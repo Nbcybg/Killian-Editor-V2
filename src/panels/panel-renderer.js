@@ -305,7 +305,21 @@ export function renderFloatPanel(f, pm, opts, container) {
   pop.appendChild(grip);
 
   makeFloatDraggable(head, pop, p.id, pm, { host: opts.host });
-  pop.addEventListener('mousedown', () => { if (typeof pm._toFront === 'function') pm._toFront(p.id); }, true);
+  // ยกขึ้นบนสุดด้วยการย้าย DOM ไม่ใช่ re-render — re-render ระหว่าง mousedown จะถอด pop
+  // ที่ drag/resize กำลังอ้างถึงออกจากหน้า แล้ว offsetLeft/Width กลายเป็น 0 ตอนปล่อยเมาส์
+  pop.addEventListener('mousedown', () => {
+    const par = pop.parentNode;
+    if (par) {
+      // ยกเหนือ "แผงลอยตัวอื่น" เท่านั้น — ไม่แซง dialog/เมนูที่ต่อท้ายอยู่ใน container เดียวกัน
+      let sib = pop.nextElementSibling, lastFloat = null;
+      while (sib) {
+        if (sib.classList && sib.classList.contains('k-float-panel')) lastFloat = sib;
+        sib = sib.nextElementSibling;
+      }
+      if (lastFloat) par.insertBefore(pop, lastFloat.nextSibling);
+    }
+    if (typeof pm._toFront === 'function') pm._toFront(p.id);
+  }, true);
   (container || document.body).appendChild(pop);
   return pop;
 }
@@ -367,6 +381,7 @@ export function makeResizable(box, grip, onEnd) {
     const up = () => {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      if (!box.isConnected) return;      // ถูก re-render ถอดออกกลางคัน → offset* = 0 อย่าบันทึกทับ
       const c = clampFloat({ x: box.offsetLeft, y: box.offsetTop,
                              w: box.offsetWidth, h: box.offsetHeight });
       box.style.left = c.x + 'px'; box.style.top = c.y + 'px';

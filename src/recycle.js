@@ -7,6 +7,15 @@ export async function restoreFromTrash(p, fname) {
   const sidecar = p + '.k2restore.json';
   if (await kapi.exists(sidecar)) {
     const info = await kapi.readJson(sidecar);
+    // [alpha.63r4] อัลบั้ม/รูปในคลัง — ก่อนหน้านี้ไม่มี sidecar เลย กดกู้คืนแล้วของไปโผล่ที่ Memos/
+    if (info.kind === 'album' || info.kind === 'image') {
+      const AC = await import('./gallery/album-core.js');
+      await AC.restoreFromRecycle(kapi, info.root || state.root, p, info);
+      await kapi.remove(sidecar);
+      await buildTree(); smart.loadNames(state.root);
+      setStatus(info.kind === 'album' ? 'กู้คืนอัลบั้มแล้ว' : 'กู้คืนรูปแล้ว');
+      return;
+    }
     if (info.kind === 'section') {
       await kapi.move(p, await kapi.join(info.root, info.folderName));
       await kapi.remove(sidecar);

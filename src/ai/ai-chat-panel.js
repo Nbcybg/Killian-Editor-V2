@@ -12,11 +12,18 @@ import { $, el, state, setStatus, log } from '../core.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import {
   SESSION_DIR, CHAT_MODES, SCOPES, DEFAULT_MODE, DEFAULT_SCOPE, DEFAULT_SEND_KEY,
+  TRANSCRIPT_VIEWS, DEFAULT_VIEW, viewDef, modeCap, hasConversation,
   modeDef, scopeLabel, isSendKey, newSession, newMessage, addMessage, renameSession,
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
   searchSessions, chatMessages, rawJson, shareMarkdown, estimateTokens,
 } from './ai-session.js';
 import { providerList, providerById, currentProvider, complete, aiMeta } from './ai-provider-ui.js';
+import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
+         toolByName, resultsMessage } from './ai-tools.js';
+import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.js';
+
+/** จำนวนรอบสูงสุดที่ยอมให้ AI สั่งคำสั่ง → เห็นผล → สั่งต่อ ในการส่งหนึ่งครั้ง */
+const MAX_TOOL_ROUNDS = 5;
 
 // สถานะของแผง (แผงเดียวในแอป — ไม่ต้องแยกอินสแตนซ์)
 const S = {
@@ -55,13 +62,32 @@ export async function loadSessions(force) {
   } catch (e) { log('warn', 'ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้', e); }
   return S.sessions;
 }
-async function saveSession(s) {
+/**
+ * [alpha.63r4] เขียนไฟล์เซสชัน — แต่ **เฉพาะเมื่อเริ่มคุยจริงแล้ว**
+ *
+ * ของเดิมกดปุ่ม "เซสชันใหม่" ทีก็เขียนไฟล์ทันทีหนึ่งไฟล์ กดเล่นสิบทีได้ไฟล์เปล่าสิบไฟล์
+ * ค้างอยู่ใน Sessions/ ตลอดไป → ตอนนี้เซสชันที่ยังไม่มีข้อความถือเป็น "ฉบับร่าง" อยู่ในหน่วยความจำ
+ * เท่านั้น พอผู้ใช้ส่งข้อความแรกถึงจะ "เกิด" ขึ้นจริง (ตอนนั้นชื่อเซสชันถูกตั้งจากข้อความแรกแล้วด้วย)
+ *
+ * เซสชันที่เคยบันทึกแล้วจะไม่ย้อนกลับไปเป็นฉบับร่างอีก — กด "เริ่มใหม่" จนไม่เหลือข้อความก็ยังอยู่
+ */
+export async function saveSession(s, { force = false } = {}) {
+  if (!s) return false;
+  if (s._draft && !force && !hasConversation(s)) return false;   // ยังไม่เริ่มคุย = ยังไม่เขียนไฟล์
   const d = await sessionsDir();
   if (!d) return false;
-  await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(s, null, 2));
+  delete s._draft;
+  const { _draft, ...clean } = s;                                 // ธงภายใน ไม่ต้องลงไฟล์
+  await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean, null, 2));
   const i = S.sessions.findIndex((x) => x.id === s.id);
   if (i === -1) S.sessions.push(s); else S.sessions[i] = s;
   return true;
+}
+/** เซสชันเปล่าที่ยังไม่ถูกเขียนลงดิสก์ */
+function draftSession(patch = {}) {
+  const s = newSession({ mode: DEFAULT_MODE, scope: DEFAULT_SCOPE, ...patch });
+  s._draft = true;
+  return s;
 }
 async function deleteSessionFile(s) {
   const d = await sessionsDir();
@@ -134,7 +160,11 @@ export async function renderAIChatPanel(host) {
     return S.host;
   }
   await loadSessions();
-  if (S.cur) { const fresh = S.sessions.find((x) => x.id === S.cur.id); if (fresh) S.cur = fresh; else S.cur = null; }
+  // เซสชันฉบับร่างยังไม่อยู่ใน S.sessions — อย่าเผลอทิ้งตอนวาดแผงใหม่
+  if (S.cur && !S.cur._draft) {
+    const fresh = S.sessions.find((x) => x.id === S.cur.id);
+    S.cur = fresh || null;
+  }
   if (!S.cur && S.view !== 'list') S.view = 'list';
   draw();
   return S.host;
@@ -184,10 +214,9 @@ function listView() {
   }
   q.oninput = () => { S.query = q.value; fill(); };
   cb.onchange = () => { S.showArchived = cb.checked; fill(); };
-  addBtn.onclick = async () => {
-    const s = newSession({ mode: DEFAULT_MODE, scope: DEFAULT_SCOPE });
-    await saveSession(s);
-    S.cur = s; S.view = 'session';
+  addBtn.onclick = () => {
+    S.cur = draftSession();          // ยังไม่เขียนไฟล์ — รอข้อความแรกก่อน
+    S.view = 'session';
     draw();
   };
   fill();
@@ -244,20 +273,37 @@ function sessionView() {
   const restart = el('button', 'ai-chat-restart', '↻');
   restart.title = 'เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เก็บโหมด/โมเดล/ไฟล์แนบไว้)';
   restart.onclick = () => restartSession(s);
+  // [alpha.63r4] มุมมอง transcript — ปกติ / ความคิด / ละเอียด / สรุป
+  const viewSel = el('select', 'ai-chat-viewsel');
+  for (const v of TRANSCRIPT_VIEWS) {
+    const o = el('option', null, v.icon + ' ' + v.label);
+    o.value = v.id;
+    o.title = v.hint;
+    viewSel.append(o);
+  }
+  viewSel.value = s.view || DEFAULT_VIEW;
+  viewSel.title = viewDef(s.view).hint;
+  viewSel.onchange = async () => {
+    s.view = viewSel.value;
+    viewSel.title = viewDef(s.view).hint;
+    await saveSession(s);
+    draw();
+  };
   const more = el('button', 'ai-chat-more', '⋯');
   more.title = 'ตัวเลือกของเซสชัน';
   more.onclick = (e) => sessionMenu(e, s);
-  right.append(badge, restart, more);
+  right.append(badge, viewSel, restart, more);
   head.append(back, title, right);
   wrap.append(head);
 
   // ── ข้อความ ──
-  const body = el('div', 'ai-chat-msgs');
+  const body = el('div', 'ai-chat-msgs ai-view-' + (s.view || DEFAULT_VIEW));
   if (!(s.messages || []).length) {
     body.append(el('div', 'ai-chat-empty dim',
-      'เริ่มคุยได้เลย — โหมด "' + modeDef(s.mode).label + '" · เห็นข้อมูล: ' + scopeLabel(s.scope)));
+      'เริ่มคุยได้เลย — โหมด "' + modeDef(s.mode).label + '" · เห็นข้อมูล: ' + scopeLabel(s.scope)
+      + (s._draft ? ' · เซสชันจะถูกบันทึกเมื่อส่งข้อความแรก' : '')));
   }
-  for (const m of s.messages || []) body.append(msgNode(m));
+  for (const m of s.messages || []) body.append(msgNode(m, s.view));
   wrap.append(body);
 
   // ── กล่องพิมพ์ ──
@@ -265,7 +311,18 @@ function sessionView() {
   setTimeout(() => { body.scrollTop = body.scrollHeight; }, 0);
   return wrap;
 }
-function msgNode(m) {
+/**
+ * วาดข้อความหนึ่งก้อนตามมุมมองที่เลือก
+ *   normal   — ข้อความล้วน (ตัดบล็อกคำสั่งออก) + สรุปสั้นว่าทำอะไรไป
+ *   thinking — เพิ่มความคิดของโมเดล + รายการคำสั่งพร้อมผล
+ *   verbose  — เพิ่ม system prompt, JSON คำสั่งดิบ, ผลดิบ, token, เวลา
+ *   summary  — บรรทัดเดียวต่อข้อความ
+ */
+function msgNode(m, view = DEFAULT_VIEW) {
+  // ผลคำสั่งที่ป้อนกลับให้โมเดลไม่ใช่บทสนทนา — โผล่เฉพาะโหมดที่ขอดูเบื้องหลัง
+  if (m.toolResult && view !== 'verbose' && view !== 'thinking') return el('span', 'ai-msg-hidden');
+  if (m.toolResult) return foldBlock('↩ ผลคำสั่งที่ส่งกลับให้โมเดล', m.text, 'ai-msg-toolresult');
+  if (view === 'summary') return summaryNode(m);
   const n = el('div', 'ai-msg ai-msg-' + m.role);
   const who = el('div', 'ai-msg-who dim',
     m.role === 'user' ? 'คุณ' : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : '🤖 ผู้ช่วย') : m.role);
@@ -280,13 +337,87 @@ function msgNode(m) {
     setTimeout(() => { copy.textContent = '⧉'; }, 1200);
   };
   who.append(copy);
-  const txt = el('div', 'ai-msg-text', m.text);
+  // โหมดปกติ/ความคิด: ซ่อนบล็อก ```k2 เพราะสรุปเป็นบรรทัดอ่านง่ายให้แล้วด้านล่าง
+  const shown = view === 'verbose' ? m.text : (m.role === 'assistant' ? stripToolCalls(m.text) : m.text);
+  const txt = el('div', 'ai-msg-text', shown);
   n.append(who, txt);
+  if (!shown && m.calls && m.calls.length) txt.remove();
+
+  if (view === 'verbose' && m.system) n.append(foldBlock('⚙ system prompt ที่ส่งไปรอบนี้', m.system));
+  if ((view === 'thinking' || view === 'verbose') && m.thinking) {
+    n.append(foldBlock('🧠 ความคิดของโมเดล', m.thinking, 'ai-msg-thinking'));
+  }
+  if (m.calls && m.calls.length && view !== 'normal') {
+    n.append(callsNode(m.calls, m.results, view));
+  } else if (m.calls && m.calls.length) {
+    // โหมดปกติ — บอกแค่ว่าทำอะไรไปกี่อย่าง สำเร็จกี่อย่าง
+    const okN = (m.results || []).filter((r) => r.ok).length;
+    const line = el('div', 'ai-msg-actions dim',
+      `⚡ ลงมือทำ ${m.calls.length} คำสั่ง — สำเร็จ ${okN}/${(m.results || []).length || m.calls.length}`);
+    n.append(line);
+  }
+  if (view === 'verbose' && m.usage) {
+    n.append(el('div', 'ai-msg-meta dim',
+      `token: เข้า ${m.usage.input || 0} · ออก ${m.usage.output || 0}`
+      + (m.usage.reasoning ? ` · คิด ${m.usage.reasoning}` : '')
+      + (m.usage.cached ? ` · แคช ${m.usage.cached}` : '')
+      + (m.ms ? ` · ใช้เวลา ${(m.ms / 1000).toFixed(1)} วิ` : '')
+      + (m.at ? ' · ' + fmtDate(m.at) : '')));
+  }
   if (m.error) n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
   if (m.files && m.files.length) {
     n.append(el('div', 'ai-msg-files dim', '📎 ' + m.files.map((f) => f.name || f.path).join(', ')));
   }
   return n;
+}
+
+/** บรรทัดเดียวต่อข้อความ — มุมมอง "สรุป" */
+function summaryNode(m) {
+  if (m.toolResult) return el('span', 'ai-msg-hidden');
+  const n = el('div', 'ai-sum ai-sum-' + m.role);
+  const icon = m.role === 'user' ? '🙋' : m.error ? '⚠' : '🤖';
+  const body = m.error ? m.error
+    : (m.calls && m.calls.length && !stripToolCalls(m.text)
+        ? m.calls.map(describeCall).join(' · ')
+        : String(m.text || '').replace(/\s+/g, ' ').trim() || '(ว่าง)');
+  n.append(el('span', 'ai-sum-icon', icon));
+  const t = el('span', 'ai-sum-text', body.length > 120 ? body.slice(0, 119) + '…' : body);
+  t.title = m.text || m.error || '';
+  n.append(t);
+  if (m.calls && m.calls.length) n.append(el('span', 'ai-sum-tag dim', '⚡' + m.calls.length));
+  if (m.usage && m.usage.total) n.append(el('span', 'ai-sum-tok dim', compact(m.usage.total)));
+  return n;
+}
+
+/** กล่องพับได้ — ใช้กับ system prompt / ความคิด / JSON ดิบ */
+function foldBlock(label, text, cls = '') {
+  const box = el('details', 'ai-fold ' + cls);
+  const sum = el('summary', 'ai-fold-sum dim', label);
+  const pre = el('pre', 'ai-fold-pre', String(text || ''));
+  box.append(sum, pre);
+  return box;
+}
+
+/** รายการคำสั่งที่ AI สั่ง + ผลของแต่ละอัน */
+function callsNode(calls, results, view) {
+  const box = el('div', 'ai-calls');
+  box.append(el('div', 'ai-calls-head dim', '⚡ คำสั่งที่ลงมือทำ (' + calls.length + ')'));
+  calls.forEach((c, i) => {
+    const r = (results || [])[i];
+    const row = el('div', 'ai-call' + (r ? (r.ok ? ' ok' : ' bad') : ''));
+    row.append(el('span', 'ai-call-icon', r ? (r.ok ? '✓' : '✕') : '·'));
+    row.append(el('span', 'ai-call-desc', describeCall(c)));
+    if (r && (r.message || r.error)) row.append(el('span', 'ai-call-msg dim', r.error || r.message));
+    box.append(row);
+    if (view === 'verbose') {
+      box.append(foldBlock('JSON ที่โมเดลสั่ง', JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
+      if (r && r.data !== undefined && r.data !== null) {
+        box.append(foldBlock('ผลที่ส่งกลับให้โมเดล',
+          typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2)));
+      }
+    }
+  });
+  return box;
 }
 
 function composer(s, body) {
@@ -299,7 +430,10 @@ function composer(s, body) {
   const modeSel = el('select', 'ai-chat-mode');
   for (const m of CHAT_MODES) { const o = el('option', null, m.icon + ' ' + m.label); o.value = m.id; modeSel.append(o); }
   modeSel.value = s.mode || DEFAULT_MODE;
-  modeSel.title = 'โหมดการทำงาน — วางแผน = อ่านอย่างเดียว · ช่วยเขียน = แก้ไข/สร้างไฟล์ได้';
+  modeSel.title = 'โหมดการทำงาน\n'
+    + '📖 วางแผน — อ่านโปรเจกต์ได้ แต่ไม่แตะไฟล์\n'
+    + '✍️ ช่วยเขียน — สร้าง/แก้ เล่ม บท ฉาก เอนทิตี้ ได้จริง (ลบไม่ได้)\n'
+    + '🔓 ปลดล็อกเต็มที่ — ทำได้ทุกอย่างรวมทั้งลบ (ของไปถังขยะ กู้คืนได้)';
 
   // โมเดลของเซสชัน = **override จากตั้งค่า** แยกกันเป็นอิสระ
   const modelSel = el('select', 'ai-chat-model');
@@ -403,43 +537,84 @@ async function send(s, ta, body, sendBtn) {
   sendBtn.disabled = true;
   ta.value = '';
 
+  const view = S.cur ? (S.cur.view || DEFAULT_VIEW) : DEFAULT_VIEW;
   const userMsg = newMessage('user', text, { files: (s.files || []).slice() });
   S.cur = addMessage(s, userMsg);
+  // ข้อความแรก = เซสชันเกิดจริง (addMessage ตั้งชื่อจากข้อความนี้ให้แล้ว) → บันทึกลงไฟล์ตอนนี้
   await saveSession(S.cur);
-  body.append(msgNode(userMsg));
+  body.append(msgNode(userMsg, view));
   const pend = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
-  pend.append(el('div', 'ai-msg-who dim', '🤖 กำลังคิด…'));
+  const pendWho = el('div', 'ai-msg-who dim', '🤖 กำลังคิด…');
+  pend.append(pendWho);
   body.append(pend);
   body.scrollTop = body.scrollHeight;
 
   const md = modeDef(S.cur.mode);
+  const cap = modeCap(S.cur.mode);
   let system = md.system;
+  const tp = toolsSystemPrompt(cap);
+  if (tp) system += '\n\n' + tp;
   try {
     const ctx = await collectScope(S.cur);
     if (ctx) system += '\n\nข้อมูลจากโปรเจกต์ (ระดับการเข้าถึง: ' + scopeLabel(S.cur.scope) + '):\n' + ctx;
   } catch (e) { log('warn', 'ai-chat: รวบรวมบริบทไม่สำเร็จ', e); }
 
-  const res = await complete(prov, {
-    system,
-    messages: chatMessages(S.cur),
-    model: s.model || undefined,
-  });
-  pend.remove();
+  // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
+  let res = null;
+  let touched = false;
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const t0 = Date.now();
+    res = await complete(prov, { system, messages: chatMessages(S.cur), model: s.model || undefined });
+    const ms = Date.now() - t0;
 
-  const reply = res.ok
-    ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider })
-    : newMessage('assistant', '', { error: res.error || 'เรียก AI ไม่สำเร็จ' });
-  S.cur = addMessage(S.cur, reply);
-  // ขีดจำกัดบริบทของโมเดล: เดาจากยอดสูงสุดที่เคยเห็น (API ส่วนใหญ่ไม่บอกตรง ๆ)
-  if (res.ok && res.usage) {
-    const used = (res.usage.input || 0) + (res.usage.output || 0);
-    S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
+    const calls = res.ok ? parseToolCalls(res.text) : [];
+    const reply = res.ok
+      ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
+                                            thinking: res.thinking, system, ms,
+                                            calls: calls.length ? calls : null })
+      : newMessage('assistant', '', { error: res.error || 'เรียก AI ไม่สำเร็จ', system, ms });
+
+    if (res.ok && res.usage) {
+      const used = (res.usage.input || 0) + (res.usage.output || 0);
+      S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
+    }
+    recordUsage(res, prov, s);
+
+    if (!calls.length) {                          // ไม่มีคำสั่ง = จบรอบ
+      S.cur = addMessage(S.cur, reply);
+      await saveSession(S.cur);
+      pend.remove();
+      body.append(msgNode(reply, view));
+      break;
+    }
+
+    pendWho.textContent = '⚡ กำลังลงมือทำ ' + calls.length + ' คำสั่ง…';
+    const results = await runCalls(calls, S.cur, cap);
+    reply.results = results;
+    touched = touched || touchesProject(results);
+    S.cur = addMessage(S.cur, reply);
+    // ผลของคำสั่งกลับเข้าบทสนทนาในนามผู้ใช้ — โมเดลอ่านต่อได้ในรอบถัดไป
+    S.cur = addMessage(S.cur, newMessage('user', resultsMessage(results), { toolResult: true }));
+    await saveSession(S.cur);
+    body.append(msgNode(reply, view));
+    body.scrollTop = body.scrollHeight;
+
+    if (results.some((r) => r.cancelled)) {       // ผู้ใช้กดยกเลิก = หยุดทั้งชุด
+      pend.remove();
+      break;
+    }
+    if (round === MAX_TOOL_ROUNDS - 1) {
+      pend.remove();
+      body.append(el('div', 'ai-chat-empty dim',
+        `หยุดที่ ${MAX_TOOL_ROUNDS} รอบเพื่อกันวนไม่จบ — พิมพ์ "ทำต่อ" ถ้ายังไม่เสร็จ`));
+    } else {
+      pendWho.textContent = '🤖 กำลังคิดต่อ…';
+    }
   }
-  await saveSession(S.cur);
-  recordUsage(res, prov, s);
+  if (touched) await refreshAfterActions();
+
   S.sending = false;
   sendBtn.disabled = false;
-  body.append(msgNode(reply));
   body.scrollTop = body.scrollHeight;
   // ชื่อเซสชันอาจเพิ่งถูกตั้งจากข้อความแรก → วาดหัวใหม่
   const t = S.host && S.host.querySelector('.ai-chat-title');
@@ -455,6 +630,39 @@ async function send(s, ta, body, sendBtn) {
   }
   if (!res.ok) setStatus('❌ AI: ' + (res.error || ''));
 }
+/**
+ * ลงมือทำคำสั่งทั้งชุดตามลำดับ
+ *
+ * การยืนยัน: คำสั่งที่ "ลบของ" จะถามก่อนเสมอ เว้นแต่ผู้ใช้ปิด `confirmDestructive` เอง
+ * ส่วนคำสั่งสร้าง/แก้ ทำเลยเมื่อ `autoRun` เปิดอยู่ (ค่าเริ่มต้น) — ไม่งั้นถามทีละอัน
+ * ผู้ใช้กดยกเลิกครั้งเดียว = หยุดทั้งชุด (ครึ่ง ๆ กลาง ๆ อันตรายกว่าไม่ทำเลย)
+ */
+async function runCalls(calls, session, cap) {
+  const results = [];
+  let stopped = false;
+  for (const c of calls) {
+    if (stopped) { results.push({ tool: c.tool, ok: false, cancelled: true, error: 'ยกเลิกทั้งชุด' }); continue; }
+    const v = validateCall(c, cap);
+    if (!v.ok) { results.push({ tool: c.tool || '(ไม่ระบุ)', ok: false, error: v.error }); continue; }
+    const def = toolByName(c.tool);
+    const needAsk = def.destructive
+      ? session.confirmDestructive !== false
+      : session.autoRun === false;
+    if (needAsk) {
+      const okGo = await confirmBox(
+        (def.destructive ? '⚠ AI ขอลบของในโปรเจกต์:\n\n' : 'AI ขอลงมือทำ:\n\n') + describeCall(c),
+        def.destructive ? 'ลบเลย' : 'ทำเลย');
+      if (!okGo) {
+        results.push({ tool: c.tool, ok: false, cancelled: true, error: 'ผู้ใช้ไม่อนุญาต' });
+        stopped = true;
+        continue;
+      }
+    }
+    results.push(await runToolCall(c));
+  }
+  return results;
+}
+
 /** ขีดจำกัดที่พบบ่อย — เลือกอันเล็กสุดที่ยังใหญ่กว่ายอดที่ใช้จริง */
 function guessLimit(used) {
   for (const L of [8192, 16384, 32768, 65536, 128000, 200000, 1000000]) if (used <= L) return L;
@@ -518,11 +726,29 @@ function sessionMenu(ev, s) {
       setStatus(await copyText(shareMarkdown(s)) ? 'คัดลอกบทสนทนาแล้ว' : 'คัดลอกไม่สำเร็จ');
     } },
     '-',
+    // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
+    { label: (s.autoRun === false ? '☐' : '☑') + ' ทำคำสั่งเองโดยไม่ต้องถาม', click: async () => {
+      s.autoRun = s.autoRun === false;
+      await saveSession(s);
+      setStatus(s.autoRun ? 'AI จะลงมือทำเองโดยไม่ถาม (ยกเว้นคำสั่งลบ)' : 'AI จะถามก่อนทุกคำสั่ง');
+    } },
+    { label: (s.confirmDestructive === false ? '☐' : '☑') + ' ถามก่อนเสมอเมื่อจะลบของ', click: async () => {
+      if (s.confirmDestructive !== false) {
+        const okGo = await confirmBox(
+          'ปิดการถามก่อนลบ?\n\nAI จะลบเล่ม/บท/ฉาก/เอนทิตี้ได้เองทันทีโดยไม่ถามคุณอีก\n'
+          + '(ของยังไปถังขยะ กู้คืนได้ แต่จะไม่มีจังหวะให้ทัดทาน)', 'ปิดการถาม');
+        if (!okGo) return;
+      }
+      s.confirmDestructive = s.confirmDestructive === false;
+      await saveSession(s);
+      setStatus(s.confirmDestructive ? 'จะถามก่อนลบเสมอ' : '⚠ ปลดล็อกเต็มที่ — AI ลบของได้เองโดยไม่ถาม');
+    } },
+    '-',
     { label: '✎ เปลี่ยนชื่อ', click: async () => {
       const v = await ask('ชื่อเซสชัน', { value: s.title });
       if (v === null) return;
       S.cur = renameSession(s, v);
-      await saveSession(S.cur); draw();
+      await saveSession(S.cur, { force: true }); draw();
     } },
     { label: '↗ แชร์ (คัดลอกเป็น Markdown)', click: async () => {
       setStatus(await copyText(shareMarkdown(s)) ? 'คัดลอกบทสนทนาแล้ว' : 'คัดลอกไม่สำเร็จ');
@@ -605,8 +831,7 @@ function detailView() {
 /** เปิดแผงแล้วเริ่มเซสชันใหม่ทันที (เมนู AI → แชท) */
 export async function newChatSession() {
   await loadSessions(true);
-  const s = newSession({ mode: DEFAULT_MODE, scope: DEFAULT_SCOPE });
-  await saveSession(s);
+  const s = draftSession();          // ยังไม่เขียนไฟล์ — เกิดจริงตอนส่งข้อความแรก
   S.cur = s; S.view = 'session';
   draw();
   return s;

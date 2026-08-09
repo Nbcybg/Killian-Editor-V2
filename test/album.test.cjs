@@ -302,8 +302,48 @@ fs.writeFileSync(path.join(IMG, 'images.json'),
     !fs.existsSync(path.join(IMG, 'ตัวละครหลัก', 'สถานที่')) && fs.existsSync(del.movedTo));
   check('deleteAlbum ถอดออกจาก albums.json', !del.albums.some((a) => a.id === 'ตัวละครหลัก/สถานที่'));
 
+  // [alpha.63r4] ถังขยะต้องรู้ว่าอัลบั้มนี้เคยอยู่ไหน ไม่งั้นกดกู้คืนแล้วโฟลเดอร์ไปโผล่ที่ Memos/
+  check('deleteAlbum เขียน sidecar กู้คืน', fs.existsSync(del.movedTo + A.RESTORE_EXT));
+  {
+    const info = JSON.parse(fs.readFileSync(del.movedTo + A.RESTORE_EXT, 'utf-8'));
+    check('sidecar อัลบั้มจำ id เดิมไว้', info.kind === 'album' && info.id === 'ตัวละครหลัก/สถานที่', JSON.stringify(info.id));
+    await A.restoreFromRecycle(api, ROOT, del.movedTo, info);
+    check('restoreFromRecycle คืนอัลบั้มกลับที่เดิม', fs.existsSync(path.join(IMG, 'ตัวละครหลัก', 'สถานที่')));
+    check('อัลบั้มที่กู้คืนกลับมาอยู่ในรายการ',
+      (await A.listAlbums(api, ROOT)).some((a) => a.id === 'ตัวละครหลัก/สถานที่'));
+    // เก็บกวาดให้เทสถัดไปเห็นสภาพเดิม
+    await A.deleteAlbum(api, ROOT, 'ตัวละครหลัก/สถานที่');
+  }
+
+  await A.updateImage(api, ROOT, 'ตัวละครหลัก', 'sunset.png', { caption: 'พระอาทิตย์ตก', tags: ['#ref'] });
   const dst = await A.deleteImage(api, ROOT, 'ตัวละครหลัก', 'sunset.png');
   check('deleteImage ย้ายรูปไปถังขยะ', fs.existsSync(dst) && !fs.existsSync(path.join(IMG, 'ตัวละครหลัก', 'sunset.png')));
+  check('deleteImage เขียน sidecar กู้คืน', fs.existsSync(dst + A.RESTORE_EXT));
+  {
+    const info = JSON.parse(fs.readFileSync(dst + A.RESTORE_EXT, 'utf-8'));
+    check('sidecar รูปจำอัลบั้ม + caption/แท็ก',
+      info.kind === 'image' && info.album === 'ตัวละครหลัก' && info.meta
+      && info.meta.caption === 'พระอาทิตย์ตก' && (info.meta.tags || []).includes('#ref'),
+      JSON.stringify(info.meta));
+    const r = await A.restoreFromRecycle(api, ROOT, dst, info);
+    check('restoreFromRecycle คืนรูปเข้าอัลบั้มเดิม (ไม่ใช่ Memos/)',
+      fs.existsSync(path.join(IMG, 'ตัวละครหลัก', 'sunset.png')) && r.album === 'ตัวละครหลัก');
+    const doc = await A.readAlbumDoc(api, ROOT, 'ตัวละครหลัก');
+    check('กู้คืนรูปแล้วได้ caption/แท็กเดิมกลับมา',
+      doc.images['sunset.png'] && doc.images['sunset.png'].caption === 'พระอาทิตย์ตก'
+      && doc.images['sunset.png'].tags.includes('#ref'), JSON.stringify(doc.images['sunset.png']));
+  }
+  {
+    // อัลบั้มต้นทางถูกลบไปแล้ว → รูปต้องตกลงอัลบั้มราก ไม่ใช่ throw หรือหายไป
+    const orphan = path.join(ROOT, 'Recycle', 'zz-orphan.png');
+    touch(orphan, 'x');
+    const r = await A.restoreFromRecycle(api, ROOT, orphan,
+      { kind: 'image', album: 'อัลบั้มที่ไม่มีแล้ว', file: 'orphan.png', meta: null });
+    check('อัลบั้มเดิมหายแล้ว → คืนรูปลงอัลบั้มราก',
+      r.album === A.ROOT_ALBUM && fs.existsSync(path.join(IMG, 'orphan.png')), JSON.stringify(r));
+    await A.deleteImage(api, ROOT, A.ROOT_ALBUM, 'orphan.png');
+  }
+  await A.deleteImage(api, ROOT, 'ตัวละครหลัก', 'sunset.png');
 }
 
 {

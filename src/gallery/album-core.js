@@ -35,6 +35,9 @@ export const isImageFile = (name) => IMAGE_RE.test(String(name || ''));
 
 const RESERVED_JSON = new Set([ALBUMS_JSON, ALBUM_META, FLAT_JSON]);
 
+/** นามสกุลไฟล์คู่ที่ถังขยะใช้จำว่าของชิ้นนี้เคยอยู่ไหน — ต้องตรงกับ recycle.js */
+export const RESTORE_EXT = '.k2restore.json';
+
 // ───────────────────────── ส่วนบริสุทธิ์: ชื่อ/รหัส/ต้นไม้ ─────────────────────────
 
 /** ชื่ออัลบั้มที่ปลอดภัยกับระบบไฟล์ (คืน '' = ใช้ไม่ได้) */
@@ -582,6 +585,11 @@ export async function deleteAlbum(api, root, id, { recycleDir = 'Recycle' } = {}
   const dst = await J(api, root, recycleDir, stamp + '-' + albumBaseName(id));
   if (await api.exists(src)) await api.move(src, dst);
   await saveAlbums(api, root, r.albums);
+  // sidecar สำคัญมาก: ถ้าไม่มี ถังขยะจะเดาชนิดไม่ออกแล้วโยนโฟลเดอร์รูปไปกองที่ Memos/
+  await writeJson(api, dst + RESTORE_EXT, {
+    kind: 'album', root, id,
+    albums: albums.filter((a) => r.removed.includes(a.id)),
+  });
   return { ...r, movedTo: dst };
 }
 
@@ -640,8 +648,47 @@ export async function deleteImage(api, root, id, file, { recycleDir = 'Recycle' 
   const dst = await J(api, root, recycleDir, Date.now().toString(36) + '-' + file);
   if (await api.exists(src)) await api.move(src, dst);
   const doc = await readAlbumDoc(api, root, id);
+  const meta = (doc && doc.images && doc.images[file]) || null;
   await writeAlbumDoc(api, root, id, removeImageMeta(doc, file));
+  // เก็บ caption/แท็ก/ลำดับไว้ด้วย — กู้คืนแล้วต้องได้ของเดิมกลับมา ไม่ใช่แค่ไฟล์เปล่า
+  await writeJson(api, dst + RESTORE_EXT, { kind: 'image', root, album: id, file, meta });
   return dst;
+}
+
+/**
+ * กู้คืนอัลบั้ม/รูปจากถังขยะ — recycle.js เรียกเมื่ออ่าน sidecar แล้วเจอ kind album/image
+ * คืน { kind, ... } ที่กู้คืนสำเร็จ หรือ null ถ้าไม่รู้จักชนิด
+ */
+export async function restoreFromRecycle(api, root, trashPath, info) {
+  if (!info) return null;
+  if (info.kind === 'album') {
+    const parent = parentOf(info.id);
+    if (parent) await api.mkdir(await albumDir(api, root, parent));  // อัลบั้มแม่อาจถูกลบไปด้วย
+    else await api.mkdir(await imagesDir(api, root));
+    await api.move(trashPath, await albumDir(api, root, info.id));
+    const cur = await listAlbums(api, root);
+    const known = new Set(cur.map((a) => a.id));
+    const back = (info.albums || []).filter((a) => a && !known.has(a.id));
+    if (back.length) await saveAlbums(api, root, [...cur, ...back]);
+    return { kind: 'album', id: info.id };
+  }
+  if (info.kind === 'image') {
+    // อัลบั้มเดิมอาจถูกลบไปแล้ว → คืนลงอัลบั้มราก ดีกว่าโยนทิ้ง
+    const albums = await listAlbums(api, root);
+    const album = (info.album && albums.some((a) => a.id === info.album)) ? info.album : ROOT_ALBUM;
+    const dir = await albumDir(api, root, album);
+    await api.mkdir(dir);
+    let name = info.file;
+    const ext = (name.match(/\.[^.]+$/) || [''])[0];
+    const stem = ext ? name.slice(0, -ext.length) : name;
+    let n = 1;
+    while (await api.exists(await J(api, dir, name))) name = stem + '-' + n++ + ext;
+    await api.move(trashPath, await J(api, dir, name));
+    const doc = await readAlbumDoc(api, root, album);
+    await writeAlbumDoc(api, root, album, setImageMeta(doc, name, info.meta || {}));
+    return { kind: 'image', album, file: name };
+  }
+  return null;
 }
 
 /** แก้คำบรรยาย/แท็ก/ลำดับของรูป */

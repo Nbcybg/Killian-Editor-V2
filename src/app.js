@@ -108,7 +108,7 @@ import { saveAISettings, saveApiKey, clearKeyCache } from './ai-settings.js';
 import { showAISettingsDialog, providerList, currentProvider, clearKeysCache,
          providerDialog } from './ai/ai-provider-ui.js';
 import { renderAIChatPanel, newChatSession, loadSessions, collectScope,
-         _chatState } from './ai/ai-chat-panel.js';
+         saveSession, _chatState } from './ai/ai-chat-panel.js';
 import { showAISummary } from './ai-summary.js';
 import { showAITitleSuggestions, collectProjectText, hashText, pastTitlesFor,
          summaryCacheState, rememberTitles } from './ai-summary.js';
@@ -2704,6 +2704,8 @@ async function resolveImageUrl(imgPath) {
 /** refresh Story Network from external callers (wiki-ui save, etc.) */
 export function refreshNetwork() {
   if (netInst && isPanelOpen('network')) {
+    // อ่านสีใหม่ทุกครั้ง — ไม่งั้นสีที่ผู้ใช้ตั้งใน Settings จะมีผลก็ต่อเมื่อสร้างแผงใหม่
+    try { netInst.readColors(); } catch {}
     netInst.refresh();
   }
 }
@@ -16158,6 +16160,10 @@ async function runTest(projectPath) {
         check('[61-2] หน้ารายการมีช่องค้นหาเซสชัน', !!host.querySelector('.ai-chat-search'));
         check('[61-2] หน้ารายการมีปุ่มเพิ่มเซสชันใหม่', !!host.querySelector('.ai-chat-new'));
 
+        // [alpha.63r4] นับไฟล์เซสชันก่อนกด เพื่อพิสูจน์ว่า "กดเซสชันใหม่" ไม่เขียนไฟล์แล้ว
+        const sdirPre = await kapi.join(state.root, AS.SESSION_DIR);
+        const nBefore = (await kapi.exists(sdirPre))
+          ? (await kapi.listFiles(sdirPre)).filter((f) => /\.json$/.test(f)).length : 0;
         host.querySelector('.ai-chat-new').click();
         await new Promise((r) => setTimeout(r, 200));
         check('[61-2] กดเพิ่มแล้วเข้าเซสชันทันที', !!host.querySelector('.ai-chat-session'));
@@ -16171,8 +16177,14 @@ async function runTest(projectPath) {
               !!host.querySelector('.ai-chat-more'));
         check('[61-2] กล่องพิมพ์มีปุ่มเพิ่มไฟล์', !!host.querySelector('.ai-chat-file'));
         const modeSel = host.querySelector('.ai-chat-mode');
-        check('[61-2] มีโหมด plan (อ่านอย่างเดียว) กับ ช่วยเขียน (แก้ไขได้)',
-              modeSel.options.length === 2 && [...modeSel.options].map((o) => o.value).join() === 'plan,write');
+        check('[61-2] มีโหมด plan (อ่านอย่างเดียว) · ช่วยเขียน · ปลดล็อกเต็มที่',
+              modeSel.options.length === 3 && [...modeSel.options].map((o) => o.value).join() === 'plan,write,agent');
+        // [alpha.63r4] มุมมอง transcript 4 แบบ
+        const viewSel = host.querySelector('.ai-chat-viewsel');
+        check('[63r4] หัวเซสชันมีตัวเลือกมุมมอง transcript', !!viewSel);
+        check('[63r4] มุมมองครบ 4 แบบ (ปกติ · ความคิด · ละเอียด · สรุป)',
+              !!viewSel && [...viewSel.options].map((o) => o.value).join() === 'normal,thinking,verbose,summary',
+              viewSel ? [...viewSel.options].map((o) => o.value).join() : 'ไม่มี');
         check('[61-2] โมเดลของเซสชันเป็น override แยกจากตั้งค่า (มีตัวเลือก "ตามตั้งค่า AI")',
               host.querySelector('.ai-chat-model').options[0].value === '');
         const scopeSel = host.querySelector('.ai-chat-scope');
@@ -16181,12 +16193,30 @@ async function runTest(projectPath) {
                 [...scopeSel.options].some((o) => o.value === id)), scopeSel.options.length);
         check('[61-2] มีปุ่มส่ง', !!host.querySelector('.ai-chat-send'));
 
-        // เซสชันถูกเก็บใน Sessions/ ของโปรเจกต์
+        // [alpha.63r4] เซสชันเกิดเป็นไฟล์เมื่อ "เริ่มคุยจริง" เท่านั้น — กดเปล่า ๆ ต้องไม่ทิ้งขยะไว้
         const sdir = await kapi.join(state.root, AS.SESSION_DIR);
+        const nAfterNew = (await kapi.exists(sdir))
+          ? (await kapi.listFiles(sdir)).filter((f) => /\.json$/.test(f)).length : 0;
+        check('[63r4] กดเซสชันใหม่แล้วยังไม่เขียนไฟล์ (รอข้อความแรก)', nAfterNew === nBefore,
+              `ก่อน ${nBefore} หลัง ${nAfterNew}`);
+        // ส่งข้อความแรก → ต้องเกิดไฟล์ และหัวข้อต้องมาจากข้อความนั้น ไม่ใช่ "เซสชันใหม่"
+        const stNew = _chatState();
+        stNew.cur = AS.addMessage(stNew.cur, AS.newMessage('user', 'ประโยคแรกที่ใช้ตั้งชื่อเซสชัน'));
+        await saveSession(stNew.cur);
         check('[61-2] เซสชันถูกเก็บในโฟลเดอร์ Sessions/ ของโปรเจกต์', await kapi.exists(sdir));
         const sfiles = await kapi.listFiles(sdir);
-        check('[61-2] มีไฟล์เซสชันจริงอย่างน้อย 1 ไฟล์', sfiles.filter((f) => /\.json$/.test(f)).length >= 1,
-              JSON.stringify(sfiles));
+        check('[63r4] ส่งข้อความแรกแล้วไฟล์เซสชันเกิดขึ้นจริง',
+              sfiles.filter((f) => /\.json$/.test(f)).length === nBefore + 1,
+              `ก่อน ${nBefore} ตอนนี้ ${sfiles.filter((f) => /\.json$/.test(f)).length}`);
+        check('[63r4] หัวข้อเซสชันถูกตั้งจากข้อความแรก',
+              stNew.cur.title === 'ประโยคแรกที่ใช้ตั้งชื่อเซสชัน', stNew.cur.title);
+        {
+          const saved = await kapi.readJson(await kapi.join(sdir, AS.sessionFileName(stNew.cur)));
+          check('[63r4] หัวข้อที่บันทึกลงไฟล์ตรงกับที่แสดง', saved.title === stNew.cur.title, saved.title);
+          check('[63r4] ธงภายใน _draft ไม่หลุดลงไฟล์', saved._draft === undefined);
+        }
+        await renderAIChatPanel(host);
+        await new Promise((r) => setTimeout(r, 120));
 
         // ป้ายบริบท → หน้ารายละเอียด
         ctxBadge.click();

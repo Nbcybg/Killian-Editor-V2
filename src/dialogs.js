@@ -1080,6 +1080,8 @@ export function settingsDialog(openTab) {
       } catch (e) { log('warn', 'บันทึก global settings ไม่สำเร็จ', e); }
       applySettings();
       try { updatePageNumberHint(); refreshSpView(); } catch {}
+      // [alpha.63r4] สี Story Network ที่เพิ่งตั้ง ต้องเห็นผลทันที ไม่ต้องปิด-เปิดแอป
+      try { const { refreshNetwork } = await import('./app.js'); refreshNetwork(); } catch {}
       state.title = m.title;
       document.title = m.title + ' — Killian 2';
       $('#projname').textContent = m.title;

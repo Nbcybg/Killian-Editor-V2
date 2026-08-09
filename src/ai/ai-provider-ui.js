@@ -148,8 +148,8 @@ export async function complete(provider, opts = {}) {
   const req = chatRequest(provider, opts);
   const res = await sendRequest(provider, req);
   if (!res.ok) return { ok: false, text: '', error: res.error, status: res.status };
-  const { text, usage } = parseChat(res.json);
-  return { ok: true, text, usage, model: req.body.model, provider: provider.name };
+  const { text, thinking, usage } = parseChat(res.json);
+  return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
 }
 
 // ══════════════════════════════ UI: กล่องตั้งค่า AI ══════════════════════════════

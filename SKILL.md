@@ -79,6 +79,10 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
   - `spell.js` — เอนจินตรวจคำผิด (ไทย maximal-matching DP + อังกฤษ wordlist+morphology) · `loadBase/setExtra/check/ready`
   - `wiki.js` — `WikiEditor` + `imageLightbox`
   - `gallery.js`, `network.js`, `ui.js` (**`window.prompt()` = no-op ใน Electron!** ใช้ ask/confirmBox)
+    · **`network-layout.js`** (alpha.63r4, บริสุทธิ์) — `forceLayout`/`seedLayout`/`loadPositions`/
+      `savePositions`/`clearPositions`/`nodeKey` · **บันทึกเฉพาะโหนดที่ผู้ใช้ลากเอง (`_pinned`)** และ
+      **key แยกตามโปรเจกต์** (`k2-net-layout2:<hash root>`) — บทเรียน 100
+      (`network-toolbar.js` ถูกลบทิ้งที่ .64 — เป็นโค้ดตายที่ไม่มีใคร import · `network.js` มี `buildToolbar()` เอง)
   - **`core.js`** — แกนกลางที่ทุกโมดูลใช้ร่วม: `$`,`el`,`state`,`smart`,`log`,`setStatus` + ค่าคงที่ (`DEFAULT_SETTINGS`,`SCENE_STATUSES`,`SCENE_COLORS`,`BUILTIN_CATS`,`CAT_ICON`,`BASE_ED_FS`,`ZOOM_*`) — **ทุกไฟล์ใหม่ import จากนี่**
     · **[alpha.62 บั๊ก 9+10] `setBusy(msg)`/`clearBusy()`/`busyMsg()`/`withBusy(msg,fn)`** = ตัวบอก "กำลังทำอะไรอยู่"
       ที่ **`#status-busy` ในแถบสถานะล่าง** (สปินเนอร์เล็ก + ข้อความ · `pointer-events:none`)
@@ -99,11 +103,22 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
     · **`ai/ai-providers.js`** (บริสุทธิ์) — `PARAM_DEFS`(12) · `normalizeParams` · `parseDomains`/`isDomainAllowed`
       · `newProvider`/`validateProvider` · `stripSecrets`/`withSecrets` · `modelsRequests`/`parseModels`
       · `chatRequest`/`parseChat` · `listProviders`/`activeProvider`/`upsertProvider`/`removeProvider`
-    · **`ai/ai-session.js`** (บริสุทธิ์) — `CHAT_MODES`(plan/write) · `SCOPES`(project/book/chapter/scene/none)
-      · `isSendKey` · `newSession`/`addMessage`/`renameSession`/`archiveSession` · `sessionStats`/`contextLabel`
-      · `searchSessions` · `chatMessages` (ตัดประวัติตามงบ token) · `rawJson`/`shareMarkdown`
+    · **`ai/ai-session.js`** (บริสุทธิ์) — `CHAT_MODES`(**plan/write/agent** — alpha.64) · `modeCap()` คืนสิทธิ์
+      `read|write|full` · `SCOPES`(project/book/chapter/scene/none) · **`TRANSCRIPT_VIEWS`** 4 แบบ (alpha.64)
+      · `isSendKey` · `newSession`/`addMessage`/`renameSession`/`archiveSession` · `hasConversation()`
+      · `sessionStats`/`contextLabel` · `searchSessions` · `chatMessages` (ตัดประวัติตามงบ token) · `rawJson`/`shareMarkdown`
+      · ⚠ `newSession(j)` ประกอบ object ใหม่ทีละฟิลด์ — **เพิ่มฟิลด์ใหม่ต้องเพิ่มที่นี่ด้วย ไม่งั้นหายตอนโหลดกลับ**
+      (บทเรียน 103 — `titleSet` เคยตกหล่นจนชื่อที่ผู้ใช้ตั้งเองถูกทับ)
+    · **`ai/ai-tools.js`** (alpha.64 · บริสุทธิ์) — โปรโตคอลให้ AI สั่งงานแอป: `TOOLS`(15) ·
+      `toolsSystemPrompt(cap)` · `parseToolCalls`/`stripToolCalls` · `validateCall(call,cap)` ·
+      `describeCall` · `hasDestructive` · `resultsMessage` — ดูบทเรียน 102
+    · **`ai/ai-actions.js`** (alpha.64) — ตัวลงมือทำ `runToolCall()` · เขียน `draft.json`/`scenes.json`/
+      `section.json`/`.md` เองตามรูปแบบเดิม (เรียก scene-ops/section-ops ตรง ๆ ไม่ได้ — มันถามชื่อเสมอ)
     · `ai/ai-provider-ui.js` — กล่องตั้งค่า + ป๊อปอัป 4 ส่วน · **`sendRequest()` = ประตูเดียวที่ตรวจ Allowed Domains**
+      · `complete()` คืน `thinking` ด้วยแล้ว (alpha.64)
     · `ai/ai-chat-panel.js` — แผง 3 ชั้น (รายการ → เซสชัน → รายละเอียด) · `collectScope()` บังคับระดับการเข้าถึงจริง
+      · **วนรอบ tool call สูงสุด `MAX_TOOL_ROUNDS`=5** · `runCalls()` คุมการยืนยัน (ลบ = ถามเสมอ)
+      · `saveSession(s,{force})` — เซสชันฉบับร่าง (`_draft`) ยังไม่เขียนไฟล์จนกว่าจะมีข้อความแรก
     · (ของเดิม `ai/ai-core.js` · `ai-bridge.js` · `ai-ui.js` ยังอยู่ — ฟีเจอร์ AI เดิมวิ่งผ่าน `callAI()` ที่ต่อเข้าทะเบียนใหม่แล้ว)
     · **[alpha.62] `aiConfigured()` ใน `ai-settings.js` = จุดเดียวที่ทุกฟีเจอร์ถามว่า "ตั้งค่าครบหรือยัง"**
       (คืน `{ok, why}` — ห้ามเขียนตัวเช็คคีย์เองในไฟล์อื่นอีก)
@@ -305,7 +320,7 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **1,883 checks** target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,028 checks** (alpha.64) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (alpha.39, รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
@@ -330,10 +345,12 @@ node test/wiki-images.test.cjs     # 43 checks — migrate string→object/capti
 node test/scene-meta.test.cjs      # 56 checks — frontmatter ชนะ index/bool จากสตริง/ลบคีย์ว่าง (alpha.60r2 · 13)
 node test/margin-presets.test.cjs  # 45 checks — 8 ชุด/จับคู่กลับ/ค่าที่ผู้ใช้ตั้งเอง (alpha.60r2 · 6)
 node test/i18n-csv.test.cjs      # 61 checks — flatten/CSV quote+BOM/round-trip ไฟล์ภาษาจริง (alpha.60r3 · 4)
-node test/album.test.cjs           # 206 checks — อัลบั้ม/CRUD บนดิสก์จริง/แท็ก/ดัชนีการใช้งาน/กระดาน/แฮชรูป (alpha.63)
-node test/ai-providers.test.cjs    # 110 checks — provider/param/โดเมน/ความลับ/models/chat + session/สถิติ/ค้นหา/เริ่มใหม่ (alpha.61–62)
+node test/album.test.cjs           # 215 checks — อัลบั้ม/CRUD บนดิสก์จริง/แท็ก/ดัชนีการใช้งาน/กระดาน/แฮชรูป (alpha.63) + sidecar กู้คืน (alpha.64)
+node test/ai-providers.test.cjs    # 111 checks — provider/param/โดเมน/ความลับ/models/chat + session/สถิติ/ค้นหา/เริ่มใหม่ (alpha.61–62)
+node test/network-layout.test.cjs  # 18 checks  — ตำแหน่งโหนดแยกตามโปรเจกต์/ชื่อซ้ำข้ามหมวด/ผังไม่แข็งถาวร (alpha.64)
+node test/ai-tools.test.cjs        # 64 checks  — แกะคำสั่ง k2/สิทธิ์ตามโหมด/describeCall/วงจรหัวข้อเซสชัน (alpha.64)
 ```
-`npm run test:unit` รันชุดบริสุทธิ์ทั้งหมดรวดเดียว (**1,282 บรรทัด PASS**)
+`npm run test:unit` รันชุดบริสุทธิ์ทั้งหมดรวดเดียว (**1,709 บรรทัด PASS · 26 ไฟล์** + fountain 84)
 · **ตรวจ PDF ที่สร้างขึ้นในเทส**: pdf-lib **บีบอัด content stream (FlateDecode)** และเขียนข้อความเป็น
 **hex string** (`<48656C…> Tj`) ทั้งฟอนต์มาตรฐานและฟอนต์ที่ฝัง → ค้นข้อความจากไบต์ดิบไม่เจอเลย
 ต้อง `zlib.inflateSync` ก่อน **แล้วถอด hex** (ดู `streamsText`/`drawnText` ใน `pdf-generator.test.cjs`)
@@ -816,6 +833,69 @@ grep -E "FAIL|STOP" /tmp/k2result.txt | head -3
    · ของที่วางไว้ก่อนหน้าซ่อมได้ด้วยคำสั่ง "ปรับให้ตรงสัดส่วนรูป"
    · กฎกว้างกว่า: **มุมมองที่ผู้ใช้ใช้ "ตัดสินใจเรื่องภาพ" ห้ามบิด/ตัดภาพโดยไม่บอก** — ให้เลือกเองได้ว่าจะย่อแบบไหน
 
+97. **[alpha.64] ย้าย feature จาก "แท็บ" มาเป็น "แผง" = ตัวยึดของ `position:absolute` หายไปด้วย** ⚠⚠
+   Planner ย้ายจากแท็บมาเป็นแผงตอน .62 · ตัวห่อเดิมคือ `.pane { position:absolute; inset:0 }`
+   ส่วน `#planner-body` **ไม่มี `position` เลย** → `.planner-wrap` / `.planner-filter` / `.planner-props`
+   ที่เป็น absolute ไปยึดกับ `#split-root` (พื้นที่แก้ไขทั้งผืน) = **กระดานคลุมทั้งจอ กดอะไรไม่ได้ทั้งแอป**
+   **เช็คทุกครั้งที่ย้ายอะไรออกจาก `.pane`: ลูกที่เป็น absolute มีตัวยึดใหม่หรือยัง**
+   (`#net-body` / `#gal-body` มี `position:relative` อยู่แล้วจึงรอด — `#planner-body` ตกหล่นตัวเดียว)
+   · **วิธีพิสูจน์โดยไม่ต้องเปิดแอป**: ทำหน้า HTML ที่จำลองสายพ่อ-ลูกให้ตรงกับของจริง
+   (ต้องมี `#split-root` ที่ positioned อยู่ชั้นนอก **และช่องแผงที่ไม่ positioned**) แล้ววัด
+   `getBoundingClientRect()` เทียบกัน — harness ที่ตัวช่องแผงเป็น `position:absolute` เองจะ
+   **บังบั๊กหมด** เพราะกลายเป็นตัวยึดให้ซะเอง (เผาไปหนึ่งรอบกว่าจะรู้)
+
+98. **[alpha.64] re-render ระหว่าง `mousedown` = ทำลาย drag/resize ที่กำลังจะเริ่ม** ⚠
+   `renderFloatPanel` มี capture listener บน `pop` เรียก `_toFront()` ทุก mousedown →
+   `setFloats()` → `_emit()` → วาดใหม่ทั้งชุด → `pop` ที่ `makeFloatDraggable`/`makeResizable`
+   ถือ reference อยู่ **หลุดจากหน้า** · อาการ: ลากไม่ไป · ปล่อยแล้ว `offsetLeft/Width` = 0
+   → แผงเด้งมุมซ้ายบน ขนาดรีเซ็ต · `stopPropagation()` ในตัว grip ก็ช่วยไม่ได้เพราะ capture
+   ของ **ancestor ยิงก่อน**
+   **กฎ: อะไรที่เกิดตอน mousedown ห้าม re-render — เปลี่ยน z-order ด้วยการย้าย DOM
+   แล้วบันทึก state แบบไม่ notify (`setFloatsQuiet`)** · และกันพลาดด้วย `if (!el.isConnected) return`
+   ก่อนเขียนพิกัดใน `up()` เสมอ
+
+99. **[alpha.64] "ลบแล้วกู้คืนได้" ต้องมี sidecar เสมอ — ไม่งั้นตกไปเข้าเงื่อนไข else ที่ผิด**
+   `deleteAlbum`/`deleteImage` ย้ายของไป `Recycle/` แต่ไม่เขียน `.k2restore.json`
+   `restoreFromTrash` หาไม่เจอก็ไล่ต่อจนตกท้ายสุด — บรรทัดที่คอมเมนต์ว่า "`.md` → Memos"
+   แต่**ไม่ได้เช็คนามสกุลจริง** → `sunset.png` ถูกโยนเข้า `Memos/`
+   **เพิ่มชนิดของที่ลบได้เมื่อไร ต้องเพิ่ม `kind` ใน sidecar + สาขาใน `restoreFromTrash` พร้อมกัน**
+   · และ **else สุดท้ายควรเป็น "ไม่รู้จัก → ไม่ทำอะไร + แจ้ง"** ไม่ใช่เดาว่าเป็น memo
+
+100. **[alpha.64] บันทึก state ทุกโหนดหลังจัดผังอัตโนมัติ = ล็อกตัวเองถาวร**
+   Story Network `savePositions(this.nodes)` เรียกทันทีหลัง `forceLayout` → รอบเปิดถัดไป
+   **ทุกโหนดมีตำแหน่งบันทึกไว้ = ถูกปักหมุดหมด** → `forceLayout` กลายเป็น no-op ตลอดกาล
+   และปุ่มรีเซ็ตรีเซ็ตแค่กล้อง ไม่มีทางสั่งจัดใหม่ได้เลย
+   **กฎ: บันทึกเฉพาะสิ่งที่ "ผู้ใช้ตั้งใจกำหนดเอง" (ลากเอง) — ผลลัพธ์ที่อัลกอริทึมคำนวณได้เองห้ามบันทึก**
+   · และคู่กับมันต้องมีทางถอย ("ปลดหมุดทั้งหมด แล้วจัดใหม่") เสมอ
+   · localStorage ที่เก็บ layout **ต้องแยกตามโปรเจกต์** (`key:<hash ของ root>`) ไม่งั้นโปรเจกต์
+   ที่มีชื่อเอนทิตี้ซ้ำจะยืมตำแหน่งกันมั่ว
+
+101. **[alpha.64] ตัวแปรที่อ่านค่าตั้งค่ามา แล้วโดนเขียนทับด้วยค่าคงที่ในบรรทัดถัดไป**
+   `draw()` ของ Story Network: `const color = this._edgeCol[e.type] || '#4a4842'` แล้วบรรทัดถัดมา
+   `if (e.type==='co-occur') { color='#8a8885'; … }` **ทับทั้ง 3 ชนิดที่หน้าตั้งค่าเปิดให้ปรับพอดี**
+   → ผู้ใช้ปรับสีแล้วไม่มีอะไรเกิดขึ้น หาสาเหตุไม่เจอเพราะโค้ดอ่านค่ามาแล้วจริง ๆ
+   **เวลาเพิ่ม "ให้ผู้ใช้ตั้งค่าได้" ต้องไล่หาทุกจุดที่ hard-code ค่าเดิมแล้วลบทิ้ง ไม่ใช่แค่เพิ่มที่อ่านค่า**
+   · คู่กัน: ตัวอ่านค่า (`readColors()`) ถูกเรียกแค่ตอน constructor → กด Save แล้วต้องรีสตาร์ท
+   **ทุก "ตั้งค่าได้" ต้องมีทางให้ค่าใหม่ไหลถึงที่ใช้จริงทันที**
+
+102. **[alpha.64] AI ที่ "แก้ไฟล์ได้" ต้องเขียนไฟล์เอง — เรียกฟังก์ชันของ UI ไม่ได้**
+   `addScene`/`addChapter`/`addSection`/`addEntity` ทุกตัวเปิดกล่อง `ask()` ถามชื่อเสมอ →
+   สั่งจากโค้ดไม่ได้เลย · `ai-actions.js` จึงเขียน `draft.json`/`scenes.json`/`section.json`/
+   `.md` frontmatter เองตามรูปแบบเดิมเป๊ะ ๆ
+   **บทเรียนกว้าง: ถ้าอยากให้ automation ใช้ logic เดิมได้ ต้องแยก "ตัวถามผู้ใช้" ออกจาก "ตัวทำงาน"
+   ตั้งแต่แรก** — ไม่งั้นได้โค้ดคู่ขนานที่ต้องดูแลสองที่ (ตอนนี้เป็นแบบหลัง — ถ้ารูปแบบไฟล์เปลี่ยน
+   ต้องแก้ทั้ง `scene-ops.js` และ `ai-actions.js`)
+   · **ไม่ใช้ function-calling ของ API** เพราะผู้ใช้ต่อ provider เองได้ทุกเจ้า รองรับไม่เท่ากัน
+   → โปรโตคอลข้อความ (บล็อก ` ```k2 ` + JSON) ใช้ได้กับทุกโมเดลที่พิมพ์ JSON เป็น
+   · ต้องกัน ` ```json ` ที่เป็น**ตัวอย่างข้อมูลเฉย ๆ** ไม่ให้ถูกนับเป็นคำสั่ง (เช็คว่า `tool` มีจริงในทะเบียน)
+
+103. **[alpha.64] `newSession(j)` ที่ประกอบ object ใหม่ทีละฟิลด์ = ฟิลด์ที่ลืมใส่หายเงียบ**
+   `titleSet` (ธง "ผู้ใช้ตั้งชื่อเอง") ไม่ถูกขนกลับมา → ตั้งชื่อเซสชันเอง ปิดเปิดโปรแกรม ธงหาย
+   ข้อความถัดไปทับชื่อทันที และ "เริ่มใหม่" ก็รีเซ็ตชื่อทิ้ง · **บั๊กแบบนี้ไม่โผล่ใน session เดียว
+   ต้องเทสวงจร save → load → ใช้งานต่อ**
+   · คู่กัน: อย่าเขียนไฟล์ตั้งแต่ "กดสร้าง" — เขียนตอน**มีเนื้อหาจริง** ไม่งั้นกดเล่นสิบทีได้ขยะสิบไฟล์
+   (ธงภายในอย่าง `_draft` ต้องถอดออกก่อน `JSON.stringify` ด้วย)
+
 78. **[alpha.61] ไฟล์ที่ working tree เป็น CRLF ทั้งไฟล์ ทำให้ diff จริงถูกกลบ**
    `main.js` ถูกบันทึกเป็น CRLF มาก่อนเริ่มงาน → `git diff --stat` ขึ้น 766+/766- ทั้งที่ไม่มีอะไรเปลี่ยน
    **เช็คด้วย `git diff -w --stat` ก่อนเสมอ** ถ้าเหลือ 0 = whitespace ล้วน → `perl -i -pe 's/\r\n/\n/g'` แล้วค่อยแก้จริง
@@ -926,7 +1006,16 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด alpha.63r · e2e 2,022 + unit 1,502)
+## เวอร์ชัน (ล่าสุด **alpha.64** · e2e 2,028 ALL OK + unit 1,709 / 26 ไฟล์)
+
+**.64** — **AI ลงมือทำเองได้** (`ai-tools.js` + `ai-actions.js` · 15 คำสั่ง · 3 โหมด read/write/full ·
+วนรอบ สั่ง→ทำ→ป้อนผลกลับ สูงสุด 5 รอบ) · **transcript view 4 แบบ** (ปกติ/ความคิด/ละเอียด/สรุป
+· `parseThinking()` อ่านความคิดได้ทุกสำนวน provider) · เซสชันแชทเกิดเป็นไฟล์เมื่อเริ่มคุยจริง +
+แก้ `titleSet` หายตอนโหลดกลับ · **Planner ที่บังทั้งจอ** (บทเรียน 97) · **แผงลอยลากไม่ไป/เด้งมุมซ้ายบน**
+(บทเรียน 98) · **ลบรูป/อัลบั้มแล้วกู้คืนไปโผล่ Memos/** (บทเรียน 99) · Story Network 7 จุด
+(ผังแข็งถาวร · ตำแหน่งข้ามโปรเจกต์ · สีที่ตั้งไม่มีผล · ชื่อซ้ำชนกัน · `_hit` ไม่ตรง filter ·
+โค้ดตาย `network-toolbar.js` — บทเรียน 100–101) · กระดานอารมณ์เต็มแผง · คลังรูป/แดชบอร์ดเลิกค้าง
+(stat เป็นชุดละ 32) · เทสใหม่ `ai-tools.test.cjs` (64) + `network-layout.test.cjs` (18) + album +9 + e2e +6
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
 .24 batch 8 (drag-move explorer, panel snap, split compare, version tracking, scene lock, screenplay Final Draft look, screenplay images, wiki links) · .25–.27 **Planner board** (fabric.js) · .28 **floating windows** · .29 memo-in-chapter + scoped search

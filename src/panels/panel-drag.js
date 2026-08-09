@@ -253,6 +253,9 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       ov.hide();
       popup.classList.remove('k-float-snapped');
       if (!moved) return;
+      // ถ้ามีอะไร re-render แผงระหว่างลาก popup จะหลุดจากหน้า → offset* เป็น 0 หมด
+      // เขียนต่อ = แผงเด้งไปมุมซ้ายบน ปล่อยผ่านดีกว่า (บั๊ก: คลิกค้างแล้วแผงรีเซ็ต)
+      if (!popup.isConnected) return;
       if (hit) { pm.dockPanel(panelId, hit.zone, hit.targetId); return; }
       // 0.56a #7: ลากหลุดขอบจอแล้วเรียกกลับไม่ได้ → หนีบตำแหน่งให้ยังเห็นหัวแผงเสมอ
       const c = clampFloat({ x: popup.offsetLeft, y: popup.offsetTop,

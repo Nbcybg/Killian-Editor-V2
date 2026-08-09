@@ -20,7 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **1,729 checks · ALL OK** — ห้ามทำให้จำนวนลดลง (unit `npm run test:unit` = **1,913 checks**)
+ปัจจุบัน **2,028 checks · ALL OK** (alpha.64) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **1,709 checks · 26 ไฟล์** + fountain 84)
 (บน Windows: `node test/fixture.js C:\tmp\k2proj` แล้วตั้ง `KILLIAN_TEST_PROJECT=C:\tmp\k2proj`
  ผลออกที่ `C:\tmp\k2result.txt` · unit test `.cjs` ใช้ `os.tmpdir()` แล้วรันได้ทั้งสองระบบ)
 
@@ -118,6 +119,16 @@ editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js ·
 - **ai/ai-character.js** (ข้อ 75) — `checkConsistency` + ตรวจคำลงท้าย/สรรพนามไทยแบบออฟไลน์
 - **ai/ai-world.js** (ข้อ 76) — `generateWorld` 6 เทมเพลต → `toWikiEntity`
 - **ai/ai-chat.js** (ข้อ 79) — `ChatSession`/`chat` (RAG ฉาก+วิกิ+เส้นเวลา · สตรีม · อ้างอิงที่มา)
+- **ai/ai-tools.js** (alpha.64 · บริสุทธิ์ 100%) — **โปรโตคอลให้ AI สั่งงานแอปได้จริง**
+  `TOOLS` (15 คำสั่ง) · `toolsSystemPrompt(cap)` · `parseToolCalls(text)` · `stripToolCalls` ·
+  `validateCall(call, cap)` · `describeCall` · `resultsMessage`
+  · **ไม่ใช้ function-calling ของ API** เพราะ provider ที่ผู้ใช้ต่อเองรองรับไม่เท่ากัน →
+  โมเดลพิมพ์บล็อก ` ```k2 ` ที่มี JSON แทน (โมเดลไหนพิมพ์ JSON เป็นก็ใช้ได้หมด · ผู้ใช้อ่านออกด้วยตา)
+  · สิทธิ์ 3 ระดับ `read` < `write` < `full` ผูกกับโหมดแชท (`modeCap()` ใน ai-session.js)
+- **ai/ai-actions.js** (alpha.64) — ตัวลงมือทำ · `runToolCall(call)` / `touchesProject` / `refreshAfterActions`
+  · **เขียนไฟล์เองตามรูปแบบเดิมเป๊ะ ๆ** (เรียก `scene-ops`/`section-ops`/`wiki-ui` ตรง ๆ ไม่ได้
+  เพราะฟังก์ชันพวกนั้นเปิดกล่องถามชื่อเสมอ — สั่งจากโค้ดไม่ได้)
+  · ลบ = ย้ายเข้า `Recycle/` + เขียน `.k2restore.json` เองเหมือนที่ผู้ใช้ลบ
 - **tools/thesaurus.js** (ข้อ 67) — เอนจินคำพ้อง (คลังไทยในตัว/Datamuse/แคช) — คนละไฟล์กับ `src/thesaurus.js` ที่เป็น UI เดิม
 - **import/import-scrivener.js** (ข้อ 63) — `.scrivx` XML + RTF(`\uNNNN` ไทย) → โครง Killian
 - **comments/comment-core.js** (ข้อ 64) — คอมเมนต์มีเธรด เก็บใน `.md` (บล็อก `<!-- k2-comments -->`) + สมอตามข้อความ
@@ -125,7 +136,7 @@ editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js ·
 **กฎของโมดูล AI**: ไม่ยิงเน็ตเอง (รับ `client`/`http` เข้ามา) · ไม่ throw (คืน `{ok:false,error,code}` ภาษาไทย) ·
 `buildXPrompt`/`parseX` เป็น pure เสมอ · คีย์อยู่ `ai-key.json` เท่านั้น · ฟีเจอร์ตรวจสอบมีชั้นออฟไลน์ก่อน
 
-ทุกตัวไม่แตะ DOM/fs (ต่อไฟล์ผ่าน `io` adapter = `kapi`) · `npm run test:unit` = **1,913 checks**
+ทุกตัวไม่แตะ DOM/fs (ต่อไฟล์ผ่าน `io` adapter = `kapi`) · `npm run test:unit` = **1,709 checks · 26 ไฟล์**
 UI ที่ต้องทำต่อ: `panels/panel-ui.js` · `layout/split-ui.js` · `kanban/kanban-ui.js` · แผง "ฉากที่กล่าวถึง" ในหน้า Wiki ·
 แผง AI (ผู้ช่วยเขียน/ตรวจปม/บทสนทนา/สร้างโลก/แชท) · หน้านำเข้า Scrivener · แถบคอมเมนต์ข้างฉาก
 แล้วค่อยต่อ entry point ตามกฎข้อ 7 (เมนู main.js + `case` ใน `handleCommand`)

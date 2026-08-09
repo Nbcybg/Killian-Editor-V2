@@ -202,8 +202,12 @@ const check = (name, cond, extra) => {
 
 // ══════════════════ 8) เซสชันแชท ══════════════════
 {
-  check('[เซสชัน] มี 2 โหมด: วางแผน(อ่านอย่างเดียว) กับ ช่วยเขียน(แก้ไขได้)',
-        S.CHAT_MODES.length === 2 && S.modeDef('plan').write === false && S.modeDef('write').write === true);
+  // [alpha.63r4] เพิ่มโหมดที่สาม: ปลดล็อกเต็มที่ (สั่งลบได้)
+  check('[เซสชัน] มี 3 โหมด: วางแผน(อ่านอย่างเดียว) · ช่วยเขียน(สร้าง/แก้) · ปลดล็อกเต็มที่',
+        S.CHAT_MODES.length === 3 && S.modeDef('plan').write === false
+        && S.modeDef('write').write === true && S.modeDef('agent').write === true);
+  check('[เซสชัน] สิทธิ์ของแต่ละโหมดไล่ระดับถูก',
+        S.modeCap('plan') === 'read' && S.modeCap('write') === 'write' && S.modeCap('agent') === 'full');
   check('[เซสชัน] โหมดที่ไม่รู้จักตกกลับโหมดแรก', S.modeDef('มั่ว').id === 'plan');
   check('[เซสชัน] ระดับการเข้าถึงครบ project/book/chapter/scene',
         ['project', 'book', 'chapter', 'scene'].every((id) => S.SCOPES.some((s) => s.id === id)));

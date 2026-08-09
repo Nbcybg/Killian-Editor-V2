@@ -184,9 +184,12 @@ export async function renderDashboard(pane) {
     const albums = await AC.listAlbums(kapi, state.root);
     const imgs = await AC.allImages(kapi, state.root, albums);
     if (imgs.length) {
-      for (const it of imgs) {
-        try { it.size = (await kapi.stat(await kapi.join(state.root, 'Images', ...it.path.split('/')))).size; }
-        catch { it.size = 0; }
+      // ยิง stat เป็นชุด ไม่ใช่ทีละใบ — คลังรูปใหญ่ ๆ ทำให้แดชบอร์ดค้างรอเป็นสิบวินาที
+      for (let i = 0; i < imgs.length; i += 32) {
+        await Promise.all(imgs.slice(i, i + 32).map(async (it) => {
+          try { it.size = (await kapi.stat(await kapi.join(state.root, 'Images', ...it.path.split('/')))).size; }
+          catch { it.size = 0; }
+        }));
       }
       const { index } = await UIX.scanUsage(kapi, state.root);
       const st = AC.galleryStats(UIX.attachUsage(imgs, index), albums);

@@ -1,13 +1,13 @@
 {
     "name":  "killian2",
-    "version":  "2.0.0-alpha.63r",
+    "version":  "2.0.0-alpha.64",
     "description":  "โปรแกรมเขียนนิยาย/บทหนัง — Electron + ProseMirror",
     "main":  "main.js",
     "scripts":  {
                     "start":  "electron .",
                     "build":  "node build.js",
                     "test":  "node test/md.test.js",
-                    "test:unit":  "node test/search-engine.test.cjs \u0026\u0026 node test/panel.test.cjs \u0026\u0026 node test/split.test.cjs \u0026\u0026 node test/branch.test.cjs \u0026\u0026 node test/timeline.test.cjs \u0026\u0026 node test/kanban.test.cjs \u0026\u0026 node test/world-story.test.cjs \u0026\u0026 node test/auto-task.test.cjs \u0026\u0026 node test/ai-core.test.cjs \u0026\u0026 node test/ai-features.test.cjs \u0026\u0026 node test/tools.test.cjs \u0026\u0026 node test/relationship.test.cjs \u0026\u0026 node test/sp-format.test.cjs \u0026\u0026 node test/sp-validator.test.cjs \u0026\u0026 node test/sp-view.test.cjs \u0026\u0026 node test/sp-continued.test.cjs \u0026\u0026 node test/sp-reports.test.cjs \u0026\u0026 node test/sp-export.test.cjs \u0026\u0026 node test/smart-terms.test.cjs \u0026\u0026 node test/lang-fonts.test.cjs \u0026\u0026 node test/prose-format.test.cjs \u0026\u0026 node test/alpha58r.test.cjs \u0026\u0026 node test/sp-headers.test.cjs \u0026\u0026 node test/sp-title-pages.test.cjs \u0026\u0026 node test/pdf-generator.test.cjs \u0026\u0026 node test/compile-omit.test.cjs \u0026\u0026 node test/text-case.test.cjs \u0026\u0026 node test/wiki-images.test.cjs \u0026\u0026 node test/scene-meta.test.cjs \u0026\u0026 node test/margin-presets.test.cjs \u0026\u0026 node test/i18n-csv.test.cjs \u0026\u0026 node test/ai-providers.test.cjs \u0026\u0026 node test/album.test.cjs \u0026\u0026 node test/fountain.test.mjs",
+                    "test:unit":  "node test/search-engine.test.cjs \u0026\u0026 node test/panel.test.cjs \u0026\u0026 node test/split.test.cjs \u0026\u0026 node test/branch.test.cjs \u0026\u0026 node test/timeline.test.cjs \u0026\u0026 node test/kanban.test.cjs \u0026\u0026 node test/world-story.test.cjs \u0026\u0026 node test/auto-task.test.cjs \u0026\u0026 node test/ai-core.test.cjs \u0026\u0026 node test/ai-features.test.cjs \u0026\u0026 node test/tools.test.cjs \u0026\u0026 node test/relationship.test.cjs \u0026\u0026 node test/sp-format.test.cjs \u0026\u0026 node test/sp-validator.test.cjs \u0026\u0026 node test/sp-view.test.cjs \u0026\u0026 node test/sp-continued.test.cjs \u0026\u0026 node test/sp-reports.test.cjs \u0026\u0026 node test/sp-export.test.cjs \u0026\u0026 node test/smart-terms.test.cjs \u0026\u0026 node test/lang-fonts.test.cjs \u0026\u0026 node test/prose-format.test.cjs \u0026\u0026 node test/alpha58r.test.cjs \u0026\u0026 node test/sp-headers.test.cjs \u0026\u0026 node test/sp-title-pages.test.cjs \u0026\u0026 node test/pdf-generator.test.cjs \u0026\u0026 node test/compile-omit.test.cjs \u0026\u0026 node test/text-case.test.cjs \u0026\u0026 node test/wiki-images.test.cjs \u0026\u0026 node test/scene-meta.test.cjs \u0026\u0026 node test/margin-presets.test.cjs \u0026\u0026 node test/i18n-csv.test.cjs \u0026\u0026 node test/ai-providers.test.cjs \u0026\u0026 node test/album.test.cjs \u0026\u0026 node test/network-layout.test.cjs && node test/ai-tools.test.cjs \u0026\u0026 node test/fountain.test.mjs",
                     "dist":  "node build.js \u0026\u0026 electron-builder --win portable",
                     "dist:dir":  "node build.js \u0026\u0026 electron-builder --win dir",
                     "dist:mac":  "node build.js \u0026\u0026 electron-builder --mac dmg --x64"
@@ -46,7 +46,7 @@
                   "appId":  "com.killian2.app",
                   "productName":  "Killian 2",
                   "directories":  {
-"output": "dist4"
+"output": "dist"
                                   },
                   "files":  [
                                 "main.js",

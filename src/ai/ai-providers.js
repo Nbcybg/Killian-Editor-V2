@@ -271,7 +271,25 @@ export function parseChat(json) {
   const cached = numOr((u.prompt_tokens_details || {}).cached_tokens,
                        u.cache_read_input_tokens, u.cached_tokens, 0);
   const total = numOr(u.total_tokens, input + output);
-  return { text: String(text || ''), usage: { input, output, reasoning, cached, total } };
+  return { text: String(text || ''), thinking: parseThinking(json), usage: { input, output, reasoning, cached, total } };
+}
+
+/**
+ * ข้อความ "ความคิด" ของโมเดล — แต่ละเจ้าวางไว้คนละที่ ลองทุกสำนวนที่ใช้กันจริง
+ * DeepSeek/Qwen: choices[0].message.reasoning_content · OpenRouter: .reasoning
+ * Anthropic: content[] ที่ type === 'thinking' · Ollama: message.thinking
+ */
+export function parseThinking(json) {
+  if (!json || typeof json !== 'object') return '';
+  const msg = (json.choices && json.choices[0] && json.choices[0].message) || json.message || {};
+  const direct = msg.reasoning_content || msg.reasoning || msg.thinking;
+  if (typeof direct === 'string' && direct.trim()) return direct;
+  if (Array.isArray(json.content)) {
+    const th = json.content.filter((c) => c && (c.type === 'thinking' || c.type === 'redacted_thinking'))
+      .map((c) => c.thinking || c.text || '').join('\n').trim();
+    if (th) return th;
+  }
+  return '';
 }
 function emptyUsage() { return { input: 0, output: 0, reasoning: 0, cached: 0, total: 0 }; }
 function numOr(...vals) {

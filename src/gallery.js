@@ -152,10 +152,16 @@ export class Gallery {
     if (rescan || !this.usage.size) await this.rescanUsage();
     if (gen !== this._gen) return false;
     const withUse = UI.attachUsage(items, this.usage);
-    for (const it of withUse) {
-      const st = await statOf(this.root, it.path);
-      it.size = st.size || 0;
-      if (!it.added) it.added = st.birthtimeMs || st.mtimeMs || 0;
+    // เดิมยิง stat ทีละใบแล้วรอทีละอัน = IPC หนึ่งรอบต่อรูป — อัลบั้มหลักร้อยใบทำให้แผงค้างไปหลายวินาที
+    // ยิงเป็นชุดแทน (ชุดละ 32 เพื่อไม่ถล่ม IPC ทีเดียว) + เช็ค gen ระหว่างชุดเพื่อยกเลิกได้ไว
+    const CHUNK = 32;
+    for (let i = 0; i < withUse.length; i += CHUNK) {
+      if (gen !== this._gen) return false;
+      await Promise.all(withUse.slice(i, i + CHUNK).map(async (it) => {
+        const st = await statOf(this.root, it.path);
+        it.size = st.size || 0;
+        if (!it.added) it.added = st.birthtimeMs || st.mtimeMs || 0;
+      }));
     }
     if (gen !== this._gen) return false;
     this.items = withUse;

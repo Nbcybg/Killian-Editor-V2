@@ -1,8 +1,8 @@
-// Story Network — alpha.67 · Canvas 2D/3D with full feature set
+// Story Network — alpha.63r4 · Canvas 2D/3D with full feature set
 import { visualTagFor } from './visual-tags.js';
 import { REL_COLOR, REL_TYPES, categorizeRole } from './relationship-types.js';
 import { state } from './core.js';
-import { seedLayout, forceLayout, loadPositions, savePositions } from './network-layout.js';
+import { seedLayout, forceLayout, loadPositions, savePositions, clearPositions, nodeKey } from './network-layout.js';
 import { ensureAutoLink, getBacklinksFor } from './world-story/auto-link-ui.js';
 
 REL_COLOR['co-occur'] = '#8a8885';
@@ -13,6 +13,10 @@ const CAT_COLOR = { characters:'#d97757', locations:'#7aa8d8', items:'#6fae8a', 
 const CAT_ARR = ['characters','locations','items','lore','scene','chapter','book'];
 const BG = '#1a1a18', GRID = '#3a3a36';
 const WIKI_CATS = new Set(['characters','locations','items','lore']);
+
+// คีย์เส้นเชื่อม — ต้องอิง nodeKey ไม่ใช่ชื่อล้วน ไม่งั้นชื่อซ้ำข้ามหมวดทำให้เส้นหายไปเงียบ ๆ
+const EDGE_SEP = String.fromCharCode(1);
+function edgeKey(a, b) { const x = nodeKey(a), y = nodeKey(b); return x < y ? x + EDGE_SEP + y : y + EDGE_SEP + x; }
 
 function tagStyle(n) { for(const t of n.tags||[]){const v=visualTagFor(t);if(v)return v;} return null; }
 function isStruct(n){return n.cat==='scene'||n.cat==='chapter'||n.cat==='book'||n.cat==='section';}
@@ -44,7 +48,7 @@ function buildToolbar(pane, cb) {
   gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title='โปร่งใส grid: '+gridAlpha.value+'%';};
   gridRow.append(gridBtn,gridSize,gridAlpha);
   const btns=document.createElement('div');btns.className='net-tbar-actions';
-  [{t:'🔄',ti:'รีเฟรช',f:cb.refresh},{t:'🖼',ti:'แสดงรูปย่อ',f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:'สลับ 2D/3D',f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:'ส่งออก',f:cb.export},{t:'⤾',ti:'รีเซ็ต',f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
+  [{t:'🔄',ti:'รีเฟรช',f:cb.refresh},{t:'📌',ti:'ปลดหมุดทุกโหนด แล้วจัดผังใหม่',f:cb.relayout},{t:'🖼',ti:'แสดงรูปย่อ',f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:'สลับ 2D/3D',f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:'ส่งออก',f:cb.export},{t:'⤾',ti:'รีเซ็ต',f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
   bd.append(cr,tr,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
   return {bar,btns,destroy:()=>bar.remove()};
 }
@@ -151,9 +155,11 @@ export class StoryNetwork {
 
     const self=this;
     this._tb=buildToolbar(pane,{
-      filter(ca,tf){self._catFilter=ca;self._typeFilter=tf;self.draw();},
+      // buildToolbar ส่ง Set ตัวเดิมกลับมาทุกครั้ง (แก้ในที่) → ต้องล้าง cache เอง
+      filter(ca,tf){self._catFilter=ca;self._typeFilter=tf;self._vfCache=null;self.draw();},
       search(q){self._searchQuery=q;self.draw();},
       refresh(){self.refresh();},
+      relayout(){self.relayout();},
       toggleImages(){self._showImages=!self._showImages;self.draw();},
       toggleMinimap(){self._showMinimap=!self._showMinimap;self._mm.style.display=self._showMinimap?'':'none';self._updateMinimap();},
       toggle3D(){self._mode3D=!self._mode3D;self._fit();self.draw();if(self._showMinimap)self._updateMinimap();},
@@ -178,14 +184,19 @@ export class StoryNetwork {
       characters: cc['nc-char']||'#d97757', locations: cc['nc-loca']||'#7aa8d8',
       items: cc['nc-item']||'#6fae8a', lore: cc['nc-lore']||'#b58fc9',
       scene: cc['nc-scen']||'#e8c95c', chapter: cc['nc-chap']||'#c08a5e',
-      book: cc['nc-chap']||'#a8d870', section: cc['nc-sect']||'#8ec8c8',
+      // book = "เล่ม" เหมือน section → ต้องตามช่อง nc-sect ไม่ใช่ nc-chap (ของเดิมสลับกัน)
+      book: cc['nc-sect']||'#a8d870', section: cc['nc-sect']||'#8ec8c8',
     };
     this._edgeCol={...REL_COLOR,
       'scene-link': ce['ne-sl']||'#5caf8a', 'co-occur': ce['ne-co']||'#8a8885',
       'ent-scene': ce['ne-es']||'#d9955f',
     };
     if(ce['ne-rel']){for(const k of Object.keys(this._edgeCol)){if(!['scene-link','co-occur','ent-scene'].includes(k))this._edgeCol[k]=ce['ne-rel'];}}
+    this._vfCache=null;
   }
+
+  /** โปรเจกต์ที่ผังนี้เป็นของ — ใช้แยก localStorage ของตำแหน่งโหนด */
+  _scope(){ return state.root || ''; }
 
   async refresh() {
     try {
@@ -196,18 +207,24 @@ export class StoryNetwork {
       const W=Math.max(600,this.pane.clientWidth||900);
       const H=Math.max(400,this.pane.clientHeight||600);
       const D = this._mode3D ? 400 : 0;
-      const pos=loadPositions();
+      const pos=loadPositions(this._scope());
       this.nodes = ents.map((e)=>({...e, x:0,y:0,z:0}));
       seedLayout(this.nodes,pos,{width:W,height:H,depth:D||400});
-      const byName=Object.fromEntries(this.nodes.map(n=>[n.name,n]));
+      // ความสัมพันธ์อ้างถึงกันด้วย "ชื่อ" → ถ้าชื่อซ้ำข้ามหมวด ให้เอนทิตี้ Wiki ชนะฉาก/บทเสมอ
+      const byName={};
+      for(const n of this.nodes){
+        const cur=byName[n.name];
+        if(!cur||(WIKI_CATS.has(n.cat)&&!WIKI_CATS.has(cur.cat)))byName[n.name]=n;
+      }
       this.edges=[];const seen=new Set();
-      for(const n of this.nodes){for(const r of n.relationships||[]){const t=byName[r.targetName||r.target];if(!t)continue;const k=[n.name,t.name].sort().join('|');if(seen.has(k))continue;seen.add(k);this.edges.push({a:n,b:t,role:r.role||'',type:r.type||categorizeRole(r.role)});}}
+      for(const n of this.nodes){for(const r of n.relationships||[]){const t=byName[r.targetName||r.target];if(!t||t===n)continue;const k=edgeKey(n,t);if(seen.has(k))continue;seen.add(k);this.edges.push({a:n,b:t,role:r.role||'',type:r.type||categorizeRole(r.role)});}}
       await this._loadCoOccur(byName,seen);
       this._linkStructNodes(byName,seen);
-      const pinned=new Set();
-      for(const n of this.nodes){if(pos&&pos[n.name])pinned.add(n);}
+      // ปักหมุดเฉพาะโหนดที่ผู้ใช้เคยลากเอง (seedLayout ติดธง _pinned ให้แล้ว)
+      const pinned=new Set(this.nodes.filter(n=>n._pinned));
       forceLayout(this.nodes,this.edges,{width:W,height:H,depth:D||400,iters:280,pinned});
-      savePositions(this.nodes);
+      // ไม่บันทึกที่นี่ — บันทึกตอนผู้ใช้ลากเท่านั้น ไม่งั้นรอบหน้าจะถูกหมุดหมดทั้งผัง
+      this._vfCache=null;
       this._fit();this.draw();this._updateMinimap();
     }catch(e){console.error('SN refresh error:',e?.message||e);}
   }
@@ -220,11 +237,13 @@ export class StoryNetwork {
       if(hasBl){
         const byFile={};
         for(const n of this.nodes){let rel=n.file;if(rel.startsWith(root))rel=rel.slice(root.length);rel=rel.replace(/^[/\\]+/,'').replace(/\\/g,'/');byFile[rel]=n;const p=rel.split('/');if(p.length>=2&&(p[0]==='Wiki'||p[0]==='Bible')){const nr=p.slice(1).join('/');if(!byFile[nr])byFile[nr]=n;}}
-        const pairs={};const keys=Object.keys(bl);
+        // เก็บโหนดคู่ไว้ตรง ๆ — ของเดิมต่อคีย์เป็นสตริงแล้ว split('|') ทีหลัง ซึ่งพังทันทีถ้าชื่อมี '|'
+        const pairs=new Map();const keys=Object.keys(bl);
         for(let i=0;i<keys.length;i++){const a=byFile[keys[i]];if(!a)continue;const aS=new Set(bl[keys[i]]);
           for(let j=i+1;j<keys.length;j++){const b=byFile[keys[j]];if(!b||a===b)continue;const sh=bl[keys[j]].filter(s=>aS.has(s)).length;if(sh<2)continue;
-            const k=[a.name,b.name].sort().join('|');if(seen.has(k))continue;pairs[k]=Math.max(pairs[k]||0,sh);}}
-        for(const[k,count] of Object.entries(pairs)){const[na,nb]=k.split('|');const a=byName[na],b=byName[nb];if(!a||!b)continue;seen.add(k);this.edges.push({a,b,role:'co-occur '+count,type:'co-occur'});}
+            const k=edgeKey(a,b);if(seen.has(k))continue;
+            const prev=pairs.get(k);if(!prev||sh>prev.count)pairs.set(k,{a,b,count:sh});}}
+        for(const[k,{a,b,count}] of pairs){seen.add(k);this.edges.push({a,b,role:'co-occur '+count,type:'co-occur'});}
         const bySid={};
         for(const n of this.nodes){if(n.cat==='scene'&&n.sid){const s=String(n.sid).toLowerCase();if(!bySid[s])bySid[s]=[];bySid[s].push(n);}}
         if(Object.keys(bySid).length){
@@ -233,7 +252,7 @@ export class StoryNetwork {
             const scArr=[];
             for(const scId of scenes){const sn=bySid[String(scId).toLowerCase()];if(sn)scArr.push(...sn);}
             for(const sn of scArr){
-              const ek=[ent.name,sn.name].sort().join('|')+'+esc';if(seen.has(ek))continue;
+              const ek=edgeKey(ent,sn)+'+esc';if(seen.has(ek))continue;
               seen.add(ek);this.edges.push({a:ent,b:sn,role:'กล่าวถึง',type:'ent-scene'});
             }
           }
@@ -260,7 +279,7 @@ export class StoryNetwork {
         const sns=bySid[String(bk.sceneId).toLowerCase()];
         if(!sns)continue;
         for(const sn of sns){
-          const ek=[ent.name,sn.name].sort().join('|')+'+esc';
+          const ek=edgeKey(ent,sn)+'+esc';
           if(seen.has(ek))continue;
           seen.add(ek);
           this.edges.push({a:ent,b:sn,role:'กล่าวถึง',type:'ent-scene'});
@@ -276,7 +295,7 @@ export class StoryNetwork {
       const chId=(s.chapterId||s.ch||'').toLowerCase();
       const ch=chs.find(c=>(c.name||'').toLowerCase()===chId||(c.chName||'').toLowerCase()===chId);
       if(!ch)continue;
-      const k=[s.name,ch.name].sort().join('|');if(seen.has(k))continue;
+      const k=edgeKey(s,ch);if(seen.has(k))continue;
       seen.add(k);this.edges.push({a:s,b:ch,role:'อยู่ใน',type:'scene-link'});
     }
     const secs=this.nodes.filter(n=>n.cat==='section');
@@ -284,7 +303,7 @@ export class StoryNetwork {
       if(!ch.sectionName)continue;
       const sec=secs.find(s=>(s.name||'').toLowerCase()===ch.sectionName.toLowerCase());
       if(!sec)continue;
-      const k=[ch.name,sec.name].sort().join('|');if(seen.has(k))continue;
+      const k=edgeKey(ch,sec);if(seen.has(k))continue;
       seen.add(k);this.edges.push({a:ch,b:sec,role:'อยู่ใน',type:'scene-link'});
     }
   }
@@ -322,13 +341,12 @@ export class StoryNetwork {
     }
     c.font='11px "Segoe UI","Leelawadee UI",sans-serif';
 
-    const ac=this._catFilter.size===4,at=this._typeFilter.size===REL_TYPES.length+3;
-    const q=this._searchQuery.toLowerCase();const m=new Set();
-    if(q)for(const n of this.nodes)if(n.name.toLowerCase().includes(q))m.add(n);
+    const at=this._typeFilter.size===REL_TYPES.length+3;
+    const {q,m,visible}=this._visFilter();
 
     const visNodes = []; const visSet = new Set();
     for(const n of this.nodes){
-      if((!ac&&!this._catFilter.has(n.cat)&&!isStruct(n))||(q&&!m.has(n)))continue;
+      if(!visible(n))continue;
       visNodes.push(n); visSet.add(n);
     }
 
@@ -352,13 +370,15 @@ export class StoryNetwork {
       const aVis=visSet.has(e.a),bVis=visSet.has(e.b);
       if(!aVis&&!bVis)continue;
       let alpha=at||this._typeFilter.has(e.type)?1:0.08;
-      let color=this._edgeCol[e.type]||'#4a4842',lw=2.0;
-      if(e.type==='co-occur'){color='#8a8885';lw=1.2;if(alpha===1)alpha=0.5;c.setLineDash([4,3]);}
-      else if(e.type==='scene-link'){color='#5caf8a';lw=1.6;if(alpha===1)alpha=0.7;c.setLineDash([3,4]);}
-      else if(e.type==='ent-scene'){color='#d9955f';lw=1.4;if(alpha===1)alpha=0.55;c.setLineDash([5,4,2,4]);}
+      // สีมาจาก _edgeCol เท่านั้น — ของเดิมเขียนทับด้วยค่าคงที่ตรงนี้ สีที่ผู้ใช้ตั้งไว้เลยไม่เคยมีผล
+      const color=this._edgeCol[e.type]||'#4a4842';let lw=2.0;
+      if(e.type==='co-occur'){lw=1.2;if(alpha===1)alpha=0.5;c.setLineDash([4,3]);}
+      else if(e.type==='scene-link'){lw=1.6;if(alpha===1)alpha=0.7;c.setLineDash([3,4]);}
+      else if(e.type==='ent-scene'){lw=1.4;if(alpha===1)alpha=0.55;c.setLineDash([5,4,2,4]);}
       else c.setLineDash([]);
       const isHover=this._hoverNode&&(e.a===this._hoverNode||e.b===this._hoverNode);
-      if(isHover){lw=3.2;alpha=1;c.shadowColor=color.replace(')','');c.shadowColor+='0.55)';c.shadowBlur=10;}
+      // สีเส้นเป็น hex → ต้องแปลงเป็น rgba ก่อน (ของเดิมต่อสตริงจนได้ค่าที่ Canvas อ่านไม่ออก เงาเลยไม่ขึ้น)
+      if(isHover){lw=3.2;alpha=1;c.shadowColor=hexToRgba(color,0.55);c.shadowBlur=10;}
       c.globalAlpha=alpha;c.strokeStyle=color;c.lineWidth=lw;
       c.beginPath();c.moveTo(px(e.a),py(e.a));c.lineTo(px(e.b),py(e.b));c.stroke();c.setLineDash([]);c.shadowBlur=0;
       if(e.role&&alpha>0.3){
@@ -458,20 +478,38 @@ export class StoryNetwork {
   }
 
   // ── hit / mouse ──
+  /** เงื่อนไข "โหนดนี้โผล่ไหม" ชุดเดียวที่ทั้ง draw() และ _hit() ใช้ร่วมกัน
+   *  แยกกันเมื่อไหร่ = คลิก/ลากโดนโหนดที่ถูกกรองซ่อนอยู่ (บั๊กเดิม)
+   *  cache ไว้เพราะ _hit ถูกเรียกทุก mousemove */
+  _visFilter(){
+    if(this._vfCache&&this._vfCache.q===this._searchQuery&&this._vfCache.cf===this._catFilter
+       &&this._vfCache.len===this.nodes.length)return this._vfCache;
+    const cf=this._catFilter;
+    const ac=cf.size===4;
+    const q=(this._searchQuery||'').toLowerCase();
+    const m=new Set();
+    if(q)for(const n of this.nodes)if((n.name||'').toLowerCase().includes(q))m.add(n);
+    const visible=(n)=>!((!ac&&!cf.has(n.cat)&&!isStruct(n))||(q&&!m.has(n)));
+    this._vfCache={q:this._searchQuery,cf,len:this.nodes.length,ac,m,visible};
+    return this._vfCache;
+  }
+
   _hit(e){
     const r=this.canvas.getBoundingClientRect();
     const sx=(e.clientX-r.left-this._cx)/this._scale;
     const sy=(e.clientY-r.top-this._cy)/this._scale;
+    const {visible}=this._visFilter();
     if(this._mode3D){
       let best=null,bestD=400;
       for(const n of this.nodes){
+        if(!visible(n))continue;
         const p=project3D(n.x,n.y,n.z||0,this._rx,this._ry);
         const d=(p.x-sx)**2+(p.y-sy)**2;
         if(d<bestD){bestD=d;best=n;}
       }
       return{x:sx,y:sy,node:bestD<400?best:null};
     }
-    return{x:sx,y:sy,node:this.nodes.find(n=>(n.x-sx)**2+(n.y-sy)**2<=400)||null};
+    return{x:sx,y:sy,node:this.nodes.find(n=>visible(n)&&(n.x-sx)**2+(n.y-sy)**2<=400)||null};
   }
 
   _down(e){
@@ -498,8 +536,22 @@ export class StoryNetwork {
     if(this._orbitDrag){this._orbitDrag=null;return;}
     if(this.pan){this.pan=null;this.canvas.classList.remove('net-panning');return;}
     // no single-click open — use double-click only
-    if(this.drag&&this.drag.moved)savePositions(this.nodes);
+    // ลากเอง = ปักหมุดโหนดนั้น (เฉพาะโหนดที่ปักหมุดเท่านั้นที่ถูกบันทึก)
+    if(this.drag&&this.drag.moved){this.drag.node._pinned=true;savePositions(this.nodes,this._scope());}
     this.drag=null;
+  }
+
+  /** ปลดหมุดทุกโหนด แล้วให้ force layout จัดผังใหม่ทั้งหมด */
+  relayout(){
+    clearPositions(this.nodes,this._scope());
+    this.refresh();
+  }
+
+  /** ปลดหมุดโหนดเดียว — รอบ refresh ถัดไป force layout จะขยับมันได้อีก */
+  unpin(node){
+    if(!node)return;
+    node._pinned=false;
+    savePositions(this.nodes,this._scope());
   }
 
   _repel(node, hx, hy) {
@@ -586,9 +638,14 @@ export class StoryNetwork {
           });
         }
       }
+      if(node._pinned){
+        addItem('-',()=>{});
+        addItem('📌 ปลดหมุดโหนดนี้',()=>{this.unpin(node);this.draw();});
+      }
     }else{
       addItem('⤾ รีเซ็ตมุมมอง',()=>{this._scale=1;this._cx=0;this._cy=0;this._rx=0.4;this._ry=-0.3;this.draw();});
       addItem('🔄 รีเฟรช',()=>this.refresh());
+      addItem('📌 ปลดหมุดทุกโหนด แล้วจัดผังใหม่',()=>this.relayout());
     }
     document.body.appendChild(menu);
     document.addEventListener('click',this._ctxCleanup);this._ctxListenerAdded=true;
@@ -604,6 +661,6 @@ export class StoryNetwork {
     document.removeEventListener('mouseup',this._upDoc);
     if(this._ro)this._ro.disconnect();
     if(this._tb)this._tb.destroy();
-    savePositions(this.nodes);
+    savePositions(this.nodes,this._scope());
   }
 }

@@ -105,6 +105,9 @@ export class PanelStore {
   // อัปเดต layout (ผ่านฟังก์ชันจาก panel-layout) แล้วบันทึก + แจ้ง listener อัตโนมัติ
   update(nextRoot) { this.root = nextRoot; this.save(); this._emit(); }
   setFloats(floats) { this.floats = floats; this.save(); this._emit(); }
+  /** บันทึกอย่างเดียว ไม่แจ้ง listener → ไม่ re-render
+   *  ใช้กับการสลับลำดับ z เท่านั้น: re-render กลาง mousedown จะทำให้ DOM ที่กำลังลากหลุด */
+  setFloatsQuiet(floats) { this.floats = floats; this.save(); }
   onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   _emit() { for (const fn of this.listeners) fn(this.root, this.floats); }
 }
@@ -259,9 +262,12 @@ export class PanelManager {
     return true;
   }
   _toFront(id) {                                   // ลำดับท้ายอาร์เรย์ = อยู่บนสุด (z-order)
-    const f = this.floats.find((x) => x.panel.id === id);
-    if (!f) return;
-    this.store.setFloats([...this.floats.filter((x) => x !== f), f]);
+    const list = this.floats;
+    const f = list.find((x) => x.panel.id === id);
+    if (!f || list[list.length - 1] === f) return;  // อยู่บนสุดแล้ว — อย่าเขียน store ซ้ำ
+    // quiet: ตัวเรียก (renderFloatPanel) ย้าย DOM ให้อยู่บนสุดเองแล้ว
+    // ถ้า _emit ตรงนี้ = re-render กลาง mousedown → ลากไม่ไป + ตำแหน่ง/ขนาดเพี้ยน
+    this.store.setFloatsQuiet([...list.filter((x) => x !== f), f]);
   }
 
   // ---- แท็บ / กลุ่ม ----

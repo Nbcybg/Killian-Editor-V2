@@ -11,16 +11,38 @@ export const SESSION_DIR = 'Sessions';
 export const SESSION_VERSION = 1;
 
 // โหมดการทำงานของผู้ช่วย (ผู้ใช้สลับได้ที่กล่องพิมพ์)
+// `cap` = สิทธิ์ที่ส่งให้ ai-tools.js ตัดสินว่าคำสั่งไหนเรียกได้ ('read' | 'write' | 'full')
 export const CHAT_MODES = [
-  { id: 'plan',  label: 'วางแผน (อ่านอย่างเดียว)', icon: '📖', write: false,
+  { id: 'plan',  label: 'วางแผน (อ่านอย่างเดียว)', icon: '📖', write: false, cap: 'read',
     system: 'คุณเป็นผู้ช่วยนักเขียน โหมดนี้คือ "อ่านอย่างเดียว" — วิเคราะห์ เสนอแนะ วางแผนได้ ' +
-            'แต่ห้ามแก้ไขหรือสร้างไฟล์ ถ้าผู้ใช้ขอให้แก้ ให้เสนอเป็นข้อความว่าจะแก้อย่างไรแทน' },
-  { id: 'write', label: 'ช่วยเขียน (แก้ไขได้)',    icon: '✍️', write: true,
-    system: 'คุณเป็นผู้ช่วยนักเขียน โหมดนี้แก้ไข/สร้างไฟล์ในโปรเจกต์ได้ ' +
-            'เขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม และบอกทุกครั้งว่าจะแตะไฟล์ไหน' },
+            'อ่านโปรเจกต์ได้ด้วยคำสั่งอ่าน แต่ห้ามแก้ไขหรือสร้างไฟล์ ' +
+            'ถ้าผู้ใช้ขอให้แก้ ให้เสนอเป็นข้อความว่าจะแก้อย่างไรแทน' },
+  { id: 'write', label: 'ช่วยเขียน (สร้าง/แก้ได้)', icon: '✍️', write: true, cap: 'write',
+    system: 'คุณเป็นผู้ช่วยนักเขียน โหมดนี้สร้างและแก้ไฟล์ในโปรเจกต์ได้จริงผ่านคำสั่งด้านล่าง ' +
+            'แต่ลบของไม่ได้ เขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม และบอกทุกครั้งว่าจะแตะไฟล์ไหน' },
+  { id: 'agent', label: 'ปลดล็อกเต็มที่ (ทำได้ทุกอย่าง)', icon: '🔓', write: true, cap: 'full',
+    system: 'คุณเป็นผู้ช่วยนักเขียนที่ลงมือทำเองได้เต็มที่ — สร้าง แก้ ลบ อะไรก็ได้ในโปรเจกต์นี้ ' +
+            'ผ่านคำสั่งด้านล่าง ทำงานให้จบเป็นเรื่อง ๆ ไม่ต้องถามกลับทุกขั้น ' +
+            'แต่ก่อนลบของ ให้บอกเหตุผลสั้น ๆ เสมอ และเขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม' },
 ];
 export const DEFAULT_MODE = 'plan';
 export function modeDef(id) { return CHAT_MODES.find((m) => m.id === id) || CHAT_MODES[0]; }
+/** สิทธิ์ของโหมด — ai-tools.js ใช้ค่านี้ */
+export function modeCap(id) { return modeDef(id).cap || 'read'; }
+
+// มุมมอง transcript — เปลี่ยนได้ที่หัวเซสชัน มีผลกับการแสดงผลเท่านั้น (ไม่กระทบข้อมูล)
+export const TRANSCRIPT_VIEWS = [
+  { id: 'normal',   label: 'ปกติ',       icon: '💬',
+    hint: 'เฉพาะบทสนทนา — ซ่อนบล็อกคำสั่งและเบื้องหลังทั้งหมด' },
+  { id: 'thinking', label: 'ความคิด',     icon: '🧠',
+    hint: 'บทสนทนา + ความคิดของโมเดล (ถ้าเจ้านั้นส่งกลับมา) + คำสั่งที่สั่งทำ' },
+  { id: 'verbose',  label: 'ละเอียด',     icon: '🔍',
+    hint: 'ทุกอย่าง — system prompt, บริบทที่ส่งไป, คำสั่งดิบ, ผลลัพธ์, token, เวลา' },
+  { id: 'summary',  label: 'สรุป',        icon: '📋',
+    hint: 'ย่อเหลือบรรทัดเดียวต่อข้อความ — ไล่ดูบทสนทนายาว ๆ ได้เร็ว' },
+];
+export const DEFAULT_VIEW = 'normal';
+export function viewDef(id) { return TRANSCRIPT_VIEWS.find((v) => v.id === id) || TRANSCRIPT_VIEWS[0]; }
 
 // ระดับการเข้าถึงข้อมูลของโปรเจกต์ที่ยอมให้ AI เห็น
 export const SCOPES = [
@@ -59,18 +81,29 @@ export function newSession(patch = {}) {
     v: SESSION_VERSION,
     id: patch.id || newSessionId(),
     title: patch.title || 'เซสชันใหม่',
+    // [alpha.63r4] ต้องขนกลับมาด้วย — ของเดิมตกฟิลด์นี้ ทำให้ชื่อที่ผู้ใช้ตั้งเอง
+    // ถูกชื่ออัตโนมัติทับทันทีที่ปิดแล้วเปิดโปรแกรมใหม่
+    titleSet: !!patch.titleSet,
     created: patch.created || now,
     updated: patch.updated || now,
     archived: !!patch.archived,
     mode: patch.mode || DEFAULT_MODE,
     scope: patch.scope || DEFAULT_SCOPE,
     scopePath: patch.scopePath || '',
+    view: patch.view || DEFAULT_VIEW,       // มุมมอง transcript ที่เลือกไว้ล่าสุด
+    autoRun: patch.autoRun !== false,       // ทำคำสั่งเองโดยไม่ถาม (ยกเว้นคำสั่งที่ลบของ)
+    confirmDestructive: patch.confirmDestructive !== false,  // ถามก่อนลบเสมอ
     providerId: patch.providerId || '',     // override จากตั้งค่า — เซสชันเลือกเจ้าของตัวเองได้
     model: patch.model || '',               // override โมเดล (อิสระจากตั้งค่ากลาง)
     contextLimit: patch.contextLimit || 0,  // 0 = ไม่รู้ (ยังไม่เคยตอบกลับมา)
     files: Array.isArray(patch.files) ? patch.files.slice() : [],
     messages: Array.isArray(patch.messages) ? patch.messages.slice() : [],
   };
+}
+
+/** เซสชันนี้ "เริ่มคุยแล้ว" หรือยัง — ใช้ตัดสินว่าถึงเวลาเขียนไฟล์หรือยัง */
+export function hasConversation(s) {
+  return !!(s && Array.isArray(s.messages) && s.messages.length);
 }
 
 /** ชื่อไฟล์ของเซสชัน — ปลอดภัยกับทุกระบบไฟล์ */
@@ -87,6 +120,13 @@ export function newMessage(role, text, patch = {}) {
     provider: patch.provider || '',
     files: patch.files || [],
     error: patch.error || '',
+    // ── ของที่ transcript view ใช้แสดง (ไม่กระทบข้อความที่ส่งให้โมเดล) ──
+    thinking: patch.thinking || '',   // ความคิดของโมเดล ถ้า provider ส่งกลับมา
+    calls: patch.calls || null,       // คำสั่งที่โมเดลสั่งในข้อความนี้
+    results: patch.results || null,   // ผลของคำสั่งเหล่านั้น
+    system: patch.system || '',       // system prompt ที่ใช้จริงในรอบนี้ (โหมดละเอียด)
+    ms: patch.ms || 0,                // เวลาที่ใช้รอคำตอบ (ms)
+    toolResult: !!patch.toolResult,   // ข้อความนี้คือผลคำสั่งที่ป้อนกลับให้โมเดล ไม่ใช่ผู้ใช้พิมพ์เอง
   };
 }
 
@@ -95,7 +135,8 @@ export function addMessage(session, msg) {
   const s = { ...session, messages: [...(session.messages || []), msg] };
   s.updated = msg.at || new Date().toISOString();
   // ชื่อเซสชันเริ่มต้น = ประโยคแรกที่ผู้ใช้พิมพ์ (แบบ opencode) จนกว่าจะเปลี่ยนชื่อเอง
-  if (msg.role === 'user' && isAutoTitle(session)) s.title = titleFromText(msg.text);
+  // ผลของคำสั่งที่ป้อนกลับให้โมเดลก็ role user เหมือนกัน — ห้ามเอามาตั้งเป็นชื่อเซสชัน
+  if (msg.role === 'user' && !msg.toolResult && isAutoTitle(session)) s.title = titleFromText(msg.text);
   return s;
 }
 function isAutoTitle(s) {
