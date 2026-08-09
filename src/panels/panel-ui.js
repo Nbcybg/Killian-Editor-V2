@@ -78,6 +78,9 @@ export const PANEL_DEFS = [
     desc: 'ผังความสัมพันธ์ของตัวละคร/สถานที่/สิ่งของ — ลากโหนดจัดวางเอง · สีเส้นบอกประเภทความสัมพันธ์ · ดับเบิลคลิกเปิดหน้า Wiki นั้น' },
   { id: 'planner',   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
     desc: 'กระดานวางแผนแบบการ์ดอิสระ — วางโน้ต รูป และลิงก์ไปฉากได้ทุกที่บนผืนผ้าใบ · ใช้ปะติดปะต่อโครงเรื่องก่อนลงมือเขียน' },
+  { id: 'planner-props', title: 'คุณสมบัติ Planner', icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
+    closable: true, floatable: true, i18n: 'panel.plannerPropsTitle',
+    desc: 'คุณสมบัติของการ์ดหรือเส้นเชื่อมที่เลือกบนกระดาน Planner — ชื่อ · สรุป · สี · สถานะ · แท็ก · ขนาด · สไตล์เส้น' },
   { id: 'floorplan', title: '📍 ผังพื้นที่',      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
     desc: 'ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่' },
 ];
@@ -535,10 +538,14 @@ export function showPanel(id, opts = {}) {
   if (ok && onShowHook) { try { onShowHook(pid); } catch {} }
   return ok;
 }
-export function hidePanel(id) {
+export function hidePanel(id, force) {
   const pid = panelId(id);
   rememberHome(pid);
-  return getPanelManager().hidePanel(pid);
+  return getPanelManager().hidePanel(pid, force);
+}
+/** ยามก่อนปิดแผง — ใช้เตือน "ยังไม่ได้บันทึก" (Planner) · fn(proceed) คืน false = หน่วงไว้ก่อน */
+export function setPanelCloseGuard(id, fn) {
+  return getPanelManager().setCloseGuard(panelId(id), fn);
 }
 // บั๊ก #2 + #10: ปุ่มสวิตช์บนแถบเครื่องมือต้อง "ปิดแผง" ไม่ใช่ "พับ/ย่อ"
 // (เดิม togglePanel เรียก collapsePanel → กด Kanban ซ้ำแล้วเหลือแถบหัวแผงเปล่า ๆ ดูเหมือนปิดไม่ได้)

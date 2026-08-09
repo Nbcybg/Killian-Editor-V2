@@ -149,20 +149,30 @@ function startPanelDrag(e, panelId, pm, ctx = {}) {
   e.preventDefault();
 }
 
-/** จุดที่จับอยู่ในเขตที่อนุญาตให้ "รวมเป็นแท็บ" ไหม (ชื่อแผง หรือ ~20% ฝั่งขวาของหัวแผง) */
+/**
+ * จุดที่จับอยู่ในเขตที่อนุญาตให้ "รวมเป็นแท็บ / ผนึกเข้าเวิร์กสเปซ" ไหม
+ *
+ * [alpha.65r] เดิมนับ "~20% ฝั่งขวาของหัวแผง" ซึ่งเป็นที่อยู่ของปุ่ม ▾ ซ่อน / ✕ ปิด พอดี
+ * → ลากพลาดตรงนั้นทีไรกลายเป็นจับกลุ่มแผงทุกที · ตอนนี้เอาเฉพาะ "พื้นที่ชื่อแผง" เท่านั้น
+ */
 export function inGroupHandle(header, clientX) {
-  const r = header.getBoundingClientRect();
+  const t = header.querySelector('.k-panel-head-title');
+  if (!t) return false;
+  const r = t.getBoundingClientRect();
   if (!r.width) return false;
-  return clientX >= r.right - r.width * GROUP_ZONE;
+  const ic = header.querySelector('.k-panel-head-icon');
+  const left = ic ? Math.min(ic.getBoundingClientRect().left, r.left) : r.left;
+  return clientX >= left && clientX <= r.right;
 }
 
 /** ลากด้วยหัวแผงที่ผนึกอยู่ → ผนึกขอบ (แยกช่อง) / รวมเป็นแท็บ / ลอยออกมา
- *  บั๊ก #3: รวมเป็นแท็บได้ก็ต่อเมื่อจับที่ "ชื่อแผง" หรือ "~20% ฝั่งขวาของหัวแผง" */
+ *  บั๊ก #3 + [alpha.65r]: รวมเป็นแท็บได้ก็ต่อเมื่อจับที่ "ชื่อแผง" เท่านั้น */
 export function makePanelDraggable(header, panelId, pm, ctx = {}) {
   header.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.k-panel-btn') || e.target.closest('.k-panel-ctrls')) return;
-    const onTitle = !!e.target.closest('.k-panel-head-title');
-    const allowGroup = onTitle || inGroupHandle(header, e.clientX);
+    if (e.target.closest('.k-panel-btn') || e.target.closest('.k-panel-ctrls')
+        || e.target.closest('.k-panel-btns')) return;
+    const onTitle = !!e.target.closest('.k-panel-head-title') || !!e.target.closest('.k-panel-head-icon');
+    const allowGroup = onTitle && inGroupHandle(header, e.clientX);
     startPanelDrag(e, panelId, pm, { ...ctx, allowGroup });
   });
   header.classList.add('k-can-group');
@@ -227,9 +237,10 @@ export function snapToEdges(x, y, w, h, edges, tol = SNAP_PX) {
 export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
   header.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('.k-panel-btn')) return;
+    if (e.target.closest('.k-panel-btn') || e.target.closest('.k-panel-ctrls')
+        || e.target.closest('.k-panel-btns')) return;
     const host = ctx.host || document.getElementById('app-root') || document.body;
-    const canDock = !!e.target.closest('.k-panel-head-title') || inGroupHandle(header, e.clientX);
+    const canDock = !!e.target.closest('.k-panel-head-title') && inGroupHandle(header, e.clientX);
     const sx = e.clientX, sy = e.clientY;
     const x0 = popup.offsetLeft, y0 = popup.offsetTop;
     const ov = createDropOverlay();

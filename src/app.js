@@ -31,7 +31,8 @@ import { Gallery, pickImage } from './gallery.js';
 import * as albumCore from './gallery/album-core.js';     // [alpha.63] อัลบั้มรูป (Explorer/แดชบอร์ดใช้ร่วม)
 import { renderMoodBoardPanel, moodBoardInstance } from './gallery/moodboard-ui.js';   // [alpha.63r] แผงกระดานอารมณ์
 import { StoryNetwork } from './network.js';
-import { PlannerBoard } from './planner.js';
+import { PlannerBoard } from './planner/planner.js';
+import { renderPlannerProps } from './planner/planner-props.js';
 import { SP_ELEMS, TIMES, TRANSITIONS, TRANSITIONS_IN, INTERCUTS, SCENE_PREFIX, TAB_CYCLE,
          PARENTHETICALS, CHAR_EXTENSIONS, splitCharacter, withExtension,
          classify, parseScript } from './fountain.js';
@@ -127,7 +128,7 @@ import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
 import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePanel, togglePanel,
          resetPanels, panelMenuItems, panelToggleState, addPanelButton, renderPanels,
          isPanelOpen, resetPanelSystem, PANEL_DEFS, panelId, setPanelShowHook,
-         onPanelLayoutChange, panelDesc } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
+         onPanelLayoutChange, panelDesc, setPanelCloseGuard } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
 import { wrapDesc as panelWrapDesc } from './panels/panel-renderer.js';
 import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSplitSystem,
          initSplitSystem, syncActiveSplit, openInSplit, closeTabInSplit, splitDir,
@@ -1637,12 +1638,18 @@ function filterTree(q) {
   const ql = raw.toLowerCase();
   const tree = $('#tree'); if (!tree) return;
   tree.querySelectorAll('.scene').forEach((s) => {
-    if (s.classList.contains('add-row')) return;
+    if (s.classList.contains('add-row') || s.dataset.nofilter) return;
     let ok;
     if (!raw) ok = true;
     else if (s._scene) ok = sceneMatchesQuery(s._scene, raw);   // ค้นทุกฟิลด์ + field:value
     else ok = (s.dataset.search || s.textContent.toLowerCase()).includes(ql);
-    if (ok && treeScope) ok = s.dataset.chGuid === treeScope.guid;   // จำกัดเฉพาะบทที่เลือก
+    // [alpha.65r8] "ค้นเฉพาะในบทนี้" ต้องไม่กลืนแถวที่ไม่ได้อยู่ในบทไหนเลย
+    // (กระดานวางแผนไม่มี chGuid → เดิมโดนซ่อนหมดทั้งที่ผู้ใช้แค่จำกัดขอบเขตการค้นฉาก)
+    if (ok && treeScope && !s.dataset.planner) ok = s.dataset.chGuid === treeScope.guid;
+    if (!ok && s.dataset.planner) {
+      log('info', `planner/tree: ตัวกรอง Explorer ซ่อนแถว "${s.dataset.plannerName}"`,
+          { query: raw, scope: treeScope ? treeScope.label : null });
+    }
     s.style.display = ok ? '' : 'none';
   });
   // ซ่อนบท/หมวดที่ไม่มีฉากโชว์ (เมื่อกำลังค้นหา)
@@ -1651,6 +1658,15 @@ function filterTree(q) {
       .some((s) => !s.classList.contains('add-row') && s.style.display !== 'none');
     ch.style.display = ((!q && !treeScope) || anyVisible) ? '' : 'none';
   });
+  // [alpha.65r8] ถ้าคำค้นซ่อนกระดานหมด ให้บอกไปตรง ๆ ว่า "ถูกกรองอยู่" — ไม่ใช่ปล่อยให้
+  // หมวดขึ้น (1) แต่ข้างล่างว่างเปล่า จนดูเหมือนไฟล์หาย (อาการที่ผู้ใช้รายงาน)
+  const plNote = tree.querySelector('.planner-filter-note');
+  if (plNote) {
+    const plRows = [...tree.querySelectorAll('.scene[data-planner]')];
+    const anyBoard = plRows.some((r) => r.style.display !== 'none');
+    plNote.style.display = (plRows.length && !anyBoard) ? '' : 'none';
+    plNote.textContent = `🔍 กระดาน ${plRows.length} ใบถูกซ่อนด้วยตัวกรอง — ล้างช่องค้นหาเพื่อดูทั้งหมด`;
+  }
   tree.querySelectorAll('.sec').forEach((sec) => {
     const anyVisible = [...sec.querySelectorAll('.scene, .chapter')]
       .some((s) => !s.classList.contains('add-row') && s.style.display !== 'none');
@@ -1689,13 +1705,32 @@ function makeAccordion(headEl, containerEl, key) {
   headEl.addEventListener('click', toggle);
 }
 
+/**
+ * สร้างต้นไม้ Explorer ใหม่
+ *
+ * [alpha.65r7] เดิม: ถ้ามีการสร้างค้างอยู่ จะ `return` ทันที (promise resolve เลย)
+ * → `await buildTree()` ของคนที่เพิ่งเขียนไฟล์เสร็จ **คืนก่อนที่ต้นไม้จะมีของใหม่จริง**
+ * แล้วโค้ดที่ตามมาก็ไปอ่านต้นไม้เวอร์ชันเก่า (เช่น แถวกระดานที่เพิ่งสร้าง "ยังไม่มี")
+ * ตอนนี้: คนที่มาระหว่างทางได้ promise ที่ resolve **หลังรอบสร้างถัดไปจบจริง**
+ * (ตัวกันซ้อนยังอยู่ — `_buildTreeInner` ไม่มีทางรันพร้อมกันสองตัว)
+ */
+let _treeWaiters = [];
 export async function buildTree() {
-  if (_treeBuilding) { _treeQueued = true; return; }
+  if (_treeBuilding) {
+    _treeQueued = true;
+    return new Promise((resolve) => _treeWaiters.push(resolve));
+  }
   _treeBuilding = true;
   try { await _buildTreeInner(); }
+  catch (e) { log('error', 'buildTree: สร้างต้นไม้ไม่สำเร็จ (ต้นไม้เดิมยังอยู่)', e); }
   finally {
     _treeBuilding = false;
-    if (_treeQueued) { _treeQueued = false; await buildTree(); }
+    if (_treeQueued) {
+      _treeQueued = false;
+      const waiters = _treeWaiters; _treeWaiters = [];
+      await buildTree();
+      for (const r of waiters) { try { r(); } catch {} }
+    }
   }
 }
 async function _buildTreeInner() {
@@ -2020,6 +2055,22 @@ async function _buildTreeInner() {
   }
   tree.append(mSec);
 
+  // ---- กระดานวางแผน (planner.json + Planners/*.json) — [alpha.65] บั๊ก 5 ----
+  // [alpha.65r7] ครอบ try ไว้: ถ้าหมวดกระดานพัง ต้องไม่ลาก buildTree ทั้งอันล้มตาม
+  // (ล้มตรงนี้ = ไม่ถึงบรรทัดสลับ buffer → ต้นไม้ค้างของเก่า กดรีเฟรชยังไงก็ไม่ขยับ)
+  try {
+    await buildPlannerSection(tree);
+  } catch (e) {
+    log('error', 'buildTree: สร้างหมวดกระดานวางแผนไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน', e);
+    const fb = el('div', 'sec');
+    const fbHead = el('div', 'sec-title', '📋 กระดานวางแผน (อ่านไม่ได้)');
+    fb.append(fbHead);
+    const retry = el('div', 'scene add-row', '↻ ลองใหม่');
+    retry.onclick = () => refreshTreeQueued();
+    fb.append(retry);
+    tree.append(fb);
+  }
+
   // ---- คลังรูป (โฟลเดอร์ Images/) — ข้อ 6 · [alpha.63] เห็นครบทุกอัลบั้ม ไม่ใช่แค่รูปที่ราก ----
   const imgDir = await kapi.join(state.root, 'Images');
   let galAlbums = [], galItems = [];
@@ -2311,6 +2362,7 @@ async function _buildTreeInner() {
   tree.append(tSec);
   // ---- สลับ buffer เข้าจอครั้งเดียว (คง scroll เดิม + สถานะขอบเขต/ตัวกรอง) ----
   const real = $('#tree');
+  if (!real) { log('warn', 'buildTree: ไม่มี #tree ให้สลับเข้า (แผงโปรเจกต์ยังไม่พร้อม) — ข้ามรอบนี้'); return; }
   const scrollTop = real.scrollTop;
   real.replaceChildren(...tree.childNodes);
   real.scrollTop = scrollTop;
@@ -2915,39 +2967,390 @@ function revealInExplorer(file) {
 // ---------------- Planner (กระดานวางแผน) ----------------
 // [alpha.62 บั๊ก 16] เป็นแผงแล้วเหมือนกัน — กระดานวางแผนควรเปิดคู่กับฉากที่กำลังเขียนได้
 export let plannerInst = null;
-export async function renderPlannerPanel() {
+export async function renderPlannerPanel(boardPath) {
   const host = $('#planner-body');
   if (!host) return false;
-  if (plannerInst && host.firstChild) { try { plannerInst._fit(); } catch {} return true; }
+  if (plannerInst && host.firstChild) {
+    if (boardPath && plannerInst.data && plannerInst.data.getPath() !== boardPath) await plannerInst.openBoard(boardPath);
+    // เปิดแผงซ้ำ = canvas อาจถูกย้ายที่ใน DOM → บังคับคำนวณพิกัดใหม่ (บั๊ก 65r4 "กรอบนำไม่ขึ้น")
+    try { plannerInst.renderer.canvas.calcOffset(); plannerInst._fit(); } catch {}
+    setTimeout(() => { try { plannerInst.renderer.canvas.calcOffset(); plannerInst._fit(); } catch {} }, 80);
+    log('info', 'planner: เปิดแผงซ้ำ — คำนวณพิกัด canvas ใหม่');
+    return true;
+  }
   host.innerHTML = '';
   host.classList.add('planner-pane');            // สไตล์เดิมของกระดานผูกกับคลาสนี้
   plannerInst = new PlannerBoard(host, state.root, {
-    onDirty: () => { savePlannerSoon(); },
+    path: boardPath || (await defaultPlannerPath()),
+    onDirty: () => {},                           // [alpha.65] ไม่ autosave ทุกจังหวะแล้ว — มี ● บอกว่ายังไม่บันทึก
     onReveal: (f) => revealInExplorer(f),
     onOpenFile: async (f) => {
       if (!f) return;
-      if (/\.json$/i.test(f) || /[\\/](Wiki|Bible)[\\/]/i.test(f)) await openEntity(f);
-      else await openScene(f, f.split(/[\\/]/).pop());
+      const abs = await plannerAbs(f);
+      if (/\.json$/i.test(abs) || /[\\/](Wiki|Bible)[\\/]/i.test(abs)) await openEntity(abs);
+      else await openScene(abs, abs.split(/[\\/]/).pop());
       bindTabStripMenus();
-      if (state.tabs.has(f)) floatTab(f);        // ดับเบิลคลิกการ์ด = เปิดเป็นหน้าต่างลอย
+      if (state.tabs.has(abs)) floatTab(abs);    // ดับเบิลคลิกการ์ด = เปิดเป็นหน้าต่างลอย
+    },
+    services: {
+      // บั๊ก 3: การ์ดต้องดึงไฟล์จาก Explorer ได้จริง ไม่ใช่พิมพ์ path เอง
+      pickFile: () => pickPlannerTarget(),
+      onBoardsChanged: () => { refreshTreeQueued(); },
+      // บั๊ก 65r2-8: บันทึกแล้วป้าย "ยังไม่บันทึก" ใน Explorer ต้องหายเอง ไม่ต้องรีเฟรชมือ
+      // บั๊ก 65r3-1: ถ้าหาแถวไม่เจอ (ต้นไม้เพี้ยน/แถวหลุดไป) ให้สร้างใหม่ให้เลย — กันแถวหาย
+      onDirtyChanged: (path, dirty) => healPlannerRow(path, dirty),
     },
   });
+  // 🔑 ต่อ planner-props panel callback เข้ากับ planner-props.js
+  if (plannerInst.setPropsCallback) {
+    plannerInst.setPropsCallback((ctx) => {
+      showPanel('planner-props');
+      const container = $('#planner-props-body');
+      if (container) renderPlannerProps(container, ctx);
+    });
+  }
+  // บั๊ก 5: กดปิดแผงตอนยังไม่บันทึก ต้องเตือน (เดิมปิดเงียบ ๆ งานหาย)
+  setPanelCloseGuard('planner', (proceed) => {
+    if (!plannerInst || !plannerInst.data || !plannerInst.data.isDirty()) return true;
+    plannerInst.requestClose().then((ok) => { if (ok) proceed(); });
+    return false;
+  });
   setTimeout(() => { try { plannerInst._fit(); } catch {} }, 60);
+  watchPlannerRows(true);                      // เฝ้าดูว่าใครมาแตะแถวกระดานใน Explorer
   return true;
 }
-// เดิม onDirty ไปทำ markDirty ของ "แท็บ Planner" แล้วผู้ใช้กด Ctrl+S เอง
-// เป็นแผงแล้วไม่มีแท็บให้ dirty → บันทึกเองแบบหน่วงสั้น ๆ (กระดานเก็บใน planner.json ของโปรเจกต์)
-let _plannerSaveJob = null;
-function savePlannerSoon() {
-  clearTimeout(_plannerSaveJob);
-  _plannerSaveJob = setTimeout(() => {
-    try { plannerInst && plannerInst.save && plannerInst.save(); } catch (e) { log('warn', 'planner: บันทึกไม่สำเร็จ', e); }
-  }, 600);
+
+/** กระดานเริ่มต้น: planner.json เดิมถ้ามี ไม่งั้นใช้ Planners/กระดานหลัก.json */
+export async function defaultPlannerPath() {
+  const legacy = await kapi.join(state.root, 'planner.json');
+  if (await kapi.exists(legacy)) return legacy;
+  const dir = await kapi.join(state.root, 'Planners');
+  const files = (await kapi.exists(dir)) ? await kapi.listFiles(dir, '.json').catch(() => []) : [];
+  if (files.length) return kapi.join(dir, files[0]);
+  return legacy;
 }
-async function openPlanner() {
+
+/** การ์ดเก็บ path สัมพัทธ์กับ root ได้ → แปลงกลับเป็น absolute ตอนเปิด */
+async function plannerAbs(f) {
+  if (!f) return f;
+  if (/^([a-z]:[\\/]|[\\/])/i.test(f)) return f;
+  return kapi.join(state.root, f);
+}
+
+/** เลือกฉาก / โน้ต / เอนทิตี้ Wiki มาผูกกับการ์ด (บั๊ก 3) */
+export async function pickPlannerTarget() {
+  const items = (await listRefTargets()).map((r) => ({ path: r.path, title: r.title, label: r.label }));
+  try {
+    for (const e of await listEntities(state.root)) {
+      const rel = (await kapi.relative(state.root, e.path)).replace(/\\/g, '/');
+      items.push({ path: rel, title: e.name, label: `👤 Wiki / ${e.cat} / ${e.name}` });
+    }
+  } catch {}
+  if (!items.length) { setStatus('ยังไม่มีฉาก/โน้ต/Wiki ให้ผูก'); return null; }
+  return new Promise((resolve) => {
+    const ov = el('div', 'k-overlay');
+    const box = el('div', 'k-dialog');
+    const t = el('div', 'k-dlg-title', '📁 ผูกการ์ดกับเอกสารในโปรเจกต์');
+    const inp = el('input', 'k-dlg-input');
+    inp.placeholder = 'พิมพ์เพื่อกรอง…';
+    const list = el('div', 'planner-board-list');
+    const draw = (q) => {
+      list.innerHTML = '';
+      const ql = (q || '').trim().toLowerCase();
+      let n = 0;
+      for (const it of items) {
+        if (ql && !it.label.toLowerCase().includes(ql)) continue;
+        if (++n > 300) break;
+        const row = el('div', 'planner-board-row');
+        row.append(el('span', 'planner-board-nm', it.label));
+        row.onclick = () => { ov.remove(); resolve(it); };
+        list.appendChild(row);
+      }
+      if (!n) list.appendChild(el('div', 'planner-props-empty', 'ไม่พบเอกสารที่ตรงกับคำค้น'));
+    };
+    draw('');
+    inp.oninput = () => draw(inp.value);
+    const btns = el('div', 'k-dlg-btns');
+    const cancel = el('button', 'k-cancel', 'ยกเลิก');
+    cancel.onclick = () => { ov.remove(); resolve(null); };
+    btns.appendChild(cancel);
+    box.append(t, inp, list, btns);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
+    inp.focus();
+  });
+}
+
+async function openPlanner(boardPath) {
   showPanel('planner');
   await renderFeaturePanel('planner');
+  if (boardPath && plannerInst) await plannerInst.openBoard(boardPath);
   refreshToolbar();
+}
+
+// ---------------- กระดานวางแผนใน Explorer (บั๊ก 5) ----------------
+/** ทุกกระดานในโปรเจกต์: planner.json เดิม + Planners/*.json */
+export async function listPlannerBoards() {
+  const out = [];
+  if (!state.root) return out;
+  const legacy = await kapi.join(state.root, 'planner.json');
+  if (await kapi.exists(legacy)) out.push({ path: legacy, name: 'กระดานหลัก', legacy: true });
+  const dir = await kapi.join(state.root, 'Planners');
+  if (await kapi.exists(dir)) {
+    for (const f of (await kapi.listFiles(dir, '.json').catch(() => []))) {
+      out.push({ path: await kapi.join(dir, f), name: f.replace(/\.json$/i, ''), legacy: false });
+    }
+  }
+  return out;
+}
+
+function safeBoardName(s) {
+  return String(s || 'กระดาน').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'กระดาน';
+}
+
+/**
+ * สร้างต้นไม้ Explorer ใหม่แบบเข้าคิว — กันงานเก่าที่ยังวิ่งอยู่มาเขียนทับผลของงานใหม่
+ * (เจอตอน alpha.65r2: save() ยิง buildTree() แบบไม่ await แล้วมันไปจบทีหลัง
+ *  buildTree() ของการสร้างกระดานใหม่ → แถวกระดานที่เพิ่งสร้างหายไปจากต้นไม้)
+ */
+let _treeJob = Promise.resolve();
+export function refreshTreeQueued() {
+  _treeJob = _treeJob.then(() => buildTree())
+    .then(() => auditPlannerRows('หลังสร้างต้นไม้'))
+    .catch((e) => log('warn', 'buildTree ล้มเหลว', e));
+  return _treeJob;
+}
+
+/**
+ * ตรวจสภาพจริงของแถวกระดานใน Explorer แล้วเขียนลง log
+ * (ผู้ใช้เจออาการ "หัวข้อขึ้น (1) แต่ไม่มีแถวโผล่" — อันนี้จะบอกว่าแถวหายไปไหน:
+ *  ไม่ถูกสร้าง / ถูก display:none / ข้อความว่าง / หมวดถูกพับ)
+ */
+export function auditPlannerRows(when) {
+  const sec = [...document.querySelectorAll('#tree .sec')]
+    .find((s) => (s.querySelector('.sec-title') || {}).textContent?.includes('กระดานวางแผน'));
+  const rows = [...document.querySelectorAll('#tree .scene[data-planner]')];
+  const info = rows.map((r) => ({
+    name: r.dataset.plannerName || '(ไม่มีชื่อ)',
+    text: (r.textContent || '').trim(),
+    display: getComputedStyle(r).display,
+    inline: r.style.display || '(ไม่ตั้ง)',
+  }));
+  const hidden = info.filter((i) => i.display === 'none').length;
+  const blank = info.filter((i) => !i.text).length;
+  const secHidden = sec ? (getComputedStyle(sec).display === 'none' || sec.classList.contains('collapsed')) : null;
+  const bad = !sec || !rows.length || hidden || blank;
+  log(bad ? 'warn' : 'info',
+      `planner/tree ตรวจสภาพ (${when || '-'}): หมวด=${sec ? 'มี' : 'ไม่มี'} แถว=${rows.length} ` +
+      `ซ่อน=${hidden} ว่าง=${blank} หมวดพับ/ซ่อน=${secHidden}`,
+      { rows: info, filter: ($('#tree-search') || {}).value || '' });
+  return { sec: !!sec, rows: rows.length, hidden, blank, secHidden, info };
+}
+
+/**
+ * อัปเดตป้ายบนแถวกระดานใน Explorer โดยไม่ต้องสร้างต้นไม้ใหม่ทั้งอัน (บั๊ก 65r2-8)
+ * [alpha.65r4] ชื่อกระดานอ่านจาก `data-planner-name` (ของตัวเอง) ไม่ใช่ `data-search`
+ * ที่โมดูลอื่นอาจเขียนทับ — และถ้าชื่อว่างเมื่อไหร่ **ห้ามเขียนทับข้อความเดิม**
+ * ไม่งั้นแถวจะกลายเป็นบรรทัดเปล่า ๆ (หัวข้อยังนับ (1) แต่มองไม่เห็นอะไร — ตรงกับที่ผู้ใช้เจอ)
+ */
+export function markPlannerRow(path, dirty) {
+  const tree = $('#tree');
+  if (!tree) return false;                     // แผงโปรเจกต์ถูกปิดอยู่ — ไม่มีอะไรให้อัปเดต ไม่ใช่ความผิดพลาด
+  const row = path ? tree.querySelector(`.scene[data-planner="${CSS.escape(path)}"]`) : null;
+
+  // คืนแถวที่ "เคยเป็นกระดานที่เปิดอยู่" ให้เป็นปกติ — แตะเฉพาะแถวนั้น ไม่กวาดทั้งหมวด
+  for (const prev of tree.querySelectorAll('.scene.planner-current')) {
+    if (prev === row) continue;
+    prev.classList.remove('planner-current', 'planner-dirty');
+    const pn = prev.dataset.plannerName;
+    if (pn) prev.textContent = '📋 ' + pn;
+  }
+
+  if (!row) {
+    log('warn', 'planner/tree: หาแถวกระดานที่เปิดอยู่ไม่เจอ', { path, rows: tree.querySelectorAll('.scene[data-planner]').length });
+    return false;
+  }
+  const nm = row.dataset.plannerName || '';
+  row.classList.add('planner-current');
+  row.classList.toggle('planner-dirty', !!dirty);
+  // ชื่อว่าง = ข้อมูลแถวไม่น่าเชื่อถือ → คงข้อความเดิมไว้ ดีกว่าเขียนทับเป็นบรรทัดเปล่า
+  if (nm) row.textContent = '▶ ' + nm + (dirty ? ' ●' : '');
+  return !!nm;
+}
+
+/**
+ * ⚠️ KNOWN ISSUE K-1 (ยังไม่ปิดเคส — ดู CHANGELOG.md หัวข้อ "บั๊กที่ยังค้างอยู่")
+ * ผู้ใช้เจอ: แถวไฟล์กระดานหายจาก Explorer ทั้งที่หัวข้อยังนับ (1) · รีเฟรชไม่กลับมา ·
+ * เกิดหลังแถวขึ้นสีส้ม + จุด ● (สถานะยังไม่บันทึก) · ทำซ้ำในเครื่องเทสไม่ได้
+ * ปิดช่องที่เป็นไปได้ไปแล้ว: เขียนทับเป็นบรรทัดว่าง (r4) · กวาดทุกแถว (r7) ·
+ * buildTree คืนก่อนเสร็จ (r7) · หมวดพังลากต้นไม้ล้ม (r7) · ตัวกรอง/ขอบเขตบทกลืนแถว (r8)
+ * เครื่องมือไล่ต่อ: watchPlannerRows() + auditPlannerRows() → อ่านที่แผง "บันทึก"
+ */
+
+/**
+ * อัปเดตป้ายแถวกระดาน + ซ่อมต้นไม้ให้ "เท่าที่จำเป็น"
+ * [alpha.65r7] เดิมหาแถวไม่เจอทีไรก็สั่งสร้างต้นไม้ใหม่ทันที — ปิดแผงโปรเจกต์ไว้แล้วแก้กระดานรัว ๆ
+ * = สร้างต้นไม้ใหม่ทุกครั้งที่กดแป้น เปลืองเปล่า ๆ และเสี่ยงชนกับงานสร้างอื่น
+ * ตอนนี้: ซ่อมเฉพาะเมื่อ "ต้นไม้มีอยู่จริงแต่แถวหาย" และไม่ถี่กว่า 3 วินาทีต่อครั้ง
+ */
+let _healAt = 0;
+export function healPlannerRow(path, dirty) {
+  if (markPlannerRow(path, dirty)) return true;
+  const tree = $('#tree');
+  if (!tree) return false;                           // แผงปิดอยู่ = ไม่ต้องซ่อม
+  const now = performance.now();
+  if (now - _healAt < 3000) return false;            // กันสร้างต้นไม้รัว
+  _healAt = now;
+  auditPlannerRows('หาแถวไม่เจอ → ซ่อมต้นไม้');
+  refreshTreeQueued().then(() => markPlannerRow(path, dirty));
+  return false;
+}
+
+/**
+ * เฝ้าดูแถวกระดานใน Explorer — ถ้ามีใครมาถอดออก/ซ่อน/ลบข้อความ ให้เขียน log ทันทีพร้อม stack
+ * (ผู้ใช้รายงานว่าแถวหายหลังขึ้นจุดสีส้ม — อันนี้จะชี้ตัวคนทำให้เห็น ๆ)
+ */
+let _plannerRowObs = null;
+export function watchPlannerRows(on) {
+  if (_plannerRowObs) { _plannerRowObs.disconnect(); _plannerRowObs = null; }
+  if (on === false) return null;
+  const tree = $('#tree');
+  if (!tree || typeof MutationObserver === 'undefined') return null;
+  _plannerRowObs = new MutationObserver((muts) => {
+    for (const m of muts) {
+      for (const n of (m.removedNodes || [])) {
+        if (n.nodeType !== 1) continue;
+        const isRow = n.dataset && n.dataset.planner;
+        const hasRow = n.querySelector && n.querySelector('[data-planner]');
+        if (isRow || hasRow) {
+          log('warn', 'planner/tree: แถวกระดานถูกถอดออกจาก DOM',
+              { name: (n.dataset && n.dataset.plannerName) || '(ในกล่อง)',
+                parent: m.target && m.target.className, stack: new Error('ที่มา').stack.split('\n').slice(1, 5).join(' ⇦ ') });
+        }
+      }
+      if (m.type === 'attributes' && m.target.dataset && m.target.dataset.planner) {
+        const hidden = getComputedStyle(m.target).display === 'none';
+        log(hidden ? 'warn' : 'info',
+            `planner/tree: แถว "${m.target.dataset.plannerName}" เปลี่ยน ${m.attributeName}` +
+            (hidden ? ' → ถูกซ่อน!' : ''),
+            { style: m.target.getAttribute('style') || '', cls: m.target.className,
+              text: (m.target.textContent || '').trim() });
+      }
+    }
+  });
+  _plannerRowObs.observe(tree, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+  log('info', 'planner/tree: เริ่มเฝ้าดูแถวกระดานใน Explorer');
+  return _plannerRowObs;
+}
+
+export async function newPlannerBoard(nameArg) {
+  const dir = await kapi.join(state.root, 'Planners');
+  let value = nameArg || 'กระดาน ' + ((await listPlannerBoards()).length + 1);
+  let p = null;
+  for (;;) {
+    const name = nameArg || await ask('ชื่อกระดานใหม่', { value, okLabel: 'สร้าง' });
+    if (!name) return null;
+    p = await kapi.join(dir, safeBoardName(name) + '.json');
+    if (!(await kapi.exists(p))) break;
+    // บั๊ก 65r2-7: ชื่อซ้ำต้องเตือน ไม่ใช่เขียนทับเงียบ ๆ
+    if (nameArg) { setStatus(`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้ว`); return null; }
+    const act = await choose(`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้วในโปรเจกต์`, [
+      { label: '✏️ ตั้งชื่อใหม่', value: 'again', primary: true },
+      { label: 'เขียนทับของเดิม', value: 'over', danger: true },
+      { label: 'ยกเลิก', value: null }]);
+    if (act === 'over') break;
+    if (!act) return null;
+    value = safeBoardName(name) + ' 2';
+  }
+  await kapi.mkdir(dir);
+  await kapi.writeFile(p, JSON.stringify({ version: '4.0', nodes: [], edges: [], groups: [] }, null, 2));
+  await refreshTreeQueued();
+  await openPlanner(p);
+  await refreshTreeQueued();
+  setStatus('สร้างกระดาน "' + p.split(/[\\/]/).pop().replace(/\.json$/i, '') + '" แล้ว');
+  return p;
+}
+
+async function renamePlannerBoard(b) {
+  const v = await ask('เปลี่ยนชื่อกระดาน', { value: b.name });
+  if (!v || v === b.name) return null;
+  const dir = await kapi.join(state.root, 'Planners');
+  await kapi.mkdir(dir);
+  const dst = await kapi.join(dir, safeBoardName(v) + '.json');
+  if (await kapi.exists(dst)) { setStatus('มีกระดานชื่อนี้อยู่แล้ว'); return null; }
+  const wasOpen = plannerInst && plannerInst.data && plannerInst.data.getPath() === b.path;
+  if (wasOpen) await plannerInst.save(true);
+  await kapi.move(b.path, dst);
+  if (wasOpen) await plannerInst.openBoard(dst);
+  await refreshTreeQueued();
+  setStatus('เปลี่ยนชื่อเป็น "' + safeBoardName(v) + '" แล้ว');
+  return dst;
+}
+
+async function duplicatePlannerBoard(b) {
+  const dir = await kapi.join(state.root, 'Planners');
+  await kapi.mkdir(dir);
+  let n = 1, dst;
+  do { dst = await kapi.join(dir, safeBoardName(b.name + ' สำเนา' + (n > 1 ? ' ' + n : '')) + '.json'); n++; }
+  while (await kapi.exists(dst));
+  await kapi.writeFile(dst, await kapi.readFile(b.path));
+  await refreshTreeQueued();
+  setStatus('ทำสำเนากระดานแล้ว');
+  return dst;
+}
+
+async function buildPlannerSection(tree) {
+  const boards = await listPlannerBoards();
+  const sec = el('div', 'sec');
+  const head = el('div', 'sec-title', `📋 กระดานวางแผน (${boards.length})`);
+  const add = el('span', 'row-add', '+'); add.title = 'สร้างกระดานใหม่';
+  add.onclick = (e) => { e.stopPropagation(); newPlannerBoard(); };
+  head.append(add); sec.append(head);
+  makeAccordion(head, sec, 'sec:__planner__');
+  head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+    { label: '＋ กระดานใหม่…', click: () => newPlannerBoard() },
+    { label: '📋 เปิด Planner', click: () => openPlanner() },
+  ]); };
+  const cur = plannerInst && plannerInst.data ? plannerInst.data.getPath() : null;
+  const curDirty = !!(plannerInst && plannerInst.data && plannerInst.data.isDirty());
+  for (const b of boards) {
+    const isCur = b.path === cur;
+    const it = el('div', 'scene' + (isCur ? ' planner-current' : '') + (isCur && curDirty ? ' planner-dirty' : ''),
+      (isCur ? '▶ ' : '📋 ') + b.name + (isCur && curDirty ? ' ●' : ''));
+    it.dataset.path = b.path;
+    it.dataset.planner = b.path;
+    it.dataset.plannerName = b.name;             // แหล่งชื่อของตัวเอง — ไม่พึ่ง data-search
+    it.dataset.search = b.name;
+    it.title = b.path + (isCur ? (curDirty ? '  — กำลังเปิดอยู่ · ยังไม่บันทึก' : '  — กำลังเปิดอยู่') : '');
+    it.onclick = () => openPlanner(b.path);
+    it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
+      { label: 'เปิดกระดานนี้', click: () => openPlanner(b.path) },
+      { label: 'เปลี่ยนชื่อ…', click: () => renamePlannerBoard(b) },
+      { label: '⧉ ทำสำเนา', click: () => duplicatePlannerBoard(b) },
+      { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(b.path) },
+      '-',
+      { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: async () => {
+          await deleteToTrash(b.path, b.name);
+          await buildTree();
+        } },
+    ]); };
+    sec.append(it);
+  }
+  if (!boards.length) {
+    const empty = el('div', 'scene add-row', '＋ สร้างกระดานแรก…');
+    empty.onclick = () => newPlannerBoard();
+    sec.append(empty);
+  }
+  // แถวอธิบายตอนกระดานถูกกรองหมด — ตัวมันเองไม่โดนกรอง (data-nofilter) หมวดจึงไม่หายไปทั้งก้อน
+  const note = el('div', 'scene planner-filter-note', '');
+  note.dataset.nofilter = '1';
+  note.style.display = 'none';
+  sec.append(note);
+  tree.append(sec);
+  log('info', `planner/tree: สร้างหมวดกระดาน ${boards.length} ใบ`,
+      { current: cur, rows: boards.map((b) => b.name) });
+  return sec;
 }
 
 // ---------------- Dashboard ----------------
@@ -6499,13 +6902,40 @@ async function insertImageByName(fileName, caption) {
 }
 
 // ---------------- เมนูจาก main process ----------------
+/**
+ * [alpha.65r4] เดิมรีเฟรชทีไรก็ดีดลงล่างสุดทุกครั้ง → อ่านบรรทัดเก่าไม่ได้เลยเพราะโดนดีดหนีตลอด
+ * ตอนนี้: **ตามบรรทัดล่าสุดเฉพาะตอนที่ผู้ใช้อยู่ล่างสุดอยู่แล้ว** เลื่อนขึ้นไปอ่านเมื่อไหร่ = ล็อกอยู่ตรงนั้น
+ * (พฤติกรรมเดียวกับ console ของเบราว์เซอร์/โปรแกรมแชท)
+ */
+const LOG_STICK_PX = 24;                        // ห่างจากก้นไม่เกินเท่านี้ = ถือว่า "อยู่ล่างสุด"
+export function logAtBottom(body) {
+  if (!body) return true;
+  return body.scrollHeight - body.scrollTop - body.clientHeight <= LOG_STICK_PX;
+}
 async function renderLogPanel() {
   const body = $('#log-body'); if (!body) return;
+  const stick = logAtBottom(body);             // จำไว้ก่อนเปลี่ยนเนื้อหา
+  const keepTop = body.scrollTop;
   let text = '';
   try { text = (await kapi.logRead(800)) || ''; } catch {}
   if (!text) text = LOG_BUF.slice(-800).join('\n');
+  if (body.textContent === (text || '(ยังไม่มีบันทึก)')) return;   // ไม่มีอะไรใหม่ = ไม่ต้องแตะ scroll
   body.textContent = text || '(ยังไม่มีบันทึก)';
-  body.scrollTop = body.scrollHeight;
+  body.scrollTop = stick ? body.scrollHeight : keepTop;
+  updateLogFollowBadge(body, stick);
+}
+/** ป้ายเล็ก ๆ บอกว่ากำลังหยุดอ่านอยู่ + กดกลับไปล่างสุดได้ */
+function updateLogFollowBadge(body, stick) {
+  const panel = body.parentElement;
+  if (!panel) return;
+  let b = panel.querySelector('.k-log-follow');
+  if (stick) { if (b) b.remove(); return; }
+  if (!b) {
+    b = el('button', 'k-log-follow', '⤓ ตามบรรทัดล่าสุด');
+    b.title = 'ตอนนี้หยุดอ่านอยู่กับที่ — กดเพื่อกลับไปล่างสุด';
+    b.onclick = () => { body.scrollTop = body.scrollHeight; b.remove(); };
+    panel.appendChild(b);
+  }
 }
 let _logTimer = null;
 function startLogAutoRefresh() {
@@ -6705,6 +7135,7 @@ const FEATURE_PANELS = {
   // [alpha.62 บั๊ก 16] 3 ฟีเจอร์ที่ยังเป็นแท็บเอกสาร → เป็นแผงเต็มตัวเหมือนตัวอื่น
   network:   () => renderNetworkPanel(),
   planner:   () => renderPlannerPanel(),
+  plannerProps: () => { /* noop — planner เป็นคนวาดผ่าน setPropsCallback */ return true; },
   floorplan: () => renderFloorPlanPanel(),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
@@ -6730,7 +7161,7 @@ export function clearFeaturePanels() {
   for (const sel of ['#dash-body', '#kanban-body', '#books-body', '#tl-body', '#maps-body',
                      '#gal-body', '#ai-analyzer-body',
                      // [alpha.62 บั๊ก 16+20] ผลค้นหา/ผัง/กระดาน เป็นของโปรเจกต์เดิมทั้งหมด
-                     '#search-body', '#net-body', '#planner-body', '#floor-body']) {
+                     '#search-body', '#net-body', '#planner-body', '#planner-props-body', '#floor-body']) {
     const n = $(sel); if (n) n.innerHTML = '';
   }
   // #notes-body ไม่ล้าง — สมุดโน้ตด่วนเป็นของผู้ใช้ ไม่ผูกกับโปรเจกต์ (เก็บใน localStorage)
@@ -8461,11 +8892,14 @@ async function runTest(projectPath) {
     }
 
     // dialog ของเราเอง (แทน prompt ที่ Electron ไม่รองรับ — เหตุที่กด + แล้วเงียบ)
+    document.querySelectorAll('.k-overlay').forEach((o) => o.remove());   // กันกล่องค้างจากเทสก่อนหน้า
     const dlgTest = ask('ทดสอบ dialog');
     await new Promise((r) => setTimeout(r, 60));
-    check('dialog ขึ้นจริง', !!document.querySelector('.k-dialog'));
-    document.querySelector('.k-dlg-input').value = 'ค่า';
-    document.querySelector('.k-dialog .k-ok').click();
+    // ใช้กล่องล่าสุดเสมอ — ถ้ามีกล่องอื่นค้างอยู่ querySelector จะไปหยิบตัวเก่า แล้วเทสหลุดแบบงง ๆ
+    const dlgBox = [...document.querySelectorAll('.k-overlay .k-dialog')].pop();
+    check('dialog ขึ้นจริง', !!dlgBox, 'overlays=' + document.querySelectorAll('.k-overlay').length);
+    dlgBox.querySelector('.k-dlg-input').value = 'ค่า';
+    dlgBox.querySelector('.k-ok').click();
     check('dialog คืนค่า', (await dlgTest) === 'ค่า');
 
     // เพิ่มฉากผ่าน dialog (จำลองการกดปุ่ม + จริง)
@@ -9382,8 +9816,13 @@ async function runTest(projectPath) {
       resetPanels(); await new Promise((r) => setTimeout(r, 30));
     }
     // hover ฉากแสดงรายละเอียด (สถานะ/แท็ก/เรื่องย่อ) แบบ v1
-    const anyScene = [...document.querySelectorAll('#tree .scene')].find((s) => !s.classList.contains('add-row'));
-    check('ฉากในต้นไม้มี tooltip รายละเอียด (hover)', !!anyScene && typeof anyScene.title === 'string' && anyScene.title.length > 0);
+    // [alpha.65r4] เทสชุดลาก/รีเซ็ตแผงข้างบนย้าย #tree ไปมา → สร้างต้นไม้ใหม่ก่อนวัด ไม่งั้นเจอต้นไม้ค้าง
+    await buildTree();
+    const allScenes = [...document.querySelectorAll('#tree .scene')];
+    const anyScene = allScenes.find((s) => !s.classList.contains('add-row') && !s.dataset.planner);
+    check('ฉากในต้นไม้มี tooltip รายละเอียด (hover)',
+          !!anyScene && typeof anyScene.title === 'string' && anyScene.title.length > 0,
+          `tree=${!!$('#tree')} scenes=${allScenes.length} first=${anyScene ? anyScene.className : 'none'}`);
     // ---- ฟีเจอร์ใหม่ alpha.23 ----
     check('ฉากในต้นไม้พก _scene (กรองได้ทุกฟิลด์)', !!anyScene && !!anyScene._scene);
     check('ฉากลากได้ (draggable) แบบ Explorer', !!anyScene && anyScene.draggable === true);
@@ -9861,133 +10300,1017 @@ async function runTest(projectPath) {
       closeTab(charFile);
     }
 
-    // ---- Planner (กระดานวางแผน) ----
+    // ---- Planner v4 (กระดานวางแผนแบบ Miro) ----
     await openPlanner();
     await new Promise((r) => setTimeout(r, 350));
-    // [alpha.62 บั๊ก 16] Planner เป็นแผงแล้ว — อ่านจาก plannerInst
     const pb = plannerInst;
-    check('Planner เปิดเป็นแผง + มี fabric canvas',
-          !!(pb && pb.canvas) && isPanelOpen('planner'), 'planner=' + !!pb);
+    check('Planner เปิดเป็นแผง + มี renderer canvas',
+          !!(pb && pb.renderer && pb.renderer.canvas) && isPanelOpen('planner'), 'planner=' + !!pb);
     await pb._ready;
 
-    const nA = pb._createNode('scene', 'ฉาก A', '#3f3e3a');
-    const nB = pb._createNode('entity', 'ตัวละคร B', '#7a6f9f');
+    // [บั๊ก 1+7] เลย์เอาต์: แถบเครื่องมือ/กรอง/เวที/สถานะ ต้องเรียงเป็นแถวไม่ทับกัน
+    const plBody = $('#planner-body');
+    const rToolbar = pb.toolbar.getBoundingClientRect();
+    const rFilter = pb.filterBar.getBoundingClientRect();
+    const rStage = pb.stage.getBoundingClientRect();
+    const rStatus = pb.statusBar.getBoundingClientRect();
+    check('Planner บั๊ก1: เวทีกระดานไม่ทับแถบเครื่องมือ/แถบกรอง (กดปุ่มได้)',
+          rStage.top >= rFilter.bottom - 1 && rFilter.top >= rToolbar.bottom - 1 && rStage.height > 40,
+          `tb=${Math.round(rToolbar.bottom)} f=${Math.round(rFilter.top)}/${Math.round(rFilter.bottom)} stage=${Math.round(rStage.top)}`);
+    // เดิม canvas (absolute top:84px) ทับปุ่มแถวที่ 2 ของ toolbar ที่ wrap ลงมา → กดไม่โดน
+    const saveHit = (() => {
+      const strip = pb.toolbar.querySelector('.planner-toolbar-strip');
+      const b = pb.toolbar.querySelector('[data-action="save"]');
+      if (!strip || !b) return { ok: false, why: 'no button' };
+      strip.style.scrollBehavior = 'auto';
+      strip.scrollLeft = Math.max(0, b.offsetLeft - 30);       // เลื่อนแถบให้ปุ่มโผล่ก่อน (บั๊ก 7)
+      const r = b.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { ok: !!hit && (hit === b || b.contains(hit)), why: hit ? hit.className || hit.tagName : 'none' };
+    })();
+    check('Planner บั๊ก1+7: เลื่อนแถบแล้วกดปุ่มบันทึกโดนจริง (elementFromPoint ชนปุ่ม ไม่ใช่ canvas)',
+          saveHit.ok, saveHit.why);
+    check('Planner บั๊ก7: แถบเครื่องมือเลื่อนแนวนอนได้ (nowrap + overflow-x)',
+          getComputedStyle(pb.toolbar.querySelector('.planner-toolbar-strip')).overflowX === 'auto' &&
+          !!pb.toolbar.querySelector('.planner-scroll-btn'));
+    check('Planner บั๊ก8: แถบสถานะบอกพิกัด x/y ได้',
+          !!rStatus.height && (pb.statusBar.setXY({ x: 12, y: 34 }),
+          pb.statusBar.querySelector('#pl-st-xy').textContent.includes('12')),
+          pb.statusBar.querySelector('#pl-st-xy').textContent);
+    check('Planner บั๊ก4: รางเครื่องมือมีครบ (มือ/ข้อความ/รูปทรง/เฟรม/คอมเมนต์/โพสต์อิต/เส้นเชื่อม)',
+          ['select', 'hand', 'sticky', 'text', 'shape', 'frame', 'comment', 'connector']
+            .every((t) => !!pb.rail.querySelector(`[data-tool="${t}"]`)));
+
+    const nA = pb._addNode('scene', 'ฉาก A', '#3f3e3a');
+    const nB = pb._addNode('entity', 'ตัวละคร B', '#7a6f9f');
     nA.x = 120; nA.y = 120; nB.x = 420; nB.y = 280;
     nA.synopsis = 'พระเอกเปิดประตูเจอจดหมาย';
     nA.status = 'กำลังเขียน';
     nA.tags = ['เปิดเรื่อง'];
     nA.file = '/x/Chapters/c1/s1.md';
-    pb._rebuildNode(nA.id); pb._rebuildNode(nB.id);
-    const edge = pb._createEdge(nA.id, nB.id, 'เกี่ยวข้อง');
-    check('Planner เพิ่มการ์ด 2 + เชื่อมเส้น 1',
-          pb._nodes.length === 2 && pb._edges.length === 1 && !!edge,
-          'nodes=' + pb._nodes.length + ' edges=' + pb._edges.length);
-    check('Planner กันเส้นเชื่อมซ้ำ', pb._createEdge(nA.id, nB.id) === null);
-    check('Planner การ์ดวาดจริงบน canvas (มี object ชนิด node)',
-          pb.canvas.getObjects().filter((o) => o.kind === 'node').length === 2);
+    pb.renderer.rebuildNode(nA); pb.renderer.rebuildNode(nB);
+    const edge = pb._handleConnect(nA.id, 'right', nB.id, 'left');
+    check('Planner v4 เพิ่มการ์ด 2 + เชื่อมเส้น 1 (port-based)',
+          pb.data.getAllNodes().length === 2 && pb.data.getAllEdges().length === 1 && !!edge,
+          'nodes=' + pb.data.getAllNodes().length + ' edges=' + pb.data.getAllEdges().length);
+    check('Planner v4 กันเส้นเชื่อมซ้ำ', pb._handleConnect(nA.id, 'right', nB.id, 'left') === null);
+    check('Planner v4 กัน self-loop', pb._handleConnect(nA.id, 'right', nA.id, 'left') === null);
+    check('Planner v4 การ์ดวาดจริงบน canvas (มี object ชนิด node)',
+          pb.renderer.canvas.getObjects().filter((o) => o.kind === 'node').length === 2);
 
-    // สถานะ/สรุปย่อ + บันทึกเป็น v2
+    // [บั๊ก 9] เส้นเชื่อมมีรูปแบบเส้นทาง + [บั๊ก 11] หัวลูกศรเลือกได้
+    check('Planner บั๊ก9: เส้นใหม่เป็นแบบโค้ง และวาดเป็น path (ไม่ใช่เส้นตรงอย่างเดียว)',
+          edge.routing === 'curved' &&
+          (pb.renderer._edgeVis.get(edge.id).line.path || []).some((seg) => seg[0] === 'C'),
+          'routing=' + edge.routing);
+    pb._changeEdge(edge.id, { routing: 'orthogonal' });
+    check('Planner บั๊ก9: สลับเป็นหักมุมฉากได้ (path มีหลายช่วง L)',
+          pb.data.getEdge(edge.id).routing === 'orthogonal' &&
+          (pb.renderer._edgeVis.get(edge.id).line.path || []).filter((s) => s[0] === 'L').length >= 2);
+    pb._changeEdge(edge.id, { arrowStart: 'circle', arrowEnd: 'diamond' });
+    check('Planner บั๊ก11: เลือกหัวลูกศรได้ทั้งสองปลาย (วาดหัว 2 ชิ้น)',
+          pb.data.getEdge(edge.id).arrowStart === 'circle' &&
+          pb.data.getEdge(edge.id).arrowEnd === 'diamond' &&
+          pb.renderer._edgeVis.get(edge.id).heads.length === 2);
+    pb._changeEdge(edge.id, { arrowStart: 'none', arrowEnd: 'arrow', routing: 'straight' });
+    // [65r3-3] เลิกใช้วัตถุรับคลิก (กรอบสี่เหลี่ยมกินพื้นที่) → วัดระยะจากตัวเส้นจริงแทน
+    const eSamples = pb.renderer._edgeVis.get(edge.id).samples;
+    check('Planner บั๊ก10: เส้นเก็บรูปเป็นชุดจุดไว้ทดสอบการคลิกด้วยระยะจริง',
+          Array.isArray(eSamples) && eSamples.length >= 2 &&
+          pb.renderer.hitEdgeAt(eSamples[Math.floor(eSamples.length / 2)]) === edge.id,
+          'samples=' + (eSamples ? eSamples.length : 0));
+    check('Planner บั๊ก10: ไม่ใช้ perPixelTargetFind (ตัวการทำให้หน่วง)',
+          pb.renderer._edgeVis.get(edge.id).line.perPixelTargetFind !== true &&
+          pb.renderer._edgeVis.get(edge.id).line.evented === false);
+    pb.selectEdge(edge.id);
+    check('Planner บั๊ก10: คลิกเส้นแล้วเลือกได้ + เปิดคุณสมบัติเส้น',
+          pb.renderer._selectedEdgeId === edge.id);
+    pb._flipEdge(edge.id);
+    check('Planner บั๊ก10: สลับทิศเส้นได้',
+          pb.data.getEdge(edge.id).from.nodeId === nB.id && pb.data.getEdge(edge.id).to.nodeId === nA.id);
+    pb._flipEdge(edge.id);
+
+    // [บั๊ก 9] port ต้องยื่นออกนอกกรอบการ์ด และปุ่มปรับขนาดกลางขอบต้องปิด
+    const visA = pb.renderer._nodeVis.get(nA.id);
+    pb.renderer.showPorts(visA);
+    const portsShown = pb.renderer.getObjects('port').filter((o) => o.visible);
+    const rightPort = portsShown.find((o) => o.port === 'right');
+    check('Planner บั๊ก9: port โผล่ 4 จุด และยื่นออกนอกขอบการ์ด (ไม่โดน transform บัง)',
+          portsShown.length === 4 && !!rightPort && rightPort.left > nA.x + nA.width + 2,
+          `right=${rightPort ? Math.round(rightPort.left) : '?'} edge=${nA.x + nA.width}`);
+    // [alpha.65r บั๊ก 4] ปุ่มกลางขอบต้อง "เปิด" ไว้เพื่อยืดด้านเดียว — port ยื่นไกลกว่าจึงไม่ทับกัน
+    check('Planner บั๊ก4: เปิดปุ่มปรับขนาดกลางขอบ + port ยังอยู่ไกลกว่าปุ่ม (ไม่ทับ)',
+          visA.isControlVisible('mr') === true && visA.isControlVisible('mt') === true &&
+          rightPort.left - (nA.x + nA.width) >= 10,
+          'gap=' + Math.round(rightPort.left - (nA.x + nA.width)));
+    check('Planner บั๊ก4: ปิดล็อกสัดส่วนตอนลากมุม (uniformScaling=false)',
+          pb.renderer.canvas.uniformScaling === false);
+    pb.renderer.hidePorts();
+    check('Planner v4 ซ่อน port เมื่อออกจากการ์ด',
+          pb.renderer.getObjects('port').filter((o) => o.visible).length === 0);
+
+    // [บั๊ก 6] กริด
+    const g0 = pb.data.getGrid();
+    check('Planner บั๊ก6: มีกริดเริ่มต้น + วาดด้วย CSS บนเวที',
+          g0.show === true && g0.size === 20 &&
+          /gradient/.test(pb.stage.style.backgroundImage || ''), pb.stage.style.backgroundSize);
+    pb.setGrid({ size: 50, snap: true, style: 'lines' });
+    check('Planner บั๊ก6: ปรับขนาด/รูปแบบ/สแนปกริดได้',
+          pb.data.getGrid().size === 50 && pb.data.getGrid().snap === true &&
+          pb.data.getGrid().style === 'lines' &&
+          /linear-gradient/.test(pb.stage.style.backgroundImage || ''));
+    const snapNode = pb.data.addNode('sticky', 'สแนป', '#f2c14e', 137, 88);
+    check('Planner บั๊ก6: snap ดูดพิกัดเข้าเส้นกริด (137,88 → 150,100)',
+          snapNode.x === 150 && snapNode.y === 100, `${snapNode.x},${snapNode.y}`);
+    pb.data.removeNode(snapNode.id);
+    pb.setGrid({ size: 20, snap: false, style: 'dots', show: false });
+    check('Planner บั๊ก6: ปิดกริดได้', pb.stage.style.backgroundImage === 'none');
+    pb.setGrid({ show: true });
+
+    // [บั๊ก 4] เครื่องมือแบบ Miro สร้างวัตถุได้จริง
+    const madeText = pb._createFromTool('text', { x: 700, y: 120 });
+    const madeShape = pb._createFromTool('shape', { x: 700, y: 260, shape: 'diamond' });
+    const madeFrame = pb._createFromTool('frame', { x: 900, y: 120, box: { x: 900, y: 120, width: 400, height: 300 } });
+    const madeComment = pb._createFromTool('comment', { x: 700, y: 400 });
+    const madeSticky = pb._createFromTool('sticky', { x: 520, y: 520 });
+    check('Planner บั๊ก4: สร้าง Text / Shape / Frame / Comment / Sticker ได้ครบ',
+          madeText.type === 'text' && madeShape.type === 'shape' && madeShape.shape === 'diamond' &&
+          madeFrame.type === 'frame' && madeFrame.width === 400 &&
+          madeComment.type === 'comment' && madeSticky.type === 'sticky',
+          [madeText.type, madeShape.shape, madeFrame.width, madeComment.type, madeSticky.type].join('/'));
+    pb.interaction.setTool('hand');
+    check('Planner บั๊ก4: โหมดมือปิดการเลือก + เคอร์เซอร์เป็น grab',
+          pb.interaction.getTool() === 'hand' && pb.renderer.canvas.selection === false &&
+          pb.renderer.canvas.defaultCursor === 'grab');
+    const vpBefore = pb.renderer.getViewport().x;
+    pb.renderer.pan(60, 0);
+    check('Planner บั๊ก4: เลื่อนกระดาน (pan) ได้', pb.renderer.getViewport().x === vpBefore + 60);
+    pb.renderer.pan(-60, 0);
+    pb.interaction.setTool('select');
+    for (const m of [madeText, madeShape, madeFrame, madeComment, madeSticky]) pb._deleteNode(m.id);
+
+    // แก้ข้อความในที่ (dblclick → overlay textarea)
+    const ta = pb.interaction.editText(nB);
+    check('Planner v4 ดับเบิลคลิกแก้ข้อความในที่ได้ (overlay textarea)',
+          !!ta && ta.classList.contains('planner-inline-edit') && ta.value === 'ตัวละคร B');
+    ta.value = 'ตัวละคร B2';
+    pb._commitEdit(nB.id, { title: ta.value });
+    pb.interaction.closeEditor();
+    check('Planner v4 บันทึกข้อความที่แก้ในที่กลับเข้าข้อมูล', pb.data.getNode(nB.id).title === 'ตัวละคร B2');
+
+    // บันทึก v4
     const okSave = await pb.save();
-    check('Planner บันทึก planner.json สำเร็จ', okSave === true && pb.dirty === false);
+    check('Planner บันทึก planner.json v4 สำเร็จ', okSave === true && pb.data.isDirty() === false);
     const pjson = await kapi.readJson(await kapi.join(state.root, 'planner.json'));
-    check('planner.json v2 เก็บ synopsis/status/tags/file ครบ',
-          pjson.version === '2.0' && pjson.nodes.length === 2 && pjson.edges.length === 1 &&
+    check('planner.json v4 เก็บ synopsis/status/tags/file + edge port + settings.grid ครบ',
+          pjson.version === '4.0' && pjson.nodes.length >= 2 && pjson.edges.length === 1 &&
           pjson.nodes.some((n) => n.synopsis.includes('จดหมาย') && n.status === 'กำลังเขียน' &&
-                                  n.file === '/x/Chapters/c1/s1.md' && n.tags[0] === 'เปิดเรื่อง'),
-          JSON.stringify({ v: pjson.version, n: pjson.nodes.length }));
+                                  n.file === '/x/Chapters/c1/s1.md' && n.tags[0] === 'เปิดเรื่อง') &&
+          pjson.edges[0].from.port === 'right' && pjson.edges[0].to.port === 'left' &&
+          !!pjson.settings && pjson.settings.grid.size === 20 && !!pjson.edges[0].routing,
+          JSON.stringify({ v: pjson.version, n: pjson.nodes.length, grid: pjson.settings && pjson.settings.grid.size }));
+
+    // [บั๊ก 5] กระดานหลายแผ่น + Explorer + บันทึกเป็น + เตือนตอนปิด
+    const boards0 = await listPlannerBoards();
+    check('Planner บั๊ก5: หากระดานในโปรเจกต์เจอ (planner.json เดิมนับด้วย)',
+          boards0.length >= 1 && boards0.some((b) => /planner\.json$/i.test(b.path)));
+    const b2 = await newPlannerBoard('กระดานทดสอบ');
+    check('Planner บั๊ก5: สร้างกระดานใหม่ลง Planners/ ได้', !!b2 && await kapi.exists(b2), String(b2));
+    check('Planner บั๊ก5: เปิดกระดานใหม่แล้วชื่อบนแถบเปลี่ยนตาม + กระดานว่าง',
+          plannerInst.data.getName() === 'กระดานทดสอบ' && plannerInst.data.getAllNodes().length === 0,
+          plannerInst.data.getName());
+    check('Planner บั๊ก5: Explorer มีหมวด "กระดานวางแผน" และเห็นกระดานที่สร้าง',
+          [...document.querySelectorAll('#tree .sec-title')].some((h) => h.textContent.includes('กระดานวางแผน')) &&
+          [...document.querySelectorAll('#tree .scene')].some((r) => (r.dataset.search || '') === 'กระดานทดสอบ'));
+    plannerInst._addNode('note', 'ของกระดาน 2', '#5f8a6f');
+    check('Planner บั๊ก5: แก้แล้วขึ้นสถานะยังไม่บันทึก (●)',
+          plannerInst.data.isDirty() === true && plannerInst.toolbar.classList.contains('is-dirty'));
+    const closeBlocked = getPanelManager().hidePanel('planner') === false;
+    const askBox = document.querySelector('.k-overlay .k-dialog');
+    check('Planner บั๊ก5: กดปิดแผงตอนยังไม่บันทึก → ยับยั้งไว้ + ขึ้นกล่องเตือน',
+          closeBlocked && isPanelOpen('planner') && !!askBox && /ยังไม่ได้บันทึก/.test(askBox.textContent),
+          askBox ? askBox.textContent.slice(0, 60) : 'ไม่มีกล่องเตือน');
+    const saveFirst = [...askBox.querySelectorAll('button')].find((b) => b.textContent.includes('บันทึกก่อน'));
+    check('Planner บั๊ก5: กล่องเตือนมีทางเลือก บันทึกก่อน / ทิ้ง / ยกเลิก',
+          !!saveFirst && askBox.querySelectorAll('button').length === 3);
+    saveFirst.click();
+    await new Promise((r) => setTimeout(r, 200));
+    check('Planner บั๊ก5: ตอบ "บันทึกก่อน" → บันทึกจริงแล้วปิดแผงให้',
+          plannerInst.data.isDirty() === false && !isPanelOpen('planner') &&
+          !document.querySelector('.k-overlay'));
+    const b2json = await kapi.readJson(b2);
+    check('Planner บั๊ก5: งานที่ค้างถูกเขียนลงไฟล์กระดานใบที่สองจริง',
+          b2json.nodes.length === 1 && b2json.nodes[0].title === 'ของกระดาน 2', JSON.stringify(b2json.nodes.length));
+    await openPlanner(await kapi.join(state.root, 'planner.json'));
+    check('Planner บั๊ก5: กลับมาเปิดกระดานหลักได้ + ข้อมูลเดิมอยู่ครบ',
+          plannerInst.data.getName() === 'กระดานหลัก' && plannerInst.data.getAllNodes().length >= 2,
+          plannerInst.data.getName() + '/' + plannerInst.data.getAllNodes().length);
 
     // ตัวกรอง
     pb._filter = { text: '', type: 'entity', status: '' };
-    check('Planner กรองตามประเภทได้ (เหลือ Wiki 1)', pb._applyFilter() === 1);
+    check('Planner v4 กรองตามประเภทได้ (เหลือ Wiki 1)', pb._applyFilter() === 1);
     pb._filter = { text: 'จดหมาย', type: '', status: '' };
-    check('Planner กรองด้วยข้อความในสรุปย่อได้', pb._applyFilter() === 1);
+    check('Planner v4 กรองด้วยข้อความในสรุปย่อได้', pb._applyFilter() === 1);
     pb._filter = { text: '', type: '', status: 'กำลังเขียน' };
-    check('Planner กรองตามสถานะได้', pb._applyFilter() === 1);
+    check('Planner v4 กรองตามสถานะได้', pb._applyFilter() === 1);
     pb._filter = { text: '', type: '', status: '' };
     pb._applyFilter();
 
     // undo / redo
-    const beforeUndo = pb._nodes.length;
-    pb._createNode('note', 'โน้ตชั่วคราว', '#5f8a6f');
-    check('Planner เพิ่มการ์ดที่ 3 แล้ว', pb._nodes.length === beforeUndo + 1);
+    const beforeUndo = pb.data.getAllNodes().length;
+    pb._addNode('note', 'โน้ตชั่วคราว', '#5f8a6f');
+    check('Planner v4 เพิ่มการ์ดที่ 3 แล้ว', pb.data.getAllNodes().length === beforeUndo + 1);
     pb.undo();
-    check('Planner undo ย้อนการเพิ่มการ์ดได้', pb._nodes.length === beforeUndo,
-          'nodes=' + pb._nodes.length);
+    check('Planner v4 undo ย้อนการเพิ่มการ์ดได้', pb.data.getAllNodes().length === beforeUndo,
+          'nodes=' + pb.data.getAllNodes().length);
     pb.redo();
-    check('Planner redo เอาการ์ดกลับมาได้', pb._nodes.length === beforeUndo + 1);
+    check('Planner v4 redo เอาการ์ดกลับมาได้', pb.data.getAllNodes().length === beforeUndo + 1);
     pb.undo();
 
     // จัดกลุ่ม (เลือกหลายใบแบบผู้ใช้ลากคลุม)
-    const getN = (id) => pb._nodes.find((n) => n.id === id);   // หลัง undo ข้อมูลถูกสร้างใหม่
+    const getN = (id) => pb.data.getNode(id);
     pb._selectNodes([nA.id, nB.id]);
     const grp = pb._createGroupFromSelection('องก์ 1');
-    check('Planner จัดกลุ่มจากการ์ดที่เลือกหลายใบได้',
-          !!grp && pb._groups.length === 1 && grp.childrenIds.length === 2,
+    check('Planner v4 จัดกลุ่มจากการ์ดที่เลือกหลายใบได้',
+          !!grp && pb.data.getAllGroups().length === 1 && grp.childrenIds.length === 2,
           'members=' + (grp ? grp.childrenIds.length : 0));
     const gW0 = grp.width;
-    getN(nB.id).x += 250; pb._updateGroupBounds(grp);
-    check('Planner กรอบกลุ่มขยายตามการ์ดที่ย้าย', grp.width > gW0, `${gW0} → ${grp.width}`);
+    getN(nB.id).x += 250; pb.data.updateGroupBounds(grp.id);
+    check('Planner v4 กรอบกลุ่มขยายตามการ์ดที่ย้าย', grp.width > gW0, `${gW0} → ${grp.width}`);
+
+    // จัดตำแหน่งหลายชิ้น
+    pb._selectNodes([nA.id, nB.id]);
+    pb._align('left', [nA.id, nB.id]);
+    check('Planner v4 จัดชิดซ้ายหลายชิ้นได้', getN(nA.id).x === getN(nB.id).x);
 
     // ลบการ์ด → เส้น + สมาชิกกลุ่มหายตาม
-    pb.canvas.setActiveObject(pb._nodeVis.get(nA.id));
+    pb.renderer.canvas.setActiveObject(pb.renderer._nodeVis.get(nA.id));
     pb._deleteSelected();
-    check('Planner ลบการ์ดแล้วเส้นเชื่อม + สมาชิกกลุ่มหายตาม',
-          pb._nodes.length === 1 && pb._edges.length === 0 &&
-          !pb._groups[0].childrenIds.includes(nA.id) && pb._groups[0].childrenIds.length === 1,
-          `n=${pb._nodes.length} e=${pb._edges.length} g=${pb._groups[0].childrenIds.length}`);
+    check('Planner v4 ลบการ์ดแล้วเส้นเชื่อม + สมาชิกกลุ่มหายตาม',
+          pb.data.getAllNodes().length === 1 && pb.data.getAllEdges().length === 0 &&
+          !pb.data.getAllGroups()[0].childrenIds.includes(nA.id) && pb.data.getAllGroups()[0].childrenIds.length === 1,
+          `n=${pb.data.getAllNodes().length} e=${pb.data.getAllEdges().length} g=${pb.data.getAllGroups()[0].childrenIds.length}`);
 
-    // อ่านไฟล์รูปแบบเก่า (v1: ไม่มี synopsis/status/groups) ต้องไม่พัง
-    pb._loadData({ nodes: [{ id: 'old1', type: 'scene', title: 'ฉากเก่า', x: 50, y: 50 },
+    // v1 migration (ไฟล์เก่าไม่มี version/tags/synopsis/status)
+    pb.data._parse({ nodes: [{ id: 'old1', type: 'scene', title: 'ฉากเก่า', x: 50, y: 50 },
                            { id: 'old2', type: 'note', title: 'โน้ตเก่า', x: 300, y: 50 }],
                    edges: [{ id: 'olde', from: 'old1', to: 'old2' }] });
-    check('Planner อ่านไฟล์รูปแบบเดิม (v1) ได้ + เติมค่าเริ่มต้นให้',
-          pb._nodes.length === 2 && pb._nodes[0].synopsis === '' && pb._nodes[0].status === '' &&
-          pb._nodes[0].width === 180 && pb._edges.length === 1 && pb._groups.length === 0);
+    check('Planner v4 อ่านไฟล์ v1 ได้ + เติมค่าเริ่มต้น + migrate เป็น edge แบบ port',
+          pb.data.getAllNodes().length === 2 && pb.data.getNode('old1').synopsis === '' &&
+          pb.data.getNode('old1').status === '' && pb.data.getNode('old1').width === 180 &&
+          pb.data.getAllEdges().length === 1 && pb.data.getAllEdges()[0].from.port === 'right' &&
+          pb.data.getAllEdges()[0].to.port === 'left' && pb.data.getAllGroups().length === 0);
+
+    // v2 migration (edges เป็น string)
+    pb.data._parse({ version: '2.0',
+      nodes: [{ id: 'v2a', type: 'scene', title: 'v2 ฉาก', x: 50, y: 50, width: 180, height: 110 },
+              { id: 'old1', type: 'scene', title: 'ฉากเก่า', x: 250, y: 50 }],
+      edges: [{ id: 'v2e', from: 'v2a', to: 'old1', label: 'เชื่อม', color: '#f00' }] });
+    check('Planner v4 อ่าน v2 edge + migrate เป็น port format (from.right, to.left)',
+          pb.data.getAllEdges().length === 1 && pb.data.getAllEdges()[0].width === 2 &&
+          pb.data.getAllEdges()[0].style === 'solid' &&
+          pb.data.getAllEdges()[0].from.nodeId === 'v2a' &&
+          pb.data.getAllEdges()[0].from.port === 'right' &&
+          pb.data.getAllEdges()[0].to.port === 'left');
+    pb._renderAll();
 
     // ลากจาก Explorer มาวางบนกระดาน
-    const sceneRow = document.querySelector('.scene[data-path]');
+    const sceneRow = document.querySelector('#tree .scene[data-path$=".md"]') || document.querySelector('.scene[data-path]');
     check('Explorer ใส่ data-path ให้แถวไฟล์แล้ว (ใช้ลาก/ค้นตำแหน่งได้)', !!sceneRow,
           'row=' + (sceneRow ? sceneRow.dataset.path : 'none'));
     const dropped = pb.dropPayload('text/k2-scene',
       { file: sceneRow.dataset.path, title: 'ฉากที่ลากมา' }, null);
-    check('Planner รับการลากจาก Explorer → เกิดการ์ดผูกไฟล์',
+    check('Planner v4 รับการลากจาก Explorer → เกิดการ์ดผูกไฟล์',
           !!dropped && dropped.file === sceneRow.dataset.path && dropped.type === 'scene');
     const again = pb.dropPayload('text/k2-scene', { file: sceneRow.dataset.path, title: 'ซ้ำ' }, null);
-    check('Planner ลากไฟล์เดิมซ้ำ → ไม่สร้างการ์ดซ้ำ แต่เลือกใบเดิม', again.id === dropped.id);
+    check('Planner v4 ลากไฟล์เดิมซ้ำ → ไม่สร้างการ์ดซ้ำ แต่เลือกใบเดิม', again.id === dropped.id);
     const memoDrop = pb.dropPayload('text/k2-memo', { file: '/x/Memos/m1.md', title: 'memo หนึ่ง' }, null);
-    check('Planner รับ memo ที่ลากมา (เป็นการ์ดชนิดโน้ต)', memoDrop.type === 'note');
+    check('Planner v4 รับ memo ที่ลากมา (เป็นการ์ดชนิดโน้ต)', memoDrop.type === 'note');
 
     // ทำซ้ำการ์ด
     pb._selectNodes([dropped.id]);
     const dupes = pb._duplicateSelected();
-    check('Planner ทำซ้ำการ์ดได้ (ชื่อมี "(สำเนา)" และเยื้องตำแหน่ง)',
+    check('Planner v4 ทำซ้ำการ์ดได้ (ชื่อมี "(สำเนา)" และเยื้องตำแหน่ง)',
           !!dupes && dupes.length === 1 && dupes[0].title.includes('สำเนา') &&
           dupes[0].x === dropped.x + 28 && dupes[0].file === dropped.file);
 
     // แสดงตำแหน่งใน Explorer
     pb._selectNodes([dropped.id]);
-    check('Planner ปุ่ม "ในเอกสาร" หาไฟล์เจอใน Explorer', pb._revealSelected() === true);
+    check('Planner v4 ปุ่ม "ในเอกสาร" หาไฟล์เจอใน Explorer', pb._revealSelected() === true);
 
-    // เชื่อมแบบ Miro: จุดเชื่อมบนขอบการ์ด + เลือก/ลบเส้น
-    pb._showAnchors(pb._nodeVis.get(dropped.id));
-    check('Planner โชว์จุดเชื่อม 4 จุดรอบการ์ดเมื่อชี้เมาส์',
-          pb.canvas.getObjects().filter((o) => o.kind === 'anchor').length === 4);
-    pb._hideAnchors();
-    check('Planner ซ่อนจุดเชื่อมเมื่อออกจากการ์ด',
-          pb.canvas.getObjects().filter((o) => o.kind === 'anchor').length === 0);
-    const e2 = pb._createEdge(dropped.id, memoDrop.id, '');
-    pb._selectEdge(e2.id);
-    check('Planner คลิกเลือกเส้นแล้วแผงเปลี่ยนเป็นโหมดเส้นเชื่อม',
-          pb._selectedEdgeId === e2.id &&
-          pb.properties.querySelector('.planner-props-title').textContent.includes('เส้นเชื่อม'));
-    const edgesBefore = pb._edges.length;
+    // [บั๊ก 3] แผงคุณสมบัติต้องมีของจริง + ผูกไฟล์จากโปรเจกต์ได้
+    let propsCtx = null;
+    const realPropsCb = pb._propsCallback;
+    pb.setPropsCallback((c) => { propsCtx = c; realPropsCb && realPropsCb(c); });
+    pb._showProps('node', pb.data.getNode(dropped.id));
+    const propsBody = $('#planner-props-body');
+    check('Planner บั๊ก3: คลิกการ์ดแล้วแผงคุณสมบัติมีฟิลด์จริง (ชื่อ/ชนิด/สี/ไฟล์/แท็ก/x,y)',
+          !!propsBody && !!propsBody.querySelector('#plp-title') && !!propsBody.querySelector('#plp-type') &&
+          !!propsBody.querySelector('#plp-color') && !!propsBody.querySelector('#plp-file') &&
+          !!propsBody.querySelector('#plp-tags') && !!propsBody.querySelector('#plp-x'),
+          propsBody ? propsBody.innerHTML.length + ' bytes' : 'no body');
+    check('Planner บั๊ก3: มีปุ่มเลือกไฟล์จากโปรเจกต์ + ต่อสายกับ Explorer แล้ว',
+          !!propsBody.querySelector('#plp-pick') && typeof propsCtx.onPickFile === 'function');
+    const refTargets = await listRefTargets();
+    check('Planner บั๊ก3: รายการเอกสารที่ผูกได้ดึงจาก Explorer จริง (มีฉากในโปรเจกต์)',
+          refTargets.length > 0 && refTargets.every((r) => !!r.path && !!r.label),
+          'targets=' + refTargets.length);
+    propsBody.querySelector('#plp-title').value = 'ชื่อจากแผงคุณสมบัติ';
+    propsCtx.onChangeNode({ title: 'ชื่อจากแผงคุณสมบัติ' });
+    check('Planner บั๊ก3: แก้ค่าในแผงแล้วเข้าไปในข้อมูลการ์ดจริง',
+          pb.data.getNode(dropped.id).title === 'ชื่อจากแผงคุณสมบัติ');
+    propsCtx.onChangeNode({ x: 888, y: 777 });
+    check('Planner บั๊ก8: ตั้งพิกัด x/y จากแผงคุณสมบัติได้',
+          pb.data.getNode(dropped.id).x === 888 && pb.data.getNode(dropped.id).y === 777);
+
+    // Edge properties (width, style) + แผงคุณสมบัติเส้น
+    const e2 = pb._handleConnect(dropped.id, 'top', memoDrop.id, 'bottom');
+    pb.data.updateEdge(e2.id, { width: 4, style: 'dashed', label: 'แนวตั้ง' });
+    const e2read = pb.data.getEdge(e2.id);
+    check('Planner v4 edge มี width=4 และ style=dashed',
+          e2read.width === 4 && e2read.style === 'dashed' && e2read.label === 'แนวตั้ง');
+    pb.selectEdge(e2.id);
+    check('Planner บั๊ก10+11: แผงคุณสมบัติเส้นมีป้าย/สี/หนา/เส้นทาง/หัวลูกศร 2 ปลาย/ปุ่มลบ',
+          !!propsBody.querySelector('#plpe-label') && !!propsBody.querySelector('#plpe-routing') &&
+          !!propsBody.querySelector('#plpe-as') && !!propsBody.querySelector('#plpe-ae') &&
+          !!propsBody.querySelector('#plpe-width') &&
+          [...propsBody.querySelectorAll('.planner-props-actions button')].some((b) => b.textContent.includes('ลบเส้น')));
     pb._deleteEdge(e2.id);
-    check('Planner ลบเส้นที่เลือกได้', pb._edges.length === edgesBefore - 1 && !pb._selectedEdgeId);
+    check('Planner v4 ลบ edge ผ่าน _deleteEdge ได้', pb.data.getAllEdges().every((e) => e.id !== e2.id));
+    pb.setPropsCallback(realPropsCb);
+
+    // Free resize (node resize ผ่าน data model)
+    const szNode = pb.data.getNode(memoDrop.id);
+    szNode.width = 250; szNode.height = 150;
+    pb.renderer.rebuildNode(szNode);
+    const szN2 = pb.data.getNode(memoDrop.id);
+    check('Planner v4 resize การ์ดได้ (250x150)',
+          szN2.width === 250 && szN2.height === 150);
+
+    // Properties panel (ผ่าน panel system)
+    check('Planner v4 properties panel container มีอยู่ ($#planner-props-body)',
+          !!$('#planner-props-body'));
+
+    pb.loadSample();
+    await new Promise((r) => setTimeout(r, 250));
+    await kapi.testShot('/tmp/k2_planner.png');   // ภาพกระดาน: แถบเครื่องมือ · ราง · กริด · เส้นโค้ง/หักมุม
 
     // ส่งออก PNG
     const okPng = await pb.exportPNG();
     check('Planner ส่งออก PNG ลงโฟลเดอร์โปรเจกต์ได้',
           okPng === true && await kapi.exists(await kapi.join(state.root, 'planner.png')));
+
+
+    // ═══════ [alpha.65r] รอบเก็บบั๊กที่ผู้ใช้แจ้ง 8 ข้อ ═══════
+    {
+      const cvEl = pb.renderer.canvas.upperCanvasEl;
+      const raf = () => new Promise((r) => requestAnimationFrame(() => r()));
+      const waitMs = (ms) => new Promise((r) => setTimeout(r, ms));
+      const rawDown = (cx, cy, o = {}) => cvEl.dispatchEvent(new MouseEvent('mousedown',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const rawMove = (cx, cy, o = {}) => document.dispatchEvent(new MouseEvent('mousemove',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const rawUp = (cx, cy, o = {}) => document.dispatchEvent(new MouseEvent('mouseup',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const toClient = (bx, by) => {                       // พิกัดกระดาน → พิกัดจอ
+        const r = cvEl.getBoundingClientRect();
+        const vt = pb.renderer.canvas.viewportTransform;
+        return { x: r.left + bx * vt[0] + vt[4], y: r.top + by * vt[3] + vt[5] };
+      };
+
+      pb.interaction.setTool('select');
+      pb.renderer.discardActiveObject();
+      pb.setGrid({ snap: false, show: true, size: 20 });
+
+      // ---- บั๊ก 1: ย่อ/ขยายแผงแล้ว canvas กะพริบ ----
+      const fw = pb.renderer.getWidth(), fh = pb.renderer.getHeight();
+      check('[65r-1] fit() ขนาดเท่าเดิม → ไม่แตะ canvas (ไม่มีเฟรมว่างให้กะพริบ)',
+            pb.renderer.fit(fw, fh) === false);
+      check('[65r-1] fit() ขนาดใหม่ → ปรับจริง', pb.renderer.fit(fw - 40, fh) === true);
+      pb.renderer.fit(fw, fh);
+      check('[65r-1] ResizeObserver รวบเป็นเฟรมเดียว (มีตัวกัน rAF)',
+            '_fitRaf' in pb || typeof pb._fit === 'function');
+
+      // ---- เตรียมการ์ด 2 ใบ + เส้น 1 เส้น สำหรับบั๊ก 2/3/4 ----
+      for (const n of pb.data.getAllNodes()) pb.data.removeNode(n.id);
+      pb._renderAll();
+      const rA = pb.data.addNode('scene', 'R-A', '#3f3e3a', 200, 200);
+      const rB = pb.data.addNode('scene', 'R-B', '#5f7a9f', 600, 200);
+      pb._renderAll();
+      const rEdge = pb._handleConnect(rA.id, 'right', rB.id, 'left');
+      const visRA = pb.renderer._nodeVis.get(rA.id);
+
+      // ---- บั๊ก 2: ย้ายหลายใบพร้อมกันแล้วกระเด็นมั่ว ----
+      const sel = pb._selectNodes([rA.id, rB.id]);
+      check('[65r-2] เลือกได้ 2 ใบเป็น activeSelection', !!sel && sel.type === 'activeSelection');
+      const dx0 = rB.x - rA.x, dy0 = rB.y - rA.y;
+      sel.set({ left: sel.left + 120, top: sel.top + 60 });
+      sel.setCoords();
+      pb.renderer.canvas.fire('object:moving', { target: sel });
+      pb.renderer.canvas.fire('object:modified', { target: sel });
+      const mA = pb.data.getNode(rA.id), mB = pb.data.getNode(rB.id);
+      check('[65r-2] ย้าย 2 ใบพร้อมกัน → ขยับเท่ากันทั้งคู่ ระยะห่างเดิมคงอยู่',
+            Math.abs(mA.x - 320) <= 1 && Math.abs(mA.y - 260) <= 1 &&
+            Math.abs((mB.x - mA.x) - dx0) <= 1 && Math.abs((mB.y - mA.y) - dy0) <= 1,
+            `A=${Math.round(mA.x)},${Math.round(mA.y)} B=${Math.round(mB.x)},${Math.round(mB.y)}`);
+      pb.renderer.discardActiveObject();
+      const vA2 = pb.renderer._nodeVis.get(rA.id), vB2 = pb.renderer._nodeVis.get(rB.id);
+      check('[65r-2] ยุบกล่องเลือกแล้วภาพยังตรงกับข้อมูล (ไม่กระเด็น)',
+            Math.abs(vA2.left - mA.x) <= 1 && Math.abs(vA2.top - mA.y) <= 1 &&
+            Math.abs(vB2.left - mB.x) <= 1 && Math.abs(vB2.top - mB.y) <= 1,
+            `visA=${Math.round(vA2.left)},${Math.round(vA2.top)} data=${Math.round(mA.x)},${Math.round(mA.y)}`);
+
+      // ---- บั๊ก 3: ย่อ/ขยายการ์ดแล้วเส้นเชื่อมไม่ตาม ----
+      const edgeLeft0 = pb.renderer._edgeVis.get(rEdge.id).line.getBoundingRect(true, true).left;
+      const vRA = pb.renderer._nodeVis.get(rA.id);
+      pb.renderer.setActiveObject(vRA);
+      vRA.set({ scaleX: 2 }); vRA.setCoords();
+      pb.renderer.canvas.fire('object:scaling', { target: vRA });
+      await raf(); await raf();
+      const edgeLeft1 = pb.renderer._edgeVis.get(rEdge.id).line.getBoundingRect(true, true).left;
+      check('[65r-3] กำลังลากย่อ/ขยาย → เส้นเชื่อมขยับตามทันที',
+            edgeLeft1 > edgeLeft0 + 100, `${Math.round(edgeLeft0)} → ${Math.round(edgeLeft1)}`);
+      pb.renderer.canvas.fire('object:modified', { target: vRA });
+      const wA = pb.data.getNode(rA.id).width;
+      check('[65r-3] ปล่อยเมาส์ → ขนาดจริงถูกบันทึก (180 → 360)', Math.abs(wA - 360) <= 2, 'w=' + wA);
+      const geoStart = pb.renderer._edgeVis.get(rEdge.id).line.getBoundingRect(true, true).left;
+      check('[65r-3] เส้นเชื่อมออกจากขอบใหม่ของการ์ด (ไม่ค้างที่ขอบเดิม)',
+            Math.abs(geoStart - (pb.data.getNode(rA.id).x + wA)) <= 6,
+            `line=${Math.round(geoStart)} edgeOfCard=${Math.round(pb.data.getNode(rA.id).x + wA)}`);
+
+      // ---- บั๊ก 4: ยืดด้านเดียวได้ ไม่ล็อกสัดส่วน ----
+      const hBefore = pb.data.getNode(rA.id).height;
+      const vRA2 = pb.renderer._nodeVis.get(rA.id);
+      pb.renderer.setActiveObject(vRA2);
+      vRA2.set({ scaleY: 1.5 }); vRA2.setCoords();
+      pb.renderer.canvas.fire('object:modified', { target: vRA2 });
+      const afterN = pb.data.getNode(rA.id);
+      check('[65r-4] ยืดเฉพาะแนวตั้งได้ — ความกว้างไม่ถูกลากตามสัดส่วน',
+            Math.abs(afterN.height - hBefore * 1.5) <= 2 && Math.abs(afterN.width - wA) <= 2,
+            `${wA}x${hBefore} → ${afterN.width}x${afterN.height}`);
+
+      // ---- บั๊ก 5: ลากกำหนดขนาดก่อนแล้วค่อยเกิดวัตถุ (ทุกเครื่องมือ) ----
+      pb.renderer.discardActiveObject();
+      for (const [tool, w, h] of [['sticky', 170, 120], ['text', 200, 60], ['shape', 240, 140]]) {
+        pb.interaction.setTool(tool);
+        const bx = 1200, by = tool === 'sticky' ? 200 : tool === 'text' ? 400 : 600;
+        const p1 = toClient(bx, by), p2 = toClient(bx + w, by + h);
+        rawDown(p1.x, p1.y); rawMove(p2.x, p2.y); rawUp(p2.x, p2.y);
+        await waitMs(40);
+        pb.interaction.closeEditor();
+        const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        check(`[65r-5] ลากกำหนดขนาดแล้วค่อยสร้าง "${tool}" ได้ตามที่ลาก`,
+              !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
+              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h}` : 'ไม่เกิดวัตถุ');
+        if (made) pb._deleteNode(made.id);
+      }
+      pb.interaction.setTool('select');
+
+      // ---- บั๊ก 6: เลื่อนกระดานด้วยล้อกลาง ----
+      check('[65r-6] เปิด fireMiddleClick แล้ว (ไม่งั้น fabric ไม่ยิงอีเวนต์ล้อกลางเลย)',
+            pb.renderer.canvas.fireMiddleClick === true);
+      const vpx0 = pb.renderer.getViewport().x, vpy0 = pb.renderer.getViewport().y;
+      const cr = cvEl.getBoundingClientRect();
+      rawDown(cr.left + 120, cr.top + 120, { button: 1, buttons: 4 });
+      rawMove(cr.left + 200, cr.top + 165, { buttons: 4 });
+      rawUp(cr.left + 200, cr.top + 165, { button: 1 });
+      const vpA = pb.renderer.getViewport();
+      check('[65r-6] กดล้อกลางแล้วลาก = เลื่อนกระดาน (ไม่ใช่ลากเลือก)',
+            Math.abs(vpA.x - (vpx0 + 80)) <= 2 && Math.abs(vpA.y - (vpy0 + 45)) <= 2,
+            `${Math.round(vpx0)},${Math.round(vpy0)} → ${Math.round(vpA.x)},${Math.round(vpA.y)}`);
+      pb.renderer.pan(-80, -45);
+
+      // ---- บั๊ก 7: คลิกการ์ดจริง ๆ แล้วต้องมีคุณสมบัติ + เปลี่ยนสีได้ ----
+      const propsBody2 = $('#planner-props-body');
+      propsBody2.innerHTML = '';
+      const nc = pb.data.getNode(rB.id);
+      const cpt = toClient(nc.x + nc.width / 2, nc.y + nc.height / 2);
+      rawDown(cpt.x, cpt.y); rawUp(cpt.x, cpt.y);
+      await waitMs(80);
+      check('[65r-7] คลิกการ์ดด้วยเมาส์จริง → แผงคุณสมบัติมีฟิลด์ขึ้นมา',
+            !!propsBody2.querySelector('#plp-title') && !!propsBody2.querySelector('#plp-color'),
+            propsBody2.innerHTML.length + ' bytes');
+      check('[65r-7] แถบคุณสมบัติลอยโผล่เหนือการ์ดที่เลือก (เปลี่ยนสีได้ทันที)',
+            pb.ctxBar.isShown() && pb.ctxBar.currentMode() === 'node' &&
+            pb.ctxBar.querySelectorAll('.planner-ctx-sw').length >= 8);
+      pb.ctxBar.querySelector('.planner-ctx-sw[data-color="#f2c14e"]').click();
+      check('[65r-7] กดจานสีบนแถบลอย → สีการ์ดเปลี่ยนจริง',
+            pb.data.getNode(rB.id).color === '#f2c14e', pb.data.getNode(rB.id).color);
+      const ci = $('#planner-props-body').querySelector('#plp-color');
+      ci.value = '#5f8a6f'; ci.dispatchEvent(new Event('input', { bubbles: true }));
+      await waitMs(300);
+      check('[65r-7] เปลี่ยนสีจากช่องสีในแผงคุณสมบัติได้',
+            pb.data.getNode(rB.id).color === '#5f8a6f', pb.data.getNode(rB.id).color);
+
+      pb.selectEdge(rEdge.id);
+      check('[65r-7] เลือกเส้นแล้วแถบลอยเปลี่ยนเป็นชุดของเส้น',
+            pb.ctxBar.isShown() && pb.ctxBar.currentMode() === 'edge');
+      pb.ctxBar.querySelector('.planner-ctx-sw[data-color="#5f7a9f"]').click();
+      check('[65r-7] กดจานสีบนแถบลอย → สีเส้นเปลี่ยนจริง',
+            pb.data.getEdge(rEdge.id).color === '#5f7a9f', pb.data.getEdge(rEdge.id).color);
+      const ec = $('#planner-props-body').querySelector('#plpe-color');
+      ec.value = '#5f8a6f'; ec.dispatchEvent(new Event('input', { bubbles: true }));
+      await waitMs(300);
+      check('[65r-7] เปลี่ยนสีเส้นจากแผงคุณสมบัติได้',
+            pb.data.getEdge(rEdge.id).color === '#5f8a6f', pb.data.getEdge(rEdge.id).color);
+      check('[65r-7] เส้นที่วาดใหม่ใช้สีที่ตั้ง',
+            pb.renderer._edgeVis.get(rEdge.id).line.stroke === '#5f8a6f');
+
+      pb.renderer.discardActiveObject();
+      pb._showProps('none', null);
+      check('[65r-7] เลิกเลือก → แถบลอยหายไป', pb.ctxBar.isShown() === false);
+      for (const n of pb.data.getAllNodes()) pb.data.removeNode(n.id);
+      pb._renderAll();
+      await pb.save();
+    }
+
+
+    // ═══════ [alpha.65r2] รอบเก็บบั๊กที่ผู้ใช้แจ้ง 8 ข้อ ═══════
+    {
+      const cvEl2 = pb.renderer.canvas.upperCanvasEl;
+      const waitMs2 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const dn = (cx, cy, o = {}) => cvEl2.dispatchEvent(new MouseEvent('mousedown',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const mv = (cx, cy, o = {}) => document.dispatchEvent(new MouseEvent('mousemove',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const up = (cx, cy, o = {}) => document.dispatchEvent(new MouseEvent('mouseup',
+        { clientX: cx, clientY: cy, bubbles: true, cancelable: true, ...o }));
+      const cli = (bx, by) => {
+        const r = cvEl2.getBoundingClientRect();
+        const vt = pb.renderer.canvas.viewportTransform;
+        return { x: r.left + bx * vt[0] + vt[4], y: r.top + by * vt[3] + vt[5] };
+      };
+
+      pb.interaction.setTool('select');
+      pb.renderer.discardActiveObject();
+      for (const n of pb.data.getAllNodes()) pb.data.removeNode(n.id);
+      pb.renderer.resetZoom();
+      pb._renderAll();
+      const zA = pb.data.addNode('scene', 'Z-A', '#3f3e3a', 120, 120);
+      const zB = pb.data.addNode('scene', 'Z-B', '#5f7a9f', 500, 120);
+      const zC = pb.data.addNode('scene', 'Z-C', '#5f8a6f', 500, 340);
+      pb._renderAll();
+
+      // ---- บั๊ก 1: ลำดับซ้อนทับ ----
+      const zi = (id) => pb.renderer.canvas.getObjects().filter((o) => o.kind === 'node').indexOf(pb.renderer._nodeVis.get(id));
+      check('[65r2-1] ตอนแรก Z-A อยู่ล่างสุด', zi(zA.id) === 0 && zi(zC.id) === 2);
+      pb._selectNodes([zA.id]);
+      pb.orderSelection('front');
+      check('[65r2-1] ยกไปบนสุด (bring to front)',
+            pb.data.nodeZ(zA.id) === 2 && zi(zA.id) === 2, 'z=' + pb.data.nodeZ(zA.id));
+      pb.orderSelection('backward');
+      check('[65r2-1] ลดลงหนึ่งชั้น (send backward)', pb.data.nodeZ(zA.id) === 1);
+      pb.orderSelection('forward');
+      check('[65r2-1] ยกขึ้นหนึ่งชั้น (bring forward)', pb.data.nodeZ(zA.id) === 2);
+      pb.orderSelection('back');
+      check('[65r2-1] ส่งไปล่างสุด (send to back)',
+            pb.data.nodeZ(zA.id) === 0 && zi(zA.id) === 0);
+      pb.orderSelection('backward');
+      check('[65r2-1] อยู่ล่างสุดแล้วสั่งลดอีก = อยู่ที่เดิม ไม่พัง', pb.data.nodeZ(zA.id) === 0);
+      pb._selectNodes([zA.id, zB.id]);
+      pb.orderSelection('front');
+      check('[65r2-1] ยกหลายใบพร้อมกันได้ + ลำดับภายในกลุ่มคงเดิม',
+            pb.data.nodeZ(zC.id) === 0 && pb.data.nodeZ(zA.id) === 1 && pb.data.nodeZ(zB.id) === 2);
+      pb._selectNodes([zA.id]); pb.syncContextBar();
+      check('[65r2-1] มีปุ่มยกบน/ส่งล่างบนแถบคุณสมบัติลอย',
+            !!pb.ctxBar.querySelector('[title*="ยกไปบนสุด"]') && !!pb.ctxBar.querySelector('[title*="ส่งไปล่างสุด"]'));
+
+      // ---- บั๊ก 2: เส้นประ/จุด บนเส้นโค้ง ----
+      pb.renderer.discardActiveObject();
+      const dEdge = pb._handleConnect(zA.id, 'right', zB.id, 'left');
+      pb._changeEdge(dEdge.id, { routing: 'curved' });
+      pb.selectEdge(dEdge.id);                       // เลือกไว้ = เงื่อนไขที่เคยทำให้เส้นประหาย
+      pb._changeEdge(dEdge.id, { style: 'dashed' });
+      const dashLine = pb.renderer._edgeVis.get(dEdge.id).line;
+      check('[65r2-2] เส้นโค้งที่ "เลือกอยู่" ก็ต้องเห็นเป็นเส้นประจริง',
+            Array.isArray(dashLine.strokeDashArray) && dashLine.strokeDashArray.length === 2 &&
+            dashLine.path.some((sg) => sg[0] === 'C'),
+            JSON.stringify(dashLine.strokeDashArray));
+      pb._changeEdge(dEdge.id, { style: 'dotted' });
+      const dotLine = pb.renderer._edgeVis.get(dEdge.id).line;
+      check('[65r2-2] สลับเป็นจุดแล้วรูปแบบเปลี่ยนจริง (ไม่ใช่ค่าเดิม)',
+            Array.isArray(dotLine.strokeDashArray) && dotLine.strokeDashArray[0] === 1,
+            JSON.stringify(dotLine.strokeDashArray));
+      pb._changeEdge(dEdge.id, { style: 'solid' });
+      check('[65r2-2] กลับเป็นเส้นทึบได้', pb.renderer._edgeVis.get(dEdge.id).line.strokeDashArray === null);
+
+      // ---- บั๊ก 3: หัวลูกศรต้องร่นเส้นเข้ามา ----
+      pb._changeEdge(dEdge.id, { routing: 'straight', arrowEnd: 'none' });
+      const noHeadRight = pb.renderer._edgeVis.get(dEdge.id).line.getBoundingRect(true, true);
+      pb._changeEdge(dEdge.id, { arrowEnd: 'triangle' });
+      const withHead = pb.renderer._edgeVis.get(dEdge.id).line.getBoundingRect(true, true);
+      check('[65r2-3] ใส่หัวลูกศรแล้วปลายเส้นร่นเข้ามา (ไม่ทะลุออกหัว)',
+            withHead.left + withHead.width < noHeadRight.left + noHeadRight.width - 4,
+            `${Math.round(noHeadRight.left + noHeadRight.width)} → ${Math.round(withHead.left + withHead.width)}`);
+      check('[65r2-3] แต่ยังคลิกโดนได้ถึงปลายเส้นเหมือนเดิม (พื้นที่คลิกไม่ถูกร่นตาม)',
+            pb.renderer.hitEdgeAt({ x: pb.data.getNode(zB.id).x - 1, y: pb.data.getNode(zB.id).y + 55 }) === dEdge.id);
+      const headObj = pb.renderer._edgeVis.get(dEdge.id).heads[0];
+      check('[65r2-3] หัวลูกศรยังอยู่ที่จุดต่อจริงของการ์ด',
+            Math.abs(headObj.left - (pb.data.getNode(zB.id).x)) <= 2, 'head=' + Math.round(headObj.left));
+
+      // ---- บั๊ก 4: จุดเชื่อมค้างบังเส้นหลังลากคลุมเลือก ----
+      const visZA = pb.renderer._nodeVis.get(zA.id);
+      pb.renderer.showPorts(visZA);
+      check('[65r2-4] จุดเชื่อมโผล่แล้ว', pb.renderer.getObjects('port').filter((o) => o.visible).length === 4);
+      const c1 = cli(60, 60), c2 = cli(900, 500);
+      dn(c1.x, c1.y); mv(c2.x, c2.y); up(c2.x, c2.y);   // ลากคลุมเลือกทับบริเวณจุดเชื่อม
+      check('[65r2-4] ลากคลุมเลือกแล้วจุดเชื่อมไม่ค้างอยู่บนกระดาน',
+            pb.renderer.getObjects('port').every((o) => !o.visible));
+      check('[65r2-4] จุดเชื่อมที่ซ่อนอยู่ไม่ดักคลิกแทนเส้น (evented=false)',
+            pb.renderer.getObjects('port').every((o) => o.evented === false));
+      pb.renderer.discardActiveObject();
+      check('[65r2-4] คลิกโดนเส้นได้ตามปกติหลังลากคลุม',
+            pb.renderer.hitEdgeAt({ x: pb.data.getNode(zA.id).x + 200, y: pb.data.getNode(zA.id).y + 55 }) === dEdge.id);
+
+      // ---- บั๊ก 5: ถอดปลั๊ก / ย้ายปลายเส้น ----
+      pb.selectEdge(dEdge.id);
+      const handles = pb.renderer._endHandles.filter((h) => h.visible);
+      check('[65r2-5] เลือกเส้นแล้วมีมือจับปลายทั้งสองข้าง',
+            handles.length === 2 && handles.every((h) => h.eid === dEdge.id));
+      const hTo = pb.renderer._endHandles.find((h) => h.end === 'to');
+      const hp = cli(hTo.left, hTo.top);
+      const targetC = pb.data.getNode(zC.id);
+      const tp = cli(targetC.x + targetC.width / 2, targetC.y + targetC.height / 2);
+      dn(hp.x, hp.y); mv(tp.x, tp.y); up(tp.x, tp.y);
+      check('[65r2-5] ลากปลายเส้นไปการ์ดอื่น = ย้ายปลั๊ก',
+            pb.data.getEdge(dEdge.id) && pb.data.getEdge(dEdge.id).to.nodeId === zC.id,
+            pb.data.getEdge(dEdge.id) ? pb.data.getEdge(dEdge.id).to.nodeId : 'ลบไปแล้ว');
+      pb.selectEdge(dEdge.id);
+      const hTo2 = pb.renderer._endHandles.find((h) => h.end === 'to');
+      const hp2 = cli(hTo2.left, hTo2.top);
+      const empty = cli(1400, 900);
+      dn(hp2.x, hp2.y); mv(empty.x, empty.y); up(empty.x, empty.y);
+      check('[65r2-5] ลากปลายเส้นไปปล่อยที่ว่าง = ถอดปลั๊ก (เส้นหายไป)',
+            pb.data.getEdge(dEdge.id) === null && pb.data.getAllEdges().length === 0);
+
+      await pb.save();
+      // ---- บั๊ก 6: เปิดแผงใหม่แล้วกรอบนำตอนสร้างต้องยังทำงาน ----
+      hidePanel('planner'); await waitMs2(60);
+      await openPlanner(); await waitMs2(220);
+      const pb6 = plannerInst;
+      check('[65r2-6] เปิดแผงใหม่แล้วกริดยังอยู่ (ไม่ต้องสร้างกระดานใหม่)',
+            /gradient/.test(pb6.stage.style.backgroundImage || ''), pb6.stage.style.backgroundImage.slice(0, 40));
+      pb6.interaction.setTool('shape');
+      const g1 = cli(300, 700), g2 = cli(520, 840);
+      dn(g1.x, g1.y); mv(g2.x, g2.y);
+      const ghost = pb6.interaction._creating && pb6.interaction._creating.ghost;
+      check('[65r2-6] กรอบนำ (guide) ตอนลากสร้างโผล่จริง + ตรงตำแหน่งที่ลาก',
+            !!ghost && Math.abs(ghost.left - 300) <= 3 && Math.abs(ghost.width - 220) <= 3,
+            ghost ? `${Math.round(ghost.left)},${Math.round(ghost.top)} ${Math.round(ghost.width)}x${Math.round(ghost.height)}` : 'ไม่มีกรอบนำ');
+      up(g2.x, g2.y);
+      pb6.interaction.closeEditor();
+      pb6.interaction.setTool('select');
+      const madeG = pb6.data.getAllNodes().find((n) => n.type === 'shape' && Math.abs(n.x - 300) <= 3);
+      check('[65r2-6] ปล่อยแล้วได้วัตถุตรงที่ลากจริง', !!madeG && Math.abs(madeG.width - 220) <= 4);
+      if (madeG) pb6._deleteNode(madeG.id);
+
+      // ---- บั๊ก 7: ชื่อกระดานซ้ำต้องเตือน ----
+      const dupName = 'กระดานทดสอบ';
+      const scripted = await newPlannerBoard(dupName);
+      check('[65r2-7] สร้างชื่อซ้ำแบบสคริปต์ → ไม่เขียนทับ คืน null', scripted === null, String(scripted));
+      const namePromise = plannerInst._askBoardName('ทดสอบชื่อซ้ำ', dupName, 'สร้าง');
+      await waitMs2(80);
+      const ovName = document.querySelector('.k-overlay .k-dialog');
+      ovName.querySelector('.k-dlg-input').value = dupName;
+      ovName.querySelector('.k-ok').click();
+      await waitMs2(120);
+      const ovDup = document.querySelector('.k-overlay .k-dialog');
+      check('[65r2-7] ชื่อซ้ำ → ขึ้นกล่องเตือน + มี 3 ทางเลือก (ตั้งชื่อใหม่/เขียนทับ/ยกเลิก)',
+            !!ovDup && /อยู่แล้ว/.test(ovDup.textContent) && ovDup.querySelectorAll('button').length === 3,
+            ovDup ? ovDup.textContent.slice(0, 50) : 'ไม่มีกล่องเตือน');
+      [...ovDup.querySelectorAll('button')].find((b) => b.textContent.includes('ยกเลิก')).click();
+      check('[65r2-7] กดยกเลิกแล้วไม่สร้างกระดาน', (await namePromise) === null);
+      document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+      const boardsNow = await listPlannerBoards();
+      check('[65r2-7] จำนวนกระดานชื่อนั้นยังมีใบเดียว',
+            boardsNow.filter((b) => b.name === dupName).length === 1);
+
+      // ═══ [65r3] ═══
+      // ---- 65r3-1: ขยับการ์ดแล้วแถวกระดานใน Explorer ต้องไม่หาย ----
+      await buildTree();
+      const pbM = plannerInst;
+      await pbM.save();
+      const pathM = pbM.data.getPath();
+      const rowSel = () => document.querySelector('#tree .scene[data-planner="' + CSS.escape(pathM) + '"]');
+      check('[65r3-1] ก่อนขยับ: แถวกระดานอยู่ใน Explorer', !!rowSel(), pathM);
+      const mvNode = pbM._addNode('scene', 'ขยับดู', '#3f3e3a', 100, 100);
+      await pbM.save();
+      const vM = pbM.renderer._nodeVis.get(mvNode.id);
+      pbM.renderer.setActiveObject(vM);
+      vM.set({ left: 260, top: 220 }); vM.setCoords();
+      pbM.renderer.canvas.fire('object:moving', { target: vM });
+      pbM.renderer.canvas.fire('object:modified', { target: vM });
+      await waitMs2(120);
+      check('[65r3-1] ขยับการ์ดแล้วแถวกระดานยังอยู่ใน Explorer (ไม่หาย)',
+            !!rowSel(), rowSel() ? rowSel().textContent : 'หายไปแล้ว');
+      check('[65r3-1] หมวด กระดานวางแผน ยังอยู่ครบ',
+            [...document.querySelectorAll('#tree .sec-title')].some((h) => h.textContent.includes('กระดานวางแผน')));
+      check('[65r3-1] แถวขึ้น ● เพราะยังไม่บันทึกหลังขยับ',
+            pbM.data.isDirty() === true && rowSel().textContent.includes('●'), rowSel().textContent);
+      await pbM.save();
+      await waitMs2(80);
+      check('[65r3-1] บันทึกแล้วแถวยังอยู่และ ● หาย',
+            !!rowSel() && !rowSel().textContent.includes('●'), rowSel() ? rowSel().textContent : 'หาย');
+      pbM._deleteNode(mvNode.id);
+      await pbM.save();
+
+      // ---- 65r3-3: เส้นต้องไม่กินพื้นที่เป็นกล่อง ----
+      const hA = pbM.data.addNode('scene', 'H-A', '#3f3e3a', 100, 100);
+      const hB = pbM.data.addNode('scene', 'H-B', '#5f7a9f', 700, 600);
+      pbM._renderAll();
+      const hE = pbM._handleConnect(hA.id, 'right', hB.id, 'left');
+      pbM._changeEdge(hE.id, { routing: 'straight' });
+      // H-C วางไว้ "ในกรอบสี่เหลี่ยมของเส้นทแยง" แต่ห่างจากตัวเส้นจริงเป็นร้อยพิกเซล
+      const hC = pbM.data.addNode('scene', 'H-C', '#5f8a6f', 300, 480);
+      pbM._renderAll();
+      const lineBox = pbM.renderer._edgeVis.get(hE.id).line.getBoundingRect(true, true);
+      check('[65r3-3] กรอบสี่เหลี่ยมของเส้นคลุมการ์ด H-C จริง (เงื่อนไขที่เคยพัง)',
+            lineBox.left < 300 && lineBox.left + lineBox.width > 300 + 180 &&
+            lineBox.top < 480 && lineBox.top + lineBox.height > 480 + 110,
+            'box=' + Math.round(lineBox.left) + ',' + Math.round(lineBox.top) + ' ' +
+            Math.round(lineBox.width) + 'x' + Math.round(lineBox.height));
+      const hcMid = { x: hC.x + hC.width / 2, y: hC.y + hC.height / 2 };
+      check('[65r3-3] จุดกลางการ์ด H-C ไม่ถูกนับว่าโดนเส้น',
+            pbM.renderer.hitEdgeAt(hcMid) === null, String(pbM.renderer.hitEdgeAt(hcMid)));
+      const sm = pbM.renderer._edgeVis.get(hE.id).samples;
+      const onLine = { x: (sm[0].x + sm[sm.length - 1].x) / 2, y: (sm[0].y + sm[sm.length - 1].y) / 2 };
+      check('[65r3-3] จุดที่อยู่บนเส้นจริง ๆ ยังคลิกโดน',
+            pbM.renderer.hitEdgeAt(onLine) === hE.id);
+      check('[65r3-3] ห่างจากเส้น 40px = ไม่โดน',
+            pbM.renderer.hitEdgeAt({ x: onLine.x, y: onLine.y + 40 }) === null);
+      const cCli = cli(hC.x + hC.width / 2, hC.y + hC.height / 2);
+      dn(cCli.x, cCli.y); up(cCli.x, cCli.y);
+      await waitMs2(60);
+      check('[65r3-3] คลิกการ์ดที่อยู่ใกล้เส้น → ได้การ์ด ไม่ใช่เส้น',
+            pbM.renderer._selectedEdgeId === null &&
+            (pbM._selectedNodeIds()[0] === hC.id), 'sel=' + JSON.stringify(pbM._selectedNodeIds()));
+      const lineCli = cli(onLine.x, onLine.y);
+      dn(lineCli.x, lineCli.y); up(lineCli.x, lineCli.y);
+      await waitMs2(60);
+      check('[65r3-3] คลิกบนเส้นจริง → เลือกเส้นได้', pbM.renderer._selectedEdgeId === hE.id);
+
+      // ---- 65r3-2: เครื่องมือวาดต้องไม่ไปลากการ์ดเดิม + กรอบนำต้องโผล่ ----
+      pbM.renderer.discardActiveObject();
+      pbM.interaction.setTool('shape');
+      const vHC = pbM.renderer._nodeVis.get(hC.id);
+      check('[65r3-2] ใช้เครื่องมือวาดแล้วการ์ดเดิมไม่รับอีเวนต์ (fabric ลากไม่ได้)',
+            vHC.evented === false && vHC.selectable === false);
+      const s1 = cli(hC.x + 20, hC.y + 20), s2 = cli(hC.x + 220, hC.y + 160);
+      const hcX0 = pbM.data.getNode(hC.id).x;
+      dn(s1.x, s1.y); mv(s2.x, s2.y);
+      const ghost2 = pbM.interaction._creating && pbM.interaction._creating.ghost;
+      check('[65r3-2] เริ่มลากทับการ์ดเดิม → กรอบนำยังโผล่ (เดิมกลายเป็นลากการ์ดนั้นแทน)',
+            !!ghost2 && Math.abs(ghost2.width - 200) <= 4, ghost2 ? Math.round(ghost2.width) : 'ไม่มีกรอบนำ');
+      up(s2.x, s2.y);
+      pbM.interaction.closeEditor();
+      pbM.interaction.setTool('select');
+      check('[65r3-2] การ์ดเดิมไม่ถูกลากไปไหน', pbM.data.getNode(hC.id).x === hcX0);
+      const newShape = pbM.data.getAllNodes().find((n) => n.type === 'shape');
+      check('[65r3-2] ได้รูปทรงใหม่ตามขนาดที่ลาก', !!newShape && Math.abs(newShape.width - 200) <= 4);
+
+      for (const n of pbM.data.getAllNodes()) pbM.data.removeNode(n.id);
+      pbM._renderAll();
+      await pbM.save();
+
+      // ---- 65r4-guide: ปิดแผงแล้วเปิดใหม่ พิกัด canvas ต้องถูกคำนวณใหม่ ----
+      await pbM.save();
+      hidePanel('planner'); await waitMs2(80);
+      await openPlanner(); await waitMs2(260);
+      const pbG = plannerInst;
+      pbG.renderer.canvas._offset = { left: -9999, top: -9999 };   // จำลอง offset ค้างจากตำแหน่งเก่า
+      pbG._fit();
+      const offAfter = pbG.renderer.canvas._offset;
+      const realRect = pbG.renderer.canvas.upperCanvasEl.getBoundingClientRect();
+      check('[65r4-guide] _fit() คำนวณ offset ใหม่เสมอ แม้ขนาดเท่าเดิม',
+            Math.abs(offAfter.left - realRect.left) <= 2 && Math.abs(offAfter.top - realRect.top) <= 2,
+            JSON.stringify({ off: [Math.round(offAfter.left), Math.round(offAfter.top)],
+                             real: [Math.round(realRect.left), Math.round(realRect.top)] }));
+      pbG.renderer.canvas._offset = { left: -9999, top: -9999 };
+      pbG.interaction.setTool('shape');
+      const q1 = cli(200, 900), q2 = cli(430, 1030);
+      dn(q1.x, q1.y); mv(q2.x, q2.y);
+      const gh4 = pbG.interaction._creating && pbG.interaction._creating.ghost;
+      check('[65r4-guide] offset ค้าง → กดเมาส์แล้วคำนวณใหม่ กรอบนำจึงโผล่ตรงที่ลากจริง',
+            !!gh4 && Math.abs(gh4.left - 200) <= 4 && Math.abs(gh4.width - 230) <= 4,
+            gh4 ? Math.round(gh4.left) + ',' + Math.round(gh4.top) + ' ' + Math.round(gh4.width) : 'ไม่มีกรอบนำ');
+      up(q2.x, q2.y); pbG.interaction.closeEditor(); pbG.interaction.setTool('select');
+      const mk4 = pbG.data.getAllNodes().find((n) => n.type === 'shape' && Math.abs(n.x - 200) <= 4);
+      check('[65r4-guide] วัตถุที่ได้อยู่ตรงที่ลาก ไม่หลุดไปที่อื่น', !!mk4);
+      if (mk4) pbG._deleteNode(mk4.id);
+
+      // ---- 65r4-tree: ตัวตรวจสภาพแถวกระดาน ----
+      await refreshTreeQueued();
+      const audit = auditPlannerRows('เทส');
+      check('[65r4-tree] ตัวตรวจเห็นหมวด + แถวที่มีชื่อจริง ไม่มีแถวว่าง/ถูกซ่อน',
+            audit.sec && audit.rows >= 1 && audit.hidden === 0 && audit.blank === 0,
+            JSON.stringify(audit.info));
+      const rowAny = document.querySelector('#tree .scene[data-planner]');
+      const savedName = rowAny.dataset.plannerName;
+      delete rowAny.dataset.plannerName; delete rowAny.dataset.search;
+      check('[65r4-tree] ชื่อแถวหาย → ไม่เขียนทับเป็นบรรทัดว่าง + สั่งสร้างต้นไม้ใหม่',
+            markPlannerRow(pbG.data.getPath(), false) === false &&
+            rowAny.textContent.trim().length > 0, rowAny.textContent);
+      rowAny.dataset.plannerName = savedName;
+
+      // ---- 65r4-log: แถบบันทึกต้องไม่ดีดลงล่างสุดตอนกำลังอ่านย้อน ----
+      for (let i = 0; i < 400; i++) log('info', 'เตรียมบรรทัดให้ยาวพอจะเลื่อน ' + i);
+      showPanel('log'); await renderLogPanel(); await waitMs2(80);
+      const logBody = $('#log-body');
+      check('[65r4-log] เนื้อหายาวพอจะเลื่อนได้จริง (เงื่อนไขของเทส)',
+            logBody.scrollHeight > logBody.clientHeight + 40,
+            `scrollH=${logBody.scrollHeight} clientH=${logBody.clientHeight}`);
+      check('[65r4-log] เปิดครั้งแรกอยู่ล่างสุด (ตามบรรทัดล่าสุด)', logAtBottom(logBody));
+      logBody.scrollTop = 0;
+      check('[65r4-log] เลื่อนขึ้นไปอ่าน = ไม่ได้อยู่ล่างสุดแล้ว', logAtBottom(logBody) === false);
+      for (let i = 0; i < 40; i++) log('info', 'บรรทัดทดสอบการเลื่อน ' + i);
+      await renderLogPanel();
+      check('[65r4-log] มีบรรทัดใหม่เข้ามาแต่ยังค้างอยู่ที่เดิม (ไม่ดีดลงล่าง)',
+            logBody.scrollTop === 0, 'scrollTop=' + logBody.scrollTop);
+      check('[65r4-log] มีปุ่มพากลับไปล่างสุด', !!document.querySelector('.k-log-follow'));
+      document.querySelector('.k-log-follow').click();
+      check('[65r4-log] กดปุ่มแล้วกลับไปล่างสุด + ปุ่มหาย',
+            logAtBottom(logBody) && !document.querySelector('.k-log-follow'));
+      for (let i = 0; i < 5; i++) log('info', 'บรรทัดตามต่อ ' + i);
+      await renderLogPanel();
+      check('[65r4-log] อยู่ล่างสุดอยู่แล้ว → ตามบรรทัดใหม่ต่อให้', logAtBottom(logBody));
+      hidePanel('log');
+      // ---- 65r6: ตัวกรอง Explorer ไม่ควรทำแถวกระดานหายเงียบ ๆ ----
+      await refreshTreeQueued();
+      const boardRow = document.querySelector('#tree .scene[data-planner]');
+      check('[65r6] มีแถวกระดานให้ทดสอบ', !!boardRow, boardRow ? boardRow.dataset.plannerName : 'ไม่มี');
+      const tq = $('#tree-search');
+      tq.value = 'zzzไม่มีอะไรตรงzzz'; tq.dispatchEvent(new Event('input', { bubbles: true }));
+      await waitMs2(60);
+      check('[65r6] ค้นคำที่ไม่ตรง → แถวกระดานถูกซ่อน (พฤติกรรมของตัวกรอง)',
+            getComputedStyle(boardRow).display === 'none');
+      check('[65r6] มี log บอกว่าตัวกรองเป็นคนซ่อน (ไม่ใช่แถวหายเอง)',
+            LOG_BUF.slice(-40).some((l) => l.includes('ตัวกรอง Explorer ซ่อนแถว')),
+            LOG_BUF.slice(-3).join(' // '));
+      check('[65r8] คำค้นซ่อนกระดานหมด → ขึ้นบรรทัดบอกว่า "ถูกกรองอยู่" ไม่ใช่หมวดว่างเปล่า',
+            (() => {
+              const n = document.querySelector('#tree .planner-filter-note');
+              return !!n && getComputedStyle(n).display !== 'none' && n.textContent.includes('ถูกซ่อนด้วยตัวกรอง');
+            })(),
+            (document.querySelector('#tree .planner-filter-note') || {}).textContent);
+      check('[65r8] หมวดกระดานยังอยู่ให้เห็น (ไม่หายไปทั้งก้อน)',
+            [...document.querySelectorAll('#tree .sec')].some((s) =>
+              s.querySelector('.sec-title') && s.querySelector('.sec-title').textContent.includes('กระดานวางแผน') &&
+              getComputedStyle(s).display !== 'none'));
+      tq.value = ''; tq.dispatchEvent(new Event('input', { bubbles: true }));
+      await waitMs2(60);
+      check('[65r6] ล้างคำค้น → แถวกระดานกลับมา', getComputedStyle(boardRow).display !== 'none');
+      check('[65r8] ล้างคำค้นแล้วบรรทัดหมายเหตุหายไป',
+            getComputedStyle(document.querySelector('#tree .planner-filter-note')).display === 'none');
+      // "ค้นเฉพาะในบทนี้" ต้องไม่กลืนแถวกระดาน (บั๊กที่ agent ชี้ + ที่เดาว่าเป็นต้นเหตุแถวหาย)
+      const anySc = document.querySelector('#tree .scene[data-ch-guid]');
+      const chGuidForScope = anySc && anySc.dataset.chGuid;
+      if (chGuidForScope) {
+        setTreeScope({ guid: chGuidForScope, label: 'บททดสอบขอบเขต' });
+        await waitMs2(60);
+        check('[65r8] ตั้งขอบเขต "ค้นเฉพาะในบทนี้" แล้วแถวกระดานยังอยู่ (เดิมโดนซ่อนหมด)',
+              getComputedStyle(boardRow).display !== 'none', 'display=' + getComputedStyle(boardRow).display);
+        setTreeScope(null);
+        await waitMs2(60);
+      }
+      // ตัวเฝ้าดูต้องจับได้เมื่อมีคนถอดแถวออก
+      watchPlannerRows(true);
+      const victim = document.querySelector('#tree .scene[data-planner]');
+      const holder = victim.parentElement;
+      const nextSib = victim.nextSibling;
+      victim.remove();
+      await waitMs2(60);
+      check('[65r6] ตัวเฝ้าดูจับได้ว่าแถวถูกถอดออกจาก DOM + เขียน log',
+            LOG_BUF.slice(-25).some((l) => l.includes('แถวกระดานถูกถอดออกจาก DOM')),
+            LOG_BUF.slice(-2).join(' // '));
+      holder.insertBefore(victim, nextSib);
+      await waitMs2(40);
+      await plannerInst.save(); await waitMs2(50);      // ต้องเริ่มจากสถานะ "บันทึกแล้ว" จุดถึงจะเพิ่งขึ้น
+      plannerInst._addNode('note', 'ทดสอบจุดส้ม', '#5f8a6f');
+      await waitMs2(50);
+      // [65r7] markPlannerRow ต้องแตะเฉพาะแถวของกระดานที่เปิดอยู่ ไม่กวาดทั้งหมวด
+      const otherRow = [...document.querySelectorAll('#tree .scene[data-planner]')]
+        .find((r) => r.dataset.planner !== plannerInst.data.getPath());
+      check('[65r7] อัปเดตจุดแล้วแถวกระดานใบอื่นไม่ถูกแตะ (ยังเป็น 📋 ไม่มีจุด)',
+            !otherRow || (otherRow.textContent.startsWith('📋') && !otherRow.textContent.includes('●') &&
+                          !otherRow.classList.contains('planner-dirty')),
+            otherRow ? otherRow.textContent : '(มีกระดานใบเดียว)');
+      const dotRow = document.querySelector('#tree .scene[data-planner].planner-dirty');
+      check('[65r6] แถวที่ยังไม่บันทึก: เป็นสีส้ม + มีจุด + ยังมองเห็นอยู่',
+            !!dotRow && dotRow.textContent.includes('●') &&
+            getComputedStyle(dotRow).display !== 'none' &&
+            dotRow.textContent.replace(/[▶●s]/g, '').length > 0,
+            dotRow ? JSON.stringify({ t: dotRow.textContent, d: getComputedStyle(dotRow).display }) : 'ไม่มีแถวสีส้ม');
+      await plannerInst.save();
+      await waitMs2(60);
+      const afterRow = document.querySelector('#tree .scene[data-planner].planner-current');
+      check('[65r6] บันทึกแล้วจุดหาย แต่แถวยังอยู่ครบ',
+            !!afterRow && !afterRow.textContent.includes('●') &&
+            getComputedStyle(afterRow).display !== 'none',
+            afterRow ? afterRow.textContent : 'แถวหาย');
+      // [65r7] buildTree ที่เรียกซ้อน ต้องรอจนต้นไม้มีของใหม่จริง ไม่ resolve ทิ้งไว้กลางทาง
+      const raceDir = await kapi.join(state.root, 'Planners');
+      await kapi.mkdir(raceDir);
+      const racePath = await kapi.join(raceDir, 'กระดานแข่งเวลา.json');
+      await kapi.writeFile(racePath, JSON.stringify({ version: '4.0', nodes: [], edges: [], groups: [] }));
+      const bt1 = buildTree();                    // รอบแรก (กำลังสร้าง)
+      const bt2 = buildTree();                    // เรียกซ้อน — ต้องได้ promise ที่รอรอบถัดไป
+      await Promise.all([bt1, bt2]);
+      check('[65r7] await buildTree() ที่เรียกซ้อน รอจนต้นไม้มีกระดานใหม่จริง',
+            !!document.querySelector(`#tree .scene[data-planner="${CSS.escape(racePath)}"]`),
+            'rows=' + document.querySelectorAll('#tree .scene[data-planner]').length);
+      await kapi.remove(racePath);      // ลบตรง ๆ — deleteToTrash มีกล่องยืนยัน เทสจะค้างรอคลิก
+      await refreshTreeQueued();
+      check('[65r7] ลบกระดานแล้วแถวหายจากต้นไม้จริง',
+            !document.querySelector(`#tree .scene[data-planner="${CSS.escape(racePath)}"]`) &&
+            !!document.querySelector('#tree .scene[data-planner]'));
+
+      // [65r7] ปิดแผงโปรเจกต์แล้วแก้กระดาน ต้องไม่สั่งสร้างต้นไม้รัว ๆ
+      const healBefore = LOG_BUF.length;
+      const savedTree = $('#tree');
+      try {
+        savedTree.id = 'tree-hidden-for-test';
+        for (let i = 0; i < 5; i++) healPlannerRow(plannerInst.data.getPath(), i % 2 === 0);
+      } finally { savedTree.id = 'tree'; }      // ต้องคืนชื่อเสมอ ไม่งั้นเทสที่เหลือพังยกชุด
+      check('[65r7] ไม่มีต้นไม้ให้แตะ → เงียบ ไม่สร้างใหม่ ไม่สแปม log',
+            LOG_BUF.slice(healBefore).every((l) => !l.includes('ซ่อมต้นไม้')),
+            LOG_BUF.slice(healBefore).length + ' บรรทัด');
+
+      for (const n of plannerInst.data.getAllNodes()) plannerInst.data.removeNode(n.id);
+      plannerInst._renderAll(); await plannerInst.save();
+      // ---- 65r5: แผง Planner ต้องย่อได้สุด ----
+      showPanel('planner'); await renderFeaturePanel('planner'); await waitMs2(120);
+      const plPanel = document.querySelector('#app-root .k-panel[data-panel-id="planner"]');
+      check('[65r5] หาแผง Planner ในเลย์เอาต์เจอ', !!plPanel);
+      check('[65r5] เวทีกระดานไม่ตั้งพื้นความสูงไว้ (min-height:0)',
+            getComputedStyle(plannerInst.stage).minHeight === '0px',
+            getComputedStyle(plannerInst.stage).minHeight);
+      check('[65r5] canvas ยอมหดต่ำกว่า 120px',
+            plannerInst.renderer.fit(400, 30) === true && plannerInst.renderer.getHeight() === 30,
+            'h=' + plannerInst.renderer.getHeight());
+      plannerInst._fit();
+      getPanelManager().collapsePanel('planner', true);
+      await waitMs2(120);
+      // พับแล้วระบบแผงวาด DOM ใหม่ → ต้อง query สดทุกครั้ง (โหนดเดิมหลุดออกจากเอกสารแล้ว)
+      const plBody = document.querySelector('#app-root .k-panel[data-panel-id="planner"] > .k-panel-body');
+      check('[65r5] พับแผงแล้วเนื้อแผงหายจริง (กฎ :has(#planner-body) เคยชนะกฎพับ)',
+            !!plBody && getComputedStyle(plBody).display === 'none',
+            plBody ? getComputedStyle(plBody).display : 'ไม่มี body');
+      // พับแล้วต้องเลิกจองพื้นที่ (flex-grow 0) — ความสูงจริงขึ้นกับว่า dock วางแนวไหน
+      const headOnly = document.querySelector('#app-root .k-panel[data-panel-id="planner"]');
+      const hcs = getComputedStyle(headOnly);
+      check('[65r5] พับแล้วแผงเลิกจองพื้นที่ (flex-grow:0, flex-basis:auto)',
+            parseFloat(hcs.flexGrow) === 0 && hcs.flexBasis === 'auto',
+            `grow=${hcs.flexGrow} basis=${hcs.flexBasis} h=${Math.round(headOnly.getBoundingClientRect().height)} ` +
+            `parentDir=${getComputedStyle(headOnly.parentElement).flexDirection}`);
+      getPanelManager().collapsePanel('planner', false);
+      await waitMs2(140);
+      const plBody2 = document.querySelector('#app-root .k-panel[data-panel-id="planner"] > .k-panel-body');
+      check('[65r5] คลี่กลับแล้วเนื้อแผงกลับมาเป็น flex',
+            getComputedStyle(plBody2).display === 'flex', getComputedStyle(plBody2).display);
+      // แผงเตี้ย → ยุบแถบกรอง/สถานะให้เอง
+      plannerInst.pane.style.flex = '0 0 150px';   // pane เป็น flex item — ตั้ง height เฉย ๆ ไม่มีผล
+      plannerInst._fit();
+      check('[65r5] แผงเตี้ย (<190px) → ซ่อนแถบกรองอัตโนมัติ',
+            plannerInst.pane.classList.contains('planner-compact') &&
+            getComputedStyle(plannerInst.filterBar).display === 'none');
+      plannerInst.pane.style.flex = '0 0 100px';
+      plannerInst._fit();
+      check('[65r5] แผงเตี้ยมาก (<120px) → ซ่อนแถบสถานะด้วย',
+            plannerInst.pane.classList.contains('planner-mini') &&
+            getComputedStyle(plannerInst.statusBar).display === 'none');
+      plannerInst.pane.style.flex = '';
+      plannerInst._fit();
+      check('[65r5] คืนความสูงปกติ → แถบกรอง/สถานะกลับมา',
+            !plannerInst.pane.classList.contains('planner-compact') &&
+            getComputedStyle(plannerInst.filterBar).display !== 'none');
+      // แผงบันทึกก็เคยติดปัญหาเดียวกัน (มีกฎ :has(#log-body))
+      showPanel('log'); await waitMs2(100);
+      getPanelManager().collapsePanel('log', true); await waitMs2(120);
+      const lgBody = document.querySelector('#app-root .k-panel[data-panel-id="log"] > .k-panel-body');
+      check('[65r5] แผงบันทึกก็พับได้สุดเหมือนกัน',
+            !lgBody || getComputedStyle(lgBody).display === 'none',
+            lgBody ? getComputedStyle(lgBody).display : 'ไม่มี body');
+      getPanelManager().collapsePanel('log', false); await waitMs2(80);
+      hidePanel('log');
+      // ---- บั๊ก 8: Explorer อัปเดตสถานะบันทึกเอง ----
+      await buildTree();
+      const pbNow = plannerInst;
+      const rowOf = () => document.querySelector(`#tree .scene[data-planner="${CSS.escape(pbNow.data.getPath())}"]`);
+      check('[65r2-8] แถวกระดานที่เปิดอยู่ถูกทำเครื่องหมายใน Explorer',
+            !!rowOf() && rowOf().classList.contains('planner-current'));
+      pbNow._addNode('note', 'ทำให้ dirty', '#5f8a6f');
+      check('[65r2-8] แก้กระดาน → Explorer ขึ้น ● ทันที (ไม่ต้องรีเฟรชเอง)',
+            pbNow.data.isDirty() === true && rowOf().classList.contains('planner-dirty') &&
+            rowOf().textContent.includes('●'), rowOf().textContent);
+      await pbNow.save();
+      check('[65r2-8] บันทึกแล้ว ● หายจาก Explorer เอง',
+            pbNow.data.isDirty() === false && !rowOf().classList.contains('planner-dirty') &&
+            !rowOf().textContent.includes('●'), rowOf().textContent);
+
+      for (const n of pbNow.data.getAllNodes()) pbNow.data.removeNode(n.id);
+      pbNow._renderAll();
+      await pbNow.save();
+    }
 
     // ---- โน้ต (memo) ย้ายเข้า/ออกบท + ไม่รวมตอนส่งออก ----
     let dP = null;                                   // หา draft แรกเองแบบเดียวกับตอนส่งออก
@@ -10099,7 +11422,10 @@ async function runTest(projectPath) {
     closeTab(flKey);
     check('ปิดแท็บแล้วหน้าต่างลอยหายไปด้วย', !document.querySelector('.float-win'));
 
+    await plannerInst.save();      // ปิดแผงตอน dirty จะเด้งกล่องเตือน (alpha.65) → เก็บงานก่อน
     hidePanel('planner');
+    check('Planner: บันทึกแล้วปิดแผงได้เงียบ ๆ ไม่มีกล่องเตือนค้าง',
+          !isPanelOpen('planner') && !document.querySelector('.k-overlay'));
 
     // ---- โหมดโฟกัส ----
     toggleFocus(true);
@@ -10614,8 +11940,12 @@ async function runTest(projectPath) {
     check('autosave นาทีถูกปรับใน state', state.settings.autoSaveMinutes === 2);
     // เป้าหมายโผล่ในแดชบอร์ด
     openDashboard();
-    await new Promise((r) => setTimeout(r, 120));
-    check('แดชบอร์ดแสดงแถบเป้าหมายคำ', !!document.querySelector('.dash-goal .dash-goal-fill'));
+    // แดชบอร์ดวาดแบบ async (อ่านไฟล์ทั้งโปรเจกต์) — รอเงื่อนไขจริง ไม่ใช่เดาเวลา
+    for (let i = 0; i < 60 && !document.querySelector('.dash-goal .dash-goal-fill'); i++) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    check('แดชบอร์ดแสดงแถบเป้าหมายคำ', !!document.querySelector('.dash-goal .dash-goal-fill'),
+          'dash=' + (document.querySelector('#dash-body') ? document.querySelector('#dash-body').children.length : -1));
     // ยกเลิกแล้วฟอนต์ที่พรีวิวต้องคืนค่า
     settingsDialog();
     await new Promise((r) => setTimeout(r, 20));
@@ -14083,10 +15413,15 @@ async function runTest(projectPath) {
               !!document.querySelector('#app-root .k-panel-head.k-can-group'));
         const h2 = document.querySelector('#app-root .k-panel-head.k-can-group');
         const hr = h2.getBoundingClientRect();
-        check('#3 จับฝั่งขวา ~20% = อนุญาตให้รวมเป็นแท็บ',
-              inGroupHandle(h2, hr.right - hr.width * 0.05) === true);
-        check('#3 จับตรงกลาง/ซ้ายของหัวแผง = ไม่อนุญาต (กันเผลอรวมแท็บ)',
-              inGroupHandle(h2, hr.left + hr.width * 0.5) === false);
+        const tr = h2.querySelector('.k-panel-head-title').getBoundingClientRect();
+        check('#3 จับที่ "ชื่อแผง" = อนุญาตให้รวมเป็นแท็บ',
+              inGroupHandle(h2, tr.left + tr.width / 2) === true,
+              `title=${Math.round(tr.left)}..${Math.round(tr.right)}`);
+        // [alpha.65r] ฝั่งขวาคือปุ่ม ▾ ซ่อน / ✕ ปิด — เดิมนับเป็นเขตจับกลุ่มด้วย ลากพลาดทีไรกลุ่มทุกที
+        check('#3 จับฝั่งขวา (ปุ่มซ่อน/ปิด) = ไม่อนุญาตให้รวมเป็นแท็บ',
+              inGroupHandle(h2, hr.right - 6) === false, 'right=' + Math.round(hr.right));
+        check('#3 จับพื้นที่ว่างระหว่างชื่อกับปุ่ม = ไม่อนุญาต',
+              inGroupHandle(h2, Math.min(hr.right - 8, tr.right + 20)) === false);
       }
 
       // ---- บั๊ก #9: แผงลอยชนขอบแล้ว snap ----
@@ -17014,8 +18349,17 @@ async function runTest(projectPath) {
           await until62(() => isPanelOpen('gallery-board') && !!$('#galboard-body .gal2-board'));
           check('[63-9] กระดานอารมณ์เปิดเป็นแผงแยก (ไม่ใช่แท็บในคลังรูป)',
                 isPanelOpen('gallery-board') && !!$('#galboard-body .gal2-board'));
+          // เปิดแผงกระดานทำให้แผงคลังรูปวาดตัวเองใหม่แบบ async → รอให้ตารางกลับมาก่อนค่อยวัด
+          await until62(() => !!$('#gal-body .gal2-grid'));
           check('[63-9] แผงคลังรูปยังเปิดอยู่คู่กัน → ลากรูปข้ามแผงได้',
-                isPanelOpen('gallery') && !!$('#gal-body .gal2-grid'));
+                isPanelOpen('gallery') && !!$('#gal-body .gal2-grid'),
+                JSON.stringify({
+                  open: isPanelOpen('gallery'),
+                  body: !!$('#gal-body'),
+                  kids: $('#gal-body') ? $('#gal-body').children.length : -1,
+                  inner: $('#gal-body') ? $('#gal-body').innerHTML.slice(0, 60) : '',
+                  openPanels: PANEL_DEFS.filter((d) => isPanelOpen(d.id)).map((d) => d.id).join(','),
+                }));
           check('[63-9] แผงกระดานอยู่ในตารางแผงฟีเจอร์', isFeaturePanel('gallery-board'));
           const mb63 = moodBoardInstance();
           check('[63-9] กระดานตามอัลบั้มที่เลือกในคลังรูป', mb63 && mb63.albumId === 'ทดสอบ',

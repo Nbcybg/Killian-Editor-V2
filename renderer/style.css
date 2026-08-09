@@ -135,7 +135,9 @@ button:hover { background:#3a3936; }
 .k-panel.k-panel-nohead > .k-panel-body { padding:0; overflow:hidden; display:flex; }
 .k-panel.k-panel-fixed { flex:0 0 auto !important; }
 .k-panel.k-collapsed { flex:0 0 auto !important; }
-.k-panel.k-collapsed > .k-panel-body { display:none; }
+/* [alpha.65r5] ต้องเป็น !important — แผงที่มีกฎเจาะจงด้วย :has(#id) (Planner / บันทึก)
+   จะได้ค่า specificity สูงกว่ากฎนี้ (ID ชนะ 3 class) แล้วเนื้อแผงไม่ยอมหายตอนพับ = "ย่อไม่สุด" */
+.k-panel.k-collapsed > .k-panel-body { display:none !important; }
 /* แผงลอย */
 /* 0.56a #6: แผงลอยที่ทับแถบหัวหน้าต่างเคยลากไม่ได้ — #titlebar เป็น -webkit-app-region:drag
    ซึ่ง OS คิดจาก "กรอบของ element" ไม่สนลำดับการซ้อน → ต้องเจาะ no-drag ให้แผงลอยเอง */
@@ -147,7 +149,8 @@ button:hover { background:#3a3936; }
 .k-drop-zone, .k-drag-ghost { -webkit-app-region:no-drag; }
 .k-float-panel > .k-panel-body { flex:1; min-height:0; overflow:auto; padding:8px; }
 .k-float-panel.k-collapsed { height:auto !important; }
-.k-float-panel.k-collapsed > .k-panel-body, .k-float-panel.k-collapsed > .k-panel-resize { display:none; }
+.k-float-panel.k-collapsed > .k-panel-body,
+.k-float-panel.k-collapsed > .k-panel-resize { display:none !important; }
 /* บั๊ก #5: ที่จับปรับขนาดของแผงลอยไม่โผล่ — .k-panel-resize ตั้ง display:none ไว้ แล้วมีแต่กฎ
    ของระบบเก่า (.k-panel-floating) ที่เปิดให้ ระบบใหม่ใช้ .k-float-panel จึงถูกซ่อนตลอด */
 .k-float-panel > .k-panel-resize { display:block; z-index:2; }
@@ -721,6 +724,16 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .tb-menu:hover { background:#2b2a27; }
 .k-logview { max-height:60vh; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace;
   font-size:calc(12px * var(--ui-scale, 1)); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+/* [alpha.65r4] เลื่อนขึ้นไปอ่าน = หยุดตามบรรทัดล่าสุด · ปุ่มนี้พากลับไปก้น
+   แผงบันทึกต้องสูงเท่าช่องที่ได้รับ (ไม่ใช่สูงตามเนื้อหา) ไม่งั้นไม่มีแถบเลื่อนของตัวเองให้ล็อก */
+.k-panel:has(#log-body) > .k-panel-body,
+.k-float-panel:has(#log-body) > .k-panel-body { display:flex; padding:0; overflow:hidden; }
+#log-panel { position:relative; display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; }
+#log-panel > .k-logview { flex:1; max-height:none; min-height:0; overflow:auto; padding:8px; margin:0; }
+.k-log-follow { position:absolute; right:12px; bottom:10px; z-index:4;
+  background:var(--accent); color:#fff; border:none; border-radius:14px; padding:4px 11px;
+  font-size:calc(11.5px * var(--ui-scale, 1)); cursor:pointer; box-shadow:0 3px 12px rgba(0,0,0,.45); }
+.k-log-follow:hover { background:var(--accent-hi); }
 .tb-menu-badge { display:inline-block; margin-left:5px; min-width:16px; height:16px; line-height:16px;
   padding:0 4px; border-radius:8px; background:var(--accent-hi); color:#fff;
   font-size:calc(10px * var(--ui-scale, 1)); font-weight:700; text-align:center; vertical-align:middle; }
@@ -1130,58 +1143,223 @@ body.k-split-on #tabs { display:none !important; }
 .cmp-del { background:rgba(217,87,94,.22); }
 .cmp-gap { background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,.03) 6px,rgba(255,255,255,.03) 12px); opacity:.5; }
 
-/* ---------------- Planner (กระดานวางแผน) ---------------- */
+/* ---------------- Planner v4 (กระดานวางแผนแบบ Miro) ---------------- */
+/* [alpha.65 บั๊ก 1+7] เดิม .planner-filter/.planner-wrap ใช้ position:absolute top:44px/84px
+   ฮาร์ดโค้ด ส่วน .planner-toolbar เป็น flex-wrap ที่สูงขึ้นเรื่อย ๆ เมื่อแผงแคบ →
+   canvas (top:84) ทับปุ่มแถวที่สองของ toolbar = "กดอะไรไม่ได้เลย"
+   แก้: #planner-body เป็น flex column ทั้งแถบ แถบเครื่องมือไม่ wrap แต่เลื่อนแนวนอนได้ */
 .pane.planner-pane { overflow:hidden; }
-.planner-toolbar { display:flex; align-items:center; gap:4px; flex-wrap:wrap;
-  padding:6px 10px; background:var(--bar); border-bottom:1px solid var(--border); }
-.planner-btn { background:transparent; color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:4px 9px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer; -webkit-app-region:no-drag; }
+.k-panel:has(#planner-body) > .k-panel-body,
+.k-float-panel:has(#planner-body) > .k-panel-body { padding:0; overflow:hidden; display:flex; }
+#planner-panel { position:relative; min-width:0; }
+#planner-body { position:relative; display:flex; flex-direction:column;
+  height:100%; min-height:0; min-width:0; overflow:hidden; }
+
+/* ---- แถบคำสั่งบน: เลื่อนแนวนอนได้ ปุ่มไม่หายเมื่อแผงแคบ (บั๊ก 7) ---- */
+.planner-toolbar { display:flex; align-items:center; gap:2px; flex:0 0 auto; min-width:0;
+  padding:5px 4px; background:var(--bar); border-bottom:1px solid var(--border); }
+.planner-toolbar-strip { display:flex; align-items:center; gap:4px; flex:1 1 auto; min-width:0;
+  overflow-x:auto; overflow-y:hidden; scrollbar-width:none; scroll-behavior:smooth;
+  white-space:nowrap; padding:1px 2px; }
+.planner-toolbar-strip::-webkit-scrollbar { height:0; }
+.planner-scroll-btn { display:none; flex:0 0 auto; width:18px; height:24px; padding:0;
+  background:var(--bar); color:var(--dim); border:1px solid var(--border); border-radius:5px;
+  cursor:pointer; font-size:13px; line-height:1; }
+.planner-toolbar.has-scroll .planner-scroll-btn { display:block; }
+.planner-scroll-btn:hover:not(:disabled) { background:#3a3936; color:var(--bright); }
+.planner-scroll-btn:disabled { opacity:.28; cursor:default; }
+.planner-btn { flex:0 0 auto; background:transparent; color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:4px 9px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer;
+  white-space:nowrap; -webkit-app-region:no-drag; }
 .planner-btn:hover { background:#3a3936; color:var(--bright); }
 .planner-btn.k-ok { background:var(--accent); color:#fff; border-color:var(--accent); }
 .planner-btn.k-ok:hover { background:var(--accent-hi); }
-.planner-sep { width:1px; height:20px; background:var(--border); margin:0 4px; }
-/* [alpha.63r4] Planner ย้ายจากแท็บมาเป็นแผงตอน alpha.62 — แต่ตัวห่อเดิมคือ .pane ที่
-   position:absolute ส่วน #planner-body ไม่มี position เลย ทำให้ .planner-wrap / .planner-filter /
-   .planner-props ที่เป็น absolute ไปยึดกับ viewport แทน = กระดานคลุมทั้งจอ กดอะไรไม่ได้ทั้งแอป */
-.k-panel:has(#planner-body) > .k-panel-body,
-.k-float-panel:has(#planner-body) > .k-panel-body { padding:0; overflow:hidden; display:flex; }
-#planner-panel { position:relative; }
-#planner-body { position:relative; height:100%; min-height:0; overflow:hidden; }
-.planner-wrap { position:absolute; inset:84px 0 0 0; overflow:hidden; background:var(--bg); }
-.planner-wrap .canvas-container { margin:10px; }
-.planner-props { position:absolute; top:54px; right:14px; width:230px; z-index:6;
-  background:var(--side); border:1px solid var(--border); border-radius:10px;
-  padding:12px; box-shadow:0 8px 30px rgba(0,0,0,.4); }
-.planner-props-title { font-size:calc(13px * var(--ui-scale, 1)); color:var(--bright); margin-bottom:8px; }
-.planner-prop-row { display:flex; flex-direction:column; gap:3px; margin-bottom:8px; }
-.planner-prop-row label { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); }
-.planner-prop-input { background:var(--bg); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:5px 7px; font-size:calc(12.5px * var(--ui-scale, 1)); }
-.planner-prop-btns { display:flex; gap:6px; margin-top:4px; }
-.planner-btn-small { flex:1; background:var(--bar); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:5px; font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; }
+.planner-zoom-label { min-width:52px; text-align:center; font-variant-numeric:tabular-nums; }
+.planner-sep { flex:0 0 auto; width:1px; height:20px; background:var(--border); margin:0 3px; }
+.planner-board-name { flex:0 0 auto; color:var(--bright); font-weight:600; padding:0 4px;
+  font-size:calc(12.5px * var(--ui-scale, 1)); max-width:180px; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.planner-dirty { flex:0 0 auto; color:var(--accent); opacity:0; font-size:15px; line-height:1;
+  transition:opacity .15s; }
+.planner-toolbar.is-dirty .planner-dirty { opacity:1; }
+
+/* ---- แถบกรอง ---- */
+.planner-filter { display:flex; align-items:center; gap:6px; flex:0 0 auto; min-width:0;
+  padding:4px 8px; background:var(--bar); border-bottom:1px solid var(--border);
+  overflow-x:auto; scrollbar-width:none; white-space:nowrap; }
+.planner-filter::-webkit-scrollbar { height:0; }
+.planner-filter-input { flex:1 1 140px; min-width:110px; max-width:320px; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:calc(12.5px * var(--ui-scale, 1)); }
+.planner-filter-sel { flex:0 0 auto; background:var(--bg); color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:4px 6px; font-size:calc(12.5px * var(--ui-scale, 1)); }
+.planner-btn-small { flex:0 0 auto; background:var(--bar); color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:4px 9px; font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; }
 .planner-btn-small:hover { background:#3a3936; color:var(--bright); }
 
-/* ---- Planner: แถบกรอง + กลุ่ม (alpha.26) ---- */
-.planner-filter { position:absolute; top:44px; left:0; right:0; display:flex; align-items:center;
-  gap:6px; padding:5px 10px; background:var(--bar); border-bottom:1px solid var(--border); }
-.planner-filter-input { flex:1; max-width:320px; background:var(--bg); color:var(--fg);
-  border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:calc(12.5px * var(--ui-scale, 1)); }
-.planner-filter-sel { background:var(--bg); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:4px 6px; font-size:calc(12.5px * var(--ui-scale, 1)); }
-.planner-count { margin-left:auto; font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); }
-.planner-props textarea.planner-prop-input { resize:vertical; font-family:inherit; line-height:1.35; }
-.planner-props { top:96px; }
+/* ---- เวทีกระดาน: กริดเป็น CSS ใต้ canvas (บั๊ก 6) ---- */
+/* [alpha.65r5] min-height ต้องเป็น 0 — ไม่งั้นแผง Planner ย่อลงไม่ต่ำกว่า ~200px
+   (เวทีกระดานตั้งพื้นไว้ 120px + แถบบน/กรอง/สถานะ) ผู้ใช้ลากขอบย่อยังไงก็ไม่สุด */
+.planner-stage { position:relative; flex:1 1 auto; min-height:0; min-width:0;
+  overflow:hidden; background:#262624; }
+.planner-stage .canvas-container { position:absolute !important; inset:0; }
+.planner-stage canvas { display:block; }
+.planner-stage.planner-drop-on { outline:2px dashed var(--accent); outline-offset:-6px; }
+.planner-stage.planner-drop-on::after { content:''; position:absolute; inset:0;
+  background:rgba(217,119,87,0.08); pointer-events:none; }
 
-/* ---- Planner alpha.27: จุดวาง + ไฮไลต์ตำแหน่งใน Explorer ---- */
-.planner-wrap.planner-drop-on { outline:2px dashed var(--accent); outline-offset:-6px;
-  background:rgba(217,119,87,0.06); }
+/* แผงเตี้ยมาก: ยุบแถบกรอง แล้วแถบสถานะ เพื่อให้ย่อลงได้จริง (บั๊ก 65r5) */
+#planner-body.planner-compact > .planner-filter { display:none; }
+#planner-body.planner-mini > .planner-status { display:none; }
+#planner-body.planner-mini > .planner-toolbar { padding:2px 4px; }
+#planner-body.planner-mini .planner-rail { padding:3px 3px; gap:1px; }
+#planner-body.planner-mini .planner-rail-btn { height:22px; width:26px; font-size:12px; }
+
+/* ---- รางเครื่องมือแนวตั้งแบบ Miro (บั๊ก 4) ---- */
+.planner-rail { position:absolute; left:8px; top:50%; transform:translateY(-50%); z-index:8;
+  display:flex; flex-direction:column; gap:2px; padding:5px 4px;
+  background:var(--side); border:1px solid var(--border); border-radius:11px;
+  box-shadow:0 6px 22px rgba(0,0,0,.45); max-height:calc(100% - 16px); overflow-y:auto;
+  scrollbar-width:none; }
+.planner-rail::-webkit-scrollbar { width:0; }
+.planner-rail-btn { position:relative; width:30px; height:28px; display:flex; align-items:center;
+  justify-content:center; background:transparent; color:var(--fg); border:1px solid transparent;
+  border-radius:7px; cursor:pointer; font-size:14px; line-height:1; padding:0; }
+.planner-rail-btn:hover { background:#3a3936; color:var(--bright); }
+.planner-rail-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.planner-rail-caret { position:absolute; right:1px; bottom:0; font-size:7px; opacity:.65; }
+.planner-rail-sep { height:1px; background:var(--border); margin:3px 2px; }
+
+/* ---- ป๊อปอัปในกระดาน (กริด / รูปทรง) ---- */
+.planner-popover { position:absolute; z-index:20; background:var(--side); border:1px solid var(--border);
+  border-radius:10px; padding:8px; box-shadow:0 10px 34px rgba(0,0,0,.55); min-width:180px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.planner-pop-title { color:var(--bright); font-weight:600; margin-bottom:6px; }
+.planner-pop-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; color:var(--fg); }
+.planner-pop-row > span:first-child { flex:0 0 62px; color:var(--dim); }
+.planner-pop-row input[type="number"] { width:64px; }
+.planner-pop-row input[type="range"] { flex:1; }
+.planner-pop-row input, .planner-pop-row select { background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 5px; font-size:inherit; }
+.planner-pop-row input[type="checkbox"] { width:auto; accent-color:var(--accent); }
+.planner-pop-presets { gap:4px; }
+.planner-pop-presets button { flex:1; padding:3px 0; background:var(--bar); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; cursor:pointer; font-size:inherit; }
+.planner-pop-presets button:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+.planner-shape-menu { display:flex; flex-direction:column; gap:2px; min-width:150px; }
+.planner-shape-menu button { text-align:left; padding:5px 8px; background:transparent; color:var(--fg);
+  border:none; border-radius:6px; cursor:pointer; font-size:inherit; }
+.planner-shape-menu button:hover { background:var(--accent); color:#fff; }
+
+/* ---- แถบคุณสมบัติลอยเหนือสิ่งที่เลือก (บั๊ก 7) ---- */
+.planner-ctxbar { position:absolute; z-index:16; display:flex; align-items:center; gap:2px;
+  padding:4px 5px; background:var(--side); border:1px solid var(--border); border-radius:9px;
+  box-shadow:0 8px 26px rgba(0,0,0,.55); max-width:calc(100% - 12px); overflow-x:auto;
+  scrollbar-width:none; white-space:nowrap; }
+.planner-ctxbar::-webkit-scrollbar { height:0; }
+.planner-ctx-sws { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+.planner-ctx-sw { width:16px; height:16px; border-radius:4px; padding:0; cursor:pointer;
+  border:1px solid rgba(255,255,255,.22); flex:0 0 auto; }
+.planner-ctx-sw:hover { outline:2px solid var(--accent-hi); outline-offset:1px; }
+.planner-ctx-sw.on { outline:2px solid var(--bright); outline-offset:1px; }
+.planner-ctx-color { width:20px; height:18px; padding:0; border:1px solid var(--border);
+  border-radius:4px; background:var(--bg); cursor:pointer; flex:0 0 auto; }
+.planner-ctx-textcolor { border-bottom:3px solid currentColor; }
+.planner-ctx-btn { min-width:22px; height:20px; padding:0 4px; background:transparent; color:var(--fg);
+  border:1px solid transparent; border-radius:5px; cursor:pointer; flex:0 0 auto;
+  font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1; }
+.planner-ctx-btn:hover { background:#3a3936; color:var(--bright); }
+.planner-ctx-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+.planner-ctx-btn.danger { color:#e05555; }
+.planner-ctx-btn.danger:hover { background:#e0555522; }
+.planner-ctx-sep { width:1px; height:15px; background:var(--border); margin:0 3px; flex:0 0 auto; }
+
+/* ---- แก้ข้อความในที่ (overlay) ---- */
+.planner-inline-edit { position:absolute; z-index:18; resize:none; overflow:hidden;
+  background:rgba(26,24,21,.94); border:2px solid var(--accent); border-radius:6px;
+  padding:6px 8px; font-family:inherit; line-height:1.3; outline:none;
+  box-shadow:0 6px 24px rgba(0,0,0,.5); }
+
+/* ---- แถบสถานะล่าง: พิกัด x y (บั๊ก 8) ---- */
+.planner-status { display:flex; align-items:center; gap:10px; flex:0 0 auto; min-width:0;
+  padding:3px 10px; background:var(--bar); border-top:1px solid var(--border);
+  font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); overflow:hidden; white-space:nowrap; }
+.planner-st-tool { color:var(--bright); }
+.planner-st-xy { font-variant-numeric:tabular-nums; min-width:104px; }
+.planner-count { margin-left:auto; font-size:inherit; color:var(--dim); }
+
+/* ---- กล่องเลือกกระดาน (บั๊ก 5) ---- */
+.planner-board-list { max-height:46vh; overflow:auto; margin:8px 0; display:flex; flex-direction:column; gap:2px; }
+.planner-board-row { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px;
+  cursor:pointer; color:var(--fg); font-size:calc(12.5px * var(--ui-scale, 1)); }
+.planner-board-row:hover { background:var(--accent); color:#fff; }
+.planner-board-row.current { color:var(--accent); font-weight:600; }
+.planner-board-row.current:hover { color:#fff; }
+.planner-board-nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---- แถวกระดานใน Explorer: กำลังเปิด / ยังไม่บันทึก (บั๊ก 65r2-8) ---- */
+.scene.planner-current { color:var(--bright); font-weight:600; }
+.scene.planner-dirty { color:var(--accent); }
+.scene.planner-filter-note { color:var(--dim); font-style:italic; cursor:default;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+
+/* ---- ไฮไลต์ตำแหน่งใน Explorer ---- */
 .scene.reveal-flash { animation:k2reveal 1.5s ease-out; border-radius:6px; }
 @keyframes k2reveal {
   0%,100% { background:transparent; }
   15%,60% { background:rgba(217,119,87,0.35); }
 }
-.planner-props { max-height:calc(100% - 120px); overflow:auto; }
+
+/* ---- แผงคุณสมบัติ Planner (บั๊ก 3/10/11) ---- */
+#planner-props-body { padding:10px; overflow-y:auto; height:100%; }
+.planner-props-empty { color:var(--dim); font-size:calc(12.5px*var(--ui-scale,1)); text-align:center;
+  padding:34px 16px; line-height:1.6; }
+.planner-props-head { font-weight:600; color:var(--bright); font-size:calc(12.5px*var(--ui-scale,1));
+  margin:2px 0 8px; padding-bottom:5px; border-bottom:1px solid var(--border); }
+.planner-props-section { margin-bottom:9px; }
+.planner-props-section label { display:block; font-size:calc(11px*var(--ui-scale,1)); color:var(--dim); margin-bottom:3px; }
+.planner-props-section input,
+.planner-props-section select,
+.planner-props-section textarea {
+  width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:5px 7px; font-size:calc(12.5px*var(--ui-scale,1)); }
+.planner-props-section textarea { resize:vertical; font-family:inherit; line-height:1.35; min-height:56px; }
+.planner-props-section input[type="color"] { padding:2px 4px; height:28px; cursor:pointer; }
+.planner-props-section input[type="range"] { padding:0; }
+.planner-prop-2col { display:flex; gap:6px; }
+.planner-prop-2col > * { flex:1; min-width:0; }
+.planner-check { display:flex !important; align-items:center; gap:6px; color:var(--fg) !important;
+  font-size:calc(12px*var(--ui-scale,1)) !important; cursor:pointer; }
+.planner-check input { width:auto !important; accent-color:var(--accent); }
+.planner-swatches { display:flex; flex-wrap:wrap; gap:4px; margin:-4px 0 9px; }
+.planner-swatch { width:19px; height:19px; border-radius:5px; border:1px solid rgba(255,255,255,.22);
+  cursor:pointer; padding:0; }
+.planner-swatch:hover { outline:2px solid var(--accent); outline-offset:1px; }
+.planner-props-edge-style { display:flex; gap:4px; }
+.planner-props-edge-style button { flex:1; padding:4px; border-radius:6px; border:1px solid var(--border);
+  background:var(--bar); color:var(--fg); cursor:pointer; font-size:calc(12px*var(--ui-scale,1)); }
+.planner-props-edge-style button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.planner-props-actions { display:flex; gap:6px; margin-top:8px; }
+.planner-props-actions button { flex:1; padding:5px; border-radius:6px; border:1px solid var(--border);
+  background:var(--bar); color:var(--fg); cursor:pointer; font-size:calc(12px*var(--ui-scale,1)); white-space:nowrap; }
+.planner-props-actions button:hover { background:#3a3936; color:var(--bright); }
+.planner-props-actions button.danger { color:#e05555; border-color:#e05555; }
+.planner-props-actions button.danger:hover { background:#e0555520; }
+.planner-edge-ends { background:var(--bg); border:1px solid var(--border); border-radius:6px;
+  padding:6px 8px; font-size:calc(12px*var(--ui-scale,1)); color:var(--fg); word-break:break-word; }
+.planner-align-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.planner-align-grid button { padding:5px; border-radius:6px; border:1px solid var(--border);
+  background:var(--bar); color:var(--fg); cursor:pointer; font-size:calc(11.5px*var(--ui-scale,1)); }
+.planner-align-grid button:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+.planner-conn-list { display:flex; flex-direction:column; gap:2px; margin-bottom:8px; }
+.planner-conn-row { display:flex; align-items:center; gap:4px; }
+.planner-conn-name { flex:1; padding:4px 7px; background:var(--bg); border:1px solid var(--border);
+  border-radius:6px; cursor:pointer; font-size:calc(11.5px*var(--ui-scale,1)); color:var(--fg);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.planner-conn-name:hover { border-color:var(--accent); color:var(--bright); }
+.planner-conn-del { flex:0 0 auto; width:22px; padding:4px 0; background:var(--bar); color:#e05555;
+  border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:11px; }
+.planner-conn-del:hover { background:#e0555520; border-color:#e05555; }
+.planner-unlinked .planner-prop-input { border-style:dashed; }
 
 /* ---- หน้าต่างลอย (alpha.28) — ลากหัว / ย่อ / คืนแท็บ / จับมุมขยาย ---- */
 .float-win { position:fixed; z-index:60; display:flex; flex-direction:column;
@@ -2330,13 +2508,13 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
   font-size:calc(12.5px * var(--ui-scale, 1)); }
 .k-set-page .k-row input[type=number].k-narrow { width:90px; }
 
-/* บั๊ก #3: เขตที่อนุญาตให้ "รวมเป็นแท็บ" (ชื่อแผง + ~20% ฝั่งขวาของหัวแผง) — ให้เห็นตอนชี้เมาส์ */
-.k-panel-head.k-can-group { position:relative; }
-.k-panel-head.k-can-group::after { content:''; position:absolute; right:0; top:0; bottom:0;
-  width:20%; pointer-events:none; opacity:0; transition:opacity .12s;
-  background:linear-gradient(90deg, transparent, rgba(217,119,87,.22)); }
-.k-panel-head.k-can-group:hover::after { opacity:1; }
-.k-panel-head .k-panel-head-title { cursor:grab; }
+/* บั๊ก #3 · [alpha.65r] เขตที่อนุญาตให้ "รวมเป็นแท็บ / ผนึก" = พื้นที่ชื่อแผงเท่านั้น
+   เดิมเป็น 20% ฝั่งขวา ซึ่งทับปุ่ม ▾ ซ่อน / ✕ ปิด → ลากพลาดกลายเป็นจับกลุ่มแผง */
+.k-panel-head.k-can-group { position:relative; cursor:default; }
+.k-panel-head.k-can-group .k-panel-head-title,
+.k-panel-head.k-can-group .k-panel-head-icon { cursor:grab; border-radius:4px; }
+.k-panel-head.k-can-group:hover .k-panel-head-title { background:rgba(217,119,87,.18); color:var(--bright); }
+.k-panel-head .k-panel-head-title:active { cursor:grabbing; }
 /* บั๊ก #9: แผงลอยดูดชิดขอบแผงลอยอื่น/ขอบจอ */
 .k-float-panel.k-float-snapped { outline:2px solid var(--accent-hi); outline-offset:-2px; }
 /* บั๊ก #12: การ์ดสูงคงที่ → เนื้อในต้องไม่ดันการ์ดยืด */

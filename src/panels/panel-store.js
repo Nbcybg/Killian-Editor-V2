@@ -203,11 +203,27 @@ export class PanelManager {
    * (ดูคำอธิบายเต็มที่ `setPanelHidden` ใน panel-layout.js)
    * แผงลอยยังถอดออกจากรายการ floats เหมือนเดิม — มันไม่มีสล็อตในต้นไม้อยู่แล้ว
    */
-  hidePanel(id) {
+  /**
+   * [alpha.65] ยามก่อนปิดแผง — แผงที่มีงานค้าง (เช่น Planner ที่ยังไม่บันทึก) จะถามผู้ใช้ก่อน
+   * guard(proceed) คืน false = ยังไม่ปิด แล้วค่อยเรียก proceed() เองเมื่อผู้ใช้ตัดสินใจ
+   */
+  setCloseGuard(id, fn) {
+    if (!this._guards) this._guards = new Map();
+    if (fn) this._guards.set(id, fn); else this._guards.delete(id);
+    return true;
+  }
+
+  hidePanel(id, force) {
     // บั๊ก #19: แผงหลัก (docs) ปิดไม่ได้ — ถ้าหลุดออกจากต้นไม้ root จะกลายเป็น null
     // แล้วรอบเปิดโปรแกรมถัดไปจะรีเซ็ตเป็นเลย์เอาต์ตั้งต้น = "แผงทั้งชุดโผล่มาเอง"
     const def = this.registry.get(id);
     if (def && def.closable === false) return false;
+    const guard = !force && this._guards && this._guards.get(id);
+    if (guard) {
+      let allow = true;
+      try { allow = guard(() => this.hidePanel(id, true)) !== false; } catch { allow = true; }
+      if (!allow) return false;
+    }
     let changed = false;
     if (this.isFloating(id)) {
       this.store.setFloats(this.floats.filter((f) => f.panel.id !== id));
