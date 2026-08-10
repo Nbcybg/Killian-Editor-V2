@@ -113,7 +113,9 @@ import { renderAIChatPanel, newChatSession, loadSessions, collectScope,
 import { showAISummary } from './ai-summary.js';
 import { showAITitleSuggestions, collectProjectText, hashText, pastTitlesFor,
          summaryCacheState, rememberTitles } from './ai-summary.js';
-import { openBranchingTree, renderBranchingTree, syncChoicesFromScene, mutateChoices } from './branching-ui.js';
+import { openBranchingTree, renderBranchingTree, renderBranchingPanel, syncChoicesFromScene,
+         mutateChoices, checkDanglingOnOpen } from './branching-ui.js';
+import { openPlayerMode, renderPlayerPanel, resetPlayerMode } from './player-mode.js';
 import { openFloorPlan, renderFloorPlan, renderFloorPlanPanel } from './floorplan-ui.js';
 import { showPlayerHistory } from './player-choices.js';
 import { manageVisualTags, renderAllTagChips, applyVisualTagStyle, visualTagFor } from './visual-tags.js';
@@ -1438,6 +1440,9 @@ async function loadProjectInner(root) {
   //   (เดิม loadProject เด้งหน้าแรกทับทุกครั้ง ทำให้ "เปิดโปรเจกต์ล่าสุดโดยข้ามหน้าแรก" เป็นไปไม่ได้)
   clearBusy();                                       // [alpha.62] เลิกแสดง "กำลังทำอะไรอยู่"
   setStatus('เปิดโปรเจกต์: ' + state.title);
+  // [alpha.66 ข้อ 14] ตรวจทางเลือกที่ชี้ไปฉากที่ถูกลบ/ย้ายไปแล้ว — ไม่บล็อกการเปิดงาน
+  // (ถ้าเจอ จะทับข้อความ "เปิดโปรเจกต์:" ด้านบนด้วยคำเตือน + เขียนรายละเอียดลงบันทึก)
+  checkDanglingOnOpen().catch(() => {});
 }
 
 // ---------------- [alpha.61 ข้อ 4] อิสระเรื่องตัวพิมพ์ใหญ่/เล็กในบทหนัง ----------------
@@ -7137,6 +7142,9 @@ const FEATURE_PANELS = {
   planner:   () => renderPlannerPanel(),
   plannerProps: () => { /* noop — planner เป็นคนวาดผ่าน setPropsCallback */ return true; },
   floorplan: () => renderFloorPlanPanel(),
+  // [alpha.66 ข้อ 1+9] ผังแตกสาย + โหมดทดลองเล่น — เดิมผังเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน
+  branch:    () => renderBranchingPanel(),
+  player:    () => renderPlayerPanel(),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
 // วาดค้างอยู่ = ใช้รอบเดียวกัน — openX() เรียก showPanel (hook เริ่มวาด) แล้ว await ต่อ
@@ -7161,9 +7169,13 @@ export function clearFeaturePanels() {
   for (const sel of ['#dash-body', '#kanban-body', '#books-body', '#tl-body', '#maps-body',
                      '#gal-body', '#ai-analyzer-body',
                      // [alpha.62 บั๊ก 16+20] ผลค้นหา/ผัง/กระดาน เป็นของโปรเจกต์เดิมทั้งหมด
-                     '#search-body', '#net-body', '#planner-body', '#planner-props-body', '#floor-body']) {
+                     '#search-body', '#net-body', '#planner-body', '#planner-props-body', '#floor-body',
+                     // [alpha.66] ผัง/รอบการเล่นเป็นของโปรเจกต์เดิมล้วน ๆ
+                     '#branch-body', '#player-body']) {
     const n = $(sel); if (n) n.innerHTML = '';
   }
+  state._branch = null;
+  resetPlayerMode();
   // #notes-body ไม่ล้าง — สมุดโน้ตด่วนเป็นของผู้ใช้ ไม่ผูกกับโปรเจกต์ (เก็บใน localStorage)
   // และตัววาดมีธง dataset.ready — ล้างเนื้อแต่ไม่ล้างธง = ได้กล่องเปล่าถาวร
   mapsState_C.s = null;
@@ -7313,8 +7325,10 @@ async function handleCommand(ch, ...a) {
     // [alpha.62 บั๊ก 20] วิ่งผ่าน renderFeaturePanel เหมือนแผงอื่น — dedupe การวาดซ้ำให้ด้วย
     case 'global-search': showPanel('search'); renderFeaturePanel('search'); syncMenuToggles(); refreshToolbar(); break;
     case 'centralize': openCentralizeUI(); break;
-    case 'branching': openBranchingTree(); break;
+    case 'branching': openBranchingTree(); syncMenuToggles(); break;
     case 'branch-sync': syncChoicesFromScene(); break;
+    // [alpha.66 ข้อ 9] ทดลองเล่น — เดินตามทางเลือกเหมือนผู้เล่น (อ่านอย่างเดียว)
+    case 'player-mode': openPlayerMode(); syncMenuToggles(); break;
     case 'floorplan': openFloorPlan(); break;
     // [alpha.62 บั๊ก 18] เช่นเดียวกัน — เดิมนี่เป็น "ทางเดียว" ที่แผงโน้ตเคยถูกวาด
     case 'scratchpad': showPanel('notes'); renderFeaturePanel('notes'); syncMenuToggles(); break;
@@ -8907,7 +8921,7 @@ async function runTest(projectPath) {
     const chJson = (await kapi.readJson(await kapi.join(dPath, 'draft.json'))).chapters[0];
     const pAdd = addScene(dPath, chJson);
     await new Promise((r) => setTimeout(r, 60));
-    document.querySelector('.k-dlg-input').value = 'ฉากใหม่ทดสอบ';
+    document.querySelector('.k-dialog .k-dlg-input').value = 'ฉากใหม่ทดสอบ';
     document.querySelector('.k-dialog .k-ok').click();
     await pAdd;
     const sj = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
@@ -8919,7 +8933,7 @@ async function runTest(projectPath) {
     // เปลี่ยนชื่อฉาก
     const pRen = renameScene(dPath, chJson, newSc);
     await new Promise((r) => setTimeout(r, 60));
-    document.querySelector('.k-dlg-input').value = 'ฉากเปลี่ยนชื่อแล้ว';
+    document.querySelector('.k-dialog .k-dlg-input').value = 'ฉากเปลี่ยนชื่อแล้ว';
     document.querySelector('.k-dialog .k-ok').click();
     await pRen;
     const sj2 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
@@ -8949,7 +8963,7 @@ async function runTest(projectPath) {
       const n0 = await countSecs();
       const pAddSec = addSection();
       await new Promise((r) => setTimeout(r, 60));
-      document.querySelector('.k-dlg-input').value = 'เล่มสองทดสอบ';
+      document.querySelector('.k-dialog .k-dlg-input').value = 'เล่มสองทดสอบ';
       document.querySelector('.k-dialog .k-ok').click();
       await pAddSec;
       check('เพิ่มเล่มใหม่ได้ (section.json + Draft + บทเริ่มต้น)', (await countSecs()) === n0 + 1);
@@ -8968,7 +8982,7 @@ async function runTest(projectPath) {
       // เปลี่ยนชื่อเล่ม
       const pRenSec = renameSection(newSecPath, newSec);
       await new Promise((r) => setTimeout(r, 60));
-      document.querySelector('.k-dlg-input').value = 'เล่มสองเปลี่ยนชื่อ';
+      document.querySelector('.k-dialog .k-dlg-input').value = 'เล่มสองเปลี่ยนชื่อ';
       document.querySelector('.k-dialog .k-ok').click();
       await pRenSec;
       check('เปลี่ยนชื่อเล่มสะท้อนใน section.json',
@@ -9004,7 +9018,7 @@ async function runTest(projectPath) {
       // เพิ่มเล่มที่สองไว้ทดสอบลากสลับลำดับ
       const pAddB = addSection();
       await new Promise((r) => setTimeout(r, 60));
-      document.querySelector('.k-dlg-input').value = 'เล่มบทดสอบจัดการ';
+      document.querySelector('.k-dialog .k-dlg-input').value = 'เล่มบทดสอบจัดการ';
       document.querySelector('.k-dialog .k-ok').click();
       await pAddB;
 
@@ -12619,9 +12633,17 @@ async function runTest(projectPath) {
                      { text: 'ยังไม่คิด', nextSceneId: '' }];
       });
       state._branch = { sel: null, zoom: 1, view: 'tree', sideOpen: true };   // เริ่มจากค่าเริ่มต้นเสมอ
+      // บทเรียนข้อ 4: localStorage คงค้างข้าม run → ล้างตำแหน่งการ์ดที่ลากไว้รอบก่อนก่อนเสมอ
+      try {
+        for (const k of Object.keys(localStorage))
+          if (k.startsWith('k2-branch-pos')) localStorage.removeItem(k);
+      } catch {}
       await openBranchingTree();
-      await new Promise((r) => setTimeout(r, 400));
-      check('เปิดผังแตกสายได้', state.tabs.has('::branching::'));
+      await new Promise((r) => setTimeout(r, 500));
+      // [alpha.66 ข้อ 1] เป็นแผงแล้ว ไม่ใช่แท็บเอกสาร
+      check('ผังแตกสายเป็นแผง ไม่ใช่แท็บเอกสาร (alpha.66 ข้อ 1)',
+            isPanelOpen('branch') && !state.tabs.has('::branching::'));
+      check('เนื้อผังถูกวาดลงในแผง #branch-body', !!$('#branch-body').querySelector('.branch-shell'));
       const nodes = [...document.querySelectorAll('.branch-node')];
       check('ผังวาดกล่องฉากเป็นภาพ (ไม่ใช่แค่รายการ)', nodes.length >= 1, String(nodes.length));
       check('กล่องฉากถูกจัดวางด้วยพิกัดจริง',
@@ -12648,6 +12670,254 @@ async function runTest(projectPath) {
             [...document.querySelectorAll('.branch-side-acts button')].some((b) => b.textContent.includes('⊞')));
       await kapi.testShot('/tmp/k2_branch.png');
 
+      // ── [alpha.66] ยกเครื่องระบบแตกสาย: ตรวจของใหม่ทีละข้อ ──
+      // ข้อ 2: แถบเพิ่มทางเลือกต้องอยู่ "เหนือ" ผัง (ทางเข้ามาก่อนผลลัพธ์)
+      {
+        const wrapEl = document.querySelector('.branch-wrap');
+        const kids = [...wrapEl.children];
+        const iAdd = kids.findIndex((k) => k.classList.contains('branch-adder'));
+        const iView = kids.findIndex((k) => k.classList.contains('branch-viewport'));
+        check('ข้อ 2: แถบเพิ่มทางเลือกอยู่บน ผังอยู่ล่าง',
+              iAdd >= 0 && iView >= 0 && iAdd < iView, `${iAdd} < ${iView}`);
+      }
+      // ข้อ 3: ป้ายข้อความทางเลือกมีแถบรองพื้น (ไม่จม)
+      if (scB2) {
+        const bg = document.querySelector('.branch-edge-labelbg');
+        check('ข้อ 3: ป้ายทางเลือกบนเส้นมีแถบรองพื้น', !!bg);
+        check('ข้อ 3: แถบรองพื้นถูกวางขนาดจริง (ไม่ใช่กล่องศูนย์)',
+              !!bg && parseFloat(bg.getAttribute('width')) > 10, bg && bg.getAttribute('width'));
+      }
+      // ข้อ 5: ตัวหนังสือในผังใหญ่ขึ้นเท่า UI หลัก (เดิมตรึงไว้ 12.5px)
+      {
+        const nameEl = document.querySelector('.branch-node-name');
+        const fs66 = parseFloat(getComputedStyle(nameEl).fontSize);
+        check('ข้อ 5: ชื่อฉากบนการ์ดไม่เล็กกว่า 13.5px', fs66 >= 13.5, fs66 + 'px');
+      }
+      // ข้อ 6: ป้ายทางเลือกอยู่กึ่งกลางเส้นจริง (จุดบนเส้นโค้ง ไม่ใช่กึ่งกลางหัว-ท้าย)
+      if (scB2) {
+        const lb = document.querySelector('.branch-edge-label');
+        const pathEl = document.querySelector('.branch-edges path.branch-edge');
+        const lx = parseFloat(lb.getAttribute('x')), ly = parseFloat(lb.getAttribute('y'));
+        const mid = pathEl.getPointAtLength(pathEl.getTotalLength() / 2);
+        check('ข้อ 6: ป้ายทางเลือกอยู่บนเส้น (ห่างจุดกึ่งกลางเส้นไม่เกิน 14px)',
+              Math.hypot(lx - mid.x, ly - mid.y) < 14,
+              `${Math.round(Math.hypot(lx - mid.x, ly - mid.y))}px`);
+      }
+      // ข้อ 6: ลากการ์ดแล้วตำแหน่งถูกจำไว้
+      {
+        const box66 = nodes[0];
+        const bid = box66.dataset.id;
+        check('ข้อ 6: การ์ดรู้ว่าตัวเองเป็นฉากไหน (dataset.id)', !!bid);
+        const fire = (type, x, y) => box66.dispatchEvent(
+          new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 }));
+        const r0 = { x: parseFloat(box66.style.left), y: parseFloat(box66.style.top) };
+        fire('mousedown', 100, 100);
+        document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 180, clientY: 160 }));
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 180, clientY: 160 }));
+        await new Promise((r) => setTimeout(r, 120));
+        const r1 = { x: parseFloat(box66.style.left), y: parseFloat(box66.style.top) };
+        check('ข้อ 6: ลากการ์ดแล้วย้ายตำแหน่งจริง', r1.x !== r0.x && r1.y !== r0.y,
+              `${r0.x},${r0.y} → ${r1.x},${r1.y}`);
+        const { loadNodePositions } = await import('./branching-ui.js');
+        check('ข้อ 6: ตำแหน่งที่ลากถูกจำไว้ข้ามการวาดใหม่', !!loadNodePositions()[bid],
+              JSON.stringify(loadNodePositions()[bid] || null));
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 250));
+        const again = document.querySelector(`.branch-node[data-id="${bid}"]`);
+        check('ข้อ 6: วาดใหม่แล้วการ์ดยังอยู่ที่เดิม (ปักหมุด)',
+              !!again && again.classList.contains('bn-pinned')
+              && Math.abs(parseFloat(again.style.left) - r1.x) < 1, again && again.style.left);
+      }
+      // ข้อ 7+10: มีปุ่มส่งออก และตัวสร้างไฟล์ทำงานได้จริง
+      {
+        check('ข้อ 7: ผังมีปุ่มส่งออก', !!document.querySelector('.branch-export'));
+        const BG66 = await import('./branch-graph.js');
+        const g66 = BG66.buildGraph([
+          { id: 'a', title: 'เริ่ม', body: 'เนื้อเรื่องย่อ', choices: [{ text: 'ไปต่อ', nextSceneId: 'b' }] },
+          { id: 'b', title: 'จบ' }]);
+        const html66 = BG66.graphToHtmlTree(g66, { title: 'ทดสอบ' });
+        check('ข้อ 10: ส่งออก HTML tree ได้ (<ul><li> + เนื้อย่อ)',
+              html66.includes('<ul>') && html66.includes('<li>') && html66.includes('เนื้อเรื่องย่อ'));
+        check('ข้อ 10: ส่งออก Markdown outline ได้',
+              BG66.graphToOutline(g66).includes('├── ') || BG66.graphToOutline(g66).includes('└── '));
+        check('ข้อ 7: ส่งออก JSON โครงสร้างได้', BG66.graphToJson(g66).scenes.length === 2);
+      }
+      // ข้อ 9: มีปุ่มทดลองเล่น
+      check('ข้อ 9: ผังมีปุ่มทดลองเล่น', !!document.querySelector('.branch-play'));
+
+      // ── [alpha.66r] รอบเก็บบั๊ก UI ของผัง ──
+      {
+        // [r-2] เนื้อแผงต้องเต็มช่องที่ได้รับ (ห้ามอิง 100vh — แผงไม่ได้สูงเท่าหน้าต่าง)
+        const bodyEl = $('#branch-body');
+        const shellEl = bodyEl.querySelector('.branch-shell');
+        const bh = bodyEl.getBoundingClientRect().height;
+        const sh = shellEl.getBoundingClientRect().height;
+        check('[r-2] เนื้อผังสูงเต็มแผง (ไม่เหลือช่องว่างท้ายแผง)',
+              bh > 0 && Math.abs(sh - bh) <= 2, `${Math.round(sh)} / ${Math.round(bh)}`);
+        const pbody = bodyEl.closest('.k-panel-body');
+        check('[r-2] .k-panel-body ของแผงผังถูกถอด padding/overflow ออกแล้ว',
+              !!pbody && getComputedStyle(pbody).paddingTop === '0px'
+              && getComputedStyle(pbody).overflow === 'hidden',
+              pbody && getComputedStyle(pbody).paddingTop + '/' + getComputedStyle(pbody).overflow);
+        // [r-3] ผังต้องเลื่อนแนวตั้งได้เอง
+        const vp = bodyEl.querySelector('.branch-viewport');
+        check('[r-3] ผังมีกล่องเลื่อนของตัวเอง (overflow:auto)',
+              getComputedStyle(vp).overflowY === 'auto', getComputedStyle(vp).overflowY);
+        check('[r-3] ความสูงผังไม่ได้ถูกตรึงด้วย 100vh',
+              !/vh/.test(getComputedStyle(vp).maxHeight), getComputedStyle(vp).maxHeight);
+        vp.scrollTop = 40;
+        check('[r-3] เลื่อนแนวตั้งได้จริงเมื่อผังสูงเกินช่อง',
+              vp.scrollHeight <= vp.clientHeight || vp.scrollTop > 0,
+              `${vp.scrollTop} · ${vp.scrollHeight}/${vp.clientHeight}`);
+        // [r-4] ปุ่มกลางเมาส์ลากผังได้
+        vp.scrollLeft = 0; vp.scrollTop = 0;
+        const mk = (type, x, y, btn) => new MouseEvent(type,
+          { bubbles: true, cancelable: true, clientX: x, clientY: y, button: btn });
+        const down = mk('mousedown', 300, 300, 1);
+        vp.dispatchEvent(down);
+        check('[r-4] ปุ่มกลาง: กัน autoscroll ของ Chromium (preventDefault)', down.defaultPrevented);
+        check('[r-4] ปุ่มกลาง: เข้าโหมดลากผัง', vp.classList.contains('branch-panning'));
+        document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 240, clientY: 260 }));
+        const panned = vp.scrollLeft > 0 || vp.scrollTop > 0
+          || (vp.scrollWidth <= vp.clientWidth && vp.scrollHeight <= vp.clientHeight);
+        check('[r-4] ลากแล้วผังเลื่อนตาม', panned, `${vp.scrollLeft},${vp.scrollTop}`);
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        check('[r-4] ปล่อยเมาส์แล้วออกจากโหมดลาก', !vp.classList.contains('branch-panning'));
+        // [r-1] วาดใหม่แบบ "ไม่แตะข้อมูล" ต้องไม่ล้างแผงทิ้งกลางคัน + คงตำแหน่งเลื่อนไว้
+        vp.scrollLeft = 25; vp.scrollTop = 15;
+        const p1 = renderBranchingPanel();
+        check('[r-1] ระหว่างวาดใหม่ เนื้อแผงเดิมยังอยู่ (ไม่กระพริบเป็นช่องว่าง)',
+              !!$('#branch-body').querySelector('.branch-shell'));
+        await p1;
+        await new Promise((r) => setTimeout(r, 250));
+        const vp2 = $('#branch-body').querySelector('.branch-viewport');
+        check('[r-1] วาดใหม่แล้วตำแหน่งเลื่อนของผังไม่เด้งกลับ 0',
+              !!vp2 && (vp2.scrollTop === 15 || vp2.scrollHeight <= vp2.clientHeight),
+              vp2 && `${vp2.scrollLeft},${vp2.scrollTop}`);
+        check('[r-1] วาดใหม่โดยไม่เปลี่ยนตัวที่เลือก ต้องไม่ดึงผังกลับไปหาโหนดเดิม',
+              !!vp2 && (vp2.scrollLeft === 25 || vp2.scrollWidth <= vp2.clientWidth),
+              vp2 && String(vp2.scrollLeft));
+        // [r-5] "เปิดคู่กับผัง" = แยกจอจริง — ผังต้องผนึกอยู่ข้างแผงเอกสาร ไม่ใช่ซ้อนเป็นแท็บ
+        const splitB = [...document.querySelectorAll('.branch-side-acts button')]
+          .find((b) => b.textContent.includes('⊞'));
+        splitB.click();
+        await new Promise((r) => setTimeout(r, 700));
+        check('[r-5] เปิดคู่กับผัง: แผงผังยังเปิดอยู่', isPanelOpen('branch'));
+        const bRect = document.querySelector('#app-root .k-panel[data-panel-id="branch"]')?.getBoundingClientRect();
+        const dRect = document.querySelector('#app-root .k-panel[data-panel-id="docs"]')?.getBoundingClientRect();
+        check('[r-5] ผังกับเอกสารอยู่เคียงข้างกันจริง (เห็นพร้อมกันทั้งคู่)',
+              !!bRect && !!dRect && bRect.width > 40 && dRect.width > 40
+              && bRect.left < dRect.left,
+              bRect && dRect ? `branch ${Math.round(bRect.left)}w${Math.round(bRect.width)} | docs ${Math.round(dRect.left)}w${Math.round(dRect.width)}` : 'ไม่เจอแผง');
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      // ข้อ 15: เลือกโหนดปลายทางแล้วเส้นทางจากจุดเริ่มถูกไฮไลต์
+      if (scB2) {
+        state._branch.sel = scB2.id;
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 300));
+        check('ข้อ 15: ไฮไลต์เส้นบนเส้นทางจากจุดเริ่ม',
+              !!document.querySelector('.branch-edges path.branch-edge-path'));
+        check('ข้อ 15: inspector บอกเส้นทางจากจุดเริ่มมาถึงฉากนี้',
+              !!document.querySelector('.branch-path-hi'));
+        state._branch.sel = scB.id;
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      // ข้อ 4: มีจานสีการ์ด และตั้งสีแล้วเขียนลง scenes.json
+      {
+        check('ข้อ 4: inspector มีจานสีการ์ดฉาก', document.querySelectorAll('.branch-colors .branch-color').length >= 6);
+        check('ข้อ 4: ทุกทางเลือกมีปุ่มเลือกสีเส้น',
+              document.querySelectorAll('.branch-edit-col').length
+              === document.querySelectorAll('.branch-edit-row').length);
+        const { setNodeColor, mutateChoices: mc66 } = await import('./branching-ui.js');
+        await setNodeColor({ dPath, id: scB.id }, '#6fae6f');
+        await mc66({ dPath, id: scB.id }, (l) => l.map((c, i) => (i === 0 ? { ...c, color: '#5f9fd9' } : c)));
+        const sjC = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+        const rowC = sjC.chapters[chB.guid].find((x) => x.id === scB.id);
+        check('ข้อ 4: สีการ์ดถูกเขียนลง scenes.json', rowC.color === '#6fae6f', rowC.color);
+        check('ข้อ 4: สีเส้นถูกเขียนติดกับทางเลือก', (rowC.choices || [])[0].color === '#5f9fd9',
+              JSON.stringify((rowC.choices || [])[0]));
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 300));
+        const tinted = document.querySelector('.branch-node.bn-tinted');
+        check('ข้อ 4: การ์ดที่ตั้งสีถูกแต้มสีบนผัง', !!tinted);
+        if (scB2) check('ข้อ 4: เส้นใช้สีที่ผู้ใช้เลือก',
+                        [...document.querySelectorAll('.branch-edges path.branch-edge')]
+                          .some((p) => (p.style.stroke || '').replace(/\s/g, '').includes('95,159,217')
+                                    || p.style.stroke === '#5f9fd9'),
+                        [...document.querySelectorAll('.branch-edges path.branch-edge')].map((p) => p.style.stroke).join('|'));
+      }
+      // ข้อ 17: ค้นหาแล้วเน้นเฉพาะที่ตรง จางที่เหลือ
+      {
+        const findInp = document.querySelector('.branch-find-inp');
+        check('ข้อ 17: ผังมีช่องค้นหา', !!findInp);
+        findInp.value = scB.title;
+        findInp.dispatchEvent(new Event('input'));
+        await new Promise((r) => setTimeout(r, 350));
+        check('ข้อ 17: ฉากที่ตรงถูกเน้น', !!document.querySelector('.branch-node.bn-hit'));
+        check('ข้อ 17: ช่องค้นหาบอกจำนวนที่เจอ',
+              (document.querySelector('.branch-find-count') || {}).textContent?.length > 0);
+        findInp.value = ''; findInp.dispatchEvent(new Event('input'));
+        await new Promise((r) => setTimeout(r, 300));
+        check('ข้อ 17: ล้างคำค้นแล้วทุกโหนดกลับมาปกติ', !document.querySelector('.branch-node.bn-faded'));
+      }
+      // ข้อ 16: ที่จับลากทางเลือก + รวมทางเลือกซ้ำ
+      {
+        check('ข้อ 16: ทุกทางเลือกมีที่จับสำหรับลากข้ามฉาก',
+              [...document.querySelectorAll('.branch-grip')].every((g) => g.draggable)
+              && document.querySelectorAll('.branch-grip').length >= 2);
+        const BG16 = await import('./branch-graph.js');
+        await mutateChoices({ dPath, id: scB.id }, (l) => [...l, { text: l[0].text, nextSceneId: '' }]);
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 350));
+        check('ข้อ 16: มีทางเลือกซ้ำ → ปุ่มรวมโผล่ขึ้นมา', !!document.querySelector('.branch-dup'));
+        const scenes16 = (await kapi.readJson(await kapi.join(dPath, 'scenes.json')))
+          .chapters[chB.guid].find((x) => x.id === scB.id).choices;
+        const merged16 = BG16.mergeDuplicateChoices(scenes16);
+        check('ข้อ 16: ตัวรวมยุบของซ้ำได้จริง', merged16.removed === 1, String(merged16.removed));
+        await mutateChoices({ dPath, id: scB.id }, () => merged16.list);
+      }
+      // ข้อ 13: ปุ่ม "ดูทั้งหมด" ของเส้นทาง
+      {
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 350));
+        const seeAll = [...document.querySelectorAll('.branch-paths-head button')];
+        check('ข้อ 13: ส่วนเส้นทางมีปุ่ม "ดูทั้งหมด"', seeAll.length === 1, String(seeAll.length));
+        if (seeAll[0]) {
+          seeAll[0].click();
+          await new Promise((r) => setTimeout(r, 250));
+          check('ข้อ 13: กดแล้วเปิดกล่องรายการเส้นทาง', !!document.querySelector('.branch-dlg'));
+          check('ข้อ 13: กล่องเส้นทางมีช่องกรอง',
+                !!document.querySelector('.branch-dlg .k-dlg-input'));
+          check('ข้อ 13: กล่องเส้นทางแสดงรายการจริง',
+                document.querySelectorAll('.branch-path-row').length >= 1,
+                String(document.querySelectorAll('.branch-path-row').length));
+          document.querySelector('.branch-dlg').closest('.k-overlay').remove();
+        }
+      }
+      // ข้อ 14: ทางเลือกชี้ไปฉากที่ไม่มีแล้ว → ตรวจเจอ + มีคำเตือนบนผัง
+      {
+        await mutateChoices({ dPath, id: scB.id }, (l) => [...l, { text: 'ไปฉากผี', nextSceneId: 'ghost-x' }]);
+        await renderBranchingPanel();
+        await new Promise((r) => setTimeout(r, 350));
+        check('ข้อ 14: ผังเตือนทางเลือกที่ชี้ไปฉากที่ไม่มีแล้ว',
+              [...document.querySelectorAll('.branch-badge')].some((b) => b.textContent.includes('ไม่มีแล้ว')),
+              [...document.querySelectorAll('.branch-badge')].map((b) => b.textContent).join('|'));
+        const { checkDanglingOnOpen: chk66 } = await import('./branching-ui.js');
+        check('ข้อ 14: ตัวตรวจตอนเปิดโปรเจกต์นับเจอ', (await chk66()) >= 1);
+        const brokenBadge = [...document.querySelectorAll('.branch-badge-btn')][0];
+        if (brokenBadge) {
+          brokenBadge.click();
+          await new Promise((r) => setTimeout(r, 250));
+          check('ข้อ 14: กดคำเตือนแล้วเปิดรายการให้ไปแก้ทีละอัน',
+                document.querySelectorAll('.branch-broken-row').length >= 1);
+          document.querySelector('.branch-dlg')?.closest('.k-overlay')?.remove();
+        }
+        await mutateChoices({ dPath, id: scB.id }, (l) => l.filter((c) => c.nextSceneId !== 'ghost-x'));
+      }
+
       // แก้ข้อความทางเลือกผ่าน inspector → ต้องเขียนลง scenes.json จริง
       const inp = document.querySelector('.branch-edit-text');
       inp.value = 'ผลักประตู'; inp.dispatchEvent(new Event('blur'));
@@ -12659,15 +12929,72 @@ async function runTest(projectPath) {
 
       // สลับเป็นมุมมองรายการ — โครงเดิมต้องยังใช้ได้
       state._branch.view = 'list';
-      await renderBranchingTree(state.tabs.get('::branching::').pane);
+      await renderBranchingPanel();
       await new Promise((r) => setTimeout(r, 250));
       check('มุมมองรายการยังแสดงทางเลือกได้',
             [...document.querySelectorAll('.branch-choice')].some((c) => c.textContent.includes('ผลักประตู')));
       check('มีแผงเพิ่มทางเลือก (สร้าง choices ได้จากในโปรแกรม)', !!document.querySelector('.branch-adder'));
+      state._branch.view = 'tree';
 
-      closeTab('::branching::');
+      // ---- [alpha.66 ข้อ 9] โหมดทดลองเล่น: อ่านฉาก → กดทางเลือก → ย้อนกลับ ----
+      if (scB2) {
+        await openPlayerMode(scB.id);
+        await new Promise((r) => setTimeout(r, 700));
+        check('ข้อ 9: โหมดทดลองเล่นเป็นแผงและเปิดได้', isPanelOpen('player'));
+        check('ข้อ 9: แสดงชื่อฉากที่กำลังเล่น',
+              (document.querySelector('.player-title') || {}).textContent?.includes(scB.title),
+              (document.querySelector('.player-title') || {}).textContent);
+        check('ข้อ 9: เนื้อฉากอ่านอย่างเดียว (ProseMirror editable=false)',
+              !!document.querySelector('.player-readonly .ProseMirror')
+              && document.querySelector('.player-readonly .ProseMirror').contentEditable !== 'true',
+              (document.querySelector('.player-readonly .ProseMirror') || {}).contentEditable);
+        const pchoices = [...document.querySelectorAll('.player-choice')];
+        check('ข้อ 9: ทางเลือกแสดงเป็นปุ่มใต้เนื้อเรื่อง', pchoices.length >= 1, String(pchoices.length));
+        const live = pchoices.find((b) => !b.classList.contains('player-choice-dead'));
+        check('ข้อ 9: ปุ่มทางเลือกบอกปลายทาง', !!live && live.textContent.includes(scB2.title),
+              live && live.textContent);
+        live.click();
+        await new Promise((r) => setTimeout(r, 800));
+        check('ข้อ 9: กดทางเลือกแล้วไปฉากปลายทางทันที',
+              (document.querySelector('.player-title') || {}).textContent?.includes(scB2.title),
+              (document.querySelector('.player-title') || {}).textContent);
+        check('ข้อ 9: มีเส้นทางที่เดินมา (breadcrumb) 2 ก้าว',
+              document.querySelectorAll('.player-trail-chip').length === 2,
+              String(document.querySelectorAll('.player-trail-chip').length));
+        const { getPlaythroughs } = await import('./player-mode.js');
+        check('ข้อ 9: เส้นทางถูกเก็บใน playthroughs[] แยกจาก playerHistory',
+              getPlaythroughs().length >= 1
+              && getPlaythroughs()[getPlaythroughs().length - 1].steps.length === 2,
+              JSON.stringify(getPlaythroughs().slice(-1)));
+        const backB66 = document.querySelector('.player-back');
+        check('ข้อ 9: มีปุ่มย้อนกลับและกดได้ตอนเดินมาแล้ว', !!backB66 && !backB66.disabled);
+        backB66.click();
+        await new Promise((r) => setTimeout(r, 700));
+        check('ข้อ 9: ย้อนกลับแล้วกลับมาฉากก่อนหน้า',
+              (document.querySelector('.player-title') || {}).textContent?.includes(scB.title),
+              (document.querySelector('.player-title') || {}).textContent);
+        check('ข้อ 9: ย้อนกลับสุดแล้วปุ่มถูกปิด', document.querySelector('.player-back').disabled);
+        const histB66 = [...document.querySelectorAll('.player-foot .player-btn')]
+          .find((b) => b.textContent.includes('🎯'));
+        histB66.click();
+        await new Promise((r) => setTimeout(r, 250));
+        check('ข้อ 9: เปิดกล่องประวัติรอบการเล่นได้',
+              document.querySelectorAll('.player-run-row').length >= 1);
+        document.querySelector('.player-run-row')?.closest('.k-overlay')?.remove();
+        await kapi.testShot('/tmp/k2_player.png');
+        hidePanel('player');
+        // เก็บกวาดให้หมด: โหมดทดลองเล่นบันทึกลงทั้ง playthroughs[] และ playerHistory
+        // ถ้าปล่อยค้าง เทส choiceStats ข้างล่างจะนับฉากเกิน (เจอจริงตอน alpha.66)
+        if (state.meta) {
+          state.meta.playthroughs = [];
+          state.meta.playerHistory = [];
+          await saveProjectMeta();
+        }
+      }
+
+      hidePanel('branch');
       state._branch = null;
-      await updateSceneRow(dPath, scB.id, (r) => { delete r.choices; });
+      await updateSceneRow(dPath, scB.id, (r) => { delete r.choices; delete r.color; });
     }
 
     // ---- ผังพื้นที่ (ข้อ 82): แผนที่ + ตำแหน่งปัจจุบัน + เส้นเวลาของสถานที่ ----
@@ -13566,7 +13893,7 @@ async function runTest(projectPath) {
         await openBranchingTree();
         await new Promise((r) => setTimeout(r, 400));
         state._branch.sel = scB.id;
-        await renderBranchingTree(state.tabs.get('::branching::').pane);
+        await renderBranchingPanel();
         await new Promise((r) => setTimeout(r, 500));
         check('แผงผังแตกสายมีส่วน "ทางเลือกในเนื้อฉาก"',
               !!document.querySelector('.branch-doc'));
@@ -13588,7 +13915,7 @@ async function runTest(projectPath) {
         check('แก้ choices พร้อมกันหลายคำสั่งไม่เขียนทับกัน (ต่อคิว)',
               ['คิว1', 'คิว2', 'คิว3'].every((t2) => texts6.includes(t2)), texts6.join('|'));
         await updateSceneRow(dPath, scB.id, (r) => { delete r.choices; });
-        closeTab('::branching::');
+        hidePanel('branch');
       }
 
       // ---- ข้อ 10: Wiki มีระบบเวอร์ชันเหมือนฉาก ----
@@ -18070,6 +18397,14 @@ async function runTest(projectPath) {
         check('[62-16] ไม่มีแท็บเอกสารเทียมของ 3 ตัวนี้หลงเหลือ',
               !state.tabs.has('::network::') && !state.tabs.has('::planner::')
               && !state.tabs.has('::floorplan::'));
+        // [alpha.66 ข้อ 1] ผังแตกสาย + ทดลองเล่น เป็นแผงชุดสุดท้ายที่ย้ายมา
+        for (const id of ['branch', 'player']) {
+          check(`[66-1] "${id}" ถูกลงทะเบียนเป็นแผง`, PANEL_DEFS.some((d) => d.id === id));
+          check(`[66-1] "${id}" มีตัววาดในตารางแผงฟีเจอร์`, isFeaturePanel(id));
+          check(`[66-1] "${id}" มีชื่อแผงตามภาษาที่โหลดอยู่ (i18n)`,
+                !!PANEL_DEFS.find((d) => d.id === id).i18n);
+        }
+        check('[66-1] ไม่มีแท็บเอกสารเทียมของผังแตกสายหลงเหลือ', !state.tabs.has('::branching::'));
         showPanel('network');
         await renderFeaturePanel('network');
         await until62(() => !!$('#net-body').firstChild);

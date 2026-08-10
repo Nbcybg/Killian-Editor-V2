@@ -83,6 +83,11 @@ export const PANEL_DEFS = [
     desc: 'คุณสมบัติของการ์ดหรือเส้นเชื่อมที่เลือกบนกระดาน Planner — ชื่อ · สรุป · สี · สถานะ · แท็ก · ขนาด · สไตล์เส้น' },
   { id: 'floorplan', title: '📍 ผังพื้นที่',      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
     desc: 'ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่' },
+  // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
+  { id: 'branch',    title: '🌿 ผังแตกสาย',      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
+    desc: 'ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้' },
+  { id: 'player',    title: '▶️ ทดลองเล่น',       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
+    desc: 'อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง' },
 ];
 // ชื่อแผงตามภาษาที่โหลดอยู่ (fallback = ชื่อไทยในตาราง) — เรียกใหม่ทุกครั้งที่ render
 function titleOf(d) { return d.i18n ? t(d.i18n, d.title) : d.title; }

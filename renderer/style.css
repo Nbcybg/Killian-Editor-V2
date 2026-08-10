@@ -406,12 +406,16 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   max-height:88vh; overflow:auto; }
 .wiki-check { width:18px; height:18px; margin:0; flex:0 0 auto; accent-color:var(--accent-hi); cursor:pointer; }
 .k-dlg-title { font-weight:600; margin-bottom:12px; color:var(--bright); }
-.k-dlg-input { width:100%; background:var(--bg); color:var(--fg);
+/* .k-dlg-* = ของกล่องโต้ตอบเท่านั้น — เนื้อ "แผง" ห้ามยืมคลาสนี้ไปใช้
+   เพราะเนื้อแผงที่ปิดอยู่ยังคาอยู่ใน #k-panel-src (ซ่อน แต่ยังอยู่ในเอกสาร)
+   → document.querySelector('.k-dlg-input') คว้าของในแผงแทนของในกล่อง (บทเรียนข้อ 10 ขยายผล)
+   แผงใช้ .k-field-input / .k-field-select ที่หน้าตาเหมือนกันเป๊ะแทน */
+.k-dlg-input, .k-field-input { width:100%; background:var(--bg); color:var(--fg);
   border:1px solid var(--border); border-radius:8px; padding:8px 12px; }
-.k-dlg-input:focus { outline:none; border-color:var(--accent-hi); }
-.k-dlg-select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
+.k-dlg-input:focus, .k-field-input:focus { outline:none; border-color:var(--accent-hi); }
+.k-dlg-select, .k-field-select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:7px 9px; font-size:calc(14px * var(--ui-scale, 1)); cursor:pointer; }
-.k-dlg-select:focus { outline:none; border-color:var(--accent-hi); }
+.k-dlg-select:focus, .k-field-select:focus { outline:none; border-color:var(--accent-hi); }
 .k-dlg-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
 /* ---- กล่อง "บันทึกทั้งหมด" พร้อมรายการไฟล์ที่ค้าง (บั๊ก #3) ---- */
 .k-dialog.k-saveall { width:480px; max-width:92vw; }
@@ -1908,27 +1912,70 @@ body.fm2 #tabs { display:none; }
 #streak-badge { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-hi); margin-left:8px; cursor:pointer; }
 #streak-badge:hover { text-shadow:0 0 8px var(--accent); }
 
-/* ====== Branching UI (ข้อ 81) — ผัง Branch Tree + แผง inspector ====== */
-.branch-shell { display:flex; height:100%; overflow:hidden; }
-.branch-main { flex:1; min-width:0; overflow-y:auto; }
-.branch-wrap { max-width:1400px; margin:0 auto; padding:20px; }
-.branch-head { margin-bottom:12px; }
+/* ====== Branching UI (ข้อ 81 · ยกเครื่อง alpha.66) — ผัง Branch Tree + แผง inspector ======
+   [ข้อ 5] ตัวหนังสือทุกจุดผูกกับ --ui-scale และใหญ่เท่า UI หลัก (เดิมหลายจุดตรึง px ไว้เล็กกว่า) */
+/* ต้อง force ให้ #branch-body / #player-body ชนขอบแผง 100% — ห้ามมี overflow:auto หรือ padding มากั้น
+   (`.k-panel-body` ตั้ง padding:8px + overflow:auto ไว้เป็นค่ามาตรฐาน ถ้าไม่ถอด เนื้อแผงจะไม่เต็มช่อง
+   แล้วได้แถบเลื่อนซ้อนสองชั้น — แบบเดียวกับที่ #net-body ต้องทำ) */
+.k-panel:has(#branch-body) > .k-panel-body,
+.k-float-panel:has(#branch-body) > .k-panel-body,
+.k-panel:has(#player-body) > .k-panel-body,
+.k-float-panel:has(#player-body) > .k-panel-body { padding:0; overflow:hidden; display:flex; }
+
+/* เป็นแผงแล้ว = ความกว้างขึ้นกับที่ผู้ใช้ผนึกไว้ ไม่ใช่ขนาดหน้าต่าง → ใช้ container query
+   ไม่ใช่ media query (ผนึกเป็นแผงแคบข้างซ้ายแล้ว media query ยังคิดว่าจอกว้างอยู่) */
+.branch-host { flex:1; min-height:0; min-width:0; width:100%; height:100%;
+  overflow:hidden !important; display:flex; container-type:inline-size; }
+.branch-shell { display:flex; flex:1; min-height:0; min-width:0; width:100%;
+  overflow:hidden; font-size:calc(13px * var(--ui-scale, 1)); }
+/* แผงแคบ → เอาแผงทางเลือกลงไปไว้ข้างล่างแทนที่จะเบียดผังจนไม่เหลือที่ */
+@container (max-width: 720px) {
+  .branch-shell { flex-direction:column; }
+  .branch-side { width:auto; flex:0 0 auto; max-height:46%; border-left:none;
+    border-top:1px solid var(--border); }
+  .branch-wrap { padding:12px; }
+  .branch-viewport { max-height:none; min-height:180px; }
+}
+@container (max-width: 430px) {
+  .branch-adder { flex-direction:column; align-items:stretch; }
+  .branch-adder .k-field-select { max-width:none; }
+  .branch-find-inp { width:130px; }
+}
+/* หัวเรื่อง/คำเตือน/แถบเพิ่มทางเลือก = ความสูงคงที่ · ผัง (หรือรายการ) กินที่เหลือทั้งหมด
+   ห้ามใช้ max-height ที่อิง 100vh — เนื้อแผงไม่ได้สูงเท่าหน้าต่าง (บทเรียน "ไม่เต็ม panel") */
+.branch-main { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+.branch-wrap { flex:1; min-height:0; width:100%; max-width:1400px; margin:0 auto; padding:16px 20px;
+  box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; }
+.branch-head { margin-bottom:12px; flex:0 0 auto; }
 .branch-title-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .branch-title { font-size:calc(20px * var(--ui-scale, 1)); font-weight:600; color:var(--bright); flex:1; }
-.branch-stats { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); margin-top:4px; }
-.branch-tools { display:flex; align-items:center; gap:5px; }
+.branch-stats { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--dim); margin-top:4px; }
+.branch-tools { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
 .branch-viewtog { display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
-.branch-viewbtn { background:transparent; border:none; color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1));
-  padding:4px 10px; cursor:pointer; }
+.branch-viewbtn { background:transparent; border:none; color:var(--dim); font-size:calc(12.5px * var(--ui-scale, 1));
+  padding:5px 11px; cursor:pointer; }
 .branch-viewbtn:hover { color:var(--bright); }
 .branch-viewbtn.on { background:var(--accent-hi); color:#fff; }
 .branch-zbtn { background:var(--side); border:1px solid var(--border); color:var(--fg);
-  border-radius:6px; min-width:26px; height:24px; font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; }
+  border-radius:6px; min-width:28px; height:27px; font-size:calc(13px * var(--ui-scale, 1)); cursor:pointer; }
 .branch-zbtn:hover { border-color:var(--accent-hi); color:var(--bright); }
-.branch-zlabel { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); min-width:36px; text-align:center; }
+.branch-zlabel { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); min-width:38px; text-align:center; }
+.branch-dup { color:var(--orange); }
+.branch-play { font-size:calc(14px * var(--ui-scale, 1)); }
 
-.branch-warn { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-.branch-badge { font-size:calc(11px * var(--ui-scale, 1)); padding:2px 8px; border-radius:999px; border:1px solid transparent; }
+/* [ข้อ 17] ช่องค้นหาในผัง */
+.branch-find { display:flex; align-items:center; gap:5px; }
+.branch-find-inp { background:var(--bg); border:1px solid var(--border); border-radius:6px;
+  color:var(--fg); font-size:calc(12.5px * var(--ui-scale, 1)); padding:4px 9px; width:190px; height:27px;
+  box-sizing:border-box; }
+.branch-find-inp:focus { outline:none; border-color:var(--accent-hi); }
+.branch-find.on .branch-find-inp { border-color:var(--accent-hi); }
+.branch-find-count { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-hi); white-space:nowrap; }
+
+.branch-warn { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; flex:0 0 auto; }
+.branch-badge { font-size:calc(12px * var(--ui-scale, 1)); padding:3px 10px; border-radius:999px; border:1px solid transparent; }
+.branch-badge-btn { cursor:pointer; }
+.branch-badge-btn:hover { filter:brightness(1.2); }
 .bw-open { color:#d9b757; background:rgba(217,183,87,.12); border-color:rgba(217,183,87,.4); }
 .bw-lost { color:#d9575e; background:rgba(217,87,94,.12); border-color:rgba(217,87,94,.4); }
 .bw-loop { color:#d97757; background:rgba(217,119,87,.12); border-color:rgba(217,119,87,.4); }
@@ -1936,98 +1983,236 @@ body.fm2 #tabs { display:none; }
 .bw-root { color:#6fae6f; background:rgba(111,174,111,.12); border-color:rgba(111,174,111,.4); }
 
 /* พื้นผัง: viewport เลื่อนได้ · canvas ถูก scale ด้วย transform */
+/* [3] แถบเลื่อนแนวตั้ง/แนวนอนของผังอยู่ที่นี่ — สูงเท่าที่เหลือในแผงเสมอ (flex:1 + min-height:0)
+   ลากด้วยปุ่มกลางเมาส์ได้ (.branch-panning) */
 .branch-viewport { position:relative; overflow:auto; border:1px solid var(--border);
-  border-radius:10px; background:var(--bg); padding:0; max-height:calc(100vh - 260px);
-  min-height:240px; }
+  border-radius:10px; background:var(--bg); padding:0;
+  flex:1 1 auto; min-height:150px; overscroll-behavior:contain; }
+.branch-viewport.branch-panning { cursor:grabbing; user-select:none; }
+.branch-viewport.branch-panning .branch-node { cursor:grabbing; }
 .branch-viewport::after { content:''; display:block; width:var(--bw,0); height:var(--bh,0); }
 .branch-canvas { position:absolute; top:0; left:0; }
 .branch-edges { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; }
-.branch-edge { fill:none; stroke:#98958b; stroke-width:1.6; opacity:.65; }
+.branch-edge { fill:none; stroke:#98958b; stroke-width:1.7; opacity:.7; transition:opacity .15s; }
 .branch-edge-back { stroke-dasharray:5 4; }
 .branch-edge-hot { stroke:var(--accent-hi); stroke-width:2.4; opacity:1; }
-.branch-edge-label { fill:var(--dim); font-size:10px; }
-.branch-edge-label.on { fill:var(--accent-hi); }
+/* [ข้อ 15] เส้นบนเส้นทางจากจุดเริ่ม → โหนดที่เลือก */
+.branch-edge-path { stroke:var(--accent-hi); stroke-width:3; opacity:1; }
+/* [ข้อ 17] จางลงเมื่อไม่ตรงคำค้น */
+.branch-edge-faded { opacity:.1; }
+
+/* [ข้อ 3] ป้ายข้อความทางเลือกต้องมีแถบรองพื้น ไม่งั้นตัวหนังสือจมหายไปกับเส้น/กล่องที่อยู่ข้างหลัง */
+.branch-edge-lg { pointer-events:auto; cursor:pointer; }
+.branch-edge-labelbg { fill:var(--side); stroke:var(--border); stroke-width:1; opacity:.97; }
+.branch-edge-lg:hover .branch-edge-labelbg { stroke:var(--accent-hi); }
+.branch-edge-lg.on .branch-edge-labelbg { stroke:var(--accent-hi); fill:var(--bar); }
+.branch-edge-label { fill:var(--fg); font-size:calc(12px * var(--ui-scale, 1)); font-weight:500;
+  pointer-events:none; }
+.branch-edge-lg.on .branch-edge-label { fill:var(--accent-hi); }
+.branch-edge-lg.branch-edge-faded { opacity:.12; }
 
 .branch-node { position:absolute; box-sizing:border-box; background:var(--side);
-  border:1px solid var(--border); border-left:3px solid var(--border); border-radius:8px;
-  padding:6px 9px; cursor:pointer; overflow:hidden; transition:border-color .12s, box-shadow .12s; }
+  border:1px solid var(--border); border-left:4px solid var(--border); border-radius:9px;
+  padding:8px 11px; cursor:grab; overflow:hidden; user-select:none;
+  transition:border-color .12s, box-shadow .12s, opacity .15s; }
 .branch-node:hover { border-color:var(--accent-hi); }
 .branch-node.on { border-color:var(--accent-hi); box-shadow:0 0 0 2px var(--accent-hi) inset; }
-.branch-node-name { font-size:12.5px; font-weight:600; color:var(--bright);
+.branch-node-name { font-size:calc(14px * var(--ui-scale, 1)); font-weight:600; color:var(--bright);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.branch-node-meta { display:flex; justify-content:space-between; gap:6px; font-size:10.5px;
-  color:var(--dim); margin-top:3px; white-space:nowrap; overflow:hidden; }
+.branch-node-meta { display:flex; justify-content:space-between; gap:8px;
+  font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-top:5px;
+  white-space:nowrap; overflow:hidden; }
+.branch-node-ch { overflow:hidden; text-overflow:ellipsis; }
 .branch-node-count { color:var(--accent-hi); flex:0 0 auto; }
 .branch-node.bn-root { border-left-color:#6fae6f; }
 .branch-node.bn-end  { border-left-color:#5f9fd9; }
 .branch-node.bn-loop { border-left-color:#d97757; }
 .branch-node.bn-lost { border-style:dashed; border-left-color:#d9575e; opacity:.75; }
+/* [ข้อ 4] สีที่ผู้ใช้เลือกเอง — แต้มพื้นหลังจาง ๆ ด้วย ไม่ใช่แค่ขอบซ้าย จะได้เห็นจากไกล */
+.branch-node.bn-tinted { background:
+  linear-gradient(to right, color-mix(in srgb, var(--bn-tint) 20%, transparent), transparent 55%), var(--side); }
+/* [ข้อ 15] โหนดบนเส้นทางที่ไฮไลต์ */
+.branch-node.bn-onpath { border-color:var(--accent-hi); box-shadow:0 0 0 1px var(--accent-hi); }
+/* [ข้อ 6] ลากย้ายการ์ด */
+.branch-node.bn-dragging { cursor:grabbing; opacity:.85; z-index:5;
+  box-shadow:0 6px 18px rgba(0,0,0,.35); }
+.branch-node.bn-pinned::after { content:'📌'; position:absolute; right:5px; bottom:3px;
+  font-size:calc(10px * var(--ui-scale, 1)); opacity:.55; }
+/* [ข้อ 16] ปลายทางของการลากทางเลือกข้ามฉาก */
+.branch-node.bn-drop, .branch-card.bn-drop { border-color:#6fae6f;
+  box-shadow:0 0 0 2px rgba(111,174,111,.6) inset; }
+/* [ข้อ 17] ผลการกรอง */
+.branch-node.bn-faded, .branch-card.bn-faded { opacity:.16; }
+.branch-node.bn-hit { border-color:#d9b757; box-shadow:0 0 0 2px rgba(217,183,87,.55); }
 
-/* มุมมองรายการ */
-.branch-tree { display:flex; flex-direction:column; gap:14px; }
+/* มุมมองรายการ — เลื่อนในตัวเอง ไม่ดันให้ทั้งแผงยาว */
+.branch-tree { display:flex; flex-direction:column; gap:14px;
+  flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:4px; }
 .branch-card { background:var(--side); border:1px solid var(--border); border-radius:10px;
   padding:14px; transition:border-color .15s; cursor:pointer; }
 .branch-card:hover { border-color:var(--accent); }
 .branch-card.on { border-color:var(--accent-hi); }
-.branch-node-title { font-size:15px; font-weight:600; color:var(--link); cursor:pointer; margin-bottom:4px; }
-.branch-ch { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); margin-bottom:8px; }
+.branch-node-title { font-size:calc(15.5px * var(--ui-scale, 1)); font-weight:600; color:var(--link);
+  cursor:pointer; margin-bottom:4px; }
+.branch-ch { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-bottom:8px; }
 .branch-choices { display:flex; flex-direction:column; gap:4px; }
-.branch-choice { display:flex; align-items:center; gap:6px; font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--orange);
-  padding:4px 8px; background:rgba(217,149,95,.08); border-radius:6px; cursor:pointer; }
+.branch-choice { display:flex; align-items:center; gap:6px; font-size:calc(13px * var(--ui-scale, 1)); color:var(--orange);
+  padding:5px 9px; background:rgba(217,149,95,.08); border-radius:6px; cursor:pointer; }
 .branch-choice:hover { background:rgba(217,149,95,.16); }
 .branch-choice-open { color:var(--dim); border:1px dashed var(--border); }
 .branch-choice-del { margin-left:auto; opacity:.5; cursor:pointer; }
 .branch-choice-del:hover { opacity:1; color:#d9575e; }
-.branch-empty { padding:40px; text-align:center; }
+.branch-empty { padding:40px; text-align:center; font-size:calc(13.5px * var(--ui-scale, 1));
+  flex:1 1 auto; min-height:0; overflow-y:auto; }
 
-.branch-adder { margin-top:16px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-.branch-adder .k-dlg-input { flex:1; min-width:160px; }
+/* [ข้อ 2] แถบเพิ่มทางเลือกย้ายขึ้นมาอยู่บนสุด — เน้นให้เห็นว่าเป็น "ทางเข้า" ไม่ใช่ท้ายหน้า */
+.branch-adder { margin:0 0 14px; display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+  background:var(--side); border:1px solid var(--border); border-radius:9px; padding:10px 12px;
+  flex:0 0 auto; }
+.branch-adder-lbl { font-size:calc(12.5px * var(--ui-scale, 1)); font-weight:600; color:var(--dim);
+  white-space:nowrap; }
+.branch-adder .k-field-input { flex:1; min-width:180px; font-size:calc(13px * var(--ui-scale, 1)); }
+.branch-adder .k-field-select { font-size:calc(12.5px * var(--ui-scale, 1)); max-width:190px; }
 
 /* แผงขวา (Panel System) */
-.branch-side { width:300px; flex:0 0 300px; border-left:1px solid var(--border);
+.branch-side { width:330px; flex:0 0 330px; border-left:1px solid var(--border);
   background:var(--side); display:flex; flex-direction:column; overflow:hidden; }
 .branch-side-head { display:flex; align-items:center; justify-content:space-between;
-  padding:10px 12px; border-bottom:1px solid var(--border); font-size:calc(12px * var(--ui-scale, 1)); font-weight:600;
+  padding:10px 12px; border-bottom:1px solid var(--border); font-size:calc(13px * var(--ui-scale, 1)); font-weight:600;
   color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
 .branch-side-x { cursor:pointer; opacity:.6; }
 .branch-side-x:hover { opacity:1; color:#d9575e; }
 .branch-side-body { flex:1; overflow-y:auto; padding:12px; display:flex;
-  flex-direction:column; gap:6px; }
-.branch-side-title { font-size:calc(15px * var(--ui-scale, 1)); font-weight:600; color:var(--bright); }
-.branch-side-sub { font-size:calc(11px * var(--ui-scale, 1)); font-weight:600; color:var(--dim); text-transform:uppercase;
+  flex-direction:column; gap:6px; font-size:calc(13px * var(--ui-scale, 1)); }
+.branch-side-title { font-size:calc(16px * var(--ui-scale, 1)); font-weight:600; color:var(--bright); }
+.branch-side-sub { font-size:calc(12px * var(--ui-scale, 1)); font-weight:600; color:var(--dim); text-transform:uppercase;
   letter-spacing:.5px; margin-top:10px; }
-.branch-side-acts { display:flex; gap:6px; margin:8px 0 4px; }
-.branch-side-acts button { flex:1; font-size:calc(11.5px * var(--ui-scale, 1)); padding:5px 8px; }
+.branch-paths-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.branch-trunc { align-self:flex-start; }
+.branch-side-acts { display:flex; gap:6px; margin:8px 0 4px; flex-wrap:wrap; }
+.branch-side-acts button { flex:1; min-width:88px; font-size:calc(12.5px * var(--ui-scale, 1)); padding:6px 9px; }
 .branch-roles { display:flex; flex-wrap:wrap; gap:4px; }
+.branch-drag-hint { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); line-height:1.5;
+  border-left:2px solid var(--border); padding-left:8px; }
 .branch-edit-row { display:flex; gap:4px; align-items:center; }
-.branch-edit-text { flex:1; min-width:0; font-size:calc(12px * var(--ui-scale, 1)); padding:4px 6px; }
-.branch-edit-to { flex:0 0 82px; max-width:82px; font-size:calc(11px * var(--ui-scale, 1)); padding:4px; }
-.branch-edit-go, .branch-edit-del { background:transparent; border:1px solid var(--border);
-  border-radius:5px; color:var(--dim); width:24px; height:24px; cursor:pointer; font-size:calc(11px * var(--ui-scale, 1));
-  flex:0 0 auto; padding:0; }
+.branch-edit-row.dragging { opacity:.45; }
+.branch-grip { cursor:grab; color:var(--dim); font-size:calc(13px * var(--ui-scale, 1));
+  padding:0 2px; flex:0 0 auto; user-select:none; }
+.branch-grip:active { cursor:grabbing; }
+.branch-grip:hover { color:var(--accent-hi); }
+.branch-edit-text { flex:1; min-width:0; font-size:calc(13px * var(--ui-scale, 1)); padding:5px 7px; }
+.branch-edit-to { flex:0 0 84px; max-width:84px; font-size:calc(12px * var(--ui-scale, 1)); padding:4px; }
+.branch-edit-go, .branch-edit-del, .branch-edit-col { background:transparent; border:1px solid var(--border);
+  border-radius:5px; color:var(--dim); width:26px; height:26px; cursor:pointer;
+  font-size:calc(12px * var(--ui-scale, 1)); flex:0 0 auto; padding:0; }
 .branch-edit-go:hover { color:var(--accent-hi); border-color:var(--accent-hi); }
+.branch-edit-col:hover { border-color:var(--accent-hi); }
 .branch-edit-del:hover { color:#d9575e; border-color:#d9575e; }
-.branch-path { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); padding:3px 6px; background:var(--bg);
+.branch-path { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); padding:4px 7px; background:var(--bg);
   border-radius:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.branch-path-hi { color:var(--accent-hi); border:1px solid var(--accent-hi); }
+
+/* [ข้อ 4] จานสีการ์ด/เส้น */
+.branch-colors { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.branch-colors-pop { background:var(--bg); border:1px solid var(--border); border-radius:7px;
+  padding:6px 8px; margin:2px 0 4px; }
+.branch-color { width:20px; height:20px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent; box-shadow:0 0 0 1px var(--border) inset; }
+.branch-color:hover { transform:scale(1.15); }
+.branch-color.on { border-color:var(--bright); }
+.branch-color-none { background:var(--bg); color:var(--dim); font-size:11px; text-align:center;
+  line-height:18px; }
+
+/* กล่องรายการ (เส้นทางทั้งหมด / ทางเลือกที่พัง) */
+.branch-dlg { min-width:min(680px, 92vw); }
+.branch-path-row { display:flex; gap:9px; align-items:baseline; }
+.branch-path-len { flex:0 0 auto; font-size:calc(11px * var(--ui-scale, 1)); color:var(--accent-hi); }
+.branch-path-txt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.branch-broken-row { display:flex; gap:8px; align-items:center; }
+.branch-broken-sc { font-weight:600; color:var(--bright); }
+.branch-broken-ch { color:var(--orange); }
+.branch-broken-row .branch-doc-add, .branch-broken-row .branch-edit-del { margin-left:auto; }
 
 /* ---- ทางเลือกที่ผูกกับ [ข้อความ] ในเนื้อฉาก (ข้อ 15) ---- */
 .branch-doc { margin-top:6px; }
 .branch-doc-body { display:flex; flex-direction:column; gap:6px; }
-.branch-doc-hint { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); line-height:1.5;
-  background:var(--bg); border:1px dashed var(--border); border-radius:6px; padding:6px 8px; }
-.branch-doc-ok { font-size:calc(11.5px * var(--ui-scale, 1)); color:#6fae8a; }
-.branch-doc-lbl { font-size:calc(11px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-top:4px; }
+.branch-doc-hint { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); line-height:1.55;
+  background:var(--bg); border:1px dashed var(--border); border-radius:6px; padding:7px 9px; }
+.branch-doc-ok { font-size:calc(12.5px * var(--ui-scale, 1)); color:#6fae8a; }
+.branch-doc-lbl { font-size:calc(12px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-top:4px; }
 .branch-doc-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .branch-doc-mark { font-family:ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--link); background:var(--bg); border:1px solid var(--border);
-  border-radius:5px; padding:2px 7px; flex:1; min-width:0;
+  font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--link); background:var(--bg); border:1px solid var(--border);
+  border-radius:5px; padding:3px 8px; flex:1; min-width:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .branch-doc-orphan .branch-doc-mark { color:var(--dim); border-style:dashed; }
-.branch-doc-add { font-size:calc(10.5px * var(--ui-scale, 1)); padding:3px 8px; background:var(--bar); color:var(--fg);
+.branch-doc-add { font-size:calc(11.5px * var(--ui-scale, 1)); padding:4px 9px; background:var(--bar); color:var(--fg);
   border:1px solid var(--border); border-radius:5px; cursor:pointer; white-space:nowrap; }
 .branch-doc-add:hover { border-color:var(--accent); color:var(--bright); }
-/* ป้ายทางเลือกบนเส้นคลิกได้ → เปิดฉากต้นทาง */
-.branch-edge-label { cursor:pointer; }
+
+/* ====== [ข้อ 9] โหมดทดลองเล่น (player-mode.js) ====== */
+.player-host { flex:1; min-height:0; min-width:0; width:100%; height:100%;
+  overflow:hidden !important; display:flex; container-type:inline-size; }
+.player-wrap { flex:1; min-height:0; min-width:0; width:100%;
+  display:flex; flex-direction:column; overflow:hidden;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+/* แผงแคบ (ผนึกข้างเดียว) → ปุ่มทางเลือกขึ้นบรรทัดใหม่ ไม่ให้ชื่อฉากปลายทางถูกบีบจนหาย */
+@container (max-width: 470px) {
+  .player-head, .player-body-box, .player-choices, .player-foot, .player-trail { padding-left:12px; padding-right:12px; }
+  .player-choice { flex-direction:column; gap:3px; }
+  .player-start { max-width:100%; }
+}
+.player-head { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;
+  padding:14px 18px 8px; border-bottom:1px solid var(--border); }
+.player-titlebox { flex:1; min-width:0; }
+.player-title { font-size:calc(19px * var(--ui-scale, 1)); font-weight:600; color:var(--bright);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.player-sub { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-top:3px; }
+.player-tools { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.player-btn { background:var(--side); border:1px solid var(--border); color:var(--fg);
+  border-radius:7px; padding:5px 11px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer; }
+.player-btn:hover:not(:disabled) { border-color:var(--accent-hi); color:var(--bright); }
+.player-btn:disabled { opacity:.4; cursor:default; }
+.player-start { font-size:calc(12.5px * var(--ui-scale, 1)); max-width:200px; }
+
+.player-trail { display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+  padding:8px 18px; border-bottom:1px solid var(--border); background:var(--bar); }
+.player-trail-chip { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); cursor:pointer;
+  padding:2px 9px; border-radius:999px; border:1px solid var(--border); background:var(--side);
+  max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.player-trail-chip:hover { color:var(--bright); border-color:var(--accent-hi); }
+.player-trail-chip.on { color:#fff; background:var(--accent-hi); border-color:var(--accent-hi); cursor:default; }
+.player-trail-sep { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
+
+.player-body-box { flex:1; overflow-y:auto; padding:20px 18px; }
+.player-prose { max-width:760px; margin:0 auto; }
+/* อ่านอย่างเดียว: ไม่มีเคอร์เซอร์ ไม่มีที่ว่างสำหรับพิมพ์ แต่ยังเลือกคัดลอกข้อความได้ */
+.player-readonly .ProseMirror { outline:none; cursor:default; caret-color:transparent;
+  font-size:calc(var(--ed-fs, 18px)); line-height:1.85; }
+.player-readonly .ProseMirror p { margin:0 0 .9em; }
+.player-plain { white-space:pre-wrap; line-height:1.85; font-size:calc(15px * var(--ui-scale, 1)); }
+
+.player-choices { border-top:1px solid var(--border); padding:14px 18px;
+  display:flex; flex-direction:column; gap:8px; max-height:42%; overflow-y:auto; }
+.player-ask { font-size:calc(13px * var(--ui-scale, 1)); color:var(--dim); font-weight:600; }
+.player-choice { display:flex; align-items:baseline; gap:10px; text-align:left; width:100%;
+  background:var(--side); border:1px solid var(--border); border-left:4px solid var(--accent);
+  border-radius:9px; padding:11px 14px; cursor:pointer; color:var(--fg);
+  font-size:calc(14.5px * var(--ui-scale, 1)); transition:border-color .12s, transform .08s; }
+.player-choice:hover { border-color:var(--accent-hi); transform:translateX(3px); }
+.player-choice-text { flex:1; min-width:0; font-weight:600; color:var(--bright); }
+.player-choice-to { flex:0 0 auto; font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); }
+.player-choice-dead { border-left-color:#d9575e; opacity:.7; cursor:not-allowed; }
+.player-end { font-size:calc(17px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); }
+.player-empty, .player-loading { padding:40px; text-align:center;
+  font-size:calc(13.5px * var(--ui-scale, 1)); }
+
+.player-foot { display:flex; gap:8px; align-items:center; padding:10px 18px;
+  border-top:1px solid var(--border); background:var(--bar); }
+.player-run-row { flex-direction:column; align-items:stretch; gap:3px; }
+.player-run-head { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--bright); }
+.player-run-path { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ====== Floor Plan (ข้อ 82) — แผนที่ + เส้นเวลา + ตำแหน่งปัจจุบัน ====== */
 .floor-wrap { display:grid; grid-template-columns:1fr 270px; grid-template-rows:auto 1fr auto;
@@ -2366,8 +2551,8 @@ button, select { padding:calc(4px * var(--uis)) calc(10px * var(--uis)); border-
 .k-tpl-edit { width:calc(560px * var(--uis)); }
 .k-ver { width:calc(640px * var(--uis)); }
 .k-dlg-title { margin-bottom:calc(12px * var(--uis)); }
-.k-dlg-input { padding:calc(8px * var(--uis)) calc(12px * var(--uis)); }
-.k-dlg-select { padding:calc(7px * var(--uis)) calc(9px * var(--uis)); }
+.k-dlg-input, .k-field-input { padding:calc(8px * var(--uis)) calc(12px * var(--uis)); }
+.k-dlg-select, .k-field-select { padding:calc(7px * var(--uis)) calc(9px * var(--uis)); }
 .k-dlg-btns { gap:calc(8px * var(--uis)); margin-top:calc(14px * var(--uis)); }
 .k-set-tab { padding:calc(7px * var(--uis)) calc(14px * var(--uis)); }
 .k-set-tabs { gap:calc(6px * var(--uis)); margin-bottom:calc(14px * var(--uis)); }

@@ -15537,8 +15537,8 @@
     if (!names || !names.length) return null;
     const usable = names.filter((n2) => n2 && n2.length >= 2);
     if (!usable.length) return null;
-    const esc4 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc4.join("|"), "g");
+    const esc5 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc5.join("|"), "g");
   }
   function mentionScan(doc3, rx, from2, to) {
     if (!rx) return [];
@@ -17148,9 +17148,9 @@
       ov.onclick = (e) => {
         if (e.target === ov) done2(false);
       };
-      document.addEventListener("keydown", function esc4(e) {
+      document.addEventListener("keydown", function esc5(e) {
         if (e.key === "Escape") {
-          document.removeEventListener("keydown", esc4);
+          document.removeEventListener("keydown", esc5);
           done2(false);
         }
       });
@@ -19071,13 +19071,13 @@
     }
     const close2 = () => {
       ov.remove();
-      document.removeEventListener("keydown", esc4);
+      document.removeEventListener("keydown", esc5);
     };
-    function esc4(e) {
+    function esc5(e) {
       if (e.key === "Escape") close2();
     }
     ov.onclick = close2;
-    document.addEventListener("keydown", esc4);
+    document.addEventListener("keydown", esc5);
     document.body.appendChild(ov);
   }
   var CAT_TH, WikiEditor;
@@ -23389,7 +23389,7 @@
           function R(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
-          function T2(e2) {
+          function T4(e2) {
             return (e2 << 1) - (4 < e2 ? 9 : 0);
           }
           function D(e2) {
@@ -23544,7 +23544,7 @@
             } else n3.status = 103;
             if (103 === n3.status && (n3.gzhead.hcrc ? (n3.pending + 2 > n3.pending_buf_size && F(e2), n3.pending + 2 <= n3.pending_buf_size && (U(n3, 255 & e2.adler), U(n3, e2.adler >> 8 & 255), e2.adler = 0, n3.status = E)) : n3.status = E), 0 !== n3.pending) {
               if (F(e2), 0 === e2.avail_out) return n3.last_flush = -1, m;
-            } else if (0 === e2.avail_in && T2(t4) <= T2(r3) && t4 !== f) return R(e2, -5);
+            } else if (0 === e2.avail_in && T4(t4) <= T4(r3) && t4 !== f) return R(e2, -5);
             if (666 === n3.status && 0 !== e2.avail_in) return R(e2, -5);
             if (0 !== e2.avail_in || 0 !== n3.lookahead || t4 !== l && 666 !== n3.status) {
               var o2 = 2 === n3.strategy ? (function(e3, t5) {
@@ -23668,7 +23668,7 @@
           };
         }, {}], 49: [function(e, t3, r) {
           "use strict";
-          var I = e("../utils/common"), O = e("./adler32"), B = e("./crc32"), R = e("./inffast"), T2 = e("./inftrees"), D = 1, F = 2, N = 0, U = -2, P = 1, n2 = 852, i5 = 592;
+          var I = e("../utils/common"), O = e("./adler32"), B = e("./crc32"), R = e("./inffast"), T4 = e("./inftrees"), D = 1, F = 2, N = 0, U = -2, P = 1, n2 = 852, i5 = 592;
           function L2(e2) {
             return (e2 >>> 24 & 255) + (e2 >>> 8 & 65280) + ((65280 & e2) << 8) + ((255 & e2) << 24);
           }
@@ -23699,8 +23699,8 @@
               for (; t4 < 256; ) e2.lens[t4++] = 9;
               for (; t4 < 280; ) e2.lens[t4++] = 7;
               for (; t4 < 288; ) e2.lens[t4++] = 8;
-              for (T2(D, e2.lens, 0, 288, l, 0, e2.work, { bits: 9 }), t4 = 0; t4 < 32; ) e2.lens[t4++] = 5;
-              T2(F, e2.lens, 0, 32, f, 0, e2.work, { bits: 5 }), c = false;
+              for (T4(D, e2.lens, 0, 288, l, 0, e2.work, { bits: 9 }), t4 = 0; t4 < 32; ) e2.lens[t4++] = 5;
+              T4(F, e2.lens, 0, 32, f, 0, e2.work, { bits: 5 }), c = false;
             }
             e2.lencode = l, e2.lenbits = 9, e2.distcode = f, e2.distbits = 5;
           }
@@ -23884,7 +23884,7 @@
                   r3.lens[A[r3.have++]] = 7 & u2, u2 >>>= 3, l2 -= 3;
                 }
                 for (; r3.have < 19; ) r3.lens[A[r3.have++]] = 0;
-                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S2 = { bits: r3.lenbits }, x = T2(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
+                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S2 = { bits: r3.lenbits }, x = T4(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
                   e2.msg = "invalid code lengths set", r3.mode = 30;
                   break;
                 }
@@ -23932,11 +23932,11 @@
                   e2.msg = "invalid code -- missing end-of-block", r3.mode = 30;
                   break;
                 }
-                if (r3.lenbits = 9, S2 = { bits: r3.lenbits }, x = T2(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
+                if (r3.lenbits = 9, S2 = { bits: r3.lenbits }, x = T4(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
                   e2.msg = "invalid literal/lengths set", r3.mode = 30;
                   break;
                 }
-                if (r3.distbits = 6, r3.distcode = r3.distdyn, S2 = { bits: r3.distbits }, x = T2(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S2), r3.distbits = S2.bits, x) {
+                if (r3.distbits = 6, r3.distcode = r3.distdyn, S2 = { bits: r3.distbits }, x = T4(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S2), r3.distbits = S2.bits, x) {
                   e2.msg = "invalid distances set", r3.mode = 30;
                   break;
                 }
@@ -24081,7 +24081,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S2 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T2 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S2 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T4 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -24091,9 +24091,9 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T2 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S2 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T4 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S2 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S2, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T2 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S2, y = u = 1 << x; i5[c + (E >> S2) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S2, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T4 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S2, y = u = 1 << x; i5[c + (E >> S2) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
@@ -24126,7 +24126,7 @@
           n2(A);
           var I = new Array(a);
           n2(I);
-          var O, B, R, T2 = new Array(f);
+          var O, B, R, T4 = new Array(f);
           function D(e2, t4, r3, n3, i6) {
             this.static_tree = e2, this.extra_bits = t4, this.extra_base = r3, this.elems = n3, this.max_length = i6, this.has_stree = e2 && e2.length;
           }
@@ -24177,7 +24177,7 @@
           }
           function K(e2, t4, r3) {
             var n3, i6, s2, a2, o2 = 0;
-            if (0 !== e2.last_lit) for (; n3 = e2.pending_buf[e2.d_buf + 2 * o2] << 8 | e2.pending_buf[e2.d_buf + 2 * o2 + 1], i6 = e2.pending_buf[e2.l_buf + o2], o2++, 0 === n3 ? L2(e2, i6, t4) : (L2(e2, (s2 = A[i6]) + u + 1, t4), 0 !== (a2 = w[s2]) && P(e2, i6 -= I[s2], a2), L2(e2, s2 = N(--n3), r3), 0 !== (a2 = k[s2]) && P(e2, n3 -= T2[s2], a2)), o2 < e2.last_lit; ) ;
+            if (0 !== e2.last_lit) for (; n3 = e2.pending_buf[e2.d_buf + 2 * o2] << 8 | e2.pending_buf[e2.d_buf + 2 * o2 + 1], i6 = e2.pending_buf[e2.l_buf + o2], o2++, 0 === n3 ? L2(e2, i6, t4) : (L2(e2, (s2 = A[i6]) + u + 1, t4), 0 !== (a2 = w[s2]) && P(e2, i6 -= I[s2], a2), L2(e2, s2 = N(--n3), r3), 0 !== (a2 = k[s2]) && P(e2, n3 -= T4[s2], a2)), o2 < e2.last_lit; ) ;
             L2(e2, m, t4);
           }
           function Y(e2, t4) {
@@ -24211,7 +24211,7 @@
               s2 = i6, u2 = (o2 = 0) === a2 ? (h2 = 138, 3) : i6 === a2 ? (h2 = 6, 3) : (h2 = 7, 4);
             }
           }
-          n2(T2);
+          n2(T4);
           var q = false;
           function J2(e2, t4, r3, n3) {
             P(e2, (s << 1) + (n3 ? 1 : 0), 3), (function(e3, t5, r4, n4) {
@@ -24222,8 +24222,8 @@
             q || ((function() {
               var e3, t4, r3, n3, i6, s2 = new Array(g + 1);
               for (n3 = r3 = 0; n3 < a - 1; n3++) for (I[n3] = r3, e3 = 0; e3 < 1 << w[n3]; e3++) A[r3++] = n3;
-              for (A[r3 - 1] = n3, n3 = i6 = 0; n3 < 16; n3++) for (T2[n3] = i6, e3 = 0; e3 < 1 << k[n3]; e3++) E[i6++] = n3;
-              for (i6 >>= 7; n3 < f; n3++) for (T2[n3] = i6 << 7, e3 = 0; e3 < 1 << k[n3] - 7; e3++) E[256 + i6++] = n3;
+              for (A[r3 - 1] = n3, n3 = i6 = 0; n3 < 16; n3++) for (T4[n3] = i6, e3 = 0; e3 < 1 << k[n3]; e3++) E[i6++] = n3;
+              for (i6 >>= 7; n3 < f; n3++) for (T4[n3] = i6 << 7, e3 = 0; e3 < 1 << k[n3] - 7; e3++) E[256 + i6++] = n3;
               for (t4 = 0; t4 <= g; t4++) s2[t4] = 0;
               for (e3 = 0; e3 <= 143; ) z[2 * e3 + 1] = 8, e3++, s2[8]++;
               for (; e3 <= 255; ) z[2 * e3 + 1] = 9, e3++, s2[9]++;
@@ -26002,16 +26002,16 @@
       nameInp.focus();
       const done2 = (v2) => {
         ov.remove();
-        document.removeEventListener("keydown", esc4, true);
+        document.removeEventListener("keydown", esc5, true);
         resolve(v2);
       };
-      function esc4(e) {
+      function esc5(e) {
         if (e.key === "Escape") {
           e.stopPropagation();
           done2(null);
         }
       }
-      document.addEventListener("keydown", esc4, true);
+      document.addEventListener("keydown", esc5, true);
       cancel.onclick = () => done2(null);
       ok2.onclick = async () => {
         const p = collect();
@@ -58158,8 +58158,8 @@ ${ctx}${hint}`;
     wrap2.appendChild(_head(`\u2B1A \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E27\u0E49 ${ids.length} \u0E0A\u0E34\u0E49\u0E19`));
     const rows = el("div", "planner-props-body");
     wrap2.appendChild(rows);
-    const colorRow = el("div", "planner-props-section");
-    colorRow.innerHTML = "<label>\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14</label>";
+    const colorRow2 = el("div", "planner-props-section");
+    colorRow2.innerHTML = "<label>\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14</label>";
     const sw = el("div", "planner-swatches");
     for (const c of ["#3f3e3a", "#5f7a9f", "#7a6f9f", "#5f8a6f", "#d97757", "#f2c14e", "#c1666b", "#4a6fa5"]) {
       const b = el("button", "planner-swatch");
@@ -58167,8 +58167,8 @@ ${ctx}${hint}`;
       b.onclick = () => ctx.onChangeMany && ctx.onChangeMany({ color: c });
       sw.appendChild(b);
     }
-    colorRow.appendChild(sw);
-    rows.appendChild(colorRow);
+    colorRow2.appendChild(sw);
+    rows.appendChild(colorRow2);
     const alignRow = el("div", "planner-props-section");
     alignRow.innerHTML = "<label>\u0E08\u0E31\u0E14\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07</label>";
     const grid = el("div", "planner-align-grid");
@@ -63257,6 +63257,29 @@ ${h.text}`;
           floatable: true,
           i18n: "panel.floorplanTitle",
           desc: '\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E40\u0E01\u0E34\u0E14\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E19 \u2014 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 + \u0E2B\u0E21\u0E38\u0E14 "\u0E04\u0E38\u0E13\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48" + \u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32\u0E02\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E19\u0E31\u0E49\u0E19 + \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19/\u0E44\u0E14\u0E49\u0E22\u0E34\u0E19/\u0E1E\u0E1A \u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48'
+        },
+        // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
+        {
+          id: "branch",
+          title: "\u{1F33F} \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22",
+          icon: "grid",
+          adopt: "#branch-panel",
+          defaultSide: "left",
+          closable: true,
+          floatable: true,
+          i18n: "panel.branchTitle",
+          desc: "\u0E1C\u0E31\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E1A\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 \u2014 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19\u0E14\u0E49\u0E27\u0E22\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \xB7 \u0E25\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14/\u0E40\u0E2A\u0E49\u0E19\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E15\u0E37\u0E2D\u0E19\u0E17\u0E32\u0E07\u0E15\u0E31\u0E19 \u0E27\u0E07\u0E27\u0E19\u0E0B\u0E49\u0E33 \u0E41\u0E25\u0E30\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 \xB7 \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 HTML/Markdown/JSON/\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49"
+        },
+        {
+          id: "player",
+          title: "\u25B6\uFE0F \u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19",
+          icon: "file",
+          adopt: "#player-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "panel.playerTitle",
+          desc: "\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E22 \u0E46 \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E01\u0E47\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E41\u0E15\u0E48\u0E25\u0E30\u0E23\u0E2D\u0E1A\u0E44\u0E27\u0E49\u0E14\u0E39\u0E22\u0E49\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07"
         }
       ];
       pm = null;
@@ -68041,10 +68064,10 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    document.addEventListener("keydown", function esc4(e) {
+    document.addEventListener("keydown", function esc5(e) {
       if (e.key === "Escape") {
         ov.remove();
-        document.removeEventListener("keydown", esc4);
+        document.removeEventListener("keydown", esc5);
       }
     });
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
@@ -68845,12 +68868,12 @@ ${h.text}`;
         return;
       }
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const { safeName: safeName4, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      const { safeName: safeName5, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
       const title2 = await ask2("\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E19\u0E49\u0E15 (Memo)", { value: ta.value.trim().slice(0, 40).split("\n")[0] });
       if (!title2) return;
       const memoDir = await kapi.join(state.root, "Memos");
       await kapi.mkdir(memoDir);
-      const fname = safeName4(title2) + "-" + Date.now().toString(36) + ".md";
+      const fname = safeName5(title2) + "-" + Date.now().toString(36) + ".md";
       const { dumpMdFile: dumpMdFile5 } = await Promise.resolve().then(() => __toESM(require_md()));
       await kapi.writeFile(
         await kapi.join(memoDir, fname),
@@ -68948,12 +68971,12 @@ ${h.text}`;
         return;
       }
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const { safeName: safeName4, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      const { safeName: safeName5, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
       const title2 = await ask2("\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E19\u0E49\u0E15 (Memo)", { value: ta.value.trim().slice(0, 40).split("\n")[0] });
       if (!title2) return;
       const memoDir = await kapi.join(state.root, "Memos");
       await kapi.mkdir(memoDir);
-      const fname = safeName4(title2) + "-" + Date.now().toString(36) + ".md";
+      const fname = safeName5(title2) + "-" + Date.now().toString(36) + ".md";
       const { dumpMdFile: dumpMdFile5 } = await Promise.resolve().then(() => __toESM(require_md()));
       await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile5({ title: title2, type: "memo" }, ta.value));
       setStatus("\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32 Memo \u0E41\u0E25\u0E49\u0E27: " + title2);
@@ -71765,8 +71788,8 @@ img{max-width:100%}` }
   async function createProjectFromTemplate(parentDir, projectName, tplKey) {
     const tpl = TEMPLATES[tplKey];
     if (!tpl) return false;
-    const { safeName: safeName4, guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    const root = await kapi.join(parentDir, safeName4(projectName));
+    const { safeName: safeName5, guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const root = await kapi.join(parentDir, safeName5(projectName));
     if (await kapi.exists(await kapi.join(root, "project.khn.json"))) {
       setStatus("\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27");
       return false;
@@ -71786,7 +71809,7 @@ img{max-width:100%}` }
     });
     for (let si = 0; si < tpl.sections.length; si++) {
       const sec = tpl.sections[si];
-      const secPath = await kapi.join(root, safeName4(sec.title));
+      const secPath = await kapi.join(root, safeName5(sec.title));
       await W(await kapi.join(secPath, "section.json"), {
         guid: guid3(),
         title: sec.title,
@@ -73699,14 +73722,29 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     NODE_W: () => NODE_W,
     PAD: () => PAD,
     analyzeGraph: () => analyzeGraph,
+    bodyExcerpt: () => bodyExcerpt,
     buildGraph: () => buildGraph,
+    countDuplicateChoices: () => countDuplicateChoices,
+    danglingChoices: () => danglingChoices,
     diffChoiceMarkers: () => diffChoiceMarkers,
+    edgeKey: () => edgeKey2,
     enumeratePaths: () => enumeratePaths,
+    enumeratePathsInfo: () => enumeratePathsInfo,
+    expandWithNeighbors: () => expandWithNeighbors,
+    exportRoots: () => exportRoots,
+    filterNodes: () => filterNodes,
     graphSummary: () => graphSummary,
+    graphToHtmlTree: () => graphToHtmlTree,
+    graphToJson: () => graphToJson,
+    graphToOutline: () => graphToOutline,
+    highlightPath: () => highlightPath,
     involvedIds: () => involvedIds,
     layoutGraph: () => layoutGraph,
     markerTexts: () => markerTexts,
-    scanChoiceMarkers: () => scanChoiceMarkers
+    mergeDuplicateChoices: () => mergeDuplicateChoices,
+    refineLayout: () => refineLayout,
+    scanChoiceMarkers: () => scanChoiceMarkers,
+    validateChoices: () => validateChoices
   });
   function scanChoiceMarkers(text) {
     const out = [];
@@ -73763,7 +73801,12 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       tags: Array.isArray(s.tags) ? s.tags : [],
       // เนื้อฉาก (ถ้า UI อ่านมาให้) — ใช้เทียบว่าทางเลือกไหนมี [ข้อความ] อยู่ในเรื่องจริง (ข้อ 15)
       body: typeof s.body === "string" ? s.body : "",
-      choices: (s.choices || []).map((c) => ({ text: c.text || "", nextSceneId: c.nextSceneId || "" }))
+      // [alpha.66 ข้อ 4] สีของเส้นทางเลือก เก็บใน scenes.json ติดกับ choice นั้น (ผู้ใช้เลือกเอง)
+      choices: (s.choices || []).map((c) => ({
+        text: c.text || "",
+        nextSceneId: c.nextSceneId || "",
+        color: c.color || ""
+      }))
     }));
     const byId = new Map(nodes.map((n2) => [n2.id, n2]));
     const edges = [];
@@ -73774,6 +73817,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
           to: c.nextSceneId || "",
           text: c.text,
           idx: idx4,
+          color: c.color || "",
           // ปลายทางว่าง หรือชี้ไปฉากที่ถูกลบไปแล้ว = เส้นห้อย (ต้องเตือนผู้ใช้)
           dangling: !c.nextSceneId || !byId.has(c.nextSceneId)
         });
@@ -73801,7 +73845,56 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     for (const [, outs] of adj) for (const to of outs) deg.set(to, (deg.get(to) || 0) + 1);
     return deg;
   }
-  function layoutGraph(graph) {
+  function refineLayout(placed, edges, opts = {}) {
+    const list = (placed || []).filter((p) => !p.pinned);
+    if (list.length < 2) return placed;
+    const iters = opts.iters ?? 80;
+    const minGap = opts.minGap ?? NODE_H + GAP_Y;
+    const byId = new Map((placed || []).map((p) => [p.id, p]));
+    const nb = new Map(list.map((p) => [p.id, []]));
+    for (const e of edges || []) {
+      if (e.dangling) continue;
+      const a = byId.get(e.from), b = byId.get(e.to);
+      if (!a || !b || a === b) continue;
+      if (nb.has(a.id)) nb.get(a.id).push(b.id);
+      if (nb.has(b.id)) nb.get(b.id).push(a.id);
+    }
+    const cols = /* @__PURE__ */ new Map();
+    for (const p of list) {
+      const c = cols.get(p.depth) || [];
+      c.push(p);
+      cols.set(p.depth, c);
+    }
+    for (let it = 0; it < iters; it++) {
+      const damp = 0.55 * (1 - it / iters) + 0.08;
+      for (const p of list) {
+        const near2 = nb.get(p.id) || [];
+        if (!near2.length) continue;
+        let sum2 = 0, n2 = 0;
+        for (const id of near2) {
+          const o = byId.get(id);
+          if (o) {
+            sum2 += o.y;
+            n2++;
+          }
+        }
+        if (!n2) continue;
+        p.y += (sum2 / n2 - p.y) * damp;
+      }
+      for (const [, group] of cols) {
+        group.sort((a, b) => a.y - b.y);
+        for (let i5 = 1; i5 < group.length; i5++) {
+          const need = group[i5 - 1].y + minGap;
+          if (group[i5].y < need) group[i5].y = need;
+        }
+      }
+    }
+    let minY = Infinity;
+    for (const p of list) minY = Math.min(minY, p.y);
+    if (Number.isFinite(minY)) for (const p of list) p.y = Math.round(p.y - minY + PAD);
+    return placed;
+  }
+  function layoutGraph(graph, opts = {}) {
     const ids = involvedIds(graph);
     const adj = adjacency(graph, ids);
     const deg = indegrees(adj);
@@ -73825,6 +73918,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     }
     const maxD = depths.size ? Math.max(...depths.values()) : 0;
     for (const id of inOrder) if (!depths.has(id)) depths.set(id, maxD + 1);
+    const positions = opts.positions || {};
     const rows = /* @__PURE__ */ new Map();
     const placed = [];
     for (const id of inOrder) {
@@ -73832,22 +73926,29 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       const row2 = rows.get(d) || 0;
       rows.set(d, row2 + 1);
       const n2 = graph.byId.get(id);
+      const manual = positions[id];
+      const pinned = !!(manual && Number.isFinite(manual.x) && Number.isFinite(manual.y));
       placed.push({
         ...n2,
         depth: d,
         row: row2,
-        x: PAD + d * (NODE_W + GAP_X),
-        y: PAD + row2 * (NODE_H + GAP_Y)
+        pinned,
+        x: pinned ? manual.x : PAD + d * (NODE_W + GAP_X),
+        y: pinned ? manual.y : PAD + row2 * (NODE_H + GAP_Y)
       });
     }
-    const cols = rows.size ? Math.max(...depths.values()) + 1 : 0;
-    const maxRow = rows.size ? Math.max(...rows.values()) : 0;
+    if (opts.refine !== false) refineLayout(placed, graph.edges, opts);
+    let maxX = 0, maxY = 0;
+    for (const p of placed) {
+      maxX = Math.max(maxX, p.x + NODE_W);
+      maxY = Math.max(maxY, p.y + NODE_H);
+    }
     return {
       placed,
       byId: new Map(placed.map((p) => [p.id, p])),
       depths,
-      width: cols ? PAD * 2 + cols * NODE_W + (cols - 1) * GAP_X : 0,
-      height: maxRow ? PAD * 2 + maxRow * NODE_H + (maxRow - 1) * GAP_Y : 0
+      width: placed.length ? maxX + PAD : 0,
+      height: placed.length ? maxY + PAD : 0
     };
   }
   function analyzeGraph(graph) {
@@ -73907,16 +74008,22 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       choiceCount: graph.edges.length
     };
   }
-  function graphSummary(a) {
-    return `${a.total} \u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07 \xB7 ${a.choiceCount} \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \xB7 ${a.roots.length} \u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21 \xB7 ${a.endings.length} \u0E15\u0E2D\u0E19\u0E08\u0E1A`;
+  function graphSummary(a, L2 = {}) {
+    const scenes = L2.scenes || "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07", choices = L2.choices || "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01";
+    const roots = L2.roots || "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21", endings = L2.endings || "\u0E15\u0E2D\u0E19\u0E08\u0E1A";
+    return `${a.total} ${scenes} \xB7 ${a.choiceCount} ${choices} \xB7 ${a.roots.length} ${roots} \xB7 ${a.endings.length} ${endings}`;
   }
   function enumeratePaths(graph, startId, limit = 40) {
+    return enumeratePathsInfo(graph, startId, limit).paths;
+  }
+  function enumeratePathsInfo(graph, startId, limit = 40) {
     const ids = involvedIds(graph);
     const adj = adjacency(graph, ids);
-    if (!ids.has(startId)) return [];
+    if (!ids.has(startId)) return { paths: [], truncated: false, limit };
+    const cap = Math.max(1, limit) + 1;
     const out = [];
     const walk3 = (id, path) => {
-      if (out.length >= limit) return;
+      if (out.length >= cap) return;
       const next = (adj.get(id) || []).filter((t3) => !path.includes(t3));
       if (!next.length) {
         out.push([...path]);
@@ -73924,1173 +74031,742 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       }
       for (const t3 of next) {
         walk3(t3, [...path, t3]);
-        if (out.length >= limit) return;
+        if (out.length >= cap) return;
       }
     };
     walk3(startId, [startId]);
+    const truncated = out.length > limit;
+    return { paths: truncated ? out.slice(0, limit) : out, truncated, limit };
+  }
+  function validateChoices(scenes) {
+    const list = scenes || [];
+    const ids = new Set(list.map((s) => s && s.id).filter(Boolean));
+    const out = [];
+    for (const s of list) {
+      if (!s) continue;
+      (s.choices || []).forEach((c, idx4) => {
+        const next = c && c.nextSceneId || "";
+        const row2 = { sceneId: s.id, sceneTitle: s.title || "", idx: idx4, text: c && c.text || "", nextSceneId: next };
+        if (!next) out.push({ ...row2, reason: "empty" });
+        else if (!ids.has(next)) out.push({ ...row2, reason: "missing" });
+      });
+    }
     return out;
   }
-  var NODE_W, NODE_H, GAP_X, GAP_Y, PAD, MARKER_SRC;
-  var init_branch_graph = __esm({
-    "src/branch-graph.js"() {
-      NODE_W = 178;
-      NODE_H = 56;
-      GAP_X = 92;
-      GAP_Y = 22;
-      PAD = 26;
-      MARKER_SRC = /(!?)\[([^\[\]\n]{1,80})\](\()?/;
-    }
-  });
-
-  // src/layout/split-layout.js
-  var split_layout_exports = {};
-  __export(split_layout_exports, {
-    SPLIT_VERSION: () => SPLIT_VERSION,
-    SplitManager: () => SplitManager,
-    SplitStore: () => SplitStore,
-    activateLeafTab: () => activateLeafTab,
-    addLeafTab: () => addLeafTab,
-    allTabIds: () => allTabIds,
-    closeTab: () => closeTab2,
-    deserializeSplit: () => deserializeSplit,
-    dropZone: () => dropZone,
-    findLeaf: () => findLeaf,
-    findLeafByTab: () => findLeafByTab,
-    leaf: () => leaf,
-    leafIds: () => leafIds,
-    leafTab: () => leafTab,
-    leafTabs: () => leafTabs,
-    moveTabToPane: () => moveTabToPane,
-    normalizeLeaves: () => normalizeLeaves,
-    paneCount: () => paneCount,
-    pruneTabs: () => pruneTabs,
-    removeLeaf: () => removeLeaf,
-    removeLeafTab: () => removeLeafTab,
-    resizeSplit: () => resizeSplit,
-    serializeSplit: () => serializeSplit,
-    setLeafTab: () => setLeafTab,
-    split: () => split2,
-    splitDepth: () => splitDepth,
-    splitPane: () => splitPane,
-    tabIds: () => tabIds,
-    walk: () => walk2
-  });
-  function leaf(tabId, id = nid2("l")) {
-    return syncLeaf({ type: "leaf", id, tabs: tabId == null ? [] : [tabId], active: 0 });
+  function danglingChoices(scenes) {
+    return validateChoices(scenes).filter((d) => d.reason === "missing");
   }
-  function split2(dir, children, sizes, id = nid2("sp")) {
-    return { type: "split", id, dir, children, sizes: sizes || even(children.length) };
-  }
-  function syncLeaf(l) {
-    if (!Array.isArray(l.tabs)) l.tabs = l.tabId == null ? [] : [l.tabId];
-    l.tabs = l.tabs.filter((x) => x != null);
-    if (!Number.isInteger(l.active)) l.active = 0;
-    l.active = l.tabs.length ? Math.max(0, Math.min(l.active, l.tabs.length - 1)) : 0;
-    l.tabId = l.tabs.length ? l.tabs[l.active] : null;
-    return l;
-  }
-  function leafTab(l) {
-    return l && l.tabs && l.tabs.length ? l.tabs[l.active] ?? null : null;
-  }
-  function normalizeLeaves(root) {
-    if (root) walk2(root, (n2) => {
-      if (n2.type === "leaf") syncLeaf(n2);
-    });
-    return root;
-  }
-  function walk2(node, fn, parent = null) {
-    fn(node, parent);
-    if (node.children) for (const c of node.children) walk2(c, fn, node);
-  }
-  function leafIds(root) {
-    const o = [];
-    walk2(root, (n2) => {
-      if (n2.type === "leaf") o.push(n2.id);
-    });
-    return o;
-  }
-  function tabIds(root) {
-    const o = [];
-    walk2(root, (n2) => {
-      if (n2.type === "leaf") o.push(leafTab(n2));
-    });
-    return o;
-  }
-  function allTabIds(root) {
-    const o = [];
-    walk2(root, (n2) => {
-      if (n2.type === "leaf") o.push(...n2.tabs || []);
-    });
-    return o;
-  }
-  function locate2(root, id) {
-    let res = null;
-    walk2(root, (n2) => {
-      if (n2.children) {
-        const i5 = n2.children.findIndex((c) => c.id === id);
-        if (i5 >= 0) res = { parent: n2, index: i5 };
+  function highlightPath(graph, selectedId) {
+    const empty2 = { path: [], nodes: /* @__PURE__ */ new Set(), edges: /* @__PURE__ */ new Set() };
+    if (!graph || !selectedId) return empty2;
+    const ids = involvedIds(graph);
+    if (!ids.has(selectedId)) return empty2;
+    const adj = adjacency(graph, ids);
+    const deg = indegrees(adj);
+    const inOrder = graph.nodes.filter((n2) => ids.has(n2.id)).map((n2) => n2.id);
+    let roots = inOrder.filter((id) => (deg.get(id) || 0) === 0);
+    if (!roots.length && inOrder.length) roots = [inOrder[0]];
+    const prev = /* @__PURE__ */ new Map();
+    const seen = new Set(roots);
+    const queue2 = [...roots];
+    for (let qi = 0; qi < queue2.length && !seen.has(selectedId); qi++) {
+      for (const to of adj.get(queue2[qi]) || []) {
+        if (seen.has(to)) continue;
+        seen.add(to);
+        prev.set(to, queue2[qi]);
+        queue2.push(to);
       }
-    });
-    return res;
-  }
-  function findLeaf(root, leafId) {
-    let f = null;
-    walk2(root, (n2) => {
-      if (n2.type === "leaf" && n2.id === leafId) f = n2;
-    });
-    return f;
-  }
-  function findLeafByTab(root, tabId) {
-    let f = null;
-    walk2(root, (n2) => {
-      if (!f && n2.type === "leaf" && (n2.tabs || []).includes(tabId)) f = n2;
-    });
-    return f;
-  }
-  function paneCount(root) {
-    return root ? leafIds(root).length : 0;
-  }
-  function splitDepth(node, d = 0) {
-    if (!node || !node.children) return d;
-    return Math.max(...node.children.map((c) => splitDepth(c, d + 1)));
-  }
-  function dropZone(px2, py2, rect, edge = 0.25) {
-    const { x, y, w, h } = rect;
-    if (px2 < x || px2 > x + w || py2 < y || py2 > y + h) return null;
-    const rx = (px2 - x) / w, ry = (py2 - y) / h;
-    const dl = rx, dr = 1 - rx, dt = ry, db = 1 - ry;
-    const min = Math.min(dl, dr, dt, db);
-    if (min > edge) return "center";
-    if (min === dl) return "left";
-    if (min === dr) return "right";
-    if (min === dt) return "top";
-    return "bottom";
-  }
-  function splitPane(root, targetLeafId, side, newTabId) {
-    root = clone2(root);
-    const wantRow = side === "left" || side === "right";
-    const before = side === "left" || side === "top";
-    const nl = leaf(newTabId);
-    const loc = locate2(root, targetLeafId);
-    const mk = (existing) => split2(wantRow ? "row" : "col", before ? [nl, existing] : [existing, nl]);
-    if (!loc) return mk(root);
-    const parent = loc.parent;
-    if (parent.type === "split" && parent.dir === (wantRow ? "row" : "col")) {
-      const at = before ? loc.index : loc.index + 1;
-      parent.children.splice(at, 0, nl);
-      parent.sizes = even(parent.children.length);
-    } else {
-      parent.children[loc.index] = mk(parent.children[loc.index]);
     }
-    return root;
-  }
-  function setLeafTab(root, leafId, tabId) {
-    return addLeafTab(root, leafId, tabId, true);
-  }
-  function addLeafTab(root, leafId, tabId, activate2 = true) {
-    root = clone2(root);
-    const l = findLeaf(root, leafId);
-    if (!l || tabId == null) return root;
-    let i5 = l.tabs.indexOf(tabId);
-    if (i5 < 0) {
-      l.tabs.push(tabId);
-      i5 = l.tabs.length - 1;
+    if (!seen.has(selectedId)) return empty2;
+    const path = [selectedId];
+    let cur = selectedId;
+    while (prev.has(cur)) {
+      cur = prev.get(cur);
+      path.unshift(cur);
     }
-    if (activate2) l.active = i5;
-    return syncLeaf(l), root;
+    const edges = /* @__PURE__ */ new Set();
+    for (let i5 = 1; i5 < path.length; i5++) edges.add(edgeKey2(path[i5 - 1], path[i5]));
+    return { path, nodes: new Set(path), edges };
   }
-  function activateLeafTab(root, leafId, tabId) {
-    root = clone2(root);
-    const l = findLeaf(root, leafId);
-    if (!l) return root;
-    const i5 = l.tabs.indexOf(tabId);
-    if (i5 >= 0) l.active = i5;
-    return syncLeaf(l), root;
-  }
-  function removeLeafTab(root, leafId, tabId) {
-    root = clone2(root);
-    const l = findLeaf(root, leafId);
-    if (!l) return root;
-    const i5 = l.tabs.indexOf(tabId);
-    if (i5 < 0) return root;
-    l.tabs.splice(i5, 1);
-    if (l.active >= i5) l.active = Math.max(0, l.active - 1);
-    syncLeaf(l);
-    if (!l.tabs.length && leafIds(root).length > 1) return removeLeaf(root, l.id);
-    return root;
-  }
-  function leafTabs(root, leafId) {
-    const l = root && findLeaf(root, leafId);
-    return l ? [...l.tabs] : [];
-  }
-  function moveTabToPane(root, tabId, targetLeafId, side = "right") {
-    const src2 = findLeafByTab(root, tabId);
-    if (src2 && src2.id === targetLeafId && side !== "center") return clone2(root);
-    let out = clone2(root);
-    if (src2) {
-      out = removeLeafTab(out, src2.id, tabId);
-      if (!out) return leaf(tabId);
-      if (!findLeaf(out, targetLeafId)) return out;
+  function mergeDuplicateChoices(choices) {
+    const out = [];
+    let removed = 0;
+    for (const c of choices || []) {
+      const text = (c.text || "").trim();
+      const next = c.nextSceneId || "";
+      const at = out.findIndex((o) => o.text === text && (!o.nextSceneId || !next || o.nextSceneId === next));
+      if (at < 0) {
+        out.push({ ...c, text, nextSceneId: next });
+        continue;
+      }
+      removed++;
+      if (!out[at].nextSceneId && next) out[at].nextSceneId = next;
+      if (!out[at].color && c.color) out[at].color = c.color;
     }
-    return side === "center" ? setLeafTab(out, targetLeafId, tabId) : splitPane(out, targetLeafId, side, tabId);
+    return { list: out, removed };
   }
-  function resizeSplit(root, splitId, index, ratio, snapTol = 0.03) {
-    root = clone2(root);
-    let sp = null;
-    walk2(root, (n2) => {
-      if (n2.id === splitId && n2.type === "split") sp = n2;
-    });
-    if (!sp || index < 0 || index >= sp.sizes.length - 1) return root;
-    const pair = sp.sizes[index] + sp.sizes[index + 1];
-    let r = Math.max(0.05, Math.min(0.95, ratio));
-    if (Math.abs(r - 0.5) <= snapTol) r = 0.5;
-    sp.sizes[index] = +(pair * r).toFixed(4);
-    sp.sizes[index + 1] = +(pair * (1 - r)).toFixed(4);
-    return root;
-  }
-  function removeLeaf(root, leafId) {
-    if (!root) return null;
-    if (root.type === "leaf") return root.id === leafId ? null : clone2(root);
-    root = clone2(root);
-    const prune = (n2) => {
-      if (!n2.children) return n2;
-      n2.children = n2.children.filter((c) => !(c.type === "leaf" && c.id === leafId)).map(prune).filter((c) => !(c.children && c.children.length === 0));
-      if (n2.type === "split") n2.sizes = even(n2.children.length);
-      return n2;
-    };
-    return collapse2(prune(root));
-  }
-  function closeTab2(root, tabId) {
-    if (!root) return null;
-    const out = clone2(root);
-    const emptied = [];
-    walk2(out, (n2) => {
-      if (n2.type !== "leaf") return;
-      const i5 = n2.tabs.indexOf(tabId);
-      if (i5 < 0) return;
-      n2.tabs.splice(i5, 1);
-      if (n2.active >= i5) n2.active = Math.max(0, n2.active - 1);
-      syncLeaf(n2);
-      if (!n2.tabs.length) emptied.push(n2.id);
-    });
-    return dropEmpty(out, emptied);
-  }
-  function pruneTabs(root, validTabIds) {
-    if (!root) return null;
-    const ok2 = new Set(validTabIds);
-    const out = clone2(root);
-    const emptied = [];
-    walk2(out, (n2) => {
-      if (n2.type !== "leaf" || !n2.tabs.length) return;
-      const keep = n2.tabs.filter((tid) => ok2.has(tid));
-      if (keep.length === n2.tabs.length) return;
-      const wasActive = leafTab(n2);
-      n2.tabs = keep;
-      n2.active = Math.max(0, keep.indexOf(wasActive));
-      syncLeaf(n2);
-      if (!n2.tabs.length) emptied.push(n2.id);
-    });
-    return dropEmpty(out, emptied, ok2.has(null));
-  }
-  function dropEmpty(out, emptied, allowEmpty = false) {
-    let r = out;
-    for (const id of emptied) {
-      if (leafIds(r).length <= 1) break;
-      r = removeLeaf(r, id);
-      if (!r) return null;
-    }
-    if (r.type === "leaf" && !r.tabs.length && !allowEmpty) return null;
-    return r;
-  }
-  function leavesOf(root) {
-    const o = [];
-    walk2(root, (n2) => {
-      if (n2.type === "leaf") o.push(n2);
-    });
-    return o;
-  }
-  function collapse2(n2) {
-    if (!n2.children) return n2;
-    n2.children = n2.children.map(collapse2);
-    if (n2.type === "split" && n2.children.length === 1) return n2.children[0];
+  function countDuplicateChoices(graph) {
+    let n2 = 0;
+    for (const node of graph && graph.nodes || []) n2 += mergeDuplicateChoices(node.choices).removed;
     return n2;
   }
-  function defaultStorage2() {
-    if (typeof localStorage !== "undefined") return localStorage;
-    const mem = /* @__PURE__ */ new Map();
-    return { getItem: (k) => mem.has(k) ? mem.get(k) : null, setItem: (k, v2) => mem.set(k, v2), removeItem: (k) => mem.delete(k) };
-  }
-  function serializeSplit(root) {
-    return JSON.stringify({ version: SPLIT_VERSION, root: root ?? null });
-  }
-  function deserializeSplit(str2) {
-    if (!str2) return null;
-    let d;
-    try {
-      d = JSON.parse(str2);
-    } catch {
-      return null;
+  function filterNodes(graph, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return null;
+    const hit = /* @__PURE__ */ new Set();
+    for (const n2 of graph && graph.nodes || []) {
+      const hay = [
+        n2.title,
+        n2.chapterName,
+        n2.status,
+        ...n2.tags || [],
+        ...n2.choices.map((c) => c.text)
+      ].join(" ").toLowerCase();
+      if (hay.includes(q)) hit.add(n2.id);
     }
-    d = migrate2(d);
-    if (!d || d.version !== SPLIT_VERSION) return null;
-    return normalizeLeaves(d.root ?? null);
+    return hit;
   }
-  function migrate2(d) {
-    if (!d || typeof d !== "object") return null;
-    if (d.version == null) d = { version: 1, root: d.root ?? d };
-    return d;
+  function expandWithNeighbors(graph, hit) {
+    if (!hit) return null;
+    const out = new Set(hit);
+    for (const e of graph && graph.edges || []) {
+      if (e.dangling) continue;
+      if (hit.has(e.from)) out.add(e.to);
+      if (hit.has(e.to)) out.add(e.from);
+    }
+    return out;
   }
-  function clone2(o) {
-    return JSON.parse(JSON.stringify(o));
+  function exportRoots(graph, analysis) {
+    const a = analysis || analyzeGraph(graph);
+    if (a.roots.length) return a.roots;
+    const ids = involvedIds(graph);
+    const first = graph.nodes.find((n2) => ids.has(n2.id));
+    return first ? [first.id] : [];
   }
-  var _uid2, nid2, even, SPLIT_VERSION, KEY2, SplitStore, SplitManager;
-  var init_split_layout = __esm({
-    "src/layout/split-layout.js"() {
-      _uid2 = 0;
-      nid2 = (p = "s") => `${p}${Date.now().toString(36)}${(_uid2++).toString(36)}`;
-      even = (n2) => Array.from({ length: n2 }, () => +(1 / n2).toFixed(4));
-      SPLIT_VERSION = 1;
-      KEY2 = "k2-split-layout";
-      SplitStore = class {
-        constructor(storage = defaultStorage2(), key2 = KEY2) {
-          this.storage = storage;
-          this.key = key2;
-          this.root = null;
-          this.listeners = /* @__PURE__ */ new Set();
-        }
-        load() {
-          const r = deserializeSplit(this.storage.getItem(this.key));
-          if (r) this.root = r;
-          return !!r;
-        }
-        save() {
-          this.storage.setItem(this.key, serializeSplit(this.root));
-        }
-        reset() {
-          this.root = null;
-          this.storage.removeItem(this.key);
-          this._emit();
-        }
-        update(next) {
-          this.root = next;
-          this.save();
-          this._emit();
-        }
-        onChange(fn) {
-          this.listeners.add(fn);
-          return () => this.listeners.delete(fn);
-        }
-        _emit() {
-          for (const fn of this.listeners) fn(this.root);
-        }
-      };
-      SplitManager = class {
-        constructor({ storage, key: key2, store } = {}) {
-          this.store = store || new SplitStore(storage, key2);
-          this.focusId = null;
-        }
-        get root() {
-          return this.store.root;
-        }
-        tabs() {
-          return this.root ? tabIds(this.root) : [];
-        }
-        paneCount() {
-          return paneCount(this.root);
-        }
-        has(tabId) {
-          return !!(this.root && findLeafByTab(this.root, tabId));
-        }
-        /** Open a tab in the focused pane (creates the first pane when empty). */
-        open(tabId) {
-          if (!this.root) {
-            this._set(leaf(tabId));
-            this.focusId = this.root.id;
-            return true;
-          }
-          const cur = findLeafByTab(this.root, tabId);
-          if (cur) {
-            this.focusId = cur.id;
-            return true;
-          }
-          const target = this._focusLeaf();
-          this._set(setLeafTab(this.root, target.id, tabId));
-          this.focusId = target.id;
-          return true;
-        }
-        /** Drag a tab to a pane edge → split (targetLeafId omitted = focused pane). */
-        splitWith(tabId, side = "right", targetLeafId) {
-          if (!this.root) return this.open(tabId);
-          const target = targetLeafId && findLeaf(this.root, targetLeafId) || this._focusLeaf();
-          this._set(this.has(tabId) ? moveTabToPane(this.root, tabId, target.id, side) : splitPane(this.root, target.id, side, tabId));
-          const nl = findLeafByTab(this.root, tabId);
-          if (nl) this.focusId = nl.id;
-          return true;
-        }
-        /** Move an already-open tab into another pane (side='center' replaces it). */
-        moveTab(tabId, targetLeafId, side = "right") {
-          if (!this.root) return false;
-          this._set(moveTabToPane(this.root, tabId, targetLeafId, side));
-          const nl = this.root && findLeafByTab(this.root, tabId);
-          this.focusId = nl ? nl.id : null;
-          return true;
-        }
-        close(tabId) {
-          this._set(closeTab2(this.root, tabId));
-          return true;
-        }
-        closePane(leafId) {
-          this._set(removeLeaf(this.root, leafId));
-          return true;
-        }
-        focus(leafId) {
-          if (!this.root || !findLeaf(this.root, leafId)) return false;
-          this.focusId = leafId;
-          return true;
-        }
-        // ───── บั๊ก #12: กลุ่มแท็บต่อช่อง — ห่อฟังก์ชันโมดูลไว้ให้ UI เรียกผ่าน manager ─────
-        /** id ของช่องที่โฟกัสอยู่ (null ถ้ายังไม่แยกจอ) */
-        focusLeafId() {
-          const l = this._focusLeaf();
-          return l ? l.id : null;
-        }
-        /** เพิ่มแท็บเข้าช่อง — ไม่ระบุช่อง = ช่องที่โฟกัสอยู่ */
-        addTab(tabId, leafId) {
-          const id = leafId || this.focusLeafId();
-          if (!id || !this.root) return false;
-          this._set(addLeafTab(this.root, id, tabId));
-          return true;
-        }
-        /** สลับแท็บที่แสดงในช่องนั้น โดยไม่ไปยุ่งกับช่องอื่น */
-        activateInLeaf(leafId, tabId) {
-          if (!this.root || !findLeaf(this.root, leafId)) return false;
-          this._set(activateLeafTab(this.root, leafId, tabId));
-          this.focusId = leafId;
-          return true;
-        }
-        /** เอาแท็บออกจากช่องนี้ (สำเนาในช่องอื่นยังอยู่) */
-        closeInLeaf(leafId, tabId) {
-          if (!this.root || !findLeaf(this.root, leafId)) return false;
-          this._set(removeLeafTab(this.root, leafId, tabId));
-          return true;
-        }
-        activeTabId() {
-          const l = this._focusLeaf();
-          return l ? l.tabId : null;
-        }
-        resize(splitId, index, ratio, snapTol) {
-          if (!this.root) return false;
-          this._set(resizeSplit(this.root, splitId, index, ratio, snapTol));
-          return true;
-        }
-        /** Drop panes whose tab no longer exists — pass a PanelManager or a list of ids. */
-        syncWithPanels(src2) {
-          const ids = src2 && typeof src2.openIds === "function" ? src2.openIds() : src2 || [];
-          this._set(pruneTabs(this.root, ids));
-          return true;
-        }
-        load() {
-          const ok2 = this.store.load();
-          this._fixFocus();
-          return ok2;
-        }
-        save() {
-          this.store.save();
-        }
-        reset() {
-          this.store.reset();
-          this.focusId = null;
-        }
-        onChange(fn) {
-          return this.store.onChange(fn);
-        }
-        _set(next) {
-          this.store.update(next || null);
-          this._fixFocus();
-        }
-        _focusLeaf() {
-          if (!this.root) return null;
-          return this.focusId && findLeaf(this.root, this.focusId) || leavesOf(this.root)[0] || null;
-        }
-        _fixFocus() {
-          const l = this._focusLeaf();
-          this.focusId = l ? l.id : null;
-        }
-      };
+  function bodyExcerpt(body, max2 = 180) {
+    const s = String(body || "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/[*_`>]/g, "").replace(/\s+/g, " ").trim();
+    return s.length > max2 ? s.slice(0, max2 - 1) + "\u2026" : s;
+  }
+  function graphToOutline(graph, opts = {}) {
+    const L2 = opts.labels || {};
+    const openTxt = L2.open || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07)";
+    const goneTxt = L2.gone || "\u0E09\u0E32\u0E01\u0E2B\u0E32\u0E22";
+    const loopTxt = L2.loop || "\u0E27\u0E19\u0E01\u0E25\u0E31\u0E1A";
+    const titleOf2 = (id) => (graph.byId.get(id) || {}).title || "?";
+    const lines = [];
+    const walk3 = (id, prefix2, stack) => {
+      const node = graph.byId.get(id);
+      const cs = node && node.choices || [];
+      cs.forEach((c, i5) => {
+        const last2 = i5 === cs.length - 1;
+        const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
+        const looped = target && stack.includes(c.nextSceneId);
+        let tail;
+        if (!c.nextSceneId) tail = openTxt;
+        else if (!target) tail = `(${goneTxt}: ${c.nextSceneId})`;
+        else tail = titleOf2(c.nextSceneId) + (looped ? ` \u21A9 ${loopTxt}` : "");
+        lines.push(`${prefix2}${last2 ? "\u2514\u2500\u2500 " : "\u251C\u2500\u2500 "}[${c.text || "\u2014"}] \u2192 ${tail}`);
+        if (target && !looped) walk3(c.nextSceneId, prefix2 + (last2 ? "    " : "\u2502   "), [...stack, c.nextSceneId]);
+      });
+    };
+    for (const r of exportRoots(graph, opts.analysis)) {
+      lines.push("\u25B6 " + titleOf2(r));
+      walk3(r, "  ", [r]);
+      lines.push("");
+    }
+    const head2 = opts.title ? `# ${opts.title}
+
+` : "";
+    return head2 + lines.join("\n").replace(/\n+$/, "") + "\n";
+  }
+  function graphToJson(graph, opts = {}) {
+    const a = opts.analysis || analyzeGraph(graph);
+    const ids = involvedIds(graph);
+    return {
+      format: "killian-branching",
+      version: 1,
+      title: opts.title || "",
+      exportedAt: opts.now || "",
+      stats: {
+        scenes: a.total,
+        choices: a.choiceCount,
+        roots: a.roots.length,
+        endings: a.endings.length,
+        cycles: a.cycles.length,
+        dangling: a.dangling.length
+      },
+      roots: a.roots,
+      endings: a.endings,
+      scenes: graph.nodes.filter((n2) => ids.has(n2.id)).map((n2) => ({
+        id: n2.id,
+        title: n2.title,
+        chapter: n2.chapterName || "",
+        status: n2.status || "",
+        color: n2.color || "",
+        tags: n2.tags || [],
+        excerpt: bodyExcerpt(n2.body, opts.excerpt ?? 180),
+        choices: n2.choices.map((c) => ({
+          text: c.text,
+          next: c.nextSceneId || null,
+          color: c.color || ""
+        }))
+      }))
+    };
+  }
+  function graphToHtmlTree(graph, opts = {}) {
+    const a = opts.analysis || analyzeGraph(graph);
+    const L2 = opts.labels || {};
+    const rootSet = new Set(a.roots), endSet = new Set(a.endings);
+    const title2 = opts.title || (L2.title || "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22");
+    const openTxt = L2.open || "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07";
+    const goneTxt = L2.gone || "\u0E09\u0E32\u0E01\u0E2B\u0E32\u0E22";
+    const loopTxt = L2.loop || "\u0E27\u0E19\u0E01\u0E25\u0E31\u0E1A";
+    const showBody = opts.excerpt !== false;
+    const sceneLine = (n2) => {
+      const badge = rootSet.has(n2.id) ? `<span class="badge b-root">\u25B6 ${esc2(L2.root || "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21")}</span>` : endSet.has(n2.id) ? `<span class="badge b-end">\u{1F3C1} ${esc2(L2.ending || "\u0E15\u0E2D\u0E19\u0E08\u0E1A")}</span>` : "";
+      const style = n2.color ? ` style="border-left-color:${esc2(n2.color)}"` : "";
+      return `<span class="scene"${style}><span class="t">${esc2(n2.title)}</span>` + (n2.chapterName ? `<span class="c">${esc2(n2.chapterName)}</span>` : "") + `</span>${badge}`;
+    };
+    const walk3 = (id, stack, depth) => {
+      const n2 = graph.byId.get(id);
+      if (!n2) return "";
+      const ex = showBody ? bodyExcerpt(n2.body, opts.excerptLen ?? 260) : "";
+      const kids = n2.choices.map((c) => {
+        const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
+        const looped = target && stack.includes(c.nextSceneId);
+        const cstyle = c.color ? ` style="color:${esc2(c.color)}"` : "";
+        const label = `<span class="choice"${cstyle}>[${esc2(c.text || "\u2014")}]</span> \u2192`;
+        if (!c.nextSceneId) return `<li>${label} <span class="open">${esc2(openTxt)}</span></li>`;
+        if (!target) return `<li>${label} <span class="open">(${esc2(goneTxt)}: ${esc2(c.nextSceneId)})</span></li>`;
+        if (looped) return `<li>${label} ${sceneLine(target)} <span class="loop">\u21A9 ${esc2(loopTxt)}</span></li>`;
+        return `<li>${label} ${walk3(c.nextSceneId, [...stack, c.nextSceneId], depth + 1)}</li>`;
+      }).join("\n");
+      const inner = (ex ? `<div class="excerpt">${esc2(ex)}</div>` : "") + (kids ? `<ul>
+${kids}
+</ul>` : "");
+      if (!inner) return sceneLine(n2);
+      return `<details open><summary>${sceneLine(n2)}</summary>
+${inner}
+</details>`;
+    };
+    const body = exportRoots(graph, a).map((r) => `<ul><li>${walk3(r, [r], 0)}</li></ul>`).join("\n");
+    return `<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc2(title2)}</title>
+<style>${TREE_CSS}</style></head>
+<body>
+<h1>${esc2(title2)}</h1>
+<div class="stats">${esc2(graphSummary(a, L2))}</div>
+${body || '<p class="open">' + esc2(L2.empty || "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01") + "</p>"}
+</body></html>`;
+  }
+  var NODE_W, NODE_H, GAP_X, GAP_Y, PAD, MARKER_SRC, edgeKey2, esc2, TREE_CSS;
+  var init_branch_graph = __esm({
+    "src/branch-graph.js"() {
+      NODE_W = 208;
+      NODE_H = 68;
+      GAP_X = 108;
+      GAP_Y = 26;
+      PAD = 30;
+      MARKER_SRC = /(!?)\[([^\[\]\n]{1,80})\](\()?/;
+      edgeKey2 = (from2, to) => from2 + "\0" + to;
+      esc2 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      TREE_CSS = `
+:root{color-scheme:light dark}
+body{font:15px/1.7 -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif;margin:0;padding:28px;
+  background:#fbfaf7;color:#2c2a26}
+h1{font-size:1.5em;margin:0 0 4px}
+.stats{color:#78746b;font-size:.85em;margin-bottom:20px}
+ul{list-style:none;margin:0;padding-left:22px;border-left:1px dashed #cfcabc}
+:scope>ul,body>ul{padding-left:0;border:none}
+li{margin:6px 0}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+.scene{display:inline-block;border:1px solid #d8d3c6;border-left:4px solid #9a958a;
+  border-radius:8px;padding:5px 11px;background:#fff}
+.scene:hover{border-color:#d97757}
+.scene .t{font-weight:600}
+.scene .c{color:#8a857a;font-size:.82em;margin-left:8px}
+.choice{color:#c2653f;font-weight:600}
+.open{color:#a9a49a;font-style:italic}
+.loop{color:#c2653f;font-size:.85em}
+.excerpt{color:#6d6960;font-size:.88em;margin:4px 0 2px 12px;max-width:56em;
+  border-left:2px solid #e2ddd0;padding-left:10px;white-space:pre-wrap}
+.badge{font-size:.72em;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.b-root{background:#e4f0e4;color:#3f7a3f}
+.b-end{background:#e2edf7;color:#3d6f9c}
+@media print{body{background:#fff}.scene{background:#fff}}
+@media (prefers-color-scheme:dark){
+  body{background:#17181b;color:#e6e3db}ul{border-color:#3a3c42}
+  .scene{background:#212328;border-color:#3a3c42}.scene .c{color:#8f8b82}
+  .excerpt{color:#a8a49b;border-color:#3a3c42}
+  .b-root{background:#23361f;color:#8bc48b}.b-end{background:#1e2c3b;color:#8fb8e0}}
+`;
     }
   });
 
-  // src/layout/split-ui.js
-  var split_ui_exports = {};
-  __export(split_ui_exports, {
-    activeSplitTab: () => activeSplitTab,
-    closePane: () => closePane,
-    closeSplit: () => closeSplit,
-    closeTabInSplit: () => closeTabInSplit,
-    createSplit: () => createSplit,
-    focusPane: () => focusPane,
-    getLeaves: () => getLeaves,
-    getSplitLayout: () => getSplitLayout,
-    getSplitManager: () => getSplitManager,
-    initSplitSystem: () => initSplitSystem,
-    isSplit: () => isSplit,
-    makeTabSplitDraggable: () => makeTabSplitDraggable,
-    openInSplit: () => openInSplit,
-    paneCount: () => paneCount2,
-    refreshSplitTabs: () => refreshSplitTabs,
-    renderSplit: () => renderSplit,
-    renderSplitNode: () => renderSplitNode,
-    resetSplit: () => resetSplit,
-    resetSplitSystem: () => resetSplitSystem,
-    selectTabInPane: () => selectTabInPane,
-    setLeafTab: () => setLeafTab2,
-    setSplitHooks: () => setSplitHooks,
-    splitDir: () => splitDir,
-    splitTabIds: () => splitTabIds,
-    syncActiveSplit: () => syncActiveSplit,
-    syncSplitPanes: () => syncSplitPanes,
-    toggleSplit: () => toggleSplit,
-    zoneRect: () => zoneRect2
+  // src/player-mode.js
+  var player_mode_exports = {};
+  __export(player_mode_exports, {
+    getPlaythroughs: () => getPlaythroughs,
+    openPlayerMode: () => openPlayerMode,
+    playthroughStats: () => playthroughStats,
+    refreshOpenPlayer: () => refreshOpenPlayer,
+    renderPlayer: () => renderPlayer,
+    renderPlayerPanel: () => renderPlayerPanel,
+    resetPlayerMode: () => resetPlayerMode,
+    showPlaythroughsDialog: () => showPlaythroughsDialog
   });
-  function setSplitHooks(h) {
-    hooks = { ...hooks, ...h || {} };
+  function pstate() {
+    if (!state._player) state._player = { run: null, graph: null, editor: null, loading: false };
+    return state._player;
   }
-  function getSplitManager() {
-    if (!mgr) {
-      mgr = new SplitManager();
-      mgr.onChange(() => renderSplit());
-    }
-    return mgr;
+  function getPlaythroughs() {
+    if (!state.meta) return [];
+    return state.meta.playthroughs || [];
   }
-  function isSplit() {
-    return getSplitManager().paneCount() >= 2;
-  }
-  function paneCount2() {
-    return getSplitManager().paneCount();
-  }
-  function splitDir() {
-    const r = getSplitManager().root;
-    return r && r.type === "split" && r.dir === "col" ? "down" : "right";
-  }
-  function splitTabIds() {
-    const r = getSplitManager().root;
-    return r ? tabIds(r).filter(Boolean) : [];
-  }
-  function activeSplitTab() {
-    return getSplitManager().activeTabId();
-  }
-  function panesEl() {
-    return $("#panes");
-  }
-  function rootEl() {
-    return document.getElementById(ROOT_ID);
-  }
-  function reclaimPanes(panes) {
-    if (!panes) return;
-    panes.querySelectorAll(".k-split-body > .pane, .k-split-pane > .pane").forEach((p) => panes.appendChild(p));
-  }
-  function tabOf(id) {
-    const t3 = id && state.tabs.get(id);
-    return t3 && !t3.floatWin && t3.pane ? t3 : null;
-  }
-  function syncCompareFile() {
-    const ids = splitTabIds();
-    state.compareFile = ids.length === 2 ? ids.find((f) => f !== state.active?.file) ?? null : null;
-  }
-  function renderSplit() {
-    const panes = panesEl();
-    if (!panes) return;
-    const sm = getSplitManager();
-    if (isSplit() && !_ensuring) {
-      _ensuring = true;
-      try {
-        if (ensureAllTabsInSplit()) return;
-      } finally {
-        _ensuring = false;
-      }
-    }
-    reclaimPanes(panes);
-    document.querySelectorAll(".pane").forEach((p) => p.classList.remove("compare-on", "k-in-split"));
-    if (!isSplit()) {
-      rootEl()?.remove();
-      panes.classList.remove("split", "split-h");
-      document.body.classList.remove("k-split-on");
-      document.querySelectorAll(".cmp-close").forEach((b) => b.remove());
-      syncCompareFile();
-      hooks.onRender?.();
-      return;
-    }
-    let host2 = rootEl();
-    if (!host2) {
-      host2 = el("div", "k-split-root");
-      host2.id = ROOT_ID;
-      panes.appendChild(host2);
-    }
-    host2.replaceChildren();
-    const tree = renderSplitNode(sm.root, sm);
-    if (tree) host2.appendChild(tree);
-    panes.classList.add("split");
-    panes.classList.toggle("split-h", splitDir() === "down");
-    document.body.classList.add("k-split-on");
-    syncCompareFile();
-    markCompare();
-    hooks.onRender?.();
-  }
-  function syncSplitPanes() {
-    const sm = getSplitManager();
-    if (!sm.root) return;
-    const valid = [...state.tabs.keys()];
-    const stale2 = tabIds(sm.root).some((id) => id && !valid.includes(id));
-    if (stale2) sm.syncWithPanels([...valid, null]);
-    else renderSplit();
-  }
-  function markCompare() {
-    for (const id of splitTabIds()) {
-      const t3 = tabOf(id);
-      if (!t3) continue;
-      t3.pane.classList.add("k-in-split");
-      t3.pane.classList.toggle("compare-on", id !== state.active?.file);
+  async function savePlaythroughs(list) {
+    if (!state.meta) return false;
+    state.meta.playthroughs = list.slice(-MAX_RUNS);
+    try {
+      const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      await saveProjectMeta2();
+      return true;
+    } catch (e) {
+      log("error", "player-mode: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 playthroughs \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      return false;
     }
   }
-  function renderSplitNode(node, sm) {
-    if (!node) return null;
-    if (node.type === "leaf") return renderLeaf(node, sm);
-    if (node.type !== "split") return null;
-    const box = el("div", "k-split-container");
-    box.dataset.splitId = node.id;
-    box.dataset.dir = node.dir === "col" ? "col" : "row";
-    const kids = node.children || [];
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      const childEl = renderSplitNode(kids[i5], sm);
-      if (!childEl) continue;
-      childEl.style.flexGrow = String(node.sizes?.[i5] ?? 1);
-      childEl.style.flexShrink = "1";
-      childEl.style.flexBasis = "0%";
-      box.appendChild(childEl);
-      if (i5 < kids.length - 1) box.appendChild(splitHandle(node, i5, sm));
-    }
-    return box;
+  async function persistRun(run2) {
+    if (!run2) return false;
+    const list = getPlaythroughs().filter((r) => r.id !== run2.id);
+    list.push(JSON.parse(JSON.stringify(run2)));
+    return savePlaythroughs(list);
   }
-  function renderLeaf(node, sm) {
-    const pane = el("div", "k-split-pane" + (sm.focusId === node.id ? " focus" : ""));
-    pane.dataset.leafId = node.id;
-    pane.dataset.tabId = node.tabId || "";
-    pane.addEventListener("mousedown", () => focusPane(node.id), true);
-    pane.appendChild(renderLeafTabs(node, sm));
-    const body = el("div", "k-split-body");
-    const t3 = tabOf(node.tabId);
-    if (t3) body.appendChild(t3.pane);
-    else {
-      const hint = el("div", "k-split-empty");
-      hint.append(el("div", "k-split-empty-icon", "\u2317"));
-      hint.append(el("div", "", t("split.emptyPane", "\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")));
-      hint.append(el("div", "dim", t("split.emptyPaneHint", "\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19")));
-      body.appendChild(hint);
-    }
-    pane.appendChild(body);
-    const cb = el("div", "cmp-close", t("split.closePane", "\u2715 \u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49"));
-    cb.title = t("split.closePaneHint", "\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
-    cb.onmousedown = (e) => e.stopPropagation();
-    cb.onclick = (e) => {
-      e.stopPropagation();
-      closePane(node.id);
+  function playthroughStats() {
+    const runs = getPlaythroughs();
+    const steps = runs.map((r) => (r.steps || []).length);
+    const endings = new Set(runs.map((r) => r.endedAtTitle).filter(Boolean));
+    return {
+      runs: runs.length,
+      avgSteps: steps.length ? +(steps.reduce((a, b) => a + b, 0) / steps.length).toFixed(1) : 0,
+      endings: endings.size,
+      last: runs.length ? runs[runs.length - 1] : null
     };
-    pane.appendChild(cb);
-    return pane;
   }
-  function renderLeafTabs(node, sm) {
-    const bar = el("div", "k-split-tabs");
-    bar.dataset.leafId = node.id;
-    const cur = leafTab(node);
-    for (const id of node.tabs || []) {
-      const t3 = state.tabs.get(id);
-      const btn = el("div", "k-mtab" + (id === cur ? " on" : "") + (t3 && t3.dirty ? " dirty" : ""));
-      btn.dataset.file = id;
-      btn.title = id;
-      btn.append(el("span", "k-mtab-title", t3 && t3.title || id.split(/[\\/]/).pop()));
-      const x = el("span", "k-mtab-x", "\xD7");
-      x.title = t("split.removeFromPane", "\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
-      x.onmousedown = (e) => e.stopPropagation();
-      x.onclick = (e) => {
-        e.stopPropagation();
-        sm.closeInLeaf(node.id, id);
-        if (!sm.has(id)) {
-          hooks.closeTab?.(id);
-          return;
-        }
-        const tid = sm.activeTabId();
-        if (tid && tid !== state.active?.file && state.tabs.has(tid)) hooks.activate?.(tid);
-      };
-      btn.append(x);
-      btn.onclick = (e) => {
-        if (e.target === x) return;
-        selectTabInPane(node.id, id);
-      };
-      bar.append(btn);
-    }
-    if (!(node.tabs || []).length) bar.append(el("span", "k-split-tabs-empty", "\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07"));
-    makeTabSplitDraggable(bar);
-    return bar;
-  }
-  function refreshSplitTabs() {
-    for (const btn of document.querySelectorAll(".k-split-tabs .k-mtab")) {
-      const t3 = state.tabs.get(btn.dataset.file);
-      if (!t3) continue;
-      btn.classList.toggle("dirty", !!t3.dirty);
-      const ttl = btn.querySelector(".k-mtab-title");
-      if (ttl && ttl.textContent !== t3.title) ttl.textContent = t3.title;
-    }
-  }
-  function selectTabInPane(leafId, tabId) {
-    const sm = getSplitManager();
-    if (!sm.root) return false;
-    if (!sm.activateInLeaf(leafId, tabId)) return false;
-    if (state.tabs.has(tabId) && tabId !== state.active?.file && hooks.activate && !_syncing) {
-      _syncing = true;
-      try {
-        hooks.activate(tabId);
-      } finally {
-        _syncing = false;
-      }
-    }
-    markCompare();
+  async function openPlayerMode(startId) {
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const ps = pstate();
+    if (startId || !ps.run) ps.pendingStart = startId || null;
+    showPanel2("player");
+    await renderFeaturePanel2("player");
     return true;
   }
-  function splitHandle(node, index, sm) {
-    const row2 = node.dir !== "col";
-    const h = el("div", "k-split-handle " + (row2 ? "k-sh-col" : "k-sh-row"));
-    h.dataset.splitId = node.id;
-    h.dataset.index = String(index);
-    h.title = t("split.dragResize", "\u0E25\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 (\u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = 50%)");
-    h.addEventListener("dblclick", () => sm.resize(node.id, index, 0.5));
-    h.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const prev = h.previousElementSibling, next = h.nextElementSibling;
-      if (!prev || !next) return;
-      const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
-      const total = row2 ? pr.width + nr.width : pr.height + nr.height;
-      if (total <= 0) return;
-      const start = row2 ? e.clientX : e.clientY;
-      const base3 = row2 ? pr.width : pr.height;
-      const sum2 = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
-      let ratio = base3 / total;
-      h.classList.add("k-dragging");
-      document.body.classList.add("k-resizing");
-      const move = (ev) => {
-        const d = (row2 ? ev.clientX : ev.clientY) - start;
-        ratio = Math.max(0.05, Math.min(0.95, (base3 + d) / total));
-        prev.style.flexGrow = String(sum2 * ratio);
-        next.style.flexGrow = String(sum2 * (1 - ratio));
-      };
-      const up = () => {
-        h.classList.remove("k-dragging");
-        document.body.classList.remove("k-resizing");
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("mouseup", up);
-        sm.resize(node.id, index, ratio);
-      };
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
-    });
-    return h;
-  }
-  function focusPane(leafId) {
-    const sm = getSplitManager();
-    if (!sm.root) return false;
-    if (sm.focusId === leafId) return true;
-    if (!sm.focus(leafId)) return false;
-    for (const p of document.querySelectorAll(".k-split-pane")) p.classList.toggle("focus", p.dataset.leafId === leafId);
-    const tid = sm.activeTabId();
-    if (tid && tid !== state.active?.file && state.tabs.has(tid) && hooks.activate && !_syncing) {
-      _syncing = true;
-      try {
-        hooks.activate(tid);
-      } finally {
-        _syncing = false;
-      }
-    }
+  async function renderPlayerPanel() {
+    const host2 = $("#player-body");
+    if (!host2) return false;
+    await renderPlayer(host2, { reload: true });
     return true;
   }
-  function syncActiveSplit(file) {
-    const sm = getSplitManager();
-    if (!isSplit() || !file || _syncing) {
-      if (isSplit()) syncCompareFile();
+  function refreshOpenPlayer() {
+    const host2 = $("#player-body");
+    if (host2 && host2.firstChild) renderPlayer(host2, { reload: true });
+  }
+  async function loadGraph(force) {
+    const ps = pstate();
+    if (!force && ps.graph && ps.graphRoot === state.root) {
+      return { graph: ps.graph, analysis: ps.analysis };
+    }
+    const scenes = await collectScenes();
+    const { parseMdFile: parseMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
+    for (const sc of scenes) {
+      try {
+        sc.body = sc.filePath ? parseMdFile11(await kapi.readFile(sc.filePath)).body || "" : "";
+      } catch {
+        sc.body = "";
+      }
+    }
+    const graph = buildGraph(scenes);
+    const analysis = analyzeGraph(graph);
+    ps.graph = graph;
+    ps.analysis = analysis;
+    ps.graphRoot = state.root;
+    return { graph, analysis };
+  }
+  function newRun(node) {
+    return {
+      id: "run-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6),
+      startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      startSceneId: node.id,
+      startTitle: node.title,
+      // ก้าวแรก = ฉากเริ่ม (ยังไม่ได้เลือกอะไร) — ทำให้ย้อนกลับ/ประวัติอ่านง่ายเป็นลำดับเดียว
+      steps: [{ sceneId: node.id, sceneTitle: node.title, choice: "", at: (/* @__PURE__ */ new Date()).toISOString() }]
+    };
+  }
+  async function renderPlayer(host2, opts = {}) {
+    const ps = pstate();
+    const gen = ++_playGen;
+    host2.classList.add("player-host");
+    const wrap2 = el("div", "player-wrap");
+    if (!host2.firstChild) {
+      host2.append(el("div", "player-loading dim", T("loading", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u2026")));
+    }
+    let graph, analysis;
+    try {
+      ({ graph, analysis } = await loadGraph(opts.reload));
+    } catch (e) {
+      log("error", "player-mode: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      if (gen === _playGen) host2.replaceChildren(el("div", "dim", T("loadFail", "\u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08")));
       return;
     }
-    const l = findLeafByTab(sm.root, file);
-    if (l) {
-      if (leafTab(l) !== file) {
-        _syncing = true;
-        try {
-          sm.activateInLeaf(l.id, file);
-        } finally {
-          _syncing = false;
-        }
+    if (gen !== _playGen || !host2.isConnected) return;
+    if (ps.editor) {
+      try {
+        ps.editor.destroy();
+      } catch {
+      }
+      ps.editor = null;
+    }
+    const wantStart = ps.pendingStart;
+    ps.pendingStart = null;
+    if (wantStart && graph.byId.has(wantStart)) ps.run = newRun(graph.byId.get(wantStart));
+    if (ps.run && !graph.byId.has(curSceneId(ps.run))) ps.run = null;
+    if (!ps.run) {
+      const rootId = analysis.roots[0] || (graph.nodes.find((n2) => n2.choices.length) || {}).id;
+      if (!rootId) {
+        wrap2.append(el(
+          "div",
+          "player-empty dim",
+          T("empty", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E09\u0E32\u0E01\u0E2A\u0E31\u0E01\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 (\u{1F33F}) \u0E01\u0E48\u0E2D\u0E19")
+        ));
+        host2.replaceChildren(wrap2);
         return;
       }
-      if (sm.focusId !== l.id) {
-        sm.focusId = l.id;
-        for (const p of document.querySelectorAll(".k-split-pane")) p.classList.toggle("focus", p.dataset.leafId === l.id);
-      }
-      syncCompareFile();
-      markCompare();
-      return;
+      ps.run = newRun(graph.byId.get(rootId));
+      persistRun(ps.run);
     }
-    _syncing = true;
-    try {
-      sm.addTab(file);
-    } finally {
-      _syncing = false;
+    const run2 = ps.run;
+    const node = graph.byId.get(curSceneId(run2));
+    const step = run2.steps.length;
+    const head2 = el("div", "player-head");
+    const titleBox = el("div", "player-titlebox");
+    titleBox.append(el("div", "player-title", "\u{1F4C4} " + node.title));
+    titleBox.append(el(
+      "div",
+      "player-sub",
+      (node.chapterName ? node.chapterName + " \xB7 " : "") + `${T("step", "\u0E01\u0E49\u0E32\u0E27\u0E17\u0E35\u0E48")} ${step}` + (analysis.roots.includes(node.id) ? " \xB7 \u25B6 " + T("atStart", "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21") : "") + (!node.choices.length ? " \xB7 \u{1F3C1} " + T("atEnd", "\u0E15\u0E2D\u0E19\u0E08\u0E1A") : "")
+    ));
+    head2.append(titleBox);
+    const tools = el("div", "player-tools");
+    const startSel = el("select", "k-field-select player-start");
+    startSel.title = T("pickStart", "\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E19\u0E08\u0E32\u0E01\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19");
+    const startIds = analysis.roots.length ? analysis.roots : graph.nodes.filter((n2) => n2.choices.length).map((n2) => n2.id);
+    for (const id of startIds) {
+      const n2 = graph.byId.get(id);
+      if (!n2) continue;
+      const o = el("option", null, "\u25B6 " + n2.title);
+      o.value = id;
+      startSel.append(o);
     }
-  }
-  function ensureAllTabsInSplit() {
-    const sm = getSplitManager();
-    if (!sm.root) return false;
-    const have = new Set(allTabIds(sm.root));
-    const missing = [...state.tabs.keys()].filter((id) => !have.has(id) && tabOf(id));
-    if (!missing.length) return false;
-    const target = sm.focusLeafId() || leafIds(sm.root)[0];
-    if (!target) return false;
-    let next = sm.root;
-    for (const id of missing) next = addLeafTab(next, target, id, false);
-    sm.store.update(next);
-    return true;
-  }
-  function createSplit(tabId, dir) {
-    const panes = panesEl();
-    if (!panes) return null;
-    const sm = getSplitManager();
-    const cur = tabId || state.active?.file || [...state.tabs.keys()].find((f) => tabOf(f)) || null;
-    const d = dir === "down" ? "down" : "right";
-    const side = d === "down" ? "bottom" : "right";
-    if (!sm.root) sm.open(cur);
-    else if (cur && !sm.has(cur)) sm.open(cur);
-    const other = [...state.tabs.keys()].find((f) => f !== cur && tabOf(f) && !sm.has(f)) || null;
-    sm.splitWith(other, side);
-    setStatus(other ? t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (d === "down" ? "\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07" : "\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32") : t("split.openedEmpty", "\u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 \u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A"));
-    return { dir: d, right: other };
-  }
-  function closeSplit() {
-    const sm = getSplitManager();
-    const keep = sm.activeTabId() || state.active?.file || null;
-    if (!sm.root) {
-      renderSplit();
-      return;
-    }
-    sm.store.update(keep ? leaf(keep) : null);
-    sm.focusId = sm.root ? sm.root.id : null;
-    if (keep && keep !== state.active?.file && state.tabs.has(keep)) hooks.activate?.(keep);
-    setStatus(t("split.closed", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27"));
-  }
-  function closePane(leafId) {
-    const sm = getSplitManager();
-    if (!sm.root) return false;
-    sm.closePane(leafId);
-    const tid = sm.activeTabId();
-    if (tid && tid !== state.active?.file && state.tabs.has(tid)) hooks.activate?.(tid);
-    return true;
-  }
-  function toggleSplit(tabId, dir) {
-    const sm = getSplitManager();
-    if (isSplit()) {
-      if (dir && dir !== splitDir()) {
-        const next = JSON.parse(JSON.stringify(sm.root));
-        if (next.type === "split") next.dir = dir === "down" ? "col" : "row";
-        sm.store.update(next);
-        setStatus(t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (dir === "down" ? "\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07" : "\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32"));
-        return true;
-      }
-      closeSplit();
-      return false;
-    }
-    return !!createSplit(tabId, dir);
-  }
-  function openInSplit(tabId, side = "right") {
-    const sm = getSplitManager();
-    const cur = state.active?.file;
-    if (!isSplit()) {
-      if (cur && cur !== tabId && tabOf(cur)) {
-        sm.store.update(leaf(cur));
-        sm.focusId = sm.root.id;
-      } else if (!sm.root) sm.open(tabId);
-    }
-    if (!sm.root) {
-      sm.open(tabId);
-      renderSplit();
-      return false;
-    }
-    if (sm.has(tabId)) {
-      const l = findLeafByTab(sm.root, tabId);
-      const curLeaf = cur ? findLeafByTab(sm.root, cur) : null;
-      if (l && curLeaf && l.id === curLeaf.id) sm.splitWith(tabId, side === "down" ? "bottom" : side, l.id);
-      else if (l) {
-        sm.activateInLeaf(l.id, tabId);
-        focusPane(l.id);
-      }
-      return true;
-    }
-    const empty2 = emptyLeafId();
-    if (empty2) sm.moveTab(tabId, empty2, "center");
-    else sm.splitWith(tabId, side === "down" ? "bottom" : side);
-    syncCompareFile();
-    markCompare();
-    return true;
-  }
-  function emptyLeafId() {
-    const r = getSplitManager().root;
-    if (!r) return null;
-    let id = null;
-    walk2(r, (n2) => {
-      if (id === null && n2.type === "leaf" && !tabOf(n2.tabId)) id = n2.id;
-    });
-    return id;
-  }
-  function closeTabInSplit(tabId) {
-    const sm = getSplitManager();
-    if (!sm.root || !sm.has(tabId)) return;
-    sm.close(tabId);
-  }
-  function makeTabSplitDraggable(strip) {
-    if (!strip || strip._splitDrag) return;
-    strip._splitDrag = true;
-    strip.addEventListener("mousedown", (e) => {
-      const btn = e.target.closest(".tab, .k-mtab");
-      if (!btn || e.button !== 0 || e.target.classList.contains("tab-x") || e.target.classList.contains("k-mtab-x")) return;
-      const file = fileOfTabBtn(btn);
-      if (!file) return;
-      const fromLeaf = btn.parentElement?.dataset?.leafId || null;
-      const sx2 = e.clientX, sy2 = e.clientY;
-      let moved = false, ghost = null, hit = null;
-      const ov = dropOverlay();
-      const move = (ev) => {
-        if (!moved) {
-          if (Math.abs(ev.clientX - sx2) + Math.abs(ev.clientY - sy2) < 8) return;
-          moved = true;
-          document.body.classList.add("k-panel-dragging");
-          ghost = el("div", "k-drag-ghost", btn.textContent.replace(/×$/, "").trim());
-          document.body.appendChild(ghost);
-        }
-        ghost.style.left = ev.clientX + 12 + "px";
-        ghost.style.top = ev.clientY + 14 + "px";
-        hit = hitPane(ev.clientX, ev.clientY);
-        if (hit) {
-          ov.show(zoneRect2(hit.rect, hit.zone), hit.zone);
-        } else ov.hide();
-      };
-      const up = (ev) => {
-        document.removeEventListener("mousemove", move);
-        document.removeEventListener("mouseup", up);
-        ov.hide();
-        ghost?.remove();
-        document.body.classList.remove("k-panel-dragging");
-        if (!moved) return;
-        const sm = getSplitManager();
-        if (hit) {
-          if (hit.leafId === fromLeaf && hit.zone === "center") return;
-          if (hit.zone === "center") sm.moveTab(file, hit.leafId, "center");
-          else sm.splitWith(file, hit.zone === "left" ? "left" : hit.zone === "top" ? "top" : hit.zone === "bottom" ? "bottom" : "right", hit.leafId);
-          hooks.activate?.(file);
-          return;
-        }
-        const panes = panesEl();
-        if (!panes || isSplit()) return;
-        const r = panes.getBoundingClientRect();
-        if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) return;
-        const cur = state.active?.file;
-        if (!cur || cur === file) return;
-        if (!sm.root) sm.open(cur);
-        sm.splitWith(file, ev.clientX > r.left + r.width / 2 ? "right" : "left");
-        hooks.activate?.(file);
-      };
-      document.addEventListener("mousemove", move);
-      document.addEventListener("mouseup", up);
-    });
-  }
-  function fileOfTabBtn(btn) {
-    if (btn.dataset && btn.dataset.file) return btn.dataset.file;
-    for (const [f, t3] of state.tabs) if (t3.tabBtn === btn) return f;
-    return null;
-  }
-  function hitPane(mx, my) {
-    let best = null;
-    for (const e of document.querySelectorAll("#panes .k-split-pane")) {
-      const r = e.getBoundingClientRect();
-      if (!r.width || !r.height) continue;
-      const rect = { x: r.left, y: r.top, w: r.width, h: r.height };
-      const zone = dropZone(mx, my, rect);
-      if (!zone) continue;
-      const area = r.width * r.height;
-      if (!best || area < best.area) best = { leafId: e.dataset.leafId, zone, rect, area };
-    }
-    return best;
-  }
-  function zoneRect2(rect, zone) {
-    const { x, y, w, h } = rect;
-    switch (zone) {
-      case "left":
-        return { x, y, w: w / 2, h };
-      case "right":
-        return { x: x + w / 2, y, w: w / 2, h };
-      case "top":
-        return { x, y, w, h: h / 2 };
-      case "bottom":
-        return { x, y: y + h / 2, w, h: h / 2 };
-      default:
-        return { x, y, w, h };
-    }
-  }
-  function dropOverlay() {
-    if (_ov2 && _ov2.el.isConnected) return _ov2;
-    const box = el("div", "k-drop-zone");
-    box.style.display = "none";
-    document.body.appendChild(box);
-    _ov2 = {
-      el: box,
-      show(rect, zone) {
-        box.dataset.zone = zone || "";
-        box.style.left = Math.round(rect.x) + "px";
-        box.style.top = Math.round(rect.y) + "px";
-        box.style.width = Math.round(rect.w) + "px";
-        box.style.height = Math.round(rect.h) + "px";
-        box.style.display = "block";
-      },
-      hide() {
-        box.style.display = "none";
-      }
+    startSel.value = run2.startSceneId;
+    startSel.onchange = () => {
+      ps.run = newRun(graph.byId.get(startSel.value));
+      persistRun(ps.run);
+      renderPlayer(host2);
     };
-    return _ov2;
-  }
-  function initSplitSystem(h) {
-    setSplitHooks(h);
-    getSplitManager();
-    makeTabSplitDraggable($("#tabs"));
-    return mgr;
-  }
-  function resetSplitSystem() {
-    const panes = panesEl();
-    reclaimPanes(panes);
-    rootEl()?.remove();
-    panes?.classList.remove("split", "split-h");
-    document.body.classList.remove("k-split-on");
-    document.querySelectorAll(".pane").forEach((p) => p.classList.remove("compare-on", "k-in-split"));
-    document.querySelectorAll(".cmp-close").forEach((b) => b.remove());
-    state.compareFile = null;
-    if (mgr) {
-      mgr.store.root = null;
-      mgr.focusId = null;
+    if (startIds.length > 1) tools.append(startSel);
+    const restartB = el("button", "player-btn", "\u27F2 " + T("restart", "\u0E40\u0E23\u0E34\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48"));
+    restartB.title = T("restartHint", "\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E19\u0E23\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E09\u0E32\u0E01\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21");
+    restartB.onclick = () => {
+      ps.run = newRun(graph.byId.get(run2.startSceneId));
+      persistRun(ps.run);
+      renderPlayer(host2);
+    };
+    const openB = el("button", "player-btn", "\u270F\uFE0F " + T("editScene", "\u0E41\u0E01\u0E49\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"));
+    openB.title = T("editSceneHint", "\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E43\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19");
+    openB.onclick = async () => {
+      if (!node.filePath) {
+        setStatus(T("noFile", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C"));
+        return;
+      }
+      const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      await openScene2(node.filePath, node.title);
+    };
+    const mapB = el("button", "player-btn", "\u{1F33F} " + T("showOnMap", "\u0E14\u0E39\u0E1A\u0E19\u0E1C\u0E31\u0E07"));
+    mapB.onclick = async () => {
+      const { openBranchingTree: openBranchingTree2 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+      if (state._branch) state._branch.sel = node.id;
+      else state._branch = { sel: node.id, zoom: 1, view: "tree", sideOpen: true, query: "" };
+      await openBranchingTree2();
+    };
+    const reloadB = el("button", "player-btn", "\u{1F504}");
+    reloadB.title = T("reload", "\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C");
+    reloadB.onclick = () => renderPlayer(host2, { reload: true });
+    tools.append(restartB, openB, mapB, reloadB);
+    head2.append(tools);
+    wrap2.append(head2);
+    const trail = el("div", "player-trail");
+    run2.steps.forEach((s, i5) => {
+      if (i5) trail.append(el("span", "player-trail-sep", "\u2192"));
+      const chip = el("span", "player-trail-chip" + (i5 === run2.steps.length - 1 ? " on" : ""), s.sceneTitle);
+      chip.title = (s.choice ? `[${s.choice}] \u2192 ` : "") + s.sceneTitle + " \u2014 " + T("jumpBack", "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48");
+      chip.onclick = () => {
+        if (i5 === run2.steps.length - 1) return;
+        run2.steps = run2.steps.slice(0, i5 + 1);
+        persistRun(run2);
+        renderPlayer(host2);
+      };
+      trail.append(chip);
+    });
+    wrap2.append(trail);
+    const bodyBox = el("div", "player-body-box");
+    const mount = el("div", "player-prose");
+    bodyBox.append(mount);
+    wrap2.append(bodyBox);
+    const text = node.body || "";
+    if (!text.trim()) {
+      mount.append(el("div", "dim", T("emptyScene", "(\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07)")));
+    } else {
       try {
-        mgr.store.save();
+        const { KEditor: KEditor2 } = await Promise.resolve().then(() => (init_editor(), editor_exports));
+        const { resolveImg: resolveImg2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        const dir = node.filePath ? node.filePath.replace(/[\\/][^\\/]*$/, "") : "";
+        ps.editor = new KEditor2(mount, {
+          markdown: text,
+          editable: () => false,
+          // อ่านอย่างเดียวจริง ๆ
+          resolveSrc: (p) => dir ? resolveImg2(dir, p) : p
+        });
+        mount.classList.add("player-readonly");
+      } catch (e) {
+        log("warn", "player-mode: \u0E43\u0E0A\u0E49 ProseMirror \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E43\u0E0A\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E27\u0E19\u0E41\u0E17\u0E19", e);
+        const pre = el("div", "player-plain");
+        pre.textContent = text;
+        mount.append(pre);
+      }
+    }
+    const choiceBox = el("div", "player-choices");
+    if (node.choices.length) {
+      choiceBox.append(el("div", "player-ask", T("youWill", "\u0E04\u0E38\u0E13\u0E08\u0E30\u2026")));
+      node.choices.forEach((c) => {
+        const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
+        const b = el("button", "player-choice" + (target ? "" : " player-choice-dead"));
+        b.append(el("span", "player-choice-text", c.text || T("aChoice", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")));
+        b.append(el(
+          "span",
+          "player-choice-to",
+          target ? "\u2192 " + target.title : c.nextSceneId ? "\u2192 " + T("goneScene", "\u0E09\u0E32\u0E01\u0E2B\u0E32\u0E22") : T("noTarget", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07")
+        ));
+        if (c.color) b.style.borderLeftColor = c.color;
+        if (!target) {
+          b.title = T("deadHint", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 \u2014 \u0E44\u0E1B\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22");
+          b.onclick = () => setStatus(T("deadHint", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 \u2014 \u0E44\u0E1B\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22"));
+        } else {
+          b.onclick = async () => {
+            run2.steps.push({
+              sceneId: target.id,
+              sceneTitle: target.title,
+              choice: c.text || "",
+              at: (/* @__PURE__ */ new Date()).toISOString()
+            });
+            if (!target.choices.length) {
+              run2.endedAt = (/* @__PURE__ */ new Date()).toISOString();
+              run2.endedAtTitle = target.title;
+            } else {
+              delete run2.endedAt;
+              delete run2.endedAtTitle;
+            }
+            await persistRun(run2);
+            try {
+              const { recordChoice: recordChoice2 } = await Promise.resolve().then(() => (init_player_choices(), player_choices_exports));
+              await recordChoice2(node.id, node.title, c.text);
+            } catch {
+            }
+            renderPlayer(host2);
+          };
+        }
+        choiceBox.append(b);
+      });
+    } else {
+      choiceBox.append(el("div", "player-end", "\u{1F3C1} " + T("theEnd", "\u0E08\u0E1A\u0E2A\u0E32\u0E22\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27")));
+      choiceBox.append(el("div", "dim", `${T("walked", "\u0E40\u0E14\u0E34\u0E19\u0E21\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")} ${run2.steps.length} ${T("scenesUnit", "\u0E09\u0E32\u0E01")}`));
+    }
+    wrap2.append(choiceBox);
+    const foot = el("div", "player-foot");
+    const backB = el("button", "player-btn player-back", "\u25C0 " + T("back", "\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A"));
+    backB.disabled = run2.steps.length < 2;
+    backB.title = T("backHint", "\u0E16\u0E2D\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E01\u0E49\u0E32\u0E27 (\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07)");
+    backB.onclick = async () => {
+      if (run2.steps.length < 2) return;
+      run2.steps.pop();
+      delete run2.endedAt;
+      delete run2.endedAtTitle;
+      await persistRun(run2);
+      renderPlayer(host2);
+    };
+    const histB = el("button", "player-btn", "\u{1F3AF} " + T("history", "\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34") + ` (${getPlaythroughs().length})`);
+    histB.title = T("historyHint", "\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E21\u0E32");
+    histB.onclick = () => showPlaythroughsDialog(graph, host2);
+    foot.append(backB, histB);
+    wrap2.append(foot);
+    if (gen === _playGen) host2.replaceChildren(wrap2);
+  }
+  function showPlaythroughsDialog(graph, host2) {
+    const runs = [...getPlaythroughs()].reverse();
+    const ov = el("div", "k-overlay");
+    const box = el("div", "k-dialog branch-dlg");
+    box.append(el("div", "k-dlg-title", "\u{1F3AF} " + T("runsTitle", "\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E21\u0E32") + ` (${runs.length})`));
+    const list = el("div", "k-pick-list");
+    list.style.maxHeight = "50vh";
+    if (!runs.length) {
+      list.append(el("div", "dim", T("noRuns", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E01\u0E14\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")));
+    }
+    for (const r of runs) {
+      const row2 = el("div", "k-menu-item player-run-row");
+      let when = r.startedAt;
+      try {
+        when = new Date(r.startedAt).toLocaleString();
+      } catch {
+      }
+      const path = (r.steps || []).map((s) => s.sceneTitle).join(" \u2192 ");
+      row2.append(el(
+        "div",
+        "player-run-head",
+        `${r.endedAt ? "\u{1F3C1}" : "\u25B6"} ${(r.steps || []).length} ${T("scenesUnit", "\u0E09\u0E32\u0E01")} \xB7 ${when}`
+      ));
+      const p = el("div", "player-run-path", path);
+      p.title = path;
+      row2.append(p);
+      row2.onclick = () => {
+        const ps = pstate();
+        ps.run = JSON.parse(JSON.stringify(r));
+        ps.run.id = "run-" + Date.now().toString(36);
+        ov.remove();
+        if (host2) renderPlayer(host2);
+        else refreshOpenPlayer();
+      };
+      list.append(row2);
+    }
+    box.append(list);
+    const btns = el("div", "k-dlg-btns");
+    const expB = el("button", null, "\u{1F4E5} " + T("exportRuns", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+    expB.onclick = async () => {
+      const dest = await kapi.saveAsDialog("playthroughs.json", "json");
+      if (!dest) return;
+      await kapi.writeFile(dest, JSON.stringify(getPlaythroughs(), null, 2));
+      setStatus(T("exported", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E41\u0E25\u0E49\u0E27: ") + dest);
+    };
+    const clearB = el("button", "k-danger", T("clearRuns", "\u0E25\u0E49\u0E32\u0E07"));
+    clearB.onclick = async () => {
+      await savePlaythroughs([]);
+      ov.remove();
+      setStatus(T("cleared", "\u0E25\u0E49\u0E32\u0E07\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E41\u0E25\u0E49\u0E27"));
+      refreshOpenPlayer();
+    };
+    const close2 = el("button", "k-ok", T("close", "\u0E1B\u0E34\u0E14"));
+    close2.onclick = () => ov.remove();
+    btns.append(expB, clearB, close2);
+    box.append(btns);
+    ov.append(box);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    return ov;
+  }
+  function resetPlayerMode() {
+    const ps = pstate();
+    if (ps.editor) {
+      try {
+        ps.editor.destroy();
       } catch {
       }
     }
+    state._player = null;
   }
-  function getSplitLayout() {
-    return getSplitManager().root;
-  }
-  function getLeaves() {
-    const r = getSplitManager().root;
-    return r ? leafIds(r).map((id) => findLeaf(r, id)) : [];
-  }
-  function setLeafTab2(leafId, tabId) {
-    const sm = getSplitManager();
-    if (sm.root) sm.store.update(setLeafTab(sm.root, leafId, tabId));
-  }
-  function resetSplit() {
-    resetSplitSystem();
-    renderSplit();
-  }
-  var ROOT_ID, hooks, mgr, _syncing, _ensuring, _ov2;
-  var init_split_ui = __esm({
-    "src/layout/split-ui.js"() {
+  var T, MAX_RUNS, curSceneId, _playGen;
+  var init_player_mode = __esm({
+    "src/player-mode.js"() {
       init_core();
-      init_split_layout();
-      ROOT_ID = "split-root";
-      hooks = { activate: null, onRender: null, closeTab: null };
-      mgr = null;
-      _syncing = false;
-      _ensuring = false;
-      _ov2 = null;
+      init_branch_graph();
+      init_branching_ui();
+      T = (key2, fb) => t("player." + key2, fb);
+      MAX_RUNS = 40;
+      curSceneId = (run2) => run2 && run2.steps.length ? run2.steps[run2.steps.length - 1].sceneId : null;
+      _playGen = 0;
     }
   });
 
   // src/branching-ui.js
+  var branching_ui_exports = {};
+  __export(branching_ui_exports, {
+    checkDanglingOnOpen: () => checkDanglingOnOpen,
+    collectScenes: () => collectScenes,
+    loadNodePositions: () => loadNodePositions,
+    loadSceneBodies: () => loadSceneBodies,
+    mutateChoices: () => mutateChoices,
+    openBranchingTree: () => openBranchingTree,
+    refreshOpenBranchPanel: () => refreshOpenBranchTab,
+    refreshOpenBranchTab: () => refreshOpenBranchTab,
+    renderBranchingPanel: () => renderBranchingPanel,
+    renderBranchingTree: () => renderBranchingTree,
+    setNodeColor: () => setNodeColor,
+    syncChoicesFromScene: () => syncChoicesFromScene
+  });
   function bstate() {
-    if (!state._branch) state._branch = { sel: null, zoom: 1, view: "tree", sideOpen: true };
+    if (!state._branch) state._branch = { ...BS_DEFAULTS };
+    for (const [k, v2] of Object.entries(BS_DEFAULTS)) if (state._branch[k] === void 0) state._branch[k] = v2;
     return state._branch;
   }
-  async function openBranchingTree() {
-    const key2 = "::branching::";
-    const { activate: activate2, closeTab: closeTab3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    if (state.tabs.has(key2)) {
-      activate2(key2);
-      return;
-    }
-    const pane = el("div", "pane");
-    $("#panes").append(pane);
-    const tabBtn = el("div", "tab");
-    tabBtn.append(el("span", "tab-title", "\u{1F33F} \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22"));
-    const x = el("span", "tab-x", "\xD7");
-    tabBtn.append(x);
-    $("#tabs").append(tabBtn);
-    const tab = {
-      file: key2,
-      title: "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22",
-      pane,
-      tabBtn,
-      dirty: false,
-      editor: null,
-      plain: null,
-      wiki: null,
-      gal: null,
-      dash: true
-    };
-    tabBtn.onclick = (e) => {
-      if (e.target !== x) activate2(key2);
-    };
-    x.onclick = () => closeTab3(key2);
-    state.tabs.set(key2, tab);
-    activate2(key2);
-    await renderBranchingTree(pane);
-    registerBranchPanel();
+  function posKey() {
+    const s = String(state.root || "").replace(/[\\/]+$/, "").toLowerCase();
+    let h = 0;
+    for (let i5 = 0; i5 < s.length; i5++) h = Math.imul(h, 31) + s.charCodeAt(i5) | 0;
+    return `${POS_PREFIX}:${(h >>> 0).toString(36)}`;
   }
-  function registerBranchPanel() {
+  function loadNodePositions() {
     try {
-      Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports)).then(({ getPanelManager: getPanelManager2 }) => {
-        const m = getPanelManager2();
-        if (!m || typeof m.registerPanel !== "function") return;
-        m.registerPanel("branch-inspector", {
-          title: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01",
-          show: () => {
-            bstate().sideOpen = true;
-            refreshOpenBranchTab();
-          },
-          hide: () => {
-            bstate().sideOpen = false;
-            refreshOpenBranchTab();
-          },
-          isVisible: () => bstate().sideOpen,
-          render: () => {
-          },
-          destroy: () => {
-          }
-        });
-      }).catch(() => {
-      });
-    } catch (e) {
-      log("warn", "branching: \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      return JSON.parse(localStorage.getItem(posKey()) || "{}") || {};
+    } catch {
+      return {};
     }
+  }
+  function saveNodePositions(pos) {
+    try {
+      localStorage.setItem(posKey(), JSON.stringify(pos));
+    } catch {
+    }
+  }
+  function clearNodePositions() {
+    try {
+      localStorage.removeItem(posKey());
+    } catch {
+    }
+  }
+  async function renderBranchingPanel() {
+    const host2 = $("#branch-body");
+    if (!host2) return false;
+    await renderBranchingTree(host2);
+    return true;
+  }
+  async function openBranchingTree() {
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    showPanel2("branch");
+    await renderFeaturePanel2("branch");
+    return true;
   }
   function refreshOpenBranchTab() {
-    const t3 = state.tabs.get("::branching::");
-    if (t3) renderBranchingTree(t3.pane);
+    const host2 = $("#branch-body");
+    if (host2 && host2.firstChild) renderBranchingTree(host2);
   }
   async function collectScenes() {
     const out = [];
     if (!state.root) return out;
     for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
-      if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"].includes(sec)) continue;
+      if (SKIP_DIRS8.includes(sec)) continue;
       const sp = await kapi.join(state.root, sec);
       if (!await kapi.exists(await kapi.join(sp, "section.json"))) continue;
       const dr = await kapi.join(sp, "Draft");
@@ -75117,221 +74793,412 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     }
     return out;
   }
+  async function loadSceneBodies(scenes) {
+    const { parseMdFile: parseMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
+    for (const sc of scenes) {
+      if (typeof sc.body === "string" || !sc.filePath) continue;
+      try {
+        sc.body = parseMdFile11(await kapi.readFile(sc.filePath)).body || "";
+      } catch {
+        sc.body = "";
+      }
+    }
+    return scenes;
+  }
   async function openSceneFromGraph(node, split3) {
     if (!node.filePath) {
-      setStatus("\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C");
+      setStatus(T2("noFile", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C"));
       return;
     }
     const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    if (split3) {
-      const { getSplitManager: getSplitManager2, openInSplit: openInSplit2 } = await Promise.resolve().then(() => (init_split_ui(), split_ui_exports));
-      getSplitManager2().open("::branching::");
-      await openScene2(node.filePath, node.title);
-      openInSplit2(node.filePath, "right");
-    } else {
-      await openScene2(node.filePath, node.title);
-    }
+    await openScene2(node.filePath, node.title);
+    if (!split3) return;
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    showPanel2("branch", { targetId: "docs", side: "left", forceMove: true });
+    setStatus(T2("splitDone", "\u0E41\u0E22\u0E01\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27: \u0E1C\u0E31\u0E07\u0E0B\u0E49\u0E32\u0E22 \xB7 \u0E09\u0E32\u0E01\u0E02\u0E27\u0E32"));
   }
-  async function renderBranchingTree(pane) {
+  function edgeGeom(a, b) {
+    const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
+    const x2 = b.x, y2 = b.y + NODE_H / 2;
+    const back = x2 <= x1;
+    const cx2 = back ? Math.max(40, GAP_X) : Math.max(28, (x2 - x1) / 2);
+    const c1x = x1 + cx2, c1y = back ? y1 + NODE_H : y1;
+    const c2x = x2 - cx2, c2y = back ? y2 + NODE_H : y2;
+    const d = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
+    const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
+    const my = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
+    return { d, back, mid: { x: mx, y: my } };
+  }
+  async function renderBranchingTree(pane, opts = {}) {
     const bs = bstate();
-    pane.innerHTML = "";
-    let scenes = [];
-    try {
-      scenes = await collectScenes();
-    } catch (e) {
-      log("error", "branching: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+    const gen = ++_renderGen;
+    pane.classList.add("branch-host");
+    const oldVp = pane.querySelector(".branch-viewport");
+    const keepScroll = oldVp ? { left: oldVp.scrollLeft, top: oldVp.scrollTop } : null;
+    let scenes = opts.scenes;
+    if (!scenes) {
+      try {
+        scenes = await collectScenes();
+      } catch (e) {
+        log("error", "branching: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+        scenes = [];
+      }
     }
+    if (gen !== _renderGen || !pane.isConnected) return;
     const graph = buildGraph(scenes);
-    const layout = layoutGraph(graph);
+    const positions = loadNodePositions();
+    const layout = layoutGraph(graph, { positions });
     const analysis = analyzeGraph(graph);
-    const redraw = () => renderBranchingTree(pane);
+    const redraw = (o) => renderBranchingTree(pane, o);
+    const redrawUi = () => renderBranchingTree(pane, { scenes });
     const shell = el("div", "branch-shell");
     const main = el("div", "branch-main");
     const wrap2 = el("div", "branch-wrap");
     const head2 = el("div", "branch-head");
     const titleRow = el("div", "branch-title-row");
-    titleRow.append(el("div", "branch-title", "\u{1F33F} \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 (Non-linear)"));
+    titleRow.append(el("div", "branch-title", "\u{1F33F} " + T2("titleFull", "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 (Non-linear)")));
     const tools = el("div", "branch-tools");
     const viewTog = el("div", "branch-viewtog");
-    const bTree = el("button", "branch-viewbtn" + (bs.view === "tree" ? " on" : ""), "\u{1F333} \u0E1C\u0E31\u0E07");
-    const bList = el("button", "branch-viewbtn" + (bs.view === "list" ? " on" : ""), "\u2630 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23");
+    const bTree = el("button", "branch-viewbtn" + (bs.view === "tree" ? " on" : ""), "\u{1F333} " + T2("viewTree", "\u0E1C\u0E31\u0E07"));
+    const bList = el("button", "branch-viewbtn" + (bs.view === "list" ? " on" : ""), "\u2630 " + T2("viewList", "\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23"));
     bTree.onclick = () => {
       bs.view = "tree";
-      redraw();
+      redrawUi();
     };
     bList.onclick = () => {
       bs.view = "list";
-      redraw();
+      redrawUi();
     };
     viewTog.append(bTree, bList);
     tools.append(viewTog);
+    const findWrap = el("div", "branch-find");
+    const findInp = el("input", "branch-find-inp");
+    findInp.type = "search";
+    findInp.value = bs.query || "";
+    findInp.placeholder = "\u{1F50D} " + T2("findPlaceholder", "\u0E04\u0E49\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 / \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 / \u0E41\u0E17\u0E47\u0E01");
+    findInp.title = T2("findHint", "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E19\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07 \u2014 \u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E08\u0E30\u0E08\u0E32\u0E07\u0E25\u0E07");
+    let findJob = null;
+    findInp.oninput = () => {
+      clearTimeout(findJob);
+      findJob = setTimeout(() => {
+        bs.query = findInp.value;
+        applyFilter();
+      }, 160);
+    };
+    findInp.onkeydown = (e) => {
+      if (e.key === "Escape") {
+        findInp.value = "";
+        bs.query = "";
+        applyFilter();
+      }
+    };
+    findWrap.append(findInp);
+    const findCount = el("span", "branch-find-count");
+    findWrap.append(findCount);
+    tools.append(findWrap);
     if (bs.view === "tree") {
       const zOut = el("button", "branch-zbtn", "\u2212");
-      zOut.title = "\u0E22\u0E48\u0E2D\u0E1C\u0E31\u0E07";
+      zOut.title = T2("zoomOut", "\u0E22\u0E48\u0E2D\u0E1C\u0E31\u0E07");
       const zLbl = el("span", "branch-zlabel", Math.round(bs.zoom * 100) + "%");
       const zIn = el("button", "branch-zbtn", "+");
-      zIn.title = "\u0E02\u0E22\u0E32\u0E22\u0E1C\u0E31\u0E07";
+      zIn.title = T2("zoomIn", "\u0E02\u0E22\u0E32\u0E22\u0E1C\u0E31\u0E07");
       const zFit = el("button", "branch-zbtn", "\u2922");
-      zFit.title = "\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D";
+      zFit.title = T2("zoomFit", "\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D");
       zOut.onclick = () => {
         bs.zoom = Math.max(ZOOM_MIN2, +(bs.zoom - 0.15).toFixed(2));
-        redraw();
+        redrawUi();
       };
       zIn.onclick = () => {
         bs.zoom = Math.min(ZOOM_MAX2, +(bs.zoom + 0.15).toFixed(2));
-        redraw();
+        redrawUi();
       };
       zFit.onclick = () => {
         const avail = (main.clientWidth || pane.clientWidth || 900) - 40;
         const f = layout.width > 0 ? avail / layout.width : 1;
         bs.zoom = Math.max(ZOOM_MIN2, Math.min(1, +f.toFixed(2)));
-        redraw();
+        redrawUi();
       };
       tools.append(zOut, zLbl, zIn, zFit);
+      const relayout = el("button", "branch-zbtn", "\u27F2");
+      relayout.title = T2("relayout", "\u0E08\u0E31\u0E14\u0E1C\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E25\u0E37\u0E21\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E25\u0E32\u0E01\u0E40\u0E2D\u0E07)");
+      relayout.onclick = () => {
+        clearNodePositions();
+        setStatus(T2("relayoutDone", "\u0E08\u0E31\u0E14\u0E1C\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27"));
+        redrawUi();
+      };
+      tools.append(relayout);
     }
-    const sideTog = el("button", "branch-zbtn", bs.sideOpen ? "\u25B6" : "\u25C0");
-    sideTog.title = bs.sideOpen ? "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01" : "\u0E41\u0E2A\u0E14\u0E07\u0E41\u0E1C\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01";
-    sideTog.onclick = () => {
-      bs.sideOpen = !bs.sideOpen;
-      redraw();
+    const playB = el("button", "branch-zbtn branch-play", "\u25B6\uFE0F");
+    playB.title = T2("playHint", "\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E2D\u0E48\u0E32\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E32\u0E07\u0E44\u0E1B\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E22 \u0E46");
+    playB.onclick = async () => {
+      const { openPlayerMode: openPlayerMode2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
+      await openPlayerMode2(bs.sel || null);
     };
-    tools.append(sideTog);
+    tools.append(playB);
+    const expB = el("button", "branch-zbtn branch-export", "\u{1F4E4}");
+    expB.title = T2("exportHint", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1C\u0E31\u0E07 \u2014 HTML / Markdown / JSON / SVG / PNG");
+    expB.onclick = (ev) => openExportMenu(ev, graph, analysis, pane);
+    tools.append(expB);
+    const dupN = countDuplicateChoices(graph);
+    if (dupN) {
+      const mergeB = el("button", "branch-zbtn branch-dup", "\u{1F9F9}" + dupN);
+      mergeB.title = T2("mergeDupHint", "\u0E23\u0E27\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33\u0E01\u0E31\u0E19") + ` (${dupN})`;
+      mergeB.onclick = () => mergeAllDuplicates(graph, redraw);
+      tools.append(mergeB);
+    }
     const scanB = el("button", "branch-zbtn", "\u{1F50E}");
-    scanB.title = "\u0E2A\u0E41\u0E01\u0E19\u0E17\u0E38\u0E01\u0E09\u0E32\u0E01\u0E2B\u0E32 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1C\u0E39\u0E01";
+    scanB.title = T2("scanHint", "\u0E2A\u0E41\u0E01\u0E19\u0E17\u0E38\u0E01\u0E09\u0E32\u0E01\u0E2B\u0E32 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1C\u0E39\u0E01");
     scanB.onclick = () => scanAllScenes(scenes, redraw);
     tools.append(scanB);
     const refreshB = el("button", "branch-zbtn", "\u{1F504}");
-    refreshB.title = "\u0E2D\u0E48\u0E32\u0E19 scenes.json \u0E43\u0E2B\u0E21\u0E48";
+    refreshB.title = T2("reload", "\u0E2D\u0E48\u0E32\u0E19 scenes.json \u0E43\u0E2B\u0E21\u0E48");
     refreshB.onclick = () => redraw();
     tools.append(refreshB);
+    const sideTog = el("button", "branch-zbtn", bs.sideOpen ? "\u25B6" : "\u25C0");
+    sideTog.title = bs.sideOpen ? T2("hideSide", "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01") : T2("showSide", "\u0E41\u0E2A\u0E14\u0E07\u0E41\u0E1C\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01");
+    sideTog.onclick = () => {
+      bs.sideOpen = !bs.sideOpen;
+      redrawUi();
+    };
+    tools.append(sideTog);
     titleRow.append(tools);
     head2.append(titleRow);
-    head2.append(el("div", "branch-stats", graphSummary(analysis)));
+    head2.append(el("div", "branch-stats", graphSummary(analysis, summaryLabels())));
     wrap2.append(head2);
     const warn = el("div", "branch-warn");
-    const addWarn = (cls, text) => {
+    const addWarn = (cls, text, title2) => {
       const d = el("span", "branch-badge " + cls, text);
+      if (title2) d.title = title2;
       warn.append(d);
+      return d;
     };
-    if (analysis.dangling.length) addWarn("bw-open", `\u26A0 ${analysis.dangling.length} \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07`);
-    if (analysis.unreachable.length) addWarn("bw-lost", `\u{1F6AB} ${analysis.unreachable.length} \u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07`);
-    if (analysis.cycles.length) addWarn("bw-loop", `\u{1F501} ${analysis.cycles.length} \u0E09\u0E32\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E27\u0E07\u0E27\u0E19\u0E0B\u0E49\u0E33`);
-    if (analysis.endings.length) addWarn("bw-end", `\u{1F3C1} ${analysis.endings.length} \u0E15\u0E2D\u0E19\u0E08\u0E1A`);
+    const brokeN = analysis.dangling.filter((e) => e.to).length;
+    const openN = analysis.dangling.length - brokeN;
+    if (openN) addWarn("bw-open", `\u26A0 ${openN} ${T2("warnOpen", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07")}`);
+    if (brokeN) {
+      const b = addWarn("bw-lost", `\u{1F494} ${brokeN} ${T2("warnBroken", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27")}`);
+      b.classList.add("branch-badge-btn");
+      b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw, redrawUi);
+    }
+    if (analysis.unreachable.length) addWarn("bw-lost", `\u{1F6AB} ${analysis.unreachable.length} ${T2("warnLost", "\u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07")}`);
+    if (analysis.cycles.length) addWarn("bw-loop", `\u{1F501} ${analysis.cycles.length} ${T2("warnLoop", "\u0E09\u0E32\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E27\u0E07\u0E27\u0E19\u0E0B\u0E49\u0E33")}`);
+    if (analysis.endings.length) addWarn("bw-end", `\u{1F3C1} ${analysis.endings.length} ${T2("sumEndings", "\u0E15\u0E2D\u0E19\u0E08\u0E1A")}`);
     if (warn.childNodes.length) wrap2.append(warn);
+    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw));
     if (!analysis.total) {
       wrap2.append(el(
         "div",
         "branch-empty dim",
-        '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E41\u0E1C\u0E07 "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01" \u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07 \u0E41\u0E25\u0E49\u0E27\u0E1C\u0E31\u0E07\u0E08\u0E30\u0E02\u0E36\u0E49\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35'
+        T2("emptyHint", '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E41\u0E16\u0E1A "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01" \u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E1C\u0E31\u0E07\u0E08\u0E30\u0E02\u0E36\u0E49\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35')
       ));
     }
     const cycleSet = new Set(analysis.cycles);
     const unreachSet = new Set(analysis.unreachable);
     const rootSet = new Set(analysis.roots);
     const endSet = new Set(analysis.endings);
+    const hi = highlightPath(graph, bs.sel);
+    const nodeEls = /* @__PURE__ */ new Map();
+    const edgeParts = [];
+    const labelPad = { x: 7, y: 3 };
     if (bs.view === "tree" && analysis.total) {
       const viewport = el("div", "branch-viewport");
+      viewport.addEventListener("mousedown", (ev) => {
+        if (ev.button !== 1) return;
+        ev.preventDefault();
+        const st = { x: ev.clientX, y: ev.clientY, l: viewport.scrollLeft, t: viewport.scrollTop };
+        viewport.classList.add("branch-panning");
+        const onMove = (e2) => {
+          viewport.scrollLeft = st.l - (e2.clientX - st.x);
+          viewport.scrollTop = st.t - (e2.clientY - st.y);
+        };
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          viewport.classList.remove("branch-panning");
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+      viewport.addEventListener("auxclick", (ev) => {
+        if (ev.button === 1) ev.preventDefault();
+      });
       const canvas = el("div", "branch-canvas");
-      canvas.style.width = layout.width + "px";
-      canvas.style.height = layout.height + "px";
+      const sizeCanvas = () => {
+        canvas.style.width = layout.width + "px";
+        canvas.style.height = layout.height + "px";
+        viewport.style.setProperty("--bw", Math.round(layout.width * bs.zoom) + "px");
+        viewport.style.setProperty("--bh", Math.round(layout.height * bs.zoom) + "px");
+      };
       canvas.style.transform = `scale(${bs.zoom})`;
       canvas.style.transformOrigin = "top left";
-      viewport.style.setProperty("--bw", Math.round(layout.width * bs.zoom) + "px");
-      viewport.style.setProperty("--bh", Math.round(layout.height * bs.zoom) + "px");
+      sizeCanvas();
       const svg = svgEl("svg", { class: "branch-edges", width: layout.width, height: layout.height });
       const defs = svgEl("defs");
-      for (const [id, color] of [["bg-arrow", "#98958b"], ["bg-arrow-sel", "#d97757"]]) {
-        const mk = svgEl("marker", {
-          id,
-          viewBox: "0 0 10 10",
-          refX: "9",
-          refY: "5",
-          markerWidth: "6",
-          markerHeight: "6",
-          orient: "auto-start-reverse"
-        });
-        mk.append(svgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color }));
-        defs.append(mk);
-      }
+      const markers = /* @__PURE__ */ new Map();
+      const markerFor = (color) => {
+        const id = "bg-arrow-" + color.replace(/[^a-z0-9]/gi, "");
+        if (!markers.has(id)) {
+          const mk = svgEl("marker", {
+            id,
+            viewBox: "0 0 10 10",
+            refX: "9",
+            refY: "5",
+            markerWidth: "6",
+            markerHeight: "6",
+            orient: "auto-start-reverse"
+          });
+          mk.append(svgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color }));
+          defs.append(mk);
+          markers.set(id, true);
+        }
+        return id;
+      };
+      markerFor("#98958b");
+      markerFor("#d97757");
       svg.append(defs);
       for (const e of graph.edges) {
         if (e.dangling) continue;
         const a = layout.byId.get(e.from), b = layout.byId.get(e.to);
         if (!a || !b) continue;
-        const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
-        const x2 = b.x, y2 = b.y + NODE_H / 2;
-        const back = x2 <= x1;
-        const cx2 = back ? Math.max(40, GAP_X) : (x2 - x1) / 2;
-        const d = back ? `M ${x1} ${y1} C ${x1 + cx2} ${y1 + NODE_H} ${x2 - cx2} ${y2 + NODE_H} ${x2} ${y2}` : `M ${x1} ${y1} C ${x1 + cx2} ${y1} ${x2 - cx2} ${y2} ${x2} ${y2}`;
+        const g = edgeGeom(a, b);
+        const onPath = hi.edges.has(edgeKey2(e.from, e.to));
         const hot = bs.sel === e.from || bs.sel === e.to;
+        const color = e.color || (onPath || hot ? "#d97757" : "#98958b");
         const path = svgEl("path", {
-          d,
-          class: "branch-edge" + (back ? " branch-edge-back" : "") + (hot ? " branch-edge-hot" : ""),
-          "marker-end": `url(#${hot ? "bg-arrow-sel" : "bg-arrow"})`
+          d: g.d,
+          class: "branch-edge" + (g.back ? " branch-edge-back" : "") + (hot ? " branch-edge-hot" : "") + (onPath ? " branch-edge-path" : ""),
+          "marker-end": `url(#${markerFor(color)})`
         });
+        if (e.color) path.style.stroke = e.color;
         const tt = svgEl("title");
-        tt.textContent = e.text || "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01";
+        tt.textContent = e.text || T2("sumChoices", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01");
         path.append(tt);
         svg.append(path);
+        let label = null, rect = null;
         if (e.text) {
-          const label = svgEl("text", {
-            x: (x1 + x2) / 2,
-            y: (y1 + y2) / 2 - 6,
-            class: "branch-edge-label" + (hot ? " on" : ""),
-            "text-anchor": "middle"
+          const gsub = svgEl("g", { class: "branch-edge-lg" + (hot || onPath ? " on" : "") });
+          rect = svgEl("rect", { class: "branch-edge-labelbg", rx: "5", ry: "5" });
+          if (e.color) {
+            rect.style.stroke = e.color;
+          }
+          label = svgEl("text", {
+            class: "branch-edge-label",
+            "text-anchor": "middle",
+            "dominant-baseline": "middle"
           });
-          label.textContent = e.text.length > 16 ? e.text.slice(0, 15) + "\u2026" : e.text;
+          label.textContent = shortText(e.text, 18);
+          if (e.color) label.style.fill = e.color;
           const lt = svgEl("title");
-          lt.textContent = `[${e.text}] \u2014 \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07`;
-          label.append(lt);
-          label.addEventListener("click", () => {
+          lt.textContent = `[${e.text}] \u2014 ` + T2("labelClick", "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07");
+          gsub.append(rect, label);
+          gsub.append(lt);
+          gsub.addEventListener("click", () => {
             const src2 = graph.byId.get(e.from);
             if (src2) openSceneFromGraph(src2, false);
           });
-          svg.append(label);
+          svg.append(gsub);
         }
+        edgeParts.push({ e, path, label, rect, geom: g });
       }
       canvas.append(svg);
+      const placeLabels = (measure2) => {
+        for (const p of edgeParts) {
+          if (!p.label) continue;
+          const { x, y } = p.geom.mid;
+          p.label.setAttribute("x", x);
+          p.label.setAttribute("y", y);
+          let w = p.label.textContent.length * 8.2, h = 17;
+          if (measure2) {
+            try {
+              const bb = p.label.getBBox();
+              if (bb.width) {
+                w = bb.width;
+                h = bb.height;
+              }
+            } catch {
+            }
+          }
+          p.rect.setAttribute("x", x - w / 2 - labelPad.x);
+          p.rect.setAttribute("y", y - h / 2 - labelPad.y);
+          p.rect.setAttribute("width", w + labelPad.x * 2);
+          p.rect.setAttribute("height", h + labelPad.y * 2);
+        }
+      };
+      placeLabels(false);
+      const redrawEdgesOf = (id) => {
+        for (const p of edgeParts) {
+          if (p.e.from !== id && p.e.to !== id) continue;
+          const a = layout.byId.get(p.e.from), b = layout.byId.get(p.e.to);
+          if (!a || !b) continue;
+          p.geom = edgeGeom(a, b);
+          p.path.setAttribute("d", p.geom.d);
+        }
+        placeLabels(true);
+      };
       for (const n2 of layout.placed) {
         const box = el("div", "branch-node");
+        box.dataset.id = n2.id;
         if (bs.sel === n2.id) box.classList.add("on");
         if (rootSet.has(n2.id)) box.classList.add("bn-root");
         if (endSet.has(n2.id)) box.classList.add("bn-end");
         if (cycleSet.has(n2.id)) box.classList.add("bn-loop");
         if (unreachSet.has(n2.id)) box.classList.add("bn-lost");
+        if (hi.nodes.has(n2.id) && bs.sel !== n2.id) box.classList.add("bn-onpath");
+        if (n2.pinned) box.classList.add("bn-pinned");
         box.style.cssText = `left:${n2.x}px;top:${n2.y}px;width:${NODE_W}px;height:${NODE_H}px`;
-        if (n2.color) box.style.borderLeftColor = n2.color;
+        if (n2.color) {
+          box.style.borderLeftColor = n2.color;
+          box.style.setProperty("--bn-tint", n2.color);
+          box.classList.add("bn-tinted");
+        }
         const icon2 = rootSet.has(n2.id) ? "\u25B6 " : endSet.has(n2.id) ? "\u{1F3C1} " : "\u{1F4C4} ";
         box.append(el("div", "branch-node-name", icon2 + n2.title));
         const meta2 = el("div", "branch-node-meta");
-        meta2.append(el("span", null, n2.chapterName || "\u2014"));
+        meta2.append(el("span", "branch-node-ch", n2.chapterName || "\u2014"));
         if (n2.choices.length) meta2.append(el("span", "branch-node-count", "\u2937 " + n2.choices.length));
         box.append(meta2);
         box.title = [
           n2.title,
-          n2.chapterName ? "\u0E1A\u0E17: " + n2.chapterName : "",
-          `\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01: ${n2.choices.length}`,
-          rootSet.has(n2.id) ? "\u25B6 \u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21" : "",
-          endSet.has(n2.id) ? "\u{1F3C1} \u0E15\u0E2D\u0E19\u0E08\u0E1A (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E2D\u0E01)" : "",
-          cycleSet.has(n2.id) ? "\u{1F501} \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E27\u0E07\u0E27\u0E19\u0E0B\u0E49\u0E33" : "",
-          unreachSet.has(n2.id) ? "\u{1F6AB} \u0E40\u0E14\u0E34\u0E19\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07" : "",
-          "\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01 \xB7 \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01"
+          n2.chapterName ? T2("chapterOf", "\u0E1A\u0E17: ") + n2.chapterName : "",
+          T2("choiceCount", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01: ") + n2.choices.length,
+          rootSet.has(n2.id) ? "\u25B6 " + T2("roleRoot", "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21") : "",
+          endSet.has(n2.id) ? "\u{1F3C1} " + T2("roleEndFull", "\u0E15\u0E2D\u0E19\u0E08\u0E1A (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E2D\u0E01)") : "",
+          cycleSet.has(n2.id) ? "\u{1F501} " + T2("roleLoop", "\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E27\u0E07\u0E27\u0E19\u0E0B\u0E49\u0E33") : "",
+          unreachSet.has(n2.id) ? "\u{1F6AB} " + T2("roleLost", "\u0E40\u0E14\u0E34\u0E19\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07") : "",
+          T2("nodeHelp", "\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01 \xB7 \u0E25\u0E32\u0E01 = \u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \xB7 \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01")
         ].filter(Boolean).join("\n");
-        box.onclick = () => {
-          bs.sel = n2.id;
-          redraw();
-        };
         box.ondblclick = () => openSceneFromGraph(n2, false);
+        makeNodeDraggable(box, n2, layout, bs, { redrawEdgesOf, canvas, viewport, sizeCanvas, redraw: redrawUi });
+        box.addEventListener("dragover", (ev) => {
+          if (!dragChoice) return;
+          ev.preventDefault();
+          box.classList.add("bn-drop");
+        });
+        box.addEventListener("dragleave", () => box.classList.remove("bn-drop"));
+        box.addEventListener("drop", async (ev) => {
+          ev.preventDefault();
+          box.classList.remove("bn-drop");
+          await dropChoiceOn(n2, graph, redraw);
+        });
+        nodeEls.set(n2.id, box);
         canvas.append(box);
       }
       viewport.append(canvas);
       wrap2.append(viewport);
+      requestAnimationFrame(() => {
+        if (svg.isConnected) placeLabels(true);
+      });
     }
+    const cardEls = /* @__PURE__ */ new Map();
     if (bs.view === "list" && analysis.total) {
       const tree = el("div", "branch-tree");
       for (const n2 of graph.nodes.filter((x) => x.choices.length)) {
         const card = el("div", "branch-card");
+        card.dataset.id = n2.id;
         if (bs.sel === n2.id) card.classList.add("on");
+        if (n2.color) {
+          card.style.borderLeft = "4px solid " + n2.color;
+        }
         const title2 = el("div", "branch-node-title", "\u{1F4C4} " + n2.title);
         title2.onclick = () => openSceneFromGraph(n2, false);
         card.append(title2);
@@ -75342,16 +75209,17 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
           const row2 = el(
             "div",
             "branch-choice" + (target ? "" : " branch-choice-open"),
-            "\u27A4 " + (c.text || "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")
+            "\u27A4 " + (c.text || T2("sumChoices", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01"))
           );
-          row2.title = "\u0E44\u0E1B\u0E22\u0E31\u0E07: " + (target ? target.title : "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07)");
+          if (c.color) row2.style.color = c.color;
+          row2.title = T2("goTo", "\u0E44\u0E1B\u0E22\u0E31\u0E07: ") + (target ? target.title : T2("openEndParen", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07)"));
           if (target) row2.onclick = async () => {
             const { recordChoice: recordChoice2 } = await Promise.resolve().then(() => (init_player_choices(), player_choices_exports));
             await recordChoice2(n2.id, n2.title, c.text);
             openSceneFromGraph(target, false);
           };
           const del2 = el("span", "branch-choice-del", "\u2715");
-          del2.title = "\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49";
+          del2.title = T2("delChoice", "\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49");
           del2.onclick = async (e) => {
             e.stopPropagation();
             await removeChoice(n2, idx4);
@@ -75364,21 +75232,340 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
         card.onclick = (e) => {
           if (e.target === card) {
             bs.sel = n2.id;
-            redraw();
+            redrawUi();
           }
         };
+        card.addEventListener("dragover", (ev) => {
+          if (dragChoice) {
+            ev.preventDefault();
+            card.classList.add("bn-drop");
+          }
+        });
+        card.addEventListener("dragleave", () => card.classList.remove("bn-drop"));
+        card.addEventListener("drop", async (ev) => {
+          ev.preventDefault();
+          card.classList.remove("bn-drop");
+          await dropChoiceOn(n2, graph, redraw);
+        });
+        cardEls.set(n2.id, card);
         tree.append(card);
       }
       wrap2.append(tree);
     }
-    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw));
     main.append(wrap2);
     shell.append(main);
-    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw));
-    pane.append(shell);
-    if (bs.view === "tree" && bs.sel) {
+    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw, redrawUi));
+    pane.replaceChildren(shell);
+    if (keepScroll) {
+      const vp = pane.querySelector(".branch-viewport");
+      if (vp) {
+        vp.scrollLeft = keepScroll.left;
+        vp.scrollTop = keepScroll.top;
+      }
+    }
+    function applyFilter() {
+      const hit = filterNodes(graph, bs.query);
+      const show = expandWithNeighbors(graph, hit);
+      const all = [...nodeEls.values(), ...cardEls.values()];
+      if (!hit) {
+        for (const b of all) b.classList.remove("bn-faded", "bn-hit");
+        for (const p of edgeParts) {
+          p.path.classList.remove("branch-edge-faded");
+          if (p.label) p.label.parentNode.classList.remove("branch-edge-faded");
+        }
+        findCount.textContent = "";
+        findWrap.classList.remove("on");
+        return;
+      }
+      for (const [id, b] of [...nodeEls, ...cardEls]) {
+        b.classList.toggle("bn-hit", hit.has(id));
+        b.classList.toggle("bn-faded", !show.has(id));
+      }
+      for (const p of edgeParts) {
+        const keep = show.has(p.e.from) && show.has(p.e.to);
+        p.path.classList.toggle("branch-edge-faded", !keep);
+        if (p.label) p.label.parentNode.classList.toggle("branch-edge-faded", !keep);
+      }
+      findCount.textContent = hit.size ? `${hit.size} ${T2("sumScenes", "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07")}` : T2("noMatch", "\u0E44\u0E21\u0E48\u0E1E\u0E1A");
+      findWrap.classList.add("on");
+    }
+    if (bs.query) applyFilter();
+    if (bs.view === "tree" && bs.sel && bs.sel !== _lastScrolledSel) {
       const on2 = pane.querySelector(".branch-node.on");
       if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+    _lastScrolledSel = bs.sel;
+  }
+  function makeNodeDraggable(box, n2, layout, bs, ctx) {
+    let start = null;
+    box.addEventListener("mousedown", (ev) => {
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      start = { mx: ev.clientX, my: ev.clientY, x: n2.x, y: n2.y, moved: false };
+      const zoom = bs.zoom || 1;
+      const onMove = (e2) => {
+        if (!start) return;
+        const dx = (e2.clientX - start.mx) / zoom;
+        const dy = (e2.clientY - start.my) / zoom;
+        if (!start.moved && Math.hypot(dx, dy) < 4) return;
+        start.moved = true;
+        box.classList.add("bn-dragging");
+        n2.x = Math.max(0, Math.round(start.x + dx));
+        n2.y = Math.max(0, Math.round(start.y + dy));
+        box.style.left = n2.x + "px";
+        box.style.top = n2.y + "px";
+        layout.width = Math.max(layout.width, n2.x + NODE_W + PAD);
+        layout.height = Math.max(layout.height, n2.y + NODE_H + PAD);
+        ctx.sizeCanvas();
+        ctx.redrawEdgesOf(n2.id);
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        box.classList.remove("bn-dragging");
+        if (start && start.moved) {
+          const pos = loadNodePositions();
+          pos[n2.id] = { x: n2.x, y: n2.y };
+          saveNodePositions(pos);
+          box.classList.add("bn-pinned");
+          box._noClick = true;
+          setStatus(T2("moved", "\u0E22\u0E49\u0E32\u0E22\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E01\u0E14 \u27F2 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E08\u0E31\u0E14\u0E1C\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34"));
+        }
+        start = null;
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+    box.onclick = () => {
+      if (box._noClick) {
+        box._noClick = false;
+        return;
+      }
+      bs.sel = n2.id;
+      ctx.redraw();
+    };
+  }
+  async function dropChoiceOn(target, graph, redraw) {
+    const d = dragChoice;
+    dragChoice = null;
+    if (!d || !target || d.node.id === target.id) return false;
+    await mutateChoices(d.node, (list) => {
+      list.splice(d.idx, 1);
+      return list;
+    });
+    await mutateChoices(target, (list) => [...list, { ...d.choice }]);
+    setStatus(`${T2("movedChoice", "\u0E22\u0E49\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")} "${d.choice.text}" \u2192 ${target.title}`);
+    redraw();
+    return true;
+  }
+  async function mergeAllDuplicates(graph, redraw) {
+    const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+    const targets = [];
+    for (const n2 of graph.nodes) {
+      const m = mergeDuplicateChoices(n2.choices);
+      if (m.removed) targets.push({ node: n2, list: m.list, removed: m.removed });
+    }
+    if (!targets.length) {
+      setStatus(T2("noDup", "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0B\u0E49\u0E33\u0E43\u0E2B\u0E49\u0E23\u0E27\u0E21"));
+      return 0;
+    }
+    const total = targets.reduce((a, x) => a + x.removed, 0);
+    const preview = targets.slice(0, 8).map((x) => `\u2022 ${x.node.title} (\u2212${x.removed})`).join("\n");
+    const ok2 = await confirmBox2(
+      `${T2("mergeAsk", "\u0E23\u0E27\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33\u0E01\u0E31\u0E19")} ${total} ${T2("items", "\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23")} ${T2("fromScenes", "\u0E08\u0E32\u0E01")} ${targets.length} ${T2("sumScenes", "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07")}
+
+${preview}` + (targets.length > 8 ? `
+\u2026 +${targets.length - 8}` : "") + `
+
+${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E41\u0E15\u0E48\u0E44\u0E1B\u0E04\u0E19\u0E25\u0E30\u0E09\u0E32\u0E01\u0E08\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E38\u0E1A")}`,
+      T2("mergeOk", "\u0E23\u0E27\u0E21\u0E40\u0E25\u0E22")
+    );
+    if (!ok2) return 0;
+    for (const x of targets) await mutateChoices(x.node, () => x.list);
+    setStatus(`${T2("mergedDone", "\u0E23\u0E27\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27")} ${total}`);
+    redraw();
+    return total;
+  }
+  function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
+    const rows = analysis.dangling.filter((e) => e.to);
+    const ov = el("div", "k-overlay");
+    const box = el("div", "k-dialog branch-dlg");
+    box.append(el("div", "k-dlg-title", "\u{1F494} " + T2("brokenTitle", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27") + ` (${rows.length})`));
+    box.append(el("div", "dim", T2(
+      "brokenHint",
+      "\u0E09\u0E32\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E2B\u0E23\u0E37\u0E2D\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E44\u0E1B\u0E41\u0E01\u0E49\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48 \u0E2B\u0E23\u0E37\u0E2D\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E34\u0E49\u0E07"
+    )));
+    const list = el("div", "k-pick-list");
+    list.style.maxHeight = "46vh";
+    for (const e of rows) {
+      const src2 = graph.byId.get(e.from);
+      const row2 = el("div", "k-menu-item branch-broken-row");
+      row2.append(el("span", "branch-broken-sc", src2 && src2.title || e.from));
+      row2.append(el("span", "branch-broken-ch", "[" + (e.text || "\u2014") + "]"));
+      row2.append(el("span", "dim", "\u2192 " + e.to));
+      const fix2 = el("button", "branch-doc-add", T2("fixIt", "\u0E44\u0E1B\u0E41\u0E01\u0E49"));
+      fix2.onclick = () => {
+        bs.sel = e.from;
+        bs.sideOpen = true;
+        ov.remove();
+        redrawUi();
+      };
+      const del2 = el("button", "branch-edit-del", "\u2715");
+      del2.title = T2("delChoice", "\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49");
+      del2.onclick = async () => {
+        if (src2) {
+          await removeChoice(src2, e.idx);
+          ov.remove();
+          redraw();
+        }
+      };
+      row2.append(fix2, del2);
+      list.append(row2);
+    }
+    box.append(list);
+    const btns = el("div", "k-dlg-btns");
+    const close2 = el("button", "k-ok", T2("close", "\u0E1B\u0E34\u0E14"));
+    close2.onclick = () => ov.remove();
+    btns.append(close2);
+    box.append(btns);
+    ov.append(box);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+  }
+  async function checkDanglingOnOpen() {
+    try {
+      if (!state.root) return 0;
+      const scenes = await collectScenes();
+      const bad = danglingChoices(scenes);
+      if (!bad.length) return 0;
+      const names = [...new Set(bad.map((b) => b.sceneTitle))].slice(0, 3).join(", ");
+      setStatus(`\u{1F494} ${bad.length} ${T2("warnBroken", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27")} (${names}${bad.length > 3 ? "\u2026" : ""}) \u2014 ${T2("openBranchToFix", "\u0E40\u0E1B\u0E34\u0E14\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E41\u0E01\u0E49")}`);
+      log(
+        "warn",
+        "branching: \u0E1E\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27 " + bad.length + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
+        bad.slice(0, 10)
+      );
+      return bad.length;
+    } catch (e) {
+      log("warn", "branching: \u0E15\u0E23\u0E27\u0E08\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      return 0;
+    }
+  }
+  function openExportMenu(ev, graph, analysis, pane) {
+    const at = ev.currentTarget.getBoundingClientRect();
+    Promise.resolve().then(() => (init_ui(), ui_exports)).then(({ popupMenu: popupMenu2 }) => {
+      popupMenu2(at.left, at.bottom + 4, [
+        { label: "\u{1F310} " + T2("expHtml", "HTML tree (\u0E04\u0E25\u0E34\u0E01\u0E44\u0E14\u0E49 \xB7 \u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E22\u0E48\u0E2D)"), click: () => exportBranchHtml(graph, analysis) },
+        { label: "\u{1F4DD} " + T2("expMd", "Markdown outline (\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32)"), click: () => exportBranchMarkdown(graph, analysis) },
+        { label: "\u{1F9E9} " + T2("expJson", "JSON (\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E25\u0E49\u0E27\u0E19 \u2014 \u0E40\u0E02\u0E49\u0E32\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E2D\u0E37\u0E48\u0E19)"), click: () => exportBranchJson(graph, analysis) },
+        "-",
+        { label: "\u{1F5BC} " + T2("expSvg", "SVG (\u0E20\u0E32\u0E1E\u0E1C\u0E31\u0E07\u0E41\u0E1A\u0E1A\u0E40\u0E27\u0E01\u0E40\u0E15\u0E2D\u0E23\u0E4C)"), click: () => exportBranchSvg(pane) },
+        { label: "\u{1F4F7} " + T2("expPng", "PNG (\u0E20\u0E32\u0E1E\u0E1C\u0E31\u0E07 \u2014 \u0E2A\u0E48\u0E07\u0E43\u0E19\u0E41\u0E0A\u0E15/\u0E2A\u0E44\u0E25\u0E14\u0E4C)"), click: () => exportBranchPng(pane) }
+      ]);
+    });
+  }
+  async function exportBranchHtml(graph, analysis) {
+    await loadSceneBodies(graph.nodes);
+    const html = graphToHtmlTree(graph, { analysis, title: projTitle(), labels: exportLabels() });
+    const dest = await kapi.saveAsDialog(safeName3(projTitle()) + "-branching.html", "html");
+    if (!dest) return false;
+    await kapi.writeFile(dest, html);
+    setStatus(T2("expDone", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1C\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27: ") + dest);
+    return true;
+  }
+  async function exportBranchMarkdown(graph, analysis) {
+    const md = graphToOutline(graph, { analysis, title: projTitle(), labels: exportLabels() });
+    const dest = await kapi.saveAsDialog(safeName3(projTitle()) + "-branching.md", "md");
+    if (!dest) return false;
+    await kapi.writeFile(dest, md);
+    setStatus(T2("expDone", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1C\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27: ") + dest);
+    return true;
+  }
+  async function exportBranchJson(graph, analysis) {
+    await loadSceneBodies(graph.nodes);
+    const j = graphToJson(graph, { analysis, title: projTitle(), now: (/* @__PURE__ */ new Date()).toISOString() });
+    const dest = await kapi.saveAsDialog(safeName3(projTitle()) + "-branching.json", "json");
+    if (!dest) return false;
+    await kapi.writeFile(dest, JSON.stringify(j, null, 2));
+    setStatus(T2("expDone", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1C\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27: ") + dest);
+    return true;
+  }
+  function buildStandaloneSvg(pane) {
+    const src2 = pane.querySelector("svg.branch-edges");
+    const canvas = pane.querySelector(".branch-canvas");
+    if (!src2 || !canvas) return null;
+    const w = parseFloat(canvas.style.width) || 900;
+    const h = parseFloat(canvas.style.height) || 600;
+    const out = svgEl("svg", { xmlns: SVG_NS, width: w, height: h, viewBox: `0 0 ${w} ${h}` });
+    const st = svgEl("style");
+    st.textContent = SVG_STYLE;
+    out.append(st);
+    out.append(svgEl("rect", { x: 0, y: 0, width: w, height: h, fill: "#fbfaf7" }));
+    for (const child of src2.childNodes) out.append(child.cloneNode(true));
+    for (const box of canvas.querySelectorAll(".branch-node")) {
+      const x = parseFloat(box.style.left) || 0, y = parseFloat(box.style.top) || 0;
+      const accent = box.style.borderLeftColor || "#9a958a";
+      out.append(svgEl("rect", { x, y, width: NODE_W, height: NODE_H, rx: 8, ry: 8, class: "bx" }));
+      out.append(svgEl("path", {
+        d: `M ${x + 2} ${y + 6} L ${x + 2} ${y + NODE_H - 6}`,
+        class: "bx-accent",
+        stroke: accent,
+        fill: "none"
+      }));
+      const name5 = svgEl("text", { x: x + 12, y: y + 24, class: "bt" });
+      name5.textContent = shortText((box.querySelector(".branch-node-name") || {}).textContent || "", 24);
+      const meta2 = svgEl("text", { x: x + 12, y: y + 44, class: "bm" });
+      meta2.textContent = shortText((box.querySelector(".branch-node-meta") || {}).textContent || "", 28);
+      out.append(name5, meta2);
+    }
+    return { svg: out, w, h };
+  }
+  async function exportBranchSvg(pane) {
+    const built = buildStandaloneSvg(pane);
+    if (!built) {
+      setStatus(T2("needTreeView", "\u0E40\u0E1B\u0E34\u0E14\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49"));
+      return false;
+    }
+    const text = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(built.svg);
+    const dest = await kapi.saveAsDialog(safeName3(projTitle()) + "-branching.svg", "svg");
+    if (!dest) return false;
+    await kapi.writeFile(dest, text);
+    setStatus(T2("expDone", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1C\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27: ") + dest);
+    return true;
+  }
+  async function exportBranchPng(pane) {
+    const built = buildStandaloneSvg(pane);
+    if (!built) {
+      setStatus(T2("needTreeView", "\u0E40\u0E1B\u0E34\u0E14\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49"));
+      return false;
+    }
+    try {
+      const text = new XMLSerializer().serializeToString(built.svg);
+      const url = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(text)));
+      const scale2 = 2;
+      const img = new Image();
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+        img.src = url;
+      });
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(built.w * scale2);
+      cv.height = Math.round(built.h * scale2);
+      const ctx = cv.getContext("2d");
+      ctx.scale(scale2, scale2);
+      ctx.drawImage(img, 0, 0);
+      const b64 = cv.toDataURL("image/png").split(",")[1];
+      const dir = await kapi.join(state.root, "Images");
+      const name5 = await kapi.writeImageData(dir, safeName3(projTitle()) + "-branching.png", b64);
+      setStatus("\u{1F4F7} " + T2("pngSaved", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E39\u0E1B\u0E1C\u0E31\u0E07\u0E25\u0E07\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E25\u0E49\u0E27: ") + (typeof name5 === "string" ? name5 : "branching.png"));
+      return true;
+    } catch (e) {
+      log("error", "branching: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      setStatus(T2("pngFail", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ") + e.message);
+      return false;
     }
   }
   function mutateChoices(node, fn) {
@@ -75387,6 +75574,17 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       return updateSceneRow2(node.dPath, node.id, (r) => {
         r.choices = fn([...r.choices || []]);
         if (!r.choices.length) delete r.choices;
+      });
+    };
+    _choiceQueue = _choiceQueue.then(run2, run2);
+    return _choiceQueue;
+  }
+  function setNodeColor(node, color) {
+    const run2 = async () => {
+      const { updateSceneRow: updateSceneRow2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      return updateSceneRow2(node.dPath, node.id, (r) => {
+        if (color) r.color = color;
+        else delete r.color;
       });
     };
     _choiceQueue = _choiceQueue.then(run2, run2);
@@ -75404,7 +75602,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
   }
   async function insertMarkerIntoScene(node, text) {
     if (!node.filePath) {
-      setStatus("\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C");
+      setStatus(T2("noFile", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C"));
       return false;
     }
     const { parseMdFile: parseMdFile11, dumpMdFile: dumpMdFile5 } = await Promise.resolve().then(() => __toESM(require_md()));
@@ -75420,7 +75618,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       if (tab.editor) tab.editor.setMarkdown(next);
       else if (tab.sp) tab.sp.setMarkdown(next);
     } else if (tab && tab.dirty) {
-      setStatus("\u0E41\u0E17\u0E23\u0E01\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22\u0E16\u0E49\u0E32\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23");
+      setStatus(T2("insertedDirty", "\u0E41\u0E17\u0E23\u0E01\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22\u0E16\u0E49\u0E32\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23"));
     }
     return true;
   }
@@ -75428,7 +75626,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     const { sceneCtx: sceneCtx2, updateSceneRow: updateSceneRow2 } = await Promise.resolve().then(() => (init_app(), app_exports));
     const ctx = await sceneCtx2();
     if (!ctx) {
-      setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E40\u0E2B\u0E25\u0E35\u0E48\u0E22\u0E21 \u0E40\u0E0A\u0E48\u0E19 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14]");
+      setStatus(T2("needScene", "\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E40\u0E2B\u0E25\u0E35\u0E48\u0E22\u0E21 \u0E40\u0E0A\u0E48\u0E19 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14]"));
       return 0;
     }
     const tab = state.tabs.get(state.active?.file);
@@ -75443,18 +75641,18 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     }
     const markers = scanChoiceMarkers(body);
     if (!markers.length) {
-      setStatus("\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49 \u2014 \u0E1E\u0E34\u0E21\u0E1E\u0E4C [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E15\u0E23\u0E07\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22");
+      setStatus(T2("noMarker", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49 \u2014 \u0E1E\u0E34\u0E21\u0E1E\u0E4C [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E15\u0E23\u0E07\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22"));
       return 0;
     }
     const { missing } = diffChoiceMarkers(markers, ctx.row.choices || []);
     if (!missing.length) {
-      setStatus("\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E1C\u0E39\u0E01\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27 (" + markers.length + " \u0E08\u0E38\u0E14)");
+      setStatus(T2("allLinked", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E1C\u0E39\u0E01\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27 (") + markers.length + ")");
       return 0;
     }
     await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
-      r.choices = [...r.choices || [], ...missing.map((t3) => ({ text: t3, nextSceneId: "" }))];
+      r.choices = [...r.choices || [], ...missing.map((t22) => ({ text: t22, nextSceneId: "" }))];
     });
-    setStatus(`\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 ${missing.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u2014 \u0E44\u0E1B\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22`);
+    setStatus(T2("addedFromText", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 ") + missing.length + T2("addedFromTextTail", " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u2014 \u0E44\u0E1B\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22"));
     refreshOpenBranchTab();
     return missing.length;
   }
@@ -75474,32 +75672,32 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       if (missing.length) found2.push({ sc, missing });
     }
     if (!found2.length) {
-      setStatus("\u0E2A\u0E41\u0E01\u0E19\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E17\u0E38\u0E01 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E43\u0E19\u0E09\u0E32\u0E01\u0E16\u0E39\u0E01\u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27");
+      setStatus(T2("scanClean", "\u0E2A\u0E41\u0E01\u0E19\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E17\u0E38\u0E01 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E43\u0E19\u0E09\u0E32\u0E01\u0E16\u0E39\u0E01\u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27"));
       return 0;
     }
     const total = found2.reduce((n2, f) => n2 + f.missing.length, 0);
-    const preview = found2.slice(0, 8).map((f) => `\u2022 ${f.sc.title}: ${f.missing.map((t3) => "[" + t3 + "]").join(" ")}`).join("\n");
+    const preview = found2.slice(0, 8).map((f) => `\u2022 ${f.sc.title}: ${f.missing.map((x) => "[" + x + "]").join(" ")}`).join("\n");
     const ok2 = await confirmBox2(
-      `\u0E1E\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1C\u0E39\u0E01 ${total} \u0E08\u0E38\u0E14 \u0E08\u0E32\u0E01 ${found2.length} \u0E09\u0E32\u0E01
+      `${T2("scanFound", "\u0E1E\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1C\u0E39\u0E01")} ${total} ${T2("spots", "\u0E08\u0E38\u0E14")} ${T2("fromScenes", "\u0E08\u0E32\u0E01")} ${found2.length} ${T2("sumScenes", "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07")}
 
 ${preview}` + (found2.length > 8 ? `
-\u2026 \u0E41\u0E25\u0E30\u0E2D\u0E35\u0E01 ${found2.length - 8} \u0E09\u0E32\u0E01` : "") + "\n\n\u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E25\u0E22\u0E44\u0E2B\u0E21 (\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E44\u0E27\u0E49\u0E01\u0E48\u0E2D\u0E19) ?",
-      "\u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"
+\u2026 +${found2.length - 8}` : "") + "\n\n" + T2("scanAsk", "\u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E25\u0E22\u0E44\u0E2B\u0E21 (\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E44\u0E27\u0E49\u0E01\u0E48\u0E2D\u0E19) ?"),
+      T2("scanOk", "\u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")
     );
     if (!ok2) return 0;
     for (const f of found2) {
-      await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((t3) => ({ text: t3, nextSceneId: "" }))]);
+      await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((x) => ({ text: x, nextSceneId: "" }))]);
     }
-    setStatus(`\u0E1C\u0E39\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 ${total} \u0E08\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E01\u0E33\u0E2B\u0E19\u0E14\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E15\u0E48\u0E2D\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32`);
+    setStatus(`${T2("scanDone", "\u0E1C\u0E39\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27")} ${total}`);
     redraw();
     return total;
   }
   function buildAdder(graph, bs, redraw) {
     const adder = el("div", "branch-adder");
-    adder.append(el("span", "dim", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01:"));
-    const fromSel = el("select", "k-dlg-select");
-    const toSel = el("select", "k-dlg-select");
-    const none2 = el("option", null, "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 \u2014");
+    adder.append(el("span", "branch-adder-lbl", "\u2795 " + T2("addChoice", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01:")));
+    const fromSel = el("select", "k-field-select");
+    const toSel = el("select", "k-field-select");
+    const none2 = el("option", null, T2("openEndDash", "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 \u2014"));
     none2.value = "";
     toSel.append(none2);
     for (const s of graph.nodes) {
@@ -75511,20 +75709,20 @@ ${preview}` + (found2.length > 8 ? `
       toSel.append(b);
     }
     if (bs.sel && graph.byId.has(bs.sel)) fromSel.value = bs.sel;
-    const textInp = el("input", "k-dlg-input");
-    textInp.placeholder = '\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E40\u0E0A\u0E48\u0E19 "\u0E40\u0E1B\u0E34\u0E14\u0E1B\u0E23\u0E30\u0E15\u0E39"';
-    const addB = el("button", "k-ok", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01");
+    const textInp = el("input", "k-field-input");
+    textInp.placeholder = T2("choiceTextPh", '\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E40\u0E0A\u0E48\u0E19 "\u0E40\u0E1B\u0E34\u0E14\u0E1B\u0E23\u0E30\u0E15\u0E39"');
+    const addB = el("button", "k-ok", "+ " + T2("addChoiceBtn", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01"));
     const doAdd = async () => {
       const from2 = graph.byId.get(fromSel.value);
       const text = textInp.value.trim();
       if (!from2 || !text) {
-        setStatus("\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E41\u0E25\u0E30\u0E43\u0E2A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E01\u0E48\u0E2D\u0E19");
+        setStatus(T2("needFromText", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E41\u0E25\u0E30\u0E43\u0E2A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E01\u0E48\u0E2D\u0E19"));
         return;
       }
       await mutateChoices(from2, (list) => [...list, { text, nextSceneId: toSel.value || "" }]);
       textInp.value = "";
       bs.sel = from2.id;
-      setStatus("\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27");
+      setStatus(T2("added", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27"));
       redraw();
     };
     addB.onclick = doAdd;
@@ -75534,15 +75732,101 @@ ${preview}` + (found2.length > 8 ? `
     adder.append(fromSel, textInp, el("span", "dim", "\u2192"), toSel, addB);
     return adder;
   }
-  function buildInspector(graph, layout, analysis, bs, redraw) {
+  function colorRow(current2, onPick) {
+    const row2 = el("div", "branch-colors");
+    const mk = (value, label, cls) => {
+      const dot = el("span", "branch-color" + (cls ? " " + cls : "") + (current2 === value ? " on" : ""));
+      if (value) dot.style.background = value;
+      dot.title = label;
+      dot.onclick = () => onPick(value);
+      row2.append(dot);
+      return dot;
+    };
+    mk("", T2("colorNone", "\u0E44\u0E21\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E2A\u0E35"), "branch-color-none").textContent = "\u2205";
+    for (const [name5, hex] of SCENE_COLORS) mk(hex, name5);
+    return row2;
+  }
+  function showAllPathsDialog(graph, startId) {
+    const info = enumeratePathsInfo(graph, startId, PATH_MAX);
+    const titleOf2 = (id) => (graph.byId.get(id) || {}).title || "?";
+    const lines = info.paths.map((p) => ({ ids: p, text: p.map(titleOf2).join(" \u2192 ") }));
+    const ov = el("div", "k-overlay");
+    const box = el("div", "k-dialog branch-dlg");
+    box.append(el(
+      "div",
+      "k-dlg-title",
+      `\u{1F9ED} ${T2("allPaths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1B\u0E44\u0E14\u0E49")} (${lines.length}${info.truncated ? "+" : ""})`
+    ));
+    if (info.truncated) {
+      box.append(el(
+        "div",
+        "branch-badge bw-open",
+        `\u26A0 ${T2("pathTrunc", "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32")} ${PATH_MAX} ${T2("paths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07")} \u2014 ` + T2("pathTruncHint", "\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E17\u0E48\u0E32\u0E17\u0E35\u0E48\u0E44\u0E25\u0E48\u0E44\u0E2B\u0E27")
+      ));
+    }
+    const inp = el("input", "k-dlg-input");
+    inp.placeholder = "\u{1F50D} " + T2("filterPaths", "\u0E01\u0E23\u0E2D\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 \u2014 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E43\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07");
+    box.append(inp);
+    const count = el("div", "dim");
+    box.append(count);
+    const list = el("div", "k-pick-list");
+    list.style.maxHeight = "48vh";
+    box.append(list);
+    const draw2 = () => {
+      const q = inp.value.trim().toLowerCase();
+      list.replaceChildren();
+      const rows = q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
+      count.textContent = `${rows.length} / ${lines.length} ${T2("paths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07")}`;
+      for (const l of rows.slice(0, 300)) {
+        const row2 = el("div", "k-menu-item branch-path-row");
+        row2.append(el("span", "branch-path-len", l.ids.length + " " + T2("steps", "\u0E09\u0E32\u0E01")));
+        row2.append(el("span", "branch-path-txt", l.text));
+        row2.title = l.text;
+        row2.onclick = async () => {
+          ov.remove();
+          const { openPlayerMode: openPlayerMode2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
+          await openPlayerMode2(l.ids[0]);
+        };
+        list.append(row2);
+      }
+      if (rows.length > 300) list.append(el("div", "dim", `\u2026 +${rows.length - 300}`));
+    };
+    let job = null;
+    inp.oninput = () => {
+      clearTimeout(job);
+      job = setTimeout(draw2, 130);
+    };
+    draw2();
+    const btns = el("div", "k-dlg-btns");
+    const copyB = el("button", null, "\u{1F4CB} " + T2("copyPaths", "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"));
+    copyB.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(lines.map((l) => l.text).join("\n"));
+        setStatus(T2("copied", "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27"));
+      } catch {
+        setStatus(T2("copyFail", "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+      }
+    };
+    const close2 = el("button", "k-ok", T2("close", "\u0E1B\u0E34\u0E14"));
+    close2.onclick = () => ov.remove();
+    btns.append(copyB, close2);
+    box.append(btns);
+    ov.append(box);
+    document.body.append(ov);
+    inp.focus();
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+  }
+  function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) {
     const side = el("div", "branch-side");
     const shead = el("div", "branch-side-head");
-    shead.append(el("span", null, "\u{1F3AF} \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01"));
+    shead.append(el("span", null, "\u{1F3AF} " + T2("inspector", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01")));
     const closeB = el("span", "branch-side-x", "\u2715");
-    closeB.title = "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E19\u0E35\u0E49";
+    closeB.title = T2("hideThis", "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E19\u0E35\u0E49");
     closeB.onclick = () => {
       bs.sideOpen = false;
-      redraw();
+      redrawUi();
     };
     shead.append(closeB);
     side.append(shead);
@@ -75550,29 +75834,49 @@ ${preview}` + (found2.length > 8 ? `
     side.append(body);
     const node = bs.sel ? graph.byId.get(bs.sel) : null;
     if (!node) {
-      body.append(el("div", "dim", analysis.total ? "\u0E04\u0E25\u0E34\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E1A\u0E19\u0E1C\u0E31\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39/\u0E41\u0E01\u0E49\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E19\u0E31\u0E49\u0E19" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E09\u0E32\u0E01\u0E2A\u0E31\u0E01\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19"));
+      body.append(el("div", "dim", analysis.total ? T2("pickNode", "\u0E04\u0E25\u0E34\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E1A\u0E19\u0E1C\u0E31\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39/\u0E41\u0E01\u0E49\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E19\u0E31\u0E49\u0E19") : T2("pickNodeEmpty", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07 \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E09\u0E32\u0E01\u0E2A\u0E31\u0E01\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19")));
       return side;
     }
     body.append(el("div", "branch-side-title", node.title));
     body.append(el("div", "dim", node.chapterName || "\u2014"));
     const acts = el("div", "branch-side-acts");
-    const openB = el("button", "k-ok", "\u{1F4C4} \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01");
+    const openB = el("button", "k-ok", "\u{1F4C4} " + T2("openScene", "\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01"));
     openB.onclick = () => openSceneFromGraph(node, false);
-    const splitB = el("button", null, "\u229E \u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E01\u0E31\u0E1A\u0E1C\u0E31\u0E07");
-    splitB.title = "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: \u0E1C\u0E31\u0E07\u0E0B\u0E49\u0E32\u0E22 \u0E09\u0E32\u0E01\u0E02\u0E27\u0E32";
+    const splitB = el("button", null, "\u229E " + T2("openSplit", "\u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E01\u0E31\u0E1A\u0E1C\u0E31\u0E07"));
+    splitB.title = T2("openSplitHint", "\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 \u0E42\u0E14\u0E22\u0E22\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E1C\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07 \u0E46");
     splitB.onclick = () => openSceneFromGraph(node, true);
-    acts.append(openB, splitB);
+    const playB = el("button", null, "\u25B6\uFE0F " + T2("playFrom", "\u0E40\u0E25\u0E48\u0E19\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48"));
+    playB.title = T2("playFromHint", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19\u0E42\u0E14\u0E22\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49");
+    playB.onclick = async () => {
+      const { openPlayerMode: openPlayerMode2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
+      await openPlayerMode2(node.id);
+    };
+    acts.append(openB, splitB, playB);
     body.append(acts);
     const roleWrap = el("div", "branch-roles");
-    if (analysis.roots.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-root", "\u25B6 \u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21"));
-    if (analysis.endings.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-end", "\u{1F3C1} \u0E15\u0E2D\u0E19\u0E08\u0E1A"));
-    if (analysis.cycles.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-loop", "\u{1F501} \u0E27\u0E19\u0E0B\u0E49\u0E33"));
-    if (analysis.unreachable.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-lost", "\u{1F6AB} \u0E40\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07"));
+    if (analysis.roots.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-root", "\u25B6 " + T2("roleRoot", "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21")));
+    if (analysis.endings.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-end", "\u{1F3C1} " + T2("roleEnd", "\u0E15\u0E2D\u0E19\u0E08\u0E1A")));
+    if (analysis.cycles.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-loop", "\u{1F501} " + T2("roleLoopShort", "\u0E27\u0E19\u0E0B\u0E49\u0E33")));
+    if (analysis.unreachable.includes(node.id)) roleWrap.append(el("span", "branch-badge bw-lost", "\u{1F6AB} " + T2("roleLostShort", "\u0E40\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07")));
     if (roleWrap.childNodes.length) body.append(roleWrap);
+    const hi = highlightPath(graph, node.id);
+    if (hi.path.length > 1) {
+      body.append(el("div", "branch-side-sub", T2("pathFromStart", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")));
+      const line = el("div", "branch-path branch-path-hi");
+      line.textContent = hi.path.map((id) => (graph.byId.get(id) || {}).title || "?").join(" \u2192 ");
+      line.title = line.textContent;
+      body.append(line);
+    }
+    body.append(el("div", "branch-side-sub", "\u{1F3A8} " + T2("cardColor", "\u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E09\u0E32\u0E01")));
+    body.append(colorRow(node.color, async (c) => {
+      await setNodeColor(node, c);
+      setStatus(c ? T2("colorSet", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27") : T2("colorClear", "\u0E25\u0E49\u0E32\u0E07\u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27"));
+      redraw();
+    }));
     const docSec = el("div", "branch-doc");
-    docSec.append(el("div", "branch-side-sub", "\u{1F517} \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01"));
+    docSec.append(el("div", "branch-side-sub", "\u{1F517} " + T2("docChoices", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01")));
     const docBody = el("div", "branch-doc-body");
-    docBody.append(el("div", "dim", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u2026"));
+    docBody.append(el("div", "dim", T2("reading", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u2026")));
     docSec.append(docBody);
     body.append(docSec);
     readSceneBody(node).then((text) => {
@@ -75583,44 +75887,44 @@ ${preview}` + (found2.length > 8 ? `
       docBody.append(el(
         "div",
         "branch-doc-hint",
-        "\u0E1E\u0E34\u0E21\u0E1E\u0E4C [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E43\u0E19\u0E09\u0E32\u0E01\u0E15\u0E23\u0E07\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 \u0E40\u0E0A\u0E48\u0E19 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1C\u0E39\u0E01\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48"
+        T2("docHint", "\u0E1E\u0E34\u0E21\u0E1E\u0E4C [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E43\u0E19\u0E09\u0E32\u0E01\u0E15\u0E23\u0E07\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 \u0E40\u0E0A\u0E48\u0E19 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1C\u0E39\u0E01\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")
       ));
       if (linked.length) {
-        const okLine = el("div", "branch-doc-ok", `\u2713 \u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27 ${linked.length} \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01`);
+        const okLine = el("div", "branch-doc-ok", `\u2713 ${T2("docLinked", "\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27")} ${linked.length}`);
         okLine.title = linked.map((x) => "\u2022 " + x).join("\n");
         docBody.append(okLine);
       }
       if (missing.length) {
-        docBody.append(el("div", "branch-doc-lbl", `\u0E1E\u0E1A\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 (${missing.length})`));
+        docBody.append(el("div", "branch-doc-lbl", `${T2("docMissing", "\u0E1E\u0E1A\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")} (${missing.length})`));
         for (const txt of missing) {
           const row2 = el("div", "branch-doc-row");
           row2.append(el("span", "branch-doc-mark", "[" + txt + "]"));
-          const b = el("button", "branch-doc-add", "\uFF0B \u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01");
+          const b = el("button", "branch-doc-add", "\uFF0B " + T2("docLink", "\u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01"));
           b.onclick = async () => {
             await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
-            setStatus('\u0E1C\u0E39\u0E01 "' + txt + '" \u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27');
+            setStatus(`${T2("docLinked1", "\u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27")}: ${txt}`);
             redraw();
           };
           row2.append(b);
           docBody.append(row2);
         }
-        const all = el("button", "k-tpl-add", `\uFF0B \u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (${missing.length})`);
+        const all = el("button", "k-tpl-add", `\uFF0B ${T2("docLinkAll", "\u0E1C\u0E39\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")} (${missing.length})`);
         all.onclick = async () => {
-          await mutateChoices(node, (list) => [...list, ...missing.map((t3) => ({ text: t3, nextSceneId: "" }))]);
-          setStatus("\u0E1C\u0E39\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27");
+          await mutateChoices(node, (list) => [...list, ...missing.map((x) => ({ text: x, nextSceneId: "" }))]);
+          setStatus(T2("docLinkedAll", "\u0E1C\u0E39\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27"));
           redraw();
         };
         docBody.append(all);
       }
       if (orphan.length) {
-        docBody.append(el("div", "branch-doc-lbl", `\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E09\u0E32\u0E01 (${orphan.length})`));
+        docBody.append(el("div", "branch-doc-lbl", `${T2("docOrphan", "\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E09\u0E32\u0E01")} (${orphan.length})`));
         for (const txt of orphan) {
           const row2 = el("div", "branch-doc-row branch-doc-orphan");
           row2.append(el("span", "branch-doc-mark", txt));
-          const b = el("button", "branch-doc-add", "\u21A9 \u0E41\u0E17\u0E23\u0E01 [" + txt + "] \u0E25\u0E07\u0E09\u0E32\u0E01");
+          const b = el("button", "branch-doc-add", "\u21A9 " + T2("docInsert", "\u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E09\u0E32\u0E01"));
           b.onclick = async () => {
             if (await insertMarkerIntoScene(node, txt)) {
-              setStatus("\u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E17\u0E49\u0E32\u0E22\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27");
+              setStatus(T2("docInserted", "\u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E17\u0E49\u0E32\u0E22\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
               redraw();
             }
           };
@@ -75629,15 +75933,34 @@ ${preview}` + (found2.length > 8 ? `
         }
       }
       if (!missing.length && !orphan.length && !linked.length)
-        docBody.append(el("div", "dim", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07"));
+        docBody.append(el("div", "dim", T2("docNone", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07")));
     });
-    body.append(el("div", "branch-side-sub", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 (" + node.choices.length + ")"));
-    if (!node.choices.length) body.append(el("div", "dim", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2014 \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E2D\u0E19\u0E08\u0E1A\u0E2A\u0E32\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07"));
+    body.append(el("div", "branch-side-sub", T2("sumChoices", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01") + " (" + node.choices.length + ")"));
+    if (!node.choices.length) body.append(el("div", "dim", T2("noChoice", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2014 \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E2D\u0E19\u0E08\u0E1A\u0E2A\u0E32\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07")));
+    if (node.choices.length) {
+      body.append(el("div", "branch-drag-hint", T2("dragHint", "\u0E25\u0E32\u0E01\u0E41\u0E16\u0E1A \u283F \u0E44\u0E1B\u0E27\u0E32\u0E07\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E09\u0E32\u0E01\u0E2D\u0E37\u0E48\u0E19 = \u0E22\u0E49\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E19\u0E31\u0E49\u0E19")));
+    }
     node.choices.forEach((c, idx4) => {
       const row2 = el("div", "branch-edit-row");
-      const tIn = el("input", "k-dlg-input branch-edit-text");
+      const grip = el("span", "branch-grip", "\u283F");
+      grip.draggable = true;
+      grip.title = T2("dragChoice", "\u0E25\u0E32\u0E01\u0E44\u0E1B\u0E27\u0E32\u0E07\u0E1A\u0E19\u0E09\u0E32\u0E01\u0E2D\u0E37\u0E48\u0E19\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E22\u0E49\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49");
+      grip.addEventListener("dragstart", (ev) => {
+        dragChoice = { node, idx: idx4, choice: { ...c } };
+        row2.classList.add("dragging");
+        try {
+          ev.dataTransfer.setData("text/plain", c.text || "");
+          ev.dataTransfer.effectAllowed = "move";
+        } catch {
+        }
+      });
+      grip.addEventListener("dragend", () => {
+        row2.classList.remove("dragging");
+        dragChoice = null;
+      });
+      const tIn = el("input", "k-field-input branch-edit-text");
       tIn.value = c.text;
-      tIn.placeholder = "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01";
+      tIn.placeholder = T2("choiceText", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01");
       const commitText = async () => {
         const v2 = tIn.value.trim();
         if (v2 === c.text) return;
@@ -75645,15 +75968,15 @@ ${preview}` + (found2.length > 8 ? `
           if (list[idx4]) list[idx4] = { ...list[idx4], text: v2 };
           return list;
         });
-        setStatus("\u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27");
+        setStatus(T2("textEdited", "\u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27"));
         redraw();
       };
       tIn.onblur = commitText;
       tIn.onkeydown = (e) => {
         if (e.key === "Enter") tIn.blur();
       };
-      const tSel = el("select", "k-dlg-select branch-edit-to");
-      const none2 = el("option", null, "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 \u2014");
+      const tSel = el("select", "k-field-select branch-edit-to");
+      const none2 = el("option", null, T2("openEndDash", "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 \u2014"));
       none2.value = "";
       tSel.append(none2);
       for (const s of graph.nodes) {
@@ -75667,15 +75990,32 @@ ${preview}` + (found2.length > 8 ? `
           if (list[idx4]) list[idx4] = { ...list[idx4], nextSceneId: tSel.value };
           return list;
         });
-        setStatus("\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27");
+        setStatus(T2("targetChanged", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27"));
         redraw();
       };
+      const colB = el("button", "branch-edit-col", "\u{1F3A8}");
+      colB.title = T2("lineColor", "\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49");
+      if (c.color) colB.style.borderColor = c.color;
+      colB.onclick = () => {
+        const open = row2.parentNode.querySelector(".branch-colors-pop");
+        if (open) open.remove();
+        const pop = colorRow(c.color, async (col) => {
+          await mutateChoices(node, (list) => {
+            if (list[idx4]) list[idx4] = { ...list[idx4], color: col };
+            return list;
+          });
+          setStatus(col ? T2("lineColorSet", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27") : T2("lineColorClear", "\u0E25\u0E49\u0E32\u0E07\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27"));
+          redraw();
+        });
+        pop.classList.add("branch-colors-pop");
+        row2.after(pop);
+      };
       const goB = el("button", "branch-edit-go", "\u279C");
-      goB.title = "\u0E40\u0E14\u0E34\u0E19\u0E15\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08)";
+      goB.title = T2("walkChoice", "\u0E40\u0E14\u0E34\u0E19\u0E15\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08)");
       goB.onclick = async () => {
         const target = graph.byId.get(c.nextSceneId);
         if (!target) {
-          setStatus("\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07");
+          setStatus(T2("noTarget", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07"));
           return;
         }
         const { recordChoice: recordChoice2 } = await Promise.resolve().then(() => (init_player_choices(), player_choices_exports));
@@ -75685,29 +76025,44 @@ ${preview}` + (found2.length > 8 ? `
         redraw();
       };
       const delB = el("button", "branch-edit-del", "\u2715");
-      delB.title = "\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49";
+      delB.title = T2("delChoice", "\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E19\u0E35\u0E49");
       delB.onclick = async () => {
         await removeChoice(node, idx4);
         redraw();
       };
-      row2.append(tIn, tSel, goB, delB);
+      row2.append(grip, tIn, tSel, colB, goB, delB);
       body.append(row2);
     });
-    const addB = el("button", "k-tpl-add", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49");
-    addB.title = "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E21\u0E48 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E41\u0E17\u0E23\u0E01 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E25\u0E07\u0E17\u0E49\u0E32\u0E22\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E49\u0E14\u0E49\u0E27\u0E22";
+    const addB = el("button", "k-tpl-add", "+ " + T2("addToThis", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"));
+    addB.title = T2("addToThisHint", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E21\u0E48 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E41\u0E17\u0E23\u0E01 [\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21] \u0E25\u0E07\u0E17\u0E49\u0E32\u0E22\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E49\u0E14\u0E49\u0E27\u0E22");
     addB.onclick = async () => {
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const txt = (await ask2("\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01", { placeholder: "\u0E40\u0E0A\u0E48\u0E19 \u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14", okLabel: "\u0E40\u0E1E\u0E34\u0E48\u0E21" }) || "").trim();
+      const txt = (await ask2(
+        T2("choiceText", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01"),
+        { placeholder: T2("choiceEg", "\u0E40\u0E0A\u0E48\u0E19 \u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14"), okLabel: T2("add", "\u0E40\u0E1E\u0E34\u0E48\u0E21") }
+      ) || "").trim();
       if (!txt) return;
       await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
       await insertMarkerIntoScene(node, txt);
       redraw();
     };
     body.append(addB);
-    const paths = enumeratePaths(graph, node.id, 12);
-    if (paths.length) {
-      body.append(el("div", "branch-side-sub", `\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E08\u0E32\u0E01\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49 (${paths.length}${paths.length >= 12 ? "+" : ""})`));
-      for (const p of paths.slice(0, 8)) {
+    const info = enumeratePathsInfo(graph, node.id, PATH_LIMIT);
+    if (info.paths.length) {
+      const sub = el("div", "branch-side-sub branch-paths-head");
+      sub.append(el("span", null, `${T2("pathsFrom", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E08\u0E32\u0E01\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49")} (${info.paths.length}${info.truncated ? "+" : ""})`));
+      const allB = el("button", "branch-doc-add", T2("seeAll", "\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"));
+      allB.onclick = () => showAllPathsDialog(graph, node.id);
+      sub.append(allB);
+      body.append(sub);
+      if (info.truncated) {
+        body.append(el(
+          "div",
+          "branch-badge bw-open branch-trunc",
+          `\u26A0 ${T2("truncWarn", "\u0E41\u0E2A\u0E14\u0E07\u0E41\u0E04\u0E48")} ${PATH_LIMIT} ${T2("paths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07")} \u2014 ` + T2("truncWarnTail", '\u0E22\u0E31\u0E07\u0E21\u0E35\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32\u0E19\u0E35\u0E49 \u0E01\u0E14 "\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"')
+        ));
+      }
+      for (const p of info.paths.slice(0, 8)) {
         const line = el("div", "branch-path");
         line.textContent = p.map((id) => (graph.byId.get(id) || {}).title || "?").join(" \u2192 ");
         line.title = line.textContent;
@@ -75717,7 +76072,7 @@ ${preview}` + (found2.length > 8 ? `
     Promise.resolve().then(() => (init_player_choices(), player_choices_exports)).then(({ choicesByScene: choicesByScene2 }) => {
       const hist = choicesByScene2(node.id);
       if (!hist.length || !body.isConnected) return;
-      body.append(el("div", "branch-side-sub", `\u0E40\u0E04\u0E22\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49 (${hist.length})`));
+      body.append(el("div", "branch-side-sub", `${T2("pastChoices", "\u0E40\u0E04\u0E22\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49")} (${hist.length})`));
       for (const h of hist.slice(-5).reverse()) {
         body.append(el("div", "branch-path", "\u{1F3AF} " + (h.choice || "")));
       }
@@ -75725,7 +76080,7 @@ ${preview}` + (found2.length > 8 ? `
     });
     return side;
   }
-  var SVG_NS, svgEl, ZOOM_MIN2, ZOOM_MAX2, _choiceQueue, removeChoice;
+  var SVG_NS, svgEl, ZOOM_MIN2, ZOOM_MAX2, PATH_LIMIT, PATH_MAX, T2, summaryLabels, exportLabels, BS_DEFAULTS, POS_PREFIX, SKIP_DIRS8, shortText, _renderGen, _lastScrolledSel, dragChoice, projTitle, safeName3, SVG_STYLE, _choiceQueue, removeChoice;
   var init_branching_ui = __esm({
     "src/branching-ui.js"() {
       init_core();
@@ -75738,6 +76093,45 @@ ${preview}` + (found2.length > 8 ? `
       };
       ZOOM_MIN2 = 0.4;
       ZOOM_MAX2 = 1.8;
+      PATH_LIMIT = 12;
+      PATH_MAX = 400;
+      T2 = (key2, fb) => t("branch." + key2, fb);
+      summaryLabels = () => ({
+        scenes: T2("sumScenes", "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1C\u0E31\u0E07"),
+        choices: T2("sumChoices", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01"),
+        roots: T2("sumRoots", "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21"),
+        endings: T2("sumEndings", "\u0E15\u0E2D\u0E19\u0E08\u0E1A")
+      });
+      exportLabels = () => ({
+        ...summaryLabels(),
+        title: T2("title", "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22"),
+        open: T2("openEnd", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07"),
+        gone: T2("goneScene", "\u0E09\u0E32\u0E01\u0E2B\u0E32\u0E22"),
+        loop: T2("loopBack", "\u0E27\u0E19\u0E01\u0E25\u0E31\u0E1A"),
+        root: T2("roleRoot", "\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21"),
+        ending: T2("roleEnd", "\u0E15\u0E2D\u0E19\u0E08\u0E1A"),
+        empty: T2("emptyGraph", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")
+      });
+      BS_DEFAULTS = { sel: null, zoom: 1, view: "tree", sideOpen: true, query: "" };
+      POS_PREFIX = "k2-branch-pos";
+      SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"];
+      shortText = (s, n2) => s && s.length > n2 ? s.slice(0, n2 - 1) + "\u2026" : s || "";
+      _renderGen = 0;
+      _lastScrolledSel = null;
+      dragChoice = null;
+      projTitle = () => state.title || "branching";
+      safeName3 = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").slice(0, 60) || "branching";
+      SVG_STYLE = `
+.branch-edge{fill:none;stroke:#98958b;stroke-width:1.8;opacity:.75}
+.branch-edge-back{stroke-dasharray:5 4}
+.branch-edge-hot,.branch-edge-path{stroke:#d97757;stroke-width:2.6;opacity:1}
+.branch-edge-labelbg{fill:#fbfaf7;stroke:#d8d3c6;stroke-width:1}
+.branch-edge-label{fill:#57534a;font:12px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+.bx{fill:#fff;stroke:#d8d3c6;stroke-width:1}
+.bx-accent{stroke-width:4}
+.bt{fill:#2c2a26;font:600 13px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+.bm{fill:#8a857a;font:11px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+`;
       _choiceQueue = Promise.resolve();
       removeChoice = (node, idx4) => mutateChoices(node, (list) => {
         list.splice(idx4, 1);
@@ -76139,7 +76533,7 @@ ${preview}` + (found2.length > 8 ? `
     return keys4.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + keys4.indexOf(a)) - (rank.has(b) ? rank.get(b) : 1e6 + keys4.indexOf(b)));
   }
   function updateSceneStatus(scenes, sceneId, status, opts = {}) {
-    const next = clone3(scenes);
+    const next = clone2(scenes);
     const hit = findScene2(next, sceneId);
     if (!hit) return { scenes: next, changed: false, from: "", to: status };
     const from2 = hit.row.status || "";
@@ -76194,7 +76588,7 @@ ${preview}` + (found2.length > 8 ? `
     delete out.wip[key2];
     if (!out.hidden.includes(key2)) out.hidden.push(key2);
   }
-  function defaultStorage3() {
+  function defaultStorage2() {
     if (typeof localStorage !== "undefined") return localStorage;
     const mem = /* @__PURE__ */ new Map();
     return { getItem: (k) => mem.has(k) ? mem.get(k) : null, setItem: (k, v2) => mem.set(k, v2), removeItem: (k) => mem.delete(k) };
@@ -76215,22 +76609,22 @@ ${preview}` + (found2.length > 8 ? `
     if (d.version !== KANBAN_VERSION) return null;
     return { ...newLayout(), ...d };
   }
-  function clone3(o) {
+  function clone2(o) {
     return JSON.parse(JSON.stringify(o ?? { chapters: {} }));
   }
   function cloneLayout(l) {
-    return { ...newLayout(), ...clone3(l || {}) };
+    return { ...newLayout(), ...clone2(l || {}) };
   }
-  var KANBAN_VERSION, KEY3, UNSET, UNSET_LABEL, DEFAULT_STATUSES, KanbanStore, KanbanBoard;
+  var KANBAN_VERSION, KEY2, UNSET, UNSET_LABEL, DEFAULT_STATUSES, KanbanStore, KanbanBoard;
   var init_kanban_core = __esm({
     "src/kanban/kanban-core.js"() {
       KANBAN_VERSION = 1;
-      KEY3 = "k2-kanban-layout";
+      KEY2 = "k2-kanban-layout";
       UNSET = "__unset__";
       UNSET_LABEL = "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14";
       DEFAULT_STATUSES = ["\u0E42\u0E04\u0E23\u0E07\u0E23\u0E48\u0E32\u0E07", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E2A\u0E23\u0E47\u0E08", "\u0E15\u0E23\u0E27\u0E08\u0E41\u0E25\u0E49\u0E27", "\u0E40\u0E01\u0E47\u0E1A\u0E16\u0E32\u0E27\u0E23"];
       KanbanStore = class {
-        constructor(storage = defaultStorage3(), key2 = KEY3) {
+        constructor(storage = defaultStorage2(), key2 = KEY2) {
           this.storage = storage;
           this.key = key2;
           this.layout = newLayout();
@@ -76336,7 +76730,7 @@ ${preview}` + (found2.length > 8 ? `
   async function getBoard() {
     if (board) return board;
     if (!state.root) return null;
-    const SKIP_DIRS8 = [
+    const SKIP_DIRS9 = [
       "Wiki",
       "Bible",
       "Images",
@@ -76350,7 +76744,7 @@ ${preview}` + (found2.length > 8 ? `
       "languages",
       "Fonts"
     ];
-    const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS8.includes(s)).sort();
+    const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS9.includes(s)).sort();
     let draftPath = null;
     for (const s of secs) {
       const dr = await kapi.join(await kapi.join(state.root, s), "Draft");
@@ -76511,6 +76905,1021 @@ ${preview}` + (found2.length > 8 ? `
       init_panel_ui();
       board = null;
       uiPane = null;
+    }
+  });
+
+  // src/layout/split-layout.js
+  var split_layout_exports = {};
+  __export(split_layout_exports, {
+    SPLIT_VERSION: () => SPLIT_VERSION,
+    SplitManager: () => SplitManager,
+    SplitStore: () => SplitStore,
+    activateLeafTab: () => activateLeafTab,
+    addLeafTab: () => addLeafTab,
+    allTabIds: () => allTabIds,
+    closeTab: () => closeTab2,
+    deserializeSplit: () => deserializeSplit,
+    dropZone: () => dropZone,
+    findLeaf: () => findLeaf,
+    findLeafByTab: () => findLeafByTab,
+    leaf: () => leaf,
+    leafIds: () => leafIds,
+    leafTab: () => leafTab,
+    leafTabs: () => leafTabs,
+    moveTabToPane: () => moveTabToPane,
+    normalizeLeaves: () => normalizeLeaves,
+    paneCount: () => paneCount,
+    pruneTabs: () => pruneTabs,
+    removeLeaf: () => removeLeaf,
+    removeLeafTab: () => removeLeafTab,
+    resizeSplit: () => resizeSplit,
+    serializeSplit: () => serializeSplit,
+    setLeafTab: () => setLeafTab,
+    split: () => split2,
+    splitDepth: () => splitDepth,
+    splitPane: () => splitPane,
+    tabIds: () => tabIds,
+    walk: () => walk2
+  });
+  function leaf(tabId, id = nid2("l")) {
+    return syncLeaf({ type: "leaf", id, tabs: tabId == null ? [] : [tabId], active: 0 });
+  }
+  function split2(dir, children, sizes, id = nid2("sp")) {
+    return { type: "split", id, dir, children, sizes: sizes || even(children.length) };
+  }
+  function syncLeaf(l) {
+    if (!Array.isArray(l.tabs)) l.tabs = l.tabId == null ? [] : [l.tabId];
+    l.tabs = l.tabs.filter((x) => x != null);
+    if (!Number.isInteger(l.active)) l.active = 0;
+    l.active = l.tabs.length ? Math.max(0, Math.min(l.active, l.tabs.length - 1)) : 0;
+    l.tabId = l.tabs.length ? l.tabs[l.active] : null;
+    return l;
+  }
+  function leafTab(l) {
+    return l && l.tabs && l.tabs.length ? l.tabs[l.active] ?? null : null;
+  }
+  function normalizeLeaves(root) {
+    if (root) walk2(root, (n2) => {
+      if (n2.type === "leaf") syncLeaf(n2);
+    });
+    return root;
+  }
+  function walk2(node, fn, parent = null) {
+    fn(node, parent);
+    if (node.children) for (const c of node.children) walk2(c, fn, node);
+  }
+  function leafIds(root) {
+    const o = [];
+    walk2(root, (n2) => {
+      if (n2.type === "leaf") o.push(n2.id);
+    });
+    return o;
+  }
+  function tabIds(root) {
+    const o = [];
+    walk2(root, (n2) => {
+      if (n2.type === "leaf") o.push(leafTab(n2));
+    });
+    return o;
+  }
+  function allTabIds(root) {
+    const o = [];
+    walk2(root, (n2) => {
+      if (n2.type === "leaf") o.push(...n2.tabs || []);
+    });
+    return o;
+  }
+  function locate2(root, id) {
+    let res = null;
+    walk2(root, (n2) => {
+      if (n2.children) {
+        const i5 = n2.children.findIndex((c) => c.id === id);
+        if (i5 >= 0) res = { parent: n2, index: i5 };
+      }
+    });
+    return res;
+  }
+  function findLeaf(root, leafId) {
+    let f = null;
+    walk2(root, (n2) => {
+      if (n2.type === "leaf" && n2.id === leafId) f = n2;
+    });
+    return f;
+  }
+  function findLeafByTab(root, tabId) {
+    let f = null;
+    walk2(root, (n2) => {
+      if (!f && n2.type === "leaf" && (n2.tabs || []).includes(tabId)) f = n2;
+    });
+    return f;
+  }
+  function paneCount(root) {
+    return root ? leafIds(root).length : 0;
+  }
+  function splitDepth(node, d = 0) {
+    if (!node || !node.children) return d;
+    return Math.max(...node.children.map((c) => splitDepth(c, d + 1)));
+  }
+  function dropZone(px2, py2, rect, edge = 0.25) {
+    const { x, y, w, h } = rect;
+    if (px2 < x || px2 > x + w || py2 < y || py2 > y + h) return null;
+    const rx = (px2 - x) / w, ry = (py2 - y) / h;
+    const dl = rx, dr = 1 - rx, dt = ry, db = 1 - ry;
+    const min = Math.min(dl, dr, dt, db);
+    if (min > edge) return "center";
+    if (min === dl) return "left";
+    if (min === dr) return "right";
+    if (min === dt) return "top";
+    return "bottom";
+  }
+  function splitPane(root, targetLeafId, side, newTabId) {
+    root = clone3(root);
+    const wantRow = side === "left" || side === "right";
+    const before = side === "left" || side === "top";
+    const nl = leaf(newTabId);
+    const loc = locate2(root, targetLeafId);
+    const mk = (existing) => split2(wantRow ? "row" : "col", before ? [nl, existing] : [existing, nl]);
+    if (!loc) return mk(root);
+    const parent = loc.parent;
+    if (parent.type === "split" && parent.dir === (wantRow ? "row" : "col")) {
+      const at = before ? loc.index : loc.index + 1;
+      parent.children.splice(at, 0, nl);
+      parent.sizes = even(parent.children.length);
+    } else {
+      parent.children[loc.index] = mk(parent.children[loc.index]);
+    }
+    return root;
+  }
+  function setLeafTab(root, leafId, tabId) {
+    return addLeafTab(root, leafId, tabId, true);
+  }
+  function addLeafTab(root, leafId, tabId, activate2 = true) {
+    root = clone3(root);
+    const l = findLeaf(root, leafId);
+    if (!l || tabId == null) return root;
+    let i5 = l.tabs.indexOf(tabId);
+    if (i5 < 0) {
+      l.tabs.push(tabId);
+      i5 = l.tabs.length - 1;
+    }
+    if (activate2) l.active = i5;
+    return syncLeaf(l), root;
+  }
+  function activateLeafTab(root, leafId, tabId) {
+    root = clone3(root);
+    const l = findLeaf(root, leafId);
+    if (!l) return root;
+    const i5 = l.tabs.indexOf(tabId);
+    if (i5 >= 0) l.active = i5;
+    return syncLeaf(l), root;
+  }
+  function removeLeafTab(root, leafId, tabId) {
+    root = clone3(root);
+    const l = findLeaf(root, leafId);
+    if (!l) return root;
+    const i5 = l.tabs.indexOf(tabId);
+    if (i5 < 0) return root;
+    l.tabs.splice(i5, 1);
+    if (l.active >= i5) l.active = Math.max(0, l.active - 1);
+    syncLeaf(l);
+    if (!l.tabs.length && leafIds(root).length > 1) return removeLeaf(root, l.id);
+    return root;
+  }
+  function leafTabs(root, leafId) {
+    const l = root && findLeaf(root, leafId);
+    return l ? [...l.tabs] : [];
+  }
+  function moveTabToPane(root, tabId, targetLeafId, side = "right") {
+    const src2 = findLeafByTab(root, tabId);
+    if (src2 && src2.id === targetLeafId && side !== "center") return clone3(root);
+    let out = clone3(root);
+    if (src2) {
+      out = removeLeafTab(out, src2.id, tabId);
+      if (!out) return leaf(tabId);
+      if (!findLeaf(out, targetLeafId)) return out;
+    }
+    return side === "center" ? setLeafTab(out, targetLeafId, tabId) : splitPane(out, targetLeafId, side, tabId);
+  }
+  function resizeSplit(root, splitId, index, ratio, snapTol = 0.03) {
+    root = clone3(root);
+    let sp = null;
+    walk2(root, (n2) => {
+      if (n2.id === splitId && n2.type === "split") sp = n2;
+    });
+    if (!sp || index < 0 || index >= sp.sizes.length - 1) return root;
+    const pair = sp.sizes[index] + sp.sizes[index + 1];
+    let r = Math.max(0.05, Math.min(0.95, ratio));
+    if (Math.abs(r - 0.5) <= snapTol) r = 0.5;
+    sp.sizes[index] = +(pair * r).toFixed(4);
+    sp.sizes[index + 1] = +(pair * (1 - r)).toFixed(4);
+    return root;
+  }
+  function removeLeaf(root, leafId) {
+    if (!root) return null;
+    if (root.type === "leaf") return root.id === leafId ? null : clone3(root);
+    root = clone3(root);
+    const prune = (n2) => {
+      if (!n2.children) return n2;
+      n2.children = n2.children.filter((c) => !(c.type === "leaf" && c.id === leafId)).map(prune).filter((c) => !(c.children && c.children.length === 0));
+      if (n2.type === "split") n2.sizes = even(n2.children.length);
+      return n2;
+    };
+    return collapse2(prune(root));
+  }
+  function closeTab2(root, tabId) {
+    if (!root) return null;
+    const out = clone3(root);
+    const emptied = [];
+    walk2(out, (n2) => {
+      if (n2.type !== "leaf") return;
+      const i5 = n2.tabs.indexOf(tabId);
+      if (i5 < 0) return;
+      n2.tabs.splice(i5, 1);
+      if (n2.active >= i5) n2.active = Math.max(0, n2.active - 1);
+      syncLeaf(n2);
+      if (!n2.tabs.length) emptied.push(n2.id);
+    });
+    return dropEmpty(out, emptied);
+  }
+  function pruneTabs(root, validTabIds) {
+    if (!root) return null;
+    const ok2 = new Set(validTabIds);
+    const out = clone3(root);
+    const emptied = [];
+    walk2(out, (n2) => {
+      if (n2.type !== "leaf" || !n2.tabs.length) return;
+      const keep = n2.tabs.filter((tid) => ok2.has(tid));
+      if (keep.length === n2.tabs.length) return;
+      const wasActive = leafTab(n2);
+      n2.tabs = keep;
+      n2.active = Math.max(0, keep.indexOf(wasActive));
+      syncLeaf(n2);
+      if (!n2.tabs.length) emptied.push(n2.id);
+    });
+    return dropEmpty(out, emptied, ok2.has(null));
+  }
+  function dropEmpty(out, emptied, allowEmpty = false) {
+    let r = out;
+    for (const id of emptied) {
+      if (leafIds(r).length <= 1) break;
+      r = removeLeaf(r, id);
+      if (!r) return null;
+    }
+    if (r.type === "leaf" && !r.tabs.length && !allowEmpty) return null;
+    return r;
+  }
+  function leavesOf(root) {
+    const o = [];
+    walk2(root, (n2) => {
+      if (n2.type === "leaf") o.push(n2);
+    });
+    return o;
+  }
+  function collapse2(n2) {
+    if (!n2.children) return n2;
+    n2.children = n2.children.map(collapse2);
+    if (n2.type === "split" && n2.children.length === 1) return n2.children[0];
+    return n2;
+  }
+  function defaultStorage3() {
+    if (typeof localStorage !== "undefined") return localStorage;
+    const mem = /* @__PURE__ */ new Map();
+    return { getItem: (k) => mem.has(k) ? mem.get(k) : null, setItem: (k, v2) => mem.set(k, v2), removeItem: (k) => mem.delete(k) };
+  }
+  function serializeSplit(root) {
+    return JSON.stringify({ version: SPLIT_VERSION, root: root ?? null });
+  }
+  function deserializeSplit(str2) {
+    if (!str2) return null;
+    let d;
+    try {
+      d = JSON.parse(str2);
+    } catch {
+      return null;
+    }
+    d = migrate2(d);
+    if (!d || d.version !== SPLIT_VERSION) return null;
+    return normalizeLeaves(d.root ?? null);
+  }
+  function migrate2(d) {
+    if (!d || typeof d !== "object") return null;
+    if (d.version == null) d = { version: 1, root: d.root ?? d };
+    return d;
+  }
+  function clone3(o) {
+    return JSON.parse(JSON.stringify(o));
+  }
+  var _uid2, nid2, even, SPLIT_VERSION, KEY3, SplitStore, SplitManager;
+  var init_split_layout = __esm({
+    "src/layout/split-layout.js"() {
+      _uid2 = 0;
+      nid2 = (p = "s") => `${p}${Date.now().toString(36)}${(_uid2++).toString(36)}`;
+      even = (n2) => Array.from({ length: n2 }, () => +(1 / n2).toFixed(4));
+      SPLIT_VERSION = 1;
+      KEY3 = "k2-split-layout";
+      SplitStore = class {
+        constructor(storage = defaultStorage3(), key2 = KEY3) {
+          this.storage = storage;
+          this.key = key2;
+          this.root = null;
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        load() {
+          const r = deserializeSplit(this.storage.getItem(this.key));
+          if (r) this.root = r;
+          return !!r;
+        }
+        save() {
+          this.storage.setItem(this.key, serializeSplit(this.root));
+        }
+        reset() {
+          this.root = null;
+          this.storage.removeItem(this.key);
+          this._emit();
+        }
+        update(next) {
+          this.root = next;
+          this.save();
+          this._emit();
+        }
+        onChange(fn) {
+          this.listeners.add(fn);
+          return () => this.listeners.delete(fn);
+        }
+        _emit() {
+          for (const fn of this.listeners) fn(this.root);
+        }
+      };
+      SplitManager = class {
+        constructor({ storage, key: key2, store } = {}) {
+          this.store = store || new SplitStore(storage, key2);
+          this.focusId = null;
+        }
+        get root() {
+          return this.store.root;
+        }
+        tabs() {
+          return this.root ? tabIds(this.root) : [];
+        }
+        paneCount() {
+          return paneCount(this.root);
+        }
+        has(tabId) {
+          return !!(this.root && findLeafByTab(this.root, tabId));
+        }
+        /** Open a tab in the focused pane (creates the first pane when empty). */
+        open(tabId) {
+          if (!this.root) {
+            this._set(leaf(tabId));
+            this.focusId = this.root.id;
+            return true;
+          }
+          const cur = findLeafByTab(this.root, tabId);
+          if (cur) {
+            this.focusId = cur.id;
+            return true;
+          }
+          const target = this._focusLeaf();
+          this._set(setLeafTab(this.root, target.id, tabId));
+          this.focusId = target.id;
+          return true;
+        }
+        /** Drag a tab to a pane edge → split (targetLeafId omitted = focused pane). */
+        splitWith(tabId, side = "right", targetLeafId) {
+          if (!this.root) return this.open(tabId);
+          const target = targetLeafId && findLeaf(this.root, targetLeafId) || this._focusLeaf();
+          this._set(this.has(tabId) ? moveTabToPane(this.root, tabId, target.id, side) : splitPane(this.root, target.id, side, tabId));
+          const nl = findLeafByTab(this.root, tabId);
+          if (nl) this.focusId = nl.id;
+          return true;
+        }
+        /** Move an already-open tab into another pane (side='center' replaces it). */
+        moveTab(tabId, targetLeafId, side = "right") {
+          if (!this.root) return false;
+          this._set(moveTabToPane(this.root, tabId, targetLeafId, side));
+          const nl = this.root && findLeafByTab(this.root, tabId);
+          this.focusId = nl ? nl.id : null;
+          return true;
+        }
+        close(tabId) {
+          this._set(closeTab2(this.root, tabId));
+          return true;
+        }
+        closePane(leafId) {
+          this._set(removeLeaf(this.root, leafId));
+          return true;
+        }
+        focus(leafId) {
+          if (!this.root || !findLeaf(this.root, leafId)) return false;
+          this.focusId = leafId;
+          return true;
+        }
+        // ───── บั๊ก #12: กลุ่มแท็บต่อช่อง — ห่อฟังก์ชันโมดูลไว้ให้ UI เรียกผ่าน manager ─────
+        /** id ของช่องที่โฟกัสอยู่ (null ถ้ายังไม่แยกจอ) */
+        focusLeafId() {
+          const l = this._focusLeaf();
+          return l ? l.id : null;
+        }
+        /** เพิ่มแท็บเข้าช่อง — ไม่ระบุช่อง = ช่องที่โฟกัสอยู่ */
+        addTab(tabId, leafId) {
+          const id = leafId || this.focusLeafId();
+          if (!id || !this.root) return false;
+          this._set(addLeafTab(this.root, id, tabId));
+          return true;
+        }
+        /** สลับแท็บที่แสดงในช่องนั้น โดยไม่ไปยุ่งกับช่องอื่น */
+        activateInLeaf(leafId, tabId) {
+          if (!this.root || !findLeaf(this.root, leafId)) return false;
+          this._set(activateLeafTab(this.root, leafId, tabId));
+          this.focusId = leafId;
+          return true;
+        }
+        /** เอาแท็บออกจากช่องนี้ (สำเนาในช่องอื่นยังอยู่) */
+        closeInLeaf(leafId, tabId) {
+          if (!this.root || !findLeaf(this.root, leafId)) return false;
+          this._set(removeLeafTab(this.root, leafId, tabId));
+          return true;
+        }
+        activeTabId() {
+          const l = this._focusLeaf();
+          return l ? l.tabId : null;
+        }
+        resize(splitId, index, ratio, snapTol) {
+          if (!this.root) return false;
+          this._set(resizeSplit(this.root, splitId, index, ratio, snapTol));
+          return true;
+        }
+        /** Drop panes whose tab no longer exists — pass a PanelManager or a list of ids. */
+        syncWithPanels(src2) {
+          const ids = src2 && typeof src2.openIds === "function" ? src2.openIds() : src2 || [];
+          this._set(pruneTabs(this.root, ids));
+          return true;
+        }
+        load() {
+          const ok2 = this.store.load();
+          this._fixFocus();
+          return ok2;
+        }
+        save() {
+          this.store.save();
+        }
+        reset() {
+          this.store.reset();
+          this.focusId = null;
+        }
+        onChange(fn) {
+          return this.store.onChange(fn);
+        }
+        _set(next) {
+          this.store.update(next || null);
+          this._fixFocus();
+        }
+        _focusLeaf() {
+          if (!this.root) return null;
+          return this.focusId && findLeaf(this.root, this.focusId) || leavesOf(this.root)[0] || null;
+        }
+        _fixFocus() {
+          const l = this._focusLeaf();
+          this.focusId = l ? l.id : null;
+        }
+      };
+    }
+  });
+
+  // src/layout/split-ui.js
+  function setSplitHooks(h) {
+    hooks = { ...hooks, ...h || {} };
+  }
+  function getSplitManager() {
+    if (!mgr) {
+      mgr = new SplitManager();
+      mgr.onChange(() => renderSplit());
+    }
+    return mgr;
+  }
+  function isSplit() {
+    return getSplitManager().paneCount() >= 2;
+  }
+  function paneCount2() {
+    return getSplitManager().paneCount();
+  }
+  function splitDir() {
+    const r = getSplitManager().root;
+    return r && r.type === "split" && r.dir === "col" ? "down" : "right";
+  }
+  function splitTabIds() {
+    const r = getSplitManager().root;
+    return r ? tabIds(r).filter(Boolean) : [];
+  }
+  function panesEl() {
+    return $("#panes");
+  }
+  function rootEl() {
+    return document.getElementById(ROOT_ID);
+  }
+  function reclaimPanes(panes) {
+    if (!panes) return;
+    panes.querySelectorAll(".k-split-body > .pane, .k-split-pane > .pane").forEach((p) => panes.appendChild(p));
+  }
+  function tabOf(id) {
+    const t3 = id && state.tabs.get(id);
+    return t3 && !t3.floatWin && t3.pane ? t3 : null;
+  }
+  function syncCompareFile() {
+    const ids = splitTabIds();
+    state.compareFile = ids.length === 2 ? ids.find((f) => f !== state.active?.file) ?? null : null;
+  }
+  function renderSplit() {
+    const panes = panesEl();
+    if (!panes) return;
+    const sm = getSplitManager();
+    if (isSplit() && !_ensuring) {
+      _ensuring = true;
+      try {
+        if (ensureAllTabsInSplit()) return;
+      } finally {
+        _ensuring = false;
+      }
+    }
+    reclaimPanes(panes);
+    document.querySelectorAll(".pane").forEach((p) => p.classList.remove("compare-on", "k-in-split"));
+    if (!isSplit()) {
+      rootEl()?.remove();
+      panes.classList.remove("split", "split-h");
+      document.body.classList.remove("k-split-on");
+      document.querySelectorAll(".cmp-close").forEach((b) => b.remove());
+      syncCompareFile();
+      hooks.onRender?.();
+      return;
+    }
+    let host2 = rootEl();
+    if (!host2) {
+      host2 = el("div", "k-split-root");
+      host2.id = ROOT_ID;
+      panes.appendChild(host2);
+    }
+    host2.replaceChildren();
+    const tree = renderSplitNode(sm.root, sm);
+    if (tree) host2.appendChild(tree);
+    panes.classList.add("split");
+    panes.classList.toggle("split-h", splitDir() === "down");
+    document.body.classList.add("k-split-on");
+    syncCompareFile();
+    markCompare();
+    hooks.onRender?.();
+  }
+  function syncSplitPanes() {
+    const sm = getSplitManager();
+    if (!sm.root) return;
+    const valid = [...state.tabs.keys()];
+    const stale2 = tabIds(sm.root).some((id) => id && !valid.includes(id));
+    if (stale2) sm.syncWithPanels([...valid, null]);
+    else renderSplit();
+  }
+  function markCompare() {
+    for (const id of splitTabIds()) {
+      const t3 = tabOf(id);
+      if (!t3) continue;
+      t3.pane.classList.add("k-in-split");
+      t3.pane.classList.toggle("compare-on", id !== state.active?.file);
+    }
+  }
+  function renderSplitNode(node, sm) {
+    if (!node) return null;
+    if (node.type === "leaf") return renderLeaf(node, sm);
+    if (node.type !== "split") return null;
+    const box = el("div", "k-split-container");
+    box.dataset.splitId = node.id;
+    box.dataset.dir = node.dir === "col" ? "col" : "row";
+    const kids = node.children || [];
+    for (let i5 = 0; i5 < kids.length; i5++) {
+      const childEl = renderSplitNode(kids[i5], sm);
+      if (!childEl) continue;
+      childEl.style.flexGrow = String(node.sizes?.[i5] ?? 1);
+      childEl.style.flexShrink = "1";
+      childEl.style.flexBasis = "0%";
+      box.appendChild(childEl);
+      if (i5 < kids.length - 1) box.appendChild(splitHandle(node, i5, sm));
+    }
+    return box;
+  }
+  function renderLeaf(node, sm) {
+    const pane = el("div", "k-split-pane" + (sm.focusId === node.id ? " focus" : ""));
+    pane.dataset.leafId = node.id;
+    pane.dataset.tabId = node.tabId || "";
+    pane.addEventListener("mousedown", () => focusPane(node.id), true);
+    pane.appendChild(renderLeafTabs(node, sm));
+    const body = el("div", "k-split-body");
+    const t3 = tabOf(node.tabId);
+    if (t3) body.appendChild(t3.pane);
+    else {
+      const hint = el("div", "k-split-empty");
+      hint.append(el("div", "k-split-empty-icon", "\u2317"));
+      hint.append(el("div", "", t("split.emptyPane", "\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")));
+      hint.append(el("div", "dim", t("split.emptyPaneHint", "\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19")));
+      body.appendChild(hint);
+    }
+    pane.appendChild(body);
+    const cb = el("div", "cmp-close", t("split.closePane", "\u2715 \u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49"));
+    cb.title = t("split.closePaneHint", "\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
+    cb.onmousedown = (e) => e.stopPropagation();
+    cb.onclick = (e) => {
+      e.stopPropagation();
+      closePane(node.id);
+    };
+    pane.appendChild(cb);
+    return pane;
+  }
+  function renderLeafTabs(node, sm) {
+    const bar = el("div", "k-split-tabs");
+    bar.dataset.leafId = node.id;
+    const cur = leafTab(node);
+    for (const id of node.tabs || []) {
+      const t3 = state.tabs.get(id);
+      const btn = el("div", "k-mtab" + (id === cur ? " on" : "") + (t3 && t3.dirty ? " dirty" : ""));
+      btn.dataset.file = id;
+      btn.title = id;
+      btn.append(el("span", "k-mtab-title", t3 && t3.title || id.split(/[\\/]/).pop()));
+      const x = el("span", "k-mtab-x", "\xD7");
+      x.title = t("split.removeFromPane", "\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
+      x.onmousedown = (e) => e.stopPropagation();
+      x.onclick = (e) => {
+        e.stopPropagation();
+        sm.closeInLeaf(node.id, id);
+        if (!sm.has(id)) {
+          hooks.closeTab?.(id);
+          return;
+        }
+        const tid = sm.activeTabId();
+        if (tid && tid !== state.active?.file && state.tabs.has(tid)) hooks.activate?.(tid);
+      };
+      btn.append(x);
+      btn.onclick = (e) => {
+        if (e.target === x) return;
+        selectTabInPane(node.id, id);
+      };
+      bar.append(btn);
+    }
+    if (!(node.tabs || []).length) bar.append(el("span", "k-split-tabs-empty", "\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07"));
+    makeTabSplitDraggable(bar);
+    return bar;
+  }
+  function selectTabInPane(leafId, tabId) {
+    const sm = getSplitManager();
+    if (!sm.root) return false;
+    if (!sm.activateInLeaf(leafId, tabId)) return false;
+    if (state.tabs.has(tabId) && tabId !== state.active?.file && hooks.activate && !_syncing) {
+      _syncing = true;
+      try {
+        hooks.activate(tabId);
+      } finally {
+        _syncing = false;
+      }
+    }
+    markCompare();
+    return true;
+  }
+  function splitHandle(node, index, sm) {
+    const row2 = node.dir !== "col";
+    const h = el("div", "k-split-handle " + (row2 ? "k-sh-col" : "k-sh-row"));
+    h.dataset.splitId = node.id;
+    h.dataset.index = String(index);
+    h.title = t("split.dragResize", "\u0E25\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 (\u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = 50%)");
+    h.addEventListener("dblclick", () => sm.resize(node.id, index, 0.5));
+    h.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const prev = h.previousElementSibling, next = h.nextElementSibling;
+      if (!prev || !next) return;
+      const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
+      const total = row2 ? pr.width + nr.width : pr.height + nr.height;
+      if (total <= 0) return;
+      const start = row2 ? e.clientX : e.clientY;
+      const base3 = row2 ? pr.width : pr.height;
+      const sum2 = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
+      let ratio = base3 / total;
+      h.classList.add("k-dragging");
+      document.body.classList.add("k-resizing");
+      const move = (ev) => {
+        const d = (row2 ? ev.clientX : ev.clientY) - start;
+        ratio = Math.max(0.05, Math.min(0.95, (base3 + d) / total));
+        prev.style.flexGrow = String(sum2 * ratio);
+        next.style.flexGrow = String(sum2 * (1 - ratio));
+      };
+      const up = () => {
+        h.classList.remove("k-dragging");
+        document.body.classList.remove("k-resizing");
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        sm.resize(node.id, index, ratio);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    });
+    return h;
+  }
+  function focusPane(leafId) {
+    const sm = getSplitManager();
+    if (!sm.root) return false;
+    if (sm.focusId === leafId) return true;
+    if (!sm.focus(leafId)) return false;
+    for (const p of document.querySelectorAll(".k-split-pane")) p.classList.toggle("focus", p.dataset.leafId === leafId);
+    const tid = sm.activeTabId();
+    if (tid && tid !== state.active?.file && state.tabs.has(tid) && hooks.activate && !_syncing) {
+      _syncing = true;
+      try {
+        hooks.activate(tid);
+      } finally {
+        _syncing = false;
+      }
+    }
+    return true;
+  }
+  function syncActiveSplit(file) {
+    const sm = getSplitManager();
+    if (!isSplit() || !file || _syncing) {
+      if (isSplit()) syncCompareFile();
+      return;
+    }
+    const l = findLeafByTab(sm.root, file);
+    if (l) {
+      if (leafTab(l) !== file) {
+        _syncing = true;
+        try {
+          sm.activateInLeaf(l.id, file);
+        } finally {
+          _syncing = false;
+        }
+        return;
+      }
+      if (sm.focusId !== l.id) {
+        sm.focusId = l.id;
+        for (const p of document.querySelectorAll(".k-split-pane")) p.classList.toggle("focus", p.dataset.leafId === l.id);
+      }
+      syncCompareFile();
+      markCompare();
+      return;
+    }
+    _syncing = true;
+    try {
+      sm.addTab(file);
+    } finally {
+      _syncing = false;
+    }
+  }
+  function ensureAllTabsInSplit() {
+    const sm = getSplitManager();
+    if (!sm.root) return false;
+    const have = new Set(allTabIds(sm.root));
+    const missing = [...state.tabs.keys()].filter((id) => !have.has(id) && tabOf(id));
+    if (!missing.length) return false;
+    const target = sm.focusLeafId() || leafIds(sm.root)[0];
+    if (!target) return false;
+    let next = sm.root;
+    for (const id of missing) next = addLeafTab(next, target, id, false);
+    sm.store.update(next);
+    return true;
+  }
+  function createSplit(tabId, dir) {
+    const panes = panesEl();
+    if (!panes) return null;
+    const sm = getSplitManager();
+    const cur = tabId || state.active?.file || [...state.tabs.keys()].find((f) => tabOf(f)) || null;
+    const d = dir === "down" ? "down" : "right";
+    const side = d === "down" ? "bottom" : "right";
+    if (!sm.root) sm.open(cur);
+    else if (cur && !sm.has(cur)) sm.open(cur);
+    const other = [...state.tabs.keys()].find((f) => f !== cur && tabOf(f) && !sm.has(f)) || null;
+    sm.splitWith(other, side);
+    setStatus(other ? t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (d === "down" ? "\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07" : "\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32") : t("split.openedEmpty", "\u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 \u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A"));
+    return { dir: d, right: other };
+  }
+  function closeSplit() {
+    const sm = getSplitManager();
+    const keep = sm.activeTabId() || state.active?.file || null;
+    if (!sm.root) {
+      renderSplit();
+      return;
+    }
+    sm.store.update(keep ? leaf(keep) : null);
+    sm.focusId = sm.root ? sm.root.id : null;
+    if (keep && keep !== state.active?.file && state.tabs.has(keep)) hooks.activate?.(keep);
+    setStatus(t("split.closed", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27"));
+  }
+  function closePane(leafId) {
+    const sm = getSplitManager();
+    if (!sm.root) return false;
+    sm.closePane(leafId);
+    const tid = sm.activeTabId();
+    if (tid && tid !== state.active?.file && state.tabs.has(tid)) hooks.activate?.(tid);
+    return true;
+  }
+  function toggleSplit(tabId, dir) {
+    const sm = getSplitManager();
+    if (isSplit()) {
+      if (dir && dir !== splitDir()) {
+        const next = JSON.parse(JSON.stringify(sm.root));
+        if (next.type === "split") next.dir = dir === "down" ? "col" : "row";
+        sm.store.update(next);
+        setStatus(t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (dir === "down" ? "\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07" : "\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32"));
+        return true;
+      }
+      closeSplit();
+      return false;
+    }
+    return !!createSplit(tabId, dir);
+  }
+  function openInSplit(tabId, side = "right") {
+    const sm = getSplitManager();
+    const cur = state.active?.file;
+    if (!isSplit()) {
+      if (cur && cur !== tabId && tabOf(cur)) {
+        sm.store.update(leaf(cur));
+        sm.focusId = sm.root.id;
+      } else if (!sm.root) sm.open(tabId);
+    }
+    if (!sm.root) {
+      sm.open(tabId);
+      renderSplit();
+      return false;
+    }
+    if (sm.has(tabId)) {
+      const l = findLeafByTab(sm.root, tabId);
+      const curLeaf = cur ? findLeafByTab(sm.root, cur) : null;
+      if (l && curLeaf && l.id === curLeaf.id) sm.splitWith(tabId, side === "down" ? "bottom" : side, l.id);
+      else if (l) {
+        sm.activateInLeaf(l.id, tabId);
+        focusPane(l.id);
+      }
+      return true;
+    }
+    const empty2 = emptyLeafId();
+    if (empty2) sm.moveTab(tabId, empty2, "center");
+    else sm.splitWith(tabId, side === "down" ? "bottom" : side);
+    syncCompareFile();
+    markCompare();
+    return true;
+  }
+  function emptyLeafId() {
+    const r = getSplitManager().root;
+    if (!r) return null;
+    let id = null;
+    walk2(r, (n2) => {
+      if (id === null && n2.type === "leaf" && !tabOf(n2.tabId)) id = n2.id;
+    });
+    return id;
+  }
+  function closeTabInSplit(tabId) {
+    const sm = getSplitManager();
+    if (!sm.root || !sm.has(tabId)) return;
+    sm.close(tabId);
+  }
+  function makeTabSplitDraggable(strip) {
+    if (!strip || strip._splitDrag) return;
+    strip._splitDrag = true;
+    strip.addEventListener("mousedown", (e) => {
+      const btn = e.target.closest(".tab, .k-mtab");
+      if (!btn || e.button !== 0 || e.target.classList.contains("tab-x") || e.target.classList.contains("k-mtab-x")) return;
+      const file = fileOfTabBtn(btn);
+      if (!file) return;
+      const fromLeaf = btn.parentElement?.dataset?.leafId || null;
+      const sx2 = e.clientX, sy2 = e.clientY;
+      let moved = false, ghost = null, hit = null;
+      const ov = dropOverlay();
+      const move = (ev) => {
+        if (!moved) {
+          if (Math.abs(ev.clientX - sx2) + Math.abs(ev.clientY - sy2) < 8) return;
+          moved = true;
+          document.body.classList.add("k-panel-dragging");
+          ghost = el("div", "k-drag-ghost", btn.textContent.replace(/×$/, "").trim());
+          document.body.appendChild(ghost);
+        }
+        ghost.style.left = ev.clientX + 12 + "px";
+        ghost.style.top = ev.clientY + 14 + "px";
+        hit = hitPane(ev.clientX, ev.clientY);
+        if (hit) {
+          ov.show(zoneRect2(hit.rect, hit.zone), hit.zone);
+        } else ov.hide();
+      };
+      const up = (ev) => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        ov.hide();
+        ghost?.remove();
+        document.body.classList.remove("k-panel-dragging");
+        if (!moved) return;
+        const sm = getSplitManager();
+        if (hit) {
+          if (hit.leafId === fromLeaf && hit.zone === "center") return;
+          if (hit.zone === "center") sm.moveTab(file, hit.leafId, "center");
+          else sm.splitWith(file, hit.zone === "left" ? "left" : hit.zone === "top" ? "top" : hit.zone === "bottom" ? "bottom" : "right", hit.leafId);
+          hooks.activate?.(file);
+          return;
+        }
+        const panes = panesEl();
+        if (!panes || isSplit()) return;
+        const r = panes.getBoundingClientRect();
+        if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) return;
+        const cur = state.active?.file;
+        if (!cur || cur === file) return;
+        if (!sm.root) sm.open(cur);
+        sm.splitWith(file, ev.clientX > r.left + r.width / 2 ? "right" : "left");
+        hooks.activate?.(file);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    });
+  }
+  function fileOfTabBtn(btn) {
+    if (btn.dataset && btn.dataset.file) return btn.dataset.file;
+    for (const [f, t3] of state.tabs) if (t3.tabBtn === btn) return f;
+    return null;
+  }
+  function hitPane(mx, my) {
+    let best = null;
+    for (const e of document.querySelectorAll("#panes .k-split-pane")) {
+      const r = e.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const rect = { x: r.left, y: r.top, w: r.width, h: r.height };
+      const zone = dropZone(mx, my, rect);
+      if (!zone) continue;
+      const area = r.width * r.height;
+      if (!best || area < best.area) best = { leafId: e.dataset.leafId, zone, rect, area };
+    }
+    return best;
+  }
+  function zoneRect2(rect, zone) {
+    const { x, y, w, h } = rect;
+    switch (zone) {
+      case "left":
+        return { x, y, w: w / 2, h };
+      case "right":
+        return { x: x + w / 2, y, w: w / 2, h };
+      case "top":
+        return { x, y, w, h: h / 2 };
+      case "bottom":
+        return { x, y: y + h / 2, w, h: h / 2 };
+      default:
+        return { x, y, w, h };
+    }
+  }
+  function dropOverlay() {
+    if (_ov2 && _ov2.el.isConnected) return _ov2;
+    const box = el("div", "k-drop-zone");
+    box.style.display = "none";
+    document.body.appendChild(box);
+    _ov2 = {
+      el: box,
+      show(rect, zone) {
+        box.dataset.zone = zone || "";
+        box.style.left = Math.round(rect.x) + "px";
+        box.style.top = Math.round(rect.y) + "px";
+        box.style.width = Math.round(rect.w) + "px";
+        box.style.height = Math.round(rect.h) + "px";
+        box.style.display = "block";
+      },
+      hide() {
+        box.style.display = "none";
+      }
+    };
+    return _ov2;
+  }
+  function initSplitSystem(h) {
+    setSplitHooks(h);
+    getSplitManager();
+    makeTabSplitDraggable($("#tabs"));
+    return mgr;
+  }
+  function resetSplitSystem() {
+    const panes = panesEl();
+    reclaimPanes(panes);
+    rootEl()?.remove();
+    panes?.classList.remove("split", "split-h");
+    document.body.classList.remove("k-split-on");
+    document.querySelectorAll(".pane").forEach((p) => p.classList.remove("compare-on", "k-in-split"));
+    document.querySelectorAll(".cmp-close").forEach((b) => b.remove());
+    state.compareFile = null;
+    if (mgr) {
+      mgr.store.root = null;
+      mgr.focusId = null;
+      try {
+        mgr.store.save();
+      } catch {
+      }
+    }
+  }
+  var ROOT_ID, hooks, mgr, _syncing, _ensuring, _ov2;
+  var init_split_ui = __esm({
+    "src/layout/split-ui.js"() {
+      init_core();
+      init_split_layout();
+      ROOT_ID = "split-root";
+      hooks = { activate: null, onRender: null, closeTab: null };
+      mgr = null;
+      _syncing = false;
+      _ensuring = false;
+      _ov2 = null;
     }
   });
 
@@ -78451,8 +79860,8 @@ ${s.body}`).join("\n\n");
           }
           continue;
         }
-        const esc4 = src2[i5 + 1];
-        if (esc4 === "'") {
+        const esc5 = src2[i5 + 1];
+        if (esc5 === "'") {
           const hex = src2.slice(i5 + 2, i5 + 4);
           if (!skipDepth) {
             const code3 = parseInt(hex, 16);
@@ -78461,12 +79870,12 @@ ${s.body}`).join("\n\n");
           i5 += 4;
           continue;
         }
-        if (esc4 === "*") {
+        if (esc5 === "*") {
           skipDepth = depth;
           i5 += 2;
           continue;
         }
-        if (!skipDepth && (esc4 === "\\" || esc4 === "{" || esc4 === "}")) out += esc4;
+        if (!skipDepth && (esc5 === "\\" || esc5 === "{" || esc5 === "}")) out += esc5;
         i5 += 2;
         continue;
       }
@@ -78601,7 +80010,7 @@ ${s.body}`).join("\n\n");
       importedAt: opts.now || null
     }, null, 2) });
     mapped.sections.forEach((sec, si) => {
-      const secDir = safeName3(sec.title, "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07");
+      const secDir = safeName4(sec.title, "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07");
       files.push({ path: [secDir, "section.json"], content: JSON.stringify({
         guid: "s" + (si + 1),
         title: sec.title,
@@ -78611,7 +80020,7 @@ ${s.body}`).join("\n\n");
       const scenesMap = {};
       sec.chapters.forEach((ch, ci) => {
         const guid3 = `c${si + 1}_${ci + 1}`;
-        const folderName = `${String(ci + 1).padStart(2, "0")} - ${safeName3(ch.title, "\u0E1A\u0E17")}`;
+        const folderName = `${String(ci + 1).padStart(2, "0")} - ${safeName4(ch.title, "\u0E1A\u0E17")}`;
         chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
         scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
           id: `${guid3}_s${i5 + 1}`,
@@ -78638,13 +80047,13 @@ ${sc.body || ""}
     });
     return { files, count: files.length };
   }
-  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER, safeName3;
+  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER, safeName4;
   var init_import_scrivener = __esm({
     "src/import/import-scrivener.js"() {
       SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
       SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
       SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
-      safeName3 = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 60) || fallback;
+      safeName4 = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 60) || fallback;
     }
   });
 
@@ -80204,14 +81613,14 @@ ${indent}</Paragraph>`;
         s.underline ? "text-decoration:underline" : "text-decoration:none",
         "white-space:pre-wrap"
       ].filter(Boolean).join(";");
-      return `<div class="sp-tp-str" style="${st}">${esc2(s.text)}</div>`;
+      return `<div class="sp-tp-str" style="${st}">${esc3(s.text)}</div>`;
     }).join("");
   }
   function cssFamily(name5) {
     const s = String(name5 ?? "").replace(/["'\\;{}()<>]/g, "").trim();
     return s ? `"${s}",monospace` : "";
   }
-  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp4, TitlePageEditor, esc2;
+  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp4, TitlePageEditor, esc3;
   var init_sp_title_pages = __esm({
     "src/sp-title-pages.js"() {
       init_sp_format();
@@ -80305,7 +81714,7 @@ ${indent}</Paragraph>`;
           return p ? titlePageInnerHtml(p, fmt) : "";
         }
       };
-      esc2 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      esc3 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -80482,12 +81891,12 @@ ${indent}</Paragraph>`;
       if (opts.showPageNumbers !== false && pg.index > 1) {
         rows.push(`<div class="pg-num">${pg.index}.</div>`);
       }
-      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc3(pg.continuedTop)}</div>`);
+      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc4(pg.continuedTop)}</div>`);
       for (const b of pg.blocks || []) {
-        rows.push(`<div class="sp sp-${esc3(b.el || "action")}">${esc3(b.text || "")}</div>`);
+        rows.push(`<div class="sp sp-${esc4(b.el || "action")}">${esc4(b.text || "")}</div>`);
       }
-      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc3(pg.continuedBottom)}</div>`);
-      const mark = wmText ? `<div class="wm">${esc3(wmText)}</div>` : "";
+      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc4(pg.continuedBottom)}</div>`);
+      const mark = wmText ? `<div class="wm">${esc4(wmText)}</div>` : "";
       return `<section class="pg">${mark}<div class="pg-body">${rows.join("")}</div></section>`;
     }).join("\n");
     const css = [
@@ -80508,7 +81917,7 @@ ${indent}</Paragraph>`;
     ].join("\n");
     return `<!doctype html>
 <html lang="th"><head><meta charset="utf-8">
-<title>${esc3(opts.title || "")}</title>
+<title>${esc4(opts.title || "")}</title>
 <style>
 ${css}
 </style>
@@ -80553,7 +81962,7 @@ ${css}
     }
     return made;
   }
-  var DEFAULT_WM, esc3;
+  var DEFAULT_WM, esc4;
   var init_export_watermark = __esm({
     "src/export-watermark.js"() {
       init_sp_format();
@@ -80567,7 +81976,7 @@ ${css}
         repeat: 1
         // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
       };
-      esc3 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      esc4 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -90163,9 +91572,9 @@ ${css}
               I(b.D, S2, C);
             }
             while (true) {
-              var T2 = v2[e(N, d) & X2];
-              d += T2 & 15;
-              var p = T2 >>> 4;
+              var T4 = v2[e(N, d) & X2];
+              d += T4 & 15;
+              var p = T4 >>> 4;
               if (p >>> 8 == 0) {
                 W[w++] = p;
               } else if (p == 256) {
@@ -104215,7 +105624,7 @@ ${css}
       return V;
     }
     if (isT(code3)) {
-      return T;
+      return T3;
     }
     if (isLV(code3)) {
       return LV;
@@ -104262,7 +105671,7 @@ ${css}
     var prev = glyphs[i5 - 1].codePoints[0];
     var prevType = getType2(prev);
     var lv, ljmo, vjmo, tjmo;
-    if (prevType === LV && type === T) {
+    if (prevType === LV && type === T3) {
       lv = prev;
       tjmo = glyph2;
     } else {
@@ -104311,7 +105720,7 @@ ${css}
         return 1;
       case V:
         return 2;
-      case T:
+      case T3:
         return 3;
     }
   }
@@ -106660,7 +108069,7 @@ ${css}
     if (staticProps) _defineProperties$a(Constructor, staticProps);
     return Constructor;
   }
-  var import_pako5, commonjsGlobal, byteLength_1, toByteArray_1, fromByteArray_1, lookup3, revLookup, Arr, code2, i4, len3, base64Js, read, write, ieee754, buffer, buffer_1, buffer_2, buffer_3, buffer_4, domain, global$1, cachedSetTimeout, cachedClearTimeout, queue, draining, currentQueue, queueIndex, title, platform, browser, env, argv, version, versions, release, config, on, addListener2, once2, off, removeListener2, removeAllListeners2, emit2, performance2, performanceNow, startTime, process2, inherits, inherits$1, formatRegExp, debugs, debugEnviron, months, require$$3, string_decoder, string_decoder_1, debug, MAX_HWM, keys2, method, v, Buffer2, safer, key, Safer, safer_1, BOMChar, PrependBOM, StripBOM, bomHandling, Buffer$1, internal, StringDecoder, Buffer$2, utf16be, utf16_1, utf16, Buffer$3, utf7_1, unicode11utf7, nonDirectChars, base64Regex, base64Chars, i$1, plusChar, minusChar, andChar, utf7imap, base64IMAPChars, utf7, Buffer$4, _sbcs, sbcsCodec, sbcsData, sbcsDataGenerated, Buffer$5, _dbcs, UNASSIGNED, GB18030_CODE, SEQ_START, NODE_START, UNASSIGNED_NODE, DEF_CHAR, i$2, dbcsCodec, shiftjis, shiftjis$1, eucjp, eucjp$1, cp936, cp936$1, gbkAdded, gbkAdded$1, uChars, gbChars, gb18030Ranges, gb18030Ranges$1, cp949, cp949$1, cp950, cp950$1, big5Added, big5Added$1, require$$0, require$$1, require$$2, require$$3$1, require$$4, require$$5, require$$6, require$$7, dbcsData, encodings, Buffer$6, Transform$1, streams, Buffer$7, extendNode, lib, DecodeStream2, EncodeStream, _Number, _Number_1, _Number_2, _Number_3, _Number_4, _Number_5, _Number_6, _Number_7, _Number_8, _Number_9, _Number_10, _Number_11, _Number_12, _Number_13, _Number_14, _Number_15, _Number_16, _Number_17, _Number_18, _Number_19, _Number_20, _Number_21, _Number_22, _Number_23, _Number_24, _Number_25, _Number_26, _Number_27, _Number_28, _Number_29, _Number_30, _Number_31, _Number_32, utils, utils_1, utils_2, _Array, LazyArray, Bitfield, _Boolean, Buffer$8, Enum, Optional, Reserved, _String, Struct, VersionedStruct, Pointer, Pointer_1, Pointer_2, restructure, restructure_1, restructure_2, restructure_3, restructure_4, restructure_5, restructure_6, restructure_7, restructure_8, restructure_9, restructure_10, restructure_11, restructure_12, restructure_13, formats, fontkit, SubHeader, CmapGroup, UnicodeValueRange, UVSMapping, DefaultUVS, NonDefaultUVS, VarSelectorRecord, CmapSubtable, CmapEntry, cmap, head, hhea, HmtxEntry, hmtx, maxp, ENCODINGS, MAC_LANGUAGE_ENCODINGS, LANGUAGES, NameRecord, LangTagRecord, NameTable, NAMES, OS2, versions$1, post, cvt, fpgm, loca, prep, glyf, CFFIndex, toStr, isArguments, keysShim, has, toStr$1, isArgs, isEnumerable, hasDontEnumBug, hasProtoEnumBug, dontEnums, equalsConstructorPrototype, excludedKeys, hasAutomationEqualityBug, equalsConstructorPrototypeIfNotBuggy, implementation, slice2, origKeys, keysShim$1, originalKeys, objectKeys, hasToStringTag, toStr$2, isStandardArguments, isLegacyArguments, supportsStandardArguments, isArguments$1, hasSymbols, toStr$3, concat, origDefineProperty, isFunction$1, arePropertyDescriptorsSupported, supportsDescriptors, defineProperty, defineProperties, defineProperties_1, ERROR_MESSAGE, slice$1, toStr$4, funcType, implementation$1, functionBind, shams, origSymbol, hasSymbols$1, undefined$1, $TypeError, $gOPD, throwTypeError, ThrowTypeError, hasSymbols$2, getProto, generatorFunction, asyncFunction, asyncGenFunction, TypedArray, INTRINSICS, $replace, rePropName, reEscapeChar, stringToPath, getBaseIntrinsic, GetIntrinsic, $Function, $apply, $call, callBind, apply3, numberIsNaN, implementation$2, polyfill, shim, polyfill$1, objectIs, src, regexExec, gOPD, tryRegexExecCall, toStr$5, regexClass, hasToStringTag$1, isRegex, $Object, $TypeError$1, implementation$3, supportsDescriptors$1, $gOPD$1, $TypeError$2, polyfill$2, supportsDescriptors$2, gOPD$1, defineProperty$1, TypeErr, getProto$1, regex, shim$1, flagsBound, regexp_prototype_flags, getDay, tryDateObject, toStr$6, dateClass, hasToStringTag$2, isDateObject, getTime, deepEqual_1, FLOAT_EOF, FLOAT_LOOKUP, FLOAT_ENCODE_LOOKUP, CFFOperand, CFFDict, CFFPointer, Ptr, CFFBlendOp, CFFPrivateDict, standardStrings, StandardEncoding, ExpertEncoding, ISOAdobeCharset, ExpertCharset, ExpertSubsetCharset, LangSysTable, LangSysRecord, Script, ScriptRecord, ScriptList, Feature, FeatureRecord, FeatureList, LookupFlags, RangeRecord, Coverage, ClassRangeRecord, ClassDef, Device, LookupRecord, Rule, RuleSet, ClassRule, ClassSet, Context, ChainRule, ChainRuleSet, ChainingContext, _, F2DOT14, RegionAxisCoordinates, VariationRegionList, DeltaSet, ItemVariationData, ItemVariationStore, ConditionTable, ConditionSet, FeatureTableSubstitutionRecord, FeatureTableSubstitution, FeatureVariationRecord, FeatureVariations, PredefinedOp, CFFEncodingVersion, Range1, Range2, CFFCustomEncoding, CFFEncoding, RangeArray, CFFCustomCharset, CFFCharset, FDRange3, FDRange4, FDSelect, ptr, CFFPrivateOp, FontDict, CFFTopDict, VariationStore, CFF2TopDict, CFFTop, CFFFont, VerticalOrigin, VORG, BigMetrics, SmallMetrics, EBDTComponent, ByteAligned, BitAligned, glyph, SBitLineMetrics, CodeOffsetPair, IndexSubtable, IndexSubtableArray, BitmapSizeTable, EBLC, ImageTable, sbix, LayerRecord, BaseGlyphRecord, COLR, ColorRecord, CPAL, BaseCoord, BaseValues, FeatMinMaxRecord, MinMax, BaseLangSysRecord, BaseScript, BaseScriptRecord, BaseScriptList, BaseTagList, Axis, BASE, AttachPoint, AttachList, CaretValue, LigGlyph, LigCaretList, MarkGlyphSetsDef, GDEF, ValueFormat, types, ValueRecord, PairValueRecord, PairSet, Class2Record, Anchor, EntryExitRecord, MarkRecord, MarkArray, BaseRecord, BaseArray, ComponentRecord, LigatureAttach, LigatureArray, GPOSLookup, GPOS, Sequence, AlternateSet, Ligature, LigatureSet, GSUBLookup, GSUB, JstfGSUBModList, JstfPriority, JstfLangSys, JstfLangSysRecord, JstfScript, JstfScriptRecord, JSTF, VariableSizeNumber, MapDataEntry, DeltaSetIndexMap, HVAR, Signature, SignatureBlock, DSIG, GaspRange, gasp, DeviceRecord, hdmx, KernPair, ClassTable, Kern2Array, KernSubtable, KernTable, kern, LTSH, PCLT, Ratio, vTable, VdmxGroup, VDMX, vhea, VmtxEntry, vmtx, shortFrac, Correspondence, Segment, avar, UnboundedArrayAccessor, UnboundedArray, LookupTable, BslnSubtable, bsln, Setting, FeatureName, feat, Axis$1, Instance, fvar, shortFrac$1, Offset, gvar, ClassTable$1, WidthDeltaRecord, WidthDeltaCluster, ActionData, Action, PostcompensationAction, PostCompensationTable, JustificationTable, just, LigatureData, ContextualData, InsertionData, SubstitutionTable, SubtableData, Subtable, FeatureEntry, MorxChain, morx, OpticalBounds, opbd, tables, TableEntry, Directory, _class, CmapProcessor, KernProcessor, TINF_OK, TINF_DATA_ERROR, sltree, sdtree, length_bits, length_base, dist_bits, dist_base, clcidx, code_tree, lengths, offs, tinyInflate, UnicodeTrie, inflate, unicodeTrie, base64Arraybuffer, base64Arraybuffer_1, base64Arraybuffer_2, base64DeflatedData, base64DeflatedTrie, data, trieData, trie, log22, bits, CATEGORY_BITS, COMBINING_BITS, SCRIPT_BITS, EAW_BITS, NUMBER_BITS, CATEGORY_SHIFT, COMBINING_SHIFT, SCRIPT_SHIFT, EAW_SHIFT, CATEGORY_MASK, COMBINING_MASK, SCRIPT_MASK, EAW_MASK, NUMBER_MASK, getCategory, getCombiningClass, getScript, getEastAsianWidth, getNumericValue, isAlphabetic, isDigit, isPunctuation, isLowerCase, isUpperCase, isTitleCase, isWhiteSpace, isBaseForm, isMark, unicode, UnicodeLayoutEngine, BBox, UNICODE_SCRIPTS, OPENTYPE_SCRIPTS, tag, t2, _iterator, _step, script, RTL, GlyphRun, GlyphPosition, features, feature, OTMapping, i$3, AATMapping, aat, ot, _class$1, AATLookupTable, START_OF_TEXT_STATE, END_OF_TEXT_CLASS, OUT_OF_BOUNDS_CLASS, DELETED_GLYPH_CLASS, DONT_ADVANCE, AATStateMachine, _class$2, MARK_FIRST, MARK_LAST, VERB, SET_MARK, SET_COMPONENT, PERFORM_ACTION, LAST_MASK, STORE_MASK, OFFSET_MASK, REVERSE_DIRECTION, CURRENT_INSERT_BEFORE, MARKED_INSERT_BEFORE, CURRENT_INSERT_COUNT, MARKED_INSERT_COUNT, AATMorxProcessor, AATLayoutEngine, ShapingPlan, VARIATION_FEATURES, COMMON_FEATURES, FRACTIONAL_FEATURES, HORIZONTAL_FEATURES, DIRECTIONAL_FEATURES, DefaultShaper, base64DeflatedTrie$1, trieData$1, trie$1, FEATURES, ShapingClasses, ISOL, FINA, FIN2, FIN3, MEDI, MED2, INIT, NONE, STATE_TABLE, ArabicShaper, GlyphIterator, DEFAULT_SCRIPTS, OTProcessor, GlyphInfo, HangulShaper, HANGUL_BASE, HANGUL_END, HANGUL_COUNT, L_BASE, V_BASE, T_BASE, L_COUNT, V_COUNT, T_COUNT, L_END, V_END, T_END, DOTTED_CIRCLE, isL, isV, isT, isTone, isLVT, isLV, isCombiningL, isCombiningV, isCombiningT, X, L, V, T, LV, LVT, M, NO_ACTION, DECOMPOSE, COMPOSE, TONE_MARK, INVALID, STATE_TABLE$1, INITIAL_STATE, FAIL_STATE, StateMachine, dfa2, CATEGORIES, POSITIONS, CONSONANT_FLAGS, JOINER_FLAGS, HALANT_OR_COENG_FLAGS, INDIC_CONFIGS, INDIC_DECOMPOSITIONS, base64DeflatedIndicMachine, base64DeflatedUseData, base64DeflatedTrie$2, indicMachine, useData, trieData$2, decompositions, trie$2, stateMachine, IndicShaper, IndicInfo, base64DeflatedTrie$3, useData$1, trieData$3, categories, decompositions$1, trie$3, stateMachine$1, UniversalShaper, USEInfo, SHAPERS, GSUBProcessor, GPOSProcessor, OTLayoutEngine, LayoutEngine, SVG_COMMANDS, Path, _loop, _i, _arr, StandardNames, _class$3, Glyph, GlyfHeader, ON_CURVE, X_SHORT_VECTOR, Y_SHORT_VECTOR, REPEAT, SAME_X, SAME_Y, ARG_1_AND_2_ARE_WORDS, WE_HAVE_A_SCALE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE, WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, Point, Component, TTFGlyph, CFFGlyph, SBIXImage, SBIXGlyph, COLRLayer, COLRGlyph, TUPLES_SHARE_POINT_NUMBERS, TUPLE_COUNT_MASK, EMBEDDED_TUPLE_COORD, INTERMEDIATE_TUPLE, PRIVATE_POINT_NUMBERS, TUPLE_INDEX_MASK, POINTS_ARE_WORDS, POINT_RUN_COUNT_MASK, DELTAS_ARE_ZERO, DELTAS_ARE_WORDS, DELTA_RUN_COUNT_MASK, GlyphVariationProcessor, clone_1, Subset, ON_CURVE$1, X_SHORT_VECTOR$1, Y_SHORT_VECTOR$1, REPEAT$1, SAME_X$1, SAME_Y$1, Point$1, Glyf, TTFGlyphEncoder, TTFSubset, CFFSubset, _class$4, TTFFont, WOFFDirectoryEntry, WOFFDirectory, TINF_OK$1, TINF_DATA_ERROR$1, sltree$1, sdtree$1, length_bits$1, length_base$1, dist_bits$1, dist_base$1, clcidx$1, code_tree$1, lengths$1, offs$1, tinyInflate$1, WOFFFont, BrotliInput_1, BrotliOutput_1, streams$1, BROTLI_READ_SIZE, BROTLI_IBUF_SIZE, BROTLI_IBUF_MASK, kBitMask, bit_reader, byteLength_1$1, toByteArray_1$1, fromByteArray_1$1, lookup$1, revLookup$1, Arr$1, code$1, i$4, len$1, base64Js$1, dictionary_bin, init, dictionaryDataCompressed, dictionary, dictionary_1, dictionary_2, dictionary_3, dictionary_4, dictionary_5, dictionary_6, HuffmanCode_1, MAX_LENGTH, BrotliBuildHuffmanTable, huffman, lookup$2, lookupOffsets, context, kBlockLengthPrefixCode, kInsertLengthPrefixCode, kCopyLengthPrefixCode, kInsertRangeLut, kCopyRangeLut, prefix, kIdentity, kOmitLast1, kOmitLast2, kOmitLast3, kOmitLast4, kOmitLast5, kOmitLast6, kOmitLast7, kOmitLast8, kOmitLast9, kUppercaseFirst, kUppercaseAll, kOmitFirst1, kOmitFirst2, kOmitFirst3, kOmitFirst4, kOmitFirst5, kOmitFirst6, kOmitFirst7, kOmitFirst9, kTransforms, kTransforms_1, kNumTransforms, transformDictionaryWord, transform, BrotliInput$1, BrotliOutput$1, HuffmanCode$1, BrotliBuildHuffmanTable$1, kDefaultCodeLength, kCodeLengthRepeatCode, kNumLiteralCodes, kNumInsertAndCopyCodes, kNumBlockLengthCodes, kLiteralContextBits, kDistanceContextBits, HUFFMAN_TABLE_BITS, HUFFMAN_TABLE_MASK, HUFFMAN_MAX_TABLE_SIZE, CODE_LENGTH_CODES, kCodeLengthCodeOrder, NUM_DISTANCE_SHORT_CODES, kDistanceShortCodeIndexOffset, kDistanceShortCodeValueOffset, kMaxHuffmanTableSize, BrotliDecompressedSize_1, BrotliDecompressBuffer_1, BrotliDecompress_1, decode, decompress, WOFF2Glyph, Base128, knownTags, WOFF2DirectoryEntry, WOFF2Directory, WOFF2Font, Substream, GlyfTable, WORD_CODE, ONE_MORE_BYTE_CODE2, ONE_MORE_BYTE_CODE1, LOWEST_U_CODE, TTCHeader, TrueTypeCollection, DFontName, DFontData, Ref, Type, TypeList, DFontMap, DFontHeader, DFont, fontkit_es_default;
+  var import_pako5, commonjsGlobal, byteLength_1, toByteArray_1, fromByteArray_1, lookup3, revLookup, Arr, code2, i4, len3, base64Js, read, write, ieee754, buffer, buffer_1, buffer_2, buffer_3, buffer_4, domain, global$1, cachedSetTimeout, cachedClearTimeout, queue, draining, currentQueue, queueIndex, title, platform, browser, env, argv, version, versions, release, config, on, addListener2, once2, off, removeListener2, removeAllListeners2, emit2, performance2, performanceNow, startTime, process2, inherits, inherits$1, formatRegExp, debugs, debugEnviron, months, require$$3, string_decoder, string_decoder_1, debug, MAX_HWM, keys2, method, v, Buffer2, safer, key, Safer, safer_1, BOMChar, PrependBOM, StripBOM, bomHandling, Buffer$1, internal, StringDecoder, Buffer$2, utf16be, utf16_1, utf16, Buffer$3, utf7_1, unicode11utf7, nonDirectChars, base64Regex, base64Chars, i$1, plusChar, minusChar, andChar, utf7imap, base64IMAPChars, utf7, Buffer$4, _sbcs, sbcsCodec, sbcsData, sbcsDataGenerated, Buffer$5, _dbcs, UNASSIGNED, GB18030_CODE, SEQ_START, NODE_START, UNASSIGNED_NODE, DEF_CHAR, i$2, dbcsCodec, shiftjis, shiftjis$1, eucjp, eucjp$1, cp936, cp936$1, gbkAdded, gbkAdded$1, uChars, gbChars, gb18030Ranges, gb18030Ranges$1, cp949, cp949$1, cp950, cp950$1, big5Added, big5Added$1, require$$0, require$$1, require$$2, require$$3$1, require$$4, require$$5, require$$6, require$$7, dbcsData, encodings, Buffer$6, Transform$1, streams, Buffer$7, extendNode, lib, DecodeStream2, EncodeStream, _Number, _Number_1, _Number_2, _Number_3, _Number_4, _Number_5, _Number_6, _Number_7, _Number_8, _Number_9, _Number_10, _Number_11, _Number_12, _Number_13, _Number_14, _Number_15, _Number_16, _Number_17, _Number_18, _Number_19, _Number_20, _Number_21, _Number_22, _Number_23, _Number_24, _Number_25, _Number_26, _Number_27, _Number_28, _Number_29, _Number_30, _Number_31, _Number_32, utils, utils_1, utils_2, _Array, LazyArray, Bitfield, _Boolean, Buffer$8, Enum, Optional, Reserved, _String, Struct, VersionedStruct, Pointer, Pointer_1, Pointer_2, restructure, restructure_1, restructure_2, restructure_3, restructure_4, restructure_5, restructure_6, restructure_7, restructure_8, restructure_9, restructure_10, restructure_11, restructure_12, restructure_13, formats, fontkit, SubHeader, CmapGroup, UnicodeValueRange, UVSMapping, DefaultUVS, NonDefaultUVS, VarSelectorRecord, CmapSubtable, CmapEntry, cmap, head, hhea, HmtxEntry, hmtx, maxp, ENCODINGS, MAC_LANGUAGE_ENCODINGS, LANGUAGES, NameRecord, LangTagRecord, NameTable, NAMES, OS2, versions$1, post, cvt, fpgm, loca, prep, glyf, CFFIndex, toStr, isArguments, keysShim, has, toStr$1, isArgs, isEnumerable, hasDontEnumBug, hasProtoEnumBug, dontEnums, equalsConstructorPrototype, excludedKeys, hasAutomationEqualityBug, equalsConstructorPrototypeIfNotBuggy, implementation, slice2, origKeys, keysShim$1, originalKeys, objectKeys, hasToStringTag, toStr$2, isStandardArguments, isLegacyArguments, supportsStandardArguments, isArguments$1, hasSymbols, toStr$3, concat, origDefineProperty, isFunction$1, arePropertyDescriptorsSupported, supportsDescriptors, defineProperty, defineProperties, defineProperties_1, ERROR_MESSAGE, slice$1, toStr$4, funcType, implementation$1, functionBind, shams, origSymbol, hasSymbols$1, undefined$1, $TypeError, $gOPD, throwTypeError, ThrowTypeError, hasSymbols$2, getProto, generatorFunction, asyncFunction, asyncGenFunction, TypedArray, INTRINSICS, $replace, rePropName, reEscapeChar, stringToPath, getBaseIntrinsic, GetIntrinsic, $Function, $apply, $call, callBind, apply3, numberIsNaN, implementation$2, polyfill, shim, polyfill$1, objectIs, src, regexExec, gOPD, tryRegexExecCall, toStr$5, regexClass, hasToStringTag$1, isRegex, $Object, $TypeError$1, implementation$3, supportsDescriptors$1, $gOPD$1, $TypeError$2, polyfill$2, supportsDescriptors$2, gOPD$1, defineProperty$1, TypeErr, getProto$1, regex, shim$1, flagsBound, regexp_prototype_flags, getDay, tryDateObject, toStr$6, dateClass, hasToStringTag$2, isDateObject, getTime, deepEqual_1, FLOAT_EOF, FLOAT_LOOKUP, FLOAT_ENCODE_LOOKUP, CFFOperand, CFFDict, CFFPointer, Ptr, CFFBlendOp, CFFPrivateDict, standardStrings, StandardEncoding, ExpertEncoding, ISOAdobeCharset, ExpertCharset, ExpertSubsetCharset, LangSysTable, LangSysRecord, Script, ScriptRecord, ScriptList, Feature, FeatureRecord, FeatureList, LookupFlags, RangeRecord, Coverage, ClassRangeRecord, ClassDef, Device, LookupRecord, Rule, RuleSet, ClassRule, ClassSet, Context, ChainRule, ChainRuleSet, ChainingContext, _, F2DOT14, RegionAxisCoordinates, VariationRegionList, DeltaSet, ItemVariationData, ItemVariationStore, ConditionTable, ConditionSet, FeatureTableSubstitutionRecord, FeatureTableSubstitution, FeatureVariationRecord, FeatureVariations, PredefinedOp, CFFEncodingVersion, Range1, Range2, CFFCustomEncoding, CFFEncoding, RangeArray, CFFCustomCharset, CFFCharset, FDRange3, FDRange4, FDSelect, ptr, CFFPrivateOp, FontDict, CFFTopDict, VariationStore, CFF2TopDict, CFFTop, CFFFont, VerticalOrigin, VORG, BigMetrics, SmallMetrics, EBDTComponent, ByteAligned, BitAligned, glyph, SBitLineMetrics, CodeOffsetPair, IndexSubtable, IndexSubtableArray, BitmapSizeTable, EBLC, ImageTable, sbix, LayerRecord, BaseGlyphRecord, COLR, ColorRecord, CPAL, BaseCoord, BaseValues, FeatMinMaxRecord, MinMax, BaseLangSysRecord, BaseScript, BaseScriptRecord, BaseScriptList, BaseTagList, Axis, BASE, AttachPoint, AttachList, CaretValue, LigGlyph, LigCaretList, MarkGlyphSetsDef, GDEF, ValueFormat, types, ValueRecord, PairValueRecord, PairSet, Class2Record, Anchor, EntryExitRecord, MarkRecord, MarkArray, BaseRecord, BaseArray, ComponentRecord, LigatureAttach, LigatureArray, GPOSLookup, GPOS, Sequence, AlternateSet, Ligature, LigatureSet, GSUBLookup, GSUB, JstfGSUBModList, JstfPriority, JstfLangSys, JstfLangSysRecord, JstfScript, JstfScriptRecord, JSTF, VariableSizeNumber, MapDataEntry, DeltaSetIndexMap, HVAR, Signature, SignatureBlock, DSIG, GaspRange, gasp, DeviceRecord, hdmx, KernPair, ClassTable, Kern2Array, KernSubtable, KernTable, kern, LTSH, PCLT, Ratio, vTable, VdmxGroup, VDMX, vhea, VmtxEntry, vmtx, shortFrac, Correspondence, Segment, avar, UnboundedArrayAccessor, UnboundedArray, LookupTable, BslnSubtable, bsln, Setting, FeatureName, feat, Axis$1, Instance, fvar, shortFrac$1, Offset, gvar, ClassTable$1, WidthDeltaRecord, WidthDeltaCluster, ActionData, Action, PostcompensationAction, PostCompensationTable, JustificationTable, just, LigatureData, ContextualData, InsertionData, SubstitutionTable, SubtableData, Subtable, FeatureEntry, MorxChain, morx, OpticalBounds, opbd, tables, TableEntry, Directory, _class, CmapProcessor, KernProcessor, TINF_OK, TINF_DATA_ERROR, sltree, sdtree, length_bits, length_base, dist_bits, dist_base, clcidx, code_tree, lengths, offs, tinyInflate, UnicodeTrie, inflate, unicodeTrie, base64Arraybuffer, base64Arraybuffer_1, base64Arraybuffer_2, base64DeflatedData, base64DeflatedTrie, data, trieData, trie, log22, bits, CATEGORY_BITS, COMBINING_BITS, SCRIPT_BITS, EAW_BITS, NUMBER_BITS, CATEGORY_SHIFT, COMBINING_SHIFT, SCRIPT_SHIFT, EAW_SHIFT, CATEGORY_MASK, COMBINING_MASK, SCRIPT_MASK, EAW_MASK, NUMBER_MASK, getCategory, getCombiningClass, getScript, getEastAsianWidth, getNumericValue, isAlphabetic, isDigit, isPunctuation, isLowerCase, isUpperCase, isTitleCase, isWhiteSpace, isBaseForm, isMark, unicode, UnicodeLayoutEngine, BBox, UNICODE_SCRIPTS, OPENTYPE_SCRIPTS, tag, t2, _iterator, _step, script, RTL, GlyphRun, GlyphPosition, features, feature, OTMapping, i$3, AATMapping, aat, ot, _class$1, AATLookupTable, START_OF_TEXT_STATE, END_OF_TEXT_CLASS, OUT_OF_BOUNDS_CLASS, DELETED_GLYPH_CLASS, DONT_ADVANCE, AATStateMachine, _class$2, MARK_FIRST, MARK_LAST, VERB, SET_MARK, SET_COMPONENT, PERFORM_ACTION, LAST_MASK, STORE_MASK, OFFSET_MASK, REVERSE_DIRECTION, CURRENT_INSERT_BEFORE, MARKED_INSERT_BEFORE, CURRENT_INSERT_COUNT, MARKED_INSERT_COUNT, AATMorxProcessor, AATLayoutEngine, ShapingPlan, VARIATION_FEATURES, COMMON_FEATURES, FRACTIONAL_FEATURES, HORIZONTAL_FEATURES, DIRECTIONAL_FEATURES, DefaultShaper, base64DeflatedTrie$1, trieData$1, trie$1, FEATURES, ShapingClasses, ISOL, FINA, FIN2, FIN3, MEDI, MED2, INIT, NONE, STATE_TABLE, ArabicShaper, GlyphIterator, DEFAULT_SCRIPTS, OTProcessor, GlyphInfo, HangulShaper, HANGUL_BASE, HANGUL_END, HANGUL_COUNT, L_BASE, V_BASE, T_BASE, L_COUNT, V_COUNT, T_COUNT, L_END, V_END, T_END, DOTTED_CIRCLE, isL, isV, isT, isTone, isLVT, isLV, isCombiningL, isCombiningV, isCombiningT, X, L, V, T3, LV, LVT, M, NO_ACTION, DECOMPOSE, COMPOSE, TONE_MARK, INVALID, STATE_TABLE$1, INITIAL_STATE, FAIL_STATE, StateMachine, dfa2, CATEGORIES, POSITIONS, CONSONANT_FLAGS, JOINER_FLAGS, HALANT_OR_COENG_FLAGS, INDIC_CONFIGS, INDIC_DECOMPOSITIONS, base64DeflatedIndicMachine, base64DeflatedUseData, base64DeflatedTrie$2, indicMachine, useData, trieData$2, decompositions, trie$2, stateMachine, IndicShaper, IndicInfo, base64DeflatedTrie$3, useData$1, trieData$3, categories, decompositions$1, trie$3, stateMachine$1, UniversalShaper, USEInfo, SHAPERS, GSUBProcessor, GPOSProcessor, OTLayoutEngine, LayoutEngine, SVG_COMMANDS, Path, _loop, _i, _arr, StandardNames, _class$3, Glyph, GlyfHeader, ON_CURVE, X_SHORT_VECTOR, Y_SHORT_VECTOR, REPEAT, SAME_X, SAME_Y, ARG_1_AND_2_ARE_WORDS, WE_HAVE_A_SCALE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE, WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, Point, Component, TTFGlyph, CFFGlyph, SBIXImage, SBIXGlyph, COLRLayer, COLRGlyph, TUPLES_SHARE_POINT_NUMBERS, TUPLE_COUNT_MASK, EMBEDDED_TUPLE_COORD, INTERMEDIATE_TUPLE, PRIVATE_POINT_NUMBERS, TUPLE_INDEX_MASK, POINTS_ARE_WORDS, POINT_RUN_COUNT_MASK, DELTAS_ARE_ZERO, DELTAS_ARE_WORDS, DELTA_RUN_COUNT_MASK, GlyphVariationProcessor, clone_1, Subset, ON_CURVE$1, X_SHORT_VECTOR$1, Y_SHORT_VECTOR$1, REPEAT$1, SAME_X$1, SAME_Y$1, Point$1, Glyf, TTFGlyphEncoder, TTFSubset, CFFSubset, _class$4, TTFFont, WOFFDirectoryEntry, WOFFDirectory, TINF_OK$1, TINF_DATA_ERROR$1, sltree$1, sdtree$1, length_bits$1, length_base$1, dist_bits$1, dist_base$1, clcidx$1, code_tree$1, lengths$1, offs$1, tinyInflate$1, WOFFFont, BrotliInput_1, BrotliOutput_1, streams$1, BROTLI_READ_SIZE, BROTLI_IBUF_SIZE, BROTLI_IBUF_MASK, kBitMask, bit_reader, byteLength_1$1, toByteArray_1$1, fromByteArray_1$1, lookup$1, revLookup$1, Arr$1, code$1, i$4, len$1, base64Js$1, dictionary_bin, init, dictionaryDataCompressed, dictionary, dictionary_1, dictionary_2, dictionary_3, dictionary_4, dictionary_5, dictionary_6, HuffmanCode_1, MAX_LENGTH, BrotliBuildHuffmanTable, huffman, lookup$2, lookupOffsets, context, kBlockLengthPrefixCode, kInsertLengthPrefixCode, kCopyLengthPrefixCode, kInsertRangeLut, kCopyRangeLut, prefix, kIdentity, kOmitLast1, kOmitLast2, kOmitLast3, kOmitLast4, kOmitLast5, kOmitLast6, kOmitLast7, kOmitLast8, kOmitLast9, kUppercaseFirst, kUppercaseAll, kOmitFirst1, kOmitFirst2, kOmitFirst3, kOmitFirst4, kOmitFirst5, kOmitFirst6, kOmitFirst7, kOmitFirst9, kTransforms, kTransforms_1, kNumTransforms, transformDictionaryWord, transform, BrotliInput$1, BrotliOutput$1, HuffmanCode$1, BrotliBuildHuffmanTable$1, kDefaultCodeLength, kCodeLengthRepeatCode, kNumLiteralCodes, kNumInsertAndCopyCodes, kNumBlockLengthCodes, kLiteralContextBits, kDistanceContextBits, HUFFMAN_TABLE_BITS, HUFFMAN_TABLE_MASK, HUFFMAN_MAX_TABLE_SIZE, CODE_LENGTH_CODES, kCodeLengthCodeOrder, NUM_DISTANCE_SHORT_CODES, kDistanceShortCodeIndexOffset, kDistanceShortCodeValueOffset, kMaxHuffmanTableSize, BrotliDecompressedSize_1, BrotliDecompressBuffer_1, BrotliDecompress_1, decode, decompress, WOFF2Glyph, Base128, knownTags, WOFF2DirectoryEntry, WOFF2Directory, WOFF2Font, Substream, GlyfTable, WORD_CODE, ONE_MORE_BYTE_CODE2, ONE_MORE_BYTE_CODE1, LOWEST_U_CODE, TTCHeader, TrueTypeCollection, DFontName, DFontData, Ref, Type, TypeList, DFontMap, DFontHeader, DFont, fontkit_es_default;
   var init_fontkit_es = __esm({
     "node_modules/@pdf-lib/fontkit/dist/fontkit.es.js"() {
       import_pako5 = __toESM(require_pako());
@@ -127582,7 +128991,7 @@ ${css}
       X = 0;
       L = 1;
       V = 2;
-      T = 3;
+      T3 = 3;
       LV = 4;
       LVT = 5;
       M = 6;
@@ -136432,6 +137841,8 @@ ${css}
     if (state.settings.autoSync) setAutoSync(true);
     clearBusy();
     setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C: " + state.title);
+    checkDanglingOnOpen().catch(() => {
+    });
   }
   function toggleElementCaps(elName, on2) {
     const cur = elementCaps(spFormat(), elName);
@@ -138977,8 +140388,8 @@ ${css}
       }
       portalRow.append(portalSel);
       box.append(portalRow);
-      const colorRow = el("div", "wiki-row");
-      colorRow.append(el("label", null, "\u0E2A\u0E35"));
+      const colorRow2 = el("div", "wiki-row");
+      colorRow2.append(el("label", null, "\u0E2A\u0E35"));
       const colorSel = el("select", "wiki-input k-dlg-select");
       {
         const none2 = el("option", null, "\u2014 \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 \u2014");
@@ -138991,8 +140402,8 @@ ${css}
           colorSel.append(o);
         }
       }
-      colorRow.append(colorSel);
-      box.append(colorRow);
+      colorRow2.append(colorSel);
+      box.append(colorRow2);
       const iNote = el("textarea", "wiki-input");
       iNote.value = pin.note || "";
       {
@@ -141423,11 +142834,11 @@ ${css}
   function spSmartCheck(tab) {
     const elName = tab.sp.curElement();
     smart.bindView(tab.sp.view);
-    const T2 = cachedTerms(tab);
+    const T4 = cachedTerms(tab);
     if (elName === "character")
       smart.check(
         tab.sp.view,
-        notIgnored([...T2.chars, ...smart.byCat?.characters || [], ...CHAR_EXTENSIONS]),
+        notIgnored([...T4.chars, ...smart.byCat?.characters || [], ...CHAR_EXTENSIONS]),
         { minLen: 1 }
       );
     else if (elName === "scene")
@@ -141435,7 +142846,7 @@ ${css}
         tab.sp.view,
         notIgnored([
           ...SCENE_PREFIX,
-          ...T2.locs,
+          ...T4.locs,
           ...smart.byCat?.locations || [],
           ...TIMES
         ]),
@@ -141447,13 +142858,13 @@ ${css}
     else if (elName === "subheader")
       smart.check(
         tab.sp.view,
-        notIgnored([...T2.locs, ...smart.byCat?.locations || [], ...TIMES]),
+        notIgnored([...T4.locs, ...smart.byCat?.locations || [], ...TIMES]),
         { minLen: 1, ci: true }
       );
     else if (elName === "parenthetical") smart.check(tab.sp.view, notIgnored(PARENTHETICALS), { minLen: 1 });
     else if (elName === "dialogue" || elName === "action")
       smart.check(tab.sp.view, notIgnored([
-        ...T2.chars,
+        ...T4.chars,
         ...smart.byCat?.characters || [],
         ...smart.names || []
       ]));
@@ -142969,11 +144380,16 @@ ${css}
       "#net-body",
       "#planner-body",
       "#planner-props-body",
-      "#floor-body"
+      "#floor-body",
+      // [alpha.66] ผัง/รอบการเล่นเป็นของโปรเจกต์เดิมล้วน ๆ
+      "#branch-body",
+      "#player-body"
     ]) {
       const n2 = $(sel);
       if (n2) n2.innerHTML = "";
     }
+    state._branch = null;
+    resetPlayerMode();
     mapsState_C.s = null;
     galInst = null;
     netInst = null;
@@ -143228,9 +144644,15 @@ ${css}
         break;
       case "branching":
         openBranchingTree();
+        syncMenuToggles();
         break;
       case "branch-sync":
         syncChoicesFromScene();
+        break;
+      // [alpha.66 ข้อ 9] ทดลองเล่น — เดินตามทางเลือกเหมือนผู้เล่น (อ่านอย่างเดียว)
+      case "player-mode":
+        openPlayerMode();
+        syncMenuToggles();
         break;
       case "floorplan":
         openFloorPlan();
@@ -144608,7 +146030,7 @@ ${css}
       const chJson = (await kapi.readJson(await kapi.join(dPath, "draft.json"))).chapters[0];
       const pAdd = addScene(dPath, chJson);
       await new Promise((r) => setTimeout(r, 60));
-      document.querySelector(".k-dlg-input").value = "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+      document.querySelector(".k-dialog .k-dlg-input").value = "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
       document.querySelector(".k-dialog .k-ok").click();
       await pAdd;
       const sj = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
@@ -144617,7 +146039,7 @@ ${css}
       check2("\u0E41\u0E17\u0E47\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07", state.active?.title === "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
       const pRen = renameScene(dPath, chJson, newSc);
       await new Promise((r) => setTimeout(r, 60));
-      document.querySelector(".k-dlg-input").value = "\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27";
+      document.querySelector(".k-dialog .k-dlg-input").value = "\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27";
       document.querySelector(".k-dialog .k-ok").click();
       await pRen;
       const sj2 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
@@ -144648,7 +146070,7 @@ ${css}
         const n0 = await countSecs();
         const pAddSec = addSection();
         await new Promise((r) => setTimeout(r, 60));
-        document.querySelector(".k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+        document.querySelector(".k-dialog .k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
         document.querySelector(".k-dialog .k-ok").click();
         await pAddSec;
         check2("\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49 (section.json + Draft + \u0E1A\u0E17\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19)", await countSecs() === n0 + 1);
@@ -144673,7 +146095,7 @@ ${css}
         );
         const pRenSec = renameSection(newSecPath, newSec);
         await new Promise((r) => setTimeout(r, 60));
-        document.querySelector(".k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D";
+        document.querySelector(".k-dialog .k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D";
         document.querySelector(".k-dialog .k-ok").click();
         await pRenSec;
         check2(
@@ -144711,7 +146133,7 @@ ${css}
       {
         const pAddB = addSection();
         await new Promise((r) => setTimeout(r, 60));
-        document.querySelector(".k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23";
+        document.querySelector(".k-dialog .k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23";
         document.querySelector(".k-dialog .k-ok").click();
         await pAddB;
         await openBookManager();
@@ -148834,9 +150256,18 @@ ${css}
           ];
         });
         state._branch = { sel: null, zoom: 1, view: "tree", sideOpen: true };
+        try {
+          for (const k of Object.keys(localStorage))
+            if (k.startsWith("k2-branch-pos")) localStorage.removeItem(k);
+        } catch {
+        }
         await openBranchingTree();
-        await new Promise((r) => setTimeout(r, 400));
-        check2("\u0E40\u0E1B\u0E34\u0E14\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E44\u0E14\u0E49", state.tabs.has("::branching::"));
+        await new Promise((r) => setTimeout(r, 500));
+        check2(
+          "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 (alpha.66 \u0E02\u0E49\u0E2D 1)",
+          isPanelOpen("branch") && !state.tabs.has("::branching::")
+        );
+        check2("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E1C\u0E31\u0E07\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E25\u0E07\u0E43\u0E19\u0E41\u0E1C\u0E07 #branch-body", !!$("#branch-body").querySelector(".branch-shell"));
         const nodes = [...document.querySelectorAll(".branch-node")];
         check2("\u0E1C\u0E31\u0E07\u0E27\u0E32\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E20\u0E32\u0E1E (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)", nodes.length >= 1, String(nodes.length));
         check2(
@@ -148872,6 +150303,294 @@ ${css}
           [...document.querySelectorAll(".branch-side-acts button")].some((b) => b.textContent.includes("\u229E"))
         );
         await kapi.testShot("/tmp/k2_branch.png");
+        {
+          const wrapEl = document.querySelector(".branch-wrap");
+          const kids = [...wrapEl.children];
+          const iAdd = kids.findIndex((k) => k.classList.contains("branch-adder"));
+          const iView = kids.findIndex((k) => k.classList.contains("branch-viewport"));
+          check2(
+            "\u0E02\u0E49\u0E2D 2: \u0E41\u0E16\u0E1A\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19 \u0E1C\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E25\u0E48\u0E32\u0E07",
+            iAdd >= 0 && iView >= 0 && iAdd < iView,
+            `${iAdd} < ${iView}`
+          );
+        }
+        if (scB2) {
+          const bg = document.querySelector(".branch-edge-labelbg");
+          check2("\u0E02\u0E49\u0E2D 3: \u0E1B\u0E49\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E23\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19", !!bg);
+          check2(
+            "\u0E02\u0E49\u0E2D 3: \u0E41\u0E16\u0E1A\u0E23\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E16\u0E39\u0E01\u0E27\u0E32\u0E07\u0E02\u0E19\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E28\u0E39\u0E19\u0E22\u0E4C)",
+            !!bg && parseFloat(bg.getAttribute("width")) > 10,
+            bg && bg.getAttribute("width")
+          );
+        }
+        {
+          const nameEl = document.querySelector(".branch-node-name");
+          const fs66 = parseFloat(getComputedStyle(nameEl).fontSize);
+          check2("\u0E02\u0E49\u0E2D 5: \u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E44\u0E21\u0E48\u0E40\u0E25\u0E47\u0E01\u0E01\u0E27\u0E48\u0E32 13.5px", fs66 >= 13.5, fs66 + "px");
+        }
+        if (scB2) {
+          const lb = document.querySelector(".branch-edge-label");
+          const pathEl = document.querySelector(".branch-edges path.branch-edge");
+          const lx = parseFloat(lb.getAttribute("x")), ly = parseFloat(lb.getAttribute("y"));
+          const mid = pathEl.getPointAtLength(pathEl.getTotalLength() / 2);
+          check2(
+            "\u0E02\u0E49\u0E2D 6: \u0E1B\u0E49\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19 (\u0E2B\u0E48\u0E32\u0E07\u0E08\u0E38\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19 14px)",
+            Math.hypot(lx - mid.x, ly - mid.y) < 14,
+            `${Math.round(Math.hypot(lx - mid.x, ly - mid.y))}px`
+          );
+        }
+        {
+          const box66 = nodes[0];
+          const bid = box66.dataset.id;
+          check2("\u0E02\u0E49\u0E2D 6: \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19 (dataset.id)", !!bid);
+          const fire = (type, x, y) => box66.dispatchEvent(
+            new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 })
+          );
+          const r0 = { x: parseFloat(box66.style.left), y: parseFloat(box66.style.top) };
+          fire("mousedown", 100, 100);
+          document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 180, clientY: 160 }));
+          document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: 180, clientY: 160 }));
+          await new Promise((r) => setTimeout(r, 120));
+          const r1 = { x: parseFloat(box66.style.left), y: parseFloat(box66.style.top) };
+          check2(
+            "\u0E02\u0E49\u0E2D 6: \u0E25\u0E32\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27\u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E08\u0E23\u0E34\u0E07",
+            r1.x !== r0.x && r1.y !== r0.y,
+            `${r0.x},${r0.y} \u2192 ${r1.x},${r1.y}`
+          );
+          const { loadNodePositions: loadNodePositions2 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          check2(
+            "\u0E02\u0E49\u0E2D 6: \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E25\u0E32\u0E01\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49\u0E02\u0E49\u0E32\u0E21\u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48",
+            !!loadNodePositions2()[bid],
+            JSON.stringify(loadNodePositions2()[bid] || null)
+          );
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 250));
+          const again2 = document.querySelector(`.branch-node[data-id="${bid}"]`);
+          check2(
+            "\u0E02\u0E49\u0E2D 6: \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 (\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14)",
+            !!again2 && again2.classList.contains("bn-pinned") && Math.abs(parseFloat(again2.style.left) - r1.x) < 1,
+            again2 && again2.style.left
+          );
+        }
+        {
+          check2("\u0E02\u0E49\u0E2D 7: \u0E1C\u0E31\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01", !!document.querySelector(".branch-export"));
+          const BG66 = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
+          const g66 = BG66.buildGraph([
+            { id: "a", title: "\u0E40\u0E23\u0E34\u0E48\u0E21", body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D", choices: [{ text: "\u0E44\u0E1B\u0E15\u0E48\u0E2D", nextSceneId: "b" }] },
+            { id: "b", title: "\u0E08\u0E1A" }
+          ]);
+          const html66 = BG66.graphToHtmlTree(g66, { title: "\u0E17\u0E14\u0E2A\u0E2D\u0E1A" });
+          check2(
+            "\u0E02\u0E49\u0E2D 10: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 HTML tree \u0E44\u0E14\u0E49 (<ul><li> + \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E22\u0E48\u0E2D)",
+            html66.includes("<ul>") && html66.includes("<li>") && html66.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D")
+          );
+          check2(
+            "\u0E02\u0E49\u0E2D 10: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 Markdown outline \u0E44\u0E14\u0E49",
+            BG66.graphToOutline(g66).includes("\u251C\u2500\u2500 ") || BG66.graphToOutline(g66).includes("\u2514\u2500\u2500 ")
+          );
+          check2("\u0E02\u0E49\u0E2D 7: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 JSON \u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49", BG66.graphToJson(g66).scenes.length === 2);
+        }
+        check2("\u0E02\u0E49\u0E2D 9: \u0E1C\u0E31\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19", !!document.querySelector(".branch-play"));
+        {
+          const bodyEl = $("#branch-body");
+          const shellEl = bodyEl.querySelector(".branch-shell");
+          const bh = bodyEl.getBoundingClientRect().height;
+          const sh = shellEl.getBoundingClientRect().height;
+          check2(
+            "[r-2] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E1C\u0E31\u0E07\u0E2A\u0E39\u0E07\u0E40\u0E15\u0E47\u0E21\u0E41\u0E1C\u0E07 (\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E17\u0E49\u0E32\u0E22\u0E41\u0E1C\u0E07)",
+            bh > 0 && Math.abs(sh - bh) <= 2,
+            `${Math.round(sh)} / ${Math.round(bh)}`
+          );
+          const pbody = bodyEl.closest(".k-panel-body");
+          check2(
+            "[r-2] .k-panel-body \u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14 padding/overflow \u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",
+            !!pbody && getComputedStyle(pbody).paddingTop === "0px" && getComputedStyle(pbody).overflow === "hidden",
+            pbody && getComputedStyle(pbody).paddingTop + "/" + getComputedStyle(pbody).overflow
+          );
+          const vp = bodyEl.querySelector(".branch-viewport");
+          check2(
+            "[r-3] \u0E1C\u0E31\u0E07\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (overflow:auto)",
+            getComputedStyle(vp).overflowY === "auto",
+            getComputedStyle(vp).overflowY
+          );
+          check2(
+            "[r-3] \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1C\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E14\u0E49\u0E27\u0E22 100vh",
+            !/vh/.test(getComputedStyle(vp).maxHeight),
+            getComputedStyle(vp).maxHeight
+          );
+          vp.scrollTop = 40;
+          check2(
+            "[r-3] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E15\u0E31\u0E49\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E1C\u0E31\u0E07\u0E2A\u0E39\u0E07\u0E40\u0E01\u0E34\u0E19\u0E0A\u0E48\u0E2D\u0E07",
+            vp.scrollHeight <= vp.clientHeight || vp.scrollTop > 0,
+            `${vp.scrollTop} \xB7 ${vp.scrollHeight}/${vp.clientHeight}`
+          );
+          vp.scrollLeft = 0;
+          vp.scrollTop = 0;
+          const mk = (type, x, y, btn) => new MouseEvent(
+            type,
+            { bubbles: true, cancelable: true, clientX: x, clientY: y, button: btn }
+          );
+          const down = mk("mousedown", 300, 300, 1);
+          vp.dispatchEvent(down);
+          check2("[r-4] \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07: \u0E01\u0E31\u0E19 autoscroll \u0E02\u0E2D\u0E07 Chromium (preventDefault)", down.defaultPrevented);
+          check2("[r-4] \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07: \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E25\u0E32\u0E01\u0E1C\u0E31\u0E07", vp.classList.contains("branch-panning"));
+          document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 240, clientY: 260 }));
+          const panned = vp.scrollLeft > 0 || vp.scrollTop > 0 || vp.scrollWidth <= vp.clientWidth && vp.scrollHeight <= vp.clientHeight;
+          check2("[r-4] \u0E25\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1C\u0E31\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E15\u0E32\u0E21", panned, `${vp.scrollLeft},${vp.scrollTop}`);
+          document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+          check2("[r-4] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E25\u0E32\u0E01", !vp.classList.contains("branch-panning"));
+          vp.scrollLeft = 25;
+          vp.scrollTop = 15;
+          const p1 = renderBranchingPanel();
+          check2(
+            "[r-1] \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E40\u0E14\u0E34\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E1E\u0E23\u0E34\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07)",
+            !!$("#branch-body").querySelector(".branch-shell")
+          );
+          await p1;
+          await new Promise((r) => setTimeout(r, 250));
+          const vp2 = $("#branch-body").querySelector(".branch-viewport");
+          check2(
+            "[r-1] \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A 0",
+            !!vp2 && (vp2.scrollTop === 15 || vp2.scrollHeight <= vp2.clientHeight),
+            vp2 && `${vp2.scrollLeft},${vp2.scrollTop}`
+          );
+          check2(
+            "[r-1] \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E14\u0E36\u0E07\u0E1C\u0E31\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E2B\u0E32\u0E42\u0E2B\u0E19\u0E14\u0E40\u0E14\u0E34\u0E21",
+            !!vp2 && (vp2.scrollLeft === 25 || vp2.scrollWidth <= vp2.clientWidth),
+            vp2 && String(vp2.scrollLeft)
+          );
+          const splitB = [...document.querySelectorAll(".branch-side-acts button")].find((b) => b.textContent.includes("\u229E"));
+          splitB.click();
+          await new Promise((r) => setTimeout(r, 700));
+          check2("[r-5] \u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E01\u0E31\u0E1A\u0E1C\u0E31\u0E07: \u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", isPanelOpen("branch"));
+          const bRect = document.querySelector('#app-root .k-panel[data-panel-id="branch"]')?.getBoundingClientRect();
+          const dRect = document.querySelector('#app-root .k-panel[data-panel-id="docs"]')?.getBoundingClientRect();
+          check2(
+            "[r-5] \u0E1C\u0E31\u0E07\u0E01\u0E31\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E04\u0E35\u0E22\u0E07\u0E02\u0E49\u0E32\u0E07\u0E01\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E2B\u0E47\u0E19\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19\u0E17\u0E31\u0E49\u0E07\u0E04\u0E39\u0E48)",
+            !!bRect && !!dRect && bRect.width > 40 && dRect.width > 40 && bRect.left < dRect.left,
+            bRect && dRect ? `branch ${Math.round(bRect.left)}w${Math.round(bRect.width)} | docs ${Math.round(dRect.left)}w${Math.round(dRect.width)}` : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E41\u0E1C\u0E07"
+          );
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        if (scB2) {
+          state._branch.sel = scB2.id;
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 300));
+          check2(
+            "\u0E02\u0E49\u0E2D 15: \u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E40\u0E2A\u0E49\u0E19\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21",
+            !!document.querySelector(".branch-edges path.branch-edge-path")
+          );
+          check2(
+            "\u0E02\u0E49\u0E2D 15: inspector \u0E1A\u0E2D\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E16\u0E36\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49",
+            !!document.querySelector(".branch-path-hi")
+          );
+          state._branch.sel = scB.id;
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        {
+          check2("\u0E02\u0E49\u0E2D 4: inspector \u0E21\u0E35\u0E08\u0E32\u0E19\u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E09\u0E32\u0E01", document.querySelectorAll(".branch-colors .branch-color").length >= 6);
+          check2(
+            "\u0E02\u0E49\u0E2D 4: \u0E17\u0E38\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19",
+            document.querySelectorAll(".branch-edit-col").length === document.querySelectorAll(".branch-edit-row").length
+          );
+          const { setNodeColor: setNodeColor2, mutateChoices: mc66 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          await setNodeColor2({ dPath, id: scB.id }, "#6fae6f");
+          await mc66({ dPath, id: scB.id }, (l) => l.map((c, i5) => i5 === 0 ? { ...c, color: "#5f9fd9" } : c));
+          const sjC = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
+          const rowC = sjC.chapters[chB.guid].find((x) => x.id === scB.id);
+          check2("\u0E02\u0E49\u0E2D 4: \u0E2A\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07 scenes.json", rowC.color === "#6fae6f", rowC.color);
+          check2(
+            "\u0E02\u0E49\u0E2D 4: \u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E34\u0E14\u0E01\u0E31\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            (rowC.choices || [])[0].color === "#5f9fd9",
+            JSON.stringify((rowC.choices || [])[0])
+          );
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 300));
+          const tinted = document.querySelector(".branch-node.bn-tinted");
+          check2("\u0E02\u0E49\u0E2D 4: \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E2A\u0E35\u0E16\u0E39\u0E01\u0E41\u0E15\u0E49\u0E21\u0E2A\u0E35\u0E1A\u0E19\u0E1C\u0E31\u0E07", !!tinted);
+          if (scB2) check2(
+            "\u0E02\u0E49\u0E2D 4: \u0E40\u0E2A\u0E49\u0E19\u0E43\u0E0A\u0E49\u0E2A\u0E35\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            [...document.querySelectorAll(".branch-edges path.branch-edge")].some((p) => (p.style.stroke || "").replace(/\s/g, "").includes("95,159,217") || p.style.stroke === "#5f9fd9"),
+            [...document.querySelectorAll(".branch-edges path.branch-edge")].map((p) => p.style.stroke).join("|")
+          );
+        }
+        {
+          const findInp = document.querySelector(".branch-find-inp");
+          check2("\u0E02\u0E49\u0E2D 17: \u0E1C\u0E31\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32", !!findInp);
+          findInp.value = scB.title;
+          findInp.dispatchEvent(new Event("input"));
+          await new Promise((r) => setTimeout(r, 350));
+          check2("\u0E02\u0E49\u0E2D 17: \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E16\u0E39\u0E01\u0E40\u0E19\u0E49\u0E19", !!document.querySelector(".branch-node.bn-hit"));
+          check2(
+            "\u0E02\u0E49\u0E2D 17: \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E17\u0E35\u0E48\u0E40\u0E08\u0E2D",
+            (document.querySelector(".branch-find-count") || {}).textContent?.length > 0
+          );
+          findInp.value = "";
+          findInp.dispatchEvent(new Event("input"));
+          await new Promise((r) => setTimeout(r, 300));
+          check2("\u0E02\u0E49\u0E2D 17: \u0E25\u0E49\u0E32\u0E07\u0E04\u0E33\u0E04\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E17\u0E38\u0E01\u0E42\u0E2B\u0E19\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E1B\u0E01\u0E15\u0E34", !document.querySelector(".branch-node.bn-faded"));
+        }
+        {
+          check2(
+            "\u0E02\u0E49\u0E2D 16: \u0E17\u0E38\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E35\u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E25\u0E32\u0E01\u0E02\u0E49\u0E32\u0E21\u0E09\u0E32\u0E01",
+            [...document.querySelectorAll(".branch-grip")].every((g) => g.draggable) && document.querySelectorAll(".branch-grip").length >= 2
+          );
+          const BG16 = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
+          await mutateChoices({ dPath, id: scB.id }, (l) => [...l, { text: l[0].text, nextSceneId: "" }]);
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 350));
+          check2("\u0E02\u0E49\u0E2D 16: \u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0B\u0E49\u0E33 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E23\u0E27\u0E21\u0E42\u0E1C\u0E25\u0E48\u0E02\u0E36\u0E49\u0E19\u0E21\u0E32", !!document.querySelector(".branch-dup"));
+          const scenes16 = (await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters[chB.guid].find((x) => x.id === scB.id).choices;
+          const merged16 = BG16.mergeDuplicateChoices(scenes16);
+          check2("\u0E02\u0E49\u0E2D 16: \u0E15\u0E31\u0E27\u0E23\u0E27\u0E21\u0E22\u0E38\u0E1A\u0E02\u0E2D\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", merged16.removed === 1, String(merged16.removed));
+          await mutateChoices({ dPath, id: scB.id }, () => merged16.list);
+        }
+        {
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 350));
+          const seeAll = [...document.querySelectorAll(".branch-paths-head button")];
+          check2('\u0E02\u0E49\u0E2D 13: \u0E2A\u0E48\u0E27\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"', seeAll.length === 1, String(seeAll.length));
+          if (seeAll[0]) {
+            seeAll[0].click();
+            await new Promise((r) => setTimeout(r, 250));
+            check2("\u0E02\u0E49\u0E2D 13: \u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07", !!document.querySelector(".branch-dlg"));
+            check2(
+              "\u0E02\u0E49\u0E2D 13: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07",
+              !!document.querySelector(".branch-dlg .k-dlg-input")
+            );
+            check2(
+              "\u0E02\u0E49\u0E2D 13: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E41\u0E2A\u0E14\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07",
+              document.querySelectorAll(".branch-path-row").length >= 1,
+              String(document.querySelectorAll(".branch-path-row").length)
+            );
+            document.querySelector(".branch-dlg").closest(".k-overlay").remove();
+          }
+        }
+        {
+          await mutateChoices({ dPath, id: scB.id }, (l) => [...l, { text: "\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E1C\u0E35", nextSceneId: "ghost-x" }]);
+          await renderBranchingPanel();
+          await new Promise((r) => setTimeout(r, 350));
+          check2(
+            "\u0E02\u0E49\u0E2D 14: \u0E1C\u0E31\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27",
+            [...document.querySelectorAll(".branch-badge")].some((b) => b.textContent.includes("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27")),
+            [...document.querySelectorAll(".branch-badge")].map((b) => b.textContent).join("|")
+          );
+          const { checkDanglingOnOpen: chk66 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          check2("\u0E02\u0E49\u0E2D 14: \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E31\u0E1A\u0E40\u0E08\u0E2D", await chk66() >= 1);
+          const brokenBadge = [...document.querySelectorAll(".branch-badge-btn")][0];
+          if (brokenBadge) {
+            brokenBadge.click();
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "\u0E02\u0E49\u0E2D 14: \u0E01\u0E14\u0E04\u0E33\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E2B\u0E49\u0E44\u0E1B\u0E41\u0E01\u0E49\u0E17\u0E35\u0E25\u0E30\u0E2D\u0E31\u0E19",
+              document.querySelectorAll(".branch-broken-row").length >= 1
+            );
+            document.querySelector(".branch-dlg")?.closest(".k-overlay")?.remove();
+          }
+          await mutateChoices({ dPath, id: scB.id }, (l) => l.filter((c) => c.nextSceneId !== "ghost-x"));
+        }
         const inp = document.querySelector(".branch-edit-text");
         inp.value = "\u0E1C\u0E25\u0E31\u0E01\u0E1B\u0E23\u0E30\u0E15\u0E39";
         inp.dispatchEvent(new Event("blur"));
@@ -148882,17 +150601,85 @@ ${css}
           (afterEdit.chapters[chB.guid].find((x) => x.id === scB.id).choices || []).some((c) => c.text === "\u0E1C\u0E25\u0E31\u0E01\u0E1B\u0E23\u0E30\u0E15\u0E39")
         );
         state._branch.view = "list";
-        await renderBranchingTree(state.tabs.get("::branching::").pane);
+        await renderBranchingPanel();
         await new Promise((r) => setTimeout(r, 250));
         check2(
           "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E22\u0E31\u0E07\u0E41\u0E2A\u0E14\u0E07\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49",
           [...document.querySelectorAll(".branch-choice")].some((c) => c.textContent.includes("\u0E1C\u0E25\u0E31\u0E01\u0E1B\u0E23\u0E30\u0E15\u0E39"))
         );
         check2("\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E2A\u0E23\u0E49\u0E32\u0E07 choices \u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)", !!document.querySelector(".branch-adder"));
-        closeTab("::branching::");
+        state._branch.view = "tree";
+        if (scB2) {
+          await openPlayerMode(scB.id);
+          await new Promise((r) => setTimeout(r, 700));
+          check2("\u0E02\u0E49\u0E2D 9: \u0E42\u0E2B\u0E21\u0E14\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", isPanelOpen("player"));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E41\u0E2A\u0E14\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E25\u0E48\u0E19",
+            (document.querySelector(".player-title") || {}).textContent?.includes(scB.title),
+            (document.querySelector(".player-title") || {}).textContent
+          );
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 (ProseMirror editable=false)",
+            !!document.querySelector(".player-readonly .ProseMirror") && document.querySelector(".player-readonly .ProseMirror").contentEditable !== "true",
+            (document.querySelector(".player-readonly .ProseMirror") || {}).contentEditable
+          );
+          const pchoices = [...document.querySelectorAll(".player-choice")];
+          check2("\u0E02\u0E49\u0E2D 9: \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E15\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07", pchoices.length >= 1, String(pchoices.length));
+          const live = pchoices.find((b) => !b.classList.contains("player-choice-dead"));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E2D\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07",
+            !!live && live.textContent.includes(scB2.title),
+            live && live.textContent
+          );
+          live.click();
+          await new Promise((r) => setTimeout(r, 800));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E01\u0E14\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E31\u0E19\u0E17\u0E35",
+            (document.querySelector(".player-title") || {}).textContent?.includes(scB2.title),
+            (document.querySelector(".player-title") || {}).textContent
+          );
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E19\u0E21\u0E32 (breadcrumb) 2 \u0E01\u0E49\u0E32\u0E27",
+            document.querySelectorAll(".player-trail-chip").length === 2,
+            String(document.querySelectorAll(".player-trail-chip").length)
+          );
+          const { getPlaythroughs: getPlaythroughs2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19 playthroughs[] \u0E41\u0E22\u0E01\u0E08\u0E32\u0E01 playerHistory",
+            getPlaythroughs2().length >= 1 && getPlaythroughs2()[getPlaythroughs2().length - 1].steps.length === 2,
+            JSON.stringify(getPlaythroughs2().slice(-1))
+          );
+          const backB66 = document.querySelector(".player-back");
+          check2("\u0E02\u0E49\u0E2D 9: \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E30\u0E01\u0E14\u0E44\u0E14\u0E49\u0E15\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E19\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27", !!backB66 && !backB66.disabled);
+          backB66.click();
+          await new Promise((r) => setTimeout(r, 700));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32",
+            (document.querySelector(".player-title") || {}).textContent?.includes(scB.title),
+            (document.querySelector(".player-title") || {}).textContent
+          );
+          check2("\u0E02\u0E49\u0E2D 9: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E2A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14", document.querySelector(".player-back").disabled);
+          const histB66 = [...document.querySelectorAll(".player-foot .player-btn")].find((b) => b.textContent.includes("\u{1F3AF}"));
+          histB66.click();
+          await new Promise((r) => setTimeout(r, 250));
+          check2(
+            "\u0E02\u0E49\u0E2D 9: \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E44\u0E14\u0E49",
+            document.querySelectorAll(".player-run-row").length >= 1
+          );
+          document.querySelector(".player-run-row")?.closest(".k-overlay")?.remove();
+          await kapi.testShot("/tmp/k2_player.png");
+          hidePanel("player");
+          if (state.meta) {
+            state.meta.playthroughs = [];
+            state.meta.playerHistory = [];
+            await saveProjectMeta();
+          }
+        }
+        hidePanel("branch");
         state._branch = null;
         await updateSceneRow(dPath, scB.id, (r) => {
           delete r.choices;
+          delete r.color;
         });
       }
       {
@@ -149920,7 +151707,7 @@ ${css}
           await openBranchingTree();
           await new Promise((r) => setTimeout(r, 400));
           state._branch.sel = scB.id;
-          await renderBranchingTree(state.tabs.get("::branching::").pane);
+          await renderBranchingPanel();
           await new Promise((r) => setTimeout(r, 500));
           check2(
             '\u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E21\u0E35\u0E2A\u0E48\u0E27\u0E19 "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01"',
@@ -149951,7 +151738,7 @@ ${css}
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
-          closeTab("::branching::");
+          hidePanel("branch");
         }
         {
           const wr = await wikiRoot();
@@ -152913,14 +154700,14 @@ ${css}
           activate(t3.file);
         }
         await new Promise((r) => setTimeout(r, 250));
-        const T2 = state.active;
+        const T4 = state.active;
         check2(
           "[58r] \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
-          !!(T2 && T2.editor && T2.pane),
-          T2 ? (T2.file || "") + " editor=" + !!T2.editor : "no active"
+          !!(T4 && T4.editor && T4.pane),
+          T4 ? (T4.file || "") + " editor=" + !!T4.editor : "no active"
         );
         const S22 = state.settings;
-        const pmR = T2.pane.querySelector(":scope > .workspace > .ProseMirror");
+        const pmR = T4.pane.querySelector(":scope > .workspace > .ProseMirror");
         check2("[58r] \u0E40\u0E08\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22", !!pmR);
         const paperWas = S22.paperMode !== false;
         if (!paperWas) {
@@ -152956,7 +154743,7 @@ ${css}
         };
         toggleReading(true);
         await new Promise((r) => setTimeout(r, 220));
-        const pmRead = T2.pane.querySelector(":scope > .workspace > .ProseMirror");
+        const pmRead = T4.pane.querySelector(":scope > .workspace > .ProseMirror");
         const csRead = getComputedStyle(pmRead);
         check2(
           "[3] \u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19+\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22/\u0E1A\u0E19\u0E40\u0E2A\u0E21\u0E2D",
@@ -152991,9 +154778,9 @@ ${css}
           '[16][17] \u0E21\u0E35 <style id="k-prose-format"> \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07',
           !!document.getElementById("k-prose-format") && document.getElementById("k-prose-format").textContent.includes("text-indent")
         );
-        T2.editor.setMarkdown("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E22\u0E48\u0E2D" + String.fromCharCode(10) + "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E22\u0E48\u0E2D");
+        T4.editor.setMarkdown("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E22\u0E48\u0E2D" + String.fromCharCode(10) + "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E22\u0E48\u0E2D");
         await new Promise((r) => setTimeout(r, 120));
-        const p2 = T2.pane.querySelectorAll(":scope > .workspace > .ProseMirror > p")[1];
+        const p2 = T4.pane.querySelectorAll(":scope > .workspace > .ProseMirror > p")[1];
         check2(
           "[16] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E21\u0E35 text-indent \u0E08\u0E23\u0E34\u0E07",
           parseFloat(getComputedStyle(p2).textIndent) > 10,
@@ -153019,9 +154806,9 @@ ${css}
         );
         S22.prose = { ...pf0, headings: pf0.headings.map((h, i5) => i5 === 0 ? { ...h, size: 3 } : h) };
         applyProseVars(proseFormat());
-        T2.editor.setMarkdown("# \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
+        T4.editor.setMarkdown("# \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
         await new Promise((r) => setTimeout(r, 120));
-        const h1El = T2.pane.querySelector(".ProseMirror h1");
+        const h1El = T4.pane.querySelector(".ProseMirror h1");
         check2(
           "[23] \u0E15\u0E31\u0E49\u0E07\u0E02\u0E19\u0E32\u0E14\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E47\u0E19\u0E1C\u0E25 (3 \u0E40\u0E17\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07)",
           !!h1El && Math.abs(parseFloat(getComputedStyle(h1El).fontSize) - parseFloat(rv("--ed-fs")) * 3) < 2,
@@ -153029,9 +154816,9 @@ ${css}
         );
         S22.prose = { ...pf0, quote: { ...pf0.quote, border: false, italic: false } };
         applyProseVars(proseFormat());
-        T2.editor.setMarkdown("> \u0E22\u0E01\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
+        T4.editor.setMarkdown("> \u0E22\u0E01\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
         await new Promise((r) => setTimeout(r, 120));
-        const bqEl = T2.pane.querySelector(".ProseMirror blockquote");
+        const bqEl = T4.pane.querySelector(".ProseMirror blockquote");
         check2(
           "[24] \u0E1B\u0E34\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E22\u0E01\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07",
           !!bqEl && parseFloat(getComputedStyle(bqEl).borderLeftWidth) < 1,
@@ -153043,14 +154830,14 @@ ${css}
         );
         S22.prose = null;
         applyProseVars(proseFormat());
-        T2.editor.setMarkdown(orig);
+        T4.editor.setMarkdown(orig);
         await new Promise((r) => setTimeout(r, 120));
         const pmodel = prosePageModel();
         check2("[20] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E21\u0E35\u0E42\u0E21\u0E40\u0E14\u0E25\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27", !!pmodel && pmodel.pages.count >= 1);
         check2("[20] anyPageModel \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E16\u0E39\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E2D\u0E07", !!anyPageModel());
         const longMd = [];
         for (let i5 = 0; i5 < 400; i5++) longMd.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E17\u0E35\u0E48 " + i5);
-        T2.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
+        T4.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
         scheduleCount();
         await new Promise((r) => setTimeout(r, 900));
         check2(
@@ -153060,38 +154847,38 @@ ${css}
         );
         check2(
           "[20] \u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E34\u0E22\u0E32\u0E22",
-          prosePageBreaks().length >= 1 && !!T2.pane.querySelector(".ed-page-break"),
+          prosePageBreaks().length >= 1 && !!T4.pane.querySelector(".ed-page-break"),
           String(prosePageBreaks().length)
         );
         const pm2 = prosePageModel();
         check2("[20] \u0E44\u0E1B\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 2 \u0E44\u0E14\u0E49", pm2.pages.count > 1 && gotoPage(2));
         setSpView("layout");
         await new Promise((r) => setTimeout(r, 200));
-        check2("[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49", T2.pane.classList.contains("sp-view-layout"));
+        check2("[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49", T4.pane.classList.contains("sp-view-layout"));
         setSpView("side");
         await new Promise((r) => setTimeout(r, 250));
         check2(
           "[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E23\u0E35\u0E22\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E04\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07",
-          !!T2.pane.querySelector(".sp-pageview .ed-page"),
-          String(T2.pane.querySelectorAll(".sp-pageview .ed-page").length)
+          !!T4.pane.querySelector(".sp-pageview .ed-page"),
+          String(T4.pane.querySelectorAll(".sp-pageview .ed-page").length)
         );
         check2(
           "[15] \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E21\u0E35 data-pos \u0E43\u0E2B\u0E49\u0E04\u0E25\u0E34\u0E01\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E14\u0E49",
-          !!T2.pane.querySelector(".sp-pageview .ed-page [data-pos]")
+          !!T4.pane.querySelector(".sp-pageview .ed-page [data-pos]")
         );
         setSpView("overview4");
         await new Promise((r) => setTimeout(r, 250));
         check2(
           "[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E20\u0E32\u0E1E\u0E23\u0E27\u0E21\u0E44\u0E14\u0E49",
-          T2.pane.classList.contains("sp-view-overview") && !!T2.pane.querySelector(".sp-pageview .ed-page")
+          T4.pane.classList.contains("sp-view-overview") && !!T4.pane.querySelector(".sp-pageview .ed-page")
         );
         setSpView("normal");
         await new Promise((r) => setTimeout(r, 200));
         check2(
           "[15] \u0E01\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E25\u0E49\u0E32\u0E07",
-          !T2.pane.querySelector(".sp-pageview")
+          !T4.pane.querySelector(".sp-pageview")
         );
-        T2.editor.setMarkdown(orig);
+        T4.editor.setMarkdown(orig);
         scheduleCount();
         await new Promise((r) => setTimeout(r, 700));
         const keepLh = S22.spLineHeight;
@@ -153218,7 +155005,7 @@ ${css}
                 return !!src2 && Array.isArray(src2.blocks) && src2.blocks.length > 0;
               })()
             );
-            activate(T2.file);
+            activate(T4.file);
             await new Promise((r) => setTimeout(r, 150));
           }
         }
@@ -153829,7 +155616,7 @@ ${css}
               "[69] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 PDF \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E15\u0E2D\u0E19\u0E01\u0E14\u0E1B\u0E34\u0E14",
               savedPdfOptions().toc === PDF_DEFAULTS.toc
             );
-            activate(T2.file);
+            activate(T4.file);
             await new Promise((r) => setTimeout(r, 150));
           }
           document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
@@ -154411,7 +156198,7 @@ ${css}
           ].join("\n"));
           await loadPlugins();
           const pl = pluginList();
-          const T2 = globalThis.__k2test || {};
+          const T4 = globalThis.__k2test || {};
           check2(
             "[r3-7] \u0E42\u0E2B\u0E25\u0E14\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E08\u0E32\u0E01\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E14\u0E49",
             pl.loaded.some((x) => x.name === "k2test"),
@@ -154442,37 +156229,37 @@ ${css}
             "menuPopup",
             "addMenuItem"
           ]) {
-            check2("[r3-7] k2 API \u0E21\u0E35\u0E40\u0E21\u0E17\u0E47\u0E2D\u0E14 " + m, typeof (T2.api || {})[m] === "function");
+            check2("[r3-7] k2 API \u0E21\u0E35\u0E40\u0E21\u0E17\u0E47\u0E2D\u0E14 " + m, typeof (T4.api || {})[m] === "function");
           }
-          T2.api.emit("k2test:ping", { n: 1 });
+          T4.api.emit("k2test:ping", { n: 1 });
           check2(
             "[r3-7] k2.on/emit \u0E2A\u0E48\u0E07\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E16\u0E36\u0E07\u0E01\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07",
-            T2.events.length === 1 && T2.events[0].n === 1,
-            JSON.stringify(T2.events)
+            T4.events.length === 1 && T4.events[0].n === 1,
+            JSON.stringify(T4.events)
           );
           check2(
             "[r3-7] k2.setSettings/getSettings \u0E40\u0E01\u0E47\u0E1A\u0E04\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E41\u0E22\u0E01\u0E01\u0E31\u0E19",
-            T2.api.getSettings("greeting") === "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35" && (state.settings.plugins || {}).k2test.greeting === "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35"
+            T4.api.getSettings("greeting") === "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35" && (state.settings.plugins || {}).k2test.greeting === "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35"
           );
           check2(
             "[r3-7] k2.registerShortcut \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32\u0E15\u0E32\u0E23\u0E32\u0E07 SHORTCUTS \u0E15\u0E2D\u0E19\u0E23\u0E31\u0E19",
             SHORTCUTS.some((s) => s[3] === "plugin:k2test:hello")
           );
           await handleCommand("plugin:k2test:hello");
-          check2("[r3-7] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E31\u0E07\u0E01\u0E4C\u0E0A\u0E31\u0E19\u0E17\u0E33\u0E07\u0E32\u0E19", T2.shortcut === true);
+          check2("[r3-7] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E31\u0E07\u0E01\u0E4C\u0E0A\u0E31\u0E19\u0E17\u0E33\u0E07\u0E32\u0E19", T4.shortcut === true);
           check2(
             "[r3-7] k2.registerPanel \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E01\u0E31\u0E1A PanelManager \u0E08\u0E23\u0E34\u0E07",
-            !!T2.panelId && !!getPanelManager().registry.get(T2.panelId),
-            T2.panelId
+            !!T4.panelId && !!getPanelManager().registry.get(T4.panelId),
+            T4.panelId
           );
-          await T2.api.writeFile("k2-plugin-test.txt", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19");
+          await T4.api.writeFile("k2-plugin-test.txt", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19");
           check2(
             "[r3-7] k2.writeFile/readFile \u0E17\u0E33\u0E07\u0E32\u0E19\u0E43\u0E19\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
-            await T2.api.readFile("k2-plugin-test.txt") === "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19"
+            await T4.api.readFile("k2-plugin-test.txt") === "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19"
           );
           check2(
             "[r3-7] path \u0E17\u0E35\u0E48\u0E21\u0E35 .. \u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18 (\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
-            await T2.api.readFile("../../etc/passwd") === null
+            await T4.api.readFile("../../etc/passwd") === null
           );
           check2(
             "[r3-7] \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33: 2.0.0-alpha.60r3 >= 2.0.0",
@@ -155571,6 +157358,15 @@ ${css}
           "[62-16] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E17\u0E35\u0E22\u0E21\u0E02\u0E2D\u0E07 3 \u0E15\u0E31\u0E27\u0E19\u0E35\u0E49\u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D",
           !state.tabs.has("::network::") && !state.tabs.has("::planner::") && !state.tabs.has("::floorplan::")
         );
+        for (const id of ["branch", "player"]) {
+          check2(`[66-1] "${id}" \u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07`, PANEL_DEFS.some((d) => d.id === id));
+          check2(`[66-1] "${id}" \u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C`, isFeaturePanel(id));
+          check2(
+            `[66-1] "${id}" \u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E07\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E17\u0E35\u0E48\u0E42\u0E2B\u0E25\u0E14\u0E2D\u0E22\u0E39\u0E48 (i18n)`,
+            !!PANEL_DEFS.find((d) => d.id === id).i18n
+          );
+        }
+        check2("[66-1] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E17\u0E35\u0E22\u0E21\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D", !state.tabs.has("::branching::"));
         showPanel("network");
         await renderFeaturePanel("network");
         await until62(() => !!$("#net-body").firstChild);
@@ -156113,6 +157909,7 @@ ${css}
       init_ai_summary();
       init_ai_summary();
       init_branching_ui();
+      init_player_mode();
       init_floorplan_ui();
       init_player_choices();
       init_visual_tags();
@@ -156287,7 +158084,10 @@ ${css}
         plannerProps: () => {
           return true;
         },
-        floorplan: () => renderFloorPlanPanel()
+        floorplan: () => renderFloorPlanPanel(),
+        // [alpha.66 ข้อ 1+9] ผังแตกสาย + โหมดทดลองเล่น — เดิมผังเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน
+        branch: () => renderBranchingPanel(),
+        player: () => renderPlayerPanel()
       };
       _featInFlight = /* @__PURE__ */ new Map();
       setPanelShowHook((pid) => {

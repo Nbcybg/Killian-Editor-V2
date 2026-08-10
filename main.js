@@ -328,6 +328,7 @@ function buildMenu() {
       ] },
       { label: 'ศูนย์รวม (Centralize — backlinks/สถิติสด)', click: () => send('centralize') },
       { label: 'ผังเรื่องแตกสาย (Branch Tree)', click: () => send('branching') },
+      { label: '▶️ ทดลองเล่นเรื่องแตกสาย (Player Mode)', click: () => send('player-mode') },
       { label: 'สร้างทางเลือกจาก [ข้อความ] ในฉากนี้', click: () => send('branch-sync') },
       { label: 'ผังพื้นที่ (Floor Plan)', click: () => send('floorplan') },
       { label: 'สมุดโน้ตด่วน', click: () => send('toggle-panel', 'notes') },
@@ -359,6 +360,9 @@ function buildMenu() {
         chk('🎨 กระดานอารมณ์', toggles.panels['gallery-board'], () => send('toggle-panel', 'gallery-board')),
         chk('🧠 AI วิเคราะห์', toggles.panels['ai-analyzer'], () => send('toggle-panel', 'ai-analyzer')),
         chk('💬 AI ผู้ช่วยเขียน', toggles.panels['ai-chat'], () => send('toggle-panel', 'ai-chat')),
+        // [alpha.66 ข้อ 1+9] ผังแตกสาย + ทดลองเล่น เป็นแผงเต็มตัวแล้ว
+        chk('🌿 ผังแตกสาย', toggles.panels['branch'], () => send('toggle-panel', 'branch')),
+        chk('▶️ ทดลองเล่น', toggles.panels['player'], () => send('toggle-panel', 'player')),
         { type: 'separator' },
         { label: '📐 จัดการแผง (แสดง/ซ่อน)…', click: () => send('panel-system') },
         { label: 'รีเซ็ตการจัดวางแผงทั้งหมด', click: () => send('reset-panels') },
@@ -610,6 +614,9 @@ const SAVE_FILTERS = {
   json: { name: 'JSON', extensions: ['json'] },
   txt: { name: 'ข้อความ', extensions: ['txt'] },
   zip: { name: 'ZIP', extensions: ['zip'] },
+  // [alpha.66 ข้อ 10] ส่งออกผังแตกสายเป็นรูป
+  svg: { name: 'ภาพเวกเตอร์ SVG', extensions: ['svg'] },
+  png: { name: 'รูปภาพ PNG', extensions: ['png'] },
   // [alpha.60r3 ข้อ 4] ตารางคำแปลสำหรับผู้แปล (Excel / Google Sheets)
   csv: { name: 'ตาราง CSV', extensions: ['csv'] },
   fdx: { name: 'Final Draft', extensions: ['fdx'] },

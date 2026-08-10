@@ -142,5 +142,196 @@ check('buildGraph รับ undefined ได้', BG.buildGraph(undefined).nodes
         lay.width >= Math.max(...lay.placed.map((p) => p.x)) + BG.NODE_W, String(lay.width));
 }
 
+// ═══════════════ alpha.66 — ยกเครื่องระบบแตกสาย ═══════════════
+
+// ── ข้อ 8+12: force-directed refinement หลัง BFS ──
+{
+  // 12 โหนดในชั้นเดียวกัน — ของเดิม BFS เรียง y ตามลำดับไฟล์เฉย ๆ
+  const many = ['n0','n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11'];
+  const g8 = BG.buildGraph([
+    { id: 'r', title: 'ราก', choices: many.map((t) => ({ text: t, nextSceneId: t })) },
+    ...many.map((id) => ({ id, title: id })),
+  ]);
+  const L8 = BG.layoutGraph(g8);
+  const col1 = L8.placed.filter((p) => p.depth === 1).sort((a, b) => a.y - b.y);
+  let minSep = Infinity;
+  for (let i = 1; i < col1.length; i++) minSep = Math.min(minSep, col1[i].y - col1[i - 1].y);
+  check('12 โหนดชั้นเดียวกัน: ระยะห่างไม่น้อยกว่าความสูงกล่อง (ไม่ทับกัน)',
+        minSep >= BG.NODE_H, String(minSep));
+  check('ผังสูงพอครอบทุกโหนดหลังขัดด้วยแรง',
+        L8.height >= Math.max(...L8.placed.map((p) => p.y)) + BG.NODE_H, String(L8.height));
+  check('รากถูกดึงมาอยู่กลาง ๆ ของลูก (barycenter)', (() => {
+    const r = L8.byId.get('r');
+    const ys = col1.map((p) => p.y);
+    return r.y > ys[0] && r.y < ys[ys.length - 1];
+  })(), String(L8.byId.get('r').y));
+
+  // refineLayout เรียกตรง ๆ ได้ (บริสุทธิ์)
+  const raw = BG.layoutGraph(g8, { refine: false });
+  const rawCol = raw.placed.filter((p) => p.depth === 1).map((p) => p.y);
+  check('refine:false = ได้ผล BFS ดิบ (y เรียงตามลำดับฉาก)',
+        rawCol.every((y, i) => i === 0 || y > rawCol[i - 1]));
+  check('refineLayout เป็นฟังก์ชันบริสุทธิ์ เรียกแยกได้',
+        typeof BG.refineLayout === 'function'
+        && BG.refineLayout([{ id: 'x', depth: 0, y: 0 }], []).length === 1);
+}
+
+// ── ข้อ 6: ตำแหน่งที่ผู้ใช้ลากเอง ต้องชนะการจัดวางอัตโนมัติ ──
+{
+  const L = BG.layoutGraph(g, { positions: { b: { x: 999, y: 777 } } });
+  const b = L.byId.get('b');
+  check('โหนดที่ลากเองอยู่ตรงตำแหน่งที่ลากเป๊ะ', b.x === 999 && b.y === 777, `${b.x},${b.y}`);
+  check('โหนดที่ลากเองถูกทำเครื่องหมาย pinned', b.pinned === true);
+  check('ผังกว้าง/สูงพอครอบโหนดที่ถูกลากออกไปไกล',
+        L.width >= 999 + BG.NODE_W && L.height >= 777 + BG.NODE_H, `${L.width}x${L.height}`);
+  check('โหนดอื่นยังถูกจัดวางอัตโนมัติตามเดิม', L.byId.get('a').pinned === false);
+}
+
+// ── ข้อ 8+13: enumeratePaths ต้องบอกได้ว่าถูกตัด ──
+{
+  const info = BG.enumeratePathsInfo(g, 'a', 1);
+  check('ถูกตัด → truncated = true', info.truncated === true && info.paths.length === 1);
+  const full = BG.enumeratePathsInfo(g, 'a', 40);
+  check('ไม่ถูกตัด → truncated = false', full.truncated === false && full.paths.length === 2);
+  check('ตัดพอดีขอบเขต ไม่รายงานผิดว่าถูกตัด',
+        BG.enumeratePathsInfo(g, 'a', 2).truncated === false);
+  check('enumeratePaths เดิมยังใช้ได้เหมือนเดิม', BG.enumeratePaths(g, 'a').length === 2);
+}
+
+// ── ข้อ 14: ตรวจทางเลือกที่ชี้ไปฉากที่ไม่มีอยู่จริง ──
+{
+  const bad = [
+    { id: 'a', title: 'A', choices: [{ text: 'ไปผี', nextSceneId: 'ghost' }, { text: 'ยังไม่คิด', nextSceneId: '' }] },
+    { id: 'b', title: 'B', choices: [{ text: 'ไป A', nextSceneId: 'a' }] },
+  ];
+  const v = BG.validateChoices(bad);
+  check('validateChoices เจอทั้งชี้ผิดและยังไม่ระบุ', v.length === 2, String(v.length));
+  check('แยกสาเหตุถูก (missing vs empty)',
+        v.find((x) => x.nextSceneId === 'ghost').reason === 'missing'
+        && v.find((x) => !x.nextSceneId).reason === 'empty');
+  check('รายงานพอให้ผู้ใช้ตามไปแก้ได้ (ชื่อฉาก + ลำดับทางเลือก)',
+        v[0].sceneTitle === 'A' && v[0].idx === 0 && v[0].text === 'ไปผี');
+  check('danglingChoices = เฉพาะที่พังจริง',
+        BG.danglingChoices(bad).length === 1 && BG.danglingChoices(bad)[0].reason === 'missing');
+  check('ทางเลือกครบถ้วน → ไม่มีรายงาน', BG.danglingChoices([
+    { id: 'a', choices: [{ text: 'x', nextSceneId: 'b' }] }, { id: 'b' }]).length === 0);
+  check('validateChoices รับ undefined ได้', BG.validateChoices(undefined).length === 0);
+}
+
+// ── ข้อ 15: ไฮไลต์เส้นทางจากจุดเริ่ม → โหนดที่เลือก ──
+{
+  const h = BG.highlightPath(g, 'd');
+  check('หาเส้นทาง root → โหนดที่เลือกเจอ', h.path.join('>') === 'a>b>d', h.path.join('>'));
+  check('ไฮไลต์ครอบทุกโหนดบนเส้นทาง', h.nodes.has('a') && h.nodes.has('b') && h.nodes.has('d'));
+  check('ไฮไลต์ครอบทุกเส้นบนเส้นทาง (ไม่เกินนั้น)',
+        h.edges.size === 2 && h.edges.has(BG.edgeKey('a', 'b')) && h.edges.has(BG.edgeKey('b', 'd')));
+  check('เลือกที่ root เอง = เส้นทางยาว 1 ไม่มีเส้น',
+        BG.highlightPath(g, 'a').path.join() === 'a' && BG.highlightPath(g, 'a').edges.size === 0);
+  check('โหนดนอกผัง → ไม่มีเส้นทาง', BG.highlightPath(g, 'z').path.length === 0);
+  check('ไม่เลือกอะไร → ว่าง ไม่พัง', BG.highlightPath(g, null).nodes.size === 0);
+  check('ผังวงล้วนยังหาเส้นทางได้ (ยึดฉากแรกเป็นราก)',
+        BG.highlightPath(gc, 'c').path.join('>') === 'a>b>c', BG.highlightPath(gc, 'c').path.join('>'));
+}
+
+// ── ข้อ 16: รวมทางเลือกที่ซ้ำกัน ──
+{
+  const m = BG.mergeDuplicateChoices([
+    { text: 'เปิดประตู', nextSceneId: '' },
+    { text: 'เปิดประตู', nextSceneId: 'b' },
+    { text: 'หนี', nextSceneId: 'c' },
+  ]);
+  check('ทางเลือกซ้ำถูกยุบเหลือหนึ่ง', m.list.length === 2 && m.removed === 1, JSON.stringify(m));
+  check('ตัวที่ยังไม่ระบุปลายทางกลืนปลายทางของคู่แฝดมาด้วย',
+        m.list[0].nextSceneId === 'b', JSON.stringify(m.list[0]));
+  const keep = BG.mergeDuplicateChoices([
+    { text: 'ไปต่อ', nextSceneId: 'x' }, { text: 'ไปต่อ', nextSceneId: 'y' }]);
+  check('ข้อความเดียวกันแต่ไปคนละฉาก = ทางแยกจริง ห้ามยุบ',
+        keep.list.length === 2 && keep.removed === 0);
+  check('ตัดช่องว่างหัวท้ายก่อนเทียบ',
+        BG.mergeDuplicateChoices([{ text: ' หนี ' }, { text: 'หนี' }]).removed === 1);
+  check('countDuplicateChoices นับทั้งผัง', BG.countDuplicateChoices(BG.buildGraph([
+    { id: 'a', choices: [{ text: 'x' }, { text: 'x' }] },
+    { id: 'b', choices: [{ text: 'y' }, { text: 'y' }, { text: 'y' }] },
+  ])) === 3);
+  check('ไม่มีของซ้ำ → removed = 0', BG.mergeDuplicateChoices(g.byId.get('a').choices).removed === 0);
+}
+
+// ── ข้อ 17: ค้นหา/กรองในผัง ──
+{
+  check('ค้นชื่อฉากเจอ', [...BG.filterNodes(g, 'ห้องมืด')].join() === 'b');
+  check('ค้นข้อความทางเลือกก็เจอฉากต้นทาง', BG.filterNodes(g, 'เปิดประตู').has('a'));
+  check('ค้นชื่อบทเจอทุกฉากในบทนั้น', BG.filterNodes(g, 'บท 2').size === 2);
+  check('ไม่ใส่คำค้น = ไม่กรอง (null ไม่ใช่ Set ว่าง)', BG.filterNodes(g, '  ') === null);
+  check('ค้นไม่เจอ = Set ว่าง', BG.filterNodes(g, 'ไม่มีคำนี้แน่นอน').size === 0);
+  const exp = BG.expandWithNeighbors(g, BG.filterNodes(g, 'ห้องมืด'));
+  check('ขยายผลค้นหาให้เห็นเพื่อนบ้าน', exp.has('a') && exp.has('b') && exp.has('d') && !exp.has('c'),
+        [...exp].join());
+}
+
+// ── ข้อ 7+10: ส่งออกผัง (Markdown outline · JSON · HTML tree) ──
+{
+  const out = BG.graphToOutline(g);
+  check('outline เริ่มด้วยจุดเริ่มเรื่อง', out.startsWith('▶ เริ่มเรื่อง'), out.split('\n')[0]);
+  check('outline ใช้เส้นขีดแบบต้นไม้', out.includes('├── [เปิดประตู] → ห้องมืด'), out);
+  check('outline ย่อหน้าลูกด้วยเส้นตั้ง', out.includes('│   └── [เดินต่อ] → ตอนจบ'), out);
+  check('outline ปิดกิ่งสุดท้ายด้วย └──', out.includes('└── [หนี] → ทางตัน'), out);
+  const outOpen = BG.graphToOutline(BG.buildGraph([{ id: 'a', title: 'A', choices: [{ text: 'x' }] }]));
+  check('outline บอกทางเลือกที่ยังไม่ระบุปลายทาง', outOpen.includes('(ยังไม่ระบุปลายทาง)'), outOpen);
+  const outLoop = BG.graphToOutline(gc);
+  check('outline ไม่วนไม่รู้จบเมื่อผังมีวง', outLoop.includes('↩ วนกลับ') && outLoop.length < 4000, outLoop);
+
+  const j = BG.graphToJson(g, { title: 'เรื่องทดสอบ' });
+  check('JSON บอกรูปแบบ+เวอร์ชันไว้ให้เครื่องมืออื่นอ่าน',
+        j.format === 'killian-branching' && j.version === 1);
+  check('JSON มีเฉพาะฉากที่อยู่ในผัง', j.scenes.length === 4, String(j.scenes.length));
+  check('JSON เก็บทางเลือก + ปลายทาง', j.scenes[0].choices[0].next === 'b');
+  check('JSON บอกปลายทางที่ยังไม่ระบุเป็น null',
+        BG.graphToJson(BG.buildGraph([{ id: 'a', choices: [{ text: 'x' }] }])).scenes[0].choices[0].next === null);
+  check('JSON มีสถิติผังครบ', j.stats.scenes === 4 && j.stats.choices === 3 && j.stats.roots === 1);
+  check('JSON serialize ได้จริง (ไม่มี Map/Set หลุดเข้าไป)',
+        JSON.parse(JSON.stringify(j)).scenes.length === 4);
+
+  const gBody = BG.buildGraph([
+    { id: 'a', title: 'ประตู', body: 'เขายืนอยู่หน้าประตู **บานใหญ่**', choices: [{ text: 'เปิด', nextSceneId: 'b' }] },
+    { id: 'b', title: 'ห้องมืด<script>', body: 'มืดสนิท' },
+  ]);
+  const html = BG.graphToHtmlTree(gBody, { title: 'ผังของฉัน' });
+  check('HTML tree เป็นหน้าเดี่ยวเปิดเบราว์เซอร์ได้', html.startsWith('<!DOCTYPE html>') && html.includes('</html>'));
+  check('HTML tree ใช้ <ul><li> จริงตามที่ขอ', html.includes('<ul>') && html.includes('<li>'));
+  check('HTML tree พับ/กางฉากได้ (<details>)', html.includes('<details'));
+  check('HTML tree แสดงเนื้อฉากย่อ', html.includes('เขายืนอยู่หน้าประตู'), '');
+  check('HTML tree ตัดเครื่องหมาย markdown ออกจากเนื้อย่อ', !html.includes('**บานใหญ่**'));
+  check('HTML tree หนีอักขระ HTML จากชื่อฉาก (กันสคริปต์ฝัง)',
+        html.includes('&lt;script&gt;') && !html.includes('<script>'));
+  check('HTML tree แสดงข้อความทางเลือกบนกิ่ง', html.includes('[เปิด]'));
+  check('HTML tree ใส่สถิติผังไว้ด้านบน', html.includes('ฉากในผัง'));
+  check('ผังว่างส่งออกได้ ไม่พัง',
+        BG.graphToHtmlTree(BG.buildGraph([])).includes('</html>') && BG.graphToOutline(BG.buildGraph([]))
+        && JSON.stringify(BG.graphToJson(BG.buildGraph([]))).length > 10);
+  check('bodyExcerpt ตัดความยาวตามที่กำหนด',
+        BG.bodyExcerpt('ก'.repeat(500), 50).length === 50, String(BG.bodyExcerpt('ก'.repeat(500), 50).length));
+}
+
+// ── ข้อ 11 (i18n): ข้อความสรุปต้องเปลี่ยนภาษาได้ ──
+{
+  const en = BG.graphSummary(BG.analyzeGraph(g),
+    { scenes: 'scenes', choices: 'choices', roots: 'starts', endings: 'endings' });
+  check('graphSummary รับป้ายกำกับภาษาอื่นได้', en === '4 scenes · 3 choices · 1 starts · 2 endings', en);
+  check('ไม่ส่งป้าย = ไทยเหมือนเดิม (ของเก่ายังใช้ได้)',
+        BG.graphSummary(BG.analyzeGraph(g)).includes('4 ฉากในผัง'));
+}
+
+// ── สีของการ์ด/เส้น (ข้อ 4) ต้องรอดจาก buildGraph ──
+{
+  const gcol = BG.buildGraph([
+    { id: 'a', title: 'A', color: '#d97757', choices: [{ text: 'x', nextSceneId: 'b', color: '#5f9fd9' }] },
+    { id: 'b', title: 'B' },
+  ]);
+  check('สีการ์ดติดมากับโหนด', gcol.byId.get('a').color === '#d97757');
+  check('สีเส้นติดมากับทางเลือกและ edge',
+        gcol.byId.get('a').choices[0].color === '#5f9fd9' && gcol.edges[0].color === '#5f9fd9');
+  check('ไม่ตั้งสี = ว่าง ไม่ใช่ undefined', BG.buildGraph([{ id: 'x' }]).byId.get('x').color === '');
+}
+
 console.log(`branch-graph: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

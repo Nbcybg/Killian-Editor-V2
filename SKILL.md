@@ -98,7 +98,20 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
     `categorizeWith(map, role)` ให้ตาราง `categories` ใน `renderer/inverse_roles.json` ชนะ regex. re-export ผ่าน core.js · **unit test 28 ข้อ**
   - **`sensory-profile.js`** (alpha.45) — บรรยากาศรับรู้ของสถานที่: `renderSensoryProfile(wrap, entity, onDirty)` (เรียกซ้ำได้ ไม่ซ้ำช่อง),
     `ensureSensory` (เรียกใน `addEntity` + `openEntity`), `isSensoryEntity`/`sensoryFilled` · เก็บใน `entity.sensoryProfile`
-  - **`branch-graph.js`** (alpha.42, บริสุทธิ์) — เอนจินผังแตกสาย: `buildGraph` (choices→edges, ตั้ง `dangling`), `layoutGraph` (จัดชั้น BFS ระยะสั้นสุด → x/y), `analyzeGraph` (roots/endings/unreachable/cycles ด้วย DFS สี), `enumeratePaths`. UI = `branching-ui.js` วาด SVG (เส้น) + div (กล่อง). **unit test แยก 37 ข้อ** (`test/branch.test.cjs`)
+  - **`branch-graph.js`** (alpha.42 · ขยายใหญ่ใน alpha.66, บริสุทธิ์) — เอนจินผังแตกสาย:
+    `buildGraph` (choices→edges, ตั้ง `dangling`, พก `color` ของ choice มาด้วย),
+    `layoutGraph(graph, {positions, refine})` (BFS ระยะสั้นสุด → x/y แล้ว **ขัดด้วยแรง**),
+    `analyzeGraph` (roots/endings/unreachable/cycles ด้วย DFS สี)
+    · **alpha.66**: `refineLayout` (barycenter + ผลักในคอลัมน์ — แรงผลักทำหลังเสมอจึง**รับประกัน**ว่าไม่ทับ) ·
+    `enumeratePathsInfo` (ไล่เกินโควตา 1 เส้นเพื่อรู้แน่ว่าถูกตัดไหม) · `validateChoices`/`danglingChoices`
+    (แยก `empty` = ยังไม่ระบุ ออกจาก `missing` = ชี้ไปฉากที่ถูกลบ) · `highlightPath`/`edgeKey` ·
+    `mergeDuplicateChoices` (ยุบเฉพาะเมื่อปลายทางไปกันได้) · `filterNodes`/`expandWithNeighbors` ·
+    **ตัวส่งออก 3 ตัว**: `graphToOutline` (Markdown tree) · `graphToJson` · `graphToHtmlTree` (หน้าเดี่ยว escape ครบ)
+    · UI = `branching-ui.js` วาด SVG (เส้น) + div (กล่อง). **unit test แยก 118 ข้อ** (`test/branch.test.cjs`)
+  - **`player-mode.js`** (alpha.66) — แผงทดลองเล่น: อ่านฉากด้วย `KEditor` + `editable:()=>false` ·
+    ทางเลือกเป็นปุ่ม · ย้อนกลับทีละก้าว · เส้นทางเก็บใน `state.meta.playthroughs[]` (เขียนทุกก้าว
+    เก็บ 40 รอบล่าสุด) **แยกจาก `playerHistory` เดิม** ที่เป็นการตัดสินใจปนกันทั้งหมด
+    · **ระวัง**: มันบันทึกลง `playerHistory` ด้วย → เทสที่นับ `choiceStats()` ต้องล้างทั้งสองที่
   - **`ai/` (alpha.61 — ผู้ให้บริการที่ผู้ใช้ตั้งเอง + แชท opencode)**
     · **`ai/ai-providers.js`** (บริสุทธิ์) — `PARAM_DEFS`(12) · `normalizeParams` · `parseDomains`/`isDomainAllowed`
       · `newProvider`/`validateProvider` · `stripSecrets`/`withSecrets` · `modelsRequests`/`parseModels`
@@ -139,7 +152,10 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
     · **[alpha.62 บั๊ก 13] `sideBetween(r, r2)` ตอบ 4 ทิศ** — `rememberHome` เดิมคิดแค่แกนนอน
       แผงที่ผนึกแนวตั้ง (dock `col`) มี `left` เท่ากัน → ได้ `'left'` เสมอ ตำแหน่งหายทุกครั้งที่ปิด-เปิด
     · **[alpha.62 บั๊ก 16] แผงครบวงแล้ว** — `network` · `planner` · `floorplan` เข้ามาเป็นแผงชุดสุดท้าย
-      (ไม่เหลือแท็บเอกสารเทียม `::xxx::` ของฟีเจอร์ที่ไม่ใช่เอกสารอีกแล้ว ยกเว้น `::branching::`)
+    · **[alpha.66 ข้อ 1] ปิดวงจริง** — `branch` (ผังแตกสาย) + `player` (ทดลองเล่น) เข้ามาเป็นแผง
+      **ไม่เหลือแท็บเอกสารเทียม `::xxx::` ของฟีเจอร์ที่ไม่ใช่เอกสารอีกแล้ว** (`::branching::` ถูกยุบ)
+      · แผงทั้งสองใช้ **container query** (`container-type:inline-size` บน `.branch-host`/`.player-host`)
+      ไม่ใช่ media query — ผนึกเป็นแผงแคบข้างซ้ายแล้ว media query ยังคิดว่าจอกว้างอยู่
   - **`layout/split-layout.js`** (alpha.39, บริสุทธิ์) — recursive split tree: `splitPane`(ลากขอบ→row/col),`resizeSplit`(+snap 50%),`removeLeaf`(+collapse), `leaf.tabId` เชื่อมกับ Panel System · store: `serializeSplit`/`SplitStore`. UI = `split-ui.js` (`renderSplitTree`/`initSplitSystem` + โหมดเทียบ 2 ช่องแบบเดิม)
   - `compile.js` — **เอนจินเวิร์กโฟลว์ส่งออก** (บริสุทธิ์ ไม่แตะ DOM/fs): `STEP_DEFS` 3 stage (model/render/text), `PRESETS`×7, `runWorkflow(model,wf,{spFormat})`, `mdToHtml`, strip helpers — มี unit test แยก
     · **alpha.58**: ขั้นตอน `sp-continued` (stage text · ปิดไว้ทุกพรีเซ็ต) + `insertContinueds(text, fmt)`
@@ -1006,7 +1022,31 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.64** · e2e 2,028 ALL OK + unit 1,709 / 26 ไฟล์)
+## เวอร์ชัน (ล่าสุด **alpha.66r** · e2e ALL OK + unit 37 ไฟล์ผ่านครบ · `npm run test:unit`)
+
+**.66r** — เก็บบั๊ก UI ผังแตกสาย 5 ข้อ · **บทเรียนใหม่ที่ต้องจำ 3 ข้อ**:
+1. **เนื้อแผงห้ามยืมคลาส `k-dlg-*` ของกล่องโต้ตอบ** — แผงที่ "ปิดอยู่" ยังคาใน `#k-panel-src`
+   (ซ่อน แต่ยังอยู่ในเอกสาร) → `document.querySelector('.k-dlg-input')` คว้าของในแผง แทนของในกล่อง
+   ทำให้กล่องเพิ่มฉาก/เปลี่ยนชื่อเล่มพังทั้งชุด · ใช้ `.k-field-input`/`.k-field-select` แทน
+   (บทเรียนข้อ 10 เดิมพูดถึงแค่ `.k-ok` — จริง ๆ ครอบทุกคลาสของกล่อง)
+2. **ห้ามใช้ `100vh` ในเนื้อแผง** — แผงไม่ได้สูงเท่าหน้าต่าง · และต้องถอด `padding`/`overflow`
+   ของ `.k-panel-body` ด้วย `:has()` เหมือน `#net-body` ไม่งั้น "เนื้อไม่เต็มแผง + แถบเลื่อนซ้อนสองชั้น"
+3. **วาดใหม่ต้องสลับทีเดียว** — `innerHTML=''` แล้วค่อย `await` อ่านไฟล์ = แผงว่างเปล่าให้เห็น
+   (อาการ "UI กระพริบ") · แยก "วาดใหม่เพราะข้อมูลเปลี่ยน" ออกจาก "วาดใหม่เพราะมุมมองเปลี่ยน"
+   + จำตำแหน่งเลื่อน + `scrollIntoView` เฉพาะตอนตัวที่เลือกเปลี่ยนจริง
+
+
+**.66** — **ยกเครื่องระบบเรื่องแตกสายทั้งชุด (17 ข้อ)** · ผังเลิกเป็นแท็บเอกสาร → **แผง `branch`**
+(+ แผงใหม่ `player` = โหมดทดลองเล่น) — ปิดวงเรื่อง "ไม่เหลือแท็บเทียม `::xxx::`" ที่ค้างมาตั้งแต่ .62 ·
+แถบเพิ่มทางเลือกขึ้นบน ผังลงล่าง · ตัวหนังสือผูก `--ui-scale` ทุกจุด · ป้ายทางเลือกมีแถบรองพื้น
+(`getBBox()` จริง) และอยู่กึ่งกลาง **เส้นโค้ง** (t=0.5 ของ Bézier) · เลือกสีการ์ด/เส้นได้ ·
+ลากย้ายการ์ดได้ (จำใน localStorage แยกตามโปรเจกต์) · `refineLayout` แก้เส้นไขว้/โหนดทับ ·
+`enumeratePathsInfo` เลิกตัดเงียบ ๆ + ปุ่ม "ดูทั้งหมด" · `validateChoices` เตือนตอนเปิดโปรเจกต์ ·
+`highlightPath` · ลากย้ายทางเลือกข้ามฉาก + รวมทางเลือกซ้ำ · ค้นหา/กรองในผัง ·
+**ส่งออก 5 แบบ** (HTML tree/Markdown outline/JSON/SVG/PNG) · **`playthroughs[]`** เก็บเส้นทางแต่ละรอบ ·
+i18n ครบ (`branch` 144 + `player` 34 คีย์ ทั้ง th/en) · unit 53→118 · e2e +49
+
+**.65** — ยกเครื่อง Planner (กระดานแบบ Miro) + รอบเก็บบั๊ก r–r8 (ดู CHANGELOG)
 
 **.64** — **AI ลงมือทำเองได้** (`ai-tools.js` + `ai-actions.js` · 15 คำสั่ง · 3 โหมด read/write/full ·
 วนรอบ สั่ง→ทำ→ป้อนผลกลับ สูงสุด 5 รอบ) · **transcript view 4 แบบ** (ปกติ/ความคิด/ละเอียด/สรุป
