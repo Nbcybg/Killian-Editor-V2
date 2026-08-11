@@ -1465,6 +1465,7 @@ async function loadProjectInner(root) {
     await renderFeaturePanel(PANEL_WIN);
     clearBusy();
     setStatus('เปิดโปรเจกต์: ' + state.title);
+    reportPanelWindowHealth();
     return;
   }
   setBusy('กำลังโหลดเทมเพลต…');
@@ -1642,6 +1643,13 @@ export function handleSyncMessage(msg) {
     buildTree().catch(() => {});
     return true;
   }
+  if (msg.kind === 'panelwin-ready' && !PANEL_WIN) {
+    state._panelWinHealth = msg;                 // เทส/การไล่ปัญหาอ่านจากตรงนี้
+    if (!msg.hasStatus || !msg.drawn) {
+      log('warn', '[แผง] หน้าต่างแผง "' + msg.id + '" รายงานสภาพผิดปกติ', msg);
+    }
+    return true;
+  }
   if (msg.kind === 'open-file' && !PANEL_WIN && msg.file) {
     // หน้าต่างแผงคลิกฉาก → หน้าต่างหลักเป็นคนเปิดให้ (ที่นั่นมีแท็บเอกสารจริง)
     activate(msg.file).then(() => { try { window.focus(); } catch {} }).catch(() => {});
@@ -1655,6 +1663,28 @@ export function bindMainWindowSync() {
   if (_mainSyncBound || PANEL_WIN) return false;
   try { kapi.onSync((msg) => handleSyncMessage(msg)); _mainSyncBound = true; } catch {}
   return _mainSyncBound;
+}
+/**
+ * [alpha.67] หน้าต่างแผงรายงานสภาพตัวเองกลับไปหน้าต่างหลัก
+ *
+ * มีไว้เพราะหน้าต่างหลัก **มองไม่เห็น DOM ของหน้าต่างลูก** (คนละ context) — ถ้าไม่มีช่องนี้
+ * ลูกพังเงียบ ๆ ได้โดยที่ทั้งเทสและผู้ใช้ไม่รู้ (เจอมาแล้วรอบ .67: `mountPanelWindow` เคยล้าง
+ * `#app-root` ทิ้งทั้งดุ้น ซึ่งลบแถบสถานะ/แถบเครื่องมือถาวร → `setStatus()` ระเบิดทุกครั้ง
+ * แต่แผงยังวาดออกมาสวยดี จึงดูเหมือนไม่มีอะไรผิด)
+ */
+export function reportPanelWindowHealth() {
+  if (!PANEL_WIN) return false;
+  const bodyEl = document.querySelector('.k-panelwin > .k-panel-body');
+  const health = {
+    kind: 'panelwin-ready', id: PANEL_WIN,
+    // ของสำคัญที่โค้ดทั้งโปรเจกต์อ้างด้วย id ต้องยังอยู่ใน DOM (ซ่อนได้ แต่ห้ามหาย)
+    hasStatus: !!document.getElementById('status'),
+    hasToolbar: !!document.getElementById('toolbar'),
+    hasPanes: !!document.getElementById('panes'),
+    drawn: !!(bodyEl && bodyEl.children.length),      // แผงวาดเนื้อออกมาจริง ไม่ใช่กล่องเปล่า
+  };
+  try { kapi.broadcast && kapi.broadcast(health); } catch {}
+  return health;
 }
 /** ขอให้หน้าต่างหลักเปิดไฟล์นี้ (ใช้จากหน้าต่างแผงเท่านั้น) — คืน false เมื่ออยู่หน้าต่างหลัก */
 export function requestOpenInMain(file) {
@@ -18866,6 +18896,12 @@ async function runTest(projectPath) {
         // จึงให้ main ถ่ายรูปมาให้ แล้วตรวจว่าไม่ใช่ไฟล์เปล่า/หน้าขาว
         const shot = await kapi.testShotTearOff('timeline', '/tmp/k2-tearoff.png');
         check('[67] ถ่ายภาพหน้าต่างแผงได้ (หน้าต่างมีตัวตนจริงและวาดเสร็จแล้ว)', shot === true);
+        // ...และลูกรายงานสภาพตัวเองกลับมา (ช่องเดียวที่หน้าต่างหลักรู้ว่าข้างในลูกพังหรือเปล่า)
+        const hz = state._panelWinHealth;
+        check('[67] หน้าต่างแผงรายงานสภาพกลับมา', !!hz && hz.id === 'timeline', JSON.stringify(hz));
+        check('[67] แผงในหน้าต่างลูกวาดเนื้อจริง ไม่ใช่กล่องเปล่า', !!hz && hz.drawn === true);
+        check('[67] หน้าต่างลูกไม่ได้ลบของที่โค้ดอ้างด้วย id ทิ้ง (#status/#toolbar/#panes)',
+              !!hz && hz.hasStatus && hz.hasToolbar && hz.hasPanes, JSON.stringify(hz));
 
         // เรียก showPanel ซ้ำต้องไม่วาดใบที่สองในหน้าต่างนี้
         showPanel('timeline'); await wait62(320);

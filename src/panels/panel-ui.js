@@ -190,7 +190,13 @@ export function mountPanelWindow(id) {
   const d = PANEL_DEFS.find((x) => x.id === pid);
   document.body.classList.add('panel-window');
   const h = host();
-  h.innerHTML = '';
+  // ⚠ ห้าม `h.innerHTML = ''` — ตอนนี้ใน host มี **เนื้อแผงตัวจริง** วางอยู่แล้ว
+  // (แถบสถานะ/แถบเครื่องมือ/พื้นที่เขียน ถูกย้ายเข้ามาก่อนหน้านี้) การล้างทิ้งคือการ **ลบทิ้งถาวร**
+  // แล้วโค้ดที่อ้าง id เหล่านั้นพังทันที — `setStatus()` = `$('#status').textContent` ระเบิดเป็นตัวแรก
+  // ท่าเดียวกับ renderPanels: ย้ายกลับเข้าที่พักที่ซ่อนอยู่ ของทุกชิ้นยังอยู่ใน DOM ครบ
+  const holder = srcHolder();
+  for (const kid of [...h.children]) holder.appendChild(kid);
+  for (const [, node] of adopted) if (!holder.contains(node) && !h.contains(node)) holder.appendChild(node);
   const box = el('div', 'k-panel k-panelwin');
   box.dataset.panelId = pid;
   const head = el('div', 'k-panel-head');

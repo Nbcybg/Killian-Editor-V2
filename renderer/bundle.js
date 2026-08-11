@@ -63718,7 +63718,9 @@ ${h.text}`;
     const d = PANEL_DEFS.find((x) => x.id === pid);
     document.body.classList.add("panel-window");
     const h = host();
-    h.innerHTML = "";
+    const holder = srcHolder();
+    for (const kid of [...h.children]) holder.appendChild(kid);
+    for (const [, node2] of adopted) if (!holder.contains(node2) && !h.contains(node2)) holder.appendChild(node2);
     const box2 = el("div", "k-panel k-panelwin");
     box2.dataset.panelId = pid;
     const head2 = el("div", "k-panel-head");
@@ -138208,6 +138210,7 @@ ${css}
     renderOpenFeaturePanels: () => renderOpenFeaturePanels,
     renderPlannerPanel: () => renderPlannerPanel,
     repaginateFast: () => repaginateFast,
+    reportPanelWindowHealth: () => reportPanelWindowHealth,
     requestOpenInMain: () => requestOpenInMain,
     resolveImg: () => resolveImg,
     revealFile: () => revealFile,
@@ -139508,6 +139511,7 @@ ${css}
       await renderFeaturePanel(PANEL_WIN);
       clearBusy();
       setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C: " + state.title);
+      reportPanelWindowHealth();
       return;
     }
     setBusy("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u2026");
@@ -139671,6 +139675,13 @@ ${css}
       });
       return true;
     }
+    if (msg.kind === "panelwin-ready" && !PANEL_WIN) {
+      state._panelWinHealth = msg;
+      if (!msg.hasStatus || !msg.drawn) {
+        log("warn", '[\u0E41\u0E1C\u0E07] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07 "' + msg.id + '" \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E1C\u0E34\u0E14\u0E1B\u0E01\u0E15\u0E34', msg);
+      }
+      return true;
+    }
     if (msg.kind === "open-file" && !PANEL_WIN && msg.file) {
       activate(msg.file).then(() => {
         try {
@@ -139691,6 +139702,25 @@ ${css}
     } catch {
     }
     return _mainSyncBound;
+  }
+  function reportPanelWindowHealth() {
+    if (!PANEL_WIN) return false;
+    const bodyEl = document.querySelector(".k-panelwin > .k-panel-body");
+    const health = {
+      kind: "panelwin-ready",
+      id: PANEL_WIN,
+      // ของสำคัญที่โค้ดทั้งโปรเจกต์อ้างด้วย id ต้องยังอยู่ใน DOM (ซ่อนได้ แต่ห้ามหาย)
+      hasStatus: !!document.getElementById("status"),
+      hasToolbar: !!document.getElementById("toolbar"),
+      hasPanes: !!document.getElementById("panes"),
+      drawn: !!(bodyEl && bodyEl.children.length)
+      // แผงวาดเนื้อออกมาจริง ไม่ใช่กล่องเปล่า
+    };
+    try {
+      kapi.broadcast && kapi.broadcast(health);
+    } catch {
+    }
+    return health;
   }
   function requestOpenInMain(file) {
     if (!PANEL_WIN || !file) return false;
@@ -159567,6 +159597,14 @@ ${css}
         );
         const shot = await kapi.testShotTearOff("timeline", "/tmp/k2-tearoff.png");
         check2("[67] \u0E16\u0E48\u0E32\u0E22\u0E20\u0E32\u0E1E\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49 (\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E21\u0E35\u0E15\u0E31\u0E27\u0E15\u0E19\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E27\u0E32\u0E14\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27)", shot === true);
+        const hz = state._panelWinHealth;
+        check2("[67] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32", !!hz && hz.id === "timeline", JSON.stringify(hz));
+        check2("[67] \u0E41\u0E1C\u0E07\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E25\u0E39\u0E01\u0E27\u0E32\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32", !!hz && hz.drawn === true);
+        check2(
+          "[67] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E25\u0E39\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E25\u0E1A\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E42\u0E04\u0E49\u0E14\u0E2D\u0E49\u0E32\u0E07\u0E14\u0E49\u0E27\u0E22 id \u0E17\u0E34\u0E49\u0E07 (#status/#toolbar/#panes)",
+          !!hz && hz.hasStatus && hz.hasToolbar && hz.hasPanes,
+          JSON.stringify(hz)
+        );
         showPanel("timeline");
         await wait62(320);
         check2(
