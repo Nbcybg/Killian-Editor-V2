@@ -341,28 +341,14 @@ function buildMenu() {
       { label: `ค้นหาทั้งโปรเจกต์… (${C}+${S}+F)`, click: () => send('toggle-panel', 'search') },
       { type: 'separator' },
       { label: 'แผง', submenu: [
-        // id แผงเปลี่ยนเป็นชื่อสั้นของ Panel System (tree/outline/props) — ฝั่ง renderer มี alias ให้ชื่อเดิมด้วย
-        chk('โปรเจกต์ (Explorer)', toggles.panels['tree'], () => send('toggle-panel', 'tree')),
-        chk('Navigation', toggles.panels['outline'], () => send('toggle-panel', 'outline')),
-        chk('คุณสมบัติ', toggles.panels['props'], () => send('toggle-panel', 'props')),
-        chk('หน้าแรก', toggles.panels['home'], () => send('toggle-panel', 'home')),
-        chk('บันทึก (Log)', toggles.panels['log'], () => send('toggle-panel', 'log')),
-        chk('คอมเมนต์', toggles.panels['comments'], () => send('toggle-panel', 'comments')),
-        { type: 'separator' },
-        // บั๊ก #18: 5 ฟีเจอร์นี้เป็นแผงแล้ว (เดิมเป็นแท็บแย่งที่กับเอกสาร)
-        chk('แดชบอร์ด', toggles.panels['dashboard'], () => send('toggle-panel', 'dashboard')),
-        chk('Kanban', toggles.panels['kanban'], () => send('toggle-panel', 'kanban')),
-        chk('จัดการเล่ม', toggles.panels['books'], () => send('toggle-panel', 'books')),
-        chk('เส้นเวลา', toggles.panels['timeline'], () => send('toggle-panel', 'timeline')),
-        chk('แผนที่', toggles.panels['maps'], () => send('toggle-panel', 'maps')),
-        // [alpha.60r1 ข้อ 21] คลังรูปย้ายจากแท็บมาเป็นแผงเช่นกัน
-        chk(`คลังรูปภาพ (${C}+${S}+G)`, toggles.panels['gallery'], () => send('toggle-panel', 'gallery')),
-        chk('🎨 กระดานอารมณ์', toggles.panels['gallery-board'], () => send('toggle-panel', 'gallery-board')),
-        chk('🧠 AI วิเคราะห์', toggles.panels['ai-analyzer'], () => send('toggle-panel', 'ai-analyzer')),
-        chk('💬 AI ผู้ช่วยเขียน', toggles.panels['ai-chat'], () => send('toggle-panel', 'ai-chat')),
-        // [alpha.66 ข้อ 1+9] ผังแตกสาย + ทดลองเล่น เป็นแผงเต็มตัวแล้ว
-        chk('🌿 ผังแตกสาย', toggles.panels['branch'], () => send('toggle-panel', 'branch')),
-        chk('▶️ ทดลองเล่น', toggles.panels['player'], () => send('toggle-panel', 'player')),
+        // [alpha.69] สร้างจาก MENU_PANELS ตัวเดียว (ดูด้านบนสุดของไฟล์) — เดิมเขียนเรียงมือทีละบรรทัด
+        // แล้วเพิ่มแผงใหม่ทีไรก็ลืมมาเติม ผู้ใช้เลยหาไม่เจอ (เจอมาแล้วรอบ .69: Codex/History/Record
+        // และก่อนหน้านั้น Story Network/Planner/ผังพื้นที่ ก็ตกหล่นมาตลอด)
+        // e2e เทียบรายการนี้กับ PANEL_DEFS ทุกรอบ → ลืมเมื่อไหร่เทสแดงทันที
+        ...MENU_PANELS.map((p) => (p.sep
+          ? { type: 'separator' }
+          : chk(typeof p.label === 'function' ? p.label(C, S) : p.label,
+                toggles.panels[p.id], () => send('toggle-panel', p.id)))),
         { type: 'separator' },
         { label: '📐 จัดการแผง (แสดง/ซ่อน)…', click: () => send('panel-system') },
         { label: '📤 ส่งออกการจัดวางแผง (JSON)…', click: () => send('export-panel-layout') },
@@ -477,11 +463,200 @@ function createWindow() {
   buildMenu();
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// [alpha.69] สมุดประวัติการทำงาน (History) — copy-on-write ที่คอขวดของระบบไฟล์
+//
+// ทุกการเขียนไฟล์ของทั้งโปรแกรมวิ่งผ่าน `H('fs:*')` ข้างล่างนี้อยู่แล้ว (renderer ไม่แตะ fs ตรง ๆ)
+// จึงเป็นจุดเดียวที่ดักได้ครบ — ท่าเดียวกับที่ alpha.67 ดัก `panel:fileChanged` ที่ preload
+// จุดเรียกใหม่ที่เพิ่มทีหลังได้ประวัติไปด้วยฟรี โดยไม่ต้องไปไล่แปะทีละที่
+//
+// ก่อนเขียนทับ/ลบ/ย้าย → คัดสำเนา "ของเดิม" เก็บเป็นก้อนใน `.k2history/blobs/`
+// แล้วจดหนึ่งบรรทัดลง `.k2history/history.json` · ย้อนกลับ = คืนไฟล์ตามแผนที่ history-data คำนวณให้
+// ตรรกะทั้งหมด (ต่อสมุด · ตัดของเก่า · แผนย้อนกลับ) อยู่ใน src/history/history-data.js ซึ่งมี unit test
+// ─────────────────────────────────────────────────────────────────────
+let HD = null;
+try { HD = require('./history-data.cjs'); }
+catch (e) { console.error('[history] โหลดตรรกะสมุดประวัติไม่ได้ — ประวัติจะถูกปิดไว้', e); }
+
+const hist = { root: '', limit: 32, on: false, seqTick: 0 };
+// โฟลเดอร์ที่ **ห้ามจด** — ของระบบสำรอง/ประวัติเอง (ไม่งั้นจดประวัติของประวัติวนไม่จบ
+// และ Snapshots ถูกเขียนทุกครั้งที่บันทึกฉาก จะกินโควตา 32 ครั้งหมดโดยไม่มีประโยชน์)
+const HIST_SKIP = ['.k2history', 'Snapshots', 'Backups'];
+
+function histDir() { return hist.root ? path.join(hist.root, '.k2history') : ''; }
+function histFile() { return histDir() ? path.join(histDir(), 'history.json') : ''; }
+function blobDir() { return histDir() ? path.join(histDir(), 'blobs') : ''; }
+
+/** path นี้อยู่ในโปรเจกต์ที่เปิดอยู่ และไม่ใช่ของระบบที่เรากันไว้ */
+function histTracks(p) {
+  if (!hist.on || !hist.root || !HD || !p) return false;
+  const abs = path.resolve(String(p));
+  const root = path.resolve(hist.root);
+  if (!abs.toLowerCase().startsWith(root.toLowerCase() + path.sep)) return false;
+  const rel = abs.slice(root.length + 1).split(/[\\/]/);
+  return !HIST_SKIP.includes(rel[0]);
+}
+function readJournal() {
+  try { return HD.migrate(JSON.parse(fs.readFileSync(histFile(), 'utf-8'))); }
+  catch { return HD.newJournal(); }
+}
+function writeJournal(j) {
+  try { fs.mkdirSync(histDir(), { recursive: true }); fs.writeFileSync(histFile(), JSON.stringify(j, null, 2), 'utf-8'); }
+  catch (e) { console.error('[history] เขียนสมุดไม่สำเร็จ', e); }
+}
+/** คัดสำเนาไฟล์เดิมเก็บไว้ → คืน id ของก้อน · ไฟล์ยังไม่มี = null (ย้อนกลับ = ลบทิ้ง) */
+function stashBlob(p) {
+  try {
+    if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) return null;
+    const id = Date.now().toString(36) + '-' + (hist.seqTick++).toString(36) + path.extname(p);
+    fs.mkdirSync(blobDir(), { recursive: true });
+    fs.copyFileSync(p, path.join(blobDir(), id));   // copyFile = ไบต์ต่อไบต์ (รูปภาพไม่เสีย)
+    return id;
+  } catch (e) { console.error('[history] คัดสำเนาไม่สำเร็จ: ' + p, e); return null; }
+}
+/** ไฟล์ทั้งหมดใต้โฟลเดอร์ (ใช้ตอนลบทั้งบท — ต้องเก็บทุกใบถึงจะคืนได้จริง) */
+function walkFiles(dir, out = [], depth = 0) {
+  if (depth > 8 || out.length > 400) return out;
+  let ents = [];
+  try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const d of ents) {
+    const p = path.join(dir, d.name);
+    if (d.isDirectory()) walkFiles(p, out, depth + 1);
+    else out.push(p);
+  }
+  return out;
+}
+/** เก็บสภาพ "ก่อนหน้านี้" ของ path (ไฟล์เดี่ยวหรือทั้งโฟลเดอร์) เป็นรายการสำหรับสมุด */
+function captureBefore(p) {
+  if (!histTracks(p)) return [];
+  try {
+    if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
+      return walkFiles(p).filter(histTracks).map((f) => ({ path: f, before: stashBlob(f) }));
+    }
+  } catch {}
+  return [{ path: String(p), before: stashBlob(p) }];
+}
+/** จดหนึ่งบรรทัด (เรียกหลังการกระทำสำเร็จแล้วเท่านั้น) */
+function journal(kind, files, label) {
+  if (!hist.on || !HD) return false;
+  const list = (files || []).filter((f) => f && f.path);
+  if (!list.length) return false;
+  const r = HD.addRecord(readJournal(), { kind, label: label || '', at: new Date().toISOString(), files: list },
+                         hist.limit);
+  writeJournal(r.journal);
+  for (const id of r.dropped) { try { fs.rmSync(path.join(blobDir(), id), { force: true }); } catch {} }
+  return true;
+}
+/** ครอบการกระทำที่เปลี่ยนไฟล์: เก็บของเดิมก่อน → ทำ → จด */
+function withHistory(kind, paths, fn, label) {
+  if (!hist.on) return fn();
+  let before = [];
+  try { for (const p of paths) before = before.concat(captureBefore(p)); }
+  catch (e) { console.error('[history] เก็บสภาพก่อนหน้าไม่สำเร็จ', e); }
+  const out = fn();
+  try { journal(kind, before, label); } catch (e) { console.error('[history] จดไม่สำเร็จ', e); }
+  return out;
+}
+
+ipcMain.handle('history:config', (e, opts = {}) => {
+  hist.root = String(opts.root || '');
+  hist.limit = HD ? HD.clampLimit(opts.limit) : 32;
+  hist.on = !!HD && !!hist.root && opts.enabled !== false;
+  return { on: hist.on, limit: hist.limit };
+});
+ipcMain.handle('history:list', () => (hist.root && HD ? readJournal() : (HD ? HD.newJournal() : null)));
+ipcMain.handle('history:clear', () => {
+  if (!hist.root || !HD) return false;
+  try { fs.rmSync(histDir(), { recursive: true, force: true }); } catch {}
+  return true;
+});
+/**
+ * ย้อนกลับไปยังจุดหลังบันทึกหมายเลข seq
+ * ทำตามแผนที่ history-data คำนวณให้เป๊ะ ๆ (ลบก่อน คืนทีหลัง) แล้วตัดบันทึกที่ถอนออกไปทิ้ง
+ */
+ipcMain.handle('history:revert', (e, seq) => {
+  if (!hist.on || !HD) return { ok: false, reason: 'off' };
+  const j = readJournal();
+  const plan = HD.planRevert(j, Number(seq) || 0);
+  let restored = 0, deleted = 0, failed = 0;
+  for (const op of plan.ops) {
+    try {
+      if (op.op === 'delete') { fs.rmSync(op.path, { recursive: true, force: true }); deleted++; }
+      else {
+        const b = path.join(blobDir(), op.blob);
+        if (!fs.existsSync(b)) { failed++; continue; }   // ก้อนถูกตัดไปแล้ว = คืนไม่ได้ แต่ต้องไม่ล้ม
+        fs.mkdirSync(path.dirname(op.path), { recursive: true });
+        fs.copyFileSync(b, op.path); restored++;
+      }
+    } catch (err) { failed++; console.error('[history] ย้อนกลับไม่สำเร็จ: ' + op.path, err); }
+  }
+  const after = HD.afterRevert(j, Number(seq) || 0);
+  writeJournal(after.journal);
+  for (const id of after.dropped) { try { fs.rmSync(path.join(blobDir(), id), { force: true }); } catch {} }
+  try { fanout({ kind: 'project-changed', path: hist.root }, e.sender.id); } catch {}
+  return { ok: failed === 0, restored, deleted, failed, undone: plan.undone.length };
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// [alpha.69] รายการแผงในเมนู "มุมมอง → แผง"
+//
+// **แหล่งความจริงเดียวของเมนูนี้** — เดิมเขียนเรียงมือในตัวสร้างเมนู แล้วเพิ่มแผงใหม่ทีไรก็ลืมมาเติม
+// ผู้ใช้จึงหาแผงที่เพิ่งทำเสร็จไม่เจอเลย (รายงานเข้ามารอบ .69 — และพบว่า Story Network / Planner /
+// ผังพื้นที่ ตกหล่นมาตั้งแต่ .62 โดยไม่มีใครสังเกต)
+//
+// `menu:panelIds` ส่งรายการนี้ให้ renderer → e2e เทียบกับ PANEL_DEFS ทุกรอบ ลืมเมื่อไหร่เทสแดงทันที
+// แผงที่ **จงใจ** ไม่ใส่ ต้องประกาศไว้ใน MENU_PANELS_SKIP พร้อมเหตุผล (ไม่ใช่ปล่อยหายเงียบ ๆ)
+// ─────────────────────────────────────────────────────────────────────
+const MENU_PANELS = [
+  // id แผงเป็นชื่อสั้นของ Panel System (tree/outline/props) — ฝั่ง renderer มี alias ให้ชื่อเดิมด้วย
+  { id: 'tree', label: 'โปรเจกต์ (Explorer)' },
+  { id: 'outline', label: 'Navigation' },
+  { id: 'props', label: 'คุณสมบัติ' },
+  { id: 'log', label: 'บันทึก (Log)' },
+  { id: 'comments', label: 'คอมเมนต์' },
+  { id: 'search', label: (C, S) => `ค้นหาทั้งโปรเจกต์ (${C}+${S}+F)` },
+  { id: 'notes', label: 'สมุดโน้ตด่วน' },
+  { sep: true },
+  // บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ
+  { id: 'dashboard', label: 'แดชบอร์ด' },
+  { id: 'kanban', label: 'Kanban' },
+  { id: 'books', label: 'จัดการเล่ม' },
+  { id: 'timeline', label: 'เส้นเวลา' },
+  { id: 'maps', label: 'แผนที่' },
+  { id: 'gallery', label: (C, S) => `คลังรูปภาพ (${C}+${S}+G)` },
+  { id: 'gallery-board', label: '🎨 กระดานอารมณ์' },
+  { id: 'ai-analyzer', label: '🧠 AI วิเคราะห์' },
+  { id: 'ai-chat', label: '💬 AI ผู้ช่วยเขียน' },
+  { sep: true },
+  // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
+  { id: 'network', label: '🕸 Story Network' },
+  { id: 'planner', label: '🗺 Planner' },
+  { id: 'floorplan', label: '📍 ผังพื้นที่' },
+  { id: 'branch', label: '🌿 ผังแตกสาย' },
+  { id: 'player', label: '▶️ ทดลองเล่น' },
+  { sep: true },
+  // [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน
+  { id: 'codex', label: '📚 สารานุกรม (Codex)' },
+  { id: 'history', label: '🕘 ประวัติการทำงาน' },
+  { id: 'record', label: '🗒 บันทึกประจำวัน' },
+];
+/** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
+const MENU_PANELS_SKIP = {
+  'planner-props': 'แผงคู่ของ Planner — Planner เป็นคนเปิด/ปิดให้เองตามการเลือกบนกระดาน',
+  home: 'หน้าแรกมีทางเข้าของตัวเองที่เมนู ไฟล์ → หน้าแรก',
+};
+ipcMain.handle('menu:panelIds', () => ({
+  ids: MENU_PANELS.filter((p) => !p.sep).map((p) => p.id),
+  skip: Object.keys(MENU_PANELS_SKIP),
+}));
+
 // ---------------- IPC: filesystem (ผ่าน main เท่านั้น — renderer ไม่แตะ fs ตรง) ----------------
 const H = (name, fn) => ipcMain.handle(name, (e, ...a) => fn(...a));
 H('fs:readFile', (p) => fs.readFileSync(p, 'utf-8'));
-H('fs:writeFile', (p, data) => { fs.mkdirSync(path.dirname(p), { recursive: true });
-                                 fs.writeFileSync(p, data, 'utf-8'); return true; });
+H('fs:writeFile', (p, data) => withHistory('write', [p], () => {
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, data, 'utf-8'); return true;
+}));
 H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8')));
 H('fs:exists', (p) => fs.existsSync(p));
 H('fs:listDirs', (p) => fs.readdirSync(p, { withFileTypes: true })
@@ -489,9 +664,14 @@ H('fs:listDirs', (p) => fs.readdirSync(p, { withFileTypes: true })
 H('fs:listFiles', (p, ext) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
   .filter((d) => d.isFile() && (!ext || d.name.endsWith(ext))).map((d) => d.name) : []);
 H('fs:mkdir', (p) => { fs.mkdirSync(p, { recursive: true }); return true; });
-H('fs:move', (src, dst) => { fs.mkdirSync(path.dirname(dst), { recursive: true });
-                             fs.renameSync(src, dst); return true; });
-H('fs:remove', (p) => { fs.rmSync(p, { recursive: true, force: true }); return true; });
+// ย้าย/เปลี่ยนชื่อ = สองด้านในบันทึกเดียว (ต้นทางหายไป · ปลายทางถูกสร้างหรือทับของเดิม)
+H('fs:move', (src, dst) => withHistory('move', [src, dst], () => {
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  fs.renameSync(src, dst); return true;
+}));
+H('fs:remove', (p) => withHistory('remove', [p], () => {
+  fs.rmSync(p, { recursive: true, force: true }); return true;
+}));
 H('fs:isDir', (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } });
 H('fs:mtime', (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } });
 // [alpha.63] ขนาดไฟล์ + วันที่สร้าง — คลังรูปใช้แสดงเมทาดาทา/เรียงตามขนาด/นับพื้นที่รวม
@@ -509,23 +689,26 @@ H('fs:writeImageData', (dstDir, name, base64) => {
   const stem = path.basename(name, ext) || 'image';
   let out = name, n = 1;
   while (fs.existsSync(path.join(dstDir, out))) out = `${stem}-${n++}${ext}`;
+  // ชื่อไฟล์ปลายทางรู้ได้หลังหาที่ว่างเสร็จ → จดหลังเขียน (ของเดิมไม่มีอยู่แล้วโดยนิยาม)
   fs.writeFileSync(path.join(dstDir, out), Buffer.from(base64, 'base64'));
+  const dst = path.join(dstDir, out);
+  if (histTracks(dst)) journal('image', [{ path: dst, before: null }]);
   return out;
 });
 
 // เขียนไฟล์ไบนารีจาก byte array (ส่งออก .zip ฯลฯ) — renderer ส่ง Uint8Array มาทาง IPC
 // สำคัญ: ห้ามส่งเป็น string แล้วเขียน utf-8 (ไบต์ ≥0x80 จะบวมเป็น multi-byte ไฟล์เสีย)
-H('fs:writeBytes', (p, bytes) => {
+H('fs:writeBytes', (p, bytes) => withHistory('write', [p], () => {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, Buffer.from(bytes));
   return true;
-});
+}));
 // คัดลอกไฟล์ตรง ๆ (รักษาไบนารี — ใช้ตอนสำรองโปรเจกต์ ซึ่งมีรูปภาพปนอยู่)
-H('fs:copyFile', (src, dst) => {
+H('fs:copyFile', (src, dst) => withHistory('copy', [dst], () => {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(src, dst);
   return true;
-});
+}));
 // อ่านไฟล์เป็นไบต์ (ใช้แพ็ก zip ให้รูปไม่เสีย)
 H('fs:readBytes', (p) => Array.from(fs.readFileSync(p)));
 
@@ -592,6 +775,8 @@ H('fs:copyInto', (src, dstDir) => {
     const e = path.extname(src); name = path.basename(src, e) + '-' + n++ + e;
   }
   fs.copyFileSync(src, path.join(dstDir, name));
+  const dst = path.join(dstDir, name);
+  if (histTracks(dst)) journal('copy', [{ path: dst, before: null }]);
   return name;
 });
 H('path:join', (...a) => path.join(...a));

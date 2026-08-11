@@ -135,6 +135,10 @@
   <button id="tb-ai-chat" class="tb tb-toggle" title="AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง)" data-icon="chat"></button>
   <!-- [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI -->
   <button id="tb-ai-analyzer" class="tb tb-toggle" title="🧠 AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)" data-icon="brain"></button>
+  <!-- [alpha.69] แผงใหม่ 3 ตัว — เป็นสวิตช์เหมือนปุ่มแผงตัวอื่น (กดซ้ำ = ปิด) -->
+  <button id="tb-codex" class="tb tb-toggle" title="📚 สารานุกรม (Codex — เอนทิตี้ Wiki ทั้งเล่ม · ส่งออกเป็นเว็บได้)" data-icon="book-content"></button>
+  <button id="tb-history" class="tb tb-toggle" title="🕘 ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้)" data-icon="history"></button>
+  <button id="tb-record" class="tb tb-toggle" title="🗒 บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)" data-icon="note"></button>
   <button id="tb-plug" class="tb" title="คำสั่งจากปลั๊กอิน" style="display:none" data-icon="extension"></button>
 </div>
 <div id="findbar">
@@ -212,6 +216,10 @@
     <!-- [alpha.66 ข้อ 1+9] ผังแตกสายเลิกเป็นแท็บเอกสาร → เป็นแผง · พร้อมแผงโหมดทดลองเล่น -->
     <div id="branch-panel" class="k-featpanel"><div id="branch-body"></div></div>
     <div id="player-panel" class="k-featpanel"><div id="player-body"></div></div>
+    <!-- [alpha.69] แผงใหม่ 3 ตัว: สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน -->
+    <div id="codex-panel" class="k-featpanel"><div id="codex-body"></div></div>
+    <div id="history-panel" class="k-featpanel"><div id="history-body"></div></div>
+    <div id="record-panel" class="k-featpanel"><div id="record-body"></div></div>
 </div>
 <div id="statusbar"><span id="status" data-i18n="app.ready">พร้อม</span>
   <!-- [alpha.62 บั๊ก 9+10] "กำลังทำอะไรอยู่" — แทนหน้าจอ loading เต็มจอที่เคยทับกล่องบันทึก

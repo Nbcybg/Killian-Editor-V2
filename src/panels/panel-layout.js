@@ -317,6 +317,28 @@ export function nodeHidden(node) {
   // container ที่ลูกถูกซ่อนหมด = ไม่มีอะไรให้แสดง → ซ่อนตัวเองด้วย (ไม่งั้นกินที่ว่างเปล่า)
   return (node.children || []).every(nodeHidden);
 }
+/** ลูกที่ยังเห็นอยู่ของ dock/tabs (ข้ามตัวที่ถูกปิดไว้) */
+export function shownChildren(node) {
+  return ((node && node.children) || []).filter((c) => !nodeHidden(c));
+}
+/**
+ * [alpha.68r] **กลุ่มแท็บที่เหลือแท็บที่เห็นได้ใบเดียว = ไม่ใช่กลุ่มอีกต่อไป**
+ *
+ * ที่มาของบั๊ก: ตั้งแต่ alpha.62 บั๊ก 21 การปิดแผงที่ผนึกอยู่ = **ติดธง `hidden`** ไม่ใช่ตัดออกจากต้นไม้
+ * (เพื่อให้เปิดกลับแล้วได้ตำแหน่ง/ลำดับ/สัดส่วนเดิมเป๊ะ) — แต่ `collapse()` ที่ยุบกลุ่มเหลือใบเดียว
+ * นับจาก `children.length` ซึ่ง **ไม่ลดลง** เมื่อปิดแท็บ → กลุ่มยังเป็นกลุ่มอยู่
+ * ผลคือได้แถบแท็บที่มีแท็บใบเดียวคาอยู่เหนือหัวแผงของมันเอง (ซ้ำซ้อน และลากจัดกลุ่มใหม่ก็สับสน)
+ * กรณีลอย (`_detach`) ยุบให้อยู่แล้ว — เพี้ยนเฉพาะกรณีผนึก · alpha.67/.68 (ปุ่ม 🖥) ทำให้เจอบ่อยขึ้น
+ *
+ * แก้ที่ **ตัววาด** ไม่ใช่ที่ต้นไม้: ต้นไม้ต้องเก็บแท็บที่ปิดไว้ที่เดิมต่อไป เปิดกลับแล้วกลุ่มต้องคืนมาครบ
+ * @returns {object|null} ลูกใบเดียวที่เหลือ (ให้ตัววาดวาดเป็นแผงเดี่ยว) · null = ยังเป็นกลุ่มจริง ๆ
+ */
+export function soloTab(node) {
+  if (!node || node.type !== 'tabs') return null;
+  if (node.collapsed) return null;                 // ย่อเป็นแถบไอคอน = ผู้ใช้สั่งเอง ห้ามแปลงร่าง
+  const shown = shownChildren(node);
+  return shown.length === 1 ? shown[0] : null;
+}
 /**
  * [alpha.66r2 ข้อ 2] โหนดนี้ "ยืดตามพื้นที่ที่เหลือ" ไม่ได้
  *
@@ -331,7 +353,14 @@ export function nodeHidden(node) {
 export function nodeRigid(node, isFixedPanel = () => false) {
   if (!node || nodeHidden(node)) return false;          // ซ่อนอยู่ = ไม่ถูกวาด ไม่ต้องคิด
   if (node.type === 'panel') return !!node.collapsed || !!isFixedPanel(node.id);
-  if (node.type === 'tabs') return !!node.collapsed;    // ย่อเป็นแถบไอคอน
+  if (node.type === 'tabs') {
+    // [alpha.68r] เหลือแท็บที่เห็นได้ใบเดียว = ตัววาดวาดเป็น "แผงเดี่ยว" → ความแข็งต้องยึดตามใบนั้น
+    // ไม่งั้นเจอบั๊กเดิมของ 66r2 อีกรอบ: แผงพับอยู่ (CSS บังคับ flex:0 0 auto) แต่ต้นไม้บอกว่ายืดได้
+    // → ส่วนแบ่งหายจากการแจกแต่ยังอยู่ในตัวหาร = **ช่องว่างค้าง**
+    const solo = soloTab(node);
+    if (solo) return nodeRigid(solo, isFixedPanel);
+    return !!node.collapsed;                            // ย่อเป็นแถบไอคอน
+  }
   if (node.type === 'dock') {
     // dock ที่ลูกแข็งหมด = ทั้งก้อนแข็ง (ไม่งั้นมันยืดแล้วเหลือช่องว่างข้างในแทน)
     const kids = (node.children || []).filter((c) => !nodeHidden(c));

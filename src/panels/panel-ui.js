@@ -90,19 +90,35 @@ export const PANEL_DEFS = [
     desc: 'ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้' },
   { id: 'player', dockW: 440,    title: '▶️ ทดลองเล่น',       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
     desc: 'อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง' },
+  // ── [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน ──
+  { id: 'codex', dockW: 680,     title: '📚 สารานุกรม',      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
+    desc: 'เอนทิตี้ Wiki ทั้งเล่มในมุมมองสารานุกรม — เรียกดูตามหมวด ค้นด้วยชื่อ/ชื่อเล่น · ส่งออกเป็นเว็บแบบ Fandom/Wikia ที่เปิดออฟไลน์ได้ทั้งชุด' },
+  { id: 'history', dockW: 420,   title: '🕘 ประวัติการทำงาน', icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
+    desc: 'ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)' },
+  { id: 'record', dockW: 460,    title: '🗒 บันทึกประจำวัน',  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
+    desc: 'จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้' },
 ];
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
 //
 // เกณฑ์: แผงต้อง "วาดตัวเองได้ครบจากไฟล์โปรเจกต์" โดยไม่พึ่ง `state.active` (ฉากที่เปิดอยู่)
 // และไม่พึ่งการลากของข้ามแผง — เพราะหน้าต่างลูกเป็นคนละ JS context ไม่มีแท็บเอกสารและไม่มีแผงอื่น
 //
-// ที่จงใจ **ไม่** ใส่ในรอบนี้:
+// ที่จงใจ **ไม่** ใส่:
 //   docs/toolbar/statusbar/tree — เป็นโครงหน้าต่างหลัก (แชร์ ProseMirror ข้าม context ไม่ได้)
-//   outline/props/comments/floorplan/player/ai-* — ผูกกับ "ฉากที่เปิดอยู่" ต้องมีช่องส่ง state ก่อน
 //   gallery-board — รับรูปด้วยการลากจากแผงคลังรูป ฉีกแยกหน้าต่างแล้วขาดกัน
+//   planner-props — เป็นแผงคู่ของ Planner (Planner เป็นคนวาดให้ผ่าน setPropsCallback ในหน้าต่างเดียวกัน)
+//
+// [alpha.68 · เฟส 2] เพิ่มแผงที่ผูกกับ "ฉากที่เปิดอยู่" อีก 7 ตัว — ทำได้เพราะมี `panel-sync.js`
+// ส่ง `state.active` ข้ามหน้าต่างแล้ว (หน้าต่างลูกประกอบเป็นแท็บจำลอง โค้ดเดิมจึงใช้ได้ทั้งดุ้น)
 export const TEAROFF_PANELS = new Set([
   'timeline', 'maps', 'kanban', 'dashboard', 'books',
   'network', 'planner', 'branch', 'search', 'gallery', 'log', 'notes',
+  // เฟส 2: ต้องรู้ว่าฉากไหนเปิดอยู่ (ได้จาก panel-sync)
+  'outline', 'props', 'comments', 'floorplan', 'ai-chat',
+  // เฟส 2: วาดจากไฟล์ล้วน ๆ อยู่แล้ว — .67 กันไว้เกินจำเป็นเพราะเหมารวมว่า "แผง AI/ผู้เล่น = ผูกกับฉาก"
+  'player', 'ai-analyzer',
+  // [alpha.69] สามตัวใหม่ — วาดจากไฟล์โปรเจกต์ล้วน ๆ ทั้งหมด ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้ตั้งแต่วันแรก
+  'codex', 'history', 'record',
 ]);
 /** แผงนี้ฉีกออกเป็นหน้าต่างได้ไหม (หน้าต่างลูกฉีกซ้อนไม่ได้) */
 export function canTearOff(id) {

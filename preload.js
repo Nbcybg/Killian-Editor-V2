@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('kapi', {
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
   quitNow: call('win:quitNow'), menuPopup: call('menu:popup'),
   menuToggles: call('menu:toggles'),        // แจ้งสถานะสวิตช์ให้เมนู native ติ๊กถูกให้ตรง
+  // [alpha.69] รายการแผงที่อยู่ในเมนู มุมมอง → แผง (เมนู native สร้างในฝั่ง main — renderer มองไม่เห็น)
+  // มีไว้ให้ e2e เทียบกับ PANEL_DEFS: เพิ่มแผงใหม่แล้วลืมใส่เมนู = เทสแดงทันที
+  menuPanelIds: call('menu:panelIds'),
   httpFetch: call('http:fetch'),
   // สตรีมทีละบรรทัด — main ส่งกลับทาง channel เฉพาะคำขอ แล้วถอด listener เมื่อจบ
   httpStream: (url, options, onLine) => {
@@ -59,4 +62,10 @@ contextBridge.exposeInMainWorld('kapi', {
   tearOffList: call('panel:tearOffList'),          // id ของแผงที่ถูกฉีกออกอยู่ตอนนี้
   broadcast: call('panel:broadcast'),              // ส่งข้อความถึงหน้าต่างอื่นทุกบาน (ไม่ย้อนกลับหาผู้ส่ง)
   onSync: (cb) => ipcRenderer.on('k2:sync', (e, msg) => cb(msg || {})),
+  // ---- [alpha.69] สมุดประวัติการทำงาน (History) ----
+  // main เป็นคนจดเอง (ดักที่ handler ของ fs) — renderer แค่บอกว่าโปรเจกต์ไหน/เก็บกี่ครั้ง แล้วอ่าน/สั่งย้อน
+  historyConfig: call('history:config'),           // {root, limit, enabled} → เปิด/ปิดการจด
+  historyList: call('history:list'),               // สมุดทั้งเล่ม
+  historyRevert: call('history:revert'),           // ย้อนกลับไปหลังบันทึกหมายเลข seq
+  historyClear: call('history:clear'),             // ล้างประวัติทั้งหมด
 });

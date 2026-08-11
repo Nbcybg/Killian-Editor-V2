@@ -248,6 +248,10 @@ export const PROJECT_DEFAULTS = {
   openTabs: null,           // [filePath, ...] — null = ยังไม่เคยบันทึก
   // Story Network — สีที่ผู้ใช้ปรับเองได้
   netColors: null,          // { cats:{characters:'#xxx',...}, edges:{'scene-link':'#xxx',...} }
+  // [alpha.69] ประวัติการทำงาน — เก็บย้อนหลังกี่ครั้ง (ยิ่งมาก ยิ่งกินที่ใน .k2history/)
+  // ค่าเริ่มต้น 32 ตามที่ผู้ใช้กำหนด · หนีบช่วง 4–500 ที่ history-data.clampLimit
+  historyLimit: 32,
+  historyOff: false,        // true = ปิดการจดประวัติทั้งโปรเจกต์
 };
 // รวมเป็น DEFAULT_SETTINGS — ให้โค้ดที่ใช้อยู่ไม่พัง (ยังอ้าง key ชื่อเดิมทุกตัว)
 export const DEFAULT_SETTINGS = { ...GLOBAL_DEFAULTS, ...PROJECT_DEFAULTS };

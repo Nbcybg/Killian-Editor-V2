@@ -2,7 +2,7 @@
 import { state, setStatus, log, setBusy, clearBusy } from './core.js';
 import JSZip from 'jszip';
 
-const SKIP_DIRS = ['Snapshots', 'Backups', 'Recycle'];
+const SKIP_DIRS = ['Snapshots', '.k2history', 'Backups', 'Recycle'];
 // นามสกุลที่ต้องอ่านเป็นไบต์ (ถ้าอ่านเป็น utf-8 ไฟล์จะเสีย)
 const BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
 
@@ -145,7 +145,7 @@ export async function exportProjectJson() {
   try {
     const data = { project: state.meta, sections: [] };
     for (const sec of await kapi.listDirs(state.root)) {
-      if (['Wiki','Bible','Images','Memos','Recycle','Snapshots','Backups','Plugins','Research'].includes(sec)) continue;
+      if (['Wiki','Bible','Images','Memos','Recycle','Snapshots', '.k2history','Backups','Plugins','Research'].includes(sec)) continue;
       const sp = await kapi.join(state.root, sec);
       const sj = await kapi.join(sp, 'section.json');
       if (!(await kapi.exists(sj))) continue;

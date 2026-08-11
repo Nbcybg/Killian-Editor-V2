@@ -5,7 +5,7 @@ import { el, state, setStatus, log, setBusy, clearBusy } from './core.js';
 import { mdToHtmlBody, escapeHtml, stripComments, stripMentions } from './compile.js';
 import { parseMdFile } from './md.js';
 
-const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research'];
+const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
 export const BLOG_THEMES = {
   medium: { label: 'Medium (การ์ดครีม)', css: `

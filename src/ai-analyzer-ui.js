@@ -37,7 +37,7 @@ export const ANALYZER_CARDS = [
 export async function analyzerStats(root = state.root) {
   const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
   if (!root) return out;
-  const SKIP = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', 'Plugins', 'Research'];
+  const SKIP = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Plugins', 'Research'];
   try {
     for (const sec of await kapi.listDirs(root)) {
       if (SKIP.includes(sec)) {

@@ -1184,6 +1184,49 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('tearoff: หน้าต่างหลักยังเขียนได้อยู่', main.store.save() === true);
 }
 
+// ── [alpha.68r] กลุ่มแท็บที่เหลือแท็บที่เห็นได้ใบเดียว = ไม่ใช่กลุ่มอีกต่อไป ──
+// บั๊กเก่าตั้งแต่ alpha.62 บั๊ก 21: ปิดแผงที่ผนึกอยู่ = ติดธง hidden ไม่ใช่ตัดออกจากต้นไม้
+// → `children.length` ไม่ลด → `collapse()` ไม่ทำงาน → เหลือแถบแท็บใบเดียวคาอยู่เหนือหัวแผงตัวเอง
+{
+  let g = PL.addAsTab(PL.panel('A', 'เอ'), 'A', PL.panel('B', 'บี'));
+  check('[68r] สองแท็บที่เห็นทั้งคู่ = ยังเป็นกลุ่ม', PL.soloTab(g) === null);
+  check('[68r] shownChildren นับเฉพาะที่เห็น (2)', PL.shownChildren(g).length === 2);
+
+  g = PL.setPanelHidden(g, 'B', true);
+  check('[68r] ปิดแท็บ B แล้วต้นไม้ยังเก็บ B ไว้ที่เดิม (เปิดกลับต้องได้ที่เดิม)',
+        g.children.length === 2 && !!PL.findPanel(g, 'B').hidden);
+  const solo = PL.soloTab(g);
+  check('[68r] เหลือแท็บที่เห็นใบเดียว → ตัววาดต้องวาดเป็นแผงเดี่ยว (A)',
+        !!solo && solo.id === 'A', solo ? solo.id : 'null');
+  check('[68r] shownChildren เหลือ 1', PL.shownChildren(g).length === 1);
+
+  g = PL.setPanelHidden(g, 'B', false);
+  check('[68r] เปิด B กลับ → กลับเป็นกลุ่มเหมือนเดิม', PL.soloTab(g) === null);
+  check('[68r] และ B กลับมาอยู่ลำดับเดิม (ไม่ไปต่อท้าย)', g.children[1].id === 'B');
+
+  // โหมดแถบไอคอน = ผู้ใช้สั่งย่อเอง ห้ามแปลงร่างเป็นแผงเดี่ยว
+  let gs = PL.setPanelHidden(PL.addAsTab(PL.panel('A'), 'A', PL.panel('B')), 'B', true);
+  gs.collapsed = true;
+  check('[68r] กลุ่มที่ย่อเป็นแถบไอคอนอยู่ ไม่ถูกแปลงเป็นแผงเดี่ยว', PL.soloTab(gs) === null);
+
+  // ปิดหมดทั้งกลุ่ม = ไม่มีอะไรให้แสดง (nodeHidden จับได้อยู่แล้ว) ไม่ใช่เคส solo
+  let gAll = PL.setPanelHidden(PL.setPanelHidden(PL.addAsTab(PL.panel('A'), 'A', PL.panel('B')), 'A', true), 'B', true);
+  check('[68r] ปิดหมดทั้งกลุ่ม → ซ่อนทั้งก้อน ไม่ใช่ solo', PL.nodeHidden(gAll) && PL.soloTab(gAll) === null);
+
+  // ความแข็ง (rigid) ต้องยึดตามใบที่เหลือ ไม่งั้นเจอ "ช่องว่างค้าง" ของ 66r2 ซ้ำ
+  let gr = PL.setPanelHidden(PL.addAsTab(PL.panel('A'), 'A', PL.panel('B')), 'B', true);
+  check('[68r] solo ที่ยืดได้ → กลุ่มยืดได้', PL.nodeRigid(gr) === false);
+  PL.findPanel(gr, 'A').collapsed = true;
+  check('[68r] solo ที่พับอยู่ → ทั้งก้อนต้องนับว่าแข็ง (กันช่องว่างค้าง)', PL.nodeRigid(gr) === true);
+  check('[68r] solo ที่เป็นแผงตายตัว → แข็งเช่นกัน',
+        PL.nodeRigid(PL.setPanelHidden(PL.addAsTab(PL.panel('toolbar'), 'toolbar', PL.panel('B')), 'B', true),
+                     (id) => id === 'toolbar') === true);
+  // กลุ่มที่ยังเห็นสองใบ ใบหนึ่งพับ = ยังไม่แข็ง (ยังมีใบที่ยืดได้)
+  let gm = PL.addAsTab(PL.panel('A'), 'A', PL.panel('B'));
+  PL.findPanel(gm, 'A').collapsed = true;
+  check('[68r] กลุ่มจริง ๆ (เห็น 2 ใบ) ยังคิดแบบเดิม', PL.nodeRigid(gm) === false);
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

@@ -108,7 +108,7 @@ export function refreshOpenBranchTab() {
 export { refreshOpenBranchTab as refreshOpenBranchPanel };
 
 // รวบรวมฉากทั้งโปรเจกต์ (ใช้ทั้งแสดงผลและเป็นตัวเลือก "ไปฉากไหนต่อ")
-const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research'];
+const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 export async function collectScenes() {
   const out = [];
   if (!state.root) return out;

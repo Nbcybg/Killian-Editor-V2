@@ -2,7 +2,7 @@
 // บทเรียน: ห้ามก๊อปไฟล์ด้วย readFile+writeFile (utf-8) — รูปภาพจะเสีย → ใช้ kapi.copyFile
 import { state, setStatus, log } from './core.js';
 
-const SKIP_DIRS = ['Recycle', 'Snapshots', 'Backups', 'Research'];
+const SKIP_DIRS = ['Recycle', 'Snapshots', '.k2history', 'Backups', 'Research'];
 const MAX_KEEP = 7;
 const LAST_KEY = 'k2-last-backup';        // วันที่สำรองล่าสุด (กันสำรองซ้ำวันเดียวกัน)
 

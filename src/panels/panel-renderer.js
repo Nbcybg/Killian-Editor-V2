@@ -39,8 +39,10 @@ export function markWorkspace(container, root, opts) {
   container.querySelectorAll('.k-workspace').forEach((e) => e.classList.remove('k-workspace'));
   const id = PL.workspaceNodeId(root, fixedPanel(opts));
   if (!id) return;
+  // [alpha.68r] `[data-tabs-id]` ไม่ผูกกับคลาส `.k-tab-group` แล้ว — กลุ่มที่เหลือแท็บเดียว
+  // ถูกวาดเป็น `.k-panel` ที่ถือ id ของกลุ่มไว้ (ดู soloTab) ต้องหาเจอทางนี้ด้วย
   const el2 = container.querySelector(
-    `.k-dock[data-dock-id="${id}"], .k-tab-group[data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`);
+    `.k-dock[data-dock-id="${id}"], [data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`);
   if (el2) el2.classList.add('k-workspace');
 }
 
@@ -124,6 +126,18 @@ function renderDock(node, pm, opts, depth) {
 // ───────── tab group ─────────
 // วาด "ทุกแท็บ" ลง DOM เสมอ (ซ่อนตัวที่ไม่ active) — โค้ดเก่าพึ่ง element id ที่ต้องอยู่ใน DOM ตลอด
 function renderTabs(node, pm, opts, depth) {
+  // [alpha.68r] เหลือแท็บที่เห็นได้ใบเดียว → **ไม่ใช่กลุ่มแล้ว** วาดเป็นแผงเดี่ยว ไม่มีแถบแท็บ
+  // (ต้นไม้ยังเก็บแท็บที่ปิดไว้ที่เดิม — เปิดกลับเมื่อไหร่กลุ่มก็คืนมาเองพร้อมลำดับเดิม)
+  const solo = PL.soloTab(node);
+  if (solo) {
+    const only = renderNode(solo, pm, opts, depth);
+    if (only) {
+      // ยังเป็น "ก้อนเดียวกัน" ในสายตาของ dock แม่และตัวชี้พื้นที่ทำงาน — id ของกลุ่มต้องติดไปด้วย
+      only.dataset.tabsId = node.id;
+      only.classList.add('k-solo-tab');
+    }
+    return only;
+  }
   const box = el('div', 'k-tab-group');
   box.dataset.tabsId = node.id;
   const strip = !!node.collapsed;                    // ย่อเป็นแถบไอคอน (icon strip)

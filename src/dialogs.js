@@ -79,6 +79,9 @@ export function settingsDialog(openTab) {
       <div class="k-row"><label>${t('settings.projectGoal')}</label><input type="number" id="st-proj" min="0"></div>
       <div class="k-set-sub k-full">// [alpha.60r ข้อ 1] พฤติกรรมตอนเปิดโปรเจกต์</div>
       <div class="k-row"><label>แสดงหน้าแรกเมื่อเปิดโปรเจกต์<span class="k-hint">ปิด = เปิดโปรเจกต์ล่าสุดโดยไม่ถาม</span></label><input type="checkbox" id="st-showhome"></div>
+      <div class="k-set-sub k-full">// [alpha.69] ประวัติการทำงาน (แผง 🕘)</div>
+      <div class="k-row"><label>เก็บประวัติย้อนหลัง (ครั้ง)<span class="k-hint">ยิ่งมากยิ่งย้อนได้ไกล แต่กินที่ใน .k2history/ · 4–500 · ค่าเริ่มต้น 32</span></label><input type="number" id="st-histlimit" min="4" max="500"></div>
+      <div class="k-row"><label>ปิดการจดประวัติ<span class="k-hint">ปิดแล้วแผงประวัติจะไม่มีอะไรใหม่เพิ่ม (ของเดิมยังอยู่)</span></label><input type="checkbox" id="st-histoff"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="write">
       <div class="k-row"><label>${t('settings.fontFamily')}<span class="k-hint">${t('settings.fontFamilyHint')}</span></label><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div>
@@ -345,6 +348,9 @@ export function settingsDialog(openTab) {
   if (showHome) showHome.checked = s.showHomeOnStartup !== false;
   q('#st-backup').checked = s.autoBackup !== false;
   q('#st-maxbak').value = s.maxBackups ?? 10;
+  // [alpha.69] ประวัติการทำงาน
+  if (q('#st-histlimit')) q('#st-histlimit').value = s.historyLimit ?? 32;
+  if (q('#st-histoff')) q('#st-histoff').checked = s.historyOff === true;
   q('#st-daily').value = g.dailyWords ?? 500;
   q('#st-proj').value = g.projectWords ?? 50000;
   q('#st-font').value = origFont;
@@ -1000,6 +1006,9 @@ export function settingsDialog(openTab) {
     if (showHomeEl) s.showHomeOnStartup = showHomeEl.checked;
     s.autoBackup = q('#st-backup').checked;
     s.maxBackups = Math.max(1, num('#st-maxbak', 10));
+    // [alpha.69] ประวัติการทำงาน — หนีบช่วงด้วยตัวเดียวกับที่ main ใช้ (ไม่คัดลอกกฎมาไว้สองที่)
+    if (q('#st-histlimit')) s.historyLimit = Math.max(4, Math.min(500, num('#st-histlimit', 32)));
+    if (q('#st-histoff')) s.historyOff = q('#st-histoff').checked;
     s.uiFontSize = Math.max(-6, Math.min(16, parseInt(q('#st-font').value, 10) || 0));
     s.fontFamily = q('#st-fontfamily')?.value || '';
     s.spFontFamily = q('#st-spfontfamily')?.value || '';
@@ -1095,6 +1104,9 @@ export function settingsDialog(openTab) {
       await loadLanguage(selLang, state.root);
       await saveProjectMeta();
     }
+    // [alpha.69] จำนวนครั้งที่เก็บ/สวิตช์ปิด มีผลกับ **main** (คนจดประวัติ) ไม่ใช่ renderer
+    // → ต้องบอกไปทันที ไม่งั้นค่าใหม่จะเริ่มใช้ตอนเปิดโปรเจกต์รอบหน้าเท่านั้น
+    try { const { configHistory } = await import('./history/history-ui.js'); await configHistory(); } catch {}
     setStatus(t('status.settingsSaved'));
     close();
   };

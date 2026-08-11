@@ -15,9 +15,21 @@ function syncLanguages() {
 
 syncLanguages();
 
-require('esbuild').build({
-  entryPoints: ['src/app.js'],
-  bundle: true, outfile: 'renderer/bundle.js',
-  format: 'iife', platform: 'browser', target: 'chrome120',
-  minify: false, sourcemap: false,
-}).then(() => console.log('bundle OK')).catch((e) => { console.error(e); process.exit(1); });
+// [alpha.69] ตรรกะสมุดประวัติ (history-data.js) ถูกใช้ **สองฝั่ง**: renderer วาดแผง · main ลงมือกับดิสก์
+// main.js เป็น CommonJS และ import ES module ตรง ๆ ไม่ได้ → แปลงเป็น .cjs ไว้ให้ require
+// (ห้ามคัดลอกตรรกะไปไว้สองที่ — ตัวที่มี unit test ต้องเป็นตัวเดียวกับที่ทำงานจริง)
+const CJS_MODULES = [['src/history/history-data.js', 'history-data.cjs']];
+
+const esbuild = require('esbuild');
+Promise.all([
+  esbuild.build({
+    entryPoints: ['src/app.js'],
+    bundle: true, outfile: 'renderer/bundle.js',
+    format: 'iife', platform: 'browser', target: 'chrome120',
+    minify: false, sourcemap: false,
+  }),
+  ...CJS_MODULES.map(([src, out]) => esbuild.build({
+    entryPoints: [src], bundle: true, outfile: out,
+    format: 'cjs', platform: 'node', target: 'node20', minify: false, sourcemap: false,
+  })),
+]).then(() => console.log('bundle OK')).catch((e) => { console.error(e); process.exit(1); });

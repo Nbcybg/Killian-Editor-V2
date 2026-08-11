@@ -100,6 +100,12 @@ body.panel-window #main { padding:0; }
 .k-panelwin > .k-panel-body { flex:1; min-height:0; overflow:auto; }
 /* หัวแผงในหน้าต่างลูกเหลือไว้แค่ชื่อ (ปุ่ม ลอย/ผนึก/ปิด ไม่มีความหมายเมื่อมีแผงเดียว) */
 .k-panelwin > .k-panel-head { cursor:default; }
+/* [alpha.68] แถบเตือน "หน้าต่างหลักยังไม่บันทึก" — แผงที่ผูกกับฉากอ่านได้อย่างเดียวช่วงนั้น
+   (คอมเมนต์/คุณสมบัติฉากเขียนลงไฟล์เดียวกับที่หน้าต่างหลักเปิดค้างอยู่ ปล่อยให้แก้พร้อมกันแล้วของหาย) */
+.k-scene-guard { position:sticky; top:0; z-index:5; margin:0 0 8px; padding:7px 10px;
+  background:var(--warn-bg, #4a3a1e); color:var(--warn-fg, #f0d9a0);
+  border-bottom:1px solid rgba(255,255,255,.12); font-size:12.5px; line-height:1.45; }
+.k-panelwin > .k-panel-body.k-guarded > *:not(.k-scene-guard) { opacity:.62; }
 #k-panel-src[hidden] { display:none !important; }
 .k-panel-root { flex:1; min-width:0; min-height:0; }
 .k-dock { display:flex; min-width:0; min-height:0; overflow:hidden; }
@@ -2633,6 +2639,94 @@ button, select { padding:calc(4px * var(--uis)) calc(10px * var(--uis)); border-
    ตอนนี้เป็นแผงจริง จึงต้องยืดเต็มช่องที่ Panel System ให้มา แล้วเลื่อนในตัวเอง */
 .k-featpanel { display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; }
 .k-featpanel > div:not(#net-body) { flex:1; min-height:0; min-width:0; overflow:auto; }
+
+/* ====== [alpha.69] สารานุกรม (Codex) · ประวัติการทำงาน (History) · บันทึกประจำวัน (Record) ======
+   **กฎเดียวที่ทั้งสามตัวต้องทำตาม** (บทเรียนข้อ 16–18 + กระดานอารมณ์ของ .63r):
+   `.k-panel-body` เป็น block ธรรมดา ลูกที่อยากสูงเต็มแผงจึงคำนวณความสูงไม่ได้
+   → ต้องบังคับให้ตัวห่อเป็น flex ทั้งสาย และทุกชั้นต้องมี `min-height:0`
+   ไม่งั้นได้อาการคลาสสิก "เนื้อแผงไม่เต็มกล่อง / เลื่อนไม่ได้ / แถบเครื่องมือทับรายการ" */
+.k-panel:has(#codex-body) > .k-panel-body,   .k-float-panel:has(#codex-body) > .k-panel-body,
+.k-panel:has(#history-body) > .k-panel-body, .k-float-panel:has(#history-body) > .k-panel-body,
+.k-panel:has(#record-body) > .k-panel-body,  .k-float-panel:has(#record-body) > .k-panel-body {
+  padding:0; overflow:hidden; display:flex; min-height:0; }
+#codex-body, #history-body, #record-body {
+  display:flex; flex-direction:column; flex:1; min-height:0; min-width:0; overflow:hidden;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+
+/* แถบเครื่องมือของทั้งสามแผง — ห้ามยืด ไม่งั้นรายการข้างล่างไม่เหลือที่ */
+.k-codex-bar, .k-hist-bar, .k-rec-bar {
+  flex:0 0 auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  padding:8px 10px; border-bottom:1px solid var(--border); background:var(--panel-bg, transparent); }
+.k-codex-bar input[type=search], .k-rec-q { flex:1 1 140px; min-width:100px; }
+.k-codex-empty, .k-hist-empty, .k-rec-empty { padding:16px; text-align:center; }
+
+/* ---- Codex ---- */
+.k-codex-main { flex:1; min-height:0; display:flex; gap:0; overflow:hidden; }
+.k-codex-grid { flex:1 1 auto; min-width:0; min-height:0; overflow:auto; padding:10px;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; align-content:start; }
+.k-codex-card { border:1px solid var(--border); border-radius:8px; padding:9px 11px; cursor:pointer;
+  background:var(--card-bg, transparent); }
+.k-codex-card:hover { border-color:var(--accent-hi); }
+.k-codex-card.on { border-color:var(--accent-hi); box-shadow:0 0 0 1px var(--accent-hi) inset; }
+.k-codex-name { font-weight:600; }
+.k-codex-cat-pill { display:inline-block; font-size:11px; opacity:.75; margin-top:3px;
+  border:1px solid var(--border); border-radius:999px; padding:1px 7px; }
+.k-codex-aka { font-size:11.5px; opacity:.6; margin-top:3px; }
+.k-codex-prev { flex:0 0 260px; min-height:0; overflow:auto; padding:12px;
+  border-left:1px solid var(--border); }
+.k-codex-prev:empty { display:none; }
+.k-codex-prev-name { font-size:16px; font-weight:700; }
+.k-codex-info { width:100%; border-collapse:collapse; margin:10px 0; font-size:12px; }
+.k-codex-info th { text-align:left; opacity:.7; font-weight:600; padding:3px 6px 3px 0; vertical-align:top; }
+.k-codex-info td { padding:3px 0; }
+.k-codex-prev-body { white-space:pre-wrap; font-size:12.5px; line-height:1.65; margin:8px 0 12px; }
+@container (max-width: 520px) { .k-codex-prev { display:none; } }
+
+/* ---- History ---- */
+.k-hist-hint { flex:0 0 auto; padding:7px 10px; font-size:11.5px; opacity:.65; line-height:1.5;
+  border-bottom:1px solid var(--border); }
+.k-hist-count { font-weight:600; margin-right:auto; }
+.k-hist-list { flex:1; min-height:0; overflow:auto; padding:6px 10px 14px; }
+.k-hist-item { display:flex; align-items:flex-start; gap:9px; padding:7px 0;
+  border-left:2px solid var(--border); margin-left:5px; padding-left:12px; position:relative; }
+.k-hist-item:last-child { border-left-color:transparent; }
+.k-hist-dot { position:absolute; left:-6px; top:11px; width:9px; height:9px; border-radius:50%;
+  background:var(--border); }
+.k-hist-now .k-hist-dot { background:var(--accent-hi); }
+.k-hist-now .k-hist-text { font-weight:700; }
+.k-hist-mid { flex:1; min-width:0; }
+.k-hist-text { overflow-wrap:anywhere; }
+.k-hist-meta { font-size:11px; opacity:.6; margin-top:2px; }
+.k-hist-back { flex:0 0 auto; font-size:11.5px; opacity:0; transition:opacity .12s; }
+.k-hist-item:hover .k-hist-back { opacity:1; }
+
+/* ---- Record ---- */
+.k-rec-form { flex:0 0 auto; padding:9px 10px; border-bottom:1px solid var(--border);
+  display:flex; flex-direction:column; gap:6px; }
+.k-rec-text { width:100%; resize:vertical; min-height:52px; font:inherit; }
+.k-rec-form-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.k-rec-num { width:74px; }
+.k-rec-tags { flex:1 1 110px; min-width:80px; }
+.k-rec-add { margin-left:auto; }
+.k-rec-stats { flex:0 0 auto; display:flex; gap:12px; flex-wrap:wrap; padding:6px 10px;
+  font-size:11.5px; opacity:.8; border-bottom:1px solid var(--border); }
+.k-rec-stat b { font-size:13px; }
+.k-rec-list { flex:1; min-height:0; overflow:auto; padding:8px 10px 14px; }
+.k-rec-day-head { display:flex; align-items:baseline; gap:8px; margin:12px 0 5px;
+  border-bottom:1px solid var(--border); padding-bottom:3px; }
+.k-rec-day-head:first-child { margin-top:0; }
+.k-rec-day-name { font-weight:700; }
+.k-rec-day-meta { font-size:11px; opacity:.6; }
+.k-rec-card { border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:6px; }
+.k-rec-card-text { white-space:pre-wrap; line-height:1.6; overflow-wrap:anywhere; }
+.k-rec-card-foot { display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+.k-rec-spacer { flex:1; }
+.k-rec-chip { font-size:11px; border:1px solid var(--border); border-radius:999px; padding:1px 7px; opacity:.85; }
+.k-rec-tag { opacity:.7; }
+.k-rec-act { cursor:pointer; opacity:.55; padding:0 3px; }
+.k-rec-act:hover { opacity:1; }
+.k-rec-edit { width:100%; resize:vertical; min-height:60px; font:inherit; }
+.k-rec-card-btns { display:flex; gap:6px; margin-top:6px; }
 /* กระดาน Kanban เลื่อนแนวนอนเองอยู่แล้ว — อย่าให้ห่อซ้อนอีกชั้น */
 #kanban-body { overflow:hidden; display:flex; flex-direction:column; }
 

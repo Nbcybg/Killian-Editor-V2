@@ -14231,7 +14231,7 @@
   function paginate(blocks, opts = {}) {
     const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
-    const R = fmt.rules, S2 = fmt.strings;
+    const R = fmt.rules, S5 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
     const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
     const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
@@ -14282,10 +14282,10 @@
       if ((isDlg || isAct) && canBottom >= minBot && body - canBottom >= minTop) {
         const head2 = splitText(b.text, c.width, canBottom);
         addBlock({ ...b, text: head2.head, lines: canBottom, split: "head" });
-        if (isDlg && wantDlgMarkers) addBlock({ el: "more", text: S2.dialogueMore, lines: 1, more: true });
+        if (isDlg && wantDlgMarkers) addBlock({ el: "more", text: S5.dialogueMore, lines: 1, more: true });
         pushPage();
         if (isDlg && wantDlgMarkers && lastChar) {
-          addBlock({ el: "character", text: lastChar + " " + S2.dialogueContd, lines: 1, contd: true });
+          addBlock({ el: "character", text: lastChar + " " + S5.dialogueContd, lines: 1, contd: true });
           used += 1;
         }
         addBlock({ ...b, text: head2.rest, lines: body - canBottom, split: "tail" });
@@ -14314,7 +14314,7 @@
   }
   function annotateContinued(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const S2 = f.strings;
+    const S5 = f.strings;
     const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const on2 = CT.enabled !== false && CT.scene !== false;
     for (const p of pages) {
@@ -14336,9 +14336,9 @@
         contScene = p.sceneEnd;
       }
       run2++;
-      p.continuedBottom = S2.continuedBottom;
+      p.continuedBottom = S5.continuedBottom;
       n2.contdRun = run2;
-      n2.continuedTop = CT.number !== false && run2 > 2 ? `${S2.continuedTop} (${run2 - 1})` : S2.continuedTop;
+      n2.continuedTop = CT.number !== false && run2 > 2 ? `${S5.continuedTop} (${run2 - 1})` : S5.continuedTop;
     }
     return pages;
   }
@@ -14896,7 +14896,7 @@
   // src/page-break-plugin.js
   function createPageBreakPlugin({ key: keyName2, cls, decoKey, label }) {
     const key2 = new PluginKey(keyName2);
-    const text = label || ((page) => "\u0E2B\u0E19\u0E49\u0E32 " + (page || ""));
+    const text = label || ((page2) => "\u0E2B\u0E19\u0E49\u0E32 " + (page2 || ""));
     let list = [];
     let sig = "";
     function setBreaks(next) {
@@ -14987,25 +14987,25 @@
       slot.className = "sp-page-slot";
       slot.style.width = pxW + "px";
       slot.style.height = pxH + "px";
-      const page = document.createElement("div");
-      page.className = "sp-page ed-page";
-      page.dataset.page = String(pg.index);
-      page.style.width = cssIn(pw);
-      page.style.minHeight = cssIn(ph);
-      page.style.paddingTop = cssIn(m.top);
-      page.style.paddingBottom = cssIn(m.bottom);
-      page.style.paddingLeft = cssIn(m.left);
-      page.style.paddingRight = cssIn(m.right);
-      page.style.transform = "scale(" + scale2 + ")";
-      page.style.fontFamily = proseFontStack(f);
-      page.style.fontSize = proseFontPx(f) + "px";
-      page.style.lineHeight = String(f.lineHeight);
+      const page2 = document.createElement("div");
+      page2.className = "sp-page ed-page";
+      page2.dataset.page = String(pg.index);
+      page2.style.width = cssIn(pw);
+      page2.style.minHeight = cssIn(ph);
+      page2.style.paddingTop = cssIn(m.top);
+      page2.style.paddingBottom = cssIn(m.bottom);
+      page2.style.paddingLeft = cssIn(m.left);
+      page2.style.paddingRight = cssIn(m.right);
+      page2.style.transform = "scale(" + scale2 + ")";
+      page2.style.fontFamily = proseFontStack(f);
+      page2.style.fontSize = proseFontPx(f) + "px";
+      page2.style.lineHeight = String(f.lineHeight);
       const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage) : opts.showPageNumbers !== false && pg.index > 1 ? String(pg.index) : "";
       if (label) {
         const n2 = document.createElement("div");
         n2.className = "sp-page-num";
         n2.textContent = label;
-        page.append(n2);
+        page2.append(n2);
       }
       for (const b of pg.blocks || []) {
         const type = b.type || "p";
@@ -15032,11 +15032,11 @@
         }
         d.classList.add("pv-block");
         if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);
-        page.append(d);
+        page2.append(d);
       }
-      slot.append(page);
+      slot.append(page2);
       host2.append(slot);
-      els.push(page);
+      els.push(page2);
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
@@ -15537,8 +15537,8 @@
     if (!names || !names.length) return null;
     const usable = names.filter((n2) => n2 && n2.length >= 2);
     if (!usable.length) return null;
-    const esc5 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc5.join("|"), "g");
+    const esc6 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc6.join("|"), "g");
   }
   function mentionScan(doc3, rx, from2, to) {
     if (!rx) return [];
@@ -16610,10 +16610,23 @@
     if (node.type === "panel") return !!node.hidden;
     return (node.children || []).every(nodeHidden);
   }
+  function shownChildren(node) {
+    return (node && node.children || []).filter((c) => !nodeHidden(c));
+  }
+  function soloTab(node) {
+    if (!node || node.type !== "tabs") return null;
+    if (node.collapsed) return null;
+    const shown = shownChildren(node);
+    return shown.length === 1 ? shown[0] : null;
+  }
   function nodeRigid(node, isFixedPanel = () => false) {
     if (!node || nodeHidden(node)) return false;
     if (node.type === "panel") return !!node.collapsed || !!isFixedPanel(node.id);
-    if (node.type === "tabs") return !!node.collapsed;
+    if (node.type === "tabs") {
+      const solo = soloTab(node);
+      if (solo) return nodeRigid(solo, isFixedPanel);
+      return !!node.collapsed;
+    }
     if (node.type === "dock") {
       const kids = (node.children || []).filter((c) => !nodeHidden(c));
       return kids.length > 0 && kids.every((c) => nodeRigid(c, isFixedPanel));
@@ -16760,14 +16773,14 @@
     if (!root) return null;
     if (root.type === "panel") return root.id === id ? null : clone(root);
     root = clone(root);
-    const prune = (node) => {
+    const prune2 = (node) => {
       if (!node.children) return node;
       const before = node.children;
       const kids = [], keep = [];
       for (let i5 = 0; i5 < before.length; i5++) {
         const c = before[i5];
         if (c.type === "panel" && c.id === id) continue;
-        const pc = prune(c);
+        const pc = prune2(c);
         if (pc.children && pc.children.length === 0) continue;
         kids.push(pc);
         keep.push(i5);
@@ -16781,7 +16794,7 @@
       }
       return node;
     };
-    root = prune(root);
+    root = prune2(root);
     return collapse(root);
   }
   function collapse(node) {
@@ -17642,9 +17655,9 @@
       ov.onclick = (e) => {
         if (e.target === ov) done2(false);
       };
-      document.addEventListener("keydown", function esc5(e) {
+      document.addEventListener("keydown", function esc6(e) {
         if (e.key === "Escape") {
-          document.removeEventListener("keydown", esc5);
+          document.removeEventListener("keydown", esc6);
           done2(false);
         }
       });
@@ -18880,8 +18893,13 @@
         openTabs: null,
         // [filePath, ...] — null = ยังไม่เคยบันทึก
         // Story Network — สีที่ผู้ใช้ปรับเองได้
-        netColors: null
+        netColors: null,
         // { cats:{characters:'#xxx',...}, edges:{'scene-link':'#xxx',...} }
+        // [alpha.69] ประวัติการทำงาน — เก็บย้อนหลังกี่ครั้ง (ยิ่งมาก ยิ่งกินที่ใน .k2history/)
+        // ค่าเริ่มต้น 32 ตามที่ผู้ใช้กำหนด · หนีบช่วง 4–500 ที่ history-data.clampLimit
+        historyLimit: 32,
+        historyOff: false
+        // true = ปิดการจดประวัติทั้งโปรเจกต์
       };
       DEFAULT_SETTINGS = { ...GLOBAL_DEFAULTS, ...PROJECT_DEFAULTS };
       DEFAULT_GOALS = { dailyWords: 500, projectWords: 5e4 };
@@ -19685,13 +19703,13 @@
     }
     const close2 = () => {
       ov.remove();
-      document.removeEventListener("keydown", esc5);
+      document.removeEventListener("keydown", esc6);
     };
-    function esc5(e) {
+    function esc6(e) {
       if (e.key === "Escape") close2();
     }
     ov.onclick = close2;
-    document.addEventListener("keydown", esc5);
+    document.addEventListener("keydown", esc6);
     document.body.appendChild(ov);
   }
   var CAT_TH, WikiEditor;
@@ -20485,16 +20503,16 @@
       slot.className = "sp-page-slot";
       slot.style.width = pxW + "px";
       slot.style.height = pxH + "px";
-      const page = document.createElement("div");
-      page.className = "sp-page";
-      page.dataset.page = String(pg.index);
-      page.style.width = cssIn2(pw);
-      page.style.minHeight = cssIn2(ph);
-      page.style.paddingTop = cssIn2(f.margins.top);
-      page.style.paddingBottom = cssIn2(f.margins.bottom);
-      page.style.paddingLeft = cssIn2(f.margins.left);
-      page.style.paddingRight = cssIn2(f.margins.right);
-      page.style.transform = "scale(" + scale2 + ")";
+      const page2 = document.createElement("div");
+      page2.className = "sp-page";
+      page2.dataset.page = String(pg.index);
+      page2.style.width = cssIn2(pw);
+      page2.style.minHeight = cssIn2(ph);
+      page2.style.paddingTop = cssIn2(f.margins.top);
+      page2.style.paddingBottom = cssIn2(f.margins.bottom);
+      page2.style.paddingLeft = cssIn2(f.margins.left);
+      page2.style.paddingRight = cssIn2(f.margins.right);
+      page2.style.transform = "scale(" + scale2 + ")";
       const label = f.pageNumbers && f.pageNumbers.show ? pageNumberLabel(pg.index, f, opts.startPage) : showNums && pg.index > 1 ? pg.index + "." : "";
       if (label) {
         const num4 = document.createElement("div");
@@ -20504,13 +20522,13 @@
           num4.style.right = cssIn2(f.pageNumbers.right);
         }
         num4.textContent = label;
-        page.append(num4);
+        page2.append(num4);
       }
       if (pg.continuedTop) {
         const ct = document.createElement("div");
         ct.className = "sp-continued-top";
         ct.textContent = pg.continuedTop;
-        page.append(ct);
+        page2.append(ct);
       }
       for (const b of pg.blocks || []) {
         const d = document.createElement("div");
@@ -20525,17 +20543,17 @@
             d.append(s);
           }
         }
-        page.append(d);
+        page2.append(d);
       }
       if (pg.continuedBottom) {
         const cb = document.createElement("div");
         cb.className = "sp-continued-bottom";
         cb.textContent = pg.continuedBottom;
-        page.append(cb);
+        page2.append(cb);
       }
-      slot.append(page);
+      slot.append(page2);
       host2.append(slot);
-      els.push(page);
+      els.push(page2);
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
@@ -22723,8 +22741,8 @@
           function n2(e2, t4, r3, n3, i6, s2) {
             var a, o, h = e2.file, u = e2.compression, l = s2 !== O.utf8encode, f = I.transformTo("string", s2(h.name)), c = I.transformTo("string", O.utf8encode(h.name)), d = h.comment, p = I.transformTo("string", s2(d)), m = I.transformTo("string", O.utf8encode(d)), _2 = c.length !== h.name.length, g = m.length !== d.length, b = "", v2 = "", y = "", w = h.dir, k = h.date, x = { crc32: 0, compressedSize: 0, uncompressedSize: 0 };
             t4 && !r3 || (x.crc32 = e2.crc32, x.compressedSize = e2.compressedSize, x.uncompressedSize = e2.uncompressedSize);
-            var S2 = 0;
-            t4 && (S2 |= 8), l || !_2 && !g || (S2 |= 2048);
+            var S5 = 0;
+            t4 && (S5 |= 8), l || !_2 && !g || (S5 |= 2048);
             var z = 0, C = 0;
             w && (z |= 16), "UNIX" === i6 ? (C = 798, z |= (function(e3, t5) {
               var r4 = e3;
@@ -22733,7 +22751,7 @@
               return 63 & (e3 || 0);
             })(h.dosPermissions)), a = k.getUTCHours(), a <<= 6, a |= k.getUTCMinutes(), a <<= 5, a |= k.getUTCSeconds() / 2, o = k.getUTCFullYear() - 1980, o <<= 4, o |= k.getUTCMonth() + 1, o <<= 5, o |= k.getUTCDate(), _2 && (v2 = A(1, 1) + A(B(f), 4) + c, b += "up" + A(v2.length, 2) + v2), g && (y = A(1, 1) + A(B(p), 4) + m, b += "uc" + A(y.length, 2) + y);
             var E = "";
-            return E += "\n\0", E += A(S2, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
+            return E += "\n\0", E += A(S5, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
           }
           var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
           function s(e2, t4, r3, n3) {
@@ -23999,7 +24017,7 @@
           };
         }, {}], 46: [function(e, t3, r) {
           "use strict";
-          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S2 = 258, z = S2 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
+          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S5 = 258, z = S5 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
           function R(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
@@ -24023,14 +24041,14 @@
             e2.pending_buf[e2.pending++] = t4 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t4;
           }
           function L2(e2, t4) {
-            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S2, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
+            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S5, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
             e2.prev_length >= e2.good_match && (i6 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
             do {
               if (u2[(r3 = t4) + a2] === p2 && u2[r3 + a2 - 1] === d2 && u2[r3] === u2[s2] && u2[++r3] === u2[s2 + 1]) {
                 s2 += 2, r3++;
                 do {
                 } while (u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && s2 < c2);
-                if (n3 = S2 - (c2 - s2), s2 = c2 - S2, a2 < n3) {
+                if (n3 = S5 - (c2 - s2), s2 = c2 - S5, a2 < n3) {
                   if (e2.match_start = t4, o2 <= (a2 = n3)) break;
                   d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
                 }
@@ -24172,15 +24190,15 @@
                 return e3.insert = 0, t5 === f ? (N(e3, true), 0 === e3.strm.avail_out ? O : B) : e3.last_lit && (N(e3, false), 0 === e3.strm.avail_out) ? A : I;
               })(n3, t4) : 3 === n3.strategy ? (function(e3, t5) {
                 for (var r4, n4, i7, s3, a3 = e3.window; ; ) {
-                  if (e3.lookahead <= S2) {
-                    if (j(e3), e3.lookahead <= S2 && t5 === l) return A;
+                  if (e3.lookahead <= S5) {
+                    if (j(e3), e3.lookahead <= S5 && t5 === l) return A;
                     if (0 === e3.lookahead) break;
                   }
                   if (e3.match_length = 0, e3.lookahead >= x && 0 < e3.strstart && (n4 = a3[i7 = e3.strstart - 1]) === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7]) {
-                    s3 = e3.strstart + S2;
+                    s3 = e3.strstart + S5;
                     do {
                     } while (n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && i7 < s3);
-                    e3.match_length = S2 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
+                    e3.match_length = S5 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
                   }
                   if (e3.match_length >= x ? (r4 = u._tr_tally(e3, 1, e3.match_length - x), e3.lookahead -= e3.match_length, e3.strstart += e3.match_length, e3.match_length = 0) : (r4 = u._tr_tally(e3, 0, e3.window[e3.strstart]), e3.lookahead--, e3.strstart++), r4 && (N(e3, false), 0 === e3.strm.avail_out)) return A;
                 }
@@ -24211,7 +24229,7 @@
         }, {}], 48: [function(e, t3, r) {
           "use strict";
           t3.exports = function(e2, t4) {
-            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S2, z, C;
+            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S5, z, C;
             r3 = e2.state, n2 = e2.next_in, z = e2.input, i5 = n2 + (e2.avail_in - 5), s = e2.next_out, C = e2.output, a = s - (t4 - e2.avail_out), o = s + (e2.avail_out - 257), h = r3.dmax, u = r3.wsize, l = r3.whave, f = r3.wnext, c = r3.window, d = r3.hold, p = r3.bits, m = r3.lencode, _2 = r3.distcode, g = (1 << r3.lenbits) - 1, b = (1 << r3.distbits) - 1;
             e: do {
               p < 15 && (d += z[n2++] << p, p += 8, d += z[n2++] << p, p += 8), v2 = m[d & g];
@@ -24249,25 +24267,25 @@
                         e2.msg = "invalid distance too far back", r3.mode = 30;
                         break e;
                       }
-                      if (S2 = c, (x = 0) === f) {
+                      if (S5 = c, (x = 0) === f) {
                         if (x += u - y, y < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
-                          x = s - k, S2 = C;
+                          x = s - k, S5 = C;
                         }
                       } else if (f < y) {
                         if (x += u + f - y, (y -= f) < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
                           if (x = 0, f < w) {
                             for (w -= y = f; C[s++] = c[x++], --y; ) ;
-                            x = s - k, S2 = C;
+                            x = s - k, S5 = C;
                           }
                         }
                       } else if (x += f - y, y < w) {
                         for (w -= y; C[s++] = c[x++], --y; ) ;
-                        x = s - k, S2 = C;
+                        x = s - k, S5 = C;
                       }
-                      for (; 2 < w; ) C[s++] = S2[x++], C[s++] = S2[x++], C[s++] = S2[x++], w -= 3;
-                      w && (C[s++] = S2[x++], 1 < w && (C[s++] = S2[x++]));
+                      for (; 2 < w; ) C[s++] = S5[x++], C[s++] = S5[x++], C[s++] = S5[x++], w -= 3;
+                      w && (C[s++] = S5[x++], 1 < w && (C[s++] = S5[x++]));
                     } else {
                       for (x = s - k; C[s++] = C[x++], C[s++] = C[x++], C[s++] = C[x++], 2 < (w -= 3); ) ;
                       w && (C[s++] = C[x++], 1 < w && (C[s++] = C[x++]));
@@ -24325,7 +24343,7 @@
           r.inflateReset = o, r.inflateReset2 = h, r.inflateResetKeep = a, r.inflateInit = function(e2) {
             return u(e2, 15);
           }, r.inflateInit2 = u, r.inflate = function(e2, t4) {
-            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S2, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S5, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
             if (!e2 || !e2.state || !e2.output || !e2.input && 0 !== e2.avail_in) return U;
             12 === (r3 = e2.state).mode && (r3.mode = 13), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, f2 = o2, c2 = h2, x = N;
             e: for (; ; ) switch (r3.mode) {
@@ -24498,7 +24516,7 @@
                   r3.lens[A[r3.have++]] = 7 & u2, u2 >>>= 3, l2 -= 3;
                 }
                 for (; r3.have < 19; ) r3.lens[A[r3.have++]] = 0;
-                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S2 = { bits: r3.lenbits }, x = T4(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
+                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S5 = { bits: r3.lenbits }, x = T4(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S5), r3.lenbits = S5.bits, x) {
                   e2.msg = "invalid code lengths set", r3.mode = 30;
                   break;
                 }
@@ -24546,11 +24564,11 @@
                   e2.msg = "invalid code -- missing end-of-block", r3.mode = 30;
                   break;
                 }
-                if (r3.lenbits = 9, S2 = { bits: r3.lenbits }, x = T4(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S2), r3.lenbits = S2.bits, x) {
+                if (r3.lenbits = 9, S5 = { bits: r3.lenbits }, x = T4(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S5), r3.lenbits = S5.bits, x) {
                   e2.msg = "invalid literal/lengths set", r3.mode = 30;
                   break;
                 }
-                if (r3.distbits = 6, r3.distcode = r3.distdyn, S2 = { bits: r3.distbits }, x = T4(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S2), r3.distbits = S2.bits, x) {
+                if (r3.distbits = 6, r3.distcode = r3.distdyn, S5 = { bits: r3.distbits }, x = T4(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S5), r3.distbits = S5.bits, x) {
                   e2.msg = "invalid distances set", r3.mode = 30;
                   break;
                 }
@@ -24695,7 +24713,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S2 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T4 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S5 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T4 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -24705,21 +24723,21 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T4 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S2 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T4 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S5 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S2, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T4 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S2, y = u = 1 << x; i5[c + (E >> S2) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S5, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T4 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S5, y = u = 1 << x; i5[c + (E >> S5) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
                 b = t4[r3 + a[v2]];
               }
               if (k < b && (E & f) !== l) {
-                for (0 === S2 && (S2 = k), c += y, z = 1 << (x = b - S2); x + S2 < w && !((z -= O[x + S2]) <= 0); ) x++, z <<= 1;
+                for (0 === S5 && (S5 = k), c += y, z = 1 << (x = b - S5); x + S5 < w && !((z -= O[x + S5]) <= 0); ) x++, z <<= 1;
                 if (C += 1 << x, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
                 i5[l = E & f] = k << 24 | x << 16 | c - s | 0;
               }
             }
-            return 0 !== E && (i5[c + E] = b - S2 << 24 | 64 << 16 | 0), o.bits = k, 0;
+            return 0 !== E && (i5[c + E] = b - S5 << 24 | 64 << 16 | 0), o.bits = k, 0;
           };
         }, { "../utils/common": 41 }], 51: [function(e, t3, r) {
           "use strict";
@@ -24730,7 +24748,7 @@
           function n2(e2) {
             for (var t4 = e2.length; 0 <= --t4; ) e2[t4] = 0;
           }
-          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S2 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
+          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S5 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
           n2(z);
           var C = new Array(2 * f);
           n2(C);
@@ -24856,11 +24874,11 @@
               return o;
             })(e2)), Y(e2, e2.l_desc), Y(e2, e2.d_desc), a2 = (function(e3) {
               var t5;
-              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S2[t5] + 1]; t5--) ;
+              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S5[t5] + 1]; t5--) ;
               return e3.opt_len += 3 * (t5 + 1) + 5 + 5 + 4, t5;
             })(e2), i6 = e2.opt_len + 3 + 7 >>> 3, (s2 = e2.static_len + 3 + 7 >>> 3) <= i6 && (i6 = s2)) : i6 = s2 = r3 + 5, r3 + 4 <= i6 && -1 !== t4 ? J2(e2, t4, r3, n3) : 4 === e2.strategy || s2 === i6 ? (P(e2, 2 + (n3 ? 1 : 0), 3), K(e2, z, C)) : (P(e2, 4 + (n3 ? 1 : 0), 3), (function(e3, t5, r4, n4) {
               var i7;
-              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S2[i7] + 1], 3);
+              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S5[i7] + 1], 3);
               V2(e3, e3.dyn_ltree, t5 - 1), V2(e3, e3.dyn_dtree, r4 - 1);
             })(e2, e2.l_desc.max_code + 1, e2.d_desc.max_code + 1, a2 + 1), K(e2, e2.dyn_ltree, e2.dyn_dtree)), W(e2), n3 && M2(e2);
           }, r._tr_tally = function(e2, t4, r3) {
@@ -25089,8 +25107,8 @@
     const rel = albumRel(albumId2);
     return rel ? rel + "/" + f : f;
   }
-  async function urlOf(root, relPath) {
-    return kapi.toFileURL(await kapi.join(root, IMAGES_DIR, ...String(relPath).split("/")));
+  async function urlOf(root, relPath2) {
+    return kapi.toFileURL(await kapi.join(root, IMAGES_DIR, ...String(relPath2).split("/")));
   }
   function naturalSize(url) {
     if (dims.has(url)) return Promise.resolve(dims.get(url));
@@ -26616,16 +26634,16 @@
       nameInp.focus();
       const done2 = (v2) => {
         ov.remove();
-        document.removeEventListener("keydown", esc5, true);
+        document.removeEventListener("keydown", esc6, true);
         resolve(v2);
       };
-      function esc5(e) {
+      function esc6(e) {
         if (e.key === "Escape") {
           e.stopPropagation();
           done2(null);
         }
       }
-      document.addEventListener("keydown", esc5, true);
+      document.addEventListener("keydown", esc6, true);
       cancel.onclick = () => done2(null);
       ok2.onclick = async () => {
         const p = collect();
@@ -26945,8 +26963,8 @@
     cleanLine: () => cleanLine,
     parseTagAnswer: () => parseTagAnswer
   });
-  async function thumbDataUrl(root, relPath) {
-    const abs = await kapi.join(root, IMAGES_DIR, ...relPath.split("/"));
+  async function thumbDataUrl(root, relPath2) {
+    const abs = await kapi.join(root, IMAGES_DIR, ...relPath2.split("/"));
     const url = await kapi.toFileURL(abs);
     return new Promise((resolve) => {
       const im = new Image();
@@ -27117,21 +27135,21 @@ ${ctx}${hint}`;
     clearGalleryCache: () => clearGalleryCache,
     pickImage: () => pickImage
   });
-  async function absOf(root, relPath) {
-    return kapi.join(root, IMAGES_DIR, ...String(relPath).split("/"));
+  async function absOf(root, relPath2) {
+    return kapi.join(root, IMAGES_DIR, ...String(relPath2).split("/"));
   }
   function clearGalleryCache() {
     urlCache.clear();
   }
-  async function fileURL(root, relPath) {
-    const key2 = root + "||" + relPath;
+  async function fileURL(root, relPath2) {
+    const key2 = root + "||" + relPath2;
     if (urlCache.has(key2)) return urlCache.get(key2);
-    const u = await kapi.toFileURL(await absOf(root, relPath));
+    const u = await kapi.toFileURL(await absOf(root, relPath2));
     urlCache.set(key2, u);
     return u;
   }
-  async function statOf(root, relPath) {
-    const p = await absOf(root, relPath);
+  async function statOf(root, relPath2) {
+    const p = await absOf(root, relPath2);
     try {
       if (kapi.stat) return await kapi.stat(p);
       return { size: 0, mtimeMs: await kapi.mtime(p), birthtimeMs: 0 };
@@ -59106,12 +59124,12 @@ ${ctx}${hint}`;
   });
 
   // src/sp-continued.js
-  function pageAnchor(page) {
-    const b = (page && page.blocks || []).find((x) => x && Number.isFinite(x.pos));
+  function pageAnchor(page2) {
+    const b = (page2 && page2.blocks || []).find((x) => x && Number.isFinite(x.pos));
     return b ? b.pos : null;
   }
-  function lastBlock(page) {
-    const list = page && page.blocks || [];
+  function lastBlock(page2) {
+    const list = page2 && page2.blocks || [];
     return list.length ? list[list.length - 1] : null;
   }
   function computeContinueds(pages, fmt) {
@@ -61308,7 +61326,7 @@ ${h.text}`;
   async function analyzerStats(root = state.root) {
     const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
     if (!root) return out;
-    const SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Plugins", "Research"];
+    const SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research"];
     try {
       for (const sec of await kapi.listDirs(root)) {
         if (SKIP.includes(sec)) {
@@ -62834,7 +62852,7 @@ ${h.text}`;
     const id = workspaceNodeId(root, fixedPanel(opts));
     if (!id) return;
     const el2 = container.querySelector(
-      `.k-dock[data-dock-id="${id}"], .k-tab-group[data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`
+      `.k-dock[data-dock-id="${id}"], [data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`
     );
     if (el2) el2.classList.add("k-workspace");
   }
@@ -62896,6 +62914,15 @@ ${h.text}`;
     return box2;
   }
   function renderTabs(node, pm2, opts, depth) {
+    const solo = soloTab(node);
+    if (solo) {
+      const only = renderNode(solo, pm2, opts, depth);
+      if (only) {
+        only.dataset.tabsId = node.id;
+        only.classList.add("k-solo-tab");
+      }
+      return only;
+    }
     const box2 = el("div", "k-tab-group");
     box2.dataset.tabsId = node.id;
     const strip = !!node.collapsed;
@@ -64881,6 +64908,43 @@ ${h.text}`;
           floatable: true,
           i18n: "panel.playerTitle",
           desc: "\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E22 \u0E46 \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E01\u0E47\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E41\u0E15\u0E48\u0E25\u0E30\u0E23\u0E2D\u0E1A\u0E44\u0E27\u0E49\u0E14\u0E39\u0E22\u0E49\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07"
+        },
+        // ── [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน ──
+        {
+          id: "codex",
+          dockW: 680,
+          title: "\u{1F4DA} \u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21",
+          icon: "book-content",
+          adopt: "#codex-panel",
+          defaultSide: "left",
+          closable: true,
+          floatable: true,
+          i18n: "panel.codexTitle",
+          desc: "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki \u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21\u0E43\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21 \u2014 \u0E40\u0E23\u0E35\u0E22\u0E01\u0E14\u0E39\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14 \u0E04\u0E49\u0E19\u0E14\u0E49\u0E27\u0E22\u0E0A\u0E37\u0E48\u0E2D/\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E19 \xB7 \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E27\u0E47\u0E1A\u0E41\u0E1A\u0E1A Fandom/Wikia \u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14"
+        },
+        {
+          id: "history",
+          dockW: 420,
+          title: "\u{1F558} \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E17\u0E33\u0E07\u0E32\u0E19",
+          icon: "history",
+          adopt: "#history-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "panel.historyTitle",
+          desc: "\u0E44\u0E17\u0E21\u0E4C\u0E44\u0E25\u0E19\u0E4C\u0E27\u0E48\u0E32\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E01\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E1B\u0E1A\u0E49\u0E32\u0E07 \u0E41\u0E25\u0E49\u0E27\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E08\u0E38\u0E14\u0E44\u0E2B\u0E19\u0E01\u0E47\u0E44\u0E14\u0E49 \xB7 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E15\u0E31\u0E49\u0E07\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \u2192 \u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B (\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 32)"
+        },
+        {
+          id: "record",
+          dockW: 460,
+          title: "\u{1F5D2} \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E27\u0E31\u0E19",
+          icon: "note",
+          adopt: "#record-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "panel.recordTitle",
+          desc: "\u0E08\u0E14\u0E27\u0E48\u0E32\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E44\u0E1B\u0E1A\u0E49\u0E32\u0E07 \u2014 \u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33 \u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49 \u0E41\u0E17\u0E47\u0E01 \xB7 \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 CSV \u0E44\u0E1B\u0E17\u0E33\u0E2A\u0E23\u0E38\u0E1B\u0E15\u0E48\u0E2D\u0E44\u0E14\u0E49"
         }
       ];
       TEAROFF_PANELS = /* @__PURE__ */ new Set([
@@ -64895,7 +64959,20 @@ ${h.text}`;
         "search",
         "gallery",
         "log",
-        "notes"
+        "notes",
+        // เฟส 2: ต้องรู้ว่าฉากไหนเปิดอยู่ (ได้จาก panel-sync)
+        "outline",
+        "props",
+        "comments",
+        "floorplan",
+        "ai-chat",
+        // เฟส 2: วาดจากไฟล์ล้วน ๆ อยู่แล้ว — .67 กันไว้เกินจำเป็นเพราะเหมารวมว่า "แผง AI/ผู้เล่น = ผูกกับฉาก"
+        "player",
+        "ai-analyzer",
+        // [alpha.69] สามตัวใหม่ — วาดจากไฟล์โปรเจกต์ล้วน ๆ ทั้งหมด ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้ตั้งแต่วันแรก
+        "codex",
+        "history",
+        "record"
       ]);
       tornOff = /* @__PURE__ */ new Set();
       _syncBound = false;
@@ -65982,6 +66059,333 @@ ${h.text}`;
     }
   });
 
+  // src/history/history-data.js
+  var history_data_exports = {};
+  __export(history_data_exports, {
+    BLOB_DIR: () => BLOB_DIR,
+    DEFAULT_HISTORY_LIMIT: () => DEFAULT_HISTORY_LIMIT,
+    HISTORY_DIR: () => HISTORY_DIR,
+    HISTORY_FILE: () => HISTORY_FILE,
+    HISTORY_LIMIT_MAX: () => HISTORY_LIMIT_MAX,
+    HISTORY_LIMIT_MIN: () => HISTORY_LIMIT_MIN,
+    HISTORY_SCHEMA: () => HISTORY_SCHEMA,
+    addRecord: () => addRecord,
+    afterRevert: () => afterRevert,
+    clampLimit: () => clampLimit,
+    describe: () => describe,
+    kindLabel: () => kindLabel,
+    migrate: () => migrate2,
+    newJournal: () => newJournal,
+    planRevert: () => planRevert,
+    prune: () => prune,
+    referencedBlobs: () => referencedBlobs,
+    relPath: () => relPath,
+    timeline: () => timeline
+  });
+  function clampLimit(n2) {
+    const v2 = parseInt(n2, 10);
+    if (!Number.isFinite(v2)) return DEFAULT_HISTORY_LIMIT;
+    return Math.min(HISTORY_LIMIT_MAX, Math.max(HISTORY_LIMIT_MIN, v2));
+  }
+  function newJournal() {
+    return { schema: HISTORY_SCHEMA, seq: 0, entries: [] };
+  }
+  function migrate2(raw) {
+    const d = raw && typeof raw === "object" ? raw : {};
+    const entries = (Array.isArray(d.entries) ? d.entries : []).filter((e) => e && typeof e === "object" && Number.isFinite(Number(e.seq))).map((e) => ({
+      seq: Number(e.seq),
+      at: e.at || "",
+      kind: e.kind || "write",
+      label: e.label || "",
+      files: (Array.isArray(e.files) ? e.files : []).map((f) => ({
+        path: String(f && f.path || ""),
+        before: f && f.before ? String(f.before) : null,
+        wasDir: !!(f && f.wasDir)
+      })).filter((f) => f.path)
+    })).sort((a, b) => a.seq - b.seq);
+    const maxSeq = entries.length ? entries[entries.length - 1].seq : 0;
+    return { schema: HISTORY_SCHEMA, seq: Math.max(Number(d.seq) || 0, maxSeq), entries };
+  }
+  function addRecord(journal, rec, limit = DEFAULT_HISTORY_LIMIT) {
+    const j = migrate2(journal);
+    const files = (rec && rec.files || []).filter((f) => f && f.path);
+    if (!files.length) return { journal: j, dropped: [] };
+    j.seq += 1;
+    j.entries.push({
+      seq: j.seq,
+      at: rec.at || "",
+      kind: rec.kind || "write",
+      label: rec.label || "",
+      files: files.map((f) => ({ path: f.path, before: f.before || null, wasDir: !!f.wasDir }))
+    });
+    return prune(j, limit);
+  }
+  function prune(journal, limit = DEFAULT_HISTORY_LIMIT) {
+    const j = migrate2(journal);
+    const max2 = clampLimit(limit);
+    if (j.entries.length <= max2) return { journal: j, dropped: [] };
+    const cut = j.entries.slice(0, j.entries.length - max2);
+    const keep = j.entries.slice(j.entries.length - max2);
+    const live = referencedBlobs({ entries: keep });
+    const dropped = [];
+    for (const e of cut) for (const f of e.files) {
+      if (f.before && !live.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
+    }
+    j.entries = keep;
+    return { journal: j, dropped };
+  }
+  function referencedBlobs(journal) {
+    const s = /* @__PURE__ */ new Set();
+    for (const e of journal && journal.entries || []) for (const f of e.files || []) {
+      if (f.before) s.add(f.before);
+    }
+    return s;
+  }
+  function planRevert(journal, seq2) {
+    const j = migrate2(journal);
+    const target = Number(seq2) || 0;
+    const rollback = j.entries.filter((e) => e.seq > target);
+    const byPath = /* @__PURE__ */ new Map();
+    for (const e of rollback) {
+      for (const f of e.files) {
+        if (!byPath.has(f.path)) byPath.set(f.path, f);
+      }
+    }
+    const ops = [];
+    for (const [path, f] of byPath) {
+      ops.push(f.before ? { op: "restore", path, blob: f.before } : { op: "delete", path, blob: null, wasDir: !!f.wasDir });
+    }
+    ops.sort((a, b) => a.op === b.op ? 0 : a.op === "delete" ? -1 : 1);
+    return { ops, undone: rollback.map((e) => e.seq), entries: rollback };
+  }
+  function afterRevert(journal, seq2) {
+    const j = migrate2(journal);
+    const target = Number(seq2) || 0;
+    const keep = j.entries.filter((e) => e.seq <= target);
+    const live = referencedBlobs({ entries: keep });
+    const dropped = [];
+    for (const e of j.entries) {
+      if (e.seq <= target) continue;
+      for (const f of e.files) if (f.before && !live.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
+    }
+    return { journal: { ...j, entries: keep }, dropped };
+  }
+  function relPath(p, root) {
+    const norm3 = (s) => String(s || "").replace(/\\/g, "/");
+    const a = norm3(p), b = norm3(root).replace(/\/+$/, "");
+    return b && a.toLowerCase().startsWith(b.toLowerCase() + "/") ? a.slice(b.length + 1) : a;
+  }
+  function describe(entry, root) {
+    if (!entry) return "";
+    const files = entry.files || [];
+    const head2 = entry.label || kindLabel(entry.kind);
+    if (!files.length) return head2;
+    const first = relPath(files[0].path, root);
+    return files.length === 1 ? `${head2} \xB7 ${first}` : `${head2} \xB7 ${first} +${files.length - 1}`;
+  }
+  function timeline(journal, root) {
+    const j = migrate2(journal);
+    return j.entries.slice().reverse().map((e) => ({
+      seq: e.seq,
+      at: e.at,
+      kind: e.kind,
+      text: describe(e, root),
+      files: (e.files || []).map((f) => relPath(f.path, root)),
+      count: (e.files || []).length
+    }));
+  }
+  var HISTORY_SCHEMA, HISTORY_DIR, HISTORY_FILE, BLOB_DIR, DEFAULT_HISTORY_LIMIT, HISTORY_LIMIT_MIN, HISTORY_LIMIT_MAX, KIND_LABEL, kindLabel;
+  var init_history_data = __esm({
+    "src/history/history-data.js"() {
+      HISTORY_SCHEMA = 1;
+      HISTORY_DIR = ".k2history";
+      HISTORY_FILE = "history.json";
+      BLOB_DIR = "blobs";
+      DEFAULT_HISTORY_LIMIT = 32;
+      HISTORY_LIMIT_MIN = 4;
+      HISTORY_LIMIT_MAX = 500;
+      KIND_LABEL = {
+        write: "\u0E41\u0E01\u0E49\u0E44\u0E02",
+        create: "\u0E2A\u0E23\u0E49\u0E32\u0E07",
+        remove: "\u0E25\u0E1A",
+        move: "\u0E22\u0E49\u0E32\u0E22/\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D",
+        copy: "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32",
+        image: "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E39\u0E1B"
+      };
+      kindLabel = (k) => KIND_LABEL[k] || "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E1B\u0E25\u0E07";
+    }
+  });
+
+  // src/history/history-ui.js
+  var history_ui_exports = {};
+  __export(history_ui_exports, {
+    configHistory: () => configHistory,
+    loadHistory: () => loadHistory,
+    openHistory: () => openHistory,
+    renderHistoryPanel: () => renderHistoryPanel,
+    resetHistory: () => resetHistory
+  });
+  function resetHistory() {
+    state._history = null;
+  }
+  async function configHistory() {
+    if (!kapi.historyConfig) return null;
+    const limit = clampLimit(state.settings && state.settings.historyLimit);
+    const enabled = !(state.settings && state.settings.historyOff === true);
+    try {
+      return await kapi.historyConfig({ root: state.root || "", limit, enabled });
+    } catch (e) {
+      log("warn", "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E2A\u0E21\u0E38\u0E14\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      return null;
+    }
+  }
+  async function loadHistory() {
+    const s = S();
+    try {
+      s.journal = migrate2(await kapi.historyList());
+    } catch {
+      s.journal = newJournal();
+    }
+    return s.journal;
+  }
+  async function renderHistoryPanel(host2) {
+    const h = host2 || $("#history-body");
+    if (!h) return false;
+    const s = S();
+    h.replaceChildren();
+    h.classList.add("k-hist");
+    if (!state.root) {
+      h.append(el("div", "dim k-hist-empty", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E08\u0E30\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34"));
+      return true;
+    }
+    await loadHistory();
+    const limit = clampLimit(state.settings && state.settings.historyLimit);
+    const rows = timeline(s.journal, state.root);
+    const bar = el("div", "k-hist-bar");
+    bar.append(el("span", "k-hist-count", `${rows.length}/${limit} \u0E04\u0E23\u0E31\u0E49\u0E07`));
+    const refresh = el("button", null, "\u{1F504} \u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A");
+    refresh.onclick = () => renderHistoryPanel(h);
+    const clear = el("button", "k-danger", "\u{1F5D1} \u0E25\u0E49\u0E32\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34");
+    clear.onclick = async () => {
+      const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      if (!await confirmBox2("\u0E25\u0E49\u0E32\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14? (\u0E44\u0E1F\u0E25\u0E4C\u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 \u2014 \u0E2B\u0E32\u0E22\u0E41\u0E04\u0E48\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E43\u0E19\u0E01\u0E32\u0E23\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A)")) return;
+      await kapi.historyClear();
+      setStatus("\u0E25\u0E49\u0E32\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27");
+      renderHistoryPanel(h);
+    };
+    bar.append(refresh, clear);
+    h.append(bar);
+    h.append(el(
+      "div",
+      "k-hist-hint",
+      '\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E08\u0E14\u0E40\u0E09\u0E1E\u0E32\u0E30 "\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E1B\u0E25\u0E07\u0E17\u0E35\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27" \u2014 \u0E01\u0E32\u0E23\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E43\u0E0A\u0E49 Ctrl+Z \u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34 \xB7 \u0E1B\u0E23\u0E31\u0E1A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \u2192 \u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B'
+    ));
+    const list = el("div", "k-hist-list");
+    h.append(list);
+    if (!rows.length) {
+      list.append(el("div", "dim k-hist-empty", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E1B\u0E25\u0E07\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49)"));
+      return true;
+    }
+    const now = el("div", "k-hist-item k-hist-now");
+    now.append(el("span", "k-hist-dot"), el("span", "k-hist-text", "\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49"));
+    list.append(now);
+    for (const r of rows) {
+      const it = el("div", "k-hist-item");
+      it.dataset.seq = String(r.seq);
+      it.append(el("span", "k-hist-dot"));
+      const mid = el("div", "k-hist-mid");
+      mid.append(el("div", "k-hist-text", r.text));
+      const meta2 = el("div", "k-hist-meta");
+      meta2.append(el("span", null, fmtAt(r.at)));
+      if (r.count > 1) meta2.append(el("span", null, " \xB7 " + r.count + " \u0E44\u0E1F\u0E25\u0E4C"));
+      mid.append(meta2);
+      it.append(mid);
+      const back = el("button", "k-hist-back", "\u21A9 \u0E22\u0E49\u0E2D\u0E19\u0E21\u0E32\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48");
+      back.title = '\u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E38\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E20\u0E32\u0E1E "\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E32\u0E23\u0E01\u0E23\u0E30\u0E17\u0E33\u0E19\u0E35\u0E49"';
+      back.onclick = () => revertTo(r.seq, r.text, h);
+      it.append(back);
+      list.append(it);
+    }
+    const zero = el("div", "k-hist-item");
+    zero.append(el("span", "k-hist-dot"));
+    const zmid = el("div", "k-hist-mid");
+    zmid.append(el("div", "k-hist-text dim", "\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E27\u0E49"));
+    zero.append(zmid);
+    const zback = el("button", "k-hist-back", "\u21A9 \u0E22\u0E49\u0E2D\u0E19\u0E21\u0E32\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48");
+    zback.onclick = () => revertTo(0, "\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E27\u0E49", h);
+    zero.append(zback);
+    list.append(zero);
+    return true;
+  }
+  async function revertTo(seq2, label, host2) {
+    const s = S();
+    if (s.busy) return false;
+    const plan = planRevert(s.journal, seq2);
+    if (!plan.ops.length) {
+      setStatus("\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E08\u0E38\u0E14\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27");
+      return false;
+    }
+    const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+    const ok2 = await confirmBox2(
+      `\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E35\u0E48 "${label}"?
+
+\u0E08\u0E30\u0E16\u0E2D\u0E19 ${plan.undone.length} \u0E01\u0E32\u0E23\u0E01\u0E23\u0E30\u0E17\u0E33 \u0E41\u0E25\u0E30\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C ${plan.ops.length} \u0E44\u0E1F\u0E25\u0E4C
+\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E2B\u0E25\u0E31\u0E07\u0E08\u0E38\u0E14\u0E19\u0E31\u0E49\u0E19\u0E08\u0E30\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21 \u2014 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E0B\u0E49\u0E33\u0E2D\u0E35\u0E01\u0E17\u0E35\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49`
+    );
+    if (!ok2) return false;
+    s.busy = true;
+    try {
+      const { saveAllTabs: saveAllTabs2, loadProject: loadProject2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      try {
+        await saveAllTabs2();
+      } catch {
+      }
+      const res = await kapi.historyRevert(seq2);
+      if (!res || res.ok === false) {
+        setStatus("\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E1A\u0E32\u0E07\u0E2A\u0E48\u0E27\u0E19 (\u0E14\u0E39\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)");
+        log("warn", "history: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E23\u0E1A", res);
+      } else {
+        setStatus(`\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E04\u0E37\u0E19 ${res.restored} \u0E44\u0E1F\u0E25\u0E4C \xB7 \u0E25\u0E1A ${res.deleted} \u0E44\u0E1F\u0E25\u0E4C`);
+        log("info", "history: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 " + JSON.stringify(res));
+      }
+      if (state.root) await loadProject2(state.root);
+    } catch (e) {
+      log("error", "history: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27", e);
+      setStatus("\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27: " + (e && e.message ? e.message : e));
+    } finally {
+      s.busy = false;
+    }
+    try {
+      await renderHistoryPanel(host2 || $("#history-body"));
+    } catch {
+    }
+    return true;
+  }
+  async function openHistory() {
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    showPanel2("history");
+    await renderFeaturePanel2("history");
+  }
+  var S, fmtAt;
+  var init_history_ui = __esm({
+    "src/history/history-ui.js"() {
+      init_core();
+      init_history_data();
+      S = () => state._history || (state._history = { journal: null, busy: false });
+      fmtAt = (iso) => {
+        if (!iso) return "";
+        try {
+          const d = new Date(iso);
+          const p = (n2) => String(n2).padStart(2, "0");
+          return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        } catch {
+          return "";
+        }
+      };
+    }
+  });
+
   // src/dialogs.js
   var dialogs_exports = {};
   __export(dialogs_exports, {
@@ -66047,6 +66451,9 @@ ${h.text}`;
       <div class="k-row"><label>${t("settings.projectGoal")}</label><input type="number" id="st-proj" min="0"></div>
       <div class="k-set-sub k-full">// [alpha.60r \u0E02\u0E49\u0E2D 1] \u0E1E\u0E24\u0E15\u0E34\u0E01\u0E23\u0E23\u0E21\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C</div>
       <div class="k-row"><label>\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C<span class="k-hint">\u0E1B\u0E34\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E16\u0E32\u0E21</span></label><input type="checkbox" id="st-showhome"></div>
+      <div class="k-set-sub k-full">// [alpha.69] \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E17\u0E33\u0E07\u0E32\u0E19 (\u0E41\u0E1C\u0E07 \u{1F558})</div>
+      <div class="k-row"><label>\u0E40\u0E01\u0E47\u0E1A\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E22\u0E49\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07 (\u0E04\u0E23\u0E31\u0E49\u0E07)<span class="k-hint">\u0E22\u0E34\u0E48\u0E07\u0E21\u0E32\u0E01\u0E22\u0E34\u0E48\u0E07\u0E22\u0E49\u0E2D\u0E19\u0E44\u0E14\u0E49\u0E44\u0E01\u0E25 \u0E41\u0E15\u0E48\u0E01\u0E34\u0E19\u0E17\u0E35\u0E48\u0E43\u0E19 .k2history/ \xB7 4\u2013500 \xB7 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 32</span></label><input type="number" id="st-histlimit" min="4" max="500"></div>
+      <div class="k-row"><label>\u0E1B\u0E34\u0E14\u0E01\u0E32\u0E23\u0E08\u0E14\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34<span class="k-hint">\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E08\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21 (\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)</span></label><input type="checkbox" id="st-histoff"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="write">
       <div class="k-row"><label>${t("settings.fontFamily")}<span class="k-hint">${t("settings.fontFamilyHint")}</span></label><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div>
@@ -66307,6 +66714,8 @@ ${h.text}`;
     if (showHome) showHome.checked = s.showHomeOnStartup !== false;
     q("#st-backup").checked = s.autoBackup !== false;
     q("#st-maxbak").value = s.maxBackups ?? 10;
+    if (q("#st-histlimit")) q("#st-histlimit").value = s.historyLimit ?? 32;
+    if (q("#st-histoff")) q("#st-histoff").checked = s.historyOff === true;
     q("#st-daily").value = g.dailyWords ?? 500;
     q("#st-proj").value = g.projectWords ?? 5e4;
     q("#st-font").value = origFont;
@@ -67235,6 +67644,8 @@ ${h.text}`;
       if (showHomeEl) s.showHomeOnStartup = showHomeEl.checked;
       s.autoBackup = q("#st-backup").checked;
       s.maxBackups = Math.max(1, num4("#st-maxbak", 10));
+      if (q("#st-histlimit")) s.historyLimit = Math.max(4, Math.min(500, num4("#st-histlimit", 32)));
+      if (q("#st-histoff")) s.historyOff = q("#st-histoff").checked;
       s.uiFontSize = Math.max(-6, Math.min(16, parseInt(q("#st-font").value, 10) || 0));
       s.fontFamily = q("#st-fontfamily")?.value || "";
       s.spFontFamily = q("#st-spfontfamily")?.value || "";
@@ -67361,6 +67772,11 @@ ${h.text}`;
         s.language = selLang;
         await loadLanguage(selLang, state.root);
         await saveProjectMeta();
+      }
+      try {
+        const { configHistory: configHistory2 } = await Promise.resolve().then(() => (init_history_ui(), history_ui_exports));
+        await configHistory2();
+      } catch {
       }
       setStatus(t("status.settingsSaved"));
       close2();
@@ -67530,6 +67946,17 @@ ${h.text}`;
   });
 
   // src/wiki-ui.js
+  var wiki_ui_exports = {};
+  __export(wiki_ui_exports, {
+    addEntity: () => addEntity,
+    applyWikiCats: () => applyWikiCats,
+    deleteWikiCat: () => deleteWikiCat,
+    duplicateEntity: () => duplicateEntity,
+    editWikiCat: () => editWikiCat,
+    newWikiCat: () => newWikiCat,
+    openEntity: () => openEntity,
+    wikiCats: () => wikiCats
+  });
   function wikiCats() {
     if (!state.meta) return [];
     if (!Array.isArray(state.meta.wikiCats)) state.meta.wikiCats = [];
@@ -67898,8 +68325,8 @@ ${h.text}`;
   }
   async function renderMaps(pane) {
     pane.innerHTML = "";
-    const S2 = mapsState_C.s;
-    const maps = S2.data.maps;
+    const S5 = mapsState_C.s;
+    const maps = S5.data.maps;
     const wrap2 = el("div", "map-wrap");
     pane.append(wrap2);
     const head2 = el("div", "map-head");
@@ -67918,18 +68345,18 @@ ${h.text}`;
     }
     const bar = el("div", "map-bar");
     for (const m of sortMaps(maps)) {
-      const chip = el("div", "map-chip" + (m.id === S2.currentId ? " on" : ""), m.name);
+      const chip = el("div", "map-chip" + (m.id === S5.currentId ? " on" : ""), m.name);
       const st2 = pinStats(m);
       if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
       chip.onclick = () => {
-        S2.currentId = m.id;
+        S5.currentId = m.id;
         renderMaps(pane);
       };
       bar.append(chip);
     }
     wrap2.append(bar);
-    const cur = findMap(maps, S2.currentId) || sortMaps(maps)[0];
-    S2.currentId = cur.id;
+    const cur = findMap(maps, S5.currentId) || sortMaps(maps)[0];
+    S5.currentId = cur.id;
     const crumb = breadcrumb(maps, cur.id);
     if (crumb.length > 1) {
       const bc = el("div", "map-crumb");
@@ -67937,7 +68364,7 @@ ${h.text}`;
         if (i5) bc.append(el("span", "map-crumb-sep", "\u203A"));
         const a = el("span", "map-crumb-item" + (c.id === cur.id ? " on" : ""), c.name);
         a.onclick = () => {
-          S2.currentId = c.id;
+          S5.currentId = c.id;
           renderMaps(pane);
         };
         bc.append(a);
@@ -67949,7 +68376,7 @@ ${h.text}`;
     nameInp.value = cur.name;
     nameInp.onchange = async () => {
       cur.name = nameInp.value.trim() || cur.name;
-      await saveMaps(S2.data);
+      await saveMaps(S5.data);
       renderMaps(pane);
     };
     tools.append(nameInp);
@@ -67960,16 +68387,16 @@ ${h.text}`;
       const it = await pickImage(state.root);
       if (!it) return;
       cur.image = "Images/" + it.file;
-      await saveMaps(S2.data);
+      await saveMaps(S5.data);
       renderMaps(pane);
     };
     tools.append(chgImg);
     const delMap = el("button", "cmp-mini k-danger", "\u{1F5D1} \u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48");
     delMap.onclick = async () => {
       if (!await confirmBox(`\u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u201C${cur.name}\u201D ?`, "\u0E25\u0E1A")) return;
-      S2.data.maps = deleteMap(maps, cur.id);
-      S2.currentId = S2.data.maps[0]?.id || null;
-      await saveMaps(S2.data);
+      S5.data.maps = deleteMap(maps, cur.id);
+      S5.currentId = S5.data.maps[0]?.id || null;
+      await saveMaps(S5.data);
       renderMaps(pane);
     };
     tools.append(delMap);
@@ -67989,7 +68416,7 @@ ${h.text}`;
       const res = await pinDialog(pin, maps, cur.id);
       if (!res) return;
       cur.pins.push(res);
-      await saveMaps(S2.data);
+      await saveMaps(S5.data);
       renderMaps(pane);
     };
     for (const pin of cur.pins || []) {
@@ -68004,7 +68431,7 @@ ${h.text}`;
         e.stopPropagation();
         if (e.altKey) return editPin();
         if (pin.kind === "portal" && pin.toMap) {
-          S2.currentId = pin.toMap;
+          S5.currentId = pin.toMap;
           renderMaps(pane);
           return;
         }
@@ -68023,13 +68450,13 @@ ${h.text}`;
         const res = await pinDialog({ ...pin }, maps, cur.id, true);
         if (res === "DELETE") {
           cur.pins = cur.pins.filter((p) => p.id !== pin.id);
-          await saveMaps(S2.data);
+          await saveMaps(S5.data);
           renderMaps(pane);
           return;
         }
         if (res) {
           Object.assign(pin, res);
-          await saveMaps(S2.data);
+          await saveMaps(S5.data);
           renderMaps(pane);
         }
       }
@@ -68051,7 +68478,7 @@ ${h.text}`;
           window.removeEventListener("pointerup", up);
           el2.classList.remove("dragging");
           if (moved) {
-            await saveMaps(S2.data);
+            await saveMaps(S5.data);
           }
         };
         window.addEventListener("pointermove", mv);
@@ -69355,7 +69782,7 @@ ${h.text}`;
     try {
       const data2 = { project: state.meta, sections: [] };
       for (const sec of await kapi.listDirs(state.root)) {
-        if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"].includes(sec)) continue;
+        if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"].includes(sec)) continue;
         const sp = await kapi.join(state.root, sec);
         const sj = await kapi.join(sp, "section.json");
         if (!await kapi.exists(sj)) continue;
@@ -69393,7 +69820,7 @@ ${h.text}`;
     "src/export-zip.js"() {
       init_core();
       import_jszip2 = __toESM(require_jszip_min());
-      SKIP_DIRS4 = ["Snapshots", "Backups", "Recycle"];
+      SKIP_DIRS4 = ["Snapshots", ".k2history", "Backups", "Recycle"];
       BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
     }
   });
@@ -69724,10 +70151,10 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    document.addEventListener("keydown", function esc5(e) {
+    document.addEventListener("keydown", function esc6(e) {
       if (e.key === "Escape") {
         ov.remove();
-        document.removeEventListener("keydown", esc5);
+        document.removeEventListener("keydown", esc6);
       }
     });
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
@@ -72484,7 +72911,7 @@ ${h.text}`;
   var init_backup = __esm({
     "src/backup.js"() {
       init_core();
-      SKIP_DIRS6 = ["Recycle", "Snapshots", "Backups", "Research"];
+      SKIP_DIRS6 = ["Recycle", "Snapshots", ".k2history", "Backups", "Research"];
       MAX_KEEP = 7;
       LAST_KEY = "k2-last-backup";
       backupTimer = null;
@@ -73315,7 +73742,7 @@ ${body}<p style="color:#999;font-size:12px;margin-top:40px">\u0E2A\u0E48\u0E07\u
       init_core();
       init_compile();
       import_md10 = __toESM(require_md());
-      SKIP_SECTIONS = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"];
+      SKIP_SECTIONS = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
       BLOG_THEMES = {
         medium: { label: "Medium (\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E35\u0E21)", css: `
 body{max-width:720px;margin:40px auto;padding:0 20px;font:16px/1.8 Georgia,serif;color:#333;background:#fff}
@@ -74260,21 +74687,21 @@ img{max-width:100%}` }
   }
   async function loadSessions(force) {
     if (!state.root) {
-      S.sessions = [];
-      S.root = null;
-      return S.sessions;
+      S2.sessions = [];
+      S2.root = null;
+      return S2.sessions;
     }
-    if (!force && S.root === state.root) return S.sessions;
-    S.root = state.root;
-    S.sessions = [];
+    if (!force && S2.root === state.root) return S2.sessions;
+    S2.root = state.root;
+    S2.sessions = [];
     try {
       const d = await sessionsDir();
-      if (!d) return S.sessions;
+      if (!d) return S2.sessions;
       for (const f of await kapi.listFiles(d)) {
         if (!/\.json$/i.test(f)) continue;
         try {
           const j = await kapi.readJson(await kapi.join(d, f));
-          if (j && j.id) S.sessions.push(newSession(j));
+          if (j && j.id) S2.sessions.push(newSession(j));
         } catch (e) {
           log("warn", "ai-chat: \u0E2D\u0E48\u0E32\u0E19\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 " + f, e);
         }
@@ -74282,7 +74709,7 @@ img{max-width:100%}` }
     } catch (e) {
       log("warn", "ai-chat: \u0E2D\u0E48\u0E32\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
     }
-    return S.sessions;
+    return S2.sessions;
   }
   async function saveSession(s, { force = false } = {}) {
     if (!s) return false;
@@ -74292,9 +74719,9 @@ img{max-width:100%}` }
     delete s._draft;
     const { _draft, ...clean } = s;
     await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean, null, 2));
-    const i5 = S.sessions.findIndex((x) => x.id === s.id);
-    if (i5 === -1) S.sessions.push(s);
-    else S.sessions[i5] = s;
+    const i5 = S2.sessions.findIndex((x) => x.id === s.id);
+    if (i5 === -1) S2.sessions.push(s);
+    else S2.sessions[i5] = s;
     return true;
   }
   function draftSession(patch = {}) {
@@ -74309,7 +74736,7 @@ img{max-width:100%}` }
       await kapi.remove(await kapi.join(d, sessionFileName(s)));
     } catch {
     }
-    S.sessions = S.sessions.filter((x) => x.id !== s.id);
+    S2.sessions = S2.sessions.filter((x) => x.id !== s.id);
     return true;
   }
   async function collectScope(session, { maxChars = 24e3 } = {}) {
@@ -74363,29 +74790,29 @@ img{max-width:100%}` }
     return out;
   }
   async function renderAIChatPanel(host2) {
-    S.host = host2 || $("#ai-chat-body");
-    if (!S.host) return null;
+    S2.host = host2 || $("#ai-chat-body");
+    if (!S2.host) return null;
     if (!state.root) {
-      S.host.innerHTML = "";
-      S.host.append(el("div", "ai-chat-empty dim", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E0A\u0E17\u0E08\u0E30\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19 Sessions/ \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E31\u0E49\u0E19"));
-      return S.host;
+      S2.host.innerHTML = "";
+      S2.host.append(el("div", "ai-chat-empty dim", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E0A\u0E17\u0E08\u0E30\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19 Sessions/ \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E31\u0E49\u0E19"));
+      return S2.host;
     }
     await loadSessions();
-    if (S.cur && !S.cur._draft) {
-      const fresh = S.sessions.find((x) => x.id === S.cur.id);
-      S.cur = fresh || null;
+    if (S2.cur && !S2.cur._draft) {
+      const fresh = S2.sessions.find((x) => x.id === S2.cur.id);
+      S2.cur = fresh || null;
     }
-    if (!S.cur && S.view !== "list") S.view = "list";
+    if (!S2.cur && S2.view !== "list") S2.view = "list";
     draw();
-    return S.host;
+    return S2.host;
   }
   function draw() {
-    const h = S.host;
+    const h = S2.host;
     if (!h) return;
     h.innerHTML = "";
     h.classList.add("ai-chat");
-    if (S.view === "list") h.append(listView());
-    else if (S.view === "detail") h.append(detailView());
+    if (S2.view === "list") h.append(listView());
+    else if (S2.view === "detail") h.append(detailView());
     else h.append(sessionView());
   }
   function listView() {
@@ -74394,7 +74821,7 @@ img{max-width:100%}` }
     const q = el("input", "ai-chat-search");
     q.type = "search";
     q.placeholder = "\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19 (\u0E0A\u0E37\u0E48\u0E2D \u0E2B\u0E23\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19)\u2026";
-    q.value = S.query;
+    q.value = S2.query;
     const addBtn = el("button", "k-ok ai-chat-new", "\u2795 \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48");
     bar.append(q, addBtn);
     wrap2.append(bar);
@@ -74403,33 +74830,33 @@ img{max-width:100%}` }
     const arch = el("label", "ai-chat-archtoggle");
     const cb = el("input");
     cb.type = "checkbox";
-    cb.checked = S.showArchived;
+    cb.checked = S2.showArchived;
     arch.append(cb, document.createTextNode(" \u0E41\u0E2A\u0E14\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27"));
     wrap2.append(arch);
     function fill3() {
       rows.innerHTML = "";
-      const list = searchSessions(S.sessions, S.query, { includeArchived: S.showArchived });
+      const list = searchSessions(S2.sessions, S2.query, { includeArchived: S2.showArchived });
       if (!list.length) {
         rows.append(el(
           "div",
           "ai-chat-empty dim",
-          S.query ? "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E04\u0E33\u0E04\u0E49\u0E19" : '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19 \u2014 \u0E01\u0E14 "\u2795 \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48" \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E34\u0E48\u0E21\u0E04\u0E38\u0E22'
+          S2.query ? "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E04\u0E33\u0E04\u0E49\u0E19" : '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19 \u2014 \u0E01\u0E14 "\u2795 \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48" \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E34\u0E48\u0E21\u0E04\u0E38\u0E22'
         ));
         return;
       }
       for (const s of list) rows.append(sessionRow(s));
     }
     q.oninput = () => {
-      S.query = q.value;
+      S2.query = q.value;
       fill3();
     };
     cb.onchange = () => {
-      S.showArchived = cb.checked;
+      S2.showArchived = cb.checked;
       fill3();
     };
     addBtn.onclick = () => {
-      S.cur = draftSession();
-      S.view = "session";
+      S2.cur = draftSession();
+      S2.view = "session";
       draw();
     };
     fill3();
@@ -74453,8 +74880,8 @@ img{max-width:100%}` }
     meta2.append(el("span", "ai-chat-row-tok", compact(st.total) + " tok"));
     row2.append(main, meta2);
     row2.onclick = () => {
-      S.cur = s;
-      S.view = "session";
+      S2.cur = s;
+      S2.view = "session";
       draw();
     };
     return row2;
@@ -74470,13 +74897,13 @@ img{max-width:100%}` }
     }
   }
   function sessionView() {
-    const s = S.cur;
+    const s = S2.cur;
     const wrap2 = el("div", "ai-chat-session");
     const head2 = el("div", "ai-chat-head");
     const back = el("button", "ai-chat-back", "\u2190");
     back.title = "\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19";
     back.onclick = () => {
-      S.view = "list";
+      S2.view = "list";
       draw();
     };
     const title2 = el("div", "ai-chat-title", s.title || "\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19");
@@ -74491,7 +74918,7 @@ img{max-width:100%}` }
       "\u2014 \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 \u2014"
     ].join("\n");
     badge.onclick = () => {
-      S.view = "detail";
+      S2.view = "detail";
       draw();
     };
     const restart = el("button", "ai-chat-restart", "\u21BB");
@@ -74738,33 +75165,33 @@ img{max-width:100%}` }
   }
   async function send(s, ta, body, sendBtn) {
     const text = String(ta.value || "").trim();
-    if (!text || S.sending) return;
+    if (!text || S2.sending) return;
     const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
     if (!prov) {
       setStatus("\u274C \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23 AI \u2014 \u0E44\u0E1F\u0E25\u0E4C \u2192 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI");
       return;
     }
-    S.sending = true;
+    S2.sending = true;
     sendBtn.disabled = true;
     ta.value = "";
-    const view = S.cur ? S.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
+    const view = S2.cur ? S2.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
-    S.cur = addMessage(s, userMsg);
-    await saveSession(S.cur);
+    S2.cur = addMessage(s, userMsg);
+    await saveSession(S2.cur);
     body.append(msgNode(userMsg, view));
     const pend = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
     const pendWho = el("div", "ai-msg-who dim", "\u{1F916} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14\u2026");
     pend.append(pendWho);
     body.append(pend);
     body.scrollTop = body.scrollHeight;
-    const md = modeDef(S.cur.mode);
-    const cap = modeCap(S.cur.mode);
+    const md = modeDef(S2.cur.mode);
+    const cap = modeCap(S2.cur.mode);
     let system = md.system;
     const tp = toolsSystemPrompt(cap);
     if (tp) system += "\n\n" + tp;
     try {
-      const ctx = await collectScope(S.cur);
-      if (ctx) system += "\n\n\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07: " + scopeLabel(S.cur.scope) + "):\n" + ctx;
+      const ctx = await collectScope(S2.cur);
+      if (ctx) system += "\n\n\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07: " + scopeLabel(S2.cur.scope) + "):\n" + ctx;
     } catch (e) {
       log("warn", "ai-chat: \u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
     }
@@ -74772,7 +75199,7 @@ img{max-width:100%}` }
     let touched = false;
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const t0 = Date.now();
-      res = await complete(prov, { system, messages: chatMessages(S.cur), model: s.model || void 0 });
+      res = await complete(prov, { system, messages: chatMessages(S2.cur), model: s.model || void 0 });
       const ms = Date.now() - t0;
       const calls = res.ok ? parseToolCalls(res.text) : [];
       const reply = res.ok ? newMessage("assistant", res.text, {
@@ -74786,23 +75213,23 @@ img{max-width:100%}` }
       }) : newMessage("assistant", "", { error: res.error || "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", system, ms });
       if (res.ok && res.usage) {
         const used = (res.usage.input || 0) + (res.usage.output || 0);
-        S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
+        S2.cur.contextLimit = Math.max(S2.cur.contextLimit || 0, guessLimit(used));
       }
       recordUsage2(res, prov, s);
       if (!calls.length) {
-        S.cur = addMessage(S.cur, reply);
-        await saveSession(S.cur);
+        S2.cur = addMessage(S2.cur, reply);
+        await saveSession(S2.cur);
         pend.remove();
         body.append(msgNode(reply, view));
         break;
       }
       pendWho.textContent = "\u26A1 \u0E01\u0E33\u0E25\u0E31\u0E07\u0E25\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E33 " + calls.length + " \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u2026";
-      const results = await runCalls(calls, S.cur, cap);
+      const results = await runCalls(calls, S2.cur, cap);
       reply.results = results;
       touched = touched || touchesProject(results);
-      S.cur = addMessage(S.cur, reply);
-      S.cur = addMessage(S.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
-      await saveSession(S.cur);
+      S2.cur = addMessage(S2.cur, reply);
+      S2.cur = addMessage(S2.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
+      await saveSession(S2.cur);
       body.append(msgNode(reply, view));
       body.scrollTop = body.scrollHeight;
       if (results.some((r) => r.cancelled)) {
@@ -74821,14 +75248,14 @@ img{max-width:100%}` }
       }
     }
     if (touched) await refreshAfterActions();
-    S.sending = false;
+    S2.sending = false;
     sendBtn.disabled = false;
     body.scrollTop = body.scrollHeight;
-    const t3 = S.host && S.host.querySelector(".ai-chat-title");
-    if (t3) t3.textContent = S.cur.title;
-    const badge = S.host && S.host.querySelector(".ai-chat-ctx");
+    const t3 = S2.host && S2.host.querySelector(".ai-chat-title");
+    if (t3) t3.textContent = S2.cur.title;
+    const badge = S2.host && S2.host.querySelector(".ai-chat-ctx");
     if (badge) {
-      const st2 = sessionStats(S.cur);
+      const st2 = sessionStats(S2.cur);
       badge.textContent = contextLabel(st2);
       badge.title = [
         "\u0E15\u0E49\u0E19\u0E17\u0E38\u0E19: " + usd(st2.usd),
@@ -74916,17 +75343,17 @@ img{max-width:100%}` }
     }
   }
   async function restartSession(s, { confirm: confirm2 = true } = {}) {
-    const target = s || S.cur;
+    const target = s || S2.cur;
     if (!target) return null;
     if (confirm2 && (target.messages || []).length && !await confirmBox(`\u0E40\u0E23\u0E34\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48 \u2014 \u0E25\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 ${(target.messages || []).length} \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E02\u0E2D\u0E07 "${target.title}" ?`)) {
       return null;
     }
-    S.cur = clearMessages(target);
-    await saveSession(S.cur);
-    S.view = "session";
+    S2.cur = clearMessages(target);
+    await saveSession(S2.cur);
+    S2.view = "session";
     draw();
     setStatus("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E01\u0E47\u0E1A\u0E42\u0E2B\u0E21\u0E14/\u0E42\u0E21\u0E40\u0E14\u0E25/\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E19\u0E1A\u0E44\u0E27\u0E49)");
-    return S.cur;
+    return S2.cur;
   }
   function sessionMenu(ev, s) {
     popupMenu(ev.clientX, ev.clientY, [
@@ -74957,33 +75384,33 @@ img{max-width:100%}` }
       { label: "\u270E \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D", click: async () => {
         const v2 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19", { value: s.title });
         if (v2 === null) return;
-        S.cur = renameSession(s, v2);
-        await saveSession(S.cur, { force: true });
+        S2.cur = renameSession(s, v2);
+        await saveSession(S2.cur, { force: true });
         draw();
       } },
       { label: "\u2197 \u0E41\u0E0A\u0E23\u0E4C (\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 Markdown)", click: async () => {
         setStatus(await copyText(shareMarkdown(s)) ? "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E41\u0E25\u0E49\u0E27" : "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08");
       } },
       { label: s.archived ? "\u{1F4E4} \u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A" : "\u{1F4E5} \u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A", click: async () => {
-        S.cur = archiveSession(s, !s.archived);
-        await saveSession(S.cur);
-        S.view = "list";
+        S2.cur = archiveSession(s, !s.archived);
+        await saveSession(S2.cur);
+        S2.view = "list";
         draw();
-        setStatus(S.cur.archived ? "\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27" : "\u0E40\u0E2D\u0E32\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27");
+        setStatus(S2.cur.archived ? "\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27" : "\u0E40\u0E2D\u0E32\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27");
       } },
       "-",
       { label: "\u{1F5D1} \u0E25\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E19\u0E35\u0E49", click: async () => {
         if (!await confirmBox(`\u0E25\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19 "${s.title}" ?`)) return;
         await deleteSessionFile(s);
-        S.cur = null;
-        S.view = "list";
+        S2.cur = null;
+        S2.view = "list";
         draw();
         setStatus("\u0E25\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27");
       } }
     ]);
   }
   function detailView() {
-    const s = S.cur;
+    const s = S2.cur;
     const st = sessionStats(s);
     const wrap2 = el("div", "ai-chat-detail");
     const head2 = el("div", "ai-chat-head");
@@ -74991,7 +75418,7 @@ img{max-width:100%}` }
     const closeBtn = el("button", "ai-chat-close", "\u2715");
     closeBtn.title = "\u0E1B\u0E34\u0E14 \u2014 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19";
     closeBtn.onclick = () => {
-      S.view = "session";
+      S2.view = "session";
       draw();
     };
     const hr = el("div", "ai-chat-head-right");
@@ -75041,15 +75468,15 @@ img{max-width:100%}` }
   async function newChatSession() {
     await loadSessions(true);
     const s = draftSession();
-    S.cur = s;
-    S.view = "session";
+    S2.cur = s;
+    S2.view = "session";
     draw();
     return s;
   }
   function _chatState() {
-    return S;
+    return S2;
   }
-  var MAX_TOOL_ROUNDS, S;
+  var MAX_TOOL_ROUNDS, S2;
   var init_ai_chat_panel = __esm({
     "src/ai/ai-chat-panel.js"() {
       init_core();
@@ -75059,7 +75486,7 @@ img{max-width:100%}` }
       init_ai_tools();
       init_ai_actions();
       MAX_TOOL_ROUNDS = 5;
-      S = {
+      S2 = {
         host: null,
         view: "list",
         // list | session | detail
@@ -75369,7 +75796,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       init_core();
       init_ai_settings();
       init_project_scan();
-      SKIP_SECTIONS2 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"];
+      SKIP_SECTIONS2 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
     }
   });
 
@@ -77774,7 +78201,7 @@ ${preview}` + (found2.length > 8 ? `
       });
       BS_DEFAULTS = { sel: null, zoom: 1, view: "tree", sideOpen: true, query: "" };
       POS_PREFIX = "k2-branch-pos";
-      SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"];
+      SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
       shortText = (s, n2) => s && s.length > n2 ? s.slice(0, n2 - 1) + "\u2026" : s || "";
       _renderGen = 0;
       _lastScrolledSel = null;
@@ -77821,7 +78248,7 @@ ${preview}` + (found2.length > 8 ? `
     const out = [];
     if (!state.root) return out;
     for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
-      if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"].includes(sec)) continue;
+      if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"].includes(sec)) continue;
       const sp = await kapi.join(state.root, sec);
       if (!await kapi.exists(await kapi.join(sp, "section.json"))) continue;
       const dr = await kapi.join(sp, "Draft");
@@ -78568,6 +78995,99 @@ ${preview}` + (found2.length > 8 ? `
     }
   });
 
+  // src/panels/panel-sync.js
+  function writesScene(id) {
+    return SCENE_WRITE_PANELS.has(id);
+  }
+  function needsScene(id) {
+    return SCENE_PANELS.has(id);
+  }
+  function anyNeedsScene(ids) {
+    return (ids || []).some(needsScene);
+  }
+  function isSceneFile(file) {
+    return typeof file === "string" && /\.md$/i.test(file) && /[\\/]Chapters[\\/]/.test(file);
+  }
+  function sceneMsg(tab, extra = {}) {
+    const file = tab && typeof tab.file === "string" ? tab.file : "";
+    const ok2 = isSceneFile(file);
+    return {
+      kind: "active-scene",
+      file: ok2 ? file : "",
+      title: ok2 ? String(tab && tab.title || "") : "",
+      dirty: ok2 ? !!(tab && tab.dirty) : false,
+      sp: ok2 ? !!(tab && tab.sp) : false,
+      ...extra
+    };
+  }
+  function remoteTab(msg) {
+    if (!msg || !msg.file) return null;
+    return {
+      file: msg.file,
+      title: msg.title || "",
+      dirty: !!msg.dirty,
+      spRemote: !!msg.sp,
+      // ไม่ตั้งชื่อ `sp` เพราะโค้ดเดิมถือว่า `t.sp` = อินสแตนซ์ SPEditor
+      remote: true,
+      // ธงเดียวที่บอกว่า "แท็บนี้เป็นตัวแทน ไม่ใช่เอกสารจริง"
+      meta: {}
+    };
+  }
+  function sceneChanged(prev, msg) {
+    if (!msg) return false;
+    if (!prev) return true;
+    return prev.file !== msg.file || prev.title !== msg.title || !!prev.dirty !== !!msg.dirty;
+  }
+  function canEditScene(msg) {
+    return !!(msg && msg.file) && !msg.dirty;
+  }
+  function outlineMsg(file, title2, items, opts = {}) {
+    return {
+      kind: "outline",
+      file: file || "",
+      title: title2 || "",
+      sp: !!opts.sp,
+      // ไอคอนหน้าชื่อฉาก (🎬 บทหนัง · 📖 นิยาย)
+      empty: opts.empty || "",
+      // ข้อความตอนไม่มีอะไรให้แสดง (หน้าต่างหลักรู้เหตุผลดีกว่า)
+      items: (items || []).map((it) => ({
+        kind: it.kind,
+        label: it.label,
+        lvl: it.lvl,
+        pos: typeof it.pos === "number" ? it.pos : null,
+        line: typeof it.line === "number" ? it.line : null
+      }))
+    };
+  }
+  function gotoMsg(file, it) {
+    return {
+      kind: "goto-outline",
+      file: file || "",
+      pos: it && typeof it.pos === "number" ? it.pos : null,
+      line: it && typeof it.line === "number" ? it.line : null
+    };
+  }
+  function wantSceneMsg(id) {
+    return { kind: "want-scene", id: id || "" };
+  }
+  function samePath(a, b) {
+    const norm3 = (s) => String(s || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+    return !!a && !!b && norm3(a) === norm3(b);
+  }
+  function tabsToReload(tabs2, changedPath) {
+    if (!changedPath) return [];
+    return (tabs2 || []).filter((t3) => t3 && !t3.dirty && samePath(t3.file, changedPath));
+  }
+  var SCENE_PANELS, SCENE_FREE_PANELS, SCENE_WRITE_PANELS, PHASE2_PANELS;
+  var init_panel_sync = __esm({
+    "src/panels/panel-sync.js"() {
+      SCENE_PANELS = /* @__PURE__ */ new Set(["outline", "props", "comments", "floorplan", "ai-chat"]);
+      SCENE_FREE_PANELS = /* @__PURE__ */ new Set(["player", "ai-analyzer"]);
+      SCENE_WRITE_PANELS = /* @__PURE__ */ new Set(["props", "comments", "floorplan"]);
+      PHASE2_PANELS = [...SCENE_PANELS, ...SCENE_FREE_PANELS];
+    }
+  });
+
   // src/layout/split-layout.js
   var split_layout_exports = {};
   __export(split_layout_exports, {
@@ -78778,13 +79298,13 @@ ${preview}` + (found2.length > 8 ? `
     if (!root) return null;
     if (root.type === "leaf") return root.id === leafId ? null : clone3(root);
     root = clone3(root);
-    const prune = (n2) => {
+    const prune2 = (n2) => {
       if (!n2.children) return n2;
-      n2.children = n2.children.filter((c) => !(c.type === "leaf" && c.id === leafId)).map(prune).filter((c) => !(c.children && c.children.length === 0));
+      n2.children = n2.children.filter((c) => !(c.type === "leaf" && c.id === leafId)).map(prune2).filter((c) => !(c.children && c.children.length === 0));
       if (n2.type === "split") n2.sizes = even(n2.children.length);
       return n2;
     };
-    return collapse2(prune(root));
+    return collapse2(prune2(root));
   }
   function closeTab2(root, tabId) {
     if (!root) return null;
@@ -78857,11 +79377,11 @@ ${preview}` + (found2.length > 8 ? `
     } catch {
       return null;
     }
-    d = migrate2(d);
+    d = migrate3(d);
     if (!d || d.version !== SPLIT_VERSION) return null;
     return normalizeLeaves(d.root ?? null);
   }
-  function migrate2(d) {
+  function migrate3(d) {
     if (!d || typeof d !== "object") return null;
     if (d.version == null) d = { version: 1, root: d.root ?? d };
     return d;
@@ -79580,6 +80100,794 @@ ${preview}` + (found2.length > 8 ? `
       _syncing = false;
       _ensuring = false;
       _ov2 = null;
+    }
+  });
+
+  // src/codex/codex-build.js
+  var codex_build_exports = {};
+  __export(codex_build_exports, {
+    CODEX_VERSION: () => CODEX_VERSION,
+    assignPages: () => assignPages,
+    buildCodexSite: () => buildCodexSite,
+    catLabel: () => catLabel3,
+    categoryPage: () => categoryPage,
+    codexStats: () => codexStats,
+    entityPage: () => entityPage,
+    esc: () => esc3,
+    indexPage: () => indexPage,
+    infoRows: () => infoRows,
+    paragraphs: () => paragraphs,
+    relationRows: () => relationRows,
+    slug: () => slug
+  });
+  function esc3(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function slug(name5, seq2) {
+    const base3 = String(name5 || "").trim().replace(/[\\/:*?"<>|#%{}]+/g, "").replace(/\s+/g, "-").slice(0, 60) || "entry";
+    return seq2 == null ? base3 : `${base3}-${seq2}`;
+  }
+  function assignPages(entities) {
+    const used = /* @__PURE__ */ new Map();
+    const out = /* @__PURE__ */ new Map();
+    for (const e of entities || []) {
+      const base3 = slug(e.name);
+      const n2 = (used.get(base3.toLowerCase()) || 0) + 1;
+      used.set(base3.toLowerCase(), n2);
+      out.set(e.path, (n2 === 1 ? base3 : `${base3}-${n2}`) + ".html");
+    }
+    return out;
+  }
+  function infoRows(entity) {
+    const f = entity && entity.fields || {};
+    const rows = [];
+    for (const k of Object.keys(f)) {
+      const v2 = f[k];
+      const text = Array.isArray(v2) ? v2.filter(Boolean).join(", ") : String(v2 == null ? "" : v2);
+      if (text.trim()) rows.push([k, text]);
+    }
+    return rows;
+  }
+  function relationRows(entity, pages) {
+    const rels = entity && entity.relations || [];
+    const out = [];
+    for (const r of rels) {
+      if (!r) continue;
+      const target = r.target || r.to || "";
+      const role = r.role || r.type || "";
+      if (!target && !role) continue;
+      out.push({ role, target, page: pages && pages.get(target) || "", name: r.name || r.targetName || "" });
+    }
+    return out;
+  }
+  function page(title2, siteTitle, bodyHtml, opts = {}) {
+    const depth = opts.home || "index.html";
+    return `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc3(title2)} \u2014 ${esc3(siteTitle)}</title>
+<style>${CSS2}</style></head>
+<body>
+<header class="top"><h1><a href="${depth}">${esc3(siteTitle)}</a></h1>
+<nav>${(opts.nav || []).map((n2) => `<a href="${esc3(n2.href)}">${esc3(n2.label)}</a>`).join("")}</nav></header>
+<div class="wrap">${bodyHtml}</div>
+<footer>\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01 Killian 2 \xB7 Codex</footer>
+</body></html>`;
+  }
+  function paragraphs(text) {
+    const t3 = String(text || "").trim();
+    if (!t3) return "";
+    return t3.split(/\n{2,}/).map((p) => `<p>${esc3(p).replace(/\n/g, "<br>")}</p>`).join("\n");
+  }
+  function entityPage(e, ctx) {
+    const { pages, siteTitle, nav: nav2, labels, mentions } = ctx;
+    const ent = e.entity || {};
+    const rows = infoRows(ent);
+    const rels = relationRows(ent, pages);
+    const seen = mentions && mentions[e.path] || [];
+    const img = ent.image || ent.portrait || Array.isArray(ent.images) && ent.images[0] || "";
+    const info = `<aside class="infobox">
+<h2>${esc3(e.name)}</h2>
+${img ? `<img src="${esc3(img)}" alt="${esc3(e.name)}">` : ""}
+${rows.length ? `<table>${rows.map(([k, v2]) => `<tr><th>${esc3(k)}</th><td>${esc3(v2)}</td></tr>`).join("")}</table>` : ""}
+</aside>`;
+    const relSec = rels.length ? `<div class="sec"><h2>\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C</h2><ul class="plain">${rels.map((r) => {
+      const label = esc3(r.name || r.target.split(/[\\/]/).pop().replace(/\.json$/i, ""));
+      const link = r.page ? `<a href="${esc3(r.page)}">${label}</a>` : label;
+      return `<li>${esc3(r.role || "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E02\u0E49\u0E2D\u0E07\u0E01\u0E31\u0E1A")} \u2014 ${link}</li>`;
+    }).join("")}</ul></div>` : "";
+    const seenSec = seen.length ? `<div class="sec"><h2>\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E43\u0E19\u0E09\u0E32\u0E01</h2><ul class="plain">${seen.map((s) => `<li>${esc3(s)}</li>`).join("")}</ul></div>` : "";
+    const bodyText = ent.body || ent.description || ent.desc || "";
+    const main = `<article>
+<span class="cat-pill">${esc3(catLabel3(e.cat, labels))}</span>
+<h1>${esc3(e.name)}</h1>
+${(e.aliases || []).length ? `<div class="aka">\u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E39\u0E49\u0E08\u0E31\u0E01\u0E43\u0E19\u0E0A\u0E37\u0E48\u0E2D: ${esc3((e.aliases || []).join(" \xB7 "))}</div>` : ""}
+<div class="body">${paragraphs(bodyText) || '<p class="empty">(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22)</p>'}</div>
+${relSec}${seenSec}
+</article>`;
+    return page(e.name, siteTitle, `<div class="layout">${main}${info}</div>`, { nav: nav2 });
+  }
+  function indexPage(entities, ctx) {
+    const { pages, siteTitle, nav: nav2, labels } = ctx;
+    const cards = entities.map((e) => `<a class="card" href="${esc3(pages.get(e.path))}" data-n="${esc3((e.name + " " + (e.aliases || []).join(" ") + " " + catLabel3(e.cat, labels)).toLowerCase())}">
+<div class="n">${esc3(e.name)}</div><div class="d">${esc3(catLabel3(e.cat, labels))}</div></a>`).join("\n");
+    const body = `<input class="q" id="q" placeholder="\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E43\u0E19\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u2026 (${entities.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)">
+<div class="grid" id="g">${cards}</div>
+<script>
+var q=document.getElementById('q'),g=document.getElementById('g');
+q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();
+[].forEach.call(g.children,function(c){c.style.display=!v||c.dataset.n.indexOf(v)>=0?'':'none';});});
+<\/script>`;
+    return page("\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01", siteTitle, body, { nav: nav2 });
+  }
+  function categoryPage(cat, entities, ctx) {
+    const { pages, siteTitle, nav: nav2, labels } = ctx;
+    const label = catLabel3(cat, labels);
+    const list = entities.length ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc3(pages.get(e.path))}">
+<div class="n">${esc3(e.name)}</div><div class="d">${esc3((e.aliases || []).join(" \xB7 "))}</div></a>`).join("")}</div>` : '<p class="empty">(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E19\u0E2B\u0E21\u0E27\u0E14\u0E19\u0E35\u0E49)</p>';
+    return page(label, siteTitle, `<article><h1>${esc3(label)}</h1><p class="d">${entities.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23</p></article><div class="sec">${list}</div>`, { nav: nav2 });
+  }
+  function buildCodexSite(entities, opts = {}) {
+    const list = (entities || []).filter((e) => e && e.name).slice().sort((a, b) => String(a.name).localeCompare(String(b.name), "th"));
+    const pages = assignPages(list);
+    const cats = [...new Set(list.map((e) => e.cat))];
+    const labels = opts.labels || {};
+    const nav2 = [
+      { href: "index.html", label: "\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" },
+      ...cats.map((c) => ({ href: "cat-" + slug(c) + ".html", label: catLabel3(c, labels) }))
+    ];
+    const ctx = { pages, siteTitle: opts.siteTitle || "Codex", nav: nav2, labels, mentions: opts.mentions || {} };
+    const files = [{ name: "index.html", text: indexPage(list, ctx) }];
+    for (const c of cats) {
+      files.push({
+        name: "cat-" + slug(c) + ".html",
+        text: categoryPage(c, list.filter((e) => e.cat === c), ctx)
+      });
+    }
+    for (const e of list) files.push({ name: pages.get(e.path), text: entityPage(e, ctx) });
+    return files;
+  }
+  function codexStats(entities) {
+    const list = (entities || []).filter((e) => e && e.name);
+    const byCat = {};
+    for (const e of list) byCat[e.cat] = (byCat[e.cat] || 0) + 1;
+    return { total: list.length, cats: Object.keys(byCat).length, byCat };
+  }
+  var CODEX_VERSION, CAT_TH2, catLabel3, CSS2;
+  var init_codex_build = __esm({
+    "src/codex/codex-build.js"() {
+      CODEX_VERSION = 1;
+      CAT_TH2 = {
+        characters: "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+        locations: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48",
+        items: "\u0E2A\u0E34\u0E48\u0E07\u0E02\u0E2D\u0E07",
+        lore: "\u0E15\u0E33\u0E19\u0E32\u0E19/\u0E04\u0E27\u0E32\u0E21\u0E23\u0E39\u0E49"
+      };
+      catLabel3 = (c, labels) => labels && labels[c] || CAT_TH2[c] || c;
+      CSS2 = `
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1c1e21;--dim:#65686c;--line:#dcdfe3;--accent:#2f6feb;--accent2:#eaf1ff}
+@media (prefers-color-scheme:dark){:root{--bg:#17181a;--card:#1f2124;--ink:#e6e8ea;--dim:#9aa0a6;--line:#33363b;--accent:#7aa7ff;--accent2:#22293a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 "Sarabun","Noto Sans Thai",system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+header.top{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header.top h1{font-size:19px;margin:0}
+header.top nav{display:flex;gap:12px;flex-wrap:wrap;font-size:14px}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 20px 64px}
+.layout{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+article{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 26px}
+article h1{margin:0 0 4px;font-size:30px}
+.aka{color:var(--dim);font-size:14px;margin-bottom:14px}
+.cat-pill{display:inline-block;background:var(--accent2);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12.5px;margin-bottom:14px}
+.infobox{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.infobox h2{margin:0;padding:11px 14px;background:var(--accent2);color:var(--accent);font-size:15px}
+.infobox img{width:100%;display:block}
+.infobox table{width:100%;border-collapse:collapse;font-size:14px}
+.infobox th{text-align:left;color:var(--dim);font-weight:600;width:38%;vertical-align:top;padding:7px 14px;border-top:1px solid var(--line)}
+.infobox td{padding:7px 14px;border-top:1px solid var(--line)}
+.sec{margin-top:26px}
+.sec h2{font-size:18px;border-bottom:2px solid var(--line);padding-bottom:6px;margin:0 0 12px}
+.body p{margin:0 0 12px}
+ul.plain{list-style:none;padding:0;margin:0}
+ul.plain li{padding:6px 0;border-bottom:1px solid var(--line)}
+ul.plain li:last-child{border-bottom:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card .n{font-weight:600;font-size:16px}
+.card .d{color:var(--dim);font-size:13.5px;margin-top:4px}
+.q{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;margin-bottom:18px}
+footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
+.empty{color:var(--dim);font-style:italic}
+`;
+    }
+  });
+
+  // src/codex/codex-ui.js
+  function resetCodex() {
+    state._codex = null;
+  }
+  function catLabels() {
+    const out = {};
+    for (const c of state.settings && state.settings.wikiCats || []) {
+      if (c && c.key) out[c.key] = c.label || c.key;
+    }
+    return out;
+  }
+  async function collectMentions(ents) {
+    const out = {};
+    try {
+      const { getBacklinksFor: getBacklinksFor2, autoLinkReady: autoLinkReady2 } = await Promise.resolve().then(() => (init_auto_link_ui(), auto_link_ui_exports));
+      if (!autoLinkReady2()) return out;
+      for (const e of ents) {
+        const links = getBacklinksFor2(e.path) || [];
+        const names = links.map((l) => l.title || l.name || l.scene || "").filter(Boolean);
+        if (names.length) out[e.path] = names;
+      }
+    } catch (err2) {
+      log("warn", "codex: \u0E2D\u0E48\u0E32\u0E19\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E01\u0E32\u0E23\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", err2);
+    }
+    return out;
+  }
+  async function renderCodexPanel(host2) {
+    const h = host2 || $("#codex-body");
+    if (!h) return false;
+    const s = S3();
+    h.replaceChildren();
+    h.classList.add("k-codex");
+    if (!state.root) {
+      h.append(el("div", "dim k-codex-empty", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E08\u0E30\u0E21\u0E35\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21"));
+      return true;
+    }
+    h.append(el("div", "dim k-codex-empty", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u2026"));
+    const ents = await listEntities(state.root);
+    s.ents = ents;
+    h.replaceChildren();
+    const labels = catLabels();
+    const stats = codexStats(ents);
+    const cats = [...new Set(ents.map((e) => e.cat))].sort();
+    const bar = el("div", "k-codex-bar");
+    const q = el("input", "k-codex-q");
+    q.type = "search";
+    q.placeholder = `\u0E04\u0E49\u0E19\u0E43\u0E19\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u2026 (${stats.total} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)`;
+    q.value = s.q;
+    q.oninput = () => {
+      s.q = q.value;
+      draw2();
+    };
+    const catSel = el("select", "k-codex-cat");
+    const all = el("option", null, "\u0E17\u0E38\u0E01\u0E2B\u0E21\u0E27\u0E14");
+    all.value = "";
+    catSel.append(all);
+    for (const c of cats) {
+      const o = el("option", null, catLabel3(c, labels) + ` (${stats.byCat[c]})`);
+      o.value = c;
+      catSel.append(o);
+    }
+    catSel.value = s.cat;
+    catSel.onchange = () => {
+      s.cat = catSel.value;
+      draw2();
+    };
+    const expBtn = el("button", "k-codex-exp", "\u{1F310} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E27\u0E47\u0E1A");
+    expBtn.title = "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E27\u0E47\u0E1A\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u0E41\u0E1A\u0E1A Fandom/Wikia (\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C\u0E44\u0E14\u0E49 \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E47\u0E15)";
+    expBtn.onclick = exportSite;
+    bar.append(q, catSel, expBtn);
+    h.append(bar);
+    const body = el("div", "k-codex-main");
+    const grid = el("div", "k-codex-grid");
+    const prev = el("div", "k-codex-prev");
+    body.append(grid, prev);
+    h.append(body);
+    function draw2() {
+      const needle = s.q.trim().toLowerCase();
+      const rows = ents.filter((e) => {
+        if (s.cat && e.cat !== s.cat) return false;
+        if (!needle) return true;
+        return (e.name + " " + (e.aliases || []).join(" ")).toLowerCase().includes(needle);
+      }).sort((a, b) => String(a.name).localeCompare(String(b.name), "th"));
+      grid.replaceChildren();
+      if (!rows.length) {
+        grid.append(el(
+          "div",
+          "dim k-codex-empty",
+          ents.length ? "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E04\u0E49\u0E19)" : "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E43\u0E19 Wiki \u2014 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)"
+        ));
+        return;
+      }
+      for (const e of rows) {
+        const c = el("div", "k-codex-card");
+        if (s.sel === e.path) c.classList.add("on");
+        c.append(el("div", "k-codex-name", e.name));
+        c.append(el("div", "k-codex-cat-pill", catLabel3(e.cat, labels)));
+        if ((e.aliases || []).length) c.append(el("div", "k-codex-aka", (e.aliases || []).join(" \xB7 ")));
+        c.onclick = () => {
+          s.sel = e.path;
+          draw2();
+          showPreview(e);
+        };
+        c.ondblclick = async () => {
+          try {
+            const { openEntity: openEntity2 } = await Promise.resolve().then(() => (init_wiki_ui(), wiki_ui_exports));
+            openEntity2(e.path);
+          } catch {
+            setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32 Wiki \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08");
+          }
+        };
+        grid.append(c);
+      }
+      if (s.sel) {
+        const hit = rows.find((e) => e.path === s.sel);
+        if (hit) showPreview(hit);
+      }
+    }
+    function showPreview(e) {
+      prev.replaceChildren();
+      const ent = e.entity || {};
+      prev.append(el("div", "k-codex-prev-name", e.name));
+      prev.append(el("div", "k-codex-cat-pill", catLabel3(e.cat, labels)));
+      const rows = infoRows(ent);
+      if (rows.length) {
+        const tb2 = el("table", "k-codex-info");
+        for (const [k, v2] of rows) {
+          const tr2 = el("tr");
+          tr2.append(el("th", null, k), el("td", null, v2));
+          tb2.append(tr2);
+        }
+        prev.append(tb2);
+      }
+      const bodyText = ent.body || ent.description || ent.desc || "";
+      prev.append(el("div", "k-codex-prev-body", bodyText || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22)"));
+      const open = el("button", null, "\u{1F4D6} \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32 Wiki");
+      open.onclick = async () => {
+        try {
+          const { openEntity: openEntity2 } = await Promise.resolve().then(() => (init_wiki_ui(), wiki_ui_exports));
+          openEntity2(e.path);
+        } catch {
+          setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32 Wiki \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08");
+        }
+      };
+      prev.append(open);
+    }
+    async function exportSite() {
+      if (!ents.length) {
+        setStatus("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E43\u0E2B\u0E49\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01");
+        return;
+      }
+      const dir = await kapi.openDirDialog();
+      if (!dir) return;
+      setStatus("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E27\u0E47\u0E1A\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u2026");
+      try {
+        const mentions = await collectMentions(ents);
+        const files = buildCodexSite(ents, { siteTitle: state.title || "Codex", labels, mentions });
+        const out = await kapi.join(dir, "codex");
+        await kapi.mkdir(out);
+        for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
+        setStatus(`\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E27\u0E47\u0E1A\u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u0E41\u0E25\u0E49\u0E27 ${files.length} \u0E2B\u0E19\u0E49\u0E32 \u2192 ${out}`);
+        log("info", "codex: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E27\u0E47\u0E1A " + files.length + " \u0E2B\u0E19\u0E49\u0E32 \u2192 " + out);
+        try {
+          await kapi.revealInOS(await kapi.join(out, "index.html"));
+        } catch {
+        }
+      } catch (e) {
+        log("error", "codex: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+        setStatus("\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + (e && e.message ? e.message : e));
+      }
+    }
+    draw2();
+    return true;
+  }
+  var S3;
+  var init_codex_ui = __esm({
+    "src/codex/codex-ui.js"() {
+      init_core();
+      init_project_scan();
+      init_codex_build();
+      S3 = () => state._codex || (state._codex = { ents: null, q: "", cat: "", sel: null });
+    }
+  });
+
+  // src/record/record-data.js
+  var record_data_exports = {};
+  __export(record_data_exports, {
+    CSV_COLUMNS: () => CSV_COLUMNS,
+    MOODS: () => MOODS,
+    RECORD_FILE: () => RECORD_FILE,
+    RECORD_SCHEMA: () => RECORD_SCHEMA,
+    addEntry: () => addEntry,
+    csvCell: () => csvCell2,
+    csvFileName: () => csvFileName,
+    dayKey: () => dayKey,
+    filterEntries: () => filterEntries,
+    groupByDay: () => groupByDay,
+    migrate: () => migrate4,
+    moodLabel: () => moodLabel,
+    newEntry: () => newEntry,
+    removeEntry: () => removeEntry,
+    sortEntries: () => sortEntries,
+    summarize: () => summarize2,
+    toCsv: () => toCsv,
+    updateEntry: () => updateEntry
+  });
+  function dayKey(d) {
+    const p = (n2) => String(n2).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+  function newEntry(id, day, patch = {}) {
+    return {
+      id: String(id),
+      day: String(day || ""),
+      at: patch.at || "",
+      // เวลาที่จด (ISO) — ใช้เรียงภายในวันเดียวกัน
+      text: patch.text || "",
+      mood: patch.mood || "",
+      tags: Array.isArray(patch.tags) ? patch.tags.slice() : [],
+      words: Number(patch.words) || 0,
+      // จำนวนคำที่เขียนได้วันนั้น (ผู้ใช้กรอกเอง หรือดึงจากสถิติ)
+      minutes: Number(patch.minutes) || 0
+    };
+  }
+  function migrate4(raw) {
+    const d = raw && typeof raw === "object" ? raw : {};
+    const list = Array.isArray(d.entries) ? d.entries : Array.isArray(d) ? d : [];
+    const entries = [];
+    for (let i5 = 0; i5 < list.length; i5++) {
+      const e = list[i5];
+      if (!e || typeof e !== "object") continue;
+      const day = e.day || e.date || "";
+      const text = e.text != null ? e.text : e.note || "";
+      if (!day && !String(text).trim()) continue;
+      entries.push(newEntry(e.id || "r" + i5, day, { ...e, text }));
+    }
+    return { schema: RECORD_SCHEMA, entries: sortEntries(entries) };
+  }
+  function sortEntries(entries) {
+    return (entries || []).slice().sort((a, b) => {
+      if (a.day !== b.day) return a.day < b.day ? 1 : -1;
+      if (a.at !== b.at) return (a.at || "") < (b.at || "") ? 1 : -1;
+      return 0;
+    });
+  }
+  function addEntry(data2, entry) {
+    const d = migrate4(data2);
+    d.entries = sortEntries([...d.entries, entry]);
+    return d;
+  }
+  function updateEntry(data2, id, patch) {
+    const d = migrate4(data2);
+    d.entries = sortEntries(d.entries.map((e) => e.id === id ? { ...e, ...patch, id: e.id } : e));
+    return d;
+  }
+  function removeEntry(data2, id) {
+    const d = migrate4(data2);
+    d.entries = d.entries.filter((e) => e.id !== id);
+    return d;
+  }
+  function groupByDay(entries) {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const e of sortEntries(entries)) {
+      if (!map2.has(e.day)) map2.set(e.day, []);
+      map2.get(e.day).push(e);
+    }
+    return [...map2.entries()].map(([day, items]) => ({
+      day,
+      items,
+      words: items.reduce((a, x) => a + (Number(x.words) || 0), 0),
+      minutes: items.reduce((a, x) => a + (Number(x.minutes) || 0), 0)
+    }));
+  }
+  function summarize2(entries) {
+    const list = sortEntries(entries);
+    const days = new Set(list.map((e) => e.day).filter(Boolean));
+    return {
+      entries: list.length,
+      days: days.size,
+      words: list.reduce((a, x) => a + (Number(x.words) || 0), 0),
+      minutes: list.reduce((a, x) => a + (Number(x.minutes) || 0), 0),
+      first: list.length ? list[list.length - 1].day : "",
+      last: list.length ? list[0].day : ""
+    };
+  }
+  function filterEntries(entries, { q = "", from: from2 = "", to = "", mood = "" } = {}) {
+    const needle = String(q || "").trim().toLowerCase();
+    return sortEntries(entries).filter((e) => {
+      if (from2 && e.day < from2) return false;
+      if (to && e.day > to) return false;
+      if (mood && e.mood !== mood) return false;
+      if (!needle) return true;
+      const hay = [e.text, e.day, (e.tags || []).join(" ")].join(" ").toLowerCase();
+      return hay.includes(needle);
+    });
+  }
+  function csvCell2(v2) {
+    const s = v2 == null ? "" : String(v2);
+    if (!/[",\r\n]/.test(s) && s === s.trim()) return s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  function toCsv(entries, opts = {}) {
+    const rows = [CSV_COLUMNS.map(([, label]) => csvCell2(label)).join(",")];
+    for (const e of sortEntries(entries)) {
+      rows.push(CSV_COLUMNS.map(([key2]) => {
+        if (key2 === "tags") return csvCell2((e.tags || []).join(" "));
+        if (key2 === "mood") return csvCell2(e.mood ? moodLabel(e.mood) : "");
+        return csvCell2(e[key2]);
+      }).join(","));
+    }
+    const text = rows.join("\r\n") + "\r\n";
+    return opts.bom === false ? text : "\uFEFF" + text;
+  }
+  function csvFileName(projectTitle, stamp) {
+    const safe2 = String(projectTitle || "project").replace(/[\\/:*?"<>|]+/g, "-").trim() || "project";
+    return `${safe2}-records-${stamp || ""}`.replace(/-+$/, "") + ".csv";
+  }
+  var RECORD_SCHEMA, RECORD_FILE, MOODS, moodLabel, CSV_COLUMNS;
+  var init_record_data = __esm({
+    "src/record/record-data.js"() {
+      RECORD_SCHEMA = 2;
+      RECORD_FILE = "records.json";
+      MOODS = [
+        { key: "", label: "\u2014" },
+        { key: "great", label: "\u{1F604} \u0E25\u0E37\u0E48\u0E19\u0E44\u0E2B\u0E25" },
+        { key: "ok", label: "\u{1F642} \u0E1B\u0E01\u0E15\u0E34" },
+        { key: "stuck", label: "\u{1F616} \u0E15\u0E34\u0E14\u0E02\u0E31\u0E14" },
+        { key: "tired", label: "\u{1F634} \u0E25\u0E49\u0E32" }
+      ];
+      moodLabel = (k) => (MOODS.find((m) => m.key === k) || MOODS[0]).label;
+      CSV_COLUMNS = [
+        ["day", "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48"],
+        ["at", "\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E08\u0E14"],
+        ["text", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01"],
+        ["mood", "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C"],
+        ["tags", "\u0E41\u0E17\u0E47\u0E01"],
+        ["words", "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33"],
+        ["minutes", "\u0E19\u0E32\u0E17\u0E35"]
+      ];
+    }
+  });
+
+  // src/record/record-ui.js
+  var record_ui_exports = {};
+  __export(record_ui_exports, {
+    loadRecords: () => loadRecords,
+    openRecord: () => openRecord,
+    renderRecordPanel: () => renderRecordPanel,
+    resetRecords: () => resetRecords
+  });
+  async function loadRecords() {
+    const s = S4();
+    if (!state.root) {
+      s.data = migrate4(null);
+      return s.data;
+    }
+    const p = await kapi.join(state.root, RECORD_FILE);
+    try {
+      s.data = migrate4(await kapi.readJson(p));
+    } catch {
+      s.data = migrate4(null);
+    }
+    return s.data;
+  }
+  async function saveRecords(next) {
+    const s = S4();
+    s.data = next;
+    if (!state.root) return false;
+    const p = await kapi.join(state.root, RECORD_FILE);
+    await kapi.writeFile(p, JSON.stringify(next, null, 2));
+    return true;
+  }
+  function resetRecords() {
+    state._record = null;
+  }
+  async function renderRecordPanel(host2) {
+    const h = host2 || $("#record-body");
+    if (!h) return false;
+    const s = S4();
+    if (!s.data) await loadRecords();
+    h.replaceChildren();
+    h.classList.add("k-rec");
+    if (!state.root) {
+      h.append(el("div", "dim k-rec-empty", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E08\u0E30\u0E08\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E14\u0E49"));
+      return true;
+    }
+    const bar = el("div", "k-rec-bar");
+    const q = el("input", "k-rec-q");
+    q.type = "search";
+    q.placeholder = "\u0E04\u0E49\u0E19\u0E43\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u2026 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 \xB7 \u0E41\u0E17\u0E47\u0E01 \xB7 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48)";
+    q.value = s.q;
+    q.oninput = () => {
+      s.q = q.value;
+      drawList();
+    };
+    const moodSel = el("select", "k-rec-mood-f");
+    for (const m of MOODS) {
+      const o = el("option", null, m.key ? m.label : "\u0E17\u0E38\u0E01\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C");
+      o.value = m.key;
+      moodSel.append(o);
+    }
+    moodSel.value = s.mood;
+    moodSel.onchange = () => {
+      s.mood = moodSel.value;
+      drawList();
+    };
+    const csvBtn = el("button", null, "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 CSV");
+    csvBtn.onclick = exportCsv;
+    bar.append(q, moodSel, csvBtn);
+    h.append(bar);
+    const form = el("div", "k-rec-form");
+    const today2 = dayKey(/* @__PURE__ */ new Date());
+    const dayIn = el("input", "k-rec-day");
+    dayIn.type = "date";
+    dayIn.value = today2;
+    const ta = el("textarea", "k-rec-text");
+    ta.placeholder = "\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E44\u0E1B\u0E1A\u0E49\u0E32\u0E07\u2026";
+    ta.rows = 3;
+    const mood2 = el("select", "k-rec-mood");
+    for (const m of MOODS) {
+      const o = el("option", null, m.label);
+      o.value = m.key;
+      mood2.append(o);
+    }
+    const words = el("input", "k-rec-num");
+    words.type = "number";
+    words.min = "0";
+    words.placeholder = "\u0E04\u0E33";
+    const mins = el("input", "k-rec-num");
+    mins.type = "number";
+    mins.min = "0";
+    mins.placeholder = "\u0E19\u0E32\u0E17\u0E35";
+    const tags = el("input", "k-rec-tags");
+    tags.placeholder = "\u0E41\u0E17\u0E47\u0E01 (\u0E40\u0E27\u0E49\u0E19\u0E27\u0E23\u0E23\u0E04)";
+    const add = el("button", "k-rec-add", "\u2795 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
+    add.onclick = async () => {
+      const text = ta.value.trim();
+      if (!text) {
+        setStatus("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22");
+        ta.focus();
+        return;
+      }
+      const entry = newEntry(newId3(), dayIn.value || today2, {
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        text,
+        mood: mood2.value,
+        words: words.value,
+        minutes: mins.value,
+        tags: tags.value.split(/\s+/).filter(Boolean)
+      });
+      await saveRecords(addEntry(s.data, entry));
+      ta.value = "";
+      words.value = "";
+      mins.value = "";
+      tags.value = "";
+      setStatus("\u0E08\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27");
+      drawStats();
+      drawList();
+    };
+    const row2 = el("div", "k-rec-form-row");
+    row2.append(dayIn, mood2, words, mins, tags, add);
+    form.append(ta, row2);
+    h.append(form);
+    const stats = el("div", "k-rec-stats");
+    h.append(stats);
+    const list = el("div", "k-rec-list");
+    h.append(list);
+    function drawStats() {
+      const sum2 = summarize2(s.data.entries);
+      stats.replaceChildren();
+      for (const [label, val] of [
+        ["\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", sum2.entries],
+        ["\u0E27\u0E31\u0E19", sum2.days],
+        ["\u0E04\u0E33\u0E23\u0E27\u0E21", sum2.words.toLocaleString()],
+        ["\u0E19\u0E32\u0E17\u0E35\u0E23\u0E27\u0E21", sum2.minutes]
+      ]) {
+        const b = el("span", "k-rec-stat");
+        b.append(el("b", null, String(val)), document.createTextNode(" " + label));
+        stats.append(b);
+      }
+    }
+    function drawList() {
+      list.replaceChildren();
+      const rows = filterEntries(s.data.entries, { q: s.q, mood: s.mood });
+      if (!rows.length) {
+        list.append(el(
+          "div",
+          "dim k-rec-empty",
+          s.data.entries.length ? "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E04\u0E49\u0E19)" : "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2014 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E1A\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)"
+        ));
+        return;
+      }
+      for (const g of groupByDay(rows)) {
+        const head2 = el("div", "k-rec-day-head");
+        head2.append(el("span", "k-rec-day-name", g.day));
+        const meta2 = [];
+        if (g.words) meta2.push(g.words.toLocaleString() + " \u0E04\u0E33");
+        if (g.minutes) meta2.push(g.minutes + " \u0E19\u0E32\u0E17\u0E35");
+        if (meta2.length) head2.append(el("span", "k-rec-day-meta", meta2.join(" \xB7 ")));
+        list.append(head2);
+        for (const e of g.items) list.append(entryCard(e));
+      }
+    }
+    function entryCard(e) {
+      const card = el("div", "k-rec-card");
+      card.dataset.id = e.id;
+      if (s.editing === e.id) {
+        const ed = el("textarea", "k-rec-edit");
+        ed.value = e.text;
+        ed.rows = 3;
+        const ok2 = el("button", null, "\u2714 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
+        const no = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
+        ok2.onclick = async () => {
+          await saveRecords(updateEntry(s.data, e.id, { text: ed.value.trim() }));
+          s.editing = null;
+          drawStats();
+          drawList();
+          setStatus("\u0E41\u0E01\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27");
+        };
+        no.onclick = () => {
+          s.editing = null;
+          drawList();
+        };
+        const btns = el("div", "k-rec-card-btns");
+        btns.append(ok2, no);
+        card.append(ed, btns);
+        return card;
+      }
+      const txt = el("div", "k-rec-card-text", e.text);
+      card.append(txt);
+      const foot = el("div", "k-rec-card-foot");
+      if (e.mood) foot.append(el("span", "k-rec-chip", moodLabel(e.mood)));
+      for (const t3 of e.tags || []) foot.append(el("span", "k-rec-chip k-rec-tag", "#" + t3));
+      if (e.words) foot.append(el("span", "k-rec-chip", e.words + " \u0E04\u0E33"));
+      if (e.minutes) foot.append(el("span", "k-rec-chip", e.minutes + " \u0E19\u0E32\u0E17\u0E35"));
+      const edit = el("span", "k-rec-act", "\u270F\uFE0F");
+      edit.title = "\u0E41\u0E01\u0E49\u0E44\u0E02";
+      edit.onclick = () => {
+        s.editing = e.id;
+        drawList();
+      };
+      const del2 = el("span", "k-rec-act", "\u{1F5D1}");
+      del2.title = "\u0E25\u0E1A";
+      del2.onclick = async () => {
+        const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+        if (!await confirmBox2("\u0E25\u0E1A\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E19\u0E35\u0E49?")) return;
+        await saveRecords(removeEntry(s.data, e.id));
+        setStatus("\u0E25\u0E1A\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27");
+        drawStats();
+        drawList();
+      };
+      foot.append(el("span", "k-rec-spacer"), edit, del2);
+      card.append(foot);
+      return card;
+    }
+    async function exportCsv() {
+      const rows = filterEntries(s.data.entries, { q: s.q, mood: s.mood });
+      if (!rows.length) {
+        setStatus("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E43\u0E2B\u0E49\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01");
+        return;
+      }
+      const name5 = csvFileName(state.title, dayKey(/* @__PURE__ */ new Date()));
+      const dest = await kapi.saveAsDialog(name5);
+      if (!dest) return;
+      await kapi.writeFile(dest, toCsv(rows));
+      setStatus("\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 CSV \u0E41\u0E25\u0E49\u0E27 (" + rows.length + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23): " + dest);
+      log("info", "record: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 CSV " + rows.length + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23");
+    }
+    drawStats();
+    drawList();
+    return true;
+  }
+  async function openRecord() {
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    showPanel2("record");
+    await renderFeaturePanel2("record");
+  }
+  var S4, newId3;
+  var init_record_ui = __esm({
+    "src/record/record-ui.js"() {
+      init_core();
+      init_record_data();
+      S4 = () => state._record || (state._record = { data: null, q: "", mood: "", editing: null });
+      newId3 = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
   });
 
@@ -81520,8 +82828,8 @@ ${s.body}`).join("\n\n");
           }
           continue;
         }
-        const esc5 = src2[i5 + 1];
-        if (esc5 === "'") {
+        const esc6 = src2[i5 + 1];
+        if (esc6 === "'") {
           const hex = src2.slice(i5 + 2, i5 + 4);
           if (!skipDepth) {
             const code3 = parseInt(hex, 16);
@@ -81530,12 +82838,12 @@ ${s.body}`).join("\n\n");
           i5 += 4;
           continue;
         }
-        if (esc5 === "*") {
+        if (esc6 === "*") {
           skipDepth = depth;
           i5 += 2;
           continue;
         }
-        if (!skipDepth && (esc5 === "\\" || esc5 === "{" || esc5 === "}")) out += esc5;
+        if (!skipDepth && (esc6 === "\\" || esc6 === "{" || esc6 === "}")) out += esc6;
         i5 += 2;
         continue;
       }
@@ -81847,8 +83155,8 @@ ${sc.body || ""}
     const errNode = doc3.querySelector("parsererror");
     if (errNode) throw new Error("XML \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07: " + errNode.textContent);
     const elements = [];
-    const paragraphs = doc3.querySelectorAll("Paragraph");
-    for (const p of paragraphs) {
+    const paragraphs2 = doc3.querySelectorAll("Paragraph");
+    for (const p of paragraphs2) {
       const type = (p.getAttribute("Type") || "General").trim();
       const el2 = FDX_TYPE_MAP[type] || "action";
       const textNodes = p.querySelectorAll("Text");
@@ -81909,10 +83217,10 @@ ${sc.body || ""}
     const errNode = doc3.querySelector("parsererror");
     if (errNode) throw new Error("XML \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07: " + errNode.textContent);
     const elements = [];
-    const paragraphs = doc3.querySelectorAll(
+    const paragraphs2 = doc3.querySelectorAll(
       "paragraph, p, Paragraph, dialogue-block, scene, action, character, transition, note"
     );
-    for (const p of paragraphs) {
+    for (const p of paragraphs2) {
       const tag3 = p.tagName.toLowerCase();
       const typeAttr = (p.getAttribute("type") || "").toLowerCase();
       const el2 = ASTX_TYPE_MAP[typeAttr] || ASTX_TYPE_MAP[tag3] || "action";
@@ -82407,8 +83715,8 @@ ${sc.body || ""}
       bSave
     );
     const ws = el("div", "workspace");
-    const page = el("div", "roster-page");
-    ws.append(page);
+    const page2 = el("div", "roster-page");
+    ws.append(page2);
     const wrap2 = el("div", "roster-wrap");
     wrap2.append(bar, ws);
     pane.append(wrap2);
@@ -82423,8 +83731,8 @@ ${sc.body || ""}
       return d;
     }
     function paint() {
-      page.innerHTML = "";
-      page.append(ce("roster-title", r.title, (v2) => {
+      page2.innerHTML = "";
+      page2.append(ce("roster-title", r.title, (v2) => {
         r.title = v2;
       }));
       const cast = el("div", "roster-cast");
@@ -82447,7 +83755,7 @@ ${sc.body || ""}
         cast.append(row2);
       });
       if (!r.characters.length) cast.append(el("div", "roster-empty", '(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D \u2014 \u0E01\u0E14 "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23")'));
-      page.append(cast);
+      page2.append(cast);
       const sec = (key2, headText) => {
         const box2 = el("div", "roster-sec");
         box2.dataset.k = key2;
@@ -82457,8 +83765,8 @@ ${sc.body || ""}
         }));
         return box2;
       };
-      if (r.showScene !== false) page.append(sec("scene", fmt.strings.sceneTitle));
-      if (r.showTime !== false) page.append(sec("time", fmt.strings.timeTitle));
+      if (r.showScene !== false) page2.append(sec("scene", fmt.strings.sceneTitle));
+      if (r.showTime !== false) page2.append(sec("time", fmt.strings.timeTitle));
     }
     paint();
     bAdd.onclick = () => {
@@ -82653,7 +83961,7 @@ ${sc.body || ""}
     let seq2 = 0;
     const list = (blocks || []).filter((b) => b && b.el !== "blank");
     for (const b of list) {
-      const page = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
+      const page2 = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
       if (b.el === "scene") {
         const h = parseHeading(b.text);
         cur = {
@@ -82662,8 +83970,8 @@ ${sc.body || ""}
           location: h.location || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48)",
           intExt: h.intExt,
           time: h.time,
-          page: page + startPage - 1,
-          endPage: page + startPage - 1,
+          page: page2 + startPage - 1,
+          endPage: page2 + startPage - 1,
           pos: Number.isFinite(b.pos) ? b.pos : null,
           characters: [],
           charSet: /* @__PURE__ */ new Set(),
@@ -82682,8 +83990,8 @@ ${sc.body || ""}
           location: "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48)",
           intExt: "",
           time: "",
-          page: page + startPage - 1,
-          endPage: page + startPage - 1,
+          page: page2 + startPage - 1,
+          endPage: page2 + startPage - 1,
           pos: Number.isFinite(b.pos) ? b.pos : null,
           characters: [],
           charSet: /* @__PURE__ */ new Set(),
@@ -82693,7 +84001,7 @@ ${sc.body || ""}
         };
         scenes.push(cur);
       }
-      cur.endPage = Math.max(cur.endPage, page + startPage - 1);
+      cur.endPage = Math.max(cur.endPage, page2 + startPage - 1);
       if (b.el === "character") {
         curChar = cleanCharacterName(b.text);
         if (curChar && !cur.charSet.has(curChar)) {
@@ -82808,15 +84116,15 @@ ${sc.body || ""}
         });
       }
       const c = chars3.get(curChar);
-      const page = (Number.isFinite(b.idx) && pageOf.get(b.idx) || 1) + startPage - 1;
+      const page2 = (Number.isFinite(b.idx) && pageOf.get(b.idx) || 1) + startPage - 1;
       const n2 = wrapLines(b.text, dlgW);
       c.totalLines += n2;
       c.speeches++;
-      c.firstPage = c.firstPage === null ? page : Math.min(c.firstPage, page);
-      c.lastPage = c.lastPage === null ? page : Math.max(c.lastPage, page);
+      c.firstPage = c.firstPage === null ? page2 : Math.min(c.firstPage, page2);
+      c.lastPage = c.lastPage === null ? page2 : Math.max(c.lastPage, page2);
       if (!c.sceneSet.has(sceneNo)) {
         c.sceneSet.add(sceneNo);
-        c.scenes.push({ scene: sceneNo, page, lines: n2 });
+        c.scenes.push({ scene: sceneNo, page: page2, lines: n2 });
       } else {
         const row2 = c.scenes.find((x) => x.scene === sceneNo);
         if (row2) row2.lines += n2;
@@ -83255,10 +84563,10 @@ ${indent}</Paragraph>`;
     }
     return [newTitlePage(rows)];
   }
-  function titlePageInnerHtml(page, fmt) {
+  function titlePageInnerHtml(page2, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     const tw = textWidth(f.paper, f.margins);
-    return (page && page.strings ? page.strings : []).filter((s) => String(s.text ?? "").trim() !== "").map((s) => {
+    return (page2 && page2.strings ? page2.strings : []).filter((s) => String(s.text ?? "").trim() !== "").map((s) => {
       const w = num(s.width, 0) > 0 ? Math.min(num(s.width, 0), +f.paper.width - num(s.x, 0)) : Math.max(0.5, Math.min(tw, +f.paper.width - num(s.x, 0) - f.margins.right));
       const st = [
         "position:absolute",
@@ -83273,14 +84581,14 @@ ${indent}</Paragraph>`;
         s.underline ? "text-decoration:underline" : "text-decoration:none",
         "white-space:pre-wrap"
       ].filter(Boolean).join(";");
-      return `<div class="sp-tp-str" style="${st}">${esc3(s.text)}</div>`;
+      return `<div class="sp-tp-str" style="${st}">${esc4(s.text)}</div>`;
     }).join("");
   }
   function cssFamily(name5) {
     const s = String(name5 ?? "").replace(/["'\\;{}()<>]/g, "").trim();
     return s ? `"${s}",monospace` : "";
   }
-  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp4, TitlePageEditor, esc3;
+  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp4, TitlePageEditor, esc4;
   var init_sp_title_pages = __esm({
     "src/sp-title-pages.js"() {
       init_sp_format();
@@ -83374,7 +84682,7 @@ ${indent}</Paragraph>`;
           return p ? titlePageInnerHtml(p, fmt) : "";
         }
       };
-      esc3 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      esc4 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -83551,12 +84859,12 @@ ${indent}</Paragraph>`;
       if (opts.showPageNumbers !== false && pg.index > 1) {
         rows.push(`<div class="pg-num">${pg.index}.</div>`);
       }
-      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc4(pg.continuedTop)}</div>`);
+      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc5(pg.continuedTop)}</div>`);
       for (const b of pg.blocks || []) {
-        rows.push(`<div class="sp sp-${esc4(b.el || "action")}">${esc4(b.text || "")}</div>`);
+        rows.push(`<div class="sp sp-${esc5(b.el || "action")}">${esc5(b.text || "")}</div>`);
       }
-      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc4(pg.continuedBottom)}</div>`);
-      const mark = wmText ? `<div class="wm">${esc4(wmText)}</div>` : "";
+      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc5(pg.continuedBottom)}</div>`);
+      const mark = wmText ? `<div class="wm">${esc5(wmText)}</div>` : "";
       return `<section class="pg">${mark}<div class="pg-body">${rows.join("")}</div></section>`;
     }).join("\n");
     const css = [
@@ -83577,7 +84885,7 @@ ${indent}</Paragraph>`;
     ].join("\n");
     return `<!doctype html>
 <html lang="th"><head><meta charset="utf-8">
-<title>${esc4(opts.title || "")}</title>
+<title>${esc5(opts.title || "")}</title>
 <style>
 ${css}
 </style>
@@ -83622,7 +84930,7 @@ ${css}
     }
     return made;
   }
-  var DEFAULT_WM, esc4;
+  var DEFAULT_WM, esc5;
   var init_export_watermark = __esm({
     "src/export-watermark.js"() {
       init_sp_format();
@@ -83636,7 +84944,7 @@ ${css}
         repeat: 1
         // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
       };
-      esc4 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      esc5 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -93224,12 +94532,12 @@ ${css}
               d = l(b.u, (1 << j) - 1, J2 + h, N, d, b.v);
               var r = V2.V(b.v, 0, J2, b.C);
               X2 = (1 << r) - 1;
-              var S2 = V2.V(b.v, J2, h, b.D);
-              u = (1 << S2) - 1;
+              var S5 = V2.V(b.v, J2, h, b.D);
+              u = (1 << S5) - 1;
               M2(b.C, r);
               I(b.C, r, v2);
-              M2(b.D, S2);
-              I(b.D, S2, C);
+              M2(b.D, S5);
+              I(b.D, S5, C);
             }
             while (true) {
               var T4 = v2[e(N, d) & X2];
@@ -95935,8 +97243,8 @@ ${css}
       init_PDFContentStream();
       init_CharCodes();
       init_utils2();
-      fullPageBoundingBox = function(page) {
-        var mediaBox = page.MediaBox();
+      fullPageBoundingBox = function(page2) {
+        var mediaBox = page2.MediaBox();
         var width = mediaBox.lookup(2, PDFNumber_default).asNumber() - mediaBox.lookup(0, PDFNumber_default).asNumber();
         var height = mediaBox.lookup(3, PDFNumber_default).asNumber() - mediaBox.lookup(1, PDFNumber_default).asNumber();
         return { left: 0, bottom: 0, right: width, top: height };
@@ -95946,18 +97254,18 @@ ${css}
       };
       PDFPageEmbedder = /** @class */
       (function() {
-        function PDFPageEmbedder2(page, boundingBox, transformationMatrix) {
-          this.page = page;
-          var bb = boundingBox !== null && boundingBox !== void 0 ? boundingBox : fullPageBoundingBox(page);
+        function PDFPageEmbedder2(page2, boundingBox, transformationMatrix) {
+          this.page = page2;
+          var bb = boundingBox !== null && boundingBox !== void 0 ? boundingBox : fullPageBoundingBox(page2);
           this.width = bb.right - bb.left;
           this.height = bb.top - bb.bottom;
           this.boundingBox = bb;
           this.transformationMatrix = transformationMatrix !== null && transformationMatrix !== void 0 ? transformationMatrix : boundingBoxAdjustedMatrix(bb);
         }
-        PDFPageEmbedder2.for = function(page, boundingBox, transformationMatrix) {
+        PDFPageEmbedder2.for = function(page2, boundingBox, transformationMatrix) {
           return __awaiter(this, void 0, void 0, function() {
             return __generator(this, function(_a) {
-              return [2, new PDFPageEmbedder2(page, boundingBox, transformationMatrix)];
+              return [2, new PDFPageEmbedder2(page2, boundingBox, transformationMatrix)];
             });
           });
         };
@@ -96722,8 +98030,8 @@ ${css}
             return P;
           return void 0;
         };
-        PDFWidgetAnnotation2.prototype.setP = function(page) {
-          this.dict.set(PDFName_default.of("P"), page);
+        PDFWidgetAnnotation2.prototype.setP = function(page2) {
+          this.dict.set(PDFName_default.of("P"), page2);
         };
         PDFWidgetAnnotation2.prototype.setDefaultAppearance = function(appearance) {
           this.dict.set(PDFName_default.of("DA"), PDFString_default.of(appearance));
@@ -97816,9 +99124,9 @@ ${css}
           }
           throw new CorruptPageTreeError(targetIndex, "insertLeafNode");
         };
-        PDFPageTree2.prototype.removeLeafNode = function(targetIndex, prune) {
-          if (prune === void 0) {
-            prune = true;
+        PDFPageTree2.prototype.removeLeafNode = function(targetIndex, prune2) {
+          if (prune2 === void 0) {
+            prune2 = true;
           }
           var Kids = this.Kids();
           var Count = this.Count().asNumber();
@@ -97831,8 +99139,8 @@ ${css}
             var kid = this.context.lookup(kidRef);
             if (kid instanceof PDFPageTree2) {
               if (kid.Count().asNumber() > leafsRemainingUntilTarget) {
-                kid.removeLeafNode(leafsRemainingUntilTarget, prune);
-                if (prune && kid.Kids().size() === 0)
+                kid.removeLeafNode(leafsRemainingUntilTarget, prune2);
+                if (prune2 && kid.Kids().size() === 0)
                   Kids.remove(idx4);
                 return;
               } else {
@@ -101412,9 +102720,9 @@ ${css}
           var onValue = this.acroField.getOnValue();
           return !!onValue && onValue === this.acroField.getValue();
         };
-        PDFCheckBox2.prototype.addToPage = function(page, options) {
+        PDFCheckBox2.prototype.addToPage = function(page2, options) {
           var _a, _b, _c, _d, _e, _f;
-          assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           if (!options)
             options = {};
@@ -101437,13 +102745,13 @@ ${css}
             borderWidth: (_e = options.borderWidth) !== null && _e !== void 0 ? _e : 0,
             rotate: (_f = options.rotate) !== null && _f !== void 0 ? _f : degrees(0),
             hidden: options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           this.acroField.addWidget(widgetRef);
           widget.setAppearanceState(PDFName_default.of("Off"));
           this.updateWidgetAppearance(widget, PDFName_default.of("Yes"));
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFCheckBox2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -101630,9 +102938,9 @@ ${css}
         PDFDropdown2.prototype.disableSelectOnClick = function() {
           this.acroField.setFlagTo(AcroChoiceFlags.CommitOnSelChange, false);
         };
-        PDFDropdown2.prototype.addToPage = function(page, options) {
+        PDFDropdown2.prototype.addToPage = function(page2, options) {
           var _a, _b, _c, _d, _e, _f, _g;
-          assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           if (!options)
             options = {};
@@ -101655,13 +102963,13 @@ ${css}
             borderWidth: (_e = options.borderWidth) !== null && _e !== void 0 ? _e : 0,
             rotate: (_f = options.rotate) !== null && _f !== void 0 ? _f : degrees(0),
             hidden: options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           this.acroField.addWidget(widgetRef);
           var font = (_g = options.font) !== null && _g !== void 0 ? _g : this.doc.getForm().getDefaultFont();
           this.updateWidgetAppearance(widget, font);
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFDropdown2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -101823,9 +103131,9 @@ ${css}
         PDFOptionList2.prototype.disableSelectOnClick = function() {
           this.acroField.setFlagTo(AcroChoiceFlags.CommitOnSelChange, false);
         };
-        PDFOptionList2.prototype.addToPage = function(page, options) {
+        PDFOptionList2.prototype.addToPage = function(page2, options) {
           var _a, _b, _c, _d, _e, _f, _g;
-          assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           if (!options)
             options = {};
@@ -101848,13 +103156,13 @@ ${css}
             borderWidth: (_e = options.borderWidth) !== null && _e !== void 0 ? _e : 0,
             rotate: (_f = options.rotate) !== null && _f !== void 0 ? _f : degrees(0),
             hidden: options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           this.acroField.addWidget(widgetRef);
           var font = (_g = options.font) !== null && _g !== void 0 ? _g : this.doc.getForm().getDefaultFont();
           this.updateWidgetAppearance(widget, font);
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFOptionList2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -101993,10 +103301,10 @@ ${css}
         PDFRadioGroup2.prototype.disableMutualExclusion = function() {
           this.acroField.setFlagTo(AcroButtonFlags.RadiosInUnison, true);
         };
-        PDFRadioGroup2.prototype.addOptionToPage = function(option, page, options) {
+        PDFRadioGroup2.prototype.addOptionToPage = function(option, page2, options) {
           var _a, _b, _c, _d, _e, _f, _g, _h, _j;
           assertIs(option, "option", ["string"]);
-          assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           var widget = this.createWidget({
             x: (_a = options === null || options === void 0 ? void 0 : options.x) !== null && _a !== void 0 ? _a : 0,
@@ -102009,13 +103317,13 @@ ${css}
             borderWidth: (_h = options === null || options === void 0 ? void 0 : options.borderWidth) !== null && _h !== void 0 ? _h : 1,
             rotate: (_j = options === null || options === void 0 ? void 0 : options.rotate) !== null && _j !== void 0 ? _j : degrees(0),
             hidden: options === null || options === void 0 ? void 0 : options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           var apStateValue = this.acroField.addWidgetWithOpt(widgetRef, PDFHexString_default.fromText(option), !this.isMutuallyExclusive());
           widget.setAppearanceState(PDFName_default.of("Off"));
           this.updateWidgetAppearance(widget, apStateValue);
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFRadioGroup2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -102255,9 +103563,9 @@ ${css}
         PDFTextField2.prototype.disableRichFormatting = function() {
           this.acroField.setFlagTo(AcroTextFlags.RichText, false);
         };
-        PDFTextField2.prototype.addToPage = function(page, options) {
+        PDFTextField2.prototype.addToPage = function(page2, options) {
           var _a, _b, _c, _d, _e, _f, _g;
-          assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           if (!options)
             options = {};
@@ -102280,13 +103588,13 @@ ${css}
             borderWidth: (_e = options.borderWidth) !== null && _e !== void 0 ? _e : 0,
             rotate: (_f = options.rotate) !== null && _f !== void 0 ? _f : degrees(0),
             hidden: options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           this.acroField.addWidget(widgetRef);
           var font = (_g = options.font) !== null && _g !== void 0 ? _g : this.doc.getForm().getDefaultFont();
           this.updateWidgetAppearance(widget, font);
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFTextField2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -102536,9 +103844,9 @@ ${css}
             var widgets = field.acroField.getWidgets();
             for (var j = 0, lenWidgets = widgets.length; j < lenWidgets; j++) {
               var widget = widgets[j];
-              var page = this.findWidgetPage(widget);
+              var page2 = this.findWidgetPage(widget);
               var widgetRef = this.findWidgetAppearanceRef(field, widget);
-              var xObjectKey = page.node.newXObject("FlatWidget", widgetRef);
+              var xObjectKey = page2.node.newXObject("FlatWidget", widgetRef);
               var rectangle = widget.getRectangle();
               var operators = __spreadArrays([
                 pushGraphicsState(),
@@ -102547,7 +103855,7 @@ ${css}
                 drawObject(xObjectKey),
                 popGraphicsState()
               ]).filter(Boolean);
-              page.pushOperators.apply(page, operators);
+              page2.pushOperators.apply(page2, operators);
             }
             this.removeField(field);
           }
@@ -102558,12 +103866,12 @@ ${css}
           for (var i5 = 0, len5 = widgets.length; i5 < len5; i5++) {
             var widget = widgets[i5];
             var widgetRef = this.findWidgetAppearanceRef(field, widget);
-            var page = this.findWidgetPage(widget);
-            pages.add(page);
-            page.node.removeAnnot(widgetRef);
+            var page2 = this.findWidgetPage(widget);
+            pages.add(page2);
+            page2.node.removeAnnot(widgetRef);
           }
-          pages.forEach(function(page2) {
-            return page2.node.removeAnnot(field.ref);
+          pages.forEach(function(page3) {
+            return page3.node.removeAnnot(field.ref);
           });
           this.acroForm.removeField(field.acroField);
           var fieldKids = field.acroField.normalizedEntries().Kids;
@@ -102604,20 +103912,20 @@ ${css}
         };
         PDFForm2.prototype.findWidgetPage = function(widget) {
           var pageRef = widget.P();
-          var page = this.doc.getPages().find(function(x) {
+          var page2 = this.doc.getPages().find(function(x) {
             return x.ref === pageRef;
           });
-          if (page === void 0) {
+          if (page2 === void 0) {
             var widgetRef = this.doc.context.getObjectRef(widget.dict);
             if (widgetRef === void 0) {
               throw new Error("Could not find PDFRef for PDFObject");
             }
-            page = this.doc.findPageForAnnotationRef(widgetRef);
-            if (page === void 0) {
+            page2 = this.doc.findPageForAnnotationRef(widgetRef);
+            if (page2 === void 0) {
               throw new Error("Could not find page for PDFRef " + widgetRef);
             }
           }
-          return page;
+          return page2;
         };
         PDFForm2.prototype.findWidgetAppearanceRef = function(field, widget) {
           var _a;
@@ -102998,12 +104306,12 @@ ${css}
             var pages = [];
             _this.catalog.Pages().traverse(function(node, ref) {
               if (node instanceof PDFPageLeaf_default) {
-                var page = _this.pageMap.get(node);
-                if (!page) {
-                  page = PDFPage_default.of(node, ref, _this);
-                  _this.pageMap.set(node, page);
+                var page2 = _this.pageMap.get(node);
+                if (!page2) {
+                  page2 = PDFPage_default.of(node, ref, _this);
+                  _this.pageMap.set(node, page2);
                 }
-                pages.push(page);
+                pages.push(page2);
               }
             });
             return pages;
@@ -103210,27 +104518,27 @@ ${css}
           this.catalog.removeLeafNode(index);
           this.pageCount = pageCount2 - 1;
         };
-        PDFDocument2.prototype.addPage = function(page) {
-          assertIs(page, "page", ["undefined", [PDFPage_default, "PDFPage"], Array]);
-          return this.insertPage(this.getPageCount(), page);
+        PDFDocument2.prototype.addPage = function(page2) {
+          assertIs(page2, "page", ["undefined", [PDFPage_default, "PDFPage"], Array]);
+          return this.insertPage(this.getPageCount(), page2);
         };
-        PDFDocument2.prototype.insertPage = function(index, page) {
+        PDFDocument2.prototype.insertPage = function(index, page2) {
           var pageCount2 = this.getPageCount();
           assertRange(index, "index", 0, pageCount2);
-          assertIs(page, "page", ["undefined", [PDFPage_default, "PDFPage"], Array]);
-          if (!page || Array.isArray(page)) {
-            var dims2 = Array.isArray(page) ? page : PageSizes.A4;
-            page = PDFPage_default.create(this);
-            page.setSize.apply(page, dims2);
-          } else if (page.doc !== this) {
+          assertIs(page2, "page", ["undefined", [PDFPage_default, "PDFPage"], Array]);
+          if (!page2 || Array.isArray(page2)) {
+            var dims2 = Array.isArray(page2) ? page2 : PageSizes.A4;
+            page2 = PDFPage_default.create(this);
+            page2.setSize.apply(page2, dims2);
+          } else if (page2.doc !== this) {
             throw new ForeignPageError();
           }
-          var parentRef = this.catalog.insertLeafNode(page.ref, index);
-          page.node.setParent(parentRef);
-          this.pageMap.set(page.node, page);
+          var parentRef = this.catalog.insertLeafNode(page2.ref, index);
+          page2.node.setParent(parentRef);
+          this.pageMap.set(page2.node, page2);
           this.pageCache.invalidate();
           this.pageCount = pageCount2 + 1;
-          return page;
+          return page2;
         };
         PDFDocument2.prototype.copyPages = function(srcDoc, indices) {
           return __awaiter(this, void 0, void 0, function() {
@@ -103459,14 +104767,14 @@ ${css}
             });
           });
         };
-        PDFDocument2.prototype.embedPage = function(page, boundingBox, transformationMatrix) {
+        PDFDocument2.prototype.embedPage = function(page2, boundingBox, transformationMatrix) {
           return __awaiter(this, void 0, void 0, function() {
             var embeddedPage;
             return __generator(this, function(_a) {
               switch (_a.label) {
                 case 0:
-                  assertIs(page, "page", [[PDFPage_default, "PDFPage"]]);
-                  return [4, this.embedPages([page], [boundingBox], [transformationMatrix])];
+                  assertIs(page2, "page", [[PDFPage_default, "PDFPage"]]);
+                  return [4, this.embedPages([page2], [boundingBox], [transformationMatrix])];
                 case 1:
                   embeddedPage = _a.sent()[0];
                   return [2, embeddedPage];
@@ -103482,7 +104790,7 @@ ${css}
             transformationMatrices = [];
           }
           return __awaiter(this, void 0, void 0, function() {
-            var idx4, len5, currPage, nextPage, context2, maybeCopyPage, embeddedPages, idx4, len5, page, box2, matrix, embedder, ref;
+            var idx4, len5, currPage, nextPage, context2, maybeCopyPage, embeddedPages, idx4, len5, page2, box2, matrix, embedder, ref;
             var _a;
             return __generator(this, function(_b) {
               switch (_b.label) {
@@ -103505,10 +104813,10 @@ ${css}
                   _b.label = 1;
                 case 1:
                   if (!(idx4 < len5)) return [3, 4];
-                  page = maybeCopyPage(pages[idx4].node);
+                  page2 = maybeCopyPage(pages[idx4].node);
                   box2 = boundingBoxes[idx4];
                   matrix = transformationMatrices[idx4];
-                  return [4, PDFPageEmbedder_default.for(page, box2, matrix)];
+                  return [4, PDFPageEmbedder_default.for(page2, box2, matrix)];
                 case 2:
                   embedder = _b.sent();
                   ref = this.context.nextRef();
@@ -103605,10 +104913,10 @@ ${css}
         PDFDocument2.prototype.findPageForAnnotationRef = function(ref) {
           var pages = this.getPages();
           for (var idx4 = 0, len5 = pages.length; idx4 < len5; idx4++) {
-            var page = pages[idx4];
-            var annotations = page.node.Annots();
+            var page2 = pages[idx4];
+            var annotations = page2.node.Annots();
             if ((annotations === null || annotations === void 0 ? void 0 : annotations.indexOf(ref)) !== void 0) {
-              return page;
+              return page2;
             }
           }
           return void 0;
@@ -104400,10 +105708,10 @@ ${css}
           this.acroField.setFontSize(fontSize);
           this.markAsDirty();
         };
-        PDFButton2.prototype.addToPage = function(text, page, options) {
+        PDFButton2.prototype.addToPage = function(text, page2, options) {
           var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
           assertOrUndefined(text, "text", ["string"]);
-          assertOrUndefined(page, "page", [[PDFPage_default, "PDFPage"]]);
+          assertOrUndefined(page2, "page", [[PDFPage_default, "PDFPage"]]);
           assertFieldAppearanceOptions(options);
           var widget = this.createWidget({
             x: ((_a = options === null || options === void 0 ? void 0 : options.x) !== null && _a !== void 0 ? _a : 0) - ((_b = options === null || options === void 0 ? void 0 : options.borderWidth) !== null && _b !== void 0 ? _b : 0) / 2,
@@ -104417,13 +105725,13 @@ ${css}
             rotate: (_k = options === null || options === void 0 ? void 0 : options.rotate) !== null && _k !== void 0 ? _k : degrees(0),
             caption: text,
             hidden: options === null || options === void 0 ? void 0 : options.hidden,
-            page: page.ref
+            page: page2.ref
           });
           var widgetRef = this.doc.context.register(widget.dict);
           this.acroField.addWidget(widgetRef);
           var font = (_l = options === null || options === void 0 ? void 0 : options.font) !== null && _l !== void 0 ? _l : this.doc.getForm().getDefaultFont();
           this.updateWidgetAppearance(widget, font);
-          page.node.addAnnot(widgetRef);
+          page2.node.addAnnot(widgetRef);
         };
         PDFButton2.prototype.needsAppearancesUpdate = function() {
           var _a;
@@ -137013,12 +138321,12 @@ ${css}
     }
     return out.length ? out : [""];
   }
-  function layoutPageLines(page, fmt) {
+  function layoutPageLines(page2, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     const cfg = (el2) => f.elements[el2] || f.elements.action;
     const out = [];
     let line = 0;
-    (page.blocks || []).forEach((b, i5) => {
+    (page2.blocks || []).forEach((b, i5) => {
       const c = cfg(b.el);
       const marker = b.more === true || b.contd === true || b.el === "more" || b.el === "continued-top" || b.el === "continued-bottom";
       const before = i5 > 0 && !marker ? Math.round(num(c.linesBefore, 10) / 10) : 0;
@@ -137078,7 +138386,7 @@ ${css}
         return String(text ?? "").length * size * 0.6;
       }
     };
-    const draw2 = (page, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
+    const draw2 = (page2, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
       const t3 = clean(text);
       if (!t3) return 0;
       const runs = splitFontRuns(t3, !!set.latin);
@@ -137099,13 +138407,13 @@ ${css}
         if (Number.isFinite(opacity)) opts.opacity = opacity;
         if (rotate) opts.rotate = rotate;
         try {
-          page.drawText(r.text, opts);
+          page2.drawText(r.text, opts);
         } catch {
           return;
         }
         if (bold && opts.font === (r.latin ? set.latin.regular : set.regular)) {
           try {
-            page.drawText(r.text, { ...opts, x: cx2 + size * 0.035 });
+            page2.drawText(r.text, { ...opts, x: cx2 + size * 0.035 });
           } catch {
           }
         }
@@ -137115,7 +138423,7 @@ ${css}
       });
       if (underline) {
         try {
-          page.drawLine({
+          page2.drawLine({
             start: { x: px2, y: y - size * 0.12 },
             end: { x: px2 + w, y: y - size * 0.12 },
             thickness: Math.max(0.5, size * 0.06)
@@ -137151,11 +138459,11 @@ ${css}
     const newPage = () => doc3.addPage([pw, ph]);
     const baseline = (n2) => ph - mgT - (hdrLines + n2) * lineH - size * 0.82;
     const wmText = String(opts.watermark || "").trim();
-    const stampWatermark = (page) => {
+    const stampWatermark = (page2) => {
       if (!wmText) return;
       const s = Math.max(8, num(opts.watermarkSize, 54));
       const w = widthOf(pickFont(set, false, false), wmText, s);
-      draw2(page, wmText, {
+      draw2(page2, wmText, {
         // มุม 0 องศา (แนวนอน) เป็นค่าที่ผู้ใช้ตั้งได้จริง — `|| 0` จึงไม่ผิด แต่ใช้ num() ให้เหมือนกันทั้งไฟล์
         x: (pw - w * 0.8) / 2,
         y: ph / 2 - s / 2,
@@ -137167,8 +138475,8 @@ ${css}
       });
     };
     for (const tp of titles) {
-      const page = newPage();
-      stampWatermark(page);
+      const page2 = newPage();
+      stampWatermark(page2);
       for (const s of tp.strings) {
         const text = String(s.text ?? "");
         if (!text.trim()) continue;
@@ -137179,7 +138487,7 @@ ${css}
         const cpi = CHARS_PER_INCH * 12 / sz;
         const lines = wrapTextLines(text, boxW / PT_PER_IN, cpi);
         lines.forEach((ln, i5) => {
-          draw2(page, ln, {
+          draw2(page2, ln, {
             x,
             y: ph - num(s.y, 0) * PT_PER_IN - lh * (i5 + 1) + lh * 0.22,
             size: sz,
@@ -137203,8 +138511,8 @@ ${css}
       PAGES: paged.count
     };
     paged.pages.forEach((pg, pi) => {
-      const page = newPage();
-      stampWatermark(page);
+      const page2 = newPage();
+      stampWatermark(page2);
       const rows = layoutPageLines(pg, fmt);
       const hdrRows = headerStringsFor(pg.index, hdr, {
         ...hdrCtx,
@@ -137212,7 +138520,7 @@ ${css}
         SCENE: (rows.find((r) => r.block.el === "scene") || { block: {} }).block.text || ""
       });
       for (const r of hdrRows) {
-        draw2(page, r.text, {
+        draw2(page2, r.text, {
           x: mgL + num(r.xOffset, 0) * PT_PER_IN,
           y: ph - mgT - size * 0.82,
           size,
@@ -137227,7 +138535,7 @@ ${css}
         const label = pageNumberLabel(pg.index, fmt, opts.startPage);
         if (label) {
           const w = widthOf(pickFont(set, false, false), label, size);
-          draw2(page, label, {
+          draw2(page2, label, {
             x: pw - (fmt.pageNumbers.right || 1) * PT_PER_IN - w,
             boxWidth: 0,
             y: ph - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82,
@@ -137247,7 +138555,7 @@ ${css}
         const lines = row2.lines;
         lines.forEach((ln, i5) => {
           const text = st && st.caps ? String(ln).toUpperCase() : ln;
-          draw2(page, text, {
+          draw2(page2, text, {
             x,
             y: baseline(row2.line + i5),
             size,
@@ -137261,9 +138569,9 @@ ${css}
         if (opts.sceneNumbers && b.el === "scene" && fmt.sceneNumbers.show && b.sceneNo) {
           const label = String(b.sceneNo) + (fmt.sceneNumbers.suffix || "");
           const y = baseline(row2.line);
-          draw2(page, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
+          draw2(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
           const w = widthOf(pickFont(set, false, false), label, size);
-          draw2(page, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
+          draw2(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
         }
         if (b.el === "scene" && String(b.text || "").trim()) {
           bookmarks.push({
@@ -137274,7 +138582,7 @@ ${css}
         }
         if (opts.drawRectAroundNotes && b.el === "note") {
           noteRects.push({
-            page,
+            page: page2,
             x: x - 3,
             y: baseline(row2.line + lines.length - 1) - size * 0.3,
             w: boxW + 6,
@@ -137296,7 +138604,7 @@ ${css}
         }
       }
       if (pg.continuedTop) {
-        draw2(page, pg.continuedTop, {
+        draw2(page2, pg.continuedTop, {
           x: mgL,
           y: baseline(-1),
           size,
@@ -137305,7 +138613,7 @@ ${css}
         });
       }
       if (pg.continuedBottom) {
-        draw2(page, pg.continuedBottom, {
+        draw2(page2, pg.continuedBottom, {
           x: mgL,
           y: baseline(bodyLines),
           size,
@@ -137619,8 +138927,8 @@ ${css}
     };
     const renderPreview = () => {
       colPrev.innerHTML = "";
-      const page = ed.page(pageIdx);
-      if (!page) {
+      const page2 = ed.page(pageIdx);
+      if (!page2) {
         colPrev.append(el("div", "dim", "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01"));
         return;
       }
@@ -137634,8 +138942,8 @@ ${css}
       guide.style.width = textWidth(fmt.paper, fmt.margins) + "in";
       guide.style.height = +fmt.paper.height - fmt.margins.top - fmt.margins.bottom + "in";
       paper.append(guide);
-      paper.insertAdjacentHTML("beforeend", titlePageInnerHtml(page, fmt));
-      const drawn = page.strings.map((s, i5) => i5).filter((i5) => String(page.strings[i5].text).trim() !== "");
+      paper.insertAdjacentHTML("beforeend", titlePageInnerHtml(page2, fmt));
+      const drawn = page2.strings.map((s, i5) => i5).filter((i5) => String(page2.strings[i5].text).trim() !== "");
       paper.querySelectorAll(".sp-tp-str").forEach((node, k) => {
         const i5 = drawn[k];
         if (i5 === strIdx) node.classList.add("on");
@@ -137650,10 +138958,10 @@ ${css}
     const renderProps = () => {
       colProps.innerHTML = "";
       colProps.append(el("div", "cmp-sub", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49"));
-      const page = ed.page(pageIdx);
-      if (!page) return;
+      const page2 = ed.page(pageIdx);
+      if (!page2) return;
       const list = el("div", "k-tp-str-list");
-      page.strings.forEach((s2, i5) => {
+      page2.strings.forEach((s2, i5) => {
         const r = el("div", "k-tp-str-row" + (i5 === strIdx ? " on" : ""));
         r.append(el("span", null, String(s2.text || "(\u0E27\u0E48\u0E32\u0E07)").split("\n")[0].slice(0, 24) || "(\u0E27\u0E48\u0E32\u0E07)"));
         r.onclick = () => {
@@ -137669,7 +138977,7 @@ ${css}
         render();
       };
       colProps.append(add);
-      const s = page.strings[strIdx];
+      const s = page2.strings[strIdx];
       if (!s) {
         colProps.append(el("div", "dim", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34"));
         return;
@@ -138110,6 +139418,7 @@ ${css}
     bootGlobalSettings: () => bootGlobalSettings,
     bootPanelWindow: () => bootPanelWindow,
     bootSequence: () => bootSequence,
+    broadcastActiveScene: () => broadcastActiveScene,
     buildSpReport: () => buildSpReport,
     buildTree: () => buildTree2,
     catEditDialog: () => catEditDialog,
@@ -138129,6 +139438,7 @@ ${css}
     currentTheme: () => currentTheme,
     defaultPlannerPath: () => defaultPlannerPath,
     deleteCurrentLine: () => deleteCurrentLine,
+    drawPanel: () => drawPanel,
     entityCreateDialog: () => entityCreateDialog,
     entitySearchBlob: () => entitySearchBlob,
     eventDialog: () => eventDialog,
@@ -138217,6 +139527,7 @@ ${css}
     revertTab: () => revertTab,
     rosterTextForDraft: () => rosterTextForDraft,
     safeName: () => safeName,
+    saveAllTabs: () => saveAllTabs,
     saveGlobalSetting: () => saveGlobalSetting,
     saveMaps: () => saveMaps,
     saveProjectMeta: () => saveProjectMeta,
@@ -138666,9 +139977,9 @@ ${css}
     tab.pane.append(host2);
     host2.addEventListener("click", (ev) => {
       const blk = ev.target.closest && ev.target.closest("[data-pos]");
-      const page = ev.target.closest && ev.target.closest(".sp-page");
-      if (!blk && !page) return;
-      const pos = blk ? parseInt(blk.dataset.pos, 10) : parseInt(page.querySelector("[data-pos]")?.dataset.pos ?? "", 10);
+      const page2 = ev.target.closest && ev.target.closest(".sp-page");
+      if (!blk && !page2) return;
+      const pos = blk ? parseInt(blk.dataset.pos, 10) : parseInt(page2.querySelector("[data-pos]")?.dataset.pos ?? "", 10);
       setSpView("normal");
       if (Number.isFinite(pos)) gotoPos(pos);
     });
@@ -139134,11 +140445,11 @@ ${css}
     if (kind === "character") return characterReportText(data2);
     return dialogueChartText(data2);
   }
-  function chartBar(page) {
+  function chartBar(page2) {
     const bar = el("div", "sp-chart-bar");
-    bar.title = CHART_KINDS.map((k) => `${CHART_LABELS[k]} ${page.percentages[k]}%`).join(" \xB7 ");
+    bar.title = CHART_KINDS.map((k) => `${CHART_LABELS[k]} ${page2.percentages[k]}%`).join(" \xB7 ");
     for (const k of CHART_KINDS) {
-      const pc = page.percentages[k];
+      const pc = page2.percentages[k];
       if (pc <= 0) continue;
       const seg = el("div", "sp-chart-seg seg-" + k);
       seg.style.width = pc + "%";
@@ -139506,9 +140817,10 @@ ${css}
     });
     loadSpellDict(root);
     warmInverse();
+    await configHistory();
     if (PANEL_WIN) {
       mountPanelWindow(PANEL_WIN);
-      await renderFeaturePanel(PANEL_WIN);
+      await drawPanelWindow();
       clearBusy();
       setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C: " + state.title);
       reportPanelWindowHealth();
@@ -139647,6 +140959,12 @@ ${css}
     }
     await loadProject(root);
     bindPanelWindowSync();
+    if (SCENE_PANELS.has(panelId(PANEL_WIN))) {
+      try {
+        kapi.broadcast && kapi.broadcast(wantSceneMsg(PANEL_WIN));
+      } catch {
+      }
+    }
     return true;
   }
   function bindPanelWindowSync() {
@@ -139666,12 +140984,14 @@ ${css}
     if (msg.kind === "project-changed") {
       if (!syncTouchesProject(msg)) return false;
       if (PANEL_WIN) {
-        renderFeaturePanel(PANEL_WIN);
+        drawPanelWindow();
         return true;
       }
       renderOpenFeaturePanels().catch(() => {
       });
       buildTree2().catch(() => {
+      });
+      reloadTabsFromDisk(msg.path).catch(() => {
       });
       return true;
     }
@@ -139692,7 +141012,160 @@ ${css}
       });
       return true;
     }
+    if (msg.kind === "want-scene" && !PANEL_WIN) {
+      broadcastActiveScene(true);
+      if (panelId(msg.id) === "outline") scheduleOutline();
+      return true;
+    }
+    if (msg.kind === "active-scene" && PANEL_WIN) {
+      applyRemoteScene(msg);
+      return true;
+    }
+    if (msg.kind === "outline" && PANEL_WIN) {
+      state._remoteOutline = msg;
+      if (panelId(PANEL_WIN) === "outline") drawPanelWindow();
+      return true;
+    }
+    if (msg.kind === "goto-outline" && !PANEL_WIN) {
+      gotoOutlineItem(msg);
+      return true;
+    }
     return false;
+  }
+  function drawPanel(id) {
+    const pid = panelId(id);
+    const f = SCENE_PANEL_DRAW[pid];
+    return f ? Promise.resolve().then(f).catch((e) => log("error", "\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07 " + pid + " \u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27", e)) : renderFeaturePanel(pid);
+  }
+  function drawPanelWindow() {
+    if (!PANEL_WIN) return Promise.resolve(false);
+    return Promise.resolve(drawPanel(PANEL_WIN)).then((r) => {
+      applySceneGuard();
+      reportPanelWindowHealth();
+      return r;
+    });
+  }
+  function broadcastActiveScene(force) {
+    if (PANEL_WIN) return false;
+    if (!force && !anyNeedsScene(tornOffIds())) return false;
+    const msg = sceneMsg(state.active, { root: state.root || "" });
+    if (!msg.file && state.lastSceneFile) {
+      const last2 = state.tabs.get(state.lastSceneFile);
+      const m2 = sceneMsg(last2 || { file: state.lastSceneFile, title: "" }, { root: state.root || "" });
+      if (m2.file) {
+        m2.stale = !last2;
+        Object.assign(msg, m2);
+      }
+    }
+    state._lastSceneMsg = msg;
+    try {
+      kapi.broadcast && kapi.broadcast(msg);
+    } catch {
+    }
+    return true;
+  }
+  async function applyRemoteScene(msg) {
+    if (!PANEL_WIN) return false;
+    if (!sceneChanged(state._remoteScene, msg)) return false;
+    state._remoteScene = msg;
+    state.active = remoteTab(msg);
+    if (msg.file) state.lastSceneFile = msg.file;
+    if (panelId(PANEL_WIN) === "props") {
+      const ctx = msg.file ? await sceneCtx(msg.file) : null;
+      setPropsTarget(ctx && ctx.dPath, ctx && ctx.ch, ctx && ctx.row);
+    }
+    await drawPanelWindow();
+    return true;
+  }
+  function applySceneGuard() {
+    if (!PANEL_WIN) return false;
+    if (!writesScene(panelId(PANEL_WIN))) return false;
+    const body = document.querySelector(".k-panelwin > .k-panel-body");
+    if (!body) return false;
+    const old = body.querySelector(".k-scene-guard");
+    if (old) old.remove();
+    body.classList.remove("k-guarded");
+    const msg = state._remoteScene;
+    if (!msg || !msg.file || canEditScene(msg)) return false;
+    body.classList.add("k-guarded");
+    const bar = el(
+      "div",
+      "k-scene-guard",
+      t("panel.sceneGuard", "\u23F8 \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01") + ' "' + (msg.title || t("panel.thisScene", "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49")) + '" \u2014 ' + t("panel.sceneGuard2", "\u0E14\u0E39\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E19\u0E31\u0E48\u0E19")
+    );
+    body.insertBefore(bar, body.firstChild);
+    for (const n2 of body.querySelectorAll("input, textarea, select, button")) {
+      if (n2.closest(".k-scene-guard")) continue;
+      n2.disabled = true;
+    }
+    return true;
+  }
+  function requestGotoInMain(it) {
+    if (!PANEL_WIN) return false;
+    const file = state._remoteScene && state._remoteScene.file || "";
+    try {
+      kapi.broadcast && kapi.broadcast(gotoMsg(file, it));
+    } catch {
+    }
+    setStatus(t("panel.jumpedInMain", "\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E1B\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E19\u0E31\u0E49\u0E19\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E41\u0E25\u0E49\u0E27"));
+    return true;
+  }
+  async function gotoOutlineItem(msg) {
+    if (PANEL_WIN || !msg) return false;
+    if (msg.file && (!state.active || !samePath(state.active.file, msg.file))) {
+      try {
+        await activate(msg.file);
+      } catch {
+        return false;
+      }
+    }
+    const t3 = state.active;
+    if (!t3) return false;
+    const view = (t3.sp || t3.editor) && (t3.sp || t3.editor).view;
+    if (view && typeof msg.pos === "number") {
+      const { TextSelection: TextSelection2 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
+      view.dispatch(view.state.tr.setSelection(
+        TextSelection2.create(view.state.doc, msg.pos + 1)
+      ).scrollIntoView());
+      view.focus();
+    } else if (t3.plain && typeof msg.line === "number") {
+      const lines = t3.plain.value.split("\n");
+      let off3 = 0;
+      for (let i5 = 0; i5 < msg.line; i5++) off3 += lines[i5].length + 1;
+      t3.plain.focus();
+      t3.plain.setSelectionRange(off3, off3);
+    } else return false;
+    try {
+      window.focus();
+    } catch {
+    }
+    return true;
+  }
+  async function reloadTabsFromDisk(changedPath) {
+    if (PANEL_WIN || !changedPath) return 0;
+    const hits = tabsToReload([...state.tabs.values()], changedPath);
+    let n2 = 0;
+    for (const tab of hits) {
+      if (!tab.editor && !tab.sp && !tab.plain) continue;
+      try {
+        const { meta: meta2, body } = (0, import_md12.parseMdFile)(await kapi.readFile(tab.file));
+        if (body === tab.body) continue;
+        tab.meta = meta2;
+        tab.body = body;
+        if (tab.editor) tab.editor.setMarkdown(body);
+        else if (tab.sp) tab.sp.setMarkdown(body);
+        else tab.plain.value = body;
+        n2++;
+      } catch (e) {
+        log("warn", "[\u0E41\u0E1C\u0E07] \u0E42\u0E2B\u0E25\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E01\u0E49\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + tab.file, e);
+      }
+    }
+    if (n2) {
+      setStatus(t("panel.reloadedFromPanelWin", "\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27") + " (" + n2 + ")");
+      scheduleOutline();
+    }
+    refreshCommentsPanel();
+    return n2;
   }
   function bindMainWindowSync() {
     if (_mainSyncBound || PANEL_WIN) return false;
@@ -139706,6 +141179,7 @@ ${css}
   function reportPanelWindowHealth() {
     if (!PANEL_WIN) return false;
     const bodyEl = document.querySelector(".k-panelwin > .k-panel-body");
+    const scene = state._remoteScene || null;
     const health = {
       kind: "panelwin-ready",
       id: PANEL_WIN,
@@ -139713,8 +141187,15 @@ ${css}
       hasStatus: !!document.getElementById("status"),
       hasToolbar: !!document.getElementById("toolbar"),
       hasPanes: !!document.getElementById("panes"),
-      drawn: !!(bodyEl && bodyEl.children.length)
+      drawn: !!(bodyEl && bodyEl.children.length),
       // แผงวาดเนื้อออกมาจริง ไม่ใช่กล่องเปล่า
+      // [alpha.68] สภาพของ "ช่องส่งฉาก" — เทสฝั่งหน้าต่างหลักตรวจได้แค่ผ่านช่องนี้ช่องเดียว
+      // (บทเรียน .67: ลูกขึ้น "(เลือกฉากก่อน…)" อยู่ก็ยังนับว่า drawn=true ได้ จึงต้องดูเนื้อจริงด้วย)
+      scene: scene && scene.file || "",
+      sceneTitle: scene && scene.title || "",
+      guarded: !!(bodyEl && bodyEl.querySelector(".k-scene-guard")),
+      items: bodyEl ? bodyEl.querySelectorAll(".ol-item").length : 0,
+      text: bodyEl ? (bodyEl.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160) : ""
     };
     try {
       kapi.broadcast && kapi.broadcast(health);
@@ -139925,7 +141406,7 @@ ${css}
   }
   async function _buildTreeInner() {
     const tree = document.createElement("div");
-    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle"]);
+    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle"]);
     for (const name5 of await kapi.listDirs(state.root)) {
       if (skip.has(name5)) continue;
       const secPath = await kapi.join(state.root, name5);
@@ -140982,7 +142463,7 @@ ${css}
       await scan(await kapi.join(state.root, sec, "Bible"));
     }
     try {
-      const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", ".git"]);
+      const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", ".git"]);
       for (const sec of await kapi.listDirs(state.root)) {
         if (skip.has(sec)) continue;
         const secPath = await kapi.join(state.root, sec);
@@ -141828,7 +143309,7 @@ ${css}
   async function listRefTargets() {
     const out = [];
     if (!state.root) return out;
-    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle"]);
+    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle"]);
     for (const secName of await kapi.listDirs(state.root).catch(() => [])) {
       if (skip.has(secName)) continue;
       const secPath = await kapi.join(state.root, secName);
@@ -142447,7 +143928,7 @@ ${css}
       } catch {
       }
     }
-    propsTarget_C.t = { dPath, ch, sc };
+    propsTarget_C.t = dPath && ch && sc ? { dPath, ch, sc } : null;
     if (isPanelOpen("props")) renderPropsPanel();
   }
   function openPropsPanel(dPath, ch, sc) {
@@ -143436,7 +144917,7 @@ ${css}
         imgURLBase.clear();
         buildTree2();
       },
-      onInsert: (relPath, caption) => insertImageByName(relPath, caption),
+      onInsert: (relPath2, caption) => insertImageByName(relPath2, caption),
       onOpenFile: (file) => openPathSmart(file),
       onOpenEntity: (name5) => {
         const f = smart.fileOf[name5];
@@ -144886,11 +146367,13 @@ ${css}
     } catch {
     }
     refreshCommentsPanel();
+    broadcastActiveScene();
   }
   function markDirty(tab) {
     if (!tab.dirty) {
       tab.dirty = true;
       tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
+      broadcastActiveScene();
     }
     updateDirtyBadge();
     updateProgressBar();
@@ -144952,6 +146435,7 @@ ${css}
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     setStatus("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27: " + tab.title);
     refreshCommentsPanel();
+    broadcastActiveScene();
     if (state.settings.autoBackup !== false && isSnapshotable(tab))
       snapshotFile(tab.file).catch(() => {
       });
@@ -145639,6 +147123,9 @@ ${css}
     $("#tb-ai-analyzer")?.classList.toggle("on", isPanelOpen("ai-analyzer"));
     $("#tb-ai-chat")?.classList.toggle("on", isPanelOpen("ai-chat"));
     $("#tb-gallery")?.classList.toggle("on", isPanelOpen("gallery"));
+    $("#tb-codex")?.classList.toggle("on", isPanelOpen("codex") || isTornOff("codex"));
+    $("#tb-history")?.classList.toggle("on", isPanelOpen("history") || isTornOff("history"));
+    $("#tb-record")?.classList.toggle("on", isPanelOpen("record") || isTornOff("record"));
     $("#tb-md-codes")?.classList.toggle("on", showMarkdownCodes());
     syncFloatBarVisible();
     syncMenuToggles();
@@ -145788,9 +147275,15 @@ ${css}
       box2.scrollLeft = keepLeft;
     };
     box2.innerHTML = "";
+    if (PANEL_WIN) {
+      drawRemoteOutline(box2);
+      back();
+      return;
+    }
     const t3 = state.active;
     if (!t3 || t3.wiki || t3.gal || t3.isJson || t3.net || t3.dash || t3.planner || !t3.editor && !t3.sp && !t3.plain) {
       box2.append(el("div", "dim", "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39 Navigation)"));
+      relayOutline("", "", [], "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39 Navigation)");
       return;
     }
     const head2 = el("div", "nav-head");
@@ -145832,13 +147325,13 @@ ${css}
           items.push({ kind: "beat", label: navTrunc(line), lvl: 4, line: i5 });
       });
     }
+    relayOutline(t3.file || "", t3.title || "", items, "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)", !!t3.sp);
     if (!items.length) {
       box2.append(el("div", "dim", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)"));
       return;
     }
     for (const it of items) {
-      const d = el("div", "ol-item nav-" + it.kind + " lvl" + it.lvl, it.label || "(\u0E27\u0E48\u0E32\u0E07)");
-      d.onclick = () => {
+      box2.append(outlineItemEl(it, () => {
         if (t3.sp || t3.editor) {
           const view = (t3.sp || t3.editor).view;
           Promise.resolve().then(() => (init_dist4(), dist_exports)).then(({ TextSelection: TextSelection2 }) => {
@@ -145854,10 +147347,38 @@ ${css}
           t3.plain.focus();
           t3.plain.setSelectionRange(off3, off3);
         }
-      };
-      box2.append(d);
+      }));
     }
     back();
+  }
+  function outlineItemEl(it, onJump) {
+    const d = el("div", "ol-item nav-" + it.kind + " lvl" + it.lvl, it.label || "(\u0E27\u0E48\u0E32\u0E07)");
+    d.onclick = onJump;
+    return d;
+  }
+  function relayOutline(file, title2, items, empty2, sp) {
+    if (PANEL_WIN || !isTornOff("outline")) return false;
+    try {
+      kapi.broadcast && kapi.broadcast(outlineMsg(file, title2, items, { empty: empty2, sp }));
+    } catch {
+    }
+    return true;
+  }
+  function drawRemoteOutline(box2) {
+    const msg = state._remoteOutline;
+    if (!msg) {
+      box2.append(el("div", "dim", t("panel.waitingMain", "(\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E2D\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u2026)")));
+      return false;
+    }
+    if (!msg.items.length) {
+      box2.append(el("div", "dim", msg.empty || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)"));
+      return true;
+    }
+    const head2 = el("div", "nav-head");
+    head2.append(el("span", "nav-scene", (msg.sp ? "\u{1F3AC} " : "\u{1F4D6} ") + (msg.title || "(\u0E09\u0E32\u0E01)")));
+    box2.append(head2);
+    for (const it of msg.items) box2.append(outlineItemEl(it, () => requestGotoInMain(it)));
+    return true;
   }
   function openFind() {
     $("#findbar").classList.add("on");
@@ -146198,11 +147719,18 @@ ${css}
       "#floor-body",
       // [alpha.66] ผัง/รอบการเล่นเป็นของโปรเจกต์เดิมล้วน ๆ
       "#branch-body",
-      "#player-body"
+      "#player-body",
+      // [alpha.69] สารานุกรม/ประวัติ/บันทึก ผูกกับโปรเจกต์ทั้งหมด
+      "#codex-body",
+      "#history-body",
+      "#record-body"
     ]) {
       const n2 = $(sel);
       if (n2) n2.innerHTML = "";
     }
+    resetCodex();
+    resetHistory();
+    resetRecords();
     state._branch = null;
     resetPlayerMode();
     mapsState_C.s = null;
@@ -154216,15 +155744,15 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 40));
         resetPageScale();
-        const S3 = state.settings;
+        const S6 = state.settings;
         const CS = (sel) => getComputedStyle(document.querySelector(sel));
         const rootVar = (n2) => getComputedStyle(document.documentElement).getPropertyValue(n2).trim();
         check2(
           "[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A \u0E1A\u0E191 \u0E25\u0E48\u0E32\u0E071 \u0E0B\u0E49\u0E32\u0E221.5 \u0E02\u0E27\u0E321 \u0E19\u0E34\u0E49\u0E27",
-          S3.pageMargins.top === 1 && S3.pageMargins.bottom === 1 && S3.pageMargins.left === 1.5 && S3.pageMargins.right === 1,
-          JSON.stringify(S3.pageMargins)
+          S6.pageMargins.top === 1 && S6.pageMargins.bottom === 1 && S6.pageMargins.left === 1.5 && S6.pageMargins.right === 1,
+          JSON.stringify(S6.pageMargins)
         );
-        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S3.paperSize === "letter");
+        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S6.paperSize === "letter");
         check2(
           "[85] --page-w / --mg-left \u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E1A\u0E19 :root",
           rootVar("--page-w") === "8.5in" && rootVar("--mg-left") === "1.5in",
@@ -154235,14 +155763,14 @@ ${css}
           linesPerPage(spFormat().paper, spFormat().margins) === 54,
           String(linesPerPage(spFormat().paper, spFormat().margins))
         );
-        S3.paperSize = "a4";
+        S6.paperSize = "a4";
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E19\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 A4 \u2192 --page-w \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", rootVar("--page-w") === "8.27in", rootVar("--page-w"));
-        S3.paperSize = "letter";
-        S3.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
+        S6.paperSize = "letter";
+        S6.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 2 \u0E19\u0E34\u0E49\u0E27 \u2192 --mg-left \u0E15\u0E32\u0E21", rootVar("--mg-left") === "2in", rootVar("--mg-left"));
-        S3.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
+        S6.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
         applyPageVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E43\u0E0A\u0E49 Courier Final Draft \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19",
@@ -154261,35 +155789,35 @@ ${css}
         );
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E10\u0E32\u0E19 12pt = 16px \u0E17\u0E31\u0E49\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E30\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07",
-          S3.edFontPt === 12 && S3.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
+          S6.edFontPt === 12 && S6.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
         );
         applyZoomVars();
         const edFsBefore = rootVar("--ed-fs");
-        S3.spFontPt = 14;
+        S6.spFontPt = 14;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E01\u0E23\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 14pt \u2192 --sp-fs \u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01",
           Math.abs(parseFloat(rootVar("--sp-fs")) - 14 * 4 / 3) < 0.05,
           rootVar("--sp-fs")
         );
-        const keepEdPt = S3.edFontPt;
-        S3.edFontPt = 1;
-        S3.uiFontSize = -6;
+        const keepEdPt = S6.edFontPt;
+        S6.edFontPt = 1;
+        S6.uiFontSize = -6;
         applyZoomVars();
         check2(
           "[26] edFontPt \u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
           parseFloat(rootVar("--ed-fs")) >= 9,
           rootVar("--ed-fs")
         );
-        S3.edFontPt = keepEdPt;
-        S3.uiFontSize = 0;
+        S6.edFontPt = keepEdPt;
+        S6.uiFontSize = 0;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E23\u0E30\u0E17\u0E1A",
           rootVar("--ed-fs") === edFsBefore,
           edFsBefore + " \u2192 " + rootVar("--ed-fs")
         );
-        S3.spFontPt = 12;
+        S6.spFontPt = 12;
         applyZoomVars();
         const spStyleEl = document.getElementById("k-sp-format");
         check2('[81] \u0E21\u0E35 <style id="k-sp-format"> \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07', !!spStyleEl && spStyleEl.textContent.includes(".sp.sp-character{"));
@@ -154326,7 +155854,7 @@ ${css}
             !!scEl && Math.abs(parseFloat(getComputedStyle(scEl).marginTop) - 2 * parseFloat(getComputedStyle(scEl).fontSize)) < 2,
             scEl && getComputedStyle(scEl).marginTop
           );
-          S3.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
+          S6.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
           applyPageVars();
           const cs2 = getComputedStyle(spT.pane.querySelector(".sp-character"));
           check2(
@@ -154339,7 +155867,7 @@ ${css}
             Math.abs(parseFloat(cs2.marginTop) - 3 * parseFloat(cs2.fontSize)) < 2,
             cs2.marginTop
           );
-          S3.spStyles = { character: {
+          S6.spStyles = { character: {
             screen: { caps: false, bold: true, italic: false, underline: false },
             print: { caps: true, bold: false, italic: false, underline: true }
           } };
@@ -154351,8 +155879,8 @@ ${css}
             "[83] \u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E19\u0E08\u0E2D (\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C)",
             /@media print\{[\s\S]*\.sp\.sp-character\{[^}]*text-decoration:underline/.test(document.getElementById("k-sp-format").textContent)
           );
-          S3.spElements = null;
-          S3.spStyles = null;
+          S6.spElements = null;
+          S6.spStyles = null;
           applyPageVars();
           const blocks = parseScript2(spT.sp.getMarkdown());
           const pgInfo = paginate(blocks, { fmt: spFormat() });
@@ -154360,7 +155888,7 @@ ${css}
           scheduleCount();
           await new Promise((r) => setTimeout(r, 400));
           check2("[84] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07", /\d+ หน้า/.test($("#wc").textContent), $("#wc").textContent);
-          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S3.spAutoPaginate === false, String(S3.spAutoPaginate));
+          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S6.spAutoPaginate === false, String(S6.spAutoPaginate));
           check2("[96] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E19\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35", /\d+ หน้า/.test($("#wc").textContent));
           check2(
             "[96] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1B\u0E34\u0E14 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19 1 \u0E2B\u0E19\u0E49\u0E32)",
@@ -154369,7 +155897,7 @@ ${css}
           );
           {
             const before = $("#wc").textContent;
-            S3.spAutoPaginate = true;
+            S6.spAutoPaginate = true;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
             check2(
@@ -154382,7 +155910,7 @@ ${css}
               $("#wc").textContent.replace(/^.*·/, "") === before.replace(/^.*·/, ""),
               before + " \u2192 " + $("#wc").textContent
             );
-            S3.spAutoPaginate = false;
+            S6.spAutoPaginate = false;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
           }
@@ -154392,20 +155920,20 @@ ${css}
             { el: "dialogue", text: "\u0E1E\u0E39\u0E14\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(40) }
           ];
           const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
-          S3.spPageRules = { minDialogueLinesAtBottom: 99 };
+          S6.spPageRules = { minDialogueLinesAtBottom: 99 };
           const split22 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[84] \u0E1B\u0E23\u0E31\u0E1A\u0E01\u0E0E minDialogueLinesAtBottom \u2192 \u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07",
             split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && !split22.pages.flatMap((p) => p.blocks).some((b) => b.split === "head")
           );
-          S3.spPageRules = null;
-          S3.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
+          S6.spPageRules = null;
+          S6.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
           const pgTh = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[92] \u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (MORE) \u0E41\u0E25\u0E49\u0E27\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07",
             pgTh.pages.flatMap((p) => p.blocks).some((b) => b.el === "more" && b.text === "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)")
           );
-          S3.spStrings = null;
+          S6.spStrings = null;
           spT.sp.setElement("character");
           smart.items = ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27"];
           smart.sel = 0;
@@ -154429,22 +155957,22 @@ ${css}
           );
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D Tab / Shift+Tab / Enter",
-            spCycleKeys(S3).tab.code === "Tab" && spCycleKeys(S3).shiftTab.shift === true && spCycleKeys(S3).enter.code === "Enter"
+            spCycleKeys(S6).tab.code === "Tab" && spCycleKeys(S6).shiftTab.shift === true && spCycleKeys(S6).enter.code === "Enter"
           );
-          S3.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S3).tab.code === "BracketRight");
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S3).enter.code === "Enter");
+          S6.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S6).tab.code === "BracketRight");
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S6).enter.code === "Enter");
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01",
             spKeyLabel({ code: "Tab", shift: true }) === "Shift+Tab",
             spKeyLabel({ code: "Tab", shift: true })
           );
-          S3.spCycleKeys = null;
-          S3.spCycleEnabled = false;
+          S6.spCycleKeys = null;
+          S6.spCycleEnabled = false;
           spT.sp.setElement("character");
           spT.sp.enter(true);
           check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A \u2192 Enter \u0E44\u0E14\u0E49\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E14\u0E34\u0E21 (\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23)", spT.sp.curElement() === "character");
-          S3.spCycleEnabled = true;
+          S6.spCycleEnabled = true;
           spT.sp.setElement("character");
           spT.sp.enter();
           check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A \u2192 Enter \u0E2B\u0E25\u0E31\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E44\u0E14\u0E49\u0E1A\u0E17\u0E1E\u0E39\u0E14", spT.sp.curElement() === "dialogue");
@@ -155896,7 +157424,7 @@ ${css}
           }
         }
         {
-          S3.homeThumb = 220;
+          S6.homeThumb = 220;
           applySettings();
           check2(
             "#12 \u0E15\u0E31\u0E49\u0E07\u0E02\u0E19\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E43\u0E19 settings \u0E44\u0E14\u0E49 (--home-thumb)",
@@ -155925,7 +157453,7 @@ ${css}
             );
           }
           ovHome.remove();
-          S3.homeThumb = 190;
+          S6.homeThumb = 190;
           applySettings();
         }
         {
@@ -158236,16 +159764,16 @@ ${css}
           [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
         }
       }
-      const S2 = state.settings;
+      const S5 = state.settings;
       {
         check2(
           '[61-1] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D "\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E30 "\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01"',
           GLOBAL_DEFAULTS.openLastProject === false && GLOBAL_DEFAULTS.showHomeOnStartup === false,
           JSON.stringify([GLOBAL_DEFAULTS.openLastProject, GLOBAL_DEFAULTS.showHomeOnStartup])
         );
-        const keepA = S2.openLastProject, keepB = S2.showHomeOnStartup;
+        const keepA = S5.openLastProject, keepB = S5.showHomeOnStartup;
         await toggleOpenLastProject(true);
-        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S2.openLastProject === true);
+        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S5.openLastProject === true);
         const g1 = await bootGlobalSettings();
         check2(
           "[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 global settings (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
@@ -158253,15 +159781,15 @@ ${css}
           JSON.stringify(g1.openLastProject)
         );
         await toggleOpenLastProject(false);
-        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S2.openLastProject === false);
+        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S5.openLastProject === false);
         await toggleShowHomeAlways(true);
         check2(
           '[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E2A\u0E21\u0E2D" \u0E17\u0E33\u0E07\u0E32\u0E19\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01',
-          S2.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
+          S5.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
         );
         await toggleShowHomeAlways(false);
-        S2.openLastProject = keepA;
-        S2.showHomeOnStartup = keepB;
+        S5.openLastProject = keepA;
+        S5.showHomeOnStartup = keepB;
       }
       {
         const scEl = document.querySelector("#tree .scene:not(.add-row)");
@@ -158381,7 +159909,7 @@ ${css}
         );
       }
       {
-        const keepFC = S2.spForceCase;
+        const keepFC = S5.spForceCase;
         toggleSpCase("spForceCase", false);
         const cssOff = document.getElementById("k-sp-format").textContent;
         check2(
@@ -158395,12 +159923,12 @@ ${css}
           /text-transform:uppercase/.test(document.getElementById("k-sp-format").textContent)
         );
         toggleSpCase("spAutoCapitalize", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S2.spAutoCapitalize === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S5.spAutoCapitalize === false);
         toggleSpCase("spAutoCapitalize", true);
         toggleSpCase("spAutoCorrectI", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S2.spAutoCorrectI === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S5.spAutoCorrectI === false);
         toggleSpCase("spAutoCorrectI", true);
-        S2.spForceCase = keepFC;
+        S5.spForceCase = keepFC;
       }
       {
         const AP = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
@@ -159559,8 +161087,8 @@ ${css}
         check2("[67] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27)", pmT.isReadOnly() === false);
         check2("[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C = \u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49", canTearOff("timeline") && canTearOff("kanban"));
         check2(
-          "[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48/\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 = \u0E09\u0E35\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
-          !canTearOff("props") && !canTearOff("docs") && !canTearOff("toolbar"),
+          "[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01 = \u0E09\u0E35\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+          !canTearOff("docs") && !canTearOff("toolbar") && !canTearOff("tree") && !canTearOff("statusbar"),
           [...TEAROFF_PANELS].join()
         );
         showPanel("timeline", { targetId: "docs", side: "left", forceMove: true });
@@ -159654,6 +161182,463 @@ ${css}
         await recallPanel("timeline");
         await wait62(1500);
         check2("[67] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E40\u0E04\u0E2A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49", !isTornOff("timeline") && pmT.isOpen("timeline"));
+        resetPanels();
+        await wait62(320);
+      }
+      {
+        resetPanels();
+        await wait62(300);
+        check2(
+          "[a68] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07 5",
+          ["outline", "props", "comments", "floorplan", "ai-chat"].every((id) => canTearOff(id)),
+          ["outline", "props", "comments", "floorplan", "ai-chat"].filter((id) => !canTearOff(id)).join()
+        );
+        check2(
+          "[a68] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E25\u0E49\u0E27\u0E19 \u0E46 (\u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19 \xB7 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C) \u0E09\u0E35\u0E01\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22",
+          canTearOff("player") && canTearOff("ai-analyzer")
+        );
+        check2(
+          "[a68] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C\u0E22\u0E31\u0E07\u0E09\u0E35\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 (\u0E23\u0E31\u0E1A\u0E23\u0E39\u0E1B\u0E14\u0E49\u0E27\u0E22\u0E01\u0E32\u0E23\u0E25\u0E32\u0E01\u0E02\u0E49\u0E32\u0E21\u0E41\u0E1C\u0E07 \u2014 \u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E32\u0E14\u0E01\u0E31\u0E19)",
+          !canTearOff("gallery-board")
+        );
+        check2(
+          "[a68] \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 panel-sync \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E09\u0E35\u0E01\u0E44\u0E14\u0E49",
+          SCENE_PANELS.size === 5 && [...SCENE_PANELS].every((id) => TEAROFF_PANELS.has(id)),
+          [...SCENE_PANELS].join()
+        );
+        document.querySelector(".scene").click();
+        await wait62(340);
+        const scTab = state.active;
+        check2(
+          "[a68] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+          !!(scTab && isSceneFile(scTab.file)),
+          scTab ? scTab.file : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A"
+        );
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(400);
+        const pBtn2 = document.querySelector(
+          '#app-root .k-panel[data-panel-id="props"] .k-panel-head .k-panel-btn-tearoff'
+        );
+        check2("[a68] \u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u{1F5A5} \u0E41\u0E25\u0E49\u0E27", !!pBtn2);
+        pBtn2.click();
+        await wait62(1700);
+        check2("[a68] \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01\u0E08\u0E23\u0E34\u0E07", isTornOff("props"));
+        const h68 = state._panelWinHealth;
+        check2("[a68] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32", !!h68 && h68.id === "props", JSON.stringify(h68));
+        check2(
+          "[a68] \u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E48\u0E07\u0E09\u0E32\u0E01\u0E17\u0E33\u0E07\u0E32\u0E19 \u2014 \u0E25\u0E39\u0E01\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E2D\u0E22\u0E39\u0E48",
+          !!h68 && samePath(h68.scene, scTab.file),
+          h68 ? h68.scene : "(\u0E44\u0E21\u0E48\u0E21\u0E35)"
+        );
+        check2(
+          '[a68] \u0E25\u0E39\u0E01\u0E27\u0E32\u0E14\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "(\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34)"',
+          !!h68 && h68.drawn && !h68.text.includes("\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39"),
+          h68 ? h68.text : ""
+        );
+        check2(
+          "[a68] \u0E09\u0E32\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 \u2192 \u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E25\u0E47\u0E2D\u0E01)",
+          !!h68 && h68.guarded === false
+        );
+        markDirty(scTab);
+        await wait62(900);
+        const hDirty = state._panelWinHealth;
+        check2(
+          "[a68] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E25\u0E47\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
+          !!hDirty && hDirty.guarded === true,
+          JSON.stringify(hDirty && hDirty.guarded)
+        );
+        await saveTab(scTab);
+        await wait62(1e3);
+        const hSaved = state._panelWinHealth;
+        check2(
+          "[a68] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E41\u0E25\u0E49\u0E27 \u2192 \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07",
+          !!hSaved && hSaved.guarded === false,
+          JSON.stringify(hSaved && hSaved.guarded)
+        );
+        await recallPanel("props");
+        await wait62(1500);
+        check2("[a68] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", !isTornOff("props"));
+        resetPanels();
+        await wait62(300);
+        document.querySelector(".scene").click();
+        await wait62(340);
+        const navTab = state.active;
+        const navOrig = navTab && navTab.editor ? navTab.editor.getMarkdown() : null;
+        if (navTab && navTab.editor) {
+          navTab.editor.setMarkdown("# \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A Navigation\n\n\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A\n");
+          await wait62(140);
+        }
+        refreshOutline();
+        const navMain = document.querySelectorAll("#outline .ol-item").length;
+        check2("[a68] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", navMain > 0, "items=" + navMain);
+        showPanel("outline", { targetId: "docs", side: "left", forceMove: true });
+        await wait62(380);
+        const oBtn = document.querySelector(
+          '#app-root .k-panel[data-panel-id="outline"] .k-panel-head .k-panel-btn-tearoff'
+        );
+        check2("[a68] \u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07 Navigation \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u{1F5A5} \u0E41\u0E25\u0E49\u0E27", !!oBtn);
+        oBtn.click();
+        await wait62(2e3);
+        const hNav = state._panelWinHealth;
+        check2(
+          "[a68] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 Navigation \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32",
+          !!hNav && hNav.id === "outline",
+          JSON.stringify(hNav)
+        );
+        check2(
+          "[a68] \u0E25\u0E39\u0E01\u0E27\u0E32\u0E14\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E08\u0E23\u0E34\u0E07\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E2A\u0E48\u0E07\u0E44\u0E1B\u0E43\u0E2B\u0E49 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E2D\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25)",
+          !!hNav && hNav.items > 0,
+          hNav ? "items=" + hNav.items + " \xB7 " + hNav.text : ""
+        );
+        check2(
+          "[a68] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E25\u0E39\u0E01 = \u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E04\u0E33\u0E19\u0E27\u0E13\u0E44\u0E14\u0E49 \u0E40\u0E1B\u0E4A\u0E30",
+          !!hNav && hNav.items === navMain,
+          hNav ? hNav.items + " vs " + navMain : ""
+        );
+        const view68 = navTab && (navTab.editor || navTab.sp) && (navTab.editor || navTab.sp).view;
+        if (view68) {
+          view68.dispatch(view68.state.tr.setSelection(
+            (await Promise.resolve().then(() => (init_dist4(), dist_exports))).TextSelection.create(view68.state.doc, 1)
+          ));
+          const jumped = await gotoOutlineItem({ file: navTab.file, pos: view68.state.doc.content.size - 2 });
+          check2(
+            '[a68] \u0E04\u0E33\u0E02\u0E2D "\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E1B\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E35\u0E49" \u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07 \u0E17\u0E33\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01',
+            jumped === true && view68.state.selection.from > 1,
+            "from=" + view68.state.selection.from
+          );
+        }
+        await recallPanel("outline");
+        await wait62(1500);
+        check2("[a68] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E41\u0E1C\u0E07 Navigation \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", !isTornOff("outline"));
+        if (navTab && navTab.editor && navOrig !== null) {
+          navTab.editor.setMarkdown(navOrig);
+          navTab.dirty = false;
+          navTab.tabBtn.querySelector(".tab-title").textContent = navTab.title;
+        }
+        resetPanels();
+        await wait62(300);
+        document.querySelector(".scene").click();
+        await wait62(320);
+        const rTab = state.active;
+        if (rTab && rTab.editor) {
+          const origRaw = await kapi.readFile(rTab.file);
+          const origBody = rTab.body;
+          const mark = "\n\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1E\u0E34\u0E48\u0E21 " + Date.now();
+          await kapi.writeFile(rTab.file, origRaw.replace(/\s*$/, "") + mark);
+          rTab.dirty = true;
+          await reloadTabsFromDisk(rTab.file);
+          check2(
+            "[a68] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07 \u0E2B\u0E49\u0E32\u0E21\u0E16\u0E39\u0E01\u0E42\u0E2B\u0E25\u0E14\u0E17\u0E31\u0E1A (\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2A\u0E33\u0E04\u0E31\u0E0D\u0E01\u0E27\u0E48\u0E32)",
+            rTab.body === origBody
+          );
+          rTab.dirty = false;
+          const n68 = await reloadTabsFromDisk(rTab.file);
+          check2(
+            "[a68] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 \u0E42\u0E2B\u0E25\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
+            n68 === 1 && rTab.body.includes("\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1E\u0E34\u0E48\u0E21"),
+            "n=" + n68
+          );
+          check2(
+            "[a68] \u0E41\u0E25\u0E30\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23",
+            (rTab.editor.getMarkdown() || "").includes("\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1E\u0E34\u0E48\u0E21")
+          );
+          await kapi.writeFile(rTab.file, origRaw);
+          await reloadTabsFromDisk(rTab.file);
+          rTab.dirty = false;
+        }
+        setPropsTarget(null, null, null);
+        await drawPanel("props");
+        await wait62(160);
+        check2(
+          "[a68] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E36\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E27\u0E48\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E31\u0E07\u0E15\u0E2D\u0E19\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C",
+          ($("#props-body").textContent || "").includes("\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01"),
+          ($("#props-body").textContent || "").slice(0, 40)
+        );
+        resetPanels();
+        await wait62(300);
+      }
+      {
+        resetPanels();
+        await wait62(340);
+        const pmG = getPanelManager();
+        const grp0 = tabGroupOf(pmG.root, "tree");
+        const gid = grp0 && grp0.id;
+        const tabsIn = (id) => document.querySelectorAll(
+          `#app-root [data-tabs-id="${id}"] .k-tab-bar .k-tab`
+        ).length;
+        check2(
+          "[68r] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19\u0E21\u0E35\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E1C\u0E19\u0E36\u0E01 (\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C + Navigation)",
+          !!gid && tabGroupOf(pmG.root, "outline") === grp0,
+          String(gid)
+        );
+        check2(
+          "[68r] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E2B\u0E47\u0E19 2 \u0E43\u0E1A) \u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19 .k-tab-group + \u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A 2 \u0E43\u0E1A",
+          !!document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 2,
+          "tabs=" + tabsIn(gid)
+        );
+        hidePanel("outline");
+        await wait62(420);
+        check2(
+          "[68r] \u0E1B\u0E34\u0E14\u0E44\u0E1B\u0E43\u0E1A\u0E2B\u0E19\u0E36\u0E48\u0E07 \u2192 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E38\u0E48\u0E21\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E04\u0E32\u0E2D\u0E22\u0E39\u0E48)",
+          !document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 0,
+          "tabs=" + tabsIn(gid)
+        );
+        const soloEl = document.querySelector(`#app-root .k-panel[data-panel-id="tree"]`);
+        check2(
+          "[68r] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07",
+          !!soloEl && soloEl.classList.contains("k-solo-tab") && !!soloEl.querySelector(":scope > .k-panel-head")
+        );
+        check2(
+          "[68r] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E16\u0E37\u0E2D id \u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E27\u0E49 (dock \u0E41\u0E21\u0E48/\u0E15\u0E31\u0E27\u0E0A\u0E35\u0E49\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E22\u0E31\u0E07\u0E2B\u0E32\u0E40\u0E08\u0E2D)",
+          !!soloEl && soloEl.dataset.tabsId === gid,
+          soloEl ? soloEl.dataset.tabsId : "-"
+        );
+        check2(
+          "[68r] ...\u0E41\u0E15\u0E48\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E27\u0E49\u0E04\u0E23\u0E1A \u2014 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E22\u0E31\u0E07\u0E08\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+          !!tabGroupOf(pmG.root, "outline") && isPanelHidden(pmG.root, "outline")
+        );
+        showPanel("outline");
+        await wait62(460);
+        check2(
+          "[68r] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E04\u0E37\u0E19\u0E21\u0E32\u0E04\u0E23\u0E1A\u0E2A\u0E2D\u0E07\u0E43\u0E1A\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+          !!document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 2,
+          "tabs=" + tabsIn(gid)
+        );
+        await tearOffPanel("outline");
+        await wait62(1600);
+        check2(
+          "[68r] \u0E09\u0E35\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 \u2192 \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E01\u0E47\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E0A\u0E48\u0E19\u0E01\u0E31\u0E19",
+          isTornOff("outline") && tabsIn(gid) === 0,
+          "tabs=" + tabsIn(gid)
+        );
+        await recallPanel("outline");
+        await wait62(1600);
+        check2(
+          "[68r] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21",
+          !isTornOff("outline") && tabsIn(gid) === 2,
+          "tabs=" + tabsIn(gid)
+        );
+        resetPanels();
+        await wait62(320);
+      }
+      {
+        resetPanels();
+        await wait62(320);
+        for (const id of ["codex", "history", "record"]) {
+          check2(
+            "[a69] " + id + ": \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E08\u0E23\u0E34\u0E07",
+            !!PANEL_DEFS.find((d) => d.id === id) && !!$("#" + (id === "codex" ? "codex" : id) + "-body")
+          );
+          check2("[a69] " + id + ": \u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49", canTearOff(id));
+          check2("[a69] " + id + ": \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D", !!$("#tb-" + id));
+        }
+        {
+          const mp = await kapi.menuPanelIds();
+          const inMenu = new Set(mp && mp.ids || []);
+          const skipped = new Set(mp && mp.skip || []);
+          const missing = PANEL_DEFS.filter((d) => d.closable !== false && !inMenu.has(d.id) && !skipped.has(d.id)).map((d) => d.id);
+          check2(
+            "[a69] \u0E17\u0E38\u0E01\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49 \u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E02\u0E49\u0E32\u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39 (\u0E2B\u0E23\u0E37\u0E2D\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E22\u0E01\u0E40\u0E27\u0E49\u0E19\u0E44\u0E27\u0E49\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25)",
+            missing.length === 0,
+            "\u0E15\u0E01\u0E2B\u0E25\u0E48\u0E19: " + (missing.join() || "(\u0E44\u0E21\u0E48\u0E21\u0E35)")
+          );
+          const ghost = [...inMenu].filter((id) => !PANEL_DEFS.find((d) => d.id === id));
+          check2("[a69] \u0E40\u0E21\u0E19\u0E39\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07", ghost.length === 0, ghost.join());
+          check2(
+            "[a69] \u0E2A\u0E32\u0E21\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E08\u0E23\u0E34\u0E07",
+            inMenu.has("codex") && inMenu.has("history") && inMenu.has("record")
+          );
+        }
+        for (const id of ["codex", "history", "record"]) {
+          showPanel(id, { targetId: "docs", side: "right", forceMove: true });
+          await renderFeaturePanel(id);
+          await wait62(420);
+          const panel2 = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          const pbody = panel2 && panel2.querySelector(":scope > .k-panel-body");
+          const inner = document.getElementById(id + "-body");
+          const ph = pbody ? pbody.getBoundingClientRect().height : 0;
+          const ih = inner ? inner.getBoundingClientRect().height : 0;
+          check2(
+            "[a69] " + id + ": \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E2A\u0E39\u0E07\u0E40\u0E15\u0E47\u0E21\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07\u0E02\u0E49\u0E32\u0E07\u0E25\u0E48\u0E32\u0E07)",
+            ph > 60 && ih >= ph - 2,
+            `body=${Math.round(ph)} inner=${Math.round(ih)}`
+          );
+          const flow2 = inner && getComputedStyle(inner);
+          check2(
+            "[a69] " + id + ": \u0E15\u0E31\u0E27\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E1B\u0E47\u0E19 flex column + min-height:0 (\u0E01\u0E0E\u0E01\u0E31\u0E19\u0E41\u0E1C\u0E07\u0E22\u0E37\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E38\u0E14)",
+            !!flow2 && flow2.display === "flex" && flow2.flexDirection === "column" && flow2.minHeight === "0px",
+            flow2 ? `${flow2.display}/${flow2.flexDirection}/${flow2.minHeight}` : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+          );
+          hidePanel(id);
+          await wait62(180);
+        }
+        showPanel("codex", { targetId: "docs", side: "left", forceMove: true });
+        await renderFeaturePanel("codex");
+        await wait62(700);
+        const cards = document.querySelectorAll("#codex-body .k-codex-card");
+        check2("[a69] codex: \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E08\u0E32\u0E01\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki \u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", cards.length > 0, "cards=" + cards.length);
+        check2(
+          "[a69] codex: \u0E21\u0E35\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E2B\u0E21\u0E27\u0E14 + \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E27\u0E47\u0E1A",
+          !!document.querySelector("#codex-body .k-codex-cat") && !!document.querySelector("#codex-body .k-codex-exp")
+        );
+        {
+          const qEl = document.querySelector("#codex-body .k-codex-q");
+          const first = cards[0].querySelector(".k-codex-name").textContent;
+          qEl.value = "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07";
+          qEl.dispatchEvent(new Event("input"));
+          await wait62(180);
+          check2(
+            "[a69] codex: \u0E04\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E04\u0E33\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35 \u2192 \u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E01\u0E32\u0E23\u0E4C\u0E14)",
+            document.querySelectorAll("#codex-body .k-codex-card").length === 0
+          );
+          qEl.value = first;
+          qEl.dispatchEvent(new Event("input"));
+          await wait62(180);
+          check2(
+            "[a69] codex: \u0E04\u0E49\u0E19\u0E14\u0E49\u0E27\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07 \u2192 \u0E40\u0E08\u0E2D",
+            document.querySelectorAll("#codex-body .k-codex-card").length >= 1,
+            first
+          );
+          qEl.value = "";
+          qEl.dispatchEvent(new Event("input"));
+          await wait62(150);
+          document.querySelector("#codex-body .k-codex-card").click();
+          await wait62(200);
+          check2(
+            "[a69] codex: \u0E04\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E14\u0E49\u0E32\u0E19\u0E02\u0E49\u0E32\u0E07",
+            !!document.querySelector("#codex-body .k-codex-prev-name")
+          );
+        }
+        {
+          const { buildCodexSite: buildCodexSite2 } = await Promise.resolve().then(() => (init_codex_build(), codex_build_exports));
+          const ents = await listEntities(state.root);
+          const files = buildCodexSite2(ents, { siteTitle: state.title });
+          const out2 = await kapi.join(state.root, "codex-test");
+          await kapi.mkdir(out2);
+          for (const f of files) await kapi.writeFile(await kapi.join(out2, f.name), f.text);
+          const wrote = await kapi.listFiles(out2, ".html");
+          check2(
+            "[a69] codex: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E27\u0E47\u0E1A\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32",
+            wrote.length === files.length && wrote.includes("index.html"),
+            `\u0E40\u0E02\u0E35\u0E22\u0E19 ${wrote.length}/${files.length}`
+          );
+          const idx5 = await kapi.readFile(await kapi.join(out2, "index.html"));
+          check2(
+            "[a69] codex: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E40\u0E2D\u0E07 (\u0E21\u0E35 DOCTYPE + UTF-8 + \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32)",
+            idx5.startsWith("<!DOCTYPE html>") && idx5.includes('charset="UTF-8"') && idx5.includes('id="q"')
+          );
+          check2(
+            "[a69] codex: \u0E44\u0E21\u0E48\u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E32\u0E01\u0E2D\u0E34\u0E19\u0E40\u0E17\u0E2D\u0E23\u0E4C\u0E40\u0E19\u0E47\u0E15\u0E40\u0E25\u0E22 (\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E1F\u0E44\u0E25\u0E19\u0E4C\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07)",
+            !/(src|href)="https?:/.test(idx5)
+          );
+          await kapi.remove(out2);
+        }
+        hidePanel("codex");
+        await wait62(200);
+        {
+          const { loadRecords: loadRecords2 } = await Promise.resolve().then(() => (init_record_ui(), record_ui_exports));
+          const RD = await Promise.resolve().then(() => (init_record_data(), record_data_exports));
+          const p = await kapi.join(state.root, RD.RECORD_FILE);
+          const day = RD.dayKey(/* @__PURE__ */ new Date());
+          const seed = RD.addEntry(
+            RD.migrate(null),
+            RD.newEntry("t1", day, { text: "\u0E40\u0E17\u0E2A: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E36\u0E48\u0E07", words: 123, mood: "ok", tags: ["\u0E40\u0E17\u0E2A"] })
+          );
+          await kapi.writeFile(p, JSON.stringify(seed, null, 2));
+          resetRecords();
+          await loadRecords2();
+          showPanel("record", { targetId: "docs", side: "right", forceMove: true });
+          await renderFeaturePanel("record");
+          await wait62(450);
+          check2(
+            "[a69] record: \u0E2D\u0E48\u0E32\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E21\u0E32\u0E41\u0E2A\u0E14\u0E07\u0E08\u0E23\u0E34\u0E07",
+            (document.querySelector("#record-body .k-rec-card-text") || {}).textContent === "\u0E40\u0E17\u0E2A: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E36\u0E48\u0E07",
+            (document.querySelector("#record-body .k-rec-card-text") || {}).textContent || "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14"
+          );
+          check2(
+            "[a69] record: \u0E08\u0E31\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E15\u0E32\u0E21\u0E27\u0E31\u0E19 + \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E34\u0E15\u0E34",
+            !!document.querySelector("#record-body .k-rec-day-head") && !!document.querySelector("#record-body .k-rec-stat")
+          );
+          check2("[a69] record: \u0E0A\u0E48\u0E2D\u0E07\u0E08\u0E14\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E43\u0E0A\u0E49", !!document.querySelector("#record-body .k-rec-text"));
+          const csv = RD.toCsv(RD.migrate(await kapi.readJson(p)).entries);
+          check2(
+            "[a69] record: CSV \u0E21\u0E35 BOM + \u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07\u0E44\u0E17\u0E22 + \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E23\u0E1A",
+            csv.charCodeAt(0) === 65279 && csv.includes("\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48") && csv.includes("\u0E40\u0E17\u0E2A: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E36\u0E48\u0E07")
+          );
+          await kapi.remove(p);
+          resetRecords();
+          hidePanel("record");
+          await wait62(200);
+        }
+        {
+          const HDm = await Promise.resolve().then(() => (init_history_data(), history_data_exports));
+          await kapi.historyConfig({ root: state.root, limit: 32, enabled: true });
+          const probe = await kapi.join(state.root, "Memos", "k2-history-probe.md");
+          await kapi.writeFile(probe, "\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07");
+          await wait62(120);
+          const j1 = HDm.migrate(await kapi.historyList());
+          const seqAfterCreate = j1.seq;
+          check2("[a69] history: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E08\u0E23\u0E34\u0E07", j1.entries.length > 0, "entries=" + j1.entries.length);
+          await kapi.writeFile(probe, "\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07");
+          await wait62(120);
+          const j2 = HDm.migrate(await kapi.historyList());
+          check2(
+            "[a69] history: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E0B\u0E49\u0E33 \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E35\u0E01\u0E2B\u0E19\u0E36\u0E48\u0E07",
+            j2.seq === seqAfterCreate + 1,
+            `${seqAfterCreate} \u2192 ${j2.seq}`
+          );
+          check2(
+            '[a69] history: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E08\u0E33 "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32" \u0E44\u0E27\u0E49 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)',
+            !!(j2.entries[j2.entries.length - 1].files[0] || {}).before
+          );
+          check2("[a69] history: \u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07", await kapi.readFile(probe) === "\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07");
+          const rv = await kapi.historyRevert(seqAfterCreate);
+          await wait62(200);
+          check2(
+            "[a69] history: \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 (\u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E04\u0E37\u0E19 true)",
+            !!rv && rv.ok === true && rv.restored >= 1,
+            JSON.stringify(rv)
+          );
+          check2(
+            "[a69] history: **\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07**",
+            await kapi.readFile(probe) === "\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07",
+            await kapi.readFile(probe)
+          );
+          const j3 = HDm.migrate(await kapi.historyList());
+          check2(
+            "[a69] history: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E2A\u0E21\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27",
+            j3.entries.every((e) => e.seq <= seqAfterCreate) && j3.entries.length < j2.entries.length,
+            `\u0E40\u0E2B\u0E25\u0E37\u0E2D ${j3.entries.length} \u0E08\u0E32\u0E01 ${j2.entries.length} \xB7 \u0E2A\u0E39\u0E07\u0E2A\u0E38\u0E14 ${j3.entries.length ? j3.entries[j3.entries.length - 1].seq : 0}`
+          );
+          check2(
+            "[a69] history: \u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A seq \u0E44\u0E21\u0E48\u0E16\u0E2D\u0E22\u0E2B\u0E25\u0E31\u0E07 (\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E43\u0E0A\u0E49\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E08\u0E01\u0E0B\u0E49\u0E33)",
+            j3.seq >= j2.seq,
+            `${j2.seq} \u2192 ${j3.seq}`
+          );
+          const rv2 = await kapi.historyRevert(seqAfterCreate - 1);
+          await wait62(200);
+          check2(
+            "[a69] history: \u0E22\u0E49\u0E2D\u0E19\u0E44\u0E1B\u0E01\u0E48\u0E2D\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E16\u0E39\u0E01\u0E2A\u0E23\u0E49\u0E32\u0E07 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E2D\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B",
+            await kapi.exists(probe) === false,
+            JSON.stringify(rv2)
+          );
+          showPanel("history", { targetId: "docs", side: "right", forceMove: true });
+          await renderFeaturePanel("history");
+          await wait62(420);
+          check2(
+            '[a69] history: \u0E41\u0E1C\u0E07\u0E27\u0E32\u0E14\u0E44\u0E17\u0E21\u0E4C\u0E44\u0E25\u0E19\u0E4C + \u0E41\u0E16\u0E27\u0E1A\u0E19\u0E2A\u0E38\u0E14\u0E04\u0E37\u0E2D "\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49"',
+            !!document.querySelector("#history-body .k-hist-now") && !!document.querySelector("#history-body .k-hist-list")
+          );
+          check2(
+            "[a69] history: \u0E1A\u0E2D\u0E01\u0E42\u0E04\u0E27\u0E15\u0E32\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49",
+            (document.querySelector("#history-body .k-hist-count") || {}).textContent.includes("/32"),
+            (document.querySelector("#history-body .k-hist-count") || {}).textContent || ""
+          );
+          check2("[a69] history: \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 = 32 \u0E04\u0E23\u0E31\u0E49\u0E07", HDm.DEFAULT_HISTORY_LIMIT === 32);
+          hidePanel("history");
+          await wait62(200);
+          await kapi.historyConfig({ root: state.root, limit: 32, enabled: false });
+        }
         resetPanels();
         await wait62(320);
       }
@@ -160364,10 +162349,10 @@ ${css}
           CAPS_ELEMENTS.includes("character") && CAPS_ELEMENTS.includes("scene"),
           CAPS_ELEMENTS.join(",")
         );
-        const keepStyles = JSON.parse(JSON.stringify(S2.spStyles || {}));
-        const keepFC11 = S2.spForceCase;
-        S2.spForceCase = true;
-        S2.spStyles = {};
+        const keepStyles = JSON.parse(JSON.stringify(S5.spStyles || {}));
+        const keepFC11 = S5.spForceCase;
+        S5.spForceCase = true;
+        S5.spStyles = {};
         applySettings();
         check2("[62-11] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19: \u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E2B\u0E0D\u0E48", elementCaps(spFormat(), "character"));
         toggleElementCaps("character", false);
@@ -160384,14 +162369,14 @@ ${css}
         );
         toggleElementCaps("character", true);
         check2("[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", elementCaps(spFormat(), "character"));
-        S2.spForceCase = false;
+        S5.spForceCase = false;
         applySettings();
         check2("[62-11] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 = \u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E25\u0E34\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A", !elementCaps(spFormat(), "scene"));
         toggleElementCaps("scene", true);
         check2(
           "[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E19\u0E34\u0E14\u0E02\u0E13\u0E30\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 \u2192 \u0E1B\u0E25\u0E38\u0E01\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
-          S2.spForceCase !== false && elementCaps(spFormat(), "scene"),
-          String(S2.spForceCase)
+          S5.spForceCase !== false && elementCaps(spFormat(), "scene"),
+          String(S5.spForceCase)
         );
         const src11 = {};
         const out11 = setElementCaps(src11, "character", false);
@@ -160399,8 +162384,8 @@ ${css}
           "[62-11] setElementCaps \u0E04\u0E37\u0E19 object \u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
           Object.keys(src11).length === 0 && out11.character.screen.caps === false
         );
-        S2.spStyles = keepStyles;
-        S2.spForceCase = keepFC11;
+        S5.spStyles = keepStyles;
+        S5.spForceCase = keepFC11;
         applySettings();
       }
       {
@@ -161001,7 +162986,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, _mainSyncBound, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_editor();
@@ -161081,10 +163066,14 @@ ${css}
       init_panel_drag();
       init_panel_ui();
       init_panel_ui();
+      init_panel_sync();
       init_panel_renderer();
       init_split_ui();
       init_auto_link_ui();
       init_project_scan();
+      init_codex_ui();
+      init_history_ui();
+      init_record_ui();
       init_event_ui();
       init_event_queue();
       init_ai_ui();
@@ -161137,6 +163126,14 @@ ${css}
         spForceCase: "\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E15\u0E32\u0E21\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E1A\u0E17\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19",
         spAutoCapitalize: "\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E43\u0E2B\u0E0D\u0E48\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
         spAutoCorrectI: "\u0E41\u0E01\u0E49 i \u0E40\u0E14\u0E35\u0E48\u0E22\u0E27 \u0E46 \u0E40\u0E1B\u0E47\u0E19 I \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34"
+      };
+      SCENE_PANEL_DRAW = {
+        outline: () => {
+          refreshOutline();
+          return true;
+        },
+        props: () => renderPropsPanel(),
+        comments: () => renderCommentPanel($("#comments-body"))
       };
       _mainSyncBound = false;
       treeScope = null;
@@ -161203,8 +163200,12 @@ ${css}
         "tb-ai-chat",
         "tb-plug",
         "tb-ai-analyzer",
-        "tb-md-codes"
+        "tb-md-codes",
         // [alpha.60r3 ข้อ 5 · ข้อ 6]
+        // [alpha.69] สามแผงใหม่ทำงานระดับโปรเจกต์ทั้งหมด — ไม่ต้องมีฉากเปิดอยู่ก็กดได้
+        "tb-codex",
+        "tb-history",
+        "tb-record"
       ]);
       _smartJob = null;
       countJob = null;
@@ -161250,7 +163251,11 @@ ${css}
         floorplan: () => renderFloorPlanPanel(),
         // [alpha.66 ข้อ 1+9] ผังแตกสาย + โหมดทดลองเล่น — เดิมผังเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน
         branch: () => renderBranchingPanel(),
-        player: () => renderPlayerPanel()
+        player: () => renderPlayerPanel(),
+        // [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน
+        codex: () => renderCodexPanel($("#codex-body")),
+        history: () => renderHistoryPanel($("#history-body")),
+        record: () => renderRecordPanel($("#record-body"))
       };
       _featInFlight = /* @__PURE__ */ new Map();
       setPanelShowHook((pid) => {
@@ -161454,6 +163459,13 @@ ${css}
           togglePanel("dashboard");
           refreshToolbar();
         };
+        for (const [btn, pid] of [["#tb-codex", "codex"], ["#tb-history", "history"], ["#tb-record", "record"]]) {
+          const b = $(btn);
+          if (b) b.onclick = () => {
+            togglePanel(pid);
+            refreshToolbar();
+          };
+        }
         $("#tb-ai").onclick = () => openAIAssistant();
         $("#tb-ai-analyzer") && ($("#tb-ai-analyzer").onclick = () => handleCommand("ai-analyzer"));
         $("#tb-md-codes") && ($("#tb-md-codes").onclick = () => handleCommand("markdown-codes"));

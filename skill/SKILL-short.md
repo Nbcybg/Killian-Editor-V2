@@ -18,7 +18,7 @@ description: Build, maintain, extend, and debug Killian 2 (คิเลียน
 
 ```bash
 cd "/Users/kaipleng/Desktop/Killian_Editor-master 2"   # ← ที่ทำงานหลัก (มี node_modules ครบ)
-git log --oneline -1        # ล่าสุด: 5afcc47 alpha.66r12
+git log --oneline -1        # ล่าสุด: alpha.69r (tear-off เฟส 2 + Codex/History/Record)
 ```
 
 - GitHub: `JabCrossHook/Killian_Editor` · สาขาหลัก `master` · สำรองก่อนรอบแผง: `backup/master-alpha66r-2026-08-11`
@@ -79,7 +79,7 @@ git log --oneline -1        # ล่าสุด: 5afcc47 alpha.66r12
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,421 checks** (alpha.66r12) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,526 checks** (alpha.69r) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (alpha.39, รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
@@ -209,7 +209,19 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.66r12** · e2e ALL OK 2,421 · commit `5afcc47` บน master)
+## เวอร์ชัน (ล่าสุด **alpha.69r** · e2e ALL OK 2,526 · unit panel 286 + panel-sync 67 + panels69 102)
+
+**.67–.68** Tear-off: ฉีกแผงออกเป็นหน้าต่าง OS จริง — .68 เปิดครบถึงแผงที่ผูกกับ "ฉากที่เปิดอยู่"
+ผ่าน `panels/panel-sync.js` (หน้าต่างหลักประกาศฉาก → ลูกประกอบ **แท็บจำลอง** วางที่ `state.active`
+โค้ดเดิม ~890 จุดใช้ได้ทันที) · **.68r** กลุ่มแท็บที่ผนึกอยู่ เหลือแท็บเดียวแล้วต้องเลิกเป็นกลุ่ม
+(บั๊กเก่าตั้งแต่ .62: ปิดแผง = ติดธง `hidden` แต่ `collapse()` นับจาก `children.length` ซึ่งไม่ลด)
+
+**.69** แผงใหม่ 3 ตัว: **Codex** (สารานุกรม + ส่งออกเว็บแบบ Fandom) · **History**
+(copy-on-write ที่ `H('fs:*')` ใน main → ย้อนกลับได้จริง · เก็บ 32 ครั้ง) · **Record** (จดรายวัน + CSV)
+· **.69r** ทำเสร็จแล้วผู้ใช้หาไม่เจอ เพราะเมนู native เป็นรายการเขียนมือใน main.js —
+แก้เป็น `MENU_PANELS` ก้อนเดียว + เปิดช่อง `menu:panelIds` ให้ e2e เทียบกับ `PANEL_DEFS` ทุกรอบ
+
+## เวอร์ชัน (alpha.66r12 · e2e ALL OK 2,421 · commit `5afcc47` บน master)
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
 .24 batch 8 (drag-move explorer, panel snap, split compare, version tracking, scene lock, screenplay Final Draft look, screenplay images, wiki links) · .25–.27 **Planner board** (fabric.js) · .28 **floating windows** · .29 memo-in-chapter + scoped search

@@ -48,7 +48,7 @@ async function collectPlacedScenes() {
   const out = [];
   if (!state.root) return out;
   for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
-    if (['Wiki','Bible','Images','Memos','Recycle','Snapshots','Backups','Plugins','Research'].includes(sec)) continue;
+    if (['Wiki','Bible','Images','Memos','Recycle','Snapshots', '.k2history','Backups','Plugins','Research'].includes(sec)) continue;
     const sp = await kapi.join(state.root, sec);
     if (!(await kapi.exists(await kapi.join(sp, 'section.json')))) continue;
     const dr = await kapi.join(sp, 'Draft');

@@ -142,6 +142,10 @@ import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePan
          // [alpha.67] tear-off: แผงเป็นหน้าต่าง OS จริง
          mountPanelWindow, tearOffPanel, recallPanel, isTornOff, tornOffIds,
          canTearOff, TEAROFF_PANELS } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
+// [alpha.68] tear-off เฟส 2: ช่องส่ง "ฉากที่เปิดอยู่" ข้ามหน้าต่าง (รูปร่างข้อความ + กฎ — บริสุทธิ์)
+import { SCENE_PANELS, writesScene, sceneMsg, remoteTab, sceneChanged, canEditScene,
+         outlineMsg, gotoMsg, wantSceneMsg, anyNeedsScene, tabsToReload,
+         samePath, isSceneFile } from './panels/panel-sync.js';
 import { wrapDesc as panelWrapDesc } from './panels/panel-renderer.js';
 import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSplitSystem,
          initSplitSystem, syncActiveSplit, openInSplit, closeTabInSplit, splitDir,
@@ -149,6 +153,10 @@ import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSpl
 import { ensureAutoLink, getBacklinksFor, renderBacklinksTab, resetAutoLink,
          rebuildAutoLink, updateSceneLink, autoLinkReady } from './world-story/auto-link-ui.js';
 import { findScenePath, listEntities } from './project-scan.js';
+// [alpha.69] แผงใหม่ 3 ตัว — ตรรกะบริสุทธิ์แยกไว้ที่ *-data/*-build (มี unit test) · ที่นี่คือฝั่ง UI
+import { renderCodexPanel, resetCodex } from './codex/codex-ui.js';
+import { renderHistoryPanel, resetHistory, configHistory } from './history/history-ui.js';
+import { renderRecordPanel, resetRecords } from './record/record-ui.js';
 import { setAutoSync, isAutoSyncOn, renderAutoSyncSection, resetTaskEngine } from './auto-task/event-ui.js';
 // [alpha.60r3 ข้อ 7] EventBus ก้อนเดียวที่ปลั๊กอินทุกตัวใช้ร่วมกัน (k2.on / k2.emit)
 import { EventBus } from './auto-task/event-queue.js';
@@ -1457,12 +1465,15 @@ async function loadProjectInner(root) {
   preloadLangFontUrls().then(() => applySettings()).catch(() => {});
   loadSpellDict(root);                               // โหลดคลังคำตรวจคำผิด (async, ไม่บล็อก)
   warmInverse();                                     // ผังความสัมพันธ์ (แผง Story Network ใช้)
+  // [alpha.69] เปิดสมุดประวัติของโปรเจกต์นี้ — ต้องมาก่อนการเขียนไฟล์ครั้งแรกของรอบนี้
+  // (main เป็นคนจด · ก่อนถูกตั้งค่า main จะไม่จดอะไรเลย ทั้งตอนยังไม่เปิดโปรเจกต์และตอนเทส)
+  await configHistory();
   // [alpha.67] หน้าต่างแผงที่ฉีกออกมา: หยุดตรงนี้ — ที่เหลือเป็นของหน้าต่างหลักล้วน ๆ
   // (เทมเพลต · ปลั๊กอิน · ระบบเลย์เอาต์แผง · กู้แท็บที่เปิดค้าง · แดชบอร์ดตั้งต้น · autosync)
   // ทั้งหมดเขียนสถานะระดับโปรแกรม/ไฟล์ทับกัน และหน้าต่างนี้ก็ไม่มี UI ให้ใช้อยู่แล้ว
   if (PANEL_WIN) {
     mountPanelWindow(PANEL_WIN);
-    await renderFeaturePanel(PANEL_WIN);
+    await drawPanelWindow();
     clearBusy();
     setStatus('เปิดโปรเจกต์: ' + state.title);
     reportPanelWindowHealth();
@@ -1613,6 +1624,11 @@ export async function bootPanelWindow() {
   if (!root) { setStatus('หน้าต่างแผง: ไม่ได้รับที่อยู่โปรเจกต์'); return false; }
   await loadProject(root);
   bindPanelWindowSync();
+  // [alpha.68] แผงที่ผูกกับฉากต้องรู้ตั้งแต่วินาทีแรกว่าตอนนี้ฉากไหนเปิดอยู่ที่หน้าต่างหลัก
+  // (ผูกช่องรับก่อนค่อยขอ — ไม่งั้นคำตอบวิ่งมาถึงก่อนที่จะมีใครฟัง)
+  if (SCENE_PANELS.has(panelId(PANEL_WIN))) {
+    try { kapi.broadcast && kapi.broadcast(wantSceneMsg(PANEL_WIN)); } catch {}
+  }
   return true;
 }
 
@@ -1637,10 +1653,12 @@ export function handleSyncMessage(msg) {
   if (!msg || !msg.kind) return false;
   if (msg.kind === 'project-changed') {
     if (!syncTouchesProject(msg)) return false;
-    if (PANEL_WIN) { renderFeaturePanel(PANEL_WIN); return true; }
+    if (PANEL_WIN) { drawPanelWindow(); return true; }
     // หน้าต่างหลัก: แผงฟีเจอร์ที่เปิดอยู่อาจแสดงข้อมูลเก่าที่หน้าต่างลูกเพิ่งแก้
     renderOpenFeaturePanels().catch(() => {});
     buildTree().catch(() => {});
+    // [alpha.68] แท็บที่เปิดค้างอยู่ก็ล้าสมัยได้ — ลูกเพิ่งเขียนคอมเมนต์/คุณสมบัติลงไฟล์เดียวกัน
+    reloadTabsFromDisk(msg.path).catch(() => {});
     return true;
   }
   if (msg.kind === 'panelwin-ready' && !PANEL_WIN) {
@@ -1655,7 +1673,176 @@ export function handleSyncMessage(msg) {
     activate(msg.file).then(() => { try { window.focus(); } catch {} }).catch(() => {});
     return true;
   }
+  // ───────── [alpha.68] tear-off เฟส 2: ช่อง "ฉากที่เปิดอยู่" ─────────
+  if (msg.kind === 'want-scene' && !PANEL_WIN) {
+    // ลูกเพิ่งบูตเสร็จ → ส่งสถานะปัจจุบันให้ทันที (ไม่งั้นต้องรอผู้ใช้สลับแท็บก่อนแผงถึงจะมีข้อมูล)
+    broadcastActiveScene(true);
+    if (panelId(msg.id) === 'outline') scheduleOutline();
+    return true;
+  }
+  if (msg.kind === 'active-scene' && PANEL_WIN) { applyRemoteScene(msg); return true; }
+  if (msg.kind === 'outline' && PANEL_WIN) {
+    state._remoteOutline = msg;
+    if (panelId(PANEL_WIN) === 'outline') drawPanelWindow();
+    return true;
+  }
+  if (msg.kind === 'goto-outline' && !PANEL_WIN) { gotoOutlineItem(msg); return true; }
   return false;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// [alpha.68] Tear-off เฟส 2 — แผงที่ผูกกับ "ฉากที่เปิดอยู่" ฉีกออกไปอยู่คนละหน้าต่างได้
+//
+// กำแพงของ .67 คือหน้าต่างลูกไม่มีแท็บเอกสาร → `state.active` เป็น null ตลอดกาล
+// แผงคุณสมบัติ/คอมเมนต์/ผังพื้นที่/Navigation จึงขึ้นแต่ "(เปิดฉากก่อน…)"
+//
+// ทางออก: หน้าต่างหลักประกาศว่าตอนนี้ฉากไหนเปิดอยู่ แล้วลูกประกอบ **แท็บจำลอง** วางที่ `state.active`
+// โค้ดเดิมทุกบรรทัดที่อ่าน `state.active.file` ใช้ได้ทันทีโดยไม่ต้องแก้ (ดูเหตุผลใน panels/panel-sync.js)
+// ───────────────────────────────────────────────────────────────────────
+
+// แผงที่ผูกกับฉากแต่ **ไม่ได้อยู่ใน FEATURE_PANELS** — ตัววาดของพวกนี้ถูกเรียกจากทางสลับแท็บ
+// (activate → refreshOutline/refreshCommentsPanel · คลิกฉาก → setPropsTarget) ไม่ใช่จากตารางแผง
+const SCENE_PANEL_DRAW = {
+  outline:  () => { refreshOutline(); return true; },
+  props:    () => renderPropsPanel(),
+  comments: () => renderCommentPanel($('#comments-body')),
+};
+/** วาดแผงตาม id — ทางผ่านเดียวที่รู้จักทั้งแผงฟีเจอร์และแผงที่ผูกกับฉาก */
+export function drawPanel(id) {
+  const pid = panelId(id);
+  const f = SCENE_PANEL_DRAW[pid];
+  return f ? Promise.resolve().then(f).catch((e) => log('error', 'วาดแผง ' + pid + ' ล้มเหลว', e))
+           : renderFeaturePanel(pid);
+}
+/** วาดแผงของหน้าต่างนี้ใหม่ (หน้าต่างแผงเท่านั้น — มีแผงเดียว) */
+function drawPanelWindow() {
+  if (!PANEL_WIN) return Promise.resolve(false);
+  return Promise.resolve(drawPanel(PANEL_WIN)).then((r) => {
+    applySceneGuard();
+    // รายงานสภาพทุกครั้งที่วาดใหม่ ไม่ใช่แค่ตอนบูต — หน้าต่างหลัก (และเทส) จะได้เห็นผลของ
+    // ข้อความที่เพิ่งส่งมา (ฉากใหม่ / ล็อกอ่านอย่างเดียว) จากของจริง ไม่ใช่จากการเดา
+    reportPanelWindowHealth();
+    return r;
+  });
+}
+
+/**
+ * หน้าต่างหลัก → ประกาศฉากที่เปิดอยู่
+ * ไม่มีหน้าต่างแผงที่ต้องรู้ฉากเปิดอยู่ = ไม่ทำอะไรเลย (การใช้งานปกติจึงไม่เสียอะไรสักนิด)
+ */
+export function broadcastActiveScene(force) {
+  if (PANEL_WIN) return false;
+  if (!force && !anyNeedsScene(tornOffIds())) return false;
+  const msg = sceneMsg(state.active, { root: state.root || '' });
+  // ฉากที่เปิดอยู่ไม่ใช่ไฟล์ฉาก (ดูแดชบอร์ด/Wiki อยู่) → ยึด "ฉากล่าสุดที่แก้" เหมือน sceneCtx ในหน้าต่างหลัก
+  if (!msg.file && state.lastSceneFile) {
+    const last = state.tabs.get(state.lastSceneFile);
+    const m2 = sceneMsg(last || { file: state.lastSceneFile, title: '' }, { root: state.root || '' });
+    if (m2.file) { m2.stale = !last; Object.assign(msg, m2); }
+  }
+  state._lastSceneMsg = msg;
+  try { kapi.broadcast && kapi.broadcast(msg); } catch {}
+  return true;
+}
+/** หน้าต่างแผง → รับฉากที่เปิดอยู่มาใช้เป็น state.active แล้ววาดใหม่ */
+async function applyRemoteScene(msg) {
+  if (!PANEL_WIN) return false;
+  if (!sceneChanged(state._remoteScene, msg)) return false;
+  state._remoteScene = msg;
+  state.active = remoteTab(msg);
+  if (msg.file) state.lastSceneFile = msg.file;
+  // แผงคุณสมบัติต้องรู้ลึกถึง "แถวฉากใน scenes.json" ไม่ใช่แค่ชื่อไฟล์ — หาให้จากไฟล์เอง
+  if (panelId(PANEL_WIN) === 'props') {
+    const ctx = msg.file ? await sceneCtx(msg.file) : null;
+    setPropsTarget(ctx && ctx.dPath, ctx && ctx.ch, ctx && ctx.row);
+  }
+  await drawPanelWindow();
+  return true;
+}
+/**
+ * ตาข่ายกันเขียนชนกัน — ระหว่างที่หน้าต่างหลักยัง **ไม่บันทึก** ฉากนี้ หน้าต่างแผงอ่านได้อย่างเดียว
+ *
+ * เพราะคอมเมนต์กับคุณสมบัติฉากเขียนลงไฟล์เดียวกับที่หน้าต่างหลักเปิดค้างอยู่ — ถ้าปล่อยให้แก้ทั้งสองฝั่ง
+ * การกด Ctrl+S ที่หน้าต่างหลักครั้งถัดไปจะทับของที่ลูกเพิ่งเขียนทิ้งทั้งหมด (เงียบ ๆ ด้วย)
+ * ทำที่ชั้นนอกทีเดียวแบบนี้ ตัววาดของแต่ละแผงจึงไม่ต้องรู้เรื่อง tear-off เลยสักตัว
+ */
+function applySceneGuard() {
+  if (!PANEL_WIN) return false;
+  // เฉพาะแผงที่ **เขียนไฟล์ของฉาก** เท่านั้น — Navigation อ่านอย่างเดียวอยู่แล้ว
+  // และ AI ผู้ช่วยเขียนเขียนลง Sessions/ ของตัวเอง (ล็อกไปก็มีแต่กวนผู้ใช้เปล่า ๆ)
+  if (!writesScene(panelId(PANEL_WIN))) return false;
+  const body = document.querySelector('.k-panelwin > .k-panel-body');
+  if (!body) return false;
+  const old = body.querySelector('.k-scene-guard');
+  if (old) old.remove();
+  body.classList.remove('k-guarded');
+  const msg = state._remoteScene;
+  if (!msg || !msg.file || canEditScene(msg)) return false;
+  body.classList.add('k-guarded');
+  const bar = el('div', 'k-scene-guard',
+    t('panel.sceneGuard', '⏸ หน้าต่างหลักยังไม่ได้บันทึก') + ' "' + (msg.title || t('panel.thisScene', 'ฉากนี้'))
+    + '" — ' + t('panel.sceneGuard2', 'ดูได้อย่างเดียวจนกว่าจะกดบันทึกที่นั่น'));
+  body.insertBefore(bar, body.firstChild);
+  for (const n of body.querySelectorAll('input, textarea, select, button')) {
+    if (n.closest('.k-scene-guard')) continue;
+    n.disabled = true;
+  }
+  return true;
+}
+/** หน้าต่างแผง Navigation คลิกหัวข้อ → ให้หน้าต่างหลักกระโดดไปตำแหน่งนั้นในเอกสารจริง */
+function requestGotoInMain(it) {
+  if (!PANEL_WIN) return false;
+  const file = (state._remoteScene && state._remoteScene.file) || '';
+  try { kapi.broadcast && kapi.broadcast(gotoMsg(file, it)); } catch {}
+  setStatus(t('panel.jumpedInMain', 'กระโดดไปตำแหน่งนั้นที่หน้าต่างหลักแล้ว'));
+  return true;
+}
+/** หน้าต่างหลัก: ทำตามคำขอกระโดดของหน้าต่าง Navigation */
+async function gotoOutlineItem(msg) {
+  if (PANEL_WIN || !msg) return false;
+  if (msg.file && (!state.active || !samePath(state.active.file, msg.file))) {
+    try { await activate(msg.file); } catch { return false; }
+  }
+  const t = state.active;
+  if (!t) return false;
+  const view = (t.sp || t.editor) && (t.sp || t.editor).view;
+  if (view && typeof msg.pos === 'number') {
+    const { TextSelection } = await import('prosemirror-state');
+    view.dispatch(view.state.tr.setSelection(
+      TextSelection.create(view.state.doc, msg.pos + 1)).scrollIntoView());
+    view.focus();
+  } else if (t.plain && typeof msg.line === 'number') {
+    const lines = t.plain.value.split('\n');
+    let off = 0; for (let i = 0; i < msg.line; i++) off += lines[i].length + 1;
+    t.plain.focus(); t.plain.setSelectionRange(off, off);
+  } else return false;
+  try { window.focus(); } catch {}
+  return true;
+}
+/**
+ * หน้าต่างหลัก: ไฟล์ถูกแก้จากหน้าต่างแผง → โหลดเนื้อของแท็บที่เปิดค้างอยู่ใหม่
+ * **แท็บที่ยังพิมพ์ค้าง (dirty) ห้ามแตะ** — งานที่ยังไม่บันทึกของผู้ใช้สำคัญกว่าเสมอ
+ * (และแผงที่ฉีกออกไปก็ถูกล็อกอ่านอย่างเดียวอยู่แล้วตอนที่นี่ dirty — ดู applySceneGuard)
+ */
+async function reloadTabsFromDisk(changedPath) {
+  if (PANEL_WIN || !changedPath) return 0;
+  const hits = tabsToReload([...state.tabs.values()], changedPath);
+  let n = 0;
+  for (const tab of hits) {
+    if (!tab.editor && !tab.sp && !tab.plain) continue;      // Wiki/แดชบอร์ด/ผัง มีทางรีเฟรชของตัวเอง
+    try {
+      const { meta, body } = parseMdFile(await kapi.readFile(tab.file));
+      if (body === tab.body) continue;                       // เปลี่ยนแต่คอมเมนต์ท้ายไฟล์ = เนื้อเท่าเดิม
+      tab.meta = meta; tab.body = body;
+      if (tab.editor) tab.editor.setMarkdown(body);
+      else if (tab.sp) tab.sp.setMarkdown(body);
+      else tab.plain.value = body;
+      n++;
+    } catch (e) { log('warn', '[แผง] โหลดไฟล์ที่หน้าต่างแผงแก้ไม่สำเร็จ: ' + tab.file, e); }
+  }
+  if (n) { setStatus(t('panel.reloadedFromPanelWin', 'อัปเดตเนื้อฉากจากหน้าต่างแผงแล้ว') + ' (' + n + ')'); scheduleOutline(); }
+  refreshCommentsPanel();
+  return n;
 }
 /** หน้าต่างหลักรับสัญญาณจากหน้าต่างแผง (ผูกครั้งเดียวตอนเริ่มโปรแกรม) */
 let _mainSyncBound = false;
@@ -1675,6 +1862,7 @@ export function bindMainWindowSync() {
 export function reportPanelWindowHealth() {
   if (!PANEL_WIN) return false;
   const bodyEl = document.querySelector('.k-panelwin > .k-panel-body');
+  const scene = state._remoteScene || null;
   const health = {
     kind: 'panelwin-ready', id: PANEL_WIN,
     // ของสำคัญที่โค้ดทั้งโปรเจกต์อ้างด้วย id ต้องยังอยู่ใน DOM (ซ่อนได้ แต่ห้ามหาย)
@@ -1682,6 +1870,13 @@ export function reportPanelWindowHealth() {
     hasToolbar: !!document.getElementById('toolbar'),
     hasPanes: !!document.getElementById('panes'),
     drawn: !!(bodyEl && bodyEl.children.length),      // แผงวาดเนื้อออกมาจริง ไม่ใช่กล่องเปล่า
+    // [alpha.68] สภาพของ "ช่องส่งฉาก" — เทสฝั่งหน้าต่างหลักตรวจได้แค่ผ่านช่องนี้ช่องเดียว
+    // (บทเรียน .67: ลูกขึ้น "(เลือกฉากก่อน…)" อยู่ก็ยังนับว่า drawn=true ได้ จึงต้องดูเนื้อจริงด้วย)
+    scene: (scene && scene.file) || '',
+    sceneTitle: (scene && scene.title) || '',
+    guarded: !!(bodyEl && bodyEl.querySelector('.k-scene-guard')),
+    items: bodyEl ? bodyEl.querySelectorAll('.ol-item').length : 0,
+    text: bodyEl ? (bodyEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160) : '',
   };
   try { kapi.broadcast && kapi.broadcast(health); } catch {}
   return health;
@@ -1887,7 +2082,7 @@ export async function buildTree() {
 }
 async function _buildTreeInner() {
   const tree = document.createElement('div');   // buffer ที่ยังไม่อยู่ใน DOM
-  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', 'Plugins', 'Recycle']);
+  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle']);
   for (const name of await kapi.listDirs(state.root)) {
     if (skip.has(name)) continue;
     const secPath = await kapi.join(state.root, name);
@@ -2744,7 +2939,7 @@ export async function loadAllEntities() {
   }
   // add scene/chapter/section structural nodes
   try {
-    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots','Plugins','Recycle','.git']);
+    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','.git']);
     for (const sec of await kapi.listDirs(state.root)) {
       if (skip.has(sec)) continue;
       const secPath = await kapi.join(state.root, sec);
@@ -3535,7 +3730,7 @@ export async function openFirstSceneOf(secPath) {
 export async function listRefTargets() {
   const out = [];
   if (!state.root) return out;
-  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', 'Plugins', 'Recycle']);
+  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle']);
   for (const secName of await kapi.listDirs(state.root).catch(() => [])) {
     if (skip.has(secName)) continue;
     const secPath = await kapi.join(state.root, secName);
@@ -4032,7 +4227,9 @@ function setPropsTarget(dPath, ch, sc) {
     const flush = propsFlush_C.fn; propsFlush_C.fn = null;
     try { flush(); } catch {}
   }
-  propsTarget_C.t = { dPath, ch, sc };
+  // [alpha.68] รับ null ได้ — หน้าต่างแผงคุณสมบัติเรียกด้วยค่าว่างเมื่อหน้าต่างหลักไม่ได้เปิดฉากอยู่
+  // (ปล่อยเป็น {dPath:null,…} จะกลายเป็นเป้าหมายจอมปลอมที่ผ่านด่าน `if (!propsTarget_C.t)` ไปได้)
+  propsTarget_C.t = (dPath && ch && sc) ? { dPath, ch, sc } : null;
   if (isPanelOpen('props')) renderPropsPanel();
 }
 function openPropsPanel(dPath, ch, sc) {
@@ -6092,10 +6289,17 @@ export function activate(file) {
   try { onCentralizeShown(); } catch {}
   // แผงคอมเมนต์ผูกกับ "ฉากที่เปิดอยู่" — สลับแท็บแล้วต้องเปลี่ยนตาม (ไม่งั้นคอมเมนต์ฉากเก่าค้าง)
   refreshCommentsPanel();
+  // [alpha.68] แผงที่ผูกกับฉากซึ่งถูกฉีกไปอยู่อีกจอ ต้องตามฉากที่เปิดอยู่ให้ทันเหมือนแผงในหน้าต่างนี้
+  broadcastActiveScene();
 }
 
 export function markDirty(tab) {
-  if (!tab.dirty) { tab.dirty = true; tab.tabBtn.querySelector('.tab-title').textContent = '● ' + tab.title; }
+  if (!tab.dirty) {
+    tab.dirty = true; tab.tabBtn.querySelector('.tab-title').textContent = '● ' + tab.title;
+    // [alpha.68] เพิ่งกลายเป็น "ยังไม่บันทึก" → แผงที่ฉีกออกไปต้องล็อกอ่านอย่างเดียวทันที
+    // (ประกาศเฉพาะตอนธงพลิก ไม่ใช่ทุกตัวอักษรที่พิมพ์)
+    broadcastActiveScene();
+  }
   updateDirtyBadge();
   updateProgressBar();
 }
@@ -6152,6 +6356,8 @@ export async function saveTab(tab) {
   tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
   setStatus('บันทึกแล้ว: ' + tab.title);
   refreshCommentsPanel();
+  // [alpha.68] บันทึกแล้ว = แผงที่ฉีกออกไปแก้ไฟล์นี้ได้อีกครั้ง (และเนื้อบนดิสก์เป็นของใหม่)
+  broadcastActiveScene();
   // สำรองเวอร์ชันอัตโนมัติ (ตามตั้งค่า autoBackup/maxBackups)
   if (state.settings.autoBackup !== false && isSnapshotable(tab))
     snapshotFile(tab.file).catch(() => {});
@@ -6202,7 +6408,9 @@ function dirtyTabList() {
  * บันทึกทั้งหมด — ขึ้นกล่องรายการไฟล์ก่อนเสมอ (บั๊ก #3)
  * @param {boolean} silent ข้ามกล่อง (ใช้ตอน autosave/เทส)
  */
-async function saveAllTabs(silent = false) {
+// [alpha.69] export ให้แผงประวัติเรียกได้ — ก่อนย้อนกลับต้องเอางานค้างลงไฟล์ให้จบก่อน
+// ไม่งั้นการกด Ctrl+S ครั้งถัดไปจะทับไฟล์ที่เพิ่งคืนกลับมา
+export async function saveAllTabs(silent = false) {
   let dirty = [...state.tabs.values()].filter((t) => t.dirty);
   if (!dirty.length) { setStatus('ไม่มีงานค้างให้บันทึก'); return 0; }
   if (!silent) {
@@ -6697,6 +6905,8 @@ const ALWAYS_ON_TB = new Set([
   'tb-tree-panel', 'tb-outline-panel', 'tb-props-panel', 'tb-search-panel',
   'tb-note', 'tb-panels', 'tb-kanban', 'tb-dashboard', 'tb-gsearch', 'tb-read', 'tb-ai', 'tb-ai-chat', 'tb-plug',
   'tb-ai-analyzer', 'tb-md-codes',       // [alpha.60r3 ข้อ 5 · ข้อ 6]
+  // [alpha.69] สามแผงใหม่ทำงานระดับโปรเจกต์ทั้งหมด — ไม่ต้องมีฉากเปิดอยู่ก็กดได้
+  'tb-codex', 'tb-history', 'tb-record',
 ]);
 
 function refreshToolbar() {
@@ -6773,6 +6983,10 @@ function refreshToolbar() {
   $('#tb-ai-analyzer')?.classList.toggle('on', isPanelOpen('ai-analyzer'));
   $('#tb-ai-chat')?.classList.toggle('on', isPanelOpen('ai-chat'));   // [alpha.62 บั๊ก 2]
   $('#tb-gallery')?.classList.toggle('on', isPanelOpen('gallery'));   // [alpha.62 บั๊ก 14]
+  // [alpha.69] สามแผงใหม่ — ปุ่มติดไฟตามสถานะจริง (รวมตอนถูกฉีกไปหน้าต่างแยกด้วย ผ่าน isPanelOpen)
+  $('#tb-codex')?.classList.toggle('on', isPanelOpen('codex') || isTornOff('codex'));
+  $('#tb-history')?.classList.toggle('on', isPanelOpen('history') || isTornOff('history'));
+  $('#tb-record')?.classList.toggle('on', isPanelOpen('record') || isTornOff('record'));
   $('#tb-md-codes')?.classList.toggle('on', showMarkdownCodes());
   syncFloatBarVisible();
   syncMenuToggles();          // เมนู native ติ๊กถูกตามสถานะจริง (ส่งเฉพาะตอนค่าเปลี่ยน)
@@ -6955,9 +7169,14 @@ function refreshOutline() {
   const keepTop = box.scrollTop, keepLeft = box.scrollLeft;
   const back = () => { box.scrollTop = keepTop; box.scrollLeft = keepLeft; };
   box.innerHTML = '';
+  // [alpha.68] หน้าต่าง Navigation ที่ฉีกออกมา ไม่มี ProseMirror ให้อ่าน (คนละ context)
+  // → วาดจากรายการที่หน้าต่างหลักคำนวณแล้วส่งมาให้ · คลิกแล้วฝากหน้าต่างหลักกระโดดให้
+  if (PANEL_WIN) { drawRemoteOutline(box); back(); return; }
   const t = state.active;
   if (!t || t.wiki || t.gal || t.isJson || t.net || t.dash || t.planner || (!t.editor && !t.sp && !t.plain)) {
-    box.append(el('div', 'dim', '(เปิดฉากเพื่อดู Navigation)')); return;
+    box.append(el('div', 'dim', '(เปิดฉากเพื่อดู Navigation)'));
+    relayOutline('', '', [], '(เปิดฉากเพื่อดู Navigation)');
+    return;
   }
   // ส่วนหัว: ชื่อฉาก + โหมด
   const head = el('div', 'nav-head');
@@ -6993,10 +7212,10 @@ function refreshOutline() {
         items.push({ kind: 'beat', label: navTrunc(line), lvl: 4, line: i });
     });
   }
+  relayOutline(t.file || '', t.title || '', items, '(ยังไม่มีหัวข้อ/หัวฉาก)', !!t.sp);
   if (!items.length) { box.append(el('div', 'dim', '(ยังไม่มีหัวข้อ/หัวฉาก)')); return; }
   for (const it of items) {
-    const d = el('div', 'ol-item nav-' + it.kind + ' lvl' + it.lvl, it.label || '(ว่าง)');
-    d.onclick = () => {
+    box.append(outlineItemEl(it, () => {
       if (t.sp || t.editor) {
         const view = (t.sp || t.editor).view;
         import('prosemirror-state').then(({ TextSelection }) => {
@@ -7009,10 +7228,32 @@ function refreshOutline() {
         let off = 0; for (let i = 0; i < it.line; i++) off += lines[i].length + 1;
         t.plain.focus(); t.plain.setSelectionRange(off, off);
       }
-    };
-    box.append(d);
+    }));
   }
   back();
+}
+/** แถวหนึ่งใน Navigation — ใช้ร่วมทั้งหน้าต่างหลักและหน้าต่างที่ฉีกออกไป (หน้าตาต้องเหมือนกันเป๊ะ) */
+function outlineItemEl(it, onJump) {
+  const d = el('div', 'ol-item nav-' + it.kind + ' lvl' + it.lvl, it.label || '(ว่าง)');
+  d.onclick = onJump;
+  return d;
+}
+/** [alpha.68] ส่งรายการ Navigation ให้หน้าต่างที่ฉีกแผงนี้ออกไป (ไม่มีใครฉีก = ไม่ทำอะไรเลย) */
+function relayOutline(file, title, items, empty, sp) {
+  if (PANEL_WIN || !isTornOff('outline')) return false;
+  try { kapi.broadcast && kapi.broadcast(outlineMsg(file, title, items, { empty, sp })); } catch {}
+  return true;
+}
+/** [alpha.68] วาด Navigation ในหน้าต่างแผงจากรายการที่หน้าต่างหลักส่งมา */
+function drawRemoteOutline(box) {
+  const msg = state._remoteOutline;
+  if (!msg) { box.append(el('div', 'dim', t('panel.waitingMain', '(กำลังรอข้อมูลจากหน้าต่างหลัก…)'))); return false; }
+  if (!msg.items.length) { box.append(el('div', 'dim', msg.empty || '(ยังไม่มีหัวข้อ/หัวฉาก)')); return true; }
+  const head = el('div', 'nav-head');
+  head.append(el('span', 'nav-scene', (msg.sp ? '🎬 ' : '📖 ') + (msg.title || '(ฉาก)')));
+  box.append(head);
+  for (const it of msg.items) box.append(outlineItemEl(it, () => requestGotoInMain(it)));
+  return true;
 }
 // ---------------- Find/replace bar ----------------
 function openFind() {
@@ -7310,6 +7551,10 @@ const FEATURE_PANELS = {
   // [alpha.66 ข้อ 1+9] ผังแตกสาย + โหมดทดลองเล่น — เดิมผังเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน
   branch:    () => renderBranchingPanel(),
   player:    () => renderPlayerPanel(),
+  // [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน
+  codex:     () => renderCodexPanel($('#codex-body')),
+  history:   () => renderHistoryPanel($('#history-body')),
+  record:    () => renderRecordPanel($('#record-body')),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
 // วาดค้างอยู่ = ใช้รอบเดียวกัน — openX() เรียก showPanel (hook เริ่มวาด) แล้ว await ต่อ
@@ -7341,9 +7586,12 @@ export function clearFeaturePanels() {
                      // [alpha.62 บั๊ก 16+20] ผลค้นหา/ผัง/กระดาน เป็นของโปรเจกต์เดิมทั้งหมด
                      '#search-body', '#net-body', '#planner-body', '#planner-props-body', '#floor-body',
                      // [alpha.66] ผัง/รอบการเล่นเป็นของโปรเจกต์เดิมล้วน ๆ
-                     '#branch-body', '#player-body']) {
+                     '#branch-body', '#player-body',
+                     // [alpha.69] สารานุกรม/ประวัติ/บันทึก ผูกกับโปรเจกต์ทั้งหมด
+                     '#codex-body', '#history-body', '#record-body']) {
     const n = $(sel); if (n) n.innerHTML = '';
   }
+  resetCodex(); resetHistory(); resetRecords();
   state._branch = null;
   resetPlayerMode();
   // #notes-body ไม่ล้าง — สมุดโน้ตด่วนเป็นของผู้ใช้ ไม่ผูกกับโปรเจกต์ (เก็บใน localStorage)
@@ -8183,6 +8431,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // [alpha.60r ข้อ 4] ปุ่มแดชบอร์ดบน toolbar
   const dbBtn = $('#tb-dashboard');
   if (dbBtn) dbBtn.onclick = () => { togglePanel('dashboard'); refreshToolbar(); };
+  // [alpha.69] ปุ่มของสามแผงใหม่ — สวิตช์ตรง ๆ เหมือนปุ่มแผงตัวอื่นทุกตัว
+  for (const [btn, pid] of [['#tb-codex', 'codex'], ['#tb-history', 'history'], ['#tb-record', 'record']]) {
+    const b = $(btn);
+    if (b) b.onclick = () => { togglePanel(pid); refreshToolbar(); };
+  }
   $('#tb-ai').onclick = () => openAIAssistant();
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
   $('#tb-ai-analyzer') && ($('#tb-ai-analyzer').onclick = () => handleCommand('ai-analyzer'));
@@ -18864,8 +19117,9 @@ async function runTest(projectPath) {
         check('[67] หน้าต่างหลักไม่ใช่หน้าต่างแผง', !isPanelWindow() && PANEL_WIN === '');
         check('[67] หน้าต่างหลักเขียนเลย์เอาต์ได้ (ไม่ใช่โหมดอ่านอย่างเดียว)', pmT.isReadOnly() === false);
         check('[67] แผงที่วาดตัวเองได้จากไฟล์ = ฉีกออกได้', canTearOff('timeline') && canTearOff('kanban'));
-        check('[67] แผงที่ผูกกับฉากที่เปิดอยู่/เป็นโครงหน้าต่าง = ฉีกไม่ได้',
-              !canTearOff('props') && !canTearOff('docs') && !canTearOff('toolbar'),
+        check('[67] แผงที่เป็นโครงหน้าต่างหลัก = ฉีกไม่ได้',
+              !canTearOff('docs') && !canTearOff('toolbar') && !canTearOff('tree')
+              && !canTearOff('statusbar'),
               [...TEAROFF_PANELS].join());
 
         showPanel('timeline', { targetId: 'docs', side: 'left', forceMove: true });
@@ -18942,6 +19196,353 @@ async function runTest(projectPath) {
         check('[67] เพื่อนในกลุ่มไม่หายไปด้วย (กลุ่มเหลือใบเดียวก็ยังลอยอยู่)', pmT.isFloating('kanban'));
         await recallPanel('timeline'); await wait62(1500);
         check('[67] เรียกกลับจากเคสกลุ่มลอยได้', !isTornOff('timeline') && pmT.isOpen('timeline'));
+        resetPanels(); await wait62(320);
+      }
+
+      // ---- [alpha.68] Tear-off เฟส 2: แผงที่ผูกกับ "ฉากที่เปิดอยู่" ----
+      // ของจริงทุกบรรทัดเหมือนรอบ .67 — เปิดหน้าต่างที่สองจริง แล้ววัดผลจากรายงานสภาพที่ลูกส่งกลับมา
+      // (หน้าต่างหลักมองไม่เห็น DOM ของลูก · และ "drawn=true" อย่างเดียวไม่พอ เพราะข้อความ
+      //  "(เลือกฉากเพื่อดูคุณสมบัติ)" ก็นับเป็นเนื้อที่วาดออกมาแล้วเหมือนกัน)
+      {
+        resetPanels(); await wait62(300);
+        check('[a68] แผงที่ผูกกับฉากฉีกออกเป็นหน้าต่างได้แล้วครบทั้ง 5',
+              ['outline', 'props', 'comments', 'floorplan', 'ai-chat'].every((id) => canTearOff(id)),
+              ['outline', 'props', 'comments', 'floorplan', 'ai-chat'].filter((id) => !canTearOff(id)).join());
+        check('[a68] แผงที่วาดจากไฟล์ล้วน ๆ (ทดลองเล่น · AI วิเคราะห์) ฉีกได้ด้วย',
+              canTearOff('player') && canTearOff('ai-analyzer'));
+        check('[a68] กระดานอารมณ์ยังฉีกไม่ได้ (รับรูปด้วยการลากข้ามแผง — แยกหน้าต่างแล้วขาดกัน)',
+              !canTearOff('gallery-board'));
+        check('[a68] ทะเบียน panel-sync ตรงกับทะเบียนแผงที่ฉีกได้',
+              SCENE_PANELS.size === 5 && [...SCENE_PANELS].every((id) => TEAROFF_PANELS.has(id)),
+              [...SCENE_PANELS].join());
+
+        // ---- เปิดฉากจริงก่อน แล้วฉีก "แผงคุณสมบัติ" ออกไปหน้าต่างที่สอง ----
+        document.querySelector('.scene').click(); await wait62(340);
+        const scTab = state.active;
+        check('[a68] เตรียมสภาพ: มีฉากเปิดอยู่จริง', !!(scTab && isSceneFile(scTab.file)),
+              scTab ? scTab.file : 'ไม่มีแท็บ');
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true }); await wait62(400);
+        const pBtn = document.querySelector(
+          '#app-root .k-panel[data-panel-id="props"] .k-panel-head .k-panel-btn-tearoff');
+        check('[a68] หัวแผงคุณสมบัติมีปุ่ม 🖥 แล้ว', !!pBtn);
+        pBtn.click(); await wait62(1700);
+        check('[a68] แผงคุณสมบัติออกไปอยู่หน้าต่างแยกจริง', isTornOff('props'));
+        const h68 = state._panelWinHealth;
+        check('[a68] หน้าต่างแผงคุณสมบัติรายงานสภาพกลับมา', !!h68 && h68.id === 'props', JSON.stringify(h68));
+        check('[a68] ช่องส่งฉากทำงาน — ลูกรู้ว่าหน้าต่างหลักเปิดฉากไหนอยู่',
+              !!h68 && samePath(h68.scene, scTab.file), h68 ? h68.scene : '(ไม่มี)');
+        check('[a68] ลูกวาดคุณสมบัติของฉากจริง ไม่ใช่ "(เลือกฉากเพื่อดูคุณสมบัติ)"',
+              !!h68 && h68.drawn && !h68.text.includes('เลือกฉากเพื่อดู'), h68 ? h68.text : '');
+        check('[a68] ฉากบันทึกแล้ว → แก้จากหน้าต่างแผงได้ (ไม่มีแถบล็อก)',
+              !!h68 && h68.guarded === false);
+
+        // ---- ตาข่ายกันเขียนชนกัน: หน้าต่างหลักมีงานค้าง = ลูกอ่านอย่างเดียว ----
+        markDirty(scTab); await wait62(900);
+        const hDirty = state._panelWinHealth;
+        check('[a68] หน้าต่างหลักยังไม่บันทึก → แผงที่ฉีกออกไปล็อกเป็นอ่านอย่างเดียว',
+              !!hDirty && hDirty.guarded === true, JSON.stringify(hDirty && hDirty.guarded));
+        await saveTab(scTab); await wait62(1000);
+        const hSaved = state._panelWinHealth;
+        check('[a68] บันทึกที่หน้าต่างหลักแล้ว → ปลดล็อกให้แก้ได้อีกครั้ง',
+              !!hSaved && hSaved.guarded === false, JSON.stringify(hSaved && hSaved.guarded));
+        await recallPanel('props'); await wait62(1500);
+        check('[a68] เรียกแผงคุณสมบัติกลับได้', !isTornOff('props'));
+        resetPanels(); await wait62(300);
+
+        // ---- Navigation: ลูกไม่มี ProseMirror จึงต้องได้รายการหัวข้อมาทางช่องข้อความ ----
+        document.querySelector('.scene').click(); await wait62(340);
+        const navTab = state.active;
+        // ฉากในโปรเจกต์ทดสอบอาจว่างเปล่า → ใส่หัวข้อ+ย่อหน้าให้แน่ ๆ ก่อน (คืนของเดิมตอนจบ)
+        // ไม่งั้นเทสจะ "ผ่านเพราะทั้งสองฝั่งได้ 0 เท่ากัน" ซึ่งไม่ได้พิสูจน์อะไรเลย
+        const navOrig = navTab && navTab.editor ? navTab.editor.getMarkdown() : null;
+        if (navTab && navTab.editor) {
+          navTab.editor.setMarkdown('# หัวข้อทดสอบ Navigation\n\nย่อหน้าแรกของฉากทดสอบ\n');
+          await wait62(140);
+        }
+        refreshOutline();
+        const navMain = document.querySelectorAll('#outline .ol-item').length;
+        check('[a68] เตรียมสภาพ: หน้าต่างหลักคำนวณหัวข้อได้จริง', navMain > 0, 'items=' + navMain);
+        showPanel('outline', { targetId: 'docs', side: 'left', forceMove: true }); await wait62(380);
+        const oBtn = document.querySelector(
+          '#app-root .k-panel[data-panel-id="outline"] .k-panel-head .k-panel-btn-tearoff');
+        check('[a68] หัวแผง Navigation มีปุ่ม 🖥 แล้ว', !!oBtn);
+        oBtn.click(); await wait62(2000);
+        const hNav = state._panelWinHealth;
+        check('[a68] หน้าต่าง Navigation รายงานสภาพกลับมา', !!hNav && hNav.id === 'outline',
+              JSON.stringify(hNav));
+        check('[a68] ลูกวาดหัวข้อออกมาจริงจากรายการที่หน้าต่างหลักส่งไปให้ (ไม่ใช่กล่องรอข้อมูล)',
+              !!hNav && hNav.items > 0, hNav ? 'items=' + hNav.items + ' · ' + hNav.text : '');
+        check('[a68] จำนวนหัวข้อในหน้าต่างลูก = ที่หน้าต่างหลักคำนวณได้ เป๊ะ',
+              !!hNav && hNav.items === navMain, hNav ? hNav.items + ' vs ' + navMain : '');
+        // ทางกลับ: ลูกคลิกหัวข้อ → หน้าต่างหลักเป็นคนกระโดด (ตรวจฝั่งผู้รับ = จุดที่เงียบได้)
+        const view68 = navTab && (navTab.editor || navTab.sp) && (navTab.editor || navTab.sp).view;
+        if (view68) {
+          view68.dispatch(view68.state.tr.setSelection(
+            (await import('prosemirror-state')).TextSelection.create(view68.state.doc, 1)));
+          const jumped = await gotoOutlineItem({ file: navTab.file, pos: view68.state.doc.content.size - 2 });
+          check('[a68] คำขอ "กระโดดไปหัวข้อนี้" จากหน้าต่างแผง ทำงานจริงในหน้าต่างหลัก',
+                jumped === true && view68.state.selection.from > 1,
+                'from=' + view68.state.selection.from);
+        }
+        await recallPanel('outline'); await wait62(1500);
+        check('[a68] เรียกแผง Navigation กลับได้', !isTornOff('outline'));
+        // คืนเนื้อฉากให้เหมือนเดิม (เทสถัดไปอ่านฉากนี้ต่อ)
+        if (navTab && navTab.editor && navOrig !== null) {
+          navTab.editor.setMarkdown(navOrig); navTab.dirty = false;
+          navTab.tabBtn.querySelector('.tab-title').textContent = navTab.title;
+        }
+        resetPanels(); await wait62(300);
+
+        // ---- ไฟล์ที่หน้าต่างแผงแก้ → แท็บที่เปิดค้างในหน้าต่างหลักต้องตามให้ทัน ----
+        // (แต่แท็บที่ผู้ใช้ยังพิมพ์ค้างอยู่ ห้ามโดนทับเด็ดขาด)
+        document.querySelector('.scene').click(); await wait62(320);
+        const rTab = state.active;
+        if (rTab && rTab.editor) {
+          const origRaw = await kapi.readFile(rTab.file);
+          const origBody = rTab.body;
+          const mark = '\n\nบรรทัดที่หน้าต่างแผงเขียนเพิ่ม ' + Date.now();
+          await kapi.writeFile(rTab.file, origRaw.replace(/\s*$/, '') + mark);
+          rTab.dirty = true;                       // จำลอง "ผู้ใช้กำลังพิมพ์อยู่"
+          await reloadTabsFromDisk(rTab.file);
+          check('[a68] แท็บที่ยังพิมพ์ค้าง ห้ามถูกโหลดทับ (งานที่ยังไม่บันทึกสำคัญกว่า)',
+                rTab.body === origBody);
+          rTab.dirty = false;
+          const n68 = await reloadTabsFromDisk(rTab.file);
+          check('[a68] แท็บที่บันทึกแล้ว โหลดเนื้อใหม่จากดิสก์ให้อัตโนมัติ',
+                n68 === 1 && rTab.body.includes('หน้าต่างแผงเขียนเพิ่ม'), 'n=' + n68);
+          check('[a68] และเนื้อในตัวแก้ไขเปลี่ยนตามจริง ไม่ใช่แค่ตัวแปร',
+                (rTab.editor.getMarkdown() || '').includes('หน้าต่างแผงเขียนเพิ่ม'));
+          await kapi.writeFile(rTab.file, origRaw);       // คืนไฟล์ให้เหมือนเดิม
+          await reloadTabsFromDisk(rTab.file);
+          rTab.dirty = false;
+        }
+        // เป้าหมายของแผงคุณสมบัติต้องรับค่าว่างได้ (หน้าต่างหลักไม่ได้เปิดฉากอยู่)
+        // เดิมได้เป้าหมายจอมปลอม {dPath:null,…} แล้วไประเบิดที่ kapi.join(null, 'scenes.json')
+        setPropsTarget(null, null, null);
+        await drawPanel('props'); await wait62(160);
+        check('[a68] ไม่มีฉากเปิดอยู่ → แผงคุณสมบัติขึ้นข้อความว่าง ไม่ใช่พังตอนอ่านไฟล์',
+              ($('#props-body').textContent || '').includes('เลือกฉาก'),
+              ($('#props-body').textContent || '').slice(0, 40));
+        resetPanels(); await wait62(300);
+      }
+
+      // ---- [alpha.68r] บั๊กเก่า: กลุ่มแท็บที่ผนึกอยู่ เหลือแท็บเดียวแล้วยัง "เป็นกลุ่ม" ----
+      // ต้นตอ: ตั้งแต่ alpha.62 บั๊ก 21 การปิดแผงที่ผนึก = ติดธง hidden ไม่ใช่ตัดออกจากต้นไม้
+      // → `children.length` ไม่ลด → `collapse()` (ที่ยุบกลุ่มเหลือใบเดียว) ไม่เคยทำงาน
+      // เคสลอยยุบให้อยู่แล้วผ่าน `_detach` — เพี้ยนเฉพาะเคสผนึก · ปุ่ม 🖥 ของ .67/.68 ทำให้เจอบ่อยขึ้น
+      {
+        resetPanels(); await wait62(340);
+        const pmG = getPanelManager();
+        const grp0 = PL.tabGroupOf(pmG.root, 'tree');
+        const gid = grp0 && grp0.id;
+        const tabsIn = (id) => document.querySelectorAll(
+          `#app-root [data-tabs-id="${id}"] .k-tab-bar .k-tab`).length;
+        check('[68r] เตรียมสภาพ: เลย์เอาต์ตั้งต้นมีกลุ่มแท็บผนึก (โปรเจกต์ + Navigation)',
+              !!gid && PL.tabGroupOf(pmG.root, 'outline') === grp0, String(gid));
+        check('[68r] กลุ่มจริง (เห็น 2 ใบ) วาดเป็น .k-tab-group + หัวแท็บ 2 ใบ',
+              !!document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 2,
+              'tabs=' + tabsIn(gid));
+
+        hidePanel('outline'); await wait62(420);
+        check('[68r] ปิดไปใบหนึ่ง → ไม่ใช่กลุ่มอีกแล้ว (ไม่มีแถบแท็บใบเดียวคาอยู่)',
+              !document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 0,
+              'tabs=' + tabsIn(gid));
+        const soloEl = document.querySelector(`#app-root .k-panel[data-panel-id="tree"]`);
+        check('[68r] แผงที่เหลือวาดเป็นแผงเดี่ยว พร้อมหัวแผงของตัวเอง',
+              !!soloEl && soloEl.classList.contains('k-solo-tab')
+              && !!soloEl.querySelector(':scope > .k-panel-head'));
+        check('[68r] แผงที่เหลือยังถือ id ของกลุ่มไว้ (dock แม่/ตัวชี้พื้นที่ทำงานยังหาเจอ)',
+              !!soloEl && soloEl.dataset.tabsId === gid, soloEl ? soloEl.dataset.tabsId : '-');
+        check('[68r] ...แต่ต้นไม้ยังเก็บกลุ่มไว้ครบ — แท็บที่ปิดยังจองที่เดิม',
+              !!PL.tabGroupOf(pmG.root, 'outline') && PL.isPanelHidden(pmG.root, 'outline'));
+
+        showPanel('outline'); await wait62(460);
+        check('[68r] เปิดกลับ → กลุ่มแท็บคืนมาครบสองใบเหมือนเดิม',
+              !!document.querySelector(`#app-root .k-tab-group[data-tabs-id="${gid}"]`) && tabsIn(gid) === 2,
+              'tabs=' + tabsIn(gid));
+
+        // ทางที่ผู้ใช้เจอจริงในรอบนี้: กด 🖥 ฉีกแท็บหนึ่งของกลุ่มที่ผนึกอยู่ออกไปเป็นหน้าต่าง
+        await tearOffPanel('outline'); await wait62(1600);
+        check('[68r] ฉีกแท็บออกไปหน้าต่างแยก → ตัวที่เหลือก็ต้องไม่ใช่กลุ่มเช่นกัน',
+              isTornOff('outline') && tabsIn(gid) === 0, 'tabs=' + tabsIn(gid));
+        await recallPanel('outline'); await wait62(1600);
+        check('[68r] เรียกกลับจากหน้าต่างแยก → กลับเข้ากลุ่มเดิม',
+              !isTornOff('outline') && tabsIn(gid) === 2, 'tabs=' + tabsIn(gid));
+        resetPanels(); await wait62(320);
+      }
+
+      // ---- [alpha.69] แผงใหม่ 3 ตัว: สารานุกรม (Codex) · ประวัติการทำงาน (History) · บันทึกประจำวัน (Record) ----
+      {
+        resetPanels(); await wait62(320);
+        for (const id of ['codex', 'history', 'record']) {
+          check('[a69] ' + id + ': ลงทะเบียนเป็นแผงจริง',
+                !!PANEL_DEFS.find((d) => d.id === id) && !!$('#' + (id === 'codex' ? 'codex' : id) + '-body'));
+          check('[a69] ' + id + ': ฉีกออกเป็นหน้าต่างได้', canTearOff(id));
+          check('[a69] ' + id + ': มีปุ่มบนแถบเครื่องมือ', !!$('#tb-' + id));
+        }
+
+        // ── ยามกันลืม: **ทุกแผงที่ปิดได้ ต้องมีทางเข้าจากเมนู มุมมอง → แผง** ──
+        // เมนู native สร้างในฝั่ง main (renderer มองไม่เห็น) จึงต้องถามรายการกลับมาเทียบ
+        // ที่มา: รอบ .69 ทำแผงเสร็จแล้วผู้ใช้หาไม่เจอเลย เพราะเมนูเป็นรายการเขียนมือที่ลืมเติม
+        // — และพบว่า Story Network / Planner / ผังพื้นที่ ตกหล่นมาตั้งแต่ .62 โดยไม่มีใครสังเกต
+        {
+          const mp = await kapi.menuPanelIds();
+          const inMenu = new Set((mp && mp.ids) || []);
+          const skipped = new Set((mp && mp.skip) || []);
+          const missing = PANEL_DEFS.filter((d) => d.closable !== false
+                                              && !inMenu.has(d.id) && !skipped.has(d.id))
+                                    .map((d) => d.id);
+          check('[a69] ทุกแผงที่ปิดได้ มีทางเข้าจากเมนู (หรือประกาศยกเว้นไว้พร้อมเหตุผล)',
+                missing.length === 0, 'ตกหล่น: ' + (missing.join() || '(ไม่มี)'));
+          const ghost = [...inMenu].filter((id) => !PANEL_DEFS.find((d) => d.id === id));
+          check('[a69] เมนูไม่มีรายการที่ชี้ไปแผงที่ไม่มีอยู่จริง', ghost.length === 0, ghost.join());
+          check('[a69] สามแผงใหม่อยู่ในเมนูจริง',
+                inMenu.has('codex') && inMenu.has('history') && inMenu.has('record'));
+        }
+
+        // ── กับดักที่ผู้ใช้เตือนไว้: "เนื้อแผงไม่เต็มกล่อง" ──
+        // วัดของจริง: ตัวเนื้อต้องสูงเท่ากล่องแผง (ไม่ใช่สูงตามเนื้อหาแล้วเหลือที่ว่างข้างล่าง)
+        for (const id of ['codex', 'history', 'record']) {
+          showPanel(id, { targetId: 'docs', side: 'right', forceMove: true });
+          await renderFeaturePanel(id);
+          await wait62(420);
+          const panel = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          const pbody = panel && panel.querySelector(':scope > .k-panel-body');
+          const inner = document.getElementById(id + '-body');
+          const ph = pbody ? pbody.getBoundingClientRect().height : 0;
+          const ih = inner ? inner.getBoundingClientRect().height : 0;
+          check('[a69] ' + id + ': เนื้อแผงสูงเต็มกล่อง (ไม่เหลือที่ว่างค้างข้างล่าง)',
+                ph > 60 && ih >= ph - 2, `body=${Math.round(ph)} inner=${Math.round(ih)}`);
+          const flow = inner && getComputedStyle(inner);
+          check('[a69] ' + id + ': ตัวเนื้อเป็น flex column + min-height:0 (กฎกันแผงยืดไม่สุด)',
+                !!flow && flow.display === 'flex' && flow.flexDirection === 'column' && flow.minHeight === '0px',
+                flow ? `${flow.display}/${flow.flexDirection}/${flow.minHeight}` : 'ไม่มี');
+          hidePanel(id); await wait62(180);
+        }
+
+        // ── Codex: อ่านเอนทิตี้จริงจากโปรเจกต์ทดสอบ ──
+        showPanel('codex', { targetId: 'docs', side: 'left', forceMove: true });
+        await renderFeaturePanel('codex'); await wait62(700);
+        const cards = document.querySelectorAll('#codex-body .k-codex-card');
+        check('[a69] codex: วาดการ์ดจากเอนทิตี้ Wiki จริงในโปรเจกต์', cards.length > 0, 'cards=' + cards.length);
+        check('[a69] codex: มีตัวกรองหมวด + ปุ่มส่งออกเว็บ',
+              !!document.querySelector('#codex-body .k-codex-cat')
+              && !!document.querySelector('#codex-body .k-codex-exp'));
+        {
+          const qEl = document.querySelector('#codex-body .k-codex-q');
+          const first = cards[0].querySelector('.k-codex-name').textContent;
+          qEl.value = 'ไม่มีทางมีชื่อนี้อยู่จริง'; qEl.dispatchEvent(new Event('input'));
+          await wait62(180);
+          check('[a69] codex: ค้นแล้วกรองจริง (คำที่ไม่มี → ไม่เหลือการ์ด)',
+                document.querySelectorAll('#codex-body .k-codex-card').length === 0);
+          qEl.value = first; qEl.dispatchEvent(new Event('input'));
+          await wait62(180);
+          check('[a69] codex: ค้นด้วยชื่อจริง → เจอ',
+                document.querySelectorAll('#codex-body .k-codex-card').length >= 1, first);
+          qEl.value = ''; qEl.dispatchEvent(new Event('input')); await wait62(150);
+          document.querySelector('#codex-body .k-codex-card').click(); await wait62(200);
+          check('[a69] codex: คลิกการ์ดแล้วมีหน้าตัวอย่างด้านข้าง',
+                !!document.querySelector('#codex-body .k-codex-prev-name'));
+        }
+        // ตัวสร้างเว็บ (ตัวเดียวกับปุ่มส่งออก) — เขียนลงโปรเจกต์ทดสอบแล้วอ่านกลับมาตรวจของจริง
+        {
+          const { buildCodexSite } = await import('./codex/codex-build.js');
+          const ents = await listEntities(state.root);
+          const files = buildCodexSite(ents, { siteTitle: state.title });
+          const out = await kapi.join(state.root, 'codex-test');
+          await kapi.mkdir(out);
+          for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
+          const wrote = await kapi.listFiles(out, '.html');
+          check('[a69] codex: เขียนเว็บออกมาเป็นไฟล์จริงครบทุกหน้า',
+                wrote.length === files.length && wrote.includes('index.html'),
+                `เขียน ${wrote.length}/${files.length}`);
+          const idx = await kapi.readFile(await kapi.join(out, 'index.html'));
+          check('[a69] codex: หน้าแรกที่เขียนออกมาเปิดได้เอง (มี DOCTYPE + UTF-8 + ช่องค้นหา)',
+                idx.startsWith('<!DOCTYPE html>') && idx.includes('charset="UTF-8"') && idx.includes('id="q"'));
+          check('[a69] codex: ไม่เรียกไฟล์จากอินเทอร์เน็ตเลย (เปิดออฟไลน์ได้จริง)',
+                !/(src|href)="https?:/.test(idx));
+          await kapi.remove(out);
+        }
+        hidePanel('codex'); await wait62(200);
+
+        // ── Record: จด → เห็นในรายการ → ส่งออก CSV ได้เนื้อถูก ──
+        {
+          const { loadRecords } = await import('./record/record-ui.js');
+          const RD = await import('./record/record-data.js');
+          const p = await kapi.join(state.root, RD.RECORD_FILE);
+          const day = RD.dayKey(new Date());
+          const seed = RD.addEntry(RD.migrate(null),
+            RD.newEntry('t1', day, { text: 'เทส: เขียนบทหนึ่ง', words: 123, mood: 'ok', tags: ['เทส'] }));
+          await kapi.writeFile(p, JSON.stringify(seed, null, 2));
+          resetRecords(); await loadRecords();
+          showPanel('record', { targetId: 'docs', side: 'right', forceMove: true });
+          await renderFeaturePanel('record'); await wait62(450);
+          check('[a69] record: อ่านบันทึกจากไฟล์โปรเจกต์มาแสดงจริง',
+                (document.querySelector('#record-body .k-rec-card-text') || {}).textContent === 'เทส: เขียนบทหนึ่ง',
+                (document.querySelector('#record-body .k-rec-card-text') || {}).textContent || 'ไม่มีการ์ด');
+          check('[a69] record: จัดกลุ่มตามวัน + แถบสถิติ',
+                !!document.querySelector('#record-body .k-rec-day-head')
+                && !!document.querySelector('#record-body .k-rec-stat'));
+          check('[a69] record: ช่องจดของวันนี้พร้อมใช้', !!document.querySelector('#record-body .k-rec-text'));
+          const csv = RD.toCsv(RD.migrate(await kapi.readJson(p)).entries);
+          check('[a69] record: CSV มี BOM + หัวตารางไทย + เนื้อครบ',
+                csv.charCodeAt(0) === 0xFEFF && csv.includes('วันที่') && csv.includes('เทส: เขียนบทหนึ่ง'));
+          await kapi.remove(p);
+          resetRecords();
+          hidePanel('record'); await wait62(200);
+        }
+
+        // ── History: จดจริง → ย้อนกลับจริง (ตัวที่เสี่ยงที่สุดของรอบนี้) ──
+        {
+          const HDm = await import('./history/history-data.js');
+          await kapi.historyConfig({ root: state.root, limit: 32, enabled: true });
+          const probe = await kapi.join(state.root, 'Memos', 'k2-history-probe.md');
+          await kapi.writeFile(probe, 'รุ่นที่หนึ่ง');
+          await wait62(120);
+          const j1 = HDm.migrate(await kapi.historyList());
+          const seqAfterCreate = j1.seq;
+          check('[a69] history: เขียนไฟล์แล้วมีบันทึกเพิ่มจริง', j1.entries.length > 0, 'entries=' + j1.entries.length);
+          await kapi.writeFile(probe, 'รุ่นที่สอง');
+          await wait62(120);
+          const j2 = HDm.migrate(await kapi.historyList());
+          check('[a69] history: เขียนซ้ำ → บันทึกเพิ่มอีกหนึ่ง', j2.seq === seqAfterCreate + 1,
+                `${seqAfterCreate} → ${j2.seq}`);
+          check('[a69] history: บันทึกล่าสุดจำ "เนื้อก่อนหน้า" ไว้ (ไม่งั้นย้อนกลับไม่ได้)',
+                !!(j2.entries[j2.entries.length - 1].files[0] || {}).before);
+          check('[a69] history: ไฟล์ตอนนี้เป็นรุ่นที่สอง', (await kapi.readFile(probe)) === 'รุ่นที่สอง');
+
+          const rv = await kapi.historyRevert(seqAfterCreate);
+          await wait62(200);
+          check('[a69] history: ย้อนกลับสำเร็จ (คืนไฟล์จริง ไม่ใช่แค่คืน true)',
+                !!rv && rv.ok === true && rv.restored >= 1, JSON.stringify(rv));
+          check('[a69] history: **เนื้อไฟล์กลับไปเป็นรุ่นก่อนหน้าจริง**',
+                (await kapi.readFile(probe)) === 'รุ่นที่หนึ่ง', await kapi.readFile(probe));
+          const j3 = HDm.migrate(await kapi.historyList());
+          check('[a69] history: บันทึกที่ถูกถอนหายไปจากสมุดแล้ว',
+                j3.entries.every((e) => e.seq <= seqAfterCreate) && j3.entries.length < j2.entries.length,
+                `เหลือ ${j3.entries.length} จาก ${j2.entries.length} · สูงสุด ${j3.entries.length ? j3.entries[j3.entries.length - 1].seq : 0}`);
+          check('[a69] history: ตัวนับ seq ไม่ถอยหลัง (เลขที่เคยใช้ต้องไม่ถูกแจกซ้ำ)',
+                j3.seq >= j2.seq, `${j2.seq} → ${j3.seq}`);
+
+          // ย้อนกลับไปก่อนที่ไฟล์จะถูกสร้าง = ไฟล์ต้องหายไป (before เป็น null)
+          const rv2 = await kapi.historyRevert(seqAfterCreate - 1);
+          await wait62(200);
+          check('[a69] history: ย้อนไปก่อนไฟล์ถูกสร้าง → ไฟล์ต้องหายไป',
+                (await kapi.exists(probe)) === false, JSON.stringify(rv2));
+
+          showPanel('history', { targetId: 'docs', side: 'right', forceMove: true });
+          await renderFeaturePanel('history'); await wait62(420);
+          check('[a69] history: แผงวาดไทม์ไลน์ + แถวบนสุดคือ "ตอนนี้"',
+                !!document.querySelector('#history-body .k-hist-now')
+                && !!document.querySelector('#history-body .k-hist-list'));
+          check('[a69] history: บอกโควตาที่ตั้งไว้',
+                (document.querySelector('#history-body .k-hist-count') || {}).textContent.includes('/32'),
+                (document.querySelector('#history-body .k-hist-count') || {}).textContent || '');
+          check('[a69] history: ค่าเริ่มต้นในตั้งค่า = 32 ครั้ง', HDm.DEFAULT_HISTORY_LIMIT === 32);
+          hidePanel('history'); await wait62(200);
+          // ปิดการจดกลับ ไม่ให้เทสที่เหลือของรอบนี้ไปกินโควตา/เขียนก้อนทิ้งไว้
+          await kapi.historyConfig({ root: state.root, limit: 32, enabled: false });
+        }
         resetPanels(); await wait62(320);
       }
 

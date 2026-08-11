@@ -354,7 +354,16 @@
       "spaceRestored": "Hidden panels restored",
       "spaceNone": "No panels left to hide",
       "spaceAll": "All panels hidden — canvas only (press again to restore)",
-      "spaceSide": "Hidden panels on the "
+      "spaceSide": "Hidden panels on the ",
+      "sceneGuard": "⏸ Unsaved changes in the main window:",
+      "sceneGuard2": "read-only until you save there",
+      "thisScene": "this scene",
+      "jumpedInMain": "Jumped to that spot in the main window",
+      "waitingMain": "(waiting for the main window…)",
+      "reloadedFromPanelWin": "Reloaded scene text edited in a panel window",
+      "codexTitle": "📚 Codex",
+      "historyTitle": "🕘 History",
+      "recordTitle": "🗒 Daily Record"
     },
     "scenes": "scenes",
     "words": "words",

@@ -3,7 +3,7 @@ import { $, el, state, setStatus, log } from './core.js';
 import { callAI, aiConfigured, getAISettings } from './ai-settings.js';
 import { listEntities } from './project-scan.js';
 
-const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research'];
+const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
 // [alpha.62 บั๊ก 6] ตั้งค่าครบหรือยัง — ถามจุดเดียวที่ `aiConfigured()` (รู้จักทะเบียนใหม่ของ alpha.61)
 // เดิมดูแต่ `loadApiKey()` ของรูปแบบเก่า → "แนะนำชื่อด้วย AI" ถูกบล็อกทั้งที่ตั้งค่าไว้เรียบร้อยแล้ว
