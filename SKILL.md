@@ -145,6 +145,16 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
       ตัววาดต้องข้ามตัวที่ซ่อน **ทั้ง 3 ที่**: ไม่วาด · ไม่นับใน `growSum` · ไม่วางที่จับข้าง ๆ
       (ที่จับส่งดัชนีจริงของทั้งสองฝั่งเข้า `resizeDockPair` เพราะอาจมีตัวที่ซ่อนคั่นอยู่)
       `detachPanel` ต้อง **ลบธง hidden ทิ้ง** — ลากไปวางแล้วต้องเห็นเสมอ
+    · **[alpha.66r9–r12] ขนาดของแผงอยู่ที่ "ลูกของ dock" ไม่ใช่ที่ตัวแผง** — กฎที่ต้องจำให้ขึ้นใจ
+      ลูกของ dock เป็น `tabs`/`dock` ได้ ไม่ใช่แค่ `panel` · ตัววาดอ่าน px จาก**ลูกของ dock**เท่านั้น
+      `nodePxDeep(node,row)` = อ่านทะลุคอนเทนเนอร์ (tabs = max ของลูก · dock ทิศเดียวกัน = ผลรวม)
+      `dockChildOf(root,id)` = ไต่จากแผงขึ้นไปหาก้อนที่เป็นลูกของ dock (ตัว**ในสุด**) → `ensureDockPx` เขียนลงก้อนนั้น
+      `collapse()` ตอนยุบกลุ่ม **ต้องส่งต่อ pxW/pxH ให้ตัวที่รอด** ไม่งั้นทั้งแถวเด้งกลับเป็นสัดส่วน
+      `nodeFloatBox()` อ่าน **แยกแกน** (มีแค่ด้านเดียวก็ใช้ได้) — ของเดิมต้องครบคู่ ทำให้ H ตกไปใช้ขนาดตอนผนึก
+  - **`panels/panel-export.js`** (alpha.66r9, บริสุทธิ์) — ประกอบ "รายงานการจัดวางแผง" เป็น JSON:
+    ต้นไม้ + ขนาดจริงบนจอ (UI วัดให้) + `diagnostics` (โหมดของทุก dock · ก้อนที่ไม่มีขนาด · ก้อนที่ดึงค่าจากลูก
+    · ช่องว่างค้าง · `warnings` ภาษาไทย) · **ผู้ใช้ส่งไฟล์นี้มาเป็นหลักฐานเวลารายงานบั๊กเรื่องแผง — ใช้เป็นตัวตั้งได้เลย**
+    เข้าถึงที่ มุมมอง → แผง → 📤 ส่งออกการจัดวางแผง · โค้ด: `panelLayoutReport()`/`exportPanelLayout()` ใน panel-ui.js
   - **`panels/panel-renderer.js` + `panel-drag.js` + `panel-ui.js`** (alpha.46) — **UI จริงของ Panel System** (ดูหัวข้อด้านล่าง)
     · **[alpha.62 บั๊ก 12] `currentRatio()` = `treeRatio() || domRatio()` — อ่านจาก layout tree ก่อนเสมอ**
       วัดจาก DOM ไม่ได้เพราะ `dock.width` รวม `.k-resize-handle` ที่คั่นอยู่ → ค่าต่ำกว่าจริงทุกครั้ง
@@ -336,12 +346,12 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,028 checks** (alpha.64) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,421 checks** (alpha.66r12) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (alpha.39, รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
 node test/search-engine.test.cjs   # 22 checks — tokenize/AND/OR/NOT/field/snippet/score/perf
-node test/panel.test.cjs           # 26 checks — snap/dock/tab/resize/store/migrate
+node test/panel.test.cjs           # 264 checks — snap/dock/tab/resize/store/migrate + px ลึก/กลุ่มลอย/ส่งออก (66r12)
 node test/split.test.cjs           # 16 checks — split/resize(snap50)/collapse/store
 node test/branch.test.cjs          # 53 checks — graph/layout/cycles/unreachable/dangling/paths + [ข้อความ]ทางเลือก
 node test/timeline.test.cjs        # 34 checks — extractNum/sort/merge(whenEnd+refs)/gantt/normalizeRefs
@@ -373,9 +383,18 @@ node test/ai-tools.test.cjs        # 64 checks  — แกะคำสั่ง 
 · และต้อง **กรองเอาแค่ content stream** (`printable > 0.95` + มี `BT`/`ET`) เพราะไบนารีฟอนต์ที่ฝังไว้
 ก็ถูกบีบอัดเหมือนกัน และมีไบต์ที่อ่านเป็น `Tj` ได้โดยบังเอิญ → นับคำสั่งวาดเพี้ยนทุกครั้ง
 
+**⚠ ตรวจว่า "รอบใหม่รันจริง" ก่อนอ่านผลเสมอ** — เผาไป 2 รอบใน alpha.66r12 เพราะคำสั่งชุดเดียว
+ตายกลางทาง (`xargs -r`) แล้ว `/tmp/k2result.txt` ยังเป็นของรอบเก่า อ่านแล้วนึกว่าแก้ไม่ติด
+· ยืนยันด้วย **เนื้อหา** ไม่ใช่ mtime: `grep -c "<ป้ายเช็คใหม่>" /tmp/k2result.txt` ต้อง > 0
+· **grep ข้อความไทยใน `renderer/bundle.js` ไม่เจอ** — esbuild ตั้ง `charset:'ascii'` เป็นค่าเริ่มต้น
+  ไทยถูก escape เป็น `\u0E21…` (backslash-u) · ตรวจว่าบันเดิลใหม่จริงให้ grep ป้ายอังกฤษแทน (เช่น `66r12]`)
+
 **รัน e2e บน macOS** (ไม่ต้องมี xvfb · หน้าต่างเด้งขึ้นมาจริง ~4 นาที):
 ```bash
-ps aux | grep -i electron | grep -v grep | awk '{print $2}' | xargs -r kill -9   # ฆ่า zombie ก่อนเสมอ
+# ⚠ macOS ไม่มี `xargs -r` (GNU only) — ใช้แล้วคำสั่งตายกลางทาง แล้ว "รอบใหม่ไม่ได้รันจริง"
+# เผาไป 2 รอบเพราะอ่านผลของรอบเก่าแล้วนึกว่าแก้ไม่ติด · ใช้ลูปแทน แล้วเช็คว่าเหลือ 0 จริง
+for p in $(ps aux | grep "[e]lectron" | awk '{print $2}'); do kill -9 "$p" 2>/dev/null || true; done
+ps aux | grep "[e]lectron" | wc -l      # ต้องเป็น 0 ก่อนไปต่อ
 node build.js && rm -f /tmp/k2result.txt && rm -rf /tmp/k2proj
 node test/fixture.js /tmp/k2proj
 KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj ./node_modules/.bin/electron . >/tmp/k2elec.log 2>&1 &
@@ -1038,7 +1057,52 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.66r7** · e2e ALL OK 2,376 + unit 200)
+## เวอร์ชัน (ล่าสุด **alpha.66r12** · e2e ALL OK 2,421 + unit panel 264 · commit `5afcc47` บน master แล้ว)
+
+**r9–r12 = รอบเก็บบั๊กระบบแผงจากผู้ใช้ล้วน ๆ** — ทุกข้อมาจากการทดสอบจริงบนบิลด์ mac
+· สำรอง master ก่อนหน้าไว้ที่ branch `backup/master-alpha66r-2026-08-11` (`0024a98`)
+
+**.66r12** — สองข้อสุดท้ายของรอบแผง:
+· **ความสูงตอนลอยหายไปแกนเดียว**: `nodeFloatBox` เดิม `return (w>0 && h>0) ? {w,h} : null`
+  = มีแค่ด้านเดียวก็ทิ้งทั้งคู่ → ตกไปใช้ "ขนาดตอนผนึก" ซึ่งของแผงข้างคือ **สูงเต็มคอลัมน์**
+  ผู้ใช้เห็นเป็น "W ถูก H ผิด" (W บังเอิญถูกเพราะเท่ากับ pxW ที่ตั้งไว้เอง)
+  · แก้: อ่านแยกแกน + `floatPanel(id, box, {fromDock})` แยก "ขนาดที่ยกมาจาก dock" (หนีบด้วย `floatSize` ของแผง)
+    ออกจาก "กล่องที่ผู้ใช้สั่งเอง" (ห้ามแตะ) · **กฎ 66r5 เปลี่ยนแล้ว**: ความกว้างยังยกมาจากตอนผนึก แต่ความสูงไม่
+· **กล่องกลุ่มลอยเด้งกลับที่แผงฐาน**: `if (hit) { applyDrop(...); return; }` — `return` ทิ้งไม่ว่า
+  applyDrop จะสำเร็จหรือไม่ · applyDrop คืน false ได้หลายทาง (กลุ่มซ้อนกลุ่ม · ปล่อยทับตัวเอง)
+  → **ตำแหน่งไม่เคยถูกบันทึก** กล่องค้างตรงที่ปล่อยเพราะ DOM ยังไม่วาดใหม่ พอวาดใหม่ก็กลับค่าเก่า
+  · แก้: `if (hit && applyDrop(...)) return;` = ปล่อยแล้วผนึกไม่สำเร็จ ถือเป็นการย้ายกล่อง
+
+**.66r11** — กลุ่มแผงลอยที่ยังไม่สมบูรณ์:
+· **`_prune()` ลบกล่องลอยที่เป็นกลุ่มทิ้งทั้งก้อนทุกครั้งที่โหลด** (กรองด้วย `registry.has(f.panel.id)`
+  แต่กลุ่มถือ id `tmso…`) → เปิดโปรแกรมใหม่ทีหนึ่งกลุ่มลอยหายเกลี้ยง · แก้ให้กรองรายใบข้างใน
+· **แผงในกลุ่มไม่จำว่าอยู่กลุ่มไหน**: `rememberHome()` หาจาก `f.panel.id` ไม่เจอสมาชิกกลุ่ม แล้ว return เงียบ
+  · กฎที่ผู้ใช้กำหนด: จำ **เพื่อนร่วมกลุ่ม** (id ของกลุ่มเปลี่ยนทุกครั้งที่สร้างใหม่ ใช้เป็นตัวชี้ไม่ได้)
+    \+ **กล่องล่าสุดของกลุ่ม** → เปิดกลับ = กลับเข้ากลุ่มเดิม ถ้ากลุ่มไม่เหลือก็ลอยที่ตำแหน่ง/ขนาดนั้น (`reopenFloat`)
+· **ลากหัวแท็บในกลุ่ม แล้วกล่องทั้งกลุ่มวิ่งตาม** — mousedown บนแท็บลอยขึ้นถึงแถบแท็บ ตัวลาก 2 ตัวทำงานพร้อมกัน
+· **ผนึกทั้งกลุ่มที่ขอบจอไปเกาะแถบเครื่องมือ** — โซนขอบส่ง `targetId=null` → `_target()` หยิบ panel ตัวแรก
+  · `dockFloatGroup(..., {edge:true, isFixedPanel})` ยึด `workspaceNodeId` แทน
+
+**.66r10** — undock แล้วขนาดทั้งแถวเพี้ยน + กลุ่มลอย "คืน true แต่ไม่ทำอะไร":
+· `collapse()` ทิ้งขนาดของก้อนที่ยุบ → ตัวที่รอดเด้งไปใช้ค่าเก่าของตัวเอง (หรือไม่มีเลย = กลายเป็นสัดส่วน
+  แล้วไปแย่งพื้นที่กับแผงที่ตรึงไว้) · **กฎ: ตัวที่รอดยึดขนาดของกลุ่มเสมอ**
+· **ทุกคำสั่งของกลุ่มลอยพังหมดด้วยต้นตอเดียว** — `floatPanel`/`hidePanel`/`collapsePanel`/`moveTab`
+  หาแผงจาก `f.panel.id` ซึ่งไม่มีวันตรงกับสมาชิกในกลุ่ม แล้ว **คืน true ทั้งที่ไม่ได้ทำอะไร**
+  → เทสที่เรียกฟังก์ชันตรง ๆ จะผ่านหลอก ๆ **ต้อง e2e กดปุ่มจริงเท่านั้น**
+· บั๊กพ่วง: ตัวกรองใน `_detach` เขียนว่า "ทิ้งกล่องที่ไม่มี children" = ทิ้ง**แผงลอยเดี่ยวทุกใบ**พร้อมกัน
+
+**.66r9** — "canvas เปล่าหลังรีเซ็ตแล้วขยับแผง" (ผู้ใช้เดาต้นตอถูกเอง: "ฝั่งซ้ายเป็น group ซึ่งไม่เคยถูกเก็บค่า"):
+· `stampDefaultSizes` ประทับ px ที่โหนด `panel` แต่ลูกของ dock คือ **กลุ่มแท็บ** → `dockShares` อ่านไม่เจอ
+  → ตกกลับโหมดสัดส่วนทั้งแถว ค่าที่ประทับไม่เคยถูกใช้ (จอ 1500: ซ้ายได้ 360 ไม่ใช่ 300)
+· `dockAtEdge` ห่อพื้นที่ทำงานด้วย `evenSizes` = **50/50** และไม่เรียก `ensureDockPx`
+  → ปล่อยที่ขอบจอ 2 ใบ พื้นที่เขียนเหลือ 1/4 จอ = อาการ canvas เปล่า
+· ใหม่: **ส่งออกการจัดวางแผงเป็น JSON** (`panel-export.js`) — ให้ผู้ใช้ส่งเลย์เอาต์จริงมาเป็นตัวตั้ง
+
+**.66r8** — บั๊กชื่อแท็บกลายเป็นรหัส (`dmso7axbt45`): `dockPanel` เอา dock ไปยัดเป็น "แท็บ" ในกลุ่ม
+· แก้: ปล่อยแยกช่องทับแผงในกลุ่ม = **แยกทั้งกลุ่ม** · ช่องใหม่สืบทอด px ของตัวที่อยู่มาก่อน
+· รีเซ็ต = **ประทับค่าอ้างอิงตั้งต้น** ไม่ใช่ลบขนาดทิ้ง (`stampDefaultSizes`)
+
+## เวอร์ชัน (alpha.66r7 · e2e ALL OK 2,376 + unit 200)
 
 **.66r7** — **วงจรชีวิตแผงใหม่** ตามกฎที่ผู้ใช้กำหนด:
 · **เปิดแผงครั้งแรก = ลอยกลางจอ ไม่ใช่ผนึก** (`showPanel(id,{prefer:'float'})` — ทางเข้าฝั่งผู้ใช้ทุกทาง)
@@ -1051,7 +1115,7 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
   จาก id เปล่า ๆ = แผงเปล่าที่ชื่อเป็น id ดิบ · แก้แล้ว + มี `pruneGhostPanels()` เป็นตาข่าย
 · **เหลือทำ session หน้า: (B) Tear-off เป็นหน้าต่าง OS จริง (multi-display)** —
   ต้องมี `panel-host.html` + IPC state bridge · เริ่มจากแผงอ่านอย่างเดียว (บันทึก/คลังรูป/เส้นเวลา/แผนที่)
-· **สำคัญ: r2→r7 ยังไม่ได้ commit เลยสักตัว** — ต้น session หน้าให้ `git reset origin/master` แล้ว commit ก่อน
+· ~~r2→r7 ยังไม่ได้ commit~~ — **commit ขึ้น master แล้วที่ `5afcc47` (alpha.66r12)**
 
 ## เวอร์ชัน (ล่าสุด **alpha.66r6** · e2e ALL OK 2,368 + unit 196 · `npm run test:unit`)
 
