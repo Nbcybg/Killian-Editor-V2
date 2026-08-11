@@ -12,6 +12,107 @@ export const el = (tag, cls, text) => {
   return e;
 };
 
+// ───────── จำ/คืน "ตำแหน่งเลื่อน" เวลารื้อ DOM แล้วสร้างใหม่ [alpha.66r2 ข้อ 1] ─────────
+// ปัญหาที่แก้: ทั้งโปรเจกต์มี `innerHTML=''` / `replaceChildren()` เกือบร้อยจุด — รื้อแล้วสร้างใหม่
+// ทีไร กล่องที่เลื่อนอยู่ก็เด้งกลับบนสุดทุกครั้ง (ทั้งตอน "รีเฟรชแผง" และตอน "ขยับแผง")
+//
+// กุญแจสำคัญ: **ห้ามจำเป็น element reference อย่างเดียว** เพราะตัวที่เลื่อนอยู่มักถูกสร้างใหม่
+// (เช่น `.k-panel-body` ที่ตัววาดแผงสร้างใหม่ทุกรอบ) → คืนค่าลงซากที่หลุด DOM ไปแล้ว ไม่มีผลอะไร
+// จึงจำเป็น "เส้นทางดัชนีลูก" จากรากที่ยังยึดได้ แล้วไปหา **ใบใหม่ที่ตำแหน่งเดิม** ตอนคืนค่า
+
+/** เส้นทางจาก root ลงมาถึง e เป็นดัชนีลูก (null = e ไม่ได้อยู่ใต้ root) */
+export function elPath(root, e) {
+  const path = [];
+  let n = e;
+  while (n && n !== root) {
+    const p = n.parentElement;
+    if (!p) return null;
+    path.unshift(Array.prototype.indexOf.call(p.children, n));
+    n = p;
+  }
+  return n === root ? path : null;
+}
+/** เดินตามเส้นทางดัชนีลูกจาก root (null = โครงเปลี่ยนไปจนหาไม่เจอ) */
+export function elByPath(root, path) {
+  let n = root;
+  for (const i of path) {
+    if (!n || !n.children[i]) return null;
+    n = n.children[i];
+  }
+  return n || null;
+}
+
+/**
+ * จำตำแหน่งเลื่อนของทุกกล่องใต้ `root` แล้วคืนฟังก์ชัน `restore()`
+ * `root` เป็น element หรือฟังก์ชันคืน element ก็ได้ (ใช้แบบหลังเมื่อ root เองก็ถูกสร้างใหม่)
+ *
+ *   const back = keepScroll(box);  box.innerHTML = '';  ...สร้างใหม่...;  back();
+ *
+ * restore() ตั้งค่าซ้ำหลายรอบ (ทันที · rAF · 0/30/60/120/250ms) เพราะตอนใส่ DOM กลับ
+ * layout ยังไม่เสร็จ เบราว์เซอร์จะหนีบค่าที่ตั้งให้เตี้ยลงตาม scrollHeight ที่ยังไม่โต
+ * แต่ **หยุดทันทีที่ผู้ใช้/โปรแกรมเลื่อนไปที่อื่นเอง** (ไม่งั้นกลายเป็นล็อกจอไว้)
+ */
+/** อ่านตำแหน่งเลื่อนของทุกกล่องใต้ root เป็นก้อนข้อมูล (ใช้ซ้ำ/เก็บไว้ใช้ทีหลังได้) */
+export function scrollSnapshot(base) {
+  const snap = [];
+  if (!base) return snap;
+  const add = (e) => {
+    const top = e.scrollTop, left = e.scrollLeft;
+    if (!top && !left) return;
+    const path = elPath(base, e);
+    if (path) snap.push({ path, top, left });
+  };
+  add(base);
+  for (const e of base.querySelectorAll('*')) add(e);
+  return snap;
+}
+
+export function keepScroll(root) {
+  const get = typeof root === 'function' ? root : () => root;
+  const snap = scrollSnapshot(get());
+  const fn = restoreScrollSnap(get, snap);
+  fn.snap = snap;
+  return fn;
+}
+
+/** คืนตำแหน่งเลื่อนจากก้อนข้อมูลที่จำไว้ (แยกจาก keepScroll เพื่อให้ "เล่นซ้ำ" ทีหลังได้) */
+export function restoreScrollSnap(root, snap) {
+  const get = typeof root === 'function' ? root : () => root;
+  return function restore() {
+    if (!snap || !snap.length) return 0;
+    const jobs = snap.map((s) => ({ path: s.path, top: s.top, left: s.left,
+                                    el: null, prev: '', wrote: false, lastTop: 0, lastLeft: 0, done: false }));
+    const put = () => {
+      const r = get();
+      if (!r) return;
+      for (const j of jobs) {
+        if (j.done) continue;
+        const e = (j.el && j.el.isConnected) ? j.el : elByPath(r, j.path);
+        if (!e) continue;                                   // ยังสร้างไม่เสร็จ — รอรอบถัดไป
+        if (j.el !== e) {
+          j.el = e; j.wrote = false;
+          // scroll-behavior:smooth ทำให้ `e.scrollTop = n` กลายเป็นอนิเมชัน แล้วอ่านกลับได้ค่ากลางทาง
+          // → เงื่อนไข "มีคนอื่นเลื่อนไปแล้ว" เป็นจริงผิด ๆ ตั้งแต่รอบสอง (บทเรียน 71)
+          j.prev = e.style.scrollBehavior;
+          e.style.scrollBehavior = 'auto';
+        }
+        const ct = e.scrollTop, cl = e.scrollLeft;
+        if (j.wrote && ((ct && ct !== j.lastTop) || (cl && cl !== j.lastLeft))) { j.done = true; continue; }
+        if (j.top && ct !== j.top) e.scrollTop = j.top;
+        if (j.left && cl !== j.left) e.scrollLeft = j.left;
+        j.lastTop = e.scrollTop; j.lastLeft = e.scrollLeft; j.wrote = true;
+        if ((!j.top || e.scrollTop === j.top) && (!j.left || e.scrollLeft === j.left)) j.done = true;
+      }
+    };
+    put();
+    // rAF ไม่ยิงเมื่อหน้าต่างถูกบัง (บทเรียน 14i-2) → มี timer สำรองเสมอ
+    try { requestAnimationFrame(put); } catch {}
+    for (const ms of [0, 30, 60, 120, 250]) setTimeout(put, ms);
+    setTimeout(() => { for (const j of jobs) if (j.el) j.el.style.scrollBehavior = j.prev || ''; }, 300);
+    return jobs.length;
+  };
+}
+
 // ---- state กลางของทั้งแอป (object — mutate ได้ผ่าน import binding, ไม่ reassign) ----
 export const state = { root: null, title: '', tabs: new Map(), active: null,
                        meta: null, settings: {}, goals: {}, compareFile: null };
@@ -452,6 +553,12 @@ export const SHORTCUTS = [
   ['KeyU', true, true, 'sp-find-error'],
   // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
   ['Backquote', true, true, 'dev-console'],
+  // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
+  // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ) → ฝั่งขวาใช้ Ctrl+Shift+[
+  ['Backslash', true, false, 'panels-hide-all'],
+  ['BracketLeft', true, true, 'panels-hide-right'],
+  // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
+  ['KeyY', true, true, 'workspace-menu'],
 ];
 
 export const shortcutId = (s) => s.slice(3).join(':');
@@ -480,6 +587,9 @@ export const SHORTCUT_LABELS = {
   'select-scene': 'shortcuts.selectScene', 'nbsp': 'shortcuts.nbsp',
   'goto': 'shortcuts.goto', 'sp-find-error': 'shortcuts.findError',
   'dev-console': 'shortcuts.devConsole',
+  // [alpha.66r3] ระบบจัดการพื้นที่ + เวิร์กสเปซ
+  'panels-hide-all': 'shortcuts.panelsHideAll', 'panels-hide-right': 'shortcuts.panelsHideRight',
+  'panels-hide-left': 'shortcuts.panelsHideLeft', 'workspace-menu': 'shortcuts.workspaceMenu',
 };
 
 const isMac = (() => { try { return navigator.platform.toLowerCase().includes('mac'); } catch { return false; } })();

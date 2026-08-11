@@ -365,7 +365,16 @@ function buildMenu() {
         chk('▶️ ทดลองเล่น', toggles.panels['player'], () => send('toggle-panel', 'player')),
         { type: 'separator' },
         { label: '📐 จัดการแผง (แสดง/ซ่อน)…', click: () => send('panel-system') },
+        { label: '📤 ส่งออกการจัดวางแผง (JSON)…', click: () => send('export-panel-layout') },
         { label: 'รีเซ็ตการจัดวางแผงทั้งหมด', click: () => send('reset-panels') },
+      ] },
+      // [alpha.66r3] ระบบจัดการพื้นที่ + เวิร์กสเปซ (สเปกระบบแผงแบบ Photoshop)
+      { label: 'จัดพื้นที่ทำงาน', submenu: [
+        { label: `⬒ ซ่อน/แสดงแผงทั้งหมด (${C}+\\)`, click: () => send('panels-hide-all') },
+        { label: `⬓ ซ่อนแผงฝั่งขวา (${C}+${S}+[)`, click: () => send('panels-hide-right') },
+        { label: '◨ ซ่อนแผงฝั่งซ้าย', click: () => send('panels-hide-left') },
+        { type: 'separator' },
+        { label: `🗂 เวิร์กสเปซ… (${C}+${S}+Y)`, click: () => send('workspace-menu') },
       ] },
       { type: 'separator' },
       chk('โหมดอ่าน (เต็มจอ)', toggles.readingMode, () => send('reading-mode')),

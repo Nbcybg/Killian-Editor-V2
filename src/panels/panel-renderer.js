@@ -28,7 +28,20 @@ export function renderPanelLayout(container, pm, opts = {}) {
   }
   for (const f of pm.store.floats || []) renderFloatPanel(f, pm, opts, container);
   markDocsChain(container);
+  markWorkspace(container, root, opts);
   return container;
+}
+
+// [alpha.66r3] ทำเครื่องหมาย "พื้นที่ทำงาน" = ก้อนที่ไม่รวมแถบเครื่องมือ/แถบสถานะ
+// ตัวลากใช้กรอบนี้เป็นขอบสำหรับโซน "สร้าง dock ใหม่เต็มด้าน" (ไม่งั้นจะไปแทรกเหนือแถบเครื่องมือ)
+export function markWorkspace(container, root, opts) {
+  if (!container) return;
+  container.querySelectorAll('.k-workspace').forEach((e) => e.classList.remove('k-workspace'));
+  const id = PL.workspaceNodeId(root, fixedPanel(opts));
+  if (!id) return;
+  const el2 = container.querySelector(
+    `.k-dock[data-dock-id="${id}"], .k-tab-group[data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`);
+  if (el2) el2.classList.add('k-workspace');
 }
 
 export function renderNode(node, pm, opts, depth) {
@@ -51,6 +64,10 @@ function metaOf(opts, id) {
 function isFixed(node, opts) {
   return node && node.type === 'panel' && !!metaOf(opts, node.id).fixed;
 }
+// [alpha.66r2 ข้อ 2] "ยืดไม่ได้" = แผงตายตัว + แผงที่พับ + กลุ่มแท็บที่ย่อเป็นแถบไอคอน
+// (ตรรกะจริงอยู่ใน panel-layout.nodeRigid — บริสุทธิ์ ทดสอบได้)
+const fixedPanel = (opts) => (id) => !!metaOf(opts, id).fixed;
+function isRigid(node, opts) { return PL.nodeRigid(node, fixedPanel(opts)); }
 
 // ───────── dock: flex container + ที่จับปรับสัดส่วน ─────────
 function renderDock(node, pm, opts, depth) {
@@ -64,24 +81,39 @@ function renderDock(node, pm, opts, depth) {
   const shown = [];
   for (let i = 0; i < kids.length; i++) if (!PL.nodeHidden(kids[i])) shown.push(i);
   // ปรับ flex-grow ของลูกที่ "ยืดได้" ให้รวมกันเป็น 1 เสมอ
-  // (ถ้า dock นี้มีลูกแบบ fixed ปนอยู่ ผลรวมของลูกที่ยืดได้จะ < 1
-  //  แล้วพื้นที่ว่างที่เหลือจะไม่ถูกแจกให้ใคร → แผงเตี้ยผิดปกติ)
-  const growSum = shown.reduce((a, i) => a + (isFixed(kids[i], opts) ? 0 : (node.sizes?.[i] ?? 1)), 0) || 1;
+  // [alpha.66r2 ข้อ 2] เดิมหักออกจากตัวหารเฉพาะแผงตายตัว → แผงที่พับ/กลุ่มแท็บที่ย่อเป็นแถบไอคอน
+  // (CSS บังคับ flex:0 0 … !important ให้อยู่แล้ว) ยังกินโควตาในตัวหารอยู่ ทำให้ผลรวม grow < 1
+  // แล้วพื้นที่ที่เหลือไม่ถูกแจกให้ใคร = **ช่องว่างค้างที่ขอบขวา** ทุกครั้งที่ย่อแผงฝั่งขวา
+  const shares = PL.dockShares(node, fixedPanel(opts));
+  const flexIdx = PL.flexChildIndex(node);          // สายที่มีแผงเอกสาร = ตัวยืดของ dock นี้
   for (let s = 0; s < shown.length; s++) {
     const i = shown[s];
     const childEl = renderNode(kids[i], pm, opts, depth + 1);
     if (!childEl) continue;
-    if (isFixed(kids[i], opts)) {
+    const sh = shares[i] || { kind: 'rigid' };
+    // [alpha.66r4] โมเดลลูกผสม: สายที่มีแผงเอกสาร = ตัวยืดตัวเดียว · แผงข้าง = px คงที่
+    // → ย่อ/ขยายหน้าต่างแล้วพื้นที่เขียนดูดส่วนต่างไปคนเดียว แผงข้างกว้างเท่าเดิม (แบบ Photoshop)
+    if (sh.kind === 'rigid') {
       childEl.style.flex = '0 0 auto';
+    } else if (sh.kind === 'flex') {
+      childEl.classList.add('k-flex-child');
+      childEl.style.flex = '1 1 0';
+    } else if (sh.kind === 'px') {
+      childEl.classList.add('k-fixed-px');
+      childEl.style.flex = '0 1 ' + sh.px + 'px';         // ยอมให้หดได้เมื่อจอแคบจริง ๆ
     } else {
-      childEl.style.flexGrow = String((node.sizes?.[i] ?? 1) / growSum);
+      // ยังไม่ถูกตรึง → สัดส่วนเหมือนเดิม · แต่ถ้าเป็นสายแผงเอกสารก็ติดป้ายไว้
+      // เพื่อให้ที่จับรู้ว่า "ฝั่งไหนคือตัวยืด" ตั้งแต่การลากครั้งแรก (ครั้งแรกนี่แหละที่ตรึง px)
+      if (i === flexIdx) childEl.classList.add('k-flex-child');
+      childEl.style.flexGrow = String(sh.grow);
       childEl.style.flexShrink = '1';
       childEl.style.flexBasis = '0%';
     }
     box.appendChild(childEl);
     // ที่จับอยู่ระหว่างลูกสองตัวที่ "ยืดได้" ทั้งคู่ และต้องเป็นตัวที่ **เห็นอยู่** ทั้งคู่
+    // (ลากปรับสัดส่วนกับแผงที่พับอยู่ไม่มีความหมาย — มันกินพื้นที่เท่าเนื้อหาเสมอ)
     const nextIdx = shown[s + 1];
-    if (nextIdx !== undefined && !isFixed(kids[i], opts) && !isFixed(kids[nextIdx], opts)) {
+    if (nextIdx !== undefined && !isRigid(kids[i], opts) && !isRigid(kids[nextIdx], opts)) {
       // ดัชนีที่ส่งให้ resizeDock ต้องเป็นดัชนี "ในต้นไม้" ไม่ใช่ลำดับที่เห็นบนจอ
       box.appendChild(createResizeHandle(node.id, i, node.dir, pm, nextIdx));
     }
@@ -123,7 +155,7 @@ function renderTabs(node, pm, opts, depth) {
       if (strip) { toggleStrip(node.id, pm, false); pm.activatePanel(child.id); return; }
       pm.activatePanel(child.id);
     };
-    makeTabDraggable(tab, child.id, node.id, i, pm, { host: opts.host });
+    makeTabDraggable(tab, child.id, node.id, i, pm, { host: opts.host, isFixedPanel: fixedPanel(opts) });
     bar.appendChild(tab);
   }
   // ปุ่มย่อกลุ่มแท็บเป็นแถบไอคอน
@@ -168,7 +200,8 @@ function renderPanel(node, pm, opts, depth) {
     const head = buildHead(node, pm, opts, md, false);
     box.appendChild(head);
     // ลากหัวแผง → ผนึกที่อื่น / รวมเป็นแท็บ / ลอยออกมา
-    makePanelDraggable(head, node.id, pm, { host: opts.host, ghostLabel: md.title || node.title || node.id });
+    makePanelDraggable(head, node.id, pm,
+      { host: opts.host, isFixedPanel: fixedPanel(opts), ghostLabel: md.title || node.title || node.id });
   }
   box.appendChild(buildBody(node, opts));
   return box;
@@ -196,7 +229,11 @@ function buildHead(node, pm, opts, md, floating) {
     btn.dataset.act = b.key;
     btn.onclick = (e) => {
       e.stopPropagation();
-      if (b.key === 'collapse') pm.collapsePanel(node.id);
+      if (b.key === 'menu') {
+        const r = btn.getBoundingClientRect();
+        popupMenu(Math.max(8, r.right - 240), r.bottom + 3, headMenuItems(node, pm, opts, md, floating));
+      }
+      else if (b.key === 'collapse') pm.collapsePanel(node.id);
       else if (b.key === 'close') pm.hidePanel(node.id);
       else if (b.key === 'float') {
         if (floating) {                              // ผนึกกลับ: อ้าง 'docs' เป็นหลัก (ไม่งั้นไปเกาะแถบเครื่องมือ)
@@ -206,7 +243,9 @@ function buildHead(node, pm, opts, md, floating) {
         }
         const host = e.target.closest('.k-panel');
         const r = host ? host.getBoundingClientRect() : { left: 90, top: 90, width: 320, height: 300 };
-        pm.floatPanel(node.id, clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }));
+        // [66r12] กล่องนี้คือ "ขนาดตอนผนึก" — ความสูงของแผงข้างคือเต็มคอลัมน์ ต้องให้ store หนีบให้
+        pm.floatPanel(node.id, clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }),
+                      { fromDock: true });
       }
     };
     btns.appendChild(btn);
@@ -241,6 +280,9 @@ export function headMenuItems(node, pm, opts, md, floating) {
         pm.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
       } });
   }
+  // [alpha.66r3] คำสั่งลึกที่ UI ฝากมา (จัดการพื้นที่ · เวิร์กสเปซ) — Progressive Disclosure ตามสเปก
+  const extra = opts.extraHeadMenu ? (opts.extraHeadMenu(node.id, floating) || []) : [];
+  if (extra.length) { items.push('-'); for (const it of extra) items.push(it); }
   if (def.closable !== false) {
     items.push('-');
     items.push({ label: '✕ ปิดแผง (เปิดกลับที่ มุมมอง → แผง)', click: () => pm.hidePanel(node.id) });
@@ -284,10 +326,13 @@ function iconSpan(name, cls) {
 
 // ───────── floating panel ─────────
 export function renderFloatPanel(f, pm, opts, container) {
+  // [alpha.66r7] แผงลอยจับกลุ่มกันได้เหมือน dock — f.panel เป็นโหนด `tabs` ได้แล้ว
+  if (f.panel && f.panel.type === 'tabs') return renderFloatGroup(f, pm, opts, container);
   const p = f.panel;
   const md = metaOf(opts, p.id);
   const pop = el('div', 'k-float-panel');
   pop.dataset.panelId = p.id;
+  pop.dataset.floatId = f.id;
   // 0.56a #7: เลย์เอาต์ที่บันทึกไว้อาจอยู่นอกจอ (ย่อหน้าต่าง/ย้ายจอ) → หนีบทุกครั้งที่วาด
   const box = clampFloat({ x: f.x ?? 80, y: f.y ?? 80, w: f.w ?? 360, h: f.h ?? 260 });
   pop.style.left = box.x + 'px';
@@ -304,7 +349,7 @@ export function renderFloatPanel(f, pm, opts, container) {
   makeResizable(pop, grip, (w, h, x, y) => pm.moveFloat(p.id, { w, h, x, y }));
   pop.appendChild(grip);
 
-  makeFloatDraggable(head, pop, p.id, pm, { host: opts.host });
+  makeFloatDraggable(head, pop, p.id, pm, { host: opts.host, isFixedPanel: fixedPanel(opts), floatId: f.id });
   // ยกขึ้นบนสุดด้วยการย้าย DOM ไม่ใช่ re-render — re-render ระหว่าง mousedown จะถอด pop
   // ที่ drag/resize กำลังอ้างถึงออกจากหน้า แล้ว offsetLeft/Width กลายเป็น 0 ตอนปล่อยเมาส์
   pop.addEventListener('mousedown', () => {
@@ -324,6 +369,84 @@ export function renderFloatPanel(f, pm, opts, container) {
   return pop;
 }
 
+
+/** [alpha.66r7] กล่องลอยที่มีหลายแผงเป็นแท็บ — ลากทั้งกล่องไปผนึกได้ · ลากแท็บออกได้ทีละใบ */
+function renderFloatGroup(f, pm, opts, container) {
+  const g = f.panel;
+  const pop = el('div', 'k-float-panel k-float-group');
+  pop.dataset.floatId = f.id;
+  const box = clampFloat({ x: f.x ?? 80, y: f.y ?? 80, w: f.w ?? 420, h: f.h ?? 320 });
+  pop.style.left = box.x + 'px'; pop.style.top = box.y + 'px';
+  pop.style.width = box.w + 'px'; pop.style.height = box.h + 'px';
+
+  const kids = (g.children || []).filter((c) => !PL.nodeHidden(c));
+  let active = Math.max(0, Math.min(g.active | 0, kids.length - 1));
+  const bar = el('div', 'k-tab-bar k-float-tabbar');
+  kids.forEach((child, i) => {
+    const md = metaOf(opts, child.id);
+    const tab = el('div', 'k-tab' + (i === active ? ' active' : ''));
+    tab.dataset.index = String(i);
+    tab.dataset.panelId = child.id;
+    tab.appendChild(iconSpan(md.icon, 'k-tab-icon'));
+    tab.appendChild(el('span', 'k-tab-title', md.title || child.title || child.id));
+    tab.title = md.title || child.title || child.id;
+    tab.onclick = () => {
+      const next = pm.floats.map((x) => (x.id === f.id
+        ? { ...x, panel: { ...x.panel, active: i } } : x));
+      pm.store.setFloats(next);
+    };
+    // ลากแท็บออกจากกลุ่มลอย → แยกเป็นกล่องของตัวเอง หรือไปผนึกที่อื่น
+    makeTabDraggable(tab, child.id, g.id, i, pm, { host: opts.host, isFixedPanel: fixedPanel(opts) });
+    bar.appendChild(tab);
+  });
+  // ปุ่มปิดของกลุ่ม (ปิดแท็บที่เปิดอยู่)
+  const closeBtn = el('span', 'k-panel-btn k-panel-btn-close', '✕');
+  closeBtn.title = 'ปิดแผงที่เปิดอยู่';
+  closeBtn.onclick = (e) => { e.stopPropagation(); const c = kids[active]; if (c) pm.hidePanel(c.id); };
+  const dockBtn = el('span', 'k-panel-btn k-panel-btn-float', '⊡');
+  dockBtn.title = 'ผนึกทั้งกลุ่มกลับเข้าหน้าต่าง';
+  dockBtn.onclick = (e) => {
+    e.stopPropagation();
+    pm.dockFloatGroup(f.id, 'left', pm.isDocked('docs') ? 'docs' : undefined);
+  };
+  const btns = el('span', 'k-panel-btns');
+  btns.append(dockBtn, closeBtn);
+  bar.appendChild(btns);
+  pop.appendChild(bar);
+
+  const body = el('div', 'k-tab-content');
+  kids.forEach((child, i) => {
+    const panelEl = renderNode(child, pm, opts, 1);
+    if (!panelEl) return;
+    panelEl.classList.add('k-tabbed');
+    if (i !== active) panelEl.classList.add('k-tab-hidden');
+    body.appendChild(panelEl);
+  });
+  pop.appendChild(body);
+
+  const grip = el('div', 'k-panel-resize');
+  makeResizable(pop, grip, (w, h, x, y) => pm.moveFloatBox(f.id, { w, h, x, y }));
+  pop.appendChild(grip);
+  // ลากแถบแท็บ (ที่ว่าง ๆ) = ย้าย/ผนึกทั้งกลุ่ม
+  makeFloatDraggable(bar, pop, g.id, pm, { host: opts.host, isFixedPanel: fixedPanel(opts), floatId: f.id });
+  // [alpha.66r10] กลุ่มลอยไม่เคยมีตัวยกขึ้นบนสุด — คลิกแล้วมันจมอยู่ใต้กล่องลอยใบอื่นตลอด
+  // (ย้าย DOM เอง ไม่ re-render — re-render กลาง mousedown จะทำให้ตัวที่กำลังลากหลุดหน้า)
+  pop.addEventListener('mousedown', () => {
+    const par = pop.parentNode;
+    if (par) {
+      let sib = pop.nextElementSibling, lastFloat = null;
+      while (sib) {
+        if (sib.classList && sib.classList.contains('k-float-panel')) lastFloat = sib;
+        sib = sib.nextElementSibling;
+      }
+      if (lastFloat) par.insertBefore(pop, lastFloat.nextSibling);
+    }
+    if (typeof pm._toFront === 'function') pm._toFront(f.id);
+  }, true);
+  (container || document.body).appendChild(pop);
+  return pop;
+}
+
 // ───────── resize handle ของ dock ─────────
 // ลากแล้วปรับ flex สดบน DOM (ไม่ re-render) → commit ลง store ตอนปล่อยครั้งเดียว
 export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
@@ -332,7 +455,23 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
   h.dataset.dockId = dockId;
   h.dataset.index = String(index);
   h.title = 'ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)';
-  h.addEventListener('dblclick', () => pm.resize(dockId, index, 0.5, nextIndex));
+  // [alpha.66r4] ลากที่จับใน dock ที่มี "ตัวยืด" = **ตรึงความกว้างฝั่งที่ไม่ใช่ตัวยืดเป็น px**
+  // (การลากคือเจตนาชัดเจนของผู้ใช้ว่า "ขอกว้างเท่านี้" — ตั้งแต่ครั้งแรก ไม่ต้องรอให้เป็น px ก่อน)
+  // dock ที่ไม่มีตัวยืดเลย (ไม่มีแผงเอกสารอยู่ข้างใน) → ใช้สัดส่วนเหมือนเดิมทุกประการ
+  const hasFlex = () => !!(h.parentElement && h.parentElement.querySelector(':scope > .k-flex-child'));
+  const isPx = (n) => !!(n && hasFlex() && !n.classList.contains('k-flex-child'));
+  h.addEventListener('dblclick', () => {
+    const prev = h.previousElementSibling, next = h.nextElementSibling;
+    if (!prev || !next) return;
+    if (!isPx(prev) && !isPx(next)) { pm.resize(dockId, index, 0.5, nextIndex); return; }
+    // โหมด px: "แบ่งครึ่ง" = ให้คู่นี้กว้างเท่ากัน (ตัวยืดไม่ต้องแตะ เดี๋ยวมันดูดที่เหลือเอง)
+    const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
+    const half = ((row ? pr.width + nr.width : pr.height + nr.height)) / 2;
+    const up2 = {};
+    if (isPx(prev)) up2[index] = half;
+    if (isPx(next)) up2[nextIndex ?? index + 1] = half;
+    pm.resizePx(dockId, up2, row);
+  });
   h.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -343,11 +482,36 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
     if (total <= 0) return;
     const start = row ? e.clientX : e.clientY;
     const base = row ? pr.width : pr.height;
+    const baseNext = row ? nr.width : nr.height;
+    const pxMode = isPx(prev) || isPx(next);
     const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
     let ratio = base / total;
+    let pxPrev = base, pxNext = baseNext;
     document.body.classList.add('k-resizing');
+    // [alpha.66r5] พื้นที่ที่ "ตัวยืด" มีอยู่ตอนเริ่มลาก — ใช้คำนวณเพดานการลาก
+    // กฎ: ผู้ที่ยอมเสียพื้นที่ให้การลากมีแค่ตัวยืดตรงกลางเท่านั้น · แผงอีกฝั่งห้ามถูกเบียดเด็ดขาด
+    // (ปล่อยให้ flexbox บีบเอง = ลากขอบขวาแล้วแผงซ้ายหดตาม ซึ่งผู้ใช้บอกว่าไม่ควรเกิด)
+    const flexEl = h.parentElement && h.parentElement.querySelector(':scope > .k-flex-child');
+    const flexR = flexEl ? flexEl.getBoundingClientRect() : null;
+    const flexSize = flexR ? (row ? flexR.width : flexR.height) : 0;
+    const slack = Math.max(0, flexSize - PL.MIN_CANVAS_PX);   // ตัวยืดยอมหดได้อีกเท่านี้
     const move = (ev) => {
       const d = (row ? ev.clientX : ev.clientY) - start;
+      if (pxMode) {
+        // [alpha.66r4] ลากในโหมด px: เขียนความกว้างจริงเป็น px ให้ฝั่งที่เป็น px
+        // ฝั่งที่เป็น "ตัวยืด" ไม่ต้องแตะเลย — มันดูดส่วนต่างเองอัตโนมัติ
+        const lim = PL.MIN_PANEL_PX;
+        let dd = d;
+        if (isPx(prev)) dd = Math.max(lim - base, dd);
+        if (isPx(next)) dd = Math.min(baseNext - lim, dd);
+        // เพดานจากพื้นที่ทำงาน: ฝั่งไหนโตขึ้น ตัวยืดก็เล็กลงเท่านั้น — ห้ามเกิน slack
+        if (isPx(prev) && !isPx(next)) dd = Math.min(dd, slack);     // ลากขวา = prev โต
+        if (isPx(next) && !isPx(prev)) dd = Math.max(dd, -slack);    // ลากซ้าย = next โต
+        pxPrev = base + dd; pxNext = baseNext - dd;
+        if (isPx(prev)) prev.style.flex = '0 1 ' + Math.round(pxPrev) + 'px';
+        if (isPx(next)) next.style.flex = '0 1 ' + Math.round(pxNext) + 'px';
+        return;
+      }
       ratio = Math.max(0.05, Math.min(0.95, (base + d) / total));
       prev.style.flexGrow = String(growSum * ratio);
       next.style.flexGrow = String(growSum * (1 - ratio));
@@ -356,7 +520,34 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
       document.body.classList.remove('k-resizing');
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
-      pm.resize(dockId, index, ratio, nextIndex);    // commit → re-render ครั้งเดียว
+      if (pxMode) {                                   // commit → re-render ครั้งเดียว
+        const upd = {};
+        if (isPx(prev)) upd[index] = pxPrev;
+        if (isPx(next)) upd[nextIndex ?? index + 1] = pxNext;
+        // [alpha.66r5] **ตรึงพี่น้องที่ยังไม่เคยถูกตรึงไปพร้อมกัน** ด้วยขนาดที่มันมีอยู่ตอนนี้
+        // ไม่งั้นแผงอีกฝั่งที่ยังเป็น "สัดส่วน" จะไปแย่งพื้นที่ที่เหลือกับตัวยืด แล้วหดตามทุกครั้งที่ลาก
+        // (อาการที่ผู้ใช้เจอ: dock/undock ฝั่งซ้าย แล้วลากฝั่งขวา ฝั่งซ้ายถูกบีบ)
+        // ตรงนี้ปลอดภัยที่จะ "วัดแล้วตรึง" เพราะเป็นจังหวะที่ผู้ใช้ลงมือเอง = เลย์เอาต์นิ่งและเห็นอยู่กับตา
+        try {
+          const dockEl = h.parentElement;
+          const kids = (PL.nodeById(pm.root, dockId) || {}).children || [];
+          for (let i = 0; i < kids.length; i++) {
+            const kid = kids[i];
+            if (!kid || upd[i] !== undefined || PL.nodePx(kid, row) > 0) continue;
+            const kel = dockEl.querySelector(
+              `:scope > [data-panel-id="${kid.id}"], :scope > [data-dock-id="${kid.id}"], :scope > [data-tabs-id="${kid.id}"]`);
+            if (!kel) continue;
+            if (kel.classList.contains('k-flex-child') || kel.classList.contains('k-collapsed')
+                || kel.classList.contains('k-panel-fixed') || kel.classList.contains('icon-strip')) continue;
+            const r = kel.getBoundingClientRect();
+            const v = Math.round(row ? r.width : r.height);
+            if (v >= PL.MIN_PANEL_PX) upd[i] = v;
+          }
+        } catch {}
+        pm.resizePx(dockId, upd, row);
+        return;
+      }
+      pm.resize(dockId, index, ratio, nextIndex);
     };
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);

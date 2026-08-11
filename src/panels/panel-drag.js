@@ -35,8 +35,9 @@ export function createDropOverlay() {
   document.body.appendChild(box);
   _ov = {
     el: box,
-    show(rect, zone) {
+    show(rect, zone, kind) {
       box.dataset.zone = zone || '';
+      box.dataset.kind = kind || 'insert';           // [66r3] แทรก / รวมกลุ่ม / แท็บ / ขอบจอ — คนละหน้าตา
       box.style.left = Math.round(rect.x) + 'px';
       box.style.top = Math.round(rect.y) + 'px';
       box.style.width = Math.round(rect.w) + 'px';
@@ -49,9 +50,23 @@ export function createDropOverlay() {
   return _ov;
 }
 
-// กรอบที่จะไฮไลต์เมื่อปล่อยโซนนี้ (ครึ่ง/สี่ส่วนของ target)
-export function zoneRect(rect, zone) {
+// ความหนาของแถบ "สร้าง dock ใหม่เต็มด้าน" ที่โชว์ตอนลากไปชนขอบพื้นที่ทำงาน
+const EDGE_BAR = 46;
+
+// กรอบที่จะไฮไลต์เมื่อปล่อยโซนนี้
+// [alpha.66r3] สเปกแยกสามหน้าตา: **แทรก** = ครึ่งพื้นที่ + เส้นหนาตรงขอบที่จะแทรก (CSS ใส่ให้)
+// · **รวมกลุ่ม** = กรอบคลุมทั้งใบ · **ขอบจอ** = แถบยาวเต็มด้าน (จะได้ dock ใหม่ทั้งคอลัมน์/แถว)
+export function zoneRect(rect, zone, kind) {
   const { x, y, w, h } = rect;
+  if (kind === 'edge') {
+    const t = Math.min(EDGE_BAR, (zone === 'left' || zone === 'right' ? w : h) / 2);
+    switch (zone) {
+      case 'left':   return { x, y, w: t, h };
+      case 'right':  return { x: x + w - t, y, w: t, h };
+      case 'top':    return { x, y, w, h: t };
+      default:       return { x, y: y + h - t, w, h: t };
+    }
+  }
   switch (zone) {
     case 'left':   return { x, y, w: w / 2, h };
     case 'right':  return { x: x + w / 2, y, w: w / 2, h };
@@ -61,13 +76,50 @@ export function zoneRect(rect, zone) {
   }
 }
 
+const box = (r) => ({ x: r.left, y: r.top, w: r.width, h: r.height });
+
 /**
- * หา panel ที่เมาส์อยู่เหนือ + โซนที่จะผนึก
- * เลือก "ใบที่เล็กที่สุด" ที่ครอบจุดนั้น = ใบในสุด (ลึกสุดของต้นไม้)
- * @returns {{targetId, zone, rect}|null}
+ * หาเป้าหมายที่จะปล่อย + โซน — ตามตารางในสเปก เรียงตาม **ลำดับความสำคัญ** และคืนแค่ตัวที่ดีที่สุด
+ *
+ *   1. หัวแท็บใบใดใบหนึ่ง → `kind:'tab'`  แทรกเป็นแท็บตรงตำแหน่งนั้นทันที (กรอบเล็กครอบแท็บ)
+ *   2. ขอบพื้นที่ทำงาน  → `kind:'edge'`   สร้าง dock ใหม่เต็มด้านนั้น (แถบยาวเต็มขอบ)
+ *   3. ขอบของแผง        → `kind:'insert'` แทรกเป็นช่องใหม่ (ครึ่งพื้นที่ + เส้นบอกด้าน)
+ *   4. กลางแผง          → `kind:'merge'`  รวมเป็นแท็บในกลุ่มนั้น (กรอบคลุมทั้งใบ)
+ *
+ * ทำไมหัวแท็บต้องมาก่อนขอบจอ: dock ฝั่งซ้าย/ขวา **ชิดขอบจออยู่แล้ว** แถบแท็บของมันจึงตกอยู่ใน
+ * เขตขอบเสมอ — ถ้าให้ขอบชนะ จะเล็งวางลงแท็บของ dock ข้างไม่ได้เลยสักครั้ง (เจอตอน e2e)
+ * ส่วนที่เหลือของขอบ (ใต้แถบแท็บลงไป) ยังให้โซนขอบตามปกติ
+ *
+ * ในข้อ 3–4 เลือก "ใบที่เล็กที่สุด" ที่ครอบจุดนั้น = ใบในสุดของต้นไม้
+ * @returns {{targetId, zone, rect, kind, tabIndex?}|null}
  */
 export function detectSnapTarget(mx, my, host, excludeId) {
   if (!host) return null;
+  // (0) [alpha.66r7] หัว/แถบแท็บของ "กล่องลอย" — ปล่อยตรงนี้ = รวมเข้ากลุ่มลอยนั้น
+  for (const fp of document.querySelectorAll('.k-float-panel[data-float-id]')) {
+    if (fp.dataset.panelId === excludeId) continue;
+    const head = fp.querySelector(':scope > .k-panel-head, :scope > .k-float-tabbar');
+    if (!head) continue;
+    const r = head.getBoundingClientRect();
+    if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
+    return { kind: 'floatgroup', zone: 'center', targetId: fp.dataset.floatId, rect: box(r) };
+  }
+  // (1) หัวแท็บ — เป็นการเล็งที่เจาะจงที่สุด ("วางเป็นแท็บลำดับนี้") จึงมาก่อนทุกอย่าง
+  for (const tab of host.querySelectorAll('.k-tab[data-panel-id]')) {
+    const pid = tab.dataset.panelId;
+    if (pid === excludeId || pid === 'docs') continue;
+    const r = tab.getBoundingClientRect();
+    if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
+    return { kind: 'tab', zone: 'center', targetId: pid, rect: box(r), tabIndex: +tab.dataset.index || 0 };
+  }
+  // (2) ขอบของ "พื้นที่ทำงาน" (ไม่รวมแถบเครื่องมือ/แถบสถานะ — สองตัวนั้นต้องอยู่บน/ล่างสุดเสมอ)
+  const wsEl = host.querySelector('.k-workspace') || host;
+  const wsR = wsEl.getBoundingClientRect();
+  if (wsR.width && wsR.height) {
+    const ez = PL.edgeZone(mx, my, box(wsR));
+    if (ez) return { kind: 'edge', zone: ez, rect: box(wsR), targetId: null };
+  }
+  // (3)+(4) กรอบของแผง
   let best = null;
   for (const e of host.querySelectorAll('.k-panel[data-panel-id]')) {
     if (e.dataset.panelId === excludeId) continue;
@@ -75,15 +127,36 @@ export function detectSnapTarget(mx, my, host, excludeId) {
     if (e.offsetParent === null) continue;           // ซ่อนอยู่ (แท็บที่ไม่ active)
     const r = e.getBoundingClientRect();
     if (!r.width || !r.height) continue;
-    const rect = { x: r.left, y: r.top, w: r.width, h: r.height };
-    let zone = PL.snapZone(mx, my, rect);
+    const rect = box(r);
+    const zone = PL.snapZone(mx, my, rect);
     if (!zone) continue;
     // ห้ามรวมเป็นแท็บกับ "แผงเอกสาร" — จะบังพื้นที่เขียนทั้งหมด (ปล่อยกลางแผงเอกสาร = ไม่ทำอะไร)
     if (zone === 'center' && e.dataset.panelId === 'docs') continue;
     const area = r.width * r.height;
-    if (!best || area < best.area) best = { targetId: e.dataset.panelId, zone, rect, area };
+    if (!best || area < best.area) {
+      best = { targetId: e.dataset.panelId, zone, rect, area, kind: zone === 'center' ? 'merge' : 'insert' };
+    }
   }
   return best;
+}
+
+/** ลงมือย้ายจริงตามเป้าที่ปล่อย (ใช้ร่วมกันทั้งลากหัวแผง ลากแท็บ และลากแผงลอย) */
+export function applyDrop(pm, panelId, hit, ctx = {}) {
+  if (!hit) return false;
+  // ลากทั้ง "กล่องลอย" (กลุ่ม) ไปผนึก — ต้องย้ายทั้งก้อน ไม่ใช่ทีละแผง
+  const draggingGroup = !!(ctx.floatId
+    && (pm.floats || []).some((f) => f.id === ctx.floatId && f.panel && f.panel.type === 'tabs'));
+  if (draggingGroup && hit.kind !== 'floatgroup') {
+    if (hit.kind === 'tab' || hit.kind === 'merge') return false;      // กลุ่มซ้อนกลุ่ม — ไม่รองรับ
+    // [alpha.66r11] ปล่อยทั้งกลุ่มที่ "ขอบพื้นที่ทำงาน" = ผนึกเต็มด้านนั้น (เหมือนแผงเดี่ยว)
+    return pm.dockFloatGroup(ctx.floatId, hit.zone, hit.targetId,
+      { edge: hit.kind === 'edge', isFixedPanel: ctx.isFixedPanel });
+  }
+  if (hit.kind === 'floatgroup') return pm.groupIntoFloat(panelId, hit.targetId);
+  if (hit.kind === 'edge') return pm.dockAtEdge(panelId, hit.zone, ctx.isFixedPanel);
+  if (hit.kind === 'tab') return pm.addTabAt(panelId, hit.targetId, hit.tabIndex);
+  if (hit.targetId === panelId) return false;
+  return pm.dockPanel(panelId, hit.zone, hit.targetId);
 }
 
 // ───────── แกนกลาง: ลากอะไรก็ได้ที่แทน panel หนึ่งใบ ─────────
@@ -113,9 +186,10 @@ function startPanelDrag(e, panelId, pm, ctx = {}) {
     if (ghost) { ghost.style.left = (ev.clientX + 12) + 'px'; ghost.style.top = (ev.clientY + 14) + 'px'; }
     if (!ctx.floatOnly) {
       hit = detectSnapTarget(ev.clientX, ev.clientY, host, panelId);
-      // บั๊ก #3: โซนกลาง (= รวมเป็นแท็บ) ต้องได้รับอนุญาตก่อน
-      if (hit && hit.zone === 'center' && !ctx.allowGroup) hit = null;
-      if (hit) ov.show(zoneRect(hit.rect, hit.zone), hit.zone);
+      // บั๊ก #3: "รวมเป็นแท็บ" แบบปล่อยกลางแผง ต้องได้รับอนุญาตก่อน (กันเผลอจับกลุ่ม)
+      // แต่การปล่อยลง **หัวแท็บ** หรือ **ขอบจอ** เป็นการเล็งที่ชัดเจนอยู่แล้ว — อนุญาตเสมอ
+      if (hit && hit.kind === 'merge' && !ctx.allowGroup) hit = null;
+      if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
       else ov.hide();
     }
   };
@@ -131,15 +205,16 @@ function startPanelDrag(e, panelId, pm, ctx = {}) {
     const uy = (ev.clientX || ev.clientY) ? ev.clientY : lastY;
     // จัดลำดับแท็บภายในกลุ่มเดิม (ถ้า caller รองรับ) มาก่อน
     if (ctx.onReorder && ctx.onReorder(ux, uy)) return;
-    if (!ctx.floatOnly && hit) {
-      if (hit.targetId === panelId) return;
-      pm.dockPanel(panelId, hit.zone, hit.targetId);
-      return;
-    }
+    if (!ctx.floatOnly && hit) { applyDrop(pm, panelId, hit, ctx); return; }
     // ปล่อยนอกทุกแผง (หรือ floatOnly ที่ไม่มี hit) → ลอยอิสระตรงตำแหน่งเมาส์ (หนีบให้อยู่ในจอ)
+    // [alpha.66r5] ขนาดต้องเป็น **ขนาดที่แผงมีอยู่ตอนยังผนึกอยู่** ไม่ใช่ 320×300 ตายตัว
+    // (อาการเดิม: ลากแผงออกมาลอยทีไร ขนาดถูกรีเซ็ตทุกครั้ง)
     if (!hit) {
+      const box = ctx.floatBox ? ctx.floatBox() : null;
+      // [66r12] `box` = ขนาดที่แผงมีอยู่ตอนยังผนึก → บอก store ให้หนีบความสูงด้วยค่าอ้างอิง
       pm.floatPanel(panelId, clampFloat({ x: ux - 60, y: uy - 12,
-                                          w: ctx.floatW || 320, h: ctx.floatH || 300 }));
+                                          w: (box && box.w) || ctx.floatW || 320,
+                                          h: (box && box.h) || ctx.floatH || 300 }), { fromDock: !!box });
     }
     // floatOnly && hit → no-op (ไม่ group, ไม่ float)
   };
@@ -167,13 +242,24 @@ export function inGroupHandle(header, clientX) {
 
 /** ลากด้วยหัวแผงที่ผนึกอยู่ → ผนึกขอบ (แยกช่อง) / รวมเป็นแท็บ / ลอยออกมา
  *  บั๊ก #3 + [alpha.65r]: รวมเป็นแท็บได้ก็ต่อเมื่อจับที่ "ชื่อแผง" เท่านั้น */
+/** ขนาดที่แผงมีอยู่จริงบนจอตอนนี้ — ใช้เป็นขนาดตั้งต้นเวลาลากออกมาลอย */
+export function panelBoxOf(panelId, host) {
+  const root = host || document;
+  const e = root.querySelector(`.k-panel[data-panel-id="${panelId}"]`);
+  if (!e) return null;
+  const r = e.getBoundingClientRect();
+  return r.width > 40 && r.height > 40 ? { w: Math.round(r.width), h: Math.round(r.height) } : null;
+}
+
 export function makePanelDraggable(header, panelId, pm, ctx = {}) {
   header.addEventListener('mousedown', (e) => {
     if (e.target.closest('.k-panel-btn') || e.target.closest('.k-panel-ctrls')
         || e.target.closest('.k-panel-btns')) return;
     const onTitle = !!e.target.closest('.k-panel-head-title') || !!e.target.closest('.k-panel-head-icon');
     const allowGroup = onTitle && inGroupHandle(header, e.clientX);
-    startPanelDrag(e, panelId, pm, { ...ctx, allowGroup });
+    // จับขนาดไว้ตั้งแต่ก่อนเริ่มลาก (ตอนปล่อย แผงอาจถูกถอดออกจาก DOM ไปแล้ว)
+    const box = panelBoxOf(panelId, ctx.host);
+    startPanelDrag(e, panelId, pm, { ...ctx, allowGroup, floatBox: () => box });
   });
   header.classList.add('k-can-group');
 }
@@ -183,8 +269,10 @@ export function makeTabDraggable(tab, panelId, tabsId, index, pm, ctx = {}) {
   tab.addEventListener('mousedown', (e) => {
     if (e.target.closest('.k-panel-btn')) return;
     const bar = tab.parentNode;
+    const box = panelBoxOf(panelId, ctx.host);          // ขนาดเดิมก่อนถูกลากออก
     startPanelDrag(e, panelId, pm, {
       ...ctx,
+      floatBox: () => box,
       allowGroup: true,                                 // ลากหัวแท็บ = ตั้งใจจัดกลุ่มอยู่แล้ว
       ghostLabel: ctx.ghostLabel || tab.textContent.trim(),
       onReorder: (mx, my) => {
@@ -240,7 +328,16 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
     if (e.target.closest('.k-panel-btn') || e.target.closest('.k-panel-ctrls')
         || e.target.closest('.k-panel-btns')) return;
     const host = ctx.host || document.getElementById('app-root') || document.body;
-    const canDock = !!e.target.closest('.k-panel-head-title') && inGroupHandle(header, e.clientX);
+    // กลุ่มลอย: ลากที่ "แถบแท็บ" (ตรงที่ว่าง ไม่ใช่ตัวแท็บ/ปุ่ม) = ย้าย/ผนึกทั้งกลุ่มได้เลย
+    const onFloatBar = !!(ctx.floatId && header.classList.contains('k-float-tabbar'));
+    // [alpha.66r11 บั๊ก A] **จับที่ "หัวแท็บ" = งานของ makeTabDraggable ล้วน ๆ ห้ามลากกล่องตาม**
+    // เดิม mousedown บนแท็บลอยขึ้นมาถึงแถบแท็บด้วย → ตัวลากกล่องทำงานคู่กัน:
+    // กล่องทั้งกลุ่มวิ่งตามเมาส์ระหว่างลากแท็บ แล้วตอนปล่อยก็ commit ตำแหน่งใหม่ลง store
+    // (อาการ: เอาแผงไปรวมในกลุ่มเดิม/สลับลำดับแท็บทีไร กล่องกลุ่มย้ายที่ทุกครั้ง)
+    if (onFloatBar && e.target.closest('.k-tab')) return;
+    const canDock = onFloatBar
+      ? !e.target.closest('.k-tab') && !e.target.closest('.k-panel-btn')
+      : (!!e.target.closest('.k-panel-head-title') && inGroupHandle(header, e.clientX));
     const sx = e.clientX, sy = e.clientY;
     const x0 = popup.offsetLeft, y0 = popup.offsetTop;
     const ov = createDropOverlay();
@@ -255,7 +352,7 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       popup.style.top = s.y + 'px';
       popup.classList.toggle('k-float-snapped', s.snapped);
       hit = canDock ? detectSnapTarget(ev.clientX, ev.clientY, host, panelId) : null;
-      if (hit) ov.show(zoneRect(hit.rect, hit.zone), hit.zone);
+      if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
       else ov.hide();
     };
     const up = () => {
@@ -267,12 +364,19 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       // ถ้ามีอะไร re-render แผงระหว่างลาก popup จะหลุดจากหน้า → offset* เป็น 0 หมด
       // เขียนต่อ = แผงเด้งไปมุมซ้ายบน ปล่อยผ่านดีกว่า (บั๊ก: คลิกค้างแล้วแผงรีเซ็ต)
       if (!popup.isConnected) return;
-      if (hit) { pm.dockPanel(panelId, hit.zone, hit.targetId); return; }
+      // [alpha.66r12 บั๊ก "กลุ่มลอยเด้งกลับที่เดิม"] **ปล่อยแล้วผนึกไม่สำเร็จ = ถือว่าเป็นการย้ายกล่อง**
+      // ของเดิม `if (hit) { applyDrop(...); return; }` — return ทิ้งไม่ว่า applyDrop จะทำสำเร็จหรือไม่
+      // แต่ applyDrop คืน false ได้หลายทาง (กลุ่มซ้อนกลุ่มไม่รองรับ · ปล่อยทับตัวเอง ฯลฯ)
+      // → ตำแหน่งใหม่ **ไม่เคยถูกบันทึกลง store** กล่องค้างอยู่ตรงที่ปล่อยเพราะ DOM ยังไม่ถูกวาดใหม่
+      //   พอมีอะไรสั่งวาดใหม่ทีหลัง (เปิด/ปิด/ผนึกแผงอื่น) มันก็กลับไปตำแหน่งเก่าในสโตร์
+      //   ซึ่งของกลุ่มคือ "ตำแหน่งของแผงฐานตอนสร้างกลุ่ม" — ตรงกับที่ผู้ใช้เห็นเป๊ะ
+      if (hit && applyDrop(pm, panelId, hit, ctx)) return;
       // 0.56a #7: ลากหลุดขอบจอแล้วเรียกกลับไม่ได้ → หนีบตำแหน่งให้ยังเห็นหัวแผงเสมอ
       const c = clampFloat({ x: popup.offsetLeft, y: popup.offsetTop,
                              w: popup.offsetWidth, h: popup.offsetHeight });
       popup.style.left = c.x + 'px'; popup.style.top = c.y + 'px';
-      pm.moveFloat(panelId, { x: c.x, y: c.y });
+      if (ctx.floatId) pm.moveFloatBox(ctx.floatId, { x: c.x, y: c.y });
+      else pm.moveFloat(panelId, { x: c.x, y: c.y });
     };
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);

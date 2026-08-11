@@ -61,7 +61,8 @@ import { $, el, state, smart, LOG_BUF, log, setStatus,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
          t, i18n, loadLanguage, applyDataI18n, onLanguageChanged, SHORTCUTS, SHORTCUT_LABELS, shortcutId,
          formatShortcut, accelText, withShortcut, num,
-         setBusy, clearBusy, busyMsg, withBusy } from './core.js';
+         setBusy, clearBusy, busyMsg, withBusy,
+         keepScroll } from './core.js';   // [alpha.66r2] จำ-คืนตำแหน่งเลื่อนตอนรื้อ DOM สร้างใหม่
 import { sceneProps } from './scene-props.js';
 // [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง
 import { attachAiFieldButton, generateSceneSynopsis, fieldPrompt, cleanResult,
@@ -130,7 +131,13 @@ import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
 import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePanel, togglePanel,
          resetPanels, panelMenuItems, panelToggleState, addPanelButton, renderPanels,
          isPanelOpen, resetPanelSystem, PANEL_DEFS, panelId, setPanelShowHook,
-         onPanelLayoutChange, panelDesc, setPanelCloseGuard } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
+         onPanelLayoutChange, panelDesc, setPanelCloseGuard,
+         // [alpha.66r3] เวิร์กสเปซ + ระบบจัดการพื้นที่
+         toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems,
+         listWorkspaces, saveWorkspace, applyWorkspace, deleteWorkspace,
+         BUILTIN_WORKSPACES, auditPanelGaps,
+         // ส่งออกการจัดวางแผงเป็นไฟล์ (ใช้เป็นเลย์เอาต์อ้างอิง / แนบตอนรายงานบั๊กเรื่องแผง)
+         exportPanelLayout, panelLayoutReport } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
 import { wrapDesc as panelWrapDesc } from './panels/panel-renderer.js';
 import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSplitSystem,
          initSplitSystem, syncActiveSplit, openInSplit, closeTabInSplit, splitDir,
@@ -605,6 +612,31 @@ export function centerPage(pane) {
   const p = pane || (state.active && state.active.pane);
   if (!p || !p.scrollWidth) return;
   p.scrollLeft = Math.max(0, (p.scrollWidth - p.clientWidth) / 2);
+}
+/**
+ * [alpha.66r5] จัดหน้ากระดาษกลับกึ่งกลางหลังพื้นที่เปลี่ยนขนาด (เข้า/ออกโหมดโฟกัส · โหมดอ่าน)
+ * ต้องหน่วง: ตอนสั่งสลับโหมด แผงข้างยังไม่หายจาก layout — วัด scrollWidth ทันทีจะได้ค่าของเก่า
+ * แล้วกระดาษค้างชิดซ้ายทุกครั้ง · ตั้งซ้ำหลายจังหวะเพราะ ProseMirror จัดหน้าใหม่ไม่พร้อมกัน
+ */
+function recenterPageSoon(pane) {
+  const run = () => { const p = pane || (state.active && state.active.pane); if (p) centerPage(p); };
+  requestAnimationFrame(run);
+  for (const ms of [40, 120, 260]) setTimeout(run, ms);
+}
+
+/**
+ * [alpha.66r5] เลย์เอาต์แผงเปลี่ยน → ถ้า "ความกว้างของพื้นที่เขียน" เปลี่ยนจริง ค่อยจัดกระดาษกลางใหม่
+ * เช็คความกว้างก่อนเสมอ — ไม่งั้นทุกการวาดแผงจะไปดึงจอผู้ใช้ที่กำลังเลื่อนดูแนวนอนอยู่
+ */
+let _lastPaneW = 0;
+function recenterOnPaneResize() {
+  const p = state.active && state.active.pane;
+  if (!p) return;
+  const w = p.clientWidth;
+  if (!w) return;
+  if (Math.abs(w - _lastPaneW) < 20) { _lastPaneW = w; return; }
+  _lastPaneW = w;
+  recenterPageSoon(p);
 }
 
 // ═════════ alpha.57 · โหมดมุมมองบทภาพยนตร์ (ข้อ 57 · 59 · 60 · 61) ═════════
@@ -1427,7 +1459,8 @@ async function loadProjectInner(root) {
   setBusy('กำลังจัดวางแผงและแท็บ…');
   initPanelSystem();                                 // Panel System
   // sync toolbar toggle .on states + [60r2 ข้อ 1/11] ความกว้าง workspace และรางเลขบรรทัด
-  onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter(); });
+  onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter();
+                              recenterOnPaneResize(); });
   // แผงฟีเจอร์ (บั๊ก #18) ต้องเรียกหลัง initPanelSystem ไม่งั้น showPanel ยังไม่รู้จักแผง
   await renderOpenFeaturePanels();                   // เลย์เอาต์ที่กู้มาอาจมีแผงเปิดค้าง = กล่องเปล่า
   // [alpha.60r ข้อ 2] กู้คืนแท็บที่เปิดค้างจากเซสชันก่อน
@@ -2368,9 +2401,12 @@ async function _buildTreeInner() {
   // ---- สลับ buffer เข้าจอครั้งเดียว (คง scroll เดิม + สถานะขอบเขต/ตัวกรอง) ----
   const real = $('#tree');
   if (!real) { log('warn', 'buildTree: ไม่มี #tree ให้สลับเข้า (แผงโปรเจกต์ยังไม่พร้อม) — ข้ามรอบนี้'); return; }
-  const scrollTop = real.scrollTop;
+  // [alpha.66r2 ข้อ 1] เดิมจำแค่ scrollTop → ต้นไม้ที่ชื่อฉากยาวจนมีแถบเลื่อนแนวนอน
+  // เด้งกลับชิดซ้ายทุกครั้งที่รีเฟรช · ต้องจำทั้งสองแกน
+  const scrollTop = real.scrollTop, scrollLeft = real.scrollLeft;
   real.replaceChildren(...tree.childNodes);
   real.scrollTop = scrollTop;
+  real.scrollLeft = scrollLeft;
   const q = $('#tree-search'); if (q && q.value) filterTree(q.value);   // คงตัวกรองหลังสร้างใหม่
   updateSummaryBar().catch(() => {});
 }
@@ -3713,6 +3749,7 @@ function toggleFocus(on) {
   syncModeHint();
   syncMenuToggles();
   refreshToolbar();
+  recenterPageSoon();           // [66r5] แผงข้างหาย/กลับมา = พื้นที่กว้างขึ้น ต้องจัดกระดาษกลางใหม่
   setStatus(v ? 'โหมดโฟกัส — Esc หรือ Ctrl+Shift+D เพื่อออก' : 'ออกจากโหมดโฟกัส');
 }
 
@@ -3837,6 +3874,7 @@ function toggleReading(on) {
   syncModeHint();
   syncMenuToggles();
   syncFloatBarVisible();
+  recenterPageSoon();           // [66r5] แผงข้างหายไปหมด = พื้นที่กว้างขึ้น ต้องจัดกระดาษกลางใหม่
   setStatus(v ? 'โหมดอ่าน — กด Esc หรือคลิก 📖 เพื่อออก' : 'ออกจากโหมดอ่าน');
 }
 
@@ -3897,6 +3935,9 @@ async function renderPropsPanel() {
   const body = $('#props-body'); if (!body) return;
   const gen = ++_propsGen;
   const stale = () => gen !== _propsGen;
+  // [alpha.66r2 ข้อ 1] แผงคุณสมบัติวาดใหม่ทุกครั้งที่สลับฉาก/บันทึก — ถ้าไม่จำตำแหน่งเลื่อน
+  // ผู้ใช้ที่กำลังกรอกช่องล่าง ๆ (แท็ก/สถานะ) จะถูกดีดกลับหัวแผงทุกครั้ง
+  const backScroll = keepScroll(body);
   body.replaceChildren();
   if (!propsTarget_C.t) { body.append(el('div', 'dim', '(เลือกฉากเพื่อดูคุณสมบัติ)')); return; }
   const { dPath, ch, sc } = propsTarget_C.t;
@@ -4029,6 +4070,7 @@ async function renderPropsPanel() {
   }
   // สลับไปฉากอื่น/ปิดแผงกลางคัน → เขียนที่ค้างอยู่ให้จบก่อน
   propsFlush_C.fn = () => { clearTimeout(saveJob); return commit(true); };
+  backScroll();                      // เนื้อครบแล้วค่อยคืนตำแหน่งเลื่อน (ก่อนหน้านี้ยังสูงไม่พอ)
 }
 
 // ตัวเขียนค้างของแผงคุณสมบัติ (เรียกก่อนวาดแผงใหม่ กันค่าที่เพิ่งพิมพ์หาย)
@@ -6790,7 +6832,12 @@ const navTrunc = (s, n = 42) => { s = String(s).trim().replace(/\s+/g, ' '); ret
 
 // Navigation — จับหัวข้อ/ย่อหน้า/หัวฉากของฉากที่เปิดอยู่ (แบบ Final Draft) + โหมดนิยาย
 function refreshOutline() {
-  const box = $('#outline'); box.innerHTML = '';
+  const box = $('#outline');
+  // [alpha.66r2 ข้อ 1] Navigation วาดใหม่ทุกครั้งที่เอกสารเปลี่ยน — กล่องเดิมยังอยู่ (ล้างแค่ลูก)
+  // จึงคืนค่าแบบซิงก์ได้เลย ไม่ต้องพึ่งตัวจับเวลาเหมือนกรณีที่กล่องถูกสร้างใหม่
+  const keepTop = box.scrollTop, keepLeft = box.scrollLeft;
+  const back = () => { box.scrollTop = keepTop; box.scrollLeft = keepLeft; };
+  box.innerHTML = '';
   const t = state.active;
   if (!t || t.wiki || t.gal || t.isJson || t.net || t.dash || t.planner || (!t.editor && !t.sp && !t.plain)) {
     box.append(el('div', 'dim', '(เปิดฉากเพื่อดู Navigation)')); return;
@@ -6848,6 +6895,7 @@ function refreshOutline() {
     };
     box.append(d);
   }
+  back();
 }
 // ---------------- Find/replace bar ----------------
 function openFind() {
@@ -7155,10 +7203,15 @@ export function renderFeaturePanel(id) {
   const f = FEATURE_PANELS[pid];
   if (!f) return Promise.resolve(false);
   if (_featInFlight.has(pid)) return _featInFlight.get(pid);
+  // [alpha.66r2 ข้อ 1] ตัววาดของแผงเกือบทุกตัวล้างเนื้อทิ้งแล้วสร้างใหม่ (`innerHTML=''`)
+  // → กดรีเฟรช/สลับข้อมูลทีไร แผงก็เด้งกลับบนสุดทุกครั้ง · จุดนี้เป็นทางผ่านเดียวของทุกแผงฟีเจอร์
+  // จึงจำ-คืนตำแหน่งเลื่อนที่นี่ทีเดียว แทนที่จะไปไล่แก้ตัววาดทีละไฟล์แล้วลืมบางตัว
+  const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
+  const backScroll = keepScroll(() => document.querySelector(sel));
   const p = Promise.resolve().then(f)
     .catch((e) => { log('error', 'วาดแผง ' + pid + ' ล้มเหลว', e); })
     .finally(() => _featInFlight.delete(pid))
-    .then(() => true);
+    .then(() => { try { backScroll(); } catch {} return true; });
   _featInFlight.set(pid, p);
   return p;
 }
@@ -7416,6 +7469,7 @@ async function handleCommand(ch, ...a) {
     // แผงฟีเจอร์ (บั๊ก #18) วาดเนื้อหาผ่าน hook ใน showPanel แล้ว
     case 'toggle-panel': togglePanel(a[0]); syncMenuToggles(); break;
     case 'reset-panels': resetPanels(); syncMenuToggles(); break;
+    case 'export-panel-layout': await exportPanelLayout(); break;
     // [alpha.61 ข้อ 1] สวิตช์ลำดับเปิดโปรแกรม (เก็บที่ global settings — ใช้ร่วมทุกโปรเจกต์)
     case 'delete-line': deleteCurrentLine(); break;
     // [alpha.61 ข้อ 4] สวิตช์ตัวพิมพ์ใหญ่/เล็กของบทหนัง — เก็บที่ระดับโปรเจกต์
@@ -7478,6 +7532,12 @@ async function handleCommand(ch, ...a) {
     case 'split-add': createSplit(state.active?.file || '', a[0] || undefined); break;   // เพิ่มอีกช่อง (ซ้อนได้)
     case 'split-close': closeSplit(); break;
     case 'panel-system': togglePanelDialog(); break;
+    // ---- [alpha.66r3] จัดการพื้นที่ + เวิร์กสเปซ (สเปกระบบแผง) ----
+    case 'panels-hide-all': toggleSpace('all'); syncMenuToggles(); break;
+    case 'panels-hide-right': toggleSpace('right'); syncMenuToggles(); break;
+    case 'panels-hide-left': toggleSpace('left'); syncMenuToggles(); break;
+    case 'workspace-menu': workspaceMenu(); break;
+    case 'workspace': applyWorkspace(a[0]); syncMenuToggles(); break;
     case 'ai-assistant': openAIAssistant(); break;
     case 'ai-plot': openPlotHoleDetector(); break;
     case 'ai-dialogue': openDialogueGenerator(); break;
@@ -8078,7 +8138,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // ---- Panel System (Photoshop-style) — วาดทุกแผงลง #app-root ----
   initPanelSystem();
   // [60r2 ข้อ 1 + 11] ขยับ/ปรับขนาดแผง = พื้นที่กระดาษเปลี่ยน → กว้าง workspace + รางเลขบรรทัดต้องตาม
-  onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter(); });
+  onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter();
+                              recenterOnPaneResize(); });
   startLogAutoRefresh();
   // ---- Split View — ผูก SplitManager เข้ากับ #panes + ลากหัวแท็บไปวางในช่องได้ ----
   // closeTab: บั๊ก #12 — × บนแท็บย่อยของช่อง เอาแท็บออกจากช่องนั้น
@@ -10773,9 +10834,14 @@ async function runTest(projectPath) {
         await waitMs(40);
         pb.interaction.closeEditor();
         const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        const cvR = cvEl.getBoundingClientRect();
         check(`[65r-5] ลากกำหนดขนาดแล้วค่อยสร้าง "${tool}" ได้ตามที่ลาก`,
               !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
-              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h}` : 'ไม่เกิดวัตถุ');
+              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h}`
+                   : `ไม่เกิดวัตถุ · canvas=${Math.round(cvR.width)}x${Math.round(cvR.height)}`
+                     + ` vt=${pb.renderer.canvas.viewportTransform.map((v) => Math.round(v * 100) / 100).join(',')}`
+                     + ` p1=${Math.round(p1.x)},${Math.round(p1.y)} p2=${Math.round(p2.x)},${Math.round(p2.y)}`
+                     + ` nodes=${pb.data.getAllNodes().length}`);
         if (made) pb._deleteNode(made.id);
       }
       pb.interaction.setTool('select');
@@ -13671,10 +13737,12 @@ async function runTest(projectPath) {
       const treeBtn = (act) => treePanelEl()?.querySelector(`:scope > .k-panel-head .k-panel-btn-${act}`);
       const order = [...treePanelEl().querySelectorAll(':scope > .k-panel-head .k-panel-btns .k-panel-btn')]
         .map((b) => b.dataset.act).filter(Boolean);
-      check('หัวแผงเรียงปุ่ม [พับ][ลอย/ผนึก][ปิด]',
-            order.join(',') === 'collapse,float,close', order.join(','));
+      // [alpha.66r3] เพิ่มปุ่มเมนูแผง ☰ นำหน้า — คำสั่งลึกของแผงย้ายไปอยู่หลังปุ่มนี้ทั้งหมด
+      check('หัวแผงเรียงปุ่ม [☰ เมนู][พับ][ลอย/ผนึก][ปิด]',
+            order.join(',') === 'menu,collapse,float,close', order.join(','));
       check('ปุ่มบนหัวแผงมาจาก PANEL_BUTTONS ของเอนจิน',
-            PL.PANEL_BUTTONS.map((b) => b.key).join(',') === 'collapse,float,close');
+            PL.PANEL_BUTTONS.map((b) => b.key).join(',') === 'menu,collapse,float,close',
+            PL.PANEL_BUTTONS.map((b) => b.key).join(','));
       // พับแล้วหัวแผงต้องยังเห็น (บั๊กเดิม: max-height:0 กลืนทั้งใบ)
       treeBtn('collapse').click();
       await new Promise((r) => setTimeout(r, 60));
@@ -18148,6 +18216,978 @@ async function runTest(projectPath) {
         await wait62(320);
         check('[62-7] หลังคืนค่าเสร็จ ผู้ใช้ยังเลื่อนต่อได้ (ไม่ถูกดึงกลับ)',
               pane7.scrollTop === 900, String(pane7.scrollTop));
+      }
+
+      // ---- [66r2-1] ตำแหน่งเลื่อน "ของตัวแผงเอง" ต้องรอดทั้งตอนขยับแผงและตอนรีเฟรช ----
+      // เคสที่ระบบเดิมพังสนิท: แผงที่ไม่มีกล่องเลื่อนของตัวเอง จะเลื่อนอยู่บน `.k-panel-body`
+      // ซึ่งตัววาด **สร้างใหม่ทุกรอบ** → การจำเป็น element reference ไม่มีทางคืนค่าได้เลย
+      {
+        showPanel('notes');
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body'));
+        const bodyOf = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body');
+        const nHost = $('#notes-panel');
+        check('[66r2-1] เปิดแผงสมุดโน้ตแล้วมีเนื้อแผงจริง', !!nHost && !!bodyOf());
+        if (nHost && bodyOf()) {
+          // ยัดเนื้อสูง+กว้างเข้าไปใน "เนื้อแผง" (ไม่ใช่ใน .k-panel-body ที่จะถูกทิ้งตอนวาดใหม่)
+          const big = el('div');
+          big.id = 'k2-scroll-probe';
+          big.style.cssText = 'height:1400px;width:2400px;flex:0 0 auto;';
+          nHost.appendChild(big);
+          await wait62(80);
+          const b1 = bodyOf();
+          b1.style.scrollBehavior = 'auto';
+          b1.scrollTop = 320; b1.scrollLeft = 140;
+          await until62(() => b1.scrollTop === 320 && b1.scrollLeft === 140, 20, 30);
+          check('[66r2-1] เลื่อนเนื้อแผงได้จริงทั้งสองแกนก่อนทดสอบ',
+                b1.scrollTop === 320 && b1.scrollLeft === 140, `${b1.scrollTop},${b1.scrollLeft}`);
+
+          renderPanels(true);                       // จำลอง "ขยับแผง"
+          await wait62(420);
+          const b2 = bodyOf();
+          check('[66r2-1] วาดแผงใหม่ = .k-panel-body เป็นคนละใบ (ต้องกู้ด้วยเส้นทาง ไม่ใช่ตัวอ้างอิง)',
+                !!b2 && b2 !== b1);
+          check('[66r2-1] ขยับแผงแล้วตำแหน่งเลื่อนแนวตั้งของเนื้อแผงยังอยู่',
+                !!b2 && Math.abs(b2.scrollTop - 320) <= 8, b2 && String(b2.scrollTop));
+          check('[66r2-1] ขยับแผงแล้วตำแหน่งเลื่อนแนวนอนก็ยังอยู่ (เดิมไม่เคยถูกจดเลย)',
+                !!b2 && Math.abs(b2.scrollLeft - 140) <= 8, b2 && String(b2.scrollLeft));
+          // ผู้ใช้ต้องเลื่อนต่อเองได้ ไม่ถูกล็อกไว้
+          b2.scrollTop = 700;
+          await wait62(320);
+          check('[66r2-1] คืนค่าเสร็จแล้วไม่ล็อกจอ — ผู้ใช้เลื่อนต่อได้',
+                Math.abs(bodyOf().scrollTop - 700) <= 2, String(bodyOf().scrollTop));
+          big.remove();
+        }
+        hidePanel('notes');
+        await wait62(120);
+      }
+
+      // ---- [66r2-1b] "รีเฟรชแผง" (ตัววาดล้างเนื้อทิ้งสร้างใหม่) ก็ต้องไม่เด้งกลับบนสุด ----
+      {
+        showPanel('dashboard');
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="dashboard"] > .k-panel-body'), 60, 50);
+        const dHost = $('#dash-panel');
+        const dBody = () => document.querySelector('#app-root .k-panel[data-panel-id="dashboard"] > .k-panel-body');
+        check('[66r2-1b] เปิดแดชบอร์ดเป็นแผงได้', !!dHost && !!dBody());
+        if (dHost && dBody()) {
+          await renderFeaturePanel('dashboard');
+          // ปักไว้นอก #dash-body เพราะตัววาดล้าง #dash-body ทิ้งทุกรอบ (จำลองแผงที่เนื้อยาวจริง)
+          const big = el('div');
+          big.id = 'k2-scroll-probe2';
+          big.style.cssText = 'height:1300px;width:2000px;flex:0 0 auto;';
+          dHost.appendChild(big);
+          await wait62(120);
+          const d1 = dBody();
+          d1.style.scrollBehavior = 'auto';
+          d1.scrollTop = 260; d1.scrollLeft = 90;
+          await until62(() => d1.scrollTop === 260, 20, 30);
+          check('[66r2-1b] เลื่อนแดชบอร์ดลงมาได้ก่อนกดรีเฟรช', d1.scrollTop === 260, String(d1.scrollTop));
+          await renderFeaturePanel('dashboard');        // = กดรีเฟรช
+          await wait62(420);
+          check('[66r2-1b] รีเฟรชแผงแล้วตำแหน่งเลื่อนยังอยู่ที่เดิม',
+                Math.abs(dBody().scrollTop - 260) <= 8, String(dBody().scrollTop));
+          check('[66r2-1b] รีเฟรชแผงแล้วแนวนอนก็ยังอยู่',
+                Math.abs(dBody().scrollLeft - 90) <= 8, String(dBody().scrollLeft));
+          big.remove();
+        }
+        hidePanel('dashboard');
+        await wait62(120);
+      }
+
+      // ---- [66r2-2] พับแผง/ย่อกลุ่มแท็บ แล้วต้องไม่เหลือ "ช่องว่างค้าง" ใน dock ----
+      // ต้นตอเดิม: ตัววาดหักเฉพาะแผงตายตัวออกจากตัวหารของ flex-grow → ผลรวม grow < 1
+      // เบราว์เซอร์เลยแจกพื้นที่ว่างไม่หมด เหลือรูโหว่ตรงขอบขวาทุกครั้งที่ย่อแผงฝั่งขวา
+      {
+        // "ช่องว่างค้าง" = ความยาวของ dock ลบผลรวมของลูกทุกตัว (รวมที่จับปรับสัดส่วน)
+        // ต้องวัดตามทิศของ dock — ใน dock แนวตั้งลูกทุกตัวกว้างเต็ม การเอาความกว้างมาบวกกันไม่มีความหมาย
+        const gapOf = (dockEl) => {
+          if (!dockEl) return NaN;
+          const row = dockEl.dataset.dir === 'row';
+          const used = [...dockEl.children].reduce((a, e) => {
+            const r = e.getBoundingClientRect();
+            return a + (row ? r.width : r.height);
+          }, 0);
+          return (row ? dockEl.clientWidth : dockEl.clientHeight) - used;
+        };
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="props"]'));
+        await wait62(120);
+        const pEl2 = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+        const dockOf = () => { const p = pEl2(); return p && p.parentElement; };
+        const dk = dockOf();
+        check('[66r2-2] แผงคุณสมบัติถูกผนึกอยู่ใน dock แนวนอน',
+              !!dk && dk.classList.contains('k-dock') && dk.dataset.dir === 'row',
+              dk && dk.dataset.dir);
+        if (dk && dk.dataset.dir === 'row') {
+          check('[66r2-2] ก่อนพับ: ลูกทุกตัวรวมกันเต็มความกว้าง dock', Math.abs(gapOf(dk)) <= 2, String(gapOf(dk)));
+          getPanelManager().collapsePanel('props', true);
+          await until62(() => !!(pEl2() && pEl2().classList.contains('k-collapsed')));
+          await wait62(150);
+          const dk2 = dockOf();
+          check('[66r2-2] พับแผงขวาแล้ว **ไม่มีช่องว่างค้าง** ใน dock',
+                !!dk2 && Math.abs(gapOf(dk2)) <= 2, dk2 && `เหลือ ${gapOf(dk2).toFixed(1)}px`);
+          check('[66r2-2] พับแผงใน dock แนวนอน = รางไอคอนแคบ ไม่ใช่แถบกว้างเท่าหัวแผง',
+                pEl2().getBoundingClientRect().width <= 40,
+                String(pEl2().getBoundingClientRect().width));
+          check('[66r2-2] พับแล้วยังกดคลี่กลับได้ (ปุ่มบนหัวแผงยังอยู่)',
+                !!pEl2().querySelector('.k-panel-btn-collapse'));
+          // control: ยืนยันว่ากลไกที่แก้ไปคือต้นตอจริง ไม่ใช่เทสที่ผ่านอยู่แล้ว —
+          // จำลอง "ผลรวม flex-grow ไม่ถึง 1" แบบสูตรเดิม แล้วช่องว่างต้องโผล่ให้เห็น
+          {
+            const flexKids = [...dk2.children].filter((e) => parseFloat(e.style.flexGrow) > 0);
+            const keepG = flexKids.map((e) => e.style.flexGrow);
+            flexKids.forEach((e) => { e.style.flexGrow = String(parseFloat(e.style.flexGrow) * 0.8); });
+            await wait62(60);
+            check('[66r2-2] control: ผลรวม flex-grow < 1 ต้องเกิดช่องว่างจริง (พิสูจน์ต้นตอ)',
+                  gapOf(dk2) > 20, `เหลือ ${gapOf(dk2).toFixed(1)}px`);
+            flexKids.forEach((e, i) => { e.style.flexGrow = keepG[i]; });
+            await wait62(60);
+            check('[66r2-2] control: คืนค่า grow กลับแล้วช่องว่างหายไป', Math.abs(gapOf(dk2)) <= 2);
+          }
+          try { await kapi.testShot('/tmp/k2-collapsed-rail.png'); } catch {}   // ไว้ตรวจด้วยตาว่ารางไอคอนไม่เพี้ยน
+          getPanelManager().collapsePanel('props', false);
+          await wait62(150);
+          check('[66r2-2] คลี่กลับแล้วก็ยังไม่มีช่องว่าง',
+                Math.abs(gapOf(dockOf())) <= 2, String(gapOf(dockOf())));
+        }
+        // ย่อกลุ่มแท็บเป็นแถบไอคอน (« ) — เคสเดียวกันคนละชนิดโหนด
+        const strip = document.querySelector('#app-root .k-tab-group .k-strip-btn');
+        if (strip) {
+          const grp = strip.closest('.k-tab-group');
+          const gdock = grp && grp.parentElement;
+          strip.click();
+          await until62(() => !!document.querySelector('#app-root .k-tab-group.icon-strip'));
+          await wait62(150);
+          const gdock2 = document.querySelector('#app-root .k-tab-group.icon-strip').parentElement;
+          check('[66r2-2] ย่อกลุ่มแท็บเป็นแถบไอคอนแล้วไม่มีช่องว่างค้าง',
+                Math.abs(gapOf(gdock2)) <= 2, `เหลือ ${gapOf(gdock2).toFixed(1)}px`);
+          const back = document.querySelector('#app-root .k-tab-group.icon-strip .k-strip-btn');
+          if (back) back.click();
+          await until62(() => !document.querySelector('#app-root .k-tab-group.icon-strip'));
+          await wait62(150);
+          const gdock3 = (gdock && gdock.isConnected) ? gdock
+            : (document.querySelector('#app-root .k-tab-group') || {}).parentElement;
+          check('[66r2-2] คลี่กลุ่มแท็บกลับแล้วเลย์เอาต์ยังเต็มพอดี',
+                Math.abs(gapOf(gdock3)) <= 2, `เหลือ ${gapOf(gdock3).toFixed(1)}px`);
+        }
+        resetPanels();                 // คืนเลย์เอาต์มาตรฐานให้เทสถัดไป (เหมือนบล็อก #3)
+        await wait62(200);
+      }
+
+      // ---- [66r4] โมเดลลูกผสม: ย่อ/ขยายหน้าต่างแล้วแผงข้างต้องกว้าง "เท่าเดิมเป๊ะ" ----
+      // ของเดิมเก็บเป็นสัดส่วน → ขยายจอแล้วสารบัญกว้างขึ้นตาม ทั้งที่ผู้ใช้อยากได้พื้นที่เขียนเพิ่ม
+      {
+        resetPanels(); await wait62(240);
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(320);
+        const W = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? e.getBoundingClientRect().width : 0;
+        };
+        const dockEl = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        check('[66r4] สายที่มีแผงเอกสารถูกทำเครื่องหมายเป็นตัวยืด — ตัวเดียวต่อ dock',
+              dockEl.querySelectorAll(':scope > .k-flex-child').length === 1,
+              String(dockEl.querySelectorAll(':scope > .k-flex-child').length));
+        // [alpha.66r6 กฎข้อ 2] โมเดลเปลี่ยน: **ผนึกเมื่อไหร่ = มีขนาดของตัวเองทันที**
+        // (เดิม .66r4 รอให้ผู้ใช้ลากก่อนถึงจะตรึง → ระหว่างนั้น dock อยู่ในสภาพผสม px+สัดส่วน
+        //  ซึ่งทำให้แผงถูกบีบเวลาลากอีกฝั่ง — ผู้ใช้เจอจริงแล้วสั่งให้เปลี่ยนเป็นตรึงตั้งแต่ผนึก)
+        check('[66r4] ผนึกแล้วถูกตรึงขนาดทันทีด้วยค่าตั้งต้น (ไม่ค้างเป็นสัดส่วน)',
+              PL.findPanel(getPanelManager().root, 'props').pxW > 0
+              && !!document.querySelector('#app-root .k-dock > .k-fixed-px'),
+              String(PL.findPanel(getPanelManager().root, 'props').pxW));
+        // ตรึงความกว้างด้วยการ "ลากที่จับ" — เจตนาของผู้ใช้เท่านั้นที่ทำให้เกิด px
+        const handles0 = [...document.querySelectorAll('#app-root .k-dock[data-dir="row"] > .k-resize-handle')];
+        const hPin = handles0[handles0.length - 1];
+        check('[66r4] มีที่จับระหว่างพื้นที่เขียนกับแผงขวา', !!hPin);
+        const hr0 = hPin.getBoundingClientRect();
+        hPin.dispatchEvent(new MouseEvent('mousedown', { clientX: hr0.left + 2, clientY: hr0.top + 30, button: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: hr0.left - 50, clientY: hr0.top + 30, bubbles: true }));
+        document.dispatchEvent(new MouseEvent('mouseup', { clientX: hr0.left - 50, clientY: hr0.top + 30, bubbles: true }));
+        await wait62(340);
+        const pinned = PL.findPanel(getPanelManager().root, 'props');
+        check('[66r4] ลากแล้วความกว้างถูกตรึงเป็น px (ไม่ใช่สัดส่วน)',
+              !!pinned && pinned.pxW > 0, pinned && String(pinned.pxW));
+        check('[66r4] แผงที่ถูกตรึงติดคลาส .k-fixed-px',
+              !!document.querySelector('#app-root .k-panel[data-panel-id="props"].k-fixed-px'));
+        check('[66r4] ค่าที่บันทึกตรงกับที่เห็นบนจอ',
+              !!pinned && Math.abs(pinned.pxW - W('props')) <= 3, pinned && `${pinned.pxW} vs ${W('props')}`);
+        check('[66r4] พื้นที่เขียนไม่ถูกตรึง (ต้องเป็นตัวยืดเสมอ)',
+              !PL.findPanel(getPanelManager().root, 'docs').pxW);
+
+        const propsW0 = W('props'), treeW0 = W('tree'), docsW0 = W('docs');
+        check('[66r4] เตรียมสภาพ: วัดความกว้างได้ครบทั้งสามส่วน',
+              propsW0 > 40 && docsW0 > 40, `props=${propsW0} docs=${docsW0}`);
+        // จำลอง "ขยายหน้าต่าง" ด้วยการกว้างขึ้นจริงของ #app-root
+        const rootEl = $('#app-root');
+        const prevW = rootEl.style.width;
+        rootEl.style.width = (rootEl.getBoundingClientRect().width - 260) + 'px';
+        await wait62(220);
+        check('[66r4] หน้าต่างแคบลง → แผงที่ถูกตรึงกว้างเท่าเดิม (พื้นที่เขียนเป็นฝ่ายหด)',
+              Math.abs(W('props') - propsW0) <= 3, `props ${propsW0}→${W('props')}`);
+        check('[66r4] ...และพื้นที่เขียนหดไปตามส่วนต่างจริง',
+              docsW0 - W('docs') > 200, `${docsW0} → ${W('docs')}`);
+        rootEl.style.width = prevW;
+        await wait62(220);
+        check('[66r4] คืนขนาดหน้าต่าง → ทุกอย่างกลับเท่าเดิม',
+              Math.abs(W('props') - propsW0) <= 3 && Math.abs(W('docs') - docsW0) <= 3,
+              `props=${W('props')} docs=${W('docs')}`);
+        // วาดใหม่ซ้ำ ๆ ต้องไม่ทำให้ขนาดดริฟต์ (บั๊กสะสมของโหมดสัดส่วนเดิม)
+        for (let i = 0; i < 3; i++) { renderPanels(true); await wait62(160); }
+        check('[66r4] วาดใหม่หลายรอบแล้วขนาดไม่ดริฟต์',
+              Math.abs(W('props') - propsW0) <= 2, `${propsW0} → ${W('props')}`);
+        // ปิดแล้วเปิดกลับต้องได้ความกว้างเดิมเป๊ะ (px เดินทางไปกับโหนด)
+        hidePanel('props'); await wait62(280);
+        showPanel('props'); await wait62(340);
+        check('[66r4] ปิด-เปิดแผงกลับมา ได้ความกว้างเดิมเป๊ะ (px ติดไปกับโหนด)',
+              Math.abs(W('props') - propsW0) <= 3, `${propsW0} → ${W('props')}`);
+        // รีเซ็ตการจัดวาง = ล้างการตรึงทั้งหมด กลับไปสัดส่วน (ทางออกเวลาเลย์เอาต์เละ)
+        resetPanels(); await wait62(300);
+        // [66r8] ผู้ใช้ระบุ: รีเซ็ต = **เอาค่าอ้างอิงตั้งต้นมาแทน** ไม่ใช่ลบทิ้งให้ว่าง
+        // (แผงที่ไม่มีขนาดของตัวเองจะไปเปลี่ยนขนาดตอนถูก dock ทีหลัง = ต้นตอของอาการขนาดเพี้ยน)
+        // แผงเอกสาร/แถบเครื่องมือ/แถบสถานะไม่ถูกตรึง (เอกสารต้องเป็นตัวยืดเสมอ) — ที่เหลือต้องมีค่า
+        check('[66r8] รีเซ็ตการจัดวางแผง = ประทับค่าอ้างอิงตั้งต้นให้แผงข้าง (ไม่ใช่ลบทิ้ง)',
+              PL.panelIds(getPanelManager().root)
+                .filter((id) => !['docs', 'toolbar', 'statusbar'].includes(id))
+                .every((id) => {
+                  const n = PL.findPanel(getPanelManager().root, id);
+                  return !n || n.pxW > 0;
+                })
+              && !PL.findPanel(getPanelManager().root, 'docs').pxW);
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(300);
+        // กติกากันบั๊กเก่า: ต้องไม่มีช่องว่างค้างในทุกโหมด
+        const dk4 = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const gap2 = dk4.clientWidth - [...dk4.children]
+          .reduce((a, e) => a + e.getBoundingClientRect().width, 0);
+        check('[66r4] โหมด px ก็ต้องไม่เหลือช่องว่างค้าง', Math.abs(gap2) <= 2, String(gap2));
+        resetPanels(); await wait62(240);
+      }
+
+      // ---- [66r9] "canvas เปล่า" หลังรีเซ็ตแล้วขยับแผง ----
+      // อาการ: รีเซ็ต → ขยับแผงทีหนึ่ง แล้วพื้นที่เขียน/แผงข้างเหลือไม่กี่สิบ px
+      // ต้นตอ 1: ค่าอ้างอิงถูกประทับที่ "แผงลูก" แต่ลูกของ dock คือ **กลุ่มแท็บ** → ตัววาดอ่านไม่เจอ
+      //          เลยตกกลับไปโหมดสัดส่วน แล้วโดนเกลี่ยใหม่ทุกครั้งที่โครงเปลี่ยน
+      // ต้นตอ 2: ปล่อยที่ขอบจอ (dockAtEdge) สร้าง dock 50/50 และไม่ตรึงขนาดให้แผงใหม่ = แบ่งครึ่งจอทุกใบ
+      {
+        resetPanels(); await wait62(320);
+        const pm9 = getPanelManager();
+        const fixed9 = (id) => !!(PANEL_DEFS.find((d) => d.id === id) || {}).fixed;
+        const grpEl = () => {
+          const t = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+          return t ? t.closest('.k-tab-group') : null;
+        };
+        const wEl = (e) => (e ? Math.round(e.getBoundingClientRect().width) : 0);
+        const W = (id) => wEl(document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`));
+        const g9 = grpEl();
+        check('[66r9] หลังรีเซ็ต ฝั่งซ้ายเป็นกลุ่มแท็บ (โปรเจกต์+Navigation)', !!g9);
+        check('[66r9] กลุ่มแท็บกว้างตาม "ค่าอ้างอิง" ไม่ใช่สัดส่วนของจอ',
+              wEl(g9) >= 280 && wEl(g9) <= 320, `กลุ่มกว้าง ${wEl(g9)} (คาด ~300)`);
+        check('[66r9] กลุ่มแท็บถูกตรึงเป็น px (เดิมเป็นสัดส่วนตลอด)',
+              !!g9 && g9.classList.contains('k-fixed-px'), g9 && g9.className);
+
+        const docs0 = W('docs'), grp0 = wEl(grpEl());
+        // ปล่อยแผงที่ "ขอบขวาของพื้นที่ทำงาน" — ท่าที่ทำบ่อยที่สุดหลังรีเซ็ต
+        pm9.dockAtEdge('props', 'right', fixed9); await wait62(340);
+        const propsN = PL.findPanel(pm9.root, 'props');
+        check('[66r9] ปล่อยที่ขอบจอ → แผงใหม่มีขนาดของตัวเองทันที (ไม่กินครึ่งจอ)',
+              !!propsN && propsN.pxW > 0 && propsN.pxW <= 400, propsN && String(propsN.pxW));
+        check('[66r9] พื้นที่เขียนไม่ถูกแบ่งครึ่ง (เดิม 1140 → 570)',
+              W('docs') > docs0 * 0.6, `${docs0} → ${W('docs')}`);
+        check('[66r9] แผงซ้ายกว้างเท่าเดิมเป๊ะหลังผนึกแผงใหม่ (เดิมโดนเกลี่ยใหม่)',
+              Math.abs(wEl(grpEl()) - grp0) <= 3, `${grp0} → ${wEl(grpEl())}`);
+        // ปล่อยใบที่สอง — อาการเดิมคือหารครึ่งซ้ำจนพื้นที่เขียนเหลือ 1/4 จอ
+        const docs1 = W('docs');
+        pm9.dockAtEdge('notes', 'right', fixed9); await wait62(340);
+        check('[66r9] ปล่อยใบที่สอง แผงแรกยังกว้างเท่าเดิม',
+              Math.abs(W('props') - propsN.pxW) <= 6, `${propsN.pxW} → ${W('props')}`);
+        check('[66r9] และพื้นที่เขียนไม่หายไปครึ่งหนึ่งอีกรอบ',
+              W('docs') > docs1 * 0.55, `${docs1} → ${W('docs')}`);
+        check('[66r9] ไม่มีแผงไหนถูกบีบต่ำกว่าขั้นต่ำ',
+              ['tree', 'props', 'notes'].every((id) => W(id) === 0 || W(id) >= PL.MIN_PANEL_PX),
+              `tree=${W('tree')} props=${W('props')} notes=${W('notes')}`);
+
+        // ---- ส่งออกการจัดวางแผงเป็นไฟล์ (รายงานต้องประกอบได้ครบและวินิจฉัยถูก) ----
+        const rep9 = panelLayoutReport();
+        check('[66r9] รายงานการจัดวางแผงประกอบได้ครบ',
+              rep9 && rep9.kind === 'killian2-panel-layout' && !!rep9.layout.root && rep9.panels.length > 5);
+        check('[66r9] รายงานแนบขนาดจริงบนจอของแผงเอกสาร',
+              Math.abs((rep9.panels.find((p) => p.id === 'docs').measured || {}).w - W('docs')) <= 2);
+        check('[66r9] รายงานบอกได้ว่ากลุ่มแท็บดึงขนาดมาจากลูก',
+              rep9.diagnostics.derivedSizes.some((d) => d.type === 'tabs' && d.derivedPx > 0)
+              || rep9.diagnostics.docks.some((d) => d.children.some((c) => c.type === 'tabs' && c.share === 'px')),
+              JSON.stringify(rep9.diagnostics.derivedSizes));
+        check('[66r9] ไม่มีคำเตือน "ไม่มีขนาดให้ใช้เลย" หลังแก้',
+              !rep9.diagnostics.warnings.some((w) => w.includes('ไม่มีขนาดให้ใช้เลย')),
+              rep9.diagnostics.warnings.join(' | '));
+        resetPanels(); await wait62(260);
+      }
+
+      // ---- [66r10] undock แล้วกลุ่มยุบ: ตัวที่รอดต้องยึดขนาดของกลุ่ม ----
+      // อาการที่ผู้ใช้รายงาน: มีช่องแบ่ง (split) หรือกลุ่มแท็บอยู่ พอ undock ออกไปใบหนึ่ง
+      // ใบที่เหลือไม่เคารพขนาดของกลุ่ม → แผงอื่นในแถวที่ตั้งขนาดไว้แล้วถูกเปลี่ยนขนาดตามไปด้วย
+      {
+        resetPanels(); await wait62(300);
+        const pm10 = getPanelManager();
+        const W = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true }); await wait62(320);
+        // ทำ "ช่องแบ่ง" ฝั่งซ้าย: outline ไปอยู่ใต้ tree (โครงเดียวกับที่ผู้ใช้ส่งมา)
+        pm10.dockPanel('outline', 'bottom', 'tree'); await wait62(340);
+        const rowEl = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const rowId = rowEl.dataset.dockId;
+        const rowNode = PL.nodeById(pm10.root, rowId);
+        const li = (rowNode.children || []).findIndex((c) => PL.hasPanel(c, 'tree'));
+        check('[66r10] เตรียมสภาพ: ซ้ายเป็นช่องแบ่ง tree/outline · ขวามีแผงคุณสมบัติ',
+              li >= 0 && rowNode.children[li].type !== 'panel' && W('outline') > 0,
+              `li=${li} type=${li >= 0 ? rowNode.children[li].type : '-'}`);
+        // ผู้ใช้ลากขอบตั้งความกว้างของ "ทั้งก้อนซ้าย" ไว้ที่ 430 (เท่ากับที่ที่จับ commit ให้)
+        pm10.resizePx(rowId, { [li]: 430 }, true); await wait62(320);
+        const leftW = W('tree'), propsW = W('props'), docsW = W('docs');
+        check('[66r10] ตั้งความกว้างก้อนซ้ายไว้ 430', Math.abs(leftW - 430) <= 6, String(leftW));
+
+        // undock outline ออกไปลอย → กลุ่มต้องยุบ และตัวที่รอดต้องกว้างเท่าเดิมเป๊ะ
+        pm10.floatPanel('outline', { x: 240, y: 240, w: 360, h: 420 }); await wait62(360);
+        const treeParent = document.querySelector('#app-root .k-panel[data-panel-id="tree"]').parentElement;
+        check('[66r10] เหลือแผงเดียว → กลุ่ม/ช่องแบ่งหายไป กลายเป็นแผงเดี่ยวในแถวหลัก',
+              treeParent.dataset.dockId === rowId, `${treeParent.className} ${treeParent.dataset.dockId}`);
+        check('[66r10] ตัวที่รอดยึดขนาดของกลุ่ม (ไม่กระโดด)',
+              Math.abs(W('tree') - leftW) <= 6, `${leftW} → ${W('tree')}`);
+        check('[66r10] แผงที่ผนึกอยู่แล้วไม่ถูกเปลี่ยนขนาดตาม',
+              Math.abs(W('props') - propsW) <= 6, `${propsW} → ${W('props')}`);
+        check('[66r10] พื้นที่เขียนก็ไม่ขยับผิดปกติ (รับเฉพาะส่วนที่ outline คืนมา)',
+              W('docs') >= docsW - 6, `${docsW} → ${W('docs')}`);
+        resetPanels(); await wait62(260);
+      }
+
+      // ---- [66r10] กลุ่มแผงลอย: ต้องดึงออก/ปิด/สลับลำดับได้จริง ----
+      // ของเดิมทุกคำสั่ง "คืน true แต่ไม่ทำอะไรเลย" เพราะทุกตัวหาแผงจาก `f.panel.id`
+      // ซึ่งไม่มีวันตรงกับสมาชิกของกลุ่ม (กล่องกลุ่มถือ id ของกลุ่ม)
+      {
+        resetPanels(); await wait62(280);
+        const pm10 = getPanelManager();
+        showPanel('notes', { prefer: 'float' }); await wait62(260);
+        showPanel('comments', { prefer: 'float' }); await wait62(260);
+        const fidN = pm10.floatIdOf('notes');
+        pm10.groupIntoFloat('comments', fidN); await wait62(320);
+        check('[66r10] จับกลุ่มแผงลอยได้ (มีกล่องกลุ่มบนจอ)',
+              document.querySelectorAll('.k-float-group').length === 1,
+              String(document.querySelectorAll('.k-float-group').length));
+        // ปุ่ม ⧉ บนหัวแผงที่อยู่ในกลุ่ม = ดึงออกมาเป็นกล่องของตัวเอง
+        const upBtn = document.querySelector('.k-float-group .k-tab-content > .k-panel:not(.k-tab-hidden) .k-panel-btn-float');
+        check('[66r10] แผงในกลุ่มลอยมีปุ่ม ⧉ ให้กด', !!upBtn);
+        if (upBtn) { upBtn.click(); await wait62(360); }
+        check('[66r10] ดึงแผงออกจากกลุ่มลอยได้จริง (เดิมกดแล้วไม่มีอะไรเกิดขึ้น)',
+              document.querySelectorAll('.k-float-panel[data-panel-id]').length >= 2,
+              [...document.querySelectorAll('.k-float-panel')].map((e) => e.dataset.panelId || 'group').join());
+        check('[66r10] เหลือใบเดียว → กลุ่มยุบกลับเป็นกล่องเดี่ยว',
+              document.querySelectorAll('.k-float-group').length === 0);
+        check('[66r10] เพื่อนในกลุ่มไม่หายไปด้วย (บั๊กพ่วงของตัวกรองกล่องลอย)',
+              isPanelOpen('notes') && isPanelOpen('comments'),
+              `notes=${isPanelOpen('notes')} comments=${isPanelOpen('comments')}`);
+        // จับกลุ่มอีกครั้งแล้วกด ✕ ของกลุ่ม — ต้องปิดแท็บที่เปิดอยู่ได้
+        pm10.groupIntoFloat('comments', pm10.floatIdOf('notes')); await wait62(320);
+        const xBtn = document.querySelector('.k-float-group .k-tab-bar .k-panel-btn-close');
+        check('[66r10] กลุ่มลอยมีปุ่ม ✕', !!xBtn);
+        if (xBtn) { xBtn.click(); await wait62(360); }
+        check('[66r10] ปิดแผงที่อยู่ในกลุ่มลอยได้จริง (เดิมกด ✕ แล้วเงียบ)',
+              !isPanelOpen('comments'), `comments open=${isPanelOpen('comments')}`);
+        check('[66r10] ...และเพื่อนในกลุ่มยังอยู่', isPanelOpen('notes'));
+        hidePanel('notes'); resetPanels(); await wait62(280);
+      }
+
+      // ---- [66r11] กลุ่มลอย: กล่องต้องอยู่กับที่ · แผงต้องจำได้ว่าเคยอยู่กลุ่มไหน ----
+      {
+        resetPanels(); await wait62(280);
+        const pm11 = getPanelManager();
+        const gBox = () => {
+          const e = document.querySelector('.k-float-group');
+          if (!e) return null;
+          const r = e.getBoundingClientRect();
+          return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+        };
+        const same = (a, b) => a && b && Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2
+                                     && Math.abs(a.w - b.w) <= 2 && Math.abs(a.h - b.h) <= 2;
+        showPanel('notes', { prefer: 'float' }); await wait62(240);
+        showPanel('comments', { prefer: 'float' }); await wait62(240);
+        pm11.groupIntoFloat('comments', pm11.floatIdOf('notes')); await wait62(320);
+        const box0 = gBox();
+        check('[66r11] มีกล่องกลุ่มลอยบนจอ', !!box0, JSON.stringify(box0));
+
+        // (บั๊กที่ผู้ใช้เจอ) เปิด/ปิดแผงอื่น แล้วกล่องกลุ่มต้องไม่ขยับ
+        togglePanel('dashboard'); await wait62(320);
+        const box1 = gBox();
+        togglePanel('dashboard'); await wait62(320);
+        const box2 = gBox();
+        check('[66r11] เปิดแผงอื่น กล่องกลุ่มลอยไม่ขยับ', same(box0, box1),
+              `${JSON.stringify(box0)} → ${JSON.stringify(box1)}`);
+        check('[66r11] ปิดแผงอื่น กล่องกลุ่มลอยก็ไม่ขยับ', same(box0, box2),
+              `${JSON.stringify(box0)} → ${JSON.stringify(box2)}`);
+
+        // (บั๊ก A) ลากหัวแท็บในกลุ่ม = จัดลำดับ ไม่ใช่ลากทั้งกล่อง
+        const tab0 = document.querySelector('.k-float-group .k-tab-bar .k-tab');
+        if (tab0) {
+          const tr = tab0.getBoundingClientRect();
+          tab0.dispatchEvent(new MouseEvent('mousedown', { clientX: tr.left + 8, clientY: tr.top + 8, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: tr.left + 80, clientY: tr.top + 6, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mouseup', { clientX: tr.left + 80, clientY: tr.top + 6, bubbles: true }));
+          await wait62(340);
+        }
+        check('[66r11] ลากหัวแท็บในกลุ่ม กล่องกลุ่มไม่ย้ายที่ตาม', same(box0, gBox()),
+              `${JSON.stringify(box0)} → ${JSON.stringify(gBox())}`);
+
+        // (บั๊ก B) ปิดแผงในกลุ่มแล้วเปิดใหม่ → ต้องกลับเข้ากลุ่มเดิม
+        hidePanel('comments'); await wait62(320);
+        check('[66r11] ปิดแล้วกลุ่มยุบเหลือกล่องเดี่ยว', !document.querySelector('.k-float-group'));
+        showPanel('comments', { prefer: 'float' }); await wait62(340);
+        const gNow = pm11.floats.find((f) => f.panel.type === 'tabs');
+        check('[66r11] เปิดกลับ → กลับเข้ากลุ่มเดิม (ไม่ใช่ไปลอยเดี่ยวกลางจอ)',
+              !!gNow && (gNow.panel.children || []).map((c) => c.id).sort().join() === 'comments,notes',
+              gNow ? gNow.panel.children.map((c) => c.id).join() : pm11.floats.map((f) => f.panel.id).join());
+
+        // (บั๊ก B ต่อ) กลุ่มไม่เหลือแล้ว → ต้องใช้ "ตำแหน่ง/ขนาดล่าสุดของกลุ่ม"
+        const lastBox = gBox();
+        hidePanel('comments'); hidePanel('notes'); await wait62(340);
+        showPanel('comments', { prefer: 'float' }); await wait62(340);
+        const solo = pm11.floats.find((f) => f.panel.id === 'comments');
+        check('[66r11] กลุ่มหายแล้ว → เปิดกลับที่ตำแหน่ง/ขนาดล่าสุดของกลุ่ม',
+              !!solo && Math.abs(solo.x - lastBox.x) <= 4 && Math.abs(solo.w - lastBox.w) <= 4,
+              `${JSON.stringify(lastBox)} → ${solo && JSON.stringify({ x: solo.x, y: solo.y, w: solo.w, h: solo.h })}`);
+        hidePanel('comments'); await wait62(200);
+
+        // (ข้อ D) ผนึกทั้งกลุ่มที่ขอบขวาของพื้นที่ทำงาน
+        showPanel('notes', { prefer: 'float' }); await wait62(240);
+        showPanel('comments', { prefer: 'float' }); await wait62(240);
+        pm11.groupIntoFloat('comments', pm11.floatIdOf('notes')); await wait62(300);
+        const gid11 = (pm11.floats.find((f) => f.panel.type === 'tabs') || {}).id;
+        pm11.dockFloatGroup(gid11, 'right', null,
+          { edge: true, isFixedPanel: (id) => !!(PANEL_DEFS.find((d) => d.id === id) || {}).fixed });
+        await wait62(360);
+        check('[66r11] ผนึกทั้งกลุ่มเข้าหน้าต่างได้ (ไม่เหลือกล่องลอย)',
+              !document.querySelector('.k-float-group') && pm11.isDocked('notes') && pm11.isDocked('comments'));
+        const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        check('[66r11] ...แถบเครื่องมือยังเต็มความกว้าง (กลุ่มไม่ไปเกาะข้างมัน)',
+              tbEl.getBoundingClientRect().width >= $('#app-root').getBoundingClientRect().width - 2,
+              `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($('#app-root').getBoundingClientRect().width)}`);
+        check('[66r11] ...และแท็บทั้งสองใบยังอยู่ในกลุ่มเดียวกันหลังผนึก',
+              !!PL.tabGroupOf(pm11.root, 'notes') && !!PL.tabGroupOf(pm11.root, 'comments'));
+        resetPanels(); await wait62(280);
+      }
+
+      // ---- [66r12] ความสูงตอนลอย + ตำแหน่งกล่องที่ปล่อยแล้วผนึกไม่สำเร็จ ----
+      {
+        resetPanels(); await wait62(300);
+        const pm12 = getPanelManager();
+        // (1) แผงข้างที่ผนึกอยู่สูงเต็มคอลัมน์ → กด ⧉ ต้องได้กล่องขนาดพอดี ไม่ใช่สูงเต็มจอ
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true }); await wait62(320);
+        const dockedH = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="props"]')
+          .getBoundingClientRect().height);
+        document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        const f12 = () => pm12.floats.find((x) => x.panel.id === 'props');
+        check('[66r12] กด ⧉ แล้วแผงลอยไม่สูงเท่าตอนผนึก (เดิมยกความสูงคอลัมน์มาทั้งดุ้น)',
+              !!f12() && f12().h < dockedH && f12().h <= 560, `dock=${dockedH} float=${f12() && f12().h}`);
+        const h12 = f12().h, w12 = f12().w;
+        // (2) ผนึกกลับแล้วดึงออกอีกที ต้องได้ความสูงเดิม
+        document.querySelector('.k-float-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        check('[66r12] ผนึกกลับได้', pm12.isDocked('props') && !pm12.isFloating('props'));
+        document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        check('[66r12] undock → dock → undock ได้ทั้งกว้างและสูงเท่าเดิม',
+              !!f12() && f12().h === h12 && f12().w === w12,
+              `${w12}x${h12} → ${f12() && f12().w}x${f12() && f12().h}`);
+        hidePanel('props'); await wait62(240);
+
+        // (3) ลากกล่องกลุ่มไปปล่อยตรงที่ผนึกไม่ได้ → ต้องถือเป็น "ย้ายกล่อง" และจำตำแหน่งไว้
+        showPanel('notes', { prefer: 'float' }); await wait62(240);
+        showPanel('comments', { prefer: 'float' }); await wait62(240);
+        pm12.groupIntoFloat('comments', pm12.floatIdOf('notes')); await wait62(320);
+        const bar = document.querySelector('.k-float-group > .k-float-tabbar');
+        const pop = document.querySelector('.k-float-group');
+        check('[66r12] มีกล่องกลุ่มและแถบแท็บให้ลาก', !!bar && !!pop);
+        const p0 = pop.getBoundingClientRect();
+        // เป้าหมาย = กลางแผงโปรเจกต์ → โซน "รวมเป็นแท็บ" ซึ่งกลุ่มทำไม่ได้ (applyDrop คืน false)
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const tr = treeEl.getBoundingClientRect();
+        const bx = bar.getBoundingClientRect();
+        const sx = Math.round(bx.right - 6), sy = Math.round(bx.top + bx.height / 2);
+        const tx = Math.round(tr.left + tr.width / 2), ty = Math.round(tr.top + tr.height / 2);
+        bar.dispatchEvent(new MouseEvent('mousedown', { clientX: sx, clientY: sy, button: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: tx, clientY: ty, bubbles: true }));
+        document.dispatchEvent(new MouseEvent('mouseup', { clientX: tx, clientY: ty, bubbles: true }));
+        await wait62(360);
+        const want = { x: Math.round(p0.left + (tx - sx)), y: Math.round(p0.top + (ty - sy)) };
+        const g12 = pm12.floats.find((x) => x.panel.type === 'tabs');
+        check('[66r12] กลุ่มยังลอยอยู่ (ปล่อยตรงที่ผนึกไม่ได้ = ไม่ผนึก)', !!g12,
+              pm12.floats.map((x) => x.panel.id).join());
+        check('[66r12] ตำแหน่งใหม่ถูกบันทึกลงสโตร์ (เดิมไม่บันทึกเลย)',
+              !!g12 && Math.abs(g12.x - want.x) <= 6 && Math.abs(g12.y - want.y) <= 6,
+              `คาด ${want.x},${want.y} ได้ ${g12 && g12.x},${g12 && g12.y}`);
+        // บังคับวาดใหม่ — ของเดิมกล่องจะเด้งกลับไปตำแหน่งของแผงฐานตอนสร้างกลุ่ม
+        togglePanel('dashboard'); await wait62(300);
+        togglePanel('dashboard'); await wait62(300);
+        const after = document.querySelector('.k-float-group');
+        const pa = after && after.getBoundingClientRect();
+        check('[66r12] วาดใหม่แล้วกล่องกลุ่มยังอยู่ที่เดิม (ไม่เด้งกลับที่แผงฐาน)',
+              !!pa && Math.abs(Math.round(pa.left) - want.x) <= 6 && Math.abs(Math.round(pa.top) - want.y) <= 6,
+              `คาด ${want.x},${want.y} ได้ ${pa && Math.round(pa.left)},${pa && Math.round(pa.top)}`);
+        resetPanels(); await wait62(280);
+      }
+
+      // ---- [66r7] เปิดแผงต้องไม่ไปเบียดแผงที่ผู้ใช้จัดขนาดไว้แล้ว ----
+      // อาการที่ผู้ใช้รายงาน: แผง A ตั้งไว้ 450px พอเปิดแผง C แล้ว A หดเหลือ 300px
+      // ทางแก้ตามที่ผู้ใช้กำหนด: เปิดแผงครั้งแรก = **ลอยกลางจอ** ไม่ใช่ผนึก → ไม่แตะเลย์เอาต์เลย
+      {
+        resetPanels(); await wait62(260);
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(340);
+        const wOf = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        // ตั้งขนาดแผง A ให้ชัดเจนก่อน
+        const dk7 = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        getPanelManager().resizePx(dk7.dataset.dockId,
+          { [[...(PL.nodeById(getPanelManager().root, dk7.dataset.dockId).children)]
+              .findIndex((c) => c.id === 'props')]: 450 }, true);
+        await wait62(320);
+        const aW = wOf('props');
+        check('[66r7] เตรียมสภาพ: ตั้งแผง A ไว้ที่ ~450px', Math.abs(aW - 450) <= 8, String(aW));
+
+        // เปิดแผงอื่นผ่านทางเข้าฝั่งผู้ใช้ (togglePanel = เมนู/ปุ่ม toolbar)
+        togglePanel('kanban');
+        await wait62(420);
+        const fl7 = document.querySelector('.k-float-panel[data-panel-id="kanban"]');
+        check('[66r7] เปิดแผงใหม่ผ่านเมนู → ได้ **แผงลอย** ไม่ใช่ผนึกเข้า dock', !!fl7);
+        if (fl7) {
+          const r7 = fl7.getBoundingClientRect();
+          const cx = Math.abs((r7.left + r7.width / 2) - window.innerWidth / 2);
+          check('[66r7] และลอยอยู่กลางจอ', cx < 40, String(Math.round(cx)));
+        }
+        check('[66r7] **เปิดแผงใหม่แล้วแผง A ขนาดไม่เปลี่ยนเลย** (อาการที่ผู้ใช้เจอ)',
+              Math.abs(wOf('props') - aW) <= 2, `${aW} → ${wOf('props')}`);
+        check('[66r7] เปิดแผงใหม่แล้วไม่เกิดช่องว่างค้าง', auditPanelGaps().length === 0,
+              JSON.stringify(auditPanelGaps()));
+        togglePanel('kanban'); await wait62(280);
+
+        // กฎกลุ่มบนจอจริง: เอาแผงมา group กับ A → ขนาดกลุ่มต้องยึด A (ไม่โตขึ้น ไม่หดลง)
+        getPanelManager().dockPanel('notes', 'center', 'props');
+        await wait62(360);
+        const grpEl = document.querySelector('#app-root .k-tab-group');
+        const grpW = (() => {
+          const g = document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+          const box = g && g.closest('.k-tab-group');
+          return box ? Math.round(box.getBoundingClientRect().width) : 0;
+        })();
+        check('[66r7] รวมกลุ่มแล้วได้กลุ่มแท็บจริง', !!grpEl && grpW > 0);
+        check('[66r7] **ขนาดกลุ่มยึดจากแผงฐาน ไม่กระโดด**', Math.abs(grpW - aW) <= 10, `${aW} → ${grpW}`);
+        check('[66r7] รวมกลุ่มแล้วไม่เกิดช่องว่างค้าง', auditPanelGaps().length === 0);
+        hidePanel('notes'); hidePanel('props');
+        resetPanels(); await wait62(260);
+      }
+
+      // ---- [66r6] repro ของผู้ใช้เป๊ะ ๆ: reset → dock แผงเข้าฝั่งขวา → ลากปรับขนาด ----
+      // ผู้ใช้บอกว่าเกิด "ทุกครั้งหลัง reset panel แล้วแค่ขยับแผง" — ทำตามลำดับนั้นตรง ๆ
+      // แล้วตรวจช่องว่างค้างทุกจังหวะ (ทั้งก่อนลาก · ระหว่างลากแต่ละครั้ง · หลังลากทุกฝั่ง)
+      {
+        const noGap = (when) => {
+          const g = auditPanelGaps();
+          check(`[66r6] ไม่มีช่องว่างค้าง — ${when}`, g.length === 0, JSON.stringify(g));
+        };
+        for (const side of ['right', 'left']) {
+          resetPanels(); await wait62(260);
+          noGap(`เพิ่ง reset (ยังไม่ขยับอะไร · ฝั่ง${side}`);
+          // "วาง undock panel ใดก็ได้ ไป dock ฝั่งขวา" — notes ปิดอยู่หลัง reset
+          showPanel('notes', { targetId: 'docs', side, forceMove: true });
+          await wait62(360);
+          check(`[66r6] ผนึกแผงเข้าฝั่ง${side}ได้`, isPanelOpen('notes'));
+          const nEl6 = document.querySelector('#app-root .k-panel[data-panel-id="notes"]');
+          check(`[66r6] แผงที่เพิ่งผนึกได้ขนาดตั้งต้นที่สมเหตุสมผล (ไม่ถูกบีบจนแบน)`,
+                !!nEl6 && nEl6.getBoundingClientRect().width >= PL.MIN_PANEL_PX * 2,
+                nEl6 && String(Math.round(nEl6.getBoundingClientRect().width)));
+          const nNode6 = PL.findPanel(getPanelManager().root, 'notes');
+          check('[66r6] และเก็บขนาดลงต้นไม้ทันทีตั้งแต่ผนึก (กฎข้อ 2)', !!nNode6 && nNode6.pxW > 0,
+                nNode6 && String(nNode6.pxW));
+          noGap(`หลัง dock เข้าฝั่ง${side}`);
+          // "แล้วทำการปรับขนาดฝั่งไหนฝั่งหนึ่ง" — ลากทีละฝั่ง ตรวจทุกครั้ง
+          const dock6 = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"]').parentElement;
+          const hAll = () => [...dock6().querySelectorAll(':scope > .k-resize-handle')];
+          for (let i = 0; i < hAll().length; i++) {
+            for (const dx of [90, -140]) {
+              const hh = hAll()[i];
+              if (!hh) continue;
+              const r = hh.getBoundingClientRect();
+              hh.dispatchEvent(new MouseEvent('mousedown', { clientX: r.left + 2, clientY: r.top + 30, button: 0, bubbles: true }));
+              document.dispatchEvent(new MouseEvent('mousemove', { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+              document.dispatchEvent(new MouseEvent('mouseup', { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+              await wait62(300);
+              noGap(`หลังลากที่จับตัวที่ ${i + 1} (${dx > 0 ? 'ขวา' : 'ซ้าย'}) ฝั่ง${side}`);
+            }
+          }
+          hidePanel('notes'); await wait62(200);
+        }
+        resetPanels(); await wait62(240);
+      }
+
+      // ---- [66r6b] ขนาด "โหมดลอย" กับ "โหมดผนึก" ต้องเป็นคนละค่า และไม่ทับกัน ----
+      {
+        resetPanels(); await wait62(260);
+        showPanel('notes', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(340);
+        const pm6 = getPanelManager();
+        const dockedW = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="notes"]')
+                                   .getBoundingClientRect().width);
+        pm6.floatPanel('notes', { x: 60, y: 60, w: 560, h: 480 });
+        await wait62(320);
+        check('[66r6b] ลอยครั้งแรกได้ขนาดที่สั่ง', (() => {
+          const f = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+          return !!f && Math.abs(f.getBoundingClientRect().width - 560) <= 6;
+        })());
+        pm6.moveFloat('notes', { w: 720, h: 520 });      // ผู้ใช้ปรับขนาดตอนลอย
+        await wait62(300);
+        pm6.dockPanel('notes', 'right', 'docs');          // ผนึกกลับ
+        await wait62(340);
+        const back6 = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="notes"]')
+                                 .getBoundingClientRect().width);
+        check('[66r6b] ผนึกกลับ → ใช้ขนาดโหมดผนึก ไม่ใช่ขนาดตอนลอย (720)',
+              Math.abs(back6 - dockedW) <= 6, `${dockedW} → ${back6}`);
+        pm6.floatPanel('notes', { x: 60, y: 60, w: 320, h: 300 });   // ดึงออกมาลอยอีกครั้ง
+        await wait62(340);
+        const f6 = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+        check('[66r6b] **ดึงออกมาลอยอีกครั้ง → ได้ขนาดโหมดลอยที่เคยตั้งไว้ (720) ไม่ใช่ขนาด dock หรือค่าที่ส่งมา**',
+              !!f6 && Math.abs(f6.getBoundingClientRect().width - 720) <= 6,
+              f6 && String(Math.round(f6.getBoundingClientRect().width)));
+        hidePanel('notes');
+        resetPanels(); await wait62(240);
+      }
+
+      // ---- [66r5] กฎการลากปรับขนาดที่ผู้ใช้กำหนด + เคสที่รายงานมา ----
+      // 1) ลากขอบฝั่งหนึ่ง อีกฝั่งต้องไม่หด  2) พื้นที่เขียนมีขั้นต่ำจริง ลากเบียดต่อไม่ได้
+      // 3) ลากออกมาลอยแล้วขนาดต้องไม่ถูกรีเซ็ต  4) พับ/คลี่ แล้วตำแหน่งเลื่อนต้องไม่หาย
+      {
+        resetPanels(); await wait62(240);
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(320);
+        const Wp = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        const dragH = async (hEl, dx) => {
+          const r = hEl.getBoundingClientRect();
+          hEl.dispatchEvent(new MouseEvent('mousedown', { clientX: r.left + 2, clientY: r.top + 30, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mouseup', { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+          await wait62(320);
+        };
+        // ทุกการลาก = วาดต้นไม้ใหม่ทั้งชุด → โหนดที่เก็บไว้ก่อนหน้าหลุด DOM ทันที (บทเรียนข้อ 3 ของแผง)
+        // ต้อง query สดทุกครั้ง ไม่งั้นยิงอีเวนต์ใส่ซากที่ไม่มีผลอะไรเลย
+        const rowDockNow = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const handleNow = (i) => [...rowDockNow().querySelectorAll(':scope > .k-resize-handle')][i];
+        check('[66r5] มีที่จับทั้งสองข้างของพื้นที่เขียน',
+              rowDockNow().querySelectorAll(':scope > .k-resize-handle').length >= 2,
+              String(rowDockNow().querySelectorAll(':scope > .k-resize-handle').length));
+        if (rowDockNow().querySelectorAll(':scope > .k-resize-handle').length >= 2) {
+          // ตรึงทั้งสองฝั่งก่อน (ลากเบา ๆ ข้างละครั้ง)
+          await dragH(handleNow(0), 20);
+          await dragH(handleNow(1), -20);
+          const leftW0 = Wp('tree'), rightW0 = Wp('props');
+          check('[66r5] เตรียมสภาพ: ตรึงความกว้างทั้งสองฝั่งแล้ว', leftW0 > 50 && rightW0 > 50,
+                `left=${leftW0} right=${rightW0}`);
+          // ลากขอบ "ขวา" → ฝั่งซ้ายต้องไม่ขยับเลย
+          await dragH(handleNow(1), -120);
+          check('[66r5] ลากขอบขวา → แผงขวากว้างขึ้นจริง', Wp('props') - rightW0 > 60,
+                `${rightW0} → ${Wp('props')}`);
+          check('[66r5] ลากขอบขวา → **แผงซ้ายต้องไม่ถูกบีบ**', Math.abs(Wp('tree') - leftW0) <= 2,
+                `${leftW0} → ${Wp('tree')}`);
+          const rightW1 = Wp('props');
+          // ลากขอบ "ซ้าย" → ฝั่งขวาต้องไม่ขยับ
+          await dragH(handleNow(0), 120);
+          check('[66r5] ลากขอบซ้าย → แผงซ้ายกว้างขึ้นจริง', Wp('tree') - leftW0 > 60, `${leftW0} → ${Wp('tree')}`);
+          check('[66r5] ลากขอบซ้าย → **แผงขวาต้องไม่ถูกบีบ**', Math.abs(Wp('props') - rightW1) <= 2,
+                `${rightW1} → ${Wp('props')}`);
+          // ลากจนสุด → พื้นที่เขียนต้องไม่ต่ำกว่าขั้นต่ำ และอีกฝั่งยังไม่ถูกบีบ
+          const keepRight = Wp('props');
+          await dragH(handleNow(0), 5000);
+          check('[66r5] ลากเบียดสุดแรง → พื้นที่เขียนไม่ต่ำกว่าขั้นต่ำ',
+                Wp('docs') >= PL.MIN_CANVAS_PX - 2, `${Wp('docs')} (ขั้นต่ำ ${PL.MIN_CANVAS_PX})`);
+          check('[66r5] ลากเบียดสุดแรง → อีกฝั่งก็ยังไม่ถูกบีบ',
+                Math.abs(Wp('props') - keepRight) <= 2, `${keepRight} → ${Wp('props')}`);
+          check('[66r5] และไม่มีช่องว่างค้างเกิดขึ้น (ตัวตรวจไม่พบรูโหว่)',
+                auditPanelGaps().length === 0, JSON.stringify(auditPanelGaps()));
+        }
+
+        // ---- ลากออกมาลอย: ขนาดต้องเท่าตอนผนึกอยู่ ไม่ใช่ 320×300 ตายตัว ----
+        const beforeW = Wp('props'), beforeH = (() => {
+          const e = document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+          return e ? Math.round(e.getBoundingClientRect().height) : 0;
+        })();
+        const pHead = document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-head-title');
+        if (pHead) {
+          const r = pHead.getBoundingClientRect();
+          pHead.dispatchEvent(new MouseEvent('mousedown', { clientX: r.left + 10, clientY: r.top + 6, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: r.left + 40, clientY: r.top + 60, bubbles: true }));
+          // ปล่อยกลางแผงเอกสาร = ไม่มีโซน → ลอยอิสระ
+          const dc = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mouseup', { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+          await wait62(360);
+          const fl = document.querySelector('.k-float-panel[data-panel-id="props"]');
+          check('[66r5] ลากออกมาเป็นแผงลอยได้', !!fl);
+          if (fl) {
+            const fr = fl.getBoundingClientRect();
+            // [66r12] กฎเปลี่ยนตามที่ผู้ใช้สั่ง: **ความกว้าง**ยังยกมาจากตอนผนึกเหมือนเดิม
+            // (เจตนาเดิมของ 66r5 คือ "อย่ารีเซ็ตเป็น 320×300") แต่ **ความสูงห้ามยกมาจาก dock**
+            // เพราะแผงข้างสูงเต็มคอลัมน์ → ลากออกมาทีไรได้กล่องสูงเต็มจอทุกครั้ง
+            // ความสูงจึงถูกหนีบด้วยค่าอ้างอิงของแผงนั้น (เตี้ยกว่าค่าอ้างอิงอยู่แล้วก็คงไว้เท่าเดิม)
+            check('[66r5] แผงลอยได้ความกว้างเท่าตอนผนึก (ไม่ถูกรีเซ็ตเป็น 320×300)',
+                  Math.abs(fr.width - beforeW) <= 6,
+                  `ผนึก ${beforeW}x${beforeH} → ลอย ${Math.round(fr.width)}x${Math.round(fr.height)}`);
+            check('[66r12] ...และความสูงไม่ยกมาจากคอลัมน์ที่มันเคยผนึกอยู่',
+                  fr.height <= Math.min(beforeH, 560) + 6,
+                  `ผนึกสูง ${beforeH} → ลอยสูง ${Math.round(fr.height)}`);
+          }
+        }
+        resetPanels(); await wait62(240);
+      }
+
+      // ---- [66r5b] พับแล้วคลี่ / ปิดแล้วเปิด → ตำแหน่งเลื่อนต้องกลับมา ----
+      {
+        showPanel('notes'); await wait62(300);
+        const nHost2 = $('#notes-panel');
+        const bodyOf2 = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body');
+        if (nHost2 && bodyOf2()) {
+          const big2 = el('div');
+          big2.style.cssText = 'height:1500px;width:1800px;flex:0 0 auto;';
+          nHost2.appendChild(big2);
+          await wait62(120);
+          const b0 = bodyOf2();
+          b0.style.scrollBehavior = 'auto';
+          b0.scrollTop = 380;
+          await until62(() => b0.scrollTop === 380, 20, 30);
+          check('[66r5b] เตรียมสภาพ: เลื่อนเนื้อแผงลงมาแล้ว', b0.scrollTop === 380, String(b0.scrollTop));
+          getPanelManager().collapsePanel('notes', true);
+          await wait62(280);
+          getPanelManager().collapsePanel('notes', false);
+          await wait62(420);
+          check('[66r5b] พับแล้วคลี่กลับ → ตำแหน่งเลื่อนยังอยู่ (เดิมหายเพราะเนื้อถูก display:none)',
+                !!bodyOf2() && Math.abs(bodyOf2().scrollTop - 380) <= 8,
+                bodyOf2() && String(bodyOf2().scrollTop));
+          hidePanel('notes'); await wait62(280);
+          showPanel('notes'); await wait62(460);
+          check('[66r5b] ปิดแล้วเปิดใหม่ → ตำแหน่งเลื่อนก็ยังอยู่',
+                !!bodyOf2() && Math.abs(bodyOf2().scrollTop - 380) <= 8,
+                bodyOf2() && String(bodyOf2().scrollTop));
+          big2.remove();
+        }
+        hidePanel('notes');
+        resetPanels(); await wait62(240);
+      }
+
+      // ---- [66r3] Drop Zone ครบตามสเปก: ขอบจอ · หัวแท็บ · แทรก · รวมกลุ่ม ----
+      {
+        const drag = async (fromEl, to) => {                 // ลากหัวแผงไปค้างไว้ที่จุดหนึ่ง (ยังไม่ปล่อย)
+          const r = fromEl.getBoundingClientRect();
+          fromEl.dispatchEvent(new MouseEvent('mousedown',
+            { clientX: r.left + 30, clientY: r.top + 8, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mousemove',
+            { clientX: r.left + 60, clientY: r.top + 40, bubbles: true }));   // เกิน DRAG_MIN ก่อน
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: to.x, clientY: to.y, bubbles: true }));
+          await wait62(30);
+          return document.querySelector('.k-drop-zone');
+        };
+        const drop = async (to) => {
+          document.dispatchEvent(new MouseEvent('mouseup', { clientX: to.x, clientY: to.y, bubbles: true }));
+          await wait62(300);
+        };
+        // ต้องจับที่ "ชื่อแผง" จริง ๆ — makePanelDraggable ดู `e.target` เพื่อตัดสินว่าอนุญาตให้รวมกลุ่มไหม
+        // (ยิงอีเวนต์ใส่ตัวหัวแผงเฉย ๆ = e.target เป็นหัวแผง → โซนรวมกลุ่มถูกปิด แล้วเทสจะเพี้ยน)
+        const grabOf = (id) => document.querySelector(`#app-root .k-panel[data-panel-id="${id}"] .k-panel-head-title`)
+                            || document.querySelector(`#app-root .k-panel[data-panel-id="${id}"] .k-panel-head`);
+
+        resetPanels(); await wait62(220);
+        showPanel('notes'); await wait62(260);
+        const wsEl = document.querySelector('#app-root .k-workspace');
+        check('[66r3-1] ตัววาดทำเครื่องหมายพื้นที่ทำงานไว้ (.k-workspace)', !!wsEl);
+        const wr = wsEl.getBoundingClientRect();
+        const tbTop = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        check('[66r3-1] พื้นที่ทำงานไม่รวมแถบเครื่องมือ',
+              !!tbTop && tbTop.getBoundingClientRect().bottom <= wr.top + 2,
+              tbTop && `toolbar.bottom=${tbTop.getBoundingClientRect().bottom} ws.top=${wr.top}`);
+
+        // (ก) ขอบจอ → สร้าง dock ใหม่เต็มด้าน
+        let dz = await drag(grabOf('notes'), { x: wr.left + 5, y: wr.top + wr.height / 2 });
+        check('[66r3-1] ลากชนขอบซ้ายของพื้นที่ทำงาน → โซน "ขอบ"',
+              !!dz && dz.dataset.kind === 'edge' && dz.dataset.zone === 'left',
+              dz && `${dz.dataset.kind}/${dz.dataset.zone}`);
+        check('[66r3-1] แถบพรีวิวยาวเต็มด้าน (บอกว่าจะได้คอลัมน์ใหม่ทั้งด้าน)',
+              !!dz && Math.abs(parseFloat(dz.style.height) - wr.height) <= 2,
+              dz && `${dz.style.height} vs ${wr.height}`);
+        await drop({ x: wr.left + 5, y: wr.top + wr.height / 2 });
+        const nEl = document.querySelector('#app-root .k-panel[data-panel-id="notes"]');
+        const ws2 = document.querySelector('#app-root .k-workspace').getBoundingClientRect();
+        const nr = nEl.getBoundingClientRect();
+        check('[66r3-1] ปล่อยที่ขอบ → แผงไปอยู่ซ้ายสุดของพื้นที่ทำงาน', Math.abs(nr.left - ws2.left) <= 2,
+              `${nr.left} vs ${ws2.left}`);
+        check('[66r3-1] และสูงเต็มด้าน (ไม่ใช่แค่เท่าแผงที่บังเอิญอยู่ตรงนั้น)',
+              Math.abs(nr.height - ws2.height) <= 3, `${nr.height} vs ${ws2.height}`);
+        check('[66r3-1] แถบเครื่องมือยังอยู่เหนือทุกอย่าง (ไม่ถูกแทรกข้าง)',
+              document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]').getBoundingClientRect().top < nr.top);
+
+        // (ข) หัวแท็บ → แทรกเป็นแท็บตรงตำแหน่งนั้น
+        resetPanels(); await wait62(220);
+        showPanel('notes'); await wait62(260);
+        const outTab = document.querySelector('#app-root .k-tab[data-panel-id="outline"]');
+        check('[66r3-1] เลย์เอาต์ตั้งต้นมีกลุ่มแท็บให้ทดสอบ', !!outTab);
+        if (outTab) {
+          const tr = outTab.getBoundingClientRect();
+          dz = await drag(grabOf('notes'),{ x: tr.left + tr.width / 2, y: tr.top + tr.height / 2 });
+          check('[66r3-1] ลากไปบนหัวแท็บ → โซน "แท็บ" (กรอบเล็กครอบแท็บนั้น)',
+                !!dz && dz.dataset.kind === 'tab', dz && dz.dataset.kind);
+          check('[66r3-1] กรอบพรีวิวเท่าขนาดแท็บที่ชี้อยู่จริง',
+                !!dz && Math.abs(parseFloat(dz.style.width) - tr.width) <= 2);
+          await drop({ x: tr.left + tr.width / 2, y: tr.top + tr.height / 2 });
+          const grp = PL.tabGroupOf(getPanelManager().root, 'notes');
+          check('[66r3-1] ปล่อยบนแท็บ → เข้ากลุ่มเดียวกันจริง', !!grp);
+          check('[66r3-1] และแทรก "ตรงตำแหน่งที่ปล่อย" ไม่ใช่ต่อท้าย',
+                !!grp && grp.children.map((c) => c.id).join(',') === 'tree,notes,outline',
+                grp && grp.children.map((c) => c.id).join(','));
+          // ลำดับความสำคัญ: แท็บใบแรกของ dock ฝั่งซ้าย **ทับเขตขอบจอ** อยู่แล้ว
+          // ถ้าปล่อยให้โซนขอบชนะ จะเล็งวางลงแท็บของ dock ข้างไม่ได้เลยสักครั้ง (e2e ล้มมาแล้วหนึ่งรอบ)
+          const t0 = document.querySelector('#app-root .k-tab-bar .k-tab[data-panel-id="tree"]');
+          if (t0) {
+            const r0 = t0.getBoundingClientRect();
+            const wsNow = document.querySelector('#app-root .k-workspace').getBoundingClientRect();
+            const dz2 = await drag(grabOf('notes'), { x: r0.left + 5, y: r0.top + r0.height / 2 });
+            check('[66r3-1] แท็บใบแรกอยู่ในเขตขอบจอจริง (เงื่อนไขของเทสนี้)',
+                  r0.left - wsNow.left < 26, `${r0.left} - ${wsNow.left}`);
+            check('[66r3-1] หัวแท็บชนะโซนขอบเมื่อทับกัน (ไม่งั้นวางลงแท็บของ dock ข้างไม่ได้)',
+                  !!dz2 && dz2.dataset.kind === 'tab', dz2 && dz2.dataset.kind);
+            // เลิกลากแบบไม่ปล่อยลงที่ไหน: ย้ายไปกลางแผงเอกสาร (ไม่มีโซน) ก่อนค่อย mouseup
+            const dc = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+            document.dispatchEvent(new MouseEvent('mousemove',
+              { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+            await wait62(30);
+            document.dispatchEvent(new MouseEvent('mouseup',
+              { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+            await wait62(250);
+          }
+        }
+
+        // (ค) ขอบของแผง = แทรก · (ง) กลางแผง = รวมกลุ่ม — ต้องเป็นคนละหน้าตา
+        resetPanels(); await wait62(220);
+        showPanel('notes'); await wait62(260);
+        const docsEl = document.querySelector('#app-root .k-panel[data-panel-id="docs"]');
+        const dr = docsEl.getBoundingClientRect();
+        dz = await drag(grabOf('notes'),{ x: dr.right - 40, y: dr.top + dr.height / 2 });
+        check('[66r3-1] ลากไปขอบขวาของแผงเอกสาร → โซน "แทรก"',
+              !!dz && dz.dataset.kind === 'insert' && dz.dataset.zone === 'right',
+              dz && `${dz.dataset.kind}/${dz.dataset.zone}`);
+        check('[66r3-1] พรีวิว "แทรก" = ครึ่งพื้นที่ (บอกว่าจะได้ช่องใหม่ครึ่งหนึ่ง)',
+              !!dz && Math.abs(parseFloat(dz.style.width) - dr.width / 2) <= 2);
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const trr = treeEl.getBoundingClientRect();
+        document.dispatchEvent(new MouseEvent('mousemove',
+          { clientX: trr.left + trr.width / 2, clientY: trr.top + trr.height / 2, bubbles: true }));
+        await wait62(30);
+        dz = document.querySelector('.k-drop-zone');
+        check('[66r3-1] ลากไปกลางแผงอื่น (จับที่ชื่อแผง) → โซน "รวมกลุ่ม"',
+              !!dz && dz.dataset.kind === 'merge', dz && dz.dataset.kind);
+        check('[66r3-1] พรีวิว "รวมกลุ่ม" = คลุมทั้งใบ (คนละหน้าตากับแทรก)',
+              !!dz && Math.abs(parseFloat(dz.style.width) - trr.width) <= 2);
+        check('[66r3-1] สองโซนนี้ใช้สีต่างกัน (ผู้ใช้ต้องแยกออกก่อนปล่อย)',
+              getComputedStyle(dz).borderColor !== 'rgb(95, 159, 217)', getComputedStyle(dz).borderColor);
+        document.dispatchEvent(new MouseEvent('mouseup', { clientX: -5, clientY: -5, bubbles: true }));
+        await wait62(200);
+        check('[66r3-1] แสดงโซนเดียวเสมอ ไม่เด้งพร้อมกันหลายอัน',
+              document.querySelectorAll('.k-drop-zone').length <= 1);
+        resetPanels(); await wait62(200);
+      }
+
+      // ---- [66r3-2] Workspace Presets — สลับชุดการจัดวางได้ในคลิกเดียว ----
+      {
+        check('[66r3-2] มีชุดสำเร็จรูปให้เลือก (รวม Essentials)',
+              BUILTIN_WORKSPACES.length >= 4 && BUILTIN_WORKSPACES[0].id === 'essentials');
+        applyWorkspace('writing'); await wait62(420);
+        check('[66r3-2] ชุด "เขียน" — เหลือสารบัญกับพื้นที่เขียน',
+              isPanelOpen('tree') && !isPanelOpen('props') && !isPanelOpen('outline'),
+              `tree=${isPanelOpen('tree')} props=${isPanelOpen('props')} outline=${isPanelOpen('outline')}`);
+        check('[66r3-2] แถบเครื่องมือ/แถบสถานะติดมาด้วยทุกชุด',
+              !!document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]')
+              && !!document.querySelector('#app-root .k-panel[data-panel-id="statusbar"]'));
+        applyWorkspace('review'); await wait62(500);
+        const revGrp = PL.tabGroupOf(getPanelManager().root, 'comments');
+        check('[66r3-2] ชุด "ตรวจแก้" — คอมเมนต์กับโน้ตอยู่กลุ่มแท็บเดียวกัน',
+              !!revGrp && revGrp.children.some((c) => c.id === 'notes'));
+        check('[66r3-2] สลับชุดแล้วพื้นที่เขียนยังอยู่เสมอ',
+              !!document.querySelector('#app-root .k-panel[data-panel-id="docs"]'));
+
+        // บันทึกชุดของตัวเอง → สลับไปที่อื่น → กลับมาต้องได้สภาพเดิม (รวมสถานะย่อ)
+        applyWorkspace('essentials'); await wait62(420);
+        showPanel('log'); await wait62(260);
+        getPanelManager().collapsePanel('log', true); await wait62(200);
+        check('[66r3-2] เตรียมสภาพ: เปิดแผงบันทึกแล้วพับไว้',
+              isPanelOpen('log') && getPanelManager().isCollapsed('log'));
+        check('[66r3-2] บันทึกเวิร์กสเปซของตัวเองได้', saveWorkspace('เทสเวิร์กสเปซ'));
+        check('[66r3-2] ชื่อโผล่ในรายการเลือก',
+              listWorkspaces().some((w) => w.name === 'เทสเวิร์กสเปซ' && !w.builtIn));
+        applyWorkspace('writing'); await wait62(420);
+        check('[66r3-2] สลับไปชุดอื่นแล้วสภาพเปลี่ยนจริง', !isPanelOpen('log'));
+        applyWorkspace('เทสเวิร์กสเปซ'); await wait62(460);
+        check('[66r3-2] กลับมาชุดที่บันทึกเอง → แผงกลับมาครบ', isPanelOpen('log'));
+        check('[66r3-2] และจำสถานะย่อ/ขยายไว้ด้วย (ไม่ใช่แค่ตำแหน่ง)',
+              getPanelManager().isCollapsed('log'));
+        check('[66r3-2] ลบเวิร์กสเปซของตัวเองได้',
+              deleteWorkspace('เทสเวิร์กสเปซ') && !listWorkspaces().some((w) => w.name === 'เทสเวิร์กสเปซ'));
+        check('[66r3-2] ชุดสำเร็จรูปลบไม่ได้ / ตั้งชื่อทับไม่ได้',
+              deleteWorkspace('essentials') === false && saveWorkspace('essentials') === false);
+        applyWorkspace('essentials'); await wait62(420);
+      }
+
+      // ---- [66r3-3] ระบบจัดการพื้นที่: ซ่อนทั้งหมด / ซ่อนเฉพาะฝั่ง ----
+      {
+        resetPanels(); await wait62(220);
+        showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
+        await wait62(300);
+        check('[66r3-3] เตรียมสภาพ: มีแผงทั้งซ้ายและขวา', isPanelOpen('tree') && isPanelOpen('props'));
+        toggleSpace('right'); await wait62(300);
+        check('[66r3-3] ซ่อนเฉพาะฝั่งขวา → แผงขวาหาย', !isPanelOpen('props'));
+        check('[66r3-3] ...แต่ฝั่งซ้ายยังอยู่ (สเปกข้อ 2)', isPanelOpen('tree'));
+        toggleSpace('right'); await wait62(320);
+        check('[66r3-3] กดซ้ำ = คืนกลับครบ', isPanelOpen('props') && isPanelOpen('tree'));
+
+        toggleSpace('all'); await wait62(340);
+        check('[66r3-3] ซ่อนแผงทั้งหมด → ไม่เหลือแผงที่ปิดได้เลย',
+              !isPanelOpen('tree') && !isPanelOpen('props') && !isPanelOpen('outline'));
+        const dEl = document.querySelector('#app-root .k-panel[data-panel-id="docs"]');
+        const wsE = document.querySelector('#app-root .k-workspace');
+        check('[66r3-3] เหลือแต่พื้นที่เขียน และกินเต็มพื้นที่ทำงาน (ไม่มีรูโหว่)',
+              !!dEl && !!wsE
+              && Math.abs(dEl.getBoundingClientRect().width - wsE.getBoundingClientRect().width) <= 3,
+              dEl && wsE && `${dEl.getBoundingClientRect().width} vs ${wsE.getBoundingClientRect().width}`);
+        check('[66r3-3] แถบเครื่องมือ/แถบสถานะไม่ถูกซ่อนไปด้วย (ปิดไม่ได้อยู่แล้ว)',
+              !!document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]'));
+        toggleSpace('all'); await wait62(360);
+        check('[66r3-3] กดซ้ำ = คืนทุกแผงที่ซ่อนไว้', isPanelOpen('tree') && isPanelOpen('props'));
+
+        // ปุ่มเมนูแผง ☰ (Progressive Disclosure)
+        const heads = [...document.querySelectorAll('#app-root .k-panel:not(.k-panel-nohead) > .k-panel-head')];
+        check('[66r3-3] ทุกแผงที่มีหัว มีปุ่มเมนู ☰',
+              heads.length > 0 && heads.every((h) => !!h.querySelector('.k-panel-btn-menu')),
+              `${heads.filter((h) => h.querySelector('.k-panel-btn-menu')).length}/${heads.length}`);
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        heads[0].querySelector('.k-panel-btn-menu').click();
+        await wait62(160);
+        // บทเรียนข้อ 31: #k-fab-menu เป็น .k-menu ถาวร ต้องกันออกก่อน
+        const pmenu = document.querySelector('.k-menu:not(#k-fab-menu)');
+        check('[66r3-3] กด ☰ แล้วเมนูแผงเปิดจริง', !!pmenu);
+        check('[66r3-3] เมนูมีคำอธิบายแผง + คำสั่งจัดพื้นที่ + เวิร์กสเปซ',
+              !!pmenu && pmenu.textContent.includes('นี่คืออะไร')
+              && pmenu.textContent.includes('ซ่อนแผงทั้งหมด')
+              && pmenu.textContent.includes('เวิร์กสเปซ'));
+        closeMenu();
+        await wait62(120);
+        resetPanels(); await wait62(220);
       }
 
       // ---- [62-8] ซูมรัว ๆ แล้วหน้ากระดาษต้องไม่ไหลไปชิดขอบซ้าย ----

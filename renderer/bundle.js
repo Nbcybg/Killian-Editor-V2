@@ -6530,10 +6530,10 @@
     }
     return outsideBlock > -1 ? outsideBlock : view.docView.posFromDOM(node, offset, -1);
   }
-  function elementFromPoint(element, coords, box) {
+  function elementFromPoint(element, coords, box2) {
     let len5 = element.childNodes.length;
-    if (len5 && box.top < box.bottom) {
-      for (let startI = Math.max(0, Math.min(len5 - 1, Math.floor(len5 * (coords.top - box.top) / (box.bottom - box.top)) - 2)), i5 = startI; ; ) {
+    if (len5 && box2.top < box2.bottom) {
+      for (let startI = Math.max(0, Math.min(len5 - 1, Math.floor(len5 * (coords.top - box2.top) / (box2.bottom - box2.top)) - 2)), i5 = startI; ; ) {
         let child = element.childNodes[i5];
         if (child.nodeType == 1) {
           let rects = child.getClientRects();
@@ -6557,10 +6557,10 @@
     let elt = (view.root.elementFromPoint ? view.root : doc3).elementFromPoint(coords.left, coords.top);
     let pos;
     if (!elt || !view.dom.contains(elt.nodeType != 1 ? elt.parentNode : elt)) {
-      let box = view.dom.getBoundingClientRect();
-      if (!inRect(coords, box))
+      let box2 = view.dom.getBoundingClientRect();
+      if (!inRect(coords, box2))
         return null;
-      elt = elementFromPoint(view.dom, coords, box);
+      elt = elementFromPoint(view.dom, coords, box2);
       if (!elt)
         return null;
     }
@@ -6574,8 +6574,8 @@
       if (gecko && node.nodeType == 1) {
         offset = Math.min(offset, node.childNodes.length);
         if (offset < node.childNodes.length) {
-          let next = node.childNodes[offset], box;
-          if (next.nodeName == "IMG" && (box = next.getBoundingClientRect()).right <= coords.left && box.bottom > coords.top)
+          let next = node.childNodes[offset], box2;
+          if (next.nodeName == "IMG" && (box2 = next.getBoundingClientRect()).right <= coords.left && box2.bottom > coords.top)
             offset++;
         }
       }
@@ -6717,8 +6717,8 @@
         else
           continue;
         for (let i5 = 0; i5 < boxes.length; i5++) {
-          let box = boxes[i5];
-          if (box.bottom > box.top + 1 && (dir == "up" ? coords.top - box.top > (box.bottom - coords.top) * 2 : box.bottom - coords.bottom > (coords.bottom - box.top) * 2))
+          let box2 = boxes[i5];
+          if (box2.bottom > box2.top + 1 && (dir == "up" ? coords.top - box2.top > (box2.bottom - coords.top) * 2 : box2.bottom - coords.bottom > (coords.bottom - box2.top) * 2))
             return false;
         }
       }
@@ -16409,6 +16409,32 @@
     if (min === dt) return "top";
     return "bottom";
   }
+  function edgeZone(px2, py2, rect, pad3 = 12) {
+    const { x, y, w, h } = rect;
+    if (px2 < x || px2 > x + w || py2 < y || py2 > y + h) return null;
+    const dl = px2 - x, dr = x + w - px2, dt = py2 - y, db = y + h - py2;
+    const m = Math.min(dl, dr, dt, db);
+    if (m > pad3) return null;
+    if (m === dl) return "left";
+    if (m === dr) return "right";
+    if (m === dt) return "top";
+    return "bottom";
+  }
+  function workspaceNodeId(root, isFixedPanel = () => false) {
+    if (!root) return null;
+    const allFixed = (n2) => {
+      if (!n2 || nodeHidden(n2)) return true;
+      if (n2.type === "panel") return !!isFixedPanel(n2.id);
+      return (n2.children || []).every(allFixed);
+    };
+    let node = root;
+    for (let guard = 0; guard < 20 && node.type === "dock"; guard++) {
+      const soft = (node.children || []).filter((c) => !nodeHidden(c) && !allFixed(c));
+      if (soft.length !== 1) break;
+      node = soft[0];
+    }
+    return node.id || null;
+  }
   function walk(node, fn, parent = null) {
     fn(node, parent);
     if (node.children) for (const c of node.children) walk(c, fn, node);
@@ -16439,10 +16465,20 @@
     const targetNode = loc ? loc.parent.children[loc.index] : root;
     const makeDock = (existing) => {
       const kids = before ? [panelize(newPanel), existing] : [existing, panelize(newPanel)];
-      return dock(wantRow ? "row" : "col", kids);
+      const d = dock(wantRow ? "row" : "col", kids);
+      if (existing && existing.pxW > 0) d.pxW = existing.pxW;
+      if (existing && existing.pxH > 0) d.pxH = existing.pxH;
+      return d;
     };
     if (!loc) return makeDock(root);
     const parent = loc.parent;
+    if (parent.type === "tabs") {
+      const wrapped = makeDock(parent);
+      const gloc = locate(root, parent.id);
+      if (!gloc) return wrapped;
+      gloc.parent.children[gloc.index] = wrapped;
+      return root;
+    }
     if (parent.type === "dock" && parent.dir === (wantRow ? "row" : "col")) {
       const at = before ? loc.index : loc.index + 1;
       const cur = parent.sizes && parent.sizes.length === parent.children.length ? parent.sizes : evenSizes(parent.children.length);
@@ -16477,7 +16513,28 @@
     if (cur.type === "tabs") {
       cur.children.push(np);
       cur.active = cur.children.length - 1;
-    } else loc.parent.children[loc.index] = tabs([cur, np], 1);
+    } else {
+      const g = tabs([cur, np], 1);
+      if (cur.pxW > 0) g.pxW = cur.pxW;
+      if (cur.pxH > 0) g.pxH = cur.pxH;
+      loc.parent.children[loc.index] = g;
+    }
+    return root;
+  }
+  function addAsTabAt(root, targetId, newPanel, index) {
+    root = addAsTab(root, targetId, newPanel);
+    const np = panelize(newPanel);
+    let grp = null;
+    walk(root, (n2) => {
+      if (!grp && n2.type === "tabs" && n2.children.some((c) => c.id === np.id)) grp = n2;
+    });
+    if (!grp) return root;
+    const from2 = grp.children.findIndex((c) => c.id === np.id);
+    const to = Math.max(0, Math.min(index | 0, grp.children.length - 1));
+    if (from2 < 0 || from2 === to) return root;
+    const [m] = grp.children.splice(from2, 1);
+    grp.children.splice(to, 0, m);
+    grp.active = to;
     return root;
   }
   function activatePanel(root, panelId2) {
@@ -16553,6 +16610,138 @@
     if (node.type === "panel") return !!node.hidden;
     return (node.children || []).every(nodeHidden);
   }
+  function nodeRigid(node, isFixedPanel = () => false) {
+    if (!node || nodeHidden(node)) return false;
+    if (node.type === "panel") return !!node.collapsed || !!isFixedPanel(node.id);
+    if (node.type === "tabs") return !!node.collapsed;
+    if (node.type === "dock") {
+      const kids = (node.children || []).filter((c) => !nodeHidden(c));
+      return kids.length > 0 && kids.every((c) => nodeRigid(c, isFixedPanel));
+    }
+    return false;
+  }
+  function flexChildIndex(node, docsId = "docs") {
+    const kids = node && node.children || [];
+    for (let i5 = 0; i5 < kids.length; i5++) {
+      if (nodeHidden(kids[i5])) continue;
+      if (kids[i5].type === "panel" ? kids[i5].id === docsId : hasPanel(kids[i5], docsId)) return i5;
+    }
+    return -1;
+  }
+  function ensureDockPx(root, id, def = {}, docsId = "docs") {
+    const loc = dockChildOf(root, id);
+    if (!loc || loc.parent.type !== "dock") return root;
+    if (flexChildIndex(loc.parent, docsId) < 0) return root;
+    if (flexChildIndex(loc.parent, docsId) === loc.index) return root;
+    const row2 = loc.parent.dir === "row";
+    const node = loc.node;
+    id = node.id;
+    if (nodePxDeep(node, row2) > 0) return root;
+    const w = Number(def.w) > 0 ? Math.round(def.w) : DEFAULT_DOCK_W;
+    const hh = Number(def.h) > 0 ? Math.round(def.h) : DEFAULT_DOCK_H;
+    const next = clone(root);
+    walk(next, (n2) => {
+      if (n2.id !== id) return;
+      if (row2) n2.pxW = w;
+      else n2.pxH = hh;
+    });
+    return next;
+  }
+  function nodeFloatBox(node) {
+    if (!node) return null;
+    const w = Number(node.fW) > 0 ? Number(node.fW) : 0;
+    const h = Number(node.fH) > 0 ? Number(node.fH) : 0;
+    return w > 0 || h > 0 ? { w, h } : null;
+  }
+  function setNodeFloatBox(node, w, h) {
+    if (!node) return node;
+    if (w > 0) node.fW = Math.round(w);
+    if (h > 0) node.fH = Math.round(h);
+    return node;
+  }
+  function nodeById(root, id) {
+    let hit = null;
+    if (root && id) walk(root, (n2) => {
+      if (!hit && n2 && n2.id === id) hit = n2;
+    });
+    return hit;
+  }
+  function nodePx(node, row2) {
+    const v2 = node && (row2 ? node.pxW : node.pxH);
+    return Number.isFinite(v2) && v2 > 0 ? v2 : 0;
+  }
+  function nodePxDeep(node, row2) {
+    const own = nodePx(node, row2);
+    if (own > 0 || !node) return own;
+    const kids = (node.children || []).filter((c) => !nodeHidden(c));
+    if (!kids.length) return 0;
+    const vals = kids.map((c) => nodePxDeep(c, row2));
+    if (vals.every((v2) => v2 <= 0)) return 0;
+    const sameAxis = node.type === "dock" && node.dir === "row" === !!row2;
+    return sameAxis ? vals.reduce((a, v2) => a + v2, 0) : Math.max(...vals);
+  }
+  function dockChildOf(root, id) {
+    if (!root || !id) return null;
+    let hit = null;
+    walk(root, (n2, parent) => {
+      if (!parent || parent.type !== "dock") return;
+      if (n2.id === id || n2.type !== "panel" && hasPanel(n2, id)) {
+        hit = { parent, index: parent.children.indexOf(n2), node: n2 };
+      }
+    });
+    return hit;
+  }
+  function setDockPx(root, dockId, updates, row2) {
+    const next = clone(root);
+    walk(next, (n2) => {
+      if (n2.type !== "dock" || n2.id !== dockId) return;
+      for (const k of Object.keys(updates || {})) {
+        const kid = n2.children[+k];
+        const v2 = Math.round(Number(updates[k]));
+        if (!kid || !(v2 >= MIN_PANEL_PX)) continue;
+        if (row2) kid.pxW = v2;
+        else kid.pxH = v2;
+      }
+    });
+    return next;
+  }
+  function dockShares(node, isFixedPanel = () => false, docsId = "docs") {
+    const kids = node && node.children || [];
+    const out = kids.map(() => null);
+    const shown = [];
+    for (let i5 = 0; i5 < kids.length; i5++) if (!nodeHidden(kids[i5])) shown.push(i5);
+    if (!shown.length) return out;
+    const sizeOf = (i5) => {
+      const v2 = node.sizes && node.sizes[i5];
+      return Number.isFinite(v2) && v2 > 0 ? v2 : 1;
+    };
+    const soft = shown.filter((i5) => !nodeRigid(kids[i5], isFixedPanel));
+    const sum2 = soft.reduce((a, i5) => a + sizeOf(i5), 0);
+    const ratioOf = (i5) => sum2 > 0 ? sizeOf(i5) / sum2 : 1 / soft.length;
+    for (const i5 of shown) out[i5] = { kind: "rigid" };
+    const row2 = node.dir === "row";
+    const fi = flexChildIndex(node, docsId);
+    const pxMode = fi >= 0 && soft.includes(fi);
+    if (!pxMode) {
+      for (const i5 of soft) out[i5] = { kind: "grow", grow: ratioOf(i5) };
+      return out;
+    }
+    const pxKids = soft.filter((i5) => i5 !== fi);
+    const anyPinned = pxKids.some((i5) => nodePxDeep(kids[i5], row2) > 0);
+    if (!anyPinned) {
+      for (const i5 of soft) out[i5] = { kind: "grow", grow: ratioOf(i5) };
+      return out;
+    }
+    for (const i5 of soft) {
+      if (i5 === fi) {
+        out[i5] = { kind: "flex" };
+        continue;
+      }
+      const px2 = nodePxDeep(kids[i5], row2);
+      out[i5] = px2 > 0 ? { kind: "px", px: px2 } : { kind: "grow", grow: ratioOf(i5) };
+    }
+    return out;
+  }
   function visiblePanelIds(root) {
     const ids = [];
     walk(root, (n2) => {
@@ -16598,7 +16787,13 @@
   function collapse(node) {
     if (!node.children) return node;
     node.children = node.children.map(collapse);
-    if ((node.type === "dock" || node.type === "tabs") && node.children.length === 1) return node.children[0];
+    if ((node.type === "dock" || node.type === "tabs") && node.children.length === 1) {
+      const only = node.children[0];
+      const w = nodePx(node, true), h = nodePx(node, false);
+      if (w > 0) only.pxW = w;
+      if (h > 0) only.pxH = h;
+      return only;
+    }
     return node;
   }
   function rootFirstPanelId(root) {
@@ -16646,12 +16841,19 @@
   function clone(o) {
     return JSON.parse(JSON.stringify(o));
   }
-  var _uid, nid, PANEL_BUTTONS;
+  var _uid, nid, MIN_PANEL_PX, MIN_CANVAS_PX, DEFAULT_DOCK_W, DEFAULT_DOCK_H, PANEL_BUTTONS;
   var init_panel_layout = __esm({
     "src/panels/panel-layout.js"() {
       _uid = 0;
       nid = (p = "n") => `${p}${Date.now().toString(36)}${(_uid++).toString(36)}`;
+      MIN_PANEL_PX = 90;
+      MIN_CANVAS_PX = 260;
+      DEFAULT_DOCK_W = 300;
+      DEFAULT_DOCK_H = 220;
       PANEL_BUTTONS = [
+        // [alpha.66r3] เมนูแผง (☰) — Progressive Disclosure: คำสั่งลึก ๆ ของแผงอยู่หลังปุ่มนี้
+        // เดิมมีแต่คลิกขวาบนหัวแผง ซึ่งไม่มีอะไรบอกว่ามีอยู่
+        { key: "menu", icon: "\u2630", title: "\u0E40\u0E21\u0E19\u0E39\u0E41\u0E1C\u0E07", action: "panelMenu" },
         { key: "collapse", icon: "\u25BE", title: "\u0E22\u0E48\u0E2D/\u0E02\u0E22\u0E32\u0E22", action: "collapsePanel" },
         { key: "float", icon: "\u29C9", title: "\u0E25\u0E2D\u0E22/\u0E1C\u0E19\u0E36\u0E01", action: "toggleFloat" },
         { key: "close", icon: "\u2715", title: "\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07", action: "hidePanel" }
@@ -16724,12 +16926,13 @@
     for (const k of keys4) if (o[k] !== void 0) out[k] = o[k];
     return out;
   }
-  var LAYOUT_VERSION, KEY, PanelStore, PanelManager;
+  var LAYOUT_VERSION, KEY, WS_KEY, PanelStore, PanelManager;
   var init_panel_store = __esm({
     "src/panels/panel-store.js"() {
       init_panel_layout();
       LAYOUT_VERSION = 2;
       KEY = "k2-panel-layout";
+      WS_KEY = "k2-panel-workspaces";
       PanelStore = class {
         constructor(storage = defaultStorage(), key2 = KEY) {
           this.storage = storage;
@@ -16796,6 +16999,61 @@
         _emit() {
           for (const fn of this.listeners) fn(this.root, this.floats);
         }
+        // ───────── [alpha.66r3] Workspace presets ─────────
+        // สเปก: "Workspace ไม่ใช่แค่การเซฟ Layout แต่คือ Snapshot ของสถานะ UI ทั้งหมด"
+        // ก้อนที่เก็บครอบคลุมครบตามรายการในสเปก:
+        //   ตำแหน่ง+ขนาดของแต่ละแผง (sizes ในต้นไม้ + กล่องของแผงลอย) · dock/undock (root vs floats) ·
+        //   ย่อ/ขยาย (collapsed) · แผงไหนอยู่กลุ่มไหน + ลำดับในกลุ่ม (โหนด tabs) · เปิด/ปิด (ธง hidden)
+        //   + `homes` = ที่กลับของแผงที่ปิดไว้ (UI ส่งเข้ามา — อยู่นอกต้นไม้)
+        workspaces() {
+          try {
+            return JSON.parse(this.storage.getItem(WS_KEY) || "{}") || {};
+          } catch {
+            return {};
+          }
+        }
+        listWorkspaces() {
+          return Object.keys(this.workspaces());
+        }
+        getWorkspace(name5) {
+          return this.workspaces()[name5] || null;
+        }
+        putWorkspace(name5, extra = {}) {
+          if (!name5) return false;
+          const all = this.workspaces();
+          all[name5] = {
+            version: LAYOUT_VERSION,
+            root: this.root ?? null,
+            floats: this.floats ?? [],
+            splitRatios: cleanRatios(this.splitRatios),
+            homes: extra.homes || null
+          };
+          try {
+            this.storage.setItem(WS_KEY, JSON.stringify(all));
+          } catch {
+            return false;
+          }
+          return true;
+        }
+        removeWorkspace(name5) {
+          const all = this.workspaces();
+          if (!(name5 in all)) return false;
+          delete all[name5];
+          try {
+            this.storage.setItem(WS_KEY, JSON.stringify(all));
+          } catch {
+            return false;
+          }
+          return true;
+        }
+        /** สวมเลย์เอาต์จาก snapshot (พรีเซ็ตที่เก็บไว้ หรือชุดสำเร็จรูป) — คืน homes ให้ UI เอาไปใช้ต่อ */
+        applySnapshot(snap2) {
+          if (!snap2 || !validRoot(snap2.root)) return null;
+          this.floats = Array.isArray(snap2.floats) ? snap2.floats.filter((f) => f && f.panel && f.panel.id) : [];
+          this.splitRatios = cleanRatios(snap2.splitRatios);
+          this.update(snap2.root);
+          return snap2.homes || null;
+        }
       };
       PanelManager = class {
         constructor({ storage, key: key2, store } = {}) {
@@ -16834,7 +17092,10 @@
             closable: opts.closable !== false,
             floatable: opts.floatable !== false,
             defaultSide: opts.defaultSide || "left",
-            defaultSize: opts.defaultSize || null
+            defaultSize: opts.defaultSize || null,
+            // [alpha.66r12] ขนาดอ้างอิงตอน "ลอย" — คนละชุดกับตอนผนึก (แผงข้างผนึกแล้วสูงเต็มคอลัมน์
+            // แต่ตอนลอยต้องเป็นกล่องขนาดพอดีมือ) · UI ส่งมาจากทะเบียนแผงของตัวเอง
+            floatSize: opts.floatSize || null
           };
           this.registry.set(id, def);
           return def;
@@ -16854,7 +17115,7 @@
           return !!(this.root && hasPanel(this.root, id));
         }
         isFloating(id) {
-          return this.floats.some((f) => f.panel.id === id);
+          return this.floats.some((f) => f.panel.id === id || f.panel.type === "tabs" && (f.panel.children || []).some((c) => c.id === id));
         }
         // [alpha.62 บั๊ก 21] "เปิดอยู่" = **เห็นอยู่จริง** — แผงที่ถูกปิดยังอยู่ในต้นไม้ (ธง hidden)
         // จึงต้องแยกจาก `isDocked` ที่แปลว่า "มีสล็อตในต้นไม้" เฉย ๆ
@@ -16874,6 +17135,7 @@
           const def = this.registry.get(id);
           if (!def) return false;
           if (this.isFloating(id)) {
+            this._activateFloatTab(id);
             this._toFront(id);
             return true;
           }
@@ -16889,7 +17151,11 @@
           }
           const side = opts.side || def.defaultSide || "left";
           const target = this._target(opts.targetId);
-          this.store.update(dockPanel(this.root, target, side, this._node(id)));
+          this.store.update(ensureDockPx(
+            dockPanel(this.root, target, side, this._node(id)),
+            id,
+            this._defSize(id)
+          ));
           return true;
         }
         /** Close a panel (✕) — removes it from the tree and from floating windows. */
@@ -16926,7 +17192,8 @@
           }
           let changed = false;
           if (this.isFloating(id)) {
-            this.store.setFloats(this.floats.filter((f) => f.panel.id !== id));
+            if (this._ownFloat(id)) this.store.setFloats(this.floats.filter((f) => f.panel.id !== id));
+            else this._detach(id);
             changed = true;
           }
           if (this.isDocked(id) && !this.isHidden(id)) {
@@ -16945,55 +17212,207 @@
         // ---- ผนึก / ลอย ----
         /** Dock a panel to `side` of `targetId` (moves it if it is floating or docked elsewhere). */
         dockPanel(id, side = "left", targetId) {
-          let node = null;
-          const fl = this.floats.find((f) => f.panel.id === id);
-          if (fl) {
-            node = fl.panel;
-            this.store.setFloats(this.floats.filter((f) => f !== fl));
-          }
-          if (!node && this.isDocked(id)) {
-            const d = detachPanel(this.root, id);
-            node = d.detached;
-            this.store.update(d.root);
-          }
+          let node = this.isFloating(id) || this.isDocked(id) ? this._detach(id) : null;
           if (!node) node = this._node(id);
           if (!this.root) {
             this.store.update({ type: "panel", id: node.id, title: node.title });
             return true;
           }
-          this.store.update(dockPanel(this.root, this._target(targetId), side, node));
+          this.store.update(ensureDockPx(
+            dockPanel(this.root, this._target(targetId), side, node),
+            id,
+            this._defSize(id)
+          ));
           return true;
         }
-        /** Pop a panel out into a floating window (⧉). */
-        floatPanel(id, box = {}) {
+        /** ถอดแผงออกจากที่เดิม (ลอยหรือผนึก) แล้วคืนโหนดของมัน — ใช้ก่อนผนึกใหม่ทุกครั้ง */
+        _detach(id) {
+          const fl = this.floats.find((f) => f.panel.id === id);
+          if (fl) {
+            this.store.setFloats(this.floats.filter((f) => f !== fl));
+            return fl.panel;
+          }
+          const grpF = this.floats.find((f) => f.panel.type === "tabs" && (f.panel.children || []).some((c) => c.id === id));
+          if (grpF) {
+            const kid = grpF.panel.children.find((c) => c.id === id);
+            const rest = grpF.panel.children.filter((c) => c.id !== id);
+            const nextFloats = this.floats.map((f) => {
+              if (f !== grpF) return f;
+              if (rest.length === 1) return { ...f, panel: rest[0] };
+              return { ...f, panel: {
+                ...f.panel,
+                children: rest,
+                active: Math.max(0, Math.min(f.panel.active | 0, rest.length - 1))
+              } };
+            }).filter((f) => f.panel.type !== "tabs" || (f.panel.children || []).length > 0);
+            this.store.setFloats(nextFloats);
+            const g = grpF.panel;
+            if (nodePx(g, true) > 0) kid.pxW = nodePx(g, true);
+            if (nodePx(g, false) > 0) kid.pxH = nodePx(g, false);
+            if (grpF.w > 0) setNodeFloatBox(kid, grpF.w, grpF.h);
+            return kid;
+          }
+          if (this.isDocked(id)) {
+            const grp = tabGroupOf(this.root, id);
+            const d = detachPanel(this.root, id);
+            const node = d.detached || this._node(id);
+            if (grp && node) {
+              if (nodePx(grp, true) > 0) node.pxW = nodePx(grp, true);
+              if (nodePx(grp, false) > 0) node.pxH = nodePx(grp, false);
+            }
+            this.store.update(d.root);
+            return node;
+          }
+          return this._node(id);
+        }
+        /**
+         * [alpha.66r3] ผนึกแผงไว้ **เต็มด้าน** ของพื้นที่ทำงาน — ปลายทางของ "ปล่อยที่ขอบจอ"
+         * ต่างจาก dockPanel ที่ผนึกเทียบกับแผงใบใดใบหนึ่ง (ได้ dock สูงเท่าแผงนั้นเท่านั้น)
+         */
+        dockAtEdge(id, side = "left", isFixedPanel) {
+          if (!this.root) return this.dockPanel(id, side);
+          const node = this._detach(id);
+          if (!this.root) {
+            this.store.update({ type: "panel", id: node.id, title: node.title });
+            return true;
+          }
+          const wid = workspaceNodeId(this.root, isFixedPanel);
+          if (!wid) return this.dockPanel(id, side);
+          this.store.update(ensureDockPx(
+            dockPanel(this.root, wid, side, node),
+            id,
+            this._defSize(id)
+          ));
+          return true;
+        }
+        /** [alpha.66r3] แทรกแผงเป็นแท็บ **ที่ตำแหน่งที่ระบุ** ของกลุ่มที่ targetId อยู่ */
+        addTabAt(id, targetId, index) {
+          if (!this.root || !this.isDocked(targetId)) return false;
+          const node = this._detach(id);
+          if (!this.root || !hasPanel(this.root, targetId)) return false;
+          this.store.update(addAsTabAt(this.root, targetId, node, index));
+          return true;
+        }
+        /** กล่องลอยใบนี้เป็น "กล่องของแผงนี้เอง" ไหม (ไม่ใช่กลุ่มที่มันไปอยู่ร่วม) */
+        _ownFloat(id) {
+          return this.floats.some((f) => f.panel.id === id);
+        }
+        /** [alpha.66r10] สลับแท็บที่แสดงอยู่ของ "กลุ่มลอย" ให้มาเป็นแผงนี้ */
+        _activateFloatTab(id) {
+          const f = this.floats.find((x) => x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === id));
+          if (!f) return false;
+          const i5 = f.panel.children.findIndex((c) => c.id === id);
+          if (i5 < 0 || f.panel.active === i5) return false;
+          this.store.setFloats(this.floats.map((x) => x === f ? { ...x, panel: { ...x.panel, active: i5 } } : x));
+          return true;
+        }
+        /**
+         * Pop a panel out into a floating window (⧉).
+         * @param opts.fromDock true = `box` คือ "ขนาดที่แผงมีอยู่ตอนยังผนึกอยู่" (ตัวลาก/ปุ่ม ⧉ ส่งมา)
+         *   ซึ่งของแผงข้างคือสูงเต็มคอลัมน์ → ต้องหนีบด้วยค่าอ้างอิง · ถ้าผู้เรียกส่งกล่องลอยจริง ๆ มา
+         *   (ผู้ใช้ปรับเอง · กล่องที่จดไว้) ห้ามหนีบ — เป็นเจตนาของผู้ใช้ตรง ๆ
+         */
+        floatPanel(id, box2 = {}, opts = {}) {
           const def = this.registry.get(id);
           if (def && def.floatable === false) return false;
-          if (this.isFloating(id)) {
+          if (this._ownFloat(id)) {
             this._toFront(id);
             return true;
           }
-          let node = this._node(id);
-          if (this.isDocked(id)) {
-            const d = detachPanel(this.root, id);
-            node = d.detached || node;
-            this.store.update(d.root);
-          }
-          const f = makeFloat(node, box.x ?? 80, box.y ?? 80, box.w ?? 360, box.h ?? 260);
+          let node = null;
+          if (this.isFloating(id) || this.isDocked(id)) node = this._detach(id);
+          if (!node) node = this._node(id);
+          const saved = nodeFloatBox(node) || {};
+          const df = this._defFloat(id);
+          const w = saved.w || box2.w || df.w || 360;
+          const defH = df.h || 520;
+          const h = saved.h || (box2.h ? opts.fromDock ? Math.min(box2.h, defH) : box2.h : defH);
+          setNodeFloatBox(node, w, h);
+          const f = makeFloat(node, box2.x ?? 80, box2.y ?? 80, w, h);
           this.store.setFloats([...this.floats, f]);
           return true;
         }
-        toggleFloat(id, box) {
-          return this.isFloating(id) ? this.dockPanel(id, box && box.side) : this.floatPanel(id, box);
+        /** [alpha.66r7] เอาแผงเข้าไปรวมเป็นแท็บใน "กลุ่มลอย" — กล่องลอยคงตำแหน่ง/ขนาดเดิมไว้ */
+        groupIntoFloat(srcId, floatId, index) {
+          const target = this.floats.find((f) => f.id === floatId);
+          if (!target || srcId === target.panel.id) return false;
+          const node = this._detach(srcId);
+          if (!node) return false;
+          const cur = this.floats.find((f) => f.id === floatId);
+          if (!cur) {
+            this.store.setFloats([...this.floats, makeFloat(node, 80, 80, 320, 300)]);
+            return true;
+          }
+          let panel2;
+          if (cur.panel.type === "tabs") {
+            const kids = [...cur.panel.children];
+            const at = Number.isInteger(index) ? Math.max(0, Math.min(index, kids.length)) : kids.length;
+            kids.splice(at, 0, node);
+            panel2 = { ...cur.panel, children: kids, active: at };
+          } else {
+            panel2 = tabs([cur.panel, node], 1);
+            if (nodePx(cur.panel, true) > 0) panel2.pxW = nodePx(cur.panel, true);
+            if (nodePx(cur.panel, false) > 0) panel2.pxH = nodePx(cur.panel, false);
+            setNodeFloatBox(panel2, cur.w, cur.h);
+          }
+          this.store.setFloats(this.floats.map((f) => f.id === floatId ? { ...f, panel: panel2 } : f));
+          return true;
+        }
+        /**
+         * [alpha.66r7] ผนึก "ทั้งกล่องลอย" (เดี่ยวหรือทั้งกลุ่ม) เข้า dock
+         * @param opts.edge เป็น true = ปล่อยที่ "ขอบพื้นที่ทำงาน" → ผนึกเต็มด้านนั้น
+         *   [alpha.66r11 บั๊ก D] ของเดิมไม่มีเคสนี้ พอ targetId เป็น null (ซึ่งโซนขอบจอส่งมาเสมอ)
+         *   `_target()` ก็หยิบ "panel ตัวแรกในต้นไม้" = **แถบเครื่องมือ** → ทั้งกลุ่มไปเกาะข้างแถบเครื่องมือ
+         */
+        dockFloatGroup(floatId, side = "left", targetId, opts = {}) {
+          const f = this.floats.find((x) => x.id === floatId);
+          if (!f) return false;
+          this.store.setFloats(this.floats.filter((x) => x.id !== floatId));
+          if (!this.root) {
+            this.store.update(f.panel);
+            return true;
+          }
+          const wid = opts.edge ? workspaceNodeId(this.root, opts.isFixedPanel) : null;
+          const anchor = wid || this._target(targetId);
+          let next = dockPanel(this.root, anchor, side, f.panel);
+          const seed = f.panel.type === "panel" ? f.panel.id : ((f.panel.children || []).find((c) => !nodeHidden(c)) || {}).id;
+          if (seed) next = ensureDockPx(next, seed, this._defSize(seed));
+          this.store.update(next);
+          return true;
+        }
+        /** ย้าย/ปรับขนาด "กล่องลอย" ตาม id ของกล่อง (ใช้กับกลุ่มลอยที่ไม่มี panel id เดียว) */
+        moveFloatBox(floatId, box2 = {}) {
+          const next = this.floats.map((f) => {
+            if (f.id !== floatId) return f;
+            const merged = { ...f, ...pick(box2, ["x", "y", "w", "h"]) };
+            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+            return merged;
+          });
+          this.store.setFloats(next);
+          return true;
+        }
+        /** id ของกล่องลอยที่แผงนี้อยู่ (เดี่ยวหรืออยู่ในกลุ่ม) */
+        floatIdOf(panelId2) {
+          const f = this.floats.find((x) => x.panel.id === panelId2 || x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === panelId2));
+          return f ? f.id : null;
+        }
+        toggleFloat(id, box2) {
+          return this.isFloating(id) ? this.dockPanel(id, box2 && box2.side) : this.floatPanel(id, box2);
         }
         /** Move/resize a floating window (drag + resize handle). */
-        moveFloat(id, box = {}) {
-          const next = this.floats.map((f) => f.panel.id === id ? { ...f, ...pick(box, ["x", "y", "w", "h"]) } : f);
+        moveFloat(id, box2 = {}) {
+          const next = this.floats.map((f) => {
+            if (f.panel.id !== id) return f;
+            const merged = { ...f, ...pick(box2, ["x", "y", "w", "h"]) };
+            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+            return merged;
+          });
           this.store.setFloats(next);
           return true;
         }
         _toFront(id) {
           const list = this.floats;
-          const f = list.find((x) => x.panel.id === id);
+          const f = list.find((x) => x.panel.id === id || x.id === id || x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === id));
           if (!f || list[list.length - 1] === f) return;
           this.store.setFloatsQuiet([...list.filter((x) => x !== f), f]);
         }
@@ -17010,7 +17429,7 @@
         ungroupPanel(id, side = "right") {
           if (!this.isDocked(id)) return false;
           if (!side) return this.floatPanel(id);
-          this.store.update(splitTab(this.root, id, side).root);
+          this.store.update(ensureDockPx(splitTab(this.root, id, side).root, id, this._defSize(id)));
           return true;
         }
         activatePanel(id) {
@@ -17019,6 +17438,16 @@
           return true;
         }
         moveTab(tabsId, from2, to) {
+          const fl = this.floats.find((f) => f.panel.type === "tabs" && f.panel.id === tabsId);
+          if (fl) {
+            const kids = [...fl.panel.children || []];
+            if (from2 < 0 || from2 >= kids.length) return false;
+            const at = Math.max(0, Math.min(to, kids.length - 1));
+            const [mv] = kids.splice(from2, 1);
+            kids.splice(at, 0, mv);
+            this.store.setFloats(this.floats.map((f) => f === fl ? { ...f, panel: { ...f.panel, children: kids, active: at } } : f));
+            return true;
+          }
           if (!this.root) return false;
           this.store.update(moveTab(this.root, tabsId, from2, to));
           return true;
@@ -17027,7 +17456,14 @@
         /** Collapse (▾) — pass `on` to force, omit to toggle. */
         collapsePanel(id, on2) {
           if (this.isFloating(id)) {
-            const next = this.floats.map((f) => f.panel.id === id ? { ...f, panel: { ...f.panel, collapsed: on2 === void 0 ? !f.panel.collapsed : !!on2 } } : f);
+            const flip = (n2) => ({ ...n2, collapsed: on2 === void 0 ? !n2.collapsed : !!on2 });
+            const next = this.floats.map((f) => {
+              if (f.panel.id === id) return { ...f, panel: flip(f.panel) };
+              if (f.panel.type === "tabs" && (f.panel.children || []).some((c) => c.id === id)) {
+                return { ...f, panel: { ...f.panel, children: f.panel.children.map((c) => c.id === id ? flip(c) : c) } };
+              }
+              return f;
+            });
             this.store.setFloats(next);
             return true;
           }
@@ -17038,7 +17474,15 @@
         isCollapsed(id) {
           const f = this.floats.find((x) => x.panel.id === id);
           if (f) return !!f.panel.collapsed;
+          const g = this.floats.find((x) => x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === id));
+          if (g) return !!(g.panel.children.find((c) => c.id === id) || {}).collapsed;
           return !!(this.root && isCollapsed(this.root, id));
+        }
+        /** [alpha.66r4] ตั้งความกว้าง/สูงเป็น px ให้ลูกของ dock (โหมดลูกผสม) */
+        resizePx(dockId, updates, row2) {
+          if (!this.root || !updates || !Object.keys(updates).length) return false;
+          this.store.update(setDockPx(this.root, dockId, updates, row2));
+          return true;
         }
         /** @param {number} [nextIndex] ดัชนีของลูกอีกฝั่ง (ตัววาดส่งมาเมื่อมีแผงที่ซ่อนคั่นอยู่) */
         resize(dockId, index, ratio, nextIndex) {
@@ -17050,6 +17494,24 @@
         // ---- persist ----
         save() {
           this.store.save();
+        }
+        // ---- [alpha.66r3] workspace presets (ผ่านไปที่ store) ----
+        listWorkspaces() {
+          return this.store.listWorkspaces();
+        }
+        getWorkspace(name5) {
+          return this.store.getWorkspace(name5);
+        }
+        saveWorkspace(name5, extra) {
+          return this.store.putWorkspace(name5, extra);
+        }
+        removeWorkspace(name5) {
+          return this.store.removeWorkspace(name5);
+        }
+        applySnapshot(snap2) {
+          const homes2 = this.store.applySnapshot(snap2);
+          if (this.registry.size) this._prune();
+          return homes2;
         }
         /** Load the saved layout, dropping panels that are no longer registered. */
         load() {
@@ -17069,11 +17531,31 @@
             for (const id of panelIds(r)) if (!this.registry.has(id)) r = removePanel(r, id);
           }
           this.store.root = r;
-          this.store.floats = this.store.floats.filter((f) => this.registry.has(f.panel.id));
+          this.store.floats = this.store.floats.map((f) => {
+            if (f.panel.type !== "tabs") return f;
+            const kids = (f.panel.children || []).filter((c) => this.registry.has(c.id));
+            if (!kids.length) return null;
+            if (kids.length === 1) return { ...f, panel: kids[0] };
+            return { ...f, panel: {
+              ...f.panel,
+              children: kids,
+              active: Math.max(0, Math.min(f.panel.active | 0, kids.length - 1))
+            } };
+          }).filter((f) => f && (f.panel.type === "tabs" || this.registry.has(f.panel.id)));
           this.store.save();
           this.store._emit();
         }
         //   → onChange ไม่ยิง UI ค้างกับต้นไม้เก่า
+        /** ขนาดตั้งต้นตอนผนึกของแผงนี้ (ทะเบียนกำหนดได้ต่อแผง — กระดานต้องกว้างกว่าแผงข้างทั่วไป) */
+        _defSize(id) {
+          const d = this.registry.get(id);
+          return d && d.defaultSize || {};
+        }
+        /** [alpha.66r12] ขนาดอ้างอิงตอนลอยของแผงนี้ */
+        _defFloat(id) {
+          const d = this.registry.get(id);
+          return d && d.floatSize || {};
+        }
         _target(id) {
           if (id && hasPanel(this.root, id)) return id;
           return panelIds(this.root)[0];
@@ -17096,25 +17578,25 @@
     return new Promise((resolve) => {
       const ov = document.createElement("div");
       ov.className = "k-overlay";
-      const box = document.createElement("div");
-      box.className = "k-dialog";
-      box.innerHTML = `<div class="k-dlg-title"></div>
+      const box2 = document.createElement("div");
+      box2.className = "k-dialog";
+      box2.innerHTML = `<div class="k-dlg-title"></div>
       <input class="k-dlg-input">
       <div class="k-dlg-btns"><button class="k-cancel">\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01</button>
       <button class="k-ok"></button></div>`;
-      box.querySelector(".k-dlg-title").textContent = title2;
-      const inp = box.querySelector(".k-dlg-input");
+      box2.querySelector(".k-dlg-title").textContent = title2;
+      const inp = box2.querySelector(".k-dlg-input");
       inp.placeholder = placeholder;
       inp.value = value;
-      box.querySelector(".k-ok").textContent = okLabel;
-      ov.appendChild(box);
+      box2.querySelector(".k-ok").textContent = okLabel;
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       const done2 = (v2) => {
         ov.remove();
         resolve(v2);
       };
-      box.querySelector(".k-ok").onclick = () => done2(allowEmpty ? inp.value.trim() : inp.value.trim() || null);
-      box.querySelector(".k-cancel").onclick = () => done2(null);
+      box2.querySelector(".k-ok").onclick = () => done2(allowEmpty ? inp.value.trim() : inp.value.trim() || null);
+      box2.querySelector(".k-cancel").onclick = () => done2(null);
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
       };
@@ -17130,21 +17612,21 @@
     return new Promise((resolve) => {
       const ov = document.createElement("div");
       ov.className = "k-overlay";
-      const box = document.createElement("div");
-      box.className = "k-dialog";
-      box.innerHTML = `<div class="k-dlg-title"></div>
+      const box2 = document.createElement("div");
+      box2.className = "k-dialog";
+      box2.innerHTML = `<div class="k-dlg-title"></div>
       <div class="k-dlg-btns"><button class="k-cancel">\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01</button>
       <button class="k-ok k-danger"></button></div>`;
-      box.querySelector(".k-dlg-title").textContent = title2;
-      box.querySelector(".k-ok").textContent = okLabel;
-      ov.appendChild(box);
+      box2.querySelector(".k-dlg-title").textContent = title2;
+      box2.querySelector(".k-ok").textContent = okLabel;
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       const done2 = (v2) => {
         ov.remove();
         resolve(v2);
       };
-      box.querySelector(".k-ok").onclick = () => done2(true);
-      box.querySelector(".k-cancel").onclick = () => done2(false);
+      box2.querySelector(".k-ok").onclick = () => done2(true);
+      box2.querySelector(".k-cancel").onclick = () => done2(false);
       ov.onclick = (e) => {
         if (e.target === ov) done2(false);
       };
@@ -17195,15 +17677,15 @@
     return new Promise((resolve) => {
       const ov = document.createElement("div");
       ov.className = "k-overlay";
-      const box = document.createElement("div");
-      box.className = "k-dialog";
+      const box2 = document.createElement("div");
+      box2.className = "k-dialog";
       const t3 = document.createElement("div");
       t3.className = "k-dlg-title";
       t3.textContent = title2;
       const btns = document.createElement("div");
       btns.className = "k-dlg-btns";
-      box.append(t3, btns);
-      ov.appendChild(box);
+      box2.append(t3, btns);
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       const done2 = (v2) => {
         ov.remove();
@@ -17231,8 +17713,8 @@
     return new Promise((resolve) => {
       const ov = document.createElement("div");
       ov.className = "k-overlay";
-      const box = document.createElement("div");
-      box.className = "k-dialog k-saveall";
+      const box2 = document.createElement("div");
+      box2.className = "k-dialog k-saveall";
       const head2 = document.createElement("div");
       head2.className = "k-dlg-title";
       head2.textContent = title2 || `\u0E21\u0E35 ${files.length} \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01`;
@@ -17281,8 +17763,8 @@
         c.onchange = sync;
       });
       sync();
-      box.append(head2, list, btns);
-      ov.appendChild(box);
+      box2.append(head2, list, btns);
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       const done2 = (action) => {
         ov.remove();
@@ -17294,7 +17776,7 @@
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
       };
-      box.addEventListener("keydown", (e) => {
+      box2.addEventListener("keydown", (e) => {
         if (e.key === "Escape") done2(null);
       });
       bSave.focus();
@@ -17928,11 +18410,14 @@
     cssFamilyName: () => cssFamilyName,
     defaultLangFonts: () => defaultLangFonts,
     el: () => el,
+    elByPath: () => elByPath,
+    elPath: () => elPath,
     elementCaps: () => elementCaps,
     formatLines: () => formatLines,
     formatShortcut: () => formatShortcut,
     i18n: () => i18n,
     isLangFontUsable: () => isUsable,
+    keepScroll: () => keepScroll,
     lineHeightIn: () => lineHeightIn,
     linesPerPage: () => linesPerPage,
     loadLanguage: () => loadLanguage,
@@ -17951,8 +18436,10 @@
     pageNumberLabel: () => pageNumberLabel,
     paginate: () => paginate,
     ptToPx: () => ptToPx,
+    restoreScrollSnap: () => restoreScrollSnap,
     rosterToText: () => rosterToText,
     sceneNumberOffsets: () => sceneNumberOffsets,
+    scrollSnapshot: () => scrollSnapshot,
     setBusy: () => setBusy,
     setElementCaps: () => setElementCaps,
     setStatus: () => setStatus,
@@ -17971,6 +18458,98 @@
     withShortcut: () => withShortcut,
     wrapLines: () => wrapLines
   });
+  function elPath(root, e) {
+    const path = [];
+    let n2 = e;
+    while (n2 && n2 !== root) {
+      const p = n2.parentElement;
+      if (!p) return null;
+      path.unshift(Array.prototype.indexOf.call(p.children, n2));
+      n2 = p;
+    }
+    return n2 === root ? path : null;
+  }
+  function elByPath(root, path) {
+    let n2 = root;
+    for (const i5 of path) {
+      if (!n2 || !n2.children[i5]) return null;
+      n2 = n2.children[i5];
+    }
+    return n2 || null;
+  }
+  function scrollSnapshot(base3) {
+    const snap2 = [];
+    if (!base3) return snap2;
+    const add = (e) => {
+      const top = e.scrollTop, left = e.scrollLeft;
+      if (!top && !left) return;
+      const path = elPath(base3, e);
+      if (path) snap2.push({ path, top, left });
+    };
+    add(base3);
+    for (const e of base3.querySelectorAll("*")) add(e);
+    return snap2;
+  }
+  function keepScroll(root) {
+    const get3 = typeof root === "function" ? root : () => root;
+    const snap2 = scrollSnapshot(get3());
+    const fn = restoreScrollSnap(get3, snap2);
+    fn.snap = snap2;
+    return fn;
+  }
+  function restoreScrollSnap(root, snap2) {
+    const get3 = typeof root === "function" ? root : () => root;
+    return function restore() {
+      if (!snap2 || !snap2.length) return 0;
+      const jobs = snap2.map((s) => ({
+        path: s.path,
+        top: s.top,
+        left: s.left,
+        el: null,
+        prev: "",
+        wrote: false,
+        lastTop: 0,
+        lastLeft: 0,
+        done: false
+      }));
+      const put = () => {
+        const r = get3();
+        if (!r) return;
+        for (const j of jobs) {
+          if (j.done) continue;
+          const e = j.el && j.el.isConnected ? j.el : elByPath(r, j.path);
+          if (!e) continue;
+          if (j.el !== e) {
+            j.el = e;
+            j.wrote = false;
+            j.prev = e.style.scrollBehavior;
+            e.style.scrollBehavior = "auto";
+          }
+          const ct = e.scrollTop, cl = e.scrollLeft;
+          if (j.wrote && (ct && ct !== j.lastTop || cl && cl !== j.lastLeft)) {
+            j.done = true;
+            continue;
+          }
+          if (j.top && ct !== j.top) e.scrollTop = j.top;
+          if (j.left && cl !== j.left) e.scrollLeft = j.left;
+          j.lastTop = e.scrollTop;
+          j.lastLeft = e.scrollLeft;
+          j.wrote = true;
+          if ((!j.top || e.scrollTop === j.top) && (!j.left || e.scrollLeft === j.left)) j.done = true;
+        }
+      };
+      put();
+      try {
+        requestAnimationFrame(put);
+      } catch {
+      }
+      for (const ms of [0, 30, 60, 120, 250]) setTimeout(put, ms);
+      setTimeout(() => {
+        for (const j of jobs) if (j.el) j.el.style.scrollBehavior = j.prev || "";
+      }, 300);
+      return jobs.length;
+    };
+  }
   function log(level, msg, extra) {
     const ts = (/* @__PURE__ */ new Date()).toISOString();
     let line = `[${ts}] ${String(level).toUpperCase()} ${msg}`;
@@ -18480,7 +19059,13 @@
         ["KeyG", true, false, "goto"],
         ["KeyU", true, true, "sp-find-error"],
         // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
-        ["Backquote", true, true, "dev-console"]
+        ["Backquote", true, true, "dev-console"],
+        // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
+        // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ) → ฝั่งขวาใช้ Ctrl+Shift+[
+        ["Backslash", true, false, "panels-hide-all"],
+        ["BracketLeft", true, true, "panels-hide-right"],
+        // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
+        ["KeyY", true, true, "workspace-menu"]
       ];
       shortcutId = (s) => s.slice(3).join(":");
       SHORTCUT_LABELS = {
@@ -18534,7 +19119,12 @@
         "nbsp": "shortcuts.nbsp",
         "goto": "shortcuts.goto",
         "sp-find-error": "shortcuts.findError",
-        "dev-console": "shortcuts.devConsole"
+        "dev-console": "shortcuts.devConsole",
+        // [alpha.66r3] ระบบจัดการพื้นที่ + เวิร์กสเปซ
+        "panels-hide-all": "shortcuts.panelsHideAll",
+        "panels-hide-right": "shortcuts.panelsHideRight",
+        "panels-hide-left": "shortcuts.panelsHideLeft",
+        "workspace-menu": "shortcuts.workspaceMenu"
       };
       isMac = (() => {
         try {
@@ -19656,8 +20246,8 @@
           wrap2.appendChild(sh);
           this.secEditors = [];
           (this.e.sections || []).forEach((sec, i5) => {
-            const box = document.createElement("div");
-            box.className = "wiki-sec";
+            const box2 = document.createElement("div");
+            box2.className = "wiki-sec";
             const st = document.createElement("div");
             st.className = "wiki-sec-title";
             const ti = document.createElement("input");
@@ -19678,10 +20268,10 @@
               this.render();
             };
             st.append(ti, del2);
-            box.appendChild(st);
+            box2.appendChild(st);
             const ed = document.createElement("div");
             ed.className = "wiki-sec-ed";
-            box.appendChild(ed);
+            box2.appendChild(ed);
             const k = new KEditor(ed, {
               markdown: sec.content || "",
               onChange: () => {
@@ -19696,7 +20286,7 @@
               getChecker: this.getChecker || void 0
             });
             this.secEditors.push({ sec, k });
-            wrap2.appendChild(box);
+            wrap2.appendChild(box2);
           });
           this.onRendered && this.onRendered(wrap2);
         }
@@ -21931,8 +22521,8 @@
   function snap(v2, grid = GRID) {
     return grid > 0 ? Math.round(v2 / grid) * grid : v2;
   }
-  function sizeForAspect(box, natW, natH) {
-    const w0 = clamp2(numOr(box, DEFAULT_SIZE), MIN_SIZE, MAX_SIZE);
+  function sizeForAspect(box2, natW, natH) {
+    const w0 = clamp2(numOr(box2, DEFAULT_SIZE), MIN_SIZE, MAX_SIZE);
     const nw = numOr(natW, 0), nh = numOr(natH, 0);
     if (nw <= 0 || nh <= 0) return { w: w0, h: w0 };
     const s = w0 / Math.max(nw, nh);
@@ -25673,8 +26263,8 @@
     await loadKeys();
     const ai = aiMeta();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-ai-settings");
-    box.append(el("div", "k-dlg-title", "\u{1F916} \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI"));
+    const box2 = el("div", "k-dialog k-ai-settings");
+    box2.append(el("div", "k-dlg-title", "\u{1F916} \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI"));
     const provRow = el("div", "wiki-row");
     provRow.append(el("label", null, "\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23"));
     const provSel = el("select", "wiki-input k-dlg-select ai-prov-sel");
@@ -25684,15 +26274,15 @@
     const delBtn = el("button", "ai-prov-del", "\u{1F5D1}");
     delBtn.title = "\u0E25\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23\u0E19\u0E35\u0E49";
     provRow.append(provSel, addBtn, editBtn, delBtn);
-    box.append(provRow);
+    box2.append(provRow);
     const info = el("div", "ai-prov-info dim");
-    box.append(info);
+    box2.append(info);
     const empty2 = el(
       "div",
       "ai-prov-empty dim",
       "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23 \u2014 \u0E01\u0E14 \u2795 \u0E40\u0E1E\u0E34\u0E48\u0E21 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D \xB7 Credential \xB7 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E42\u0E21\u0E40\u0E14\u0E25 \xB7 \u0E15\u0E31\u0E49\u0E07\u0E1E\u0E32\u0E23\u0E32\u0E21\u0E34\u0E40\u0E15\u0E2D\u0E23\u0E4C"
     );
-    box.append(empty2);
+    box2.append(empty2);
     const sendRow = el("div", "wiki-row");
     sendRow.append(el("label", null, "\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E41\u0E0A\u0E17"));
     const sendSel = el("select", "wiki-input k-dlg-select ai-send-sel");
@@ -25703,7 +26293,7 @@
     }
     sendSel.value = ai.sendKey || DEFAULT_SEND_KEY;
     sendRow.append(sendSel);
-    box.append(sendRow);
+    box2.append(sendRow);
     const usage = ai.usage || [];
     if (usage.length) {
       const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
@@ -25713,14 +26303,14 @@
         "dim ai-usage-stat",
         `\u0E43\u0E0A\u0E49\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27 ${total.toLocaleString()} tokens \xB7 ${usage.length} \u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13 $${cost.toFixed(4)}`
       );
-      box.append(stat);
+      box2.append(stat);
     }
     const btns = el("div", "k-dlg-btns");
     const cB = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
     const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
     btns.append(cB, okB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     let rows = listProviders(ai);
     let activeId = ai.activeProviderId || rows[0] && rows[0].id || "";
@@ -25787,12 +26377,12 @@
       P.params = normalizeParams({ ...defaultParams(), ...P.params || {} });
       const ov = el("div", "k-overlay k-ai-prov-ov");
       ov.style.zIndex = "120";
-      const box = el("div", "k-dialog k-ai-prov");
-      box.append(el("div", "k-dlg-title", existing ? "\u270E \u0E41\u0E01\u0E49\u0E44\u0E02\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23" : "\u2795 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23"));
+      const box2 = el("div", "k-dialog k-ai-prov");
+      box2.append(el("div", "k-dlg-title", existing ? "\u270E \u0E41\u0E01\u0E49\u0E44\u0E02\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23" : "\u2795 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23"));
       const sec = (n2, title2) => {
         const s = el("div", "ai-sec");
         s.append(el("div", "ai-sec-title", n2 + ". " + title2));
-        box.append(s);
+        box2.append(s);
         return s;
       };
       const field = (host2, label, node, hint) => {
@@ -25991,13 +26581,13 @@
         say(credMsg, true, "\u2705 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 Credential \u0E41\u0E25\u0E49\u0E27 (\u0E04\u0E35\u0E22\u0E4C\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E22\u0E01\u0E17\u0E35\u0E48 " + KEY_FILE + ")");
       };
       const errBox = el("div", "ai-prov-err");
-      box.append(errBox);
+      box2.append(errBox);
       const btns = el("div", "k-dlg-btns");
       const cancel = el("button", "k-cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const ok2 = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23");
       btns.append(cancel, ok2);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       nameInp.focus();
       const done2 = (v2) => {
@@ -26188,12 +26778,12 @@
     const ai = getAISettings();
     const curKey = await loadApiKey();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-ai-settings");
-    box.append(el("div", "k-dlg-title", "\u{1F916} \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI"));
+    const box2 = el("div", "k-dialog k-ai-settings");
+    box2.append(el("div", "k-dlg-title", "\u{1F916} \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI"));
     const mkRow = (label) => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
-      box.append(r);
+      box2.append(r);
       return r;
     };
     const provRow = mkRow("\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23");
@@ -26221,7 +26811,7 @@
     keyRow.append(keyInp);
     const keyNote = el("div", "dim", `\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E22\u0E01\u0E17\u0E35\u0E48 ${KEY_FILE2} \u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E44\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 project.khn.json \u0E17\u0E35\u0E48\u0E41\u0E0A\u0E23\u0E4C\u0E01\u0E31\u0E19)`);
     keyNote.style.cssText = "font-size:11px;margin:-4px 0 6px";
-    box.append(keyNote);
+    box2.append(keyNote);
     const modelRow = mkRow("\u0E42\u0E21\u0E40\u0E14\u0E25");
     const modelInp = el("input", "wiki-input");
     modelInp.value = ai.model || "";
@@ -26277,7 +26867,7 @@
         `\u0E23\u0E27\u0E21 ${total.toLocaleString()} tokens \xB7 ${usage.length} \u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 ${new Date(last2.date).toLocaleString("th-TH")}`
       );
       stat.style.cssText = "margin:10px 0;font-size:12px";
-      box.append(stat);
+      box2.append(stat);
     }
     const collect = () => ({
       provider: provSel.value,
@@ -26292,8 +26882,8 @@
     const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
     const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
     btns.append(testB, cB, okB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     testB.onclick = async () => {
       saveAISettings(collect());
@@ -26563,8 +27153,8 @@ ${ctx}${hint}`;
   function pickImage(root, { album = null } = {}) {
     return new Promise(async (resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog k-wide gal2-pick");
-      box.append(el("div", "k-dlg-title", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E08\u0E32\u0E01\u0E04\u0E25\u0E31\u0E07"));
+      const box2 = el("div", "k-dialog k-wide gal2-pick");
+      box2.append(el("div", "k-dlg-title", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E08\u0E32\u0E01\u0E04\u0E25\u0E31\u0E07"));
       const body = el("div", "gal2-pick-body");
       const side = el("div", "gal2-pick-side");
       const right = el("div", "gal2-pick-right");
@@ -26573,13 +27163,13 @@ ${ctx}${hint}`;
       const grid = el("div", "gal-grid gal-pick");
       right.append(search2, grid);
       body.append(side, right);
-      box.append(body);
+      box2.append(body);
       const btns = el("div", "k-dlg-btns");
       const addB = el("button", null, "\uFF0B \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E39\u0E1B\u0E43\u0E2B\u0E21\u0E48\u2026");
       const cancel = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       btns.append(addB, cancel);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       const done2 = (v2) => {
         ov.remove();
@@ -27139,7 +27729,7 @@ ${ctx}${hint}`;
           if (this.state.cell === "list") return this.buildRow(it);
           const cell = el("div", "gal2-cell" + (this.state.sel.has(it.path) ? " sel" : ""));
           cell.dataset.path = it.path;
-          const box = el("div", "gal2-thumb");
+          const box2 = el("div", "gal2-thumb");
           const im = el("img");
           im.alt = it.caption || it.file;
           im.loading = "lazy";
@@ -27147,10 +27737,10 @@ ${ctx}${hint}`;
             im.src = u;
           });
           im.onerror = () => {
-            box.classList.add("miss");
-            box.textContent = "\u26A0 \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49";
+            box2.classList.add("miss");
+            box2.textContent = "\u26A0 \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49";
           };
-          box.append(im);
+          box2.append(im);
           const mark = el("span", "gal2-check");
           mark.innerHTML = iconHtml("check", 12);
           mark.title = "\u0E40\u0E25\u0E37\u0E2D\u0E01/\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01";
@@ -27158,10 +27748,10 @@ ${ctx}${hint}`;
             stopEv2(e);
             this.toggleSel(it.path, true);
           };
-          box.append(mark);
+          box2.append(mark);
           if (!it.uses) {
             const b = el("span", "gal2-badge unused", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E43\u0E0A\u0E49");
-            box.append(b);
+            box2.append(b);
           } else {
             const b = el("span", "gal2-badge used", "\u0E43\u0E0A\u0E49 " + it.uses);
             b.title = usageLabel(this.usage, it.file, 6);
@@ -27169,9 +27759,9 @@ ${ctx}${hint}`;
               stopEv2(e);
               this.usageMenu(e, it);
             };
-            box.append(b);
+            box2.append(b);
           }
-          cell.append(box);
+          cell.append(box2);
           const cap = el("input", "wiki-input gal-cap");
           cap.value = it.caption || "";
           cap.placeholder = it.file;
@@ -27608,18 +28198,18 @@ ${ctx}${hint}`;
             ["\u0E41\u0E17\u0E47\u0E01", (it.tags || []).join(" ") || "\u2014"]
           ];
           const ov = el("div", "k-overlay");
-          const box = el("div", "k-dialog gal2-info");
-          box.append(el("div", "k-dlg-title", "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E23\u0E39\u0E1B"));
+          const box2 = el("div", "k-dialog gal2-info");
+          box2.append(el("div", "k-dlg-title", "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E23\u0E39\u0E1B"));
           const im = el("img", "gal2-info-img");
           im.src = url;
-          box.append(im);
+          box2.append(im);
           const tbl = el("div", "gal2-info-rows");
           for (const [k, v2] of rows) {
             const r = el("div", "gal2-info-row");
             r.append(el("span", "gal2-info-k", k), el("span", "gal2-info-v", v2));
             tbl.append(r);
           }
-          box.append(tbl);
+          box2.append(tbl);
           if ((it.usedIn || []).length) {
             const u = el("div", "gal2-info-uses");
             u.append(el("div", "gal2-info-k", "\u0E43\u0E0A\u0E49\u0E43\u0E19"));
@@ -27631,14 +28221,14 @@ ${ctx}${hint}`;
               };
               u.append(a);
             }
-            box.append(u);
+            box2.append(u);
           }
           const btns = el("div", "k-dlg-btns");
           const ok2 = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
           ok2.onclick = () => ov.remove();
           btns.append(ok2);
-          box.append(btns);
-          ov.append(box);
+          box2.append(btns);
+          ov.append(box2);
           document.body.append(ov);
           ov.onclick = (e) => {
             if (e.target === ov) ov.remove();
@@ -27664,8 +28254,8 @@ ${ctx}${hint}`;
         }
         async showSimilar(target, sim) {
           const ov = el("div", "k-overlay");
-          const box = el("div", "k-dialog k-wide gal2-sim");
-          box.append(el("div", "k-dlg-title", "\u0E23\u0E39\u0E1B\u0E17\u0E35\u0E48\u0E04\u0E25\u0E49\u0E32\u0E22\u0E01\u0E31\u0E1A " + target.file));
+          const box2 = el("div", "k-dialog k-wide gal2-sim");
+          box2.append(el("div", "k-dlg-title", "\u0E23\u0E39\u0E1B\u0E17\u0E35\u0E48\u0E04\u0E25\u0E49\u0E32\u0E22\u0E01\u0E31\u0E1A " + target.file));
           const grid = el("div", "gal-grid gal-pick");
           if (!sim.length) grid.append(el("div", "dim", "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E39\u0E1B\u0E17\u0E35\u0E48\u0E04\u0E25\u0E49\u0E32\u0E22\u0E01\u0E31\u0E19\u0E43\u0E19\u0E04\u0E25\u0E31\u0E07)"));
           for (const s of sim) {
@@ -27680,13 +28270,13 @@ ${ctx}${hint}`;
             };
             grid.append(cell);
           }
-          box.append(grid);
+          box2.append(grid);
           const btns = el("div", "k-dlg-btns");
           const ok2 = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
           ok2.onclick = () => ov.remove();
           btns.append(ok2);
-          box.append(btns);
-          ov.append(box);
+          box2.append(btns);
+          ov.append(box2);
           document.body.append(ov);
           ov.onclick = (e) => {
             if (e.target === ov) ov.remove();
@@ -27698,8 +28288,8 @@ ${ctx}${hint}`;
             const withHash = await this.ensureHashes(attachUsage(all, this.usage));
             const dups = findDuplicates(withHash, { min: 0.94 });
             const ov = el("div", "k-overlay");
-            const box = el("div", "k-dialog k-wide gal2-sim");
-            box.append(el("div", "k-dlg-title", `\u0E23\u0E39\u0E1B\u0E0B\u0E49\u0E33/\u0E40\u0E01\u0E37\u0E2D\u0E1A\u0E0B\u0E49\u0E33 \u2014 \u0E1E\u0E1A ${dups.length} \u0E04\u0E39\u0E48`));
+            const box2 = el("div", "k-dialog k-wide gal2-sim");
+            box2.append(el("div", "k-dlg-title", `\u0E23\u0E39\u0E1B\u0E0B\u0E49\u0E33/\u0E40\u0E01\u0E37\u0E2D\u0E1A\u0E0B\u0E49\u0E33 \u2014 \u0E1E\u0E1A ${dups.length} \u0E04\u0E39\u0E48`));
             const list = el("div", "gal2-dups");
             if (!dups.length) list.append(el("div", "dim", "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E39\u0E1B\u0E0B\u0E49\u0E33)"));
             for (const d of dups.slice(0, 60)) {
@@ -27716,13 +28306,13 @@ ${ctx}${hint}`;
               row2.append(el("div", "gal2-dup-score", Math.round(d.score * 100) + "%"));
               list.append(row2);
             }
-            box.append(list);
+            box2.append(list);
             const btns = el("div", "k-dlg-btns");
             const ok2 = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
             ok2.onclick = () => ov.remove();
             btns.append(ok2);
-            box.append(btns);
-            ov.append(box);
+            box2.append(btns);
+            ov.append(box2);
             document.body.append(ov);
             ov.onclick = (e) => {
               if (e.target === ov) ov.remove();
@@ -27928,8 +28518,8 @@ ${ctx}${hint}`;
   }
   async function manageVisualTags() {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", "\u{1F3F7} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23 Visual Tags"));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u{1F3F7} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23 Visual Tags"));
     const tags = getVisualTags();
     const grid = el("div");
     grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill, minmax(150px,1fr));gap:8px;margin:10px 0";
@@ -27954,7 +28544,7 @@ ${ctx}${hint}`;
       }
     };
     renderGrid();
-    box.append(grid);
+    box2.append(grid);
     const addRow = el("div", "k-row");
     addRow.style.cssText = "gap:6px";
     const nameInp = el("input", "k-dlg-input");
@@ -27973,7 +28563,7 @@ ${ctx}${hint}`;
       shapeSel.append(o);
     });
     addRow.append(nameInp, iconInp, colorInp, shapeSel);
-    box.append(addRow);
+    box2.append(addRow);
     const btns = el("div", "k-dlg-btns");
     const addB = el("button", "k-ok", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21");
     addB.onclick = async () => {
@@ -27986,8 +28576,8 @@ ${ctx}${hint}`;
     const closeB = el("button", null, "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(addB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -29401,24 +29991,24 @@ ${ctx}${hint}`;
       arrowEnd: validateArrow(o.arrowEnd) ? o.arrowEnd : "arrow"
     };
   }
-  function portPoint(box, port, towards) {
-    const cx2 = box.x + box.width / 2, cy2 = box.y + box.height / 2;
+  function portPoint(box2, port, towards) {
+    const cx2 = box2.x + box2.width / 2, cy2 = box2.y + box2.height / 2;
     let p = port;
     if (p === "auto" || !PORT_POSITIONS.includes(p)) {
       const t3 = towards || { x: cx2 + 1, y: cy2 };
       const dx = t3.x - cx2, dy = t3.y - cy2;
-      const rx = box.width / 2 || 1, ry = box.height / 2 || 1;
+      const rx = box2.width / 2 || 1, ry = box2.height / 2 || 1;
       p = Math.abs(dy / ry) > Math.abs(dx / rx) ? dy > 0 ? "bottom" : "top" : dx > 0 ? "right" : "left";
     }
     switch (p) {
       case "top":
-        return { x: cx2, y: box.y, dir: { x: 0, y: -1 }, port: "top" };
+        return { x: cx2, y: box2.y, dir: { x: 0, y: -1 }, port: "top" };
       case "bottom":
-        return { x: cx2, y: box.y + box.height, dir: { x: 0, y: 1 }, port: "bottom" };
+        return { x: cx2, y: box2.y + box2.height, dir: { x: 0, y: 1 }, port: "bottom" };
       case "left":
-        return { x: box.x, y: cy2, dir: { x: -1, y: 0 }, port: "left" };
+        return { x: box2.x, y: cy2, dir: { x: -1, y: 0 }, port: "left" };
       default:
-        return { x: box.x + box.width, y: cy2, dir: { x: 1, y: 0 }, port: "right" };
+        return { x: box2.x + box2.width, y: cy2, dir: { x: 1, y: 0 }, port: "right" };
     }
   }
   function edgeGeometry(fromBox, toBox, edge) {
@@ -32648,7 +33238,7 @@ ${ctx}${hint}`;
           return { left, top };
         }
         function getElementOffset(element) {
-          var docElem, doc3 = element && element.ownerDocument, box = { left: 0, top: 0 }, offset = { left: 0, top: 0 }, scrollLeftTop, offsetAttributes = {
+          var docElem, doc3 = element && element.ownerDocument, box2 = { left: 0, top: 0 }, offset = { left: 0, top: 0 }, scrollLeftTop, offsetAttributes = {
             borderLeftWidth: "left",
             borderTopWidth: "top",
             paddingLeft: "left",
@@ -32662,12 +33252,12 @@ ${ctx}${hint}`;
           }
           docElem = doc3.documentElement;
           if (typeof element.getBoundingClientRect !== "undefined") {
-            box = element.getBoundingClientRect();
+            box2 = element.getBoundingClientRect();
           }
           scrollLeftTop = getScrollLeftTop(element);
           return {
-            left: box.left + scrollLeftTop.left - (docElem.clientLeft || 0) + offset.left,
-            top: box.top + scrollLeftTop.top - (docElem.clientTop || 0) + offset.top
+            left: box2.left + scrollLeftTop.left - (docElem.clientLeft || 0) + offset.left,
+            top: box2.top + scrollLeftTop.top - (docElem.clientTop || 0) + offset.top
           };
         }
         var getElementStyle;
@@ -50566,7 +51156,7 @@ ${ctx}${hint}`;
                 width += charSpacing;
                 kernedWidth += charSpacing;
               }
-              var box = {
+              var box2 = {
                 width,
                 left: 0,
                 height: style.fontSize,
@@ -50575,9 +51165,9 @@ ${ctx}${hint}`;
               };
               if (charIndex > 0 && !skipLeft) {
                 var previousBox = this.__charBounds[lineIndex][charIndex - 1];
-                box.left = previousBox.left + previousBox.width + info.kernedWidth - info.width;
+                box2.left = previousBox.left + previousBox.width + info.kernedWidth - info.width;
               }
-              return box;
+              return box2;
             },
             /**
              * Calculate height of line at 'lineIndex'
@@ -53942,8 +54532,8 @@ ${ctx}${hint}`;
             var width = 0, prevGrapheme, skipLeft = true;
             charOffset = charOffset || 0;
             for (var i5 = 0, len5 = word.length; i5 < len5; i5++) {
-              var box = this._getGraphemeBox(word[i5], lineIndex, i5 + charOffset, prevGrapheme, skipLeft);
-              width += box.kernedWidth;
+              var box2 = this._getGraphemeBox(word[i5], lineIndex, i5 + charOffset, prevGrapheme, skipLeft);
+              width += box2.kernedWidth;
               prevGrapheme = word[i5];
             }
             return width;
@@ -55502,10 +56092,10 @@ ${ctx}${hint}`;
           const minMove = 4 / (this.renderer.getZoom() || 1);
           if (Math.abs(p.x - c.x) < minMove && Math.abs(p.y - c.y) < minMove) return;
           c.moved = true;
-          const box = _rectFrom(c.x, c.y, p.x, p.y);
+          const box2 = _rectFrom(c.x, c.y, p.x, p.y);
           if (!c.ghost) {
             this._log(
-              `create/guide \u0E40\u0E01\u0E34\u0E14\u0E01\u0E23\u0E2D\u0E1A\u0E19\u0E33 ${_r(box.width)}x${_r(box.height)} \u0E17\u0E35\u0E48 ${_r(box.x)},${_r(box.y)}`,
+              `create/guide \u0E40\u0E01\u0E34\u0E14\u0E01\u0E23\u0E2D\u0E1A\u0E19\u0E33 ${_r(box2.width)}x${_r(box2.height)} \u0E17\u0E35\u0E48 ${_r(box2.x)},${_r(box2.y)}`,
               { objects: this.renderer.canvas.getObjects().length, zoom: _r(this.renderer.getZoom()) }
             );
           }
@@ -55524,7 +56114,7 @@ ${ctx}${hint}`;
             c.ghost.layer = 4;
             this.renderer.canvas.add(c.ghost);
           }
-          c.ghost.set({ left: box.x, top: box.y, width: box.width, height: box.height });
+          c.ghost.set({ left: box2.x, top: box2.y, width: box2.width, height: box2.height });
           this.renderer.refresh();
         }
         _endCreate(opt) {
@@ -55532,14 +56122,14 @@ ${ctx}${hint}`;
           this._creating = null;
           if (c.ghost) this.renderer.canvas.remove(c.ghost);
           const p = this.renderer.canvas.getPointer(opt.e);
-          const box = c.moved ? _rectFrom(c.x, c.y, p.x, p.y) : null;
+          const box2 = c.moved ? _rectFrom(c.x, c.y, p.x, p.y) : null;
           this._log(
-            `create/end tool=${this.tool} ${box ? "\u0E25\u0E32\u0E01\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E02\u0E19\u0E32\u0E14" : "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1B\u0E25\u0E48\u0E32 (\u0E02\u0E19\u0E32\u0E14\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19)"}`,
-            box ? { w: _r(box.width), h: _r(box.height) } : void 0
+            `create/end tool=${this.tool} ${box2 ? "\u0E25\u0E32\u0E01\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E02\u0E19\u0E32\u0E14" : "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1B\u0E25\u0E48\u0E32 (\u0E02\u0E19\u0E32\u0E14\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19)"}`,
+            box2 ? { w: _r(box2.width), h: _r(box2.height) } : void 0
           );
           this.renderer.canvas.selection = this.tool === "select";
           if (this._cb.onCreateNode) {
-            this._cb.onCreateNode(this.tool, { x: c.x, y: c.y, box, shape: this._shapeKind });
+            this._cb.onCreateNode(this.tool, { x: c.x, y: c.y, box: box2, shape: this._shapeKind });
           }
           if (!this._sticky) this.setTool("select");
         }
@@ -55788,11 +56378,11 @@ ${ctx}${hint}`;
             if (o.kind !== "node") continue;
             const n2 = this.data.getNode(o.nid);
             if (!n2) continue;
-            const box = absBox(o);
-            n2.x = g.snap ? Math.round(box.x / g.size) * g.size : Math.round(box.x);
-            n2.y = g.snap ? Math.round(box.y / g.size) * g.size : Math.round(box.y);
-            const newW = Math.max(16, Math.round(box.width));
-            const newH = Math.max(16, Math.round(box.height));
+            const box2 = absBox(o);
+            n2.x = g.snap ? Math.round(box2.x / g.size) * g.size : Math.round(box2.x);
+            n2.y = g.snap ? Math.round(box2.y / g.size) * g.size : Math.round(box2.y);
+            const newW = Math.max(16, Math.round(box2.width));
+            const newH = Math.max(16, Math.round(box2.height));
             if (Math.abs(newW - n2.width) > 0.5 || Math.abs(newH - n2.height) > 0.5) {
               n2.width = newW;
               n2.height = newH;
@@ -56613,7 +57203,7 @@ ${ctx}${hint}`;
   function boardPicker(boards, currentPath) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
+      const box2 = el("div", "k-dialog");
       const t3 = el("div", "k-dlg-title", "\u{1F4CB} \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19");
       const list = el("div", "planner-board-list");
       for (const b of boards) {
@@ -56636,8 +57226,8 @@ ${ctx}${hint}`;
         resolve(null);
       };
       btns.appendChild(cancel);
-      box.append(t3, list, btns);
-      ov.appendChild(box);
+      box2.append(t3, list, btns);
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       ov.onclick = (e) => {
         if (e.target === ov) {
@@ -57145,13 +57735,13 @@ ${ctx}${hint}`;
         /** คลิก/ลากบนกระดานด้วยเครื่องมือสร้าง → เกิดวัตถุใหม่ */
         _createFromTool(tool, info) {
           const d = TYPE_DEFAULTS[tool] || TYPE_DEFAULTS.scene;
-          const box = info.box;
+          const box2 = info.box;
           let x, y, w = d.width, h = d.height;
-          if (box && box.width > 8 && box.height > 8) {
-            x = box.x;
-            y = box.y;
-            w = box.width;
-            h = box.height;
+          if (box2 && box2.width > 8 && box2.height > 8) {
+            x = box2.x;
+            y = box2.y;
+            w = box2.width;
+            h = box2.height;
           } else {
             x = info.x - d.width / 2;
             y = info.y - d.height / 2;
@@ -59411,8 +60001,8 @@ ${mdToHtmlBody(md)}
       return;
     }
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-status-mgr");
-    box.append(el("div", "k-dlg-title", "\u{1F3F7} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E09\u0E32\u0E01"));
+    const box2 = el("div", "k-dialog k-status-mgr");
+    box2.append(el("div", "k-dlg-title", "\u{1F3F7} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E09\u0E32\u0E01"));
     const list = el("div", "k-pick-list");
     const mkRow = (s, builtIn) => {
       const row2 = el("div", "k-menu-item k-status-row");
@@ -59476,8 +60066,8 @@ ${mdToHtmlBody(md)}
     const closeB = el("button", null, "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(addB, outB, inB, closeB);
-    box.append(list, btns);
-    ov.append(box);
+    box2.append(list, btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -60549,8 +61139,8 @@ ${h.text}`;
     const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
     const M2 = await readSceneMeta(file, row2);
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01 \u2014 " + row2.title));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01 \u2014 " + row2.title));
     const rowOf = /* @__PURE__ */ new Map();
     const mk = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
@@ -60558,7 +61148,7 @@ ${h.text}`;
       const i5 = el(tag3, "wiki-input");
       i5.value = val || "";
       r.append(i5);
-      box.append(r);
+      box2.append(r);
       rowOf.set(i5, r);
       return i5;
     };
@@ -60573,7 +61163,7 @@ ${h.text}`;
         s.append(o);
       }
       r.append(s);
-      box.append(r);
+      box2.append(r);
       return s;
     };
     const mkCheck = (label, checked) => {
@@ -60583,7 +61173,7 @@ ${h.text}`;
       c.type = "checkbox";
       c.checked = !!checked;
       r.append(c);
-      box.append(r);
+      box2.append(r);
       return c;
     };
     const iSyn = mk("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D", M2.synopsis, "textarea");
@@ -60635,8 +61225,8 @@ ${h.text}`;
     const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
     const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
     btns.append(cB, okB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     cB.onclick = () => ov.remove();
     ov.onclick = (e) => {
@@ -61500,8 +62090,8 @@ ${h.text}`;
   async function showPlayerHistory() {
     const history2 = getPlayerHistory();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", "\u{1F3AE} \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08 (" + history2.length + " \u0E04\u0E23\u0E31\u0E49\u0E07)"));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u{1F3AE} \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08 (" + history2.length + " \u0E04\u0E23\u0E31\u0E49\u0E07)"));
     const list = el("div", "k-pick-list");
     list.style.maxHeight = "50vh";
     if (!history2.length) {
@@ -61522,7 +62112,7 @@ ${h.text}`;
         list.append(row2);
       });
     }
-    box.append(list);
+    box2.append(list);
     const btns = el("div", "k-dlg-btns");
     const exportB = el("button", null, "\u{1F4E5} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01");
     exportB.onclick = async () => {
@@ -61543,8 +62133,8 @@ ${h.text}`;
     const closeB = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(exportB, clearB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -61854,42 +62444,56 @@ ${h.text}`;
   });
 
   // src/panels/panel-drag.js
-  function clampFloat(box, vw, vh) {
+  function clampFloat(box2, vw, vh) {
     const W = vw || window.innerWidth, H2 = vh || window.innerHeight;
-    const w = Math.max(FLOAT_MIN_W, Math.min(Math.round(box.w ?? 320), W));
-    const h = Math.max(FLOAT_MIN_H, Math.min(Math.round(box.h ?? 300), H2));
-    const x = Math.round(Math.min(Math.max(box.x ?? 80, KEEP_VISIBLE - w), W - KEEP_VISIBLE));
-    const y = Math.round(Math.min(Math.max(box.y ?? 80, 0), H2 - 28));
+    const w = Math.max(FLOAT_MIN_W, Math.min(Math.round(box2.w ?? 320), W));
+    const h = Math.max(FLOAT_MIN_H, Math.min(Math.round(box2.h ?? 300), H2));
+    const x = Math.round(Math.min(Math.max(box2.x ?? 80, KEEP_VISIBLE - w), W - KEEP_VISIBLE));
+    const y = Math.round(Math.min(Math.max(box2.y ?? 80, 0), H2 - 28));
     return { x, y, w, h };
   }
   function createDropOverlay() {
     if (_ov && _ov.el.isConnected) return _ov;
-    const box = document.createElement("div");
-    box.className = "k-drop-zone";
-    box.style.display = "none";
-    document.body.appendChild(box);
+    const box2 = document.createElement("div");
+    box2.className = "k-drop-zone";
+    box2.style.display = "none";
+    document.body.appendChild(box2);
     _ov = {
-      el: box,
-      show(rect, zone) {
-        box.dataset.zone = zone || "";
-        box.style.left = Math.round(rect.x) + "px";
-        box.style.top = Math.round(rect.y) + "px";
-        box.style.width = Math.round(rect.w) + "px";
-        box.style.height = Math.round(rect.h) + "px";
-        box.style.display = "block";
+      el: box2,
+      show(rect, zone, kind) {
+        box2.dataset.zone = zone || "";
+        box2.dataset.kind = kind || "insert";
+        box2.style.left = Math.round(rect.x) + "px";
+        box2.style.top = Math.round(rect.y) + "px";
+        box2.style.width = Math.round(rect.w) + "px";
+        box2.style.height = Math.round(rect.h) + "px";
+        box2.style.display = "block";
       },
       hide() {
-        box.style.display = "none";
+        box2.style.display = "none";
       },
       destroy() {
-        box.remove();
+        box2.remove();
         _ov = null;
       }
     };
     return _ov;
   }
-  function zoneRect(rect, zone) {
+  function zoneRect(rect, zone, kind) {
     const { x, y, w, h } = rect;
+    if (kind === "edge") {
+      const t3 = Math.min(EDGE_BAR, (zone === "left" || zone === "right" ? w : h) / 2);
+      switch (zone) {
+        case "left":
+          return { x, y, w: t3, h };
+        case "right":
+          return { x: x + w - t3, y, w: t3, h };
+        case "top":
+          return { x, y, w, h: t3 };
+        default:
+          return { x, y: y + h - t3, w, h: t3 };
+      }
+    }
     switch (zone) {
       case "left":
         return { x, y, w: w / 2, h };
@@ -61905,6 +62509,27 @@ ${h.text}`;
   }
   function detectSnapTarget(mx, my, host2, excludeId) {
     if (!host2) return null;
+    for (const fp of document.querySelectorAll(".k-float-panel[data-float-id]")) {
+      if (fp.dataset.panelId === excludeId) continue;
+      const head2 = fp.querySelector(":scope > .k-panel-head, :scope > .k-float-tabbar");
+      if (!head2) continue;
+      const r = head2.getBoundingClientRect();
+      if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
+      return { kind: "floatgroup", zone: "center", targetId: fp.dataset.floatId, rect: box(r) };
+    }
+    for (const tab of host2.querySelectorAll(".k-tab[data-panel-id]")) {
+      const pid = tab.dataset.panelId;
+      if (pid === excludeId || pid === "docs") continue;
+      const r = tab.getBoundingClientRect();
+      if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
+      return { kind: "tab", zone: "center", targetId: pid, rect: box(r), tabIndex: +tab.dataset.index || 0 };
+    }
+    const wsEl = host2.querySelector(".k-workspace") || host2;
+    const wsR = wsEl.getBoundingClientRect();
+    if (wsR.width && wsR.height) {
+      const ez = edgeZone(mx, my, box(wsR));
+      if (ez) return { kind: "edge", zone: ez, rect: box(wsR), targetId: null };
+    }
     let best = null;
     for (const e of host2.querySelectorAll(".k-panel[data-panel-id]")) {
       if (e.dataset.panelId === excludeId) continue;
@@ -61912,14 +62537,34 @@ ${h.text}`;
       if (e.offsetParent === null) continue;
       const r = e.getBoundingClientRect();
       if (!r.width || !r.height) continue;
-      const rect = { x: r.left, y: r.top, w: r.width, h: r.height };
-      let zone = snapZone(mx, my, rect);
+      const rect = box(r);
+      const zone = snapZone(mx, my, rect);
       if (!zone) continue;
       if (zone === "center" && e.dataset.panelId === "docs") continue;
       const area = r.width * r.height;
-      if (!best || area < best.area) best = { targetId: e.dataset.panelId, zone, rect, area };
+      if (!best || area < best.area) {
+        best = { targetId: e.dataset.panelId, zone, rect, area, kind: zone === "center" ? "merge" : "insert" };
+      }
     }
     return best;
+  }
+  function applyDrop(pm2, panelId2, hit, ctx = {}) {
+    if (!hit) return false;
+    const draggingGroup = !!(ctx.floatId && (pm2.floats || []).some((f) => f.id === ctx.floatId && f.panel && f.panel.type === "tabs"));
+    if (draggingGroup && hit.kind !== "floatgroup") {
+      if (hit.kind === "tab" || hit.kind === "merge") return false;
+      return pm2.dockFloatGroup(
+        ctx.floatId,
+        hit.zone,
+        hit.targetId,
+        { edge: hit.kind === "edge", isFixedPanel: ctx.isFixedPanel }
+      );
+    }
+    if (hit.kind === "floatgroup") return pm2.groupIntoFloat(panelId2, hit.targetId);
+    if (hit.kind === "edge") return pm2.dockAtEdge(panelId2, hit.zone, ctx.isFixedPanel);
+    if (hit.kind === "tab") return pm2.addTabAt(panelId2, hit.targetId, hit.tabIndex);
+    if (hit.targetId === panelId2) return false;
+    return pm2.dockPanel(panelId2, hit.zone, hit.targetId);
   }
   function startPanelDrag(e, panelId2, pm2, ctx = {}) {
     if (e.button !== 0) return;
@@ -61949,8 +62594,8 @@ ${h.text}`;
       }
       if (!ctx.floatOnly) {
         hit = detectSnapTarget(ev.clientX, ev.clientY, host2, panelId2);
-        if (hit && hit.zone === "center" && !ctx.allowGroup) hit = null;
-        if (hit) ov.show(zoneRect(hit.rect, hit.zone), hit.zone);
+        if (hit && hit.kind === "merge" && !ctx.allowGroup) hit = null;
+        if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
         else ov.hide();
       }
     };
@@ -61965,17 +62610,17 @@ ${h.text}`;
       const uy = ev.clientX || ev.clientY ? ev.clientY : lastY;
       if (ctx.onReorder && ctx.onReorder(ux, uy)) return;
       if (!ctx.floatOnly && hit) {
-        if (hit.targetId === panelId2) return;
-        pm2.dockPanel(panelId2, hit.zone, hit.targetId);
+        applyDrop(pm2, panelId2, hit, ctx);
         return;
       }
       if (!hit) {
+        const box2 = ctx.floatBox ? ctx.floatBox() : null;
         pm2.floatPanel(panelId2, clampFloat({
           x: ux - 60,
           y: uy - 12,
-          w: ctx.floatW || 320,
-          h: ctx.floatH || 300
-        }));
+          w: box2 && box2.w || ctx.floatW || 320,
+          h: box2 && box2.h || ctx.floatH || 300
+        }), { fromDock: !!box2 });
       }
     };
     document.addEventListener("mousemove", move);
@@ -61991,12 +62636,20 @@ ${h.text}`;
     const left = ic ? Math.min(ic.getBoundingClientRect().left, r.left) : r.left;
     return clientX >= left && clientX <= r.right;
   }
+  function panelBoxOf(panelId2, host2) {
+    const root = host2 || document;
+    const e = root.querySelector(`.k-panel[data-panel-id="${panelId2}"]`);
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return r.width > 40 && r.height > 40 ? { w: Math.round(r.width), h: Math.round(r.height) } : null;
+  }
   function makePanelDraggable(header, panelId2, pm2, ctx = {}) {
     header.addEventListener("mousedown", (e) => {
       if (e.target.closest(".k-panel-btn") || e.target.closest(".k-panel-ctrls") || e.target.closest(".k-panel-btns")) return;
       const onTitle = !!e.target.closest(".k-panel-head-title") || !!e.target.closest(".k-panel-head-icon");
       const allowGroup = onTitle && inGroupHandle(header, e.clientX);
-      startPanelDrag(e, panelId2, pm2, { ...ctx, allowGroup });
+      const box2 = panelBoxOf(panelId2, ctx.host);
+      startPanelDrag(e, panelId2, pm2, { ...ctx, allowGroup, floatBox: () => box2 });
     });
     header.classList.add("k-can-group");
   }
@@ -62004,8 +62657,10 @@ ${h.text}`;
     tab.addEventListener("mousedown", (e) => {
       if (e.target.closest(".k-panel-btn")) return;
       const bar = tab.parentNode;
+      const box2 = panelBoxOf(panelId2, ctx.host);
       startPanelDrag(e, panelId2, pm2, {
         ...ctx,
+        floatBox: () => box2,
         allowGroup: true,
         // ลากหัวแท็บ = ตั้งใจจัดกลุ่มอยู่แล้ว
         ghostLabel: ctx.ghostLabel || tab.textContent.trim(),
@@ -62073,7 +62728,9 @@ ${h.text}`;
       if (e.button !== 0) return;
       if (e.target.closest(".k-panel-btn") || e.target.closest(".k-panel-ctrls") || e.target.closest(".k-panel-btns")) return;
       const host2 = ctx.host || document.getElementById("app-root") || document.body;
-      const canDock = !!e.target.closest(".k-panel-head-title") && inGroupHandle(header, e.clientX);
+      const onFloatBar = !!(ctx.floatId && header.classList.contains("k-float-tabbar"));
+      if (onFloatBar && e.target.closest(".k-tab")) return;
+      const canDock = onFloatBar ? !e.target.closest(".k-tab") && !e.target.closest(".k-panel-btn") : !!e.target.closest(".k-panel-head-title") && inGroupHandle(header, e.clientX);
       const sx2 = e.clientX, sy2 = e.clientY;
       const x0 = popup.offsetLeft, y0 = popup.offsetTop;
       const ov = createDropOverlay();
@@ -62088,7 +62745,7 @@ ${h.text}`;
         popup.style.top = s.y + "px";
         popup.classList.toggle("k-float-snapped", s.snapped);
         hit = canDock ? detectSnapTarget(ev.clientX, ev.clientY, host2, panelId2) : null;
-        if (hit) ov.show(zoneRect(hit.rect, hit.zone), hit.zone);
+        if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
         else ov.hide();
       };
       const up = () => {
@@ -62098,10 +62755,7 @@ ${h.text}`;
         popup.classList.remove("k-float-snapped");
         if (!moved) return;
         if (!popup.isConnected) return;
-        if (hit) {
-          pm2.dockPanel(panelId2, hit.zone, hit.targetId);
-          return;
-        }
+        if (hit && applyDrop(pm2, panelId2, hit, ctx)) return;
         const c = clampFloat({
           x: popup.offsetLeft,
           y: popup.offsetTop,
@@ -62110,14 +62764,15 @@ ${h.text}`;
         });
         popup.style.left = c.x + "px";
         popup.style.top = c.y + "px";
-        pm2.moveFloat(panelId2, { x: c.x, y: c.y });
+        if (ctx.floatId) pm2.moveFloatBox(ctx.floatId, { x: c.x, y: c.y });
+        else pm2.moveFloat(panelId2, { x: c.x, y: c.y });
       };
       document.addEventListener("mousemove", move);
       document.addEventListener("mouseup", up);
       e.preventDefault();
     });
   }
-  var DRAG_MIN, SNAP_PX, FLOAT_MIN_W, FLOAT_MIN_H, KEEP_VISIBLE, _ov;
+  var DRAG_MIN, SNAP_PX, FLOAT_MIN_W, FLOAT_MIN_H, KEEP_VISIBLE, _ov, EDGE_BAR, box;
   var init_panel_drag = __esm({
     "src/panels/panel-drag.js"() {
       init_panel_layout();
@@ -62127,6 +62782,8 @@ ${h.text}`;
       FLOAT_MIN_H = 120;
       KEEP_VISIBLE = 90;
       _ov = null;
+      EDGE_BAR = 46;
+      box = (r) => ({ x: r.left, y: r.top, w: r.width, h: r.height });
     }
   });
 
@@ -62144,7 +62801,18 @@ ${h.text}`;
     }
     for (const f of pm2.store.floats || []) renderFloatPanel(f, pm2, opts, container);
     markDocsChain(container);
+    markWorkspace(container, root, opts);
     return container;
+  }
+  function markWorkspace(container, root, opts) {
+    if (!container) return;
+    container.querySelectorAll(".k-workspace").forEach((e) => e.classList.remove("k-workspace"));
+    const id = workspaceNodeId(root, fixedPanel(opts));
+    if (!id) return;
+    const el2 = container.querySelector(
+      `.k-dock[data-dock-id="${id}"], .k-tab-group[data-tabs-id="${id}"], .k-panel[data-panel-id="${id}"]`
+    );
+    if (el2) el2.classList.add("k-workspace");
   }
   function renderNode(node, pm2, opts, depth) {
     if (!node) return null;
@@ -62164,41 +62832,50 @@ ${h.text}`;
     const v2 = m && (typeof m.get === "function" ? m.get(id) : m[id]);
     return v2 || {};
   }
-  function isFixed(node, opts) {
-    return node && node.type === "panel" && !!metaOf(opts, node.id).fixed;
+  function isRigid(node, opts) {
+    return nodeRigid(node, fixedPanel(opts));
   }
   function renderDock(node, pm2, opts, depth) {
-    const box = el("div", "k-dock");
-    box.dataset.dockId = node.id;
-    box.dataset.dir = node.dir === "row" ? "row" : "col";
+    const box2 = el("div", "k-dock");
+    box2.dataset.dockId = node.id;
+    box2.dataset.dir = node.dir === "row" ? "row" : "col";
     const kids = node.children || [];
     const shown = [];
     for (let i5 = 0; i5 < kids.length; i5++) if (!nodeHidden(kids[i5])) shown.push(i5);
-    const growSum = shown.reduce((a, i5) => a + (isFixed(kids[i5], opts) ? 0 : node.sizes?.[i5] ?? 1), 0) || 1;
+    const shares = dockShares(node, fixedPanel(opts));
+    const flexIdx = flexChildIndex(node);
     for (let s = 0; s < shown.length; s++) {
       const i5 = shown[s];
       const childEl = renderNode(kids[i5], pm2, opts, depth + 1);
       if (!childEl) continue;
-      if (isFixed(kids[i5], opts)) {
+      const sh = shares[i5] || { kind: "rigid" };
+      if (sh.kind === "rigid") {
         childEl.style.flex = "0 0 auto";
+      } else if (sh.kind === "flex") {
+        childEl.classList.add("k-flex-child");
+        childEl.style.flex = "1 1 0";
+      } else if (sh.kind === "px") {
+        childEl.classList.add("k-fixed-px");
+        childEl.style.flex = "0 1 " + sh.px + "px";
       } else {
-        childEl.style.flexGrow = String((node.sizes?.[i5] ?? 1) / growSum);
+        if (i5 === flexIdx) childEl.classList.add("k-flex-child");
+        childEl.style.flexGrow = String(sh.grow);
         childEl.style.flexShrink = "1";
         childEl.style.flexBasis = "0%";
       }
-      box.appendChild(childEl);
+      box2.appendChild(childEl);
       const nextIdx = shown[s + 1];
-      if (nextIdx !== void 0 && !isFixed(kids[i5], opts) && !isFixed(kids[nextIdx], opts)) {
-        box.appendChild(createResizeHandle(node.id, i5, node.dir, pm2, nextIdx));
+      if (nextIdx !== void 0 && !isRigid(kids[i5], opts) && !isRigid(kids[nextIdx], opts)) {
+        box2.appendChild(createResizeHandle(node.id, i5, node.dir, pm2, nextIdx));
       }
     }
-    return box;
+    return box2;
   }
   function renderTabs(node, pm2, opts, depth) {
-    const box = el("div", "k-tab-group");
-    box.dataset.tabsId = node.id;
+    const box2 = el("div", "k-tab-group");
+    box2.dataset.tabsId = node.id;
     const strip = !!node.collapsed;
-    if (strip) box.classList.add("icon-strip");
+    if (strip) box2.classList.add("icon-strip");
     const bar = el("div", "k-tab-bar" + (strip ? " k-vertical" : ""));
     const kids = node.children || [];
     const isHid = (k) => nodeHidden(k);
@@ -62225,7 +62902,7 @@ ${h.text}`;
         }
         pm2.activatePanel(child.id);
       };
-      makeTabDraggable(tab, child.id, node.id, i5, pm2, { host: opts.host });
+      makeTabDraggable(tab, child.id, node.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
       bar.appendChild(tab);
     }
     const strBtn = el("span", "k-panel-btn k-strip-btn", strip ? "\xBB" : "\xAB");
@@ -62235,7 +62912,7 @@ ${h.text}`;
       toggleStrip(node.id, pm2, !strip);
     };
     bar.appendChild(strBtn);
-    box.appendChild(bar);
+    box2.appendChild(bar);
     const body = el("div", "k-tab-content");
     for (let i5 = 0; i5 < kids.length; i5++) {
       if (isHid(kids[i5])) continue;
@@ -62245,8 +62922,8 @@ ${h.text}`;
       if (i5 !== active) panelEl.classList.add("k-tab-hidden");
       body.appendChild(panelEl);
     }
-    box.appendChild(body);
-    return box;
+    box2.appendChild(body);
+    return box2;
   }
   function toggleStrip(tabsId, pm2, on2) {
     const root = pm2.store.root;
@@ -62259,19 +62936,24 @@ ${h.text}`;
   }
   function renderPanel(node, pm2, opts, depth) {
     const md = metaOf(opts, node.id);
-    const box = el("div", "k-panel");
-    box.dataset.panelId = node.id;
-    if (md.cls) box.classList.add(md.cls);
-    if (node.collapsed) box.classList.add("k-collapsed");
-    if (md.fixed) box.classList.add("k-panel-fixed");
-    if (md.noHead) box.classList.add("k-panel-nohead");
+    const box2 = el("div", "k-panel");
+    box2.dataset.panelId = node.id;
+    if (md.cls) box2.classList.add(md.cls);
+    if (node.collapsed) box2.classList.add("k-collapsed");
+    if (md.fixed) box2.classList.add("k-panel-fixed");
+    if (md.noHead) box2.classList.add("k-panel-nohead");
     else {
       const head2 = buildHead(node, pm2, opts, md, false);
-      box.appendChild(head2);
-      makePanelDraggable(head2, node.id, pm2, { host: opts.host, ghostLabel: md.title || node.title || node.id });
+      box2.appendChild(head2);
+      makePanelDraggable(
+        head2,
+        node.id,
+        pm2,
+        { host: opts.host, isFixedPanel: fixedPanel(opts), ghostLabel: md.title || node.title || node.id }
+      );
     }
-    box.appendChild(buildBody(node, opts));
-    return box;
+    box2.appendChild(buildBody(node, opts));
+    return box2;
   }
   function buildHead(node, pm2, opts, md, floating) {
     const head2 = el("div", "k-panel-head");
@@ -62295,7 +62977,10 @@ ${h.text}`;
       btn.dataset.act = b.key;
       btn.onclick = (e) => {
         e.stopPropagation();
-        if (b.key === "collapse") pm2.collapsePanel(node.id);
+        if (b.key === "menu") {
+          const r = btn.getBoundingClientRect();
+          popupMenu(Math.max(8, r.right - 240), r.bottom + 3, headMenuItems(node, pm2, opts, md, floating));
+        } else if (b.key === "collapse") pm2.collapsePanel(node.id);
         else if (b.key === "close") pm2.hidePanel(node.id);
         else if (b.key === "float") {
           if (floating) {
@@ -62305,7 +62990,11 @@ ${h.text}`;
           }
           const host2 = e.target.closest(".k-panel");
           const r = host2 ? host2.getBoundingClientRect() : { left: 90, top: 90, width: 320, height: 300 };
-          pm2.floatPanel(node.id, clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }));
+          pm2.floatPanel(
+            node.id,
+            clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }),
+            { fromDock: true }
+          );
         }
       };
       btns.appendChild(btn);
@@ -62339,6 +63028,11 @@ ${h.text}`;
           pm2.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
         }
       });
+    }
+    const extra = opts.extraHeadMenu ? opts.extraHeadMenu(node.id, floating) || [] : [];
+    if (extra.length) {
+      items.push("-");
+      for (const it of extra) items.push(it);
     }
     if (def.closable !== false) {
       items.push("-");
@@ -62382,15 +63076,17 @@ ${h.text}`;
     return s;
   }
   function renderFloatPanel(f, pm2, opts, container) {
+    if (f.panel && f.panel.type === "tabs") return renderFloatGroup(f, pm2, opts, container);
     const p = f.panel;
     const md = metaOf(opts, p.id);
     const pop = el("div", "k-float-panel");
     pop.dataset.panelId = p.id;
-    const box = clampFloat({ x: f.x ?? 80, y: f.y ?? 80, w: f.w ?? 360, h: f.h ?? 260 });
-    pop.style.left = box.x + "px";
-    pop.style.top = box.y + "px";
-    pop.style.width = box.w + "px";
-    pop.style.height = box.h + "px";
+    pop.dataset.floatId = f.id;
+    const box2 = clampFloat({ x: f.x ?? 80, y: f.y ?? 80, w: f.w ?? 360, h: f.h ?? 260 });
+    pop.style.left = box2.x + "px";
+    pop.style.top = box2.y + "px";
+    pop.style.width = box2.w + "px";
+    pop.style.height = box2.h + "px";
     if (p.collapsed) pop.classList.add("k-collapsed");
     const head2 = buildHead(p, pm2, opts, md, true);
     pop.appendChild(head2);
@@ -62398,7 +63094,7 @@ ${h.text}`;
     const grip = el("div", "k-panel-resize");
     makeResizable(pop, grip, (w, h, x, y) => pm2.moveFloat(p.id, { w, h, x, y }));
     pop.appendChild(grip);
-    makeFloatDraggable(head2, pop, p.id, pm2, { host: opts.host });
+    makeFloatDraggable(head2, pop, p.id, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts), floatId: f.id });
     pop.addEventListener("mousedown", () => {
       const par = pop.parentNode;
       if (par) {
@@ -62414,13 +63110,100 @@ ${h.text}`;
     (container || document.body).appendChild(pop);
     return pop;
   }
+  function renderFloatGroup(f, pm2, opts, container) {
+    const g = f.panel;
+    const pop = el("div", "k-float-panel k-float-group");
+    pop.dataset.floatId = f.id;
+    const box2 = clampFloat({ x: f.x ?? 80, y: f.y ?? 80, w: f.w ?? 420, h: f.h ?? 320 });
+    pop.style.left = box2.x + "px";
+    pop.style.top = box2.y + "px";
+    pop.style.width = box2.w + "px";
+    pop.style.height = box2.h + "px";
+    const kids = (g.children || []).filter((c) => !nodeHidden(c));
+    let active = Math.max(0, Math.min(g.active | 0, kids.length - 1));
+    const bar = el("div", "k-tab-bar k-float-tabbar");
+    kids.forEach((child, i5) => {
+      const md = metaOf(opts, child.id);
+      const tab = el("div", "k-tab" + (i5 === active ? " active" : ""));
+      tab.dataset.index = String(i5);
+      tab.dataset.panelId = child.id;
+      tab.appendChild(iconSpan(md.icon, "k-tab-icon"));
+      tab.appendChild(el("span", "k-tab-title", md.title || child.title || child.id));
+      tab.title = md.title || child.title || child.id;
+      tab.onclick = () => {
+        const next = pm2.floats.map((x) => x.id === f.id ? { ...x, panel: { ...x.panel, active: i5 } } : x);
+        pm2.store.setFloats(next);
+      };
+      makeTabDraggable(tab, child.id, g.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
+      bar.appendChild(tab);
+    });
+    const closeBtn = el("span", "k-panel-btn k-panel-btn-close", "\u2715");
+    closeBtn.title = "\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48";
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      const c = kids[active];
+      if (c) pm2.hidePanel(c.id);
+    };
+    const dockBtn = el("span", "k-panel-btn k-panel-btn-float", "\u22A1");
+    dockBtn.title = "\u0E1C\u0E19\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07";
+    dockBtn.onclick = (e) => {
+      e.stopPropagation();
+      pm2.dockFloatGroup(f.id, "left", pm2.isDocked("docs") ? "docs" : void 0);
+    };
+    const btns = el("span", "k-panel-btns");
+    btns.append(dockBtn, closeBtn);
+    bar.appendChild(btns);
+    pop.appendChild(bar);
+    const body = el("div", "k-tab-content");
+    kids.forEach((child, i5) => {
+      const panelEl = renderNode(child, pm2, opts, 1);
+      if (!panelEl) return;
+      panelEl.classList.add("k-tabbed");
+      if (i5 !== active) panelEl.classList.add("k-tab-hidden");
+      body.appendChild(panelEl);
+    });
+    pop.appendChild(body);
+    const grip = el("div", "k-panel-resize");
+    makeResizable(pop, grip, (w, h, x, y) => pm2.moveFloatBox(f.id, { w, h, x, y }));
+    pop.appendChild(grip);
+    makeFloatDraggable(bar, pop, g.id, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts), floatId: f.id });
+    pop.addEventListener("mousedown", () => {
+      const par = pop.parentNode;
+      if (par) {
+        let sib = pop.nextElementSibling, lastFloat = null;
+        while (sib) {
+          if (sib.classList && sib.classList.contains("k-float-panel")) lastFloat = sib;
+          sib = sib.nextElementSibling;
+        }
+        if (lastFloat) par.insertBefore(pop, lastFloat.nextSibling);
+      }
+      if (typeof pm2._toFront === "function") pm2._toFront(f.id);
+    }, true);
+    (container || document.body).appendChild(pop);
+    return pop;
+  }
   function createResizeHandle(dockId, index, dir, pm2, nextIndex) {
     const row2 = dir === "row";
     const h = el("div", "k-resize-handle " + (row2 ? "k-rh-col" : "k-rh-row"));
     h.dataset.dockId = dockId;
     h.dataset.index = String(index);
     h.title = "\u0E25\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 (\u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = 50%)";
-    h.addEventListener("dblclick", () => pm2.resize(dockId, index, 0.5, nextIndex));
+    const hasFlex = () => !!(h.parentElement && h.parentElement.querySelector(":scope > .k-flex-child"));
+    const isPx = (n2) => !!(n2 && hasFlex() && !n2.classList.contains("k-flex-child"));
+    h.addEventListener("dblclick", () => {
+      const prev = h.previousElementSibling, next = h.nextElementSibling;
+      if (!prev || !next) return;
+      if (!isPx(prev) && !isPx(next)) {
+        pm2.resize(dockId, index, 0.5, nextIndex);
+        return;
+      }
+      const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
+      const half = (row2 ? pr.width + nr.width : pr.height + nr.height) / 2;
+      const up2 = {};
+      if (isPx(prev)) up2[index] = half;
+      if (isPx(next)) up2[nextIndex ?? index + 1] = half;
+      pm2.resizePx(dockId, up2, row2);
+    });
     h.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -62431,11 +63214,31 @@ ${h.text}`;
       if (total <= 0) return;
       const start = row2 ? e.clientX : e.clientY;
       const base3 = row2 ? pr.width : pr.height;
+      const baseNext = row2 ? nr.width : nr.height;
+      const pxMode = isPx(prev) || isPx(next);
       const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
       let ratio = base3 / total;
+      let pxPrev = base3, pxNext = baseNext;
       document.body.classList.add("k-resizing");
+      const flexEl = h.parentElement && h.parentElement.querySelector(":scope > .k-flex-child");
+      const flexR = flexEl ? flexEl.getBoundingClientRect() : null;
+      const flexSize = flexR ? row2 ? flexR.width : flexR.height : 0;
+      const slack = Math.max(0, flexSize - MIN_CANVAS_PX);
       const move = (ev) => {
         const d = (row2 ? ev.clientX : ev.clientY) - start;
+        if (pxMode) {
+          const lim = MIN_PANEL_PX;
+          let dd = d;
+          if (isPx(prev)) dd = Math.max(lim - base3, dd);
+          if (isPx(next)) dd = Math.min(baseNext - lim, dd);
+          if (isPx(prev) && !isPx(next)) dd = Math.min(dd, slack);
+          if (isPx(next) && !isPx(prev)) dd = Math.max(dd, -slack);
+          pxPrev = base3 + dd;
+          pxNext = baseNext - dd;
+          if (isPx(prev)) prev.style.flex = "0 1 " + Math.round(pxPrev) + "px";
+          if (isPx(next)) next.style.flex = "0 1 " + Math.round(pxNext) + "px";
+          return;
+        }
         ratio = Math.max(0.05, Math.min(0.95, (base3 + d) / total));
         prev.style.flexGrow = String(growSum * ratio);
         next.style.flexGrow = String(growSum * (1 - ratio));
@@ -62444,6 +63247,30 @@ ${h.text}`;
         document.body.classList.remove("k-resizing");
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
+        if (pxMode) {
+          const upd = {};
+          if (isPx(prev)) upd[index] = pxPrev;
+          if (isPx(next)) upd[nextIndex ?? index + 1] = pxNext;
+          try {
+            const dockEl = h.parentElement;
+            const kids = (nodeById(pm2.root, dockId) || {}).children || [];
+            for (let i5 = 0; i5 < kids.length; i5++) {
+              const kid = kids[i5];
+              if (!kid || upd[i5] !== void 0 || nodePx(kid, row2) > 0) continue;
+              const kel = dockEl.querySelector(
+                `:scope > [data-panel-id="${kid.id}"], :scope > [data-dock-id="${kid.id}"], :scope > [data-tabs-id="${kid.id}"]`
+              );
+              if (!kel) continue;
+              if (kel.classList.contains("k-flex-child") || kel.classList.contains("k-collapsed") || kel.classList.contains("k-panel-fixed") || kel.classList.contains("icon-strip")) continue;
+              const r = kel.getBoundingClientRect();
+              const v2 = Math.round(row2 ? r.width : r.height);
+              if (v2 >= MIN_PANEL_PX) upd[i5] = v2;
+            }
+          } catch {
+          }
+          pm2.resizePx(dockId, upd, row2);
+          return;
+        }
         pm2.resize(dockId, index, ratio, nextIndex);
       };
       document.addEventListener("mousemove", move);
@@ -62451,36 +63278,36 @@ ${h.text}`;
     });
     return h;
   }
-  function makeResizable(box, grip, onEnd) {
+  function makeResizable(box2, grip, onEnd) {
     grip.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      const w0 = box.offsetWidth, h0 = box.offsetHeight, x0 = e.clientX, y0 = e.clientY;
+      const w0 = box2.offsetWidth, h0 = box2.offsetHeight, x0 = e.clientX, y0 = e.clientY;
       const move = (ev) => {
         const c = clampFloat({
-          x: box.offsetLeft,
-          y: box.offsetTop,
+          x: box2.offsetLeft,
+          y: box2.offsetTop,
           w: w0 + ev.clientX - x0,
           h: h0 + ev.clientY - y0
         });
-        box.style.width = Math.max(FLOAT_MIN_W, Math.min(c.w, window.innerWidth - box.offsetLeft)) + "px";
-        box.style.height = Math.max(FLOAT_MIN_H, Math.min(c.h, window.innerHeight - box.offsetTop)) + "px";
+        box2.style.width = Math.max(FLOAT_MIN_W, Math.min(c.w, window.innerWidth - box2.offsetLeft)) + "px";
+        box2.style.height = Math.max(FLOAT_MIN_H, Math.min(c.h, window.innerHeight - box2.offsetTop)) + "px";
       };
       const up = () => {
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
-        if (!box.isConnected) return;
+        if (!box2.isConnected) return;
         const c = clampFloat({
-          x: box.offsetLeft,
-          y: box.offsetTop,
-          w: box.offsetWidth,
-          h: box.offsetHeight
+          x: box2.offsetLeft,
+          y: box2.offsetTop,
+          w: box2.offsetWidth,
+          h: box2.offsetHeight
         });
-        box.style.left = c.x + "px";
-        box.style.top = c.y + "px";
-        box.style.width = c.w + "px";
-        box.style.height = c.h + "px";
+        box2.style.left = c.x + "px";
+        box2.style.top = c.y + "px";
+        box2.style.width = c.w + "px";
+        box2.style.height = c.h + "px";
         onEnd(c.w, c.h, c.x, c.y);
       };
       document.addEventListener("mousemove", move);
@@ -62496,6 +63323,7 @@ ${h.text}`;
       n2 = n2.parentElement;
     }
   }
+  var fixedPanel;
   var init_panel_renderer = __esm({
     "src/panels/panel-renderer.js"() {
       init_core();
@@ -62503,37 +63331,228 @@ ${h.text}`;
       init_icons();
       init_panel_layout();
       init_panel_drag();
+      fixedPanel = (opts) => (id) => !!metaOf(opts, id).fixed;
+    }
+  });
+
+  // src/panels/panel-export.js
+  function storedPx(node) {
+    return { w: nodePx(node, true), h: nodePx(node, false) };
+  }
+  function dockReport(node, isFixedPanel = () => false, measured = {}, docsId = "docs") {
+    const row2 = node.dir === "row";
+    const shares = dockShares(node, isFixedPanel, docsId);
+    const kids = node.children || [];
+    const flexIdx = flexChildIndex(node, docsId);
+    const children = kids.map((k, i5) => {
+      const sh = shares[i5];
+      const px2 = storedPx(k);
+      return {
+        id: k.id,
+        type: k.type,
+        label: labelOf(k),
+        hidden: nodeHidden(k) || void 0,
+        share: sh ? sh.kind : "hidden",
+        grow: sh && sh.kind === "grow" ? +sh.grow.toFixed(4) : void 0,
+        sharePx: sh && sh.kind === "px" ? sh.px : void 0,
+        storedPx: px2.w || px2.h ? px2 : null,
+        size: node.sizes && Number.isFinite(node.sizes[i5]) ? node.sizes[i5] : null,
+        measured: measured[k.id] || null
+      };
+    });
+    const mode = children.some((c) => c.share === "px") ? "px" : "ratio";
+    return {
+      id: node.id,
+      dir: node.dir,
+      mode,
+      flexChild: flexIdx >= 0 ? (kids[flexIdx] || {}).id || null : null,
+      sizes: node.sizes || null,
+      measured: measured[node.id] || null,
+      children
+    };
+  }
+  function labelOf(n2) {
+    return n2.title || (n2.type === "tabs" ? "\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A" : n2.type === "dock" ? "\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E48\u0E07" : n2.id);
+  }
+  function collectDocks(root, isFixedPanel, measured, docsId = "docs") {
+    const out = [];
+    if (!root) return out;
+    walk(root, (n2) => {
+      if (n2 && n2.type === "dock") out.push(dockReport(n2, isFixedPanel, measured, docsId));
+    });
+    return out;
+  }
+  function unsizedDockChildren(root, isFixedPanel = () => false) {
+    const out = [];
+    if (!root) return out;
+    walk(root, (n2) => {
+      if (!n2 || n2.type !== "dock") return;
+      const row2 = n2.dir === "row";
+      const flexIdx = flexChildIndex(n2);
+      (n2.children || []).forEach((k, i5) => {
+        if (i5 === flexIdx || nodeHidden(k)) return;
+        if (k.type === "panel" && isFixedPanel(k.id)) return;
+        if (nodePxDeep(k, row2) > 0) return;
+        out.push({ dock: n2.id, dir: n2.dir, id: k.id, type: k.type, ownPx: nodePx(k, row2) });
+      });
+    });
+    return out;
+  }
+  function derivedSizeNodes(root) {
+    const out = [];
+    if (!root) return out;
+    walk(root, (n2) => {
+      if (!n2 || n2.type !== "dock") return;
+      const row2 = n2.dir === "row";
+      (n2.children || []).forEach((k) => {
+        if (k.type === "panel" || nodeHidden(k)) return;
+        if (nodePx(k, row2) > 0) return;
+        const deep = nodePxDeep(k, row2);
+        if (deep > 0) out.push({
+          dock: n2.id,
+          id: k.id,
+          type: k.type,
+          derivedPx: deep,
+          from: panelIds(k).filter((id) => nodePx(findPanel(k, id), row2) > 0)
+        });
+      });
+    });
+    return out;
+  }
+  function diagnose(root, docks, unsized, measured = {}, docsId = "docs") {
+    const warn = [];
+    for (const d of docks) {
+      const holdsDocs = !!d.flexChild;
+      const live = d.children.filter((c) => c.share !== "hidden" && !c.hidden);
+      const hasRatioNeighbour = live.some((c) => c.share === "grow" && c.id !== d.flexChild);
+      if (holdsDocs && d.mode === "ratio" && hasRatioNeighbour) {
+        warn.push(`dock ${d.id} (${d.dir}) \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 \u0E17\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E49\u0E32\u0E07\u0E43\u0E19 \u2014 \u0E04\u0E48\u0E32\u0E02\u0E19\u0E32\u0E14\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E27\u0E49\u0E43\u0E19\u0E25\u0E39\u0E01\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E43\u0E0A\u0E49 \xB7 \u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07\u0E08\u0E30\u0E16\u0E39\u0E01\u0E40\u0E01\u0E25\u0E35\u0E48\u0E22\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14/\u0E1C\u0E19\u0E36\u0E01\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19`);
+      }
+      if (holdsDocs && hasRatioNeighbour && Array.isArray(d.sizes) && d.sizes.length === 2 && Math.abs(d.sizes[0] - 0.5) < 1e-3 && Math.abs(d.sizes[1] - 0.5) < 1e-3) {
+        warn.push(`dock ${d.id} \u0E41\u0E1A\u0E48\u0E07 50/50 \u0E01\u0E31\u0E1A\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 \u2014 \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E1C\u0E19\u0E36\u0E01\u0E01\u0E34\u0E19\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07`);
+      }
+    }
+    for (const u of unsized) {
+      if (u.type === "panel") continue;
+      warn.push(`${u.type === "tabs" ? "\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A" : "\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E48\u0E07"} ${u.id} \u0E43\u0E19 dock ${u.dock} \u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E19\u0E32\u0E14\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E22 (\u0E17\u0E31\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07\u0E43\u0E19) \u2014 \u0E01\u0E49\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E08\u0E30\u0E16\u0E39\u0E01\u0E40\u0E01\u0E25\u0E35\u0E48\u0E22\u0E15\u0E32\u0E21\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E42\u0E04\u0E23\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19`);
+    }
+    for (const [id, m] of Object.entries(measured)) {
+      if (!m || !m.w) continue;
+      if (id === docsId && m.w < MIN_CANVAS_PX) warn.push(`\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E27\u0E49\u0E32\u0E07\u0E41\u0E04\u0E48 ${m.w}px (\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 ${MIN_CANVAS_PX}px)`);
+      else if (m.kind === "panel" && id !== docsId && m.w < MIN_PANEL_PX) warn.push(`\u0E41\u0E1C\u0E07 ${id} \u0E01\u0E27\u0E49\u0E32\u0E07\u0E41\u0E04\u0E48 ${m.w}px (\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33 ${MIN_PANEL_PX}px) \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E08\u0E19\u0E41\u0E17\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E17\u0E35\u0E48`);
+    }
+    return warn;
+  }
+  function buildLayoutReport(input = {}) {
+    const layout = input.layout || {};
+    const root = layout.root || null;
+    const defs = input.defs || [];
+    const fixedIds = new Set(defs.filter((d) => d.fixed).map((d) => d.id));
+    const isFixedPanel = (id) => fixedIds.has(id);
+    const measured = input.measured || {};
+    const docks = collectDocks(root, isFixedPanel, measured);
+    const unsized = unsizedDockChildren(root, isFixedPanel);
+    return {
+      kind: EXPORT_KIND,
+      exportVersion: EXPORT_VERSION,
+      savedAt: input.savedAt || (/* @__PURE__ */ new Date()).toISOString(),
+      app: input.app || null,
+      viewport: input.viewport || null,
+      layout: {
+        version: layout.version ?? null,
+        root,
+        floats: layout.floats || [],
+        splitRatios: layout.splitRatios || {}
+      },
+      homes: input.homes || {},
+      workspaces: input.workspaces || {},
+      panels: defs.map((d) => ({
+        id: d.id,
+        title: d.title,
+        defaultSide: d.defaultSide || "left",
+        dockW: d.dockW || null,
+        dockH: d.dockH || null,
+        fixed: !!d.fixed,
+        closable: d.closable !== false,
+        floatable: d.floatable !== false,
+        open: !!(input.state && (input.state.open || []).includes(d.id)),
+        hidden: !!(input.state && (input.state.hidden || []).includes(d.id)),
+        floating: !!(input.state && (input.state.floating || []).includes(d.id)),
+        measured: measured[d.id] || null
+      })),
+      diagnostics: {
+        docks,
+        unsizedDockChildren: unsized,
+        derivedSizes: derivedSizeNodes(root),
+        gaps: input.gaps || [],
+        warnings: diagnose(root, docks, unsized, measured)
+      }
+    };
+  }
+  function reportToJson(report) {
+    return JSON.stringify(report, null, 2);
+  }
+  function defaultExportName(title2 = "") {
+    const ts = /* @__PURE__ */ new Date();
+    const p = (v2) => String(v2).padStart(2, "0");
+    const stamp = `${ts.getFullYear()}${p(ts.getMonth() + 1)}${p(ts.getDate())}-${p(ts.getHours())}${p(ts.getMinutes())}`;
+    const safe2 = String(title2 || "").trim().replace(/[\\/:*?"<>|]/g, "").slice(0, 40);
+    return `${safe2 ? safe2 + "-" : ""}panel-layout-${stamp}.json`;
+  }
+  var EXPORT_VERSION, EXPORT_KIND;
+  var init_panel_export = __esm({
+    "src/panels/panel-export.js"() {
+      init_panel_layout();
+      EXPORT_VERSION = 1;
+      EXPORT_KIND = "killian2-panel-layout";
     }
   });
 
   // src/panels/panel-ui.js
   var panel_ui_exports = {};
   __export(panel_ui_exports, {
+    BUILTIN_WORKSPACES: () => BUILTIN_WORKSPACES,
     PANEL_DEFS: () => PANEL_DEFS,
     SCROLLABLES: () => SCROLLABLES,
     addPanelButton: () => addPanelButton,
+    applyWorkspace: () => applyWorkspace,
+    auditPanelGaps: () => auditPanelGaps,
+    defaultFloatBox: () => defaultFloatBox,
     defaultLayout: () => defaultLayout,
+    deleteWorkspace: () => deleteWorkspace,
+    exportPanelLayout: () => exportPanelLayout,
     getPanelManager: () => getPanelManager,
+    hiddenMode: () => hiddenMode,
     hidePanel: () => hidePanel,
     initPanelSystem: () => initPanelSystem,
+    isBuiltinWorkspace: () => isBuiltinWorkspace,
     isPanelOpen: () => isPanelOpen,
+    listWorkspaces: () => listWorkspaces,
     loadPanelLayout: () => loadPanelLayout,
+    measurePanelGeometry: () => measurePanelGeometry,
     onPanelLayoutChange: () => onPanelLayoutChange,
     panelDesc: () => panelDesc,
     panelId: () => panelId,
+    panelLayoutReport: () => panelLayoutReport,
     panelMenuItems: () => panelMenuItems,
     panelToggleState: () => panelToggleState,
+    panelsHidden: () => panelsHidden,
     registerPanels: () => registerPanels,
     renderPanels: () => renderPanels,
     resetPanelHomes: () => resetPanelHomes,
     resetPanelSystem: () => resetPanelSystem,
     resetPanels: () => resetPanels,
+    resetScrollMemo: () => resetScrollMemo,
     savePanelLayout: () => savePanelLayout,
+    saveWorkspace: () => saveWorkspace,
     setPanelCloseGuard: () => setPanelCloseGuard,
     setPanelShowHook: () => setPanelShowHook,
     showPanel: () => showPanel,
     togglePanel: () => togglePanel,
-    togglePanelDialog: () => togglePanelDialog
+    togglePanelDialog: () => togglePanelDialog,
+    toggleSpace: () => toggleSpace,
+    workspaceMenu: () => workspaceMenu,
+    workspaceMenuItems: () => workspaceMenuItems
   });
   function titleOf(d) {
     return d.i18n ? t(d.i18n, d.title) : d.title;
@@ -62578,6 +63597,11 @@ ${h.text}`;
         closable: d.closable !== false,
         floatable: d.floatable !== false,
         defaultSide: d.defaultSide || "left",
+        // [alpha.66r6] ขนาดตั้งต้นตอนผนึกครั้งแรก — แผงกระดาน/ผังต้องกว้างกว่าแผงข้างทั่วไปมาก
+        defaultSize: { w: d.dockW || 300, h: d.dockH || 220 },
+        // [alpha.66r12] ขนาดอ้างอิงตอนลอย (เลขเดียวกับ defaultFloatBox) — ใช้เป็นเพดานความสูง
+        // ตอนลากแผงข้างที่สูงเต็มคอลัมน์ออกมาลอย
+        floatSize: { w: d.floatW || Math.max(340, Math.round((d.dockW || 300) * 1.1)), h: d.floatH || 520 },
         render: (h) => {
           const n2 = adopted.get(d.id);
           if (n2) h.appendChild(n2);
@@ -62597,6 +63621,94 @@ ${h.text}`;
       panel("statusbar", "\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30")
     ], [0, 1, 0]);
   }
+  function isBuiltinWorkspace(name5) {
+    return BUILTIN_WORKSPACES.some((w) => w.id === name5 || w.label === name5);
+  }
+  function listWorkspaces() {
+    const mine = getPanelManager().listWorkspaces();
+    return [
+      ...BUILTIN_WORKSPACES.map((w) => ({ name: w.id, label: w.label, builtIn: true })),
+      ...mine.map((n2) => ({ name: n2, label: n2, builtIn: false }))
+    ];
+  }
+  function saveWorkspace(name5) {
+    const n2 = String(name5 || "").trim();
+    if (!n2 || isBuiltinWorkspace(n2)) return false;
+    rememberOpenPanels();
+    return getPanelManager().saveWorkspace(n2, { homes: Object.fromEntries(homes) });
+  }
+  function deleteWorkspace(name5) {
+    if (isBuiltinWorkspace(name5)) return false;
+    return getPanelManager().removeWorkspace(name5);
+  }
+  function applyWorkspace(name5) {
+    const m = getPanelManager();
+    const b = BUILTIN_WORKSPACES.find((w) => w.id === name5 || w.label === name5);
+    const snap2 = b ? { version: 2, root: b.build(), floats: [], splitRatios: {}, homes: null } : m.getWorkspace(name5);
+    if (!snap2) return false;
+    const hm = m.applySnapshot(snap2);
+    _stash = null;
+    homes.clear();
+    if (hm) for (const k of Object.keys(hm)) homes.set(k, hm[k]);
+    saveHomes();
+    renderPanels(true);
+    if (onShowHook) for (const id of m.openIds()) {
+      try {
+        onShowHook(id);
+      } catch {
+      }
+    }
+    setStatus(t("panel.wsApplied", "\u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B: ") + (b ? b.label : name5));
+    return true;
+  }
+  function panelsHidden() {
+    return !!_stash;
+  }
+  function hiddenMode() {
+    return _stash ? _stash.mode : "";
+  }
+  function visibleClosable(side) {
+    const m = getPanelManager();
+    rememberSides();
+    return PANEL_DEFS.filter((d) => d.closable !== false && m.isOpen(d.id) && (!side || sideOf(d) === side)).map((d) => d.id);
+  }
+  function toggleSpace(mode = "all") {
+    if (_stash) {
+      const was = _stash;
+      const ids2 = was.ids;
+      _stash = null;
+      for (const id of ids2) {
+        try {
+          showPanel(id);
+        } catch {
+        }
+      }
+      renderPanels(true);
+      if (onShowHook) for (const id of ids2) {
+        try {
+          onShowHook(id);
+        } catch {
+        }
+      }
+      setStatus(t("panel.spaceRestored", "\u0E04\u0E37\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27"));
+      if (was.mode === mode) return false;
+    }
+    const ids = visibleClosable(mode === "all" ? null : mode);
+    if (!ids.length) {
+      setStatus(t("panel.spaceNone", "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E49\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27"));
+      return false;
+    }
+    for (const id of ids) {
+      try {
+        hidePanel(id, true);
+      } catch {
+      }
+    }
+    _stash = { ids, mode };
+    renderPanels(true);
+    setStatus(mode === "all" ? t("panel.spaceAll", "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \u2014 \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E15\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 (\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A)") : t("panel.spaceSide", "\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07") + (mode === "right" ? "\u0E02\u0E27\u0E32" : "\u0E0B\u0E49\u0E32\u0E22"));
+    return true;
+  }
   function renderOpts() {
     for (const d of PANEL_DEFS) {
       const m = meta.get(d.id) || {};
@@ -62606,6 +63718,12 @@ ${h.text}`;
       meta,
       host: host(),
       headExtras: (id) => extras.get(id) || [],
+      // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
+      extraHeadMenu: (id) => [
+        { label: "\u2B12 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E15\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19)", click: () => toggleSpace("all") },
+        { label: "\u2B13 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E19\u0E35\u0E49", click: () => toggleSpace(sideOf({ id, defaultSide: "left" })) },
+        { label: "\u{1F5C2} \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u2026", click: () => workspaceMenu() }
+      ],
       renderPanelBody: (id, body) => {
         const node = adopted.get(id);
         if (node) {
@@ -62631,48 +63749,119 @@ ${h.text}`;
       _fixingDocs = false;
     }
   }
-  function captureScroll() {
-    const out = [];
-    for (const e of document.querySelectorAll(SCROLLABLES)) {
-      if (e.scrollTop || e.scrollLeft) out.push([e, e.scrollTop, e.scrollLeft]);
-    }
-    return out;
+  function anchorSelector(a) {
+    return a.classList.contains("k-float-panel") ? `.k-float-panel[data-panel-id="${a.dataset.panelId}"]` : `#${HOST_ID} .k-panel[data-panel-id="${a.dataset.panelId}"]`;
   }
-  function restoreScroll(saved) {
-    if (!saved.length) return;
-    const jobs = saved.map(([e, top, left]) => ({ e, top, left, lastTop: 0, lastLeft: 0, done: false }));
-    const prevBehavior = jobs.map((j) => j.e.style.scrollBehavior);
-    for (const j of jobs) j.e.style.scrollBehavior = "auto";
-    const put = () => {
-      for (const j of jobs) {
-        if (j.done || !j.e.isConnected) continue;
-        const curTop = j.e.scrollTop, curLeft = j.e.scrollLeft;
-        if (curTop !== 0 && curTop !== j.lastTop || curLeft !== 0 && curLeft !== j.lastLeft) {
-          j.done = true;
-          continue;
-        }
-        if (j.top && curTop !== j.top) {
-          j.e.scrollTop = j.top;
-          j.lastTop = j.e.scrollTop;
-        }
-        if (j.left && curLeft !== j.left) {
-          j.e.scrollLeft = j.left;
-          j.lastLeft = j.e.scrollLeft;
-        }
-        if (j.e.scrollTop === j.top && j.e.scrollLeft === j.left) j.done = true;
-      }
+  function memoKey(a) {
+    return a && a.dataset ? a.dataset.panelId || "" : "";
+  }
+  function captureScroll() {
+    const h = host();
+    if (!h) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const jobs = [];
+    const take = (e) => {
+      if (!e.scrollTop && !e.scrollLeft) return;
+      const a = e.closest(SCROLL_ANCHOR);
+      const key2 = a || h;
+      if (seen.has(key2)) return;
+      seen.add(key2);
+      const sel = a ? anchorSelector(a) : null;
+      const job = keepScroll(sel ? () => document.querySelector(sel) : h);
+      const k = memoKey(a);
+      if (k && job.snap && job.snap.length) scrollMemo.set(k, job.snap);
+      jobs.push(job);
     };
-    put();
-    requestAnimationFrame(put);
-    for (const ms of [0, 30, 60, 120, 250]) setTimeout(put, ms);
-    setTimeout(() => {
-      jobs.forEach((j, i5) => {
-        j.e.style.scrollBehavior = prevBehavior[i5] || "";
-      });
-    }, 260);
+    for (const e of h.querySelectorAll("*")) take(e);
+    try {
+      for (const e of document.querySelectorAll(SCROLLABLES)) {
+        if (h.contains(e) || seen.has(e)) continue;
+        if (!e.scrollTop && !e.scrollLeft) continue;
+        seen.add(e);
+        jobs.push(keepScroll(e));
+      }
+    } catch {
+    }
+    return jobs;
+  }
+  function restoreScroll(jobs) {
+    for (const j of jobs) {
+      try {
+        j();
+      } catch {
+      }
+    }
+    replayScrollMemo();
+  }
+  function replayScrollMemo() {
+    if (!scrollMemo.size) return;
+    for (const [pid, snap2] of scrollMemo) {
+      const sel = `#${HOST_ID} .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
+      const el2 = document.querySelector(sel);
+      if (!el2 || !el2.getBoundingClientRect().width) continue;
+      const target = elByPath(el2, snap2[0] ? snap2[0].path : null) || null;
+      if (target && (target.scrollTop || target.scrollLeft)) continue;
+      try {
+        restoreScrollSnap(() => document.querySelector(sel), snap2)();
+      } catch {
+      }
+    }
+  }
+  function resetScrollMemo() {
+    scrollMemo.clear();
+  }
+  function auditPanelGaps(opts = {}) {
+    const h = host();
+    if (!h) return [];
+    const found2 = [];
+    for (const dockEl of h.querySelectorAll(".k-dock[data-dock-id]")) {
+      const row2 = dockEl.dataset.dir === "row";
+      const kids = [...dockEl.children];
+      if (!kids.length) continue;
+      const total = row2 ? dockEl.clientWidth : dockEl.clientHeight;
+      if (!total) continue;
+      const used = kids.reduce((a, e) => {
+        const r = e.getBoundingClientRect();
+        return a + (row2 ? r.width : r.height);
+      }, 0);
+      const gap = total - used;
+      if (gap <= GAP_TOL) continue;
+      found2.push({ dock: dockEl.dataset.dockId, dir: dockEl.dataset.dir, gap: Math.round(gap), total: Math.round(total) });
+      const growable = kids.filter((e) => !e.classList.contains("k-resize-handle") && getComputedStyle(e).display !== "none" && !e.classList.contains("k-panel-fixed") && !e.classList.contains("k-collapsed"));
+      const taker = growable.find((e) => e.classList.contains("k-flex-child")) || growable[growable.length - 1];
+      if (taker) {
+        taker.style.flexGrow = "1";
+        taker.style.flexBasis = "0%";
+        taker.style.flexShrink = "1";
+      }
+      const key2 = dockEl.dataset.dockId + ":" + Math.round(gap / 10);
+      if (!_gapLogged.has(key2) || opts.force) {
+        _gapLogged.add(key2);
+        const detail = kids.map((e) => ({
+          id: e.dataset.panelId || e.dataset.dockId || e.dataset.tabsId || e.className,
+          cls: e.className,
+          flex: e.style.flex || `${e.style.flexGrow}/${e.style.flexShrink}/${e.style.flexBasis}`,
+          size: Math.round(row2 ? e.getBoundingClientRect().width : e.getBoundingClientRect().height)
+        }));
+        log("warn", `[\u0E41\u0E1C\u0E07] \u0E1E\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07 ${Math.round(gap)}px \u0E43\u0E19 dock ${dockEl.dataset.dockId} (${dockEl.dataset.dir}) \u2014 \u0E1B\u0E34\u0E14\u0E23\u0E39\u0E43\u0E2B\u0E49\u0E41\u0E25\u0E49\u0E27`, detail);
+      }
+    }
+    return found2;
+  }
+  function pruneGhostPanels() {
+    if (!pm || !pm.root) return false;
+    const ghosts = panelIds(pm.root).filter((id) => !pm.registry.has(id));
+    if (!ghosts.length) return false;
+    let r = pm.root;
+    for (const id of ghosts) r = removePanel(r, id);
+    pm.store.root = r;
+    pm.store.save();
+    log("warn", "[\u0E41\u0E1C\u0E07] \u0E1E\u0E1A\u0E41\u0E1C\u0E07\u0E1B\u0E25\u0E2D\u0E21\u0E43\u0E19\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19) \u2014 \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E49\u0E41\u0E25\u0E49\u0E27", ghosts);
+    return true;
   }
   function renderPanels(force) {
     if (!pm) return;
+    pruneGhostPanels();
     ensureDocsVisible();
     const sig = JSON.stringify({ r: pm.store.root, f: pm.store.floats });
     if (!force && sig === lastSig) return;
@@ -62680,6 +63869,10 @@ ${h.text}`;
     const saved = captureScroll();
     renderPanelLayout(host(), pm, renderOpts());
     restoreScroll(saved);
+    try {
+      requestAnimationFrame(() => auditPanelGaps());
+    } catch {
+    }
     const h = host(), holder = srcHolder();
     for (const [, node] of adopted) if (!h.contains(node)) holder.appendChild(node);
     scheduleRemember();
@@ -62705,6 +63898,19 @@ ${h.text}`;
   }
   function onPanelLayoutChange(fn) {
     _onLayoutChange = fn;
+  }
+  function rememberSides() {
+    const h = host();
+    const hr = h.getBoundingClientRect();
+    if (!hr.width) return;
+    for (const d of PANEL_DEFS) {
+      if (d.closable === false) continue;
+      const node = h.querySelector(`.k-panel[data-panel-id="${d.id}"]`) || document.querySelector(`.k-float-panel[data-panel-id="${d.id}"]`);
+      if (!node) continue;
+      const r = node.getBoundingClientRect();
+      if (!r.width) continue;
+      lastSide.set(d.id, r.left + r.width / 2 < hr.left + hr.width / 2 ? "left" : "right");
+    }
   }
   function sideOf(d) {
     return lastSide.get(d.id) || d.defaultSide || "left";
@@ -62757,6 +63963,15 @@ ${h.text}`;
     const f = (m.floats || []).find((x) => x.panel.id === pid);
     if (f) {
       homes.set(pid, { float: { x: f.x, y: f.y, w: f.w, h: f.h } });
+      saveHomes();
+      return;
+    }
+    const gf = (m.floats || []).find((x) => x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === pid));
+    if (gf) {
+      homes.set(pid, {
+        floatWith: gf.panel.children.filter((c) => c.id !== pid).map((c) => c.id),
+        float: { x: gf.x, y: gf.y, w: gf.w, h: gf.h }
+      });
       saveHomes();
       return;
     }
@@ -62850,11 +64065,35 @@ ${h.text}`;
     m.store.update(next);
     return true;
   }
+  function defaultFloatBox(pid) {
+    const d = PANEL_DEFS.find((x) => x.id === pid) || {};
+    const W = window.innerWidth || 1200, H2 = window.innerHeight || 800;
+    const w = Math.min(d.floatW || Math.max(340, Math.round((d.dockW || 300) * 1.1)), Math.round(W * 0.8));
+    const h = Math.min(d.floatH || 520, Math.round(H2 * 0.8));
+    return { x: Math.round((W - w) / 2), y: Math.round((H2 - h) / 2), w, h };
+  }
+  function reopenFloat(m, pid, home) {
+    for (const mate of home && home.floatWith || []) {
+      const fid = m.floatIdOf(mate);
+      if (fid && m.groupIntoFloat(pid, fid)) return true;
+    }
+    return m.floatPanel(pid, home && home.float || defaultFloatBox(pid));
+  }
   function showPanel(id, opts = {}) {
     const m = getPanelManager();
     const pid = panelId(id);
     const def = m.registry.get(pid) || {};
     let ok2;
+    if (opts.prefer === "float" && !m.isDocked(pid) && !m.isFloating(pid) && !opts.side && !opts.targetId) {
+      ok2 = reopenFloat(m, pid, homes.get(pid));
+      if (ok2 && onShowHook) {
+        try {
+          onShowHook(pid);
+        } catch {
+        }
+      }
+      return ok2;
+    }
     if (m.isDocked(pid) && opts.forceMove && (opts.targetId || opts.side)) {
       ok2 = m.dockPanel(pid, opts.side || def.defaultSide || "left", opts.targetId);
     } else if (m.isDocked(pid)) {
@@ -62864,8 +64103,8 @@ ${h.text}`;
       ok2 = true;
     } else {
       const home = homes.get(pid);
-      if (!opts.side && !opts.targetId && home && home.float) {
-        ok2 = m.floatPanel(pid, home.float);
+      if (!opts.side && !opts.targetId && home && (home.float || home.floatWith)) {
+        ok2 = reopenFloat(m, pid, home);
       } else {
         const o = { ...opts };
         if (!o.targetId) o.targetId = home && home.targetId || "docs";
@@ -62874,8 +64113,10 @@ ${h.text}`;
         if (o.side === "center" && o.targetId === "docs") o.side = def.defaultSide || "right";
         if (o.side !== "center" && tabGroupOf(m.root, o.targetId) && m.isDocked("docs")) o.targetId = "docs";
         ok2 = m.showPanel(pid, o);
+        const node = findPanel(m.root, pid);
+        const hasPx = !!(node && (node.pxW > 0 || node.pxH > 0));
         const ratio = home && home.ratio > 0 ? home.ratio : m.savedRatio(pid);
-        if (ok2 && ratio > 0) {
+        if (ok2 && !hasPx && ratio > 0) {
           try {
             applyRatio(pid, ratio);
           } catch {
@@ -62903,13 +64144,105 @@ ${h.text}`;
     const m = getPanelManager();
     const pid = panelId(id);
     if (m.isOpen(pid)) return hidePanel(pid);
-    return showPanel(pid, opts);
+    return showPanel(pid, { prefer: "float", ...opts || {} });
+  }
+  function stampDefaultSizes(root) {
+    if (!root) return root;
+    const next = JSON.parse(JSON.stringify(root));
+    walk(next, (n2) => {
+      if (!n2 || n2.type !== "panel") return;
+      const d = PANEL_DEFS.find((x) => x.id === n2.id);
+      if (!d) return;
+      if (d.fixed || d.closable === false) return;
+      n2.pxW = d.dockW || 300;
+      n2.pxH = d.dockH || 220;
+      delete n2.fW;
+      delete n2.fH;
+    });
+    return next;
+  }
+  function measurePanelGeometry() {
+    const out = {};
+    const h = host();
+    const take = (e, kind, id) => {
+      if (!id || out[id]) return;
+      const r = e.getBoundingClientRect();
+      out[id] = {
+        kind,
+        x: Math.round(r.left),
+        y: Math.round(r.top),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        flex: e.style.flex || [e.style.flexGrow, e.style.flexShrink, e.style.flexBasis].filter(Boolean).join(" ") || "",
+        cls: e.className || ""
+      };
+    };
+    if (h) {
+      for (const e of h.querySelectorAll(".k-dock[data-dock-id]")) take(e, "dock", e.dataset.dockId);
+      for (const e of h.querySelectorAll(".k-tab-group[data-tabs-id]")) take(e, "tabs", e.dataset.tabsId);
+      for (const e of h.querySelectorAll(".k-panel[data-panel-id]")) take(e, "panel", e.dataset.panelId);
+    }
+    for (const e of document.querySelectorAll(".k-float-panel[data-panel-id]")) take(e, "float", e.dataset.panelId);
+    return out;
+  }
+  function panelLayoutReport() {
+    const m = getPanelManager();
+    rememberSides();
+    const open = m.openIds();
+    return buildLayoutReport({
+      layout: { ...m.layout(), version: 2 },
+      app: { name: "Killian 2", platform: navigator && navigator.platform || "", project: state.title || "" },
+      viewport: { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1 },
+      defs: PANEL_DEFS.map((d) => ({
+        id: d.id,
+        title: titleOf(d),
+        defaultSide: d.defaultSide || "left",
+        dockW: d.dockW || 300,
+        dockH: d.dockH || 220,
+        fixed: !!d.fixed,
+        closable: d.closable !== false,
+        floatable: d.floatable !== false
+      })),
+      state: {
+        open,
+        hidden: PANEL_DEFS.filter((d) => m.isHidden(d.id)).map((d) => d.id),
+        floating: (m.floats || []).flatMap((f) => f.panel.type === "tabs" ? (f.panel.children || []).map((c) => c.id) : [f.panel.id])
+      },
+      measured: measurePanelGeometry(),
+      homes: Object.fromEntries(homes),
+      workspaces: m.store.workspaces(),
+      gaps: auditPanelGaps()
+    });
+  }
+  async function exportPanelLayout() {
+    const report = panelLayoutReport();
+    const json = reportToJson(report);
+    const name5 = defaultExportName(state.title || "");
+    try {
+      const dest = await kapi.saveAsDialog(name5, "json");
+      if (!dest) return null;
+      await kapi.writeFile(dest, json);
+      log("info", "[\u0E41\u0E1C\u0E07] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27", { dest, warnings: report.diagnostics.warnings.length });
+      setStatus(t("panel.exported", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27: ") + dest);
+      return dest;
+    } catch (e) {
+      try {
+        await kapi.clipboardWrite(json);
+        setStatus(t("panel.exportClip", "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E44\u0E1B\u0E04\u0E25\u0E34\u0E1B\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27"));
+        return "clipboard";
+      } catch {
+      }
+      log("error", "[\u0E41\u0E1C\u0E07] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27", e);
+      setStatus(t("panel.exportFail", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+      return null;
+    }
   }
   function resetPanels() {
     const m = getPanelManager();
+    _stash = null;
     resetPanelHomes();
     m.store.reset();
-    m.store.update(defaultLayout());
+    m.store.update(stampDefaultSizes(defaultLayout()));
     renderPanels(true);
     setStatus(t("panel.layoutReset", "\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27"));
     return true;
@@ -62935,9 +64268,64 @@ ${h.text}`;
     renderPanels(true);
     return node;
   }
+  function workspaceMenuItems() {
+    const items = [{ label: t("panel.wsPick", "\u{1F5C2} \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B \u2014 \u0E2A\u0E25\u0E31\u0E1A\u0E0A\u0E38\u0E14\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07"), disabled: true }];
+    for (const w of listWorkspaces()) {
+      items.push({ label: (w.builtIn ? "\u25FB " : "\u25A3 ") + w.label, click: () => applyWorkspace(w.name) });
+    }
+    items.push("-");
+    items.push({
+      label: t("panel.wsSave", "\uFF0B \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u2026"),
+      click: async () => {
+        const name5 = await ask(
+          t("panel.wsName", "\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B"),
+          { placeholder: t("panel.wsNameHint", "\u0E40\u0E0A\u0E48\u0E19 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E2D\u0E19\u0E40\u0E0A\u0E49\u0E32 / \u0E15\u0E23\u0E27\u0E08\u0E07\u0E32\u0E19"), okLabel: t("common.save", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01") }
+        );
+        if (!name5) return;
+        if (isBuiltinWorkspace(name5)) {
+          setStatus(t("panel.wsBuiltin", "\u0E0A\u0E37\u0E48\u0E2D\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E38\u0E14\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E23\u0E39\u0E1B \u0E15\u0E31\u0E49\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49"));
+          return;
+        }
+        if (saveWorkspace(name5)) setStatus(t("panel.wsSaved", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u0E41\u0E25\u0E49\u0E27: ") + name5);
+      }
+    });
+    const mine = listWorkspaces().filter((w) => !w.builtIn);
+    if (mine.length) {
+      items.push({
+        label: t("panel.wsDelete", "\u{1F5D1} \u0E25\u0E1A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u2026"),
+        click: () => {
+          const r = $("#tb-panels") ? $("#tb-panels").getBoundingClientRect() : { left: 40, bottom: 60 };
+          popupMenu(r.left, r.bottom + 4, mine.map((w) => ({
+            label: "\u{1F5D1} " + w.label,
+            click: async () => {
+              if (!await confirmBox(t("panel.wsDelAsk", "\u0E25\u0E1A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B \u201C") + w.label + "\u201D ?")) return;
+              deleteWorkspace(w.name);
+              setStatus(t("panel.wsDeleted", "\u0E25\u0E1A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u0E41\u0E25\u0E49\u0E27: ") + w.label);
+            }
+          })));
+        }
+      });
+    }
+    return items;
+  }
+  function workspaceMenu(x, y) {
+    const btn = $("#tb-panels");
+    const r = btn ? btn.getBoundingClientRect() : { left: 40, bottom: 60 };
+    popupMenu(x ?? r.left, y ?? r.bottom + 4, workspaceMenuItems());
+  }
   async function togglePanelDialog() {
     const items = panelMenuItems();
     items.push("-");
+    items.push({
+      label: panelsHidden() ? t("panel.spaceShow", "\u2B12 \u0E04\u0E37\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E27\u0E49") : t("panel.spaceHideAll", "\u2B12 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E15\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19)"),
+      click: () => toggleSpace("all")
+    });
+    items.push({ label: t("panel.spaceHideRight", "\u2B13 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E02\u0E27\u0E32"), click: () => toggleSpace("right") });
+    items.push({ label: t("panel.spaceHideLeft", "\u25E8 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22"), click: () => toggleSpace("left") });
+    items.push("-");
+    items.push({ label: t("panel.wsMenu", "\u{1F5C2} \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u2026"), click: () => workspaceMenu() });
+    items.push("-");
+    items.push({ label: t("panel.exportLayout", "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C JSON\u2026"), click: () => exportPanelLayout() });
     items.push({ label: t("panel.resetAll", "\u27F2 \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14"), click: () => resetPanels() });
     try {
       const btn = $("#tb-panels");
@@ -62946,11 +64334,11 @@ ${h.text}`;
       popupMenu(r.left, r.bottom + 4, items);
     } catch {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", t("panel.manage", "\u{1F4D0} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E07")));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", t("panel.manage", "\u{1F4D0} \u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E07")));
       for (const it of items) {
         if (it === "-") {
-          box.append(el("hr"));
+          box2.append(el("hr"));
           continue;
         }
         const row2 = el("div", "k-menu-item", it.label);
@@ -62958,14 +64346,14 @@ ${h.text}`;
           it.click();
           ov.remove();
         };
-        box.append(row2);
+        box2.append(row2);
       }
       const closeBtn = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
       closeBtn.onclick = () => ov.remove();
       const btns = el("div", "k-dlg-btns");
       btns.append(closeBtn);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       ov.onclick = (e) => {
         if (e.target === ov) ov.remove();
@@ -62975,6 +64363,7 @@ ${h.text}`;
   function resetPanelSystem() {
     lastSig = "";
     resetPanelHomes();
+    resetScrollMemo();
   }
   function resetPanelHomes() {
     homes.clear();
@@ -62983,7 +64372,7 @@ ${h.text}`;
     } catch {
     }
   }
-  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, pm, started, lastSig, adopted, extras, meta, _fixingDocs, SCROLLABLES, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
+  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, BUILTIN_WORKSPACES, _stash, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, GAP_TOL, _gapLogged, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
   var init_panel_ui = __esm({
     "src/panels/panel-ui.js"() {
       init_core();
@@ -62991,6 +64380,7 @@ ${h.text}`;
       init_panel_layout();
       init_panel_store();
       init_panel_renderer();
+      init_panel_export();
       HOST_ID = "app-root";
       SRC_ID = "k-panel-src";
       ALIAS = {
@@ -63067,6 +64457,7 @@ ${h.text}`;
         },
         {
           id: "log",
+          dockW: 420,
           title: "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01",
           icon: "history",
           adopt: "#log-panel",
@@ -63078,6 +64469,7 @@ ${h.text}`;
         },
         {
           id: "search",
+          dockW: 360,
           title: "\u0E04\u0E49\u0E19\u0E2B\u0E32",
           icon: "search",
           adopt: "#search-panel",
@@ -63112,6 +64504,7 @@ ${h.text}`;
         // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
         {
           id: "dashboard",
+          dockW: 640,
           title: "\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14",
           icon: "grid",
           adopt: "#dash-panel",
@@ -63123,6 +64516,7 @@ ${h.text}`;
         },
         {
           id: "kanban",
+          dockW: 640,
           title: "Kanban",
           icon: "grid",
           adopt: "#kanban-panel",
@@ -63134,6 +64528,7 @@ ${h.text}`;
         },
         {
           id: "books",
+          dockW: 640,
           title: "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E21",
           icon: "book-content",
           adopt: "#books-panel",
@@ -63145,6 +64540,7 @@ ${h.text}`;
         },
         {
           id: "timeline",
+          dockW: 640,
           title: "\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32",
           icon: "history",
           adopt: "#tl-panel",
@@ -63156,6 +64552,7 @@ ${h.text}`;
         },
         {
           id: "maps",
+          dockW: 640,
           title: "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
           icon: "layout",
           adopt: "#maps-panel",
@@ -63168,6 +64565,7 @@ ${h.text}`;
         // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
         {
           id: "gallery",
+          dockW: 640,
           title: "\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E",
           icon: "image",
           adopt: "#gal-panel",
@@ -63180,6 +64578,7 @@ ${h.text}`;
         // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
         {
           id: "gallery-board",
+          dockW: 640,
           title: "\u{1F3A8} \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C",
           icon: "layout",
           adopt: "#galboard-panel",
@@ -63192,6 +64591,7 @@ ${h.text}`;
         // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
         {
           id: "ai-analyzer",
+          dockW: 640,
           title: "\u{1F9E0} AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C",
           icon: "brain",
           adopt: "#ai-analyzer-panel",
@@ -63204,6 +64604,7 @@ ${h.text}`;
         // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
         {
           id: "ai-chat",
+          dockW: 640,
           title: "\u{1F4AC} AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19",
           icon: "chat",
           adopt: "#ai-chat-panel",
@@ -63216,6 +64617,7 @@ ${h.text}`;
         // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
         {
           id: "network",
+          dockW: 640,
           title: "Story Network",
           icon: "grid",
           adopt: "#net-panel",
@@ -63227,6 +64629,7 @@ ${h.text}`;
         },
         {
           id: "planner",
+          dockW: 640,
           title: "Planner",
           icon: "grid",
           adopt: "#planner-panel",
@@ -63249,6 +64652,7 @@ ${h.text}`;
         },
         {
           id: "floorplan",
+          dockW: 640,
           title: "\u{1F4CD} \u0E1C\u0E31\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48",
           icon: "map",
           adopt: "#floor-panel",
@@ -63261,6 +64665,7 @@ ${h.text}`;
         // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
         {
           id: "branch",
+          dockW: 640,
           title: "\u{1F33F} \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22",
           icon: "grid",
           adopt: "#branch-panel",
@@ -63272,6 +64677,7 @@ ${h.text}`;
         },
         {
           id: "player",
+          dockW: 440,
           title: "\u25B6\uFE0F \u0E17\u0E14\u0E25\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E19",
           icon: "file",
           adopt: "#player-panel",
@@ -63288,6 +64694,45 @@ ${h.text}`;
       adopted = /* @__PURE__ */ new Map();
       extras = /* @__PURE__ */ new Map();
       meta = /* @__PURE__ */ new Map();
+      wsRow = (left, center, right, sizes) => dock("row", right ? [left, center, right] : [left, center], sizes);
+      wsFrame = (mid) => dock("col", [
+        panel("toolbar", "\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D"),
+        mid,
+        panel("statusbar", "\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30")
+      ], [0, 1, 0]);
+      BUILTIN_WORKSPACES = [
+        {
+          id: "essentials",
+          label: "Essentials (\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19)",
+          build: () => defaultLayout()
+        },
+        {
+          id: "writing",
+          label: "\u0E40\u0E02\u0E35\u0E22\u0E19 \u2014 \u0E08\u0E2D\u0E42\u0E25\u0E48\u0E07 \u0E21\u0E35\u0E41\u0E04\u0E48\u0E2A\u0E32\u0E23\u0E1A\u0E31\u0E0D",
+          build: () => wsFrame(wsRow(panel("tree", "\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"), panel("docs", "\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23"), null, [0.18, 0.82]))
+        },
+        {
+          id: "planning",
+          label: "\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19 \u2014 \u0E42\u0E04\u0E23\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 + \u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01",
+          build: () => wsFrame(wsRow(
+            tabs([panel("tree", "\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"), panel("kanban", "Kanban"), panel("timeline", "\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32")], 0),
+            panel("docs", "\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23"),
+            panel("props", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34"),
+            [0.26, 0.52, 0.22]
+          ))
+        },
+        {
+          id: "review",
+          label: "\u0E15\u0E23\u0E27\u0E08\u0E41\u0E01\u0E49 \u2014 \u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C + \u0E42\u0E19\u0E49\u0E15",
+          build: () => wsFrame(wsRow(
+            tabs([panel("tree", "\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"), panel("outline", "Navigation")], 1),
+            panel("docs", "\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23"),
+            tabs([panel("comments", "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C"), panel("notes", "\u0E2A\u0E21\u0E38\u0E14\u0E42\u0E19\u0E49\u0E15\u0E14\u0E48\u0E27\u0E19")], 0),
+            [0.2, 0.56, 0.24]
+          ))
+        }
+      ];
+      _stash = null;
       _fixingDocs = false;
       SCROLLABLES = [
         ".pane",
@@ -63303,6 +64748,10 @@ ${h.text}`;
         ".pane-content",
         ".home-dlg-scroll"
       ].join(", ");
+      SCROLL_ANCHOR = ".k-float-panel[data-panel-id], .k-panel[data-panel-id]";
+      scrollMemo = /* @__PURE__ */ new Map();
+      GAP_TOL = 4;
+      _gapLogged = /* @__PURE__ */ new Set();
       _rememberJob = null;
       _onLayoutChange = null;
       lastSide = /* @__PURE__ */ new Map();
@@ -63651,17 +65100,17 @@ ${h.text}`;
   }
   async function quickNote(sceneId, sceneTitle) {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", "\u{1F4DD} \u0E42\u0E19\u0E49\u0E15\u0E14\u0E48\u0E27\u0E19 \u2014 " + (sceneTitle || "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u{1F4DD} \u0E42\u0E19\u0E49\u0E15\u0E14\u0E48\u0E27\u0E19 \u2014 " + (sceneTitle || "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")));
     const ta = el("textarea", "k-dlg-input");
     ta.style.cssText = "width:100%;min-height:100px;resize:vertical;font-family:inherit";
-    box.append(ta);
+    box2.append(ta);
     const futRow = el("label", "fn-future-row");
     const fut = el("input");
     fut.type = "checkbox";
     fut.className = "wiki-check";
     futRow.append(fut, el("span", null, " \u0E44\u0E27\u0E49\u0E17\u0E33\u0E20\u0E32\u0E22\u0E2B\u0E25\u0E31\u0E07 (\u0E41\u0E2A\u0E14\u0E07\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32)"));
-    box.append(futRow);
+    box2.append(futRow);
     const notes = [...getSessionNotes()].reverse().slice(0, 5);
     if (notes.length) {
       const recent = el("div");
@@ -63676,7 +65125,7 @@ ${h.text}`;
         };
         recent.append(r);
       }
-      box.append(recent);
+      box2.append(recent);
     }
     const btns = el("div", "k-dlg-btns");
     const saveB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
@@ -63699,8 +65148,8 @@ ${h.text}`;
     const closeB = el("button", null, "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(saveB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ta.focus();
     ov.onclick = (e) => {
@@ -63710,8 +65159,8 @@ ${h.text}`;
   async function showAllNotes() {
     const notes = [...getSessionNotes()].reverse();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", "\u{1F4DD} \u0E42\u0E19\u0E49\u0E15\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (" + notes.length + ")"));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u{1F4DD} \u0E42\u0E19\u0E49\u0E15\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (" + notes.length + ")"));
     const list = el("div", "k-pick-list");
     list.style.maxHeight = "50vh";
     if (!notes.length) {
@@ -63736,7 +65185,7 @@ ${h.text}`;
         list.append(row2);
       }
     }
-    box.append(list);
+    box2.append(list);
     const btns = el("div", "k-dlg-btns");
     const clearB = el("button", "k-danger", "\u0E25\u0E49\u0E32\u0E07");
     clearB.onclick = async () => {
@@ -63749,8 +65198,8 @@ ${h.text}`;
     const closeB = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(clearB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -64053,13 +65502,13 @@ ${h.text}`;
     {
       const hist = getWordHistory();
       const streak = calcStreak(hist);
-      const box = el("div", "dash-streak");
+      const box2 = el("div", "dash-streak");
       const head2 = el(
         "div",
         "dash-goal-label",
         streak > 0 ? `\u{1F525} \u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19 ${streak} \u0E27\u0E31\u0E19` : "\u{1F525} \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E19\u0E31\u0E1A\u0E27\u0E31\u0E19\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19"
       );
-      box.append(head2);
+      box2.append(head2);
       if (hist.length >= 2) {
         const last2 = hist.slice(-15);
         const days = [];
@@ -64075,12 +65524,12 @@ ${h.text}`;
           bar.title = `${d.date}: +${d.delta.toLocaleString()} \u0E04\u0E33`;
           chart.append(bar);
         }
-        box.append(chart);
-        box.append(el("div", "dim", `\u0E04\u0E33\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E48\u0E2D\u0E27\u0E31\u0E19 \xB7 ${days.length} \u0E27\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E2A\u0E38\u0E14`));
+        box2.append(chart);
+        box2.append(el("div", "dim", `\u0E04\u0E33\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E48\u0E2D\u0E27\u0E31\u0E19 \xB7 ${days.length} \u0E27\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E2A\u0E38\u0E14`));
       } else {
-        box.append(el("div", "dim", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E31\u0E01 2 \u0E27\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E33\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19\u0E08\u0E30\u0E02\u0E36\u0E49\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48"));
+        box2.append(el("div", "dim", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E31\u0E01 2 \u0E27\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E33\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19\u0E08\u0E30\u0E02\u0E36\u0E49\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48"));
       }
-      wrap2.append(box);
+      wrap2.append(box2);
     }
     const statBars = (rows, total, palette) => {
       const box2 = el("div", "dash-stat");
@@ -64183,8 +65632,8 @@ ${h.text}`;
     } catch (e) {
     }
     {
-      const box = el("div", "dash-choices");
-      renderChoicePanel(box, {
+      const box2 = el("div", "dash-choices");
+      renderChoicePanel(box2, {
         limit: 6,
         onOpenScene: async (sceneId) => {
           const hit = await findScenePath(state.root, sceneId);
@@ -64193,8 +65642,8 @@ ${h.text}`;
       });
       const openAll = el("button", "k-tpl-add", "\u0E14\u0E39\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 / \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u2026");
       openAll.onclick = () => showPlayerHistory();
-      box.append(openAll);
-      wrap2.append(box);
+      box2.append(openAll);
+      wrap2.append(box2);
     }
     const favs = sceneRows.filter((r) => r.flag);
     if (favs.length) {
@@ -64360,8 +65809,8 @@ ${h.text}`;
       spPageGap: parseInt(s.spPageGap, 10) || 28
     };
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-settings");
-    box.innerHTML = `
+    const box2 = el("div", "k-dialog k-settings");
+    box2.innerHTML = `
     <div class="k-dlg-title">${t("settings.title")} <span style="font-weight:normal;font-size:0.7em;color:#666">// [alpha.60 \u0E02\u0E49\u0E2D 94] \u{1F310} = \u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C) \xB7 \u{1F4C1} = \u0E23\u0E30\u0E14\u0E31\u0E1A\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49)</span></div>
     <div class="k-set-tabs">
       <div class="k-set-tab on" data-p="gen">\u{1F310} ${t("settings.general")}</div>
@@ -64583,9 +66032,9 @@ ${h.text}`;
       <div class="k-row"><label>\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u2194\u0E09\u0E32\u0E01</label><input type="color" id="st-ne-es" value="#d9955f"></div>
     </div>
     <div class="k-dlg-btns"><button class="k-cancel">${t("dialogs.cancel")}</button><button class="k-ok">${t("dialogs.save")}</button></div>`;
-    ov.appendChild(box);
+    ov.appendChild(box2);
     document.body.appendChild(ov);
-    const q = (id) => box.querySelector(id);
+    const q = (id) => box2.querySelector(id);
     const applySpFont = (v2) => {
       if (v2) document.documentElement.style.setProperty("--sp-font", v2);
       else document.documentElement.style.removeProperty("--sp-font");
@@ -65529,10 +66978,10 @@ ${h.text}`;
     }
     renderShortcuts();
     const gotoTab = (name5) => {
-      box.querySelectorAll(".k-set-tab").forEach((x) => x.classList.toggle("on", x.dataset.p === name5));
-      box.querySelectorAll(".k-set-page").forEach((p) => p.classList.toggle("on", p.dataset.p === name5));
+      box2.querySelectorAll(".k-set-tab").forEach((x) => x.classList.toggle("on", x.dataset.p === name5));
+      box2.querySelectorAll(".k-set-page").forEach((p) => p.classList.toggle("on", p.dataset.p === name5));
     };
-    box.querySelectorAll(".k-set-tab").forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
+    box2.querySelectorAll(".k-set-tab").forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
     if (openTab) gotoTab(openTab);
     q("#st-font").oninput = () => applyZoomVars(parseInt(q("#st-font").value, 10) || 0);
     const close2 = () => ov.remove();
@@ -65563,11 +67012,11 @@ ${h.text}`;
       const n2 = parseInt(q(id).value, 10);
       return Number.isFinite(n2) ? Math.max(0, n2) : d;
     };
-    box.querySelector(".k-cancel").onclick = cancel;
+    box2.querySelector(".k-cancel").onclick = cancel;
     ov.onclick = (e) => {
       if (e.target === ov) cancel();
     };
-    box.querySelector(".k-ok").onclick = async () => {
+    box2.querySelector(".k-ok").onclick = async () => {
       m.title = q("#st-title").value.trim() || m.title;
       m.author = q("#st-author").value.trim();
       s.autoSaveMinutes = num4("#st-auto", 5);
@@ -65705,7 +67154,7 @@ ${h.text}`;
       setStatus(t("status.settingsSaved"));
       close2();
     };
-    box.addEventListener("keydown", (e) => {
+    box2.addEventListener("keydown", (e) => {
       if (e.key === "Escape") cancel();
     });
     q("#st-title").focus();
@@ -65717,19 +67166,19 @@ ${h.text}`;
   async function fileVersionDialog(file, titleText, { onRestored = null } = {}) {
     const isJson = /\.json$/i.test(file);
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-ver");
-    box.append(el("div", "k-dlg-title", t("panel.versionHistoryTitle") + titleText));
+    const box2 = el("div", "k-dialog k-ver");
+    box2.append(el("div", "k-dlg-title", t("panel.versionHistoryTitle") + titleText));
     const body = el("div", "k-ver-body");
     const listCol = el("div", "k-ver-list");
     const prev = el("div", "k-ver-prev");
     prev.textContent = t("panel.chooseVersion");
     body.append(listCol, prev);
-    box.append(body);
+    box2.append(body);
     const foot = el("div", "k-dlg-btns");
     const closeB = el("button", null, t("dialogs.close"));
     foot.append(closeB);
-    box.append(foot);
-    ov.append(box);
+    box2.append(foot);
+    ov.append(box2);
     document.body.append(ov);
     closeB.onclick = () => ov.remove();
     ov.onclick = (e) => {
@@ -65800,15 +67249,15 @@ ${h.text}`;
   async function showChangelog() {
     const md = await fetch("CHANGELOG.md").then((r) => r.text()).catch(() => t("panel.changelogNotFound"));
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide");
+    const box2 = el("div", "k-dialog k-wide");
     const ttl = el("div", "k-dlg-title", t("panel.changelogTitle"));
     const body = el("pre", "k-changelog", md);
     const btns = el("div", "k-dlg-btns");
     const ok2 = el("button", "k-ok", t("dialogs.close"));
     ok2.onclick = () => ov.remove();
     btns.append(ok2);
-    box.append(ttl, body, btns);
-    ov.append(box);
+    box2.append(ttl, body, btns);
+    ov.append(box2);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
@@ -65817,7 +67266,7 @@ ${h.text}`;
   async function showLog() {
     log("info", "\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E14\u0E39 log");
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide");
+    const box2 = el("div", "k-dialog k-wide");
     const ttl = el("div", "k-dlg-title", t("panel.logTitle"));
     const body = el("pre", "k-changelog k-logview");
     const load = async () => {
@@ -65844,8 +67293,8 @@ ${h.text}`;
     const ok2 = el("button", "k-ok", t("dialogs.close"));
     ok2.onclick = () => ov.remove();
     btns.append(refresh, reveal, copy2, ok2);
-    box.append(ttl, body, btns);
-    ov.append(box);
+    box2.append(ttl, body, btns);
+    ov.append(box2);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
@@ -66029,17 +67478,17 @@ ${h.text}`;
         const curId = entity.templateId || "";
         const pick2 = await new Promise((resolve) => {
           const ov = el("div", "k-overlay");
-          const box = el("div", "k-dialog");
+          const box2 = el("div", "k-dialog");
           const opts = tps.map(
             (t3) => `<option value="${t3.id}"${t3.id === curId ? " selected" : ""}>${t3.name || t3.id}${t3.id === curId ? " (\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19)" : ""}</option>`
           ).join("");
-          box.innerHTML = `<div class="k-dlg-title">\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15</div>
+          box2.innerHTML = `<div class="k-dlg-title">\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15</div>
           <div class="k-hint" style="margin:8px 0">\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E40\u0E14\u0E34\u0E21\u0E08\u0E30\u0E16\u0E39\u0E01\u0E23\u0E31\u0E01\u0E29\u0E32\u0E44\u0E27\u0E49 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E02\u0E32\u0E14\u0E08\u0E32\u0E01\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E43\u0E2B\u0E21\u0E48</div>
           <select id="tp-select" class="k-dlg-select" style="width:100%">${opts}</select>
           <div class="k-dlg-btns"><button class="k-cancel">\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01</button><button class="k-ok">\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15</button></div>`;
-          ov.appendChild(box);
+          ov.appendChild(box2);
           document.body.appendChild(ov);
-          box.querySelector(".k-cancel").onclick = () => {
+          box2.querySelector(".k-cancel").onclick = () => {
             ov.remove();
             resolve(null);
           };
@@ -66049,12 +67498,12 @@ ${h.text}`;
               resolve(null);
             }
           };
-          box.querySelector(".k-ok").onclick = () => {
-            const v2 = box.querySelector("#tp-select").value;
+          box2.querySelector(".k-ok").onclick = () => {
+            const v2 = box2.querySelector("#tp-select").value;
             ov.remove();
             resolve(v2);
           };
-          box.addEventListener("keydown", (e) => {
+          box2.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
               ov.remove();
               resolve(null);
@@ -66558,15 +68007,15 @@ ${h.text}`;
       return false;
     }
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-section-props");
-    box.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E40\u0E25\u0E48\u0E21 \u2014 " + (d.title || sec?.title || "")));
+    const box2 = el("div", "k-dialog k-section-props");
+    box2.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E40\u0E25\u0E48\u0E21 \u2014 " + (d.title || sec?.title || "")));
     const mk = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
       i5.value = val == null ? "" : String(val);
       r.append(i5);
-      box.append(r);
+      box2.append(r);
       return { row: r, input: i5 };
     };
     const iTitle = mk("\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21", d.title || sec?.title || "").input;
@@ -66580,7 +68029,7 @@ ${h.text}`;
       iStatus.append(o);
     }
     rStatus.append(iStatus);
-    box.append(rStatus);
+    box2.append(rStatus);
     const iBlurb = mk("\u0E04\u0E33\u0E42\u0E1B\u0E23\u0E22 (Blurb)", d.blurb || "", "textarea").input;
     iBlurb.placeholder = "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E49\u0E19 \u0E46 \u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E41\u0E19\u0E30\u0E19\u0E33\u0E40\u0E25\u0E48\u0E21\u0E19\u0E35\u0E49";
     const iOrder = mk("\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E25\u0E48\u0E21", d.order || "").input;
@@ -66594,7 +68043,7 @@ ${h.text}`;
     const clrBtn = el("button", null, "\u2715 \u0E40\u0E2D\u0E32\u0E1B\u0E01\u0E2D\u0E2D\u0E01");
     clrBtn.type = "button";
     coverRow.append(coverName, pickBtn, clrBtn);
-    box.append(coverRow);
+    box2.append(coverRow);
     let cover = d.cover || "";
     pickBtn.onclick = async () => {
       const { pickImage: pickImage2 } = await Promise.resolve().then(() => (init_gallery(), gallery_exports));
@@ -66612,8 +68061,8 @@ ${h.text}`;
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       const close2 = (v2) => {
         ov.remove();
@@ -66623,7 +68072,7 @@ ${h.text}`;
       ov.onclick = (e) => {
         if (e.target === ov) close2(false);
       };
-      box.addEventListener("keydown", (e) => {
+      box2.addEventListener("keydown", (e) => {
         if (e.key === "Escape") close2(false);
       });
       okB.onclick = async () => {
@@ -66846,15 +68295,15 @@ ${h.text}`;
       return false;
     }
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-chapter-props");
-    box.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E1A\u0E17 \u2014 " + (cur.title || "")));
+    const box2 = el("div", "k-dialog k-chapter-props");
+    box2.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E1A\u0E17 \u2014 " + (cur.title || "")));
     const mk = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
       i5.value = val == null ? "" : String(val);
       r.append(i5);
-      box.append(r);
+      box2.append(r);
       return i5;
     };
     const mkSel = (label, options, curVal) => {
@@ -66868,7 +68317,7 @@ ${h.text}`;
         s.append(o);
       }
       r.append(s);
-      box.append(r);
+      box2.append(r);
       return s;
     };
     const mkChk = (label, checked) => {
@@ -66878,7 +68327,7 @@ ${h.text}`;
       c.type = "checkbox";
       c.checked = !!checked;
       r.append(c);
-      box.append(r);
+      box2.append(r);
       return c;
     };
     const iTitle = mk("\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17", cur.title || "");
@@ -66899,8 +68348,8 @@ ${h.text}`;
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       const close2 = (v2) => {
         ov.remove();
@@ -66910,7 +68359,7 @@ ${h.text}`;
       ov.onclick = (e) => {
         if (e.target === ov) close2(false);
       };
-      box.addEventListener("keydown", (e) => {
+      box2.addEventListener("keydown", (e) => {
         if (e.key === "Escape") close2(false);
       });
       okB.onclick = async () => {
@@ -68050,7 +69499,7 @@ ${h.text}`;
   async function showHomeDialog() {
     const ov = el("div", "k-overlay");
     ov.style.zIndex = "90";
-    const box = el("div", "k-dialog k-home-dlg");
+    const box2 = el("div", "k-dialog k-home-dlg");
     const head2 = el("div", "home-head");
     head2.append(el("h2", "home-title", "Killian 2"));
     const grid = el("div", "home-grid");
@@ -68058,8 +69507,8 @@ ${h.text}`;
     scroll.append(grid);
     const { actions } = buildHomeActions({ onClose: () => ov.remove(), grid });
     actions.classList.add("home-actions-bottom");
-    box.append(head2, scroll, actions);
-    ov.append(box);
+    box2.append(head2, scroll, actions);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -68071,7 +69520,7 @@ ${h.text}`;
       }
     });
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
-    box.style.setProperty("--home-thumb", thumb + "px");
+    box2.style.setProperty("--home-thumb", thumb + "px");
     await loadPanelProjects(grid, () => ov.remove());
     return ov;
   }
@@ -70587,7 +72036,7 @@ ${h.text}`;
     }
     const ov = el("div", "k-overlay");
     ov.style.cssText = "z-index:100;background:rgba(0,0,0,.45)";
-    const box = el("div", "k-qo");
+    const box2 = el("div", "k-qo");
     const input = el("input", "k-qo-input");
     input.placeholder = "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u2026";
     const list = el("div", "k-qo-list");
@@ -70600,8 +72049,8 @@ ${h.text}`;
     reBtn.title = "\u0E2A\u0E41\u0E01\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48";
     reBtn.style.cssText = "border:none;background:none;cursor:pointer;font-size:13px";
     foot.append(hint, count, reBtn);
-    box.append(input, list, foot);
-    ov.append(box);
+    box2.append(input, list, foot);
+    ov.append(box2);
     document.body.append(ov);
     let allFiles = _cacheRoot === state.root ? _cacheFiles.slice() : [];
     let fuse = allFiles.length ? mkFuse(allFiles) : null;
@@ -71322,13 +72771,13 @@ ${BLOCK_END}
       ta.rows = 2;
       const ok2 = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       const no = el("button", null, t("cmt.cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01"));
-      const box = el("div", "k-cm-editbox");
-      box.append(ta, ok2, no);
-      body.after(box);
+      const box2 = el("div", "k-cm-editbox");
+      box2.append(ta, ok2, no);
+      body.after(box2);
       body.hidden = true;
       ta.focus();
       const close2 = () => {
-        box.remove();
+        box2.remove();
         body.hidden = false;
       };
       no.onclick = close2;
@@ -71350,15 +72799,15 @@ ${BLOCK_END}
       ta.rows = 2;
       const ok2 = el("button", "k-ok", "\u0E15\u0E2D\u0E1A");
       const no = el("button", null, t("cmt.cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01"));
-      const box = el("div", "k-cm-editbox");
-      box.append(ta, ok2, no);
-      card.append(box);
+      const box2 = el("div", "k-cm-editbox");
+      box2.append(ta, ok2, no);
+      card.append(box2);
       ta.focus();
-      no.onclick = () => box.remove();
+      no.onclick = () => box2.remove();
       const send2 = async () => {
         const v2 = ta.value.trim();
         if (!v2) {
-          box.remove();
+          box2.remove();
           return;
         }
         await store.reply(file, c.id, v2);
@@ -71558,12 +73007,12 @@ ${body}<p style="color:#999;font-size:12px;margin-top:40px">\u0E2A\u0E48\u0E07\u
     return new Promise((resolve) => {
       const o = getBlogOptions();
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog k-blog-opts");
-      box.append(el("div", "k-dlg-title", "\u{1F310} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 HTML \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01"));
+      const box2 = el("div", "k-dialog k-blog-opts");
+      box2.append(el("div", "k-dlg-title", "\u{1F310} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 HTML \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01"));
       const mkRow = (label) => {
         const r = el("div", "wiki-row");
         r.append(el("label", null, label));
-        box.append(r);
+        box2.append(r);
         return r;
       };
       const themeRow = mkRow("\u0E18\u0E35\u0E21");
@@ -71584,7 +73033,7 @@ ${body}<p style="color:#999;font-size:12px;margin-top:40px">\u0E2A\u0E48\u0E07\u
         if (hint) {
           const h = el("div", "dim", hint);
           h.style.cssText = "font-size:11px;margin:-4px 0 6px";
-          box.append(h);
+          box2.append(h);
         }
         return c;
       };
@@ -71599,8 +73048,8 @@ ${body}<p style="color:#999;font-size:12px;margin-top:40px">\u0E2A\u0E48\u0E07\u
       const cB = el("button", "k-cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u2026");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       const close2 = (val) => {
         ov.remove();
@@ -71724,9 +73173,9 @@ img{max-width:100%}` }
     setStatus("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E07: " + word);
     const ov = el("div", "k-overlay");
     ov.style.cssText = "background:transparent";
-    const box = el("div", "k-dialog k-thes");
-    box.style.cssText = `position:fixed;left:${x}px;top:${y}px;min-width:180px;max-width:280px`;
-    box.append(el("div", "k-dlg-title", "\u{1F4D6} " + word));
+    const box2 = el("div", "k-dialog k-thes");
+    box2.style.cssText = `position:fixed;left:${x}px;top:${y}px;min-width:180px;max-width:280px`;
+    box2.append(el("div", "k-dlg-title", "\u{1F4D6} " + word));
     const replaceWith = async (w) => {
       ov.remove();
       const t3 = state.active;
@@ -71743,7 +73192,7 @@ img{max-width:100%}` }
       list.style.maxHeight = "120px";
       list.append(el("div", "dim", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u2026"));
       sec.append(list);
-      box.append(sec);
+      box2.append(sec);
       const words = await fetchThesaurus(word, relCode);
       list.innerHTML = "";
       if (!words.length) {
@@ -71756,7 +73205,7 @@ img{max-width:100%}` }
         list.append(d);
       }
     };
-    ov.append(box);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -71767,7 +73216,7 @@ img{max-width:100%}` }
     cB.onclick = () => ov.remove();
     const btns = el("div", "k-dlg-btns");
     btns.append(cB);
-    box.append(btns);
+    box2.append(btns);
     return ov;
   }
   function thesaurusMenuItems(x, y) {
@@ -71856,8 +73305,8 @@ img{max-width:100%}` }
   async function showTemplateDialog() {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E08\u0E32\u0E01 template"));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E08\u0E32\u0E01 template"));
       const grid = el("div");
       grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0";
       for (const [key2, tpl] of Object.entries(TEMPLATES)) {
@@ -71876,7 +73325,7 @@ img{max-width:100%}` }
         card.onmouseleave = () => card.style.borderColor = "";
         grid.append(card);
       }
-      box.append(grid);
+      box2.append(grid);
       const btns = el("div", "k-dlg-btns");
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       cB.onclick = () => {
@@ -71884,8 +73333,8 @@ img{max-width:100%}` }
         resolve(null);
       };
       btns.append(cB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       ov.onclick = (e) => {
         if (e.target === ov) {
@@ -72941,36 +74390,36 @@ img{max-width:100%}` }
     return n2;
   }
   function foldBlock(label, text, cls = "") {
-    const box = el("details", "ai-fold " + cls);
+    const box2 = el("details", "ai-fold " + cls);
     const sum2 = el("summary", "ai-fold-sum dim", label);
     const pre = el("pre", "ai-fold-pre", String(text || ""));
-    box.append(sum2, pre);
-    return box;
+    box2.append(sum2, pre);
+    return box2;
   }
   function callsNode(calls, results, view) {
-    const box = el("div", "ai-calls");
-    box.append(el("div", "ai-calls-head dim", "\u26A1 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E25\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E33 (" + calls.length + ")"));
+    const box2 = el("div", "ai-calls");
+    box2.append(el("div", "ai-calls-head dim", "\u26A1 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E25\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E33 (" + calls.length + ")"));
     calls.forEach((c, i5) => {
       const r = (results || [])[i5];
       const row2 = el("div", "ai-call" + (r ? r.ok ? " ok" : " bad" : ""));
       row2.append(el("span", "ai-call-icon", r ? r.ok ? "\u2713" : "\u2715" : "\xB7"));
       row2.append(el("span", "ai-call-desc", describeCall(c)));
       if (r && (r.message || r.error)) row2.append(el("span", "ai-call-msg dim", r.error || r.message));
-      box.append(row2);
+      box2.append(row2);
       if (view === "verbose") {
-        box.append(foldBlock("JSON \u0E17\u0E35\u0E48\u0E42\u0E21\u0E40\u0E14\u0E25\u0E2A\u0E31\u0E48\u0E07", JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
+        box2.append(foldBlock("JSON \u0E17\u0E35\u0E48\u0E42\u0E21\u0E40\u0E14\u0E25\u0E2A\u0E31\u0E48\u0E07", JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
         if (r && r.data !== void 0 && r.data !== null) {
-          box.append(foldBlock(
+          box2.append(foldBlock(
             "\u0E1C\u0E25\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E43\u0E2B\u0E49\u0E42\u0E21\u0E40\u0E14\u0E25",
             typeof r.data === "string" ? r.data : JSON.stringify(r.data, null, 2)
           ));
         }
       }
     });
-    return box;
+    return box2;
   }
   function composer(s, body) {
-    const box = el("div", "ai-chat-composer");
+    const box2 = el("div", "ai-chat-composer");
     const ctrls = el("div", "ai-chat-ctrls");
     const fileBtn = el("button", "ai-chat-file", "\u{1F4CE}");
     fileBtn.title = "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E02\u0E2D\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E19\u0E35\u0E49";
@@ -72993,7 +74442,7 @@ img{max-width:100%}` }
     scopeSel.value = s.scope || DEFAULT_SCOPE;
     scopeSel.title = "\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07 \u2014 AI \u0E08\u0E30\u0E40\u0E2B\u0E47\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E41\u0E04\u0E48\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E19\u0E35\u0E49";
     ctrls.append(fileBtn, modeSel, modelSel, scopeSel);
-    box.append(ctrls);
+    box2.append(ctrls);
     fillModelSelect(modelSel, s);
     const filesRow = el("div", "ai-chat-files dim");
     const drawFiles = () => {
@@ -73012,7 +74461,7 @@ img{max-width:100%}` }
       }
     };
     drawFiles();
-    box.append(filesRow);
+    box2.append(filesRow);
     const inputRow = el("div", "ai-chat-inputrow");
     const ta = el("textarea", "ai-chat-input");
     ta.rows = 3;
@@ -73021,7 +74470,7 @@ img{max-width:100%}` }
     const sendBtn = el("button", "k-ok ai-chat-send", "\u0E2A\u0E48\u0E07");
     sendBtn.title = "\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E15\u0E31\u0E49\u0E07\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48 \u0E44\u0E1F\u0E25\u0E4C \u2192 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI";
     inputRow.append(ta, sendBtn);
-    box.append(inputRow);
+    box2.append(inputRow);
     modeSel.onchange = async () => {
       s.mode = modeSel.value;
       await saveSession(s);
@@ -73054,7 +74503,7 @@ img{max-width:100%}` }
       doSend();
     };
     setTimeout(() => ta.focus(), 0);
-    return box;
+    return box2;
   }
   function fillModelSelect(sel, s) {
     sel.innerHTML = "";
@@ -73502,8 +74951,8 @@ img{max-width:100%}` }
   }
   function busyBox(title2) {
     const ov = el("div", "k-overlay k-busy");
-    const box = el("div", "k-dialog");
-    box.append(el("div", "k-dlg-title", title2));
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", title2));
     const msg = el("div", "k-busy-msg", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u2026");
     msg.style.cssText = "padding:8px 0;font-size:13px";
     const bar = el("div", "k-busy-bar");
@@ -73511,8 +74960,8 @@ img{max-width:100%}` }
     const fill3 = el("div", "k-busy-fill");
     fill3.style.cssText = "height:100%;width:0;background:var(--accent,#d97757);transition:width .2s";
     bar.append(fill3);
-    box.append(msg, bar);
-    ov.append(box);
+    box2.append(msg, bar);
+    ov.append(box2);
     document.body.append(ov);
     return {
       set(textMsg, pct) {
@@ -73578,17 +75027,17 @@ ${text}`;
     }
     if (!result) return;
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide k-ai-summary");
-    box.append(el("div", "k-dlg-title", "\u{1F916} AI \u0E2A\u0E23\u0E38\u0E1B\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32 \u2014 " + state.title));
+    const box2 = el("div", "k-dialog k-wide k-ai-summary");
+    box2.append(el("div", "k-dlg-title", "\u{1F916} AI \u0E2A\u0E23\u0E38\u0E1B\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32 \u2014 " + state.title));
     if (cached) {
       const note = el("div", "dim", "\u{1F4CC} \u0E1C\u0E25\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D " + new Date(cacheDate).toLocaleString("th-TH") + ' (\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 \u2014 \u0E01\u0E14 "\u0E2A\u0E23\u0E38\u0E1B\u0E43\u0E2B\u0E21\u0E48" \u0E16\u0E49\u0E32\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E43\u0E2B\u0E49 AI \u0E04\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48)');
       note.style.cssText = "font-size:11px;margin:-4px 0 6px";
-      box.append(note);
+      box2.append(note);
     }
     const content = el("div", "k-ai-summary-body");
     content.style.cssText = "max-height:55vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;padding:8px 0";
     content.textContent = result;
-    box.append(content);
+    box2.append(content);
     const btns = el("div", "k-dlg-btns");
     const againB = el("button", null, "\u{1F504} \u0E2A\u0E23\u0E38\u0E1B\u0E43\u0E2B\u0E21\u0E48");
     againB.title = "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E43\u0E2B\u0E21\u0E48 (\u0E43\u0E0A\u0E49 token \u0E40\u0E1E\u0E34\u0E48\u0E21)";
@@ -73606,8 +75055,8 @@ ${text}`;
     const closeB = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     closeB.onclick = () => ov.remove();
     btns.append(againB, exportB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -73658,8 +75107,8 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     } catch {
     }
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-ai-titles");
-    box.append(el("div", "k-dlg-title", `\u2728 \u0E41\u0E19\u0E30\u0E19\u0E33\u0E0A\u0E37\u0E48\u0E2D${KIND_TH[kind]} \u2014 "${currentTitle}"`));
+    const box2 = el("div", "k-dialog k-ai-titles");
+    box2.append(el("div", "k-dlg-title", `\u2728 \u0E41\u0E19\u0E30\u0E19\u0E33\u0E0A\u0E37\u0E48\u0E2D${KIND_TH[kind]} \u2014 "${currentTitle}"`));
     const list = el("div", "k-pick-list");
     for (const tt of titles) {
       const row2 = el("div", "k-menu-item", "\u{1F4D6} " + tt);
@@ -73669,12 +75118,12 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       };
       list.append(row2);
     }
-    box.append(list);
+    box2.append(list);
     const past = pastTitlesFor(currentTitle).filter((p) => !titles.includes(p));
     if (past.length) {
       const h = el("div", "dim", "\u{1F558} \u0E40\u0E04\u0E22\u0E41\u0E19\u0E30\u0E19\u0E33\u0E44\u0E27\u0E49\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32");
       h.style.cssText = "margin:8px 0 2px;font-size:11px";
-      box.append(h);
+      box2.append(h);
       const pl = el("div", "k-pick-list k-ai-past");
       pl.style.cssText = "max-height:120px;overflow-y:auto";
       for (const tt of past.slice(-10).reverse()) {
@@ -73685,7 +75134,7 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
         };
         pl.append(row2);
       }
-      box.append(pl);
+      box2.append(pl);
     }
     const btns = el("div", "k-dlg-btns");
     const retryB = el("button", null, "\u{1F504} \u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48");
@@ -73696,8 +75145,8 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
     const closeB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
     closeB.onclick = () => ov.remove();
     btns.append(retryB, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -74616,8 +76065,8 @@ details>summary::-webkit-details-marker{display:none}
   function showPlaythroughsDialog(graph, host2) {
     const runs = [...getPlaythroughs()].reverse();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog branch-dlg");
-    box.append(el("div", "k-dlg-title", "\u{1F3AF} " + T("runsTitle", "\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E21\u0E32") + ` (${runs.length})`));
+    const box2 = el("div", "k-dialog branch-dlg");
+    box2.append(el("div", "k-dlg-title", "\u{1F3AF} " + T("runsTitle", "\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E21\u0E32") + ` (${runs.length})`));
     const list = el("div", "k-pick-list");
     list.style.maxHeight = "50vh";
     if (!runs.length) {
@@ -74649,7 +76098,7 @@ details>summary::-webkit-details-marker{display:none}
       };
       list.append(row2);
     }
-    box.append(list);
+    box2.append(list);
     const btns = el("div", "k-dlg-btns");
     const expB = el("button", null, "\u{1F4E5} " + T("exportRuns", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
     expB.onclick = async () => {
@@ -74668,8 +76117,8 @@ details>summary::-webkit-details-marker{display:none}
     const close2 = el("button", "k-ok", T("close", "\u0E1B\u0E34\u0E14"));
     close2.onclick = () => ov.remove();
     btns.append(expB, clearB, close2);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -74834,7 +76283,7 @@ details>summary::-webkit-details-marker{display:none}
     const gen = ++_renderGen;
     pane.classList.add("branch-host");
     const oldVp = pane.querySelector(".branch-viewport");
-    const keepScroll = oldVp ? { left: oldVp.scrollLeft, top: oldVp.scrollTop } : null;
+    const keepScroll2 = oldVp ? { left: oldVp.scrollLeft, top: oldVp.scrollTop } : null;
     let scenes = opts.scenes;
     if (!scenes) {
       try {
@@ -75136,28 +76585,28 @@ details>summary::-webkit-details-marker{display:none}
         placeLabels(true);
       };
       for (const n2 of layout.placed) {
-        const box = el("div", "branch-node");
-        box.dataset.id = n2.id;
-        if (bs.sel === n2.id) box.classList.add("on");
-        if (rootSet.has(n2.id)) box.classList.add("bn-root");
-        if (endSet.has(n2.id)) box.classList.add("bn-end");
-        if (cycleSet.has(n2.id)) box.classList.add("bn-loop");
-        if (unreachSet.has(n2.id)) box.classList.add("bn-lost");
-        if (hi.nodes.has(n2.id) && bs.sel !== n2.id) box.classList.add("bn-onpath");
-        if (n2.pinned) box.classList.add("bn-pinned");
-        box.style.cssText = `left:${n2.x}px;top:${n2.y}px;width:${NODE_W}px;height:${NODE_H}px`;
+        const box2 = el("div", "branch-node");
+        box2.dataset.id = n2.id;
+        if (bs.sel === n2.id) box2.classList.add("on");
+        if (rootSet.has(n2.id)) box2.classList.add("bn-root");
+        if (endSet.has(n2.id)) box2.classList.add("bn-end");
+        if (cycleSet.has(n2.id)) box2.classList.add("bn-loop");
+        if (unreachSet.has(n2.id)) box2.classList.add("bn-lost");
+        if (hi.nodes.has(n2.id) && bs.sel !== n2.id) box2.classList.add("bn-onpath");
+        if (n2.pinned) box2.classList.add("bn-pinned");
+        box2.style.cssText = `left:${n2.x}px;top:${n2.y}px;width:${NODE_W}px;height:${NODE_H}px`;
         if (n2.color) {
-          box.style.borderLeftColor = n2.color;
-          box.style.setProperty("--bn-tint", n2.color);
-          box.classList.add("bn-tinted");
+          box2.style.borderLeftColor = n2.color;
+          box2.style.setProperty("--bn-tint", n2.color);
+          box2.classList.add("bn-tinted");
         }
         const icon2 = rootSet.has(n2.id) ? "\u25B6 " : endSet.has(n2.id) ? "\u{1F3C1} " : "\u{1F4C4} ";
-        box.append(el("div", "branch-node-name", icon2 + n2.title));
+        box2.append(el("div", "branch-node-name", icon2 + n2.title));
         const meta2 = el("div", "branch-node-meta");
         meta2.append(el("span", "branch-node-ch", n2.chapterName || "\u2014"));
         if (n2.choices.length) meta2.append(el("span", "branch-node-count", "\u2937 " + n2.choices.length));
-        box.append(meta2);
-        box.title = [
+        box2.append(meta2);
+        box2.title = [
           n2.title,
           n2.chapterName ? T2("chapterOf", "\u0E1A\u0E17: ") + n2.chapterName : "",
           T2("choiceCount", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01: ") + n2.choices.length,
@@ -75167,21 +76616,21 @@ details>summary::-webkit-details-marker{display:none}
           unreachSet.has(n2.id) ? "\u{1F6AB} " + T2("roleLost", "\u0E40\u0E14\u0E34\u0E19\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07") : "",
           T2("nodeHelp", "\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01 \xB7 \u0E25\u0E32\u0E01 = \u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \xB7 \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01")
         ].filter(Boolean).join("\n");
-        box.ondblclick = () => openSceneFromGraph(n2, false);
-        makeNodeDraggable(box, n2, layout, bs, { redrawEdgesOf, canvas, viewport, sizeCanvas, redraw: redrawUi });
-        box.addEventListener("dragover", (ev) => {
+        box2.ondblclick = () => openSceneFromGraph(n2, false);
+        makeNodeDraggable(box2, n2, layout, bs, { redrawEdgesOf, canvas, viewport, sizeCanvas, redraw: redrawUi });
+        box2.addEventListener("dragover", (ev) => {
           if (!dragChoice) return;
           ev.preventDefault();
-          box.classList.add("bn-drop");
+          box2.classList.add("bn-drop");
         });
-        box.addEventListener("dragleave", () => box.classList.remove("bn-drop"));
-        box.addEventListener("drop", async (ev) => {
+        box2.addEventListener("dragleave", () => box2.classList.remove("bn-drop"));
+        box2.addEventListener("drop", async (ev) => {
           ev.preventDefault();
-          box.classList.remove("bn-drop");
+          box2.classList.remove("bn-drop");
           await dropChoiceOn(n2, graph, redraw);
         });
-        nodeEls.set(n2.id, box);
-        canvas.append(box);
+        nodeEls.set(n2.id, box2);
+        canvas.append(box2);
       }
       viewport.append(canvas);
       wrap2.append(viewport);
@@ -75256,11 +76705,11 @@ details>summary::-webkit-details-marker{display:none}
     shell.append(main);
     if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw, redrawUi));
     pane.replaceChildren(shell);
-    if (keepScroll) {
+    if (keepScroll2) {
       const vp = pane.querySelector(".branch-viewport");
       if (vp) {
-        vp.scrollLeft = keepScroll.left;
-        vp.scrollTop = keepScroll.top;
+        vp.scrollLeft = keepScroll2.left;
+        vp.scrollTop = keepScroll2.top;
       }
     }
     function applyFilter() {
@@ -75296,9 +76745,9 @@ details>summary::-webkit-details-marker{display:none}
     }
     _lastScrolledSel = bs.sel;
   }
-  function makeNodeDraggable(box, n2, layout, bs, ctx) {
+  function makeNodeDraggable(box2, n2, layout, bs, ctx) {
     let start = null;
-    box.addEventListener("mousedown", (ev) => {
+    box2.addEventListener("mousedown", (ev) => {
       if (ev.button !== 0) return;
       ev.preventDefault();
       start = { mx: ev.clientX, my: ev.clientY, x: n2.x, y: n2.y, moved: false };
@@ -75309,11 +76758,11 @@ details>summary::-webkit-details-marker{display:none}
         const dy = (e2.clientY - start.my) / zoom;
         if (!start.moved && Math.hypot(dx, dy) < 4) return;
         start.moved = true;
-        box.classList.add("bn-dragging");
+        box2.classList.add("bn-dragging");
         n2.x = Math.max(0, Math.round(start.x + dx));
         n2.y = Math.max(0, Math.round(start.y + dy));
-        box.style.left = n2.x + "px";
-        box.style.top = n2.y + "px";
+        box2.style.left = n2.x + "px";
+        box2.style.top = n2.y + "px";
         layout.width = Math.max(layout.width, n2.x + NODE_W + PAD);
         layout.height = Math.max(layout.height, n2.y + NODE_H + PAD);
         ctx.sizeCanvas();
@@ -75322,13 +76771,13 @@ details>summary::-webkit-details-marker{display:none}
       const onUp = () => {
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
-        box.classList.remove("bn-dragging");
+        box2.classList.remove("bn-dragging");
         if (start && start.moved) {
           const pos = loadNodePositions();
           pos[n2.id] = { x: n2.x, y: n2.y };
           saveNodePositions(pos);
-          box.classList.add("bn-pinned");
-          box._noClick = true;
+          box2.classList.add("bn-pinned");
+          box2._noClick = true;
           setStatus(T2("moved", "\u0E22\u0E49\u0E32\u0E22\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E01\u0E14 \u27F2 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E08\u0E31\u0E14\u0E1C\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34"));
         }
         start = null;
@@ -75336,9 +76785,9 @@ details>summary::-webkit-details-marker{display:none}
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
     });
-    box.onclick = () => {
-      if (box._noClick) {
-        box._noClick = false;
+    box2.onclick = () => {
+      if (box2._noClick) {
+        box2._noClick = false;
         return;
       }
       bs.sel = n2.id;
@@ -75389,9 +76838,9 @@ ${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\
   function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
     const rows = analysis.dangling.filter((e) => e.to);
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog branch-dlg");
-    box.append(el("div", "k-dlg-title", "\u{1F494} " + T2("brokenTitle", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27") + ` (${rows.length})`));
-    box.append(el("div", "dim", T2(
+    const box2 = el("div", "k-dialog branch-dlg");
+    box2.append(el("div", "k-dlg-title", "\u{1F494} " + T2("brokenTitle", "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27") + ` (${rows.length})`));
+    box2.append(el("div", "dim", T2(
       "brokenHint",
       "\u0E09\u0E32\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E2B\u0E23\u0E37\u0E2D\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E44\u0E1B\u0E41\u0E01\u0E49\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48 \u0E2B\u0E23\u0E37\u0E2D\u0E25\u0E1A\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E34\u0E49\u0E07"
     )));
@@ -75422,13 +76871,13 @@ ${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\
       row2.append(fix2, del2);
       list.append(row2);
     }
-    box.append(list);
+    box2.append(list);
     const btns = el("div", "k-dlg-btns");
     const close2 = el("button", "k-ok", T2("close", "\u0E1B\u0E34\u0E14"));
     close2.onclick = () => ov.remove();
     btns.append(close2);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -75504,9 +76953,9 @@ ${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\
     out.append(st);
     out.append(svgEl("rect", { x: 0, y: 0, width: w, height: h, fill: "#fbfaf7" }));
     for (const child of src2.childNodes) out.append(child.cloneNode(true));
-    for (const box of canvas.querySelectorAll(".branch-node")) {
-      const x = parseFloat(box.style.left) || 0, y = parseFloat(box.style.top) || 0;
-      const accent = box.style.borderLeftColor || "#9a958a";
+    for (const box2 of canvas.querySelectorAll(".branch-node")) {
+      const x = parseFloat(box2.style.left) || 0, y = parseFloat(box2.style.top) || 0;
+      const accent = box2.style.borderLeftColor || "#9a958a";
       out.append(svgEl("rect", { x, y, width: NODE_W, height: NODE_H, rx: 8, ry: 8, class: "bx" }));
       out.append(svgEl("path", {
         d: `M ${x + 2} ${y + 6} L ${x + 2} ${y + NODE_H - 6}`,
@@ -75515,9 +76964,9 @@ ${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\
         fill: "none"
       }));
       const name5 = svgEl("text", { x: x + 12, y: y + 24, class: "bt" });
-      name5.textContent = shortText((box.querySelector(".branch-node-name") || {}).textContent || "", 24);
+      name5.textContent = shortText((box2.querySelector(".branch-node-name") || {}).textContent || "", 24);
       const meta2 = svgEl("text", { x: x + 12, y: y + 44, class: "bm" });
-      meta2.textContent = shortText((box.querySelector(".branch-node-meta") || {}).textContent || "", 28);
+      meta2.textContent = shortText((box2.querySelector(".branch-node-meta") || {}).textContent || "", 28);
       out.append(name5, meta2);
     }
     return { svg: out, w, h };
@@ -75751,14 +77200,14 @@ ${preview}` + (found2.length > 8 ? `
     const titleOf2 = (id) => (graph.byId.get(id) || {}).title || "?";
     const lines = info.paths.map((p) => ({ ids: p, text: p.map(titleOf2).join(" \u2192 ") }));
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog branch-dlg");
-    box.append(el(
+    const box2 = el("div", "k-dialog branch-dlg");
+    box2.append(el(
       "div",
       "k-dlg-title",
       `\u{1F9ED} ${T2("allPaths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1B\u0E44\u0E14\u0E49")} (${lines.length}${info.truncated ? "+" : ""})`
     ));
     if (info.truncated) {
-      box.append(el(
+      box2.append(el(
         "div",
         "branch-badge bw-open",
         `\u26A0 ${T2("pathTrunc", "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32")} ${PATH_MAX} ${T2("paths", "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07")} \u2014 ` + T2("pathTruncHint", "\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E17\u0E48\u0E32\u0E17\u0E35\u0E48\u0E44\u0E25\u0E48\u0E44\u0E2B\u0E27")
@@ -75766,12 +77215,12 @@ ${preview}` + (found2.length > 8 ? `
     }
     const inp = el("input", "k-dlg-input");
     inp.placeholder = "\u{1F50D} " + T2("filterPaths", "\u0E01\u0E23\u0E2D\u0E07\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 \u2014 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E43\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07");
-    box.append(inp);
+    box2.append(inp);
     const count = el("div", "dim");
-    box.append(count);
+    box2.append(count);
     const list = el("div", "k-pick-list");
     list.style.maxHeight = "48vh";
-    box.append(list);
+    box2.append(list);
     const draw2 = () => {
       const q = inp.value.trim().toLowerCase();
       list.replaceChildren();
@@ -75810,8 +77259,8 @@ ${preview}` + (found2.length > 8 ? `
     const close2 = el("button", "k-ok", T2("close", "\u0E1B\u0E34\u0E14"));
     close2.onclick = () => ov.remove();
     btns.append(copyB, close2);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     inp.focus();
     ov.onclick = (e) => {
@@ -77488,9 +78937,9 @@ ${preview}` + (found2.length > 8 ? `
     if (!node) return null;
     if (node.type === "leaf") return renderLeaf(node, sm);
     if (node.type !== "split") return null;
-    const box = el("div", "k-split-container");
-    box.dataset.splitId = node.id;
-    box.dataset.dir = node.dir === "col" ? "col" : "row";
+    const box2 = el("div", "k-split-container");
+    box2.dataset.splitId = node.id;
+    box2.dataset.dir = node.dir === "col" ? "col" : "row";
     const kids = node.children || [];
     for (let i5 = 0; i5 < kids.length; i5++) {
       const childEl = renderSplitNode(kids[i5], sm);
@@ -77498,10 +78947,10 @@ ${preview}` + (found2.length > 8 ? `
       childEl.style.flexGrow = String(node.sizes?.[i5] ?? 1);
       childEl.style.flexShrink = "1";
       childEl.style.flexBasis = "0%";
-      box.appendChild(childEl);
-      if (i5 < kids.length - 1) box.appendChild(splitHandle(node, i5, sm));
+      box2.appendChild(childEl);
+      if (i5 < kids.length - 1) box2.appendChild(splitHandle(node, i5, sm));
     }
-    return box;
+    return box2;
   }
   function renderLeaf(node, sm) {
     const pane = el("div", "k-split-pane" + (sm.focusId === node.id ? " focus" : ""));
@@ -77866,21 +79315,21 @@ ${preview}` + (found2.length > 8 ? `
   }
   function dropOverlay() {
     if (_ov2 && _ov2.el.isConnected) return _ov2;
-    const box = el("div", "k-drop-zone");
-    box.style.display = "none";
-    document.body.appendChild(box);
+    const box2 = el("div", "k-drop-zone");
+    box2.style.display = "none";
+    document.body.appendChild(box2);
     _ov2 = {
-      el: box,
+      el: box2,
       show(rect, zone) {
-        box.dataset.zone = zone || "";
-        box.style.left = Math.round(rect.x) + "px";
-        box.style.top = Math.round(rect.y) + "px";
-        box.style.width = Math.round(rect.w) + "px";
-        box.style.height = Math.round(rect.h) + "px";
-        box.style.display = "block";
+        box2.dataset.zone = zone || "";
+        box2.style.left = Math.round(rect.x) + "px";
+        box2.style.top = Math.round(rect.y) + "px";
+        box2.style.width = Math.round(rect.w) + "px";
+        box2.style.height = Math.round(rect.h) + "px";
+        box2.style.display = "block";
       },
       hide() {
-        box.style.display = "none";
+        box2.style.display = "none";
       }
     };
     return _ov2;
@@ -78887,22 +80336,22 @@ ${s.body}`).join("\n\n");
   }
   function showDialog(title2, bodyFn, widthClass = "k-wide") {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog " + widthClass);
-    box.append(el("div", "k-dlg-title", title2));
-    bodyFn(box, ov);
-    ov.append(box);
+    const box2 = el("div", "k-dialog " + widthClass);
+    box2.append(el("div", "k-dlg-title", title2));
+    bodyFn(box2, ov);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    return { ov, box };
+    return { ov, box: box2 };
   }
   async function openAIAssistant() {
     if (!await aiReady2()) return;
     const t3 = state.active;
     const sel = t3?.editor ? t3.editor.getSelectedText() : t3?.sp ? t3.sp.getSelectedText() : "";
     const fullText = t3?.editor ? t3.editor.getText() : t3?.sp ? t3.sp.getText() : "";
-    showDialog(t("ai.assistantTitle", "\u2728 AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19"), (box, ov) => {
+    showDialog(t("ai.assistantTitle", "\u2728 AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19"), (box2, ov) => {
       const TASK_TH = {
         expand: t("ai.opExpand", "\u0E02\u0E22\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21"),
         summarize: t("ai.opSummarize", "\u0E2A\u0E23\u0E38\u0E1B\u0E04\u0E27\u0E32\u0E21"),
@@ -78937,12 +80386,12 @@ ${s.body}`).join("\n\n");
       const row1 = el("div", "k-row");
       row1.append(el("label", "", t("ai.opLabel", "\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07: ")), taskSel);
       row1.append(el("label", "", t("ai.toneLabel", " \u0E42\u0E17\u0E19: ")), toneSel);
-      box.append(row1);
-      box.append(instrInput);
-      box.append(el("label", "", t("ai.textLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21:")));
-      box.append(textInput);
-      box.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
-      box.append(resultDiv);
+      box2.append(row1);
+      box2.append(instrInput);
+      box2.append(el("label", "", t("ai.textLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21:")));
+      box2.append(textInput);
+      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", "\u25B6 \u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25");
       runBtn.onclick = async () => {
@@ -78989,7 +80438,7 @@ ${s.body}`).join("\n\n");
       btns.append(runBtn, insertBtn, el("button", "k-cancel", "\u0E1B\u0E34\u0E14"));
       const closeBtn = btns.lastChild;
       closeBtn.onclick = () => ov.remove();
-      box.append(btns);
+      box2.append(btns);
     });
   }
   async function openPlotHoleDetector() {
@@ -78999,11 +80448,11 @@ ${s.body}`).join("\n\n");
       return;
     }
     setStatus(t("ai.plotWorking", "\u{1F50D} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Holes\u2026"));
-    showDialog(t("ai.plotTitle", "\u{1F50D} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Hole"), async (box, ov) => {
+    showDialog(t("ai.plotTitle", "\u{1F50D} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Hole"), async (box2, ov) => {
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
       resultDiv.textContent = t("ai.collectingScenes", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E09\u0E32\u0E01\u2026");
-      box.append(resultDiv);
+      box2.append(resultDiv);
       let allScenes = [];
       try {
         allScenes = (await listScenes(state.root, { withText: true })).map((s) => ({
@@ -79047,13 +80496,13 @@ ${s.body}`).join("\n\n");
       const closeBtn = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
       closeBtn.onclick = () => ov.remove();
       btns.append(closeBtn);
-      box.append(btns);
+      box2.append(btns);
     });
   }
   async function openDialogueGenerator() {
     if (!await aiReady2()) return;
-    showDialog(t("ai.dialogueTitle", "\u{1F4AC} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32"), (box, ov) => {
-      box.style.minWidth = "500px";
+    showDialog(t("ai.dialogueTitle", "\u{1F4AC} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32"), (box2, ov) => {
+      box2.style.minWidth = "500px";
       const charA = el("input");
       charA.placeholder = "\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A";
       const charB = el("input");
@@ -79072,19 +80521,19 @@ ${s.body}`).join("\n\n");
       const fmtSel = el("select");
       fmtSel.append(el("option", "", "\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C", { value: "screenplay" }));
       fmtSel.append(el("option", "", "\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E01\u0E49\u0E27", { value: "prose" }));
-      box.append(el("div", "k-row"));
-      box.querySelector(".k-row").append(el("label", "", t("ai.charA", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A: ")), charA);
-      box.append(descA);
-      box.append(el("label", "", t("ai.charB", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B: ")));
-      box.append(charB);
-      box.append(descB);
-      box.append(el("label", "", t("ai.ctxLabel", "\u0E1A\u0E23\u0E34\u0E1A\u0E17: ")));
-      box.append(context2);
+      box2.append(el("div", "k-row"));
+      box2.querySelector(".k-row").append(el("label", "", t("ai.charA", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A: ")), charA);
+      box2.append(descA);
+      box2.append(el("label", "", t("ai.charB", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B: ")));
+      box2.append(charB);
+      box2.append(descB);
+      box2.append(el("label", "", t("ai.ctxLabel", "\u0E1A\u0E23\u0E34\u0E1A\u0E17: ")));
+      box2.append(context2);
       const fmtRow = el("div", "k-row");
       fmtRow.append(el("label", "", t("ai.formatLabel", "\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A: ")), fmtSel);
-      box.append(fmtRow);
-      box.append(el("label", "", t("ai.dialogueLabel", "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32:")));
-      box.append(resultDiv);
+      box2.append(fmtRow);
+      box2.append(el("label", "", t("ai.dialogueLabel", "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32:")));
+      box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", "\u25B6 \u0E2A\u0E23\u0E49\u0E32\u0E07");
       runBtn.onclick = async () => {
@@ -79135,7 +80584,7 @@ ${s.body}`).join("\n\n");
       };
       btns.append(runBtn, insertBtn, el("button", "k-cancel", "\u0E1B\u0E34\u0E14"));
       btns.lastChild.onclick = () => ov.remove();
-      box.append(btns);
+      box2.append(btns);
     });
   }
   async function openConsistencyCheck(entityPath) {
@@ -79156,11 +80605,11 @@ ${s.body}`).join("\n\n");
       return;
     }
     setStatus(t("ai.consistWorking", "\u{1F3AD} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D\u2026"));
-    showDialog(t("ai.consistTitle", "\u{1F3AD} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D \u2014 ") + entity.name, async (box, ov) => {
+    showDialog(t("ai.consistTitle", "\u{1F3AD} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D \u2014 ") + entity.name, async (box2, ov) => {
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
       resultDiv.textContent = t("ai.collecting", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u2026");
-      box.append(resultDiv);
+      box2.append(resultDiv);
       const scenes = (await listScenes(state.root, { withText: true })).map((s) => ({ id: s.id, title: s.title, text: s.text || "", storyDate: s.row.storyDate || "" }));
       resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
       const { checkConsistency: checkConsistency2 } = await Promise.resolve().then(() => (init_ai_character(), ai_character_exports));
@@ -79185,12 +80634,12 @@ ${s.body}`).join("\n\n");
       const closeBtn = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
       closeBtn.onclick = () => ov.remove();
       btns.append(closeBtn);
-      box.append(btns);
+      box2.append(btns);
     });
   }
   async function openWorldGenerator() {
     if (!await aiReady2()) return;
-    showDialog(t("ai.worldTitle", "\u{1F30D} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E25\u0E01"), (box, ov) => {
+    showDialog(t("ai.worldTitle", "\u{1F30D} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E25\u0E01"), (box2, ov) => {
       const typeSel = el("select");
       ["magic", "city", "culture", "economy", "religion", "faction"].forEach((v2) => {
         const labels = { magic: t("ai.wMagic", "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C"), city: t("ai.wCity", "\u0E40\u0E21\u0E37\u0E2D\u0E07"), culture: t("ai.wCulture", "\u0E27\u0E31\u0E12\u0E19\u0E18\u0E23\u0E23\u0E21"), economy: t("ai.wEconomy", "\u0E40\u0E28\u0E23\u0E29\u0E10\u0E01\u0E34\u0E08"), religion: t("ai.wReligion", "\u0E28\u0E32\u0E2A\u0E19\u0E32"), faction: t("ai.wFaction", "\u0E01\u0E25\u0E38\u0E48\u0E21/\u0E1D\u0E48\u0E32\u0E22") };
@@ -79201,12 +80650,12 @@ ${s.body}`).join("\n\n");
       promptInput.style.cssText = "width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:80px;font-size:14px;line-height:1.8";
-      box.append(el("div", "k-row"));
-      box.querySelector(".k-row").append(el("label", "", t("ai.kindLabel", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17: ")), typeSel);
-      box.append(el("label", "", t("ai.detailLabel", "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:")));
-      box.append(promptInput);
-      box.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
-      box.append(resultDiv);
+      box2.append(el("div", "k-row"));
+      box2.querySelector(".k-row").append(el("label", "", t("ai.kindLabel", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17: ")), typeSel);
+      box2.append(el("label", "", t("ai.detailLabel", "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:")));
+      box2.append(promptInput);
+      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", "\u25B6 \u0E2A\u0E23\u0E49\u0E32\u0E07");
       let lastWorld = null;
@@ -79261,7 +80710,7 @@ ${s.body}`).join("\n\n");
       };
       btns.append(runBtn, saveBtn, el("button", "k-cancel", "\u0E1B\u0E34\u0E14"));
       btns.lastChild.onclick = () => ov.remove();
-      box.append(btns);
+      box2.append(btns);
     });
   }
   async function openAIChat() {
@@ -80789,13 +82238,13 @@ ${sc.body || ""}
       if (!r.characters.length) cast.append(el("div", "roster-empty", '(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D \u2014 \u0E01\u0E14 "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23")'));
       page.append(cast);
       const sec = (key2, headText) => {
-        const box = el("div", "roster-sec");
-        box.dataset.k = key2;
-        box.append(el("div", "roster-sec-head", headText));
-        box.append(ce("roster-sec-body", r[key2], (v2) => {
+        const box2 = el("div", "roster-sec");
+        box2.dataset.k = key2;
+        box2.append(el("div", "roster-sec-head", headText));
+        box2.append(ce("roster-sec-body", r[key2], (v2) => {
           r[key2] = v2;
         }));
-        return box;
+        return box2;
       };
       if (r.showScene !== false) page.append(sec("scene", fmt.strings.sceneTitle));
       if (r.showTime !== false) page.append(sec("time", fmt.strings.timeTitle));
@@ -101822,7 +103271,7 @@ ${css}
             transformationMatrices = [];
           }
           return __awaiter(this, void 0, void 0, function() {
-            var idx4, len5, currPage, nextPage, context2, maybeCopyPage, embeddedPages, idx4, len5, page, box, matrix, embedder, ref;
+            var idx4, len5, currPage, nextPage, context2, maybeCopyPage, embeddedPages, idx4, len5, page, box2, matrix, embedder, ref;
             var _a;
             return __generator(this, function(_b) {
               switch (_b.label) {
@@ -101846,9 +103295,9 @@ ${css}
                 case 1:
                   if (!(idx4 < len5)) return [3, 4];
                   page = maybeCopyPage(pages[idx4].node);
-                  box = boundingBoxes[idx4];
+                  box2 = boundingBoxes[idx4];
                   matrix = transformationMatrices[idx4];
-                  return [4, PDFPageEmbedder_default.for(page, box, matrix)];
+                  return [4, PDFPageEmbedder_default.for(page, box2, matrix)];
                 case 2:
                   embedder = _b.sent();
                   ref = this.context.nextRef();
@@ -135857,12 +137306,12 @@ ${css}
   }
   function overlay(cls) {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog " + (cls || ""));
-    ov.append(box);
+    const box2 = el("div", "k-dialog " + (cls || ""));
+    ov.append(box2);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    return { ov, box };
+    return { ov, box: box2 };
   }
   async function openTitlePageDialog() {
     if (!state.root) {
@@ -135873,9 +137322,9 @@ ${css}
     const ed = new TitlePageEditor(projectTitlePages());
     if (!ed.count) ed.pages = defaultTitlePages(pdfMeta(), fmt);
     let pageIdx = 0, strIdx = -1;
-    const { ov, box } = overlay("k-tp-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 (Title Pages)"));
-    box.append(el(
+    const { ov, box: box2 } = overlay("k-tp-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 (Title Pages)"));
+    box2.append(el(
       "div",
       "k-hint",
       '\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E08\u0E30\u0E16\u0E39\u0E01\u0E27\u0E32\u0E07\u0E44\u0E27\u0E49\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E1A\u0E17 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A\u0E23\u0E27\u0E21\u0E01\u0E31\u0E1A\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E23\u0E30\u0E22\u0E30 x/y \u0E40\u0E1B\u0E47\u0E19 "\u0E19\u0E34\u0E49\u0E27\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E02\u0E2D\u0E1A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29" \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29'
@@ -135885,7 +137334,7 @@ ${css}
     const colPrev = el("div", "k-tp-preview");
     const colProps = el("div", "k-tp-props");
     body.append(colPages, colPrev, colProps);
-    box.append(body);
+    box2.append(body);
     let render = () => {
     };
     const renderPages = () => {
@@ -136075,7 +137524,7 @@ ${css}
       ov.remove();
     };
     btns.append(bClose, bSave);
-    box.append(btns);
+    box2.append(btns);
     document.body.append(ov);
     return { ov, editor: ed, render, select: (p, s) => {
       pageIdx = p;
@@ -136089,22 +137538,22 @@ ${css}
       return null;
     }
     const hdr = projectHeaders();
-    const { ov, box } = overlay("k-hdr-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32 (Page Headers)"));
-    box.append(el(
+    const { ov, box: box2 } = overlay("k-hdr-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32 (Page Headers)"));
+    box2.append(el(
       "div",
       "k-hint",
       '\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0B\u0E49\u0E33\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E1A\u0E19 \u0E41\u0E25\u0E30 "\u0E01\u0E34\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14" \u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E32\u0E08\u0E40\u0E1E\u0E34\u0E48\u0E21) \xB7 \u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07 PDF \u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21'
     ));
     const on2 = checkbox(hdr.enabled);
-    box.append(row("\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", on2));
+    box2.append(row("\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", on2));
     const first = checkbox(hdr.firstPage);
-    box.append(row("\u0E43\u0E2A\u0E48\u0E2B\u0E31\u0E27\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E14\u0E49\u0E27\u0E22", first, "\u0E18\u0E23\u0E23\u0E21\u0E40\u0E19\u0E35\u0E22\u0E21\u0E1A\u0E17: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48"));
+    box2.append(row("\u0E43\u0E2A\u0E48\u0E2B\u0E31\u0E27\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E14\u0E49\u0E27\u0E22", first, "\u0E18\u0E23\u0E23\u0E21\u0E40\u0E19\u0E35\u0E22\u0E21\u0E1A\u0E17: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48"));
     const gap = numInput(hdr.emptyLinesAfter, { min: 0, max: 10, step: 1 });
-    box.append(row("\u0E40\u0E27\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E15\u0E49\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", gap));
-    box.append(el("div", "cmp-sub", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E17\u0E38\u0E01\u0E0A\u0E34\u0E49\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u2014 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32)"));
+    box2.append(row("\u0E40\u0E27\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E15\u0E49\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", gap));
+    box2.append(el("div", "cmp-sub", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E17\u0E38\u0E01\u0E0A\u0E34\u0E49\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u2014 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32)"));
     const list = el("div", "k-hdr-list");
-    box.append(list);
+    box2.append(list);
     const info = el("div", "dim k-hdr-info");
     const varHint = el(
       "div",
@@ -136190,7 +137639,7 @@ ${css}
     first.onchange = preview;
     gap.onchange = preview;
     refresh();
-    box.append(varHint, info);
+    box2.append(varHint, info);
     const btns = el("div", "k-dlg-btns");
     const bReset = el("button", null, "\u21BA \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19");
     bReset.onclick = () => {
@@ -136210,7 +137659,7 @@ ${css}
       ov.remove();
     };
     btns.append(bReset, bClose, bSave);
-    box.append(btns);
+    box2.append(btns);
     document.body.append(ov);
     return { ov, rows, preview, current: cur };
   }
@@ -136240,35 +137689,35 @@ ${css}
     const titles = projectTitlePages();
     const hdr = projectHeaders();
     const here = currentScriptPage(state.active, src2.blocks, fmt);
-    const { ov, box } = overlay("k-pdf-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF (\u0E15\u0E31\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)"));
-    box.append(el(
+    const { ov, box: box2 } = overlay("k-pdf-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF (\u0E15\u0E31\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)"));
+    box2.append(el(
       "div",
       "k-hint",
       `\u0E1A\u0E17 \u201C${src2.title}\u201D \xB7 ${pagesOf(src2.blocks, fmt).count} \u0E2B\u0E19\u0E49\u0E32 \u2014 \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E19\u0E35\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19 PDF \u0E40\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22 pdf-lib \u0E08\u0E36\u0E07\u0E17\u0E33\u0E2A\u0E32\u0E23\u0E1A\u0E31\u0E0D/\u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E34\u0E21/\u0E1D\u0E31\u0E07\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22\u0E44\u0E14\u0E49 (\u0E40\u0E21\u0E19\u0E39 "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 PDF\u2026" \u0E40\u0E14\u0E34\u0E21\u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49 Chromium \u0E2D\u0E22\u0E39\u0E48\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34)`
     ));
     const cToc = checkbox(saved.toc);
-    box.append(row("[87] \u0E2A\u0E32\u0E23\u0E1A\u0E31\u0E0D (bookmark \u0E15\u0E48\u0E2D\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)", cToc, "\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E15\u0E32\u0E21\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E48\u0E32\u0E19 PDF"));
+    box2.append(row("[87] \u0E2A\u0E32\u0E23\u0E1A\u0E31\u0E0D (bookmark \u0E15\u0E48\u0E2D\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)", cToc, "\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E15\u0E32\u0E21\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E48\u0E32\u0E19 PDF"));
     const cOpen = checkbox(saved.openPage > 0);
     const nOpen = numInput(here, { min: 1, max: 9999, step: 1 });
     const openWrap = el("span");
     openWrap.append(cOpen, document.createTextNode(" \u0E2B\u0E19\u0E49\u0E32 "), nOpen);
-    box.append(row("[89] \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32", openWrap, "\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48"));
+    box2.append(row("[89] \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32", openWrap, "\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48"));
     const cTitle = checkbox(saved.titlePages !== false && titles.length > 0);
     cTitle.disabled = !titles.length;
-    box.append(row(
+    box2.append(row(
       "[90] \u0E41\u0E19\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01",
       cTitle,
       titles.length ? titles.length + " \u0E2B\u0E19\u0E49\u0E32" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 \u2014 \u0E40\u0E21\u0E19\u0E39 \u0E1A\u0E17 \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01"
     ));
     const cHdr = checkbox(saved.headers !== false && hdr.enabled);
     cHdr.disabled = !hdr.enabled;
-    box.append(row(
+    box2.append(row(
       "[91] \u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32",
       cHdr,
       hdr.enabled ? "\u0E01\u0E34\u0E19\u0E44\u0E1B " + headerLineCount(hdr) + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14/\u0E2B\u0E19\u0E49\u0E32" : "\u0E22\u0E31\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2014 \u0E40\u0E21\u0E19\u0E39 \u0E1A\u0E17 \u2192 \u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29"
     ));
-    box.append(el("div", "cmp-sub", "[88] \u0E44\u0E21\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C element \u0E40\u0E2B\u0E25\u0E48\u0E32\u0E19\u0E35\u0E49"));
+    box2.append(el("div", "cmp-sub", "[88] \u0E44\u0E21\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C element \u0E40\u0E2B\u0E25\u0E48\u0E32\u0E19\u0E35\u0E49"));
     const omitWrap = el("div", "k-pdf-omit");
     const omitBoxes = {};
     for (const k of OMITTABLE_ELEMENTS) {
@@ -136278,11 +137727,11 @@ ${css}
       w.append(c, el("span", null, SP_ELEMS[k] && SP_ELEMS[k].th || k));
       omitWrap.append(w);
     }
-    box.append(omitWrap);
+    box2.append(omitWrap);
     const cRect = checkbox(saved.drawRectAroundNotes);
-    box.append(row("\u0E27\u0E32\u0E14\u0E01\u0E23\u0E2D\u0E1A\u0E23\u0E2D\u0E1A\u0E42\u0E19\u0E49\u0E15\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E22\u0E39\u0E48", cRect));
+    box2.append(row("\u0E27\u0E32\u0E14\u0E01\u0E23\u0E2D\u0E1A\u0E23\u0E2D\u0E1A\u0E42\u0E19\u0E49\u0E15\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E22\u0E39\u0E48", cRect));
     const cNums = checkbox(saved.pageNumbers !== false);
-    box.append(row(
+    box2.append(row(
       "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 / \u0E40\u0E25\u0E02\u0E09\u0E32\u0E01 \u0E15\u0E32\u0E21\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E1A\u0E17",
       cNums,
       fmt.pageNumbers.show || fmt.sceneNumbers.show ? "" : "\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29"
@@ -136290,9 +137739,9 @@ ${css}
     const wm = el("input", "k-dlg-input");
     wm.value = String(saved.watermark || "");
     wm.placeholder = "\u0E27\u0E48\u0E32\u0E07 = \u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33";
-    box.append(row("\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33", wm, '\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E44\u0E1F\u0E25\u0E4C \u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49 "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19"'));
+    box2.append(row("\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33", wm, '\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E44\u0E1F\u0E25\u0E4C \u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49 "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19"'));
     const prog = el("div", "dim k-pdf-prog");
-    box.append(prog);
+    box2.append(prog);
     const collect = () => ({
       toc: cToc.checked,
       openPage: cOpen.checked ? parseInt(nOpen.value, 10) || 1 : 0,
@@ -136346,7 +137795,7 @@ ${css}
       bGo.disabled = false;
     };
     btns.append(bClose, bGo);
-    box.append(btns);
+    box2.append(btns);
     document.body.append(ov);
     return { ov, collect, run: () => bGo.onclick() };
   }
@@ -136711,11 +138160,11 @@ ${css}
   function lnGutterEl(make) {
     let g = document.getElementById(LN_GUTTER_ID);
     if (!g && make) {
-      const box = $("#panes");
-      if (!box) return null;
+      const box2 = $("#panes");
+      if (!box2) return null;
       g = el("div", "k-ln-gutter");
       g.id = LN_GUTTER_ID;
-      box.appendChild(g);
+      box2.appendChild(g);
     }
     return g || null;
   }
@@ -136731,8 +138180,8 @@ ${css}
       g.textContent = "";
       return 0;
     }
-    const box = g.parentElement;
-    const hr = box.getBoundingClientRect();
+    const box2 = g.parentElement;
+    const hr = box2.getBoundingClientRect();
     const pr = pane.getBoundingClientRect();
     if (!pr.height) {
       g.textContent = "";
@@ -136761,9 +138210,9 @@ ${css}
   }
   function initLineGutter() {
     if (_lnBound) return false;
-    const box = $("#panes");
-    if (!box) return false;
-    box.addEventListener("scroll", scheduleLineGutter, true);
+    const box2 = $("#panes");
+    if (!box2) return false;
+    box2.addEventListener("scroll", scheduleLineGutter, true);
     _lnBound = true;
     scheduleLineGutter();
     return true;
@@ -136771,8 +138220,8 @@ ${css}
   function syncWorkspaceWidths() {
     const z = pageScale > 0 ? pageScale : 1;
     for (const ws of document.querySelectorAll(".pane > .workspace, .roster-wrap > .workspace")) {
-      const box = ws.parentElement;
-      const w = box ? box.clientWidth : 0;
+      const box2 = ws.parentElement;
+      const w = box2 ? box2.clientWidth : 0;
       ws.style.minWidth = w > 0 ? Math.round(w / z) + "px" : "";
     }
   }
@@ -136966,6 +138415,26 @@ ${css}
     const p = pane || state.active && state.active.pane;
     if (!p || !p.scrollWidth) return;
     p.scrollLeft = Math.max(0, (p.scrollWidth - p.clientWidth) / 2);
+  }
+  function recenterPageSoon(pane) {
+    const run2 = () => {
+      const p = pane || state.active && state.active.pane;
+      if (p) centerPage(p);
+    };
+    requestAnimationFrame(run2);
+    for (const ms of [40, 120, 260]) setTimeout(run2, ms);
+  }
+  function recenterOnPaneResize() {
+    const p = state.active && state.active.pane;
+    if (!p) return;
+    const w = p.clientWidth;
+    if (!w) return;
+    if (Math.abs(w - _lastPaneW) < 20) {
+      _lastPaneW = w;
+      return;
+    }
+    _lastPaneW = w;
+    recenterPageSoon(p);
   }
   function currentSpView() {
     return spViewMode;
@@ -137208,8 +138677,8 @@ ${css}
     const scenes = m.prose ? proseHeadings(m.blocks) : scenePositions(m.blocks);
     const unit = m.prose ? "\u0E1A\u0E17/\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D" : "\u0E09\u0E32\u0E01";
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-goto-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E44\u0E1B\u0E17\u0E35\u0E48\u2026"));
+    const box2 = el("div", "k-dialog k-goto-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E44\u0E1B\u0E17\u0E35\u0E48\u2026"));
     const row2 = el("div", "k-goto-row");
     const sel = el("select", "k-dlg-select");
     sel.id = "goto-kind";
@@ -137235,7 +138704,7 @@ ${css}
       renderList();
     };
     row2.append(sel, inp, hint);
-    box.append(row2);
+    box2.append(row2);
     const list = el("div", "k-goto-list");
     const renderList = () => {
       list.innerHTML = "";
@@ -137257,7 +138726,7 @@ ${css}
         list.append(d);
       }
     };
-    box.append(list);
+    box2.append(list);
     const go = () => {
       const n2 = parseInt(inp.value, 10) || 1;
       ov.remove();
@@ -137276,8 +138745,8 @@ ${css}
     const bGo = el("button", "k-ok", "\u0E44\u0E1B");
     bGo.onclick = go;
     btns.append(bCancel, bGo);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -137328,19 +138797,19 @@ ${css}
     return e;
   }
   function updateErrorBadge() {
-    const box = $("#sp-errors");
-    if (!box) return;
+    const box2 = $("#sp-errors");
+    if (!box2) return;
     const t22 = state.active;
     if (!t22 || !t22.sp) {
-      box.textContent = "";
-      box.classList.remove("has-err");
-      box.title = "";
+      box2.textContent = "";
+      box2.classList.remove("has-err");
+      box2.title = "";
       return;
     }
     const s = errorSummary(_spErrors);
-    box.textContent = s.total ? `\u26A0\uFE0F ${s.total} \u25BE` : "\u2705 \u0E15\u0E23\u0E27\u0E08\u0E41\u0E25\u0E49\u0E27 \u25BE";
-    box.classList.toggle("has-err", s.total > 0);
-    box.title = summaryText(_spErrors) + " \u2014 \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 (\u0E44\u0E1B\u0E02\u0E49\u0E2D\u0E16\u0E31\u0E14\u0E44\u0E1B \xB7 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \xB7 \u0E15\u0E23\u0E27\u0E08\u0E43\u0E2B\u0E21\u0E48)";
+    box2.textContent = s.total ? `\u26A0\uFE0F ${s.total} \u25BE` : "\u2705 \u0E15\u0E23\u0E27\u0E08\u0E41\u0E25\u0E49\u0E27 \u25BE";
+    box2.classList.toggle("has-err", s.total > 0);
+    box2.title = summaryText(_spErrors) + " \u2014 \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 (\u0E44\u0E1B\u0E02\u0E49\u0E2D\u0E16\u0E31\u0E14\u0E44\u0E1B \xB7 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \xB7 \u0E15\u0E23\u0E27\u0E08\u0E43\u0E2B\u0E21\u0E48)";
   }
   function spErrorMenu(x, y) {
     const t22 = state.active;
@@ -137379,9 +138848,9 @@ ${css}
     const errs = checkScreenplay(t22);
     updateErrorBadge();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-err-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C"));
-    box.append(el("div", "dim", summaryText(errs)));
+    const box2 = el("div", "k-dialog k-err-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C"));
+    box2.append(el("div", "dim", summaryText(errs)));
     const list = el("div", "k-err-list");
     if (!errs.length) list.append(el("div", "cmp-empty", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14 \u{1F389}"));
     for (const e of errs.slice().sort((a, b) => a.block - b.block)) {
@@ -137396,7 +138865,7 @@ ${css}
       };
       list.append(row2);
     }
-    box.append(list);
+    box2.append(list);
     const btns = el("div", "k-dlg-btns");
     const bRe = el("button", null, "\u{1F504} \u0E15\u0E23\u0E27\u0E08\u0E43\u0E2B\u0E21\u0E48");
     bRe.onclick = () => {
@@ -137406,8 +138875,8 @@ ${css}
     const bOk = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     bOk.onclick = () => ov.remove();
     btns.append(bRe, bOk);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (ev) => {
       if (ev.target === ov) ov.remove();
@@ -137470,8 +138939,8 @@ ${css}
     const info = SP_REPORTS[kind] || SP_REPORTS.location;
     const data2 = buildSpReport(kind, inp);
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-report-dlg");
-    box.append(el("div", "k-dlg-title", info.title + " \u2014 " + (inp.tab.title || "")));
+    const box2 = el("div", "k-dialog k-report-dlg");
+    box2.append(el("div", "k-dlg-title", info.title + " \u2014 " + (inp.tab.title || "")));
     const tabs2 = el("div", "k-report-tabs");
     for (const k of Object.keys(SP_REPORTS)) {
       const b = el("button", "k-report-tab" + (k === kind ? " on" : ""), SP_REPORTS[k].title);
@@ -137481,7 +138950,7 @@ ${css}
       };
       tabs2.append(b);
     }
-    box.append(tabs2);
+    box2.append(tabs2);
     const body = el("div", "k-report-body");
     const goto = (pos) => {
       if (Number.isFinite(pos)) {
@@ -137490,7 +138959,7 @@ ${css}
       }
     };
     if (kind === "location") {
-      box.append(el(
+      box2.append(el(
         "div",
         "dim",
         `${data2.locations.length} \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48 \xB7 ${data2.totalScenes} \u0E09\u0E32\u0E01 \xB7 ${data2.totalPages} \u0E2B\u0E19\u0E49\u0E32`
@@ -137517,7 +138986,7 @@ ${css}
       }
       if (!data2.locations.length) body.append(el("div", "cmp-empty", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1A\u0E17\u0E19\u0E35\u0E49"));
     } else if (kind === "character") {
-      box.append(el(
+      box2.append(el(
         "div",
         "dim",
         `${data2.characters.length} \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 \xB7 ${data2.totalLines} \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1A\u0E17\u0E1E\u0E39\u0E14 \xB7 ${data2.totalPages} \u0E2B\u0E19\u0E49\u0E32`
@@ -137547,7 +139016,7 @@ ${css}
       body.append(tbl);
       if (!data2.characters.length) body.append(el("div", "cmp-empty", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E43\u0E19\u0E1A\u0E17\u0E19\u0E35\u0E49"));
     } else {
-      box.append(el(
+      box2.append(el(
         "div",
         "dim",
         `\u0E23\u0E27\u0E21\u0E17\u0E31\u0E49\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07: ${CHART_KINDS.map((k) => CHART_LABELS[k] + " " + data2.overall[k] + "%").join(" \xB7 ")}`
@@ -137568,7 +139037,7 @@ ${css}
         body.append(row2);
       }
     }
-    box.append(body);
+    box2.append(body);
     const btns = el("div", "k-dlg-btns");
     const bCopy = el("button", null, "\u{1F4CB} \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21");
     bCopy.onclick = async () => {
@@ -137589,8 +139058,8 @@ ${css}
     const bOk = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     bOk.onclick = () => ov.remove();
     btns.append(bCopy, bSave, bOk);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (ev) => {
       if (ev.target === ov) ov.remove();
@@ -137628,12 +139097,12 @@ ${css}
     }
     const md = src2.getMarkdown();
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide");
-    box.append(el("div", "k-dlg-title", "Markdown \u0E14\u0E34\u0E1A \u2014 " + tab.title));
+    const box2 = el("div", "k-dialog k-wide");
+    box2.append(el("div", "k-dlg-title", "Markdown \u0E14\u0E34\u0E1A \u2014 " + tab.title));
     const ta = el("textarea", "k-src-view");
     ta.value = md;
     ta.readOnly = true;
-    box.append(ta);
+    box2.append(ta);
     const btns = el("div", "k-dlg-btns");
     const cp = el("button", null, "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14");
     const cl = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
@@ -137644,8 +139113,8 @@ ${css}
     };
     cl.onclick = () => ov.remove();
     btns.append(cp, cl);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -137830,6 +139299,7 @@ ${css}
       refreshToolbar();
       syncWorkspaceWidths();
       scheduleLineGutter();
+      recenterOnPaneResize();
     });
     await renderOpenFeaturePanels();
     await restoreOpenTabs();
@@ -138891,9 +140361,10 @@ ${css}
       log("warn", "buildTree: \u0E44\u0E21\u0E48\u0E21\u0E35 #tree \u0E43\u0E2B\u0E49\u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32 (\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21) \u2014 \u0E02\u0E49\u0E32\u0E21\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49");
       return;
     }
-    const scrollTop = real.scrollTop;
+    const scrollTop = real.scrollTop, scrollLeft = real.scrollLeft;
     real.replaceChildren(...tree.childNodes);
     real.scrollTop = scrollTop;
+    real.scrollLeft = scrollLeft;
     const q = $("#tree-search");
     if (q && q.value) filterTree(q.value);
     updateSummaryBar().catch(() => {
@@ -138902,8 +140373,8 @@ ${css}
   function pickFromList(title2, items) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", title2));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", title2));
       const list = el("div", "k-pick-list");
       for (const it of items) {
         const d = el("div", "k-menu-item", it);
@@ -138913,7 +140384,7 @@ ${css}
         };
         list.append(d);
       }
-      box.append(list);
+      box2.append(list);
       const btns = el("div", "k-dlg-btns");
       const c = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       c.onclick = () => {
@@ -138921,8 +140392,8 @@ ${css}
         resolve(null);
       };
       btns.append(c);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       ov.onclick = (e) => {
         if (e.target === ov) {
           ov.remove();
@@ -138956,8 +140427,8 @@ ${css}
   function relationDialog(targets, fromName) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", "\u0E1C\u0E39\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C"));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", "\u0E1C\u0E39\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C"));
       const r1 = el("div", "wiki-row");
       r1.append(el("label", null, "\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A"));
       const selT = el("select", "wiki-input k-dlg-select");
@@ -138967,7 +140438,7 @@ ${css}
         selT.append(o);
       }
       r1.append(selT);
-      box.append(r1);
+      box2.append(r1);
       const r22 = el("div", "wiki-row");
       const lab = el("label", null, "");
       r22.append(lab);
@@ -138982,7 +140453,7 @@ ${css}
         dl.append(o);
       }
       r22.append(inR, dl);
-      box.append(r22);
+      box2.append(r22);
       const rType = el("div", "wiki-row");
       rType.append(el("label", null, "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17"));
       const selType = el("select", "wiki-input k-dlg-select rel-type");
@@ -138997,7 +140468,7 @@ ${css}
         selType.append(o);
       }
       rType.append(selType);
-      box.append(rType);
+      box2.append(rType);
       let typeTouched = false;
       selType.onchange = () => {
         typeTouched = true;
@@ -139014,7 +140485,7 @@ ${css}
       selT.onchange = upd;
       inR.oninput = upd;
       upd();
-      box.append(hint);
+      box2.append(hint);
       const btns = el("div", "k-dlg-btns");
       const c = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const ok2 = el("button", "k-ok", "\u0E1C\u0E39\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C");
@@ -139032,8 +140503,8 @@ ${css}
         resolve({ target: selT.value, role, type: selType.value });
       };
       btns.append(c, ok2);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       ov.onclick = (e) => {
         if (e.target === ov) {
           ov.remove();
@@ -139114,8 +140585,8 @@ ${css}
   function catEditDialog(init3, title2) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.innerHTML = `
+      const box2 = el("div", "k-dialog");
+      box2.innerHTML = `
       <div class="k-dlg-title">${title2}</div>
       <div class="k-row" style="flex-direction:column;align-items:stretch;gap:6px;margin:6px 0">
         <label>\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E21\u0E27\u0E14</label><input type="text" class="k-dlg-input" id="cat-label">
@@ -139124,9 +140595,9 @@ ${css}
         <label>\u0E44\u0E2D\u0E04\u0E2D\u0E19 (\u0E2D\u0E35\u0E42\u0E21\u0E08\u0E34)</label><input type="text" class="k-dlg-input" id="cat-icon" maxlength="4">
       </div>
       <div class="k-dlg-btns"><button class="k-cancel">\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01</button><button class="k-ok">\u0E15\u0E01\u0E25\u0E07</button></div>`;
-      ov.append(box);
+      ov.append(box2);
       document.body.append(ov);
-      const iL = box.querySelector("#cat-label"), iI = box.querySelector("#cat-icon");
+      const iL = box2.querySelector("#cat-label"), iI = box2.querySelector("#cat-icon");
       iL.value = init3.label || "";
       iI.value = init3.icon || "\u{1F516}";
       const done2 = (v2) => {
@@ -139141,9 +140612,9 @@ ${css}
         }
         done2({ label: l, icon: iI.value.trim() || "\u{1F516}" });
       };
-      box.querySelector(".k-dialog .k-ok") || 0;
-      box.querySelector(".k-ok").onclick = ok2;
-      box.querySelector(".k-cancel").onclick = () => done2(null);
+      box2.querySelector(".k-dialog .k-ok") || 0;
+      box2.querySelector(".k-ok").onclick = ok2;
+      box2.querySelector(".k-cancel").onclick = () => done2(null);
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
       };
@@ -139713,7 +141184,7 @@ ${css}
     }
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
+      const box2 = el("div", "k-dialog");
       const t3 = el("div", "k-dlg-title", "\u{1F4C1} \u0E1C\u0E39\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E01\u0E31\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C");
       const inp = el("input", "k-dlg-input");
       inp.placeholder = "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E01\u0E23\u0E2D\u0E07\u2026";
@@ -139744,8 +141215,8 @@ ${css}
         resolve(null);
       };
       btns.appendChild(cancel);
-      box.append(t3, inp, list, btns);
-      ov.appendChild(box);
+      box2.append(t3, inp, list, btns);
+      ov.appendChild(box2);
       document.body.appendChild(ov);
       ov.onclick = (e) => {
         if (e.target === ov) {
@@ -140092,11 +141563,11 @@ ${css}
     }
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", "\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E16\u0E36\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23/\u0E42\u0E19\u0E49\u0E15\u0E44\u0E2B\u0E19"));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", "\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E16\u0E36\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23/\u0E42\u0E19\u0E49\u0E15\u0E44\u0E2B\u0E19"));
       const q = el("input", "k-dlg-input");
       q.placeholder = "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E01\u0E23\u0E2D\u0E07\u2026";
-      box.append(q);
+      box2.append(q);
       const list = el("div", "k-pick-list");
       const rows = items.map((it) => {
         const d = el("div", "k-menu-item", it.label);
@@ -140111,7 +141582,7 @@ ${css}
         const s = q.value.trim().toLowerCase();
         for (const { it, d } of rows) d.style.display = !s || it.label.toLowerCase().includes(s) ? "" : "none";
       };
-      box.append(list);
+      box2.append(list);
       const btns = el("div", "k-dlg-btns");
       const c = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       c.onclick = () => {
@@ -140119,8 +141590,8 @@ ${css}
         resolve(null);
       };
       btns.append(c);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       ov.onclick = (e) => {
         if (e.target === ov) {
           ov.remove();
@@ -140191,8 +141662,8 @@ ${css}
   function eventDialog(ev, knownTracks, canDelete = false) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", canDelete ? "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C" : "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C"));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", canDelete ? "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C" : "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C"));
       const mk = (label, val, ph, tag3 = "input") => {
         const r = el("div", "wiki-row");
         r.append(el("label", null, label));
@@ -140200,7 +141671,7 @@ ${css}
         i5.value = val || "";
         if (ph) i5.placeholder = ph;
         r.append(i5);
-        box.append(r);
+        box2.append(r);
         return i5;
       };
       const iTitle = mk("\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C", ev.title, "\u0E40\u0E0A\u0E48\u0E19 \u0E2A\u0E07\u0E04\u0E23\u0E32\u0E21\u0E1B\u0E30\u0E17\u0E38");
@@ -140216,7 +141687,7 @@ ${css}
           dl.append(o);
         }
         iTrack.setAttribute("list", "tl-tracks");
-        box.append(dl);
+        box2.append(dl);
       }
       const iSort = mk("\u0E25\u0E33\u0E14\u0E31\u0E1A (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \u2014 \u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A)", ev.sort ?? "", "\u0E43\u0E0A\u0E49\u0E08\u0E31\u0E14\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E40\u0E27\u0E25\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21");
       iSort.type = "number";
@@ -140254,7 +141725,7 @@ ${css}
       paintRefs();
       refWrap.append(refList, addRef);
       refRow.append(refWrap);
-      box.append(refRow);
+      box2.append(refRow);
       const btns = el("div", "k-dlg-btns");
       if (canDelete) {
         const del2 = el("button", "k-danger", "\u{1F5D1} \u0E25\u0E1A");
@@ -140267,8 +141738,8 @@ ${css}
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       cB.onclick = () => {
         ov.remove();
@@ -140334,8 +141805,8 @@ ${css}
   function pinDialog(pin, maps, curMapId, canDelete = false) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", canDelete ? "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2B\u0E21\u0E38\u0E14" : "\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14"));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", canDelete ? "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2B\u0E21\u0E38\u0E14" : "\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14"));
       const kindRow = el("div", "wiki-row");
       kindRow.append(el("label", null, "\u0E0A\u0E19\u0E34\u0E14"));
       const kindSel = el("select", "wiki-input k-dlg-select");
@@ -140346,19 +141817,19 @@ ${css}
         kindSel.append(o);
       }
       kindRow.append(kindSel);
-      box.append(kindRow);
+      box2.append(kindRow);
       const iLabel = el("input", "wiki-input");
       iLabel.value = pin.label || "";
       {
         const r = el("div", "wiki-row");
         r.append(el("label", null, "\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D"), iLabel);
-        box.append(r);
+        box2.append(r);
       }
       const entRow = el("div", "wiki-row");
       entRow.append(el("label", null, "\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49"));
       const entSel = el("select", "wiki-input k-dlg-select");
       entRow.append(entSel);
-      box.append(entRow);
+      box2.append(entRow);
       const fillEntities = async () => {
         entSel.innerHTML = "";
         const none2 = el("option", null, "\u2014 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 \u2014");
@@ -140387,7 +141858,7 @@ ${css}
         }
       }
       portalRow.append(portalSel);
-      box.append(portalRow);
+      box2.append(portalRow);
       const colorRow2 = el("div", "wiki-row");
       colorRow2.append(el("label", null, "\u0E2A\u0E35"));
       const colorSel = el("select", "wiki-input k-dlg-select");
@@ -140403,13 +141874,13 @@ ${css}
         }
       }
       colorRow2.append(colorSel);
-      box.append(colorRow2);
+      box2.append(colorRow2);
       const iNote = el("textarea", "wiki-input");
       iNote.value = pin.note || "";
       {
         const r = el("div", "wiki-row");
         r.append(el("label", null, "\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38"), iNote);
-        box.append(r);
+        box2.append(r);
       }
       const syncRows = () => {
         entRow.style.display = kindSel.value === "entity" ? "" : "none";
@@ -140430,8 +141901,8 @@ ${css}
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       cB.onclick = () => {
         ov.remove();
@@ -140487,6 +141958,7 @@ ${css}
     syncModeHint();
     syncMenuToggles();
     refreshToolbar();
+    recenterPageSoon();
     setStatus(v2 ? "\u0E42\u0E2B\u0E21\u0E14\u0E42\u0E1F\u0E01\u0E31\u0E2A \u2014 Esc \u0E2B\u0E23\u0E37\u0E2D Ctrl+Shift+D \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2D\u0E2D\u0E01" : "\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E42\u0E1F\u0E01\u0E31\u0E2A");
   }
   function syncMenuToggles() {
@@ -140606,6 +142078,7 @@ ${css}
     syncModeHint();
     syncMenuToggles();
     syncFloatBarVisible();
+    recenterPageSoon();
     setStatus(v2 ? "\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19 \u2014 \u0E01\u0E14 Esc \u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01 \u{1F4D6} \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2D\u0E2D\u0E01" : "\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19");
   }
   function applyLockToTab(tab) {
@@ -140665,6 +142138,7 @@ ${css}
     if (!body) return;
     const gen = ++_propsGen;
     const stale2 = () => gen !== _propsGen;
+    const backScroll = keepScroll(body);
     body.replaceChildren();
     if (!propsTarget_C.t) {
       body.append(el("div", "dim", "(\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34)"));
@@ -140869,6 +142343,7 @@ ${css}
       clearTimeout(saveJob);
       return commit(true);
     };
+    backScroll();
   }
   async function rosterTextForDraft(dPath) {
     try {
@@ -140970,8 +142445,8 @@ ${css}
       return;
     }
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-compile");
-    box.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E14\u0E49\u0E27\u0E22\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C"));
+    const box2 = el("div", "k-dialog k-compile");
+    box2.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E14\u0E49\u0E27\u0E22\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C"));
     const top = el("div", "cmp-top");
     const selDraft = el("select", "k-dlg-select");
     for (const d of drafts) {
@@ -140980,12 +142455,12 @@ ${css}
       selDraft.append(o);
     }
     top.append(el("span", null, "\u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07"), selDraft);
-    box.append(top);
+    box2.append(top);
     const body = el("div", "cmp-body");
     const left = el("div", "cmp-left");
     const right = el("div", "cmp-right");
     body.append(left, right);
-    box.append(body);
+    box2.append(body);
     let curId = (userWorkflows()[0] || PRESETS[0]).id;
     const cur = () => allWorkflows().find((w) => w.id === curId) || PRESETS[0];
     const renderLeft = () => {
@@ -141143,7 +142618,7 @@ ${css}
     };
     const prev = el("pre", "cmp-preview");
     prev.id = "cmp-preview";
-    box.append(prev);
+    box2.append(prev);
     const doRun = async () => {
       const model = await buildDraftModel(selDraft.value);
       const varCtx = { title: model.title, author: model.author };
@@ -141185,8 +142660,8 @@ ${css}
     const bClose = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
     bClose.onclick = () => ov.remove();
     btns.append(bClose, bPrev, bGo);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -141288,9 +142763,9 @@ ${css}
     const pages = pagesOf(src2.blocks, fmt);
     const saved = state.meta && state.meta.watermark || {};
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wm-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19"));
-    box.append(el("div", "dim", `\u0E1A\u0E17 \u201C${src2.title}\u201D \xB7 ${pages.count} \u0E2B\u0E19\u0E49\u0E32 \u2014 \u0E08\u0E30\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E25\u0E30\u0E04\u0E19 \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19`));
+    const box2 = el("div", "k-dialog k-wm-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PDF \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E23\u0E32\u0E22\u0E04\u0E19"));
+    box2.append(el("div", "dim", `\u0E1A\u0E17 \u201C${src2.title}\u201D \xB7 ${pages.count} \u0E2B\u0E19\u0E49\u0E32 \u2014 \u0E08\u0E30\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E25\u0E30\u0E04\u0E19 \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19`));
     const mk = (label, node) => {
       const r = el("div", "k-row");
       r.append(el("label", null, label), node);
@@ -141300,26 +142775,26 @@ ${css}
     ta.rows = 6;
     ta.placeholder = "\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 = \u0E2B\u0E19\u0E36\u0E48\u0E07\u0E04\u0E19\n\u0E2A\u0E21\u0E0A\u0E32\u0E22\n\u0E2A\u0E21\u0E2B\u0E0D\u0E34\u0E07 | \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E01\u0E33\u0E01\u0E31\u0E1A";
     ta.value = saved.recipients || "";
-    box.append(mk("\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E23\u0E31\u0E1A", ta));
+    box2.append(mk("\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E23\u0E31\u0E1A", ta));
     const tpl = el("input", "k-dlg-input");
     tpl.value = saved.template || "{\u0E0A\u0E37\u0E48\u0E2D} \xB7 {\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48}";
-    box.append(mk("\u0E41\u0E21\u0E48\u0E41\u0E1A\u0E1A\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33", tpl));
-    box.append(el("div", "dim", '\u0E43\u0E0A\u0E49 {\u0E0A\u0E37\u0E48\u0E2D} {\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48} {\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07} \u0E44\u0E14\u0E49 \xB7 \u0E23\u0E30\u0E1A\u0E38\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E04\u0E19\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22 "\u0E0A\u0E37\u0E48\u0E2D | \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33"'));
+    box2.append(mk("\u0E41\u0E21\u0E48\u0E41\u0E1A\u0E1A\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33", tpl));
+    box2.append(el("div", "dim", '\u0E43\u0E0A\u0E49 {\u0E0A\u0E37\u0E48\u0E2D} {\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48} {\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07} \u0E44\u0E14\u0E49 \xB7 \u0E23\u0E30\u0E1A\u0E38\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E04\u0E19\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22 "\u0E0A\u0E37\u0E48\u0E2D | \u0E25\u0E32\u0E22\u0E19\u0E49\u0E33"'));
     const pre = el("input", "k-dlg-input");
     pre.value = saved.prefix || safeName(src2.title);
-    box.append(mk("\u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C", pre));
+    box2.append(mk("\u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C", pre));
     const size = el("input", "k-dlg-input");
     size.type = "number";
     size.min = "10";
     size.max = "200";
     size.value = String(saved.fontSize || DEFAULT_WM.fontSize);
-    box.append(mk("\u0E02\u0E19\u0E32\u0E14\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33 (px)", size));
+    box2.append(mk("\u0E02\u0E19\u0E32\u0E14\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33 (px)", size));
     const ang = el("input", "k-dlg-input");
     ang.type = "number";
     ang.min = "-90";
     ang.max = "90";
     ang.value = String(saved.angle ?? DEFAULT_WM.angle);
-    box.append(mk("\u0E21\u0E38\u0E21\u0E40\u0E2D\u0E35\u0E22\u0E07 (\u0E2D\u0E07\u0E28\u0E32)", ang));
+    box2.append(mk("\u0E21\u0E38\u0E21\u0E40\u0E2D\u0E35\u0E22\u0E07 (\u0E2D\u0E07\u0E28\u0E32)", ang));
     const dirRow = el("div", "k-row");
     const dirLbl = el("span", "dim", saved.outDir || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C)");
     let outDir = saved.outDir || "";
@@ -141332,9 +142807,9 @@ ${css}
       }
     };
     dirRow.append(bDir, dirLbl);
-    box.append(dirRow);
+    box2.append(dirRow);
     const prog = el("div", "dim k-wm-prog");
-    box.append(prog);
+    box2.append(prog);
     const btns = el("div", "k-dlg-btns");
     const bCancel = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
     bCancel.onclick = () => ov.remove();
@@ -141405,8 +142880,8 @@ ${css}
       bGo.disabled = false;
     };
     btns.append(bCancel, bGo);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -141890,15 +143365,15 @@ ${css}
     t3.fields = t3.fields || [];
     t3.sections = t3.sections || [];
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-tpl-edit");
-    box.append(el("div", "k-dlg-title", isNew ? "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E43\u0E2B\u0E21\u0E48" : "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15"));
+    const box2 = el("div", "k-dialog k-tpl-edit");
+    box2.append(el("div", "k-dlg-title", isNew ? "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E43\u0E2B\u0E21\u0E48" : "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15"));
     const rowName = el("div", "k-row");
     rowName.append(el("label", null, "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15"));
     const iName = el("input", "k-dlg-input");
     iName.type = "text";
     iName.value = t3.name || "";
     rowName.append(iName);
-    box.append(rowName);
+    box2.append(rowName);
     const rowCat = el("div", "k-row");
     rowCat.append(el("label", null, "\u0E2B\u0E21\u0E27\u0E14"));
     const selCat = el("select", "k-dlg-select");
@@ -141915,8 +143390,8 @@ ${css}
     }
     selCat.value = t3.entityTypeKey;
     rowCat.append(selCat);
-    box.append(rowCat);
-    box.append(el("div", "k-tpl-sub", "\u0E1F\u0E34\u0E25\u0E14\u0E4C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"));
+    box2.append(rowCat);
+    box2.append(el("div", "k-tpl-sub", "\u0E1F\u0E34\u0E25\u0E14\u0E4C\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"));
     const fieldsWrap = el("div", "k-tpl-list");
     const addFieldRow = (f = { key: "", label: "", type: "String", defaultValue: "" }) => {
       const r = el("div", "k-tpl-frow");
@@ -141944,8 +143419,8 @@ ${css}
     (t3.fields || []).forEach(addFieldRow);
     const bAddF = el("button", "k-tpl-add", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E1F\u0E34\u0E25\u0E14\u0E4C");
     bAddF.onclick = () => addFieldRow();
-    box.append(fieldsWrap, bAddF);
-    box.append(el("div", "k-tpl-sub", "\u0E2A\u0E48\u0E27\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32"));
+    box2.append(fieldsWrap, bAddF);
+    box2.append(el("div", "k-tpl-sub", "\u0E2A\u0E48\u0E27\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32"));
     const secWrap = el("div", "k-tpl-list");
     const addSecRow = (s = { title: "", defaultContent: "" }) => {
       const r = el("div", "k-tpl-frow");
@@ -141963,7 +143438,7 @@ ${css}
     (t3.sections || []).forEach(addSecRow);
     const bAddS = el("button", "k-tpl-add", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2A\u0E48\u0E27\u0E19");
     bAddS.onclick = () => addSecRow();
-    box.append(secWrap, bAddS);
+    box2.append(secWrap, bAddS);
     const optWrap = el("div", "k-tpl-opts");
     const mkChk = (label, val) => {
       const w = el("label", "k-tpl-chk");
@@ -141977,15 +143452,15 @@ ${css}
     const cRel = mkChk("\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C", t3.includeRelationships);
     const cImg = mkChk("\u0E21\u0E35\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E", t3.includeImages);
     const cCh = mkChk("\u0E21\u0E35 chapter overrides", t3.includeChapterOverrides);
-    box.append(optWrap);
+    box2.append(optWrap);
     const btns = el("div", "k-dlg-btns");
     const bJsonToggle = el("button", null, "{ } \u0E41\u0E01\u0E49\u0E40\u0E1B\u0E47\u0E19 JSON");
     bJsonToggle.style.marginRight = "auto";
     const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
     const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
     btns.append(bJsonToggle, cB, okB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     iName.focus();
     const collectForm = () => ({
@@ -142000,14 +143475,14 @@ ${css}
     });
     let jsonMode = false;
     let jsonTa = null;
-    const formEls = [rowName, rowCat, ...box.querySelectorAll(".k-tpl-sub, .k-tpl-list, .k-tpl-add, .k-tpl-opts")];
+    const formEls = [rowName, rowCat, ...box2.querySelectorAll(".k-tpl-sub, .k-tpl-list, .k-tpl-add, .k-tpl-opts")];
     bJsonToggle.onclick = () => {
       if (!jsonMode) {
         jsonTa = el("textarea", "k-src-view");
         jsonTa.style.height = "46vh";
         jsonTa.value = JSON.stringify(collectForm(), null, 2);
         formEls.forEach((n2) => n2.style.display = "none");
-        box.insertBefore(jsonTa, btns);
+        box2.insertBefore(jsonTa, btns);
         bJsonToggle.textContent = "\u25A4 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E1F\u0E2D\u0E23\u0E4C\u0E21";
         jsonMode = true;
       } else {
@@ -142448,12 +143923,12 @@ ${css}
   function entityCreateDialog(cat, tps) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
+      const box2 = el("div", "k-dialog");
       const opts = [
         ...tps.map((t3) => `<option value="${t3.id}">${t3.name || t3.id}</option>`),
         '<option value="">\u2014 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 \u2014</option>'
       ].join("");
-      box.innerHTML = `
+      box2.innerHTML = `
       <div class="k-dlg-title">\u0E2A\u0E23\u0E49\u0E32\u0E07${CAT_TH[cat] || cat}\u0E43\u0E2B\u0E21\u0E48</div>
       <div class="k-row" style="flex-direction:column;align-items:stretch;gap:6px;margin:6px 0">
         <label>\u0E0A\u0E37\u0E48\u0E2D</label><input type="text" class="k-dlg-input" id="ent-name" style="width:100%">
@@ -142463,10 +143938,10 @@ ${css}
         <select id="ent-tpl" class="k-dlg-select">${opts}</select>
       </div>
       <div class="k-dlg-btns"><button class="k-cancel">\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01</button><button class="k-ok">\u0E2A\u0E23\u0E49\u0E32\u0E07</button></div>`;
-      ov.appendChild(box);
+      ov.appendChild(box2);
       document.body.appendChild(ov);
-      const name5 = box.querySelector("#ent-name");
-      const tpl = box.querySelector("#ent-tpl");
+      const name5 = box2.querySelector("#ent-name");
+      const tpl = box2.querySelector("#ent-tpl");
       if (tps.length) tpl.value = tps[0].id;
       const done2 = (v2) => {
         ov.remove();
@@ -142480,8 +143955,8 @@ ${css}
         }
         done2({ name: n2, templateId: tpl.value });
       };
-      box.querySelector(".k-ok").onclick = ok2;
-      box.querySelector(".k-cancel").onclick = () => done2(null);
+      box2.querySelector(".k-ok").onclick = ok2;
+      box2.querySelector(".k-cancel").onclick = () => done2(null);
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
       };
@@ -142873,9 +144348,9 @@ ${css}
   function smartTypeDialog() {
     const tab = state.active;
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-smart-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23 SmartType (\u0E04\u0E33\u0E17\u0E35\u0E48\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E08\u0E33\u0E44\u0E27\u0E49)"));
-    box.append(el(
+    const box2 = el("div", "k-dialog k-smart-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23 SmartType (\u0E04\u0E33\u0E17\u0E35\u0E48\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E08\u0E33\u0E44\u0E27\u0E49)"));
+    box2.append(el(
       "div",
       "dim",
       '\u0E04\u0E33\u0E40\u0E2B\u0E25\u0E48\u0E32\u0E19\u0E35\u0E49\u0E40\u0E01\u0E47\u0E1A\u0E08\u0E32\u0E01 "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E1A\u0E17\u0E19\u0E35\u0E49" \u2014 \u0E01\u0E14 \u2715 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2A\u0E31\u0E48\u0E07\u0E44\u0E21\u0E48\u0E43\u0E2B\u0E49\u0E08\u0E33\u0E2D\u0E35\u0E01'
@@ -142892,7 +144367,7 @@ ${css}
     }
     minRow.append(minSel);
     minRow.append(el("span", "dim", " \u2014 \u0E04\u0E48\u0E32 1 = \u0E08\u0E33\u0E17\u0E38\u0E01\u0E04\u0E33\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C (\u0E04\u0E33\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E1C\u0E34\u0E14\u0E08\u0E30\u0E15\u0E34\u0E14\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22)"));
-    box.append(minRow);
+    box2.append(minRow);
     const body = el("div", "k-smart-body");
     const render = () => {
       body.innerHTML = "";
@@ -142981,7 +144456,7 @@ ${css}
       render();
     };
     render();
-    box.append(body);
+    box2.append(body);
     const btns = el("div", "k-dlg-btns");
     const ok2 = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     ok2.onclick = () => {
@@ -142989,8 +144464,8 @@ ${css}
       if (tab && tab.sp) spSmartCheck(tab);
     };
     btns.append(ok2);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
       if (e.target === ov) ok2.onclick();
@@ -143356,8 +144831,8 @@ ${css}
       }
     };
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide k-cmp");
-    box.append(el("div", "k-dlg-title", "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19 \u2014 " + sc.title));
+    const box2 = el("div", "k-dialog k-wide k-cmp");
+    box2.append(el("div", "k-dlg-title", "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19 \u2014 " + sc.title));
     const head2 = el("div", "k-cmp-head");
     const selL = el("select", "k-dlg-select");
     const selR = el("select", "k-dlg-select");
@@ -143372,14 +144847,14 @@ ${css}
     selL.selectedIndex = Math.min(1, opts.length - 1);
     selR.value = "__cur__";
     head2.append(el("span", "k-cmp-lbl", "\u0E0B\u0E49\u0E32\u0E22:"), selL, el("span", "k-cmp-lbl", "\u0E02\u0E27\u0E32:"), selR);
-    box.append(head2);
+    box2.append(head2);
     const grid = el("div", "k-cmp-grid");
-    box.append(grid);
+    box2.append(grid);
     const foot = el("div", "k-dlg-btns");
     const closeB = el("button", null, "\u0E1B\u0E34\u0E14");
     foot.append(closeB);
-    box.append(foot);
-    ov.append(box);
+    box2.append(foot);
+    ov.append(box2);
     document.body.append(ov);
     closeB.onclick = () => ov.remove();
     ov.onclick = (e) => {
@@ -143542,19 +145017,19 @@ ${css}
     };
     if (opts.silent) return { types: types2, counts, blanks, doRemove };
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.innerHTML = `<div class="k-dlg-title">\u0E25\u0E1A element \u0E15\u0E32\u0E21\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17</div>
+    const box2 = el("div", "k-dialog");
+    box2.innerHTML = `<div class="k-dlg-title">\u0E25\u0E1A element \u0E15\u0E32\u0E21\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17</div>
     <div class="k-hint" style="margin-bottom:10px">\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17 element \u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E25\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E17
       <br>(\u0E19\u0E31\u0E1A\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32 \u2014 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 \xB7 \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22 Ctrl+Z)</div>
     <div id="rm-el-list"></div>
     <div style="margin-top:8px"><a href="#" id="rm-el-all">\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14</a> \xB7 <a href="#" id="rm-el-none">\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01</a></div>
     <div class="k-dlg-total dim" style="margin-top:8px"></div>
     <div class="k-dlg-btns"><button class="k-cancel">${t("dialogs.cancel")}</button><button class="k-ok k-danger" disabled>\u0E25\u0E1A</button></div>`;
-    ov.append(box);
+    ov.append(box2);
     document.body.append(ov);
-    const list = box.querySelector("#rm-el-list");
-    const totalEl = box.querySelector(".k-dlg-total");
-    const okBtn = box.querySelector(".k-ok");
+    const list = box2.querySelector("#rm-el-list");
+    const totalEl = box2.querySelector(".k-dlg-total");
+    const okBtn = box2.querySelector(".k-ok");
     const chks = [];
     const syncTotal = () => {
       const sel = chks.filter((c) => c.checked);
@@ -143574,21 +145049,21 @@ ${css}
       list.append(label);
     }
     syncTotal();
-    box.querySelector("#rm-el-all").onclick = (e) => {
+    box2.querySelector("#rm-el-all").onclick = (e) => {
       e.preventDefault();
       chks.forEach((c) => {
         c.checked = true;
       });
       syncTotal();
     };
-    box.querySelector("#rm-el-none").onclick = (e) => {
+    box2.querySelector("#rm-el-none").onclick = (e) => {
       e.preventDefault();
       chks.forEach((c) => {
         c.checked = false;
       });
       syncTotal();
     };
-    box.querySelector(".k-cancel").onclick = () => ov.remove();
+    box2.querySelector(".k-cancel").onclick = () => ov.remove();
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
@@ -143616,13 +145091,13 @@ ${css}
       "\xA1\xA2\xA3\xA4\xA5\xA6\xA7\xA8\xA9\xAA\xAB\xAC\xAD\xAE\xAF\xB0\xB1\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xBB\xBC\xBD\xBE\xBF"
     ];
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog");
-    box.innerHTML = `<div class="k-dlg-title">\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E1E\u0E34\u0E40\u0E28\u0E29</div>
+    const box2 = el("div", "k-dialog");
+    box2.innerHTML = `<div class="k-dlg-title">\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E1E\u0E34\u0E40\u0E28\u0E29</div>
     <div class="k-charmap"></div>
     <div class="k-dlg-btns"><button class="k-ok">${t("dialogs.close")}</button></div>`;
-    ov.append(box);
+    ov.append(box2);
     document.body.append(ov);
-    const grid = box.querySelector(".k-charmap");
+    const grid = box2.querySelector(".k-charmap");
     for (const row2 of LATIN1) {
       const r = el("div", "k-cm-row");
       for (const ch of row2) {
@@ -143639,7 +145114,7 @@ ${css}
       }
       grid.append(r);
     }
-    box.querySelector(".k-ok").onclick = () => ov.remove();
+    box2.querySelector(".k-ok").onclick = () => ov.remove();
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
@@ -143980,16 +145455,21 @@ ${css}
     refreshOutline();
   }
   function refreshOutline() {
-    const box = $("#outline");
-    box.innerHTML = "";
+    const box2 = $("#outline");
+    const keepTop = box2.scrollTop, keepLeft = box2.scrollLeft;
+    const back = () => {
+      box2.scrollTop = keepTop;
+      box2.scrollLeft = keepLeft;
+    };
+    box2.innerHTML = "";
     const t3 = state.active;
     if (!t3 || t3.wiki || t3.gal || t3.isJson || t3.net || t3.dash || t3.planner || !t3.editor && !t3.sp && !t3.plain) {
-      box.append(el("div", "dim", "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39 Navigation)"));
+      box2.append(el("div", "dim", "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39 Navigation)"));
       return;
     }
     const head2 = el("div", "nav-head");
     head2.append(el("span", "nav-scene", (t3.sp ? "\u{1F3AC} " : "\u{1F4D6} ") + (t3.title || "(\u0E09\u0E32\u0E01)")));
-    box.append(head2);
+    box2.append(head2);
     const items = [];
     if (t3.editor) {
       t3.editor.view.state.doc.forEach((n2, offset) => {
@@ -144027,7 +145507,7 @@ ${css}
       });
     }
     if (!items.length) {
-      box.append(el("div", "dim", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)"));
+      box2.append(el("div", "dim", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01)"));
       return;
     }
     for (const it of items) {
@@ -144049,8 +145529,9 @@ ${css}
           t3.plain.setSelectionRange(off3, off3);
         }
       };
-      box.append(d);
+      box2.append(d);
     }
+    back();
   }
   function openFind() {
     $("#findbar").classList.add("on");
@@ -144212,9 +145693,9 @@ ${css}
   }
   function openDevConsole() {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-dev-dlg");
-    box.append(el("div", "k-dlg-title", "\u{1F6E0} \u0E04\u0E2D\u0E19\u0E42\u0E0B\u0E25\u0E19\u0E31\u0E01\u0E1E\u0E31\u0E12\u0E19\u0E32"));
-    box.append(el(
+    const box2 = el("div", "k-dialog k-dev-dlg");
+    box2.append(el("div", "k-dlg-title", "\u{1F6E0} \u0E04\u0E2D\u0E19\u0E42\u0E0B\u0E25\u0E19\u0E31\u0E01\u0E1E\u0E31\u0E12\u0E19\u0E32"));
+    box2.append(el(
       "div",
       "dim",
       '\u0E1E\u0E34\u0E21\u0E1E\u0E4C JavaScript \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 Ctrl+Enter \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E23\u0E31\u0E19 \xB7 \u0E43\u0E0A\u0E49\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 k2 \u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07\u0E02\u0E2D\u0E07\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 (k2.state \xB7 k2.tab() \xB7 k2.md() \xB7 k2.blocks() \xB7 k2.cssVar("--ed-fs") \xB7 k2.cmd("save"))'
@@ -144223,7 +145704,7 @@ ${css}
     inp.rows = 5;
     inp.spellcheck = false;
     inp.placeholder = '\u0E40\u0E0A\u0E48\u0E19  k2.cssVar("--ed-fs")   \u0E2B\u0E23\u0E37\u0E2D   k2.blocks().length';
-    box.append(inp);
+    box2.append(inp);
     const btns = el("div", "k-dev-btns");
     const out = el("pre", "k-dev-out");
     const write3 = (s, cls) => {
@@ -144314,13 +145795,13 @@ ${css}
         "--ui-fs": getComputedStyle(document.documentElement).getPropertyValue("--ui-fs").trim()
       }));
     }));
-    box.append(btns, out);
+    box2.append(btns, out);
     const foot = el("div", "k-dlg-btns");
     const close2 = el("button", "k-cancel", "\u0E1B\u0E34\u0E14");
     close2.onclick = () => ov.remove();
     foot.append(close2);
-    box.append(foot);
-    ov.append(box);
+    box2.append(foot);
+    ov.append(box2);
     document.body.append(ov);
     ov.addEventListener("mousedown", (e) => {
       if (e.target === ov) ov.remove();
@@ -144330,11 +145811,11 @@ ${css}
   }
   function aboutDialog() {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-about-dlg");
-    box.append(el("div", "k-dlg-title", "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A Killian 2"));
-    box.append(el("div", null, "\u0E04\u0E34\u0E40\u0E25\u0E35\u0E22\u0E19 \u0E2D\u0E35\u0E14\u0E34\u0E40\u0E15\u0E2D\u0E23\u0E4C " + APP_VERSION));
-    box.append(el("div", "dim", "\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E40\u0E02\u0E35\u0E22\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22/\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C \u2014 Electron + ProseMirror"));
-    box.append(el("div", "dim", "\u0E44\u0E1F\u0E25\u0E4C\u0E07\u0E32\u0E19\u0E40\u0E1B\u0E47\u0E19 Markdown + JSON \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E48\u0E27\u0E21\u0E01\u0E31\u0E1A Killian v1 \u0E44\u0E14\u0E49 100%"));
+    const box2 = el("div", "k-dialog k-about-dlg");
+    box2.append(el("div", "k-dlg-title", "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A Killian 2"));
+    box2.append(el("div", null, "\u0E04\u0E34\u0E40\u0E25\u0E35\u0E22\u0E19 \u0E2D\u0E35\u0E14\u0E34\u0E40\u0E15\u0E2D\u0E23\u0E4C " + APP_VERSION));
+    box2.append(el("div", "dim", "\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E40\u0E02\u0E35\u0E22\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22/\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C \u2014 Electron + ProseMirror"));
+    box2.append(el("div", "dim", "\u0E44\u0E1F\u0E25\u0E4C\u0E07\u0E32\u0E19\u0E40\u0E1B\u0E47\u0E19 Markdown + JSON \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E48\u0E27\u0E21\u0E01\u0E31\u0E1A Killian v1 \u0E44\u0E14\u0E49 100%"));
     const btns = el("div", "k-dlg-btns");
     const dev = el("button", "cmp-mini", "\u{1F6E0} \u0E04\u0E2D\u0E19\u0E42\u0E0B\u0E25\u0E19\u0E31\u0E01\u0E1E\u0E31\u0E12\u0E19\u0E32");
     dev.onclick = () => {
@@ -144344,8 +145825,8 @@ ${css}
     const ok2 = el("button", "k-ok", "\u0E1B\u0E34\u0E14");
     ok2.onclick = () => ov.remove();
     btns.append(dev, ok2);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     ov.addEventListener("mousedown", (e) => {
       if (e.target === ov) ov.remove();
@@ -144360,9 +145841,17 @@ ${css}
     const f = FEATURE_PANELS[pid];
     if (!f) return Promise.resolve(false);
     if (_featInFlight.has(pid)) return _featInFlight.get(pid);
+    const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
+    const backScroll = keepScroll(() => document.querySelector(sel));
     const p = Promise.resolve().then(f).catch((e) => {
       log("error", "\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07 " + pid + " \u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27", e);
-    }).finally(() => _featInFlight.delete(pid)).then(() => true);
+    }).finally(() => _featInFlight.delete(pid)).then(() => {
+      try {
+        backScroll();
+      } catch {
+      }
+      return true;
+    });
     _featInFlight.set(pid, p);
     return p;
   }
@@ -144782,6 +146271,9 @@ ${css}
         resetPanels();
         syncMenuToggles();
         break;
+      case "export-panel-layout":
+        await exportPanelLayout();
+        break;
       // [alpha.61 ข้อ 1] สวิตช์ลำดับเปิดโปรแกรม (เก็บที่ global settings — ใช้ร่วมทุกโปรเจกต์)
       case "delete-line":
         deleteCurrentLine();
@@ -144904,6 +146396,26 @@ ${css}
         break;
       case "panel-system":
         togglePanelDialog();
+        break;
+      // ---- [alpha.66r3] จัดการพื้นที่ + เวิร์กสเปซ (สเปกระบบแผง) ----
+      case "panels-hide-all":
+        toggleSpace("all");
+        syncMenuToggles();
+        break;
+      case "panels-hide-right":
+        toggleSpace("right");
+        syncMenuToggles();
+        break;
+      case "panels-hide-left":
+        toggleSpace("left");
+        syncMenuToggles();
+        break;
+      case "workspace-menu":
+        workspaceMenu();
+        break;
+      case "workspace":
+        applyWorkspace(a[0]);
+        syncMenuToggles();
         break;
       case "ai-assistant":
         openAIAssistant();
@@ -145254,16 +146766,16 @@ ${css}
     return _tipEl;
   }
   function placeTipRelative(el2) {
-    const box = tipBox();
+    const box2 = tipBox();
     const er = el2.getBoundingClientRect();
-    const bw = box.offsetWidth || box.getBoundingClientRect().width;
-    const bh = box.offsetHeight || box.getBoundingClientRect().height;
+    const bw = box2.offsetWidth || box2.getBoundingClientRect().width;
+    const bh = box2.offsetHeight || box2.getBoundingClientRect().height;
     let left = er.left + er.width / 2 - bw / 2;
     left = Math.max(4, Math.min(left, window.innerWidth - bw - 4));
     let top = er.top - bh - TIP_GAP;
     if (top < 4) top = er.bottom + TIP_GAP;
-    box.style.left = Math.round(left) + "px";
-    box.style.top = Math.round(top) + "px";
+    box2.style.left = Math.round(left) + "px";
+    box2.style.top = Math.round(top) + "px";
   }
   function hideTip() {
     clearTimeout(_tipJob);
@@ -145304,15 +146816,15 @@ ${css}
       _tipSaved = text;
       _tipKt = host2;
       host2.removeAttribute("title");
-      const box = tipBox();
-      box.textContent = text;
-      box.classList.toggle("multiline", text.includes("\n"));
-      box.classList.add("on");
+      const box2 = tipBox();
+      box2.textContent = text;
+      box2.classList.toggle("multiline", text.includes("\n"));
+      box2.classList.add("on");
       if (host2.dataset.ktAbove === "0") {
         const er = host2.getBoundingClientRect();
-        const bh = box.offsetHeight || box.getBoundingClientRect().height;
-        box.style.left = Math.round(er.left + er.width / 2 - (box.offsetWidth || 100) / 2) + "px";
-        box.style.top = Math.round(er.bottom + TIP_GAP) + "px";
+        const bh = box2.offsetHeight || box2.getBoundingClientRect().height;
+        box2.style.left = Math.round(er.left + er.width / 2 - (box2.offsetWidth || 100) / 2) + "px";
+        box2.style.top = Math.round(er.bottom + TIP_GAP) + "px";
       } else {
         placeTipRelative(host2);
       }
@@ -145367,14 +146879,14 @@ ${css}
     }
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
-      const box = el("div", "k-dialog");
-      box.append(el("div", "k-dlg-title", title2));
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", title2));
       const mkRow = (label) => {
         const r = el("div", "wiki-row");
         r.append(el("label", null, label));
         const s = el("select", "wiki-input k-dlg-select");
         r.append(s);
-        box.append(r);
+        box2.append(r);
         return s;
       };
       const selSec = mkRow("\u0E40\u0E25\u0E48\u0E21");
@@ -145414,8 +146926,8 @@ ${css}
       const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
       const okB = el("button", "k-ok", "\u0E15\u0E01\u0E25\u0E07");
       btns.append(cB, okB);
-      box.append(btns);
-      ov.append(box);
+      box2.append(btns);
+      ov.append(box2);
       document.body.append(ov);
       const done2 = (v2) => {
         ov.remove();
@@ -145699,8 +147211,8 @@ ${css}
   }
   function showShortcutsDialog() {
     const ov = el("div", "k-overlay");
-    const box = el("div", "k-dialog k-wide k-keys-dlg");
-    box.append(el("div", "k-dlg-title", t("allShortcutsTitle")));
+    const box2 = el("div", "k-dialog k-wide k-keys-dlg");
+    box2.append(el("div", "k-dlg-title", t("allShortcutsTitle")));
     const catKeys = {
       "shortcutCategories.file": ["save", "save-all", "global-search"],
       "shortcutCategories.edit": ["fmt:bold", "fmt:italic", "fmt:underline", "fmt:strike", "find", "editor-undo", "editor-redo"],
@@ -145756,7 +147268,7 @@ ${css}
       }
       grid.append(sec);
     }
-    box.append(grid);
+    box2.append(grid);
     const btns = el("div", "k-dlg-btns");
     const searchInp = el("input", "k-dlg-input");
     searchInp.placeholder = t("filterCommands");
@@ -145769,8 +147281,8 @@ ${css}
     };
     const closeB = el("button", "k-ok", t("dialogs.close"));
     btns.append(searchInp, closeB);
-    box.append(btns);
-    ov.append(box);
+    box2.append(btns);
+    ov.append(box2);
     document.body.append(ov);
     closeB.onclick = () => ov.remove();
     ov.onclick = (e) => {
@@ -148164,10 +149676,11 @@ ${css}
           await waitMs(40);
           pb.interaction.closeEditor();
           const made = pb.data.getAllNodes().find((n2) => n2.type === tool && Math.abs(n2.x - bx) <= 3);
+          const cvR = cvEl.getBoundingClientRect();
           check2(
             `[65r-5] \u0E25\u0E32\u0E01\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E02\u0E19\u0E32\u0E14\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E2D\u0E22\u0E2A\u0E23\u0E49\u0E32\u0E07 "${tool}" \u0E44\u0E14\u0E49\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E25\u0E32\u0E01`,
             !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
-            made ? `${Math.round(made.width)}x${Math.round(made.height)} \u0E02\u0E2D ${w}x${h}` : "\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E27\u0E31\u0E15\u0E16\u0E38"
+            made ? `${Math.round(made.width)}x${Math.round(made.height)} \u0E02\u0E2D ${w}x${h}` : `\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E27\u0E31\u0E15\u0E16\u0E38 \xB7 canvas=${Math.round(cvR.width)}x${Math.round(cvR.height)} vt=${pb.renderer.canvas.viewportTransform.map((v4) => Math.round(v4 * 100) / 100).join(",")} p1=${Math.round(p1.x)},${Math.round(p1.y)} p2=${Math.round(p2.x)},${Math.round(p2.y)} nodes=${pb.data.getAllNodes().length}`
           );
           if (made) pb._deleteNode(made.id);
         }
@@ -151454,13 +152967,14 @@ ${css}
         const treeBtn = (act) => treePanelEl()?.querySelector(`:scope > .k-panel-head .k-panel-btn-${act}`);
         const order = [...treePanelEl().querySelectorAll(":scope > .k-panel-head .k-panel-btns .k-panel-btn")].map((b) => b.dataset.act).filter(Boolean);
         check2(
-          "\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E1B\u0E38\u0E48\u0E21 [\u0E1E\u0E31\u0E1A][\u0E25\u0E2D\u0E22/\u0E1C\u0E19\u0E36\u0E01][\u0E1B\u0E34\u0E14]",
-          order.join(",") === "collapse,float,close",
+          "\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E1B\u0E38\u0E48\u0E21 [\u2630 \u0E40\u0E21\u0E19\u0E39][\u0E1E\u0E31\u0E1A][\u0E25\u0E2D\u0E22/\u0E1C\u0E19\u0E36\u0E01][\u0E1B\u0E34\u0E14]",
+          order.join(",") === "menu,collapse,float,close",
           order.join(",")
         );
         check2(
           "\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01 PANEL_BUTTONS \u0E02\u0E2D\u0E07\u0E40\u0E2D\u0E19\u0E08\u0E34\u0E19",
-          PANEL_BUTTONS.map((b) => b.key).join(",") === "collapse,float,close"
+          PANEL_BUTTONS.map((b) => b.key).join(",") === "menu,collapse,float,close",
+          PANEL_BUTTONS.map((b) => b.key).join(",")
         );
         treeBtn("collapse").click();
         await new Promise((r) => setTimeout(r, 60));
@@ -151884,16 +153398,16 @@ ${css}
             "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14: \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E19 pane \u2192 \u0E43\u0E0A\u0E49 .pane \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19",
             !!pmNow && scrollHost(pmNow) === pmNow.closest(".pane")
           );
-          const box = el("div");
-          box.style.cssText = "overflow-y:auto;height:50px";
+          const box2 = el("div");
+          box2.style.cssText = "overflow-y:auto;height:50px";
           const inner = el("div", "ProseMirror");
-          box.append(inner);
-          document.body.append(box);
+          box2.append(inner);
+          document.body.append(box2);
           check2(
             "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14: \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E25\u0E2D\u0E22 (\u0E44\u0E21\u0E48\u0E21\u0E35 .pane) \u2192 \u0E44\u0E15\u0E48\u0E2B\u0E32 element \u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E14\u0E49",
-            scrollHost(inner) === box
+            scrollHost(inner) === box2
           );
-          box.remove();
+          box2.remove();
           check2("\u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 twScroll \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23", twScroll() === false);
         }
         {
@@ -153857,26 +155371,26 @@ ${css}
             markDirty(spT58);
             const p58 = confirmQuit();
             await new Promise((r) => setTimeout(r, 150));
-            const box = document.querySelector(".k-overlay .k-saveall");
-            check2("[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E17\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 \u2192 \u0E02\u0E36\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E1F\u0E25\u0E4C", !!box);
+            const box2 = document.querySelector(".k-overlay .k-saveall");
+            check2("[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E17\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 \u2192 \u0E02\u0E36\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E1F\u0E25\u0E4C", !!box2);
             check2(
               "[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21",
-              !!box && box.querySelector(".k-dlg-title").textContent.includes("\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21"),
-              box && box.querySelector(".k-dlg-title").textContent
+              !!box2 && box2.querySelector(".k-dlg-title").textContent.includes("\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21"),
+              box2 && box2.querySelector(".k-dlg-title").textContent
             );
             check2(
               "[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E21\u0E35\u0E40\u0E0A\u0E47\u0E04\u0E1A\u0E47\u0E2D\u0E01\u0E0B\u0E4C\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E25\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-              !!box && box.querySelectorAll(".k-saveall-row input[type=checkbox]").length >= 1
+              !!box2 && box2.querySelectorAll(".k-saveall-row input[type=checkbox]").length >= 1
             );
             check2(
               "[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E41\u0E2A\u0E14\u0E07 path \u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E49\u0E27\u0E22",
-              !!box && box.querySelector(".k-saveall-path").textContent.length > 3
+              !!box2 && box2.querySelector(".k-saveall-path").textContent.length > 3
             );
             check2(
               '[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E2D\u0E2D\u0E01\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E41\u0E25\u0E30 "\u0E44\u0E21\u0E48\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27"',
-              [...box.querySelectorAll(".k-dlg-btns button")].map((b) => b.textContent).join("|").includes("\u0E2D\u0E2D\u0E01\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01")
+              [...box2.querySelectorAll(".k-dlg-btns button")].map((b) => b.textContent).join("|").includes("\u0E2D\u0E2D\u0E01\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01")
             );
-            box.querySelector(".k-cancel").click();
+            box2.querySelector(".k-cancel").click();
             check2("[58-\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C1] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21", await p58 === null);
             await saveTab(spT58);
           }
@@ -157051,6 +158565,1221 @@ ${css}
         );
       }
       {
+        showPanel("notes");
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body'));
+        const bodyOf = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body');
+        const nHost = $("#notes-panel");
+        check2("[66r2-1] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2A\u0E21\u0E38\u0E14\u0E42\u0E19\u0E49\u0E15\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E08\u0E23\u0E34\u0E07", !!nHost && !!bodyOf());
+        if (nHost && bodyOf()) {
+          const big = el("div");
+          big.id = "k2-scroll-probe";
+          big.style.cssText = "height:1400px;width:2400px;flex:0 0 auto;";
+          nHost.appendChild(big);
+          await wait62(80);
+          const b1 = bodyOf();
+          b1.style.scrollBehavior = "auto";
+          b1.scrollTop = 320;
+          b1.scrollLeft = 140;
+          await until62(() => b1.scrollTop === 320 && b1.scrollLeft === 140, 20, 30);
+          check2(
+            "[66r2-1] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E41\u0E01\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
+            b1.scrollTop === 320 && b1.scrollLeft === 140,
+            `${b1.scrollTop},${b1.scrollLeft}`
+          );
+          renderPanels(true);
+          await wait62(420);
+          const b22 = bodyOf();
+          check2(
+            "[66r2-1] \u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48 = .k-panel-body \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E19\u0E25\u0E30\u0E43\u0E1A (\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E39\u0E49\u0E14\u0E49\u0E27\u0E22\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07)",
+            !!b22 && b22 !== b1
+          );
+          check2(
+            "[66r2-1] \u0E02\u0E22\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E15\u0E31\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            !!b22 && Math.abs(b22.scrollTop - 320) <= 8,
+            b22 && String(b22.scrollTop)
+          );
+          check2(
+            "[66r2-1] \u0E02\u0E22\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E01\u0E47\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E16\u0E39\u0E01\u0E08\u0E14\u0E40\u0E25\u0E22)",
+            !!b22 && Math.abs(b22.scrollLeft - 140) <= 8,
+            b22 && String(b22.scrollLeft)
+          );
+          b22.scrollTop = 700;
+          await wait62(320);
+          check2(
+            "[66r2-1] \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E08\u0E2D \u2014 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E15\u0E48\u0E2D\u0E44\u0E14\u0E49",
+            Math.abs(bodyOf().scrollTop - 700) <= 2,
+            String(bodyOf().scrollTop)
+          );
+          big.remove();
+        }
+        hidePanel("notes");
+        await wait62(120);
+      }
+      {
+        showPanel("dashboard");
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="dashboard"] > .k-panel-body'), 60, 50);
+        const dHost = $("#dash-panel");
+        const dBody = () => document.querySelector('#app-root .k-panel[data-panel-id="dashboard"] > .k-panel-body');
+        check2("[66r2-1b] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49", !!dHost && !!dBody());
+        if (dHost && dBody()) {
+          await renderFeaturePanel("dashboard");
+          const big = el("div");
+          big.id = "k2-scroll-probe2";
+          big.style.cssText = "height:1300px;width:2000px;flex:0 0 auto;";
+          dHost.appendChild(big);
+          await wait62(120);
+          const d1 = dBody();
+          d1.style.scrollBehavior = "auto";
+          d1.scrollTop = 260;
+          d1.scrollLeft = 90;
+          await until62(() => d1.scrollTop === 260, 20, 30);
+          check2("[66r2-1b] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E25\u0E07\u0E21\u0E32\u0E44\u0E14\u0E49\u0E01\u0E48\u0E2D\u0E19\u0E01\u0E14\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A", d1.scrollTop === 260, String(d1.scrollTop));
+          await renderFeaturePanel("dashboard");
+          await wait62(420);
+          check2(
+            "[66r2-1b] \u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+            Math.abs(dBody().scrollTop - 260) <= 8,
+            String(dBody().scrollTop)
+          );
+          check2(
+            "[66r2-1b] \u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E01\u0E47\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            Math.abs(dBody().scrollLeft - 90) <= 8,
+            String(dBody().scrollLeft)
+          );
+          big.remove();
+        }
+        hidePanel("dashboard");
+        await wait62(120);
+      }
+      {
+        const gapOf = (dockEl) => {
+          if (!dockEl) return NaN;
+          const row2 = dockEl.dataset.dir === "row";
+          const used = [...dockEl.children].reduce((a, e) => {
+            const r = e.getBoundingClientRect();
+            return a + (row2 ? r.width : r.height);
+          }, 0);
+          return (row2 ? dockEl.clientWidth : dockEl.clientHeight) - used;
+        };
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="props"]'));
+        await wait62(120);
+        const pEl2 = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+        const dockOf = () => {
+          const p = pEl2();
+          return p && p.parentElement;
+        };
+        const dk = dockOf();
+        check2(
+          "[66r2-2] \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E16\u0E39\u0E01\u0E1C\u0E19\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 dock \u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19",
+          !!dk && dk.classList.contains("k-dock") && dk.dataset.dir === "row",
+          dk && dk.dataset.dir
+        );
+        if (dk && dk.dataset.dir === "row") {
+          check2("[66r2-2] \u0E01\u0E48\u0E2D\u0E19\u0E1E\u0E31\u0E1A: \u0E25\u0E39\u0E01\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E23\u0E27\u0E21\u0E01\u0E31\u0E19\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 dock", Math.abs(gapOf(dk)) <= 2, String(gapOf(dk)));
+          getPanelManager().collapsePanel("props", true);
+          await until62(() => !!(pEl2() && pEl2().classList.contains("k-collapsed")));
+          await wait62(150);
+          const dk2 = dockOf();
+          check2(
+            "[66r2-2] \u0E1E\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32\u0E41\u0E25\u0E49\u0E27 **\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07** \u0E43\u0E19 dock",
+            !!dk2 && Math.abs(gapOf(dk2)) <= 2,
+            dk2 && `\u0E40\u0E2B\u0E25\u0E37\u0E2D ${gapOf(dk2).toFixed(1)}px`
+          );
+          check2(
+            "[66r2-2] \u0E1E\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E43\u0E19 dock \u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19 = \u0E23\u0E32\u0E07\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E41\u0E04\u0E1A \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E16\u0E1A\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07",
+            pEl2().getBoundingClientRect().width <= 40,
+            String(pEl2().getBoundingClientRect().width)
+          );
+          check2(
+            "[66r2-2] \u0E1E\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E01\u0E14\u0E04\u0E25\u0E35\u0E48\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49 (\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)",
+            !!pEl2().querySelector(".k-panel-btn-collapse")
+          );
+          {
+            const flexKids = [...dk2.children].filter((e) => parseFloat(e.style.flexGrow) > 0);
+            const keepG = flexKids.map((e) => e.style.flexGrow);
+            flexKids.forEach((e) => {
+              e.style.flexGrow = String(parseFloat(e.style.flexGrow) * 0.8);
+            });
+            await wait62(60);
+            check2(
+              "[66r2-2] control: \u0E1C\u0E25\u0E23\u0E27\u0E21 flex-grow < 1 \u0E15\u0E49\u0E2D\u0E07\u0E40\u0E01\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E1E\u0E34\u0E2A\u0E39\u0E08\u0E19\u0E4C\u0E15\u0E49\u0E19\u0E15\u0E2D)",
+              gapOf(dk2) > 20,
+              `\u0E40\u0E2B\u0E25\u0E37\u0E2D ${gapOf(dk2).toFixed(1)}px`
+            );
+            flexKids.forEach((e, i5) => {
+              e.style.flexGrow = keepG[i5];
+            });
+            await wait62(60);
+            check2("[66r2-2] control: \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32 grow \u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B", Math.abs(gapOf(dk2)) <= 2);
+          }
+          try {
+            await kapi.testShot("/tmp/k2-collapsed-rail.png");
+          } catch {
+          }
+          getPanelManager().collapsePanel("props", false);
+          await wait62(150);
+          check2(
+            "[66r2-2] \u0E04\u0E25\u0E35\u0E48\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E01\u0E47\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07",
+            Math.abs(gapOf(dockOf())) <= 2,
+            String(gapOf(dockOf()))
+          );
+        }
+        const strip = document.querySelector("#app-root .k-tab-group .k-strip-btn");
+        if (strip) {
+          const grp2 = strip.closest(".k-tab-group");
+          const gdock = grp2 && grp2.parentElement;
+          strip.click();
+          await until62(() => !!document.querySelector("#app-root .k-tab-group.icon-strip"));
+          await wait62(150);
+          const gdock2 = document.querySelector("#app-root .k-tab-group.icon-strip").parentElement;
+          check2(
+            "[66r2-2] \u0E22\u0E48\u0E2D\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E16\u0E1A\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07",
+            Math.abs(gapOf(gdock2)) <= 2,
+            `\u0E40\u0E2B\u0E25\u0E37\u0E2D ${gapOf(gdock2).toFixed(1)}px`
+          );
+          const back = document.querySelector("#app-root .k-tab-group.icon-strip .k-strip-btn");
+          if (back) back.click();
+          await until62(() => !document.querySelector("#app-root .k-tab-group.icon-strip"));
+          await wait62(150);
+          const gdock3 = gdock && gdock.isConnected ? gdock : (document.querySelector("#app-root .k-tab-group") || {}).parentElement;
+          check2(
+            "[66r2-2] \u0E04\u0E25\u0E35\u0E48\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E40\u0E15\u0E47\u0E21\u0E1E\u0E2D\u0E14\u0E35",
+            Math.abs(gapOf(gdock3)) <= 2,
+            `\u0E40\u0E2B\u0E25\u0E37\u0E2D ${gapOf(gdock3).toFixed(1)}px`
+          );
+        }
+        resetPanels();
+        await wait62(200);
+      }
+      {
+        resetPanels();
+        await wait62(240);
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(320);
+        const W = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? e.getBoundingClientRect().width : 0;
+        };
+        const dockEl = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        check2(
+          "[66r4] \u0E2A\u0E32\u0E22\u0E17\u0E35\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E22\u0E37\u0E14 \u2014 \u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E15\u0E48\u0E2D dock",
+          dockEl.querySelectorAll(":scope > .k-flex-child").length === 1,
+          String(dockEl.querySelectorAll(":scope > .k-flex-child").length)
+        );
+        check2(
+          "[66r4] \u0E1C\u0E19\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E02\u0E19\u0E32\u0E14\u0E17\u0E31\u0E19\u0E17\u0E35\u0E14\u0E49\u0E27\u0E22\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19)",
+          findPanel(getPanelManager().root, "props").pxW > 0 && !!document.querySelector("#app-root .k-dock > .k-fixed-px"),
+          String(findPanel(getPanelManager().root, "props").pxW)
+        );
+        const handles0 = [...document.querySelectorAll('#app-root .k-dock[data-dir="row"] > .k-resize-handle')];
+        const hPin = handles0[handles0.length - 1];
+        check2("[66r4] \u0E21\u0E35\u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32", !!hPin);
+        const hr0 = hPin.getBoundingClientRect();
+        hPin.dispatchEvent(new MouseEvent("mousedown", { clientX: hr0.left + 2, clientY: hr0.top + 30, button: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: hr0.left - 50, clientY: hr0.top + 30, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mouseup", { clientX: hr0.left - 50, clientY: hr0.top + 30, bubbles: true }));
+        await wait62(340);
+        const pinned = findPanel(getPanelManager().root, "props");
+        check2(
+          "[66r4] \u0E25\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19 px (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19)",
+          !!pinned && pinned.pxW > 0,
+          pinned && String(pinned.pxW)
+        );
+        check2(
+          "[66r4] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E15\u0E34\u0E14\u0E04\u0E25\u0E32\u0E2A .k-fixed-px",
+          !!document.querySelector('#app-root .k-panel[data-panel-id="props"].k-fixed-px')
+        );
+        check2(
+          "[66r4] \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19\u0E1A\u0E19\u0E08\u0E2D",
+          !!pinned && Math.abs(pinned.pxW - W("props")) <= 3,
+          pinned && `${pinned.pxW} vs ${W("props")}`
+        );
+        check2(
+          "[66r4] \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07 (\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E22\u0E37\u0E14\u0E40\u0E2A\u0E21\u0E2D)",
+          !findPanel(getPanelManager().root, "docs").pxW
+        );
+        const propsW0 = W("props"), treeW0 = W("tree"), docsW0 = W("docs");
+        check2(
+          "[66r4] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E27\u0E31\u0E14\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E32\u0E21\u0E2A\u0E48\u0E27\u0E19",
+          propsW0 > 40 && docsW0 > 40,
+          `props=${propsW0} docs=${docsW0}`
+        );
+        const rootEl2 = $("#app-root");
+        const prevW = rootEl2.style.width;
+        rootEl2.style.width = rootEl2.getBoundingClientRect().width - 260 + "px";
+        await wait62(220);
+        check2(
+          "[66r4] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E04\u0E1A\u0E25\u0E07 \u2192 \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 (\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1D\u0E48\u0E32\u0E22\u0E2B\u0E14)",
+          Math.abs(W("props") - propsW0) <= 3,
+          `props ${propsW0}\u2192${W("props")}`
+        );
+        check2(
+          "[66r4] ...\u0E41\u0E25\u0E30\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E2B\u0E14\u0E44\u0E1B\u0E15\u0E32\u0E21\u0E2A\u0E48\u0E27\u0E19\u0E15\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+          docsW0 - W("docs") > 200,
+          `${docsW0} \u2192 ${W("docs")}`
+        );
+        rootEl2.style.width = prevW;
+        await wait62(220);
+        check2(
+          "[66r4] \u0E04\u0E37\u0E19\u0E02\u0E19\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 \u2192 \u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21",
+          Math.abs(W("props") - propsW0) <= 3 && Math.abs(W("docs") - docsW0) <= 3,
+          `props=${W("props")} docs=${W("docs")}`
+        );
+        for (let i5 = 0; i5 < 3; i5++) {
+          renderPanels(true);
+          await wait62(160);
+        }
+        check2(
+          "[66r4] \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E2B\u0E25\u0E32\u0E22\u0E23\u0E2D\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E02\u0E19\u0E32\u0E14\u0E44\u0E21\u0E48\u0E14\u0E23\u0E34\u0E1F\u0E15\u0E4C",
+          Math.abs(W("props") - propsW0) <= 2,
+          `${propsW0} \u2192 ${W("props")}`
+        );
+        hidePanel("props");
+        await wait62(280);
+        showPanel("props");
+        await wait62(340);
+        check2(
+          "[66r4] \u0E1B\u0E34\u0E14-\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 \u0E44\u0E14\u0E49\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30 (px \u0E15\u0E34\u0E14\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E42\u0E2B\u0E19\u0E14)",
+          Math.abs(W("props") - propsW0) <= 3,
+          `${propsW0} \u2192 ${W("props")}`
+        );
+        resetPanels();
+        await wait62(300);
+        check2(
+          "[66r8] \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07 = \u0E1B\u0E23\u0E30\u0E17\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19\u0E43\u0E2B\u0E49\u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07)",
+          panelIds(getPanelManager().root).filter((id) => !["docs", "toolbar", "statusbar"].includes(id)).every((id) => {
+            const n2 = findPanel(getPanelManager().root, id);
+            return !n2 || n2.pxW > 0;
+          }) && !findPanel(getPanelManager().root, "docs").pxW
+        );
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(300);
+        const dk4 = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const gap2 = dk4.clientWidth - [...dk4.children].reduce((a, e) => a + e.getBoundingClientRect().width, 0);
+        check2("[66r4] \u0E42\u0E2B\u0E21\u0E14 px \u0E01\u0E47\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07", Math.abs(gap2) <= 2, String(gap2));
+        resetPanels();
+        await wait62(240);
+      }
+      {
+        resetPanels();
+        await wait62(320);
+        const pm9 = getPanelManager();
+        const fixed9 = (id) => !!(PANEL_DEFS.find((d) => d.id === id) || {}).fixed;
+        const grpEl = () => {
+          const t4 = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+          return t4 ? t4.closest(".k-tab-group") : null;
+        };
+        const wEl = (e) => e ? Math.round(e.getBoundingClientRect().width) : 0;
+        const W = (id) => wEl(document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`));
+        const g9 = grpEl();
+        check2("[66r9] \u0E2B\u0E25\u0E31\u0E07\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15 \u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A (\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C+Navigation)", !!g9);
+        check2(
+          '[66r9] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E01\u0E27\u0E49\u0E32\u0E07\u0E15\u0E32\u0E21 "\u0E04\u0E48\u0E32\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E02\u0E2D\u0E07\u0E08\u0E2D',
+          wEl(g9) >= 280 && wEl(g9) <= 320,
+          `\u0E01\u0E25\u0E38\u0E48\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 ${wEl(g9)} (\u0E04\u0E32\u0E14 ~300)`
+        );
+        check2(
+          "[66r9] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E16\u0E39\u0E01\u0E15\u0E23\u0E36\u0E07\u0E40\u0E1B\u0E47\u0E19 px (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E15\u0E25\u0E2D\u0E14)",
+          !!g9 && g9.classList.contains("k-fixed-px"),
+          g9 && g9.className
+        );
+        const docs0 = W("docs"), grp0 = wEl(grpEl());
+        pm9.dockAtEdge("props", "right", fixed9);
+        await wait62(340);
+        const propsN = findPanel(pm9.root, "props");
+        check2(
+          "[66r9] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E08\u0E2D \u2192 \u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E21\u0E35\u0E02\u0E19\u0E32\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E01\u0E34\u0E19\u0E04\u0E23\u0E36\u0E48\u0E07\u0E08\u0E2D)",
+          !!propsN && propsN.pxW > 0 && propsN.pxW <= 400,
+          propsN && String(propsN.pxW)
+        );
+        check2(
+          "[66r9] \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E1A\u0E48\u0E07\u0E04\u0E23\u0E36\u0E48\u0E07 (\u0E40\u0E14\u0E34\u0E21 1140 \u2192 570)",
+          W("docs") > docs0 * 0.6,
+          `${docs0} \u2192 ${W("docs")}`
+        );
+        check2(
+          "[66r9] \u0E41\u0E1C\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E2B\u0E25\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48 (\u0E40\u0E14\u0E34\u0E21\u0E42\u0E14\u0E19\u0E40\u0E01\u0E25\u0E35\u0E48\u0E22\u0E43\u0E2B\u0E21\u0E48)",
+          Math.abs(wEl(grpEl()) - grp0) <= 3,
+          `${grp0} \u2192 ${wEl(grpEl())}`
+        );
+        const docs1 = W("docs");
+        pm9.dockAtEdge("notes", "right", fixed9);
+        await wait62(340);
+        check2(
+          "[66r9] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E43\u0E1A\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07 \u0E41\u0E1C\u0E07\u0E41\u0E23\u0E01\u0E22\u0E31\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21",
+          Math.abs(W("props") - propsN.pxW) <= 6,
+          `${propsN.pxW} \u2192 ${W("props")}`
+        );
+        check2(
+          "[66r9] \u0E41\u0E25\u0E30\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E2D\u0E35\u0E01\u0E23\u0E2D\u0E1A",
+          W("docs") > docs1 * 0.55,
+          `${docs1} \u2192 ${W("docs")}`
+        );
+        check2(
+          "[66r9] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E44\u0E2B\u0E19\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33",
+          ["tree", "props", "notes"].every((id) => W(id) === 0 || W(id) >= MIN_PANEL_PX),
+          `tree=${W("tree")} props=${W("props")} notes=${W("notes")}`
+        );
+        const rep9 = panelLayoutReport();
+        check2(
+          "[66r9] \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A",
+          rep9 && rep9.kind === "killian2-panel-layout" && !!rep9.layout.root && rep9.panels.length > 5
+        );
+        check2(
+          "[66r9] \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E41\u0E19\u0E1A\u0E02\u0E19\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23",
+          Math.abs((rep9.panels.find((p) => p.id === "docs").measured || {}).w - W("docs")) <= 2
+        );
+        check2(
+          "[66r9] \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E14\u0E36\u0E07\u0E02\u0E19\u0E32\u0E14\u0E21\u0E32\u0E08\u0E32\u0E01\u0E25\u0E39\u0E01",
+          rep9.diagnostics.derivedSizes.some((d) => d.type === "tabs" && d.derivedPx > 0) || rep9.diagnostics.docks.some((d) => d.children.some((c) => c.type === "tabs" && c.share === "px")),
+          JSON.stringify(rep9.diagnostics.derivedSizes)
+        );
+        check2(
+          '[66r9] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E40\u0E15\u0E37\u0E2D\u0E19 "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E19\u0E32\u0E14\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E22" \u0E2B\u0E25\u0E31\u0E07\u0E41\u0E01\u0E49',
+          !rep9.diagnostics.warnings.some((w) => w.includes("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E19\u0E32\u0E14\u0E43\u0E2B\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E22")),
+          rep9.diagnostics.warnings.join(" | ")
+        );
+        resetPanels();
+        await wait62(260);
+      }
+      {
+        resetPanels();
+        await wait62(300);
+        const pm10 = getPanelManager();
+        const W = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(320);
+        pm10.dockPanel("outline", "bottom", "tree");
+        await wait62(340);
+        const rowEl = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const rowId = rowEl.dataset.dockId;
+        const rowNode = nodeById(pm10.root, rowId);
+        const li = (rowNode.children || []).findIndex((c) => hasPanel(c, "tree"));
+        check2(
+          "[66r10] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E48\u0E07 tree/outline \xB7 \u0E02\u0E27\u0E32\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34",
+          li >= 0 && rowNode.children[li].type !== "panel" && W("outline") > 0,
+          `li=${li} type=${li >= 0 ? rowNode.children[li].type : "-"}`
+        );
+        pm10.resizePx(rowId, { [li]: 430 }, true);
+        await wait62(320);
+        const leftW = W("tree"), propsW = W("props"), docsW = W("docs");
+        check2("[66r10] \u0E15\u0E31\u0E49\u0E07\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E01\u0E49\u0E2D\u0E19\u0E0B\u0E49\u0E32\u0E22\u0E44\u0E27\u0E49 430", Math.abs(leftW - 430) <= 6, String(leftW));
+        pm10.floatPanel("outline", { x: 240, y: 240, w: 360, h: 420 });
+        await wait62(360);
+        const treeParent = document.querySelector('#app-root .k-panel[data-panel-id="tree"]').parentElement;
+        check2(
+          "[66r10] \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E1C\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u2192 \u0E01\u0E25\u0E38\u0E48\u0E21/\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B \u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27\u0E43\u0E19\u0E41\u0E16\u0E27\u0E2B\u0E25\u0E31\u0E01",
+          treeParent.dataset.dockId === rowId,
+          `${treeParent.className} ${treeParent.dataset.dockId}`
+        );
+        check2(
+          "[66r10] \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E23\u0E2D\u0E14\u0E22\u0E36\u0E14\u0E02\u0E19\u0E32\u0E14\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21 (\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14)",
+          Math.abs(W("tree") - leftW) <= 6,
+          `${leftW} \u2192 ${W("tree")}`
+        );
+        check2(
+          "[66r10] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E19\u0E32\u0E14\u0E15\u0E32\u0E21",
+          Math.abs(W("props") - propsW) <= 6,
+          `${propsW} \u2192 ${W("props")}`
+        );
+        check2(
+          "[66r10] \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E47\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E1C\u0E34\u0E14\u0E1B\u0E01\u0E15\u0E34 (\u0E23\u0E31\u0E1A\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2A\u0E48\u0E27\u0E19\u0E17\u0E35\u0E48 outline \u0E04\u0E37\u0E19\u0E21\u0E32)",
+          W("docs") >= docsW - 6,
+          `${docsW} \u2192 ${W("docs")}`
+        );
+        resetPanels();
+        await wait62(260);
+      }
+      {
+        resetPanels();
+        await wait62(280);
+        const pm10 = getPanelManager();
+        showPanel("notes", { prefer: "float" });
+        await wait62(260);
+        showPanel("comments", { prefer: "float" });
+        await wait62(260);
+        const fidN = pm10.floatIdOf("notes");
+        pm10.groupIntoFloat("comments", fidN);
+        await wait62(320);
+        check2(
+          "[66r10] \u0E08\u0E31\u0E1A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49 (\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E08\u0E2D)",
+          document.querySelectorAll(".k-float-group").length === 1,
+          String(document.querySelectorAll(".k-float-group").length)
+        );
+        const upBtn = document.querySelector(".k-float-group .k-tab-content > .k-panel:not(.k-tab-hidden) .k-panel-btn-float");
+        check2("[66r10] \u0E41\u0E1C\u0E07\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u29C9 \u0E43\u0E2B\u0E49\u0E01\u0E14", !!upBtn);
+        if (upBtn) {
+          upBtn.click();
+          await wait62(360);
+        }
+        check2(
+          "[66r10] \u0E14\u0E36\u0E07\u0E41\u0E1C\u0E07\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E34\u0E14\u0E02\u0E36\u0E49\u0E19)",
+          document.querySelectorAll(".k-float-panel[data-panel-id]").length >= 2,
+          [...document.querySelectorAll(".k-float-panel")].map((e) => e.dataset.panelId || "group").join()
+        );
+        check2(
+          "[66r10] \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27 \u2192 \u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E38\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27",
+          document.querySelectorAll(".k-float-group").length === 0
+        );
+        check2(
+          "[66r10] \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E19\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22 (\u0E1A\u0E31\u0E4A\u0E01\u0E1E\u0E48\u0E27\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E25\u0E2D\u0E22)",
+          isPanelOpen("notes") && isPanelOpen("comments"),
+          `notes=${isPanelOpen("notes")} comments=${isPanelOpen("comments")}`
+        );
+        pm10.groupIntoFloat("comments", pm10.floatIdOf("notes"));
+        await wait62(320);
+        const xBtn = document.querySelector(".k-float-group .k-tab-bar .k-panel-btn-close");
+        check2("[66r10] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u2715", !!xBtn);
+        if (xBtn) {
+          xBtn.click();
+          await wait62(360);
+        }
+        check2(
+          "[66r10] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E14 \u2715 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
+          !isPanelOpen("comments"),
+          `comments open=${isPanelOpen("comments")}`
+        );
+        check2("[66r10] ...\u0E41\u0E25\u0E30\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E19\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48", isPanelOpen("notes"));
+        hidePanel("notes");
+        resetPanels();
+        await wait62(280);
+      }
+      {
+        resetPanels();
+        await wait62(280);
+        const pm11 = getPanelManager();
+        const gBox = () => {
+          const e = document.querySelector(".k-float-group");
+          if (!e) return null;
+          const r = e.getBoundingClientRect();
+          return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+        };
+        const same = (a, b) => a && b && Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.w - b.w) <= 2 && Math.abs(a.h - b.h) <= 2;
+        showPanel("notes", { prefer: "float" });
+        await wait62(240);
+        showPanel("comments", { prefer: "float" });
+        await wait62(240);
+        pm11.groupIntoFloat("comments", pm11.floatIdOf("notes"));
+        await wait62(320);
+        const box0 = gBox();
+        check2("[66r11] \u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E1A\u0E19\u0E08\u0E2D", !!box0, JSON.stringify(box0));
+        togglePanel("dashboard");
+        await wait62(320);
+        const box1 = gBox();
+        togglePanel("dashboard");
+        await wait62(320);
+        const box2 = gBox();
+        check2(
+          "[66r11] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
+          same(box0, box1),
+          `${JSON.stringify(box0)} \u2192 ${JSON.stringify(box1)}`
+        );
+        check2(
+          "[66r11] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E01\u0E47\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
+          same(box0, box2),
+          `${JSON.stringify(box0)} \u2192 ${JSON.stringify(box2)}`
+        );
+        const tab0 = document.querySelector(".k-float-group .k-tab-bar .k-tab");
+        if (tab0) {
+          const tr2 = tab0.getBoundingClientRect();
+          tab0.dispatchEvent(new MouseEvent("mousedown", { clientX: tr2.left + 8, clientY: tr2.top + 8, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: tr2.left + 80, clientY: tr2.top + 6, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mouseup", { clientX: tr2.left + 80, clientY: tr2.top + 6, bubbles: true }));
+          await wait62(340);
+        }
+        check2(
+          "[66r11] \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E22\u0E49\u0E32\u0E22\u0E17\u0E35\u0E48\u0E15\u0E32\u0E21",
+          same(box0, gBox()),
+          `${JSON.stringify(box0)} \u2192 ${JSON.stringify(gBox())}`
+        );
+        hidePanel("comments");
+        await wait62(320);
+        check2("[66r11] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E38\u0E1A\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27", !document.querySelector(".k-float-group"));
+        showPanel("comments", { prefer: "float" });
+        await wait62(340);
+        const gNow = pm11.floats.find((f) => f.panel.type === "tabs");
+        check2(
+          "[66r11] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E44\u0E1B\u0E25\u0E2D\u0E22\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D)",
+          !!gNow && (gNow.panel.children || []).map((c) => c.id).sort().join() === "comments,notes",
+          gNow ? gNow.panel.children.map((c) => c.id).join() : pm11.floats.map((f) => f.panel.id).join()
+        );
+        const lastBox = gBox();
+        hidePanel("comments");
+        hidePanel("notes");
+        await wait62(340);
+        showPanel("comments", { prefer: "float" });
+        await wait62(340);
+        const solo = pm11.floats.find((f) => f.panel.id === "comments");
+        check2(
+          "[66r11] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E2B\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27 \u2192 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07/\u0E02\u0E19\u0E32\u0E14\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21",
+          !!solo && Math.abs(solo.x - lastBox.x) <= 4 && Math.abs(solo.w - lastBox.w) <= 4,
+          `${JSON.stringify(lastBox)} \u2192 ${solo && JSON.stringify({ x: solo.x, y: solo.y, w: solo.w, h: solo.h })}`
+        );
+        hidePanel("comments");
+        await wait62(200);
+        showPanel("notes", { prefer: "float" });
+        await wait62(240);
+        showPanel("comments", { prefer: "float" });
+        await wait62(240);
+        pm11.groupIntoFloat("comments", pm11.floatIdOf("notes"));
+        await wait62(300);
+        const gid11 = (pm11.floats.find((f) => f.panel.type === "tabs") || {}).id;
+        pm11.dockFloatGroup(
+          gid11,
+          "right",
+          null,
+          { edge: true, isFixedPanel: (id) => !!(PANEL_DEFS.find((d) => d.id === id) || {}).fixed }
+        );
+        await wait62(360);
+        check2(
+          "[66r11] \u0E1C\u0E19\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E25\u0E2D\u0E22)",
+          !document.querySelector(".k-float-group") && pm11.isDocked("notes") && pm11.isDocked("comments")
+        );
+        const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        check2(
+          "[66r11] ...\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 (\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E44\u0E1B\u0E40\u0E01\u0E32\u0E30\u0E02\u0E49\u0E32\u0E07\u0E21\u0E31\u0E19)",
+          tbEl.getBoundingClientRect().width >= $("#app-root").getBoundingClientRect().width - 2,
+          `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($("#app-root").getBoundingClientRect().width)}`
+        );
+        check2(
+          "[66r11] ...\u0E41\u0E25\u0E30\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E43\u0E1A\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01",
+          !!tabGroupOf(pm11.root, "notes") && !!tabGroupOf(pm11.root, "comments")
+        );
+        resetPanels();
+        await wait62(280);
+      }
+      {
+        resetPanels();
+        await wait62(300);
+        const pm12 = getPanelManager();
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(320);
+        const dockedH = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="props"]').getBoundingClientRect().height);
+        document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        const f12 = () => pm12.floats.find((x) => x.panel.id === "props");
+        check2(
+          "[66r12] \u0E01\u0E14 \u29C9 \u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E44\u0E21\u0E48\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E15\u0E2D\u0E19\u0E1C\u0E19\u0E36\u0E01 (\u0E40\u0E14\u0E34\u0E21\u0E22\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E21\u0E32\u0E17\u0E31\u0E49\u0E07\u0E14\u0E38\u0E49\u0E19)",
+          !!f12() && f12().h < dockedH && f12().h <= 560,
+          `dock=${dockedH} float=${f12() && f12().h}`
+        );
+        const h12 = f12().h, w12 = f12().w;
+        document.querySelector('.k-float-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        check2("[66r12] \u0E1C\u0E19\u0E36\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", pm12.isDocked("props") && !pm12.isFloating("props"));
+        document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-btn-float').click();
+        await wait62(340);
+        check2(
+          "[66r12] undock \u2192 dock \u2192 undock \u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E41\u0E25\u0E30\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21",
+          !!f12() && f12().h === h12 && f12().w === w12,
+          `${w12}x${h12} \u2192 ${f12() && f12().w}x${f12() && f12().h}`
+        );
+        hidePanel("props");
+        await wait62(240);
+        showPanel("notes", { prefer: "float" });
+        await wait62(240);
+        showPanel("comments", { prefer: "float" });
+        await wait62(240);
+        pm12.groupIntoFloat("comments", pm12.floatIdOf("notes"));
+        await wait62(320);
+        const bar = document.querySelector(".k-float-group > .k-float-tabbar");
+        const pop = document.querySelector(".k-float-group");
+        check2("[66r12] \u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E25\u0E30\u0E41\u0E16\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E2B\u0E49\u0E25\u0E32\u0E01", !!bar && !!pop);
+        const p0 = pop.getBoundingClientRect();
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const tr2 = treeEl.getBoundingClientRect();
+        const bx = bar.getBoundingClientRect();
+        const sx2 = Math.round(bx.right - 6), sy2 = Math.round(bx.top + bx.height / 2);
+        const tx = Math.round(tr2.left + tr2.width / 2), ty = Math.round(tr2.top + tr2.height / 2);
+        bar.dispatchEvent(new MouseEvent("mousedown", { clientX: sx2, clientY: sy2, button: 0, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mousemove", { clientX: tx, clientY: ty, bubbles: true }));
+        document.dispatchEvent(new MouseEvent("mouseup", { clientX: tx, clientY: ty, bubbles: true }));
+        await wait62(360);
+        const want = { x: Math.round(p0.left + (tx - sx2)), y: Math.round(p0.top + (ty - sy2)) };
+        const g12 = pm12.floats.find((x) => x.panel.type === "tabs");
+        check2(
+          "[66r12] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E25\u0E2D\u0E22\u0E2D\u0E22\u0E39\u0E48 (\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E15\u0E23\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 = \u0E44\u0E21\u0E48\u0E1C\u0E19\u0E36\u0E01)",
+          !!g12,
+          pm12.floats.map((x) => x.panel.id).join()
+        );
+        check2(
+          "[66r12] \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E2A\u0E42\u0E15\u0E23\u0E4C (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E25\u0E22)",
+          !!g12 && Math.abs(g12.x - want.x) <= 6 && Math.abs(g12.y - want.y) <= 6,
+          `\u0E04\u0E32\u0E14 ${want.x},${want.y} \u0E44\u0E14\u0E49 ${g12 && g12.x},${g12 && g12.y}`
+        );
+        togglePanel("dashboard");
+        await wait62(300);
+        togglePanel("dashboard");
+        await wait62(300);
+        const after = document.querySelector(".k-float-group");
+        const pa = after && after.getBoundingClientRect();
+        check2(
+          "[66r12] \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E41\u0E1C\u0E07\u0E10\u0E32\u0E19)",
+          !!pa && Math.abs(Math.round(pa.left) - want.x) <= 6 && Math.abs(Math.round(pa.top) - want.y) <= 6,
+          `\u0E04\u0E32\u0E14 ${want.x},${want.y} \u0E44\u0E14\u0E49 ${pa && Math.round(pa.left)},${pa && Math.round(pa.top)}`
+        );
+        resetPanels();
+        await wait62(280);
+      }
+      {
+        resetPanels();
+        await wait62(260);
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(340);
+        const wOf = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        const dk7 = document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        getPanelManager().resizePx(
+          dk7.dataset.dockId,
+          { [[...nodeById(getPanelManager().root, dk7.dataset.dockId).children].findIndex((c) => c.id === "props")]: 450 },
+          true
+        );
+        await wait62(320);
+        const aW = wOf("props");
+        check2("[66r7] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E15\u0E31\u0E49\u0E07\u0E41\u0E1C\u0E07 A \u0E44\u0E27\u0E49\u0E17\u0E35\u0E48 ~450px", Math.abs(aW - 450) <= 8, String(aW));
+        togglePanel("kanban");
+        await wait62(420);
+        const fl7 = document.querySelector('.k-float-panel[data-panel-id="kanban"]');
+        check2("[66r7] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E44\u0E14\u0E49 **\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1C\u0E19\u0E36\u0E01\u0E40\u0E02\u0E49\u0E32 dock", !!fl7);
+        if (fl7) {
+          const r7 = fl7.getBoundingClientRect();
+          const cx2 = Math.abs(r7.left + r7.width / 2 - window.innerWidth / 2);
+          check2("[66r7] \u0E41\u0E25\u0E30\u0E25\u0E2D\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D", cx2 < 40, String(Math.round(cx2)));
+        }
+        check2(
+          "[66r7] **\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07 A \u0E02\u0E19\u0E32\u0E14\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E25\u0E22** (\u0E2D\u0E32\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E08\u0E2D)",
+          Math.abs(wOf("props") - aW) <= 2,
+          `${aW} \u2192 ${wOf("props")}`
+        );
+        check2(
+          "[66r7] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07",
+          auditPanelGaps().length === 0,
+          JSON.stringify(auditPanelGaps())
+        );
+        togglePanel("kanban");
+        await wait62(280);
+        getPanelManager().dockPanel("notes", "center", "props");
+        await wait62(360);
+        const grpEl = document.querySelector("#app-root .k-tab-group");
+        const grpW = (() => {
+          const g = document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+          const box2 = g && g.closest(".k-tab-group");
+          return box2 ? Math.round(box2.getBoundingClientRect().width) : 0;
+        })();
+        check2("[66r7] \u0E23\u0E27\u0E21\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E08\u0E23\u0E34\u0E07", !!grpEl && grpW > 0);
+        check2("[66r7] **\u0E02\u0E19\u0E32\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E22\u0E36\u0E14\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E10\u0E32\u0E19 \u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14**", Math.abs(grpW - aW) <= 10, `${aW} \u2192 ${grpW}`);
+        check2("[66r7] \u0E23\u0E27\u0E21\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07", auditPanelGaps().length === 0);
+        hidePanel("notes");
+        hidePanel("props");
+        resetPanels();
+        await wait62(260);
+      }
+      {
+        const noGap = (when) => {
+          const g = auditPanelGaps();
+          check2(`[66r6] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07 \u2014 ${when}`, g.length === 0, JSON.stringify(g));
+        };
+        for (const side of ["right", "left"]) {
+          resetPanels();
+          await wait62(260);
+          noGap(`\u0E40\u0E1E\u0E34\u0E48\u0E07 reset (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E2D\u0E30\u0E44\u0E23 \xB7 \u0E1D\u0E31\u0E48\u0E07${side}`);
+          showPanel("notes", { targetId: "docs", side, forceMove: true });
+          await wait62(360);
+          check2(`[66r6] \u0E1C\u0E19\u0E36\u0E01\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E49\u0E32\u0E1D\u0E31\u0E48\u0E07${side}\u0E44\u0E14\u0E49`, isPanelOpen("notes"));
+          const nEl6 = document.querySelector('#app-root .k-panel[data-panel-id="notes"]');
+          check2(
+            `[66r6] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E1C\u0E19\u0E36\u0E01\u0E44\u0E14\u0E49\u0E02\u0E19\u0E32\u0E14\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E21\u0E40\u0E2B\u0E15\u0E38\u0E2A\u0E21\u0E1C\u0E25 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E08\u0E19\u0E41\u0E1A\u0E19)`,
+            !!nEl6 && nEl6.getBoundingClientRect().width >= MIN_PANEL_PX * 2,
+            nEl6 && String(Math.round(nEl6.getBoundingClientRect().width))
+          );
+          const nNode6 = findPanel(getPanelManager().root, "notes");
+          check2(
+            "[66r6] \u0E41\u0E25\u0E30\u0E40\u0E01\u0E47\u0E1A\u0E02\u0E19\u0E32\u0E14\u0E25\u0E07\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35\u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48\u0E1C\u0E19\u0E36\u0E01 (\u0E01\u0E0E\u0E02\u0E49\u0E2D 2)",
+            !!nNode6 && nNode6.pxW > 0,
+            nNode6 && String(nNode6.pxW)
+          );
+          noGap(`\u0E2B\u0E25\u0E31\u0E07 dock \u0E40\u0E02\u0E49\u0E32\u0E1D\u0E31\u0E48\u0E07${side}`);
+          const dock6 = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"]').parentElement;
+          const hAll = () => [...dock6().querySelectorAll(":scope > .k-resize-handle")];
+          for (let i5 = 0; i5 < hAll().length; i5++) {
+            for (const dx of [90, -140]) {
+              const hh = hAll()[i5];
+              if (!hh) continue;
+              const r = hh.getBoundingClientRect();
+              hh.dispatchEvent(new MouseEvent("mousedown", { clientX: r.left + 2, clientY: r.top + 30, button: 0, bubbles: true }));
+              document.dispatchEvent(new MouseEvent("mousemove", { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+              document.dispatchEvent(new MouseEvent("mouseup", { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+              await wait62(300);
+              noGap(`\u0E2B\u0E25\u0E31\u0E07\u0E25\u0E32\u0E01\u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48 ${i5 + 1} (${dx > 0 ? "\u0E02\u0E27\u0E32" : "\u0E0B\u0E49\u0E32\u0E22"}) \u0E1D\u0E31\u0E48\u0E07${side}`);
+            }
+          }
+          hidePanel("notes");
+          await wait62(200);
+        }
+        resetPanels();
+        await wait62(240);
+      }
+      {
+        resetPanels();
+        await wait62(260);
+        showPanel("notes", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(340);
+        const pm6 = getPanelManager();
+        const dockedW = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="notes"]').getBoundingClientRect().width);
+        pm6.floatPanel("notes", { x: 60, y: 60, w: 560, h: 480 });
+        await wait62(320);
+        check2("[66r6b] \u0E25\u0E2D\u0E22\u0E04\u0E23\u0E31\u0E49\u0E07\u0E41\u0E23\u0E01\u0E44\u0E14\u0E49\u0E02\u0E19\u0E32\u0E14\u0E17\u0E35\u0E48\u0E2A\u0E31\u0E48\u0E07", (() => {
+          const f = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+          return !!f && Math.abs(f.getBoundingClientRect().width - 560) <= 6;
+        })());
+        pm6.moveFloat("notes", { w: 720, h: 520 });
+        await wait62(300);
+        pm6.dockPanel("notes", "right", "docs");
+        await wait62(340);
+        const back6 = Math.round(document.querySelector('#app-root .k-panel[data-panel-id="notes"]').getBoundingClientRect().width);
+        check2(
+          "[66r6b] \u0E1C\u0E19\u0E36\u0E01\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E43\u0E0A\u0E49\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E1C\u0E19\u0E36\u0E01 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E19\u0E32\u0E14\u0E15\u0E2D\u0E19\u0E25\u0E2D\u0E22 (720)",
+          Math.abs(back6 - dockedW) <= 6,
+          `${dockedW} \u2192 ${back6}`
+        );
+        pm6.floatPanel("notes", { x: 60, y: 60, w: 320, h: 300 });
+        await wait62(340);
+        const f6 = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+        check2(
+          "[66r6b] **\u0E14\u0E36\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E25\u0E2D\u0E22\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07 \u2192 \u0E44\u0E14\u0E49\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E25\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 (720) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E19\u0E32\u0E14 dock \u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E21\u0E32**",
+          !!f6 && Math.abs(f6.getBoundingClientRect().width - 720) <= 6,
+          f6 && String(Math.round(f6.getBoundingClientRect().width))
+        );
+        hidePanel("notes");
+        resetPanels();
+        await wait62(240);
+      }
+      {
+        resetPanels();
+        await wait62(240);
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(320);
+        const Wp = (id) => {
+          const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`);
+          return e ? Math.round(e.getBoundingClientRect().width) : 0;
+        };
+        const dragH = async (hEl, dx) => {
+          const r = hEl.getBoundingClientRect();
+          hEl.dispatchEvent(new MouseEvent("mousedown", { clientX: r.left + 2, clientY: r.top + 30, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mouseup", { clientX: r.left + 2 + dx, clientY: r.top + 30, bubbles: true }));
+          await wait62(320);
+        };
+        const rowDockNow = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]').parentElement;
+        const handleNow = (i5) => [...rowDockNow().querySelectorAll(":scope > .k-resize-handle")][i5];
+        check2(
+          "[66r5] \u0E21\u0E35\u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E02\u0E49\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19",
+          rowDockNow().querySelectorAll(":scope > .k-resize-handle").length >= 2,
+          String(rowDockNow().querySelectorAll(":scope > .k-resize-handle").length)
+        );
+        if (rowDockNow().querySelectorAll(":scope > .k-resize-handle").length >= 2) {
+          await dragH(handleNow(0), 20);
+          await dragH(handleNow(1), -20);
+          const leftW0 = Wp("tree"), rightW0 = Wp("props");
+          check2(
+            "[66r5] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E15\u0E23\u0E36\u0E07\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E41\u0E25\u0E49\u0E27",
+            leftW0 > 50 && rightW0 > 50,
+            `left=${leftW0} right=${rightW0}`
+          );
+          await dragH(handleNow(1), -120);
+          check2(
+            "[66r5] \u0E25\u0E32\u0E01\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32 \u2192 \u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07",
+            Wp("props") - rightW0 > 60,
+            `${rightW0} \u2192 ${Wp("props")}`
+          );
+          check2(
+            "[66r5] \u0E25\u0E32\u0E01\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32 \u2192 **\u0E41\u0E1C\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A**",
+            Math.abs(Wp("tree") - leftW0) <= 2,
+            `${leftW0} \u2192 ${Wp("tree")}`
+          );
+          const rightW1 = Wp("props");
+          await dragH(handleNow(0), 120);
+          check2("[66r5] \u0E25\u0E32\u0E01\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22 \u2192 \u0E41\u0E1C\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07", Wp("tree") - leftW0 > 60, `${leftW0} \u2192 ${Wp("tree")}`);
+          check2(
+            "[66r5] \u0E25\u0E32\u0E01\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22 \u2192 **\u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A**",
+            Math.abs(Wp("props") - rightW1) <= 2,
+            `${rightW1} \u2192 ${Wp("props")}`
+          );
+          const keepRight = Wp("props");
+          await dragH(handleNow(0), 5e3);
+          check2(
+            "[66r5] \u0E25\u0E32\u0E01\u0E40\u0E1A\u0E35\u0E22\u0E14\u0E2A\u0E38\u0E14\u0E41\u0E23\u0E07 \u2192 \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33",
+            Wp("docs") >= MIN_CANVAS_PX - 2,
+            `${Wp("docs")} (\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33 ${MIN_CANVAS_PX})`
+          );
+          check2(
+            "[66r5] \u0E25\u0E32\u0E01\u0E40\u0E1A\u0E35\u0E22\u0E14\u0E2A\u0E38\u0E14\u0E41\u0E23\u0E07 \u2192 \u0E2D\u0E35\u0E01\u0E1D\u0E31\u0E48\u0E07\u0E01\u0E47\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A",
+            Math.abs(Wp("props") - keepRight) <= 2,
+            `${keepRight} \u2192 ${Wp("props")}`
+          );
+          check2(
+            "[66r5] \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07\u0E40\u0E01\u0E34\u0E14\u0E02\u0E36\u0E49\u0E19 (\u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E23\u0E39\u0E42\u0E2B\u0E27\u0E48)",
+            auditPanelGaps().length === 0,
+            JSON.stringify(auditPanelGaps())
+          );
+        }
+        const beforeW = Wp("props"), beforeH = (() => {
+          const e = document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+          return e ? Math.round(e.getBoundingClientRect().height) : 0;
+        })();
+        const pHead2 = document.querySelector('#app-root .k-panel[data-panel-id="props"] .k-panel-head-title');
+        if (pHead2) {
+          const r = pHead2.getBoundingClientRect();
+          pHead2.dispatchEvent(new MouseEvent("mousedown", { clientX: r.left + 10, clientY: r.top + 6, button: 0, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: r.left + 40, clientY: r.top + 60, bubbles: true }));
+          const dc = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mouseup", { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }));
+          await wait62(360);
+          const fl = document.querySelector('.k-float-panel[data-panel-id="props"]');
+          check2("[66r5] \u0E25\u0E32\u0E01\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49", !!fl);
+          if (fl) {
+            const fr = fl.getBoundingClientRect();
+            check2(
+              "[66r5] \u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E15\u0E2D\u0E19\u0E1C\u0E19\u0E36\u0E01 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E40\u0E1B\u0E47\u0E19 320\xD7300)",
+              Math.abs(fr.width - beforeW) <= 6,
+              `\u0E1C\u0E19\u0E36\u0E01 ${beforeW}x${beforeH} \u2192 \u0E25\u0E2D\u0E22 ${Math.round(fr.width)}x${Math.round(fr.height)}`
+            );
+            check2(
+              "[66r12] ...\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E44\u0E21\u0E48\u0E22\u0E01\u0E21\u0E32\u0E08\u0E32\u0E01\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E21\u0E31\u0E19\u0E40\u0E04\u0E22\u0E1C\u0E19\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48",
+              fr.height <= Math.min(beforeH, 560) + 6,
+              `\u0E1C\u0E19\u0E36\u0E01\u0E2A\u0E39\u0E07 ${beforeH} \u2192 \u0E25\u0E2D\u0E22\u0E2A\u0E39\u0E07 ${Math.round(fr.height)}`
+            );
+          }
+        }
+        resetPanels();
+        await wait62(240);
+      }
+      {
+        showPanel("notes");
+        await wait62(300);
+        const nHost2 = $("#notes-panel");
+        const bodyOf2 = () => document.querySelector('#app-root .k-panel[data-panel-id="notes"] > .k-panel-body');
+        if (nHost2 && bodyOf2()) {
+          const big2 = el("div");
+          big2.style.cssText = "height:1500px;width:1800px;flex:0 0 auto;";
+          nHost2.appendChild(big2);
+          await wait62(120);
+          const b0 = bodyOf2();
+          b0.style.scrollBehavior = "auto";
+          b0.scrollTop = 380;
+          await until62(() => b0.scrollTop === 380, 20, 30);
+          check2("[66r5b] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E25\u0E07\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27", b0.scrollTop === 380, String(b0.scrollTop));
+          getPanelManager().collapsePanel("notes", true);
+          await wait62(280);
+          getPanelManager().collapsePanel("notes", false);
+          await wait62(420);
+          check2(
+            "[66r5b] \u0E1E\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E35\u0E48\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E32\u0E22\u0E40\u0E1E\u0E23\u0E32\u0E30\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E16\u0E39\u0E01 display:none)",
+            !!bodyOf2() && Math.abs(bodyOf2().scrollTop - 380) <= 8,
+            bodyOf2() && String(bodyOf2().scrollTop)
+          );
+          hidePanel("notes");
+          await wait62(280);
+          showPanel("notes");
+          await wait62(460);
+          check2(
+            "[66r5b] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48 \u2192 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E01\u0E47\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            !!bodyOf2() && Math.abs(bodyOf2().scrollTop - 380) <= 8,
+            bodyOf2() && String(bodyOf2().scrollTop)
+          );
+          big2.remove();
+        }
+        hidePanel("notes");
+        resetPanels();
+        await wait62(240);
+      }
+      {
+        const drag = async (fromEl, to) => {
+          const r = fromEl.getBoundingClientRect();
+          fromEl.dispatchEvent(new MouseEvent(
+            "mousedown",
+            { clientX: r.left + 30, clientY: r.top + 8, button: 0, bubbles: true }
+          ));
+          document.dispatchEvent(new MouseEvent(
+            "mousemove",
+            { clientX: r.left + 60, clientY: r.top + 40, bubbles: true }
+          ));
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: to.x, clientY: to.y, bubbles: true }));
+          await wait62(30);
+          return document.querySelector(".k-drop-zone");
+        };
+        const drop = async (to) => {
+          document.dispatchEvent(new MouseEvent("mouseup", { clientX: to.x, clientY: to.y, bubbles: true }));
+          await wait62(300);
+        };
+        const grabOf = (id) => document.querySelector(`#app-root .k-panel[data-panel-id="${id}"] .k-panel-head-title`) || document.querySelector(`#app-root .k-panel[data-panel-id="${id}"] .k-panel-head`);
+        resetPanels();
+        await wait62(220);
+        showPanel("notes");
+        await wait62(260);
+        const wsEl = document.querySelector("#app-root .k-workspace");
+        check2("[66r3-1] \u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E44\u0E27\u0E49 (.k-workspace)", !!wsEl);
+        const wr = wsEl.getBoundingClientRect();
+        const tbTop = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        check2(
+          "[66r3-1] \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E23\u0E27\u0E21\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D",
+          !!tbTop && tbTop.getBoundingClientRect().bottom <= wr.top + 2,
+          tbTop && `toolbar.bottom=${tbTop.getBoundingClientRect().bottom} ws.top=${wr.top}`
+        );
+        let dz = await drag(grabOf("notes"), { x: wr.left + 5, y: wr.top + wr.height / 2 });
+        check2(
+          '[66r3-1] \u0E25\u0E32\u0E01\u0E0A\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19 \u2192 \u0E42\u0E0B\u0E19 "\u0E02\u0E2D\u0E1A"',
+          !!dz && dz.dataset.kind === "edge" && dz.dataset.zone === "left",
+          dz && `${dz.dataset.kind}/${dz.dataset.zone}`
+        );
+        check2(
+          "[66r3-1] \u0E41\u0E16\u0E1A\u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27\u0E22\u0E32\u0E27\u0E40\u0E15\u0E47\u0E21\u0E14\u0E49\u0E32\u0E19 (\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E44\u0E14\u0E49\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E49\u0E07\u0E14\u0E49\u0E32\u0E19)",
+          !!dz && Math.abs(parseFloat(dz.style.height) - wr.height) <= 2,
+          dz && `${dz.style.height} vs ${wr.height}`
+        );
+        await drop({ x: wr.left + 5, y: wr.top + wr.height / 2 });
+        const nEl = document.querySelector('#app-root .k-panel[data-panel-id="notes"]');
+        const ws2 = document.querySelector("#app-root .k-workspace").getBoundingClientRect();
+        const nr = nEl.getBoundingClientRect();
+        check2(
+          "[66r3-1] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A \u2192 \u0E41\u0E1C\u0E07\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E0B\u0E49\u0E32\u0E22\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19",
+          Math.abs(nr.left - ws2.left) <= 2,
+          `${nr.left} vs ${ws2.left}`
+        );
+        check2(
+          "[66r3-1] \u0E41\u0E25\u0E30\u0E2A\u0E39\u0E07\u0E40\u0E15\u0E47\u0E21\u0E14\u0E49\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E40\u0E17\u0E48\u0E32\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E07\u0E40\u0E2D\u0E34\u0E0D\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E23\u0E07\u0E19\u0E31\u0E49\u0E19)",
+          Math.abs(nr.height - ws2.height) <= 3,
+          `${nr.height} vs ${ws2.height}`
+        );
+        check2(
+          "[66r3-1] \u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E23\u0E01\u0E02\u0E49\u0E32\u0E07)",
+          document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]').getBoundingClientRect().top < nr.top
+        );
+        resetPanels();
+        await wait62(220);
+        showPanel("notes");
+        await wait62(260);
+        const outTab = document.querySelector('#app-root .k-tab[data-panel-id="outline"]');
+        check2("[66r3-1] \u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19\u0E21\u0E35\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!outTab);
+        if (outTab) {
+          const tr2 = outTab.getBoundingClientRect();
+          dz = await drag(grabOf("notes"), { x: tr2.left + tr2.width / 2, y: tr2.top + tr2.height / 2 });
+          check2(
+            '[66r3-1] \u0E25\u0E32\u0E01\u0E44\u0E1B\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A \u2192 \u0E42\u0E0B\u0E19 "\u0E41\u0E17\u0E47\u0E1A" (\u0E01\u0E23\u0E2D\u0E1A\u0E40\u0E25\u0E47\u0E01\u0E04\u0E23\u0E2D\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E31\u0E49\u0E19)',
+            !!dz && dz.dataset.kind === "tab",
+            dz && dz.dataset.kind
+          );
+          check2(
+            "[66r3-1] \u0E01\u0E23\u0E2D\u0E1A\u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27\u0E40\u0E17\u0E48\u0E32\u0E02\u0E19\u0E32\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E0A\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+            !!dz && Math.abs(parseFloat(dz.style.width) - tr2.width) <= 2
+          );
+          await drop({ x: tr2.left + tr2.width / 2, y: tr2.top + tr2.height / 2 });
+          const grp2 = tabGroupOf(getPanelManager().root, "notes");
+          check2("[66r3-1] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1A\u0E19\u0E41\u0E17\u0E47\u0E1A \u2192 \u0E40\u0E02\u0E49\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07", !!grp2);
+          check2(
+            '[66r3-1] \u0E41\u0E25\u0E30\u0E41\u0E17\u0E23\u0E01 "\u0E15\u0E23\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22',
+            !!grp2 && grp2.children.map((c) => c.id).join(",") === "tree,notes,outline",
+            grp2 && grp2.children.map((c) => c.id).join(",")
+          );
+          const t0 = document.querySelector('#app-root .k-tab-bar .k-tab[data-panel-id="tree"]');
+          if (t0) {
+            const r0 = t0.getBoundingClientRect();
+            const wsNow = document.querySelector("#app-root .k-workspace").getBoundingClientRect();
+            const dz2 = await drag(grabOf("notes"), { x: r0.left + 5, y: r0.top + r0.height / 2 });
+            check2(
+              "[66r3-1] \u0E41\u0E17\u0E47\u0E1A\u0E43\u0E1A\u0E41\u0E23\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E02\u0E15\u0E02\u0E2D\u0E1A\u0E08\u0E2D\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E02\u0E2D\u0E07\u0E40\u0E17\u0E2A\u0E19\u0E35\u0E49)",
+              r0.left - wsNow.left < 26,
+              `${r0.left} - ${wsNow.left}`
+            );
+            check2(
+              "[66r3-1] \u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E0A\u0E19\u0E30\u0E42\u0E0B\u0E19\u0E02\u0E2D\u0E1A\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E27\u0E32\u0E07\u0E25\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07 dock \u0E02\u0E49\u0E32\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
+              !!dz2 && dz2.dataset.kind === "tab",
+              dz2 && dz2.dataset.kind
+            );
+            const dc = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+            document.dispatchEvent(new MouseEvent(
+              "mousemove",
+              { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }
+            ));
+            await wait62(30);
+            document.dispatchEvent(new MouseEvent(
+              "mouseup",
+              { clientX: dc.left + dc.width / 2, clientY: dc.top + dc.height / 2, bubbles: true }
+            ));
+            await wait62(250);
+          }
+        }
+        resetPanels();
+        await wait62(220);
+        showPanel("notes");
+        await wait62(260);
+        const docsEl = document.querySelector('#app-root .k-panel[data-panel-id="docs"]');
+        const dr = docsEl.getBoundingClientRect();
+        dz = await drag(grabOf("notes"), { x: dr.right - 40, y: dr.top + dr.height / 2 });
+        check2(
+          '[66r3-1] \u0E25\u0E32\u0E01\u0E44\u0E1B\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 \u2192 \u0E42\u0E0B\u0E19 "\u0E41\u0E17\u0E23\u0E01"',
+          !!dz && dz.dataset.kind === "insert" && dz.dataset.zone === "right",
+          dz && `${dz.dataset.kind}/${dz.dataset.zone}`
+        );
+        check2(
+          '[66r3-1] \u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27 "\u0E41\u0E17\u0E23\u0E01" = \u0E04\u0E23\u0E36\u0E48\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48 (\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E44\u0E14\u0E49\u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07)',
+          !!dz && Math.abs(parseFloat(dz.style.width) - dr.width / 2) <= 2
+        );
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const trr = treeEl.getBoundingClientRect();
+        document.dispatchEvent(new MouseEvent(
+          "mousemove",
+          { clientX: trr.left + trr.width / 2, clientY: trr.top + trr.height / 2, bubbles: true }
+        ));
+        await wait62(30);
+        dz = document.querySelector(".k-drop-zone");
+        check2(
+          '[66r3-1] \u0E25\u0E32\u0E01\u0E44\u0E1B\u0E01\u0E25\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19 (\u0E08\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E07) \u2192 \u0E42\u0E0B\u0E19 "\u0E23\u0E27\u0E21\u0E01\u0E25\u0E38\u0E48\u0E21"',
+          !!dz && dz.dataset.kind === "merge",
+          dz && dz.dataset.kind
+        );
+        check2(
+          '[66r3-1] \u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27 "\u0E23\u0E27\u0E21\u0E01\u0E25\u0E38\u0E48\u0E21" = \u0E04\u0E25\u0E38\u0E21\u0E17\u0E31\u0E49\u0E07\u0E43\u0E1A (\u0E04\u0E19\u0E25\u0E30\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32\u0E01\u0E31\u0E1A\u0E41\u0E17\u0E23\u0E01)',
+          !!dz && Math.abs(parseFloat(dz.style.width) - trr.width) <= 2
+        );
+        check2(
+          "[66r3-1] \u0E2A\u0E2D\u0E07\u0E42\u0E0B\u0E19\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E35\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E49\u0E2D\u0E07\u0E41\u0E22\u0E01\u0E2D\u0E2D\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E25\u0E48\u0E2D\u0E22)",
+          getComputedStyle(dz).borderColor !== "rgb(95, 159, 217)",
+          getComputedStyle(dz).borderColor
+        );
+        document.dispatchEvent(new MouseEvent("mouseup", { clientX: -5, clientY: -5, bubbles: true }));
+        await wait62(200);
+        check2(
+          "[66r3-1] \u0E41\u0E2A\u0E14\u0E07\u0E42\u0E0B\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E40\u0E2A\u0E21\u0E2D \u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E2D\u0E31\u0E19",
+          document.querySelectorAll(".k-drop-zone").length <= 1
+        );
+        resetPanels();
+        await wait62(200);
+      }
+      {
+        check2(
+          "[66r3-2] \u0E21\u0E35\u0E0A\u0E38\u0E14\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E23\u0E39\u0E1B\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E23\u0E27\u0E21 Essentials)",
+          BUILTIN_WORKSPACES.length >= 4 && BUILTIN_WORKSPACES[0].id === "essentials"
+        );
+        applyWorkspace("writing");
+        await wait62(420);
+        check2(
+          '[66r3-2] \u0E0A\u0E38\u0E14 "\u0E40\u0E02\u0E35\u0E22\u0E19" \u2014 \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2A\u0E32\u0E23\u0E1A\u0E31\u0E0D\u0E01\u0E31\u0E1A\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19',
+          isPanelOpen("tree") && !isPanelOpen("props") && !isPanelOpen("outline"),
+          `tree=${isPanelOpen("tree")} props=${isPanelOpen("props")} outline=${isPanelOpen("outline")}`
+        );
+        check2(
+          "[66r3-2] \u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D/\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E15\u0E34\u0E14\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22\u0E17\u0E38\u0E01\u0E0A\u0E38\u0E14",
+          !!document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]') && !!document.querySelector('#app-root .k-panel[data-panel-id="statusbar"]')
+        );
+        applyWorkspace("review");
+        await wait62(500);
+        const revGrp = tabGroupOf(getPanelManager().root, "comments");
+        check2(
+          '[66r3-2] \u0E0A\u0E38\u0E14 "\u0E15\u0E23\u0E27\u0E08\u0E41\u0E01\u0E49" \u2014 \u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E01\u0E31\u0E1A\u0E42\u0E19\u0E49\u0E15\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19',
+          !!revGrp && revGrp.children.some((c) => c.id === "notes")
+        );
+        check2(
+          "[66r3-2] \u0E2A\u0E25\u0E31\u0E1A\u0E0A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E2A\u0E21\u0E2D",
+          !!document.querySelector('#app-root .k-panel[data-panel-id="docs"]')
+        );
+        applyWorkspace("essentials");
+        await wait62(420);
+        showPanel("log");
+        await wait62(260);
+        getPanelManager().collapsePanel("log", true);
+        await wait62(200);
+        check2(
+          "[66r3-2] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1E\u0E31\u0E1A\u0E44\u0E27\u0E49",
+          isPanelOpen("log") && getPanelManager().isCollapsed("log")
+        );
+        check2("[66r3-2] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49", saveWorkspace("\u0E40\u0E17\u0E2A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B"));
+        check2(
+          "[66r3-2] \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E2D\u0E01",
+          listWorkspaces().some((w) => w.name === "\u0E40\u0E17\u0E2A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B" && !w.builtIn)
+        );
+        applyWorkspace("writing");
+        await wait62(420);
+        check2("[66r3-2] \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E0A\u0E38\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E20\u0E32\u0E1E\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07", !isPanelOpen("log"));
+        applyWorkspace("\u0E40\u0E17\u0E2A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B");
+        await wait62(460);
+        check2("[66r3-2] \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E0A\u0E38\u0E14\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E2D\u0E07 \u2192 \u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A", isPanelOpen("log"));
+        check2(
+          "[66r3-2] \u0E41\u0E25\u0E30\u0E08\u0E33\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E48\u0E2D/\u0E02\u0E22\u0E32\u0E22\u0E44\u0E27\u0E49\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07)",
+          getPanelManager().isCollapsed("log")
+        );
+        check2(
+          "[66r3-2] \u0E25\u0E1A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49",
+          deleteWorkspace("\u0E40\u0E17\u0E2A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B") && !listWorkspaces().some((w) => w.name === "\u0E40\u0E17\u0E2A\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B")
+        );
+        check2(
+          "[66r3-2] \u0E0A\u0E38\u0E14\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E23\u0E39\u0E1B\u0E25\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 / \u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E17\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+          deleteWorkspace("essentials") === false && saveWorkspace("essentials") === false
+        );
+        applyWorkspace("essentials");
+        await wait62(420);
+      }
+      {
+        resetPanels();
+        await wait62(220);
+        showPanel("props", { targetId: "docs", side: "right", forceMove: true });
+        await wait62(300);
+        check2("[66r3-3] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E41\u0E25\u0E30\u0E02\u0E27\u0E32", isPanelOpen("tree") && isPanelOpen("props"));
+        toggleSpace("right");
+        await wait62(300);
+        check2("[66r3-3] \u0E0B\u0E48\u0E2D\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1D\u0E31\u0E48\u0E07\u0E02\u0E27\u0E32 \u2192 \u0E41\u0E1C\u0E07\u0E02\u0E27\u0E32\u0E2B\u0E32\u0E22", !isPanelOpen("props"));
+        check2("[66r3-3] ...\u0E41\u0E15\u0E48\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E2A\u0E40\u0E1B\u0E01\u0E02\u0E49\u0E2D 2)", isPanelOpen("tree"));
+        toggleSpace("right");
+        await wait62(320);
+        check2("[66r3-3] \u0E01\u0E14\u0E0B\u0E49\u0E33 = \u0E04\u0E37\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E23\u0E1A", isPanelOpen("props") && isPanelOpen("tree"));
+        toggleSpace("all");
+        await wait62(340);
+        check2(
+          "[66r3-3] \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 \u2192 \u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22",
+          !isPanelOpen("tree") && !isPanelOpen("props") && !isPanelOpen("outline")
+        );
+        const dEl = document.querySelector('#app-root .k-panel[data-panel-id="docs"]');
+        const wsE = document.querySelector("#app-root .k-workspace");
+        check2(
+          "[66r3-3] \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E15\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 \u0E41\u0E25\u0E30\u0E01\u0E34\u0E19\u0E40\u0E15\u0E47\u0E21\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E42\u0E2B\u0E27\u0E48)",
+          !!dEl && !!wsE && Math.abs(dEl.getBoundingClientRect().width - wsE.getBoundingClientRect().width) <= 3,
+          dEl && wsE && `${dEl.getBoundingClientRect().width} vs ${wsE.getBoundingClientRect().width}`
+        );
+        check2(
+          "[66r3-3] \u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D/\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22 (\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27)",
+          !!document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]')
+        );
+        toggleSpace("all");
+        await wait62(360);
+        check2("[66r3-3] \u0E01\u0E14\u0E0B\u0E49\u0E33 = \u0E04\u0E37\u0E19\u0E17\u0E38\u0E01\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E27\u0E49", isPanelOpen("tree") && isPanelOpen("props"));
+        const heads = [...document.querySelectorAll("#app-root .k-panel:not(.k-panel-nohead) > .k-panel-head")];
+        check2(
+          "[66r3-3] \u0E17\u0E38\u0E01\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E21\u0E19\u0E39 \u2630",
+          heads.length > 0 && heads.every((h) => !!h.querySelector(".k-panel-btn-menu")),
+          `${heads.filter((h) => h.querySelector(".k-panel-btn-menu")).length}/${heads.length}`
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        heads[0].querySelector(".k-panel-btn-menu").click();
+        await wait62(160);
+        const pmenu = document.querySelector(".k-menu:not(#k-fab-menu)");
+        check2("[66r3-3] \u0E01\u0E14 \u2630 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E21\u0E19\u0E39\u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E08\u0E23\u0E34\u0E07", !!pmenu);
+        check2(
+          "[66r3-3] \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E41\u0E1C\u0E07 + \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E08\u0E31\u0E14\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48 + \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B",
+          !!pmenu && pmenu.textContent.includes("\u0E19\u0E35\u0E48\u0E04\u0E37\u0E2D\u0E2D\u0E30\u0E44\u0E23") && pmenu.textContent.includes("\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14") && pmenu.textContent.includes("\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B")
+        );
+        closeMenu();
+        await wait62(120);
+        resetPanels();
+        await wait62(220);
+      }
+      {
         const t8 = state.active;
         const pane8 = t8.pane;
         resetPageScale();
@@ -157840,7 +160569,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_editor();
@@ -157956,6 +160685,7 @@ ${css}
       _lnBound = false;
       _langFontUrls = /* @__PURE__ */ new Map();
       _typeSoundBound = false;
+      _lastPaneW = 0;
       spViewMode = "normal";
       _spViewJob = null;
       window.addEventListener("resize", () => {
@@ -158369,6 +161099,7 @@ ${css}
           refreshToolbar();
           syncWorkspaceWidths();
           scheduleLineGutter();
+          recenterOnPaneResize();
         });
         startLogAutoRefresh();
         initSplitSystem({ activate, closeTab, onRender: () => refreshToolbar() });
