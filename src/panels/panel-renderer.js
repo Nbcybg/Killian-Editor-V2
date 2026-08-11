@@ -220,6 +220,14 @@ function buildHead(node, pm, opts, md, floating) {
 
   const btns = el('span', 'k-panel-btns');
   const def = pm.registry.get(node.id) || {};
+  // [alpha.67] 🖥 ฉีกแผงออกเป็นหน้าต่าง OS จริง — วางไว้ก่อน ⧉ (ลอย) เพราะเป็นการ "ออกไปไกลกว่า"
+  if (opts.canTearOff && opts.canTearOff(node.id)) {
+    const tb = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
+    tb.title = 'ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)';
+    tb.dataset.act = 'tearoff';
+    tb.onclick = (e) => { e.stopPropagation(); opts.onTearOff(node.id); };
+    btns.appendChild(tb);
+  }
   for (const b of PL.PANEL_BUTTONS) {
     if (b.key === 'close' && def.closable === false) continue;
     if (b.key === 'float' && def.floatable === false) continue;
@@ -279,6 +287,10 @@ export function headMenuItems(node, pm, opts, md, floating) {
         if (floating) { const a = pm.isDocked('docs') ? 'docs' : undefined; pm.dockPanel(node.id, def.defaultSide || 'left', a); return; }
         pm.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
       } });
+  }
+  // [alpha.67] ทางเข้าที่สองของ tear-off (ปุ่ม 🖥 อาจถูกบีบหายเมื่อหัวแผงแคบ)
+  if (opts.canTearOff && opts.canTearOff(node.id)) {
+    items.push({ label: '🖥 ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)', click: () => opts.onTearOff(node.id) });
   }
   // [alpha.66r3] คำสั่งลึกที่ UI ฝากมา (จัดการพื้นที่ · เวิร์กสเปซ) — Progressive Disclosure ตามสเปก
   const extra = opts.extraHeadMenu ? (opts.extraHeadMenu(node.id, floating) || []) : [];
@@ -410,6 +422,16 @@ function renderFloatGroup(f, pm, opts, container) {
     pm.dockFloatGroup(f.id, 'left', pm.isDocked('docs') ? 'docs' : undefined);
   };
   const btns = el('span', 'k-panel-btns');
+  // [alpha.67] ฉีก "แท็บที่เปิดอยู่" ของกลุ่มลอยออกไปเป็นหน้าต่างแยก
+  // (หัวแผงข้างในก็มีปุ่มนี้ แต่ในกลุ่มลอยแถบแท็บอยู่บนสุด ผู้ใช้เอื้อมถึงก่อน)
+  const actId = (kids[active] || {}).id;
+  if (actId && opts.canTearOff && opts.canTearOff(actId)) {
+    const toBtn = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
+    toBtn.title = 'ย้ายแท็บนี้ไปหน้าต่างแยก (ลากไปจออื่นได้)';
+    toBtn.dataset.act = 'tearoff';
+    toBtn.onclick = (e) => { e.stopPropagation(); opts.onTearOff(actId); };
+    btns.appendChild(toBtn);
+  }
   btns.append(dockBtn, closeBtn);
   bar.appendChild(btns);
   pop.appendChild(bar);

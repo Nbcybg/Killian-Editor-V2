@@ -1,16 +1,23 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const call = (ch) => (...a) => ipcRenderer.invoke(ch, ...a);
+// [alpha.67] ทุกคำสั่งที่ "เปลี่ยนไฟล์" ต้องบอกหน้าต่างอื่นให้รู้ (tear-off = หลายหน้าต่างดูโปรเจกต์เดียวกัน)
+// ดักที่นี่ทีเดียวแทนการไล่แปะตามจุดเรียกนับร้อยแห่งใน renderer — จุดใหม่ที่เพิ่มทีหลังก็ได้ไปด้วยฟรี ๆ
+// (main เป็นคนหน่วงรวบก่อนกระจาย จึงเขียนรัว ๆ ตอน autosave ได้โดยไม่ท่วม)
+const callW = (ch) => (...a) => ipcRenderer.invoke(ch, ...a).then((r) => {
+  try { ipcRenderer.invoke('panel:fileChanged', a[0]); } catch {}
+  return r;
+});
 let _appVersion = '2.0.0';
 try { _appVersion = require('./package.json').version || _appVersion; } catch {}
 contextBridge.exposeInMainWorld('kapi', {
   appVersion: _appVersion,
   appDir: call('app:dir'),                 // โฟลเดอร์แอป — ใช้หาไฟล์ภาษา/ทรัพยากรที่มากับโปรแกรม (preload sandbox ไม่มี __dirname)
-  readFile: call('fs:readFile'), writeFile: call('fs:writeFile'),
+  readFile: call('fs:readFile'), writeFile: callW('fs:writeFile'),
   readJson: call('fs:readJson'), exists: call('fs:exists'), listDirs: call('fs:listDirs'),
-  listFiles: call('fs:listFiles'), mkdir: call('fs:mkdir'), move: call('fs:move'), remove: call('fs:remove'), isDir: call('fs:isDir'), mtime: call('fs:mtime'),
+  listFiles: call('fs:listFiles'), mkdir: call('fs:mkdir'), move: callW('fs:move'), remove: callW('fs:remove'), isDir: call('fs:isDir'), mtime: call('fs:mtime'),
   stat: call('fs:stat'),                   // [alpha.63] {size, mtimeMs, birthtimeMs, isDir} — คลังรูปใช้
-  copyInto: call('fs:copyInto'), writeImageData: call('fs:writeImageData'),
-  writeBytes: call('fs:writeBytes'), readBytes: call('fs:readBytes'), copyFile: call('fs:copyFile'),
+  copyInto: callW('fs:copyInto'), writeImageData: callW('fs:writeImageData'),
+  writeBytes: callW('fs:writeBytes'), readBytes: call('fs:readBytes'), copyFile: callW('fs:copyFile'),
   spellBase: call('spell:base'), spellExtra: call('spell:extra'),
   spellAddWord: call('spell:addWord'), spellDownload: call('spell:download'), spellHasBase: call('spell:hasBase'),
   join: call('path:join'), resolve: call('path:resolve'),
@@ -28,7 +35,7 @@ contextBridge.exposeInMainWorld('kapi', {
   print: call('win:print'), printToPdf: call('win:printToPdf'),
   pdfFromHtml: call('pdf:fromHtml'),         // [70] สร้าง PDF จาก HTML (หน้าต่างซ่อน)
   pushRecent: call('recent:push'), listRecent: call('recent:list'),
-  testShot: call('test:shot'), revealInOS: call('shell:reveal'),
+  testShot: call('test:shot'), testShotTearOff: call('test:shotTearOff'), revealInOS: call('shell:reveal'),
   // [alpha.62 บั๊ก 3] คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า navigator.clipboard ในหน้าต่างไร้ขอบ
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
@@ -46,4 +53,10 @@ contextBridge.exposeInMainWorld('kapi', {
   },
   logWrite: call('log:write'), logRead: call('log:read'), logPath: call('log:path'), logReveal: call('log:reveal'),
   onMenu: (cb) => ipcRenderer.on('menu', (e, ch, ...a) => cb(ch, ...a)),
+  // ---- [alpha.67] Tear-off: แผงเป็นหน้าต่าง OS จริง (หลายจอ) ----
+  tearOff: call('panel:tearOff'),                 // {id,title,root,x,y,w,h} → เปิดหน้าต่างแผง
+  tearOffClose: call('panel:tearOffClose'),        // ปิดหน้าต่างแผงตาม id
+  tearOffList: call('panel:tearOffList'),          // id ของแผงที่ถูกฉีกออกอยู่ตอนนี้
+  broadcast: call('panel:broadcast'),              // ส่งข้อความถึงหน้าต่างอื่นทุกบาน (ไม่ย้อนกลับหาผู้ส่ง)
+  onSync: (cb) => ipcRenderer.on('k2:sync', (e, msg) => cb(msg || {})),
 });

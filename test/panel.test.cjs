@@ -1150,6 +1150,40 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
         PE.defaultExportName('ก-ข/:*?"<>|'));
 }
 
+// ───────── [alpha.67] tear-off: store แบบอ่านอย่างเดียว ─────────
+// หน้าต่างแผงที่ฉีกออกไปใช้ localStorage ก้อนเดียวกับหน้าต่างหลัก (origin file:// เดียวกัน)
+// ถ้ามันเขียนได้ เลย์เอาต์ของหน้าต่างหลักจะถูกทับด้วย "เลย์เอาต์แผงเดียว" ทันทีที่เปิดหน้าต่างลูก
+{
+  const mem = new Map();
+  const storage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+                    setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  // หน้าต่างหลักจัดเลย์เอาต์ไว้ก่อน
+  const main = new PS.PanelManager({ storage });
+  main.registerPanel('docs', { title: 'เอกสาร' });
+  main.registerPanel('timeline', { title: 'เส้นเวลา' });
+  main.showPanel('docs'); main.showPanel('timeline');
+  const saved = storage.getItem('k2-panel-layout');
+  check('tearoff: หน้าต่างหลักเขียนเลย์เอาต์ได้ตามปกติ', !!saved && saved.includes('timeline'));
+
+  // หน้าต่างลูก: อ่านได้ แต่ห้ามเขียนทับ
+  const child = new PS.PanelManager({ storage });
+  child.registerPanel('timeline', { title: 'เส้นเวลา' });
+  check('tearoff: setReadOnly คืนค่าสถานะ', child.setReadOnly(true) === true && child.isReadOnly() === true);
+  check('tearoff: ลูกยังโหลดเลย์เอาต์เดิมมาอ่านได้', child.store.load() === true);
+  child.store.root = PL.panel('timeline', 'เส้นเวลา');       // จำลอง "เลย์เอาต์แผงเดียว"
+  check('tearoff: save() ของลูกถูกปฏิเสธ', child.store.save() === false);
+  check('tearoff: ของในกล่องยังเป็นของหน้าต่างหลัก', storage.getItem('k2-panel-layout') === saved);
+
+  child.store.reset();
+  check('tearoff: reset() ของลูกไม่ล้างของหน้าต่างหลัก', storage.getItem('k2-panel-layout') === saved);
+  check('tearoff: ลูกบันทึกเวิร์กสเปซไม่ได้', child.saveWorkspace('ของลูก') === false);
+  check('tearoff: ลูกลบเวิร์กสเปซไม่ได้', child.removeWorkspace('อะไรก็ตาม') === false);
+
+  // และหน้าต่างหลักต้องไม่ถูกกระทบ — เขียนต่อได้เหมือนเดิม
+  main.showPanel('timeline');
+  check('tearoff: หน้าต่างหลักยังเขียนได้อยู่', main.store.save() === true);
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

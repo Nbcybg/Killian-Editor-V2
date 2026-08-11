@@ -62,6 +62,7 @@ import { $, el, state, smart, LOG_BUF, log, setStatus,
          t, i18n, loadLanguage, applyDataI18n, onLanguageChanged, SHORTCUTS, SHORTCUT_LABELS, shortcutId,
          formatShortcut, accelText, withShortcut, num,
          setBusy, clearBusy, busyMsg, withBusy,
+         PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
          keepScroll } from './core.js';   // [alpha.66r2] จำ-คืนตำแหน่งเลื่อนตอนรื้อ DOM สร้างใหม่
 import { sceneProps } from './scene-props.js';
 // [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง
@@ -137,7 +138,10 @@ import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePan
          listWorkspaces, saveWorkspace, applyWorkspace, deleteWorkspace,
          BUILTIN_WORKSPACES, auditPanelGaps,
          // ส่งออกการจัดวางแผงเป็นไฟล์ (ใช้เป็นเลย์เอาต์อ้างอิง / แนบตอนรายงานบั๊กเรื่องแผง)
-         exportPanelLayout, panelLayoutReport } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
+         exportPanelLayout, panelLayoutReport,
+         // [alpha.67] tear-off: แผงเป็นหน้าต่าง OS จริง
+         mountPanelWindow, tearOffPanel, recallPanel, isTornOff, tornOffIds,
+         canTearOff, TEAROFF_PANELS } from './panels/panel-ui.js';   // [60r3 ข้อ 8]
 import { wrapDesc as panelWrapDesc } from './panels/panel-renderer.js';
 import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSplitSystem,
          initSplitSystem, syncActiveSplit, openInSplit, closeTabInSplit, splitDir,
@@ -1452,9 +1456,20 @@ async function loadProjectInner(root) {
   // [alpha.57a ข้อ 5] ฟอนต์ตามภาษาของโปรเจกต์ (ต้องรู้ path จริงก่อนจึงสร้าง @font-face ได้)
   preloadLangFontUrls().then(() => applySettings()).catch(() => {});
   loadSpellDict(root);                               // โหลดคลังคำตรวจคำผิด (async, ไม่บล็อก)
+  warmInverse();                                     // ผังความสัมพันธ์ (แผง Story Network ใช้)
+  // [alpha.67] หน้าต่างแผงที่ฉีกออกมา: หยุดตรงนี้ — ที่เหลือเป็นของหน้าต่างหลักล้วน ๆ
+  // (เทมเพลต · ปลั๊กอิน · ระบบเลย์เอาต์แผง · กู้แท็บที่เปิดค้าง · แดชบอร์ดตั้งต้น · autosync)
+  // ทั้งหมดเขียนสถานะระดับโปรแกรม/ไฟล์ทับกัน และหน้าต่างนี้ก็ไม่มี UI ให้ใช้อยู่แล้ว
+  if (PANEL_WIN) {
+    mountPanelWindow(PANEL_WIN);
+    await renderFeaturePanel(PANEL_WIN);
+    clearBusy();
+    setStatus('เปิดโปรเจกต์: ' + state.title);
+    return;
+  }
   setBusy('กำลังโหลดเทมเพลต…');
   await loadTemplates();                            // default templates ถูกฝังลงโปรเจกต์ทันที
-  warmInverse(); loadPlugins();
+  loadPlugins();
   // ---- เริ่มระบบใหม่ (Part 1+2) ----
   setBusy('กำลังจัดวางแผงและแท็บ…');
   initPanelSystem();                                 // Panel System
@@ -1580,6 +1595,75 @@ export async function bootSequence() {
   }
   return { openedLast, showedHome: !openedLast || g.showHomeOnStartup === true };
 }
+/**
+ * [alpha.67] ลำดับเริ่มของ "หน้าต่างแผงที่ฉีกออกมา" (tear-off)
+ *
+ * เปิดโปรเจกต์เดียวกับหน้าต่างหลัก แล้ว `loadProject` จะแยกไปเรียก `mountPanelWindow`
+ * ให้เองตอนถึงขั้นจัดวางแผง (ดูจุดตัดใน loadProjectInner)
+ * ไม่มีหน้าแรก · ไม่มีการกู้แท็บ · ไม่มี autosave — หน้าต่างนี้ไม่ได้ถือเอกสารอะไรเลย
+ */
+export async function bootPanelWindow() {
+  document.body.classList.add('panel-window');
+  const root = (() => {
+    try { return new URLSearchParams(location.search).get('root') || ''; } catch { return ''; }
+  })();
+  const g = await bootGlobalSettings();
+  state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
+  if (!root) { setStatus('หน้าต่างแผง: ไม่ได้รับที่อยู่โปรเจกต์'); return false; }
+  await loadProject(root);
+  bindPanelWindowSync();
+  return true;
+}
+
+/**
+ * [alpha.67] ช่องสื่อสารของหน้าต่างแผง
+ *   ขาเข้า  — หน้าต่างหลักบอกว่าไฟล์โปรเจกต์เปลี่ยน → วาดแผงใหม่
+ *   ขาออก  — ผู้ใช้คลิกฉากในแผง (เส้นเวลา/Kanban/ผัง) → ฝากหน้าต่างหลักเปิดให้
+ *            (หน้าต่างนี้ไม่มีแท็บเอกสาร เปิดเองแล้วจะไม่มีอะไรโผล่)
+ */
+function bindPanelWindowSync() {
+  try { kapi.onSync((msg) => handleSyncMessage(msg)); } catch {}
+  return true;
+}
+/** ข้อความนี้เกี่ยวกับโปรเจกต์ที่หน้าต่างนี้เปิดอยู่ไหม (path ว่าง = เหมารวมว่าใช่) */
+function syncTouchesProject(msg) {
+  if (!state.root) return false;
+  const p = msg && msg.path;
+  return !p || String(p).startsWith(state.root);
+}
+/** ตัวจัดการข้อความข้ามหน้าต่าง — ใช้ร่วมทั้งหน้าต่างหลักและหน้าต่างแผง */
+export function handleSyncMessage(msg) {
+  if (!msg || !msg.kind) return false;
+  if (msg.kind === 'project-changed') {
+    if (!syncTouchesProject(msg)) return false;
+    if (PANEL_WIN) { renderFeaturePanel(PANEL_WIN); return true; }
+    // หน้าต่างหลัก: แผงฟีเจอร์ที่เปิดอยู่อาจแสดงข้อมูลเก่าที่หน้าต่างลูกเพิ่งแก้
+    renderOpenFeaturePanels().catch(() => {});
+    buildTree().catch(() => {});
+    return true;
+  }
+  if (msg.kind === 'open-file' && !PANEL_WIN && msg.file) {
+    // หน้าต่างแผงคลิกฉาก → หน้าต่างหลักเป็นคนเปิดให้ (ที่นั่นมีแท็บเอกสารจริง)
+    activate(msg.file).then(() => { try { window.focus(); } catch {} }).catch(() => {});
+    return true;
+  }
+  return false;
+}
+/** หน้าต่างหลักรับสัญญาณจากหน้าต่างแผง (ผูกครั้งเดียวตอนเริ่มโปรแกรม) */
+let _mainSyncBound = false;
+export function bindMainWindowSync() {
+  if (_mainSyncBound || PANEL_WIN) return false;
+  try { kapi.onSync((msg) => handleSyncMessage(msg)); _mainSyncBound = true; } catch {}
+  return _mainSyncBound;
+}
+/** ขอให้หน้าต่างหลักเปิดไฟล์นี้ (ใช้จากหน้าต่างแผงเท่านั้น) — คืน false เมื่ออยู่หน้าต่างหลัก */
+export function requestOpenInMain(file) {
+  if (!PANEL_WIN || !file) return false;
+  try { kapi.broadcast && kapi.broadcast({ kind: 'open-file', root: state.root, file }); } catch {}
+  setStatus('ส่งไปเปิดที่หน้าต่างหลักแล้ว');
+  return true;
+}
+
 /** สลับ "เปิดโปรเจกต์ล่าสุดเมื่อเริ่มโปรแกรม" (เมนูไฟล์) */
 export async function toggleOpenLastProject(on) {
   const v = on ?? !(state.settings.openLastProject === true);
@@ -5511,6 +5595,9 @@ async function addMemo() {
 
 // ---------------- แท็บ + ตัวแก้ไข ----------------
 export async function openScene(file, title) {
+  // [alpha.67] หน้าต่างแผงที่ฉีกออกมาไม่มีแถบแท็บ/พื้นที่เขียน — เปิดที่นี่แล้วจะไม่มีอะไรโผล่
+  // ทางเดียวเดียวที่ทุกแผงใช้เปิดฉาก จึงดักที่นี่ทีเดียว: ฝากหน้าต่างหลักเปิดให้แทน
+  if (PANEL_WIN) return requestOpenInMain(file);
   if (state.tabs.has(file)) return activate(file);
   const raw = await kapi.readFile(file);
   const { meta, body } = parseMdFile(raw);
@@ -8254,6 +8341,9 @@ window.addEventListener('DOMContentLoaded', () => {
                                     markDirty(state.active); doFind(); };
   $('#find-repall').onclick = () => { const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
                                       setStatus('แทนที่ ' + n + ' แห่ง'); markDirty(state.active); doFind(); };
+  // [alpha.67] หน้าต่างแผงที่ฉีกออกมามีลำดับเริ่มของตัวเอง (และไม่มี autosave — ไม่ได้ถือเอกสาร)
+  if (PANEL_WIN) { bootPanelWindow(); return; }
+  bindMainWindowSync();
   if (!location.search.includes('k2test')) bootSequence();
   // autosave ตั้งค่าได้ผ่านตั้งค่าโปรเจกต์ (restartAutosave เรียกจาก applySettings เมื่อเปิดโปรเจกต์)
   restartAutosave();
@@ -18733,6 +18823,90 @@ async function runTest(projectPath) {
               !!pa && Math.abs(Math.round(pa.left) - want.x) <= 6 && Math.abs(Math.round(pa.top) - want.y) <= 6,
               `คาด ${want.x},${want.y} ได้ ${pa && Math.round(pa.left)},${pa && Math.round(pa.top)}`);
         resetPanels(); await wait62(280);
+      }
+
+      // ---- [alpha.67] Tear-off: ฉีกแผงออกเป็นหน้าต่าง OS จริง ----
+      // เทสนี้เปิด **หน้าต่างที่สองจริง ๆ** แล้วปิดจริง — ไม่ได้เรียกฟังก์ชันตรง ๆ ให้ผ่านหลอก
+      // (บทเรียนรอบ 66r10–r12: บั๊กกลุ่มลอยทั้งชุดคือ "คืน true แต่ไม่ทำอะไรเลย")
+      {
+        resetPanels(); await wait62(300);
+        const pmT = getPanelManager();
+        check('[67] หน้าต่างหลักไม่ใช่หน้าต่างแผง', !isPanelWindow() && PANEL_WIN === '');
+        check('[67] หน้าต่างหลักเขียนเลย์เอาต์ได้ (ไม่ใช่โหมดอ่านอย่างเดียว)', pmT.isReadOnly() === false);
+        check('[67] แผงที่วาดตัวเองได้จากไฟล์ = ฉีกออกได้', canTearOff('timeline') && canTearOff('kanban'));
+        check('[67] แผงที่ผูกกับฉากที่เปิดอยู่/เป็นโครงหน้าต่าง = ฉีกไม่ได้',
+              !canTearOff('props') && !canTearOff('docs') && !canTearOff('toolbar'),
+              [...TEAROFF_PANELS].join());
+
+        showPanel('timeline', { targetId: 'docs', side: 'left', forceMove: true });
+        await wait62(420);
+        const headSel = '#app-root .k-panel[data-panel-id="timeline"] .k-panel-head';
+        const toBtn = document.querySelector(headSel + ' .k-panel-btn-tearoff');
+        check('[67] หัวแผงมีปุ่ม 🖥 ให้กดจริง', !!toBtn, toBtn ? toBtn.textContent : 'ไม่มีปุ่ม');
+        check('[67] แผงที่ฉีกไม่ได้ ต้องไม่มีปุ่มนี้โผล่มา',
+              !document.querySelector('#app-root .k-panel[data-panel-id="tree"] .k-panel-btn-tearoff'));
+
+        // กดปุ่มจริง → หน้าต่างที่สองต้องเกิดขึ้นจริงในฝั่ง main
+        toBtn.click();
+        await wait62(1400);
+        check('[67] กด 🖥 แล้วแผงหายไปจากหน้าต่างนี้',
+              !document.querySelector('#app-root .k-panel[data-panel-id="timeline"]'));
+        check('[67] ระบบจำว่าแผงอยู่หน้าต่างแยก', isTornOff('timeline') && tornOffIds().includes('timeline'));
+        const listed = await kapi.tearOffList();
+        check('[67] main เปิดหน้าต่างให้จริง (ไม่ใช่แค่คืน true)',
+              Array.isArray(listed) && listed.includes('timeline'), JSON.stringify(listed));
+        check('[67] ปุ่มบนแถบเครื่องมือยังติดไฟ (แผงยังเปิดอยู่ แค่คนละหน้าต่าง)',
+              panelToggleState().timeline === true);
+        // ทางกลับที่ผู้ใช้เห็นจริง (ถาด #k-min-tray เลิกใช้ตั้งแต่ alpha.50) = เมนู มุมมอง → แผง
+        const tlItem = panelMenuItems().find((it) => it.label.includes('เส้นเวลา'));
+        check('[67] เมนูแผงบอกว่าอยู่หน้าต่างแยก (ไม่ใช่ ☐ เหมือนถูกปิด)',
+              !!tlItem && tlItem.label.includes('🖥') && tlItem.label.includes('หน้าต่างแยก'),
+              tlItem ? tlItem.label : 'ไม่มีรายการ');
+        // หน้าต่างลูกวาดเนื้อจริงไหม — renderer นี้มองไม่เห็นข้างในหน้าต่างนั้น (คนละ context)
+        // จึงให้ main ถ่ายรูปมาให้ แล้วตรวจว่าไม่ใช่ไฟล์เปล่า/หน้าขาว
+        const shot = await kapi.testShotTearOff('timeline', '/tmp/k2-tearoff.png');
+        check('[67] ถ่ายภาพหน้าต่างแผงได้ (หน้าต่างมีตัวตนจริงและวาดเสร็จแล้ว)', shot === true);
+
+        // เรียก showPanel ซ้ำต้องไม่วาดใบที่สองในหน้าต่างนี้
+        showPanel('timeline'); await wait62(320);
+        check('[67] เรียกแผงซ้ำไม่ทำให้เกิดแผงซ้อนในหน้าต่างหลัก',
+              !document.querySelector('#app-root .k-panel[data-panel-id="timeline"]') && isTornOff('timeline'));
+
+        // ปิดหน้าต่างลูก → แผงต้องกลับมาเอง (main ส่งสัญญาณ tearoff-closed กลับมา)
+        await recallPanel('timeline');
+        await wait62(1500);
+        check('[67] ปิดหน้าต่างแยกแล้วแผงกลับเข้าหน้าต่างหลัก',
+              !!document.querySelector('#app-root .k-panel[data-panel-id="timeline"]')
+              || pmT.isFloating('timeline'));
+        check('[67] และเลิกนับว่าอยู่หน้าต่างแยกแล้ว', !isTornOff('timeline'));
+        const listed2 = await kapi.tearOffList();
+        check('[67] main ปิดหน้าต่างจริง', Array.isArray(listed2) && !listed2.includes('timeline'),
+              JSON.stringify(listed2));
+        // เลย์เอาต์ของหน้าต่างหลักต้องไม่ถูกหน้าต่างลูกเขียนทับ (localStorage ก้อนเดียวกัน)
+        const rawL = localStorage.getItem('k2-panel-layout') || '';
+        check('[67] เลย์เอาต์ในกล่องเก็บยังเป็นของหน้าต่างหลัก (มีแผงเอกสารอยู่)', rawL.includes('docs'));
+        resetPanels(); await wait62(300);
+
+        // ---- ฉีกออกจาก "กลุ่มลอย" (โจทย์ของผู้ใช้: ต้องได้ทั้งแบบกลุ่มและไม่กลุ่ม) ----
+        // ประวัติของกลุ่มลอยคือ "คืน true แต่ไม่ทำอะไรเลย" (66r10) จึงต้องวัดจากของจริงทุกบรรทัด
+        showPanel('timeline', { prefer: 'float' }); await wait62(300);
+        showPanel('kanban', { prefer: 'float' }); await wait62(300);
+        pmT.groupIntoFloat('timeline', pmT.floatIdOf('kanban')); await wait62(380);
+        const grpEl = document.querySelector('.k-float-group');
+        check('[67] ตั้งกลุ่มลอยสำเร็จก่อนทดสอบ', !!grpEl && pmT.isFloating('timeline') && pmT.isFloating('kanban'));
+        const grpBtn = grpEl && grpEl.querySelector('.k-float-tabbar .k-panel-btn-tearoff');
+        check('[67] แถบแท็บของกลุ่มลอยมีปุ่ม 🖥 ของแท็บที่เปิดอยู่', !!grpBtn);
+        grpBtn.click();
+        await wait62(1400);
+        check('[67] ฉีกจากกลุ่มลอยได้จริง — แผงออกจากกลุ่มไปหน้าต่างแยก',
+              isTornOff('timeline') && !pmT.isFloating('timeline'));
+        const listed3 = await kapi.tearOffList();
+        check('[67] main เปิดหน้าต่างให้ (เคสกลุ่มลอย)',
+              Array.isArray(listed3) && listed3.includes('timeline'), JSON.stringify(listed3));
+        check('[67] เพื่อนในกลุ่มไม่หายไปด้วย (กลุ่มเหลือใบเดียวก็ยังลอยอยู่)', pmT.isFloating('kanban'));
+        await recallPanel('timeline'); await wait62(1500);
+        check('[67] เรียกกลับจากเคสกลุ่มลอยได้', !isTornOff('timeline') && pmT.isOpen('timeline'));
+        resetPanels(); await wait62(320);
       }
 
       // ---- [66r7] เปิดแผงต้องไม่ไปเบียดแผงที่ผู้ใช้จัดขนาดไว้แล้ว ----

@@ -7,7 +7,7 @@
 //
 // เนื้อแผงคือ element เดิมใน index.html (#tree-panel, #content, …) — "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่
 // เพราะโค้ดทั้งโปรเจกต์อ้าง id เหล่านี้ ($('#panes'), $('#tabs'), $('#props-body'), …)
-import { $, el, setStatus, t, onLanguageChanged, log, state,
+import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
          keepScroll, restoreScrollSnap, elByPath } from '../core.js';
 import { popupMenu, ask, confirmBox } from '../ui.js';
 import * as PL from './panel-layout.js';
@@ -91,6 +91,120 @@ export const PANEL_DEFS = [
   { id: 'player', dockW: 440,    title: '▶️ ทดลองเล่น',       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
     desc: 'อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง' },
 ];
+// ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
+//
+// เกณฑ์: แผงต้อง "วาดตัวเองได้ครบจากไฟล์โปรเจกต์" โดยไม่พึ่ง `state.active` (ฉากที่เปิดอยู่)
+// และไม่พึ่งการลากของข้ามแผง — เพราะหน้าต่างลูกเป็นคนละ JS context ไม่มีแท็บเอกสารและไม่มีแผงอื่น
+//
+// ที่จงใจ **ไม่** ใส่ในรอบนี้:
+//   docs/toolbar/statusbar/tree — เป็นโครงหน้าต่างหลัก (แชร์ ProseMirror ข้าม context ไม่ได้)
+//   outline/props/comments/floorplan/player/ai-* — ผูกกับ "ฉากที่เปิดอยู่" ต้องมีช่องส่ง state ก่อน
+//   gallery-board — รับรูปด้วยการลากจากแผงคลังรูป ฉีกแยกหน้าต่างแล้วขาดกัน
+export const TEAROFF_PANELS = new Set([
+  'timeline', 'maps', 'kanban', 'dashboard', 'books',
+  'network', 'planner', 'branch', 'search', 'gallery', 'log', 'notes',
+]);
+/** แผงนี้ฉีกออกเป็นหน้าต่างได้ไหม (หน้าต่างลูกฉีกซ้อนไม่ได้) */
+export function canTearOff(id) {
+  return !PANEL_WIN && TEAROFF_PANELS.has(panelId(id)) && typeof kapiTearOff() === 'function';
+}
+function kapiTearOff() { try { return window.kapi && window.kapi.tearOff; } catch { return null; } }
+
+const tornOff = new Set();                     // id ของแผงที่ตอนนี้อยู่ในหน้าต่างแยก
+export function isTornOff(id) { return tornOff.has(panelId(id)); }
+export function tornOffIds() { return [...tornOff]; }
+
+/**
+ * ฉีกแผงออกเป็นหน้าต่าง OS จริง
+ * ปิดแผงในหน้าต่างนี้ก่อน (ผ่าน hidePanel ของโมดูลนี้ = จด "ที่เดิม" ไว้ให้อัตโนมัติ)
+ * แล้วค่อยเปิดหน้าต่างลูก — ปิดหน้าต่างลูกเมื่อไหร่ แผงกลับมาที่เดิมเอง
+ */
+export async function tearOffPanel(id) {
+  const pid = panelId(id);
+  if (!canTearOff(pid)) return false;
+  const d = PANEL_DEFS.find((x) => x.id === pid);
+  // ขนาด/ตำแหน่งเริ่มต้นของหน้าต่าง = กล่องที่แผงกินอยู่ตอนนี้บนจอ (ผู้ใช้จะได้ไม่เสียบริบท)
+  const node = document.querySelector(`.k-float-panel[data-panel-id="${pid}"]`)
+            || host().querySelector(`.k-panel[data-panel-id="${pid}"]`);
+  const r = node ? node.getBoundingClientRect() : null;
+  const box = r && r.width > 80
+    ? { x: Math.round(window.screenX + r.left), y: Math.round(window.screenY + r.top),
+        w: Math.round(r.width), h: Math.round(r.height) }
+    : { w: d && d.dockW ? d.dockW + 80 : 720, h: 620 };
+  hidePanel(pid, true);                        // force: ข้ามกล่องยืนยันของแผง (เราไม่ได้ทิ้งงาน แค่ย้ายหน้าต่าง)
+  tornOff.add(pid);
+  renderPanels(true);
+  let ok = false;
+  try {
+    ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', ...box });
+  } catch (e) { log('warn', '[แผง] ฉีกออกเป็นหน้าต่างไม่สำเร็จ: ' + pid, e); }
+  if (!ok) { tornOff.delete(pid); showPanel(pid); return false; }
+  setStatus(t('panel.tornOff', 'ย้าย "') + (d ? titleOf(d) : pid) + t('panel.tornOff2', '" ไปหน้าต่างแยกแล้ว — ปิดหน้าต่างนั้นเพื่อเอากลับมา'));
+  return true;
+}
+/** ยกหน้าต่างแผงที่เปิดอยู่แล้วขึ้นมาหน้าสุด (tearOff ตัวเดิมทำหน้าที่นี้ให้เมื่อ id ซ้ำ) */
+function focusTearOff(pid) {
+  try { window.kapi.tearOff({ id: pid }); } catch {}
+  setStatus(t('panel.tornOffFocus', 'แผงนี้อยู่ในหน้าต่างแยก — ยกหน้าต่างนั้นขึ้นมาให้แล้ว'));
+  return true;
+}
+/** เรียกแผงกลับจากหน้าต่างแยก (สั่งปิดหน้าต่างลูก — ตัวจริงกลับมาตอนได้สัญญาณ tearoff-closed) */
+export async function recallPanel(id) {
+  const pid = panelId(id);
+  if (!tornOff.has(pid)) return false;
+  try { await window.kapi.tearOffClose(pid); } catch {}
+  return true;
+}
+/** หน้าต่างลูกปิดแล้ว → คืนแผงกลับที่เดิมที่จดไว้ */
+export function onTearOffClosed(id) {
+  const pid = panelId(id);
+  if (!tornOff.delete(pid)) return false;
+  showPanel(pid);                              // showPanel ของโมดูลนี้คืน "ที่เดิม" (homes) ให้เอง
+  renderPanels(true);
+  if (onShowHook) { try { onShowHook(pid); } catch {} }
+  return true;
+}
+/** ผูกสัญญาณจาก main — เรียกครั้งเดียวตอนเริ่มระบบแผงในหน้าต่างหลัก */
+let _syncBound = false;
+export function bindTearOffSync() {
+  if (_syncBound || PANEL_WIN) return false;
+  const api = window.kapi;
+  if (!api || !api.onSync) return false;
+  _syncBound = true;
+  api.onSync((msg) => { if (msg && msg.kind === 'tearoff-closed') onTearOffClosed(msg.id); });
+  // หน้าต่างลูกที่ยังเปิดค้างจากรอบก่อน (โหลดหน้าต่างหลักใหม่) — ซิงก์รายการให้ตรงความจริง
+  try { api.tearOffList().then((ids) => { for (const id of ids || []) { tornOff.add(id); hidePanel(id, true); } renderPanels(true); }); } catch {}
+  return true;
+}
+
+/**
+ * [alpha.67] โหมดหน้าต่างแผง — วางเนื้อแผงเดียวเต็มหน้าต่าง **ไม่ผ่านระบบเลย์เอาต์เลย**
+ * จงใจไม่เรียก initPanelSystem: ไม่มี dock/tab/float ให้จัดการ และที่สำคัญกว่านั้นคือ
+ * ห้ามแตะ localStorage ก้อนเดียวกับหน้าต่างหลัก (origin file:// เดียวกัน)
+ */
+export function mountPanelWindow(id) {
+  const pid = panelId(id);
+  const m = getPanelManager();
+  m.setReadOnly(true);                          // ตาข่ายชั้นสอง เผื่อมีทางเรียก save() ที่มองไม่เห็น
+  if (!started) { started = true; registerPanels(); srcHolder(); }
+  const d = PANEL_DEFS.find((x) => x.id === pid);
+  document.body.classList.add('panel-window');
+  const h = host();
+  h.innerHTML = '';
+  const box = el('div', 'k-panel k-panelwin');
+  box.dataset.panelId = pid;
+  const head = el('div', 'k-panel-head');
+  head.appendChild(el('span', 'k-panel-head-title', d ? titleOf(d) : pid));
+  box.appendChild(head);
+  const body = el('div', 'k-panel-body');
+  const node = adopted.get(pid);
+  if (node) body.appendChild(node);
+  box.appendChild(body);
+  h.appendChild(box);
+  document.title = (d ? titleOf(d) : pid) + ' — ' + (state.title || 'Killian 2');
+  return pid;
+}
+
 // ชื่อแผงตามภาษาที่โหลดอยู่ (fallback = ชื่อไทยในตาราง) — เรียกใหม่ทุกครั้งที่ render
 function titleOf(d) { return d.i18n ? t(d.i18n, d.title) : d.title; }
 // [alpha.60r3 ข้อ 8] คำอธิบายแผง — i18n key `panel.desc_<id>` (fallback = ข้อความไทยในตาราง)
@@ -278,6 +392,9 @@ function renderOpts() {
     meta,
     host: host(),
     headExtras: (id) => extras.get(id) || [],
+    // [alpha.67] ปุ่ม 🖥 บนหัวแผง — โผล่เฉพาะแผงที่ฉีกออกเป็นหน้าต่างจริงได้
+    canTearOff,
+    onTearOff: (id) => tearOffPanel(id),
     // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
     extraHeadMenu: (id) => [
       { label: '⬒ ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)', click: () => toggleSpace('all') },
@@ -544,17 +661,28 @@ function syncMinTray() {
     for (const chip of [...tray.children]) if (want.get(chip.dataset.key) !== side) chip.remove();
     for (const d of closed) {
       if (want.get(d.id) !== side) continue;
-      if (tray.querySelector(`[data-key="${d.id}"]`)) continue;
-      const chip = el('div', 'k-min-chip', '▣ ' + titleOf(d));
+      const old = tray.querySelector(`[data-key="${d.id}"]`);
+      // [alpha.67] แผงที่ถูกฉีกไปหน้าต่างแยกก็ "ปิด" ในสายตาของ manager เหมือนกัน
+      // แต่ต้องไม่ให้เปิดซ้ำในหน้าต่างนี้ — chip เปลี่ยนเป็นปุ่ม "เรียกกลับจากหน้าต่างแยก" แทน
+      const away = tornOff.has(d.id);
+      if (old) { if (!!old.dataset.away === away) continue; old.remove(); }
+      const chip = el('div', 'k-min-chip' + (away ? ' k-min-chip-away' : ''),
+                      (away ? '🖥 ' : '▣ ') + titleOf(d));
       chip.dataset.key = d.id;
-      chip.title = t('panel.trayRestorePre', 'คลิกเพื่อเรียกแผง "') + titleOf(d) + t('panel.trayRestorePost', '" กลับมา');
-      // กลับไป "ที่เดิม" ที่จดไว้ — ถ้ายังไม่เคยมีที่อยู่เลยก็ลอยกลางจอ (ไม่ไปเบียดใคร)
-      // [alpha.66r11] แผงที่ที่เดิมเป็น "แผงลอย/กลุ่มลอย" ต้องไม่ถูกยัด `side` — ไม่งั้น showPanel
-      // ตกไปสายผนึกทันที (อาการ: แผงที่เคยลอย พอเรียกกลับจากถาด กลายเป็นผนึกข้างจอ)
-      chip.onclick = () => {
-        const h = homes.get(d.id);
-        showPanel(d.id, (h && !h.float && !h.floatWith) ? { side: sideOf(d) } : { prefer: 'float' });
-      };
+      if (away) {
+        chip.dataset.away = '1';
+        chip.title = t('panel.trayRecall', 'อยู่ในหน้าต่างแยก — คลิกเพื่อเรียกกลับเข้าหน้าต่างนี้');
+        chip.onclick = () => recallPanel(d.id);
+      } else {
+        chip.title = t('panel.trayRestorePre', 'คลิกเพื่อเรียกแผง "') + titleOf(d) + t('panel.trayRestorePost', '" กลับมา');
+        // กลับไป "ที่เดิม" ที่จดไว้ — ถ้ายังไม่เคยมีที่อยู่เลยก็ลอยกลางจอ (ไม่ไปเบียดใคร)
+        // [alpha.66r11] แผงที่ที่เดิมเป็น "แผงลอย/กลุ่มลอย" ต้องไม่ถูกยัด `side` — ไม่งั้น showPanel
+        // ตกไปสายผนึกทันที (อาการ: แผงที่เคยลอย พอเรียกกลับจากถาด กลายเป็นผนึกข้างจอ)
+        chip.onclick = () => {
+          const h = homes.get(d.id);
+          showPanel(d.id, (h && !h.float && !h.floatWith) ? { side: sideOf(d) } : { prefer: 'float' });
+        };
+      }
       tray.appendChild(chip);
     }
     tray.classList.toggle('on', !!tray.children.length);
@@ -579,6 +707,7 @@ export function initPanelSystem() {
   }
   m.store.onChange(() => { savePanelLayout(); renderPanels(); });
   onLanguageChanged(() => renderPanels(true));  // เปลี่ยนภาษา → ชื่อแผงเปลี่ยนตาม
+  bindTearOffSync();                            // [alpha.67] ปิดหน้าต่างแผง → เอาแผงกลับที่เดิม
   renderPanels(true);
   return m;
 }
@@ -760,6 +889,10 @@ function reopenFloat(m, pid, home) {
 export function showPanel(id, opts = {}) {
   const m = getPanelManager();
   const pid = panelId(id);
+  // [alpha.67] แผงนี้ถูกฉีกไปอยู่หน้าต่างแยกแล้ว — "เปิดแผง" ต้องแปลว่า **ยกหน้าต่างนั้นขึ้นมา**
+  // ไม่ใช่วาดใบที่สองในหน้าต่างนี้ (จะได้แผงเดียวกันสองใบที่ไม่รู้จักกัน)
+  // ยกเว้นตอนคืนแผงกลับจริง ๆ (onTearOffClosed) ซึ่งลบออกจาก tornOff ไปก่อนแล้ว
+  if (tornOff.has(pid)) { focusTearOff(pid); return true; }
   const def = m.registry.get(pid) || {};
   let ok;
   // [alpha.66r7 กฎข้อ 2 ของผู้ใช้] **เปิดแผงครั้งแรก (หรือหลังรีเซ็ต) = ลอยกลางจอ ไม่ใช่ผนึก**
@@ -827,6 +960,8 @@ export function setPanelCloseGuard(id, fn) {
 export function togglePanel(id, opts) {
   const m = getPanelManager();
   const pid = panelId(id);
+  // [alpha.67] อยู่ในหน้าต่างแยก = เปิดอยู่ → กดสวิตช์ซ้ำ แปลว่า "เอากลับมา/ปิดหน้าต่างนั้น"
+  if (tornOff.has(pid)) { recallPanel(pid); return true; }
   if (m.isOpen(pid)) return hidePanel(pid);
   // ทางเข้าฝั่งผู้ใช้ (เมนู · ปุ่มบนแถบเครื่องมือ · ถาดแผงที่ปิดไว้) = เปิดเป็นแผงลอยกลางจอ
   return showPanel(pid, { prefer: 'float', ...(opts || {}) });
@@ -942,16 +1077,24 @@ export function resetPanels() {
 /** รายการแผงสำหรับเมนู "มุมมอง → แผง" */
 export function panelMenuItems() {
   const m = getPanelManager();
-  return PANEL_DEFS.filter((d) => d.closable !== false).map((d) => ({
-    label: (m.isOpen(d.id) ? '☑ ' : '☐ ') + titleOf(d),
-    click: () => togglePanel(d.id),
-  }));
+  return PANEL_DEFS.filter((d) => d.closable !== false).map((d) => {
+    // [alpha.67] แผงที่อยู่หน้าต่างแยกต้องอ่านออกทันทีว่า "เปิดอยู่ แต่ไม่ได้อยู่ที่นี่"
+    // ไม่งั้นผู้ใช้กดแล้วงงว่าทำไมไม่มีอะไรโผล่ในหน้าต่างนี้ (togglePanel เรียกมันกลับมาให้)
+    const away = tornOff.has(d.id);
+    return {
+      label: (away ? '🖥 ' : m.isOpen(d.id) ? '☑ ' : '☐ ') + titleOf(d)
+             + (away ? t('panel.menuAway', ' (หน้าต่างแยก)') : ''),
+      click: () => togglePanel(d.id),
+    };
+  });
 }
 /** สถานะเปิด/ปิดของทุกแผง (ส่งให้เมนู native ติ๊กถูก) */
 export function panelToggleState() {
   const m = getPanelManager();
   const o = {};
-  for (const d of PANEL_DEFS) o[d.id] = m.isOpen(d.id);
+  // [alpha.67] แผงที่อยู่ในหน้าต่างแยกยังนับว่า "เปิดอยู่" — ปุ่มบนแถบเครื่องมือต้องติดไฟค้างไว้
+  // ไม่งั้นดูเหมือนแผงถูกปิดไปแล้วทั้งที่ผู้ใช้เห็นมันอยู่บนอีกจอ
+  for (const d of PANEL_DEFS) o[d.id] = m.isOpen(d.id) || tornOff.has(d.id);
   return o;
 }
 

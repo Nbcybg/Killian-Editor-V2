@@ -79,6 +79,10 @@ export class PanelStore {
     this.root = null; this.floats = [];
     this.splitRatios = {};                       // [ข้อ 8] id ของแผง → สัดส่วนใน dock แม่
     this.listeners = new Set();
+    // [alpha.67] อ่านได้ เขียนไม่ได้ — ใช้ในหน้าต่างแผงที่ฉีกออกมา (tear-off)
+    // ทุกหน้าต่างของโปรแกรมใช้ origin `file://` เดียวกัน = localStorage ก้อนเดียวกัน
+    // ถ้าลูกเขียนได้ เลย์เอาต์ของหน้าต่างหลักจะถูกทับด้วย "เลย์เอาต์แผงเดียว" ทันทีที่เปิดลูก
+    this.readOnly = false;
   }
   load() {
     const parsed = deserializeLayout(this.storage.getItem(this.key));
@@ -86,12 +90,15 @@ export class PanelStore {
     return !!parsed;
   }
   save() {
+    if (this.readOnly) return false;
     this.storage.setItem(this.key, serializeLayout(
       { root: this.root, floats: this.floats, splitRatios: this.splitRatios }));
+    return true;
   }
   reset() {
     this.root = null; this.floats = []; this.splitRatios = {};
-    this.storage.removeItem(this.key); this._emit();
+    if (!this.readOnly) this.storage.removeItem(this.key);
+    this._emit();
   }
   /** จำสัดส่วนของแผงหนึ่งตัว — คืน true เมื่อค่าเปลี่ยนจริง (จะได้ไม่ save ซ้ำทุกเฟรม) */
   setSplitRatio(id, ratio) {
@@ -124,7 +131,7 @@ export class PanelStore {
   listWorkspaces() { return Object.keys(this.workspaces()); }
   getWorkspace(name) { return this.workspaces()[name] || null; }
   putWorkspace(name, extra = {}) {
-    if (!name) return false;
+    if (!name || this.readOnly) return false;
     const all = this.workspaces();
     all[name] = {
       version: LAYOUT_VERSION,
@@ -137,6 +144,7 @@ export class PanelStore {
     return true;
   }
   removeWorkspace(name) {
+    if (this.readOnly) return false;
     const all = this.workspaces();
     if (!(name in all)) return false;
     delete all[name];
@@ -171,6 +179,9 @@ export class PanelManager {
   }
   get root() { return this.store.root; }
   get floats() { return this.store.floats; }
+  /** [alpha.67] ห้ามหน้าต่างนี้เขียนเลย์เอาต์ลง storage (หน้าต่างแผงที่ฉีกออกมา) */
+  setReadOnly(on = true) { this.store.readOnly = !!on; return this.store.readOnly; }
+  isReadOnly() { return !!this.store.readOnly; }
   get splitRatios() { return this.store.splitRatios; }
   layout() { return { root: this.store.root, floats: this.store.floats, splitRatios: this.store.splitRatios }; }
   /** [ข้อ 8] จำสัดส่วนที่ผู้ใช้ลากไว้ — บันทึกลง storage เมื่อค่าเปลี่ยนจริงเท่านั้น */

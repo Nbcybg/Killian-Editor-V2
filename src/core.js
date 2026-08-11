@@ -117,6 +117,15 @@ export function restoreScrollSnap(root, snap) {
 export const state = { root: null, title: '', tabs: new Map(), active: null,
                        meta: null, settings: {}, goals: {}, compareFile: null };
 
+// ---- [alpha.67] หน้าต่างนี้เป็น "หน้าต่างแผงที่ฉีกออกมา" หรือเปล่า ----
+// ค่าเป็น id ของแผงที่หน้าต่างนี้ถือ ('' = หน้าต่างหลัก) — main ใส่มาให้ทาง query string
+// ทุกที่ที่เขียนสถานะ "ระดับโปรแกรม" (เลย์เอาต์แผง · แท็บที่เปิด · autosave · สำรองไฟล์)
+// ต้องเช็คค่านี้ก่อน ไม่งั้นหน้าต่างลูกจะเขียนทับของหน้าต่างหลัก (localStorage เป็น origin เดียวกัน)
+export const PANEL_WIN = (() => {
+  try { return new URLSearchParams(location.search).get('panelwin') || ''; } catch { return ''; }
+})();
+export function isPanelWindow() { return !!PANEL_WIN; }
+
 // ---- SmartType (auto-mention / spellcheck names) ----
 export const smart = new SmartType();
 

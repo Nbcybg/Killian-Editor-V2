@@ -16941,6 +16941,7 @@
           this.floats = [];
           this.splitRatios = {};
           this.listeners = /* @__PURE__ */ new Set();
+          this.readOnly = false;
         }
         load() {
           const parsed = deserializeLayout(this.storage.getItem(this.key));
@@ -16952,15 +16953,17 @@
           return !!parsed;
         }
         save() {
+          if (this.readOnly) return false;
           this.storage.setItem(this.key, serializeLayout(
             { root: this.root, floats: this.floats, splitRatios: this.splitRatios }
           ));
+          return true;
         }
         reset() {
           this.root = null;
           this.floats = [];
           this.splitRatios = {};
-          this.storage.removeItem(this.key);
+          if (!this.readOnly) this.storage.removeItem(this.key);
           this._emit();
         }
         /** จำสัดส่วนของแผงหนึ่งตัว — คืน true เมื่อค่าเปลี่ยนจริง (จะได้ไม่ save ซ้ำทุกเฟรม) */
@@ -17019,7 +17022,7 @@
           return this.workspaces()[name5] || null;
         }
         putWorkspace(name5, extra = {}) {
-          if (!name5) return false;
+          if (!name5 || this.readOnly) return false;
           const all = this.workspaces();
           all[name5] = {
             version: LAYOUT_VERSION,
@@ -17036,6 +17039,7 @@
           return true;
         }
         removeWorkspace(name5) {
+          if (this.readOnly) return false;
           const all = this.workspaces();
           if (!(name5 in all)) return false;
           delete all[name5];
@@ -17065,6 +17069,14 @@
         }
         get floats() {
           return this.store.floats;
+        }
+        /** [alpha.67] ห้ามหน้าต่างนี้เขียนเลย์เอาต์ลง storage (หน้าต่างแผงที่ฉีกออกมา) */
+        setReadOnly(on2 = true) {
+          this.store.readOnly = !!on2;
+          return this.store.readOnly;
+        }
+        isReadOnly() {
+          return !!this.store.readOnly;
         }
         get splitRatios() {
           return this.store.splitRatios;
@@ -18372,6 +18384,7 @@
     MARGIN_DEFAULTS: () => MARGIN_DEFAULTS,
     PAGE_BREAK_RULES: () => PAGE_BREAK_RULES,
     PAGE_NUMBER_DEFAULTS: () => PAGE_NUMBER_DEFAULTS,
+    PANEL_WIN: () => PANEL_WIN,
     PAPER_SIZES: () => PAPER_SIZES,
     PROJECT_DEFAULTS: () => PROJECT_DEFAULTS,
     PT_PX: () => PT_PX2,
@@ -18417,6 +18430,7 @@
     formatShortcut: () => formatShortcut,
     i18n: () => i18n,
     isLangFontUsable: () => isUsable,
+    isPanelWindow: () => isPanelWindow,
     keepScroll: () => keepScroll,
     lineHeightIn: () => lineHeightIn,
     linesPerPage: () => linesPerPage,
@@ -18549,6 +18563,9 @@
       }, 300);
       return jobs.length;
     };
+  }
+  function isPanelWindow() {
+    return !!PANEL_WIN;
   }
   function log(level, msg, extra) {
     const ts = (/* @__PURE__ */ new Date()).toISOString();
@@ -18726,7 +18743,7 @@
     const sc = formatShortcut(code3, ctrl, shift2);
     return label + " (" + sc + ")";
   }
-  var $, el, state, smart, LOG_BUF, LOG_MAX, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, BUILTIN_CATS, CAT_ICON, i18n, langHooks, BUILTIN_EN, SHORTCUTS, shortcutId, SHORTCUT_LABELS, isMac, accelText;
+  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, BUILTIN_CATS, CAT_ICON, i18n, langHooks, BUILTIN_EN, SHORTCUTS, shortcutId, SHORTCUT_LABELS, isMac, accelText;
   var init_core = __esm({
     "src/core.js"() {
       init_smart();
@@ -18751,6 +18768,13 @@
         goals: {},
         compareFile: null
       };
+      PANEL_WIN = (() => {
+        try {
+          return new URLSearchParams(location.search).get("panelwin") || "";
+        } catch {
+          return "";
+        }
+      })();
       smart = new SmartType();
       LOG_BUF = [];
       LOG_MAX = 1e3;
@@ -62965,6 +62989,16 @@ ${h.text}`;
     head2.appendChild(ctrls);
     const btns = el("span", "k-panel-btns");
     const def = pm2.registry.get(node.id) || {};
+    if (opts.canTearOff && opts.canTearOff(node.id)) {
+      const tb2 = el("span", "k-panel-btn k-panel-btn-tearoff", "\u{1F5A5}");
+      tb2.title = "\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 (\u0E25\u0E32\u0E01\u0E44\u0E1B\u0E08\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E14\u0E49)";
+      tb2.dataset.act = "tearoff";
+      tb2.onclick = (e) => {
+        e.stopPropagation();
+        opts.onTearOff(node.id);
+      };
+      btns.appendChild(tb2);
+    }
     for (const b of PANEL_BUTTONS) {
       if (b.key === "close" && def.closable === false) continue;
       if (b.key === "float" && def.floatable === false) continue;
@@ -63028,6 +63062,9 @@ ${h.text}`;
           pm2.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
         }
       });
+    }
+    if (opts.canTearOff && opts.canTearOff(node.id)) {
+      items.push({ label: "\u{1F5A5} \u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 (\u0E25\u0E32\u0E01\u0E44\u0E1B\u0E08\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E14\u0E49)", click: () => opts.onTearOff(node.id) });
     }
     const extra = opts.extraHeadMenu ? opts.extraHeadMenu(node.id, floating) || [] : [];
     if (extra.length) {
@@ -63151,6 +63188,17 @@ ${h.text}`;
       pm2.dockFloatGroup(f.id, "left", pm2.isDocked("docs") ? "docs" : void 0);
     };
     const btns = el("span", "k-panel-btns");
+    const actId = (kids[active] || {}).id;
+    if (actId && opts.canTearOff && opts.canTearOff(actId)) {
+      const toBtn = el("span", "k-panel-btn k-panel-btn-tearoff", "\u{1F5A5}");
+      toBtn.title = "\u0E22\u0E49\u0E32\u0E22\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E35\u0E49\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 (\u0E25\u0E32\u0E01\u0E44\u0E1B\u0E08\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E14\u0E49)";
+      toBtn.dataset.act = "tearoff";
+      toBtn.onclick = (e) => {
+        e.stopPropagation();
+        opts.onTearOff(actId);
+      };
+      btns.appendChild(toBtn);
+    }
     btns.append(dockBtn, closeBtn);
     bar.appendChild(btns);
     pop.appendChild(bar);
@@ -63514,9 +63562,12 @@ ${h.text}`;
     BUILTIN_WORKSPACES: () => BUILTIN_WORKSPACES,
     PANEL_DEFS: () => PANEL_DEFS,
     SCROLLABLES: () => SCROLLABLES,
+    TEAROFF_PANELS: () => TEAROFF_PANELS,
     addPanelButton: () => addPanelButton,
     applyWorkspace: () => applyWorkspace,
     auditPanelGaps: () => auditPanelGaps,
+    bindTearOffSync: () => bindTearOffSync,
+    canTearOff: () => canTearOff,
     defaultFloatBox: () => defaultFloatBox,
     defaultLayout: () => defaultLayout,
     deleteWorkspace: () => deleteWorkspace,
@@ -63527,16 +63578,20 @@ ${h.text}`;
     initPanelSystem: () => initPanelSystem,
     isBuiltinWorkspace: () => isBuiltinWorkspace,
     isPanelOpen: () => isPanelOpen,
+    isTornOff: () => isTornOff,
     listWorkspaces: () => listWorkspaces,
     loadPanelLayout: () => loadPanelLayout,
     measurePanelGeometry: () => measurePanelGeometry,
+    mountPanelWindow: () => mountPanelWindow,
     onPanelLayoutChange: () => onPanelLayoutChange,
+    onTearOffClosed: () => onTearOffClosed,
     panelDesc: () => panelDesc,
     panelId: () => panelId,
     panelLayoutReport: () => panelLayoutReport,
     panelMenuItems: () => panelMenuItems,
     panelToggleState: () => panelToggleState,
     panelsHidden: () => panelsHidden,
+    recallPanel: () => recallPanel,
     registerPanels: () => registerPanels,
     renderPanels: () => renderPanels,
     resetPanelHomes: () => resetPanelHomes,
@@ -63548,12 +63603,135 @@ ${h.text}`;
     setPanelCloseGuard: () => setPanelCloseGuard,
     setPanelShowHook: () => setPanelShowHook,
     showPanel: () => showPanel,
+    tearOffPanel: () => tearOffPanel,
     togglePanel: () => togglePanel,
     togglePanelDialog: () => togglePanelDialog,
     toggleSpace: () => toggleSpace,
+    tornOffIds: () => tornOffIds,
     workspaceMenu: () => workspaceMenu,
     workspaceMenuItems: () => workspaceMenuItems
   });
+  function canTearOff(id) {
+    return !PANEL_WIN && TEAROFF_PANELS.has(panelId(id)) && typeof kapiTearOff() === "function";
+  }
+  function kapiTearOff() {
+    try {
+      return window.kapi && window.kapi.tearOff;
+    } catch {
+      return null;
+    }
+  }
+  function isTornOff(id) {
+    return tornOff.has(panelId(id));
+  }
+  function tornOffIds() {
+    return [...tornOff];
+  }
+  async function tearOffPanel(id) {
+    const pid = panelId(id);
+    if (!canTearOff(pid)) return false;
+    const d = PANEL_DEFS.find((x) => x.id === pid);
+    const node = document.querySelector(`.k-float-panel[data-panel-id="${pid}"]`) || host().querySelector(`.k-panel[data-panel-id="${pid}"]`);
+    const r = node ? node.getBoundingClientRect() : null;
+    const box2 = r && r.width > 80 ? {
+      x: Math.round(window.screenX + r.left),
+      y: Math.round(window.screenY + r.top),
+      w: Math.round(r.width),
+      h: Math.round(r.height)
+    } : { w: d && d.dockW ? d.dockW + 80 : 720, h: 620 };
+    hidePanel(pid, true);
+    tornOff.add(pid);
+    renderPanels(true);
+    let ok2 = false;
+    try {
+      ok2 = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || "", ...box2 });
+    } catch (e) {
+      log("warn", "[\u0E41\u0E1C\u0E07] \u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + pid, e);
+    }
+    if (!ok2) {
+      tornOff.delete(pid);
+      showPanel(pid);
+      return false;
+    }
+    setStatus(t("panel.tornOff", '\u0E22\u0E49\u0E32\u0E22 "') + (d ? titleOf(d) : pid) + t("panel.tornOff2", '" \u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E19\u0E31\u0E49\u0E19\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E2D\u0E32\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32'));
+    return true;
+  }
+  function focusTearOff(pid) {
+    try {
+      window.kapi.tearOff({ id: pid });
+    } catch {
+    }
+    setStatus(t("panel.tornOffFocus", "\u0E41\u0E1C\u0E07\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 \u2014 \u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E19\u0E31\u0E49\u0E19\u0E02\u0E36\u0E49\u0E19\u0E21\u0E32\u0E43\u0E2B\u0E49\u0E41\u0E25\u0E49\u0E27"));
+    return true;
+  }
+  async function recallPanel(id) {
+    const pid = panelId(id);
+    if (!tornOff.has(pid)) return false;
+    try {
+      await window.kapi.tearOffClose(pid);
+    } catch {
+    }
+    return true;
+  }
+  function onTearOffClosed(id) {
+    const pid = panelId(id);
+    if (!tornOff.delete(pid)) return false;
+    showPanel(pid);
+    renderPanels(true);
+    if (onShowHook) {
+      try {
+        onShowHook(pid);
+      } catch {
+      }
+    }
+    return true;
+  }
+  function bindTearOffSync() {
+    if (_syncBound || PANEL_WIN) return false;
+    const api = window.kapi;
+    if (!api || !api.onSync) return false;
+    _syncBound = true;
+    api.onSync((msg) => {
+      if (msg && msg.kind === "tearoff-closed") onTearOffClosed(msg.id);
+    });
+    try {
+      api.tearOffList().then((ids) => {
+        for (const id of ids || []) {
+          tornOff.add(id);
+          hidePanel(id, true);
+        }
+        renderPanels(true);
+      });
+    } catch {
+    }
+    return true;
+  }
+  function mountPanelWindow(id) {
+    const pid = panelId(id);
+    const m = getPanelManager();
+    m.setReadOnly(true);
+    if (!started) {
+      started = true;
+      registerPanels();
+      srcHolder();
+    }
+    const d = PANEL_DEFS.find((x) => x.id === pid);
+    document.body.classList.add("panel-window");
+    const h = host();
+    h.innerHTML = "";
+    const box2 = el("div", "k-panel k-panelwin");
+    box2.dataset.panelId = pid;
+    const head2 = el("div", "k-panel-head");
+    head2.appendChild(el("span", "k-panel-head-title", d ? titleOf(d) : pid));
+    box2.appendChild(head2);
+    const body = el("div", "k-panel-body");
+    const node = adopted.get(pid);
+    if (node) body.appendChild(node);
+    box2.appendChild(body);
+    h.appendChild(box2);
+    document.title = (d ? titleOf(d) : pid) + " \u2014 " + (state.title || "Killian 2");
+    return pid;
+  }
   function titleOf(d) {
     return d.i18n ? t(d.i18n, d.title) : d.title;
   }
@@ -63718,6 +63896,9 @@ ${h.text}`;
       meta,
       host: host(),
       headExtras: (id) => extras.get(id) || [],
+      // [alpha.67] ปุ่ม 🖥 บนหัวแผง — โผล่เฉพาะแผงที่ฉีกออกเป็นหน้าต่างจริงได้
+      canTearOff,
+      onTearOff: (id) => tearOffPanel(id),
       // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
       extraHeadMenu: (id) => [
         { label: "\u2B12 \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E15\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19)", click: () => toggleSpace("all") },
@@ -63936,6 +64117,7 @@ ${h.text}`;
       renderPanels();
     });
     onLanguageChanged(() => renderPanels(true));
+    bindTearOffSync();
     renderPanels(true);
     return m;
   }
@@ -64082,6 +64264,10 @@ ${h.text}`;
   function showPanel(id, opts = {}) {
     const m = getPanelManager();
     const pid = panelId(id);
+    if (tornOff.has(pid)) {
+      focusTearOff(pid);
+      return true;
+    }
     const def = m.registry.get(pid) || {};
     let ok2;
     if (opts.prefer === "float" && !m.isDocked(pid) && !m.isFloating(pid) && !opts.side && !opts.targetId) {
@@ -64143,6 +64329,10 @@ ${h.text}`;
   function togglePanel(id, opts) {
     const m = getPanelManager();
     const pid = panelId(id);
+    if (tornOff.has(pid)) {
+      recallPanel(pid);
+      return true;
+    }
     if (m.isOpen(pid)) return hidePanel(pid);
     return showPanel(pid, { prefer: "float", ...opts || {} });
   }
@@ -64249,15 +64439,18 @@ ${h.text}`;
   }
   function panelMenuItems() {
     const m = getPanelManager();
-    return PANEL_DEFS.filter((d) => d.closable !== false).map((d) => ({
-      label: (m.isOpen(d.id) ? "\u2611 " : "\u2610 ") + titleOf(d),
-      click: () => togglePanel(d.id)
-    }));
+    return PANEL_DEFS.filter((d) => d.closable !== false).map((d) => {
+      const away = tornOff.has(d.id);
+      return {
+        label: (away ? "\u{1F5A5} " : m.isOpen(d.id) ? "\u2611 " : "\u2610 ") + titleOf(d) + (away ? t("panel.menuAway", " (\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01)") : ""),
+        click: () => togglePanel(d.id)
+      };
+    });
   }
   function panelToggleState() {
     const m = getPanelManager();
     const o = {};
-    for (const d of PANEL_DEFS) o[d.id] = m.isOpen(d.id);
+    for (const d of PANEL_DEFS) o[d.id] = m.isOpen(d.id) || tornOff.has(d.id);
     return o;
   }
   function addPanelButton(id, node) {
@@ -64372,7 +64565,7 @@ ${h.text}`;
     } catch {
     }
   }
-  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, BUILTIN_WORKSPACES, _stash, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, GAP_TOL, _gapLogged, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
+  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, TEAROFF_PANELS, tornOff, _syncBound, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, BUILTIN_WORKSPACES, _stash, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, GAP_TOL, _gapLogged, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
   var init_panel_ui = __esm({
     "src/panels/panel-ui.js"() {
       init_core();
@@ -64688,6 +64881,22 @@ ${h.text}`;
           desc: "\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E1A\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19 \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E15\u0E48\u0E2D\u0E44\u0E1B\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E22 \u0E46 \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E01\u0E47\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E41\u0E15\u0E48\u0E25\u0E30\u0E23\u0E2D\u0E1A\u0E44\u0E27\u0E49\u0E14\u0E39\u0E22\u0E49\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07"
         }
       ];
+      TEAROFF_PANELS = /* @__PURE__ */ new Set([
+        "timeline",
+        "maps",
+        "kanban",
+        "dashboard",
+        "books",
+        "network",
+        "planner",
+        "branch",
+        "search",
+        "gallery",
+        "log",
+        "notes"
+      ]);
+      tornOff = /* @__PURE__ */ new Set();
+      _syncBound = false;
       pm = null;
       started = false;
       lastSig = "";
@@ -137895,7 +138104,9 @@ ${css}
     applyUIScale: () => applyUIScale,
     applyZoomVars: () => applyZoomVars,
     auditPlannerRows: () => auditPlannerRows,
+    bindMainWindowSync: () => bindMainWindowSync,
     bootGlobalSettings: () => bootGlobalSettings,
+    bootPanelWindow: () => bootPanelWindow,
     bootSequence: () => bootSequence,
     buildSpReport: () => buildSpReport,
     buildTree: () => buildTree2,
@@ -137934,6 +138145,7 @@ ${css}
     gotoProsePos: () => gotoProsePos,
     gotoScene: () => gotoScene,
     guid: () => guid,
+    handleSyncMessage: () => handleSyncMessage,
     healPlannerRow: () => healPlannerRow,
     hideLoader: () => hideLoader,
     importLanguageCsv: () => importLanguageCsv,
@@ -137996,6 +138208,7 @@ ${css}
     renderOpenFeaturePanels: () => renderOpenFeaturePanels,
     renderPlannerPanel: () => renderPlannerPanel,
     repaginateFast: () => repaginateFast,
+    requestOpenInMain: () => requestOpenInMain,
     resolveImg: () => resolveImg,
     revealFile: () => revealFile,
     revertTab: () => revertTab,
@@ -139289,9 +139502,16 @@ ${css}
     preloadLangFontUrls().then(() => applySettings()).catch(() => {
     });
     loadSpellDict(root);
+    warmInverse();
+    if (PANEL_WIN) {
+      mountPanelWindow(PANEL_WIN);
+      await renderFeaturePanel(PANEL_WIN);
+      clearBusy();
+      setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C: " + state.title);
+      return;
+    }
     setBusy("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u2026");
     await loadTemplates();
-    warmInverse();
     loadPlugins();
     setBusy("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E30\u0E41\u0E17\u0E47\u0E1A\u2026");
     initPanelSystem();
@@ -139405,6 +139625,81 @@ ${css}
       }
     }
     return { openedLast, showedHome: !openedLast || g.showHomeOnStartup === true };
+  }
+  async function bootPanelWindow() {
+    document.body.classList.add("panel-window");
+    const root = (() => {
+      try {
+        return new URLSearchParams(location.search).get("root") || "";
+      } catch {
+        return "";
+      }
+    })();
+    const g = await bootGlobalSettings();
+    state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
+    if (!root) {
+      setStatus("\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07: \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C");
+      return false;
+    }
+    await loadProject(root);
+    bindPanelWindowSync();
+    return true;
+  }
+  function bindPanelWindowSync() {
+    try {
+      kapi.onSync((msg) => handleSyncMessage(msg));
+    } catch {
+    }
+    return true;
+  }
+  function syncTouchesProject(msg) {
+    if (!state.root) return false;
+    const p = msg && msg.path;
+    return !p || String(p).startsWith(state.root);
+  }
+  function handleSyncMessage(msg) {
+    if (!msg || !msg.kind) return false;
+    if (msg.kind === "project-changed") {
+      if (!syncTouchesProject(msg)) return false;
+      if (PANEL_WIN) {
+        renderFeaturePanel(PANEL_WIN);
+        return true;
+      }
+      renderOpenFeaturePanels().catch(() => {
+      });
+      buildTree2().catch(() => {
+      });
+      return true;
+    }
+    if (msg.kind === "open-file" && !PANEL_WIN && msg.file) {
+      activate(msg.file).then(() => {
+        try {
+          window.focus();
+        } catch {
+        }
+      }).catch(() => {
+      });
+      return true;
+    }
+    return false;
+  }
+  function bindMainWindowSync() {
+    if (_mainSyncBound || PANEL_WIN) return false;
+    try {
+      kapi.onSync((msg) => handleSyncMessage(msg));
+      _mainSyncBound = true;
+    } catch {
+    }
+    return _mainSyncBound;
+  }
+  function requestOpenInMain(file) {
+    if (!PANEL_WIN || !file) return false;
+    try {
+      kapi.broadcast && kapi.broadcast({ kind: "open-file", root: state.root, file });
+    } catch {
+    }
+    setStatus("\u0E2A\u0E48\u0E07\u0E44\u0E1B\u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E41\u0E25\u0E49\u0E27");
+    return true;
   }
   async function toggleOpenLastProject(on2) {
     const v2 = on2 ?? !(state.settings.openLastProject === true);
@@ -144040,6 +144335,7 @@ ${css}
     openScene(file, title2);
   }
   async function openScene(file, title2) {
+    if (PANEL_WIN) return requestOpenInMain(file);
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
     const { meta: meta2, body } = (0, import_md12.parseMdFile)(raw);
@@ -159227,6 +159523,104 @@ ${css}
       }
       {
         resetPanels();
+        await wait62(300);
+        const pmT = getPanelManager();
+        check2("[67] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07", !isPanelWindow() && PANEL_WIN === "");
+        check2("[67] \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27)", pmT.isReadOnly() === false);
+        check2("[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C = \u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49", canTearOff("timeline") && canTearOff("kanban"));
+        check2(
+          "[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48/\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 = \u0E09\u0E35\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+          !canTearOff("props") && !canTearOff("docs") && !canTearOff("toolbar"),
+          [...TEAROFF_PANELS].join()
+        );
+        showPanel("timeline", { targetId: "docs", side: "left", forceMove: true });
+        await wait62(420);
+        const headSel = '#app-root .k-panel[data-panel-id="timeline"] .k-panel-head';
+        const toBtn = document.querySelector(headSel + " .k-panel-btn-tearoff");
+        check2("[67] \u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u{1F5A5} \u0E43\u0E2B\u0E49\u0E01\u0E14\u0E08\u0E23\u0E34\u0E07", !!toBtn, toBtn ? toBtn.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21");
+        check2(
+          "[67] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E09\u0E35\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E19\u0E35\u0E49\u0E42\u0E1C\u0E25\u0E48\u0E21\u0E32",
+          !document.querySelector('#app-root .k-panel[data-panel-id="tree"] .k-panel-btn-tearoff')
+        );
+        toBtn.click();
+        await wait62(1400);
+        check2(
+          "[67] \u0E01\u0E14 \u{1F5A5} \u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E19\u0E35\u0E49",
+          !document.querySelector('#app-root .k-panel[data-panel-id="timeline"]')
+        );
+        check2("[67] \u0E23\u0E30\u0E1A\u0E1A\u0E08\u0E33\u0E27\u0E48\u0E32\u0E41\u0E1C\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01", isTornOff("timeline") && tornOffIds().includes("timeline"));
+        const listed = await kapi.tearOffList();
+        check2(
+          "[67] main \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E04\u0E37\u0E19 true)",
+          Array.isArray(listed) && listed.includes("timeline"),
+          JSON.stringify(listed)
+        );
+        check2(
+          "[67] \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E15\u0E34\u0E14\u0E44\u0E1F (\u0E41\u0E1C\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u0E41\u0E04\u0E48\u0E04\u0E19\u0E25\u0E30\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07)",
+          panelToggleState().timeline === true
+        );
+        const tlItem = panelMenuItems().find((it) => it.label.includes("\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32"));
+        check2(
+          "[67] \u0E40\u0E21\u0E19\u0E39\u0E41\u0E1C\u0E07\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 \u2610 \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14)",
+          !!tlItem && tlItem.label.includes("\u{1F5A5}") && tlItem.label.includes("\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01"),
+          tlItem ? tlItem.label : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23"
+        );
+        const shot = await kapi.testShotTearOff("timeline", "/tmp/k2-tearoff.png");
+        check2("[67] \u0E16\u0E48\u0E32\u0E22\u0E20\u0E32\u0E1E\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49 (\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E21\u0E35\u0E15\u0E31\u0E27\u0E15\u0E19\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E27\u0E32\u0E14\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27)", shot === true);
+        showPanel("timeline");
+        await wait62(320);
+        check2(
+          "[67] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E41\u0E1C\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E40\u0E01\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E0B\u0E49\u0E2D\u0E19\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01",
+          !document.querySelector('#app-root .k-panel[data-panel-id="timeline"]') && isTornOff("timeline")
+        );
+        await recallPanel("timeline");
+        await wait62(1500);
+        check2(
+          "[67] \u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01",
+          !!document.querySelector('#app-root .k-panel[data-panel-id="timeline"]') || pmT.isFloating("timeline")
+        );
+        check2("[67] \u0E41\u0E25\u0E30\u0E40\u0E25\u0E34\u0E01\u0E19\u0E31\u0E1A\u0E27\u0E48\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01\u0E41\u0E25\u0E49\u0E27", !isTornOff("timeline"));
+        const listed2 = await kapi.tearOffList();
+        check2(
+          "[67] main \u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+          Array.isArray(listed2) && !listed2.includes("timeline"),
+          JSON.stringify(listed2)
+        );
+        const rawL = localStorage.getItem("k2-panel-layout") || "";
+        check2("[67] \u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01 (\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E2D\u0E22\u0E39\u0E48)", rawL.includes("docs"));
+        resetPanels();
+        await wait62(300);
+        showPanel("timeline", { prefer: "float" });
+        await wait62(300);
+        showPanel("kanban", { prefer: "float" });
+        await wait62(300);
+        pmT.groupIntoFloat("timeline", pmT.floatIdOf("kanban"));
+        await wait62(380);
+        const grpEl = document.querySelector(".k-float-group");
+        check2("[67] \u0E15\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E01\u0E48\u0E2D\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!grpEl && pmT.isFloating("timeline") && pmT.isFloating("kanban"));
+        const grpBtn = grpEl && grpEl.querySelector(".k-float-tabbar .k-panel-btn-tearoff");
+        check2("[67] \u0E41\u0E16\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u{1F5A5} \u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", !!grpBtn);
+        grpBtn.click();
+        await wait62(1400);
+        check2(
+          "[67] \u0E09\u0E35\u0E01\u0E08\u0E32\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 \u2014 \u0E41\u0E1C\u0E07\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01",
+          isTornOff("timeline") && !pmT.isFloating("timeline")
+        );
+        const listed3 = await kapi.tearOffList();
+        check2(
+          "[67] main \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E49 (\u0E40\u0E04\u0E2A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22)",
+          Array.isArray(listed3) && listed3.includes("timeline"),
+          JSON.stringify(listed3)
+        );
+        check2("[67] \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E19\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22 (\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E47\u0E22\u0E31\u0E07\u0E25\u0E2D\u0E22\u0E2D\u0E22\u0E39\u0E48)", pmT.isFloating("kanban"));
+        await recallPanel("timeline");
+        await wait62(1500);
+        check2("[67] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E40\u0E04\u0E2A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49", !isTornOff("timeline") && pmT.isOpen("timeline"));
+        resetPanels();
+        await wait62(320);
+      }
+      {
+        resetPanels();
         await wait62(260);
         showPanel("props", { targetId: "docs", side: "right", forceMove: true });
         await wait62(340);
@@ -160569,7 +160963,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, _mainSyncBound, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_editor();
@@ -160706,6 +161100,7 @@ ${css}
         spAutoCapitalize: "\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E43\u0E2B\u0E0D\u0E48\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
         spAutoCorrectI: "\u0E41\u0E01\u0E49 i \u0E40\u0E14\u0E35\u0E48\u0E22\u0E27 \u0E46 \u0E40\u0E1B\u0E47\u0E19 I \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34"
       };
+      _mainSyncBound = false;
       treeScope = null;
       _treeBuilding = false;
       _treeQueued = false;
@@ -161237,6 +161632,11 @@ ${css}
           markDirty(state.active);
           doFind();
         };
+        if (PANEL_WIN) {
+          bootPanelWindow();
+          return;
+        }
+        bindMainWindowSync();
         if (!location.search.includes("k2test")) bootSequence();
         restartAutosave();
       });

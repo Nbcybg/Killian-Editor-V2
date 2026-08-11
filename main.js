@@ -753,7 +753,12 @@ H('recent:list', () => readRecent());
 H('win:minimize', () => win.minimize());
 H('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
 H('win:close', () => win.close());
-H('win:quitNow', () => { forceQuit = true; win.destroy(); app.quit(); });
+H('win:quitNow', () => {
+  forceQuit = true;
+  // [alpha.67] หน้าต่างแผงที่ฉีกออกไปต้องปิดตามหน้าต่างหลัก — ไม่งั้นโปรแกรมค้างอยู่ทั้งที่ผู้ใช้สั่งออก
+  closeAllTearOffs();
+  win.destroy(); app.quit();
+});
 // renderer แจ้งสถานะสวิตช์ล่าสุด → สร้างเมนูใหม่ให้เครื่องหมายถูกตรงกับของจริง (ข้อ 3)
 H('menu:toggles', (patch) => {
   if (!patch || typeof patch !== 'object') return false;
@@ -811,6 +816,17 @@ H('test:shot', async (out) => {
     return true;
   } catch (e) { return false; }
 });
+// [alpha.67] สกรีนช็อต "หน้าต่างแผงที่ฉีกออกไป" — renderer หลักมองไม่เห็นเนื้อในหน้าต่างลูก
+// (คนละ JS context) จึงต้องให้ main เป็นคนถ่ายให้ แล้วค่อยตรวจพิกเซลว่าไม่ใช่หน้าเปล่า
+H('test:shotTearOff', async (id, out) => {
+  try {
+    const w = tearOffWin(String(id || ''));
+    if (!w) return false;
+    const img = await w.webContents.capturePage();
+    fs.writeFileSync(out, img.toPNG());
+    return true;
+  } catch (e) { return false; }
+});
 
 // ---- ระบบบันทึกการทำงาน (log) : เขียน append ลง <userData>/logs/app-YYYY-MM-DD.log ----
 function logDir() { const d = path.join(app.getPath('userData'), 'logs');
@@ -831,6 +847,96 @@ H('log:read', (maxLines) => {
 H('app:dir', () => __dirname);
 H('log:path', () => { try { return logFile(); } catch { return ''; } });
 H('log:reveal', () => { try { require('electron').shell.showItemInFolder(logFile()); return true; } catch { return false; } });
+
+// ─────────────────────────────────────────────────────────────────────
+// [alpha.67] Tear-off — ฉีกแผงออกเป็นหน้าต่าง OS จริง (รองรับหลายจอ)
+//
+// หน้าต่างลูกโหลด `renderer/index.html?panelwin=<id>&root=<โปรเจกต์>` = บันเดิลตัวเดียวกัน
+// แล้ว renderer เข้าโหมด lite (ดู bootPanelWindow ใน app.js) — ไม่มีแท็บ/แถบเครื่องมือ/แผงอื่น
+// มีแค่เนื้อแผงเดียวเต็มหน้าต่าง วาดด้วย `FEATURE_PANELS[id]` ตัวเดียวกับในหน้าต่างหลัก
+//
+// กติกาความเป็นเจ้าของ (กันเขียนไฟล์ชนกัน):
+//   หน้าต่างหลักถือ project.khn.json · ลูกเขียนได้เฉพาะไฟล์ของแผงตัวเอง แล้ว broadcast บอกคนอื่น
+// ─────────────────────────────────────────────────────────────────────
+const tearOffs = new Map();                       // panelId → BrowserWindow
+
+function tearOffWin(id) {
+  const w = tearOffs.get(id);
+  return w && !w.isDestroyed() ? w : null;
+}
+/** ส่งข้อความถึงทุกหน้าต่าง **ยกเว้น** ผู้ส่ง (webContents.id) */
+function fanout(msg, fromWcId) {
+  const targets = [win, ...tearOffs.values()];
+  for (const w of targets) {
+    if (!w || w.isDestroyed()) continue;
+    if (w.webContents.id === fromWcId) continue;
+    try { w.webContents.send('k2:sync', msg); } catch {}
+  }
+}
+
+ipcMain.handle('panel:tearOff', (e, opts = {}) => {
+  const id = String(opts.id || '');
+  if (!id) return false;
+  const exist = tearOffWin(id);
+  if (exist) { exist.show(); exist.focus(); return true; }   // เปิดอยู่แล้ว → ยกมาไว้หน้าสุด
+  const w = new BrowserWindow({
+    width: Math.max(360, opts.w | 0 || 720), height: Math.max(240, opts.h | 0 || 620),
+    x: Number.isInteger(opts.x) ? opts.x : undefined,
+    y: Number.isInteger(opts.y) ? opts.y : undefined,
+    minWidth: 320, minHeight: 200,
+    title: String(opts.title || id) + ' — Killian 2',
+    backgroundColor: '#262624',
+    // ต่างจากหน้าต่างหลัก: ใช้ขอบหน้าต่างของ OS จริง — ผู้ใช้ลากข้ามจอ/สแนปด้วยท่ามาตรฐานได้เลย
+    frame: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'),
+                      contextIsolation: true, nodeIntegration: false,
+                      backgroundThrottling: false },
+  });
+  tearOffs.set(id, w);
+  const q = new URLSearchParams({ panelwin: id, root: String(opts.root || '') });
+  if (TEST) q.set('k2test', '1');
+  w.loadFile('renderer/index.html', { search: q.toString() });
+  w.on('closed', () => {
+    tearOffs.delete(id);
+    // หน้าต่างหลักเป็นคนตัดสินว่าจะเอาแผงกลับไปไว้ที่ไหน (ที่เดิมที่จดไว้ใน homes)
+    if (win && !win.isDestroyed()) { try { win.webContents.send('k2:sync', { kind: 'tearoff-closed', id }); } catch {} }
+  });
+  return true;
+});
+ipcMain.handle('panel:tearOffClose', (e, id) => {
+  const w = tearOffWin(String(id || ''));
+  if (!w) return false;
+  w.close();
+  return true;
+});
+ipcMain.handle('panel:tearOffList', () => [...tearOffs.keys()].filter((id) => tearOffWin(id)));
+function closeAllTearOffs() {
+  for (const w of [...tearOffs.values()]) { try { if (w && !w.isDestroyed()) w.destroy(); } catch {} }
+  tearOffs.clear();
+}
+/** ประกาศให้หน้าต่างอื่นรู้ว่ามีอะไรเปลี่ยน (ไฟล์โปรเจกต์ · ฉากที่เปิดอยู่ · คำขอเปิดไฟล์) */
+ipcMain.handle('panel:broadcast', (e, msg) => {
+  fanout(msg || {}, e.sender.id);
+  return true;
+});
+
+// ไฟล์ถูกเขียน (preload ดักให้ทุกคำสั่งที่เปลี่ยนไฟล์) → บอกหน้าต่างอื่นให้วาดใหม่
+// หน่วงรวบ 250ms: autosave/ย้ายฉากทีเดียวแตะหลายไฟล์รวด ไม่งั้นหน้าต่างลูกวาดใหม่สิบรอบติด ๆ
+// ไม่มีหน้าต่างแผงเปิดอยู่ = ไม่ต้องทำอะไรเลย (ค่าใช้จ่ายเป็นศูนย์ในการใช้งานปกติ)
+let _fcJob = null;
+const _fcPending = new Map();                     // wcId ผู้เขียน → path ล่าสุด
+ipcMain.handle('panel:fileChanged', (e, p) => {
+  if (!tearOffs.size) return false;
+  _fcPending.set(e.sender.id, String(p || ''));
+  if (_fcJob) return true;
+  _fcJob = setTimeout(() => {
+    _fcJob = null;
+    const batch = [..._fcPending.entries()];
+    _fcPending.clear();
+    for (const [wcId, last] of batch) fanout({ kind: 'project-changed', path: last }, wcId);
+  }, 250);
+  return true;
+});
 
 app.whenReady().then(() => {
   createWindow();
