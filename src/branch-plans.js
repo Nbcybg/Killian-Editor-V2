@@ -16,7 +16,7 @@
 //          positions:{[nodeId]:{x,y}}, colors:{[nodeId]:'#hex'},
 //          view:'tree'|'list', zoom, sel, updated }
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 export const BRANCH_PLAN_VERSION = 3;
 export const BRANCH_PLAN_DIR = 'Branches';
 export const BRANCH_PLAN_EXT = '.json';
@@ -27,7 +27,7 @@ export const PLAN_DEFAULT_STATUS = 'ร่าง';
 
 /** แผนเปล่า */
 export function newBranchPlan(name) {
-  return { version: BRANCH_PLAN_VERSION, name: String(name || T`แผนใหม่`).trim() || T`แผนใหม่`,
+  return { version: BRANCH_PLAN_VERSION, name: String(name || t('ui.common.newPlan')).trim() || t('ui.common.newPlan'),
            note: '', status: PLAN_DEFAULT_STATUS, color: '', tags: [], book: '',
            choices: {}, positions: {}, colors: {}, view: 'tree', zoom: 1, sel: null, updated: '' };
 }
@@ -166,7 +166,7 @@ export function planNameFromFile(file) {
 /** ตั้งชื่อไม่ให้ชนของเดิม — "ชื่อ", "ชื่อ 2", "ชื่อ 3", … */
 export function uniquePlanName(name, existing) {
   const taken = new Set((existing || []).map((x) => String(x).toLowerCase()));
-  const base = safePlanName(name) || T`แผนใหม่`;
+  const base = safePlanName(name) || t('ui.common.newPlan');
   if (!taken.has(base.toLowerCase())) return base;
   for (let i = 2; i < 999; i++) {
     const n = `${base} ${i}`;
@@ -201,11 +201,11 @@ export function planSummary(plan) {
   const parts = [];
   const ch = normalizeChoiceMap(p.choices);
   const nCh = Object.values(ch).reduce((n, l) => n + l.length, 0);
-  if (nCh) parts.push(nCh + T` ทางเลือก / ` + Object.keys(ch).length + T` ฉาก`);
+  if (nCh) parts.push(nCh + t('ui.branch.choice') + Object.keys(ch).length + t('ui.common.scene'));
   if (p.status && p.status !== PLAN_DEFAULT_STATUS) parts.push(p.status);
   if ((p.tags || []).length) parts.push('#' + p.tags.join(' #'));
   const n = Object.keys(p.positions || {}).length;
-  if (n) parts.push(n + T` การ์ดจัดเอง`);
-  if (p.view === 'list') parts.push(T`มุมมองรายการ`);
-  return parts.join(' · ') || T`ยังไม่ได้จัดอะไร`;
+  if (n) parts.push(n + t('ui.branch.cardArrange'));
+  if (p.view === 'list') parts.push(t('ui.branch.viewList2'));
+  return parts.join(' · ') || t('ui.branch.cantArrange');
 }

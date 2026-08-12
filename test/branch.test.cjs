@@ -1,4 +1,6 @@
 // test/branch.test.cjs — ทดสอบ branch-graph (เอนจินผังแตกสาย ข้อ 81) ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const out = require('path').join(require('os').tmpdir(), '_bg.cjs');   // '/tmp' ใช้บน Windows ไม่ได้
 require('esbuild').buildSync({ entryPoints: [path.join(__dirname, '../src/branch-graph.js')], outfile: out, format: 'cjs', bundle: true, logLevel: 'silent' });

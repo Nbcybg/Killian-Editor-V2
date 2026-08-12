@@ -1,23 +1,23 @@
 // ai-character.js — ตรวจความสม่ำเสมอของตัวละครข้ามฉาก (ข้อ 75)
 // spec: docs/75-ai-character.md
 // มี 2 ชั้น: (1) ตรวจออฟไลน์จากรูปแบบภาษา (ฟรี แม่นแน่นอน) (2) ส่งให้ AI ดูเรื่องนิสัย/การกระทำ
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { extractJson, validate, estimateTokens, SEVERITY, SEV_RANK } from './ai-core.js';
 import { characterProfile, profileBlock } from './ai-dialogue.js';
 
 export const ASPECTS = {
-  speech:      T`วิธีพูด/สำนวน`,
-  personality: T`นิสัยและปฏิกิริยา`,
-  knowledge:   T`สิ่งที่ตัวละครควรรู้/ไม่ควรรู้`,
-  ability:     T`ความสามารถ`,
-  appearance:  T`รูปลักษณ์`,
-  relationship:T`ความสัมพันธ์กับตัวละครอื่น`,
+  speech:      t('ui.common.howSpeak'),
+  personality: t('ui.aiCharacter.msg'),
+  knowledge:   t('ui.aiCharacter.thingCharacterNot'),
+  ability:     t('ui.aiCharacter.ability'),
+  appearance:  t('ui.aiCharacter.image'),
+  relationship:t('ui.aiCharacter.relationCharacterOther'),
 };
 export { SEVERITY, SEV_RANK };            // ส่งต่อจาก ai-core.js (แหล่งเดียว)
 
-const SYSTEM = T`คุณเป็นบรรณาธิการต้นฉบับที่เชี่ยวชาญเรื่องความสม่ำเสมอของตัวละคร `
-  + T`อ่านโปรไฟล์ตัวละครกับฉากที่ตัวละครนั้นปรากฏ แล้วชี้จุดที่ตัวละครทำ/พูดไม่ตรงกับตัวเองในฉากอื่นหรือไม่ตรงกับโปรไฟล์ `
-  + T`รายงานเฉพาะสิ่งที่ขัดกันจริงในข้อความที่ได้รับ ตอบเป็น JSON เท่านั้น`;
+const SYSTEM = t('ui.aiCharacter.youEditorSourceStory')
+  + t('ui.aiCharacter.readFileCharacterScene')
+  + t('ui.aiCharacter.reportOnlyThingText');
 
 /**
  * Build the consistency prompt. Pure.
@@ -27,27 +27,27 @@ const SYSTEM = T`คุณเป็นบรรณาธิการต้นฉ
 export function buildConsistencyPrompt(profile, appearances = [], opts = {}) {
   const aspects = (opts.aspects && opts.aspects.length ? opts.aspects : Object.keys(ASPECTS));
   const lines = [];
-  lines.push(T`ตรวจความสม่ำเสมอของตัวละคร "${profile.name}" จากฉากทั้งหมดที่ตัวละครนี้ปรากฏ`);
+  lines.push(tf('ui.aiCharacter.checkAlwaysCharacterScene', profile.name));
   lines.push('');
-  lines.push(T`ประเด็นที่ต้องดู:`);
+  lines.push(t('ui.aiCharacter.mustView'));
   for (const a of aspects) lines.push(`- ${a} (${ASPECTS[a] || a})`);
   lines.push('');
-  lines.push(T`กติกา:`);
-  lines.push(T`1. เทียบฉากกับฉาก และเทียบกับโปรไฟล์ — ระบุ sceneId ของฉากที่มีปัญหาเสมอ`);
-  lines.push(T`2. อ้างข้อความสั้น ๆ จากฉากเป็นหลักฐานทุกข้อ`);
-  lines.push(T`3. ให้ข้อเสนอแก้ไขที่ลงมือทำได้จริง (แก้ประโยคไหน เป็นอะไร)`);
-  lines.push(T`4. ถ้าตัวละครสม่ำเสมอดีอยู่แล้ว ให้ตอบ [] — ห้ามแต่งปัญหา`);
+  lines.push(t('ui.common.rule'));
+  lines.push(t('ui.aiCharacter.compareSceneSceneCompare'));
+  lines.push(t('ui.aiCharacter.textShortSceneMain'));
+  lines.push(t('ui.aiCharacter.itemEditActEdit'));
+  lines.push(t('ui.aiCharacter.characterAlwaysReplyForbid'));
   lines.push('');
-  lines.push(T`รูปแบบคำตอบ (JSON array เท่านั้น):`);
-  lines.push(T`[{"sceneId":"<id ฉาก>","aspect":"<ประเด็นจากรายการข้างบน>","severity":"critical|major|minor",`
-    + T`"issue":"ปัญหาที่พบ (ภาษาไทย)","evidence":"ข้อความจากฉาก","suggestion":"ข้อเสนอวิธีแก้"}]`);
+  lines.push(t('ui.common.formatAnswerJSONArray'));
+  lines.push(t('ui.aiCharacter.sceneIdAspectSeverityCritical')
+    + t('ui.aiCharacter.issueProblemFoundThai'));
   lines.push('');
-  lines.push(T`### โปรไฟล์ตัวละคร`);
+  lines.push(t('ui.aiCharacter.fileCharacter'));
   lines.push(profileBlock(profile));
   lines.push('');
-  lines.push(T`### ฉากที่ตัวละครนี้ปรากฏ`);
+  lines.push(t('ui.aiCharacter.sceneCharacterAppear'));
   for (const a of appearances) {
-    lines.push(`[sceneId: ${a.sceneId}] ${a.title || ''}${a.storyDate ? T` · เวลาในเรื่อง: ` + a.storyDate : ''}`);
+    lines.push(`[sceneId: ${a.sceneId}] ${a.title || ''}${a.storyDate ? t('ui.aiCharacter.timeStory') + a.storyDate : ''}`);
     lines.push(String(a.text || '').trim());
     lines.push('');
   }
@@ -91,8 +91,8 @@ function dedupe(rows) {
 }
 
 // ───────── ตรวจออฟไลน์: รูปแบบการพูด (ไทยมีสัญญาณชัด — คำลงท้าย/สรรพนาม) ─────────
-export const POLITE_PARTICLES = [T`ครับ`, T`ค่ะ`, T`คะ`, T`จ้ะ`, T`จ้า`, T`ฮะ`, T`ขอรับ`, T`เจ้าค่ะ`];
-export const PRONOUNS = [T`ผม`, T`ฉัน`, T`ดิฉัน`, T`กระผม`, T`หนู`, T`ข้า`, T`กู`, T`เรา`, T`ข้าพเจ้า`, T`อั๊ว`];
+export const POLITE_PARTICLES = ['ครับ', 'ค่ะ', 'คะ', 'จ้ะ', 'จ้า', 'ฮะ', 'ขอรับ', 'เจ้าค่ะ'];
+export const PRONOUNS = ['ผม', 'ฉัน', 'ดิฉัน', 'กระผม', 'หนู', 'ข้า', 'กู', 'เรา', 'ข้าพเจ้า', 'อั๊ว'];
 
 /** Count speech markers per scene for one character (dialogue lines only). */
 export function speechStats(appearances, characterName) {
@@ -148,8 +148,8 @@ export function localConsistency(appearances, characterName, opts = {}) {
       const used = Object.keys(s.particles);
       if (main && used.length && !used.includes(main)) {
         issues.push(mkIssue(s, 'speech', 'minor',
-          T`ฉากนี้ใช้คำลงท้าย "${used.join(', ')}" ขณะที่ฉากอื่นของ ${characterName} ใช้ "${main}" เป็นหลัก`,
-          T`ตรวจว่าตั้งใจเปลี่ยนน้ำเสียงตามสถานการณ์หรือไม่ ถ้าไม่ ให้แก้เป็น "${main}"`));
+          tf('ui.aiCharacter.sceneUseWordScene', used.join(', '), characterName, main),
+          tf('ui.aiCharacter.checkSetChangeSound', main)));
       }
     }
   }
@@ -159,8 +159,8 @@ export function localConsistency(appearances, characterName, opts = {}) {
       const used = Object.keys(s.pronouns);
       if (main && used.length && !used.includes(main)) {
         issues.push(mkIssue(s, 'speech', 'minor',
-          T`ฉากนี้ ${characterName} เรียกตัวเองว่า "${used.join(', ')}" ขณะที่ฉากอื่นใช้ "${main}"`,
-          T`ถ้าไม่ได้ตั้งใจให้เปลี่ยนตามคู่สนทนา ให้แก้เป็น "${main}"`));
+          tf('ui.aiCharacter.sceneCallItemScene', characterName, used.join(', '), main),
+          tf('ui.aiCharacter.cantSetChangePair', main)));
       }
     }
   }
@@ -182,7 +182,7 @@ function mkIssue(s, aspect, severity, issue, suggestion) {
  */
 export async function checkConsistency(characterId, options = {}) {
   const entity = options.entity;
-  if (!entity) return { ok: false, issues: [], error: T`ไม่พบข้อมูลตัวละครใน Wiki`, code: 'no-entity' };
+  if (!entity) return { ok: false, issues: [], error: t('ui.aiCharacter.notFoundDataCharacter'), code: 'no-entity' };
   const profile = entity.personality !== undefined ? entity : characterProfile(entity);
 
   const ids = options.sceneIds || (options.backlinks && options.backlinks[characterId]) || null;
@@ -192,11 +192,11 @@ export async function checkConsistency(characterId, options = {}) {
     : all.filter((s) => names.some((n) => String(s.text || '').includes(n))))
     .map((s) => ({ sceneId: s.id, title: s.title || '', text: s.text || '', storyDate: s.storyDate || '' }));
 
-  if (!appearances.length) return { ok: false, issues: [], error: T`ไม่พบฉากที่มี "${profile.name}" ปรากฏ`, code: 'no-scenes' };
+  if (!appearances.length) return { ok: false, issues: [], error: tf('ui.aiCharacter.notFoundSceneHas', profile.name), code: 'no-scenes' };
 
   const local = options.includeLocal === false ? [] : localConsistency(appearances, profile.name, options);
   const client = options.client;
-  if (!client) return { ok: !!local.length, issues: local, error: T`ไม่ได้ตั้งค่า AI client`, code: 'no-client', appearances: appearances.length };
+  if (!client) return { ok: !!local.length, issues: local, error: t('ui.common.cantSettingsAIClient'), code: 'no-client', appearances: appearances.length };
 
   const built = buildConsistencyPrompt(profile, appearances, options);
   const res = await client.complete({

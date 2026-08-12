@@ -1,22 +1,22 @@
 // ai-dialogue.js — สร้างบทสนทนาจากบุคลิกตัวละครใน Wiki (ข้อ 74)
 // spec: docs/74-ai-dialogue.md · รูปแบบผลลัพธ์ตรงกับ fountain ของ K2 (.หัวฉาก @ตัวละคร (วงเล็บ) บทพูด)
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { estimateTokens } from './ai-core.js';
 
-const SYSTEM = T`คุณเป็นนักเขียนบทภาพยนตร์ภาษาไทยมืออาชีพ เขียนบทสนทนาที่ฟังเหมือนคนพูดจริง `
-  + T`ตัวละครแต่ละตัวต้องมีน้ำเสียงต่างกันชัดเจนตามบุคลิกที่ให้มา `
-  + T`ส่งเฉพาะบทสนทนา ห้ามอธิบาย ห้ามใส่หัวข้อหรือคำนำ`;
+const SYSTEM = tt('ui.aiDialogue.youWriterScreenplayThai')
+  + tt('ui.aiDialogue.characterEachItemMust')
+  + tt('ui.aiDialogue.sendOnlyDialogueForbid');
 
 // ฟิลด์ใน Wiki ที่ใช้เป็นบุคลิก (ยอมรับได้ทั้งคีย์ไทยและอังกฤษ — โปรเจกต์เก่าตั้งชื่อฟิลด์เองได้)
 const FIELD_ALIASES = {
-  role: ['role', T`บทบาท`, T`ตำแหน่ง`],
-  age: ['age', T`อายุ`],
-  personality: ['personality', T`บุคลิก`, T`นิสัย`, 'traits'],
-  speech: ['speech', 'speechStyle', T`การพูด`, T`สำนวน`, T`น้ำเสียง`],
-  background: ['background', T`ภูมิหลัง`, T`ประวัติ`, 'bio'],
-  goal: ['goal', T`เป้าหมาย`, 'motivation', T`แรงจูงใจ`],
-  fear: ['fear', T`ความกลัว`, T`จุดอ่อน`, 'weakness'],
-  quirk: ['quirk', T`ลักษณะเฉพาะ`, T`ติดปาก`],
+  role: ['role', tt('ui.aiDialogue.chapter'), tt('ui.aiDialogue.pos')],
+  age: ['age', tt('ui.aiDialogue.msg6')],
+  personality: ['personality', tt('ui.aiDialogue.click'), tt('ui.aiDialogue.msg2'), 'traits'],
+  speech: ['speech', 'speechStyle', tt('ui.aiDialogue.speak2'), tt('ui.aiDialogue.msg5'), tt('ui.aiDialogue.sound')],
+  background: ['background', tt('ui.aiDialogue.msg3'), tt('ui.common.history'), 'bio'],
+  goal: ['goal', tt('ui.common.goal'), 'motivation', tt('ui.aiDialogue.msg7')],
+  fear: ['fear', tt('ui.aiDialogue.fear'), tt('ui.aiDialogue.dot'), 'weakness'],
+  quirk: ['quirk', tt('ui.aiDialogue.only'), tt('ui.aiDialogue.msg')],
 };
 
 /**
@@ -33,7 +33,7 @@ export function characterProfile(entity) {
     }
     return '';
   };
-  const out = { id: entity.id || '', name: entity.name || entity.title || T`(ไม่ทราบชื่อ)`, aliases: entity.aliases || [] };
+  const out = { id: entity.id || '', name: entity.name || entity.title || tt('ui.aiDialogue.notName'), aliases: entity.aliases || [] };
   for (const [key, keys] of Object.entries(FIELD_ALIASES)) out[key] = pick(keys);
   out.relationships = (entity.relationships || []).map((r) => ({
     target: r.targetName || r.target || '', role: r.role || '',
@@ -44,19 +44,19 @@ export function characterProfile(entity) {
 /** Render a profile as prompt text (pure). */
 export function profileBlock(p) {
   if (!p) return '';
-  const rows = [T`ชื่อ: ${p.name}` + (p.aliases && p.aliases.length ? T` (เรียกอีกอย่างว่า ${p.aliases.join(', ')})` : '')];
+  const rows = [ttf('ui.aiDialogue.name2', p.name) + (p.aliases && p.aliases.length ? ttf('ui.aiDialogue.call', p.aliases.join(', ')) : '')];
   const add = (label, v) => { if (v) rows.push(`${label}: ${v}`); };
-  add(T`บทบาท`, p.role); add(T`อายุ`, p.age); add(T`บุคลิก`, p.personality);
-  add(T`วิธีพูด/สำนวน`, p.speech); add(T`ภูมิหลัง`, p.background);
-  add(T`เป้าหมาย`, p.goal); add(T`ความกลัว/จุดอ่อน`, p.fear); add(T`ติดปาก`, p.quirk);
+  add(tt('ui.aiDialogue.chapter'), p.role); add(tt('ui.aiDialogue.msg6'), p.age); add(tt('ui.aiDialogue.click'), p.personality);
+  add(tt('ui.common.howSpeak'), p.speech); add(tt('ui.aiDialogue.msg3'), p.background);
+  add(tt('ui.common.goal'), p.goal); add(tt('ui.aiDialogue.fearDot'), p.fear); add(tt('ui.aiDialogue.msg'), p.quirk);
   if (p.relationships && p.relationships.length) {
-    rows.push(T`ความสัมพันธ์: ` + p.relationships.map((r) => `${r.target}${r.role ? ' (' + r.role + ')' : ''}`).join(', '));
+    rows.push(tt('ui.aiDialogue.relation') + p.relationships.map((r) => `${r.target}${r.role ? ' (' + r.role + ')' : ''}`).join(', '));
   }
-  add(T`อื่น ๆ`, p.notes);
+  add(tt('ui.common.other'), p.notes);
   return rows.join('\n');
 }
 
-export const DIALOGUE_FORMATS = { screenplay: T`บทภาพยนตร์`, prose: T`ร้อยแก้ว (มีบรรยายคั่น)` };
+export const DIALOGUE_FORMATS = { screenplay: tt('ui.common.screenplay'), prose: tt('ui.aiDialogue.editHasAction') };
 
 /**
  * Build the dialogue prompt. Pure.
@@ -68,36 +68,36 @@ export function buildDialoguePrompt(a, b, context = {}, opts = {}) {
   const format = opts.format === 'prose' ? 'prose' : 'screenplay';
   const lines = [];
   const exchanges = opts.lines || 8;
-  lines.push(T`เขียนบทสนทนาระหว่างตัวละคร 2 ตัวต่อไปนี้ ประมาณ ${exchanges} รอบการโต้ตอบ`);
-  lines.push(T`ให้แต่ละคนพูดตามบุคลิก วิธีพูด และเป้าหมายของตัวเอง — ห้ามให้ทั้งคู่พูดเหมือนกัน`);
-  if (opts.tone) lines.push(T`โทนโดยรวม: ` + opts.tone);
+  lines.push(ttf('ui.aiDialogue.writeDialogueBetweenCharacter', exchanges));
+  lines.push(tt('ui.aiDialogue.eachPersonSpeakClick'));
+  if (opts.tone) lines.push(tt('ui.aiDialogue.toneMerge') + opts.tone);
   lines.push('');
-  lines.push(T`### ตัวละคร ก`);
+  lines.push(tt('ui.aiDialogue.character'));
   lines.push(profileBlock(a));
   lines.push('');
-  lines.push(T`### ตัวละคร ข`);
+  lines.push(tt('ui.aiDialogue.character2'));
   lines.push(profileBlock(b));
 
   const ctx = typeof context === 'string' ? { situation: context } : (context || {});
   const cRows = [];
-  if (ctx.situation) cRows.push(T`สถานการณ์: ` + ctx.situation);
-  if (ctx.place) cRows.push(T`สถานที่: ` + ctx.place);
-  if (ctx.time) cRows.push(T`เวลา: ` + ctx.time);
-  if (ctx.goal) cRows.push(T`สิ่งที่แต่ละฝ่ายต้องการจากบทสนทนานี้: ` + ctx.goal);
-  if (ctx.conflict) cRows.push(T`ความขัดแย้ง: ` + ctx.conflict);
-  if (ctx.mood) cRows.push(T`อารมณ์ของฉาก: ` + ctx.mood);
-  if (cRows.length) { lines.push('', T`### บริบทของฉาก`, ...cRows); }
-  if (ctx.before) { lines.push('', T`### ข้อความก่อนหน้า (เขียนต่อให้กลมกลืน)`, String(ctx.before).slice(0, 1500)); }
+  if (ctx.situation) cRows.push(tt('ui.aiDialogue.msg4') + ctx.situation);
+  if (ctx.place) cRows.push(tt('ui.aiDialogue.place') + ctx.place);
+  if (ctx.time) cRows.push(tt('ui.aiDialogue.time') + ctx.time);
+  if (ctx.goal) cRows.push(tt('ui.aiDialogue.thingEachNeedDialogue') + ctx.goal);
+  if (ctx.conflict) cRows.push(tt('ui.common.conflict2') + ctx.conflict);
+  if (ctx.mood) cRows.push(tt('ui.aiDialogue.moodScene') + ctx.mood);
+  if (cRows.length) { lines.push('', tt('ui.aiDialogue.contextScene'), ...cRows); }
+  if (ctx.before) { lines.push('', tt('ui.aiDialogue.textBeforePageWrite'), String(ctx.before).slice(0, 1500)); }
 
-  lines.push('', T`### รูปแบบผลลัพธ์`);
+  lines.push('', tt('ui.aiDialogue.formatResult'));
   if (format === 'screenplay') {
-    lines.push(T`ใช้รูปแบบบทภาพยนตร์แบบนี้เท่านั้น (ขึ้นบรรทัดใหม่ทุกครั้ง):`);
-    lines.push(T`@ชื่อตัวละคร`);
-    lines.push(T`(อารมณ์/การกระทำสั้น ๆ ถ้าจำเป็น)`);
-    lines.push(T`บทพูด`);
-    lines.push(T`ห้ามใส่หัวฉาก ห้ามใส่คำบรรยายยาว ห้ามใส่เลขลำดับ`);
+    lines.push(tt('ui.aiDialogue.useFormatScreenplayStyle'));
+    lines.push(tt('ui.aiDialogue.name'));
+    lines.push(tt('ui.aiDialogue.moodDoShortRemember'));
+    lines.push(tt('ui.common.dialogue'));
+    lines.push(tt('ui.aiDialogue.forbidPutHeadScene'));
   } else {
-    lines.push(T`เขียนเป็นร้อยแก้ว: บทพูดอยู่ในเครื่องหมายคำพูด "…" สลับกับคำบรรยายสั้น ๆ ว่าใครพูดและทำอะไร`);
+    lines.push(tt('ui.aiDialogue.writeEditDialogueWord'));
   }
   const prompt = lines.join('\n');
   return { system: SYSTEM, prompt, tokens: estimateTokens(prompt), format };
@@ -158,7 +158,7 @@ export function toProse(lines) {
   return (lines || []).filter((l) => l && l.text).map((l) => {
     if (!l.speaker) return l.text;
     const paren = l.paren ? `${l.paren} ` : '';
-    return T`${l.speaker}${paren ? ' ' + paren : ''} พูดว่า "${l.text}"`.replace(/\s+/g, ' ');
+    return ttf('ui.aiDialogue.speak', l.speaker, paren ? ' ' + paren : '', l.text).replace(/\s+/g, ' ');
   }).join('\n\n');
 }
 
@@ -174,9 +174,9 @@ export async function generateDialogue(characterA, characterB, context = {}, opt
   const client = options.client;
   const a = characterA && characterA.personality !== undefined ? characterA : characterProfile(characterA);
   const b = characterB && characterB.personality !== undefined ? characterB : characterProfile(characterB);
-  if (!a || !b) return { ok: false, text: '', lines: [], error: T`ต้องมีตัวละคร 2 ตัว`, code: 'no-characters' };
+  if (!a || !b) return { ok: false, text: '', lines: [], error: tt('ui.aiDialogue.mustHasCharacterItem'), code: 'no-characters' };
   const built = buildDialoguePrompt(a, b, context, options);
-  if (!client) return { ok: false, text: '', lines: [], prompt: built.prompt, error: T`ไม่ได้ตั้งค่า AI client`, code: 'no-client' };
+  if (!client) return { ok: false, text: '', lines: [], prompt: built.prompt, error: tt('ui.common.cantSettingsAIClient'), code: 'no-client' };
 
   const req = {
     prompt: built.prompt, system: built.system, feature: 'dialogue',

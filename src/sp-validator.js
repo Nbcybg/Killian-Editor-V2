@@ -5,7 +5,7 @@
 // คืน [{ type, block, el, msg, severity }] โดย `block` = ดัชนีใน array ที่ส่งเข้ามา (นับ blank ด้วย)
 // → ผู้เรียกเอาไปหาตำแหน่งจริงในเอกสารต่อได้
 
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 export const SP_ERRORS = {
   EMPTY_ELEMENT: 'empty-element',
   ORPHAN_CHARACTER: 'orphan-character',
@@ -36,10 +36,10 @@ export const DEFAULT_LIMITS = { dialogue: 60, action: 70, scene: 70, character: 
 // element ที่ "ว่างแล้วผิด" (action ว่าง = บรรทัดเว้นวรรค ปกติของบท จึงไม่นับ)
 const NEED_TEXT = ['scene', 'character', 'dialogue', 'parenthetical', 'transition', 'shot', 'act-break'];
 const TH_EL = {
-  scene: T`หัวฉาก`, action: T`บรรยาย`, character: T`ตัวละคร`, dialogue: T`บทพูด`,
-  parenthetical: T`วงเล็บ`, transition: T`ทรานซิชัน`, shot: T`ช็อต`, 'act-break': T`ตอน`,
-  note: T`โน้ต`, summary: T`สรุป`, outline1: T`โครง 1`, outline2: T`โครง 2`, outline3: T`โครง 3`,
-  image: T`รูปภาพ`, raw: T`อื่น ๆ`,
+  scene: t('ui.spValidator.headScene'), action: t('ui.common.action'), character: t('ui.common.character'), dialogue: t('ui.common.dialogue'),
+  parenthetical: t('ui.spValidator.msg2'), transition: t('ui.spValidator.msg'), shot: t('ui.spValidator.shot'), 'act-break': t('ui.spValidator.act'),
+  note: t('ui.common.note'), summary: t('ui.common.summary'), outline1: t('ui.spValidator.outline'), outline2: t('ui.spValidator.outline2'), outline3: t('ui.spValidator.outline3'),
+  image: t('ui.common.image'), raw: t('ui.common.other'),
 };
 export const elLabel = (el) => TH_EL[el] || el;
 
@@ -83,7 +83,7 @@ export function validateScreenplay(blocks, opts = {}) {
 
     // 1. element ที่ต้องมีข้อความแต่ว่างเปล่า
     if (!text && NEED_TEXT.includes(el)) {
-      add(SP_ERRORS.EMPTY_ELEMENT, i, el, T`${elLabel(el)}: บรรทัดว่าง`);
+      add(SP_ERRORS.EMPTY_ELEMENT, i, el, tf('ui.spValidator.lineEmpty', elLabel(el)));
     }
 
     // 7. มีเนื้อบทก่อนหัวฉากแรก
@@ -91,27 +91,27 @@ export function validateScreenplay(blocks, opts = {}) {
     else if (!sceneSeen && !warnedNoScene &&
              ['action', 'character', 'dialogue', 'parenthetical'].includes(el)) {
       warnedNoScene = true;
-      add(SP_ERRORS.MISSING_SCENE_HEADING, i, el, T`มีเนื้อบทก่อนหัวฉากแรก — ควรขึ้นหัวฉาก (INT./EXT.) ก่อน`);
+      add(SP_ERRORS.MISSING_SCENE_HEADING, i, el, t('ui.spValidator.hasBodyChapterBefore'));
     }
 
     // 6. หัวฉากติดกัน 2 อัน
     if (el === 'scene' && next && next.el === 'scene') {
-      add(SP_ERRORS.DOUBLE_SCENE, i, el, T`หัวฉากติดกันสองอัน — “${text || T`(ว่าง)`}” ไม่มีเนื้อฉาก`);
+      add(SP_ERRORS.DOUBLE_SCENE, i, el, tf('ui.spValidator.headSceneTwoNot', text || t('ui.common.empty')));
     }
 
     // 2. ตัวละครไม่มีบทพูด/วงเล็บตามหลัง
     if (el === 'character' && (!next || !['dialogue', 'parenthetical'].includes(next.el))) {
-      add(SP_ERRORS.ORPHAN_CHARACTER, i, el, T`ตัวละคร “${text}” ไม่มีบทสนทนาตามหลัง`);
+      add(SP_ERRORS.ORPHAN_CHARACTER, i, el, tf('ui.spValidator.characterNotHasDialogue', text));
     }
 
     // 3. บทพูดกำพร้า — ไม่มีตัวละคร/วงเล็บ/บทพูดนำหน้า
     if (el === 'dialogue' && (!prev || !['character', 'parenthetical', 'dialogue'].includes(prev.el))) {
-      add(SP_ERRORS.ORPHAN_DIALOGUE, i, el, T`บทพูดกำพร้า — ไม่มีชื่อตัวละครนำหน้า`);
+      add(SP_ERRORS.ORPHAN_DIALOGUE, i, el, t('ui.spValidator.dialogueNotNamedCharacter'));
     }
 
     // 4. วงเล็บกำพร้า — ต้องอยู่หลังตัวละครหรือบทพูด
     if (el === 'parenthetical' && (!prev || !['character', 'dialogue'].includes(prev.el))) {
-      add(SP_ERRORS.ORPHAN_PARENTHETICAL, i, el, T`วงเล็บกำพร้า — ไม่ได้อยู่หลังตัวละคร/บทพูด`);
+      add(SP_ERRORS.ORPHAN_PARENTHETICAL, i, el, t('ui.spValidator.cantCharacterDialogue'));
     }
 
     // 8. วงเล็บไม่ปิด
@@ -119,7 +119,7 @@ export function validateScreenplay(blocks, opts = {}) {
       const opens = (text.match(/\(/g) || []).length;
       const closes = (text.match(/\)/g) || []).length;
       if (opens !== closes) {
-        add(SP_ERRORS.UNCLOSED_PARENTHETICAL, i, el, T`วงเล็บไม่ครบคู่: ${text}`);
+        add(SP_ERRORS.UNCLOSED_PARENTHETICAL, i, el, tf('ui.spValidator.notCompletePair', text));
       }
     }
 
@@ -127,7 +127,7 @@ export function validateScreenplay(blocks, opts = {}) {
     const lim = L[el];
     if (lim && text.length > lim) {
       add(SP_ERRORS.OVERLONG_LINE, i, el,
-          T`${elLabel(el)} ยาวเกิน (${text.length}/${lim} ตัวอักษร)`);
+          tf('ui.spValidator.longChar', elLabel(el), text.length, lim));
     }
   }
 
@@ -144,10 +144,10 @@ export function errorSummary(errors) {
 /** ข้อความสั้นสำหรับแถบสถานะ */
 export function summaryText(errors) {
   const s = errorSummary(errors);
-  if (!s.total) return T`✅ ไม่พบข้อผิดพลาด`;
+  if (!s.total) return t('ui.spValidator.notFoundError');
   const parts = [];
-  if (s.errors) parts.push(T`${s.errors} ข้อผิดพลาด`);
-  if (s.warnings) parts.push(T`${s.warnings} ข้อควรดู`);
+  if (s.errors) parts.push(tf('ui.spValidator.error', s.errors));
+  if (s.warnings) parts.push(tf('ui.spValidator.itemView', s.warnings));
   return '⚠️ ' + parts.join(' · ');
 }
 

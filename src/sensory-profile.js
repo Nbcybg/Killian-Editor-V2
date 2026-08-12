@@ -1,14 +1,14 @@
 // sensory-profile.js — บรรยากาศรับรู้ของสถานที่ (sight/sound/smell/touch/taste)
 // แสดงเป็นหัวข้อเพิ่มในหน้า Wiki หมวด "สถานที่" เท่านั้น · เก็บใน entity.sensoryProfile
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { el } from './core.js';
 
 const SENSORY_FIELDS = [
-  { key: 'sight', label: T`👁 สิ่งที่เห็น`, icon: 'image', hint: T`เช่น แสงสลัวลอดหน้าต่างบานเกล็ด` },
-  { key: 'sound', label: T`👂 สิ่งที่ได้ยิน`, icon: 'chat', hint: T`เช่น เสียงน้ำหยดจากเพดาน` },
-  { key: 'smell', label: T`👃 กลิ่น`, icon: 'note', hint: T`เช่น กลิ่นกระดาษเก่ากับฝุ่น` },
-  { key: 'touch', label: T`🖐 สัมผัส`, icon: 'edit', hint: T`เช่น พื้นไม้เย็นและหยาบ` },
-  { key: 'taste', label: T`👅 รสชาติ`, icon: 'star', hint: T`เช่น รสฝุ่นติดปลายลิ้น` },
+  { key: 'sight', label: t('ui.common.thingSee'), icon: 'image', hint: t('ui.sensory.egWindow') },
+  { key: 'sound', label: t('ui.sensory.thingHear'), icon: 'chat', hint: t('ui.sensory.egSound') },
+  { key: 'smell', label: t('ui.sensory.smell'), icon: 'note', hint: t('ui.sensory.egSmellPaper') },
+  { key: 'touch', label: t('ui.sensory.touch'), icon: 'edit', hint: t('ui.sensory.egBg') },
+  { key: 'taste', label: t('ui.sensory.taste'), icon: 'star', hint: t('ui.sensory.eg') },
 ];
 
 // เอนทิตี้นี้ควรมีบรรยากาศรับรู้ไหม (เฉพาะหมวดสถานที่)
@@ -35,7 +35,7 @@ export function renderSensoryProfile(wrap, entity, onDirty) {
   if (!sec) {
     sec = el('div', 'wiki-sensory');
     sec.style.cssText = 'margin-top:20px;padding-top:16px;border-top:1px solid var(--border)';
-    sec.append(el('div', 'wiki-sub', T`🌐 บรรยากาศรับรู้`));
+    sec.append(el('div', 'wiki-sub', t('ui.sensory.ambienceSensory')));
     wrap.append(sec);
   }
   // ลบช่องเก่าแล้ววาดใหม่ (render ถูกเรียกหลายครั้ง)

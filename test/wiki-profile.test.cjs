@@ -1,4 +1,6 @@
 // test/wiki-profile.test.cjs — หัวการ์ดโปรไฟล์ Wiki ต้องมาจาก templates.json เท่านั้น (alpha.71 ข้อ 4)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // จุดที่ต้องกันไม่ให้กลับไปพัง: ห้ามมีชื่อ field ('Role'/'Status') เขียนตายในโค้ด
 // และรูปประจำตัวต้องใช้ได้ทุกหมวด ไม่ใช่เฉพาะ characters
 const path = require('path');

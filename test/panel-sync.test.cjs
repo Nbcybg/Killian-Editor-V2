@@ -1,4 +1,6 @@
 // test/panel-sync.test.cjs — [alpha.68] ช่องส่ง "ฉากที่เปิดอยู่" ข้ามหน้าต่าง (tear-off เฟส 2)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');

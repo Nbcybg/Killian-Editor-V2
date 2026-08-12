@@ -4,7 +4,7 @@
 // ส่วนสร้าง HTML บริสุทธิ์ 100% (ทดสอบด้วย node ได้ — test/sp-export.test.cjs)
 // ส่วนที่เขียนไฟล์รับ `api` เข้ามา (kapi) จึงไม่ผูกกับ Electron ตอนทดสอบ
 
-import { T } from './i18n.js';
+import { t as tt, t } from './i18n.js';
 import { mergeSpFormat, spCss, textWidth } from './sp-format.js';
 import { num } from './num.js';
 
@@ -17,12 +17,12 @@ export const DEFAULT_WM = {
 
 /** ชื่อไฟล์ที่ปลอดภัยกับทุกระบบไฟล์ */
 export function safeFileName(s) {
-  return String(s ?? '').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || T`ไม่มีชื่อ`;
+  return String(s ?? '').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || tt('ui.common.notNamed2');
 }
 
 /** แทนค่าในแม่แบบลายน้ำ: {ชื่อ} {name} {วันที่} {date} {เรื่อง} {title} */
 export function watermarkText(tpl, ctx = {}) {
-  const t = String(tpl ?? '').trim() || T`{ชื่อ}`;
+  const t = String(tpl ?? '').trim() || tt('ui.watermark.name');
   return t
     .replace(/\{ชื่อ\}|\{name\}/g, ctx.name ?? '')
     .replace(/\{วันที่\}|\{date\}/g, ctx.date ?? '')
@@ -132,7 +132,7 @@ export function buildWatermarkHtml(pages, fmt, opts = {}) {
  */
 export async function generateWatermarkedPDFs(api, args = {}) {
   const { pages, fmt, recipients = [], outDir, prefix = 'script',
-          wmTemplate = T`{ชื่อ}`, wmOptions, fontUrls, title, date, onProgress, buildPdf } = args;
+          wmTemplate = tt('ui.watermark.name'), wmOptions, fontUrls, title, date, onProgress, buildPdf } = args;
   const made = [];
   for (let i = 0; i < recipients.length; i++) {
     const r = recipients[i];

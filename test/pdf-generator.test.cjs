@@ -1,4 +1,6 @@
 // test/pdf-generator.test.cjs — unit test ตัวสร้าง PDF ในโปรแกรม (ข้อ 69 · 87 · 89)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // สร้าง PDF จริงแล้วตรวจไบต์ที่ออกมา — ไม่ต้องเปิด electron
 const path = require('path');
 const os = require('os');

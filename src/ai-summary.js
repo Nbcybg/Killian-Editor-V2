@@ -1,5 +1,5 @@
 // ai-summary.js — สรุปเนื้อหาด้วย AI (ข้อ 77) + แนะนำชื่อเรื่อง/ชื่อบท/ชื่อฉาก (ข้อ 78)
-import { T } from './i18n.js';
+import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { callAI, aiConfigured, getAISettings } from './ai-settings.js';
 import { listEntities } from './project-scan.js';
@@ -31,7 +31,7 @@ export function hashText(s) {
  */
 export async function collectProjectText(opts = {}) {
   const { onProgress = null, includeWiki = true, perScene = 2000, maxChars = 8000 } = opts;
-  let text = '# ' + (state.title || T`โปรเจกต์`) + '\n\n';
+  let text = '# ' + (state.title || tt('ui.common.project')) + '\n\n';
   let scenes = 0, entities = 0;
   if (!state.root) return { text, scenes, entities };
 
@@ -86,7 +86,7 @@ export async function collectProjectText(opts = {}) {
       const ents = await listEntities(state.root);
       entities = ents.length;
       if (ents.length) {
-        text += T`\n## คลังข้อมูล (Wiki)\n`;
+        text += tt('ui.aiSum.libraryDataWiki');
         for (const e of ents.slice(0, 60)) {
           const secTxt = (e.entity.sections || []).map((s) => s.content || '').join(' ')
             .replace(/\s+/g, ' ').slice(0, 160);
@@ -94,7 +94,7 @@ export async function collectProjectText(opts = {}) {
                   (secTxt ? ': ' + secTxt : '') + '\n';
         }
       }
-    } catch (e) { log('warn', T`ai-summary: อ่าน Wiki ไม่ได้`, e); }
+    } catch (e) { log('warn', tt('ui.aiSum.aiSummaryReadWiki'), e); }
   }
 
   return { text: text.slice(0, maxChars + 2000), scenes, entities };
@@ -105,7 +105,7 @@ function busyBox(title) {
   const ov = el('div', 'k-overlay k-busy');
   const box = el('div', 'k-dialog');
   box.append(el('div', 'k-dlg-title', title));
-  const msg = el('div', 'k-busy-msg', T`กำลังเริ่ม…`);
+  const msg = el('div', 'k-busy-msg', tt('ui.aiSum.busyStart'));
   msg.style.cssText = 'padding:8px 0;font-size:13px';
   const bar = el('div', 'k-busy-bar');
   bar.style.cssText = 'height:6px;border-radius:3px;background:var(--border);overflow:hidden';
@@ -137,28 +137,28 @@ function writeCache(hash, textVal) {
 }
 
 export async function showAISummary({ force = false } = {}) {
-  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
+  if (!state.root) { setStatus(tt('ui.common.cantOpenProject')); return; }
   if (!(await aiReady())) return;
 
-  const busy = busyBox(T`🤖 AI สรุปเนื้อหา`);
+  const busy = busyBox(tt('ui.aiSum.aISummaryBody'));
   let result = null, cached = false, cacheDate = '';
   try {
-    busy.set(T`กำลังอ่านเนื้อหาโปรเจกต์…`, 0);
+    busy.set(tt('ui.aiSum.busyReadBodyProject'), 0);
     const { text, scenes, entities } = await collectProjectText({
       onProgress: (done, total, label) =>
-        busy.set(T`อ่านฉาก ${done}/${total}${label ? ' — ' + label : ''}`, total ? done / total * 0.6 : 0),
+        busy.set(ttf('ui.aiSum.readScene', done, total, label ? ' — ' + label : ''), total ? done / total * 0.6 : 0),
     });
     const h = hashText(text);
     const cache = readCache();
     if (!force && cache && cache.hash === h && cache.text) {
       result = cache.text; cached = true; cacheDate = cache.date;
-      busy.set(T`ใช้ผลสรุปที่บันทึกไว้ (เนื้อหายังไม่เปลี่ยน)`, 1);
+      busy.set(tt('ui.aiSum.useResultSummarySave'), 1);
     } else {
-      busy.set(T`กำลังส่งให้ AI สรุป (${scenes} ฉาก · ${entities} รายการใน Wiki)…`, 0.7);
-      const prompt = T`กรุณาสรุปเนื้อหานิยาย/บทภาพยนตร์ต่อไปนี้เป็นภาษาไทย สั้นๆ 3-5 ย่อหน้า:\n\n${text}`;
-      result = await callAI(prompt, T`คุณเป็นนักเขียนมืออาชีพ ช่วยสรุปเนื้อหานิยาย`);
+      busy.set(ttf('ui.aiSum.busySendAISummary', scenes, entities), 0.7);
+      const prompt = ttf('ui.aiSum.summaryBodyNovelScreenplay', text);
+      result = await callAI(prompt, tt('ui.aiSum.youWriterHelpSummary'));
       if (result) { writeCache(h, result); try { const { saveProjectMeta } = await import('./app.js'); await saveProjectMeta(); } catch {} }
-      busy.set(T`เสร็จแล้ว`, 1);
+      busy.set(tt('ui.aiSum.doneDone'), 1);
     }
   } finally { busy.close(); }
   if (!result) return;
@@ -166,10 +166,10 @@ export async function showAISummary({ force = false } = {}) {
   // แสดงใน dialog
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide k-ai-summary');
-  box.append(el('div', 'k-dlg-title', T`🤖 AI สรุปเนื้อหา — ` + state.title));
+  box.append(el('div', 'k-dlg-title', tt('ui.aiSum.aISummaryBody2') + state.title));
   if (cached) {
-    const note = el('div', 'dim', T`📌 ผลที่บันทึกไว้เมื่อ ` + new Date(cacheDate).toLocaleString('th-TH') +
-                                  T` (เนื้อหายังไม่เปลี่ยน — กด "สรุปใหม่" ถ้าต้องการให้ AI คิดใหม่)`);
+    const note = el('div', 'dim', tt('ui.aiSum.resultSave') + new Date(cacheDate).toLocaleString('th-TH') +
+                                  tt('ui.aiSum.bodyNotChangePress'));
     note.style.cssText = 'font-size:11px;margin:-4px 0 6px';
     box.append(note);
   }
@@ -180,17 +180,17 @@ export async function showAISummary({ force = false } = {}) {
   box.append(content);
 
   const btns = el('div', 'k-dlg-btns');
-  const againB = el('button', null, T`🔄 สรุปใหม่`);
-  againB.title = T`เรียก AI ใหม่ (ใช้ token เพิ่ม)`;
+  const againB = el('button', null, tt('ui.aiSum.summaryNew'));
+  againB.title = tt('ui.aiSum.callAINewUse');
   againB.onclick = () => { ov.remove(); showAISummary({ force: true }); };
-  const exportB = el('button', null, T`📥 ส่งออก .md`);
+  const exportB = el('button', null, tt('ui.common.exportMd'));
   exportB.onclick = async () => {
     const dest = await kapi.saveAsDialog(state.title + '-summary.md', 'md');
     if (!dest) return;
-    await kapi.writeFile(dest, '# ' + state.title + T` — สรุป\n\n` + result);
-    setStatus(T`ส่งออกสรุปแล้ว`);
+    await kapi.writeFile(dest, '# ' + state.title + tt('ui.aiSum.summary') + result);
+    setStatus(tt('ui.aiSum.exportSummaryDone'));
   };
-  const closeB = el('button', 'k-ok', T`ปิด`);
+  const closeB = el('button', 'k-ok', tt('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(againB, exportB, closeB);
   box.append(btns);
@@ -232,19 +232,19 @@ export function pastTitlesFor(base) {
  */
 export async function showAITitleSuggestions(currentTitle, callback, opts = {}) {
   const kind = opts.kind || 'project';
-  const KIND_TH = { project: T`เรื่อง`, chapter: T`บท`, scene: T`ฉาก` };
+  const KIND_TH = { project: tt('ui.common.story'), chapter: tt('ui.common.chapter'), scene: tt('ui.common.scene2') };
   if (!(await aiReady())) return;
-  setStatus(T`AI กำลังคิดชื่อ…`);
+  setStatus(tt('ui.aiSum.aIBusyThinkName'));
 
-  const busy = busyBox(T`✨ แนะนำชื่อ${KIND_TH[kind]}`);
-  busy.set(T`กำลังส่งให้ AI คิดชื่อ…`, 0.5);
+  const busy = busyBox(ttf('ui.aiSum.suggestName', KIND_TH[kind]));
+  busy.set(tt('ui.aiSum.busySendAIThink'), 0.5);
   let result = null;
   try {
-    const prompt = T`แนะนำชื่อ${KIND_TH[kind]} (ภาษาไทย) สำหรับนิยาย/บทภาพยนตร์ 5-10 ชื่อ ` +
-      T`โดยอิงจากชื่อปัจจุบัน: "${currentTitle}"` +
-      (opts.context ? T`\n\nบริบท/เนื้อหาย่อ:\n${String(opts.context).slice(0, 1500)}` : '') +
-      T`\n\nส่งเป็นรายการบรรทัดละชื่อ ไม่ต้องมีเลขนำหน้า`;
-    result = await callAI(prompt, T`คุณเป็นนักเขียนบทมืออาชีพ ช่วยคิดชื่อภาษาไทย`);
+    const prompt = ttf('ui.aiSum.suggestNameThaiNovel', KIND_TH[kind]) +
+      ttf('ui.aiSum.nameCurrent', currentTitle) +
+      (opts.context ? ttf('ui.aiSum.contextBodyCollapse', String(opts.context).slice(0, 1500)) : '') +
+      tt('ui.aiSum.sendListLineName');
+    result = await callAI(prompt, tt('ui.aiSum.youWriterChapterHelp'));
   } finally { busy.close(); }
 
   if (!result) return;
@@ -257,7 +257,7 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
   // แสดง popup
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-ai-titles');
-  box.append(el('div', 'k-dlg-title', T`✨ แนะนำชื่อ${KIND_TH[kind]} — "${currentTitle}"`));
+  box.append(el('div', 'k-dlg-title', ttf('ui.aiSum.suggestName2', KIND_TH[kind], currentTitle)));
 
   const list = el('div', 'k-pick-list');
   for (const tt of titles) {
@@ -270,7 +270,7 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
   // ชื่อที่เคยแนะนำมาก่อน (ไม่รวมรอบนี้) — เลือกซ้ำได้ฟรี
   const past = pastTitlesFor(currentTitle).filter((p) => !titles.includes(p));
   if (past.length) {
-    const h = el('div', 'dim', T`🕘 เคยแนะนำไว้ก่อนหน้า`);
+    const h = el('div', 'dim', tt('ui.aiSum.suggestBeforePage'));
     h.style.cssText = 'margin:8px 0 2px;font-size:11px';
     box.append(h);
     const pl = el('div', 'k-pick-list k-ai-past');
@@ -284,9 +284,9 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
   }
 
   const btns = el('div', 'k-dlg-btns');
-  const retryB = el('button', null, T`🔄 ลองใหม่`);
+  const retryB = el('button', null, tt('ui.aiSum.tryNew'));
   retryB.onclick = () => { ov.remove(); showAITitleSuggestions(currentTitle, callback, opts); };
-  const closeB = el('button', null, T`ยกเลิก`);
+  const closeB = el('button', null, tt('ui.common.cancel'));
   closeB.onclick = () => ov.remove();
   btns.append(retryB, closeB);
   box.append(btns);

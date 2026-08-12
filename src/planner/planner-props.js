@@ -2,26 +2,26 @@
 // บั๊ก 3  : การ์ดไม่มีคุณสมบัติ + ผูกไฟล์จาก Explorer ไม่ได้ → มีครบทุกฟิลด์ + ปุ่ม "เลือกจากโปรเจกต์"
 // บั๊ก 10 : เส้นเชื่อมแก้ไม่ได้ ลบไม่ได้ → มีฟิลด์ครบ + ปุ่มลบ + สลับทิศ
 // บั๊ก 11 : เลือกหัวลูกศรไม่ได้ → มีทั้งหัวต้นทางและปลายทาง
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { el } from '../core.js';
 import {
   STATUSES, EDGE_STYLES, EDGE_ROUTINGS, ARROW_HEADS, NODE_TYPES, SHAPES, PORT_POSITIONS,
 } from './planner-data.js';
 
 const TYPE_LABELS = {
-  scene: T`📄 ฉาก`, chapter: T`📁 บท`, entity: '👤 Wiki', note: T`📝 โน้ต`, sticky: T`📌 โพสต์อิต`,
-  text: T`🅃 ข้อความ`, shape: T`⬛ รูปทรง`, frame: T`🖼 เฟรม`, comment: T`💬 คอมเมนต์`,
+  scene: tt('ui.plannerProps.scene'), chapter: tt('ui.plannerProps.chapter'), entity: '👤 Wiki', note: tt('ui.plannerProps.note'), sticky: tt('ui.plannerProps.sticky'),
+  text: tt('ui.plannerProps.text'), shape: tt('ui.plannerProps.shape'), frame: tt('ui.plannerProps.frame'), comment: tt('ui.plannerProps.comment'),
 };
 const SHAPE_LABELS = {
-  rect: T`สี่เหลี่ยม`, round: T`มุมมน`, ellipse: T`วงรี`, diamond: T`ข้าวหลามตัด`,
-  triangle: T`สามเหลี่ยม`, star: T`ดาว`, arrow: T`ลูกศร`, cylinder: T`ทรงกระบอก`,
+  rect: tt('ui.plannerProps.rect'), round: tt('ui.plannerProps.corner'), ellipse: tt('ui.plannerProps.ellipse'), diamond: tt('ui.plannerProps.cut'),
+  triangle: tt('ui.plannerProps.triangle'), star: tt('ui.plannerProps.star'), arrow: tt('ui.plannerProps.arrow'), cylinder: tt('ui.plannerProps.cylinder'),
 };
-const ROUTING_LABELS = { straight: T`╱ ตรง`, orthogonal: T`⌐ หักมุมฉาก`, curved: T`⌒ โค้ง` };
+const ROUTING_LABELS = { straight: tt('ui.plannerProps.at'), orthogonal: tt('ui.common.cornerScene'), curved: tt('ui.common.curve') };
 const ARROW_LABELS = {
-  none: T`— ไม่มี`, arrow: T`➤ ลูกศร`, triangle: T`▶ สามเหลี่ยมทึบ`,
-  circle: T`● วงกลม`, diamond: T`◆ ข้าวหลามตัด`, bar: T`│ ขีด`,
+  none: tt('ui.plannerProps.notHas'), arrow: tt('ui.plannerProps.arrow2'), triangle: tt('ui.plannerProps.triangleSolid'),
+  circle: tt('ui.plannerProps.circle'), diamond: tt('ui.plannerProps.cut2'), bar: tt('ui.plannerProps.dash'),
 };
-const PORT_LABELS = { auto: T`อัตโนมัติ`, top: T`บน`, right: T`ขวา`, bottom: T`ล่าง`, left: T`ซ้าย` };
+const PORT_LABELS = { auto: tt('ui.plannerProps.auto'), top: tt('ui.plannerProps.top'), right: tt('ui.common.right'), bottom: tt('ui.plannerProps.bottom'), left: tt('ui.common.left') };
 
 export function renderPlannerProps(container, ctx) {
   if (!container) return;
@@ -30,14 +30,14 @@ export function renderPlannerProps(container, ctx) {
   if (mode === 'node' && data) _renderNodeProps(container, data, ctx);
   else if (mode === 'edge' && data) _renderEdgeProps(container, data, ctx);
   else if (mode === 'many' && data) _renderManyProps(container, data, ctx);
-  else container.innerHTML = T`<div class="planner-props-empty">คลิกการ์ดหรือเส้นเชื่อมเพื่อดูคุณสมบัติ<br><br>` +
-      T`<span style="opacity:.7">เคล็ดลับ: ลากจากจุดสีส้มรอบการ์ดเพื่อเชื่อมเส้น · ดับเบิลคลิกเพื่อแก้ข้อความ</span></div>`;
+  else container.innerHTML = tt('ui.plannerProps.clickCardLineLink') +
+      tt('ui.plannerProps.dragDotColorRound');
 }
 
 // ═════════════════ การ์ด / วัตถุ ═════════════════
 function _renderNodeProps(container, n, ctx) {
   const wrap = el('div', 'planner-props-wrap');
-  wrap.appendChild(_head('✏️ ' + (TYPE_LABELS[n.type] || T`วัตถุ`)));
+  wrap.appendChild(_head('✏️ ' + (TYPE_LABELS[n.type] || tt('ui.plannerProps.object'))));
 
   const isText = n.type === 'text';
   const isShape = n.type === 'shape';
@@ -53,28 +53,25 @@ function _renderNodeProps(container, n, ctx) {
     return row;
   };
 
-  add(isText ? T`ข้อความ` : T`ชื่อ`, `<input class="planner-prop-input" id="plp-title" value="${_esc(n.title)}">`);
-  add(T`ประเภท`, `<select class="planner-prop-input" id="plp-type">
+  add(isText ? tt('ui.common.text') : tt('ui.common.name'), `<input class="planner-prop-input" id="plp-title" value="${_esc(n.title)}">`);
+  add(tt('ui.common.type'), `<select class="planner-prop-input" id="plp-type">
       ${NODE_TYPES.map((t) => `<option value="${t}"${n.type === t ? ' selected' : ''}>${TYPE_LABELS[t] || t}</option>`).join('')}
     </select>`);
   if (isShape) {
-    add(T`รูปทรง`, `<select class="planner-prop-input" id="plp-shape">
+    add(tt('ui.common.shape'), `<select class="planner-prop-input" id="plp-shape">
         ${SHAPES.map((s) => `<option value="${s}"${n.shape === s ? ' selected' : ''}>${SHAPE_LABELS[s] || s}</option>`).join('')}
       </select>`);
   }
   if (isCard) {
-    add(T`สถานะ`, `<select class="planner-prop-input" id="plp-status">
-        ${STATUSES.map((s) => `<option value="${s}"${n.status === s ? ' selected' : ''}>${s || T`— ไม่ระบุ —`}</option>`).join('')}
+    add(tt('ui.common.status'), `<select class="planner-prop-input" id="plp-status">
+        ${STATUSES.map((s) => `<option value="${s}"${n.status === s ? ' selected' : ''}>${s || tt('ui.common.notSpecify2')}</option>`).join('')}
       </select>`);
   }
-  add(isNote ? T`เนื้อความ` : T`สรุปย่อ`,
-    `<textarea class="planner-prop-input" id="plp-synopsis" rows="3" placeholder="${isNote ? T`พิมพ์ข้อความ…` : T`เกิดอะไรขึ้นในฉากนี้`}">${_esc(n.synopsis)}</textarea>`);
+  add(isNote ? tt('ui.plannerProps.body') : tt('ui.plannerProps.summaryCollapse'),
+    `<textarea class="planner-prop-input" id="plp-synopsis" rows="3" placeholder="${isNote ? tt('ui.plannerProps.printText') : tt('ui.plannerProps.occurScene')}">${_esc(n.synopsis)}</textarea>`);
 
   // ── สี + ตัวอักษร ──
-  add(T`สี`, T`<div class="planner-prop-2col">
-      <input class="planner-prop-input" id="plp-color" type="color" value="${_color(n.color, '#3f3e3a')}" title="สีพื้น">
-      <input class="planner-prop-input" id="plp-textcolor" type="color" value="${_color(n.textColor, '#faf9f5')}" title="สีตัวอักษร">
-    </div>`);
+  add(tt('ui.common.color'), ttf('ui.plannerProps.msg', _color(n.color, '#3f3e3a'), _color(n.textColor, '#faf9f5')));
   const swatch = el('div', 'planner-swatches');
   for (const c of ['#3f3e3a', '#5f7a9f', '#7a6f9f', '#5f8a6f', '#d97757', '#f2c14e', '#c1666b', '#4a6fa5', '#e8e3d3', '#26241f']) {
     const b = el('button', 'planner-swatch');
@@ -84,40 +81,32 @@ function _renderNodeProps(container, n, ctx) {
   }
   rows.appendChild(swatch);
 
-  add(T`ขนาดตัวอักษร (${Math.round(n.fontSize || 12)})`,
+  add(ttf('ui.plannerProps.sizeChar', Math.round(n.fontSize || 12)),
     `<input class="planner-prop-input" id="plp-fs" type="range" min="8" max="48" step="0.5" value="${n.fontSize || 12}">`);
 
   // ── ตำแหน่ง / ขนาด (บั๊ก 8 ฝั่งวัตถุ) ──
-  add(T`ตำแหน่ง X / Y`, `<div class="planner-prop-2col">
+  add(tt('ui.plannerProps.posXY'), `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-x" type="number" value="${Math.round(n.x)}">
       <input class="planner-prop-input" id="plp-y" type="number" value="${Math.round(n.y)}">
     </div>`);
-  add(T`กว้าง / สูง`, `<div class="planner-prop-2col">
+  add(tt('ui.plannerProps.wideHigh'), `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-w" type="number" min="16" value="${Math.round(n.width)}">
       <input class="planner-prop-input" id="plp-h" type="number" min="16" value="${Math.round(n.height)}">
     </div>`);
 
   // ── ผูกไฟล์จาก Explorer (บั๊ก 3) ──
-  const fileRow = add(T`ไฟล์ที่ผูกไว้`,
-    T`<input class="planner-prop-input" id="plp-file" value="${_esc(n.file || '')}" placeholder="ยังไม่ได้ผูกไฟล์">
-     <div class="planner-props-actions" style="margin-top:5px">
-       <button id="plp-pick">📁 เลือกจากโปรเจกต์</button>
-       <button id="plp-unlink" title="เอาลิงก์ออก">✕</button>
-     </div>`);
-  add(T`แท็ก`, T`<input class="planner-prop-input" id="plp-tags" value="${_esc((n.tags || []).join(', '))}" placeholder="คั่นด้วย ,">`);
-  add('', T`<label class="planner-check"><input type="checkbox" id="plp-lock"${n.locked ? ' checked' : ''}> 🔒 ล็อกไม่ให้ย้าย/แก้</label>`);
+  const fileRow = add(tt('ui.plannerProps.fileBind'),
+    ttf('ui.plannerProps.pickProject', _esc(n.file || '')));
+  add(tt('ui.common.tag'), ttf('ui.plannerProps.msg2', _esc((n.tags || []).join(', '))));
+  add('', ttf('ui.plannerProps.lockNotMoveEdit', n.locked ? ' checked' : ''));
 
   const actions = el('div', 'planner-props-actions');
-  actions.innerHTML = T`
-    <button id="plp-link" title="ลากจากจุดสีส้มรอบการ์ดก็ได้">🔗 เชื่อมเส้น</button>
-    <button id="plp-center">🎯 เลื่อนไปหา</button>
-    <button id="plp-reveal">📂 ในเอกสาร</button>
-  `;
+  actions.innerHTML = tt('ui.plannerProps.linkLineScrollFind');
   wrap.appendChild(actions);
   const actions2 = el('div', 'planner-props-actions');
-  const dupBtn = el('button', '', T`⧉ ทำซ้ำ`);
+  const dupBtn = el('button', '', tt('ui.common.repeat'));
   dupBtn.onclick = () => ctx.onDuplicateNode && ctx.onDuplicateNode(n.id);
-  const delBtn = el('button', 'danger', T`🗑 ลบวัตถุนี้`);
+  const delBtn = el('button', 'danger', tt('ui.plannerProps.delObject'));
   delBtn.onclick = () => ctx.onDeleteNode && ctx.onDeleteNode(n.id);
   actions2.append(dupBtn, delBtn);
   wrap.appendChild(actions2);
@@ -125,14 +114,14 @@ function _renderNodeProps(container, n, ctx) {
   // ── เส้นที่ต่อกับการ์ดนี้ (บั๊ก 10 : เข้าถึงเส้นได้โดยไม่ต้องคลิกโดน) ──
   const conns = (ctx.connections || []);
   if (conns.length) {
-    wrap.appendChild(_head(T`🔗 เส้นที่ต่ออยู่ (` + conns.length + ')'));
+    wrap.appendChild(_head(tt('ui.plannerProps.lineNext') + conns.length + ')'));
     const list = el('div', 'planner-conn-list');
     for (const c of conns) {
       const row = el('div', 'planner-conn-row');
       const name = el('span', 'planner-conn-name', `${c.dir === 'out' ? '→' : '←'} ${c.otherTitle}${c.label ? ' · ' + c.label : ''}`);
       name.onclick = () => ctx.onSelectEdgeId && ctx.onSelectEdgeId(c.id);
       const del = el('button', 'planner-conn-del', '✕');
-      del.title = T`ลบเส้นนี้`;
+      del.title = tt('ui.plannerProps.delLine');
       del.onclick = () => ctx.onDeleteEdge && ctx.onDeleteEdge(c.id);
       row.append(name, del);
       list.appendChild(row);
@@ -157,7 +146,7 @@ function _renderNodeProps(container, n, ctx) {
   q('plp-fs').oninput = () => {
     const v = parseFloat(q('plp-fs').value);
     const lbl = q('plp-fs').parentElement.querySelector('label');
-    if (lbl) lbl.textContent = T`ขนาดตัวอักษร (${Math.round(v)})`;
+    if (lbl) lbl.textContent = ttf('ui.plannerProps.sizeChar', Math.round(v));
     deb(() => set({ fontSize: v }));
   };
   for (const [id, key] of [['plp-x', 'x'], ['plp-y', 'y'], ['plp-w', 'width'], ['plp-h', 'height']]) {
@@ -186,7 +175,7 @@ function _renderNodeProps(container, n, ctx) {
 // ═════════════════ เส้นเชื่อม ═════════════════
 function _renderEdgeProps(container, e, ctx) {
   const wrap = el('div', 'planner-props-wrap');
-  wrap.appendChild(_head(T`🔗 เส้นเชื่อม`));
+  wrap.appendChild(_head(tt('ui.plannerProps.lineLink')));
   const rows = el('div', 'planner-props-body');
   wrap.appendChild(rows);
   const add = (label, html) => {
@@ -197,23 +186,23 @@ function _renderEdgeProps(container, e, ctx) {
   };
 
   if (ctx.endpoints) {
-    add(T`เชื่อมจาก → ถึง`,
+    add(tt('ui.plannerProps.linkTo'),
       `<div class="planner-edge-ends">${_esc(ctx.endpoints.from)} <b>→</b> ${_esc(ctx.endpoints.to)}</div>`);
   }
-  add(T`ป้ายกำกับ`, T`<input class="planner-prop-input" id="plpe-label" value="${_esc(e.label)}" placeholder="เช่น ต่อเนื่อง / ย้อนอดีต">`);
-  add(T`สี`, `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, '#d97757')}">`);
-  add(T`ความหนา (${e.width || 2})`,
+  add(tt('ui.plannerProps.badge'), ttf('ui.plannerProps.msg3', _esc(e.label)));
+  add(tt('ui.common.color'), `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, '#d97757')}">`);
+  add(ttf('ui.plannerProps.bold', e.width || 2),
     `<input class="planner-prop-input" id="plpe-width" type="range" min="1" max="8" step="1" value="${e.width || 2}">`);
 
-  add(T`เส้นทาง`, `<select class="planner-prop-input" id="plpe-routing">
+  add(tt('ui.common.route'), `<select class="planner-prop-input" id="plpe-routing">
       ${EDGE_ROUTINGS.map((r) => `<option value="${r}"${(e.routing || 'straight') === r ? ' selected' : ''}>${ROUTING_LABELS[r]}</option>`).join('')}
     </select>`);
 
   // สไตล์เส้น (ปุ่มกด)
   const styleRow = el('div', 'planner-props-section');
-  styleRow.innerHTML = T`<label>ลักษณะเส้น</label>`;
+  styleRow.innerHTML = tt('ui.plannerProps.line');
   const styleBtns = el('div', 'planner-props-edge-style');
-  const STYLE_TH = { solid: T`ทึบ`, dashed: T`ประ`, dotted: T`จุด` };
+  const STYLE_TH = { solid: tt('ui.common.solid'), dashed: tt('ui.common.msg5'), dotted: tt('ui.common.dot') };
   for (const s of EDGE_STYLES) {
     const b = el('button', (e.style || 'solid') === s ? 'active' : '', STYLE_TH[s] || s);
     b.onclick = () => {
@@ -227,7 +216,7 @@ function _renderEdgeProps(container, e, ctx) {
   rows.appendChild(styleRow);
 
   // หัวลูกศรทั้งสองปลาย (บั๊ก 11)
-  add(T`หัวลูกศร (ต้นทาง / ปลายทาง)`, `<div class="planner-prop-2col">
+  add(tt('ui.plannerProps.headArrowFromTo'), `<div class="planner-prop-2col">
       <select class="planner-prop-input" id="plpe-as">
         ${ARROW_HEADS.map((a) => `<option value="${a}"${(e.arrowStart || 'none') === a ? ' selected' : ''}>${ARROW_LABELS[a]}</option>`).join('')}
       </select>
@@ -236,7 +225,7 @@ function _renderEdgeProps(container, e, ctx) {
       </select>
     </div>`);
 
-  add(T`จุดต่อ (ต้นทาง / ปลายทาง)`, `<div class="planner-prop-2col">
+  add(tt('ui.plannerProps.dotNextFromTo'), `<div class="planner-prop-2col">
       <select class="planner-prop-input" id="plpe-fp">
         ${PORT_POSITIONS.map((p) => `<option value="${p}"${e.from.port === p ? ' selected' : ''}>${PORT_LABELS[p]}</option>`).join('')}
       </select>
@@ -246,9 +235,9 @@ function _renderEdgeProps(container, e, ctx) {
     </div>`);
 
   const actions = el('div', 'planner-props-actions');
-  const flip = el('button', '', T`⇄ สลับทิศ`);
+  const flip = el('button', '', tt('ui.common.toggle'));
   flip.onclick = () => ctx.onFlipEdge && ctx.onFlipEdge(e.id);
-  const delBtn = el('button', 'danger', T`🗑 ลบเส้นนี้`);
+  const delBtn = el('button', 'danger', tt('ui.plannerProps.delLine2'));
   delBtn.onclick = () => ctx.onDeleteEdge && ctx.onDeleteEdge(e.id);
   actions.append(flip, delBtn);
   wrap.appendChild(actions);
@@ -262,7 +251,7 @@ function _renderEdgeProps(container, e, ctx) {
   q('plpe-width').oninput = () => {
     const v = parseInt(q('plpe-width').value, 10);
     const lbl = q('plpe-width').parentElement.querySelector('label');
-    if (lbl) lbl.textContent = T`ความหนา (${v})`;
+    if (lbl) lbl.textContent = ttf('ui.plannerProps.bold', v);
     deb(() => set({ width: v }));
   };
   q('plpe-routing').onchange = () => set({ routing: q('plpe-routing').value });
@@ -275,12 +264,12 @@ function _renderEdgeProps(container, e, ctx) {
 // ═════════════════ เลือกหลายชิ้น ═════════════════
 function _renderManyProps(container, ids, ctx) {
   const wrap = el('div', 'planner-props-wrap');
-  wrap.appendChild(_head(T`⬚ เลือกไว้ ${ids.length} ชิ้น`));
+  wrap.appendChild(_head(ttf('ui.plannerProps.pickItem', ids.length)));
   const rows = el('div', 'planner-props-body');
   wrap.appendChild(rows);
 
   const colorRow = el('div', 'planner-props-section');
-  colorRow.innerHTML = T`<label>เปลี่ยนสีทั้งหมด</label>`;
+  colorRow.innerHTML = tt('ui.plannerProps.recolorAll');
   const sw = el('div', 'planner-swatches');
   for (const c of ['#3f3e3a', '#5f7a9f', '#7a6f9f', '#5f8a6f', '#d97757', '#f2c14e', '#c1666b', '#4a6fa5']) {
     const b = el('button', 'planner-swatch');
@@ -292,11 +281,11 @@ function _renderManyProps(container, ids, ctx) {
   rows.appendChild(colorRow);
 
   const alignRow = el('div', 'planner-props-section');
-  alignRow.innerHTML = T`<label>จัดตำแหน่ง</label>`;
+  alignRow.innerHTML = tt('ui.plannerProps.arrangePos');
   const grid = el('div', 'planner-align-grid');
-  const ALIGNS = [['left', T`⇤ ซ้าย`], ['hcenter', T`⇹ กลางแนวนอน`], ['right', T`⇥ ขวา`],
-                  ['top', T`⤒ บน`], ['vcenter', T`⇳ กลางแนวตั้ง`], ['bottom', T`⤓ ล่าง`],
-                  ['distH', T`⇿ กระจายแนวนอน`], ['distV', T`↕ กระจายแนวตั้ง`]];
+  const ALIGNS = [['left', tt('ui.plannerProps.left')], ['hcenter', tt('ui.plannerProps.centerHoriz')], ['right', tt('ui.plannerProps.right')],
+                  ['top', tt('ui.plannerProps.top2')], ['vcenter', tt('ui.plannerProps.centerVert')], ['bottom', tt('ui.plannerProps.bottom2')],
+                  ['distH', tt('ui.plannerProps.distributeHoriz')], ['distV', tt('ui.plannerProps.distributeVert')]];
   for (const [k, label] of ALIGNS) {
     const b = el('button', '', label);
     b.onclick = () => ctx.onAlign && ctx.onAlign(k);
@@ -306,11 +295,11 @@ function _renderManyProps(container, ids, ctx) {
   rows.appendChild(alignRow);
 
   const actions = el('div', 'planner-props-actions');
-  const g = el('button', '', T`🗂 จัดกลุ่ม`);
+  const g = el('button', '', tt('ui.plannerProps.group'));
   g.onclick = () => ctx.onGroup && ctx.onGroup();
-  const d = el('button', '', T`⧉ ทำซ้ำ`);
+  const d = el('button', '', tt('ui.common.repeat'));
   d.onclick = () => ctx.onDuplicate && ctx.onDuplicate();
-  const del = el('button', 'danger', T`🗑 ลบทั้งหมด`);
+  const del = el('button', 'danger', tt('ui.plannerProps.delAll'));
   del.onclick = () => ctx.onDeleteSelected && ctx.onDeleteSelected();
   actions.append(g, d, del);
   wrap.appendChild(actions);

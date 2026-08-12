@@ -1,6 +1,6 @@
 // planner.js — Orchestrator ของ Planner v4 (กระดานวางแผนแบบ Miro)
 // ประกอบ data → render → interact → ui → props เข้าด้วยกัน + จัดการไฟล์กระดาน
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import {
   PlannerData, CARD_W, CARD_H, uid, TYPE_DEFAULTS, snapTo,
 } from './planner-data.js';
@@ -20,8 +20,8 @@ const COLORS = {
   sticky: '#f2c14e', text: 'transparent', shape: '#4a6fa5', frame: '#d97757', comment: '#e8e3d3',
 };
 const NEW_TITLE = {
-  scene: T`ฉากใหม่`, chapter: T`บทใหม่`, entity: T`ตัวละครใหม่`, note: T`โน้ตใหม่`,
-  sticky: '', text: T`ข้อความ`, shape: '', frame: T`เฟรมใหม่`, comment: '',
+  scene: tt('ui.planner.sceneNew'), chapter: tt('ui.planner.chapterNew'), entity: tt('ui.planner.characterNew'), note: tt('ui.planner.noteNew'),
+  sticky: '', text: tt('ui.common.text'), shape: '', frame: tt('ui.planner.frameNew'), comment: '',
 };
 
 export class PlannerBoard {
@@ -40,7 +40,7 @@ export class PlannerBoard {
       this._init(opts.path);
     } catch (e) {
       console.error('PlannerBoard init failed', e);
-      this.pane.innerHTML = T`<div style="color:#e05555;padding:20px">Planner เปิดไม่ได้: ` + (e.message || e) + '</div>';
+      this.pane.innerHTML = tt('ui.planner.plannerOpenCant') + (e.message || e) + '</div>';
     }
   }
 
@@ -233,7 +233,7 @@ export class PlannerBoard {
     this.toolbar.setZoom(this.renderer.getZoom());
     this.statusBar.setGridInfo(this.data.getGrid());
     this._syncDirty();
-    log('info', T`planner: โหลดกระดาน "${this.data.getName()}"`, {
+    log('info', ttf('ui.planner.plannerLoadBoard', this.data.getName()), {
       path: this.data.getPath(), ...this.data.countStats(),
       grid: this.data.getGrid(), viewport: this.data.getViewport(),
     });
@@ -245,11 +245,11 @@ export class PlannerBoard {
     const wasNew = !(await kapi.exists(await this.data._defaultPath()).catch(() => true));
     const ok = await this.data.save();
     this._syncDirty();
-    log('info', T`planner: บันทึก "${this.data.getName()}" ${ok ? T`สำเร็จ` : T`ล้มเหลว`}` +
-        (wasNew ? T` (ไฟล์ใหม่ → รีเฟรช Explorer)` : ''), { path: this.data.getPath() });
+    log('info', ttf('ui.planner.plannerSave', this.data.getName(), ok ? tt('ui.common.ok') : tt('ui.common.fail')) +
+        (wasNew ? tt('ui.planner.fileNewRefreshExplorer') : ''), { path: this.data.getPath() });
     if (ok && wasNew && this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-    if (ok && !silent) setStatus(T`💾 บันทึกกระดาน "` + this.data.getName() + T`" แล้ว`);
-    else if (!ok) setStatus(T`บันทึกกระดานไม่สำเร็จ`);
+    if (ok && !silent) setStatus(tt('ui.planner.saveBoard2') + this.data.getName() + tt('ui.common.done'));
+    else if (!ok) setStatus(tt('ui.planner.saveBoardNotOk'));
     return ok;
   }
 
@@ -265,15 +265,15 @@ export class PlannerBoard {
     const dir = await this.boardsDir();
     let value = initial;
     for (;;) {
-      const name = await ask(title, { value, okLabel: okLabel || T`สร้าง` });
+      const name = await ask(title, { value, okLabel: okLabel || tt('ui.common.new') });
       if (!name) return null;
       const safe = _safeName(name);
       const p = await kapi.join(dir, safe + '.json');
       if (!(await kapi.exists(p))) return { name: safe, path: p, overwrite: false };
-      const act = await choose(T`มีกระดานชื่อ "${safe}" อยู่แล้วในโปรเจกต์`, [
-        { label: T`✏️ ตั้งชื่อใหม่`, value: 'again', primary: true },
-        { label: T`เขียนทับของเดิม`, value: 'over', danger: true },
-        { label: T`ยกเลิก`, value: null }]);
+      const act = await choose(ttf('ui.common.hasBoardNameProject', safe), [
+        { label: tt('ui.common.renameNew'), value: 'again', primary: true },
+        { label: tt('ui.common.overwritePrev'), value: 'over', danger: true },
+        { label: tt('ui.common.cancel'), value: null }]);
       if (act === 'over') return { name: safe, path: p, overwrite: true };
       if (!act) return null;
       value = safe + ' 2';
@@ -282,9 +282,9 @@ export class PlannerBoard {
 
   /** สร้างกระดานใหม่ — ถามชื่อ แล้วเปิดกระดานเปล่า (บั๊ก 5) */
   async newBoard() {
-    if (!(await this.confirmDiscard(T`สร้างกระดานใหม่`))) return null;
-    const picked = await this._askBoardName(T`ชื่อกระดานใหม่`,
-      T`กระดาน ` + (new Date().toLocaleDateString('th-TH')), T`สร้าง`);
+    if (!(await this.confirmDiscard(tt('ui.common.newBoardNew')))) return null;
+    const picked = await this._askBoardName(tt('ui.common.nameBoardNew'),
+      tt('ui.common.board2') + (new Date().toLocaleDateString('th-TH')), tt('ui.common.new'));
     if (!picked) return null;
     const dir = await this.boardsDir();
     try { await kapi.mkdir(dir); } catch {}
@@ -300,7 +300,7 @@ export class PlannerBoard {
     await this.data.save();
     this._syncDirty();
     if (this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-    setStatus(T`สร้างกระดาน "` + this.data.getName() + T`" แล้ว`);
+    setStatus(tt('ui.common.newBoard') + this.data.getName() + tt('ui.common.done'));
     return p;
   }
 
@@ -308,7 +308,7 @@ export class PlannerBoard {
   async listBoards() {
     const out = [];
     const legacy = await kapi.join(this.root, 'planner.json');
-    if (await kapi.exists(legacy)) out.push({ path: legacy, name: T`กระดานหลัก` });
+    if (await kapi.exists(legacy)) out.push({ path: legacy, name: tt('ui.common.boardMain') });
     const dir = await this.boardsDir();
     if (await kapi.exists(dir)) {
       for (const f of await kapi.listFiles(dir, '.json').catch(() => [])) {
@@ -320,7 +320,7 @@ export class PlannerBoard {
 
   async openBoardDialog() {
     const boards = await this.listBoards();
-    if (!boards.length) { setStatus(T`ยังไม่มีกระดานในโปรเจกต์ — กด ✚ ใหม่ เพื่อสร้าง`); return null; }
+    if (!boards.length) { setStatus(tt('ui.planner.notHasBoardProject')); return null; }
     const pick = await boardPicker(boards, this.data.getPath());
     if (!pick || pick === this.data.getPath()) return null;
     return this.openBoard(pick);
@@ -328,7 +328,7 @@ export class PlannerBoard {
 
   async openBoard(path) {
     if (!path) return false;
-    if (!(await this.confirmDiscard(T`เปิดกระดานอื่น`))) return false;
+    if (!(await this.confirmDiscard(tt('ui.planner.openBoardOther')))) return false;
     this.renderer.clear();
     await this.data.load(path);
     this.renderer.setGrid(this.data.getGrid());
@@ -342,13 +342,13 @@ export class PlannerBoard {
     this._snapshot(true);
     this._syncDirty();
     this._showProps('none', null);
-    setStatus(T`เปิดกระดาน "` + this.data.getName() + '"');
+    setStatus(tt('ui.planner.openBoard') + this.data.getName() + '"');
     return true;
   }
 
   /** บันทึกเป็นไฟล์ใหม่ (บั๊ก 5) */
   async saveAs() {
-    const picked = await this._askBoardName(T`บันทึกเป็นกระดานชื่อ`, this.data.getName() + T` สำเนา`, T`บันทึก`);
+    const picked = await this._askBoardName(tt('ui.planner.saveBoardName'), this.data.getName() + tt('ui.common.msg2'), tt('ui.common.save'));
     if (!picked) return false;
     const dir = await this.boardsDir();
     try { await kapi.mkdir(dir); } catch {}
@@ -358,8 +358,8 @@ export class PlannerBoard {
       this.toolbar.setBoardName(this.data.getName());
       this._syncDirty();
       if (this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-      setStatus(T`💾 บันทึกเป็น "` + this.data.getName() + T`" แล้ว`);
-    } else setStatus(T`บันทึกเป็นไม่สำเร็จ`);
+      setStatus(tt('ui.planner.save') + this.data.getName() + tt('ui.common.done'));
+    } else setStatus(tt('ui.planner.saveNotOk'));
     return ok;
   }
 
@@ -370,17 +370,17 @@ export class PlannerBoard {
   async confirmDiscard(what) {
     if (!this.data.isDirty()) return true;
     const act = await choose(
-      T`กระดาน "${this.data.getName()}" ยังไม่ได้บันทึก — ${what || T`ปิด`} เลยไหม?`,
-      [{ label: T`💾 บันทึกก่อน`, value: 'save', primary: true },
-       { label: T`ทิ้งการแก้ไข`, value: 'discard', danger: true },
-       { label: T`ยกเลิก`, value: null }]);
+      ttf('ui.planner.boardCantSave', this.data.getName(), what || tt('ui.common.close')),
+      [{ label: tt('ui.planner.saveBefore'), value: 'save', primary: true },
+       { label: tt('ui.planner.edit'), value: 'discard', danger: true },
+       { label: tt('ui.common.cancel'), value: null }]);
     if (act === 'save') { await this.save(); return true; }
     if (act === 'discard') return true;
     return false;
   }
 
   /** true = ปิดได้ (app.js เรียกก่อนปิดแผง Planner) */
-  async requestClose() { return this.confirmDiscard(T`ปิดกระดาน`); }
+  async requestClose() { return this.confirmDiscard(tt('ui.planner.closeBoard')); }
 
   /**
    * [บั๊ก 65r2-8] Explorer เคยค้างแสดง "ยังไม่บันทึก" หลังกดบันทึกไปแล้ว
@@ -443,7 +443,7 @@ export class PlannerBoard {
     let x, y, w = d.width, h = d.height;
     if (box && box.width > 8 && box.height > 8) { x = box.x; y = box.y; w = box.width; h = box.height; }
     else { x = info.x - d.width / 2; y = info.y - d.height / 2; }
-    const n = this.data.addNode(tool, NEW_TITLE[tool] != null ? NEW_TITLE[tool] : T`ใหม่`, COLORS[tool], x, y,
+    const n = this.data.addNode(tool, NEW_TITLE[tool] != null ? NEW_TITLE[tool] : tt('ui.common.new2'), COLORS[tool], x, y,
       { width: Math.round(w), height: Math.round(h), shape: tool === 'shape' ? (info.shape || 'rect') : d.shape || 'rect' });
     const v = this.renderer.renderNode(n);
     v._lockedByData = false;
@@ -460,7 +460,7 @@ export class PlannerBoard {
   _addNode(type, title, color, x, y) {
     const cx = x != null ? x : (this.renderer.getWidth() / 2 - this.renderer.getViewport().x) / this.renderer.getZoom();
     const cy = y != null ? y : (this.renderer.getHeight() / 2 - this.renderer.getViewport().y) / this.renderer.getZoom();
-    const n = this.data.addNode(type, title || NEW_TITLE[type] || T`ใหม่`, color || COLORS[type], cx, cy);
+    const n = this.data.addNode(type, title || NEW_TITLE[type] || tt('ui.common.new2'), color || COLORS[type], cx, cy);
     const v = this.renderer.renderNode(n);
     v._lockedByData = false;
     this.renderer.restack();
@@ -487,12 +487,12 @@ export class PlannerBoard {
   // ═════════════════ เส้นเชื่อม ═════════════════
   _handleConnect(fromId, fromPort, toId, toPort) {
     const e = this.data.addEdge(fromId, fromPort, toId, toPort, { routing: 'curved', arrowEnd: 'arrow' });
-    if (!e) { setStatus(T`เชื่อมต่อไม่ได้ — มีเส้นนี้อยู่แล้ว หรือเป็นการ์ดเดียวกัน`); return null; }
+    if (!e) { setStatus(tt('ui.planner.connectCantHasLine')); return null; }
     this.renderer.renderEdge(e);
     this.renderer.restack();
     this.renderer.refresh();
     this._snapshot();
-    setStatus(T`เชื่อมต่อแล้ว — คลิกที่เส้นเพื่อแก้รูปแบบ/หัวลูกศร`);
+    setStatus(tt('ui.planner.connectDoneClickLine'));
     return e;
   }
 
@@ -526,21 +526,21 @@ export class PlannerBoard {
     this.renderer.refresh();
     this._snapshot();
     this._showProps('edge', e);
-    setStatus(T`ย้ายปลายเส้นแล้ว`);
+    setStatus(tt('ui.planner.moveLineDone'));
     return true;
   }
 
   /** ลำดับซ้อนทับของสิ่งที่เลือก (บั๊ก 65r2-1) */
   orderSelection(mode) {
     const ids = this._selectedNodeIds();
-    if (!ids.length) { setStatus(T`เลือกวัตถุก่อน`); return false; }
+    if (!ids.length) { setStatus(tt('ui.planner.pickObjectBefore')); return false; }
     if (!this.data.moveNodeZ(ids, mode)) return false;
     this.renderer.setNodeOrder(this.data.getAllNodes().map((n) => n.id));
     this.renderer.restack();
     this.renderer.refresh();
     this._snapshot();
-    setStatus({ front: T`⬆ ยกไปบนสุด`, back: T`⬇ ส่งไปล่างสุด`,
-                forward: T`↑ ยกขึ้นหนึ่งชั้น`, backward: T`↓ ลดลงหนึ่งชั้น` }[mode] || T`จัดลำดับแล้ว`);
+    setStatus({ front: tt('ui.planner.liftTop'), back: tt('ui.planner.sendBottomLast'),
+                forward: tt('ui.planner.liftOneLayer'), backward: tt('ui.planner.reduceOneLayer') }[mode] || tt('ui.planner.reorderDone'));
     return true;
   }
 
@@ -552,7 +552,7 @@ export class PlannerBoard {
     this.renderer.refresh();
     this._showProps('none', null);
     this._snapshot();
-    setStatus(T`ลบเส้นเชื่อมแล้ว`);
+    setStatus(tt('ui.planner.delLineLinkDone'));
     return true;
   }
 
@@ -573,7 +573,7 @@ export class PlannerBoard {
   async _editEdgeLabel(id) {
     const e = this.data.getEdge(id);
     if (!e) return false;
-    const v = await ask(T`ป้ายกำกับเส้นเชื่อม`, { value: e.label || '', allowEmpty: true });
+    const v = await ask(tt('ui.planner.badgeLineLink'), { value: e.label || '', allowEmpty: true });
     if (v == null) return false;
     this.data.updateEdge(id, { label: v });
     this.renderer.renderEdge(this.data.getEdge(id));
@@ -609,7 +609,7 @@ export class PlannerBoard {
     const groups = act ? (act.type === 'activeSelection' ? act.getObjects() : [act]).filter((o) => o.kind === 'group') : [];
     if (!ids.length && !groups.length) {
       if (this.renderer._selectedEdgeId) return this._deleteEdge(this.renderer._selectedEdgeId);
-      setStatus(T`เลือกวัตถุที่จะลบก่อน`); return false;
+      setStatus(tt('ui.planner.pickObjectDelBefore')); return false;
     }
     for (const id of ids) { if (this.data.isLocked(id)) continue; this.renderer.removeNode(id); this.data.removeNode(id); }
     for (const g of groups) { this.renderer.removeGroup(g.gid); this.data.removeGroup(g.gid); }
@@ -617,7 +617,7 @@ export class PlannerBoard {
     this._renderAll();
     this._snapshot();
     this._showProps('none', null);
-    setStatus(T`ลบ ${ids.length + groups.length} ชิ้นแล้ว`);
+    setStatus(ttf('ui.planner.delItemDone', ids.length + groups.length));
     return true;
   }
 
@@ -629,19 +629,19 @@ export class PlannerBoard {
     this._renderAll();
     this._snapshot();
     this._showProps('none', null);
-    setStatus(T`ลบแล้ว`);
+    setStatus(tt('ui.planner.delDone'));
     return true;
   }
 
   _duplicateSelected(ids) {
     const src = (ids || this._selectedNodeIds()).map((i) => this.data.getNode(i)).filter(Boolean);
-    if (!src.length) { setStatus(T`เลือกวัตถุที่จะทำซ้ำก่อน`); return null; }
+    if (!src.length) { setStatus(tt('ui.planner.pickObjectRepeatBefore')); return null; }
     const made = [];
     for (const n of src) {
       const copy = this.data.addNodeRaw({
         ...n, id: uid('pl-'), tags: [...(n.tags || [])],
         x: n.x + 28, y: n.y + 28,
-        title: n.title ? n.title + T` (สำเนา)` : n.title,
+        title: n.title ? n.title + tt('ui.common.msg') : n.title,
       });
       const v = this.renderer.renderNode(copy);
       v._lockedByData = !!copy.locked;
@@ -652,7 +652,7 @@ export class PlannerBoard {
     this._applyFilter();
     this._snapshot();
     this._selectNodes(made.map((m) => m.id));
-    setStatus(T`ทำซ้ำ ${made.length} ชิ้นแล้ว`);
+    setStatus(ttf('ui.planner.repeatItemDone', made.length));
     return made;
   }
 
@@ -668,19 +668,19 @@ export class PlannerBoard {
 
   _createGroupFromSelection(name) {
     const ids = this._selectedNodeIds();
-    if (!ids.length) { setStatus(T`เลือกการ์ดก่อน (ลากคลุม / Shift+คลิก) แล้วกด 🗂 จัดกลุ่ม`); return null; }
-    const g = this.data.addGroup(name || T`กลุ่มใหม่`, ids, '#d97757');
+    if (!ids.length) { setStatus(tt('ui.planner.pickCardBeforeDrag')); return null; }
+    const g = this.data.addGroup(name || tt('ui.planner.groupNew'), ids, '#d97757');
     this.renderer.discardActiveObject();
     this._renderAll();
     this._snapshot();
-    setStatus(T`จัดกลุ่ม "${g.name}" (${ids.length} การ์ด)`);
+    setStatus(ttf('ui.planner.groupCard', g.name, ids.length));
     return g;
   }
 
   /** จัดตำแหน่ง/กระจาย สำหรับหลายชิ้น */
   _align(mode, ids) {
     const list = (ids || this._selectedNodeIds()).map((i) => this.data.getNode(i)).filter(Boolean);
-    if (list.length < 2) { setStatus(T`เลือกอย่างน้อย 2 ชิ้นก่อน`); return false; }
+    if (list.length < 2) { setStatus(tt('ui.planner.pickLessItemBefore')); return false; }
     const minX = Math.min(...list.map((n) => n.x)), maxR = Math.max(...list.map((n) => n.x + n.width));
     const minY = Math.min(...list.map((n) => n.y)), maxB = Math.max(...list.map((n) => n.y + n.height));
     if (mode === 'left') for (const n of list) n.x = minX;
@@ -725,8 +725,8 @@ export class PlannerBoard {
   _revealSelected() {
     const ids = this._selectedNodeIds();
     const n = ids.length ? this.data.getNode(ids[0]) : null;
-    if (!n) { setStatus(T`เลือกการ์ดก่อน`); return false; }
-    if (!n.file) { setStatus(T`การ์ดนี้ยังไม่ได้ผูกไฟล์ — กด "📁 เลือกจากโปรเจกต์" ในแผงคุณสมบัติ`); return false; }
+    if (!n) { setStatus(tt('ui.planner.pickCardBefore')); return false; }
+    if (!n.file) { setStatus(tt('ui.planner.cardCantBindFile2')); return false; }
     if (this._onReveal) { this._onReveal(n.file); return true; }
     return false;
   }
@@ -740,53 +740,53 @@ export class PlannerBoard {
       if (!this.renderer.getActiveObject() || this._selectedNodeIds().indexOf(id) < 0) {
         this._selectNodes([id]); this._showProps('node', n);
       }
-      if (n.file) items.push({ label: T`📖 เปิดไฟล์`, click: () => this._onOpenFile && this._onOpenFile(n.file) },
-                             { label: T`📂 ชี้ตำแหน่งใน Explorer`, click: () => this._onReveal && this._onReveal(n.file) });
-      items.push({ label: T`✏️ แก้ข้อความ`, click: () => this.interaction.editText(n) });
-      items.push({ label: T`📁 ผูกไฟล์จากโปรเจกต์…`, click: () => this._pickFileFor(n.id) });
+      if (n.file) items.push({ label: tt('ui.planner.openFile'), click: () => this._onOpenFile && this._onOpenFile(n.file) },
+                             { label: tt('ui.planner.pointPosExplorer'), click: () => this._onReveal && this._onReveal(n.file) });
+      items.push({ label: tt('ui.planner.editText'), click: () => this.interaction.editText(n) });
+      items.push({ label: tt('ui.planner.bindFileProject'), click: () => this._pickFileFor(n.id) });
       items.push('-');
-      items.push({ label: T`⧉ ทำซ้ำ`, click: () => this._duplicateSelected() });
+      items.push({ label: tt('ui.common.repeat'), click: () => this._duplicateSelected() });
       items.push('-');
-      items.push({ label: T`⬆ ยกไปบนสุด <span style="opacity:.55">Ctrl+Shift+]</span>`, click: () => this.orderSelection('front') });
-      items.push({ label: T`↑ ยกขึ้นหนึ่งชั้น <span style="opacity:.55">Ctrl+]</span>`, click: () => this.orderSelection('forward') });
-      items.push({ label: T`↓ ลดลงหนึ่งชั้น <span style="opacity:.55">Ctrl+[</span>`, click: () => this.orderSelection('backward') });
-      items.push({ label: T`⬇ ส่งไปล่างสุด <span style="opacity:.55">Ctrl+Shift+[</span>`, click: () => this.orderSelection('back') });
+      items.push({ label: tt('ui.planner.liftTopCtrlShift2'), click: () => this.orderSelection('front') });
+      items.push({ label: tt('ui.planner.liftOneLayerCtrl'), click: () => this.orderSelection('forward') });
+      items.push({ label: tt('ui.planner.reduceOneLayerCtrl'), click: () => this.orderSelection('backward') });
+      items.push({ label: tt('ui.planner.sendBottomLastCtrl2'), click: () => this.orderSelection('back') });
       items.push('-');
-      items.push({ label: n.locked ? T`🔓 ปลดล็อก` : T`🔒 ล็อก`, click: () => this._commitEdit(n.id, { locked: !n.locked }) });
-      items.push({ label: T`🗂 จัดกลุ่มที่เลือก`, click: () => this._createGroupFromSelection() });
+      items.push({ label: n.locked ? tt('ui.common.unlock') : tt('ui.planner.lock'), click: () => this._commitEdit(n.id, { locked: !n.locked }) });
+      items.push({ label: tt('ui.planner.groupPick'), click: () => this._createGroupFromSelection() });
       items.push('-');
-      items.push({ label: T`🗑 ลบ`, danger: true, click: () => this._deleteSelected() });
+      items.push({ label: tt('ui.common.del2'), danger: true, click: () => this._deleteSelected() });
     } else if (kind === 'edge') {
       this.selectEdge(id);
       const e = this.data.getEdge(id);
       if (!e) return;
-      items.push({ label: T`🏷 แก้ป้ายกำกับ…`, click: () => this._editEdgeLabel(id) });
-      items.push({ label: T`⇄ สลับทิศ`, click: () => this._flipEdge(id) });
-      for (const [r, label] of [['straight', T`╱ เส้นตรง`], ['orthogonal', T`⌐ หักมุมฉาก`], ['curved', T`⌒ โค้ง`]]) {
+      items.push({ label: tt('ui.planner.editBadge'), click: () => this._editEdgeLabel(id) });
+      items.push({ label: tt('ui.common.toggle'), click: () => this._flipEdge(id) });
+      for (const [r, label] of [['straight', tt('ui.planner.lineAt2')], ['orthogonal', tt('ui.common.cornerScene')], ['curved', tt('ui.common.curve')]]) {
         items.push({ label: (e.routing === r ? '● ' : '　') + label, click: () => this._changeEdge(id, { routing: r }) });
       }
       items.push('-');
-      items.push({ label: T`🗑 ลบเส้น`, danger: true, click: () => this._deleteEdge(id) });
+      items.push({ label: tt('ui.planner.delLine'), danger: true, click: () => this._deleteEdge(id) });
     } else if (kind === 'group') {
-      items.push({ label: T`✏️ เปลี่ยนชื่อกลุ่ม…`, click: async () => {
+      items.push({ label: tt('ui.planner.changeNameGroup'), click: async () => {
         const g = this.data.getGroup(id); if (!g) return;
-        const v = await ask(T`ชื่อกลุ่ม`, { value: g.name });
+        const v = await ask(tt('ui.common.nameGroup'), { value: g.name });
         if (v) { g.name = v; this.data.markDirty(); this._renderAll(); this._snapshot(); }
       } });
-      items.push({ label: T`🗑 ยุบกลุ่ม`, danger: true, click: () => {
+      items.push({ label: tt('ui.planner.group2'), danger: true, click: () => {
         this.data.removeGroup(id); this.renderer.removeGroup(id); this._renderAll(); this._snapshot();
       } });
     } else {
-      items.push({ label: T`📌 โพสต์อิตตรงนี้`, click: () => this._createFromTool('sticky', { x: pt.x, y: pt.y }) });
-      items.push({ label: T`🅃 ข้อความตรงนี้`, click: () => this._createFromTool('text', { x: pt.x, y: pt.y }) });
-      items.push({ label: T`⬛ รูปทรงตรงนี้`, click: () => this._createFromTool('shape', { x: pt.x, y: pt.y, shape: this.interaction.getShapeKind() }) });
-      items.push({ label: T`💬 คอมเมนต์ตรงนี้`, click: () => this._createFromTool('comment', { x: pt.x, y: pt.y }) });
+      items.push({ label: tt('ui.planner.sticky2'), click: () => this._createFromTool('sticky', { x: pt.x, y: pt.y }) });
+      items.push({ label: tt('ui.planner.text'), click: () => this._createFromTool('text', { x: pt.x, y: pt.y }) });
+      items.push({ label: tt('ui.planner.shape'), click: () => this._createFromTool('shape', { x: pt.x, y: pt.y, shape: this.interaction.getShapeKind() }) });
+      items.push({ label: tt('ui.planner.comment'), click: () => this._createFromTool('comment', { x: pt.x, y: pt.y }) });
       items.push('-');
-      items.push({ label: T`⊡ พอดีจอ`, click: () => this._zoomFit() });
-      items.push({ label: this.data.getGrid().show ? T`▦ ซ่อนกริด` : T`▦ แสดงกริด`, click: () => this.setGrid({ show: !this.data.getGrid().show }) });
-      items.push({ label: this.data.getGrid().snap ? T`⌗ ปิด snap` : T`⌗ เปิด snap`, click: () => this.setGrid({ snap: !this.data.getGrid().snap }) });
+      items.push({ label: tt('ui.planner.fitScreen'), click: () => this._zoomFit() });
+      items.push({ label: this.data.getGrid().show ? tt('ui.planner.hideGrid') : tt('ui.planner.showGrid'), click: () => this.setGrid({ show: !this.data.getGrid().show }) });
+      items.push({ label: this.data.getGrid().snap ? tt('ui.planner.closeSnap') : tt('ui.planner.openSnap'), click: () => this.setGrid({ snap: !this.data.getGrid().snap }) });
       items.push('-');
-      items.push({ label: T`💾 บันทึกกระดาน`, click: () => this.save() });
+      items.push({ label: tt('ui.planner.saveBoard'), click: () => this.save() });
     }
     popupMenu(ev.clientX, ev.clientY, items);
   }
@@ -801,12 +801,12 @@ export class PlannerBoard {
   }
 
   async _pickFileFor(nodeId) {
-    if (!this._svc.pickFile) { setStatus(T`เลือกไฟล์จากโปรเจกต์ยังไม่พร้อมใช้งาน`); return null; }
+    if (!this._svc.pickFile) { setStatus(tt('ui.planner.pickFileProjectNot')); return null; }
     const picked = await this._svc.pickFile();
     if (!picked) return null;
     const props = { file: picked.path };
     const n = this.data.getNode(nodeId);
-    if (n && (!n.title || [T`ใหม่`, T`ไม่ระบุชื่อ`, T`ฉากใหม่`].includes(n.title))) props.title = picked.title;
+    if (n && (!n.title || [tt('ui.common.new2'), tt('ui.common.notSpecifyName'), tt('ui.planner.sceneNew')].includes(n.title))) props.title = picked.title;
     this._commitEdit(nodeId, props);
     return picked;
   }
@@ -870,16 +870,16 @@ export class PlannerBoard {
   }
 
   undo() {
-    if (this._histIndex <= 0) { setStatus(T`ย้อนกลับไม่ได้แล้ว`); return false; }
+    if (this._histIndex <= 0) { setStatus(tt('ui.planner.undoCantDone')); return false; }
     const ok = this._restore(this._histIndex - 1);
-    if (ok) setStatus(T`↶ ย้อนกลับ`);
+    if (ok) setStatus(tt('ui.planner.undo'));
     return ok;
   }
 
   redo() {
-    if (this._histIndex >= this._history.length - 1) { setStatus(T`ทำซ้ำไม่ได้แล้ว`); return false; }
+    if (this._histIndex >= this._history.length - 1) { setStatus(tt('ui.planner.repeatCantDone')); return false; }
     const ok = this._restore(this._histIndex + 1);
-    if (ok) setStatus(T`↷ ทำซ้ำ`);
+    if (ok) setStatus(tt('ui.planner.repeat'));
     return ok;
   }
 
@@ -913,9 +913,9 @@ export class PlannerBoard {
         this._snapshot();
       };
       ctx.onPickFile = () => (this._svc.pickFile ? this._svc.pickFile() : Promise.resolve(null));
-      ctx.onConnectFrom = () => { this._pickTool('connector'); setStatus(T`เครื่องมือเส้นเชื่อม: คลิกการ์ดปลายทาง (หรือลากจากจุดสีส้ม)`); };
+      ctx.onConnectFrom = () => { this._pickTool('connector'); setStatus(tt('ui.planner.toolLineLinkClick')); };
       ctx.onCenterNode = (id) => this.centerOn(id);
-      ctx.onRevealFile = (file) => { if (this._onReveal && file) this._onReveal(file); else setStatus(T`การ์ดนี้ยังไม่ได้ผูกไฟล์`); };
+      ctx.onRevealFile = (file) => { if (this._onReveal && file) this._onReveal(file); else setStatus(tt('ui.planner.cardCantBindFile')); };
       ctx.onDeleteNode = (id) => this._deleteNode(id);
       ctx.onDuplicateNode = (id) => this._duplicateSelected([id]);
       ctx.onDeleteEdge = (id) => this._deleteEdge(id);
@@ -959,9 +959,9 @@ export class PlannerBoard {
       x = ((ev.clientX - r.left) - vt[4]) / z - CARD_W / 2;
       y = ((ev.clientY - r.top) - vt[5]) / z - CARD_H / 2;
     }
-    const title = d.title || (d.file ? (String(d.file).split(/[\\/]/).pop() || '').replace(/\.md$/i, '') : T`ใหม่`);
+    const title = d.title || (d.file ? (String(d.file).split(/[\\/]/).pop() || '').replace(/\.md$/i, '') : tt('ui.common.new2'));
     const dup = d.file && this.data.getAllNodes().find((n) => n.file === d.file);
-    if (dup) { this._selectNodes([dup.id]); this.centerOn(dup.id); setStatus(T`"${title}" อยู่บนกระดานแล้ว`); return dup; }
+    if (dup) { this._selectNodes([dup.id]); this.centerOn(dup.id); setStatus(ttf('ui.planner.topBoardDone', title)); return dup; }
     const n = this.data.addNode(type, title, COLORS[type], x, y);
     n.file = d.file || d.path || null;
     const v = this.renderer.renderNode(n);
@@ -972,7 +972,7 @@ export class PlannerBoard {
     this.renderer.setActiveObject(v);
     this._showProps('node', n);
     this._snapshot();
-    setStatus(T`เพิ่ม "${title}" ลงกระดานแล้ว`);
+    setStatus(ttf('ui.planner.addBoardDone', title));
     this.renderer.refresh();
     return n;
   }
@@ -981,23 +981,23 @@ export class PlannerBoard {
   loadSample() {
     const mk = (o) => this.data.addNodeRaw(o);
     this.data._nodes = []; this.data._edges = []; this.data._groups = [];
-    const a = mk({ type: 'scene', title: T`ฉากเปิดเรื่อง`, color: '#3f3e3a', x: 120, y: 140, tags: [T`เปิดเรื่อง`], synopsis: T`ตัวเอกตื่นมาเจอเรื่องผิดปกติ`, status: T`กำลังเขียน` });
-    const b = mk({ type: 'scene', title: T`ฉากปะทะ`, color: '#5f7a9f', x: 460, y: 140, tags: [T`จุดหักเห`], synopsis: T`ความจริงถูกเปิดเผยกลางวงสนทนา`, status: T`โครงร่าง` });
-    const c = mk({ type: 'entity', title: T`ตัวละครหลัก`, color: '#7a6f9f', x: 290, y: 340 });
-    mk({ type: 'sticky', title: '', synopsis: T`อย่าลืมปมเรื่องกุญแจ`, color: '#f2c14e', x: 660, y: 330, width: 160, height: 160 });
-    mk({ type: 'shape', shape: 'diamond', title: T`ตัดสินใจ`, color: '#4a6fa5', x: 470, y: 350, width: 170, height: 120 });
-    this.data.addEdge(a.id, 'right', b.id, 'left', { label: T`ต่อเนื่อง`, routing: 'curved' });
-    this.data.addEdge(c.id, 'top', a.id, 'bottom', { label: T`ปรากฏใน`, routing: 'orthogonal', arrowEnd: 'triangle' });
+    const a = mk({ type: 'scene', title: tt('ui.planner.sceneOpenStory'), color: '#3f3e3a', x: 120, y: 140, tags: [tt('ui.planner.openStory')], synopsis: tt('ui.planner.itemFoundStoryNormal'), status: tt('ui.common.busyWrite') });
+    const b = mk({ type: 'scene', title: tt('ui.planner.scene'), color: '#5f7a9f', x: 460, y: 140, tags: [tt('ui.planner.dot')], synopsis: tt('ui.planner.openLift'), status: tt('ui.planner.outlineDraft') });
+    const c = mk({ type: 'entity', title: tt('ui.planner.characterMain'), color: '#7a6f9f', x: 290, y: 340 });
+    mk({ type: 'sticky', title: '', synopsis: tt('ui.planner.knotStory'), color: '#f2c14e', x: 660, y: 330, width: 160, height: 160 });
+    mk({ type: 'shape', shape: 'diamond', title: tt('ui.planner.decide'), color: '#4a6fa5', x: 470, y: 350, width: 170, height: 120 });
+    this.data.addEdge(a.id, 'right', b.id, 'left', { label: tt('ui.planner.cont'), routing: 'curved' });
+    this.data.addEdge(c.id, 'top', a.id, 'bottom', { label: tt('ui.planner.appear'), routing: 'orthogonal', arrowEnd: 'triangle' });
     this.data.markDirty();
     this._renderAll();
     this._snapshot();
     this._zoomFit();
-    setStatus(T`ใส่ตัวอย่างแล้ว — กด 💾 ถ้าจะเก็บไว้`);
+    setStatus(tt('ui.planner.putSampleDonePress'));
   }
 
   _autoLayout() {
     const ns = this.data.getAllNodes().filter((n) => n.type !== 'frame');
-    if (ns.length < 2) { setStatus(T`ต้องมีอย่างน้อย 2 การ์ด`); return false; }
+    if (ns.length < 2) { setStatus(tt('ui.planner.mustHasLessCard')); return false; }
     const W = Math.max(600, this.renderer.getWidth()), H = Math.max(450, this.renderer.getHeight());
     const k = (Math.min(W, H) / Math.sqrt(ns.length)) * 0.8;
     for (let it = 0; it < 140; it++) {
@@ -1033,7 +1033,7 @@ export class PlannerBoard {
     this._renderAll();
     this._snapshot();
     this._zoomFit();
-    setStatus(T`จัดเรียงอัตโนมัติแล้ว`);
+    setStatus(tt('ui.planner.arrangeAutoDone'));
     return true;
   }
 
@@ -1056,9 +1056,9 @@ export class PlannerBoard {
       this.renderer.canvas.setViewportTransform(vt);
       this.renderer.refresh();
       const name = await kapi.writeImageData(this.root, _safeName(this.data.getFileBase()) + '.png', url.split(',')[1]);
-      setStatus(T`🖼 บันทึกรูปกระดานแล้ว: ` + (typeof name === 'string' ? name : 'planner.png'));
+      setStatus(tt('ui.planner.saveImageBoardDone') + (typeof name === 'string' ? name : 'planner.png'));
       return true;
-    } catch (e) { setStatus(T`ส่งออก PNG ไม่ได้: ` + e.message); return false; }
+    } catch (e) { setStatus(tt('ui.planner.exportPNGCant') + e.message); return false; }
   }
 
   _fit() {
@@ -1070,7 +1070,7 @@ export class PlannerBoard {
     }
     const r = this.stage.getBoundingClientRect();
     if (!r.width || !r.height) {
-      log('warn', T`planner: _fit ข้าม — เวทีกระดานยังไม่มีขนาด (แผงถูกซ่อนอยู่?)`);
+      log('warn', tt('ui.planner.plannerFitSkipBoard'));
       return false;
     }
     const changed = this.renderer.fit(r.width, r.height);
@@ -1104,7 +1104,7 @@ export function boardPicker(boards, currentPath) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    const t = el('div', 'k-dlg-title', T`📋 เปิดกระดานวางแผน`);
+    const t = el('div', 'k-dlg-title', tt('ui.planner.openBoardPlanner'));
     const list = el('div', 'planner-board-list');
     for (const b of boards) {
       const row = el('div', 'planner-board-row' + (b.path === currentPath ? ' current' : ''));
@@ -1115,7 +1115,7 @@ export function boardPicker(boards, currentPath) {
       list.appendChild(row);
     }
     const btns = el('div', 'k-dlg-btns');
-    const cancel = el('button', 'k-cancel', T`ยกเลิก`);
+    const cancel = el('button', 'k-cancel', tt('ui.common.cancel'));
     cancel.onclick = () => { ov.remove(); resolve(null); };
     btns.appendChild(cancel);
     box.append(t, list, btns);
@@ -1127,5 +1127,5 @@ export function boardPicker(boards, currentPath) {
 
 /** ชื่อไฟล์ที่ปลอดภัยกับ Windows/macOS */
 function _safeName(s) {
-  return String(s || T`กระดาน`).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || T`กระดาน`;
+  return String(s || tt('ui.common.board')).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || tt('ui.common.board');
 }

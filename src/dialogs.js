@@ -1,5 +1,5 @@
 // dialogs.js — กล่องโต้ตอบ: ตั้งค่าโปรเจกต์ · ประวัติเวอร์ชัน · changelog · ตัวดู log
-import { T } from './i18n.js';
+import { tf } from './i18n.js';
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
          applyProseVars, proseFormat } from './app.js';
@@ -50,7 +50,7 @@ function buildNetColorFields(box, s) {
       c.dataset.key = d.key;
       c.value = saved[d.key] || d.def;
       const txt = el('input'); txt.type = 'text'; txt.className = 'st-netcol-t';
-      txt.style.width = '84px'; txt.placeholder = d.cssVar ? T`ตามธีม` : d.def;
+      txt.style.width = '84px'; txt.placeholder = d.cssVar ? t('ui.dlg.theme') : d.def;
       txt.value = saved[d.key] || '';
       // พิมพ์เลขสีเองก็ได้ · เว้นว่าง = ใช้ค่าเริ่มต้น/ตามธีม
       txt.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value; };
@@ -74,7 +74,7 @@ function buildNetColorFields(box, s) {
     if (!hint) return;
     const c2 = resolveNetControls({ orbitButton: orbit.value, panButton: pan.value });
     if (pan.value !== c2.panButton) pan.value = c2.panButton;   // ชนกัน = ถอยให้อัตโนมัติ
-    hint.textContent = T`คำอธิบายใต้ผังจะเป็น: ` + controlsHint(c2, true);
+    hint.textContent = t('ui.dlg.descUnderGraph') + controlsHint(c2, true);
   };
   if (orbit) orbit.onchange = syncHint;
   if (pan) pan.onchange = syncHint;
@@ -121,227 +121,7 @@ export function settingsDialog(openTab) {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
-  box.innerHTML = T`
-    <div class="k-dlg-title">${t('settings.title')} <span style="font-weight:normal;font-size:0.7em;color:#666">// [alpha.60 ข้อ 94] 🌐 = ระดับผู้ใช้ (ใช้ร่วมทุกโปรเจกต์) · 📁 = ระดับโปรเจกต์ (เฉพาะโปรเจกต์นี้)</span></div>
-    <div class="k-set-tabs">
-      <div class="k-set-tab on" data-p="gen">🌐 ${t('settings.general')}</div>
-      <div class="k-set-tab" data-p="write">🌐 ${t('settings.writing')}</div>
-      <div class="k-set-tab" data-p="auto">🌐 ${t('settings.automation')}</div>
-      <div class="k-set-tab" data-p="setup">📁 ข้อมูลผลงาน</div>
-      <div class="k-set-tab" data-p="page">📁 หน้ากระดาษ</div>
-      <div class="k-set-tab" data-p="prose">📁 รูปแบบนิยาย</div>
-      <div class="k-set-tab" data-p="spfmt">📁 รูปแบบบท</div>
-      <div class="k-set-tab" data-p="sp">📁 ปุ่มบทหนัง</div>
-      <div class="k-set-tab" data-p="fonts">📁 ฟอนต์ตามภาษา</div>
-      <div class="k-set-tab" data-p="lang">🌐 ${t('settings.language')}</div>
-      <div class="k-set-tab" data-p="keys">🌐 ${t('settings.shortcuts')}</div>
-      <div class="k-set-tab" data-p="netcol">📁 Story Network</div>
-    </div>
-    <div class="k-set-page k-set-2col on" data-p="gen">
-      <div class="k-row"><label>${t('settings.projectName')}</label><input type="text" id="st-title"></div>
-      <div class="k-row"><label>${t('settings.author')}</label><input type="text" id="st-author"></div>
-      <div class="k-row"><label>${t('settings.autoSaveMinutes')}<span class="k-hint">${t('settings.autoSaveHint')}</span></label><input type="number" id="st-auto" min="0" max="120"></div>
-      <div class="k-row"><label>${t('settings.autoBackup')}</label><input type="checkbox" id="st-backup"></div>
-      <div class="k-row"><label>${t('settings.maxBackups')}<span class="k-hint">${t('settings.maxBackupsHint')}</span></label><input type="number" id="st-maxbak" min="1" max="200"></div>
-      <div class="k-row"><label>${t('settings.dailyGoal')}</label><input type="number" id="st-daily" min="0"></div>
-      <div class="k-row"><label>${t('settings.projectGoal')}</label><input type="number" id="st-proj" min="0"></div>
-      <div class="k-set-sub k-full">// [alpha.60r ข้อ 1] พฤติกรรมตอนเปิดโปรเจกต์</div>
-      <div class="k-row"><label>แสดงหน้าแรกเมื่อเปิดโปรเจกต์<span class="k-hint">ปิด = เปิดโปรเจกต์ล่าสุดโดยไม่ถาม</span></label><input type="checkbox" id="st-showhome"></div>
-      <div class="k-set-sub k-full">// [alpha.69] ประวัติการทำงาน (แผง 🕘)</div>
-      <div class="k-row"><label>เก็บประวัติย้อนหลัง (ครั้ง)<span class="k-hint">ยิ่งมากยิ่งย้อนได้ไกล แต่กินที่ใน .k2history/ · 4–500 · ค่าเริ่มต้น 32</span></label><input type="number" id="st-histlimit" min="4" max="500"></div>
-      <div class="k-row"><label>ปิดการจดประวัติ<span class="k-hint">ปิดแล้วแผงประวัติจะไม่มีอะไรใหม่เพิ่ม (ของเดิมยังอยู่)</span></label><input type="checkbox" id="st-histoff"></div>
-    </div>
-    <div class="k-set-page k-set-2col" data-p="write">
-      <div class="k-row"><label>${t('settings.fontFamily')}<span class="k-hint">${t('settings.fontFamilyHint')}</span></label><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>${t('settings.spFontFamily')}<span class="k-hint">${t('settings.spFontFamilyHint')}</span></label><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>ขนาดฟอนต์นิยาย (pt)<span class="k-hint">มาตรฐานต้นฉบับ = 12pt · รูปแบบอื่น ๆ ดูที่แท็บ "📖 รูปแบบนิยาย"</span></label><input type="number" id="st-edpt" class="k-narrow" min="6" max="48" step="0.5"></div>
-      <div class="k-row"><label>ขนาดฟอนต์บทภาพยนตร์ (pt)<span class="k-hint">มาตรฐานบท = 12pt ทุกภาษา</span></label><input type="number" id="st-sppt" class="k-narrow" min="6" max="48" step="0.5"></div>
-      <div class="k-row"><label>ขนาดตัวอักษรของ UI<span class="k-hint">[บั๊ก 14] ปรับจากค่าเริ่มต้น 14px — มีผลกับเปลือกโปรแกรมเท่านั้น ไม่แตะเอกสาร</span></label><input type="number" id="st-font" min="-6" max="16" step="1"></div>
-      <div class="k-row"><label>ขนาดการ์ดหน้าแรก (px)<span class="k-hint">ความกว้างการ์ด 4 คอลัมน์บนหน้าแรก</span></label><input type="number" id="st-homethumb" class="k-narrow" min="120" max="400" step="10"></div>
-      <div class="k-row"><label>${t('settings.lineNumbers')}<span class="k-hint">${t('settings.lineNumbersHint')}</span></label><input type="checkbox" id="st-ln"></div>
-      <div class="k-row"><label>ปุ่มลอยมุมขวาล่าง (FAB)<span class="k-hint">[60r2 ข้อ 9] ปิดแล้วปุ่ม + และเมนูของมันจะหายไปทั้งชุด</span></label><input type="checkbox" id="st-fab"></div>
-      <div class="k-row"><label>${t('settings.spellCheck')}<span class="k-hint">${t('settings.spellCheckHint')}</span></label><input type="checkbox" id="st-spell"></div>
-      <div class="k-row"><label>${t('settings.spellCheckDict')}<span class="k-hint">${t('settings.spellCheckDictHint')}</span></label><input type="checkbox" id="st-spelldict"></div>
-      <div class="k-row"><label>${t('settings.autoMention')}<span class="k-hint">${t('settings.autoMentionHint')}</span></label><input type="checkbox" id="st-mention"></div>
-      <div class="k-row"><label>${t('settings.recycleDays')}<span class="k-hint">${t('settings.recycleDaysHint')}</span></label><input type="number" id="st-recycle" min="0" max="3650"></div>
-      <div class="k-row"><label>${t('settings.focusDim')}<span class="k-hint">${t('settings.focusDimHint')}</span></label><input type="range" id="st-fmdim" min="0.05" max="0.8" step="0.05"><span id="st-fmdim-lbl" class="k-hint"></span></div>
-      <div class="k-row"><label>${t('settings.uiScale', 'ขนาด UI')}<span class="k-hint">${t('settings.uiScaleHint', 'ย่อ/ขยายแถบเครื่องมือ แผง แท็บ และกล่องโต้ตอบ (75–200%)')}</span></label><input type="range" id="st-uiscale" min="0.75" max="2" step="0.05"><span id="st-uiscale-lbl" class="k-hint"></span></div>
-      <div class="k-set-sub k-full">🔊 เสียงเครื่องพิมพ์ดีด</div>
-      <div class="k-row"><label>เปิดเสียงขณะพิมพ์<span class="k-hint">เคาะแป้น · วรรค · ลบ · กระดิ่งตอนขึ้นบรรทัด</span></label><input type="checkbox" id="st-typesnd"></div>
-      <div class="k-row"><label>เล่นเมื่อไร<span class="k-hint">[60r2 ข้อ 4] ค่าเริ่มต้น = ดังตลอด · เดิมต้องเปิดสวิตช์ที่สองด้วยจึงจะได้ยิน</span></label><select id="st-typesnd-mode" class="k-dlg-select"><option value="always">ดังตลอดเวลาที่พิมพ์</option><option value="typewriter">เฉพาะโหมดเครื่องพิมพ์ดีด (Ctrl+Shift+T)</option></select></div>
-      <div class="k-row"><label>ระดับเสียง</label><input type="range" id="st-typesnd-vol" min="0" max="1" step="0.05"><span id="st-typesnd-lbl" class="k-hint"></span></div>
-      <div class="k-row"><label>ลองฟัง</label><span><button id="st-typesnd-test" class="k-key-btn">เคาะ</button> <button id="st-typesnd-test2" class="k-key-btn">ขึ้นบรรทัด</button></span></div>
-    </div>
-    <div class="k-set-page" data-p="auto">
-      <div class="k-row"><label>${iconHtml('cloud-lightning', 14)} ${t('settings.autoSync')}<span class="k-hint">${t('settings.autoSyncHint')}</span></label><input type="checkbox" id="st-autosync"></div>
-      <div class="k-set-sub k-full">// [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติสำหรับบทภาพยนตร์</div>
-      <div class="k-row"><label>คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์<span class="k-hint">ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น</span></label><input type="checkbox" id="st-autopag"></div>
-      <div class="k-row"><label>รอหลังหยุดพิมพ์ (วินาที)<span class="k-hint">1–60 วินาที ก่อนคำนวณหน้าใหม่ · ยิ่งสั้นยิ่งใช้ CPU มาก</span></label><input type="number" id="st-pagintv" min="1" max="60" step="1" class="k-narrow"></div>
-    </div>
-    <div class="k-set-page k-set-2col" data-p="setup">
-      <div class="k-hint" style="margin-bottom:10px">[98] ข้อมูลบนหน้าปกบท/ต้นฉบับ — ใช้ตอนพิมพ์และส่งออก</div>
-      <div class="k-set-sub">ผู้เขียน</div>
-      <div class="k-row"><label>อีเมลผู้เขียน</label><input type="text" id="st-email"></div>
-      <div class="k-row"><label>ข้อมูลติดต่อ (Contact information)</label><input type="text" id="st-contact"></div>
-      <div class="k-row"><label>โทรศัพท์ (Phone)</label><input type="text" id="st-phone"></div>
-      <div class="k-set-sub">เครดิตบท</div>
-      <div class="k-row"><label>Screenplay By</label><input type="text" id="st-spby"></div>
-      <div class="k-row"><label>Based On</label><input type="text" id="st-basedon"></div>
-      <div class="k-row"><label>Revisions by</label><input type="text" id="st-revby"></div>
-      <div class="k-set-sub">ตัวแทน (Agent)</div>
-      <div class="k-row"><label>Agent's Name</label><input type="text" id="st-agname"></div>
-      <div class="k-row"><label>Agent's Address</label><input type="text" id="st-agaddr"></div>
-      <div class="k-row"><label>Agent's Phone</label><input type="text" id="st-agphone"></div>
-      <div class="k-row"><label>Agent's Email</label><input type="text" id="st-agemail"></div>
-      <div class="k-set-sub">ลิขสิทธิ์</div>
-      <div class="k-row"><label>Copyright by</label><input type="text" id="st-copyright"></div>
-    </div>
-    <div class="k-set-page k-set-2col" data-p="page">
-      <div class="k-hint" style="margin-bottom:10px">[85] ขนาดกระดาษและระยะขอบ — ใช้ร่วมกันทั้งโหมดนิยายและโหมดบทภาพยนตร์</div>
-      <div class="k-row"><label>ขนาดกระดาษ</label><select id="st-paper" class="k-dlg-select"></select></div>
-      <div class="k-row k-full" id="st-paper-custom"><label>กว้าง × สูง (นิ้ว)</label>
-        <span><input type="number" id="st-paper-w" class="k-narrow" min="3" max="30" step="0.01">
-        × <input type="number" id="st-paper-h" class="k-narrow" min="3" max="40" step="0.01"></span></div>
-      <div class="k-set-sub">ระยะขอบ (นิ้ว)</div>
-      <!-- [alpha.60r2 ข้อ 6] ชุดสำเร็จรูป — เลือกแล้วเติมช่องทั้งสี่ให้ทันที (ค่าอยู่ใน src/margin-presets.json) -->
-      <div class="k-row k-full"><label>ชุดสำเร็จรูป<span class="k-hint">เลือกแล้วเติมค่าทั้งสี่ด้านให้ · แก้ตัวเลขเองได้ต่อ</span></label><select id="st-mg-preset" class="k-dlg-select"></select></div>
-      <div class="k-set-grid2">
-        <div class="k-row"><label>บน (Top)</label><input type="number" id="st-mg-top" class="k-narrow" min="0" max="5" step="0.05"></div>
-        <div class="k-row"><label>ล่าง (Bottom)</label><input type="number" id="st-mg-bottom" class="k-narrow" min="0" max="5" step="0.05"></div>
-        <div class="k-row"><label>ซ้าย (Left)</label><input type="number" id="st-mg-left" class="k-narrow" min="0" max="5" step="0.05"></div>
-        <div class="k-row"><label>ขวา (Right)</label><input type="number" id="st-mg-right" class="k-narrow" min="0" max="5" step="0.05"></div>
-      </div>
-      <div class="k-row"><label>ช่วงบรรทัดบทภาพยนตร์<span class="k-hint">มาตรฐาน = 1 (6 บรรทัด/นิ้ว) · เปลี่ยนแล้วจำนวนบรรทัดต่อหน้าเปลี่ยนตาม</span></label><input type="number" id="st-splh" class="k-narrow" min="0.8" max="2.5" step="0.05"></div>
-      <div class="k-row"><label>ช่องว่างระหว่างหน้าในโหมดจัดหน้า (px)</label><input type="number" id="st-sppagegap" class="k-narrow" min="8" max="120" step="2"></div>
-      <div class="k-hint k-full" id="st-page-info" style="margin-top:8px"></div>
-      <div class="k-set-sub k-full">เลขฉาก (Scene Number)</div>
-      <div class="k-row"><label>แสดงเลขฉากข้างหัวฉาก<span class="k-hint">เลขจะอยู่ทั้งซ้ายและขวาของบรรทัดหัวฉาก</span></label><input type="checkbox" id="st-sn-show"></div>
-      <div class="k-row"><label>ท้ายเลข<span class="k-hint">เช่น ว่าง หรือ "."</span></label><input type="text" id="st-sn-suffix" class="k-narrow"></div>
-      <div class="k-row"><label>ซ้าย: ระยะจากขอบกระดาษซ้าย (นิ้ว)</label><input type="number" id="st-sn-left" class="k-narrow" min="0" max="5" step="0.05"></div>
-      <div class="k-row"><label>ขวา: ระยะจากขอบกระดาษขวา (นิ้ว)</label><input type="number" id="st-sn-right" class="k-narrow" min="0" max="5" step="0.05"></div>
-      <div class="k-set-sub k-full">เลขหน้า (Page Number)</div>
-      <div class="k-row"><label>แสดงเลขหน้า<span class="k-hint">มีเฉพาะไฟล์ที่เป็นฉาก · เลขเริ่มต้นตั้งรายไฟล์ที่ "คุณสมบัติฉาก"</span></label><input type="checkbox" id="st-pn-show"></div>
-      <div class="k-row"><label>ใส่เลขบนหน้าแรกด้วย<span class="k-hint">ธรรมเนียมบท: หน้าแรกไม่ใส่เลข</span></label><input type="checkbox" id="st-pn-first"></div>
-      <div class="k-row"><label>ระยะจากขอบขวา (นิ้ว)</label><input type="number" id="st-pn-right" class="k-narrow" min="0" max="5" step="0.05"></div>
-      <div class="k-row"><label>ระยะจากขอบบน (นิ้ว)</label><input type="number" id="st-pn-top" class="k-narrow" min="0" max="5" step="0.05"></div>
-      <div class="k-row"><label>ท้ายเลข</label><input type="text" id="st-pn-suffix" class="k-narrow"></div>
-      <div class="k-set-sub">[84] กฎการตัดหน้า (widow / orphan)</div>
-      <div class="k-set-grid2">
-        <div class="k-row"><label>บรรยาย: เหลือท้ายหน้าอย่างน้อย</label><input type="number" id="st-pb-ab" class="k-narrow" min="0" max="20"></div>
-        <div class="k-row"><label>บรรยาย: ยกไปหน้าใหม่อย่างน้อย</label><input type="number" id="st-pb-at" class="k-narrow" min="0" max="20"></div>
-        <div class="k-row"><label>บทพูด: เหลือท้ายหน้าอย่างน้อย</label><input type="number" id="st-pb-db" class="k-narrow" min="0" max="20"></div>
-        <div class="k-row"><label>บทพูด: ยกไปหน้าใหม่อย่างน้อย</label><input type="number" id="st-pb-dt" class="k-narrow" min="0" max="20"></div>
-        <div class="k-row"><label>ขีดท้ายบรรทัดติดกันไม่เกิน</label><input type="number" id="st-pb-hy" class="k-narrow" min="0" max="10"></div>
-        <div class="k-row"><label>หัวฉากท้ายหน้าต้องมีเนื้อตาม</label><input type="number" id="st-pb-ks" class="k-narrow" min="0" max="20"></div>
-      </div>
-      <div class="k-set-sub">[92] ข้อความมาตรฐาน</div>
-      <div class="k-row"><label>ท้ายหน้าเมื่อฉากต่อเนื่อง</label><input type="text" id="st-str-cb"></div>
-      <div class="k-row"><label>ต้นหน้าเมื่อฉากต่อเนื่อง</label><input type="text" id="st-str-ct"></div>
-      <div class="k-row"><label>บทพูดยังไม่จบ (MORE)</label><input type="text" id="st-str-more"></div>
-      <div class="k-row"><label>ทวนชื่อตัวละคร (cont'd)</label><input type="text" id="st-str-contd"></div>
-      <div class="k-row"><label>หัวข้อ Scene / Time (หน้ารายชื่อ)</label>
-        <span><input type="text" id="st-str-scene" style="width:46%"> <input type="text" id="st-str-time" style="width:46%"></span></div>
-      <div class="k-full" style="margin-top:12px; text-align:right"><button id="st-page-reset" class="k-reset-btn">↺ คืนค่าเริ่มต้น</button></div>
-    </div>
-    <div class="k-set-page k-set-2col" data-p="prose">
-      <div class="k-hint k-full" style="margin-bottom:10px">
-        [16–24] รูปแบบของ "เนื้อเรื่องนิยาย" — ย่อหน้าบรรทัดแรก · ช่วงบรรทัด · หัวข้อ · ยกคำพูด
-        · ค่าที่ตั้งที่นี่ใช้ทั้งบนจอและตอนส่งออก HTML (WYSIWYG)</div>
-      <div class="k-set-sub k-full">เนื้อเรื่อง</div>
-      <div class="k-row"><label>ฟอนต์นิยาย<span class="k-hint">ว่าง = ตัวพิมพ์สัดส่วนมาตรฐาน (Sarabun/Georgia) ไม่ใช่ Courier ของบท</span></label><select id="st-pr-font" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>ขนาด (pt)</label><input type="number" id="st-pr-pt" class="k-narrow" min="6" max="48" step="0.5"></div>
-      <div class="k-row"><label>ช่วงบรรทัด<span class="k-hint">1.0 = ชิด · 1.75 = ปกติ · 2.0 = เว้นบรรทัดคู่</span></label><input type="number" id="st-pr-lh" class="k-narrow" min="0.8" max="4" step="0.05"></div>
-      <div class="k-row"><label>ระยะระหว่างย่อหน้า (em)<span class="k-hint">นิยายมาตรฐาน = 0 (ใช้ย่อหน้าแทนการเว้นบรรทัด)</span></label><input type="number" id="st-pr-para" class="k-narrow" min="0" max="4" step="0.05"></div>
-      <div class="k-row"><label>ย่อหน้าบรรทัดแรก (นิ้ว)<span class="k-hint">มาตรฐาน 0.3–0.5 นิ้ว · 0 = ไม่ย่อ</span></label><input type="number" id="st-pr-indent" class="k-narrow" min="0" max="3" step="0.05"></div>
-      <div class="k-row"><label>ย่อหน้าแรกหลังหัวข้อด้วย<span class="k-hint">ธรรมเนียมสากล: ย่อหน้าแรกของบทไม่ย่อ</span></label><input type="checkbox" id="st-pr-indent-h"></div>
-      <div class="k-row"><label>จัดหน้าเริ่มต้น</label><select id="st-pr-align" class="k-dlg-select"><option value="left">ชิดซ้าย</option><option value="justify">เต็มบรรทัด</option></select></div>
-      <div class="k-set-sub k-full">หัวข้อ (h1–h6)</div>
-      <div class="k-row"><label>ฟอนต์หัวข้อ<span class="k-hint">ว่าง = เหมือนเนื้อเรื่อง</span></label><select id="st-pr-hfont" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>สีหัวข้อ<span class="k-hint">ว่าง = ใช้สีของธีม</span></label><input type="text" id="st-pr-hcolor" class="k-narrow" placeholder="#c8792f"></div>
-      <div class="k-full"><table class="k-sp-cycle-tbl" id="st-pr-heads">
-        <thead><tr><th>ระดับ</th><th>ขนาด (เท่า)</th><th>หนา</th><th>เอียง</th><th>เว้นก่อน (em)</th><th>เว้นหลัง (em)</th><th>จัดหน้า</th></tr></thead>
-        <tbody></tbody></table></div>
-      <div class="k-row"><label>เติมเลขบทอัตโนมัติ<span class="k-hint">วาดด้วย CSS — ไม่เขียนตัวเลขลงไฟล์</span></label><input type="checkbox" id="st-pr-hnum"></div>
-      <div class="k-row"><label>รูปแบบเลขบท<span class="k-hint">ใช้ {n}</span></label><input type="text" id="st-pr-hnumfmt"></div>
-      <div class="k-row"><label>ใส่เลขให้หัวข้อระดับ</label><input type="number" id="st-pr-hnumlv" class="k-narrow" min="1" max="6"></div>
-      <div class="k-set-sub k-full">ยกคำพูด (Blockquote)</div>
-      <div class="k-row"><label>ตัวเอียง</label><input type="checkbox" id="st-pr-qi"></div>
-      <div class="k-row"><label>มีเส้นขอบซ้าย</label><input type="checkbox" id="st-pr-qb"></div>
-      <div class="k-row"><label>ระยะเยื้อง (นิ้ว)</label><input type="number" id="st-pr-qind" class="k-narrow" min="0" max="3" step="0.05"></div>
-      <div class="k-row"><label>สีตัวอักษร<span class="k-hint">ว่าง = ใช้สีของธีม</span></label><input type="text" id="st-pr-qcolor" class="k-narrow" placeholder="#c8792f"></div>
-      <div class="k-set-sub k-full">เลขหน้า (มุมมองหน้ากระดาษของนิยาย)</div>
-      <div class="k-row"><label>แสดงเลขหน้า</label><input type="checkbox" id="st-pr-pgnum"></div>
-      <div class="k-row"><label>ใส่เลขบนหน้าแรกด้วย</label><input type="checkbox" id="st-pr-pgfirst"></div>
-      <div class="k-hint k-full" id="st-pr-info" style="margin-top:8px"></div>
-      <div class="k-full" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap">
-        <button id="st-pr-preset-novel" class="k-key-btn">📖 ตั้งเป็นแบบนิยายมาตรฐาน</button>
-        <button id="st-pr-preset-ms" class="k-key-btn">📄 ต้นฉบับส่งสำนักพิมพ์ (เว้นบรรทัดคู่)</button>
-        <button id="st-pr-reset" class="k-reset-btn">↺ คืนค่าเริ่มต้น</button>
-      </div>
-    </div>
-    <div class="k-set-page" data-p="spfmt">
-      <div class="k-hint" style="margin-bottom:10px">[81][82][83] ระยะเยื้อง (วัดจากขอบกระดาษ) · ความกว้าง · ระยะเว้นบรรทัด (10 = 1 บรรทัด) · ตัวอักษรบนจอ / ตอนพิมพ์</div>
-      <div class="k-spfmt-scroll">
-        <table class="k-spfmt-tbl" id="st-spfmt">
-          <thead><tr>
-            <th rowspan="2">Element</th><th rowspan="2">เยื้อง"</th><th rowspan="2">กว้าง"</th>
-            <th rowspan="2">เว้นก่อน</th><th rowspan="2">ระยะบรรทัด</th>
-            <th colspan="4">บนจอ</th><th colspan="4">ตอนพิมพ์</th>
-          </tr><tr>
-            <th>ใหญ่</th><th>หนา</th><th>เอียง</th><th>ขีด</th>
-            <th>ใหญ่</th><th>หนา</th><th>เอียง</th><th>ขีด</th>
-          </tr></thead><tbody></tbody>
-        </table>
-      </div>
-      <div style="margin-top:12px; text-align:right"><button id="st-spfmt-reset" class="k-reset-btn">↺ คืนค่าเริ่มต้น</button></div>
-    </div>
-    <div class="k-set-page" data-p="sp">
-      <div class="k-row"><label>เปิดระบบปุ่มสลับ element<span class="k-hint">ปิด = Enter ขึ้นบรรทัดใหม่ชนิดเดิม · ปุ่มอื่นไม่ทำงาน</span></label><input type="checkbox" id="st-spcycle-on"></div>
-      <div class="k-set-sub">ปุ่มที่ใช้ (กด "เปลี่ยน" แล้วกดปุ่มใหม่)</div>
-      <div id="st-spkeys"></div>
-      <div class="k-hint" style="margin:12px 0">ควบคุมว่าปุ่มแต่ละตัวจะสร้างหรือสลับเป็น element ใด</div>
-      <table class="k-sp-cycle-tbl" id="st-spcycle"><thead><tr><th>Element</th><th id="st-hd-enter">Enter →</th><th id="st-hd-tab">Tab →</th><th id="st-hd-stab">Shift+Tab →</th></tr></thead><tbody></tbody></table>
-      <div style="margin-top:12px; text-align:right"><button id="st-spcycle-reset" class="k-reset-btn">↺ คืนค่าเริ่มต้น</button></div>
-    </div>
-    <div class="k-set-page" data-p="fonts">
-      <div class="k-hint" style="margin-bottom:10px">
-        ฟอนต์บทมาตรฐาน (Courier) ไม่มีอักษรไทย — กำหนดเองได้ว่า "ช่วงอักขระไหน ใช้ฟอนต์อะไร"
-        เพิ่มได้ไม่จำกัด · ใช้ได้ทั้งโหมดนิยายและบทภาพยนตร์ · แถวบนสุดมีลำดับก่อน</div>
-      <div id="st-fonts-list"></div>
-      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
-        <button id="st-fonts-add" class="k-key-btn">➕ เพิ่มแถว</button>
-        <button id="st-fonts-import" class="k-key-btn">📁 นำเข้าไฟล์ฟอนต์เข้าโปรเจกต์…</button>
-        <button id="st-fonts-reset" class="k-reset-btn">↺ คืนค่าเริ่มต้น</button>
-      </div>
-      <div class="k-hint" id="st-fonts-preview" style="margin-top:14px"></div>
-      <div id="st-fonts-sample" style="margin-top:6px; font-size:22px; line-height:1.7"></div>
-    </div>
-    <div class="k-set-page" data-p="lang">
-      <div class="k-row"><label>${t('settings.languageSelect')}</label>
-        <select id="st-lang"></select>
-      </div>
-      <div class="k-hint" style="margin-top:10px">${T`ภาษาอ่านจาก **ชื่อไฟล์** ในโฟลเดอร์ languages — วางไฟล์ \`k2_<รหัสภาษา>.csv\` เพิ่ม (เช่น k2_ja.csv) แล้วเปิดโปรแกรมใหม่ ก็มีภาษานั้นเลย ไม่ต้องติดตั้งอะไร`}</div>
-      <div id="st-lang-dirs" class="k-hint" style="margin-top:6px; opacity:.7; font-size:11px"></div>
-      <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
-        <button id="st-lang-export" class="cmp-mini">${T`📤 ส่งออกไฟล์แปล (CSV)`}</button>
-        <button id="st-lang-folder" class="cmp-mini">${T`📁 เปิดโฟลเดอร์ภาษา`}</button>
-        <button id="st-lang-reload" class="cmp-mini">${T`↻ โหลดไฟล์ภาษาใหม่`}</button>
-      </div>
-    </div>
-    <div class="k-set-page" data-p="keys">
-      <div class="k-hint" style="margin-bottom:10px">${t('settings.shortcutsHint')}</div>
-      <div id="st-keys"></div>
-    </div>
-    <div class="k-set-page" data-p="netcol">
-      <div class="k-hint" style="margin-bottom:10px">สีและการควบคุมของ Story Network — ช่องทั้งหมดสร้างจากนิยามกลาง (network-theme.js) จึงครบทุกสีที่ผังใช้จริงเสมอ</div>
-      <div class="k-set-sub k-full">🖱 การควบคุมด้วยเมาส์</div>
-      <div class="k-row"><label>ปุ่มหมุนมุมมอง 3D</label><select id="st-net-orbit" class="k-dlg-select"></select></div>
-      <div class="k-row"><label>ปุ่มเลื่อนผัง (แพน)</label><select id="st-net-pan" class="k-dlg-select"></select></div>
-      <div class="k-hint k-full" id="st-net-hint" style="margin:2px 0 10px"></div>
-      <div id="st-netcol-body"></div>
-    </div>
-    </div>
-    <div class="k-dlg-btns"><button class="k-cancel">${t('dialogs.cancel')}</button><button class="k-ok">${t('dialogs.save')}</button></div>`;
+  box.innerHTML = tf('ui.dlg.alphaItemLevelUser', t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save'));
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);
@@ -357,12 +137,12 @@ export function settingsDialog(openTab) {
     const fs = q('#st-fontfamily'); if (!fs) return;
     const spFs = q('#st-spfontfamily');
     const builtin = [
-      { name: T`ค่าเริ่มต้น (Courier Prime 12pt)`, value: '' },
-      { name: T`Courier Prime (ฝังมากับโปรแกรม)`, value: DEFAULT_SCRIPT_FONT },
-      { name: T`Courier Thai Mono (ไทย · ฝังมากับโปรแกรม)`, value: '"Courier Thai Mono", "Courier Prime", monospace' },
-      { name: T`Courier Thai Proportional (ไทย · ฝังมากับโปรแกรม)`, value: '"Courier Thai Proportional", "Courier Prime", monospace' },
+      { name: t('ui.dlg.defaultCourierPrimePt'), value: '' },
+      { name: t('ui.dlg.courierPrimeMoreApp'), value: DEFAULT_SCRIPT_FONT },
+      { name: t('ui.dlg.courierThaiMonoMore'), value: '"Courier Thai Mono", "Courier Prime", monospace' },
+      { name: t('ui.dlg.courierThaiProportionalMore'), value: '"Courier Thai Proportional", "Courier Prime", monospace' },
       // [alpha.60r3a] ฟอนต์ระบบที่วางวรรณยุกต์ไทยได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ แต่ถ้าเครื่องมีก็ใช้ได้เลย
-      { name: T`Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)`, value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+      { name: t('ui.common.ayuthayaMacOSNotFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
       { name: 'Thonburi (macOS)', value: 'Thonburi, "Leelawadee UI", sans-serif' },
       { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
       { name: 'Sarabun', value: 'Sarabun, sans-serif' },
@@ -379,7 +159,7 @@ export function settingsDialog(openTab) {
         const fontFiles = await kapi.listFiles(fontDir);
         for (const f of fontFiles) {
           const name = f.replace(/\.[^.]+$/, '');
-          builtin.push({ name: name + T` (โปรเจกต์)`, value: '"' + name + '", sans-serif' });
+          builtin.push({ name: name + t('ui.dlg.project'), value: '"' + name + '", sans-serif' });
         }
       }
     } catch {}
@@ -395,7 +175,7 @@ export function settingsDialog(openTab) {
         const opt = document.createElement('option');
         opt.value = f.value;
         // ฟอนต์บทหนังค่าว่าง = Courier New ตามมาตรฐานบท (ไม่ใช่ Segoe UI แบบนิยาย)
-        opt.textContent = f.value === '' ? T`ค่าเริ่มต้นบทหนัง (Courier Prime 12pt)` : f.name;
+        opt.textContent = f.value === '' ? t('ui.dlg.defaultChapterFilmCourier') : f.name;
         if (f.value === (origSpFontFamily || '')) opt.selected = true;
         spFs.appendChild(opt);
       }
@@ -466,17 +246,17 @@ export function settingsDialog(openTab) {
   const origProse = JSON.parse(JSON.stringify(s.prose || {}));
   const P = mergeProseFormat(s.prose);
   const PROSE_FONTS = [
-    { name: T`ค่าเริ่มต้นนิยาย (ตัวพิมพ์สัดส่วน)`, value: '' },
+    { name: t('ui.dlg.defaultNovelCaseRatio'), value: '' },
     { name: 'Sarabun', value: '"Sarabun", sans-serif' },
     { name: 'TH Sarabun New', value: '"TH Sarabun New", sans-serif' },
-    { name: T`Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)`, value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+    { name: t('ui.common.ayuthayaMacOSNotFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
     { name: 'Noto Serif Thai', value: '"Noto Serif Thai", serif' },
     { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
     { name: 'Leelawadee UI', value: '"Leelawadee UI", sans-serif' },
     { name: 'Georgia', value: 'Georgia, serif' },
     { name: 'Times New Roman', value: '"Times New Roman", serif' },
     { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
-    { name: T`Courier Prime (แบบบทภาพยนตร์)`, value: DEFAULT_SCRIPT_FONT },
+    { name: t('ui.dlg.courierPrimeStyleScreenplay'), value: DEFAULT_SCRIPT_FONT },
   ];
   const fillFontSel = (sel, val) => {
     if (!sel) return;
@@ -498,7 +278,7 @@ export function settingsDialog(openTab) {
   q('#st-pr-align').value = P.align;
   q('#st-pr-hcolor').value = P.headingColor || '';
   q('#st-pr-hnum').checked = !!P.headingNumber;
-  q('#st-pr-hnumfmt').value = P.headingNumberFormat || T`บทที่ {n}`;
+  q('#st-pr-hnumfmt').value = P.headingNumberFormat || t('ui.common.chapterN');
   q('#st-pr-hnumlv').value = P.headingNumberLevel;
   q('#st-pr-qi').checked = !!P.quote.italic;
   q('#st-pr-qb').checked = !!P.quote.border;
@@ -532,7 +312,7 @@ export function settingsDialog(openTab) {
       td(mkNum(h.before, 0, 6, 0.1, (v) => { h.before = Number.isFinite(v) ? v : 0; }));
       td(mkNum(h.after, 0, 6, 0.1, (v) => { h.after = Number.isFinite(v) ? v : 0; }));
       const al = document.createElement('select');
-      for (const [v, lb] of [['', T`ตามเนื้อเรื่อง`], ['left', T`ชิดซ้าย`], ['center', T`กึ่งกลาง`], ['right', T`ชิดขวา`]]) {
+      for (const [v, lb] of [['', t('ui.dlg.bodyStory')], ['left', t('ui.common.alignLeft')], ['center', t('ui.common.center')], ['right', t('ui.common.right2')]]) {
         const o = document.createElement('option'); o.value = v; o.textContent = lb;
         if (v === (h.align || '')) o.selected = true; al.appendChild(o);
       }
@@ -553,7 +333,7 @@ export function settingsDialog(openTab) {
     P.headingFont = q('#st-pr-hfont').value || '';
     P.headingColor = q('#st-pr-hcolor').value.trim();
     P.headingNumber = q('#st-pr-hnum').checked;
-    P.headingNumberFormat = q('#st-pr-hnumfmt').value || T`บทที่ {n}`;
+    P.headingNumberFormat = q('#st-pr-hnumfmt').value || t('ui.common.chapterN');
     P.headingNumberLevel = parseInt(q('#st-pr-hnumlv').value, 10) || 1;
     P.quote.italic = q('#st-pr-qi').checked;
     P.quote.border = q('#st-pr-qb').checked;
@@ -569,8 +349,8 @@ export function settingsDialog(openTab) {
     const paper = PAPER_SIZES[W.paperSize] || PAPER_SIZES.letter;
     const pp = W.paperSize === 'custom' ? W.customPaper : paper;
     q('#st-pr-info').textContent =
-      T`≈ ${proseLinesPerPage(f, pp, W.margins)} บรรทัด/หน้า · ` +
-      T`≈ ${proseCharsPerLine(f, pp, W.margins)} ตัวอักษร/บรรทัด (โดยประมาณ)`;
+      tf('ui.dlg.linePage2', proseLinesPerPage(f, pp, W.margins)) +
+      tf('ui.dlg.charLine', proseCharsPerLine(f, pp, W.margins));
   };
   for (const id of ['#st-pr-font', '#st-pr-pt', '#st-pr-lh', '#st-pr-para', '#st-pr-indent',
                     '#st-pr-indent-h', '#st-pr-align', '#st-pr-hfont', '#st-pr-hcolor',
@@ -632,9 +412,9 @@ export function settingsDialog(openTab) {
                                lineHeight: W.spLineHeight });
     q('#st-paper-custom').style.display = W.paperSize === 'custom' ? '' : 'none';
     q('#st-page-info').textContent =
-      T`พื้นที่พิมพ์ ${(fmt.paper.width - W.margins.left - W.margins.right).toFixed(2)} × ` +
-      T`${(fmt.paper.height - W.margins.top - W.margins.bottom).toFixed(2)} นิ้ว · ` +
-      T`${formatLines(fmt)} บรรทัด/หน้า`;
+      tf('ui.dlg.areaPrint', (fmt.paper.width - W.margins.left - W.margins.right).toFixed(2)) +
+      tf('ui.dlg.inch', (fmt.paper.height - W.margins.top - W.margins.bottom).toFixed(2)) +
+      tf('ui.dlg.linePage', formatLines(fmt));
   };
   paperSel.onchange = () => { W.paperSize = paperSel.value; pageInfo(); previewPage(); };
   const numIn = (sel, get, set, step) => {
@@ -651,7 +431,7 @@ export function settingsDialog(openTab) {
     numIn('#st-mg-' + side, () => W.margins[side], (v) => { W.margins[side] = v; syncMarginPreset(); });
   // ---- [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป ----
   const mgPreset = q('#st-mg-preset');
-  mgPreset.append(el('option', '', T`— ตั้งเอง (Custom) —`));
+  mgPreset.append(el('option', '', t('ui.dlg.setCustom')));
   for (const [key, label] of marginPresetOptions()) {
     const o = el('option', '', label); o.value = key; mgPreset.append(o);
   }
@@ -767,9 +547,9 @@ export function settingsDialog(openTab) {
   // ---- [แก้ไข feature 1] ปุ่มสลับ element ตั้งเองได้ + สวิตช์เปิด/ปิด ----
   q('#st-spcycle-on').checked = W.cycleOn;
   q('#st-spcycle-on').onchange = () => { W.cycleOn = q('#st-spcycle-on').checked; };
-  const KEY_LABELS = { enter: T`ไป element ถัดไป (เดิม Enter)`,
-                       tab: T`สลับไปข้างหน้า (เดิม Tab)`,
-                       shiftTab: T`สลับย้อนกลับ (เดิม Shift+Tab)` };
+  const KEY_LABELS = { enter: t('ui.dlg.elementPrevEnter'),
+                       tab: t('ui.dlg.togglePagePrevTab'),
+                       shiftTab: t('ui.dlg.toggleUndoPrevShift') };
   function renderSpKeys() {
     const host = q('#st-spkeys'); host.innerHTML = '';
     for (const dir of ['enter', 'tab', 'shiftTab']) {
@@ -777,11 +557,11 @@ export function settingsDialog(openTab) {
       row.append(el('span', 'k-key-label', KEY_LABELS[dir]));
       const accel = el('span', 'k-key-accel', spKeyLabel(W.keys[dir]));
       row.append(accel);
-      const edit = el('button', 'k-key-btn', T`เปลี่ยน`);
+      const edit = el('button', 'k-key-btn', t('ui.dlg.change'));
       const reset = el('button', 'k-key-btn', '↺');
-      reset.title = T`คืนค่าเริ่มต้น`;
+      reset.title = t('ui.dlg.restoreDefault');
       edit.onclick = () => {
-        accel.textContent = T`กดปุ่มที่ต้องการ…`; accel.classList.add('rec');
+        accel.textContent = t('ui.dlg.pressBtnNeed'); accel.classList.add('rec');
         const grab = (e) => {
           e.preventDefault(); e.stopPropagation();
           if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
@@ -869,20 +649,20 @@ export function settingsDialog(openTab) {
     applyLangFonts(W.langFonts, langFontUrl);
     const usable = W.langFonts.filter((r) => r.enabled !== false && (r.builtin || r.file || r.family));
     q('#st-fonts-preview').textContent = usable.length
-      ? T`ใช้อยู่ ${usable.length} แถว — ตัวอย่าง (ไทยผสมอังกฤษ):`
-      : T`ยังไม่ได้กำหนดแถวไหน — ใช้ฟอนต์ตามค่าในแท็บ "การเขียน"`;
+      ? tf('ui.dlg.useRowSampleEnglish', usable.length)
+      : t('ui.dlg.cantDefineRowUse');
     const sample = q('#st-fonts-sample');
-    sample.textContent = T`INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123`;
+    sample.textContent = t('ui.dlg.iNTNightSceneOne');
     sample.style.fontFamily = `"${LANG_FAMILY}", ` + (q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT);
   };
   function renderFonts() {
     fontsHost.innerHTML = '';
-    if (!W.langFonts.length) fontsHost.append(el('div', 'cmp-empty', T`(ยังไม่มีแถว — กด "เพิ่มแถว")`));
+    if (!W.langFonts.length) fontsHost.append(el('div', 'cmp-empty', t('ui.dlg.notHasRowPress')));
     W.langFonts.forEach((row, i) => {
       const r = el('div', 'k-font-row');
       // เปิด/ปิดแถว
       const on = el('input'); on.type = 'checkbox'; on.checked = row.enabled !== false;
-      on.title = T`ใช้แถวนี้`;
+      on.title = t('ui.dlg.useRow');
       on.onchange = () => { row.enabled = on.checked; previewFonts(); };
       r.append(on);
       // ภาษา / ช่วงอักขระ
@@ -890,7 +670,7 @@ export function settingsDialog(openTab) {
       for (const p of SCRIPT_PRESETS) {
         const o = el('option', null, p.label); o.value = p.range; scriptSel.append(o);
       }
-      const custom = el('option', null, T`กำหนดช่วงเอง…`); custom.value = '__custom'; scriptSel.append(custom);
+      const custom = el('option', null, t('ui.dlg.defineRange')); custom.value = '__custom'; scriptSel.append(custom);
       const known = SCRIPT_PRESETS.find((p) => p.range === row.range);
       scriptSel.value = known ? known.range : '__custom';
       const rangeIn = el('input', 'k-font-range');
@@ -912,14 +692,14 @@ export function settingsDialog(openTab) {
       // ฟอนต์: ฝังมากับโปรแกรม / ไฟล์ในโปรเจกต์ / ชื่อฟอนต์ที่ลงในเครื่อง
       const fontSel = el('select', 'k-dlg-select k-font-pick');
       const addOpt = (val, text) => { const o = el('option', null, text); o.value = val; fontSel.append(o); };
-      addOpt('', T`— ใช้ฟอนต์ที่ลงในเครื่อง (พิมพ์ชื่อ) —`);
+      addOpt('', t('ui.dlg.useFontPrintName'));
       for (const b of BUILTIN_FONT_FILES) addOpt('b:' + b.file, b.label);
       // [alpha.60r3a] ฟอนต์ไทยของระบบ (Ayuthaya ฯลฯ) — ใช้ได้เมื่อเครื่องมีติดตั้งอยู่แล้ว
       for (const f of SYSTEM_THAI_FONTS) addOpt('f:' + f.family, f.label);
-      for (const f of projectFonts) addOpt('p:' + f, f + T` (โปรเจกต์)`);
+      for (const f of projectFonts) addOpt('p:' + f, f + t('ui.dlg.project'));
       fontSel.value = row.builtin ? 'b:' + row.builtin : (row.file ? 'p:' + row.file : '');
       const famIn = el('input', 'k-font-family');
-      famIn.value = row.family; famIn.placeholder = T`เช่น TH Sarabun New`;
+      famIn.value = row.family; famIn.placeholder = t('ui.dlg.egTHSarabunNew');
       famIn.style.display = fontSel.value ? 'none' : '';
       fontSel.onchange = () => {
         const v = fontSel.value;
@@ -931,7 +711,7 @@ export function settingsDialog(openTab) {
       famIn.oninput = () => { row.family = famIn.value; previewFonts(); };
       r.append(fontSel, famIn);
       // ลำดับ + ลบ
-      const up = el('button', 'k-key-btn', '↑'); up.title = T`เลื่อนขึ้น`;
+      const up = el('button', 'k-key-btn', '↑'); up.title = t('ui.common.scroll');
       up.onclick = () => { if (i > 0) { const [x] = W.langFonts.splice(i, 1); W.langFonts.splice(i - 1, 0, x); renderFonts(); previewFonts(); } };
       const del = el('button', 'k-danger-btn', '✕');
       del.onclick = () => { W.langFonts.splice(i, 1); renderFonts(); previewFonts(); };
@@ -941,7 +721,7 @@ export function settingsDialog(openTab) {
     previewFonts();
   }
   q('#st-fonts-add').onclick = () => {
-    W.langFonts.push({ id: 'f' + W.langFonts.length, label: T`ไทย`, range: 'U+0E00-0E7F',
+    W.langFonts.push({ id: 'f' + W.langFonts.length, label: t('ui.common.msg8'), range: 'U+0E00-0E7F',
                        builtin: 'CourierThaiMono.ttf', file: '', family: '', enabled: true });
     renderFonts();
   };
@@ -959,8 +739,8 @@ export function settingsDialog(openTab) {
       W.langFonts.push({ id: 'f' + W.langFonts.length, label: '', range: '',
                          builtin: '', file: name, family: '', enabled: true });
       renderFonts();
-      setStatus(T`นำเข้าฟอนต์ ` + name + T` แล้ว — เลือกช่วงอักขระที่จะใช้`);
-    } catch (e) { log('error', T`นำเข้าฟอนต์ล้มเหลว`, e); setStatus(T`นำเข้าฟอนต์ไม่สำเร็จ`); }
+      setStatus(t('ui.dlg.importFont') + name + t('ui.dlg.donePickRangeChar'));
+    } catch (e) { log('error', t('ui.dlg.importFontFail'), e); setStatus(t('ui.dlg.importFontNotOk')); }
   };
   (async () => {
     try {
@@ -990,7 +770,7 @@ export function settingsDialog(openTab) {
     try {
       const dirs = await kapi.langDirs(state.root || '');
       const box = q('#st-lang-dirs');
-      if (box) box.textContent = T`ที่ค้นหาไฟล์ภาษา: ` + (dirs || []).join('  ·  ');
+      if (box) box.textContent = t('ui.dlg.searchFileLang') + (dirs || []).join('  ·  ');
     } catch {}
   };
   fillLangs();
@@ -1003,13 +783,13 @@ export function settingsDialog(openTab) {
       for (const d of dirs) { const f = await kapi.join(d, want); if (await kapi.exists(f)) { target = f; break; } }
       if (!target) { for (const d of dirs) if (await kapi.exists(d)) { target = d; break; } }
       if (target) await kapi.revealInOS(target);
-      else setStatus(T`ยังไม่มีโฟลเดอร์ภาษา — กด "ส่งออกไฟล์แปล" เพื่อสร้างไฟล์ตั้งต้นก่อน`);
-    } catch (e) { log('warn', T`เปิดโฟลเดอร์ภาษาไม่ได้`, e); }
+      else setStatus(t('ui.dlg.notHasFolderLang'));
+    } catch (e) { log('warn', t('ui.dlg.openFolderLangCant'), e); }
   };
   if (q('#st-lang-reload')) q('#st-lang-reload').onclick = async () => {
     try { await kapi.langReload(); } catch {}          // main แคชเนื้อไฟล์ไว้ — ต้องบอกให้ทิ้งก่อน
     await loadLanguage(q('#st-lang').value || i18n.lang, state.root);
-    await fillLangs(); setStatus(T`โหลดไฟล์ภาษาใหม่แล้ว`);
+    await fillLangs(); setStatus(t('ui.dlg.loadFileLangNew'));
   };
   if (q('#st-lang-export')) q('#st-lang-export').onclick = () => exportLangCsv();
   const origLang = i18n.lang;
@@ -1174,7 +954,7 @@ export function settingsDialog(openTab) {
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
         await kapi.writeGlobalSettings(globals);
-      } catch (e) { log('warn', T`บันทึก global settings ไม่สำเร็จ`, e); }
+      } catch (e) { log('warn', t('ui.common.saveGlobalSettingsNot'), e); }
       applySettings();
       try { updatePageNumberHint(); refreshSpView(); } catch {}
       // [alpha.63r4] สี Story Network ที่เพิ่งตั้ง ต้องเห็นผลทันที ไม่ต้องปิด-เปิดแอป
@@ -1184,7 +964,7 @@ export function settingsDialog(openTab) {
       $('#projname').textContent = m.title;
       $('#tb-title').textContent = m.title + ' — Killian 2';
       // แดชบอร์ดเป็นแผงแล้ว (refreshDashboardIfOpen เมื่อมี export)
-    } catch (e) { log('error', T`บันทึกการตั้งค่าล้มเหลว`, e); }
+    } catch (e) { log('error', t('ui.dlg.saveSettingsFail'), e); }
     // ---- บันทึกภาษา ----
     const selLang = q('#st-lang')?.value;
     if (selLang && selLang !== origLang) {
@@ -1197,7 +977,7 @@ export function settingsDialog(openTab) {
       // → เปลี่ยนภาษาแล้วบางป้ายยังเป็นภาษาเดิมจนกว่าจะเริ่มใหม่ · ถามผู้ใช้ตรง ๆ ดีกว่าปล่อยให้งง
       // (โหมดเทสไม่ถาม — กล่องยืนยันจะค้างรอคลิกตลอดกาล ดูกับดักเทสข้อ 1)
       const inTest = location.search.includes('k2test') || !!globalThis.__k2testing;
-      if (!inTest && await confirmBox(T`เปลี่ยนภาษาแล้ว — เริ่มโปรแกรมใหม่เพื่อให้เปลี่ยนครบทุกจุดไหม`, T`เริ่มใหม่`)) {
+      if (!inTest && await confirmBox(t('ui.dlg.changeLangDoneStart'), t('ui.common.restart'))) {
         setTimeout(() => location.reload(), 150);
       }
     }
@@ -1219,7 +999,7 @@ export function settingsDialog(openTab) {
  * ที่ชื่อตรงกับรหัสภาษา) วางในโฟลเดอร์ languages แล้วเปิดโปรแกรมใหม่ — **ไม่ต้อง build**
  */
 export async function exportLangCsv(target) {
-  const code = target || (await ask(T`ส่งออกตารางแปลของภาษาไหน (รหัสภาษา เช่น en, ja)`,
+  const code = target || (await ask(t('ui.dlg.exportTableLangLang'),
                                     { value: i18n.lang === 'th' ? 'en' : i18n.lang })) || '';
   if (!code) return null;
   const src = {}, dst = {};
@@ -1238,7 +1018,7 @@ export async function exportLangCsv(target) {
   const text = '﻿' + rows.join('\r\n') + '\r\n';
   const out = await kapi.saveAsDialog(langFileName(code), 'csv');
   if (out) await kapi.writeFile(out, text);
-  if (out) setStatus(T`ส่งออกตารางแปล ${rows.length - 1} แถว → ${out}`);
+  if (out) setStatus(tf('ui.dlg.exportTableRow', rows.length - 1, out));
   return out;
 }
 
@@ -1302,7 +1082,7 @@ export async function fileVersionDialog(file, titleText, { onRestored = null } =
         setStatus(t('status.versionRestored')); refresh();
       };
       // เทียบกับฉากปัจจุบันแบบแยกจอจริง (ฉากซ้าย · เวอร์ชันเก่าขวา) — ข้อ 7
-      const bSplit = el('button', null, T`⇋ เทียบด้านขวา`); bSplit.title = T`เปิดเวอร์ชันนี้คู่กับไฟล์ปัจจุบัน`;
+      const bSplit = el('button', null, t('ui.dlg.compareRight')); bSplit.title = t('ui.dlg.openVersionPairFile');
       bSplit.onclick = async () => { ov.remove(); await openSnapshotRight(file, s); };
       const bDel = el('button', 'k-danger-btn', t('dialogs.delete')); bDel.onclick = async () => {
         if (await confirmBox(t('panel.confirmDelete'))) { await kapi.remove(s.path); refresh(); }
@@ -1328,7 +1108,7 @@ export async function showChangelog() {
 }
 
 export async function showLog() {
-  log('info', T`เปิดตัวดู log`);
+  log('info', t('ui.dlg.openItemViewLog'));
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide');
   const ttl = el('div', 'k-dlg-title', t('panel.logTitle'));

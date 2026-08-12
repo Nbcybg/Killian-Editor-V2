@@ -1,5 +1,5 @@
 // drafts.js — CRUD ฉบับร่าง: สร้าง/ลบ/เปลี่ยนชื่อ/ตั้ง primary
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { setStatus, state } from './core.js';
 import { confirmBox, ask } from './ui.js';
 
@@ -53,16 +53,16 @@ export async function createDraft(secPath, name, sourceDraft = null) {
   const draftRoot = await kapi.join(secPath, 'Draft');
   await kapi.mkdir(draftRoot);
   const newPath = await kapi.join(draftRoot, name);
-  if (await kapi.exists(newPath)) throw new Error(T`มีร่างชื่อนี้แล้ว`);
+  if (await kapi.exists(newPath)) throw new Error(t('ui.drafts.hasDraftNameDone'));
 
   if (sourceDraft) {
     const srcPath = await kapi.join(draftRoot, sourceDraft);
-    if (!(await kapi.exists(srcPath))) throw new Error(T`ไม่พบร่างต้นทาง`);
+    if (!(await kapi.exists(srcPath))) throw new Error(t('ui.drafts.notFoundDraftFrom'));
     await copyDraftContents(srcPath, newPath);
   } else {
     const { guid } = await import('./app.js');
-    const ch = { guid: guid(), title: T`บทที่หนึ่ง`, order: 1, status: 'Outline',
-                 act: 'I', date: '', isFavorite: false, folderName: T`01 - บทที่หนึ่ง` };
+    const ch = { guid: guid(), title: t('ui.common.chapterOne2'), order: 1, status: 'Outline',
+                 act: 'I', date: '', isFavorite: false, folderName: t('ui.common.chapterOne') };
     await kapi.mkdir(await kapi.join(newPath, 'Chapters', ch.folderName));
     await kapi.writeFile(await kapi.join(newPath, 'draft.json'),
       JSON.stringify({ chapters: [ch] }, null, 2));
@@ -77,9 +77,9 @@ export async function deleteDraft(secPath, name) {
   const sf = await kapi.join(secPath, 'section.json');
   let meta = {}; try { meta = await kapi.readJson(sf); } catch {}
   if ((meta.primaryDraft || 'default') === name) {
-    setStatus(T`ลบไม่ได้ — นี่คือร่างหลัก`); return false;
+    setStatus(t('ui.drafts.delCantDraftMain')); return false;
   }
-  if (!(await confirmBox(T`ลบร่าง “${name}” ทั้งร่าง ?`, T`ลบร่าง`))) return false;
+  if (!(await confirmBox(tf('ui.drafts.delDraftDraft', name), t('ui.drafts.delDraft')))) return false;
   const dPath = await kapi.join(secPath, 'Draft', name);
   const recycle = await kapi.join(state.root, 'Recycle', 'draft-' + Date.now().toString(36));
   await kapi.move(dPath, recycle);
@@ -90,7 +90,7 @@ export async function deleteDraft(secPath, name) {
 export async function renameDraft(secPath, oldName, newName) {
   const oldPath = await kapi.join(secPath, 'Draft', oldName);
   const newPath = await kapi.join(secPath, 'Draft', newName);
-  if (await kapi.exists(newPath)) { setStatus(T`มีร่างชื่อนี้แล้ว`); return false; }
+  if (await kapi.exists(newPath)) { setStatus(t('ui.drafts.hasDraftNameDone')); return false; }
   await kapi.move(oldPath, newPath);
   const sf = await kapi.join(secPath, 'section.json');
   let meta = {}; try { meta = await kapi.readJson(sf); } catch {}

@@ -9,7 +9,7 @@
 //   - ไม่งั้นแยกเลขตัวแรกจากข้อความ storyDate มาเทียบ (เช่น "วันที่ 3" → 3, "ปีที่ 1024" → 1024)
 //   - เท่ากันค่อยเทียบข้อความ
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 export const TIMELINE_VERSION = '1.0';
 
 // สีของ track (เลน) — วนใช้
@@ -62,7 +62,7 @@ export function mergeTimeline(events, sceneEvents) {
 }
 
 // จัดกลุ่มเป็นเลน (track) — คงลำดับ track ตามที่พบครั้งแรก, เลนว่าง ("") ใช้ชื่อ default
-export function groupByTrack(items, defaultLabel = T`ทั่วไป`) {
+export function groupByTrack(items, defaultLabel = t('ui.common.msg4')) {
   const order = [];
   const map = new Map();
   for (const it of items) {

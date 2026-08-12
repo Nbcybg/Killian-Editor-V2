@@ -5,7 +5,7 @@
 //   → รู้จัก aliases, เช็คขอบคำภาษาอังกฤษ, นับจำนวนครั้ง, และแคชลง project.khn.json
 //
 // "Real-time": วาดใหม่ทุกครั้งที่กลับมาที่แท็บนี้ + ทุกครั้งที่บันทึกไฟล์ (markCentralizeStale)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { ensureAutoLink, resetAutoLink } from './world-story/auto-link-ui.js';
 import { listScenes, listEntities, findScenePath } from './project-scan.js';
@@ -50,7 +50,7 @@ export function resetCentralize() {
  * (คงคำสั่งเดิมไว้เพื่อไม่ให้เมนู/คีย์ลัด/ปลั๊กอินที่เรียกอยู่พัง)
  */
 export async function openCentralizeUI() {
-  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
+  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
   const { openDashboard } = await import('./dashboard.js');
   await openDashboard();
   // วาดเสร็จแล้วค่อยเลื่อน — ส่วนศูนย์รวมอยู่ท้ายสุดของแผง
@@ -58,7 +58,7 @@ export async function openCentralizeUI() {
     const sec = document.querySelector('#dash-body .dash-cent');
     if (sec) sec.scrollIntoView({ block: 'start' });
   }, 60);
-  setStatus(T`ศูนย์รวมอยู่ในแดชบอร์ดแล้ว (ส่วนล่างของแผง)`);
+  setStatus(t('ui.central.hubDashboardDonePart'));
 }
 
 // เปิดฉากจาก sceneId (ผลลัพธ์ของ auto-link เก็บเป็น id ไม่ใช่ path)
@@ -67,7 +67,7 @@ async function openSceneById(sceneId, fallbackTitle) {
   if (hit && (await kapi.exists(hit.path))) {
     const { openScene } = await import('./app.js');
     openScene(hit.path, hit.title || fallbackTitle);
-  } else setStatus(T`ไม่พบไฟล์ฉาก`);
+  } else setStatus(t('ui.common.notFoundFileScene'));
 }
 
 /**
@@ -80,17 +80,17 @@ export async function renderCentralize(pane, opts = {}) {
   pane.append(wrap);
 
   const headRow = el('div', 'cent-head');
-  headRow.append(el('div', 'cent-title', T`📊 ศูนย์รวม`));
-  const liveDot = el('span', 'cent-live', T`● สด`);
-  liveDot.title = T`อัปเดตอัตโนมัติทุกครั้งที่บันทึกไฟล์`;
+  headRow.append(el('div', 'cent-title', t('ui.central.hub')));
+  const liveDot = el('span', 'cent-live', t('ui.central.fresh'));
+  liveDot.title = t('ui.central.updateAutoAllTimes');
   headRow.append(liveDot);
-  const refreshB = el('button', 'cent-refresh', T`🔄 สร้างดัชนีใหม่`);
+  const refreshB = el('button', 'cent-refresh', t('ui.central.newIndexNew'));
   refreshB.onclick = () => { resetAutoLink(); stale = true; renderCentralize(pane, opts); };
   headRow.append(refreshB);
   wrap.append(headRow);
 
   // ---- โหลดข้อมูลผ่านชั้นสแกนกลาง (project-scan) + Auto-link Engine ----
-  const loading = el('div', 'dim', T`กำลังสร้างดัชนีเชื่อมโยง…`);
+  const loading = el('div', 'dim', t('ui.central.busyNewIndexLink'));
   wrap.append(loading);
 
   let scenes = [], entities = [], autoLink = null;
@@ -103,34 +103,34 @@ export async function renderCentralize(pane, opts = {}) {
     autoLink = await ensureAutoLink();
     stale = false;
   } catch (e) {
-    log('error', T`centralize: สร้างดัชนีไม่สำเร็จ`, e);
+    log('error', t('ui.central.centralizeNewIndexNot'), e);
   }
   loading.remove();
 
   // ───────── แผง 1: สถิติสด ─────────
   const stats = el('div', 'cent-panel');
-  stats.append(el('div', 'cent-panel-title', T`📊 สถิติ`));
+  stats.append(el('div', 'cent-panel-title', t('ui.central.stats')));
   // listScenes คืนแถวดิบไว้ใน .row (ไม่ใช่ระดับบนสุด) — wordCount/status อยู่ในนั้น
   const words = scenes.reduce((n, s) => n + ((s.row && s.row.wordCount) || 0), 0);
   const byCat = {};
-  for (const e of entities) byCat[e.cat || e.entityTypeKey || T`อื่น ๆ`] = (byCat[e.cat || e.entityTypeKey || T`อื่น ๆ`] || 0) + 1;
+  for (const e of entities) byCat[e.cat || e.entityTypeKey || t('ui.common.other')] = (byCat[e.cat || e.entityTypeKey || t('ui.common.other')] || 0) + 1;
   const grid = el('div', 'cent-stats-grid');
   const statCard = (num, label) => {
     const c = el('div', 'cent-stat-card');
     c.append(el('div', 'cent-stat-num', String(num)), el('div', 'cent-stat-lbl', label));
     grid.append(c);
   };
-  statCard(scenes.length.toLocaleString(), T`ฉาก`);
-  statCard(words.toLocaleString(), T`คำ`);
+  statCard(scenes.length.toLocaleString(), t('ui.common.scene2'));
+  statCard(words.toLocaleString(), t('ui.common.word2'));
   statCard(entities.length.toLocaleString(), 'Wiki');
   if (autoLink) {
     const s = autoLink.stats();
-    statCard(s.links.toLocaleString(), T`จุดเชื่อมโยง`);
+    statCard(s.links.toLocaleString(), t('ui.central.dotLink'));
   }
   stats.append(grid);
   // แถวสรุปแบบบรรทัดเดียว — e2e เดิมอ้าง .cent-stat จึงคงชื่อคลาสไว้
   stats.append(el('div', 'cent-stat',
-    T`📄 ${scenes.length} ฉาก · 📝 ${words.toLocaleString()} คำ · 👤 ${byCat.characters || 0} ตัวละคร`));
+    tf('ui.central.sceneWordCharacter', scenes.length, words.toLocaleString(), byCat.characters || 0)));
   if (Object.keys(byCat).length) {
     stats.append(el('div', 'cent-stat',
       '🗂 ' + Object.entries(byCat).sort((a, b) => b[1] - a[1])
@@ -140,12 +140,12 @@ export async function renderCentralize(pane, opts = {}) {
 
   // ───────── แผง 2: Backlinks จาก Auto-link Engine ─────────
   const blinks = el('div', 'cent-panel');
-  blinks.append(el('div', 'cent-panel-title', T`🔗 Backlinks (ฉากที่อ้างถึง Wiki นี้)`));
+  blinks.append(el('div', 'cent-panel-title', t('ui.central.backlinksSceneToWiki')));
   const blList = el('div', 'cent-list');
   blinks.append(blList);
 
   if (!autoLink) {
-    blList.append(el('div', 'dim', T`สร้างดัชนีไม่สำเร็จ — กด "🔄 สร้างดัชนีใหม่"`));
+    blList.append(el('div', 'dim', t('ui.central.newIndexNotOk')));
   } else {
     // จัดอันดับเอนทิตี้ตามจำนวนฉากที่กล่าวถึง
     const ranked = entities
@@ -155,17 +155,17 @@ export async function renderCentralize(pane, opts = {}) {
 
     if (!ranked.length) {
       blList.append(el('div', 'dim',
-        T`ยังไม่มี backlinks — พิมพ์ชื่อตัวละคร/สถานที่ในฉากเพื่อให้ปรากฏที่นี่`));
+        t('ui.central.notHasBacklinksPrint')));
     } else {
       for (const { ent, links } of ranked.slice(0, 15)) {
         const row = el('div', 'cent-link-row');
         // ชื่อ entity + ชื่อฉากมาจากไฟล์ผู้ใช้ → ห้าม innerHTML
         const name = el('strong', null, ent.name);
-        row.append(name, el('span', null, T` ← ${links.length} ฉาก: `));
+        row.append(name, el('span', null, tf('ui.central.scene', links.length)));
         links.slice(0, 3).forEach((l, i) => {
           if (i) row.append(el('span', null, ', '));
           const a = el('span', 'cent-scene-link', l.title || l.sceneId);
-          a.title = T`กล่าวถึง ${l.count || 1} ครั้ง — คลิกเปิดฉาก`;
+          a.title = tf('ui.central.mentionTimesClickOpenScene', l.count || 1);
           a.onclick = () => openSceneById(l.sceneId, l.title);
           row.append(a);
         });
@@ -177,7 +177,7 @@ export async function renderCentralize(pane, opts = {}) {
       const orphans = entities.filter((e) => !autoLink.getRelatedScenes(e.path || e.id).length);
       if (orphans.length) {
         const row = el('div', 'cent-link-row cent-orphan');
-        row.append(el('strong', null, T`🕳 ยังไม่ถูกกล่าวถึงเลย`));
+        row.append(el('strong', null, t('ui.central.notMention')));
         row.append(el('span', null, ` (${orphans.length}): `
           + orphans.slice(0, 6).map((e) => e.name).join(', ')
           + (orphans.length > 6 ? ' …' : '')));
@@ -189,7 +189,7 @@ export async function renderCentralize(pane, opts = {}) {
 
   // ───────── แผง 3: สิ่งที่ต้องอัปเดต ─────────
   const todo = el('div', 'cent-panel');
-  todo.append(el('div', 'cent-panel-title', T`📋 สิ่งที่ต้องอัปเดต`));
+  todo.append(el('div', 'cent-panel-title', t('ui.central.thingMustUpdate')));
   const todoList = el('div', 'cent-list');
   const pending = [];
 
@@ -199,19 +199,19 @@ export async function renderCentralize(pane, opts = {}) {
   }
   // ฉากที่ยังไม่ได้ตั้งสถานะ
   const noStatus = scenes.filter((s) => !(s.row && s.row.status));
-  if (noStatus.length) pending.push({ text: T`📄 ${noStatus.length} ฉากยังไม่ได้ตั้งสถานะ` });
+  if (noStatus.length) pending.push({ text: tf('ui.central.sceneCantSetStatus', noStatus.length) });
   // ยังไม่ได้เขียนวันนี้
   if (state.meta && Array.isArray(state.meta.wordHistory) && state.meta.wordHistory.length) {
     const today = new Date().toISOString().slice(0, 10);
     const t2 = state.meta.wordHistory.find((w) => w.date === today);
-    if (!t2 || !t2.words) pending.push({ text: T`🔥 วันนี้ยังไม่ได้เขียน!` });
+    if (!t2 || !t2.words) pending.push({ text: t('ui.central.cantWrite') });
   }
   // การตัดสินใจล่าสุด (ข้อ 83)
   const cs = choiceStats();
-  if (cs.total) pending.push({ text: T`🎮 บันทึกการตัดสินใจไว้ ${cs.total} ครั้ง` });
+  if (cs.total) pending.push({ text: tf('ui.central.saveDecisionTimes', cs.total) });
 
   if (!pending.length) {
-    todoList.append(el('div', 'dim', T`✅ ทุกอย่างเป็นปัจจุบัน`));
+    todoList.append(el('div', 'dim', t('ui.central.allCurrent')));
   } else {
     for (const item of pending) {
       const d = el('div', 'cent-todo-item', item.text);

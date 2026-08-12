@@ -1,4 +1,6 @@
 // test/margin-presets.test.cjs — unit test ชุดระยะขอบสำเร็จรูป (alpha.60r2 · ข้อ 6)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');

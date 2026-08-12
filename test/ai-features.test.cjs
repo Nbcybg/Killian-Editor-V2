@@ -1,4 +1,6 @@
 // test/ai-features.test.cjs — ทดสอบ ai-plot / ai-dialogue / ai-character / ai-world / ai-chat (ข้อ 73-76,79)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // ใช้ client ปลอมทั้งหมด — ไม่ยิง API จริง ไม่เสียเงิน
 const path = require('path');
 const os = require('os');

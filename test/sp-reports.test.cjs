@@ -1,4 +1,6 @@
 // test/sp-reports.test.cjs — unit test รายงานบท (ข้อ 71 · 72 · 73)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');

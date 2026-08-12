@@ -1,4 +1,6 @@
 // test/sp-export.test.cjs — unit test ส่งออก FDX (67) / RTF (68) / PDF ลายน้ำ (70)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');

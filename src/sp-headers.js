@@ -7,21 +7,21 @@
 //
 // หน่วยระยะเป็น "นิ้ว" เหมือน sp-format.js ทั้งไฟล์ (xOffset = ขยับจากตำแหน่งตามการจัดหน้า)
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { mergeSpFormat, textWidth, lineHeightIn } from './sp-format.js';
 import { num } from './num.js';
 
 // ───────── ตัวแปรที่ใช้ได้ในข้อความหัวกระดาษ ─────────
 // เขียนได้ทั้ง ${PAGE} และ ${หน้า} — ตารางนี้เป็น "คำอธิบายให้ UI แสดง" ด้วย
 export const HEADER_VARS = [
-  { key: 'PAGE', th: T`หน้า`, label: T`เลขหน้าปัจจุบัน` },
-  { key: 'PAGES', th: T`จำนวนหน้า`, label: T`จำนวนหน้าทั้งหมด` },
-  { key: 'TITLE', th: T`เรื่อง`, label: T`ชื่อเรื่อง` },
-  { key: 'AUTHOR', th: T`ผู้เขียน`, label: T`ชื่อผู้เขียน` },
-  { key: 'DRAFT', th: T`ฉบับ`, label: T`ชื่อฉบับร่าง / รอบแก้` },
-  { key: 'DATE', th: T`วันที่`, label: T`วันที่ (ส่งเข้ามาตอนสร้าง)` },
-  { key: 'SCENE', th: T`ฉาก`, label: T`หัวฉากแรกของหน้านั้น` },
-  { key: 'COPYRIGHT', th: T`ลิขสิทธิ์`, label: T`ข้อความลิขสิทธิ์` },
+  { key: 'PAGE', th: t('ui.common.page'), label: t('ui.spHeaders.pageNumCurrent') },
+  { key: 'PAGES', th: t('ui.spHeaders.countPage'), label: t('ui.spHeaders.countPageAll') },
+  { key: 'TITLE', th: t('ui.common.story'), label: t('ui.common.title') },
+  { key: 'AUTHOR', th: t('ui.common.author'), label: t('ui.spHeaders.nameAuthor') },
+  { key: 'DRAFT', th: t('ui.spHeaders.edition'), label: t('ui.spHeaders.nameDraftRoundEdit') },
+  { key: 'DATE', th: t('ui.common.date'), label: t('ui.spHeaders.dateSendInAct') },
+  { key: 'SCENE', th: t('ui.common.scene2'), label: t('ui.spHeaders.headSceneFirstPage') },
+  { key: 'COPYRIGHT', th: t('ui.spHeaders.msg'), label: t('ui.spHeaders.text') },
 ];
 
 export const HEADER_ALIGNS = ['left', 'center', 'right'];

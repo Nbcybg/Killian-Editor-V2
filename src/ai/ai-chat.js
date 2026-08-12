@@ -2,13 +2,13 @@
 // spec: docs/79-ai-chat.md
 // แหล่งข้อมูล: ฉาก + วิกิ + เส้นเวลา + ตัวละคร → chunk → embed → เก็บใน VectorIndex (.ai-index.json)
 // ตอบพร้อมอ้างอิงที่มา · สตรีมได้ถ้า transport รองรับ (ไม่งั้นส่งก้อนเดียว UI เขียนแบบเดียวกัน)
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { VectorIndex, RagPipeline, buildContext, estimateTokens, INDEX_FILE } from './ai-core.js';
 
-const SYSTEM = T`คุณเป็นผู้ช่วยที่รู้จักโลกและเนื้อเรื่องของนักเขียนคนนี้เป็นอย่างดี `
-  + T`ตอบเป็นภาษาไทย ใช้เฉพาะข้อมูลอ้างอิงที่ให้มาเป็นหลัก `
-  + T`ถ้าข้อมูลไม่พอให้บอกตรง ๆ ว่าไม่พบในเรื่อง อย่าเดาแทนผู้เขียน `
-  + T`เมื่ออ้างถึงฉากหรือหน้าวิกิ ให้ระบุชื่อในวงเล็บเหลี่ยมตามที่ปรากฏในข้อมูลอ้างอิง`;
+const SYSTEM = t('ui.aiChat.youAssistantKnownWorld')
+  + t('ui.aiChat.replyThaiUseOnly')
+  + t('ui.aiChat.dataNotAtNot')
+  + t('ui.aiChat.toScenePageSpecify');
 
 export const MAX_HISTORY_TOKENS = 2000;
 
@@ -24,7 +24,7 @@ export function collectDocs(src = {}) {
     if (!s || !s.text) continue;
     docs.push({
       id: 'scene:' + s.id,
-      text: T`ฉาก: ${s.title || ''}\n${s.text}`,
+      text: tf('ui.aiChat.scene', s.title || '', s.text),
       meta: { kind: 'scene', title: s.title || s.id, sceneId: s.id, chapterId: s.chapterId || '', storyDate: s.storyDate || '' },
     });
   }
@@ -35,7 +35,7 @@ export function collectDocs(src = {}) {
     if (!body.trim()) continue;
     docs.push({
       id: 'wiki:' + (e.id || e.name),
-      text: T`หน้าวิกิ: ${e.name}\n${body}`,
+      text: tf('ui.aiChat.page', e.name, body),
       meta: { kind: 'wiki', title: e.name, entityId: e.id || '', category: e.entityTypeKey || '' },
     });
   }
@@ -44,7 +44,7 @@ export function collectDocs(src = {}) {
     if (!ev || !(ev.title || ev.desc)) continue;
     docs.push({
       id: 'event:' + (ev.id || ev.title),
-      text: T`เหตุการณ์: ${ev.title || ''}\nเวลา: ${ev.when || ''}${ev.whenEnd ? ' – ' + ev.whenEnd : ''}\n${ev.desc || ''}`,
+      text: tf('ui.aiChat.eventTime', ev.title || '', ev.when || '', ev.whenEnd ? ' – ' + ev.whenEnd : '', ev.desc || ''),
       meta: { kind: 'timeline', title: ev.title || '', when: ev.when || '', track: ev.track || '' },
     });
   }
@@ -72,11 +72,11 @@ export function trimHistory(history = [], maxTokens = MAX_HISTORY_TOKENS) {
  * @returns {{system, messages, contextText, sources}}
  */
 export function buildChatMessages(query, history = [], hits = [], opts = {}) {
-  const ctx = buildContext(hits, { maxTokens: opts.maxContextTokens || 2000, header: T`ข้อมูลอ้างอิงจากเรื่องนี้` });
+  const ctx = buildContext(hits, { maxTokens: opts.maxContextTokens || 2000, header: t('ui.aiChat.dataRefStory') });
   const messages = trimHistory(history, opts.maxHistoryTokens || MAX_HISTORY_TOKENS);
   const userContent = ctx.text
-    ? T`${ctx.text}\n\n### คำถาม\n${query}`
-    : T`### คำถาม\n${query}\n\n(ไม่พบข้อมูลอ้างอิงในโปรเจกต์ — ถ้าตอบไม่ได้ให้บอกตรง ๆ)`;
+    ? tf('ui.aiChat.wordAsk', ctx.text, query)
+    : tf('ui.aiChat.wordAskNotFound', query);
   messages.push({ role: 'user', content: userContent });
   return { system: opts.system || SYSTEM, messages, contextText: ctx.text, sources: ctx.sources };
 }
@@ -150,8 +150,8 @@ export class ChatSession {
  */
 export async function chat(query, history = [], options = {}) {
   const client = options.client;
-  if (!client) return { ok: false, text: '', sources: [], error: T`ไม่ได้ตั้งค่า AI client`, code: 'no-client', history };
-  if (!query || !String(query).trim()) return { ok: false, text: '', sources: [], error: T`ยังไม่ได้พิมพ์คำถาม`, code: 'empty', history };
+  if (!client) return { ok: false, text: '', sources: [], error: t('ui.common.cantSettingsAIClient'), code: 'no-client', history };
+  if (!query || !String(query).trim()) return { ok: false, text: '', sources: [], error: t('ui.aiChat.cantPrintWordAsk'), code: 'empty', history };
 
   let hits = options.hits || [];
   if (!hits.length && options.rag && typeof options.rag.retrieve === 'function') {

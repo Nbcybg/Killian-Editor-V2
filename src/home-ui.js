@@ -1,5 +1,5 @@
 // home-ui.js — หน้า Home แสดงรายการโปรเจกต์ทั้งหมดแบบ Grid (เหมือน Notion)
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { $, el, state, setStatus, log, t as tr } from './core.js';
 import { activate, closeTab, loadProject, newProject } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
@@ -7,8 +7,8 @@ import { exportProjectZip, importProjectZip } from './export-zip.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
 export const HOME_VIEWS = [
-  { id: 'card', icon: '▦', label: T`การ์ด` },
-  { id: 'list', icon: '☰', label: T`รายการ` },
+  { id: 'card', icon: '▦', label: t('ui.home.card') },
+  { id: 'list', icon: '☰', label: t('ui.common.list2') },
 ];
 /** โหมดที่ผู้ใช้เลือกไว้ล่าสุด (localStorage) — ค่าที่อ่านไม่รู้จักถือเป็น 'card' */
 export function homeView() {
@@ -43,25 +43,25 @@ export function buildHomeActions(opts = {}) {
   const viewWrap = el('div', 'home-view-modes');
   const viewBtns = {};
   for (const v of HOME_VIEWS) {
-    const b = mk('home-view-mode', v.icon + ' ' + v.label, T`มุมมอง` + v.label);
+    const b = mk('home-view-mode', v.icon + ' ' + v.label, t('ui.common.view') + v.label);
     b.dataset.view = v.id;
     b.onclick = () => applyView(v.id);
     viewBtns[v.id] = b;
     viewWrap.append(b);
   }
   // ── ค้นหาโปรเจกต์ (ถัดจากปุ่มมุมมอง) ──
-  const findBtn = mk('home-btn-find', T`🔍 ค้นหา`, T`ค้นหาโปรเจกต์จากชื่อ / ผู้เขียน / ที่อยู่ไฟล์`);
+  const findBtn = mk('home-btn-find', t('ui.home.search'), t('ui.home.searchProjectNameAuthor'));
   const findInp = el('input', 'home-find-input');
   findInp.type = 'search';
-  findInp.placeholder = T`ค้นหาโปรเจกต์…`;
+  findInp.placeholder = t('ui.home.searchProject');
   findInp.style.display = 'none';
 
-  const exportBtn = mk('home-btn-export', tr('home.export', '📤 ส่งออก'), T`ส่งออกโปรเจกต์ที่เปิดอยู่เป็นไฟล์ .zip`);
-  const importBtn = mk('home-btn-import', tr('home.import', '📥 นำเข้า'), T`นำเข้าโปรเจกต์จากไฟล์ .zip`);
+  const exportBtn = mk('home-btn-export', tr('home.export', '📤 ส่งออก'), t('ui.home.exportProjectOpenFile'));
+  const importBtn = mk('home-btn-import', tr('home.import', '📥 นำเข้า'), t('ui.home.importProjectFileZip'));
   const spacer = el('div', 'home-actions-spacer');
   const newBtn = mk('k-ok home-btn-new', tr('home.newProject', '➕ สร้างโปรเจกต์ใหม่'));
   const openBtn = mk('home-btn-open', tr('home.openProject', '📂 เปิดโปรเจกต์'));
-  const closeBtn = mk('home-btn-close', tr('home.close', '✕ ปิด'), T`ปิดหน้าแรก`);
+  const closeBtn = mk('home-btn-close', tr('home.close', '✕ ปิด'), t('ui.home.closePageFirst'));
 
   function applyView(mode) {
     const m = setHomeView(mode);
@@ -93,7 +93,7 @@ export function buildHomeActions(opts = {}) {
   findInp.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); findBtn.onclick(); } };
 
   exportBtn.onclick = async () => {
-    if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน จึงจะส่งออกเป็น .zip ได้`); return; }
+    if (!state.root) { setStatus(t('ui.home.openProjectBeforeExport')); return; }
     await exportProjectZip();
   };
   importBtn.onclick = async () => {
@@ -126,10 +126,10 @@ export async function openHome() {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', T`🏠 หน้าแรก`));
+  tabBtn.append(el('span', 'tab-title', t('ui.home.pageFirst')));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file: key, title: T`หน้าแรก`, pane, tabBtn, dirty: false,
+  const tab = { file: key, title: t('ui.common.pageFirst'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
   tabBtn.onclick = (e) => { if (e.target !== x) activate(key); };
   x.onclick = () => closeTab(key);
@@ -146,7 +146,7 @@ export async function renderHome(pane) {
   // หัวข้อ
   const head = el('div', 'home-head');
   head.append(el('h1', 'home-title', 'Killian 2'));
-  head.append(el('p', 'home-sub', T`โปรแกรมเขียนนิยาย+บทภาพยนตร์ แบบพกพา`));
+  head.append(el('p', 'home-sub', t('ui.home.appWriteNovelScreenplay')));
 
   // คอนเทนเนอร์การ์ด (grid)
   const grid = el('div', 'home-grid');
@@ -234,7 +234,7 @@ async function loadProjects(grid) {
           goals: meta.goals || {},
         };
       } catch (e) {
-        log('warn', T`home: อ่านโปรเจกต์ล้มเหลว: ` + root, e);
+        log('warn', t('ui.home.homeReadProjectFail') + root, e);
         return null;
       }
     });
@@ -244,11 +244,7 @@ async function loadProjects(grid) {
     if (projects.length === 0) {
       // Empty state
       const empty = el('div', 'home-empty');
-      empty.innerHTML = T`
-        <div class="home-empty-icon">📚</div>
-        <h2>ยังไม่มีโปรเจกต์</h2>
-        <p>สร้างโปรเจกต์แรกของคุณ แล้วเริ่มเขียนนิยายหรือบทภาพยนตร์ได้เลย</p>
-      `;
+      empty.innerHTML = t('ui.home.notHasProjectNew');
       grid.append(empty);
       return;
     }
@@ -261,8 +257,8 @@ async function loadProjects(grid) {
       grid.append(card);
     }
   } catch (e) {
-    log('error', T`home: โหลดโปรเจกต์ล้มเหลว`, e);
-    grid.append(el('div', 'home-empty', T`เกิดข้อผิดพลาดในการโหลดโปรเจกต์`));
+    log('error', t('ui.home.homeLoadProjectFail'), e);
+    grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));
   }
 }
 
@@ -290,16 +286,16 @@ export function createProjectCard(project, onOpen) {
   // ชื่อโปรเจกต์
   const title = el('div', 'home-card-title', project.title);
   if (project.author) {
-    title.append(el('span', 'home-card-author', T` โดย ` + project.author));
+    title.append(el('span', 'home-card-author', t('ui.home.msg') + project.author));
   }
   body.append(title);
   
   // สถิติ
   const stats = el('div', 'home-card-stats');
   const statItems = [
-    { icon: '📄', label: T`ฉาก`, val: project.totalScenes },
-    { icon: '📁', label: T`บท`, val: project.totalChapters },
-    { icon: '📝', label: T`คำ`, val: project.totalWords.toLocaleString() },
+    { icon: '📄', label: t('ui.common.scene2'), val: project.totalScenes },
+    { icon: '📁', label: t('ui.common.chapter'), val: project.totalChapters },
+    { icon: '📝', label: t('ui.common.word2'), val: project.totalWords.toLocaleString() },
   ];
   for (const s of statItems) {
     const si = el('span', 'home-stat');
@@ -309,11 +305,11 @@ export function createProjectCard(project, onOpen) {
   body.append(stats);
   
   // วันที่แก้ไขล่าสุด
-  const date = el('div', 'home-card-date', T`แก้ไขล่าสุด: ` + project.dateStr);
+  const date = el('div', 'home-card-date', t('ui.home.editLatest') + project.dateStr);
   body.append(date);
   
   // ปุ่มเปิด
-  const openBtn = el('button', 'k-ok home-card-open', T`เปิดโปรเจกต์`);
+  const openBtn = el('button', 'k-ok home-card-open', t('ui.common.openProject'));
   openBtn.onclick = async (e) => {
     e.stopPropagation();
     await kapi.pushRecent(project.root).catch(() => {});
@@ -432,14 +428,14 @@ async function loadPanelProjects(grid, onOpen) {
     });
     let projects = (await Promise.all(tasks)).filter(Boolean);
     if (projects.length === 0) {
-      grid.append(el('div', 'home-empty', el('p', null, T`ยังไม่มีโปรเจกต์`)));
+      grid.append(el('div', 'home-empty', el('p', null, t('ui.home.notHasProject'))));
       return;
     }
     projects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
     // ใช้การ์ดชุดเดียวกับหน้า Home (.home-card) — มีสไตล์จริงและสลับมุมมองการ์ด/รายการได้
     for (const p of projects) grid.append(createProjectCard(p, onOpen));
   } catch (e) {
-    log('error', T`home-panel: โหลดล้มเหลว`, e);
-    grid.append(el('div', 'home-empty', T`เกิดข้อผิดพลาดในการโหลดโปรเจกต์`));
+    log('error', t('ui.home.homePanelLoadFail'), e);
+    grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));
   }
 }

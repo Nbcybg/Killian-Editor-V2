@@ -8,19 +8,19 @@
 // pin = { id, x, y, label, kind:'entity'|'portal'|'note', entityFile?, toMap?, color?, note? }
 // route = { id, name, color, dashed, pinIds:[pinId] }  — เส้นทางระหว่างหมุด (alpha.70)
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 export const MAPS_VERSION = '1.1';
 
 export const PIN_COLORS = ['#d9575e', '#5f9fd9', '#6fae6f', '#d9b757', '#a97fd0', '#d97757', '#7fb8b0'];
 export const PIN_KIND = {
-  entity: { icon: '📍', label: T`ตำแหน่งเอนทิตี้` },
-  portal: { icon: '🚪', label: T`ประตูไปแผนที่อื่น` },
-  note:   { icon: '📌', label: T`หมายเหตุ` },
+  entity: { icon: '📍', label: t('ui.maps.pos') },
+  portal: { icon: '🚪', label: t('ui.maps.portalMapOther') },
+  note:   { icon: '📌', label: t('ui.common.msg6') },
 };
 
 export function newMap(name, image) {
   return { id: 'map-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-           name: name || T`แผนที่ใหม่`, image: image || '', pins: [], order: 0,
+           name: name || t('ui.common.mapNew'), image: image || '', pins: [], order: 0,
            category: '', routes: [], overlays: { ...DEFAULT_OVERLAYS } };
 }
 
@@ -205,7 +205,7 @@ export function clonePins(pins, ids, offset = 2, intoMapId = null) {
 export const ROUTE_COLORS = ['#d97757', '#5f9fd9', '#6fae6f', '#a97fd0', '#d9b757'];
 export function newRoute(name, color) {
   return { id: 'rt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-           name: name || T`เส้นทางใหม่`, color: color || ROUTE_COLORS[0], dashed: false, pinIds: [] };
+           name: name || t('ui.maps.routeNew'), color: color || ROUTE_COLORS[0], dashed: false, pinIds: [] };
 }
 export function mapRoutes(map) { return (map && Array.isArray(map.routes)) ? map.routes : []; }
 /** จุดจริงของเส้นทาง (%) — หมุดที่ถูกลบไปแล้วถูกข้าม ไม่ทำให้เส้นกระโดดไปมุมจอ */

@@ -1,5 +1,5 @@
 // books.js — ตัวจัดการเล่ม/ร่าง (Book Manager): เพิ่ม/แก้/ลบ/เรียงเล่มและร่าง
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { SECTION_STATUSES, buildTree, openCompileDialog, openFirstSceneOf, resolveImg } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { addSection, deleteSection, listSections, reorderSections, saveSectionMeta, sectionStats } from './section-ops.js';
@@ -21,8 +21,8 @@ export async function renderBookManager(pane) {
   pane.innerHTML = '';
   const wrap = el('div', 'books-wrap'); pane.append(wrap);
   const head = el('div', 'books-head');
-  head.append(el('div', 'books-title', T`📚 เล่มทั้งหมดในโปรเจกต์`));
-  const addBtn = el('button', 'k-ok', T`＋ เพิ่มเล่ม`);
+  head.append(el('div', 'books-title', t('ui.books.bookAllProject')));
+  const addBtn = el('button', 'k-ok', t('ui.books.addBook'));
   addBtn.onclick = async () => { await addSection(); renderBookManager(pane); };
   head.append(addBtn);
   wrap.append(head);
@@ -37,7 +37,7 @@ export async function renderBookManager(pane) {
     const drafts = await listDraftsForSection(sec.secPath);
     const list = el('div', 'book-drafts');
     const hdr = el('div', 'book-drafts-head',
-      T`📝 ฉบับร่าง` + (drafts.length ? ` (${drafts.length})` : ''));
+      t('ui.books.draft2') + (drafts.length ? ` (${drafts.length})` : ''));
     list.append(hdr);
 
     for (const d of drafts) {
@@ -47,18 +47,18 @@ export async function renderBookManager(pane) {
       row.append(label);
 
       if (!d.primary) {
-        const setBtn = el('button', 'cmp-mini', T`ตั้งหลัก`);
+        const setBtn = el('button', 'cmp-mini', t('ui.books.setMain'));
         setBtn.onclick = async () => {
           await setPrimaryDraft(sec.secPath, d.name);
           renderDraftList(sec, dst);
-          setStatus(T`ตั้งร่างหลักเป็น: ` + d.name);
+          setStatus(t('ui.books.setDraftMain') + d.name);
         };
         row.append(setBtn);
       }
       const renBtn = el('button', 'cmp-mini', '✎');
-      renBtn.title = T`เปลี่ยนชื่อร่าง`;
+      renBtn.title = t('ui.books.changeNameDraft');
       renBtn.onclick = async () => {
-        const n = await ask(T`ชื่อร่างใหม่`, { value: d.name });
+        const n = await ask(t('ui.books.nameDraftNew'), { value: d.name });
         if (n && n !== d.name) {
           if (await renameDraft(sec.secPath, d.name, n))
             renderDraftList(sec, dst);
@@ -67,7 +67,7 @@ export async function renderBookManager(pane) {
       row.append(renBtn);
       if (!d.primary) {
         const delBtn = el('button', 'cmp-mini k-danger', '🗑');
-        delBtn.title = T`ลบร่างนี้`;
+        delBtn.title = t('ui.books.delDraft');
         delBtn.onclick = async () => {
           if (await deleteDraft(sec.secPath, d.name))
             renderDraftList(sec, dst);
@@ -77,17 +77,17 @@ export async function renderBookManager(pane) {
       list.append(row);
     }
 
-    const addD = el('button', 'cmp-mini', T`＋ สร้างร่างใหม่`);
+    const addD = el('button', 'cmp-mini', t('ui.books.newDraftNew2'));
     addD.onclick = async () => {
-      const n = await ask(T`ชื่อร่างใหม่`, { placeholder: T`เช่น draft-2` });
+      const n = await ask(t('ui.books.nameDraftNew'), { placeholder: t('ui.books.egDraft') });
       if (!n) return;
       // ถ้ามีร่างอยู่แล้ว ให้เลือกสำเนาจากใคร
-      const src = await ask(T`ก๊อบโครงจากร่างไหน ? (ว่าง = สร้างเปล่า)`,
+      const src = await ask(t('ui.books.outlineDraftEmptyNew'),
         { placeholder: drafts.length ? drafts[0].name : '' });
       try {
         await createDraft(sec.secPath, n, src || null);
         renderDraftList(sec, dst);
-        setStatus(T`สร้างร่างใหม่: ` + n);
+        setStatus(t('ui.books.newDraftNew') + n);
       } catch (e) { setStatus(e.message); }
     };
     list.append(addD);
@@ -113,19 +113,19 @@ export async function renderBookManager(pane) {
     };
     applyCover(s.meta.cover);
     const coverBtns = el('div', 'book-cover-btns');
-    const pickCover = el('button', 'cmp-mini', T`🖼 เลือกปก`);
+    const pickCover = el('button', 'cmp-mini', t('ui.books.pickCover'));
     pickCover.onclick = async () => {
       const it = await pickImage(state.root);
       if (!it) return;
       // เก็บ path แบบสัมพัทธ์กับโฟลเดอร์เล่ม (รูปอยู่ใน <root>/Images)
       const rel = '../Images/' + it.file;
       s.meta = await saveSectionMeta(s.sf, { cover: rel });
-      applyCover(rel); setStatus(T`ตั้งปกเล่มแล้ว`);
+      applyCover(rel); setStatus(t('ui.books.setCoverBookDone'));
     };
     coverBtns.append(pickCover);
     if (s.meta.cover) {
       const clr = el('button', 'cmp-mini', '✕');
-      clr.title = T`เอาปกออก`;
+      clr.title = t('ui.books.coverOut');
       clr.onclick = async () => { s.meta = await saveSectionMeta(s.sf, { cover: '' }); applyCover(''); coverBtns.removeChild(clr); };
       coverBtns.append(clr);
     }
@@ -139,7 +139,7 @@ export async function renderBookManager(pane) {
     titleInp.onchange = async () => {
       const v = titleInp.value.trim(); if (!v || v === s.title) { titleInp.value = s.title; return; }
       s.meta = await saveSectionMeta(s.sf, { title: v }); s.title = v;
-      await buildTree(); setStatus(T`เปลี่ยนชื่อเล่มแล้ว`);
+      await buildTree(); setStatus(t('ui.books.changeNameBookDone'));
     };
     bd.append(titleInp);
 
@@ -159,7 +159,7 @@ export async function renderBookManager(pane) {
     bd.append(stRow);
 
     // คำโปรย
-    const blurb = el('textarea', 'book-blurb'); blurb.placeholder = T`คำโปรย / เรื่องย่อของเล่มนี้…`;
+    const blurb = el('textarea', 'book-blurb'); blurb.placeholder = t('ui.books.wordSynopsisBook');
     blurb.value = s.meta.blurb || '';
     blurb.onchange = async () => { s.meta = await saveSectionMeta(s.sf, { blurb: blurb.value }); };
     bd.append(blurb);
@@ -169,18 +169,18 @@ export async function renderBookManager(pane) {
     // รายการร่าง
     const draftsBox = el('div', 'drafts-box'); bd.append(draftsBox);
     sectionStats(s.secPath).then((st) => {
-      stats.textContent = T`${st.chapters} บท · ${st.scenes} ฉาก · ${st.words.toLocaleString()} คำ`
-        + (st.drafts > 1 ? T` · ${st.drafts} ฉบับร่าง` : '');
+      stats.textContent = tf('ui.books.chapterSceneWord', st.chapters, st.scenes, st.words.toLocaleString())
+        + (st.drafts > 1 ? tf('ui.books.draft', st.drafts) : '');
       renderDraftList(s, draftsBox);
     });
 
     // ปุ่มจัดการ
     const acts = el('div', 'book-acts');
-    const openB = el('button', 'cmp-mini', T`📂 เปิด`);
+    const openB = el('button', 'cmp-mini', t('ui.books.open'));
     openB.onclick = () => openFirstSceneOf(s.secPath);
-    const expB = el('button', 'cmp-mini', T`📤 ส่งออก`);
+    const expB = el('button', 'cmp-mini', t('ui.books.export'));
     expB.onclick = () => openCompileDialog();
-    const delB = el('button', 'cmp-mini k-danger', T`🗑 ลบ`);
+    const delB = el('button', 'cmp-mini k-danger', t('ui.common.del2'));
     delB.onclick = async () => { await deleteSection(s.secPath, s.meta); renderBookManager(pane); };
     acts.append(openB, expB, delB);
     bd.append(acts);
@@ -207,5 +207,5 @@ export async function renderBookManager(pane) {
     grid.append(card);
   }
 
-  if (!sections.length) grid.append(el('div', 'books-empty', T`ยังไม่มีเล่ม — กด "＋ เพิ่มเล่ม"`));
+  if (!sections.length) grid.append(el('div', 'books-empty', t('ui.books.notHasBookPress')));
 }

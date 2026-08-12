@@ -8,7 +8,7 @@
 // floating เก็บแยกนอกต้นไม้: { id, panel, x, y, w, h }
 // spec: docs/08-panel-system.md
 
-import { T } from '../i18n.js';
+import { t } from '../i18n.js';
 let _uid = 0;
 const nid = (p = 'n') => `${p}${Date.now().toString(36)}${(_uid++).toString(36)}`;
 
@@ -709,10 +709,10 @@ export function tabGroupOf(root, panelId) {
 export const PANEL_BUTTONS = [
   // [alpha.66r3] เมนูแผง (☰) — Progressive Disclosure: คำสั่งลึก ๆ ของแผงอยู่หลังปุ่มนี้
   // เดิมมีแต่คลิกขวาบนหัวแผง ซึ่งไม่มีอะไรบอกว่ามีอยู่
-  { key: 'menu',     icon: '☰', title: T`เมนูแผง`,   action: 'panelMenu' },
-  { key: 'collapse', icon: '▾', title: T`ย่อ/ขยาย`, action: 'collapsePanel' },
-  { key: 'float',    icon: '⧉', title: T`ลอย/ผนึก`, action: 'toggleFloat' },
-  { key: 'close',    icon: '✕', title: T`ปิดแผง`,   action: 'hidePanel' },
+  { key: 'menu',     icon: '☰', title: t('ui.panelLayout.panel'),   action: 'panelMenu' },
+  { key: 'collapse', icon: '▾', title: t('ui.panelLayout.collapseExpand'), action: 'collapsePanel' },
+  { key: 'float',    icon: '⧉', title: t('ui.panelLayout.float'), action: 'toggleFloat' },
+  { key: 'close',    icon: '✕', title: t('ui.panelLayout.closePanel'),   action: 'hidePanel' },
 ];
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }

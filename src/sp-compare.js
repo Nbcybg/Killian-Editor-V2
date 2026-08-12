@@ -1,6 +1,6 @@
 // sp-compare.js — [alpha.60 ข้อ 74] เปรียบเทียบบทภาพยนตร์ 2 ฉบับ
 // LCS diff + color-coded HTML output (deleted=แดง, added=เขียว, context=ขาว, change=เหลือง)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { parseScript, SP_ELEMS } from './fountain.js';
 
 // [74] เปรียบเทียบบท 2 ชุด → diffs แบบมีสี
@@ -20,8 +20,8 @@ export function compareScripts(oldText, newText) {
 
 // [74] สร้าง HTML สำหรับแสดงผลเปรียบเทียบ
 export function renderComparisonHtml(diffs, labels = {}) {
-  const leftLabel = labels.old || T`ฉบับเก่า`;
-  const rightLabel = labels.new || T`ฉบับใหม่`;
+  const leftLabel = labels.old || t('ui.spCompare.edition');
+  const rightLabel = labels.new || t('ui.spCompare.editionNew');
 
   let html = `<div class="k-compare-wrap">
 <style>
@@ -87,18 +87,13 @@ export function showComparisonDialog(oldText, newText, labels) {
 
   const ov = document.createElement('div');
   ov.className = 'k-overlay';
-  ov.innerHTML = T`<div class="k-dialog" style="max-width:95vw;max-height:90vh;overflow:auto;padding:16px">
-    <div class="k-dlg-title">เปรียบเทียบ</div>
-    <div style="max-height:75vh;overflow:auto;border:1px solid #ccc;margin:8px 0">${html}</div>
-    <div style="text-align:right"><button class="k-ok">ปิด</button></div>
-  </div>`;
+  ov.innerHTML = tf('ui.spCompare.compareClose', html);
   document.body.appendChild(ov);
 
   const stats = diffStats(diffs);
   const el = ov.querySelector('.k-dlg-title');
   if (el) {
-    el.innerHTML += T` <span style="font-weight:normal;color:#666;font-size:0.8em">
-      (${stats.equal} เท่ากัน · <span style="color:#070">+${stats.inserted}</span> · <span style="color:#b00">-${stats.deleted}</span> · <span style="color:#a90">~${stats.changed}</span>)</span>`;
+    el.innerHTML += tf('ui.spCompare.msg', stats.equal, stats.inserted, stats.deleted, stats.changed);
   }
 
   ov.querySelector('.k-ok').onclick = () => ov.remove();

@@ -6,7 +6,7 @@
 //
 // prompt ต่อยอดจาก `buildPrompt('summarize')` ใน ai/ai-assistant.js (โทน/ความยาว/บริบทเดียวกับ
 // AI ผู้ช่วยเขียน) แล้วเติมข้อกำหนดเฉพาะของช่องนั้นต่อท้าย — ไม่แตกสาย prompt เป็นคนละระบบ
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { buildPrompt } from './ai/ai-assistant.js';
 import { callAI } from './ai-settings.js';
 import { el, setStatus, t as tr } from './core.js';
@@ -14,22 +14,22 @@ import { el, setStatus, t as tr } from './core.js';
 /** ช่องที่กดปุ่ม ✨ ได้ · label = ข้อความบนสถานะ · rule = ข้อกำหนดที่ต่อท้าย prompt */
 export const AI_SCENE_FIELDS = {
   synopsis: {
-    label: T`เรื่องย่อ`, length: 'short',
-    rule: T`เขียน "เรื่องย่อของฉาก" 1–3 ประโยค บอกว่าใครทำอะไร ที่ไหน ผลเป็นอย่างไร `
-        + T`ส่งกลับเฉพาะตัวเรื่องย่อ ห้ามขึ้นต้นด้วยคำว่า "เรื่องย่อ" หรือใส่หัวข้อ`,
+    label: t('ui.common.synopsis'), length: 'short',
+    rule: t('ui.aiSyn.writeSynopsisSceneSentence')
+        + t('ui.aiSyn.sendBackOnlyItem'),
   },
   pov: {
-    label: T`มุมมอง (POV)`, length: 'short',
-    rule: T`ตอบเป็น "ชื่อตัวละครที่เป็นมุมมองหลักของฉากนี้" เท่านั้น (ชื่อเดียว ไม่เกิน 40 ตัวอักษร) `
-        + T`ถ้าเป็นมุมมองผู้เล่าเรื่องรอบรู้ให้ตอบว่า "ผู้เล่าเรื่อง" ห้ามอธิบายเพิ่ม`,
+    label: t('ui.common.viewPOV'), length: 'short',
+    rule: t('ui.aiSyn.replyNameViewMain')
+        + t('ui.aiSyn.viewStoryRoundReply'),
   },
   emotion: {
-    label: T`อารมณ์`, length: 'short',
-    rule: T`ตอบเป็น "อารมณ์หลักของฉาก" 1–3 คำ (เช่น ตึงเครียด · เศร้า · อบอุ่น) ห้ามอธิบายเพิ่ม`,
+    label: t('ui.common.mood'), length: 'short',
+    rule: t('ui.aiSyn.replyMoodMainScene'),
   },
   conflict: {
-    label: T`ความขัดแย้ง`, length: 'short',
-    rule: T`ตอบเป็น "ความขัดแย้งหลักของฉาก" 1 ประโยคสั้น ๆ (ใครขัดกับใคร/อะไร) ห้ามอธิบายเพิ่ม`,
+    label: t('ui.common.conflict'), length: 'short',
+    rule: t('ui.aiSyn.replyConflictMainScene'),
   },
 };
 
@@ -38,7 +38,7 @@ export const AI_SCENE_FIELD_KEYS = Object.keys(AI_SCENE_FIELDS);
 /** ตัดเนื้อฉากให้พอสำหรับ prompt (โมเดลส่วนใหญ่ไม่ต้องอ่านทั้งฉากจึงสรุปได้) */
 export function trimBody(body, max = 6000) {
   const s = String(body || '').trim();
-  return s.length <= max ? s : s.slice(0, max) + T`\n…(ตัดท้ายไฟล์)`;
+  return s.length <= max ? s : s.slice(0, max) + t('ui.aiSyn.cutFile');
 }
 
 /**
@@ -124,16 +124,16 @@ export async function generateSceneField(field, body, title, onResult) {
   const def = AI_SCENE_FIELDS[field];
   if (!def) return '';
   const p = fieldPrompt(field, body, title);
-  if (!p) { setStatus(T`ฉากนี้ยังไม่มีเนื้อหาให้ AI อ่าน`); return ''; }
-  setStatus(T`✨ กำลังให้ AI เขียน` + def.label + '…');
+  if (!p) { setStatus(t('ui.aiSyn.sceneNotHasBody')); return ''; }
+  setStatus(t('ui.aiSyn.busyAIWrite') + def.label + '…');
   const raw = await callAI(p.prompt, p.system);
   // [alpha.62 บั๊ก 5] `callAI` คืน null = ล้มเหลว และ **ตั้งข้อความบอกสาเหตุจริงไว้แล้ว**
   // (คีย์ผิด · ยังไม่เลือกโมเดล · โดเมนไม่อยู่ในรายการ) — เขียนทับด้วยข้อความรวม ๆ ไม่ได้
   // ไม่งั้นผู้ใช้เห็นแค่ "ไม่ขึ้นข้อความ" แล้วไม่รู้จะไปแก้ตรงไหน
   if (raw === null) return '';
   const out = cleanResult(raw, field);
-  if (!out) { setStatus(T`AI ไม่ได้ส่ง` + def.label + T`กลับมา`); return ''; }
+  if (!out) { setStatus(t('ui.aiSyn.aICantSend') + def.label + t('ui.aiSyn.back')); return ''; }
   if (onResult) onResult(out);
-  setStatus(T`✨ เติม` + def.label + T`จาก AI แล้ว`);
+  setStatus(t('ui.aiSyn.fill') + def.label + t('ui.aiSyn.aIDone'));
   return out;
 }

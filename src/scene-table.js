@@ -1,5 +1,5 @@
 // scene-table.js — มุมมอง "ตารางฉาก" แสดงทุกฉากเป็นตาราง Grid คลิกแถวเพื่อเปิด, เรียง/กรองได้ทุกคอลัมน์
-import { T } from './i18n.js';
+import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { getVisualTags, renderVisualTagChips } from './visual-tags.js';
 import { statusColor } from './custom-status.js';
@@ -14,10 +14,10 @@ export async function openSceneTable() {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', T`📊 ตารางฉาก`));
+  tabBtn.append(el('span', 'tab-title', tt('ui.scene.tableScene2')));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file: key, title: T`ตารางฉาก`, pane, tabBtn, dirty: false,
+  const tab = { file: key, title: tt('ui.scene.tableScene'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
   tabBtn.onclick = (e) => { if (e.target !== x) { import('./app.js').then(m => m.activate(key)); } };
   x.onclick = async () => { const { closeTab } = await import('./app.js'); closeTab(key); };
@@ -37,9 +37,9 @@ export async function renderSceneTable(pane) {
 
   // หัว + ตัวกรอง
   const head = el('div', 'sc-tbl-head');
-  head.append(el('div', 'sc-tbl-title', T`📊 ตารางฉากทั้งหมด`));
+  head.append(el('div', 'sc-tbl-title', tt('ui.scene.tableSceneAll')));
   const search = el('input', 'sc-tbl-search');
-  search.placeholder = T`🔍 กรอง — ค้นชื่อ/แท็ก/สถานะ/เรื่องย่อ`;
+  search.placeholder = tt('ui.scene.filterSearchNameTag');
   search.oninput = () => { setTimeout(() => renderBody(wrap, search.value.toLowerCase()), 50); };
   head.append(search);
   wrap.append(head);
@@ -87,7 +87,7 @@ async function loadAllScenes() {
       }
     }
   } catch (e) {
-    log('warn', T`scene-table: โหลดฉากล้มเหลว`, e);
+    log('warn', tt('ui.scene.sceneTableLoadScene'), e);
   }
   return scenes;
 }
@@ -98,7 +98,7 @@ async function renderBody(wrap, filter) {
 
   const scenes = await loadAllScenes();
   if (!scenes.length) {
-    tableWrap.append(el('div', 'dim', T`ยังไม่มีฉากในโปรเจกต์`));
+    tableWrap.append(el('div', 'dim', tt('ui.scene.notHasSceneProject')));
     return;
   }
 
@@ -136,12 +136,12 @@ async function renderBody(wrap, filter) {
   const table = el('table', 'sc-tbl-table');
   const thead = el('thead');
   const cols = [
-    { key: 'title', label: T`ชื่อ`, w: '25%' },
-    { key: 'status', label: T`สถานะ`, w: '12%' },
-    { key: 'words', label: T`คำ`, w: '8%' },
-    { key: 'section', label: T`เล่ม`, w: '12%' },
-    { key: 'chapter', label: T`บท`, w: '12%' },
-    { key: 'tags', label: T`แท็ก`, w: '15%' },
+    { key: 'title', label: tt('ui.common.name'), w: '25%' },
+    { key: 'status', label: tt('ui.common.status'), w: '12%' },
+    { key: 'words', label: tt('ui.common.word2'), w: '8%' },
+    { key: 'section', label: tt('ui.common.book'), w: '12%' },
+    { key: 'chapter', label: tt('ui.common.chapter'), w: '12%' },
+    { key: 'tags', label: tt('ui.common.tag'), w: '15%' },
     { key: 'pov', label: 'POV', w: '10%' },
   ];
   const tr = el('tr');
@@ -219,7 +219,7 @@ async function renderBody(wrap, filter) {
   table.append(tbody);
 
   // จำนวนรวม
-  const info = el('div', 'sc-tbl-info', T`${filtered.length} / ${scenes.length} ฉาก`);
+  const info = el('div', 'sc-tbl-info', ttf('ui.scene.scene', filtered.length, scenes.length));
 
   tableWrap.innerHTML = '';
   tableWrap.append(info, table);

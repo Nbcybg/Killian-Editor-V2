@@ -1,4 +1,6 @@
 // ai-providers.test.cjs — [alpha.61 ข้อ 2] ทะเบียนผู้ให้บริการ AI + เซสชันแชท
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // โมดูลบริสุทธิ์ทั้งคู่ (ไม่แตะ DOM/fs/network) → แปลงเป็น CJS ชั่วคราวแล้ว require ตรง ๆ
 const fs = require('fs');
 const path = require('path');

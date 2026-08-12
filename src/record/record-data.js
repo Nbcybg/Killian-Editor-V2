@@ -6,7 +6,7 @@
 // ไฟล์นี้ **บริสุทธิ์** (ไม่แตะ DOM/kapi/state) — schema, การเรียง, สรุปรายวัน และตัวเขียน CSV
 // เทสด้วย node ได้หมด · การเชื่อมกับไฟล์/หน้าจออยู่ที่ record-ui.js
 
-import { T } from '../i18n.js';
+import { t } from '../i18n.js';
 export const RECORD_SCHEMA = 2;
 /** ไฟล์เก็บบันทึกในโปรเจกต์ (อยู่ระดับเดียวกับ project.khn.json — แก้นอกโปรแกรมได้ตามหลักของโปรเจกต์) */
 export const RECORD_FILE = 'records.json';
@@ -14,10 +14,10 @@ export const RECORD_FILE = 'records.json';
 /** อารมณ์/ผลของวัน — ใช้ทำสรุปและกรอง (เก็บเป็นคีย์ ไม่ใช่ข้อความ เพื่อให้เปลี่ยนภาษาได้) */
 export const MOODS = [
   { key: '', label: '—' },
-  { key: 'great', label: T`😄 ลื่นไหล` },
-  { key: 'ok', label: T`🙂 ปกติ` },
-  { key: 'stuck', label: T`😖 ติดขัด` },
-  { key: 'tired', label: T`😴 ล้า` },
+  { key: 'great', label: t('ui.recOrd.flowing') },
+  { key: 'ok', label: t('ui.recOrd.normal') },
+  { key: 'stuck', label: t('ui.recOrd.stuck') },
+  { key: 'tired', label: t('ui.recOrd.tired') },
 ];
 export const moodLabel = (k) => (MOODS.find((m) => m.key === k) || MOODS[0]).label;
 
@@ -137,8 +137,8 @@ export function csvCell(v) {
   return '"' + s.replace(/"/g, '""') + '"';
 }
 export const CSV_COLUMNS = [
-  ['day', T`วันที่`], ['at', T`เวลาที่จด`], ['text', T`บันทึก`],
-  ['mood', T`อารมณ์`], ['tags', T`แท็ก`], ['words', T`จำนวนคำ`], ['minutes', T`นาที`],
+  ['day', t('ui.common.date')], ['at', t('ui.recOrd.timeNote')], ['text', t('ui.common.save')],
+  ['mood', t('ui.common.mood')], ['tags', t('ui.common.tag')], ['words', t('ui.recOrd.countWord')], ['minutes', t('ui.common.min')],
 ];
 /**
  * แปลงรายการเป็น CSV

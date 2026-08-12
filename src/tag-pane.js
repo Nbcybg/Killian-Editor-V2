@@ -1,5 +1,5 @@
 // tag-pane.js — แท็บ "แท็ก" แสดงรายการแท็กทั้งหมด + จำนวน + กรอง + tag cloud
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { activate, closeTab } from './app.js';
 
@@ -16,10 +16,10 @@ export async function openTagPane() {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', T`🏷 แท็ก`));
+  tabBtn.append(el('span', 'tab-title', t('ui.tags.tag4')));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file: key, title: T`แท็ก`, pane, tabBtn, dirty: false,
+  const tab = { file: key, title: t('ui.common.tag'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
   tabBtn.onclick = (e) => { if (e.target !== x) activate(key); };
   x.onclick = () => closeTab(key);
@@ -35,11 +35,11 @@ export async function renderTagList(pane) {
   
   // หัว + toggle
   const head = el('div', 'tag-head');
-  head.append(el('div', 'tag-title', T`🏷 แท็กทั้งหมด`));
+  head.append(el('div', 'tag-title', t('ui.tags.tagAll')));
   
   const toggles = el('div', 'tag-toggles');
-  const listBtn = el('button', 'tag-mode-btn' + (_tagView === 'list' ? ' on' : ''), T`📋 รายการ`);
-  const cloudBtn = el('button', 'tag-mode-btn' + (_tagView === 'cloud' ? ' on' : ''), T`☁️ เมฆแท็ก`);
+  const listBtn = el('button', 'tag-mode-btn' + (_tagView === 'list' ? ' on' : ''), t('ui.tags.list'));
+  const cloudBtn = el('button', 'tag-mode-btn' + (_tagView === 'cloud' ? ' on' : ''), t('ui.tags.tag3'));
   listBtn.onclick = () => { _tagView = 'list'; renderTagList(pane); };
   cloudBtn.onclick = () => { _tagView = 'cloud'; renderTagList(pane); };
   toggles.append(listBtn, cloudBtn);
@@ -47,7 +47,7 @@ export async function renderTagList(pane) {
   
   // จำนวนแท็กรวม
   const counts = await getTagCounts();
-  const info = el('div', 'tag-info', Object.keys(counts).length + T` แท็ก`);
+  const info = el('div', 'tag-info', Object.keys(counts).length + t('ui.tags.tag'));
   head.append(info);
   wrap.append(head);
   
@@ -133,7 +133,7 @@ export async function getTagCounts() {
       }
     }
   } catch (e) {
-    log('warn', T`tag-pane: อ่านแท็กล้มเหลว`, e);
+    log('warn', t('ui.tags.tagPaneReadTag'), e);
   }
   
   return counts;
@@ -147,7 +147,7 @@ function renderTagTree(container, counts) {
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   
   if (!sorted.length) {
-    container.append(el('div', 'tag-empty', T`ยังไม่มีแท็ก — ใส่แท็กในคุณสมบัติฉากหรือ Wiki`));
+    container.append(el('div', 'tag-empty', t('ui.tags.notHasTagPut')));
     return;
   }
   
@@ -179,7 +179,7 @@ function renderTagTree(container, counts) {
       
       // คลิกเพื่อกรอง Explorer
       row.onclick = () => filterByTag(key);
-      row.title = T`คลิกเพื่อกรอง Explorer → แสดงเฉพาะฉากที่มีแท็ก: ` + key;
+      row.title = t('ui.tags.clickFilterExplorerShow') + key;
       
       container.append(row);
       
@@ -199,7 +199,7 @@ function renderTagCloud(container, counts) {
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   
   if (!sorted.length) {
-    container.append(el('div', 'tag-empty', T`ยังไม่มีแท็ก — ใส่แท็กในคุณสมบัติฉากหรือ Wiki`));
+    container.append(el('div', 'tag-empty', t('ui.tags.notHasTagPut')));
     return;
   }
   
@@ -214,7 +214,7 @@ function renderTagCloud(container, counts) {
     pill.style.fontSize = fontSize + 'px';
     pill.style.opacity = 0.6 + ratio * 0.4;
     pill.onclick = () => filterByTag(tag);
-    pill.title = T`คลิกเพื่อกรอง Explorer → แสดงเฉพาะฉากที่มีแท็ก: ` + tag;
+    pill.title = t('ui.tags.clickFilterExplorerShow') + tag;
     cloud.append(pill);
   }
   
@@ -223,12 +223,12 @@ function renderTagCloud(container, counts) {
 
 // กรอง Explorer ตามแท็ก
 export async function filterByTag(tag) {
-  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
+  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
   
   const searchInput = $('#tree-search');
   if (searchInput) {
     searchInput.value = 'tag:' + tag;
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  setStatus(T`กรองด้วยแท็ก: ` + tag + T` — Explorer แสดงเฉพาะฉากที่มีแท็กนี้`);
+  setStatus(t('ui.tags.filterTag') + tag + t('ui.tags.explorerShowOnlyScene'));
 }

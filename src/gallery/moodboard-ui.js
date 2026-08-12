@@ -8,7 +8,7 @@
 // รูปบนกระดาน **ไม่ถูกครอบตัด** — `object-fit:contain` เสมอ และตอนวางครั้งแรก
 // ความสูงคิดจากสัดส่วนจริงของไฟล์ (`sizeForAspect`)
 
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import { imageLightbox } from '../wiki.js';
 import { iconHtml } from '../icons.js';
@@ -83,7 +83,7 @@ export class MoodBoard {
   buildBar(list) {
     const bar = el('div', 'gal2-bar gal2-boardbar');
     const sel = el('select', 'wiki-input k-dlg-select gal2-board-sel');
-    sel.title = T`กระดานของอัลบั้มไหน`;
+    sel.title = t('ui.galleryMoodboard.boardAlbum');
     for (const a of list) {
       const o = el('option', null, a.id === AC.ROOT_ALBUM ? AC.ROOT_ALBUM_NAME : a.id);
       o.value = a.id;
@@ -100,14 +100,14 @@ export class MoodBoard {
     const more = mk('⋯', (e) => {
       const r = e.currentTarget.getBoundingClientRect();
       popupMenu(r.left, r.bottom + 4, [
-        { label: T`▦ จัดเรียงอัตโนมัติ`, click: () => this.tidy() },
-        { label: T`📐 ปรับทุกชิ้นให้ตรงสัดส่วนรูป`, click: () => this.fixAllRatios() },
-        { label: T`📷 ส่งออกกระดานเป็นภาพ…`, click: () => this.exportBoard() },
+        { label: t('ui.galleryMoodboard.arrangeAuto'), click: () => this.tidy() },
+        { label: t('ui.galleryMoodboard.adjustAllItemAt2'), click: () => this.fixAllRatios() },
+        { label: t('ui.galleryMoodboard.exportBoardImage'), click: () => this.exportBoard() },
         '-',
-        { label: T`🗑 ล้างกระดาน (ไม่ลบไฟล์)`, danger: true, click: () => this.clear() },
+        { label: t('ui.galleryMoodboard.clearBoardNotDel'), danger: true, click: () => this.clear() },
       ]);
-    }, T`คำสั่งเพิ่มเติมของกระดาน`);
-    bar.append(sel, mk(T`⤢ พอดีจอ`, () => this.fit()), more);
+    }, t('ui.galleryMoodboard.cmdAddFillBoard'));
+    bar.append(sel, mk(t('ui.common.fitScreen'), () => this.fit()), more);
     return bar;
   }
 
@@ -183,8 +183,8 @@ export class MoodBoard {
     this.applyTransform();
     if (!board.length) {
       canvas.append(el('div', 'gal2-board-hint',
-        T`กระดานยังว่าง — เปิดแผง "คลังรูปภาพ" ไว้ข้าง ๆ แล้ว **ลากรูปมาวางตรงนี้** ได้เลย ` +
-        T`(หรือเลือกรูปในคลังแล้วกด "🎨 วางบนกระดาน")`));
+        t('ui.galleryMoodboard.boardEmptyOpenPanel') +
+        t('ui.galleryMoodboard.pickImageLibraryDone')));
       return;
     }
     for (const it of MB.boardOrder(board)) canvas.append(await this.itemEl(it));
@@ -255,12 +255,12 @@ export class MoodBoard {
       e.preventDefault();
       popupMenu(e.clientX, e.clientY, [
         { label: '<b>' + it.file + '</b>', disabled: true },
-        { label: T`🔍 ดูภาพเต็ม`, click: () => imageLightbox(im.src, it.file) },
-        { label: T`📐 ปรับให้ตรงสัดส่วนรูป`, click: () => this.fixRatio(it) },
-        { label: T`⬆️ ขึ้นบนสุด`, click: async () => this.saveBoard(MB.moveToFront((await this.doc()).moodBoard, it.id)) },
-        { label: T`⬇️ ลงล่างสุด`, click: async () => this.saveBoard(MB.moveToBack((await this.doc()).moodBoard, it.id)) },
+        { label: t('ui.common.viewImageFull'), click: () => imageLightbox(im.src, it.file) },
+        { label: t('ui.galleryMoodboard.adjustAtRatioImage'), click: () => this.fixRatio(it) },
+        { label: t('ui.galleryMoodboard.top'), click: async () => this.saveBoard(MB.moveToFront((await this.doc()).moodBoard, it.id)) },
+        { label: t('ui.galleryMoodboard.bottomLast'), click: async () => this.saveBoard(MB.moveToBack((await this.doc()).moodBoard, it.id)) },
         '-',
-        { label: T`✕ เอาออกจากกระดาน (ไม่ลบไฟล์)`, click: async () =>
+        { label: t('ui.galleryMoodboard.exitBoardNotDel'), click: async () =>
           this.saveBoard(MB.removeFromBoard((await this.doc()).moodBoard, it.id)) },
       ]);
     };
@@ -270,7 +270,7 @@ export class MoodBoard {
   /** วางรูปลงกระดาน — ความสูงคิดจากสัดส่วนจริงของไฟล์ (ไม่ครอบตัด ไม่บิด) */
   async add(paths, at) {
     const list = (paths || []).filter(Boolean);
-    if (!list.length) { setStatus(T`เลือกรูปก่อน`); return 0; }
+    if (!list.length) { setStatus(t('ui.common.pickImageBefore')); return 0; }
     const d = await this.doc();
     let board = d.moodBoard;
     let i = 0;
@@ -287,7 +287,7 @@ export class MoodBoard {
       i++;
     }
     await this.saveBoard(board);
-    setStatus(T`วาง ${list.length} รูปบนกระดาน "${AC.albumBaseName(this.albumId)}" แล้ว`);
+    setStatus(tf('ui.galleryMoodboard.pasteImageTopBoard', list.length, AC.albumBaseName(this.albumId)));
     return list.length;
   }
 
@@ -307,7 +307,7 @@ export class MoodBoard {
       board = MB.updateBoardItem(board, it.id, { w: size.w, h: size.h });
     }
     await this.saveBoard(board);
-    setStatus(T`ปรับทุกชิ้นให้ตรงสัดส่วนรูปแล้ว`);
+    setStatus(t('ui.galleryMoodboard.adjustAllItemAt'));
   }
 
   async tidy() {
@@ -316,7 +316,7 @@ export class MoodBoard {
   }
 
   async clear() {
-    if (!(await confirmBox(T`ล้างกระดานอารมณ์ของอัลบั้มนี้? (ไม่ลบไฟล์รูป)`, T`ล้าง`))) return;
+    if (!(await confirmBox(t('ui.galleryMoodboard.clearBoardMoodAlbum'), t('ui.common.clear')))) return;
     await this.saveBoard([]);
   }
 
@@ -338,7 +338,7 @@ let inst = null;
 /** ตัววาดของแผง `gallery-board` (app.js เรียกผ่าน FEATURE_PANELS) */
 export function renderMoodBoardPanel(host, root) {
   if (!host) return null;
-  if (!root) { host.innerHTML = ''; host.append(el('div', 'dim', T`เปิดโปรเจกต์ก่อน`)); return null; }
+  if (!root) { host.innerHTML = ''; host.append(el('div', 'dim', t('ui.common.openProjectBefore'))); return null; }
   if (inst) inst.destroy();
   host.innerHTML = '';
   inst = new MoodBoard(host, root);

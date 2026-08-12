@@ -5,7 +5,7 @@
 //                            └──▶ rule → enqueue → processQueue() → handler (เบื้องหลัง)
 //                                                        └──▶ taskLog[] ใน project.khn.json
 
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 export const TASK_LOG_MAX = 200;                 // เก็บ log ล่าสุดเท่านี้ — ไฟล์โปรเจกต์จะได้ไม่บวม
 
 // ───────── EventBus: ยิงเหตุการณ์แบบซิงโครนัส ─────────
@@ -136,7 +136,7 @@ export class AutoTaskEngine {
     if (!fn) {                                   // ไม่มีคนทำงานชนิดนี้ → ข้าม (ไม่ใช่ error)
       task.status = 'skipped';
       this.counters.skipped++;
-      this._log(task, 'skipped', T`ไม่มี handler ของงานชนิดนี้`);
+      this._log(task, 'skipped', tt('ui.autoTaskEventQueue.notHasHandlerTask'));
       return task;
     }
     task.status = 'running';
@@ -251,7 +251,7 @@ export function replaceName(text, oldName, newName) {
 export function renameEntityTask(io) {
   return async (payload) => {
     const { oldName, newName, files = [] } = payload || {};
-    if (!oldName || !newName || oldName === newName) return { changed: 0, files: [], detail: T`ไม่มีอะไรต้องแก้` };
+    if (!oldName || !newName || oldName === newName) return { changed: 0, files: [], detail: tt('ui.autoTaskEventQueue.notHasMustEdit') };
     const touched = [];
     let total = 0;
     for (const p of files) {
@@ -263,7 +263,7 @@ export function renameEntityTask(io) {
       touched.push(p);
       total += r.changed;
     }
-    return { changed: total, files: touched, detail: T`${oldName} → ${newName} (${touched.length} ไฟล์)` };
+    return { changed: total, files: touched, detail: ttf('ui.autoTaskEventQueue.file', oldName, newName, touched.length) };
   };
 }
 

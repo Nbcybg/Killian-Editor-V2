@@ -1,7 +1,7 @@
 // gallery-export.js — ส่งออกจากคลังรูป (alpha.63 · Phase 8)
 //   · ส่งออกอัลบั้ม / รูปที่เลือก / เฉพาะรูปที่ถูกใช้จริง → .zip (ไบต์ดิบ ไม่ผ่าน utf-8)
 //   · ส่งออกกระดานอารมณ์เป็นภาพรวมใบเดียว → .png (วาดบน canvas ตามพิกัดบนกระดาน)
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import JSZip from 'jszip';
 import { setStatus, log, setBusy, clearBusy } from '../core.js';
 import * as AC from './album-core.js';
@@ -12,14 +12,14 @@ const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '_');
 
 /** สรุปเป็นไฟล์ .md แนบไปในซิป — ผู้รับรู้ว่าแต่ละรูปคืออะไร ใช้ที่ไหน */
 function manifest(items, usage, title) {
-  const lines = [`# ${title}`, '', T`รูปทั้งหมด ${items.length} ใบ`, ''];
+  const lines = [`# ${title}`, '', tf('ui.galleryExport.imageAllItem', items.length), ''];
   for (const it of items) {
     lines.push(`## ${it.file}`);
-    if (it.caption) lines.push(T`คำบรรยาย: ${it.caption}`);
-    lines.push(T`อัลบั้ม: ${it.album === AC.ROOT_ALBUM ? AC.ROOT_ALBUM_NAME : it.album}`);
-    if (it.tags && it.tags.length) lines.push(T`แท็ก: ${it.tags.join(' ')}`);
+    if (it.caption) lines.push(tf('ui.galleryExport.caption', it.caption));
+    lines.push(tf('ui.galleryExport.album', it.album === AC.ROOT_ALBUM ? AC.ROOT_ALBUM_NAME : it.album));
+    if (it.tags && it.tags.length) lines.push(tf('ui.galleryExport.tag', it.tags.join(' ')));
     const uses = usage ? usageOf(usage, it.file) : [];
-    if (uses.length) lines.push(T`ใช้ใน: ` + [...new Set(uses.map((u) => u.title))].join(', '));
+    if (uses.length) lines.push(t('ui.common.use') + [...new Set(uses.map((u) => u.title))].join(', '));
     lines.push('', `![${it.caption || ''}](${it.path})`, '');
   }
   return lines.join('\n');
@@ -29,10 +29,10 @@ function manifest(items, usage, title) {
  * ส่งออกรูปเป็น .zip — คงโครงอัลบั้มไว้ (`ตัวละคร/ref.png`) + `รายการรูป.md`
  * @returns {Promise<boolean>}
  */
-export async function exportImages(root, items, { name = T`คลังรูป`, usage = null } = {}) {
+export async function exportImages(root, items, { name = t('ui.galleryExport.libraryImage'), usage = null } = {}) {
   const list = (items || []).filter((i) => i && i.path);
-  if (!list.length) { setStatus(T`ไม่มีรูปให้ส่งออก`); return false; }
-  setBusy(T`กำลังรวบรวมรูป ${list.length} ใบ…`);
+  if (!list.length) { setStatus(t('ui.galleryExport.notHasImageExport')); return false; }
+  setBusy(tf('ui.galleryExport.busyCollectImageItem', list.length));
   try {
     const zip = new JSZip();
     let n = 0;
@@ -42,21 +42,21 @@ export async function exportImages(root, items, { name = T`คลังรูป
         const bytes = await kapi.readBytes(abs);            // ไบนารีต้องผ่าน readBytes (บทเรียน 14d)
         zip.file(it.path, new Uint8Array(bytes));
         n++;
-        if (n % 10 === 0) setBusy(T`กำลังรวบรวมรูป… (${n}/${list.length})`);
-      } catch (e) { log('warn', T`gallery-export: ข้ามไฟล์ ` + abs, e); }
+        if (n % 10 === 0) setBusy(tf('ui.galleryExport.busyCollectImage', n, list.length));
+      } catch (e) { log('warn', t('ui.galleryExport.galleryExportSkipFile') + abs, e); }
     }
-    zip.file(T`รายการรูป.md`, manifest(list, usage, name));
+    zip.file(t('ui.galleryExport.listImageMd'), manifest(list, usage, name));
     clearBusy();                                            // อย่าให้สปินเนอร์ค้างตอนรอผู้ใช้ตอบ (บทเรียน 85)
     const dest = await kapi.saveAsDialog(safe(name) + '.zip');
     if (!dest) return false;
-    setBusy(T`กำลังบีบอัดและเขียนไฟล์…`);
+    setBusy(t('ui.galleryExport.busyWriteFile'));
     const bytes = await zip.generateAsync({ type: 'uint8array' });
     await kapi.writeBytes(dest, Array.from(bytes));
-    setStatus(T`ส่งออกรูป ${n} ใบแล้ว: ` + dest);
+    setStatus(tf('ui.galleryExport.exportImageItemDone', n) + dest);
     return true;
   } catch (e) {
     log('error', 'gallery-export failed', e);
-    setStatus(T`ส่งออกรูปล้มเหลว: ` + e.message);
+    setStatus(t('ui.galleryExport.exportImageFail') + e.message);
     return false;
   } finally { clearBusy(); }
 }
@@ -70,12 +70,12 @@ const MAX_EDGE = 4000;
  */
 export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1b1d21' } = {}) {
   const items = MB.boardOrder(board);
-  if (!items.length) { setStatus(T`กระดานยังว่าง — ไม่มีอะไรให้ส่งออก`); return false; }
+  if (!items.length) { setStatus(t('ui.galleryExport.boardEmptyNotHas')); return false; }
   const b = MB.boardBounds(items);
   const scale = Math.min(1, MAX_EDGE / Math.max(b.w + pad * 2, b.h + pad * 2));
   const W = Math.max(1, Math.round((b.w + pad * 2) * scale));
   const H = Math.max(1, Math.round((b.h + pad * 2) * scale));
-  setBusy(T`กำลังวาดกระดานอารมณ์…`);
+  setBusy(t('ui.galleryExport.busyDrawBoardMood'));
   try {
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
@@ -103,18 +103,18 @@ export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1
     const base = safe(albumId === AC.ROOT_ALBUM ? 'moodboard' : AC.albumBaseName(albumId)) + '-moodboard.png';
     const dest = await kapi.saveAsDialog(base);
     if (!dest) return false;
-    setBusy(T`กำลังเขียนไฟล์ภาพ…`);
+    setBusy(t('ui.galleryExport.busyWriteFileImage'));
     const dataUrl = canvas.toDataURL('image/png');
     const b64 = dataUrl.split(',')[1] || '';
     const bin = atob(b64);
     const bytes = new Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     await kapi.writeBytes(dest, bytes);
-    setStatus(T`ส่งออกกระดานอารมณ์แล้ว (${W}×${H}): ` + dest);
+    setStatus(tf('ui.galleryExport.exportBoardMoodDone', W, H) + dest);
     return true;
   } catch (e) {
     log('error', 'moodboard export failed', e);
-    setStatus(T`ส่งออกกระดานล้มเหลว: ` + e.message);
+    setStatus(t('ui.galleryExport.exportBoardFail') + e.message);
     return false;
   } finally { clearBusy(); }
 }

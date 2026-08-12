@@ -1,4 +1,6 @@
 // test/world-story.test.cjs — ทดสอบ auto-link (ข้อ 86) ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const out = path.join(os.tmpdir(), '_wsl.cjs');

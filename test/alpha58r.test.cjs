@@ -1,4 +1,6 @@
 // test/alpha58r.test.cjs — บั๊กรอบ alpha.58r ที่แก้ในโมดูลบริสุทธิ์
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 //   5+9  linesPerPage/pageMetrics ต้องนับ spLineHeight ที่ผู้ใช้ตั้ง
 //   10   spCss ต้องสร้างกฎ .sp-contd
 //   12   "จำคำนี้" (pinned) ต้องชนะตัวกรอง looksLikeTerm

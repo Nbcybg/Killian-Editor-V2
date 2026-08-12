@@ -1,4 +1,6 @@
 // test/album.test.cjs — unit test ระบบคลังรูปใหม่ (alpha.63)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 //   album-core (ทั้งส่วนบริสุทธิ์และ CRUD บนดิสก์จริงผ่าน kapi ปลอม) · album-tags ·
 //   usage-index · moodboard · image-hash
 const fs = require('fs');

@@ -1,5 +1,5 @@
 // quick-open.js — เปิดไฟล์ด่วนแบบ fuzzy (Ctrl+Shift+O)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import Fuse from 'fuse.js';
 
@@ -33,22 +33,22 @@ async function scanProject(root) {
 }
 
 export function openQuickOpen() {
-  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return null; }
+  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return null; }
 
   const ov = el('div', 'k-overlay');
   ov.style.cssText = 'z-index:100;background:rgba(0,0,0,.45)';
   const box = el('div', 'k-qo');
   const input = el('input', 'k-qo-input');
-  input.placeholder = T`พิมพ์ชื่อไฟล์…`;
+  input.placeholder = t('ui.quickOpen.printNameFile');
   const list = el('div', 'k-qo-list');
   // แถบคำใบ้ท้ายกล่อง (ผู้ใช้ไม่รู้ว่ากดอะไรได้บ้าง) + ปุ่มสแกนใหม่
   const foot = el('div', 'k-qo-foot');
   foot.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;opacity:.75;border-top:1px solid var(--border)';
-  const hint = el('span', 'k-qo-hint', T`↑↓ เลือก · Enter เปิด · Esc ปิด · Ctrl+R สแกนใหม่`);
+  const hint = el('span', 'k-qo-hint', t('ui.quickOpen.pickEnterOpenEsc'));
   const count = el('span', 'k-qo-count');
   count.style.cssText = 'margin-left:auto';
   const reBtn = el('button', 'k-qo-refresh', '🔄');
-  reBtn.title = T`สแกนไฟล์ใหม่`;
+  reBtn.title = t('ui.quickOpen.scanFileNew');
   reBtn.style.cssText = 'border:none;background:none;cursor:pointer;font-size:13px';
   foot.append(hint, count, reBtn);
   box.append(input, list, foot);
@@ -66,7 +66,7 @@ export function openQuickOpen() {
   async function rescan() {
     if (scanning) return;
     scanning = true;
-    count.textContent = T`กำลังสแกน…`;
+    count.textContent = t('ui.quickOpen.busyScan');
     try {
       const files = await scanProject(state.root);
       _cacheRoot = state.root; _cacheFiles = files;
@@ -94,7 +94,7 @@ export function openQuickOpen() {
       row.onclick = () => openFile(f);
       list.append(row);
     });
-    count.textContent = T`${results.length}/${allFiles.length} ไฟล์`;
+    count.textContent = tf('ui.quickOpen.file', results.length, allFiles.length);
     highlight(selectedIdx);
   }
 

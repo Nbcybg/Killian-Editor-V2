@@ -2,15 +2,12 @@
 
 // allowEmpty (alpha.60r2 ข้อ 12): ปกติ "ว่าง" = ยกเลิก — แต่บางช่อง (คำบรรยายรูป) ต้องลบให้ว่างได้
 // เปิดแล้ว: ตกลง → คืนสตริง (อาจว่าง) · ยกเลิก/Esc/คลิกนอกกล่อง → คืน null เหมือนเดิม
-import { T } from './i18n.js';
-export function ask(title, { placeholder = '', value = '', okLabel = T`ตกลง`, allowEmpty = false } = {}) {
+import { t as tt, tf as ttf, t, tf } from './i18n.js';
+export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.common.msg3'), allowEmpty = false } = {}) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog';
-    box.innerHTML = T`<div class="k-dlg-title"></div>
-      <input class="k-dlg-input">
-      <div class="k-dlg-btns"><button class="k-cancel">ยกเลิก</button>
-      <button class="k-ok"></button></div>`;
+    box.innerHTML = tt('ui.ui.cancel2');
     box.querySelector('.k-dlg-title').textContent = title;
     const inp = box.querySelector('.k-dlg-input');
     inp.placeholder = placeholder; inp.value = value;
@@ -28,13 +25,11 @@ export function ask(title, { placeholder = '', value = '', okLabel = T`ตกล
   });
 }
 
-export function confirmBox(title, okLabel = T`ลบ`) {
+export function confirmBox(title, okLabel = tt('ui.common.del')) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog';
-    box.innerHTML = T`<div class="k-dlg-title"></div>
-      <div class="k-dlg-btns"><button class="k-cancel">ยกเลิก</button>
-      <button class="k-ok k-danger"></button></div>`;
+    box.innerHTML = tt('ui.ui.cancel');
     box.querySelector('.k-dlg-title').textContent = title;
     box.querySelector('.k-ok').textContent = okLabel;
     ov.appendChild(box); document.body.appendChild(ov);
@@ -102,15 +97,15 @@ export function choose(title, options) {
  * @returns {Promise<{action:'save'|'discard'|null, keys:string[]}>} keys = เฉพาะที่ติ๊กไว้
  */
 export function saveAllDialog(files, {
-  title = '', saveLabel = T`บันทึกทั้งหมด`,
-  discardLabel = T`ไม่บันทึก`, cancelLabel = T`ยกเลิก`,
+  title = '', saveLabel = tt('ui.common.saveAll'),
+  discardLabel = tt('ui.ui.notSave'), cancelLabel = tt('ui.common.cancel'),
 } = {}) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog k-saveall';
     const head = document.createElement('div');
     head.className = 'k-dlg-title';
-    head.textContent = title || T`มี ${files.length} ไฟล์ที่ยังไม่ได้บันทึก`;
+    head.textContent = title || ttf('ui.ui.hasFileCantSave', files.length);
 
     const list = document.createElement('div'); list.className = 'k-saveall-list';
     const boxes = [];
@@ -141,7 +136,7 @@ export function saveAllDialog(files, {
     const sel = () => boxes.filter((c) => c.checked).map((c) => c.dataset.key);
     const sync = () => {
       const n = sel().length;
-      bSave.textContent = n === boxes.length ? saveLabel : T`บันทึกที่เลือก (${n})`;
+      bSave.textContent = n === boxes.length ? saveLabel : ttf('ui.ui.savePick', n);
       bSave.disabled = n === 0;
     };
     boxes.forEach((c) => { c.onchange = sync; });

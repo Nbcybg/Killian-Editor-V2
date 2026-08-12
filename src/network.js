@@ -1,5 +1,5 @@
 // Story Network — alpha.63r4 · Canvas 2D/3D with full feature set
-import { T } from './i18n.js';
+import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { visualTagFor } from './visual-tags.js';
 import { REL_COLOR, REL_TYPES, categorizeRole } from './relationship-types.js';
 import { resolveNetColors, resolveNetControls, controlsHint, buttonIndex,
@@ -27,9 +27,9 @@ function edgeKey(a, b) { const x = nodeKey(a), y = nodeKey(b); return x < y ? x 
 
 // [alpha.71 ข้อ 3] โหมดเครื่องมือของผัง — แทน "ดับเบิลคลิกเท่านั้น" + "ลากได้ตลอดเวลา" แบบเดิม
 export const NET_TOOLS = [
-  { id: 'open', icon: '👆', label: T`เปิด/ดู`, hint: T`คลิกโหนด = เปิดหน้านั้น · ลากพื้นที่ว่างหรือลากทับโหนด = เลื่อนผัง (โหนดไม่ขยับ)` },
-  { id: 'edit', icon: '✎', label: T`แก้ไข`, hint: T`คลิกโหนด = เปิดหน้านั้นไปแก้ไข` },
-  { id: 'move', icon: '✥', label: T`ย้ายตำแหน่ง`, hint: T`ลากโหนดเพื่อย้ายตำแหน่ง` },
+  { id: 'open', icon: '👆', label: tt('ui.common.openView'), hint: tt('ui.net.clickNodeOpenPage') },
+  { id: 'edit', icon: '✎', label: tt('ui.common.edit'), hint: tt('ui.net.clickNodeOpenPage2') },
+  { id: 'move', icon: '✥', label: tt('ui.common.movePos'), hint: tt('ui.net.dragNodeMovePos') },
 ];
 
 function tagStyle(n) { for(const t of n.tags||[]){const v=visualTagFor(t);if(v)return v;} return null; }
@@ -39,7 +39,7 @@ function hexToRgba(hex, alpha){const h=hex.replace('#','');const r=parseInt(h.su
 // ── toolbar ──
 function buildToolbar(pane, cb) {
   const bar=document.createElement('div');bar.className='net-toolbar';
-  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent='▼';tg.title=T`ซ่อน`;
+  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent='▼';tg.title=tt('ui.net.hide');
   const bd=document.createElement('div');bd.className='net-tbar-body';let col=false;
   tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?'▶':'▼';};
   const ca=new Set(CAT_ARR.slice(0,4)),tf=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
@@ -48,25 +48,25 @@ function buildToolbar(pane, cb) {
   netColorDefsOf('nodes').filter(d=>CAT_ARR.slice(0,4).includes(d.id)).forEach(x=>{const b=document.createElement('button');b.className='net-tcat';b.dataset.cat=x.id;b.title=x.label;b.dataset.active='1';b.classList.add('on');b.textContent=x.label;b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)ca.delete(x.id);else ca.add(x.id);cb.filter(ca,tf);};cr.appendChild(b);});
   const tr=document.createElement('div');tr.className='net-tbar-row net-tbar-types';
   REL_TYPES.forEach(t=>{const b=document.createElement('button');b.className='net-ttype';b.dataset.type=t.key;b.title=t.label;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete(t.key);else tf.add(t.key);cb.filter(ca,tf);};tr.appendChild(b);});
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-co';b.dataset.type='co-occur';b.title=T`ปรากฏร่วม`;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('co-occur');else tf.add('co-occur');cb.filter(ca,tf);};tr.appendChild(b);})();
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-sc';b.dataset.type='scene-link';b.title=T`ลิงก์ฉาก`;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('scene-link');else tf.add('scene-link');cb.filter(ca,tf);};tr.appendChild(b);})();
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-es';b.dataset.type='ent-scene';b.title=T`เอนทิตี้↔ฉาก`;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('ent-scene');else tf.add('ent-scene');cb.filter(ca,tf);};tr.appendChild(b);})();
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-co';b.dataset.type='co-occur';b.title=tt('ui.net.appear');b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('co-occur');else tf.add('co-occur');cb.filter(ca,tf);};tr.appendChild(b);})();
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-sc';b.dataset.type='scene-link';b.title=tt('ui.net.linkScene');b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('scene-link');else tf.add('scene-link');cb.filter(ca,tf);};tr.appendChild(b);})();
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-es';b.dataset.type='ent-scene';b.title=tt('ui.net.scene2');b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('ent-scene');else tf.add('ent-scene');cb.filter(ca,tf);};tr.appendChild(b);})();
   const sw=document.createElement('div');sw.className='net-tbar-search';
-  const si=document.createElement('input');si.type='text';si.className='net-tbar-input';si.placeholder=T`🔍 ค้นหา…`;
+  const si=document.createElement('input');si.type='text';si.className='net-tbar-input';si.placeholder=tt('ui.net.search');
   let tm;si.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>cb.search(si.value.trim()),200);};si.onkeydown=e=>{if(e.key==='Enter')cb.search(si.value.trim());};sw.appendChild(si);
   const gridRow=document.createElement('div');gridRow.className='net-tbar-row';
-  const gridBtn=document.createElement('button');gridBtn.className='net-tbar-btn net-tog on';gridBtn.textContent='📐';gridBtn.title=T`แสดง grid`;
-  const gridSize=document.createElement('input');gridSize.type='range';gridSize.className='net-grid-slider';gridSize.min='20';gridSize.max='120';gridSize.value='60';gridSize.title=T`ขนาด grid: 60px`;
+  const gridBtn=document.createElement('button');gridBtn.className='net-tbar-btn net-tog on';gridBtn.textContent='📐';gridBtn.title=tt('ui.net.showGrid');
+  const gridSize=document.createElement('input');gridSize.type='range';gridSize.className='net-grid-slider';gridSize.min='20';gridSize.max='120';gridSize.value='60';gridSize.title=tt('ui.net.sizeGridPx');
   gridBtn.onclick=()=>{cb.toggleGrid();gridBtn.classList.toggle('on');};
-  gridSize.oninput=()=>{cb.setGridPx(Number(gridSize.value));gridSize.title=T`ขนาด grid: `+gridSize.value+'px';};
-  const gridAlpha=document.createElement('input');gridAlpha.type='range';gridAlpha.className='net-grid-slider';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value='12';gridAlpha.title=T`โปร่งใส grid: 12%`;
-  gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title=T`โปร่งใส grid: `+gridAlpha.value+'%';};
+  gridSize.oninput=()=>{cb.setGridPx(Number(gridSize.value));gridSize.title=tt('ui.net.sizeGrid')+gridSize.value+'px';};
+  const gridAlpha=document.createElement('input');gridAlpha.type='range';gridAlpha.className='net-grid-slider';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value='12';gridAlpha.title=tt('ui.net.hollowGrid2');
+  gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title=tt('ui.net.hollowGrid')+gridAlpha.value+'%';};
   gridRow.append(gridBtn,gridSize,gridAlpha);
   // ── [alpha.71 ข้อ 3] แถวเครื่องมือ: แสดงตัวหนังสือ · เปิด/แก้ไข/ย้าย · ขยาย-ย่อโหนด ──
   // เดิมคลิกโหนดไม่ทำอะไร (ต้องดับเบิลคลิก) และลากได้ตลอดเวลา → เผลอลากทั้งผังโดยไม่ตั้งใจบ่อย
   const toolRow=document.createElement('div');toolRow.className='net-tbar-row net-tbar-tools';
   const lblBtn=document.createElement('button');
-  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent='🔤';lblBtn.title=T`แสดงตัวหนังสือ (ชื่อใต้โหนด)`;
+  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent='🔤';lblBtn.title=tt('ui.net.showItemFilmName');
   lblBtn.onclick=()=>{lblBtn.classList.toggle('on');cb.toggleLabels();};
   toolRow.appendChild(lblBtn);
   const sep=document.createElement('span');sep.className='net-tbar-sep';toolRow.appendChild(sep);
@@ -79,14 +79,14 @@ function buildToolbar(pane, cb) {
     toolBtns.push(b);toolRow.appendChild(b);
   }
   const sep2=document.createElement('span');sep2.className='net-tbar-sep';toolRow.appendChild(sep2);
-  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent='⦿';szLbl.title=T`ขนาดโหนด`;
+  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent='⦿';szLbl.title=tt('ui.net.sizeNode');
   const size=document.createElement('input');size.type='range';size.className='net-grid-slider net-size-slider';
-  size.min='50';size.max='250';size.value='100';size.title=T`ขนาดโหนด: 100%`;
-  size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=T`ขนาดโหนด: `+size.value+'%';};
+  size.min='50';size.max='250';size.value='100';size.title=tt('ui.net.sizeNode3');
+  size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=tt('ui.net.sizeNode2')+size.value+'%';};
   toolRow.append(szLbl,size);
 
   const btns=document.createElement('div');btns.className='net-tbar-actions';
-  [{t:'🔄',ti:T`รีเฟรช`,f:cb.refresh},{t:'📌',ti:T`ปลดหมุดทุกโหนด แล้วจัดผังใหม่`,f:cb.relayout},{t:'🖼',ti:T`แสดงรูปย่อ`,f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:T`สลับ 2D/3D`,f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:T`ส่งออก`,f:cb.export},{t:'⤾',ti:T`รีเซ็ต`,f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
+  [{t:'🔄',ti:tt('ui.common.refresh'),f:cb.refresh},{t:'📌',ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},{t:'🖼',ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:tt('ui.common.export'),f:cb.export},{t:'⤾',ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
   bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
   return {bar,btns,toolRow,destroy:()=>bar.remove()};
 }
@@ -148,7 +148,7 @@ function buildStatusBar(pane) {
 }
 function buildTipBar(pane) {
   const tb = document.createElement('div'); tb.className = 'net-tip';
-  tb.textContent = T`🖱 ลากพื้น=เลื่อน · ล้อ=ซูม · ลากโหนด=ย้าย · Shift+คลิก=ผลัก · ดับเบิลคลิก=เปิด · คลิกขวา=เมนู`;
+  tb.textContent = tt('ui.net.dragBgScrollWheel');
   pane.appendChild(tb); return tb;
 }
 
@@ -262,10 +262,10 @@ export class StoryNetwork {
 
   async refresh() {
     try {
-      this._sb && (this._sb.textContent = T`กำลังโหลด…`);
+      this._sb && (this._sb.textContent = tt('ui.net.busyLoad'));
       const ents=await this.loadEntities();
-      if (!ents || !Array.isArray(ents)) { this._sb && (this._sb.textContent = T`โหลดผิดพลาด`); return; }
-      if (!ents.length) { this._sb && (this._sb.textContent = T`ไม่พบเอนทิตี้ — สร้างตัวละคร/สถานที่ใน Wiki ก่อน`); this.draw(); this._updateStatus(); return; }
+      if (!ents || !Array.isArray(ents)) { this._sb && (this._sb.textContent = tt('ui.net.loadError')); return; }
+      if (!ents.length) { this._sb && (this._sb.textContent = tt('ui.net.notFoundNewCharacter')); this.draw(); this._updateStatus(); return; }
       const W=Math.max(600,this.pane.clientWidth||900);
       const H=Math.max(400,this.pane.clientHeight||600);
       const D = this._mode3D ? 400 : 0;
@@ -321,7 +321,7 @@ export class StoryNetwork {
             for(const scId of scenes){const sn=bySid[String(scId).toLowerCase()];if(sn)scArr.push(...sn);}
             for(const sn of scArr){
               const ek=edgeKey(ent,sn)+'+esc';if(seen.has(ek))continue;
-              seen.add(ek);this.edges.push({a:ent,b:sn,role:T`กล่าวถึง`,type:'ent-scene'});
+              seen.add(ek);this.edges.push({a:ent,b:sn,role:tt('ui.net.mention'),type:'ent-scene'});
             }
           }
         }
@@ -350,7 +350,7 @@ export class StoryNetwork {
           const ek=edgeKey(ent,sn)+'+esc';
           if(seen.has(ek))continue;
           seen.add(ek);
-          this.edges.push({a:ent,b:sn,role:T`กล่าวถึง`,type:'ent-scene'});
+          this.edges.push({a:ent,b:sn,role:tt('ui.net.mention'),type:'ent-scene'});
         }
       }
     }
@@ -364,7 +364,7 @@ export class StoryNetwork {
       const ch=chs.find(c=>(c.name||'').toLowerCase()===chId||(c.chName||'').toLowerCase()===chId);
       if(!ch)continue;
       const k=edgeKey(s,ch);if(seen.has(k))continue;
-      seen.add(k);this.edges.push({a:s,b:ch,role:T`อยู่ใน`,type:'scene-link'});
+      seen.add(k);this.edges.push({a:s,b:ch,role:tt('ui.net.msg'),type:'scene-link'});
     }
     const secs=this.nodes.filter(n=>n.cat==='section');
     for(const ch of chs){
@@ -372,7 +372,7 @@ export class StoryNetwork {
       const sec=secs.find(s=>(s.name||'').toLowerCase()===ch.sectionName.toLowerCase());
       if(!sec)continue;
       const k=edgeKey(ch,sec);if(seen.has(k))continue;
-      seen.add(k);this.edges.push({a:ch,b:sec,role:T`อยู่ใน`,type:'scene-link'});
+      seen.add(k);this.edges.push({a:ch,b:sec,role:tt('ui.net.msg'),type:'scene-link'});
     }
   }
 
@@ -400,8 +400,8 @@ export class StoryNetwork {
 
     if(!this.nodes.length){
       c.restore();c.fillStyle=THEME.canvas.axis;c.font='15px sans-serif';c.textAlign='center';
-      c.fillText(T`ยังไม่มีเอนทิตี้ใน Wiki`,w/2,h/2-10);c.font='12px sans-serif';
-      c.fillText(T`สร้างตัวละคร/สถานที่/ไอเทม/ตำนานใน Wiki`,w/2,h/2+14);
+      c.fillText(tt('ui.net.notHasWiki'),w/2,h/2-10);c.font='12px sans-serif';
+      c.fillText(tt('ui.net.newCharacterPlaceLegend'),w/2,h/2+14);
       this._updateStatus();return;
     }
 
@@ -575,13 +575,13 @@ export class StoryNetwork {
   _updateStatus() {
     if(!this._sb)return;
     const structN=this.nodes.filter(n=>!WIKI_CATS.has(n.cat)).length;
-    const st=structN?T` (+${structN} ฉาก/บท)`:'';
+    const st=structN?ttf('ui.net.sceneChapter', structN):'';
     const c=viewCenter({scale:this._scale,cx:this._cx,cy:this._cy},this.canvas.width,this.canvas.height);
     const zc=this._mode3D?this._viewZ():0;
-    this._sb.textContent=T`⦿ ${this.nodes.length}${st} · ${this.edges.length} เส้น · `+
+    this._sb.textContent=ttf('ui.net.line', this.nodes.length, st, this.edges.length)+
       `X ${Math.round(c.x)} · Y ${Math.round(c.y)} · Z ${Math.round(zc)}`+
       (this._mode3D?` · ↻ ${Math.round(this._rx*180/Math.PI)}°,${Math.round(this._ry*180/Math.PI)}°`:'')+
-      T` · ซูม ${Math.round(this._scale*100)}%`;
+      ttf('ui.net.zoom', Math.round(this._scale*100));
   }
 
   /** ความลึกเฉลี่ยของโหนดที่มองเห็น — ใช้เป็นค่า Z ของกล้องในโหมด 3D */
@@ -771,36 +771,36 @@ export class StoryNetwork {
       if(struct){
         // structural node — copy from explorer
         if(node.cat==='scene'){
-          addItem(T`📄 เปิด`,()=>{if(this.onOpenScene)this.onOpenScene(node.file);});
-          if(this.onRenameStruct)addItem(T`✎ เปลี่ยนชื่อ…`,()=>this.onRenameStruct(node));
-          if(this.onDuplicateStruct)addItem(T`📋 ทำซ้ำ`,()=>this.onDuplicateStruct(node));
-          if(node.file&&this.onReveal)addItem(T`📂 หาในดิสก์`,()=>{try{this.onReveal(node.file);}catch{}});
+          addItem(tt('ui.net.open'),()=>{if(this.onOpenScene)this.onOpenScene(node.file);});
+          if(this.onRenameStruct)addItem(tt('ui.net.changeName'),()=>this.onRenameStruct(node));
+          if(this.onDuplicateStruct)addItem(tt('ui.net.repeat'),()=>this.onDuplicateStruct(node));
+          if(node.file&&this.onReveal)addItem(tt('ui.net.findDisk'),()=>{try{this.onReveal(node.file);}catch{}});
           addItem('-',()=>{});
-          if(this.onDeleteStruct)addItem(T`🗑 ลบ (ย้ายไปถังขยะ)`,()=>this.onDeleteStruct(node),{danger:true});
+          if(this.onDeleteStruct)addItem(tt('ui.common.delMoveTrash'),()=>this.onDeleteStruct(node),{danger:true});
         }else if(node.cat==='chapter'){
-          addItem(T`📂 เปิดบท`,()=>{if(this.onOpenScene&&node.file)this.onOpenScene(node.file);});
-          if(this.onAddChild)addItem(T`＋ เพิ่มฉาก…`,()=>this.onAddChild(node));
-          if(this.onRenameStruct)addItem(T`✎ เปลี่ยนชื่อบท…`,()=>this.onRenameStruct(node));
+          addItem(tt('ui.net.openChapter'),()=>{if(this.onOpenScene&&node.file)this.onOpenScene(node.file);});
+          if(this.onAddChild)addItem(tt('ui.net.addScene'),()=>this.onAddChild(node));
+          if(this.onRenameStruct)addItem(tt('ui.net.changeNameChapter'),()=>this.onRenameStruct(node));
           addItem('-',()=>{});
-          if(this.onDeleteStruct)addItem(T`🗑 ลบบททั้งบท`,()=>this.onDeleteStruct(node),{danger:true});
+          if(this.onDeleteStruct)addItem(tt('ui.net.delChapterChapter'),()=>this.onDeleteStruct(node),{danger:true});
         }else if(node.cat==='section'){
-          if(this.onOpenScene&&node.file)addItem(T`📂 เปิดเล่ม`,()=>this.onOpenScene(node.file));
-          if(this.onAddChild)addItem(T`＋ เพิ่มเล่มใหม่…`,()=>this.onAddChild(node));
-          if(this.onRenameStruct)addItem(T`✎ เปลี่ยนชื่อเล่ม…`,()=>this.onRenameStruct(node));
+          if(this.onOpenScene&&node.file)addItem(tt('ui.net.openBook'),()=>this.onOpenScene(node.file));
+          if(this.onAddChild)addItem(tt('ui.net.addBookNew'),()=>this.onAddChild(node));
+          if(this.onRenameStruct)addItem(tt('ui.common.changeNameBook'),()=>this.onRenameStruct(node));
           addItem('-',()=>{});
-          if(this.onDeleteStruct)addItem(T`🗑 ลบเล่มทั้งเล่ม`,()=>this.onDeleteStruct(node),{danger:true});
+          if(this.onDeleteStruct)addItem(tt('ui.common.delBookBook'),()=>this.onDeleteStruct(node),{danger:true});
         }
       }else{
         // wiki entity — match explorer style
-        addItem(T`📖 เปิด`,()=>{if(this.onOpen)this.onOpen(node);});
+        addItem(tt('ui.net.open2'),()=>{if(this.onOpen)this.onOpen(node);});
         if(node.file&&this.onReveal){
-          addItem(T`📂 หาในดิสก์`,()=>{try{this.onReveal(node.file);}catch{}});
+          addItem(tt('ui.net.findDisk'),()=>{try{this.onReveal(node.file);}catch{}});
         }
-        if(node.cat)addItem(T`🏷 หมวด: `+node.cat,()=>{},{dim:true});
+        if(node.cat)addItem(tt('ui.net.cat')+node.cat,()=>{},{dim:true});
         if(node.desc)addItem('📝 '+(node.desc.length>50?node.desc.slice(0,49)+'…':node.desc),()=>{},{dim:true});
-        if(node.tags&&node.tags.length)addItem(T`🏷 แท็ก: `+node.tags.join(', '),()=>{},{dim:true});
+        if(node.tags&&node.tags.length)addItem(tt('ui.net.tag')+node.tags.join(', '),()=>{},{dim:true});
         if(node.relationships&&node.relationships.length){
-          addItem(T`🔗 ความสัมพันธ์ (`+node.relationships.length+')…',()=>{
+          addItem(tt('ui.net.relation')+node.relationships.length+')…',()=>{
             const sm=document.createElement('div');sm.className='k-menu net-ctx-menu';this._ctxMenus.push(sm);
             sm.style.cssText='position:fixed;left:'+(e.clientX+170)+'px;top:'+e.clientY+'px;z-index:81;background:var(--side);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.4);';
             for(const r of node.relationships.slice(0,15)){
@@ -816,12 +816,12 @@ export class StoryNetwork {
       }
       if(node._pinned){
         addItem('-',()=>{});
-        addItem(T`📌 ปลดหมุดโหนดนี้`,()=>{this.unpin(node);this.draw();});
+        addItem(tt('ui.net.unsetPinNode'),()=>{this.unpin(node);this.draw();});
       }
     }else{
-      addItem(T`⤾ รีเซ็ตมุมมอง`,()=>{this._scale=1;this._cx=0;this._cy=0;this._rx=0.4;this._ry=-0.3;this.draw();});
-      addItem(T`🔄 รีเฟรช`,()=>this.refresh());
-      addItem(T`📌 ปลดหมุดทุกโหนด แล้วจัดผังใหม่`,()=>this.relayout());
+      addItem(tt('ui.net.resetView'),()=>{this._scale=1;this._cx=0;this._cy=0;this._rx=0.4;this._ry=-0.3;this.draw();});
+      addItem(tt('ui.common.refresh2'),()=>this.refresh());
+      addItem(tt('ui.net.unsetPinAllNode2'),()=>this.relayout());
     }
     document.body.appendChild(menu);
     document.addEventListener('click',this._ctxCleanup);this._ctxListenerAdded=true;

@@ -1,4 +1,6 @@
 // test/split.test.cjs — ทดสอบ split-layout ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const slOut = require('path').join(require('os').tmpdir(), '_sl.cjs');   // '/tmp' ใช้บน Windows ไม่ได้
 require('esbuild').buildSync({ entryPoints: [path.join(__dirname, '../src/layout/split-layout.js')], outfile: slOut, format: 'cjs', bundle: true, logLevel: 'silent' });

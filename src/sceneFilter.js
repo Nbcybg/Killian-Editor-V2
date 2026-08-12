@@ -3,7 +3,7 @@
 //   status:กำลังเขียน   tag:บู๊   pov:ท็อป   flag:1   สี:เขียว
 // สถานะเก็บเป็นคำไทยอยู่แล้ว ('Outline' = ยังไม่ตั้ง) → match แบบ substring ตรง ๆ
 
-import { T } from './i18n.js';
+import { t as tt, t } from './i18n.js';
 const FIELD = {
   'สถานะ': 'status', 'status': 'status',
   'แท็ก': 'tags', 'tag': 'tags', 'tags': 'tags', '#': 'tags',
@@ -43,7 +43,7 @@ export function sceneMatchesQuery(sc, q) {
   return terms.every((t) => {
     if (t.field === '*') return hay.includes(t.value);
     if (t.field === 'flag') {
-      const on = ['1', 'true', T`ปักหมุด`, 'fav', 'yes', 'y'].includes(t.value);
+      const on = ['1', 'true', tt('ui.common.pinPin'), 'fav', 'yes', 'y'].includes(t.value);
       return (!!sc.flag) === on;
     }
     if (t.field === 'tags') return tagStr(sc).includes(t.value);

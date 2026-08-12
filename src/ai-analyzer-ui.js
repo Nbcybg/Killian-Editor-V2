@@ -6,32 +6,32 @@
 //
 // เจตนา: ผู้ใช้เห็นแผนของฟีเจอร์และกดสำรวจได้ โดยไม่หลอกว่าผลลัพธ์เป็นของจริง
 // (บทเรียน 14b — โมดูลที่ไม่มีจุดเรียกเท่ากับไม่มีอยู่ · แผงนี้จึงมีทั้งปุ่ม toolbar เมนู และคำสั่ง)
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { el, setStatus, state, t as tr } from './core.js';
 import { iconHtml } from './icons.js';
 
 /** การ์ดตัวอย่างทั้ง 5 ใบ — ข้อความไทยล้วนตามสเปก */
 export const ANALYZER_CARDS = [
-  { id: 'pacing',    icon: '📊', title: T`วิเคราะห์จังหวะเรื่อง`,
-    desc: T`ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน เทียบความยาว·ความหนาแน่นของบทพูดตลอดทั้งเล่ม`,
-    bullets: [T`กราฟความยาวฉากเรียงตามลำดับเรื่อง`, T`จุดที่จังหวะตกติดกันหลายฉาก`,
-              T`สัดส่วนบรรยาย : บทสนทนา ต่อบท`] },
-  { id: 'arc',       icon: '👤', title: T`ส่วนโค้งตัวละคร`,
-    desc: T`ติดตามว่าตัวละครแต่ละตัวปรากฏช่วงไหนของเรื่อง และหายไปนานเกินไปหรือเปล่า`,
-    bullets: [T`แผนภาพการปรากฏตัวตลอดเรื่อง`, T`ตัวละครที่หายไปเกิน N บท`,
-              T`ตัวละครที่ถูกกล่าวถึงแต่ไม่เคยออกฉาก`] },
-  { id: 'words',     icon: '📝', title: T`คำที่ใช้บ่อย`,
-    desc: T`หาคำและวลีที่ซ้ำจนสะดุดตา แยกตามบทและตามตัวละครผู้พูด`,
-    bullets: [T`คำซ้ำในระยะใกล้ (ย่อหน้าเดียวกัน)`, T`คำติดปากของนักเขียน`,
-              T`ความหลากหลายของคำศัพท์ต่อบท`] },
-  { id: 'conflict',  icon: '🔍', title: T`ความขัดแย้ง`,
-    desc: T`ตรวจว่าแต่ละฉากมีแรงต้านหรือไม่ ฉากที่ไม่มีความขัดแย้งเลยมักเป็นฉากที่ตัดได้`,
-    bullets: [T`ฉากที่ยังไม่ได้ระบุความขัดแย้ง`, T`ความขัดแย้งที่ค้างไม่ถูกคลี่คลาย`,
-              T`จุดพลิกของเรื่องเทียบโครงสร้าง 3 องก์`] },
-  { id: 'length',    icon: '⏱️', title: T`ความยาวฉาก`,
-    desc: T`เทียบความยาวฉากกับค่ากลางของทั้งเล่ม ชี้ฉากที่ผิดปกติทั้งสั้นและยาว`,
-    bullets: [T`ฉากยาวกว่าค่ากลาง 2 เท่าขึ้นไป`, T`ฉากสั้นกว่า 150 คำ`,
-              T`ประมาณเวลาอ่าน / จำนวนหน้าบท`] },
+  { id: 'pacing',    icon: '📊', title: t('ui.aia.analyzePaceStory'),
+    desc: t('ui.aia.viewSceneSceneCompare'),
+    bullets: [t('ui.aia.graphLongSceneOrder'), t('ui.aia.dotPaceScene'),
+              t('ui.aia.ratioActionDialogueNext')] },
+  { id: 'arc',       icon: '👤', title: t('ui.aia.partCurveCharacter'),
+    desc: t('ui.aia.characterEachItemAppear'),
+    bullets: [t('ui.aia.planImageAppearItem'), t('ui.aia.characterFindNChapter'),
+              t('ui.aia.characterMentionNotOut')] },
+  { id: 'words',     icon: '📝', title: t('ui.aia.wordUse'),
+    desc: t('ui.aia.findWordDupSplit'),
+    bullets: [t('ui.aia.wordDupGapPara'), t('ui.aia.wordWriter'),
+              t('ui.aia.dragWordNextChapter')] },
+  { id: 'conflict',  icon: '🔍', title: t('ui.common.conflict'),
+    desc: t('ui.aia.checkEachSceneHas'),
+    bullets: [t('ui.aia.sceneCantSpecifyConflict'), t('ui.aia.conflictStuckNot'),
+              t('ui.aia.dotStoryCompareStructure')] },
+  { id: 'length',    icon: '⏱️', title: t('ui.aia.longScene'),
+    desc: t('ui.aia.compareLongSceneValue'),
+    bullets: [t('ui.aia.sceneLongValueCenter'), t('ui.aia.sceneShortWord'),
+              t('ui.aia.timeReadCountPage')] },
 ];
 
 /** ตัวเลขจริงที่อ่านได้จากดัชนีในเครื่อง (ไม่ยิง AI · ไม่เปิดไฟล์ทีละใบ) */
@@ -88,14 +88,14 @@ export async function renderAIAnalyzerPanel(host) {
 
   wrap.append(el('div', 'aia-lead',
     tr('aia.lead', 'ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI ที่กำลังจะมา '
-       + T`ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง`)));
+       + t('ui.aia.nowShowSamplePage'))));
 
   // แถบสถิติจริง — บอกว่าจะเอาอะไรไปวิเคราะห์
   const stats = await analyzerStats();
   const bar = el('div', 'aia-stats');
   for (const [label, val] of [
-    [T`เล่ม`, stats.sections], [T`บท`, stats.chapters], [T`ฉาก`, stats.scenes],
-    [T`คำ`, stats.words.toLocaleString()], [T`เอนทิตี้ Wiki`, stats.entities],
+    [t('ui.common.book'), stats.sections], [t('ui.common.chapter'), stats.chapters], [t('ui.common.scene2'), stats.scenes],
+    [t('ui.common.word2'), stats.words.toLocaleString()], [t('ui.aia.wiki'), stats.entities],
   ]) {
     const b = el('div', 'aia-stat');
     b.append(el('div', 'aia-stat-val', String(val)), el('div', 'aia-stat-label', label));
@@ -114,7 +114,7 @@ export async function renderAIAnalyzerPanel(host) {
     card.append(ul);
     const btn = el('button', 'aia-run', tr('aia.run', 'วิเคราะห์'));
     btn.type = 'button';
-    btn.onclick = () => setStatus('🧠 “' + c.title + T`” ยังเป็นตัวอย่างหน้าตา — ยังไม่ได้ต่อกับ AI`);
+    btn.onclick = () => setStatus('🧠 “' + c.title + t('ui.aia.samplePageCantNext'));
     card.append(btn);
     grid.append(card);
   }
@@ -122,7 +122,7 @@ export async function renderAIAnalyzerPanel(host) {
 
   wrap.append(el('div', 'aia-foot',
     tr('aia.foot', 'ระหว่างนี้ใช้ของที่ทำงานจริงได้แล้ว: '
-       + T`เครื่องมือ → ตรวจหาคำซ้ำ · AI → ตรวจ Plot Hole · AI → ตรวจความสอดคล้อง`)));
+       + t('ui.aia.toolCheckFindWord'))));
 
   h.append(wrap);
   return wrap;

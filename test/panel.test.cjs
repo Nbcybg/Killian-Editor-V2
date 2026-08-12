@@ -2,6 +2,8 @@
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');
+// [alpha.77] t() ไม่ตกกลับภาษาอื่นแล้ว — ต้องมีตารางคำแปลจริงก่อน require บันเดิล
+require('./_lang.cjs').installLang('th');
 // ใช้ os.tmpdir() — '/tmp' ตายตัวรันบน Windows ไม่ได้
 const tmp = (f) => path.join(os.tmpdir(), f);
 for (const [src, out] of [['panels/panel-layout.js', tmp('_pl.cjs')], ['panels/panel-store.js', tmp('_ps.cjs')]])

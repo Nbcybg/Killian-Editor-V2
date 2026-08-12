@@ -1,5 +1,5 @@
 // session-notes.js — โน้ตระหว่างเขียน เชื่อมกับฉาก (ข้อ 85)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { state, setStatus, el } from './core.js';
 
 const NOTES_KEY = 'k2-session-notes';
@@ -28,7 +28,7 @@ export async function addSessionNote(text, sceneId, sceneTitle, future = false) 
     timestamp: new Date().toISOString(),
   }];
   await saveSessionNotes(notes);
-  setStatus(future ? T`บันทึกโน้ตไว้ทำภายหลังแล้ว` : T`บันทึกโน้ตแล้ว`);
+  setStatus(future ? t('ui.notes.saveNoteDoDone') : t('ui.notes.saveNoteDone'));
   return notes.length;
 }
 
@@ -41,14 +41,14 @@ export function getFutureNotes({ includeDone = false } = {}) {
 export async function setNoteDone(id, done = true) {
   const notes = getSessionNotes().map((n) => (n.id === id ? { ...n, done: !!done } : n));
   await saveSessionNotes(notes);
-  setStatus(done ? T`ทำโน้ตนี้แล้ว` : T`เอากลับมาเป็นค้างอยู่`);
+  setStatus(done ? t('ui.notes.doNoteDone') : t('ui.notes.backStuck'));
   return notes;
 }
 
 /** ลบโน้ตทีละอัน */
 export async function removeSessionNote(id) {
   await saveSessionNotes(getSessionNotes().filter((n) => n.id !== id));
-  setStatus(T`ลบโน้ตแล้ว`);
+  setStatus(t('ui.notes.delNoteDone'));
 }
 
 /** โน้ตของฉากหนึ่ง — ใช้ตอนแสดงบนการ์ดฉากในเส้นเวลา */
@@ -66,18 +66,18 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
   host.innerHTML = '';
   const pending = getFutureNotes();
   const done = getSessionNotes().filter((n) => n.future && n.done);
-  host.append(el('div', 'fn-title', T`📝 ไว้ทำภายหลัง (${pending.length})`));
+  host.append(el('div', 'fn-title', tf('ui.notes.do2', pending.length)));
   if (!pending.length) {
     host.append(el('div', 'dim', done.length
-      ? T`✅ เคลียร์หมดแล้ว (ทำไปแล้ว ${done.length} รายการ)`
-      : T`ยังไม่มีโน้ตค้าง — กด 📝 บนแถบเครื่องมือแล้วติ๊ก "ไว้ทำภายหลัง"`));
+      ? tf('ui.notes.doneDoDoneList', done.length)
+      : t('ui.notes.notHasNoteStuck')));
     return host;
   }
   const list = el('div', 'fn-list');
   for (const n of [...pending].reverse()) {
     const row = el('div', 'fn-row');
     const chk = el('input', 'fn-chk'); chk.type = 'checkbox';
-    chk.title = T`ทำแล้ว`;
+    chk.title = t('ui.notes.doDone');
     chk.onclick = async (e) => { e.stopPropagation(); await setNoteDone(n.id, true); if (onChanged) onChanged(); };
     const body = el('div', 'fn-body');
     // ข้อความโน้ตมาจากผู้ใช้ → textContent เท่านั้น
@@ -90,7 +90,7 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
       body.onclick = () => onOpenScene(n.sceneId, n.sceneTitle);
     }
     const del = el('span', 'fn-del', '✕');
-    del.title = T`ลบโน้ตนี้`;
+    del.title = t('ui.notes.delNote');
     del.onclick = async (e) => { e.stopPropagation(); await removeSessionNote(n.id); if (onChanged) onChanged(); };
     row.append(chk, body, del);
     list.append(row);
@@ -103,7 +103,7 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
 export async function quickNote(sceneId, sceneTitle) {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', T`📝 โน้ตด่วน — ` + (sceneTitle || T`ทั่วไป`)));
+  box.append(el('div', 'k-dlg-title', t('ui.notes.noteQuick') + (sceneTitle || t('ui.common.msg4'))));
   const ta = el('textarea', 'k-dlg-input');
   ta.style.cssText = 'width:100%;min-height:100px;resize:vertical;font-family:inherit';
   box.append(ta);
@@ -111,7 +111,7 @@ export async function quickNote(sceneId, sceneTitle) {
   // ติ๊กไว้ = ไปโผล่ในแผง "ไว้ทำภายหลัง" บนหน้าเส้นเวลา (Future Notes)
   const futRow = el('label', 'fn-future-row');
   const fut = el('input'); fut.type = 'checkbox'; fut.className = 'wiki-check';
-  futRow.append(fut, el('span', null, T` ไว้ทำภายหลัง (แสดงบนหน้าเส้นเวลา)`));
+  futRow.append(fut, el('span', null, t('ui.notes.doShowTopPage')));
   box.append(futRow);
 
   // Show recent notes
@@ -119,7 +119,7 @@ export async function quickNote(sceneId, sceneTitle) {
   const notes = [...getSessionNotes()].reverse().slice(0, 5);
   if (notes.length) {
     const recent = el('div'); recent.style.cssText = 'margin-top:8px;max-height:120px;overflow-y:auto';
-    recent.append(el('div', 'dim', T`ล่าสุด:`));
+    recent.append(el('div', 'dim', t('ui.notes.latest')));
     for (const n of notes) {
       const r = el('div', 'k-menu-item');
       r.style.cssText = 'font-size:11px;cursor:pointer';
@@ -131,7 +131,7 @@ export async function quickNote(sceneId, sceneTitle) {
   }
 
   const btns = el('div', 'k-dlg-btns');
-  const saveB = el('button', 'k-ok', T`บันทึก`);
+  const saveB = el('button', 'k-ok', t('ui.common.save'));
   saveB.onclick = async () => {
     const text = ta.value.trim();
     if (!text) { ov.remove(); return; }
@@ -142,7 +142,7 @@ export async function quickNote(sceneId, sceneTitle) {
       try { const { refreshOpenTimeline } = await import('./timeline-ui.js'); refreshOpenTimeline(); } catch {}
     }
   };
-  const closeB = el('button', null, T`ปิด`);
+  const closeB = el('button', null, t('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(saveB, closeB);
   box.append(btns);
@@ -157,10 +157,10 @@ export async function showAllNotes() {
   const notes = [...getSessionNotes()].reverse();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', T`📝 โน้ตทั้งหมด (` + notes.length + ')'));
+  box.append(el('div', 'k-dlg-title', t('ui.notes.noteAll') + notes.length + ')'));
   const list = el('div', 'k-pick-list'); list.style.maxHeight = '50vh';
   if (!notes.length) {
-    list.append(el('div', 'dim', T`ยังไม่มีโน้ต — กด 📝 ใน toolbar`));
+    list.append(el('div', 'dim', t('ui.notes.notHasNotePress')));
   } else {
     for (const n of notes) {
       const row = el('div', 'k-menu-item');
@@ -170,7 +170,7 @@ export async function showAllNotes() {
       body.style.fontSize = '12px';
       const sub = el('small', null,
         [n.sceneTitle, new Date(n.timestamp).toLocaleString('th-TH'),
-         n.future ? (n.done ? T`ทำแล้ว` : T`ไว้ทำภายหลัง`) : ''].filter(Boolean).join(' · '));
+         n.future ? (n.done ? t('ui.notes.doDone') : t('ui.notes.do')) : ''].filter(Boolean).join(' · '));
       sub.style.color = 'var(--dim)';
       row.append(body, sub);
       list.append(row);
@@ -178,13 +178,13 @@ export async function showAllNotes() {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const clearB = el('button', 'k-danger', T`ล้าง`);
+  const clearB = el('button', 'k-danger', t('ui.common.clear'));
   clearB.onclick = async () => {
     const { confirmBox } = await import('./ui.js');
-    if (!(await confirmBox(T`ล้างโน้ตทั้งหมด (${notes.length} รายการ)?`, T`ล้าง`))) return;
-    await saveSessionNotes([]); ov.remove(); setStatus(T`ล้างโน้ตทั้งหมดแล้ว`);
+    if (!(await confirmBox(tf('ui.notes.clearNoteAllList', notes.length), t('ui.common.clear')))) return;
+    await saveSessionNotes([]); ov.remove(); setStatus(t('ui.notes.clearNoteAllDone'));
   };
-  const closeB = el('button', 'k-ok', T`ปิด`);
+  const closeB = el('button', 'k-ok', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(clearB, closeB);
   box.append(btns);

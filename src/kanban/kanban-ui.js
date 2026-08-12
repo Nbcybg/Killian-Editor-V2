@@ -1,5 +1,4 @@
 // kanban-ui.js — กระดาน Kanban แสดงฉากตามสถานะ · ลากการ์ดเปลี่ยนสถานะ (ข้อ 12)
-import { T } from '../i18n.js';
 import { $, el, setStatus, state, SCENE_COLORS, t } from '../core.js';
 import { KanbanBoard } from './kanban-core.js';   // คอลัมน์จัดการผ่านเมธอดของ board (addColumn/removeColumn)
 import { allStatuses, statusColor } from '../custom-status.js';
@@ -42,7 +41,7 @@ let uiPane = null;
 // บั๊ก #18: Kanban เป็นแผง ไม่ใช่แท็บเอกสาร
 export async function openKanban() {
   const b = await getBoard();
-  if (!b) { setStatus(T`สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้`); return; }
+  if (!b) { setStatus(t('ui.kanban.newDraftBeforeUse')); return; }
   showPanel('kanban');                 // hook ใน app.js เริ่มวาดให้ · await ตัวเดียวกันต่อ
   return renderKanbanPanel();
 }
@@ -50,7 +49,7 @@ export async function openKanban() {
 /** วาดเนื้อกระดานลง #kanban-body — ห้ามเรียก showPanel ในนี้ (วนซ้ำกับ hook) */
 export async function renderKanbanPanel() {
   const b = await getBoard();
-  if (!b) { setStatus(T`สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้`); return; }
+  if (!b) { setStatus(t('ui.kanban.newDraftBeforeUse')); return; }
   uiPane = $('#kanban-body');
   if (!uiPane) return;
   uiPane.classList.add('kanban-pane');
@@ -65,11 +64,11 @@ function renderKanban(b) {
 
   // หัวกระดาน + ปุ่มเพิ่มคอลัมน์
   const head = el('div', 'kb-head');
-  head.append(el('span', 'kb-title', '📋 Kanban — ' + data.total + T` ฉาก`));
-  const addBtn = el('button', 'kb-add-col', T`+ เพิ่มคอลัมน์`);
+  head.append(el('span', 'kb-title', '📋 Kanban — ' + data.total + t('ui.common.scene')));
+  const addBtn = el('button', 'kb-add-col', t('ui.kanban.add'));
   addBtn.onclick = async () => {
     // window.prompt() เป็น no-op ใน Electron — ต้องใช้กล่องของโปรแกรมเอง
-    const name = await ask(t('kanban.newColumn', 'ชื่อคอลัมน์ใหม่'), { placeholder: t('kanban.newColumnHint', 'เช่น รอรีวิว') });
+    const name = await ask(t('ui.kanban.newColumn'), { placeholder: t('ui.kanban.newColumnHint') });
     if (!name) return;
     await b.addColumn(name);
     renderKanban(b);
@@ -93,10 +92,10 @@ function renderKanban(b) {
     // ปุ่มลบคอลัมน์ (เฉพาะคอลัมน์ที่กำหนดเอง)
     if (col.custom) {
       const delBtn = el('span', 'kb-col-del', '×');
-      delBtn.title = t('kanban.deleteColumn', 'ลบคอลัมน์');
+      delBtn.title = t('ui.kanban.deleteColumn');
       delBtn.onclick = async (e) => { e.stopPropagation();
         const res = await b.removeColumn(col.key, { moveTo: allStatuses()[0] || '' });
-        if (!res.ok) { setStatus(t('kanban.moveScenesFirst', 'ย้ายฉากออกจากคอลัมน์นี้ก่อน')); return; }
+        if (!res.ok) { setStatus(t('ui.kanban.moveScenesFirst')); return; }
         renderKanban(b);
       };
       colHead.append(delBtn);
@@ -143,7 +142,7 @@ function renderKanban(b) {
             openScene(p, card.title);
             return;
           }
-          setStatus(t('kanban.sceneNotFound', 'ไม่พบไฟล์ฉาก: ') + card.title);
+          setStatus(t('ui.kanban.sceneNotFound') + card.title);
         };
 
         // อ่านบทก่อนวาง (drag)

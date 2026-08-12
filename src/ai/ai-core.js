@@ -2,7 +2,7 @@
 // provider adapter · ความปลอดภัยของคีย์ · rate limit · นับต้นทุน · RAG (chunk/embed/vector/retrieve)
 // pure logic: ไม่แตะ DOM/fs/network เอง — ฉีด { http, io, now, sleep } เข้ามาทั้งหมด
 // spec: docs/72-ai-core.md
-import { T } from '../i18n.js';
+import { t as tt, t } from '../i18n.js';
 import { tokenizeQuery } from '../search-engine.js';   // ตัดคำไทยตัวเดียวกับระบบค้นหา (คืนสตริงคำ)
 
 // ────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export const PROVIDERS = {
   },
 
   ollama: {
-    label: T`Ollama (เครื่องตัวเอง)`,
+    label: tt('ui.common.ollamaItem'),
     needsKey: false,
     defaultModel: 'llama3',
     defaultEmbedModel: 'nomic-embed-text',
@@ -115,7 +115,7 @@ export const PROVIDER_IDS = Object.keys(PROVIDERS);
 
 // ───────── ระดับความรุนแรงของสิ่งที่ตรวจพบ (ใช้ร่วมกันทุกโมดูลตรวจสอบ) ─────────
 // เดิมประกาศซ้ำใน ai-plot.js กับ ai-character.js — แก้ที่หนึ่งแล้วอีกที่ไม่ตาม
-export const SEVERITY = { critical: T`ร้ายแรง`, major: T`สำคัญ`, minor: T`เล็กน้อย` };
+export const SEVERITY = { critical: tt('ui.ai.msg'), major: tt('ui.ai.important'), minor: tt('ui.ai.smallLess') };
 export const SEV_RANK = { critical: 3, major: 2, minor: 1 };
 
 /** Build an HTTP request for a chat completion. @returns {{url,headers,body}} */
@@ -213,7 +213,7 @@ export class CostTracker {
   byFeature() {
     const m = {};
     for (const r of this.rows()) {
-      const k = r.feature || T`อื่น ๆ`;
+      const k = r.feature || tt('ui.common.other');
       m[k] = m[k] || { calls: 0, tokens: 0, usd: 0 };
       m[k].calls++; m[k].tokens += num(r.tokens); m[k].usd = +(m[k].usd + num(r.usd)).toFixed(6);
     }
@@ -228,7 +228,7 @@ export const KEY_FILE = 'ai-key.json';
 /** Show a key without leaking it: 'sk-abcdefghijkl' → 'sk-…ijkl' */
 export function mask(key) {
   const s = String(key || '');
-  if (!s) return T`(ยังไม่ตั้ง)`;
+  if (!s) return tt('ui.ai.notSet');
   if (s.length <= 8) return '…';
   return s.slice(0, 3) + '…' + s.slice(-4);
 }
@@ -264,7 +264,7 @@ export class KeyStore {
     this._cache = apiKey || '';
     if (!this.io || !this.root) return false;
     await this.io.writeFile(this.io.join(this.root, KEY_FILE), JSON.stringify(
-      { apiKey: this._cache, note: T`ไฟล์นี้เก็บคีย์ส่วนตัว — อย่าแชร์/อย่าใส่ในซิปที่ส่งต่อ` }, null, 2));
+      { apiKey: this._cache, note: tt('ui.ai.fileKeepKeyPart') }, null, 2));
     return true;
   }
   clear() { this._cache = null; }
@@ -329,9 +329,9 @@ export class AIClient {
     const s = { ...this.settings(), ...pickDefined(opts, ['provider', 'model', 'temperature', 'maxTokens']) };
     const provider = s.provider;
     const def = PROVIDERS[provider];
-    if (!def) return fail(T`ไม่รู้จักผู้ให้บริการ: ` + provider, 'bad-provider');
+    if (!def) return fail(tt('ui.ai.notKnownProvider') + provider, 'bad-provider');
     const apiKey = def.needsKey ? await this.keyStore.get() : '';
-    if (def.needsKey && !apiKey) return fail(T`ยังไม่ได้ตั้งค่า API key (ไฟล์ → ตั้งค่า AI)`, 'no-key');
+    if (def.needsKey && !apiKey) return fail(tt('ui.ai.cantSettingsAPIKey'), 'no-key');
 
     const model = s.model || def.defaultModel;
     const req = buildRequest(provider, {
@@ -347,7 +347,7 @@ export class AIClient {
           res = await this.http.fetch(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
         } catch (e) {
           if (attempt < maxRetries) { await this.sleep(backoff(attempt)); continue; }
-          return fail(T`เชื่อมต่อ AI ไม่ได้: ` + (e && e.message), 'network');
+          return fail(tt('ui.ai.connectAICant') + (e && e.message), 'network');
         }
         if (!res || !res.ok) {
           const status = (res && res.status) || 0;
@@ -356,7 +356,7 @@ export class AIClient {
           return { ...fail(httpMessage(status), 'http'), status };
         }
         const data = safeJson(res.body);
-        if (!data) return fail(T`อ่านคำตอบจาก AI ไม่ได้ (ไม่ใช่ JSON)`, 'bad-json');
+        if (!data) return fail(tt('ui.ai.readAnswerAICant'), 'bad-json');
         const { text, usage } = parseResponse(provider, data);
         const cost = estimateCost(provider, model, usage);
         if (this.tracker) this.tracker.record({ provider, model, usage, feature: opts.feature });
@@ -374,14 +374,14 @@ export class AIClient {
     const s = { ...this.settings(), ...pickDefined(opts, ['provider', 'model', 'temperature', 'maxTokens']) };
     const provider = s.provider;
     const def = PROVIDERS[provider];
-    if (!def) return fail(T`ไม่รู้จักผู้ให้บริการ: ` + provider, 'bad-provider');
+    if (!def) return fail(tt('ui.ai.notKnownProvider') + provider, 'bad-provider');
     if (!this.http.stream) {
       const r = await this.complete(opts);
       if (r.ok && r.text) onChunk(r.text, r);
       return r;
     }
     const apiKey = def.needsKey ? await this.keyStore.get() : '';
-    if (def.needsKey && !apiKey) return fail(T`ยังไม่ได้ตั้งค่า API key (ไฟล์ → ตั้งค่า AI)`, 'no-key');
+    if (def.needsKey && !apiKey) return fail(tt('ui.ai.cantSettingsAPIKey'), 'no-key');
     const model = s.model || def.defaultModel;
     const req = buildRequest(provider, {
       apiKey, model, baseUrl: this.baseUrl(s), system: opts.system, prompt: opts.prompt,
@@ -401,7 +401,7 @@ export class AIClient {
       if (this.tracker) this.tracker.record({ provider, model, usage, feature: opts.feature });
       return { ok: true, text: text.trim(), usage, cost: estimateCost(provider, model, usage), provider, model };
     } catch (e) {
-      return fail(T`สตรีมข้อความไม่สำเร็จ: ` + (e && e.message), 'network');
+      return fail(tt('ui.ai.textNotOk') + (e && e.message), 'network');
     } finally { this.limiter.release(); }
   }
 
@@ -437,10 +437,10 @@ function fail(error, code) { return { ok: false, text: '', error, code, usage: {
 const retryable = (s) => s === 429 || s === 408 || (s >= 500 && s < 600);
 const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
 function httpMessage(status) {
-  if (status === 401 || status === 403) return T`API key ไม่ถูกต้องหรือหมดสิทธิ์ (HTTP ` + status + ')';
-  if (status === 429) return T`เรียกถี่เกินไป — ลองใหม่อีกครั้ง (HTTP 429)`;
-  if (status >= 500) return T`ฝั่งผู้ให้บริการขัดข้อง (HTTP ` + status + ')';
-  return T`เรียก AI ไม่สำเร็จ (HTTP ` + status + ')';
+  if (status === 401 || status === 403) return tt('ui.ai.aPIKeyNotValid') + status + ')';
+  if (status === 429) return tt('ui.ai.callTryNewTimes');
+  if (status >= 500) return tt('ui.common.sideProviderItemHTTP') + status + ')';
+  return tt('ui.ai.callAINotOk') + status + ')';
 }
 function pickDefined(o, keys) {
   const out = {};
@@ -535,7 +535,7 @@ export class VectorIndex {
 export const INDEX_FILE = '.ai-index.json';
 
 /** Assemble retrieved chunks into a prompt-ready context block, capped by token budget. */
-export function buildContext(hits, { maxTokens = 1500, header = T`ข้อมูลอ้างอิงจากโปรเจกต์` } = {}) {
+export function buildContext(hits, { maxTokens = 1500, header = tt('ui.ai.dataRefProject') } = {}) {
   const parts = [];
   const used = [];
   let budget = maxTokens;

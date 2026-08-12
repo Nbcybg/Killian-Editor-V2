@@ -8,7 +8,7 @@
 //
 // เซสชันเก็บเป็นไฟล์ JSON ใน `<โปรเจกต์>/Sessions/` — เปลี่ยนโปรเจกต์ = เห็นคนละชุด
 
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import {
@@ -58,9 +58,9 @@ export async function loadSessions(force) {
       try {
         const j = await kapi.readJson(await kapi.join(d, f));
         if (j && j.id) S.sessions.push(newSession(j));
-      } catch (e) { log('warn', T`ai-chat: อ่านเซสชันไม่ได้ ` + f, e); }
+      } catch (e) { log('warn', tt('ui.aiChatPanel.aiChatReadSession') + f, e); }
     }
-  } catch (e) { log('warn', T`ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้`, e); }
+  } catch (e) { log('warn', tt('ui.aiChatPanel.aiChatReadFolder'), e); }
   return S.sessions;
 }
 /**
@@ -116,7 +116,7 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
   };
   const active = state.active;
   if (scope === 'scene') {
-    if (active && active.file && !active.file.startsWith('::')) await push(active.file, active.title || T`ฉากที่เปิดอยู่`);
+    if (active && active.file && !active.file.startsWith('::')) await push(active.file, active.title || tt('ui.aiChatPanel.sceneOpen'));
   } else {
     // ระดับที่กว้างกว่าฉาก — เดินโครงโปรเจกต์จริง แล้วกรองตาม "ที่อยู่" ของไฟล์ที่เปิดอยู่
     const here = (active && active.file) || '';
@@ -135,7 +135,7 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
   // แนบไฟล์ที่ผู้ใช้เพิ่มเองด้วย 📎 (นอกเหนือจาก scope)
   for (const f of session.files || []) await push(f.path, '📎 ' + (f.name || f.path));
   const text = parts.join('\n\n');
-  return text.length > maxChars ? text.slice(0, maxChars) + T`\n…(ตัดเพราะยาวเกิน)` : text;
+  return text.length > maxChars ? text.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : text;
 }
 async function allMdFiles(root, depth = 0) {
   if (depth > 6) return [];
@@ -157,7 +157,7 @@ export async function renderAIChatPanel(host) {
   if (!S.host) return null;
   if (!state.root) {
     S.host.innerHTML = '';
-    S.host.append(el('div', 'ai-chat-empty dim', T`เปิดโปรเจกต์ก่อน แล้วเซสชันแชทจะถูกเก็บใน Sessions/ ของโปรเจกต์นั้น`));
+    S.host.append(el('div', 'ai-chat-empty dim', tt('ui.aiChatPanel.openProjectBeforeDone')));
     return S.host;
   }
   await loadSessions();
@@ -187,9 +187,9 @@ function listView() {
   const bar = el('div', 'ai-chat-listbar');
   const q = el('input', 'ai-chat-search');
   q.type = 'search';
-  q.placeholder = T`ค้นหาเซสชัน (ชื่อ หรือข้อความในเซสชัน)…`;
+  q.placeholder = tt('ui.aiChatPanel.searchSessionNameText');
   q.value = S.query;
-  const addBtn = el('button', 'k-ok ai-chat-new', T`➕ เซสชันใหม่`);
+  const addBtn = el('button', 'k-ok ai-chat-new', tt('ui.aiChatPanel.sessionNew'));
   bar.append(q, addBtn);
   wrap.append(bar);
 
@@ -200,7 +200,7 @@ function listView() {
   const cb = el('input');
   cb.type = 'checkbox';
   cb.checked = S.showArchived;
-  arch.append(cb, document.createTextNode(T` แสดงเซสชันที่จัดเก็บแล้ว`));
+  arch.append(cb, document.createTextNode(tt('ui.aiChatPanel.showSessionArrangeKeep')));
   wrap.append(arch);
 
   function fill() {
@@ -208,7 +208,7 @@ function listView() {
     const list = searchSessions(S.sessions, S.query, { includeArchived: S.showArchived });
     if (!list.length) {
       rows.append(el('div', 'ai-chat-empty dim',
-        S.query ? T`ไม่พบเซสชันที่ตรงกับคำค้น` : T`ยังไม่มีเซสชัน — กด "➕ เซสชันใหม่" เพื่อเริ่มคุย`));
+        S.query ? tt('ui.aiChatPanel.notFoundSessionAt') : tt('ui.aiChatPanel.notHasSessionPress')));
       return;
     }
     for (const s of list) rows.append(sessionRow(s));
@@ -228,10 +228,10 @@ function sessionRow(s) {
   if (s.archived) row.classList.add('archived');
   row.dataset.session = s.id;
   const main = el('div', 'ai-chat-row-main');
-  main.append(el('div', 'ai-chat-row-title', s.title || T`เซสชัน`));
+  main.append(el('div', 'ai-chat-row-title', s.title || tt('ui.aiChatPanel.session')));
   const last = [...(s.messages || [])].reverse().find((m) => m.text);
   main.append(el('div', 'ai-chat-row-sub dim',
-    last ? String(last.text).replace(/\s+/g, ' ').slice(0, 90) : T`ยังไม่มีข้อความ`));
+    last ? String(last.text).replace(/\s+/g, ' ').slice(0, 90) : tt('ui.aiChatPanel.notHasText')));
   const meta = el('div', 'ai-chat-row-meta dim');
   const st = sessionStats(s);
   meta.append(el('span', 'ai-chat-row-date', fmtDate(s.updated)));
@@ -255,24 +255,24 @@ function sessionView() {
   // ── หัว: ซ้าย = ชื่อเซสชัน · ขวา = ป้ายบริบท + เมนู ⋯ ──
   const head = el('div', 'ai-chat-head');
   const back = el('button', 'ai-chat-back', '←');
-  back.title = T`กลับไปรายการเซสชัน`;
+  back.title = tt('ui.aiChatPanel.backListSession');
   back.onclick = () => { S.view = 'list'; draw(); };
-  const title = el('div', 'ai-chat-title', s.title || T`เซสชัน`);
+  const title = el('div', 'ai-chat-title', s.title || tt('ui.aiChatPanel.session'));
   title.title = s.title || '';
   const right = el('div', 'ai-chat-head-right');
   const st = sessionStats(s);
   const badge = el('button', 'ai-chat-ctx', contextLabel(st));
   // hover = ต้นทุน (USD) · การใช้งาน % ของเซสชัน · token ที่ใช้
   badge.title = [
-    T`ต้นทุน: ` + usd(st.usd),
-    T`การใช้งาน: ` + (st.limit ? st.percent + '%' : T`ไม่รู้ขีดจำกัดของโมเดล`),
-    T`โทเค็นที่ใช้: ` + st.total.toLocaleString(),
-    T`— คลิกเพื่อดูรายละเอียด —`,
+    tt('ui.aiChatPanel.msg') + usd(st.usd),
+    tt('ui.aiChatPanel.usage2') + (st.limit ? st.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
+    tt('ui.aiChatPanel.use2') + st.total.toLocaleString(),
+    tt('ui.aiChatPanel.clickViewDetail'),
   ].join('\n');
   badge.onclick = () => { S.view = 'detail'; draw(); };
   // [alpha.62 บั๊ก 3] เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เซสชันยังอยู่ที่เดิม)
   const restart = el('button', 'ai-chat-restart', '↻');
-  restart.title = T`เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เก็บโหมด/โมเดล/ไฟล์แนบไว้)`;
+  restart.title = tt('ui.aiChatPanel.restartClearDialogueSession');
   restart.onclick = () => restartSession(s);
   // [alpha.63r4] มุมมอง transcript — ปกติ / ความคิด / ละเอียด / สรุป
   const viewSel = el('select', 'ai-chat-viewsel');
@@ -291,7 +291,7 @@ function sessionView() {
     draw();
   };
   const more = el('button', 'ai-chat-more', '⋯');
-  more.title = T`ตัวเลือกของเซสชัน`;
+  more.title = tt('ui.aiChatPanel.itemPickSession');
   more.onclick = (e) => sessionMenu(e, s);
   right.append(badge, viewSel, restart, more);
   head.append(back, title, right);
@@ -301,8 +301,8 @@ function sessionView() {
   const body = el('div', 'ai-chat-msgs ai-view-' + (s.view || DEFAULT_VIEW));
   if (!(s.messages || []).length) {
     body.append(el('div', 'ai-chat-empty dim',
-      T`เริ่มคุยได้เลย — โหมด "` + modeDef(s.mode).label + T`" · เห็นข้อมูล: ` + scopeLabel(s.scope)
-      + (s._draft ? T` · เซสชันจะถูกบันทึกเมื่อส่งข้อความแรก` : '')));
+      tt('ui.aiChatPanel.startMode') + modeDef(s.mode).label + tt('ui.aiChatPanel.seeData') + scopeLabel(s.scope)
+      + (s._draft ? tt('ui.aiChatPanel.sessionSaveSendText') : '')));
   }
   for (const m of s.messages || []) body.append(msgNode(m, s.view));
   wrap.append(body);
@@ -322,16 +322,16 @@ function sessionView() {
 function msgNode(m, view = DEFAULT_VIEW) {
   // ผลคำสั่งที่ป้อนกลับให้โมเดลไม่ใช่บทสนทนา — โผล่เฉพาะโหมดที่ขอดูเบื้องหลัง
   if (m.toolResult && view !== 'verbose' && view !== 'thinking') return el('span', 'ai-msg-hidden');
-  if (m.toolResult) return foldBlock(T`↩ ผลคำสั่งที่ส่งกลับให้โมเดล`, m.text, 'ai-msg-toolresult');
+  if (m.toolResult) return foldBlock(tt('ui.aiChatPanel.resultCmdSendBack'), m.text, 'ai-msg-toolresult');
   if (view === 'summary') return summaryNode(m);
   const n = el('div', 'ai-msg ai-msg-' + m.role);
   const who = el('div', 'ai-msg-who dim',
-    m.role === 'user' ? T`คุณ` : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : T`🤖 ผู้ช่วย`) : m.role);
+    m.role === 'user' ? tt('ui.aiChatPanel.you') : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : tt('ui.aiChatPanel.assistant')) : m.role);
   // [alpha.62 บั๊ก 3] คัดลอกข้อความทีละก้อน — คำตอบของ AI ส่วนใหญ่เอาไปวางต่อในต้นฉบับ
   // (ลากคลุมเองไม่ได้เพราะแผงลอย/แผง dock กินอีเวนต์เมาส์ไปทำอย่างอื่น)
   const copy = el('button', 'ai-msg-copy', '⧉');
   copy.type = 'button';
-  copy.title = T`คัดลอกข้อความนี้`;
+  copy.title = tt('ui.aiChatPanel.copyText');
   copy.onclick = async () => {
     const ok = await copyText(m.text || '');
     copy.textContent = ok ? '✓' : '✕';
@@ -344,9 +344,9 @@ function msgNode(m, view = DEFAULT_VIEW) {
   n.append(who, txt);
   if (!shown && m.calls && m.calls.length) txt.remove();
 
-  if (view === 'verbose' && m.system) n.append(foldBlock(T`⚙ system prompt ที่ส่งไปรอบนี้`, m.system));
+  if (view === 'verbose' && m.system) n.append(foldBlock(tt('ui.aiChatPanel.systemPromptSendRound'), m.system));
   if ((view === 'thinking' || view === 'verbose') && m.thinking) {
-    n.append(foldBlock(T`🧠 ความคิดของโมเดล`, m.thinking, 'ai-msg-thinking'));
+    n.append(foldBlock(tt('ui.aiChatPanel.ideaModel'), m.thinking, 'ai-msg-thinking'));
   }
   if (m.calls && m.calls.length && view !== 'normal') {
     n.append(callsNode(m.calls, m.results, view));
@@ -354,15 +354,15 @@ function msgNode(m, view = DEFAULT_VIEW) {
     // โหมดปกติ — บอกแค่ว่าทำอะไรไปกี่อย่าง สำเร็จกี่อย่าง
     const okN = (m.results || []).filter((r) => r.ok).length;
     const line = el('div', 'ai-msg-actions dim',
-      T`⚡ ลงมือทำ ${m.calls.length} คำสั่ง — สำเร็จ ${okN}/${(m.results || []).length || m.calls.length}`);
+      ttf('ui.aiChatPanel.actCmdOk', m.calls.length, okN, (m.results || []).length || m.calls.length));
     n.append(line);
   }
   if (view === 'verbose' && m.usage) {
     n.append(el('div', 'ai-msg-meta dim',
-      T`token: เข้า ${m.usage.input || 0} · ออก ${m.usage.output || 0}`
-      + (m.usage.reasoning ? T` · คิด ${m.usage.reasoning}` : '')
-      + (m.usage.cached ? T` · แคช ${m.usage.cached}` : '')
-      + (m.ms ? T` · ใช้เวลา ${(m.ms / 1000).toFixed(1)} วิ` : '')
+      ttf('ui.aiChatPanel.tokenInOut', m.usage.input || 0, m.usage.output || 0)
+      + (m.usage.reasoning ? ttf('ui.aiChatPanel.think', m.usage.reasoning) : '')
+      + (m.usage.cached ? ttf('ui.aiChatPanel.cache', m.usage.cached) : '')
+      + (m.ms ? ttf('ui.aiChatPanel.useTime', (m.ms / 1000).toFixed(1)) : '')
       + (m.at ? ' · ' + fmtDate(m.at) : '')));
   }
   if (m.error) n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
@@ -380,7 +380,7 @@ function summaryNode(m) {
   const body = m.error ? m.error
     : (m.calls && m.calls.length && !stripToolCalls(m.text)
         ? m.calls.map(describeCall).join(' · ')
-        : String(m.text || '').replace(/\s+/g, ' ').trim() || T`(ว่าง)`);
+        : String(m.text || '').replace(/\s+/g, ' ').trim() || tt('ui.common.empty'));
   n.append(el('span', 'ai-sum-icon', icon));
   const t = el('span', 'ai-sum-text', body.length > 120 ? body.slice(0, 119) + '…' : body);
   t.title = m.text || m.error || '';
@@ -402,7 +402,7 @@ function foldBlock(label, text, cls = '') {
 /** รายการคำสั่งที่ AI สั่ง + ผลของแต่ละอัน */
 function callsNode(calls, results, view) {
   const box = el('div', 'ai-calls');
-  box.append(el('div', 'ai-calls-head dim', T`⚡ คำสั่งที่ลงมือทำ (` + calls.length + ')'));
+  box.append(el('div', 'ai-calls-head dim', tt('ui.aiChatPanel.cmdAct') + calls.length + ')'));
   calls.forEach((c, i) => {
     const r = (results || [])[i];
     const row = el('div', 'ai-call' + (r ? (r.ok ? ' ok' : ' bad') : ''));
@@ -411,9 +411,9 @@ function callsNode(calls, results, view) {
     if (r && (r.message || r.error)) row.append(el('span', 'ai-call-msg dim', r.error || r.message));
     box.append(row);
     if (view === 'verbose') {
-      box.append(foldBlock(T`JSON ที่โมเดลสั่ง`, JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
+      box.append(foldBlock(tt('ui.aiChatPanel.jSONModelCmd'), JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
       if (r && r.data !== undefined && r.data !== null) {
-        box.append(foldBlock(T`ผลที่ส่งกลับให้โมเดล`,
+        box.append(foldBlock(tt('ui.aiChatPanel.resultSendBackModel'),
           typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2)));
       }
     }
@@ -427,22 +427,22 @@ function composer(s, body) {
   // แถวควบคุม: 📎 ไฟล์ · โหมด · โมเดล (override) · ระดับการเข้าถึง
   const ctrls = el('div', 'ai-chat-ctrls');
   const fileBtn = el('button', 'ai-chat-file', '📎');
-  fileBtn.title = T`เพิ่มไฟล์เข้าบริบทของเซสชันนี้`;
+  fileBtn.title = tt('ui.aiChatPanel.addFileInContext');
   const modeSel = el('select', 'ai-chat-mode');
   for (const m of CHAT_MODES) { const o = el('option', null, m.icon + ' ' + m.label); o.value = m.id; modeSel.append(o); }
   modeSel.value = s.mode || DEFAULT_MODE;
-  modeSel.title = T`โหมดการทำงาน\n`
-    + T`📖 วางแผน — อ่านโปรเจกต์ได้ แต่ไม่แตะไฟล์\n`
-    + T`✍️ ช่วยเขียน — สร้าง/แก้ เล่ม บท ฉาก เอนทิตี้ ได้จริง (ลบไม่ได้)\n`
-    + T`🔓 ปลดล็อกเต็มที่ — ทำได้ทุกอย่างรวมทั้งลบ (ของไปถังขยะ กู้คืนได้)`;
+  modeSel.title = tt('ui.aiChatPanel.modeRun')
+    + tt('ui.aiChatPanel.plannerReadProjectNot')
+    + tt('ui.aiChatPanel.helpWriteNewEdit')
+    + tt('ui.aiChatPanel.unlockFullDoAll');
 
   // โมเดลของเซสชัน = **override จากตั้งค่า** แยกกันเป็นอิสระ
   const modelSel = el('select', 'ai-chat-model');
-  modelSel.title = T`โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)`;
+  modelSel.title = tt('ui.aiChatPanel.modelSessionValueSet');
   const scopeSel = el('select', 'ai-chat-scope');
   for (const sc of SCOPES) { const o = el('option', null, sc.label); o.value = sc.id; scopeSel.append(o); }
   scopeSel.value = s.scope || DEFAULT_SCOPE;
-  scopeSel.title = T`ระดับการเข้าถึง — AI จะเห็นเนื้อหาแค่ระดับนี้`;
+  scopeSel.title = tt('ui.aiChatPanel.levelInToAI');
   ctrls.append(fileBtn, modeSel, modelSel, scopeSel);
   box.append(ctrls);
 
@@ -472,10 +472,10 @@ function composer(s, body) {
   ta.rows = 3;
   const sendKey = aiMeta().sendKey || DEFAULT_SEND_KEY;
   ta.placeholder = sendKey === 'shift-enter'
-    ? T`พิมพ์ข้อความ… (Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด)`
-    : T`พิมพ์ข้อความ… (Enter = ส่ง · Shift+Enter = ขึ้นบรรทัด)`;
-  const sendBtn = el('button', 'k-ok ai-chat-send', T`ส่ง`);
-  sendBtn.title = T`ปุ่มส่งตั้งได้ที่ ไฟล์ → ตั้งค่า AI`;
+    ? tt('ui.aiChatPanel.printTextShiftEnter')
+    : tt('ui.aiChatPanel.printTextEnterSend');
+  const sendBtn = el('button', 'k-ok ai-chat-send', tt('ui.aiChatPanel.send'));
+  sendBtn.title = tt('ui.aiChatPanel.btnSendSetFile');
   inputRow.append(ta, sendBtn);
   box.append(inputRow);
 
@@ -488,7 +488,7 @@ function composer(s, body) {
   };
   fileBtn.onclick = async () => {
     const p = await (kapi.openFileDialog ? kapi.openFileDialog() : null);
-    if (!p) { setStatus(T`เลือกไฟล์ไม่สำเร็จ`); return; }
+    if (!p) { setStatus(tt('ui.aiChatPanel.pickFileNotOk')); return; }
     s.files = [...(s.files || []), { path: p, name: String(p).replace(/^.*[\\/]/, '') }];
     await saveSession(s); drawFiles();
   };
@@ -507,7 +507,7 @@ function composer(s, body) {
 function fillModelSelect(sel, s) {
   sel.innerHTML = '';
   const provs = providerList();
-  const dflt = el('option', null, T`(ตามตั้งค่า AI)`);
+  const dflt = el('option', null, tt('ui.aiChatPanel.settingsAI'));
   dflt.value = '';
   sel.append(dflt);
   for (const p of provs) {
@@ -531,7 +531,7 @@ async function send(s, ta, body, sendBtn) {
   if (!text || S.sending) return;
   const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
   if (!prov) {
-    setStatus(T`❌ ยังไม่ได้ตั้งค่าผู้ให้บริการ AI — ไฟล์ → ตั้งค่า AI`);
+    setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI'));
     return;
   }
   S.sending = true;
@@ -545,7 +545,7 @@ async function send(s, ta, body, sendBtn) {
   await saveSession(S.cur);
   body.append(msgNode(userMsg, view));
   const pend = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
-  const pendWho = el('div', 'ai-msg-who dim', T`🤖 กำลังคิด…`);
+  const pendWho = el('div', 'ai-msg-who dim', tt('ui.aiChatPanel.busyThink'));
   pend.append(pendWho);
   body.append(pend);
   body.scrollTop = body.scrollHeight;
@@ -557,8 +557,8 @@ async function send(s, ta, body, sendBtn) {
   if (tp) system += '\n\n' + tp;
   try {
     const ctx = await collectScope(S.cur);
-    if (ctx) system += T`\n\nข้อมูลจากโปรเจกต์ (ระดับการเข้าถึง: ` + scopeLabel(S.cur.scope) + '):\n' + ctx;
-  } catch (e) { log('warn', T`ai-chat: รวบรวมบริบทไม่สำเร็จ`, e); }
+    if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(S.cur.scope) + '):\n' + ctx;
+  } catch (e) { log('warn', tt('ui.aiChatPanel.aiChatCollectContext'), e); }
 
   // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
   let res = null;
@@ -573,7 +573,7 @@ async function send(s, ta, body, sendBtn) {
       ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
                                             thinking: res.thinking, system, ms,
                                             calls: calls.length ? calls : null })
-      : newMessage('assistant', '', { error: res.error || T`เรียก AI ไม่สำเร็จ`, system, ms });
+      : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'), system, ms });
 
     if (res.ok && res.usage) {
       const used = (res.usage.input || 0) + (res.usage.output || 0);
@@ -589,7 +589,7 @@ async function send(s, ta, body, sendBtn) {
       break;
     }
 
-    pendWho.textContent = T`⚡ กำลังลงมือทำ ` + calls.length + T` คำสั่ง…`;
+    pendWho.textContent = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
     const results = await runCalls(calls, S.cur, cap);
     reply.results = results;
     touched = touched || touchesProject(results);
@@ -607,9 +607,9 @@ async function send(s, ta, body, sendBtn) {
     if (round === MAX_TOOL_ROUNDS - 1) {
       pend.remove();
       body.append(el('div', 'ai-chat-empty dim',
-        T`หยุดที่ ${MAX_TOOL_ROUNDS} รอบเพื่อกันวนไม่จบ — พิมพ์ "ทำต่อ" ถ้ายังไม่เสร็จ`));
+        ttf('ui.aiChatPanel.roundNotEndPrint', MAX_TOOL_ROUNDS)));
     } else {
-      pendWho.textContent = T`🤖 กำลังคิดต่อ…`;
+      pendWho.textContent = tt('ui.aiChatPanel.busyThinkNext');
     }
   }
   if (touched) await refreshAfterActions();
@@ -624,10 +624,10 @@ async function send(s, ta, body, sendBtn) {
   if (badge) {
     const st2 = sessionStats(S.cur);
     badge.textContent = contextLabel(st2);
-    badge.title = [T`ต้นทุน: ` + usd(st2.usd),
-                   T`การใช้งาน: ` + (st2.limit ? st2.percent + '%' : T`ไม่รู้ขีดจำกัดของโมเดล`),
-                   T`โทเค็นที่ใช้: ` + st2.total.toLocaleString(),
-                   T`— คลิกเพื่อดูรายละเอียด —`].join('\n');
+    badge.title = [tt('ui.aiChatPanel.msg') + usd(st2.usd),
+                   tt('ui.aiChatPanel.usage2') + (st2.limit ? st2.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
+                   tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
+                   tt('ui.aiChatPanel.clickViewDetail')].join('\n');
   }
   if (!res.ok) setStatus('❌ AI: ' + (res.error || ''));
 }
@@ -642,19 +642,19 @@ async function runCalls(calls, session, cap) {
   const results = [];
   let stopped = false;
   for (const c of calls) {
-    if (stopped) { results.push({ tool: c.tool, ok: false, cancelled: true, error: T`ยกเลิกทั้งชุด` }); continue; }
+    if (stopped) { results.push({ tool: c.tool, ok: false, cancelled: true, error: tt('ui.aiChatPanel.cancelSet') }); continue; }
     const v = validateCall(c, cap);
-    if (!v.ok) { results.push({ tool: c.tool || T`(ไม่ระบุ)`, ok: false, error: v.error }); continue; }
+    if (!v.ok) { results.push({ tool: c.tool || tt('ui.common.notSpecify'), ok: false, error: v.error }); continue; }
     const def = toolByName(c.tool);
     const needAsk = def.destructive
       ? session.confirmDestructive !== false
       : session.autoRun === false;
     if (needAsk) {
       const okGo = await confirmBox(
-        (def.destructive ? T`⚠ AI ขอลบของในโปรเจกต์:\n\n` : T`AI ขอลงมือทำ:\n\n`) + describeCall(c),
-        def.destructive ? T`ลบเลย` : T`ทำเลย`);
+        (def.destructive ? tt('ui.aiChatPanel.aIDelProject') : tt('ui.aiChatPanel.aIAct')) + describeCall(c),
+        def.destructive ? tt('ui.aiChatPanel.del') : tt('ui.aiChatPanel.do'));
       if (!okGo) {
-        results.push({ tool: c.tool, ok: false, cancelled: true, error: T`ผู้ใช้ไม่อนุญาต` });
+        results.push({ tool: c.tool, ok: false, cancelled: true, error: tt('ui.aiChatPanel.userNotAllow') });
         stopped = true;
         continue;
       }
@@ -708,64 +708,64 @@ export async function restartSession(s, { confirm = true } = {}) {
   const target = s || S.cur;
   if (!target) return null;
   if (confirm && (target.messages || []).length
-      && !(await confirmBox(T`เริ่มใหม่ — ล้างบทสนทนา ${(target.messages || []).length} ข้อความของ "${target.title}" ?`))) {
+      && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title)))) {
     return null;
   }
   S.cur = clearMessages(target);
   await saveSession(S.cur);
   S.view = 'session';
   draw();
-  setStatus(T`เริ่มบทสนทนาใหม่แล้ว (เก็บโหมด/โมเดล/ไฟล์แนบไว้)`);
+  setStatus(tt('ui.aiChatPanel.startDialogueNewDone'));
   return S.cur;
 }
 
 // ── เมนู ⋯ ──
 function sessionMenu(ev, s) {
   popupMenu(ev.clientX, ev.clientY, [
-    { label: T`↻ เริ่มใหม่ (ล้างบทสนทนา)`, click: () => restartSession(s) },
-    { label: T`⧉ คัดลอกบทสนทนาทั้งหมด`, click: async () => {
-      setStatus(await copyText(shareMarkdown(s)) ? T`คัดลอกบทสนทนาแล้ว` : T`คัดลอกไม่สำเร็จ`);
+    { label: tt('ui.aiChatPanel.restartClearDialogue'), click: () => restartSession(s) },
+    { label: tt('ui.aiChatPanel.copyDialogueAll'), click: async () => {
+      setStatus(await copyText(shareMarkdown(s)) ? tt('ui.aiChatPanel.copyDialogueDone') : tt('ui.common.copyNotOk'));
     } },
     '-',
     // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
-    { label: (s.autoRun === false ? '☐' : '☑') + T` ทำคำสั่งเองโดยไม่ต้องถาม`, click: async () => {
+    { label: (s.autoRun === false ? '☐' : '☑') + tt('ui.aiChatPanel.doCmdNotMust'), click: async () => {
       s.autoRun = s.autoRun === false;
       await saveSession(s);
-      setStatus(s.autoRun ? T`AI จะลงมือทำเองโดยไม่ถาม (ยกเว้นคำสั่งลบ)` : T`AI จะถามก่อนทุกคำสั่ง`);
+      setStatus(s.autoRun ? tt('ui.aiChatPanel.aIActNotAsk') : tt('ui.aiChatPanel.aIAskBeforeAll'));
     } },
-    { label: (s.confirmDestructive === false ? '☐' : '☑') + T` ถามก่อนเสมอเมื่อจะลบของ`, click: async () => {
+    { label: (s.confirmDestructive === false ? '☐' : '☑') + tt('ui.aiChatPanel.askBeforeAlwaysDel'), click: async () => {
       if (s.confirmDestructive !== false) {
         const okGo = await confirmBox(
-          T`ปิดการถามก่อนลบ?\n\nAI จะลบเล่ม/บท/ฉาก/เอนทิตี้ได้เองทันทีโดยไม่ถามคุณอีก\n`
-          + T`(ของยังไปถังขยะ กู้คืนได้ แต่จะไม่มีจังหวะให้ทัดทาน)`, T`ปิดการถาม`);
+          tt('ui.aiChatPanel.closeAskBeforeDel')
+          + tt('ui.aiChatPanel.trashRecoverRestoreNot'), tt('ui.aiChatPanel.closeAsk'));
         if (!okGo) return;
       }
       s.confirmDestructive = s.confirmDestructive === false;
       await saveSession(s);
-      setStatus(s.confirmDestructive ? T`จะถามก่อนลบเสมอ` : T`⚠ ปลดล็อกเต็มที่ — AI ลบของได้เองโดยไม่ถาม`);
+      setStatus(s.confirmDestructive ? tt('ui.aiChatPanel.askBeforeDelAlways') : tt('ui.aiChatPanel.unlockFullAIDel'));
     } },
     '-',
-    { label: T`✎ เปลี่ยนชื่อ`, click: async () => {
-      const v = await ask(T`ชื่อเซสชัน`, { value: s.title });
+    { label: tt('ui.aiChatPanel.changeName'), click: async () => {
+      const v = await ask(tt('ui.aiChatPanel.nameSession'), { value: s.title });
       if (v === null) return;
       S.cur = renameSession(s, v);
       await saveSession(S.cur, { force: true }); draw();
     } },
-    { label: T`↗ แชร์ (คัดลอกเป็น Markdown)`, click: async () => {
-      setStatus(await copyText(shareMarkdown(s)) ? T`คัดลอกบทสนทนาแล้ว` : T`คัดลอกไม่สำเร็จ`);
+    { label: tt('ui.aiChatPanel.copyMarkdown'), click: async () => {
+      setStatus(await copyText(shareMarkdown(s)) ? tt('ui.aiChatPanel.copyDialogueDone') : tt('ui.common.copyNotOk'));
     } },
-    { label: s.archived ? T`📤 เอาออกจากที่จัดเก็บ` : T`📥 จัดเก็บ`, click: async () => {
+    { label: s.archived ? tt('ui.aiChatPanel.exitArrangeKeep') : tt('ui.aiChatPanel.arrangeKeep'), click: async () => {
       S.cur = archiveSession(s, !s.archived);
       await saveSession(S.cur);
       S.view = 'list'; draw();
-      setStatus(S.cur.archived ? T`จัดเก็บเซสชันแล้ว` : T`เอาเซสชันออกจากที่จัดเก็บแล้ว`);
+      setStatus(S.cur.archived ? tt('ui.aiChatPanel.arrangeKeepSessionDone') : tt('ui.aiChatPanel.sessionExitArrangeKeep'));
     } },
     '-',
-    { label: T`🗑 ลบเซสชันนี้`, click: async () => {
-      if (!(await confirmBox(T`ลบเซสชัน "${s.title}" ?`))) return;
+    { label: tt('ui.aiChatPanel.delSession2'), click: async () => {
+      if (!(await confirmBox(ttf('ui.aiChatPanel.delSession', s.title)))) return;
       await deleteSessionFile(s);
       S.cur = null; S.view = 'list'; draw();
-      setStatus(T`ลบเซสชันแล้ว`);
+      setStatus(tt('ui.aiChatPanel.delSessionDone'));
     } },
   ]);
 }
@@ -777,9 +777,9 @@ function detailView() {
   const wrap = el('div', 'ai-chat-detail');
 
   const head = el('div', 'ai-chat-head');
-  head.append(el('div', 'ai-chat-title', T`รายละเอียดบริบท`));
+  head.append(el('div', 'ai-chat-title', tt('ui.aiChatPanel.detailContext')));
   const closeBtn = el('button', 'ai-chat-close', '✕');
-  closeBtn.title = T`ปิด — กลับไปที่เซสชัน`;
+  closeBtn.title = tt('ui.aiChatPanel.closeBackSession');
   closeBtn.onclick = () => { S.view = 'session'; draw(); };
   const hr = el('div', 'ai-chat-head-right');
   hr.append(closeBtn);
@@ -789,24 +789,24 @@ function detailView() {
   const prov = providerList().find((p) => p.id === s.providerId);
   const lastAssistant = [...(s.messages || [])].reverse().find((m) => m.role === 'assistant' && m.model);
   const rows = [
-    [T`ชื่อเซสชัน`, s.title || '—'],
-    [T`ข้อความในเซสชัน`, (s.messages || []).length.toLocaleString() + T` ข้อความ`],
-    [T`ผู้ให้บริการ`, prov ? prov.name : (lastAssistant && lastAssistant.provider) || T`(ตามตั้งค่า AI)`],
-    [T`โมเดล`, s.model || (lastAssistant && lastAssistant.model) || T`(ตามตั้งค่า AI)`],
-    [T`ขีดจำกัด`, st.limit ? st.limit.toLocaleString() + ' tokens' : T`ไม่ทราบ`],
-    [T`โทเค็นที่ใช้`, st.total.toLocaleString()],
-    [T`การใช้งาน`, st.limit ? st.percent + '%' : '—'],
-    [T`โทเค็นนำเข้า`, st.input.toLocaleString()],
-    [T`โทเค็นส่งออก`, st.output.toLocaleString()],
-    [T`โทเค็นแบบใช้เหตุผล`, st.reasoning.toLocaleString()],
-    [T`โทเค็นแคช`, st.cached.toLocaleString()],
-    [T`จำนวนข้อความผู้ใช้`, String(st.userMsgs)],
-    [T`จำนวนข้อความผู้ช่วย`, String(st.agentMsgs)],
-    [T`ต้นทุน (USD)`, usd(st.usd)],
-    [T`วันที่สร้างเซสชัน`, fmtDate(s.created)],
-    [T`ใช้งานล่าสุด`, fmtDate(s.updated)],
-    [T`โหมด`, modeDef(s.mode).label],
-    [T`ระดับการเข้าถึง`, scopeLabel(s.scope)],
+    [tt('ui.aiChatPanel.nameSession'), s.title || '—'],
+    [tt('ui.aiChatPanel.textSession'), (s.messages || []).length.toLocaleString() + tt('ui.aiChatPanel.text')],
+    [tt('ui.common.provider'), prov ? prov.name : (lastAssistant && lastAssistant.provider) || tt('ui.aiChatPanel.settingsAI')],
+    [tt('ui.common.model'), s.model || (lastAssistant && lastAssistant.model) || tt('ui.aiChatPanel.settingsAI')],
+    [tt('ui.aiChatPanel.dashRemember'), st.limit ? st.limit.toLocaleString() + ' tokens' : tt('ui.aiChatPanel.not')],
+    [tt('ui.aiChatPanel.use'), st.total.toLocaleString()],
+    [tt('ui.aiChatPanel.usage'), st.limit ? st.percent + '%' : '—'],
+    [tt('ui.aiChatPanel.import'), st.input.toLocaleString()],
+    [tt('ui.aiChatPanel.export'), st.output.toLocaleString()],
+    [tt('ui.aiChatPanel.styleUseResult'), st.reasoning.toLocaleString()],
+    [tt('ui.aiChatPanel.cache2'), st.cached.toLocaleString()],
+    [tt('ui.aiChatPanel.countTextUser'), String(st.userMsgs)],
+    [tt('ui.aiChatPanel.countTextAssistant'), String(st.agentMsgs)],
+    [tt('ui.aiChatPanel.uSD'), usd(st.usd)],
+    [tt('ui.aiChatPanel.dateNewSession'), fmtDate(s.created)],
+    [tt('ui.aiChatPanel.useTaskLatest'), fmtDate(s.updated)],
+    [tt('ui.aiChatPanel.mode'), modeDef(s.mode).label],
+    [tt('ui.aiChatPanel.levelInTo'), scopeLabel(s.scope)],
   ];
   const table = el('div', 'ai-detail-grid');
   for (const [k, v] of rows) {
@@ -815,7 +815,7 @@ function detailView() {
   }
   wrap.append(table);
 
-  const rawBtn = el('button', 'ai-detail-raw', T`{ } แสดงข้อความดิบ (JSON)`);
+  const rawBtn = el('button', 'ai-detail-raw', tt('ui.aiChatPanel.showTextJSON'));
   const pre = el('pre', 'ai-detail-json');
   pre.style.display = 'none';
   pre.textContent = rawJson(s);

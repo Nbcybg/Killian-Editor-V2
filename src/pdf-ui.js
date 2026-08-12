@@ -5,7 +5,7 @@
 //
 // **ที่เก็บข้อมูล**: project.khn.json → `titlePages` (หน้าปก) และ `settings.spHeaders` (หัวกระดาษ)
 // เป็นค่า "ระดับโปรเจกต์" เหมือนขนาดกระดาษ/รูปแบบบท — ไม่ใช่รายเล่มแบบ roster.json
-import { T } from './i18n.js';
+import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { el, state, setStatus, log, textWidth } from './core.js';
 import { num } from './num.js';
 import { confirmBox } from './ui.js';
@@ -96,7 +96,7 @@ export async function pdfFontBytes() {
                     italic: await read(L.italic), boldItalic: await read(L.boldItalic) };
     }
   } catch (e) {
-    log('warn', T`อ่านไฟล์ฟอนต์สำหรับ PDF ไม่สำเร็จ`, e);
+    log('warn', tt('ui.pdf.readFileFontPDF'), e);
     if (FONT_CACHE.set) return FONT_CACHE.set;             // อ่านไม่ได้รอบนี้ — ใช้ของเดิมต่อ
   }
   FONT_CACHE.set = out;
@@ -127,7 +127,7 @@ const select = (opts, val) => {
   s.value = val;
   return s;
 };
-const ALIGN_OPTS = [['left', T`ชิดซ้าย`], ['center', T`กึ่งกลาง`], ['right', T`ชิดขวา`]];
+const ALIGN_OPTS = [['left', tt('ui.common.alignLeft')], ['center', tt('ui.common.center')], ['right', tt('ui.common.right2')]];
 
 /** ปิดกล่องใบล่าสุดอย่างเดียว (บทเรียน 16) */
 function overlay(cls) {
@@ -144,17 +144,17 @@ function overlay(cls) {
  * คลิกพรีวิวเพื่อเลือกสตริง · ลากไม่ได้ (ตั้งค่า x/y เป็นตัวเลขนิ้วให้แม่นกว่า)
  */
 export async function openTitlePageDialog() {
-  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน`); return null; }
+  if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return null; }
   const fmt = spFormat();
   const ed = new TitlePageEditor(projectTitlePages());
   if (!ed.count) ed.pages = defaultTitlePages(pdfMeta(), fmt);
   let pageIdx = 0, strIdx = -1;
 
   const { ov, box } = overlay('k-tp-dlg');
-  box.append(el('div', 'k-dlg-title', T`หน้าปก (Title Pages)`));
+  box.append(el('div', 'k-dlg-title', tt('ui.pdf.coverTitlePages')));
   box.append(el('div', 'k-hint',
-    T`หน้าปกจะถูกวางไว้ก่อนหน้าแรกของบท และไม่นับรวมกับเลขหน้า · ` +
-    T`ระยะ x/y เป็น "นิ้ววัดจากขอบกระดาษ" เหมือนแท็บหน้ากระดาษ`));
+    tt('ui.pdf.coverPasteBeforePage') +
+    tt('ui.pdf.gapXYInch')));
 
   const body = el('div', 'k-tp-body');
   const colPages = el('div', 'k-tp-pages');
@@ -168,33 +168,33 @@ export async function openTitlePageDialog() {
   // ---- คอลัมน์ซ้าย: รายการหน้า ----
   const renderPages = () => {
     colPages.innerHTML = '';
-    colPages.append(el('div', 'cmp-sub', T`หน้า`));
+    colPages.append(el('div', 'cmp-sub', tt('ui.common.page')));
     ed.pages.forEach((p, i) => {
       const r = el('div', 'k-tp-page-row' + (i === pageIdx ? ' on' : ''));
-      r.append(el('span', 'k-tp-page-no', T`หน้า ` + (i + 1)));
-      r.append(el('span', 'dim', p.strings.length + T` ชิ้น`));
+      r.append(el('span', 'k-tp-page-no', tt('ui.common.page2') + (i + 1)));
+      r.append(el('span', 'dim', p.strings.length + tt('ui.pdf.item')));
       r.onclick = () => { pageIdx = i; strIdx = -1; render(); };
       colPages.append(r);
     });
     const btns = el('div', 'k-tp-page-btns');
-    const bAdd = el('button', 'cmp-mini', T`➕ เพิ่มหน้า`);
+    const bAdd = el('button', 'cmp-mini', tt('ui.pdf.addPage'));
     bAdd.onclick = () => { pageIdx = ed.addPage(); strIdx = -1; render(); };
-    const bUp = el('button', 'cmp-mini', '▲'); bUp.title = T`เลื่อนหน้าขึ้น`;
+    const bUp = el('button', 'cmp-mini', '▲'); bUp.title = tt('ui.pdf.scrollPage');
     bUp.onclick = () => { const t = ed.movePage(pageIdx, pageIdx - 1); if (t >= 0) { pageIdx = t; render(); } };
-    const bDn = el('button', 'cmp-mini', '▼'); bDn.title = T`เลื่อนหน้าลง`;
+    const bDn = el('button', 'cmp-mini', '▼'); bDn.title = tt('ui.pdf.scrollPage2');
     bDn.onclick = () => { const t = ed.movePage(pageIdx, pageIdx + 1); if (t >= 0) { pageIdx = t; render(); } };
-    const bDup = el('button', 'cmp-mini', T`⧉ ทำสำเนา`); bDup.title = T`ทำสำเนาหน้านี้ไว้ถัดไป`;
+    const bDup = el('button', 'cmp-mini', tt('ui.common.dup')); bDup.title = tt('ui.pdf.dupPage');
     bDup.onclick = () => { const t = ed.duplicatePage(pageIdx); if (t >= 0) { pageIdx = t; strIdx = -1; render(); } };
-    const bDel = el('button', 'cmp-mini', T`🗑 ลบหน้า`);
+    const bDel = el('button', 'cmp-mini', tt('ui.pdf.delPage'));
     bDel.onclick = async () => {
-      if (!(await confirmBox(T`ลบหน้าปกหน้าที่ ` + (pageIdx + 1) + '?'))) return;
+      if (!(await confirmBox(tt('ui.pdf.delCoverPage') + (pageIdx + 1) + '?'))) return;
       ed.deletePage(pageIdx);
       pageIdx = Math.max(0, Math.min(pageIdx, ed.count - 1)); strIdx = -1; render();
     };
     btns.append(bAdd, bDup, bUp, bDn, bDel);
     colPages.append(btns);
-    const bStd = el('button', 'k-key-btn', T`🎬 ใส่หน้าปกมาตรฐาน`);
-    bStd.title = T`สร้างจากข้อมูลผลงาน (ชื่อเรื่อง/ผู้เขียน/ติดต่อ/ลิขสิทธิ์)`;
+    const bStd = el('button', 'k-key-btn', tt('ui.pdf.putCoverDefault'));
+    bStd.title = tt('ui.pdf.newDataResultTask');
     bStd.onclick = () => { ed.pages = defaultTitlePages(pdfMeta(), fmt); pageIdx = 0; strIdx = -1; render(); };
     colPages.append(bStd);
   };
@@ -203,7 +203,7 @@ export async function openTitlePageDialog() {
   const renderPreview = () => {
     colPrev.innerHTML = '';
     const page = ed.page(pageIdx);
-    if (!page) { colPrev.append(el('div', 'dim', T`ไม่มีหน้าปก`)); return; }
+    if (!page) { colPrev.append(el('div', 'dim', tt('ui.pdf.notHasCover'))); return; }
     // ย่อกระดาษให้พอดีคอลัมน์ด้วย CSS zoom (พิกัดคลิกยังตรง — ต่างจาก transform:scale)
     const paper = el('div', 'k-tp-paper');
     paper.style.width = fmt.paper.width + 'in';
@@ -225,67 +225,67 @@ export async function openTitlePageDialog() {
       node.onclick = () => { strIdx = i; render(); };
     });
     colPrev.append(paper);
-    colPrev.append(el('div', 'dim', T`คลิกข้อความในกระดาษเพื่อแก้ · กรอบเส้นประ = พื้นที่พิมพ์`));
+    colPrev.append(el('div', 'dim', tt('ui.pdf.clickTextPaperEdit')));
   };
 
   // ---- คอลัมน์ขวา: คุณสมบัติสตริง ----
   const renderProps = () => {
     colProps.innerHTML = '';
-    colProps.append(el('div', 'cmp-sub', T`ข้อความในหน้านี้`));
+    colProps.append(el('div', 'cmp-sub', tt('ui.pdf.textPage')));
     const page = ed.page(pageIdx);
     if (!page) return;
     const list = el('div', 'k-tp-str-list');
     page.strings.forEach((s, i) => {
       const r = el('div', 'k-tp-str-row' + (i === strIdx ? ' on' : ''));
-      r.append(el('span', null, String(s.text || T`(ว่าง)`).split('\n')[0].slice(0, 24) || T`(ว่าง)`));
+      r.append(el('span', null, String(s.text || tt('ui.common.empty')).split('\n')[0].slice(0, 24) || tt('ui.common.empty')));
       r.onclick = () => { strIdx = i; render(); };
       list.append(r);
     });
     colProps.append(list);
 
-    const add = el('button', 'cmp-mini', T`➕ เพิ่มข้อความ`);
-    add.onclick = () => { strIdx = ed.addString(pageIdx, { text: T`ข้อความใหม่` }); render(); };
+    const add = el('button', 'cmp-mini', tt('ui.pdf.addText'));
+    add.onclick = () => { strIdx = ed.addString(pageIdx, { text: tt('ui.pdf.textNew') }); render(); };
     colProps.append(add);
 
     const s = page.strings[strIdx];
-    if (!s) { colProps.append(el('div', 'dim', T`เลือกข้อความเพื่อแก้คุณสมบัติ`)); return; }
+    if (!s) { colProps.append(el('div', 'dim', tt('ui.pdf.pickTextEditProps'))); return; }
 
     const set = (patch) => { ed.updateString(pageIdx, strIdx, patch); renderPreview(); renderPages(); };
     const ta = el('textarea', 'k-dlg-input'); ta.rows = 3; ta.value = s.text;
     ta.oninput = () => set({ text: ta.value });
-    colProps.append(row(T`ข้อความ`, ta));
+    colProps.append(row(tt('ui.common.text'), ta));
 
     const gx = numInput(s.x, { min: -2, max: 40 });
     gx.onchange = () => set({ x: gx.value });
     const gy = numInput(s.y, { min: -2, max: 40 });
     gy.onchange = () => set({ y: gy.value });
     const pos = el('span'); pos.append(gx, document.createTextNode(' × '), gy);
-    colProps.append(row(T`ตำแหน่ง x × y (นิ้ว)`, pos, T`วัดจากขอบกระดาษซ้าย/บน`));
+    colProps.append(row(tt('ui.pdf.posXYInch'), pos, tt('ui.pdf.marginPaperLeftTop')));
 
     const gw = numInput(s.width, { min: 0, max: 40 });
     gw.onchange = () => set({ width: gw.value });
-    colProps.append(row(T`ความกว้างกล่อง (นิ้ว)`, gw, T`0 = เท่าพื้นที่พิมพ์ที่เหลือ`));
+    colProps.append(row(tt('ui.pdf.wideDialogInch'), gw, tt('ui.pdf.areaPrint')));
 
     const gs = numInput(s.size, { min: 4, max: 96, step: 0.5 });
     gs.onchange = () => set({ size: gs.value });
-    colProps.append(row(T`ขนาด (pt)`, gs));
+    colProps.append(row(tt('ui.pdf.sizePt'), gs));
 
     const gf = el('input', 'k-dlg-input'); gf.value = s.font;
-    gf.placeholder = T`ว่าง = ฟอนต์ของบท`;
+    gf.placeholder = tt('ui.pdf.emptyFontChapter');
     gf.onchange = () => set({ font: gf.value });
-    colProps.append(row(T`ฟอนต์`, gf, T`PDF ในโปรแกรมใช้ฟอนต์ที่ฝังมาเสมอ — ช่องนี้มีผลกับพรีวิว/พิมพ์`));
+    colProps.append(row(tt('ui.common.font'), gf, tt('ui.pdf.pDFAppUseFont')));
 
     const ga = select(ALIGN_OPTS, s.align);
     ga.onchange = () => set({ align: ga.value });
-    colProps.append(row(T`จัดหน้า`, ga));
+    colProps.append(row(tt('ui.common.arrangePage'), ga));
 
-    for (const [k, label] of [['bold', T`ตัวหนา`], ['italic', T`ตัวเอียง`], ['underline', T`ขีดเส้นใต้`]]) {
+    for (const [k, label] of [['bold', tt('ui.pdf.itemBold')], ['italic', tt('ui.pdf.item2')], ['underline', tt('ui.pdf.dashLineUnder')]]) {
       const c = checkbox(s[k]);
       c.onchange = () => set({ [k]: c.checked });
       colProps.append(row(label, c));
     }
 
-    const del = el('button', 'cmp-mini', T`🗑 ลบข้อความนี้`);
+    const del = el('button', 'cmp-mini', tt('ui.pdf.delText'));
     del.onclick = () => { ed.deleteString(pageIdx, strIdx); strIdx = -1; render(); };
     colProps.append(del);
   };
@@ -294,13 +294,13 @@ export async function openTitlePageDialog() {
   render();
 
   const btns = el('div', 'k-dlg-btns');
-  const bClose = el('button', 'k-cancel', T`ยกเลิก`);
+  const bClose = el('button', 'k-cancel', tt('ui.common.cancel'));
   bClose.onclick = () => ov.remove();
-  const bSave = el('button', 'k-ok', T`บันทึก`);
+  const bSave = el('button', 'k-ok', tt('ui.common.save'));
   bSave.onclick = async () => {
     await saveTitlePages(ed.pages);
-    setStatus(T`บันทึกหน้าปกแล้ว — ` + ed.count + T` หน้า`);
-    log('info', T`บันทึกหน้าปก`, { pages: ed.count });
+    setStatus(tt('ui.pdf.saveCoverDone') + ed.count + tt('ui.pdf.page'));
+    log('info', tt('ui.pdf.saveCover'), { pages: ed.count });
     ov.remove();
   };
   btns.append(bClose, bSave);
@@ -311,29 +311,29 @@ export async function openTitlePageDialog() {
 
 // ═════════════════════ [91] กล่องหัวกระดาษ ═════════════════════
 export async function openHeaderDialog() {
-  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน`); return null; }
+  if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return null; }
   const hdr = projectHeaders();
   const { ov, box } = overlay('k-hdr-dlg');
-  box.append(el('div', 'k-dlg-title', T`หัวกระดาษทุกหน้า (Page Headers)`));
+  box.append(el('div', 'k-dlg-title', tt('ui.pdf.headPaperAllPage2')));
   box.append(el('div', 'k-hint',
-    T`หัวกระดาษพิมพ์ซ้ำทุกหน้าที่ขอบบน และ "กินบรรทัด" ของเนื้อหน้าจริง ` +
-    T`(เปิดแล้วจำนวนหน้าอาจเพิ่ม) · ใช้ได้กับตัวสร้าง PDF ในโปรแกรม`));
+    tt('ui.pdf.headPaperPrintDup') +
+    tt('ui.pdf.openDoneCountPage')));
 
   const on = checkbox(hdr.enabled);
-  box.append(row(T`เปิดใช้หัวกระดาษ`, on));
+  box.append(row(tt('ui.pdf.openUseHeadPaper'), on));
   const first = checkbox(hdr.firstPage);
-  box.append(row(T`ใส่หัวบนหน้าแรกด้วย`, first, T`ธรรมเนียมบท: หน้าแรกไม่ใส่`));
+  box.append(row(tt('ui.pdf.putHeadTopPage'), first, tt('ui.pdf.chapterPageFirstNot')));
   const gap = numInput(hdr.emptyLinesAfter, { min: 0, max: 10, step: 1 });
-  box.append(row(T`เว้นบรรทัดใต้หัวกระดาษ`, gap));
+  box.append(row(tt('ui.pdf.skipLineUnderHead'), gap));
 
-  box.append(el('div', 'cmp-sub', T`ข้อความ (ทุกชิ้นอยู่บรรทัดเดียวกัน — ต่างกันที่การจัดหน้า)`));
+  box.append(el('div', 'cmp-sub', tt('ui.pdf.textAllItemLine')));
   const list = el('div', 'k-hdr-list');
   box.append(list);
 
   const info = el('div', 'dim k-hdr-info');
   const varHint = el('div', 'k-hint',
-    T`ตัวแปร: ` + HEADER_VARS.map((v) => '${' + v.key + '} = ' + v.label).join(' · ') +
-    T` (พิมพ์ชื่อไทยได้ เช่น \${หน้า})`);
+    tt('ui.pdf.item3') + HEADER_VARS.map((v) => '${' + v.key + '} = ' + v.label).join(' · ') +
+    tt('ui.pdf.printNameEgPage'));
 
   const rows = hdr.strings.slice();
   const refresh = () => {
@@ -341,27 +341,27 @@ export async function openHeaderDialog() {
     rows.forEach((s, i) => {
       const r = el('div', 'k-hdr-row');
       const tx = el('input', 'k-dlg-input k-hdr-text'); tx.value = s.text;
-      tx.placeholder = T`\${TITLE} หรือ \${PAGE}`;
+      tx.placeholder = tt('ui.pdf.tITLEPAGE');
       tx.oninput = () => { s.text = tx.value; preview(); };
       const al = select(ALIGN_OPTS, s.align);
       al.onchange = () => { s.align = al.value; preview(); };
       const ox = numInput(s.xOffset, { min: -5, max: 5 });
-      ox.title = T`ขยับจากตำแหน่งปกติ (นิ้ว · บวก = ไปทางขวา)`;
+      ox.title = tt('ui.pdf.posNormalInchRight');
       ox.onchange = () => { s.xOffset = parseFloat(ox.value) || 0; };
       const marks = el('span', 'k-hdr-marks');
-      for (const [k, label] of [['bold', T`ห`], ['italic', T`อ`], ['underline', T`ข`], ['caps', T`ใ`]]) {
-        const c = checkbox(s[k]); c.title = { bold: T`ตัวหนา`, italic: T`ตัวเอียง`,
-          underline: T`ขีดเส้นใต้`, caps: T`ตัวพิมพ์ใหญ่` }[k];
+      for (const [k, label] of [['bold', tt('ui.pdf.msg3')], ['italic', tt('ui.pdf.msg4')], ['underline', tt('ui.pdf.msg2')], ['caps', tt('ui.pdf.msg5')]]) {
+        const c = checkbox(s[k]); c.title = { bold: tt('ui.pdf.itemBold'), italic: tt('ui.pdf.item2'),
+          underline: tt('ui.pdf.dashLineUnder'), caps: tt('ui.pdf.caseBig') }[k];
         c.onchange = () => { s[k] = c.checked; preview(); };
         const w = el('label', 'k-hdr-mark'); w.append(c, el('span', null, label));
         marks.append(w);
       }
-      const del = el('button', 'cmp-mini', '✕'); del.title = T`ลบชิ้นนี้`;
+      const del = el('button', 'cmp-mini', '✕'); del.title = tt('ui.pdf.delItem');
       del.onclick = () => { rows.splice(i, 1); refresh(); };
       r.append(tx, al, ox, marks, del);
       list.append(r);
     });
-    const add = el('button', 'cmp-mini', T`➕ เพิ่มข้อความ`);
+    const add = el('button', 'cmp-mini', tt('ui.pdf.addText'));
     add.onclick = () => { rows.push(newHeaderString({ text: '${PAGE}' })); refresh(); };
     list.append(add);
     preview();
@@ -370,20 +370,20 @@ export async function openHeaderDialog() {
                        emptyLinesAfter: parseInt(gap.value, 10) || 0, strings: rows });
   const preview = () => {
     const h = mergeHeaders(cur());
-    const shown = headerStringsFor(2, h, { PAGE: 2, PAGES: 120, TITLE: state.title || T`ชื่อเรื่อง`,
-      AUTHOR: (state.meta || {}).author || T`ผู้เขียน`, DRAFT: T`ร่างที่สอง`,
-      DATE: new Date().toISOString().slice(0, 10), SCENE: T`INT. ห้องนอน - กลางคืน` });
+    const shown = headerStringsFor(2, h, { PAGE: 2, PAGES: 120, TITLE: state.title || tt('ui.common.title'),
+      AUTHOR: (state.meta || {}).author || tt('ui.common.author'), DRAFT: tt('ui.pdf.draftTwo'),
+      DATE: new Date().toISOString().slice(0, 10), SCENE: tt('ui.pdf.iNTNight') });
     info.textContent = shown.length
-      ? T`ตัวอย่างหน้า 2 → ` + shown.map((r) => `[${r.align}] ${r.text}`).join('   ') +
-        T`   · กินไป ${headerLineCount(h)} บรรทัด/หน้า`
-      : T`หน้านี้ไม่มีหัวกระดาษ`;
+      ? tt('ui.pdf.samplePage') + shown.map((r) => `[${r.align}] ${r.text}`).join('   ') +
+        ttf('ui.pdf.linePage', headerLineCount(h))
+      : tt('ui.pdf.pageNotHasHead');
   };
   on.onchange = preview; first.onchange = preview; gap.onchange = preview;
   refresh();
   box.append(varHint, info);
 
   const btns = el('div', 'k-dlg-btns');
-  const bReset = el('button', null, T`↺ ค่าเริ่มต้น`);
+  const bReset = el('button', null, tt('ui.pdf.default'));
   bReset.onclick = () => {
     rows.length = 0;
     for (const s of HEADER_DEFAULTS.strings) rows.push(newHeaderString(s));
@@ -391,12 +391,12 @@ export async function openHeaderDialog() {
     gap.value = String(HEADER_DEFAULTS.emptyLinesAfter);
     refresh();
   };
-  const bClose = el('button', 'k-cancel', T`ยกเลิก`);
+  const bClose = el('button', 'k-cancel', tt('ui.common.cancel'));
   bClose.onclick = () => ov.remove();
-  const bSave = el('button', 'k-ok', T`บันทึก`);
+  const bSave = el('button', 'k-ok', tt('ui.common.save'));
   bSave.onclick = async () => {
     await saveHeaders(cur());
-    setStatus(on.checked ? T`เปิดหัวกระดาษแล้ว` : T`ปิดหัวกระดาษแล้ว`);
+    setStatus(on.checked ? tt('ui.pdf.openHeadPaperDone') : tt('ui.pdf.closeHeadPaperDone'));
     ov.remove();
   };
   btns.append(bReset, bClose, bSave);
@@ -435,30 +435,30 @@ export async function pdfExportDialog() {
   const here = currentScriptPage(state.active, src.blocks, fmt);
 
   const { ov, box } = overlay('k-pdf-dlg');
-  box.append(el('div', 'k-dlg-title', T`ส่งออก PDF (ตัวสร้างในโปรแกรม)`));
+  box.append(el('div', 'k-dlg-title', tt('ui.pdf.exportPDFItemNew')));
   box.append(el('div', 'k-hint',
-    T`บท “${src.title}” · ${pagesOf(src.blocks, fmt).count} หน้า — ` +
-    T`เส้นทางนี้เขียน PDF เองด้วย pdf-lib จึงทำสารบัญ/เปิดที่หน้าเดิม/ฝังฟอนต์ไทยได้ ` +
-    T`(เมนู "ส่งออกเป็น PDF…" เดิมยังใช้ Chromium อยู่ตามปกติ)`));
+    ttf('ui.pdf.chapterPage', src.title, pagesOf(src.blocks, fmt).count) +
+    tt('ui.pdf.routeWritePDFPdf') +
+    tt('ui.pdf.exportPDFPrevUse')));
 
   const cToc = checkbox(saved.toc);
-  box.append(row(T`[87] สารบัญ (bookmark ต่อหัวฉาก)`, cToc, T`กระโดดตามฉากได้ในโปรแกรมอ่าน PDF`));
+  box.append(row(tt('ui.pdf.tocBookmarkNextHead'), cToc, tt('ui.pdf.sceneAppReadPDF')));
   const cOpen = checkbox(saved.openPage > 0);
   const nOpen = numInput(here, { min: 1, max: 9999, step: 1 });
-  const openWrap = el('span'); openWrap.append(cOpen, document.createTextNode(T` หน้า `), nOpen);
-  box.append(row(T`[89] เปิดไฟล์แล้วไปที่หน้า`, openWrap, T`ค่าเริ่มต้น = หน้าที่เคอร์เซอร์อยู่`));
+  const openWrap = el('span'); openWrap.append(cOpen, document.createTextNode(tt('ui.pdf.page2')), nOpen);
+  box.append(row(tt('ui.pdf.openFileDonePage'), openWrap, tt('ui.pdf.defaultPage')));
 
   const cTitle = checkbox(saved.titlePages !== false && titles.length > 0);
   cTitle.disabled = !titles.length;
-  box.append(row(T`[90] แนบหน้าปก`, cTitle,
-    titles.length ? titles.length + T` หน้า` : T`ยังไม่ได้ตั้งหน้าปก — เมนู บท → หน้าปก`));
+  box.append(row(tt('ui.pdf.cover'), cTitle,
+    titles.length ? titles.length + tt('ui.pdf.page') : tt('ui.pdf.cantSetCoverChapter')));
 
   const cHdr = checkbox(saved.headers !== false && hdr.enabled);
   cHdr.disabled = !hdr.enabled;
-  box.append(row(T`[91] หัวกระดาษทุกหน้า`, cHdr,
-    hdr.enabled ? T`กินไป ` + headerLineCount(hdr) + T` บรรทัด/หน้า` : T`ยังปิดอยู่ — เมนู บท → หัวกระดาษ`));
+  box.append(row(tt('ui.pdf.headPaperAllPage'), cHdr,
+    hdr.enabled ? tt('ui.pdf.msg') + headerLineCount(hdr) + tt('ui.pdf.linePage2') : tt('ui.pdf.closeChapterHeadPaper')));
 
-  box.append(el('div', 'cmp-sub', T`[88] ไม่พิมพ์ element เหล่านี้`));
+  box.append(el('div', 'cmp-sub', tt('ui.pdf.notPrintElement')));
   const omitWrap = el('div', 'k-pdf-omit');
   const omitBoxes = {};
   for (const k of OMITTABLE_ELEMENTS) {
@@ -470,14 +470,14 @@ export async function pdfExportDialog() {
   }
   box.append(omitWrap);
   const cRect = checkbox(saved.drawRectAroundNotes);
-  box.append(row(T`วาดกรอบรอบโน้ตที่ยังพิมพ์อยู่`, cRect));
+  box.append(row(tt('ui.pdf.drawFrameRoundNote'), cRect));
 
   const cNums = checkbox(saved.pageNumbers !== false);
-  box.append(row(T`เลขหน้า / เลขฉาก ตามรูปแบบบท`, cNums,
-    fmt.pageNumbers.show || fmt.sceneNumbers.show ? '' : T`ทั้งสองยังปิดอยู่ในแท็บหน้ากระดาษ`));
+  box.append(row(tt('ui.pdf.pageNumNumSceneFormat'), cNums,
+    fmt.pageNumbers.show || fmt.sceneNumbers.show ? '' : tt('ui.pdf.twoCloseTabPage')));
   const wm = el('input', 'k-dlg-input'); wm.value = String(saved.watermark || '');
-  wm.placeholder = T`ว่าง = ไม่ใส่ลายน้ำ`;
-  box.append(row(T`ลายน้ำ`, wm, T`ต้องการลายน้ำรายคนหลายไฟล์ ให้ใช้ "ส่งออก PDF ลายน้ำรายคน"`));
+  wm.placeholder = tt('ui.pdf.emptyNotPutWatermark');
+  box.append(row(tt('ui.pdf.watermark'), wm, tt('ui.pdf.needWatermarkPersonFile')));
 
   const prog = el('div', 'dim k-pdf-prog');
   box.append(prog);
@@ -495,14 +495,14 @@ export async function pdfExportDialog() {
   });
 
   const btns = el('div', 'k-dlg-btns');
-  const bClose = el('button', 'k-cancel', T`ปิด`);
+  const bClose = el('button', 'k-cancel', tt('ui.common.close'));
   bClose.onclick = () => ov.remove();
-  const bGo = el('button', 'k-ok', T`สร้าง PDF…`);
+  const bGo = el('button', 'k-ok', tt('ui.pdf.newPDF'));
   bGo.onclick = async () => {
     if (!(await checkBeforeExport())) return;
     const opts = collect();
     bGo.disabled = true;
-    prog.textContent = T`กำลังสร้าง…`;
+    prog.textContent = tt('ui.pdf.busyNew');
     try {
       const dest = await kapi.savePdfDialog(safeName(src.title) + '.pdf');
       if (!dest) { bGo.disabled = false; prog.textContent = ''; return; }
@@ -510,12 +510,12 @@ export async function pdfExportDialog() {
                                        titlePages: titles, headers: hdr });
       await kapi.writeBytes(dest, Array.from(r.bytes));
       if (state.meta) { state.meta.pdfExport = opts; await saveProjectMeta(); }
-      prog.textContent = T`เสร็จแล้ว — ${r.pageCount} หน้า · สารบัญ ${r.bookmarks.length} รายการ`;
-      setStatus(T`ส่งออก PDF: ` + dest);
-      log('info', T`ส่งออก PDF (pdf-lib)`, { dest, pages: r.pageCount, toc: r.bookmarks.length });
+      prog.textContent = ttf('ui.pdf.doneDonePageToc', r.pageCount, r.bookmarks.length);
+      setStatus(tt('ui.common.exportPDF') + dest);
+      log('info', tt('ui.pdf.exportPDFPdfLib'), { dest, pages: r.pageCount, toc: r.bookmarks.length });
     } catch (e) {
-      prog.textContent = T`ผิดพลาด: ` + (e && e.message ? e.message : e);
-      log('error', T`สร้าง PDF ไม่สำเร็จ`, e);
+      prog.textContent = tt('ui.common.error') + (e && e.message ? e.message : e);
+      log('error', tt('ui.pdf.newPDFNotOk'), e);
     }
     bGo.disabled = false;
   };

@@ -6,7 +6,7 @@
 //
 // ส่วนคำนวณบริสุทธิ์ (ทดสอบด้วย node ได้) · ส่วนที่แตะ DOM = renderProsePageView + plugin เส้นคั่นหน้า
 
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { mergeProseFormat, paginateProse, proseMetrics, prosePageLabel,
          proseFontStack, proseHeadingStack, proseLinePx, proseFontPx } from './prose-format.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
@@ -16,12 +16,12 @@ import { createPageBreakPlugin } from './page-break-plugin.js';
 // ───────── รายการโหมด (ชื่อเดียวกับบทภาพยนตร์ เพื่อให้เมนู/คลาส CSS ใช้ร่วมกันได้) ─────────
 export const PROSE_VIEWS = ['normal', 'layout', 'draft', 'side', 'overview1', 'overview4'];
 export const PROSE_VIEW_LABELS = {
-  normal:    T`ปกติ (หน้ากระดาษ)`,
-  layout:    T`จัดหน้า — เห็นหน้าจริง (Layout)`,
-  draft:     T`ร่าง — ข้อความล้วน (Draft)`,
-  side:      T`เรียงหน้าคู่ (Side-by-Side)`,
-  overview1: T`ภาพรวม 1px/ตัวอักษร`,
-  overview4: T`ภาพรวม 4px/ตัวอักษร`,
+  normal:    t('ui.common.normalPagePaper'),
+  layout:    t('ui.common.arrangePageSeePage'),
+  draft:     t('ui.common.draftTextDraft'),
+  side:      t('ui.common.pagePairSideBy'),
+  overview1: t('ui.common.overviewPxChar'),
+  overview4: t('ui.common.overviewPxChar2'),
 };
 export const isValidProseView = (m) => PROSE_VIEWS.includes(m);
 export const isProsePageView = (m) => m === 'side' || m === 'overview1' || m === 'overview4';
@@ -118,7 +118,7 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
       } else if (type === 'figure') {
         d = document.createElement('div');
         d.className = 'pv-figure';
-        d.textContent = '🖼 ' + (b.alt || T`รูป`);
+        d.textContent = '🖼 ' + (b.alt || t('ui.prose.image'));
       } else {
         d = document.createElement('p');
         d.style.textIndent = f.firstLineIndent + 'in';
@@ -139,7 +139,7 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
 /** ข้อความสรุปมุมมองปัจจุบัน (แถบสถานะ) */
 export function proseViewStatusText(mode, pageCount) {
   const name = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
-  return Number.isFinite(pageCount) ? T`มุมมอง: ${name} · ${pageCount} หน้า` : T`มุมมอง: ` + name;
+  return Number.isFinite(pageCount) ? tf('ui.common.viewPage', name, pageCount) : t('ui.common.view2') + name;
 }
 
 export { proseLinePx };

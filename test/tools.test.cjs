@@ -1,4 +1,6 @@
 // test/tools.test.cjs — ทดสอบ thesaurus (ข้อ 67) · import-scrivener (ข้อ 63) · comment-core (ข้อ 64)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const build = (src, name) => {

@@ -4,30 +4,30 @@
 //     และเครื่องมือวาดย้ายไป "รางเครื่องมือ" แนวตั้งแบบ Miro ที่ไม่กินความกว้าง
 // แก้บั๊ก 6 (กริด): ป๊อปอัปตั้งค่ากริด — เปิด/ปิด · ขนาด · สแนป · รูปแบบ · ความเข้ม
 // แก้บั๊ก 8 (x y): แถบสถานะล่างบอกพิกัดเคอร์เซอร์ · ซูม · จำนวนวัตถุ · สถานะบันทึก
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { el } from '../core.js';
 import { STATUSES, SHAPES, GRID_STYLES } from './planner-data.js';
 
 const SHAPE_LABEL = {
-  rect: T`▭ สี่เหลี่ยม`, round: T`▢ มุมมน`, ellipse: T`⬭ วงรี`, diamond: T`◇ ข้าวหลามตัด`,
-  triangle: T`△ สามเหลี่ยม`, star: T`☆ ดาว`, arrow: T`➜ ลูกศร`, cylinder: T`⛁ ทรงกระบอก`,
+  rect: t('ui.planner.rect'), round: t('ui.planner.corner'), ellipse: t('ui.planner.ellipse'), diamond: t('ui.planner.cut'),
+  triangle: t('ui.planner.triangle'), star: t('ui.planner.star'), arrow: t('ui.planner.arrow'), cylinder: t('ui.planner.cylinder'),
 };
 
 const TOOL_DEFS = [
-  { tool: 'select',    icon: '⬉', label: T`เลือก / ย้าย`, key: 'V' },
-  { tool: 'hand',      icon: '✋', label: T`มือ (เลื่อนกระดาน)`, key: 'H' },
+  { tool: 'select',    icon: '⬉', label: t('ui.planner.pickMove'), key: 'V' },
+  { tool: 'hand',      icon: '✋', label: t('ui.planner.scrollBoard'), key: 'H' },
   { sep: true },
-  { tool: 'sticky',    icon: '📌', label: T`โพสต์อิต`, key: 'N' },
-  { tool: 'text',      icon: '🅃', label: T`ข้อความ`, key: 'T' },
-  { tool: 'shape',     icon: '⬛', label: T`รูปทรง`, key: 'S', hasMenu: true },
-  { tool: 'frame',     icon: '🖼', label: T`เฟรม`, key: 'F' },
-  { tool: 'comment',   icon: '💬', label: T`คอมเมนต์`, key: 'C' },
-  { tool: 'connector', icon: '↝', label: T`เส้นเชื่อม`, key: 'L' },
+  { tool: 'sticky',    icon: '📌', label: t('ui.planner.sticky'), key: 'N' },
+  { tool: 'text',      icon: '🅃', label: t('ui.common.text'), key: 'T' },
+  { tool: 'shape',     icon: '⬛', label: t('ui.common.shape'), key: 'S', hasMenu: true },
+  { tool: 'frame',     icon: '🖼', label: t('ui.common.frame'), key: 'F' },
+  { tool: 'comment',   icon: '💬', label: t('ui.common.comment'), key: 'C' },
+  { tool: 'connector', icon: '↝', label: t('ui.planner.lineLink'), key: 'L' },
   { sep: true },
-  { tool: 'scene',     icon: '📄', label: T`การ์ดฉาก` },
-  { tool: 'chapter',   icon: '📁', label: T`การ์ดบท` },
-  { tool: 'entity',    icon: '👤', label: T`การ์ด Wiki` },
-  { tool: 'note',      icon: '📝', label: T`การ์ดโน้ต` },
+  { tool: 'scene',     icon: '📄', label: t('ui.planner.cardScene') },
+  { tool: 'chapter',   icon: '📁', label: t('ui.planner.cardChapter') },
+  { tool: 'entity',    icon: '👤', label: t('ui.planner.cardWiki') },
+  { tool: 'note',      icon: '📝', label: t('ui.planner.cardNote') },
 ];
 
 /** รางเครื่องมือแนวตั้ง (แบบ Miro) — ลอยอยู่ซ้ายมือบนกระดาน */
@@ -56,7 +56,7 @@ export function createPlannerRail(cb) {
   };
   rail.setShape = (s) => {
     const b = btns.get('shape');
-    if (b) b.title = T`รูปทรง (S) — ` + (SHAPE_LABEL[s] || s);
+    if (b) b.title = t('ui.planner.shapeS') + (SHAPE_LABEL[s] || s);
   };
   return rail;
 }
@@ -92,38 +92,11 @@ function _placePopover(pop, anchor) {
 /** แถบคำสั่ง (บน) — เลื่อนแนวนอนได้ ไม่มีปุ่มไหนหายเมื่อแผงแคบ (บั๊ก 7) */
 export function createPlannerToolbar(cb) {
   const wrap = el('div', 'planner-toolbar');
-  const left = el('button', 'planner-scroll-btn', '‹'); left.title = T`เลื่อนซ้าย`;
-  const right = el('button', 'planner-scroll-btn', '›'); right.title = T`เลื่อนขวา`;
+  const left = el('button', 'planner-scroll-btn', '‹'); left.title = t('ui.planner.scrollLeft');
+  const right = el('button', 'planner-scroll-btn', '›'); right.title = t('ui.planner.scrollRight');
   const strip = el('div', 'planner-toolbar-strip');
 
-  strip.innerHTML = T`
-    <span class="planner-board-name" id="pl-boardname" title="กระดานที่เปิดอยู่">กระดานหลัก</span>
-    <span class="planner-dirty" id="pl-dirty" title="ยังไม่ได้บันทึก">●</span>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="new" title="กระดานใหม่">✚ ใหม่</button>
-    <button class="planner-btn" data-action="open" title="เปิดกระดานอื่น">📂 เปิด</button>
-    <button class="planner-btn k-ok" data-action="save" title="บันทึก (Ctrl+S)">💾 บันทึก</button>
-    <button class="planner-btn" data-action="save-as" title="บันทึกเป็นไฟล์ใหม่">💾… บันทึกเป็น</button>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="undo" title="ย้อนกลับ (Ctrl+Z)">↶</button>
-    <button class="planner-btn" data-action="redo" title="ทำซ้ำ (Ctrl+Shift+Z)">↷</button>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="group" title="จัดกลุ่ม (Ctrl+G)">🗂 จัดกลุ่ม</button>
-    <button class="planner-btn" data-action="duplicate" title="ทำซ้ำ (Ctrl+D)">⧉ ทำซ้ำ</button>
-    <button class="planner-btn" data-action="reveal" title="ชี้ตำแหน่งไฟล์ใน Explorer">📂 ในเอกสาร</button>
-    <button class="planner-btn" data-action="delete" title="ลบ (Del)">🗑 ลบ</button>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="auto-layout" title="จัดเรียงอัตโนมัติ">📐 จัดเรียง</button>
-    <button class="planner-btn" data-action="grid" title="ตั้งค่ากริด">▦ กริด</button>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="zoom-out" title="ซูมออก (Ctrl+-)">➖</button>
-    <button class="planner-btn planner-zoom-label" data-action="zoom-reset" title="ซูม 100% (Ctrl+0)" id="pl-zoom">100%</button>
-    <button class="planner-btn" data-action="zoom-in" title="ซูมเข้า (Ctrl+=)">➕</button>
-    <button class="planner-btn" data-action="zoom-fit" title="พอดีจอ">⊡ พอดีจอ</button>
-    <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="export-png" title="ส่งออกเป็นรูป">🖼 PNG</button>
-    <button class="planner-btn" data-action="sample" title="ใส่ตัวอย่าง">🧪 ตัวอย่าง</button>
-  `;
+  strip.innerHTML = t('ui.planner.boardMainNewOpen');
 
   const map = {
     'new': 'onNew', 'open': 'onOpen', 'save': 'onSave', 'save-as': 'onSaveAs',
@@ -176,7 +149,7 @@ export function createPlannerToolbar(cb) {
   wrap.append(left, strip, right);
   wrap.syncArrows = syncArrows;
   wrap.setZoom = (z) => { const n = strip.querySelector('#pl-zoom'); if (n) n.textContent = Math.round(z * 100) + '%'; };
-  wrap.setBoardName = (name) => { const n = strip.querySelector('#pl-boardname'); if (n) { n.textContent = name; n.title = T`กระดาน: ` + name; } };
+  wrap.setBoardName = (name) => { const n = strip.querySelector('#pl-boardname'); if (n) { n.textContent = name; n.title = t('ui.planner.board') + name; } };
   wrap.setDirty = (d) => { wrap.classList.toggle('is-dirty', !!d); };
   setTimeout(syncArrows, 0);
   return wrap;
@@ -187,23 +160,7 @@ function _gridPopover(anchor, cb) {
   document.querySelectorAll('.planner-popover').forEach((p) => p.remove());
   const g = (cb.getGrid && cb.getGrid()) || { show: true, size: 20, snap: false, style: 'dots', opacity: 0.9, color: '#3a3936' };
   const pop = el('div', 'planner-popover planner-grid-pop');
-  pop.innerHTML = T`
-    <div class="planner-pop-title">▦ กริด</div>
-    <label class="planner-pop-row"><input type="checkbox" id="plg-show"${g.show ? ' checked' : ''}> แสดงกริด</label>
-    <label class="planner-pop-row"><input type="checkbox" id="plg-snap"${g.snap ? ' checked' : ''}> ดูดเข้าเส้นกริด (snap)</label>
-    <div class="planner-pop-row"><span>ขนาด</span>
-      <input type="number" id="plg-size" min="4" max="400" step="1" value="${g.size}"> px</div>
-    <div class="planner-pop-row"><span>รูปแบบ</span>
-      <select id="plg-style">${GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? T`จุด` : s === 'lines' ? T`เส้น` : T`กากบาท`}</option>`).join('')}</select></div>
-    <div class="planner-pop-row"><span>ความเข้ม</span>
-      <input type="range" id="plg-op" min="0" max="1" step="0.05" value="${g.opacity}"></div>
-    <div class="planner-pop-row"><span>สีเส้น</span><input type="color" id="plg-color" value="${g.color || '#3a3936'}"></div>
-    <div class="planner-pop-row"><span>สีพื้น</span><input type="color" id="plg-bg" value="${(cb.getBackground && cb.getBackground()) || '#262624'}"></div>
-    <div class="planner-pop-row planner-pop-presets">
-      <button data-size="10">10</button><button data-size="20">20</button>
-      <button data-size="25">25</button><button data-size="50">50</button><button data-size="100">100</button>
-    </div>
-  `;
+  pop.innerHTML = tf('ui.planner.gridShowGridView', g.show ? ' checked' : '', g.snap ? ' checked' : '', g.size, GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? t('ui.common.dot') : s === 'lines' ? t('ui.planner.line') : t('ui.planner.cross')}</option>`).join(''), g.opacity, g.color || '#3a3936', (cb.getBackground && cb.getBackground()) || '#262624');
   const emit = (p) => cb.onGridChange && cb.onGridChange(p);
   pop.querySelector('#plg-show').onchange = (e) => emit({ show: e.target.checked });
   pop.querySelector('#plg-snap').onchange = (e) => emit({ snap: e.target.checked });
@@ -221,26 +178,7 @@ function _gridPopover(anchor, cb) {
 /** แถบกรอง — เลื่อนแนวนอนได้เหมือนกัน */
 export function createPlannerFilterBar(callbacks) {
   const bar = el('div', 'planner-filter');
-  bar.innerHTML = T`
-    <input class="planner-filter-input" id="pl-f-text" placeholder="🔍 กรอง — ชื่อ / สรุป / แท็ก">
-    <select class="planner-filter-sel" id="pl-f-type">
-      <option value="">ทุกประเภท</option>
-      <option value="scene">📄 ฉาก</option>
-      <option value="chapter">📁 บท</option>
-      <option value="entity">👤 Wiki</option>
-      <option value="note">📝 โน้ต</option>
-      <option value="sticky">📌 โพสต์อิต</option>
-      <option value="text">🅃 ข้อความ</option>
-      <option value="shape">⬛ รูปทรง</option>
-      <option value="frame">🖼 เฟรม</option>
-      <option value="comment">💬 คอมเมนต์</option>
-    </select>
-    <select class="planner-filter-sel" id="pl-f-status">
-      <option value="">ทุกสถานะ</option>
-      ${STATUSES.filter(Boolean).map((s) => `<option value="${s}">${s}</option>`).join('')}
-    </select>
-    <button class="planner-btn-small" id="pl-f-clear">ล้าง</button>
-  `;
+  bar.innerHTML = tf('ui.planner.allTypeSceneChapter', STATUSES.filter(Boolean).map((s) => `<option value="${s}">${s}</option>`).join(''));
 
   let filter = { text: '', type: '', status: '' };
   const emit = () => { if (callbacks.onFilterChange) callbacks.onFilterChange({ ...filter }); };
@@ -260,12 +198,7 @@ export function createPlannerFilterBar(callbacks) {
 /** แถบสถานะล่าง — พิกัด x y (บั๊ก 8) · ซูม · จำนวน · เครื่องมือปัจจุบัน */
 export function createPlannerStatus() {
   const bar = el('div', 'planner-status');
-  bar.innerHTML = T`
-    <span class="planner-st-tool" id="pl-st-tool">เลือก</span>
-    <span class="planner-st-xy" id="pl-st-xy">x — · y —</span>
-    <span class="planner-st-grid" id="pl-st-grid"></span>
-    <span class="planner-count" id="pl-count"></span>
-  `;
+  bar.innerHTML = t('ui.planner.pickXY');
   bar.setXY = (p) => {
     const n = bar.querySelector('#pl-st-xy');
     if (n) n.textContent = p ? `x ${p.x} · y ${p.y}` : 'x — · y —';
@@ -273,7 +206,7 @@ export function createPlannerStatus() {
   bar.setTool = (label) => { const n = bar.querySelector('#pl-st-tool'); if (n) n.textContent = label; };
   bar.setGridInfo = (g) => {
     const n = bar.querySelector('#pl-st-grid');
-    if (n) n.textContent = g ? `▦ ${g.size}px${g.snap ? ' · snap' : ''}${g.show ? '' : T` · ซ่อน`}` : '';
+    if (n) n.textContent = g ? `▦ ${g.size}px${g.snap ? ' · snap' : ''}${g.show ? '' : t('ui.planner.hide')}` : '';
   };
   return bar;
 }
@@ -319,7 +252,7 @@ export function createContextBar(cb) {
     const custom = document.createElement('input');
     custom.type = 'color'; custom.className = 'planner-ctx-color';
     custom.value = /^#[0-9a-f]{6}$/i.test(n.color || '') ? n.color : '#3f3e3a';
-    custom.title = T`สีอื่น…`;
+    custom.title = t('ui.planner.colorOther');
     custom.oninput = () => cb.onNodeChange && cb.onNodeChange({ color: custom.value });
     sw.appendChild(custom);
     bar.append(sw, sep());
@@ -327,22 +260,22 @@ export function createContextBar(cb) {
     const tc = document.createElement('input');
     tc.type = 'color'; tc.className = 'planner-ctx-color planner-ctx-textcolor';
     tc.value = /^#[0-9a-f]{6}$/i.test(n.textColor || '') ? n.textColor : '#faf9f5';
-    tc.title = T`สีตัวอักษร`;
+    tc.title = t('ui.planner.colorChar');
     tc.oninput = () => cb.onNodeChange && cb.onNodeChange({ textColor: tc.value });
     bar.append(tc);
     bar.append(
-      mkBtn('A－', T`ตัวอักษรเล็กลง`, () => cb.onNodeChange && cb.onNodeChange({ fontSize: (current.fontSize || 12) - 1 })),
-      mkBtn('A＋', T`ตัวอักษรใหญ่ขึ้น`, () => cb.onNodeChange && cb.onNodeChange({ fontSize: (current.fontSize || 12) + 1 })),
+      mkBtn('A－', t('ui.planner.charSmall'), () => cb.onNodeChange && cb.onNodeChange({ fontSize: (current.fontSize || 12) - 1 })),
+      mkBtn('A＋', t('ui.planner.charBig'), () => cb.onNodeChange && cb.onNodeChange({ fontSize: (current.fontSize || 12) + 1 })),
       sep(),
       sep(),
-      mkBtn('⬆', T`ยกไปบนสุด (Ctrl+Shift+])`, () => cb.onOrder && cb.onOrder('front')),
-      mkBtn('⬇', T`ส่งไปล่างสุด (Ctrl+Shift+[)`, () => cb.onOrder && cb.onOrder('back')),
+      mkBtn('⬆', t('ui.planner.liftTopCtrlShift'), () => cb.onOrder && cb.onOrder('front')),
+      mkBtn('⬇', t('ui.planner.sendBottomLastCtrl'), () => cb.onOrder && cb.onOrder('back')),
       sep(),
-      mkBtn(n.locked ? '🔒' : '🔓', n.locked ? T`ปลดล็อก` : T`ล็อกไม่ให้ย้าย`,
+      mkBtn(n.locked ? '🔒' : '🔓', n.locked ? t('ui.planner.unlock') : t('ui.planner.lockNotMove'),
             () => cb.onNodeChange && cb.onNodeChange({ locked: !current.locked })),
-      mkBtn('⧉', T`ทำซ้ำ (Ctrl+D)`, () => cb.onDuplicate && cb.onDuplicate()),
-      mkBtn('⋯', T`คุณสมบัติทั้งหมด`, () => cb.onMore && cb.onMore()),
-      mkBtn('🗑', T`ลบ (Del)`, () => cb.onDelete && cb.onDelete(), 'danger'),
+      mkBtn('⧉', t('ui.planner.repeatCtrlD'), () => cb.onDuplicate && cb.onDuplicate()),
+      mkBtn('⋯', t('ui.planner.propsAll'), () => cb.onMore && cb.onMore()),
+      mkBtn('🗑', t('ui.planner.delDel'), () => cb.onDelete && cb.onDelete(), 'danger'),
     );
   }
 
@@ -357,33 +290,33 @@ export function createContextBar(cb) {
     const custom = document.createElement('input');
     custom.type = 'color'; custom.className = 'planner-ctx-color';
     custom.value = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#d97757';
-    custom.title = T`สีอื่น…`;
+    custom.title = t('ui.planner.colorOther');
     custom.oninput = () => cb.onEdgeChange && cb.onEdgeChange({ color: custom.value });
     sw.appendChild(custom);
     bar.append(sw, sep());
-    for (const [r, ic, tip] of [['straight', '╱', T`เส้นตรง`], ['orthogonal', '⌐', T`หักมุมฉาก`], ['curved', '⌒', T`โค้ง`]]) {
+    for (const [r, ic, tip] of [['straight', '╱', t('ui.planner.lineAt')], ['orthogonal', '⌐', t('ui.planner.cornerScene')], ['curved', '⌒', t('ui.planner.curve')]]) {
       const b = mkBtn(ic, tip, () => cb.onEdgeChange && cb.onEdgeChange({ routing: r }));
       if ((e.routing || 'straight') === r) b.classList.add('on');
       bar.append(b);
     }
     bar.append(sep());
-    for (const [s, ic, tip] of [['solid', '──', T`ทึบ`], ['dashed', '╌╌', T`ประ`], ['dotted', '···', T`จุด`]]) {
+    for (const [s, ic, tip] of [['solid', '──', t('ui.common.solid')], ['dashed', '╌╌', t('ui.common.msg5')], ['dotted', '···', t('ui.common.dot')]]) {
       const b = mkBtn(ic, tip, () => cb.onEdgeChange && cb.onEdgeChange({ style: s }));
       if ((e.style || 'solid') === s) b.classList.add('on');
       bar.append(b);
     }
     bar.append(
       sep(),
-      mkBtn('－', T`เส้นบางลง`, () => cb.onEdgeChange && cb.onEdgeChange({ width: (current.width || 2) - 1 })),
-      mkBtn('＋', T`เส้นหนาขึ้น`, () => cb.onEdgeChange && cb.onEdgeChange({ width: (current.width || 2) + 1 })),
-      mkBtn('➤', T`สลับหัวลูกศรปลายทาง`, () => {
+      mkBtn('－', t('ui.planner.line2'), () => cb.onEdgeChange && cb.onEdgeChange({ width: (current.width || 2) - 1 })),
+      mkBtn('＋', t('ui.planner.lineBold'), () => cb.onEdgeChange && cb.onEdgeChange({ width: (current.width || 2) + 1 })),
+      mkBtn('➤', t('ui.planner.toggleHeadArrowTo'), () => {
         const order = ['none', 'arrow', 'triangle', 'circle', 'diamond', 'bar'];
         const i = order.indexOf(current.arrowEnd || 'arrow');
         cb.onEdgeChange && cb.onEdgeChange({ arrowEnd: order[(i + 1) % order.length] });
       }),
-      mkBtn('⇄', T`สลับทิศ`, () => cb.onFlip && cb.onFlip()),
-      mkBtn('⋯', T`คุณสมบัติทั้งหมด`, () => cb.onMore && cb.onMore()),
-      mkBtn('🗑', T`ลบเส้น (Del)`, () => cb.onDeleteEdge && cb.onDeleteEdge(), 'danger'),
+      mkBtn('⇄', t('ui.planner.toggle'), () => cb.onFlip && cb.onFlip()),
+      mkBtn('⋯', t('ui.planner.propsAll'), () => cb.onMore && cb.onMore()),
+      mkBtn('🗑', t('ui.planner.delLineDel'), () => cb.onDeleteEdge && cb.onDeleteEdge(), 'danger'),
     );
   }
 
@@ -417,8 +350,8 @@ export function createContextBar(cb) {
 export function updatePlannerCount(node, stats, filtered) {
   if (!node) return;
   node.textContent = filtered
-    ? T`แสดง ${filtered.shown}/${filtered.total} การ์ด`
-    : T`${stats.nodes} วัตถุ · ${stats.edges} เส้น · ${stats.groups} กลุ่ม`;
+    ? tf('ui.planner.showCard', filtered.shown, filtered.total)
+    : tf('ui.planner.objectLineGroup', stats.nodes, stats.edges, stats.groups);
 }
 
 export const TOOL_LABELS = TOOL_DEFS.filter((d) => !d.sep)

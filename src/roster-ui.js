@@ -9,7 +9,7 @@
 //   · Scene / Time — หัวข้อกลางหน้า ขีดเส้นใต้ เว้น 1 บรรทัด แล้วคำอธิบายชิดซ้าย
 //     ระหว่างสองหัวข้อเว้น 2 บรรทัด · ทั้งสองหัวข้อเลือกเอา/ไม่เอาได้
 //   · หน้านี้ไม่มีเลขหน้า
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { $, el, state, setStatus, log, normalizeRoster, newRoster, rosterToText, mergeSpFormat } from './core.js';
 import { activate, closeTab, pickFromList } from './app.js';
 import { listSections } from './section-ops.js';
@@ -24,7 +24,7 @@ export async function loadRoster(secPath) {
   try {
     const p = await rosterPath(secPath);
     if (await kapi.exists(p)) return normalizeRoster(await kapi.readJson(p));
-  } catch (e) { log('warn', T`อ่านหน้ารายชื่อตัวละครไม่สำเร็จ`, e); }
+  } catch (e) { log('warn', t('ui.roster.readPageListCharacter'), e); }
   return newRoster();
 }
 export async function saveRoster(secPath, roster) {
@@ -35,11 +35,11 @@ export async function saveRoster(secPath, roster) {
 
 /** เลือกเล่ม แล้วเปิดหน้ารายชื่อตัวละครของเล่มนั้น */
 export async function openRosterFlow() {
-  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน`); return; }
+  if (!state.root) { setStatus(t('ui.common.openProjectBefore')); return; }
   const secs = await listSections();
-  if (!secs.length) { setStatus(T`ยังไม่มีเล่มในโปรเจกต์นี้`); return; }
+  if (!secs.length) { setStatus(t('ui.roster.notHasBookProject')); return; }
   if (secs.length === 1) return openRoster(secs[0].secPath, secs[0].title);
-  const pick = await pickFromList(T`เลือกเล่มที่จะเปิดหน้ารายชื่อตัวละคร`, secs.map((s) => s.title));
+  const pick = await pickFromList(t('ui.roster.pickBookOpenPage'), secs.map((s) => s.title));
   const sec = secs.find((s) => s.title === pick);
   if (sec) return openRoster(sec.secPath, sec.title);
 }
@@ -49,7 +49,7 @@ export async function openRoster(secPath, secTitle) {
   if (state.tabs.has(key)) { activate(key); return renderRoster(state.tabs.get(key)); }
   const pane = el('div', 'pane');
   $('#panes').append(pane);
-  const title = T`รายชื่อตัวละคร` + (secTitle ? ' — ' + secTitle : '');
+  const title = t('ui.roster.listCharacter') + (secTitle ? ' — ' + secTitle : '');
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', title));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
@@ -94,10 +94,10 @@ export async function renderRoster(tab) {
 
   // ---- แถบเครื่องมือ ----
   const bar = el('div', 'roster-bar');
-  const bAdd = el('button', null, T`+ เพิ่มตัวละคร`);
-  const bWiki = el('button', null, T`↓ ดึงจาก Wiki`);
-  const bSave = el('button', 'k-ok', T`บันทึก`);
-  const bCopy = el('button', null, T`📋 คัดลอกเป็นข้อความ`);
+  const bAdd = el('button', null, t('ui.roster.addCharacter'));
+  const bWiki = el('button', null, t('ui.roster.fetchWiki'));
+  const bSave = el('button', 'k-ok', t('ui.common.save'));
+  const bCopy = el('button', null, t('ui.common.copyText'));
   const mkChk = (label, key, tip) => {
     const w = el('label', 'roster-chk');
     const c = el('input'); c.type = 'checkbox'; c.checked = r[key] !== false;
@@ -107,9 +107,9 @@ export async function renderRoster(tab) {
     return w;
   };
   bar.append(bAdd, bWiki,
-    mkChk(T`แสดงหัวข้อ Scene`, 'showScene'),
-    mkChk(T`แสดงหัวข้อ Time`, 'showTime'),
-    mkChk(T`ใส่ตอนพิมพ์/ส่งออก`, 'includeInExport', T`ปิด = ข้ามหน้านี้ตอนพิมพ์และตอนส่งออก`),
+    mkChk(t('ui.roster.showHeadingScene'), 'showScene'),
+    mkChk(t('ui.roster.showHeadingTime'), 'showTime'),
+    mkChk(t('ui.roster.putActPrintExport'), 'includeInExport', t('ui.roster.closeSkipPageAct')),
     bCopy, bSave);
 
   // ---- ตัวหน้ากระดาษ ----
@@ -140,12 +140,12 @@ export async function renderRoster(tab) {
       const name = ce('roster-name', c.name, (v) => { c.name = v.replace(/:$/, ''); });
       const detail = ce('roster-detail', c.detail, (v) => { c.detail = v; });
       const del = el('span', 'roster-del', '✕');
-      del.title = T`ลบตัวละครนี้ออกจากหน้ารายชื่อ`;
+      del.title = t('ui.roster.delCharacterExitPage');
       del.onclick = () => { r.characters.splice(i, 1); dirty(); paint(); };
       row.append(name, el('span', 'roster-colon', ':'), detail, del);
       cast.append(row);
     });
-    if (!r.characters.length) cast.append(el('div', 'roster-empty', T`(ยังไม่มีรายชื่อ — กด "เพิ่มตัวละคร")`));
+    if (!r.characters.length) cast.append(el('div', 'roster-empty', t('ui.roster.notHasListPress')));
     page.append(cast);
     // Scene / Time — หัวข้อกลางหน้า ขีดเส้นใต้ · เนื้อชิดซ้าย
     const sec = (key, headText) => {
@@ -163,16 +163,16 @@ export async function renderRoster(tab) {
   bAdd.onclick = () => { r.characters.push({ name: '', detail: '' }); dirty(); paint(); };
   bWiki.onclick = async () => {
     const chars = await wikiCharacters();
-    if (!chars.length) { setStatus(T`ไม่พบตัวละครใน Wiki`); return; }
+    if (!chars.length) { setStatus(t('ui.roster.notFoundCharacterWiki')); return; }
     const have = new Set(r.characters.map((c) => c.name.trim()));
     let added = 0;
     for (const c of chars) if (c.name && !have.has(c.name.trim())) { r.characters.push(c); added++; }
     dirty(); paint();
-    setStatus(added ? T`เพิ่มตัวละครจาก Wiki ` + added + T` คน` : T`ตัวละครจาก Wiki อยู่ครบแล้ว`);
+    setStatus(added ? t('ui.roster.addCharacterWiki') + added + t('ui.roster.person') : t('ui.roster.characterWikiCompleteDone'));
   };
   bCopy.onclick = () => {
     const txt = rosterToText(r, fmt);
-    navigator.clipboard.writeText(txt).then(() => setStatus(T`คัดลอกหน้ารายชื่อตัวละครแล้ว`));
+    navigator.clipboard.writeText(txt).then(() => setStatus(t('ui.roster.copyPageListCharacter')));
   };
   bSave.onclick = async () => { await saveRosterTab(tab); };
   return wrap;
@@ -185,7 +185,7 @@ export async function saveRosterTab(tab) {
   tab.dirty = false;
   const ttl = tab.tabBtn && tab.tabBtn.querySelector('.tab-title');
   if (ttl) ttl.textContent = tab.title;
-  setStatus(T`บันทึกหน้ารายชื่อตัวละครแล้ว`);
+  setStatus(t('ui.roster.savePageListCharacter'));
   return true;
 }
 

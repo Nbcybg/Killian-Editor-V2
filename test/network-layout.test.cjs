@@ -1,4 +1,6 @@
 // test/network-layout.test.cjs — เอนจินตำแหน่งโหนดของ Story Network
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // คุมบั๊ก alpha.63r4 สามข้อ: ตำแหน่งปนข้ามโปรเจกต์ · ชื่อซ้ำข้ามหมวดชนกัน · ผังแข็งถาวร
 const path = require('path');
 const out = path.join(require('os').tmpdir(), '_netlayout.cjs');   // '/tmp' ใช้บน Windows ไม่ได้

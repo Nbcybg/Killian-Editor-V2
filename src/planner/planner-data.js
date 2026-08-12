@@ -1,6 +1,6 @@
 // planner-data.js — Data layer (บริสุทธิ์) สำหรับ Planner v4
 // ไม่ import DOM, Fabric.js, หรือ core.js — ใช้แค่ num.js  (unit test ได้ตรง ๆ)
-import { T } from '../i18n.js';
+import { t as tt, t } from '../i18n.js';
 import { num, numClamp, numInt } from '../num.js';
 
 export const CARD_W = 180, CARD_H = 110;
@@ -69,7 +69,7 @@ export function createDefaultNode(type, title, color, x, y, extra) {
   return {
     id: uid('pl-'),
     type: t,
-    title: title != null ? title : T`ใหม่`,
+    title: title != null ? title : tt('ui.common.new2'),
     color: color || d.color,
     textColor: d.textColor,
     fontSize: d.fontSize,
@@ -130,7 +130,7 @@ export class PlannerData {
   /** ชื่อกระดานที่เอาไว้โชว์บนหัวแผง (planner.json เดิม = "กระดานหลัก") */
   getName() {
     const base = this.getFileBase();
-    return base === 'planner' ? T`กระดานหลัก` : base;
+    return base === 'planner' ? tt('ui.common.boardMain') : base;
   }
 
   async _defaultPath() {
@@ -202,7 +202,7 @@ export class PlannerData {
       .map((e) => this._normEdge(e));
     this._groups = (data.groups || []).map((g) => ({
       id: g.id || uid('gp-'),
-      name: g.name || T`กลุ่ม`,
+      name: g.name || tt('ui.planner.group'),
       color: g.color || '#d97757',
       x: num(g.x, 0), y: num(g.y, 0),
       width: num(g.width, 260), height: num(g.height, 200),
@@ -235,7 +235,7 @@ export class PlannerData {
     return {
       id: n.id || uid('pl-'),
       type,
-      title: n.title != null ? n.title : T`ไม่ระบุชื่อ`,
+      title: n.title != null ? n.title : tt('ui.common.notSpecifyName'),
       color: n.color || d.color,
       textColor: n.textColor || d.textColor,
       fontSize: numClamp(n.fontSize, d.fontSize, 6, 120),
@@ -509,7 +509,7 @@ export class PlannerData {
   // ───── Group CRUD ─────
   addGroup(name, childrenIds, color) {
     const g = {
-      id: uid('gp-'), name: name || T`กลุ่ม`, color: color || '#d97757',
+      id: uid('gp-'), name: name || tt('ui.planner.group'), color: color || '#d97757',
       x: 0, y: 0, width: 260, height: 200,
       childrenIds: childrenIds || [],
     };

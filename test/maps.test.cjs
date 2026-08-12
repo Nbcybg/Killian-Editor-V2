@@ -1,4 +1,6 @@
 // test/maps.test.cjs — ทดสอบเอนจินแผนที่ (src/maps.js) ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // ครอบ: หมุด/ลำดับชั้น portal · ซูม · โอเวอร์เลย์ · หมวด · ค้นหา · หลายหมุด · เส้นทาง · ฉากบนหมุด · migrate
 const path = require('path');
 const out = path.join(require('os').tmpdir(), '_maps.cjs');   // '/tmp' ใช้บน Windows ไม่ได้

@@ -8,7 +8,7 @@
 //  · บั๊ก 9  port ยื่นออกนอกกรอบ transform + ปิดปุ่มปรับขนาดกลางขอบ → ไม่โดนบัง เหมือน Miro
 //            เส้นเชื่อมมี 3 รูปแบบ (ตรง / หักมุมฉาก / โค้ง)
 //  · บั๊ก 11 หัวลูกศรเลือกได้ทั้งสองปลาย (ไม่มี / ลูกศร / สามเหลี่ยม / วงกลม / ข้าวหลามตัด / ขีด)
-import { T } from '../i18n.js';
+import { t as tt, t } from '../i18n.js';
 import { fabric } from 'fabric';
 import { visualTagFor } from '../visual-tags.js';
 import {
@@ -209,7 +209,7 @@ export class PlannerRenderer {
       titleW = Math.max(30, W - 30 - txt.width - 12);
     }
 
-    kids.push(new fabric.Textbox(_clip((ICONS[n.type] || '📄') + ' ' + (n.title || T`ไม่ระบุชื่อ`), 70), {
+    kids.push(new fabric.Textbox(_clip((ICONS[n.type] || '📄') + ' ' + (n.title || tt('ui.common.notSpecifyName')), 70), {
       left: 10, top: 8, width: Math.max(20, titleW), fontSize: fs, fill: textFill,
       fontFamily: FONT, originX: 'left', originY: 'top',
       editable: false, splitByGrapheme: true,
@@ -261,7 +261,7 @@ export class PlannerRenderer {
         originX: 'left', originY: 'top',
         shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.35)', blur: 8, offsetX: 1, offsetY: 3 }),
       }),
-      new fabric.Textbox(body || T`ดับเบิลคลิกเพื่อเขียน`, {
+      new fabric.Textbox(body || tt('ui.plannerRender.clickWrite'), {
         left: 12, top: 12, width: W - 24, fontSize: fs, fill: textFill,
         fontFamily: FONT, originX: 'left', originY: 'top',
         editable: false, splitByGrapheme: true, lineHeight: 1.32,
@@ -278,7 +278,7 @@ export class PlannerRenderer {
         fill: n.color && n.color !== 'transparent' ? n.color : 'rgba(0,0,0,0.001)',
         stroke: null, originX: 'left', originY: 'top',
       }),
-      new fabric.Textbox(n.title || T`ข้อความ`, {
+      new fabric.Textbox(n.title || tt('ui.common.text'), {
         left: 2, top: 2, width: Math.max(20, W - 4), fontSize: fs, fill: textFill,
         fontFamily: FONT, originX: 'left', originY: 'top',
         editable: false, splitByGrapheme: true, lineHeight: 1.25,
@@ -337,7 +337,7 @@ export class PlannerRenderer {
         left: 0, top: -22, width: Math.min(W, 260), height: 20, rx: 4, ry: 4,
         fill: 'rgba(0,0,0,0.35)', stroke: null, originX: 'left', originY: 'top',
       }),
-      new fabric.Text(_clip('🖼 ' + (n.title || T`เฟรม`), 34), {
+      new fabric.Text(_clip('🖼 ' + (n.title || tt('ui.common.frame')), 34), {
         left: 6, top: -20, fontSize: Math.min(fs, 13), fill: col,
         fontFamily: FONT, originX: 'left', originY: 'top',
       }),
@@ -353,7 +353,7 @@ export class PlannerRenderer {
         fill, stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1,
         shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 6, offsetX: 1, offsetY: 2 }),
       }),
-      new fabric.Text('💬 ' + _clip(n.title || T`คอมเมนต์`, 20), {
+      new fabric.Text('💬 ' + _clip(n.title || tt('ui.common.comment'), 20), {
         left: 10, top: 8, fontSize: Math.max(9, fs - 2), fill: 'rgba(0,0,0,0.5)',
         fontFamily: FONT, originX: 'left', originY: 'top',
       }),

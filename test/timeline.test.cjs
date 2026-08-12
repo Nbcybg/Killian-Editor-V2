@@ -1,4 +1,6 @@
 // test/timeline.test.cjs — ทดสอบเอนจินเส้นเวลา (timeline.js) ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // เน้นจุดที่เคยพลาด: mergeTimeline ต้อง copy ทุก field ที่ UI ใช้ (whenEnd, refs)
 const path = require('path');
 const out = path.join(require('os').tmpdir(), '_tl.cjs');   // '/tmp' ใช้บน Windows ไม่ได้

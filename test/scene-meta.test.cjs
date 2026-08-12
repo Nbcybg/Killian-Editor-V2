@@ -1,4 +1,6 @@
 // test/scene-meta.test.cjs — unit test แหล่งความจริงเดียวของคุณสมบัติฉาก (alpha.60r2 · ข้อ 13)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // ทดสอบเฉพาะส่วนบริสุทธิ์ (readSceneMeta/writeSceneMeta ต้องมี kapi จริง → อยู่ใน e2e)
 const path = require('path');
 const os = require('os');

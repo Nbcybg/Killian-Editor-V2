@@ -1,5 +1,5 @@
 // player-choices.js — ประวัติการตัดสินใจ (ข้อ 83)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { state, setStatus, el, log } from './core.js';
 
 export function getPlayerHistory() {
@@ -13,12 +13,12 @@ export async function recordChoice(sceneId, sceneTitle, choice, player = '') {
   state.meta.playerHistory.push({
     sceneId, sceneTitle, choice,
     timestamp: new Date().toISOString(),
-    player: player || T`ผู้เขียน`,
+    player: player || t('ui.common.author'),
   });
   try {
     const { saveProjectMeta } = await import('./app.js');
     await saveProjectMeta();
-    setStatus(T`บันทึกการตัดสินใจ: ` + choice);
+    setStatus(t('ui.player.saveDecision') + choice);
     return true;
   } catch (e) { log('error', 'recordChoice failed', e); return false; }
 }
@@ -55,7 +55,7 @@ export function choiceStats() {
  * @param {object} opts { limit, character, title, empty, onOpenScene }
  */
 export function renderChoicePanel(host, opts = {}) {
-  const { limit = 8, character = '', title = T`🎮 ประวัติการตัดสินใจ`, empty = '', onOpenScene = null } = opts;
+  const { limit = 8, character = '', title = t('ui.player.historyDecide'), empty = '', onOpenScene = null } = opts;
   host.innerHTML = '';
   const rows = character ? choicesByCharacter(character) : getPlayerHistory();
   const st = choiceStats();
@@ -63,13 +63,13 @@ export function renderChoicePanel(host, opts = {}) {
   host.append(el('div', 'pc-panel-title', `${title} (${rows.length})`));
   if (!rows.length) {
     host.append(el('div', 'dim', empty
-      || T`ยังไม่มีการตัดสินใจ — เดินตามทางเลือกในผังแตกสาย (🌿) แล้วจะบันทึกที่นี่`));
+      || t('ui.player.notHasDecisionChoice')));
     return host;
   }
 
   if (!character && st.top) {
     host.append(el('div', 'pc-sum',
-      T`${st.total} ครั้ง · ${st.scenes} ฉาก · เลือกบ่อยสุด: “${st.top.choice}” (${st.top.n}×)`));
+      tf('ui.player.timesScenePickLast', st.total, st.scenes, st.top.choice, st.top.n)));
   }
 
   const list = el('div', 'pc-list');
@@ -87,7 +87,7 @@ export function renderChoicePanel(host, opts = {}) {
     list.append(row);
   }
   host.append(list);
-  if (rows.length > limit) host.append(el('div', 'dim pc-more', T`+ อีก ${rows.length - limit} รายการ`));
+  if (rows.length > limit) host.append(el('div', 'dim pc-more', tf('ui.player.list', rows.length - limit)));
   return host;
 }
 
@@ -96,12 +96,12 @@ export async function showPlayerHistory() {
   const history = getPlayerHistory();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', T`🎮 ประวัติการตัดสินใจ (` + history.length + T` ครั้ง)`));
+  box.append(el('div', 'k-dlg-title', t('ui.player.historyDecide2') + history.length + t('ui.player.times')));
 
   const list = el('div', 'k-pick-list');
   list.style.maxHeight = '50vh';
   if (!history.length) {
-    list.append(el('div', 'dim', T`ยังไม่มีการตัดสินใจ`));
+    list.append(el('div', 'dim', t('ui.player.notHasDecision')));
   } else {
     [...history].reverse().slice(0, 100).forEach((c) => {
       const row = el('div', 'k-menu-item');
@@ -119,18 +119,18 @@ export async function showPlayerHistory() {
   box.append(list);
 
   const btns = el('div', 'k-dlg-btns');
-  const exportB = el('button', null, T`📥 ส่งออก`);
+  const exportB = el('button', null, t('ui.player.export'));
   exportB.onclick = async () => {
     const dest = await kapi.saveAsDialog('player-history.json');
     if (!dest) return;
     await kapi.writeFile(dest, JSON.stringify(history, null, 2));
   };
-  const clearB = el('button', 'k-danger', T`ล้าง`);
+  const clearB = el('button', 'k-danger', t('ui.common.clear'));
   clearB.onclick = async () => {
     if (state.meta) { state.meta.playerHistory = []; const { saveProjectMeta } = await import('./app.js'); await saveProjectMeta(); }
-    ov.remove(); setStatus(T`ล้างประวัติการตัดสินใจแล้ว`);
+    ov.remove(); setStatus(t('ui.player.clearHistoryDecideDone'));
   };
-  const closeB = el('button', 'k-ok', T`ปิด`);
+  const closeB = el('button', 'k-ok', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(exportB, clearB, closeB);
   box.append(btns);

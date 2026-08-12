@@ -1,4 +1,6 @@
 // test/dirty-registry.test.cjs — ทะเบียนงานค้าง (alpha.72 ข้อ 4)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // กฎ: อะไรที่ทิ้ง/อัปเดตตอนปิดโปรแกรม ต้องขึ้น list ทุกครั้ง
 const path = require('path');
 const out = path.join(require('os').tmpdir(), '_dirtyreg.cjs');

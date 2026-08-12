@@ -1,4 +1,6 @@
 // test/relationship.test.cjs — ทดสอบประเภทความสัมพันธ์ (relationship-types.js) ด้วย node
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // โมดูลบริสุทธิ์: ไม่มี DOM/kapi → require ตรงได้หลังแปลงเป็น cjs
 const path = require('path');
 const fs = require('fs');

@@ -8,13 +8,13 @@
 //
 // กติกา: พิมพ์เปล่า ๆ ไม่ใส่ตัวนำหน้า = แท็กทั่วไป (`#`)
 
-import { T } from '../i18n.js';
+import { t as tt, t } from '../i18n.js';
 import { normalizeAlbumDoc, setImageMeta } from './album-core.js';
 
 export const TAG_KINDS = {
-  '#': { key: 'plain',  label: T`ทั่วไป`,   icon: 'bookmark' },
-  '@': { key: 'entity', label: T`เอนทิตี้`, icon: 'user' },
-  '~': { key: 'scene',  label: T`ฉาก`,      icon: 'film' },
+  '#': { key: 'plain',  label: tt('ui.common.msg4'),   icon: 'bookmark' },
+  '@': { key: 'entity', label: tt('ui.common.msg7'), icon: 'user' },
+  '~': { key: 'scene',  label: tt('ui.common.scene2'),      icon: 'film' },
 };
 export const TAG_PREFIXES = Object.keys(TAG_KINDS);
 

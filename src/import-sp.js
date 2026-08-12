@@ -1,7 +1,7 @@
 // import-sp.js — [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ
 // FDX · Celtx (ZIP+HTML) · Adobe Story (XML) · Fade In Pro (JSON) · Fountain (markup)
 // คืน element list → convertToK2Elements → fountain markdown → inject เข้า SPEditor
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { parseScript, SP_ELEMS, classify, splitCharacter } from './fountain.js';
 import JSZip from 'jszip';
 
@@ -22,20 +22,20 @@ export async function importScreenplayDialog(injectFn) {
 
   const result = await importScreenplay(filePath, null);
   if (!result.ok) {
-    alert(T`นำเข้าไม่สำเร็จ: ` + result.error);
+    alert(t('ui.importSp.importNotOk') + result.error);
     return null;
   }
 
   const summary = importSummary(result.elements);
   const lines = [
-    T`นำเข้าจาก: ` + result.importer,
-    T`ไฟล์: ` + filePath.split(/[/\\]/).pop(),
+    t('ui.importSp.import') + result.importer,
+    t('ui.importSp.file') + filePath.split(/[/\\]/).pop(),
     '',
-    T`ฉาก: ` + summary.scenes + T`    ตัวละคร: ` + summary.characters,
-    T`บทพูด: ` + summary.dialogueBlocks + T`    คำบรรยาย: ` + summary.actionBlocks,
-    T`จำนวนคำ: ` + summary.words,
+    t('ui.common.scene3') + summary.scenes + t('ui.importSp.character') + summary.characters,
+    t('ui.importSp.dialogue') + summary.dialogueBlocks + t('ui.importSp.caption') + summary.actionBlocks,
+    t('ui.importSp.countWord') + summary.words,
     '',
-    T`นำเนื้อหาเข้านิยายหรือบทภาพยนตร์ที่เปิดอยู่?`,
+    t('ui.importSp.bodyInNovelScreenplay'),
   ];
 
   if (!confirm(lines.join('\n'))) return null;
@@ -62,7 +62,7 @@ export function detectFormat(filePath) {
 export async function importScreenplay(filePath, format) {
   if (!format) format = detectFormat(filePath);
   if (!format || !SP_IMPORTERS[format]) {
-    return { ok: false, error: T`ไม่รู้จักรูปแบบไฟล์: ` + (filePath.split(/[/\\]/).pop() || filePath) };
+    return { ok: false, error: t('ui.importSp.notKnownFormatFile') + (filePath.split(/[/\\]/).pop() || filePath) };
   }
 
   const importer = SP_IMPORTERS[format];
@@ -76,7 +76,7 @@ export async function importScreenplay(filePath, format) {
       content = await kapi.readFile(filePath);
     }
   } catch (e) {
-    return { ok: false, error: T`อ่านไฟล์ไม่สำเร็จ: ` + e.message };
+    return { ok: false, error: t('ui.importSp.readFileNotOk') + e.message };
   }
 
   try {
@@ -112,7 +112,7 @@ function parseFdx(xml) {
   const doc = parser.parseFromString(xml, 'text/xml');
 
   const errNode = doc.querySelector('parsererror');
-  if (errNode) throw new Error(T`XML ไม่ถูกต้อง: ` + errNode.textContent);
+  if (errNode) throw new Error(t('ui.importSp.xMLNotValid') + errNode.textContent);
 
   const elements = [];
   const paragraphs = doc.querySelectorAll('Paragraph');
@@ -162,7 +162,7 @@ async function parseCeltx(buffer) {
     if (htmlFiles.length) htmlFile = zip.file(htmlFiles[0]);
   }
   if (!htmlFile) {
-    throw new Error(T`ไม่พบไฟล์ HTML ใน .celtx — อาจเป็น Celtx รุ่นเก่าที่เก็บเป็น XML ตรงๆ`);
+    throw new Error(t('ui.importSp.notFoundFileHTML'));
   }
 
   const html = await htmlFile.async('text');
@@ -223,7 +223,7 @@ function parseAstx(xml) {
   const doc = parser.parseFromString(xml, 'text/xml');
 
   const errNode = doc.querySelector('parsererror');
-  if (errNode) throw new Error(T`XML ไม่ถูกต้อง: ` + errNode.textContent);
+  if (errNode) throw new Error(t('ui.importSp.xMLNotValid') + errNode.textContent);
 
   const elements = [];
 
@@ -280,7 +280,7 @@ function parseFadeIn(jsonStr) {
   try {
     data = JSON.parse(jsonStr);
   } catch (e) {
-    throw new Error(T`JSON ไม่ถูกต้อง: ` + e.message);
+    throw new Error(t('ui.common.jSONNotValid') + e.message);
   }
 
   const elements = [];

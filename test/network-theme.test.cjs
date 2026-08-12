@@ -1,4 +1,6 @@
 // test/network-theme.test.cjs — สี/การควบคุม/กล้อง ของ Story Network (alpha.73 ข้อ 2,3,4)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // กฎที่ต้องกันไม่ให้พังซ้ำ: ทุกสีที่ตัววาดใช้ ต้องมีช่องให้ตั้งในตั้งค่า และห้ามฮาร์ดโค้ดปุ่มเมาส์
 const path = require('path');
 const fs = require('fs');

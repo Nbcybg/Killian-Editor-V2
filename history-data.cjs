@@ -168,6 +168,11 @@ function lookup(key) {
   if (typeof u === "string" && u !== "") return u;
   return void 0;
 }
+function t(key) {
+  if (typeof key !== "string" || !key) return "";
+  const v = lookup(key);
+  return formatMsg(v != null ? v : String(key), []);
+}
 function formatMsg(tpl, vals) {
   if (!vals || !vals.length) return String(tpl).replace(/\{\{|\}\}/g, (m) => m[0]);
   return String(tpl).replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
@@ -176,25 +181,7 @@ function formatMsg(tpl, vals) {
     return v == null ? "" : String(v);
   });
 }
-function makeMsgid(strings) {
-  let s = "";
-  for (let i = 0; i < strings.length; i++) {
-    s += strings[i];
-    if (i < strings.length - 1) s += "{" + i + "}";
-  }
-  return s;
-}
 var _memo = /* @__PURE__ */ new WeakMap();
-function T(strings, ...vals) {
-  if (typeof strings === "string") return formatMsg(lookup(strings) ?? strings, vals);
-  let tpl = _memo.get(strings);
-  if (tpl === void 0) {
-    const id = makeMsgid(strings);
-    tpl = lookup(id) ?? id;
-    _memo.set(strings, tpl);
-  }
-  return formatMsg(tpl, vals);
-}
 var LANG_LS_KEY = "k2-lang";
 function initSyncFromHost() {
   try {
@@ -315,14 +302,14 @@ function afterRevert(journal, seq) {
   return { journal: { ...j, entries: keep }, dropped };
 }
 var KIND_LABEL = {
-  write: T`แก้ไข`,
-  create: T`สร้าง`,
-  remove: T`ลบ`,
-  move: T`ย้าย/เปลี่ยนชื่อ`,
-  copy: T`คัดลอกเข้ามา`,
-  image: T`เพิ่มรูป`
+  write: t("ui.common.edit"),
+  create: t("ui.common.new"),
+  remove: t("ui.common.del"),
+  move: t("ui.histOry.moveChangeName"),
+  copy: t("ui.histOry.copyIn"),
+  image: t("ui.histOry.addImage")
 };
-var kindLabel = (k) => KIND_LABEL[k] || T`เปลี่ยนแปลง`;
+var kindLabel = (k) => KIND_LABEL[k] || t("ui.histOry.change");
 function relPath(p, root) {
   const norm = (s) => String(s || "").replace(/\\/g, "/");
   const a = norm(p), b = norm(root).replace(/\/+$/, "");

@@ -24,70 +24,8 @@ const { lexStrings, cookedValue } = require('./js-lex.cjs');
 const ROOT = path.join(__dirname, '..');
 const TH = /[฀-๿]/;
 
-// ───────── ขอบเขตที่ไม่แตะ ─────────
-const SKIP_FILES = new Set([
-  'src/i18n.js', 'src/i18n-csv.js',                 // ตัวระบบภาษาเอง
-  'src/fountain.js',                                // คำนำหน้า/ทรานซิชัน = ไวยากรณ์ของไฟล์บท
-  'src/md.js',                                      // โทเคนของมาร์กดาวน์
-  'src/spell.js',                                   // พจนานุกรม
-  'src/relationship-types.js',                      // ชนิดความสัมพันธ์ = ค่าที่เก็บใน Wiki JSON
-]);
-// ช่วงบรรทัดที่เป็น "ค่าคงที่ที่ถูกเขียนลงไฟล์งาน" — แปลไม่ได้ (จะอ่านไฟล์เก่าไม่ออก)
-const SKIP_RANGES = {
-  'src/core.js': [[368, 390]],                      // SCENE_STATUSES / SCENE_COLORS / STATUS_COLORS
-  'src/planner/planner-data.js': [[14, 24]],        // PLANNER_STATUSES (เก็บใน Planners/*.json)
-  'src/kanban/kanban-core.js': [[8, 20]],           // คอลัมน์ = สถานะฉากตัวเดียวกับ scenes.json
-  'src/branch-plans.js': [[20, 28]],                // PLAN_STATUSES (เก็บใน Branches/*.json)
-  'src/visual-tags.js': [[1, 12]],                  // แท็กมาตรฐาน = ค่าที่เก็บใน scenes.json
-  'src/scene-meta.js': [[1, 40]],
-};
-// app.js: บล็อก selftest — หาแบบไดนามิกเพราะเลขบรรทัดขยับทุกรุ่น
-function testStart(rel, src) {
-  if (rel !== 'src/app.js') return Infinity;
-  const m = /\nasync function runTest\(/.exec(src);
-  return m ? src.slice(0, m.index).split('\n').length : Infinity;
-}
-
-// ───────── ตัวกรองตามบริบท ─────────
-const CMP_BEFORE = /(===|!==|==|!=|\bcase)\s*$/;
-const CMP_AFTER = /^\s*(===|!==|==|!=)/;
-// อาร์กิวเมนต์ของเมธอดที่ "ประมวลผลข้อความ" — แปลแล้วตรรกะเพี้ยน
-const DATA_CALL = /\.(includes|indexOf|lastIndexOf|startsWith|endsWith|split|match|matchAll|search|test|exec|localeCompare|replace|replaceAll|hasOwnProperty)\s*\([^()]*$/;
-const REGEX_CALL = /(new\s+RegExp|RegExp)\s*\([^()]*$/;
-const CONSOLE_CALL = /console\.\w+\s*\([^()]*$/;
-// เป็นค่าสำรองของ t()/tr() อยู่แล้ว → ถือว่าแปลได้แล้ว
-const T_FALLBACK = /\b(t|tr|tKey|tm)\s*\(\s*(['"])[^'"]*\2\s*,\s*$/;
-const OBJ_KEY_BEFORE = /[{,]\s*$/;
-// `obj['คีย์']` = อ่าน property (ข้าม) · แต่ `f(['ข้อความ'])` = อาร์เรย์ (ไม่ใช่)
-const PROP_BEFORE = /[A-Za-z0-9_$)\]]\s*\[\s*$/, PROP_AFTER = /^\s*\]/;
-// คำสงวนที่นำหน้า template ได้โดยไม่ใช่ tagged template (`return \`…\``)
-const KEYWORD_BEFORE = /(^|[^A-Za-z0-9_$.])(return|typeof|instanceof|case|else|do|new|delete|void|in|of|await|yield|throw)\s*$/;
-const KEY_AFTER = /^\s*:/;
-// ถูกห่อด้วย T แล้ว (โคดมอดรันซ้ำได้)
-const ALREADY = /(^|[^A-Za-z0-9_$.])(T|tm)\s*$/;
-// ป้ายกำกับของ log/dirty-registry ที่เป็นคีย์ระบบ
-const SKIP_TEXT = [
-  /^[\s\-–—·:|/\\]*$/,                              // มีแต่เครื่องหมาย
-];
-
-function classify(src, tok, rel, tstart) {
-  if (tok.line >= tstart) return 'test';
-  for (const [a, b] of (SKIP_RANGES[rel] || [])) if (tok.line >= a && tok.line <= b) return 'data-range';
-  const before = src.slice(Math.max(0, tok.start - 120), tok.start);
-  const after = src.slice(tok.end, tok.end + 24);
-  if (ALREADY.test(before)) return 'already';
-  if (T_FALLBACK.test(before)) return 'already';
-  if (CMP_BEFORE.test(before) || CMP_AFTER.test(after)) return 'compare';
-  if (DATA_CALL.test(before) || REGEX_CALL.test(before)) return 'data-call';
-  if (CONSOLE_CALL.test(before)) return 'console';
-  if (KEY_AFTER.test(after) && OBJ_KEY_BEFORE.test(before)) return 'obj-key';
-  if (PROP_BEFORE.test(before) && PROP_AFTER.test(after)) return 'prop';
-  // tagged template ของคนอื่น (`html\`…\``) — ห้ามแทรก T คั่น
-  if (tok.type === 'tpl' && /[A-Za-z0-9_$)\]]\s*$/.test(before) && !KEYWORD_BEFORE.test(before)) return 'tagged';
-  const val = cookedValue(tok);
-  for (const re of SKIP_TEXT) if (re.test(val)) return 'symbol';
-  return 'ui';
-}
+// กฎว่า 'ไทยจุดนี้เป็น UI หรือข้อมูล' อยู่ที่เดียว — tools/i18n-classify.cjs (เทสก็ใช้ตัวเดียวกัน)
+const { classify, testStart, SKIP_FILES } = require('./i18n-classify.cjs');
 
 // ───────── แปลงข้อความเป็น template literal ─────────
 /** raw ของสตริง '…' / "…" → raw ที่ใส่ใน `…` ได้ */

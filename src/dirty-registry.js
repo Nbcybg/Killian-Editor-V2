@@ -17,13 +17,13 @@
 //   save  : async (key) => boolean          บันทึกรายการนั้น
 // }
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 /** สร้างทะเบียนใหม่ (โปรแกรมจริงใช้ตัวเดียวที่ export ไว้ท้ายไฟล์ · เทสสร้างของตัวเองได้) */
 export function createDirtyRegistry() {
   const providers = new Map();
 
   const register = (id, p) => {
-    if (!id || !p || typeof p.list !== 'function') throw new Error(T`dirty-registry: provider ต้องมี list()`);
+    if (!id || !p || typeof p.list !== 'function') throw new Error(t('ui.dirty.dirtyRegistryProviderMust'));
     providers.set(id, { label: p.label || id, list: p.list, save: p.save || null });
     return () => providers.delete(id);
   };
@@ -54,10 +54,10 @@ export function createDirtyRegistry() {
     let saved = 0;
     for (const it of items) {
       const p = providers.get(it.source);
-      if (!p || !p.save) { failed.push({ key: it.key, error: T`ไม่มีตัวบันทึก` }); continue; }
+      if (!p || !p.save) { failed.push({ key: it.key, error: t('ui.dirty.notHasItemSave') }); continue; }
       try {
         const ok = await p.save(it.key);
-        if (ok === false) failed.push({ key: it.key, error: T`บันทึกไม่สำเร็จ` });
+        if (ok === false) failed.push({ key: it.key, error: t('ui.dirty.saveNotOk') });
         else saved++;
       } catch (e) { failed.push({ key: it.key, error: (e && e.message) || String(e) }); }
     }

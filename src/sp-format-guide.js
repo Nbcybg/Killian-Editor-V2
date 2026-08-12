@@ -6,7 +6,7 @@
 // ใช้ decoration ของ ProseMirror เท่านั้น — ห้ามใส่ class ลง DOM ตรง ๆ (DOMObserver ซ่อมกลับ)
 // รูปแบบเดียวกับ spellPlugin/commentAnchorPlugin ใน editor.js
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { Plugin as PMPlugin, PluginKey as PMKey } from 'prosemirror-state';
 import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
 import { lineEndingType, LINE_MARK } from './sp-view.js';
@@ -40,7 +40,7 @@ function guideDecos(doc) {
       const s = document.createElement('span');
       s.className = 'sp-line-marker ' + kind;
       s.textContent = LINE_MARK[kind];
-      s.title = kind === 'soft' ? T`ตัดบรรทัดเอง (soft wrap)` : T`จบบรรทัดด้วยการขึ้นบล็อกใหม่ (hard)`;
+      s.title = kind === 'soft' ? t('ui.spFormatGuide.cutLineSoftWrap') : t('ui.spFormatGuide.endLineBlockNew');
       s.setAttribute('contenteditable', 'false');
       return s;
     }, { side: 1, key: 'lm' + pos + kind }));

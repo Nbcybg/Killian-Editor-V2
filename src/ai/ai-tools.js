@@ -9,7 +9,7 @@
 // ไฟล์นี้ไม่แตะ DOM/fs/network — แปลงข้อความเป็นรายการคำสั่ง + ตรวจความถูกต้องเท่านั้น
 // ตัวลงมือทำจริงอยู่ที่ ai-actions.js → unit test ไฟล์นี้ได้ตรง ๆ
 
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 /** ระดับความสามารถของโหมดแชท */
 export const CAP_READ = 'read';     // อ่านโปรเจกต์ได้อย่างเดียว
 export const CAP_WRITE = 'write';   // สร้าง/แก้ได้ แต่ลบไม่ได้
@@ -25,43 +25,43 @@ export const CAP_FULL = 'full';     // ทำได้ทุกอย่าง�
 export const TOOLS = [
   // ── อ่าน ──
   { name: 'project.tree', cap: CAP_READ, need: [], opt: [],
-    desc: T`ดูโครงสร้างทั้งโปรเจกต์ (เล่ม → บท → ฉาก) และรายชื่อเอนทิตี้ใน Wiki` },
+    desc: tt('ui.aiTools.viewStructureProjectBook') },
   { name: 'scene.read', cap: CAP_READ, need: ['title'], opt: ['book', 'chapter'],
-    desc: T`อ่านเนื้อหาฉาก` },
+    desc: tt('ui.aiTools.readBodyScene') },
   { name: 'entity.read', cap: CAP_READ, need: ['name'], opt: [],
-    desc: T`อ่านข้อมูลเอนทิตี้ใน Wiki (ตัวละคร/สถานที่/ไอเทม/ตำนาน)` },
+    desc: tt('ui.aiTools.readDataWikiCharacter') },
 
   // ── เอนทิตี้ใน Wiki ──
   { name: 'entity.create', cap: CAP_WRITE, need: ['cat', 'name'], opt: ['description', 'fields', 'aliases', 'sections'],
-    desc: T`สร้างเอนทิตี้ใหม่ — cat = characters | locations | items | lore (หรือหมวดที่ผู้ใช้สร้างเอง)` },
+    desc: tt('ui.aiTools.newNewCatCharacters') },
   { name: 'entity.update', cap: CAP_WRITE, need: ['name'], opt: ['newName', 'description', 'fields', 'aliases', 'sections'],
-    desc: T`แก้ไขเอนทิตี้ที่มีอยู่ (ส่งเฉพาะฟิลด์ที่จะแก้)` },
+    desc: tt('ui.aiTools.editHasSendOnly') },
   { name: 'entity.delete', cap: CAP_FULL, need: ['name'], opt: [], destructive: true,
-    desc: T`ลบเอนทิตี้ (ย้ายไปถังขยะ กู้คืนได้)` },
+    desc: tt('ui.aiTools.delMoveTrashRecover') },
 
   // ── เล่ม (book/section) ──
   { name: 'book.create', cap: CAP_WRITE, need: ['title'], opt: [],
-    desc: T`สร้างเล่มใหม่ (มีบทแรกให้อัตโนมัติ)` },
+    desc: tt('ui.aiTools.newBookNewHas') },
   { name: 'book.delete', cap: CAP_FULL, need: ['title'], opt: [], destructive: true,
-    desc: T`ลบเล่มทั้งเล่ม (ย้ายไปถังขยะ)` },
+    desc: tt('ui.aiTools.delBookBookMove') },
 
   // ── บท ──
   { name: 'chapter.create', cap: CAP_WRITE, need: ['title'], opt: ['book'],
-    desc: T`เพิ่มบทใหม่ในเล่ม (ไม่ระบุ book = เล่มแรก)` },
+    desc: tt('ui.aiTools.addChapterNewBook') },
   { name: 'chapter.rename', cap: CAP_WRITE, need: ['title', 'newTitle'], opt: ['book'],
-    desc: T`เปลี่ยนชื่อบท` },
+    desc: tt('ui.aiTools.changeNameChapter') },
   { name: 'chapter.delete', cap: CAP_FULL, need: ['title'], opt: ['book'], destructive: true,
-    desc: T`ลบบททั้งบท (ทุกฉากย้ายไปถังขยะ)` },
+    desc: tt('ui.aiTools.delChapterChapterAll') },
 
   // ── ฉาก ──
   { name: 'scene.create', cap: CAP_WRITE, need: ['title'], opt: ['book', 'chapter', 'text', 'synopsis'],
-    desc: T`สร้างฉากใหม่ในบท พร้อมเนื้อหาเริ่มต้นได้เลย` },
+    desc: tt('ui.aiTools.newSceneNewChapter') },
   { name: 'scene.write', cap: CAP_WRITE, need: ['title', 'text'], opt: ['book', 'chapter', 'mode'],
-    desc: T`เขียนเนื้อหาฉาก — mode = append (เขียนต่อท้าย, ค่าเริ่มต้น) | replace (เขียนทับ) | prepend (แทรกหน้า)` },
+    desc: tt('ui.aiTools.writeBodySceneMode') },
   { name: 'scene.rename', cap: CAP_WRITE, need: ['title', 'newTitle'], opt: ['book', 'chapter'],
-    desc: T`เปลี่ยนชื่อฉาก` },
+    desc: tt('ui.aiTools.changeNameScene') },
   { name: 'scene.delete', cap: CAP_FULL, need: ['title'], opt: ['book', 'chapter'], destructive: true,
-    desc: T`ลบฉาก (ย้ายไปถังขยะ)` },
+    desc: tt('ui.aiTools.delSceneMoveTrash') },
 ];
 
 export function toolByName(name) { return TOOLS.find((t) => t.name === name) || null; }
@@ -80,28 +80,28 @@ export function toolsSystemPrompt(cap) {
   if (!list.length) return '';
   // ตัวอย่างต้องเป็นคำสั่งที่โหมดนั้นใช้ได้จริง — ไม่งั้นเท่ากับยั่วให้โมเดลสั่งของที่ถูกปฏิเสธ
   const example = capAllows(cap, CAP_WRITE)
-    ? T`{"tool":"scene.write","args":{"title":"ฉากแรก","mode":"append","text":"เนื้อหาที่จะเขียนต่อ…"}}`
-    : T`{"tool":"scene.read","args":{"title":"ฉากแรก"}}`;
+    ? tt('ui.aiTools.toolSceneWriteArgs')
+    : tt('ui.aiTools.toolSceneReadArgs');
   const lines = [
-    T`## คำสั่งที่คุณสั่งให้โปรแกรมทำได้`,
-    T`เมื่อต้องการให้โปรแกรมลงมือทำจริง ให้พิมพ์บล็อกโค้ดภาษา \`k2\` ที่มี JSON ข้างใน แบบนี้:`,
+    tt('ui.aiTools.cmdYouCmdApp'),
+    tt('ui.aiTools.needAppActPrint'),
     '',
     '```k2',
     example,
     '```',
     '',
-    T`กติกา:`,
-    T`- หนึ่งบล็อก = หนึ่งคำสั่ง สั่งหลายอย่างได้โดยใส่หลายบล็อก โปรแกรมจะทำตามลำดับบนลงล่าง`,
-    T`- เขียนข้อความอธิบายให้ผู้ใช้อ่านนอกบล็อกได้ตามปกติ`,
-    T`- ห้ามใส่คอมเมนต์หรือข้อความอื่นในบล็อก \`k2\` — ต้องเป็น JSON ล้วน`,
-    T`- ถ้าไม่รู้ชื่อเล่ม/บท/ฉาก ให้เรียก \`project.tree\` ก่อน อย่าเดา`,
-    T`- ผลของทุกคำสั่งจะถูกส่งกลับมาให้คุณในข้อความถัดไป ทำงานต่อจากผลนั้นได้เลย`,
+    tt('ui.common.rule'),
+    tt('ui.aiTools.oneBlockOneCmd'),
+    tt('ui.aiTools.writeTextExplainUser'),
+    tt('ui.aiTools.forbidPutCommentText'),
+    tt('ui.aiTools.notNameBookChapter'),
+    tt('ui.aiTools.resultAllCmdSend'),
     '',
-    T`คำสั่งที่ใช้ได้ตอนนี้:`,
+    tt('ui.aiTools.cmdUseNow'),
   ];
   for (const t of list) {
     const args = [...t.need.map((a) => a), ...t.opt.map((a) => a + '?')].join(', ');
-    lines.push(`- \`${t.name}\`(${args}) — ${t.desc}${t.destructive ? T` ⚠ ลบของ` : ''}`);
+    lines.push(`- \`${t.name}\`(${args}) — ${t.desc}${t.destructive ? tt('ui.aiTools.del') : ''}`);
   }
   return lines.join('\n');
 }
@@ -127,14 +127,14 @@ export function parseToolCalls(text) {
     let j;
     try { j = JSON.parse(raw); } catch (e) {
       // บล็อก json ที่ไม่ใช่คำสั่ง (ตัวอย่างข้อมูล) — เมินไป ไม่ใช่ error ของผู้ใช้
-      if (lang === 'k2') out.push({ tool: '', args: {}, raw, error: T`JSON ไม่ถูกต้อง: ` + (e.message || e) });
+      if (lang === 'k2') out.push({ tool: '', args: {}, raw, error: tt('ui.common.jSONNotValid') + (e.message || e) });
       continue;
     }
     const rows = Array.isArray(j) ? j : [j];
     for (const r of rows) {
       if (!r || typeof r !== 'object') continue;
       const name = String(r.tool || r.name || '');
-      if (!name) { if (lang === 'k2') out.push({ tool: '', args: {}, raw, error: T`ไม่มีฟิลด์ tool` }); continue; }
+      if (!name) { if (lang === 'k2') out.push({ tool: '', args: {}, raw, error: tt('ui.aiTools.notHasReduceTool') }); continue; }
       if (lang === 'json' && !toolByName(name)) continue;   // ```json ที่บังเอิญมี key ชื่อ tool
       out.push({ tool: name, args: (r.args && typeof r.args === 'object') ? r.args : {}, raw });
     }
@@ -150,18 +150,18 @@ export function stripToolCalls(text) {
 
 /** ตรวจว่าคำสั่งนี้เรียกได้ไหมในโหมดปัจจุบัน */
 export function validateCall(call, cap) {
-  if (!call) return { ok: false, error: T`คำสั่งว่าง` };
+  if (!call) return { ok: false, error: tt('ui.aiTools.cmdEmpty') };
   if (call.error) return { ok: false, error: call.error };
   const def = toolByName(call.tool);
-  if (!def) return { ok: false, error: T`ไม่รู้จักคำสั่ง "` + call.tool + '"' };
+  if (!def) return { ok: false, error: tt('ui.aiTools.notKnownCmd') + call.tool + '"' };
   if (!capAllows(cap, def.cap)) {
-    return { ok: false, error: T`โหมดปัจจุบันไม่อนุญาตให้ใช้ "` + call.tool + T`" — สลับโหมดที่กล่องพิมพ์ก่อน` };
+    return { ok: false, error: tt('ui.aiTools.modeCurrentNotAllow') + call.tool + tt('ui.aiTools.toggleModeDialogPrint') };
   }
   const miss = def.need.filter((k) => {
     const v = call.args[k];
     return v === undefined || v === null || String(v).trim() === '';
   });
-  if (miss.length) return { ok: false, error: T`ขาดอาร์กิวเมนต์: ` + miss.join(', ') };
+  if (miss.length) return { ok: false, error: tt('ui.aiTools.missingArg') + miss.join(', ') };
   return { ok: true, def };
 }
 
@@ -171,29 +171,29 @@ export function describeCall(call) {
   const where = [a.book, a.chapter].filter(Boolean).join(' › ');
   const at = where ? ` (${where})` : '';
   switch (call && call.tool) {
-    case 'project.tree':    return T`ดูโครงสร้างโปรเจกต์`;
-    case 'scene.read':      return T`อ่านฉาก "${a.title}"${at}`;
-    case 'entity.read':     return T`อ่านข้อมูล "${a.name}"`;
-    case 'entity.create':   return T`สร้าง${catLabel(a.cat)} "${a.name}"`;
-    case 'entity.update':   return T`แก้ข้อมูล "${a.name}"` + (a.newName ? ` → "${a.newName}"` : '');
-    case 'entity.delete':   return T`ลบ "${a.name}" ไปถังขยะ`;
-    case 'book.create':     return T`สร้างเล่ม "${a.title}"`;
-    case 'book.delete':     return T`ลบเล่ม "${a.title}" ไปถังขยะ`;
-    case 'chapter.create':  return T`เพิ่มบท "${a.title}"${at}`;
-    case 'chapter.rename':  return T`เปลี่ยนชื่อบท "${a.title}" → "${a.newTitle}"`;
-    case 'chapter.delete':  return T`ลบบท "${a.title}" ทั้งบท`;
-    case 'scene.create':    return T`สร้างฉาก "${a.title}"${at}`;
-    case 'scene.write':     return T`${writeVerb(a.mode)}ฉาก "${a.title}"${at} (${String(a.text || '').length} ตัวอักษร)`;
-    case 'scene.rename':    return T`เปลี่ยนชื่อฉาก "${a.title}" → "${a.newTitle}"`;
-    case 'scene.delete':    return T`ลบฉาก "${a.title}"${at} ไปถังขยะ`;
-    default:                return call && call.tool ? call.tool : T`คำสั่งไม่ถูกต้อง`;
+    case 'project.tree':    return tt('ui.aiTools.viewStructureProject');
+    case 'scene.read':      return ttf('ui.aiTools.readScene', a.title, at);
+    case 'entity.read':     return ttf('ui.aiTools.readData', a.name);
+    case 'entity.create':   return ttf('ui.aiTools.new', catLabel(a.cat), a.name);
+    case 'entity.update':   return ttf('ui.aiTools.editData', a.name) + (a.newName ? ` → "${a.newName}"` : '');
+    case 'entity.delete':   return ttf('ui.aiTools.delTrash', a.name);
+    case 'book.create':     return ttf('ui.aiTools.newBook', a.title);
+    case 'book.delete':     return ttf('ui.aiTools.delBookTrash', a.title);
+    case 'chapter.create':  return ttf('ui.aiTools.addChapter', a.title, at);
+    case 'chapter.rename':  return ttf('ui.aiTools.changeNameChapter2', a.title, a.newTitle);
+    case 'chapter.delete':  return ttf('ui.aiTools.delChapterChapter', a.title);
+    case 'scene.create':    return ttf('ui.aiTools.newScene', a.title, at);
+    case 'scene.write':     return ttf('ui.aiTools.sceneChar', writeVerb(a.mode), a.title, at, String(a.text || '').length);
+    case 'scene.rename':    return ttf('ui.aiTools.changeNameScene2', a.title, a.newTitle);
+    case 'scene.delete':    return ttf('ui.aiTools.delSceneTrash', a.title, at);
+    default:                return call && call.tool ? call.tool : tt('ui.aiTools.cmdNotValid');
   }
 }
 function writeVerb(mode) {
-  return mode === 'replace' ? T`เขียนทับ` : mode === 'prepend' ? T`แทรกหน้า` : T`เขียนต่อท้าย`;
+  return mode === 'replace' ? tt('ui.common.overwrite') : mode === 'prepend' ? tt('ui.common.insertPage') : tt('ui.aiTools.writeNext');
 }
 function catLabel(cat) {
-  return { characters: T`ตัวละคร`, locations: T`สถานที่`, items: T`ไอเทม`, lore: T`ตำนาน` }[cat] || T`เอนทิตี้`;
+  return { characters: tt('ui.common.character'), locations: tt('ui.common.place'), items: tt('ui.aiTools.msg'), lore: tt('ui.common.legend') }[cat] || tt('ui.common.msg7');
 }
 
 /** คำสั่งชุดนี้มีอันที่ลบของไหม (ใช้ตัดสินว่าต้องถามก่อนไหม) */
@@ -203,12 +203,12 @@ export function hasDestructive(calls) {
 
 /** ผลของคำสั่งที่จะส่งกลับให้โมเดลอ่านต่อ */
 export function resultsMessage(results) {
-  const lines = [T`ผลของคำสั่งที่สั่งไป:`];
+  const lines = [tt('ui.aiTools.resultCmdCmd')];
   for (const r of results || []) {
-    lines.push(`- ${r.tool}: ${r.ok ? T`สำเร็จ` : T`ล้มเหลว`}${r.message ? ' — ' + r.message : ''}${r.error ? ' — ' + r.error : ''}`);
+    lines.push(`- ${r.tool}: ${r.ok ? tt('ui.common.ok') : tt('ui.common.fail')}${r.message ? ' — ' + r.message : ''}${r.error ? ' — ' + r.error : ''}`);
     if (r.ok && r.data !== undefined && r.data !== null) {
       const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2);
-      lines.push('```', body.length > 8000 ? body.slice(0, 8000) + T`\n…(ตัดให้สั้น)` : body, '```');
+      lines.push('```', body.length > 8000 ? body.slice(0, 8000) + tt('ui.aiTools.cutShort') : body, '```');
     }
   }
   return lines.join('\n');

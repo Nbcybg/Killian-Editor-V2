@@ -1,4 +1,6 @@
 // test/sp-headers.test.cjs — unit test หัวกระดาษทุกหน้า (ข้อ 91)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');

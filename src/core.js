@@ -176,7 +176,7 @@ window.addEventListener('error', (e) => {
   if (!t || t === window || !t.tagName) return;
   const src = t.src || t.href || '';
   if (!src) return;
-  log('warn', T`resource: โหลดไม่สำเร็จ <` + String(t.tagName).toLowerCase() + '>', src);
+  log('warn', tt('ui.core.resourceLoadNotOk2') + String(t.tagName).toLowerCase() + '>', src);
 }, true);
 // [alpha.72 ข้อ 5] console.error/warn ที่โมดูลอื่นเรียกตรง ๆ เคยหายไปจากแผงบันทึกทั้งหมด
 // (เช่น `console.error('SN refresh error:', ...)` ใน network.js) → ห่อให้ไหลเข้า log ด้วย
@@ -188,7 +188,7 @@ for (const lv of ['error', 'warn']) {
       const first = args.find((a) => typeof a === 'string');
       const errArg = args.find((a) => a instanceof Error);
       const rest = args.filter((a) => a !== first);
-      logStore.push(lv, 'console: ' + (first || T`(ไม่มีข้อความ)`),
+      logStore.push(lv, 'console: ' + (first || tt('ui.core.notHasText2')),
                     errArg || (rest.length ? rest : undefined), new Date().toISOString());
       for (const fn of logSubs) { try { fn(null); } catch {} }
     } catch {}
@@ -384,13 +384,23 @@ export const STATUS_COLORS = {
 };
 export const DEFAULT_STATUS_COLOR = '#8a8f98';
 /**
- * [alpha.76] ป้ายสำหรับ "ค่าที่เก็บในไฟล์งาน" (สถานะฉาก · ชื่อสี · ชนิดความสัมพันธ์ · แท็ก)
+ * ป้ายสำหรับ "ค่าที่เก็บในไฟล์งาน" (สถานะฉาก · ชื่อสี) — [alpha.76 · ปรับคีย์ .77]
  *
- * ค่าพวกนี้แปลตรง ๆ ไม่ได้ — มันถูกเขียนลง scenes.json/Wiki แล้วอ่านกลับ ถ้าเปลี่ยนตามภาษา
- * ไฟล์เก่าจะอ่านไม่ออกทันที **จึงเก็บเป็นภาษาไทยเสมอ แล้วแปลตอนแสดงผลเท่านั้น**
- * ผู้แปลใส่คำแปลใน CSV โดยใช้ค่าไทยเป็นคีย์ได้เลย (ไม่ใส่ = โชว์ค่าเดิม)
+ * ค่าพวกนี้แปลตรง ๆ ไม่ได้ เพราะถูกเขียนลง scenes.json แล้วอ่านกลับด้วยค่าเดิม
+ * **เก็บเป็นภาษาไทยเสมอ แปลเฉพาะตอนวาดบนจอ** ผ่านตารางจับคู่ค่า→คีย์ข้างล่างนี้
+ * ค่าที่ผู้ใช้ตั้งเอง (custom-status) ไม่อยู่ในตาราง = โชว์ตามที่ผู้ใช้พิมพ์ ซึ่งถูกแล้ว
  */
-export function dataLabel(v) { return v == null || v === '' ? '' : tm(String(v)); }
+const DATA_KEYS = {
+  'โครงร่าง': 'ui.data.stOutline', 'กำลังเขียน': 'ui.data.stWriting', 'เขียนเสร็จ': 'ui.data.stDone',
+  'ตรวจแล้ว': 'ui.data.stChecked', 'เก็บถาวร': 'ui.data.stArchived',
+  'แดง': 'ui.data.cRed', 'ส้ม': 'ui.data.cOrange', 'เหลือง': 'ui.data.cYellow',
+  'เขียว': 'ui.data.cGreen', 'ฟ้า': 'ui.data.cBlue', 'ม่วง': 'ui.data.cPurple',
+};
+export function dataLabel(v) {
+  if (v == null || v === '') return '';
+  const k = DATA_KEYS[v];
+  return k ? t(k) : String(v);
+}
 export const BUILTIN_CATS = ['characters', 'locations', 'items', 'lore'];
 export const CAT_ICON = { characters: 'user', locations: 'map', items: 'briefcase', lore: 'bookmark' };
 // ตัวแปลงตัวเลขที่ปลอดภัยกับค่า 0 (กฎ 20) — แหล่งความจริงเดียวของทั้งโปรเจกต์
@@ -416,11 +426,11 @@ export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, def
 // ---- ระบบภาษา (i18n) ----
 // เอนจินจริงอยู่ `src/i18n.js` (บริสุทธิ์ · โมดูลที่ import core ไม่ได้ก็ใช้ได้) — ตรงนี้เหลือแค่
 // ส่วนที่ต้องแตะ DOM/kapi: โหลดไฟล์, applyDataI18n, ฮุกอัปเดต UI
-import { T, tm, tKey, lookup as i18nLookup, setTable, fillTable, csvToTable, tableToCsv,
+import { t as tt, T, t, tf, tm, tKey, lookup as i18nLookup, setTable, fillTable, csvToTable, tableToCsv,
          langInfo, langCatalog, setCatalog, langCodeFromFile, langFileName, fallbackLangName,
          getTable, formatMsg, makeMsgid, LANG_LS_KEY } from './i18n.js';
 import { unflatten } from './i18n-csv.js';
-export { T, tm, tableToCsv, csvToTable, langInfo, langCodeFromFile, langFileName, fallbackLangName,
+export { T, t, tf, tm, tKey, tableToCsv, csvToTable, langInfo, langCodeFromFile, langFileName, fallbackLangName,
          formatMsg, makeMsgid, LANG_LS_KEY };
 /** รายชื่อภาษาที่สแกนเจอ (อ่านจาก **ชื่อไฟล์** k2_*.csv) */
 export function languageCatalog() { return langCatalog; }
@@ -437,62 +447,9 @@ if (langInfo.code) {
 const langHooks = [];
 export function onLanguageChanged(fn) { langHooks.push(fn); }
 
-// EN built-in สำรอง — ฝังมาด้วยกันตอน build (ใช้ตอนโหลดภาษาจากโปรเจกต์ยังไม่ได้)
-const BUILTIN_EN = {
-  "ui": {
-    "app": { "title": "Killian 2", "newProject": "New Project...", "openProject": "Open Project...", "saveAll": "Save All", "home": "Home", "ready": "Ready", "project": "Project", "saving": "Saving...", "saved": "Saved", "loading": "Loading...", "searching": "Searching..." },
-    "menu": { "file": "File", "edit": "Edit", "view": "View", "format": "Format", "script": "Script", "help": "Help", "ai": "AI" },
-    "toolbar": {
-      "paperMode": "Paper Mode", "toggleMode": "Toggle Mode", "normalText": "Body Text",
-      "heading1": "Heading 1", "heading2": "Heading 2", "heading3": "Heading 3",
-      "heading4": "Heading 4", "heading5": "Heading 5", "heading6": "Heading 6",
-      "quote": "Blockquote", "bold": "Bold", "italic": "Italic", "underline": "Underline",
-      "strike": "Strikethrough", "bulletList": "Bullet List", "numberList": "Numbered List",
-      "blockquote": "Blockquote", "alignLeft": "Align Left", "alignCenter": "Align Center",
-      "alignRight": "Align Right", "alignJustify": "Justify", "insertImage": "Insert Image",
-      "viewSource": "View Markdown Source", "readingMode": "Reading Mode",
-      "globalSearch": "Search Project", "kanban": "Kanban Board",
-      "aiAssistant": "AI Writing Assistant", "aiChat": "Chat with Story", "plugins": "Plugin Commands"
-    },
-    "dialogs": { "ok": "OK", "cancel": "Cancel", "save": "Save", "delete": "Delete", "confirm": "Confirm", "yes": "Yes", "no": "No", "close": "Close", "apply": "Apply", "reset": "Reset" },
-    "settings": {
-      "title": "Project Settings", "general": "General", "writing": "Writing", "automation": "Automation",
-      "shortcuts": "Shortcuts", "language": "Language", "projectName": "Project Name", "author": "Author",
-      "autoSaveMinutes": "Auto Save every (minutes)", "autoSaveHint": "0 = disable auto save",
-      "autoBackup": "Auto-backup versions on save", "maxBackups": "Max auto backups",
-      "maxBackupsHint": "Named versions are not deleted", "dailyGoal": "Daily word goal",
-      "projectGoal": "Project word goal",       "fontSize": "Editor font size",
-      "fontSizeHint": "Adjust from default size", "uiScale": "UI size", "uiScaleHint": "Scale toolbar, panels, tabs and dialogs (75-200%)", "fontFamily": "Font Family", "fontFamilyHint": "Select a font for the editor",
-      "spFontFamily": "Screenplay Font", "spFontFamilyHint": "Font used only in screenplay mode (default: Courier New)",
-      "lineNumbers": "Show line numbers",
-      "lineNumbersHint": "Count by paragraph/block", "spellCheck": "Spell check",
-      "spellCheckHint": "Underline misspelled words", "spellCheckDict": "Spell check with dictionary (Thai+English)",
-      "spellCheckDictHint": "Offline word list", "autoMention": "Auto-detect Wiki names",
-      "autoMentionHint": "Highlight names from Wiki", "recycleDays": "Auto-empty trash older than (days)",
-      "recycleDaysHint": "0 = never", "focusDim": "Dim level of other lines (Focus Mode)", "focusDimHint": "0.05 = very dim - 0.8 = barely dim", "autoSync": "Auto-sync",
-      "autoSyncHint": "Update entity names in all files", "languageSelect": "Interface Language",
-      "downloadLanguage": "Download additional language...", "shortcutsHint": "Click Edit then press new key combo"
-    },
-    "errors": { "noProject": "No project open", "noFile": "File not found", "saveFailed": "Save failed", "loadFailed": "Load failed", "aiNoKey": "Please set AI API key", "aiFailed": "AI request failed", "openProjectFirst": "Open a project first", "notKillianProject": "This folder is not a Killian project", "needScene": "Open a scene first", "moveCrossDraft": "Moving across drafts not supported", "requiresCtrl": "Ctrl/⌘ required", "pressShortcut": "Press shortcut..." },
-    "status": { "ready": "Ready", "saving": "Saving...", "saved": "Saved", "loading": "Loading...", "searching": "Searching...", "settingsSaved": "Settings saved", "zoom": "Zoom", "zoomReset": "Zoom reset to 100%", "uiScale": "UI size", "copied": "Markdown copied", "movedScene": "Moved scene to", "typewriterOn": "Typewriter: ON", "typewriterOff": "Typewriter: OFF", "focusOn": "Focus mode: ON", "focusOff": "Focus mode: OFF", "paperOn": "Paper mode: ON", "paperOff": "Paper mode: OFF", "dirtyClose": "tabs with unsaved changes", "saveAllAndClose": "Save all and close", "closeWithoutSaving": "Close without saving" },
-    "shortcuts": { "save": "Save", "saveAll": "Save All", "saveAs": "Save As...", "newProject": "New Project", "openProject": "Open Project", "print": "Print", "closeTab": "Close Tab", "find": "Find", "settings": "Settings", "undo": "Undo", "redo": "Redo", "bold": "Bold", "italic": "Italic", "underline": "Underline", "strikethrough": "Strikethrough", "heading1": "Heading 1", "heading2": "Heading 2", "heading3": "Heading 3", "bodyText": "Body Text", "bulletList": "Bullet List", "numberedList": "Numbered List", "clearFormatting": "Clear Formatting", "alignLeft": "Align Left", "alignCenter": "Align Center", "alignRight": "Align Right", "justify": "Justify", "toggleFormat": "Toggle Mode", "paperMode": "Paper Mode", "toggleTheme": "Dark / Light Theme", "globalSearch": "Search Project", "focusMode": "Focus Mode", "quickOpen": "Quick Open", "typewriter": "Typewriter Mode", "compile": "Compile", "splitView": "Split View", "kanban": "Kanban Board", "exportBlog": "Export as Blog HTML", "gallery": "Gallery", "spScene": "SP: Scene", "spAction": "SP: Action", "spCharacter": "SP: Character", "spParenthetical": "SP: Parenthetical", "spDialogue": "SP: Dialogue", "spTransition": "SP: Transition", "spShot": "SP: Shot", "spActBreak": "SP: Act Break", "spNote": "SP: Note", "selectScene": "Select Scene", "nbsp": "Non-Breaking Space", "goto": "Go to Page/Scene", "findError": "Find Next Error", "devConsole": "Developer Console" }
-  }
-};
-
-// แปลง dot-path (ex. "ui.toolbar.bold") → หาในตารางคำแปล โดยมี fallback เป็น BUILTIN_EN
-export function t(key, fallback) {
-  if (typeof key !== 'string' || !key) return fallback || '';   // กัน key undefined (ex. SHORTCUT_LABELS ไม่มีคีย์)
-  const v = i18nLookup(key);
-  if (v != null) return v;
-  // fallback ใน BUILTIN_EN
-  let fb = BUILTIN_EN.ui;
-  for (const p of key.split('.')) {
-    if (fb && typeof fb === 'object') fb = fb[p];
-    else { fb = undefined; break; }
-  }
-  if (fb != null && typeof fb === 'string' && fb.length) return fb;
-  return fallback || key;
-}
+// [alpha.77] ไม่มีตาราง EN ฝังในโค้ดอีกแล้ว และ **ไม่มีการตกกลับข้ามภาษา**
+// ไฟล์ภาษาต้องครบทุกแถว (เทส test/i18n-keys.test.cjs เป็นคนบังคับ) · คีย์ไหนขาด = โชว์คีย์ให้เห็น
+// t/tf ตัวจริงอยู่ src/i18n.js — ที่นี่แค่ re-export ให้โค้ดเดิมที่ import จาก core.js ใช้ได้เหมือนเดิม
 
 // ลำดับที่ค้นหาไฟล์ภาษาแบบเก่า (.json) — เก็บไว้อ่านโปรเจกต์เดิมที่ผู้ใช้เคยแปลไว้เอง
 async function langCandidates(lang, root) {
@@ -564,8 +521,8 @@ export async function loadLanguage(lang, root) {
     }
   } catch {}
   if (!ok) {
-    // ไม่มีไฟล์ภาษาเลย — en ใช้ BUILTIN_EN ได้ · ภาษาอื่นเตือนแล้วตกกลับ
-    if (i18n.lang !== 'en') setStatus(tm(T`ไม่พบภาษา "{0}" ใช้ภาษาอังกฤษแทน`, i18n.lang));
+    // ไม่มีไฟล์ภาษาเลย — เตือนแล้วปล่อยให้ t() คืนตัวคีย์ (เห็นชัดว่าไฟล์ภาษาหาย)
+    if (i18n.lang !== 'en') setStatus(tm(tt('ui.core.notFoundLangUse2'), i18n.lang));
     setTable({}, 'en');
     i18n.lang = 'en';
   }

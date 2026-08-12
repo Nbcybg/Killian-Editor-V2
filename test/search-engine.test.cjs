@@ -1,4 +1,6 @@
 // test/search-engine.test.cjs — ทดสอบ search-engine ด้วย node (ไม่ต้องเปิด electron)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // วิธีรัน:  node test/search-engine.test.cjs
 // แปลง ES module → CommonJS ด้วย esbuild ชั่วคราว แล้ว require (เพราะ root ไม่ใช่ type:module)
 const path = require('path');

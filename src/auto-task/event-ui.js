@@ -1,6 +1,6 @@
 // event-ui.js — UI/การต่อสายของ Auto-task / Event Queue (ข้อ 88)
 // เปิด/ปิด auto-sync ใน settings + ผูกงาน rename-entity เข้ากับเอนจินจริง
-import { T } from '../i18n.js';
+import { tf } from '../i18n.js';
 import { el, setStatus, state, log, t } from '../core.js';
 import { AutoTaskEngine, installDefaultRules, renameEntityTask } from '../auto-task/event-queue.js';
 
@@ -27,7 +27,7 @@ export async function listTextFiles(root) {
         }
       }
     }
-  } catch (e) { log('warn', T`auto-task: ไล่ไฟล์ไม่ครบ`, e); }
+  } catch (e) { log('warn', t('ui.autoTaskEvent.autoTaskFileNot'), e); }
   return out;
 }
 
@@ -36,7 +36,7 @@ export function getTaskEngine() {
     engine = new AutoTaskEngine({
       meta: state.meta,
       onLog: (entry) => log('info', 'auto-task: ' + entry.type, entry),
-      onError: (e, type) => log('error', t('task.jobFailed', 'auto-task: งาน ') + type + t('task.failedSuffix', ' พัง'), { error: e && e.message }),
+      onError: (e, type) => log('error', t('ui.task.jobFailed') + type + t('ui.task.failedSuffix'), { error: e && e.message }),
     });
     installDefaultRules(engine);
     // งานจริงที่ทำได้ตอนนี้: เปลี่ยนชื่อเอนทิตี้ → ไล่แก้ทุกไฟล์
@@ -47,7 +47,7 @@ export function getTaskEngine() {
         writeFile: (p, c) => kapi.writeFile(p, c),
       });
       const r = await run({ ...payload, files });
-      if (r.changed) setStatus(T`auto-sync: อัปเดตชื่อใน ${r.files.length} ไฟล์`);
+      if (r.changed) setStatus(tf('ui.autoTaskEvent.autoSyncUpdateName', r.files.length));
       return r;
     });
   }
@@ -59,10 +59,10 @@ export function setAutoSync(on) {
   const eng = getTaskEngine();
   if (on) {
     if (!ticker) ticker = eng.start((tick) => setInterval(tick, 3000));
-    log('info', T`auto-task: auto-sync เปิด`);
+    log('info', t('ui.autoTaskEvent.autoTaskAutoSync2'));
   } else {
     if (ticker) { eng.stop((h) => clearInterval(h)); ticker = null; }
-    log('info', T`auto-task: auto-sync ปิด`);
+    log('info', t('ui.autoTaskEvent.autoTaskAutoSync'));
   }
 }
 
@@ -88,7 +88,7 @@ export function renderAutoSyncSection(host) {
   const cb = el('input'); cb.type = 'checkbox'; cb.id = 'st-autosync';
   cb.checked = isAutoSyncOn();
   cb.onchange = () => setAutoSync(cb.checked);
-  lab.append(cb, document.createTextNode(T` เปิด auto-sync (อัปเดตชื่อทุกไฟล์อัตโนมัติเมื่อเปลี่ยนชื่อเอนทิตี้)`));
+  lab.append(cb, document.createTextNode(t('ui.autoTaskEvent.openAutoSyncUpdate')));
   div.append(lab);
   host.appendChild(div);
   return div;

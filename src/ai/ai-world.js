@@ -1,86 +1,86 @@
 // ai-world.js — สร้างเนื้อหาโลก (worldbuilding) ตามเทมเพลต + schema (ข้อ 76)
 // spec: docs/76-ai-world.md · ผลลัพธ์เป็นข้อมูลมีโครงสร้าง → เขียนเข้า Wiki ได้ตรง ๆ
-import { T } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { extractJson, validate, estimateTokens } from './ai-core.js';
 
-const SYSTEM = T`คุณเป็นนักสร้างโลก (worldbuilder) สำหรับนิยาย/บทภาพยนตร์ภาษาไทย `
-  + T`สร้างรายละเอียดที่สอดคล้องกันเอง มีเหตุผลภายในโลก และใช้เขียนเรื่องต่อได้จริง `
-  + T`ตอบเป็น JSON ตามโครงที่กำหนดเท่านั้น ห้ามมีข้อความอื่นนอก JSON`;
+const SYSTEM = tt('ui.aiWorld.youNewWorldWorldbuilder')
+  + tt('ui.aiWorld.newDetailWheelHas')
+  + tt('ui.aiWorld.replyJSONOutlineDefine');
 
 // ───────── เทมเพลตต่อประเภท ─────────
 // fields = ค่าเดี่ยว (ลง Wiki เป็นฟิลด์) · sections = เนื้อหายาว (ลง Wiki เป็นหัวข้อ)
 export const WORLD_TEMPLATES = {
   magic: {
-    label: T`ระบบเวทมนตร์`, category: 'lore', icon: '✨',
+    label: tt('ui.aiWorld.system'), category: 'lore', icon: '✨',
     fields: [
-      { key: 'name', label: T`ชื่อระบบ` },
-      { key: 'source', label: T`แหล่งพลัง` },
-      { key: 'cost', label: T`ราคาที่ต้องจ่าย` },
-      { key: 'limits', label: T`ข้อจำกัด` },
-      { key: 'whoCanUse', label: T`ใครใช้ได้` },
-      { key: 'rarity', label: T`ความแพร่หลาย` },
+      { key: 'name', label: tt('ui.aiWorld.nameSystem') },
+      { key: 'source', label: tt('ui.aiWorld.msg10') },
+      { key: 'cost', label: tt('ui.aiWorld.must') },
+      { key: 'limits', label: tt('ui.aiWorld.itemRemember') },
+      { key: 'whoCanUse', label: tt('ui.aiWorld.use') },
+      { key: 'rarity', label: tt('ui.aiWorld.spread') },
     ],
-    sections: [T`กฎของระบบ`, T`วิธีใช้งานจริง`, T`ผลข้างเคียงและอันตราย`, T`ผลกระทบต่อสังคม`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.ruleSystem'), tt('ui.aiWorld.howto'), tt('ui.aiWorld.sideEffect'), tt('ui.aiWorld.resultNext'), tt('ui.aiWorld.knotWriteNext')],
   },
   city: {
-    label: T`เมือง`, category: 'locations', icon: '🏙',
+    label: tt('ui.aiWorld.msg8'), category: 'locations', icon: '🏙',
     fields: [
-      { key: 'name', label: T`ชื่อเมือง` },
-      { key: 'population', label: T`ประชากร` },
-      { key: 'geography', label: T`ภูมิประเทศ` },
-      { key: 'government', label: T`การปกครอง` },
-      { key: 'economy', label: T`เศรษฐกิจหลัก` },
-      { key: 'landmark', label: T`สถานที่สำคัญ` },
+      { key: 'name', label: tt('ui.aiWorld.name3') },
+      { key: 'population', label: tt('ui.aiWorld.msg2') },
+      { key: 'geography', label: tt('ui.aiWorld.msg4') },
+      { key: 'government', label: tt('ui.aiWorld.cover') },
+      { key: 'economy', label: tt('ui.aiWorld.main2') },
+      { key: 'landmark', label: tt('ui.aiWorld.placeImportant') },
     ],
-    sections: [T`ภาพรวมและบรรยากาศ`, T`ย่านสำคัญ`, T`ผู้มีอำนาจและกลุ่มอิทธิพล`, T`ปัญหาที่เมืองนี้เผชิญ`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.overviewAmbience'), tt('ui.aiWorld.districtImportant'), tt('ui.aiWorld.hasPowerGroup'), tt('ui.aiWorld.problem'), tt('ui.aiWorld.knotWriteNext')],
   },
   culture: {
-    label: T`วัฒนธรรม`, category: 'lore', icon: '🎎',
+    label: tt('ui.aiWorld.msg5'), category: 'lore', icon: '🎎',
     fields: [
-      { key: 'name', label: T`ชื่อกลุ่ม/วัฒนธรรม` },
-      { key: 'values', label: T`ค่านิยมหลัก` },
-      { key: 'language', label: T`ภาษา/สำเนียง` },
-      { key: 'taboo', label: T`ข้อห้าม` },
-      { key: 'ritual', label: T`พิธีกรรมสำคัญ` },
-      { key: 'hierarchy', label: T`ลำดับชั้นทางสังคม` },
+      { key: 'name', label: tt('ui.aiWorld.nameGroup') },
+      { key: 'values', label: tt('ui.aiWorld.valueMain') },
+      { key: 'language', label: tt('ui.aiWorld.lang') },
+      { key: 'taboo', label: tt('ui.aiWorld.itemForbid') },
+      { key: 'ritual', label: tt('ui.aiWorld.ritualImportant') },
+      { key: 'hierarchy', label: tt('ui.aiWorld.orderLayer') },
     ],
-    sections: [T`ชีวิตประจำวัน`, T`ประเพณีและเทศกาล`, T`ความเชื่อ`, T`ความสัมพันธ์กับกลุ่มอื่น`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.dailyLife'), tt('ui.aiWorld.customFestival'), tt('ui.aiWorld.name'), tt('ui.aiWorld.relationGroupOther'), tt('ui.aiWorld.knotWriteNext')],
   },
   economy: {
-    label: T`เศรษฐกิจ`, category: 'lore', icon: '💰',
+    label: tt('ui.aiWorld.msg9'), category: 'lore', icon: '💰',
     fields: [
-      { key: 'name', label: T`ชื่อระบบเศรษฐกิจ` },
-      { key: 'currency', label: T`สกุลเงิน/สื่อกลาง` },
-      { key: 'mainTrade', label: T`สินค้าหลัก` },
-      { key: 'scarcity', label: T`ของที่ขาดแคลน` },
-      { key: 'powerHolders', label: T`ใครคุมความมั่งคั่ง` },
-      { key: 'blackMarket', label: T`ตลาดมืด` },
+      { key: 'name', label: tt('ui.aiWorld.nameSystem2') },
+      { key: 'currency', label: tt('ui.aiWorld.center') },
+      { key: 'mainTrade', label: tt('ui.aiWorld.main') },
+      { key: 'scarcity', label: tt('ui.aiWorld.scarce') },
+      { key: 'powerHolders', label: tt('ui.aiWorld.msg11') },
+      { key: 'blackMarket', label: tt('ui.aiWorld.dark') },
     ],
-    sections: [T`โครงสร้างการค้า`, T`ชนชั้นและรายได้`, T`วิกฤตที่กำลังก่อตัว`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.structureTrade'), tt('ui.aiWorld.classIncome'), tt('ui.aiWorld.busyItem'), tt('ui.aiWorld.knotWriteNext')],
   },
   religion: {
-    label: T`ศาสนา/ความเชื่อ`, category: 'lore', icon: '⛩',
+    label: tt('ui.aiWorld.name4'), category: 'lore', icon: '⛩',
     fields: [
-      { key: 'name', label: T`ชื่อศาสนา/ลัทธิ` },
-      { key: 'deity', label: T`สิ่งที่นับถือ` },
-      { key: 'doctrine', label: T`หลักคำสอน` },
-      { key: 'clergy', label: T`นักบวช/ผู้นำ` },
-      { key: 'symbol', label: T`สัญลักษณ์` },
-      { key: 'heresy', label: T`สิ่งที่ถือว่านอกรีต` },
+      { key: 'name', label: tt('ui.aiWorld.name2') },
+      { key: 'deity', label: tt('ui.aiWorld.thing2') },
+      { key: 'doctrine', label: tt('ui.aiWorld.mainWord') },
+      { key: 'clergy', label: tt('ui.aiWorld.msg') },
+      { key: 'symbol', label: tt('ui.aiWorld.msg7') },
+      { key: 'heresy', label: tt('ui.aiWorld.thing') },
     ],
-    sections: [T`กำเนิดและตำนาน`, T`พิธีกรรม`, T`อำนาจทางการเมือง`, T`ผู้เห็นต่าง`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.originLegend'), tt('ui.aiWorld.ritual'), tt('ui.aiWorld.power'), tt('ui.aiWorld.see'), tt('ui.aiWorld.knotWriteNext')],
   },
   faction: {
-    label: T`กลุ่ม/องค์กร`, category: 'lore', icon: '⚔',
+    label: tt('ui.aiWorld.group'), category: 'lore', icon: '⚔',
     fields: [
-      { key: 'name', label: T`ชื่อกลุ่ม` },
-      { key: 'goal', label: T`เป้าหมาย` },
-      { key: 'leader', label: T`ผู้นำ` },
-      { key: 'members', label: T`สมาชิก/กำลังพล` },
-      { key: 'methods', label: T`วิธีการ` },
-      { key: 'enemy', label: T`ศัตรู` },
+      { key: 'name', label: tt('ui.common.nameGroup') },
+      { key: 'goal', label: tt('ui.common.goal') },
+      { key: 'leader', label: tt('ui.aiWorld.msg3') },
+      { key: 'members', label: tt('ui.aiWorld.busy') },
+      { key: 'methods', label: tt('ui.aiWorld.how') },
+      { key: 'enemy', label: tt('ui.aiWorld.msg6') },
     ],
-    sections: [T`ความเป็นมา`, T`โครงสร้างภายใน`, T`ทรัพยากรและจุดอ่อน`, T`แผนการปัจจุบัน`, T`ปมที่เอาไปเขียนต่อได้`],
+    sections: [tt('ui.aiWorld.origin'), tt('ui.aiWorld.structureInner'), tt('ui.aiWorld.resourceDot'), tt('ui.aiWorld.planCurrent'), tt('ui.aiWorld.knotWriteNext')],
   },
 };
 export const WORLD_TYPES = Object.keys(WORLD_TEMPLATES);
@@ -96,26 +96,26 @@ export function buildWorldPrompt(type, prompt, opts = {}) {
   const tpl = getTemplate(type);
   if (!tpl) return null;
   const lines = [];
-  lines.push(T`สร้าง "${tpl.label}" สำหรับโลกของเรื่องนี้ ตามคำสั่งของผู้เขียน: ${prompt || T`(ผู้เขียนไม่ได้ระบุ — คิดให้เหมาะกับบริบท)`}`);
+  lines.push(ttf('ui.aiWorld.newWorldStoryCmd', tpl.label, prompt || tt('ui.aiWorld.authorCantSpecifyThink')));
   lines.push('');
-  lines.push(T`ข้อกำหนด:`);
-  lines.push(T`1. ทุกอย่างต้องสอดคล้องกันเอง และสอดคล้องกับบริบทของเรื่องที่ให้มา (ถ้ามี)`);
-  lines.push(T`2. เขียนเป็นภาษาไทย กระชับ ใช้ได้จริง ไม่ใช่คำสวยลอย ๆ`);
-  lines.push(T`3. ทุกหัวข้อต้องมีเนื้อหาอย่างน้อย 2-4 ประโยค`);
-  lines.push(T`4. ปิดท้ายด้วยปมที่เอาไปเขียนเป็นฉากต่อได้จริง`);
-  if (opts.tone) lines.push(T`5. โทน/แนวของโลก: ` + opts.tone);
+  lines.push(tt('ui.aiWorld.itemDefine'));
+  lines.push(tt('ui.aiWorld.allMustWheelWheel'));
+  lines.push(tt('ui.aiWorld.writeThaiConciseUse'));
+  lines.push(tt('ui.aiWorld.allHeadingMustHas'));
+  lines.push(tt('ui.aiWorld.closeKnotWriteScene'));
+  if (opts.tone) lines.push(tt('ui.aiWorld.toneWorld') + opts.tone);
   if (opts.existing) {
-    lines.push('', T`### ของเดิมที่มีอยู่แล้ว (ห้ามขัดกัน)`, String(opts.existing).slice(0, 2000));
+    lines.push('', tt('ui.aiWorld.prevHasForbid'), String(opts.existing).slice(0, 2000));
   }
   if (opts.context) {
-    lines.push('', T`### บริบทของเรื่อง`, typeof opts.context === 'string' ? opts.context : JSON.stringify(opts.context));
+    lines.push('', tt('ui.aiWorld.contextStory'), typeof opts.context === 'string' ? opts.context : JSON.stringify(opts.context));
   }
-  lines.push('', T`### รูปแบบคำตอบ (JSON เท่านั้น)`);
+  lines.push('', tt('ui.aiWorld.formatAnswerJSON'));
   lines.push(JSON.stringify({
-    name: T`ชื่อ`,
+    name: tt('ui.common.name'),
     fields: Object.fromEntries(tpl.fields.filter((f) => f.key !== 'name').map((f) => [f.key, f.label])),
-    sections: tpl.sections.map((s) => ({ title: s, body: T`เนื้อหา 2-4 ประโยค` })),
-    tags: [T`คำค้น1`, T`คำค้น2`],
+    sections: tpl.sections.map((s) => ({ title: s, body: tt('ui.aiWorld.bodySentence') })),
+    tags: [tt('ui.aiWorld.wordSearch'), tt('ui.aiWorld.wordSearch2')],
   }, null, 2));
   const built = lines.join('\n');
   return { system: SYSTEM, prompt: built, tokens: estimateTokens(built), type, template: tpl };
@@ -162,7 +162,7 @@ export function toWikiEntity(world, opts = {}) {
   const cat = opts.category || (tpl && tpl.category) || 'lore';
   const notes = (world.sections || []).map((s) => `## ${s.title}\n${s.body}`).join('\n\n');
   return {
-    name: world.name || opts.name || T`ไม่มีชื่อ`,
+    name: world.name || opts.name || tt('ui.common.notNamed2'),
     entityTypeKey: cat,
     aliases: [],
     tags: world.tags || [],
@@ -174,12 +174,12 @@ export function toWikiEntity(world, opts = {}) {
 /** Markdown preview (for the dialog / for pasting into a scene). */
 export function toMarkdown(world) {
   const tpl = getTemplate(world.type);
-  const out = [`# ${world.name || T`(ไม่มีชื่อ)`}`, ''];
+  const out = [`# ${world.name || tt('ui.common.notNamed')}`, ''];
   const labels = Object.fromEntries(((tpl && tpl.fields) || []).map((f) => [f.key, f.label]));
   for (const [k, v] of Object.entries(world.fields || {})) if (v) out.push(`- **${labels[k] || k}:** ${v}`);
   out.push('');
   for (const s of world.sections || []) out.push(`## ${s.title}`, s.body, '');
-  if (world.tags && world.tags.length) out.push(T`แท็ก: ` + world.tags.map((t) => '#' + t).join(' '));
+  if (world.tags && world.tags.length) out.push(tt('ui.common.tag3') + world.tags.map((t) => '#' + t).join(' '));
   return out.join('\n').trim();
 }
 
@@ -192,9 +192,9 @@ export function toMarkdown(world) {
  */
 export async function generateWorld(type, prompt, options = {}) {
   const built = buildWorldPrompt(type, prompt, options);
-  if (!built) return { ok: false, error: T`ไม่รู้จักประเภท: ` + type, code: 'bad-type', types: WORLD_TYPES };
+  if (!built) return { ok: false, error: tt('ui.aiWorld.notKnownType') + type, code: 'bad-type', types: WORLD_TYPES };
   const client = options.client;
-  if (!client) return { ok: false, prompt: built.prompt, error: T`ไม่ได้ตั้งค่า AI client`, code: 'no-client' };
+  if (!client) return { ok: false, prompt: built.prompt, error: tt('ui.common.cantSettingsAIClient'), code: 'no-client' };
 
   const call = () => client.complete({
     prompt: built.prompt, system: built.system, feature: 'worldbuilding:' + type,
@@ -209,6 +209,6 @@ export async function generateWorld(type, prompt, options = {}) {
     res = await call();
     if (res.ok) world = parseWorld(type, res.text);
   }
-  if (!world.ok) return { ok: false, world, prompt: built.prompt, error: T`AI ตอบไม่ตรงโครงที่กำหนด`, code: 'bad-shape', usage: res.usage };
+  if (!world.ok) return { ok: false, world, prompt: built.prompt, error: tt('ui.aiWorld.aIReplyNotAt'), code: 'bad-shape', usage: res.usage };
   return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };
 }

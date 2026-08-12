@@ -11,13 +11,13 @@
 //   source ที่มาของบรรทัด — ถอดจากคำนำหน้า "xxx: ข้อความ" ที่โค้ดทั้งโปรเจกต์ใช้อยู่แล้ว
 //   count  จำนวนครั้งที่บรรทัดเดิมซ้ำติดกัน (กัน log ท่วมจากลูปที่ยิงรัว)
 
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 export const LEVELS = ['error', 'warn', 'info', 'debug'];
 export const LEVEL_META = {
-  error: { icon: '⛔', label: T`ผิดพลาด`, rank: 0 },
-  warn:  { icon: '⚠', label: T`เตือน`,   rank: 1 },
-  info:  { icon: 'ℹ', label: T`ทั่วไป`,  rank: 2 },
-  debug: { icon: '·', label: T`ละเอียด`, rank: 3 },
+  error: { icon: '⛔', label: t('ui.log.error'), rank: 0 },
+  warn:  { icon: '⚠', label: t('ui.log.msg'),   rank: 1 },
+  info:  { icon: 'ℹ', label: t('ui.common.msg4'),  rank: 2 },
+  debug: { icon: '·', label: t('ui.common.detailed'), rank: 3 },
 };
 
 export function normLevel(lv) {
@@ -55,7 +55,7 @@ function replacer() {
   return (k, v) => {
     if (v instanceof Error) return { name: v.name, message: v.message, stack: v.stack };
     if (typeof v === 'object' && v !== null) {
-      if (seen.has(v)) return T`[วนซ้ำ]`;
+      if (seen.has(v)) return t('ui.log.dup');
       seen.add(v);
     }
     if (typeof v === 'function') return '[function]';
@@ -145,5 +145,5 @@ export function summarize(counts) {
 
 /** ข้อความทั้งก้อนสำหรับปุ่มคัดลอก/ส่งออก */
 export function exportText(recs) {
-  return (recs || []).map((r) => formatLine(r) + (r.count > 1 ? T`  (ซ้ำ ${r.count} ครั้ง)` : '')).join('\n');
+  return (recs || []).map((r) => formatLine(r) + (r.count > 1 ? tf('ui.log.dupTimes', r.count) : '')).join('\n');
 }

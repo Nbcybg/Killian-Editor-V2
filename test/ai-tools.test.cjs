@@ -1,4 +1,6 @@
 // test/ai-tools.test.cjs — [alpha.63r4] โปรโตคอลคำสั่งที่ AI สั่งให้แอปลงมือทำ
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // คุมจุดที่พลาดแล้วอันตราย: แกะคำสั่งผิด · โหมดอ่านอย่างเดียวหลุดไปเขียนไฟล์ · ลบโดยไม่ผ่านการตรวจ
 const path = require('path');
 const os = require('os');

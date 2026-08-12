@@ -9,7 +9,7 @@
 // model = { title, author, chapters: [ { title, scenes: [ {title, body, synopsis, status, type, words} ] } ] }
 // ไฟล์นี้ "บริสุทธิ์" (ไม่แตะ DOM/ไฟล์) เพื่อให้เทสตรงๆ ได้
 
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { resolveVars } from './template-vars.js';
 // [alpha.58 · 55–56] ส่งออกบทภาพยนตร์พร้อมข้อความต่อเนื่อง — ใช้เอนจินจัดหน้าตัวเดียวกับบนจอ
 // [alpha.59 · 88] classify — ใช้ระบุประเภท element ของแต่ละบรรทัดตอน "ตัดออกตอนส่งออก"
@@ -19,7 +19,7 @@ import { pagesWithContinueds } from './sp-continued.js';
 // [alpha.58r บั๊ก 19] WYSIWYG — HTML ที่ส่งออกต้องใช้ฟอนต์/ช่วงบรรทัด/ย่อหน้า ชุดเดียวกับบนจอ
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
 
-export const PAGE_BREAK = T`<!-- ขึ้นหน้าใหม่ -->`;
+export const PAGE_BREAK = t('ui.compile.msg');
 
 /**
  * [alpha.58 · 55–56] แทรก (CONTINUED)/CONTINUED:/(MORE)/(cont'd) ลงในข้อความบทที่ประกอบเสร็จแล้ว
@@ -86,50 +86,50 @@ export const OMIT_CHOICES = ['note', 'summary', 'outline1', 'outline2', 'outline
 
 export const STEP_DEFS = [
   // ---- ช่วงเนื้อหา ----
-  { key: 'skip-memo', stage: 'model', label: T`ตัดโน้ต (memo) ออก` },
+  { key: 'skip-memo', stage: 'model', label: t('ui.compile.cutNoteMemoOut') },
   // [alpha.59 · 88] ตัด element ทีละประเภท — ค่าเริ่มต้นตัดแค่ ((โน้ต)) เพราะ # ## ###
   // ในโหมดนิยายคือ "หัวข้อ" ไม่ใช่ "โครง" (เปิดตัดโครงกับไฟล์นิยายจะกินหัวข้อไปด้วย)
-  { key: 'omit-elements', stage: 'model', label: T`บทภาพยนตร์: ไม่รวม element ตามประเภท`,
+  { key: 'omit-elements', stage: 'model', label: t('ui.compile.screenplayNotMergeElement'),
     opts: { types: 'note', drawRectAroundNotes: false },
     fields: [
-      { k: 'types', label: T`ประเภทที่ตัดออก (คั่นด้วยจุลภาค: ` + OMIT_CHOICES.join(', ') + ')',
+      { k: 'types', label: t('ui.compile.typeCutOut') + OMIT_CHOICES.join(', ') + ')',
         type: 'text' },
-      { k: 'drawRectAroundNotes', label: T`วาดกรอบรอบโน้ตที่ยังเหลือ (ใช้กับตัวสร้าง PDF ในโปรแกรม)`,
+      { k: 'drawRectAroundNotes', label: t('ui.compile.drawFrameRoundNote'),
         type: 'check' },
     ] },
-  { key: 'filter-status', stage: 'model', label: T`เอาเฉพาะฉากที่สถานะ…`,
-    opts: { status: T`เขียนเสร็จ, ตรวจแล้ว` },
-    fields: [{ k: 'status', label: T`สถานะ (คั่นด้วยจุลภาค)`, type: 'text' }] },
-  { key: 'synopsis-only', stage: 'model', label: T`ใช้เรื่องย่อแทนเนื้อหาฉาก` },
-  { key: 'number-scenes', stage: 'model', label: T`ใส่เลขลำดับหน้าชื่อฉาก` },
-  { key: 'strip-comments', stage: 'model', label: T`ตัดคอมเมนต์ %%…%% และ <!-- … -->` },
-  { key: 'strip-mentions', stage: 'model', label: T`แปลงลิงก์วิกิ [[ชื่อ]] เป็นข้อความธรรมดา` },
-  { key: 'strip-markdown', stage: 'model', label: T`ตัดสัญลักษณ์ Markdown (ข้อความล้วน)` },
-  { key: 'resolve-vars', stage: 'model', label: T`แก้ไขตัวแปร {{ชื่อ}} จาก Wiki` },
+  { key: 'filter-status', stage: 'model', label: t('ui.compile.onlySceneStatus'),
+    opts: { status: t('ui.compile.writeDoneCheckDone') },
+    fields: [{ k: 'status', label: t('ui.compile.status'), type: 'text' }] },
+  { key: 'synopsis-only', stage: 'model', label: t('ui.compile.useSynopsisReplaceBody') },
+  { key: 'number-scenes', stage: 'model', label: t('ui.compile.putNumOrderPage') },
+  { key: 'strip-comments', stage: 'model', label: t('ui.compile.cutComment') },
+  { key: 'strip-mentions', stage: 'model', label: t('ui.compile.linkNameText') },
+  { key: 'strip-markdown', stage: 'model', label: t('ui.compile.cutMarkdownText') },
+  { key: 'resolve-vars', stage: 'model', label: t('ui.compile.editItemNameWiki') },
   // ---- ช่วงประกอบ ----
-  { key: 'cover', stage: 'render', label: T`หน้าปก (ชื่อเรื่อง / ผู้เขียน / จำนวนคำ)`,
-    opts: { author: '' }, fields: [{ k: 'author', label: T`ผู้เขียน (ว่าง = ใช้จากโปรเจกต์)`, type: 'text' }] },
+  { key: 'cover', stage: 'render', label: t('ui.compile.coverTitleAuthorCount'),
+    opts: { author: '' }, fields: [{ k: 'author', label: t('ui.compile.authorEmptyUseProject'), type: 'text' }] },
   // [97] หน้ารายชื่อตัวละคร (Cast of Characters) ประจำเล่ม — ปิดได้ที่นี่ หรือที่สวิตช์ในหน้ารายชื่อเอง
-  { key: 'roster', stage: 'render', label: T`หน้ารายชื่อตัวละคร (Cast of Characters)` },
-  { key: 'chapter-heading', stage: 'render', label: T`หัวบท`,
+  { key: 'roster', stage: 'render', label: t('ui.compile.pageListCharacterCast') },
+  { key: 'chapter-heading', stage: 'render', label: t('ui.compile.headChapter'),
     opts: { template: '## {title}' },
-    fields: [{ k: 'template', label: T`รูปแบบ — ใช้ {n} {title} ได้`, type: 'text' }] },
-  { key: 'scene-heading', stage: 'render', label: T`ชื่อฉาก`,
+    fields: [{ k: 'template', label: t('ui.compile.formatUseNTitle'), type: 'text' }] },
+  { key: 'scene-heading', stage: 'render', label: t('ui.compile.nameScene'),
     opts: { template: '### {title}' },
-    fields: [{ k: 'template', label: T`รูปแบบ — ใช้ {n} {title} ได้`, type: 'text' }] },
-  { key: 'scene-meta', stage: 'render', label: T`แนบสถานะ/จำนวนคำของฉาก (สำหรับ บ.ก.)` },
-  { key: 'scene-separator', stage: 'render', label: T`ตัวคั่นระหว่างฉาก`,
-    opts: { text: '* * *' }, fields: [{ k: 'text', label: T`ข้อความคั่น`, type: 'text' }] },
-  { key: 'page-break', stage: 'render', label: T`ขึ้นหน้าใหม่ทุกบท` },
-  { key: 'stats', stage: 'render', label: T`ต่อท้ายด้วยสรุปสถิติ` },
+    fields: [{ k: 'template', label: t('ui.compile.formatUseNTitle'), type: 'text' }] },
+  { key: 'scene-meta', stage: 'render', label: t('ui.compile.statusCountWordScene') },
+  { key: 'scene-separator', stage: 'render', label: t('ui.compile.itemBetweenScene'),
+    opts: { text: '* * *' }, fields: [{ k: 'text', label: t('ui.compile.text'), type: 'text' }] },
+  { key: 'page-break', stage: 'render', label: t('ui.compile.pageBreakAllChapter') },
+  { key: 'stats', stage: 'render', label: t('ui.compile.nextSummaryStats') },
   // ---- ช่วงข้อความสุดท้าย ----
   // [alpha.58 · 55–56] เฉพาะบทภาพยนตร์ — ปิดไว้ในทุกพรีเซ็ต (นิยายไม่ต้องใช้)
   { key: 'sp-continued', stage: 'text',
-    label: T`บทภาพยนตร์: แทรก (CONTINUED)/(MORE) ตามการตัดหน้า` },
-  { key: 'to-html', stage: 'text', label: T`แปลงเป็น HTML` },
-  { key: 'js', stage: 'text', label: T`สคริปต์ JavaScript เอง`,
-    opts: { code: T`// text = ข้อความที่ประกอบเสร็จ · คืนค่าข้อความใหม่\nreturn text;` },
-    fields: [{ k: 'code', label: T`โค้ด (มีตัวแปร text, model)`, type: 'code' }] },
+    label: t('ui.compile.screenplayInsertCONTINUEDMORE') },
+  { key: 'to-html', stage: 'text', label: t('ui.compile.hTML') },
+  { key: 'js', stage: 'text', label: t('ui.compile.javaScript'),
+    opts: { code: t('ui.compile.textTextDoneRestore') },
+    fields: [{ k: 'code', label: t('ui.compile.codeHasItemText'), type: 'code' }] },
 ];
 
 export const stepDef = (k) => STEP_DEFS.find((s) => s.key === k) || null;
@@ -147,35 +147,35 @@ const wf = (id, name, ext, keys) => ({
 
 // พรีเซ็ตสำเร็จรูป — ก๊อบไปแก้เป็นของตัวเองได้ (ปุ่ม "ทำสำเนา")
 export const PRESETS = [
-  wf('manuscript', T`ต้นฉบับ (Markdown)`, 'md',
+  wf('manuscript', t('ui.compile.sourceMarkdown'), 'md',
      ['skip-memo', 'chapter-heading', 'scene-separator']),
-  wf('reader', T`ร่างสำหรับคนอ่าน`, 'md',
+  wf('reader', t('ui.compile.draftPersonRead'), 'md',
      ['cover', 'skip-memo', 'strip-comments', 'chapter-heading', 'scene-separator']),
-  wf('editor', T`ร่างสำหรับบรรณาธิการ`, 'md',
+  wf('editor', t('ui.compile.draftEditor'), 'md',
      ['cover', 'skip-memo', 'number-scenes', 'chapter-heading', 'scene-heading',
       'scene-meta', 'stats']),
-  wf('synopsis', T`เรื่องย่อ`, 'md',
+  wf('synopsis', t('ui.common.synopsis'), 'md',
      ['skip-memo', 'synopsis-only', 'chapter-heading', ['scene-heading', { template: '**{title}**' }]]),
-  wf('plain', T`ข้อความล้วน (.txt)`, 'txt',
+  wf('plain', t('ui.compile.textTxt'), 'txt',
      ['skip-memo', 'strip-comments', 'strip-mentions', 'strip-markdown',
       ['chapter-heading', { template: '{title}' }], 'scene-separator']),
-  wf('html', T`เว็บ (HTML)`, 'html',
+  wf('html', t('ui.compile.webHTML'), 'html',
      ['cover', 'skip-memo', 'chapter-heading', 'scene-separator', 'to-html']),
-  wf('print', T`พร้อมพิมพ์ (HTML ขึ้นหน้าใหม่ทุกบท)`, 'html',
+  wf('print', t('ui.compile.readyPrintHTMLPageBreak'), 'html',
      ['cover', 'skip-memo', 'chapter-heading', 'page-break', 'scene-separator', 'to-html']),
   // [alpha.58r บั๊ก 13] พรีเซ็ตของ "บทภาพยนตร์" — เดิมไม่มีพรีเซ็ตไหนเปิด sp-continued เลย
   // ผู้ใช้จึงต้องไปเปิดเองทุกครั้ง (และส่วนใหญ่ไม่รู้ว่ามีฟีเจอร์นี้)
   // [alpha.59 · 88] ตัด ((โน้ต)) ออกด้วย — โน้ตของนักเขียนไม่ควรติดไปกับบทที่ส่งให้คนอื่นอ่าน
-  wf('screenplay', T`🎬 บทภาพยนตร์ (CONTINUED · MORE)`, 'txt',
+  wf('screenplay', t('ui.compile.screenplayCONTINUEDMORE'), 'txt',
      ['skip-memo', 'strip-comments', ['omit-elements', { types: 'note' }], 'sp-continued']),
   // [alpha.59 · 69] ปลายทางเป็น PDF ที่ตัวสร้างในโปรแกรมเขียนให้ (สารบัญ + หน้าปก + หัวกระดาษ)
   // ไม่เปิด sp-continued เพราะตัวสร้าง PDF จัดหน้าเองแล้วใส่ CONTINUED ให้ตอนวาด
-  wf('screenplay-pdf', T`🎬 บทภาพยนตร์ → PDF (สารบัญ · หน้าปก)`, 'pdf',
+  wf('screenplay-pdf', t('ui.compile.screenplayPDFTocCover'), 'pdf',
      ['skip-memo', 'strip-comments', ['omit-elements', { types: 'note' }]]),
 ];
 
 export function newWorkflow(name) {
-  return { id: 'wf-' + Date.now().toString(36), name: name || T`เวิร์กโฟลว์ใหม่`, ext: 'md',
+  return { id: 'wf-' + Date.now().toString(36), name: name || t('ui.compile.workFlowNew'), ext: 'md',
            builtIn: false, steps: STEP_DEFS.map((d) => mkStep(d.key, false)) };
 }
 
@@ -183,7 +183,7 @@ export function newWorkflow(name) {
 export function cloneWorkflow(src, name) {
   const have = new Set((src.steps || []).map((s) => s.key));
   return {
-    id: 'wf-' + Date.now().toString(36), name: name || (src.name + T` (สำเนา)`),
+    id: 'wf-' + Date.now().toString(36), name: name || (src.name + t('ui.common.msg')),
     ext: src.ext || 'md', builtIn: false,
     steps: [...(src.steps || []).map((s) => ({ key: s.key, on: s.on !== false, opts: { ...s.opts } })),
             ...STEP_DEFS.filter((d) => !have.has(d.key)).map((d) => mkStep(d.key, false))],
@@ -348,7 +348,7 @@ export function runWorkflow(model0, workflow,
     out.push('# ' + model.title, '');
     const au = String(opt('cover', 'author', '') || model.author || '').trim();
     if (au) out.push(au, '');
-    out.push(T`${st0.words.toLocaleString()} คำ · ${st0.chapters} บท · ${st0.scenes} ฉาก`, '');
+    out.push(tf('ui.compile.wordChapterScene', st0.words.toLocaleString(), st0.chapters, st0.scenes), '');
     if (has('page-break')) out.push(PAGE_BREAK, '');
   } else {
     out.push('# ' + model.title, '');
@@ -372,16 +372,16 @@ export function runWorkflow(model0, workflow,
       if (has('scene-heading'))
         out.push(fill(opt('scene-heading', 'template', '### {title}'), sn, s.title || '', varCtx), '');
       if (has('scene-meta'))
-        out.push(T`_[${s.status || T`ไม่ระบุสถานะ`} · ${(s.words || 0).toLocaleString()} คำ]_`, '');
+        out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), (s.words || 0).toLocaleString()), '');
       const b = String(s.body || '').trim();
       if (b) out.push(b, '');
     }
   }
   if (has('stats')) {
-    out.push('---', '', T`## สรุปสถิติ`, '',
-             T`- บท: ${st0.chapters}`, T`- ฉาก: ${st0.scenes}`,
-             T`- คำทั้งหมด: ${st0.words.toLocaleString()}`,
-             T`- เวลาอ่านโดยประมาณ: ${Math.max(1, Math.round(st0.words / 250))} นาที`, '');
+    out.push('---', '', t('ui.compile.summaryStats'), '',
+             tf('ui.compile.chapter', st0.chapters), tf('ui.compile.scene', st0.scenes),
+             tf('ui.compile.wordAll', st0.words.toLocaleString()),
+             tf('ui.compile.timeReadMin', Math.max(1, Math.round(st0.words / 250))), '');
   }
   let text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 
@@ -390,21 +390,21 @@ export function runWorkflow(model0, workflow,
   for (const st of at('text')) {
     if (st.key === 'sp-continued') {
       try { text = insertContinueds(text, spFormat); }
-      catch (e) { warn.push(T`แทรกข้อความต่อเนื่องไม่สำเร็จ: ` + e.message); }
+      catch (e) { warn.push(t('ui.compile.insertTextContNot') + e.message); }
       continue;
     }
     if (st.key === 'to-html') {
       text = mdToHtml(text, model.title, proseFormat, paper, margins); ext = 'html'; continue;
     }
     if (st.key === 'js') {
-      if (!allowJs) { warn.push(T`ข้ามขั้นตอน JavaScript (ปิดไว้)`); continue; }
+      if (!allowJs) { warn.push(t('ui.compile.skipStepJavaScriptClose')); continue; }
       try {
         // eslint-disable-next-line no-new-func
         const fn = new Function('text', 'model', String((st.opts || {}).code || 'return text;'));
         const r = fn(text, model);
         if (typeof r === 'string') text = r;
-        else warn.push(T`ขั้นตอน JavaScript ไม่ได้คืนค่าข้อความ — ข้ามไป`);
-      } catch (e) { warn.push(T`ขั้นตอน JavaScript ผิดพลาด: ` + e.message); }
+        else warn.push(t('ui.compile.stepJavaScriptCantRestore'));
+      } catch (e) { warn.push(t('ui.compile.stepJavaScriptError') + e.message); }
     }
   }
   if (ext !== 'html') text = text.split(PAGE_BREAK).join('\f');

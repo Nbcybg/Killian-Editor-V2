@@ -7,24 +7,24 @@
 //
 // ไฟล์นี้ไม่แตะ DOM/fs/network — เป็นแค่โครงข้อมูล + การคำนวณสถิติ → unit test ได้ตรง ๆ
 
-import { T } from '../i18n.js';
+import { t as tt, t } from '../i18n.js';
 export const SESSION_DIR = 'Sessions';
 export const SESSION_VERSION = 1;
 
 // โหมดการทำงานของผู้ช่วย (ผู้ใช้สลับได้ที่กล่องพิมพ์)
 // `cap` = สิทธิ์ที่ส่งให้ ai-tools.js ตัดสินว่าคำสั่งไหนเรียกได้ ('read' | 'write' | 'full')
 export const CHAT_MODES = [
-  { id: 'plan',  label: T`วางแผน (อ่านอย่างเดียว)`, icon: '📖', write: false, cap: 'read',
-    system: T`คุณเป็นผู้ช่วยนักเขียน โหมดนี้คือ "อ่านอย่างเดียว" — วิเคราะห์ เสนอแนะ วางแผนได้ ` +
-            T`อ่านโปรเจกต์ได้ด้วยคำสั่งอ่าน แต่ห้ามแก้ไขหรือสร้างไฟล์ ` +
-            T`ถ้าผู้ใช้ขอให้แก้ ให้เสนอเป็นข้อความว่าจะแก้อย่างไรแทน` },
-  { id: 'write', label: T`ช่วยเขียน (สร้าง/แก้ได้)`, icon: '✍️', write: true, cap: 'write',
-    system: T`คุณเป็นผู้ช่วยนักเขียน โหมดนี้สร้างและแก้ไฟล์ในโปรเจกต์ได้จริงผ่านคำสั่งด้านล่าง ` +
-            T`แต่ลบของไม่ได้ เขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม และบอกทุกครั้งว่าจะแตะไฟล์ไหน` },
-  { id: 'agent', label: T`ปลดล็อกเต็มที่ (ทำได้ทุกอย่าง)`, icon: '🔓', write: true, cap: 'full',
-    system: T`คุณเป็นผู้ช่วยนักเขียนที่ลงมือทำเองได้เต็มที่ — สร้าง แก้ ลบ อะไรก็ได้ในโปรเจกต์นี้ ` +
-            T`ผ่านคำสั่งด้านล่าง ทำงานให้จบเป็นเรื่อง ๆ ไม่ต้องถามกลับทุกขั้น ` +
-            T`แต่ก่อนลบของ ให้บอกเหตุผลสั้น ๆ เสมอ และเขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม` },
+  { id: 'plan',  label: tt('ui.aiSession.plannerRead'), icon: '📖', write: false, cap: 'read',
+    system: tt('ui.aiSession.youAssistantWriterMode') +
+            tt('ui.aiSession.readProjectCmdRead') +
+            tt('ui.aiSession.userEditTextEdit') },
+  { id: 'write', label: tt('ui.aiSession.helpWriteNewEdit'), icon: '✍️', write: true, cap: 'write',
+    system: tt('ui.aiSession.youAssistantWriterMode2') +
+            tt('ui.aiSession.delCantWriteNext') },
+  { id: 'agent', label: tt('ui.aiSession.unlockFullDoAll'), icon: '🔓', write: true, cap: 'full',
+    system: tt('ui.aiSession.youAssistantWriterAct') +
+            tt('ui.aiSession.cmdBottomRunEnd') +
+            tt('ui.aiSession.beforeDelResultShort') },
 ];
 export const DEFAULT_MODE = 'plan';
 export function modeDef(id) { return CHAT_MODES.find((m) => m.id === id) || CHAT_MODES[0]; }
@@ -33,33 +33,33 @@ export function modeCap(id) { return modeDef(id).cap || 'read'; }
 
 // มุมมอง transcript — เปลี่ยนได้ที่หัวเซสชัน มีผลกับการแสดงผลเท่านั้น (ไม่กระทบข้อมูล)
 export const TRANSCRIPT_VIEWS = [
-  { id: 'normal',   label: T`ปกติ`,       icon: '💬',
-    hint: T`เฉพาะบทสนทนา — ซ่อนบล็อกคำสั่งและเบื้องหลังทั้งหมด` },
-  { id: 'thinking', label: T`ความคิด`,     icon: '🧠',
-    hint: T`บทสนทนา + ความคิดของโมเดล (ถ้าเจ้านั้นส่งกลับมา) + คำสั่งที่สั่งทำ` },
-  { id: 'verbose',  label: T`ละเอียด`,     icon: '🔍',
-    hint: T`ทุกอย่าง — system prompt, บริบทที่ส่งไป, คำสั่งดิบ, ผลลัพธ์, token, เวลา` },
-  { id: 'summary',  label: T`สรุป`,        icon: '📋',
-    hint: T`ย่อเหลือบรรทัดเดียวต่อข้อความ — ไล่ดูบทสนทนายาว ๆ ได้เร็ว` },
+  { id: 'normal',   label: tt('ui.aiSession.normal'),       icon: '💬',
+    hint: tt('ui.aiSession.onlyDialogueHideBlock') },
+  { id: 'thinking', label: tt('ui.aiSession.idea'),     icon: '🧠',
+    hint: tt('ui.aiSession.dialogueIdeaModelSend') },
+  { id: 'verbose',  label: tt('ui.common.detailed'),     icon: '🔍',
+    hint: tt('ui.aiSession.allSystemPromptContext') },
+  { id: 'summary',  label: tt('ui.common.summary'),        icon: '📋',
+    hint: tt('ui.aiSession.collapseLineNextText') },
 ];
 export const DEFAULT_VIEW = 'normal';
 export function viewDef(id) { return TRANSCRIPT_VIEWS.find((v) => v.id === id) || TRANSCRIPT_VIEWS[0]; }
 
 // ระดับการเข้าถึงข้อมูลของโปรเจกต์ที่ยอมให้ AI เห็น
 export const SCOPES = [
-  { id: 'project', label: T`ทั้งโปรเจกต์` },
-  { id: 'book',    label: T`เฉพาะเล่มนี้` },
-  { id: 'chapter', label: T`เฉพาะบทนี้` },
-  { id: 'scene',   label: T`เฉพาะฉากนี้` },
-  { id: 'none',    label: T`ไม่ให้เข้าถึงเลย` },
+  { id: 'project', label: tt('ui.aiSession.project') },
+  { id: 'book',    label: tt('ui.aiSession.onlyBook') },
+  { id: 'chapter', label: tt('ui.aiSession.onlyChapter') },
+  { id: 'scene',   label: tt('ui.aiSession.onlyScene') },
+  { id: 'none',    label: tt('ui.aiSession.notInTo') },
 ];
 export const DEFAULT_SCOPE = 'scene';
 export function scopeLabel(id) { return (SCOPES.find((s) => s.id === id) || SCOPES[0]).label; }
 
 // ปุ่มส่งข้อความ — ผู้ใช้เลือกได้ในตั้งค่า (บางคนพิมพ์หลายบรรทัดเป็นหลัก)
 export const SEND_KEYS = [
-  { id: 'enter',       label: T`Enter = ส่ง · Shift+Enter = ขึ้นบรรทัด` },
-  { id: 'shift-enter', label: T`Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด` },
+  { id: 'enter',       label: tt('ui.aiSession.enterSendShiftEnter') },
+  { id: 'shift-enter', label: tt('ui.aiSession.shiftEnterSendEnter') },
 ];
 export const DEFAULT_SEND_KEY = 'enter';
 /** อีเวนต์นี้คือ "สั่งส่ง" ไหม ตามการตั้งค่าปุ่มส่ง */
@@ -81,7 +81,7 @@ export function newSession(patch = {}) {
   return {
     v: SESSION_VERSION,
     id: patch.id || newSessionId(),
-    title: patch.title || T`เซสชันใหม่`,
+    title: patch.title || tt('ui.aiSession.sessionNew'),
     // [alpha.63r4] ต้องขนกลับมาด้วย — ของเดิมตกฟิลด์นี้ ทำให้ชื่อที่ผู้ใช้ตั้งเอง
     // ถูกชื่ออัตโนมัติทับทันทีที่ปิดแล้วเปิดโปรแกรมใหม่
     titleSet: !!patch.titleSet,
@@ -146,7 +146,7 @@ function isAutoTitle(s) {
 /** ตัดข้อความแรกให้สั้นพอเป็นชื่อ (ไม่ตัดกลางคำอังกฤษ · ไทยตัดตรง ๆ ได้) */
 export function titleFromText(text, max = 40) {
   const t = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!t) return T`เซสชันใหม่`;
+  if (!t) return tt('ui.aiSession.sessionNew');
   if (t.length <= max) return t;
   const cut = t.slice(0, max);
   const sp = cut.lastIndexOf(' ');
@@ -173,7 +173,7 @@ export function archiveSession(session, on = true) {
  */
 export function clearMessages(session) {
   const s = { ...session, messages: [], contextLimit: 0, updated: new Date().toISOString() };
-  if (!session.titleSet) s.title = T`เซสชันใหม่`;
+  if (!session.titleSet) s.title = tt('ui.aiSession.sessionNew');
   return s;
 }
 
@@ -277,10 +277,10 @@ export function rawJson(session) { return JSON.stringify(session, null, 2); }
 
 /** ข้อความที่เอาไปแชร์ (คัดลอกเป็น Markdown อ่านง่าย) */
 export function shareMarkdown(session) {
-  const lines = ['# ' + (session.title || T`เซสชัน AI`), ''];
+  const lines = ['# ' + (session.title || tt('ui.aiSession.sessionAI')), ''];
   for (const m of session.messages || []) {
-    if (m.role === 'user') lines.push(T`**คุณ:** ` + m.text, '');
-    else if (m.role === 'assistant') lines.push(T`**ผู้ช่วย:** ` + m.text, '');
+    if (m.role === 'user') lines.push(tt('ui.aiSession.you') + m.text, '');
+    else if (m.role === 'assistant') lines.push(tt('ui.aiSession.assistant') + m.text, '');
   }
   return lines.join('\n').trim() + '\n';
 }

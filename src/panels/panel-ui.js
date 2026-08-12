@@ -7,7 +7,7 @@
 //
 // เนื้อแผงคือ element เดิมใน index.html (#tree-panel, #content, …) — "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่
 // เพราะโค้ดทั้งโปรเจกต์อ้าง id เหล่านี้ ($('#panes'), $('#tabs'), $('#props-body'), …)
-import { T } from '../i18n.js';
+import { tf } from '../i18n.js';
 import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
          keepScroll, restoreScrollSnap, elByPath } from '../core.js';
 import { popupMenu, ask, confirmBox } from '../ui.js';
@@ -32,72 +32,72 @@ export const panelId = (id) => ALIAS[id] || id;
 // [alpha.60r3 ข้อ 8] `desc` = คำอธิบายภาษาไทยของแผง — โผล่ในเมนูคลิกขวาบนหัวแผง ("❔ นี่คืออะไร")
 // เขียนให้ตอบคำถามเดียว: "แผงนี้ใช้ทำอะไร และเปิดไว้ตอนไหน"
 export const PANEL_DEFS = [
-  { id: 'toolbar',   title: T`แถบเครื่องมือ`, icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false,
-    desc: T`ปุ่มจัดรูปแบบและสวิตช์โหมดทั้งหมด — ตัวหนา/เอียง · จัดหน้า · โหมดอ่าน/โฟกัส · เปิด-ปิดแผงอื่น` },
-  { id: 'tree',      title: T`โปรเจกต์`,      icon: 'book-content', adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project',
-    desc: T`สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ` },
+  { id: 'toolbar',   title: t('ui.panel.barTool'), icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false,
+    desc: t('ui.panel.btnArrangeFormatMode') },
+  { id: 'tree',      title: t('ui.common.project'),      icon: 'book-content', adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project',
+    desc: t('ui.panel.tocResultTaskBook') },
   { id: 'outline',   title: 'Navigation',    icon: 'list-ul',      adopt: '#outline-panel', defaultSide: 'left',  i18n: 'panel.navigation',
-    desc: T`เค้าโครงหัวข้อของ "ไฟล์ที่เปิดอยู่" — คลิกหัวข้อเพื่อกระโดดไปตำแหน่งนั้นในเอกสาร` },
+    desc: t('ui.panel.outlineHeadingFileOpen') },
   // แผงเอกสารไม่มีหัวแผง (พื้นที่ทำงานหลัก — แถบแท็บเอกสาร #tabs ทำหน้าที่นั้นอยู่แล้ว)
-  { id: 'docs',      title: T`เอกสาร`,         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false,
-    desc: T`พื้นที่เขียนหลัก — แท็บทุกใบที่เปิดอยู่ ทั้งฉาก บทภาพยนตร์ และหน้า Wiki (ปิดไม่ได้)` },
-  { id: 'props',     title: T`คุณสมบัติ`,      icon: 'clipboard',    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties',
-    desc: T`คุณสมบัติของฉากที่เลือก — เรื่องย่อ · มุมมอง · อารมณ์ · ความขัดแย้ง · สถานะ · สี · แท็ก · บันทึกอัตโนมัติขณะพิมพ์` },
-  { id: 'statusbar', title: T`แถบสถานะ`,      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false,
-    desc: T`ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ` },
-  { id: 'log', dockW: 420,       title: T`บันทึก`,         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
-    desc: T`บันทึกการทำงานของโปรแกรม — ใช้ตอนหาสาเหตุเมื่อมีอะไรไม่เป็นอย่างที่คาด` },
-  { id: 'search', dockW: 360,    title: T`ค้นหา`,          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.searchTitle',
-    desc: T`ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น` },
-  { id: 'notes',     title: T`สมุดโน้ตด่วน`,    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.notesTitle',
-    desc: T`ที่จดความคิดชั่วคราวโดยไม่ปนต้นฉบับ — โน้ตผูกกับฉากที่เปิดอยู่ตอนจด` },
-  { id: 'comments',  title: T`คอมเมนต์`,        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
-    desc: T`คอมเมนต์ของฉากที่เปิดอยู่ — ตอบกลับเป็นเธรด ปิดงานได้ · เก็บท้ายไฟล์ .md จึงติดไปกับไฟล์เสมอ` },
+  { id: 'docs',      title: t('ui.panel.doc'),         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false,
+    desc: t('ui.panel.areaWriteMainTab') },
+  { id: 'props',     title: t('ui.common.props'),      icon: 'clipboard',    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties',
+    desc: t('ui.panel.propsScenePickSynopsis') },
+  { id: 'statusbar', title: t('ui.panel.barStatus'),      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false,
+    desc: t('ui.panel.dataCollapseTaskOpen') },
+  { id: 'log', dockW: 420,       title: t('ui.common.save'),         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
+    desc: t('ui.panel.saveRunAppUse') },
+  { id: 'search', dockW: 360,    title: t('ui.panel.search'),          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.searchTitle',
+    desc: t('ui.panel.searchTextProjectAll') },
+  { id: 'notes',     title: t('ui.common.notebookNoteQuick'),    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.notesTitle',
+    desc: t('ui.panel.noteIdeaNotSource') },
+  { id: 'comments',  title: t('ui.common.comment'),        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
+    desc: t('ui.panel.commentSceneOpenReply') },
   // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
-  { id: 'dashboard', minW: 620, dockW: 640, title: T`แดชบอร์ด`,        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
-    desc: T`ภาพรวมความคืบหน้า — จำนวนคำเทียบเป้าหมาย · สัดส่วนฉากตามสถานะ · ความยาวของแต่ละบท` },
+  { id: 'dashboard', minW: 620, dockW: 640, title: t('ui.common.dashboard'),        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
+    desc: t('ui.panel.overviewPageCountWord') },
   { id: 'kanban', minW: 800, dockW: 640,    title: 'Kanban',          icon: 'grid',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle',
-    desc: T`กระดานฉากเรียงตามสถานะ — ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะฉากนั้นทันที` },
-  { id: 'books', minW: 400, dockW: 640,     title: T`จัดการเล่ม`,       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
-    desc: T`จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม` },
-  { id: 'timeline', minW: 620, dockW: 640,  title: T`เส้นเวลา`,         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
-    desc: T`ลำดับเหตุการณ์ตาม "เวลาในเรื่อง" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง` },
-  { id: 'maps', dockW: 640,      title: T`แผนที่`,           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
-    desc: T`แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้` },
+    desc: t('ui.panel.boardSceneStatusDrag') },
+  { id: 'books', minW: 400, dockW: 640,     title: t('ui.common.manageBook'),       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
+    desc: t('ui.panel.manageBookDraftCover') },
+  { id: 'timeline', minW: 620, dockW: 640,  title: t('ui.common.lineTime'),         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
+    desc: t('ui.panel.orderEventTimeStory') },
+  { id: 'maps', dockW: 640,      title: t('ui.common.map'),           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
+    desc: t('ui.panel.mapWorldStoryPin') },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
-  { id: 'gallery', minW: 600, dockW: 640,   title: T`คลังรูปภาพ`,       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
-    desc: T`รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki` },
+  { id: 'gallery', minW: 600, dockW: 640,   title: t('ui.common.libraryImage'),       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
+    desc: t('ui.panel.imageAllFolderImages') },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
-  { id: 'gallery-board', minW: 400, dockW: 640, title: T`🎨 กระดานอารมณ์`, icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
-    desc: T`ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์` },
+  { id: 'gallery-board', minW: 400, dockW: 640, title: t('ui.common.boardMood'), icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
+    desc: t('ui.panel.itemPasteImageRef') },
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-  { id: 'ai-analyzer', minW: 400, dockW: 640, title: T`🧠 AI วิเคราะห์`,  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
-    desc: T`ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)` },
+  { id: 'ai-analyzer', minW: 400, dockW: 640, title: t('ui.common.aIAnalyze'),  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
+    desc: t('ui.panel.setToolAnalyzeSource') },
   // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-  { id: 'ai-chat', dockW: 640,   title: T`💬 AI ผู้ช่วยเขียน`,       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
-    desc: T`คุยกับ AI เรื่องงานเขียนของคุณ — แยกเป็นเซสชันเหมือน opencode · เลือกโหมด (วางแผน/ช่วยเขียน) · เลือกโมเดล · กำหนดได้ว่าจะให้เห็นข้อมูลระดับไหน (ทั้งโปรเจกต์/เล่ม/บท/ฉาก)` },
+  { id: 'ai-chat', dockW: 640,   title: t('ui.common.aIAssistantWrite'),       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
+    desc: t('ui.panel.liftAIStoryTask') },
   // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
   { id: 'network', minW: 400, dockW: 640,   title: 'Story Network',   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.networkTitle',
-    desc: T`ผังความสัมพันธ์ของตัวละคร/สถานที่/สิ่งของ — ลากโหนดจัดวางเอง · สีเส้นบอกประเภทความสัมพันธ์ · ดับเบิลคลิกเปิดหน้า Wiki นั้น` },
+    desc: t('ui.panel.graphRelationCharacterPlace') },
   { id: 'planner', minW: 800, dockW: 640,   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
-    desc: T`กระดานวางแผนแบบการ์ดอิสระ — วางโน้ต รูป และลิงก์ไปฉากได้ทุกที่บนผืนผ้าใบ · ใช้ปะติดปะต่อโครงเรื่องก่อนลงมือเขียน` },
-  { id: 'planner-props', title: T`คุณสมบัติ Planner`, icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
+    desc: t('ui.panel.boardPlannerStyleCard') },
+  { id: 'planner-props', title: t('ui.panel.propsPlanner'), icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
     closable: true, floatable: true, i18n: 'panel.plannerPropsTitle',
-    desc: T`คุณสมบัติของการ์ดหรือเส้นเชื่อมที่เลือกบนกระดาน Planner — ชื่อ · สรุป · สี · สถานะ · แท็ก · ขนาด · สไตล์เส้น` },
-  { id: 'floorplan', dockW: 640, title: T`📍 ผังพื้นที่`,      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
-    desc: T`ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่` },
+    desc: t('ui.panel.propsCardLineLink') },
+  { id: 'floorplan', dockW: 640, title: t('ui.common.graphArea'),      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
+    desc: t('ui.panel.sceneOccurMapPin') },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
-  { id: 'branch', minW: 700, dockW: 640,    title: T`🌿 ผังแตกสาย`,      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
-    desc: T`ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้` },
-  { id: 'player', dockW: 440,    title: T`▶️ ทดลองเล่น`,       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
-    desc: T`อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง` },
+  { id: 'branch', minW: 700, dockW: 640,    title: t('ui.common.graphBreakBranch2'),      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
+    desc: t('ui.panel.graphStoryStyleBreak') },
+  { id: 'player', dockW: 440,    title: t('ui.common.trialPlay'),       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
+    desc: t('ui.panel.readStoryStylePlay') },
   // ── [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน ──
-  { id: 'codex', dockW: 680,     title: T`📚 สารานุกรม`,      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
-    desc: T`เอนทิตี้ Wiki ทั้งเล่มในมุมมองสารานุกรม — เรียกดูตามหมวด ค้นด้วยชื่อ/ชื่อเล่น · ส่งออกเป็นเว็บแบบ Fandom/Wikia ที่เปิดออฟไลน์ได้ทั้งชุด` },
-  { id: 'history', dockW: 420,   title: T`🕘 ประวัติการทำงาน`, icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
-    desc: T`ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)` },
-  { id: 'record', dockW: 460,    title: T`🗒 บันทึกประจำวัน`,  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
-    desc: T`จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้` },
+  { id: 'codex', dockW: 680,     title: t('ui.panel.codex'),      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
+    desc: t('ui.panel.wikiBookViewCodex') },
+  { id: 'history', dockW: 420,   title: t('ui.common.historyRun'), icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
+    desc: t('ui.panel.doFileProjectDone') },
+  { id: 'record', dockW: 460,    title: t('ui.common.journal'),  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
+    desc: t('ui.panel.noteDoMoodCount') },
 ];
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
 //
@@ -154,15 +154,15 @@ export async function tearOffPanel(id) {
   let ok = false;
   try {
     ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', ...box });
-  } catch (e) { log('warn', T`[แผง] ฉีกออกเป็นหน้าต่างไม่สำเร็จ: ` + pid, e); }
+  } catch (e) { log('warn', t('ui.panel.panelOutWindowNot') + pid, e); }
   if (!ok) { tornOff.delete(pid); showPanel(pid); return false; }
-  setStatus(t('panel.tornOff', 'ย้าย "') + (d ? titleOf(d) : pid) + t('panel.tornOff2', '" ไปหน้าต่างแยกแล้ว — ปิดหน้าต่างนั้นเพื่อเอากลับมา'));
+  setStatus(t('ui.panel.tornOff') + (d ? titleOf(d) : pid) + t('ui.panel.tornOff2'));
   return true;
 }
 /** ยกหน้าต่างแผงที่เปิดอยู่แล้วขึ้นมาหน้าสุด (tearOff ตัวเดิมทำหน้าที่นี้ให้เมื่อ id ซ้ำ) */
 function focusTearOff(pid) {
   try { window.kapi.tearOff({ id: pid }); } catch {}
-  setStatus(t('panel.tornOffFocus', 'แผงนี้อยู่ในหน้าต่างแยก — ยกหน้าต่างนั้นขึ้นมาให้แล้ว'));
+  setStatus(t('ui.panel.tornOffFocus'));
   return true;
 }
 /** เรียกแผงกลับจากหน้าต่างแยก (สั่งปิดหน้าต่างลูก — ตัวจริงกลับมาตอนได้สัญญาณ tearoff-closed) */
@@ -288,12 +288,12 @@ export function registerPanels() {
 // เลย์เอาต์ตั้งต้น (Photoshop): เครื่องมือบน · ซ้าย = โปรเจกต์+Navigation เป็นแท็บ · กลาง = เอกสาร · ล่าง = สถานะ
 export function defaultLayout() {
   return PL.dock('col', [
-    PL.panel('toolbar', T`แถบเครื่องมือ`),
+    PL.panel('toolbar', t('ui.panel.barTool')),
     PL.dock('row', [
-      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('outline', 'Navigation')], 0),
-      PL.panel('docs', T`เอกสาร`),
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', 'Navigation')], 0),
+      PL.panel('docs', t('ui.panel.doc')),
     ], [0.24, 0.76]),
-    PL.panel('statusbar', T`แถบสถานะ`),
+    PL.panel('statusbar', t('ui.panel.barStatus')),
   ], [0, 1, 0]);
 }
 
@@ -304,24 +304,24 @@ export function defaultLayout() {
 const wsRow = (left, center, right, sizes) =>
   PL.dock('row', right ? [left, center, right] : [left, center], sizes);
 const wsFrame = (mid) => PL.dock('col', [
-  PL.panel('toolbar', T`แถบเครื่องมือ`), mid, PL.panel('statusbar', T`แถบสถานะ`),
+  PL.panel('toolbar', t('ui.panel.barTool')), mid, PL.panel('statusbar', t('ui.panel.barStatus')),
 ], [0, 1, 0]);
 
 export const BUILTIN_WORKSPACES = [
-  { id: 'essentials', label: T`Essentials (ค่าเริ่มต้น)`,
+  { id: 'essentials', label: t('ui.panel.essentialsDefault'),
     build: () => defaultLayout() },
-  { id: 'writing', label: T`เขียน — จอโล่ง มีแค่สารบัญ`,
-    build: () => wsFrame(wsRow(PL.panel('tree', T`โปรเจกต์`), PL.panel('docs', T`เอกสาร`), null, [0.18, 0.82])) },
-  { id: 'planning', label: T`วางแผน — โครงเรื่อง + คุณสมบัติฉาก`,
+  { id: 'writing', label: t('ui.panel.writeScreenHasToc'),
+    build: () => wsFrame(wsRow(PL.panel('tree', t('ui.common.project')), PL.panel('docs', t('ui.panel.doc')), null, [0.18, 0.82])) },
+  { id: 'planning', label: t('ui.panel.plannerOutlineStoryProps'),
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('kanban', 'Kanban'), PL.panel('timeline', T`เส้นเวลา`)], 0),
-      PL.panel('docs', T`เอกสาร`),
-      PL.panel('props', T`คุณสมบัติ`), [0.26, 0.52, 0.22])) },
-  { id: 'review', label: T`ตรวจแก้ — คอมเมนต์ + โน้ต`,
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('kanban', 'Kanban'), PL.panel('timeline', t('ui.common.lineTime'))], 0),
+      PL.panel('docs', t('ui.panel.doc')),
+      PL.panel('props', t('ui.common.props')), [0.26, 0.52, 0.22])) },
+  { id: 'review', label: t('ui.panel.checkEditCommentNote'),
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('outline', 'Navigation')], 1),
-      PL.panel('docs', T`เอกสาร`),
-      PL.tabs([PL.panel('comments', T`คอมเมนต์`), PL.panel('notes', T`สมุดโน้ตด่วน`)], 0), [0.20, 0.56, 0.24])) },
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', 'Navigation')], 1),
+      PL.panel('docs', t('ui.panel.doc')),
+      PL.tabs([PL.panel('comments', t('ui.common.comment')), PL.panel('notes', t('ui.common.notebookNoteQuick'))], 0), [0.20, 0.56, 0.24])) },
 ];
 export function isBuiltinWorkspace(name) { return BUILTIN_WORKSPACES.some((w) => w.id === name || w.label === name); }
 
@@ -359,7 +359,7 @@ export function applyWorkspace(name) {
   renderPanels(true);
   // แผงฟีเจอร์ที่โผล่มาพร้อมเวิร์กสเปซต้องถูกวาดเนื้อด้วย (ไม่ได้ผ่าน showPanel จึงไม่มีใครเรียก hook)
   if (onShowHook) for (const id of m.openIds()) { try { onShowHook(id); } catch {} }
-  setStatus(t('panel.wsApplied', 'สลับเวิร์กสเปซ: ') + (b ? b.label : name));
+  setStatus(t('ui.panel.wsApplied') + (b ? b.label : name));
   return true;
 }
 
@@ -392,16 +392,16 @@ export function toggleSpace(mode = 'all') {
     for (const id of ids) { try { showPanel(id); } catch {} }
     renderPanels(true);
     if (onShowHook) for (const id of ids) { try { onShowHook(id); } catch {} }
-    setStatus(t('panel.spaceRestored', 'คืนแผงที่ซ่อนไว้แล้ว'));
+    setStatus(t('ui.panel.spaceRestored'));
     if (was.mode === mode) return false;                    // กดปุ่มเดิมซ้ำ = แค่คืนสภาพ
   }
   const ids = visibleClosable(mode === 'all' ? null : mode);
-  if (!ids.length) { setStatus(t('panel.spaceNone', 'ไม่มีแผงให้ซ่อนแล้ว')); return false; }
+  if (!ids.length) { setStatus(t('ui.panel.spaceNone')); return false; }
   for (const id of ids) { try { hidePanel(id, true); } catch {} }     // force: ข้ามกล่องยืนยันของแผง
   _stash = { ids, mode };
   renderPanels(true);
-  setStatus(mode === 'all' ? t('panel.spaceAll', 'ซ่อนแผงทั้งหมด — เหลือแต่พื้นที่เขียน (กดซ้ำเพื่อเรียกกลับ)')
-                           : t('panel.spaceSide', 'ซ่อนแผงฝั่ง') + (mode === 'right' ? T`ขวา` : T`ซ้าย`));
+  setStatus(mode === 'all' ? t('ui.panel.spaceAll')
+                           : t('ui.panel.spaceSide') + (mode === 'right' ? t('ui.common.right') : t('ui.common.left')));
   return true;
 }
 
@@ -421,9 +421,9 @@ function renderOpts() {
     onTearOff: (id) => tearOffPanel(id),
     // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
     extraHeadMenu: (id) => [
-      { label: T`⬒ ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)`, click: () => toggleSpace('all') },
-      { label: T`⬓ ซ่อนแผงฝั่งนี้`, click: () => toggleSpace(sideOf({ id, defaultSide: 'left' })) },
-      { label: T`🗂 เวิร์กสเปซ…`, click: () => workspaceMenu() },
+      { label: t('ui.panel.hidePanelAllArea'), click: () => toggleSpace('all') },
+      { label: t('ui.panel.hidePanelSide'), click: () => toggleSpace(sideOf({ id, defaultSide: 'left' })) },
+      { label: t('ui.panel.work'), click: () => workspaceMenu() },
     ],
     renderPanelBody: (id, body) => {
       const node = adopted.get(id);
@@ -579,7 +579,7 @@ export function auditPanelGaps(opts = {}) {
         flex: e.style.flex || `${e.style.flexGrow}/${e.style.flexShrink}/${e.style.flexBasis}`,
         size: Math.round(row ? e.getBoundingClientRect().width : e.getBoundingClientRect().height),
       }));
-      log('warn', T`[แผง] พบช่องว่างค้าง ${Math.round(gap)}px ใน dock ${dockEl.dataset.dockId} (${dockEl.dataset.dir}) — ปิดรูให้แล้ว`, detail);
+      log('warn', tf('ui.panel.panelFoundFieldEmpty', Math.round(gap), dockEl.dataset.dockId, dockEl.dataset.dir), detail);
     }
   }
   return found;
@@ -596,7 +596,7 @@ function pruneGhostPanels() {
   for (const id of ghosts) r = PL.removePanel(r, id);
   pm.store.root = r;                       // ไม่ผ่าน update() — เรากำลังจะวาดอยู่แล้ว
   pm.store.save();
-  log('warn', T`[แผง] พบแผงปลอมในเลย์เอาต์ (ไม่มีในทะเบียน) — เก็บกวาดให้แล้ว`, ghosts);
+  log('warn', t('ui.panel.panelFoundPanelNot'), ghosts);
   return true;
 }
 
@@ -695,10 +695,10 @@ function syncMinTray() {
       chip.dataset.key = d.id;
       if (away) {
         chip.dataset.away = '1';
-        chip.title = t('panel.trayRecall', 'อยู่ในหน้าต่างแยก — คลิกเพื่อเรียกกลับเข้าหน้าต่างนี้');
+        chip.title = t('ui.panel.trayRecall');
         chip.onclick = () => recallPanel(d.id);
       } else {
-        chip.title = t('panel.trayRestorePre', 'คลิกเพื่อเรียกแผง "') + titleOf(d) + t('panel.trayRestorePost', '" กลับมา');
+        chip.title = t('ui.panel.trayRestorePre') + titleOf(d) + t('ui.panel.trayRestorePost');
         // กลับไป "ที่เดิม" ที่จดไว้ — ถ้ายังไม่เคยมีที่อยู่เลยก็ลอยกลางจอ (ไม่ไปเบียดใคร)
         // [alpha.66r11] แผงที่ที่เดิมเป็น "แผงลอย/กลุ่มลอย" ต้องไม่ถูกยัด `side` — ไม่งั้น showPanel
         // ตกไปสายผนึกทันที (อาการ: แผงที่เคยลอย พอเรียกกลับจากถาด กลายเป็นผนึกข้างจอ)
@@ -727,7 +727,7 @@ export function initPanelSystem() {
   if (!m.store.root) m.store.update(defaultLayout());
   else if (!PL.hasPanel(m.store.root, 'docs')) {
     const anchor = PL.panelIds(m.store.root)[0];
-    m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', T`เอกสาร`)));
+    m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', t('ui.panel.doc'))));
   }
   m.store.onChange(() => { savePanelLayout(); renderPanels(); });
   onLanguageChanged(() => renderPanels(true));  // เปลี่ยนภาษา → ชื่อแผงเปลี่ยนตาม
@@ -1076,14 +1076,14 @@ export async function exportPanelLayout() {
     const dest = await kapi.saveAsDialog(name, 'json');
     if (!dest) return null;
     await kapi.writeFile(dest, json);
-    log('info', T`[แผง] ส่งออกการจัดวางแผงแล้ว`, { dest, warnings: report.diagnostics.warnings.length });
-    setStatus(t('panel.exported', 'ส่งออกการจัดวางแผงแล้ว: ') + dest);
+    log('info', t('ui.panel.panelExportLayoutPanel2'), { dest, warnings: report.diagnostics.warnings.length });
+    setStatus(t('ui.panel.exported') + dest);
     return dest;
   } catch (e) {
     // ไม่มีกล่องบันทึกไฟล์ (เทส/เบราว์เซอร์) → อย่างน้อยให้ค่าไปทางคลิปบอร์ด
-    try { await kapi.clipboardWrite(json); setStatus(t('panel.exportClip', 'คัดลอกการจัดวางแผงไปคลิปบอร์ดแล้ว')); return 'clipboard'; } catch {}
-    log('error', T`[แผง] ส่งออกการจัดวางแผงล้มเหลว`, e);
-    setStatus(t('panel.exportFail', 'ส่งออกการจัดวางแผงไม่สำเร็จ'));
+    try { await kapi.clipboardWrite(json); setStatus(t('ui.panel.exportClip')); return 'clipboard'; } catch {}
+    log('error', t('ui.panel.panelExportLayoutPanel'), e);
+    setStatus(t('ui.panel.exportFail'));
     return null;
   }
 }
@@ -1095,7 +1095,7 @@ export function resetPanels() {
   m.store.reset();
   m.store.update(stampDefaultSizes(defaultLayout()));
   renderPanels(true);
-  setStatus(t('panel.layoutReset', 'รีเซ็ตการจัดวางแผงแล้ว'));
+  setStatus(t('ui.panel.layoutReset'));
   return true;
 }
 /** รายการแผงสำหรับเมนู "มุมมอง → แผง" */
@@ -1107,7 +1107,7 @@ export function panelMenuItems() {
     const away = tornOff.has(d.id);
     return {
       label: (away ? '🖥 ' : m.isOpen(d.id) ? '☑ ' : '☐ ') + titleOf(d)
-             + (away ? t('panel.menuAway', ' (หน้าต่างแยก)') : ''),
+             + (away ? t('ui.panel.menuAway') : ''),
       click: () => togglePanel(d.id),
     };
   });
@@ -1135,30 +1135,30 @@ export function addPanelButton(id, node) {
 // ───────── [alpha.66r3] เมนูเวิร์กสเปซ ─────────
 /** รายการเมนู "เวิร์กสเปซ" — ใช้ทั้งในเมนูมุมมอง กล่องจัดการแผง และเมนู ☰ ของทุกแผง */
 export function workspaceMenuItems() {
-  const items = [{ label: t('panel.wsPick', '🗂 เวิร์กสเปซ — สลับชุดการจัดวางแผง'), disabled: true }];
+  const items = [{ label: t('ui.panel.wsPick'), disabled: true }];
   for (const w of listWorkspaces()) {
     items.push({ label: (w.builtIn ? '◻ ' : '▣ ') + w.label, click: () => applyWorkspace(w.name) });
   }
   items.push('-');
-  items.push({ label: t('panel.wsSave', '＋ บันทึกการจัดวางตอนนี้เป็นเวิร์กสเปซ…'),
+  items.push({ label: t('ui.panel.wsSave'),
     click: async () => {
-      const name = await ask(t('panel.wsName', 'ตั้งชื่อเวิร์กสเปซ'),
-                             { placeholder: t('panel.wsNameHint', 'เช่น เขียนตอนเช้า / ตรวจงาน'), okLabel: t('common.save', 'บันทึก') });
+      const name = await ask(t('ui.panel.wsName'),
+                             { placeholder: t('ui.panel.wsNameHint'), okLabel: t('ui.common.save') });
       if (!name) return;
-      if (isBuiltinWorkspace(name)) { setStatus(t('panel.wsBuiltin', 'ชื่อนี้เป็นชุดสำเร็จรูป ตั้งซ้ำไม่ได้')); return; }
-      if (saveWorkspace(name)) setStatus(t('panel.wsSaved', 'บันทึกเวิร์กสเปซแล้ว: ') + name);
+      if (isBuiltinWorkspace(name)) { setStatus(t('ui.panel.wsBuiltin')); return; }
+      if (saveWorkspace(name)) setStatus(t('ui.panel.wsSaved') + name);
     } });
   const mine = listWorkspaces().filter((w) => !w.builtIn);
   if (mine.length) {
-    items.push({ label: t('panel.wsDelete', '🗑 ลบเวิร์กสเปซ…'),
+    items.push({ label: t('ui.panel.wsDelete'),
       click: () => {
         const r = $('#tb-panels') ? $('#tb-panels').getBoundingClientRect() : { left: 40, bottom: 60 };
         popupMenu(r.left, r.bottom + 4, mine.map((w) => ({
           label: '🗑 ' + w.label,
           click: async () => {
-            if (!(await confirmBox(t('panel.wsDelAsk', 'ลบเวิร์กสเปซ “') + w.label + '” ?'))) return;
+            if (!(await confirmBox(t('ui.panel.wsDelAsk') + w.label + '” ?'))) return;
             deleteWorkspace(w.name);
-            setStatus(t('panel.wsDeleted', 'ลบเวิร์กสเปซแล้ว: ') + w.label);
+            setStatus(t('ui.panel.wsDeleted') + w.label);
           },
         })));
       } });
@@ -1176,16 +1176,16 @@ export async function togglePanelDialog() {
   const items = panelMenuItems();
   items.push('-');
   // [alpha.66r3] จัดการพื้นที่ + เวิร์กสเปซ อยู่ในกล่องเดียวกับรายการแผง
-  items.push({ label: panelsHidden() ? t('panel.spaceShow', '⬒ คืนแผงที่ซ่อนไว้')
-                                     : t('panel.spaceHideAll', '⬒ ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)'),
+  items.push({ label: panelsHidden() ? t('ui.panel.spaceShow')
+                                     : t('ui.panel.spaceHideAll'),
                click: () => toggleSpace('all') });
-  items.push({ label: t('panel.spaceHideRight', '⬓ ซ่อนแผงฝั่งขวา'), click: () => toggleSpace('right') });
-  items.push({ label: t('panel.spaceHideLeft', '◨ ซ่อนแผงฝั่งซ้าย'), click: () => toggleSpace('left') });
+  items.push({ label: t('ui.panel.spaceHideRight'), click: () => toggleSpace('right') });
+  items.push({ label: t('ui.panel.spaceHideLeft'), click: () => toggleSpace('left') });
   items.push('-');
-  items.push({ label: t('panel.wsMenu', '🗂 เวิร์กสเปซ…'), click: () => workspaceMenu() });
+  items.push({ label: t('ui.panel.wsMenu'), click: () => workspaceMenu() });
   items.push('-');
-  items.push({ label: t('panel.exportLayout', '📤 ส่งออกการจัดวางแผงเป็นไฟล์ JSON…'), click: () => exportPanelLayout() });
-  items.push({ label: t('panel.resetAll', '⟲ รีเซ็ตการจัดวางแผงทั้งหมด'), click: () => resetPanels() });
+  items.push({ label: t('ui.panel.exportLayout'), click: () => exportPanelLayout() });
+  items.push({ label: t('ui.panel.resetAll'), click: () => resetPanels() });
   try {
     // popupMenu อยู่ที่ ui.js — app.js แค่ import มาใช้ ไม่ได้ export ต่อ
     // (เดิม `import('../app.js')` จึงได้ undefined ทุกครั้ง → ตกไป fallback ตลอดกาล)
@@ -1196,14 +1196,14 @@ export async function togglePanelDialog() {
   } catch {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', t('panel.manage', '📐 จัดการแผง')));
+    box.append(el('div', 'k-dlg-title', t('ui.panel.manage')));
     for (const it of items) {
       if (it === '-') { box.append(el('hr')); continue; }
       const row = el('div', 'k-menu-item', it.label);
       row.onclick = () => { it.click(); ov.remove(); };
       box.append(row);
     }
-    const closeBtn = el('button', 'k-cancel', T`ปิด`);
+    const closeBtn = el('button', 'k-cancel', t('ui.common.close'));
     closeBtn.onclick = () => ov.remove();
     const btns = el('div', 'k-dlg-btns'); btns.append(closeBtn);
     box.append(btns); ov.append(box); document.body.append(ov);

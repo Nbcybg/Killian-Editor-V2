@@ -1,5 +1,5 @@
 // scratchpad.js — แท็บ "📝 สมุดโน้ตด่วน" textarea ไม่บันทึกเป็นไฟล์, export/ย้ายเข้า Memo ได้
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 
 export async function openScratchpad() {
@@ -12,7 +12,7 @@ export async function openScratchpad() {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', T`📝 สมุดโน้ตด่วน`));
+  tabBtn.append(el('span', 'tab-title', t('ui.notes.notebookNoteQuick')));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   // restore from localStorage
@@ -31,9 +31,9 @@ export async function openScratchpad() {
   };
   // toolbar for scratchpad
   const bar = el('div', 'scratch-bar');
-  const exportBtn = el('button', null, T`📥 ส่งออก .md`);
-  const memoBtn = el('button', null, T`📋 ย้ายเข้า Memo`);
-  const clearBtn = el('button', 'k-danger', T`🗑 ล้าง`);
+  const exportBtn = el('button', null, t('ui.common.exportMd'));
+  const memoBtn = el('button', null, t('ui.notes.moveInMemo'));
+  const clearBtn = el('button', 'k-danger', t('ui.common.clear2'));
   const info = el('span', 'scratch-info');
   bar.append(info, exportBtn, memoBtn, clearBtn);
 
@@ -41,14 +41,14 @@ export async function openScratchpad() {
     const dest = await kapi.saveAsDialog('scratchpad.md');
     if (!dest) return;
     await kapi.writeFile(dest, ta.value);
-    setStatus(T`ส่งออกแล้ว: ` + dest);
+    setStatus(t('ui.common.exportDone') + dest);
   };
   memoBtn.onclick = async () => {
-    if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
-    if (!ta.value.trim()) { setStatus(T`ยังไม่มีข้อความให้ย้าย`); return; }
+    if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
+    if (!ta.value.trim()) { setStatus(t('ui.notes.notHasTextMove')); return; }
     const { ask } = await import('./ui.js');
     const { safeName, buildTree } = await import('./app.js');
-    const title = await ask(T`ชื่อโน้ต (Memo)`, { value: ta.value.trim().slice(0, 40).split('\n')[0] });
+    const title = await ask(t('ui.notes.nameNoteMemo'), { value: ta.value.trim().slice(0, 40).split('\n')[0] });
     if (!title) return;
     const memoDir = await kapi.join(state.root, 'Memos');
     await kapi.mkdir(memoDir);
@@ -56,26 +56,26 @@ export async function openScratchpad() {
     const { dumpMdFile } = await import('./md.js');
     await kapi.writeFile(await kapi.join(memoDir, fname),
                          dumpMdFile({ title, type: 'memo' }, ta.value));
-    setStatus(T`ย้ายเข้า Memo แล้ว: ` + title);
+    setStatus(t('ui.notes.moveInMemoDone') + title);
     await buildTree();
   };
   clearBtn.onclick = () => {
     ta.value = '';
     try { localStorage.setItem('k2-scratchpad', ''); } catch {}
-    setStatus(T`ล้างสมุดโน้ตแล้ว`);
+    setStatus(t('ui.notes.clearNotebookNoteDone'));
   };
 
   const updateInfo = () => {
     const lines = ta.value.split('\n').length;
     const chars = ta.value.length;
     const words = ta.value ? ta.value.trim().split(/\s+/).length : 0;
-    info.textContent = T`${lines} บรรทัด · ${words} คำ · ${chars} อักขระ`;
+    info.textContent = tf('ui.notes.lineWordChar', lines, words, chars);
   };
   ta.addEventListener('input', updateInfo);
   updateInfo();
 
   pane.append(bar, ta);
-  const tab = { file: key, title: T`สมุดโน้ตด่วน`, pane, tabBtn, dirty: false,
+  const tab = { file: key, title: t('ui.common.notebookNoteQuick'), pane, tabBtn, dirty: false,
                 editor: null, plain: ta, wiki: null, gal: null };
   tab.plain = ta;
   tabBtn.onclick = (e) => { if (e.target !== x) { import('./app.js').then(m => m.activate(key)); } };
@@ -110,9 +110,9 @@ export function renderNotesPanel(host) {
   };
 
   const bar = el('div', 'scratch-bar');
-  const exportBtn = el('button', null, T`📥 ส่งออก .md`);
-  const memoBtn = el('button', null, T`📋 ย้ายเข้า Memo`);
-  const clearBtn = el('button', 'k-danger', T`🗑 ล้าง`);
+  const exportBtn = el('button', null, t('ui.common.exportMd'));
+  const memoBtn = el('button', null, t('ui.notes.moveInMemo'));
+  const clearBtn = el('button', 'k-danger', t('ui.common.clear2'));
   const info = el('span', 'scratch-info');
   bar.append(info, exportBtn, memoBtn, clearBtn);
 
@@ -120,34 +120,34 @@ export function renderNotesPanel(host) {
     const dest = await kapi.saveAsDialog('scratchpad.md');
     if (!dest) return;
     await kapi.writeFile(dest, ta.value);
-    setStatus(T`ส่งออกแล้ว: ` + dest);
+    setStatus(t('ui.common.exportDone') + dest);
   };
   memoBtn.onclick = async () => {
-    if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
-    if (!ta.value.trim()) { setStatus(T`ยังไม่มีข้อความให้ย้าย`); return; }
+    if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
+    if (!ta.value.trim()) { setStatus(t('ui.notes.notHasTextMove')); return; }
     const { ask } = await import('./ui.js');
     const { safeName, buildTree } = await import('./app.js');
-    const title = await ask(T`ชื่อโน้ต (Memo)`, { value: ta.value.trim().slice(0, 40).split('\n')[0] });
+    const title = await ask(t('ui.notes.nameNoteMemo'), { value: ta.value.trim().slice(0, 40).split('\n')[0] });
     if (!title) return;
     const memoDir = await kapi.join(state.root, 'Memos');
     await kapi.mkdir(memoDir);
     const fname = safeName(title) + '-' + Date.now().toString(36) + '.md';
     const { dumpMdFile } = await import('./md.js');
     await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile({ title, type: 'memo' }, ta.value));
-    setStatus(T`ย้ายเข้า Memo แล้ว: ` + title);
+    setStatus(t('ui.notes.moveInMemoDone') + title);
     await buildTree();
   };
   clearBtn.onclick = () => {
     ta.value = '';
     try { localStorage.setItem('k2-scratchpad', ''); } catch {}
-    setStatus(T`ล้างสมุดโน้ตแล้ว`);
+    setStatus(t('ui.notes.clearNotebookNoteDone'));
   };
 
   const updateInfo = () => {
     const lines = ta.value.split('\n').length;
     const chars = ta.value.length;
     const words = ta.value ? ta.value.trim().split(/\s+/).length : 0;
-    info.textContent = T`${lines} บรรทัด · ${words} คำ · ${chars} อักขระ`;
+    info.textContent = tf('ui.notes.lineWordChar', lines, words, chars);
   };
   ta.addEventListener('input', updateInfo);
   updateInfo();

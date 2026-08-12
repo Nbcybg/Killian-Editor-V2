@@ -67,9 +67,11 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
   - `spell.js` — เอนจินตรวจคำผิด (ไทย maximal-matching DP + อังกฤษ wordlist+morphology) · `loadBase/setExtra/check/ready`
   - `wiki.js` — `WikiEditor` + `imageLightbox`
   - `gallery.js`, `network.js`, `ui.js` (**`window.prompt()` = no-op ใน Electron!** ใช้ ask/confirmBox)
-  - **`i18n.js`** (alpha.76, บริสุทธิ์) — เอนจินภาษา: `T` tagged template (msgid = ประโยคไทยต้นฉบับ +
-    `{0}`) · `tKey`/`tm` · `csvToTable`/`tableToCsv` · `langCodeFromFile` · **โหลดตาราง sync ตอน import**
-    (`kapi.langSync`) — โมดูลไหนก็ import ได้ ไม่แตะ DOM · core.js re-export `T` ให้ทั้งโปรเจกต์
+  - **`i18n.js`** (alpha.76 · คีย์ดอตพาธ .77 · บริสุทธิ์) — เอนจินภาษา:
+    **`t('ui.<module>.<name>')`** และ **`tf(key, ...ค่า)`** (CSV เก็บที่แทรกค่าเป็น `{0}`,`{1}`) ·
+    `csvToTable`/`tableToCsv` · `langCodeFromFile` · **โหลดตาราง sync ตอน import** (`kapi.langSync`)
+    · **ไม่มี fallback** — คีย์ขาดคืนตัวคีย์ · โมดูลไหนก็ import ได้ ไม่แตะ DOM
+    · core.js re-export `t`/`tf` ให้ไฟล์ที่ import จาก core อยู่แล้ว
   - **`core.js`** — แกนกลางที่ทุกโมดูลใช้ร่วม: `$`,`el`,`state`,`smart`,`log`,`setStatus` + ค่าคงที่ (`DEFAULT_SETTINGS`,`SCENE_STATUSES`,`SCENE_COLORS`,`BUILTIN_CATS`,`CAT_ICON`,`BASE_ED_FS`,`ZOOM_*`) — **ทุกไฟล์ใหม่ import จากนี่**
   - `app.js` (~5,300 บรรทัด: bootstrap/explorer(buildTree)/tabs/toolbar(floatBar)/zoom(pageZoom)/commands/shortcuts/**selftest**) — orchestrator
   - **แยกจาก app.js แล้ว (alpha.39, feature modules):** `dashboard.js` · `books.js` · `timeline-ui.js` · `maps-ui.js` · `wiki-ui.js` · `scene-ops.js` · `section-ops.js` · `scene-props.js` · `dialogs.js` · `recycle.js` — จุดที่ feature ใหม่มาต่อยอด (ดู **AGENTS.md** สำหรับกฎ import/circular/CommonJS ก่อนแก้)
@@ -119,6 +121,7 @@ node test/planner-data.test.cjs    # 157 checks — schema v4/grid/snap/z-order/
 node test/search-engine.test.cjs   # 22 checks — tokenize/AND/OR/NOT/field/snippet/score/perf
 node test/panel.test.cjs           # 26 checks — snap/dock/tab/resize/store/migrate
 node test/i18n.test.cjs            # 56 checks — รหัสภาษาจากชื่อไฟล์/CSV ไป-กลับ/ชั้นทับกัน/แคช
+node test/i18n-keys.test.cjs       #  9 checks — **ประตูกันพลาด**: ทุก t() ต้องมีคีย์ในไฟล์ภาษาทุกไฟล์
 ```
 เทคนิค: ไฟล์ src เป็น ES module แต่ root ไม่ใช่ `type:module` → test เป็น `.cjs` ที่ `esbuild.buildSync({format:'cjs'})` แปลงชั่วคราวแล้ว `require`. โมดูลบริสุทธิ์ (ไม่ import DOM/kapi) จึงเทสได้ตรง ๆ — เพิ่ม unit test ทุกครั้งที่เพิ่ม logic ในไฟล์เหล่านี้
 
@@ -242,6 +245,22 @@ sleep 118; grep -m1 "^FAIL" "C:/tmp/k2result.txt"; echo "pass=$(grep -c '^PASS' 
     แล้ว `await` ค้างตลอดกาล · **ยืนยัน dev ผ่านอย่างเดียวไม่พอ ต้องรัน `dist/win-unpacked` ด้วยเสมอ**
     · e2e สองรอบติดที่ผลต่างกันโดยโค้ดไม่เปลี่ยน = มี electron ค้างอยู่แย่งเครื่อง (`tasklist | grep -i electron`)
 
+### บทเรียน i18n รอบสอง (alpha.77 — เปลี่ยนเป็นคีย์ดอตพาธ)
+
+42. **`unit test` ที่ตรวจ "ข้อความที่ผู้ใช้เห็น" พังทันทีที่ตัด fallback** — บน node ไม่มีตารางคำแปล
+    `t()` เลยคืนตัวคีย์มาเทียบ · แก้ด้วย `test/_lang.cjs` ที่ปลอม `globalThis.kapi.langSync`
+    **ก่อน require บันเดิล** (เดินทางเดียวกับของจริง ไม่ได้ยัดตารางทางลัด) — ต้องใส่ให้ครบทุกไฟล์เทส
+43. **โคดมอดที่เติม import ต้องดูของที่มีอยู่ก่อน** — หลายไฟล์ `import { t } from './core.js'` อยู่แล้ว
+    (core re-export ให้) เติมจาก i18n.js อีก = `The symbol "t" has already been declared`
+    · และ **ห้ามเขียนทับบรรทัด import เดิมทั้งบรรทัด** — core.js นำเข้าจาก i18n.js สิบกว่าตัว หายหมด
+44. **พจนานุกรมตั้งชื่อคีย์ต้องจับคู่กับข้อความดิบ ไม่ใช่ผลตัดคำ** — dict ของโปรแกรมตัด "คัดลอก"
+    เป็น "คัด"+"ลอก" ซึ่งไม่มีในพจนานุกรมทั้งคู่ → ได้ชื่อว่าง 39% · เปลี่ยนเป็น longest-match
+    บนข้อความตรง ๆ เหลือ 2.4% (และยังกัน "การ" ไปแย่งแมตช์ใน "การ์ด" ด้วย)
+45. **โคดมอดรอบสองบนโค้ดที่แปลงไปแล้ว = ตารางคำแปลบวม** — ตัวเขียน CSV สร้างจาก
+    "msgid ที่เจอในซอร์สรอบนี้" ถ้าซอร์สส่วนใหญ่ถูกแปลงไปแล้วมันจะมองไม่เห็น แล้วแจกคีย์ใหม่ให้ที่เหลือ
+    ได้คีย์ซ้ำความหมายเดิม · **ถ้าโคดมอดพลาดกลางทาง ให้กู้ซอร์สจากสำเนาแล้วรันใหม่รอบเดียว**
+    อย่ารันซ้ำทับของที่แปลงไปแล้ว (สำเนาไว้ก่อนเสมอ — `cp -r src main.js languages <ที่เก็บชั่วคราว>`)
+
 ### บทเรียนอื่น
 
 29. **`buildTree()` เดิมคืนทันทีถ้ามีงานสร้างค้างอยู่** → `await buildTree()` คืนก่อนต้นไม้มีของใหม่จริง
@@ -343,7 +362,7 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.76** · e2e ALL OK **2,782** ทั้ง dev และตัว packaged · unit ทั้งชุดผ่าน · push ขึ้น GitHub แล้ว)
+## เวอร์ชัน (ล่าสุด **alpha.77** · e2e ALL OK · unit ทั้งชุดผ่าน · push ขึ้น GitHub แล้ว)
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
 .24 batch 8 (drag-move explorer, panel snap, split compare, version tracking, scene lock, screenplay Final Draft look, screenplay images, wiki links) · .25–.27 **Planner board** (fabric.js) · .28 **floating windows** · .29 memo-in-chapter + scoped search
@@ -390,14 +409,41 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
   DeepSeek/opencode · Electron · ProseMirror · Fabric · pdf-lib · JSZip · Fuse.js · ฟอนต์ + สัญญาอนุญาต)
 - **สถานะการแปล**: ไทย 100% (ภาษาต้นฉบับ) · อังกฤษ 712 จาก 4,241 คีย์ — ที่เหลือช่องว่าง = ตกกลับเป็นไทย
 
+**.77 — 🔑 คีย์ดอตพาธ + ตัด fallback ออกจากแอปทั้งหมด**
+- ผู้ใช้สั่งเปลี่ยนจาก "ข้อความไทยเป็นคีย์" (gettext) มาเป็น **`ui.branch.delChoice`**
+  เหตุผล: *"ไม่ให้ app ตีตก ไม่งั้นบั๊กกระจุย แถมแก้ยาก · แก้ที่ CSV ดีที่สุด"*
+- แปลง **4,249 จุด** ด้วย `tools/i18n-rekey.cjs` · ตั้งชื่อคีย์อัตโนมัติจาก `tools/th-en-lexicon.cjs`
+  (พจนานุกรมไทย→อังกฤษ ~540 คำ ใช้ตั้งชื่อเท่านั้น ไม่ใช่คำแปล) — ตั้งชื่อได้ 97.6%
+- ถอด `t('key','ค่าสำรองไทย')` อีก 72 จุด · ลบตาราง `BUILTIN_EN` ในโค้ดทิ้ง
+- **ไฟล์ภาษาครบทุกแถวเสมอ** (4,178 คีย์ × ทุกภาษา) — ภาษาที่ยังไม่แปลใส่ไทยไปก่อน
+- `test/i18n-keys.test.cjs` 9 checks = ประตูกันพลาด (คีย์ขาด · ชุดคีย์ไม่ตรงกัน · ที่แทรกค่าไม่ตรง ·
+  ไทยตกค้าง · รูปแบบคีย์)
+- ค่าที่เป็นข้อมูล (สถานะฉาก/ชื่อสี) แปลผ่าน `DATA_KEYS` ใน core.js — เก็บลงไฟล์เป็นไทยเหมือนเดิม
+
 ### ⚠️ กฎถาวรที่ผู้ใช้กำหนด (ห้ามฝ่าฝืน — เขียนไว้ใน AGENTS.md ด้วย)
 
-0. **« ห้ามฮาร์ดโค้ดข้อความไทย — ทุกข้อความที่ผู้ใช้เห็นต้องแปลได้จาก CSV โดยไม่ต้อง build »** (.76)
-   → ห่อด้วย ``T`…` `` จาก `src/i18n.js` (`setStatus(T`บันทึกแล้ว`)` · ``T`บทที่ ${n}` ``)
-   · **ค่าที่เขียนลงไฟล์งานห้ามห่อ** (สถานะฉาก · คำนำหน้าหัวฉาก fountain · ชนิดความสัมพันธ์ · แท็ก ·
-     คีย์ของ object) — เก็บเป็นไทยเสมอ แล้วแปลตอนแสดงผลด้วย `dataLabel(v)` จาก core.js
-   · ตรวจด้วย `npm run i18n` (เหลือกี่จุด ที่ไหน) · ห่อให้อัตโนมัติด้วย `npm run i18n:apply`
-   · ยกเว้นไฟล์/ช่วงบรรทัดได้ที่ `SKIP_FILES`/`SKIP_RANGES` ใน `tools/i18n-extract.cjs` **พร้อมเหตุผล**
+0. **« ห้ามฮาร์ดโค้ดข้อความไทยเด็ดขาด · มีข้อความใหม่ = ไปเพิ่มใน CSV »** (.77 — ผู้ใช้ย้ำเอง)
+
+   ```js
+   setStatus('บันทึกแล้ว')        ✗   →   setStatus(t('ui.app.saveDone'))        ✓
+   `บทที่ ${n}`                   ✗   →   tf('ui.scene.chapterNum', n)           ✓
+   t('ui.x.y', 'ข้อความสำรอง')    ✗   →   t('ui.x.y')                            ✓  (ห้ามมีค่าสำรอง)
+   ```
+
+   **ขั้นตอนเวลาจะเพิ่มข้อความใหม่** (ทำมือก็ได้ ให้เครื่องมือทำก็ได้ แต่ต้องจบที่ CSV เสมอ):
+   1. เขียน `t('ui.<module>.<name>')` ในโค้ด
+   2. เพิ่มแถวเดียวกันใน **ทุกไฟล์** `languages/k2_*.csv` — ภาษาที่ยังไม่แปล **ใส่ข้อความไทยไปก่อน**
+      (ห้ามเว้นว่าง · แอปไม่มีการตกกลับ ช่องว่าง = คีย์โผล่บนหน้าจอ)
+   3. `npm run i18n` → มันจะเติมแถวที่ขาดให้ทุกไฟล์ แล้วรันเทสตรวจซ้ำให้เสร็จในคำสั่งเดียว
+
+   · **ไม่มี fallback ใด ๆ ในแอป** (ผู้ใช้สั่ง): ไม่ตกกลับข้ามภาษา ไม่มีตาราง EN ฝังในโค้ด
+     คีย์ขาด = โชว์ตัวคีย์ให้เห็นทันที · **ประตูกันพลาดอยู่ที่ `test/i18n-keys.test.cjs`** ซึ่งกวาดทุก
+     `t()`/`tf()` ในซอร์สเทียบกับไฟล์ภาษาทุกไฟล์ — ขาดแถวไหนเทสแดงตั้งแต่ build ไม่มีทางหลุดถึงผู้ใช้
+   · **ค่าที่เขียนลงไฟล์งานห้ามแปล** (สถานะฉาก · คำนำหน้าหัวฉาก fountain · ชนิดความสัมพันธ์ · แท็ก ·
+     คีย์ของ object · คลังคำพ้องไทย · สรรพนามไทยของตัวจับรูปแบบการพูด)
+     — เก็บเป็นไทยเสมอ แปลตอนวาดด้วย `dataLabel(v)` (ตาราง `DATA_KEYS` ใน core.js)
+   · ยกเว้นไฟล์/ช่วงบรรทัดเพิ่มได้ที่ `tools/i18n-classify.cjs` (**แหล่งความจริงเดียว** — ทั้งเครื่องมือ
+     และเทสอ่านจากที่นี่) **พร้อมคอมเมนต์บอกเหตุผลเสมอ**
 
 
 1. **« อะไรที่มีการทิ้งเมื่อปิด หรือ update ตอนปิดโปรแกรม ต้องขึ้น list ทุกครั้ง »** (.72)

@@ -128,10 +128,31 @@ export function lookup(key) {
   return undefined;
 }
 
-/** `t('a.b', 'สำรอง')` — ไม่เจอคืนค่าสำรอง (ถ้าไม่ส่งมาก็คืนตัวคีย์) */
+/** `t('ui.a.b')` — ไม่เจอคืนค่าสำรอง (ถ้าไม่ส่งมาก็คืนตัวคีย์) */
 export function tKey(key, fallback) {
   const v = lookup(key);
   return v != null ? v : (fallback != null ? fallback : key);
+}
+
+/**
+ * [alpha.77] **ทางเรียกหลักของทั้งโปรเจกต์** — `t('ui.branch.delChoice')`
+ *
+ * ไม่มีการตกกลับไปหาภาษาอื่นโดยเด็ดขาด (กฎที่ผู้ใช้กำหนด): ไฟล์ภาษาต้องครบทุกแถวอยู่แล้ว
+ * คีย์ไหนไม่มีในไฟล์ = โชว์ตัวคีย์โต้ง ๆ ให้เห็นทันทีว่าลืมอะไร **ไม่ซ่อนปัญหาไว้**
+ * (ประตูกันพลาดอยู่ที่ `test/i18n-keys.test.cjs` ซึ่งกวาดทุก t() ในซอร์สเทียบกับไฟล์ภาษา)
+ */
+export function t(key) {
+  // กันคีย์ undefined/ว่าง (ex. SHORTCUT_LABELS ไม่มีรายการนั้น) — คืนค่าว่าง ไม่ใช่คำว่า "undefined"
+  if (typeof key !== 'string' || !key) return '';
+  const v = lookup(key);
+  // `{{` / `}}` = วงเล็บปีกกาตัวจริงที่ถูก escape ไว้ (ข้อความอย่าง "{ชื่อ}" ในแม่แบบลายน้ำ)
+  // ต้องคลายตรงนี้ด้วย ไม่ใช่เฉพาะใน tf() ไม่งั้นข้อความที่ไม่มีค่าแทรกจะโชว์ปีกกาซ้อน
+  return formatMsg(v != null ? v : String(key), []);
+}
+
+/** เหมือน t แต่มีค่าแทรก — CSV เก็บเป็น `บทที่ {0}` · `tf('ui.scene.chapterNum', 7)` */
+export function tf(key, ...vals) {
+  return formatMsg(t(key), vals);
 }
 
 // ───────── tagged template ─────────

@@ -8,7 +8,7 @@
 // ทำแบบนี้เพราะฟังก์ชันใน scene-ops/section-ops/wiki-ui เปิดกล่องถามชื่อเสมอ (สั่งจากโค้ดไม่ได้)
 // การลบใช้ deleteToTrash เดิม → ได้ sidecar กู้คืนเหมือนที่ผู้ใช้ลบเอง
 
-import { T } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { state, setStatus, smart } from '../core.js';
 import { dumpMdFile, parseMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
@@ -118,25 +118,25 @@ const HANDLERS = {
     }
     const ents = (await listEntities(state.root).catch(() => []))
       .map((e) => ({ name: e.name, cat: e.cat }));
-    return ok(T`อ่านโครงสร้างแล้ว`, { books: tree, entities: ents });
+    return ok(t('ui.aiActions.readStructureDone'), { books: tree, entities: ents });
   },
 
   async 'scene.read'(a) {
     const sc = await findScene(a);
-    if (!sc) return err(T`ไม่พบฉาก "${a.title}"`);
+    if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const raw = (await kapi.exists(sc.path)) ? await kapi.readFile(sc.path) : '';
     const { meta, body } = parseMdFile(raw);
-    return ok(T`อ่านฉาก "${sc.title}" แล้ว`, { title: sc.title, book: sc.section, meta, text: body });
+    return ok(tf('ui.aiActions.readSceneDone', sc.title), { title: sc.title, book: sc.section, meta, text: body });
   },
 
   async 'entity.read'(a) {
     const e = await findEntityFile(a.name);
-    if (!e) return err(T`ไม่พบเอนทิตี้ "${a.name}"`);
-    return ok(T`อ่าน "${e.name}" แล้ว`, e.entity);
+    if (!e) return err(tf('ui.aiActions.notFound', a.name));
+    return ok(tf('ui.aiActions.readDone', e.name), e.entity);
   },
 
   async 'entity.create'(a) {
-    if (await findEntityFile(a.name)) return err(T`มี "${a.name}" อยู่แล้ว — ใช้ entity.update แทน`);
+    if (await findEntityFile(a.name)) return err(tf('ui.aiActions.hasUseEntityUpdate', a.name));
     const cat = String(a.cat || 'characters').trim();
     const dir = await kapi.join(await wikiBase(), cat);
     await kapi.mkdir(dir);
@@ -151,12 +151,12 @@ const HANDLERS = {
     };
     const file = await kapi.join(dir, safeName(a.name) + '-' + Date.now().toString(36) + '.json');
     await kapi.writeFile(file, JSON.stringify(e, null, 2));
-    return ok(T`สร้าง "${a.name}" ในหมวด ${cat} แล้ว`);
+    return ok(tf('ui.aiActions.newCatDone', a.name, cat));
   },
 
   async 'entity.update'(a) {
     const hit = await findEntityFile(a.name);
-    if (!hit) return err(T`ไม่พบเอนทิตี้ "${a.name}"`);
+    if (!hit) return err(tf('ui.aiActions.notFound', a.name));
     const e = { ...hit.entity };
     if (a.newName) e.name = String(a.newName);
     if (Array.isArray(a.aliases)) e.aliases = a.aliases;
@@ -171,14 +171,14 @@ const HANDLERS = {
       e.sections = cur;
     }
     await kapi.writeFile(hit.path, JSON.stringify(e, null, 2));
-    return ok(T`แก้ "${hit.name}" แล้ว`);
+    return ok(tf('ui.aiActions.editDone', hit.name));
   },
 
   async 'entity.delete'(a) {
     const hit = await findEntityFile(a.name);
-    if (!hit) return err(T`ไม่พบเอนทิตี้ "${a.name}"`);
+    if (!hit) return err(tf('ui.aiActions.notFound', a.name));
     await moveToTrash(hit.path);
-    return ok(T`ย้าย "${hit.name}" ไปถังขยะแล้ว`);
+    return ok(tf('ui.aiActions.moveTrashDone', hit.name));
   },
 
   async 'book.create'(a) {
@@ -190,54 +190,54 @@ const HANDLERS = {
     await kapi.writeFile(await kapi.join(dir, 'section.json'),
       JSON.stringify({ guid: guid(), title, order }, null, 2));
     const dr = await kapi.join(dir, 'Draft', 'default');
-    const ch = { guid: guid(), title: T`บทที่หนึ่ง`, order: 1, status: 'Outline', act: 'I',
-                 date: '', isFavorite: false, folderName: T`01 - บทที่หนึ่ง` };
+    const ch = { guid: guid(), title: t('ui.common.chapterOne2'), order: 1, status: 'Outline', act: 'I',
+                 date: '', isFavorite: false, folderName: t('ui.common.chapterOne') };
     await kapi.writeFile(await kapi.join(dr, 'draft.json'), JSON.stringify({ chapters: [ch] }, null, 2));
     await kapi.writeFile(await kapi.join(dr, 'scenes.json'), JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2));
     await kapi.mkdir(await kapi.join(dr, 'Chapters', ch.folderName));
-    return ok(T`สร้างเล่ม "${title}" พร้อมบทแรกแล้ว`);
+    return ok(tf('ui.aiActions.newBookReadyChapter', title));
   },
 
   async 'book.delete'(a) {
     const b = await findBook(a.title);
-    if (!b) return err(T`ไม่พบเล่ม "${a.title}"`);
+    if (!b) return err(tf('ui.aiActions.notFoundBook2', a.title));
     const dst = await moveToTrash(b.path);
     await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
       { kind: 'section', root: state.root, folderName: b.name }, null, 2));
-    return ok(T`ย้ายเล่ม "${b.title}" ไปถังขยะแล้ว`);
+    return ok(tf('ui.aiActions.moveBookTrashDone', b.title));
   },
 
   async 'chapter.create'(a) {
     const b = await findBook(a.book);
-    if (!b) return err(a.book ? T`ไม่พบเล่ม "${a.book}"` : T`ยังไม่มีเล่มในโปรเจกต์ — สร้างด้วย book.create ก่อน`);
+    if (!b) return err(a.book ? tf('ui.aiActions.notFoundBook2', a.book) : t('ui.aiActions.notHasBookProject'));
     const df = await kapi.join(b.draftPath, 'draft.json');
     const d = (await kapi.exists(df)) ? await kapi.readJson(df) : { chapters: [] };
-    if ((d.chapters || []).some((c) => eq(c.title, a.title))) return err(T`เล่มนี้มีบท "${a.title}" อยู่แล้ว`);
+    if ((d.chapters || []).some((c) => eq(c.title, a.title))) return err(tf('ui.aiActions.bookHasChapter', a.title));
     const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
     const ch = { guid: guid(), title: String(a.title), order, status: 'Outline', act: 'I', date: '',
                  isFavorite: false, folderName: String(order).padStart(2, '0') + ' - ' + safeName(a.title) };
     d.chapters = [...(d.chapters || []), ch];
     await kapi.writeFile(df, JSON.stringify(d, null, 2));
     await kapi.mkdir(await kapi.join(b.draftPath, 'Chapters', ch.folderName));
-    return ok(T`เพิ่มบท "${a.title}" ใน "${b.title}" แล้ว`);
+    return ok(tf('ui.aiActions.addChapterDone', a.title, b.title));
   },
 
   async 'chapter.rename'(a) {
     const b = await findBook(a.book);
-    if (!b) return err(T`ไม่พบเล่ม`);
+    if (!b) return err(t('ui.aiActions.notFoundBook'));
     const c = await findChapter(b, a.title);
-    if (!c) return err(T`ไม่พบบท "${a.title}"`);
+    if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
     c.ch.title = String(a.newTitle);
     c.draft.chapters = c.draft.chapters.map((x) => (x.guid === c.ch.guid ? c.ch : x));
     await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
-    return ok(T`เปลี่ยนชื่อบทเป็น "${a.newTitle}" แล้ว (โฟลเดอร์คงชื่อเดิมไว้ ลิงก์ในต้นฉบับจึงไม่พัง)`);
+    return ok(tf('ui.aiActions.changeNameChapterDone', a.newTitle));
   },
 
   async 'chapter.delete'(a) {
     const b = await findBook(a.book);
-    if (!b) return err(T`ไม่พบเล่ม`);
+    if (!b) return err(t('ui.aiActions.notFoundBook'));
     const c = await findChapter(b, a.title);
-    if (!c) return err(T`ไม่พบบท "${a.title}"`);
+    if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
     const dir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
     const sf = await kapi.join(b.draftPath, 'scenes.json');
     const sdata = (await kapi.exists(sf)) ? await kapi.readJson(sf) : { chapters: {} };
@@ -251,19 +251,19 @@ const HANDLERS = {
     await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
     if (sdata.chapters) delete sdata.chapters[c.ch.guid];
     await kapi.writeFile(sf, JSON.stringify(sdata, null, 2));
-    return ok(T`ลบบท "${a.title}" (${scenes.length} ฉาก) ไปถังขยะแล้ว`);
+    return ok(tf('ui.aiActions.delChapterSceneTrash', a.title, scenes.length));
   },
 
   async 'scene.create'(a) {
     const b = await findBook(a.book);
-    if (!b) return err(a.book ? T`ไม่พบเล่ม "${a.book}"` : T`ยังไม่มีเล่มในโปรเจกต์ — สร้างด้วย book.create ก่อน`);
+    if (!b) return err(a.book ? tf('ui.aiActions.notFoundBook2', a.book) : t('ui.aiActions.notHasBookProject'));
     const c = await findChapter(b, a.chapter);
-    if (!c) return err(a.chapter ? T`ไม่พบบท "${a.chapter}"` : T`เล่มนี้ยังไม่มีบท`);
+    if (!c) return err(a.chapter ? tf('ui.aiActions.notFoundChapter', a.chapter) : t('ui.common.bookNotHasChapter'));
     const sf = await kapi.join(b.draftPath, 'scenes.json');
     const d = (await kapi.exists(sf)) ? await kapi.readJson(sf) : { chapters: {} };
     d.chapters = d.chapters || {};
     const list = d.chapters[c.ch.guid] || [];
-    if (list.some((s) => eq(s.title, a.title))) return err(T`บทนี้มีฉาก "${a.title}" อยู่แล้ว`);
+    if (list.some((s) => eq(s.title, a.title))) return err(tf('ui.aiActions.chapterHasScene', a.title));
     const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
     const sc = { id: guid(), title: String(a.title), order,
                  fileName: 'scene-' + String(order).padStart(2, '0') + '.md',
@@ -274,12 +274,12 @@ const HANDLERS = {
     await kapi.writeFile(file, dumpMdFile(
       { title: sc.title, type: 'scene', format: 'prose', pov: '', tags: [] }, String(a.text || '')));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    return ok(T`สร้างฉาก "${a.title}" ใน "${b.title} › ${c.ch.title}" แล้ว`);
+    return ok(tf('ui.aiActions.newSceneDone', a.title, b.title, c.ch.title));
   },
 
   async 'scene.write'(a) {
     const sc = await findScene(a);
-    if (!sc) return err(T`ไม่พบฉาก "${a.title}" — สร้างก่อนด้วย scene.create`);
+    if (!sc) return err(tf('ui.aiActions.notFoundSceneNew', a.title));
     const raw = (await kapi.exists(sc.path)) ? await kapi.readFile(sc.path) : '';
     const { meta, body } = parseMdFile(raw);
     const add = String(a.text || '');
@@ -288,13 +288,13 @@ const HANDLERS = {
                : mode === 'prepend' ? (add + (body ? '\n\n' + body : ''))
                : (body ? body.replace(/\s+$/, '') + '\n\n' + add : add);
     await kapi.writeFile(sc.path, dumpMdFile(meta, next));
-    const verb = mode === 'replace' ? T`เขียนทับ` : mode === 'prepend' ? T`แทรกหน้า` : T`เขียนต่อ`;
-    return ok(T`${verb}ฉาก "${sc.title}" แล้ว (รวม ${next.length} ตัวอักษร)`);
+    const verb = mode === 'replace' ? t('ui.common.overwrite') : mode === 'prepend' ? t('ui.common.insertPage') : t('ui.aiActions.writeNext');
+    return ok(tf('ui.aiActions.sceneDoneMergeChar', verb, sc.title, next.length));
   },
 
   async 'scene.rename'(a) {
     const sc = await findScene(a);
-    if (!sc) return err(T`ไม่พบฉาก "${a.title}"`);
+    if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
     const d = await kapi.readJson(sf);
     for (const k of Object.keys(d.chapters || {})) {
@@ -305,12 +305,12 @@ const HANDLERS = {
       const { meta, body } = parseMdFile(await kapi.readFile(sc.path));
       await kapi.writeFile(sc.path, dumpMdFile({ ...meta, title: String(a.newTitle) }, body));
     }
-    return ok(T`เปลี่ยนชื่อฉากเป็น "${a.newTitle}" แล้ว`);
+    return ok(tf('ui.aiActions.changeNameSceneDone', a.newTitle));
   },
 
   async 'scene.delete'(a) {
     const sc = await findScene(a);
-    if (!sc) return err(T`ไม่พบฉาก "${a.title}"`);
+    if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
     const d = await kapi.readJson(sf);
     const folderName = (sc.path.split(/[\\/]/).slice(-2, -1)[0]) || '';
@@ -323,15 +323,15 @@ const HANDLERS = {
       d.chapters[k] = (d.chapters[k] || []).filter((s) => s.id !== sc.id);
     }
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    return ok(T`ลบฉาก "${sc.title}" ไปถังขยะแล้ว`);
+    return ok(tf('ui.aiActions.delSceneTrashDone', sc.title));
   },
 };
 
 function normSections(sections, description) {
   if (Array.isArray(sections) && sections.length) {
-    return sections.map((s) => ({ title: String((s && s.title) || T`คำอธิบาย`), content: String((s && s.content) || '') }));
+    return sections.map((s) => ({ title: String((s && s.title) || t('ui.common.desc')), content: String((s && s.content) || '') }));
   }
-  return [{ title: T`คำอธิบาย`, content: String(description || '') }];
+  return [{ title: t('ui.common.desc'), content: String(description || '') }];
 }
 
 /** ย้ายเข้า Recycle/ แบบเดียวกับที่ผู้ใช้ลบเอง (ไม่ถาม เพราะถามไปแล้วตอนยืนยันคำสั่ง) */
@@ -348,8 +348,8 @@ async function moveToTrash(p) {
  */
 export async function runToolCall(call) {
   const h = HANDLERS[call && call.tool];
-  if (!h) return { tool: call && call.tool, ok: false, error: T`ไม่รู้จักคำสั่ง` };
-  if (!state.root) return { tool: call.tool, ok: false, error: T`ยังไม่ได้เปิดโปรเจกต์` };
+  if (!h) return { tool: call && call.tool, ok: false, error: t('ui.aiActions.notKnownCmd') };
+  if (!state.root) return { tool: call.tool, ok: false, error: t('ui.common.cantOpenProject') };
   try {
     const r = await h(call.args || {});
     return { tool: call.tool, ...r };
@@ -370,6 +370,6 @@ export async function refreshAfterActions() {
     await app.buildTree();
     await smart.loadNames(state.root);
     app.refreshNetwork();
-    setStatus(T`AI แก้ไขโปรเจกต์แล้ว — รีเฟรชรายการเรียบร้อย`);
+    setStatus(t('ui.aiActions.aIEditProjectDone'));
   } catch { /* รีเฟรชไม่ได้ไม่ควรทำให้คำสั่งที่สำเร็จไปแล้วกลายเป็นล้มเหลว */ }
 }

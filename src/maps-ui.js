@@ -1,7 +1,7 @@
 // maps-ui.js — แผนที่ (UI): เปิด/วาดแผนที่ · หมุด · ลำดับชั้นโลก→เมือง→ห้อง
 // [alpha.70] ยกเครื่อง: ซูม · โอเวอร์เลย์ (กริด/เข็มทิศ/มาตราส่วน) · ค้นหาหมุด · เลือกหลายหมุด
 //            · คัดลอก-วางข้ามแผนที่ · เส้นทาง · หมวดแผนที่ · ส่งออก PNG/พิมพ์ · ป้ายจำนวนฉากบนหมุด
-import { T } from './i18n.js';
+import { tf } from './i18n.js';
 import { addMapFlow, loadMaps, mapImgURL, mapsState_C, pinDialog, saveMaps } from './app.js';
 import { $, el, state, setStatus, log, t } from './core.js';
 import { pickImage } from './gallery.js';
@@ -36,9 +36,9 @@ let scenesCache = null;              // ฉากที่ปักหมุด�
 let portraitCache = null;            // entityFile → ชื่อไฟล์รูปประจำตัว (ข้อ 2)
 
 export const MAP_TOOLS = [
-  { id: 'open', icon: '👆', label: T`เปิด/ดู`, hint: T`คลิกหมุด = เปิดลิงก์ของหมุด (ประตู/หน้า Wiki) · ไม่แก้ไขอะไร` },
-  { id: 'edit', icon: '✎', label: T`แก้ไข`, hint: T`คลิกหมุด = เปิดกล่องแก้ไขหมุด` },
-  { id: 'move', icon: '✥', label: T`ย้ายตำแหน่ง`, hint: T`ลากหมุดเพื่อย้าย (โหมดอื่นลากไม่ได้ กันเลื่อนโดนโดยไม่ตั้งใจ)` },
+  { id: 'open', icon: '👆', label: t('ui.common.openView'), hint: t('ui.maps.clickPinOpenLink') },
+  { id: 'edit', icon: '✎', label: t('ui.common.edit'), hint: t('ui.maps.clickPinOpenDialog') },
+  { id: 'move', icon: '✥', label: t('ui.common.movePos'), hint: t('ui.maps.dragPinMoveMode') },
 ];
 
 export const PIN_SCALE_MIN = 0.6, PIN_SCALE_MAX = 3, PIN_SCALE_STEP = 0.2;
@@ -61,7 +61,7 @@ async function loadPortraits() {
   try {
     const { loadAllEntities } = await import('./app.js');
     for (const e of await loadAllEntities()) if (e.file && e.image) portraitCache.set(e.file, e.image);
-  } catch (e) { log('warn', T`maps: อ่านรูปประจำตัวของเอนทิตี้ไม่ได้`, e); }
+  } catch (e) { log('warn', t('ui.maps.mapsReadImagePortrait'), e); }
   return portraitCache;
 }
 
@@ -102,7 +102,7 @@ export async function focusMapPin(mapId, pinId, at) {
   const keepZoom = view.zoom;
   await renderMapsPanel();
   const S = mapsState_C.s;
-  if (!S || !findMap(S.data.maps, mapId)) { setStatus(T`ไม่พบแผนที่ที่ฉากนี้ผูกไว้ (อาจถูกลบไปแล้ว)`); return false; }
+  if (!S || !findMap(S.data.maps, mapId)) { setStatus(t('ui.maps.notFoundMapScene')); return false; }
   S.currentId = mapId;
   view.zoom = keepZoom;
   view.sel.clear();
@@ -123,13 +123,13 @@ export async function sceneMapLocation(row) {
   let data;
   try { data = await loadMaps(); } catch { return null; }
   const map = findMap(data.maps, row.mapId);
-  if (!map) return { missing: true, mapId: row.mapId, text: T`(แผนที่ที่ผูกไว้ถูกลบไปแล้ว)` };
+  if (!map) return { missing: true, mapId: row.mapId, text: t('ui.maps.mapBindDelDone') };
   const pin = row.pinId ? (map.pins || []).find((p) => p.id === row.pinId) : null;
   const x = pin ? pin.x : row.pinX, y = pin ? pin.y : row.pinY;
   return { map, pin, x, y,
-           text: (map.name || T`(ไม่มีชื่อ)`)
-                 + (pin ? ' · ' + (pin.label || T`หมุด`)
-                        : (row.pinX != null ? T` · พิกัดที่ปักเอง` : '')) };
+           text: (map.name || t('ui.common.notNamed'))
+                 + (pin ? ' · ' + (pin.label || t('ui.common.pin'))
+                        : (row.pinX != null ? t('ui.maps.pin') : '')) };
 }
 
 /**
@@ -139,20 +139,20 @@ export async function sceneMapLocation(row) {
 export async function buildShowOnMapRow(row) {
   const loc = await sceneMapLocation(row);
   const r = el('div', 'wiki-row props-maprow');
-  r.append(el('label', null, t('maps.sceneWhere', 'ตำแหน่งบนแผนที่')));
+  r.append(el('label', null, t('ui.maps.sceneWhere')));
   const box = el('div', 'props-maprow-body');
   if (!loc) {
-    box.append(el('span', 'dim', t('maps.notPlaced', 'ยังไม่ได้ปักตำแหน่ง')));
-    const b = el('button', 'cmp-mini', '📌 ' + t('maps.placeIt', 'ไปปักตำแหน่ง'));
-    b.title = t('maps.placeItHint', 'เปิดแผงผังพื้นที่ แล้วกด "ปักตำแหน่งฉากนี้"');
+    box.append(el('span', 'dim', t('ui.maps.notPlaced')));
+    const b = el('button', 'cmp-mini', '📌 ' + t('ui.maps.placeIt'));
+    b.title = t('ui.maps.placeItHint');
     b.onclick = async () => { const { openFloorPlan } = await import('./floorplan-ui.js'); await openFloorPlan(); };
     box.append(b);
   } else if (loc.missing) {
     box.append(el('span', 'dim', loc.text));
   } else {
     box.append(el('span', 'props-mapwhere', '📍 ' + loc.text));
-    const b = el('button', 'cmp-mini k-ok props-mapbtn', '🗺 ' + t('maps.showOnMap', 'ดูบนแผนที่'));
-    b.title = t('maps.showOnMapHint', 'เปิดแผงแผนที่แล้วเลื่อนไปที่ตำแหน่งของฉากนี้');
+    const b = el('button', 'cmp-mini k-ok props-mapbtn', '🗺 ' + t('ui.maps.showOnMap'));
+    b.title = t('ui.maps.showOnMapHint');
     b.onclick = () => focusMapPin(loc.map.id, loc.pin ? loc.pin.id : null,
                                   loc.x != null ? { x: loc.x, y: loc.y } : null);
     box.append(b);
@@ -182,21 +182,21 @@ export async function renderMaps(pane) {
 
   // แถบหัว: ชื่อ + ปุ่มเพิ่มแผนที่ + ช่องค้นหาหมุด
   const head = el('div', 'map-head');
-  head.append(el('div', 'map-title', T`🗺 แผนที่`));
-  const addBtn = el('button', 'k-ok', T`＋ เพิ่มแผนที่`);
+  head.append(el('div', 'map-title', t('ui.common.map3')));
+  const addBtn = el('button', 'k-ok', t('ui.maps.addMap'));
   addBtn.onclick = () => addMapFlow();
   head.append(addBtn);
   wrap.append(head);
 
   if (!maps.length) {
     wrap.append(el('div', 'map-empty',
-      T`ยังไม่มีแผนที่ — กด "＋ เพิ่มแผนที่" แล้วเลือกรูปจากคลังรูปเป็นแผนที่ (เช่น แผนที่โลก/เมือง/ผังห้อง)`));
+      t('ui.maps.notPlannedPressAdd')));
     return;
   }
 
   // ค้นหาหมุด (ข้อ 7) — อยู่บนหัวเพราะใช้ข้ามแผนที่
   const search = el('input', 'map-search'); search.type = 'search';
-  search.placeholder = T`🔍 ค้นหาหมุด (ชื่อ/หมายเหตุ)`; search.value = view.q;
+  search.placeholder = t('ui.maps.searchPinName'); search.value = view.q;
   search.oninput = () => { view.q = search.value; applyPinFilter(wrap); };
   head.append(search);
 
@@ -209,15 +209,15 @@ export async function renderMaps(pane) {
       c.onclick = () => { view.catFilter = val; renderMaps(pane); };
       catBar.append(c);
     };
-    mkCat(T`ทั้งหมด`, null);
-    for (const g of groups) mkCat((g.cat || T`(ไม่ระบุหมวด)`) + ' · ' + g.maps.length, g.cat);
+    mkCat(t('ui.common.all'), null);
+    for (const g of groups) mkCat((g.cat || t('ui.common.notSpecifyCat')) + ' · ' + g.maps.length, g.cat);
     wrap.append(catBar);
   }
 
   const bar = el('div', 'map-bar');
   const shown = groups.filter((g) => view.catFilter === null || g.cat === view.catFilter);
   for (const g of shown) {
-    if (groups.length > 1) bar.append(el('div', 'map-bar-cat', g.cat || T`(ไม่ระบุหมวด)`));
+    if (groups.length > 1) bar.append(el('div', 'map-bar-cat', g.cat || t('ui.common.notSpecifyCat')));
     const row = el('div', 'map-bar-row');
     for (const m of g.maps) {
       const chip = el('div', 'map-chip' + (m.id === S.currentId ? ' on' : ''), m.name);
@@ -256,31 +256,31 @@ export async function renderMaps(pane) {
   // ── แถบเครื่องมือแผนที่ปัจจุบัน ──
   const tools = el('div', 'map-tools');
   const nameInp = el('input', 'map-name-inp'); nameInp.value = cur.name;
-  nameInp.title = T`ชื่อแผนที่`;
+  nameInp.title = t('ui.common.nameMap');
   nameInp.onchange = async () => { cur.name = nameInp.value.trim() || cur.name; await save(); redraw(); };
   tools.append(nameInp);
   // หมวด (ข้อ 8) — พิมพ์ชื่อหมวดเอง มี datalist ของหมวดที่มีอยู่แล้ว
   const catInp = el('input', 'map-cat-inp'); catInp.value = cur.category || '';
-  catInp.placeholder = T`หมวด (เช่น โลกปัจจุบัน)`; catInp.title = T`หมวดแผนที่ — เว้นว่างได้`;
+  catInp.placeholder = t('ui.maps.catEgWorldCurrent'); catInp.title = t('ui.maps.catMapSkipEmpty');
   catInp.setAttribute('list', 'map-cat-list');
   const dl = el('datalist'); dl.id = 'map-cat-list';
   for (const g of groups) if (g.cat) { const o = el('option'); o.value = g.cat; dl.append(o); }
   catInp.onchange = async () => { cur.category = catInp.value.trim(); await save(); redraw(); };
   tools.append(catInp, dl);
-  const chgImg = el('button', 'cmp-mini', T`🖼 เปลี่ยนรูป`);
+  const chgImg = el('button', 'cmp-mini', t('ui.maps.changeImage'));
   chgImg.onclick = async () => { const it = await pickImage(state.root); if (!it) return;
     cur.image = 'Images/' + it.file; await save(); redraw(); };
   tools.append(chgImg);
-  const expBtn = el('button', 'cmp-mini', T`📤 ส่งออก PNG`);
-  expBtn.title = T`บันทึกแผนที่พร้อมหมุด/เส้นทางเป็นรูปลงคลังรูป`;
+  const expBtn = el('button', 'cmp-mini', t('ui.common.exportPNG'));
+  expBtn.title = t('ui.maps.saveMapReadyPin');
   expBtn.onclick = () => exportMapPng(cur, S.data.maps);
   tools.append(expBtn);
-  const prnBtn = el('button', 'cmp-mini', T`🖨 พิมพ์`);
+  const prnBtn = el('button', 'cmp-mini', t('ui.maps.print'));
   prnBtn.onclick = () => printMap(cur, S.data.maps);
   tools.append(prnBtn);
-  const delMap = el('button', 'cmp-mini k-danger', T`🗑 ลบแผนที่`);
+  const delMap = el('button', 'cmp-mini k-danger', t('ui.maps.delMap'));
   delMap.onclick = async () => {
-    if (!(await confirmBox(T`ลบแผนที่ “${cur.name}” ?`, T`ลบ`))) return;
+    if (!(await confirmBox(tf('ui.common.delMap', cur.name), t('ui.common.del')))) return;
     S.data.maps = deleteMap(maps, cur.id); S.currentId = S.data.maps[0]?.id || null;
     view.sel.clear(); await save(); redraw();
   };
@@ -290,8 +290,8 @@ export async function renderMaps(pane) {
   // ── แถบซูม + โอเวอร์เลย์ (ข้อ 3, 4) ──
   const ov = mapOverlays(cur);
   const tools2 = el('div', 'map-tools2');
-  const zOut = el('button', 'cmp-mini', '➖'); zOut.title = T`ซูมออก (Ctrl+ล้อ)`;
-  const zIn = el('button', 'cmp-mini', '➕'); zIn.title = T`ซูมเข้า (Ctrl+ล้อ)`;
+  const zOut = el('button', 'cmp-mini', '➖'); zOut.title = t('ui.maps.zoomOutCtrlWheel');
+  const zIn = el('button', 'cmp-mini', '➕'); zIn.title = t('ui.maps.zoomInCtrlWheel');
   const zSlider = el('input', 'map-zoom-slider'); zSlider.type = 'range';
   zSlider.min = String(MAP_ZOOM_MIN); zSlider.max = String(MAP_ZOOM_MAX); zSlider.step = String(MAP_ZOOM_STEP);
   zSlider.value = String(view.zoom);
@@ -315,7 +315,7 @@ export async function renderMaps(pane) {
   zOut.onclick = () => setZoom(zoomStep(view.zoom, -1));
   zIn.onclick = () => setZoom(zoomStep(view.zoom, 1));
   zSlider.oninput = () => setZoom(zSlider.value);
-  const zFit = el('button', 'cmp-mini', T`⤢ พอดีจอ`); zFit.title = T`กลับไปขนาดพอดีกรอบ (100%)`;
+  const zFit = el('button', 'cmp-mini', t('ui.common.fitScreen')); zFit.title = t('ui.maps.backSizeFitFrame');
   zFit.onclick = () => setZoom(1);
   tools2.append(el('span', 'map-tool-lbl', '🔍'), zOut, zSlider, zIn, zLabel, zFit);
   tools2.append(el('span', 'map-tool-sep', ''));
@@ -324,12 +324,12 @@ export async function renderMaps(pane) {
     b.onclick = async () => { toggleOverlay(cur, key); await save(); redraw(); };
     tools2.append(b);
   };
-  mkOv('grid', '▦', T`ตารางกริด`);
-  mkOv('compass', '🧭', T`เข็มทิศ`);
-  mkOv('scale', '📏', T`มาตราส่วน`);
+  mkOv('grid', '▦', t('ui.maps.tableGrid'));
+  mkOv('compass', '🧭', t('ui.maps.compass'));
+  mkOv('scale', '📏', t('ui.maps.part'));
   if (ov.grid) {
     const gs = el('input', 'map-grid-size'); gs.type = 'number'; gs.min = '2'; gs.max = '50';
-    gs.value = String(ov.gridSize); gs.title = T`จำนวนช่องกริดต่อด้าน`;
+    gs.value = String(ov.gridSize); gs.title = t('ui.maps.countFieldGridNext');
     gs.onchange = async () => {
       cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) };
       await save(); redraw();
@@ -338,21 +338,21 @@ export async function renderMaps(pane) {
   }
   if (ov.scale) {
     const sl = el('input', 'map-scale-lbl'); sl.value = ov.scaleLabel;
-    sl.placeholder = T`ระยะของแถบ เช่น 100 กม.`; sl.title = T`ข้อความใต้แถบมาตราส่วน`;
+    sl.placeholder = t('ui.maps.gapBarEg'); sl.title = t('ui.maps.textUnderBarPart');
     sl.onchange = async () => { cur.overlays = { ...ov, scaleLabel: sl.value.trim() }; await save(); redraw(); };
     tools2.append(sl);
   }
   tools2.append(el('span', 'map-tool-sep', ''));
-  const rtBtn = el('button', 'cmp-mini map-ov-btn' + (view.showRoutes ? ' on' : ''), T`🛣 เส้นทาง`);
-  rtBtn.title = T`แสดง/ซ่อนเส้นทางระหว่างหมุด`;
+  const rtBtn = el('button', 'cmp-mini map-ov-btn' + (view.showRoutes ? ' on' : ''), t('ui.maps.route2'));
+  rtBtn.title = t('ui.maps.showHideRouteBetween');
   rtBtn.onclick = () => { view.showRoutes = !view.showRoutes; redraw(); };
   tools2.append(rtBtn);
   wrap.append(tools2);
 
   // ── [alpha.71 ข้อ 3] แถบเครื่องมือหมุด: แสดงตัวหนังสือ · เปิด/แก้ไข/ย้าย · ขยาย-ย่อ ──
   const tools3 = el('div', 'map-tools3');
-  const lblBtn = el('button', 'cmp-mini map-ov-btn' + (view.showLabels ? ' on' : ''), T`🔤 แสดงตัวหนังสือ`);
-  lblBtn.title = T`แสดง/ซ่อนป้ายชื่อใต้หมุด`;
+  const lblBtn = el('button', 'cmp-mini map-ov-btn' + (view.showLabels ? ' on' : ''), t('ui.maps.showItemFilm'));
+  lblBtn.title = t('ui.maps.showHideLabelUnder');
   lblBtn.onclick = () => { view.showLabels = !view.showLabels; redraw(); };
   tools3.append(lblBtn);
   tools3.append(el('span', 'map-tool-sep', ''));
@@ -367,8 +367,8 @@ export async function renderMaps(pane) {
   tools3.append(el('span', 'map-tool-sep', ''));
   // ขยาย/ย่อหมุด (รวมรูปประจำตัวของเอนทิตี้) — บันทึกต่อแผนที่
   const curScale = pinScaleOf(cur);
-  const psOut = el('button', 'cmp-mini', '➖'); psOut.title = T`ย่อหมุด`;
-  const psIn = el('button', 'cmp-mini', '➕'); psIn.title = T`ขยายหมุด`;
+  const psOut = el('button', 'cmp-mini', '➖'); psOut.title = t('ui.maps.collapsePin');
+  const psIn = el('button', 'cmp-mini', '➕'); psIn.title = t('ui.maps.expandPin');
   const psLbl = el('span', 'map-zoom-label', Math.round(curScale * 100) + '%');
   const setScale = async (v) => {
     cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v.toFixed(2)));
@@ -376,46 +376,46 @@ export async function renderMaps(pane) {
   };
   psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
   psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
-  tools3.append(el('span', 'map-tool-lbl', T`📍 ขนาดหมุด`), psOut, psLbl, psIn);
+  tools3.append(el('span', 'map-tool-lbl', t('ui.maps.sizePin')), psOut, psLbl, psIn);
   wrap.append(tools3);
 
   const toolHint = (MAP_TOOLS.find((x) => x.id === view.tool) || MAP_TOOLS[0]).hint;
   const hint = el('div', 'map-hint',
-    T`คลิกที่ว่าง = ปักหมุด · ` + toolHint + T` · Ctrl+คลิก = เลือกหลายตัว · Shift+ลาก = เลือกเป็นกรอบ · Ctrl+ล้อ = ซูม`);
+    t('ui.maps.clickEmptyPinPin') + toolHint + t('ui.maps.ctrlClickPickItem'));
   wrap.append(hint);
 
   // ── แถบทำงานกับหมุดหลายตัว (ข้อ 6) ──
   const selBar = el('div', 'map-selbar' + (view.sel.size || view.clip.length ? ' on' : ''));
-  const selCount = el('span', 'map-selcount', view.sel.size ? T`เลือก ${view.sel.size} หมุด` : T`ยังไม่ได้เลือกหมุด`);
+  const selCount = el('span', 'map-selcount', view.sel.size ? tf('ui.maps.pickPin', view.sel.size) : t('ui.maps.cantPickPin'));
   selBar.append(selCount);
   if (view.sel.size) {
-    const bCopy = el('button', 'cmp-mini', T`⧉ คัดลอก`);
-    bCopy.title = T`คัดลอกหมุดที่เลือก แล้วไปวางบนแผนที่อื่นได้`;
+    const bCopy = el('button', 'cmp-mini', t('ui.maps.copy'));
+    bCopy.title = t('ui.maps.copyPinPickDone');
     bCopy.onclick = () => {
       view.clip = clonePins(cur.pins, [...view.sel], 0);
-      setStatus(T`คัดลอก ${view.clip.length} หมุดแล้ว — เปิดแผนที่ปลายทางแล้วกด "วาง"`);
+      setStatus(tf('ui.maps.copyPinDoneOpen', view.clip.length));
       redraw();
     };
-    const bDel = el('button', 'cmp-mini k-danger', T`🗑 ลบที่เลือก`);
+    const bDel = el('button', 'cmp-mini k-danger', t('ui.maps.delPick'));
     bDel.onclick = async () => {
       const n = view.sel.size;
-      if (!(await confirmBox(T`ลบหมุดที่เลือก ${n} ตัว ?`, T`ลบ`))) return;
+      if (!(await confirmBox(tf('ui.maps.delPinPickItem', n), t('ui.common.del')))) return;
       deletePins(cur, [...view.sel]);
-      view.sel.clear(); await save(); setStatus(T`ลบ ${n} หมุดแล้ว`); redraw();
+      view.sel.clear(); await save(); setStatus(tf('ui.maps.delPinDone', n)); redraw();
     };
-    const bNone = el('button', 'cmp-mini', T`✖ ยกเลิกการเลือก`);
+    const bNone = el('button', 'cmp-mini', t('ui.maps.cancelPick'));
     bNone.onclick = () => { view.sel.clear(); redraw(); };
     selBar.append(bCopy, bDel, bNone);
   }
   if (view.clip.length) {
-    const bPaste = el('button', 'cmp-mini', T`📋 วาง ${view.clip.length} หมุด`);
-    bPaste.title = T`วางหมุดที่คัดลอกไว้ลงแผนที่นี้`;
+    const bPaste = el('button', 'cmp-mini', tf('ui.maps.pastePin', view.clip.length));
+    bPaste.title = t('ui.maps.pastePinCopyMap');
     bPaste.onclick = async () => {
       // สร้าง id ใหม่ตอนวางทุกครั้ง → วางซ้ำหลายรอบ/หลายแผนที่ได้โดย id ไม่ชนกัน
       const added = clonePins(view.clip, view.clip.map((p) => p.id), 2, cur.id);
       cur.pins = [...(cur.pins || []), ...added];
       view.sel = new Set(added.map((p) => p.id));
-      await save(); setStatus(T`วาง ${added.length} หมุดลง "${cur.name}" แล้ว`); redraw();
+      await save(); setStatus(tf('ui.maps.pastePinDone', added.length, cur.name)); redraw();
     };
     selBar.append(bPaste);
   }
@@ -425,10 +425,10 @@ export async function renderMaps(pane) {
   const editingRoute = view.routeEdit ? mapRoutes(cur).find((r) => r.id === view.routeEdit) : null;
   if (editingRoute) {
     const rb = el('div', 'map-routebar');
-    rb.append(el('span', null, T`🛣 กำลังต่อเส้นทาง “${editingRoute.name}” — คลิกหมุดตามลำดับที่เดินทาง (${(editingRoute.pinIds || []).length} จุด)`));
-    const undoB = el('button', 'cmp-mini', T`↩ ถอยจุดล่าสุด`);
+    rb.append(el('span', null, tf('ui.maps.busyNextRouteClick', editingRoute.name, (editingRoute.pinIds || []).length)));
+    const undoB = el('button', 'cmp-mini', t('ui.maps.dotLatest'));
     undoB.onclick = async () => { (editingRoute.pinIds || []).pop(); await save(); redraw(); };
-    const doneB = el('button', 'cmp-mini k-ok', T`✔ เสร็จ`);
+    const doneB = el('button', 'cmp-mini k-ok', t('ui.maps.done'));
     doneB.onclick = () => { view.routeEdit = null; redraw(); };
     rb.append(undoB, doneB);
     wrap.append(rb);
@@ -437,7 +437,7 @@ export async function renderMaps(pane) {
   // ── ฉากที่ผูกกับหมุด (ข้อ 2) ──
   if (scenesCache === null) {
     try { scenesCache = await collectPlacedScenes(); }
-    catch (e) { log('warn', T`maps: อ่านฉากที่ปักหมุดไม่ได้`, e); scenesCache = []; }
+    catch (e) { log('warn', t('ui.maps.mapsReadScenePin'), e); scenesCache = []; }
   }
   const counts = scenePinCounts(scenesCache, cur.id);
   const hereScenes = scenesForMap(scenesCache, cur.id);
@@ -448,7 +448,7 @@ export async function renderMaps(pane) {
   canvas.style.width = (view.zoom * 100) + '%';
   const img = el('img', 'map-img');
   if (cur.image) { img.src = mapImgURL(cur.image); canvas.append(img); }
-  else canvas.append(el('div', 'map-noimg', T`📷 ยังไม่มีรูป — กด "🖼 เปลี่ยนรูป"`));
+  else canvas.append(el('div', 'map-noimg', t('ui.maps.notHasImagePress')));
 
   // กริด
   if (ov.grid) {
@@ -591,12 +591,12 @@ export async function renderMaps(pane) {
       if (e.altKey) return editPin();
       // [alpha.71 ข้อ 3] โหมดเครื่องมือเป็นตัวตัดสิน — ไม่ใช่ "คลิกแล้วแก้ไขเลย" แบบเดิม
       if (view.tool === 'edit') return editPin();
-      if (view.tool === 'move') { setStatus(T`โหมดย้ายตำแหน่ง — ลากหมุดเพื่อย้าย`); return; }
+      if (view.tool === 'move') { setStatus(t('ui.maps.modeMovePosDrag')); return; }
       if (pin.kind === 'portal' && pin.toMap) { S.currentId = pin.toMap; view.sel.clear(); view.focusPin = null; redraw(); return; }
       if (pin.kind === 'entity' && pin.entityFile) { openEntity(pin.entityFile); return; }
       // หมุดที่ไม่มีลิงก์ในโหมด "เปิด/ดู" — บอกข้อมูลเฉย ๆ ไม่เปิดกล่องแก้ (ต้องกดปุ่ม ✎ ก่อน)
-      setStatus('📌 ' + (pin.label || T`(ไม่มีชื่อ)`) + (pin.note ? ' — ' + pin.note : '')
-                + T` · กดปุ่ม "✎ แก้ไข" บนแถบเครื่องมือเพื่อแก้หมุดนี้`);
+      setStatus('📌 ' + (pin.label || t('ui.common.notNamed')) + (pin.note ? ' — ' + pin.note : '')
+                + t('ui.maps.pressBtnEditTop'));
     };
     el2.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); editPin(); };
     async function editPin() {
@@ -643,7 +643,7 @@ export async function renderMaps(pane) {
     if (s.pinId || s.pinX == null) continue;
     const d = el('div', 'map-scene-dot', '◉');
     d.style.left = s.pinX + '%'; d.style.top = s.pinY + '%';
-    d.title = '📄 ' + (s.title || '') + T`\n(ฉากที่ปักพิกัดไว้เอง ไม่ได้ผูกกับหมุด)`;
+    d.title = '📄 ' + (s.title || '') + t('ui.maps.scenePinCantBind');
     canvas.append(d);
   }
 
@@ -658,13 +658,13 @@ export async function renderMaps(pane) {
   if (ov.compass) {
     const c = el('div', 'map-compass');
     c.innerHTML = '<span class="map-compass-n">N</span><span class="map-compass-needle">▲</span>';
-    c.title = T`ทิศเหนืออยู่ด้านบนของภาพ`;
+    c.title = t('ui.maps.topImage');
     canvas.append(c);
   }
   if (ov.scale) {
     const sc = el('div', 'map-scalebar');
     sc.append(el('div', 'map-scalebar-bar'));
-    sc.append(el('div', 'map-scalebar-lbl', ov.scaleLabel || T`(ตั้งระยะได้ที่ช่องข้าง 📏)`));
+    sc.append(el('div', 'map-scalebar-lbl', ov.scaleLabel || t('ui.maps.setGapField')));
     canvas.append(sc);
   }
 
@@ -675,10 +675,10 @@ export async function renderMaps(pane) {
   // ── รายการเส้นทาง (ข้อ 9) ──
   const rsec = el('div', 'map-routes-panel');
   const rhead = el('div', 'map-routes-head');
-  rhead.append(el('span', null, T`🛣 เส้นทาง (${mapRoutes(cur).length})`));
-  const addR = el('button', 'cmp-mini', T`＋ เส้นทางใหม่`);
+  rhead.append(el('span', null, tf('ui.maps.route3', mapRoutes(cur).length)));
+  const addR = el('button', 'cmp-mini', t('ui.maps.routeNew2'));
   addR.onclick = async () => {
-    const name = await ask(T`ชื่อเส้นทาง`, { value: T`เส้นทางที่ ` + (mapRoutes(cur).length + 1) });
+    const name = await ask(t('ui.maps.nameRoute'), { value: t('ui.maps.route') + (mapRoutes(cur).length + 1) });
     if (!name) return;
     const r = newRoute(name, ROUTE_COLORS[mapRoutes(cur).length % ROUTE_COLORS.length]);
     cur.routes = [...mapRoutes(cur), r];
@@ -693,27 +693,27 @@ export async function renderMaps(pane) {
     row.append(sw);
     const pts = routePoints(cur, r);
     row.append(el('span', 'map-route-name', r.name));
-    row.append(el('span', 'map-route-meta', T`${pts.length} จุด · ระยะ ~${routeLength(pts)}`));
-    const bEdit = el('button', 'cmp-mini', r.id === view.routeEdit ? T`✔ เสร็จ` : T`✎ ต่อจุด`);
+    row.append(el('span', 'map-route-meta', tf('ui.maps.dotGap', pts.length, routeLength(pts))));
+    const bEdit = el('button', 'cmp-mini', r.id === view.routeEdit ? t('ui.maps.done') : t('ui.maps.nextDot'));
     bEdit.onclick = () => { view.routeEdit = view.routeEdit === r.id ? null : r.id; redraw(); };
     const bColor = el('button', 'cmp-mini', '🎨');
-    bColor.title = T`เปลี่ยนสีเส้น`;
+    bColor.title = t('ui.maps.recolorLine');
     bColor.onclick = async () => {
       const i = ROUTE_COLORS.indexOf(r.color);
       r.color = ROUTE_COLORS[(i + 1) % ROUTE_COLORS.length];
       await save(); redraw();
     };
     const bDash = el('button', 'cmp-mini' + (r.dashed ? ' on' : ''), '┅');
-    bDash.title = T`เส้นประ / เส้นทึบ`;
+    bDash.title = t('ui.maps.lineLineSolid');
     bDash.onclick = async () => { r.dashed = !r.dashed; await save(); redraw(); };
     const bRen = el('button', 'cmp-mini', '✏');
-    bRen.title = T`เปลี่ยนชื่อเส้นทาง`;
-    bRen.onclick = async () => { const v = await ask(T`ชื่อเส้นทาง`, { value: r.name }); if (!v) return;
+    bRen.title = t('ui.maps.changeNameRoute');
+    bRen.onclick = async () => { const v = await ask(t('ui.maps.nameRoute'), { value: r.name }); if (!v) return;
       r.name = v.trim(); await save(); redraw(); };
     const bDel = el('button', 'cmp-mini k-danger', '🗑');
-    bDel.title = T`ลบเส้นทาง (หมุดยังอยู่)`;
+    bDel.title = t('ui.maps.delRoutePin');
     bDel.onclick = async () => {
-      if (!(await confirmBox(T`ลบเส้นทาง “${r.name}” ? (หมุดไม่ถูกลบ)`, T`ลบ`))) return;
+      if (!(await confirmBox(tf('ui.maps.delRoutePinNot', r.name), t('ui.common.del')))) return;
       deleteRoute(cur, r.id);
       if (view.routeEdit === r.id) view.routeEdit = null;
       await save(); redraw();
@@ -723,15 +723,15 @@ export async function renderMaps(pane) {
   }
   if (!mapRoutes(cur).length) {
     rsec.append(el('div', 'dim map-route-empty',
-      T`เส้นทาง = ลากเส้นเชื่อมหมุดตามลำดับ ใช้เล่าการเดินทางของตัวละคร — กด "＋ เส้นทางใหม่" แล้วคลิกหมุดทีละจุด`));
+      t('ui.maps.routeDragLineLink')));
   }
   wrap.append(rsec);
 
   // ── สรุป ──
   const st = pinStats(cur);
   wrap.append(el('div', 'map-foot',
-    T`📍 ${st.entity} เอนทิตี้ · 🚪 ${st.portal} ประตู · 📌 ${st.note} หมายเหตุ · 📄 ${hereScenes.length} ฉากผูกกับแผนที่นี้`
-    + (counts[''] ? T` (${counts['']} ฉากปักพิกัดเอง)` : '')));
+    tf('ui.maps.portalSceneBindMap', st.entity, st.portal, st.note, hereScenes.length)
+    + (counts[''] ? tf('ui.maps.scenePin', counts['']) : '')));
 
   if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
 }
@@ -752,7 +752,7 @@ function applyPinFilter(wrap) {
   }
   let note = wrap.querySelector('.map-search-note');
   if (!note) { note = el('div', 'map-search-note'); wrap.querySelector('.map-hint')?.after(note); }
-  note.textContent = q ? T`🔍 "${q}" — เจอ ${hit} หมุดบนแผนที่นี้` : '';
+  note.textContent = q ? tf('ui.maps.foundPinTopMap', q, hit) : '';
   note.style.display = q ? '' : 'none';
 }
 
@@ -857,11 +857,11 @@ export async function exportMapPng(map) {
     const b64 = cv.toDataURL('image/png').split(',')[1];
     const dir = await kapi.join(state.root, 'Images');
     const name = await kapi.writeImageData(dir, safeFileName(map.name) + '-map.png', b64);
-    setStatus(T`📷 บันทึกแผนที่ลงคลังรูปแล้ว: ` + (typeof name === 'string' ? name : 'map.png'));
+    setStatus(t('ui.maps.saveMapLibraryImage') + (typeof name === 'string' ? name : 'map.png'));
     return true;
   } catch (e) {
-    log('error', T`maps: ส่งออก PNG ไม่สำเร็จ`, e);
-    setStatus(T`ส่งออก PNG ไม่สำเร็จ: ` + e.message);
+    log('error', t('ui.maps.mapsExportPNGNot'), e);
+    setStatus(t('ui.common.exportPNGNotOk') + e.message);
     return false;
   }
 }
@@ -880,8 +880,8 @@ export async function printMap(map) {
     await kapi.print();
     return true;
   } catch (e) {
-    log('error', T`maps: พิมพ์แผนที่ไม่สำเร็จ`, e);
-    setStatus(T`พิมพ์แผนที่ไม่สำเร็จ: ` + e.message);
+    log('error', t('ui.maps.mapsPrintMapNot'), e);
+    setStatus(t('ui.maps.printMapNotOk') + e.message);
     return false;
   } finally {
     document.body.classList.remove('map-printing', 'printing');

@@ -1,4 +1,6 @@
 // test/branch-plans.test.cjs — หลายแผนต่อหนึ่งโปรเจกต์ (alpha.73 ข้อ 5)
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 const path = require('path');
 const out = path.join(require('os').tmpdir(), '_bplans.cjs');
 require('esbuild').buildSync({ entryPoints: [path.join(__dirname, '../src/branch-plans.js')], outfile: out, format: 'cjs', bundle: true, logLevel: 'silent' });

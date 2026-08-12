@@ -1,4 +1,6 @@
 // test/planner-data.test.cjs — Unit tests for PlannerData v4
+// [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
+require('./_lang.cjs').installLang('th');
 // รันด้วย: node test/planner-data.test.cjs
 'use strict';
 

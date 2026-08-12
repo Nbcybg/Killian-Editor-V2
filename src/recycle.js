@@ -1,5 +1,5 @@
 // recycle.js — ถังขยะ: ลบไปถังขยะ / กู้คืน / ล้างถังขยะเก่า (retention)
-import { T } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, refreshNetwork } from './app.js';
 import { setStatus, smart, state } from './core.js';
 import { confirmBox } from './ui.js';
@@ -14,7 +14,7 @@ export async function restoreFromTrash(p, fname) {
       await AC.restoreFromRecycle(kapi, info.root || state.root, p, info);
       await kapi.remove(sidecar);
       await buildTree(); smart.loadNames(state.root);
-      setStatus(info.kind === 'album' ? T`กู้คืนอัลบั้มแล้ว` : T`กู้คืนรูปแล้ว`);
+      setStatus(info.kind === 'album' ? t('ui.trash.recoverRestoreAlbumDone') : t('ui.trash.recoverRestoreImageDone'));
       return;
     }
     if (info.kind === 'section') {
@@ -22,7 +22,7 @@ export async function restoreFromTrash(p, fname) {
       await kapi.remove(sidecar);
       await buildTree(); smart.loadNames(state.root);
       refreshNetwork();
-      setStatus(T`กู้คืนเล่มแล้ว`); return;
+      setStatus(t('ui.trash.recoverRestoreBookDone')); return;
     }
     if (info.kind === 'scene') {
       const dst = await kapi.join(info.dPath, 'Chapters', info.folderName, info.sc.fileName);
@@ -62,18 +62,18 @@ export async function restoreFromTrash(p, fname) {
   }
   await buildTree(); smart.loadNames(state.root);
   refreshNetwork();
-  setStatus(T`กู้คืนแล้ว`);
+  setStatus(t('ui.trash.recoverRestoreDone'));
 }
 
 export async function deleteToTrash(file, label) {
-  if (!(await confirmBox(T`ลบ “${label}” ? (ย้ายไปถังขยะของโปรเจกต์ กู้คืนได้)`))) return null;
+  if (!(await confirmBox(tf('ui.trash.delMoveTrashProject', label)))) return null;
   const base = file.split(/[\\/]/).pop();
   const dst = await kapi.join(state.root, 'Recycle', Date.now().toString(36) + '-' + base);
   await kapi.move(file, dst);
   if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file); }
   await buildTree(); smart.loadNames(state.root);
   refreshNetwork();
-  setStatus(T`ย้ายไปถังขยะ: ` + label);
+  setStatus(t('ui.trash.moveTrash') + label);
   return dst;
 }
 
@@ -92,5 +92,5 @@ export async function purgeRecycle(root) {
     const p = await kapi.join(recDir, name);
     if ((await kapi.mtime(p)) < cutoff) { await kapi.remove(p); purged++; }
   }
-  if (purged) setStatus(T`ล้างถังขยะอัตโนมัติ ${purged} รายการ (เก่ากว่า ${days} วัน)`);
+  if (purged) setStatus(tf('ui.trash.clearTrashAutoList', purged, days));
 }

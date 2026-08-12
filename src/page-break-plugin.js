@@ -8,7 +8,7 @@
 // บทเรียน 44: `setBreaks()` คืน true เฉพาะเมื่อ "ลายเซ็นเปลี่ยนจริง" — ผู้เรียกจึง
 // dispatch transaction เฉพาะตอนนั้น ไม่ใช่ทุก 300ms ตามจังหวะ debounce
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 import { Plugin as PMPlugin, PluginKey as PMKey } from 'prosemirror-state';
 import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
 
@@ -21,7 +21,7 @@ import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
  */
 export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
   const key = new PMKey(keyName);
-  const text = label || ((page) => T`หน้า ` + (page || ''));
+  const text = label || ((page) => t('ui.common.page2') + (page || ''));
   let list = [];
   let sig = '';
 
