@@ -1,20 +1,21 @@
 // global-search.js — ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F) ค้นทุกไฟล์ .md และ .json
+import { T } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { parseMdFile } from './md.js';
 
 // ฟังก์ชันหลัก — เปิด dialog ค้นหา
 export async function openGlobalSearch() {
-  if (!state.root) { setStatus('ยังไม่ได้เปิดโปรเจกต์'); return; }
+  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide k-gsearch');
-  box.append(el('div', 'k-dlg-title', '🔍 ค้นหาทั้งโปรเจกต์'));
+  box.append(el('div', 'k-dlg-title', T`🔍 ค้นหาทั้งโปรเจกต์`));
 
   // แถบค้นหา
   const searchRow = el('div', 'k-row');
   searchRow.style.cssText = 'gap:8px;margin:8px 0';
   const qInput = el('input', 'k-dlg-input');
-  qInput.type = 'text'; qInput.placeholder = 'ค้นในทุกไฟล์ .md และ .json — กด Enter';
+  qInput.type = 'text'; qInput.placeholder = T`ค้นในทุกไฟล์ .md และ .json — กด Enter`;
   qInput.style.flex = '1';
   searchRow.append(qInput);
 
@@ -27,9 +28,9 @@ export async function openGlobalSearch() {
     w.append(c, document.createTextNode(' ' + label));
     typeRow.append(w); return c;
   };
-  const chkMd = mkChk('.md (ฉาก/โน้ต/Memo)', 'md');
+  const chkMd = mkChk(T`.md (ฉาก/โน้ต/Memo)`, 'md');
   const chkJson = mkChk('.json (Wiki/scenes/section)', 'json', false);
-  const chkAll = mkChk('ค้นเฉพาะชื่อไฟล์', 'name', false);
+  const chkAll = mkChk(T`ค้นเฉพาะชื่อไฟล์`, 'name', false);
   searchRow.append(typeRow);
 
   box.append(searchRow, typeRow);
@@ -43,7 +44,7 @@ export async function openGlobalSearch() {
   const btns = el('div', 'k-dlg-btns');
   const status = el('span', 'k-gsearch-status');
   status.style.cssText = 'flex:1;font-size:11.5px;color:var(--dim);text-align:left';
-  const closeB = el('button', 'k-ok', 'ปิด');
+  const closeB = el('button', 'k-ok', T`ปิด`);
   btns.append(status, closeB);
   box.append(btns);
   ov.append(box);
@@ -55,8 +56,8 @@ export async function openGlobalSearch() {
   // ฟังก์ชันค้นหา
   async function doGlobalSearch(q) {
     if (!q.trim()) { results.innerHTML = ''; status.textContent = ''; return; }
-    status.textContent = 'กำลังค้น…';
-    results.innerHTML = el('div', 'dim', 'กำลังค้นหา…').outerHTML;
+    status.textContent = T`กำลังค้น…`;
+    results.innerHTML = el('div', 'dim', T`กำลังค้นหา…`).outerHTML;
 
     const hits = [];
     const ql = q.toLowerCase();
@@ -119,11 +120,11 @@ export async function openGlobalSearch() {
       }
 
       renderResults(Object.values(grouped), ql);
-      status.textContent = `พบ ${hits.length} ไฟล์`;
+      status.textContent = T`พบ ${hits.length} ไฟล์`;
     } catch (e) {
-      log('error', 'global-search: ค้นล้มเหลว', e);
-      results.innerHTML = el('div', 'dim', 'เกิดข้อผิดพลาด').outerHTML;
-      status.textContent = 'ค้นล้มเหลว';
+      log('error', T`global-search: ค้นล้มเหลว`, e);
+      results.innerHTML = el('div', 'dim', T`เกิดข้อผิดพลาด`).outerHTML;
+      status.textContent = T`ค้นล้มเหลว`;
     }
   }
 
@@ -131,7 +132,7 @@ export async function openGlobalSearch() {
   function renderResults(hits, highlight) {
     results.innerHTML = '';
     if (!hits.length) {
-      results.append(el('div', 'dim', 'ไม่พบผลลัพธ์'));
+      results.append(el('div', 'dim', T`ไม่พบผลลัพธ์`));
       return;
     }
 
@@ -167,7 +168,7 @@ export async function openGlobalSearch() {
       }
 
       // ปุ่มเปิดไฟล์
-      const openB = el('button', 'k-ok k-gsearch-open', 'เปิด');
+      const openB = el('button', 'k-ok k-gsearch-open', T`เปิด`);
       openB.onclick = async (e) => {
         e.stopPropagation();
         ov.remove();
@@ -212,15 +213,15 @@ export async function openGlobalSearch() {
 }
 
 export async function renderSearchPanel(host) {
-  if (!state.root) { setStatus('ยังไม่ได้เปิดโปรเจกต์'); return; }
+  if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
   host.innerHTML = '';
 
-  host.append(el('div', 'k-dlg-title', '🔍 ค้นหาทั้งโปรเจกต์'));
+  host.append(el('div', 'k-dlg-title', T`🔍 ค้นหาทั้งโปรเจกต์`));
 
   const searchRow = el('div', 'k-row');
   searchRow.style.cssText = 'gap:8px;margin:8px 0';
   const qInput = el('input', 'k-dlg-input');
-  qInput.type = 'text'; qInput.placeholder = 'ค้นในทุกไฟล์ .md และ .json — กด Enter';
+  qInput.type = 'text'; qInput.placeholder = T`ค้นในทุกไฟล์ .md และ .json — กด Enter`;
   qInput.style.flex = '1';
   searchRow.append(qInput);
 
@@ -232,9 +233,9 @@ export async function renderSearchPanel(host) {
     w.append(c, document.createTextNode(' ' + label));
     typeRow.append(w); return c;
   };
-  const chkMd = mkChk('.md (ฉาก/โน้ต/Memo)', 'md');
+  const chkMd = mkChk(T`.md (ฉาก/โน้ต/Memo)`, 'md');
   const chkJson = mkChk('.json (Wiki/scenes/section)', 'json', false);
-  const chkAll = mkChk('ค้นเฉพาะชื่อไฟล์', 'name', false);
+  const chkAll = mkChk(T`ค้นเฉพาะชื่อไฟล์`, 'name', false);
   host.append(searchRow, typeRow);
 
   const results = el('div', 'k-gsearch-results');
@@ -247,8 +248,8 @@ export async function renderSearchPanel(host) {
 
   async function doSearch(q) {
     if (!q.trim()) { results.innerHTML = ''; status.textContent = ''; return; }
-    status.textContent = 'กำลังค้น…';
-    results.innerHTML = el('div', 'dim', 'กำลังค้นหา…').outerHTML;
+    status.textContent = T`กำลังค้น…`;
+    results.innerHTML = el('div', 'dim', T`กำลังค้นหา…`).outerHTML;
     const hits = [];
     const ql = q.toLowerCase();
     const searchNameOnly = chkAll.checked;
@@ -289,17 +290,17 @@ export async function renderSearchPanel(host) {
       const grouped = {};
       for (const h of hits) { if (!grouped[h.file]) grouped[h.file] = h; else grouped[h.file].matches.push(...h.matches); }
       showResults(Object.values(grouped), ql);
-      status.textContent = `พบ ${hits.length} ไฟล์`;
+      status.textContent = T`พบ ${hits.length} ไฟล์`;
     } catch (e) {
-      log('error', 'search-panel: ค้นล้มเหลว', e);
-      results.innerHTML = el('div', 'dim', 'เกิดข้อผิดพลาด').outerHTML;
-      status.textContent = 'ค้นล้มเหลว';
+      log('error', T`search-panel: ค้นล้มเหลว`, e);
+      results.innerHTML = el('div', 'dim', T`เกิดข้อผิดพลาด`).outerHTML;
+      status.textContent = T`ค้นล้มเหลว`;
     }
   }
 
   function showResults(hits, highlight) {
     results.innerHTML = '';
-    if (!hits.length) { results.append(el('div', 'dim', 'ไม่พบผลลัพธ์')); return; }
+    if (!hits.length) { results.append(el('div', 'dim', T`ไม่พบผลลัพธ์`)); return; }
     for (const h of hits) {
       const card = el('div', 'k-gsearch-hit');
       const header = el('div', 'k-gsearch-hit-head');
@@ -319,7 +320,7 @@ export async function renderSearchPanel(host) {
         } else { line.textContent = m.text; }
         card.append(line);
       }
-      const openB = el('button', 'k-ok k-gsearch-open', 'เปิด');
+      const openB = el('button', 'k-ok k-gsearch-open', T`เปิด`);
       openB.onclick = async (e) => {
         e.stopPropagation();
         if (h.type === 'md') { const { openScene } = await import('./app.js'); openScene(h.file, h.name); }

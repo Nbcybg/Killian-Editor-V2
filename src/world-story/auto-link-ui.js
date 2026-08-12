@@ -1,5 +1,6 @@
 // auto-link-ui.js — แท็บ Backlinks ในหน้า Wiki entity (ข้อ 86)
 // แสดงรายการฉากที่กล่าวถึง entity นี้
+import { T } from '../i18n.js';
 import { el, setStatus, state } from '../core.js';
 import { AutoLink } from '../world-story/auto-link.js';
 import { listScenes, listEntities } from '../project-scan.js';
@@ -72,13 +73,13 @@ export function getBacklinksFor(entityPath) {
 export function renderBacklinksTab(host, entityPath, onOpenScene) {
   host.innerHTML = '';
   if (!autoLink) {
-    host.append(el('div', 'dim', '(กำลังโหลดดัชนีเชื่อมโยง…)'));
+    host.append(el('div', 'dim', T`(กำลังโหลดดัชนีเชื่อมโยง…)`));
     ensureAutoLink().then(() => renderBacklinksTab(host, entityPath, onOpenScene));
     return;
   }
   const links = getBacklinksFor(entityPath);
   if (!links.length) {
-    host.append(el('div', 'dim', '(ยังไม่มีฉากที่กล่าวถึงเอนทิตี้นี้)'));
+    host.append(el('div', 'dim', T`(ยังไม่มีฉากที่กล่าวถึงเอนทิตี้นี้)`));
     return;
   }
 

@@ -1,21 +1,22 @@
 // ai-dialogue.js — สร้างบทสนทนาจากบุคลิกตัวละครใน Wiki (ข้อ 74)
 // spec: docs/74-ai-dialogue.md · รูปแบบผลลัพธ์ตรงกับ fountain ของ K2 (.หัวฉาก @ตัวละคร (วงเล็บ) บทพูด)
+import { T } from '../i18n.js';
 import { estimateTokens } from './ai-core.js';
 
-const SYSTEM = 'คุณเป็นนักเขียนบทภาพยนตร์ภาษาไทยมืออาชีพ เขียนบทสนทนาที่ฟังเหมือนคนพูดจริง '
-  + 'ตัวละครแต่ละตัวต้องมีน้ำเสียงต่างกันชัดเจนตามบุคลิกที่ให้มา '
-  + 'ส่งเฉพาะบทสนทนา ห้ามอธิบาย ห้ามใส่หัวข้อหรือคำนำ';
+const SYSTEM = T`คุณเป็นนักเขียนบทภาพยนตร์ภาษาไทยมืออาชีพ เขียนบทสนทนาที่ฟังเหมือนคนพูดจริง `
+  + T`ตัวละครแต่ละตัวต้องมีน้ำเสียงต่างกันชัดเจนตามบุคลิกที่ให้มา `
+  + T`ส่งเฉพาะบทสนทนา ห้ามอธิบาย ห้ามใส่หัวข้อหรือคำนำ`;
 
 // ฟิลด์ใน Wiki ที่ใช้เป็นบุคลิก (ยอมรับได้ทั้งคีย์ไทยและอังกฤษ — โปรเจกต์เก่าตั้งชื่อฟิลด์เองได้)
 const FIELD_ALIASES = {
-  role: ['role', 'บทบาท', 'ตำแหน่ง'],
-  age: ['age', 'อายุ'],
-  personality: ['personality', 'บุคลิก', 'นิสัย', 'traits'],
-  speech: ['speech', 'speechStyle', 'การพูด', 'สำนวน', 'น้ำเสียง'],
-  background: ['background', 'ภูมิหลัง', 'ประวัติ', 'bio'],
-  goal: ['goal', 'เป้าหมาย', 'motivation', 'แรงจูงใจ'],
-  fear: ['fear', 'ความกลัว', 'จุดอ่อน', 'weakness'],
-  quirk: ['quirk', 'ลักษณะเฉพาะ', 'ติดปาก'],
+  role: ['role', T`บทบาท`, T`ตำแหน่ง`],
+  age: ['age', T`อายุ`],
+  personality: ['personality', T`บุคลิก`, T`นิสัย`, 'traits'],
+  speech: ['speech', 'speechStyle', T`การพูด`, T`สำนวน`, T`น้ำเสียง`],
+  background: ['background', T`ภูมิหลัง`, T`ประวัติ`, 'bio'],
+  goal: ['goal', T`เป้าหมาย`, 'motivation', T`แรงจูงใจ`],
+  fear: ['fear', T`ความกลัว`, T`จุดอ่อน`, 'weakness'],
+  quirk: ['quirk', T`ลักษณะเฉพาะ`, T`ติดปาก`],
 };
 
 /**
@@ -32,7 +33,7 @@ export function characterProfile(entity) {
     }
     return '';
   };
-  const out = { id: entity.id || '', name: entity.name || entity.title || '(ไม่ทราบชื่อ)', aliases: entity.aliases || [] };
+  const out = { id: entity.id || '', name: entity.name || entity.title || T`(ไม่ทราบชื่อ)`, aliases: entity.aliases || [] };
   for (const [key, keys] of Object.entries(FIELD_ALIASES)) out[key] = pick(keys);
   out.relationships = (entity.relationships || []).map((r) => ({
     target: r.targetName || r.target || '', role: r.role || '',
@@ -43,19 +44,19 @@ export function characterProfile(entity) {
 /** Render a profile as prompt text (pure). */
 export function profileBlock(p) {
   if (!p) return '';
-  const rows = [`ชื่อ: ${p.name}` + (p.aliases && p.aliases.length ? ` (เรียกอีกอย่างว่า ${p.aliases.join(', ')})` : '')];
+  const rows = [T`ชื่อ: ${p.name}` + (p.aliases && p.aliases.length ? T` (เรียกอีกอย่างว่า ${p.aliases.join(', ')})` : '')];
   const add = (label, v) => { if (v) rows.push(`${label}: ${v}`); };
-  add('บทบาท', p.role); add('อายุ', p.age); add('บุคลิก', p.personality);
-  add('วิธีพูด/สำนวน', p.speech); add('ภูมิหลัง', p.background);
-  add('เป้าหมาย', p.goal); add('ความกลัว/จุดอ่อน', p.fear); add('ติดปาก', p.quirk);
+  add(T`บทบาท`, p.role); add(T`อายุ`, p.age); add(T`บุคลิก`, p.personality);
+  add(T`วิธีพูด/สำนวน`, p.speech); add(T`ภูมิหลัง`, p.background);
+  add(T`เป้าหมาย`, p.goal); add(T`ความกลัว/จุดอ่อน`, p.fear); add(T`ติดปาก`, p.quirk);
   if (p.relationships && p.relationships.length) {
-    rows.push('ความสัมพันธ์: ' + p.relationships.map((r) => `${r.target}${r.role ? ' (' + r.role + ')' : ''}`).join(', '));
+    rows.push(T`ความสัมพันธ์: ` + p.relationships.map((r) => `${r.target}${r.role ? ' (' + r.role + ')' : ''}`).join(', '));
   }
-  add('อื่น ๆ', p.notes);
+  add(T`อื่น ๆ`, p.notes);
   return rows.join('\n');
 }
 
-export const DIALOGUE_FORMATS = { screenplay: 'บทภาพยนตร์', prose: 'ร้อยแก้ว (มีบรรยายคั่น)' };
+export const DIALOGUE_FORMATS = { screenplay: T`บทภาพยนตร์`, prose: T`ร้อยแก้ว (มีบรรยายคั่น)` };
 
 /**
  * Build the dialogue prompt. Pure.
@@ -67,36 +68,36 @@ export function buildDialoguePrompt(a, b, context = {}, opts = {}) {
   const format = opts.format === 'prose' ? 'prose' : 'screenplay';
   const lines = [];
   const exchanges = opts.lines || 8;
-  lines.push(`เขียนบทสนทนาระหว่างตัวละคร 2 ตัวต่อไปนี้ ประมาณ ${exchanges} รอบการโต้ตอบ`);
-  lines.push('ให้แต่ละคนพูดตามบุคลิก วิธีพูด และเป้าหมายของตัวเอง — ห้ามให้ทั้งคู่พูดเหมือนกัน');
-  if (opts.tone) lines.push('โทนโดยรวม: ' + opts.tone);
+  lines.push(T`เขียนบทสนทนาระหว่างตัวละคร 2 ตัวต่อไปนี้ ประมาณ ${exchanges} รอบการโต้ตอบ`);
+  lines.push(T`ให้แต่ละคนพูดตามบุคลิก วิธีพูด และเป้าหมายของตัวเอง — ห้ามให้ทั้งคู่พูดเหมือนกัน`);
+  if (opts.tone) lines.push(T`โทนโดยรวม: ` + opts.tone);
   lines.push('');
-  lines.push('### ตัวละคร ก');
+  lines.push(T`### ตัวละคร ก`);
   lines.push(profileBlock(a));
   lines.push('');
-  lines.push('### ตัวละคร ข');
+  lines.push(T`### ตัวละคร ข`);
   lines.push(profileBlock(b));
 
   const ctx = typeof context === 'string' ? { situation: context } : (context || {});
   const cRows = [];
-  if (ctx.situation) cRows.push('สถานการณ์: ' + ctx.situation);
-  if (ctx.place) cRows.push('สถานที่: ' + ctx.place);
-  if (ctx.time) cRows.push('เวลา: ' + ctx.time);
-  if (ctx.goal) cRows.push('สิ่งที่แต่ละฝ่ายต้องการจากบทสนทนานี้: ' + ctx.goal);
-  if (ctx.conflict) cRows.push('ความขัดแย้ง: ' + ctx.conflict);
-  if (ctx.mood) cRows.push('อารมณ์ของฉาก: ' + ctx.mood);
-  if (cRows.length) { lines.push('', '### บริบทของฉาก', ...cRows); }
-  if (ctx.before) { lines.push('', '### ข้อความก่อนหน้า (เขียนต่อให้กลมกลืน)', String(ctx.before).slice(0, 1500)); }
+  if (ctx.situation) cRows.push(T`สถานการณ์: ` + ctx.situation);
+  if (ctx.place) cRows.push(T`สถานที่: ` + ctx.place);
+  if (ctx.time) cRows.push(T`เวลา: ` + ctx.time);
+  if (ctx.goal) cRows.push(T`สิ่งที่แต่ละฝ่ายต้องการจากบทสนทนานี้: ` + ctx.goal);
+  if (ctx.conflict) cRows.push(T`ความขัดแย้ง: ` + ctx.conflict);
+  if (ctx.mood) cRows.push(T`อารมณ์ของฉาก: ` + ctx.mood);
+  if (cRows.length) { lines.push('', T`### บริบทของฉาก`, ...cRows); }
+  if (ctx.before) { lines.push('', T`### ข้อความก่อนหน้า (เขียนต่อให้กลมกลืน)`, String(ctx.before).slice(0, 1500)); }
 
-  lines.push('', '### รูปแบบผลลัพธ์');
+  lines.push('', T`### รูปแบบผลลัพธ์`);
   if (format === 'screenplay') {
-    lines.push('ใช้รูปแบบบทภาพยนตร์แบบนี้เท่านั้น (ขึ้นบรรทัดใหม่ทุกครั้ง):');
-    lines.push('@ชื่อตัวละคร');
-    lines.push('(อารมณ์/การกระทำสั้น ๆ ถ้าจำเป็น)');
-    lines.push('บทพูด');
-    lines.push('ห้ามใส่หัวฉาก ห้ามใส่คำบรรยายยาว ห้ามใส่เลขลำดับ');
+    lines.push(T`ใช้รูปแบบบทภาพยนตร์แบบนี้เท่านั้น (ขึ้นบรรทัดใหม่ทุกครั้ง):`);
+    lines.push(T`@ชื่อตัวละคร`);
+    lines.push(T`(อารมณ์/การกระทำสั้น ๆ ถ้าจำเป็น)`);
+    lines.push(T`บทพูด`);
+    lines.push(T`ห้ามใส่หัวฉาก ห้ามใส่คำบรรยายยาว ห้ามใส่เลขลำดับ`);
   } else {
-    lines.push('เขียนเป็นร้อยแก้ว: บทพูดอยู่ในเครื่องหมายคำพูด "…" สลับกับคำบรรยายสั้น ๆ ว่าใครพูดและทำอะไร');
+    lines.push(T`เขียนเป็นร้อยแก้ว: บทพูดอยู่ในเครื่องหมายคำพูด "…" สลับกับคำบรรยายสั้น ๆ ว่าใครพูดและทำอะไร`);
   }
   const prompt = lines.join('\n');
   return { system: SYSTEM, prompt, tokens: estimateTokens(prompt), format };
@@ -157,7 +158,7 @@ export function toProse(lines) {
   return (lines || []).filter((l) => l && l.text).map((l) => {
     if (!l.speaker) return l.text;
     const paren = l.paren ? `${l.paren} ` : '';
-    return `${l.speaker}${paren ? ' ' + paren : ''} พูดว่า "${l.text}"`.replace(/\s+/g, ' ');
+    return T`${l.speaker}${paren ? ' ' + paren : ''} พูดว่า "${l.text}"`.replace(/\s+/g, ' ');
   }).join('\n\n');
 }
 
@@ -173,9 +174,9 @@ export async function generateDialogue(characterA, characterB, context = {}, opt
   const client = options.client;
   const a = characterA && characterA.personality !== undefined ? characterA : characterProfile(characterA);
   const b = characterB && characterB.personality !== undefined ? characterB : characterProfile(characterB);
-  if (!a || !b) return { ok: false, text: '', lines: [], error: 'ต้องมีตัวละคร 2 ตัว', code: 'no-characters' };
+  if (!a || !b) return { ok: false, text: '', lines: [], error: T`ต้องมีตัวละคร 2 ตัว`, code: 'no-characters' };
   const built = buildDialoguePrompt(a, b, context, options);
-  if (!client) return { ok: false, text: '', lines: [], prompt: built.prompt, error: 'ไม่ได้ตั้งค่า AI client', code: 'no-client' };
+  if (!client) return { ok: false, text: '', lines: [], prompt: built.prompt, error: T`ไม่ได้ตั้งค่า AI client`, code: 'no-client' };
 
   const req = {
     prompt: built.prompt, system: built.system, feature: 'dialogue',

@@ -10,6 +10,7 @@
 // ตอนนี้: **นิยามที่เดียวคือไฟล์นี้** — ทั้งกล่องตั้งค่า ชิปบนแถบเครื่องมือ และตัววาด
 // อ่านจาก `NET_COLOR_DEFS` ชุดเดียวกันหมด · เพิ่มสีใหม่ = เพิ่มบรรทัดเดียวที่นี่
 
+import { T } from './i18n.js';
 import { REL_TYPES } from './relationship-types.js';
 
 /**
@@ -21,40 +22,40 @@ import { REL_TYPES } from './relationship-types.js';
  *   def    ค่าเริ่มต้น · cssVar = ถ้าไม่ได้ตั้งเอง ให้ตามธีมของโปรแกรม
  */
 export const NET_COLOR_GROUPS = [
-  { group: 'nodes',  label: 'สีโหนด (ตามหมวด)' },
-  { group: 'edges',  label: 'สีเส้น (ตามประเภทความสัมพันธ์)' },
-  { group: 'links',  label: 'สีเส้นเชื่อมอื่น ๆ' },
-  { group: 'canvas', label: 'พื้นผัง / ตัวหนังสือ' },
+  { group: 'nodes',  label: T`สีโหนด (ตามหมวด)` },
+  { group: 'edges',  label: T`สีเส้น (ตามประเภทความสัมพันธ์)` },
+  { group: 'links',  label: T`สีเส้นเชื่อมอื่น ๆ` },
+  { group: 'canvas', label: T`พื้นผัง / ตัวหนังสือ` },
 ];
 
 const NODE_DEFS = [
-  { key: 'nc-char', id: 'characters', label: 'ตัวละคร',      def: '#d97757' },
-  { key: 'nc-loca', id: 'locations',  label: 'สถานที่',      def: '#7aa8d8' },
-  { key: 'nc-item', id: 'items',      label: 'สิ่งของ',       def: '#6fae8a' },
-  { key: 'nc-lore', id: 'lore',       label: 'ตำนาน',        def: '#b58fc9' },
-  { key: 'nc-scen', id: 'scene',      label: 'ฉาก',          def: '#e8c95c' },
-  { key: 'nc-chap', id: 'chapter',    label: 'บท',           def: '#c08a5e' },
+  { key: 'nc-char', id: 'characters', label: T`ตัวละคร`,      def: '#d97757' },
+  { key: 'nc-loca', id: 'locations',  label: T`สถานที่`,      def: '#7aa8d8' },
+  { key: 'nc-item', id: 'items',      label: T`สิ่งของ`,       def: '#6fae8a' },
+  { key: 'nc-lore', id: 'lore',       label: T`ตำนาน`,        def: '#b58fc9' },
+  { key: 'nc-scen', id: 'scene',      label: T`ฉาก`,          def: '#e8c95c' },
+  { key: 'nc-chap', id: 'chapter',    label: T`บท`,           def: '#c08a5e' },
   // [alpha.73 ข้อ 3] เดิม book กับ section ใช้ช่องเดียวกัน (nc-sect) — แยกให้ตั้งได้จริงทั้งคู่
-  { key: 'nc-book', id: 'book',       label: 'เล่ม',          def: '#a8d870' },
-  { key: 'nc-sect', id: 'section',    label: 'ตอน/ส่วน',      def: '#8ec8c8' },
+  { key: 'nc-book', id: 'book',       label: T`เล่ม`,          def: '#a8d870' },
+  { key: 'nc-sect', id: 'section',    label: T`ตอน/ส่วน`,      def: '#8ec8c8' },
 ];
 
 // เส้นเชื่อมพิเศษที่ไม่ได้มาจาก REL_TYPES
 const LINK_DEFS = [
-  { key: 'ne-sl', id: 'scene-link', label: 'ลิงก์ระหว่างฉาก',   def: '#5caf8a' },
-  { key: 'ne-co', id: 'co-occur',   label: 'ปรากฏร่วมในฉาก',   def: '#8a8885' },
-  { key: 'ne-es', id: 'ent-scene',  label: 'เอนทิตี้ ↔ ฉาก',    def: '#d9955f' },
+  { key: 'ne-sl', id: 'scene-link', label: T`ลิงก์ระหว่างฉาก`,   def: '#5caf8a' },
+  { key: 'ne-co', id: 'co-occur',   label: T`ปรากฏร่วมในฉาก`,   def: '#8a8885' },
+  { key: 'ne-es', id: 'ent-scene',  label: T`เอนทิตี้ ↔ ฉาก`,    def: '#d9955f' },
 ];
 
 // สีของผืนผ้าใบ — ยังไม่ได้ตั้งเอง = ตามธีมของโปรแกรม (cssVar) · อ่านธีมไม่ได้ค่อยใช้ def
 const CANVAS_DEFS = [
-  { key: 'nb-bg',      id: 'bg',      label: 'พื้นหลังผัง',        def: '#1a1a18', cssVar: '--bg' },
-  { key: 'nb-grid',    id: 'grid',    label: 'เส้นกริด',          def: '#3a3a36', cssVar: '--border' },
-  { key: 'nb-label',   id: 'label',   label: 'ตัวหนังสือชื่อโหนด', def: '#faf9f5', cssVar: '--bright' },
-  { key: 'nb-labelbg', id: 'labelBg', label: 'พื้นป้ายชื่อโหนด',   def: '#1f1e1c', cssVar: '--side' },
-  { key: 'nb-border',  id: 'border',  label: 'ขอบโหนด',          def: '#1f1e1c' },
-  { key: 'nb-hover',   id: 'hover',   label: 'ขอบโหนดตอนชี้',     def: '#faf9f5' },
-  { key: 'nb-axis',    id: 'axis',    label: 'แกนบอกทิศ (X/Y/Z)', def: '#8a8885', cssVar: '--dim' },
+  { key: 'nb-bg',      id: 'bg',      label: T`พื้นหลังผัง`,        def: '#1a1a18', cssVar: '--bg' },
+  { key: 'nb-grid',    id: 'grid',    label: T`เส้นกริด`,          def: '#3a3a36', cssVar: '--border' },
+  { key: 'nb-label',   id: 'label',   label: T`ตัวหนังสือชื่อโหนด`, def: '#faf9f5', cssVar: '--bright' },
+  { key: 'nb-labelbg', id: 'labelBg', label: T`พื้นป้ายชื่อโหนด`,   def: '#1f1e1c', cssVar: '--side' },
+  { key: 'nb-border',  id: 'border',  label: T`ขอบโหนด`,          def: '#1f1e1c' },
+  { key: 'nb-hover',   id: 'hover',   label: T`ขอบโหนดตอนชี้`,     def: '#faf9f5' },
+  { key: 'nb-axis',    id: 'axis',    label: T`แกนบอกทิศ (X/Y/Z)`, def: '#8a8885', cssVar: '--dim' },
 ];
 
 /** สีเส้นตามประเภทความสัมพันธ์ — สร้างจาก REL_TYPES ไม่ต้องเขียนซ้ำ */
@@ -125,9 +126,9 @@ export function needsNetColorMigration(saved) {
 // ห้ามฮาร์ดโค้ดปุ่มเมาส์ — ต้องตั้งได้ในตั้งค่าโปรเจกต์ และคำอธิบายใต้ผังต้องตรงกับที่ตั้งไว้เสมอ
 
 export const MOUSE_BUTTONS = [
-  { value: 'middle', btn: 1, label: 'ปุ่มกลาง (ล้อ)' },
-  { value: 'right',  btn: 2, label: 'คลิกขวา' },
-  { value: 'left',   btn: 0, label: 'คลิกซ้าย' },
+  { value: 'middle', btn: 1, label: T`ปุ่มกลาง (ล้อ)` },
+  { value: 'right',  btn: 2, label: T`คลิกขวา` },
+  { value: 'left',   btn: 0, label: T`คลิกซ้าย` },
 ];
 export function buttonLabel(v) {
   const m = MOUSE_BUTTONS.find((x) => x.value === v);
@@ -155,13 +156,13 @@ export function resolveNetControls(saved) {
 export function controlsHint(controls, mode3D) {
   const c = resolveNetControls(controls);
   const parts = [
-    `ลาก${buttonLabel(c.panButton)}พื้นที่ว่าง = เลื่อนผัง`,
-    'ล้อ = ซูม',
-    'Shift+คลิกโหนด = ผลักโหนดรอบ ๆ ออก',
-    'ดับเบิลคลิก = เปิด',
+    T`ลาก${buttonLabel(c.panButton)}พื้นที่ว่าง = เลื่อนผัง`,
+    T`ล้อ = ซูม`,
+    T`Shift+คลิกโหนด = ผลักโหนดรอบ ๆ ออก`,
+    T`ดับเบิลคลิก = เปิด`,
   ];
-  if (mode3D) parts.splice(2, 0, `ลาก${buttonLabel(c.orbitButton)} = หมุนมุมมอง 3D`);
-  else parts.push(`(เปิดโหมด 3D แล้วลาก${buttonLabel(c.orbitButton)} = หมุนมุมมอง)`);
+  if (mode3D) parts.splice(2, 0, T`ลาก${buttonLabel(c.orbitButton)} = หมุนมุมมอง 3D`);
+  else parts.push(T`(เปิดโหมด 3D แล้วลาก${buttonLabel(c.orbitButton)} = หมุนมุมมอง)`);
   return parts.join(' · ');
 }
 

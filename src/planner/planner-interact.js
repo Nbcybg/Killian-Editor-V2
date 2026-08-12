@@ -4,6 +4,7 @@
 //            + การ์ดเนื้อเรื่อง scene/chapter/entity/note
 // เพิ่มจาก v3: pan ด้วย space/ล้อกลาง/มือ · ซูมเข้าหาเคอร์เซอร์ · snap กริด · รายงานพิกัด x,y (บั๊ก 8)
 //            · แก้ข้อความในที่ (overlay textarea — ProseMirror/IME ไทยใช้ได้) · เมนูคลิกขวา
+import { T } from '../i18n.js';
 import { fabric } from 'fabric';
 import { log } from '../core.js';
 import { absBox } from './planner-render.js';
@@ -258,7 +259,7 @@ export class PlannerInteraction {
     c.moved = true;
     const box = _rectFrom(c.x, c.y, p.x, p.y);
     if (!c.ghost) {
-      this._log(`create/guide เกิดกรอบนำ ${_r(box.width)}x${_r(box.height)} ที่ ${_r(box.x)},${_r(box.y)}`,
+      this._log(T`create/guide เกิดกรอบนำ ${_r(box.width)}x${_r(box.height)} ที่ ${_r(box.x)},${_r(box.y)}`,
         { objects: this.renderer.canvas.getObjects().length, zoom: _r(this.renderer.getZoom()) });
     }
     if (!c.ghost) {
@@ -279,7 +280,7 @@ export class PlannerInteraction {
     if (c.ghost) this.renderer.canvas.remove(c.ghost);
     const p = this.renderer.canvas.getPointer(opt.e);
     const box = c.moved ? _rectFrom(c.x, c.y, p.x, p.y) : null;
-    this._log(`create/end tool=${this.tool} ${box ? 'ลากกำหนดขนาด' : 'คลิกเปล่า (ขนาดมาตรฐาน)'}`,
+    this._log(`create/end tool=${this.tool} ${box ? T`ลากกำหนดขนาด` : T`คลิกเปล่า (ขนาดมาตรฐาน)`}`,
       box ? { w: _r(box.width), h: _r(box.height) } : undefined);
     this.renderer.canvas.selection = this.tool === 'select';
     if (this._cb.onCreateNode) {
@@ -293,13 +294,13 @@ export class PlannerInteraction {
     let node = t && t.kind === 'node' ? t : (t && t.kind === 'port' ? this.renderer._nodeVis.get(t.nid) : null);
     if (!node) {
       this._connectFrom = null;
-      if (this._cb.onStatus) this._cb.onStatus('คลิกการ์ดต้นทาง แล้วคลิกการ์ดปลายทาง (Esc = ยกเลิก)');
+      if (this._cb.onStatus) this._cb.onStatus(T`คลิกการ์ดต้นทาง แล้วคลิกการ์ดปลายทาง (Esc = ยกเลิก)`);
       return;
     }
     const port = t && t.kind === 'port' ? t.port : 'auto';
     if (!this._connectFrom) {
       this._connectFrom = { nid: node.nid, port };
-      if (this._cb.onStatus) this._cb.onStatus('เลือกการ์ดปลายทาง…');
+      if (this._cb.onStatus) this._cb.onStatus(T`เลือกการ์ดปลายทาง…`);
       return;
     }
     if (this._connectFrom.nid !== node.nid && this._cb.onConnect) {
@@ -331,7 +332,7 @@ export class PlannerInteraction {
     this.renderer.hideEdgeHandles();
     cv.selection = false;
     this._movePortDrag(opt);
-    if (this._cb.onStatus) this._cb.onStatus('ลากไปการ์ดอื่นเพื่อย้ายปลายเส้น · ปล่อยที่ว่าง = ถอดเส้นออก');
+    if (this._cb.onStatus) this._cb.onStatus(T`ลากไปการ์ดอื่นเพื่อย้ายปลายเส้น · ปล่อยที่ว่าง = ถอดเส้นออก`);
   }
 
   // ── ลากจาก port ──
@@ -347,7 +348,7 @@ export class PlannerInteraction {
     cv.add(this._previewLine);
     cv.selection = false;
     this._dragStartPt = { x: p.x, y: p.y };
-    if (this._cb.onStatus) this._cb.onStatus('ลากไปปล่อยบนการ์ดปลายทาง (Esc = ยกเลิก)');
+    if (this._cb.onStatus) this._cb.onStatus(T`ลากไปปล่อยบนการ์ดปลายทาง (Esc = ยกเลิก)`);
   }
 
   _movePortDrag(opt) {
@@ -393,7 +394,7 @@ export class PlannerInteraction {
     if (toId && from && toId !== from.fromNodeId && this._cb.onConnect) {
       this._cb.onConnect(from.fromNodeId, from.fromPort, toId, toPort);
     } else if (from && this._cb.onStatus) {
-      this._cb.onStatus('ยกเลิกการเชื่อม — ต้องปล่อยบนการ์ดปลายทาง');
+      this._cb.onStatus(T`ยกเลิกการเชื่อม — ต้องปล่อยบนการ์ดปลายทาง`);
     }
   }
 

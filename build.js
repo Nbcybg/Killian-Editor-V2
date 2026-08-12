@@ -9,7 +9,8 @@ function syncLanguages() {
   if (!fs.existsSync(src)) return;
   fs.mkdirSync(dst, { recursive: true });
   for (const f of fs.readdirSync(src)) {
-    if (f.endsWith('.json')) fs.copyFileSync(path.join(src, f), path.join(dst, f));
+    // [alpha.76] ไฟล์ภาษาเป็น CSV (`k2_<code>.csv`) แล้ว — .json เก็บไว้เผื่อโปรเจกต์เก่า
+    if (f.endsWith('.csv') || f.endsWith('.json')) fs.copyFileSync(path.join(src, f), path.join(dst, f));
   }
 }
 

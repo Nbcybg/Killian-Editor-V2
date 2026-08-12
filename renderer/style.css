@@ -3337,8 +3337,19 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
 .k-dev-line.k-dev-in { color:var(--accent-hi); }
 .k-dev-line.k-dev-err { color:#e5695e; }
 .k-dev-line.k-dev-log { color:var(--dim); }
-.k-about-dlg { width:460px; max-width:92vw; }
+.k-about-dlg { width:560px; max-width:94vw; }
 .k-about-dlg > div { margin-bottom:6px; }
+/* [alpha.76] เครดิต — รายการยาว ให้เลื่อนในตัวเอง ไม่ดันกล่องจนล้นจอ */
+.k-credits { margin-top:10px; max-height:46vh; overflow-y:auto; padding-right:6px;
+             border-top:1px solid var(--line); }
+.k-credits-head { font-weight:600; margin:10px 0 6px; }
+.k-credit-group { margin:12px 0 4px; font-size:12px; color:var(--accent); font-weight:600; }
+.k-credit-row { margin-bottom:5px; line-height:1.45; }
+.k-credit-name { font-weight:600; }
+.k-credit-link { color:var(--accent); cursor:pointer; text-decoration:underline dotted; }
+.k-credit-lic { margin-left:7px; font-size:11px; color:var(--dim);
+                border:1px solid var(--line); border-radius:4px; padding:0 5px; }
+.k-credit-what { font-size:12px; color:var(--dim); }
 /* [บั๊ก 23] ตารางหัวข้อในแท็บ "รูปแบบนิยาย" */
 #st-pr-heads input[type=number] { width:70px; }
 #st-pr-heads select { max-width:130px; }

@@ -1,5 +1,6 @@
 // import-ui.js — UI นำเข้าโปรเจกต์ Scrivener (ข้อ 63)
 // เลือกโฟลเดอร์ .scriv → ดูตัวอย่างโครงที่จะได้ (dryRun) → เลือกปลายทาง → เขียนจริง → เปิดโปรเจกต์
+import { T } from '../i18n.js';
 import { setStatus, log, t, setBusy, clearBusy } from '../core.js';
 import { importScrivener } from './import-scrivener.js';
 import { confirmBox } from '../ui.js';
@@ -13,7 +14,7 @@ export async function importScrivenerDialog(onOpenProject) {
   if (!src) return null;
 
   // [alpha.62 บั๊ก 10] บอกที่แถบล่างว่ากำลังอ่าน · เคลียร์ก่อนเด้ง confirmBox ทุกครั้ง
-  setBusy('กำลังอ่านโปรเจกต์ Scrivener…');
+  setBusy(T`กำลังอ่านโปรเจกต์ Scrivener…`);
   const io = makeIo();
   let preview;
   try { preview = await importScrivener(src, { io, dryRun: true }); }
@@ -23,13 +24,13 @@ export async function importScrivenerDialog(onOpenProject) {
   const c = preview.counts || {};
   const lines = [
     t('imp.projectName', 'ชื่อโปรเจกต์: ') + (preview.title || t('imp.untitled', '(ไม่มีชื่อ)')),
-    t('imp.chapters', 'บท: ') + (c.chapters ?? 0) + '  ·  ฉาก: ' + (c.scenes ?? 0),
+    t('imp.chapters', 'บท: ') + (c.chapters ?? 0) + T`  ·  ฉาก: ` + (c.scenes ?? 0),
     t('imp.filesToCreate', 'ไฟล์ที่จะสร้าง: ') + (preview.plan?.count ?? 0),
   ];
   if (preview.warnings?.length) lines.push(t('imp.warnPrefix', '⚠ คำเตือน ') + preview.warnings.length + t('imp.warnSuffix', ' รายการ (ดูใน Log)'));
-  if (preview.warnings?.length) log('warn', 'scrivener import: มีคำเตือน', preview.warnings);
+  if (preview.warnings?.length) log('warn', T`scrivener import: มีคำเตือน`, preview.warnings);
 
-  if (!(await confirmBox(lines.join('\n') + '\n\nเลือกโฟลเดอร์ปลายทางแล้วนำเข้าเลยไหม?'))) return null;
+  if (!(await confirmBox(lines.join('\n') + T`\n\nเลือกโฟลเดอร์ปลายทางแล้วนำเข้าเลยไหม?`))) return null;
 
   const dest = await kapi.openProjectDialog();
   if (!dest) return null;
@@ -42,12 +43,12 @@ export async function importScrivenerDialog(onOpenProject) {
   try {
     res = await importScrivener(src, { io, dest, title: preview.title,
       now: new Date().toISOString(),
-      onProgress: (n, total) => { if (n % 10 === 0) setBusy(`นำเข้า ${n}/${total} ไฟล์…`); } });
+      onProgress: (n, total) => { if (n % 10 === 0) setBusy(T`นำเข้า ${n}/${total} ไฟล์…`); } });
   } finally { clearBusy(); }
   if (!res.ok) { setStatus(t('imp.failed', 'นำเข้าไม่สำเร็จ: ') + res.error); return null; }
 
-  setStatus(`นำเข้าเสร็จ ${res.written} ไฟล์ → ${dest}`);
-  log('info', 'scrivener import สำเร็จ', { src, dest, written: res.written });
+  setStatus(T`นำเข้าเสร็จ ${res.written} ไฟล์ → ${dest}`);
+  log('info', T`scrivener import สำเร็จ`, { src, dest, written: res.written });
   if (onOpenProject) await onOpenProject(dest);
   return res;
 }

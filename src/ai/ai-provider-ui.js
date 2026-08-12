@@ -6,6 +6,7 @@
 // ตรรกะทั้งหมด (validate · สร้างคำขอ · อ่านคำตอบ) อยู่ใน ai-providers.js ซึ่งเป็นโมดูลบริสุทธิ์
 // ไฟล์นี้ทำแค่ "วาดและยิงคำขอ" เท่านั้น
 
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log, setBusy, clearBusy } from '../core.js';
 import {
   PARAM_DEFS, defaultParams, normalizeParams, parseDomains, isDomainAllowed,
@@ -31,7 +32,7 @@ export async function loadKeys() {
       // ไฟล์รุ่นเก่าเก็บคีย์เดียวที่ `apiKey` — พามาให้ผู้ใช้ไม่ต้องกรอกใหม่
       if (j && j.apiKey && !Object.keys(_keys).length) _keys = { legacy: j.apiKey };
     }
-  } catch (e) { log('warn', 'ai: อ่าน ai-key.json ไม่ได้', e); }
+  } catch (e) { log('warn', T`ai: อ่าน ai-key.json ไม่ได้`, e); }
   return _keys;
 }
 export async function saveKeys(keys) {
@@ -39,7 +40,7 @@ export async function saveKeys(keys) {
   if (!state.root) return false;
   await kapi.writeFile(await kapi.join(state.root, KEY_FILE), JSON.stringify({
     keys: _keys,
-    note: 'ไฟล์นี้เก็บคีย์ส่วนตัวของแต่ละ Credential — อย่าแชร์ อย่าใส่ใน zip ที่ส่งต่อ',
+    note: T`ไฟล์นี้เก็บคีย์ส่วนตัวของแต่ละ Credential — อย่าแชร์ อย่าใส่ใน zip ที่ส่งต่อ`,
   }, null, 2));
   return true;
 }
@@ -78,7 +79,7 @@ async function persist(rows, activeId) {
 export async function sendRequest(provider, req) {
   const allowed = (provider.credential || {}).allowedDomains || [];
   if (!isDomainAllowed(req.url, allowed)) {
-    return { ok: false, status: 0, error: 'โดเมนนี้ไม่อยู่ในรายการ Allowed HTTP Request Domains: ' + req.url };
+    return { ok: false, status: 0, error: T`โดเมนนี้ไม่อยู่ในรายการ Allowed HTTP Request Domains: ` + req.url };
   }
   const opts = { method: req.method || 'POST', headers: req.headers };
   if (req.body !== undefined) opts.body = JSON.stringify(req.body);
@@ -87,13 +88,13 @@ export async function sendRequest(provider, req) {
   const who = provider.name || hostOf(req.url);
   try {
     for (let attempt = 0; ; attempt++) {
-      setBusy(attempt ? `กำลังติดต่อ ${who}… (ลองใหม่ครั้งที่ ${attempt})` : `กำลังติดต่อ ${who}…`);
+      setBusy(attempt ? T`กำลังติดต่อ ${who}… (ลองใหม่ครั้งที่ ${attempt})` : T`กำลังติดต่อ ${who}…`);
       let res;
       try {
         res = await kapi.httpFetch(req.url, opts);
       } catch (e) {
         if (attempt < retries) continue;
-        return { ok: false, status: 0, error: 'เชื่อมต่อไม่ได้: ' + (e && e.message) };
+        return { ok: false, status: 0, error: T`เชื่อมต่อไม่ได้: ` + (e && e.message) };
       }
       if (res && res.ok) {
         let json = null;
@@ -112,24 +113,24 @@ function hostOf(url) {
   try { return new URL(String(url)).host; } catch { return 'AI'; }
 }
 function httpMsg(s) {
-  if (s === 401 || s === 403) return 'API key ไม่ถูกต้องหรือไม่มีสิทธิ์ (HTTP ' + s + ')';
-  if (s === 404) return 'ไม่พบปลายทาง — ตรวจ Base URL อีกครั้ง (HTTP 404)';
-  if (s === 429) return 'เรียกถี่เกินไป (HTTP 429)';
-  if (s >= 500) return 'ฝั่งผู้ให้บริการขัดข้อง (HTTP ' + s + ')';
-  return 'เรียกไม่สำเร็จ (HTTP ' + s + ')';
+  if (s === 401 || s === 403) return T`API key ไม่ถูกต้องหรือไม่มีสิทธิ์ (HTTP ` + s + ')';
+  if (s === 404) return T`ไม่พบปลายทาง — ตรวจ Base URL อีกครั้ง (HTTP 404)`;
+  if (s === 429) return T`เรียกถี่เกินไป (HTTP 429)`;
+  if (s >= 500) return T`ฝั่งผู้ให้บริการขัดข้อง (HTTP ` + s + ')';
+  return T`เรียกไม่สำเร็จ (HTTP ` + s + ')';
 }
 
 /** ดึงรายชื่อโมเดลจาก API ของเจ้านั้น — ลองทีละเส้นทางจนกว่าจะได้ */
 export async function fetchModels(provider) {
   const reqs = modelsRequests(provider);
-  if (!reqs.length) return { ok: false, models: [], error: 'ยังไม่ได้ใส่ Base URL' };
-  let lastErr = 'ไม่พบรายชื่อโมเดล';
+  if (!reqs.length) return { ok: false, models: [], error: T`ยังไม่ได้ใส่ Base URL` };
+  let lastErr = T`ไม่พบรายชื่อโมเดล`;
   for (const r of reqs) {
     const res = await sendRequest(provider, { ...r, maxRetries: 0 });
     if (!res.ok) { lastErr = res.error; continue; }
     const models = parseModels(res.json);
     if (models.length) return { ok: true, models };
-    lastErr = 'ปลายทางตอบกลับแล้ว แต่ไม่มีรายชื่อโมเดลในคำตอบ';
+    lastErr = T`ปลายทางตอบกลับแล้ว แต่ไม่มีรายชื่อโมเดลในคำตอบ`;
   }
   return { ok: false, models: [], error: lastErr };
 }
@@ -137,14 +138,14 @@ export async function fetchModels(provider) {
 /** ทดสอบการเชื่อมต่อของ Credential (ใช้รายชื่อโมเดลเป็นตัววัด — ถูกและไม่เสียเงิน) */
 export async function testCredential(provider) {
   const r = await fetchModels(provider);
-  return r.ok ? { ok: true, msg: `เชื่อมต่อสำเร็จ — พบ ${r.models.length} โมเดล`, models: r.models }
+  return r.ok ? { ok: true, msg: T`เชื่อมต่อสำเร็จ — พบ ${r.models.length} โมเดล`, models: r.models }
               : { ok: false, msg: r.error, models: [] };
 }
 
 /** คุยกับโมเดลหนึ่งรอบ — ไม่โยน error ตลอด (คืน {ok,text,usage,error}) */
 export async function complete(provider, opts = {}) {
-  if (!provider) return { ok: false, text: '', error: 'ยังไม่ได้ตั้งค่าผู้ให้บริการ AI (ไฟล์ → ตั้งค่า AI)' };
-  if (!provider.model && !opts.model) return { ok: false, text: '', error: 'ยังไม่ได้เลือกโมเดล' };
+  if (!provider) return { ok: false, text: '', error: T`ยังไม่ได้ตั้งค่าผู้ให้บริการ AI (ไฟล์ → ตั้งค่า AI)` };
+  if (!provider.model && !opts.model) return { ok: false, text: '', error: T`ยังไม่ได้เลือกโมเดล` };
   const req = chatRequest(provider, opts);
   const res = await sendRequest(provider, req);
   if (!res.ok) return { ok: false, text: '', error: res.error, status: res.status };
@@ -154,23 +155,23 @@ export async function complete(provider, opts = {}) {
 
 // ══════════════════════════════ UI: กล่องตั้งค่า AI ══════════════════════════════
 export async function showAISettingsDialog() {
-  if (!state.root) { setStatus('เปิดโปรเจกต์ก่อนจึงตั้งค่า AI ได้'); return null; }
+  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อนจึงตั้งค่า AI ได้`); return null; }
   await loadKeys();
   const ai = aiMeta();
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-ai-settings');
-  box.append(el('div', 'k-dlg-title', '🤖 ตั้งค่า AI'));
+  box.append(el('div', 'k-dlg-title', T`🤖 ตั้งค่า AI`));
 
   // ---- แถวผู้ให้บริการ (dropdown ของเจ้าที่ผู้ใช้เพิ่มเอง) ----
   const provRow = el('div', 'wiki-row');
-  provRow.append(el('label', null, 'ผู้ให้บริการ'));
+  provRow.append(el('label', null, T`ผู้ให้บริการ`));
   const provSel = el('select', 'wiki-input k-dlg-select ai-prov-sel');
-  const addBtn = el('button', 'ai-prov-add', '➕ เพิ่ม');
-  addBtn.title = 'เพิ่มผู้ให้บริการใหม่';
-  const editBtn = el('button', 'ai-prov-edit', '✎ แก้ไข');
+  const addBtn = el('button', 'ai-prov-add', T`➕ เพิ่ม`);
+  addBtn.title = T`เพิ่มผู้ให้บริการใหม่`;
+  const editBtn = el('button', 'ai-prov-edit', T`✎ แก้ไข`);
   const delBtn = el('button', 'ai-prov-del', '🗑');
-  delBtn.title = 'ลบผู้ให้บริการนี้';
+  delBtn.title = T`ลบผู้ให้บริการนี้`;
   provRow.append(provSel, addBtn, editBtn, delBtn);
   box.append(provRow);
 
@@ -178,12 +179,12 @@ export async function showAISettingsDialog() {
   box.append(info);
 
   const empty = el('div', 'ai-prov-empty dim',
-    'ยังไม่มีผู้ให้บริการ — กด ➕ เพิ่ม แล้วกรอกชื่อ · Credential · เลือกโมเดล · ตั้งพารามิเตอร์');
+    T`ยังไม่มีผู้ให้บริการ — กด ➕ เพิ่ม แล้วกรอกชื่อ · Credential · เลือกโมเดล · ตั้งพารามิเตอร์`);
   box.append(empty);
 
   // ---- ปุ่มส่งของแชท (ผู้ใช้สั่งให้ตั้งได้ในตั้งค่า) ----
   const sendRow = el('div', 'wiki-row');
-  sendRow.append(el('label', null, 'ปุ่มส่งข้อความในแชท'));
+  sendRow.append(el('label', null, T`ปุ่มส่งข้อความในแชท`));
   const sendSel = el('select', 'wiki-input k-dlg-select ai-send-sel');
   for (const k of SEND_KEYS) { const o = el('option', null, k.label); o.value = k.id; sendSel.append(o); }
   sendSel.value = ai.sendKey || DEFAULT_SEND_KEY;
@@ -196,13 +197,13 @@ export async function showAISettingsDialog() {
     const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
     const cost = usage.reduce((s, u) => s + (u.usd || 0), 0);
     const stat = el('div', 'dim ai-usage-stat',
-      `ใช้ไปแล้ว ${total.toLocaleString()} tokens · ${usage.length} ครั้ง · ประมาณ $${cost.toFixed(4)}`);
+      T`ใช้ไปแล้ว ${total.toLocaleString()} tokens · ${usage.length} ครั้ง · ประมาณ $${cost.toFixed(4)}`);
     box.append(stat);
   }
 
   const btns = el('div', 'k-dlg-btns');
-  const cB = el('button', 'k-cancel', 'ปิด');
-  const okB = el('button', 'k-ok', 'บันทึก');
+  const cB = el('button', 'k-cancel', T`ปิด`);
+  const okB = el('button', 'k-ok', T`บันทึก`);
   btns.append(cB, okB);
   box.append(btns);
   ov.append(box);
@@ -225,8 +226,8 @@ export async function showAISettingsDialog() {
     empty.style.display = has ? 'none' : '';
     const cur = rows.find((p) => p.id === provSel.value);
     info.textContent = cur
-      ? `Base URL: ${cur.credential.baseUrl || '—'} · โมเดล: ${cur.model || '(ยังไม่เลือก)'} · ` +
-        `โดเมนที่อนุญาต: ${(cur.credential.allowedDomains || []).join(', ') || 'ไม่จำกัด'}`
+      ? T`Base URL: ${cur.credential.baseUrl || '—'} · โมเดล: ${cur.model || T`(ยังไม่เลือก)`} · ` +
+        T`โดเมนที่อนุญาต: ${(cur.credential.allowedDomains || []).join(', ') || T`ไม่จำกัด`}`
       : '';
   }
   provSel.onchange = () => { activeId = provSel.value; refresh(); };
@@ -249,7 +250,7 @@ export async function showAISettingsDialog() {
     const cur = rows.find((p) => p.id === provSel.value);
     if (!cur) return;
     const { confirmBox } = await import('../ui.js');
-    if (!(await confirmBox(`ลบผู้ให้บริการ "${cur.name}" ?`))) return;
+    if (!(await confirmBox(T`ลบผู้ให้บริการ "${cur.name}" ?`))) return;
     rows = removeProvider(rows, cur.id);
     if (activeId === cur.id) activeId = (rows[0] && rows[0].id) || '';
     refresh();
@@ -263,7 +264,7 @@ export async function showAISettingsDialog() {
     aiMeta().sendKey = sendSel.value;
     await persist(rows, activeId);
     close();
-    setStatus('บันทึกการตั้งค่า AI แล้ว');
+    setStatus(T`บันทึกการตั้งค่า AI แล้ว`);
   };
   return ov;
 }
@@ -282,7 +283,7 @@ export function providerDialog(existing) {
     const ov = el('div', 'k-overlay k-ai-prov-ov');
     ov.style.zIndex = '120';
     const box = el('div', 'k-dialog k-ai-prov');
-    box.append(el('div', 'k-dlg-title', existing ? '✎ แก้ไขผู้ให้บริการ' : '➕ เพิ่มผู้ให้บริการ'));
+    box.append(el('div', 'k-dlg-title', existing ? T`✎ แก้ไขผู้ให้บริการ` : T`➕ เพิ่มผู้ให้บริการ`));
 
     const sec = (n, title) => {
       const s = el('div', 'ai-sec');
@@ -300,32 +301,32 @@ export function providerDialog(existing) {
     };
 
     // ── 1. ชื่อ ──
-    const s1 = sec(1, 'ชื่อผู้ให้บริการ');
-    const nameInp = field(s1, 'ชื่อ (ตั้งเอง)', el('input', 'wiki-input ai-prov-name'),
-                          'ชื่อที่จะเห็นใน dropdown เช่น "OpenAI ที่ทำงาน" หรือ "Ollama เครื่องตัวเอง"');
+    const s1 = sec(1, T`ชื่อผู้ให้บริการ`);
+    const nameInp = field(s1, T`ชื่อ (ตั้งเอง)`, el('input', 'wiki-input ai-prov-name'),
+                          T`ชื่อที่จะเห็นใน dropdown เช่น "OpenAI ที่ทำงาน" หรือ "Ollama เครื่องตัวเอง"`);
     nameInp.value = P.name || '';
 
     // ── 2. Credential ──
     const s2 = sec(2, 'Credential');
-    const credName = field(s2, 'ชื่อ Credential', el('input', 'wiki-input ai-cred-name'));
+    const credName = field(s2, T`ชื่อ Credential`, el('input', 'wiki-input ai-cred-name'));
     credName.value = P.credential.name || '';
     const apiInp = field(s2, 'API', el('input', 'wiki-input ai-cred-key'),
-                         `เก็บแยกที่ ${KEY_FILE} ในโฟลเดอร์โปรเจกต์ — ไม่อยู่ใน project.khn.json ที่แชร์กัน`);
+                         T`เก็บแยกที่ ${KEY_FILE} ในโฟลเดอร์โปรเจกต์ — ไม่อยู่ใน project.khn.json ที่แชร์กัน`);
     apiInp.type = 'password';
     apiInp.value = P.credential.apiKey || '';
-    apiInp.placeholder = 'sk-… (เว้นว่างได้ถ้าเซิร์ฟเวอร์ไม่ต้องใช้คีย์ เช่น Ollama)';
+    apiInp.placeholder = T`sk-… (เว้นว่างได้ถ้าเซิร์ฟเวอร์ไม่ต้องใช้คีย์ เช่น Ollama)`;
     const baseInp = field(s2, 'Base URL', el('input', 'wiki-input ai-cred-base'));
     baseInp.value = P.credential.baseUrl || '';
     baseInp.placeholder = 'https://api.openai.com/v1';
     const domInp = field(s2, 'Allowed HTTP Request Domains',
                          el('textarea', 'wiki-input ai-cred-domains'),
-                         'คั่นด้วยคอมมาหรือขึ้นบรรทัดใหม่ · รองรับ *.example.com · เว้นว่าง = ไม่จำกัด');
+                         T`คั่นด้วยคอมมาหรือขึ้นบรรทัดใหม่ · รองรับ *.example.com · เว้นว่าง = ไม่จำกัด`);
     domInp.rows = 2;
     domInp.value = (P.credential.allowedDomains || []).join(', ');
     domInp.placeholder = 'api.openai.com, *.openai.com';
 
     const credBtns = el('div', 'ai-cred-btns');
-    const testBtn = el('button', 'ai-cred-test', '🔌 ทดสอบการเชื่อมต่อ');
+    const testBtn = el('button', 'ai-cred-test', T`🔌 ทดสอบการเชื่อมต่อ`);
     const saveCredBtn = el('button', 'k-ok ai-cred-save', '💾 Save Credential');
     const credMsg = el('span', 'ai-cred-msg dim');
     credBtns.append(testBtn, saveCredBtn, credMsg);
@@ -333,10 +334,10 @@ export function providerDialog(existing) {
 
     // ── 3. Model (ดึงจาก API) ──
     const s3 = sec(3, 'Model');
-    const modelSel = field(s3, 'โมเดล', el('select', 'wiki-input k-dlg-select ai-model-sel'),
-                           'กด "ดึงรายชื่อโมเดล" เพื่อขอรายการจาก API ของเจ้านี้');
+    const modelSel = field(s3, T`โมเดล`, el('select', 'wiki-input k-dlg-select ai-model-sel'),
+                           T`กด "ดึงรายชื่อโมเดล" เพื่อขอรายการจาก API ของเจ้านี้`);
     const modelBtns = el('div', 'ai-model-btns');
-    const loadModelsBtn = el('button', 'ai-model-load', '⟳ ดึงรายชื่อโมเดล');
+    const loadModelsBtn = el('button', 'ai-model-load', T`⟳ ดึงรายชื่อโมเดล`);
     const modelMsg = el('span', 'ai-model-msg dim');
     modelBtns.append(loadModelsBtn, modelMsg);
     s3.append(modelBtns);
@@ -345,7 +346,7 @@ export function providerDialog(existing) {
       modelSel.innerHTML = '';
       const models = list && list.length ? list : (P.model ? [P.model] : []);
       if (!models.length) {
-        const o = el('option', null, '— ยังไม่มีรายชื่อ (กดดึงรายชื่อโมเดล) —');
+        const o = el('option', null, T`— ยังไม่มีรายชื่อ (กดดึงรายชื่อโมเดล) —`);
         o.value = '';
         modelSel.append(o);
         return;
@@ -366,7 +367,7 @@ export function providerDialog(existing) {
       if (d.type === 'select') {
         node = el('select', 'wiki-input k-dlg-select');
         for (const opt of d.options) {
-          const o = el('option', null, opt === '' ? '(ไม่ระบุ)' : opt);
+          const o = el('option', null, opt === '' ? T`(ไม่ระบุ)` : opt);
           o.value = opt;
           node.append(o);
         }
@@ -374,7 +375,7 @@ export function providerDialog(existing) {
       } else if (d.type === 'kv') {
         node = el('textarea', 'wiki-input ai-param-kv');
         node.rows = 3;
-        node.placeholder = 'X-Header: ค่า  (บรรทัดละหนึ่งคู่)';
+        node.placeholder = T`X-Header: ค่า  (บรรทัดละหนึ่งคู่)`;
         node.value = Object.entries(P.params[d.key] || {}).map(([k, v]) => k + ': ' + v).join('\n');
       } else {
         node = el('input', 'wiki-input');
@@ -382,7 +383,7 @@ export function providerDialog(existing) {
         node.min = String(d.min); node.max = String(d.max);
         if (d.step) node.step = String(d.step);
         node.value = P.params[d.key] === null || P.params[d.key] === undefined ? '' : String(P.params[d.key]);
-        node.placeholder = d.def === null ? '(ไม่ส่งค่านี้)' : String(d.def);
+        node.placeholder = d.def === null ? T`(ไม่ส่งค่านี้)` : String(d.def);
       }
       node.dataset.param = d.key;
       inputs[d.key] = node;
@@ -443,7 +444,7 @@ export function providerDialog(existing) {
       const p = collect();
       const errs = validateProvider(p).filter((e) => !e.includes('ชื่อผู้ให้บริการ'));
       if (errs.length) { say(credMsg, false, errs[0]); return; }
-      setBusy(true, credMsg, 'กำลังทดสอบ…');
+      setBusy(true, credMsg, T`กำลังทดสอบ…`);
       const r = await testCredential(p);
       setBusy(false);
       say(credMsg, r.ok, (r.ok ? '✅ ' : '❌ ') + r.msg);
@@ -452,10 +453,10 @@ export function providerDialog(existing) {
     loadModelsBtn.onclick = async () => {
       if (busy) return;
       const p = collect();
-      setBusy(true, modelMsg, 'กำลังดึงรายชื่อโมเดล…');
+      setBusy(true, modelMsg, T`กำลังดึงรายชื่อโมเดล…`);
       const r = await fetchModels(p);
       setBusy(false);
-      if (r.ok) { fillModels(r.models, modelSel.value); say(modelMsg, true, `พบ ${r.models.length} โมเดล`); }
+      if (r.ok) { fillModels(r.models, modelSel.value); say(modelMsg, true, T`พบ ${r.models.length} โมเดล`); }
       else say(modelMsg, false, '❌ ' + r.error);
     };
     saveCredBtn.onclick = async () => {
@@ -466,15 +467,15 @@ export function providerDialog(existing) {
       keys[p.credential.id] = p.credential.apiKey;
       await saveKeys(keys);
       P.credential = { ...p.credential };
-      say(credMsg, true, '✅ บันทึก Credential แล้ว (คีย์เก็บแยกที่ ' + KEY_FILE + ')');
+      say(credMsg, true, T`✅ บันทึก Credential แล้ว (คีย์เก็บแยกที่ ` + KEY_FILE + ')');
     };
 
     // ---- ปุ่มท้ายกล่อง ----
     const errBox = el('div', 'ai-prov-err');
     box.append(errBox);
     const btns = el('div', 'k-dlg-btns');
-    const cancel = el('button', 'k-cancel', 'ยกเลิก');
-    const ok = el('button', 'k-ok', 'บันทึกผู้ให้บริการ');
+    const cancel = el('button', 'k-cancel', T`ยกเลิก`);
+    const ok = el('button', 'k-ok', T`บันทึกผู้ให้บริการ`);
     btns.append(cancel, ok);
     box.append(btns);
     ov.append(box);

@@ -8,6 +8,7 @@
 //      (ไม่แต่งเรื่องจากภาพที่โมเดลไม่ได้เห็น)
 //
 // ทุกคำขอไปทาง `sendRequest()` ของ ai-provider-ui เสมอ = ผ่านการตรวจ Allowed Domains จุดเดียว
+import { T } from '../i18n.js';
 import { setStatus, setBusy, clearBusy, log } from '../core.js';
 import { aiConfigured, callAI } from '../ai-settings.js';
 import * as AC from './album-core.js';
@@ -40,12 +41,12 @@ async function thumbDataUrl(root, relPath) {
 
 /** บริบทที่เรารู้จริงเกี่ยวกับรูปใบนี้ (ใช้ทั้งสองทาง) */
 function contextOf(it, usage) {
-  const lines = [`ชื่อไฟล์: ${it.file}`];
-  if (it.album && it.album !== AC.ROOT_ALBUM) lines.push(`อยู่ในอัลบั้ม: ${it.album}`);
-  if (it.caption) lines.push(`คำบรรยายปัจจุบัน: ${it.caption}`);
-  if (it.tags && it.tags.length) lines.push(`แท็กปัจจุบัน: ${it.tags.join(' ')}`);
+  const lines = [T`ชื่อไฟล์: ${it.file}`];
+  if (it.album && it.album !== AC.ROOT_ALBUM) lines.push(T`อยู่ในอัลบั้ม: ${it.album}`);
+  if (it.caption) lines.push(T`คำบรรยายปัจจุบัน: ${it.caption}`);
+  if (it.tags && it.tags.length) lines.push(T`แท็กปัจจุบัน: ${it.tags.join(' ')}`);
   const uses = usage ? usageOf(usage, it.file) : [];
-  if (uses.length) lines.push('ถูกใช้ในฉาก: ' + [...new Set(uses.map((u) => u.title))].slice(0, 8).join(', '));
+  if (uses.length) lines.push(T`ถูกใช้ในฉาก: ` + [...new Set(uses.map((u) => u.title))].slice(0, 8).join(', '));
   return lines.join('\n');
 }
 
@@ -63,10 +64,10 @@ async function visionAsk(prompt, system, dataUrl) {
         { type: 'image_url', image_url: { url: dataUrl } },
       ] }],
     });
-    if (!r.ok) { log('warn', 'gallery-ai: vision ใช้ไม่ได้ → ตกไปทางข้อความ', r.error); return ''; }
+    if (!r.ok) { log('warn', T`gallery-ai: vision ใช้ไม่ได้ → ตกไปทางข้อความ`, r.error); return ''; }
     return (r.text || '').trim();
   } catch (e) {
-    log('warn', 'gallery-ai: vision ล้มเหลว', e);
+    log('warn', T`gallery-ai: vision ล้มเหลว`, e);
     return '';
   }
 }
@@ -83,12 +84,12 @@ export function cleanCaption(s) {
   return t.slice(0, 120);
 }
 
-const SYS_CAP = 'คุณช่วยตั้งคำบรรยายรูปภาพสำหรับคลังรูปของนักเขียนนิยาย/บทภาพยนตร์ ' +
-  'ตอบเป็นภาษาไทยสั้น ๆ ไม่เกิน 12 คำ บรรทัดเดียว ไม่ต้องมีเครื่องหมายคำพูดหรือคำอธิบายอื่น';
+const SYS_CAP = T`คุณช่วยตั้งคำบรรยายรูปภาพสำหรับคลังรูปของนักเขียนนิยาย/บทภาพยนตร์ ` +
+  T`ตอบเป็นภาษาไทยสั้น ๆ ไม่เกิน 12 คำ บรรทัดเดียว ไม่ต้องมีเครื่องหมายคำพูดหรือคำอธิบายอื่น`;
 
-const SYS_TAG = 'คุณช่วยตั้งแท็กให้รูปในคลังรูปของนักเขียน ตอบเป็นรายการแท็กภาษาไทยคั่นด้วยช่องว่าง ' +
-  'ไม่เกิน 5 แท็ก · ใช้ # นำหน้าแท็กทั่วไป และ @ นำหน้าชื่อตัวละคร/สถานที่ที่มั่นใจจริง ๆ ' +
-  'ห้ามอธิบายอะไรเพิ่ม ตอบแค่บรรทัดแท็ก';
+const SYS_TAG = T`คุณช่วยตั้งแท็กให้รูปในคลังรูปของนักเขียน ตอบเป็นรายการแท็กภาษาไทยคั่นด้วยช่องว่าง ` +
+  T`ไม่เกิน 5 แท็ก · ใช้ # นำหน้าแท็กทั่วไป และ @ นำหน้าชื่อตัวละคร/สถานที่ที่มั่นใจจริง ๆ ` +
+  T`ห้ามอธิบายอะไรเพิ่ม ตอบแค่บรรทัดแท็ก`;
 
 /**
  * ตั้งคำบรรยายให้รูปที่เลือก → จำนวนใบที่เขียนจริง
@@ -99,18 +100,18 @@ export async function aiCaptionImages(root, items, { usage = null, overwrite = f
   if (!cfg.ok) { setStatus('❌ AI: ' + cfg.why); return 0; }
   const list = (items || []).filter((i) => overwrite || !i.caption ||
     i.caption === i.file.replace(/\.[^.]+$/, ''));
-  if (!list.length) { setStatus('รูปที่เลือกมีคำบรรยายครบแล้ว (ต้องการเขียนทับให้ลบคำบรรยายเดิมก่อน)'); return 0; }
+  if (!list.length) { setStatus(T`รูปที่เลือกมีคำบรรยายครบแล้ว (ต้องการเขียนทับให้ลบคำบรรยายเดิมก่อน)`); return 0; }
   let n = 0;
   try {
     for (let i = 0; i < list.length; i++) {
       const it = list[i];
-      setBusy(`AI กำลังตั้งคำบรรยาย… (${i + 1}/${list.length}) ${it.file}`);
+      setBusy(T`AI กำลังตั้งคำบรรยาย… (${i + 1}/${list.length}) ${it.file}`);
       const ctx = contextOf(it, usage);
-      const prompt = `ตั้งคำบรรยายสั้น ๆ ให้รูปนี้\n\n${ctx}`;
+      const prompt = T`ตั้งคำบรรยายสั้น ๆ ให้รูปนี้\n\n${ctx}`;
       let text = await visionAsk(prompt, SYS_CAP, await thumbDataUrl(root, it.path));
       if (!text) {
         text = await callAI(
-          `ตั้งคำบรรยายสั้น ๆ ให้รูปในคลังรูป โดยเดาจากข้อมูลเท่าที่มี (อย่าแต่งรายละเอียดที่ไม่มีหลักฐาน)\n\n${ctx}`,
+          T`ตั้งคำบรรยายสั้น ๆ ให้รูปในคลังรูป โดยเดาจากข้อมูลเท่าที่มี (อย่าแต่งรายละเอียดที่ไม่มีหลักฐาน)\n\n${ctx}`,
           SYS_CAP) || '';
       }
       const cap = cleanCaption(text);
@@ -119,10 +120,10 @@ export async function aiCaptionImages(root, items, { usage = null, overwrite = f
       n++;
     }
     await AC.syncFlatIndex(kapi, root);
-    setStatus(n ? `AI ตั้งคำบรรยายให้ ${n} รูปแล้ว` : 'AI ไม่ได้ส่งคำบรรยายกลับมา');
+    setStatus(n ? T`AI ตั้งคำบรรยายให้ ${n} รูปแล้ว` : T`AI ไม่ได้ส่งคำบรรยายกลับมา`);
   } catch (e) {
     log('error', 'aiCaptionImages failed', e);
-    setStatus('AI ตั้งคำบรรยายล้มเหลว: ' + e.message);
+    setStatus(T`AI ตั้งคำบรรยายล้มเหลว: ` + e.message);
   } finally { clearBusy(); }
   return n;
 }
@@ -145,12 +146,12 @@ export async function aiTagImages(root, items, { usage = null, entities = [] } =
   if (!list.length) return 0;
   let n = 0;
   try {
-    const hint = entities.length ? `\n\nชื่อที่มีในสารานุกรมของเรื่อง (ใช้ @ ถ้าตรง): ${entities.slice(0, 60).join(', ')}` : '';
+    const hint = entities.length ? T`\n\nชื่อที่มีในสารานุกรมของเรื่อง (ใช้ @ ถ้าตรง): ${entities.slice(0, 60).join(', ')}` : '';
     for (let i = 0; i < list.length; i++) {
       const it = list[i];
-      setBusy(`AI กำลังแนะนำแท็ก… (${i + 1}/${list.length}) ${it.file}`);
+      setBusy(T`AI กำลังแนะนำแท็ก… (${i + 1}/${list.length}) ${it.file}`);
       const ctx = contextOf(it, usage);
-      const prompt = `ตั้งแท็กให้รูปนี้\n\n${ctx}${hint}`;
+      const prompt = T`ตั้งแท็กให้รูปนี้\n\n${ctx}${hint}`;
       let text = await visionAsk(prompt, SYS_TAG, await thumbDataUrl(root, it.path));
       if (!text) text = await callAI(prompt, SYS_TAG) || '';
       const tags = parseTagAnswer(text, { entities });
@@ -161,10 +162,10 @@ export async function aiTagImages(root, items, { usage = null, entities = [] } =
       n++;
     }
     await AC.syncFlatIndex(kapi, root);
-    setStatus(n ? `AI แนะนำแท็กให้ ${n} รูปแล้ว` : 'AI ไม่ได้ส่งแท็กกลับมา');
+    setStatus(n ? T`AI แนะนำแท็กให้ ${n} รูปแล้ว` : T`AI ไม่ได้ส่งแท็กกลับมา`);
   } catch (e) {
     log('error', 'aiTagImages failed', e);
-    setStatus('AI แนะนำแท็กล้มเหลว: ' + e.message);
+    setStatus(T`AI แนะนำแท็กล้มเหลว: ` + e.message);
   } finally { clearBusy(); }
   return n;
 }

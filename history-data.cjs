@@ -40,6 +40,185 @@ __export(history_data_exports, {
   timeline: () => timeline
 });
 module.exports = __toCommonJS(history_data_exports);
+
+// src/i18n-csv.js
+function parseCsv(text) {
+  const s = String(text || "").replace(/^﻿/, "");
+  const rows = [];
+  let row = [], cell = "", inQ = false, i = 0;
+  const endCell = () => {
+    row.push(cell);
+    cell = "";
+  };
+  const endRow = () => {
+    endCell();
+    rows.push(row);
+    row = [];
+  };
+  while (i < s.length) {
+    const c = s[i];
+    if (inQ) {
+      if (c === '"') {
+        if (s[i + 1] === '"') {
+          cell += '"';
+          i += 2;
+          continue;
+        }
+        inQ = false;
+        i++;
+        continue;
+      }
+      cell += c;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      inQ = true;
+      i++;
+      continue;
+    }
+    if (c === ",") {
+      endCell();
+      i++;
+      continue;
+    }
+    if (c === "\r") {
+      i++;
+      continue;
+    }
+    if (c === "\n") {
+      endRow();
+      i++;
+      continue;
+    }
+    cell += c;
+    i++;
+  }
+  if (cell !== "" || row.length) endRow();
+  return rows;
+}
+
+// src/i18n.js
+var TABLE = /* @__PURE__ */ Object.create(null);
+var langInfo = { code: "", name: "", nativeName: "", version: "", author: "", file: "" };
+var langCatalog = [];
+var FALLBACK_NAMES = {
+  th: "\u0E44\u0E17\u0E22",
+  en: "English",
+  ja: "\u65E5\u672C\u8A9E",
+  zh: "\u4E2D\u6587",
+  ko: "\uD55C\uAD6D\uC5B4",
+  fr: "Fran\xE7ais",
+  de: "Deutsch",
+  es: "Espa\xF1ol",
+  pt: "Portugu\xEAs",
+  ru: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",
+  vi: "Ti\u1EBFng Vi\u1EC7t",
+  id: "Bahasa Indonesia",
+  it: "Italiano",
+  ar: "\u0627\u0644\u0639\u0631\u0628\u064A\u0629",
+  hi: "\u0939\u093F\u0928\u094D\u0926\u0940",
+  my: "\u1019\u103C\u1014\u103A\u1019\u102C"
+};
+function fallbackLangName(code) {
+  const c = String(code || "").toLowerCase();
+  return FALLBACK_NAMES[c] || FALLBACK_NAMES[c.split("-")[0]] || code || "";
+}
+function csvToTable(text, pick) {
+  const rows = parseCsv(String(text || "").replace(/﻿/g, ""));
+  const out = /* @__PURE__ */ Object.create(null);
+  if (!rows.length) return out;
+  const head = rows[0].map((c) => String(c).trim().toLowerCase());
+  const isHeader = head[0] === "key";
+  let vi = 1;
+  if (isHeader && pick) {
+    const i = head.indexOf(String(pick).toLowerCase());
+    if (i > 0) vi = i;
+  } else if (isHeader) {
+    const i = head.findIndex((h, n) => n > 0 && (h === "text" || h === "value"));
+    if (i > 0) vi = i;
+  }
+  for (const r of isHeader ? rows.slice(1) : rows) {
+    const k = r[0] == null ? "" : String(r[0]);
+    if (!k || k.startsWith("#")) continue;
+    const v = r[vi] == null ? "" : String(r[vi]);
+    if (v !== "" && !(k in out)) out[k] = v;
+  }
+  return out;
+}
+function setTable(table, code) {
+  TABLE = Object.assign(/* @__PURE__ */ Object.create(null), table || {});
+  _memo = /* @__PURE__ */ new WeakMap();
+  langInfo.code = code || TABLE["meta.code"] || "";
+  langInfo.name = TABLE["meta.name"] || "";
+  langInfo.nativeName = TABLE["meta.nativeName"] || fallbackLangName(langInfo.code);
+  langInfo.version = TABLE["meta.version"] || "";
+  langInfo.author = TABLE["meta.author"] || "";
+  return TABLE;
+}
+function setCatalog(list) {
+  langCatalog = Array.isArray(list) ? list : [];
+  return langCatalog;
+}
+function lookup(key) {
+  if (typeof key !== "string" || !key) return void 0;
+  const v = TABLE[key];
+  if (typeof v === "string" && v !== "") return v;
+  const u = TABLE["ui." + key];
+  if (typeof u === "string" && u !== "") return u;
+  return void 0;
+}
+function formatMsg(tpl, vals) {
+  if (!vals || !vals.length) return String(tpl).replace(/\{\{|\}\}/g, (m) => m[0]);
+  return String(tpl).replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+    if (m === "{{" || m === "}}") return m[0];
+    const v = vals[+d];
+    return v == null ? "" : String(v);
+  });
+}
+function makeMsgid(strings) {
+  let s = "";
+  for (let i = 0; i < strings.length; i++) {
+    s += strings[i];
+    if (i < strings.length - 1) s += "{" + i + "}";
+  }
+  return s;
+}
+var _memo = /* @__PURE__ */ new WeakMap();
+function T(strings, ...vals) {
+  if (typeof strings === "string") return formatMsg(lookup(strings) ?? strings, vals);
+  let tpl = _memo.get(strings);
+  if (tpl === void 0) {
+    const id = makeMsgid(strings);
+    tpl = lookup(id) ?? id;
+    _memo.set(strings, tpl);
+  }
+  return formatMsg(tpl, vals);
+}
+var LANG_LS_KEY = "k2-lang";
+function initSyncFromHost() {
+  try {
+    const api = typeof globalThis !== "undefined" && globalThis.kapi || null;
+    if (!api || typeof api.langSync !== "function") return false;
+    let want = "";
+    try {
+      want = globalThis.localStorage?.getItem(LANG_LS_KEY) || "";
+    } catch {
+    }
+    const res = api.langSync(want);
+    if (!res) return false;
+    if (Array.isArray(res.catalog)) setCatalog(res.catalog);
+    if (res.csv) {
+      setTable(csvToTable(res.csv), res.code);
+      return true;
+    }
+  } catch {
+  }
+  return false;
+}
+initSyncFromHost();
+
+// src/history/history-data.js
 var HISTORY_SCHEMA = 1;
 var HISTORY_DIR = ".k2history";
 var HISTORY_FILE = "history.json";
@@ -136,14 +315,14 @@ function afterRevert(journal, seq) {
   return { journal: { ...j, entries: keep }, dropped };
 }
 var KIND_LABEL = {
-  write: "\u0E41\u0E01\u0E49\u0E44\u0E02",
-  create: "\u0E2A\u0E23\u0E49\u0E32\u0E07",
-  remove: "\u0E25\u0E1A",
-  move: "\u0E22\u0E49\u0E32\u0E22/\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D",
-  copy: "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32",
-  image: "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E39\u0E1B"
+  write: T`แก้ไข`,
+  create: T`สร้าง`,
+  remove: T`ลบ`,
+  move: T`ย้าย/เปลี่ยนชื่อ`,
+  copy: T`คัดลอกเข้ามา`,
+  image: T`เพิ่มรูป`
 };
-var kindLabel = (k) => KIND_LABEL[k] || "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E1B\u0E25\u0E07";
+var kindLabel = (k) => KIND_LABEL[k] || T`เปลี่ยนแปลง`;
 function relPath(p, root) {
   const norm = (s) => String(s || "").replace(/\\/g, "/");
   const a = norm(p), b = norm(root).replace(/\/+$/, "");

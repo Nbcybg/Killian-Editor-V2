@@ -1,39 +1,40 @@
 // project.js — สร้างโปรเจกต์จาก template (นิยาย, บทหนัง, แฟนตาซี, สืบสวน)
+import { T } from './i18n.js';
 import { el, setStatus, log, DEFAULT_SETTINGS, DEFAULT_GOALS, CAT_ICON } from './core.js';
 
 // ป้ายไทย + ไอคอนของหมวด Wiki (เดิมใส่ label เป็นคีย์อังกฤษ ผิดหลัก "ไทย 100%")
 const CAT_LABEL = {
-  characters: 'ตัวละคร', locations: 'สถานที่', items: 'สิ่งของ',
-  lore: 'ตำนาน/ความรู้', factions: 'กลุ่ม/ฝ่าย',
+  characters: T`ตัวละคร`, locations: T`สถานที่`, items: T`สิ่งของ`,
+  lore: T`ตำนาน/ความรู้`, factions: T`กลุ่ม/ฝ่าย`,
 };
 
 const TEMPLATES = {
   novel: {
-    name: '📖 นิยาย',
-    desc: 'โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่',
-    sections: [{ title: 'เล่มหนึ่ง', chapters: ['บทที่หนึ่ง', 'บทที่สอง'] }],
+    name: T`📖 นิยาย`,
+    desc: T`โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่`,
+    sections: [{ title: T`เล่มหนึ่ง`, chapters: [T`บทที่หนึ่ง`, T`บทที่สอง`] }],
     wikiCats: ['characters', 'locations', 'lore'],
     templates: 'default',
   },
   screenplay: {
-    name: '🎬 บทภาพยนตร์',
-    desc: 'โครงสร้างบทหนัง — 3 องก์, scenes เป็นบทภาพยนตร์',
-    sections: [{ title: 'บทหนัง', chapters: ['องก์ 1', 'องก์ 2', 'องก์ 3'] }],
+    name: T`🎬 บทภาพยนตร์`,
+    desc: T`โครงสร้างบทหนัง — 3 องก์, scenes เป็นบทภาพยนตร์`,
+    sections: [{ title: T`บทหนัง`, chapters: [T`องก์ 1`, T`องก์ 2`, T`องก์ 3`] }],
     wikiCats: ['characters', 'locations'],
     templates: 'screenplay',
     format: 'screenplay',
   },
   fantasy: {
-    name: '🐉 แฟนตาซี',
-    desc: 'นิยายแฟนตาซี — worldbuilding, เผ่าพันธุ์, เวทมนตร์',
-    sections: [{ title: 'เล่มหนึ่ง', chapters: ['บทนำ', 'บทที่หนึ่ง'] }],
+    name: T`🐉 แฟนตาซี`,
+    desc: T`นิยายแฟนตาซี — worldbuilding, เผ่าพันธุ์, เวทมนตร์`,
+    sections: [{ title: T`เล่มหนึ่ง`, chapters: [T`บทนำ`, T`บทที่หนึ่ง`] }],
     wikiCats: ['characters', 'locations', 'items', 'lore', 'factions'],
     templates: 'fantasy',
   },
   mystery: {
-    name: '🔍 สืบสวน/ลึกลับ',
-    desc: 'นิยายสืบสวน — ตัวละคร suspects, clues, timeline',
-    sections: [{ title: 'เล่มหนึ่ง', chapters: ['คดีเริ่มต้น', 'การสืบสวน', 'บทสรุป'] }],
+    name: T`🔍 สืบสวน/ลึกลับ`,
+    desc: T`นิยายสืบสวน — ตัวละคร suspects, clues, timeline`,
+    sections: [{ title: T`เล่มหนึ่ง`, chapters: [T`คดีเริ่มต้น`, T`การสืบสวน`, T`บทสรุป`] }],
     wikiCats: ['characters', 'locations', 'items', 'lore'],
     templates: 'mystery',
   },
@@ -48,7 +49,7 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
   const { safeName, guid } = await import('./app.js');
   const root = await kapi.join(parentDir, safeName(projectName));
   if (await kapi.exists(await kapi.join(root, 'project.khn.json'))) {
-    setStatus('มีโปรเจกต์นี้อยู่แล้ว');
+    setStatus(T`มีโปรเจกต์นี้อยู่แล้ว`);
     return false;
   }
 
@@ -87,7 +88,7 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
     for (const ch of chData) {
       // เลขไฟล์เริ่มใหม่ทุกบท (แต่ละบทมีโฟลเดอร์ของตัวเอง) — เดิมเลขไหลต่อกันข้ามบท
       const sc = {
-        id: guid(), title: 'ฉากแรกของ ' + ch.title, order: 1,
+        id: guid(), title: T`ฉากแรกของ ` + ch.title, order: 1,
         fileName: 'scene-01.md',
         chapterGuid: ch.guid,
       };
@@ -112,7 +113,7 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
     await kapi.mkdir(await kapi.join(wikiRoot, cat));
   }
 
-  setStatus('สร้างโปรเจกต์จาก template แล้ว: ' + projectName);
+  setStatus(T`สร้างโปรเจกต์จาก template แล้ว: ` + projectName);
   log('info', 'project: created from template ' + tplKey);
   return root;
 }
@@ -122,7 +123,7 @@ export async function showTemplateDialog() {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', 'สร้างโปรเจกต์จาก template'));
+    box.append(el('div', 'k-dlg-title', T`สร้างโปรเจกต์จาก template`));
 
     const grid = el('div');
     grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0';
@@ -142,7 +143,7 @@ export async function showTemplateDialog() {
     box.append(grid);
 
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, 'ยกเลิก');
+    const cB = el('button', null, T`ยกเลิก`);
     cB.onclick = () => { ov.remove(); resolve(null); };
     btns.append(cB);
     box.append(btns);

@@ -20,13 +20,14 @@
 // โมดูลนี้ **ไม่แตะ DOM** และรับ `api` (kapi หรือของปลอมในเทส) เข้ามาทุกฟังก์ชันที่ยุ่งกับไฟล์
 // → unit test รันด้วย node ได้ตรง ๆ
 
+import { T } from '../i18n.js';
 export const IMAGES_DIR = 'Images';
 export const ALBUMS_JSON = 'albums.json';
 export const ALBUM_META = 'album.json';
 export const FLAT_JSON = 'images.json';
 /** อัลบั้มเริ่มต้นของรูปที่ยังไม่จัดกลุ่ม — ชี้ไปที่ Images/ เอง (ไม่ใช่โฟลเดอร์จริง) */
 export const ROOT_ALBUM = '_uncategorized';
-export const ROOT_ALBUM_NAME = 'ยังไม่จัดกลุ่ม';
+export const ROOT_ALBUM_NAME = T`ยังไม่จัดกลุ่ม`;
 /** id เทียมของมุมมอง "รูปทั้งหมด" — ไม่มีอยู่ใน albums.json */
 export const ALL_ALBUM = '__all__';
 
@@ -146,12 +147,12 @@ export function albumBreadcrumb(list, id) {
 /** เปลี่ยนชื่ออัลบั้ม (บริสุทธิ์) → { albums, from, to, moves } · moves = คู่ id เก่า→ใหม่ทุกชั้น */
 export function renameAlbumIn(list, id, newName) {
   const name = sanitizeAlbumName(newName);
-  if (!name || isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: 'ชื่อไม่ถูกต้อง' };
+  if (!name || isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: T`ชื่อไม่ถูกต้อง` };
   const cur = list.find((a) => a.id === id);
-  if (!cur) return { albums: list, from: id, to: id, moves: [], error: 'ไม่พบอัลบั้ม' };
+  if (!cur) return { albums: list, from: id, to: id, moves: [], error: T`ไม่พบอัลบั้ม` };
   const to = albumId(cur.parent, name);
   if (to !== id && list.some((a) => a.id === to)) {
-    return { albums: list, from: id, to, moves: [], error: 'มีอัลบั้มชื่อนี้อยู่แล้ว' };
+    return { albums: list, from: id, to, moves: [], error: T`มีอัลบั้มชื่อนี้อยู่แล้ว` };
   }
   return { ...retargetIds(list, id, to), from: id, to };
 }
@@ -159,16 +160,16 @@ export function renameAlbumIn(list, id, newName) {
 /** ย้ายอัลบั้มไปอยู่ใต้อัลบั้มอื่น (บริสุทธิ์) — กันย้ายเข้าไปในลูกตัวเอง */
 export function moveAlbumIn(list, id, newParent) {
   const np = newParent === ROOT_ALBUM ? '' : String(newParent || '');
-  if (isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: 'ย้ายอัลบั้มรากไม่ได้' };
+  if (isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: T`ย้ายอัลบั้มรากไม่ได้` };
   if (np === id || descendantIds(list, id).includes(np)) {
-    return { albums: list, from: id, to: id, moves: [], error: 'ย้ายเข้าไปในอัลบั้มลูกของตัวเองไม่ได้' };
+    return { albums: list, from: id, to: id, moves: [], error: T`ย้ายเข้าไปในอัลบั้มลูกของตัวเองไม่ได้` };
   }
   const cur = list.find((a) => a.id === id);
-  if (!cur) return { albums: list, from: id, to: id, moves: [], error: 'ไม่พบอัลบั้ม' };
+  if (!cur) return { albums: list, from: id, to: id, moves: [], error: T`ไม่พบอัลบั้ม` };
   if ((cur.parent || '') === np) return { albums: list, from: id, to: id, moves: [] };
   const to = albumId(np, cur.name);
   if (list.some((a) => a.id === to)) {
-    return { albums: list, from: id, to, moves: [], error: 'ปลายทางมีอัลบั้มชื่อนี้อยู่แล้ว' };
+    return { albums: list, from: id, to, moves: [], error: T`ปลายทางมีอัลบั้มชื่อนี้อยู่แล้ว` };
   }
   return { ...retargetIds(list, id, to), from: id, to };
 }
@@ -192,7 +193,7 @@ function retargetIds(list, from, to) {
 
 /** ลบอัลบั้มออกจากรายการ (พร้อมลูกหลาน) → { albums, removed } */
 export function removeAlbumIn(list, id) {
-  if (isRootAlbum(id)) return { albums: list, removed: [], error: 'ลบอัลบั้มรากไม่ได้' };
+  if (isRootAlbum(id)) return { albums: list, removed: [], error: T`ลบอัลบั้มรากไม่ได้` };
   const removed = [id, ...descendantIds(list, id)];
   return { albums: list.filter((a) => !removed.includes(a.id)), removed };
 }
@@ -336,11 +337,11 @@ export function captionsFromFlat(doc) {
 // ───────────────────────── ส่วนบริสุทธิ์: เรียง / ค้นหา / สถิติ ─────────────────────────
 
 export const SORT_MODES = [
-  { key: 'manual', label: 'ลำดับที่จัดเอง' },
-  { key: 'name',   label: 'ชื่อไฟล์' },
-  { key: 'date',   label: 'วันที่เพิ่ม (ใหม่สุดก่อน)' },
-  { key: 'size',   label: 'ขนาดไฟล์ (ใหญ่สุดก่อน)' },
-  { key: 'usage',  label: 'จำนวนการใช้งาน' },
+  { key: 'manual', label: T`ลำดับที่จัดเอง` },
+  { key: 'name',   label: T`ชื่อไฟล์` },
+  { key: 'date',   label: T`วันที่เพิ่ม (ใหม่สุดก่อน)` },
+  { key: 'size',   label: T`ขนาดไฟล์ (ใหญ่สุดก่อน)` },
+  { key: 'usage',  label: T`จำนวนการใช้งาน` },
 ];
 
 export function sortImages(items, mode) {
@@ -537,10 +538,10 @@ export async function migrateFromFlat(api, root) {
 
 export async function createAlbum(api, root, name, parent = '') {
   const clean = sanitizeAlbumName(name);
-  if (!clean) throw new Error('ชื่ออัลบั้มใช้ไม่ได้');
+  if (!clean) throw new Error(T`ชื่ออัลบั้มใช้ไม่ได้`);
   const albums = await listAlbums(api, root);
   const id = albumId(parent, clean);
-  if (albums.some((a) => a.id === id)) throw new Error('มีอัลบั้มชื่อนี้อยู่แล้ว');
+  if (albums.some((a) => a.id === id)) throw new Error(T`มีอัลบั้มชื่อนี้อยู่แล้ว`);
   const dir = await albumDir(api, root, id);
   await api.mkdir(dir);
   const rec = normalizeAlbum({ id, name: clean, parent: parent === ROOT_ALBUM ? '' : parent,

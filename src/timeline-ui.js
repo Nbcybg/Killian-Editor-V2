@@ -1,4 +1,5 @@
 // timeline-ui.js — เส้นเวลา (UI): เปิด/วาดเส้นเวลา (การ์ด·Gantt)
+import { T } from './i18n.js';
 import { eventDialog, loadTimeline, openRef, openScene, saveTimeline, sceneEventsFromProject } from './app.js';
 import { $, el, state } from './core.js';
 import { findClashes, ganttBar, ganttData, ganttTicks, groupByTrack, mergeTimeline, newEvent, sortEvents, trackNames } from './timeline.js';
@@ -21,18 +22,18 @@ export async function renderTimeline(pane) {
   pane.innerHTML = '';
   const wrap = el('div', 'tl-wrap'); pane.append(wrap);
   const head = el('div', 'tl-head');
-  head.append(el('div', 'tl-title', '🕒 เส้นเวลา'));
-  const addBtn = el('button', 'k-ok', '＋ เพิ่มเหตุการณ์');
+  head.append(el('div', 'tl-title', T`🕒 เส้นเวลา`));
+  const addBtn = el('button', 'k-ok', T`＋ เพิ่มเหตุการณ์`);
   head.append(addBtn);
   // ปุ่มสลับมุมมอง การ์ด ↔ Gantt (จำค่าไว้ใน state)
   if (!state._tlView) state._tlView = 'cards';
   const viewTog = el('div', 'tl-viewtog');
-  const bCards = el('button', 'tl-viewbtn' + (state._tlView === 'cards' ? ' on' : ''), '▦ การ์ด');
+  const bCards = el('button', 'tl-viewbtn' + (state._tlView === 'cards' ? ' on' : ''), T`▦ การ์ด`);
   const bGantt = el('button', 'tl-viewbtn' + (state._tlView === 'gantt' ? ' on' : ''), '▬ Gantt');
   bCards.onclick = () => { state._tlView = 'cards'; renderTimeline(pane); };
   bGantt.onclick = () => { state._tlView = 'gantt'; renderTimeline(pane); };
   viewTog.append(bCards, bGantt); head.append(viewTog);
-  const hint = el('span', 'tl-hint', 'ฉากที่ตั้ง "เวลาในเรื่อง" จะขึ้นบนเส้นเวลาอัตโนมัติ');
+  const hint = el('span', 'tl-hint', T`ฉากที่ตั้ง "เวลาในเรื่อง" จะขึ้นบนเส้นเวลาอัตโนมัติ`);
   head.append(hint);
   wrap.append(head);
 
@@ -64,7 +65,7 @@ export async function renderTimeline(pane) {
 
   if (!items.length) {
     wrap.append(el('div', 'tl-empty',
-      'ยังไม่มีเหตุการณ์ — กด "＋ เพิ่มเหตุการณ์" หรือไปตั้ง "เวลาในเรื่อง" ให้ฉากในคุณสมบัติฉาก'));
+      T`ยังไม่มีเหตุการณ์ — กด "＋ เพิ่มเหตุการณ์" หรือไปตั้ง "เวลาในเรื่อง" ให้ฉากในคุณสมบัติฉาก`));
     return;
   }
 
@@ -83,7 +84,7 @@ export async function renderTimeline(pane) {
     const g = ganttData(items);
     if (!g.rows.length) {
       wrap.append(el('div', 'tl-empty',
-        'มุมมอง Gantt ต้องมีเหตุการณ์ที่ระบุเวลาเป็นตัวเลข (เช่น "ปีที่ 1024") — ยังไม่มีเลย'));
+        T`มุมมอง Gantt ต้องมีเหตุการณ์ที่ระบุเวลาเป็นตัวเลข (เช่น "ปีที่ 1024") — ยังไม่มีเลย`));
       return;
     }
     const gb = el('div', 'gantt-board'); wrap.append(gb);
@@ -99,7 +100,7 @@ export async function renderTimeline(pane) {
     axis.append(axisTrack); gb.append(axis);
     // แต่ละ track เป็นแถว — แท่งเรียงตามเวลา
     for (const tr of tracks) {
-      const rowItems = g.rows.filter((r) => (r.track || 'ทั่วไป') === tr.name);
+      const rowItems = g.rows.filter((r) => (r.track || T`ทั่วไป`) === tr.name);
       if (!rowItems.length) continue;
       const grow = el('div', 'gantt-row');
       const lbl = el('div', 'gantt-row-label');
@@ -122,9 +123,9 @@ export async function renderTimeline(pane) {
       grow.append(track); gb.append(grow);
     }
     if (g.undated.length)
-      wrap.append(el('div', 'tl-hint', `+ อีก ${g.undated.length} เหตุการณ์ไม่มีเวลาเป็นตัวเลข (ดูในมุมมองการ์ด)`));
+      wrap.append(el('div', 'tl-hint', T`+ อีก ${g.undated.length} เหตุการณ์ไม่มีเวลาเป็นตัวเลข (ดูในมุมมองการ์ด)`));
     if (clashes.length)
-      wrap.append(el('div', 'tl-clash-note', `⚠ มี ${clashes.length} จุดที่เวลาตรงกัน (ไฮไลต์สีส้ม)`));
+      wrap.append(el('div', 'tl-clash-note', T`⚠ มี ${clashes.length} จุดที่เวลาตรงกัน (ไฮไลต์สีส้ม)`));
     return;
   }
 
@@ -143,7 +144,7 @@ export async function renderTimeline(pane) {
                        + (clashIds.has(it.id) ? ' tl-clash' : ''));
       card.style.borderLeftColor = it.color || tr.color;
       const when = el('div', 'tl-when',
-        (it.when || '(ไม่ระบุเวลา)') + (it.whenEnd ? ' → ' + it.whenEnd : ''));
+        (it.when || T`(ไม่ระบุเวลา)`) + (it.whenEnd ? ' → ' + it.whenEnd : ''));
       const title = el('div', 'tl-ev-title', (it.kind === 'scene' ? '📄 ' : '') + it.title);
       card.append(when, title);
       if (it.desc) card.append(el('div', 'tl-ev-desc', it.desc));
@@ -152,7 +153,7 @@ export async function renderTimeline(pane) {
         const rw = el('div', 'tl-ev-refs');
         for (const r of it.refs) {
           const chip = el('span', 'tl-ev-ref', (r.kind === 'memo' ? '📝 ' : '📄 ') + r.title);
-          chip.title = 'เปิด: ' + r.path;
+          chip.title = T`เปิด: ` + r.path;
           chip.onclick = (e) => { e.stopPropagation(); openRef(r); };   // กันไปโดนคลิกของการ์ด
           rw.append(chip);
         }
@@ -162,14 +163,14 @@ export async function renderTimeline(pane) {
       if (it.kind === 'scene') {
         const notes = notesForScene(String(it.id || '').split(':').pop());
         if (notes.length) {
-          const b = el('div', 'tl-ev-notes', '📝 ' + notes.length + ' โน้ต');
+          const b = el('div', 'tl-ev-notes', '📝 ' + notes.length + T` โน้ต`);
           b.title = notes.map((n) => '• ' + n.text).join('\n');
           card.append(b);
         }
       }
       card.classList.add('tl-clickable');
       card.onclick = () => onEventClick(it);
-      if (it.kind === 'scene') card.title = 'คลิกเปิดฉากนี้';
+      if (it.kind === 'scene') card.title = T`คลิกเปิดฉากนี้`;
       line.append(card);
     }
     lane.append(line);
@@ -178,5 +179,5 @@ export async function renderTimeline(pane) {
 
   if (clashes.length)
     wrap.append(el('div', 'tl-clash-note',
-      `⚠ มี ${clashes.length} จุดที่เหตุการณ์เวลาตรงกัน (ไฮไลต์สีส้ม) — ตรวจว่าตั้งใจหรือไม่`));
+      T`⚠ มี ${clashes.length} จุดที่เหตุการณ์เวลาตรงกัน (ไฮไลต์สีส้ม) — ตรวจว่าตั้งใจหรือไม่`));
 }

@@ -1,4 +1,5 @@
 // ProseMirror editor — หัวใจของ Killian 2 (word-processor grade)
+import { T } from './i18n.js';
 import { Schema } from 'prosemirror-model';
 import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
@@ -95,7 +96,7 @@ function mentionScan(doc, rx, from, to) {
     let m;
     while ((m = rx.exec(node.text))) {
       out.push(Deco.inline(pos + m.index, pos + m.index + m[0].length,
-        { class: 'k-mention', title: 'Ctrl+คลิก เปิดใน Wiki' }));
+        { class: 'k-mention', title: T`Ctrl+คลิก เปิดใน Wiki` }));
     }
   });
   return out;
@@ -133,7 +134,7 @@ function spellScan(doc, checkFn, from, to) {
     }
     for (const b of checkFn(node.text)) {
       out.push(Deco.inline(pos + b.start, pos + b.end,
-        { class: 'k-spell-bad', title: 'น่าจะสะกดผิด: ' + b.word }));
+        { class: 'k-spell-bad', title: T`น่าจะสะกดผิด: ` + b.word }));
     }
   });
   return out;
@@ -196,7 +197,7 @@ function cmScan(doc, from, to) {
       let i = -1;
       while ((i = node.text.indexOf(q, i + 1)) >= 0) {
         out.push(Deco.inline(pos + i, pos + i + q.length,
-          { class: 'k-cm-anchor' + (q === _cmActive ? ' on' : ''), title: 'มีคอมเมนต์ผูกกับข้อความนี้' }));
+          { class: 'k-cm-anchor' + (q === _cmActive ? ' on' : ''), title: T`มีคอมเมนต์ผูกกับข้อความนี้` }));
       }
     }
   });
@@ -257,7 +258,7 @@ export const schema = new Schema({
                   parseDOM: [{ tag: 'div.k-manual-page-break' }],
                   toDOM: () => ['div', { class: 'k-manual-page-break',
                                          contenteditable: 'false',
-                                         'data-label': 'ขึ้นหน้าใหม่' }] },
+                                         'data-label': T`ขึ้นหน้าใหม่` }] },
     code_block: { group: 'block', content: 'text*', marks: '', code: true, defining: true,
                   attrs: { lang: { default: '' }, fence: { default: '```' } },
                   parseDOM: [{ tag: 'pre', preserveWhitespace: 'full',

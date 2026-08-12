@@ -7,20 +7,21 @@
 //
 // หน่วยระยะเป็น "นิ้ว" เหมือน sp-format.js ทั้งไฟล์ (xOffset = ขยับจากตำแหน่งตามการจัดหน้า)
 
+import { T } from './i18n.js';
 import { mergeSpFormat, textWidth, lineHeightIn } from './sp-format.js';
 import { num } from './num.js';
 
 // ───────── ตัวแปรที่ใช้ได้ในข้อความหัวกระดาษ ─────────
 // เขียนได้ทั้ง ${PAGE} และ ${หน้า} — ตารางนี้เป็น "คำอธิบายให้ UI แสดง" ด้วย
 export const HEADER_VARS = [
-  { key: 'PAGE', th: 'หน้า', label: 'เลขหน้าปัจจุบัน' },
-  { key: 'PAGES', th: 'จำนวนหน้า', label: 'จำนวนหน้าทั้งหมด' },
-  { key: 'TITLE', th: 'เรื่อง', label: 'ชื่อเรื่อง' },
-  { key: 'AUTHOR', th: 'ผู้เขียน', label: 'ชื่อผู้เขียน' },
-  { key: 'DRAFT', th: 'ฉบับ', label: 'ชื่อฉบับร่าง / รอบแก้' },
-  { key: 'DATE', th: 'วันที่', label: 'วันที่ (ส่งเข้ามาตอนสร้าง)' },
-  { key: 'SCENE', th: 'ฉาก', label: 'หัวฉากแรกของหน้านั้น' },
-  { key: 'COPYRIGHT', th: 'ลิขสิทธิ์', label: 'ข้อความลิขสิทธิ์' },
+  { key: 'PAGE', th: T`หน้า`, label: T`เลขหน้าปัจจุบัน` },
+  { key: 'PAGES', th: T`จำนวนหน้า`, label: T`จำนวนหน้าทั้งหมด` },
+  { key: 'TITLE', th: T`เรื่อง`, label: T`ชื่อเรื่อง` },
+  { key: 'AUTHOR', th: T`ผู้เขียน`, label: T`ชื่อผู้เขียน` },
+  { key: 'DRAFT', th: T`ฉบับ`, label: T`ชื่อฉบับร่าง / รอบแก้` },
+  { key: 'DATE', th: T`วันที่`, label: T`วันที่ (ส่งเข้ามาตอนสร้าง)` },
+  { key: 'SCENE', th: T`ฉาก`, label: T`หัวฉากแรกของหน้านั้น` },
+  { key: 'COPYRIGHT', th: T`ลิขสิทธิ์`, label: T`ข้อความลิขสิทธิ์` },
 ];
 
 export const HEADER_ALIGNS = ['left', 'center', 'right'];

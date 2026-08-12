@@ -8,6 +8,7 @@
 //
 // เซสชันเก็บเป็นไฟล์ JSON ใน `<โปรเจกต์>/Sessions/` — เปลี่ยนโปรเจกต์ = เห็นคนละชุด
 
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import {
@@ -57,9 +58,9 @@ export async function loadSessions(force) {
       try {
         const j = await kapi.readJson(await kapi.join(d, f));
         if (j && j.id) S.sessions.push(newSession(j));
-      } catch (e) { log('warn', 'ai-chat: อ่านเซสชันไม่ได้ ' + f, e); }
+      } catch (e) { log('warn', T`ai-chat: อ่านเซสชันไม่ได้ ` + f, e); }
     }
-  } catch (e) { log('warn', 'ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้', e); }
+  } catch (e) { log('warn', T`ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้`, e); }
   return S.sessions;
 }
 /**
@@ -115,7 +116,7 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
   };
   const active = state.active;
   if (scope === 'scene') {
-    if (active && active.file && !active.file.startsWith('::')) await push(active.file, active.title || 'ฉากที่เปิดอยู่');
+    if (active && active.file && !active.file.startsWith('::')) await push(active.file, active.title || T`ฉากที่เปิดอยู่`);
   } else {
     // ระดับที่กว้างกว่าฉาก — เดินโครงโปรเจกต์จริง แล้วกรองตาม "ที่อยู่" ของไฟล์ที่เปิดอยู่
     const here = (active && active.file) || '';
@@ -134,7 +135,7 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
   // แนบไฟล์ที่ผู้ใช้เพิ่มเองด้วย 📎 (นอกเหนือจาก scope)
   for (const f of session.files || []) await push(f.path, '📎 ' + (f.name || f.path));
   const text = parts.join('\n\n');
-  return text.length > maxChars ? text.slice(0, maxChars) + '\n…(ตัดเพราะยาวเกิน)' : text;
+  return text.length > maxChars ? text.slice(0, maxChars) + T`\n…(ตัดเพราะยาวเกิน)` : text;
 }
 async function allMdFiles(root, depth = 0) {
   if (depth > 6) return [];
@@ -156,7 +157,7 @@ export async function renderAIChatPanel(host) {
   if (!S.host) return null;
   if (!state.root) {
     S.host.innerHTML = '';
-    S.host.append(el('div', 'ai-chat-empty dim', 'เปิดโปรเจกต์ก่อน แล้วเซสชันแชทจะถูกเก็บใน Sessions/ ของโปรเจกต์นั้น'));
+    S.host.append(el('div', 'ai-chat-empty dim', T`เปิดโปรเจกต์ก่อน แล้วเซสชันแชทจะถูกเก็บใน Sessions/ ของโปรเจกต์นั้น`));
     return S.host;
   }
   await loadSessions();
@@ -186,9 +187,9 @@ function listView() {
   const bar = el('div', 'ai-chat-listbar');
   const q = el('input', 'ai-chat-search');
   q.type = 'search';
-  q.placeholder = 'ค้นหาเซสชัน (ชื่อ หรือข้อความในเซสชัน)…';
+  q.placeholder = T`ค้นหาเซสชัน (ชื่อ หรือข้อความในเซสชัน)…`;
   q.value = S.query;
-  const addBtn = el('button', 'k-ok ai-chat-new', '➕ เซสชันใหม่');
+  const addBtn = el('button', 'k-ok ai-chat-new', T`➕ เซสชันใหม่`);
   bar.append(q, addBtn);
   wrap.append(bar);
 
@@ -199,7 +200,7 @@ function listView() {
   const cb = el('input');
   cb.type = 'checkbox';
   cb.checked = S.showArchived;
-  arch.append(cb, document.createTextNode(' แสดงเซสชันที่จัดเก็บแล้ว'));
+  arch.append(cb, document.createTextNode(T` แสดงเซสชันที่จัดเก็บแล้ว`));
   wrap.append(arch);
 
   function fill() {
@@ -207,7 +208,7 @@ function listView() {
     const list = searchSessions(S.sessions, S.query, { includeArchived: S.showArchived });
     if (!list.length) {
       rows.append(el('div', 'ai-chat-empty dim',
-        S.query ? 'ไม่พบเซสชันที่ตรงกับคำค้น' : 'ยังไม่มีเซสชัน — กด "➕ เซสชันใหม่" เพื่อเริ่มคุย'));
+        S.query ? T`ไม่พบเซสชันที่ตรงกับคำค้น` : T`ยังไม่มีเซสชัน — กด "➕ เซสชันใหม่" เพื่อเริ่มคุย`));
       return;
     }
     for (const s of list) rows.append(sessionRow(s));
@@ -227,10 +228,10 @@ function sessionRow(s) {
   if (s.archived) row.classList.add('archived');
   row.dataset.session = s.id;
   const main = el('div', 'ai-chat-row-main');
-  main.append(el('div', 'ai-chat-row-title', s.title || 'เซสชัน'));
+  main.append(el('div', 'ai-chat-row-title', s.title || T`เซสชัน`));
   const last = [...(s.messages || [])].reverse().find((m) => m.text);
   main.append(el('div', 'ai-chat-row-sub dim',
-    last ? String(last.text).replace(/\s+/g, ' ').slice(0, 90) : 'ยังไม่มีข้อความ'));
+    last ? String(last.text).replace(/\s+/g, ' ').slice(0, 90) : T`ยังไม่มีข้อความ`));
   const meta = el('div', 'ai-chat-row-meta dim');
   const st = sessionStats(s);
   meta.append(el('span', 'ai-chat-row-date', fmtDate(s.updated)));
@@ -254,24 +255,24 @@ function sessionView() {
   // ── หัว: ซ้าย = ชื่อเซสชัน · ขวา = ป้ายบริบท + เมนู ⋯ ──
   const head = el('div', 'ai-chat-head');
   const back = el('button', 'ai-chat-back', '←');
-  back.title = 'กลับไปรายการเซสชัน';
+  back.title = T`กลับไปรายการเซสชัน`;
   back.onclick = () => { S.view = 'list'; draw(); };
-  const title = el('div', 'ai-chat-title', s.title || 'เซสชัน');
+  const title = el('div', 'ai-chat-title', s.title || T`เซสชัน`);
   title.title = s.title || '';
   const right = el('div', 'ai-chat-head-right');
   const st = sessionStats(s);
   const badge = el('button', 'ai-chat-ctx', contextLabel(st));
   // hover = ต้นทุน (USD) · การใช้งาน % ของเซสชัน · token ที่ใช้
   badge.title = [
-    'ต้นทุน: ' + usd(st.usd),
-    'การใช้งาน: ' + (st.limit ? st.percent + '%' : 'ไม่รู้ขีดจำกัดของโมเดล'),
-    'โทเค็นที่ใช้: ' + st.total.toLocaleString(),
-    '— คลิกเพื่อดูรายละเอียด —',
+    T`ต้นทุน: ` + usd(st.usd),
+    T`การใช้งาน: ` + (st.limit ? st.percent + '%' : T`ไม่รู้ขีดจำกัดของโมเดล`),
+    T`โทเค็นที่ใช้: ` + st.total.toLocaleString(),
+    T`— คลิกเพื่อดูรายละเอียด —`,
   ].join('\n');
   badge.onclick = () => { S.view = 'detail'; draw(); };
   // [alpha.62 บั๊ก 3] เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เซสชันยังอยู่ที่เดิม)
   const restart = el('button', 'ai-chat-restart', '↻');
-  restart.title = 'เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เก็บโหมด/โมเดล/ไฟล์แนบไว้)';
+  restart.title = T`เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เก็บโหมด/โมเดล/ไฟล์แนบไว้)`;
   restart.onclick = () => restartSession(s);
   // [alpha.63r4] มุมมอง transcript — ปกติ / ความคิด / ละเอียด / สรุป
   const viewSel = el('select', 'ai-chat-viewsel');
@@ -290,7 +291,7 @@ function sessionView() {
     draw();
   };
   const more = el('button', 'ai-chat-more', '⋯');
-  more.title = 'ตัวเลือกของเซสชัน';
+  more.title = T`ตัวเลือกของเซสชัน`;
   more.onclick = (e) => sessionMenu(e, s);
   right.append(badge, viewSel, restart, more);
   head.append(back, title, right);
@@ -300,8 +301,8 @@ function sessionView() {
   const body = el('div', 'ai-chat-msgs ai-view-' + (s.view || DEFAULT_VIEW));
   if (!(s.messages || []).length) {
     body.append(el('div', 'ai-chat-empty dim',
-      'เริ่มคุยได้เลย — โหมด "' + modeDef(s.mode).label + '" · เห็นข้อมูล: ' + scopeLabel(s.scope)
-      + (s._draft ? ' · เซสชันจะถูกบันทึกเมื่อส่งข้อความแรก' : '')));
+      T`เริ่มคุยได้เลย — โหมด "` + modeDef(s.mode).label + T`" · เห็นข้อมูล: ` + scopeLabel(s.scope)
+      + (s._draft ? T` · เซสชันจะถูกบันทึกเมื่อส่งข้อความแรก` : '')));
   }
   for (const m of s.messages || []) body.append(msgNode(m, s.view));
   wrap.append(body);
@@ -321,16 +322,16 @@ function sessionView() {
 function msgNode(m, view = DEFAULT_VIEW) {
   // ผลคำสั่งที่ป้อนกลับให้โมเดลไม่ใช่บทสนทนา — โผล่เฉพาะโหมดที่ขอดูเบื้องหลัง
   if (m.toolResult && view !== 'verbose' && view !== 'thinking') return el('span', 'ai-msg-hidden');
-  if (m.toolResult) return foldBlock('↩ ผลคำสั่งที่ส่งกลับให้โมเดล', m.text, 'ai-msg-toolresult');
+  if (m.toolResult) return foldBlock(T`↩ ผลคำสั่งที่ส่งกลับให้โมเดล`, m.text, 'ai-msg-toolresult');
   if (view === 'summary') return summaryNode(m);
   const n = el('div', 'ai-msg ai-msg-' + m.role);
   const who = el('div', 'ai-msg-who dim',
-    m.role === 'user' ? 'คุณ' : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : '🤖 ผู้ช่วย') : m.role);
+    m.role === 'user' ? T`คุณ` : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : T`🤖 ผู้ช่วย`) : m.role);
   // [alpha.62 บั๊ก 3] คัดลอกข้อความทีละก้อน — คำตอบของ AI ส่วนใหญ่เอาไปวางต่อในต้นฉบับ
   // (ลากคลุมเองไม่ได้เพราะแผงลอย/แผง dock กินอีเวนต์เมาส์ไปทำอย่างอื่น)
   const copy = el('button', 'ai-msg-copy', '⧉');
   copy.type = 'button';
-  copy.title = 'คัดลอกข้อความนี้';
+  copy.title = T`คัดลอกข้อความนี้`;
   copy.onclick = async () => {
     const ok = await copyText(m.text || '');
     copy.textContent = ok ? '✓' : '✕';
@@ -343,9 +344,9 @@ function msgNode(m, view = DEFAULT_VIEW) {
   n.append(who, txt);
   if (!shown && m.calls && m.calls.length) txt.remove();
 
-  if (view === 'verbose' && m.system) n.append(foldBlock('⚙ system prompt ที่ส่งไปรอบนี้', m.system));
+  if (view === 'verbose' && m.system) n.append(foldBlock(T`⚙ system prompt ที่ส่งไปรอบนี้`, m.system));
   if ((view === 'thinking' || view === 'verbose') && m.thinking) {
-    n.append(foldBlock('🧠 ความคิดของโมเดล', m.thinking, 'ai-msg-thinking'));
+    n.append(foldBlock(T`🧠 ความคิดของโมเดล`, m.thinking, 'ai-msg-thinking'));
   }
   if (m.calls && m.calls.length && view !== 'normal') {
     n.append(callsNode(m.calls, m.results, view));
@@ -353,15 +354,15 @@ function msgNode(m, view = DEFAULT_VIEW) {
     // โหมดปกติ — บอกแค่ว่าทำอะไรไปกี่อย่าง สำเร็จกี่อย่าง
     const okN = (m.results || []).filter((r) => r.ok).length;
     const line = el('div', 'ai-msg-actions dim',
-      `⚡ ลงมือทำ ${m.calls.length} คำสั่ง — สำเร็จ ${okN}/${(m.results || []).length || m.calls.length}`);
+      T`⚡ ลงมือทำ ${m.calls.length} คำสั่ง — สำเร็จ ${okN}/${(m.results || []).length || m.calls.length}`);
     n.append(line);
   }
   if (view === 'verbose' && m.usage) {
     n.append(el('div', 'ai-msg-meta dim',
-      `token: เข้า ${m.usage.input || 0} · ออก ${m.usage.output || 0}`
-      + (m.usage.reasoning ? ` · คิด ${m.usage.reasoning}` : '')
-      + (m.usage.cached ? ` · แคช ${m.usage.cached}` : '')
-      + (m.ms ? ` · ใช้เวลา ${(m.ms / 1000).toFixed(1)} วิ` : '')
+      T`token: เข้า ${m.usage.input || 0} · ออก ${m.usage.output || 0}`
+      + (m.usage.reasoning ? T` · คิด ${m.usage.reasoning}` : '')
+      + (m.usage.cached ? T` · แคช ${m.usage.cached}` : '')
+      + (m.ms ? T` · ใช้เวลา ${(m.ms / 1000).toFixed(1)} วิ` : '')
       + (m.at ? ' · ' + fmtDate(m.at) : '')));
   }
   if (m.error) n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
@@ -379,7 +380,7 @@ function summaryNode(m) {
   const body = m.error ? m.error
     : (m.calls && m.calls.length && !stripToolCalls(m.text)
         ? m.calls.map(describeCall).join(' · ')
-        : String(m.text || '').replace(/\s+/g, ' ').trim() || '(ว่าง)');
+        : String(m.text || '').replace(/\s+/g, ' ').trim() || T`(ว่าง)`);
   n.append(el('span', 'ai-sum-icon', icon));
   const t = el('span', 'ai-sum-text', body.length > 120 ? body.slice(0, 119) + '…' : body);
   t.title = m.text || m.error || '';
@@ -401,7 +402,7 @@ function foldBlock(label, text, cls = '') {
 /** รายการคำสั่งที่ AI สั่ง + ผลของแต่ละอัน */
 function callsNode(calls, results, view) {
   const box = el('div', 'ai-calls');
-  box.append(el('div', 'ai-calls-head dim', '⚡ คำสั่งที่ลงมือทำ (' + calls.length + ')'));
+  box.append(el('div', 'ai-calls-head dim', T`⚡ คำสั่งที่ลงมือทำ (` + calls.length + ')'));
   calls.forEach((c, i) => {
     const r = (results || [])[i];
     const row = el('div', 'ai-call' + (r ? (r.ok ? ' ok' : ' bad') : ''));
@@ -410,9 +411,9 @@ function callsNode(calls, results, view) {
     if (r && (r.message || r.error)) row.append(el('span', 'ai-call-msg dim', r.error || r.message));
     box.append(row);
     if (view === 'verbose') {
-      box.append(foldBlock('JSON ที่โมเดลสั่ง', JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
+      box.append(foldBlock(T`JSON ที่โมเดลสั่ง`, JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
       if (r && r.data !== undefined && r.data !== null) {
-        box.append(foldBlock('ผลที่ส่งกลับให้โมเดล',
+        box.append(foldBlock(T`ผลที่ส่งกลับให้โมเดล`,
           typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2)));
       }
     }
@@ -426,22 +427,22 @@ function composer(s, body) {
   // แถวควบคุม: 📎 ไฟล์ · โหมด · โมเดล (override) · ระดับการเข้าถึง
   const ctrls = el('div', 'ai-chat-ctrls');
   const fileBtn = el('button', 'ai-chat-file', '📎');
-  fileBtn.title = 'เพิ่มไฟล์เข้าบริบทของเซสชันนี้';
+  fileBtn.title = T`เพิ่มไฟล์เข้าบริบทของเซสชันนี้`;
   const modeSel = el('select', 'ai-chat-mode');
   for (const m of CHAT_MODES) { const o = el('option', null, m.icon + ' ' + m.label); o.value = m.id; modeSel.append(o); }
   modeSel.value = s.mode || DEFAULT_MODE;
-  modeSel.title = 'โหมดการทำงาน\n'
-    + '📖 วางแผน — อ่านโปรเจกต์ได้ แต่ไม่แตะไฟล์\n'
-    + '✍️ ช่วยเขียน — สร้าง/แก้ เล่ม บท ฉาก เอนทิตี้ ได้จริง (ลบไม่ได้)\n'
-    + '🔓 ปลดล็อกเต็มที่ — ทำได้ทุกอย่างรวมทั้งลบ (ของไปถังขยะ กู้คืนได้)';
+  modeSel.title = T`โหมดการทำงาน\n`
+    + T`📖 วางแผน — อ่านโปรเจกต์ได้ แต่ไม่แตะไฟล์\n`
+    + T`✍️ ช่วยเขียน — สร้าง/แก้ เล่ม บท ฉาก เอนทิตี้ ได้จริง (ลบไม่ได้)\n`
+    + T`🔓 ปลดล็อกเต็มที่ — ทำได้ทุกอย่างรวมทั้งลบ (ของไปถังขยะ กู้คืนได้)`;
 
   // โมเดลของเซสชัน = **override จากตั้งค่า** แยกกันเป็นอิสระ
   const modelSel = el('select', 'ai-chat-model');
-  modelSel.title = 'โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)';
+  modelSel.title = T`โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)`;
   const scopeSel = el('select', 'ai-chat-scope');
   for (const sc of SCOPES) { const o = el('option', null, sc.label); o.value = sc.id; scopeSel.append(o); }
   scopeSel.value = s.scope || DEFAULT_SCOPE;
-  scopeSel.title = 'ระดับการเข้าถึง — AI จะเห็นเนื้อหาแค่ระดับนี้';
+  scopeSel.title = T`ระดับการเข้าถึง — AI จะเห็นเนื้อหาแค่ระดับนี้`;
   ctrls.append(fileBtn, modeSel, modelSel, scopeSel);
   box.append(ctrls);
 
@@ -471,10 +472,10 @@ function composer(s, body) {
   ta.rows = 3;
   const sendKey = aiMeta().sendKey || DEFAULT_SEND_KEY;
   ta.placeholder = sendKey === 'shift-enter'
-    ? 'พิมพ์ข้อความ… (Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด)'
-    : 'พิมพ์ข้อความ… (Enter = ส่ง · Shift+Enter = ขึ้นบรรทัด)';
-  const sendBtn = el('button', 'k-ok ai-chat-send', 'ส่ง');
-  sendBtn.title = 'ปุ่มส่งตั้งได้ที่ ไฟล์ → ตั้งค่า AI';
+    ? T`พิมพ์ข้อความ… (Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด)`
+    : T`พิมพ์ข้อความ… (Enter = ส่ง · Shift+Enter = ขึ้นบรรทัด)`;
+  const sendBtn = el('button', 'k-ok ai-chat-send', T`ส่ง`);
+  sendBtn.title = T`ปุ่มส่งตั้งได้ที่ ไฟล์ → ตั้งค่า AI`;
   inputRow.append(ta, sendBtn);
   box.append(inputRow);
 
@@ -487,7 +488,7 @@ function composer(s, body) {
   };
   fileBtn.onclick = async () => {
     const p = await (kapi.openFileDialog ? kapi.openFileDialog() : null);
-    if (!p) { setStatus('เลือกไฟล์ไม่สำเร็จ'); return; }
+    if (!p) { setStatus(T`เลือกไฟล์ไม่สำเร็จ`); return; }
     s.files = [...(s.files || []), { path: p, name: String(p).replace(/^.*[\\/]/, '') }];
     await saveSession(s); drawFiles();
   };
@@ -506,7 +507,7 @@ function composer(s, body) {
 function fillModelSelect(sel, s) {
   sel.innerHTML = '';
   const provs = providerList();
-  const dflt = el('option', null, '(ตามตั้งค่า AI)');
+  const dflt = el('option', null, T`(ตามตั้งค่า AI)`);
   dflt.value = '';
   sel.append(dflt);
   for (const p of provs) {
@@ -530,7 +531,7 @@ async function send(s, ta, body, sendBtn) {
   if (!text || S.sending) return;
   const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
   if (!prov) {
-    setStatus('❌ ยังไม่ได้ตั้งค่าผู้ให้บริการ AI — ไฟล์ → ตั้งค่า AI');
+    setStatus(T`❌ ยังไม่ได้ตั้งค่าผู้ให้บริการ AI — ไฟล์ → ตั้งค่า AI`);
     return;
   }
   S.sending = true;
@@ -544,7 +545,7 @@ async function send(s, ta, body, sendBtn) {
   await saveSession(S.cur);
   body.append(msgNode(userMsg, view));
   const pend = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
-  const pendWho = el('div', 'ai-msg-who dim', '🤖 กำลังคิด…');
+  const pendWho = el('div', 'ai-msg-who dim', T`🤖 กำลังคิด…`);
   pend.append(pendWho);
   body.append(pend);
   body.scrollTop = body.scrollHeight;
@@ -556,8 +557,8 @@ async function send(s, ta, body, sendBtn) {
   if (tp) system += '\n\n' + tp;
   try {
     const ctx = await collectScope(S.cur);
-    if (ctx) system += '\n\nข้อมูลจากโปรเจกต์ (ระดับการเข้าถึง: ' + scopeLabel(S.cur.scope) + '):\n' + ctx;
-  } catch (e) { log('warn', 'ai-chat: รวบรวมบริบทไม่สำเร็จ', e); }
+    if (ctx) system += T`\n\nข้อมูลจากโปรเจกต์ (ระดับการเข้าถึง: ` + scopeLabel(S.cur.scope) + '):\n' + ctx;
+  } catch (e) { log('warn', T`ai-chat: รวบรวมบริบทไม่สำเร็จ`, e); }
 
   // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
   let res = null;
@@ -572,7 +573,7 @@ async function send(s, ta, body, sendBtn) {
       ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
                                             thinking: res.thinking, system, ms,
                                             calls: calls.length ? calls : null })
-      : newMessage('assistant', '', { error: res.error || 'เรียก AI ไม่สำเร็จ', system, ms });
+      : newMessage('assistant', '', { error: res.error || T`เรียก AI ไม่สำเร็จ`, system, ms });
 
     if (res.ok && res.usage) {
       const used = (res.usage.input || 0) + (res.usage.output || 0);
@@ -588,7 +589,7 @@ async function send(s, ta, body, sendBtn) {
       break;
     }
 
-    pendWho.textContent = '⚡ กำลังลงมือทำ ' + calls.length + ' คำสั่ง…';
+    pendWho.textContent = T`⚡ กำลังลงมือทำ ` + calls.length + T` คำสั่ง…`;
     const results = await runCalls(calls, S.cur, cap);
     reply.results = results;
     touched = touched || touchesProject(results);
@@ -606,9 +607,9 @@ async function send(s, ta, body, sendBtn) {
     if (round === MAX_TOOL_ROUNDS - 1) {
       pend.remove();
       body.append(el('div', 'ai-chat-empty dim',
-        `หยุดที่ ${MAX_TOOL_ROUNDS} รอบเพื่อกันวนไม่จบ — พิมพ์ "ทำต่อ" ถ้ายังไม่เสร็จ`));
+        T`หยุดที่ ${MAX_TOOL_ROUNDS} รอบเพื่อกันวนไม่จบ — พิมพ์ "ทำต่อ" ถ้ายังไม่เสร็จ`));
     } else {
-      pendWho.textContent = '🤖 กำลังคิดต่อ…';
+      pendWho.textContent = T`🤖 กำลังคิดต่อ…`;
     }
   }
   if (touched) await refreshAfterActions();
@@ -623,10 +624,10 @@ async function send(s, ta, body, sendBtn) {
   if (badge) {
     const st2 = sessionStats(S.cur);
     badge.textContent = contextLabel(st2);
-    badge.title = ['ต้นทุน: ' + usd(st2.usd),
-                   'การใช้งาน: ' + (st2.limit ? st2.percent + '%' : 'ไม่รู้ขีดจำกัดของโมเดล'),
-                   'โทเค็นที่ใช้: ' + st2.total.toLocaleString(),
-                   '— คลิกเพื่อดูรายละเอียด —'].join('\n');
+    badge.title = [T`ต้นทุน: ` + usd(st2.usd),
+                   T`การใช้งาน: ` + (st2.limit ? st2.percent + '%' : T`ไม่รู้ขีดจำกัดของโมเดล`),
+                   T`โทเค็นที่ใช้: ` + st2.total.toLocaleString(),
+                   T`— คลิกเพื่อดูรายละเอียด —`].join('\n');
   }
   if (!res.ok) setStatus('❌ AI: ' + (res.error || ''));
 }
@@ -641,19 +642,19 @@ async function runCalls(calls, session, cap) {
   const results = [];
   let stopped = false;
   for (const c of calls) {
-    if (stopped) { results.push({ tool: c.tool, ok: false, cancelled: true, error: 'ยกเลิกทั้งชุด' }); continue; }
+    if (stopped) { results.push({ tool: c.tool, ok: false, cancelled: true, error: T`ยกเลิกทั้งชุด` }); continue; }
     const v = validateCall(c, cap);
-    if (!v.ok) { results.push({ tool: c.tool || '(ไม่ระบุ)', ok: false, error: v.error }); continue; }
+    if (!v.ok) { results.push({ tool: c.tool || T`(ไม่ระบุ)`, ok: false, error: v.error }); continue; }
     const def = toolByName(c.tool);
     const needAsk = def.destructive
       ? session.confirmDestructive !== false
       : session.autoRun === false;
     if (needAsk) {
       const okGo = await confirmBox(
-        (def.destructive ? '⚠ AI ขอลบของในโปรเจกต์:\n\n' : 'AI ขอลงมือทำ:\n\n') + describeCall(c),
-        def.destructive ? 'ลบเลย' : 'ทำเลย');
+        (def.destructive ? T`⚠ AI ขอลบของในโปรเจกต์:\n\n` : T`AI ขอลงมือทำ:\n\n`) + describeCall(c),
+        def.destructive ? T`ลบเลย` : T`ทำเลย`);
       if (!okGo) {
-        results.push({ tool: c.tool, ok: false, cancelled: true, error: 'ผู้ใช้ไม่อนุญาต' });
+        results.push({ tool: c.tool, ok: false, cancelled: true, error: T`ผู้ใช้ไม่อนุญาต` });
         stopped = true;
         continue;
       }
@@ -707,64 +708,64 @@ export async function restartSession(s, { confirm = true } = {}) {
   const target = s || S.cur;
   if (!target) return null;
   if (confirm && (target.messages || []).length
-      && !(await confirmBox(`เริ่มใหม่ — ล้างบทสนทนา ${(target.messages || []).length} ข้อความของ "${target.title}" ?`))) {
+      && !(await confirmBox(T`เริ่มใหม่ — ล้างบทสนทนา ${(target.messages || []).length} ข้อความของ "${target.title}" ?`))) {
     return null;
   }
   S.cur = clearMessages(target);
   await saveSession(S.cur);
   S.view = 'session';
   draw();
-  setStatus('เริ่มบทสนทนาใหม่แล้ว (เก็บโหมด/โมเดล/ไฟล์แนบไว้)');
+  setStatus(T`เริ่มบทสนทนาใหม่แล้ว (เก็บโหมด/โมเดล/ไฟล์แนบไว้)`);
   return S.cur;
 }
 
 // ── เมนู ⋯ ──
 function sessionMenu(ev, s) {
   popupMenu(ev.clientX, ev.clientY, [
-    { label: '↻ เริ่มใหม่ (ล้างบทสนทนา)', click: () => restartSession(s) },
-    { label: '⧉ คัดลอกบทสนทนาทั้งหมด', click: async () => {
-      setStatus(await copyText(shareMarkdown(s)) ? 'คัดลอกบทสนทนาแล้ว' : 'คัดลอกไม่สำเร็จ');
+    { label: T`↻ เริ่มใหม่ (ล้างบทสนทนา)`, click: () => restartSession(s) },
+    { label: T`⧉ คัดลอกบทสนทนาทั้งหมด`, click: async () => {
+      setStatus(await copyText(shareMarkdown(s)) ? T`คัดลอกบทสนทนาแล้ว` : T`คัดลอกไม่สำเร็จ`);
     } },
     '-',
     // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
-    { label: (s.autoRun === false ? '☐' : '☑') + ' ทำคำสั่งเองโดยไม่ต้องถาม', click: async () => {
+    { label: (s.autoRun === false ? '☐' : '☑') + T` ทำคำสั่งเองโดยไม่ต้องถาม`, click: async () => {
       s.autoRun = s.autoRun === false;
       await saveSession(s);
-      setStatus(s.autoRun ? 'AI จะลงมือทำเองโดยไม่ถาม (ยกเว้นคำสั่งลบ)' : 'AI จะถามก่อนทุกคำสั่ง');
+      setStatus(s.autoRun ? T`AI จะลงมือทำเองโดยไม่ถาม (ยกเว้นคำสั่งลบ)` : T`AI จะถามก่อนทุกคำสั่ง`);
     } },
-    { label: (s.confirmDestructive === false ? '☐' : '☑') + ' ถามก่อนเสมอเมื่อจะลบของ', click: async () => {
+    { label: (s.confirmDestructive === false ? '☐' : '☑') + T` ถามก่อนเสมอเมื่อจะลบของ`, click: async () => {
       if (s.confirmDestructive !== false) {
         const okGo = await confirmBox(
-          'ปิดการถามก่อนลบ?\n\nAI จะลบเล่ม/บท/ฉาก/เอนทิตี้ได้เองทันทีโดยไม่ถามคุณอีก\n'
-          + '(ของยังไปถังขยะ กู้คืนได้ แต่จะไม่มีจังหวะให้ทัดทาน)', 'ปิดการถาม');
+          T`ปิดการถามก่อนลบ?\n\nAI จะลบเล่ม/บท/ฉาก/เอนทิตี้ได้เองทันทีโดยไม่ถามคุณอีก\n`
+          + T`(ของยังไปถังขยะ กู้คืนได้ แต่จะไม่มีจังหวะให้ทัดทาน)`, T`ปิดการถาม`);
         if (!okGo) return;
       }
       s.confirmDestructive = s.confirmDestructive === false;
       await saveSession(s);
-      setStatus(s.confirmDestructive ? 'จะถามก่อนลบเสมอ' : '⚠ ปลดล็อกเต็มที่ — AI ลบของได้เองโดยไม่ถาม');
+      setStatus(s.confirmDestructive ? T`จะถามก่อนลบเสมอ` : T`⚠ ปลดล็อกเต็มที่ — AI ลบของได้เองโดยไม่ถาม`);
     } },
     '-',
-    { label: '✎ เปลี่ยนชื่อ', click: async () => {
-      const v = await ask('ชื่อเซสชัน', { value: s.title });
+    { label: T`✎ เปลี่ยนชื่อ`, click: async () => {
+      const v = await ask(T`ชื่อเซสชัน`, { value: s.title });
       if (v === null) return;
       S.cur = renameSession(s, v);
       await saveSession(S.cur, { force: true }); draw();
     } },
-    { label: '↗ แชร์ (คัดลอกเป็น Markdown)', click: async () => {
-      setStatus(await copyText(shareMarkdown(s)) ? 'คัดลอกบทสนทนาแล้ว' : 'คัดลอกไม่สำเร็จ');
+    { label: T`↗ แชร์ (คัดลอกเป็น Markdown)`, click: async () => {
+      setStatus(await copyText(shareMarkdown(s)) ? T`คัดลอกบทสนทนาแล้ว` : T`คัดลอกไม่สำเร็จ`);
     } },
-    { label: s.archived ? '📤 เอาออกจากที่จัดเก็บ' : '📥 จัดเก็บ', click: async () => {
+    { label: s.archived ? T`📤 เอาออกจากที่จัดเก็บ` : T`📥 จัดเก็บ`, click: async () => {
       S.cur = archiveSession(s, !s.archived);
       await saveSession(S.cur);
       S.view = 'list'; draw();
-      setStatus(S.cur.archived ? 'จัดเก็บเซสชันแล้ว' : 'เอาเซสชันออกจากที่จัดเก็บแล้ว');
+      setStatus(S.cur.archived ? T`จัดเก็บเซสชันแล้ว` : T`เอาเซสชันออกจากที่จัดเก็บแล้ว`);
     } },
     '-',
-    { label: '🗑 ลบเซสชันนี้', click: async () => {
-      if (!(await confirmBox(`ลบเซสชัน "${s.title}" ?`))) return;
+    { label: T`🗑 ลบเซสชันนี้`, click: async () => {
+      if (!(await confirmBox(T`ลบเซสชัน "${s.title}" ?`))) return;
       await deleteSessionFile(s);
       S.cur = null; S.view = 'list'; draw();
-      setStatus('ลบเซสชันแล้ว');
+      setStatus(T`ลบเซสชันแล้ว`);
     } },
   ]);
 }
@@ -776,9 +777,9 @@ function detailView() {
   const wrap = el('div', 'ai-chat-detail');
 
   const head = el('div', 'ai-chat-head');
-  head.append(el('div', 'ai-chat-title', 'รายละเอียดบริบท'));
+  head.append(el('div', 'ai-chat-title', T`รายละเอียดบริบท`));
   const closeBtn = el('button', 'ai-chat-close', '✕');
-  closeBtn.title = 'ปิด — กลับไปที่เซสชัน';
+  closeBtn.title = T`ปิด — กลับไปที่เซสชัน`;
   closeBtn.onclick = () => { S.view = 'session'; draw(); };
   const hr = el('div', 'ai-chat-head-right');
   hr.append(closeBtn);
@@ -788,24 +789,24 @@ function detailView() {
   const prov = providerList().find((p) => p.id === s.providerId);
   const lastAssistant = [...(s.messages || [])].reverse().find((m) => m.role === 'assistant' && m.model);
   const rows = [
-    ['ชื่อเซสชัน', s.title || '—'],
-    ['ข้อความในเซสชัน', (s.messages || []).length.toLocaleString() + ' ข้อความ'],
-    ['ผู้ให้บริการ', prov ? prov.name : (lastAssistant && lastAssistant.provider) || '(ตามตั้งค่า AI)'],
-    ['โมเดล', s.model || (lastAssistant && lastAssistant.model) || '(ตามตั้งค่า AI)'],
-    ['ขีดจำกัด', st.limit ? st.limit.toLocaleString() + ' tokens' : 'ไม่ทราบ'],
-    ['โทเค็นที่ใช้', st.total.toLocaleString()],
-    ['การใช้งาน', st.limit ? st.percent + '%' : '—'],
-    ['โทเค็นนำเข้า', st.input.toLocaleString()],
-    ['โทเค็นส่งออก', st.output.toLocaleString()],
-    ['โทเค็นแบบใช้เหตุผล', st.reasoning.toLocaleString()],
-    ['โทเค็นแคช', st.cached.toLocaleString()],
-    ['จำนวนข้อความผู้ใช้', String(st.userMsgs)],
-    ['จำนวนข้อความผู้ช่วย', String(st.agentMsgs)],
-    ['ต้นทุน (USD)', usd(st.usd)],
-    ['วันที่สร้างเซสชัน', fmtDate(s.created)],
-    ['ใช้งานล่าสุด', fmtDate(s.updated)],
-    ['โหมด', modeDef(s.mode).label],
-    ['ระดับการเข้าถึง', scopeLabel(s.scope)],
+    [T`ชื่อเซสชัน`, s.title || '—'],
+    [T`ข้อความในเซสชัน`, (s.messages || []).length.toLocaleString() + T` ข้อความ`],
+    [T`ผู้ให้บริการ`, prov ? prov.name : (lastAssistant && lastAssistant.provider) || T`(ตามตั้งค่า AI)`],
+    [T`โมเดล`, s.model || (lastAssistant && lastAssistant.model) || T`(ตามตั้งค่า AI)`],
+    [T`ขีดจำกัด`, st.limit ? st.limit.toLocaleString() + ' tokens' : T`ไม่ทราบ`],
+    [T`โทเค็นที่ใช้`, st.total.toLocaleString()],
+    [T`การใช้งาน`, st.limit ? st.percent + '%' : '—'],
+    [T`โทเค็นนำเข้า`, st.input.toLocaleString()],
+    [T`โทเค็นส่งออก`, st.output.toLocaleString()],
+    [T`โทเค็นแบบใช้เหตุผล`, st.reasoning.toLocaleString()],
+    [T`โทเค็นแคช`, st.cached.toLocaleString()],
+    [T`จำนวนข้อความผู้ใช้`, String(st.userMsgs)],
+    [T`จำนวนข้อความผู้ช่วย`, String(st.agentMsgs)],
+    [T`ต้นทุน (USD)`, usd(st.usd)],
+    [T`วันที่สร้างเซสชัน`, fmtDate(s.created)],
+    [T`ใช้งานล่าสุด`, fmtDate(s.updated)],
+    [T`โหมด`, modeDef(s.mode).label],
+    [T`ระดับการเข้าถึง`, scopeLabel(s.scope)],
   ];
   const table = el('div', 'ai-detail-grid');
   for (const [k, v] of rows) {
@@ -814,7 +815,7 @@ function detailView() {
   }
   wrap.append(table);
 
-  const rawBtn = el('button', 'ai-detail-raw', '{ } แสดงข้อความดิบ (JSON)');
+  const rawBtn = el('button', 'ai-detail-raw', T`{ } แสดงข้อความดิบ (JSON)`);
   const pre = el('pre', 'ai-detail-json');
   pre.style.display = 'none';
   pre.textContent = rawJson(s);

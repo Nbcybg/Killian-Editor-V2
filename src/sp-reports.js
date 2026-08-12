@@ -7,6 +7,7 @@
 // บริสุทธิ์ 100% : ไม่แตะ DOM / kapi / state → ทดสอบด้วย node ได้ (test/sp-reports.test.cjs)
 // รับ blocks ชุดเดียวกับ sp-format/sp-view (`{el, text, pos?, idx?}`)
 
+import { T } from './i18n.js';
 import { mergeSpFormat, paginate, wrapLines, linesPerPage, formatLines } from './sp-format.js';
 import { SCENE_PREFIX, splitCharacter } from './fountain.js';
 
@@ -82,7 +83,7 @@ export function sceneBreakdown(blocks, opts = {}) {
     if (b.el === 'scene') {
       const h = parseHeading(b.text);
       cur = {
-        n: ++seq, heading: h.raw, location: h.location || '(ไม่ระบุสถานที่)',
+        n: ++seq, heading: h.raw, location: h.location || T`(ไม่ระบุสถานที่)`,
         intExt: h.intExt, time: h.time,
         page: page + startPage - 1, endPage: page + startPage - 1,
         pos: Number.isFinite(b.pos) ? b.pos : null,
@@ -95,7 +96,7 @@ export function sceneBreakdown(blocks, opts = {}) {
     }
     if (!cur) {
       // เนื้อหาก่อนหัวฉากแรก — เก็บเป็น "ฉากนำ" เพื่อไม่ให้บทพูดหาย
-      cur = { n: ++seq, heading: '(ก่อนหัวฉากแรก)', location: '(ไม่ระบุสถานที่)',
+      cur = { n: ++seq, heading: T`(ก่อนหัวฉากแรก)`, location: T`(ไม่ระบุสถานที่)`,
               intExt: '', time: '', page: page + startPage - 1, endPage: page + startPage - 1,
               pos: Number.isFinite(b.pos) ? b.pos : null,
               characters: [], charSet: new Set(),
@@ -215,8 +216,8 @@ export function generateCharacterReport(blocks, opts = {}) {
 
 // ───────── 73. กราฟบทพูดต่อหน้า ─────────
 export const CHART_KINDS = ['action', 'dialogue', 'character', 'other'];
-export const CHART_LABELS = { action: 'บรรยาย', dialogue: 'บทพูด',
-                              character: 'ชื่อตัวละคร', other: 'อื่น ๆ' };
+export const CHART_LABELS = { action: T`บรรยาย`, dialogue: T`บทพูด`,
+                              character: T`ชื่อตัวละคร`, other: T`อื่น ๆ` };
 
 /** จัดชนิด element ลง 4 กลุ่มของกราฟ */
 export function chartKind(el) {
@@ -268,11 +269,11 @@ export function generateDialogueChart(blocks, opts = {}) {
 const pad = (s, n) => { s = String(s ?? ''); return s + ' '.repeat(Math.max(0, n - s.length)); };
 
 export function locationReportText(rep) {
-  const out = [`รายงานสถานที่ — ${rep.locations.length} สถานที่ · ${rep.totalScenes} ฉาก · ${rep.totalPages} หน้า`, ''];
+  const out = [T`รายงานสถานที่ — ${rep.locations.length} สถานที่ · ${rep.totalScenes} ฉาก · ${rep.totalPages} หน้า`, ''];
   for (const L of rep.locations) {
-    out.push(`${L.location}  [${L.intExt.join('/') || '—'}]  ${L.sceneCount} ฉาก · ~${L.pages} หน้า`);
+    out.push(T`${L.location}  [${L.intExt.join('/') || '—'}]  ${L.sceneCount} ฉาก · ~${L.pages} หน้า`);
     for (const s of L.scenes) {
-      out.push(`   ฉาก ${pad(s.n, 4)} หน้า ${pad(s.page, 4)} ${s.heading}` +
+      out.push(T`   ฉาก ${pad(s.n, 4)} หน้า ${pad(s.page, 4)} ${s.heading}` +
                (s.characters.length ? '   [' + s.characters.join(', ') + ']' : ''));
     }
     out.push('');
@@ -281,8 +282,8 @@ export function locationReportText(rep) {
 }
 
 export function characterReportText(rep) {
-  const out = [`รายงานตัวละคร — ${rep.characters.length} คน · ${rep.totalLines} บรรทัดบทพูด`, '',
-               `${pad('ตัวละคร', 24)}${pad('ฉาก', 6)}${pad('บทพูด', 8)}${pad('บรรทัด', 8)}${pad('เฉลี่ย/ฉาก', 12)}สัดส่วน`];
+  const out = [T`รายงานตัวละคร — ${rep.characters.length} คน · ${rep.totalLines} บรรทัดบทพูด`, '',
+               T`${pad(T`ตัวละคร`, 24)}${pad(T`ฉาก`, 6)}${pad(T`บทพูด`, 8)}${pad(T`บรรทัด`, 8)}${pad(T`เฉลี่ย/ฉาก`, 12)}สัดส่วน`];
   for (const c of rep.characters) {
     out.push(`${pad(c.name, 24)}${pad(c.sceneCount, 6)}${pad(c.speeches, 8)}` +
              `${pad(c.totalLines, 8)}${pad(c.avgLines, 12)}${c.share}%`);
@@ -291,13 +292,13 @@ export function characterReportText(rep) {
 }
 
 export function dialogueChartText(rep) {
-  const out = [`กราฟบทพูด — ${rep.totalPages} หน้า`,
-               `รวมทั้งเรื่อง: บรรยาย ${rep.overall.action}% · บทพูด ${rep.overall.dialogue}% · ` +
-               `ชื่อตัวละคร ${rep.overall.character}% · อื่น ๆ ${rep.overall.other}%`, ''];
+  const out = [T`กราฟบทพูด — ${rep.totalPages} หน้า`,
+               T`รวมทั้งเรื่อง: บรรยาย ${rep.overall.action}% · บทพูด ${rep.overall.dialogue}% · ` +
+               T`ชื่อตัวละคร ${rep.overall.character}% · อื่น ๆ ${rep.overall.other}%`, ''];
   for (const p of rep.pages) {
     const bar = '█'.repeat(Math.round(p.percentages.dialogue / 5)) +
                 '░'.repeat(Math.round(p.percentages.action / 5));
-    out.push(`หน้า ${pad(p.page, 5)} ${pad(bar, 22)} บทพูด ${p.percentages.dialogue}% · บรรยาย ${p.percentages.action}%`);
+    out.push(T`หน้า ${pad(p.page, 5)} ${pad(bar, 22)} บทพูด ${p.percentages.dialogue}% · บรรยาย ${p.percentages.action}%`);
   }
   return out.join('\n');
 }

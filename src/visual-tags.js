@@ -1,4 +1,5 @@
 // visual-tags.js — Visual Tagging System — แท็กมีสี/ไอคอน/รูปทรง (ข้อ 84)
+import { T } from './i18n.js';
 import { state, setStatus, el } from './core.js';
 
 const DEFAULT_VISUAL_TAGS = [
@@ -60,7 +61,7 @@ export function applyVisualTagStyle(node, name, { withIcon = true } = {}) {
   if (withIcon && vt.icon && !node.textContent.startsWith(vt.icon)) {
     node.textContent = vt.icon + ' ' + node.textContent;
   }
-  node.title = (node.title ? node.title + '\n' : '') + `แท็ก: ${vt.name} (${vt.shape || 'tag'})`;
+  node.title = (node.title ? node.title + '\n' : '') + T`แท็ก: ${vt.name} (${vt.shape || 'tag'})`;
   return true;
 }
 
@@ -101,7 +102,7 @@ export function renderAllTagChips(tags, onClick) {
 export async function manageVisualTags() {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', '🏷 จัดการ Visual Tags'));
+  box.append(el('div', 'k-dlg-title', T`🏷 จัดการ Visual Tags`));
 
   const tags = getVisualTags();
   const grid = el('div');
@@ -118,7 +119,7 @@ export async function manageVisualTags() {
       card.append(sub);
       const del = el('span', 'vt-del', '✕');
       del.style.cssText = 'position:absolute;top:6px;right:8px;cursor:pointer;opacity:.55';
-      del.title = 'ลบแท็กนี้';
+      del.title = T`ลบแท็กนี้`;
       del.onclick = async () => { await removeVisualTag(t.name); renderGrid(); };
       card.append(del);
       grid.append(card);
@@ -128,7 +129,7 @@ export async function manageVisualTags() {
   box.append(grid);
 
   const addRow = el('div', 'k-row'); addRow.style.cssText = 'gap:6px';
-  const nameInp = el('input', 'k-dlg-input'); nameInp.placeholder = 'ชื่อแท็ก'; nameInp.style.flex = '1';
+  const nameInp = el('input', 'k-dlg-input'); nameInp.placeholder = T`ชื่อแท็ก`; nameInp.style.flex = '1';
   const iconInp = el('input', 'k-dlg-input'); iconInp.placeholder = '⚔'; iconInp.style.width = '48px';
   const colorInp = el('input', 'k-dlg-input'); colorInp.type = 'color'; colorInp.style.width = '40px';
   const shapeSel = el('select', 'k-dlg-select');
@@ -137,14 +138,14 @@ export async function manageVisualTags() {
   box.append(addRow);
 
   const btns = el('div', 'k-dlg-btns');
-  const addB = el('button', 'k-ok', '+ เพิ่ม');
+  const addB = el('button', 'k-ok', T`+ เพิ่ม`);
   addB.onclick = async () => {
     const name = nameInp.value.trim();
     if (!name) return;
     await addVisualTag({ name, icon: iconInp.value || '🔖', color: colorInp.value || '#d97757', shape: shapeSel.value || 'tag' });
     nameInp.value = ''; renderGrid();
   };
-  const closeB = el('button', null, 'ปิด');
+  const closeB = el('button', null, T`ปิด`);
   closeB.onclick = () => ov.remove();
   btns.append(addB, closeB);
   box.append(btns);

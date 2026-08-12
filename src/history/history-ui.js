@@ -3,6 +3,7 @@
 // แสดงไทม์ไลน์ว่าผู้ใช้ทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วกดย้อนกลับไปจุดไหนก็ได้
 // ตัวจดและตัวลงมือย้อนกลับอยู่ที่ **main** (ดักที่ handler ของ fs — ดู main.js)
 // เพราะเป็นจุดเดียวที่เห็นทุกการเขียนของทั้งโปรแกรม · แผงนี้เป็นแค่หน้าจอ + ปุ่ม
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import * as HD from './history-data.js';
 
@@ -15,7 +16,7 @@ export async function configHistory() {
   const limit = HD.clampLimit(state.settings && state.settings.historyLimit);
   const enabled = !(state.settings && state.settings.historyOff === true);
   try { return await kapi.historyConfig({ root: state.root || '', limit, enabled }); }
-  catch (e) { log('warn', 'ตั้งค่าสมุดประวัติไม่สำเร็จ', e); return null; }
+  catch (e) { log('warn', T`ตั้งค่าสมุดประวัติไม่สำเร็จ`, e); return null; }
 }
 export async function loadHistory() {
   const s = S();
@@ -41,7 +42,7 @@ export async function renderHistoryPanel(host) {
   h.classList.add('k-hist');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-hist-empty', 'เปิดโปรเจกต์ก่อนจึงจะมีประวัติ'));
+    h.append(el('div', 'dim k-hist-empty', T`เปิดโปรเจกต์ก่อนจึงจะมีประวัติ`));
     return true;
   }
   await loadHistory();
@@ -49,35 +50,35 @@ export async function renderHistoryPanel(host) {
   const rows = HD.timeline(s.journal, state.root);
 
   const bar = el('div', 'k-hist-bar');
-  bar.append(el('span', 'k-hist-count', `${rows.length}/${limit} ครั้ง`));
-  const refresh = el('button', null, '🔄 รีเฟรช');
+  bar.append(el('span', 'k-hist-count', T`${rows.length}/${limit} ครั้ง`));
+  const refresh = el('button', null, T`🔄 รีเฟรช`);
   refresh.onclick = () => renderHistoryPanel(h);
-  const clear = el('button', 'k-danger', '🗑 ล้างประวัติ');
+  const clear = el('button', 'k-danger', T`🗑 ล้างประวัติ`);
   clear.onclick = async () => {
     const { confirmBox } = await import('../ui.js');
-    if (!(await confirmBox('ล้างประวัติทั้งหมด? (ไฟล์งานไม่ถูกแตะ — หายแค่ความสามารถในการย้อนกลับ)'))) return;
+    if (!(await confirmBox(T`ล้างประวัติทั้งหมด? (ไฟล์งานไม่ถูกแตะ — หายแค่ความสามารถในการย้อนกลับ)`))) return;
     await kapi.historyClear();
-    setStatus('ล้างประวัติแล้ว');
+    setStatus(T`ล้างประวัติแล้ว`);
     renderHistoryPanel(h);
   };
   bar.append(refresh, clear);
   h.append(bar);
 
   h.append(el('div', 'k-hist-hint',
-    'ประวัติจดเฉพาะ "การเปลี่ยนแปลงที่ลงไฟล์แล้ว" — การพิมพ์ที่ยังไม่บันทึกใช้ Ctrl+Z ตามปกติ '
-    + '· ปรับจำนวนครั้งที่เก็บได้ที่ ตั้งค่า → ทั่วไป'));
+    T`ประวัติจดเฉพาะ "การเปลี่ยนแปลงที่ลงไฟล์แล้ว" — การพิมพ์ที่ยังไม่บันทึกใช้ Ctrl+Z ตามปกติ `
+    + T`· ปรับจำนวนครั้งที่เก็บได้ที่ ตั้งค่า → ทั่วไป`));
 
   const list = el('div', 'k-hist-list');
   h.append(list);
 
   if (!rows.length) {
-    list.append(el('div', 'dim k-hist-empty', '(ยังไม่มีการเปลี่ยนแปลงที่บันทึกไว้)'));
+    list.append(el('div', 'dim k-hist-empty', T`(ยังไม่มีการเปลี่ยนแปลงที่บันทึกไว้)`));
     return true;
   }
 
   // แถวบนสุด = ตอนนี้ · กดที่แถวไหนคือ "ย้อนกลับไปสภาพหลังการกระทำนั้น"
   const now = el('div', 'k-hist-item k-hist-now');
-  now.append(el('span', 'k-hist-dot'), el('span', 'k-hist-text', 'ตอนนี้'));
+  now.append(el('span', 'k-hist-dot'), el('span', 'k-hist-text', T`ตอนนี้`));
   list.append(now);
 
   for (const r of rows) {
@@ -88,11 +89,11 @@ export async function renderHistoryPanel(host) {
     mid.append(el('div', 'k-hist-text', r.text));
     const meta = el('div', 'k-hist-meta');
     meta.append(el('span', null, fmtAt(r.at)));
-    if (r.count > 1) meta.append(el('span', null, ' · ' + r.count + ' ไฟล์'));
+    if (r.count > 1) meta.append(el('span', null, ' · ' + r.count + T` ไฟล์`));
     mid.append(meta);
     it.append(mid);
-    const back = el('button', 'k-hist-back', '↩ ย้อนมาที่นี่');
-    back.title = 'คืนไฟล์ทุกไฟล์กลับไปเป็นสภาพ "หลังการกระทำนี้"';
+    const back = el('button', 'k-hist-back', T`↩ ย้อนมาที่นี่`);
+    back.title = T`คืนไฟล์ทุกไฟล์กลับไปเป็นสภาพ "หลังการกระทำนี้"`;
     back.onclick = () => revertTo(r.seq, r.text, h);
     it.append(back);
     list.append(it);
@@ -101,10 +102,10 @@ export async function renderHistoryPanel(host) {
   const zero = el('div', 'k-hist-item');
   zero.append(el('span', 'k-hist-dot'));
   const zmid = el('div', 'k-hist-mid');
-  zmid.append(el('div', 'k-hist-text dim', 'ก่อนหน้าทั้งหมดที่เก็บไว้'));
+  zmid.append(el('div', 'k-hist-text dim', T`ก่อนหน้าทั้งหมดที่เก็บไว้`));
   zero.append(zmid);
-  const zback = el('button', 'k-hist-back', '↩ ย้อนมาที่นี่');
-  zback.onclick = () => revertTo(0, 'ก่อนหน้าทั้งหมดที่เก็บไว้', h);
+  const zback = el('button', 'k-hist-back', T`↩ ย้อนมาที่นี่`);
+  zback.onclick = () => revertTo(0, T`ก่อนหน้าทั้งหมดที่เก็บไว้`, h);
   zero.append(zback);
   list.append(zero);
   return true;
@@ -118,12 +119,12 @@ async function revertTo(seq, label, host) {
   const s = S();
   if (s.busy) return false;
   const plan = HD.planRevert(s.journal, seq);
-  if (!plan.ops.length) { setStatus('อยู่ที่จุดนี้อยู่แล้ว'); return false; }
+  if (!plan.ops.length) { setStatus(T`อยู่ที่จุดนี้อยู่แล้ว`); return false; }
   const { confirmBox } = await import('../ui.js');
   const ok = await confirmBox(
-    `ย้อนกลับไปที่ "${label}"?\n\n`
-    + `จะถอน ${plan.undone.length} การกระทำ และแตะไฟล์ ${plan.ops.length} ไฟล์\n`
-    + 'ไฟล์ที่ถูกเขียนทับหลังจุดนั้นจะกลับไปเป็นของเดิม — ย้อนกลับซ้ำอีกทีไม่ได้');
+    T`ย้อนกลับไปที่ "${label}"?\n\n`
+    + T`จะถอน ${plan.undone.length} การกระทำ และแตะไฟล์ ${plan.ops.length} ไฟล์\n`
+    + T`ไฟล์ที่ถูกเขียนทับหลังจุดนั้นจะกลับไปเป็นของเดิม — ย้อนกลับซ้ำอีกทีไม่ได้`);
   if (!ok) return false;
   s.busy = true;
   try {
@@ -132,17 +133,17 @@ async function revertTo(seq, label, host) {
     try { await saveAllTabs(); } catch {}
     const res = await kapi.historyRevert(seq);
     if (!res || res.ok === false) {
-      setStatus('ย้อนกลับไม่สำเร็จบางส่วน (ดูรายละเอียดในแผงบันทึก)');
-      log('warn', 'history: ย้อนกลับไม่ครบ', res);
+      setStatus(T`ย้อนกลับไม่สำเร็จบางส่วน (ดูรายละเอียดในแผงบันทึก)`);
+      log('warn', T`history: ย้อนกลับไม่ครบ`, res);
     } else {
-      setStatus(`ย้อนกลับแล้ว — คืน ${res.restored} ไฟล์ · ลบ ${res.deleted} ไฟล์`);
-      log('info', 'history: ย้อนกลับสำเร็จ ' + JSON.stringify(res));
+      setStatus(T`ย้อนกลับแล้ว — คืน ${res.restored} ไฟล์ · ลบ ${res.deleted} ไฟล์`);
+      log('info', T`history: ย้อนกลับสำเร็จ ` + JSON.stringify(res));
     }
     // ไฟล์บนดิสก์เปลี่ยนไปทั้งชุด → โหลดโปรเจกต์ใหม่ทั้งก้อนคือทางเดียวที่ปลอดภัยจริง
     if (state.root) await loadProject(state.root);
   } catch (e) {
-    log('error', 'history: ย้อนกลับล้มเหลว', e);
-    setStatus('ย้อนกลับล้มเหลว: ' + (e && e.message ? e.message : e));
+    log('error', T`history: ย้อนกลับล้มเหลว`, e);
+    setStatus(T`ย้อนกลับล้มเหลว: ` + (e && e.message ? e.message : e));
   } finally {
     s.busy = false;
   }

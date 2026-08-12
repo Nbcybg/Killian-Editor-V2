@@ -1,4 +1,5 @@
 // kanban-ui.js — กระดาน Kanban แสดงฉากตามสถานะ · ลากการ์ดเปลี่ยนสถานะ (ข้อ 12)
+import { T } from '../i18n.js';
 import { $, el, setStatus, state, SCENE_COLORS, t } from '../core.js';
 import { KanbanBoard } from './kanban-core.js';   // คอลัมน์จัดการผ่านเมธอดของ board (addColumn/removeColumn)
 import { allStatuses, statusColor } from '../custom-status.js';
@@ -41,7 +42,7 @@ let uiPane = null;
 // บั๊ก #18: Kanban เป็นแผง ไม่ใช่แท็บเอกสาร
 export async function openKanban() {
   const b = await getBoard();
-  if (!b) { setStatus('สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้'); return; }
+  if (!b) { setStatus(T`สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้`); return; }
   showPanel('kanban');                 // hook ใน app.js เริ่มวาดให้ · await ตัวเดียวกันต่อ
   return renderKanbanPanel();
 }
@@ -49,7 +50,7 @@ export async function openKanban() {
 /** วาดเนื้อกระดานลง #kanban-body — ห้ามเรียก showPanel ในนี้ (วนซ้ำกับ hook) */
 export async function renderKanbanPanel() {
   const b = await getBoard();
-  if (!b) { setStatus('สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้'); return; }
+  if (!b) { setStatus(T`สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้`); return; }
   uiPane = $('#kanban-body');
   if (!uiPane) return;
   uiPane.classList.add('kanban-pane');
@@ -64,8 +65,8 @@ function renderKanban(b) {
 
   // หัวกระดาน + ปุ่มเพิ่มคอลัมน์
   const head = el('div', 'kb-head');
-  head.append(el('span', 'kb-title', '📋 Kanban — ' + data.total + ' ฉาก'));
-  const addBtn = el('button', 'kb-add-col', '+ เพิ่มคอลัมน์');
+  head.append(el('span', 'kb-title', '📋 Kanban — ' + data.total + T` ฉาก`));
+  const addBtn = el('button', 'kb-add-col', T`+ เพิ่มคอลัมน์`);
   addBtn.onclick = async () => {
     // window.prompt() เป็น no-op ใน Electron — ต้องใช้กล่องของโปรแกรมเอง
     const name = await ask(t('kanban.newColumn', 'ชื่อคอลัมน์ใหม่'), { placeholder: t('kanban.newColumnHint', 'เช่น รอรีวิว') });

@@ -8,6 +8,7 @@
 // ส่วนคำนวณทั้งหมดบริสุทธิ์ (ทดสอบด้วย node ได้ — test/sp-view.test.cjs)
 // ส่วนที่แตะ DOM มีเฉพาะ renderPageView() ซึ่งรับ host element มาจากผู้เรียก
 
+import { T } from './i18n.js';
 import { paginate, mergeSpFormat, textWidth, wrapLines, CHARS_PER_INCH, LINE_HEIGHT_IN,
          linesPerPage, pageNumberLabel, lineHeightIn, formatLines,
          clampLineHeight } from './sp-format.js';
@@ -16,12 +17,12 @@ import { num } from './num.js';
 // ───────── รายการโหมด ─────────
 export const SP_VIEWS = ['normal', 'layout', 'draft', 'side', 'overview1', 'overview4'];
 export const SP_VIEW_LABELS = {
-  normal:    'ปกติ (หน้ากระดาษ)',
-  layout:    'จัดหน้า — เห็นหน้าจริง (Layout)',
-  draft:     'ร่าง — ข้อความล้วน (Draft)',
-  side:      'เรียงหน้าคู่ (Side-by-Side)',
-  overview1: 'ภาพรวม 1px/ตัวอักษร',
-  overview4: 'ภาพรวม 4px/ตัวอักษร',
+  normal:    T`ปกติ (หน้ากระดาษ)`,
+  layout:    T`จัดหน้า — เห็นหน้าจริง (Layout)`,
+  draft:     T`ร่าง — ข้อความล้วน (Draft)`,
+  side:      T`เรียงหน้าคู่ (Side-by-Side)`,
+  overview1: T`ภาพรวม 1px/ตัวอักษร`,
+  overview4: T`ภาพรวม 4px/ตัวอักษร`,
 };
 // คลาสที่ใส่ให้ .pane — normal ไม่ต้องมีคลาสอะไร
 export const SP_VIEW_CLASS = {
@@ -282,7 +283,7 @@ export function renderPageView(host, pages, fmt, opts = {}) {
 /** ข้อความสรุปมุมมองปัจจุบัน (แถบสถานะ) */
 export function viewStatusText(mode, pageCount) {
   const name = SP_VIEW_LABELS[mode] || SP_VIEW_LABELS.normal;
-  return Number.isFinite(pageCount) ? `มุมมอง: ${name} · ${pageCount} หน้า` : 'มุมมอง: ' + name;
+  return Number.isFinite(pageCount) ? T`มุมมอง: ${name} · ${pageCount} หน้า` : T`มุมมอง: ` + name;
 }
 
 export { textWidth };

@@ -4,6 +4,7 @@
 // ต่างจากสมุดโน้ตด่วนตรงที่ตัวนี้ **ผูกกับวันที่ + เก็บเป็นไฟล์ของโปรเจกต์** จึงเอาไปทำสรุปได้จริง
 //
 // ตรรกะ/ตัวเขียน CSV อยู่ใน record-data.js (บริสุทธิ์ · มี unit test) — ไฟล์นี้มีแต่เรื่องหน้าจอ
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import * as RD from './record-data.js';
 
@@ -43,23 +44,23 @@ export async function renderRecordPanel(host) {
   h.classList.add('k-rec');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-rec-empty', 'เปิดโปรเจกต์ก่อนจึงจะจดบันทึกได้'));
+    h.append(el('div', 'dim k-rec-empty', T`เปิดโปรเจกต์ก่อนจึงจะจดบันทึกได้`));
     return true;
   }
 
   // ── แถบเครื่องมือ (flex:0 0 auto — ห้ามยืด ไม่งั้นรายการข้างล่างไม่เหลือที่) ──
   const bar = el('div', 'k-rec-bar');
   const q = el('input', 'k-rec-q'); q.type = 'search';
-  q.placeholder = 'ค้นในบันทึก… (ข้อความ · แท็ก · วันที่)';
+  q.placeholder = T`ค้นในบันทึก… (ข้อความ · แท็ก · วันที่)`;
   q.value = s.q;
   q.oninput = () => { s.q = q.value; drawList(); };
   const moodSel = el('select', 'k-rec-mood-f');
   for (const m of RD.MOODS) {
-    const o = el('option', null, m.key ? m.label : 'ทุกอารมณ์'); o.value = m.key; moodSel.append(o);
+    const o = el('option', null, m.key ? m.label : T`ทุกอารมณ์`); o.value = m.key; moodSel.append(o);
   }
   moodSel.value = s.mood;
   moodSel.onchange = () => { s.mood = moodSel.value; drawList(); };
-  const csvBtn = el('button', null, '📤 ส่งออก CSV');
+  const csvBtn = el('button', null, T`📤 ส่งออก CSV`);
   csvBtn.onclick = exportCsv;
   bar.append(q, moodSel, csvBtn);
   h.append(bar);
@@ -69,17 +70,17 @@ export async function renderRecordPanel(host) {
   const today = RD.dayKey(new Date());
   const dayIn = el('input', 'k-rec-day'); dayIn.type = 'date'; dayIn.value = today;
   const ta = el('textarea', 'k-rec-text');
-  ta.placeholder = 'วันนี้ทำอะไรไปบ้าง…';
+  ta.placeholder = T`วันนี้ทำอะไรไปบ้าง…`;
   ta.rows = 3;
   const mood2 = el('select', 'k-rec-mood');
   for (const m of RD.MOODS) { const o = el('option', null, m.label); o.value = m.key; mood2.append(o); }
-  const words = el('input', 'k-rec-num'); words.type = 'number'; words.min = '0'; words.placeholder = 'คำ';
-  const mins = el('input', 'k-rec-num'); mins.type = 'number'; mins.min = '0'; mins.placeholder = 'นาที';
-  const tags = el('input', 'k-rec-tags'); tags.placeholder = 'แท็ก (เว้นวรรค)';
-  const add = el('button', 'k-rec-add', '➕ บันทึก');
+  const words = el('input', 'k-rec-num'); words.type = 'number'; words.min = '0'; words.placeholder = T`คำ`;
+  const mins = el('input', 'k-rec-num'); mins.type = 'number'; mins.min = '0'; mins.placeholder = T`นาที`;
+  const tags = el('input', 'k-rec-tags'); tags.placeholder = T`แท็ก (เว้นวรรค)`;
+  const add = el('button', 'k-rec-add', T`➕ บันทึก`);
   add.onclick = async () => {
     const text = ta.value.trim();
-    if (!text) { setStatus('ยังไม่ได้เขียนอะไรเลย'); ta.focus(); return; }
+    if (!text) { setStatus(T`ยังไม่ได้เขียนอะไรเลย`); ta.focus(); return; }
     const entry = RD.newEntry(newId(), dayIn.value || today, {
       at: new Date().toISOString(), text, mood: mood2.value,
       words: words.value, minutes: mins.value,
@@ -87,7 +88,7 @@ export async function renderRecordPanel(host) {
     });
     await saveRecords(RD.addEntry(s.data, entry));
     ta.value = ''; words.value = ''; mins.value = ''; tags.value = '';
-    setStatus('จดบันทึกแล้ว');
+    setStatus(T`จดบันทึกแล้ว`);
     drawStats(); drawList();
   };
   const row2 = el('div', 'k-rec-form-row');
@@ -104,8 +105,8 @@ export async function renderRecordPanel(host) {
   function drawStats() {
     const sum = RD.summarize(s.data.entries);
     stats.replaceChildren();
-    for (const [label, val] of [['รายการ', sum.entries], ['วัน', sum.days],
-                                ['คำรวม', sum.words.toLocaleString()], ['นาทีรวม', sum.minutes]]) {
+    for (const [label, val] of [[T`รายการ`, sum.entries], [T`วัน`, sum.days],
+                                [T`คำรวม`, sum.words.toLocaleString()], [T`นาทีรวม`, sum.minutes]]) {
       const b = el('span', 'k-rec-stat');
       b.append(el('b', null, String(val)), document.createTextNode(' ' + label));
       stats.append(b);
@@ -116,15 +117,15 @@ export async function renderRecordPanel(host) {
     const rows = RD.filterEntries(s.data.entries, { q: s.q, mood: s.mood });
     if (!rows.length) {
       list.append(el('div', 'dim k-rec-empty',
-        s.data.entries.length ? '(ไม่พบบันทึกที่ตรงกับที่ค้น)' : '(ยังไม่มีบันทึก — เขียนช่องบนแล้วกดบันทึก)'));
+        s.data.entries.length ? T`(ไม่พบบันทึกที่ตรงกับที่ค้น)` : T`(ยังไม่มีบันทึก — เขียนช่องบนแล้วกดบันทึก)`));
       return;
     }
     for (const g of RD.groupByDay(rows)) {
       const head = el('div', 'k-rec-day-head');
       head.append(el('span', 'k-rec-day-name', g.day));
       const meta = [];
-      if (g.words) meta.push(g.words.toLocaleString() + ' คำ');
-      if (g.minutes) meta.push(g.minutes + ' นาที');
+      if (g.words) meta.push(g.words.toLocaleString() + T` คำ`);
+      if (g.minutes) meta.push(g.minutes + T` นาที`);
       if (meta.length) head.append(el('span', 'k-rec-day-meta', meta.join(' · ')));
       list.append(head);
       for (const e of g.items) list.append(entryCard(e));
@@ -135,11 +136,11 @@ export async function renderRecordPanel(host) {
     card.dataset.id = e.id;
     if (s.editing === e.id) {
       const ed = el('textarea', 'k-rec-edit'); ed.value = e.text; ed.rows = 3;
-      const ok = el('button', null, '✔ บันทึก');
-      const no = el('button', null, 'ยกเลิก');
+      const ok = el('button', null, T`✔ บันทึก`);
+      const no = el('button', null, T`ยกเลิก`);
       ok.onclick = async () => {
         await saveRecords(RD.updateEntry(s.data, e.id, { text: ed.value.trim() }));
-        s.editing = null; drawStats(); drawList(); setStatus('แก้บันทึกแล้ว');
+        s.editing = null; drawStats(); drawList(); setStatus(T`แก้บันทึกแล้ว`);
       };
       no.onclick = () => { s.editing = null; drawList(); };
       const btns = el('div', 'k-rec-card-btns'); btns.append(ok, no);
@@ -151,18 +152,18 @@ export async function renderRecordPanel(host) {
     const foot = el('div', 'k-rec-card-foot');
     if (e.mood) foot.append(el('span', 'k-rec-chip', RD.moodLabel(e.mood)));
     for (const t of e.tags || []) foot.append(el('span', 'k-rec-chip k-rec-tag', '#' + t));
-    if (e.words) foot.append(el('span', 'k-rec-chip', e.words + ' คำ'));
-    if (e.minutes) foot.append(el('span', 'k-rec-chip', e.minutes + ' นาที'));
+    if (e.words) foot.append(el('span', 'k-rec-chip', e.words + T` คำ`));
+    if (e.minutes) foot.append(el('span', 'k-rec-chip', e.minutes + T` นาที`));
     const edit = el('span', 'k-rec-act', '✏️');
-    edit.title = 'แก้ไข';
+    edit.title = T`แก้ไข`;
     edit.onclick = () => { s.editing = e.id; drawList(); };
     const del = el('span', 'k-rec-act', '🗑');
-    del.title = 'ลบ';
+    del.title = T`ลบ`;
     del.onclick = async () => {
       const { confirmBox } = await import('../ui.js');
-      if (!(await confirmBox('ลบบันทึกนี้?'))) return;
+      if (!(await confirmBox(T`ลบบันทึกนี้?`))) return;
       await saveRecords(RD.removeEntry(s.data, e.id));
-      setStatus('ลบบันทึกแล้ว'); drawStats(); drawList();
+      setStatus(T`ลบบันทึกแล้ว`); drawStats(); drawList();
     };
     foot.append(el('span', 'k-rec-spacer'), edit, del);
     card.append(foot);
@@ -170,13 +171,13 @@ export async function renderRecordPanel(host) {
   }
   async function exportCsv() {
     const rows = RD.filterEntries(s.data.entries, { q: s.q, mood: s.mood });
-    if (!rows.length) { setStatus('ไม่มีบันทึกให้ส่งออก'); return; }
+    if (!rows.length) { setStatus(T`ไม่มีบันทึกให้ส่งออก`); return; }
     const name = RD.csvFileName(state.title, RD.dayKey(new Date()));
     const dest = await kapi.saveAsDialog(name);
     if (!dest) return;
     await kapi.writeFile(dest, RD.toCsv(rows));
-    setStatus('ส่งออก CSV แล้ว (' + rows.length + ' รายการ): ' + dest);
-    log('info', 'record: ส่งออก CSV ' + rows.length + ' รายการ');
+    setStatus(T`ส่งออก CSV แล้ว (` + rows.length + T` รายการ): ` + dest);
+    log('info', T`record: ส่งออก CSV ` + rows.length + T` รายการ`);
   }
 
   drawStats(); drawList();

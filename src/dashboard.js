@@ -1,5 +1,6 @@
 // dashboard.js — แดชบอร์ดโปรเจกต์ (สถิติ/analytics/ฉากปักหมุด/ไปต่อจากที่ค้าง)
 // แยกจาก app.js — feature นี้เป็นจุดที่ feature ใหม่ (แก้แดชบอร์ด, กราฟ, theme) จะมาต่อยอด
+import { T } from './i18n.js';
 import { $, state, el, SCENE_STATUSES } from './core.js';
 import { parseMdFile, countWords } from './md.js';
 import { getWordHistory, calcStreak } from './word-history.js';
@@ -35,7 +36,7 @@ export async function renderDashboard(pane) {
     c.append(v, el('div', 'dash-label', label));
     cards.append(c); return v;
   };
-  const vCh = card('บท'), vSc = card('ฉาก'), vW = card('คำทั้งหมด'), vE = card('Wiki entities');
+  const vCh = card(T`บท`), vSc = card(T`ฉาก`), vW = card(T`คำทั้งหมด`), vE = card('Wiki entities');
   let nCh = 0, nSc = 0, words = 0;
   const sceneRows = [];
   const byStatus = {};            // สถานะฉาก → จำนวน
@@ -56,7 +57,7 @@ export async function renderDashboard(pane) {
         let cw = 0, cs = 0;
         for (const sc of scAll[ch.guid] || []) {
           nSc++; cs++;
-          const st = SCENE_STATUSES.includes(sc.status) ? sc.status : 'ยังไม่ตั้งสถานะ';
+          const st = SCENE_STATUSES.includes(sc.status) ? sc.status : T`ยังไม่ตั้งสถานะ`;
           byStatus[st] = (byStatus[st] || 0) + 1;
           const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
           try {
@@ -80,7 +81,7 @@ export async function renderDashboard(pane) {
     const pct = Math.min(100, Math.round((words / goal) * 100));
     const gwrap = el('div', 'dash-goal');
     gwrap.append(el('div', 'dash-goal-label',
-      `เป้าหมาย: ${words.toLocaleString()} / ${goal.toLocaleString()} คำ (${pct}%)`));
+      T`เป้าหมาย: ${words.toLocaleString()} / ${goal.toLocaleString()} คำ (${pct}%)`));
     const bar = el('div', 'dash-goal-bar');
     const fill = el('div', 'dash-goal-fill'); fill.style.width = pct + '%';
     bar.append(fill); gwrap.append(bar);
@@ -93,7 +94,7 @@ export async function renderDashboard(pane) {
     const streak = calcStreak(hist);
     const box = el('div', 'dash-streak');
     const head = el('div', 'dash-goal-label',
-      streak > 0 ? `🔥 เขียนติดต่อกัน ${streak} วัน` : '🔥 ยังไม่เริ่มนับวันเขียนติดต่อกัน');
+      streak > 0 ? T`🔥 เขียนติดต่อกัน ${streak} วัน` : T`🔥 ยังไม่เริ่มนับวันเขียนติดต่อกัน`);
     box.append(head);
     if (hist.length >= 2) {
       // แท่งคำที่เขียนต่อวัน 14 วันหลังสุด (ผลต่างของยอดรวมสะสม)
@@ -108,13 +109,13 @@ export async function renderDashboard(pane) {
       for (const d of days) {
         const bar = el('div', 'dash-day-bar');
         bar.style.cssText = `flex:1;min-width:6px;border-radius:2px 2px 0 0;background:${d.delta ? '#6fae6f' : 'var(--border)'};height:${Math.max(3, Math.round((d.delta / max) * 100))}%`;
-        bar.title = `${d.date}: +${d.delta.toLocaleString()} คำ`;
+        bar.title = T`${d.date}: +${d.delta.toLocaleString()} คำ`;
         chart.append(bar);
       }
       box.append(chart);
-      box.append(el('div', 'dim', `คำที่เพิ่มต่อวัน · ${days.length} วันหลังสุด`));
+      box.append(el('div', 'dim', T`คำที่เพิ่มต่อวัน · ${days.length} วันหลังสุด`));
     } else {
-      box.append(el('div', 'dim', 'บันทึกงานสัก 2 วันแล้วกราฟคำรายวันจะขึ้นที่นี่'));
+      box.append(el('div', 'dim', T`บันทึกงานสัก 2 วันแล้วกราฟคำรายวันจะขึ้นที่นี่`));
     }
     wrap.append(box);
   }
@@ -147,8 +148,8 @@ export async function renderDashboard(pane) {
 
     // ความคืบหน้าตามสถานะฉาก
     const left2 = el('div', 'dash-apanel');
-    left2.append(el('div', 'dash-apanel-title', '📊 ความคืบหน้าตามสถานะฉาก'));
-    const order = [...SCENE_STATUSES, 'ยังไม่ตั้งสถานะ'];
+    left2.append(el('div', 'dash-apanel-title', T`📊 ความคืบหน้าตามสถานะฉาก`));
+    const order = [...SCENE_STATUSES, T`ยังไม่ตั้งสถานะ`];
     left2.append(statBars(
       order.filter((s) => byStatus[s]).map((s) => ({ label: s, n: byStatus[s] })), nSc, PAL));
     grid.append(left2);
@@ -158,7 +159,7 @@ export async function renderDashboard(pane) {
       const byCat = {};
       for (const e of allEnts) byCat[e.cat] = (byCat[e.cat] || 0) + 1;
       const right2 = el('div', 'dash-apanel');
-      right2.append(el('div', 'dash-apanel-title', '🗂 Wiki ตามหมวด'));
+      right2.append(el('div', 'dash-apanel-title', T`🗂 Wiki ตามหมวด`));
       right2.append(statBars(
         Object.entries(byCat).sort((a, b) => b[1] - a[1])
           .map(([c, n]) => ({ label: catIconHtml(c) + ' ' + catLabel(c), n })), allEnts.length, PAL));
@@ -168,12 +169,12 @@ export async function renderDashboard(pane) {
     // ความยาวแต่ละบท (คำ)
     if (chapterWords.length) {
       const cpanel = el('div', 'dash-apanel dash-apanel-wide');
-      cpanel.append(el('div', 'dash-apanel-title', '📖 ความยาวแต่ละบท (คำ)'));
+      cpanel.append(el('div', 'dash-apanel-title', T`📖 ความยาวแต่ละบท (คำ)`));
       const avg = Math.round(words / chapterWords.length);
       cpanel.append(statBars(
-        chapterWords.map((c) => ({ label: c.title || '(ไม่มีชื่อ)', n: c.words })), words, PAL));
+        chapterWords.map((c) => ({ label: c.title || T`(ไม่มีชื่อ)`, n: c.words })), words, PAL));
       cpanel.append(el('div', 'dash-stat-note',
-        `เฉลี่ย ${avg.toLocaleString()} คำ/บท · เวลาอ่านรวม ~${Math.max(1, Math.round(words / 250))} นาที`));
+        T`เฉลี่ย ${avg.toLocaleString()} คำ/บท · เวลาอ่านรวม ~${Math.max(1, Math.round(words / 250))} นาที`));
       grid.append(cpanel);
     }
   }
@@ -194,14 +195,14 @@ export async function renderDashboard(pane) {
       const { index } = await UIX.scanUsage(kapi, state.root);
       const st = AC.galleryStats(UIX.attachUsage(imgs, index), albums);
       const gpanel = el('div', 'dash-apanel dash-apanel-wide dash-gallery');
-      gpanel.append(el('div', 'dash-apanel-title', '🖼 คลังรูป'));
+      gpanel.append(el('div', 'dash-apanel-title', T`🖼 คลังรูป`));
       gpanel.append(statBars([
-        { label: 'ใช้ในต้นฉบับแล้ว', n: st.used },
-        { label: 'ยังไม่ถูกใช้', n: st.unused },
+        { label: T`ใช้ในต้นฉบับแล้ว`, n: st.used },
+        { label: T`ยังไม่ถูกใช้`, n: st.unused },
       ], st.total, PAL));
       gpanel.append(el('div', 'dash-stat-note',
-        `${st.total} รูป · ${st.albums} อัลบั้ม · ${st.tags} แท็ก · พื้นที่รวม ${st.bytesText}`));
-      const openG = el('button', 'k-tpl-add', 'เปิดคลังรูป');
+        T`${st.total} รูป · ${st.albums} อัลบั้ม · ${st.tags} แท็ก · พื้นที่รวม ${st.bytesText}`));
+      const openG = el('button', 'k-tpl-add', T`เปิดคลังรูป`);
       openG.onclick = async () => { const { galleryCommand } = await import('./app.js'); galleryCommand('gallery'); };
       gpanel.append(openG);
       wrap.append(gpanel);
@@ -218,7 +219,7 @@ export async function renderDashboard(pane) {
         if (hit && (await kapi.exists(hit.path))) openScene(hit.path, hit.title);
       },
     });
-    const openAll = el('button', 'k-tpl-add', 'ดูทั้งหมด / ส่งออก…');
+    const openAll = el('button', 'k-tpl-add', T`ดูทั้งหมด / ส่งออก…`);
     openAll.onclick = () => showPlayerHistory();
     box.append(openAll);
     wrap.append(box);
@@ -226,14 +227,14 @@ export async function renderDashboard(pane) {
 
   const favs = sceneRows.filter((r) => r.flag);
   if (favs.length) {
-    wrap.append(el('div', 'wiki-sub', `⭐ ฉากปักหมุด (${favs.length})`));
+    wrap.append(el('div', 'wiki-sub', T`⭐ ฉากปักหมุด (${favs.length})`));
     for (const r of favs) {
       const d = el('div', 'scene', `⭐ ${r.title} — ${r.ch}`);
       d.onclick = () => openScene(r.file, r.title);
       wrap.append(d);
     }
   }
-  wrap.append(el('div', 'wiki-sub', 'ไปต่อจากที่ค้าง'));
+  wrap.append(el('div', 'wiki-sub', T`ไปต่อจากที่ค้าง`));
   for (const r of sceneRows.slice(0, 8)) {
     const d = el('div', 'scene', `📄 ${r.title} — ${r.ch}`);
     d.onclick = () => openScene(r.file, r.title);
@@ -249,7 +250,7 @@ export async function renderDashboard(pane) {
     const { renderCentralize } = await import('./centralize-ui.js');
     await renderCentralize(centHost, { embedded: true });
   } catch (e) {
-    centHost.append(el('div', 'dim', 'โหลดส่วนศูนย์รวมไม่สำเร็จ'));
+    centHost.append(el('div', 'dim', T`โหลดส่วนศูนย์รวมไม่สำเร็จ`));
   }
 }
 

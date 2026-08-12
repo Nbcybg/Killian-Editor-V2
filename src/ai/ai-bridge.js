@@ -1,5 +1,6 @@
 // ai-bridge.js — ต่อเอนจิน ai-core.js (AIClient + RAG) เข้ากับแอปจริง
 // เดิม ai-ui.js เรียก API เองด้วย callAI() ทำให้ RAG/VectorIndex/streaming ใน ai-core ไม่ถูกใช้เลย
+import { T } from '../i18n.js';
 import { state, log } from '../core.js';
 import { AIClient, KeyStore, CostTracker, RagPipeline, VectorIndex,
          httpFromKapi, INDEX_FILE, buildContext } from './ai-core.js';
@@ -65,10 +66,10 @@ export async function getRag({ rebuild = false, onProgress = null } = {}) {
   _rag = new RagPipeline({ client, index });
   _ragRoot = state.root;
   if (!index.size) {
-    onProgress && onProgress('กำลังสร้างดัชนีเนื้อหา…');
+    onProgress && onProgress(T`กำลังสร้างดัชนีเนื้อหา…`);
     const docs = await collectDocs(state.root);
     const res = await _rag.indexDocs(docs);
-    log('info', 'ai rag: สร้างดัชนี', { docs: docs.length, chunks: res.added, model: res.model });
+    log('info', T`ai rag: สร้างดัชนี`, { docs: docs.length, chunks: res.added, model: res.model });
     try { await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON())); } catch {}
   }
   return _rag;
@@ -79,7 +80,7 @@ export async function ragContext(query, opts = {}) {
   const rag = await getRag(opts);
   if (!rag) return { text: '', sources: [], tokens: 0 };
   try { return await rag.context(query, { k: opts.k || 5, maxTokens: opts.maxTokens || 1500 }); }
-  catch (e) { log('warn', 'ai rag: retrieve ล้มเหลว', e); return buildContext([], {}); }
+  catch (e) { log('warn', T`ai rag: retrieve ล้มเหลว`, e); return buildContext([], {}); }
 }
 
 /** ล้างทุกอย่างเมื่อเปลี่ยนโปรเจกต์ (คีย์/ดัชนีของโปรเจกต์เดิมห้ามข้ามมา) */

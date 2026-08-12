@@ -6,6 +6,7 @@
 //
 // ส่วนคำนวณบริสุทธิ์ (ทดสอบด้วย node ได้) · ส่วนที่แตะ DOM = renderProsePageView + plugin เส้นคั่นหน้า
 
+import { T } from './i18n.js';
 import { mergeProseFormat, paginateProse, proseMetrics, prosePageLabel,
          proseFontStack, proseHeadingStack, proseLinePx, proseFontPx } from './prose-format.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
@@ -15,12 +16,12 @@ import { createPageBreakPlugin } from './page-break-plugin.js';
 // ───────── รายการโหมด (ชื่อเดียวกับบทภาพยนตร์ เพื่อให้เมนู/คลาส CSS ใช้ร่วมกันได้) ─────────
 export const PROSE_VIEWS = ['normal', 'layout', 'draft', 'side', 'overview1', 'overview4'];
 export const PROSE_VIEW_LABELS = {
-  normal:    'ปกติ (หน้ากระดาษ)',
-  layout:    'จัดหน้า — เห็นหน้าจริง (Layout)',
-  draft:     'ร่าง — ข้อความล้วน (Draft)',
-  side:      'เรียงหน้าคู่ (Side-by-Side)',
-  overview1: 'ภาพรวม 1px/ตัวอักษร',
-  overview4: 'ภาพรวม 4px/ตัวอักษร',
+  normal:    T`ปกติ (หน้ากระดาษ)`,
+  layout:    T`จัดหน้า — เห็นหน้าจริง (Layout)`,
+  draft:     T`ร่าง — ข้อความล้วน (Draft)`,
+  side:      T`เรียงหน้าคู่ (Side-by-Side)`,
+  overview1: T`ภาพรวม 1px/ตัวอักษร`,
+  overview4: T`ภาพรวม 4px/ตัวอักษร`,
 };
 export const isValidProseView = (m) => PROSE_VIEWS.includes(m);
 export const isProsePageView = (m) => m === 'side' || m === 'overview1' || m === 'overview4';
@@ -117,7 +118,7 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
       } else if (type === 'figure') {
         d = document.createElement('div');
         d.className = 'pv-figure';
-        d.textContent = '🖼 ' + (b.alt || 'รูป');
+        d.textContent = '🖼 ' + (b.alt || T`รูป`);
       } else {
         d = document.createElement('p');
         d.style.textIndent = f.firstLineIndent + 'in';
@@ -138,7 +139,7 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
 /** ข้อความสรุปมุมมองปัจจุบัน (แถบสถานะ) */
 export function proseViewStatusText(mode, pageCount) {
   const name = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
-  return Number.isFinite(pageCount) ? `มุมมอง: ${name} · ${pageCount} หน้า` : 'มุมมอง: ' + name;
+  return Number.isFinite(pageCount) ? T`มุมมอง: ${name} · ${pageCount} หน้า` : T`มุมมอง: ` + name;
 }
 
 export { proseLinePx };

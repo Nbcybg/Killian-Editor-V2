@@ -1,4 +1,5 @@
 // Wiki entity editor — โครงข้อมูลเดียวกับ v1 ทุก field (อ่าน-แก้-เขียน ไม่ทำข้อมูลส่วนอื่นหาย)
+import { T } from './i18n.js';
 import { KEditor } from './editor.js';
 import { ask, confirmBox, popupMenu } from './ui.js';
 import { iconHtml, icon } from './icons.js';
@@ -11,8 +12,8 @@ import { migrateImages, imageFile, imageAlt, imageLabel, setImageMeta,
 import { profileData, statusTone } from './wiki-profile.js';
 import { CAT_ICON } from './core.js';
 
-export const CAT_TH = { characters: 'ตัวละคร', locations: 'สถานที่',
-                        items: 'สิ่งของ', lore: 'ตำนาน' };
+export const CAT_TH = { characters: T`ตัวละคร`, locations: T`สถานที่`,
+                        items: T`สิ่งของ`, lore: T`ตำนาน` };
 
 // กล่องขยายรูป (คลิกที่ไหนก็ปิด · Esc ปิด) — ใช้ร่วมกันทั้ง Wiki และคลังรูป
 export function imageLightbox(url, caption) {
@@ -79,7 +80,7 @@ export class WikiEditor {
         if (f && this.onOpenEntity) {
           e.preventDefault();
           popupMenu(e.clientX, e.clientY, [
-            { label: iconHtml('link', 14) + ' เปิดหน้า Wiki นี้', click: () => this.onOpenEntity(f) },
+            { label: iconHtml('link', 14) + T` เปิดหน้า Wiki นี้`, click: () => this.onOpenEntity(f) },
           ]);
           return;
         }
@@ -92,7 +93,7 @@ export class WikiEditor {
           // [alpha.60r3 ข้อ 1] เดิมแค่ "เลื่อนจอลงไปหาแผง backlinks" — ผู้ใช้ที่แผงยังว่าง
           // (ดัชนียังไม่ทันสร้าง) เห็นเหมือนคำสั่งไม่ทำงานเลย
           // ตอนนี้เปิดเมนูรายชื่อฉากตรง ๆ แบบเดียวกับคลิกขวาใน Explorer (findEntityInScenes)
-          items.push({ label: iconHtml('link', 14) + ' ค้นหาในฉาก (Find on location)', click: async () => {
+          items.push({ label: iconHtml('link', 14) + T` ค้นหาในฉาก (Find on location)`, click: async () => {
             if (!this.file) return;
             if (this.onFindInScenes) {
               await this.onFindInScenes(this.file, this.e.name || '', e.clientX, e.clientY);
@@ -105,8 +106,8 @@ export class WikiEditor {
             }
           }});
         }
-        items.push({ label: iconHtml('edit', 14) + ' เปลี่ยนชื่อ', click: async () => {
-          const nv = await ask('ชื่อใหม่', { placeholder: this.e.name });
+        items.push({ label: iconHtml('edit', 14) + T` เปลี่ยนชื่อ`, click: async () => {
+          const nv = await ask(T`ชื่อใหม่`, { placeholder: this.e.name });
           if (nv && nv !== this.e.name) { this.e.name = nv; this.markDirty(); this.render(); }
         }});
         popupMenu(e.clientX, e.clientY, items);
@@ -158,7 +159,7 @@ export class WikiEditor {
           const a = document.createElement('span');
           a.className = 'wiki-rel-link wiki-link-pill';
           a.textContent = nm;
-          a.title = 'คลิกเพื่อเปิดหน้า Wiki นี้';
+          a.title = T`คลิกเพื่อเปิดหน้า Wiki นี้`;
           a.onclick = () => { const f = this.fileOfEntity(nm);
             if (f && this.onOpenEntity) this.onOpenEntity(f); };
           linkRow.appendChild(a);
@@ -174,38 +175,38 @@ export class WikiEditor {
     const hl = document.createElement('span');
     hl.textContent = (CAT_TH[this.e.entityTypeKey] || this.e.entityTypeKey || 'Wiki');
     const saveBtn = document.createElement('button');
-    saveBtn.innerHTML = iconHtml('save', 16) + ' บันทึก (Ctrl+S)';
+    saveBtn.innerHTML = iconHtml('save', 16) + T` บันทึก (Ctrl+S)`;
     saveBtn.onclick = () => this.save().then(() => {
-      saveBtn.innerHTML = iconHtml('check', 16) + ' บันทึกแล้ว';
-      setTimeout(() => { saveBtn.innerHTML = iconHtml('save', 16) + ' บันทึก (Ctrl+S)'; }, 1500);
+      saveBtn.innerHTML = iconHtml('check', 16) + T` บันทึกแล้ว`;
+      setTimeout(() => { saveBtn.innerHTML = iconHtml('save', 16) + T` บันทึก (Ctrl+S)`; }, 1500);
     });
     head.append(hl);
     // ประวัติเวอร์ชันของหน้า Wiki — ระบบเดียวกับฉาก (ข้อ 10)
     if (this.onVersions) {
       const verBtn = document.createElement('button');
-      verBtn.className = 'wiki-ver-btn'; verBtn.innerHTML = iconHtml('history', 14) + ' ประวัติเวอร์ชัน';
-      verBtn.title = 'ดู/กู้คืนเวอร์ชันเก่าของหน้านี้';
+      verBtn.className = 'wiki-ver-btn'; verBtn.innerHTML = iconHtml('history', 14) + T` ประวัติเวอร์ชัน`;
+      verBtn.title = T`ดู/กู้คืนเวอร์ชันเก่าของหน้านี้`;
       verBtn.onclick = () => this.onVersions();
       head.append(verBtn);
       const snapBtn = document.createElement('button');
-      snapBtn.className = 'wiki-ver-btn'; snapBtn.innerHTML = iconHtml('camera', 14) + ' บันทึกเวอร์ชัน';
-      snapBtn.title = 'บันทึกเวอร์ชันนี้ไว้ (ตั้งชื่อได้)';
+      snapBtn.className = 'wiki-ver-btn'; snapBtn.innerHTML = iconHtml('camera', 14) + T` บันทึกเวอร์ชัน`;
+      snapBtn.title = T`บันทึกเวอร์ชันนี้ไว้ (ตั้งชื่อได้)`;
       snapBtn.onclick = () => this.onSnapshot && this.onSnapshot();
       head.append(snapBtn);
     }
     // [alpha.58] หาไฟล์ในดิสก์ — เปิดโฟลเดอร์ของ .json นี้ใน File Explorer/Finder
     if (this.onReveal) {
       const revBtn = document.createElement('button');
-      revBtn.className = 'wiki-ver-btn'; revBtn.innerHTML = iconHtml('folder', 14) + ' หาในดิสก์';
-      revBtn.title = 'เปิดโฟลเดอร์ที่เก็บไฟล์นี้ (' + this.file + ')';
+      revBtn.className = 'wiki-ver-btn'; revBtn.innerHTML = iconHtml('folder', 14) + T` หาในดิสก์`;
+      revBtn.title = T`เปิดโฟลเดอร์ที่เก็บไฟล์นี้ (` + this.file + ')';
       revBtn.onclick = () => this.onReveal(this.file);
       head.append(revBtn);
     }
     // ปุ่มเปลี่ยนเทมเพลต (ข้อ 18b) — merge fields ไม่ล้างของเดิม
     if (this.onSwapTemplate) {
       const tplBtn = document.createElement('button');
-      tplBtn.className = 'wiki-tpl-btn'; tplBtn.innerHTML = iconHtml('cog', 14) + ' เปลี่ยนเทมเพลต';
-      tplBtn.title = 'เปลี่ยนเทมเพลตและเพิ่มช่องข้อมูลใหม่จากเทมเพลต (ไม่ลบข้อมูลเดิม)';
+      tplBtn.className = 'wiki-tpl-btn'; tplBtn.innerHTML = iconHtml('cog', 14) + T` เปลี่ยนเทมเพลต`;
+      tplBtn.title = T`เปลี่ยนเทมเพลตและเพิ่มช่องข้อมูลใหม่จากเทมเพลต (ไม่ลบข้อมูลเดิม)`;
       tplBtn.onclick = async () => {
         if (await this.onSwapTemplate()) { this.render(); }
       };
@@ -226,7 +227,7 @@ export class WikiEditor {
       // รูปในวงกลม — images[] เก็บเป็น "ชื่อไฟล์ในโฟลเดอร์ Images" (string) ไม่ใช่ออบเจกต์ {url}
       // เดิมอ่าน images[0].url จึงได้ undefined ตลอด → เห็นแต่ไอคอน 👤 (บั๊กข้อ 2)
       const avatar = document.createElement('div'); avatar.className = 'wiki-prof-avatar';
-      avatar.title = 'คลิกเพื่อตั้งรูปประจำตัว (คลิกขวา = เอารูปออก)';
+      avatar.title = T`คลิกเพื่อตั้งรูปประจำตัว (คลิกขวา = เอารูปออก)`;
       // ไอคอนสำรองตามหมวด — มาจาก CAT_ICON (ตารางเดียวกับ Explorer) ไม่ใช่ 'user' ตายตัวทุกหมวด
       const fallbackIcon = () => iconHtml(CAT_ICON[this.e.entityTypeKey] || 'bookmark', 32);
       const paintAvatar = async () => {
@@ -255,8 +256,8 @@ export class WikiEditor {
       };
       avatar.onclick = async () => {
         const items = [];
-        if (this.pickFromGallery) items.push('เลือกจากคลังรูปของโปรเจกต์');
-        items.push('เพิ่มรูปจากไฟล์…');
+        if (this.pickFromGallery) items.push(T`เลือกจากคลังรูปของโปรเจกต์`);
+        items.push(T`เพิ่มรูปจากไฟล์…`);
         const pick = items.length > 1 && this.pickTitle ? await this.pickTitle(items) : items[items.length - 1];
         if (!pick) return;
         if (pick.startsWith('เลือกจากคลัง')) {
@@ -279,7 +280,7 @@ export class WikiEditor {
       // ข้อมูล — ทุกบรรทัดมาจาก profileData() ซึ่งอ่านจากเทมเพลตล้วน ๆ
       const info = document.createElement('div'); info.className = 'wiki-prof-info';
       const nameEl = document.createElement('div'); nameEl.className = 'wiki-prof-name';
-      nameEl.textContent = P.name || '(ไม่มีชื่อ)';
+      nameEl.textContent = P.name || T`(ไม่มีชื่อ)`;
       info.appendChild(nameEl);
       if (P.aliases.length) {
         const ali = document.createElement('div'); ali.className = 'wiki-prof-aliases';
@@ -317,8 +318,8 @@ export class WikiEditor {
       wrap.appendChild(prof);
     }
 
-    row('ชื่อ').appendChild(input(this.e.name || '', (v) => { this.e.name = v; }));
-    row('ชื่ออื่น (คั่นด้วย , )').appendChild(
+    row(T`ชื่อ`).appendChild(input(this.e.name || '', (v) => { this.e.name = v; }));
+    row(T`ชื่ออื่น (คั่นด้วย , )`).appendChild(
       input((this.e.aliases || []).join(', '),
             (v) => { this.e.aliases = v.split(',').map((x) => x.trim()).filter(Boolean); }));
 
@@ -326,18 +327,18 @@ export class WikiEditor {
     const fields = this.e.fields || {};
     if (Object.keys(fields).length) {
       const fh = document.createElement('div'); fh.className = 'wiki-sub';
-      fh.textContent = 'ข้อมูล (จากเทมเพลต)';
+      fh.textContent = T`ข้อมูล (จากเทมเพลต)`;
       wrap.appendChild(fh);
       for (const k of Object.keys(fields)) {
         linkedField(this.labels[k] || k, String(fields[k] ?? ''), (v) => { this.e.fields[k] = v; });
       }
     }
     const ch = document.createElement('div'); ch.className = 'wiki-sub';
-    ch.textContent = 'ข้อมูลเพิ่มเอง';
+    ch.textContent = T`ข้อมูลเพิ่มเอง`;
     const addP = document.createElement('span'); addP.className = 'row-add';
-    addP.innerHTML = iconHtml('plus', 14); addP.title = 'เพิ่มช่องข้อมูลของตัวเอง';
+    addP.innerHTML = iconHtml('plus', 14); addP.title = T`เพิ่มช่องข้อมูลของตัวเอง`;
     addP.onclick = async () => {
-      const k = await ask('ชื่อช่องข้อมูลใหม่', { placeholder: 'เช่น อาวุธประจำตัว' });
+      const k = await ask(T`ชื่อช่องข้อมูลใหม่`, { placeholder: T`เช่น อาวุธประจำตัว` });
       if (!k) return;
       (this.e.customProperties = this.e.customProperties || {})[k] = '';
       this.markDirty(); this.render();
@@ -347,17 +348,17 @@ export class WikiEditor {
       const r = linkedField(k, String(this.e.customProperties[k] ?? ''),
                             (v) => { this.e.customProperties[k] = v; });
       const del = document.createElement('span'); del.className = 'row-add';
-      del.innerHTML = iconHtml('x', 14); del.title = 'ลบช่องนี้';
+      del.innerHTML = iconHtml('x', 14); del.title = T`ลบช่องนี้`;
       del.onclick = () => { delete this.e.customProperties[k]; this.markDirty(); this.render(); };
       r.appendChild(del);
     }
 
     // คลังรูปของ entity (images[] — ชื่อไฟล์ในโฟลเดอร์ Images ของโปรเจกต์)
     const ih = document.createElement('div'); ih.className = 'wiki-sub';
-    ih.textContent = 'รูปภาพ';
+    ih.textContent = T`รูปภาพ`;
     // เลือกจากคลังรูปที่มีอยู่ในโปรเจกต์
     const pickImg = document.createElement('span'); pickImg.className = 'row-add';
-    pickImg.innerHTML = iconHtml('image', 14); pickImg.title = 'เลือกจากคลังรูปของโปรเจกต์';
+    pickImg.innerHTML = iconHtml('image', 14); pickImg.title = T`เลือกจากคลังรูปของโปรเจกต์`;
     pickImg.onclick = async () => {
       if (!this.pickFromGallery) return;
       const it = await this.pickFromGallery();
@@ -367,7 +368,7 @@ export class WikiEditor {
     };
     // เพิ่มรูปใหม่จากไฟล์ (คัดลอกเข้าคลัง)
     const addImg = document.createElement('span'); addImg.className = 'row-add';
-    addImg.innerHTML = iconHtml('plus', 14); addImg.title = 'เพิ่มรูปจากไฟล์ (คัดลอกเข้าคลังรูปโปรเจกต์)';
+    addImg.innerHTML = iconHtml('plus', 14); addImg.title = T`เพิ่มรูปจากไฟล์ (คัดลอกเข้าคลังรูปโปรเจกต์)`;
     addImg.onclick = async () => {
       const src = await kapi.openImageDialog(); if (!src) return;
       const dir = await kapi.join(this.projectRoot, 'Images');
@@ -388,12 +389,12 @@ export class WikiEditor {
       const url = await kapi.toFileURL(await kapi.join(this.projectRoot, 'Images', name));
       im.src = url;
       im.alt = imageAlt(meta);
-      im.title = (meta.title || meta.caption || '') + (meta.caption || meta.title ? ' — ' : '') + 'คลิกเพื่อขยาย';
+      im.title = (meta.title || meta.caption || '') + (meta.caption || meta.title ? ' — ' : '') + T`คลิกเพื่อขยาย`;
       im.onclick = () => imageLightbox(url, imageLabel(meta));      // คลิกขยายภาพ
       im.onerror = () => { im.replaceWith(Object.assign(document.createElement('div'),
         { className: 'wiki-img-miss', innerHTML: iconHtml('error', 14) + ' ' + name })); };
       const del = document.createElement('span'); del.className = 'row-add wiki-img-x';
-      del.innerHTML = iconHtml('x', 14); del.title = 'เอารูปนี้ออก (ไฟล์ยังอยู่ในคลัง)';
+      del.innerHTML = iconHtml('x', 14); del.title = T`เอารูปนี้ออก (ไฟล์ยังอยู่ในคลัง)`;
       del.onclick = (e) => {
         e.stopPropagation();
         this.e.images = removeImage(this.e.images, i);
@@ -403,7 +404,7 @@ export class WikiEditor {
       // รูปแรก = รูปในวงกลมโปรไฟล์ → ให้เลือกได้ว่าจะใช้รูปไหน (ข้อ 2)
       const star = document.createElement('span'); star.className = 'row-add wiki-img-star';
       star.innerHTML = iconHtml('star', 14);
-      star.title = i === 0 ? 'รูปประจำตัวอยู่แล้ว' : 'ตั้งเป็นรูปประจำตัว (วงกลมด้านบน)';
+      star.title = i === 0 ? T`รูปประจำตัวอยู่แล้ว` : T`ตั้งเป็นรูปประจำตัว (วงกลมด้านบน)`;
       star.classList.toggle('on', i === 0);
       star.style.opacity = i === 0 ? '1' : '0.4';
       star.onclick = (e) => {
@@ -416,14 +417,14 @@ export class WikiEditor {
       // ปุ่มแก้เมทาดาทา (คำบรรยาย · ข้อความแทนรูป · ชื่อกำกับ)
       const edit = document.createElement('span'); edit.className = 'row-add wiki-img-edit';
       edit.innerHTML = iconHtml('edit', 14);
-      edit.title = 'แก้คำบรรยาย / ข้อความแทนรูป (alt) / ชื่อกำกับ';
+      edit.title = T`แก้คำบรรยาย / ข้อความแทนรูป (alt) / ชื่อกำกับ`;
       edit.onclick = async (e) => {
         e.stopPropagation();
         const cur = migrateImages(this.e.images)[i];
         if (!cur) return;
-        const cap = await ask('คำบรรยายใต้รูป (Caption)', { value: cur.caption, allowEmpty: true });
+        const cap = await ask(T`คำบรรยายใต้รูป (Caption)`, { value: cur.caption, allowEmpty: true });
         if (cap === null || cap === undefined) return;
-        const alt = await ask('ข้อความแทนรูป (Alt)', { value: cur.alt, allowEmpty: true });
+        const alt = await ask(T`ข้อความแทนรูป (Alt)`, { value: cur.alt, allowEmpty: true });
         if (alt === null || alt === undefined) return;
         this.e.images = setImageMeta(this.e.images, i, { caption: cap, alt });
         this.markDirty(); this.render();
@@ -441,12 +442,12 @@ export class WikiEditor {
 
     // ความสัมพันธ์ (sync สองทางตอนบันทึก — เหมือน v1)
     const rh = document.createElement('div'); rh.className = 'wiki-sub';
-    rh.textContent = 'ความสัมพันธ์';
+    rh.textContent = T`ความสัมพันธ์`;
     const addR = document.createElement('span'); addR.className = 'row-add';
-    addR.innerHTML = iconHtml('plus', 14); addR.title = 'เพิ่มความสัมพันธ์';
+    addR.innerHTML = iconHtml('plus', 14); addR.title = T`เพิ่มความสัมพันธ์`;
     addR.onclick = async () => {
       const others = this.entityTitles().filter((n) => n !== this.e.name);
-      if (!others.length) { alert('ยังไม่มี entity อื่นให้ผูกความสัมพันธ์'); return; }
+      if (!others.length) { alert(T`ยังไม่มี entity อื่นให้ผูกความสัมพันธ์`); return; }
       let target, role, type = '';
       if (this.pickRelation) {
         const res = await this.pickRelation(others, this.e.name);
@@ -455,8 +456,8 @@ export class WikiEditor {
       } else {
         target = this.pickTitle ? await this.pickTitle(others) : null;
         if (!target) return;
-        role = await ask(`${this.e.name} เป็นอะไรกับ ${target}`,
-                         { placeholder: 'เช่น พี่ชาย / เพื่อน / ศัตรู' });
+        role = await ask(T`${this.e.name} เป็นอะไรกับ ${target}`,
+                         { placeholder: T`เช่น พี่ชาย / เพื่อน / ศัตรู` });
       }
       if (!target || !role) return;
       // ไม่ระบุประเภท = ไม่เก็บ field เลย (เข้ากันได้กับไฟล์เดิมที่ไม่มี type)
@@ -476,31 +477,31 @@ export class WikiEditor {
         const badge = document.createElement('span');
         badge.className = 'rel-type-dot';
         badge.style.background = REL_COLOR[rel.type];
-        badge.title = 'ประเภท: ' + (REL_LABEL[rel.type] || rel.type);
+        badge.title = T`ประเภท: ` + (REL_LABEL[rel.type] || rel.type);
         lab.appendChild(badge);
       }
       lab.appendChild(document.createTextNode(rel.role || '—'));
       const val = document.createElement('span'); val.className = 'wiki-rel-target wiki-rel-link';
       val.textContent = rel.targetName || rel.target || '?';
-      val.title = 'เปิดหน้า Wiki นี้';
+      val.title = T`เปิดหน้า Wiki นี้`;
       val.onclick = () => {
         const f = this.fileOfEntity(rel.targetName || rel.target);
         if (f && this.onOpenEntity) this.onOpenEntity(f);
-        else alert('ยังไม่พบหน้า Wiki ของ ' + (rel.targetName || rel.target));
+        else alert(T`ยังไม่พบหน้า Wiki ของ ` + (rel.targetName || rel.target));
       };
       const del = document.createElement('span'); del.className = 'row-add';
-      del.innerHTML = iconHtml('x', 14); del.title = 'ลบความสัมพันธ์นี้ (ฝั่งนี้)';
+      del.innerHTML = iconHtml('x', 14); del.title = T`ลบความสัมพันธ์นี้ (ฝั่งนี้)`;
       del.onclick = () => { this.e.relationships.splice(i, 1); this.markDirty(); this.render(); };
       r.append(lab, val, del); wrap.appendChild(r);
     });
 
     // sections: หัวข้อ + เนื้อหา (WYSIWYG — เก็บเป็น md ใน content เหมือน v1)
     const sh = document.createElement('div'); sh.className = 'wiki-sub';
-    sh.textContent = 'เนื้อหา';
+    sh.textContent = T`เนื้อหา`;
     const addSec = document.createElement('span'); addSec.className = 'row-add';     addSec.innerHTML = iconHtml('plus', 14);
-    addSec.title = 'เพิ่มหัวข้อ';
+    addSec.title = T`เพิ่มหัวข้อ`;
     addSec.onclick = async () => {
-      const t = await ask('ชื่อหัวข้อใหม่', { placeholder: 'เช่น ประวัติ / นิสัย' });
+      const t = await ask(T`ชื่อหัวข้อใหม่`, { placeholder: T`เช่น ประวัติ / นิสัย` });
       if (!t) return;
       this.e.sections = [...(this.e.sections || []), { title: t, content: '' }];
       this.markDirty(); this.render();
@@ -514,9 +515,9 @@ export class WikiEditor {
       const ti = document.createElement('input'); ti.className = 'wiki-input'; ti.value = sec.title || '';
       ti.addEventListener('input', () => { sec.title = ti.value; this.markDirty(); });
       const del = document.createElement('span'); del.className = 'row-add';       del.innerHTML = iconHtml('x', 14);
-      del.title = 'ลบหัวข้อนี้';
+      del.title = T`ลบหัวข้อนี้`;
       del.onclick = async () => {
-        if (!(await confirmBox(`ลบหัวข้อ “${sec.title}” ?`))) return;
+        if (!(await confirmBox(T`ลบหัวข้อ “${sec.title}” ?`))) return;
         this.e.sections.splice(i, 1); this.markDirty(); this.render();
       };
       st.append(ti, del); box.appendChild(st);

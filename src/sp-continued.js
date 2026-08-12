@@ -10,6 +10,7 @@
 // และตั้ง page.continuedTop/continuedBottom ให้) — ไฟล์นี้แปลงผลนั้นเป็น
 // "ตำแหน่งในเอกสาร + ข้อความ" เพื่อให้ ProseMirror วาดเป็น decoration ได้
 
+import { T } from './i18n.js';
 import { mergeSpFormat, paginate, CONTINUED_DEFAULTS } from './sp-format.js';
 
 export { CONTINUED_DEFAULTS };
@@ -102,8 +103,8 @@ export function continuedSummary(marks) {
 /** ข้อความบรรยายสำหรับแถบสถานะ */
 export function continuedStatusText(marks) {
   const s = continuedSummary(marks);
-  if (!s.total) return 'ต่อเนื่อง: ไม่มี';
-  return `ต่อเนื่อง: ฉาก ${s['continued-top']} · บทพูด ${s.more}`;
+  if (!s.total) return T`ต่อเนื่อง: ไม่มี`;
+  return T`ต่อเนื่อง: ฉาก ${s['continued-top']} · บทพูด ${s.more}`;
 }
 
 /**

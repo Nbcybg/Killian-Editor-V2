@@ -6,6 +6,7 @@
 //   · ตอนนั้นบนจอแต่ละแผงกว้างเท่าไหร่จริง ๆ
 // รายงานนี้จึงรวม 3 ชั้นเข้าด้วยกัน: ต้นไม้ที่เก็บไว้ + ขนาดที่วัดได้จริง + ผลวินิจฉัยว่าใครไม่มีค่าเก็บ
 // เอาไปใช้เป็น "เลย์เอาต์อ้างอิง" ได้ตรง ๆ (จัดวางให้พอใจ → ส่งออก → ใช้ค่าที่ได้เป็นค่าตั้งต้น)
+import { T } from '../i18n.js';
 import * as PL from './panel-layout.js';
 
 export const EXPORT_VERSION = 1;
@@ -50,7 +51,7 @@ export function dockReport(node, isFixedPanel = () => false, measured = {}, docs
     children,
   };
 }
-function labelOf(n) { return n.title || (n.type === 'tabs' ? 'กลุ่มแท็บ' : n.type === 'dock' ? 'ช่องแบ่ง' : n.id); }
+function labelOf(n) { return n.title || (n.type === 'tabs' ? T`กลุ่มแท็บ` : n.type === 'dock' ? T`ช่องแบ่ง` : n.id); }
 
 /** dock ทุกก้อนในต้นไม้ (เรียงจากนอกเข้าใน) */
 export function collectDocks(root, isFixedPanel, measured, docsId = 'docs') {
@@ -115,23 +116,23 @@ export function diagnose(root, docks, unsized, measured = {}, docsId = 'docs') {
     const live = d.children.filter((c) => c.share !== 'hidden' && !c.hidden);
     const hasRatioNeighbour = live.some((c) => c.share === 'grow' && c.id !== d.flexChild);
     if (holdsDocs && d.mode === 'ratio' && hasRatioNeighbour) {
-      warn.push(`dock ${d.id} (${d.dir}) อยู่ในโหมดสัดส่วน ทั้งที่มีพื้นที่เขียนอยู่ข้างใน — `
-        + 'ค่าขนาดที่เก็บไว้ในลูกยังไม่ถูกใช้ · แผงข้างจะถูกเกลี่ยใหม่ทุกครั้งที่เปิด/ผนึกแผงอื่น');
+      warn.push(T`dock ${d.id} (${d.dir}) อยู่ในโหมดสัดส่วน ทั้งที่มีพื้นที่เขียนอยู่ข้างใน — `
+        + T`ค่าขนาดที่เก็บไว้ในลูกยังไม่ถูกใช้ · แผงข้างจะถูกเกลี่ยใหม่ทุกครั้งที่เปิด/ผนึกแผงอื่น`);
     }
     if (holdsDocs && hasRatioNeighbour && Array.isArray(d.sizes) && d.sizes.length === 2
         && Math.abs(d.sizes[0] - 0.5) < 0.001 && Math.abs(d.sizes[1] - 0.5) < 0.001) {
-      warn.push(`dock ${d.id} แบ่ง 50/50 กับพื้นที่เขียน — แผงที่เพิ่งผนึกกินครึ่งหน้าต่าง`);
+      warn.push(T`dock ${d.id} แบ่ง 50/50 กับพื้นที่เขียน — แผงที่เพิ่งผนึกกินครึ่งหน้าต่าง`);
     }
   }
   for (const u of unsized) {
     if (u.type === 'panel') continue;                       // แผงเดี่ยวที่ยังไม่เคยลาก = ปกติ
-    warn.push(`${u.type === 'tabs' ? 'กลุ่มแท็บ' : 'ช่องแบ่ง'} ${u.id} ใน dock ${u.dock} `
-      + 'ไม่มีขนาดให้ใช้เลย (ทั้งของตัวเองและของแผงข้างใน) — ก้อนนี้จะถูกเกลี่ยตามสัดส่วนใหม่ทุกครั้งที่โครงเปลี่ยน');
+    warn.push(T`${u.type === 'tabs' ? T`กลุ่มแท็บ` : T`ช่องแบ่ง`} ${u.id} ใน dock ${u.dock} `
+      + T`ไม่มีขนาดให้ใช้เลย (ทั้งของตัวเองและของแผงข้างใน) — ก้อนนี้จะถูกเกลี่ยตามสัดส่วนใหม่ทุกครั้งที่โครงเปลี่ยน`);
   }
   for (const [id, m] of Object.entries(measured)) {
     if (!m || !m.w) continue;
-    if (id === docsId && m.w < PL.MIN_CANVAS_PX) warn.push(`พื้นที่เขียนกว้างแค่ ${m.w}px (ขั้นต่ำที่ตั้งไว้ ${PL.MIN_CANVAS_PX}px)`);
-    else if (m.kind === 'panel' && id !== docsId && m.w < PL.MIN_PANEL_PX) warn.push(`แผง ${id} กว้างแค่ ${m.w}px (ขั้นต่ำ ${PL.MIN_PANEL_PX}px) — เนื้อแผงถูกบีบจนแทบไม่เหลือที่`);
+    if (id === docsId && m.w < PL.MIN_CANVAS_PX) warn.push(T`พื้นที่เขียนกว้างแค่ ${m.w}px (ขั้นต่ำที่ตั้งไว้ ${PL.MIN_CANVAS_PX}px)`);
+    else if (m.kind === 'panel' && id !== docsId && m.w < PL.MIN_PANEL_PX) warn.push(T`แผง ${id} กว้างแค่ ${m.w}px (ขั้นต่ำ ${PL.MIN_PANEL_PX}px) — เนื้อแผงถูกบีบจนแทบไม่เหลือที่`);
   }
   return warn;
 }

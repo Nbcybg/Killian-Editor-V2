@@ -2,6 +2,7 @@
 // เก็บใน project.khn.json:
 //   meta.customStatuses      = ['รอแก้ไข', 'ส่งแล้ว']          (สถานะที่เพิ่มเอง)
 //   meta.customStatusColors  = { 'รอแก้ไข': '#d9575e', … }     (สีทับได้ทั้งสถานะมาตรฐานและที่เพิ่มเอง)
+import { T } from './i18n.js';
 import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR } from './core.js';
 import { ask, confirmBox } from './ui.js';
 
@@ -46,7 +47,7 @@ export async function addCustomStatus(label, color) {
   state.meta.customStatuses = [...getCustomStatuses(), name];
   if (color) state.meta.customStatusColors = { ...getStatusColors(), [name]: color };
   await persist();
-  setStatus('เพิ่มสถานะแล้ว: ' + name);
+  setStatus(T`เพิ่มสถานะแล้ว: ` + name);
   return true;
 }
 
@@ -56,7 +57,7 @@ export async function removeCustomStatus(label) {
   const colors = { ...getStatusColors() }; delete colors[label];
   state.meta.customStatusColors = colors;
   await persist();                       // เดิมลืมบันทึก → ลบแล้วกลับมาใหม่ตอนเปิดโปรเจกต์
-  setStatus('ลบสถานะแล้ว: ' + label);
+  setStatus(T`ลบสถานะแล้ว: ` + label);
   return true;
 }
 
@@ -85,7 +86,7 @@ async function exportStatusesFile() {
   const dest = await kapi.saveAsDialog((state.title || 'project') + '-statuses.json', 'json');
   if (!dest) return false;
   await kapi.writeFile(dest, JSON.stringify(statusesToJson(), null, 2));
-  setStatus('ส่งออกชุดสถานะแล้ว: ' + dest);
+  setStatus(T`ส่งออกชุดสถานะแล้ว: ` + dest);
   return true;
 }
 
@@ -94,21 +95,21 @@ async function importStatusesFile() {
   if (!src) return 0;
   try {
     const n = await importStatuses(JSON.parse(await kapi.readFile(src)));
-    setStatus(n ? `นำเข้าสถานะใหม่ ${n} รายการ` : 'ไม่มีสถานะใหม่ให้เพิ่ม (ซ้ำกับของเดิมทั้งหมด)');
+    setStatus(n ? T`นำเข้าสถานะใหม่ ${n} รายการ` : T`ไม่มีสถานะใหม่ให้เพิ่ม (ซ้ำกับของเดิมทั้งหมด)`);
     return n;
   } catch (e) {
-    log('error', 'custom-status: นำเข้าล้มเหลว', e);
-    setStatus('นำเข้าไฟล์สถานะไม่สำเร็จ (ไฟล์ไม่ใช่ JSON ที่ถูกต้อง)');
+    log('error', T`custom-status: นำเข้าล้มเหลว`, e);
+    setStatus(T`นำเข้าไฟล์สถานะไม่สำเร็จ (ไฟล์ไม่ใช่ JSON ที่ถูกต้อง)`);
     return 0;
   }
 }
 
 // ---- กล่องจัดการสถานะ ----
 export async function manageCustomStatuses() {
-  if (!state.meta) { setStatus('ยังไม่ได้เปิดโปรเจกต์'); return; }
+  if (!state.meta) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-status-mgr');
-  box.append(el('div', 'k-dlg-title', '🏷 จัดการสถานะฉาก'));
+  box.append(el('div', 'k-dlg-title', T`🏷 จัดการสถานะฉาก`));
 
   const list = el('div', 'k-pick-list');
   // แถวเดียวใช้ได้ทั้งสถานะมาตรฐาน (ลบไม่ได้ แต่เปลี่ยนสีได้) และที่เพิ่มเอง
@@ -116,11 +117,11 @@ export async function manageCustomStatuses() {
     const row = el('div', 'k-menu-item k-status-row');
     const dot = el('span', 'k-status-dot');
     dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
-    row.append(dot, el('span', null, s + (builtIn ? '  (มาตรฐาน)' : '')));
+    row.append(dot, el('span', null, s + (builtIn ? T`  (มาตรฐาน)` : '')));
 
     const pick = el('input', 'k-status-color');
     pick.type = 'color'; pick.value = statusColor(s);
-    pick.title = 'เปลี่ยนสีของสถานะนี้';
+    pick.title = T`เปลี่ยนสีของสถานะนี้`;
     pick.style.cssText = 'float:right;width:26px;height:20px;padding:0;border:none;background:none;cursor:pointer';
     pick.onchange = async () => { dot.style.background = pick.value; await setStatusColor(s, pick.value); refreshStatusChips(); };
     row.append(pick);
@@ -128,10 +129,10 @@ export async function manageCustomStatuses() {
     if (!builtIn) {
       const del = el('span', 'k-status-del', '✕');
       del.style.cssText = 'float:right;cursor:pointer;margin-left:10px';
-      del.title = 'ลบสถานะนี้';
+      del.title = T`ลบสถานะนี้`;
       del.onclick = async (e) => {
         e.stopPropagation();
-        if (await confirmBox(`ลบสถานะ "${s}" ?`, 'ลบ')) { await removeCustomStatus(s); render(); refreshStatusChips(); }
+        if (await confirmBox(T`ลบสถานะ "${s}" ?`, T`ลบ`)) { await removeCustomStatus(s); render(); refreshStatusChips(); }
       };
       row.append(del);
     }
@@ -141,26 +142,26 @@ export async function manageCustomStatuses() {
     list.innerHTML = '';
     for (const s of SCENE_STATUSES) list.append(mkRow(s, true));
     const custom = getCustomStatuses();
-    if (!custom.length) list.append(el('div', 'dim', 'ยังไม่มีสถานะที่กำหนดเอง'));
+    if (!custom.length) list.append(el('div', 'dim', T`ยังไม่มีสถานะที่กำหนดเอง`));
     for (const s of custom) list.append(mkRow(s, false));
   };
   render();
 
   const btns = el('div', 'k-dlg-btns');
-  const addB = el('button', 'k-ok', '+ เพิ่มสถานะ');
+  const addB = el('button', 'k-ok', T`+ เพิ่มสถานะ`);
   addB.onclick = async () => {
-    const name = await ask('ชื่อสถานะใหม่', { placeholder: 'เช่น รอแก้ไข, ส่งแล้ว' });
+    const name = await ask(T`ชื่อสถานะใหม่`, { placeholder: T`เช่น รอแก้ไข, ส่งแล้ว` });
     if (!name) return;
     await addCustomStatus(name);
     render(); refreshStatusChips();
   };
-  const outB = el('button', null, '📤 ส่งออก…');
-  outB.title = 'บันทึกชุดสถานะ + สี เป็นไฟล์ .json เพื่อนำไปใช้กับโปรเจกต์อื่น';
+  const outB = el('button', null, T`📤 ส่งออก…`);
+  outB.title = T`บันทึกชุดสถานะ + สี เป็นไฟล์ .json เพื่อนำไปใช้กับโปรเจกต์อื่น`;
   outB.onclick = () => exportStatusesFile();
-  const inB = el('button', null, '📥 นำเข้า…');
-  inB.title = 'อ่านชุดสถานะจากไฟล์ .json (รวมกับของเดิม ไม่ลบทิ้ง)';
+  const inB = el('button', null, T`📥 นำเข้า…`);
+  inB.title = T`อ่านชุดสถานะจากไฟล์ .json (รวมกับของเดิม ไม่ลบทิ้ง)`;
   inB.onclick = async () => { await importStatusesFile(); render(); refreshStatusChips(); };
-  const closeB = el('button', null, 'ปิด');
+  const closeB = el('button', null, T`ปิด`);
   closeB.onclick = () => ov.remove();
   btns.append(addB, outB, inB, closeB);
   box.append(list, btns);

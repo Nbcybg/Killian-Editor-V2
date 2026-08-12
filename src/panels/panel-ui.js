@@ -7,6 +7,7 @@
 //
 // เนื้อแผงคือ element เดิมใน index.html (#tree-panel, #content, …) — "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่
 // เพราะโค้ดทั้งโปรเจกต์อ้าง id เหล่านี้ ($('#panes'), $('#tabs'), $('#props-body'), …)
+import { T } from '../i18n.js';
 import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
          keepScroll, restoreScrollSnap, elByPath } from '../core.js';
 import { popupMenu, ask, confirmBox } from '../ui.js';
@@ -31,72 +32,72 @@ export const panelId = (id) => ALIAS[id] || id;
 // [alpha.60r3 ข้อ 8] `desc` = คำอธิบายภาษาไทยของแผง — โผล่ในเมนูคลิกขวาบนหัวแผง ("❔ นี่คืออะไร")
 // เขียนให้ตอบคำถามเดียว: "แผงนี้ใช้ทำอะไร และเปิดไว้ตอนไหน"
 export const PANEL_DEFS = [
-  { id: 'toolbar',   title: 'แถบเครื่องมือ', icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false,
-    desc: 'ปุ่มจัดรูปแบบและสวิตช์โหมดทั้งหมด — ตัวหนา/เอียง · จัดหน้า · โหมดอ่าน/โฟกัส · เปิด-ปิดแผงอื่น' },
-  { id: 'tree',      title: 'โปรเจกต์',      icon: 'book-content', adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project',
-    desc: 'สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ' },
+  { id: 'toolbar',   title: T`แถบเครื่องมือ`, icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false,
+    desc: T`ปุ่มจัดรูปแบบและสวิตช์โหมดทั้งหมด — ตัวหนา/เอียง · จัดหน้า · โหมดอ่าน/โฟกัส · เปิด-ปิดแผงอื่น` },
+  { id: 'tree',      title: T`โปรเจกต์`,      icon: 'book-content', adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project',
+    desc: T`สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ` },
   { id: 'outline',   title: 'Navigation',    icon: 'list-ul',      adopt: '#outline-panel', defaultSide: 'left',  i18n: 'panel.navigation',
-    desc: 'เค้าโครงหัวข้อของ "ไฟล์ที่เปิดอยู่" — คลิกหัวข้อเพื่อกระโดดไปตำแหน่งนั้นในเอกสาร' },
+    desc: T`เค้าโครงหัวข้อของ "ไฟล์ที่เปิดอยู่" — คลิกหัวข้อเพื่อกระโดดไปตำแหน่งนั้นในเอกสาร` },
   // แผงเอกสารไม่มีหัวแผง (พื้นที่ทำงานหลัก — แถบแท็บเอกสาร #tabs ทำหน้าที่นั้นอยู่แล้ว)
-  { id: 'docs',      title: 'เอกสาร',         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false,
-    desc: 'พื้นที่เขียนหลัก — แท็บทุกใบที่เปิดอยู่ ทั้งฉาก บทภาพยนตร์ และหน้า Wiki (ปิดไม่ได้)' },
-  { id: 'props',     title: 'คุณสมบัติ',      icon: 'clipboard',    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties',
-    desc: 'คุณสมบัติของฉากที่เลือก — เรื่องย่อ · มุมมอง · อารมณ์ · ความขัดแย้ง · สถานะ · สี · แท็ก · บันทึกอัตโนมัติขณะพิมพ์' },
-  { id: 'statusbar', title: 'แถบสถานะ',      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false,
-    desc: 'ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ' },
-  { id: 'log', dockW: 420,       title: 'บันทึก',         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
-    desc: 'บันทึกการทำงานของโปรแกรม — ใช้ตอนหาสาเหตุเมื่อมีอะไรไม่เป็นอย่างที่คาด' },
-  { id: 'search', dockW: 360,    title: 'ค้นหา',          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.searchTitle',
-    desc: 'ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น' },
-  { id: 'notes',     title: 'สมุดโน้ตด่วน',    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.notesTitle',
-    desc: 'ที่จดความคิดชั่วคราวโดยไม่ปนต้นฉบับ — โน้ตผูกกับฉากที่เปิดอยู่ตอนจด' },
-  { id: 'comments',  title: 'คอมเมนต์',        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
-    desc: 'คอมเมนต์ของฉากที่เปิดอยู่ — ตอบกลับเป็นเธรด ปิดงานได้ · เก็บท้ายไฟล์ .md จึงติดไปกับไฟล์เสมอ' },
+  { id: 'docs',      title: T`เอกสาร`,         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false,
+    desc: T`พื้นที่เขียนหลัก — แท็บทุกใบที่เปิดอยู่ ทั้งฉาก บทภาพยนตร์ และหน้า Wiki (ปิดไม่ได้)` },
+  { id: 'props',     title: T`คุณสมบัติ`,      icon: 'clipboard',    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties',
+    desc: T`คุณสมบัติของฉากที่เลือก — เรื่องย่อ · มุมมอง · อารมณ์ · ความขัดแย้ง · สถานะ · สี · แท็ก · บันทึกอัตโนมัติขณะพิมพ์` },
+  { id: 'statusbar', title: T`แถบสถานะ`,      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false,
+    desc: T`ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ` },
+  { id: 'log', dockW: 420,       title: T`บันทึก`,         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
+    desc: T`บันทึกการทำงานของโปรแกรม — ใช้ตอนหาสาเหตุเมื่อมีอะไรไม่เป็นอย่างที่คาด` },
+  { id: 'search', dockW: 360,    title: T`ค้นหา`,          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.searchTitle',
+    desc: T`ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น` },
+  { id: 'notes',     title: T`สมุดโน้ตด่วน`,    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.notesTitle',
+    desc: T`ที่จดความคิดชั่วคราวโดยไม่ปนต้นฉบับ — โน้ตผูกกับฉากที่เปิดอยู่ตอนจด` },
+  { id: 'comments',  title: T`คอมเมนต์`,        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
+    desc: T`คอมเมนต์ของฉากที่เปิดอยู่ — ตอบกลับเป็นเธรด ปิดงานได้ · เก็บท้ายไฟล์ .md จึงติดไปกับไฟล์เสมอ` },
   // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
-  { id: 'dashboard', minW: 620, dockW: 640, title: 'แดชบอร์ด',        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
-    desc: 'ภาพรวมความคืบหน้า — จำนวนคำเทียบเป้าหมาย · สัดส่วนฉากตามสถานะ · ความยาวของแต่ละบท' },
+  { id: 'dashboard', minW: 620, dockW: 640, title: T`แดชบอร์ด`,        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
+    desc: T`ภาพรวมความคืบหน้า — จำนวนคำเทียบเป้าหมาย · สัดส่วนฉากตามสถานะ · ความยาวของแต่ละบท` },
   { id: 'kanban', minW: 800, dockW: 640,    title: 'Kanban',          icon: 'grid',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle',
-    desc: 'กระดานฉากเรียงตามสถานะ — ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะฉากนั้นทันที' },
-  { id: 'books', minW: 400, dockW: 640,     title: 'จัดการเล่ม',       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
-    desc: 'จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม' },
-  { id: 'timeline', minW: 620, dockW: 640,  title: 'เส้นเวลา',         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
-    desc: 'ลำดับเหตุการณ์ตาม "เวลาในเรื่อง" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง' },
-  { id: 'maps', dockW: 640,      title: 'แผนที่',           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
-    desc: 'แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้' },
+    desc: T`กระดานฉากเรียงตามสถานะ — ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะฉากนั้นทันที` },
+  { id: 'books', minW: 400, dockW: 640,     title: T`จัดการเล่ม`,       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
+    desc: T`จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม` },
+  { id: 'timeline', minW: 620, dockW: 640,  title: T`เส้นเวลา`,         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
+    desc: T`ลำดับเหตุการณ์ตาม "เวลาในเรื่อง" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง` },
+  { id: 'maps', dockW: 640,      title: T`แผนที่`,           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
+    desc: T`แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้` },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
-  { id: 'gallery', minW: 600, dockW: 640,   title: 'คลังรูปภาพ',       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
-    desc: 'รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki' },
+  { id: 'gallery', minW: 600, dockW: 640,   title: T`คลังรูปภาพ`,       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
+    desc: T`รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki` },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
-  { id: 'gallery-board', minW: 400, dockW: 640, title: '🎨 กระดานอารมณ์', icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
-    desc: 'ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์' },
+  { id: 'gallery-board', minW: 400, dockW: 640, title: T`🎨 กระดานอารมณ์`, icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
+    desc: T`ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์` },
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-  { id: 'ai-analyzer', minW: 400, dockW: 640, title: '🧠 AI วิเคราะห์',  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
-    desc: 'ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)' },
+  { id: 'ai-analyzer', minW: 400, dockW: 640, title: T`🧠 AI วิเคราะห์`,  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
+    desc: T`ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)` },
   // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-  { id: 'ai-chat', dockW: 640,   title: '💬 AI ผู้ช่วยเขียน',       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
-    desc: 'คุยกับ AI เรื่องงานเขียนของคุณ — แยกเป็นเซสชันเหมือน opencode · เลือกโหมด (วางแผน/ช่วยเขียน) · เลือกโมเดล · กำหนดได้ว่าจะให้เห็นข้อมูลระดับไหน (ทั้งโปรเจกต์/เล่ม/บท/ฉาก)' },
+  { id: 'ai-chat', dockW: 640,   title: T`💬 AI ผู้ช่วยเขียน`,       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
+    desc: T`คุยกับ AI เรื่องงานเขียนของคุณ — แยกเป็นเซสชันเหมือน opencode · เลือกโหมด (วางแผน/ช่วยเขียน) · เลือกโมเดล · กำหนดได้ว่าจะให้เห็นข้อมูลระดับไหน (ทั้งโปรเจกต์/เล่ม/บท/ฉาก)` },
   // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
   { id: 'network', minW: 400, dockW: 640,   title: 'Story Network',   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.networkTitle',
-    desc: 'ผังความสัมพันธ์ของตัวละคร/สถานที่/สิ่งของ — ลากโหนดจัดวางเอง · สีเส้นบอกประเภทความสัมพันธ์ · ดับเบิลคลิกเปิดหน้า Wiki นั้น' },
+    desc: T`ผังความสัมพันธ์ของตัวละคร/สถานที่/สิ่งของ — ลากโหนดจัดวางเอง · สีเส้นบอกประเภทความสัมพันธ์ · ดับเบิลคลิกเปิดหน้า Wiki นั้น` },
   { id: 'planner', minW: 800, dockW: 640,   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
-    desc: 'กระดานวางแผนแบบการ์ดอิสระ — วางโน้ต รูป และลิงก์ไปฉากได้ทุกที่บนผืนผ้าใบ · ใช้ปะติดปะต่อโครงเรื่องก่อนลงมือเขียน' },
-  { id: 'planner-props', title: 'คุณสมบัติ Planner', icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
+    desc: T`กระดานวางแผนแบบการ์ดอิสระ — วางโน้ต รูป และลิงก์ไปฉากได้ทุกที่บนผืนผ้าใบ · ใช้ปะติดปะต่อโครงเรื่องก่อนลงมือเขียน` },
+  { id: 'planner-props', title: T`คุณสมบัติ Planner`, icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
     closable: true, floatable: true, i18n: 'panel.plannerPropsTitle',
-    desc: 'คุณสมบัติของการ์ดหรือเส้นเชื่อมที่เลือกบนกระดาน Planner — ชื่อ · สรุป · สี · สถานะ · แท็ก · ขนาด · สไตล์เส้น' },
-  { id: 'floorplan', dockW: 640, title: '📍 ผังพื้นที่',      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
-    desc: 'ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่' },
+    desc: T`คุณสมบัติของการ์ดหรือเส้นเชื่อมที่เลือกบนกระดาน Planner — ชื่อ · สรุป · สี · สถานะ · แท็ก · ขนาด · สไตล์เส้น` },
+  { id: 'floorplan', dockW: 640, title: T`📍 ผังพื้นที่`,      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
+    desc: T`ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่` },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
-  { id: 'branch', minW: 700, dockW: 640,    title: '🌿 ผังแตกสาย',      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
-    desc: 'ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้' },
-  { id: 'player', dockW: 440,    title: '▶️ ทดลองเล่น',       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
-    desc: 'อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง' },
+  { id: 'branch', minW: 700, dockW: 640,    title: T`🌿 ผังแตกสาย`,      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
+    desc: T`ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้` },
+  { id: 'player', dockW: 440,    title: T`▶️ ทดลองเล่น`,       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
+    desc: T`อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง` },
   // ── [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน ──
-  { id: 'codex', dockW: 680,     title: '📚 สารานุกรม',      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
-    desc: 'เอนทิตี้ Wiki ทั้งเล่มในมุมมองสารานุกรม — เรียกดูตามหมวด ค้นด้วยชื่อ/ชื่อเล่น · ส่งออกเป็นเว็บแบบ Fandom/Wikia ที่เปิดออฟไลน์ได้ทั้งชุด' },
-  { id: 'history', dockW: 420,   title: '🕘 ประวัติการทำงาน', icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
-    desc: 'ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)' },
-  { id: 'record', dockW: 460,    title: '🗒 บันทึกประจำวัน',  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
-    desc: 'จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้' },
+  { id: 'codex', dockW: 680,     title: T`📚 สารานุกรม`,      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
+    desc: T`เอนทิตี้ Wiki ทั้งเล่มในมุมมองสารานุกรม — เรียกดูตามหมวด ค้นด้วยชื่อ/ชื่อเล่น · ส่งออกเป็นเว็บแบบ Fandom/Wikia ที่เปิดออฟไลน์ได้ทั้งชุด` },
+  { id: 'history', dockW: 420,   title: T`🕘 ประวัติการทำงาน`, icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
+    desc: T`ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)` },
+  { id: 'record', dockW: 460,    title: T`🗒 บันทึกประจำวัน`,  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
+    desc: T`จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้` },
 ];
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
 //
@@ -153,7 +154,7 @@ export async function tearOffPanel(id) {
   let ok = false;
   try {
     ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', ...box });
-  } catch (e) { log('warn', '[แผง] ฉีกออกเป็นหน้าต่างไม่สำเร็จ: ' + pid, e); }
+  } catch (e) { log('warn', T`[แผง] ฉีกออกเป็นหน้าต่างไม่สำเร็จ: ` + pid, e); }
   if (!ok) { tornOff.delete(pid); showPanel(pid); return false; }
   setStatus(t('panel.tornOff', 'ย้าย "') + (d ? titleOf(d) : pid) + t('panel.tornOff2', '" ไปหน้าต่างแยกแล้ว — ปิดหน้าต่างนั้นเพื่อเอากลับมา'));
   return true;
@@ -287,12 +288,12 @@ export function registerPanels() {
 // เลย์เอาต์ตั้งต้น (Photoshop): เครื่องมือบน · ซ้าย = โปรเจกต์+Navigation เป็นแท็บ · กลาง = เอกสาร · ล่าง = สถานะ
 export function defaultLayout() {
   return PL.dock('col', [
-    PL.panel('toolbar', 'แถบเครื่องมือ'),
+    PL.panel('toolbar', T`แถบเครื่องมือ`),
     PL.dock('row', [
-      PL.tabs([PL.panel('tree', 'โปรเจกต์'), PL.panel('outline', 'Navigation')], 0),
-      PL.panel('docs', 'เอกสาร'),
+      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('outline', 'Navigation')], 0),
+      PL.panel('docs', T`เอกสาร`),
     ], [0.24, 0.76]),
-    PL.panel('statusbar', 'แถบสถานะ'),
+    PL.panel('statusbar', T`แถบสถานะ`),
   ], [0, 1, 0]);
 }
 
@@ -303,24 +304,24 @@ export function defaultLayout() {
 const wsRow = (left, center, right, sizes) =>
   PL.dock('row', right ? [left, center, right] : [left, center], sizes);
 const wsFrame = (mid) => PL.dock('col', [
-  PL.panel('toolbar', 'แถบเครื่องมือ'), mid, PL.panel('statusbar', 'แถบสถานะ'),
+  PL.panel('toolbar', T`แถบเครื่องมือ`), mid, PL.panel('statusbar', T`แถบสถานะ`),
 ], [0, 1, 0]);
 
 export const BUILTIN_WORKSPACES = [
-  { id: 'essentials', label: 'Essentials (ค่าเริ่มต้น)',
+  { id: 'essentials', label: T`Essentials (ค่าเริ่มต้น)`,
     build: () => defaultLayout() },
-  { id: 'writing', label: 'เขียน — จอโล่ง มีแค่สารบัญ',
-    build: () => wsFrame(wsRow(PL.panel('tree', 'โปรเจกต์'), PL.panel('docs', 'เอกสาร'), null, [0.18, 0.82])) },
-  { id: 'planning', label: 'วางแผน — โครงเรื่อง + คุณสมบัติฉาก',
+  { id: 'writing', label: T`เขียน — จอโล่ง มีแค่สารบัญ`,
+    build: () => wsFrame(wsRow(PL.panel('tree', T`โปรเจกต์`), PL.panel('docs', T`เอกสาร`), null, [0.18, 0.82])) },
+  { id: 'planning', label: T`วางแผน — โครงเรื่อง + คุณสมบัติฉาก`,
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', 'โปรเจกต์'), PL.panel('kanban', 'Kanban'), PL.panel('timeline', 'เส้นเวลา')], 0),
-      PL.panel('docs', 'เอกสาร'),
-      PL.panel('props', 'คุณสมบัติ'), [0.26, 0.52, 0.22])) },
-  { id: 'review', label: 'ตรวจแก้ — คอมเมนต์ + โน้ต',
+      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('kanban', 'Kanban'), PL.panel('timeline', T`เส้นเวลา`)], 0),
+      PL.panel('docs', T`เอกสาร`),
+      PL.panel('props', T`คุณสมบัติ`), [0.26, 0.52, 0.22])) },
+  { id: 'review', label: T`ตรวจแก้ — คอมเมนต์ + โน้ต`,
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', 'โปรเจกต์'), PL.panel('outline', 'Navigation')], 1),
-      PL.panel('docs', 'เอกสาร'),
-      PL.tabs([PL.panel('comments', 'คอมเมนต์'), PL.panel('notes', 'สมุดโน้ตด่วน')], 0), [0.20, 0.56, 0.24])) },
+      PL.tabs([PL.panel('tree', T`โปรเจกต์`), PL.panel('outline', 'Navigation')], 1),
+      PL.panel('docs', T`เอกสาร`),
+      PL.tabs([PL.panel('comments', T`คอมเมนต์`), PL.panel('notes', T`สมุดโน้ตด่วน`)], 0), [0.20, 0.56, 0.24])) },
 ];
 export function isBuiltinWorkspace(name) { return BUILTIN_WORKSPACES.some((w) => w.id === name || w.label === name); }
 
@@ -400,7 +401,7 @@ export function toggleSpace(mode = 'all') {
   _stash = { ids, mode };
   renderPanels(true);
   setStatus(mode === 'all' ? t('panel.spaceAll', 'ซ่อนแผงทั้งหมด — เหลือแต่พื้นที่เขียน (กดซ้ำเพื่อเรียกกลับ)')
-                           : t('panel.spaceSide', 'ซ่อนแผงฝั่ง') + (mode === 'right' ? 'ขวา' : 'ซ้าย'));
+                           : t('panel.spaceSide', 'ซ่อนแผงฝั่ง') + (mode === 'right' ? T`ขวา` : T`ซ้าย`));
   return true;
 }
 
@@ -420,9 +421,9 @@ function renderOpts() {
     onTearOff: (id) => tearOffPanel(id),
     // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
     extraHeadMenu: (id) => [
-      { label: '⬒ ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)', click: () => toggleSpace('all') },
-      { label: '⬓ ซ่อนแผงฝั่งนี้', click: () => toggleSpace(sideOf({ id, defaultSide: 'left' })) },
-      { label: '🗂 เวิร์กสเปซ…', click: () => workspaceMenu() },
+      { label: T`⬒ ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)`, click: () => toggleSpace('all') },
+      { label: T`⬓ ซ่อนแผงฝั่งนี้`, click: () => toggleSpace(sideOf({ id, defaultSide: 'left' })) },
+      { label: T`🗂 เวิร์กสเปซ…`, click: () => workspaceMenu() },
     ],
     renderPanelBody: (id, body) => {
       const node = adopted.get(id);
@@ -578,7 +579,7 @@ export function auditPanelGaps(opts = {}) {
         flex: e.style.flex || `${e.style.flexGrow}/${e.style.flexShrink}/${e.style.flexBasis}`,
         size: Math.round(row ? e.getBoundingClientRect().width : e.getBoundingClientRect().height),
       }));
-      log('warn', `[แผง] พบช่องว่างค้าง ${Math.round(gap)}px ใน dock ${dockEl.dataset.dockId} (${dockEl.dataset.dir}) — ปิดรูให้แล้ว`, detail);
+      log('warn', T`[แผง] พบช่องว่างค้าง ${Math.round(gap)}px ใน dock ${dockEl.dataset.dockId} (${dockEl.dataset.dir}) — ปิดรูให้แล้ว`, detail);
     }
   }
   return found;
@@ -595,7 +596,7 @@ function pruneGhostPanels() {
   for (const id of ghosts) r = PL.removePanel(r, id);
   pm.store.root = r;                       // ไม่ผ่าน update() — เรากำลังจะวาดอยู่แล้ว
   pm.store.save();
-  log('warn', '[แผง] พบแผงปลอมในเลย์เอาต์ (ไม่มีในทะเบียน) — เก็บกวาดให้แล้ว', ghosts);
+  log('warn', T`[แผง] พบแผงปลอมในเลย์เอาต์ (ไม่มีในทะเบียน) — เก็บกวาดให้แล้ว`, ghosts);
   return true;
 }
 
@@ -726,7 +727,7 @@ export function initPanelSystem() {
   if (!m.store.root) m.store.update(defaultLayout());
   else if (!PL.hasPanel(m.store.root, 'docs')) {
     const anchor = PL.panelIds(m.store.root)[0];
-    m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', 'เอกสาร')));
+    m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', T`เอกสาร`)));
   }
   m.store.onChange(() => { savePanelLayout(); renderPanels(); });
   onLanguageChanged(() => renderPanels(true));  // เปลี่ยนภาษา → ชื่อแผงเปลี่ยนตาม
@@ -1075,13 +1076,13 @@ export async function exportPanelLayout() {
     const dest = await kapi.saveAsDialog(name, 'json');
     if (!dest) return null;
     await kapi.writeFile(dest, json);
-    log('info', '[แผง] ส่งออกการจัดวางแผงแล้ว', { dest, warnings: report.diagnostics.warnings.length });
+    log('info', T`[แผง] ส่งออกการจัดวางแผงแล้ว`, { dest, warnings: report.diagnostics.warnings.length });
     setStatus(t('panel.exported', 'ส่งออกการจัดวางแผงแล้ว: ') + dest);
     return dest;
   } catch (e) {
     // ไม่มีกล่องบันทึกไฟล์ (เทส/เบราว์เซอร์) → อย่างน้อยให้ค่าไปทางคลิปบอร์ด
     try { await kapi.clipboardWrite(json); setStatus(t('panel.exportClip', 'คัดลอกการจัดวางแผงไปคลิปบอร์ดแล้ว')); return 'clipboard'; } catch {}
-    log('error', '[แผง] ส่งออกการจัดวางแผงล้มเหลว', e);
+    log('error', T`[แผง] ส่งออกการจัดวางแผงล้มเหลว`, e);
     setStatus(t('panel.exportFail', 'ส่งออกการจัดวางแผงไม่สำเร็จ'));
     return null;
   }
@@ -1202,7 +1203,7 @@ export async function togglePanelDialog() {
       row.onclick = () => { it.click(); ov.remove(); };
       box.append(row);
     }
-    const closeBtn = el('button', 'k-cancel', 'ปิด');
+    const closeBtn = el('button', 'k-cancel', T`ปิด`);
     closeBtn.onclick = () => ov.remove();
     const btns = el('div', 'k-dlg-btns'); btns.append(closeBtn);
     box.append(btns); ov.append(box); document.body.append(ov);

@@ -1,5 +1,6 @@
 // event-ui.js — UI/การต่อสายของ Auto-task / Event Queue (ข้อ 88)
 // เปิด/ปิด auto-sync ใน settings + ผูกงาน rename-entity เข้ากับเอนจินจริง
+import { T } from '../i18n.js';
 import { el, setStatus, state, log, t } from '../core.js';
 import { AutoTaskEngine, installDefaultRules, renameEntityTask } from '../auto-task/event-queue.js';
 
@@ -26,7 +27,7 @@ export async function listTextFiles(root) {
         }
       }
     }
-  } catch (e) { log('warn', 'auto-task: ไล่ไฟล์ไม่ครบ', e); }
+  } catch (e) { log('warn', T`auto-task: ไล่ไฟล์ไม่ครบ`, e); }
   return out;
 }
 
@@ -46,7 +47,7 @@ export function getTaskEngine() {
         writeFile: (p, c) => kapi.writeFile(p, c),
       });
       const r = await run({ ...payload, files });
-      if (r.changed) setStatus(`auto-sync: อัปเดตชื่อใน ${r.files.length} ไฟล์`);
+      if (r.changed) setStatus(T`auto-sync: อัปเดตชื่อใน ${r.files.length} ไฟล์`);
       return r;
     });
   }
@@ -58,10 +59,10 @@ export function setAutoSync(on) {
   const eng = getTaskEngine();
   if (on) {
     if (!ticker) ticker = eng.start((tick) => setInterval(tick, 3000));
-    log('info', 'auto-task: auto-sync เปิด');
+    log('info', T`auto-task: auto-sync เปิด`);
   } else {
     if (ticker) { eng.stop((h) => clearInterval(h)); ticker = null; }
-    log('info', 'auto-task: auto-sync ปิด');
+    log('info', T`auto-task: auto-sync ปิด`);
   }
 }
 
@@ -87,7 +88,7 @@ export function renderAutoSyncSection(host) {
   const cb = el('input'); cb.type = 'checkbox'; cb.id = 'st-autosync';
   cb.checked = isAutoSyncOn();
   cb.onchange = () => setAutoSync(cb.checked);
-  lab.append(cb, document.createTextNode(' เปิด auto-sync (อัปเดตชื่อทุกไฟล์อัตโนมัติเมื่อเปลี่ยนชื่อเอนทิตี้)'));
+  lab.append(cb, document.createTextNode(T` เปิด auto-sync (อัปเดตชื่อทุกไฟล์อัตโนมัติเมื่อเปลี่ยนชื่อเอนทิตี้)`));
   div.append(lab);
   host.appendChild(div);
   return div;

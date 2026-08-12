@@ -19,6 +19,7 @@
 // ไฟล์นี้ **บริสุทธิ์** (ไม่แตะ fs/DOM/kapi) — ทั้งการต่อสมุด การตัดของเก่า และ **แผนการย้อนกลับ**
 // เทสด้วย node ได้หมด · ฝั่งที่ลงมือทำจริงกับดิสก์อยู่ที่ main.js
 
+import { T } from '../i18n.js';
 export const HISTORY_SCHEMA = 1;
 /** โฟลเดอร์เก็บสมุด + ก้อนเนื้อไฟล์เดิม (อยู่ในโปรเจกต์ — ย้ายโปรเจกต์ไปไหนประวัติตามไปด้วย) */
 export const HISTORY_DIR = '.k2history';
@@ -157,10 +158,10 @@ export function afterRevert(journal, seq) {
 
 // ───────── คำอธิบายที่ผู้ใช้อ่านรู้เรื่อง ─────────
 const KIND_LABEL = {
-  write: 'แก้ไข', create: 'สร้าง', remove: 'ลบ', move: 'ย้าย/เปลี่ยนชื่อ',
-  copy: 'คัดลอกเข้ามา', image: 'เพิ่มรูป',
+  write: T`แก้ไข`, create: T`สร้าง`, remove: T`ลบ`, move: T`ย้าย/เปลี่ยนชื่อ`,
+  copy: T`คัดลอกเข้ามา`, image: T`เพิ่มรูป`,
 };
-export const kindLabel = (k) => KIND_LABEL[k] || 'เปลี่ยนแปลง';
+export const kindLabel = (k) => KIND_LABEL[k] || T`เปลี่ยนแปลง`;
 
 /** ชื่อไฟล์แบบสั้น (เทียบกับรากโปรเจกต์) — สมุดเก็บ path เต็มเพื่อคืนไฟล์ได้ถูกที่ */
 export function relPath(p, root) {

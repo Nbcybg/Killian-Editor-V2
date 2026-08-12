@@ -7,11 +7,21 @@ const callW = (ch) => (...a) => ipcRenderer.invoke(ch, ...a).then((r) => {
   try { ipcRenderer.invoke('panel:fileChanged', a[0]); } catch {}
   return r;
 });
+// preload ทำงานในโหมด sandbox → `require('./package.json')` ล้มเสมอ และตกมาที่ '2.0.0'
+// (กล่อง "เกี่ยวกับ" จึงโชว์เลขรุ่นผิดมาตลอด) — ถามจาก main แบบ sync แทน แล้วค่อยตกกลับของเดิม
 let _appVersion = '2.0.0';
-try { _appVersion = require('./package.json').version || _appVersion; } catch {}
+try { _appVersion = ipcRenderer.sendSync('app:versionSync') || _appVersion; } catch {}
+if (_appVersion === '2.0.0') { try { _appVersion = require('./package.json').version || _appVersion; } catch {} }
 contextBridge.exposeInMainWorld('kapi', {
   appVersion: _appVersion,
   appDir: call('app:dir'),                 // โฟลเดอร์แอป — ใช้หาไฟล์ภาษา/ทรัพยากรที่มากับโปรแกรม (preload sandbox ไม่มี __dirname)
+  // [alpha.76] ไฟล์ภาษา CSV — langSync เป็น **synchronous** ตั้งใจ: ต้องได้ตารางคำแปล
+  // ก่อน bundle.js เริ่ม import โมดูล ไม่งั้นค่าคงที่ระดับโมดูลค้างเป็นภาษาเดิม (ดูหัวไฟล์ src/i18n.js)
+  langSync: (want) => ipcRenderer.sendSync('lang:sync', want),
+  langList: call('lang:list'), langRead: call('lang:read'), langDirs: call('lang:dirs'),
+  langSet: call('lang:set'),               // บอก main ให้สร้างเมนู OS ใหม่ตามภาษาที่เลือก
+  langReload: call('lang:reload'),         // ทิ้งแคชไฟล์ภาษาใน main (ผู้ใช้แก้ CSV นอกโปรแกรม)
+  openExternal: call('shell:openExternal'),// เปิดลิงก์ในเบราว์เซอร์ของเครื่อง (เครดิตในกล่อง "เกี่ยวกับ")
   readFile: call('fs:readFile'), writeFile: callW('fs:writeFile'),
   readJson: call('fs:readJson'), exists: call('fs:exists'), listDirs: call('fs:listDirs'),
   listFiles: call('fs:listFiles'), mkdir: call('fs:mkdir'), move: callW('fs:move'), remove: callW('fs:remove'), isDir: call('fs:isDir'), mtime: call('fs:mtime'),

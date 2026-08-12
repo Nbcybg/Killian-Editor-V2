@@ -6,6 +6,7 @@
 //
 // ส่วนบริสุทธิ์ทั้งหมด ยกเว้น `scanUsage()` ที่รับ `api` (kapi) เข้ามา
 
+import { T } from '../i18n.js';
 /** `![alt](path)` — ไม่จับ `\!` ที่ถูก escape */
 const MD_IMG = /!\[([^\]]*)\]\(\s*<?([^)>\s]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
 const HTML_IMG = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
@@ -75,10 +76,10 @@ export function usageOf(index, file) {
 /** ข้อความสรุป "ใช้ใน: ฉากที่ 3, ฉากที่ 7" (จำกัดจำนวนที่แสดง) */
 export function usageLabel(index, file, max = 3) {
   const rows = usageOf(index, file);
-  if (!rows.length) return 'ยังไม่ถูกใช้';
+  if (!rows.length) return T`ยังไม่ถูกใช้`;
   const names = [...new Set(rows.map((r) => r.title))];
   const head = names.slice(0, max).join(', ');
-  return 'ใช้ใน: ' + head + (names.length > max ? ` +อีก ${names.length - max}` : '');
+  return T`ใช้ใน: ` + head + (names.length > max ? T` +อีก ${names.length - max}` : '');
 }
 
 /** ติดฟิลด์ `uses`/`usedIn` ให้รายการรูป (ตัวกรอง/ตัวเรียงใช้ต่อ) */
@@ -90,9 +91,9 @@ export function unusedImages(items) { return (items || []).filter((i) => !(i.use
 export function usedImages(items) { return (items || []).filter((i) => i.uses > 0); }
 
 export const USE_FILTERS = [
-  { key: 'all',    label: 'ทั้งหมด' },
-  { key: 'used',   label: 'ใช้แล้ว' },
-  { key: 'unused', label: 'ยังไม่ถูกใช้' },
+  { key: 'all',    label: T`ทั้งหมด` },
+  { key: 'used',   label: T`ใช้แล้ว` },
+  { key: 'unused', label: T`ยังไม่ถูกใช้` },
 ];
 
 export function filterByUsage(items, mode) {

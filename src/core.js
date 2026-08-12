@@ -176,7 +176,7 @@ window.addEventListener('error', (e) => {
   if (!t || t === window || !t.tagName) return;
   const src = t.src || t.href || '';
   if (!src) return;
-  log('warn', 'resource: โหลดไม่สำเร็จ <' + String(t.tagName).toLowerCase() + '>', src);
+  log('warn', T`resource: โหลดไม่สำเร็จ <` + String(t.tagName).toLowerCase() + '>', src);
 }, true);
 // [alpha.72 ข้อ 5] console.error/warn ที่โมดูลอื่นเรียกตรง ๆ เคยหายไปจากแผงบันทึกทั้งหมด
 // (เช่น `console.error('SN refresh error:', ...)` ใน network.js) → ห่อให้ไหลเข้า log ด้วย
@@ -188,7 +188,7 @@ for (const lv of ['error', 'warn']) {
       const first = args.find((a) => typeof a === 'string');
       const errArg = args.find((a) => a instanceof Error);
       const rest = args.filter((a) => a !== first);
-      logStore.push(lv, 'console: ' + (first || '(ไม่มีข้อความ)'),
+      logStore.push(lv, 'console: ' + (first || T`(ไม่มีข้อความ)`),
                     errArg || (rest.length ? rest : undefined), new Date().toISOString());
       for (const fn of logSubs) { try { fn(null); } catch {} }
     } catch {}
@@ -383,6 +383,14 @@ export const STATUS_COLORS = {
   'ตรวจแล้ว': '#6fae6f', 'เก็บถาวร': '#a97fd0',
 };
 export const DEFAULT_STATUS_COLOR = '#8a8f98';
+/**
+ * [alpha.76] ป้ายสำหรับ "ค่าที่เก็บในไฟล์งาน" (สถานะฉาก · ชื่อสี · ชนิดความสัมพันธ์ · แท็ก)
+ *
+ * ค่าพวกนี้แปลตรง ๆ ไม่ได้ — มันถูกเขียนลง scenes.json/Wiki แล้วอ่านกลับ ถ้าเปลี่ยนตามภาษา
+ * ไฟล์เก่าจะอ่านไม่ออกทันที **จึงเก็บเป็นภาษาไทยเสมอ แล้วแปลตอนแสดงผลเท่านั้น**
+ * ผู้แปลใส่คำแปลใน CSV โดยใช้ค่าไทยเป็นคีย์ได้เลย (ไม่ใส่ = โชว์ค่าเดิม)
+ */
+export function dataLabel(v) { return v == null || v === '' ? '' : tm(String(v)); }
 export const BUILTIN_CATS = ['characters', 'locations', 'items', 'lore'];
 export const CAT_ICON = { characters: 'user', locations: 'map', items: 'briefcase', lore: 'bookmark' };
 // ตัวแปลงตัวเลขที่ปลอดภัยกับค่า 0 (กฎ 20) — แหล่งความจริงเดียวของทั้งโปรเจกต์
@@ -406,7 +414,24 @@ export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, def
          withLangFamily, applyLangFonts } from './lang-fonts.js';
 
 // ---- ระบบภาษา (i18n) ----
+// เอนจินจริงอยู่ `src/i18n.js` (บริสุทธิ์ · โมดูลที่ import core ไม่ได้ก็ใช้ได้) — ตรงนี้เหลือแค่
+// ส่วนที่ต้องแตะ DOM/kapi: โหลดไฟล์, applyDataI18n, ฮุกอัปเดต UI
+import { T, tm, tKey, lookup as i18nLookup, setTable, fillTable, csvToTable, tableToCsv,
+         langInfo, langCatalog, setCatalog, langCodeFromFile, langFileName, fallbackLangName,
+         getTable, formatMsg, makeMsgid, LANG_LS_KEY } from './i18n.js';
+import { unflatten } from './i18n-csv.js';
+export { T, tm, tableToCsv, csvToTable, langInfo, langCodeFromFile, langFileName, fallbackLangName,
+         formatMsg, makeMsgid, LANG_LS_KEY };
+/** รายชื่อภาษาที่สแกนเจอ (อ่านจาก **ชื่อไฟล์** k2_*.csv) */
+export function languageCatalog() { return langCatalog; }
+
 export const i18n = { lang: 'en', strings: {}, fallback: null, available: ['en'] };
+// ตาราง CSV ถูกโหลดไปแล้วแบบ sync ตอน import src/i18n.js — เก็บผลนั้นเข้า i18n ให้โค้ดเดิมเห็นตรงกัน
+if (langInfo.code) {
+  i18n.lang = langInfo.code;
+  i18n.available = langCatalog.length ? langCatalog.map((l) => l.code) : [langInfo.code];
+  syncNestedStrings();
+}
 
 // ฮุก: หลังจากเปลี่ยนภาษาเสร็จ → ให้โมดูลอื่นลงทะเบียน callback (ex. applyToolbarShortcutTitles)
 const langHooks = [];
@@ -454,20 +479,14 @@ const BUILTIN_EN = {
   }
 };
 
-// แปลง dot-path (ex. "ui.toolbar.bold") → หาค่าใน i18n.strings โดยมี fallback เป็น BUILTIN_EN
+// แปลง dot-path (ex. "ui.toolbar.bold") → หาในตารางคำแปล โดยมี fallback เป็น BUILTIN_EN
 export function t(key, fallback) {
   if (typeof key !== 'string' || !key) return fallback || '';   // กัน key undefined (ex. SHORTCUT_LABELS ไม่มีคีย์)
-  const src = i18n.strings?.ui || BUILTIN_EN.ui;
-  let v = src;
-  const parts = key.split('.');
-  for (const p of parts) {
-    if (v && typeof v === 'object') v = v[p];
-    else { v = undefined; break; }
-  }
-  if (v != null && typeof v === 'string' && v.length) return v;
+  const v = i18nLookup(key);
+  if (v != null) return v;
   // fallback ใน BUILTIN_EN
   let fb = BUILTIN_EN.ui;
-  for (const p of parts) {
+  for (const p of key.split('.')) {
     if (fb && typeof fb === 'object') fb = fb[p];
     else { fb = undefined; break; }
   }
@@ -475,7 +494,7 @@ export function t(key, fallback) {
   return fallback || key;
 }
 
-// ลำดับที่ค้นหาไฟล์ภาษา: โปรเจกต์ (ผู้ใช้แก้เองได้) → ที่มากับโปรแกรม (appDir)
+// ลำดับที่ค้นหาไฟล์ภาษาแบบเก่า (.json) — เก็บไว้อ่านโปรเจกต์เดิมที่ผู้ใช้เคยแปลไว้เอง
 async function langCandidates(lang, root) {
   const out = [];
   if (typeof kapi === 'undefined') return out;
@@ -489,34 +508,73 @@ async function langCandidates(lang, root) {
   return out;
 }
 
-// โหลดไฟล์ภาษา: โปรเจกต์ → ไฟล์ที่มากับโปรแกรม → ถ้าไม่มีเลย ใช้ built-in EN
-export async function loadLanguage(lang, root) {
-  i18n.lang = lang || 'en';
-  i18n.strings = {};
+/**
+ * อัปเดต i18n.strings (รูปซ้อนแบบเดิม) ให้โค้ดเก่าที่อ่านตรง ๆ ยังใช้ได้
+ * เอาเฉพาะคีย์ที่เป็น dot-path จริง ๆ — คีย์แบบ msgid (ประโยคไทย) ไม่ต้องแตกเป็นต้นไม้
+ */
+function syncNestedStrings() {
   try {
-    for (const langPath of await langCandidates(i18n.lang, root)) {
-      if (await kapi.exists(langPath)) {
-        i18n.strings = await kapi.readJson(langPath);
-        i18n.available = [i18n.lang];
-        applyDataI18n();
-        for (const fn of langHooks) fn();
-        return true;
+    const flat = getTable(), pick = {};
+    for (const k of Object.keys(flat)) if (/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/.test(k)) pick[k] = flat[k];
+    i18n.strings = unflatten(pick);
+  } catch { i18n.strings = {}; }
+}
+
+/** สแกนภาษาที่มีในเครื่อง (อ่านรหัสจากชื่อไฟล์ k2_*.csv) แล้วอัปเดตทะเบียน */
+export async function scanLanguages(root) {
+  try {
+    if (typeof kapi !== 'undefined' && kapi.langList) {
+      const list = await kapi.langList(root || '');
+      if (Array.isArray(list) && list.length) {
+        setCatalog(list);
+        i18n.available = list.map((l) => l.code);
+        return list;
       }
     }
   } catch {}
-  // ถ้า lang==='en' → BUILTIN_EN ก็พอ (ไม่ต้องอ่านไฟล์ก็ได้)
-  if (lang === 'en') {
-    i18n.strings = {};
-    i18n.available = ['en'];
-    applyDataI18n();
-    for (const fn of langHooks) fn();
-    return true;
+  return langCatalog;
+}
+
+// โหลดไฟล์ภาษา: CSV (k2_<code>.csv ทุกชั้น) → ถ้าไม่มีเลยลอง .json แบบเก่า → ท้ายสุด built-in EN
+export async function loadLanguage(lang, root) {
+  i18n.lang = lang || 'en';
+  let ok = false;
+  try {
+    if (typeof kapi !== 'undefined' && kapi.langRead) {
+      const csv = await kapi.langRead(i18n.lang, root || '');
+      if (csv && csv.trim()) { setTable(csvToTable(csv), i18n.lang); ok = true; }
+    }
+  } catch {}
+  // ---- ของเดิม: ไฟล์ .json (โปรเจกต์เก่า) — เอามาเติมคีย์ที่ CSV ไม่มี ----
+  try {
+    for (const langPath of await langCandidates(i18n.lang, root)) {
+      if (await kapi.exists(langPath)) {
+        const json = await kapi.readJson(langPath);
+        const flat = {};
+        (function walk(o, p) {
+          for (const k of Object.keys(o || {})) {
+            const v = o[k], key = p ? p + '.' + k : k;
+            if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, key);
+            else if (typeof v === 'string') flat[key] = v;
+          }
+        })(json, '');
+        if (ok) fillTable(flat); else { setTable(flat, i18n.lang); ok = true; }
+        break;
+      }
+    }
+  } catch {}
+  if (!ok) {
+    // ไม่มีไฟล์ภาษาเลย — en ใช้ BUILTIN_EN ได้ · ภาษาอื่นเตือนแล้วตกกลับ
+    if (i18n.lang !== 'en') setStatus(tm(T`ไม่พบภาษา "{0}" ใช้ภาษาอังกฤษแทน`, i18n.lang));
+    setTable({}, 'en');
+    i18n.lang = 'en';
   }
-  // lang อื่น แต่ไม่มีไฟล์ → fallback en
-  setStatus('ไม่พบภาษา "' + lang + '" ใช้ภาษาอังกฤษแทน');
-  i18n.strings = {};
-  i18n.available = ['en'];
+  try { await scanLanguages(root); } catch {}
+  if (!i18n.available.length) i18n.available = [i18n.lang];
+  try { globalThis.localStorage?.setItem(LANG_LS_KEY, i18n.lang); } catch {}
+  syncNestedStrings();
   applyDataI18n();
+  for (const fn of langHooks) fn();
   return true;
 }
 

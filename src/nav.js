@@ -5,6 +5,7 @@
 // กติกาสถานะฉากในโปรเจกต์นี้: เก็บเป็นคำไทย ('โครงร่าง'/'กำลังเขียน'/'เขียนเสร็จ'/'ตรวจแล้ว')
 // ค่าว่าง = 'Outline' (ยังไม่ตั้ง) — statusLabel() แปลงให้เป็น '' เพื่อไม่โชว์
 
+import { T } from './i18n.js';
 export function statusLabel(status) {
   return (status && status !== 'Outline') ? status : '';
 }
@@ -65,7 +66,7 @@ export function buildNavigation(scenes, opts = {}) {
   (scenes || []).forEach((sc) => {
     nodes.push({
       kind: 'scene', level: 0, id: sc.id, sceneId: sc.id,
-      label: sc.title || '(ไม่มีชื่อ)',
+      label: sc.title || T`(ไม่มีชื่อ)`,
       status: statusLabel(sc.status), color: sc.color || sc.colorTag || '',
       wordCount: sc.wordCount || 0, flag: !!sc.flag,
     });

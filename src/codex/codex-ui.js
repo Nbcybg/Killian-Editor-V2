@@ -4,6 +4,7 @@
 // (แผง Wiki = แก้ทีละหน้า · Codex = เห็นทั้งเล่ม เรียกดูตามหมวด แล้วส่งออกเป็นเว็บทั้งชุด)
 //
 // ตัวสร้างเว็บอยู่ใน codex-build.js (บริสุทธิ์ · มี unit test) — ไฟล์นี้มีแต่เรื่องหน้าจอกับไฟล์
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import { listEntities } from '../project-scan.js';
 import * as CB from './codex-build.js';
@@ -31,7 +32,7 @@ async function collectMentions(ents) {
       const names = links.map((l) => l.title || l.name || l.scene || '').filter(Boolean);
       if (names.length) out[e.path] = names;
     }
-  } catch (err) { log('warn', 'codex: อ่านดัชนีการกล่าวถึงไม่ได้', err); }
+  } catch (err) { log('warn', T`codex: อ่านดัชนีการกล่าวถึงไม่ได้`, err); }
   return out;
 }
 
@@ -43,10 +44,10 @@ export async function renderCodexPanel(host) {
   h.classList.add('k-codex');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-codex-empty', 'เปิดโปรเจกต์ก่อนจึงจะมีสารานุกรม'));
+    h.append(el('div', 'dim k-codex-empty', T`เปิดโปรเจกต์ก่อนจึงจะมีสารานุกรม`));
     return true;
   }
-  h.append(el('div', 'dim k-codex-empty', 'กำลังอ่านเอนทิตี้…'));
+  h.append(el('div', 'dim k-codex-empty', T`กำลังอ่านเอนทิตี้…`));
   const ents = await listEntities(state.root);
   s.ents = ents;
   h.replaceChildren();
@@ -58,18 +59,18 @@ export async function renderCodexPanel(host) {
   // ── แถบเครื่องมือ ──
   const bar = el('div', 'k-codex-bar');
   const q = el('input', 'k-codex-q'); q.type = 'search';
-  q.placeholder = `ค้นในสารานุกรม… (${stats.total} รายการ)`;
+  q.placeholder = T`ค้นในสารานุกรม… (${stats.total} รายการ)`;
   q.value = s.q;
   q.oninput = () => { s.q = q.value; draw(); };
   const catSel = el('select', 'k-codex-cat');
-  const all = el('option', null, 'ทุกหมวด'); all.value = ''; catSel.append(all);
+  const all = el('option', null, T`ทุกหมวด`); all.value = ''; catSel.append(all);
   for (const c of cats) {
     const o = el('option', null, CB.catLabel(c, labels) + ` (${stats.byCat[c]})`); o.value = c; catSel.append(o);
   }
   catSel.value = s.cat;
   catSel.onchange = () => { s.cat = catSel.value; draw(); };
-  const expBtn = el('button', 'k-codex-exp', '🌐 ส่งออกเป็นเว็บ');
-  expBtn.title = 'สร้างเว็บสารานุกรมแบบ Fandom/Wikia (เปิดออฟไลน์ได้ ไม่ต้องต่อเน็ต)';
+  const expBtn = el('button', 'k-codex-exp', T`🌐 ส่งออกเป็นเว็บ`);
+  expBtn.title = T`สร้างเว็บสารานุกรมแบบ Fandom/Wikia (เปิดออฟไลน์ได้ ไม่ต้องต่อเน็ต)`;
   expBtn.onclick = exportSite;
   bar.append(q, catSel, expBtn);
   h.append(bar);
@@ -90,7 +91,7 @@ export async function renderCodexPanel(host) {
     grid.replaceChildren();
     if (!rows.length) {
       grid.append(el('div', 'dim k-codex-empty',
-        ents.length ? '(ไม่พบรายการที่ตรงกับที่ค้น)' : '(ยังไม่มีเอนทิตี้ใน Wiki — สร้างจากแผงโปรเจกต์)'));
+        ents.length ? T`(ไม่พบรายการที่ตรงกับที่ค้น)` : T`(ยังไม่มีเอนทิตี้ใน Wiki — สร้างจากแผงโปรเจกต์)`));
       return;
     }
     for (const e of rows) {
@@ -102,7 +103,7 @@ export async function renderCodexPanel(host) {
       c.onclick = () => { s.sel = e.path; draw(); showPreview(e); };
       c.ondblclick = async () => {
         try { const { openEntity } = await import('../wiki-ui.js'); openEntity(e.path); }
-        catch { setStatus('เปิดหน้า Wiki ไม่สำเร็จ'); }
+        catch { setStatus(T`เปิดหน้า Wiki ไม่สำเร็จ`); }
       };
       grid.append(c);
     }
@@ -122,32 +123,32 @@ export async function renderCodexPanel(host) {
       prev.append(tb);
     }
     const bodyText = ent.body || ent.description || ent.desc || '';
-    prev.append(el('div', 'k-codex-prev-body', bodyText || '(ยังไม่มีคำอธิบาย)'));
-    const open = el('button', null, '📖 เปิดหน้า Wiki');
+    prev.append(el('div', 'k-codex-prev-body', bodyText || T`(ยังไม่มีคำอธิบาย)`));
+    const open = el('button', null, T`📖 เปิดหน้า Wiki`);
     open.onclick = async () => {
       try { const { openEntity } = await import('../wiki-ui.js'); openEntity(e.path); }
-      catch { setStatus('เปิดหน้า Wiki ไม่สำเร็จ'); }
+      catch { setStatus(T`เปิดหน้า Wiki ไม่สำเร็จ`); }
     };
     prev.append(open);
   }
 
   async function exportSite() {
-    if (!ents.length) { setStatus('ยังไม่มีเอนทิตี้ให้ส่งออก'); return; }
+    if (!ents.length) { setStatus(T`ยังไม่มีเอนทิตี้ให้ส่งออก`); return; }
     const dir = await kapi.openDirDialog();
     if (!dir) return;
-    setStatus('กำลังสร้างเว็บสารานุกรม…');
+    setStatus(T`กำลังสร้างเว็บสารานุกรม…`);
     try {
       const mentions = await collectMentions(ents);
       const files = CB.buildCodexSite(ents, { siteTitle: state.title || 'Codex', labels, mentions });
       const out = await kapi.join(dir, 'codex');
       await kapi.mkdir(out);
       for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
-      setStatus(`ส่งออกเว็บสารานุกรมแล้ว ${files.length} หน้า → ${out}`);
-      log('info', 'codex: ส่งออกเว็บ ' + files.length + ' หน้า → ' + out);
+      setStatus(T`ส่งออกเว็บสารานุกรมแล้ว ${files.length} หน้า → ${out}`);
+      log('info', T`codex: ส่งออกเว็บ ` + files.length + T` หน้า → ` + out);
       try { await kapi.revealInOS(await kapi.join(out, 'index.html')); } catch {}
     } catch (e) {
-      log('error', 'codex: ส่งออกไม่สำเร็จ', e);
-      setStatus('ส่งออกไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+      log('error', T`codex: ส่งออกไม่สำเร็จ`, e);
+      setStatus(T`ส่งออกไม่สำเร็จ: ` + (e && e.message ? e.message : e));
     }
   }
 

@@ -10,14 +10,15 @@
 //
 // หน่วยทั้งไฟล์เป็น "นิ้ว" (in) เหมือนอุตสาหกรรมบท — CSS ใช้ `in` ได้ตรง ๆ
 
+import { T } from './i18n.js';
 import { num } from './num.js';
 
 // ───────── 85. ขนาดกระดาษ + ระยะขอบ ─────────
 export const PAPER_SIZES = {
-  letter: { name: 'Letter (8.5 × 11 นิ้ว)', width: 8.5,  height: 11,    unit: 'in' },
-  a4:     { name: 'A4 (8.27 × 11.69 นิ้ว)', width: 8.27, height: 11.69, unit: 'in' },
-  legal:  { name: 'Legal (8.5 × 14 นิ้ว)',  width: 8.5,  height: 14,    unit: 'in' },
-  custom: { name: 'กำหนดเอง',                width: 8.5,  height: 11,    unit: 'in' },
+  letter: { name: T`Letter (8.5 × 11 นิ้ว)`, width: 8.5,  height: 11,    unit: 'in' },
+  a4:     { name: T`A4 (8.27 × 11.69 นิ้ว)`, width: 8.27, height: 11.69, unit: 'in' },
+  legal:  { name: T`Legal (8.5 × 14 นิ้ว)`,  width: 8.5,  height: 14,    unit: 'in' },
+  custom: { name: T`กำหนดเอง`,                width: 8.5,  height: 11,    unit: 'in' },
 };
 export const MARGIN_DEFAULTS = { top: 1, bottom: 1, left: 1.5, right: 1 };
 
@@ -178,7 +179,7 @@ export const SP_STRINGS = {
   continuedTop: 'CONTINUED:',
   dialogueMore: '(MORE)',
   dialogueContd: "(cont'd)",
-  sceneContinued: 'ต่อ',
+  sceneContinued: T`ต่อ`,
   castTitle: 'Cast of Characters',
   sceneTitle: 'Scene',
   timeTitle: 'Time',

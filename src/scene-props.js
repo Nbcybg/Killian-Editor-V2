@@ -1,6 +1,7 @@
 // scene-props.js — แผงคุณสมบัติฉาก (สถานะ/สี/ปักหมุด/ล็อก/futureNote)
+import { T } from './i18n.js';
 import { buildTree, guid, updatePageNumberHint, refreshSpView } from './app.js';
-import { SCENE_COLORS, SCENE_STATUSES, el, setStatus, state } from './core.js';
+import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state } from './core.js';
 import { allStatuses } from './custom-status.js';
 import * as spell from './spell.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติฉากอยู่ใน frontmatter ของ .md เป็นหลัก — scenes.json เป็นดัชนี/แคช
@@ -21,7 +22,7 @@ export async function sceneProps(dPath, ch, sc) {
   const M = await readSceneMeta(file, row);
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', 'คุณสมบัติฉาก — ' + row.title));
+  box.append(el('div', 'k-dlg-title', T`คุณสมบัติฉาก — ` + row.title));
   // mk คืน <input> เหมือนเดิม แต่จำแถวไว้ให้ปุ่ม ✨ มาแปะทีหลังได้
   const rowOf = new Map();
   const mk = (label, val, tag = 'input') => {
@@ -51,34 +52,34 @@ export async function sceneProps(dPath, ch, sc) {
     r.append(c); box.append(r); return c;
   };
 
-  const iSyn = mk('เรื่องย่อ', M.synopsis, 'textarea');
-  const iStoryDate = mk('เวลาในเรื่อง (เส้นเวลา)', M.storyDate);
-  iStoryDate.placeholder = 'เช่น วันที่ 3 · ปีที่ 1024 · เช้าวันจันทร์';
+  const iSyn = mk(T`เรื่องย่อ`, M.synopsis, 'textarea');
+  const iStoryDate = mk(T`เวลาในเรื่อง (เส้นเวลา)`, M.storyDate);
+  iStoryDate.placeholder = T`เช่น วันที่ 3 · ปีที่ 1024 · เช้าวันจันทร์`;
   // [alpha.57a ข้อ 2] เลขหน้าเริ่มต้นของไฟล์ฉากนี้ — เลขหน้าบนกระดาษนับต่อจากค่านี้
-  const iStartPage = mk('เลขหน้าเริ่มต้น (บทภาพยนตร์)', row.startPage || '');
+  const iStartPage = mk(T`เลขหน้าเริ่มต้น (บทภาพยนตร์)`, row.startPage || '');
   iStartPage.type = 'number'; iStartPage.min = '1';
-  iStartPage.placeholder = '1 — ใช้เมื่อเปิด "เลขหน้า" ในตั้งค่าโปรเจกต์';
-  const iPov = mk('มุมมอง (POV)', M.pov);
-  const iEmotion = mk('อารมณ์', M.emotion);
-  const iConflict = mk('ความขัดแย้ง', M.conflict);
-  const iStatus = mkSelect('สถานะ',
-    [['Outline', '— ยังไม่ตั้ง —'], ...allStatuses().map((s) => [s, s])],
+  iStartPage.placeholder = T`1 — ใช้เมื่อเปิด "เลขหน้า" ในตั้งค่าโปรเจกต์`;
+  const iPov = mk(T`มุมมอง (POV)`, M.pov);
+  const iEmotion = mk(T`อารมณ์`, M.emotion);
+  const iConflict = mk(T`ความขัดแย้ง`, M.conflict);
+  const iStatus = mkSelect(T`สถานะ`,
+    [['Outline', T`— ยังไม่ตั้ง —`], ...allStatuses().map((s) => [s, dataLabel(s)])],
     allStatuses().includes(row.status) ? row.status : 'Outline');
-  const iColor = mkSelect('สี',
-    [['', '— ไม่มี —'], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + n])], row.color || '');
-  const iFlag = mkCheck('ปักหมุด', row.flag);
-  const iTags = mk('แท็ก (คั่น , )', (M.tags || []).join(', '));
-  const iNote = mk('โน้ต', M.note, 'textarea');
-  const iFuture = mk('Future Note (หมายเหตุนักเขียน)', M.futureNote || '', 'textarea');
-  iFuture.placeholder = 'โน้ตสำหรับนักเขียน — แสดงเฉพาะที่นี่และ Planner ไม่แสดงในฉากปกติ';
+  const iColor = mkSelect(T`สี`,
+    [['', T`— ไม่มี —`], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + dataLabel(n)])], row.color || '');
+  const iFlag = mkCheck(T`ปักหมุด`, row.flag);
+  const iTags = mk(T`แท็ก (คั่น , )`, (M.tags || []).join(', '));
+  const iNote = mk(T`โน้ต`, M.note, 'textarea');
+  const iFuture = mk(T`Future Note (หมายเหตุนักเขียน)`, M.futureNote || '', 'textarea');
+  iFuture.placeholder = T`โน้ตสำหรับนักเขียน — แสดงเฉพาะที่นี่และ Planner ไม่แสดงในฉากปกติ`;
   // [alpha.70 ข้อ 1] ปุ่ม "ดูบนแผนที่" — เดิมปักตำแหน่งฉากได้แต่ไม่มีทางกระโดดกลับไปดู
   // (import แบบไดนามิก: maps-ui → app.js → scene-props เป็นวง ถ้า import ตรง ๆ ตอนโหลดโมดูล)
   { const slot = el('div', 'props-mapslot'); box.append(slot);
     import('./maps-ui.js').then(({ buildShowOnMapRow }) => buildShowOnMapRow(row))
       .then((r) => slot.replaceWith(r)).catch(() => slot.remove()); }
   // ป้ายเล่าเรื่อง (Narrative Markers) — ฉากนี้อยู่นอกลำดับเวลาหลัก
-  const iFb = mkCheck('⏪ ย้อนอดีต (Flashback)', M.isFlashback);
-  const iFf = mkCheck('⏩ ล่วงหน้า (Flashforward)', M.isFlashforward);
+  const iFb = mkCheck(T`⏪ ย้อนอดีต (Flashback)`, M.isFlashback);
+  const iFf = mkCheck(T`⏩ ล่วงหน้า (Flashforward)`, M.isFlashforward);
   // เลือกได้อย่างละหนึ่ง — ติ๊กตัวหนึ่งแล้วอีกตัวหลุดเอง
   iFb.addEventListener('change', () => { if (iFb.checked) iFf.checked = false; });
   iFf.addEventListener('change', () => { if (iFf.checked) iFb.checked = false; });
@@ -95,8 +96,8 @@ export async function sceneProps(dPath, ch, sc) {
   attachAiFieldButton(rowOf.get(iConflict), iConflict, 'conflict', aiCtx);
 
   const btns = el('div', 'k-dlg-btns');
-  const cB = el('button', null, 'ยกเลิก');
-  const okB = el('button', 'k-ok', 'บันทึก');
+  const cB = el('button', null, T`ยกเลิก`);
+  const okB = el('button', 'k-ok', T`บันทึก`);
   btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
   cB.onclick = () => ov.remove();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
@@ -121,6 +122,6 @@ export async function sceneProps(dPath, ch, sc) {
     // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
     const openTab = state.tabs.get(file);
     if (openTab) { openTab.startPage = row.startPage || 1; updatePageNumberHint(); refreshSpView(); }
-    ov.remove(); setStatus('บันทึกคุณสมบัติฉากแล้ว');
+    ov.remove(); setStatus(T`บันทึกคุณสมบัติฉากแล้ว`);
   };
 }

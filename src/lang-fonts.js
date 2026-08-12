@@ -9,29 +9,30 @@
 // ส่วนคำนวณทั้งหมดบริสุทธิ์ (ทดสอบด้วย node ได้ — test/lang-fonts.test.cjs)
 // ส่วนที่แตะ DOM มีแค่ applyLangFonts() ตัวเดียว
 
+import { T } from './i18n.js';
 /** ชื่อวงศ์ที่สร้างขึ้น — ต้องมาก่อนฟอนต์อื่นใน font stack เสมอ */
 export const LANG_FAMILY = 'K2 Lang';
 
 /** ช่วงอักขระสำเร็จรูป — ผู้ใช้เลือกจากรายการนี้ หรือพิมพ์ช่วงเองก็ได้ */
 export const SCRIPT_PRESETS = [
-  { key: 'thai',    label: 'ไทย',            range: 'U+0E00-0E7F' },
-  { key: 'latin',   label: 'ละติน (อังกฤษ)', range: 'U+0000-024F, U+2000-206F' },
-  { key: 'lao',     label: 'ลาว',            range: 'U+0E80-0EFF' },
-  { key: 'khmer',   label: 'เขมร',           range: 'U+1780-17FF' },
-  { key: 'myanmar', label: 'พม่า',           range: 'U+1000-109F' },
-  { key: 'cjk',     label: 'จีน/ญี่ปุ่น (คันจิ)', range: 'U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF' },
-  { key: 'hangul',  label: 'เกาหลี',          range: 'U+1100-11FF, U+AC00-D7AF' },
-  { key: 'cyrillic', label: 'ซีริลลิก',       range: 'U+0400-04FF' },
-  { key: 'arabic',  label: 'อาหรับ',          range: 'U+0600-06FF' },
-  { key: 'devanagari', label: 'เทวนาครี',     range: 'U+0900-097F' },
-  { key: 'all',     label: 'ทุกอักขระ',       range: '' },
+  { key: 'thai',    label: T`ไทย`,            range: 'U+0E00-0E7F' },
+  { key: 'latin',   label: T`ละติน (อังกฤษ)`, range: 'U+0000-024F, U+2000-206F' },
+  { key: 'lao',     label: T`ลาว`,            range: 'U+0E80-0EFF' },
+  { key: 'khmer',   label: T`เขมร`,           range: 'U+1780-17FF' },
+  { key: 'myanmar', label: T`พม่า`,           range: 'U+1000-109F' },
+  { key: 'cjk',     label: T`จีน/ญี่ปุ่น (คันจิ)`, range: 'U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF' },
+  { key: 'hangul',  label: T`เกาหลี`,          range: 'U+1100-11FF, U+AC00-D7AF' },
+  { key: 'cyrillic', label: T`ซีริลลิก`,       range: 'U+0400-04FF' },
+  { key: 'arabic',  label: T`อาหรับ`,          range: 'U+0600-06FF' },
+  { key: 'devanagari', label: T`เทวนาครี`,     range: 'U+0900-097F' },
+  { key: 'all',     label: T`ทุกอักขระ`,       range: '' },
 ];
 
 /** ฟอนต์ที่ฝังมากับโปรแกรม — เลือกได้ทันทีโดยไม่ต้องลงเครื่อง */
 export const BUILTIN_FONT_FILES = [
-  { file: 'CourierPrime-Regular.ttf',  label: 'Courier Prime (ละติน · มาตรฐานบท)' },
-  { file: 'CourierThaiMono.ttf',       label: 'Courier Thai Mono (ไทย · ความกว้างเท่ากันทุกตัว)' },
-  { file: 'CourierThaiProp.ttf',       label: 'Courier Thai Proportional (ไทย · ความกว้างตามตัวอักษร)' },
+  { file: 'CourierPrime-Regular.ttf',  label: T`Courier Prime (ละติน · มาตรฐานบท)` },
+  { file: 'CourierThaiMono.ttf',       label: T`Courier Thai Mono (ไทย · ความกว้างเท่ากันทุกตัว)` },
+  { file: 'CourierThaiProp.ttf',       label: T`Courier Thai Proportional (ไทย · ความกว้างตามตัวอักษร)` },
 ];
 
 /**
@@ -40,16 +41,16 @@ export const BUILTIN_FONT_FILES = [
  * Ayuthaya = ฟอนต์ระบบของ macOS · Leelawadee UI = ของ Windows
  */
 export const SYSTEM_THAI_FONTS = [
-  { family: 'Ayuthaya',       label: 'Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)' },
+  { family: 'Ayuthaya',       label: T`Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)` },
   { family: 'Thonburi',       label: 'Thonburi (macOS)' },
   { family: 'Leelawadee UI',  label: 'Leelawadee UI (Windows)' },
-  { family: 'TH Sarabun New', label: 'TH Sarabun New (ราชการไทย)' },
+  { family: 'TH Sarabun New', label: T`TH Sarabun New (ราชการไทย)` },
 ];
 
 /** รายการเริ่มต้น: ไทยใช้ Courier Thai Mono ที่ฝังมา · นอกนั้นปล่อยตาม font stack เดิม */
 export function defaultLangFonts() {
   return [
-    { id: 'thai', label: 'ไทย', range: 'U+0E00-0E7F',
+    { id: 'thai', label: T`ไทย`, range: 'U+0E00-0E7F',
       builtin: 'CourierThaiMono.ttf', family: '', file: '', enabled: false },
   ];
 }

@@ -1,6 +1,7 @@
 // thesaurus.js — คำพ้อง/คำตรงข้าม (Datamuse API — รองรับเฉพาะภาษาอังกฤษ)
 // ข้อจำกัดที่ต้องพูดตรง ๆ: ไม่มีคลังคำพ้องภาษาไทยฟรีที่ใช้ได้ → คำไทยจะไม่เปิดเมนูนี้
 //   และเป็นการส่งคำที่ผู้ใช้เลือกออกอินเทอร์เน็ต → ค่าเริ่มต้น "ปิด" เปิดเองได้ที่ settings.thesaurus
+import { T } from './i18n.js';
 import { el, setStatus, state, log } from './core.js';
 
 const EN_WORD = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
@@ -14,12 +15,12 @@ async function fetchThesaurus(word, rel = 'ml') {
     const res = await kapi.httpFetch(url, { method: 'GET' });
     if (!res || !res.ok) return [];
     return JSON.parse(res.body).map((d) => d.word).filter((w) => w !== word);
-  } catch (e) { log('warn', 'thesaurus: ค้นไม่สำเร็จ', e); return []; }
+  } catch (e) { log('warn', T`thesaurus: ค้นไม่สำเร็จ`, e); return []; }
 }
 
 export async function showThesaurus(word, x, y) {
   if (!word) return null;
-  setStatus('กำลังค้นคำพ้องของ: ' + word);
+  setStatus(T`กำลังค้นคำพ้องของ: ` + word);
 
   const ov = el('div', 'k-overlay');
   ov.style.cssText = 'background:transparent';
@@ -42,12 +43,12 @@ export async function showThesaurus(word, x, y) {
     sec.append(el('div', 'wiki-sub', label));
     const list = el('div', 'k-pick-list');
     list.style.maxHeight = '120px';
-    list.append(el('div', 'dim', 'กำลังค้น…'));
+    list.append(el('div', 'dim', T`กำลังค้น…`));
     sec.append(list);
     box.append(sec);
     const words = await fetchThesaurus(word, relCode);
     list.innerHTML = '';
-    if (!words.length) { list.append(el('div', 'dim', 'ไม่พบ')); return; }
+    if (!words.length) { list.append(el('div', 'dim', T`ไม่พบ`)); return; }
     for (const w of words) {
       const d = el('div', 'k-menu-item', w);
       d.onclick = () => replaceWith(w);
@@ -58,10 +59,10 @@ export async function showThesaurus(word, x, y) {
   ov.append(box); document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
 
-  await load('คำพ้อง (คล้าย)', 'ml');
-  await load('คำตรงข้าม', 'rel_ant');
+  await load(T`คำพ้อง (คล้าย)`, 'ml');
+  await load(T`คำตรงข้าม`, 'rel_ant');
 
-  const cB = el('button', null, '✕ ปิด'); cB.onclick = () => ov.remove();
+  const cB = el('button', null, T`✕ ปิด`); cB.onclick = () => ov.remove();
   const btns = el('div', 'k-dlg-btns'); btns.append(cB); box.append(btns);
   return ov;
 }
@@ -73,5 +74,5 @@ export function thesaurusMenuItems(x, y) {
   if (!thesaurusEnabled()) return [];
   const word = (window.getSelection()?.toString() || '').trim();
   if (!EN_WORD.test(word)) return [];
-  return [{ label: `📖 คำพ้อง/คำตรงข้าม: "${word}"`, click: () => showThesaurus(word, x, y) }];
+  return [{ label: T`📖 คำพ้อง/คำตรงข้าม: "${word}"`, click: () => showThesaurus(word, x, y) }];
 }

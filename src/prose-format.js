@@ -16,6 +16,7 @@
 //
 // บริสุทธิ์ 100% — ไม่แตะ DOM/kapi/state (ทดสอบด้วย node ได้: test/prose-format.test.cjs)
 
+import { T } from './i18n.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS, textWidth } from './sp-format.js';
 import { num } from './num.js';
 
@@ -65,7 +66,7 @@ export const PROSE_DEFAULTS = {
   headingFont: '',           // '' = เหมือนเนื้อเรื่อง
   headingColor: '',          // '' = ใช้สีของธีม
   headingNumber: false,      // [23] เติมเลขบทอัตโนมัติ
-  headingNumberFormat: 'บทที่ {n}',
+  headingNumberFormat: T`บทที่ {n}`,
   headingNumberLevel: 1,     // ใส่เลขให้หัวข้อระดับไหน
   headings: null,            // [23] null = HEADING_DEFAULTS
   quote: null,               // [24] null = QUOTE_DEFAULTS
@@ -177,7 +178,7 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
 /** ข้อความเลขบทตามรูปแบบที่ตั้ง (ใช้ {n}) */
 export function headingNumberText(fmt, n) {
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
-  return String(f.headingNumberFormat || 'บทที่ {n}').replace(/\{n\}/g, String(n));
+  return String(f.headingNumberFormat || T`บทที่ {n}`).replace(/\{n\}/g, String(n));
 }
 
 // ───────── 19. CSS ตอนส่งออก (WYSIWYG) ─────────

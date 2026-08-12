@@ -2,6 +2,7 @@
 // หลักสำคัญ 2 ข้อ:
 //  1) เรียก API ผ่าน main process (kapi.httpFetch) — fetch จาก renderer โดน CORS (origin เป็น file://)
 //  2) API key ไม่เก็บใน project.khn.json (ไฟล์ที่ตั้งใจให้ก๊อป/แชร์) → เก็บแยกที่ <root>/ai-key.json
+import { T } from './i18n.js';
 import { $, el, state, setStatus, log, withBusy } from './core.js';
 
 const KEY_FILE = 'ai-key.json';
@@ -26,7 +27,7 @@ export async function loadApiKey() {
   try {
     const p = await kapi.join(state.root, KEY_FILE);
     if (await kapi.exists(p)) { _keyCache = await kapi.readJson(p); return _keyCache.apiKey || ''; }
-  } catch (e) { log('warn', 'ai: อ่าน ai-key.json ไม่ได้', e); }
+  } catch (e) { log('warn', T`ai: อ่าน ai-key.json ไม่ได้`, e); }
   _keyCache = { apiKey: '' };
   return '';
 }
@@ -35,7 +36,7 @@ export async function saveApiKey(apiKey) {
   if (!state.root) return false;
   _keyCache = { apiKey };
   await kapi.writeFile(await kapi.join(state.root, KEY_FILE),
-                       JSON.stringify({ apiKey, note: 'ไฟล์นี้เก็บคีย์ส่วนตัว — อย่าแชร์/อย่าใส่ใน zip ที่ส่งต่อ' }, null, 2));
+                       JSON.stringify({ apiKey, note: T`ไฟล์นี้เก็บคีย์ส่วนตัว — อย่าแชร์/อย่าใส่ใน zip ที่ส่งต่อ` }, null, 2));
   return true;
 }
 
@@ -53,19 +54,19 @@ export function clearKeyCache() { _keyCache = null; }
  * @returns {Promise<{ok:boolean, why:string}>} why = เหตุผลที่ยังใช้ไม่ได้ ('' เมื่อ ok)
  */
 export async function aiConfigured() {
-  if (!state.root) return { ok: false, why: 'ยังไม่ได้เปิดโปรเจกต์' };
+  if (!state.root) return { ok: false, why: T`ยังไม่ได้เปิดโปรเจกต์` };
   const ai = getAISettings();
   // ทะเบียนใหม่ (alpha.61) มาก่อนเสมอ
   if (Array.isArray(ai.providers) && ai.providers.length) {
     const { currentProvider } = await import('./ai/ai-provider-ui.js');
     const p = await currentProvider();
-    if (!p) return { ok: false, why: 'ยังไม่ได้เลือกผู้ให้บริการ AI (ไฟล์ → ตั้งค่า AI)' };
-    if (!p.model) return { ok: false, why: 'ผู้ให้บริการ "' + p.name + '" ยังไม่ได้เลือกโมเดล (ไฟล์ → ตั้งค่า AI)' };
+    if (!p) return { ok: false, why: T`ยังไม่ได้เลือกผู้ให้บริการ AI (ไฟล์ → ตั้งค่า AI)` };
+    if (!p.model) return { ok: false, why: T`ผู้ให้บริการ "` + p.name + T`" ยังไม่ได้เลือกโมเดล (ไฟล์ → ตั้งค่า AI)` };
     return { ok: true, why: '' };
   }
   if ((ai.provider || 'openai') === 'ollama') return { ok: true, why: '' };
   if (await loadApiKey()) return { ok: true, why: '' };
-  return { ok: false, why: 'ตั้งค่า AI ที่ ไฟล์ → ตั้งค่า AI ก่อน' };
+  return { ok: false, why: T`ตั้งค่า AI ที่ ไฟล์ → ตั้งค่า AI ก่อน` };
 }
 
 // ---- เรียก AI (ผ่าน main process) ----
@@ -80,16 +81,16 @@ export async function callAI(prompt, system = '') {
     // [alpha.62 บั๊ก 5] ตั้งทะเบียนใหม่ไว้แล้ว = ห้ามตกไปทางเก่าเงียบ ๆ
     // (ทางเก่าอ่าน `ai-key.json → apiKey` ซึ่งรูปแบบใหม่ไม่มี → ได้ข้อความ "ยังไม่ได้ตั้งค่า AI"
     //  ทั้งที่ตั้งครบแล้ว · ปุ่ม ✨ ในคุณสมบัติฉากจึงเงียบไปเฉย ๆ) → รายงานเหตุผลจริงเสมอ
-    if (!p) { setStatus('❌ AI: ยังไม่ได้เลือกผู้ให้บริการ (ไฟล์ → ตั้งค่า AI)'); return null; }
+    if (!p) { setStatus(T`❌ AI: ยังไม่ได้เลือกผู้ให้บริการ (ไฟล์ → ตั้งค่า AI)`); return null; }
     const r = await complete(p, { system, messages: [{ role: 'user', content: prompt }] });
-    if (!r.ok) { log('error', 'AI (provider ใหม่) ล้มเหลว', r.error); setStatus('❌ AI: ' + r.error); return null; }
+    if (!r.ok) { log('error', T`AI (provider ใหม่) ล้มเหลว`, r.error); setStatus('❌ AI: ' + r.error); return null; }
     recordUsage((r.usage && r.usage.total) || 0, p.name, r.model);
     return (r.text || '').trim();
   }
   const apiKey = await loadApiKey();
   const provider = ai.provider || 'openai';
   if (!apiKey && provider !== 'ollama') {
-    setStatus('❌ ยังไม่ได้ตั้งค่า AI — ไฟล์ → ตั้งค่า AI');
+    setStatus(T`❌ ยังไม่ได้ตั้งค่า AI — ไฟล์ → ตั้งค่า AI`);
     return null;
   }
   const model = ai.model || (ai.provider === 'claude' ? 'claude-sonnet-4-5'
@@ -133,7 +134,7 @@ export async function callAI(prompt, system = '') {
     return text.trim();
   } catch (e) {
     log('error', 'AI call failed', e);
-    setStatus('❌ เชื่อมต่อ AI ไม่ได้: ' + e.message);
+    setStatus(T`❌ เชื่อมต่อ AI ไม่ได้: ` + e.message);
     return null;
   }
 }
@@ -149,25 +150,25 @@ function recordUsage(tokens, provider, model) {
 
 export async function testAIConnection() {
   // [alpha.62 บั๊ก 10] เครือข่ายช้าได้เป็นสิบวินาที — ต้องเห็นว่าโปรแกรมยังทำงานอยู่
-  const result = await withBusy('กำลังทดสอบเชื่อมต่อ AI…',
-                                () => callAI('ตอบกลับคำว่า ok เท่านั้น', ''));
+  const result = await withBusy(T`กำลังทดสอบเชื่อมต่อ AI…`,
+                                () => callAI(T`ตอบกลับคำว่า ok เท่านั้น`, ''));
   const ok = !!result && result.toLowerCase().includes('ok');
-  setStatus(ok ? '✅ AI: เชื่อมต่อสำเร็จ' : '❌ AI: ทดสอบล้มเหลว');
+  setStatus(ok ? T`✅ AI: เชื่อมต่อสำเร็จ` : T`❌ AI: ทดสอบล้มเหลว`);
   return ok;
 }
 
 // ---- กล่องตั้งค่า ----
 export async function showAISettingsDialog() {
-  if (!state.root) { setStatus('เปิดโปรเจกต์ก่อนจึงตั้งค่า AI ได้'); return; }
+  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อนจึงตั้งค่า AI ได้`); return; }
   const ai = getAISettings();
   const curKey = await loadApiKey();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-ai-settings');
-  box.append(el('div', 'k-dlg-title', '🤖 ตั้งค่า AI'));
+  box.append(el('div', 'k-dlg-title', T`🤖 ตั้งค่า AI`));
 
   const mkRow = (label) => { const r = el('div', 'wiki-row'); r.append(el('label', null, label)); box.append(r); return r; };
 
-  const provRow = mkRow('ผู้ให้บริการ');
+  const provRow = mkRow(T`ผู้ให้บริการ`);
   const provSel = el('select', 'wiki-input k-dlg-select');
   // [alpha.60r ข้อ 3] เพิ่ม DeepSeek, Grok, และกำหนดเอง
   const providers = [
@@ -175,8 +176,8 @@ export async function showAISettingsDialog() {
     ['deepseek', 'DeepSeek — V3 / R1'],
     ['grok', 'Grok (xAI)'],
     ['claude', 'Claude (Anthropic)'],
-    ['ollama', 'Ollama (เครื่องตัวเอง)'],
-    ['custom', 'กำหนดเอง (Custom LLM)'],
+    ['ollama', T`Ollama (เครื่องตัวเอง)`],
+    ['custom', T`กำหนดเอง (Custom LLM)`],
   ];
   for (const [v, t] of providers) {
     const o = el('option', null, t); o.value = v; provSel.append(o);
@@ -187,22 +188,22 @@ export async function showAISettingsDialog() {
   const keyRow = mkRow('API Key');
   const keyInp = el('input', 'wiki-input'); keyInp.type = 'password'; keyInp.value = curKey; keyInp.placeholder = 'sk-…';
   keyRow.append(keyInp);
-  const keyNote = el('div', 'dim', `เก็บแยกที่ ${KEY_FILE} ในโฟลเดอร์โปรเจกต์ (ไม่อยู่ใน project.khn.json ที่แชร์กัน)`);
+  const keyNote = el('div', 'dim', T`เก็บแยกที่ ${KEY_FILE} ในโฟลเดอร์โปรเจกต์ (ไม่อยู่ใน project.khn.json ที่แชร์กัน)`);
   keyNote.style.cssText = 'font-size:11px;margin:-4px 0 6px';
   box.append(keyNote);
 
-  const modelRow = mkRow('โมเดล');
+  const modelRow = mkRow(T`โมเดล`);
   const modelInp = el('input', 'wiki-input'); modelInp.value = ai.model || ''; modelInp.placeholder = 'gpt-4o-mini / claude-sonnet-4-5 / llama3';
   modelRow.append(modelInp);
 
-  const tempRow = mkRow('ความสร้างสรรค์ (temperature)');
+  const tempRow = mkRow(T`ความสร้างสรรค์ (temperature)`);
   const tempRng = el('input', 'wiki-input'); tempRng.type = 'range'; tempRng.min = '0'; tempRng.max = '1'; tempRng.step = '0.1';
   tempRng.value = String(ai.temperature ?? 0.7);
   const tempLbl = el('span', null, ' ' + (ai.temperature ?? 0.7));
   tempRng.oninput = () => { tempLbl.textContent = ' ' + tempRng.value; };
   tempRow.append(tempRng, tempLbl);
 
-  const tokRow = mkRow('ความยาวสูงสุด (tokens)');
+  const tokRow = mkRow(T`ความยาวสูงสุด (tokens)`);
   const tokInp = el('input', 'wiki-input'); tokInp.type = 'number'; tokInp.value = String(ai.maxTokens || 500);
   tokInp.min = '50'; tokInp.max = '8192';
   tokRow.append(tokInp);
@@ -231,7 +232,7 @@ export async function showAISettingsDialog() {
     const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
     const last = usage[usage.length - 1];
     const stat = el('div', 'dim',
-      `รวม ${total.toLocaleString()} tokens · ${usage.length} ครั้ง · ล่าสุด ${new Date(last.date).toLocaleString('th-TH')}`);
+      T`รวม ${total.toLocaleString()} tokens · ${usage.length} ครั้ง · ล่าสุด ${new Date(last.date).toLocaleString('th-TH')}`);
     stat.style.cssText = 'margin:10px 0;font-size:12px';
     box.append(stat);
   }
@@ -244,9 +245,9 @@ export async function showAISettingsDialog() {
   });
 
   const btns = el('div', 'k-dlg-btns');
-  const testB = el('button', null, '🔌 ทดสอบเชื่อมต่อ');
-  const cB = el('button', null, 'ยกเลิก');
-  const okB = el('button', 'k-ok', 'บันทึก');
+  const testB = el('button', null, T`🔌 ทดสอบเชื่อมต่อ`);
+  const cB = el('button', null, T`ยกเลิก`);
+  const okB = el('button', 'k-ok', T`บันทึก`);
   btns.append(testB, cB, okB);
   box.append(btns);
   ov.append(box);
@@ -265,6 +266,6 @@ export async function showAISettingsDialog() {
     const { saveProjectMeta } = await import('./app.js');
     await saveProjectMeta();
     ov.remove();
-    setStatus('บันทึกการตั้งค่า AI แล้ว');
+    setStatus(T`บันทึกการตั้งค่า AI แล้ว`);
   };
 }

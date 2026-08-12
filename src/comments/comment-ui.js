@@ -2,6 +2,7 @@
 // เดิมคอมเมนต์เป็น "กล่องโต้ตอบ" ที่เก็บใน scenes.json → แบน ไม่มีสมอ ไม่มี resolve ไม่มีผู้เขียน
 // ตอนนี้เป็น "แผง" (dock/tab/float ได้) ที่ใช้ comment-core.js — เธรดซ้อนได้ · ผูกกับข้อความ · ปิดเรื่องได้
 // เก็บท้ายไฟล์ .md เอง (<!-- k2-comments --> ) → แก้นอกโปรแกรมได้ · v1 (Python) ยังเปิดไฟล์ได้เหมือนเดิม
+import { T } from '../i18n.js';
 import { $, el, state, setStatus, log, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import { CommentStore, countComments, openComments, reanchorAll } from './comment-core.js';
 import { setCommentAnchors, refreshCommentAnchors } from '../editor.js';
@@ -85,7 +86,7 @@ export async function selectionAnchor() {
       const i = body.indexOf(quote);
       if (i >= 0) start = i;
     }
-  } catch (e) { log('warn', 'selectionAnchor: อ่านไฟล์ไม่ได้', e); }
+  } catch (e) { log('warn', T`selectionAnchor: อ่านไฟล์ไม่ได้`, e); }
   return { start, end: start + quote.length, quote };
 }
 
@@ -117,7 +118,7 @@ export async function renderCommentPanel(host) {
   const head = el('div', 'k-cm-head');
   head.append(el('span', 'k-cm-scene', '💬 ' + (activeTitle() || file.split(/[\\/]/).pop())));
   const nOpen = openComments(all).length;
-  head.append(el('span', 'k-cm-count', `${countComments(all)} รายการ · ยังไม่ปิด ${nOpen}`));
+  head.append(el('span', 'k-cm-count', T`${countComments(all)} รายการ · ยังไม่ปิด ${nOpen}`));
   const fBtn = el('button', 'k-cm-filter' + (filterOpen ? ' on' : ''),
                   filterOpen ? tr('cmt.filterOpen', '🔽 เฉพาะที่ยังไม่ปิด') : tr('cmt.filterAll', '🔽 ทั้งหมด'));
   fBtn.title = tr('cmt.filterHint', 'สลับกรองคอมเมนต์ที่ปิดเรื่องแล้ว');
@@ -135,7 +136,7 @@ export async function renderCommentPanel(host) {
   const sel = await selectionAnchor();
   const foot = el('div', 'k-cm-foot');
   if (sel) {
-    const chip = el('div', 'k-cm-anchor-chip', '📍 ผูกกับ: “' + short(sel.quote) + '”');
+    const chip = el('div', 'k-cm-anchor-chip', T`📍 ผูกกับ: “` + short(sel.quote) + '”');
     chip.title = tr('cmt.anchorHint', 'คอมเมนต์ที่เพิ่มจะผูกกับข้อความที่เลือกไว้');
     foot.append(chip);
   }
@@ -143,7 +144,7 @@ export async function renderCommentPanel(host) {
   const inp = el('textarea', 'k-cm-input');
   inp.placeholder = sel ? tr('cmt.placeholderSel', 'คอมเมนต์เกี่ยวกับข้อความที่เลือก…') : tr('cmt.placeholder', 'พิมพ์คอมเมนต์…');
   inp.rows = 2;
-  const addB = el('button', 'k-ok', '💬 เพิ่ม');
+  const addB = el('button', 'k-ok', T`💬 เพิ่ม`);
   const doAdd = async () => {
     const text = inp.value.trim();
     if (!text) return;
@@ -177,7 +178,7 @@ function commentCard(c, file, host, depth) {
   if (depth) card.style.marginInlineStart = Math.min(depth, 4) * 14 + 'px';
 
   const top = el('div', 'k-cm-top');
-  top.append(el('span', 'k-cm-author', '👤 ' + (c.author || 'ไม่ระบุชื่อ')));
+  top.append(el('span', 'k-cm-author', '👤 ' + (c.author || T`ไม่ระบุชื่อ`)));
   top.append(el('span', 'k-cm-when', fmtWhen(c.timestamp) + (c.editedAt ? tr('cmt.edited', ' (แก้ไขแล้ว)') : '')));
   const acts = el('span', 'k-cm-acts');
 
@@ -215,7 +216,7 @@ function commentCard(c, file, host, depth) {
   function startEdit() {
     if (card.querySelector('.k-cm-edit')) return;
     const ta = el('textarea', 'k-cm-edit'); ta.value = c.text; ta.rows = 2;
-    const ok = el('button', 'k-ok', 'บันทึก');
+    const ok = el('button', 'k-ok', T`บันทึก`);
     const no = el('button', null, tr('cmt.cancel', 'ยกเลิก'));
     const box = el('div', 'k-cm-editbox'); box.append(ta, ok, no);
     body.after(box); body.hidden = true; ta.focus();
@@ -231,7 +232,7 @@ function commentCard(c, file, host, depth) {
   function startReply() {
     if (card.querySelector('.k-cm-reply')) return;
     const ta = el('textarea', 'k-cm-reply'); ta.placeholder = tr('cmt.replyPlaceholder', 'ตอบกลับ…'); ta.rows = 2;
-    const ok = el('button', 'k-ok', 'ตอบ');
+    const ok = el('button', 'k-ok', T`ตอบ`);
     const no = el('button', null, tr('cmt.cancel', 'ยกเลิก'));
     const box = el('div', 'k-cm-editbox'); box.append(ta, ok, no);
     card.append(box); ta.focus();
@@ -248,7 +249,7 @@ function commentCard(c, file, host, depth) {
   // ---- เธรดตอบกลับ ----
   if ((c.replies || []).length) {
     const rs = el('div', 'k-cm-replies');
-    rs.append(el('div', 'k-cm-replies-head', `↳ ${c.replies.length} การตอบกลับ`));
+    rs.append(el('div', 'k-cm-replies-head', T`↳ ${c.replies.length} การตอบกลับ`));
     for (const r of c.replies) rs.append(commentCard(r, file, host, depth + 1));
     card.append(rs);
   }
@@ -269,7 +270,7 @@ export function scrollToAnchor(quote) {
   try {
     const to = Math.min(hit + quote.length, v.state.doc.content.size);
     v.dispatch(v.state.tr.setSelection(TextSelection.create(v.state.doc, hit, to)).scrollIntoView());
-  } catch (e) { log('warn', 'scrollToAnchor: เลือกช่วงไม่ได้', e); v.dispatch(v.state.tr.scrollIntoView()); }
+  } catch (e) { log('warn', T`scrollToAnchor: เลือกช่วงไม่ได้`, e); v.dispatch(v.state.tr.scrollIntoView()); }
   v.focus();
   return true;
 }
@@ -309,6 +310,6 @@ export async function migrateSceneComments(dPath) {
     }
   }
   if (n) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-  log('info', `ย้ายคอมเมนต์เดิมจาก scenes.json → .md แล้ว ${n} รายการ`);
+  log('info', T`ย้ายคอมเมนต์เดิมจาก scenes.json → .md แล้ว ${n} รายการ`);
   return n;
 }

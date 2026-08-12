@@ -1,5 +1,6 @@
 // backup.js — สำรองโปรเจกต์อัตโนมัติวันละครั้ง เก็บใน Backups/<YYYY-MM-DD>/
 // บทเรียน: ห้ามก๊อปไฟล์ด้วย readFile+writeFile (utf-8) — รูปภาพจะเสีย → ใช้ kapi.copyFile
+import { T } from './i18n.js';
 import { state, setStatus, log } from './core.js';
 
 const SKIP_DIRS = ['Recycle', 'Snapshots', '.k2history', 'Backups', 'Research'];
@@ -9,7 +10,7 @@ const LAST_KEY = 'k2-last-backup';        // วันที่สำรอง�
 function today() { return new Date().toISOString().slice(0, 10); }
 
 export async function autoBackupNow(silent = false) {
-  if (!state.root) { if (!silent) setStatus('ยังไม่ได้เปิดโปรเจกต์'); return false; }
+  if (!state.root) { if (!silent) setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return false; }
   try {
     const backupDir = await kapi.join(state.root, 'Backups');
     const ts = today();
@@ -33,7 +34,7 @@ export async function autoBackupNow(silent = false) {
     let n = 0;
     for (const f of files) {
       try { await kapi.copyFile(f.src, await kapi.join(dest, ...f.rel.split('/'))); n++; }
-      catch (e) { log('warn', 'backup: ข้ามไฟล์ ' + f.src, e); }
+      catch (e) { log('warn', T`backup: ข้ามไฟล์ ` + f.src, e); }
     }
 
     // เก็บสูงสุด MAX_KEEP รุ่น (เรียงตามชื่อ = เรียงตามวันที่)
@@ -41,12 +42,12 @@ export async function autoBackupNow(silent = false) {
     while (dirs.length > MAX_KEEP) await kapi.remove(await kapi.join(backupDir, dirs.shift()));
 
     try { localStorage.setItem(LAST_KEY, ts); } catch {}
-    if (!silent) setStatus(`สำรองโปรเจกต์แล้ว: ${ts} (${n} ไฟล์)`);
+    if (!silent) setStatus(T`สำรองโปรเจกต์แล้ว: ${ts} (${n} ไฟล์)`);
     log('info', `backup: saved ${ts} (${n} files)`);
     return true;
   } catch (e) {
     log('error', 'backup failed', e);
-    if (!silent) setStatus('สำรองโปรเจกต์ล้มเหลว');
+    if (!silent) setStatus(T`สำรองโปรเจกต์ล้มเหลว`);
     return false;
   }
 }

@@ -13,6 +13,7 @@
 //
 // ไฟล์นี้ไม่แตะ DOM/kapi — รับไบต์ฟอนต์เข้ามา คืน Uint8Array ออกไป → เทสด้วย node ได้
 
+import { T } from './i18n.js';
 import { PDFDocument, StandardFonts, PDFName, PDFHexString, degrees, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { mergeSpFormat, textWidth, lineHeightIn, paginate, pageNumberLabel,
@@ -457,7 +458,7 @@ export async function generatePdf(args = {}) {
     if (meta.author) doc.setAuthor(String(meta.author));
     if (meta.subject) doc.setSubject(String(meta.subject));
     doc.setProducer('Killian 2');
-    doc.setCreator('Killian 2 (คิเลียน)');
+    doc.setCreator(T`Killian 2 (คิเลียน)`);
   } catch {}
 
   // ── [87] สารบัญ = PDF outline ──

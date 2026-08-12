@@ -1,4 +1,5 @@
 ﻿// Killian 2 renderer — explorer + tabs + toolbar + statusbar
+import { T } from './i18n.js';
 import { KEditor } from './editor.js';
 import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString } from './md.js';
 // ---- alpha.58r: รูปแบบ + มุมมองหน้ากระดาษของ "นิยาย" (บั๊ก 15–24) ----
@@ -64,9 +65,11 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, defaultLangFonts, normalizeLangFonts,
          buildLangFontCss, withLangFamily, applyLangFonts,
          SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX,
-         SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, BUILTIN_CATS, CAT_ICON,
+         SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, dataLabel, BUILTIN_CATS, CAT_ICON,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
-         t, i18n, loadLanguage, applyDataI18n, onLanguageChanged, SHORTCUTS, SHORTCUT_LABELS, shortcutId,
+         t, i18n, loadLanguage, scanLanguages, languageCatalog, applyDataI18n, onLanguageChanged,
+         csvToTable, tableToCsv, langFileName, fallbackLangName,
+         SHORTCUTS, SHORTCUT_LABELS, shortcutId,
          formatShortcut, accelText, withShortcut, num,
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
@@ -81,9 +84,9 @@ import { renderAIAnalyzerPanel, ANALYZER_CARDS, analyzerStats } from './ai-analy
 import { setMarkdownCodes, markdownCodesOn, refreshMarkdownCodes,
          prefixLen as mdPrefixLen, suffixLen as mdSuffixLen, MD_HIDE_CLASS } from './markdown-code-toggle.js';
 // [alpha.60r3 ข้อ 4] Localizer — ไฟล์ภาษา ↔ ตาราง CSV (โมดูลบริสุทธิ์ · มี unit test แยก)
-// (`importSummary` ชนกับของ import-sp.js → เปลี่ยนชื่อเป็น csvImportSummary)
-import { jsonToCsv, csvToJson, mergeStrings, flatten, unflatten, parseCsv,
-         importSummary as csvImportSummary } from './i18n-csv.js';
+// [alpha.76] ไฟล์ภาษาเป็น CSV แล้ว — เหลือใช้แค่ตัวพาร์ส (ตัวแปลง json↔csv ยังอยู่ใน i18n-csv.js
+// เผื่อโปรเจกต์เก่าที่ยังมี languages/*.json แต่ app.js ไม่ได้เรียกแล้ว)
+import { parseCsv } from './i18n-csv.js';
 import { openMaps, renderMaps, renderMapsPanel, focusMapPin, exportMapPng, resetMapsView,
          buildShowOnMapRow, sceneMapLocation } from './maps-ui.js';
 import { openTimeline, renderTimeline } from './timeline-ui.js';
@@ -294,7 +297,7 @@ export function toggleMarkdownCodes() {
   applyMarkdownCodes();
   saveProjectMeta();
   refreshToolbar(); syncMenuToggles();
-  setStatus(showMarkdownCodes() ? 'ซ่อนรหัสนำหน้าบรรทัด: เปิด' : 'ซ่อนรหัสนำหน้าบรรทัด: ปิด (เห็นรหัสครบ)');
+  setStatus(showMarkdownCodes() ? T`ซ่อนรหัสนำหน้าบรรทัด: เปิด` : T`ซ่อนรหัสนำหน้าบรรทัด: ปิด (เห็นรหัสครบ)`);
   return showMarkdownCodes();
 }
 
@@ -627,7 +630,7 @@ export function zoomFitWidth(pane) {
   const avail = Math.max(200, (p ? p.clientWidth : window.innerWidth) - 48);
   const z = Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(avail / pageW * 100) / 100));
   keepZoomCenter(() => { pageScale = z; applyZoomVars(); });
-  setStatus('ซูมพอดีความกว้าง: ' + Math.round(z * 100) + '%');
+  setStatus(T`ซูมพอดีความกว้าง: ` + Math.round(z * 100) + '%');
   return z;
 }
 
@@ -789,7 +792,7 @@ export function toggleShowFormat(on) {
   for (const tb of state.tabs.values()) if (tb.sp) tb.sp.refreshGuides();
   saveProjectMeta();
   syncMenuToggles();
-  setStatus(v ? 'แสดงรูปแบบ: เปิด (เส้นขอบ element + เครื่องหมายจบบรรทัด)' : 'แสดงรูปแบบ: ปิด');
+  setStatus(v ? T`แสดงรูปแบบ: เปิด (เส้นขอบ element + เครื่องหมายจบบรรทัด)` : T`แสดงรูปแบบ: ปิด`);
   return v;
 }
 
@@ -809,8 +812,8 @@ export function toggleContinueds(on) {
   refreshSpView();
   saveProjectMeta(); syncMenuToggles();
   setStatus(cur.enabled
-    ? 'ข้อความต่อเนื่อง: เปิด — (CONTINUED) · CONTINUED: · (MORE) · (cont\'d)'
-    : 'ข้อความต่อเนื่อง: ปิด');
+    ? T`ข้อความต่อเนื่อง: เปิด — (CONTINUED) · CONTINUED: · (MORE) · (cont'd)`
+    : T`ข้อความต่อเนื่อง: ปิด`);
   return cur.enabled;
 }
 
@@ -823,7 +826,7 @@ export function toggleSceneNumbers(on) {
   applyPageVars();
   refreshSpView();
   saveProjectMeta(); syncMenuToggles();
-  setStatus(cur.show ? `เลขฉาก: เปิด (ซ้าย ${cur.left}" · ขวา ${cur.right}" จากขอบกระดาษ)` : 'เลขฉาก: ปิด');
+  setStatus(cur.show ? T`เลขฉาก: เปิด (ซ้าย ${cur.left}" · ขวา ${cur.right}" จากขอบกระดาษ)` : T`เลขฉาก: ปิด`);
   return cur.show;
 }
 
@@ -836,7 +839,7 @@ export function togglePageNumbers(on) {
   refreshSpView();
   updatePageNumberHint();
   saveProjectMeta(); syncMenuToggles();
-  setStatus(cur.show ? `เลขหน้า: เปิด (ชิดขวา ${cur.right}" · ${cur.top}" จากขอบบน)` : 'เลขหน้า: ปิด');
+  setStatus(cur.show ? T`เลขหน้า: เปิด (ชิดขวา ${cur.right}" · ${cur.top}" จากขอบบน)` : T`เลขหน้า: ปิด`);
   return cur.show;
 }
 
@@ -861,9 +864,9 @@ export function updatePageNumberHint() {
 /** เมนู "ส่วนเสริม" ของชื่อตัวละคร — เว้นจากชื่อ 1 วรรคเสมอ */
 export function extensionMenu(x, y) {
   const t2 = state.active;
-  if (!t2 || !t2.sp) { setStatus('เปิดฉากบทภาพยนตร์ก่อน'); return null; }
+  if (!t2 || !t2.sp) { setStatus(T`เปิดฉากบทภาพยนตร์ก่อน`); return null; }
   if (t2.sp.curElement() !== 'character') {
-    setStatus('วางเคอร์เซอร์ในบรรทัด "ตัวละคร" ก่อนใส่ส่วนเสริม');
+    setStatus(T`วางเคอร์เซอร์ในบรรทัด "ตัวละคร" ก่อนใส่ส่วนเสริม`);
     return null;
   }
   const cur = t2.sp.curExtension();
@@ -871,7 +874,7 @@ export function extensionMenu(x, y) {
     label: (e === cur ? '● ' : '   ') + e,
     click: () => { t2.sp.setExtension(e); markDirty(t2); },
   }));
-  items.push({ label: '— ไม่มีส่วนเสริม —', click: () => { t2.sp.setExtension(''); markDirty(t2); } });
+  items.push({ label: T`— ไม่มีส่วนเสริม —`, click: () => { t2.sp.setExtension(''); markDirty(t2); } });
   const r = $('#elem-badge')?.getBoundingClientRect();
   return popupMenu(x ?? (r ? r.left : 200), y ?? (r ? r.bottom + 4 : 120), items);
 }
@@ -905,43 +908,43 @@ export function anyPageModel(tab) { return spPageModel(tab) || prosePageModel(ta
 
 export function gotoPage(n) {
   const m = anyPageModel();
-  if (!m) { setStatus('เปิดฉากก่อนจึงจะไปยังหน้าได้'); return false; }
+  if (!m) { setStatus(T`เปิดฉากก่อนจึงจะไปยังหน้าได้`); return false; }
   const pos = m.prose ? findProsePageStart(m.pages, n) : findPageStart(m.pages, n);
-  if (pos == null) { setStatus(`ไม่มีหน้า ${n} (ไฟล์นี้มี ${m.pages.count} หน้า)`); return false; }
+  if (pos == null) { setStatus(T`ไม่มีหน้า ${n} (ไฟล์นี้มี ${m.pages.count} หน้า)`); return false; }
   (m.prose ? m.tab.editor : m.tab.sp).gotoPos(pos);
-  setStatus(`ไปที่หน้า ${n} จาก ${m.pages.count} หน้า`);
+  setStatus(T`ไปที่หน้า ${n} จาก ${m.pages.count} หน้า`);
   return true;
 }
 
 export function gotoScene(n) {
   const m = anyPageModel();
-  if (!m) { setStatus('เปิดฉากก่อน'); return false; }
+  if (!m) { setStatus(T`เปิดฉากก่อน`); return false; }
   // นิยาย: "ฉาก" = หัวข้อ (บท) · บทภาพยนตร์: หัวฉาก
   const list = m.prose ? proseHeadings(m.blocks) : scenePositions(m.blocks);
   const item = list[Math.max(1, Math.round(+n || 1)) - 1];
   const pos = item ? item.pos : null;
   if (pos == null) {
-    setStatus(`ไม่มี${m.prose ? 'หัวข้อ' : 'ฉาก'}ที่ ${n} (ไฟล์นี้มี ${list.length})`);
+    setStatus(T`ไม่มี${m.prose ? T`หัวข้อ` : T`ฉาก`}ที่ ${n} (ไฟล์นี้มี ${list.length})`);
     return false;
   }
   (m.prose ? m.tab.editor : m.tab.sp).gotoPos(pos);
-  setStatus(`ไปที่${m.prose ? 'หัวข้อ' : 'ฉาก'} ${n}: ${item.text || ''}`);
+  setStatus(T`ไปที่${m.prose ? T`หัวข้อ` : T`ฉาก`} ${n}: ${item.text || ''}`);
   return true;
 }
 
 /** กล่อง "ไปที่…" — เลือกหน้า/ฉาก แล้วกรอกเลข (Ctrl+G) */
 export function gotoDialog(kind) {
   const m = anyPageModel();
-  if (!m) { setStatus('เปิดฉากก่อนจึงจะไปยังหน้า/ฉากได้'); return null; }
+  if (!m) { setStatus(T`เปิดฉากก่อนจึงจะไปยังหน้า/ฉากได้`); return null; }
   const scenes = m.prose ? proseHeadings(m.blocks) : scenePositions(m.blocks);
-  const unit = m.prose ? 'บท/หัวข้อ' : 'ฉาก';
+  const unit = m.prose ? T`บท/หัวข้อ` : T`ฉาก`;
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-goto-dlg');
-  box.append(el('div', 'k-dlg-title', 'ไปที่…'));
+  box.append(el('div', 'k-dlg-title', T`ไปที่…`));
 
   const row = el('div', 'k-goto-row');
   const sel = el('select', 'k-dlg-select'); sel.id = 'goto-kind';
-  for (const [v, label] of [['page', 'หน้า'], ['scene', unit]]) {
+  for (const [v, label] of [['page', T`หน้า`], ['scene', unit]]) {
     const o = el('option', null, label); o.value = v; sel.append(o);
   }
   sel.value = kind === 'scene' ? 'scene' : 'page';
@@ -963,9 +966,9 @@ export function gotoDialog(kind) {
     list.innerHTML = '';
     if (sel.value !== 'scene') { list.style.display = 'none'; return; }
     list.style.display = '';
-    if (!scenes.length) { list.append(el('div', 'cmp-empty', `(ไฟล์นี้ยังไม่มี${unit})`)); return; }
+    if (!scenes.length) { list.append(el('div', 'cmp-empty', T`(ไฟล์นี้ยังไม่มี${unit})`)); return; }
     for (const s of scenes) {
-      const d = el('div', 'k-menu-item', `${s.n}. ${s.text || '(ว่าง)'}`);
+      const d = el('div', 'k-menu-item', `${s.n}. ${s.text || T`(ว่าง)`}`);
       d.onclick = () => { ov.remove(); gotoScene(s.n); };
       list.append(d);
     }
@@ -979,8 +982,8 @@ export function gotoDialog(kind) {
   };
   inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
   const btns = el('div', 'k-dlg-btns');
-  const bCancel = el('button', 'k-cancel', 'ยกเลิก'); bCancel.onclick = () => ov.remove();
-  const bGo = el('button', 'k-ok', 'ไป'); bGo.onclick = go;
+  const bCancel = el('button', 'k-cancel', T`ยกเลิก`); bCancel.onclick = () => ov.remove();
+  const bGo = el('button', 'k-ok', T`ไป`); bGo.onclick = go;
   btns.append(bCancel, bGo); box.append(btns);
 
   ov.append(box); document.body.append(ov);
@@ -1012,7 +1015,7 @@ export function checkScreenplay(tab) {
 /** ไปยังข้อผิดพลาดถัดไป (วนกลับต้นเมื่อหมด) — Ctrl+Shift+U */
 export function findNextSpError() {
   const t2 = state.active;
-  if (!t2 || !t2.sp) { setStatus('เปิดฉากบทภาพยนตร์ก่อนจึงจะตรวจได้'); return null; }
+  if (!t2 || !t2.sp) { setStatus(T`เปิดฉากบทภาพยนตร์ก่อนจึงจะตรวจได้`); return null; }
   const errs = checkScreenplay(t2);
   updateErrorBadge();
   if (!errs.length) { setStatus(summaryText(errs)); return null; }
@@ -1047,9 +1050,9 @@ export function updateErrorBadge() {
     return;
   }
   const s = errorSummary(_spErrors);
-  box.textContent = s.total ? `⚠️ ${s.total} ▾` : '✅ ตรวจแล้ว ▾';
+  box.textContent = s.total ? `⚠️ ${s.total} ▾` : T`✅ ตรวจแล้ว ▾`;
   box.classList.toggle('has-err', s.total > 0);
-  box.title = summaryText(_spErrors) + ' — คลิกเพื่อดูคำสั่ง (ไปข้อถัดไป · รายการทั้งหมด · ตรวจใหม่)';
+  box.title = summaryText(_spErrors) + T` — คลิกเพื่อดูคำสั่ง (ไปข้อถัดไป · รายการทั้งหมด · ตรวจใหม่)`;
 }
 
 /**
@@ -1058,23 +1061,23 @@ export function updateErrorBadge() {
  */
 export function spErrorMenu(x, y) {
   const t2 = state.active;
-  if (!t2 || !t2.sp) { setStatus('ป้ายนี้ใช้กับบทภาพยนตร์ — เปิดฉากที่เป็นบทก่อน'); return null; }
+  if (!t2 || !t2.sp) { setStatus(T`ป้ายนี้ใช้กับบทภาพยนตร์ — เปิดฉากที่เป็นบทก่อน`); return null; }
   const s = errorSummary(_spErrors);
   const items = [];
   if (s.total) {
-    items.push({ label: iconHtml('arrow-down', 14) + ` ไปข้อถัดไป (${s.total} ข้อ)`,
+    items.push({ label: iconHtml('arrow-down', 14) + T` ไปข้อถัดไป (${s.total} ข้อ)`,
                  click: () => findNextSpError() });
-    items.push({ label: iconHtml('list-ul', 14) + ' ดูรายการทั้งหมด…', click: () => showErrorList() });
+    items.push({ label: iconHtml('list-ul', 14) + T` ดูรายการทั้งหมด…`, click: () => showErrorList() });
     items.push('-');
   } else {
-    items.push({ label: '✅ ไม่พบข้อผิดพลาดในบทนี้', disabled: true });
+    items.push({ label: T`✅ ไม่พบข้อผิดพลาดในบทนี้`, disabled: true });
     items.push('-');
   }
-  items.push({ label: iconHtml('reset', 14) + ' ตรวจใหม่ทั้งบท', click: () => {
+  items.push({ label: iconHtml('reset', 14) + T` ตรวจใหม่ทั้งบท`, click: () => {
     checkScreenplay(t2); updateErrorBadge();
     setStatus(summaryText(_spErrors));
   } });
-  items.push({ label: iconHtml('clipboard', 14) + ' ตั้งค่ารูปแบบ/การตรวจบท…', click: () => settingsDialog('page') });
+  items.push({ label: iconHtml('clipboard', 14) + T` ตั้งค่ารูปแบบ/การตรวจบท…`, click: () => settingsDialog('page') });
   popupMenu(x, y, items);
   return items.length;                      // > 0 = เมนูถูกเปิดจริง (เทสใช้ตรวจ)
 }
@@ -1082,15 +1085,15 @@ export function spErrorMenu(x, y) {
 /** รายการข้อผิดพลาดทั้งบท — คลิกแถวเพื่อกระโดดไป */
 export function showErrorList() {
   const t2 = state.active;
-  if (!t2 || !t2.sp) { setStatus('เปิดฉากบทภาพยนตร์ก่อนจึงจะตรวจได้'); return null; }
+  if (!t2 || !t2.sp) { setStatus(T`เปิดฉากบทภาพยนตร์ก่อนจึงจะตรวจได้`); return null; }
   const errs = checkScreenplay(t2);
   updateErrorBadge();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-err-dlg');
-  box.append(el('div', 'k-dlg-title', 'ตรวจบทภาพยนตร์'));
+  box.append(el('div', 'k-dlg-title', T`ตรวจบทภาพยนตร์`));
   box.append(el('div', 'dim', summaryText(errs)));
   const list = el('div', 'k-err-list');
-  if (!errs.length) list.append(el('div', 'cmp-empty', 'ไม่พบข้อผิดพลาด 🎉'));
+  if (!errs.length) list.append(el('div', 'cmp-empty', T`ไม่พบข้อผิดพลาด 🎉`));
   for (const e of errs.slice().sort((a, b) => a.block - b.block)) {
     const row = el('div', 'k-err-row ' + e.severity);
     row.append(el('span', 'k-err-dot', e.severity === 'error' ? '⛔' : '⚠️'));
@@ -1102,9 +1105,9 @@ export function showErrorList() {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const bRe = el('button', null, '🔄 ตรวจใหม่');
+  const bRe = el('button', null, T`🔄 ตรวจใหม่`);
   bRe.onclick = () => { ov.remove(); showErrorList(); };
-  const bOk = el('button', 'k-ok', 'ปิด'); bOk.onclick = () => ov.remove();
+  const bOk = el('button', 'k-ok', T`ปิด`); bOk.onclick = () => ov.remove();
   btns.append(bRe, bOk); box.append(btns);
   ov.append(box); document.body.append(ov);
   ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
@@ -1120,7 +1123,7 @@ export async function checkBeforeExport() {
   updateErrorBadge();
   const hard = errs.filter((e) => e.severity === 'error');
   if (!hard.length) return true;
-  return confirmBox(`พบ ${hard.length} ข้อผิดพลาดในบท (เช่น “${hard[0].msg}”)\nส่งออกต่อไปเลยไหม?`, 'ส่งออกต่อ');
+  return confirmBox(T`พบ ${hard.length} ข้อผิดพลาดในบท (เช่น “${hard[0].msg}”)\nส่งออกต่อไปเลยไหม?`, T`ส่งออกต่อ`);
 }
 
 // ═════════ alpha.58 · [71][72][73] รายงานบทภาพยนตร์ ═════════
@@ -1135,9 +1138,9 @@ export function spReportInput(tab) {
 }
 
 export const SP_REPORTS = {
-  location:  { title: '📍 รายงานสถานที่', file: 'รายงานสถานที่' },
-  character: { title: '👥 รายงานตัวละคร', file: 'รายงานตัวละคร' },
-  chart:     { title: '📊 กราฟบทพูดต่อหน้า', file: 'กราฟบทพูด' },
+  location:  { title: T`📍 รายงานสถานที่`, file: T`รายงานสถานที่` },
+  character: { title: T`👥 รายงานตัวละคร`, file: T`รายงานตัวละคร` },
+  chart:     { title: T`📊 กราฟบทพูดต่อหน้า`, file: T`กราฟบทพูด` },
 };
 
 /** สร้างข้อมูลรายงานตามชนิด — แยกออกมาให้ selftest เรียกตรงได้ */
@@ -1173,7 +1176,7 @@ function chartBar(page) {
 /** กล่องรายงาน — คลิกแถวเพื่อกระโดดไปยังฉากนั้นในบท */
 export function openSpReport(kind = 'location') {
   const inp = spReportInput();
-  if (!inp) { setStatus('เปิดฉากบทภาพยนตร์ก่อนจึงจะทำรายงานได้'); return null; }
+  if (!inp) { setStatus(T`เปิดฉากบทภาพยนตร์ก่อนจึงจะทำรายงานได้`); return null; }
   const info = SP_REPORTS[kind] || SP_REPORTS.location;
   const data = buildSpReport(kind, inp);
   const ov = el('div', 'k-overlay');
@@ -1194,17 +1197,17 @@ export function openSpReport(kind = 'location') {
 
   if (kind === 'location') {
     box.append(el('div', 'dim',
-      `${data.locations.length} สถานที่ · ${data.totalScenes} ฉาก · ${data.totalPages} หน้า`));
+      T`${data.locations.length} สถานที่ · ${data.totalScenes} ฉาก · ${data.totalPages} หน้า`));
     for (const L of data.locations) {
       const g = el('div', 'k-report-group');
       const h = el('div', 'k-report-ghead');
       h.append(el('b', null, L.location));
-      h.append(el('span', 'dim', `  ${L.intExt.join('/') || '—'} · ${L.sceneCount} ฉาก · ~${L.pages} หน้า`));
+      h.append(el('span', 'dim', T`  ${L.intExt.join('/') || '—'} · ${L.sceneCount} ฉาก · ~${L.pages} หน้า`));
       g.append(h);
       for (const s of L.scenes) {
         const row = el('div', 'k-report-row');
-        row.append(el('span', 'k-report-no', 'ฉาก ' + s.n));
-        row.append(el('span', 'k-report-pg', 'หน้า ' + s.page));
+        row.append(el('span', 'k-report-no', T`ฉาก ` + s.n));
+        row.append(el('span', 'k-report-pg', T`หน้า ` + s.page));
         row.append(el('span', 'k-report-txt', s.heading));
         if (s.characters.length) row.append(el('span', 'dim k-report-chars', s.characters.join(', ')));
         if (Number.isFinite(s.pos)) { row.classList.add('can-go'); row.onclick = () => goto(s.pos); }
@@ -1212,13 +1215,13 @@ export function openSpReport(kind = 'location') {
       }
       body.append(g);
     }
-    if (!data.locations.length) body.append(el('div', 'cmp-empty', 'ยังไม่มีหัวฉากในบทนี้'));
+    if (!data.locations.length) body.append(el('div', 'cmp-empty', T`ยังไม่มีหัวฉากในบทนี้`));
   } else if (kind === 'character') {
     box.append(el('div', 'dim',
-      `${data.characters.length} ตัวละคร · ${data.totalLines} บรรทัดบทพูด · ${data.totalPages} หน้า`));
+      T`${data.characters.length} ตัวละคร · ${data.totalLines} บรรทัดบทพูด · ${data.totalPages} หน้า`));
     const tbl = el('table', 'k-report-table');
     const head = el('tr');
-    for (const h of ['ตัวละคร', 'ฉาก', 'ครั้งที่พูด', 'บรรทัด', 'เฉลี่ย/ฉาก', 'หน้า', 'สัดส่วน'])
+    for (const h of [T`ตัวละคร`, T`ฉาก`, T`ครั้งที่พูด`, T`บรรทัด`, T`เฉลี่ย/ฉาก`, T`หน้า`, T`สัดส่วน`])
       head.append(el('th', null, h));
     tbl.append(head);
     for (const c of data.characters) {
@@ -1238,10 +1241,10 @@ export function openSpReport(kind = 'location') {
       tbl.append(tr);
     }
     body.append(tbl);
-    if (!data.characters.length) body.append(el('div', 'cmp-empty', 'ยังไม่มีบทพูดในบทนี้'));
+    if (!data.characters.length) body.append(el('div', 'cmp-empty', T`ยังไม่มีบทพูดในบทนี้`));
   } else {
     box.append(el('div', 'dim',
-      `รวมทั้งเรื่อง: ${CHART_KINDS.map((k) => CHART_LABELS[k] + ' ' + data.overall[k] + '%').join(' · ')}`));
+      T`รวมทั้งเรื่อง: ${CHART_KINDS.map((k) => CHART_LABELS[k] + ' ' + data.overall[k] + '%').join(' · ')}`));
     const legend = el('div', 'sp-chart-legend');
     for (const k of CHART_KINDS) {
       const it = el('span', 'sp-chart-key');
@@ -1251,7 +1254,7 @@ export function openSpReport(kind = 'location') {
     body.append(legend);
     for (const p of data.pages) {
       const row = el('div', 'k-report-row sp-chart-row');
-      row.append(el('span', 'k-report-pg', 'หน้า ' + p.page));
+      row.append(el('span', 'k-report-pg', T`หน้า ` + p.page));
       row.append(chartBar(p));
       const top = p.charDensity.slice(0, 3).map((d) => `${d.name} ${d.lines}`).join(' · ');
       row.append(el('span', 'dim k-report-chars', top));
@@ -1261,19 +1264,19 @@ export function openSpReport(kind = 'location') {
   box.append(body);
 
   const btns = el('div', 'k-dlg-btns');
-  const bCopy = el('button', null, '📋 คัดลอกเป็นข้อความ');
+  const bCopy = el('button', null, T`📋 คัดลอกเป็นข้อความ`);
   bCopy.onclick = async () => {
-    try { await navigator.clipboard.writeText(spReportText(kind, data)); setStatus('คัดลอกรายงานแล้ว'); }
-    catch (e) { log('warn', 'คัดลอกรายงานไม่สำเร็จ', e); }
+    try { await navigator.clipboard.writeText(spReportText(kind, data)); setStatus(T`คัดลอกรายงานแล้ว`); }
+    catch (e) { log('warn', T`คัดลอกรายงานไม่สำเร็จ`, e); }
   };
-  const bSave = el('button', null, '💾 บันทึกเป็นไฟล์…');
+  const bSave = el('button', null, T`💾 บันทึกเป็นไฟล์…`);
   bSave.onclick = async () => {
     const p = await kapi.saveAsDialog(info.file + '.txt', 'txt');
     if (!p) return;
     await kapi.writeFile(p, spReportText(kind, data));
-    setStatus('บันทึกรายงานแล้ว: ' + p);
+    setStatus(T`บันทึกรายงานแล้ว: ` + p);
   };
-  const bOk = el('button', 'k-ok', 'ปิด'); bOk.onclick = () => ov.remove();
+  const bOk = el('button', 'k-ok', T`ปิด`); bOk.onclick = () => ov.remove();
   btns.append(bCopy, bSave, bOk); box.append(btns);
   ov.append(box); document.body.append(ov);
   ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
@@ -1295,7 +1298,7 @@ function setUIScale(v) {
   // ปัดทศนิยม 2 ตำแหน่งก่อนเก็บ — กันค่าสะสมแบบ 1.2000000000000002 จากการกดขยายซ้ำ ๆ
   const s = applyUIScale(Math.round(v * 100) / 100);
   state.settings.uiScale = s;
-  if (state.root) saveProjectMeta().catch((e) => log('warn', 'บันทึกขนาด UI ไม่สำเร็จ', e));
+  if (state.root) saveProjectMeta().catch((e) => log('warn', T`บันทึกขนาด UI ไม่สำเร็จ`, e));
   setStatus(t('status.uiScale', 'ขนาด UI') + ': ' + Math.round(s * 100) + '%');
 }
 function bumpUIScale(dir) {
@@ -1308,16 +1311,16 @@ function showSourceView() {
   // ห้ามตั้งชื่อตัวแปรว่า t — จะบัง t() ของ i18n ทำให้ปุ่ม "คัดลอกทั้งหมด" พังตอนเรียก t('status.copied')
   const tab = state.active;
   const src = tab && (tab.editor || tab.sp);
-  if (!src) { setStatus('เปิดฉากก่อนจึงจะดู Markdown ได้'); return; }
+  if (!src) { setStatus(T`เปิดฉากก่อนจึงจะดู Markdown ได้`); return; }
   const md = src.getMarkdown();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide');
-  box.append(el('div', 'k-dlg-title', 'Markdown ดิบ — ' + tab.title));
+  box.append(el('div', 'k-dlg-title', T`Markdown ดิบ — ` + tab.title));
   const ta = el('textarea', 'k-src-view'); ta.value = md; ta.readOnly = true;
   box.append(ta);
   const btns = el('div', 'k-dlg-btns');
-  const cp = el('button', null, 'คัดลอกทั้งหมด');
-  const cl = el('button', 'k-ok', 'ปิด');
+  const cp = el('button', null, T`คัดลอกทั้งหมด`);
+  const cl = el('button', 'k-ok', T`ปิด`);
   cp.onclick = () => { ta.select(); document.execCommand('copy'); setStatus(t('status.copied')); };
   cl.onclick = () => ov.remove();
   btns.append(cp, cl); box.append(btns); ov.append(box); document.body.append(ov);
@@ -1378,7 +1381,7 @@ function restartAutosave() {
   autosaveTimer = setInterval(() => {
     let any = false;
     for (const t of state.tabs.values()) if (t.dirty) { saveTab(t); any = true; }
-    if (any) { log('info', 'autosave ทำงาน'); setTimeout(updateDirtyBadge, 300); }
+    if (any) { log('info', T`autosave ทำงาน`); setTimeout(updateDirtyBadge, 300); }
   }, min * 60 * 1000);
 }
 
@@ -1398,10 +1401,10 @@ async function closeProjectIfAny() {
   await saveOpenTabs();
   const dirty = [...state.tabs.values()].filter((t) => t.dirty);
   if (dirty.length) {
-    const v = await choose(`โปรเจกต์เดิมมี ${dirty.length} แท็บยังไม่ได้บันทึก`, [
-      { label: 'บันทึกทั้งหมดแล้วปิด', value: 'save', primary: true },
-      { label: 'ปิดโดยไม่บันทึก', value: 'discard', danger: true },
-      { label: 'ยกเลิก', value: null },
+    const v = await choose(T`โปรเจกต์เดิมมี ${dirty.length} แท็บยังไม่ได้บันทึก`, [
+      { label: T`บันทึกทั้งหมดแล้วปิด`, value: 'save', primary: true },
+      { label: T`ปิดโดยไม่บันทึก`, value: 'discard', danger: true },
+      { label: T`ยกเลิก`, value: null },
     ]);
     if (v === null) return false;
     if (v === 'save') for (const t of dirty) await saveTab(t);
@@ -1427,33 +1430,33 @@ async function closeProjectIfAny() {
 export async function loadProject(root) {
   // [alpha.62 บั๊ก 9] ครอบทั้งก้อนด้วย try/finally — ถ้าโยน error กลางทาง ตัวบอกสถานะต้องไม่ค้าง
   const t0 = performance.now();
-  logAction('project', 'เปิดโปรเจกต์', root);
+  logAction('project', T`เปิดโปรเจกต์`, root);
   try {
     const r = await loadProjectInner(root);
-    logAction('project', `เปิดโปรเจกต์เสร็จใน ${Math.round(performance.now() - t0)}ms`, root);
+    logAction('project', T`เปิดโปรเจกต์เสร็จใน ${Math.round(performance.now() - t0)}ms`, root);
     return r;
   } catch (e) {
     // [alpha.72 ข้อ 5] เดิมพังตรงนี้แล้วผู้ใช้เห็นแค่หน้าจอว่าง ไม่มีอะไรใน log เลย
-    log('error', 'project: เปิดโปรเจกต์ไม่สำเร็จ: ' + root, e);
+    log('error', T`project: เปิดโปรเจกต์ไม่สำเร็จ: ` + root, e);
     throw e;
   } finally { clearBusy(); }
 }
 async function loadProjectInner(root) {
   // [alpha.60r ข้อ 8 → alpha.62] รายงานที่แถบสถานะล่าง (ไม่ใช่หน้าจอเต็มจอ)
-  setBusy('กำลังเปิดโปรเจกต์…');
+  setBusy(T`กำลังเปิดโปรเจกต์…`);
   if (!(await kapi.exists(await kapi.join(root, 'project.khn.json')))) {
     // ตรวจก่อน "ก่อน" ถามบันทึก — จะได้ไม่ทำผู้ใช้เสียเวลาตอบกล่องแล้วค่อยรู้ว่าโฟลเดอร์ผิด
     clearBusy();
-    alert('โฟลเดอร์นี้ไม่ใช่โปรเจกต์ Killian (ไม่พบ project.khn.json)');
+    alert(T`โฟลเดอร์นี้ไม่ใช่โปรเจกต์ Killian (ไม่พบ project.khn.json)`);
     return;
   }
   // [alpha.62 บั๊ก 9] กล่อง "บันทึกก่อนปิด?" เด้งตรงนี้ — ต้องล้างตัวบอกสถานะก่อน
   //   ไม่งั้นสปินเนอร์หมุนค้างระหว่างรอผู้ใช้ตอบ ดูเหมือนโปรแกรมแฮงก์
   clearBusy();
   if (!(await closeProjectIfAny())) return;
-  setBusy('กำลังอ่านข้อมูลโปรเจกต์…');
+  setBusy(T`กำลังอ่านข้อมูลโปรเจกต์…`);
   const meta = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
-  state.root = root; state.title = meta.title || 'โปรเจกต์';
+  state.root = root; state.title = meta.title || T`โปรเจกต์`;
   loadSettings(meta);
   applyWikiCats();
   document.title = state.title + ' — Killian 2';
@@ -1463,15 +1466,15 @@ async function loadProjectInner(root) {
   // ---- โหลดภาษาของโปรเจกต์ (ถ้าเลือกไว้) ----
   const projLang = state.settings.language || 'en';
   if (projLang !== i18n.lang) {
-    setBusy('กำลังโหลดภาษา…');
+    setBusy(T`กำลังโหลดภาษา…`);
     await loadLanguage(projLang, root);
   }
   applyDataI18n();
   initIcons();
   applyToolbarShortcutTitles();
-  setBusy('กำลังตรวจสอบไฟล์…');
+  setBusy(T`กำลังตรวจสอบไฟล์…`);
   await purgeRecycle(root);                          // ล้างถังขยะเก่าก่อนสร้างต้นไม้
-  setBusy('กำลังสร้างโครงสร้างโปรเจกต์…');
+  setBusy(T`กำลังสร้างโครงสร้างโปรเจกต์…`);
   await buildTree();
   buildFilterBar().catch(() => {});             // แถบกรอง
   updateSummaryBar().catch(() => {});            // สรุปด่วนเหนือ tree
@@ -1480,7 +1483,7 @@ async function loadProjectInner(root) {
   // [alpha.57a ข้อ 4] คลิกขวาที่คำเดา = ไม่ต้องจำคำนั้นอีก
   smart.onIgnore = (w) => {
     smartIgnoreAdd(w);
-    setStatus(`ไม่จำ "${w}" อีก (แก้ได้ที่ บท → จัดการ SmartType)`);
+    setStatus(T`ไม่จำ "${w}" อีก (แก้ได้ที่ บท → จัดการ SmartType)`);
   };
   // [alpha.57a ข้อ 5] ฟอนต์ตามภาษาของโปรเจกต์ (ต้องรู้ path จริงก่อนจึงสร้าง @font-face ได้)
   preloadLangFontUrls().then(() => applySettings()).catch(() => {});
@@ -1496,15 +1499,15 @@ async function loadProjectInner(root) {
     mountPanelWindow(PANEL_WIN);
     await drawPanelWindow();
     clearBusy();
-    setStatus('เปิดโปรเจกต์: ' + state.title);
+    setStatus(T`เปิดโปรเจกต์: ` + state.title);
     reportPanelWindowHealth();
     return;
   }
-  setBusy('กำลังโหลดเทมเพลต…');
+  setBusy(T`กำลังโหลดเทมเพลต…`);
   await loadTemplates();                            // default templates ถูกฝังลงโปรเจกต์ทันที
   loadPlugins();
   // ---- เริ่มระบบใหม่ (Part 1+2) ----
-  setBusy('กำลังจัดวางแผงและแท็บ…');
+  setBusy(T`กำลังจัดวางแผงและแท็บ…`);
   initPanelSystem();                                 // Panel System
   // sync toolbar toggle .on states + [60r2 ข้อ 1/11] ความกว้าง workspace และรางเลขบรรทัด
   onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter();
@@ -1520,7 +1523,7 @@ async function loadProjectInner(root) {
   // [alpha.61 ข้อ 1] หน้าแรกไม่เด้งจากตรงนี้แล้ว — bootSequence() เป็นคนตัดสินลำดับเปิดโปรแกรม
   //   (เดิม loadProject เด้งหน้าแรกทับทุกครั้ง ทำให้ "เปิดโปรเจกต์ล่าสุดโดยข้ามหน้าแรก" เป็นไปไม่ได้)
   clearBusy();                                       // [alpha.62] เลิกแสดง "กำลังทำอะไรอยู่"
-  setStatus('เปิดโปรเจกต์: ' + state.title);
+  setStatus(T`เปิดโปรเจกต์: ` + state.title);
   // [alpha.66 ข้อ 14] ตรวจทางเลือกที่ชี้ไปฉากที่ถูกลบ/ย้ายไปแล้ว — ไม่บล็อกการเปิดงาน
   // (ถ้าเจอ จะทับข้อความ "เปิดโปรเจกต์:" ด้านบนด้วยคำเตือน + เขียนรายละเอียดลงบันทึก)
   checkDanglingOnOpen().catch(() => {});
@@ -1530,9 +1533,9 @@ async function loadProjectInner(root) {
 // สามสวิตช์ (spForceCase · spAutoCapitalize · spAutoCorrectI) ใช้ทางเดียวกันหมด:
 // พลิกค่า → applySettings (spCss สร้างใหม่ทันที) → บันทึกลงโปรเจกต์ → อัปเดตติ๊กในเมนู
 const SP_CASE_LABELS = {
-  spForceCase: 'บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน',
-  spAutoCapitalize: 'แก้ตัวแรกของประโยคเป็นตัวใหญ่อัตโนมัติ',
-  spAutoCorrectI: 'แก้ i เดี่ยว ๆ เป็น I อัตโนมัติ',
+  spForceCase: T`บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน`,
+  spAutoCapitalize: T`แก้ตัวแรกของประโยคเป็นตัวใหญ่อัตโนมัติ`,
+  spAutoCorrectI: T`แก้ i เดี่ยว ๆ เป็น I อัตโนมัติ`,
 };
 /**
  * [alpha.62 บั๊ก 11] สลับ "บังคับตัวพิมพ์ใหญ่" ของ element เดียว (เช่นเฉพาะชื่อตัวละคร)
@@ -1549,7 +1552,7 @@ export function toggleElementCaps(elName, on) {
   applySettings();
   saveProjectMeta();
   syncMenuToggles();
-  setStatus((SP_ELEMS[elName]?.th || elName) + ': ' + (v ? 'บังคับตัวพิมพ์ใหญ่' : 'พิมพ์อย่างไรก็เป็นอย่างนั้น'));
+  setStatus((SP_ELEMS[elName]?.th || elName) + ': ' + (v ? T`บังคับตัวพิมพ์ใหญ่` : T`พิมพ์อย่างไรก็เป็นอย่างนั้น`));
   return v;
 }
 export function toggleSpCase(key, on) {
@@ -1558,7 +1561,7 @@ export function toggleSpCase(key, on) {
   applySettings();                    // spForceCase มีผลทันทีผ่าน spCss()
   saveProjectMeta();
   syncMenuToggles();
-  setStatus(SP_CASE_LABELS[key] + ': ' + (v ? 'เปิด' : 'ปิด (พิมพ์อย่างไรก็เป็นอย่างนั้น)'));
+  setStatus(SP_CASE_LABELS[key] + ': ' + (v ? T`เปิด` : T`ปิด (พิมพ์อย่างไรก็เป็นอย่างนั้น)`));
   return v;
 }
 
@@ -1568,7 +1571,7 @@ export function toggleSpCase(key, on) {
 export function deleteCurrentLine() {
   const t = state.active;
   const view = t?.editor?.view || t?.sp?.view;
-  if (!view) { setStatus('เปิดเอกสารก่อนจึงลบบรรทัดได้'); return false; }
+  if (!view) { setStatus(T`เปิดเอกสารก่อนจึงลบบรรทัดได้`); return false; }
   const st = view.state;
   const { $from, $to } = st.selection;
   const d = Math.min($from.depth, $to.depth) || 1;
@@ -1587,7 +1590,7 @@ export function deleteCurrentLine() {
   view.dispatch(tr.scrollIntoView());
   view.focus();
   markDirty(t);
-  setStatus('ลบบรรทัดแล้ว');
+  setStatus(T`ลบบรรทัดแล้ว`);
   return true;
 }
 
@@ -1607,12 +1610,12 @@ export async function saveGlobalSetting(key, value) {
   let g = {};
   try { g = (await kapi.readGlobalSettings()) || {}; } catch {}
   g[key] = value;
-  try { await kapi.writeGlobalSettings(g); } catch (e) { log('warn', 'บันทึก global settings ไม่สำเร็จ', e); }
+  try { await kapi.writeGlobalSettings(g); } catch (e) { log('warn', T`บันทึก global settings ไม่สำเร็จ`, e); }
   state.settings[key] = value;
   return value;
 }
 export async function bootSequence() {
-  setBusy('กำลังเริ่มโปรแกรม…');
+  setBusy(T`กำลังเริ่มโปรแกรม…`);
   const g = await bootGlobalSettings();
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
@@ -1642,7 +1645,7 @@ export async function bootPanelWindow() {
   })();
   const g = await bootGlobalSettings();
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
-  if (!root) { setStatus('หน้าต่างแผง: ไม่ได้รับที่อยู่โปรเจกต์'); return false; }
+  if (!root) { setStatus(T`หน้าต่างแผง: ไม่ได้รับที่อยู่โปรเจกต์`); return false; }
   await loadProject(root);
   bindPanelWindowSync();
   // [alpha.68] แผงที่ผูกกับฉากต้องรู้ตั้งแต่วินาทีแรกว่าตอนนี้ฉากไหนเปิดอยู่ที่หน้าต่างหลัก
@@ -1685,7 +1688,7 @@ export function handleSyncMessage(msg) {
   if (msg.kind === 'panelwin-ready' && !PANEL_WIN) {
     state._panelWinHealth = msg;                 // เทส/การไล่ปัญหาอ่านจากตรงนี้
     if (!msg.hasStatus || !msg.drawn) {
-      log('warn', '[แผง] หน้าต่างแผง "' + msg.id + '" รายงานสภาพผิดปกติ', msg);
+      log('warn', T`[แผง] หน้าต่างแผง "` + msg.id + T`" รายงานสภาพผิดปกติ`, msg);
     }
     return true;
   }
@@ -1732,7 +1735,7 @@ const SCENE_PANEL_DRAW = {
 export function drawPanel(id) {
   const pid = panelId(id);
   const f = SCENE_PANEL_DRAW[pid];
-  return f ? Promise.resolve().then(f).catch((e) => log('error', 'วาดแผง ' + pid + ' ล้มเหลว', e))
+  return f ? Promise.resolve().then(f).catch((e) => log('error', T`วาดแผง ` + pid + T` ล้มเหลว`, e))
            : renderFeaturePanel(pid);
 }
 /** วาดแผงของหน้าต่างนี้ใหม่ (หน้าต่างแผงเท่านั้น — มีแผงเดียว) */
@@ -1859,7 +1862,7 @@ async function reloadTabsFromDisk(changedPath) {
       else if (tab.sp) tab.sp.setMarkdown(body);
       else tab.plain.value = body;
       n++;
-    } catch (e) { log('warn', '[แผง] โหลดไฟล์ที่หน้าต่างแผงแก้ไม่สำเร็จ: ' + tab.file, e); }
+    } catch (e) { log('warn', T`[แผง] โหลดไฟล์ที่หน้าต่างแผงแก้ไม่สำเร็จ: ` + tab.file, e); }
   }
   if (n) { setStatus(t('panel.reloadedFromPanelWin', 'อัปเดตเนื้อฉากจากหน้าต่างแผงแล้ว') + ' (' + n + ')'); scheduleOutline(); }
   refreshCommentsPanel();
@@ -1906,7 +1909,7 @@ export function reportPanelWindowHealth() {
 export function requestOpenInMain(file) {
   if (!PANEL_WIN || !file) return false;
   try { kapi.broadcast && kapi.broadcast({ kind: 'open-file', root: state.root, file }); } catch {}
-  setStatus('ส่งไปเปิดที่หน้าต่างหลักแล้ว');
+  setStatus(T`ส่งไปเปิดที่หน้าต่างหลักแล้ว`);
   return true;
 }
 
@@ -1915,8 +1918,8 @@ export async function toggleOpenLastProject(on) {
   const v = on ?? !(state.settings.openLastProject === true);
   await saveGlobalSetting('openLastProject', v);
   syncMenuToggles();
-  setStatus(v ? 'เริ่มโปรแกรม: เปิดโปรเจกต์ล่าสุดทันที (ข้ามหน้าแรก)'
-              : 'เริ่มโปรแกรม: แสดงหน้าแรกก่อน');
+  setStatus(v ? T`เริ่มโปรแกรม: เปิดโปรเจกต์ล่าสุดทันที (ข้ามหน้าแรก)`
+              : T`เริ่มโปรแกรม: แสดงหน้าแรกก่อน`);
   return v;
 }
 /** สลับ "แสดงหน้าแรกเสมอ" (เมนูมุมมอง) */
@@ -1924,7 +1927,7 @@ export async function toggleShowHomeAlways(on) {
   const v = on ?? !(state.settings.showHomeOnStartup === true);
   await saveGlobalSetting('showHomeOnStartup', v);
   syncMenuToggles();
-  setStatus(v ? 'แสดงหน้าแรกเสมอ: เปิด' : 'แสดงหน้าแรกเสมอ: ปิด');
+  setStatus(v ? T`แสดงหน้าแรกเสมอ: เปิด` : T`แสดงหน้าแรกเสมอ: ปิด`);
   return v;
 }
 
@@ -1936,7 +1939,7 @@ async function saveOpenTabs() {
   try {
     await kapi.writeFile(await kapi.join(state.root, 'project.khn.json'),
       JSON.stringify(state.meta, null, 2));
-  } catch (e) { log('warn', 'บันทึก openTabs ไม่สำเร็จ', e); }
+  } catch (e) { log('warn', T`บันทึก openTabs ไม่สำเร็จ`, e); }
 }
 // [alpha.60r ข้อ 2] กู้คืนแท็บที่เคยเปิดค้างไว้
 async function restoreOpenTabs() {
@@ -1952,7 +1955,7 @@ async function restoreOpenTabs() {
       }
     } catch {}
   }
-  if (restored.length) log('info', `กู้คืน ${restored.length} แท็บ`);
+  if (restored.length) log('info', T`กู้คืน ${restored.length} แท็บ`);
 }
 
 // ขอบเขตการค้น: จำกัดผลการกรองไว้เฉพาะบทที่เลือก (คลิกขวาที่หัวบท → ค้นเฉพาะในบทนี้)
@@ -1963,7 +1966,7 @@ function setTreeScope(scope) {
   const q = $('#tree-search');
   filterTree(q ? q.value : '');
   if (treeScope && q) q.focus();
-  setStatus(treeScope ? 'ค้นเฉพาะในบท: ' + treeScope.label : 'ค้นทั้งโปรเจกต์');
+  setStatus(treeScope ? T`ค้นเฉพาะในบท: ` + treeScope.label : T`ค้นทั้งโปรเจกต์`);
   return treeScope;
 }
 function renderScopeChip() {
@@ -1973,9 +1976,9 @@ function renderScopeChip() {
     chip = el('div', 'tree-scope'); chip.id = 'tree-scope';
     const tree = $('#tree'); if (tree && tree.parentNode) tree.parentNode.insertBefore(chip, tree);
   }
-  chip.innerHTML = iconHtml('search', 14) + ' ค้นเฉพาะใน: ' + treeScope.label + '  ';
+  chip.innerHTML = iconHtml('search', 14) + T` ค้นเฉพาะใน: ` + treeScope.label + '  ';
   const x = el('span', 'tree-scope-x', '✕');
-  x.title = 'ยกเลิกขอบเขต';
+  x.title = T`ยกเลิกขอบเขต`;
   x.onclick = () => setTreeScope(null);
   chip.append(x);
 }
@@ -2019,7 +2022,7 @@ function filterTree(q) {
     // **กฎที่ถูกคือดูที่ตัวแถวเอง**: แถวที่ไม่ได้สังกัดบทไหน (ไม่มี chGuid) ไม่เกี่ยวกับขอบเขตบท
     if (ok && treeScope && s.dataset.chGuid) ok = s.dataset.chGuid === treeScope.guid;
     if (!ok && s.dataset.planner) {
-      log('info', `planner/tree: ตัวกรอง Explorer ซ่อนแถว "${s.dataset.plannerName}"`,
+      log('info', T`planner/tree: ตัวกรอง Explorer ซ่อนแถว "${s.dataset.plannerName}"`,
           { query: raw, scope: treeScope ? treeScope.label : null });
     }
     s.style.display = ok ? '' : 'none';
@@ -2037,7 +2040,7 @@ function filterTree(q) {
     const plRows = [...tree.querySelectorAll('.scene[data-planner]')];
     const anyBoard = plRows.some((r) => r.style.display !== 'none');
     plNote.style.display = (plRows.length && !anyBoard) ? '' : 'none';
-    plNote.textContent = `🔍 กระดาน ${plRows.length} ใบถูกซ่อนด้วยตัวกรอง — ล้างช่องค้นหาเพื่อดูทั้งหมด`;
+    plNote.textContent = T`🔍 กระดาน ${plRows.length} ใบถูกซ่อนด้วยตัวกรอง — ล้างช่องค้นหาเพื่อดูทั้งหมด`;
   }
   tree.querySelectorAll('.sec').forEach((sec) => {
     const anyVisible = [...sec.querySelectorAll('.scene, .chapter')]
@@ -2097,7 +2100,7 @@ export async function buildTree() {
   }
   _treeBuilding = true;
   try { await _buildTreeInner(); }
-  catch (e) { log('error', 'buildTree: สร้างต้นไม้ไม่สำเร็จ (ต้นไม้เดิมยังอยู่)', e); }
+  catch (e) { log('error', T`buildTree: สร้างต้นไม้ไม่สำเร็จ (ต้นไม้เดิมยังอยู่)`, e); }
   finally {
     _treeBuilding = false;
     if (_treeQueued) {
@@ -2119,22 +2122,22 @@ async function _buildTreeInner() {
     const secEl = el('div', 'sec');
     const secTitle = el('div', 'sec-title', '📚 ' + (sec.title || name));
     // ปุ่ม + บนหัวเล่ม = เพิ่มบทลงในฉบับร่างแรกของเล่ม (ทางลัด)
-    const addToSec = el('span', 'row-add', '+'); addToSec.title = 'เพิ่มบทในเล่มนี้';
+    const addToSec = el('span', 'row-add', '+'); addToSec.title = T`เพิ่มบทในเล่มนี้`;
     addToSec.onclick = async (e) => { e.stopPropagation();
       const dRoot = await kapi.join(secPath, 'Draft');
       const dns = (await kapi.exists(dRoot)) ? await kapi.listDirs(dRoot) : [];
       if (dns.length) addChapter(await kapi.join(dRoot, dns[0]));
-      else setStatus('เล่มนี้ยังไม่มีฉบับร่าง');
+      else setStatus(T`เล่มนี้ยังไม่มีฉบับร่าง`);
     };
     secTitle.append(addToSec);
     // คลิกขวาหัวเล่ม → เปลี่ยนชื่อ/ลบเล่ม/เพิ่มเล่มใหม่
     secTitle.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-      { label: '📗 เพิ่มเล่มใหม่…', click: () => addSection() },
-      { label: '✎ เปลี่ยนชื่อเล่ม…', click: () => renameSection(secPath, sec) },
+      { label: T`📗 เพิ่มเล่มใหม่…`, click: () => addSection() },
+      { label: T`✎ เปลี่ยนชื่อเล่ม…`, click: () => renameSection(secPath, sec) },
       // [alpha.60r3 ข้อ 3] ปก/คำโปรย/สถานะ/ลำดับ — เดิมต้องเปิดหน้าจัดการเล่มทั้งหน้า
       { label: '⚙ ' + t('app.sectionProps', 'คุณสมบัติเล่ม…'), click: () => sectionProps(secPath, sec) },
       '-',
-      { label: '🗑 ลบเล่มทั้งเล่ม', danger: true, click: () => deleteSection(secPath, sec) },
+      { label: T`🗑 ลบเล่มทั้งเล่ม`, danger: true, click: () => deleteSection(secPath, sec) },
     ]); };
     secEl.append(secTitle);
     makeAccordion(secTitle, secEl, 'sec:' + name);
@@ -2155,7 +2158,7 @@ async function _buildTreeInner() {
           const chHead = el('div', 'ch-title');
           chHead.innerHTML = iconHtml('folder', 14) + ' ' + ch.title;
           const addSc = el('span', 'row-add', '+');
-          addSc.title = 'เพิ่มฉากในบทนี้';
+          addSc.title = T`เพิ่มฉากในบทนี้`;
           addSc.onclick = (e) => { e.stopPropagation(); addScene(dPath, ch); };
           chHead.append(addSc);
           chEl.append(chHead);
@@ -2182,15 +2185,15 @@ async function _buildTreeInner() {
               e.preventDefault(); return moveMemoToChapter(m.path || m.file, dPath, ch, null); }
             const cData = e.dataTransfer.getData('text/k2-chapter');
             if (cData) { let c; try { c = JSON.parse(cData); } catch { return; }
-              if (c.draftDir !== dPath) { setStatus('ย้ายข้ามฉบับร่างยังไม่รองรับ'); return; }
+              if (c.draftDir !== dPath) { setStatus(T`ย้ายข้ามฉบับร่างยังไม่รองรับ`); return; }
               e.preventDefault(); return moveChapterBefore(dPath, c.guid, ch.guid); }
             // วางฉาก → ต่อท้ายบทนี้
             let data; try { data = JSON.parse(e.dataTransfer.getData('text/k2-scene')); } catch { return; }
             if (!data || data.chGuid === ch.guid) return;
-            if (data.draftDir !== dPath) { setStatus('ยังไม่รองรับการย้ายข้ามฉบับร่าง/เซกชัน'); return; }
+            if (data.draftDir !== dPath) { setStatus(T`ยังไม่รองรับการย้ายข้ามฉบับร่าง/เซกชัน`); return; }
             e.preventDefault();
             await moveSceneToChapter(dPath, { guid: data.chGuid }, { id: data.id }, ch);
-            setStatus('ย้ายฉากไปบท: ' + ch.title);
+            setStatus(T`ย้ายฉากไปบท: ` + ch.title);
           });
           for (const sc of (scenesAll[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0))) {
             const scEl = el('div', 'scene');
@@ -2214,7 +2217,7 @@ async function _buildTreeInner() {
             // word count เล็ก ๆ
             if (sc.wordCount) {
               scEl.append(el('span', 'sc-wordcount',
-                (sc.wordCount >= 1000 ? Math.round(sc.wordCount / 1000) + 'k' : sc.wordCount) + ' คำ'));
+                (sc.wordCount >= 1000 ? Math.round(sc.wordCount / 1000) + 'k' : sc.wordCount) + T` คำ`));
             }
             if (sc.status && sc.status !== 'Outline') {
               // ชิปสถานะได้สีประจำสถานะ (มาตรฐาน หรือที่ผู้ใช้ตั้งเองในกล่องจัดการสถานะ)
@@ -2237,19 +2240,19 @@ async function _buildTreeInner() {
               sc.pov, sc.emotion, sc.conflict, sc.synopsis, sc.note].filter(Boolean).join(' ').toLowerCase();
             scEl.title = [
               (isMemo ? '📝 ' : '📄 ') + sc.title,
-              isMemo ? 'โน้ตในบท — ไม่ถูกรวมตอนส่งออกฉบับร่าง' : '',
-              sc.locked ? '🔒 ล็อก (แก้ไม่ได้)' : '',
-              sc.status && sc.status !== 'Outline' ? 'สถานะ: ' + sc.status : '',
-              (sc.tags || []).length ? 'แท็ก: ' + sc.tags.join(', ') : '',
-              sc.pov ? 'มุมมอง: ' + sc.pov : '',
-              sc.emotion ? 'อารมณ์: ' + sc.emotion : '',
-              sc.conflict ? 'ความขัดแย้ง: ' + sc.conflict : '',
-              sc.flag ? '⭐ ปักหมุด' : '',
-              sc.isFlashback ? '⏪ ย้อนอดีต (Flashback)' : '',
-              sc.isFlashforward ? '⏩ ล่วงหน้า (Flashforward)' : '',
-              sc.wordCount ? sc.wordCount + ' คำ' : '',
+              isMemo ? T`โน้ตในบท — ไม่ถูกรวมตอนส่งออกฉบับร่าง` : '',
+              sc.locked ? T`🔒 ล็อก (แก้ไม่ได้)` : '',
+              sc.status && sc.status !== 'Outline' ? T`สถานะ: ` + sc.status : '',
+              (sc.tags || []).length ? T`แท็ก: ` + sc.tags.join(', ') : '',
+              sc.pov ? T`มุมมอง: ` + sc.pov : '',
+              sc.emotion ? T`อารมณ์: ` + sc.emotion : '',
+              sc.conflict ? T`ความขัดแย้ง: ` + sc.conflict : '',
+              sc.flag ? T`⭐ ปักหมุด` : '',
+              sc.isFlashback ? T`⏪ ย้อนอดีต (Flashback)` : '',
+              sc.isFlashforward ? T`⏩ ล่วงหน้า (Flashforward)` : '',
+              sc.wordCount ? sc.wordCount + T` คำ` : '',
               sc.synopsis || '',
-              sc.note ? 'โน้ต: ' + sc.note : '',
+              sc.note ? T`โน้ต: ` + sc.note : '',
             ].filter(Boolean).join('\n');
             scEl.onclick = async () => {
               setPropsTarget(dPath, ch, sc);                       // อัปเดตแผงคุณสมบัติ (ถ้าเปิดอยู่)
@@ -2277,53 +2280,53 @@ async function _buildTreeInner() {
                 e.preventDefault(); return moveMemoToChapter(m.path || m.file, dPath, ch, sc.id); }
               let data; try { data = JSON.parse(e.dataTransfer.getData('text/k2-scene')); } catch { return; }
               if (!data || data.id === sc.id) return;
-              if (data.draftDir !== dPath) { setStatus('ยังไม่รองรับการย้ายข้ามฉบับร่าง'); return; }
+              if (data.draftDir !== dPath) { setStatus(T`ยังไม่รองรับการย้ายข้ามฉบับร่าง`); return; }
               e.preventDefault(); e.stopPropagation();
               await moveSceneBefore(dPath, { guid: data.chGuid }, data.id, ch, sc.id);
             });
             scEl.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-              { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(scEl.dataset.path) },
+              { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(scEl.dataset.path) },
               // โน้ตในบท: ย้ายออกไปโฟลเดอร์ MEMO ได้ และ "กลับเป็นฉากปกติ" ได้ด้วย
               // (เดิมเปลี่ยนเป็นโน้ตแล้วไม่มีทางกลับในเมนู — บั๊กข้อ 8)
-              ...(isMemo ? [{ label: '📄 กลับเป็นฉากปกติ (รวมตอนส่งออก)',
+              ...(isMemo ? [{ label: T`📄 กลับเป็นฉากปกติ (รวมตอนส่งออก)`,
                               click: () => setRowMemo(dPath, ch, sc, false) },
-                            { label: '📝 ย้ายออกไปที่ MEMO', click: () => moveRowToMemos(dPath, ch, sc) }]
-                         : [{ label: '📝 เปลี่ยนเป็นโน้ต (ไม่รวมตอนส่งออก)',
+                            { label: T`📝 ย้ายออกไปที่ MEMO`, click: () => moveRowToMemos(dPath, ch, sc) }]
+                         : [{ label: T`📝 เปลี่ยนเป็นโน้ต (ไม่รวมตอนส่งออก)`,
                              click: () => setRowMemo(dPath, ch, sc, true) }]),
-              { label: 'เปิด', click: scEl.onclick },
+              { label: T`เปิด`, click: scEl.onclick },
               // เปิดฉากให้เสร็จก่อนค่อยเปิดแผง — แผงอ่านจาก state.active ที่ openScene เป็นคนตั้ง
-              { label: '💬 คอมเมนต์ (แผง)', click: async () => {
+              { label: T`💬 คอมเมนต์ (แผง)`, click: async () => {
                   setPropsTarget(dPath, ch, sc);
                   await openScene(scEl.dataset.path, sc.title);
                   await openCommentsPanel();
                 } },
-              { label: 'ทำซ้ำ', click: () => duplicateScene(dPath, ch, sc) },
-              { label: 'เปลี่ยนชื่อ…', click: () => renameScene(dPath, ch, sc) },
+              { label: T`ทำซ้ำ`, click: () => duplicateScene(dPath, ch, sc) },
+              { label: T`เปลี่ยนชื่อ…`, click: () => renameScene(dPath, ch, sc) },
               // ข้อ 78: แนะนำชื่อจากเนื้อฉากจริง (ส่งเนื้อหาไปเป็นบริบทให้ AI)
-              { label: '✨ แนะนำชื่อฉากด้วย AI…', click: async () => {
+              { label: T`✨ แนะนำชื่อฉากด้วย AI…`, click: async () => {
                   let ctx = '';
                   try { ctx = await kapi.readFile(scEl.dataset.path); } catch {}
                   showAITitleSuggestions(sc.title || '', (title) => setSceneTitle(dPath, ch, sc, title),
                                          { kind: 'scene', context: ctx });
                 } },
               '-',
-              { label: '▲ เลื่อนขึ้น', click: () => moveSceneOrder(dPath, ch, sc, -1) },
-              { label: '▼ เลื่อนลง', click: () => moveSceneOrder(dPath, ch, sc, 1) },
-              { label: 'ย้ายไปบท ▸', click: () => sceneMoveMenu(e, dPath, ch, sc) },
+              { label: T`▲ เลื่อนขึ้น`, click: () => moveSceneOrder(dPath, ch, sc, -1) },
+              { label: T`▼ เลื่อนลง`, click: () => moveSceneOrder(dPath, ch, sc, 1) },
+              { label: T`ย้ายไปบท ▸`, click: () => sceneMoveMenu(e, dPath, ch, sc) },
               '-',
-              { label: sc.locked ? '🔓 ปลดล็อก' : '🔒 ล็อก (แก้ไม่ได้)', click: () => setSceneLock(dPath, ch, sc, !sc.locked) },
-              { label: sc.flag ? '☆ เอาหมุดออก' : '⭐ ปักหมุด', click: () => toggleSceneFlag(dPath, ch, sc) },
-              { label: 'สถานะ ▸', click: () => sceneStatusMenu(e, dPath, ch, sc) },
-              { label: 'สี ▸', click: () => sceneColorMenu(e, dPath, ch, sc) },
+              { label: sc.locked ? T`🔓 ปลดล็อก` : T`🔒 ล็อก (แก้ไม่ได้)`, click: () => setSceneLock(dPath, ch, sc, !sc.locked) },
+              { label: sc.flag ? T`☆ เอาหมุดออก` : T`⭐ ปักหมุด`, click: () => toggleSceneFlag(dPath, ch, sc) },
+              { label: T`สถานะ ▸`, click: () => sceneStatusMenu(e, dPath, ch, sc) },
+              { label: T`สี ▸`, click: () => sceneColorMenu(e, dPath, ch, sc) },
               '-',
-              { label: '📸 บันทึกเวอร์ชันนี้', click: () => manualSnapshot(dPath, ch, sc) },
-              { label: '🕘 ประวัติเวอร์ชัน…', click: () => versionDialog(dPath, ch, sc) },
-              { label: '⇋ เทียบเวอร์ชัน…', click: () => compareVersionsDialog(dPath, ch, sc) },
-              { label: '⇋ เปิดเทียบด้านขวา', click: () => openCompareRight(dPath, ch, sc) },
-              { label: 'คุณสมบัติ (แผง)', click: () => openPropsPanel(dPath, ch, sc) },
-              { label: 'คุณสมบัติ… (หน้าต่าง)', click: () => sceneProps(dPath, ch, sc) },
+              { label: T`📸 บันทึกเวอร์ชันนี้`, click: () => manualSnapshot(dPath, ch, sc) },
+              { label: T`🕘 ประวัติเวอร์ชัน…`, click: () => versionDialog(dPath, ch, sc) },
+              { label: T`⇋ เทียบเวอร์ชัน…`, click: () => compareVersionsDialog(dPath, ch, sc) },
+              { label: T`⇋ เปิดเทียบด้านขวา`, click: () => openCompareRight(dPath, ch, sc) },
+              { label: T`คุณสมบัติ (แผง)`, click: () => openPropsPanel(dPath, ch, sc) },
+              { label: T`คุณสมบัติ… (หน้าต่าง)`, click: () => sceneProps(dPath, ch, sc) },
               '-',
-              { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: () => deleteScene(dPath, ch, sc) },
+              { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: () => deleteScene(dPath, ch, sc) },
             ]); };
             chEl.append(scEl);
           }
@@ -2331,28 +2334,28 @@ async function _buildTreeInner() {
           if ((scenesAll[ch.guid] || []).length === 0) {
             const es = el('div', 'empty-state-row');
             es.style.cssText = 'text-align:center;padding:8px;opacity:.7;font-style:italic;';
-            es.append(el('span', 'dim', 'ยังไม่มีฉาก — กด + เพื่อสร้าง'));
+            es.append(el('span', 'dim', T`ยังไม่มีฉาก — กด + เพื่อสร้าง`));
             chEl.append(es);
           }
           chHead.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-            { label: '🔍 ค้นเฉพาะในบทนี้', click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
-            { label: 'เพิ่มฉาก…', click: () => addScene(dPath, ch) },
-            { label: 'เปลี่ยนชื่อบท…', click: () => renameChapter(dPath, ch) },
+            { label: T`🔍 ค้นเฉพาะในบทนี้`, click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
+            { label: T`เพิ่มฉาก…`, click: () => addScene(dPath, ch) },
+            { label: T`เปลี่ยนชื่อบท…`, click: () => renameChapter(dPath, ch) },
             // [alpha.60r3 ข้อ 3] สถานะ/องก์/วันที่/บทสำคัญ — ค่าที่ draft.json มีอยู่แล้วแต่ไม่เคยมี UI
             { label: '⚙ ' + t('app.chapterProps', 'คุณสมบัติบท…'), click: () => chapterProps(dPath, ch) },
             // ข้อ 78: บริบท = ชื่อฉากทั้งบท (พอให้ AI เดาเนื้อบทได้โดยไม่ต้องอ่านทุกไฟล์)
-            { label: '✨ แนะนำชื่อบทด้วย AI…', click: () => {
+            { label: T`✨ แนะนำชื่อบทด้วย AI…`, click: () => {
                 const ctx = (scenesAll[ch.guid] || []).map((s) => '- ' + (s.title || '')).join('\n');
                 showAITitleSuggestions(ch.title || '', (title) => setChapterTitle(dPath, ch, title),
                                        { kind: 'chapter', context: ctx });
               } },
-            { label: '🔢 เรียงลำดับหมายเลขใหม่', click: () => renumberChapters(dPath) },
+            { label: T`🔢 เรียงลำดับหมายเลขใหม่`, click: () => renumberChapters(dPath) },
             '-',
-            { label: 'ลบบททั้งบท (ย้ายไปถังขยะ)', danger: true, click: () => deleteChapter(dPath, ch) },
+            { label: T`ลบบททั้งบท (ย้ายไปถังขยะ)`, danger: true, click: () => deleteChapter(dPath, ch) },
           ]); };
           secEl.append(chEl);
         }
-        const addCh = el('div', 'scene add-row', '＋ เพิ่มบท…');
+        const addCh = el('div', 'scene add-row', T`＋ เพิ่มบท…`);
         addCh.onclick = () => addChapter(dPath);
         secEl.append(addCh);
       }
@@ -2361,16 +2364,16 @@ async function _buildTreeInner() {
   }
   // แถวเพิ่มเล่มใหม่ + เปิดตัวจัดการเล่ม (ท้ายรายการเล่มทั้งหมด)
   const addSecRow = el('div', 'sec');
-  const mgrBtn = el('div', 'scene add-row', '📚 จัดการเล่ม…');
+  const mgrBtn = el('div', 'scene add-row', T`📚 จัดการเล่ม…`);
   mgrBtn.onclick = () => openBookManager();
   addSecRow.append(mgrBtn);
-  const tlBtn = el('div', 'scene add-row', '🕒 เส้นเวลา…');
+  const tlBtn = el('div', 'scene add-row', T`🕒 เส้นเวลา…`);
   tlBtn.onclick = () => openTimeline();
   addSecRow.append(tlBtn);
-  const mapBtn = el('div', 'scene add-row', '🗺 แผนที่…');
+  const mapBtn = el('div', 'scene add-row', T`🗺 แผนที่…`);
   mapBtn.onclick = () => openMaps();
   addSecRow.append(mapBtn);
-  const addSecBtn = el('div', 'scene add-row', '＋ เพิ่มเล่ม…');
+  const addSecBtn = el('div', 'scene add-row', T`＋ เพิ่มเล่ม…`);
   addSecBtn.onclick = () => addSection();
   addSecRow.append(addSecBtn);
   tree.append(addSecRow);
@@ -2378,7 +2381,7 @@ async function _buildTreeInner() {
   const memoDir = await kapi.join(state.root, 'Memos');
   const mSec = el('div', 'sec');
   const mHead = el('div', 'sec-title', '📝 MEMO');
-  const addM = el('span', 'row-add', '+'); addM.title = 'สร้าง memo ใหม่';
+  const addM = el('span', 'row-add', '+'); addM.title = T`สร้าง memo ใหม่`;
   addM.onclick = () => addMemo();
   mHead.append(addM); mSec.append(mHead);
   makeAccordion(mHead, mSec, 'sec:__memo__');
@@ -2413,18 +2416,18 @@ async function _buildTreeInner() {
     });
     it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
     it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-      { label: 'เปิด', click: it.onclick },
-      { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(p) },
-      { label: 'เปลี่ยนชื่อ…', click: () => renameMemo(p) },
+      { label: T`เปิด`, click: it.onclick },
+      { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(p) },
+      { label: T`เปลี่ยนชื่อ…`, click: () => renameMemo(p) },
       '-',
       // ทางกลับของคำสั่ง "ย้ายออกไปที่ MEMO" — เดิมทำได้ทางเดียวคือลากวาง (บั๊กข้อ 8)
-      { label: '↩ ย้ายกลับเข้าบท…', click: async () => {
-          const dst = await pickDraftTarget({ title: 'ย้ายโน้ตกลับเข้าบทไหน' });
+      { label: T`↩ ย้ายกลับเข้าบท…`, click: async () => {
+          const dst = await pickDraftTarget({ title: T`ย้ายโน้ตกลับเข้าบทไหน` });
           if (!dst) return;
           await moveMemoToChapter(p, dst.dPath, dst.chapter);
         } },
       '-',
-      { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: () => deleteToTrash(p, title) },
+      { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: () => deleteToTrash(p, title) },
     ]); };
     mSec.append(it);
   }
@@ -2436,11 +2439,11 @@ async function _buildTreeInner() {
   try {
     await buildPlannerSection(tree);
   } catch (e) {
-    log('error', 'buildTree: สร้างหมวดกระดานวางแผนไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน', e);
+    log('error', T`buildTree: สร้างหมวดกระดานวางแผนไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน`, e);
     const fb = el('div', 'sec');
-    const fbHead = el('div', 'sec-title', '📋 กระดานวางแผน (อ่านไม่ได้)');
+    const fbHead = el('div', 'sec-title', T`📋 กระดานวางแผน (อ่านไม่ได้)`);
     fb.append(fbHead);
-    const retry = el('div', 'scene add-row', '↻ ลองใหม่');
+    const retry = el('div', 'scene add-row', T`↻ ลองใหม่`);
     retry.onclick = () => refreshTreeQueued();
     fb.append(retry);
     tree.append(fb);
@@ -2451,10 +2454,10 @@ async function _buildTreeInner() {
   try {
     await buildMapsSection(tree);
   } catch (e) {
-    log('error', 'buildTree: สร้างหมวดแผนที่ไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน', e);
+    log('error', T`buildTree: สร้างหมวดแผนที่ไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน`, e);
     const fb2 = el('div', 'sec');
-    fb2.append(el('div', 'sec-title', '🗺 แผนที่ (อ่านไม่ได้)'));
-    const retry2 = el('div', 'scene add-row', '↻ ลองใหม่');
+    fb2.append(el('div', 'sec-title', T`🗺 แผนที่ (อ่านไม่ได้)`));
+    const retry2 = el('div', 'scene add-row', T`↻ ลองใหม่`);
     retry2.onclick = () => refreshTreeQueued();
     fb2.append(retry2);
     tree.append(fb2);
@@ -2464,7 +2467,7 @@ async function _buildTreeInner() {
   try {
     await buildBranchPlanSection(tree);
   } catch (e) {
-    log('error', 'buildTree: สร้างหมวดแผนผังแตกสายไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน', e);
+    log('error', T`buildTree: สร้างหมวดแผนผังแตกสายไม่สำเร็จ — ข้ามหมวดนี้ไปก่อน`, e);
   }
 
   // ---- คลังรูป (โฟลเดอร์ Images/) — ข้อ 6 · [alpha.63] เห็นครบทุกอัลบั้ม ไม่ใช่แค่รูปที่ราก ----
@@ -2474,25 +2477,25 @@ async function _buildTreeInner() {
     try {
       galAlbums = await albumCore.listAlbums(kapi, state.root);
       galItems = await albumCore.allImages(kapi, state.root, galAlbums);
-    } catch (e) { log('warn', 'explorer: อ่านคลังรูปไม่ได้', e); }
+    } catch (e) { log('warn', T`explorer: อ่านคลังรูปไม่ได้`, e); }
   }
   const iSec = el('div', 'sec');
-  const iHead = el('div', 'sec-title', `🖼 คลังรูป (${galItems.length})`);
-  const addI = el('span', 'row-add', '+'); addI.title = 'เพิ่มรูปเข้าคลัง';
+  const iHead = el('div', 'sec-title', T`🖼 คลังรูป (${galItems.length})`);
+  const addI = el('span', 'row-add', '+'); addI.title = T`เพิ่มรูปเข้าคลัง`;
   addI.onclick = async (e) => {
     e.stopPropagation();
     const src = await kapi.openImageDialog(); if (!src) return;
     await kapi.mkdir(imgDir);
     const nm = await albumCore.addImageFile(kapi, state.root, albumCore.ROOT_ALBUM, src);
     await albumCore.syncFlatIndex(kapi, state.root);
-    await buildTree(); setStatus('เพิ่มรูปเข้าคลังแล้ว: ' + nm);
+    await buildTree(); setStatus(T`เพิ่มรูปเข้าคลังแล้ว: ` + nm);
   };
   iHead.append(addI); iSec.append(iHead);
   makeAccordion(iHead, iSec, 'sec:__images__');
   iHead.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-    { label: '🖼 เปิดคลังรูป', click: () => openGallery() },
-    { label: '＋ สร้างอัลบั้มใหม่…', click: () => galleryCommand('gallery-new-album') },
-    { label: '📂 แสดงโฟลเดอร์ Images', click: () => kapi.revealInOS(imgDir) },
+    { label: T`🖼 เปิดคลังรูป`, click: () => openGallery() },
+    { label: T`＋ สร้างอัลบั้มใหม่…`, click: () => galleryCommand('gallery-new-album') },
+    { label: T`📂 แสดงโฟลเดอร์ Images`, click: () => kapi.revealInOS(imgDir) },
   ]); };
   // จัดกลุ่มตามอัลบั้ม (อัลบั้มรากขึ้นก่อน) — อัลบั้มที่ว่างไม่ต้องโชว์ให้รก
   const byAlbum = new Map();
@@ -2520,7 +2523,7 @@ async function _buildTreeInner() {
       it.dataset.path = p;
       it.dataset.search = (im.file + ' ' + (im.caption || '') + ' ' + (im.tags || []).join(' ')).toLowerCase();
       it.title = im.file + (im.caption ? '\n' + im.caption : '') +
-                 '\nคลิก = ดูภาพเต็ม · ลากไปวางในฉากเพื่อแทรกรูป';
+                 T`\nคลิก = ดูภาพเต็ม · ลากไปวางในฉากเพื่อแทรกรูป`;
       it.onclick = async () => imageLightbox(await kapi.toFileURL(p), im.caption || im.file);
       it.draggable = true;
       it.addEventListener('dragstart', (e) => {
@@ -2529,16 +2532,16 @@ async function _buildTreeInner() {
         e.dataTransfer.setData('text/plain', '![](' + im.path + ')');
       });
       it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-        { label: '🔍 ดูภาพเต็ม', click: it.onclick },
-        { label: '🖼 แทรกลงฉากที่เปิดอยู่', click: () => insertImageByName(im.path, im.caption) },
-        { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(p) },
+        { label: T`🔍 ดูภาพเต็ม`, click: it.onclick },
+        { label: T`🖼 แทรกลงฉากที่เปิดอยู่`, click: () => insertImageByName(im.path, im.caption) },
+        { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(p) },
         '-',
-        { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: () => deleteToTrash(p, im.file) },
+        { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: () => deleteToTrash(p, im.file) },
       ]); };
       iSec.append(it);
     }
   }
-  if (!galItems.length) iSec.append(el('div', 'scene empty-state-row', 'ยังไม่มีรูปในคลัง'));
+  if (!galItems.length) iSec.append(el('div', 'scene empty-state-row', T`ยังไม่มีรูปในคลัง`));
   tree.append(iSec);
 
   // ---- Research (โฟลเดอร์ Research/ — เก็บ PDF, ภาพ, ลิงก์, .md งานวิจัย) ----
@@ -2557,10 +2560,10 @@ async function _buildTreeInner() {
       it.innerHTML = iconHtml('folder', 14) + ' ' + d;
       it.onclick = () => kapi.revealInOS(dp);
       it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-        { label: '📂 เปิดในโฟลเดอร์', click: () => kapi.revealInOS(dp) },
+        { label: T`📂 เปิดในโฟลเดอร์`, click: () => kapi.revealInOS(dp) },
         '-',
-        { label: '🗑 ลบโฟลเดอร์', danger: true, click: async () => {
-          if (!(await confirmBox(`ลบโฟลเดอร์ "${d}" ทั้งหมด ?`))) return;
+        { label: T`🗑 ลบโฟลเดอร์`, danger: true, click: async () => {
+          if (!(await confirmBox(T`ลบโฟลเดอร์ "${d}" ทั้งหมด ?`))) return;
           await kapi.remove(dp); await buildTree();
         } },
       ]); };
@@ -2582,31 +2585,31 @@ async function _buildTreeInner() {
         it.onclick = () => kapi.revealInOS(fp);
       }
       it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-        { label: isMd ? '📝 เปิด' : '📂 เปิดในโปรแกรม', click: it.onclick },
-        { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(fp) },
+        { label: isMd ? T`📝 เปิด` : T`📂 เปิดในโปรแกรม`, click: it.onclick },
+        { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(fp) },
         '-',
-        { label: '🗑 ลบ', danger: true, click: async () => {
+        { label: T`🗑 ลบ`, danger: true, click: async () => {
           await kapi.remove(fp); await buildTree();
         } },
       ]); };
       rSec.append(it);
     }
     // ปุ่มเพิ่มไฟล์
-    const addR = el('div', 'scene add-row', '＋ เพิ่มไฟล์งานวิจัย…');
+    const addR = el('div', 'scene add-row', T`＋ เพิ่มไฟล์งานวิจัย…`);
     addR.onclick = async () => {
       await kapi.mkdir(resDir);
       kapi.revealInOS(resDir);  // เปิดให้ลากวาง
-      setStatus('เปิดโฟลเดอร์ Research แล้ว — ลากไฟล์เข้ามาได้เลย');
+      setStatus(T`เปิดโฟลเดอร์ Research แล้ว — ลากไฟล์เข้ามาได้เลย`);
     };
     rSec.append(addR);
   } else {
     // Empty state
     const es = el('div', 'scene empty-state-row');
-    es.append(el('span', 'dim', 'ยังไม่มีไฟล์งานวิจัย'));
-    const createB = el('button', 'k-ok empty-state-btn', '+ สร้างโฟลเดอร์ Research');
+    es.append(el('span', 'dim', T`ยังไม่มีไฟล์งานวิจัย`));
+    const createB = el('button', 'k-ok empty-state-btn', T`+ สร้างโฟลเดอร์ Research`);
     createB.onclick = async () => {
       await kapi.mkdir(resDir);
-      setStatus('สร้างโฟลเดอร์ Research แล้ว');
+      setStatus(T`สร้างโฟลเดอร์ Research แล้ว`);
       await buildTree();
     };
     es.append(createB);
@@ -2627,30 +2630,30 @@ async function _buildTreeInner() {
   const wHead = el('div', 'sec-title', '📖 WIKI');
   wSec.append(wHead);
   makeAccordion(wHead, wSec, 'sec:__wiki__');
-  const tplRow = el('div', 'scene', '⚙ เทมเพลต (จัดการ)');
+  const tplRow = el('div', 'scene', T`⚙ เทมเพลต (จัดการ)`);
   tplRow.onclick = () => openTemplateManager();
   wSec.append(tplRow);
-  const galRow = el('div', 'scene', '🖼 คลังรูปภาพ');
+  const galRow = el('div', 'scene', T`🖼 คลังรูปภาพ`);
   galRow.onclick = () => openGallery();
   wSec.append(galRow);
-  const catRow = el('div', 'scene', '➕ สร้างหมวดใหม่');
+  const catRow = el('div', 'scene', T`➕ สร้างหมวดใหม่`);
   catRow.onclick = () => newWikiCat();
   wSec.append(catRow);
   const renderCat = async (catDir, cat, scopeLabel) => {
     const cEl = el('div', 'chapter');
     const cHead = el('div', 'ch-title');
     cHead.innerHTML = catIconHtml(cat) + ' ' + catLabel(cat) + (scopeLabel ? ` (${scopeLabel})` : '');
-    const addE = el('span', 'row-add', '+'); addE.title = 'สร้างใหม่ในหมวดนี้';
+    const addE = el('span', 'row-add', '+'); addE.title = T`สร้างใหม่ในหมวดนี้`;
     addE.onclick = (e) => { e.stopPropagation(); addEntity(catDir, cat); };
     cHead.append(addE); cEl.append(cHead);
     makeAccordion(cHead, cEl, 'wcat:' + cat + ':' + (scopeLabel || ''));
     // คลิกขวาหัวหมวด → แก้ไข/ลบ (เฉพาะหมวดที่ผู้ใช้สร้าง / ไม่ใช่หมวดหลัก)
     if (!scopeLabel) cHead.oncontextmenu = (e) => { e.preventDefault();
-      const items = [{ label: iconHtml('plus', 14) + ' สร้างรายการใหม่', click: () => addEntity(catDir, cat) }];
+      const items = [{ label: iconHtml('plus', 14) + T` สร้างรายการใหม่`, click: () => addEntity(catDir, cat) }];
       if (!BUILTIN_CATS.includes(cat)) items.push('-',
-        { label: iconHtml('edit', 14) + ' แก้ไขหมวด (ชื่อ/ไอคอน)', click: () => editWikiCat(cat) },
-        { label: iconHtml('trash', 14) + ' ลบหมวด', danger: true, click: () => deleteWikiCat(cat, catDir) });
-      else items.push('-', { label: iconHtml('edit', 14) + ' เปลี่ยนไอคอน/ชื่อที่แสดง', click: () => editWikiCat(cat) });
+        { label: iconHtml('edit', 14) + T` แก้ไขหมวด (ชื่อ/ไอคอน)`, click: () => editWikiCat(cat) },
+        { label: iconHtml('trash', 14) + T` ลบหมวด`, danger: true, click: () => deleteWikiCat(cat, catDir) });
+      else items.push('-', { label: iconHtml('edit', 14) + T` เปลี่ยนไอคอน/ชื่อที่แสดง`, click: () => editWikiCat(cat) });
       popupMenu(e.clientX, e.clientY, items);
     };
     // หัวหมวดรับ drop entity จากหมวดอื่น → ย้ายไฟล์ .json
@@ -2686,12 +2689,12 @@ async function _buildTreeInner() {
         });
         it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
         it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-          { label: 'เปิด', click: it.onclick },
-          { label: iconHtml('search', 14) + ' ค้นหาในฉาก (Find on location)',
+          { label: T`เปิด`, click: it.onclick },
+          { label: iconHtml('search', 14) + T` ค้นหาในฉาก (Find on location)`,
             click: () => findEntityInScenes(p, name, e.clientX, e.clientY) },
           // [alpha.58 ฟีเจอร์ที่ขาด 2] เอนทิตี้เป็นไฟล์ .json แก้นอกโปรแกรมได้ — ต้องหาเจอในดิสก์
-          { label: '📂 หาในดิสก์ (Find on disk)', click: () => revealFile(p) },
-          { label: iconHtml('history', 14) + ' ประวัติเวอร์ชัน…',
+          { label: T`📂 หาในดิสก์ (Find on disk)`, click: () => revealFile(p) },
+          { label: iconHtml('history', 14) + T` ประวัติเวอร์ชัน…`,
             click: async () => {
               const { fileVersionDialog } = await import('./dialogs.js');
               await fileVersionDialog(p, name, { onRestored: async () => {
@@ -2700,9 +2703,9 @@ async function _buildTreeInner() {
                 await buildTree();
               } });
             } },
-          { label: 'ทำซ้ำ', click: () => duplicateEntity(p) },
+          { label: T`ทำซ้ำ`, click: () => duplicateEntity(p) },
           '-',
-          { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: () => deleteToTrash(p, name) },
+          { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: () => deleteToTrash(p, name) },
         ]); };
         cEl.append(it);
       }
@@ -2738,19 +2741,19 @@ async function _buildTreeInner() {
   const recDirs = await kapi.exists(recDir) ? await kapi.listDirs(recDir) : [];
   const all = [...recItems, ...recDirs];
   const tSec = el('div', 'sec');
-  tSec.append(el('div', 'sec-title', `🗑 ถังขยะ (${all.length})`));
+  tSec.append(el('div', 'sec-title', T`🗑 ถังขยะ (${all.length})`));
   for (const f of all) {
     const p = await kapi.join(recDir, f);
     const label = f.replace(/^[a-z0-9]+-/, '');
     const it = el('div', 'scene trash-item', '♻ ' + label);
     it.oncontextmenu = it.onclick = (e) => { e.preventDefault();
       popupMenu(e.clientX, e.clientY, [
-        { label: 'กู้คืน', click: () => restoreFromTrash(p, f) },
+        { label: T`กู้คืน`, click: () => restoreFromTrash(p, f) },
         '-',
-        { label: 'ลบถาวร', danger: true, click: async () => {
-            if (!(await confirmBox(`ลบ “${label}” ถาวร ? (กู้คืนไม่ได้อีก)`, 'ลบถาวร'))) return;
+        { label: T`ลบถาวร`, danger: true, click: async () => {
+            if (!(await confirmBox(T`ลบ “${label}” ถาวร ? (กู้คืนไม่ได้อีก)`, T`ลบถาวร`))) return;
             await kapi.remove(p); await kapi.remove(p + '.k2restore.json');
-            await buildTree(); setStatus('ลบถาวรแล้ว: ' + label);
+            await buildTree(); setStatus(T`ลบถาวรแล้ว: ` + label);
           } },
       ]); };
     tSec.append(it);
@@ -2758,7 +2761,7 @@ async function _buildTreeInner() {
   tree.append(tSec);
   // ---- สลับ buffer เข้าจอครั้งเดียว (คง scroll เดิม + สถานะขอบเขต/ตัวกรอง) ----
   const real = $('#tree');
-  if (!real) { log('warn', 'buildTree: ไม่มี #tree ให้สลับเข้า (แผงโปรเจกต์ยังไม่พร้อม) — ข้ามรอบนี้'); return; }
+  if (!real) { log('warn', T`buildTree: ไม่มี #tree ให้สลับเข้า (แผงโปรเจกต์ยังไม่พร้อม) — ข้ามรอบนี้`); return; }
   // [alpha.66r2 ข้อ 1] เดิมจำแค่ scrollTop → ต้นไม้ที่ชื่อฉากยาวจนมีแถบเลื่อนแนวนอน
   // เด้งกลับชิดซ้ายทุกครั้งที่รีเฟรช · ต้องจำทั้งสองแกน
   const scrollTop = real.scrollTop, scrollLeft = real.scrollLeft;
@@ -2786,7 +2789,7 @@ export function pickFromList(title, items) {
     }
     box.append(list);
     const btns = el('div', 'k-dlg-btns');
-    const c = el('button', null, 'ยกเลิก');
+    const c = el('button', null, T`ยกเลิก`);
     c.onclick = () => { ov.remove(); resolve(null); };
     btns.append(c); box.append(btns); ov.append(box);
     ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
@@ -2817,39 +2820,39 @@ export function relationDialog(targets, fromName) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', 'ผูกความสัมพันธ์'));
-    const r1 = el('div', 'wiki-row'); r1.append(el('label', null, 'ผูกกับ'));
+    box.append(el('div', 'k-dlg-title', T`ผูกความสัมพันธ์`));
+    const r1 = el('div', 'wiki-row'); r1.append(el('label', null, T`ผูกกับ`));
     const selT = el('select', 'wiki-input k-dlg-select');
     for (const t of targets) { const o = el('option', null, t); o.value = t; selT.append(o); }
     r1.append(selT); box.append(r1);
     const r2 = el('div', 'wiki-row');
     const lab = el('label', null, ''); r2.append(lab);
     const inR = el('input', 'wiki-input'); inR.setAttribute('list', 'k-roles');
-    inR.placeholder = 'เช่น พ่อ / เพื่อน / ศัตรู';
+    inR.placeholder = T`เช่น พ่อ / เพื่อน / ศัตรู`;
     const dl = el('datalist'); dl.id = 'k-roles';
     for (const role of knownRoles()) { const o = el('option'); o.value = role; dl.append(o); }
     r2.append(inR, dl); box.append(r2);
     // ประเภทความสัมพันธ์ (ครอบครัว/คนรัก/ศัตรู…) — ใช้ระบายสีเส้นใน Story Network
     const rType = el('div', 'wiki-row');
-    rType.append(el('label', null, 'ประเภท'));
+    rType.append(el('label', null, T`ประเภท`));
     const selType = el('select', 'wiki-input k-dlg-select rel-type');
-    { const o = el('option', null, '— ไม่ระบุ —'); o.value = ''; selType.append(o); }
+    { const o = el('option', null, T`— ไม่ระบุ —`); o.value = ''; selType.append(o); }
     for (const ty of REL_TYPES) { const o = el('option', null, ty.label); o.value = ty.key; selType.append(o); }
     rType.append(selType); box.append(rType);
     let typeTouched = false;                      // ผู้ใช้เลือกเองแล้ว → เลิกเดาทับ
     selType.onchange = () => { typeTouched = true; };
     // แสดงตัวอย่างบทบาทฝั่งตรงข้ามแบบสด + เดาประเภทจากบทบาทที่พิมพ์
     const hint = el('div', 'k-hint'); hint.style.margin = '2px 0 8px';
-    const upd = () => { lab.textContent = `${fromName} เป็น…ของ ${selT.value}`;
+    const upd = () => { lab.textContent = T`${fromName} เป็น…ของ ${selT.value}`;
       const role = inR.value.trim();
       const inv = (INV_C.m && INV_C.m[role]) || role;
       if (!typeTouched) selType.value = role ? categorizeWith(INV_C.cat, role) : '';
-      hint.textContent = role ? `อีกฝั่งจะได้บทบาท “${inv}” อัตโนมัติ` : ''; };
+      hint.textContent = role ? T`อีกฝั่งจะได้บทบาท “${inv}” อัตโนมัติ` : ''; };
     selT.onchange = upd; inR.oninput = upd; upd();
     box.append(hint);
     const btns = el('div', 'k-dlg-btns');
-    const c = el('button', null, 'ยกเลิก');
-    const ok = el('button', 'k-ok', 'ผูกความสัมพันธ์');
+    const c = el('button', null, T`ยกเลิก`);
+    const ok = el('button', 'k-ok', T`ผูกความสัมพันธ์`);
     c.onclick = () => { ov.remove(); resolve(null); };
     ok.onclick = () => { const role = inR.value.trim();
       if (!role) { inR.focus(); return; }
@@ -2882,31 +2885,31 @@ export function catIconHtml(key, sz) { return iconHtml(catIcon(key), sz || 16); 
  * @returns {Promise<boolean>} สำเร็จไหม (main คืน false เมื่อ path ไม่มีจริง)
  */
 export async function revealFile(p) {
-  if (!p) { setStatus('ยังไม่มีไฟล์ให้เปิด'); return false; }
+  if (!p) { setStatus(T`ยังไม่มีไฟล์ให้เปิด`); return false; }
   try {
     const ok = await kapi.revealInOS(p);
-    setStatus(ok ? '📂 เปิดโฟลเดอร์แล้ว: ' + p : 'ไม่พบไฟล์ในดิสก์: ' + p);
+    setStatus(ok ? T`📂 เปิดโฟลเดอร์แล้ว: ` + p : T`ไม่พบไฟล์ในดิสก์: ` + p);
     return !!ok;
-  } catch (e) { log('warn', 'เปิดโฟลเดอร์ไม่สำเร็จ', e); return false; }
+  } catch (e) { log('warn', T`เปิดโฟลเดอร์ไม่สำเร็จ`, e); return false; }
 }
 
 export async function findEntityInScenes(entityPath, name, x, y) {
-  setStatus('กำลังค้นหาฉากที่กล่าวถึง “' + name + '” …');
+  setStatus(T`กำลังค้นหาฉากที่กล่าวถึง “` + name + '” …');
   await ensureAutoLink();
   const links = (getBacklinksFor(entityPath) || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0));
-  if (!links.length) { setStatus('ยังไม่มีฉากที่กล่าวถึง “' + name + '”'); return links; }
+  if (!links.length) { setStatus(T`ยังไม่มีฉากที่กล่าวถึง “` + name + '”'); return links; }
   const items = links.map((l) => ({
     label: iconHtml('file', 14) + ' ' + (l.title || l.sceneId) +
            '  <span class="dim">' + (l.count || 1) + '×' + (l.via ? ' · ' + l.via : '') + '</span>',
     click: async () => {
       const hit = await findScenePath(state.root, l.sceneId);
       if (hit && (await kapi.exists(hit.path))) openScene(hit.path, hit.title);
-      else setStatus('ไม่พบไฟล์ฉาก: ' + (l.title || l.sceneId));
+      else setStatus(T`ไม่พบไฟล์ฉาก: ` + (l.title || l.sceneId));
     },
   }));
-  items.unshift({ label: `<b>${links.length} ฉากที่กล่าวถึง “${name}”</b>`, disabled: true }, '-');
+  items.unshift({ label: T`<b>${links.length} ฉากที่กล่าวถึง “${name}”</b>`, disabled: true }, '-');
   popupMenu(typeof x === 'number' ? x : 80, typeof y === 'number' ? y : 80, items);
-  setStatus(`พบ ${links.length} ฉากที่กล่าวถึง “${name}”`);
+  setStatus(T`พบ ${links.length} ฉากที่กล่าวถึง “${name}”`);
   return links;
 }
 // เอาชื่อไทยของหมวดเองไปใส่ CAT_TH ด้วย เพื่อให้ WikiEditor/ตัวจัดการเทมเพลตแสดงตรงกัน
@@ -2938,7 +2941,7 @@ export function catEditDialog(init, title) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.innerHTML = `
+    box.innerHTML = T`
       <div class="k-dlg-title">${title}</div>
       <div class="k-row" style="flex-direction:column;align-items:stretch;gap:6px;margin:6px 0">
         <label>ชื่อหมวด</label><input type="text" class="k-dlg-input" id="cat-label">
@@ -3093,7 +3096,7 @@ export async function renderNetworkPanel() {
             eb.relationships.push({ targetName: a.name, target: a.file, role: label, type });
             await kapi.writeFile(b.file, JSON.stringify(eb, null, 2));
           }
-          setStatus(`🔗 สร้างความสัมพันธ์ "${label}" ระหว่าง ${a.name} ↔ ${b.name}`);
+          setStatus(T`🔗 สร้างความสัมพันธ์ "${label}" ระหว่าง ${a.name} ↔ ${b.name}`);
         } catch(e) { console.error('onCreateRel failed:', e); }
       },
       onReveal: (file) => { try { kapi.revealInOS(file); } catch {} },
@@ -3198,7 +3201,7 @@ async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
   d.chapters[ch.guid] = list;
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   await buildTree();
-  setStatus(`ย้ายโน้ต "${title}" เข้าบท "${ch.title}" แล้ว (จะไม่ถูกรวมตอนส่งออก)`);
+  setStatus(T`ย้ายโน้ต "${title}" เข้าบท "${ch.title}" แล้ว (จะไม่ถูกรวมตอนส่งออก)`);
   return true;
 }
 
@@ -3219,7 +3222,7 @@ async function moveRowToMemos(dPath, ch, sc) {
     .sort((a, b) => (a.order || 0) - (b.order || 0)).map((x, i) => ({ ...x, order: i + 1 }));
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   await buildTree();
-  setStatus(`ย้าย "${sc.title}" ออกไปที่ MEMO แล้ว`);
+  setStatus(T`ย้าย "${sc.title}" ออกไปที่ MEMO แล้ว`);
   return dst;
 }
 
@@ -3239,7 +3242,7 @@ async function setRowMemo(dPath, ch, sc, on) {
     await kapi.writeFile(file, dumpMdFile(meta, body));
   } catch {}
   await buildTree();
-  setStatus(on ? `"${row.title}" เป็นโน้ตแล้ว — จะไม่ถูกรวมตอนส่งออก` : `"${row.title}" กลับเป็นฉากปกติแล้ว`);
+  setStatus(on ? T`"${row.title}" เป็นโน้ตแล้ว — จะไม่ถูกรวมตอนส่งออก` : T`"${row.title}" กลับเป็นฉากปกติแล้ว`);
   return true;
 }
 
@@ -3280,9 +3283,9 @@ function floatTab(file) {
   const bar = el('div', 'float-bar');
   bar.append(el('span', 'float-title', t.title));
   const btns = el('span', 'float-btns');
-  const bMin = el('span', 'float-btn', '—'); bMin.title = 'ย่อ';
-  const bDock = el('span', 'float-btn', '⤢'); bDock.title = 'คืนเป็นแท็บ';
-  const bX = el('span', 'float-btn', '×'); bX.title = 'ปิด';
+  const bMin = el('span', 'float-btn', '—'); bMin.title = T`ย่อ`;
+  const bDock = el('span', 'float-btn', '⤢'); bDock.title = T`คืนเป็นแท็บ`;
+  const bX = el('span', 'float-btn', '×'); bX.title = T`ปิด`;
   btns.append(bMin, bDock, bX); bar.append(btns);
   const body = el('div', 'float-body');
   const grip = el('div', 'float-grip');
@@ -3322,7 +3325,7 @@ function floatTab(file) {
   win.addEventListener('mousedown', () => bringFloatFront(win));
 
   t.tabBtn.classList.add('floated');
-  setStatus('แยก "' + t.title + '" เป็นหน้าต่างลอยแล้ว (ดับเบิลคลิกหัวหน้าต่าง = คืนเป็นแท็บ)');
+  setStatus(T`แยก "` + t.title + T`" เป็นหน้าต่างลอยแล้ว (ดับเบิลคลิกหัวหน้าต่าง = คืนเป็นแท็บ)`);
   setTimeout(() => refitTab(t), 60);
   return win;
 }
@@ -3338,7 +3341,7 @@ function dockTab(file) {
   syncSplitPanes();          // ผนึกคืน → ช่องที่เคยว่างต้องรับ pane กลับ
   activate(file);
   setTimeout(() => refitTab(t), 60);
-  setStatus('คืน "' + t.title + '" เป็นแท็บแล้ว');
+  setStatus(T`คืน "` + t.title + T`" เป็นแท็บแล้ว`);
   return true;
 }
 
@@ -3362,13 +3365,13 @@ function refitTab(t) {
 function revealInExplorer(file) {
   if (!file) return false;
   const row = document.querySelector(`.scene[data-path="${CSS.escape(file)}"]`);
-  if (!row) { setStatus('ไม่พบไฟล์นี้ใน Explorer (อาจถูกลบ/ย้ายไปแล้ว)'); return false; }
+  if (!row) { setStatus(T`ไม่พบไฟล์นี้ใน Explorer (อาจถูกลบ/ย้ายไปแล้ว)`); return false; }
   const sec = row.closest('.sec');
   if (sec && sec.classList.contains('collapsed')) sec.classList.remove('collapsed');
   row.scrollIntoView({ block: 'center', behavior: 'smooth' });
   row.classList.add('reveal-flash');
   setTimeout(() => row.classList.remove('reveal-flash'), 1600);
-  setStatus('แสดงตำแหน่งใน Explorer แล้ว');
+  setStatus(T`แสดงตำแหน่งใน Explorer แล้ว`);
   return true;
 }
 
@@ -3383,7 +3386,7 @@ export async function renderPlannerPanel(boardPath) {
     // เปิดแผงซ้ำ = canvas อาจถูกย้ายที่ใน DOM → บังคับคำนวณพิกัดใหม่ (บั๊ก 65r4 "กรอบนำไม่ขึ้น")
     try { plannerInst.renderer.canvas.calcOffset(); plannerInst._fit(); } catch {}
     setTimeout(() => { try { plannerInst.renderer.canvas.calcOffset(); plannerInst._fit(); } catch {} }, 80);
-    log('info', 'planner: เปิดแผงซ้ำ — คำนวณพิกัด canvas ใหม่');
+    log('info', T`planner: เปิดแผงซ้ำ — คำนวณพิกัด canvas ใหม่`);
     return true;
   }
   host.innerHTML = '';
@@ -3455,13 +3458,13 @@ export async function pickPlannerTarget() {
       items.push({ path: rel, title: e.name, label: `👤 Wiki / ${e.cat} / ${e.name}` });
     }
   } catch {}
-  if (!items.length) { setStatus('ยังไม่มีฉาก/โน้ต/Wiki ให้ผูก'); return null; }
+  if (!items.length) { setStatus(T`ยังไม่มีฉาก/โน้ต/Wiki ให้ผูก`); return null; }
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    const t = el('div', 'k-dlg-title', '📁 ผูกการ์ดกับเอกสารในโปรเจกต์');
+    const t = el('div', 'k-dlg-title', T`📁 ผูกการ์ดกับเอกสารในโปรเจกต์`);
     const inp = el('input', 'k-dlg-input');
-    inp.placeholder = 'พิมพ์เพื่อกรอง…';
+    inp.placeholder = T`พิมพ์เพื่อกรอง…`;
     const list = el('div', 'planner-board-list');
     const draw = (q) => {
       list.innerHTML = '';
@@ -3475,12 +3478,12 @@ export async function pickPlannerTarget() {
         row.onclick = () => { ov.remove(); resolve(it); };
         list.appendChild(row);
       }
-      if (!n) list.appendChild(el('div', 'planner-props-empty', 'ไม่พบเอกสารที่ตรงกับคำค้น'));
+      if (!n) list.appendChild(el('div', 'planner-props-empty', T`ไม่พบเอกสารที่ตรงกับคำค้น`));
     };
     draw('');
     inp.oninput = () => draw(inp.value);
     const btns = el('div', 'k-dlg-btns');
-    const cancel = el('button', 'k-cancel', 'ยกเลิก');
+    const cancel = el('button', 'k-cancel', T`ยกเลิก`);
     cancel.onclick = () => { ov.remove(); resolve(null); };
     btns.appendChild(cancel);
     box.append(t, inp, list, btns);
@@ -3504,7 +3507,7 @@ export async function listPlannerBoards() {
   const out = [];
   if (!state.root) return out;
   const legacy = await kapi.join(state.root, 'planner.json');
-  if (await kapi.exists(legacy)) out.push({ path: legacy, name: 'กระดานหลัก', legacy: true });
+  if (await kapi.exists(legacy)) out.push({ path: legacy, name: T`กระดานหลัก`, legacy: true });
   const dir = await kapi.join(state.root, 'Planners');
   if (await kapi.exists(dir)) {
     for (const f of (await kapi.listFiles(dir, '.json').catch(() => []))) {
@@ -3515,7 +3518,7 @@ export async function listPlannerBoards() {
 }
 
 function safeBoardName(s) {
-  return String(s || 'กระดาน').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'กระดาน';
+  return String(s || T`กระดาน`).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || T`กระดาน`;
 }
 
 /**
@@ -3526,8 +3529,8 @@ function safeBoardName(s) {
 let _treeJob = Promise.resolve();
 export function refreshTreeQueued() {
   _treeJob = _treeJob.then(() => buildTree())
-    .then(() => auditPlannerRows('หลังสร้างต้นไม้'))
-    .catch((e) => log('warn', 'buildTree ล้มเหลว', e));
+    .then(() => auditPlannerRows(T`หลังสร้างต้นไม้`))
+    .catch((e) => log('warn', T`buildTree ล้มเหลว`, e));
   return _treeJob;
 }
 
@@ -3545,13 +3548,13 @@ export function auditPlannerRows(when) {
   const info = rows.map((r) => {
     const cs = getComputedStyle(r);
     return {
-      name: r.dataset.plannerName || '(ไม่มีชื่อ)',
+      name: r.dataset.plannerName || T`(ไม่มีชื่อ)`,
       text: (r.textContent || '').trim(),
       display: cs.display,
       opacity: cs.opacity,
       visibility: cs.visibility,
       cls: r.className,
-      inline: r.style.display || '(ไม่ตั้ง)',
+      inline: r.style.display || T`(ไม่ตั้ง)`,
     };
   });
   const hidden = info.filter((i) => i.display === 'none').length;
@@ -3560,8 +3563,8 @@ export function auditPlannerRows(when) {
   const secHidden = sec ? (getComputedStyle(sec).display === 'none' || sec.classList.contains('collapsed')) : null;
   const bad = !sec || !rows.length || hidden || faded || blank;
   log(bad ? 'warn' : 'info',
-      `planner/tree ตรวจสภาพ (${when || '-'}): หมวด=${sec ? 'มี' : 'ไม่มี'} แถว=${rows.length} ` +
-      `ซ่อน=${hidden} จาง=${faded} ว่าง=${blank} หมวดพับ/ซ่อน=${secHidden}`,
+      T`planner/tree ตรวจสภาพ (${when || '-'}): หมวด=${sec ? T`มี` : T`ไม่มี`} แถว=${rows.length} ` +
+      T`ซ่อน=${hidden} จาง=${faded} ว่าง=${blank} หมวดพับ/ซ่อน=${secHidden}`,
       { rows: info, filter: ($('#tree-search') || {}).value || '' });
   return { sec: !!sec, rows: rows.length, hidden, faded, blank, secHidden, info };
 }
@@ -3588,7 +3591,7 @@ export function markPlannerRow(path, dirty) {
   }
 
   if (!row) {
-    log('warn', 'planner/tree: หาแถวกระดานที่เปิดอยู่ไม่เจอ', { path, rows: tree.querySelectorAll('.scene[data-planner]').length });
+    log('warn', T`planner/tree: หาแถวกระดานที่เปิดอยู่ไม่เจอ`, { path, rows: tree.querySelectorAll('.scene[data-planner]').length });
     return false;
   }
   row.classList.add('k-row-open');
@@ -3619,7 +3622,7 @@ export function healPlannerRow(path, dirty) {
   const now = performance.now();
   if (now - _healAt < 3000) return false;            // กันสร้างต้นไม้รัว
   _healAt = now;
-  auditPlannerRows('หาแถวไม่เจอ → ซ่อมต้นไม้');
+  auditPlannerRows(T`หาแถวไม่เจอ → ซ่อมต้นไม้`);
   refreshTreeQueued().then(() => markPlannerRow(path, dirty));
   return false;
 }
@@ -3645,41 +3648,41 @@ export function watchPlannerRows(on) {
           // ตัวเฝ้าเดิมไม่รู้เรื่องนี้ จึงเตือน "แถวกระดานถูกถอดออกจาก DOM" ทุกครั้งที่รีเฟรชต้นไม้
           // (name เป็น "(ในกล่อง)" เพราะสิ่งที่ถูกถอดคือ .sec ที่ห่อแถวไว้ ไม่ใช่ตัวแถว) = สัญญาณหลอก
           if (_treeSwapping) continue;
-          log('warn', 'planner/tree: แถวกระดานถูกถอดออกจาก DOM',
-              { name: (n.dataset && n.dataset.plannerName) || '(ในกล่อง)',
-                parent: m.target && m.target.className, stack: new Error('ที่มา').stack.split('\n').slice(1, 5).join(' ⇦ ') });
+          log('warn', T`planner/tree: แถวกระดานถูกถอดออกจาก DOM`,
+              { name: (n.dataset && n.dataset.plannerName) || T`(ในกล่อง)`,
+                parent: m.target && m.target.className, stack: new Error(T`ที่มา`).stack.split('\n').slice(1, 5).join(' ⇦ ') });
         }
       }
       if (m.type === 'attributes' && m.target.dataset && m.target.dataset.planner) {
         const hidden = getComputedStyle(m.target).display === 'none';
         log(hidden ? 'warn' : 'info',
-            `planner/tree: แถว "${m.target.dataset.plannerName}" เปลี่ยน ${m.attributeName}` +
-            (hidden ? ' → ถูกซ่อน!' : ''),
+            T`planner/tree: แถว "${m.target.dataset.plannerName}" เปลี่ยน ${m.attributeName}` +
+            (hidden ? T` → ถูกซ่อน!` : ''),
             { style: m.target.getAttribute('style') || '', cls: m.target.className,
               text: (m.target.textContent || '').trim() });
       }
     }
   });
   _plannerRowObs.observe(tree, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-  log('info', 'planner/tree: เริ่มเฝ้าดูแถวกระดานใน Explorer');
+  log('info', T`planner/tree: เริ่มเฝ้าดูแถวกระดานใน Explorer`);
   return _plannerRowObs;
 }
 
 export async function newPlannerBoard(nameArg) {
   const dir = await kapi.join(state.root, 'Planners');
-  let value = nameArg || 'กระดาน ' + ((await listPlannerBoards()).length + 1);
+  let value = nameArg || T`กระดาน ` + ((await listPlannerBoards()).length + 1);
   let p = null;
   for (;;) {
-    const name = nameArg || await ask('ชื่อกระดานใหม่', { value, okLabel: 'สร้าง' });
+    const name = nameArg || await ask(T`ชื่อกระดานใหม่`, { value, okLabel: T`สร้าง` });
     if (!name) return null;
     p = await kapi.join(dir, safeBoardName(name) + '.json');
     if (!(await kapi.exists(p))) break;
     // บั๊ก 65r2-7: ชื่อซ้ำต้องเตือน ไม่ใช่เขียนทับเงียบ ๆ
-    if (nameArg) { setStatus(`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้ว`); return null; }
-    const act = await choose(`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้วในโปรเจกต์`, [
-      { label: '✏️ ตั้งชื่อใหม่', value: 'again', primary: true },
-      { label: 'เขียนทับของเดิม', value: 'over', danger: true },
-      { label: 'ยกเลิก', value: null }]);
+    if (nameArg) { setStatus(T`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้ว`); return null; }
+    const act = await choose(T`มีกระดานชื่อ "${safeBoardName(name)}" อยู่แล้วในโปรเจกต์`, [
+      { label: T`✏️ ตั้งชื่อใหม่`, value: 'again', primary: true },
+      { label: T`เขียนทับของเดิม`, value: 'over', danger: true },
+      { label: T`ยกเลิก`, value: null }]);
     if (act === 'over') break;
     if (!act) return null;
     value = safeBoardName(name) + ' 2';
@@ -3689,23 +3692,23 @@ export async function newPlannerBoard(nameArg) {
   await refreshTreeQueued();
   await openPlanner(p);
   await refreshTreeQueued();
-  setStatus('สร้างกระดาน "' + p.split(/[\\/]/).pop().replace(/\.json$/i, '') + '" แล้ว');
+  setStatus(T`สร้างกระดาน "` + p.split(/[\\/]/).pop().replace(/\.json$/i, '') + T`" แล้ว`);
   return p;
 }
 
 async function renamePlannerBoard(b) {
-  const v = await ask('เปลี่ยนชื่อกระดาน', { value: b.name });
+  const v = await ask(T`เปลี่ยนชื่อกระดาน`, { value: b.name });
   if (!v || v === b.name) return null;
   const dir = await kapi.join(state.root, 'Planners');
   await kapi.mkdir(dir);
   const dst = await kapi.join(dir, safeBoardName(v) + '.json');
-  if (await kapi.exists(dst)) { setStatus('มีกระดานชื่อนี้อยู่แล้ว'); return null; }
+  if (await kapi.exists(dst)) { setStatus(T`มีกระดานชื่อนี้อยู่แล้ว`); return null; }
   const wasOpen = plannerInst && plannerInst.data && plannerInst.data.getPath() === b.path;
   if (wasOpen) await plannerInst.save(true);
   await kapi.move(b.path, dst);
   if (wasOpen) await plannerInst.openBoard(dst);
   await refreshTreeQueued();
-  setStatus('เปลี่ยนชื่อเป็น "' + safeBoardName(v) + '" แล้ว');
+  setStatus(T`เปลี่ยนชื่อเป็น "` + safeBoardName(v) + T`" แล้ว`);
   return dst;
 }
 
@@ -3713,25 +3716,25 @@ async function duplicatePlannerBoard(b) {
   const dir = await kapi.join(state.root, 'Planners');
   await kapi.mkdir(dir);
   let n = 1, dst;
-  do { dst = await kapi.join(dir, safeBoardName(b.name + ' สำเนา' + (n > 1 ? ' ' + n : '')) + '.json'); n++; }
+  do { dst = await kapi.join(dir, safeBoardName(b.name + T` สำเนา` + (n > 1 ? ' ' + n : '')) + '.json'); n++; }
   while (await kapi.exists(dst));
   await kapi.writeFile(dst, await kapi.readFile(b.path));
   await refreshTreeQueued();
-  setStatus('ทำสำเนากระดานแล้ว');
+  setStatus(T`ทำสำเนากระดานแล้ว`);
   return dst;
 }
 
 async function buildPlannerSection(tree) {
   const boards = await listPlannerBoards();
   const sec = el('div', 'sec');
-  const head = el('div', 'sec-title', `📋 กระดานวางแผน (${boards.length})`);
-  const add = el('span', 'row-add', '+'); add.title = 'สร้างกระดานใหม่';
+  const head = el('div', 'sec-title', T`📋 กระดานวางแผน (${boards.length})`);
+  const add = el('span', 'row-add', '+'); add.title = T`สร้างกระดานใหม่`;
   add.onclick = (e) => { e.stopPropagation(); newPlannerBoard(); };
   head.append(add); sec.append(head);
   makeAccordion(head, sec, 'sec:__planner__');
   head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-    { label: '＋ กระดานใหม่…', click: () => newPlannerBoard() },
-    { label: '📋 เปิด Planner', click: () => openPlanner() },
+    { label: T`＋ กระดานใหม่…`, click: () => newPlannerBoard() },
+    { label: T`📋 เปิด Planner`, click: () => openPlanner() },
   ]); };
   const cur = plannerInst && plannerInst.data ? plannerInst.data.getPath() : null;
   const curDirty = !!(plannerInst && plannerInst.data && plannerInst.data.isDirty());
@@ -3744,15 +3747,15 @@ async function buildPlannerSection(tree) {
     it.dataset.planner = b.path;
     it.dataset.plannerName = b.name;             // แหล่งชื่อของตัวเอง — ไม่พึ่ง data-search
     it.dataset.search = b.name;
-    it.title = b.path + (isCur ? (curDirty ? '  — กำลังเปิดอยู่ · ยังไม่บันทึก' : '  — กำลังเปิดอยู่') : '');
+    it.title = b.path + (isCur ? (curDirty ? T`  — กำลังเปิดอยู่ · ยังไม่บันทึก` : T`  — กำลังเปิดอยู่`) : '');
     it.onclick = () => openPlanner(b.path);
     it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
-      { label: 'เปิดกระดานนี้', click: () => openPlanner(b.path) },
-      { label: 'เปลี่ยนชื่อ…', click: () => renamePlannerBoard(b) },
-      { label: '⧉ ทำสำเนา', click: () => duplicatePlannerBoard(b) },
-      { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(b.path) },
+      { label: T`เปิดกระดานนี้`, click: () => openPlanner(b.path) },
+      { label: T`เปลี่ยนชื่อ…`, click: () => renamePlannerBoard(b) },
+      { label: T`⧉ ทำสำเนา`, click: () => duplicatePlannerBoard(b) },
+      { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(b.path) },
       '-',
-      { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: async () => {
+      { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: async () => {
           await deleteToTrash(b.path, b.name);
           await buildTree();
         } },
@@ -3760,7 +3763,7 @@ async function buildPlannerSection(tree) {
     sec.append(it);
   }
   if (!boards.length) {
-    const empty = el('div', 'scene add-row', '＋ สร้างกระดานแรก…');
+    const empty = el('div', 'scene add-row', T`＋ สร้างกระดานแรก…`);
     empty.onclick = () => newPlannerBoard();
     sec.append(empty);
   }
@@ -3770,7 +3773,7 @@ async function buildPlannerSection(tree) {
   note.style.display = 'none';
   sec.append(note);
   tree.append(sec);
-  log('info', `planner/tree: สร้างหมวดกระดาน ${boards.length} ใบ`,
+  log('info', T`planner/tree: สร้างหมวดกระดาน ${boards.length} ใบ`,
       { current: cur, rows: boards.map((b) => b.name) });
   return sec;
 }
@@ -3780,28 +3783,28 @@ async function buildPlannerSection(tree) {
 // จัดกลุ่มตามหมวดถ้าผู้ใช้ตั้งหมวดไว้ (ข้อ 8) — ไม่ตั้งก็เป็นรายการเรียบเหมือนเดิม
 async function buildMapsSection(tree) {
   let data = { maps: [] };
-  try { data = await loadMaps(); } catch (e) { log('warn', 'explorer: อ่าน maps.json ไม่ได้', e); }
+  try { data = await loadMaps(); } catch (e) { log('warn', T`explorer: อ่าน maps.json ไม่ได้`, e); }
   const maps = data.maps || [];
   const jsonPath = await kapi.join(state.root, 'maps.json');
   const sec = el('div', 'sec');
-  const head = el('div', 'sec-title', `🗺 แผนที่ (${maps.length})`);
-  const add = el('span', 'row-add', '+'); add.title = 'เพิ่มแผนที่ใหม่';
+  const head = el('div', 'sec-title', T`🗺 แผนที่ (${maps.length})`);
+  const add = el('span', 'row-add', '+'); add.title = T`เพิ่มแผนที่ใหม่`;
   add.onclick = async (e) => { e.stopPropagation(); await openMaps(); await addMapFlow(); await refreshTreeQueued(); };
   head.append(add); sec.append(head);
   makeAccordion(head, sec, 'sec:__maps__');
   head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-    { label: '🗺 เปิดแผงแผนที่', click: () => openMaps() },
-    { label: '＋ เพิ่มแผนที่…', click: async () => { await openMaps(); await addMapFlow(); await refreshTreeQueued(); } },
+    { label: T`🗺 เปิดแผงแผนที่`, click: () => openMaps() },
+    { label: T`＋ เพิ่มแผนที่…`, click: async () => { await openMaps(); await addMapFlow(); await refreshTreeQueued(); } },
     '-',
-    { label: '📄 เปิด maps.json', click: () => openPlainFile(jsonPath, 'maps.json') },
-    { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(jsonPath) },
+    { label: T`📄 เปิด maps.json`, click: () => openPlainFile(jsonPath, 'maps.json') },
+    { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(jsonPath) },
   ]); };
 
   const groups = groupMaps(maps);
   const multiCat = groups.length > 1;
   for (const g of groups) {
     if (multiCat) {
-      const ch = el('div', 'scene map-row-cat', '📁 ' + (g.cat || '(ไม่ระบุหมวด)'));
+      const ch = el('div', 'scene map-row-cat', '📁 ' + (g.cat || T`(ไม่ระบุหมวด)`));
       ch.dataset.nofilter = '1';
       sec.append(ch);
     }
@@ -3810,31 +3813,31 @@ async function buildMapsSection(tree) {
       const nPins = (m.pins || []).length;
       const nRoutes = mapRoutes(m).length;
       const it = el('div', 'scene map-row' + (multiCat ? ' map-row-in-cat' : ''),
-        '🗺 ' + (m.name || '(ไม่มีชื่อ)'));
+        '🗺 ' + (m.name || T`(ไม่มีชื่อ)`));
       const badge = el('span', 'map-row-badge',
         nPins ? `${nPins}📍` + (nRoutes ? ` ${nRoutes}🛣` : '') : '—');
       it.append(badge);
       it.dataset.mapId = m.id;
       it.dataset.search = [m.name, m.category, ...(m.pins || []).map((p) => p.label)].filter(Boolean).join(' ');
-      it.title = [m.name || '(ไม่มีชื่อ)', m.category ? 'หมวด: ' + m.category : '',
-                  `${st.entity} เอนทิตี้ · ${st.portal} ประตู · ${st.note} หมายเหตุ`,
-                  m.image ? 'รูป: ' + m.image : '(ยังไม่มีรูป)'].filter(Boolean).join('\n');
+      it.title = [m.name || T`(ไม่มีชื่อ)`, m.category ? T`หมวด: ` + m.category : '',
+                  T`${st.entity} เอนทิตี้ · ${st.portal} ประตู · ${st.note} หมายเหตุ`,
+                  m.image ? T`รูป: ` + m.image : T`(ยังไม่มีรูป)`].filter(Boolean).join('\n');
       it.onclick = () => openMapFromTree(m.id);
       it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
-        { label: 'เปิดแผนที่นี้', click: () => openMapFromTree(m.id) },
-        { label: 'เปลี่ยนชื่อ…', click: () => renameMapFromTree(m.id) },
-        { label: '📁 ตั้งหมวด…', click: () => setMapCategoryFromTree(m.id) },
-        { label: '📤 ส่งออก PNG', click: async () => { const d2 = await loadMaps();
+        { label: T`เปิดแผนที่นี้`, click: () => openMapFromTree(m.id) },
+        { label: T`เปลี่ยนชื่อ…`, click: () => renameMapFromTree(m.id) },
+        { label: T`📁 ตั้งหมวด…`, click: () => setMapCategoryFromTree(m.id) },
+        { label: T`📤 ส่งออก PNG`, click: async () => { const d2 = await loadMaps();
             const mm = findMap(d2.maps, m.id); if (mm) await exportMapPng(mm); } },
         '-',
-        { label: '📄 เปิด maps.json', click: () => openPlainFile(jsonPath, 'maps.json') },
-        { label: 'ลบแผนที่นี้', danger: true, click: () => deleteMapFromTree(m.id, m.name) },
+        { label: T`📄 เปิด maps.json`, click: () => openPlainFile(jsonPath, 'maps.json') },
+        { label: T`ลบแผนที่นี้`, danger: true, click: () => deleteMapFromTree(m.id, m.name) },
       ]); };
       sec.append(it);
     }
   }
   if (!maps.length) {
-    const empty = el('div', 'scene add-row', '＋ สร้างแผนที่แรก…');
+    const empty = el('div', 'scene add-row', T`＋ สร้างแผนที่แรก…`);
     empty.onclick = async () => { await openMaps(); await addMapFlow(); await refreshTreeQueued(); };
     sec.append(empty);
   }
@@ -3850,11 +3853,11 @@ async function buildBranchPlanSection(tree) {
   const plans = await listBranchPlans();
   const cur = currentBranchPlan();
   const sec = el('div', 'sec');
-  const head = el('div', 'sec-title', `🌿 แผนผังแตกสาย (${plans.length})`);
-  const add = el('span', 'row-add', '+'); add.title = 'สร้างแผนใหม่';
+  const head = el('div', 'sec-title', T`🌿 แผนผังแตกสาย (${plans.length})`);
+  const add = el('span', 'row-add', '+'); add.title = T`สร้างแผนใหม่`;
   add.onclick = async (e) => {
     e.stopPropagation();
-    const v = await ask('ชื่อแผนใหม่', { value: 'แผนที่ ' + (plans.length + 1) });
+    const v = await ask(T`ชื่อแผนใหม่`, { value: T`แผนที่ ` + (plans.length + 1) });
     if (!v) return;
     await saveBranchPlanAs(v);
     await refreshTreeQueued();
@@ -3863,7 +3866,7 @@ async function buildBranchPlanSection(tree) {
   head.append(add); sec.append(head);
   makeAccordion(head, sec, 'sec:__branchplans__');
   head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-    { label: '🌿 เปิดผังแตกสาย', click: () => openBranchingTree() },
+    { label: T`🌿 เปิดผังแตกสาย`, click: () => openBranchingTree() },
   ]); };
   for (const p of plans) {
     const isCur = cur && cur.path === p.path;
@@ -3879,31 +3882,31 @@ async function buildBranchPlanSection(tree) {
     it.title = p.path + String.fromCharCode(10) + planSummary(p.plan);
     it.onclick = async () => { await openBranchPlan(p.path); await openBranchingTree(); await refreshTreeQueued(); };
     it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
-      { label: 'เปิดแผนนี้', click: async () => { await openBranchPlan(p.path); await openBranchingTree(); await refreshTreeQueued(); } },
-      { label: 'เปลี่ยนชื่อ…', click: async () => {
-          const v = await ask('ชื่อแผน', { value: p.name }); if (!v) return;
+      { label: T`เปิดแผนนี้`, click: async () => { await openBranchPlan(p.path); await openBranchingTree(); await refreshTreeQueued(); } },
+      { label: T`เปลี่ยนชื่อ…`, click: async () => {
+          const v = await ask(T`ชื่อแผน`, { value: p.name }); if (!v) return;
           const dir = await kapi.join(state.root, 'Branches');
           const dst = await kapi.join(dir, safePlanName(v) + '.json');
-          if (await kapi.exists(dst)) { setStatus('มีแผนชื่อนี้อยู่แล้ว'); return; }
+          if (await kapi.exists(dst)) { setStatus(T`มีแผนชื่อนี้อยู่แล้ว`); return; }
           const data = await kapi.readJson(p.path); data.name = v;
           await kapi.writeFile(dst, JSON.stringify(data, null, 2));
           await kapi.remove(p.path);
           if (cur && cur.path === p.path) await openBranchPlan(dst);
-          await refreshTreeQueued(); setStatus('เปลี่ยนชื่อแผนแล้ว');
+          await refreshTreeQueued(); setStatus(T`เปลี่ยนชื่อแผนแล้ว`);
         } },
-      { label: '⚙ คุณสมบัติแผน…', click: async () => {
+      { label: T`⚙ คุณสมบัติแผน…`, click: async () => {
           const m = await import('./branching-ui.js');
           if (!cur || cur.path !== p.path) await m.openBranchPlan(p.path);
           await m.planPropsDialog(); await refreshTreeQueued();
         } },
-      { label: '⇋ เทียบกับแผนอื่น…', click: async () => {
+      { label: T`⇋ เทียบกับแผนอื่น…`, click: async () => {
           const m = await import('./branching-ui.js');
           if (!cur || cur.path !== p.path) await m.openBranchPlan(p.path);
           await m.comparePlanDialog();
         } },
-      { label: '📂 แสดงในโฟลเดอร์', click: () => kapi.revealInOS(p.path) },
+      { label: T`📂 แสดงในโฟลเดอร์`, click: () => kapi.revealInOS(p.path) },
       '-',
-      { label: 'ลบ (ย้ายไปถังขยะ)', danger: true, click: async () => {
+      { label: T`ลบ (ย้ายไปถังขยะ)`, danger: true, click: async () => {
           await deleteToTrash(p.path, p.name);
           const { closeBranchPlan } = await import('./branching-ui.js');
           if (cur && cur.path === p.path) closeBranchPlan();
@@ -3913,7 +3916,7 @@ async function buildBranchPlanSection(tree) {
     sec.append(it);
   }
   if (!plans.length) {
-    const empty = el('div', 'scene add-row', '＋ สร้างแผนแรก…');
+    const empty = el('div', 'scene add-row', T`＋ สร้างแผนแรก…`);
     empty.onclick = () => add.onclick({ stopPropagation() {} });
     sec.append(empty);
   }
@@ -3941,28 +3944,28 @@ async function openMapFromTree(mapId) {
 async function renameMapFromTree(mapId) {
   const d = await loadMaps();
   const m = findMap(d.maps, mapId); if (!m) return;
-  const v = await ask('ชื่อแผนที่', { value: m.name });
+  const v = await ask(T`ชื่อแผนที่`, { value: m.name });
   if (!v) return;
   m.name = v.trim() || m.name;
   await saveMaps(d);
   if (mapsState_C.s) { mapsState_C.s.data = d; await renderMaps($('#maps-body')); }
   await refreshTreeQueued();
-  setStatus('เปลี่ยนชื่อแผนที่แล้ว');
+  setStatus(T`เปลี่ยนชื่อแผนที่แล้ว`);
 }
 async function setMapCategoryFromTree(mapId) {
   const d = await loadMaps();
   const m = findMap(d.maps, mapId); if (!m) return;
-  const v = await ask('หมวดแผนที่ (เว้นว่าง = ไม่ระบุหมวด)',
-    { value: m.category || '', placeholder: 'เช่น โลกปัจจุบัน · โลกอดีต · มิติอื่น' });
+  const v = await ask(T`หมวดแผนที่ (เว้นว่าง = ไม่ระบุหมวด)`,
+    { value: m.category || '', placeholder: T`เช่น โลกปัจจุบัน · โลกอดีต · มิติอื่น` });
   if (v === null || v === undefined) return;
   m.category = String(v).trim();
   await saveMaps(d);
   if (mapsState_C.s) { mapsState_C.s.data = d; await renderMaps($('#maps-body')); }
   await refreshTreeQueued();
-  setStatus(m.category ? 'ย้ายไปหมวด "' + m.category + '" แล้ว' : 'เอาออกจากหมวดแล้ว');
+  setStatus(m.category ? T`ย้ายไปหมวด "` + m.category + T`" แล้ว` : T`เอาออกจากหมวดแล้ว`);
 }
 async function deleteMapFromTree(mapId, name) {
-  if (!(await confirmBox(`ลบแผนที่ “${name || ''}” ?`, 'ลบ'))) return;
+  if (!(await confirmBox(T`ลบแผนที่ “${name || ''}” ?`, T`ลบ`))) return;
   const d = await loadMaps();
   d.maps = deleteMap(d.maps, mapId);
   await saveMaps(d);
@@ -3972,7 +3975,7 @@ async function deleteMapFromTree(mapId, name) {
     await renderMaps($('#maps-body'));
   }
   await refreshTreeQueued();
-  setStatus('ลบแผนที่แล้ว');
+  setStatus(T`ลบแผนที่แล้ว`);
 }
 
 // ---------------- Dashboard ----------------
@@ -3981,17 +3984,17 @@ async function deleteMapFromTree(mapId, name) {
 // เปิดฉากแรกของเล่ม (ฉบับร่างแรก บทแรก ฉากแรก) — ทางลัดจากตัวจัดการเล่ม
 export async function openFirstSceneOf(secPath) {
   const draftRoot = await kapi.join(secPath, 'Draft');
-  if (!(await kapi.exists(draftRoot))) { setStatus('เล่มนี้ยังไม่มีฉบับร่าง'); return; }
+  if (!(await kapi.exists(draftRoot))) { setStatus(T`เล่มนี้ยังไม่มีฉบับร่าง`); return; }
   const dns = await kapi.listDirs(draftRoot);
   if (!dns.length) return;
   const dPath = await kapi.join(draftRoot, dns[0]);
   const chs = ((await kapi.readJson(await kapi.join(dPath, 'draft.json'))).chapters || [])
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  if (!chs.length) { setStatus('เล่มนี้ยังไม่มีบท'); return; }
+  if (!chs.length) { setStatus(T`เล่มนี้ยังไม่มีบท`); return; }
   const ch = chs[0];
   const scAll = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters || {};
   const sc = (scAll[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0))[0];
-  if (!sc) { setStatus('บทแรกยังไม่มีฉาก'); return; }
+  if (!sc) { setStatus(T`บทแรกยังไม่มีฉาก`); return; }
   openScene(await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName), sc.title);
 }
 
@@ -4040,12 +4043,12 @@ export async function listRefTargets() {
 // กล่องเลือกเอกสาร/โน้ตที่จะอ้างอิง — มีช่องกรองเพราะโปรเจกต์จริงมีฉากเป็นร้อย
 export async function pickReference() {
   const items = await listRefTargets();
-  if (!items.length) { setStatus('ยังไม่มีฉาก/โน้ตให้อ้างอิง'); return null; }
+  if (!items.length) { setStatus(T`ยังไม่มีฉาก/โน้ตให้อ้างอิง`); return null; }
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', 'อ้างอิงถึงเอกสาร/โน้ตไหน'));
-    const q = el('input', 'k-dlg-input'); q.placeholder = 'พิมพ์เพื่อกรอง…';
+    box.append(el('div', 'k-dlg-title', T`อ้างอิงถึงเอกสาร/โน้ตไหน`));
+    const q = el('input', 'k-dlg-input'); q.placeholder = T`พิมพ์เพื่อกรอง…`;
     box.append(q);
     const list = el('div', 'k-pick-list');
     const rows = items.map((it) => {
@@ -4060,7 +4063,7 @@ export async function pickReference() {
     };
     box.append(list);
     const btns = el('div', 'k-dlg-btns');
-    const c = el('button', null, 'ยกเลิก');
+    const c = el('button', null, T`ยกเลิก`);
     c.onclick = () => { ov.remove(); resolve(null); };
     btns.append(c); box.append(btns); ov.append(box);
     ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
@@ -4073,7 +4076,7 @@ export async function pickReference() {
 export async function openRef(ref) {
   if (!ref || !ref.path || !state.root) return;
   const abs = await kapi.join(state.root, ...ref.path.split('/'));
-  if (!(await kapi.exists(abs))) { setStatus('ไม่พบไฟล์ที่อ้างอิง: ' + ref.path); return; }
+  if (!(await kapi.exists(abs))) { setStatus(T`ไม่พบไฟล์ที่อ้างอิง: ` + ref.path); return; }
   openScene(abs, ref.title || ref.path.split('/').pop());
 }
 
@@ -4103,7 +4106,7 @@ export async function sceneEventsFromProject() {
       for (const chGuid of Object.keys(scAll)) {
         for (const sc of scAll[chGuid]) {
           if (sc.type === 'memo' || !sc.storyDate) continue;
-          out.push({ id: 'sc:' + dPath + ':' + sc.id, title: sc.title || '(ไม่มีชื่อ)',
+          out.push({ id: 'sc:' + dPath + ':' + sc.id, title: sc.title || T`(ไม่มีชื่อ)`,
                      when: sc.storyDate, track: sec.title, color: sc.color || '',
                      synopsis: sc.synopsis || '',
                      file: await kapi.join(dPath, 'Chapters',
@@ -4123,40 +4126,40 @@ export function eventDialog(ev, knownTracks, canDelete = false) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', canDelete ? 'แก้ไขเหตุการณ์' : 'เพิ่มเหตุการณ์'));
+    box.append(el('div', 'k-dlg-title', canDelete ? T`แก้ไขเหตุการณ์` : T`เพิ่มเหตุการณ์`));
     const mk = (label, val, ph, tag = 'input') => {
       const r = el('div', 'wiki-row'); r.append(el('label', null, label));
       const i = el(tag, 'wiki-input'); i.value = val || ''; if (ph) i.placeholder = ph;
       r.append(i); box.append(r); return i;
     };
-    const iTitle = mk('ชื่อเหตุการณ์', ev.title, 'เช่น สงครามปะทุ');
-    const iWhen = mk('เวลาในเรื่อง (เริ่ม)', ev.when, 'เช่น ปีที่ 1024 · วันที่ 3');
-    const iWhenEnd = mk('เวลาจบ (ไม่บังคับ — สำหรับ Gantt)', ev.whenEnd, 'เว้นว่าง = เหตุการณ์จุดเดียว');
-    const iTrack = mk('แทร็ก/เส้นเรื่อง', ev.track, 'เช่น เส้นหลัก, มุมมองศัตรู');
+    const iTitle = mk(T`ชื่อเหตุการณ์`, ev.title, T`เช่น สงครามปะทุ`);
+    const iWhen = mk(T`เวลาในเรื่อง (เริ่ม)`, ev.when, T`เช่น ปีที่ 1024 · วันที่ 3`);
+    const iWhenEnd = mk(T`เวลาจบ (ไม่บังคับ — สำหรับ Gantt)`, ev.whenEnd, T`เว้นว่าง = เหตุการณ์จุดเดียว`);
+    const iTrack = mk(T`แทร็ก/เส้นเรื่อง`, ev.track, T`เช่น เส้นหลัก, มุมมองศัตรู`);
     if (knownTracks.length) {
       const dl = el('datalist'); dl.id = 'tl-tracks';
       for (const t of knownTracks) { const o = el('option'); o.value = t; dl.append(o); }
       iTrack.setAttribute('list', 'tl-tracks'); box.append(dl);
     }
-    const iSort = mk('ลำดับ (ตัวเลข — ไม่บังคับ)', ev.sort ?? '', 'ใช้จัดลำดับเมื่อเวลาเป็นข้อความ');
+    const iSort = mk(T`ลำดับ (ตัวเลข — ไม่บังคับ)`, ev.sort ?? '', T`ใช้จัดลำดับเมื่อเวลาเป็นข้อความ`);
     iSort.type = 'number';
-    const iDesc = mk('รายละเอียด', ev.desc, '', 'textarea');
+    const iDesc = mk(T`รายละเอียด`, ev.desc, '', 'textarea');
 
     // ---- อ้างอิง (ข้อ 5): ผูกเหตุการณ์กับฉาก/โน้ตจริงในโปรเจกต์ ----
     let refs = normalizeRefs(ev.refs);
     const refRow = el('div', 'wiki-row k-ev-refs');
-    refRow.append(el('label', null, 'อ้างอิง'));
+    refRow.append(el('label', null, T`อ้างอิง`));
     const refWrap = el('div', 'k-ev-ref-wrap');
     const refList = el('div', 'k-ev-ref-list');
-    const addRef = el('button', 'k-tpl-add', '+ อ้างอิงเอกสาร/โน้ต…');
+    const addRef = el('button', 'k-tpl-add', T`+ อ้างอิงเอกสาร/โน้ต…`);
     addRef.type = 'button';
     const paintRefs = () => {
       refList.replaceChildren();
-      if (!refs.length) refList.append(el('span', 'dim', 'ยังไม่ได้อ้างอิงอะไร'));
+      if (!refs.length) refList.append(el('span', 'dim', T`ยังไม่ได้อ้างอิงอะไร`));
       refs.forEach((r, i) => {
         const chip = el('span', 'k-ev-ref');
         chip.append(el('span', null, (r.kind === 'memo' ? '📝 ' : '📄 ') + r.title));
-        const x = el('span', 'k-ev-ref-x', '✕'); x.title = 'เอาการอ้างอิงนี้ออก';
+        const x = el('span', 'k-ev-ref-x', '✕'); x.title = T`เอาการอ้างอิงนี้ออก`;
         x.onclick = () => { refs.splice(i, 1); paintRefs(); };
         chip.append(x);
         chip.title = r.path;
@@ -4174,12 +4177,12 @@ export function eventDialog(ev, knownTracks, canDelete = false) {
 
     const btns = el('div', 'k-dlg-btns');
     if (canDelete) {
-      const del = el('button', 'k-danger', '🗑 ลบ');
+      const del = el('button', 'k-danger', T`🗑 ลบ`);
       del.onclick = () => { ov.remove(); resolve('DELETE'); };
       btns.append(del);
     }
-    const cB = el('button', null, 'ยกเลิก');
-    const okB = el('button', 'k-ok', 'บันทึก');
+    const cB = el('button', null, T`ยกเลิก`);
+    const okB = el('button', 'k-ok', T`บันทึก`);
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     cB.onclick = () => { ov.remove(); resolve(null); };
     ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
@@ -4218,7 +4221,7 @@ export const mapsState_C = { s: null };   // object เพื่อ export ข�
 // เพิ่มแผนที่ใหม่: เลือกรูป → ตั้งชื่อ
 export async function addMapFlow() {
   const it = await pickImage(state.root);
-  const name = await ask('ชื่อแผนที่', { value: it ? it.file.replace(/\.[^.]+$/, '') : 'แผนที่ใหม่' });
+  const name = await ask(T`ชื่อแผนที่`, { value: it ? it.file.replace(/\.[^.]+$/, '') : T`แผนที่ใหม่` });
   if (!name) return;
   const m = newMap(name, it ? 'Images/' + it.file : '');
   m.order = mapsState_C.s.data.maps.length;
@@ -4233,10 +4236,10 @@ export function pinDialog(pin, maps, curMapId, canDelete = false) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', canDelete ? 'แก้ไขหมุด' : 'ปักหมุด'));
+    box.append(el('div', 'k-dlg-title', canDelete ? T`แก้ไขหมุด` : T`ปักหมุด`));
 
     // เลือกชนิดหมุด
-    const kindRow = el('div', 'wiki-row'); kindRow.append(el('label', null, 'ชนิด'));
+    const kindRow = el('div', 'wiki-row'); kindRow.append(el('label', null, T`ชนิด`));
     const kindSel = el('select', 'wiki-input k-dlg-select');
     for (const [k, v] of Object.entries(PIN_KIND)) {
       const o = el('option', null, v.icon + ' ' + v.label); o.value = k;
@@ -4245,14 +4248,14 @@ export function pinDialog(pin, maps, curMapId, canDelete = false) {
     kindRow.append(kindSel); box.append(kindRow);
 
     const iLabel = el('input', 'wiki-input'); iLabel.value = pin.label || '';
-    { const r = el('div', 'wiki-row'); r.append(el('label', null, 'ป้ายชื่อ'), iLabel); box.append(r); }
+    { const r = el('div', 'wiki-row'); r.append(el('label', null, T`ป้ายชื่อ`), iLabel); box.append(r); }
 
     // ลิงก์เอนทิตี้ (เมื่อ kind=entity)
-    const entRow = el('div', 'wiki-row'); entRow.append(el('label', null, 'ลิงก์เอนทิตี้'));
+    const entRow = el('div', 'wiki-row'); entRow.append(el('label', null, T`ลิงก์เอนทิตี้`));
     const entSel = el('select', 'wiki-input k-dlg-select');
     entRow.append(entSel); box.append(entRow);
     const fillEntities = async () => {
-      entSel.innerHTML = ''; const none = el('option', null, '— เลือกเอนทิตี้ —'); none.value = ''; entSel.append(none);
+      entSel.innerHTML = ''; const none = el('option', null, T`— เลือกเอนทิตี้ —`); none.value = ''; entSel.append(none);
       for (const e of await loadAllEntities()) {
         const o = el('option', null, `${(PIN_KIND.entity.icon)} ${e.name} (${catLabel(e.cat)})`); o.value = e.file;
         if (e.file === pin.entityFile) o.selected = true; entSel.append(o);
@@ -4260,24 +4263,24 @@ export function pinDialog(pin, maps, curMapId, canDelete = false) {
     };
 
     // ลิงก์ประตูไปแผนที่อื่น (เมื่อ kind=portal)
-    const portalRow = el('div', 'wiki-row'); portalRow.append(el('label', null, 'ประตูไปแผนที่'));
+    const portalRow = el('div', 'wiki-row'); portalRow.append(el('label', null, T`ประตูไปแผนที่`));
     const portalSel = el('select', 'wiki-input k-dlg-select');
-    { const none = el('option', null, '— เลือกแผนที่ปลายทาง —'); none.value = ''; portalSel.append(none);
+    { const none = el('option', null, T`— เลือกแผนที่ปลายทาง —`); none.value = ''; portalSel.append(none);
       for (const m of sortMaps(maps)) { if (m.id === curMapId) continue;
         const o = el('option', null, '🗺 ' + m.name); o.value = m.id;
         if (m.id === pin.toMap) o.selected = true; portalSel.append(o); } }
     portalRow.append(portalSel); box.append(portalRow);
 
     // สีหมุด
-    const colorRow = el('div', 'wiki-row'); colorRow.append(el('label', null, 'สี'));
+    const colorRow = el('div', 'wiki-row'); colorRow.append(el('label', null, T`สี`));
     const colorSel = el('select', 'wiki-input k-dlg-select');
-    { const none = el('option', null, '— อัตโนมัติ —'); none.value = ''; colorSel.append(none);
+    { const none = el('option', null, T`— อัตโนมัติ —`); none.value = ''; colorSel.append(none);
       for (const c of PIN_COLORS) { const o = el('option', null, '● ' + c); o.value = c;
         if (c === pin.color) o.selected = true; colorSel.append(o); } }
     colorRow.append(colorSel); box.append(colorRow);
 
     const iNote = el('textarea', 'wiki-input'); iNote.value = pin.note || '';
-    { const r = el('div', 'wiki-row'); r.append(el('label', null, 'หมายเหตุ'), iNote); box.append(r); }
+    { const r = el('div', 'wiki-row'); r.append(el('label', null, T`หมายเหตุ`), iNote); box.append(r); }
 
     // แสดง/ซ่อนแถวตามชนิด
     const syncRows = () => {
@@ -4288,10 +4291,10 @@ export function pinDialog(pin, maps, curMapId, canDelete = false) {
     fillEntities();
 
     const btns = el('div', 'k-dlg-btns');
-    if (canDelete) { const del = el('button', 'k-danger', '🗑 ลบ');
+    if (canDelete) { const del = el('button', 'k-danger', T`🗑 ลบ`);
       del.onclick = () => { ov.remove(); resolve('DELETE'); }; btns.append(del); }
-    const cB = el('button', null, 'ยกเลิก');
-    const okB = el('button', 'k-ok', 'บันทึก');
+    const cB = el('button', null, T`ยกเลิก`);
+    const okB = el('button', 'k-ok', T`บันทึก`);
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     cB.onclick = () => { ov.remove(); resolve(null); };
     ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
@@ -4318,10 +4321,10 @@ export function syncModeHint() {
   const focus = document.body.classList.contains('focus-mode');
   const h = modeHint();
   if (!reading && !focus) { h.textContent = ''; return; }
-  const name = reading && focus ? 'โหมดอ่าน + โฟกัส' : reading ? 'โหมดอ่าน' : 'โหมดโฟกัส';
+  const name = reading && focus ? T`โหมดอ่าน + โฟกัส` : reading ? T`โหมดอ่าน` : T`โหมดโฟกัส`;
   h.innerHTML = '';
-  h.append(el('b', null, name), document.createTextNode(' — กด '));
-  h.append(el('kbd', null, 'Esc'), document.createTextNode(' เพื่อออก'));
+  h.append(el('b', null, name), document.createTextNode(T` — กด `));
+  h.append(el('kbd', null, 'Esc'), document.createTextNode(T` เพื่อออก`));
 }
 
 function toggleFocus(on) {
@@ -4332,7 +4335,7 @@ function toggleFocus(on) {
   syncMenuToggles();
   refreshToolbar();
   recenterPageSoon();           // [66r5] แผงข้างหาย/กลับมา = พื้นที่กว้างขึ้น ต้องจัดกระดาษกลางใหม่
-  setStatus(v ? 'โหมดโฟกัส — Esc หรือ Ctrl+Shift+D เพื่อออก' : 'ออกจากโหมดโฟกัส');
+  setStatus(v ? T`โหมดโฟกัส — Esc หรือ Ctrl+Shift+D เพื่อออก` : T`ออกจากโหมดโฟกัส`);
 }
 
 // ---------------- เครื่องหมายถูกในเมนู native (ข้อ 3) ----------------
@@ -4395,7 +4398,7 @@ function togglePaper(on) {
   saveProjectMeta();
   const btn = $('#tb-paper'); if (btn) btn.classList.toggle('on', v);
   syncMenuToggles();
-  setStatus(v ? 'โหมดหน้ากระดาษ: เปิด (กระดาษขาว)' : 'โหมดหน้ากระดาษ: ปิด (พื้นมืด)');
+  setStatus(v ? T`โหมดหน้ากระดาษ: เปิด (กระดาษขาว)` : T`โหมดหน้ากระดาษ: ปิด (พื้นมืด)`);
 }
 
 // ---------------- [alpha.60r2 ข้อ 10] ธีมของโปรแกรม (Dark / Light) ----------------
@@ -4410,8 +4413,8 @@ export function applyTheme() {
   const btn = $('#tb-theme');
   if (btn) {
     btn.classList.toggle('on', th === 'light');
-    btn.title = th === 'light' ? 'ธีมสว่าง — คลิกเพื่อไปธีมมืด (Ctrl+Shift+P)'
-                               : 'ธีมมืด — คลิกเพื่อไปธีมสว่าง (Ctrl+Shift+P)';
+    btn.title = th === 'light' ? T`ธีมสว่าง — คลิกเพื่อไปธีมมืด (Ctrl+Shift+P)`
+                               : T`ธีมมืด — คลิกเพื่อไปธีมสว่าง (Ctrl+Shift+P)`;
   }
   return th;
 }
@@ -4421,7 +4424,7 @@ export function toggleTheme(mode) {
   applyTheme();
   saveProjectMeta();
   syncMenuToggles();
-  setStatus(th === 'light' ? 'ธีม: สว่าง (Light)' : 'ธีม: มืด (Dark)');
+  setStatus(th === 'light' ? T`ธีม: สว่าง (Light)` : T`ธีม: มืด (Dark)`);
   return th;
 }
 
@@ -4457,7 +4460,7 @@ function toggleReading(on) {
   syncMenuToggles();
   syncFloatBarVisible();
   recenterPageSoon();           // [66r5] แผงข้างหายไปหมด = พื้นที่กว้างขึ้น ต้องจัดกระดาษกลางใหม่
-  setStatus(v ? 'โหมดอ่าน — กด Esc หรือคลิก 📖 เพื่อออก' : 'ออกจากโหมดอ่าน');
+  setStatus(v ? T`โหมดอ่าน — กด Esc หรือคลิก 📖 เพื่อออก` : T`ออกจากโหมดอ่าน`);
 }
 
 // ---------------- คุณสมบัติฉาก ----------------
@@ -4488,7 +4491,7 @@ async function setSceneLock(dPath, ch, sc, locked) {
   const openTab = state.tabs.get(file);
   if (openTab) { openTab.locked = locked; openTab.meta.locked = locked ? 'true' : undefined; applyLockToTab(openTab); }
   await buildTree();
-  setStatus(locked ? '🔒 ล็อกฉากแล้ว (แก้ไม่ได้จนปลดล็อก)' : '🔓 ปลดล็อกฉากแล้ว');
+  setStatus(locked ? T`🔒 ล็อกฉากแล้ว (แก้ไม่ได้จนปลดล็อก)` : T`🔓 ปลดล็อกฉากแล้ว`);
 }
 
 // ---------------- คุณสมบัติฉาก (แบบแผง dock ได้ แทน popup) ----------------
@@ -4523,14 +4526,14 @@ async function renderPropsPanel() {
   // ผู้ใช้ที่กำลังกรอกช่องล่าง ๆ (แท็ก/สถานะ) จะถูกดีดกลับหัวแผงทุกครั้ง
   const backScroll = keepScroll(body);
   body.replaceChildren();
-  if (!propsTarget_C.t) { body.append(el('div', 'dim', '(เลือกฉากเพื่อดูคุณสมบัติ)')); return; }
+  if (!propsTarget_C.t) { body.append(el('div', 'dim', T`(เลือกฉากเพื่อดูคุณสมบัติ)`)); return; }
   const { dPath, ch, sc } = propsTarget_C.t;
   const sf = await kapi.join(dPath, 'scenes.json');
   if (stale()) return;
   const d = await kapi.readJson(sf);
   if (stale()) return;
   const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-  if (!row) { body.replaceChildren(el('div', 'dim', '(ไม่พบฉาก)')); return; }
+  if (!row) { body.replaceChildren(el('div', 'dim', T`(ไม่พบฉาก)`)); return; }
   body.replaceChildren();              // กันของค้างจากรอบก่อนที่ยัง append ไม่ทัน
   body.append(el('div', 'props-name', '📄 ' + row.title));
 
@@ -4538,7 +4541,7 @@ async function renderPropsPanel() {
   const lockRow = el('div', 'props-lock');
   const lockChk = el('input', null); lockChk.type = 'checkbox'; lockChk.checked = !!row.locked;
   const lockLbl = el('label', null); lockLbl.append(lockChk,
-    document.createTextNode(row.locked ? ' 🔒 ล็อกอยู่ (แก้ไม่ได้)' : ' 🔓 ล็อกฉากนี้'));
+    document.createTextNode(row.locked ? T` 🔒 ล็อกอยู่ (แก้ไม่ได้)` : T` 🔓 ล็อกฉากนี้`));
   lockChk.onchange = async () => { await setSceneLock(dPath, ch, sc, lockChk.checked); renderPropsPanel(); };
   lockRow.append(lockLbl); body.append(lockRow);
 
@@ -4549,10 +4552,10 @@ async function renderPropsPanel() {
   if (stale()) return;
   const verRow = el('div', 'props-ver');
   verRow.append(el('div', 'props-ver-line',
-    'เวอร์ชันที่แก้ไข: ' + (vmeta.appVersion || '—') + '  ·  รอบแก้ #' + (vmeta.revision || '0')));
+    T`เวอร์ชันที่แก้ไข: ` + (vmeta.appVersion || '—') + T`  ·  รอบแก้ #` + (vmeta.revision || '0')));
   const verBtns = el('div', 'props-ver-btns');
-  const bHist = el('button', null, '🕘 ประวัติ'); bHist.onclick = () => versionDialog(dPath, ch, sc);
-  const bCmp = el('button', null, '⇋ เทียบเวอร์ชัน'); bCmp.onclick = () => compareVersionsDialog(dPath, ch, sc);
+  const bHist = el('button', null, T`🕘 ประวัติ`); bHist.onclick = () => versionDialog(dPath, ch, sc);
+  const bCmp = el('button', null, T`⇋ เทียบเวอร์ชัน`); bCmp.onclick = () => compareVersionsDialog(dPath, ch, sc);
   verBtns.append(bHist, bCmp); verRow.append(verBtns); body.append(verRow);
 
   const rowOf = new Map();          // input → แถว (ปุ่ม ✨ ของข้อ 2 มาแปะทีหลัง)
@@ -4572,23 +4575,23 @@ async function renderPropsPanel() {
     const c = el('input', 'wiki-check'); c.type = 'checkbox'; c.checked = !!checked; r.append(c); body.append(r); return c;
   };
 
-  const iSyn = mk('เรื่องย่อ', row.synopsis, 'textarea');
-  const iStoryDate = mk('เวลาในเรื่อง (เส้นเวลา)', row.storyDate);
-  iStoryDate.placeholder = 'วันที่ 3 · ปีที่ 1024 · เช้า';
+  const iSyn = mk(T`เรื่องย่อ`, row.synopsis, 'textarea');
+  const iStoryDate = mk(T`เวลาในเรื่อง (เส้นเวลา)`, row.storyDate);
+  iStoryDate.placeholder = T`วันที่ 3 · ปีที่ 1024 · เช้า`;
   // [alpha.57a ข้อ 2] เลขหน้าเริ่มต้นของไฟล์ฉากนี้ (ใช้เมื่อเปิด "เลขหน้า" ในตั้งค่าโปรเจกต์)
-  const iStartPage = mk('เลขหน้าเริ่มต้น (บท)', row.startPage || '');
+  const iStartPage = mk(T`เลขหน้าเริ่มต้น (บท)`, row.startPage || '');
   iStartPage.type = 'number'; iStartPage.min = '1'; iStartPage.placeholder = '1';
-  const iPov = mk('มุมมอง (POV)', row.pov);
-  const iEmotion = mk('อารมณ์', row.emotion);
-  const iConflict = mk('ความขัดแย้ง', row.conflict);
+  const iPov = mk(T`มุมมอง (POV)`, row.pov);
+  const iEmotion = mk(T`อารมณ์`, row.emotion);
+  const iConflict = mk(T`ความขัดแย้ง`, row.conflict);
   // สถานะต้องใช้ allStatuses() เหมือนกล่องคุณสมบัติ ไม่งั้นสถานะที่ผู้ใช้สร้างเองจะหายตอนบันทึก
   const statuses = allStatuses();
-  const iStatus = mkSel('สถานะ', [['Outline', '— ยังไม่ตั้ง —'], ...statuses.map((s) => [s, s])],
+  const iStatus = mkSel(T`สถานะ`, [['Outline', T`— ยังไม่ตั้ง —`], ...statuses.map((s) => [s, s])],
     statuses.includes(row.status) ? row.status : 'Outline');
-  const iColor = mkSel('สี', [['', '— ไม่มี —'], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + n])], row.color || '');
-  const iFlag = mkChk('ปักหมุด', row.flag);
-  const iTags = mk('แท็ก (คั่น , )', (row.tags || []).join(', '));
-  const iNote = mk('โน้ต', row.note, 'textarea');
+  const iColor = mkSel(T`สี`, [['', T`— ไม่มี —`], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + dataLabel(n)])], row.color || '');
+  const iFlag = mkChk(T`ปักหมุด`, row.flag);
+  const iTags = mk(T`แท็ก (คั่น , )`, (row.tags || []).join(', '));
+  const iNote = mk(T`โน้ต`, row.note, 'textarea');
 
   // ---- [alpha.70 ข้อ 1] ตำแหน่งบนแผนที่ + ปุ่ม "ดูบนแผนที่" ----
   // อ่าน maps.json (async) → ต้องเช็ค stale เหมือนทุกจุด await ในฟังก์ชันนี้ ไม่งั้นแถวของฉากเก่าโผล่ทับ
@@ -4596,11 +4599,11 @@ async function renderPropsPanel() {
     const mapRow = await buildShowOnMapRow(row);
     if (stale()) return;
     body.append(mapRow);
-  } catch (e) { log('warn', 'props: สร้างแถวตำแหน่งบนแผนที่ไม่ได้', e); }
+  } catch (e) { log('warn', T`props: สร้างแถวตำแหน่งบนแผนที่ไม่ได้`, e); }
 
   // ---- บันทึกอัตโนมัติ (ข้อ 13) — ไม่ต้องกดปุ่มแล้ว ----
   // พิมพ์แล้วรอเงียบ 600ms ค่อยเขียน (กันเขียนไฟล์ทุกตัวอักษร) · เปลี่ยน dropdown/checkbox = เขียนทันที
-  const statusLine = el('div', 'props-autosave', 'บันทึกอัตโนมัติ');
+  const statusLine = el('div', 'props-autosave', T`บันทึกอัตโนมัติ`);
   body.append(statusLine);
 
   const collect = () => {
@@ -4621,7 +4624,7 @@ async function renderPropsPanel() {
     const now = snapshot();
     if (now === lastSaved) return;          // ไม่มีอะไรเปลี่ยน = ไม่แตะดิสก์
     lastSaved = now;
-    statusLine.textContent = 'กำลังบันทึก…';
+    statusLine.textContent = T`กำลังบันทึก…`;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     try {
       const { meta, body: mbody } = parseMdFile(await kapi.readFile(file0));
@@ -4629,14 +4632,14 @@ async function renderPropsPanel() {
       meta.emotion = row.emotion; meta.conflict = row.conflict; meta.note = row.note;
       await kapi.writeFile(file0, dumpMdFile(meta, mbody));
     } catch {}
-    statusLine.innerHTML = iconHtml('check', 14) + ' บันทึกแล้ว';
+    statusLine.innerHTML = iconHtml('check', 14) + T` บันทึกแล้ว`;
     // สี/สถานะ/แท็ก/หมุด มีผลกับต้นไม้ — วาดใหม่เฉพาะตอนจำเป็น (ไม่ใช่ทุกตัวอักษรที่พิมพ์)
     if (rebuildTree) await buildTree();
   };
 
   let saveJob = null;
   const scheduleSave = () => {
-    statusLine.textContent = 'แก้ไข…';
+    statusLine.textContent = T`แก้ไข…`;
     clearTimeout(saveJob);
     saveJob = setTimeout(() => commit(true).catch(() => {}), 600);
   };
@@ -4734,9 +4737,9 @@ async function listDrafts() {
 
 // ---------------- เล่ม (sections) — ตัวช่วยกลาง ----------------
 export const SECTION_STATUSES = [
-  ['outline', 'โครงเรื่อง', '#8a8f98'], ['drafting', 'กำลังเขียน', '#5f9fd9'],
-  ['revising', 'กำลังแก้', '#d9b757'], ['done', 'เขียนจบ', '#6fae6f'],
-  ['published', 'ตีพิมพ์แล้ว', '#a97fd0'],
+  ['outline', T`โครงเรื่อง`, '#8a8f98'], ['drafting', T`กำลังเขียน`, '#5f9fd9'],
+  ['revising', T`กำลังแก้`, '#d9b757'], ['done', T`เขียนจบ`, '#6fae6f'],
+  ['published', T`ตีพิมพ์แล้ว`, '#a97fd0'],
 ];
 // อ่านทุกเล่ม (เรียงตาม order) พร้อม meta ที่จำเป็น
 // นับบท/ฉาก/คำของทั้งเล่ม (รวมทุกฉบับร่าง)
@@ -4763,16 +4766,16 @@ export function finalizeCompiled(r) {
 export async function openCompileDialog() {
   if (!state.root) return;
   const drafts = await listDrafts();
-  if (!drafts.length) { setStatus('ยังไม่มีฉบับร่างให้ส่งออก'); return; }
+  if (!drafts.length) { setStatus(T`ยังไม่มีฉบับร่างให้ส่งออก`); return; }
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-compile');
-  box.append(el('div', 'k-dlg-title', 'ส่งออกด้วยเวิร์กโฟลว์'));
+  box.append(el('div', 'k-dlg-title', T`ส่งออกด้วยเวิร์กโฟลว์`));
 
   const top = el('div', 'cmp-top');
   const selDraft = el('select', 'k-dlg-select');
   for (const d of drafts) { const o = el('option', null, d.label); o.value = d.dPath; selDraft.append(o); }
-  top.append(el('span', null, 'ฉบับร่าง'), selDraft);
+  top.append(el('span', null, T`ฉบับร่าง`), selDraft);
   box.append(top);
 
   const body = el('div', 'cmp-body');
@@ -4785,7 +4788,7 @@ export async function openCompileDialog() {
 
   const renderLeft = () => {
     left.innerHTML = '';
-    left.append(el('div', 'cmp-sub', 'พรีเซ็ต'));
+    left.append(el('div', 'cmp-sub', T`พรีเซ็ต`));
     const row = (w) => {
       const d = el('div', 'cmp-wf' + (w.id === curId ? ' on' : ''), w.name);
       d.dataset.wf = w.id;
@@ -4793,13 +4796,13 @@ export async function openCompileDialog() {
       left.append(d);
     };
     PRESETS.forEach(row);
-    left.append(el('div', 'cmp-sub', 'ของฉัน'));
+    left.append(el('div', 'cmp-sub', T`ของฉัน`));
     const mine = userWorkflows();
-    if (!mine.length) left.append(el('div', 'cmp-empty', '(ยังไม่มี — กด "ทำสำเนา" จากพรีเซ็ต)'));
+    if (!mine.length) left.append(el('div', 'cmp-empty', T`(ยังไม่มี — กด "ทำสำเนา" จากพรีเซ็ต)`));
     mine.forEach(row);
-    const bAdd = el('button', 'cmp-mini', '+ สร้างเปล่า');
+    const bAdd = el('button', 'cmp-mini', T`+ สร้างเปล่า`);
     bAdd.onclick = async () => {
-      const n = await ask('ชื่อเวิร์กโฟลว์ใหม่', { value: 'เวิร์กโฟลว์ของฉัน' });
+      const n = await ask(T`ชื่อเวิร์กโฟลว์ใหม่`, { value: T`เวิร์กโฟลว์ของฉัน` });
       if (!n) return;
       const w = newWorkflow(n); userWorkflows().push(w); await saveProjectMeta();
       curId = w.id; renderLeft(); renderRight();
@@ -4811,17 +4814,17 @@ export async function openCompileDialog() {
     const w = cur();
     right.innerHTML = '';
     const head = el('div', 'cmp-head');
-    head.append(el('div', 'cmp-name', w.name + (w.builtIn ? '  (พรีเซ็ต — แก้ไม่ได้)' : '')));
-    const bCopy = el('button', 'cmp-mini', '⧉ ทำสำเนา');
+    head.append(el('div', 'cmp-name', w.name + (w.builtIn ? T`  (พรีเซ็ต — แก้ไม่ได้)` : '')));
+    const bCopy = el('button', 'cmp-mini', T`⧉ ทำสำเนา`);
     bCopy.onclick = async () => {
       const c = cloneWorkflow(w); userWorkflows().push(c); await saveProjectMeta();
-      curId = c.id; renderLeft(); renderRight(); setStatus('ทำสำเนาเวิร์กโฟลว์แล้ว');
+      curId = c.id; renderLeft(); renderRight(); setStatus(T`ทำสำเนาเวิร์กโฟลว์แล้ว`);
     };
     head.append(bCopy);
     if (!w.builtIn) {
-      const bDel = el('button', 'cmp-mini k-danger', '🗑 ลบ');
+      const bDel = el('button', 'cmp-mini k-danger', T`🗑 ลบ`);
       bDel.onclick = async () => {
-        if (!(await confirmBox(`ลบเวิร์กโฟลว์ “${w.name}” ?`, 'ลบ'))) return;
+        if (!(await confirmBox(T`ลบเวิร์กโฟลว์ “${w.name}” ?`, T`ลบ`))) return;
         const arr = userWorkflows(); arr.splice(arr.indexOf(w), 1); await saveProjectMeta();
         curId = PRESETS[0].id; renderLeft(); renderRight();
       };
@@ -4830,7 +4833,7 @@ export async function openCompileDialog() {
     right.append(head);
 
     const extRow = el('div', 'cmp-ext');
-    extRow.append(el('span', null, 'นามสกุลไฟล์'));
+    extRow.append(el('span', null, T`นามสกุลไฟล์`));
     const selExt = el('select', 'k-dlg-select'); selExt.id = 'cmp-ext';
     // alpha.57 — .fdx/.rtf: เอาข้อความที่เวิร์กโฟลว์ประกอบเสร็จมาอ่านเป็นบทแล้วแปลงต่อ
     for (const e of ['md', 'txt', 'html', 'fdx', 'rtf']) { const o = el('option', null, '.' + e); o.value = e; selExt.append(o); }
@@ -4840,7 +4843,7 @@ export async function openCompileDialog() {
     extRow.append(selExt); right.append(extRow);
 
     const list = el('div', 'cmp-steps'); list.id = 'cmp-steps';
-    const STAGE_TH = { model: 'เนื้อหา', render: 'ประกอบ', text: 'ข้อความสุดท้าย' };
+    const STAGE_TH = { model: T`เนื้อหา`, render: T`ประกอบ`, text: T`ข้อความสุดท้าย` };
     (w.steps || []).forEach((st, i) => {
       const d = stepDef(st.key); if (!d) return;
       const rowEl = el('div', 'cmp-step' + (st.on === false ? ' off' : ''));
@@ -4852,10 +4855,10 @@ export async function openCompileDialog() {
       const badge = el('span', 'cmp-stage', STAGE_TH[d.stage]);
       rowEl.append(cb, lbl, badge);
       if (!w.builtIn) {
-        const up = el('button', 'cmp-mini', '▲'); up.title = 'เลื่อนขึ้น';
+        const up = el('button', 'cmp-mini', '▲'); up.title = T`เลื่อนขึ้น`;
         up.onclick = async () => { if (i > 0) { const a = w.steps; [a[i - 1], a[i]] = [a[i], a[i - 1]];
                                                 await saveProjectMeta(); renderRight(); } };
-        const dn = el('button', 'cmp-mini', '▼'); dn.title = 'เลื่อนลง';
+        const dn = el('button', 'cmp-mini', '▼'); dn.title = T`เลื่อนลง`;
         dn.onclick = async () => { const a = w.steps; if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]];
                                                 await saveProjectMeta(); renderRight(); } };
         rowEl.append(up, dn);
@@ -4900,31 +4903,31 @@ export async function openCompileDialog() {
                                        paper: spf.paper, margins: spf.margins });
   };
   const btns = el('div', 'k-dlg-btns');
-  const bPrev = el('button', null, '👁 ดูตัวอย่าง');
+  const bPrev = el('button', null, T`👁 ดูตัวอย่าง`);
   bPrev.onclick = async () => {
-    const r = await withBusy('กำลังประมวลผลเวิร์กโฟลว์…', doRun);
+    const r = await withBusy(T`กำลังประมวลผลเวิร์กโฟลว์…`, doRun);
     prev.textContent = r.text.slice(0, 4000) + (r.text.length > 4000 ? '\n…' : '');
     if (r.warnings.length) setStatus(r.warnings.join(' · '));
   };
-  const bGo = el('button', 'k-ok', 'ส่งออก…');
+  const bGo = el('button', 'k-ok', T`ส่งออก…`);
   bGo.onclick = async () => {
     // [alpha.62 บั๊ก 10] ประมวลผลก่อน → เคลียร์ตัวบอกสถานะ → ค่อยเปิดกล่องบันทึก
     //   (บทเรียนเดียวกับบั๊ก 1: อย่าให้มีอะไรหมุนค้างตอนรอผู้ใช้ตอบกล่อง)
-    const r = await withBusy('กำลังประมวลผลเวิร์กโฟลว์…', doRun);
+    const r = await withBusy(T`กำลังประมวลผลเวิร์กโฟลว์…`, doRun);
     const dest = r.ext === 'pdf'
       ? await kapi.savePdfDialog(safeName(state.title) + '.pdf')
       : await kapi.saveAsDialog(safeName(state.title) + '.' + r.ext, r.ext);
     if (!dest) return;
     // [alpha.59 · 69] ปลายทาง .pdf → ตัวสร้าง PDF ในโปรแกรม (ไบนารี ต้องผ่าน writeBytes — กฎ 10)
     if (r.ext === 'pdf') {
-      const made = await withBusy('กำลังสร้างไฟล์ PDF…', () => writeCompiledPdf(dest, r, state.title));
-      ov.remove(); setStatus(`ส่งออก PDF แล้ว (${made.pageCount} หน้า): ` + dest);
+      const made = await withBusy(T`กำลังสร้างไฟล์ PDF…`, () => writeCompiledPdf(dest, r, state.title));
+      ov.remove(); setStatus(T`ส่งออก PDF แล้ว (${made.pageCount} หน้า): ` + dest);
       return;
     }
-    await withBusy('กำลังเขียนไฟล์…', () => kapi.writeFile(dest, finalizeCompiled(r)));
-    ov.remove(); setStatus('ส่งออกแล้ว: ' + dest);
+    await withBusy(T`กำลังเขียนไฟล์…`, () => kapi.writeFile(dest, finalizeCompiled(r)));
+    ov.remove(); setStatus(T`ส่งออกแล้ว: ` + dest);
   };
-  const bClose = el('button', 'k-cancel', 'ปิด');
+  const bClose = el('button', 'k-cancel', T`ปิด`);
   bClose.onclick = () => ov.remove();
   btns.append(bClose, bPrev, bGo); box.append(btns);
 
@@ -4939,14 +4942,14 @@ async function exportDraft() {
   const drafts = await listDrafts();
   if (!drafts.length) return;
   const pick = drafts.length === 1 ? drafts[0].label
-    : await pickFromList('ส่งออกฉบับร่างไหน', drafts.map((d) => d.label));
+    : await pickFromList(T`ส่งออกฉบับร่างไหน`, drafts.map((d) => d.label));
   if (!pick) return;
   const { secName, dPath } = drafts.find((d) => d.label === pick);
-  const text = await withBusy('กำลังรวมฉบับร่าง…', () => compileDraftText(dPath));
+  const text = await withBusy(T`กำลังรวมฉบับร่าง…`, () => compileDraftText(dPath));
   const dest = await kapi.saveAsDialog(safeName(state.title) + '.md');
   if (!dest) return;
-  await withBusy('กำลังเขียนไฟล์…', () => kapi.writeFile(dest, text));
-  setStatus('ส่งออกรวมแล้ว: ' + dest);
+  await withBusy(T`กำลังเขียนไฟล์…`, () => kapi.writeFile(dest, text));
+  setStatus(T`ส่งออกรวมแล้ว: ` + dest);
   return dest;
 }
 
@@ -4955,7 +4958,7 @@ async function exportDraft() {
 export function scriptMeta(title) {
   const m = state.meta || {};
   const contact = [m.contact, m.phone, m.authorEmail,
-                   m.agentName && ('ตัวแทน: ' + m.agentName), m.agentAddress,
+                   m.agentName && (T`ตัวแทน: ` + m.agentName), m.agentAddress,
                    m.agentPhone, m.agentEmail].filter(Boolean).join('\n');
   return {
     title: title || state.title || '',
@@ -4983,9 +4986,9 @@ export async function currentScriptSource() {
              title: t2.title || state.title };
   }
   const drafts = await listDrafts();
-  if (!drafts.length) { setStatus('ยังไม่มีบทให้ส่งออก — เปิดฉากบทภาพยนตร์ก่อน'); return null; }
+  if (!drafts.length) { setStatus(T`ยังไม่มีบทให้ส่งออก — เปิดฉากบทภาพยนตร์ก่อน`); return null; }
   const pick = drafts.length === 1 ? drafts[0].label
-    : await pickFromList('ส่งออกบทจากฉบับร่างไหน', drafts.map((d) => d.label));
+    : await pickFromList(T`ส่งออกบทจากฉบับร่างไหน`, drafts.map((d) => d.label));
   if (!pick) return null;
   const d = drafts.find((x) => x.label === pick);
   const md = await compileDraftText(d.dPath);
@@ -5009,8 +5012,8 @@ export async function exportScript(kind) {
   const dest = await kapi.saveAsDialog(safeName(src.title) + '.' + kind, kind);
   if (!dest) return null;
   await kapi.writeFile(dest, text);
-  log('info', 'ส่งออกบท ' + kind, dest);
-  setStatus(`ส่งออก .${kind} แล้ว: ${dest}`);
+  log('info', T`ส่งออกบท ` + kind, dest);
+  setStatus(T`ส่งออก .${kind} แล้ว: ${dest}`);
   return dest;
 }
 
@@ -5037,34 +5040,34 @@ export async function watermarkDialog() {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wm-dlg');
-  box.append(el('div', 'k-dlg-title', 'ส่งออก PDF ลายน้ำรายคน'));
-  box.append(el('div', 'dim', `บท “${src.title}” · ${pages.count} หน้า — จะได้ไฟล์ละคน ลายน้ำต่างกัน`));
+  box.append(el('div', 'k-dlg-title', T`ส่งออก PDF ลายน้ำรายคน`));
+  box.append(el('div', 'dim', T`บท “${src.title}” · ${pages.count} หน้า — จะได้ไฟล์ละคน ลายน้ำต่างกัน`));
 
   const mk = (label, node) => { const r = el('div', 'k-row'); r.append(el('label', null, label), node); return r; };
   const ta = el('textarea', 'k-dlg-input k-wm-list');
   ta.rows = 6;
-  ta.placeholder = 'หนึ่งบรรทัด = หนึ่งคน\nสมชาย\nสมหญิง | สำเนาสำหรับผู้กำกับ';
+  ta.placeholder = T`หนึ่งบรรทัด = หนึ่งคน\nสมชาย\nสมหญิง | สำเนาสำหรับผู้กำกับ`;
   ta.value = saved.recipients || '';
-  box.append(mk('รายชื่อผู้รับ', ta));
+  box.append(mk(T`รายชื่อผู้รับ`, ta));
 
-  const tpl = el('input', 'k-dlg-input'); tpl.value = saved.template || '{ชื่อ} · {วันที่}';
-  box.append(mk('แม่แบบลายน้ำ', tpl));
-  box.append(el('div', 'dim', 'ใช้ {ชื่อ} {วันที่} {เรื่อง} ได้ · ระบุลายน้ำเฉพาะคนได้ด้วย "ชื่อ | ลายน้ำ"'));
+  const tpl = el('input', 'k-dlg-input'); tpl.value = saved.template || T`{ชื่อ} · {วันที่}`;
+  box.append(mk(T`แม่แบบลายน้ำ`, tpl));
+  box.append(el('div', 'dim', T`ใช้ {ชื่อ} {วันที่} {เรื่อง} ได้ · ระบุลายน้ำเฉพาะคนได้ด้วย "ชื่อ | ลายน้ำ"`));
 
   const pre = el('input', 'k-dlg-input'); pre.value = saved.prefix || safeName(src.title);
-  box.append(mk('คำนำหน้าชื่อไฟล์', pre));
+  box.append(mk(T`คำนำหน้าชื่อไฟล์`, pre));
 
   const size = el('input', 'k-dlg-input'); size.type = 'number'; size.min = '10'; size.max = '200';
   size.value = String(saved.fontSize || DEFAULT_WM.fontSize);
-  box.append(mk('ขนาดลายน้ำ (px)', size));
+  box.append(mk(T`ขนาดลายน้ำ (px)`, size));
   const ang = el('input', 'k-dlg-input'); ang.type = 'number'; ang.min = '-90'; ang.max = '90';
   ang.value = String(saved.angle ?? DEFAULT_WM.angle);
-  box.append(mk('มุมเอียง (องศา)', ang));
+  box.append(mk(T`มุมเอียง (องศา)`, ang));
 
   const dirRow = el('div', 'k-row');
-  const dirLbl = el('span', 'dim', saved.outDir || '(ยังไม่ได้เลือกโฟลเดอร์)');
+  const dirLbl = el('span', 'dim', saved.outDir || T`(ยังไม่ได้เลือกโฟลเดอร์)`);
   let outDir = saved.outDir || '';
-  const bDir = el('button', 'cmp-mini', '📂 เลือกโฟลเดอร์ปลายทาง');
+  const bDir = el('button', 'cmp-mini', T`📂 เลือกโฟลเดอร์ปลายทาง`);
   bDir.onclick = async () => {
     const p = await kapi.openDirDialog();
     if (p) { outDir = p; dirLbl.textContent = p; }
@@ -5076,12 +5079,12 @@ export async function watermarkDialog() {
   box.append(prog);
 
   const btns = el('div', 'k-dlg-btns');
-  const bCancel = el('button', 'k-cancel', 'ปิด'); bCancel.onclick = () => ov.remove();
-  const bGo = el('button', 'k-ok', 'สร้าง PDF');
+  const bCancel = el('button', 'k-cancel', T`ปิด`); bCancel.onclick = () => ov.remove();
+  const bGo = el('button', 'k-ok', T`สร้าง PDF`);
   bGo.onclick = async () => {
     const rs = parseRecipients(ta.value);
-    if (!rs.length) { prog.textContent = 'ยังไม่มีรายชื่อผู้รับ'; return; }
-    if (!outDir) { prog.textContent = 'เลือกโฟลเดอร์ปลายทางก่อน'; return; }
+    if (!rs.length) { prog.textContent = T`ยังไม่มีรายชื่อผู้รับ`; return; }
+    if (!outDir) { prog.textContent = T`เลือกโฟลเดอร์ปลายทางก่อน`; return; }
     bGo.disabled = true;
     const wmOptions = { ...DEFAULT_WM, fontSize: num(size.value, DEFAULT_WM.fontSize),
                         angle: num(ang.value, 0) };
@@ -5099,19 +5102,19 @@ export async function watermarkDialog() {
                   watermarkSize: wmOptions.fontSize * 0.75,     // px → pt
                   watermarkAngle: wmOptions.angle },
         })).bytes,
-        onProgress: (i, n, name) => { prog.textContent = `กำลังสร้าง ${i}/${n} — ${name}`; },
+        onProgress: (i, n, name) => { prog.textContent = T`กำลังสร้าง ${i}/${n} — ${name}`; },
       });
       if (state.meta) {
         state.meta.watermark = { recipients: ta.value, template: tpl.value, prefix: pre.value,
                                  outDir, fontSize: wmOptions.fontSize, angle: wmOptions.angle };
         await saveProjectMeta();
       }
-      prog.textContent = `เสร็จแล้ว ${made.length} ไฟล์`;
-      setStatus(`สร้าง PDF ลายน้ำ ${made.length} ไฟล์ที่ ${outDir}`);
-      log('info', 'PDF ลายน้ำ', { count: made.length, outDir });
+      prog.textContent = T`เสร็จแล้ว ${made.length} ไฟล์`;
+      setStatus(T`สร้าง PDF ลายน้ำ ${made.length} ไฟล์ที่ ${outDir}`);
+      log('info', T`PDF ลายน้ำ`, { count: made.length, outDir });
     } catch (e) {
-      prog.textContent = 'ผิดพลาด: ' + (e && e.message ? e.message : e);
-      log('error', 'สร้าง PDF ลายน้ำไม่สำเร็จ', e);
+      prog.textContent = T`ผิดพลาด: ` + (e && e.message ? e.message : e);
+      log('error', T`สร้าง PDF ลายน้ำไม่สำเร็จ`, e);
     }
     bGo.disabled = false;
   };
@@ -5200,7 +5203,7 @@ function pluginApi(name) {
         });
         plugins.panels.push(pid);
         return pid;
-      } catch (e) { log('warn', 'registerPanel ล้มเหลว: ' + pid, e); return null; }
+      } catch (e) { log('warn', T`registerPanel ล้มเหลว: ` + pid, e); return null; }
     },
     showPanel: (id) => showPanel('plugin-' + name + '-' + id),
     hidePanel: (id) => hidePanel('plugin-' + name + '-' + id),
@@ -5257,12 +5260,12 @@ function pluginApi(name) {
 async function pluginPath(rel) {
   if (!state.root) return null;
   const clean = String(rel || '').replace(/\\/g, '/').replace(/^[/]+/, '');
-  if (clean.split('/').includes('..')) { log('warn', 'plugin: path หลุดขอบเขตโปรเจกต์: ' + rel); return null; }
+  if (clean.split('/').includes('..')) { log('warn', T`plugin: path หลุดขอบเขตโปรเจกต์: ` + rel); return null; }
   return kapi.join(state.root, ...clean.split('/').filter(Boolean));
 }
 
 /** ข้อความสั้น ๆ ของกล่อง alert ที่ปลั๊กอินเรียก (window.alert ใช้ไม่ได้ใน Electron — บทเรียน 3) */
-function aboutBox(msg) { setStatus(msg); return confirmBox(msg, 'ปลั๊กอิน'); }
+function aboutBox(msg) { setStatus(msg); return confirmBox(msg, T`ปลั๊กอิน`); }
 
 async function loadPlugins() {
   plugins.commands = []; plugins.loaded = []; plugins.failed = [];
@@ -5276,11 +5279,11 @@ async function loadPlugins() {
   const sources = [];
   try {
     const g = await kapi.globalPluginsDir?.();
-    if (g && await kapi.exists(g)) sources.push([g, 'ผู้ใช้']);
+    if (g && await kapi.exists(g)) sources.push([g, T`ผู้ใช้`]);
   } catch {}
   if (state.root) {
     const p = await kapi.join(state.root, 'Plugins');
-    if (await kapi.exists(p)) sources.push([p, 'โปรเจกต์']);
+    if (await kapi.exists(p)) sources.push([p, T`โปรเจกต์`]);
   }
   if (!sources.length) { const b = $('#tb-plug'); if (b) b.style.display = 'none'; return plugins; }
 
@@ -5290,11 +5293,11 @@ async function loadPlugins() {
     try { names = await kapi.listDirs(dir); } catch { continue; }
     for (const name of names) {
       if (name === 'dictionaries') continue;            // โฟลเดอร์พจนานุกรม ไม่ใช่ปลั๊กอิน
-      if (pluginDisabled(name)) { plugins.failed.push({ name, origin, error: 'ปิดไว้หลังเคยพัง' }); continue; }
+      if (pluginDisabled(name)) { plugins.failed.push({ name, origin, error: T`ปิดไว้หลังเคยพัง` }); continue; }
       try {
         const manifest = await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
         if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
-          plugins.failed.push({ name, origin, error: 'ต้องใช้ Killian ' + manifest.minAppVersion + ' ขึ้นไป' });
+          plugins.failed.push({ name, origin, error: T`ต้องใช้ Killian ` + manifest.minAppVersion + T` ขึ้นไป` });
           continue;
         }
         const code = await kapi.readFile(await kapi.join(dir, name, manifest.entry || 'main.js'));
@@ -5309,12 +5312,12 @@ async function loadPlugins() {
         plugins.failed.push({ name, origin, error: e.message });
         // พังตอนโหลด = ปิดไว้ก่อน กันเปิดโปรแกรมไม่ขึ้นรอบหน้า (ผู้ใช้เปิดกลับได้จากกล่องจัดการ)
         setPluginDisabled(name, true);
-        log('error', 'ปลั๊กอิน ' + name + ' พัง — ปิดไว้ชั่วคราว', e);
+        log('error', T`ปลั๊กอิน ` + name + T` พัง — ปิดไว้ชั่วคราว`, e);
       }
     }
   }
-  if (plugins.loaded.length) setStatus(`โหลดปลั๊กอิน ${plugins.loaded.length} ตัว`
-    + (plugins.failed.length ? ` (พัง ${plugins.failed.length})` : ''));
+  if (plugins.loaded.length) setStatus(T`โหลดปลั๊กอิน ${plugins.loaded.length} ตัว`
+    + (plugins.failed.length ? T` (พัง ${plugins.failed.length})` : ''));
   const btn = $('#tb-plug');
   if (btn) btn.style.display = plugins.commands.length ? '' : 'none';
   return plugins;
@@ -5329,7 +5332,7 @@ let galInst = null;
 export function renderGalleryPanel() {
   const host = $('#gal-body');
   if (!host) return null;
-  if (!state.root) { host.innerHTML = ''; host.append(el('div', 'dim', 'เปิดโปรเจกต์ก่อน')); return null; }
+  if (!state.root) { host.innerHTML = ''; host.append(el('div', 'dim', T`เปิดโปรเจกต์ก่อน`)); return null; }
   host.innerHTML = '';
   // [alpha.63] คลังรูปเป็นระบบอัลบั้มแล้ว — ตัวเชื่อมกับส่วนอื่นส่งเป็น callback
   // (gallery.js จึงไม่ต้อง import app.js กลับมา = ไม่มี import วน)
@@ -5365,7 +5368,7 @@ async function openPathSmart(file) {
     if (/\.md$/i.test(file)) await openScene(file, file.split(/[\\/]/).pop().replace(/\.md$/i, ''));
     else if (/\.json$/i.test(file)) await openEntity(file);
     else await openPlainFile(file);
-  } catch (e) { setStatus('เปิดไฟล์ไม่ได้: ' + e.message); }
+  } catch (e) { setStatus(T`เปิดไฟล์ไม่ได้: ` + e.message); }
 }
 export function galleryInstance() { return galInst; }
 async function openGallery() {
@@ -5380,10 +5383,10 @@ async function openGallery() {
  * เปิดแผงให้ก่อนเสมอ (ผู้ใช้สั่งจากเมนูตอนแผงยังปิดอยู่ได้) แล้วค่อยสั่งงานตัวคลัง
  */
 export async function galleryCommand(ch) {
-  if (!state.root) { setStatus('เปิดโปรเจกต์ก่อน'); return false; }
+  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน`); return false; }
   await openGallery();
   const g = galInst;
-  if (!g) { setStatus('เปิดคลังรูปไม่สำเร็จ'); return false; }
+  if (!g) { setStatus(T`เปิดคลังรูปไม่สำเร็จ`); return false; }
   try {
     switch (ch) {
       case 'gallery': break;                       // เปิดแผงเฉย ๆ (แดชบอร์ดเรียกทางนี้)
@@ -5399,7 +5402,7 @@ export async function galleryCommand(ch) {
   } catch (e) {
     // คำสั่งจากเมนู native ต้องบอกเหตุผลให้เห็น (บทเรียน 89 — ห้ามตายเงียบ)
     log('error', 'gallery command failed: ' + ch, e);
-    setStatus('คำสั่งคลังรูปล้มเหลว: ' + e.message);
+    setStatus(T`คำสั่งคลังรูปล้มเหลว: ` + e.message);
     return false;
   }
   return true;
@@ -5427,7 +5430,7 @@ async function loadTemplates() {
     state.templates = state.templatesDoc.templates || [];
   } catch (e) {
     state.templates = [];
-    setStatus('templates.json ผิดรูปแบบ: ' + e.message);
+    setStatus(T`templates.json ผิดรูปแบบ: ` + e.message);
     return;
   }
   // [alpha.71 ข้อ 4] โปรเจกต์เก่ามี templates.json ที่คัดลอกไปตั้งแต่ตอนสร้าง จึงไม่มีบล็อก `profile`
@@ -5441,9 +5444,9 @@ async function loadTemplates() {
       state.templates = templates;
       state.templatesDoc.templates = templates;
       await kapi.writeFile(file, JSON.stringify(state.templatesDoc, null, 2));
-      log('info', 'templates: เติมบล็อก profile ให้เทมเพลตมาตรฐานของโปรเจกต์นี้แล้ว');
+      log('info', T`templates: เติมบล็อก profile ให้เทมเพลตมาตรฐานของโปรเจกต์นี้แล้ว`);
     }
-  } catch (e) { log('warn', 'templates: เติมบล็อก profile ไม่สำเร็จ', e); }
+  } catch (e) { log('warn', T`templates: เติมบล็อก profile ไม่สำเร็จ`, e); }
 }
 
 // เขียน state.templates กลับลงไฟล์ (คงคีย์ version/note เดิม) แล้วรีเฟรชตัวจัดการ
@@ -5491,10 +5494,10 @@ function openTemplateManager() {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', 'เทมเพลต Wiki'));
+  tabBtn.append(el('span', 'tab-title', T`เทมเพลต Wiki`));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file: key, title: 'เทมเพลต Wiki', pane, tabBtn, dirty: false,
+  const tab = { file: key, title: T`เทมเพลต Wiki`, pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null };
   tabBtn.onclick = (e) => { if (e.target !== x) activate(key); };
   x.onclick = () => closeTab(key);
@@ -5507,11 +5510,11 @@ function renderTemplateManager(pane) {
   pane.innerHTML = '';
   const wrap = el('div', 'tpl-mgr');
   const head = el('div', 'tpl-head');
-  head.append(el('div', 'tpl-title', 'เทมเพลต Wiki'));
+  head.append(el('div', 'tpl-title', T`เทมเพลต Wiki`));
   const btns = el('div', 'tpl-head-btns');
-  const bNew = el('button', 'k-ok', '+ สร้างเทมเพลตใหม่');
+  const bNew = el('button', 'k-ok', T`+ สร้างเทมเพลตใหม่`);
   bNew.onclick = () => templateEditModal(null);
-  const bJson = el('button', null, '{ } แก้ JSON ดิบ');
+  const bJson = el('button', null, T`{ } แก้ JSON ดิบ`);
   bJson.onclick = () => openTemplatesFile();
   btns.append(bNew, bJson); head.append(btns); wrap.append(head);
 
@@ -5525,20 +5528,20 @@ function renderTemplateManager(pane) {
       const card = el('div', 'tpl-card');
       const info = el('div', 'tpl-card-info');
       const nm = el('div', 'tpl-card-name', tp.name || tp.id);
-      if (tp.builtIn) nm.append(el('span', 'tpl-badge', 'ค่าเริ่มต้น'));
+      if (tp.builtIn) nm.append(el('span', 'tpl-badge', T`ค่าเริ่มต้น`));
       info.append(nm);
       info.append(el('div', 'tpl-card-meta',
-        `${(tp.fields || []).length} ฟิลด์ · ${(tp.sections || []).length} ส่วน`));
+        T`${(tp.fields || []).length} ฟิลด์ · ${(tp.sections || []).length} ส่วน`));
       card.append(info);
       const acts = el('div', 'tpl-card-acts');
       const mk = (label, fn, cls) => { const b = el('button', cls || null, label); b.onclick = fn; return b; };
       acts.append(
-        mk('แก้ไข', () => templateEditModal(tp)),
-        mk('ทำซ้ำ', () => duplicateTemplate(tp)),
-        mk('ลบ', async () => {
-          if (await confirmBox(`ลบเทมเพลต "${tp.name}"?`)) {
+        mk(T`แก้ไข`, () => templateEditModal(tp)),
+        mk(T`ทำซ้ำ`, () => duplicateTemplate(tp)),
+        mk(T`ลบ`, async () => {
+          if (await confirmBox(T`ลบเทมเพลต "${tp.name}"?`)) {
             state.templates = state.templates.filter((t) => t !== tp);
-            await writeTemplates(); setStatus('ลบเทมเพลตแล้ว');
+            await writeTemplates(); setStatus(T`ลบเทมเพลตแล้ว`);
           }
         }, 'k-danger-btn'));
       card.append(acts);
@@ -5551,9 +5554,9 @@ function renderTemplateManager(pane) {
 
 async function duplicateTemplate(tp) {
   const copy = JSON.parse(JSON.stringify(tp));
-  copy.id = guid(); copy.name = (tp.name || 'เทมเพลต') + ' (สำเนา)'; copy.builtIn = false;
+  copy.id = guid(); copy.name = (tp.name || T`เทมเพลต`) + T` (สำเนา)`; copy.builtIn = false;
   state.templates.push(copy);
-  await writeTemplates(); setStatus('ทำซ้ำเทมเพลตแล้ว');
+  await writeTemplates(); setStatus(T`ทำซ้ำเทมเพลตแล้ว`);
 }
 
 // modal สร้าง/แก้เทมเพลต — tp=null คือสร้างใหม่
@@ -5567,13 +5570,13 @@ function templateEditModal(tp) {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-tpl-edit');
-  box.append(el('div', 'k-dlg-title', isNew ? 'สร้างเทมเพลตใหม่' : 'แก้ไขเทมเพลต'));
+  box.append(el('div', 'k-dlg-title', isNew ? T`สร้างเทมเพลตใหม่` : T`แก้ไขเทมเพลต`));
 
-  const rowName = el('div', 'k-row'); rowName.append(el('label', null, 'ชื่อเทมเพลต'));
+  const rowName = el('div', 'k-row'); rowName.append(el('label', null, T`ชื่อเทมเพลต`));
   const iName = el('input', 'k-dlg-input'); iName.type = 'text'; iName.value = t.name || '';
   rowName.append(iName); box.append(rowName);
 
-  const rowCat = el('div', 'k-row'); rowCat.append(el('label', null, 'หมวด'));
+  const rowCat = el('div', 'k-row'); rowCat.append(el('label', null, T`หมวด`));
   const selCat = el('select', 'k-dlg-select');
   const tplCatKeys = [...TPL_CATS, ...wikiCats().map((c) => c.key)];
   for (const c of tplCatKeys) { const o = el('option', null, catLabel(c)); o.value = c; selCat.append(o); }
@@ -5581,12 +5584,12 @@ function templateEditModal(tp) {
   selCat.value = t.entityTypeKey; rowCat.append(selCat); box.append(rowCat);
 
   // ---- ฟิลด์ ----
-  box.append(el('div', 'k-tpl-sub', 'ฟิลด์ข้อมูล'));
+  box.append(el('div', 'k-tpl-sub', T`ฟิลด์ข้อมูล`));
   const fieldsWrap = el('div', 'k-tpl-list');
   const addFieldRow = (f = { key: '', label: '', type: 'String', defaultValue: '' }) => {
     const r = el('div', 'k-tpl-frow');
-    const iK = el('input', 'k-dlg-input'); iK.type = 'text'; iK.placeholder = 'key (อังกฤษ)'; iK.value = f.key || '';
-    const iL = el('input', 'k-dlg-input'); iL.type = 'text'; iL.placeholder = 'ป้ายชื่อ (ไทย)'; iL.value = f.label || '';
+    const iK = el('input', 'k-dlg-input'); iK.type = 'text'; iK.placeholder = T`key (อังกฤษ)`; iK.value = f.key || '';
+    const iL = el('input', 'k-dlg-input'); iL.type = 'text'; iL.placeholder = T`ป้ายชื่อ (ไทย)`; iL.value = f.label || '';
     const sT = el('select', 'k-dlg-select');
     for (const ft of FIELD_TYPES) { const o = el('option', null, ft); o.value = ft; sT.append(o); }
     sT.value = FIELD_TYPES.includes(f.type) ? f.type : 'String';
@@ -5595,22 +5598,22 @@ function templateEditModal(tp) {
     r.append(iK, iL, sT, del); fieldsWrap.append(r);
   };
   (t.fields || []).forEach(addFieldRow);
-  const bAddF = el('button', 'k-tpl-add', '+ เพิ่มฟิลด์'); bAddF.onclick = () => addFieldRow();
+  const bAddF = el('button', 'k-tpl-add', T`+ เพิ่มฟิลด์`); bAddF.onclick = () => addFieldRow();
   box.append(fieldsWrap, bAddF);
 
   // ---- ส่วนเนื้อหา (sections) ----
-  box.append(el('div', 'k-tpl-sub', 'ส่วนเนื้อหา'));
+  box.append(el('div', 'k-tpl-sub', T`ส่วนเนื้อหา`));
   const secWrap = el('div', 'k-tpl-list');
   const addSecRow = (s = { title: '', defaultContent: '' }) => {
     const r = el('div', 'k-tpl-frow');
-    const iT = el('input', 'k-dlg-input'); iT.type = 'text'; iT.placeholder = 'ชื่อส่วน'; iT.value = s.title || '';
+    const iT = el('input', 'k-dlg-input'); iT.type = 'text'; iT.placeholder = T`ชื่อส่วน`; iT.value = s.title || '';
     iT.style.flex = '1';
     const del = el('button', 'k-tpl-del', '✕'); del.onclick = () => r.remove();
     r._get = () => ({ title: iT.value.trim(), defaultContent: s.defaultContent || '' });
     r.append(iT, del); secWrap.append(r);
   };
   (t.sections || []).forEach(addSecRow);
-  const bAddS = el('button', 'k-tpl-add', '+ เพิ่มส่วน'); bAddS.onclick = () => addSecRow();
+  const bAddS = el('button', 'k-tpl-add', T`+ เพิ่มส่วน`); bAddS.onclick = () => addSecRow();
   box.append(secWrap, bAddS);
 
   // ---- ตัวเลือก ----
@@ -5620,15 +5623,15 @@ function templateEditModal(tp) {
     const c = el('input'); c.type = 'checkbox'; c.checked = val !== false;
     w.append(c, document.createTextNode(' ' + label)); optWrap.append(w); return c;
   };
-  const cRel = mkChk('มีความสัมพันธ์', t.includeRelationships);
-  const cImg = mkChk('มีรูปภาพ', t.includeImages);
-  const cCh = mkChk('มี chapter overrides', t.includeChapterOverrides);
+  const cRel = mkChk(T`มีความสัมพันธ์`, t.includeRelationships);
+  const cImg = mkChk(T`มีรูปภาพ`, t.includeImages);
+  const cCh = mkChk(T`มี chapter overrides`, t.includeChapterOverrides);
   box.append(optWrap);
 
   const btns = el('div', 'k-dlg-btns');
-  const bJsonToggle = el('button', null, '{ } แก้เป็น JSON');
+  const bJsonToggle = el('button', null, T`{ } แก้เป็น JSON`);
   bJsonToggle.style.marginRight = 'auto';
-  const cB = el('button', null, 'ยกเลิก'); const okB = el('button', 'k-ok', 'บันทึก');
+  const cB = el('button', null, T`ยกเลิก`); const okB = el('button', 'k-ok', T`บันทึก`);
   btns.append(bJsonToggle, cB, okB); box.append(btns);
   ov.append(box); document.body.append(ov);
   iName.focus();
@@ -5650,14 +5653,14 @@ function templateEditModal(tp) {
       jsonTa.value = JSON.stringify(collectForm(), null, 2);
       formEls.forEach((n) => n.style.display = 'none');
       box.insertBefore(jsonTa, btns);
-      bJsonToggle.textContent = '▤ กลับไปฟอร์ม';
+      bJsonToggle.textContent = T`▤ กลับไปฟอร์ม`;
       jsonMode = true;
     } else {
       try {
         const parsed = JSON.parse(jsonTa.value);         // ตรวจรูปแบบก่อนกลับ
         Object.assign(t, parsed);
         ov.remove(); templateEditModal(t.id ? t : Object.assign(t, { id: t.id }));  // เปิดใหม่ให้ฟอร์มสะท้อนค่า
-      } catch (err) { setStatus('JSON ไม่ถูกต้อง: ' + err.message); }
+      } catch (err) { setStatus(T`JSON ไม่ถูกต้อง: ` + err.message); }
     }
   };
 
@@ -5667,11 +5670,11 @@ function templateEditModal(tp) {
     if (jsonMode) {
       let parsed;
       try { parsed = JSON.parse(jsonTa.value); }
-      catch (err) { setStatus('JSON ไม่ถูกต้อง: ' + err.message); return; }
+      catch (err) { setStatus(T`JSON ไม่ถูกต้อง: ` + err.message); return; }
       Object.assign(t, parsed);
     } else {
       const name = iName.value.trim();
-      if (!name) { iName.focus(); setStatus('ต้องตั้งชื่อเทมเพลต'); return; }
+      if (!name) { iName.focus(); setStatus(T`ต้องตั้งชื่อเทมเพลต`); return; }
       t.name = name; t.entityTypeKey = selCat.value;
       t.fields = [...fieldsWrap.querySelectorAll('.k-tpl-frow')].map((r) => r._get()).filter((f) => f.key);
       t.sections = [...secWrap.querySelectorAll('.k-tpl-frow')].map((r) => r._get()).filter((s) => s.title);
@@ -5681,7 +5684,7 @@ function templateEditModal(tp) {
     else { const i = state.templates.findIndex((x) => x.id === t.id); if (i >= 0) state.templates[i] = t; else state.templates.push(t); }
     await writeTemplates();
     ov.remove();
-    setStatus(isNew ? 'สร้างเทมเพลตแล้ว' : 'บันทึกเทมเพลตแล้ว');
+    setStatus(isNew ? T`สร้างเทมเพลตแล้ว` : T`บันทึกเทมเพลตแล้ว`);
   };
 }
 
@@ -5692,8 +5695,8 @@ export async function openPlainFile(file, title) {
   const raw = await kapi.readFile(file);
   const pane = el('div', 'pane');
   const bar = el('div', 'json-bar');
-  const info = el('span', 'dim', title + (isJsonFile ? ' — JSON ล้วน (ตรวจรูปแบบก่อนเขียน)' : ' — ข้อความล้วน'));
-  const saveB = el('button', 'k-ok', '💾 บันทึก');
+  const info = el('span', 'dim', title + (isJsonFile ? T` — JSON ล้วน (ตรวจรูปแบบก่อนเขียน)` : T` — ข้อความล้วน`));
+  const saveB = el('button', 'k-ok', T`💾 บันทึก`);
   bar.append(info, saveB);
   const ta = el('textarea', 'plain-md json-edit');
   ta.value = raw;
@@ -5708,7 +5711,7 @@ export async function openPlainFile(file, title) {
                 save: async () => {
                   if (isJsonFile) {
                     try { JSON.parse(ta.value); }
-                    catch (e) { setStatus('JSON ผิดรูปแบบ ยังไม่บันทึก: ' + e.message); return false; }
+                    catch (e) { setStatus(T`JSON ผิดรูปแบบ ยังไม่บันทึก: ` + e.message); return false; }
                   }
                   await kapi.writeFile(file, ta.value);
                   tab.dirty = false;
@@ -5751,7 +5754,7 @@ export async function sceneCtx(file) {
  */
 export async function syncSceneMetaFromFiles(dPath) {
   const dir = dPath || (await sceneCtx())?.dPath;
-  if (!dir) { setStatus('เปิดฉากในฉบับร่างก่อน จึงจะซิงก์คุณสมบัติได้'); return 0; }
+  if (!dir) { setStatus(T`เปิดฉากในฉบับร่างก่อน จึงจะซิงก์คุณสมบัติได้`); return 0; }
   const sf = await kapi.join(dir, 'scenes.json');
   const d = await kapi.readJson(sf);
   const draft = await kapi.readJson(await kapi.join(dir, 'draft.json'));
@@ -5767,76 +5770,104 @@ export async function syncSceneMetaFromFiles(dPath) {
     }
   }
   if (n) { await kapi.writeFile(sf, JSON.stringify(d, null, 2)); await buildTree(); }
-  setStatus(n ? `ซิงก์คุณสมบัติฉากจากไฟล์ .md แล้ว (${n} ค่า)` : 'คุณสมบัติฉากตรงกับไฟล์ .md อยู่แล้ว');
+  setStatus(n ? T`ซิงก์คุณสมบัติฉากจากไฟล์ .md แล้ว (${n} ค่า)` : T`คุณสมบัติฉากตรงกับไฟล์ .md อยู่แล้ว`);
   return n;
 }
 
-// ---------------- [alpha.60r3 ข้อ 4] Localizer: ไฟล์ภาษา ↔ ตาราง CSV ----------------
-// ที่อยู่ของไฟล์ภาษา (เรียงตามลำดับที่ core.js ใช้จริง): โปรเจกต์ก่อน แล้วค่อยที่มากับโปรแกรม
-// นำเข้าจะ "เขียนลงโปรเจกต์เสมอ" — ไฟล์ในโฟลเดอร์โปรแกรมอาจอยู่ใน Program Files ที่เขียนไม่ได้
-async function langFileCandidates(lang) {
-  const out = [];
-  if (state.root) out.push(await kapi.join(state.root, 'languages', lang + '.json'));
+// ---------------- Localizer: ตารางแปล ↔ ไฟล์ภาษา (alpha.60r3 ข้อ 4 · ยกเครื่อง alpha.76) ----------------
+// ไฟล์ภาษาเป็น CSV `k2_<code>.csv` แล้ว (ไม่ใช่ .json) — ดู src/i18n.js
+// ส่งออก = ตาราง 3 คอลัมน์ `key,th,en` ให้ผู้แปลทำงานใน Excel/Sheets
+// นำเข้า = เขียนลง **โฟลเดอร์โปรเจกต์เสมอ** เพราะไฟล์ในโฟลเดอร์โปรแกรมอาจอยู่ที่ที่เขียนไม่ได้
+//          (และ core.js อ่านของโปรเจกต์ก่อนอยู่แล้ว)
+
+/** อ่านตารางคำแปลของภาษาหนึ่ง (รวมทุกชั้น) เป็น { key: text } */
+async function readLangTable(lang) {
   try {
-    const appDir = await kapi.appDir();
-    if (appDir) {
-      out.push(await kapi.join(appDir, 'languages', lang + '.json'));
-      out.push(await kapi.join(appDir, 'renderer', 'languages', lang + '.json'));
-    }
+    const csv = await kapi.langRead(lang, state.root || '');
+    if (csv && csv.trim()) return csvToTable(csv);
   } catch {}
-  return out;
-}
-async function readLangFile(lang) {
-  for (const p of await langFileCandidates(lang)) {
-    try { if (await kapi.exists(p)) return await kapi.readJson(p); } catch {}
-  }
-  return null;
+  return {};
 }
 
-/** ส่งออก th+en เป็นตาราง CSV 3 คอลัมน์ให้ผู้แปลทำงานใน Excel/Sheets */
-export async function exportLanguageCsv() {
-  const th = await readLangFile('th');
-  const en = await readLangFile('en');
-  if (!th && !en) { setStatus('ไม่พบไฟล์ภาษา (languages/th.json · en.json)'); return false; }
-  const csv = jsonToCsv(th || {}, en || {});
-  const dest = await kapi.saveAsDialog('killian2-languages.csv', 'csv');
+/** ส่งออกตารางคำแปลเป็น CSV 3 คอลัมน์ให้ผู้แปลทำงานใน Excel/Sheets */
+export async function exportLanguageCsv(target) {
+  const th = await readLangTable('th');
+  const code = target || (i18n.lang && i18n.lang !== 'th' ? i18n.lang : 'en');
+  const dst = await readLangTable(code);
+  if (!Object.keys(th).length && !Object.keys(dst).length) {
+    setStatus(T`ไม่พบไฟล์ภาษา (languages/k2_th.csv · k2_${code}.csv)`); return false;
+  }
+  const keys = [...new Set([...Object.keys(th), ...Object.keys(dst)])].filter((k) => !k.startsWith('meta.'));
+  const q = (v) => { const x = v == null ? '' : String(v); return /[",\r\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+  const rows = ['key,th,' + code];
+  for (const k of keys) rows.push(q(k) + ',' + q(th[k] ?? k) + ',' + q(dst[k] || ''));
+  const csv = '\ufeff' + rows.join('\r\n') + '\r\n';
+  const dest = await kapi.saveAsDialog('k2_' + code + '.csv', 'csv');
   if (!dest) return false;
   await kapi.writeFile(dest, csv);
-  const n = csv.split(/\r?\n/).length - 2;      // ลบหัวตาราง + บรรทัดว่างท้ายไฟล์
-  setStatus(`ส่งออกตารางคำแปลแล้ว (${n} คีย์): ` + dest);
-  log('info', 'i18n-csv: export ' + n + ' keys → ' + dest);
+  setStatus(T`ส่งออกตารางคำแปลแล้ว (${keys.length} คีย์): ` + dest);
+  log('info', 'i18n-csv: export ' + keys.length + ' keys → ' + dest);
   return true;
 }
 
 /**
  * นำเข้าคำแปลจาก CSV — **รวมทับของเดิม ไม่ลบคีย์ที่ไม่มีในตาราง**
  * (ผู้แปลมักส่งกลับมาแค่บางส่วน — ถ้าทับทั้งไฟล์ สตริงที่เหลือจะหายเงียบ ๆ)
- * เขียนลง `<โปรเจกต์>/languages/*.json` ซึ่ง core.js อ่านก่อนไฟล์ที่มากับโปรแกรมอยู่แล้ว
+ * รับได้ทั้งตาราง 3 คอลัมน์ (`key,th,en`) และไฟล์ภาษาตรง ๆ (`key,text`)
+ * เขียนลง `<โปรเจกต์>/languages/k2_<code>.csv`
  */
 export async function importLanguageCsv(srcPath) {
-  if (!state.root) { setStatus('เปิดโปรเจกต์ก่อน จึงจะนำเข้าคำแปลได้'); return false; }
+  if (!state.root) { setStatus(T`เปิดโปรเจกต์ก่อน จึงจะนำเข้าคำแปลได้`); return false; }
   const src = srcPath || await kapi.openFileDialog('csv');
   if (!src) return false;
   let text = '';
   try { text = await kapi.readFile(src); }
-  catch (e) { setStatus('อ่านไฟล์ CSV ไม่ได้: ' + e.message); return false; }
-  const parsed = csvToJson(text);
-  if (!parsed.keys.length) { setStatus('ไม่พบคีย์ในไฟล์ CSV นี้'); return false; }
-  const res = { keys: parsed.keys, skipped: parsed.skipped,
-                thAdded: 0, thChanged: 0, enAdded: 0, enChanged: 0 };
+  catch (e) { setStatus(T`อ่านไฟล์ CSV ไม่ได้: ` + e.message); return false; }
+  const rows = parseCsv(String(text).replace(/\ufeff/g, ''));
+  if (!rows.length) { setStatus(T`ไม่พบคีย์ในไฟล์ CSV นี้`); return false; }
+  // คอลัมน์ไหนเป็นภาษาอะไร — อ่านจากหัวตาราง (`key,th,en`) · ไม่มีหัวตาราง = คอลัมน์ 2 คือภาษาที่ใช้อยู่
+  const head = rows[0].map((c) => String(c).trim().toLowerCase());
+  const hasHead = head[0] === 'key';
+  const cols = [];
+  if (hasHead) {
+    for (let i = 1; i < head.length; i++) {
+      const c = head[i];
+      if (c === 'text' || c === 'value') cols.push([i, i18n.lang || 'th']);
+      else if (/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(c)) cols.push([i, c.split('-')[0] + (c.includes('-') ? '-' + c.split('-')[1].toUpperCase() : '')]);
+    }
+  }
+  if (!cols.length) cols.push([1, i18n.lang || 'th']);
+  const body = hasHead ? rows.slice(1) : rows;
+  const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
   const dir = await kapi.join(state.root, 'languages');
   await kapi.mkdir(dir);
-  for (const [lang, patch, addKey, chKey] of
-       [['th', parsed.th, 'thAdded', 'thChanged'], ['en', parsed.en, 'enAdded', 'enChanged']]) {
-    if (!Object.keys(patch || {}).length) continue;
-    const base = (await readLangFile(lang)) || {};
-    const { merged, added, changed } = mergeStrings(base, patch);
-    res[addKey] = added; res[chKey] = changed;
-    await kapi.writeFile(await kapi.join(dir, lang + '.json'), JSON.stringify(merged, null, 2));
+  for (const [ci, lang] of cols) {
+    const patch = {};
+    for (const r of body) {
+      const k = r[0] == null ? '' : String(r[0]);
+      if (!k || k.startsWith('#')) { if (ci === cols[0][0]) res.skipped++; continue; }
+      if (ci === cols[0][0] && !res.keys.includes(k)) res.keys.push(k);
+      const v = r[ci] == null ? '' : String(r[ci]);
+      if (v !== '') patch[k] = v;
+    }
+    if (!Object.keys(patch).length) continue;
+    // รวมทับไฟล์ของโปรเจกต์ (ถ้ามี) — ไม่แตะไฟล์ที่มากับโปรแกรม
+    const file = await kapi.join(dir, langFileName(lang));
+    let base = {};
+    try { if (await kapi.exists(file)) base = csvToTable(await kapi.readFile(file)); } catch {}
+    for (const k of Object.keys(patch)) {
+      if (!(k in base)) res.added++; else if (base[k] !== patch[k]) res.changed++;
+      base[k] = patch[k];
+    }
+    base['meta.code'] = lang;
+    base['meta.nativeName'] = base['meta.nativeName'] || fallbackLangName(lang);
+    await kapi.writeFile(file, tableToCsv(base));
+    res.langs.push(lang);
   }
+  if (!res.langs.length) { setStatus(T`ไม่พบคีย์ในไฟล์ CSV นี้`); return false; }
   // โหลดภาษาที่ใช้อยู่ใหม่ทันที — ไม่ต้องรีสตาร์ตโปรแกรมถึงจะเห็นคำแปลใหม่
   try { await loadLanguage(i18n.lang, state.root); applyDataI18n(); updateToolbarTitles(); } catch {}
-  setStatus(csvImportSummary(res));
+  setStatus(T`นำเข้า ${res.keys.length} คีย์ · ภาษา ${res.langs.join(', ')} · เพิ่ม/แก้ ${res.added + res.changed}`);
   log('info', 'i18n-csv: import ' + JSON.stringify(res));
   return res;
 }
@@ -5852,8 +5883,8 @@ export async function openCommentsPanel() {
     _cmMigrated.add(c.dPath);
     try {
       const n = await migrateSceneComments(c.dPath);
-      if (n) setStatus(`ย้ายคอมเมนต์เดิม ${n} รายการเข้าไฟล์ฉากแล้ว`);
-    } catch (e) { log('warn', 'ย้ายคอมเมนต์เดิมไม่สำเร็จ', e); }
+      if (n) setStatus(T`ย้ายคอมเมนต์เดิม ${n} รายการเข้าไฟล์ฉากแล้ว`);
+    } catch (e) { log('warn', T`ย้ายคอมเมนต์เดิมไม่สำเร็จ`, e); }
   }
   await renderCommentPanel($('#comments-body'));
 }
@@ -5861,7 +5892,7 @@ export async function openCommentsPanel() {
 export async function refreshCommentsPanel() {
   if (!isPanelOpen('comments')) { clearCommentAnchors(); return; }
   try { await renderCommentPanel($('#comments-body')); }
-  catch (e) { log('warn', 'วาดแผงคอมเมนต์ไม่สำเร็จ', e); }
+  catch (e) { log('warn', T`วาดแผงคอมเมนต์ไม่สำเร็จ`, e); }
 }
 
 // แก้ไขแถวฉากใน scenes.json แบบปลอดภัย (อ่าน→แก้ผ่าน mutator→เขียนกลับ)
@@ -5882,27 +5913,27 @@ async function openTemplatesFile() {
   const raw = await kapi.readFile(file);
   const pane = el('div', 'pane');
   const bar = el('div', 'json-bar');
-  const info = el('span', 'dim', 'templates.json — JSON ล้วน แก้เสร็จกดบันทึก (ตรวจรูปแบบให้ก่อนเขียน)');
-  const saveB = el('button', 'k-ok', '💾 บันทึก');
+  const info = el('span', 'dim', T`templates.json — JSON ล้วน แก้เสร็จกดบันทึก (ตรวจรูปแบบให้ก่อนเขียน)`);
+  const saveB = el('button', 'k-ok', T`💾 บันทึก`);
   bar.append(info, saveB);
   const ta = el('textarea', 'plain-md json-edit');
   ta.value = raw;
   pane.append(bar, ta);
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', 'เทมเพลต Wiki'));
+  tabBtn.append(el('span', 'tab-title', T`เทมเพลต Wiki`));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file, title: 'เทมเพลต Wiki', pane, tabBtn, dirty: false,
+  const tab = { file, title: T`เทมเพลต Wiki`, pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, isJson: true,
                 save: async () => {
                   try { JSON.parse(ta.value); }
-                  catch (e) { setStatus('JSON ผิดรูปแบบ ยังไม่บันทึก: ' + e.message); return false; }
+                  catch (e) { setStatus(T`JSON ผิดรูปแบบ ยังไม่บันทึก: ` + e.message); return false; }
                   await kapi.writeFile(file, ta.value);
                   await loadTemplates();
                   tab.dirty = false;
                   tabBtn.querySelector('.tab-title').textContent = tab.title;
-                  setStatus('บันทึกเทมเพลตแล้ว');
+                  setStatus(T`บันทึกเทมเพลตแล้ว`);
                   return true;
                 } };
   ta.addEventListener('input', () => markDirty(tab));
@@ -5917,7 +5948,7 @@ async function openTemplatesFile() {
 export async function newProject() {
   const parent = await kapi.openProjectDialog();     // เลือกโฟลเดอร์ที่จะสร้างข้างใน
   if (!parent) return;
-  const name = await ask('ชื่อโปรเจกต์ใหม่', { placeholder: 'เช่น ปีศาจแห่งบางกอก' });
+  const name = await ask(T`ชื่อโปรเจกต์ใหม่`, { placeholder: T`เช่น ปีศาจแห่งบางกอก` });
   if (!name) return;
   if (!(await closeProjectIfAny())) return;
   await createProjectAt(parent, name);
@@ -5929,7 +5960,7 @@ export async function newProjectFromTemplate() {
   if (!tplKey) return;
   const parent = await kapi.openProjectDialog();
   if (!parent) return;
-  const name = await ask('ชื่อโปรเจกต์ใหม่', { placeholder: 'เช่น ปีศาจแห่งบางกอก' });
+  const name = await ask(T`ชื่อโปรเจกต์ใหม่`, { placeholder: T`เช่น ปีศาจแห่งบางกอก` });
   if (!name) return;
   if (!(await closeProjectIfAny())) return;
   const root = await createProjectFromTemplate(parent, name, tplKey);
@@ -5940,17 +5971,17 @@ export async function newProjectFromTemplate() {
 async function createProjectAt(parent, name) {
   const root = await kapi.join(parent, safeName(name));
   if (await kapi.exists(await kapi.join(root, 'project.khn.json'))) {
-    setStatus('มีโปรเจกต์นี้อยู่แล้ว — เปิดให้แทน'); return loadProject(root);
+    setStatus(T`มีโปรเจกต์นี้อยู่แล้ว — เปิดให้แทน`); return loadProject(root);
   }
   const W = (p, d) => kapi.writeFile(p, JSON.stringify(d, null, 2));
   await W(await kapi.join(root, 'project.khn.json'),
     { title: name, type: 'killian-project', version: '2.0', created: new Date().toISOString() });
-  const sec = await kapi.join(root, 'เล่มหนึ่ง');
-  await W(await kapi.join(sec, 'section.json'), { guid: guid(), title: 'เล่มหนึ่ง', order: 1 });
+  const sec = await kapi.join(root, T`เล่มหนึ่ง`);
+  await W(await kapi.join(sec, 'section.json'), { guid: guid(), title: T`เล่มหนึ่ง`, order: 1 });
   const dr = await kapi.join(sec, 'Draft', 'default');
-  const ch = { guid: guid(), title: 'บทที่หนึ่ง', order: 1, status: 'Outline', act: 'I',
-               date: '', isFavorite: false, folderName: '01 - บทที่หนึ่ง' };
-  const sc = { id: guid(), title: 'ฉากแรก', order: 1, fileName: 'scene-01.md',
+  const ch = { guid: guid(), title: T`บทที่หนึ่ง`, order: 1, status: 'Outline', act: 'I',
+               date: '', isFavorite: false, folderName: T`01 - บทที่หนึ่ง` };
+  const sc = { id: guid(), title: T`ฉากแรก`, order: 1, fileName: 'scene-01.md',
                chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
   await W(await kapi.join(dr, 'draft.json'), { chapters: [ch] });
   await W(await kapi.join(dr, 'scenes.json'), { chapters: { [ch.guid]: [sc] } });
@@ -5963,7 +5994,7 @@ async function createProjectAt(parent, name) {
   const defTpl = await fetch('templates.json').then((r) => r.text());
   await kapi.writeFile(await kapi.join(root, 'templates.json'), defTpl);
   await loadProject(root);
-  setStatus('สร้างโปรเจกต์ใหม่แล้ว: ' + name);
+  setStatus(T`สร้างโปรเจกต์ใหม่แล้ว: ` + name);
 }
 
 // ---------------- ปิดโปรแกรม: เตือนงานที่ยังไม่บันทึก ----------------
@@ -5977,28 +6008,28 @@ async function createProjectAt(parent, name) {
 async function confirmQuit() {
   // [alpha.72 ข้อ 4] อ่านจากทะเบียนงานค้าง ไม่ใช่แค่ state.tabs — กระดานวางแผนเคยหายเงียบตรงนี้
   const items = allDirtyList();
-  logAction('quit', `ขอปิดโปรแกรม · งานค้าง ${items.length} รายการ`,
+  logAction('quit', T`ขอปิดโปรแกรม · งานค้าง ${items.length} รายการ`,
             items.map((x) => x.title));
   if (!items.length) { kapi.quitNow(); return 'save'; }
   const { action, keys } = await saveAllDialog(items, {
-    title: `ปิดโปรแกรม — มี ${items.length} รายการที่ยังไม่ได้บันทึก`,
-    saveLabel: 'บันทึกแล้วออก',
-    discardLabel: 'ออกโดยไม่บันทึก',
-    cancelLabel: 'ไม่ออกแล้ว',
+    title: T`ปิดโปรแกรม — มี ${items.length} รายการที่ยังไม่ได้บันทึก`,
+    saveLabel: T`บันทึกแล้วออก`,
+    discardLabel: T`ออกโดยไม่บันทึก`,
+    cancelLabel: T`ไม่ออกแล้ว`,
   });
   if (action === 'save') {
     const res = await dirtyRegistry.saveKeys(keys);
     if (res.failed.length) {
-      for (const f of res.failed) log('error', 'quit: บันทึกก่อนปิดไม่สำเร็จ: ' + f.key, f.error);
+      for (const f of res.failed) log('error', T`quit: บันทึกก่อนปิดไม่สำเร็จ: ` + f.key, f.error);
       // มีของบันทึกไม่ได้ = ห้ามปิดเงียบ ๆ ให้งานหาย
-      setStatus(`บันทึกไม่สำเร็จ ${res.failed.length} รายการ — ยังไม่ปิดโปรแกรม (ดูรายละเอียดในแผงบันทึก)`);
+      setStatus(T`บันทึกไม่สำเร็จ ${res.failed.length} รายการ — ยังไม่ปิดโปรแกรม (ดูรายละเอียดในแผงบันทึก)`);
       showPanel('log'); renderLogPanel(true);
       return null;
     }
-    logAction('quit', `บันทึกครบ ${res.saved} รายการ แล้วปิดโปรแกรม`);
+    logAction('quit', T`บันทึกครบ ${res.saved} รายการ แล้วปิดโปรแกรม`);
     kapi.quitNow();
-  } else if (action === 'discard') { logAction('quit', 'ปิดโดยไม่บันทึก'); kapi.quitNow(); }
-  else setStatus('ยกเลิกการปิดโปรแกรม');
+  } else if (action === 'discard') { logAction('quit', T`ปิดโดยไม่บันทึก`); kapi.quitNow(); }
+  else setStatus(T`ยกเลิกการปิดโปรแกรม`);
   return action;
 }
 
@@ -6010,8 +6041,8 @@ export function entityCreateDialog(cat, tps) {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
     const opts = [...tps.map((t) => `<option value="${t.id}">${t.name || t.id}</option>`),
-                  '<option value="">— ไม่ใช้เทมเพลต —</option>'].join('');
-    box.innerHTML = `
+                  T`<option value="">— ไม่ใช้เทมเพลต —</option>`].join('');
+    box.innerHTML = T`
       <div class="k-dlg-title">สร้าง${CAT_TH[cat] || cat}ใหม่</div>
       <div class="k-row" style="flex-direction:column;align-items:stretch;gap:6px;margin:6px 0">
         <label>ชื่อ</label><input type="text" class="k-dlg-input" id="ent-name" style="width:100%">
@@ -6051,7 +6082,7 @@ export function entityCreateDialog(cat, tps) {
 
 async function renameMemo(file) {
   const { meta, body } = parseMdFile(await kapi.readFile(file));
-  const title = await ask('ชื่อ memo ใหม่', { value: meta.title || '' }); if (!title) return;
+  const title = await ask(T`ชื่อ memo ใหม่`, { value: meta.title || '' }); if (!title) return;
   meta.title = title;
   await kapi.writeFile(file, dumpMdFile(meta, body));
   const t = state.tabs.get(file);
@@ -6091,7 +6122,7 @@ async function sceneMoveMenu(e, dPath, ch, sc) {
   const chapters = ((await kapi.readJson(await kapi.join(dPath, 'draft.json'))).chapters || [])
     .filter((c) => c.guid !== ch.guid)
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  if (!chapters.length) { setStatus('ไม่มีบทอื่นให้ย้ายไป'); return; }
+  if (!chapters.length) { setStatus(T`ไม่มีบทอื่นให้ย้ายไป`); return; }
   popupMenu(e.clientX, e.clientY,
     chapters.map((c) => ({ label: c.title, click: () => moveSceneToChapter(dPath, ch, sc, c) })));
 }
@@ -6106,20 +6137,20 @@ async function moveEntityToCat(srcPath, dstCatDir) {
   const dst = await kapi.join(dstCatDir, base);
   if (srcPath === dst) return;
   await kapi.mkdir(dstCatDir);
-  if (await kapi.exists(dst)) { setStatus('มีไฟล์ชื่อนี้ในหมวดปลายทางแล้ว'); return; }
+  if (await kapi.exists(dst)) { setStatus(T`มีไฟล์ชื่อนี้ในหมวดปลายทางแล้ว`); return; }
   const openTab = state.tabs.get(srcPath);
   if (openTab) { if (openTab.dirty) await saveTab(openTab); closeTab(srcPath); }
   await kapi.move(srcPath, dst);
   await buildTree(); await smart.loadNames(state.root);
   refreshNetwork();
-  setStatus('ย้ายไปหมวดใหม่แล้ว');
+  setStatus(T`ย้ายไปหมวดใหม่แล้ว`);
 }
 
 
 // ทำซ้ำ Wiki entity
 
 async function addMemo() {
-  const title = await ask('ชื่อ memo'); if (!title) return;
+  const title = await ask(T`ชื่อ memo`); if (!title) return;
   const dir = await kapi.join(state.root, 'Memos');
   await kapi.mkdir(dir);
   const file = await kapi.join(dir, safeName(title) + '-' + Date.now().toString(36) + '.md');
@@ -6218,7 +6249,7 @@ function mountEditor(tab, dir, body) {
 // target: 'prose' | 'screenplay' | undefined(=สลับ). ไฟล์เข้ากับ v1 ทุกประการ (เปลี่ยนแค่ frontmatter format)
 async function switchFormat(target) {
   const tab = state.active;
-  if (!tab || !(tab.editor || tab.sp)) { setStatus('เปิดฉากก่อนจึงจะสลับโหมดได้'); return; }
+  if (!tab || !(tab.editor || tab.sp)) { setStatus(T`เปิดฉากก่อนจึงจะสลับโหมดได้`); return; }
   const cur = (tab.meta.format || 'prose') === 'screenplay' ? 'screenplay' : 'prose';
   const to = target || (cur === 'prose' ? 'screenplay' : 'prose');
   if (to === cur) return;
@@ -6250,7 +6281,7 @@ async function switchFormat(target) {
   setElementBadge(tab.sp ? tab.sp.curElement() : null);
   refreshToolbar(); refreshModeBtn(); scheduleCount(); scheduleOutline();
   (tab.editor || tab.sp)?.focus?.();
-  setStatus(to === 'screenplay' ? 'สลับเป็นโหมดบทหนัง' : 'สลับเป็นโหมดนิยาย');
+  setStatus(to === 'screenplay' ? T`สลับเป็นโหมดบทหนัง` : T`สลับเป็นโหมดนิยาย`);
 }
 
 // ปุ่มสลับโหมดบน toolbar — แสดงโหมดปัจจุบัน คลิกแล้วเลือกนิยาย/บทหนัง
@@ -6262,8 +6293,8 @@ function refreshModeBtn() {
   b.style.display = editable ? '' : 'none';
   if (!editable) return;
   const sp = !!tab.sp;
-  b.innerHTML = (sp ? iconHtml('film', 16) : iconHtml('book', 16)) + (sp ? ' บทหนัง ▾' : ' นิยาย ▾');
-  b.title = 'สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)';
+  b.innerHTML = (sp ? iconHtml('film', 16) : iconHtml('book', 16)) + (sp ? T` บทหนัง ▾` : T` นิยาย ▾`);
+  b.title = T`สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)`;
 }
 
 // ---- ตั้งค่าโปรเจกต์ (พอร์ตจาก v1 SettingsDialog) ----
@@ -6416,22 +6447,22 @@ export function smartTypeDialog() {
   const tab = state.active;
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-smart-dlg');
-  box.append(el('div', 'k-dlg-title', 'จัดการ SmartType (คำที่โปรแกรมจำไว้)'));
+  box.append(el('div', 'k-dlg-title', T`จัดการ SmartType (คำที่โปรแกรมจำไว้)`));
   box.append(el('div', 'dim',
-    'คำเหล่านี้เก็บจาก "สิ่งที่พิมพ์ในบทนี้" — กด ✕ เพื่อสั่งไม่ให้จำอีก'));
+    T`คำเหล่านี้เก็บจาก "สิ่งที่พิมพ์ในบทนี้" — กด ✕ เพื่อสั่งไม่ให้จำอีก`));
 
   // [alpha.58 บั๊ก 1] เกณฑ์ "ต้องเจอกี่ครั้งจึงจำ" — ตัวกันคำพิมพ์มั่วที่ได้ผลจริง
   const minRow = el('div', 'k-row k-smart-min');
-  minRow.append(el('label', null, 'จำคำจากบทเมื่อเจอซ้ำอย่างน้อย'));
+  minRow.append(el('label', null, T`จำคำจากบทเมื่อเจอซ้ำอย่างน้อย`));
   const minSel = el('select');
   for (let i = LEARN_MIN_RANGE[0]; i <= LEARN_MIN_RANGE[1]; i++) {
     const o = el('option'); o.value = String(i);
-    o.textContent = i + ' บล็อก' + (i === DEFAULT_LEARN_MIN ? ' (แนะนำ)' : '');
+    o.textContent = i + T` บล็อก` + (i === DEFAULT_LEARN_MIN ? T` (แนะนำ)` : '');
     if (i === smartLearnMin()) o.selected = true;
     minSel.append(o);
   }
   minRow.append(minSel);
-  minRow.append(el('span', 'dim', ' — ค่า 1 = จำทุกคำที่พิมพ์ (คำพิมพ์ผิดจะติดมาด้วย)'));
+  minRow.append(el('span', 'dim', T` — ค่า 1 = จำทุกคำที่พิมพ์ (คำพิมพ์ผิดจะติดมาด้วย)`));
   box.append(minRow);
 
   const body = el('div', 'k-smart-body');
@@ -6441,17 +6472,17 @@ export function smartTypeDialog() {
                                    : { chars: new Map(), locs: new Map() };
     const base = { min: smartLearnMin(), pinned: smartPinList(), ignored: smartIgnoreList() };
     const known = { chars: smart.byCat?.characters || [], locs: smart.byCat?.locations || [] };
-    for (const [title, key] of [['ตัวละครในบทนี้', 'chars'], ['สถานที่ในบทนี้', 'locs']]) {
+    for (const [title, key] of [[T`ตัวละครในบทนี้`, 'chars'], [T`สถานที่ในบทนี้`, 'locs']]) {
       const opt = { ...base, known: known[key] };
       const list = learnedTerms(counts[key], opt);
       body.append(el('div', 'k-set-sub', title));
-      if (!list.length) body.append(el('div', 'cmp-empty', '(ยังไม่มี)'));
+      if (!list.length) body.append(el('div', 'cmp-empty', T`(ยังไม่มี)`));
       for (const w of list) {
         const row = el('div', 'k-smart-row');
         row.append(el('span', 'k-smart-word', w));
         row.append(el('span', 'dim', ' × ' + (counts[key].get(w) || 0)));
         const x = el('button', 'k-danger-btn', '✕');
-        x.title = 'ไม่ต้องจำคำนี้';
+        x.title = T`ไม่ต้องจำคำนี้`;
         x.onclick = () => { smartIgnoreAdd(w); render(); };
         row.append(x); body.append(row);
       }
@@ -6459,16 +6490,16 @@ export function smartTypeDialog() {
       const wait = pendingTerms(counts[key], opt);
       if (wait.length) {
         body.append(el('div', 'k-smart-wait-head dim',
-          `ยังไม่จำ (เจอไม่ถึง ${smartLearnMin()} ครั้ง) — กด ✚ เพื่อจำเลย`));
+          T`ยังไม่จำ (เจอไม่ถึง ${smartLearnMin()} ครั้ง) — กด ✚ เพื่อจำเลย`));
         for (const p of wait) {
           const row = el('div', 'k-smart-row k-smart-wait');
           row.append(el('span', 'k-smart-word dim', p.word));
-          row.append(el('span', 'dim', ' × ' + p.count + (p.ok ? '' : ' · หน้าตาไม่เหมือนชื่อ')));
-          const add = el('button', null, '✚ จำ');
-          add.title = 'จำคำนี้ไว้เดา แม้จะเจอครั้งเดียว';
+          row.append(el('span', 'dim', ' × ' + p.count + (p.ok ? '' : T` · หน้าตาไม่เหมือนชื่อ`)));
+          const add = el('button', null, T`✚ จำ`);
+          add.title = T`จำคำนี้ไว้เดา แม้จะเจอครั้งเดียว`;
           add.onclick = () => { smartPinAdd(p.word); render(); };
           const x = el('button', 'k-danger-btn', '✕');
-          x.title = 'ไม่ต้องจำคำนี้';
+          x.title = T`ไม่ต้องจำคำนี้`;
           x.onclick = () => { smartIgnoreAdd(p.word); render(); };
           row.append(add, x); body.append(row);
         }
@@ -6476,22 +6507,22 @@ export function smartTypeDialog() {
     }
     const pin = smartPinList();
     if (pin.length) {
-      body.append(el('div', 'k-set-sub', `คำที่สั่งให้จำเอง (${pin.length})`));
+      body.append(el('div', 'k-set-sub', T`คำที่สั่งให้จำเอง (${pin.length})`));
       for (const w of pin) {
         const row = el('div', 'k-smart-row');
         row.append(el('span', 'k-smart-word', w));
-        const b = el('button', null, '↩ เลิกจำเอง');
+        const b = el('button', null, T`↩ เลิกจำเอง`);
         b.onclick = () => { smartPinRemove(w); render(); };
         row.append(b); body.append(row);
       }
     }
     const ign = smartIgnoreList();
-    body.append(el('div', 'k-set-sub', `คำที่สั่งไม่ให้จำ (${ign.length})`));
-    if (!ign.length) body.append(el('div', 'cmp-empty', '(ไม่มี)'));
+    body.append(el('div', 'k-set-sub', T`คำที่สั่งไม่ให้จำ (${ign.length})`));
+    if (!ign.length) body.append(el('div', 'cmp-empty', T`(ไม่มี)`));
     for (const w of ign) {
       const row = el('div', 'k-smart-row');
       row.append(el('span', 'k-smart-word dim', w));
-      const b = el('button', null, '↩ จำอีกครั้ง');
+      const b = el('button', null, T`↩ จำอีกครั้ง`);
       b.onclick = () => { smartIgnoreRemove(w); render(); };
       row.append(b); body.append(row);
     }
@@ -6504,7 +6535,7 @@ export function smartTypeDialog() {
   render();
   box.append(body);
   const btns = el('div', 'k-dlg-btns');
-  const ok = el('button', 'k-ok', 'ปิด');
+  const ok = el('button', 'k-ok', T`ปิด`);
   ok.onclick = () => { ov.remove(); if (tab && tab.sp) spSmartCheck(tab); };
   btns.append(ok); box.append(btns);
   ov.append(box); document.body.append(ov);
@@ -6520,7 +6551,7 @@ function setElementBadge(elName) {
   if (spSel && SP_ELEMS[elName]) { try { spSel.value = elName; } catch {} }
   if (!SP_ELEMS[elName]) { b.textContent = ''; b.classList.remove('elem-pick'); b.onclick = null; return; }
   b.innerHTML = iconHtml('film', 14) + ' ' + SP_ELEMS[elName].th + ' ▾';
-  b.title = 'คลิกเลือกรูปแบบ · หรือ Ctrl+↑/↓ สลับ';
+  b.title = T`คลิกเลือกรูปแบบ · หรือ Ctrl+↑/↓ สลับ`;
   b.classList.add('elem-pick');
   b.onclick = (e) => {
     const t = state.active; if (!t?.sp) return;
@@ -6623,13 +6654,13 @@ function updateDirtyBadge() {
     } else if (badge) badge.remove();
   }
   const dot = $('#tb-dirty-dot');
-  if (dot) { dot.style.display = n > 0 ? 'inline' : 'none'; dot.title = n > 0 ? `มีงานค้าง ${n} ไฟล์ (Ctrl+Alt+S เพื่อบันทึกทั้งหมด)` : ''; }
+  if (dot) { dot.style.display = n > 0 ? 'inline' : 'none'; dot.title = n > 0 ? T`มีงานค้าง ${n} ไฟล์ (Ctrl+Alt+S เพื่อบันทึกทั้งหมด)` : ''; }
 }
 
 export async function saveTab(tab) {
   if (!tab) return;
   // [alpha.72 ข้อ 5] จดทุกการเขียนไฟล์ — ใช้ตอบคำถาม "ไฟล์ถูกเขียนทับตอนไหน/ด้วยอะไร"
-  logAction('save', tab.title || tab.file || '(ไม่มีชื่อ)', tab.file);
+  logAction('save', tab.title || tab.file || T`(ไม่มีชื่อ)`, tab.file);
   if (isRosterTab(tab)) { await saveRosterTab(tab); return; }   // [97] หน้ารายชื่อตัวละคร
   if (tab.planner) {
     await tab.planner.save();
@@ -6663,7 +6694,7 @@ export async function saveTab(tab) {
   await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body));
   tab.dirty = false;
   tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
-  setStatus('บันทึกแล้ว: ' + tab.title);
+  setStatus(T`บันทึกแล้ว: ` + tab.title);
   refreshCommentsPanel();
   // [alpha.68] บันทึกแล้ว = แผงที่ฉีกออกไปแก้ไฟล์นี้ได้อีกครั้ง (และเนื้อบนดิสก์เป็นของใหม่)
   broadcastActiveScene();
@@ -6671,7 +6702,7 @@ export async function saveTab(tab) {
   if (state.settings.autoBackup !== false && isSnapshotable(tab))
     snapshotFile(tab.file).catch(() => {});
   // เนื้อหาเปลี่ยน → ดัชนีเชื่อมโยงของศูนย์รวมล้าสมัย (ข้อ 87 real-time)
-  try { markCentralizeStale(); } catch (e) { log('warn', 'markCentralizeStale ล้มเหลว', e); }
+  try { markCentralizeStale(); } catch (e) { log('warn', T`markCentralizeStale ล้มเหลว`, e); }
   // [alpha.60r3 ข้อ 1] ดัชนี Wiki↔ฉากต้องตามทันด้วย ไม่งั้น "ฉากที่กล่าวถึง" ค้างอยู่ที่ค่าตอนเปิดโปรแกรม
   await refreshBacklinksAfterSave(tab, body);
   // [alpha.65] Story Network — refresh when scenes are saved (scene links may change)
@@ -6694,7 +6725,7 @@ async function refreshBacklinksAfterSave(tab, body) {
                                       chapterId: ctx.ch.guid, text: body || '' });
     if (!changed) return;
     refreshOpenWikiBacklinks();
-  } catch (e) { log('warn', 'อัปเดตดัชนี backlinks ล้มเหลว', e); }
+  } catch (e) { log('warn', T`อัปเดตดัชนี backlinks ล้มเหลว`, e); }
 }
 
 /** วาดส่วน "ฉากที่กล่าวถึง" ของทุกแท็บ Wiki ที่เปิดอยู่ใหม่ (ฝากไว้ตอนสร้างแท็บใน wiki-ui.js) */
@@ -6722,7 +6753,7 @@ let _branchPlanApi = null;
 function registerDirtySources() {
   if (dirtyRegistry.has('tabs')) return;
   registerDirtySource('tabs', {
-    label: 'ไฟล์ที่เปิดอยู่',
+    label: T`ไฟล์ที่เปิดอยู่`,
     list: dirtyTabList,
     save: async (key) => {
       const t = state.tabs.get(key);
@@ -6733,11 +6764,11 @@ function registerDirtySources() {
   });
   // กระดานวางแผน — ไม่ได้อยู่ในรูปแท็บ จึงเคยหายเงียบตอนปิดโปรแกรม
   registerDirtySource('planner', {
-    label: 'กระดานวางแผน',
+    label: T`กระดานวางแผน`,
     list: () => {
       if (!plannerInst || !plannerInst.data || !plannerInst.data.isDirty()) return [];
       const p = plannerInst.data.getPath();
-      return [{ key: p || '::planner::', title: plannerInst.data.getName() || 'กระดานวางแผน', file: p || '' }];
+      return [{ key: p || '::planner::', title: plannerInst.data.getName() || T`กระดานวางแผน`, file: p || '' }];
     },
     save: async () => {
       if (!plannerInst) return false;
@@ -6746,13 +6777,13 @@ function registerDirtySources() {
   });
   // [alpha.73 ข้อ 5] แผนของผังแตกสายก็ถือสถานะค้างในหน่วยความจำ → ต้องขึ้น list ตามกฎ alpha.72
   registerDirtySource('branch-plan', {
-    label: 'แผนผังแตกสาย',
+    label: T`แผนผังแตกสาย`,
     list: () => {
       const bp = _branchPlanApi;
       if (!bp || !bp.currentBranchPlan) return [];
       const cur = bp.currentBranchPlan();
       if (!cur || !cur.path || !bp.isBranchPlanDirty()) return [];
-      return [{ key: cur.path, title: cur.name || 'แผนผังแตกสาย', file: cur.path }];
+      return [{ key: cur.path, title: cur.name || T`แผนผังแตกสาย`, file: cur.path }];
     },
     save: async () => {
       if (!_branchPlanApi) return false;
@@ -6761,7 +6792,7 @@ function registerDirtySources() {
   });
   // โหลด API ของผังแตกสายไว้ล่วงหน้า — ทะเบียนถูกถามตอนจะปิดโปรแกรม รอ import ไม่ทัน
   import('./branching-ui.js').then((m) => { _branchPlanApi = m; }).catch(() => {});
-  log('info', 'dirty: ลงทะเบียนแหล่งงานค้าง ' + dirtyRegistry.ids().join(', '));
+  log('info', T`dirty: ลงทะเบียนแหล่งงานค้าง ` + dirtyRegistry.ids().join(', '));
 }
 
 /** รายการงานค้างทั้งหมดสำหรับกล่องบันทึก (ทุกแหล่ง ไม่ใช่แค่แท็บ) */
@@ -6784,10 +6815,10 @@ function allDirtyList() {
 export async function saveAllTabs(silent = false) {
   // [alpha.72 ข้อ 4] "ทั้งหมด" = ทุกแหล่งในทะเบียน ไม่ใช่แค่แท็บ (กระดานวางแผนเคยตกหล่น)
   let items = allDirtyList();
-  if (!items.length) { setStatus('ไม่มีงานค้างให้บันทึก'); return 0; }
+  if (!items.length) { setStatus(T`ไม่มีงานค้างให้บันทึก`); return 0; }
   if (!silent) {
     const { action, keys } = await saveAllDialog(items);
-    if (action !== 'save') { if (action === null) setStatus('ยกเลิกการบันทึก'); return 0; }
+    if (action !== 'save') { if (action === null) setStatus(T`ยกเลิกการบันทึก`); return 0; }
     const pick = new Set(keys);
     items = items.filter((x) => pick.has(x.key));
     if (!items.length) return 0;
@@ -6796,14 +6827,14 @@ export async function saveAllTabs(silent = false) {
   // [alpha.62 บั๊ก 10] บอกที่แถบล่างว่ากำลังบันทึกไฟล์ไหน อยู่ที่เท่าไรของทั้งหมด
   try {
     for (const it of items) {
-      setBusy(`กำลังบันทึก ${n + 1}/${items.length} — ${it.title || it.key || ''}`);
+      setBusy(T`กำลังบันทึก ${n + 1}/${items.length} — ${it.title || it.key || ''}`);
       const r = await dirtyRegistry.saveKeys([it.key]);
       n += r.saved;
-      for (const f of r.failed) log('error', 'saveAll: บันทึกไม่สำเร็จ: ' + f.key, f.error);
+      for (const f of r.failed) log('error', T`saveAll: บันทึกไม่สำเร็จ: ` + f.key, f.error);
     }
   } finally { clearBusy(); }
-  logAction('saveAll', `บันทึก ${n}/${items.length} รายการ`);
-  setStatus(`บันทึกทั้งหมดแล้ว (${n} รายการ)`);
+  logAction('saveAll', T`บันทึก ${n}/${items.length} รายการ`);
+  setStatus(T`บันทึกทั้งหมดแล้ว (${n} รายการ)`);
   updateDirtyBadge();
   refreshStatusBar();
   // บันทึกสถิติคำ (ข้อ 58)
@@ -6868,10 +6899,10 @@ async function manualSnapshot(dPath, ch, sc) {
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
   const openTab = state.tabs.get(file);
   if (openTab && openTab.dirty) await saveTab(openTab);
-  const label = await ask('ตั้งชื่อเวอร์ชัน (เว้นว่างได้)', { placeholder: 'เช่น ก่อนแก้ตอนจบ', okLabel: 'บันทึกเวอร์ชัน' });
+  const label = await ask(T`ตั้งชื่อเวอร์ชัน (เว้นว่างได้)`, { placeholder: T`เช่น ก่อนแก้ตอนจบ`, okLabel: T`บันทึกเวอร์ชัน` });
   if (label === null) return;
-  await snapshotFile(file, label || 'เวอร์ชัน');   // manual = มี label เสมอ (กันถูกตัด)
-  setStatus('บันทึกเวอร์ชันแล้ว');
+  await snapshotFile(file, label || T`เวอร์ชัน`);   // manual = มี label เสมอ (กันถูกตัด)
+  setStatus(T`บันทึกเวอร์ชันแล้ว`);
 }
 
 export function fmtTs(ts) {
@@ -6906,29 +6937,29 @@ async function compareVersionsDialog(dPath, ch, sc) {
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
   const snaps = await listSnapshots(file);
   // ตัวเลือก: [ปัจจุบัน] + เวอร์ชันที่บันทึกไว้
-  const opts = [{ key: '__cur__', label: 'ปัจจุบัน (บนดิสก์)' },
+  const opts = [{ key: '__cur__', label: T`ปัจจุบัน (บนดิสก์)` },
     ...snaps.map((s) => ({ key: s.path, label: fmtTs(s.ts) + (s.label ? ' · ' + s.label : '') }))];
   const bodyOf = async (key) => {
     try {
       if (key === '__cur__') { const t = state.tabs.get(file);
         if (t && (t.editor || t.sp)) return (t.editor || t.sp).getMarkdown(); }
       return parseMdFile(await kapi.readFile(key === '__cur__' ? file : key)).body;
-    } catch { return '(อ่านไม่ได้)'; }
+    } catch { return T`(อ่านไม่ได้)`; }
   };
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide k-cmp');
-  box.append(el('div', 'k-dlg-title', 'เทียบเวอร์ชัน — ' + sc.title));
+  box.append(el('div', 'k-dlg-title', T`เทียบเวอร์ชัน — ` + sc.title));
   const head = el('div', 'k-cmp-head');
   const selL = el('select', 'k-dlg-select'); const selR = el('select', 'k-dlg-select');
   for (const o of opts) { const a = el('option', null, o.label); a.value = o.key; selL.append(a);
                           const b = el('option', null, o.label); b.value = o.key; selR.append(b); }
   selL.selectedIndex = Math.min(1, opts.length - 1);      // ฝั่งซ้าย = เวอร์ชันเก่าสุดที่มี (ถ้ามี)
   selR.value = '__cur__';                                  // ฝั่งขวา = ปัจจุบัน
-  head.append(el('span', 'k-cmp-lbl', 'ซ้าย:'), selL, el('span', 'k-cmp-lbl', 'ขวา:'), selR);
+  head.append(el('span', 'k-cmp-lbl', T`ซ้าย:`), selL, el('span', 'k-cmp-lbl', T`ขวา:`), selR);
   box.append(head);
   const grid = el('div', 'k-cmp-grid'); box.append(grid);
-  const foot = el('div', 'k-dlg-btns'); const closeB = el('button', null, 'ปิด');
+  const foot = el('div', 'k-dlg-btns'); const closeB = el('button', null, T`ปิด`);
   foot.append(closeB); box.append(foot);
   ov.append(box); document.body.append(ov);
   closeB.onclick = () => ov.remove();
@@ -6949,7 +6980,7 @@ async function compareVersionsDialog(dPath, ch, sc) {
     }
     grid.append(colL, colR);
     head.querySelector('.k-cmp-count')?.remove();
-    head.append(el('span', 'k-cmp-count', diffs ? `ต่างกัน ${diffs} บรรทัด` : 'เหมือนกันทุกบรรทัด'));
+    head.append(el('span', 'k-cmp-count', diffs ? T`ต่างกัน ${diffs} บรรทัด` : T`เหมือนกันทุกบรรทัด`));
   }
   selL.onchange = render; selR.onchange = render;
   render();
@@ -6974,7 +7005,7 @@ export function closeTab(file) {
 export async function revertTab(file) {
   const t = state.tabs.get(file);
   if (!t) return;
-  if (!(await confirmBox('ยกเลิกการเปลี่ยนแปลงทั้งหมดในแท็บนี้?\nเนื้อหาจะกลับไปเป็นเวอร์ชันล่าสุดที่บันทึกไว้', 'Revert'))) return;
+  if (!(await confirmBox(T`ยกเลิกการเปลี่ยนแปลงทั้งหมดในแท็บนี้?\nเนื้อหาจะกลับไปเป็นเวอร์ชันล่าสุดที่บันทึกไว้`, 'Revert'))) return;
   const content = await kapi.readFile(file);
   const { meta, body } = parseMdFile(content);
   // [alpha.58r บั๊ก 25] จัดหน้าอยู่ใน frontmatter แล้ว → คืนค่ามาพร้อมเนื้อหาด้วย
@@ -6998,7 +7029,7 @@ export async function revertTab(file) {
   else if (t.plain) { t.plain = false; openPlainFile(file, t.title); return; }
   t.dirty = false;
   refreshAllSpell(); refreshAllMentions();
-  setStatus('↩ กลับไปยังเวอร์ชันล่าสุดที่บันทึก');
+  setStatus(T`↩ กลับไปยังเวอร์ชันล่าสุดที่บันทึก`);
 }
 
 // [76] Remove Elements by Type — ลบ element ทั้งหมดของประเภทที่เลือก
@@ -7014,8 +7045,8 @@ export async function removeElementsDialog(opts = {}) {
   const sp = state.active?.sp;
   if (!sp) {
     // ดังพอให้คนที่กดจากเมนูเห็น — เดิมบอกที่แถบล่างอย่างเดียว
-    setStatus('เปิดฉากที่เป็นบทภาพยนตร์ก่อน จึงจะลบ element ตามประเภทได้');
-    if (!opts.silent) alert('คำสั่งนี้ใช้กับบทภาพยนตร์\nเปิดฉากที่เป็นบทก่อน แล้วลองใหม่');
+    setStatus(T`เปิดฉากที่เป็นบทภาพยนตร์ก่อน จึงจะลบ element ตามประเภทได้`);
+    if (!opts.silent) alert(T`คำสั่งนี้ใช้กับบทภาพยนตร์\nเปิดฉากที่เป็นบทก่อน แล้วลองใหม่`);
     return null;
   }
   const v = sp.view;
@@ -7029,8 +7060,8 @@ export async function removeElementsDialog(opts = {}) {
   });
   const types = Object.keys(counts).filter((k) => SP_ELEMS[k]);
   if (!types.length) {
-    setStatus('บทนี้ยังไม่มี element ที่มีเนื้อหาให้ลบ');
-    if (!opts.silent) alert('บทนี้ยังไม่มี element ที่มีเนื้อหาให้ลบ');
+    setStatus(T`บทนี้ยังไม่มี element ที่มีเนื้อหาให้ลบ`);
+    if (!opts.silent) alert(T`บทนี้ยังไม่มี element ที่มีเนื้อหาให้ลบ`);
     return null;
   }
 
@@ -7039,9 +7070,9 @@ export async function removeElementsDialog(opts = {}) {
     const tab = state.active;
     // snapshot เป็นของแถม — ห้ามทำให้การลบล้มเหลว (บั๊กเดิมล้มทั้งคำสั่งเพราะตรงนี้)
     try {
-      if (tab) await snapshotFile(tab.file, 'ก่อนลบ ' + sel.map((x) => SP_ELEMS[x]?.th || x).join(','));
-    } catch (e) { log('warn', 'remove-elements: เก็บเวอร์ชันก่อนลบไม่สำเร็จ (ลบต่อ)', e); }
-    if (!sp.view || sp.view.isDestroyed) { setStatus('ตัวแก้ไขถูกปิดไปแล้ว — เปิดฉากใหม่แล้วลองอีกครั้ง'); return 0; }
+      if (tab) await snapshotFile(tab.file, T`ก่อนลบ ` + sel.map((x) => SP_ELEMS[x]?.th || x).join(','));
+    } catch (e) { log('warn', T`remove-elements: เก็บเวอร์ชันก่อนลบไม่สำเร็จ (ลบต่อ)`, e); }
+    if (!sp.view || sp.view.isDestroyed) { setStatus(T`ตัวแก้ไขถูกปิดไปแล้ว — เปิดฉากใหม่แล้วลองอีกครั้ง`); return 0; }
     const view = sp.view;
     const delSet = new Set(sel);
     const toRemove = [];
@@ -7050,7 +7081,7 @@ export async function removeElementsDialog(opts = {}) {
       if (n.type.name === 'sp' && delSet.has(n.attrs.el) && n.textContent.trim())
         toRemove.push({ pos, size: n.nodeSize });
     });
-    if (!toRemove.length) { setStatus('ไม่พบ element ที่ตรงเงื่อนไข'); return 0; }
+    if (!toRemove.length) { setStatus(T`ไม่พบ element ที่ตรงเงื่อนไข`); return 0; }
     let tr = view.state.tr;
     // ลบจากท้ายมาต้น — ตำแหน่งของตัวที่ยังไม่ถูกลบจึงไม่ขยับ
     for (const { pos, size } of toRemove.slice().reverse()) tr = tr.delete(pos, pos + size);
@@ -7060,14 +7091,14 @@ export async function removeElementsDialog(opts = {}) {
     // → ReferenceError กลางทาง · dispatch ลบไปแล้วแต่ `ov.remove()` กับ setStatus ไม่ได้ทำงาน
     // ผู้ใช้เห็นกล่องค้างอยู่กับที่ ไม่มีข้อความอะไร = "กดลบแล้วไม่มีอะไรเกิดขึ้น"
     if (tab) { markDirty(tab); scheduleSpSmart(tab); scheduleRepaginate(); }
-    setStatus(`ลบ ${toRemove.length} element แล้ว (ยกเลิกได้ด้วย Ctrl+Z)`);
+    setStatus(T`ลบ ${toRemove.length} element แล้ว (ยกเลิกได้ด้วย Ctrl+Z)`);
     return toRemove.length;
   };
   if (opts.silent) return { types, counts, blanks, doRemove };
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.innerHTML = `<div class="k-dlg-title">ลบ element ตามประเภท</div>
+  box.innerHTML = T`<div class="k-dlg-title">ลบ element ตามประเภท</div>
     <div class="k-hint" style="margin-bottom:10px">เลือกประเภท element ที่ต้องการลบทั้งหมดออกจากบท
       <br>(นับเฉพาะบรรทัดที่มีเนื้อหา — บรรทัดว่างไม่ถูกแตะ · ยกเลิกได้ด้วย Ctrl+Z)</div>
     <div id="rm-el-list"></div>
@@ -7082,7 +7113,7 @@ export async function removeElementsDialog(opts = {}) {
   const syncTotal = () => {
     const sel = chks.filter((c) => c.checked);
     const n = sel.reduce((s, c) => s + (counts[c.value] || 0), 0);
-    totalEl.textContent = n ? `จะลบทั้งหมด ${n} บรรทัด` : 'ยังไม่ได้เลือกอะไร';
+    totalEl.textContent = n ? T`จะลบทั้งหมด ${n} บรรทัด` : T`ยังไม่ได้เลือกอะไร`;
     okBtn.disabled = !n;                       // ปุ่มลบกดไม่ได้ตอนยังไม่เลือก = ไม่ใช่ "กดแล้วไม่มีอะไรเกิดขึ้น"
   };
   for (const ty of types) {
@@ -7090,7 +7121,7 @@ export async function removeElementsDialog(opts = {}) {
     label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer';
     const cb = el('input'); cb.type = 'checkbox'; cb.value = ty; chks.push(cb);
     cb.onchange = syncTotal;
-    label.append(cb, el('span', null, `${SP_ELEMS[ty]?.th || ty} (${counts[ty]} บรรทัด)`));
+    label.append(cb, el('span', null, T`${SP_ELEMS[ty]?.th || ty} (${counts[ty]} บรรทัด)`));
     list.append(label);
   }
   syncTotal();
@@ -7105,13 +7136,13 @@ export async function removeElementsDialog(opts = {}) {
       if (!sel.length) return;
       const n = sel.reduce((s, k) => s + (counts[k] || 0), 0);
       const names = sel.map((k) => SP_ELEMS[k]?.th || k).join(', ');
-      if (!(await confirmBox(`ลบ ${names} ทั้งหมด (${n} บรรทัด)?`, 'ลบ'))) return;
+      if (!(await confirmBox(T`ลบ ${names} ทั้งหมด (${n} บรรทัด)?`, T`ลบ`))) return;
       ov.remove();
       await doRemove(sel);
     } catch (e) {
-      log('error', 'remove-elements ล้มเหลว', e);
+      log('error', T`remove-elements ล้มเหลว`, e);
       ov.remove();
-      setStatus('ลบ element ไม่สำเร็จ: ' + (e && e.message));
+      setStatus(T`ลบ element ไม่สำเร็จ: ` + (e && e.message));
     }
   };
   return ov;
@@ -7126,7 +7157,7 @@ async function showCharMap() {
   ];
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.innerHTML = `<div class="k-dlg-title">แผนที่อักขระพิเศษ</div>
+  box.innerHTML = T`<div class="k-dlg-title">แผนที่อักขระพิเศษ</div>
     <div class="k-charmap"></div>
     <div class="k-dlg-btns"><button class="k-ok">${t('dialogs.close')}</button></div>`;
   ov.append(box); document.body.append(ov);
@@ -7167,7 +7198,7 @@ function applyCompare(rightFile) {
   const rt = state.tabs.get(rightFile);
   if (!rt) return;
   openInSplit(rightFile, 'right');
-  setStatus('โหมดเทียบเอกสาร: ' + (state.active?.title || '') + '  ⇋  ' + rt.title);
+  setStatus(T`โหมดเทียบเอกสาร: ` + (state.active?.title || '') + '  ⇋  ' + rt.title);
 }
 // เปิด "เวอร์ชันที่บันทึกไว้" เป็นแท็บอ่านอย่างเดียวแล้ววางไว้ฝั่งขวาคู่กับฉากปัจจุบัน (ข้อ 7)
 // ทำให้ "เทียบเวอร์ชันแบบ split view ด้านขวา" ใช้ได้จริง ไม่ใช่แค่กล่องโต้ตอบสองคอลัมน์
@@ -7176,10 +7207,10 @@ export async function openSnapshotRight(curFile, snap) {
   const title = '🕘 ' + (snap.label || fmtTs(snap.ts));
   if (!state.tabs.has(key)) {
     let body = '';
-    try { body = parseMdFile(await kapi.readFile(snap.path)).body; } catch { body = '(อ่านไฟล์เวอร์ชันไม่ได้)'; }
+    try { body = parseMdFile(await kapi.readFile(snap.path)).body; } catch { body = T`(อ่านไฟล์เวอร์ชันไม่ได้)`; }
     const pane = el('div', 'pane');
     const bar = el('div', 'json-bar');
-    bar.append(el('span', 'dim', title + ' — อ่านอย่างเดียว'));
+    bar.append(el('span', 'dim', title + T` — อ่านอย่างเดียว`));
     const ta = el('textarea', 'plain-md'); ta.value = body; ta.readOnly = true;
     pane.append(bar, ta);
     $('#panes').append(pane);
@@ -7230,9 +7261,9 @@ function bindTabStripMenus() {
     const [f, t] = tabByBtn(btn);
     if (!f) return;
     popupMenu(e.clientX, e.clientY, [
-      t.floatWin ? { label: '⤢ คืนเป็นแท็บ', click: () => dockTab(f) }
-                 : { label: '🪟 แยกเป็นหน้าต่างลอย', click: () => floatTab(f) },
-      { label: 'ปิดแท็บนี้', click: () => closeTab(f) },
+      t.floatWin ? { label: T`⤢ คืนเป็นแท็บ`, click: () => dockTab(f) }
+                 : { label: T`🪟 แยกเป็นหน้าต่างลอย`, click: () => floatTab(f) },
+      { label: T`ปิดแท็บนี้`, click: () => closeTab(f) },
     ]);
   });
 }
@@ -7335,8 +7366,8 @@ function refreshToolbar() {
     if (sp) { try { curExt = sp.curExtension(); onChar = sp.curElement() === 'character'; } catch {} }
     spExt.classList.toggle('dis', !onChar);
     spExt.textContent = curExt || '( )';
-    spExt.title = onChar ? "ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)"
-                         : 'วางเคอร์เซอร์ในบรรทัด "ตัวละคร" ก่อน';
+    spExt.title = onChar ? T`ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)`
+                         : T`วางเคอร์เซอร์ในบรรทัด "ตัวละคร" ก่อน`;
   }
   $('#tb-paper').classList.toggle('on', state.settings.paperMode !== false);
   applyTheme();                       // [60r2 ข้อ 10] ปุ่มธีมสะท้อนสถานะจริง
@@ -7432,9 +7463,9 @@ function repaginateNow(t) {
     // วาดใหม่เฉพาะตอนตำแหน่งเส้นเปลี่ยนจริง — dispatch ทุก 300ms ไปกวนตำแหน่งเลื่อนตอนซูม
     if (changed || cChanged) t.sp.refreshGuides();
     refreshSpView();                       // มุมมองเรียงหน้า/ภาพรวมตามเนื้อหาล่าสุด
-    _spPageText = ` · ${pg.count} หน้า`;
+    _spPageText = T` · ${pg.count} หน้า`;
     return _spPageText;
-  } catch (e) { log('warn', 'นับหน้าบทไม่สำเร็จ', e); return _spPageText; }
+  } catch (e) { log('warn', T`นับหน้าบทไม่สำเร็จ`, e); return _spPageText; }
 }
 /**
  * [alpha.58r บั๊ก 20 · แยกออกมาใน alpha.60r2 ข้อ 3] จัดหน้าเอกสาร "นิยาย" + วาดเส้นคั่นหน้า
@@ -7453,7 +7484,7 @@ function repaginateProseNow(t) {
     if (changed) refreshProsePageBreaks(t.editor.view);
     refreshSpView();
     return ppg.count;
-  } catch (e) { log('warn', 'นับหน้านิยายไม่สำเร็จ', e); return 0; }
+  } catch (e) { log('warn', T`นับหน้านิยายไม่สำเร็จ`, e); return 0; }
 }
 
 /**
@@ -7492,7 +7523,7 @@ function scheduleCount() {
     // = งานหนักที่สุดในลูปนี้ · แถมนับ prefix ของ fountain (@ . $shot) เป็นอักขระด้วย ซึ่งผิดอยู่แล้ว
     const body = t.editor ? t.editor.getMarkdown()
       : t.sp ? t.sp.getText() : t.plain.value;
-    let txt = `คำ ${countWords(body).toLocaleString()} · อักขระ ${body.length.toLocaleString()}`;
+    let txt = T`คำ ${countWords(body).toLocaleString()} · อักขระ ${body.length.toLocaleString()}`;
     // [84][85] บทภาพยนตร์: บอกจำนวนหน้าจริงตามขนาดกระดาษ/ระยะขอบ/กฎตัดหน้าที่ตั้งไว้
     if (t.sp) {
       // [alpha.60 ข้อ 96 · แก้ใน alpha.60r1] เปิด "ปรับหน้าตามช่วงเวลา" = ยกงานจัดหน้า
@@ -7500,7 +7531,7 @@ function scheduleCount() {
       // แถบสถานะโชว์จำนวนหน้าเสมอไม่ว่าโหมดไหน (ค่าล่าสุดถูกจำไว้ใน _spPageText)
       txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t);
       // [54] ตรวจข้อผิดพลาดพร้อมกัน (debounce เดียวกับการนับคำ)
-      try { checkScreenplay(t); } catch (e) { log('warn', 'ตรวจบทไม่สำเร็จ', e); }
+      try { checkScreenplay(t); } catch (e) { log('warn', T`ตรวจบทไม่สำเร็จ`, e); }
     } else {
       setPageBreaks([]);
       setContinueds([]);
@@ -7510,7 +7541,7 @@ function scheduleCount() {
     // [alpha.58r บั๊ก 20] นิยายก็ต้องรู้ว่าอยู่หน้าไหน/ขึ้นหน้าใหม่ตรงไหน
     if (t.editor) {
       const n = repaginateProseNow(t);
-      if (n) txt += ` · ${n} หน้า`;
+      if (n) txt += T` · ${n} หน้า`;
     } else {
       setProsePageBreaks([]);
     }
@@ -7548,20 +7579,20 @@ function refreshOutline() {
   if (PANEL_WIN) { drawRemoteOutline(box); back(); return; }
   const t = state.active;
   if (!t || t.wiki || t.gal || t.isJson || t.net || t.dash || t.planner || (!t.editor && !t.sp && !t.plain)) {
-    box.append(el('div', 'dim', '(เปิดฉากเพื่อดู Navigation)'));
-    relayOutline('', '', [], '(เปิดฉากเพื่อดู Navigation)');
+    box.append(el('div', 'dim', T`(เปิดฉากเพื่อดู Navigation)`));
+    relayOutline('', '', [], T`(เปิดฉากเพื่อดู Navigation)`);
     return;
   }
   // ส่วนหัว: ชื่อฉาก + โหมด
   const head = el('div', 'nav-head');
-  head.append(el('span', 'nav-scene', (t.sp ? '🎬 ' : '📖 ') + (t.title || '(ฉาก)')));
+  head.append(el('span', 'nav-scene', (t.sp ? '🎬 ' : '📖 ') + (t.title || T`(ฉาก)`)));
   box.append(head);
 
   const items = [];
   if (t.editor) {
     t.editor.view.state.doc.forEach((n, offset) => {
       if (n.type.name === 'heading')
-        items.push({ kind: 'heading', label: n.textContent || '(ว่าง)', lvl: n.attrs.level, pos: offset });
+        items.push({ kind: 'heading', label: n.textContent || T`(ว่าง)`, lvl: n.attrs.level, pos: offset });
       else if (navShowBeats && n.type.name === 'paragraph' && n.textContent.trim())
         items.push({ kind: 'beat', label: navTrunc(n.textContent), lvl: 4, pos: offset });
       else if (navShowBeats && n.type.name === 'blockquote' && n.textContent.trim())
@@ -7586,8 +7617,8 @@ function refreshOutline() {
         items.push({ kind: 'beat', label: navTrunc(line), lvl: 4, line: i });
     });
   }
-  relayOutline(t.file || '', t.title || '', items, '(ยังไม่มีหัวข้อ/หัวฉาก)', !!t.sp);
-  if (!items.length) { box.append(el('div', 'dim', '(ยังไม่มีหัวข้อ/หัวฉาก)')); return; }
+  relayOutline(t.file || '', t.title || '', items, T`(ยังไม่มีหัวข้อ/หัวฉาก)`, !!t.sp);
+  if (!items.length) { box.append(el('div', 'dim', T`(ยังไม่มีหัวข้อ/หัวฉาก)`)); return; }
   for (const it of items) {
     box.append(outlineItemEl(it, () => {
       if (t.sp || t.editor) {
@@ -7608,7 +7639,7 @@ function refreshOutline() {
 }
 /** แถวหนึ่งใน Navigation — ใช้ร่วมทั้งหน้าต่างหลักและหน้าต่างที่ฉีกออกไป (หน้าตาต้องเหมือนกันเป๊ะ) */
 function outlineItemEl(it, onJump) {
-  const d = el('div', 'ol-item nav-' + it.kind + ' lvl' + it.lvl, it.label || '(ว่าง)');
+  const d = el('div', 'ol-item nav-' + it.kind + ' lvl' + it.lvl, it.label || T`(ว่าง)`);
   d.onclick = onJump;
   return d;
 }
@@ -7622,9 +7653,9 @@ function relayOutline(file, title, items, empty, sp) {
 function drawRemoteOutline(box) {
   const msg = state._remoteOutline;
   if (!msg) { box.append(el('div', 'dim', t('panel.waitingMain', '(กำลังรอข้อมูลจากหน้าต่างหลัก…)'))); return false; }
-  if (!msg.items.length) { box.append(el('div', 'dim', msg.empty || '(ยังไม่มีหัวข้อ/หัวฉาก)')); return true; }
+  if (!msg.items.length) { box.append(el('div', 'dim', msg.empty || T`(ยังไม่มีหัวข้อ/หัวฉาก)`)); return true; }
   const head = el('div', 'nav-head');
-  head.append(el('span', 'nav-scene', (msg.sp ? '🎬 ' : '📖 ') + (msg.title || '(ฉาก)')));
+  head.append(el('span', 'nav-scene', (msg.sp ? '🎬 ' : '📖 ') + (msg.title || T`(ฉาก)`)));
   box.append(head);
   for (const it of msg.items) box.append(outlineItemEl(it, () => requestGotoInMain(it)));
   return true;
@@ -7637,7 +7668,7 @@ function openFind() {
 function doFind() {
   const ed = state.active?.editor; if (!ed) return 0;
   const n = setQuery(ed.view, $('#find-q').value);
-  $('#find-n').textContent = n ? n + ' ผล' : 'ไม่พบ';
+  $('#find-n').textContent = n ? n + T` ผล` : T`ไม่พบ`;
   return n;
 }
 function closeFind() {
@@ -7662,8 +7693,8 @@ async function importImageFile(file, t) {
     const cap = saved.replace(/\.[^.]+$/, '');
     (t.editor || t.sp).insertImage(rel, cap, `![${cap}](${rel})`);
     markDirty(t);
-    setStatus('แทรกรูป: ' + saved);
-  } catch (err) { setStatus('แทรกรูปไม่สำเร็จ: ' + err.message); }
+    setStatus(T`แทรกรูป: ` + saved);
+  } catch (err) { setStatus(T`แทรกรูปไม่สำเร็จ: ` + err.message); }
 }
 
 async function insertImage() {
@@ -7676,14 +7707,14 @@ async function insertImage() {
 // ('sunset.png' หรือ 'ตัวละคร/ref.png' — alpha.63 รับทั้งสองแบบ) · ใช้ร่วมกับคลิกขวาใน Explorer (ข้อ 6)
 async function insertImageByName(fileName, caption) {
   const t = state.active;
-  if (!t || !(t.editor || t.sp)) { setStatus('เปิดฉากก่อนจึงจะแทรกรูปได้'); return; }
+  if (!t || !(t.editor || t.sp)) { setStatus(T`เปิดฉากก่อนจึงจะแทรกรูปได้`); return; }
   const imgDir = await kapi.join(state.root, 'Images');
   const sceneDir = t.file.replace(/[\\/][^\\/]*$/, '');
   const rel = await kapi.relative(sceneDir, await kapi.join(imgDir, ...String(fileName).split('/')));
   const cap = caption || String(fileName).split('/').pop().replace(/\.[^.]+$/, '');
   (t.editor || t.sp).insertImage(rel, cap, `![${cap}](${rel})`);
   markDirty(t);
-  setStatus('แทรกรูปแล้ว: ' + fileName);
+  setStatus(T`แทรกรูปแล้ว: ` + fileName);
 }
 
 // ---------------- เมนูจาก main process ----------------
@@ -7716,8 +7747,8 @@ async function renderLogPanel(force) {
   body.classList.add('k-log-list');
   if (!shown.length) {
     body.append(el('div', 'dim', recs.length
-      ? 'ไม่มีบรรทัดที่ตรงตัวกรอง — ลองเปิดระดับอื่นหรือล้างคำค้น'
-      : '(ยังไม่มีบันทึก)'));
+      ? T`ไม่มีบรรทัดที่ตรงตัวกรอง — ลองเปิดระดับอื่นหรือล้างคำค้น`
+      : T`(ยังไม่มีบันทึก)`));
   }
   for (const r of shown) body.append(logRow(r));
   syncLogBar(host, recs);
@@ -7736,7 +7767,7 @@ function logRow(r) {
   if (r.count > 1) row.append(el('span', 'k-log-count', '×' + r.count));
   if (r.detail) {
     row.classList.add('k-log-has-detail');
-    row.title = 'คลิกเพื่อดูรายละเอียด';
+    row.title = T`คลิกเพื่อดูรายละเอียด`;
     const det = el('pre', 'k-log-detail', r.detail);
     if (!logView.open.has(r.seq)) det.style.display = 'none';
     row.append(det);
@@ -7756,7 +7787,7 @@ function buildLogBar(host, body) {
     const b = el('button', 'k-log-chip k-log-chip-' + lv + (logView.levels.has(lv) ? ' on' : ''),
                  LEVEL_META[lv].icon + ' ' + LEVEL_META[lv].label);
     b.dataset.lv = lv;
-    b.title = 'แสดง/ซ่อนระดับ ' + LEVEL_META[lv].label;
+    b.title = T`แสดง/ซ่อนระดับ ` + LEVEL_META[lv].label;
     b.onclick = () => {
       if (logView.levels.has(lv)) logView.levels.delete(lv); else logView.levels.add(lv);
       b.classList.toggle('on', logView.levels.has(lv));
@@ -7764,14 +7795,14 @@ function buildLogBar(host, body) {
     };
     bar.append(b);
   }
-  const sel = el('select', 'k-log-src-sel'); sel.title = 'กรองตามที่มา';
+  const sel = el('select', 'k-log-src-sel'); sel.title = T`กรองตามที่มา`;
   sel.onchange = () => { logView.source = sel.value; renderLogPanel(true); };
   bar.append(sel);
-  const q = el('input', 'k-log-q'); q.type = 'search'; q.placeholder = '🔍 ค้นในบันทึก';
+  const q = el('input', 'k-log-q'); q.type = 'search'; q.placeholder = T`🔍 ค้นในบันทึก`;
   q.oninput = () => { logView.q = q.value; renderLogPanel(true); };
   bar.append(q);
-  const clr = el('button', 'k-log-btn', '🗑 ล้าง');
-  clr.title = 'ล้างบันทึกที่แสดงอยู่ (ไฟล์ log ในเครื่องยังอยู่ครบ)';
+  const clr = el('button', 'k-log-btn', T`🗑 ล้าง`);
+  clr.title = T`ล้างบันทึกที่แสดงอยู่ (ไฟล์ log ในเครื่องยังอยู่ครบ)`;
   clr.onclick = () => { logStore.clear(); LOG_BUF.length = 0; logView.open.clear(); renderLogPanel(true); };
   bar.append(clr);
   host.insertBefore(bar, body);
@@ -7793,7 +7824,7 @@ function syncLogBar(host, recs) {
   if (sel.dataset.list !== srcs.join()) {
     sel.dataset.list = srcs.join();
     sel.replaceChildren();
-    const o0 = el('option', null, 'ทุกที่มา'); o0.value = ''; sel.append(o0);
+    const o0 = el('option', null, T`ทุกที่มา`); o0.value = ''; sel.append(o0);
     for (const s of srcs) { const o = el('option', null, s); o.value = s; sel.append(o); }
     sel.value = logView.source;
   }
@@ -7805,8 +7836,8 @@ function updateLogFollowBadge(body, stick) {
   let b = panel.querySelector('.k-log-follow');
   if (stick) { if (b) b.remove(); return; }
   if (!b) {
-    b = el('button', 'k-log-follow', '⤓ ตามบรรทัดล่าสุด');
-    b.title = 'ตอนนี้หยุดอ่านอยู่กับที่ — กดเพื่อกลับไปล่างสุด';
+    b = el('button', 'k-log-follow', T`⤓ ตามบรรทัดล่าสุด`);
+    b.title = T`ตอนนี้หยุดอ่านอยู่กับที่ — กดเพื่อกลับไปล่างสุด`;
     b.onclick = () => { body.scrollTop = body.scrollHeight; b.remove(); };
     panel.appendChild(b);
   }
@@ -7819,7 +7850,7 @@ function startLogAutoRefresh() {
 function stopLogAutoRefresh() {
   if (_logTimer) { clearInterval(_logTimer); _logTimer = null; }
 }
-window.__k2test = (p) => runTest(p);
+window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
 window.__k2menu = null;
 
 // ═════════ [alpha.58r ข้อ 4] คอนโซลนักพัฒนา ═════════
@@ -7866,15 +7897,15 @@ function devFormat(v) {
 export function openDevConsole() {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-dev-dlg');
-  box.append(el('div', 'k-dlg-title', '🛠 คอนโซลนักพัฒนา'));
+  box.append(el('div', 'k-dlg-title', T`🛠 คอนโซลนักพัฒนา`));
   box.append(el('div', 'dim',
-    'พิมพ์ JavaScript แล้วกด Ctrl+Enter เพื่อรัน · ใช้ตัวแปร k2 เข้าถึงของในโปรแกรม ' +
+    T`พิมพ์ JavaScript แล้วกด Ctrl+Enter เพื่อรัน · ใช้ตัวแปร k2 เข้าถึงของในโปรแกรม ` +
     '(k2.state · k2.tab() · k2.md() · k2.blocks() · k2.cssVar("--ed-fs") · k2.cmd("save"))'));
 
   const inp = el('textarea', 'k-dlg-input k-dev-input');
   inp.rows = 5;
   inp.spellcheck = false;
-  inp.placeholder = 'เช่น  k2.cssVar("--ed-fs")   หรือ   k2.blocks().length';
+  inp.placeholder = T`เช่น  k2.cssVar("--ed-fs")   หรือ   k2.blocks().length`;
   box.append(inp);
 
   const btns = el('div', 'k-dev-btns');
@@ -7924,23 +7955,23 @@ export function openDevConsole() {
   });
 
   const mkBtn = (label, fn, cls) => { const b = el('button', cls || 'cmp-mini', label); b.onclick = fn; return b; };
-  btns.append(mkBtn('▶ รัน (Ctrl+Enter)', run, 'k-ok'));
-  btns.append(mkBtn('🧹 ล้างผล', () => { out.innerHTML = ''; }));
-  btns.append(mkBtn('📋 คัดลอกผล', () => {
+  btns.append(mkBtn(T`▶ รัน (Ctrl+Enter)`, run, 'k-ok'));
+  btns.append(mkBtn(T`🧹 ล้างผล`, () => { out.innerHTML = ''; }));
+  btns.append(mkBtn(T`📋 คัดลอกผล`, () => {
     navigator.clipboard?.writeText(out.textContent || '');
-    setStatus('คัดลอกผลจากคอนโซลแล้ว');
+    setStatus(T`คัดลอกผลจากคอนโซลแล้ว`);
   }));
-  btns.append(mkBtn('📜 บันทึกล่าสุด (log)', async () => {
+  btns.append(mkBtn(T`📜 บันทึกล่าสุด (log)`, async () => {
     let text = '';
     try { text = (await kapi.logRead(200)) || ''; } catch {}
-    write(text || LOG_BUF.slice(-200).join('\n') || '(ยังไม่มีบันทึก)', 'k-dev-log');
+    write(text || LOG_BUF.slice(-200).join('\n') || T`(ยังไม่มีบันทึก)`, 'k-dev-log');
   }));
-  btns.append(mkBtn('ℹ ข้อมูลระบบ', () => {
+  btns.append(mkBtn(T`ℹ ข้อมูลระบบ`, () => {
     write(devFormat({
       version: APP_VERSION,
-      โปรเจกต์: state.root || '(ยังไม่เปิด)',
+      โปรเจกต์: state.root || T`(ยังไม่เปิด)`,
       แท็บที่เปิด: state.tabs.size,
-      โหมด: state.active && state.active.sp ? 'บทภาพยนตร์' : state.active && state.active.editor ? 'นิยาย' : '-',
+      โหมด: state.active && state.active.sp ? T`บทภาพยนตร์` : state.active && state.active.editor ? T`นิยาย` : '-',
       มุมมอง: currentSpView(),
       ซูม: Math.round(pageScale * 100) + '%',
       'ขนาดกระดาษ': spFormat().paperSize,
@@ -7954,7 +7985,7 @@ export function openDevConsole() {
   box.append(btns, out);
 
   const foot = el('div', 'k-dlg-btns');
-  const close = el('button', 'k-cancel', 'ปิด');
+  const close = el('button', 'k-cancel', T`ปิด`);
   close.onclick = () => ov.remove();
   foot.append(close);
   box.append(foot);
@@ -7967,17 +7998,75 @@ export function openDevConsole() {
 }
 
 /** กล่อง "เกี่ยวกับ" — ทางเข้าคอนโซลนักพัฒนาอยู่ที่นี่ด้วย */
+/**
+ * เครดิต — **ตารางเดียวที่เป็นแหล่งความจริง** (กล่อง "เกี่ยวกับ" อ่านจากที่นี่ที่เดียว)
+ * เพิ่ม/ถอด dependency เมื่อไหร่ ให้แก้ที่นี่ · e2e ตรวจว่าทุกแถวมีชื่อ+สัญญาอนุญาตครบ
+ * (`what` ใช้ T`` ได้เพราะตารางถูกสร้างตอนโหลดโมดูล ซึ่งตารางคำแปลพร้อมแล้ว — ดู src/i18n.js)
+ */
+export const CREDITS = [
+  { group: T`เขียนโค้ด`, items: [
+    { name: 'Claude (Anthropic)', what: T`เขียน/ออกแบบโค้ดเกือบทั้งหมด ผ่าน Claude Code`, url: 'https://claude.com/claude-code' },
+    { name: 'DeepSeek', what: T`ช่วยเขียนโค้ดบางส่วน (opencode)`, url: 'https://www.deepseek.com' },
+  ] },
+  { group: T`ฐานของโปรแกรม`, items: [
+    { name: 'Electron', what: T`ตัวรันแอปเดสก์ท็อป`, lic: 'MIT', url: 'https://electronjs.org' },
+    { name: 'Chromium · Node.js', what: T`เอนจินเว็บ + รันไทม์ที่มากับ Electron`, lic: 'BSD / MIT' },
+    { name: 'esbuild', what: T`รวมไฟล์ (bundler)`, lic: 'MIT', url: 'https://esbuild.github.io' },
+    { name: 'electron-builder', what: T`ทำตัวติดตั้ง/พกพา`, lic: 'MIT' },
+  ] },
+  { group: T`ไลบรารีที่ใช้ในโปรแกรม`, items: [
+    { name: 'ProseMirror', what: T`ตัวแก้ไขข้อความ (นิยาย + บทภาพยนตร์)`, lic: 'MIT', url: 'https://prosemirror.net' },
+    { name: 'Fabric.js', what: T`กระดานวางแผน (Planner) และผังพื้นที่`, lic: 'MIT', url: 'https://fabricjs.com' },
+    { name: 'pdf-lib + @pdf-lib/fontkit', what: T`สร้างไฟล์ PDF ฝังฟอนต์ไทย`, lic: 'MIT' },
+    { name: 'JSZip', what: T`ส่งออก/นำเข้าโปรเจกต์เป็น .zip`, lic: 'MIT / GPL-3.0' },
+    { name: 'Fuse.js', what: T`ค้นหาแบบยอมพิมพ์ผิด`, lic: 'Apache-2.0' },
+  ] },
+  { group: T`ฟอนต์`, items: [
+    { name: 'Courier Prime', what: T`ฟอนต์บทภาพยนตร์ (ละติน) — Quote-Unquote Apps`, lic: 'SIL OFL 1.1' },
+    { name: T`Courier MonoThai · ProportionalThai (1998)`, what: T`ฟอนต์บทภาพยนตร์ (ไทย) — ดัดแปลงตำแหน่งวรรณยุกต์ · ดู renderer/assets/fonts/THAI-FONTS.txt`, lic: T`ไม่ทราบสิทธิ์ต้นฉบับ` },
+  ] },
+  { group: T`ข้อมูล`, items: [
+    { name: T`พจนานุกรมตรวจคำผิด`, what: T`รายการคำไทย/อังกฤษในโฟลเดอร์ renderer/assets · เพิ่มเองได้ที่ Plugins/dictionaries`, lic: '' },
+    { name: T`ไฟล์ภาษา (k2_*.csv)`, what: T`ข้อความในหน้าจอทั้งหมด — แก้/แปลเพิ่มได้โดยไม่ต้อง build ใหม่`, lic: '' },
+  ] },
+  { group: T`แรงบันดาลใจ`, items: [
+    { name: 'Scrivener · Final Draft · Storyteller · Miro', what: T`แนวคิดของ Explorer, บทภาพยนตร์, เวิร์กโฟลว์ส่งออก และกระดานวางแผน`, lic: '' },
+  ] },
+];
+
 export function aboutDialog() {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-about-dlg');
-  box.append(el('div', 'k-dlg-title', 'เกี่ยวกับ Killian 2'));
-  box.append(el('div', null, 'คิเลียน อีดิเตอร์ ' + APP_VERSION));
-  box.append(el('div', 'dim', 'โปรแกรมเขียนนิยาย/บทภาพยนตร์ — Electron + ProseMirror'));
-  box.append(el('div', 'dim', 'ไฟล์งานเป็น Markdown + JSON เปิดร่วมกับ Killian v1 ได้ 100%'));
+  box.append(el('div', 'k-dlg-title', T`เกี่ยวกับ Killian 2`));
+  box.append(el('div', null, T`คิเลียน อีดิเตอร์ ` + APP_VERSION));
+  box.append(el('div', 'dim', T`โปรแกรมเขียนนิยาย/บทภาพยนตร์ — Electron + ProseMirror`));
+  box.append(el('div', 'dim', T`ไฟล์งานเป็น Markdown + JSON เปิดร่วมกับ Killian v1 ได้ 100%`));
+
+  // ---- เครดิต ----
+  const cr = el('div', 'k-credits');
+  cr.append(el('div', 'k-credits-head', T`เครดิต · ใช้อะไรบ้าง มาจากไหน`));
+  for (const g of CREDITS) {
+    cr.append(el('div', 'k-credit-group', g.group));
+    for (const it of g.items) {
+      const row = el('div', 'k-credit-row');
+      const nm = el('span', 'k-credit-name', it.name);
+      if (it.url) {
+        nm.classList.add('k-credit-link');
+        nm.title = it.url;
+        nm.onclick = () => { try { kapi.openExternal ? kapi.openExternal(it.url) : window.open(it.url, '_blank'); } catch {} };
+      }
+      row.append(nm);
+      if (it.lic) row.append(el('span', 'k-credit-lic', it.lic));
+      row.append(el('div', 'k-credit-what', it.what));
+      cr.append(row);
+    }
+  }
+  box.append(cr);
+
   const btns = el('div', 'k-dlg-btns');
-  const dev = el('button', 'cmp-mini', '🛠 คอนโซลนักพัฒนา');
+  const dev = el('button', 'cmp-mini', T`🛠 คอนโซลนักพัฒนา`);
   dev.onclick = () => { ov.remove(); openDevConsole(); };
-  const ok = el('button', 'k-ok', 'ปิด');
+  const ok = el('button', 'k-ok', T`ปิด`);
   ok.onclick = () => ov.remove();
   btns.append(dev, ok);
   box.append(btns);
@@ -8034,7 +8123,7 @@ export function renderFeaturePanel(id) {
   const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
   const backScroll = keepScroll(() => document.querySelector(sel));
   const p = Promise.resolve().then(f)
-    .catch((e) => { log('error', 'วาดแผง ' + pid + ' ล้มเหลว', e); })
+    .catch((e) => { log('error', T`วาดแผง ` + pid + T` ล้มเหลว`, e); })
     .finally(() => _featInFlight.delete(pid))
     .then(() => { try { backScroll(); } catch {} return true; });
   _featInFlight.set(pid, p);
@@ -8101,7 +8190,7 @@ async function handleCommand(ch, ...a) {
   // [alpha.60r3 ข้อ 7] คีย์ลัดที่ปลั๊กอินลงทะเบียนไว้ (`plugin:<ชื่อ>:<id>`)
   if (typeof ch === 'string' && ch.startsWith('plugin:')) {
     const hit = plugins.shortcuts.find((s) => s.ch === ch);
-    if (hit) { try { await hit.fn(...a); } catch (e) { log('warn', 'คีย์ลัดปลั๊กอินพัง: ' + ch, e); } }
+    if (hit) { try { await hit.fn(...a); } catch (e) { log('warn', T`คีย์ลัดปลั๊กอินพัง: ` + ch, e); } }
     return;
   }
   switch (ch) {
@@ -8134,7 +8223,7 @@ async function handleCommand(ch, ...a) {
                await kapi.printToPdf(p);
                restoreInactivePanes();
                document.body.classList.remove('printing');
-               setStatus('ส่งออก PDF: ' + p); }
+               setStatus(T`ส่งออก PDF: ` + p); }
       break;
     }
     case 'close-tab': if (t) closeTab(t.file); break;
@@ -8153,10 +8242,10 @@ async function handleCommand(ch, ...a) {
     // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก (เมนู "รูปแบบ → รูปตัวพิมพ์")
     case 'text-case': {
       const ed2 = getActiveEditor();
-      if (!ed2) { setStatus('เปิดฉากก่อนจึงจะเปลี่ยนรูปตัวพิมพ์ได้'); break; }
+      if (!ed2) { setStatus(T`เปิดฉากก่อนจึงจะเปลี่ยนรูปตัวพิมพ์ได้`); break; }
       const ok = ed2.cmd('case', a[0]);
-      if (ok) { if (t) markDirty(t); setStatus('เปลี่ยนรูปตัวพิมพ์: ' + (CASE_SHORT[a[0]] || a[0])); }
-      else setStatus('เลือกข้อความก่อน แล้วค่อยเปลี่ยนรูปตัวพิมพ์');
+      if (ok) { if (t) markDirty(t); setStatus(T`เปลี่ยนรูปตัวพิมพ์: ` + (CASE_SHORT[a[0]] || a[0])); }
+      else setStatus(T`เลือกข้อความก่อน แล้วค่อยเปลี่ยนรูปตัวพิมพ์`);
       refreshToolbar(); break;
     }
     case 'editor-undo': getActiveEditor()?.cmd('undo'); refreshToolbar(); break;
@@ -8191,17 +8280,17 @@ async function handleCommand(ch, ...a) {
       state.settings.fabEnabled = v;
       document.body.classList.toggle('k-fab-off', !v);
       saveProjectMeta(); syncMenuToggles();
-      setStatus(v ? 'ปุ่มลอย (FAB): เปิด' : 'ปุ่มลอย (FAB): ปิด');
+      setStatus(v ? T`ปุ่มลอย (FAB): เปิด` : T`ปุ่มลอย (FAB): ปิด`);
       break;
     }
     case 'reading-mode': toggleReading(); break;
     case 'line-numbers':
       state.settings.lineNumbers = !state.settings.lineNumbers;
       applySettings(); saveProjectMeta(); syncMenuToggles(); refreshToolbar();
-      setStatus(state.settings.lineNumbers ? 'เลขบรรทัด: เปิด' : 'เลขบรรทัด: ปิด');
+      setStatus(state.settings.lineNumbers ? T`เลขบรรทัด: เปิด` : T`เลขบรรทัด: ปิด`);
       break;
     // ---- ฟีเจอร์ที่เคยไม่มีทางเข้าถึง (import ไว้แต่ไม่มีเมนู/ปุ่ม) ----
-    case 'typewriter': setStatus(toggleTypewriter() ? 'โหมดเครื่องพิมพ์ดีด: เปิด' : 'โหมดเครื่องพิมพ์ดีด: ปิด'); refreshToolbar();
+    case 'typewriter': setStatus(toggleTypewriter() ? T`โหมดเครื่องพิมพ์ดีด: เปิด` : T`โหมดเครื่องพิมพ์ดีด: ปิด`); refreshToolbar();
                        syncTypeSound(); syncMenuToggles(); break;
     // [alpha.57a ข้อ 1] เสียงพิมพ์ — สวิตช์แยกจากโหมดเครื่องพิมพ์ดีด (ตั้งระดับเสียงในตั้งค่า)
     case 'type-sound':
@@ -8209,8 +8298,8 @@ async function handleCommand(ch, ...a) {
       syncTypeSound(); saveProjectMeta(); syncMenuToggles();
       if (state.settings.typeSound) playType('key', { force: true });
       setStatus(state.settings.typeSound
-        ? 'เสียงเครื่องพิมพ์ดีด: เปิด' + (state.settings.typeSoundAlways || isTypewriter() ? '' : ' (จะได้ยินเมื่อเปิดโหมดเครื่องพิมพ์ดีด — Ctrl+Shift+T)')
-        : 'เสียงเครื่องพิมพ์ดีด: ปิด');
+        ? T`เสียงเครื่องพิมพ์ดีด: เปิด` + (state.settings.typeSoundAlways || isTypewriter() ? '' : T` (จะได้ยินเมื่อเปิดโหมดเครื่องพิมพ์ดีด — Ctrl+Shift+T)`)
+        : T`เสียงเครื่องพิมพ์ดีด: ปิด`);
       break;
     case 'quick-open': openQuickOpen(); break;
     // [alpha.62 บั๊ก 20] วิ่งผ่าน renderFeaturePanel เหมือนแผงอื่น — dedupe การวาดซ้ำให้ด้วย
@@ -8238,23 +8327,23 @@ async function handleCommand(ch, ...a) {
           t.sp.setMarkdown(markdown);
           if (t.editor) t.editor.setMarkdown(markdown);
           markDirty(t);
-          setStatus('นำเข้าบทภาพยนตร์ (' + format + ') เสร็จ: ' + summary.scenes + ' ฉาก, ' + summary.characters + ' ตัวละคร');
+          setStatus(T`นำเข้าบทภาพยนตร์ (` + format + T`) เสร็จ: ` + summary.scenes + T` ฉาก, ` + summary.characters + T` ตัวละคร`);
         } else {
           // ยังไม่มีแท็บบท → สร้างแท็บฉากใหม่ในบทปัจจุบัน
           // ใช้ createNewScene ถ้ามี
           const sec = state.active?.meta;
           const dPath = sec ? kapi.join(state.root, sec.section, 'Draft', sec.draft) : null;
           if (dPath) {
-            const file = await createNewScene(dPath, 'นำเข้า-' + format + '-' + Date.now().toString(36));
+            const file = await createNewScene(dPath, T`นำเข้า-` + format + '-' + Date.now().toString(36));
             const tab = await activate(file);
             if (tab?.sp) {
               tab.sp.setMarkdown(markdown);
               if (tab.editor) tab.editor.setMarkdown(markdown);
               markDirty(tab);
-              setStatus('นำเข้าบทภาพยนตร์ (' + format + ') — สร้างฉากใหม่: ' + summary.scenes + ' ฉาก, ' + summary.characters + ' ตัวละคร');
+              setStatus(T`นำเข้าบทภาพยนตร์ (` + format + T`) — สร้างฉากใหม่: ` + summary.scenes + T` ฉาก, ` + summary.characters + T` ตัวละคร`);
             }
           } else {
-            alert('นำเข้าไม่สำเร็จ: ยังไม่มีเล่ม/ฉบับร่างที่ใช้งานอยู่');
+            alert(T`นำเข้าไม่สำเร็จ: ยังไม่มีเล่ม/ฉบับร่างที่ใช้งานอยู่`);
           }
         }
       });
@@ -8265,15 +8354,15 @@ async function handleCommand(ch, ...a) {
       const tabs = [...state.tabs.entries()];
       const spTabs = tabs.filter(([, t]) => t.sp || t.editor);
       if (spTabs.length < 2) {
-        alert('ต้องเปิดแท็บบทภาพยนตร์หรือเอกสารอย่างน้อย 2 แท็บจึงจะเปรียบเทียบได้');
+        alert(T`ต้องเปิดแท็บบทภาพยนตร์หรือเอกสารอย่างน้อย 2 แท็บจึงจะเปรียบเทียบได้`);
         break;
       }
       // แสดงรายการให้เลือก 2 แท็บ
       const names = spTabs.map(([f]) => f.split(/[/\\]/).pop().replace(/\.md$/i, ''));
-      const oldIdx = parseInt(prompt('เลือก "ฉบับเก่า" (หมายเลข 1–' + spTabs.length + '):\n' +
+      const oldIdx = parseInt(prompt(T`เลือก "ฉบับเก่า" (หมายเลข 1–` + spTabs.length + '):\n' +
         names.map((n, i) => (i + 1) + '. ' + n).join('\n')), 10);
       if (!oldIdx || oldIdx < 1 || oldIdx > spTabs.length) break;
-      const newIdx = parseInt(prompt('เลือก "ฉบับใหม่" (หมายเลข 1–' + spTabs.length + '):\n' +
+      const newIdx = parseInt(prompt(T`เลือก "ฉบับใหม่" (หมายเลข 1–` + spTabs.length + '):\n' +
         names.map((n, i) => (i + 1) + '. ' + n).join('\n')), 10);
       if (!newIdx || newIdx < 1 || newIdx > spTabs.length || newIdx === oldIdx) break;
 
@@ -8293,7 +8382,7 @@ async function handleCommand(ch, ...a) {
         if (!state.meta) return;
         state.meta.title = title; state.title = title;
         await saveProjectMeta(); $('#projname').textContent = title;
-        setStatus('เปลี่ยนชื่อเรื่องเป็น: ' + title);
+        setStatus(T`เปลี่ยนชื่อเรื่องเป็น: ` + title);
       }, { kind: 'project' }); break;
     case 'custom-status': manageCustomStatuses(); break;
     case 'visual-tags': manageVisualTags(); break;
@@ -8409,7 +8498,7 @@ async function handleCommand(ch, ...a) {
     case 'sp-check-toggle':
       state.settings.spCheckBeforeExport = state.settings.spCheckBeforeExport === false;
       saveProjectMeta(); syncMenuToggles();
-      setStatus(state.settings.spCheckBeforeExport ? 'ตรวจบทก่อนส่งออก: เปิด' : 'ตรวจบทก่อนส่งออก: ปิด');
+      setStatus(state.settings.spCheckBeforeExport ? T`ตรวจบทก่อนส่งออก: เปิด` : T`ตรวจบทก่อนส่งออก: ปิด`);
       break;
     case 'export-fdx': await exportScript('fdx'); break;
     case 'export-rtf': await exportScript('rtf'); break;
@@ -8617,7 +8706,7 @@ let floatBar = null;
 function setupFloatingFormatBar() {
   if (floatBar) return;
   const bar = el('div', 'k-fmtbar');
-  const handle = el('div', 'k-fmtbar-grip'); handle.title = 'ลากเพื่อย้ายแถบ';
+  const handle = el('div', 'k-fmtbar-grip'); handle.title = T`ลากเพื่อย้ายแถบ`;
   handle.innerHTML = '<span></span><span></span>';
   bar.append(handle);
   // ลำดับปุ่มตามภาพ: [grip] 📄กระดาษ · 📖โหมด · สไตล์ · B I U S · •≣ 1≣ · ❝ · ← ↔ → ☰ · 🖼 · </>
@@ -8633,7 +8722,7 @@ function setupFloatingFormatBar() {
   $('#content').append(bar);
   floatBar = bar;
   const drag = makeDraggable(bar, handle, { key: 'fmtbar', defaultPos: { left: 24, top: 12 } });
-  handle.addEventListener('dblclick', () => { drag.reset(); setStatus('รีเซ็ตตำแหน่งแถบรูปแบบแล้ว'); });
+  handle.addEventListener('dblclick', () => { drag.reset(); setStatus(T`รีเซ็ตตำแหน่งแถบรูปแบบแล้ว`); });
   syncFloatBarVisible();
 }
 function getActiveEditor() {
@@ -8667,7 +8756,7 @@ function syncFloatBarVisible() {
 // ที่ closeProjectIfAny() เด้งขึ้นมาระหว่างเปิดโปรเจกต์ → กดปุ่มไม่ได้ ต้อง force quit
 // ตอนนี้รายงานที่แถบสถานะล่างแทน (setBusy) — ไม่มีอะไรทับ ไม่มีอะไรบล็อก
 // คงชื่อ showLoader/hideLoader ไว้เพื่อไม่ต้องไล่แก้จุดเรียกทั้งหมด
-export function showLoader(msg) { return setBusy(msg || 'กำลังทำงาน…'); }
+export function showLoader(msg) { return setBusy(msg || T`กำลังทำงาน…`); }
 export function hideLoader() { return clearBusy(); }
 // วาง tooltip "เหนือ" ตัว trigger เสมอ (ใช้ getBoundingClientRect + flip)
 // ไม่หน่วงเวลา — แสดงทันที · รองรับข้อความยาว · ธีมตาม CSS
@@ -8798,8 +8887,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const cur = tab.sp ? 'screenplay' : 'prose';
     const r = e.target.getBoundingClientRect();
     popupMenu(r.left, r.bottom + 4, [
-      { label: iconHtml('book', 14) + ' ' + (cur === 'prose' ? '✓ ' : '') + 'นิยาย', click: () => switchFormat('prose') },
-      { label: iconHtml('film', 14) + ' ' + (cur === 'screenplay' ? '✓ ' : '') + 'บทหนัง', click: () => switchFormat('screenplay') },
+      { label: iconHtml('book', 14) + ' ' + (cur === 'prose' ? '✓ ' : '') + T`นิยาย`, click: () => switchFormat('prose') },
+      { label: iconHtml('film', 14) + ' ' + (cur === 'screenplay' ? '✓ ' : '') + T`บทหนัง`, click: () => switchFormat('screenplay') },
     ]);
   };
   $('#tb-style').onchange = (e) => {
@@ -8817,7 +8906,7 @@ window.addEventListener('DOMContentLoaded', () => {
     e.target.value = '';
     if (!mode) return;
     const ed = getActiveEditor();
-    if (!ed) { setStatus('เปิดฉากก่อนจึงจะเปลี่ยนรูปตัวพิมพ์ได้'); return; }
+    if (!ed) { setStatus(T`เปิดฉากก่อนจึงจะเปลี่ยนรูปตัวพิมพ์ได้`); return; }
     // [alpha.62 บั๊ก 11] ในบทหนัง element อย่าง "ชื่อตัวละคร/หัวฉาก" ถูก text-transform:uppercase อยู่
     //   → เปลี่ยน case ของข้อความสำเร็จ แต่บนจอไม่ขยับเลย ผู้ใช้อ่านว่า "ล็อกไว้ ปรับไม่ได้"
     //   ถ้าสั่งเปลี่ยนเป็นตัวเล็ก/รูปแบบอื่นทั้งที่ element นั้นบังคับตัวใหญ่อยู่ = เจตนาชัดว่า
@@ -8829,10 +8918,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (state.active) markDirty(state.active);
       if (wasCapped) {
         toggleElementCaps(spEl, false);
-        setStatus(`เปลี่ยนรูปตัวพิมพ์: ${CASE_SHORT[mode]} — ปลดบังคับตัวพิมพ์ใหญ่ของ ` +
-                  `"${SP_ELEMS[spEl]?.th || spEl}" ให้แล้ว (เปิดกลับได้ที่ บท → 🔠 ตัวพิมพ์ใหญ่/เล็ก)`);
-      } else setStatus('เปลี่ยนรูปตัวพิมพ์: ' + CASE_SHORT[mode]);
-    } else setStatus('เลือกข้อความก่อน แล้วค่อยเปลี่ยนรูปตัวพิมพ์');
+        setStatus(T`เปลี่ยนรูปตัวพิมพ์: ${CASE_SHORT[mode]} — ปลดบังคับตัวพิมพ์ใหญ่ของ ` +
+                  T`"${SP_ELEMS[spEl]?.th || spEl}" ให้แล้ว (เปิดกลับได้ที่ บท → 🔠 ตัวพิมพ์ใหญ่/เล็ก)`);
+      } else setStatus(T`เปลี่ยนรูปตัวพิมพ์: ` + CASE_SHORT[mode]);
+    } else setStatus(T`เลือกข้อความก่อน แล้วค่อยเปลี่ยนรูปตัวพิมพ์`);
     refreshToolbar();
   };
   $('#tb-sp-elem').onchange = (e) => {
@@ -8883,7 +8972,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!plugins.commands.length) return;
     const r = e.target.getBoundingClientRect();
     popupMenu(r.left, r.bottom + 4, plugins.commands.map((c) => (
-      { label: c.label, click: () => { try { c.fn(); } catch (err) { setStatus('ปลั๊กอิน: ' + err.message); } } })));
+      { label: c.label, click: () => { try { c.fn(); } catch (err) { setStatus(T`ปลั๊กอิน: ` + err.message); } } })));
   };
   document.querySelectorAll('.tb-menu').forEach((m) => {
     m.onclick = () => { const r = m.getBoundingClientRect(); kapi.menuPopup(m.dataset.m, r.left, r.bottom); };
@@ -8992,23 +9081,23 @@ window.addEventListener('DOMContentLoaded', () => {
   // ปุ่ม 🔄 บนหัวแผงโปรเจกต์ = อ่านโฟลเดอร์ใหม่ (ข้อ 11)
   // จำเป็นเพราะไฟล์ถูกแก้จากนอกโปรแกรมได้ (Explorer/Finder) แล้วต้นไม้ไม่รู้
   const refreshBtn = el('span', 'k-panel-btn k-tree-refresh-btn', '🔄');
-  refreshBtn.title = 'รีเฟรช — อ่านไฟล์/โฟลเดอร์ใหม่จากดิสก์';
+  refreshBtn.title = T`รีเฟรช — อ่านไฟล์/โฟลเดอร์ใหม่จากดิสก์`;
   refreshBtn.onclick = async (e) => {
     e.stopPropagation();
-    if (!state.root) { setStatus('ยังไม่ได้เปิดโปรเจกต์'); return; }
+    if (!state.root) { setStatus(T`ยังไม่ได้เปิดโปรเจกต์`); return; }
     refreshBtn.classList.add('spin');
     try {
       await loadTemplates();
       await smart.loadNames(state.root);
       await buildTree();
       await buildFilterBar();
-      setStatus('รีเฟรชรายการโปรเจกต์แล้ว');
+      setStatus(T`รีเฟรชรายการโปรเจกต์แล้ว`);
     } finally { refreshBtn.classList.remove('spin'); }
   };
   addPanelButton('tree', refreshBtn);
 
   // ปุ่ม 🔍 บนหัวแผงโปรเจกต์ = เปิด/ปิดช่องค้นหา (อยู่ในแผง explorer)
-  const searchBtn = el('span', 'k-panel-btn k-tree-search-btn', '🔍'); searchBtn.title = 'เปิด/ปิดช่องค้นหา';
+  const searchBtn = el('span', 'k-panel-btn k-tree-search-btn', '🔍'); searchBtn.title = T`เปิด/ปิดช่องค้นหา`;
   addPanelButton('tree', searchBtn);
   const searchOn0 = (localStorage.getItem('k2-tree-search') ?? '1') === '1';
   const applySearchVis = (on) => { $('#tree-search').classList.toggle('k-search-off', !on);
@@ -9018,25 +9107,25 @@ window.addEventListener('DOMContentLoaded', () => {
   searchBtn.onclick = (e) => { e.stopPropagation(); applySearchVis($('#tree-search').classList.contains('k-search-off')); };
 
   // ปุ่ม ¶ บนหัวแผง Navigation = โชว์/ซ่อนย่อหน้า (beat)
-  const beatBtn = el('span', 'k-panel-btn', '¶'); beatBtn.id = 'nav-beats-btn'; beatBtn.title = 'แสดง/ซ่อนย่อหน้าใน Navigation';
+  const beatBtn = el('span', 'k-panel-btn', '¶'); beatBtn.id = 'nav-beats-btn'; beatBtn.title = T`แสดง/ซ่อนย่อหน้าใน Navigation`;
   beatBtn.classList.toggle('on', navShowBeats);
   addPanelButton('outline', beatBtn);
   beatBtn.onclick = (e) => { e.stopPropagation(); setNavBeats(!navShowBeats); };
 
   // ปุ่มแผงบันทึก (Log): ↩ รีเฟรช, 📁 เปิดโฟลเดอร์, 📋 copy
-  const logRefresh = el('span', 'k-panel-btn', '↻'); logRefresh.title = 'รีเฟรช';
+  const logRefresh = el('span', 'k-panel-btn', '↻'); logRefresh.title = T`รีเฟรช`;
   addPanelButton('log', logRefresh);
   logRefresh.onclick = (e) => { e.stopPropagation(); renderLogPanel(); };
-  const logReveal = el('span', 'k-panel-btn'); logReveal.innerHTML = iconHtml('folder', 14); logReveal.title = 'เปิดโฟลเดอร์ log';
+  const logReveal = el('span', 'k-panel-btn'); logReveal.innerHTML = iconHtml('folder', 14); logReveal.title = T`เปิดโฟลเดอร์ log`;
   addPanelButton('log', logReveal);
   logReveal.onclick = (e) => { e.stopPropagation(); kapi.logReveal && kapi.logReveal(); };
-  const logCopy = el('span', 'k-panel-btn', '📋'); logCopy.title = 'คัดลอก';
+  const logCopy = el('span', 'k-panel-btn', '📋'); logCopy.title = T`คัดลอก`;
   addPanelButton('log', logCopy);
   // [alpha.72 ข้อ 5] คัดลอก "เฉพาะที่กรองอยู่" — ส่งให้คนช่วยดูบั๊กได้ตรงจุด ไม่ต้องส่งทั้งกอง
   logCopy.onclick = (e) => { e.stopPropagation();
     const txt = exportText(filterLogs(logStore.all(), logView));
-    navigator.clipboard.writeText(txt || '(ไม่มีบรรทัดที่ตรงตัวกรอง)')
-      .then(() => setStatus(`คัดลอกบันทึกแล้ว (${txt ? txt.split('\n').length : 0} บรรทัดตามตัวกรอง)`)); };
+    navigator.clipboard.writeText(txt || T`(ไม่มีบรรทัดที่ตรงตัวกรอง)`)
+      .then(() => setStatus(T`คัดลอกบันทึกแล้ว (${txt ? txt.split('\n').length : 0} บรรทัดตามตัวกรอง)`)); };
 
   // คลิกขวาคำที่ขีดแดง (สะกดผิด) → เพิ่มลงพจนานุกรมส่วนตัวของโปรเจกต์
   document.addEventListener('contextmenu', (e) => {
@@ -9049,10 +9138,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const items = [];
     if (bad) {
       const word = bad.textContent.trim();
-      items.push({ label: `เพิ่ม “${word}” ลงพจนานุกรม`, click: async () => {
+      items.push({ label: T`เพิ่ม “${word}” ลงพจนานุกรม`, click: async () => {
         await kapi.spellAddWord(state.root, word);
         await loadSpellDict(state.root);
-        setStatus('เพิ่มลงพจนานุกรมแล้ว: ' + word);
+        setStatus(T`เพิ่มลงพจนานุกรมแล้ว: ` + word);
       } });
     }
     if (bad && thes.length) items.push('-');
@@ -9062,7 +9151,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const word = sel?.toString()?.trim();
     if (word && word.length >= 2) {
       items.push('-');
-      items.push({ label: `คำพ้อง/คำตรงข้าม “${word}”`, click: () => {
+      items.push({ label: T`คำพ้อง/คำตรงข้าม “${word}”`, click: () => {
         showThesaurusPopup(word, e.clientX, e.clientY);
       } });
     }
@@ -9099,7 +9188,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#find-rep1').onclick = () => { replaceCurrent(state.active?.editor?.view, $('#find-r').value);
                                     markDirty(state.active); doFind(); };
   $('#find-repall').onclick = () => { const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
-                                      setStatus('แทนที่ ' + n + ' แห่ง'); markDirty(state.active); doFind(); };
+                                      setStatus(T`แทนที่ ` + n + T` แห่ง`); markDirty(state.active); doFind(); };
   // [alpha.67] หน้าต่างแผงที่ฉีกออกมามีลำดับเริ่มของตัวเอง (และไม่มี autosave — ไม่ได้ถือเอกสาร)
   if (PANEL_WIN) { bootPanelWindow(); return; }
   bindMainWindowSync();
@@ -9113,9 +9202,9 @@ window.addEventListener('DOMContentLoaded', () => {
 // เดิม FAB ยัดของลง sections[0]/drafts[0]/chapters[0] เสมอ — โปรเจกต์ที่มีหลายเล่มจึงสร้างผิดที่
 // ค่าเริ่มต้นของกล่องนี้ = บริบทที่ผู้ใช้เปิดอยู่ (ถ้ามี) ไม่งั้น = อันแรก
 // needChapter=false → ใช้เลือกปลายทางของ "บทใหม่" (พอถึงระดับฉบับร่าง)
-async function pickDraftTarget({ needChapter = true, title = 'สร้างที่ไหน' } = {}) {
+async function pickDraftTarget({ needChapter = true, title = T`สร้างที่ไหน` } = {}) {
   const sections = await listSections();
-  if (!sections.length) { setStatus('ยังไม่มีเล่ม — สร้างเล่มก่อน'); return null; }
+  if (!sections.length) { setStatus(T`ยังไม่มีเล่ม — สร้างเล่มก่อน`); return null; }
 
   // อ่านฉบับร่างของแต่ละเล่มไว้ล่วงหน้า (โปรเจกต์ใหญ่สุดก็ยังเป็นสิบ ๆ รายการ ไม่หนัก)
   const tree = [];
@@ -9134,7 +9223,7 @@ async function pickDraftTarget({ needChapter = true, title = 'สร้างท
     }
     if (drafts.length) tree.push({ ...s, drafts });
   }
-  if (!tree.length) { setStatus('ยังไม่มีฉบับร่าง — สร้างเล่ม/ฉบับร่างก่อน'); return null; }
+  if (!tree.length) { setStatus(T`ยังไม่มีฉบับร่าง — สร้างเล่ม/ฉบับร่างก่อน`); return null; }
 
   const ctx = await sceneCtx();                   // ฉากที่เปิดอยู่ = ค่าเริ่มต้นที่ตรงใจที่สุด
   let si = 0, di = 0, ci = 0;
@@ -9153,9 +9242,9 @@ async function pickDraftTarget({ needChapter = true, title = 'สร้างท
     box.append(el('div', 'k-dlg-title', title));
     const mkRow = (label) => { const r = el('div', 'wiki-row'); r.append(el('label', null, label));
       const s = el('select', 'wiki-input k-dlg-select'); r.append(s); box.append(r); return s; };
-    const selSec = mkRow('เล่ม');
-    const selDraft = mkRow('ฉบับร่าง');
-    const selCh = needChapter ? mkRow('บท') : null;
+    const selSec = mkRow(T`เล่ม`);
+    const selDraft = mkRow(T`ฉบับร่าง`);
+    const selCh = needChapter ? mkRow(T`บท`) : null;
     const fill = (sel, items, cur) => {
       sel.replaceChildren();
       items.forEach((txt, i) => { const o = el('option', null, txt); o.value = String(i); sel.append(o); });
@@ -9164,7 +9253,7 @@ async function pickDraftTarget({ needChapter = true, title = 'สร้างท
     const syncCh = () => {
       if (!selCh) return;
       const chs = tree[+selSec.value].drafts[+selDraft.value].chapters;
-      fill(selCh, chs.length ? chs.map((c) => c.title || '(ไม่มีชื่อ)') : ['— ยังไม่มีบท —'], ci);
+      fill(selCh, chs.length ? chs.map((c) => c.title || T`(ไม่มีชื่อ)`) : [T`— ยังไม่มีบท —`], ci);
       selCh.disabled = !chs.length;
     };
     const syncDraft = () => {
@@ -9177,8 +9266,8 @@ async function pickDraftTarget({ needChapter = true, title = 'สร้างท
     selDraft.onchange = () => { ci = 0; syncCh(); };
 
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, 'ยกเลิก');
-    const okB = el('button', 'k-ok', 'ตกลง');
+    const cB = el('button', null, T`ยกเลิก`);
+    const okB = el('button', 'k-ok', T`ตกลง`);
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     const done = (v) => { ov.remove(); resolve(v); };
     cB.onclick = () => done(null);
@@ -9187,7 +9276,7 @@ async function pickDraftTarget({ needChapter = true, title = 'สร้างท
       const dr = tree[+selSec.value].drafts[+selDraft.value];
       if (needChapter) {
         const ch = dr.chapters[+selCh.value];
-        if (!ch) { setStatus('ฉบับร่างนี้ยังไม่มีบท — สร้างบทก่อน'); return; }
+        if (!ch) { setStatus(T`ฉบับร่างนี้ยังไม่มีบท — สร้างบทก่อน`); return; }
         done({ dPath: dr.dPath, chapter: ch });
       } else done({ dPath: dr.dPath, chapter: null });
     };
@@ -9221,14 +9310,14 @@ function wireFab() {
         case 'scene': {
           // ให้ผู้ใช้เลือก เล่ม→ฉบับร่าง→บท เอง (เดิมยัดลงบทแรกของเล่มแรกเสมอ — บั๊กข้อ 9)
           if (!state.root) break;
-          const dst = await pickDraftTarget({ title: 'สร้างฉากใหม่ที่ไหน' });
+          const dst = await pickDraftTarget({ title: T`สร้างฉากใหม่ที่ไหน` });
           if (!dst) break;
           addScene(dst.dPath, dst.chapter);
           break;
         }
         case 'chapter': {
           if (!state.root) break;
-          const dst = await pickDraftTarget({ needChapter: false, title: 'สร้างบทใหม่ที่ไหน' });
+          const dst = await pickDraftTarget({ needChapter: false, title: T`สร้างบทใหม่ที่ไหน` });
           if (!dst) break;
           addChapter(dst.dPath);
           break;
@@ -9282,7 +9371,8 @@ async function buildFilterBar() {
   
   // ปุ่มสถานะ
   for (const st of SCENE_STATUSES) {
-    const chip = el('span', 'filter-chip', st);
+    const chip = el('span', 'filter-chip', dataLabel(st));
+    chip.dataset.status = st;                       // ค่าจริงเก็บใน dataset — ตัวกรองต้องใช้ค่าไทยเสมอ
     chip.onclick = () => {
       chip.classList.toggle('on');
       const q = $('#tree-search');
@@ -9367,7 +9457,7 @@ function updateProgressBar() {
   const fill = $('#prog-fill');
   const wrap = $('#prog-wrap');
   if (fill) fill.style.width = pctDaily + '%';
-  if (wrap) wrap.title = `เป้าหมายวันนี้: ${totalWords.toLocaleString()} / ${daily.toLocaleString()} คำ (${pctDaily}%)`;
+  if (wrap) wrap.title = T`เป้าหมายวันนี้: ${totalWords.toLocaleString()} / ${daily.toLocaleString()} คำ (${pctDaily}%)`;
 }
 
 // ---------------- Status Bar extras (จำนวนฉาก/สถานะ/โหมด) ----------------
@@ -9394,7 +9484,7 @@ function updateStatusExtras() {
       }
     } catch {}
     const el = $('#status-scenes');
-    if (el) el.innerHTML = iconHtml('file', 14) + ' ' + total + ' ฉาก';
+    if (el) el.innerHTML = iconHtml('file', 14) + ' ' + total + T` ฉาก`;
   };
   updateSceneCount();
   
@@ -9402,7 +9492,7 @@ function updateStatusExtras() {
   const modeEl = $('#status-mode');
   if (modeEl) {
     const tab = state.active;
-    modeEl.innerHTML = tab?.sp ? (iconHtml('film', 14) + ' บทหนัง') : tab?.editor ? (iconHtml('book', 14) + ' นิยาย') : '';
+    modeEl.innerHTML = tab?.sp ? (iconHtml('film', 14) + T` บทหนัง`) : tab?.editor ? (iconHtml('book', 14) + T` นิยาย`) : '';
   }
   
   // สถานะ autosave + วันที่แก้ไขล่าสุด
@@ -9410,7 +9500,7 @@ function updateStatusExtras() {
   if (saveEl) {
     const tab = state.active;
     if (tab && tab.dirty) {
-      saveEl.textContent = '⏳ ยังไม่บันทึก';
+      saveEl.textContent = T`⏳ ยังไม่บันทึก`;
       saveEl.style.color = 'var(--orange)';
     } else if (tab) {
       const mod = tab.meta?.modified || '';
@@ -14075,7 +14165,10 @@ async function runTest(projectPath) {
     const memoFiles = await kapi.listFiles(await kapi.join(state.root, 'Memos'), '.md');
     if (memoFiles.length > 1) {
       const pT = deleteToTrash(await kapi.join(state.root, 'Memos', memoFiles[1]), 'ตัวอย่าง');
-      await new Promise((r) => setTimeout(r, 60));
+      // [alpha.76] วนรอ "กล่องยืนยันโผล่จริง" แทนการเดา 60ms — ตัว packaged วาดช้ากว่า dev
+      // ถ้าคลิกไม่โดน `await pT` จะค้างตลอดกาล (กับดักเทสข้อ 1: ฟังก์ชันที่มีกล่องยืนยัน)
+      for (let i = 0; i < 100 && !document.querySelector('.k-dialog .k-ok'); i++)
+        await new Promise((r) => setTimeout(r, 50));
       document.querySelector('.k-dialog .k-ok')?.click(); await pT;
     }
     activate(t2.file);
@@ -15557,6 +15650,90 @@ async function runTest(projectPath) {
       await new Promise((r) => setTimeout(r, 30));
       check('ข้อความหัวแผงกลับมาเหมือนก่อนเปลี่ยนภาษา', headOf().textContent === before,
             headOf().textContent + ' vs ' + before);
+    }
+
+    // ---- [alpha.76] ระบบภาษาแบบ CSV: อ่านรหัสจากชื่อไฟล์ · ใส่ภาษาใหม่โดยไม่ต้อง build ----
+    {
+      const I = await import('./i18n.js');
+      check('[76-1] รหัสภาษาอ่านจากชื่อไฟล์', I.langCodeFromFile('k2_ja.csv') === 'ja'
+            && I.langCodeFromFile('อะไรก็ไม่รู้.csv') === '');
+      // ที่ค้นหาไฟล์ภาษาต้องมีจริงและเรียงจากสำคัญมาก→น้อย (โปรเจกต์มาก่อนของที่มากับโปรแกรม)
+      const dirs = await kapi.langDirs(state.root);
+      check('[76-2] โฟลเดอร์โปรเจกต์อยู่อันดับแรกของที่ค้นหาไฟล์ภาษา',
+            Array.isArray(dirs) && dirs.length >= 2 && dirs[0].includes('languages'), (dirs || [])[0]);
+      // สแกนภาษาที่มีจริง
+      const list = await scanLanguages(state.root);
+      const codes = list.map((l) => l.code);
+      check('[76-3] สแกนเจอทั้งไทยและอังกฤษ', codes.includes('th') && codes.includes('en'), codes.join(','));
+      check('[76-4] แต่ละภาษามีชื่อให้แสดงในกล่องตั้งค่า', list.every((l) => l.nativeName || l.name || l.code));
+
+      // ★ หัวใจของข้อกำหนด: วางไฟล์ CSV ใหม่ในโปรเจกต์ → มีภาษาใหม่ทันที ไม่ต้อง build
+      const projLang = await kapi.join(state.root, 'languages');
+      await kapi.mkdir(projLang);
+      const zzFile = await kapi.join(projLang, 'k2_zz.csv');
+      await kapi.writeFile(zzFile, 'key,text\r\nmeta.code,zz\r\nmeta.nativeName,ภาษาทดสอบ\r\n'
+        + 'ui.panel.project,ZZPROJECT\r\n"ปิด",ZZCLOSE\r\n');
+      const list2 = await scanLanguages(state.root);
+      check('[76-5] วางไฟล์ k2_zz.csv แล้วสแกนเจอภาษาใหม่ทันที (ไม่ต้อง build)',
+            list2.some((l) => l.code === 'zz'), list2.map((l) => l.code).join(','));
+      check('[76-6] อ่านชื่อภาษาจากแถว meta.nativeName ในไฟล์',
+            (list2.find((l) => l.code === 'zz') || {}).nativeName === 'ภาษาทดสอบ');
+      await loadLanguage('zz', state.root);
+      check('[76-7] เปลี่ยนไปภาษาใหม่แล้ว t() ใช้คำแปลจาก CSV', tr('panel.project') === 'ZZPROJECT', tr('panel.project'));
+      check('[76-8] T`` ใช้คำแปลจาก CSV (คีย์ = ประโยคไทยต้นฉบับ)', T`ปิด` === 'ZZCLOSE', T`ปิด`);
+      check('[76-9] ข้อความที่ยังไม่แปล ตกกลับเป็นภาษาต้นฉบับ ไม่ใช่ค่าว่าง',
+            T`บันทึกทั้งหมด` === 'บันทึกทั้งหมด', T`บันทึกทั้งหมด`);
+      check('[76-10] แทนค่า ${} ในข้อความที่แปลแล้วยังทำงาน', T`บทที่ ${7}`.includes('7'), T`บทที่ ${7}`);
+      // ไฟล์ของโปรเจกต์ต้องชนะไฟล์ที่มากับโปรแกรม
+      const thProj = await kapi.join(projLang, 'k2_th.csv');
+      await kapi.writeFile(thProj, 'key,text\r\nmeta.code,th\r\nmeta.nativeName,ไทย\r\nui.panel.project,ทับของโปรแกรม\r\n');
+      await loadLanguage('th', state.root);
+      check('[76-11] ไฟล์ภาษาของโปรเจกต์ทับของที่มากับโปรแกรม', tr('panel.project') === 'ทับของโปรแกรม', tr('panel.project'));
+      check('[76-12] คีย์ที่ไฟล์โปรเจกต์ไม่มี ยังได้จากไฟล์ของโปรแกรม', T`ปิด` === 'ปิด', T`ปิด`);
+      await kapi.remove(zzFile); await kapi.remove(thProj);
+      await loadLanguage('th', state.root);
+      check('[76-13] ลบไฟล์ทิ้งแล้วกลับมาใช้ของโปรแกรมตามเดิม', tr('panel.project') !== 'ทับของโปรแกรม');
+
+      // ไม่มีข้อความไทยฮาร์ดโค้ดหลงเหลือใน UI ที่แปลไม่ได้ — วัดจากจำนวน msgid ที่ระบบรู้จัก
+      const tbl = I.getTable();
+      const thKeys = Object.keys(tbl).filter((k) => /[฀-๿]/.test(k));
+      check('[76-14] ตารางคำแปลมีประโยคจากซอร์สเกิน 1,000 รายการ', thKeys.length > 1000, thKeys.length);
+    }
+
+    // ---- [alpha.76] กล่อง "เกี่ยวกับ" ต้องมีเครดิตครบ ----
+    {
+      document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+      check('[76-15] ตารางเครดิตมีหมวดอย่างน้อย 4 หมวด', CREDITS.length >= 4, CREDITS.length);
+      const flatCr = CREDITS.flatMap((g) => g.items);
+      check('[76-16] ทุกแถวเครดิตมีชื่อและคำอธิบาย', flatCr.every((i) => i.name && i.what),
+            JSON.stringify(flatCr.find((i) => !i.name || !i.what) || ''));
+      const names = flatCr.map((i) => i.name).join(' | ');
+      check('[76-17] ให้เครดิต Claude ที่เขียนโค้ด', /Claude/.test(names), names.slice(0, 120));
+      check('[76-18] ให้เครดิต DeepSeek', /DeepSeek/.test(names));
+      for (const lib of ['Electron', 'ProseMirror', 'Fabric.js', 'pdf-lib', 'JSZip', 'Fuse.js', 'esbuild', 'Courier Prime']) {
+        check('[76-19] เครดิตมี ' + lib, names.includes(lib), names);
+      }
+      const ov = aboutDialog();
+      await new Promise((r) => setTimeout(r, 20));
+      const rows = ov.querySelectorAll('.k-credit-row');
+      check('[76-20] กล่องเกี่ยวกับวาดแถวเครดิตครบทุกแถว', rows.length === flatCr.length, rows.length + ' vs ' + flatCr.length);
+      const txt = ov.textContent;
+      check('[76-21] กล่องเกี่ยวกับพูดถึง Claude + DeepSeek', txt.includes('Claude') && txt.includes('DeepSeek'));
+      check('[76-25] กล่องเกี่ยวกับโชว์เลขรุ่นจริง (preload sandbox อ่าน package.json ไม่ได้)',
+            /alpha\.\d+/.test(txt), APP_VERSION);
+      check('[76-22] แสดงสัญญาอนุญาตของไลบรารี', ov.querySelectorAll('.k-credit-lic').length >= 8,
+            ov.querySelectorAll('.k-credit-lic').length);
+      // "มองเห็นจริงไหม" ต้องวัด opacity/visibility/ขนาด ไม่ใช่แค่ display (บทเรียน K-1)
+      const first = rows[0], cs = getComputedStyle(first), r = first.getBoundingClientRect();
+      check('[76-23] แถวเครดิตมองเห็นได้จริง (opacity/visibility/ขนาด)',
+            cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.5 && r.width > 10 && r.height > 4,
+            `${cs.display}/${cs.visibility}/${cs.opacity}/${r.width}x${r.height}`);
+      const cr = ov.querySelector('.k-credits');
+      try { await kapi.testShot('/tmp/k2-about.png'); } catch {}
+      check('[76-24] รายการเครดิตยาวแล้วเลื่อนในตัวเอง ไม่ดันกล่องล้นจอ',
+            getComputedStyle(cr).overflowY === 'auto' && ov.querySelector('.k-dialog').getBoundingClientRect().bottom <= innerHeight + 2,
+            ov.querySelector('.k-dialog').getBoundingClientRect().bottom + ' vs ' + innerHeight);
+      ov.remove();
     }
 
     // ---- Split View (ข้อ 40): ต้องเห็นบนจอจริง + ลากปรับสัดส่วนได้ ----
@@ -19492,31 +19669,48 @@ async function runTest(projectPath) {
         }
 
         // ---- [r3-4] Localizer CSV (ทางเดินจริงในแอป ไม่ใช่แค่ unit test) ----
+        //      [alpha.76] ไฟล์ภาษาเป็น CSV แล้ว — นำเข้า/ส่งออกต้องเขียน k2_<code>.csv ไม่ใช่ .json
         {
-          const th4 = { ui: { app: { title: 'คิเลียน' }, hint: 'สั้น, ปานกลาง' } };
-          const en4 = { ui: { app: { title: 'Killian' }, hint: 'short, medium' } };
-          const csv4 = jsonToCsv(th4, en4);
-          check('[r3-4] CSV มี BOM (Excel บน Windows อ่านไทยได้)', csv4.charCodeAt(0) === 0xfeff);
-          const back4 = csvToJson(csv4);
-          check('[r3-4] round-trip ไทยกลับมาครบ รวมค่าที่มีคอมมา',
-                back4.th.ui.hint === 'สั้น, ปานกลาง', JSON.stringify(back4.th));
-          const mg4 = mergeStrings({ ui: { a: 'เก่า', b: 'คงเดิม' } }, { ui: { a: 'ใหม่' } });
-          check('[r3-4] นำเข้าแบบรวม — คีย์ที่ไม่มีใน CSV ต้องไม่หาย',
-                mg4.merged.ui.b === 'คงเดิม' && mg4.merged.ui.a === 'ใหม่');
-          // เขียนไฟล์จริงแล้วนำเข้ากลับผ่านฟังก์ชันของแอป
+          const csvIn = '\ufeff' + ['key,th,en',
+            '"ui.app.ready","\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e41\u0e25\u0e49\u0e27\u0e08\u0e49\u0e32","Ready!"',
+            '"\u0e21\u0e35, \u0e04\u0e2d\u0e21\u0e21\u0e32","\u0e21\u0e35, \u0e04\u0e2d\u0e21\u0e21\u0e32","has, comma"',
+            '# \u0e41\u0e16\u0e27\u0e04\u0e2d\u0e21\u0e40\u0e21\u0e19\u0e15\u0e4c,,',
+          ].join('\r\n') + '\r\n';
           const csvPath = await kapi.join(state.root, 'k2-lang-test.csv');
-          await kapi.writeFile(csvPath, jsonToCsv({ ui: { app: { ready: 'พร้อมแล้วจ้า' } } },
-                                                  { ui: { app: { ready: 'Ready!' } } }));
+          await kapi.writeFile(csvPath, csvIn);
           const res4 = await importLanguageCsv(csvPath);
-          check('[r3-4] นำเข้า CSV ผ่านคำสั่งของแอปได้', !!res4 && res4.keys.length === 1,
+          check('[r3-4] นำเข้า CSV ผ่านคำสั่งของแอปได้', !!res4 && res4.keys.length === 2,
                 JSON.stringify(res4));
-          const wroteTh = await kapi.readJson(await kapi.join(state.root, 'languages', 'th.json'));
-          check('[r3-4] เขียนคำแปลลง <โปรเจกต์>/languages/th.json',
-                wroteTh.ui.app.ready === 'พร้อมแล้วจ้า', JSON.stringify(wroteTh.ui.app));
-          check('[r3-4] คีย์เดิมของไฟล์ภาษาไม่ถูกลบทิ้ง',
-                Object.keys(wroteTh.ui).length > 1 || Object.keys(wroteTh.ui.app).length >= 1);
+          check('[r3-4] แถวคอมเมนต์ # ไม่ถูกนับเป็นคีย์', !!res4 && res4.skipped === 1, res4 && res4.skipped);
+          check('[r3-4] นำเข้าครบทั้งสองภาษาในไฟล์เดียว',
+                !!res4 && res4.langs.includes('th') && res4.langs.includes('en'), JSON.stringify(res4 && res4.langs));
+          const wroteTh = await kapi.readFile(await kapi.join(state.root, 'languages', 'k2_th.csv'));
+          const tblTh = csvToTable(wroteTh);
+          check('[r3-4] เขียนคำแปลลง <โปรเจกต์>/languages/k2_th.csv',
+                tblTh['ui.app.ready'] === 'พร้อมแล้วจ้า', JSON.stringify(tblTh['ui.app.ready']));
+          check('[r3-4] ค่าที่มีคอมมาถูกครอบเครื่องหมายคำพูด อ่านกลับได้ครบ',
+                tblTh['มี, คอมมา'] === 'มี, คอมมา', tblTh['มี, คอมมา']);
+          check('[r3-4] ไฟล์ที่เขียนออกมามีแถว meta.code ให้ตัวสแกนอ่าน', tblTh['meta.code'] === 'th');
+          const tblEn = csvToTable(await kapi.readFile(await kapi.join(state.root, 'languages', 'k2_en.csv')));
+          check('[r3-4] คอลัมน์ en เข้าไฟล์ของตัวเอง', tblEn['ui.app.ready'] === 'Ready!', tblEn['ui.app.ready']);
+          // นำเข้ารอบสองต้อง "รวมทับ" ไม่ลบคีย์เดิม
+          await kapi.writeFile(csvPath, '\ufeff' + 'key,th\r\n"ui.app.saved","เซฟแล้ว"\r\n');
+          await importLanguageCsv(csvPath);
+          const tbl2 = csvToTable(await kapi.readFile(await kapi.join(state.root, 'languages', 'k2_th.csv')));
+          check('[r3-4] นำเข้าแบบรวม — คีย์ที่ไม่มีใน CSV รอบใหม่ต้องไม่หาย',
+                tbl2['ui.app.ready'] === 'พร้อมแล้วจ้า' && tbl2['ui.app.saved'] === 'เซฟแล้ว',
+                JSON.stringify([tbl2['ui.app.ready'], tbl2['ui.app.saved']]));
+          check('[r3-4] คำแปลของโปรเจกต์มีผลทันทีโดยไม่ต้องรีสตาร์ต',
+                tr('app.ready') === 'พร้อมแล้วจ้า', tr('app.ready'));
           check('[r3-4] เมนู "เครื่องมือ" มีคำสั่งส่งออก/นำเข้า CSV (บทเรียน 14b)',
                 typeof exportLanguageCsv === 'function' && typeof importLanguageCsv === 'function');
+          // เก็บกวาด — ไม่งั้นเทสข้ออื่นที่วัดข้อความไทยจะเจอคำแปลที่ยัดไว้
+          await kapi.remove(await kapi.join(state.root, 'languages', 'k2_th.csv'));
+          await kapi.remove(await kapi.join(state.root, 'languages', 'k2_en.csv'));
+          await kapi.remove(csvPath);
+          await loadLanguage('th', state.root);
+          check('[r3-4] ลบไฟล์ของโปรเจกต์แล้วกลับไปใช้คำแปลที่มากับโปรแกรม',
+                tr('app.ready') !== 'พร้อมแล้วจ้า', tr('app.ready'));
         }
 
         // ---- [r3-5] แผง AI วิเคราะห์ ----
@@ -20904,6 +21098,9 @@ async function runTest(projectPath) {
         const shot = await kapi.testShotTearOff('timeline', '/tmp/k2-tearoff.png');
         check('[67] ถ่ายภาพหน้าต่างแผงได้ (หน้าต่างมีตัวตนจริงและวาดเสร็จแล้ว)', shot === true);
         // ...และลูกรายงานสภาพตัวเองกลับมา (ช่องเดียวที่หน้าต่างหลักรู้ว่าข้างในลูกพังหรือเปล่า)
+        // [alpha.76] **วนรอเงื่อนไขจริง อย่ารอเวลาตายตัว** — ตัว packaged บูตหน้าต่างลูกช้ากว่าตอน dev
+        // (อ่านจาก asar + โหลดตารางคำแปล) เคยพลาดหลุด 1400ms ที่เคยพอในโหมด dev
+        await until62(() => !!state._panelWinHealth, 60, 100);
         const hz = state._panelWinHealth;
         check('[67] หน้าต่างแผงรายงานสภาพกลับมา', !!hz && hz.id === 'timeline', JSON.stringify(hz));
         check('[67] แผงในหน้าต่างลูกวาดเนื้อจริง ไม่ใช่กล่องเปล่า', !!hz && hz.drawn === true);

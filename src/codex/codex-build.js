@@ -9,11 +9,12 @@
 //
 // ผลลัพธ์เป็นเว็บสถิตล้วน (ไม่มี build step ไม่มี CDN) เปิดจากไฟล์ก็ใช้ได้ ตามหลัก "offline 100%"
 
+import { T } from '../i18n.js';
 export const CODEX_VERSION = 1;
 
 /** หมวดมาตรฐาน → ชื่อไทย (หมวดที่ผู้ใช้สร้างเองใช้ชื่อของตัวเอง) */
 const CAT_TH = {
-  characters: 'ตัวละคร', locations: 'สถานที่', items: 'สิ่งของ', lore: 'ตำนาน/ความรู้',
+  characters: T`ตัวละคร`, locations: T`สถานที่`, items: T`สิ่งของ`, lore: T`ตำนาน/ความรู้`,
 };
 export const catLabel = (c, labels) => (labels && labels[c]) || CAT_TH[c] || c;
 
@@ -117,7 +118,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
 
 function page(title, siteTitle, bodyHtml, opts = {}) {
   const depth = opts.home || 'index.html';
-  return `<!DOCTYPE html>
+  return T`<!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — ${esc(siteTitle)}</title>
@@ -152,22 +153,22 @@ ${img ? `<img src="${esc(img)}" alt="${esc(e.name)}">` : ''}
 ${rows.length ? `<table>${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
 </aside>`;
 
-  const relSec = rels.length ? `<div class="sec"><h2>ความสัมพันธ์</h2><ul class="plain">${
+  const relSec = rels.length ? T`<div class="sec"><h2>ความสัมพันธ์</h2><ul class="plain">${
     rels.map((r) => {
       const label = esc(r.name || r.target.split(/[\\/]/).pop().replace(/\.json$/i, ''));
       const link = r.page ? `<a href="${esc(r.page)}">${label}</a>` : label;
-      return `<li>${esc(r.role || 'เกี่ยวข้องกับ')} — ${link}</li>`;
+      return `<li>${esc(r.role || T`เกี่ยวข้องกับ`)} — ${link}</li>`;
     }).join('')}</ul></div>` : '';
 
-  const seenSec = seen.length ? `<div class="sec"><h2>ปรากฏในฉาก</h2><ul class="plain">${
+  const seenSec = seen.length ? T`<div class="sec"><h2>ปรากฏในฉาก</h2><ul class="plain">${
     seen.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : '';
 
   const bodyText = ent.body || ent.description || ent.desc || '';
   const main = `<article>
 <span class="cat-pill">${esc(catLabel(e.cat, labels))}</span>
 <h1>${esc(e.name)}</h1>
-${(e.aliases || []).length ? `<div class="aka">หรือรู้จักในชื่อ: ${esc((e.aliases || []).join(' · '))}</div>` : ''}
-<div class="body">${paragraphs(bodyText) || '<p class="empty">(ยังไม่มีคำอธิบาย)</p>'}</div>
+${(e.aliases || []).length ? T`<div class="aka">หรือรู้จักในชื่อ: ${esc((e.aliases || []).join(' · '))}</div>` : ''}
+<div class="body">${paragraphs(bodyText) || T`<p class="empty">(ยังไม่มีคำอธิบาย)</p>`}</div>
 ${relSec}${seenSec}
 </article>`;
 
@@ -180,14 +181,14 @@ export function indexPage(entities, ctx) {
   const cards = entities.map((e) => `<a class="card" href="${esc(pages.get(e.path))}" data-n="${
     esc((e.name + ' ' + (e.aliases || []).join(' ') + ' ' + catLabel(e.cat, labels)).toLowerCase())}">
 <div class="n">${esc(e.name)}</div><div class="d">${esc(catLabel(e.cat, labels))}</div></a>`).join('\n');
-  const body = `<input class="q" id="q" placeholder="ค้นหาในสารานุกรม… (${entities.length} รายการ)">
+  const body = T`<input class="q" id="q" placeholder="ค้นหาในสารานุกรม… (${entities.length} รายการ)">
 <div class="grid" id="g">${cards}</div>
 <script>
 var q=document.getElementById('q'),g=document.getElementById('g');
 q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();
 [].forEach.call(g.children,function(c){c.style.display=!v||c.dataset.n.indexOf(v)>=0?'':'none';});});
 </script>`;
-  return page('หน้าแรก', siteTitle, body, { nav });
+  return page(T`หน้าแรก`, siteTitle, body, { nav });
 }
 
 /** หน้าหมวด */
@@ -197,8 +198,8 @@ export function categoryPage(cat, entities, ctx) {
   const list = entities.length
     ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc(pages.get(e.path))}">
 <div class="n">${esc(e.name)}</div><div class="d">${esc((e.aliases || []).join(' · '))}</div></a>`).join('')}</div>`
-    : '<p class="empty">(ยังไม่มีรายการในหมวดนี้)</p>';
-  return page(label, siteTitle, `<article><h1>${esc(label)}</h1><p class="d">${entities.length} รายการ</p></article><div class="sec">${list}</div>`, { nav });
+    : T`<p class="empty">(ยังไม่มีรายการในหมวดนี้)</p>`;
+  return page(label, siteTitle, T`<article><h1>${esc(label)}</h1><p class="d">${entities.length} รายการ</p></article><div class="sec">${list}</div>`, { nav });
 }
 
 /**
@@ -213,7 +214,7 @@ export function buildCodexSite(entities, opts = {}) {
   const pages = assignPages(list);
   const cats = [...new Set(list.map((e) => e.cat))];
   const labels = opts.labels || {};
-  const nav = [{ href: 'index.html', label: 'หน้าแรก' },
+  const nav = [{ href: 'index.html', label: T`หน้าแรก` },
                ...cats.map((c) => ({ href: 'cat-' + slug(c) + '.html', label: catLabel(c, labels) }))];
   const ctx = { pages, siteTitle: opts.siteTitle || 'Codex', nav, labels, mentions: opts.mentions || {} };
 

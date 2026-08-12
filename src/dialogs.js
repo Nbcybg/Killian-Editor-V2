@@ -1,10 +1,12 @@
 // dialogs.js — กล่องโต้ตอบ: ตั้งค่าโปรเจกต์ · ประวัติเวอร์ชัน · changelog · ตัวดู log
+import { T } from './i18n.js';
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
          applyProseVars, proseFormat } from './app.js';
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
-import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
+import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
+         fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
          PAGE_BREAK_RULES, SP_STRINGS, mergeSpFormat, linesPerPage, formatLines,
@@ -18,7 +20,7 @@ import { SP_ELEMS, TAB_CYCLE } from './fountain.js';
 import { refreshDashboardIfOpen } from './dashboard.js';
 // refreshDashboardIfOpen — ใช้ต่อเมื่อ dashboard.js export ฟังก์ชันนี้
 const _refreshDash = () => { try { refreshDashboardIfOpen(); } catch {} };
-import { confirmBox } from './ui.js';
+import { ask, confirmBox } from './ui.js';
 import { parseMdFile } from './md.js';
 import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
@@ -48,7 +50,7 @@ function buildNetColorFields(box, s) {
       c.dataset.key = d.key;
       c.value = saved[d.key] || d.def;
       const txt = el('input'); txt.type = 'text'; txt.className = 'st-netcol-t';
-      txt.style.width = '84px'; txt.placeholder = d.cssVar ? 'ตามธีม' : d.def;
+      txt.style.width = '84px'; txt.placeholder = d.cssVar ? T`ตามธีม` : d.def;
       txt.value = saved[d.key] || '';
       // พิมพ์เลขสีเองก็ได้ · เว้นว่าง = ใช้ค่าเริ่มต้น/ตามธีม
       txt.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value; };
@@ -72,7 +74,7 @@ function buildNetColorFields(box, s) {
     if (!hint) return;
     const c2 = resolveNetControls({ orbitButton: orbit.value, panButton: pan.value });
     if (pan.value !== c2.panButton) pan.value = c2.panButton;   // ชนกัน = ถอยให้อัตโนมัติ
-    hint.textContent = 'คำอธิบายใต้ผังจะเป็น: ' + controlsHint(c2, true);
+    hint.textContent = T`คำอธิบายใต้ผังจะเป็น: ` + controlsHint(c2, true);
   };
   if (orbit) orbit.onchange = syncHint;
   if (pan) pan.onchange = syncHint;
@@ -119,7 +121,7 @@ export function settingsDialog(openTab) {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
-  box.innerHTML = `
+  box.innerHTML = T`
     <div class="k-dlg-title">${t('settings.title')} <span style="font-weight:normal;font-size:0.7em;color:#666">// [alpha.60 ข้อ 94] 🌐 = ระดับผู้ใช้ (ใช้ร่วมทุกโปรเจกต์) · 📁 = ระดับโปรเจกต์ (เฉพาะโปรเจกต์นี้)</span></div>
     <div class="k-set-tabs">
       <div class="k-set-tab on" data-p="gen">🌐 ${t('settings.general')}</div>
@@ -316,12 +318,15 @@ export function settingsDialog(openTab) {
     </div>
     <div class="k-set-page" data-p="lang">
       <div class="k-row"><label>${t('settings.languageSelect')}</label>
-        <select id="st-lang">
-          <option value="en">English</option>
-          <option value="th">ภาษาไทย</option>
-        </select>
+        <select id="st-lang"></select>
       </div>
-      <div class="k-hint" style="margin-top:10px">${t('settings.downloadLanguage')}</div>
+      <div class="k-hint" style="margin-top:10px">${T`ภาษาอ่านจาก **ชื่อไฟล์** ในโฟลเดอร์ languages — วางไฟล์ \`k2_<รหัสภาษา>.csv\` เพิ่ม (เช่น k2_ja.csv) แล้วเปิดโปรแกรมใหม่ ก็มีภาษานั้นเลย ไม่ต้องติดตั้งอะไร`}</div>
+      <div id="st-lang-dirs" class="k-hint" style="margin-top:6px; opacity:.7; font-size:11px"></div>
+      <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
+        <button id="st-lang-export" class="cmp-mini">${T`📤 ส่งออกไฟล์แปล (CSV)`}</button>
+        <button id="st-lang-folder" class="cmp-mini">${T`📁 เปิดโฟลเดอร์ภาษา`}</button>
+        <button id="st-lang-reload" class="cmp-mini">${T`↻ โหลดไฟล์ภาษาใหม่`}</button>
+      </div>
     </div>
     <div class="k-set-page" data-p="keys">
       <div class="k-hint" style="margin-bottom:10px">${t('settings.shortcutsHint')}</div>
@@ -352,12 +357,12 @@ export function settingsDialog(openTab) {
     const fs = q('#st-fontfamily'); if (!fs) return;
     const spFs = q('#st-spfontfamily');
     const builtin = [
-      { name: 'ค่าเริ่มต้น (Courier Prime 12pt)', value: '' },
-      { name: 'Courier Prime (ฝังมากับโปรแกรม)', value: DEFAULT_SCRIPT_FONT },
-      { name: 'Courier Thai Mono (ไทย · ฝังมากับโปรแกรม)', value: '"Courier Thai Mono", "Courier Prime", monospace' },
-      { name: 'Courier Thai Proportional (ไทย · ฝังมากับโปรแกรม)', value: '"Courier Thai Proportional", "Courier Prime", monospace' },
+      { name: T`ค่าเริ่มต้น (Courier Prime 12pt)`, value: '' },
+      { name: T`Courier Prime (ฝังมากับโปรแกรม)`, value: DEFAULT_SCRIPT_FONT },
+      { name: T`Courier Thai Mono (ไทย · ฝังมากับโปรแกรม)`, value: '"Courier Thai Mono", "Courier Prime", monospace' },
+      { name: T`Courier Thai Proportional (ไทย · ฝังมากับโปรแกรม)`, value: '"Courier Thai Proportional", "Courier Prime", monospace' },
       // [alpha.60r3a] ฟอนต์ระบบที่วางวรรณยุกต์ไทยได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ แต่ถ้าเครื่องมีก็ใช้ได้เลย
-      { name: 'Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)', value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+      { name: T`Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)`, value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
       { name: 'Thonburi (macOS)', value: 'Thonburi, "Leelawadee UI", sans-serif' },
       { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
       { name: 'Sarabun', value: 'Sarabun, sans-serif' },
@@ -374,7 +379,7 @@ export function settingsDialog(openTab) {
         const fontFiles = await kapi.listFiles(fontDir);
         for (const f of fontFiles) {
           const name = f.replace(/\.[^.]+$/, '');
-          builtin.push({ name: name + ' (โปรเจกต์)', value: '"' + name + '", sans-serif' });
+          builtin.push({ name: name + T` (โปรเจกต์)`, value: '"' + name + '", sans-serif' });
         }
       }
     } catch {}
@@ -390,7 +395,7 @@ export function settingsDialog(openTab) {
         const opt = document.createElement('option');
         opt.value = f.value;
         // ฟอนต์บทหนังค่าว่าง = Courier New ตามมาตรฐานบท (ไม่ใช่ Segoe UI แบบนิยาย)
-        opt.textContent = f.value === '' ? 'ค่าเริ่มต้นบทหนัง (Courier Prime 12pt)' : f.name;
+        opt.textContent = f.value === '' ? T`ค่าเริ่มต้นบทหนัง (Courier Prime 12pt)` : f.name;
         if (f.value === (origSpFontFamily || '')) opt.selected = true;
         spFs.appendChild(opt);
       }
@@ -461,17 +466,17 @@ export function settingsDialog(openTab) {
   const origProse = JSON.parse(JSON.stringify(s.prose || {}));
   const P = mergeProseFormat(s.prose);
   const PROSE_FONTS = [
-    { name: 'ค่าเริ่มต้นนิยาย (ตัวพิมพ์สัดส่วน)', value: '' },
+    { name: T`ค่าเริ่มต้นนิยาย (ตัวพิมพ์สัดส่วน)`, value: '' },
     { name: 'Sarabun', value: '"Sarabun", sans-serif' },
     { name: 'TH Sarabun New', value: '"TH Sarabun New", sans-serif' },
-    { name: 'Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)', value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+    { name: T`Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)`, value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
     { name: 'Noto Serif Thai', value: '"Noto Serif Thai", serif' },
     { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
     { name: 'Leelawadee UI', value: '"Leelawadee UI", sans-serif' },
     { name: 'Georgia', value: 'Georgia, serif' },
     { name: 'Times New Roman', value: '"Times New Roman", serif' },
     { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
-    { name: 'Courier Prime (แบบบทภาพยนตร์)', value: DEFAULT_SCRIPT_FONT },
+    { name: T`Courier Prime (แบบบทภาพยนตร์)`, value: DEFAULT_SCRIPT_FONT },
   ];
   const fillFontSel = (sel, val) => {
     if (!sel) return;
@@ -493,7 +498,7 @@ export function settingsDialog(openTab) {
   q('#st-pr-align').value = P.align;
   q('#st-pr-hcolor').value = P.headingColor || '';
   q('#st-pr-hnum').checked = !!P.headingNumber;
-  q('#st-pr-hnumfmt').value = P.headingNumberFormat || 'บทที่ {n}';
+  q('#st-pr-hnumfmt').value = P.headingNumberFormat || T`บทที่ {n}`;
   q('#st-pr-hnumlv').value = P.headingNumberLevel;
   q('#st-pr-qi').checked = !!P.quote.italic;
   q('#st-pr-qb').checked = !!P.quote.border;
@@ -527,7 +532,7 @@ export function settingsDialog(openTab) {
       td(mkNum(h.before, 0, 6, 0.1, (v) => { h.before = Number.isFinite(v) ? v : 0; }));
       td(mkNum(h.after, 0, 6, 0.1, (v) => { h.after = Number.isFinite(v) ? v : 0; }));
       const al = document.createElement('select');
-      for (const [v, lb] of [['', 'ตามเนื้อเรื่อง'], ['left', 'ชิดซ้าย'], ['center', 'กึ่งกลาง'], ['right', 'ชิดขวา']]) {
+      for (const [v, lb] of [['', T`ตามเนื้อเรื่อง`], ['left', T`ชิดซ้าย`], ['center', T`กึ่งกลาง`], ['right', T`ชิดขวา`]]) {
         const o = document.createElement('option'); o.value = v; o.textContent = lb;
         if (v === (h.align || '')) o.selected = true; al.appendChild(o);
       }
@@ -548,7 +553,7 @@ export function settingsDialog(openTab) {
     P.headingFont = q('#st-pr-hfont').value || '';
     P.headingColor = q('#st-pr-hcolor').value.trim();
     P.headingNumber = q('#st-pr-hnum').checked;
-    P.headingNumberFormat = q('#st-pr-hnumfmt').value || 'บทที่ {n}';
+    P.headingNumberFormat = q('#st-pr-hnumfmt').value || T`บทที่ {n}`;
     P.headingNumberLevel = parseInt(q('#st-pr-hnumlv').value, 10) || 1;
     P.quote.italic = q('#st-pr-qi').checked;
     P.quote.border = q('#st-pr-qb').checked;
@@ -564,8 +569,8 @@ export function settingsDialog(openTab) {
     const paper = PAPER_SIZES[W.paperSize] || PAPER_SIZES.letter;
     const pp = W.paperSize === 'custom' ? W.customPaper : paper;
     q('#st-pr-info').textContent =
-      `≈ ${proseLinesPerPage(f, pp, W.margins)} บรรทัด/หน้า · ` +
-      `≈ ${proseCharsPerLine(f, pp, W.margins)} ตัวอักษร/บรรทัด (โดยประมาณ)`;
+      T`≈ ${proseLinesPerPage(f, pp, W.margins)} บรรทัด/หน้า · ` +
+      T`≈ ${proseCharsPerLine(f, pp, W.margins)} ตัวอักษร/บรรทัด (โดยประมาณ)`;
   };
   for (const id of ['#st-pr-font', '#st-pr-pt', '#st-pr-lh', '#st-pr-para', '#st-pr-indent',
                     '#st-pr-indent-h', '#st-pr-align', '#st-pr-hfont', '#st-pr-hcolor',
@@ -627,9 +632,9 @@ export function settingsDialog(openTab) {
                                lineHeight: W.spLineHeight });
     q('#st-paper-custom').style.display = W.paperSize === 'custom' ? '' : 'none';
     q('#st-page-info').textContent =
-      `พื้นที่พิมพ์ ${(fmt.paper.width - W.margins.left - W.margins.right).toFixed(2)} × ` +
-      `${(fmt.paper.height - W.margins.top - W.margins.bottom).toFixed(2)} นิ้ว · ` +
-      `${formatLines(fmt)} บรรทัด/หน้า`;
+      T`พื้นที่พิมพ์ ${(fmt.paper.width - W.margins.left - W.margins.right).toFixed(2)} × ` +
+      T`${(fmt.paper.height - W.margins.top - W.margins.bottom).toFixed(2)} นิ้ว · ` +
+      T`${formatLines(fmt)} บรรทัด/หน้า`;
   };
   paperSel.onchange = () => { W.paperSize = paperSel.value; pageInfo(); previewPage(); };
   const numIn = (sel, get, set, step) => {
@@ -646,7 +651,7 @@ export function settingsDialog(openTab) {
     numIn('#st-mg-' + side, () => W.margins[side], (v) => { W.margins[side] = v; syncMarginPreset(); });
   // ---- [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป ----
   const mgPreset = q('#st-mg-preset');
-  mgPreset.append(el('option', '', '— ตั้งเอง (Custom) —'));
+  mgPreset.append(el('option', '', T`— ตั้งเอง (Custom) —`));
   for (const [key, label] of marginPresetOptions()) {
     const o = el('option', '', label); o.value = key; mgPreset.append(o);
   }
@@ -762,9 +767,9 @@ export function settingsDialog(openTab) {
   // ---- [แก้ไข feature 1] ปุ่มสลับ element ตั้งเองได้ + สวิตช์เปิด/ปิด ----
   q('#st-spcycle-on').checked = W.cycleOn;
   q('#st-spcycle-on').onchange = () => { W.cycleOn = q('#st-spcycle-on').checked; };
-  const KEY_LABELS = { enter: 'ไป element ถัดไป (เดิม Enter)',
-                       tab: 'สลับไปข้างหน้า (เดิม Tab)',
-                       shiftTab: 'สลับย้อนกลับ (เดิม Shift+Tab)' };
+  const KEY_LABELS = { enter: T`ไป element ถัดไป (เดิม Enter)`,
+                       tab: T`สลับไปข้างหน้า (เดิม Tab)`,
+                       shiftTab: T`สลับย้อนกลับ (เดิม Shift+Tab)` };
   function renderSpKeys() {
     const host = q('#st-spkeys'); host.innerHTML = '';
     for (const dir of ['enter', 'tab', 'shiftTab']) {
@@ -772,11 +777,11 @@ export function settingsDialog(openTab) {
       row.append(el('span', 'k-key-label', KEY_LABELS[dir]));
       const accel = el('span', 'k-key-accel', spKeyLabel(W.keys[dir]));
       row.append(accel);
-      const edit = el('button', 'k-key-btn', 'เปลี่ยน');
+      const edit = el('button', 'k-key-btn', T`เปลี่ยน`);
       const reset = el('button', 'k-key-btn', '↺');
-      reset.title = 'คืนค่าเริ่มต้น';
+      reset.title = T`คืนค่าเริ่มต้น`;
       edit.onclick = () => {
-        accel.textContent = 'กดปุ่มที่ต้องการ…'; accel.classList.add('rec');
+        accel.textContent = T`กดปุ่มที่ต้องการ…`; accel.classList.add('rec');
         const grab = (e) => {
           e.preventDefault(); e.stopPropagation();
           if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
@@ -864,20 +869,20 @@ export function settingsDialog(openTab) {
     applyLangFonts(W.langFonts, langFontUrl);
     const usable = W.langFonts.filter((r) => r.enabled !== false && (r.builtin || r.file || r.family));
     q('#st-fonts-preview').textContent = usable.length
-      ? `ใช้อยู่ ${usable.length} แถว — ตัวอย่าง (ไทยผสมอังกฤษ):`
-      : 'ยังไม่ได้กำหนดแถวไหน — ใช้ฟอนต์ตามค่าในแท็บ "การเขียน"';
+      ? T`ใช้อยู่ ${usable.length} แถว — ตัวอย่าง (ไทยผสมอังกฤษ):`
+      : T`ยังไม่ได้กำหนดแถวไหน — ใช้ฟอนต์ตามค่าในแท็บ "การเขียน"`;
     const sample = q('#st-fonts-sample');
-    sample.textContent = 'INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123';
+    sample.textContent = T`INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123`;
     sample.style.fontFamily = `"${LANG_FAMILY}", ` + (q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT);
   };
   function renderFonts() {
     fontsHost.innerHTML = '';
-    if (!W.langFonts.length) fontsHost.append(el('div', 'cmp-empty', '(ยังไม่มีแถว — กด "เพิ่มแถว")'));
+    if (!W.langFonts.length) fontsHost.append(el('div', 'cmp-empty', T`(ยังไม่มีแถว — กด "เพิ่มแถว")`));
     W.langFonts.forEach((row, i) => {
       const r = el('div', 'k-font-row');
       // เปิด/ปิดแถว
       const on = el('input'); on.type = 'checkbox'; on.checked = row.enabled !== false;
-      on.title = 'ใช้แถวนี้';
+      on.title = T`ใช้แถวนี้`;
       on.onchange = () => { row.enabled = on.checked; previewFonts(); };
       r.append(on);
       // ภาษา / ช่วงอักขระ
@@ -885,7 +890,7 @@ export function settingsDialog(openTab) {
       for (const p of SCRIPT_PRESETS) {
         const o = el('option', null, p.label); o.value = p.range; scriptSel.append(o);
       }
-      const custom = el('option', null, 'กำหนดช่วงเอง…'); custom.value = '__custom'; scriptSel.append(custom);
+      const custom = el('option', null, T`กำหนดช่วงเอง…`); custom.value = '__custom'; scriptSel.append(custom);
       const known = SCRIPT_PRESETS.find((p) => p.range === row.range);
       scriptSel.value = known ? known.range : '__custom';
       const rangeIn = el('input', 'k-font-range');
@@ -907,14 +912,14 @@ export function settingsDialog(openTab) {
       // ฟอนต์: ฝังมากับโปรแกรม / ไฟล์ในโปรเจกต์ / ชื่อฟอนต์ที่ลงในเครื่อง
       const fontSel = el('select', 'k-dlg-select k-font-pick');
       const addOpt = (val, text) => { const o = el('option', null, text); o.value = val; fontSel.append(o); };
-      addOpt('', '— ใช้ฟอนต์ที่ลงในเครื่อง (พิมพ์ชื่อ) —');
+      addOpt('', T`— ใช้ฟอนต์ที่ลงในเครื่อง (พิมพ์ชื่อ) —`);
       for (const b of BUILTIN_FONT_FILES) addOpt('b:' + b.file, b.label);
       // [alpha.60r3a] ฟอนต์ไทยของระบบ (Ayuthaya ฯลฯ) — ใช้ได้เมื่อเครื่องมีติดตั้งอยู่แล้ว
       for (const f of SYSTEM_THAI_FONTS) addOpt('f:' + f.family, f.label);
-      for (const f of projectFonts) addOpt('p:' + f, f + ' (โปรเจกต์)');
+      for (const f of projectFonts) addOpt('p:' + f, f + T` (โปรเจกต์)`);
       fontSel.value = row.builtin ? 'b:' + row.builtin : (row.file ? 'p:' + row.file : '');
       const famIn = el('input', 'k-font-family');
-      famIn.value = row.family; famIn.placeholder = 'เช่น TH Sarabun New';
+      famIn.value = row.family; famIn.placeholder = T`เช่น TH Sarabun New`;
       famIn.style.display = fontSel.value ? 'none' : '';
       fontSel.onchange = () => {
         const v = fontSel.value;
@@ -926,7 +931,7 @@ export function settingsDialog(openTab) {
       famIn.oninput = () => { row.family = famIn.value; previewFonts(); };
       r.append(fontSel, famIn);
       // ลำดับ + ลบ
-      const up = el('button', 'k-key-btn', '↑'); up.title = 'เลื่อนขึ้น';
+      const up = el('button', 'k-key-btn', '↑'); up.title = T`เลื่อนขึ้น`;
       up.onclick = () => { if (i > 0) { const [x] = W.langFonts.splice(i, 1); W.langFonts.splice(i - 1, 0, x); renderFonts(); previewFonts(); } };
       const del = el('button', 'k-danger-btn', '✕');
       del.onclick = () => { W.langFonts.splice(i, 1); renderFonts(); previewFonts(); };
@@ -936,7 +941,7 @@ export function settingsDialog(openTab) {
     previewFonts();
   }
   q('#st-fonts-add').onclick = () => {
-    W.langFonts.push({ id: 'f' + W.langFonts.length, label: 'ไทย', range: 'U+0E00-0E7F',
+    W.langFonts.push({ id: 'f' + W.langFonts.length, label: T`ไทย`, range: 'U+0E00-0E7F',
                        builtin: 'CourierThaiMono.ttf', file: '', family: '', enabled: true });
     renderFonts();
   };
@@ -954,8 +959,8 @@ export function settingsDialog(openTab) {
       W.langFonts.push({ id: 'f' + W.langFonts.length, label: '', range: '',
                          builtin: '', file: name, family: '', enabled: true });
       renderFonts();
-      setStatus('นำเข้าฟอนต์ ' + name + ' แล้ว — เลือกช่วงอักขระที่จะใช้');
-    } catch (e) { log('error', 'นำเข้าฟอนต์ล้มเหลว', e); setStatus('นำเข้าฟอนต์ไม่สำเร็จ'); }
+      setStatus(T`นำเข้าฟอนต์ ` + name + T` แล้ว — เลือกช่วงอักขระที่จะใช้`);
+    } catch (e) { log('error', T`นำเข้าฟอนต์ล้มเหลว`, e); setStatus(T`นำเข้าฟอนต์ไม่สำเร็จ`); }
   };
   (async () => {
     try {
@@ -966,7 +971,47 @@ export function settingsDialog(openTab) {
   })();
 
   // ---- ภาษา ----
-  if (q('#st-lang')) q('#st-lang').value = i18n.lang || 'en';
+  // [alpha.76] รายการภาษา = ผลสแกนไฟล์ `k2_<code>.csv` จริง ๆ ไม่ใช่รายชื่อฮาร์ดโค้ด
+  const fillLangs = async () => {
+    const sel = q('#st-lang'); if (!sel) return;
+    let list = [];
+    try { list = await scanLanguages(state.root); } catch {}
+    // ชื่อภาษาเขียนด้วยภาษานั้นเอง ("ไทย" ต้องเป็น "ไทย" ในทุกภาษา) จึงไม่ผ่านระบบแปล
+    if (!list.length) list = ['th', 'en'].map((c) => ({ code: c, nativeName: fallbackLangName(c) }));
+    sel.innerHTML = '';
+    for (const l of list) {
+      const o = document.createElement('option');
+      o.value = l.code;
+      o.textContent = (l.nativeName || fallbackLangName(l.code)) + (l.name && l.name !== l.nativeName ? ' (' + l.name + ')' : '') + ' · ' + l.code;
+      sel.append(o);
+    }
+    sel.value = i18n.lang || 'th';
+    if (!sel.value && list[0]) sel.value = list[0].code;
+    try {
+      const dirs = await kapi.langDirs(state.root || '');
+      const box = q('#st-lang-dirs');
+      if (box) box.textContent = T`ที่ค้นหาไฟล์ภาษา: ` + (dirs || []).join('  ·  ');
+    } catch {}
+  };
+  fillLangs();
+  if (q('#st-lang-folder')) q('#st-lang-folder').onclick = async () => {
+    try {
+      // เปิดที่ที่ **มีไฟล์อยู่จริง** — โฟลเดอร์แรกในลำดับอาจยังไม่ถูกสร้าง (โปรเจกต์ที่ไม่เคยแปลเอง)
+      const dirs = await kapi.langDirs(state.root || '');
+      const want = langFileName(i18n.lang || 'th');
+      let target = '';
+      for (const d of dirs) { const f = await kapi.join(d, want); if (await kapi.exists(f)) { target = f; break; } }
+      if (!target) { for (const d of dirs) if (await kapi.exists(d)) { target = d; break; } }
+      if (target) await kapi.revealInOS(target);
+      else setStatus(T`ยังไม่มีโฟลเดอร์ภาษา — กด "ส่งออกไฟล์แปล" เพื่อสร้างไฟล์ตั้งต้นก่อน`);
+    } catch (e) { log('warn', T`เปิดโฟลเดอร์ภาษาไม่ได้`, e); }
+  };
+  if (q('#st-lang-reload')) q('#st-lang-reload').onclick = async () => {
+    try { await kapi.langReload(); } catch {}          // main แคชเนื้อไฟล์ไว้ — ต้องบอกให้ทิ้งก่อน
+    await loadLanguage(q('#st-lang').value || i18n.lang, state.root);
+    await fillLangs(); setStatus(T`โหลดไฟล์ภาษาใหม่แล้ว`);
+  };
+  if (q('#st-lang-export')) q('#st-lang-export').onclick = () => exportLangCsv();
   const origLang = i18n.lang;
   const origLn = !!s.lineNumbers, origSpell = s.spellCheck !== false,
         origSpellDict = s.spellCheckDict !== false, origMention = s.autoMention !== false;
@@ -1129,7 +1174,7 @@ export function settingsDialog(openTab) {
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
         await kapi.writeGlobalSettings(globals);
-      } catch (e) { log('warn', 'บันทึก global settings ไม่สำเร็จ', e); }
+      } catch (e) { log('warn', T`บันทึก global settings ไม่สำเร็จ`, e); }
       applySettings();
       try { updatePageNumberHint(); refreshSpView(); } catch {}
       // [alpha.63r4] สี Story Network ที่เพิ่งตั้ง ต้องเห็นผลทันที ไม่ต้องปิด-เปิดแอป
@@ -1139,13 +1184,22 @@ export function settingsDialog(openTab) {
       $('#projname').textContent = m.title;
       $('#tb-title').textContent = m.title + ' — Killian 2';
       // แดชบอร์ดเป็นแผงแล้ว (refreshDashboardIfOpen เมื่อมี export)
-    } catch (e) { log('error', 'บันทึกการตั้งค่าล้มเหลว', e); }
+    } catch (e) { log('error', T`บันทึกการตั้งค่าล้มเหลว`, e); }
     // ---- บันทึกภาษา ----
     const selLang = q('#st-lang')?.value;
     if (selLang && selLang !== origLang) {
       s.language = selLang;
       await loadLanguage(selLang, state.root);
       await saveProjectMeta();
+      // เมนู OS สร้างในฝั่ง main (renderer แตะไม่ได้) → ต้องบอกให้โหลดตารางแล้วสร้างเมนูใหม่
+      try { await kapi.langSet(selLang); } catch {}
+      // ค่าคงที่ระดับโมดูล (ชื่อสถานะ/ชื่อ element/ป้ายในตารางค่าคงที่) ถูกคำนวณตอนเปิดโปรแกรม
+      // → เปลี่ยนภาษาแล้วบางป้ายยังเป็นภาษาเดิมจนกว่าจะเริ่มใหม่ · ถามผู้ใช้ตรง ๆ ดีกว่าปล่อยให้งง
+      // (โหมดเทสไม่ถาม — กล่องยืนยันจะค้างรอคลิกตลอดกาล ดูกับดักเทสข้อ 1)
+      const inTest = location.search.includes('k2test') || !!globalThis.__k2testing;
+      if (!inTest && await confirmBox(T`เปลี่ยนภาษาแล้ว — เริ่มโปรแกรมใหม่เพื่อให้เปลี่ยนครบทุกจุดไหม`, T`เริ่มใหม่`)) {
+        setTimeout(() => location.reload(), 150);
+      }
     }
     // [alpha.69] จำนวนครั้งที่เก็บ/สวิตช์ปิด มีผลกับ **main** (คนจดประวัติ) ไม่ใช่ renderer
     // → ต้องบอกไปทันที ไม่งั้นค่าใหม่จะเริ่มใช้ตอนเปิดโปรเจกต์รอบหน้าเท่านั้น
@@ -1155,6 +1209,37 @@ export function settingsDialog(openTab) {
   };
   box.addEventListener('keydown', (e) => { if (e.key === 'Escape') cancel(); });
   q('#st-title').focus();
+}
+
+/**
+ * [alpha.76] ส่งออก "ตารางแปล" ให้คนแปลทำงานใน Excel / Google Sheets
+ *
+ * ได้ไฟล์ 3 คอลัมน์: `key, th, <ภาษาปลายทาง>` — แถวไหนช่องปลายทางว่าง = ยังไม่แปล
+ * แปลเสร็จแล้วบันทึกกลับเป็น `k2_<code>.csv` (2 คอลัมน์แรกจะถูกมองข้าม ตัวอ่านหยิบคอลัมน์
+ * ที่ชื่อตรงกับรหัสภาษา) วางในโฟลเดอร์ languages แล้วเปิดโปรแกรมใหม่ — **ไม่ต้อง build**
+ */
+export async function exportLangCsv(target) {
+  const code = target || (await ask(T`ส่งออกตารางแปลของภาษาไหน (รหัสภาษา เช่น en, ja)`,
+                                    { value: i18n.lang === 'th' ? 'en' : i18n.lang })) || '';
+  if (!code) return null;
+  const src = {}, dst = {};
+  try {
+    const csvTh = await kapi.langRead('th', state.root || '');
+    Object.assign(src, csvToTable(csvTh));
+  } catch {}
+  try {
+    const csvT = await kapi.langRead(code, state.root || '');
+    if (csvT) Object.assign(dst, csvToTable(csvT));
+  } catch {}
+  const keys = [...new Set([...Object.keys(src), ...Object.keys(dst)])];
+  const cell = (v) => { const s = v == null ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const rows = ['key,th,' + code];
+  for (const k of keys) rows.push(cell(k) + ',' + cell(src[k] ?? k) + ',' + cell(dst[k] || ''));
+  const text = '﻿' + rows.join('\r\n') + '\r\n';
+  const out = await kapi.saveAsDialog(langFileName(code), 'csv');
+  if (out) await kapi.writeFile(out, text);
+  if (out) setStatus(T`ส่งออกตารางแปล ${rows.length - 1} แถว → ${out}`);
+  return out;
 }
 
 export async function versionDialog(dPath, ch, sc) {
@@ -1217,7 +1302,7 @@ export async function fileVersionDialog(file, titleText, { onRestored = null } =
         setStatus(t('status.versionRestored')); refresh();
       };
       // เทียบกับฉากปัจจุบันแบบแยกจอจริง (ฉากซ้าย · เวอร์ชันเก่าขวา) — ข้อ 7
-      const bSplit = el('button', null, '⇋ เทียบด้านขวา'); bSplit.title = 'เปิดเวอร์ชันนี้คู่กับไฟล์ปัจจุบัน';
+      const bSplit = el('button', null, T`⇋ เทียบด้านขวา`); bSplit.title = T`เปิดเวอร์ชันนี้คู่กับไฟล์ปัจจุบัน`;
       bSplit.onclick = async () => { ov.remove(); await openSnapshotRight(file, s); };
       const bDel = el('button', 'k-danger-btn', t('dialogs.delete')); bDel.onclick = async () => {
         if (await confirmBox(t('panel.confirmDelete'))) { await kapi.remove(s.path); refresh(); }
@@ -1243,7 +1328,7 @@ export async function showChangelog() {
 }
 
 export async function showLog() {
-  log('info', 'เปิดตัวดู log');
+  log('info', T`เปิดตัวดู log`);
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide');
   const ttl = el('div', 'k-dlg-title', t('panel.logTitle'));

@@ -5,6 +5,7 @@
 // สำคัญ: RTF เป็นไฟล์ ANSI — ภาษาไทย (และอักขระ >127 ทุกตัว) ต้องเขียนเป็น \uNNNN?
 //        ไม่งั้น Word/Pages เปิดแล้วได้ตัวขยะ (บทเรียนเดียวกับข้อ 14d เรื่องไบนารี)
 
+import { T } from './i18n.js';
 import { mergeSpFormat, textWidth } from './sp-format.js';
 import { normalizeTitlePages } from './sp-title-pages.js';
 import { num } from './num.js';
@@ -144,7 +145,7 @@ export function generateRtf(blocks, meta = {}, fmt = null, opts = {}) {
     const titleTx = f.forceCase === false ? title : title.toUpperCase();
     out.push('\\pard\\plain\\f0\\fs' + fs + '\\qc\\sb2880\\b ' + escapeRtf(titleTx) + '\\b0\\par');
     if (meta.author) {
-      out.push('\\pard\\plain\\f0\\fs' + fs + '\\qc\\sb480 ' + escapeRtf('เขียนโดย') + '\\par');
+      out.push('\\pard\\plain\\f0\\fs' + fs + '\\qc\\sb480 ' + escapeRtf(T`เขียนโดย`) + '\\par');
       out.push('\\pard\\plain\\f0\\fs' + fs + '\\qc ' + escapeRtf(String(meta.author)) + '\\par');
     }
     if (meta.basedOn) out.push('\\pard\\plain\\f0\\fs' + fs + '\\qc\\sb480 ' + escapeRtf(String(meta.basedOn)) + '\\par');

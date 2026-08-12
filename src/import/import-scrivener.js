@@ -11,6 +11,7 @@
 // ────────────────────────────────────────────────────────────────
 // 1) XML เล็ก ๆ พอสำหรับ .scrivx (ไม่มี DOMParser ใน node → เขียนเอง)
 // ────────────────────────────────────────────────────────────────
+import { T } from '../i18n.js';
 /**
  * Minimal XML → tree. Good enough for .scrivx (no namespaces, no CDATA nesting).
  * @returns {{tag, attrs, children, text}}
@@ -141,17 +142,17 @@ export function mapBinder(binder, opts = {}) {
     : binder;
   const chapters = [];
   let loose = null;
-  const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || '(ไม่มีชื่อ)' });
+  const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || T`(ไม่มีชื่อ)` });
   const visit = (items, chapter) => {
     for (const it of items) {
       if (opts.onlyCompiled && it.include === false) continue;   // เคารพ "Include in Compile" ถ้าผู้ใช้สั่ง
       if (SCRIV_FOLDER.has(it.type) || (it.children && it.children.length)) {
-        const ch = { title: it.title || '(ไม่มีชื่อ)', scenes: [] };
+        const ch = { title: it.title || T`(ไม่มีชื่อ)`, scenes: [] };
         chapters.push(ch);
         visit(it.children || [], ch);
         if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);   // โฟลเดอร์ที่มีเนื้อหาเองด้วย
       } else if (SCRIV_TEXT.has(it.type)) {
-        if (!chapter) { loose = loose || { title: opts.looseTitle || '(ไม่มีบท)', scenes: [] }; pushScene(loose, it); }
+        if (!chapter) { loose = loose || { title: opts.looseTitle || T`(ไม่มีบท)`, scenes: [] }; pushScene(loose, it); }
         else pushScene(chapter, it);
       }
     }
@@ -160,7 +161,7 @@ export function mapBinder(binder, opts = {}) {
   if (loose) chapters.unshift(loose);
   const kept = chapters.filter((c) => c.scenes.length);
   return {
-    sections: [{ title: opts.sectionTitle || 'เล่มหนึ่ง', chapters: kept }],
+    sections: [{ title: opts.sectionTitle || T`เล่มหนึ่ง`, chapters: kept }],
     counts: { chapters: kept.length, scenes: kept.reduce((n, c) => n + c.scenes.length, 0) },
   };
 }
@@ -183,18 +184,18 @@ const safeName = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g,
  */
 export async function importScrivener(filePath, options = {}) {
   const io = options.io;
-  if (!io) return { ok: false, error: 'ต้องส่ง io adapter เข้ามา', code: 'no-io' };
+  if (!io) return { ok: false, error: T`ต้องส่ง io adapter เข้ามา`, code: 'no-io' };
   const warnings = [];
 
   // 1. หาไฟล์ .scrivx
   let files = [];
   try { files = await io.listFiles(filePath); } catch { files = []; }
   const scrivx = files.find((f) => f.toLowerCase().endsWith('.scrivx'));
-  if (!scrivx) return { ok: false, error: 'ไม่พบไฟล์ .scrivx ในโฟลเดอร์นี้ (ต้องชี้ไปที่โฟลเดอร์ .scriv)', code: 'no-scrivx' };
+  if (!scrivx) return { ok: false, error: T`ไม่พบไฟล์ .scrivx ในโฟลเดอร์นี้ (ต้องชี้ไปที่โฟลเดอร์ .scriv)`, code: 'no-scrivx' };
 
   const xml = await io.readFile(io.join(filePath, scrivx));
   const binder = parseBinder(xml);
-  if (!binder.length) return { ok: false, error: 'อ่านโครง binder ไม่ได้ (ไฟล์อาจเสียหาย)', code: 'bad-binder' };
+  if (!binder.length) return { ok: false, error: T`อ่านโครง binder ไม่ได้ (ไฟล์อาจเสียหาย)`, code: 'bad-binder' };
 
   const mapped = mapBinder(binder, options);
   const title = options.title || scrivx.replace(/\.scrivx$/i, '');
@@ -204,7 +205,7 @@ export async function importScrivener(filePath, options = {}) {
     for (const ch of sec.chapters) {
       for (const sc of ch.scenes) {
         const rtf = await readDocRtf(io, filePath, sc.srcId);
-        if (rtf == null) { warnings.push(`ไม่พบเนื้อหาของ "${sc.title}" (${sc.srcId})`); sc.body = ''; continue; }
+        if (rtf == null) { warnings.push(T`ไม่พบเนื้อหาของ "${sc.title}" (${sc.srcId})`); sc.body = ''; continue; }
         sc.body = rtfToText(rtf);
       }
     }
@@ -215,7 +216,7 @@ export async function importScrivener(filePath, options = {}) {
 
   // 3. เขียนโครงโปรเจกต์ Killian
   const dest = options.dest;
-  if (!dest) return { ok: false, error: 'ยังไม่ได้เลือกโฟลเดอร์ปลายทาง', code: 'no-dest', plan, counts: mapped.counts };
+  if (!dest) return { ok: false, error: T`ยังไม่ได้เลือกโฟลเดอร์ปลายทาง`, code: 'no-dest', plan, counts: mapped.counts };
   let written = 0;
   for (const f of plan.files) {
     const full = io.join(dest, ...f.path);
@@ -249,7 +250,7 @@ export function buildPlan(mapped, title, opts = {}) {
   }, null, 2) });
 
   mapped.sections.forEach((sec, si) => {
-    const secDir = safeName(sec.title, 'เล่มหนึ่ง');
+    const secDir = safeName(sec.title, T`เล่มหนึ่ง`);
     files.push({ path: [secDir, 'section.json'], content: JSON.stringify({
       guid: 's' + (si + 1), title: sec.title, order: si + 1,
     }, null, 2) });
@@ -258,7 +259,7 @@ export function buildPlan(mapped, title, opts = {}) {
     const scenesMap = {};
     sec.chapters.forEach((ch, ci) => {
       const guid = `c${si + 1}_${ci + 1}`;
-      const folderName = `${String(ci + 1).padStart(2, '0')} - ${safeName(ch.title, 'บท')}`;
+      const folderName = `${String(ci + 1).padStart(2, '0')} - ${safeName(ch.title, T`บท`)}`;
       chapters.push({ guid, title: ch.title, order: ci + 1, folderName });
       scenesMap[guid] = ch.scenes.map((sc, i) => ({
         id: `${guid}_s${i + 1}`, title: sc.title, order: i + 1, fileName: `scene-${String(i + 1).padStart(2, '0')}.md`,

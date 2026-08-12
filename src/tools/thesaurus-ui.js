@@ -1,5 +1,6 @@
 // thesaurus-ui.js — UI สำหรับ Thesaurus: คลิกขวาคำ → คำพ้อง/คำตรงข้าม (ข้อ 67)
 // แยกจาก src/thesaurus.js เดิม (ซึ่งเป็น UI ของ K1 เก่า — ไฟล์นี้เป็น UI ใหม่สำหรับ tools/thesaurus.js)
+import { T } from '../i18n.js';
 import { el, setStatus, state, t } from '../core.js';
 import { getSynonyms, getAntonyms } from '../tools/thesaurus.js';
 
@@ -47,7 +48,7 @@ export async function showThesaurusPopup(word, x, y) {
   pop.style.top = Math.min(y, window.innerHeight - 300) + 'px';
 
   if (syns.length) {
-    pop.append(el('div', 'k-thes-head', 'คำพ้อง (Synonyms)'));
+    pop.append(el('div', 'k-thes-head', T`คำพ้อง (Synonyms)`));
     for (const s of syns.slice(0, 15)) {
       const item = el('div', 'k-thes-item', s);
       item.onclick = () => { navigator.clipboard.writeText(s); setStatus(t('thes.copied', 'คัดลอก: ') + s); pop.remove(); };
@@ -55,7 +56,7 @@ export async function showThesaurusPopup(word, x, y) {
     }
   }
   if (ants.length) {
-    pop.append(el('div', 'k-thes-head', 'คำตรงข้าม (Antonyms)'));
+    pop.append(el('div', 'k-thes-head', T`คำตรงข้าม (Antonyms)`));
     for (const a of ants.slice(0, 15)) {
       const item = el('div', 'k-thes-item', a);
       item.onclick = () => { navigator.clipboard.writeText(a); setStatus(t('thes.copied', 'คัดลอก: ') + a); pop.remove(); };

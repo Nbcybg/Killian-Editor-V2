@@ -18,29 +18,30 @@
 // ────────────────────────────────────────────────────────────────
 // 1) พารามิเตอร์ที่ผู้ใช้ตั้งได้ (ลำดับตามที่ผู้ใช้สั่ง — UI วาดตามอาร์เรย์นี้ตรง ๆ)
 // ────────────────────────────────────────────────────────────────
+import { T } from '../i18n.js';
 export const PARAM_DEFS = [
-  { key: 'thinkingMode', label: 'Thinking mode', th: 'โหมดคิดก่อนตอบ', type: 'select',
+  { key: 'thinkingMode', label: 'Thinking mode', th: T`โหมดคิดก่อนตอบ`, type: 'select',
     options: ['off', 'auto', 'on'], def: 'off',
-    hint: 'on = สั่งให้โมเดลคิดเป็นขั้นก่อนตอบ (ใช้ได้เฉพาะโมเดลที่รองรับ)' },
-  { key: 'frequencyPenalty', label: 'Frequency Penalty', th: 'ลดการใช้คำซ้ำ', type: 'number',
+    hint: T`on = สั่งให้โมเดลคิดเป็นขั้นก่อนตอบ (ใช้ได้เฉพาะโมเดลที่รองรับ)` },
+  { key: 'frequencyPenalty', label: 'Frequency Penalty', th: T`ลดการใช้คำซ้ำ`, type: 'number',
     min: -2, max: 2, step: 0.1, def: null },
-  { key: 'maxRetries', label: 'Max Retries', th: 'ลองใหม่สูงสุด (ครั้ง)', type: 'int',
+  { key: 'maxRetries', label: 'Max Retries', th: T`ลองใหม่สูงสุด (ครั้ง)`, type: 'int',
     min: 0, max: 10, def: 2 },
-  { key: 'maxTokens', label: 'Maximum Number of Tokens', th: 'ความยาวคำตอบสูงสุด', type: 'int',
+  { key: 'maxTokens', label: 'Maximum Number of Tokens', th: T`ความยาวคำตอบสูงสุด`, type: 'int',
     min: 1, max: 200000, def: 2048 },
-  { key: 'presencePenalty', label: 'Presence Penalty', th: 'ดันให้พูดเรื่องใหม่', type: 'number',
+  { key: 'presencePenalty', label: 'Presence Penalty', th: T`ดันให้พูดเรื่องใหม่`, type: 'number',
     min: -2, max: 2, step: 0.1, def: null },
-  { key: 'reasoningEffort', label: 'Reasoning Effort', th: 'ระดับการใช้เหตุผล', type: 'select',
+  { key: 'reasoningEffort', label: 'Reasoning Effort', th: T`ระดับการใช้เหตุผล`, type: 'select',
     options: ['', 'minimal', 'low', 'medium', 'high'], def: '' },
-  { key: 'responseFormat', label: 'Response Format', th: 'รูปแบบคำตอบ', type: 'select',
+  { key: 'responseFormat', label: 'Response Format', th: T`รูปแบบคำตอบ`, type: 'select',
     options: ['text', 'json_object'], def: 'text' },
-  { key: 'temperature', label: 'Sampling Temperature', th: 'ความสร้างสรรค์', type: 'number',
+  { key: 'temperature', label: 'Sampling Temperature', th: T`ความสร้างสรรค์`, type: 'number',
     min: 0, max: 2, step: 0.05, def: 0.7 },
-  { key: 'timeout', label: 'Timeout', th: 'หมดเวลารอ (วินาที)', type: 'int',
+  { key: 'timeout', label: 'Timeout', th: T`หมดเวลารอ (วินาที)`, type: 'int',
     min: 1, max: 600, def: 60 },
   { key: 'topK', label: 'Top K', th: 'Top K', type: 'int', min: 0, max: 500, def: null },
   { key: 'topP', label: 'Top P', th: 'Top P', type: 'number', min: 0, max: 1, step: 0.05, def: null },
-  { key: 'customHeaders', label: 'Custom Headers', th: 'ส่วนหัว HTTP เพิ่มเติม', type: 'kv', def: {} },
+  { key: 'customHeaders', label: 'Custom Headers', th: T`ส่วนหัว HTTP เพิ่มเติม`, type: 'kv', def: {} },
 ];
 export const PARAM_KEYS = PARAM_DEFS.map((p) => p.key);
 const PARAM_BY_KEY = Object.fromEntries(PARAM_DEFS.map((p) => [p.key, p]));
@@ -138,13 +139,13 @@ export function newProvider(patch = {}) {
 /** ตรวจก่อนบันทึก — คืนรายการปัญหาเป็นข้อความไทย (ว่าง = ผ่าน) */
 export function validateProvider(p) {
   const errs = [];
-  if (!p || !String(p.name || '').trim()) errs.push('ยังไม่ได้ตั้งชื่อผู้ให้บริการ');
+  if (!p || !String(p.name || '').trim()) errs.push(T`ยังไม่ได้ตั้งชื่อผู้ให้บริการ`);
   const c = (p && p.credential) || {};
-  if (!String(c.name || '').trim()) errs.push('ยังไม่ได้ตั้งชื่อ Credential');
-  if (!String(c.baseUrl || '').trim()) errs.push('ยังไม่ได้ใส่ Base URL');
-  else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) errs.push('Base URL ต้องขึ้นต้นด้วย http:// หรือ https://');
+  if (!String(c.name || '').trim()) errs.push(T`ยังไม่ได้ตั้งชื่อ Credential`);
+  if (!String(c.baseUrl || '').trim()) errs.push(T`ยังไม่ได้ใส่ Base URL`);
+  else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) errs.push(T`Base URL ต้องขึ้นต้นด้วย http:// หรือ https://`);
   else if (!isDomainAllowed(c.baseUrl, c.allowedDomains))
-    errs.push('Base URL ไม่อยู่ในรายการ Allowed HTTP Request Domains');
+    errs.push(T`Base URL ไม่อยู่ในรายการ Allowed HTTP Request Domains`);
   return errs;
 }
 

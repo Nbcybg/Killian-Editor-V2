@@ -8,6 +8,7 @@
 
 // ---- ขนาดกล่องโหนดบนผัง (px) — UI ใช้ค่าเดียวกันตอนวาด SVG ----
 // [alpha.66 ข้อ 5] กล่องใหญ่ขึ้นเพราะตัวหนังสือในผังถูกขยายให้เท่า UI หลัก (เดิม 12.5px เล็กกว่าที่อื่น)
+import { T } from './i18n.js';
 export const NODE_W = 208, NODE_H = 68;
 export const GAP_X = 108, GAP_Y = 26, PAD = 30;
 
@@ -78,7 +79,7 @@ export function buildGraph(scenes) {
   const nodes = (scenes || []).map((s, order) => ({
     id: s.id,
     order,
-    title: s.title || '(ไม่มีชื่อ)',
+    title: s.title || T`(ไม่มีชื่อ)`,
     chapterName: s.chapterName || '',
     filePath: s.filePath || '',
     dPath: s.dPath || '',
@@ -335,8 +336,8 @@ export function analyzeGraph(graph) {
  * @param {object} L ป้ายกำกับตามภาษาที่โหลดอยู่ (ไม่ส่ง = ไทย) — ข้อ 11 (i18n)
  */
 export function graphSummary(a, L = {}) {
-  const scenes = L.scenes || 'ฉากในผัง', choices = L.choices || 'ทางเลือก';
-  const roots = L.roots || 'จุดเริ่ม', endings = L.endings || 'ตอนจบ';
+  const scenes = L.scenes || T`ฉากในผัง`, choices = L.choices || T`ทางเลือก`;
+  const roots = L.roots || T`จุดเริ่ม`, endings = L.endings || T`ตอนจบ`;
   return `${a.total} ${scenes} · ${a.choiceCount} ${choices} · ${a.roots.length} ${roots} · ${a.endings.length} ${endings}`;
 }
 
@@ -533,9 +534,9 @@ export function bodyExcerpt(body, max = 180) {
  */
 export function graphToOutline(graph, opts = {}) {
   const L = opts.labels || {};
-  const openTxt = L.open || '(ยังไม่ระบุปลายทาง)';
-  const goneTxt = L.gone || 'ฉากหาย';
-  const loopTxt = L.loop || 'วนกลับ';
+  const openTxt = L.open || T`(ยังไม่ระบุปลายทาง)`;
+  const goneTxt = L.gone || T`ฉากหาย`;
+  const loopTxt = L.loop || T`วนกลับ`;
   const titleOf = (id) => (graph.byId.get(id) || {}).title || '?';
   const lines = [];
   const walk = (id, prefix, stack) => {
@@ -632,15 +633,15 @@ export function graphToHtmlTree(graph, opts = {}) {
   const a = opts.analysis || analyzeGraph(graph);
   const L = opts.labels || {};
   const rootSet = new Set(a.roots), endSet = new Set(a.endings);
-  const title = opts.title || (L.title || 'ผังแตกสาย');
-  const openTxt = L.open || 'ยังไม่ระบุปลายทาง';
-  const goneTxt = L.gone || 'ฉากหาย';
-  const loopTxt = L.loop || 'วนกลับ';
+  const title = opts.title || (L.title || T`ผังแตกสาย`);
+  const openTxt = L.open || T`ยังไม่ระบุปลายทาง`;
+  const goneTxt = L.gone || T`ฉากหาย`;
+  const loopTxt = L.loop || T`วนกลับ`;
   const showBody = opts.excerpt !== false;
 
   const sceneLine = (n) => {
-    const badge = rootSet.has(n.id) ? `<span class="badge b-root">▶ ${esc(L.root || 'จุดเริ่ม')}</span>`
-      : endSet.has(n.id) ? `<span class="badge b-end">🏁 ${esc(L.ending || 'ตอนจบ')}</span>` : '';
+    const badge = rootSet.has(n.id) ? `<span class="badge b-root">▶ ${esc(L.root || T`จุดเริ่ม`)}</span>`
+      : endSet.has(n.id) ? `<span class="badge b-end">🏁 ${esc(L.ending || T`ตอนจบ`)}</span>` : '';
     const style = n.color ? ` style="border-left-color:${esc(n.color)}"` : '';
     return `<span class="scene"${style}><span class="t">${esc(n.title)}</span>`
       + (n.chapterName ? `<span class="c">${esc(n.chapterName)}</span>` : '') + `</span>${badge}`;
@@ -674,6 +675,6 @@ export function graphToHtmlTree(graph, opts = {}) {
 <body>
 <h1>${esc(title)}</h1>
 <div class="stats">${esc(graphSummary(a, L))}</div>
-${body || '<p class="open">' + esc(L.empty || 'ยังไม่มีฉากที่มีทางเลือก') + '</p>'}
+${body || '<p class="open">' + esc(L.empty || T`ยังไม่มีฉากที่มีทางเลือก`) + '</p>'}
 </body></html>`;
 }

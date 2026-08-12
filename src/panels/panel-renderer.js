@@ -8,6 +8,7 @@
 //   · เนื้อแผง (#tree-panel, #content, …) ถูก "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่ → โค้ดเก่ายังอ้าง id ได้
 //   · ลาก resize/float ไม่ยิง re-render ระหว่างลาก (จะทำให้ ProseMirror ถูกถอด-ใส่ 60 ครั้ง/วินาที)
 //     → ปรับ style สดตอนลาก แล้ว commit ลง store ครั้งเดียวตอนปล่อย
+import { T } from '../i18n.js';
 import { el } from '../core.js';
 import { popupMenu } from '../ui.js';        // [60r3 ข้อ 8] เมนูคลิกขวาบนหัวแผง
 import { iconHtml, hasIcon } from '../icons.js';
@@ -174,7 +175,7 @@ function renderTabs(node, pm, opts, depth) {
   }
   // ปุ่มย่อกลุ่มแท็บเป็นแถบไอคอน
   const strBtn = el('span', 'k-panel-btn k-strip-btn', strip ? '»' : '«');
-  strBtn.title = strip ? 'คลี่กลุ่มแท็บ' : 'ย่อเป็นแถบไอคอน';
+  strBtn.title = strip ? T`คลี่กลุ่มแท็บ` : T`ย่อเป็นแถบไอคอน`;
   strBtn.onclick = (e) => { e.stopPropagation(); toggleStrip(node.id, pm, !strip); };
   bar.appendChild(strBtn);
   box.appendChild(bar);
@@ -237,7 +238,7 @@ function buildHead(node, pm, opts, md, floating) {
   // [alpha.67] 🖥 ฉีกแผงออกเป็นหน้าต่าง OS จริง — วางไว้ก่อน ⧉ (ลอย) เพราะเป็นการ "ออกไปไกลกว่า"
   if (opts.canTearOff && opts.canTearOff(node.id)) {
     const tb = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
-    tb.title = 'ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)';
+    tb.title = T`ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)`;
     tb.dataset.act = 'tearoff';
     tb.onclick = (e) => { e.stopPropagation(); opts.onTearOff(node.id); };
     btns.appendChild(tb);
@@ -289,14 +290,14 @@ function buildHead(node, pm, opts, md, floating) {
 export function headMenuItems(node, pm, opts, md, floating) {
   const def = pm.registry.get(node.id) || {};
   const title = md.title || node.title || node.id;
-  const items = [{ label: '❔ นี่คืออะไร — <b>' + escapeHtml(title) + '</b>', disabled: true }];
+  const items = [{ label: T`❔ นี่คืออะไร — <b>` + escapeHtml(title) + '</b>', disabled: true }];
   for (const line of wrapDesc(md.desc || '')) items.push({ label: '<span class="dim">' + escapeHtml(line) + '</span>', disabled: true });
   items.push('-');
   if (def.closable !== false) {
-    items.push({ label: (node.collapsed ? '▸ คลี่แผง' : '▾ พับแผง'), click: () => pm.collapsePanel(node.id) });
+    items.push({ label: (node.collapsed ? T`▸ คลี่แผง` : T`▾ พับแผง`), click: () => pm.collapsePanel(node.id) });
   }
   if (def.floatable !== false) {
-    items.push({ label: floating ? '⊡ ผนึกกลับเข้าหน้าต่าง' : '⧉ ลอยแผงออกมา',
+    items.push({ label: floating ? T`⊡ ผนึกกลับเข้าหน้าต่าง` : T`⧉ ลอยแผงออกมา`,
       click: () => {
         if (floating) { const a = pm.isDocked('docs') ? 'docs' : undefined; pm.dockPanel(node.id, def.defaultSide || 'left', a); return; }
         pm.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
@@ -304,14 +305,14 @@ export function headMenuItems(node, pm, opts, md, floating) {
   }
   // [alpha.67] ทางเข้าที่สองของ tear-off (ปุ่ม 🖥 อาจถูกบีบหายเมื่อหัวแผงแคบ)
   if (opts.canTearOff && opts.canTearOff(node.id)) {
-    items.push({ label: '🖥 ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)', click: () => opts.onTearOff(node.id) });
+    items.push({ label: T`🖥 ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)`, click: () => opts.onTearOff(node.id) });
   }
   // [alpha.66r3] คำสั่งลึกที่ UI ฝากมา (จัดการพื้นที่ · เวิร์กสเปซ) — Progressive Disclosure ตามสเปก
   const extra = opts.extraHeadMenu ? (opts.extraHeadMenu(node.id, floating) || []) : [];
   if (extra.length) { items.push('-'); for (const it of extra) items.push(it); }
   if (def.closable !== false) {
     items.push('-');
-    items.push({ label: '✕ ปิดแผง (เปิดกลับที่ มุมมอง → แผง)', click: () => pm.hidePanel(node.id) });
+    items.push({ label: T`✕ ปิดแผง (เปิดกลับที่ มุมมอง → แผง)`, click: () => pm.hidePanel(node.id) });
   }
   return items;
 }
@@ -438,10 +439,10 @@ function renderFloatGroup(f, pm, opts, container) {
   });
   // ปุ่มปิดของกลุ่ม (ปิดแท็บที่เปิดอยู่)
   const closeBtn = el('span', 'k-panel-btn k-panel-btn-close', '✕');
-  closeBtn.title = 'ปิดแผงที่เปิดอยู่';
+  closeBtn.title = T`ปิดแผงที่เปิดอยู่`;
   closeBtn.onclick = (e) => { e.stopPropagation(); const c = kids[active]; if (c) pm.hidePanel(c.id); };
   const dockBtn = el('span', 'k-panel-btn k-panel-btn-float', '⊡');
-  dockBtn.title = 'ผนึกทั้งกลุ่มกลับเข้าหน้าต่าง';
+  dockBtn.title = T`ผนึกทั้งกลุ่มกลับเข้าหน้าต่าง`;
   dockBtn.onclick = (e) => {
     e.stopPropagation();
     pm.dockFloatGroup(f.id, 'left', pm.isDocked('docs') ? 'docs' : undefined);
@@ -452,7 +453,7 @@ function renderFloatGroup(f, pm, opts, container) {
   const actId = (kids[active] || {}).id;
   if (actId && opts.canTearOff && opts.canTearOff(actId)) {
     const toBtn = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
-    toBtn.title = 'ย้ายแท็บนี้ไปหน้าต่างแยก (ลากไปจออื่นได้)';
+    toBtn.title = T`ย้ายแท็บนี้ไปหน้าต่างแยก (ลากไปจออื่นได้)`;
     toBtn.dataset.act = 'tearoff';
     toBtn.onclick = (e) => { e.stopPropagation(); opts.onTearOff(actId); };
     btns.appendChild(toBtn);
@@ -501,7 +502,7 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
   const h = el('div', 'k-resize-handle ' + (row ? 'k-rh-col' : 'k-rh-row'));
   h.dataset.dockId = dockId;
   h.dataset.index = String(index);
-  h.title = 'ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)';
+  h.title = T`ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)`;
   // [alpha.66r4] ลากที่จับใน dock ที่มี "ตัวยืด" = **ตรึงความกว้างฝั่งที่ไม่ใช่ตัวยืดเป็น px**
   // (การลากคือเจตนาชัดเจนของผู้ใช้ว่า "ขอกว้างเท่านี้" — ตั้งแต่ครั้งแรก ไม่ต้องรอให้เป็น px ก่อน)
   // dock ที่ไม่มีตัวยืดเลย (ไม่มีแผงเอกสารอยู่ข้างใน) → ใช้สัดส่วนเหมือนเดิมทุกประการ

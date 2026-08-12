@@ -8,6 +8,7 @@
 // ตัวเชื่อมกับที่อื่น (แทรกลงฉาก/เปิดไฟล์/เปิดหน้า Wiki) รับเข้ามาเป็น callback ตอนสร้าง
 // เพื่อไม่ให้ import วนกลับไปหา app.js
 
+import { T } from './i18n.js';
 import { ask, confirmBox, popupMenu, choose } from './ui.js';
 import { imageLightbox } from './wiki.js';
 import { iconHtml } from './icons.js';
@@ -86,9 +87,9 @@ const stopEv = (e) => { e.preventDefault(); e.stopPropagation(); };
 
 /** มุมมองของตาราง — ผู้ใช้เลือกเองว่าจะให้ครอบตัดหรือเห็นเต็มรูป */
 export const CELL_MODES = [
-  ['thumb', 'ย่อ',     'grid',   'ภาพย่อขนาดเท่ากัน (ครอบตัดให้เต็มกรอบ)'],
-  ['fit',   'เต็มรูป',  'image',  'เห็นทั้งรูปตามสัดส่วนจริง ไม่ครอบตัด'],
-  ['list',  'รายการ',   'list-ul', 'แถวละรูป — เห็นชื่อ คำบรรยาย แท็ก ขนาด และการใช้งานพร้อมกัน'],
+  ['thumb', T`ย่อ`,     'grid',   T`ภาพย่อขนาดเท่ากัน (ครอบตัดให้เต็มกรอบ)`],
+  ['fit',   T`เต็มรูป`,  'image',  T`เห็นทั้งรูปตามสัดส่วนจริง ไม่ครอบตัด`],
+  ['list',  T`รายการ`,   'list-ul', T`แถวละรูป — เห็นชื่อ คำบรรยาย แท็ก ขนาด และการใช้งานพร้อมกัน`],
 ];
 
 // ───────────────────────── ตัวคลังรูปหลัก ─────────────────────────
@@ -104,7 +105,7 @@ export class Gallery {
     this.pane = pane;
     this.root = root;
     this.opts = opts;
-    this.title = 'คลังรูปภาพ';
+    this.title = T`คลังรูปภาพ`;
     this.dirty = false;
     this.state = {
       album: currentAlbum(),
@@ -226,25 +227,25 @@ export class Gallery {
     }
     const stats = el('div', 'gal2-stats');
     const st = AC.galleryStats(this.items, this.albums);
-    stats.textContent = `${st.total} รูป · ยังไม่ถูกใช้ ${st.unused} · ${st.bytesText}`;
-    stats.title = `อัลบั้ม ${st.albums} · แท็ก ${st.tags} · ใช้แล้ว ${st.used}`;
+    stats.textContent = T`${st.total} รูป · ยังไม่ถูกใช้ ${st.unused} · ${st.bytesText}`;
+    stats.title = T`อัลบั้ม ${st.albums} · แท็ก ${st.tags} · ใช้แล้ว ${st.used}`;
 
     const btns = el('div', 'gal2-head-btns');
-    const add = el('button', 'k-ok gal2-add', '＋ เพิ่มรูป…');
+    const add = el('button', 'k-ok gal2-add', T`＋ เพิ่มรูป…`);
     add.onclick = () => this.addImages();
     const refresh = el('button', 'cmp-mini gal2-refresh');
     refresh.innerHTML = iconHtml('reset', 13);
-    refresh.title = 'สแกนใหม่ (ไฟล์/การใช้งาน)';
+    refresh.title = T`สแกนใหม่ (ไฟล์/การใช้งาน)`;
     refresh.onclick = async () => {
-      await withBusy('สแกนคลังรูป…', async () => { await this.reload({ rescan: true }); });
-      this.draw(); setStatus('สแกนคลังรูปใหม่แล้ว');
+      await withBusy(T`สแกนคลังรูป…`, async () => { await this.reload({ rescan: true }); });
+      this.draw(); setStatus(T`สแกนคลังรูปใหม่แล้ว`);
     };
     const board = el('button', 'cmp-mini gal2-openboard');
     board.innerHTML = iconHtml('layout', 13);
-    board.title = 'เปิดแผงกระดานอารมณ์ (ผนึกไว้ข้าง ๆ แล้วลากรูปจากตารางไปวางได้)';
+    board.title = T`เปิดแผงกระดานอารมณ์ (ผนึกไว้ข้าง ๆ แล้วลากรูปจากตารางไปวางได้)`;
     board.onclick = () => this.opts.onOpenBoard && this.opts.onOpenBoard();
     const more = el('button', 'cmp-mini gal2-more', '⋯');
-    more.title = 'คำสั่งเพิ่มเติม';
+    more.title = T`คำสั่งเพิ่มเติม`;
     more.onclick = (e) => this.moreMenu(e);
     btns.append(add, board, refresh, more);
     head.append(tabs, stats, btns);
@@ -265,16 +266,16 @@ export class Gallery {
   buildSide() {
     const side = el('div', 'gal2-side');
     const h = el('div', 'gal2-side-head');
-    h.append(el('span', null, 'อัลบั้ม'));
+    h.append(el('span', null, T`อัลบั้ม`));
     const plus = el('span', 'row-add');
     plus.innerHTML = iconHtml('plus', 13);
-    plus.title = 'สร้างอัลบั้มใหม่';
+    plus.title = T`สร้างอัลบั้มใหม่`;
     plus.onclick = () => this.newAlbum('');
     h.append(plus);
     side.append(h);
 
     const tree = el('div', 'gal2-tree');
-    tree.append(this.albumRow({ id: ALL_ALBUM, name: 'รูปทั้งหมด' }, 0, this.items.length));
+    tree.append(this.albumRow({ id: ALL_ALBUM, name: T`รูปทั้งหมด` }, 0, this.items.length));
     const counts = this.albumCounts();
     for (const node of AC.albumTree(this.albums)) this.appendAlbumNode(tree, node, 0, counts);
     side.append(tree);
@@ -283,18 +284,18 @@ export class Gallery {
     const tags = TG.getAllTags(this.items);
     const tf = el('div', 'gal2-tagfilter');
     const th = el('div', 'gal2-side-head');
-    th.append(el('span', null, 'แท็ก'));
-    const mode = el('button', 'gal2-tagmode', this.state.tagMode === 'and' ? 'ทั้งหมด (AND)' : 'อย่างน้อยหนึ่ง (OR)');
-    mode.title = 'สลับเงื่อนไขการกรอง';
+    th.append(el('span', null, T`แท็ก`));
+    const mode = el('button', 'gal2-tagmode', this.state.tagMode === 'and' ? T`ทั้งหมด (AND)` : T`อย่างน้อยหนึ่ง (OR)`);
+    mode.title = T`สลับเงื่อนไขการกรอง`;
     mode.onclick = () => { this.state.tagMode = this.state.tagMode === 'and' ? 'or' : 'and'; this.draw(); };
     th.append(mode);
     tf.append(th);
     const chips = el('div', 'gal2-chips');
-    if (!tags.length) chips.append(el('div', 'dim gal2-empty-note', '(ยังไม่มีแท็ก — คลิกขวาที่รูปเพื่อติดแท็ก)'));
+    if (!tags.length) chips.append(el('div', 'dim gal2-empty-note', T`(ยังไม่มีแท็ก — คลิกขวาที่รูปเพื่อติดแท็ก)`));
     for (const t of tags) {
       const c = el('span', 'gal2-chip k-tag-' + t.kind + (this.state.tags.includes(t.tag) ? ' on' : ''));
       c.textContent = t.tag + ' ' + t.count;
-      c.title = TG.TAG_KINDS[t.tag[0]] ? TG.TAG_KINDS[t.tag[0]].label : 'ทั่วไป';
+      c.title = TG.TAG_KINDS[t.tag[0]] ? TG.TAG_KINDS[t.tag[0]].label : T`ทั่วไป`;
       c.onclick = () => {
         const i = this.state.tags.indexOf(t.tag);
         if (i < 0) this.state.tags.push(t.tag); else this.state.tags.splice(i, 1);
@@ -303,15 +304,15 @@ export class Gallery {
       c.oncontextmenu = (e) => {
         e.preventDefault();
         popupMenu(e.clientX, e.clientY, [
-          { label: '✏️ เปลี่ยนชื่อแท็กนี้ทั้งคลัง', click: () => this.renameTag(t.tag) },
-          { label: '🗑 ถอดแท็กนี้ออกจากทุกรูป', danger: true, click: () => this.dropTag(t.tag) },
+          { label: T`✏️ เปลี่ยนชื่อแท็กนี้ทั้งคลัง`, click: () => this.renameTag(t.tag) },
+          { label: T`🗑 ถอดแท็กนี้ออกจากทุกรูป`, danger: true, click: () => this.dropTag(t.tag) },
         ]);
       };
       chips.append(c);
     }
     tf.append(chips);
     if (this.state.tags.length) {
-      const clr = el('button', 'cmp-mini', '✕ ล้างตัวกรองแท็ก');
+      const clr = el('button', 'cmp-mini', T`✕ ล้างตัวกรองแท็ก`);
       clr.onclick = () => { this.state.tags = []; this.draw(); };
       tf.append(clr);
     }
@@ -371,7 +372,7 @@ export class Gallery {
   buildBar() {
     const bar = el('div', 'gal2-bar');
     const q = el('input', 'wiki-input gal2-search');
-    q.placeholder = '🔍 ค้นชื่อไฟล์ / คำบรรยาย / แท็ก';
+    q.placeholder = T`🔍 ค้นชื่อไฟล์ / คำบรรยาย / แท็ก`;
     q.value = this.state.q;
     q.oninput = () => {
       this.state.q = q.value;
@@ -383,7 +384,7 @@ export class Gallery {
       if (m.key === this.state.sort) o.selected = true;
       sort.append(o);
     }
-    sort.title = 'เรียงตาม';
+    sort.title = T`เรียงตาม`;
     sort.onchange = () => { this.state.sort = sort.value; this.refreshGrid(); };
     const use = el('select', 'wiki-input k-dlg-select gal2-use');
     for (const f of UI.USE_FILTERS) {
@@ -391,7 +392,7 @@ export class Gallery {
       if (f.key === this.state.use) o.selected = true;
       use.append(o);
     }
-    use.title = 'กรองตามการใช้งานจริงในต้นฉบับ';
+    use.title = T`กรองตามการใช้งานจริงในต้นฉบับ`;
     use.onchange = () => { this.state.use = use.value; this.refreshGrid(); };
     bar.append(q, sort, use);
     return bar;
@@ -414,8 +415,8 @@ export class Gallery {
       const d = el('div', 'gal-empty');
       d.append(el('div', 'gal-empty-icon', '🖼'));
       d.append(el('div', null, this.items.length
-        ? 'ไม่มีรูปที่ตรงกับตัวกรอง'
-        : 'ยังไม่มีรูปในอัลบั้มนี้ — กด "เพิ่มรูป…" หรือลากไฟล์มาวางตรงนี้'));
+        ? T`ไม่มีรูปที่ตรงกับตัวกรอง`
+        : T`ยังไม่มีรูปในอัลบั้มนี้ — กด "เพิ่มรูป…" หรือลากไฟล์มาวางตรงนี้`));
       grid.append(d);
     }
     for (const it of items) grid.append(this.buildCell(it));
@@ -479,14 +480,14 @@ export class Gallery {
     }
     const cap = el('input', 'wiki-input gal2-row-cap');
     cap.value = it.caption || '';
-    cap.placeholder = 'คำบรรยาย…';
+    cap.placeholder = T`คำบรรยาย…`;
     cap.onclick = (e) => e.stopPropagation();
     cap.addEventListener('change', async () => {
       await AC.updateImage(kapi, this.root, it.album, it.file, { caption: cap.value });
       it.caption = cap.value;
       await AC.syncFlatIndex(kapi, this.root);
       this.changed();
-      setStatus('บันทึกคำบรรยายแล้ว');
+      setStatus(T`บันทึกคำบรรยายแล้ว`);
     });
     main.append(name, cap);
     if (it.tags && it.tags.length) {
@@ -505,7 +506,7 @@ export class Gallery {
     const side = el('div', 'gal2-row-side');
     side.append(el('div', 'gal2-row-size', AC.formatBytes(it.size)));
     const use = el('div', 'gal2-badge ' + (it.uses ? 'used' : 'unused'),
-                   it.uses ? 'ใช้ ' + it.uses : 'ยังไม่ถูกใช้');
+                   it.uses ? T`ใช้ ` + it.uses : T`ยังไม่ถูกใช้`);
     if (it.uses) {
       use.title = UI.usageLabel(this.usage, it.file, 6);
       use.onclick = (e) => { stopEv(e); this.usageMenu(e, it); };
@@ -524,20 +525,20 @@ export class Gallery {
     im.alt = it.caption || it.file;
     im.loading = 'lazy';
     fileURL(this.root, it.path).then((u) => { im.src = u; });
-    im.onerror = () => { box.classList.add('miss'); box.textContent = '⚠ เปิดรูปไม่ได้'; };
+    im.onerror = () => { box.classList.add('miss'); box.textContent = T`⚠ เปิดรูปไม่ได้`; };
     box.append(im);
 
     const mark = el('span', 'gal2-check');
     mark.innerHTML = iconHtml('check', 12);
-    mark.title = 'เลือก/ไม่เลือก';
+    mark.title = T`เลือก/ไม่เลือก`;
     mark.onclick = (e) => { stopEv(e); this.toggleSel(it.path, true); };
     box.append(mark);
 
     if (!it.uses) {
-      const b = el('span', 'gal2-badge unused', 'ยังไม่ถูกใช้');
+      const b = el('span', 'gal2-badge unused', T`ยังไม่ถูกใช้`);
       box.append(b);
     } else {
-      const b = el('span', 'gal2-badge used', 'ใช้ ' + it.uses);
+      const b = el('span', 'gal2-badge used', T`ใช้ ` + it.uses);
       b.title = UI.usageLabel(this.usage, it.file, 6);
       b.onclick = (e) => { stopEv(e); this.usageMenu(e, it); };
       box.append(b);
@@ -547,14 +548,14 @@ export class Gallery {
     const cap = el('input', 'wiki-input gal-cap');
     cap.value = it.caption || '';
     cap.placeholder = it.file;
-    cap.title = 'คำบรรยาย — แก้แล้วบันทึกอัตโนมัติ';
+    cap.title = T`คำบรรยาย — แก้แล้วบันทึกอัตโนมัติ`;
     cap.onclick = (e) => e.stopPropagation();
     cap.addEventListener('change', async () => {
       await AC.updateImage(kapi, this.root, it.album, it.file, { caption: cap.value });
       it.caption = cap.value;
       await AC.syncFlatIndex(kapi, this.root);
       this.changed();
-      setStatus('บันทึกคำบรรยายแล้ว');
+      setStatus(T`บันทึกคำบรรยายแล้ว`);
     });
     cell.append(cap);
 
@@ -611,10 +612,10 @@ export class Gallery {
     const n = el('span', 'gal2-batch-n');
     bar.append(n);
     const mk = (label, fn, cls) => { const b = el('button', 'cmp-mini' + (cls ? ' ' + cls : ''), label); b.onclick = fn; bar.append(b); return b; };
-    mk('📁 ย้ายไปอัลบั้ม', () => this.moveSelection());
-    mk('🏷 ติดแท็ก', () => this.tagSelection());
-    mk('📤 ส่งออกที่เลือก', () => this.exportSelection());
-    mk('🗑 ลบ', () => this.deleteSelection(), 'k-danger');
+    mk(T`📁 ย้ายไปอัลบั้ม`, () => this.moveSelection());
+    mk(T`🏷 ติดแท็ก`, () => this.tagSelection());
+    mk(T`📤 ส่งออกที่เลือก`, () => this.exportSelection());
+    mk(T`🗑 ลบ`, () => this.deleteSelection(), 'k-danger');
     mk('✕', () => { this.state.sel.clear(); this.syncSelection(); });
     return bar;
   }
@@ -625,82 +626,82 @@ export class Gallery {
     const n = this.state.sel.size;
     bar.classList.toggle('on', n > 0);
     const label = bar.querySelector('.gal2-batch-n');
-    if (label) label.textContent = `เลือกไว้ ${n} รูป`;
+    if (label) label.textContent = T`เลือกไว้ ${n} รูป`;
   }
 
   // ---------- คำสั่งเกี่ยวกับอัลบั้ม ----------
 
   albumMenu(e, a) {
     const items = [
-      { label: '＋ อัลบั้มย่อยใหม่…', click: () => this.newAlbum(a.id) },
+      { label: T`＋ อัลบั้มย่อยใหม่…`, click: () => this.newAlbum(a.id) },
     ];
     if (a.id !== ROOT_ALBUM) {
       items.push(
-        { label: '✏️ เปลี่ยนชื่อ…', click: () => this.renameAlbum(a.id) },
-        { label: '📁 ย้ายไปอยู่ใต้…', click: () => this.moveAlbumTo(a.id) },
+        { label: T`✏️ เปลี่ยนชื่อ…`, click: () => this.renameAlbum(a.id) },
+        { label: T`📁 ย้ายไปอยู่ใต้…`, click: () => this.moveAlbumTo(a.id) },
         '-',
-        { label: '📤 ส่งออกอัลบั้มนี้…', click: () => this.exportAlbum(a.id) },
-        { label: '📂 แสดงในโฟลเดอร์', click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, a.id)) },
+        { label: T`📤 ส่งออกอัลบั้มนี้…`, click: () => this.exportAlbum(a.id) },
+        { label: T`📂 แสดงในโฟลเดอร์`, click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, a.id)) },
         '-',
-        { label: '🗑 ลบอัลบั้ม (ย้ายไปถังขยะ)', danger: true, click: () => this.deleteAlbum(a.id) },
+        { label: T`🗑 ลบอัลบั้ม (ย้ายไปถังขยะ)`, danger: true, click: () => this.deleteAlbum(a.id) },
       );
     } else {
-      items.push({ label: '📂 แสดงโฟลเดอร์ Images', click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, ROOT_ALBUM)) });
+      items.push({ label: T`📂 แสดงโฟลเดอร์ Images`, click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, ROOT_ALBUM)) });
     }
     popupMenu(e.clientX, e.clientY, items);
   }
 
   async newAlbum(parent) {
-    const name = await ask('ชื่ออัลบั้มใหม่' + (parent && parent !== ROOT_ALBUM ? ` (อยู่ใต้ ${parent})` : ''),
-                           { placeholder: 'เช่น ตัวละคร' });
+    const name = await ask(T`ชื่ออัลบั้มใหม่` + (parent && parent !== ROOT_ALBUM ? T` (อยู่ใต้ ${parent})` : ''),
+                           { placeholder: T`เช่น ตัวละคร` });
     if (!name) return;
     try {
       const a = await AC.createAlbum(kapi, this.root, name, parent === ROOT_ALBUM ? '' : parent);
       this.state.album = a.id;
       await this.render();
-      setStatus('สร้างอัลบั้ม: ' + a.id);
-    } catch (err) { setStatus('สร้างอัลบั้มไม่สำเร็จ: ' + err.message); }
+      setStatus(T`สร้างอัลบั้ม: ` + a.id);
+    } catch (err) { setStatus(T`สร้างอัลบั้มไม่สำเร็จ: ` + err.message); }
   }
 
   async renameAlbum(id) {
-    const name = await ask('ชื่อใหม่ของอัลบั้ม', { value: AC.albumBaseName(id) });
+    const name = await ask(T`ชื่อใหม่ของอัลบั้ม`, { value: AC.albumBaseName(id) });
     if (!name) return;
     try {
       const r = await AC.renameAlbum(kapi, this.root, id, name);
       await this.fixRefsAfterAlbumMove(r.moves);
       if (this.state.album === id) this.state.album = r.to;
       await this.render();
-      setStatus('เปลี่ยนชื่ออัลบั้มแล้ว: ' + r.to);
-    } catch (err) { setStatus('เปลี่ยนชื่อไม่สำเร็จ: ' + err.message); }
+      setStatus(T`เปลี่ยนชื่ออัลบั้มแล้ว: ` + r.to);
+    } catch (err) { setStatus(T`เปลี่ยนชื่อไม่สำเร็จ: ` + err.message); }
   }
 
   async moveAlbumTo(id) {
-    const opts = [{ label: '(ชั้นบนสุด)', value: '' },
+    const opts = [{ label: T`(ชั้นบนสุด)`, value: '' },
       ...this.albums.filter((a) => a.id !== ROOT_ALBUM && a.id !== id && !AC.descendantIds(this.albums, id).includes(a.id))
         .map((a) => ({ label: a.id, value: a.id }))];
-    const dst = await choose('ย้ายอัลบั้ม "' + AC.albumBaseName(id) + '" ไปอยู่ใต้', opts);
+    const dst = await choose(T`ย้ายอัลบั้ม "` + AC.albumBaseName(id) + T`" ไปอยู่ใต้`, opts);
     if (dst === null || dst === undefined) return;
     try {
       const r = await AC.moveAlbum(kapi, this.root, id, dst);
       await this.fixRefsAfterAlbumMove(r.moves);
       if (this.state.album === id) this.state.album = r.to;
       await this.render();
-      setStatus('ย้ายอัลบั้มแล้ว: ' + r.to);
-    } catch (err) { setStatus('ย้ายไม่สำเร็จ: ' + err.message); }
+      setStatus(T`ย้ายอัลบั้มแล้ว: ` + r.to);
+    } catch (err) { setStatus(T`ย้ายไม่สำเร็จ: ` + err.message); }
   }
 
   async deleteAlbum(id) {
     const imgs = await AC.getAlbumImages(kapi, this.root, id, { write: false });
     const used = imgs.filter((i) => UI.usageCount(this.usage, i.file) > 0).length;
-    const warn = used ? `\n⚠ มี ${used} รูปที่ถูกใช้ในต้นฉบับอยู่` : '';
-    if (!(await confirmBox(`ลบอัลบั้ม “${AC.albumBaseName(id)}” พร้อมรูป ${imgs.length} ใบ? (ย้ายไปถังขยะ)` + warn))) return;
+    const warn = used ? T`\n⚠ มี ${used} รูปที่ถูกใช้ในต้นฉบับอยู่` : '';
+    if (!(await confirmBox(T`ลบอัลบั้ม “${AC.albumBaseName(id)}” พร้อมรูป ${imgs.length} ใบ? (ย้ายไปถังขยะ)` + warn))) return;
     try {
       await AC.deleteAlbum(kapi, this.root, id);
       if (this.state.album === id) this.state.album = ALL_ALBUM;
       await this.render();
       this.changed();
-      setStatus('ย้ายอัลบั้มไปถังขยะแล้ว');
-    } catch (err) { setStatus('ลบไม่สำเร็จ: ' + err.message); }
+      setStatus(T`ย้ายอัลบั้มไปถังขยะแล้ว`);
+    } catch (err) { setStatus(T`ลบไม่สำเร็จ: ` + err.message); }
   }
 
   /** อัลบั้มถูกเปลี่ยนชื่อ/ย้าย → ลิงก์ในไฟล์ .md ต้องตามไปด้วย */
@@ -714,7 +715,7 @@ export class Gallery {
           (mv.from ? mv.from + '/' : '') + f, (mv.to ? mv.to + '/' : '') + f);
       }
     }
-    if (n) { await this.rescanUsage(); setStatus(`อัปเดตลิงก์รูปใน ${n} ไฟล์`); }
+    if (n) { await this.rescanUsage(); setStatus(T`อัปเดตลิงก์รูปใน ${n} ไฟล์`); }
     return n;
   }
 
@@ -729,7 +730,7 @@ export class Gallery {
     urlCache.clear();
     await this.render();
     this.changed();
-    setStatus('เพิ่มรูปแล้ว: ' + name);
+    setStatus(T`เพิ่มรูปแล้ว: ` + name);
   }
 
   /** ลากไฟล์จาก Finder/Explorer มาวางในตาราง */
@@ -738,41 +739,41 @@ export class Gallery {
     const dir = await AC.albumDir(kapi, this.root, album);
     await kapi.mkdir(dir);
     let n = 0;
-    await withBusy('กำลังเพิ่มรูป…', async () => {
+    await withBusy(T`กำลังเพิ่มรูป…`, async () => {
       for (const f of files) {
         try {
           const buf = new Uint8Array(await f.arrayBuffer());
           const base64 = btoa(Array.from(buf, (b) => String.fromCharCode(b)).join(''));
           await kapi.writeImageData(dir, f.name, base64);
           n++;
-        } catch (err) { setStatus('เพิ่มรูปไม่สำเร็จ: ' + err.message); }
+        } catch (err) { setStatus(T`เพิ่มรูปไม่สำเร็จ: ` + err.message); }
       }
     });
     if (!n) return;
     urlCache.clear();
     await this.render();
     this.changed();
-    setStatus(`เพิ่มรูป ${n} ใบเข้าอัลบั้ม ${AC.albumBaseName(album)}`);
+    setStatus(T`เพิ่มรูป ${n} ใบเข้าอัลบั้ม ${AC.albumBaseName(album)}`);
   }
 
   cellMenu(e, it) {
     const sel = this.state.sel.size > 1 && this.state.sel.has(it.path);
     const many = sel ? [...this.state.sel] : [it.path];
     popupMenu(e.clientX, e.clientY, [
-      { label: `<b>${sel ? many.length + ' รูปที่เลือก' : it.file}</b>`, disabled: true },
-      { label: '🔍 ดูภาพเต็ม', click: async () => imageLightbox(await fileURL(this.root, it.path), it.caption || it.file) },
-      { label: '🖼 แทรกลงฉากที่เปิดอยู่', click: () => this.insert(many) },
-      { label: '🎨 วางบนกระดานอารมณ์', click: () => this.addToBoard(many) },
+      { label: `<b>${sel ? many.length + T` รูปที่เลือก` : it.file}</b>`, disabled: true },
+      { label: T`🔍 ดูภาพเต็ม`, click: async () => imageLightbox(await fileURL(this.root, it.path), it.caption || it.file) },
+      { label: T`🖼 แทรกลงฉากที่เปิดอยู่`, click: () => this.insert(many) },
+      { label: T`🎨 วางบนกระดานอารมณ์`, click: () => this.addToBoard(many) },
       '-',
-      { label: '🏷 แก้แท็ก…', click: () => this.tagSelection(many) },
-      { label: '✏️ แก้คำบรรยาย…', click: () => this.editCaption(it) },
-      { label: '📁 ย้ายไปอัลบั้ม…', click: () => this.moveSelection(many) },
+      { label: T`🏷 แก้แท็ก…`, click: () => this.tagSelection(many) },
+      { label: T`✏️ แก้คำบรรยาย…`, click: () => this.editCaption(it) },
+      { label: T`📁 ย้ายไปอัลบั้ม…`, click: () => this.moveSelection(many) },
       '-',
-      { label: 'ℹ️ ข้อมูลรูป', click: () => this.infoDialog(it) },
-      { label: '🔎 หารูปที่คล้ายกัน', click: () => this.findSimilar(it) },
-      { label: '📂 แสดงในโฟลเดอร์', click: async () => kapi.revealInOS(await absOf(this.root, it.path)) },
+      { label: T`ℹ️ ข้อมูลรูป`, click: () => this.infoDialog(it) },
+      { label: T`🔎 หารูปที่คล้ายกัน`, click: () => this.findSimilar(it) },
+      { label: T`📂 แสดงในโฟลเดอร์`, click: async () => kapi.revealInOS(await absOf(this.root, it.path)) },
       '-',
-      { label: '🗑 ลบ (ย้ายไปถังขยะ)', danger: true, click: () => this.deleteSelection(many) },
+      { label: T`🗑 ลบ (ย้ายไปถังขยะ)`, danger: true, click: () => this.deleteSelection(many) },
     ]);
   }
 
@@ -780,16 +781,16 @@ export class Gallery {
     const rows = UI.usageOf(this.usage, it.file);
     if (!rows.length) return;
     popupMenu(e.clientX, e.clientY, [
-      { label: '<b>รูปนี้ถูกใช้ใน</b>', disabled: true },
+      { label: T`<b>รูปนี้ถูกใช้ใน</b>`, disabled: true },
       ...rows.map((r) => ({
-        label: `${r.title} <span class="dim">(บรรทัด ${r.line})</span>`,
+        label: T`${r.title} <span class="dim">(บรรทัด ${r.line})</span>`,
         click: () => this.opts.onOpenFile && this.opts.onOpenFile(r.file),
       })),
     ]);
   }
 
   async insert(paths) {
-    if (!this.opts.onInsert) { setStatus('เปิดฉากก่อนจึงจะแทรกรูปได้'); return; }
+    if (!this.opts.onInsert) { setStatus(T`เปิดฉากก่อนจึงจะแทรกรูปได้`); return; }
     for (const p of paths) {
       const it = this.items.find((x) => x.path === p);
       await this.opts.onInsert(p, (it && it.caption) || '');
@@ -797,7 +798,7 @@ export class Gallery {
   }
 
   async editCaption(it) {
-    const v = await ask('คำบรรยายของ ' + it.file, { value: it.caption || '', allowEmpty: true });
+    const v = await ask(T`คำบรรยายของ ` + it.file, { value: it.caption || '', allowEmpty: true });
     if (v === null) return;
     await AC.updateImage(kapi, this.root, it.album, it.file, { caption: v });
     await AC.syncFlatIndex(kapi, this.root);
@@ -810,7 +811,7 @@ export class Gallery {
     if (!list.length) return;
     const opts = [{ label: ROOT_ALBUM_NAME, value: ROOT_ALBUM },
       ...this.albums.filter((a) => a.id !== ROOT_ALBUM).map((a) => ({ label: a.id, value: a.id }))];
-    const dst = await choose(`ย้าย ${list.length} รูปไปอัลบั้มไหน`, opts);
+    const dst = await choose(T`ย้าย ${list.length} รูปไปอัลบั้มไหน`, opts);
     if (!dst) return;
     await this.moveImages(list, dst);
   }
@@ -818,14 +819,14 @@ export class Gallery {
   async moveImages(paths, dstAlbum) {
     if (!paths || !paths.length) return;
     const moved = [];
-    await withBusy('กำลังย้ายรูป…', async () => {
+    await withBusy(T`กำลังย้ายรูป…`, async () => {
       for (const p of paths) {
         const it = this.items.find((x) => x.path === p);
         if (!it || it.album === dstAlbum) continue;
         try {
           const r = await AC.moveImage(kapi, this.root, it.album, dstAlbum, it.file);
           if (r) moved.push(r);
-        } catch (err) { setStatus('ย้ายไม่สำเร็จ: ' + err.message); }
+        } catch (err) { setStatus(T`ย้ายไม่สำเร็จ: ` + err.message); }
       }
     });
     if (!moved.length) return;
@@ -835,17 +836,17 @@ export class Gallery {
       const files = new Set();
       for (const m of affected) for (const r of UI.usageOf(this.usage, m.file)) files.add(r.file);
       const ok = await confirmBox(
-        `รูปที่ย้าย ${affected.length} ใบถูกใช้อยู่ใน ${files.size} ไฟล์\nแก้ลิงก์ในไฟล์เหล่านั้นให้ตรงที่อยู่ใหม่เลยไหม?`,
-        'แก้ลิงก์ให้เลย');
+        T`รูปที่ย้าย ${affected.length} ใบถูกใช้อยู่ใน ${files.size} ไฟล์\nแก้ลิงก์ในไฟล์เหล่านั้นให้ตรงที่อยู่ใหม่เลยไหม?`,
+        T`แก้ลิงก์ให้เลย`);
       if (ok) {
         let n = 0;
         for (const m of moved) n += await UI.applyRefRewrite(kapi, this.usage, m.oldPath, m.newPath);
-        setStatus(`ย้าย ${moved.length} รูป · อัปเดตลิงก์ใน ${n} ไฟล์`);
+        setStatus(T`ย้าย ${moved.length} รูป · อัปเดตลิงก์ใน ${n} ไฟล์`);
       } else {
-        setStatus(`ย้าย ${moved.length} รูปแล้ว (ยังไม่แก้ลิงก์ในต้นฉบับ)`);
+        setStatus(T`ย้าย ${moved.length} รูปแล้ว (ยังไม่แก้ลิงก์ในต้นฉบับ)`);
       }
     } else {
-      setStatus(`ย้าย ${moved.length} รูปแล้ว`);
+      setStatus(T`ย้าย ${moved.length} รูปแล้ว`);
     }
     this.state.sel.clear();
     urlCache.clear();
@@ -862,14 +863,14 @@ export class Gallery {
       const it = this.items.find((x) => x.path === p);
       return it && it.uses > 0;
     }).length;
-    const warn = used ? `\n⚠ มี ${used} ใบที่ยังถูกใช้ในต้นฉบับ` : '';
-    if (!(await confirmBox(`ลบ ${list.length} รูป? (ย้ายไปถังขยะ)` + warn))) return;
-    await withBusy('กำลังลบรูป…', async () => {
+    const warn = used ? T`\n⚠ มี ${used} ใบที่ยังถูกใช้ในต้นฉบับ` : '';
+    if (!(await confirmBox(T`ลบ ${list.length} รูป? (ย้ายไปถังขยะ)` + warn))) return;
+    await withBusy(T`กำลังลบรูป…`, async () => {
       for (const p of list) {
         const it = this.items.find((x) => x.path === p);
         if (!it) continue;
         try { await AC.deleteImage(kapi, this.root, it.album, it.file); }
-        catch (err) { setStatus('ลบไม่สำเร็จ: ' + err.message); }
+        catch (err) { setStatus(T`ลบไม่สำเร็จ: ` + err.message); }
       }
     });
     this.state.sel.clear();
@@ -877,16 +878,16 @@ export class Gallery {
     await AC.syncFlatIndex(kapi, this.root);
     await this.render();
     this.changed();
-    setStatus(`ลบ ${list.length} รูปแล้ว (อยู่ในถังขยะ)`);
+    setStatus(T`ลบ ${list.length} รูปแล้ว (อยู่ในถังขยะ)`);
   }
 
   async tagSelection(paths) {
     const list = paths || [...this.state.sel];
-    if (!list.length) { setStatus('เลือกรูปก่อน'); return; }
+    if (!list.length) { setStatus(T`เลือกรูปก่อน`); return; }
     const cur = list.length === 1
       ? TG.tagsToText((this.items.find((x) => x.path === list[0]) || {}).tags || []) : '';
-    const text = await ask(`แท็กของ ${list.length} รูป (คั่นด้วยช่องว่าง · @ = เอนทิตี้ Wiki · ~ = ฉาก)`,
-                           { value: cur, placeholder: '#ฉาก @เอกราช ~ฉากที่ 3', allowEmpty: true });
+    const text = await ask(T`แท็กของ ${list.length} รูป (คั่นด้วยช่องว่าง · @ = เอนทิตี้ Wiki · ~ = ฉาก)`,
+                           { value: cur, placeholder: T`#ฉาก @เอกราช ~ฉากที่ 3`, allowEmpty: true });
     if (text === null) return;
     const tags = TG.parseTags(text);
     const byAlbum = new Map();
@@ -907,11 +908,11 @@ export class Gallery {
     await AC.syncFlatIndex(kapi, this.root);
     await this.render();
     this.changed();
-    setStatus(list.length === 1 ? 'บันทึกแท็กแล้ว' : `ติดแท็กให้ ${list.length} รูปแล้ว`);
+    setStatus(list.length === 1 ? T`บันทึกแท็กแล้ว` : T`ติดแท็กให้ ${list.length} รูปแล้ว`);
   }
 
   async renameTag(tag) {
-    const v = await ask('เปลี่ยนชื่อแท็ก ' + tag, { value: tag });
+    const v = await ask(T`เปลี่ยนชื่อแท็ก ` + tag, { value: tag });
     if (!v || v === tag) return;
     for (const a of this.albums) {
       const doc = await AC.readAlbumDoc(kapi, this.root, a.id);
@@ -922,11 +923,11 @@ export class Gallery {
     }
     this.state.tags = this.state.tags.map((t) => (t === tag ? TG.normalizeTag(v) : t));
     await this.render();
-    setStatus('เปลี่ยนชื่อแท็กแล้ว');
+    setStatus(T`เปลี่ยนชื่อแท็กแล้ว`);
   }
 
   async dropTag(tag) {
-    if (!(await confirmBox(`ถอดแท็ก ${tag} ออกจากทุกรูป?`, 'ถอดออก'))) return;
+    if (!(await confirmBox(T`ถอดแท็ก ${tag} ออกจากทุกรูป?`, T`ถอดออก`))) return;
     for (const a of this.albums) {
       const doc = await AC.readAlbumDoc(kapi, this.root, a.id);
       const files = Object.keys(doc.images);
@@ -937,7 +938,7 @@ export class Gallery {
     }
     this.state.tags = this.state.tags.filter((t) => t !== tag);
     await this.render();
-    setStatus('ถอดแท็กแล้ว');
+    setStatus(T`ถอดแท็กแล้ว`);
   }
 
   // ---------- ข้อมูล / ค้นรูปคล้าย ----------
@@ -947,19 +948,19 @@ export class Gallery {
     const dim = await measure(url);
     const st = await statOf(this.root, it.path);
     const rows = [
-      ['ชื่อไฟล์', it.file],
-      ['อัลบั้ม', it.album === ROOT_ALBUM ? ROOT_ALBUM_NAME : it.album],
-      ['ที่อยู่ในคลัง', 'Images/' + it.path],
-      ['ความละเอียด', dim.w ? `${dim.w} × ${dim.h} px` : '—'],
-      ['ขนาดไฟล์', AC.formatBytes(st.size)],
-      ['วันที่เพิ่ม', it.added ? new Date(it.added).toLocaleString('th-TH') : '—'],
-      ['แก้ไขล่าสุด', st.mtimeMs ? new Date(st.mtimeMs).toLocaleString('th-TH') : '—'],
-      ['จำนวนครั้งที่ใช้', String(it.uses || 0)],
-      ['แท็ก', (it.tags || []).join(' ') || '—'],
+      [T`ชื่อไฟล์`, it.file],
+      [T`อัลบั้ม`, it.album === ROOT_ALBUM ? ROOT_ALBUM_NAME : it.album],
+      [T`ที่อยู่ในคลัง`, 'Images/' + it.path],
+      [T`ความละเอียด`, dim.w ? `${dim.w} × ${dim.h} px` : '—'],
+      [T`ขนาดไฟล์`, AC.formatBytes(st.size)],
+      [T`วันที่เพิ่ม`, it.added ? new Date(it.added).toLocaleString('th-TH') : '—'],
+      [T`แก้ไขล่าสุด`, st.mtimeMs ? new Date(st.mtimeMs).toLocaleString('th-TH') : '—'],
+      [T`จำนวนครั้งที่ใช้`, String(it.uses || 0)],
+      [T`แท็ก`, (it.tags || []).join(' ') || '—'],
     ];
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog gal2-info');
-    box.append(el('div', 'k-dlg-title', 'ข้อมูลรูป'));
+    box.append(el('div', 'k-dlg-title', T`ข้อมูลรูป`));
     const im = el('img', 'gal2-info-img'); im.src = url; box.append(im);
     const tbl = el('div', 'gal2-info-rows');
     for (const [k, v] of rows) {
@@ -970,16 +971,16 @@ export class Gallery {
     box.append(tbl);
     if ((it.usedIn || []).length) {
       const u = el('div', 'gal2-info-uses');
-      u.append(el('div', 'gal2-info-k', 'ใช้ใน'));
+      u.append(el('div', 'gal2-info-k', T`ใช้ใน`));
       for (const r of it.usedIn) {
-        const a = el('a', 'gal2-uselink', `${r.title} (บรรทัด ${r.line})`);
+        const a = el('a', 'gal2-uselink', T`${r.title} (บรรทัด ${r.line})`);
         a.onclick = () => { ov.remove(); this.opts.onOpenFile && this.opts.onOpenFile(r.file); };
         u.append(a);
       }
       box.append(u);
     }
     const btns = el('div', 'k-dlg-btns');
-    const ok = el('button', 'k-ok', 'ปิด');
+    const ok = el('button', 'k-ok', T`ปิด`);
     ok.onclick = () => ov.remove();
     btns.append(ok); box.append(btns);
     ov.append(box); document.body.append(ov);
@@ -997,7 +998,7 @@ export class Gallery {
   }
 
   async findSimilar(it) {
-    await withBusy('กำลังเทียบรูป…', async () => {
+    await withBusy(T`กำลังเทียบรูป…`, async () => {
       const all = this.state.album === ALL_ALBUM ? this.items : await AC.allImages(kapi, this.root, this.albums);
       const withHash = await this.ensureHashes(all);
       const target = withHash.find((x) => x.path === it.path) || { ...it, hash: await hashOf(await fileURL(this.root, it.path)) };
@@ -1009,9 +1010,9 @@ export class Gallery {
   async showSimilar(target, sim) {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog k-wide gal2-sim');
-    box.append(el('div', 'k-dlg-title', 'รูปที่คล้ายกับ ' + target.file));
+    box.append(el('div', 'k-dlg-title', T`รูปที่คล้ายกับ ` + target.file));
     const grid = el('div', 'gal-grid gal-pick');
-    if (!sim.length) grid.append(el('div', 'dim', '(ไม่พบรูปที่คล้ายกันในคลัง)'));
+    if (!sim.length) grid.append(el('div', 'dim', T`(ไม่พบรูปที่คล้ายกันในคลัง)`));
     for (const s of sim) {
       const cell = el('div', 'gal-cell gal-choice');
       const im = el('img'); im.src = await fileURL(this.root, s.path);
@@ -1022,28 +1023,28 @@ export class Gallery {
     }
     box.append(grid);
     const btns = el('div', 'k-dlg-btns');
-    const ok = el('button', 'k-ok', 'ปิด'); ok.onclick = () => ov.remove();
+    const ok = el('button', 'k-ok', T`ปิด`); ok.onclick = () => ov.remove();
     btns.append(ok); box.append(btns);
     ov.append(box); document.body.append(ov);
     ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   }
 
   async findDuplicates() {
-    await withBusy('กำลังหารูปซ้ำ…', async () => {
+    await withBusy(T`กำลังหารูปซ้ำ…`, async () => {
       const all = await AC.allImages(kapi, this.root, this.albums);
       const withHash = await this.ensureHashes(UI.attachUsage(all, this.usage));
       const dups = IH.findDuplicates(withHash, { min: 0.94 });
       const ov = el('div', 'k-overlay');
       const box = el('div', 'k-dialog k-wide gal2-sim');
-      box.append(el('div', 'k-dlg-title', `รูปซ้ำ/เกือบซ้ำ — พบ ${dups.length} คู่`));
+      box.append(el('div', 'k-dlg-title', T`รูปซ้ำ/เกือบซ้ำ — พบ ${dups.length} คู่`));
       const list = el('div', 'gal2-dups');
-      if (!dups.length) list.append(el('div', 'dim', '(ไม่พบรูปซ้ำ)'));
+      if (!dups.length) list.append(el('div', 'dim', T`(ไม่พบรูปซ้ำ)`));
       for (const d of dups.slice(0, 60)) {
         const row = el('div', 'gal2-dup-row');
         for (const side of [d.a, d.b]) {
           const c = el('div', 'gal2-dup-cell');
           const im = el('img'); im.src = await fileURL(this.root, side.path);
-          c.append(im, el('div', 'gal-cap-ro', `${side.path}\nใช้ ${side.uses || 0} ครั้ง`));
+          c.append(im, el('div', 'gal-cap-ro', T`${side.path}\nใช้ ${side.uses || 0} ครั้ง`));
           list.append(c);
           row.append(c);
         }
@@ -1052,7 +1053,7 @@ export class Gallery {
       }
       box.append(list);
       const btns = el('div', 'k-dlg-btns');
-      const ok = el('button', 'k-ok', 'ปิด'); ok.onclick = () => ov.remove();
+      const ok = el('button', 'k-ok', T`ปิด`); ok.onclick = () => ov.remove();
       btns.append(ok); box.append(btns);
       ov.append(box); document.body.append(ov);
       ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
@@ -1064,18 +1065,18 @@ export class Gallery {
   moreMenu(e) {
     const r = e.currentTarget.getBoundingClientRect();
     popupMenu(r.left, r.bottom + 4, [
-      { label: '🤖 AI: ตั้งคำบรรยายให้รูปที่เลือก', click: () => this.aiCaption() },
-      { label: '🤖 AI: แนะนำแท็กให้รูปที่เลือก', click: () => this.aiTags() },
+      { label: T`🤖 AI: ตั้งคำบรรยายให้รูปที่เลือก`, click: () => this.aiCaption() },
+      { label: T`🤖 AI: แนะนำแท็กให้รูปที่เลือก`, click: () => this.aiTags() },
       '-',
-      { label: '🔎 หารูปซ้ำในคลัง', click: () => this.findDuplicates() },
-      { label: '🧹 แสดงเฉพาะรูปที่ยังไม่ถูกใช้', click: () => { this.state.use = 'unused'; this.state.album = ALL_ALBUM; this.render(); } },
+      { label: T`🔎 หารูปซ้ำในคลัง`, click: () => this.findDuplicates() },
+      { label: T`🧹 แสดงเฉพาะรูปที่ยังไม่ถูกใช้`, click: () => { this.state.use = 'unused'; this.state.album = ALL_ALBUM; this.render(); } },
       '-',
-      { label: '📤 ส่งออกอัลบั้มที่เลือกอยู่…', click: () => this.exportAlbum(this.state.album) },
-      { label: '📤 ส่งออกเฉพาะรูปที่ถูกใช้จริง…', click: () => this.exportUsed() },
+      { label: T`📤 ส่งออกอัลบั้มที่เลือกอยู่…`, click: () => this.exportAlbum(this.state.album) },
+      { label: T`📤 ส่งออกเฉพาะรูปที่ถูกใช้จริง…`, click: () => this.exportUsed() },
       '-',
-      { label: '🔄 สร้าง images.json ใหม่ (ดัชนี v1)', click: async () => {
-        await AC.syncFlatIndex(kapi, this.root); setStatus('สร้างดัชนี images.json ใหม่แล้ว'); } },
-      { label: '📂 แสดงโฟลเดอร์ Images', click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, ROOT_ALBUM)) },
+      { label: T`🔄 สร้าง images.json ใหม่ (ดัชนี v1)`, click: async () => {
+        await AC.syncFlatIndex(kapi, this.root); setStatus(T`สร้างดัชนี images.json ใหม่แล้ว`); } },
+      { label: T`📂 แสดงโฟลเดอร์ Images`, click: async () => kapi.revealInOS(await AC.albumDir(kapi, this.root, ROOT_ALBUM)) },
     ]);
   }
 
@@ -1085,7 +1086,7 @@ export class Gallery {
     const { exportImages } = await import('./gallery/gallery-export.js');
     const items = id === ALL_ALBUM ? this.items : await AC.getAlbumImages(kapi, this.root, id, { write: false });
     await exportImages(this.root, items, {
-      name: id === ALL_ALBUM ? 'ทุกอัลบั้ม' : AC.albumBaseName(id),
+      name: id === ALL_ALBUM ? T`ทุกอัลบั้ม` : AC.albumBaseName(id),
       usage: this.usage,
     });
   }
@@ -1095,22 +1096,22 @@ export class Gallery {
     if (!list.length) return;
     const { exportImages } = await import('./gallery/gallery-export.js');
     await exportImages(this.root, this.items.filter((i) => list.includes(i.path)),
-                       { name: 'รูปที่เลือก', usage: this.usage });
+                       { name: T`รูปที่เลือก`, usage: this.usage });
   }
 
   async exportUsed() {
     const { exportImages } = await import('./gallery/gallery-export.js');
     const all = UI.attachUsage(await AC.allImages(kapi, this.root, this.albums), this.usage);
     const used = UI.usedImages(all);
-    if (!used.length) { setStatus('ยังไม่มีรูปที่ถูกใช้ในต้นฉบับ'); return; }
-    await exportImages(this.root, used, { name: 'รูปที่ใช้จริง', usage: this.usage });
+    if (!used.length) { setStatus(T`ยังไม่มีรูปที่ถูกใช้ในต้นฉบับ`); return; }
+    await exportImages(this.root, used, { name: T`รูปที่ใช้จริง`, usage: this.usage });
   }
 
   // ---------- AI ----------
 
   async aiCaption() {
     const list = [...this.state.sel];
-    if (!list.length) { setStatus('เลือกรูปก่อน แล้วสั่ง AI ตั้งคำบรรยาย'); return; }
+    if (!list.length) { setStatus(T`เลือกรูปก่อน แล้วสั่ง AI ตั้งคำบรรยาย`); return; }
     const { aiCaptionImages } = await import('./gallery/gallery-ai.js');
     const items = this.items.filter((i) => list.includes(i.path));
     const n = await aiCaptionImages(this.root, items, { usage: this.usage });
@@ -1119,7 +1120,7 @@ export class Gallery {
 
   async aiTags() {
     const list = [...this.state.sel];
-    if (!list.length) { setStatus('เลือกรูปก่อน แล้วสั่ง AI แนะนำแท็ก'); return; }
+    if (!list.length) { setStatus(T`เลือกรูปก่อน แล้วสั่ง AI แนะนำแท็ก`); return; }
     const { aiTagImages } = await import('./gallery/gallery-ai.js');
     const items = this.items.filter((i) => list.includes(i.path));
     const n = await aiTagImages(this.root, items, {
@@ -1133,7 +1134,7 @@ export class Gallery {
   /** วางรูปที่เลือกลงกระดาน แล้วเปิดแผงกระดานให้เห็นผลทันที */
   async addToBoard(paths) {
     const list = (paths || []).filter(Boolean);
-    if (!list.length) { setStatus('เลือกรูปก่อน แล้วค่อยวางบนกระดาน'); return; }
+    if (!list.length) { setStatus(T`เลือกรูปก่อน แล้วค่อยวางบนกระดาน`); return; }
     if (this.opts.onOpenBoard) await this.opts.onOpenBoard();
     await dropOnBoard(this.root, list);
   }
@@ -1158,19 +1159,19 @@ export function pickImage(root, { album = null } = {}) {
   return new Promise(async (resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog k-wide gal2-pick');
-    box.append(el('div', 'k-dlg-title', 'เลือกรูปจากคลัง'));
+    box.append(el('div', 'k-dlg-title', T`เลือกรูปจากคลัง`));
     const body = el('div', 'gal2-pick-body');
     const side = el('div', 'gal2-pick-side');
     const right = el('div', 'gal2-pick-right');
     const search = el('input', 'wiki-input gal2-search');
-    search.placeholder = '🔍 ค้นชื่อไฟล์ / คำบรรยาย / แท็ก';
+    search.placeholder = T`🔍 ค้นชื่อไฟล์ / คำบรรยาย / แท็ก`;
     const grid = el('div', 'gal-grid gal-pick');
     right.append(search, grid);
     body.append(side, right);
     box.append(body);
     const btns = el('div', 'k-dlg-btns');
-    const addB = el('button', null, '＋ เพิ่มรูปใหม่…');
-    const cancel = el('button', null, 'ยกเลิก');
+    const addB = el('button', null, T`＋ เพิ่มรูปใหม่…`);
+    const cancel = el('button', null, T`ยกเลิก`);
     btns.append(addB, cancel);
     box.append(btns);
     ov.append(box);
@@ -1199,7 +1200,7 @@ export function pickImage(root, { album = null } = {}) {
         r.onclick = async () => { cur = id; await loadItems(); drawSide(); drawGrid(); };
         side.append(r);
       };
-      row(ALL_ALBUM, 'รูปทั้งหมด', 0);
+      row(ALL_ALBUM, T`รูปทั้งหมด`, 0);
       const walk = (nodes, depth) => {
         for (const n of nodes) {
           row(n.id, n.id === ROOT_ALBUM ? ROOT_ALBUM_NAME : n.name, depth);
@@ -1212,7 +1213,7 @@ export function pickImage(root, { album = null } = {}) {
       grid.innerHTML = '';
       const list = AC.searchImages(items, search.value);
       if (!list.length) {
-        grid.append(el('div', 'dim', items.length ? '(ไม่มีรูปที่ตรงกับคำค้น)' : '(อัลบั้มนี้ยังว่าง)'));
+        grid.append(el('div', 'dim', items.length ? T`(ไม่มีรูปที่ตรงกับคำค้น)` : T`(อัลบั้มนี้ยังว่าง)`));
         return;
       }
       for (const it of list) {
@@ -1237,7 +1238,7 @@ export function pickImage(root, { album = null } = {}) {
       albums = await AC.listAlbums(kapi, root);
       await loadItems();
       drawSide(); drawGrid();
-      setStatus('เพิ่มรูปแล้ว: ' + name);
+      setStatus(T`เพิ่มรูปแล้ว: ` + name);
     };
 
     await loadItems();

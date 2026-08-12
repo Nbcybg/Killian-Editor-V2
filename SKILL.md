@@ -5,6 +5,11 @@ description: Build, maintain, extend, and debug Killian 2 (คิเลียน
 
 # Killian 2 (คิเลียน อีดิเตอร์ v2)
 
+> ⚠️ **ไฟล์นี้เป็นฉบับยาว/ฉบับเก็บ (หยุดอัปเดตที่ราว alpha.61)**
+> สกิลตัวที่ Claude โหลดจริงคือ [`skill/SKILL-short.md`](skill/SKILL-short.md) — แก้ที่นั่นที่เดียว
+> (คู่มือปัจจุบันของโปรเจกต์ = `AGENTS.md` + `CHANGELOG.md` + `README.md`)
+
+
 โปรแกรมเขียนนิยาย + บทภาพยนตร์ของ Top — **Electron 43 + ProseMirror**, พกพาได้, ไทยเป็นหลัก
 เขียนใหม่จาก v1 (Python/Tkinter) แต่ **ไฟล์งานเข้ากันได้ 100%** (.md + .json เหมือนเดิม)
 

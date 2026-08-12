@@ -1,6 +1,7 @@
 // scene-ops.js — จัดการฉากและบท: เพิ่ม/แก้ชื่อ/ลบ/ทำสำเนา/ย้าย/เมนูสถานะ·สี
+import { T } from './i18n.js';
 import { buildTree, closeTab, guid, openScene, safeName, saveTab, uniqueSceneFileName, refreshNetwork } from './app.js';
-import { SCENE_COLORS, SCENE_STATUSES, el, setStatus, state } from './core.js';
+import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { deleteToTrash } from './recycle.js';
 import { ask, confirmBox, popupMenu } from './ui.js';
@@ -9,7 +10,7 @@ import { dumpMdFile, parseMdFile } from './md.js';
 import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
 
 export async function renameScene(dPath, ch, sc) {
-  const title = await ask('ชื่อฉากใหม่', { value: sc.title }); if (!title) return;
+  const title = await ask(T`ชื่อฉากใหม่`, { value: sc.title }); if (!title) return;
   return setSceneTitle(dPath, ch, sc, title);
 }
 
@@ -30,7 +31,7 @@ export async function setSceneTitle(dPath, ch, sc, title) {
 }
 
 export async function renameChapter(dPath, ch) {
-  const title = await ask('ชื่อบทใหม่', { value: ch.title }); if (!title) return;
+  const title = await ask(T`ชื่อบทใหม่`, { value: ch.title }); if (!title) return;
   return setChapterTitle(dPath, ch, title);
 }
 
@@ -52,13 +53,13 @@ export async function setChapterTitle(dPath, ch, title) {
 export async function chapterProps(dPath, ch) {
   const df = await kapi.join(dPath, 'draft.json');
   let d;
-  try { d = await kapi.readJson(df); } catch { setStatus('อ่าน draft.json ไม่ได้'); return false; }
+  try { d = await kapi.readJson(df); } catch { setStatus(T`อ่าน draft.json ไม่ได้`); return false; }
   const cur = (d.chapters || []).find((c) => c.guid === ch.guid);
-  if (!cur) { setStatus('ไม่พบบทนี้ใน draft.json'); return false; }
+  if (!cur) { setStatus(T`ไม่พบบทนี้ใน draft.json`); return false; }
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-chapter-props');
-  box.append(el('div', 'k-dlg-title', 'คุณสมบัติบท — ' + (cur.title || '')));
+  box.append(el('div', 'k-dlg-title', T`คุณสมบัติบท — ` + (cur.title || '')));
   const mk = (label, val, tag = 'input') => {
     const r = el('div', 'wiki-row'); r.append(el('label', null, label));
     const i = el(tag, 'wiki-input'); i.value = val == null ? '' : String(val);
@@ -80,22 +81,22 @@ export async function chapterProps(dPath, ch) {
     r.append(c); box.append(r); return c;
   };
 
-  const iTitle = mk('ชื่อบท', cur.title || '');
+  const iTitle = mk(T`ชื่อบท`, cur.title || '');
   const statuses = allStatuses();
-  const iStatus = mkSel('สถานะ', [['Outline', '— ยังไม่ตั้ง —'], ...statuses.map((s) => [s, s])],
+  const iStatus = mkSel(T`สถานะ`, [['Outline', T`— ยังไม่ตั้ง —`], ...statuses.map((s) => [s, dataLabel(s)])],
                         statuses.includes(cur.status) ? cur.status : 'Outline');
   // องก์ (Act) — ตัวเลขโรมันแบบ v1 · เลือก "อื่น ๆ" ไม่ได้ จึงใช้ช่องพิมพ์เพื่อไม่ปิดกั้นโครงเรื่องแบบอื่น
-  const iAct = mk('องก์ (Act)', cur.act || '');
-  iAct.placeholder = 'I · II · III · หรือชื่อองก์ที่ตั้งเอง';
-  const iDate = mk('วันที่ / กำหนดส่ง', cur.date || '');
-  iDate.placeholder = 'เช่น 2026-09-01 หรือ "สัปดาห์หน้า"';
-  const iNote = mk('โน้ตของบท', cur.note || '', 'textarea');
-  const iFav = mkChk('⭐ บทสำคัญ (Favorite)', cur.isFavorite);
+  const iAct = mk(T`องก์ (Act)`, cur.act || '');
+  iAct.placeholder = T`I · II · III · หรือชื่อองก์ที่ตั้งเอง`;
+  const iDate = mk(T`วันที่ / กำหนดส่ง`, cur.date || '');
+  iDate.placeholder = T`เช่น 2026-09-01 หรือ "สัปดาห์หน้า"`;
+  const iNote = mk(T`โน้ตของบท`, cur.note || '', 'textarea');
+  const iFav = mkChk(T`⭐ บทสำคัญ (Favorite)`, cur.isFavorite);
 
   return new Promise((resolve) => {
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, 'ยกเลิก');
-    const okB = el('button', 'k-ok', 'บันทึก');
+    const cB = el('button', null, T`ยกเลิก`);
+    const okB = el('button', 'k-ok', T`บันทึก`);
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     const close = (v) => { ov.remove(); resolve(v); };
     cB.onclick = () => close(false);
@@ -115,7 +116,7 @@ export async function chapterProps(dPath, ch) {
       if (!cur.date) delete cur.date;
       await kapi.writeFile(df, JSON.stringify(d, null, 2));
       await buildTree();
-      setStatus('บันทึกคุณสมบัติบทแล้ว: ' + (cur.title || ''));
+      setStatus(T`บันทึกคุณสมบัติบทแล้ว: ` + (cur.title || ''));
       close(true);
     };
   });
@@ -136,7 +137,7 @@ export async function deleteScene(dPath, ch, sc) {
 
 export async function deleteChapter(dPath, ch) {
   const dir = await kapi.join(dPath, 'Chapters', ch.folderName);
-  if (!(await confirmBox(`ลบบท "${ch.title}" ทั้งบท ? (ทุกฉากย้ายไปถังขยะ)`))) return;
+  if (!(await confirmBox(T`ลบบท "${ch.title}" ทั้งบท ? (ทุกฉากย้ายไปถังขยะ)`))) return;
   const dst = await kapi.join(state.root, 'Recycle',
                               Date.now().toString(36) + '-' + ch.folderName);
   const scenesNow = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters?.[ch.guid] || [];
@@ -155,7 +156,7 @@ export async function deleteChapter(dPath, ch) {
 }
 
 export async function addChapter(dPath) {
-  const title = await ask('ชื่อบทใหม่'); if (!title) return;
+  const title = await ask(T`ชื่อบทใหม่`); if (!title) return;
   const df = await kapi.join(dPath, 'draft.json');
   const d = await kapi.readJson(df);
   const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
@@ -164,11 +165,11 @@ export async function addChapter(dPath) {
   d.chapters = [...(d.chapters || []), ch];
   await kapi.writeFile(df, JSON.stringify(d, null, 2));
   await kapi.mkdir(await kapi.join(dPath, 'Chapters', ch.folderName));
-  await buildTree(); setStatus('เพิ่มบท: ' + title); refreshNetwork();
+  await buildTree(); setStatus(T`เพิ่มบท: ` + title); refreshNetwork();
 }
 
 export async function addScene(dPath, ch) {
-  const title = await ask('ชื่อฉากใหม่'); if (!title) return;
+  const title = await ask(T`ชื่อฉากใหม่`); if (!title) return;
   const sf = await kapi.join(dPath, 'scenes.json');
   const d = await kapi.readJson(sf);
   d.chapters = d.chapters || {};
@@ -204,7 +205,7 @@ export async function setSceneMeta(dPath, ch, sc, patch) {
 
 export async function toggleSceneFlag(dPath, ch, sc) {
   await setSceneMeta(dPath, ch, sc, { flag: !sc.flag });
-  setStatus(sc.flag ? 'เอาหมุดออก: ' + sc.title : '⭐ ปักหมุด: ' + sc.title);
+  setStatus(sc.flag ? T`เอาหมุดออก: ` + sc.title : T`⭐ ปักหมุด: ` + sc.title);
 }
 
 export async function duplicateScene(dPath, ch, sc) {
@@ -215,7 +216,7 @@ export async function duplicateScene(dPath, ch, sc) {
   if (!row) return;
   const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
   const fileName = 'scene-' + String(order).padStart(2, '0') + '.md';
-  const newTitle = row.title + ' (สำเนา)';
+  const newTitle = row.title + T` (สำเนา)`;
   const srcFile = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
   let meta = { title: newTitle, type: 'scene', format: 'prose', pov: '', tags: [] }, body = '';
   try { const parsed = parseMdFile(await kapi.readFile(srcFile)); meta = parsed.meta; body = parsed.body; } catch {}
@@ -267,7 +268,7 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
   d.chapters[dstCh.guid] = [...dst, row];
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   await buildTree();
-  setStatus('ย้าย “' + row.title + '” ไปบท “' + dstCh.title + '” แล้ว');
+  setStatus(T`ย้าย “` + row.title + T`” ไปบท “` + dstCh.title + T`” แล้ว`);
 }
 
 export async function moveChapterBefore(dPath, srcGuid, dstGuid) {
@@ -284,7 +285,7 @@ export async function moveChapterBefore(dPath, srcGuid, dstGuid) {
   d.chapters = list;
   await kapi.writeFile(df, JSON.stringify(d, null, 2));
   await buildTree();
-  setStatus('จัดลำดับบทใหม่แล้ว');
+  setStatus(T`จัดลำดับบทใหม่แล้ว`);
 }
 
 export async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
@@ -309,7 +310,7 @@ export async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
   d.chapters[dstCh.guid] = list;
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   await buildTree();
-  setStatus('จัดลำดับฉากใหม่แล้ว');
+  setStatus(T`จัดลำดับฉากใหม่แล้ว`);
 }
 
 export function sceneStatusMenu(e, dPath, ch, sc) {
@@ -317,7 +318,7 @@ export function sceneStatusMenu(e, dPath, ch, sc) {
     // allStatuses = มาตรฐาน + ที่ผู้ใช้เพิ่มเอง (custom-status.js)
     ...allStatuses().map((s) => ({ label: s, click: () => setSceneMeta(dPath, ch, sc, { status: s }) })),
     '-',
-    { label: 'ล้างสถานะ', click: () => setSceneMeta(dPath, ch, sc, { status: 'Outline' }) },
+    { label: T`ล้างสถานะ`, click: () => setSceneMeta(dPath, ch, sc, { status: 'Outline' }) },
   ]);
 }
 
@@ -325,7 +326,7 @@ export function sceneColorMenu(e, dPath, ch, sc) {
   popupMenu(e.clientX, e.clientY, [
     ...SCENE_COLORS.map(([name, hex]) => ({ label: '● ' + name, click: () => setSceneMeta(dPath, ch, sc, { color: hex }) })),
     '-',
-    { label: 'ล้างสี', click: () => setSceneMeta(dPath, ch, sc, { color: '' }) },
+    { label: T`ล้างสี`, click: () => setSceneMeta(dPath, ch, sc, { color: '' }) },
   ]);
 }
 
@@ -346,12 +347,12 @@ export async function renumberChapters(dPath) {
   }
   await kapi.writeFile(sf, JSON.stringify(scData, null, 2));
   await buildTree();
-  setStatus('เรียงลำดับบท+ฉากใหม่แล้ว (' + chapters.length + ' บท)');
+  setStatus(T`เรียงลำดับบท+ฉากใหม่แล้ว (` + chapters.length + T` บท)`);
 }
 
 // เพิ่มเมนู "เรียงลำดับหมายเลขใหม่" ใน context menu ของหัวบท
 export function renumberMenuItems(dPath) {
   return [
-    { label: '🔢 เรียงลำดับหมายเลขใหม่', click: () => renumberChapters(dPath) },
+    { label: T`🔢 เรียงลำดับหมายเลขใหม่`, click: () => renumberChapters(dPath) },
   ];
 }

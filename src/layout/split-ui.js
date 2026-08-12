@@ -15,6 +15,7 @@
 //              └ .k-split-pane
 //
 // pane ว่าง (leaf.tabId = null) รองรับด้วย — เปิดแยกจอตอนมีแท็บเดียวจึงทำได้ แล้วค่อยลากแท็บมาวาง
+import { T } from '../i18n.js';
 import { $, el, setStatus, state, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import * as SL from '../layout/split-layout.js';
 
@@ -216,7 +217,7 @@ function renderLeafTabs(node, sm) {
     };
     bar.append(btn);
   }
-  if (!(node.tabs || []).length) bar.append(el('span', 'k-split-tabs-empty', 'ช่องว่าง'));
+  if (!(node.tabs || []).length) bar.append(el('span', 'k-split-tabs-empty', T`ช่องว่าง`));
   makeTabSplitDraggable(bar);                      // ลากแท็บข้ามช่องได้จากแถบย่อยด้วย
   return bar;
 }
@@ -358,7 +359,7 @@ export function createSplit(tabId, dir) {
   // (เดิมกรณีมีแท็บเดียวจะขึ้นว่า "ต้องเปิดอย่างน้อย 2 แท็บ" แล้วไม่เกิดอะไรขึ้น = ดูเหมือน split พัง)
   const other = [...state.tabs.keys()].find((f) => f !== cur && tabOf(f) && !sm.has(f)) || null;
   sm.splitWith(other, side);
-  setStatus(other ? tr('split.statusPrefix', 'แยกหน้าจอ: ') + (d === 'down' ? 'บน-ล่าง' : 'ซ้าย-ขวา')
+  setStatus(other ? tr('split.statusPrefix', 'แยกหน้าจอ: ') + (d === 'down' ? T`บน-ล่าง` : T`ซ้าย-ขวา`)
                   : tr('split.openedEmpty', 'เปิดช่องว่างแล้ว — ลากหัวแท็บมาวางในช่อง หรือคลิกช่องแล้วเลือกแท็บ'));
   return { dir: d, right: other };
 }
@@ -392,7 +393,7 @@ export function toggleSplit(tabId, dir) {
       const next = JSON.parse(JSON.stringify(sm.root));
       if (next.type === 'split') next.dir = dir === 'down' ? 'col' : 'row';
       sm.store.update(next);
-      setStatus(tr('split.statusPrefix', 'แยกหน้าจอ: ') + (dir === 'down' ? 'บน-ล่าง' : 'ซ้าย-ขวา'));
+      setStatus(tr('split.statusPrefix', 'แยกหน้าจอ: ') + (dir === 'down' ? T`บน-ล่าง` : T`ซ้าย-ขวา`));
       return true;
     }
     closeSplit();

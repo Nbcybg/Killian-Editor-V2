@@ -6,6 +6,7 @@
 //   { chapters: { <chapterId>: [ { id, title, order, fileName, status?, kbOrder?, … } ] } }
 // เลย์เอาต์กระดาน (ลำดับ/ซ่อน/WIP) เก็บ localStorage — ไม่ปนกับข้อมูลงานเขียน
 
+import { T } from '../i18n.js';
 export const KANBAN_VERSION = 1;
 const KEY = 'k2-kanban-layout';
 export const UNSET = '__unset__';                 // คอลัมน์ของฉากที่ยังไม่กำหนดสถานะ
@@ -30,7 +31,7 @@ export function cardsOf(scenes) {
     const rows = chapters[chapterId] || [];
     for (const r of rows) {
       out.push({
-        id: r.id, title: r.title || '(ไม่มีชื่อ)', chapterId,
+        id: r.id, title: r.title || T`(ไม่มีชื่อ)`, chapterId,
         status: r.status || '', kbOrder: r.kbOrder, order: r.order ?? 0,
         color: r.color || '', tags: r.tags || [], synopsis: r.synopsis || '',
         pov: r.pov || '', fileName: r.fileName || '', locked: !!r.locked, _seq: seq++,

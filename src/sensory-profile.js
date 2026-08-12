@@ -1,13 +1,14 @@
 // sensory-profile.js — บรรยากาศรับรู้ของสถานที่ (sight/sound/smell/touch/taste)
 // แสดงเป็นหัวข้อเพิ่มในหน้า Wiki หมวด "สถานที่" เท่านั้น · เก็บใน entity.sensoryProfile
+import { T } from './i18n.js';
 import { el } from './core.js';
 
 const SENSORY_FIELDS = [
-  { key: 'sight', label: '👁 สิ่งที่เห็น', icon: 'image', hint: 'เช่น แสงสลัวลอดหน้าต่างบานเกล็ด' },
-  { key: 'sound', label: '👂 สิ่งที่ได้ยิน', icon: 'chat', hint: 'เช่น เสียงน้ำหยดจากเพดาน' },
-  { key: 'smell', label: '👃 กลิ่น', icon: 'note', hint: 'เช่น กลิ่นกระดาษเก่ากับฝุ่น' },
-  { key: 'touch', label: '🖐 สัมผัส', icon: 'edit', hint: 'เช่น พื้นไม้เย็นและหยาบ' },
-  { key: 'taste', label: '👅 รสชาติ', icon: 'star', hint: 'เช่น รสฝุ่นติดปลายลิ้น' },
+  { key: 'sight', label: T`👁 สิ่งที่เห็น`, icon: 'image', hint: T`เช่น แสงสลัวลอดหน้าต่างบานเกล็ด` },
+  { key: 'sound', label: T`👂 สิ่งที่ได้ยิน`, icon: 'chat', hint: T`เช่น เสียงน้ำหยดจากเพดาน` },
+  { key: 'smell', label: T`👃 กลิ่น`, icon: 'note', hint: T`เช่น กลิ่นกระดาษเก่ากับฝุ่น` },
+  { key: 'touch', label: T`🖐 สัมผัส`, icon: 'edit', hint: T`เช่น พื้นไม้เย็นและหยาบ` },
+  { key: 'taste', label: T`👅 รสชาติ`, icon: 'star', hint: T`เช่น รสฝุ่นติดปลายลิ้น` },
 ];
 
 // เอนทิตี้นี้ควรมีบรรยากาศรับรู้ไหม (เฉพาะหมวดสถานที่)
@@ -34,7 +35,7 @@ export function renderSensoryProfile(wrap, entity, onDirty) {
   if (!sec) {
     sec = el('div', 'wiki-sensory');
     sec.style.cssText = 'margin-top:20px;padding-top:16px;border-top:1px solid var(--border)';
-    sec.append(el('div', 'wiki-sub', '🌐 บรรยากาศรับรู้'));
+    sec.append(el('div', 'wiki-sub', T`🌐 บรรยากาศรับรู้`));
     wrap.append(sec);
   }
   // ลบช่องเก่าแล้ววาดใหม่ (render ถูกเรียกหลายครั้ง)

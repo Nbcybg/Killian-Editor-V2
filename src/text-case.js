@@ -4,17 +4,18 @@
 // ไทยไม่มีตัวพิมพ์ใหญ่/เล็ก → ทุกโหมดปล่อยอักษรไทยไว้เหมือนเดิมโดยอัตโนมัติ
 // (toUpperCase/toLowerCase ของ JS คืนตัวเดิมสำหรับอักษรที่ไม่มีคู่ตัวพิมพ์)
 
+import { T } from './i18n.js';
 /** รหัสโหมดตามที่ผู้ใช้ระบุ — ใช้เป็น value ของ <select> และอาร์กิวเมนต์ของคำสั่ง `case` */
 export const CASE_MODES = ['SC', 'lc', 'UC', 'CC', 'aC', 'TC', 'iC'];
 
 export const CASE_LABELS = {
-  SC: 'Sentence case — ขึ้นต้นประโยคตัวใหญ่',
-  lc: 'lower case — ตัวเล็กทั้งหมด',
-  UC: 'UPPER CASE — ตัวใหญ่ทั้งหมด',
-  CC: 'Capitalize Case — ขึ้นต้นทุกคำ',
-  aC: 'aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่',
-  TC: 'Title Case — แบบชื่อเรื่อง',
-  iC: 'iNVERSE cASE — กลับตัวเล็ก↔ใหญ่',
+  SC: T`Sentence case — ขึ้นต้นประโยคตัวใหญ่`,
+  lc: T`lower case — ตัวเล็กทั้งหมด`,
+  UC: T`UPPER CASE — ตัวใหญ่ทั้งหมด`,
+  CC: T`Capitalize Case — ขึ้นต้นทุกคำ`,
+  aC: T`aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่`,
+  TC: T`Title Case — แบบชื่อเรื่อง`,
+  iC: T`iNVERSE cASE — กลับตัวเล็ก↔ใหญ่`,
 };
 
 /** ป้ายสั้นสำหรับปุ่ม/เมนู (ไม่มีคำอธิบายต่อท้าย) */

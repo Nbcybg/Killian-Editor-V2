@@ -3,6 +3,7 @@
 // สำคัญ: **folderName ของบทอยู่ใน draft.json ไม่ใช่ scenes.json**
 // โค้ดรอบก่อนใช้ `sc.folderName || chapterId` → path ผิด อ่านไฟล์ไม่เจอ (เงียบ ๆ)
 // ทำให้ backlinks/plot-hole/AI chat เห็นเนื้อหาเป็นค่าว่างทั้งหมด
+import { T } from './i18n.js';
 import { log, state } from './core.js';
 
 // ---- io adapter ที่ join เป็น sync ----
@@ -118,7 +119,7 @@ export async function listEntities(root) {
           const fp = await kapi.join(cd, f);
           const e = await kapi.readJson(fp);
           if (e && e.name) out.push({ id: fp, path: fp, name: e.name, aliases: e.aliases || [], cat, entity: e });
-        } catch (err) { log('warn', 'อ่านเอนทิตี้ไม่ได้: ' + f, err); }
+        } catch (err) { log('warn', T`อ่านเอนทิตี้ไม่ได้: ` + f, err); }
       }
     }
   }

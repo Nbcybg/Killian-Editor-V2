@@ -3,6 +3,7 @@
 // ทดสอบด้วย node ได้ (test/sp-export.test.cjs)
 
 // ชนิดย่อหน้าใน FDX (Final Draft 8+ ใช้ชื่อพวกนี้)
+import { T } from './i18n.js';
 export const FDX_TYPE_MAP = {
   scene: 'Scene Heading',
   action: 'Action',
@@ -105,7 +106,7 @@ export function generateFdx(blocks, meta = {}, opts = {}) {
     }
   } else {
     addTitle(meta.title);
-    addTitle(meta.author ? 'เขียนโดย\n' + meta.author : '');
+    addTitle(meta.author ? T`เขียนโดย\n` + meta.author : '');
     addTitle(meta.basedOn);
     addTitle(meta.contact, 'Left');
     addTitle(meta.copyright, 'Left');

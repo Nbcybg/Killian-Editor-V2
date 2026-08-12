@@ -9,6 +9,7 @@
 //
 // หน้าปกไม่นับรวมกับเลขหน้าของบท (ธรรมเนียม: หน้าแรกของบท = หน้า 1)
 
+import { T } from './i18n.js';
 import { mergeSpFormat, textWidth } from './sp-format.js';
 import { num } from './num.js';
 
@@ -61,11 +62,11 @@ export function defaultTitlePages(meta = {}, fmt = null) {
   const mid = (y, text, patch) => newTitleString({
     text, x: L, y, width: tw, align: 'center', size: 12, ...patch });
 
-  const rows = [mid(3.6, String(meta.title || 'ไม่มีชื่อเรื่อง'), { bold: true })];
-  const by = String(meta.screenplayBy || '').trim() || 'บทโดย';
+  const rows = [mid(3.6, String(meta.title || T`ไม่มีชื่อเรื่อง`), { bold: true })];
+  const by = String(meta.screenplayBy || '').trim() || T`บทโดย`;
   rows.push(mid(4.2, by));
   if (String(meta.author || '').trim()) rows.push(mid(4.6, String(meta.author).trim()));
-  if (String(meta.basedOn || '').trim()) rows.push(mid(5.4, 'สร้างจาก ' + String(meta.basedOn).trim()));
+  if (String(meta.basedOn || '').trim()) rows.push(mid(5.4, T`สร้างจาก ` + String(meta.basedOn).trim()));
   if (String(meta.draft || '').trim()) {
     rows.push(newTitleString({ text: String(meta.draft).trim(), x: L, y: bottom - 1.4,
                                width: tw, align: 'left', size: 12 }));
