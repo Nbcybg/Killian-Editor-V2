@@ -343,7 +343,8 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
     · **`gallery/gallery-bus.js`** — อัลบั้มที่คลังรูปกับกระดานใช้ร่วม (`currentAlbum`/`setCurrentAlbum`/`onAlbumChange`/`onBoardChange`)
     · `gallery.js` = **ตัววาดอย่างเดียว** · ตัวเชื่อมส่งเข้ามาเป็น callback (`onInsert`/`onOpenFile`/`onOpenEntity`/`entityNames`)
       → ไม่ import app.js กลับ · **unit test `test/album.test.cjs` 199 ข้อ**
-  - `maps.js` — **เอนจินแผนที่** (บริสุทธิ์): `newMap/newPin`, `breadcrumb` (ลำดับชั้น world→city→room ตาม portal), `rootMaps`, `pinStats`, `deleteMap` (ล้าง portal ค้าง), `PIN_COLORS/PIN_KIND`
+  - `maps.js` — **เอนจินแผนที่** (บริสุทธิ์ · **unit test แยก `test/maps.test.cjs` 93 checks**): `newMap/newPin`, `breadcrumb` (ลำดับชั้น world→city→room ตาม portal), `rootMaps`, `pinStats`, `deleteMap` (ล้าง portal ค้าง), `PIN_COLORS/PIN_KIND`
+    · **[alpha.70]** ซูม (`clampZoom/zoomStep` — ปัดลงร่องขั้น 0.25) · โอเวอร์เลย์ (`mapOverlays/toggleOverlay/gridLines`) · หมวด (`mapCategories/groupMaps`) · ค้นหา (`matchPin/filterPins`) · หลายหมุด (`movePins/deletePins/clonePins`) · เส้นทาง (`newRoute/routePoints/routePath/routeLength/addPinToRoute/deleteRoute`) · ฉากบนหมุด (`scenesForMap/scenePinCounts`) · `migrateMaps` (v1.0→v1.1)
 - **build**: `node build.js` (esbuild bundle src/app.js) — dict แยกไฟล์ไม่ฝัง bundle
 
 โครงโปรเจกต์: `<root>/{project.khn.json, <Section>/{section.json (มี title/order/status/cover/blurb), Draft/<name>/{draft.json, scenes.json, Chapters/<folder>/*.md}}, Wiki|Bible/{characters,locations,items,lore,<หมวดเอง>}/*.json, Images/{albums.json, album.json, images.json, <อัลบั้ม>/{album.json,*.png}}, Memos/, Snapshots/, Recycle/, timeline.json, maps.json, dictionary.json, Plugins/dictionaries/*.txt}`
@@ -354,7 +355,7 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,526 checks** (alpha.69r) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,702 checks** (alpha.73) target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (alpha.39, รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
@@ -1056,7 +1057,8 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 - **แดชบอร์ด analytics** — `renderDashboard` เก็บ byStatus + chapterWords, `statBars()` วาดแถบสัดส่วน (สถานะฉาก / Wiki ตามหมวด / ความยาวบท)
 - **จัดการเล่ม (Book Manager)** — `openBookManager()` tab `::books::`. การ์ดต่อเล่ม: ปก(pickImage→`section.json→cover` เป็น `../Images/<f>`), ชื่อแก้ inline, สถานะ(`SECTION_STATUSES`), คำโปรย, สถิติ(`sectionStats()`), ลากสลับลำดับ(`reorderSections()`). helpers: `listSections()/saveSectionMeta()`. section.json มี title/order/status/cover/blurb
 - **เส้นเวลา (Timeline)** — `openTimeline()` tab `::timeline::`. **2 มุมมอง สลับได้** (`state._tlView` cards/gantt): (1) การ์ด = เลนตาม track เรียงตามเวลา; (2) **Gantt** = แท่งตามช่วงเวลาบนแกน (`ganttData/ganttBar/ganttTicks` ใน timeline.js) ใช้ `whenEnd` เป็นจุดจบแท่ง. `sceneEventsFromProject()` ดึงฉากที่มี `storyDate` (ตั้งใน sceneProps ทั้ง dialog+panel) มาแสดงอัตโนมัติ. event เอง→`timeline.json`. `eventDialog()` (title/when/whenEnd/track/sort/desc). ตรรกะ `timeline.js`. **ระวัง: `mergeTimeline` ต้อง copy ทุก field ที่มุมมองใช้** (เคยลืม whenEnd → Gantt แท่งกลายเป็นจุดหมด)
-- **แผนที่ (Maps)** — `openMaps()` tab `::maps::` (state ใน `mapsState`). รูปเป็นแผนที่, คลิกปักหมุด (พิกัด %), หมุด 3 ชนิด entity/portal/note, ลากย้ายได้. portal = ลำดับชั้น world→city→room + breadcrumb. `pinDialog()`. เก็บ `maps.json`. ตรรกะ `maps.js`
+- **แผนที่ (Maps)** — `openMaps()` = **แผง** `maps` (state ใน `mapsState_C.s` + สถานะการดูใน `view` ของ maps-ui.js). รูปเป็นแผนที่, คลิกปักหมุด (พิกัด %), หมุด 3 ชนิด entity/portal/note, ลากย้ายได้. portal = ลำดับชั้น world→city→room + breadcrumb. `pinDialog()`. เก็บ `maps.json` (v1.1). ตรรกะ `maps.js`
+  · **[alpha.70] ยกเครื่องทั้งชุด**: ซูม (สไลเดอร์ + **Ctrl+ล้อ** · `.map-canvas` กว้างเป็น % ของกรอบ = ระดับซูม หมุดเป็น % จึงตามเอง) · โอเวอร์เลย์ ▦🧭📏 (บันทึกใน `map.overlays`) · ค้นหาหมุด (ทำกับ DOM ตรง ๆ ไม่ redraw) · **เลือกหลายหมุด** (Ctrl+คลิก / Shift+ลากกรอบ → ย้ายกลุ่ม/ลบ/คัดลอก-วางข้ามแผนที่) · **หมวดแผนที่** (`map.category`) · **เส้นทาง** (`map.routes[]` — SVG viewBox 0–100 + `preserveAspectRatio=none` → **ต้องใส่ `vector-effect="non-scaling-stroke"`** ไม่งั้นเส้นถูกยืดตามอัตราส่วนภาพ · เลขลำดับจุดวาดเป็น HTML ไม่ใช่ `<text>`) · **ส่งออก PNG/พิมพ์** (วาดลง `<canvas>` เอง → `writeImageData` / ชั้น `#map-print-layer`) · **ป้ายจำนวนฉากบนหมุด** (ใช้ `collectPlacedScenes()` ที่ export จาก floorplan-ui.js — แหล่งเดียวกับผังพื้นที่) · **ปุ่ม "🗺 ดูบนแผนที่"** ในคุณสมบัติฉาก **ทั้งกล่องและแผง** (`buildShowOnMapRow`/`sceneMapLocation`/`focusMapPin` ใน maps-ui.js) · **แถวแผนที่ใน Explorer** (`buildMapsSection`, ครอบ try/catch แยกเหมือนหมวดกระดาน)
 - **โหมดหน้ากระดาษ (paper mode)** — `togglePaper()` + `body.paper-mode` (ค่าเริ่มต้นเปิด, เก็บใน settings). กระดาษครีม `--paper:#f5f1e6` (ปรับได้), นิยาย+บทหนังใช้กรอบเดียวกัน. ปุ่ม 📄 `#tb-paper` (ไม่ disable ตอนไม่มี editor)
 - **ซูมหน้ากระดาษ (alpha.47 — ซูมจริง)** — `pageScale` (`SCALE_MIN/MAX` 0.5–2.5), `applyZoomVars(off)` set `--ed-fs`/`--sp-fs` (ฟอนต์ฐาน+ค่าที่ตั้ง **ไม่คูณซูม**) + `--page-scale`; CSS ซูมด้วย **`zoom` property** ที่ `.pane > .ProseMirror` → ฟอนต์/padding/margin/ความกว้างขยายพร้อมกัน (max-width คงที่ 940px). ห้ามใช้ `transform:scale` (พิกัดคลิก/selection/scroll พัง) · **ห้ามใส่ `role:'zoomIn/zoomOut/resetZoom'` ของ Electron กลับเข้าเมนู** (zoom ระดับ webContents ซ้อนทับจนเพี้ยน) · slider ล่างขวาใน statusbar (`#zoom-slider/#zoom-label`) + Ctrl+ล้อ/=/-//Shift+0. **font preview ในตั้งค่าต้องเรียก `applyZoomVars(val)`** · **เทสในซับทรีที่ถูก zoom ต้องวัดด้วย `getBoundingClientRect()` ไม่ใช่ `getComputedStyle().maxWidth`**
 - **ขนาด UI (alpha.47)** — `settings.uiScale` (`UI_SCALE_MIN/MAX` 0.75–2.0) → `applyUIScale(v)` ตั้ง `--ui-scale`. style.css: `body{font-size:calc(14px*var(--ui-scale))}` (ปุ่ม/select/input ใช้ `font:inherit` จึงไล่ตาม) + font-size ทุกกฎของเปลือก UI เป็น `calc(px*var(--ui-scale))` + **บล็อกท้ายไฟล์** เก็บขนาดโครงสร้าง (titlebar/toolbar/แท็บ/หัวแผง/statusbar/dialog/tree/FAB) ผ่าน `var(--uis)`. เพิ่มของใหม่ที่ต้อง scale → เติมในบล็อกนั้น. เส้นขอบ 1px + max-width หน้ากระดาษ = **ไม่ scale**. เข้าถึงได้ที่ ตั้งค่า→การเขียน (`#st-uiscale`) และเมนู มุมมอง→ขนาด UI (`send('ui-scale', 1/-1/0)`)
@@ -1065,7 +1067,98 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.69r** · e2e ALL OK 2,526 + unit panel 286 + panel-sync 67 + panels69 102)
+## เวอร์ชัน (ล่าสุด **alpha.74** · e2e ALL OK · unit ทั้งชุดผ่าน รวม `branch-plans` 68 + `network-theme` 50 + `log-core` 52)
+
+**.74 — ✅ ปิดเคส K-1 ได้แล้ว (แถวหายจาก Explorer) + แผนผังแตกสายเก็บทางเลือกเอง**
+· **ต้นตอ K-1 ชั้นที่ 1**: `filterTree()` ยกเว้นขอบเขตบทให้เฉพาะ `data-planner` **แบบเจาะจงชื่อ**
+  → หมวดที่เพิ่มทีหลัง (แผนที่/แผนผังแตกสาย) ไม่มี chGuid จึงถูกซ่อนหมดเมื่อผู้ใช้ตั้ง 'ค้นเฉพาะในบทนี้'
+  (หัวข้อยังนับ (n) · รีเฟรชไม่กลับเพราะ buildTree เรียก filterTree ซ้ำทุกครั้ง)
+  **กฎที่ถูก: แถวที่ไม่มี `chGuid` ไม่เกี่ยวกับขอบเขตบท** — อย่ายกเว้นเป็นราย attribute อีก
+· **ชั้นที่ 2 (ผู้ใช้สั่ง)**: ห้ามใช้สัญลักษณ์บอกสถานะบนแถว Explorer — `markPlannerRow` เคยเขียนทับ
+  `textContent` เป็น `▶ ชื่อ ●` = **ที่เดียวที่รื้อเนื้อแถวนอก buildTree** → ตอนนี้แตะแค่ class
+  (`planner-current` = ตัวหนา · `planner-dirty` = แดง + ::after 'ยังไม่บันทึก')
+· **เตือนหลอกใน log**: `แถวกระดานถูกถอดออกจาก DOM` name `(ในกล่อง)` = double-buffer swap ปกติ
+  ของ buildTree ไม่ใช่บั๊ก → ใส่ธง `_treeSwapping` ปิดเสียงระหว่าง `replaceChildren`
+· **แผน = ชุดทางเลือกของตัวเอง** (`plan.choices`) ไม่ใช่แค่มุมมอง — เหตุผลผู้ใช้: เทียบกันได้เวลาทำงานหลายคน ·
+  หลายเล่มมีทางเลือกคนละชุด (D&D) · ติดป้ายเอง → **คุณสมบัติแผน = ชุดเดียวกับฉาก** (สถานะ/สี/แท็ก/เล่ม/โน้ต)
+  · เปิดแผนอยู่แล้วแก้ทางเลือก **ห้ามแตะ scenes.json** · ฉากที่แผนไม่พูดถึง = ไม่มีทางเลือก (ห้าม fallback
+    ไปของเดิม ไม่งั้นลบทางเลือกออกจากแผนไม่ได้) · `⇋ เทียบแผน` + `⚙ คุณสมบัติแผน`
+· **dock ไม่เคารพ minW**: `.k-featpanel{min-width:0}` อยู่ท้ายไฟล์กว่า + specificity เท่ากัน → ชนะ
+  ยกน้ำหนักด้วย `:not(canvas):not(img)` + ย้ายกฎไปท้ายไฟล์ · **เทสต้องครอบทั้งแบบลอยและแบบผนึก**
+
+
+**.73 — ผังจำตำแหน่งไม่ได้ · ฮาร์ดโค้ดปุ่ม/สี · หลายแผนผังแตกสาย · แถบเลื่อนแนวนอน**
+· **ตำแหน่งโหนด**: เดิมบันทึกเฉพาะโหนดที่ผู้ใช้ลาก ที่เหลือถูก `Math.random()` โยนใหม่ทุกรีเฟรช
+  → **แยก 'ตำแหน่ง' (เก็บทุกโหนด) ออกจาก 'ปักหมุด' (เฉพาะที่ผู้ใช้จัดเอง)** + ธง `_fresh` สำหรับของใหม่
+  → `refresh()` จัดผังเฉพาะ `_fresh` แล้วตรึงที่เหลือ · `savePositions()` ทุกรอบ
+· **Shift+คลิกผลัก**: สูตร `f=180/(d²·0.01+1)` ที่ระยะจริง (หลายร้อยหน่วย) ให้แรง ~0.005 = ไม่ขยับ
+  → เปลี่ยนเป็น 'เคลียร์ที่ว่างรัศมี 220' + ปักหมุด + บันทึก · **โหมด 2D ต้องไม่เอา z มาคิด**
+    (ไม่งั้นโหนดที่ลึกต่างกันดูเหมือนไม่ขยับ — เจอตอนเขียนเทส)
+· **ห้ามฮาร์ดโค้ดปุ่มเมาส์** — `settings.netControls` (`orbitButton`/`panButton`) · ค่าเริ่มต้น = ปุ่มกลาง
+  **tooltip/คำอธิบายต้องสร้างจากค่าที่ตั้งไว้** (`controlsHint()`) ไม่ใช่ข้อความตายตัว
+· **`src/network-theme.js` = นิยามสีที่เดียวของผัง** (`NET_COLOR_DEFS`) — กล่องตั้งค่าสร้างช่องเอง ·
+  ชิปแถบเครื่องมือ + ตัววาด อ่านจากตัวเดียวกัน · **unit test กวาด network.js หาเลข hex ที่หลุด**
+  ที่เคยขาด: สีเล่มแยกจากตอน · สีเส้นรายประเภท (9 แบบ เดิมมีช่องเดียว) · พื้น/กริด/ตัวหนังสือ/ขอบ/แกน
+· **แถบสถานะ X/Y/Z**: เดิมโชว์ `_cx/_cy` (พิกเซลของกล้อง) และเอามุมหมุนมาแปะป้าย Z
+  → X/Y/Z = **พิกัดโลกของจุดกึ่งกลางจอ** · มุมหมุนแยกเป็น `↻` · **ซูมยึดกึ่งกลาง** (`zoomAtCenter`)
+  → เพิ่ม **แกนบอกทิศมุมล่างซ้าย** (`axisVectors` ใช้สูตรฉายเดียวกับ project3D)
+· **`Branches/*.json` = แผนของผังแตกสาย** (`src/branch-plans.js` บริสุทธิ์) — เนื้อเรื่องยังอยู่ scenes.json ชุดเดียว
+  แผนเก็บแค่ 'วิธีมองผัง' (ตำแหน่ง/สี/มุมมอง/โน้ต) · load/save/save-as + แถวใน Explorer + ลงทะเบียนงานค้าง
+· **`minW` ใน PANEL_DEFS** → `--panel-min-w` บน `.k-panel-body` → บีบแคบกว่านั้นมีแถบเลื่อนแนวนอน
+  **กับดัก**: `.k-featpanel{min-width:0}` อยู่ท้ายไฟล์และ specificity เท่ากัน → ต้องยกน้ำหนักด้วย
+  `:not(canvas):not(img)` (บทเรียน 17) แทน `!important` เพื่อให้ canvas/รูปยังยืดหดเองได้
+· **บทเรียนซ้ำ**: build ตอน electron ยังรันอยู่ = esbuild เขียน bundle ไม่ได้ **แต่ไม่ throw ให้เห็นชัด**
+  → เทสรันกับ bundle เก่า หลอกว่าแก้ไม่ติด · **kill ก่อน build ทุกครั้ง แล้วดูให้เห็น `bundle OK`**
+
+
+**.72 — ⚠️ กฎถาวรใหม่จากผู้ใช้ + log ที่ใช้งานได้จริง**
+· **กฎ: « อะไรที่มีการทิ้งเมื่อปิด หรือ update ตอนปิดโปรแกรม ต้องขึ้น list ทุกครั้ง »**
+  → `src/dirty-registry.js` · `registerDirtySource(id,{label,list,save})` ใน `registerDirtySources()` ของ app.js
+  → กล่อง 'บันทึกทั้งหมด'/'ปิดโปรแกรม' อ่านจากทะเบียนตัวเดียว **ห้ามแก้กล่องบันทึกทีละที่**
+  → ต้นตอ: กล่องปิดโปรแกรมอ่านจาก `state.tabs` อย่างเดียว กระดานวางแผนจึงหายเงียบ
+  → บันทึกไม่สำเร็จ = **ไม่ปิดโปรแกรม** + เปิดแผงบันทึกให้ดูเหตุ
+· **ปิด 'แผง' ≠ ทิ้งงาน** — แผงที่ยังถือสถานะในหน่วยความจำห้ามตั้ง `setPanelCloseGuard` ให้ถามบันทึก
+  ถามเฉพาะตอนงานหายจริง (เปิดไฟล์อื่นทับ/ทิ้ง/ปิดโปรแกรม)
+· **log ยกเครื่อง** (`src/log-core.js` บริสุทธิ์): ระเบียนมีชั้นข้อมูล → แผงกรองระดับ/ที่มา/ค้นหา/กาง stack
+  · ที่มาถอดจากคำนำหน้า `xxx:` ที่โค้ดใช้อยู่แล้ว — **ต้อง `\p{L}\p{M}` + ธง `u`** (`\w` ไม่นับอักษรไทย
+    และสระ/วรรณยุกต์เป็น combining mark) · บรรทัดซ้ำติดกันยุบเป็นแถวเดียว + ตัวนับ ×N
+  · **ห่อ `console.error/warn` ให้ไหลเข้า log** (เดิมหายหมด) — ต้องเก็บ console ตัวจริงไว้ก่อนห่อ ไม่งั้นวนไม่รู้จบ
+  · จดทุก `cmd:` ที่ผู้ใช้สั่ง + ทุก `save:` + เปิด/ปิดโปรเจกต์ → ไล่ย้อนได้ว่าก่อนพังกดอะไร
+· **Story Network 2 บั๊กวาดภาพ**: (ก) วาดรูปก่อนแล้วเติมสีวงกลมทับ — ลำดับต้องเป็น พื้น→รูป(clip)→ขอบ
+  และต้อง cover-crop คงสัดส่วน · (ข) `_fit()` ตั้งพื้น `Math.max(300,w)` → แผงแคบกว่านั้น **ถูกบีบแนวนอน**
+  ทั้งผัง (วงกลมเป็นวงรี) — **ผืนวาดต้องเท่ากล่อง CSS เป๊ะ ๆ เสมอ**
+· **สีผังไม่ตามตั้งค่า**: ชิปแถบเครื่องมือฝังสีในโค้ด (ต้องติด `data-cat`/`data-type` แล้วให้ `readColors()` ทาสี)
+  · พื้น/กริดเป็นค่าคงที่ → อ่านจากตัวแปร CSS ของธีม (`cssVar()`)
+
+
+**.71 — รูปประจำตัวไม่เคยขึ้นเลย + เทมเพลต Wiki ถูกฮาร์ดโค้ด**
+· **ต้นตอ 1**: `loadAllEntities()` ฮาร์ดโค้ด `image:''` → Story Network มีโค้ดวาดรูปครบแต่เงื่อนไข
+  `if (n.image && n._img)` ไม่มีทางเป็นจริง · ซ้ำด้วย preload ที่ตั้ง `img.src` แล้วคืนทันทีไม่รอ `onload`
+  → **กฎ: preload รูปต้อง `await` ทุกใบก่อนคืนค่า** ไม่งั้น draw รอบแรกวาดตอนรูปยังว่างแล้วไม่มีใครวาดซ้ำ
+· **ต้นตอ 2**: หัวการ์ด Wiki อยู่ใต้ `if (entityTypeKey === 'characters')` + อ่าน `fields.Role`/`fields.Status`
+  ด้วยชื่อที่เขียนตายในโค้ด (เทมเพลตไม่เคยมี field `Status` ด้วยซ้ำ)
+· **กฎใหม่ที่ผู้ใช้กำหนด: เทมเพลต Wiki ห้ามฮาร์ดโค้ด ต้องดึงจาก JSON เท่านั้น**
+  → `src/wiki-profile.js` (บริสุทธิ์) + บล็อก `profile` ใน templates.json
+    (`subtitleField`/`statusField`/`badgeFields`/`statusWords`) · ไม่มีบล็อก = โชว์แค่รูป+ชื่อ (ห้ามเดา)
+  → **รูปประจำตัวเป็นของ `entity.images` ไม่ใช่ของเทมเพลต** จึงมีครบทุกหมวดโดยไม่ต้องประกาศ
+  → โปรเจกต์เก่า: `mergeBuiltInTemplateMeta()` ก็อปคีย์ที่ขาดมาจาก templates.json ที่แถมมากับโปรแกรม
+    (เฉพาะ builtIn · เฉพาะคีย์ที่ยังไม่มี · ห้ามทับของที่ผู้ใช้แก้เอง · รันซ้ำต้องได้ changed=false)
+· โหมดเครื่องมือ 3 โหมดเหมือนกันทั้งแผนที่และ Story Network (เปิด/แก้ไข/ย้าย) + ปุ่มป้ายชื่อ + สเกลขนาด
+  **ลากย้ายได้เฉพาะโหมด ✥** — เดิมเผลอลากโดนโหนดแล้วมันถูกปักหมุดถาวรทันที
+· `zoomScroll()` ใน maps.js — ซูมยึดกึ่งกลาง (เดิมขยายความกว้างเฉย ๆ ภาพโตออกจากมุมซ้ายบน)
+· เจอระหว่างทาง: `onCreateRel` เรียก **`kapi.writeJson` ที่ไม่มีใน preload** → ลากสร้างความสัมพันธ์พังทุกครั้ง
+
+
+**.70 — ยกเครื่องระบบแผนที่ทั้งชุด (11 ข้อจากผู้ใช้)**
+· **ต้นตอข้อแรก**: ระบบแผนที่ทำงาน**ทางเดียว** — ผังพื้นที่เขียน `sc.mapId/sc.pinId` ลง scenes.json ได้
+  แต่ไม่มีใครอ่านกลับนอกจากตัวมันเอง (`scene-props.js` ไม่เคยเอ่ยถึง `mapId` เลย) → ปักแล้วกลับไปดูไม่ได้
+· **ระวังข้อสังเกตที่คลาดเคลื่อน**: คีย์ `showOnMap` ใน languages/*.json **ถูกใช้อยู่แล้ว** แต่เป็นของ
+  **โหมดเล่น** (`player.showOnMap` = "ดูบนผัง") คนละที่กับคุณสมบัติฉาก → รอบนี้เพิ่มชุดใหม่ `ui.maps.*`
+· ได้ครบ 11 ข้อ: ปุ่มดูบนแผนที่ · ป้ายจำนวนฉากบนหมุด · ซูม · โอเวอร์เลย์ · ส่งออก PNG/พิมพ์ ·
+  หลายหมุด+copy-paste ข้ามแผนที่ · ค้นหาหมุด · หมวดแผนที่ · เส้นทาง · unit test แยก · แถวใน Explorer
+· กับดักที่เจอจริงตอนเขียนเทส: `Number(null)===0` ทำ `clampZoom(null)` กลายเป็นซูมต่ำสุด (ต้องเช็ค null ก่อน)
+  · `Number(0)||10` ทำ `gridLines(0)` ไม่ถูกหนีบ — pattern `||` เป็นกับดักซ้ำรอยบทเรียนข้อ 5
+
 
 **.69r — ทำแผงเสร็จแล้วผู้ใช้หาไม่เจอ เพราะลืมใส่เมนู** (บทเรียนที่ต้องจำให้ขึ้นใจ)
 · เมนู **มุมมอง → แผง** สร้างใน **main.js** ด้วยรายการ **เขียนมือ** ไม่ได้มาจาก `PANEL_DEFS`

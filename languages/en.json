@@ -761,6 +761,14 @@
       "cleared": "Play-throughs cleared",
       "close": "Close",
       "reload": "Re-read the story from disk"
+    },
+    "maps": {
+      "sceneWhere": "Location on map",
+      "notPlaced": "Not placed yet",
+      "placeIt": "Place it",
+      "placeItHint": "Open the Floor Plan panel and click \"Place this scene\"",
+      "showOnMap": "Show on map",
+      "showOnMapHint": "Open the Maps panel and scroll to this scene's location"
     }
   }
 }

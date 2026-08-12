@@ -7,6 +7,9 @@ import { REL_COLOR, REL_LABEL } from './relationship-types.js';
 // โมดูลบริสุทธิ์ — แปลงรูปแบบเก่า (string[]) ให้อัตโนมัติ ไฟล์เดิมเปิดได้ทุกใบ
 import { migrateImages, imageFile, imageAlt, imageLabel, setImageMeta,
          makePrimary, removeImage, addImage, needsImageMigration } from './wiki-images.js';
+// [alpha.71 ข้อ 4] หัวการ์ดโปรไฟล์ = ข้อมูลจาก templates.json ล้วน ๆ (ไม่มีชื่อ field เขียนตายในโค้ด)
+import { profileData, statusTone } from './wiki-profile.js';
+import { CAT_ICON } from './core.js';
 
 export const CAT_TH = { characters: 'ตัวละคร', locations: 'สถานที่',
                         items: 'สิ่งของ', lore: 'ตำนาน' };
@@ -25,7 +28,7 @@ export function imageLightbox(url, caption) {
 
 export class WikiEditor {
   constructor(pane, file, entity, { onSaved = null, onDeleted = null,
-                                    projectRoot = '', labels = {},
+                                    projectRoot = '', labels = {}, template = null,
                                     entityTitles = () => [], fileOfEntity = () => null,
                                     invertRole = (r) => r, pickTitle = null, pickRelation = null,
                                     onOpenEntity = null, pickFromGallery = null,
@@ -40,6 +43,8 @@ export class WikiEditor {
     this.onSwapTemplate = onSwapTemplate;                          // เปลี่ยนเทมเพลต (ข้อ 18b)
     this.pane = pane; this.file = file; this.e = entity;
     this.projectRoot = projectRoot; this.labels = labels;
+    // เทมเพลตของ entity นี้ — ฟังก์ชัน (อ่านสดทุกครั้ง) หรือออบเจกต์ก็ได้
+    this._template = template;
     this.entityTitles = entityTitles; this.fileOfEntity = fileOfEntity;
     this.invertRole = invertRole; this.pickTitle = pickTitle; this.pickRelation = pickRelation;
     this.onOpenEntity = onOpenEntity; this.pickFromGallery = pickFromGallery;
@@ -51,6 +56,12 @@ export class WikiEditor {
   }
 
   get title() { return this.e.name || 'entity'; }
+
+  /** เทมเพลตปัจจุบัน — อ่านสดทุกครั้งที่วาด (เปลี่ยนเทมเพลตแล้วหัวการ์ดต้องเปลี่ยนตามทันที) */
+  get template() {
+    try { return typeof this._template === 'function' ? this._template(this.e) : this._template; }
+    catch { return null; }
+  }
 
   markDirty() { if (!this.dirty) { this.dirty = true; this._dirtyCb && this._dirtyCb(); } }
   onDirty(cb) { this._dirtyCb = cb; }
@@ -203,18 +214,26 @@ export class WikiEditor {
     head.append(saveBtn);
     wrap.appendChild(head);
 
-    // ---- Profile Header (ข้อ 55) — แสดงการ์ดตัวละคร ----
-    if (this.e.entityTypeKey === 'characters') {
+    // ---- Profile Header (ข้อ 55 · [alpha.71 ข้อ 4] ยกเลิกการฮาร์ดโค้ด) ----
+    // เดิม: `if (entityTypeKey === 'characters')` → สถานที่/สิ่งของ/ตำนาน/หมวดที่ผู้ใช้สร้างเอง
+    //       ไม่มีรูปประจำตัวเลย ทั้งที่ entity.images[] รองรับมาตลอด
+    // ตอนนี้: **ทุกหมวดได้หัวการ์ดเหมือนกันหมด** · จะโชว์ field ไหนใต้ชื่อ อ่านจาก templates.json
+    //         (บล็อก `profile`) ไม่ใช่ชื่อ field ที่เขียนตายในโค้ด
+    {
+      const tpl = this.template || null;
+      const P = profileData(this.e, tpl, this.labels || {});
       const prof = document.createElement('div'); prof.className = 'wiki-prof';
       // รูปในวงกลม — images[] เก็บเป็น "ชื่อไฟล์ในโฟลเดอร์ Images" (string) ไม่ใช่ออบเจกต์ {url}
       // เดิมอ่าน images[0].url จึงได้ undefined ตลอด → เห็นแต่ไอคอน 👤 (บั๊กข้อ 2)
       const avatar = document.createElement('div'); avatar.className = 'wiki-prof-avatar';
       avatar.title = 'คลิกเพื่อตั้งรูปประจำตัว (คลิกขวา = เอารูปออก)';
+      // ไอคอนสำรองตามหมวด — มาจาก CAT_ICON (ตารางเดียวกับ Explorer) ไม่ใช่ 'user' ตายตัวทุกหมวด
+      const fallbackIcon = () => iconHtml(CAT_ICON[this.e.entityTypeKey] || 'bookmark', 32);
       const paintAvatar = async () => {
         avatar.textContent = '';
         const first = migrateImages(this.e.images)[0];
         const name = first ? first.file : '';
-        if (!name) { avatar.innerHTML = iconHtml('user', 32); return; }
+        if (!name) { avatar.innerHTML = fallbackIcon(); return; }
         const url = /^(file|https?|data):/i.test(name)
           ? name
           : await kapi.toFileURL(await kapi.join(this.projectRoot, 'Images', name));
@@ -222,7 +241,7 @@ export class WikiEditor {
         imgEl.src = url;
         imgEl.alt = imageAlt(first);
         if (first.caption) imgEl.title = first.caption;
-        imgEl.onerror = () => { avatar.innerHTML = iconHtml('user', 32); };
+        imgEl.onerror = () => { avatar.innerHTML = fallbackIcon(); };
         avatar.appendChild(imgEl);
       };
       paintAvatar();
@@ -257,32 +276,41 @@ export class WikiEditor {
         this.markDirty(); this.render();
       };
       prof.appendChild(avatar);
-      // ข้อมูล
+      // ข้อมูล — ทุกบรรทัดมาจาก profileData() ซึ่งอ่านจากเทมเพลตล้วน ๆ
       const info = document.createElement('div'); info.className = 'wiki-prof-info';
       const nameEl = document.createElement('div'); nameEl.className = 'wiki-prof-name';
-      nameEl.textContent = this.e.name || '(ไม่มีชื่อ)';
+      nameEl.textContent = P.name || '(ไม่มีชื่อ)';
       info.appendChild(nameEl);
-      // ชื่ออื่น
-      if (this.e.aliases && this.e.aliases.length) {
+      if (P.aliases.length) {
         const ali = document.createElement('div'); ali.className = 'wiki-prof-aliases';
-        this.e.aliases.forEach((a) => {
+        P.aliases.forEach((a) => {
           const s = document.createElement('span'); s.textContent = a; ali.appendChild(s);
         });
         info.appendChild(ali);
       }
-      // บทบาท (จาก fields)
-      const role = (this.e.fields && (this.e.fields.Role || this.e.fields.role || this.e.fields['Role'] || this.e.fields['บทบาท']));
-      if (role) {
-        const rl = document.createElement('div'); rl.className = 'wiki-prof-role'; rl.innerHTML = iconHtml('brain', 14) + ' ' + role;
+      // บรรทัดรอง (เทมเพลตบอกว่าใช้ field ไหน — ตัวละคร=บทบาท · สถานที่/สิ่งของ=ประเภท · ตำนาน=หมวด)
+      if (P.subtitle) {
+        const rl = document.createElement('div'); rl.className = 'wiki-prof-role';
+        rl.innerHTML = iconHtml('brain', 14) + ' ' + P.subtitle;
+        rl.title = P.subtitleLabel;
         info.appendChild(rl);
       }
-      // สถานะ (Living/Deceased/Unknown)
-      const status = (this.e.fields && (this.e.fields.Status || this.e.fields.status || ''));
-      if (status) {
+      // ป้ายข้อมูลย่อ (badgeFields จากเทมเพลต)
+      if (P.badges.length) {
+        const bw = document.createElement('div'); bw.className = 'wiki-prof-badges';
+        for (const b of P.badges) {
+          const s = document.createElement('span'); s.className = 'wiki-prof-badge';
+          s.textContent = b.label + ': ' + b.value;
+          bw.appendChild(s);
+        }
+        info.appendChild(bw);
+      }
+      // สถานะ — ทั้งชื่อ field และคำที่ใช้จัดกลุ่มสี มาจากเทมเพลต (statusField/statusWords)
+      if (P.status) {
         const st = document.createElement('span'); st.className = 'wiki-prof-status';
-        const sl = status.toLowerCase();
-        st.classList.add(sl.includes('dead') || sl.includes('เสีย') ? 'deceased' : sl.includes('unknown') || sl.includes('ไม่ทราบ') ? 'unknown' : 'living');
-        st.textContent = status;
+        st.classList.add(statusTone(tpl, P.status));
+        st.textContent = P.status;
+        st.title = P.statusLabel;
         info.appendChild(st);
       }
       prof.appendChild(info);

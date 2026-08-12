@@ -20,6 +20,11 @@
 //  16  ลากย้ายทางเลือกข้ามฉาก + ปุ่มรวมทางเลือกที่ซ้ำกัน
 //  17  ช่องค้นหา — เน้นที่ตรง จางที่เหลือ
 import { $, el, state, setStatus, log, t, SCENE_COLORS } from './core.js';
+// [alpha.73 ข้อ 5] หลายแผนต่อหนึ่งโปรเจกต์ — ตรรกะแผนอยู่ใน branch-plans.js (บริสุทธิ์ · มี unit test)
+import { BRANCH_PLAN_DIR, newBranchPlan, normalizeBranchPlan, planFromState, planDirty,
+         planNameFromFile, safePlanName, sortPlans, uniquePlanName, planSummary,
+         PLAN_STATUSES, PLAN_DEFAULT_STATUS, applyPlanChoices, planChoicesFor, setPlanChoices,
+         snapshotChoices, comparePlans, compareSummary } from './branch-plans.js';
 import {
   NODE_W, NODE_H, GAP_X, PAD,
   buildGraph, layoutGraph, analyzeGraph, graphSummary, enumeratePathsInfo,
@@ -66,6 +71,13 @@ function bstate() {
 // ───────── ตำแหน่งการ์ดที่ผู้ใช้ลากเอง (ข้อ 6) ─────────
 // เก็บใน localStorage แยกตามโปรเจกต์ — ไม่ยัดลง scenes.json เพราะเป็นเรื่อง "มุมมอง" ไม่ใช่เนื้อเรื่อง
 // (แนวเดียวกับ network-layout.js ที่จำตำแหน่งโหนดผังความสัมพันธ์)
+// ───────── [alpha.73 ข้อ 5] แผนของผังแตกสาย — หลายแผนต่อหนึ่งโปรเจกต์ ─────────
+// เนื้อเรื่อง (ฉาก+ทางเลือก) อยู่ใน scenes.json ชุดเดียวเสมอ · "แผน" เก็บวิธีมองผังนั้น
+// (ตำแหน่งการ์ด · สี · มุมมอง/ซูม · โน้ต) เป็นไฟล์ละแผนใน Branches/ แบบเดียวกับ Planners/
+const planState = { path: null, saved: null, live: null, name: '' };
+export function currentBranchPlan() { return planState; }
+
+/** ตำแหน่งการ์ด: อยู่ในแผนถ้าเปิดแผนอยู่ · ไม่งั้นใช้ localStorage เหมือนเดิม (โปรเจกต์ที่ยังไม่ทำแผน) */
 const POS_PREFIX = 'k2-branch-pos';
 function posKey() {
   const s = String(state.root || '').replace(/[\\/]+$/, '').toLowerCase();
@@ -74,13 +86,245 @@ function posKey() {
   return `${POS_PREFIX}:${(h >>> 0).toString(36)}`;
 }
 export function loadNodePositions() {
+  if (planState.path && planState.live) return planState.live.positions || {};
   try { return JSON.parse(localStorage.getItem(posKey()) || '{}') || {}; } catch { return {}; }
 }
 function saveNodePositions(pos) {
+  if (planState.path && planState.live) { planState.live.positions = pos; markPlanDirty(); return; }
   try { localStorage.setItem(posKey(), JSON.stringify(pos)); } catch { /* quota */ }
 }
 function clearNodePositions() {
+  if (planState.path && planState.live) { planState.live.positions = {}; markPlanDirty(); return; }
   try { localStorage.removeItem(posKey()); } catch { /* ignore */ }
+}
+function markPlanDirty() {
+  if (!planState.path || !planState.live) return;
+  planState.live.updated = new Date().toISOString();
+  // แถวใน Explorer ต้องขึ้นจุด ● ทันที (import แบบไดนามิก — app.js import ไฟล์นี้อยู่ เป็นวง)
+  import('./app.js').then((m) => m.markBranchPlanRow && m.markBranchPlanRow()).catch(() => {});
+}
+
+// ---- ไฟล์แผน ----
+export async function branchPlansDir() {
+  const d = await kapi.join(state.root, BRANCH_PLAN_DIR);
+  await kapi.mkdir(d);
+  return d;
+}
+/** รายชื่อแผนทั้งหมดในโปรเจกต์ */
+export async function listBranchPlans() {
+  if (!state.root) return [];
+  const dir = await kapi.join(state.root, BRANCH_PLAN_DIR);
+  if (!(await kapi.exists(dir))) return [];
+  const out = [];
+  for (const f of await kapi.listFiles(dir, '.json').catch(() => [])) {
+    const path = await kapi.join(dir, f);
+    let plan = null;
+    try { plan = normalizeBranchPlan(await kapi.readJson(path), planNameFromFile(f)); }
+    catch (e) { log('warn', 'branch: อ่านไฟล์แผนไม่ได้ ' + f, e); continue; }
+    out.push({ path, name: plan.name || planNameFromFile(f), plan });
+  }
+  return sortPlans(out);
+}
+/** เปิดแผน — คืน true เมื่อสำเร็จ */
+export async function openBranchPlan(path) {
+  try {
+    const plan = normalizeBranchPlan(await kapi.readJson(path), planNameFromFile(path));
+    planState.path = path; planState.name = plan.name;
+    planState.saved = JSON.parse(JSON.stringify(plan));
+    planState.live = plan;
+    const bs = bstate();
+    bs.view = plan.view; bs.zoom = plan.zoom; if (plan.sel) bs.sel = plan.sel;
+    setStatus('เปิดแผน "' + plan.name + '" แล้ว');
+    log('info', 'branch: เปิดแผน ' + plan.name, path);
+    return true;
+  } catch (e) { log('error', 'branch: เปิดแผนไม่สำเร็จ', e); setStatus('เปิดแผนไม่สำเร็จ'); return false; }
+}
+/** บันทึกแผนที่เปิดอยู่ (ไม่มีแผนเปิดอยู่ = ไม่ทำอะไร คืน false) */
+export async function saveBranchPlan(silent) {
+  if (!planState.path || !planState.live) return false;
+  const bs = bstate();
+  const L = planState.live;
+  const plan = planFromState({ name: planState.name, note: L.note,
+    status: L.status, color: L.color, tags: L.tags, book: L.book, choices: L.choices,
+    positions: L.positions, colors: L.colors,
+    view: bs.view, zoom: bs.zoom, sel: bs.sel, now: new Date().toISOString() });
+  await kapi.writeFile(planState.path, JSON.stringify(plan, null, 2));
+  planState.live = plan;
+  planState.saved = JSON.parse(JSON.stringify(plan));
+  if (!silent) setStatus('บันทึกแผน "' + plan.name + '" แล้ว');
+  try { const m = await import('./app.js'); m.markBranchPlanRow && m.markBranchPlanRow(); } catch {}
+  return true;
+}
+/** บันทึกเป็นแผนใหม่ */
+export async function saveBranchPlanAs(name) {
+  const dir = await branchPlansDir();
+  const existing = (await listBranchPlans()).map((x) => x.name);
+  const finalName = uniquePlanName(name || planState.name || 'แผนใหม่', existing);
+  const path = await kapi.join(dir, safePlanName(finalName) + '.json');
+  const bs = bstate();
+  const src = planState.live || newBranchPlan(finalName);
+  const plan = planFromState({ name: finalName, note: src.note,
+    status: src.status, color: src.color, tags: src.tags, book: src.book, choices: src.choices,
+    positions: src.positions || loadNodePositions(), colors: src.colors || {},
+    view: bs.view, zoom: bs.zoom, sel: bs.sel, now: new Date().toISOString() });
+  await kapi.writeFile(path, JSON.stringify(plan, null, 2));
+  planState.path = path; planState.name = finalName;
+  planState.live = plan; planState.saved = JSON.parse(JSON.stringify(plan));
+  setStatus('บันทึกเป็นแผน "' + finalName + '" แล้ว');
+  return path;
+}
+/** ปิดแผน กลับไปโหมด "ไม่มีแผน" (ตำแหน่งการ์ดกลับไปใช้ localStorage) */
+export function closeBranchPlan() {
+  planState.path = null; planState.saved = null; planState.live = null; planState.name = '';
+}
+/** true = แผนที่เปิดอยู่มีงานค้าง */
+export function isBranchPlanDirty() {
+  return !!(planState.path && planDirty(planState.live, planState.saved));
+}
+
+/** true = กำลังทำงานบน "แผน" อยู่ (ทางเลือกทั้งหมดอ่าน/เขียนที่แผน ไม่ใช่ scenes.json) */
+export function inBranchPlan() { return !!(planState.path && planState.live); }
+
+/** เอาทางเลือกของแผนสวมทับรายการฉาก — ตัวเดียวที่ผังใช้ตัดสินว่าจะวาดอะไร */
+export function scenesWithPlan(scenes) {
+  return inBranchPlan() ? applyPlanChoices(scenes, planState.live) : scenes;
+}
+
+/** สร้างแผนใหม่โดยถ่ายทางเลือกปัจจุบันมาเป็นจุดตั้งต้น (แผนแรกจะได้ไม่ว่างเปล่า) */
+export async function newPlanFromCurrent(name) {
+  const scenes = await collectScenes();
+  const base = newBranchPlan(name);
+  base.choices = inBranchPlan() ? JSON.parse(JSON.stringify(planState.live.choices || {}))
+                                : snapshotChoices(scenes);
+  base.positions = { ...loadNodePositions() };
+  closeBranchPlan();
+  planState.live = base;
+  return saveBranchPlanAs(name);
+}
+
+/** เทียบแผนที่เปิดอยู่กับอีกแผนหนึ่ง (เหตุผลข้อ 1 ของผู้ใช้: ทำงานหลายคน) */
+export async function compareWithPlan(otherPath) {
+  const scenes = await collectScenes();
+  const titleOf = (id) => (scenes.find((x) => String(x.id) === String(id)) || {}).title || id;
+  const other = normalizeBranchPlan(await kapi.readJson(otherPath), planNameFromFile(otherPath));
+  const rows = comparePlans(planState.live, other, titleOf);
+  return { rows, summary: compareSummary(rows), other };
+}
+
+/**
+ * กล่องคุณสมบัติแผน — ชุดฟิลด์เดียวกับ "คุณสมบัติฉาก" ตามที่ผู้ใช้ขอ
+ * (ชื่อ · สถานะ · สี · แท็ก · เล่ม · โน้ต) เพื่อให้ติดป้ายได้อิสระว่าแผนไหนร่าง/ใช้จริง/สำรอง
+ */
+export async function planPropsDialog() {
+  if (!inBranchPlan()) { setStatus('ยังไม่ได้เปิดแผน'); return false; }
+  const L = planState.live;
+  const { el: E } = await import('./core.js');
+  return new Promise((resolve) => {
+    const ov = E('div', 'k-overlay');
+    const box = E('div', 'k-dialog');
+    box.append(E('div', 'k-dlg-title', '🌿 คุณสมบัติแผน — ' + (planState.name || '')));
+    const mk = (label, val, tag) => {
+      const r = E('div', 'wiki-row');
+      r.append(E('label', null, label));
+      const i = E(tag || 'input', 'wiki-input');
+      i.value = val || '';
+      r.append(i); box.append(r); return i;
+    };
+    const iName = mk('ชื่อแผน', planState.name);
+    const rSt = E('div', 'wiki-row'); rSt.append(E('label', null, 'สถานะ'));
+    const iStatus = E('select', 'wiki-input k-dlg-select');
+    for (const st of PLAN_STATUSES) {
+      const o = E('option', null, st); o.value = st;
+      if (st === (L.status || PLAN_DEFAULT_STATUS)) o.selected = true;
+      iStatus.append(o);
+    }
+    rSt.append(iStatus); box.append(rSt);
+    const rC = E('div', 'wiki-row'); rC.append(E('label', null, 'สี'));
+    const iColor = E('select', 'wiki-input k-dlg-select');
+    { const none = E('option', null, '— ไม่มี —'); none.value = ''; iColor.append(none);
+      for (const [n2, hex] of SCENE_COLORS) { const o = E('option', null, '● ' + n2); o.value = hex;
+        if (hex === L.color) o.selected = true; iColor.append(o); } }
+    rC.append(iColor); box.append(rC);
+    const iTags = mk('แท็ก (คั่น , )', (L.tags || []).join(', '));
+    const iBook = mk('เล่ม/สังกัด (เว้นว่างได้)', L.book);
+    iBook.placeholder = 'เช่น เล่มหนึ่ง — ใช้เมื่อแต่ละเล่มมีทางเลือกคนละชุด';
+    const iNote = mk('โน้ต', L.note, 'textarea');
+
+    const info = E('div', 'dim', planSummary(L));
+    box.append(info);
+
+    const btns = E('div', 'k-dlg-btns');
+    const cB = E('button', null, 'ยกเลิก');
+    const okB = E('button', 'k-ok', 'บันทึก');
+    btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
+    cB.onclick = () => { ov.remove(); resolve(false); };
+    ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(false); } };
+    okB.onclick = async () => {
+      setPlanProps({ name: iName.value, status: iStatus.value, color: iColor.value,
+                     tags: iTags.value.split(',').map((x) => x.trim()).filter(Boolean),
+                     book: iBook.value.trim(), note: iNote.value });
+      await saveBranchPlan(true);
+      ov.remove();
+      setStatus('บันทึกคุณสมบัติแผนแล้ว');
+      try { const m = await import('./app.js'); await m.refreshTreeQueued(); } catch {}
+      resolve(true);
+    };
+    iName.focus();
+  });
+}
+
+/** กล่องเทียบแผน — เลือกอีกแผนแล้วดูว่าทางเลือกต่างกันตรงไหน */
+export async function comparePlanDialog() {
+  if (!inBranchPlan()) { setStatus('เปิดแผนก่อน แล้วค่อยเลือกแผนที่จะเทียบ'); return false; }
+  const list = (await listBranchPlans()).filter((x) => x.path !== planState.path);
+  if (!list.length) { setStatus('ยังมีแผนเดียว — สร้างอีกแผนก่อนถึงจะเทียบได้'); return false; }
+  const { el: E } = await import('./core.js');
+  const ov = E('div', 'k-overlay');
+  const box = E('div', 'k-dialog k-dialog-wide');
+  box.append(E('div', 'k-dlg-title', '⇋ เทียบแผน — ' + planState.name));
+  const row = E('div', 'wiki-row');
+  row.append(E('label', null, 'เทียบกับ'));
+  const sel = E('select', 'wiki-input k-dlg-select');
+  for (const x of list) { const o = E('option', null, x.name); o.value = x.path; sel.append(o); }
+  row.append(sel); box.append(row);
+  const body = E('div', 'branch-cmp'); box.append(body);
+  const draw = async () => {
+    body.replaceChildren();
+    const { rows, summary, other } = await compareWithPlan(sel.value);
+    body.append(E('div', 'branch-cmp-sum',
+      `เหมือนกัน ${summary.same} · ต่างกัน ${summary.diff} · มีเฉพาะ "${planState.name}" ${summary.onlyA}` +
+      ` · มีเฉพาะ "${other.name}" ${summary.onlyB}`));
+    if (!rows.length) { body.append(E('div', 'dim', 'ทั้งสองแผนยังไม่มีทางเลือกเลย')); return; }
+    for (const r of rows) {
+      const line = E('div', 'branch-cmp-row' + (r.same ? ' same' : ''));
+      line.append(E('div', 'branch-cmp-title', (r.same ? '=' : '≠') + ' ' + r.title));
+      line.append(E('div', 'branch-cmp-side', (r.a.join(' · ') || '—')));
+      line.append(E('div', 'branch-cmp-side', (r.b.join(' · ') || '—')));
+      body.append(line);
+    }
+  };
+  sel.onchange = draw;
+  const btns = E('div', 'k-dlg-btns');
+  const cB = E('button', 'k-ok', 'ปิด');
+  btns.append(cB); box.append(btns); ov.append(box); document.body.append(ov);
+  cB.onclick = () => ov.remove();
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  await draw();
+  return true;
+}
+
+/** คุณสมบัติของแผน (ชุดเดียวกับฉาก) — แก้แล้วถือว่ามีงานค้าง */
+export function setPlanProps(props) {
+  if (!planState.live) return false;
+  const L = planState.live;
+  if (props.name !== undefined) { planState.name = String(props.name).trim() || planState.name; L.name = planState.name; }
+  if (props.status !== undefined) L.status = PLAN_STATUSES.includes(props.status) ? props.status : PLAN_DEFAULT_STATUS;
+  if (props.color !== undefined) L.color = props.color || '';
+  if (props.tags !== undefined) L.tags = props.tags;
+  if (props.book !== undefined) L.book = props.book || '';
+  if (props.note !== undefined) L.note = props.note || '';
+  markPlanDirty();
+  return true;
 }
 
 // ───────── ทางเข้า: เป็นแผง ไม่ใช่แท็บเอกสาร (ข้อ 1) ─────────
@@ -213,6 +457,8 @@ export async function renderBranchingTree(pane, opts = {}) {
     try { scenes = await collectScenes(); }
     catch (e) { log('error', 'branching: อ่านฉากไม่สำเร็จ', e); scenes = []; }
   }
+  // [alpha.74] เปิดแผนอยู่ → ผังวาดจาก "ทางเลือกของแผน" ไม่ใช่ของ scenes.json
+  scenes = scenesWithPlan(scenes);
   // มีคนสั่งวาดใหม่แซงระหว่างอ่านไฟล์ (หรือแผงถูกปิดไปแล้ว) → ทิ้งงานนี้ อย่าเขียนทับ
   if (gen !== _renderGen || !pane.isConnected) return;
 
@@ -234,6 +480,67 @@ export async function renderBranchingTree(pane, opts = {}) {
   titleRow.append(el('div', 'branch-title', '🌿 ' + T('titleFull', 'ผังแตกสาย (Non-linear)')));
 
   const tools = el('div', 'branch-tools');
+
+  // ── [alpha.73 ข้อ 5] แถบแผน: เลือก/บันทึก/บันทึกเป็น/ใหม่ ──
+  const planWrap = el('div', 'branch-plans');
+  const planSel = el('select', 'branch-plan-sel');
+  planSel.title = 'แผนของผังนี้ — หนึ่งโปรเจกต์มีได้หลายแผน (ตำแหน่งการ์ด/สี/มุมมอง แยกกันคนละแผน)';
+  const fillPlans = async () => {
+    const list = await listBranchPlans().catch(() => []);
+    planSel.replaceChildren();
+    const o0 = el('option', null, '— ไม่ใช้แผน (จำในเครื่อง) —'); o0.value = ''; planSel.append(o0);
+    for (const p2 of list) {
+      const o = el('option', null, '🌿 ' + p2.name + (planSummary(p2.plan) ? ' · ' + planSummary(p2.plan) : ''));
+      o.value = p2.path; planSel.append(o);
+    }
+    planSel.value = planState.path || '';
+  };
+  planSel.onchange = async () => {
+    if (!planSel.value) { closeBranchPlan(); setStatus('เลิกใช้แผน — กลับไปจำตำแหน่งในเครื่อง'); }
+    else await openBranchPlan(planSel.value);
+    redrawUi();
+  };
+  planWrap.append(planSel);
+  const bSave = el('button', 'branch-zbtn', '💾');
+  bSave.title = 'บันทึกแผนที่เปิดอยู่';
+  bSave.onclick = async () => {
+    if (!planState.path) { setStatus('ยังไม่ได้เปิดแผน — กด “＋” สร้างแผนใหม่ก่อน'); return; }
+    await saveBranchPlan(); await fillPlans();
+  };
+  const bSaveAs = el('button', 'branch-zbtn', '💾+');
+  bSaveAs.title = 'บันทึกเป็นแผนใหม่ (ก๊อปการจัดวางปัจจุบันไปเป็นอีกแผน)';
+  bSaveAs.onclick = async () => {
+    const { ask } = await import('./ui.js');
+    const v = await ask('ชื่อแผนใหม่', { value: (planState.name || 'แผน') + ' สำเนา' });
+    if (!v) return;
+    await saveBranchPlanAs(v); await fillPlans(); planSel.value = planState.path || '';
+    const { refreshTreeQueued } = await import('./app.js');
+    await refreshTreeQueued();
+  };
+  const bNew = el('button', 'branch-zbtn', '＋');
+  bNew.title = 'สร้างแผนใหม่ (เริ่มจากการจัดวางเปล่า)';
+  bNew.onclick = async () => {
+    const { ask } = await import('./ui.js');
+    const v = await ask('ชื่อแผนใหม่', { value: 'แผนที่ ' + ((await listBranchPlans()).length + 1) });
+    if (!v) return;
+    // แผนใหม่ถ่ายทางเลือกปัจจุบันมาเป็นจุดตั้งต้น — จะได้เริ่มแก้ต่อได้เลย ไม่ใช่ผังว่างเปล่า
+    await newPlanFromCurrent(v);
+    await fillPlans(); planSel.value = planState.path || '';
+    const { refreshTreeQueued } = await import('./app.js');
+    await refreshTreeQueued();
+    redrawUi();
+  };
+  const bProps = el('button', 'branch-zbtn', '⚙');
+  bProps.title = 'คุณสมบัติแผน — สถานะ (ร่าง/ใช้จริง/สำรอง) · สี · แท็ก · เล่ม · โน้ต';
+  bProps.onclick = async () => { if (await planPropsDialog()) redrawUi(); };
+  const bCmp = el('button', 'branch-zbtn', '⇋');
+  bCmp.title = 'เทียบกับอีกแผน — ดูว่าทางเลือกต่างกันตรงไหน';
+  bCmp.onclick = () => comparePlanDialog();
+  planWrap.append(bSave, bSaveAs, bNew, bProps, bCmp);
+  if (planState.path && isBranchPlanDirty()) planWrap.append(el('span', 'branch-plan-dirty', '●'));
+  tools.append(planWrap);
+  fillPlans();
+
   const viewTog = el('div', 'branch-viewtog');
   const bTree = el('button', 'branch-viewbtn' + (bs.view === 'tree' ? ' on' : ''), '🌳 ' + T('viewTree', 'ผัง'));
   const bList = el('button', 'branch-viewbtn' + (bs.view === 'list' ? ' on' : ''), '☰ ' + T('viewList', 'รายการ'));
@@ -934,6 +1241,14 @@ async function exportBranchPng(pane) {
 // แล้วเขียนทับ = การแก้ครั้งแรกหายเงียบ ๆ (บั๊กข้อ 15c)
 let _choiceQueue = Promise.resolve();
 export function mutateChoices(node, fn) {
+  // [alpha.74] เปิดแผนอยู่ = ทางเลือกเป็นของแผนนั้น ไม่ใช่ของ scenes.json
+  // (เหตุผลข้อ 2 ของผู้ใช้: แต่ละเล่มมีทางเลือกคนละชุด — เขียนทับกันไม่ได้)
+  if (inBranchPlan()) {
+    const cur = planChoicesFor(planState.live, node.id);
+    setPlanChoices(planState.live, node.id, fn([...cur]));
+    markPlanDirty();
+    return Promise.resolve(true);
+  }
   const run = async () => {
     const { updateSceneRow } = await import('./app.js');
     return updateSceneRow(node.dPath, node.id, (r) => {

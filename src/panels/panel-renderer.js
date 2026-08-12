@@ -334,8 +334,19 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+/**
+ * [alpha.73 ข้อ 6] ความกว้างต่ำสุดของเนื้อแผง — บีบแคบกว่านี้ให้มีแถบเลื่อนแนวนอนแทนการยุบเนื้อหา
+ * ค่ามาจาก `minW` ใน PANEL_DEFS (ผ่าน metaOf) **ไม่ฮาร์ดโค้ดที่นี่** — ค่าเริ่มต้น 200px
+ */
+export const PANEL_MIN_W_DEFAULT = 200;
+export function panelMinW(md) {
+  const n = Number(md && md.minW);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : PANEL_MIN_W_DEFAULT;
+}
+
 function buildBody(node, opts) {
   const body = el('div', 'k-panel-body');
+  body.style.setProperty('--panel-min-w', panelMinW(metaOf(opts, node.id)) + 'px');
   if (opts.renderPanelBody) {
     const content = opts.renderPanelBody(node.id, body);
     if (content && content !== body && content.parentNode !== body) body.appendChild(content);

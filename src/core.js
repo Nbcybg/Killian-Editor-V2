@@ -2,6 +2,7 @@
 // กฎ: ที่นี่มีเฉพาะสิ่งที่ "แชร์ข้ามไฟล์และไม่ reassign" เท่านั้น
 //     ตัวแปร let ที่ reassign (pageScale, autosaveTimer, floatBar, …) อยู่กับฟังก์ชันที่แก้มันในไฟล์ของมันเอง
 import { SmartType } from './smart.js';
+import { createLogStore, formatLine } from './log-core.js';
 
 // ---- DOM helpers ----
 export const $ = (s) => document.querySelector(s);
@@ -131,24 +132,35 @@ export const smart = new SmartType();
 
 // ---------------- ระบบบันทึกการทำงาน (log) ----------------
 // เก็บ buffer ในหน่วยความจำ (สำหรับ viewer) + append ลงไฟล์ <userData>/logs/app-<วันที่>.log
+// [alpha.72 ข้อ 5] เก็บเป็น "ระเบียน" มีชั้นข้อมูลจริง (log-core.js) — แผงบันทึกจึงกรอง/ค้น/นับได้
+// LOG_BUF ยังเป็น array ของสตริงเหมือนเดิม เพื่อไม่ให้โค้ดเก่าที่อ่านมันพัง
 export const LOG_BUF = [];
-const LOG_MAX = 1000;                                // กัน buffer โตไม่จำกัด
+const LOG_MAX = 2000;                                // กัน buffer โตไม่จำกัด
+// เก็บ console ตัวจริงไว้ก่อนห่อ — ต้องประกาศเหนือ log() ไม่งั้นชน TDZ ถ้ามีใครเรียก log ระหว่างโหลดโมดูล
+const RAW_CONSOLE = { error: console.error.bind(console), warn: console.warn.bind(console) };
+export const logStore = createLogStore(LOG_MAX);
+/** ผู้ฟังการเปลี่ยนแปลงของ log (แผงบันทึกใช้วาดใหม่แบบทันที ไม่ต้องรอ timer 2 วินาที) */
+const logSubs = new Set();
+export function onLog(fn) { logSubs.add(fn); return () => logSubs.delete(fn); }
+
 export function log(level, msg, extra) {
   const ts = new Date().toISOString();
-  let line = `[${ts}] ${String(level).toUpperCase()} ${msg}`;
-  if (extra !== undefined) {
-    try { line += ' | ' + (extra instanceof Error ? (extra.stack || extra.message) : JSON.stringify(extra)); }
-    catch { line += ' | ' + String(extra); }
-  }
+  const rec = logStore.push(level, msg, extra, ts);
+  const line = formatLine(rec);
   LOG_BUF.push(line);
   if (LOG_BUF.length > LOG_MAX) LOG_BUF.shift();
   try { kapi.logWrite && kapi.logWrite(line); } catch {}
-  if (level === 'error' || level === 'warn') {
-    (level === 'error' ? console.error : console.warn)(line);
+  if (rec.level === 'error' || rec.level === 'warn') {
+    // console เดิมถูกห่อไว้ด้านล่าง → ใช้ตัวจริงที่เก็บไว้ ไม่งั้นวนกลับเข้า log() ไม่รู้จบ
+    (rec.level === 'error' ? RAW_CONSOLE.error : RAW_CONSOLE.warn)(line);
   }
+  for (const fn of logSubs) { try { fn(rec); } catch {} }
   return line;
 }
-// ดักข้อผิดพลาดระดับหน้าต่างทั้งหมด → ลง log
+/** จดว่า "ผู้ใช้/โปรแกรมทำอะไร" — ใช้ไล่ย้อนได้ว่าก่อนพังมีอะไรเกิดขึ้นบ้าง */
+export function logAction(source, what, detail) { return log('info', source + ': ' + what, detail); }
+
+// ---- ดักข้อผิดพลาดทุกทางให้ลง log จริง ๆ (เดิมบางทางหายเงียบ) ----
 window.addEventListener('error', (e) => {
   // benign ResizeObserver error — Chromium fires this when layout is busy, ignore
   if (e.message && e.message.includes('ResizeObserver')) return;
@@ -158,6 +170,30 @@ window.addEventListener('error', (e) => {
 window.addEventListener('unhandledrejection', (e) => {
   log('error', 'unhandledrejection', e.reason);
 });
+// โหลดทรัพยากรไม่สำเร็จ (รูป/สคริปต์/สไตล์) — ไม่ยิง window.onerror แบบปกติ ต้องดักตอน capture
+window.addEventListener('error', (e) => {
+  const t = e.target;
+  if (!t || t === window || !t.tagName) return;
+  const src = t.src || t.href || '';
+  if (!src) return;
+  log('warn', 'resource: โหลดไม่สำเร็จ <' + String(t.tagName).toLowerCase() + '>', src);
+}, true);
+// [alpha.72 ข้อ 5] console.error/warn ที่โมดูลอื่นเรียกตรง ๆ เคยหายไปจากแผงบันทึกทั้งหมด
+// (เช่น `console.error('SN refresh error:', ...)` ใน network.js) → ห่อให้ไหลเข้า log ด้วย
+for (const lv of ['error', 'warn']) {
+  const raw = RAW_CONSOLE[lv];
+  console[lv] = (...args) => {
+    raw(...args);
+    try {
+      const first = args.find((a) => typeof a === 'string');
+      const errArg = args.find((a) => a instanceof Error);
+      const rest = args.filter((a) => a !== first);
+      logStore.push(lv, 'console: ' + (first || '(ไม่มีข้อความ)'),
+                    errArg || (rest.length ? rest : undefined), new Date().toISOString());
+      for (const fn of logSubs) { try { fn(null); } catch {} }
+    } catch {}
+  };
+}
 
 // ---- แถบสถานะล่าง ----
 export function setStatus(s) { $('#status').textContent = s; }
@@ -247,7 +283,8 @@ export const PROJECT_DEFAULTS = {
   // [alpha.60r ข้อ 2] จำแท็บที่เปิดค้างไว้ — restore ตอนเปิดโปรเจกต์ครั้งต่อไป
   openTabs: null,           // [filePath, ...] — null = ยังไม่เคยบันทึก
   // Story Network — สีที่ผู้ใช้ปรับเองได้
-  netColors: null,          // { cats:{characters:'#xxx',...}, edges:{'scene-link':'#xxx',...} }
+  netColors: null,          // [alpha.73] { '<คีย์จาก NET_COLOR_DEFS>': '#xxxxxx' } (รับรูปแบบเก่า cats/edges ได้)
+  netControls: null,        // { orbitButton:'middle'|'right'|'left', panButton:… } — ห้ามฮาร์ดโค้ดปุ่มเมาส์
   // [alpha.69] ประวัติการทำงาน — เก็บย้อนหลังกี่ครั้ง (ยิ่งมาก ยิ่งกินที่ใน .k2history/)
   // ค่าเริ่มต้น 32 ตามที่ผู้ใช้กำหนด · หนีบช่วง 4–500 ที่ history-data.clampLimit
   historyLimit: 32,

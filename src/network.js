@@ -1,22 +1,35 @@
 // Story Network — alpha.63r4 · Canvas 2D/3D with full feature set
 import { visualTagFor } from './visual-tags.js';
 import { REL_COLOR, REL_TYPES, categorizeRole } from './relationship-types.js';
+import { resolveNetColors, resolveNetControls, controlsHint, buttonIndex,
+         netColorDefsOf, viewCenter, zoomAtCenter, axisVectors } from './network-theme.js';
 import { state } from './core.js';
 import { seedLayout, forceLayout, loadPositions, savePositions, clearPositions, nodeKey } from './network-layout.js';
 import { ensureAutoLink, getBacklinksFor } from './world-story/auto-link-ui.js';
 
-REL_COLOR['co-occur'] = '#8a8885';
-REL_COLOR['scene-link'] = '#5caf8a';
-REL_COLOR['ent-scene'] = '#d9955f';
-const CAT_COLOR = { characters:'#d97757', locations:'#7aa8d8', items:'#6fae8a', lore:'#b58fc9',
-  scene:'#e8c95c', chapter:'#c08a5e', book:'#a8d870', section:'#8ec8c8' };
 const CAT_ARR = ['characters','locations','items','lore','scene','chapter','book'];
-const BG = '#1a1a18', GRID = '#3a3a36';
+// [alpha.73 ข้อ 3] **ห้ามมีเลขสีในไฟล์นี้อีก** — ทุกสีมาจาก network-theme.js ที่เดียว
+// (เทส network-theme.test.cjs คอยกวาดไฟล์นี้หาเลข hex ที่หลุดมา)
+export function cssVar(name, fallback) {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  } catch { return fallback; }
+}
+/** สีชุดปัจจุบัน — ตั้งใหม่ทุกครั้งที่ readColors() ทำงาน */
+let THEME = resolveNetColors(null, cssVar);
 const WIKI_CATS = new Set(['characters','locations','items','lore']);
 
 // คีย์เส้นเชื่อม — ต้องอิง nodeKey ไม่ใช่ชื่อล้วน ไม่งั้นชื่อซ้ำข้ามหมวดทำให้เส้นหายไปเงียบ ๆ
 const EDGE_SEP = String.fromCharCode(1);
 function edgeKey(a, b) { const x = nodeKey(a), y = nodeKey(b); return x < y ? x + EDGE_SEP + y : y + EDGE_SEP + x; }
+
+// [alpha.71 ข้อ 3] โหมดเครื่องมือของผัง — แทน "ดับเบิลคลิกเท่านั้น" + "ลากได้ตลอดเวลา" แบบเดิม
+export const NET_TOOLS = [
+  { id: 'open', icon: '👆', label: 'เปิด/ดู', hint: 'คลิกโหนด = เปิดหน้านั้น · ลากพื้นที่ว่างหรือลากทับโหนด = เลื่อนผัง (โหนดไม่ขยับ)' },
+  { id: 'edit', icon: '✎', label: 'แก้ไข', hint: 'คลิกโหนด = เปิดหน้านั้นไปแก้ไข' },
+  { id: 'move', icon: '✥', label: 'ย้ายตำแหน่ง', hint: 'ลากโหนดเพื่อย้ายตำแหน่ง' },
+];
 
 function tagStyle(n) { for(const t of n.tags||[]){const v=visualTagFor(t);if(v)return v;} return null; }
 function isStruct(n){return n.cat==='scene'||n.cat==='chapter'||n.cat==='book'||n.cat==='section';}
@@ -30,12 +43,13 @@ function buildToolbar(pane, cb) {
   tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?'▶':'▼';};
   const ca=new Set(CAT_ARR.slice(0,4)),tf=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
   const cr=document.createElement('div');cr.className='net-tbar-row';
-  [{k:'characters',l:'ตัวละคร',c:'#d97757'},{k:'locations',l:'สถานที่',c:'#7aa8d8'},{k:'items',l:'ไอเทม',c:'#6fae8a'},{k:'lore',l:'ตำนาน',c:'#b58fc9'}].forEach(x=>{const b=document.createElement('button');b.className='net-tcat';b.style.setProperty('--tcolor',x.c);b.title=x.l;b.dataset.active='1';b.classList.add('on');b.textContent=x.l;b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)ca.delete(x.k);else ca.add(x.k);cb.filter(ca,tf);};cr.appendChild(b);});
+  // ชิปหมวด: ชื่อ/คีย์มาจาก network-theme.js · สีถูกทาทีหลังโดย _paintToolbarColors()
+  netColorDefsOf('nodes').filter(d=>CAT_ARR.slice(0,4).includes(d.id)).forEach(x=>{const b=document.createElement('button');b.className='net-tcat';b.dataset.cat=x.id;b.title=x.label;b.dataset.active='1';b.classList.add('on');b.textContent=x.label;b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)ca.delete(x.id);else ca.add(x.id);cb.filter(ca,tf);};cr.appendChild(b);});
   const tr=document.createElement('div');tr.className='net-tbar-row net-tbar-types';
-  REL_TYPES.forEach(t=>{const b=document.createElement('button');b.className='net-ttype';b.style.setProperty('--tcolor',t.color);b.title=t.label;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete(t.key);else tf.add(t.key);cb.filter(ca,tf);};tr.appendChild(b);});
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-co';b.style.setProperty('--tcolor','#8a8885');b.title='ปรากฏร่วม';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('co-occur');else tf.add('co-occur');cb.filter(ca,tf);};tr.appendChild(b);})();
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-sc';b.style.setProperty('--tcolor','#5caf8a');b.title='ลิงก์ฉาก';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('scene-link');else tf.add('scene-link');cb.filter(ca,tf);};tr.appendChild(b);})();
-  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-es';b.style.setProperty('--tcolor','#d9955f');b.title='เอนทิตี้↔ฉาก';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('ent-scene');else tf.add('ent-scene');cb.filter(ca,tf);};tr.appendChild(b);})();
+  REL_TYPES.forEach(t=>{const b=document.createElement('button');b.className='net-ttype';b.dataset.type=t.key;b.title=t.label;b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete(t.key);else tf.add(t.key);cb.filter(ca,tf);};tr.appendChild(b);});
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-co';b.dataset.type='co-occur';b.title='ปรากฏร่วม';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('co-occur');else tf.add('co-occur');cb.filter(ca,tf);};tr.appendChild(b);})();
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-sc';b.dataset.type='scene-link';b.title='ลิงก์ฉาก';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('scene-link');else tf.add('scene-link');cb.filter(ca,tf);};tr.appendChild(b);})();
+  (()=>{const b=document.createElement('button');b.className='net-ttype net-ttype-es';b.dataset.type='ent-scene';b.title='เอนทิตี้↔ฉาก';b.dataset.active='1';b.classList.add('on');b.onclick=()=>{const a=b.dataset.active==='1';b.dataset.active=a?'0':'1';if(a)b.classList.remove('on');else b.classList.add('on');if(a)tf.delete('ent-scene');else tf.add('ent-scene');cb.filter(ca,tf);};tr.appendChild(b);})();
   const sw=document.createElement('div');sw.className='net-tbar-search';
   const si=document.createElement('input');si.type='text';si.className='net-tbar-input';si.placeholder='🔍 ค้นหา…';
   let tm;si.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>cb.search(si.value.trim()),200);};si.onkeydown=e=>{if(e.key==='Enter')cb.search(si.value.trim());};sw.appendChild(si);
@@ -47,10 +61,33 @@ function buildToolbar(pane, cb) {
   const gridAlpha=document.createElement('input');gridAlpha.type='range';gridAlpha.className='net-grid-slider';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value='12';gridAlpha.title='โปร่งใส grid: 12%';
   gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title='โปร่งใส grid: '+gridAlpha.value+'%';};
   gridRow.append(gridBtn,gridSize,gridAlpha);
+  // ── [alpha.71 ข้อ 3] แถวเครื่องมือ: แสดงตัวหนังสือ · เปิด/แก้ไข/ย้าย · ขยาย-ย่อโหนด ──
+  // เดิมคลิกโหนดไม่ทำอะไร (ต้องดับเบิลคลิก) และลากได้ตลอดเวลา → เผลอลากทั้งผังโดยไม่ตั้งใจบ่อย
+  const toolRow=document.createElement('div');toolRow.className='net-tbar-row net-tbar-tools';
+  const lblBtn=document.createElement('button');
+  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent='🔤';lblBtn.title='แสดงตัวหนังสือ (ชื่อใต้โหนด)';
+  lblBtn.onclick=()=>{lblBtn.classList.toggle('on');cb.toggleLabels();};
+  toolRow.appendChild(lblBtn);
+  const sep=document.createElement('span');sep.className='net-tbar-sep';toolRow.appendChild(sep);
+  const toolBtns=[];
+  for(const x of NET_TOOLS){
+    const b=document.createElement('button');
+    b.className='net-tbar-btn net-tool-btn'+(x.id==='open'?' on':'');
+    b.dataset.tool=x.id;b.textContent=x.icon;b.title=x.label+' — '+x.hint;
+    b.onclick=()=>{for(const o of toolBtns)o.classList.toggle('on',o===b);cb.setTool(x.id);};
+    toolBtns.push(b);toolRow.appendChild(b);
+  }
+  const sep2=document.createElement('span');sep2.className='net-tbar-sep';toolRow.appendChild(sep2);
+  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent='⦿';szLbl.title='ขนาดโหนด';
+  const size=document.createElement('input');size.type='range';size.className='net-grid-slider net-size-slider';
+  size.min='50';size.max='250';size.value='100';size.title='ขนาดโหนด: 100%';
+  size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title='ขนาดโหนด: '+size.value+'%';};
+  toolRow.append(szLbl,size);
+
   const btns=document.createElement('div');btns.className='net-tbar-actions';
   [{t:'🔄',ti:'รีเฟรช',f:cb.refresh},{t:'📌',ti:'ปลดหมุดทุกโหนด แล้วจัดผังใหม่',f:cb.relayout},{t:'🖼',ti:'แสดงรูปย่อ',f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:'สลับ 2D/3D',f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:'ส่งออก',f:cb.export},{t:'⤾',ti:'รีเซ็ต',f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
-  bd.append(cr,tr,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
-  return {bar,btns,destroy:()=>bar.remove()};
+  bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
+  return {bar,btns,toolRow,destroy:()=>bar.remove()};
 }
 
 // ═════ 3D projection (pure world coordinates, no scale/center — canvas transform handles that) ═════
@@ -78,7 +115,7 @@ function drawLabelBox(c, text, cx, cy, fontSize) {
   c.quadraticCurveTo(x, y + th, x, y + th - r);
   c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y);
   c.closePath(); c.fill();
-  c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = THEME.canvas.label; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, cx, cy + 1);
   return { w: tw + 4, h: th + 4 };
 }
@@ -96,7 +133,7 @@ function drawEdgeLabel(c, text, x, y, fontSize) {
   c.quadraticCurveTo(bx, by + th, bx, by + th - r);
   c.lineTo(bx, by + r); c.quadraticCurveTo(bx, by, bx + r, by);
   c.closePath(); c.fill();
-  c.fillStyle = '#e0e0dc'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = THEME.canvas.label; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText(text, x, y + 1);
 }
 
@@ -133,6 +170,8 @@ export class StoryNetwork {
     this._showImages=true; this._showMinimap=false;
     this._showGrid=true; this._gridPx=60; this._gridAlpha=0.12;
     this._orbitDrag=null;
+    // [alpha.71 ข้อ 3] เครื่องมือ + ป้ายชื่อ + ขนาดโหนด
+    this._tool='open'; this._showLabels=true; this._nodeScale=1;
 
     this.canvas=document.createElement('canvas');
     this.canvas.className='net-canvas';
@@ -161,6 +200,9 @@ export class StoryNetwork {
       refresh(){self.refresh();},
       relayout(){self.relayout();},
       toggleImages(){self._showImages=!self._showImages;self.draw();},
+      toggleLabels(){self._showLabels=!self._showLabels;self.draw();},
+      setTool(id){self._tool=id;self.canvas.classList.toggle('net-move-mode',id==='move');self.draw();},
+      setNodeScale(v){self._nodeScale=Math.max(0.5,Math.min(2.5,v||1));self.draw();},
       toggleMinimap(){self._showMinimap=!self._showMinimap;self._mm.style.display=self._showMinimap?'':'none';self._updateMinimap();},
       toggle3D(){self._mode3D=!self._mode3D;self._fit();self.draw();if(self._showMinimap)self._updateMinimap();},
       toggleGrid(){self._showGrid=!self._showGrid;self.draw();},
@@ -178,21 +220,40 @@ export class StoryNetwork {
   }
 
   readColors(){
-    const nc=state.settings?.netColors||{};
-    const cc=nc.cats||{}, ce=nc.edges||{};
-    this._catCol={
-      characters: cc['nc-char']||'#d97757', locations: cc['nc-loca']||'#7aa8d8',
-      items: cc['nc-item']||'#6fae8a', lore: cc['nc-lore']||'#b58fc9',
-      scene: cc['nc-scen']||'#e8c95c', chapter: cc['nc-chap']||'#c08a5e',
-      // book = "เล่ม" เหมือน section → ต้องตามช่อง nc-sect ไม่ใช่ nc-chap (ของเดิมสลับกัน)
-      book: cc['nc-sect']||'#a8d870', section: cc['nc-sect']||'#8ec8c8',
-    };
-    this._edgeCol={...REL_COLOR,
-      'scene-link': ce['ne-sl']||'#5caf8a', 'co-occur': ce['ne-co']||'#8a8885',
-      'ent-scene': ce['ne-es']||'#d9955f',
-    };
-    if(ce['ne-rel']){for(const k of Object.keys(this._edgeCol)){if(!['scene-link','co-occur','ent-scene'].includes(k))this._edgeCol[k]=ce['ne-rel'];}}
+    // [alpha.73 ข้อ 3] สีทุกสีมาจากนิยามกลางที่เดียว (network-theme.js)
+    // รับค่ารูปแบบเก่า (netColors.cats/.edges) ได้เองผ่าน normalizeNetColors
+    THEME = resolveNetColors(state.settings && state.settings.netColors, cssVar);
+    this._catCol = THEME.node;
+    this._edgeCol = THEME.edge;
+    this._bg = THEME.canvas.bg;
+    this._grid = THEME.canvas.grid;
+    this._controls = resolveNetControls(state.settings && state.settings.netControls);
     this._vfCache=null;
+    this._paintToolbarColors();
+    this._syncTip();
+  }
+
+  /** คำอธิบายใต้ผัง — สร้างจากค่าที่ตั้งไว้จริง (ข้อ 2: tooltip ต้อง sync กับ setting) */
+  _syncTip(){
+    if(!this._tip)return;
+    this._tip.textContent = controlsHint(this._controls, this._mode3D);
+  }
+
+  /**
+   * [alpha.72 ข้อ 2] ทาสีปุ่มบนแถบเครื่องมือให้ตรงกับสีที่ตั้งไว้จริง
+   * ของเดิม buildToolbar ฝังเลขสีไว้ในโค้ดอีกชุด → เปลี่ยนสีในตั้งค่าแล้วชิปยังเป็นสีเก่า
+   * ผู้ใช้จึงเห็น "สีบนผังกับสีในแถบเครื่องมือไม่ตรงกัน"
+   */
+  _paintToolbarColors(){
+    if(!this._tb||!this._tb.bar)return;
+    for(const b of this._tb.bar.querySelectorAll('.net-tcat[data-cat]')){
+      const col=this._catCol[b.dataset.cat];
+      if(col)b.style.setProperty('--tcolor',col);
+    }
+    for(const b of this._tb.bar.querySelectorAll('.net-ttype[data-type]')){
+      const col=this._edgeCol[b.dataset.type];
+      if(col)b.style.setProperty('--tcolor',col);
+    }
   }
 
   /** โปรเจกต์ที่ผังนี้เป็นของ — ใช้แยก localStorage ของตำแหน่งโหนด */
@@ -220,10 +281,16 @@ export class StoryNetwork {
       for(const n of this.nodes){for(const r of n.relationships||[]){const t=byName[r.targetName||r.target];if(!t||t===n)continue;const k=edgeKey(n,t);if(seen.has(k))continue;seen.add(k);this.edges.push({a:n,b:t,role:r.role||'',type:r.type||categorizeRole(r.role)});}}
       await this._loadCoOccur(byName,seen);
       this._linkStructNodes(byName,seen);
-      // ปักหมุดเฉพาะโหนดที่ผู้ใช้เคยลากเอง (seedLayout ติดธง _pinned ให้แล้ว)
-      const pinned=new Set(this.nodes.filter(n=>n._pinned));
-      forceLayout(this.nodes,this.edges,{width:W,height:H,depth:D||400,iters:280,pinned});
-      // ไม่บันทึกที่นี่ — บันทึกตอนผู้ใช้ลากเท่านั้น ไม่งั้นรอบหน้าจะถูกหมุดหมดทั้งผัง
+      // [alpha.73 ข้อ 1] จัดผังเฉพาะ "โหนดที่ยังไม่เคยมีตำแหน่ง" (เอนทิตี้ที่เพิ่งสร้าง)
+      // โหนดที่มีตำแหน่งบันทึกไว้แล้วถือว่าตรึงไว้หมด → กดรีเฟรชกี่ครั้งผังก็หน้าตาเดิม
+      // (ของเดิมปล่อยให้ forceLayout ขยับทุกตัวที่ไม่ได้ถูกลาก = ผังเปลี่ยนทุกครั้งที่รีเฟรช)
+      const fresh=this.nodes.filter(n=>n._fresh);
+      if(fresh.length){
+        const frozen=new Set(this.nodes.filter(n=>!n._fresh));
+        forceLayout(this.nodes,this.edges,{width:W,height:H,depth:D||400,iters:280,pinned:frozen});
+      }
+      // บันทึกทุกครั้ง — ตำแหน่งของทุกโหนดต้องอยู่ถาวร ไม่ใช่เฉพาะตัวที่ลาก
+      savePositions(this.nodes,this._scope());
       this._vfCache=null;
       this._fit();this.draw();this._updateMinimap();
     }catch(e){console.error('SN refresh error:',e?.message||e);}
@@ -308,22 +375,30 @@ export class StoryNetwork {
     }
   }
 
+  /**
+   * [alpha.72 ข้อ 1] ขนาดผืนวาดต้องเท่ากับกล่อง CSS "เป๊ะ ๆ"
+   * ของเดิม `Math.max(300, r.width)` ตั้งพื้นไว้ที่ 300 → พอแผงแคบกว่านั้น (แผงข้างกว้าง ~200)
+   * ผืนวาดภายในกว้าง 300 แต่ถูกยืดลงมาแสดงที่ 200 = **บีบแนวนอน 2/3 ทั้งผัง**
+   * โหนดวงกลมจึงกลายเป็นวงรี และรูปประจำตัวหน้าแบนผิดสัดส่วน (เห็นชัดตอนรูปเริ่มขึ้นใน .71)
+   * แผงที่ยังไม่มีขนาด (ซ่อนอยู่) = ข้ามไป ไม่ตั้งเป็น 0 (จะล้างภาพทิ้งเปล่า ๆ)
+   */
   _fit() {
     const r=this.pane.getBoundingClientRect();
-    const w=Math.max(300,r.width),h=Math.max(300,r.height);
-    if(w>0&&h>0&&(this.canvas.width!==w||this.canvas.height!==h)){this.canvas.width=w;this.canvas.height=h;}
+    const w=Math.round(r.width),h=Math.round(r.height);
+    if(w<2||h<2)return;
+    if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
   }
 
   draw() {
     const c=this.canvas.getContext('2d');const w=this.canvas.width,h=this.canvas.height;
     if(!w||!h)return;
-    c.clearRect(0,0,w,h);c.fillStyle=BG;c.fillRect(0,0,w,h);
+    c.clearRect(0,0,w,h);c.fillStyle=this._bg||BG_FALLBACK;c.fillRect(0,0,w,h);
     c.save();
     // unified transform: both 2D and 3D use same _cx,_cy,_scale
     c.translate(this._cx,this._cy);c.scale(this._scale,this._scale);
 
     if(!this.nodes.length){
-      c.restore();c.fillStyle='#6a6862';c.font='15px sans-serif';c.textAlign='center';
+      c.restore();c.fillStyle=THEME.canvas.axis;c.font='15px sans-serif';c.textAlign='center';
       c.fillText('ยังไม่มีเอนทิตี้ใน Wiki',w/2,h/2-10);c.font='12px sans-serif';
       c.fillText('สร้างตัวละคร/สถานที่/ไอเทม/ตำนานใน Wiki',w/2,h/2+14);
       this._updateStatus();return;
@@ -334,7 +409,7 @@ export class StoryNetwork {
       const viewW=w/this._scale,viewH=h/this._scale;
       const cx=-this._cx/this._scale,cy=-this._cy/this._scale;
       const ext=Math.max(viewW,viewH)*2+Math.max(Math.abs(cx),Math.abs(cy))*1.5;
-      c.strokeStyle=GRID;c.lineWidth=0.4;c.globalAlpha=this._gridAlpha;c.beginPath();
+      c.strokeStyle=this._grid||GRID_FALLBACK;c.lineWidth=0.4;c.globalAlpha=this._gridAlpha;c.beginPath();
       for(let x=-ext;x<=ext;x+=this._gridPx){c.moveTo(x,-ext);c.lineTo(x,ext);}
       for(let y=-ext;y<=ext;y+=this._gridPx){c.moveTo(-ext,y);c.lineTo(ext,y);}
       c.stroke();c.globalAlpha=1;
@@ -371,7 +446,7 @@ export class StoryNetwork {
       if(!aVis&&!bVis)continue;
       let alpha=at||this._typeFilter.has(e.type)?1:0.08;
       // สีมาจาก _edgeCol เท่านั้น — ของเดิมเขียนทับด้วยค่าคงที่ตรงนี้ สีที่ผู้ใช้ตั้งไว้เลยไม่เคยมีผล
-      const color=this._edgeCol[e.type]||'#4a4842';let lw=2.0;
+      const color=this._edgeCol[e.type]||THEME.canvas.grid;let lw=2.0;
       if(e.type==='co-occur'){lw=1.2;if(alpha===1)alpha=0.5;c.setLineDash([4,3]);}
       else if(e.type==='scene-link'){lw=1.6;if(alpha===1)alpha=0.7;c.setLineDash([3,4]);}
       else if(e.type==='ent-scene'){lw=1.4;if(alpha===1)alpha=0.55;c.setLineDash([5,4,2,4]);}
@@ -394,14 +469,15 @@ export class StoryNetwork {
       const vt=tagStyle(n);
       const isHov=n===this._hoverNode;
       const struct=isStruct(n);
-      const baseR=struct?10:14;
-      let r=isHov?baseR+6:baseR;
+      // [alpha.71 ข้อ 3] ขนาดโหนดคูณด้วยสเกลที่ผู้ใช้ตั้ง (ปุ่มขยาย/ย่อ entities)
+      const ns=this._nodeScale||1;
+      const baseR=(struct?10:14)*ns;
       const degree=this.edges.filter(e=>e.a===n||e.b===n).length;
-      r=Math.max(baseR,Math.min(28,baseR+degree*0.6));
+      let r=Math.max(baseR,Math.min(28*ns,baseR+degree*0.6*ns));
       if(isHov)r+=4;
 
       const nx=px(n),ny=py(n);
-      const col=this._catCol[n.cat]||'#d9955f';
+      const col=this._catCol[n.cat]||THEME.edge['ent-scene'];
 
       // glow on hover — use node's own category color
       if(isHov){
@@ -412,57 +488,114 @@ export class StoryNetwork {
         c.shadowColor=hexToRgba(col,0.6);c.shadowBlur=14;
       }
 
-      // thumbnail
-      if(this._showImages&&n.image&&n._img&&!struct){
-        c.save();c.beginPath();c.arc(nx,ny,r+2,0,Math.PI*2);c.clip();
-        c.drawImage(n._img,nx-r-2,ny-r-2,(r+2)*2,(r+2)*2);
-        c.restore();
-        c.beginPath();c.strokeStyle='rgba(255,255,255,0.3)';c.lineWidth=2;c.arc(nx,ny,r+3,0,Math.PI*2);c.stroke();
-      }
-
+      // [alpha.72 ข้อ 1] ลำดับการวาดของเดิมผิด: วาดรูปย่อก่อน แล้ว **เติมสีวงกลมทับลงไป**
+      // ตอนที่รูปไม่เคยขึ้น (บั๊ก .71) เลยไม่มีใครเห็น — พอรูปมาจริงก็โดนกลบหมดทันที
+      // ลำดับที่ถูก: พื้นวงกลม → รูป (ครอบวงกลม) → ขอบ · และวงแหวนป้ายกำกับต้องอยู่ "นอก" ตัวโหนด
+      const hasImg=this._showImages&&n.image&&n._img&&!struct;
       if(vt){c.beginPath();c.fillStyle=vt.color;c.arc(nx,ny,r+3.5,0,Math.PI*2);c.fill();}
 
       if(struct){
         const sw2=r*1.6,sh2=r*1.4;
         c.fillStyle=col;c.fillRect(nx-sw2/2,ny-sh2/2,sw2,sh2);
-        c.strokeStyle=isHov?'#faf9f5':'#1f1e1c';
+        c.strokeStyle=isHov?THEME.canvas.hover:THEME.canvas.border;
         c.lineWidth=isHov?3:2;c.strokeRect(nx-sw2/2,ny-sh2/2,sw2,sh2);
       }else{
         c.beginPath();c.fillStyle=col;c.arc(nx,ny,r,0,Math.PI*2);c.fill();
-        c.strokeStyle=isHov?'#faf9f5':'#1f1e1c';
-        c.lineWidth=isHov?3:2;c.stroke();
+        if(hasImg){
+          // ครอบรูปให้พอดีวงกลม + คงสัดส่วน (ของเดิมยืดรูปสี่เหลี่ยมให้เป็นจัตุรัสจนหน้าเบี้ยว)
+          const iw=n._img.naturalWidth||1, ih=n._img.naturalHeight||1;
+          const side=Math.min(iw,ih);
+          const sxi=(iw-side)/2, syi=(ih-side)/2;
+          c.save();c.beginPath();c.arc(nx,ny,r-1,0,Math.PI*2);c.clip();
+          c.drawImage(n._img,sxi,syi,side,side,nx-r+1,ny-r+1,(r-1)*2,(r-1)*2);
+          c.restore();
+        }
+        // ขอบวาดหลังรูปเสมอ → รูปไม่ล้นออกนอกวง และขอบไม่ถูกรูปทับ
+        c.beginPath();c.arc(nx,ny,r,0,Math.PI*2);
+        c.strokeStyle=hasImg?col:(isHov?THEME.canvas.hover:THEME.canvas.border);
+        c.lineWidth=hasImg?3:(isHov?3:2);c.stroke();
+        if(hasImg&&isHov){c.beginPath();c.arc(nx,ny,r+2,0,Math.PI*2);
+          c.strokeStyle=THEME.canvas.hover;c.lineWidth=2;c.stroke();}
       }
       c.shadowBlur=0;
 
       if(q&&m.has(n)&&!this._rafId){
-        c.beginPath();c.strokeStyle='#61afef';c.lineWidth=3;c.globalAlpha=0.5+Math.sin(performance.now()*0.005)*0.5;
+        c.beginPath();c.strokeStyle=THEME.edge.ally;c.lineWidth=3;c.globalAlpha=0.5+Math.sin(performance.now()*0.005)*0.5;
         c.arc(nx,ny,r+6,0,Math.PI*2);c.stroke();c.globalAlpha=1;
       }
 
-      const label=(vt&&vt.icon?vt.icon+' ':'')+(n.name.length>20?n.name.slice(0,19)+'…':n.name);
-      drawLabelBox(c,label,nx,ny+r+12+4,isHov?11:9);
+      // ป้ายชื่อ — ปิดได้ด้วยปุ่ม 🔤 (ผังใหญ่ ๆ ตัวหนังสือทับกันจนอ่านโครงไม่ออก)
+      // ตอนชี้เมาส์ยังโชว์เสมอ ไม่งั้นปิดป้ายแล้วหาโหนดที่ต้องการไม่เจอเลย
+      if(this._showLabels||isHov){
+        const label=(vt&&vt.icon?vt.icon+' ':'')+(n.name.length>20?n.name.slice(0,19)+'…':n.name);
+        drawLabelBox(c,label,nx,ny+r+12+4,isHov?11:9);
+      }
     }
 
     c.restore();
+    this._drawAxis(c);
     this._updateStatus();
     if(q&&m.size&&!this._rafId)this._rafId=requestAnimationFrame(()=>{this._rafId=null;this.draw();});
   }
 
+  /**
+   * [alpha.73 ข้อ 4] แกนบอกทิศที่มุมล่างซ้ายของผัง
+   * เดิมมีแต่ตัวเลขบนแถบสถานะ ไม่มีอะไรบอกว่าแกนไหนชี้ไปทางไหน (โดยเฉพาะพอหมุน 3D)
+   * ลูกศรหมุนตามมุมกล้องจริง ใช้สูตรฉายเดียวกับที่วาดโหนด (axisVectors)
+   */
+  _drawAxis(c){
+    const w=this.canvas.width,h=this.canvas.height;
+    if(w<160||h<120)return;                     // แผงแคบมาก ๆ ไม่ต้องวาดให้รก
+    const ox=34,oy=h-34,len=22;
+    const ax=axisVectors(this._rx,this._ry,this._mode3D);
+    const axes=[['X',ax.x,THEME.node.characters],['Y',ax.y,THEME.node.items]];
+    if(ax.z)axes.push(['Z',ax.z,THEME.node.locations]);
+    c.save();
+    c.globalAlpha=0.85;c.lineWidth=1.6;c.font='9px sans-serif';
+    c.textAlign='center';c.textBaseline='middle';
+    for(const [name,v,col] of axes){
+      const ex=ox+v.x*len, ey=oy+v.y*len;
+      c.strokeStyle=col;c.fillStyle=col;
+      c.beginPath();c.moveTo(ox,oy);c.lineTo(ex,ey);c.stroke();
+      c.beginPath();c.arc(ex,ey,2.2,0,Math.PI*2);c.fill();
+      c.fillText(name,ox+v.x*(len+8),oy+v.y*(len+8));
+    }
+    c.fillStyle=THEME.canvas.axis;c.globalAlpha=0.6;
+    c.beginPath();c.arc(ox,oy,2,0,Math.PI*2);c.fill();
+    c.restore();
+  }
+
+  /**
+   * [alpha.73 ข้อ 4] แถบสถานะเดิมโชว์ `_cx/_cy` = ระยะเลื่อนกล้องเป็น "พิกเซลบนจอ"
+   * ไม่ใช่พิกัดของอะไรเลย (ซูมทีค่าก็เปลี่ยนทั้งที่ยังมองจุดเดิม) และเอามุมหมุนมาแปะป้ายว่า "Z"
+   * ทั้งที่ Z คือแกนลึกของผัง ไม่ใช่องศา
+   * ตอนนี้: X/Y/Z = **พิกัดโลกของจุดกึ่งกลางจอ** (ค่าเดียวกับที่โหนดใช้) · มุมหมุนแยกเป็น ↻
+   */
   _updateStatus() {
     if(!this._sb)return;
     const structN=this.nodes.filter(n=>!WIKI_CATS.has(n.cat)).length;
     const st=structN?` (+${structN} ฉาก/บท)`:'';
+    const c=viewCenter({scale:this._scale,cx:this._cx,cy:this._cy},this.canvas.width,this.canvas.height);
+    const zc=this._mode3D?this._viewZ():0;
     this._sb.textContent=`⦿ ${this.nodes.length}${st} · ${this.edges.length} เส้น · `+
-      `✕ ${Math.round(this._cx)} ${Math.round(this._cy)}`+
-      (this._mode3D?` Z${Math.round(this._rx*180/Math.PI)}°`:'')+
+      `X ${Math.round(c.x)} · Y ${Math.round(c.y)} · Z ${Math.round(zc)}`+
+      (this._mode3D?` · ↻ ${Math.round(this._rx*180/Math.PI)}°,${Math.round(this._ry*180/Math.PI)}°`:'')+
       ` · ซูม ${Math.round(this._scale*100)}%`;
+  }
+
+  /** ความลึกเฉลี่ยของโหนดที่มองเห็น — ใช้เป็นค่า Z ของกล้องในโหมด 3D */
+  _viewZ(){
+    if(!this.nodes.length)return 0;
+    let sum=0,n=0;
+    for(const nd of this.nodes){sum+=(nd.z||0);n++;}
+    return n?sum/n:0;
   }
 
   _updateMinimap() {
     if(!this._showMinimap||!this._mm||this._mm.style.display==='none')return;
     const c=this._mm.getContext('2d');const mw=160,mh=120;
     c.clearRect(0,0,mw,mh);c.fillStyle='rgba(26,26,24,0.92)';c.fillRect(0,0,mw,mh);
-    if(!this.nodes.length){c.strokeStyle='#4a4842';c.strokeRect(0,0,mw,mh);return;}
+    if(!this.nodes.length){c.strokeStyle=THEME.canvas.grid;c.strokeRect(0,0,mw,mh);return;}
     let mnx=Infinity,mny=Infinity,mxx=-Infinity,mxy=-Infinity;
     for(const n of this.nodes){if(n.x<mnx)mnx=n.x;if(n.y<mny)mny=n.y;if(n.x>mxx)mxx=n.x;if(n.y>mxy)mxy=n.y;}
     const pw=mxx-mnx||200,ph=mxy-mny||200;
@@ -470,11 +603,11 @@ export class StoryNetwork {
     const ox=10+(mw-20-pw*s)/2,oy=10+(mh-20-ph*s)/2;
     for(const n of this.nodes){
       const nx=ox+(n.x-mnx)*s,ny=oy+(n.y-mny)*s;
-      c.fillStyle=this._catCol[n.cat]||'#d9955f';c.beginPath();c.arc(nx,ny,2.5,0,Math.PI*2);c.fill();
+      c.fillStyle=this._catCol[n.cat]||THEME.edge['ent-scene'];c.beginPath();c.arc(nx,ny,2.5,0,Math.PI*2);c.fill();
     }
     const vw=this.canvas.width/this._scale,vh=this.canvas.height/this._scale;
     const vx=ox+(-this._cx/this._scale-mnx)*s,vy=oy+(-this._cy/this._scale-mny)*s;
-    c.strokeStyle='#61afef';c.lineWidth=1.5;c.strokeRect(vx,vy,vw*s,vh*s);
+    c.strokeStyle=THEME.edge.ally;c.lineWidth=1.5;c.strokeRect(vx,vy,vw*s,vh*s);
   }
 
   // ── hit / mouse ──
@@ -513,11 +646,20 @@ export class StoryNetwork {
   }
 
   _down(e){
-    if(e.button===2&&this._mode3D){this._orbitDrag={sx:e.clientX,sy:e.clientY,orx:this._rx,ory:this._ry};return;}
-    if(e.button!==0)return;
+    // [alpha.73 ข้อ 2] ปุ่มหมุน 3D มาจาก settings.netControls (ค่าเริ่มต้น = ปุ่มกลาง เหมือนรุ่นก่อน)
+    // ของเดิมฮาร์ดโค้ด `e.button===2` (คลิกขวา) จึงไม่ตรงกับที่ผู้ใช้เคยใช้และแก้ไม่ได้
+    const ctl=this._controls||resolveNetControls(null);
+    const orbitBtn=buttonIndex(ctl.orbitButton), panBtn=buttonIndex(ctl.panButton);
+    if(e.button===orbitBtn&&this._mode3D){
+      e.preventDefault();                       // ปุ่มกลางของ Chromium = auto-scroll ต้องกันไว้
+      this._orbitDrag={sx:e.clientX,sy:e.clientY,orx:this._rx,ory:this._ry};return;}
+    if(e.button!==panBtn)return;
     const{x,y,node}=this._hit(e);
-    if(node&&e.shiftKey){this._repel(node,x,y);this.draw();return;}
-    if(node){this.drag={node,moved:false,ox:node.x-x,oy:node.y-y};return;}
+    // [alpha.73 ข้อ 1] ผลักแล้วต้องอยู่ถาวร — เดิมผลักเสร็จไม่ปักหมุด/ไม่บันทึก รอบ refresh ถัดไปเด้งกลับหมด
+    if(node&&e.shiftKey){this._repel(node,x,y);savePositions(this.nodes,this._scope());this.draw();return;}
+    // [alpha.71 ข้อ 3] ลากโหนดได้เฉพาะโหมด "ย้ายตำแหน่ง" — โหมดอื่นคลิกโดนโหนดแล้วให้แพนผังแทน
+    if(node&&this._tool==='move'){this.drag={node,moved:false,ox:node.x-x,oy:node.y-y};return;}
+    if(node){this._clickNode=node;}
     this.pan={sx:e.clientX,sy:e.clientY,cx:this._cx,cy:this._cy,moved:false};this.canvas.classList.add('net-panning');
   }
 
@@ -533,17 +675,28 @@ export class StoryNetwork {
     const{x}=this._hit(e);this.drag.node.x=x+this.drag.ox;this.drag.node.y=(e.clientY-this.canvas.getBoundingClientRect().top-this._cy)/this._scale+this.drag.oy;this.drag.moved=true;this.draw();if(this._showMinimap)this._updateMinimap();}
 
   _up(){
+    const clicked=this._clickNode;this._clickNode=null;
     if(this._orbitDrag){this._orbitDrag=null;return;}
-    if(this.pan){this.pan=null;this.canvas.classList.remove('net-panning');return;}
-    // no single-click open — use double-click only
+    if(this.pan){const moved=this.pan.moved;this.pan=null;this.canvas.classList.remove('net-panning');
+      if(moved)return;}
     // ลากเอง = ปักหมุดโหนดนั้น (เฉพาะโหนดที่ปักหมุดเท่านั้นที่ถูกบันทึก)
     if(this.drag&&this.drag.moved){this.drag.node._pinned=true;savePositions(this.nodes,this._scope());}
     this.drag=null;
+    // [alpha.71 ข้อ 3] โหมด เปิด/แก้ไข → คลิกเดียวเปิดได้เลย (เดิมต้องดับเบิลคลิกเท่านั้น)
+    if(clicked&&(this._tool==='open'||this._tool==='edit'))this._openNode(clicked);
+  }
+
+  _openNode(node){
+    if(!node)return;
+    if(isStruct(node)){if(this.onOpenScene)this.onOpenScene(node.file);}
+    else if(this.onOpen)this.onOpen(node);
   }
 
   /** ปลดหมุดทุกโหนด แล้วให้ force layout จัดผังใหม่ทั้งหมด */
+  /** ปลดหมุดทุกโหนด + ลบตำแหน่งที่บันทึกไว้ → รอบถัดไปทุกโหนดเป็น "ของใหม่" จึงถูกจัดผังใหม่หมด */
   relayout(){
     clearPositions(this.nodes,this._scope());
+    for(const n of this.nodes)n._fresh=true;
     this.refresh();
   }
 
@@ -554,23 +707,45 @@ export class StoryNetwork {
     savePositions(this.nodes,this._scope());
   }
 
+  /**
+   * [alpha.73 ข้อ 1] Shift+คลิก = "เคลียร์ที่ว่างรอบโหนดนี้"
+   *
+   * สูตรเดิมเป็นแรงผลักแบบ 1/d² (`f=180/(d*d*0.01+1)`) — ที่ระยะจริงบนผัง (หลายร้อยหน่วย)
+   * ได้แรงราว 0.005 หน่วย = **ขยับไม่ถึงหนึ่งพิกเซล** ผู้ใช้จึงเห็นว่า "กดแล้วไม่มีอะไรเกิดขึ้น"
+   *
+   * ตอนนี้ดันเฉพาะโหนดที่อยู่ใกล้กว่ารัศมีเคลียร์ ให้ออกไปอยู่ที่ขอบรัศมีพอดี — เห็นผลทันทีและคาดเดาได้
+   * โหนดที่ถูกดันถือว่า "ผู้ใช้จัดเอง" (ปักหมุด) จะได้ไม่ถูก forceLayout ดึงกลับ
+   */
   _repel(node, hx, hy) {
+    const R = 220 * (this._nodeScale || 1);
+    // โหมด 2D ผู้ใช้เห็นแค่ระนาบ x/y — ถ้าเอา z มาคิดด้วย โหนดที่ "ลึก" ต่างกันจะดูเหมือนไม่ขยับ
+    const use3D = !!this._mode3D;
+    let moved = 0;
     for(const n of this.nodes){
       if(n===node)continue;
-      const dx=n.x-node.x,dy=n.y-node.y,dz=(n.z||0)-(node.z||0);
-      const d=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
-      const f=180/(d*d*0.01+1);
-      n.x+=dx/d*f;n.y+=dy/d*f;n.z=(n.z||0)+dz/d*f;
+      let dx=n.x-node.x, dy=n.y-node.y, dz=use3D?((n.z||0)-(node.z||0)):0;
+      let d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(d>=R)continue;
+      if(d<1){const a=Math.random()*Math.PI*2;dx=Math.cos(a);dy=Math.sin(a);dz=0;d=1;}
+      const k=R/d;
+      n.x=node.x+dx*k; n.y=node.y+dy*k; if(use3D)n.z=(node.z||0)+dz*k;
+      n._pinned=true;
+      moved++;
     }
+    return moved;
   }
 
+
+  /**
+   * [alpha.73 ข้อ 4] ซูมยึด "จุดกึ่งกลางจอ"
+   * ของเดิมยึดตำแหน่งเมาส์ → พิกัดกล้องที่โชว์บนแถบสถานะเปลี่ยนทุกครั้งที่ซูม
+   * ทั้งที่ผู้ใช้ยังมองจุดเดิม (ดูเหมือน "ค่า x/y/z ไม่ยึดจากอะไรเลย")
+   */
   _zoom(e){
-    const r=this.canvas.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
     const f=e.deltaY<0?1.1:0.9;
-    const ns=this._scale*f;
-    this._cx=mx-(mx-this._cx)*(ns/this._scale);
-    this._cy=my-(my-this._cy)*(ns/this._scale);
-    this._scale=ns;
+    const cam=zoomAtCenter({scale:this._scale,cx:this._cx,cy:this._cy},
+                           this.canvas.width,this.canvas.height,this._scale*f);
+    this._scale=cam.scale;this._cx=cam.cx;this._cy=cam.cy;
     this.draw();if(this._showMinimap)this._updateMinimap();
   }
 
@@ -589,7 +764,7 @@ export class StoryNetwork {
     this._ctxMenus.push(menu);
     menu.style.cssText='position:fixed;left:'+e.clientX+'px;top:'+e.clientY+'px;z-index:80;background:var(--side);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.4);min-width:160px;';
     const done=()=>{this._ctxMenus=this._ctxMenus.filter(x=>x!==menu);try{menu.remove();}catch{}};
-    const addItem=(label,click,opts={})=>{const d=document.createElement('div');d.className='k-menu-item';d.textContent=label;if(opts.danger)d.style.color='#e06c75';if(opts.dim)d.style.opacity='0.5';if(label==='-'){d.style.cssText='height:1px;background:var(--border);margin:2px 6px;padding:0;cursor:default;';d.onclick=()=>{};}else{d.onclick=()=>{click();done();}}menu.appendChild(d);};
+    const addItem=(label,click,opts={})=>{const d=document.createElement('div');d.className='k-menu-item';d.textContent=label;if(opts.danger)d.style.color=THEME.edge.family;if(opts.dim)d.style.opacity='0.5';if(label==='-'){d.style.cssText='height:1px;background:var(--border);margin:2px 6px;padding:0;cursor:default;';d.onclick=()=>{};}else{d.onclick=()=>{click();done();}}menu.appendChild(d);};
     if(node){
       const struct=isStruct(node);
       if(struct){

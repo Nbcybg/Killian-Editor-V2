@@ -53,32 +53,32 @@ export const PANEL_DEFS = [
   { id: 'comments',  title: 'คอมเมนต์',        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
     desc: 'คอมเมนต์ของฉากที่เปิดอยู่ — ตอบกลับเป็นเธรด ปิดงานได้ · เก็บท้ายไฟล์ .md จึงติดไปกับไฟล์เสมอ' },
   // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
-  { id: 'dashboard', dockW: 640, title: 'แดชบอร์ด',        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
+  { id: 'dashboard', minW: 620, dockW: 640, title: 'แดชบอร์ด',        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
     desc: 'ภาพรวมความคืบหน้า — จำนวนคำเทียบเป้าหมาย · สัดส่วนฉากตามสถานะ · ความยาวของแต่ละบท' },
-  { id: 'kanban', dockW: 640,    title: 'Kanban',          icon: 'grid',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle',
+  { id: 'kanban', minW: 800, dockW: 640,    title: 'Kanban',          icon: 'grid',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle',
     desc: 'กระดานฉากเรียงตามสถานะ — ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะฉากนั้นทันที' },
-  { id: 'books', dockW: 640,     title: 'จัดการเล่ม',       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
+  { id: 'books', minW: 400, dockW: 640,     title: 'จัดการเล่ม',       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
     desc: 'จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม' },
-  { id: 'timeline', dockW: 640,  title: 'เส้นเวลา',         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
+  { id: 'timeline', minW: 620, dockW: 640,  title: 'เส้นเวลา',         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
     desc: 'ลำดับเหตุการณ์ตาม "เวลาในเรื่อง" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง' },
   { id: 'maps', dockW: 640,      title: 'แผนที่',           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
     desc: 'แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้' },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
-  { id: 'gallery', dockW: 640,   title: 'คลังรูปภาพ',       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
+  { id: 'gallery', minW: 600, dockW: 640,   title: 'คลังรูปภาพ',       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
     desc: 'รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki' },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
-  { id: 'gallery-board', dockW: 640, title: '🎨 กระดานอารมณ์', icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
+  { id: 'gallery-board', minW: 400, dockW: 640, title: '🎨 กระดานอารมณ์', icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
     desc: 'ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์' },
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-  { id: 'ai-analyzer', dockW: 640, title: '🧠 AI วิเคราะห์',  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
+  { id: 'ai-analyzer', minW: 400, dockW: 640, title: '🧠 AI วิเคราะห์',  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
     desc: 'ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)' },
   // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
   { id: 'ai-chat', dockW: 640,   title: '💬 AI ผู้ช่วยเขียน',       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
     desc: 'คุยกับ AI เรื่องงานเขียนของคุณ — แยกเป็นเซสชันเหมือน opencode · เลือกโหมด (วางแผน/ช่วยเขียน) · เลือกโมเดล · กำหนดได้ว่าจะให้เห็นข้อมูลระดับไหน (ทั้งโปรเจกต์/เล่ม/บท/ฉาก)' },
   // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
-  { id: 'network', dockW: 640,   title: 'Story Network',   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.networkTitle',
+  { id: 'network', minW: 400, dockW: 640,   title: 'Story Network',   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.networkTitle',
     desc: 'ผังความสัมพันธ์ของตัวละคร/สถานที่/สิ่งของ — ลากโหนดจัดวางเอง · สีเส้นบอกประเภทความสัมพันธ์ · ดับเบิลคลิกเปิดหน้า Wiki นั้น' },
-  { id: 'planner', dockW: 640,   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
+  { id: 'planner', minW: 800, dockW: 640,   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
     desc: 'กระดานวางแผนแบบการ์ดอิสระ — วางโน้ต รูป และลิงก์ไปฉากได้ทุกที่บนผืนผ้าใบ · ใช้ปะติดปะต่อโครงเรื่องก่อนลงมือเขียน' },
   { id: 'planner-props', title: 'คุณสมบัติ Planner', icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
     closable: true, floatable: true, i18n: 'panel.plannerPropsTitle',
@@ -86,7 +86,7 @@ export const PANEL_DEFS = [
   { id: 'floorplan', dockW: 640, title: '📍 ผังพื้นที่',      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
     desc: 'ฉากนี้เกิดที่ไหน — แผนที่ + หมุด "คุณอยู่ที่นี่" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่' },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
-  { id: 'branch', dockW: 640,    title: '🌿 ผังแตกสาย',      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
+  { id: 'branch', minW: 700, dockW: 640,    title: '🌿 ผังแตกสาย',      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
     desc: 'ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้' },
   { id: 'player', dockW: 440,    title: '▶️ ทดลองเล่น',       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
     desc: 'อ่านเรื่องแบบผู้เล่น — เนื้อฉากอ่านอย่างเดียว แล้วกดปุ่มทางเลือกเดินต่อไปเรื่อย ๆ · ย้อนกลับได้ · เก็บเส้นทางแต่ละรอบไว้ดูย้อนหลัง' },
@@ -408,7 +408,8 @@ export function toggleSpace(mode = 'all') {
 function renderOpts() {
   for (const d of PANEL_DEFS) {                 // รีเฟรชชื่อตามภาษาปัจจุบัน
     const m = meta.get(d.id) || {};
-    meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id) });
+    // [alpha.73 ข้อ 6] minW เดินทางไปกับ meta → ตัววาดตั้ง --panel-min-w ให้เอง (ไม่ฮาร์ดโค้ดใน CSS)
+    meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id), minW: d.minW });
   }
   return {
     meta,

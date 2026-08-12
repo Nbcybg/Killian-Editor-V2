@@ -1,5 +1,5 @@
 // wiki-ui.js — Wiki: หมวด (สร้าง/แก้/ลบ) + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
-import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, findEntityInScenes, guid, invertRole, markDirty, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
+import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
 import { $, BUILTIN_CATS, el, setStatus, smart, state, t as tr } from './core.js';
 import { pickImage } from './gallery.js';
@@ -93,6 +93,8 @@ export async function openEntity(file) {
   tab.wiki = new WikiEditor(pane, file, entity, {
     projectRoot: state.root,
     labels: fieldLabels(entity.templateId),
+    // [alpha.71 ข้อ 4] หัวการ์ดอ่านจากเทมเพลต — ส่งเป็นฟังก์ชันเพื่อให้เปลี่ยนเทมเพลตแล้วเห็นผลทันที
+    template: (e) => templateOf(e && e.templateId),
     entityTitles: () => smart.titles || [],
     fileOfEntity: (n) => smart.fileOf[n] || null,
     invertRole: (r) => (INV_C.m && INV_C.m[r]) || r,
@@ -175,6 +177,8 @@ export async function openEntity(file) {
       smart.loadNames(state.root); buildTree();
       // [alpha.62 บั๊ก 16] Story Network เป็นแผงแล้ว ไม่ใช่แท็บ
       import('./app.js').then((m) => m.netInst?.refresh()).catch(() => {});
+      // [alpha.71 ข้อ 2] เปลี่ยนรูปประจำตัวแล้ว หมุดเอนทิตี้บนแผนที่ต้องเปลี่ยนตามด้วย
+      import('./maps-ui.js').then((m) => m.refreshMapsIfOpen()).catch(() => {});
       // ถ้าฝั่งตรงข้ามเปิดอยู่เป็นแท็บ → รีเฟรชให้เห็นความสัมพันธ์ที่เพิ่งซิงก์
       for (const t of state.tabs.values())
         if (t.wiki && t.wiki !== tab.wiki) t.wiki.reloadIfExists?.();

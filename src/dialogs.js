@@ -23,6 +23,72 @@ import { parseMdFile } from './md.js';
 import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
 import { iconHtml } from './icons.js';
+// [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
+import { NET_COLOR_GROUPS, NET_COLOR_DEFS, netColorDefsOf, normalizeNetColors,
+         MOUSE_BUTTONS, resolveNetControls, controlsHint } from './network-theme.js';
+
+/**
+ * สร้างช่องสีทั้งหมดของ Story Network จาก NET_COLOR_DEFS
+ * เพิ่มสีใหม่ในนิยามกลาง = ช่องโผล่ในกล่องตั้งค่าเอง ไม่ต้องมาแก้ที่นี่อีก
+ */
+function buildNetColorFields(box, s) {
+  const host = box.querySelector('#st-netcol-body');
+  if (!host) return;
+  const saved = normalizeNetColors(s.netColors);
+  host.replaceChildren();
+  for (const g of NET_COLOR_GROUPS) {
+    const defs = netColorDefsOf(g.group);
+    if (!defs.length) continue;
+    const h = el('div', 'k-set-sub k-full', g.label);
+    host.append(h);
+    for (const d of defs) {
+      const row = el('div', 'k-row');
+      row.append(el('label', null, d.label));
+      const c = el('input'); c.type = 'color'; c.className = 'st-netcol';
+      c.dataset.key = d.key;
+      c.value = saved[d.key] || d.def;
+      const txt = el('input'); txt.type = 'text'; txt.className = 'st-netcol-t';
+      txt.style.width = '84px'; txt.placeholder = d.cssVar ? 'ตามธีม' : d.def;
+      txt.value = saved[d.key] || '';
+      // พิมพ์เลขสีเองก็ได้ · เว้นว่าง = ใช้ค่าเริ่มต้น/ตามธีม
+      txt.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value; };
+      c.oninput = () => { txt.value = c.value; };
+      row.append(c, txt);
+      host.append(row);
+    }
+  }
+  // ปุ่มเมาส์ + คำอธิบายที่ sync กับค่าที่เลือก
+  const ctl = resolveNetControls(s.netControls);
+  const fill = (sel, cur) => {
+    if (!sel) return;
+    sel.replaceChildren();
+    for (const b of MOUSE_BUTTONS) { const o = el('option', null, b.label); o.value = b.value; sel.append(o); }
+    sel.value = cur;
+  };
+  const orbit = box.querySelector('#st-net-orbit'), pan = box.querySelector('#st-net-pan');
+  fill(orbit, ctl.orbitButton); fill(pan, ctl.panButton);
+  const hint = box.querySelector('#st-net-hint');
+  const syncHint = () => {
+    if (!hint) return;
+    const c2 = resolveNetControls({ orbitButton: orbit.value, panButton: pan.value });
+    if (pan.value !== c2.panButton) pan.value = c2.panButton;   // ชนกัน = ถอยให้อัตโนมัติ
+    hint.textContent = 'คำอธิบายใต้ผังจะเป็น: ' + controlsHint(c2, true);
+  };
+  if (orbit) orbit.onchange = syncHint;
+  if (pan) pan.onchange = syncHint;
+  syncHint();
+}
+
+/** อ่านค่าคืน — ช่องที่เว้นว่างไม่ถูกบันทึก (จะได้ตามธีม/ค่าเริ่มต้นต่อไป) */
+function readNetColorFields(box) {
+  const out = {};
+  for (const c of box.querySelectorAll('.st-netcol')) {
+    const txt = c.parentElement.querySelector('.st-netcol-t');
+    const v = String((txt && txt.value) || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(v)) out[c.dataset.key] = v.toLowerCase();
+  }
+  return out;
+}
 
 export function settingsDialog(openTab) {
   if (!state.root) { alert(t('errors.openProjectFirst')); return; }
@@ -262,20 +328,13 @@ export function settingsDialog(openTab) {
       <div id="st-keys"></div>
     </div>
     <div class="k-set-page" data-p="netcol">
-      <div class="k-hint" style="margin-bottom:10px">กำหนดสีของโหนดและเส้นเชื่อมใน Story Network (ระบุเป็น hex เช่น #d97757)</div>
-      <div class="k-set-sub k-full">⬤ สีโหนดตามหมวด</div>
-      <div class="k-row"><label>ตัวละคร</label><input type="color" id="st-nc-char" value="#d97757"><input type="text" id="st-nc-char-t" style="width:80px" placeholder="#d97757"></div>
-      <div class="k-row"><label>สถานที่</label><input type="color" id="st-nc-loca" value="#7aa8d8"><input type="text" id="st-nc-loca-t" style="width:80px" placeholder="#7aa8d8"></div>
-      <div class="k-row"><label>ไอเทม</label><input type="color" id="st-nc-item" value="#6fae8a"><input type="text" id="st-nc-item-t" style="width:80px" placeholder="#6fae8a"></div>
-      <div class="k-row"><label>ตำนาน</label><input type="color" id="st-nc-lore" value="#b58fc9"><input type="text" id="st-nc-lore-t" style="width:80px" placeholder="#b58fc9"></div>
-      <div class="k-row"><label>ฉาก</label><input type="color" id="st-nc-scen" value="#e8c95c"><input type="text" id="st-nc-scen-t" style="width:80px" placeholder="#e8c95c"></div>
-      <div class="k-row"><label>บท</label><input type="color" id="st-nc-chap" value="#c08a5e"><input type="text" id="st-nc-chap-t" style="width:80px" placeholder="#c08a5e"></div>
-      <div class="k-row"><label>เล่ม</label><input type="color" id="st-nc-sect" value="#8ec8c8"><input type="text" id="st-nc-sect-t" style="width:80px" placeholder="#8ec8c8"></div>
-      <div class="k-set-sub k-full">━ เส้นเชื่อม</div>
-      <div class="k-row"><label>ลิงก์โครงสร้าง (ฉาก↔บท↔เล่ม)</label><input type="color" id="st-ne-sl" value="#5caf8a"></div>
-      <div class="k-row"><label>ความสัมพันธ์ (entity↔entity)</label><input type="color" id="st-ne-rel" value="#4a4842"></div>
-      <div class="k-row"><label>ปรากฏร่วม (co-occur)</label><input type="color" id="st-ne-co" value="#8a8885"></div>
-      <div class="k-row"><label>เอนทิตี้↔ฉาก</label><input type="color" id="st-ne-es" value="#d9955f"></div>
+      <div class="k-hint" style="margin-bottom:10px">สีและการควบคุมของ Story Network — ช่องทั้งหมดสร้างจากนิยามกลาง (network-theme.js) จึงครบทุกสีที่ผังใช้จริงเสมอ</div>
+      <div class="k-set-sub k-full">🖱 การควบคุมด้วยเมาส์</div>
+      <div class="k-row"><label>ปุ่มหมุนมุมมอง 3D</label><select id="st-net-orbit" class="k-dlg-select"></select></div>
+      <div class="k-row"><label>ปุ่มเลื่อนผัง (แพน)</label><select id="st-net-pan" class="k-dlg-select"></select></div>
+      <div class="k-hint k-full" id="st-net-hint" style="margin:2px 0 10px"></div>
+      <div id="st-netcol-body"></div>
+    </div>
     </div>
     <div class="k-dlg-btns"><button class="k-cancel">${t('dialogs.cancel')}</button><button class="k-ok">${t('dialogs.save')}</button></div>`;
   ov.appendChild(box); document.body.appendChild(ov);
@@ -383,16 +442,9 @@ export function settingsDialog(openTab) {
   q('#st-edpt').value = s.edFontPt ?? 12;
   q('#st-sppt').value = s.spFontPt ?? 12;
   q('#st-homethumb').value = s.homeThumb ?? 190;
-  // ── Story Network colors ──
-  const nc = s.netColors || {};
-  const ncCats = nc.cats || {};
-  const ncEdges = nc.edges || {};
-  const setCol = (id, def) => { const el=q('#st-'+id); if(!el)return; el.value=ncCats[id]||def; const tEl=q('#st-'+id+'-t'); if(tEl){tEl.value=ncCats[id]||def;tEl.oninput=()=>{try{el.value=tEl.value;}catch{}};} };
-  setCol('nc-char','#d97757'); setCol('nc-loca','#7aa8d8'); setCol('nc-item','#6fae8a');
-  setCol('nc-lore','#b58fc9'); setCol('nc-scen','#e8c95c'); setCol('nc-chap','#c08a5e');
-  setCol('nc-sect','#8ec8c8');
-  const setEdge = (id, def) => { const el=q('#st-'+id); if(!el)return; el.value=ncEdges[id]||def; };
-  setEdge('ne-sl','#5caf8a'); setEdge('ne-rel','#4a4842'); setEdge('ne-co','#8a8885'); setEdge('ne-es','#d9955f');
+  // ── [alpha.73 ข้อ 2+3] Story Network: สร้างช่องสี + ช่องปุ่มเมาส์ จากนิยามกลาง ──
+  // เดิมเขียน HTML มือ 11 ช่อง แล้วอ่านกลับด้วยชื่อ id ที่พิมพ์เอง → ตกหล่นทุกครั้งที่เพิ่มสีใหม่
+  buildNetColorFields(box, s);
   // ── end Story Network colors
   // พรีวิวขนาดฟอนต์ทันที (ยกเลิก = คืนค่าเดิม)
   const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
@@ -1061,19 +1113,10 @@ export function settingsDialog(openTab) {
     for (const [sel, key] of SETUP_FIELDS) m[key] = q(sel).value.trim();
     g.dailyWords = num('#st-daily', 500);
     g.projectWords = num('#st-proj', 50000);
-    // ── Story Network colors ──
-    s.netColors = {
-      cats: {
-        'nc-char': q('#st-nc-char')?.value||'#d97757', 'nc-loca': q('#st-nc-loca')?.value||'#7aa8d8',
-        'nc-item': q('#st-nc-item')?.value||'#6fae8a', 'nc-lore': q('#st-nc-lore')?.value||'#b58fc9',
-        'nc-scen': q('#st-nc-scen')?.value||'#e8c95c', 'nc-chap': q('#st-nc-chap')?.value||'#c08a5e',
-        'nc-sect': q('#st-nc-sect')?.value||'#8ec8c8',
-      },
-      edges: {
-        'ne-sl': q('#st-ne-sl')?.value||'#5caf8a', 'ne-rel': q('#st-ne-rel')?.value||'#4a4842',
-        'ne-co': q('#st-ne-co')?.value||'#8a8885', 'ne-es': q('#st-ne-es')?.value||'#d9955f',
-      },
-    };
+    // ── [alpha.73 ข้อ 2+3] อ่านค่าคืนจากช่องที่สร้างเอง (ครบทุกคีย์เสมอ) ──
+    s.netColors = readNetColorFields(box);
+    s.netControls = { orbitButton: q('#st-net-orbit')?.value || 'middle',
+                      panButton: q('#st-net-pan')?.value || 'left' };
     try {
       await preloadLangFontUrls();         // ฟอนต์ที่เพิ่งนำเข้าต้องมี URL ก่อน applySettings สร้าง CSS
       await saveProjectMeta();

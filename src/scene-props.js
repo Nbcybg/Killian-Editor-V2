@@ -71,6 +71,11 @@ export async function sceneProps(dPath, ch, sc) {
   const iNote = mk('โน้ต', M.note, 'textarea');
   const iFuture = mk('Future Note (หมายเหตุนักเขียน)', M.futureNote || '', 'textarea');
   iFuture.placeholder = 'โน้ตสำหรับนักเขียน — แสดงเฉพาะที่นี่และ Planner ไม่แสดงในฉากปกติ';
+  // [alpha.70 ข้อ 1] ปุ่ม "ดูบนแผนที่" — เดิมปักตำแหน่งฉากได้แต่ไม่มีทางกระโดดกลับไปดู
+  // (import แบบไดนามิก: maps-ui → app.js → scene-props เป็นวง ถ้า import ตรง ๆ ตอนโหลดโมดูล)
+  { const slot = el('div', 'props-mapslot'); box.append(slot);
+    import('./maps-ui.js').then(({ buildShowOnMapRow }) => buildShowOnMapRow(row))
+      .then((r) => slot.replaceWith(r)).catch(() => slot.remove()); }
   // ป้ายเล่าเรื่อง (Narrative Markers) — ฉากนี้อยู่นอกลำดับเวลาหลัก
   const iFb = mkCheck('⏪ ย้อนอดีต (Flashback)', M.isFlashback);
   const iFf = mkCheck('⏩ ล่วงหน้า (Flashforward)', M.isFlashforward);

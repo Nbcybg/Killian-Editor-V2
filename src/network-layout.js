@@ -61,7 +61,17 @@ export function forceLayout(nodes, edges, { width = 900, height = 600, depth = 4
   }
 }
 
-/** วางตำแหน่งเริ่มต้น — โหนดที่มีตำแหน่งบันทึกไว้ถือว่า "ปักหมุด" (ผู้ใช้เคยลากเอง) */
+/**
+ * [alpha.73 ข้อ 1] วางตำแหน่งเริ่มต้น
+ *
+ * เดิมบันทึกเฉพาะโหนดที่ผู้ใช้ลากเอง → โหนดที่เหลือถูก `Math.random()` โยนตำแหน่งใหม่
+ * แล้ว forceLayout จัดใหม่ทุกครั้งที่กดรีเฟรช = **ผังเปลี่ยนหน้าตาทุกครั้ง** ผู้ใช้จำอะไรไม่ได้เลย
+ *
+ * ตอนนี้แยกสองเรื่องออกจากกัน:
+ *   - **ตำแหน่งที่บันทึก** — เก็บทุกโหนด เพื่อให้เปิดมาเห็นผังเดิมเป๊ะ
+ *   - **ปักหมุด (pinned)** — เฉพาะโหนดที่ผู้ใช้ลาก/ผลักเอง · forceLayout ห้ามขยับ
+ * โหนดที่ยังไม่เคยมีตำแหน่ง (เอนทิตี้ที่เพิ่งสร้าง) ติดธง `_fresh` ให้ฝั่งเรียกจัดวางเฉพาะตัวนั้น
+ */
 export function seedLayout(nodes, positions, { width = 900, depth = 400 } = {}) {
   const halfW = width * 0.28, halfD = depth * 0.28;
   const n = nodes.length;
@@ -71,9 +81,12 @@ export function seedLayout(nodes, positions, { width = 900, depth = 400 } = {}) 
     if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
       node.x = pos.x;
       node.y = pos.y;
-      node.z = typeof pos.z === 'number' ? pos.z : (Math.random() - 0.5) * halfD * 2;
-      node._pinned = true;
+      node.z = typeof pos.z === 'number' ? pos.z : 0;
+      // ไฟล์รุ่นเก่าไม่มีธง pinned — ของที่บันทึกไว้ตอนนั้นคือ "โหนดที่ผู้ใช้ลากเอง" ทั้งหมด
+      node._pinned = pos.pinned === undefined ? true : !!pos.pinned;
+      node._fresh = false;
     } else {
+      node._fresh = true;
       const angle = (i / Math.max(1, n)) * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * halfW;
       node.x = Math.cos(angle) * r;
@@ -84,13 +97,17 @@ export function seedLayout(nodes, positions, { width = 900, depth = 400 } = {}) 
   }
 }
 
-/** เก็บเฉพาะโหนดที่ผู้ใช้ลากเอง
- *  ถ้าเก็บทุกโหนด รอบเปิดถัดไปจะถูกปักหมุดหมดทั้งผัง แล้ว forceLayout กลายเป็น no-op ถาวร */
+/**
+ * เก็บตำแหน่ง **ทุกโหนด** พร้อมธงว่าตัวไหนผู้ใช้จัดเอง
+ * (เดิมเก็บเฉพาะตัวที่ลาก เพราะกลัวว่าเก็บหมดแล้วจะถูกปักหมุดหมดทั้งผัง —
+ *  ตอนนี้ธง pinned แยกจากตำแหน่งแล้ว จึงเก็บได้ครบโดยที่ forceLayout ยังทำงานกับของใหม่ได้)
+ */
 export function layoutPositions(nodes) {
   const out = {};
   for (const n of nodes || []) {
-    if (n && n._pinned && n.name) {
-      out[nodeKey(n)] = { x: Math.round(n.x), y: Math.round(n.y), z: Math.round(n.z || 0) };
+    if (n && n.name && Number.isFinite(n.x) && Number.isFinite(n.y)) {
+      out[nodeKey(n)] = { x: Math.round(n.x), y: Math.round(n.y), z: Math.round(n.z || 0),
+                          pinned: !!n._pinned };
     }
   }
   return out;

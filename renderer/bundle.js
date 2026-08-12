@@ -6324,12 +6324,12 @@
       bottom: rect.top + node.clientHeight * scaleY
     };
   }
-  function scrollRectIntoView(view, rect, startDOM) {
+  function scrollRectIntoView(view2, rect, startDOM) {
     if (!nonZero(rect) && rect.left == 0)
       return;
-    let scrollThreshold = view.someProp("scrollThreshold") || 0, scrollMargin = view.someProp("scrollMargin") || 5;
-    let doc3 = view.dom.ownerDocument;
-    for (let parent = startDOM || view.dom; ; ) {
+    let scrollThreshold = view2.someProp("scrollThreshold") || 0, scrollMargin = view2.someProp("scrollMargin") || 5;
+    let doc3 = view2.dom.ownerDocument;
+    for (let parent = startDOM || view2.dom; ; ) {
       if (!parent)
         break;
       if (parent.nodeType != 1) {
@@ -6367,12 +6367,12 @@
       parent = pos == "absolute" ? parent.offsetParent : parentNode(parent);
     }
   }
-  function storeScrollPos(view) {
-    let rect = view.dom.getBoundingClientRect(), startY = Math.max(0, rect.top);
+  function storeScrollPos(view2) {
+    let rect = view2.dom.getBoundingClientRect(), startY = Math.max(0, rect.top);
     let refDOM, refTop;
     for (let x = (rect.left + rect.right) / 2, y = startY + 1; y < Math.min(innerHeight, rect.bottom); y += 5) {
-      let dom = view.root.elementFromPoint(x, y);
-      if (!dom || dom == view.dom || !view.dom.contains(dom))
+      let dom = view2.root.elementFromPoint(x, y);
+      if (!dom || dom == view2.dom || !view2.dom.contains(dom))
         continue;
       let localRect = dom.getBoundingClientRect();
       if (localRect.top >= startY - 20) {
@@ -6381,7 +6381,7 @@
         break;
       }
     }
-    return { refDOM, refTop, stack: scrollStack(view.dom) };
+    return { refDOM, refTop, stack: scrollStack(view2.dom) };
   }
   function scrollStack(dom) {
     let stack = [], doc3 = dom.ownerDocument;
@@ -6496,20 +6496,20 @@
       return parent;
     return dom;
   }
-  function posFromElement(view, elt, coords) {
+  function posFromElement(view2, elt, coords) {
     let { node, offset } = findOffsetInNode(elt, coords), bias = -1;
     if (node.nodeType == 1 && !node.firstChild) {
       let rect = node.getBoundingClientRect();
       bias = rect.left != rect.right && coords.left > (rect.left + rect.right) / 2 ? 1 : -1;
     }
-    return view.docView.posFromDOM(node, offset, bias);
+    return view2.docView.posFromDOM(node, offset, bias);
   }
-  function posFromCaret(view, node, offset, coords) {
+  function posFromCaret(view2, node, offset, coords) {
     let outsideBlock = -1;
     for (let cur = node, sawBlock = false; ; ) {
-      if (cur == view.dom)
+      if (cur == view2.dom)
         break;
-      let desc = view.docView.nearestDesc(cur, true), rect;
+      let desc = view2.docView.nearestDesc(cur, true), rect;
       if (!desc)
         return null;
       if (desc.dom.nodeType == 1 && (desc.node.isBlock && desc.parent || !desc.contentDOM) && // Ignore elements with zero-size bounding rectangles
@@ -6528,7 +6528,7 @@
       }
       cur = desc.dom.parentNode;
     }
-    return outsideBlock > -1 ? outsideBlock : view.docView.posFromDOM(node, offset, -1);
+    return outsideBlock > -1 ? outsideBlock : view2.docView.posFromDOM(node, offset, -1);
   }
   function elementFromPoint(element, coords, box2) {
     let len5 = element.childNodes.length;
@@ -6549,18 +6549,18 @@
     }
     return element;
   }
-  function posAtCoords(view, coords) {
-    let doc3 = view.dom.ownerDocument, node, offset = 0;
+  function posAtCoords(view2, coords) {
+    let doc3 = view2.dom.ownerDocument, node, offset = 0;
     let caret = caretFromPoint(doc3, coords.left, coords.top);
     if (caret)
       ({ node, offset } = caret);
-    let elt = (view.root.elementFromPoint ? view.root : doc3).elementFromPoint(coords.left, coords.top);
+    let elt = (view2.root.elementFromPoint ? view2.root : doc3).elementFromPoint(coords.left, coords.top);
     let pos;
-    if (!elt || !view.dom.contains(elt.nodeType != 1 ? elt.parentNode : elt)) {
-      let box2 = view.dom.getBoundingClientRect();
+    if (!elt || !view2.dom.contains(elt.nodeType != 1 ? elt.parentNode : elt)) {
+      let box2 = view2.dom.getBoundingClientRect();
       if (!inRect(coords, box2))
         return null;
-      elt = elementFromPoint(view.dom, coords, box2);
+      elt = elementFromPoint(view2.dom, coords, box2);
       if (!elt)
         return null;
     }
@@ -6582,14 +6582,14 @@
       let prev;
       if (webkit && offset && node.nodeType == 1 && (prev = node.childNodes[offset - 1]).nodeType == 1 && prev.contentEditable == "false" && prev.getBoundingClientRect().top >= coords.top)
         offset--;
-      if (node == view.dom && offset == node.childNodes.length - 1 && node.lastChild.nodeType == 1 && coords.top > node.lastChild.getBoundingClientRect().bottom)
-        pos = view.state.doc.content.size;
+      if (node == view2.dom && offset == node.childNodes.length - 1 && node.lastChild.nodeType == 1 && coords.top > node.lastChild.getBoundingClientRect().bottom)
+        pos = view2.state.doc.content.size;
       else if (offset == 0 || node.nodeType != 1 || node.childNodes[offset - 1].nodeName != "BR")
-        pos = posFromCaret(view, node, offset, coords);
+        pos = posFromCaret(view2, node, offset, coords);
     }
     if (pos == null)
-      pos = posFromElement(view, elt, coords);
-    let desc = view.docView.nearestDesc(elt, true);
+      pos = posFromElement(view2, elt, coords);
+    let desc = view2.docView.nearestDesc(elt, true);
     return { pos, inside: desc ? desc.posAtStart - desc.border : -1 };
   }
   function nonZero(rect) {
@@ -6604,8 +6604,8 @@
     }
     return Array.prototype.find.call(rects, nonZero) || target.getBoundingClientRect();
   }
-  function coordsAtPos(view, pos, side) {
-    let { node, offset, atom } = view.docView.domFromPos(pos, side < 0 ? -1 : 1);
+  function coordsAtPos(view2, pos, side) {
+    let { node, offset, atom } = view2.docView.domFromPos(pos, side < 0 ? -1 : 1);
     let supportEmptyRange = webkit || gecko;
     if (node.nodeType == 3) {
       if (supportEmptyRange && (BIDI.test(node.nodeValue) || (side < 0 ? !offset : offset == node.nodeValue.length))) {
@@ -6635,7 +6635,7 @@
         return flattenV(singleRect(textRange(node, from2, to), takeSide), takeSide < 0);
       }
     }
-    let $dom = view.state.doc.resolve(pos - (atom || 0));
+    let $dom = view2.state.doc.resolve(pos - (atom || 0));
     if (!$dom.parent.inlineContent) {
       if (atom == null && offset && (side < 0 || offset == nodeSize(node))) {
         let before = node.childNodes[offset - 1];
@@ -6677,28 +6677,28 @@
     let y = top ? rect.top : rect.bottom;
     return { top: y, bottom: y, left: rect.left, right: rect.right };
   }
-  function withFlushedState(view, state2, f) {
-    let viewState = view.state, active = view.root.activeElement;
+  function withFlushedState(view2, state2, f) {
+    let viewState = view2.state, active = view2.root.activeElement;
     if (viewState != state2)
-      view.updateState(state2);
-    if (active != view.dom)
-      view.focus();
+      view2.updateState(state2);
+    if (active != view2.dom)
+      view2.focus();
     try {
       return f();
     } finally {
       if (viewState != state2)
-        view.updateState(viewState);
-      if (active != view.dom && active)
+        view2.updateState(viewState);
+      if (active != view2.dom && active)
         active.focus();
     }
   }
-  function endOfTextblockVertical(view, state2, dir) {
+  function endOfTextblockVertical(view2, state2, dir) {
     let sel = state2.selection;
     let $pos = dir == "up" ? sel.$from : sel.$to;
-    return withFlushedState(view, state2, () => {
-      let { node: dom } = view.docView.domFromPos($pos.pos, dir == "up" ? -1 : 1);
+    return withFlushedState(view2, state2, () => {
+      let { node: dom } = view2.docView.domFromPos($pos.pos, dir == "up" ? -1 : 1);
       for (; ; ) {
-        let nearest = view.docView.nearestDesc(dom, true);
+        let nearest = view2.docView.nearestDesc(dom, true);
         if (!nearest)
           break;
         if (nearest.node.isBlock) {
@@ -6707,7 +6707,7 @@
         }
         dom = nearest.dom.parentNode;
       }
-      let coords = coordsAtPos(view, $pos.pos, 1);
+      let coords = coordsAtPos(view2, $pos.pos, 1);
       for (let child = dom.firstChild; child; child = child.nextSibling) {
         let boxes;
         if (child.nodeType == 1)
@@ -6725,22 +6725,22 @@
       return true;
     });
   }
-  function endOfTextblockHorizontal(view, state2, dir) {
+  function endOfTextblockHorizontal(view2, state2, dir) {
     let { $head } = state2.selection;
     if (!$head.parent.isTextblock)
       return false;
     let offset = $head.parentOffset, atStart = !offset, atEnd = offset == $head.parent.content.size;
-    let sel = view.domSelection();
+    let sel = view2.domSelection();
     if (!sel)
       return $head.pos == $head.start() || $head.pos == $head.end();
     if (!maybeRTL.test($head.parent.textContent) || !sel.modify)
       return dir == "left" || dir == "backward" ? atStart : atEnd;
-    return withFlushedState(view, state2, () => {
-      let { focusNode: oldNode, focusOffset: oldOff, anchorNode, anchorOffset } = view.domSelectionRange();
+    return withFlushedState(view2, state2, () => {
+      let { focusNode: oldNode, focusOffset: oldOff, anchorNode, anchorOffset } = view2.domSelectionRange();
       let oldBidiLevel = sel.caretBidiLevel;
       sel.modify("move", dir, "character");
-      let parentDOM = $head.depth ? view.docView.domAfterPos($head.before()) : view.dom;
-      let { focusNode: newNode, focusOffset: newOff } = view.domSelectionRange();
+      let parentDOM = $head.depth ? view2.docView.domAfterPos($head.before()) : view2.dom;
+      let { focusNode: newNode, focusOffset: newOff } = view2.domSelectionRange();
       let result = newNode && !parentDOM.contains(newNode.nodeType == 1 ? newNode : newNode.parentNode) || oldNode == newNode && oldOff == newOff;
       try {
         sel.collapse(anchorNode, anchorOffset);
@@ -6753,21 +6753,21 @@
       return result;
     });
   }
-  function endOfTextblock(view, state2, dir) {
+  function endOfTextblock(view2, state2, dir) {
     if (cachedState == state2 && cachedDir == dir)
       return cachedResult;
     cachedState = state2;
     cachedDir = dir;
-    return cachedResult = dir == "up" || dir == "down" ? endOfTextblockVertical(view, state2, dir) : endOfTextblockHorizontal(view, state2, dir);
+    return cachedResult = dir == "up" || dir == "down" ? endOfTextblockVertical(view2, state2, dir) : endOfTextblockHorizontal(view2, state2, dir);
   }
-  function docViewDesc(doc3, outerDeco, innerDeco, dom, view) {
+  function docViewDesc(doc3, outerDeco, innerDeco, dom, view2) {
     applyOuterDeco(dom, outerDeco, doc3);
     let docView = new NodeViewDesc(void 0, doc3, outerDeco, innerDeco, dom, dom, dom);
     if (docView.contentDOM)
-      docView.updateChildren(view, 0);
+      docView.updateChildren(view2, 0);
     return docView;
   }
-  function renderDescs(parentDOM, descs, view) {
+  function renderDescs(parentDOM, descs, view2) {
     let dom = parentDOM.firstChild, written = false;
     for (let i5 = 0; i5 < descs.length; i5++) {
       let desc = descs[i5], childDOM = desc.dom;
@@ -6783,7 +6783,7 @@
       }
       if (desc instanceof MarkViewDesc) {
         let pos = dom ? dom.previousSibling : parentDOM.lastChild;
-        renderDescs(desc.contentDOM, desc.children, view);
+        renderDescs(desc.contentDOM, desc.children, view2);
         dom = pos ? pos.nextSibling : parentDOM.firstChild;
       }
     }
@@ -6791,8 +6791,8 @@
       dom = rm(dom);
       written = true;
     }
-    if (written && view.trackWrites == parentDOM)
-      view.trackWrites = null;
+    if (written && view2.trackWrites == parentDOM)
+      view2.trackWrites = null;
   }
   function computeOuterDeco(outerDeco, node, needsWrap) {
     if (outerDeco.length == 0)
@@ -7028,7 +7028,7 @@
     }
     return -1;
   }
-  function replaceNodes(nodes, from2, to, view, replacement) {
+  function replaceNodes(nodes, from2, to, view2, replacement) {
     let result = [];
     for (let i5 = 0, off3 = 0; i5 < nodes.length; i5++) {
       let child = nodes[i5], start = off3, end = off3 += child.size;
@@ -7036,23 +7036,23 @@
         result.push(child);
       } else {
         if (start < from2)
-          result.push(child.slice(0, from2 - start, view));
+          result.push(child.slice(0, from2 - start, view2));
         if (replacement) {
           result.push(replacement);
           replacement = void 0;
         }
         if (end > to)
-          result.push(child.slice(to - start, child.size, view));
+          result.push(child.slice(to - start, child.size, view2));
       }
     }
     return result;
   }
-  function selectionFromDOM(view, origin = null) {
-    let domSel = view.domSelectionRange(), doc3 = view.state.doc;
+  function selectionFromDOM(view2, origin = null) {
+    let domSel = view2.domSelectionRange(), doc3 = view2.state.doc;
     if (!domSel.focusNode)
       return null;
-    let nearestDesc = view.docView.nearestDesc(domSel.focusNode), inWidget = nearestDesc && nearestDesc.size == 0;
-    let head2 = view.docView.posFromDOM(domSel.focusNode, domSel.focusOffset, 1);
+    let nearestDesc = view2.docView.nearestDesc(domSel.focusNode), inWidget = nearestDesc && nearestDesc.size == 0;
+    let head2 = view2.docView.posFromDOM(domSel.focusNode, domSel.focusOffset, 1);
     if (head2 < 0)
       return null;
     let $head = doc3.resolve(head2), anchor, selection;
@@ -7066,58 +7066,58 @@
         selection = new NodeSelection(head2 == pos ? $head : doc3.resolve(pos));
       }
     } else {
-      if (domSel instanceof view.dom.ownerDocument.defaultView.Selection && domSel.rangeCount > 1) {
+      if (domSel instanceof view2.dom.ownerDocument.defaultView.Selection && domSel.rangeCount > 1) {
         let min = head2, max2 = head2;
         for (let i5 = 0; i5 < domSel.rangeCount; i5++) {
           let range3 = domSel.getRangeAt(i5);
-          min = Math.min(min, view.docView.posFromDOM(range3.startContainer, range3.startOffset, 1));
-          max2 = Math.max(max2, view.docView.posFromDOM(range3.endContainer, range3.endOffset, -1));
+          min = Math.min(min, view2.docView.posFromDOM(range3.startContainer, range3.startOffset, 1));
+          max2 = Math.max(max2, view2.docView.posFromDOM(range3.endContainer, range3.endOffset, -1));
         }
         if (min < 0)
           return null;
-        [anchor, head2] = max2 == view.state.selection.anchor ? [max2, min] : [min, max2];
+        [anchor, head2] = max2 == view2.state.selection.anchor ? [max2, min] : [min, max2];
         $head = doc3.resolve(head2);
       } else {
-        anchor = view.docView.posFromDOM(domSel.anchorNode, domSel.anchorOffset, 1);
+        anchor = view2.docView.posFromDOM(domSel.anchorNode, domSel.anchorOffset, 1);
       }
       if (anchor < 0)
         return null;
     }
     let $anchor = doc3.resolve(anchor);
     if (!selection) {
-      let bias = origin == "pointer" || view.state.selection.head < $head.pos && !inWidget ? 1 : -1;
-      selection = selectionBetween(view, $anchor, $head, bias);
+      let bias = origin == "pointer" || view2.state.selection.head < $head.pos && !inWidget ? 1 : -1;
+      selection = selectionBetween(view2, $anchor, $head, bias);
     }
     return selection;
   }
-  function editorOwnsSelection(view) {
-    return view.editable ? view.hasFocus() : hasSelection(view) && document.activeElement && document.activeElement.contains(view.dom);
+  function editorOwnsSelection(view2) {
+    return view2.editable ? view2.hasFocus() : hasSelection(view2) && document.activeElement && document.activeElement.contains(view2.dom);
   }
-  function selectionToDOM(view, force = false) {
-    let sel = view.state.selection;
-    syncNodeSelection(view, sel);
-    if (!editorOwnsSelection(view))
+  function selectionToDOM(view2, force = false) {
+    let sel = view2.state.selection;
+    syncNodeSelection(view2, sel);
+    if (!editorOwnsSelection(view2))
       return;
-    let mouseDown = view.input.mouseDown;
+    let mouseDown = view2.input.mouseDown;
     if (!force && chrome && mouseDown) {
-      let domSel = view.domSelectionRange(), curSel = view.domObserver.currentSelection;
+      let domSel = view2.domSelectionRange(), curSel = view2.domObserver.currentSelection;
       if (domSel.anchorNode && curSel.anchorNode && isEquivalentPosition(domSel.anchorNode, domSel.anchorOffset, curSel.anchorNode, curSel.anchorOffset) && mouseDown.delaySelUpdate()) {
-        view.domObserver.setCurSelection();
+        view2.domObserver.setCurSelection();
         return;
       }
     }
-    view.domObserver.disconnectSelection();
-    if (view.cursorWrapper) {
-      selectCursorWrapper(view);
+    view2.domObserver.disconnectSelection();
+    if (view2.cursorWrapper) {
+      selectCursorWrapper(view2);
     } else {
       let { anchor, head: head2 } = sel, resetEditableFrom, resetEditableTo;
       if (brokenSelectBetweenUneditable && !(sel instanceof TextSelection)) {
         if (!sel.$from.parent.inlineContent)
-          resetEditableFrom = temporarilyEditableNear(view, sel.from);
+          resetEditableFrom = temporarilyEditableNear(view2, sel.from);
         if (!sel.empty && !sel.$from.parent.inlineContent)
-          resetEditableTo = temporarilyEditableNear(view, sel.to);
+          resetEditableTo = temporarilyEditableNear(view2, sel.to);
       }
-      view.docView.setSelection(anchor, head2, view, force);
+      view2.docView.setSelection(anchor, head2, view2, force);
       if (brokenSelectBetweenUneditable) {
         if (resetEditableFrom)
           resetEditable(resetEditableFrom);
@@ -7125,18 +7125,18 @@
           resetEditable(resetEditableTo);
       }
       if (sel.visible) {
-        view.dom.classList.remove("ProseMirror-hideselection");
+        view2.dom.classList.remove("ProseMirror-hideselection");
       } else {
-        view.dom.classList.add("ProseMirror-hideselection");
+        view2.dom.classList.add("ProseMirror-hideselection");
         if ("onselectionchange" in document)
-          removeClassOnSelectionChange(view);
+          removeClassOnSelectionChange(view2);
       }
     }
-    view.domObserver.setCurSelection();
-    view.domObserver.connectSelection();
+    view2.domObserver.setCurSelection();
+    view2.domObserver.connectSelection();
   }
-  function temporarilyEditableNear(view, pos) {
-    let { node, offset } = view.docView.domFromPos(pos, 0);
+  function temporarilyEditableNear(view2, pos) {
+    let { node, offset } = view2.docView.domFromPos(pos, 0);
     let after = offset < node.childNodes.length ? node.childNodes[offset] : null;
     let before = offset ? node.childNodes[offset - 1] : null;
     if (safari && after && after.contentEditable == "false")
@@ -7163,76 +7163,76 @@
       element.wasDraggable = null;
     }
   }
-  function removeClassOnSelectionChange(view) {
-    let doc3 = view.dom.ownerDocument;
-    doc3.removeEventListener("selectionchange", view.input.hideSelectionGuard);
-    let domSel = view.domSelectionRange();
+  function removeClassOnSelectionChange(view2) {
+    let doc3 = view2.dom.ownerDocument;
+    doc3.removeEventListener("selectionchange", view2.input.hideSelectionGuard);
+    let domSel = view2.domSelectionRange();
     let node = domSel.anchorNode, offset = domSel.anchorOffset;
-    doc3.addEventListener("selectionchange", view.input.hideSelectionGuard = () => {
+    doc3.addEventListener("selectionchange", view2.input.hideSelectionGuard = () => {
       if (domSel.anchorNode != node || domSel.anchorOffset != offset) {
-        doc3.removeEventListener("selectionchange", view.input.hideSelectionGuard);
+        doc3.removeEventListener("selectionchange", view2.input.hideSelectionGuard);
         setTimeout(() => {
-          if (!editorOwnsSelection(view) || view.state.selection.visible)
-            view.dom.classList.remove("ProseMirror-hideselection");
+          if (!editorOwnsSelection(view2) || view2.state.selection.visible)
+            view2.dom.classList.remove("ProseMirror-hideselection");
         }, 20);
       }
     });
   }
-  function selectCursorWrapper(view) {
-    let domSel = view.domSelection();
+  function selectCursorWrapper(view2) {
+    let domSel = view2.domSelection();
     if (!domSel)
       return;
-    let node = view.cursorWrapper.dom, img = node.nodeName == "IMG";
+    let node = view2.cursorWrapper.dom, img = node.nodeName == "IMG";
     if (img)
       domSel.collapse(node.parentNode, domIndex(node) + 1);
     else
       domSel.collapse(node, 0);
-    if (!img && !view.state.selection.visible && ie && ie_version <= 11) {
+    if (!img && !view2.state.selection.visible && ie && ie_version <= 11) {
       node.disabled = true;
       node.disabled = false;
     }
   }
-  function syncNodeSelection(view, sel) {
+  function syncNodeSelection(view2, sel) {
     if (sel instanceof NodeSelection) {
-      let desc = view.docView.descAt(sel.from);
-      if (desc != view.lastSelectedViewDesc) {
-        clearNodeSelection(view);
+      let desc = view2.docView.descAt(sel.from);
+      if (desc != view2.lastSelectedViewDesc) {
+        clearNodeSelection(view2);
         if (desc)
           desc.selectNode();
-        view.lastSelectedViewDesc = desc;
+        view2.lastSelectedViewDesc = desc;
       }
     } else {
-      clearNodeSelection(view);
+      clearNodeSelection(view2);
     }
   }
-  function clearNodeSelection(view) {
-    if (view.lastSelectedViewDesc) {
-      if (view.lastSelectedViewDesc.parent)
-        view.lastSelectedViewDesc.deselectNode();
-      view.lastSelectedViewDesc = void 0;
+  function clearNodeSelection(view2) {
+    if (view2.lastSelectedViewDesc) {
+      if (view2.lastSelectedViewDesc.parent)
+        view2.lastSelectedViewDesc.deselectNode();
+      view2.lastSelectedViewDesc = void 0;
     }
   }
-  function selectionBetween(view, $anchor, $head, bias) {
-    return view.someProp("createSelectionBetween", (f) => f(view, $anchor, $head)) || TextSelection.between($anchor, $head, bias);
+  function selectionBetween(view2, $anchor, $head, bias) {
+    return view2.someProp("createSelectionBetween", (f) => f(view2, $anchor, $head)) || TextSelection.between($anchor, $head, bias);
   }
-  function hasFocusAndSelection(view) {
-    if (view.editable && !view.hasFocus())
+  function hasFocusAndSelection(view2) {
+    if (view2.editable && !view2.hasFocus())
       return false;
-    return hasSelection(view);
+    return hasSelection(view2);
   }
-  function hasSelection(view) {
-    let sel = view.domSelectionRange();
+  function hasSelection(view2) {
+    let sel = view2.domSelectionRange();
     if (!sel.anchorNode)
       return false;
     try {
-      return view.dom.contains(sel.anchorNode.nodeType == 3 ? sel.anchorNode.parentNode : sel.anchorNode) && (view.editable || view.dom.contains(sel.focusNode.nodeType == 3 ? sel.focusNode.parentNode : sel.focusNode));
+      return view2.dom.contains(sel.anchorNode.nodeType == 3 ? sel.anchorNode.parentNode : sel.anchorNode) && (view2.editable || view2.dom.contains(sel.focusNode.nodeType == 3 ? sel.focusNode.parentNode : sel.focusNode));
     } catch (_2) {
       return false;
     }
   }
-  function anchorInRightPlace(view) {
-    let anchorDOM = view.docView.domFromPos(view.state.selection.anchor, 0);
-    let domSel = view.domSelectionRange();
+  function anchorInRightPlace(view2) {
+    let anchorDOM = view2.docView.domFromPos(view2.state.selection.anchor, 0);
+    let domSel = view2.domSelectionRange();
     return isEquivalentPosition(anchorDOM.node, anchorDOM.offset, domSel.anchorNode, domSel.anchorOffset);
   }
   function moveSelectionBlock(state2, dir) {
@@ -7241,47 +7241,47 @@
     let $start = !$side.parent.inlineContent ? $side : $side.depth ? state2.doc.resolve(dir > 0 ? $side.after() : $side.before()) : null;
     return $start && Selection.findFrom($start, dir);
   }
-  function apply(view, sel) {
-    view.dispatch(view.state.tr.setSelection(sel).scrollIntoView());
+  function apply(view2, sel) {
+    view2.dispatch(view2.state.tr.setSelection(sel).scrollIntoView());
     return true;
   }
-  function selectHorizontally(view, dir, mods) {
-    let sel = view.state.selection;
+  function selectHorizontally(view2, dir, mods) {
+    let sel = view2.state.selection;
     if (sel instanceof TextSelection) {
       if (mods.indexOf("s") > -1) {
         let { $head } = sel, node = $head.textOffset ? null : dir < 0 ? $head.nodeBefore : $head.nodeAfter;
         if (!node || node.isText || !node.isLeaf)
           return false;
-        let $newHead = view.state.doc.resolve($head.pos + node.nodeSize * (dir < 0 ? -1 : 1));
-        return apply(view, new TextSelection(sel.$anchor, $newHead));
+        let $newHead = view2.state.doc.resolve($head.pos + node.nodeSize * (dir < 0 ? -1 : 1));
+        return apply(view2, new TextSelection(sel.$anchor, $newHead));
       } else if (!sel.empty) {
         return false;
-      } else if (view.endOfTextblock(dir > 0 ? "forward" : "backward")) {
-        let next = moveSelectionBlock(view.state, dir);
+      } else if (view2.endOfTextblock(dir > 0 ? "forward" : "backward")) {
+        let next = moveSelectionBlock(view2.state, dir);
         if (next && next instanceof NodeSelection)
-          return apply(view, next);
+          return apply(view2, next);
         return false;
       } else if (!(mac && mods.indexOf("m") > -1)) {
         let $head = sel.$head, node = $head.textOffset ? null : dir < 0 ? $head.nodeBefore : $head.nodeAfter, desc;
         if (!node || node.isText)
           return false;
         let nodePos = dir < 0 ? $head.pos - node.nodeSize : $head.pos;
-        if (!(node.isAtom || (desc = view.docView.descAt(nodePos)) && !desc.contentDOM))
+        if (!(node.isAtom || (desc = view2.docView.descAt(nodePos)) && !desc.contentDOM))
           return false;
         if (NodeSelection.isSelectable(node)) {
-          return apply(view, new NodeSelection(dir < 0 ? view.state.doc.resolve($head.pos - node.nodeSize) : $head));
+          return apply(view2, new NodeSelection(dir < 0 ? view2.state.doc.resolve($head.pos - node.nodeSize) : $head));
         } else if (webkit) {
-          return apply(view, new TextSelection(view.state.doc.resolve(dir < 0 ? nodePos : nodePos + node.nodeSize)));
+          return apply(view2, new TextSelection(view2.state.doc.resolve(dir < 0 ? nodePos : nodePos + node.nodeSize)));
         } else {
           return false;
         }
       }
     } else if (sel instanceof NodeSelection && sel.node.isInline) {
-      return apply(view, new TextSelection(dir > 0 ? sel.$to : sel.$from));
+      return apply(view2, new TextSelection(dir > 0 ? sel.$to : sel.$from));
     } else {
-      let next = moveSelectionBlock(view.state, dir);
+      let next = moveSelectionBlock(view2.state, dir);
       if (next)
-        return apply(view, next);
+        return apply(view2, next);
       return false;
     }
   }
@@ -7292,11 +7292,11 @@
     let desc = dom.pmViewDesc;
     return desc && desc.size == 0 && (dir < 0 || dom.nextSibling || dom.nodeName != "BR");
   }
-  function skipIgnoredNodes(view, dir) {
-    return dir < 0 ? skipIgnoredNodesBefore(view) : skipIgnoredNodesAfter(view);
+  function skipIgnoredNodes(view2, dir) {
+    return dir < 0 ? skipIgnoredNodesBefore(view2) : skipIgnoredNodesAfter(view2);
   }
-  function skipIgnoredNodesBefore(view) {
-    let sel = view.domSelectionRange();
+  function skipIgnoredNodesBefore(view2) {
+    let sel = view2.domSelectionRange();
     let node = sel.focusNode, offset = sel.focusOffset;
     if (!node)
       return;
@@ -7329,7 +7329,7 @@
         }
         if (!prev) {
           node = node.parentNode;
-          if (node == view.dom)
+          if (node == view2.dom)
             break;
           offset = 0;
         } else {
@@ -7339,12 +7339,12 @@
       }
     }
     if (force)
-      setSelFocus(view, node, offset);
+      setSelFocus(view2, node, offset);
     else if (moveNode)
-      setSelFocus(view, moveNode, moveOffset);
+      setSelFocus(view2, moveNode, moveOffset);
   }
-  function skipIgnoredNodesAfter(view) {
-    let sel = view.domSelectionRange();
+  function skipIgnoredNodesAfter(view2) {
+    let sel = view2.domSelectionRange();
     let node = sel.focusNode, offset = sel.focusOffset;
     if (!node)
       return;
@@ -7371,7 +7371,7 @@
         }
         if (!next) {
           node = node.parentNode;
-          if (node == view.dom)
+          if (node == view2.dom)
             break;
           offset = len5 = 0;
         } else {
@@ -7382,7 +7382,7 @@
       }
     }
     if (moveNode)
-      setSelFocus(view, moveNode, moveOffset);
+      setSelFocus(view2, moveNode, moveOffset);
   }
   function isBlockNode(dom) {
     let desc = dom.pmViewDesc;
@@ -7418,7 +7418,7 @@
       offset = node.childNodes.length;
     }
   }
-  function setSelFocus(view, node, offset) {
+  function setSelFocus(view2, node, offset) {
     if (node.nodeType != 3) {
       let before, after;
       if (after = textNodeAfter(node, offset)) {
@@ -7429,7 +7429,7 @@
         offset = before.nodeValue.length;
       }
     }
-    let sel = view.domSelection();
+    let sel = view2.domSelection();
     if (!sel)
       return;
     if (selectionCollapsed(sel)) {
@@ -7441,87 +7441,87 @@
     } else if (sel.extend) {
       sel.extend(node, offset);
     }
-    view.domObserver.setCurSelection();
-    let { state: state2 } = view;
+    view2.domObserver.setCurSelection();
+    let { state: state2 } = view2;
     setTimeout(() => {
-      if (view.state == state2)
-        selectionToDOM(view);
+      if (view2.state == state2)
+        selectionToDOM(view2);
     }, 50);
   }
-  function findDirection(view, pos) {
-    let $pos = view.state.doc.resolve(pos);
+  function findDirection(view2, pos) {
+    let $pos = view2.state.doc.resolve(pos);
     if (!(chrome || windows) && $pos.parent.inlineContent) {
-      let coords = view.coordsAtPos(pos);
+      let coords = view2.coordsAtPos(pos);
       if (pos > $pos.start()) {
-        let before = view.coordsAtPos(pos - 1);
+        let before = view2.coordsAtPos(pos - 1);
         let mid = (before.top + before.bottom) / 2;
         if (mid > coords.top && mid < coords.bottom && Math.abs(before.left - coords.left) > 1)
           return before.left < coords.left ? "ltr" : "rtl";
       }
       if (pos < $pos.end()) {
-        let after = view.coordsAtPos(pos + 1);
+        let after = view2.coordsAtPos(pos + 1);
         let mid = (after.top + after.bottom) / 2;
         if (mid > coords.top && mid < coords.bottom && Math.abs(after.left - coords.left) > 1)
           return after.left > coords.left ? "ltr" : "rtl";
       }
     }
-    let computed = getComputedStyle(view.dom).direction;
+    let computed = getComputedStyle(view2.dom).direction;
     return computed == "rtl" ? "rtl" : "ltr";
   }
-  function selectVertically(view, dir, mods) {
-    let sel = view.state.selection;
+  function selectVertically(view2, dir, mods) {
+    let sel = view2.state.selection;
     if (sel instanceof TextSelection && !sel.empty || mods.indexOf("s") > -1)
       return false;
     if (mac && mods.indexOf("m") > -1)
       return false;
     let { $from, $to } = sel;
-    if (!$from.parent.inlineContent || view.endOfTextblock(dir < 0 ? "up" : "down")) {
-      let next = moveSelectionBlock(view.state, dir);
+    if (!$from.parent.inlineContent || view2.endOfTextblock(dir < 0 ? "up" : "down")) {
+      let next = moveSelectionBlock(view2.state, dir);
       if (next && next instanceof NodeSelection)
-        return apply(view, next);
+        return apply(view2, next);
     }
     if (!$from.parent.inlineContent) {
       let side = dir < 0 ? $from : $to;
       let beyond = sel instanceof AllSelection ? Selection.near(side, dir) : Selection.findFrom(side, dir);
-      return beyond ? apply(view, beyond) : false;
+      return beyond ? apply(view2, beyond) : false;
     }
     return false;
   }
-  function stopNativeHorizontalDelete(view, dir) {
-    if (!(view.state.selection instanceof TextSelection))
+  function stopNativeHorizontalDelete(view2, dir) {
+    if (!(view2.state.selection instanceof TextSelection))
       return true;
-    let { $head, $anchor, empty: empty2 } = view.state.selection;
+    let { $head, $anchor, empty: empty2 } = view2.state.selection;
     if (!$head.sameParent($anchor))
       return true;
     if (!empty2)
       return false;
-    if (view.endOfTextblock(dir > 0 ? "forward" : "backward"))
+    if (view2.endOfTextblock(dir > 0 ? "forward" : "backward"))
       return true;
     let nextNode = !$head.textOffset && (dir < 0 ? $head.nodeBefore : $head.nodeAfter);
     if (nextNode && !nextNode.isText) {
-      let tr2 = view.state.tr;
+      let tr2 = view2.state.tr;
       if (dir < 0)
         tr2.delete($head.pos - nextNode.nodeSize, $head.pos);
       else
         tr2.delete($head.pos, $head.pos + nextNode.nodeSize);
-      view.dispatch(tr2);
+      view2.dispatch(tr2);
       return true;
     }
     return false;
   }
-  function switchEditable(view, node, state2) {
-    view.domObserver.stop();
+  function switchEditable(view2, node, state2) {
+    view2.domObserver.stop();
     node.contentEditable = state2;
-    view.domObserver.start();
+    view2.domObserver.start();
   }
-  function safariDownArrowBug(view) {
-    if (!safari || view.state.selection.$head.parentOffset > 0)
+  function safariDownArrowBug(view2) {
+    if (!safari || view2.state.selection.$head.parentOffset > 0)
       return false;
-    let { focusNode, focusOffset } = view.domSelectionRange();
+    let { focusNode, focusOffset } = view2.domSelectionRange();
     if (focusNode && focusNode.nodeType == 1 && focusOffset == 0 && focusNode.firstChild && focusNode.firstChild.contentEditable == "false") {
       let child = focusNode.firstChild;
-      switchEditable(view, child, "true");
-      setTimeout(() => switchEditable(view, child, "false"), 20);
+      switchEditable(view2, child, "true");
+      setTimeout(() => switchEditable(view2, child, "false"), 20);
     }
     return false;
   }
@@ -7537,32 +7537,32 @@
       result += "s";
     return result;
   }
-  function captureKeyDown(view, event) {
+  function captureKeyDown(view2, event) {
     let code3 = event.keyCode, mods = getMods(event);
     if (code3 == 8 || mac && code3 == 72 && mods == "c") {
-      return stopNativeHorizontalDelete(view, -1) || skipIgnoredNodes(view, -1);
+      return stopNativeHorizontalDelete(view2, -1) || skipIgnoredNodes(view2, -1);
     } else if (code3 == 46 && !event.shiftKey || mac && code3 == 68 && mods == "c") {
-      return stopNativeHorizontalDelete(view, 1) || skipIgnoredNodes(view, 1);
+      return stopNativeHorizontalDelete(view2, 1) || skipIgnoredNodes(view2, 1);
     } else if (code3 == 13 || code3 == 27) {
       return true;
     } else if (code3 == 37 || mac && code3 == 66 && mods == "c") {
-      let dir = code3 == 37 ? findDirection(view, view.state.selection.from) == "ltr" ? -1 : 1 : -1;
-      return selectHorizontally(view, dir, mods) || skipIgnoredNodes(view, dir);
+      let dir = code3 == 37 ? findDirection(view2, view2.state.selection.from) == "ltr" ? -1 : 1 : -1;
+      return selectHorizontally(view2, dir, mods) || skipIgnoredNodes(view2, dir);
     } else if (code3 == 39 || mac && code3 == 70 && mods == "c") {
-      let dir = code3 == 39 ? findDirection(view, view.state.selection.from) == "ltr" ? 1 : -1 : 1;
-      return selectHorizontally(view, dir, mods) || skipIgnoredNodes(view, dir);
+      let dir = code3 == 39 ? findDirection(view2, view2.state.selection.from) == "ltr" ? 1 : -1 : 1;
+      return selectHorizontally(view2, dir, mods) || skipIgnoredNodes(view2, dir);
     } else if (code3 == 38 || mac && code3 == 80 && mods == "c") {
-      return selectVertically(view, -1, mods) || skipIgnoredNodes(view, -1);
+      return selectVertically(view2, -1, mods) || skipIgnoredNodes(view2, -1);
     } else if (code3 == 40 || mac && code3 == 78 && mods == "c") {
-      return safariDownArrowBug(view) || selectVertically(view, 1, mods) || skipIgnoredNodes(view, 1);
+      return safariDownArrowBug(view2) || selectVertically(view2, 1, mods) || skipIgnoredNodes(view2, 1);
     } else if (mods == (mac ? "m" : "c") && (code3 == 66 || code3 == 73 || code3 == 89 || code3 == 90)) {
       return true;
     }
     return false;
   }
-  function serializeForClipboard(view, slice3) {
-    view.someProp("transformCopied", (f) => {
-      slice3 = f(slice3, view);
+  function serializeForClipboard(view2, slice3) {
+    view2.someProp("transformCopied", (f) => {
+      slice3 = f(slice3, view2);
     });
     let context2 = [], { content, openStart, openEnd } = slice3;
     while (openStart > 1 && openEnd > 1 && content.childCount == 1 && content.firstChild.childCount == 1) {
@@ -7572,7 +7572,7 @@
       context2.push(node.type.name, node.attrs != node.type.defaultAttrs ? node.attrs : null);
       content = node.content;
     }
-    let serializer = view.someProp("clipboardSerializer") || DOMSerializer.fromSchema(view.state.schema);
+    let serializer = view2.someProp("clipboardSerializer") || DOMSerializer.fromSchema(view2.state.schema);
     let doc3 = detachedDoc(), wrap2 = doc3.createElement("div");
     wrap2.appendChild(serializer.serializeFragment(content, { document: doc3 }));
     let firstChild2 = wrap2.firstChild, needsWrap, wrappers = 0;
@@ -7588,32 +7588,32 @@
     }
     if (firstChild2 && firstChild2.nodeType == 1)
       firstChild2.setAttribute("data-pm-slice", `${openStart} ${openEnd}${wrappers ? ` -${wrappers}` : ""} ${JSON.stringify(context2)}`);
-    let text = view.someProp("clipboardTextSerializer", (f) => f(slice3, view)) || slice3.content.textBetween(0, slice3.content.size, "\n\n");
+    let text = view2.someProp("clipboardTextSerializer", (f) => f(slice3, view2)) || slice3.content.textBetween(0, slice3.content.size, "\n\n");
     return { dom: wrap2, text, slice: slice3 };
   }
-  function parseFromClipboard(view, text, html, plainText3, $context) {
+  function parseFromClipboard(view2, text, html, plainText3, $context) {
     let inCode = $context.parent.type.spec.code;
     let dom, slice3;
     if (!html && !text)
       return null;
     let asText = !!text && (plainText3 || inCode || !html);
     if (asText) {
-      view.someProp("transformPastedText", (f) => {
-        text = f(text, inCode || plainText3, view);
+      view2.someProp("transformPastedText", (f) => {
+        text = f(text, inCode || plainText3, view2);
       });
       if (inCode) {
-        slice3 = new Slice(Fragment.from(view.state.schema.text(text.replace(/\r\n?/g, "\n"))), 0, 0);
-        view.someProp("transformPasted", (f) => {
-          slice3 = f(slice3, view, true);
+        slice3 = new Slice(Fragment.from(view2.state.schema.text(text.replace(/\r\n?/g, "\n"))), 0, 0);
+        view2.someProp("transformPasted", (f) => {
+          slice3 = f(slice3, view2, true);
         });
         return slice3;
       }
-      let parsed = view.someProp("clipboardTextParser", (f) => f(text, $context, plainText3, view));
+      let parsed = view2.someProp("clipboardTextParser", (f) => f(text, $context, plainText3, view2));
       if (parsed) {
         slice3 = parsed;
       } else {
         let marks2 = $context.marks();
-        let { schema: schema2 } = view.state, serializer = DOMSerializer.fromSchema(schema2);
+        let { schema: schema2 } = view2.state, serializer = DOMSerializer.fromSchema(schema2);
         dom = document.createElement("div");
         text.split(/(?:\r\n?|\n)+/).forEach((block) => {
           let p = dom.appendChild(document.createElement("p"));
@@ -7622,8 +7622,8 @@
         });
       }
     } else {
-      view.someProp("transformPastedHTML", (f) => {
-        html = f(html, view);
+      view2.someProp("transformPastedHTML", (f) => {
+        html = f(html, view2);
       });
       dom = readHTML(html);
       if (webkit)
@@ -7641,7 +7641,7 @@
         dom = child;
       }
     if (!slice3) {
-      let parser = view.someProp("clipboardParser") || view.someProp("domParser") || DOMParser2.fromSchema(view.state.schema);
+      let parser = view2.someProp("clipboardParser") || view2.someProp("domParser") || DOMParser2.fromSchema(view2.state.schema);
       slice3 = parser.parseSlice(dom, {
         preserveWhitespace: !!(asText || sliceData),
         context: $context,
@@ -7665,8 +7665,8 @@
         slice3 = closeSlice(slice3, openStart, openEnd);
       }
     }
-    view.someProp("transformPasted", (f) => {
-      slice3 = f(slice3, view, asText);
+    view2.someProp("transformPasted", (f) => {
+      slice3 = f(slice3, view2, asText);
     });
     return slice3;
   }
@@ -7802,57 +7802,57 @@
     }
     return new Slice(content, openStart, openEnd);
   }
-  function initInput(view) {
+  function initInput(view2) {
     for (let event in handlers) {
       let handler = handlers[event];
-      view.dom.addEventListener(event, view.input.eventHandlers[event] = (event2) => {
-        if (eventBelongsToView(view, event2) && !runCustomHandler(view, event2) && (view.editable || !(event2.type in editHandlers)))
-          handler(view, event2);
+      view2.dom.addEventListener(event, view2.input.eventHandlers[event] = (event2) => {
+        if (eventBelongsToView(view2, event2) && !runCustomHandler(view2, event2) && (view2.editable || !(event2.type in editHandlers)))
+          handler(view2, event2);
       }, passiveHandlers[event] ? { passive: true } : void 0);
     }
     if (safari)
-      view.dom.addEventListener("input", () => null);
-    ensureListeners(view);
+      view2.dom.addEventListener("input", () => null);
+    ensureListeners(view2);
   }
-  function setSelectionOrigin(view, origin) {
-    view.input.lastSelectionOrigin = origin;
-    view.input.lastSelectionTime = Date.now();
+  function setSelectionOrigin(view2, origin) {
+    view2.input.lastSelectionOrigin = origin;
+    view2.input.lastSelectionTime = Date.now();
   }
-  function destroyInput(view) {
-    if (view.input.mouseDown)
-      view.input.mouseDown.done();
-    view.domObserver.stop();
-    for (let type in view.input.eventHandlers)
-      view.dom.removeEventListener(type, view.input.eventHandlers[type]);
-    clearTimeout(view.input.composingTimeout);
-    clearTimeout(view.input.lastIOSEnterFallbackTimeout);
+  function destroyInput(view2) {
+    if (view2.input.mouseDown)
+      view2.input.mouseDown.done();
+    view2.domObserver.stop();
+    for (let type in view2.input.eventHandlers)
+      view2.dom.removeEventListener(type, view2.input.eventHandlers[type]);
+    clearTimeout(view2.input.composingTimeout);
+    clearTimeout(view2.input.lastIOSEnterFallbackTimeout);
   }
-  function ensureListeners(view) {
-    view.someProp("handleDOMEvents", (currentHandlers) => {
+  function ensureListeners(view2) {
+    view2.someProp("handleDOMEvents", (currentHandlers) => {
       for (let type in currentHandlers)
-        if (!view.input.eventHandlers[type])
-          view.dom.addEventListener(type, view.input.eventHandlers[type] = (event) => runCustomHandler(view, event));
+        if (!view2.input.eventHandlers[type])
+          view2.dom.addEventListener(type, view2.input.eventHandlers[type] = (event) => runCustomHandler(view2, event));
     });
   }
-  function runCustomHandler(view, event) {
-    return view.someProp("handleDOMEvents", (handlers2) => {
+  function runCustomHandler(view2, event) {
+    return view2.someProp("handleDOMEvents", (handlers2) => {
       let handler = handlers2[event.type];
-      return handler ? handler(view, event) || event.defaultPrevented : false;
+      return handler ? handler(view2, event) || event.defaultPrevented : false;
     });
   }
-  function eventBelongsToView(view, event) {
+  function eventBelongsToView(view2, event) {
     if (!event.bubbles)
       return true;
     if (event.defaultPrevented)
       return false;
-    for (let node = event.target; node != view.dom; node = node.parentNode)
+    for (let node = event.target; node != view2.dom; node = node.parentNode)
       if (!node || node.nodeType == 11 || node.pmViewDesc && node.pmViewDesc.stopEvent(event))
         return false;
     return true;
   }
-  function dispatchEvent(view, event) {
-    if (!runCustomHandler(view, event) && handlers[event.type] && (view.editable || !(event.type in editHandlers)))
-      handlers[event.type](view, event);
+  function dispatchEvent(view2, event) {
+    if (!runCustomHandler(view2, event) && handlers[event.type] && (view2.editable || !(event.type in editHandlers)))
+      handlers[event.type](view2, event);
   }
   function eventCoords(event) {
     return { left: event.clientX, top: event.clientY };
@@ -7861,43 +7861,43 @@
     let dx = click.x - event.clientX, dy = click.y - event.clientY;
     return dx * dx + dy * dy < 100;
   }
-  function runHandlerOnContext(view, propName, pos, inside, event) {
+  function runHandlerOnContext(view2, propName, pos, inside, event) {
     if (inside == -1)
       return false;
-    let $pos = view.state.doc.resolve(inside);
+    let $pos = view2.state.doc.resolve(inside);
     for (let i5 = $pos.depth + 1; i5 > 0; i5--) {
-      if (view.someProp(propName, (f) => i5 > $pos.depth ? f(view, pos, $pos.nodeAfter, $pos.before(i5), event, true) : f(view, pos, $pos.node(i5), $pos.before(i5), event, false)))
+      if (view2.someProp(propName, (f) => i5 > $pos.depth ? f(view2, pos, $pos.nodeAfter, $pos.before(i5), event, true) : f(view2, pos, $pos.node(i5), $pos.before(i5), event, false)))
         return true;
     }
     return false;
   }
-  function updateSelection(view, selection, origin) {
-    if (!view.focused)
-      view.focus();
-    if (view.state.selection.eq(selection))
+  function updateSelection(view2, selection, origin) {
+    if (!view2.focused)
+      view2.focus();
+    if (view2.state.selection.eq(selection))
       return;
-    let tr2 = view.state.tr.setSelection(selection);
+    let tr2 = view2.state.tr.setSelection(selection);
     if (origin == "pointer")
       tr2.setMeta("pointer", true);
-    view.dispatch(tr2);
+    view2.dispatch(tr2);
   }
-  function selectClickedLeaf(view, inside) {
+  function selectClickedLeaf(view2, inside) {
     if (inside == -1)
       return false;
-    let $pos = view.state.doc.resolve(inside), node = $pos.nodeAfter;
+    let $pos = view2.state.doc.resolve(inside), node = $pos.nodeAfter;
     if (node && node.isAtom && NodeSelection.isSelectable(node)) {
-      updateSelection(view, new NodeSelection($pos), "pointer");
+      updateSelection(view2, new NodeSelection($pos), "pointer");
       return true;
     }
     return false;
   }
-  function selectClickedNode(view, inside) {
+  function selectClickedNode(view2, inside) {
     if (inside == -1)
       return false;
-    let sel = view.state.selection, selectedNode, selectAt;
+    let sel = view2.state.selection, selectedNode, selectAt;
     if (sel instanceof NodeSelection)
       selectedNode = sel.node;
-    let $pos = view.state.doc.resolve(inside);
+    let $pos = view2.state.doc.resolve(inside);
     for (let i5 = $pos.depth + 1; i5 > 0; i5--) {
       let node = i5 > $pos.depth ? $pos.nodeAfter : $pos.node(i5);
       if (NodeSelection.isSelectable(node)) {
@@ -7909,34 +7909,34 @@
       }
     }
     if (selectAt != null) {
-      updateSelection(view, NodeSelection.create(view.state.doc, selectAt), "pointer");
+      updateSelection(view2, NodeSelection.create(view2.state.doc, selectAt), "pointer");
       return true;
     } else {
       return false;
     }
   }
-  function handleSingleClick(view, pos, inside, event, selectNode) {
-    return runHandlerOnContext(view, "handleClickOn", pos, inside, event) || view.someProp("handleClick", (f) => f(view, pos, event)) || (selectNode ? selectClickedNode(view, inside) : selectClickedLeaf(view, inside));
+  function handleSingleClick(view2, pos, inside, event, selectNode) {
+    return runHandlerOnContext(view2, "handleClickOn", pos, inside, event) || view2.someProp("handleClick", (f) => f(view2, pos, event)) || (selectNode ? selectClickedNode(view2, inside) : selectClickedLeaf(view2, inside));
   }
-  function handleDoubleClick(view, pos, inside, event) {
-    return runHandlerOnContext(view, "handleDoubleClickOn", pos, inside, event) || view.someProp("handleDoubleClick", (f) => f(view, pos, event));
+  function handleDoubleClick(view2, pos, inside, event) {
+    return runHandlerOnContext(view2, "handleDoubleClickOn", pos, inside, event) || view2.someProp("handleDoubleClick", (f) => f(view2, pos, event));
   }
-  function handleTripleClick(view, pos, inside, event) {
-    return runHandlerOnContext(view, "handleTripleClickOn", pos, inside, event) || view.someProp("handleTripleClick", (f) => f(view, pos, event)) || defaultTripleClick(view, inside, event);
+  function handleTripleClick(view2, pos, inside, event) {
+    return runHandlerOnContext(view2, "handleTripleClickOn", pos, inside, event) || view2.someProp("handleTripleClick", (f) => f(view2, pos, event)) || defaultTripleClick(view2, inside, event);
   }
-  function defaultTripleClick(view, inside, event) {
+  function defaultTripleClick(view2, inside, event) {
     if (event.button != 0)
       return false;
-    let selection = selectionForTripleClick(view, inside, true), doc3 = view.state.doc;
+    let selection = selectionForTripleClick(view2, inside, true), doc3 = view2.state.doc;
     if (!selection)
       return false;
-    updateSelection(view, selection, "pointer");
-    if (selection instanceof TextSelection && doc3.eq(view.state.doc))
-      view.input.mouseDown = new TripleClickDrag(view, selection);
+    updateSelection(view2, selection, "pointer");
+    if (selection instanceof TextSelection && doc3.eq(view2.state.doc))
+      view2.input.mouseDown = new TripleClickDrag(view2, selection);
     return true;
   }
-  function selectionForTripleClick(view, inside, selectNodes) {
-    let doc3 = view.state.doc;
+  function selectionForTripleClick(view2, inside, selectNodes) {
+    let doc3 = view2.state.doc;
     if (inside == -1)
       return doc3.inlineContent ? TextSelection.create(doc3, 0, doc3.content.size) : null;
     let $pos = doc3.resolve(inside);
@@ -7950,51 +7950,51 @@
     }
     return null;
   }
-  function forceDOMFlush(view) {
-    return endComposition(view);
+  function forceDOMFlush(view2) {
+    return endComposition(view2);
   }
-  function inOrNearComposition(view, event) {
-    if (view.composing)
+  function inOrNearComposition(view2, event) {
+    if (view2.composing)
       return true;
-    if (safari && Math.abs(Date.now() - view.input.compositionEndedAt) < 500) {
-      view.input.compositionEndedAt = -2e8;
+    if (safari && Math.abs(Date.now() - view2.input.compositionEndedAt) < 500) {
+      view2.input.compositionEndedAt = -2e8;
       return true;
     }
     return false;
   }
-  function selectionBeforeUneditable(view) {
-    let { focusNode, focusOffset } = view.domSelectionRange();
+  function selectionBeforeUneditable(view2) {
+    let { focusNode, focusOffset } = view2.domSelectionRange();
     if (!focusNode || focusNode.nodeType != 1 || focusOffset >= focusNode.childNodes.length)
       return false;
     let next = focusNode.childNodes[focusOffset];
     return next.nodeType == 1 && next.contentEditable == "false";
   }
-  function scheduleComposeEnd(view, delay) {
-    clearTimeout(view.input.composingTimeout);
+  function scheduleComposeEnd(view2, delay) {
+    clearTimeout(view2.input.composingTimeout);
     if (delay > -1)
-      view.input.composingTimeout = setTimeout(() => endComposition(view), delay);
+      view2.input.composingTimeout = setTimeout(() => endComposition(view2), delay);
   }
-  function clearComposition(view) {
-    if (view.composing) {
-      view.input.composing = false;
-      view.input.compositionEndedAt = Date.now();
+  function clearComposition(view2) {
+    if (view2.composing) {
+      view2.input.composing = false;
+      view2.input.compositionEndedAt = Date.now();
     }
-    while (view.input.compositionNodes.length > 0)
-      view.input.compositionNodes.pop().markParentsDirty();
+    while (view2.input.compositionNodes.length > 0)
+      view2.input.compositionNodes.pop().markParentsDirty();
   }
-  function findCompositionNode(view) {
-    let sel = view.domSelectionRange();
+  function findCompositionNode(view2) {
+    let sel = view2.domSelectionRange();
     if (!sel.focusNode)
       return null;
     let textBefore = textNodeBefore$1(sel.focusNode, sel.focusOffset);
     let textAfter = textNodeAfter$1(sel.focusNode, sel.focusOffset);
     if (textBefore && textAfter && textBefore != textAfter) {
-      let descAfter = textAfter.pmViewDesc, lastChanged = view.domObserver.lastChangedTextNode;
+      let descAfter = textAfter.pmViewDesc, lastChanged = view2.domObserver.lastChangedTextNode;
       if (textBefore == lastChanged || textAfter == lastChanged)
         return lastChanged;
       if (!descAfter || !descAfter.isText(textAfter.nodeValue)) {
         return textAfter;
-      } else if (view.input.compositionNode == textAfter) {
+      } else if (view2.input.compositionNode == textAfter) {
         let descBefore = textBefore.pmViewDesc;
         if (!(!descBefore || !descBefore.isText(textBefore.nodeValue)))
           return textAfter;
@@ -8002,72 +8002,72 @@
     }
     return textBefore || textAfter;
   }
-  function endComposition(view, restarting = false) {
-    if (android && view.domObserver.flushingSoon >= 0)
+  function endComposition(view2, restarting = false) {
+    if (android && view2.domObserver.flushingSoon >= 0)
       return;
-    view.domObserver.forceFlush();
-    clearComposition(view);
-    if (restarting || view.docView && view.docView.dirty) {
-      let sel = selectionFromDOM(view), cur = view.state.selection;
+    view2.domObserver.forceFlush();
+    clearComposition(view2);
+    if (restarting || view2.docView && view2.docView.dirty) {
+      let sel = selectionFromDOM(view2), cur = view2.state.selection;
       if (sel && !sel.eq(cur))
-        view.dispatch(view.state.tr.setSelection(sel));
-      else if ((view.markCursor || restarting) && !cur.$from.node(cur.$from.sharedDepth(cur.to)).inlineContent)
-        view.dispatch(view.state.tr.deleteSelection());
+        view2.dispatch(view2.state.tr.setSelection(sel));
+      else if ((view2.markCursor || restarting) && !cur.$from.node(cur.$from.sharedDepth(cur.to)).inlineContent)
+        view2.dispatch(view2.state.tr.deleteSelection());
       else
-        view.updateState(view.state);
+        view2.updateState(view2.state);
       return true;
     }
     return false;
   }
-  function captureCopy(view, dom) {
-    if (!view.dom.parentNode)
+  function captureCopy(view2, dom) {
+    if (!view2.dom.parentNode)
       return;
-    let wrap2 = view.dom.parentNode.appendChild(document.createElement("div"));
+    let wrap2 = view2.dom.parentNode.appendChild(document.createElement("div"));
     wrap2.appendChild(dom);
     wrap2.style.cssText = "position: fixed; left: -10000px; top: 10px";
     let sel = getSelection(), range3 = document.createRange();
     range3.selectNodeContents(dom);
-    view.dom.blur();
+    view2.dom.blur();
     sel.removeAllRanges();
     sel.addRange(range3);
     setTimeout(() => {
       if (wrap2.parentNode)
         wrap2.parentNode.removeChild(wrap2);
-      view.focus();
+      view2.focus();
     }, 50);
   }
   function sliceSingleNode(slice3) {
     return slice3.openStart == 0 && slice3.openEnd == 0 && slice3.content.childCount == 1 ? slice3.content.firstChild : null;
   }
-  function capturePaste(view, event) {
-    if (!view.dom.parentNode)
+  function capturePaste(view2, event) {
+    if (!view2.dom.parentNode)
       return;
-    let plainText3 = view.input.shiftKey || view.state.selection.$from.parent.type.spec.code;
-    let target = view.dom.parentNode.appendChild(document.createElement(plainText3 ? "textarea" : "div"));
+    let plainText3 = view2.input.shiftKey || view2.state.selection.$from.parent.type.spec.code;
+    let target = view2.dom.parentNode.appendChild(document.createElement(plainText3 ? "textarea" : "div"));
     if (!plainText3)
       target.contentEditable = "true";
     target.style.cssText = "position: fixed; left: -10000px; top: 10px";
     target.focus();
-    let plain = view.input.shiftKey && view.input.lastKeyCode != 45;
+    let plain = view2.input.shiftKey && view2.input.lastKeyCode != 45;
     setTimeout(() => {
-      view.focus();
+      view2.focus();
       if (target.parentNode)
         target.parentNode.removeChild(target);
       if (plainText3)
-        doPaste(view, target.value, null, plain, event);
+        doPaste(view2, target.value, null, plain, event);
       else
-        doPaste(view, target.textContent, target.innerHTML, plain, event);
+        doPaste(view2, target.textContent, target.innerHTML, plain, event);
     }, 50);
   }
-  function doPaste(view, text, html, preferPlain, event) {
-    let slice3 = parseFromClipboard(view, text, html, preferPlain, view.state.selection.$from);
-    if (view.someProp("handlePaste", (f) => f(view, event, slice3 || Slice.empty)))
+  function doPaste(view2, text, html, preferPlain, event) {
+    let slice3 = parseFromClipboard(view2, text, html, preferPlain, view2.state.selection.$from);
+    if (view2.someProp("handlePaste", (f) => f(view2, event, slice3 || Slice.empty)))
       return true;
     if (!slice3)
       return false;
     let singleNode = sliceSingleNode(slice3);
-    let tr2 = singleNode ? view.state.tr.replaceSelectionWith(singleNode, preferPlain) : view.state.tr.replaceSelection(slice3);
-    view.dispatch(tr2.scrollIntoView().setMeta("paste", true).setMeta("uiEvent", "paste"));
+    let tr2 = singleNode ? view2.state.tr.replaceSelectionWith(singleNode, preferPlain) : view2.state.tr.replaceSelection(slice3);
+    view2.dispatch(tr2.scrollIntoView().setMeta("paste", true).setMeta("uiEvent", "paste"));
     return true;
   }
   function getText(clipboardData) {
@@ -8077,40 +8077,40 @@
     let uris = clipboardData.getData("text/uri-list");
     return uris ? uris.replace(/\r?\n/g, " ") : "";
   }
-  function dragMoves(view, event) {
+  function dragMoves(view2, event) {
     let copy2;
-    view.someProp("dragCopies", (test) => {
+    view2.someProp("dragCopies", (test) => {
       copy2 = copy2 || test(event);
     });
     return copy2 != null ? !copy2 : !event[dragCopyModifier];
   }
-  function handleDrop(view, event, dragging) {
+  function handleDrop(view2, event, dragging) {
     if (!event.dataTransfer)
       return;
-    let eventPos = view.posAtCoords(eventCoords(event));
+    let eventPos = view2.posAtCoords(eventCoords(event));
     if (!eventPos)
       return;
-    let $mouse = view.state.doc.resolve(eventPos.pos);
+    let $mouse = view2.state.doc.resolve(eventPos.pos);
     let slice3 = dragging && dragging.slice;
     if (slice3) {
-      view.someProp("transformPasted", (f) => {
-        slice3 = f(slice3, view, false);
+      view2.someProp("transformPasted", (f) => {
+        slice3 = f(slice3, view2, false);
       });
     } else {
-      slice3 = parseFromClipboard(view, getText(event.dataTransfer), brokenClipboardAPI ? null : event.dataTransfer.getData("text/html"), false, $mouse);
+      slice3 = parseFromClipboard(view2, getText(event.dataTransfer), brokenClipboardAPI ? null : event.dataTransfer.getData("text/html"), false, $mouse);
     }
-    let move = !!(dragging && dragMoves(view, event));
-    if (view.someProp("handleDrop", (f) => f(view, event, slice3 || Slice.empty, move))) {
+    let move = !!(dragging && dragMoves(view2, event));
+    if (view2.someProp("handleDrop", (f) => f(view2, event, slice3 || Slice.empty, move))) {
       event.preventDefault();
       return;
     }
     if (!slice3)
       return;
     event.preventDefault();
-    let insertPos = slice3 ? dropPoint(view.state.doc, $mouse.pos, slice3) : $mouse.pos;
+    let insertPos = slice3 ? dropPoint(view2.state.doc, $mouse.pos, slice3) : $mouse.pos;
     if (insertPos == null)
       insertPos = $mouse.pos;
-    let tr2 = view.state.tr;
+    let tr2 = view2.state.tr;
     if (move) {
       let { node } = dragging;
       if (node)
@@ -8133,10 +8133,10 @@
     } else {
       let end = tr2.mapping.map(insertPos);
       tr2.mapping.maps[tr2.mapping.maps.length - 1].forEach((_from, _to, _newFrom, newTo) => end = newTo);
-      tr2.setSelection(selectionBetween(view, $pos, tr2.doc.resolve(end)));
+      tr2.setSelection(selectionBetween(view2, $pos, tr2.doc.resolve(end)));
     }
-    view.focus();
-    view.dispatch(tr2.setMeta("uiEvent", "drop"));
+    view2.focus();
+    view2.dispatch(tr2.setMeta("uiEvent", "drop"));
   }
   function compareObjs(a, b) {
     if (a == b)
@@ -8321,42 +8321,42 @@
       i5++;
     array.splice(i5, 0, deco);
   }
-  function viewDecorations(view) {
+  function viewDecorations(view2) {
     let found2 = [];
-    view.someProp("decorations", (f) => {
-      let result = f(view.state);
+    view2.someProp("decorations", (f) => {
+      let result = f(view2.state);
       if (result && result != empty)
         found2.push(result);
     });
-    if (view.cursorWrapper)
-      found2.push(DecorationSet.create(view.state.doc, [view.cursorWrapper.deco]));
+    if (view2.cursorWrapper)
+      found2.push(DecorationSet.create(view2.state.doc, [view2.cursorWrapper.deco]));
     return DecorationGroup.from(found2);
   }
-  function checkCSS(view) {
-    if (cssChecked.has(view))
+  function checkCSS(view2) {
+    if (cssChecked.has(view2))
       return;
-    cssChecked.set(view, null);
-    if (["normal", "nowrap", "pre-line"].indexOf(getComputedStyle(view.dom).whiteSpace) !== -1) {
-      view.requiresGeckoHackNode = gecko;
+    cssChecked.set(view2, null);
+    if (["normal", "nowrap", "pre-line"].indexOf(getComputedStyle(view2.dom).whiteSpace) !== -1) {
+      view2.requiresGeckoHackNode = gecko;
       if (cssCheckWarned)
         return;
       console["warn"]("ProseMirror expects the CSS white-space property to be set, preferably to 'pre-wrap'. It is recommended to load style/prosemirror.css from the prosemirror-view package.");
       cssCheckWarned = true;
     }
   }
-  function rangeToSelectionRange(view, range3) {
+  function rangeToSelectionRange(view2, range3) {
     let anchorNode = range3.startContainer, anchorOffset = range3.startOffset;
     let focusNode = range3.endContainer, focusOffset = range3.endOffset;
-    let currentAnchor = view.domAtPos(view.state.selection.anchor);
+    let currentAnchor = view2.domAtPos(view2.state.selection.anchor);
     if (isEquivalentPosition(currentAnchor.node, currentAnchor.offset, focusNode, focusOffset))
       [anchorNode, anchorOffset, focusNode, focusOffset] = [focusNode, focusOffset, anchorNode, anchorOffset];
     return { anchorNode, anchorOffset, focusNode, focusOffset };
   }
-  function safariShadowSelectionRange(view, selection) {
+  function safariShadowSelectionRange(view2, selection) {
     if (selection.getComposedRanges) {
-      let range3 = selection.getComposedRanges(view.root)[0];
+      let range3 = selection.getComposedRanges(view2.root)[0];
       if (range3)
-        return rangeToSelectionRange(view, range3);
+        return rangeToSelectionRange(view2, range3);
     }
     let found2;
     function read3(event) {
@@ -8364,22 +8364,22 @@
       event.stopImmediatePropagation();
       found2 = event.getTargetRanges()[0];
     }
-    view.dom.addEventListener("beforeinput", read3, true);
+    view2.dom.addEventListener("beforeinput", read3, true);
     document.execCommand("indent");
-    view.dom.removeEventListener("beforeinput", read3, true);
-    return found2 ? rangeToSelectionRange(view, found2) : null;
+    view2.dom.removeEventListener("beforeinput", read3, true);
+    return found2 ? rangeToSelectionRange(view2, found2) : null;
   }
-  function blockParent(view, node) {
-    for (let p = node.parentNode; p && p != view.dom; p = p.parentNode) {
-      let desc = view.docView.nearestDesc(p, true);
+  function blockParent(view2, node) {
+    for (let p = node.parentNode; p && p != view2.dom; p = p.parentNode) {
+      let desc = view2.docView.nearestDesc(p, true);
       if (desc && desc.node.isBlock)
         return p;
     }
     return null;
   }
-  function fixUpBadSafariComposition(view, addedNodes) {
+  function fixUpBadSafariComposition(view2, addedNodes) {
     var _a;
-    let { focusNode, focusOffset } = view.domSelectionRange();
+    let { focusNode, focusOffset } = view2.domSelectionRange();
     for (let node of addedNodes) {
       if (((_a = node.parentNode) === null || _a === void 0 ? void 0 : _a.nodeName) == "TR") {
         let nextCell = node.nextSibling;
@@ -8395,24 +8395,24 @@
           }
           parent.insertBefore(node, parent.firstChild);
           if (focusNode == node)
-            view.domSelection().collapse(node, focusOffset);
+            view2.domSelection().collapse(node, focusOffset);
         } else {
           node.parentNode.removeChild(node);
         }
       }
     }
   }
-  function parseBetween(view, from_, to_) {
-    let { node: parent, fromOffset, toOffset, from: from2, to } = view.docView.parseRange(from_, to_);
-    let domSel = view.domSelectionRange();
+  function parseBetween(view2, from_, to_) {
+    let { node: parent, fromOffset, toOffset, from: from2, to } = view2.docView.parseRange(from_, to_);
+    let domSel = view2.domSelectionRange();
     let find;
     let anchor = domSel.anchorNode;
-    if (anchor && view.dom.contains(anchor.nodeType == 1 ? anchor : anchor.parentNode)) {
+    if (anchor && view2.dom.contains(anchor.nodeType == 1 ? anchor : anchor.parentNode)) {
       find = [{ node: anchor, offset: domSel.anchorOffset }];
       if (!selectionCollapsed(domSel))
         find.push({ node: domSel.focusNode, offset: domSel.focusOffset });
     }
-    if (chrome && view.input.lastKeyCode === 8) {
+    if (chrome && view2.input.lastKeyCode === 8) {
       for (let off3 = toOffset; off3 > fromOffset; off3--) {
         let node = parent.childNodes[off3 - 1], desc = node.pmViewDesc;
         if (node.nodeName == "BR" && !desc) {
@@ -8423,8 +8423,8 @@
           break;
       }
     }
-    let startDoc = view.state.doc;
-    let parser = view.someProp("domParser") || DOMParser2.fromSchema(view.state.schema);
+    let startDoc = view2.state.doc;
+    let parser = view2.someProp("domParser") || DOMParser2.fromSchema(view2.state.schema);
     let $from = startDoc.resolve(from2);
     let sel = null, doc3 = parser.parse(parent, {
       topNode: $from.parent,
@@ -8462,71 +8462,71 @@
     }
     return null;
   }
-  function readDOMChange(view, from2, to, typeOver, addedNodes) {
-    let compositionID = view.input.compositionPendingChanges || (view.composing ? view.input.compositionID : 0);
-    view.input.compositionPendingChanges = 0;
+  function readDOMChange(view2, from2, to, typeOver, addedNodes) {
+    let compositionID = view2.input.compositionPendingChanges || (view2.composing ? view2.input.compositionID : 0);
+    view2.input.compositionPendingChanges = 0;
     if (from2 < 0) {
-      let origin = view.input.lastSelectionTime > Date.now() - 50 ? view.input.lastSelectionOrigin : null;
-      let newSel = selectionFromDOM(view, origin);
-      if (newSel && !view.state.selection.eq(newSel)) {
-        if (chrome && android && view.input.lastKeyCode === 13 && Date.now() - 100 < view.input.lastKeyCodeTime && view.someProp("handleKeyDown", (f) => f(view, keyEvent(13, "Enter"))))
+      let origin = view2.input.lastSelectionTime > Date.now() - 50 ? view2.input.lastSelectionOrigin : null;
+      let newSel = selectionFromDOM(view2, origin);
+      if (newSel && !view2.state.selection.eq(newSel)) {
+        if (chrome && android && view2.input.lastKeyCode === 13 && Date.now() - 100 < view2.input.lastKeyCodeTime && view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(13, "Enter"))))
           return;
-        let tr2 = view.state.tr.setSelection(newSel);
+        let tr2 = view2.state.tr.setSelection(newSel);
         if (origin == "pointer")
           tr2.setMeta("pointer", true);
         else if (origin == "key")
           tr2.scrollIntoView();
         if (compositionID)
           tr2.setMeta("composition", compositionID);
-        view.dispatch(tr2);
+        view2.dispatch(tr2);
       }
       return;
     }
-    let $before = view.state.doc.resolve(from2);
+    let $before = view2.state.doc.resolve(from2);
     let shared2 = $before.sharedDepth(to);
     from2 = $before.before(shared2 + 1);
-    to = view.state.doc.resolve(to).after(shared2 + 1);
-    let sel = view.state.selection;
-    let parse3 = parseBetween(view, from2, to);
-    let doc3 = view.state.doc, compare = doc3.slice(parse3.from, parse3.to);
+    to = view2.state.doc.resolve(to).after(shared2 + 1);
+    let sel = view2.state.selection;
+    let parse3 = parseBetween(view2, from2, to);
+    let doc3 = view2.state.doc, compare = doc3.slice(parse3.from, parse3.to);
     let preferredPos, preferredSide;
-    if (view.input.lastKeyCode === 8 && Date.now() - 100 < view.input.lastKeyCodeTime) {
-      preferredPos = view.state.selection.to;
+    if (view2.input.lastKeyCode === 8 && Date.now() - 100 < view2.input.lastKeyCodeTime) {
+      preferredPos = view2.state.selection.to;
       preferredSide = "end";
     } else {
-      preferredPos = view.state.selection.from;
+      preferredPos = view2.state.selection.from;
       preferredSide = "start";
     }
-    view.input.lastKeyCode = null;
+    view2.input.lastKeyCode = null;
     let change = findDiff(compare.content, parse3.doc.content, parse3.from, preferredPos, preferredSide);
     if (change)
-      view.input.domChangeCount++;
-    if ((ios && view.input.lastIOSEnter > Date.now() - 225 || android) && addedNodes.some((n2) => n2.nodeType == 1 && !isInline.test(n2.nodeName)) && (!change || change.endA >= change.endB) && view.someProp("handleKeyDown", (f) => f(view, keyEvent(13, "Enter")))) {
-      view.input.lastIOSEnter = 0;
+      view2.input.domChangeCount++;
+    if ((ios && view2.input.lastIOSEnter > Date.now() - 225 || android) && addedNodes.some((n2) => n2.nodeType == 1 && !isInline.test(n2.nodeName)) && (!change || change.endA >= change.endB) && view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(13, "Enter")))) {
+      view2.input.lastIOSEnter = 0;
       return;
     }
     if (!change) {
-      if (typeOver && sel instanceof TextSelection && !sel.empty && sel.$head.sameParent(sel.$anchor) && !view.composing && !(parse3.sel && parse3.sel.anchor != parse3.sel.head)) {
+      if (typeOver && sel instanceof TextSelection && !sel.empty && sel.$head.sameParent(sel.$anchor) && !view2.composing && !(parse3.sel && parse3.sel.anchor != parse3.sel.head)) {
         change = { start: sel.from, endA: sel.to, endB: sel.to };
       } else {
         if (parse3.sel) {
-          let sel2 = resolveSelection(view, view.state.doc, parse3.sel);
-          if (sel2 && !sel2.eq(view.state.selection)) {
-            let tr2 = view.state.tr.setSelection(sel2);
+          let sel2 = resolveSelection(view2, view2.state.doc, parse3.sel);
+          if (sel2 && !sel2.eq(view2.state.selection)) {
+            let tr2 = view2.state.tr.setSelection(sel2);
             if (compositionID)
               tr2.setMeta("composition", compositionID);
-            view.dispatch(tr2);
+            view2.dispatch(tr2);
           }
         }
         return;
       }
     }
-    if (view.state.selection.from < view.state.selection.to && change.start == change.endB && view.state.selection instanceof TextSelection) {
-      if (change.start > view.state.selection.from && change.start <= view.state.selection.from + 2 && view.state.selection.from >= parse3.from) {
-        change.start = view.state.selection.from;
-      } else if (change.endA < view.state.selection.to && change.endA >= view.state.selection.to - 2 && view.state.selection.to <= parse3.to) {
-        change.endB += view.state.selection.to - change.endA;
-        change.endA = view.state.selection.to;
+    if (view2.state.selection.from < view2.state.selection.to && change.start == change.endB && view2.state.selection instanceof TextSelection) {
+      if (change.start > view2.state.selection.from && change.start <= view2.state.selection.from + 2 && view2.state.selection.from >= parse3.from) {
+        change.start = view2.state.selection.from;
+      } else if (change.endA < view2.state.selection.to && change.endA >= view2.state.selection.to - 2 && view2.state.selection.to <= parse3.to) {
+        change.endB += view2.state.selection.to - change.endA;
+        change.endA = view2.state.selection.to;
       }
     }
     if (ie && ie_version <= 11 && change.endB == change.start + 1 && change.endA == change.start && change.start > parse3.from && parse3.doc.textBetween(change.start - parse3.from - 1, change.start - parse3.from + 1) == " \xA0") {
@@ -8538,32 +8538,32 @@
     let $to = parse3.doc.resolveNoCache(change.endB - parse3.from);
     let $fromA = doc3.resolve(change.start);
     let inlineChange = $from.sameParent($to) && $from.parent.inlineContent && $fromA.end() >= change.endA;
-    if ((ios && view.input.lastIOSEnter > Date.now() - 225 && (!inlineChange || addedNodes.some((n2) => n2.nodeName == "DIV" || n2.nodeName == "P")) || !inlineChange && $from.pos < parse3.doc.content.size && (!$from.sameParent($to) || !$from.parent.inlineContent) && $from.pos < $to.pos && !/\S/.test(parse3.doc.textBetween($from.pos, $to.pos, "", ""))) && view.someProp("handleKeyDown", (f) => f(view, keyEvent(13, "Enter")))) {
-      view.input.lastIOSEnter = 0;
+    if ((ios && view2.input.lastIOSEnter > Date.now() - 225 && (!inlineChange || addedNodes.some((n2) => n2.nodeName == "DIV" || n2.nodeName == "P")) || !inlineChange && $from.pos < parse3.doc.content.size && (!$from.sameParent($to) || !$from.parent.inlineContent) && $from.pos < $to.pos && !/\S/.test(parse3.doc.textBetween($from.pos, $to.pos, "", ""))) && view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(13, "Enter")))) {
+      view2.input.lastIOSEnter = 0;
       return;
     }
-    if (view.state.selection.anchor > change.start && looksLikeBackspace(doc3, change.start, change.endA, $from, $to) && view.someProp("handleKeyDown", (f) => f(view, keyEvent(8, "Backspace")))) {
+    if (view2.state.selection.anchor > change.start && looksLikeBackspace(doc3, change.start, change.endA, $from, $to) && view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(8, "Backspace")))) {
       if (android && chrome)
-        view.domObserver.suppressSelectionUpdates();
+        view2.domObserver.suppressSelectionUpdates();
       return;
     }
     if (chrome && change.endB == change.start)
-      view.input.lastChromeDelete = Date.now();
+      view2.input.lastChromeDelete = Date.now();
     if (android && !inlineChange && $from.start() != $to.start() && $to.parentOffset == 0 && $from.depth == $to.depth && parse3.sel && parse3.sel.anchor == parse3.sel.head && parse3.sel.head == change.endA) {
       change.endB -= 2;
       $to = parse3.doc.resolveNoCache(change.endB - parse3.from);
       setTimeout(() => {
-        view.someProp("handleKeyDown", function(f) {
-          return f(view, keyEvent(13, "Enter"));
+        view2.someProp("handleKeyDown", function(f) {
+          return f(view2, keyEvent(13, "Enter"));
         });
       }, 20);
     }
     let chFrom = change.start, chTo = change.endA;
     let mkTr = (base3) => {
-      let tr2 = base3 || view.state.tr.replace(chFrom, chTo, parse3.doc.slice(change.start - parse3.from, change.endB - parse3.from));
+      let tr2 = base3 || view2.state.tr.replace(chFrom, chTo, parse3.doc.slice(change.start - parse3.from, change.endB - parse3.from));
       if (parse3.sel) {
-        let sel2 = resolveSelection(view, tr2.doc, parse3.sel);
-        if (sel2 && !(chrome && view.composing && sel2.empty && (change.start != change.endB || view.input.lastChromeDelete < Date.now() - 100) && (sel2.head == chFrom || sel2.head == tr2.mapping.map(chTo) - 1) || ie && sel2.empty && sel2.head == chFrom))
+        let sel2 = resolveSelection(view2, tr2.doc, parse3.sel);
+        if (sel2 && !(chrome && view2.composing && sel2.empty && (change.start != change.endB || view2.input.lastChromeDelete < Date.now() - 100) && (sel2.head == chFrom || sel2.head == tr2.mapping.map(chTo) - 1) || ie && sel2.empty && sel2.head == chFrom))
           tr2.setSelection(sel2);
       }
       if (compositionID)
@@ -8574,40 +8574,40 @@
     if (inlineChange) {
       if ($from.pos == $to.pos) {
         if (ie && ie_version <= 11 && $from.parentOffset == 0) {
-          view.domObserver.suppressSelectionUpdates();
-          setTimeout(() => selectionToDOM(view), 20);
+          view2.domObserver.suppressSelectionUpdates();
+          setTimeout(() => selectionToDOM(view2), 20);
         }
-        let tr2 = mkTr(view.state.tr.delete(chFrom, chTo));
+        let tr2 = mkTr(view2.state.tr.delete(chFrom, chTo));
         let marks2 = doc3.resolve(change.start).marksAcross(doc3.resolve(change.endA));
         if (marks2)
           tr2.ensureMarks(marks2);
-        view.dispatch(tr2);
+        view2.dispatch(tr2);
       } else if (
         // Adding or removing a mark
         change.endA == change.endB && (markChange = isMarkChange($from.parent.content.cut($from.parentOffset, $to.parentOffset), $fromA.parent.content.cut($fromA.parentOffset, change.endA - $fromA.start())))
       ) {
-        let tr2 = mkTr(view.state.tr);
+        let tr2 = mkTr(view2.state.tr);
         if (markChange.type == "add")
           tr2.addMark(chFrom, chTo, markChange.mark);
         else
           tr2.removeMark(chFrom, chTo, markChange.mark);
-        view.dispatch(tr2);
+        view2.dispatch(tr2);
       } else if ($from.parent.child($from.index()).isText && $from.index() == $to.index() - ($to.textOffset ? 0 : 1)) {
         let text = $from.parent.textBetween($from.parentOffset, $to.parentOffset);
-        let deflt = () => mkTr(view.state.tr.insertText(text, chFrom, chTo));
-        if (!view.someProp("handleTextInput", (f) => f(view, chFrom, chTo, text, deflt)))
-          view.dispatch(deflt());
+        let deflt = () => mkTr(view2.state.tr.insertText(text, chFrom, chTo));
+        if (!view2.someProp("handleTextInput", (f) => f(view2, chFrom, chTo, text, deflt)))
+          view2.dispatch(deflt());
       } else {
-        view.dispatch(mkTr());
+        view2.dispatch(mkTr());
       }
     } else {
-      view.dispatch(mkTr());
+      view2.dispatch(mkTr());
     }
   }
-  function resolveSelection(view, doc3, parsedSel) {
+  function resolveSelection(view2, doc3, parsedSel) {
     if (Math.max(parsedSel.anchor, parsedSel.head) > doc3.content.size)
       return null;
-    return selectionBetween(view, doc3.resolve(parsedSel.anchor), doc3.resolve(parsedSel.head));
+    return selectionBetween(view2, doc3.resolve(parsedSel.anchor), doc3.resolve(parsedSel.head));
   }
   function isMarkChange(cur, prev) {
     let curMarks = cur.firstChild.marks, prevMarks = prev.firstChild.marks;
@@ -8690,13 +8690,13 @@
     }
     return { start, endA, endB };
   }
-  function computeDocDeco(view) {
+  function computeDocDeco(view2) {
     let attrs = /* @__PURE__ */ Object.create(null);
     attrs.class = "ProseMirror";
-    attrs.contenteditable = String(view.editable);
-    view.someProp("attributes", (value) => {
+    attrs.contenteditable = String(view2.editable);
+    view2.someProp("attributes", (value) => {
       if (typeof value == "function")
-        value = value(view.state);
+        value = value(view2.state);
       if (value)
         for (let attr in value) {
           if (attr == "class")
@@ -8709,35 +8709,35 @@
     });
     if (!attrs.translate)
       attrs.translate = "no";
-    return [Decoration.node(0, view.state.doc.content.size, attrs)];
+    return [Decoration.node(0, view2.state.doc.content.size, attrs)];
   }
-  function updateCursorWrapper(view) {
-    if (view.markCursor) {
+  function updateCursorWrapper(view2) {
+    if (view2.markCursor) {
       let dom = document.createElement("img");
       dom.className = "ProseMirror-separator";
       dom.setAttribute("mark-placeholder", "true");
       dom.setAttribute("alt", "");
-      view.cursorWrapper = { dom, deco: Decoration.widget(view.state.selection.from, dom, { raw: true, marks: view.markCursor }) };
+      view2.cursorWrapper = { dom, deco: Decoration.widget(view2.state.selection.from, dom, { raw: true, marks: view2.markCursor }) };
     } else {
-      view.cursorWrapper = null;
+      view2.cursorWrapper = null;
     }
   }
-  function getEditable(view) {
-    return !view.someProp("editable", (value) => value(view.state) === false);
+  function getEditable(view2) {
+    return !view2.someProp("editable", (value) => value(view2.state) === false);
   }
   function selectionContextChanged(sel1, sel2) {
     let depth = Math.min(sel1.$anchor.sharedDepth(sel1.head), sel2.$anchor.sharedDepth(sel2.head));
     return sel1.$anchor.start(depth) != sel2.$anchor.start(depth);
   }
-  function buildNodeViews(view) {
+  function buildNodeViews(view2) {
     let result = /* @__PURE__ */ Object.create(null);
     function add(obj) {
       for (let prop in obj)
         if (!Object.prototype.hasOwnProperty.call(result, prop))
           result[prop] = obj[prop];
     }
-    view.someProp("nodeViews", add);
-    view.someProp("markViews", add);
+    view2.someProp("nodeViews", add);
+    view2.someProp("markViews", add);
     return result;
   }
   function changedNodeViews(a, b) {
@@ -9091,18 +9091,18 @@
         // custom things with the selection. Note that this falls apart when
         // a selection starts in such a node and ends in another, in which
         // case we just use whatever domFromPos produces as a best effort.
-        setSelection(anchor, head2, view, force = false) {
+        setSelection(anchor, head2, view2, force = false) {
           let from2 = Math.min(anchor, head2), to = Math.max(anchor, head2);
           for (let i5 = 0, offset = 0; i5 < this.children.length; i5++) {
             let child = this.children[i5], end = offset + child.size;
             if (from2 > offset && to < end)
-              return child.setSelection(anchor - offset - child.border, head2 - offset - child.border, view, force);
+              return child.setSelection(anchor - offset - child.border, head2 - offset - child.border, view2, force);
             offset = end;
           }
           let anchorDOM = this.domFromPos(anchor, anchor ? -1 : 1);
           let headDOM = head2 == anchor ? anchorDOM : this.domFromPos(head2, head2 ? -1 : 1);
-          let domSel = view.root.getSelection();
-          let selRange = view.domSelectionRange();
+          let domSel = view2.root.getSelection();
+          let selRange = view2.domSelectionRange();
           let brKludge = false;
           if ((gecko || safari) && anchor == head2) {
             let { node, offset } = anchorDOM;
@@ -9205,10 +9205,10 @@
         }
       };
       WidgetViewDesc = class extends ViewDesc {
-        constructor(parent, widget, view, pos) {
+        constructor(parent, widget, view2, pos) {
           let self2, dom = widget.type.toDOM;
           if (typeof dom == "function")
-            dom = dom(view, () => {
+            dom = dom(view2, () => {
               if (!self2)
                 return pos;
               if (self2.parent)
@@ -9282,9 +9282,9 @@
           this.mark = mark;
           this.spec = spec;
         }
-        static create(parent, mark, inline2, view) {
-          let custom = view.nodeViews[mark.type.name];
-          let spec = custom && custom(mark, view, inline2);
+        static create(parent, mark, inline2, view2) {
+          let custom = view2.nodeViews[mark.type.name];
+          let spec = custom && custom(mark, view2, inline2);
           if (!spec || !spec.dom)
             spec = DOMSerializer.renderSpec(document, mark.type.spec.toDOM(mark, inline2), null, mark.attrs);
           return new _MarkViewDesc(parent, mark, spec.dom, spec.contentDOM || spec.dom, spec);
@@ -9308,13 +9308,13 @@
             this.dirty = NOT_DIRTY;
           }
         }
-        slice(from2, to, view) {
-          let copy2 = _MarkViewDesc.create(this.parent, this.mark, true, view);
+        slice(from2, to, view2) {
+          let copy2 = _MarkViewDesc.create(this.parent, this.mark, true, view2);
           let nodes = this.children, size = this.size;
           if (to < size)
-            nodes = replaceNodes(nodes, to, size, view);
+            nodes = replaceNodes(nodes, to, size, view2);
           if (from2 > 0)
-            nodes = replaceNodes(nodes, 0, from2, view);
+            nodes = replaceNodes(nodes, 0, from2, view2);
           for (let i5 = 0; i5 < nodes.length; i5++)
             nodes[i5].parent = copy2;
           copy2.children = nodes;
@@ -9346,9 +9346,9 @@
         // since it'd require exposing a whole slew of finicky
         // implementation details to the user code that they probably will
         // never need.)
-        static create(parent, node, outerDeco, innerDeco, view, pos) {
-          let custom = view.nodeViews[node.type.name], descObj;
-          let spec = custom && custom(node, view, () => {
+        static create(parent, node, outerDeco, innerDeco, view2, pos) {
+          let custom = view2.nodeViews[node.type.name], descObj;
+          let spec = custom && custom(node, view2, () => {
             if (!descObj)
               return pos;
             if (descObj.parent)
@@ -9415,46 +9415,46 @@
         // decorations, possibly introducing nesting for marks. Then, in a
         // separate step, syncs the DOM inside `this.contentDOM` to
         // `this.children`.
-        updateChildren(view, pos) {
+        updateChildren(view2, pos) {
           let inline2 = this.node.inlineContent, off3 = pos;
-          let composition = view.composing ? this.localCompositionInfo(view, pos) : null;
+          let composition = view2.composing ? this.localCompositionInfo(view2, pos) : null;
           let localComposition = composition && composition.pos > -1 ? composition : null;
           let compositionInChild = composition && composition.pos < 0;
-          let updater = new ViewTreeUpdater(this, localComposition && localComposition.node, view);
+          let updater = new ViewTreeUpdater(this, localComposition && localComposition.node, view2);
           iterDeco(this.node, this.innerDeco, (widget, i5, insideNode) => {
             if (widget.spec.marks)
-              updater.syncToMarks(widget.spec.marks, inline2, view, i5);
+              updater.syncToMarks(widget.spec.marks, inline2, view2, i5);
             else if (widget.type.side >= 0 && !insideNode)
-              updater.syncToMarks(i5 == this.node.childCount ? Mark.none : this.node.child(i5).marks, inline2, view, i5);
-            updater.placeWidget(widget, view, off3);
+              updater.syncToMarks(i5 == this.node.childCount ? Mark.none : this.node.child(i5).marks, inline2, view2, i5);
+            updater.placeWidget(widget, view2, off3);
           }, (child, outerDeco, innerDeco, i5) => {
-            updater.syncToMarks(child.marks, inline2, view, i5);
+            updater.syncToMarks(child.marks, inline2, view2, i5);
             let compIndex;
             if (updater.findNodeMatch(child, outerDeco, innerDeco, i5)) ;
-            else if (compositionInChild && view.state.selection.from > off3 && view.state.selection.to < off3 + child.nodeSize && (compIndex = updater.findIndexWithChild(composition.node)) > -1 && updater.updateNodeAt(child, outerDeco, innerDeco, compIndex, view)) ;
-            else if (updater.updateNextNode(child, outerDeco, innerDeco, view, i5, off3)) ;
+            else if (compositionInChild && view2.state.selection.from > off3 && view2.state.selection.to < off3 + child.nodeSize && (compIndex = updater.findIndexWithChild(composition.node)) > -1 && updater.updateNodeAt(child, outerDeco, innerDeco, compIndex, view2)) ;
+            else if (updater.updateNextNode(child, outerDeco, innerDeco, view2, i5, off3)) ;
             else {
-              updater.addNode(child, outerDeco, innerDeco, view, off3);
+              updater.addNode(child, outerDeco, innerDeco, view2, off3);
             }
             off3 += child.nodeSize;
           });
-          updater.syncToMarks([], inline2, view, 0);
+          updater.syncToMarks([], inline2, view2, 0);
           if (this.node.isTextblock)
             updater.addTextblockHacks();
           updater.destroyRest();
           if (updater.changed || this.dirty == CONTENT_DIRTY) {
             if (localComposition)
-              this.protectLocalComposition(view, localComposition);
-            renderDescs(this.contentDOM, this.children, view);
+              this.protectLocalComposition(view2, localComposition);
+            renderDescs(this.contentDOM, this.children, view2);
             if (ios)
               iosHacks(this.dom);
           }
         }
-        localCompositionInfo(view, pos) {
-          let { from: from2, to } = view.state.selection;
-          if (!(view.state.selection instanceof TextSelection) || from2 < pos || to > pos + this.node.content.size)
+        localCompositionInfo(view2, pos) {
+          let { from: from2, to } = view2.state.selection;
+          if (!(view2.state.selection instanceof TextSelection) || from2 < pos || to > pos + this.node.content.size)
             return null;
-          let textNode = view.input.compositionNode;
+          let textNode = view2.input.compositionNode;
           if (!textNode || !this.dom.contains(textNode.parentNode))
             return null;
           if (this.node.inlineContent) {
@@ -9465,7 +9465,7 @@
             return { node: textNode, pos: -1, text: "" };
           }
         }
-        protectLocalComposition(view, { node, pos, text }) {
+        protectLocalComposition(view2, { node, pos, text }) {
           if (this.getDesc(node))
             return;
           let topNode = node;
@@ -9480,23 +9480,23 @@
               topNode.pmViewDesc = void 0;
           }
           let desc = new CompositionViewDesc(this, topNode, node, text);
-          view.input.compositionNodes.push(desc);
-          this.children = replaceNodes(this.children, pos, pos + text.length, view, desc);
+          view2.input.compositionNodes.push(desc);
+          this.children = replaceNodes(this.children, pos, pos + text.length, view2, desc);
         }
         // If this desc must be updated to match the given node decoration,
         // do so and return true.
-        update(node, outerDeco, innerDeco, view) {
+        update(node, outerDeco, innerDeco, view2) {
           if (this.dirty == NODE_DIRTY || !node.sameMarkup(this.node))
             return false;
-          this.updateInner(node, outerDeco, innerDeco, view);
+          this.updateInner(node, outerDeco, innerDeco, view2);
           return true;
         }
-        updateInner(node, outerDeco, innerDeco, view) {
+        updateInner(node, outerDeco, innerDeco, view2) {
           this.updateOuterDeco(outerDeco);
           this.node = node;
           this.innerDeco = innerDeco;
           if (this.contentDOM)
-            this.updateChildren(view, this.posAtStart);
+            this.updateChildren(view2, this.posAtStart);
           this.dirty = NOT_DIRTY;
         }
         updateOuterDeco(outerDeco) {
@@ -9541,14 +9541,14 @@
             skip = skip.parentNode;
           return { skip: skip || true };
         }
-        update(node, outerDeco, innerDeco, view) {
+        update(node, outerDeco, innerDeco, view2) {
           if (this.dirty == NODE_DIRTY || this.dirty != NOT_DIRTY && !this.inParent() || !node.sameMarkup(this.node))
             return false;
           this.updateOuterDeco(outerDeco);
           if ((this.dirty != NOT_DIRTY || node.text != this.node.text) && node.text != this.nodeDOM.nodeValue) {
             this.nodeDOM.nodeValue = node.text;
-            if (view.trackWrites == this.nodeDOM)
-              view.trackWrites = null;
+            if (view2.trackWrites == this.nodeDOM)
+              view2.trackWrites = null;
           }
           this.node = node;
           this.dirty = NOT_DIRTY;
@@ -9610,18 +9610,18 @@
         // A custom `update` method gets to decide whether the update goes
         // through. If it does, and there's a `contentDOM` node, our logic
         // updates the children.
-        update(node, outerDeco, innerDeco, view) {
+        update(node, outerDeco, innerDeco, view2) {
           if (this.dirty == NODE_DIRTY)
             return false;
           if (this.spec.update && (this.node.type == node.type || this.spec.multiType)) {
             let result = this.spec.update(node, outerDeco, innerDeco);
             if (result)
-              this.updateInner(node, outerDeco, innerDeco, view);
+              this.updateInner(node, outerDeco, innerDeco, view2);
             return result;
           } else if (!this.contentDOM && !node.isLeaf) {
             return false;
           } else {
-            return super.update(node, outerDeco, innerDeco, view);
+            return super.update(node, outerDeco, innerDeco, view2);
           }
         }
         selectNode() {
@@ -9630,8 +9630,8 @@
         deselectNode() {
           this.spec.deselectNode ? this.spec.deselectNode() : super.deselectNode();
         }
-        setSelection(anchor, head2, view, force) {
-          this.spec.setSelection ? this.spec.setSelection(anchor, head2, view.root) : super.setSelection(anchor, head2, view, force);
+        setSelection(anchor, head2, view2, force) {
+          this.spec.setSelection ? this.spec.setSelection(anchor, head2, view2.root) : super.setSelection(anchor, head2, view2, force);
         }
         destroy() {
           if (this.spec.destroy)
@@ -9652,9 +9652,9 @@
       OuterDecoLevel.prototype = /* @__PURE__ */ Object.create(null);
       noDeco = [new OuterDecoLevel()];
       ViewTreeUpdater = class {
-        constructor(top, lock, view) {
+        constructor(top, lock, view2) {
           this.lock = lock;
-          this.view = view;
+          this.view = view2;
           this.index = 0;
           this.stack = [];
           this.changed = false;
@@ -9677,7 +9677,7 @@
         }
         // Sync the current stack of mark descs with the given array of
         // marks, reusing existing mark descs when possible.
-        syncToMarks(marks2, inline2, view, parentIndex) {
+        syncToMarks(marks2, inline2, view2, parentIndex) {
           let keep = 0, depth = this.stack.length >> 1;
           let maxKeep = Math.min(depth, marks2.length);
           while (keep < maxKeep && (keep == depth - 1 ? this.top : this.stack[keep + 1 << 1]).matchesMark(marks2[keep]) && marks2[keep].type.spec.spanning !== false)
@@ -9716,7 +9716,7 @@
               }
               this.top = this.top.children[this.index];
             } else {
-              let markDesc = MarkViewDesc.create(this.top, marks2[depth], inline2, view);
+              let markDesc = MarkViewDesc.create(this.top, marks2[depth], inline2, view2);
               this.top.children.splice(this.index, 0, markDesc);
               this.top = markDesc;
               this.changed = true;
@@ -9746,11 +9746,11 @@
           this.index++;
           return true;
         }
-        updateNodeAt(node, outerDeco, innerDeco, index, view) {
+        updateNodeAt(node, outerDeco, innerDeco, index, view2) {
           let child = this.top.children[index];
           if (child.dirty == NODE_DIRTY && child.dom == child.contentDOM)
             child.dirty = CONTENT_DIRTY;
-          if (!child.update(node, outerDeco, innerDeco, view))
+          if (!child.update(node, outerDeco, innerDeco, view2))
             return false;
           this.destroyBetween(this.index, index);
           this.index++;
@@ -9775,7 +9775,7 @@
         }
         // Try to update the next node, if any, to the given data. Checks
         // pre-matches to avoid overwriting nodes that could still be used.
-        updateNextNode(node, outerDeco, innerDeco, view, index, pos) {
+        updateNextNode(node, outerDeco, innerDeco, view2, index, pos) {
           for (let i5 = this.index; i5 < this.top.children.length; i5++) {
             let next = this.top.children[i5];
             if (next instanceof NodeViewDesc) {
@@ -9784,18 +9784,18 @@
                 return false;
               let nextDOM = next.dom, updated;
               let locked = this.isLocked(nextDOM) && !(node.isText && next.node && next.node.isText && next.nodeDOM.nodeValue == node.text && next.dirty != NODE_DIRTY && sameOuterDeco(outerDeco, next.outerDeco));
-              if (!locked && next.update(node, outerDeco, innerDeco, view)) {
+              if (!locked && next.update(node, outerDeco, innerDeco, view2)) {
                 this.destroyBetween(this.index, i5);
                 if (next.dom != nextDOM)
                   this.changed = true;
                 this.index++;
                 return true;
-              } else if (!locked && (updated = this.recreateWrapper(next, node, outerDeco, innerDeco, view, pos))) {
+              } else if (!locked && (updated = this.recreateWrapper(next, node, outerDeco, innerDeco, view2, pos))) {
                 this.destroyBetween(this.index, i5);
                 this.top.children[this.index] = updated;
                 if (updated.contentDOM) {
                   updated.dirty = CONTENT_DIRTY;
-                  updated.updateChildren(view, pos + 1);
+                  updated.updateChildren(view2, pos + 1);
                   updated.dirty = NOT_DIRTY;
                 }
                 this.changed = true;
@@ -9809,10 +9809,10 @@
         }
         // When a node with content is replaced by a different node with
         // identical content, move over its children.
-        recreateWrapper(next, node, outerDeco, innerDeco, view, pos) {
+        recreateWrapper(next, node, outerDeco, innerDeco, view2, pos) {
           if (next.dirty || node.isAtom || !next.children.length || !next.node.content.eq(node.content) || !sameOuterDeco(outerDeco, next.outerDeco) || !innerDeco.eq(next.innerDeco))
             return null;
-          let wrapper = NodeViewDesc.create(this.top, node, outerDeco, innerDeco, view, pos);
+          let wrapper = NodeViewDesc.create(this.top, node, outerDeco, innerDeco, view2, pos);
           if (wrapper.contentDOM) {
             wrapper.children = next.children;
             next.children = [];
@@ -9823,19 +9823,19 @@
           return wrapper;
         }
         // Insert the node as a newly created node desc.
-        addNode(node, outerDeco, innerDeco, view, pos) {
-          let desc = NodeViewDesc.create(this.top, node, outerDeco, innerDeco, view, pos);
+        addNode(node, outerDeco, innerDeco, view2, pos) {
+          let desc = NodeViewDesc.create(this.top, node, outerDeco, innerDeco, view2, pos);
           if (desc.contentDOM)
-            desc.updateChildren(view, pos + 1);
+            desc.updateChildren(view2, pos + 1);
           this.top.children.splice(this.index++, 0, desc);
           this.changed = true;
         }
-        placeWidget(widget, view, pos) {
+        placeWidget(widget, view2, pos) {
           let next = this.index < this.top.children.length ? this.top.children[this.index] : null;
           if (next && next.matchesWidget(widget) && (widget == next.widget || !next.widget.type.toDOM.parentNode)) {
             this.index++;
           } else {
-            let desc = new WidgetViewDesc(this.top, widget, view, pos);
+            let desc = new WidgetViewDesc(this.top, widget, view2, pos);
             this.top.children.splice(this.index++, 0, desc);
             this.changed = true;
           }
@@ -9922,85 +9922,85 @@
           this.hideSelectionGuard = null;
         }
       };
-      editHandlers.keydown = (view, _event) => {
+      editHandlers.keydown = (view2, _event) => {
         let event = _event;
-        view.input.shiftKey = event.keyCode == 16 || event.shiftKey;
-        if (inOrNearComposition(view))
+        view2.input.shiftKey = event.keyCode == 16 || event.shiftKey;
+        if (inOrNearComposition(view2))
           return;
-        view.input.lastKeyCode = event.keyCode;
-        view.input.lastKeyCodeTime = Date.now();
+        view2.input.lastKeyCode = event.keyCode;
+        view2.input.lastKeyCodeTime = Date.now();
         if (android && chrome && event.keyCode == 13)
           return;
         if (event.keyCode != 229)
-          view.domObserver.forceFlush();
+          view2.domObserver.forceFlush();
         if (ios && event.keyCode == 13 && !event.ctrlKey && !event.altKey && !event.metaKey) {
           let now = Date.now();
-          view.input.lastIOSEnter = now;
-          view.input.lastIOSEnterFallbackTimeout = setTimeout(() => {
-            if (view.input.lastIOSEnter == now) {
-              view.someProp("handleKeyDown", (f) => f(view, keyEvent(13, "Enter")));
-              view.input.lastIOSEnter = 0;
+          view2.input.lastIOSEnter = now;
+          view2.input.lastIOSEnterFallbackTimeout = setTimeout(() => {
+            if (view2.input.lastIOSEnter == now) {
+              view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(13, "Enter")));
+              view2.input.lastIOSEnter = 0;
             }
           }, 200);
-        } else if (view.someProp("handleKeyDown", (f) => f(view, event)) || captureKeyDown(view, event)) {
+        } else if (view2.someProp("handleKeyDown", (f) => f(view2, event)) || captureKeyDown(view2, event)) {
           event.preventDefault();
         } else {
-          setSelectionOrigin(view, "key");
+          setSelectionOrigin(view2, "key");
         }
       };
-      editHandlers.keyup = (view, event) => {
+      editHandlers.keyup = (view2, event) => {
         if (event.keyCode == 16)
-          view.input.shiftKey = false;
+          view2.input.shiftKey = false;
       };
-      editHandlers.keypress = (view, _event) => {
+      editHandlers.keypress = (view2, _event) => {
         let event = _event;
-        if (inOrNearComposition(view) || !event.charCode || event.ctrlKey && !event.altKey || mac && event.metaKey)
+        if (inOrNearComposition(view2) || !event.charCode || event.ctrlKey && !event.altKey || mac && event.metaKey)
           return;
-        if (view.someProp("handleKeyPress", (f) => f(view, event))) {
+        if (view2.someProp("handleKeyPress", (f) => f(view2, event))) {
           event.preventDefault();
           return;
         }
-        let sel = view.state.selection;
+        let sel = view2.state.selection;
         if (!(sel instanceof TextSelection) || !sel.$from.sameParent(sel.$to)) {
           let text = String.fromCharCode(event.charCode);
-          let deflt = () => view.state.tr.insertText(text).scrollIntoView();
-          if (!/[\r\n]/.test(text) && !view.someProp("handleTextInput", (f) => f(view, sel.$from.pos, sel.$to.pos, text, deflt)))
-            view.dispatch(deflt());
+          let deflt = () => view2.state.tr.insertText(text).scrollIntoView();
+          if (!/[\r\n]/.test(text) && !view2.someProp("handleTextInput", (f) => f(view2, sel.$from.pos, sel.$to.pos, text, deflt)))
+            view2.dispatch(deflt());
           event.preventDefault();
         }
       };
       selectNodeModifier = mac ? "metaKey" : "ctrlKey";
-      handlers.mousedown = (view, _event) => {
+      handlers.mousedown = (view2, _event) => {
         let event = _event;
-        view.input.shiftKey = event.shiftKey;
-        let flushed = forceDOMFlush(view);
+        view2.input.shiftKey = event.shiftKey;
+        let flushed = forceDOMFlush(view2);
         let now = Date.now(), type = "singleClick";
-        if (now - view.input.lastClick.time < 500 && isNear(event, view.input.lastClick) && !event[selectNodeModifier] && view.input.lastClick.button == event.button) {
-          if (view.input.lastClick.type == "singleClick")
+        if (now - view2.input.lastClick.time < 500 && isNear(event, view2.input.lastClick) && !event[selectNodeModifier] && view2.input.lastClick.button == event.button) {
+          if (view2.input.lastClick.type == "singleClick")
             type = "doubleClick";
-          else if (view.input.lastClick.type == "doubleClick")
+          else if (view2.input.lastClick.type == "doubleClick")
             type = "tripleClick";
         }
-        view.input.lastClick = { time: now, x: event.clientX, y: event.clientY, type, button: event.button };
-        if (view.input.mouseDown)
-          view.input.mouseDown.done();
-        let pos = view.posAtCoords(eventCoords(event));
+        view2.input.lastClick = { time: now, x: event.clientX, y: event.clientY, type, button: event.button };
+        if (view2.input.mouseDown)
+          view2.input.mouseDown.done();
+        let pos = view2.posAtCoords(eventCoords(event));
         if (!pos)
           return;
         if (type == "singleClick") {
-          view.input.mouseDown = new LeftMouseDown(view, pos, event, !!flushed);
-        } else if ((type == "doubleClick" ? handleDoubleClick : handleTripleClick)(view, pos.pos, pos.inside, event)) {
+          view2.input.mouseDown = new LeftMouseDown(view2, pos, event, !!flushed);
+        } else if ((type == "doubleClick" ? handleDoubleClick : handleTripleClick)(view2, pos.pos, pos.inside, event)) {
           event.preventDefault();
         } else {
-          setSelectionOrigin(view, "pointer");
+          setSelectionOrigin(view2, "pointer");
         }
       };
       MouseDown = class {
-        constructor(view) {
-          this.view = view;
+        constructor(view2) {
+          this.view = view2;
           this.mightDrag = null;
-          view.root.addEventListener("mouseup", this.up = this.up.bind(this));
-          view.root.addEventListener("mousemove", this.move = this.move.bind(this));
+          view2.root.addEventListener("mouseup", this.up = this.up.bind(this));
+          view2.root.addEventListener("mousemove", this.move = this.move.bind(this));
         }
         up(event) {
           this.done();
@@ -10020,28 +10020,28 @@
         }
       };
       LeftMouseDown = class extends MouseDown {
-        constructor(view, pos, event, flushed) {
-          super(view);
+        constructor(view2, pos, event, flushed) {
+          super(view2);
           this.pos = pos;
           this.event = event;
           this.flushed = flushed;
           this.delayedSelectionSync = false;
-          this.startDoc = view.state.doc;
+          this.startDoc = view2.state.doc;
           this.selectNode = !!event[selectNodeModifier];
           this.allowDefault = event.shiftKey;
           let targetNode, targetPos;
           if (pos.inside > -1) {
-            targetNode = view.state.doc.nodeAt(pos.inside);
+            targetNode = view2.state.doc.nodeAt(pos.inside);
             targetPos = pos.inside;
           } else {
-            let $pos = view.state.doc.resolve(pos.pos);
+            let $pos = view2.state.doc.resolve(pos.pos);
             targetNode = $pos.parent;
             targetPos = $pos.depth ? $pos.before() : 0;
           }
           const target = flushed ? null : event.target;
-          const targetDesc = target ? view.docView.nearestDesc(target, true) : null;
+          const targetDesc = target ? view2.docView.nearestDesc(target, true) : null;
           this.target = targetDesc && targetDesc.nodeDOM.nodeType == 1 ? targetDesc.nodeDOM : null;
-          let { selection } = view.state;
+          let { selection } = view2.state;
           if (event.button == 0 && (targetNode.type.spec.draggable && targetNode.type.spec.selectable !== false || selection instanceof NodeSelection && selection.from <= targetPos && selection.to > targetPos))
             this.mightDrag = {
               node: targetNode,
@@ -10060,7 +10060,7 @@
               }, 20);
             this.view.domObserver.start();
           }
-          setSelectionOrigin(view, "pointer");
+          setSelectionOrigin(view2, "pointer");
         }
         done() {
           super.done();
@@ -10122,10 +10122,10 @@
         }
       };
       TripleClickDrag = class extends MouseDown {
-        constructor(view, startSelection) {
-          super(view);
+        constructor(view2, startSelection) {
+          super(view2);
           this.startSelection = startSelection;
-          this.startDoc = view.state.doc;
+          this.startDoc = view2.state.doc;
         }
         move(event) {
           if (event.buttons == 0 || this.view.isDestroyed || !this.view.state.doc.eq(this.startDoc)) {
@@ -10143,35 +10143,35 @@
           updateSelection(this.view, TextSelection.create(doc3, anchor, head2), "pointer");
         }
       };
-      handlers.touchstart = (view) => {
-        view.input.lastTouch = Date.now();
-        forceDOMFlush(view);
-        setSelectionOrigin(view, "pointer");
+      handlers.touchstart = (view2) => {
+        view2.input.lastTouch = Date.now();
+        forceDOMFlush(view2);
+        setSelectionOrigin(view2, "pointer");
       };
-      handlers.touchmove = (view) => {
-        view.input.lastTouch = Date.now();
-        setSelectionOrigin(view, "pointer");
+      handlers.touchmove = (view2) => {
+        view2.input.lastTouch = Date.now();
+        setSelectionOrigin(view2, "pointer");
       };
-      handlers.contextmenu = (view) => forceDOMFlush(view);
+      handlers.contextmenu = (view2) => forceDOMFlush(view2);
       timeoutComposition = android ? 5e3 : -1;
-      editHandlers.compositionstart = editHandlers.compositionupdate = (view) => {
-        if (!view.composing) {
-          view.domObserver.flush();
-          let { state: state2 } = view, $pos = state2.selection.$to;
-          if (state2.selection instanceof TextSelection && (state2.storedMarks || !$pos.textOffset && $pos.parentOffset && $pos.nodeBefore.marks.some((m) => m.type.spec.inclusive === false) || chrome && windows && selectionBeforeUneditable(view))) {
-            view.markCursor = view.state.storedMarks || $pos.marks();
-            endComposition(view, true);
-            view.markCursor = null;
+      editHandlers.compositionstart = editHandlers.compositionupdate = (view2) => {
+        if (!view2.composing) {
+          view2.domObserver.flush();
+          let { state: state2 } = view2, $pos = state2.selection.$to;
+          if (state2.selection instanceof TextSelection && (state2.storedMarks || !$pos.textOffset && $pos.parentOffset && $pos.nodeBefore.marks.some((m) => m.type.spec.inclusive === false) || chrome && windows && selectionBeforeUneditable(view2))) {
+            view2.markCursor = view2.state.storedMarks || $pos.marks();
+            endComposition(view2, true);
+            view2.markCursor = null;
           } else {
-            endComposition(view, !state2.selection.empty);
+            endComposition(view2, !state2.selection.empty);
             if (gecko && state2.selection.empty && $pos.parentOffset && !$pos.textOffset && $pos.nodeBefore.marks.length) {
-              let sel = view.domSelectionRange();
+              let sel = view2.domSelectionRange();
               for (let node = sel.focusNode, offset = sel.focusOffset; node && node.nodeType == 1 && offset != 0; ) {
                 let before = offset < 0 ? node.lastChild : node.childNodes[offset - 1];
                 if (!before)
                   break;
                 if (before.nodeType == 3) {
-                  let sel2 = view.domSelection();
+                  let sel2 = view2.domSelection();
                   if (sel2)
                     sel2.collapse(before, before.nodeValue.length);
                   break;
@@ -10182,53 +10182,53 @@
               }
             }
           }
-          view.input.composing = true;
+          view2.input.composing = true;
         }
-        scheduleComposeEnd(view, timeoutComposition);
+        scheduleComposeEnd(view2, timeoutComposition);
       };
-      editHandlers.compositionend = (view, event) => {
-        if (view.composing) {
-          view.input.composing = false;
-          view.input.compositionEndedAt = Date.now();
-          view.input.compositionPendingChanges = view.domObserver.pendingRecords().length ? view.input.compositionID : 0;
-          view.input.compositionNode = null;
-          if (view.input.badSafariComposition)
-            view.domObserver.forceFlush();
-          else if (view.input.compositionPendingChanges)
-            Promise.resolve().then(() => view.domObserver.flush());
-          view.input.compositionID++;
-          scheduleComposeEnd(view, 20);
+      editHandlers.compositionend = (view2, event) => {
+        if (view2.composing) {
+          view2.input.composing = false;
+          view2.input.compositionEndedAt = Date.now();
+          view2.input.compositionPendingChanges = view2.domObserver.pendingRecords().length ? view2.input.compositionID : 0;
+          view2.input.compositionNode = null;
+          if (view2.input.badSafariComposition)
+            view2.domObserver.forceFlush();
+          else if (view2.input.compositionPendingChanges)
+            Promise.resolve().then(() => view2.domObserver.flush());
+          view2.input.compositionID++;
+          scheduleComposeEnd(view2, 20);
         }
       };
       brokenClipboardAPI = ie && ie_version < 15 || ios && webkit_version < 604;
-      handlers.copy = editHandlers.cut = (view, _event) => {
+      handlers.copy = editHandlers.cut = (view2, _event) => {
         let event = _event;
-        let sel = view.state.selection, cut = event.type == "cut";
+        let sel = view2.state.selection, cut = event.type == "cut";
         if (sel.empty)
           return;
         let data2 = brokenClipboardAPI ? null : event.clipboardData;
-        let slice3 = sel.content(), { dom, text } = serializeForClipboard(view, slice3);
+        let slice3 = sel.content(), { dom, text } = serializeForClipboard(view2, slice3);
         if (data2) {
           event.preventDefault();
           data2.clearData();
           data2.setData("text/html", dom.innerHTML);
           data2.setData("text/plain", text);
         } else {
-          captureCopy(view, dom);
+          captureCopy(view2, dom);
         }
         if (cut)
-          view.dispatch(view.state.tr.deleteSelection().scrollIntoView().setMeta("uiEvent", "cut"));
+          view2.dispatch(view2.state.tr.deleteSelection().scrollIntoView().setMeta("uiEvent", "cut"));
       };
-      editHandlers.paste = (view, _event) => {
+      editHandlers.paste = (view2, _event) => {
         let event = _event;
-        if (view.composing && !android)
+        if (view2.composing && !android)
           return;
         let data2 = brokenClipboardAPI ? null : event.clipboardData;
-        let plain = view.input.shiftKey && view.input.lastKeyCode != 45;
-        if (data2 && doPaste(view, getText(data2), data2.getData("text/html"), plain, event))
+        let plain = view2.input.shiftKey && view2.input.lastKeyCode != 45;
+        if (data2 && doPaste(view2, getText(data2), data2.getData("text/html"), plain, event))
           event.preventDefault();
         else
-          capturePaste(view, event);
+          capturePaste(view2, event);
       };
       Dragging = class {
         constructor(slice3, move, node) {
@@ -10238,88 +10238,88 @@
         }
       };
       dragCopyModifier = mac ? "altKey" : "ctrlKey";
-      handlers.dragstart = (view, _event) => {
+      handlers.dragstart = (view2, _event) => {
         let event = _event;
-        let mouseDown = view.input.mouseDown;
+        let mouseDown = view2.input.mouseDown;
         if (mouseDown)
           mouseDown.done();
         if (!event.dataTransfer)
           return;
-        let sel = view.state.selection;
-        let pos = sel.empty ? null : view.posAtCoords(eventCoords(event));
+        let sel = view2.state.selection;
+        let pos = sel.empty ? null : view2.posAtCoords(eventCoords(event));
         let node;
         if (pos && pos.pos >= sel.from && pos.pos <= (sel instanceof NodeSelection ? sel.to - 1 : sel.to)) ;
         else if (mouseDown && mouseDown.mightDrag) {
-          node = NodeSelection.create(view.state.doc, mouseDown.mightDrag.pos);
+          node = NodeSelection.create(view2.state.doc, mouseDown.mightDrag.pos);
         } else if (event.target && event.target.nodeType == 1) {
-          let desc = view.docView.nearestDesc(event.target, true);
-          if (desc && desc.node.type.spec.draggable && desc != view.docView)
-            node = NodeSelection.create(view.state.doc, desc.posBefore);
+          let desc = view2.docView.nearestDesc(event.target, true);
+          if (desc && desc.node.type.spec.draggable && desc != view2.docView)
+            node = NodeSelection.create(view2.state.doc, desc.posBefore);
         }
-        let draggedSlice = (node || view.state.selection).content();
-        let { dom, text, slice: slice3 } = serializeForClipboard(view, draggedSlice);
+        let draggedSlice = (node || view2.state.selection).content();
+        let { dom, text, slice: slice3 } = serializeForClipboard(view2, draggedSlice);
         if (!event.dataTransfer.files.length || !chrome || chrome_version > 120)
           event.dataTransfer.clearData();
         event.dataTransfer.setData(brokenClipboardAPI ? "Text" : "text/html", dom.innerHTML);
         event.dataTransfer.effectAllowed = "copyMove";
         if (!brokenClipboardAPI)
           event.dataTransfer.setData("text/plain", text);
-        view.dragging = new Dragging(slice3, dragMoves(view, event), node);
+        view2.dragging = new Dragging(slice3, dragMoves(view2, event), node);
       };
-      handlers.dragend = (view) => {
-        let dragging = view.dragging;
+      handlers.dragend = (view2) => {
+        let dragging = view2.dragging;
         window.setTimeout(() => {
-          if (view.dragging == dragging)
-            view.dragging = null;
+          if (view2.dragging == dragging)
+            view2.dragging = null;
         }, 50);
       };
       editHandlers.dragover = editHandlers.dragenter = (_2, e) => e.preventDefault();
-      editHandlers.drop = (view, event) => {
+      editHandlers.drop = (view2, event) => {
         try {
-          handleDrop(view, event, view.dragging);
+          handleDrop(view2, event, view2.dragging);
         } finally {
-          view.dragging = null;
+          view2.dragging = null;
         }
       };
-      handlers.focus = (view) => {
-        view.input.lastFocus = Date.now();
-        if (!view.focused) {
-          view.domObserver.stop();
-          view.dom.classList.add("ProseMirror-focused");
-          view.domObserver.start();
-          view.focused = true;
+      handlers.focus = (view2) => {
+        view2.input.lastFocus = Date.now();
+        if (!view2.focused) {
+          view2.domObserver.stop();
+          view2.dom.classList.add("ProseMirror-focused");
+          view2.domObserver.start();
+          view2.focused = true;
           setTimeout(() => {
-            if (view.docView && view.hasFocus() && !view.domObserver.currentSelection.eq(view.domSelectionRange()))
-              selectionToDOM(view);
+            if (view2.docView && view2.hasFocus() && !view2.domObserver.currentSelection.eq(view2.domSelectionRange()))
+              selectionToDOM(view2);
           }, 20);
         }
       };
-      handlers.blur = (view, _event) => {
+      handlers.blur = (view2, _event) => {
         let event = _event;
-        if (view.focused) {
-          view.domObserver.stop();
-          view.dom.classList.remove("ProseMirror-focused");
-          view.domObserver.start();
-          if (event.relatedTarget && view.dom.contains(event.relatedTarget))
-            view.domObserver.currentSelection.clear();
-          view.focused = false;
+        if (view2.focused) {
+          view2.domObserver.stop();
+          view2.dom.classList.remove("ProseMirror-focused");
+          view2.domObserver.start();
+          if (event.relatedTarget && view2.dom.contains(event.relatedTarget))
+            view2.domObserver.currentSelection.clear();
+          view2.focused = false;
         }
       };
-      handlers.beforeinput = (view, _event) => {
+      handlers.beforeinput = (view2, _event) => {
         let event = _event;
         if (chrome && android && event.inputType == "deleteContentBackward") {
-          view.domObserver.flushSoon();
-          let { domChangeCount } = view.input;
+          view2.domObserver.flushSoon();
+          let { domChangeCount } = view2.input;
           setTimeout(() => {
-            if (view.input.domChangeCount != domChangeCount)
+            if (view2.input.domChangeCount != domChangeCount)
               return;
-            view.dom.blur();
-            view.focus();
-            if (view.someProp("handleKeyDown", (f) => f(view, keyEvent(8, "Backspace"))))
+            view2.dom.blur();
+            view2.focus();
+            if (view2.someProp("handleKeyDown", (f) => f(view2, keyEvent(8, "Backspace"))))
               return;
-            let { $cursor } = view.state.selection;
+            let { $cursor } = view2.state.selection;
             if ($cursor && $cursor.pos > 0)
-              view.dispatch(view.state.tr.delete($cursor.pos - 1, $cursor.pos).scrollIntoView());
+              view2.dispatch(view2.state.tr.delete($cursor.pos - 1, $cursor.pos).scrollIntoView());
           }, 50);
         }
       };
@@ -10786,8 +10786,8 @@
         }
       };
       DOMObserver = class {
-        constructor(view, handleDOMChange) {
-          this.view = view;
+        constructor(view2, handleDOMChange) {
+          this.view = view2;
           this.handleDOMChange = handleDOMChange;
           this.queue = [];
           this.flushingSoon = -1;
@@ -10801,8 +10801,8 @@
               this.queue.push(mutations[i5]);
             if (ie && ie_version <= 11 && mutations.some((m) => m.type == "childList" && m.removedNodes.length || m.type == "characterData" && m.oldValue.length > m.target.nodeValue.length)) {
               this.flushSoon();
-            } else if (safari && view.composing && mutations.some((m) => m.type == "childList" && m.target.nodeName == "TR")) {
-              view.input.badSafariComposition = true;
+            } else if (safari && view2.composing && mutations.some((m) => m.type == "childList" && m.target.nodeName == "TR")) {
+              view2.input.badSafariComposition = true;
               this.flushSoon();
             } else {
               this.flush();
@@ -10905,16 +10905,16 @@
           return this.queue;
         }
         flush() {
-          let { view } = this;
-          if (!view.docView || this.flushingSoon > -1)
+          let { view: view2 } = this;
+          if (!view2.docView || this.flushingSoon > -1)
             return;
           let mutations = this.pendingRecords();
           if (mutations.length)
             this.queue = [];
-          let sel = view.domSelectionRange();
-          let newSel = !this.suppressingSelectionUpdates && !this.currentSelection.eq(sel) && hasFocusAndSelection(view) && !this.ignoreSelectionChange(sel);
+          let sel = view2.domSelectionRange();
+          let newSel = !this.suppressingSelectionUpdates && !this.currentSelection.eq(sel) && hasFocusAndSelection(view2) && !this.ignoreSelectionChange(sel);
           let from2 = -1, to = -1, typeOver = false, added = [];
-          if (view.editable) {
+          if (view2.editable) {
             for (let i5 = 0; i5 < mutations.length; i5++) {
               let result = this.registerMutation(mutations[i5], added);
               if (result) {
@@ -10925,7 +10925,7 @@
               }
             }
           }
-          if (added.some((n2) => n2.nodeName == "BR") && (view.input.lastKeyCode == 8 || view.input.lastKeyCode == 46 || chrome && (view.composing || view.input.compositionEndedAt > Date.now() - 50) && mutations.some((m) => m.type == "childList" && m.removedNodes.length))) {
+          if (added.some((n2) => n2.nodeName == "BR") && (view2.input.lastKeyCode == 8 || view2.input.lastKeyCode == 46 || chrome && (view2.composing || view2.input.compositionEndedAt > Date.now() - 50) && mutations.some((m) => m.type == "childList" && m.removedNodes.length))) {
             for (let node of added)
               if (node.nodeName == "BR" && node.parentNode) {
                 let after = node.nextSibling;
@@ -10949,31 +10949,31 @@
               let { focusNode } = this.currentSelection;
               for (let br of brs) {
                 let parent = br.parentNode;
-                if (parent && parent.nodeName == "LI" && (!focusNode || blockParent(view, focusNode) != parent))
+                if (parent && parent.nodeName == "LI" && (!focusNode || blockParent(view2, focusNode) != parent))
                   br.remove();
               }
             }
           }
           let readSel = null;
-          if (from2 < 0 && newSel && view.input.lastFocus > Date.now() - 200 && Math.max(view.input.lastTouch, view.input.lastClick.time) < Date.now() - 300 && selectionCollapsed(sel) && (readSel = selectionFromDOM(view)) && readSel.eq(Selection.near(view.state.doc.resolve(0), 1))) {
-            view.input.lastFocus = 0;
-            selectionToDOM(view);
+          if (from2 < 0 && newSel && view2.input.lastFocus > Date.now() - 200 && Math.max(view2.input.lastTouch, view2.input.lastClick.time) < Date.now() - 300 && selectionCollapsed(sel) && (readSel = selectionFromDOM(view2)) && readSel.eq(Selection.near(view2.state.doc.resolve(0), 1))) {
+            view2.input.lastFocus = 0;
+            selectionToDOM(view2);
             this.currentSelection.set(sel);
-            view.scrollToSelection();
+            view2.scrollToSelection();
           } else if (from2 > -1 || newSel) {
             if (from2 > -1) {
-              view.docView.markDirty(from2, to);
-              checkCSS(view);
+              view2.docView.markDirty(from2, to);
+              checkCSS(view2);
             }
-            if (view.input.badSafariComposition) {
-              view.input.badSafariComposition = false;
-              fixUpBadSafariComposition(view, added);
+            if (view2.input.badSafariComposition) {
+              view2.input.badSafariComposition = false;
+              fixUpBadSafariComposition(view2, added);
             }
             this.handleDOMChange(from2, to, typeOver, added);
-            if (view.docView && view.docView.dirty)
-              view.updateState(view.state);
+            if (view2.docView && view2.docView.dirty)
+              view2.updateState(view2.state);
             else if (!this.currentSelection.eq(sel))
-              selectionToDOM(view);
+              selectionToDOM(view2);
             this.currentSelection.set(sel);
           }
         }
@@ -11208,10 +11208,10 @@
           }
         }
         destroyPluginViews() {
-          let view;
-          while (view = this.pluginViews.pop())
-            if (view.destroy)
-              view.destroy();
+          let view2;
+          while (view2 = this.pluginViews.pop())
+            if (view2.destroy)
+              view2.destroy();
         }
         updatePluginViews(prevState) {
           if (!prevState || prevState.plugins != this.state.plugins || this.directPlugins != this.prevDirectPlugins) {
@@ -11775,13 +11775,13 @@
       config: config2,
       props: {
         handleDOMEvents: {
-          beforeinput(view, e) {
+          beforeinput(view2, e) {
             let inputType = e.inputType;
             let command = inputType == "historyUndo" ? undo : inputType == "historyRedo" ? redo : null;
-            if (!command || !view.editable)
+            if (!command || !view2.editable)
               return false;
             e.preventDefault();
-            return command(view.state, view.dispatch);
+            return command(view2.state, view2.dispatch);
           }
         }
       }
@@ -12191,20 +12191,20 @@
   }
   function keydownHandler(bindings) {
     let map2 = normalize(bindings);
-    return function(view, event) {
+    return function(view2, event) {
       let name5 = keyName(event), baseName, direct = map2[modifiers(name5, event)];
-      if (direct && direct(view.state, view.dispatch, view))
+      if (direct && direct(view2.state, view2.dispatch, view2))
         return true;
       if (name5.length == 1 && name5 != " ") {
         if (event.shiftKey) {
           let noShift = map2[modifiers(name5, event, false)];
-          if (noShift && noShift(view.state, view.dispatch, view))
+          if (noShift && noShift(view2.state, view2.dispatch, view2))
             return true;
         }
         if ((event.altKey || event.metaKey || event.ctrlKey) && // Ctrl-Alt may be used for AltGr on Windows
         !(windows2 && event.ctrlKey && event.altKey) && (baseName = base[event.keyCode]) && baseName != name5) {
           let fromCode = map2[modifiers(baseName, event)];
-          if (fromCode && fromCode(view.state, view.dispatch, view))
+          if (fromCode && fromCode(view2.state, view2.dispatch, view2))
             return true;
         }
       }
@@ -12222,9 +12222,9 @@
   });
 
   // node_modules/prosemirror-commands/dist/index.js
-  function atBlockStart(state2, view) {
+  function atBlockStart(state2, view2) {
     let { $cursor } = state2.selection;
-    if (!$cursor || (view ? !view.endOfTextblock("backward", state2) : $cursor.parentOffset > 0))
+    if (!$cursor || (view2 ? !view2.endOfTextblock("backward", state2) : $cursor.parentOffset > 0))
       return null;
     return $cursor;
   }
@@ -12247,9 +12247,9 @@
       }
     return null;
   }
-  function atBlockEnd(state2, view) {
+  function atBlockEnd(state2, view2) {
     let { $cursor } = state2.selection;
-    if (!$cursor || (view ? !view.endOfTextblock("forward", state2) : $cursor.parentOffset < $cursor.parent.content.size))
+    if (!$cursor || (view2 ? !view2.endOfTextblock("forward", state2) : $cursor.parentOffset < $cursor.parent.content.size))
       return null;
     return $cursor;
   }
@@ -12532,9 +12532,9 @@
     };
   }
   function chainCommands(...commands) {
-    return function(state2, dispatch, view) {
+    return function(state2, dispatch, view2) {
       for (let i5 = 0; i5 < commands.length; i5++)
-        if (commands[i5](state2, dispatch, view))
+        if (commands[i5](state2, dispatch, view2))
           return true;
       return false;
     };
@@ -12552,8 +12552,8 @@
           dispatch(state2.tr.deleteSelection().scrollIntoView());
         return true;
       };
-      joinBackward = (state2, dispatch, view) => {
-        let $cursor = atBlockStart(state2, view);
+      joinBackward = (state2, dispatch, view2) => {
+        let $cursor = atBlockStart(state2, view2);
         if (!$cursor)
           return false;
         let $cut = findCutBefore($cursor);
@@ -12590,12 +12590,12 @@
         }
         return false;
       };
-      selectNodeBackward = (state2, dispatch, view) => {
+      selectNodeBackward = (state2, dispatch, view2) => {
         let { $head, empty: empty2 } = state2.selection, $cut = $head;
         if (!empty2)
           return false;
         if ($head.parent.isTextblock) {
-          if (view ? !view.endOfTextblock("backward", state2) : $head.parentOffset > 0)
+          if (view2 ? !view2.endOfTextblock("backward", state2) : $head.parentOffset > 0)
             return false;
           $cut = findCutBefore($head);
         }
@@ -12606,8 +12606,8 @@
           dispatch(state2.tr.setSelection(NodeSelection.create(state2.doc, $cut.pos - node.nodeSize)).scrollIntoView());
         return true;
       };
-      joinForward = (state2, dispatch, view) => {
-        let $cursor = atBlockEnd(state2, view);
+      joinForward = (state2, dispatch, view2) => {
+        let $cursor = atBlockEnd(state2, view2);
         if (!$cursor)
           return false;
         let $cut = findCutAfter($cursor);
@@ -12634,12 +12634,12 @@
         }
         return false;
       };
-      selectNodeForward = (state2, dispatch, view) => {
+      selectNodeForward = (state2, dispatch, view2) => {
         let { $head, empty: empty2 } = state2.selection, $cut = $head;
         if (!empty2)
           return false;
         if ($head.parent.isTextblock) {
-          if (view ? !view.endOfTextblock("forward", state2) : $head.parentOffset < $head.parent.content.size)
+          if (view2 ? !view2.endOfTextblock("forward", state2) : $head.parentOffset < $head.parent.content.size)
             return false;
           $cut = findCutAfter($head);
         }
@@ -12965,15 +12965,15 @@
         }
       },
       props: {
-        handleTextInput(view, from2, to, text) {
-          return run(view, from2, to, text, rules, plugin);
+        handleTextInput(view2, from2, to, text) {
+          return run(view2, from2, to, text, rules, plugin);
         },
         handleDOMEvents: {
-          compositionend: (view) => {
+          compositionend: (view2) => {
             setTimeout(() => {
-              let { $cursor } = view.state.selection;
+              let { $cursor } = view2.state.selection;
               if ($cursor)
-                run(view, $cursor.pos, $cursor.pos, "", rules, plugin);
+                run(view2, $cursor.pos, $cursor.pos, "", rules, plugin);
             });
           }
         }
@@ -12982,10 +12982,10 @@
     });
     return plugin;
   }
-  function run(view, from2, to, text, rules, plugin) {
-    if (view.composing)
+  function run(view2, from2, to, text, rules, plugin) {
+    if (view2.composing)
       return false;
-    let state2 = view.state, $from = state2.doc.resolve(from2);
+    let state2 = view2.state, $from = state2.doc.resolve(from2);
     let textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - MAX_MATCH), $from.parentOffset, null, "\uFFFC") + text;
     for (let i5 = 0; i5 < rules.length; i5++) {
       let rule = rules[i5];
@@ -13015,7 +13015,7 @@
         continue;
       if (rule.undoable)
         tr2.setMeta(plugin, { transform: tr2, from: from2, to, text });
-      view.dispatch(tr2);
+      view2.dispatch(tr2);
       return true;
     }
     return false;
@@ -13291,11 +13291,11 @@
   }
   function arrow(axis, dir) {
     const dirStr = axis == "vert" ? dir > 0 ? "down" : "up" : dir > 0 ? "right" : "left";
-    return function(state2, dispatch, view) {
+    return function(state2, dispatch, view2) {
       let sel = state2.selection;
       let $start = dir > 0 ? sel.$to : sel.$from, mustMove = sel.empty;
       if (sel instanceof TextSelection) {
-        if (!view.endOfTextblock(dirStr) || $start.depth == 0)
+        if (!view2.endOfTextblock(dirStr) || $start.depth == 0)
           return false;
         mustMove = false;
         $start = state2.doc.resolve(dir > 0 ? $start.after() : $start.before());
@@ -13308,31 +13308,31 @@
       return true;
     };
   }
-  function handleClick(view, pos, event) {
-    if (!view || !view.editable)
+  function handleClick(view2, pos, event) {
+    if (!view2 || !view2.editable)
       return false;
-    let $pos = view.state.doc.resolve(pos);
+    let $pos = view2.state.doc.resolve(pos);
     if (!GapCursor.valid($pos))
       return false;
-    let clickPos = view.posAtCoords({ left: event.clientX, top: event.clientY });
-    if (clickPos && clickPos.inside > -1 && NodeSelection.isSelectable(view.state.doc.nodeAt(clickPos.inside)))
+    let clickPos = view2.posAtCoords({ left: event.clientX, top: event.clientY });
+    if (clickPos && clickPos.inside > -1 && NodeSelection.isSelectable(view2.state.doc.nodeAt(clickPos.inside)))
       return false;
-    view.dispatch(view.state.tr.setSelection(new GapCursor($pos)));
+    view2.dispatch(view2.state.tr.setSelection(new GapCursor($pos)));
     return true;
   }
-  function beforeinput(view, event) {
-    if (event.inputType != "insertCompositionText" || !(view.state.selection instanceof GapCursor))
+  function beforeinput(view2, event) {
+    if (event.inputType != "insertCompositionText" || !(view2.state.selection instanceof GapCursor))
       return false;
-    let { $from } = view.state.selection;
-    let insert = $from.parent.contentMatchAt($from.index()).findWrapping(view.state.schema.nodes.text);
+    let { $from } = view2.state.selection;
+    let insert = $from.parent.contentMatchAt($from.index()).findWrapping(view2.state.schema.nodes.text);
     if (!insert)
       return false;
     let frag = Fragment.empty;
     for (let i5 = insert.length - 1; i5 >= 0; i5--)
       frag = Fragment.from(insert[i5].createAndFill(null, frag));
-    let tr2 = view.state.tr.replace($from.pos, $from.pos, new Slice(frag, 0, 0));
+    let tr2 = view2.state.tr.replace($from.pos, $from.pos, new Slice(frag, 0, 0));
     tr2.setSelection(TextSelection.near(tr2.doc.resolve($from.pos + 1)));
-    view.dispatch(tr2);
+    view2.dispatch(tr2);
     return false;
   }
   function drawGapCursor(state2) {
@@ -13828,40 +13828,40 @@
       } }
     });
   }
-  function setQuery(view, q) {
-    view.dispatch(view.state.tr.setMeta(searchKey, q));
-    return searchKey.getState(view.state).matches.length;
+  function setQuery(view2, q) {
+    view2.dispatch(view2.state.tr.setMeta(searchKey, q));
+    return searchKey.getState(view2.state).matches.length;
   }
-  function gotoMatch(view, dir) {
-    const { matches: matches2 } = searchKey.getState(view.state);
+  function gotoMatch(view2, dir) {
+    const { matches: matches2 } = searchKey.getState(view2.state);
     if (!matches2.length) return 0;
-    const cur = view.state.selection.from;
+    const cur = view2.state.selection.from;
     let m = dir > 0 ? matches2.find((x) => x.from > cur) : [...matches2].reverse().find((x) => x.from < cur);
     if (!m) m = dir > 0 ? matches2[0] : matches2[matches2.length - 1];
-    view.dispatch(view.state.tr.setSelection(
-      TextSelection.create(view.state.doc, m.from, m.to)
+    view2.dispatch(view2.state.tr.setSelection(
+      TextSelection.create(view2.state.doc, m.from, m.to)
     ).scrollIntoView());
-    view.focus();
+    view2.focus();
     return matches2.indexOf(m) + 1;
   }
-  function replaceCurrent(view, text) {
-    const { matches: matches2, query } = searchKey.getState(view.state);
-    const { from: from2, to } = view.state.selection;
+  function replaceCurrent(view2, text) {
+    const { matches: matches2, query } = searchKey.getState(view2.state);
+    const { from: from2, to } = view2.state.selection;
     const hit = matches2.find((m) => m.from === from2 && m.to === to);
     if (!hit) {
-      gotoMatch(view, 1);
+      gotoMatch(view2, 1);
       return false;
     }
-    view.dispatch(view.state.tr.insertText(text, from2, to));
-    gotoMatch(view, 1);
+    view2.dispatch(view2.state.tr.insertText(text, from2, to));
+    gotoMatch(view2, 1);
     return true;
   }
-  function replaceAll(view, text) {
-    const { matches: matches2 } = searchKey.getState(view.state);
+  function replaceAll(view2, text) {
+    const { matches: matches2 } = searchKey.getState(view2.state);
     if (!matches2.length) return 0;
-    let tr2 = view.state.tr;
+    let tr2 = view2.state.tr;
     for (const m of [...matches2].reverse()) tr2 = tr2.insertText(text, m.from, m.to);
-    view.dispatch(tr2);
+    view2.dispatch(tr2);
     return matches2.length;
   }
   var searchKey;
@@ -14945,8 +14945,8 @@
         } }
       });
     }
-    function refresh(view) {
-      if (view) view.dispatch(view.state.tr.setMeta(key2, true));
+    function refresh(view2) {
+      if (view2) view2.dispatch(view2.state.tr.setMeta(key2, true));
     }
     return { key: key2, setBreaks, breaks, plugin, refresh };
   }
@@ -15462,8 +15462,8 @@
       } }
     });
   }
-  function refreshMarkdownCodes(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(MD_CODE_KEY, true));
+  function refreshMarkdownCodes(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(MD_CODE_KEY, true));
   }
   var MD_CODE_KEY, MD_HIDE_CLASS, MD_PREFIXES, _on;
   var init_markdown_code_toggle = __esm({
@@ -15576,8 +15576,8 @@
       } }
     });
   }
-  function refreshMentions(view) {
-    view.dispatch(view.state.tr.setMeta(mentionKey, true));
+  function refreshMentions(view2) {
+    view2.dispatch(view2.state.tr.setMeta(mentionKey, true));
   }
   function spellScan(doc3, checkFn, from2, to) {
     if (!checkFn) return [];
@@ -15609,8 +15609,8 @@
       } }
     });
   }
-  function refreshSpell(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(spellKey, true));
+  function refreshSpell(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(spellKey, true));
   }
   function setFocusLine(on2) {
     _focusOn = !!on2;
@@ -15635,8 +15635,8 @@
       } }
     });
   }
-  function refreshFocusLine(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(focusKey, true));
+  function refreshFocusLine(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(focusKey, true));
   }
   function setCommentAnchors(quotes, active) {
     _cmQuotes = [...new Set((quotes || []).filter((q) => q && q.length >= 2))];
@@ -15672,8 +15672,8 @@
       } }
     });
   }
-  function refreshCommentAnchors(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(cmKey, true));
+  function refreshCommentAnchors(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(cmKey, true));
   }
   function markRule(regexp, markType) {
     return new InputRule(regexp, (state2, match, start, end) => {
@@ -15930,11 +15930,11 @@
           this.view = new EditorView(mount, {
             editable: editable ? () => editable() : void 0,
             state: this._mkState(doc3),
-            handleKeyDown(view, ev) {
+            handleKeyDown(view2, ev) {
               return onKeyDown ? onKeyDown(ev) : false;
             },
             handleDOMEvents: {
-              mousedown(view, ev) {
+              mousedown(view2, ev) {
                 if (!onMention || !(ev.ctrlKey || ev.metaKey)) return false;
                 const t3 = ev.target && ev.target.closest && ev.target.closest(".k-mention");
                 if (!t3) return false;
@@ -15942,7 +15942,7 @@
                 onMention(t3.textContent.replace(/^\[\[|\]\]$/g, ""));
                 return true;
               },
-              auxclick(view, ev) {
+              auxclick(view2, ev) {
                 if (!onMention || ev.button !== 1) return false;
                 const t3 = ev.target && ev.target.closest && ev.target.closest(".k-mention");
                 if (!t3) return false;
@@ -16359,6 +16359,263 @@
         const n2 = parseInt(v2, 10);
         return Number.isFinite(n2) && n2 > 0 ? n2 : 0;
       };
+    }
+  });
+
+  // src/wiki-profile.js
+  function templateProfile(tpl) {
+    const p = tpl && tpl.profile || {};
+    const badges = Array.isArray(p.badgeFields) ? p.badgeFields.map((k) => String(k || "").trim()).filter(Boolean) : [];
+    return {
+      subtitleField: String(p.subtitleField || "").trim(),
+      statusField: String(p.statusField || "").trim(),
+      badgeFields: badges
+    };
+  }
+  function entityPortrait(entity) {
+    const list = migrateImages(entity && entity.images);
+    if (!list.length) return null;
+    const im = list[0];
+    return { file: im.file, alt: imageAlt(im), caption: im.caption || "" };
+  }
+  function fieldValue(entity, key2) {
+    if (!entity || !key2) return "";
+    const f = entity.fields || {}, c = entity.customProperties || {};
+    const v2 = key2 in f ? f[key2] : key2 in c ? c[key2] : "";
+    return v2 == null ? "" : String(v2).trim();
+  }
+  function profileData(entity, tpl, labels = {}) {
+    const prof = templateProfile(tpl);
+    const lbl = (k) => labels && labels[k] || k;
+    const badges = [];
+    for (const k of prof.badgeFields) {
+      const v2 = fieldValue(entity, k);
+      if (v2) badges.push({ key: k, label: lbl(k), value: v2 });
+    }
+    return {
+      portrait: entityPortrait(entity),
+      name: String(entity && entity.name || "").trim(),
+      aliases: Array.isArray(entity && entity.aliases) ? entity.aliases.filter(Boolean) : [],
+      subtitle: prof.subtitleField ? fieldValue(entity, prof.subtitleField) : "",
+      subtitleLabel: prof.subtitleField ? lbl(prof.subtitleField) : "",
+      status: prof.statusField ? fieldValue(entity, prof.statusField) : "",
+      statusLabel: prof.statusField ? lbl(prof.statusField) : "",
+      badges
+    };
+  }
+  function statusTone(tpl, value) {
+    const words = tpl && tpl.profile && tpl.profile.statusWords || null;
+    if (!words || !value) return "plain";
+    const v2 = String(value).toLowerCase();
+    for (const tone of Object.keys(words)) {
+      const list = Array.isArray(words[tone]) ? words[tone] : [];
+      if (list.some((w) => w && v2.includes(String(w).toLowerCase()))) return tone;
+    }
+    return "plain";
+  }
+  function mergeBuiltInTemplateMeta(projectTpls, shippedTpls, keys4 = ["profile"]) {
+    const out = Array.isArray(projectTpls) ? projectTpls.map((t3) => ({ ...t3 })) : [];
+    const shipped = Array.isArray(shippedTpls) ? shippedTpls : [];
+    const byId = new Map(shipped.filter((t3) => t3.id).map((t3) => [t3.id, t3]));
+    const byName = new Map(shipped.map((t3) => [t3.entityTypeKey + "" + t3.name, t3]));
+    let changed = false;
+    for (const t3 of out) {
+      if (!t3 || !t3.builtIn) continue;
+      const src2 = byId.get(t3.id) || byName.get(t3.entityTypeKey + "" + t3.name);
+      if (!src2) continue;
+      for (const k of keys4) {
+        if (src2[k] !== void 0 && t3[k] === void 0) {
+          t3[k] = src2[k];
+          changed = true;
+        }
+      }
+    }
+    return { templates: out, changed };
+  }
+  var init_wiki_profile = __esm({
+    "src/wiki-profile.js"() {
+      init_wiki_images();
+    }
+  });
+
+  // src/log-core.js
+  function normLevel(lv) {
+    const s = String(lv || "").toLowerCase();
+    return LEVELS.includes(s) ? s : "info";
+  }
+  function splitSource(msg) {
+    const s = String(msg == null ? "" : msg);
+    const i5 = s.indexOf(":");
+    if (i5 <= 0 || i5 > 24) return { source: "", msg: s };
+    const head2 = s.slice(0, i5);
+    if (!/^[\p{L}\p{M}\p{N}._\-/]+( [\p{L}\p{M}\p{N}._\-/]+)?$/u.test(head2)) return { source: "", msg: s };
+    return { source: head2, msg: s.slice(i5 + 1).trim() };
+  }
+  function detailText(extra) {
+    if (extra === void 0 || extra === null) return "";
+    if (extra instanceof Error) return extra.stack || extra.name + ": " + extra.message;
+    if (typeof extra === "string") return extra;
+    try {
+      return JSON.stringify(extra, replacer(), 2);
+    } catch {
+      return String(extra);
+    }
+  }
+  function replacer() {
+    const seen = /* @__PURE__ */ new WeakSet();
+    return (k, v2) => {
+      if (v2 instanceof Error) return { name: v2.name, message: v2.message, stack: v2.stack };
+      if (typeof v2 === "object" && v2 !== null) {
+        if (seen.has(v2)) return "[\u0E27\u0E19\u0E0B\u0E49\u0E33]";
+        seen.add(v2);
+      }
+      if (typeof v2 === "function") return "[function]";
+      return v2;
+    };
+  }
+  function formatLine(rec) {
+    let line = `[${rec.ts}] ${rec.level.toUpperCase()} ` + (rec.source ? rec.source + ": " : "") + rec.msg;
+    if (rec.detail) line += " | " + rec.detail.replace(/\n/g, "\\n");
+    return line;
+  }
+  function shortTime(ts) {
+    const m = String(ts || "").match(/T(\d{2}:\d{2}:\d{2})/);
+    return m ? m[1] : String(ts || "").slice(0, 8);
+  }
+  function createLogStore(max2 = 2e3) {
+    const cap = Math.max(50, max2 | 0);
+    const recs = [];
+    let seq2 = 0;
+    const counts = { error: 0, warn: 0, info: 0, debug: 0 };
+    const push = (level, msg, extra, ts) => {
+      const lv = normLevel(level);
+      const { source, msg: text } = splitSource(msg);
+      const detail = detailText(extra);
+      const last2 = recs[recs.length - 1];
+      if (last2 && last2.level === lv && last2.source === source && last2.msg === text && last2.detail === detail) {
+        last2.count++;
+        last2.ts = ts;
+        return last2;
+      }
+      const rec = { seq: ++seq2, ts, level: lv, source, msg: text, detail, count: 1 };
+      recs.push(rec);
+      counts[lv]++;
+      while (recs.length > cap) {
+        const old = recs.shift();
+        counts[old.level] -= old.count;
+      }
+      return rec;
+    };
+    return {
+      push,
+      all: () => recs.slice(),
+      size: () => recs.length,
+      lastSeq: () => seq2,
+      counts: () => ({ ...counts }),
+      sources: () => [...new Set(recs.map((r) => r.source).filter(Boolean))].sort(),
+      clear: () => {
+        recs.length = 0;
+        for (const k of LEVELS) counts[k] = 0;
+      }
+    };
+  }
+  function filterLogs(recs, opts = {}) {
+    const lv = opts.levels && (opts.levels.size ?? opts.levels.length) ? new Set(opts.levels instanceof Set ? [...opts.levels] : opts.levels) : null;
+    const src2 = String(opts.source || "").trim();
+    const q = String(opts.q || "").trim().toLowerCase();
+    return (recs || []).filter((r) => {
+      if (lv && !lv.has(r.level)) return false;
+      if (src2 && r.source !== src2) return false;
+      if (q) {
+        const hay = (r.source + " " + r.msg + " " + r.detail).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+  function exportText(recs) {
+    return (recs || []).map((r) => formatLine(r) + (r.count > 1 ? `  (\u0E0B\u0E49\u0E33 ${r.count} \u0E04\u0E23\u0E31\u0E49\u0E07)` : "")).join("\n");
+  }
+  var LEVELS, LEVEL_META;
+  var init_log_core = __esm({
+    "src/log-core.js"() {
+      LEVELS = ["error", "warn", "info", "debug"];
+      LEVEL_META = {
+        error: { icon: "\u26D4", label: "\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14", rank: 0 },
+        warn: { icon: "\u26A0", label: "\u0E40\u0E15\u0E37\u0E2D\u0E19", rank: 1 },
+        info: { icon: "\u2139", label: "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B", rank: 2 },
+        debug: { icon: "\xB7", label: "\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14", rank: 3 }
+      };
+    }
+  });
+
+  // src/dirty-registry.js
+  function createDirtyRegistry() {
+    const providers = /* @__PURE__ */ new Map();
+    const register2 = (id, p) => {
+      if (!id || !p || typeof p.list !== "function") throw new Error("dirty-registry: provider \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35 list()");
+      providers.set(id, { label: p.label || id, list: p.list, save: p.save || null });
+      return () => providers.delete(id);
+    };
+    const collect = () => {
+      const out = [];
+      for (const [id, p] of providers) {
+        let items = [];
+        try {
+          items = p.list() || [];
+        } catch {
+          items = [];
+        }
+        for (const it of items) {
+          if (!it || !it.key) continue;
+          out.push({
+            key: String(it.key),
+            title: it.title || String(it.key),
+            file: it.file || "",
+            source: id,
+            sourceLabel: p.label
+          });
+        }
+      }
+      return out;
+    };
+    const saveKeys2 = async (keys4) => {
+      const want = new Set((keys4 || []).map(String));
+      const items = collect().filter((x) => want.has(x.key));
+      const failed = [];
+      let saved = 0;
+      for (const it of items) {
+        const p = providers.get(it.source);
+        if (!p || !p.save) {
+          failed.push({ key: it.key, error: "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" });
+          continue;
+        }
+        try {
+          const ok2 = await p.save(it.key);
+          if (ok2 === false) failed.push({ key: it.key, error: "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08" });
+          else saved++;
+        } catch (e) {
+          failed.push({ key: it.key, error: e && e.message || String(e) });
+        }
+      }
+      return { saved, failed };
+    };
+    return {
+      register: register2,
+      unregister: (id) => providers.delete(id),
+      has: (id) => providers.has(id),
+      ids: () => [...providers.keys()],
+      collect,
+      count: () => collect().length,
+      saveKeys: saveKeys2,
+      clear: () => providers.clear()
+    };
+  }
+  var dirtyRegistry, registerDirtySource;
+  var init_dirty_registry = __esm({
+    "src/dirty-registry.js"() {
+      dirtyRegistry = createDirtyRegistry();
+      registerDirtySource = (id, p) => dirtyRegistry.register(id, p);
     }
   });
 
@@ -18163,15 +18420,15 @@
         // เรียกหลังทุกการพิมพ์: ดูข้อความก่อนเคอร์เซอร์ หาชื่อที่ขึ้นต้นตรงกัน
         // opts.minLen = จำนวนอักษรขั้นต่ำที่เริ่มเดา (บทหนังแบบ Final Draft = 1: พิมพ์ e → EXT.)
         // opts.ci = จับคู่โดยไม่สนตัวพิมพ์เล็กใหญ่ (หัวฉาก/ทรานซิชัน)
-        check(view, list, opts = {}) {
-          return this._check(view, list || this.names, opts);
+        check(view2, list, opts = {}) {
+          return this._check(view2, list || this.names, opts);
         }
-        _check(view, NAMES2, opts = {}) {
+        _check(view2, NAMES2, opts = {}) {
           const minLen = opts.minLen || 2;
           const ci = !!opts.ci;
           const eq2 = ci ? (a, b) => a.toLowerCase() === b.toLowerCase() : (a, b) => a === b;
           const starts = ci ? (n2, t3) => n2.toLowerCase().startsWith(t3.toLowerCase()) : (n2, t3) => n2.startsWith(t3);
-          const { $from, empty: empty2 } = view.state.selection;
+          const { $from, empty: empty2 } = view2.state.selection;
           if (!empty2 || !$from.parent.isTextblock) return this.hide();
           const before = $from.parent.textBetween(
             Math.max(0, $from.parentOffset - 24),
@@ -18195,7 +18452,7 @@
           this.sel = 0;
           this.prefixLen = bestLen;
           this.render();
-          const c = view.coordsAtPos(view.state.selection.from);
+          const c = view2.coordsAtPos(view2.state.selection.from);
           this.box.style.left = c.left + "px";
           this.box.style.top = c.bottom + 6 + "px";
           this.box.style.display = "block";
@@ -18224,17 +18481,17 @@
           this.box.style.display = "none";
           this.items = [];
         }
-        bindView(view) {
-          this._view = view;
+        bindView(view2) {
+          this._view = view2;
         }
         _accept() {
-          const view = this._view;
-          if (!view || !this.items.length) return;
+          const view2 = this._view;
+          if (!view2 || !this.items.length) return;
           const name5 = this.items[this.sel];
-          const to = view.state.selection.from;
-          view.dispatch(view.state.tr.insertText(name5, to - this.prefixLen, to));
+          const to = view2.state.selection.from;
+          view2.dispatch(view2.state.tr.insertText(name5, to - this.prefixLen, to));
           this.hide();
-          view.focus();
+          view2.focus();
         }
         // คืน true = กิน key แล้ว
         // บั๊ก #1: เดิม Enter ก็ยืนยันคำเดา → ในบล็อก "ตัวละคร" ของบทหนัง พิมพ์อะไรก็ตามแล้ว SmartType เด้ง
@@ -18449,6 +18706,8 @@
     linesPerPage: () => linesPerPage,
     loadLanguage: () => loadLanguage,
     log: () => log,
+    logAction: () => logAction,
+    logStore: () => logStore,
     mergeSpFormat: () => mergeSpFormat,
     newRoster: () => newRoster,
     normalizeLangFonts: () => normalizeLangFonts,
@@ -18458,6 +18717,7 @@
     numClamp: () => numClamp,
     numInt: () => numInt,
     onLanguageChanged: () => onLanguageChanged,
+    onLog: () => onLog,
     pageCount: () => pageCount,
     pageCssVars: () => pageCssVars,
     pageNumberLabel: () => pageNumberLabel,
@@ -18580,26 +18840,33 @@
   function isPanelWindow() {
     return !!PANEL_WIN;
   }
+  function onLog(fn) {
+    logSubs.add(fn);
+    return () => logSubs.delete(fn);
+  }
   function log(level, msg, extra) {
     const ts = (/* @__PURE__ */ new Date()).toISOString();
-    let line = `[${ts}] ${String(level).toUpperCase()} ${msg}`;
-    if (extra !== void 0) {
-      try {
-        line += " | " + (extra instanceof Error ? extra.stack || extra.message : JSON.stringify(extra));
-      } catch {
-        line += " | " + String(extra);
-      }
-    }
+    const rec = logStore.push(level, msg, extra, ts);
+    const line = formatLine(rec);
     LOG_BUF.push(line);
     if (LOG_BUF.length > LOG_MAX) LOG_BUF.shift();
     try {
       kapi.logWrite && kapi.logWrite(line);
     } catch {
     }
-    if (level === "error" || level === "warn") {
-      (level === "error" ? console.error : console.warn)(line);
+    if (rec.level === "error" || rec.level === "warn") {
+      (rec.level === "error" ? RAW_CONSOLE.error : RAW_CONSOLE.warn)(line);
+    }
+    for (const fn of logSubs) {
+      try {
+        fn(rec);
+      } catch {
+      }
     }
     return line;
+  }
+  function logAction(source, what, detail) {
+    return log("info", source + ": " + what, detail);
   }
   function setStatus(s) {
     $("#status").textContent = s;
@@ -18756,10 +19023,11 @@
     const sc = formatShortcut(code3, ctrl, shift2);
     return label + " (" + sc + ")";
   }
-  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, BUILTIN_CATS, CAT_ICON, i18n, langHooks, BUILTIN_EN, SHORTCUTS, shortcutId, SHORTCUT_LABELS, isMac, accelText;
+  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, BUILTIN_CATS, CAT_ICON, i18n, langHooks, BUILTIN_EN, SHORTCUTS, shortcutId, SHORTCUT_LABELS, isMac, accelText;
   var init_core = __esm({
     "src/core.js"() {
       init_smart();
+      init_log_core();
       init_num();
       init_relationship_types();
       init_sp_format();
@@ -18790,7 +19058,10 @@
       })();
       smart = new SmartType();
       LOG_BUF = [];
-      LOG_MAX = 1e3;
+      LOG_MAX = 2e3;
+      RAW_CONSOLE = { error: console.error.bind(console), warn: console.warn.bind(console) };
+      logStore = createLogStore(LOG_MAX);
+      logSubs = /* @__PURE__ */ new Set();
       window.addEventListener("error", (e) => {
         if (e.message && e.message.includes("ResizeObserver")) return;
         log(
@@ -18802,6 +19073,37 @@
       window.addEventListener("unhandledrejection", (e) => {
         log("error", "unhandledrejection", e.reason);
       });
+      window.addEventListener("error", (e) => {
+        const t3 = e.target;
+        if (!t3 || t3 === window || !t3.tagName) return;
+        const src2 = t3.src || t3.href || "";
+        if (!src2) return;
+        log("warn", "resource: \u0E42\u0E2B\u0E25\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 <" + String(t3.tagName).toLowerCase() + ">", src2);
+      }, true);
+      for (const lv of ["error", "warn"]) {
+        const raw = RAW_CONSOLE[lv];
+        console[lv] = (...args) => {
+          raw(...args);
+          try {
+            const first = args.find((a) => typeof a === "string");
+            const errArg = args.find((a) => a instanceof Error);
+            const rest = args.filter((a) => a !== first);
+            logStore.push(
+              lv,
+              "console: " + (first || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21)"),
+              errArg || (rest.length ? rest : void 0),
+              (/* @__PURE__ */ new Date()).toISOString()
+            );
+            for (const fn of logSubs) {
+              try {
+                fn(null);
+              } catch {
+              }
+            }
+          } catch {
+          }
+        };
+      }
       _busyMsg = "";
       GLOBAL_DEFAULTS = {
         autoSaveMinutes: 5,
@@ -18894,7 +19196,9 @@
         // [filePath, ...] — null = ยังไม่เคยบันทึก
         // Story Network — สีที่ผู้ใช้ปรับเองได้
         netColors: null,
-        // { cats:{characters:'#xxx',...}, edges:{'scene-link':'#xxx',...} }
+        // [alpha.73] { '<คีย์จาก NET_COLOR_DEFS>': '#xxxxxx' } (รับรูปแบบเก่า cats/edges ได้)
+        netControls: null,
+        // { orbitButton:'middle'|'right'|'left', panButton:… } — ห้ามฮาร์ดโค้ดปุ่มเมาส์
         // [alpha.69] ประวัติการทำงาน — เก็บย้อนหลังกี่ครั้ง (ยิ่งมาก ยิ่งกินที่ใน .k2history/)
         // ค่าเริ่มต้น 32 ตามที่ผู้ใช้กำหนด · หนีบช่วง 4–500 ที่ history-data.clampLimit
         historyLimit: 32,
@@ -19720,6 +20024,8 @@
       init_icons();
       init_relationship_types();
       init_wiki_images();
+      init_wiki_profile();
+      init_core();
       CAT_TH = {
         characters: "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
         locations: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48",
@@ -19732,6 +20038,7 @@
           onDeleted = null,
           projectRoot = "",
           labels = {},
+          template = null,
           entityTitles = () => [],
           fileOfEntity = () => null,
           invertRole: invertRole2 = (r) => r,
@@ -19758,6 +20065,7 @@
           this.e = entity;
           this.projectRoot = projectRoot;
           this.labels = labels;
+          this._template = template;
           this.entityTitles = entityTitles;
           this.fileOfEntity = fileOfEntity;
           this.invertRole = invertRole2;
@@ -19774,6 +20082,14 @@
         }
         get title() {
           return this.e.name || "entity";
+        }
+        /** เทมเพลตปัจจุบัน — อ่านสดทุกครั้งที่วาด (เปลี่ยนเทมเพลตแล้วหัวการ์ดต้องเปลี่ยนตามทันที) */
+        get template() {
+          try {
+            return typeof this._template === "function" ? this._template(this.e) : this._template;
+          } catch {
+            return null;
+          }
         }
         markDirty() {
           if (!this.dirty) {
@@ -19948,18 +20264,21 @@
           }
           head2.append(saveBtn);
           wrap2.appendChild(head2);
-          if (this.e.entityTypeKey === "characters") {
+          {
+            const tpl = this.template || null;
+            const P = profileData(this.e, tpl, this.labels || {});
             const prof = document.createElement("div");
             prof.className = "wiki-prof";
             const avatar = document.createElement("div");
             avatar.className = "wiki-prof-avatar";
             avatar.title = "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E49\u0E07\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27 (\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32 = \u0E40\u0E2D\u0E32\u0E23\u0E39\u0E1B\u0E2D\u0E2D\u0E01)";
+            const fallbackIcon = () => iconHtml(CAT_ICON[this.e.entityTypeKey] || "bookmark", 32);
             const paintAvatar = async () => {
               avatar.textContent = "";
               const first = migrateImages(this.e.images)[0];
               const name5 = first ? first.file : "";
               if (!name5) {
-                avatar.innerHTML = iconHtml("user", 32);
+                avatar.innerHTML = fallbackIcon();
                 return;
               }
               const url = /^(file|https?|data):/i.test(name5) ? name5 : await kapi.toFileURL(await kapi.join(this.projectRoot, "Images", name5));
@@ -19968,7 +20287,7 @@
               imgEl.alt = imageAlt(first);
               if (first.caption) imgEl.title = first.caption;
               imgEl.onerror = () => {
-                avatar.innerHTML = iconHtml("user", 32);
+                avatar.innerHTML = fallbackIcon();
               };
               avatar.appendChild(imgEl);
             };
@@ -20009,32 +20328,42 @@
             info.className = "wiki-prof-info";
             const nameEl = document.createElement("div");
             nameEl.className = "wiki-prof-name";
-            nameEl.textContent = this.e.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)";
+            nameEl.textContent = P.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)";
             info.appendChild(nameEl);
-            if (this.e.aliases && this.e.aliases.length) {
+            if (P.aliases.length) {
               const ali = document.createElement("div");
               ali.className = "wiki-prof-aliases";
-              this.e.aliases.forEach((a) => {
+              P.aliases.forEach((a) => {
                 const s = document.createElement("span");
                 s.textContent = a;
                 ali.appendChild(s);
               });
               info.appendChild(ali);
             }
-            const role = this.e.fields && (this.e.fields.Role || this.e.fields.role || this.e.fields["Role"] || this.e.fields["\u0E1A\u0E17\u0E1A\u0E32\u0E17"]);
-            if (role) {
+            if (P.subtitle) {
               const rl = document.createElement("div");
               rl.className = "wiki-prof-role";
-              rl.innerHTML = iconHtml("brain", 14) + " " + role;
+              rl.innerHTML = iconHtml("brain", 14) + " " + P.subtitle;
+              rl.title = P.subtitleLabel;
               info.appendChild(rl);
             }
-            const status = this.e.fields && (this.e.fields.Status || this.e.fields.status || "");
-            if (status) {
+            if (P.badges.length) {
+              const bw = document.createElement("div");
+              bw.className = "wiki-prof-badges";
+              for (const b of P.badges) {
+                const s = document.createElement("span");
+                s.className = "wiki-prof-badge";
+                s.textContent = b.label + ": " + b.value;
+                bw.appendChild(s);
+              }
+              info.appendChild(bw);
+            }
+            if (P.status) {
               const st = document.createElement("span");
               st.className = "wiki-prof-status";
-              const sl = status.toLowerCase();
-              st.classList.add(sl.includes("dead") || sl.includes("\u0E40\u0E2A\u0E35\u0E22") ? "deceased" : sl.includes("unknown") || sl.includes("\u0E44\u0E21\u0E48\u0E17\u0E23\u0E32\u0E1A") ? "unknown" : "living");
-              st.textContent = status;
+              st.classList.add(statusTone(tpl, P.status));
+              st.textContent = P.status;
+              st.title = P.statusLabel;
               info.appendChild(st);
             }
             prof.appendChild(info);
@@ -20645,8 +20974,8 @@
       } }
     });
   }
-  function refreshFormatGuide(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(guideKey, true));
+  function refreshFormatGuide(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(guideKey, true));
   }
   function setSceneNumbers(on2, suffix) {
     const next = !!on2, sfx = String(suffix ?? "");
@@ -20690,8 +21019,8 @@
       } }
     });
   }
-  function refreshSceneNumbers(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(snKey, true));
+  function refreshSceneNumbers(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(snKey, true));
   }
   function setContinueds(list) {
     const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
@@ -20733,8 +21062,8 @@
       } }
     });
   }
-  function refreshContinueds(view) {
-    if (view) view.dispatch(view.state.tr.setMeta(ctKey, true));
+  function refreshContinueds(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(ctKey, true));
   }
   var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, ctKey, _conts, _contSig;
   var init_sp_format_guide = __esm({
@@ -20942,25 +21271,25 @@
                 // [alpha.58 · 55–56] (CONTINUED)/CONTINUED:/(MORE)/(cont'd)
               ]
             }),
-            handleKeyDown(view, ev) {
+            handleKeyDown(view2, ev) {
               if (ev.key === "(" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
                 const el2 = self2.curElement();
                 const { node, pos } = self2.curBlock();
                 if (el2 === "dialogue" && node && node.content.size === 0) {
                   ev.preventDefault();
-                  const from2 = view.state.selection.from;
-                  let tr2 = view.state.tr;
+                  const from2 = view2.state.selection.from;
+                  let tr2 = view2.state.tr;
                   tr2 = tr2.setNodeMarkup(pos, null, { el: "parenthetical", align: node.attrs.align || null });
                   tr2 = tr2.insertText("()", from2);
                   tr2 = tr2.setSelection(TextSelection.create(tr2.doc, from2 + 1));
-                  view.dispatch(tr2);
+                  view2.dispatch(tr2);
                   if (self2.onElement) self2.onElement("parenthetical");
                   return true;
                 }
               }
               if (ev.code === "Space" && (ev.ctrlKey || ev.metaKey) && ev.shiftKey) {
                 ev.preventDefault();
-                view.dispatch(view.state.tr.insertText("\xA0"));
+                view2.dispatch(view2.state.tr.insertText("\xA0"));
                 return true;
               }
               const cycleOn = state.settings?.spCycleEnabled !== false;
@@ -20982,13 +21311,13 @@
               return onKeyDown ? onKeyDown(ev) : false;
             },
             // [93] Auto-capitalize: ขึ้นต้นประโยคด้วยตัวใหญ่ + i→I
-            handleTextInput(view, from2, to, text) {
+            handleTextInput(view2, from2, to, text) {
               if (text.length > 20) return false;
-              return self2._handleAutoText(view, from2, to, text);
+              return self2._handleAutoText(view2, from2, to, text);
             },
             handleDOMEvents: {
               // Ctrl/Cmd+คลิก หรือคลิกกลาง บนชื่อ Wiki → เปิดหน้า Wiki (เหมือนโหมดนิยาย)
-              mousedown(view, ev) {
+              mousedown(view2, ev) {
                 if (!onMention || !(ev.ctrlKey || ev.metaKey)) return false;
                 const t3 = ev.target && ev.target.closest && ev.target.closest(".k-mention");
                 if (!t3) return false;
@@ -20996,7 +21325,7 @@
                 onMention(t3.textContent.replace(/^\[\[|\]\]$/g, ""));
                 return true;
               },
-              auxclick(view, ev) {
+              auxclick(view2, ev) {
                 if (!onMention || ev.button !== 1) return false;
                 const t3 = ev.target && ev.target.closest && ev.target.closest(".k-mention");
                 if (!t3) return false;
@@ -21246,12 +21575,12 @@
           this.view.focus();
         }
         // [93] Auto-capitalize sentences + i→I ในบทหนัง
-        _handleAutoText(view, from2, to, text) {
+        _handleAutoText(view2, from2, to, text) {
           const s = state.settings;
           if (!s.spAutoCapitalize && !s.spAutoCorrectI) return false;
           let modified = text;
           if (s.spAutoCapitalize) {
-            const $from = view.state.doc.resolve(from2);
+            const $from = view2.state.doc.resolve(from2);
             if ($from.parentOffset === 0) {
               modified = modified.replace(/^[a-z]/, (c) => c.toUpperCase());
             } else if ($from.parentOffset >= 2) {
@@ -21262,14 +21591,14 @@
             }
           }
           if (s.spAutoCorrectI && modified.length <= 2) {
-            const $from = view.state.doc.resolve(from2);
+            const $from = view2.state.doc.resolve(from2);
             const solo = $from.parentOffset === 0 || $from.parent.textBetween($from.parentOffset - 1, $from.parentOffset).endsWith(" ");
             if (solo && /^i$/i.test(modified.trim())) {
               modified = "I" + modified.slice(1);
             }
           }
           if (modified !== text) {
-            view.dispatch(view.state.tr.insertText(modified, from2, to));
+            view2.dispatch(view2.state.tr.insertText(modified, from2, to));
             return true;
           }
           return false;
@@ -22544,21 +22873,21 @@
       panY: (viewH - b.h * zoom) / 2 - b.y * zoom
     };
   }
-  function zoomAt(view, factor, px2, py2) {
-    const z0 = clampZoom(view.zoom);
+  function zoomAt(view2, factor, px2, py2) {
+    const z0 = clampZoom(view2.zoom);
     const z1 = clampZoom(z0 * factor);
-    if (z1 === z0) return { ...view, zoom: z0 };
-    const wx = (px2 - view.panX) / z0;
-    const wy = (py2 - view.panY) / z0;
+    if (z1 === z0) return { ...view2, zoom: z0 };
+    const wx = (px2 - view2.panX) / z0;
+    const wy = (py2 - view2.panY) / z0;
     return { zoom: z1, panX: px2 - wx * z1, panY: py2 - wy * z1 };
   }
-  function toBoard(view, px2, py2) {
-    const z = clampZoom(view.zoom);
-    return { x: (px2 - view.panX) / z, y: (py2 - view.panY) / z };
+  function toBoard(view2, px2, py2) {
+    const z = clampZoom(view2.zoom);
+    return { x: (px2 - view2.panX) / z, y: (py2 - view2.panY) / z };
   }
-  function toScreen(view, x, y) {
-    const z = clampZoom(view.zoom);
-    return { x: x * z + view.panX, y: y * z + view.panY };
+  function toScreen(view2, x, y) {
+    const z = clampZoom(view2.zoom);
+    return { x: x * z + view2.panX, y: y * z + view2.panY };
   }
   function snap(v2, grid = GRID) {
     return grid > 0 ? Math.round(v2 / grid) * grid : v2;
@@ -28639,6 +28968,142 @@ ${ctx}${hint}`;
     }
   });
 
+  // src/network-theme.js
+  function netColorDefsOf(group) {
+    return NET_COLOR_DEFS.filter((d) => d.group === group);
+  }
+  function resolveNetColors(saved, varOf) {
+    const s = normalizeNetColors(saved);
+    const readVar = typeof varOf === "function" ? varOf : () => "";
+    const out = { node: {}, edge: {}, canvas: {} };
+    for (const d of NET_COLOR_DEFS) {
+      let v2 = String(s[d.key] || "").trim();
+      if (!v2) v2 = d.cssVar ? String(readVar(d.cssVar) || "").trim() || d.def : d.def;
+      out[d.target][d.id] = v2;
+    }
+    return out;
+  }
+  function normalizeNetColors(saved) {
+    const src2 = saved && typeof saved === "object" ? saved : {};
+    if (!src2.cats && !src2.edges) return { ...src2 };
+    const out = { ...src2 };
+    delete out.cats;
+    delete out.edges;
+    for (const [k, v2] of Object.entries(src2.cats || {})) if (v2) out[k] = v2;
+    for (const [k, v2] of Object.entries(src2.edges || {})) {
+      if (!v2) continue;
+      if (k === "ne-rel") {
+        for (const d of EDGE_DEFS) if (!out[d.key]) out[d.key] = v2;
+      } else out[k] = v2;
+    }
+    return out;
+  }
+  function buttonLabel(v2) {
+    const m = MOUSE_BUTTONS.find((x) => x.value === v2);
+    return m ? m.label : v2;
+  }
+  function buttonIndex(v2) {
+    const m = MOUSE_BUTTONS.find((x) => x.value === v2);
+    return m ? m.btn : 1;
+  }
+  function resolveNetControls(saved) {
+    const s = saved && typeof saved === "object" ? saved : {};
+    const ok2 = (v2, def) => MOUSE_BUTTONS.some((x) => x.value === v2) ? v2 : def;
+    const orbit = ok2(s.orbitButton, DEFAULT_NET_CONTROLS.orbitButton);
+    let pan = ok2(s.panButton, DEFAULT_NET_CONTROLS.panButton);
+    if (pan === orbit) pan = orbit === "left" ? "right" : "left";
+    return { orbitButton: orbit, panButton: pan };
+  }
+  function controlsHint(controls, mode3D) {
+    const c = resolveNetControls(controls);
+    const parts = [
+      `\u0E25\u0E32\u0E01${buttonLabel(c.panButton)}\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 = \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E1C\u0E31\u0E07`,
+      "\u0E25\u0E49\u0E2D = \u0E0B\u0E39\u0E21",
+      "Shift+\u0E04\u0E25\u0E34\u0E01\u0E42\u0E2B\u0E19\u0E14 = \u0E1C\u0E25\u0E31\u0E01\u0E42\u0E2B\u0E19\u0E14\u0E23\u0E2D\u0E1A \u0E46 \u0E2D\u0E2D\u0E01",
+      "\u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E1B\u0E34\u0E14"
+    ];
+    if (mode3D) parts.splice(2, 0, `\u0E25\u0E32\u0E01${buttonLabel(c.orbitButton)} = \u0E2B\u0E21\u0E38\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 3D`);
+    else parts.push(`(\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14 3D \u0E41\u0E25\u0E49\u0E27\u0E25\u0E32\u0E01${buttonLabel(c.orbitButton)} = \u0E2B\u0E21\u0E38\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07)`);
+    return parts.join(" \xB7 ");
+  }
+  function viewCenter(cam, w, h) {
+    const s = cam && +cam.scale || 1;
+    const cx2 = cam && +cam.cx || 0, cy2 = cam && +cam.cy || 0;
+    return { x: (w / 2 - cx2) / s, y: (h / 2 - cy2) / s };
+  }
+  function zoomAtCenter(cam, w, h, nextScale) {
+    const s = cam && +cam.scale || 1;
+    const raw = Number(nextScale);
+    const ns = Math.max(0.05, Math.min(8, Number.isFinite(raw) ? raw : s));
+    const c = viewCenter(cam, w, h);
+    return { scale: ns, cx: w / 2 - c.x * ns, cy: h / 2 - c.y * ns };
+  }
+  function axisVectors(rx, ry, mode3D) {
+    if (!mode3D) return { x: { x: 1, y: 0 }, y: { x: 0, y: 1 }, z: null };
+    const cosX = Math.cos(rx), sinX = Math.sin(rx);
+    const cosY = Math.cos(ry), sinY = Math.sin(ry);
+    const proj = (x, y, z) => ({
+      x: x * cosY + z * sinY,
+      y: y * cosX - (x * -sinY + z * cosY) * sinX
+    });
+    return { x: proj(1, 0, 0), y: proj(0, 1, 0), z: proj(0, 0, 1) };
+  }
+  var NET_COLOR_GROUPS, NODE_DEFS, LINK_DEFS, CANVAS_DEFS, EDGE_DEFS, NET_COLOR_DEFS, MOUSE_BUTTONS, DEFAULT_NET_CONTROLS;
+  var init_network_theme = __esm({
+    "src/network-theme.js"() {
+      init_relationship_types();
+      NET_COLOR_GROUPS = [
+        { group: "nodes", label: "\u0E2A\u0E35\u0E42\u0E2B\u0E19\u0E14 (\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14)" },
+        { group: "edges", label: "\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19 (\u0E15\u0E32\u0E21\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C)" },
+        { group: "links", label: "\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E2D\u0E37\u0E48\u0E19 \u0E46" },
+        { group: "canvas", label: "\u0E1E\u0E37\u0E49\u0E19\u0E1C\u0E31\u0E07 / \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D" }
+      ];
+      NODE_DEFS = [
+        { key: "nc-char", id: "characters", label: "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23", def: "#d97757" },
+        { key: "nc-loca", id: "locations", label: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48", def: "#7aa8d8" },
+        { key: "nc-item", id: "items", label: "\u0E2A\u0E34\u0E48\u0E07\u0E02\u0E2D\u0E07", def: "#6fae8a" },
+        { key: "nc-lore", id: "lore", label: "\u0E15\u0E33\u0E19\u0E32\u0E19", def: "#b58fc9" },
+        { key: "nc-scen", id: "scene", label: "\u0E09\u0E32\u0E01", def: "#e8c95c" },
+        { key: "nc-chap", id: "chapter", label: "\u0E1A\u0E17", def: "#c08a5e" },
+        // [alpha.73 ข้อ 3] เดิม book กับ section ใช้ช่องเดียวกัน (nc-sect) — แยกให้ตั้งได้จริงทั้งคู่
+        { key: "nc-book", id: "book", label: "\u0E40\u0E25\u0E48\u0E21", def: "#a8d870" },
+        { key: "nc-sect", id: "section", label: "\u0E15\u0E2D\u0E19/\u0E2A\u0E48\u0E27\u0E19", def: "#8ec8c8" }
+      ];
+      LINK_DEFS = [
+        { key: "ne-sl", id: "scene-link", label: "\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E09\u0E32\u0E01", def: "#5caf8a" },
+        { key: "ne-co", id: "co-occur", label: "\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E23\u0E48\u0E27\u0E21\u0E43\u0E19\u0E09\u0E32\u0E01", def: "#8a8885" },
+        { key: "ne-es", id: "ent-scene", label: "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 \u2194 \u0E09\u0E32\u0E01", def: "#d9955f" }
+      ];
+      CANVAS_DEFS = [
+        { key: "nb-bg", id: "bg", label: "\u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E1C\u0E31\u0E07", def: "#1a1a18", cssVar: "--bg" },
+        { key: "nb-grid", id: "grid", label: "\u0E40\u0E2A\u0E49\u0E19\u0E01\u0E23\u0E34\u0E14", def: "#3a3a36", cssVar: "--border" },
+        { key: "nb-label", id: "label", label: "\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E2B\u0E19\u0E14", def: "#faf9f5", cssVar: "--bright" },
+        { key: "nb-labelbg", id: "labelBg", label: "\u0E1E\u0E37\u0E49\u0E19\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E2B\u0E19\u0E14", def: "#1f1e1c", cssVar: "--side" },
+        { key: "nb-border", id: "border", label: "\u0E02\u0E2D\u0E1A\u0E42\u0E2B\u0E19\u0E14", def: "#1f1e1c" },
+        { key: "nb-hover", id: "hover", label: "\u0E02\u0E2D\u0E1A\u0E42\u0E2B\u0E19\u0E14\u0E15\u0E2D\u0E19\u0E0A\u0E35\u0E49", def: "#faf9f5" },
+        { key: "nb-axis", id: "axis", label: "\u0E41\u0E01\u0E19\u0E1A\u0E2D\u0E01\u0E17\u0E34\u0E28 (X/Y/Z)", def: "#8a8885", cssVar: "--dim" }
+      ];
+      EDGE_DEFS = REL_TYPES.map((t3) => ({
+        key: "ne-rt-" + t3.key,
+        id: t3.key,
+        label: t3.label,
+        def: t3.color
+      }));
+      NET_COLOR_DEFS = [
+        ...NODE_DEFS.map((d) => ({ ...d, group: "nodes", target: "node" })),
+        ...EDGE_DEFS.map((d) => ({ ...d, group: "edges", target: "edge" })),
+        ...LINK_DEFS.map((d) => ({ ...d, group: "links", target: "edge" })),
+        ...CANVAS_DEFS.map((d) => ({ ...d, group: "canvas", target: "canvas" }))
+      ];
+      MOUSE_BUTTONS = [
+        { value: "middle", btn: 1, label: "\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07 (\u0E25\u0E49\u0E2D)" },
+        { value: "right", btn: 2, label: "\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32" },
+        { value: "left", btn: 0, label: "\u0E04\u0E25\u0E34\u0E01\u0E0B\u0E49\u0E32\u0E22" }
+      ];
+      DEFAULT_NET_CONTROLS = { orbitButton: "middle", panButton: "left" };
+    }
+  });
+
   // src/network-layout.js
   function nodeKey(n2) {
     return (n2 && n2.cat || "") + SEP + (n2 && n2.name || "");
@@ -28700,9 +29165,11 @@ ${ctx}${hint}`;
       if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
         node.x = pos.x;
         node.y = pos.y;
-        node.z = typeof pos.z === "number" ? pos.z : (Math.random() - 0.5) * halfD * 2;
-        node._pinned = true;
+        node.z = typeof pos.z === "number" ? pos.z : 0;
+        node._pinned = pos.pinned === void 0 ? true : !!pos.pinned;
+        node._fresh = false;
       } else {
+        node._fresh = true;
         const angle = i5 / Math.max(1, n2) * Math.PI * 2;
         const r = Math.sqrt(Math.random()) * halfW;
         node.x = Math.cos(angle) * r;
@@ -28715,8 +29182,13 @@ ${ctx}${hint}`;
   function layoutPositions(nodes) {
     const out = {};
     for (const n2 of nodes || []) {
-      if (n2 && n2._pinned && n2.name) {
-        out[nodeKey(n2)] = { x: Math.round(n2.x), y: Math.round(n2.y), z: Math.round(n2.z || 0) };
+      if (n2 && n2.name && Number.isFinite(n2.x) && Number.isFinite(n2.y)) {
+        out[nodeKey(n2)] = {
+          x: Math.round(n2.x),
+          y: Math.round(n2.y),
+          z: Math.round(n2.z || 0),
+          pinned: !!n2._pinned
+        };
       }
     }
     return out;
@@ -28751,6 +29223,14 @@ ${ctx}${hint}`;
   });
 
   // src/network.js
+  function cssVar(name5, fallback) {
+    try {
+      const v2 = getComputedStyle(document.documentElement).getPropertyValue(name5).trim();
+      return v2 || fallback;
+    } catch {
+      return fallback;
+    }
+  }
   function edgeKey(a, b) {
     const x = nodeKey(a), y = nodeKey(b);
     return x < y ? x + EDGE_SEP + y : y + EDGE_SEP + x;
@@ -28790,21 +29270,21 @@ ${ctx}${hint}`;
     const ca = new Set(CAT_ARR.slice(0, 4)), tf = /* @__PURE__ */ new Set([...REL_TYPES.map((t3) => t3.key), "co-occur", "scene-link", "ent-scene"]);
     const cr = document.createElement("div");
     cr.className = "net-tbar-row";
-    [{ k: "characters", l: "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23", c: "#d97757" }, { k: "locations", l: "\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48", c: "#7aa8d8" }, { k: "items", l: "\u0E44\u0E2D\u0E40\u0E17\u0E21", c: "#6fae8a" }, { k: "lore", l: "\u0E15\u0E33\u0E19\u0E32\u0E19", c: "#b58fc9" }].forEach((x) => {
+    netColorDefsOf("nodes").filter((d) => CAT_ARR.slice(0, 4).includes(d.id)).forEach((x) => {
       const b = document.createElement("button");
       b.className = "net-tcat";
-      b.style.setProperty("--tcolor", x.c);
-      b.title = x.l;
+      b.dataset.cat = x.id;
+      b.title = x.label;
       b.dataset.active = "1";
       b.classList.add("on");
-      b.textContent = x.l;
+      b.textContent = x.label;
       b.onclick = () => {
         const a = b.dataset.active === "1";
         b.dataset.active = a ? "0" : "1";
         if (a) b.classList.remove("on");
         else b.classList.add("on");
-        if (a) ca.delete(x.k);
-        else ca.add(x.k);
+        if (a) ca.delete(x.id);
+        else ca.add(x.id);
         cb.filter(ca, tf);
       };
       cr.appendChild(b);
@@ -28814,7 +29294,7 @@ ${ctx}${hint}`;
     REL_TYPES.forEach((t3) => {
       const b = document.createElement("button");
       b.className = "net-ttype";
-      b.style.setProperty("--tcolor", t3.color);
+      b.dataset.type = t3.key;
       b.title = t3.label;
       b.dataset.active = "1";
       b.classList.add("on");
@@ -28832,7 +29312,7 @@ ${ctx}${hint}`;
     (() => {
       const b = document.createElement("button");
       b.className = "net-ttype net-ttype-co";
-      b.style.setProperty("--tcolor", "#8a8885");
+      b.dataset.type = "co-occur";
       b.title = "\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E23\u0E48\u0E27\u0E21";
       b.dataset.active = "1";
       b.classList.add("on");
@@ -28850,7 +29330,7 @@ ${ctx}${hint}`;
     (() => {
       const b = document.createElement("button");
       b.className = "net-ttype net-ttype-sc";
-      b.style.setProperty("--tcolor", "#5caf8a");
+      b.dataset.type = "scene-link";
       b.title = "\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E09\u0E32\u0E01";
       b.dataset.active = "1";
       b.classList.add("on");
@@ -28868,7 +29348,7 @@ ${ctx}${hint}`;
     (() => {
       const b = document.createElement("button");
       b.className = "net-ttype net-ttype-es";
-      b.style.setProperty("--tcolor", "#d9955f");
+      b.dataset.type = "ent-scene";
       b.title = "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u2194\u0E09\u0E32\u0E01";
       b.dataset.active = "1";
       b.classList.add("on");
@@ -28931,6 +29411,53 @@ ${ctx}${hint}`;
       gridAlpha.title = "\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A grid: " + gridAlpha.value + "%";
     };
     gridRow.append(gridBtn, gridSize, gridAlpha);
+    const toolRow = document.createElement("div");
+    toolRow.className = "net-tbar-row net-tbar-tools";
+    const lblBtn = document.createElement("button");
+    lblBtn.className = "net-tbar-btn net-tog on net-lbl-btn";
+    lblBtn.textContent = "\u{1F524}";
+    lblBtn.title = "\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D (\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E15\u0E49\u0E42\u0E2B\u0E19\u0E14)";
+    lblBtn.onclick = () => {
+      lblBtn.classList.toggle("on");
+      cb.toggleLabels();
+    };
+    toolRow.appendChild(lblBtn);
+    const sep = document.createElement("span");
+    sep.className = "net-tbar-sep";
+    toolRow.appendChild(sep);
+    const toolBtns = [];
+    for (const x of NET_TOOLS) {
+      const b = document.createElement("button");
+      b.className = "net-tbar-btn net-tool-btn" + (x.id === "open" ? " on" : "");
+      b.dataset.tool = x.id;
+      b.textContent = x.icon;
+      b.title = x.label + " \u2014 " + x.hint;
+      b.onclick = () => {
+        for (const o of toolBtns) o.classList.toggle("on", o === b);
+        cb.setTool(x.id);
+      };
+      toolBtns.push(b);
+      toolRow.appendChild(b);
+    }
+    const sep2 = document.createElement("span");
+    sep2.className = "net-tbar-sep";
+    toolRow.appendChild(sep2);
+    const szLbl = document.createElement("span");
+    szLbl.className = "net-tbar-lbl";
+    szLbl.textContent = "\u29BF";
+    szLbl.title = "\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E19\u0E14";
+    const size = document.createElement("input");
+    size.type = "range";
+    size.className = "net-grid-slider net-size-slider";
+    size.min = "50";
+    size.max = "250";
+    size.value = "100";
+    size.title = "\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E19\u0E14: 100%";
+    size.oninput = () => {
+      cb.setNodeScale(Number(size.value) / 100);
+      size.title = "\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E19\u0E14: " + size.value + "%";
+    };
+    toolRow.append(szLbl, size);
     const btns = document.createElement("div");
     btns.className = "net-tbar-actions";
     [{ t: "\u{1F504}", ti: "\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A", f: cb.refresh }, { t: "\u{1F4CC}", ti: "\u0E1B\u0E25\u0E14\u0E2B\u0E21\u0E38\u0E14\u0E17\u0E38\u0E01\u0E42\u0E2B\u0E19\u0E14 \u0E41\u0E25\u0E49\u0E27\u0E08\u0E31\u0E14\u0E1C\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48", f: cb.relayout }, { t: "\u{1F5BC}", ti: "\u0E41\u0E2A\u0E14\u0E07\u0E23\u0E39\u0E1B\u0E22\u0E48\u0E2D", f: cb.toggleImages, cl: "net-tog on" }, { t: "\u{1F5FA}", ti: "Minimap", f: cb.toggleMinimap, cl: "net-tog" }, { t: "3D", ti: "\u0E2A\u0E25\u0E31\u0E1A 2D/3D", f: cb.toggle3D, cl: "net-tog" }, { t: "\u{1F4E5}", ti: "\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01", f: cb.export }, { t: "\u293E", ti: "\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15", f: cb.reset, cl: "net-reset" }].forEach((x) => {
@@ -28948,10 +29475,10 @@ ${ctx}${hint}`;
       };
       btns.appendChild(b);
     });
-    bd.append(cr, tr2, gridRow, sw, btns);
+    bd.append(cr, tr2, toolRow, gridRow, sw, btns);
     bar.append(tg, bd);
     pane.appendChild(bar);
-    return { bar, btns, destroy: () => bar.remove() };
+    return { bar, btns, toolRow, destroy: () => bar.remove() };
   }
   function project3D(x, y, z, rx, ry) {
     const cosX = Math.cos(rx), sinX = Math.sin(rx);
@@ -28978,7 +29505,7 @@ ${ctx}${hint}`;
     c.quadraticCurveTo(x, y, x + r, y);
     c.closePath();
     c.fill();
-    c.fillStyle = "#ffffff";
+    c.fillStyle = THEME.canvas.label;
     c.textAlign = "center";
     c.textBaseline = "middle";
     c.fillText(text, cx2, cy2 + 1);
@@ -29002,7 +29529,7 @@ ${ctx}${hint}`;
     c.quadraticCurveTo(bx, by, bx + r, by);
     c.closePath();
     c.fill();
-    c.fillStyle = "#e0e0dc";
+    c.fillStyle = THEME.canvas.label;
     c.textAlign = "center";
     c.textBaseline = "middle";
     c.fillText(text, x, y + 1);
@@ -29028,22 +29555,24 @@ ${ctx}${hint}`;
     pane.appendChild(tb2);
     return tb2;
   }
-  var CAT_ARR, BG, GRID2, WIKI_CATS, EDGE_SEP, StoryNetwork;
+  var CAT_ARR, THEME, WIKI_CATS, EDGE_SEP, NET_TOOLS, StoryNetwork;
   var init_network = __esm({
     "src/network.js"() {
       init_visual_tags();
       init_relationship_types();
+      init_network_theme();
       init_core();
       init_network_layout();
       init_auto_link_ui();
-      REL_COLOR["co-occur"] = "#8a8885";
-      REL_COLOR["scene-link"] = "#5caf8a";
-      REL_COLOR["ent-scene"] = "#d9955f";
       CAT_ARR = ["characters", "locations", "items", "lore", "scene", "chapter", "book"];
-      BG = "#1a1a18";
-      GRID2 = "#3a3a36";
+      THEME = resolveNetColors(null, cssVar);
       WIKI_CATS = /* @__PURE__ */ new Set(["characters", "locations", "items", "lore"]);
       EDGE_SEP = String.fromCharCode(1);
+      NET_TOOLS = [
+        { id: "open", icon: "\u{1F446}", label: "\u0E40\u0E1B\u0E34\u0E14/\u0E14\u0E39", hint: "\u0E04\u0E25\u0E34\u0E01\u0E42\u0E2B\u0E19\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E49\u0E19 \xB7 \u0E25\u0E32\u0E01\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E23\u0E37\u0E2D\u0E25\u0E32\u0E01\u0E17\u0E31\u0E1A\u0E42\u0E2B\u0E19\u0E14 = \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E1C\u0E31\u0E07 (\u0E42\u0E2B\u0E19\u0E14\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A)" },
+        { id: "edit", icon: "\u270E", label: "\u0E41\u0E01\u0E49\u0E44\u0E02", hint: "\u0E04\u0E25\u0E34\u0E01\u0E42\u0E2B\u0E19\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E49\u0E19\u0E44\u0E1B\u0E41\u0E01\u0E49\u0E44\u0E02" },
+        { id: "move", icon: "\u2725", label: "\u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07", hint: "\u0E25\u0E32\u0E01\u0E42\u0E2B\u0E19\u0E14\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07" }
+      ];
       StoryNetwork = class {
         constructor(pane, {
           loadEntities,
@@ -29085,6 +29614,9 @@ ${ctx}${hint}`;
           this._gridPx = 60;
           this._gridAlpha = 0.12;
           this._orbitDrag = null;
+          this._tool = "open";
+          this._showLabels = true;
+          this._nodeScale = 1;
           this.canvas = document.createElement("canvas");
           this.canvas.className = "net-canvas";
           pane.appendChild(this.canvas);
@@ -29147,6 +29679,19 @@ ${ctx}${hint}`;
               self2._showImages = !self2._showImages;
               self2.draw();
             },
+            toggleLabels() {
+              self2._showLabels = !self2._showLabels;
+              self2.draw();
+            },
+            setTool(id) {
+              self2._tool = id;
+              self2.canvas.classList.toggle("net-move-mode", id === "move");
+              self2.draw();
+            },
+            setNodeScale(v2) {
+              self2._nodeScale = Math.max(0.5, Math.min(2.5, v2 || 1));
+              self2.draw();
+            },
             toggleMinimap() {
               self2._showMinimap = !self2._showMinimap;
               self2._mm.style.display = self2._showMinimap ? "" : "none";
@@ -29200,31 +29745,36 @@ ${ctx}${hint}`;
           this.refresh();
         }
         readColors() {
-          const nc = state.settings?.netColors || {};
-          const cc = nc.cats || {}, ce = nc.edges || {};
-          this._catCol = {
-            characters: cc["nc-char"] || "#d97757",
-            locations: cc["nc-loca"] || "#7aa8d8",
-            items: cc["nc-item"] || "#6fae8a",
-            lore: cc["nc-lore"] || "#b58fc9",
-            scene: cc["nc-scen"] || "#e8c95c",
-            chapter: cc["nc-chap"] || "#c08a5e",
-            // book = "เล่ม" เหมือน section → ต้องตามช่อง nc-sect ไม่ใช่ nc-chap (ของเดิมสลับกัน)
-            book: cc["nc-sect"] || "#a8d870",
-            section: cc["nc-sect"] || "#8ec8c8"
-          };
-          this._edgeCol = {
-            ...REL_COLOR,
-            "scene-link": ce["ne-sl"] || "#5caf8a",
-            "co-occur": ce["ne-co"] || "#8a8885",
-            "ent-scene": ce["ne-es"] || "#d9955f"
-          };
-          if (ce["ne-rel"]) {
-            for (const k of Object.keys(this._edgeCol)) {
-              if (!["scene-link", "co-occur", "ent-scene"].includes(k)) this._edgeCol[k] = ce["ne-rel"];
-            }
-          }
+          THEME = resolveNetColors(state.settings && state.settings.netColors, cssVar);
+          this._catCol = THEME.node;
+          this._edgeCol = THEME.edge;
+          this._bg = THEME.canvas.bg;
+          this._grid = THEME.canvas.grid;
+          this._controls = resolveNetControls(state.settings && state.settings.netControls);
           this._vfCache = null;
+          this._paintToolbarColors();
+          this._syncTip();
+        }
+        /** คำอธิบายใต้ผัง — สร้างจากค่าที่ตั้งไว้จริง (ข้อ 2: tooltip ต้อง sync กับ setting) */
+        _syncTip() {
+          if (!this._tip) return;
+          this._tip.textContent = controlsHint(this._controls, this._mode3D);
+        }
+        /**
+         * [alpha.72 ข้อ 2] ทาสีปุ่มบนแถบเครื่องมือให้ตรงกับสีที่ตั้งไว้จริง
+         * ของเดิม buildToolbar ฝังเลขสีไว้ในโค้ดอีกชุด → เปลี่ยนสีในตั้งค่าแล้วชิปยังเป็นสีเก่า
+         * ผู้ใช้จึงเห็น "สีบนผังกับสีในแถบเครื่องมือไม่ตรงกัน"
+         */
+        _paintToolbarColors() {
+          if (!this._tb || !this._tb.bar) return;
+          for (const b of this._tb.bar.querySelectorAll(".net-tcat[data-cat]")) {
+            const col = this._catCol[b.dataset.cat];
+            if (col) b.style.setProperty("--tcolor", col);
+          }
+          for (const b of this._tb.bar.querySelectorAll(".net-ttype[data-type]")) {
+            const col = this._edgeCol[b.dataset.type];
+            if (col) b.style.setProperty("--tcolor", col);
+          }
         }
         /** โปรเจกต์ที่ผังนี้เป็นของ — ใช้แยก localStorage ของตำแหน่งโหนด */
         _scope() {
@@ -29269,8 +29819,12 @@ ${ctx}${hint}`;
             }
             await this._loadCoOccur(byName, seen);
             this._linkStructNodes(byName, seen);
-            const pinned = new Set(this.nodes.filter((n2) => n2._pinned));
-            forceLayout(this.nodes, this.edges, { width: W, height: H2, depth: D || 400, iters: 280, pinned });
+            const fresh = this.nodes.filter((n2) => n2._fresh);
+            if (fresh.length) {
+              const frozen = new Set(this.nodes.filter((n2) => !n2._fresh));
+              forceLayout(this.nodes, this.edges, { width: W, height: H2, depth: D || 400, iters: 280, pinned: frozen });
+            }
+            savePositions(this.nodes, this._scope());
             this._vfCache = null;
             this._fit();
             this.draw();
@@ -29401,10 +29955,18 @@ ${ctx}${hint}`;
             this.edges.push({ a: ch, b: sec, role: "\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19", type: "scene-link" });
           }
         }
+        /**
+         * [alpha.72 ข้อ 1] ขนาดผืนวาดต้องเท่ากับกล่อง CSS "เป๊ะ ๆ"
+         * ของเดิม `Math.max(300, r.width)` ตั้งพื้นไว้ที่ 300 → พอแผงแคบกว่านั้น (แผงข้างกว้าง ~200)
+         * ผืนวาดภายในกว้าง 300 แต่ถูกยืดลงมาแสดงที่ 200 = **บีบแนวนอน 2/3 ทั้งผัง**
+         * โหนดวงกลมจึงกลายเป็นวงรี และรูปประจำตัวหน้าแบนผิดสัดส่วน (เห็นชัดตอนรูปเริ่มขึ้นใน .71)
+         * แผงที่ยังไม่มีขนาด (ซ่อนอยู่) = ข้ามไป ไม่ตั้งเป็น 0 (จะล้างภาพทิ้งเปล่า ๆ)
+         */
         _fit() {
           const r = this.pane.getBoundingClientRect();
-          const w = Math.max(300, r.width), h = Math.max(300, r.height);
-          if (w > 0 && h > 0 && (this.canvas.width !== w || this.canvas.height !== h)) {
+          const w = Math.round(r.width), h = Math.round(r.height);
+          if (w < 2 || h < 2) return;
+          if (this.canvas.width !== w || this.canvas.height !== h) {
             this.canvas.width = w;
             this.canvas.height = h;
           }
@@ -29414,14 +29976,14 @@ ${ctx}${hint}`;
           const w = this.canvas.width, h = this.canvas.height;
           if (!w || !h) return;
           c.clearRect(0, 0, w, h);
-          c.fillStyle = BG;
+          c.fillStyle = this._bg || BG_FALLBACK;
           c.fillRect(0, 0, w, h);
           c.save();
           c.translate(this._cx, this._cy);
           c.scale(this._scale, this._scale);
           if (!this.nodes.length) {
             c.restore();
-            c.fillStyle = "#6a6862";
+            c.fillStyle = THEME.canvas.axis;
             c.font = "15px sans-serif";
             c.textAlign = "center";
             c.fillText("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E43\u0E19 Wiki", w / 2, h / 2 - 10);
@@ -29434,7 +29996,7 @@ ${ctx}${hint}`;
             const viewW = w / this._scale, viewH = h / this._scale;
             const cx2 = -this._cx / this._scale, cy2 = -this._cy / this._scale;
             const ext = Math.max(viewW, viewH) * 2 + Math.max(Math.abs(cx2), Math.abs(cy2)) * 1.5;
-            c.strokeStyle = GRID2;
+            c.strokeStyle = this._grid || GRID_FALLBACK;
             c.lineWidth = 0.4;
             c.globalAlpha = this._gridAlpha;
             c.beginPath();
@@ -29491,7 +30053,7 @@ ${ctx}${hint}`;
             const aVis = visSet.has(e.a), bVis = visSet.has(e.b);
             if (!aVis && !bVis) continue;
             let alpha = at || this._typeFilter.has(e.type) ? 1 : 0.08;
-            const color = this._edgeCol[e.type] || "#4a4842";
+            const color = this._edgeCol[e.type] || THEME.canvas.grid;
             let lw = 2;
             if (e.type === "co-occur") {
               lw = 1.2;
@@ -29533,13 +30095,13 @@ ${ctx}${hint}`;
             const vt = tagStyle(n2);
             const isHov = n2 === this._hoverNode;
             const struct = isStruct(n2);
-            const baseR = struct ? 10 : 14;
-            let r = isHov ? baseR + 6 : baseR;
+            const ns = this._nodeScale || 1;
+            const baseR = (struct ? 10 : 14) * ns;
             const degree = this.edges.filter((e) => e.a === n2 || e.b === n2).length;
-            r = Math.max(baseR, Math.min(28, baseR + degree * 0.6));
+            let r = Math.max(baseR, Math.min(28 * ns, baseR + degree * 0.6 * ns));
             if (isHov) r += 4;
             const nx = px2(n2), ny = py2(n2);
-            const col = this._catCol[n2.cat] || "#d9955f";
+            const col = this._catCol[n2.cat] || THEME.edge["ent-scene"];
             if (isHov) {
               c.beginPath();
               c.arc(nx, ny, r + 12, 0, Math.PI * 2);
@@ -29551,19 +30113,7 @@ ${ctx}${hint}`;
               c.shadowColor = hexToRgba(col, 0.6);
               c.shadowBlur = 14;
             }
-            if (this._showImages && n2.image && n2._img && !struct) {
-              c.save();
-              c.beginPath();
-              c.arc(nx, ny, r + 2, 0, Math.PI * 2);
-              c.clip();
-              c.drawImage(n2._img, nx - r - 2, ny - r - 2, (r + 2) * 2, (r + 2) * 2);
-              c.restore();
-              c.beginPath();
-              c.strokeStyle = "rgba(255,255,255,0.3)";
-              c.lineWidth = 2;
-              c.arc(nx, ny, r + 3, 0, Math.PI * 2);
-              c.stroke();
-            }
+            const hasImg = this._showImages && n2.image && n2._img && !struct;
             if (vt) {
               c.beginPath();
               c.fillStyle = vt.color;
@@ -29574,7 +30124,7 @@ ${ctx}${hint}`;
               const sw2 = r * 1.6, sh2 = r * 1.4;
               c.fillStyle = col;
               c.fillRect(nx - sw2 / 2, ny - sh2 / 2, sw2, sh2);
-              c.strokeStyle = isHov ? "#faf9f5" : "#1f1e1c";
+              c.strokeStyle = isHov ? THEME.canvas.hover : THEME.canvas.border;
               c.lineWidth = isHov ? 3 : 2;
               c.strokeRect(nx - sw2 / 2, ny - sh2 / 2, sw2, sh2);
             } else {
@@ -29582,35 +30132,114 @@ ${ctx}${hint}`;
               c.fillStyle = col;
               c.arc(nx, ny, r, 0, Math.PI * 2);
               c.fill();
-              c.strokeStyle = isHov ? "#faf9f5" : "#1f1e1c";
-              c.lineWidth = isHov ? 3 : 2;
+              if (hasImg) {
+                const iw = n2._img.naturalWidth || 1, ih = n2._img.naturalHeight || 1;
+                const side = Math.min(iw, ih);
+                const sxi = (iw - side) / 2, syi = (ih - side) / 2;
+                c.save();
+                c.beginPath();
+                c.arc(nx, ny, r - 1, 0, Math.PI * 2);
+                c.clip();
+                c.drawImage(n2._img, sxi, syi, side, side, nx - r + 1, ny - r + 1, (r - 1) * 2, (r - 1) * 2);
+                c.restore();
+              }
+              c.beginPath();
+              c.arc(nx, ny, r, 0, Math.PI * 2);
+              c.strokeStyle = hasImg ? col : isHov ? THEME.canvas.hover : THEME.canvas.border;
+              c.lineWidth = hasImg ? 3 : isHov ? 3 : 2;
               c.stroke();
+              if (hasImg && isHov) {
+                c.beginPath();
+                c.arc(nx, ny, r + 2, 0, Math.PI * 2);
+                c.strokeStyle = THEME.canvas.hover;
+                c.lineWidth = 2;
+                c.stroke();
+              }
             }
             c.shadowBlur = 0;
             if (q && m.has(n2) && !this._rafId) {
               c.beginPath();
-              c.strokeStyle = "#61afef";
+              c.strokeStyle = THEME.edge.ally;
               c.lineWidth = 3;
               c.globalAlpha = 0.5 + Math.sin(performance.now() * 5e-3) * 0.5;
               c.arc(nx, ny, r + 6, 0, Math.PI * 2);
               c.stroke();
               c.globalAlpha = 1;
             }
-            const label = (vt && vt.icon ? vt.icon + " " : "") + (n2.name.length > 20 ? n2.name.slice(0, 19) + "\u2026" : n2.name);
-            drawLabelBox(c, label, nx, ny + r + 12 + 4, isHov ? 11 : 9);
+            if (this._showLabels || isHov) {
+              const label = (vt && vt.icon ? vt.icon + " " : "") + (n2.name.length > 20 ? n2.name.slice(0, 19) + "\u2026" : n2.name);
+              drawLabelBox(c, label, nx, ny + r + 12 + 4, isHov ? 11 : 9);
+            }
           }
           c.restore();
+          this._drawAxis(c);
           this._updateStatus();
           if (q && m.size && !this._rafId) this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
             this.draw();
           });
         }
+        /**
+         * [alpha.73 ข้อ 4] แกนบอกทิศที่มุมล่างซ้ายของผัง
+         * เดิมมีแต่ตัวเลขบนแถบสถานะ ไม่มีอะไรบอกว่าแกนไหนชี้ไปทางไหน (โดยเฉพาะพอหมุน 3D)
+         * ลูกศรหมุนตามมุมกล้องจริง ใช้สูตรฉายเดียวกับที่วาดโหนด (axisVectors)
+         */
+        _drawAxis(c) {
+          const w = this.canvas.width, h = this.canvas.height;
+          if (w < 160 || h < 120) return;
+          const ox = 34, oy = h - 34, len5 = 22;
+          const ax = axisVectors(this._rx, this._ry, this._mode3D);
+          const axes = [["X", ax.x, THEME.node.characters], ["Y", ax.y, THEME.node.items]];
+          if (ax.z) axes.push(["Z", ax.z, THEME.node.locations]);
+          c.save();
+          c.globalAlpha = 0.85;
+          c.lineWidth = 1.6;
+          c.font = "9px sans-serif";
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          for (const [name5, v2, col] of axes) {
+            const ex = ox + v2.x * len5, ey = oy + v2.y * len5;
+            c.strokeStyle = col;
+            c.fillStyle = col;
+            c.beginPath();
+            c.moveTo(ox, oy);
+            c.lineTo(ex, ey);
+            c.stroke();
+            c.beginPath();
+            c.arc(ex, ey, 2.2, 0, Math.PI * 2);
+            c.fill();
+            c.fillText(name5, ox + v2.x * (len5 + 8), oy + v2.y * (len5 + 8));
+          }
+          c.fillStyle = THEME.canvas.axis;
+          c.globalAlpha = 0.6;
+          c.beginPath();
+          c.arc(ox, oy, 2, 0, Math.PI * 2);
+          c.fill();
+          c.restore();
+        }
+        /**
+         * [alpha.73 ข้อ 4] แถบสถานะเดิมโชว์ `_cx/_cy` = ระยะเลื่อนกล้องเป็น "พิกเซลบนจอ"
+         * ไม่ใช่พิกัดของอะไรเลย (ซูมทีค่าก็เปลี่ยนทั้งที่ยังมองจุดเดิม) และเอามุมหมุนมาแปะป้ายว่า "Z"
+         * ทั้งที่ Z คือแกนลึกของผัง ไม่ใช่องศา
+         * ตอนนี้: X/Y/Z = **พิกัดโลกของจุดกึ่งกลางจอ** (ค่าเดียวกับที่โหนดใช้) · มุมหมุนแยกเป็น ↻
+         */
         _updateStatus() {
           if (!this._sb) return;
           const structN = this.nodes.filter((n2) => !WIKI_CATS.has(n2.cat)).length;
           const st = structN ? ` (+${structN} \u0E09\u0E32\u0E01/\u0E1A\u0E17)` : "";
-          this._sb.textContent = `\u29BF ${this.nodes.length}${st} \xB7 ${this.edges.length} \u0E40\u0E2A\u0E49\u0E19 \xB7 \u2715 ${Math.round(this._cx)} ${Math.round(this._cy)}` + (this._mode3D ? ` Z${Math.round(this._rx * 180 / Math.PI)}\xB0` : "") + ` \xB7 \u0E0B\u0E39\u0E21 ${Math.round(this._scale * 100)}%`;
+          const c = viewCenter({ scale: this._scale, cx: this._cx, cy: this._cy }, this.canvas.width, this.canvas.height);
+          const zc = this._mode3D ? this._viewZ() : 0;
+          this._sb.textContent = `\u29BF ${this.nodes.length}${st} \xB7 ${this.edges.length} \u0E40\u0E2A\u0E49\u0E19 \xB7 X ${Math.round(c.x)} \xB7 Y ${Math.round(c.y)} \xB7 Z ${Math.round(zc)}` + (this._mode3D ? ` \xB7 \u21BB ${Math.round(this._rx * 180 / Math.PI)}\xB0,${Math.round(this._ry * 180 / Math.PI)}\xB0` : "") + ` \xB7 \u0E0B\u0E39\u0E21 ${Math.round(this._scale * 100)}%`;
+        }
+        /** ความลึกเฉลี่ยของโหนดที่มองเห็น — ใช้เป็นค่า Z ของกล้องในโหมด 3D */
+        _viewZ() {
+          if (!this.nodes.length) return 0;
+          let sum2 = 0, n2 = 0;
+          for (const nd of this.nodes) {
+            sum2 += nd.z || 0;
+            n2++;
+          }
+          return n2 ? sum2 / n2 : 0;
         }
         _updateMinimap() {
           if (!this._showMinimap || !this._mm || this._mm.style.display === "none") return;
@@ -29620,7 +30249,7 @@ ${ctx}${hint}`;
           c.fillStyle = "rgba(26,26,24,0.92)";
           c.fillRect(0, 0, mw, mh);
           if (!this.nodes.length) {
-            c.strokeStyle = "#4a4842";
+            c.strokeStyle = THEME.canvas.grid;
             c.strokeRect(0, 0, mw, mh);
             return;
           }
@@ -29636,14 +30265,14 @@ ${ctx}${hint}`;
           const ox = 10 + (mw - 20 - pw * s) / 2, oy = 10 + (mh - 20 - ph * s) / 2;
           for (const n2 of this.nodes) {
             const nx = ox + (n2.x - mnx) * s, ny = oy + (n2.y - mny) * s;
-            c.fillStyle = this._catCol[n2.cat] || "#d9955f";
+            c.fillStyle = this._catCol[n2.cat] || THEME.edge["ent-scene"];
             c.beginPath();
             c.arc(nx, ny, 2.5, 0, Math.PI * 2);
             c.fill();
           }
           const vw = this.canvas.width / this._scale, vh = this.canvas.height / this._scale;
           const vx = ox + (-this._cx / this._scale - mnx) * s, vy = oy + (-this._cy / this._scale - mny) * s;
-          c.strokeStyle = "#61afef";
+          c.strokeStyle = THEME.edge.ally;
           c.lineWidth = 1.5;
           c.strokeRect(vx, vy, vw * s, vh * s);
         }
@@ -29685,20 +30314,27 @@ ${ctx}${hint}`;
           return { x: sx2, y: sy2, node: this.nodes.find((n2) => visible(n2) && (n2.x - sx2) ** 2 + (n2.y - sy2) ** 2 <= 400) || null };
         }
         _down(e) {
-          if (e.button === 2 && this._mode3D) {
+          const ctl = this._controls || resolveNetControls(null);
+          const orbitBtn = buttonIndex(ctl.orbitButton), panBtn = buttonIndex(ctl.panButton);
+          if (e.button === orbitBtn && this._mode3D) {
+            e.preventDefault();
             this._orbitDrag = { sx: e.clientX, sy: e.clientY, orx: this._rx, ory: this._ry };
             return;
           }
-          if (e.button !== 0) return;
+          if (e.button !== panBtn) return;
           const { x, y, node } = this._hit(e);
           if (node && e.shiftKey) {
             this._repel(node, x, y);
+            savePositions(this.nodes, this._scope());
             this.draw();
             return;
           }
-          if (node) {
+          if (node && this._tool === "move") {
             this.drag = { node, moved: false, ox: node.x - x, oy: node.y - y };
             return;
+          }
+          if (node) {
+            this._clickNode = node;
           }
           this.pan = { sx: e.clientX, sy: e.clientY, cx: this._cx, cy: this._cy, moved: false };
           this.canvas.classList.add("net-panning");
@@ -29737,24 +30373,36 @@ ${ctx}${hint}`;
           if (this._showMinimap) this._updateMinimap();
         }
         _up() {
+          const clicked = this._clickNode;
+          this._clickNode = null;
           if (this._orbitDrag) {
             this._orbitDrag = null;
             return;
           }
           if (this.pan) {
+            const moved = this.pan.moved;
             this.pan = null;
             this.canvas.classList.remove("net-panning");
-            return;
+            if (moved) return;
           }
           if (this.drag && this.drag.moved) {
             this.drag.node._pinned = true;
             savePositions(this.nodes, this._scope());
           }
           this.drag = null;
+          if (clicked && (this._tool === "open" || this._tool === "edit")) this._openNode(clicked);
+        }
+        _openNode(node) {
+          if (!node) return;
+          if (isStruct(node)) {
+            if (this.onOpenScene) this.onOpenScene(node.file);
+          } else if (this.onOpen) this.onOpen(node);
         }
         /** ปลดหมุดทุกโหนด แล้วให้ force layout จัดผังใหม่ทั้งหมด */
+        /** ปลดหมุดทุกโหนด + ลบตำแหน่งที่บันทึกไว้ → รอบถัดไปทุกโหนดเป็น "ของใหม่" จึงถูกจัดผังใหม่หมด */
         relayout() {
           clearPositions(this.nodes, this._scope());
+          for (const n2 of this.nodes) n2._fresh = true;
           this.refresh();
         }
         /** ปลดหมุดโหนดเดียว — รอบ refresh ถัดไป force layout จะขยับมันได้อีก */
@@ -29763,25 +30411,56 @@ ${ctx}${hint}`;
           node._pinned = false;
           savePositions(this.nodes, this._scope());
         }
+        /**
+         * [alpha.73 ข้อ 1] Shift+คลิก = "เคลียร์ที่ว่างรอบโหนดนี้"
+         *
+         * สูตรเดิมเป็นแรงผลักแบบ 1/d² (`f=180/(d*d*0.01+1)`) — ที่ระยะจริงบนผัง (หลายร้อยหน่วย)
+         * ได้แรงราว 0.005 หน่วย = **ขยับไม่ถึงหนึ่งพิกเซล** ผู้ใช้จึงเห็นว่า "กดแล้วไม่มีอะไรเกิดขึ้น"
+         *
+         * ตอนนี้ดันเฉพาะโหนดที่อยู่ใกล้กว่ารัศมีเคลียร์ ให้ออกไปอยู่ที่ขอบรัศมีพอดี — เห็นผลทันทีและคาดเดาได้
+         * โหนดที่ถูกดันถือว่า "ผู้ใช้จัดเอง" (ปักหมุด) จะได้ไม่ถูก forceLayout ดึงกลับ
+         */
         _repel(node, hx, hy) {
+          const R = 220 * (this._nodeScale || 1);
+          const use3D = !!this._mode3D;
+          let moved = 0;
           for (const n2 of this.nodes) {
             if (n2 === node) continue;
-            const dx = n2.x - node.x, dy = n2.y - node.y, dz = (n2.z || 0) - (node.z || 0);
-            const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-            const f = 180 / (d * d * 0.01 + 1);
-            n2.x += dx / d * f;
-            n2.y += dy / d * f;
-            n2.z = (n2.z || 0) + dz / d * f;
+            let dx = n2.x - node.x, dy = n2.y - node.y, dz = use3D ? (n2.z || 0) - (node.z || 0) : 0;
+            let d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (d >= R) continue;
+            if (d < 1) {
+              const a = Math.random() * Math.PI * 2;
+              dx = Math.cos(a);
+              dy = Math.sin(a);
+              dz = 0;
+              d = 1;
+            }
+            const k = R / d;
+            n2.x = node.x + dx * k;
+            n2.y = node.y + dy * k;
+            if (use3D) n2.z = (node.z || 0) + dz * k;
+            n2._pinned = true;
+            moved++;
           }
+          return moved;
         }
+        /**
+         * [alpha.73 ข้อ 4] ซูมยึด "จุดกึ่งกลางจอ"
+         * ของเดิมยึดตำแหน่งเมาส์ → พิกัดกล้องที่โชว์บนแถบสถานะเปลี่ยนทุกครั้งที่ซูม
+         * ทั้งที่ผู้ใช้ยังมองจุดเดิม (ดูเหมือน "ค่า x/y/z ไม่ยึดจากอะไรเลย")
+         */
         _zoom(e) {
-          const r = this.canvas.getBoundingClientRect();
-          const mx = e.clientX - r.left, my = e.clientY - r.top;
           const f = e.deltaY < 0 ? 1.1 : 0.9;
-          const ns = this._scale * f;
-          this._cx = mx - (mx - this._cx) * (ns / this._scale);
-          this._cy = my - (my - this._cy) * (ns / this._scale);
-          this._scale = ns;
+          const cam = zoomAtCenter(
+            { scale: this._scale, cx: this._cx, cy: this._cy },
+            this.canvas.width,
+            this.canvas.height,
+            this._scale * f
+          );
+          this._scale = cam.scale;
+          this._cx = cam.cx;
+          this._cy = cam.cy;
           this.draw();
           if (this._showMinimap) this._updateMinimap();
         }
@@ -29828,7 +30507,7 @@ ${ctx}${hint}`;
             const d = document.createElement("div");
             d.className = "k-menu-item";
             d.textContent = label;
-            if (opts.danger) d.style.color = "#e06c75";
+            if (opts.danger) d.style.color = THEME.edge.family;
             if (opts.dim) d.style.opacity = "0.5";
             if (label === "-") {
               d.style.cssText = "height:1px;background:var(--border);margin:2px 6px;padding:0;cursor:default;";
@@ -59883,7 +60562,10 @@ ${mdToHtmlBody(md)}
       name: name5 || "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2B\u0E21\u0E48",
       image: image || "",
       pins: [],
-      order: 0
+      order: 0,
+      category: "",
+      routes: [],
+      overlays: { ...DEFAULT_OVERLAYS }
     };
   }
   function newPin(x, y, kind = "note") {
@@ -59939,16 +60621,162 @@ ${mdToHtmlBody(md)}
     for (const m of out) m.pins = (m.pins || []).filter((p) => !(p.kind === "portal" && p.toMap === id));
     return out;
   }
-  var MAPS_VERSION, PIN_COLORS, PIN_KIND;
+  function clampZoom2(z) {
+    if (z === null || z === void 0 || z === "") return 1;
+    const n2 = Number(z);
+    if (!Number.isFinite(n2)) return 1;
+    return Math.max(MAP_ZOOM_MIN, Math.min(MAP_ZOOM_MAX, n2));
+  }
+  function zoomStep(z, dir) {
+    const cur = clampZoom2(z);
+    const steps = Math.round(cur / MAP_ZOOM_STEP) + (dir > 0 ? 1 : -1);
+    return clampZoom2(steps * MAP_ZOOM_STEP);
+  }
+  function zoomScroll(scroll, client, before, after, anchor = 0.5) {
+    const c = +client || 0, b = +before || 0, a = +after || 0;
+    if (!b || !c) return 0;
+    const at = Math.max(0, Math.min(1, +anchor || 0));
+    const ratio = ((+scroll || 0) + c * at) / b;
+    return Math.max(0, Math.min(Math.max(0, a - c), ratio * a - c * at));
+  }
+  function mapOverlays(map2) {
+    const o = map2 && map2.overlays || {};
+    const size = Number(o.gridSize);
+    return {
+      grid: !!o.grid,
+      gridSize: Number.isFinite(size) && size >= 2 && size <= 50 ? size : DEFAULT_OVERLAYS.gridSize,
+      compass: !!o.compass,
+      scale: !!o.scale,
+      scaleLabel: String(o.scaleLabel || "")
+    };
+  }
+  function toggleOverlay(map2, key2) {
+    const o = mapOverlays(map2);
+    o[key2] = !o[key2];
+    map2.overlays = o;
+    return o;
+  }
+  function gridLines(gridSize) {
+    const raw = Number(gridSize);
+    const n2 = Number.isFinite(raw) ? Math.max(2, Math.min(50, Math.round(raw))) : DEFAULT_OVERLAYS.gridSize;
+    const out = [];
+    for (let i5 = 1; i5 < n2; i5++) out.push(+(i5 * 100 / n2).toFixed(4));
+    return out;
+  }
+  function mapCategories(maps) {
+    const set = /* @__PURE__ */ new Set();
+    for (const m of maps || []) set.add(String(m.category || "").trim());
+    const named = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, "th"));
+    return set.has(MAP_UNCATEGORIZED) ? [...named, MAP_UNCATEGORIZED] : named;
+  }
+  function groupMaps(maps) {
+    return mapCategories(maps).map((cat) => ({
+      cat,
+      maps: sortMaps((maps || []).filter((m) => String(m.category || "").trim() === cat))
+    }));
+  }
+  function matchPin(pin, q) {
+    const s = String(q || "").trim().toLowerCase();
+    if (!s) return true;
+    const hay = [pin.label, pin.note, pin.kind, (PIN_KIND[pin.kind] || {}).label].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(s);
+  }
+  function movePins(pins, ids, dx, dy) {
+    const set = new Set(ids || []);
+    return (pins || []).map((p) => set.has(p.id) ? { ...p, x: clamp3(p.x + (+dx || 0)), y: clamp3(p.y + (+dy || 0)) } : p);
+  }
+  function deletePins(map2, ids) {
+    const set = new Set(ids || []);
+    map2.pins = (map2.pins || []).filter((p) => !set.has(p.id));
+    map2.routes = (map2.routes || []).map((r) => ({ ...r, pinIds: (r.pinIds || []).filter((id) => !set.has(id)) }));
+    return map2;
+  }
+  function clonePins(pins, ids, offset = 2, intoMapId = null) {
+    const set = new Set(ids || []);
+    const seq2 = () => "pin-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    return (pins || []).filter((p) => set.has(p.id)).map((p) => {
+      const c = { ...p, id: seq2(), x: clamp3(p.x + offset), y: clamp3(p.y + offset) };
+      if (intoMapId && c.kind === "portal" && c.toMap === intoMapId) c.toMap = "";
+      return c;
+    });
+  }
+  function newRoute(name5, color) {
+    return {
+      id: "rt-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name: name5 || "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48",
+      color: color || ROUTE_COLORS[0],
+      dashed: false,
+      pinIds: []
+    };
+  }
+  function mapRoutes(map2) {
+    return map2 && Array.isArray(map2.routes) ? map2.routes : [];
+  }
+  function routePoints(map2, route) {
+    const byId = new Map((map2.pins || []).map((p) => [p.id, p]));
+    return (route.pinIds || []).map((id) => byId.get(id)).filter(Boolean).map((p) => ({ x: p.x, y: p.y, id: p.id, label: p.label }));
+  }
+  function routePath(points) {
+    if (!points || points.length < 2) return "";
+    return points.map((p, i5) => (i5 ? "L" : "M") + p.x.toFixed(2) + "," + p.y.toFixed(2)).join(" ");
+  }
+  function routeLength(points) {
+    let sum2 = 0;
+    for (let i5 = 1; i5 < (points || []).length; i5++) {
+      const dx = points[i5].x - points[i5 - 1].x, dy = points[i5].y - points[i5 - 1].y;
+      sum2 += Math.sqrt(dx * dx + dy * dy);
+    }
+    return +sum2.toFixed(2);
+  }
+  function addPinToRoute(route, pinId) {
+    const ids = route.pinIds || (route.pinIds = []);
+    if (!pinId || ids[ids.length - 1] === pinId) return route;
+    ids.push(pinId);
+    return route;
+  }
+  function deleteRoute(map2, routeId) {
+    map2.routes = mapRoutes(map2).filter((r) => r.id !== routeId);
+    return map2;
+  }
+  function scenesForMap(scenes, mapId) {
+    return (scenes || []).filter((s) => s && s.mapId === mapId);
+  }
+  function scenePinCounts(scenes, mapId) {
+    const out = {};
+    for (const s of scenesForMap(scenes, mapId)) {
+      const k = s.pinId || "";
+      out[k] = (out[k] || 0) + 1;
+    }
+    return out;
+  }
+  function migrateMaps(data2) {
+    const d = data2 && typeof data2 === "object" ? data2 : {};
+    d.maps = Array.isArray(d.maps) ? d.maps : [];
+    for (const m of d.maps) {
+      m.pins = Array.isArray(m.pins) ? m.pins : [];
+      m.routes = Array.isArray(m.routes) ? m.routes : [];
+      if (typeof m.category !== "string") m.category = "";
+      m.overlays = mapOverlays(m);
+    }
+    d.version = MAPS_VERSION;
+    return d;
+  }
+  var MAPS_VERSION, PIN_COLORS, PIN_KIND, MAP_ZOOM_MIN, MAP_ZOOM_MAX, MAP_ZOOM_STEP, DEFAULT_OVERLAYS, MAP_UNCATEGORIZED, ROUTE_COLORS;
   var init_maps = __esm({
     "src/maps.js"() {
-      MAPS_VERSION = "1.0";
+      MAPS_VERSION = "1.1";
       PIN_COLORS = ["#d9575e", "#5f9fd9", "#6fae6f", "#d9b757", "#a97fd0", "#d97757", "#7fb8b0"];
       PIN_KIND = {
         entity: { icon: "\u{1F4CD}", label: "\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49" },
         portal: { icon: "\u{1F6AA}", label: "\u0E1B\u0E23\u0E30\u0E15\u0E39\u0E44\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19" },
         note: { icon: "\u{1F4CC}", label: "\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38" }
       };
+      MAP_ZOOM_MIN = 0.25;
+      MAP_ZOOM_MAX = 5;
+      MAP_ZOOM_STEP = 0.25;
+      DEFAULT_OVERLAYS = { grid: false, gridSize: 10, compass: false, scale: false, scaleLabel: "" };
+      MAP_UNCATEGORIZED = "";
+      ROUTE_COLORS = ["#d97757", "#5f9fd9", "#6fae6f", "#a97fd0", "#d9b757"];
     }
   });
 
@@ -61172,456 +62000,6 @@ ${h.text}`;
     }
   });
 
-  // src/scene-props.js
-  async function sceneProps(dPath, ch, sc) {
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) return;
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-    const M2 = await readSceneMeta(file, row2);
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog");
-    box2.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01 \u2014 " + row2.title));
-    const rowOf = /* @__PURE__ */ new Map();
-    const mk = (label, val, tag3 = "input") => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const i5 = el(tag3, "wiki-input");
-      i5.value = val || "";
-      r.append(i5);
-      box2.append(r);
-      rowOf.set(i5, r);
-      return i5;
-    };
-    const mkSelect = (label, options, cur) => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const s = el("select", "wiki-input k-dlg-select");
-      for (const [val, txt] of options) {
-        const o = el("option", null, txt);
-        o.value = val;
-        if (val === cur) o.selected = true;
-        s.append(o);
-      }
-      r.append(s);
-      box2.append(r);
-      return s;
-    };
-    const mkCheck = (label, checked) => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const c = el("input", "wiki-check");
-      c.type = "checkbox";
-      c.checked = !!checked;
-      r.append(c);
-      box2.append(r);
-      return c;
-    };
-    const iSyn = mk("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D", M2.synopsis, "textarea");
-    const iStoryDate = mk("\u0E40\u0E27\u0E25\u0E32\u0E43\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 (\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32)", M2.storyDate);
-    iStoryDate.placeholder = "\u0E40\u0E0A\u0E48\u0E19 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48 3 \xB7 \u0E1B\u0E35\u0E17\u0E35\u0E48 1024 \xB7 \u0E40\u0E0A\u0E49\u0E32\u0E27\u0E31\u0E19\u0E08\u0E31\u0E19\u0E17\u0E23\u0E4C";
-    const iStartPage = mk("\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C)", row2.startPage || "");
-    iStartPage.type = "number";
-    iStartPage.min = "1";
-    iStartPage.placeholder = '1 \u2014 \u0E43\u0E0A\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14 "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32" \u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C';
-    const iPov = mk("\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 (POV)", M2.pov);
-    const iEmotion = mk("\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C", M2.emotion);
-    const iConflict = mk("\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07", M2.conflict);
-    const iStatus = mkSelect(
-      "\u0E2A\u0E16\u0E32\u0E19\u0E30",
-      [["Outline", "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07 \u2014"], ...allStatuses().map((s) => [s, s])],
-      allStatuses().includes(row2.status) ? row2.status : "Outline"
-    );
-    const iColor = mkSelect(
-      "\u0E2A\u0E35",
-      [["", "\u2014 \u0E44\u0E21\u0E48\u0E21\u0E35 \u2014"], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + n2])],
-      row2.color || ""
-    );
-    const iFlag = mkCheck("\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14", row2.flag);
-    const iTags = mk("\u0E41\u0E17\u0E47\u0E01 (\u0E04\u0E31\u0E48\u0E19 , )", (M2.tags || []).join(", "));
-    const iNote = mk("\u0E42\u0E19\u0E49\u0E15", M2.note, "textarea");
-    const iFuture = mk("Future Note (\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19)", M2.futureNote || "", "textarea");
-    iFuture.placeholder = "\u0E42\u0E19\u0E49\u0E15\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19 \u2014 \u0E41\u0E2A\u0E14\u0E07\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48\u0E41\u0E25\u0E30 Planner \u0E44\u0E21\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E1B\u0E01\u0E15\u0E34";
-    const iFb = mkCheck("\u23EA \u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15 (Flashback)", M2.isFlashback);
-    const iFf = mkCheck("\u23E9 \u0E25\u0E48\u0E27\u0E07\u0E2B\u0E19\u0E49\u0E32 (Flashforward)", M2.isFlashforward);
-    iFb.addEventListener("change", () => {
-      if (iFb.checked) iFf.checked = false;
-    });
-    iFf.addEventListener("change", () => {
-      if (iFf.checked) iFb.checked = false;
-    });
-    const aiCtx = async () => {
-      let body = "";
-      try {
-        body = (0, import_md4.parseMdFile)(await kapi.readFile(file)).body || "";
-      } catch {
-      }
-      return { body, title: row2.title || "" };
-    };
-    attachAiFieldButton(rowOf.get(iSyn), iSyn, "synopsis", aiCtx);
-    attachAiFieldButton(rowOf.get(iPov), iPov, "pov", aiCtx);
-    attachAiFieldButton(rowOf.get(iEmotion), iEmotion, "emotion", aiCtx);
-    attachAiFieldButton(rowOf.get(iConflict), iConflict, "conflict", aiCtx);
-    const btns = el("div", "k-dlg-btns");
-    const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
-    const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
-    btns.append(cB, okB);
-    box2.append(btns);
-    ov.append(box2);
-    document.body.append(ov);
-    cB.onclick = () => ov.remove();
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    okB.onclick = async () => {
-      row2.synopsis = iSyn.value;
-      row2.pov = iPov.value;
-      row2.status = iStatus.value;
-      row2.storyDate = iStoryDate.value.trim();
-      {
-        const sp = parseInt(iStartPage.value, 10);
-        if (Number.isFinite(sp) && sp > 0) row2.startPage = sp;
-        else delete row2.startPage;
-      }
-      row2.emotion = iEmotion.value;
-      row2.conflict = iConflict.value;
-      row2.color = iColor.value;
-      row2.flag = iFlag.checked;
-      row2.note = iNote.value;
-      row2.futureNote = iFuture.value;
-      if (iFb.checked && iFf.checked) iFf.checked = false;
-      row2.isFlashback = iFb.checked;
-      row2.isFlashforward = iFf.checked;
-      row2.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
-      const props = {};
-      for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
-      await writeSceneMeta(file, props);
-      await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-      await buildTree2();
-      const openTab = state.tabs.get(file);
-      if (openTab) {
-        openTab.startPage = row2.startPage || 1;
-        updatePageNumberHint();
-        refreshSpView();
-      }
-      ov.remove();
-      setStatus("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27");
-    };
-  }
-  var import_md4;
-  var init_scene_props = __esm({
-    "src/scene-props.js"() {
-      init_app();
-      init_core();
-      init_custom_status();
-      init_spell();
-      init_scene_meta();
-      init_ai_synopsis();
-      import_md4 = __toESM(require_md());
-    }
-  });
-
-  // src/ai-analyzer-ui.js
-  async function analyzerStats(root = state.root) {
-    const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
-    if (!root) return out;
-    const SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research"];
-    try {
-      for (const sec of await kapi.listDirs(root)) {
-        if (SKIP.includes(sec)) {
-          if (sec === "Wiki" || sec === "Bible") {
-            const wp = await kapi.join(root, sec);
-            for (const cat of await kapi.listDirs(wp).catch(() => []))
-              out.entities += (await kapi.listFiles(await kapi.join(wp, cat), ".json").catch(() => [])).length;
-          }
-          continue;
-        }
-        const secPath = await kapi.join(root, sec);
-        if (!await kapi.exists(await kapi.join(secPath, "section.json"))) continue;
-        out.sections++;
-        const dr = await kapi.join(secPath, "Draft");
-        if (!await kapi.exists(dr)) continue;
-        for (const dn of await kapi.listDirs(dr).catch(() => [])) {
-          const dp = await kapi.join(dr, dn);
-          const df = await kapi.join(dp, "draft.json");
-          if (!await kapi.exists(df)) continue;
-          const chs = (await kapi.readJson(df).catch(() => ({}))).chapters || [];
-          out.chapters += chs.length;
-          const scAll = (await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}))).chapters || {};
-          for (const ch of chs) for (const sc of scAll[ch.guid] || []) {
-            if (sc.type === "memo") continue;
-            out.scenes++;
-            out.words += Number(sc.wordCount) || 0;
-          }
-        }
-      }
-    } catch {
-    }
-    return out;
-  }
-  async function renderAIAnalyzerPanel(host2) {
-    const h = host2 || document.getElementById("ai-analyzer-body");
-    if (!h) return null;
-    h.replaceChildren();
-    const wrap2 = el("div", "aia-wrap");
-    const head2 = el("div", "aia-head");
-    const title2 = el("div", "aia-title");
-    title2.innerHTML = iconHtml("brain", 18) + " " + t("panel.aiAnalyzerTitle", "AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C");
-    head2.append(title2);
-    head2.append(el("div", "aia-badge", t("aia.mockup", "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19")));
-    wrap2.append(head2);
-    wrap2.append(el(
-      "div",
-      "aia-lead",
-      t("aia.lead", "\u0E0A\u0E38\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E14\u0E49\u0E27\u0E22 AI \u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E21\u0E32 \u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E27\u0E48\u0E32\u0E41\u0E15\u0E48\u0E25\u0E30\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E08\u0E30\u0E1A\u0E2D\u0E01\u0E2D\u0E30\u0E44\u0E23\u0E1A\u0E49\u0E32\u0E07")
-    ));
-    const stats = await analyzerStats();
-    const bar = el("div", "aia-stats");
-    for (const [label, val] of [
-      ["\u0E40\u0E25\u0E48\u0E21", stats.sections],
-      ["\u0E1A\u0E17", stats.chapters],
-      ["\u0E09\u0E32\u0E01", stats.scenes],
-      ["\u0E04\u0E33", stats.words.toLocaleString()],
-      ["\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki", stats.entities]
-    ]) {
-      const b = el("div", "aia-stat");
-      b.append(el("div", "aia-stat-val", String(val)), el("div", "aia-stat-label", label));
-      bar.append(b);
-    }
-    wrap2.append(bar);
-    const grid = el("div", "aia-grid");
-    for (const c of ANALYZER_CARDS) {
-      const card = el("div", "aia-card");
-      card.dataset.card = c.id;
-      card.append(el("div", "aia-card-head", c.icon + " " + c.title));
-      card.append(el("div", "aia-card-desc", c.desc));
-      const ul = el("ul", "aia-card-list");
-      for (const b of c.bullets) ul.append(el("li", null, b));
-      card.append(ul);
-      const btn = el("button", "aia-run", t("aia.run", "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C"));
-      btn.type = "button";
-      btn.onclick = () => setStatus("\u{1F9E0} \u201C" + c.title + "\u201D \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E1A AI");
-      card.append(btn);
-      grid.append(card);
-    }
-    wrap2.append(grid);
-    wrap2.append(el(
-      "div",
-      "aia-foot",
-      t("aia.foot", "\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E49\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27: \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D \u2192 \u0E15\u0E23\u0E27\u0E08\u0E2B\u0E32\u0E04\u0E33\u0E0B\u0E49\u0E33 \xB7 AI \u2192 \u0E15\u0E23\u0E27\u0E08 Plot Hole \xB7 AI \u2192 \u0E15\u0E23\u0E27\u0E08\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E2D\u0E14\u0E04\u0E25\u0E49\u0E2D\u0E07")
-    ));
-    h.append(wrap2);
-    return wrap2;
-  }
-  var ANALYZER_CARDS;
-  var init_ai_analyzer_ui = __esm({
-    "src/ai-analyzer-ui.js"() {
-      init_core();
-      init_icons();
-      ANALYZER_CARDS = [
-        {
-          id: "pacing",
-          icon: "\u{1F4CA}",
-          title: "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
-          desc: "\u0E14\u0E39\u0E27\u0E48\u0E32\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E22\u0E37\u0E14\u0E44\u0E1B \u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E23\u0E27\u0E1A\u0E23\u0E31\u0E14\u0E40\u0E01\u0E34\u0E19 \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\xB7\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E19\u0E32\u0E41\u0E19\u0E48\u0E19\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E15\u0E25\u0E2D\u0E14\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21",
-          bullets: [
-            "\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
-            "\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E15\u0E01\u0E15\u0E34\u0E14\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E09\u0E32\u0E01",
-            "\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22 : \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 \u0E15\u0E48\u0E2D\u0E1A\u0E17"
-          ]
-        },
-        {
-          id: "arc",
-          icon: "\u{1F464}",
-          title: "\u0E2A\u0E48\u0E27\u0E19\u0E42\u0E04\u0E49\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
-          desc: "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E27\u0E48\u0E32\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E41\u0E15\u0E48\u0E25\u0E30\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E0A\u0E48\u0E27\u0E07\u0E44\u0E2B\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \u0E41\u0E25\u0E30\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E19\u0E32\u0E19\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B\u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E1B\u0E25\u0E48\u0E32",
-          bullets: [
-            "\u0E41\u0E1C\u0E19\u0E20\u0E32\u0E1E\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E15\u0E31\u0E27\u0E15\u0E25\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
-            "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E01\u0E34\u0E19 N \u0E1A\u0E17",
-            "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E2D\u0E2D\u0E01\u0E09\u0E32\u0E01"
-          ]
-        },
-        {
-          id: "words",
-          icon: "\u{1F4DD}",
-          title: "\u0E04\u0E33\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1A\u0E48\u0E2D\u0E22",
-          desc: "\u0E2B\u0E32\u0E04\u0E33\u0E41\u0E25\u0E30\u0E27\u0E25\u0E35\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33\u0E08\u0E19\u0E2A\u0E30\u0E14\u0E38\u0E14\u0E15\u0E32 \u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E1A\u0E17\u0E41\u0E25\u0E30\u0E15\u0E32\u0E21\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14",
-          bullets: [
-            "\u0E04\u0E33\u0E0B\u0E49\u0E33\u0E43\u0E19\u0E23\u0E30\u0E22\u0E30\u0E43\u0E01\u0E25\u0E49 (\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19)",
-            "\u0E04\u0E33\u0E15\u0E34\u0E14\u0E1B\u0E32\u0E01\u0E02\u0E2D\u0E07\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19",
-            "\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E32\u0E01\u0E2B\u0E25\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E28\u0E31\u0E1E\u0E17\u0E4C\u0E15\u0E48\u0E2D\u0E1A\u0E17"
-          ]
-        },
-        {
-          id: "conflict",
-          icon: "\u{1F50D}",
-          title: "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
-          desc: "\u0E15\u0E23\u0E27\u0E08\u0E27\u0E48\u0E32\u0E41\u0E15\u0E48\u0E25\u0E30\u0E09\u0E32\u0E01\u0E21\u0E35\u0E41\u0E23\u0E07\u0E15\u0E49\u0E32\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E40\u0E25\u0E22\u0E21\u0E31\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E31\u0E14\u0E44\u0E14\u0E49",
-          bullets: [
-            "\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E30\u0E1A\u0E38\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
-            "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E04\u0E25\u0E35\u0E48\u0E04\u0E25\u0E32\u0E22",
-            "\u0E08\u0E38\u0E14\u0E1E\u0E25\u0E34\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07 3 \u0E2D\u0E07\u0E01\u0E4C"
-          ]
-        },
-        {
-          id: "length",
-          icon: "\u23F1\uFE0F",
-          title: "\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01",
-          desc: "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21 \u0E0A\u0E35\u0E49\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E34\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E31\u0E49\u0E19\u0E41\u0E25\u0E30\u0E22\u0E32\u0E27",
-          bullets: [
-            "\u0E09\u0E32\u0E01\u0E22\u0E32\u0E27\u0E01\u0E27\u0E48\u0E32\u0E04\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07 2 \u0E40\u0E17\u0E48\u0E32\u0E02\u0E36\u0E49\u0E19\u0E44\u0E1B",
-            "\u0E09\u0E32\u0E01\u0E2A\u0E31\u0E49\u0E19\u0E01\u0E27\u0E48\u0E32 150 \u0E04\u0E33",
-            "\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E40\u0E27\u0E25\u0E32\u0E2D\u0E48\u0E32\u0E19 / \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E17"
-          ]
-        }
-      ];
-    }
-  });
-
-  // src/i18n-csv.js
-  function flatten(obj, prefix2 = "") {
-    const out = {};
-    if (!obj || typeof obj !== "object") return out;
-    for (const k of Object.keys(obj)) {
-      const v2 = obj[k];
-      const key2 = prefix2 ? prefix2 + "." + k : k;
-      if (v2 && typeof v2 === "object" && !Array.isArray(v2)) Object.assign(out, flatten(v2, key2));
-      else if (typeof v2 === "string") out[key2] = v2;
-      else if (typeof v2 === "number" || typeof v2 === "boolean") out[key2] = String(v2);
-    }
-    return out;
-  }
-  function unflatten(map2) {
-    const out = {};
-    for (const key2 of Object.keys(map2 || {})) {
-      const parts = String(key2).split(".").filter(Boolean);
-      if (!parts.length) continue;
-      let node = out;
-      for (let i5 = 0; i5 < parts.length - 1; i5++) {
-        const p = parts[i5];
-        if (!node[p] || typeof node[p] !== "object") node[p] = {};
-        node = node[p];
-      }
-      node[parts[parts.length - 1]] = map2[key2];
-    }
-    return out;
-  }
-  function csvCell(v2) {
-    const s = v2 == null ? "" : String(v2);
-    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-  function jsonToCsv(th, en = {}, opts = {}) {
-    const { bom = true, eol = "\r\n" } = opts;
-    const fth = flatten(th), fen = flatten(en);
-    const keys4 = [.../* @__PURE__ */ new Set([...Object.keys(fth), ...Object.keys(fen)])].sort();
-    const rows = [CSV_HEADER.join(",")];
-    for (const k of keys4) rows.push([csvCell(k), csvCell(fth[k]), csvCell(fen[k])].join(","));
-    return (bom ? CSV_BOM : "") + rows.join(eol) + eol;
-  }
-  function parseCsv(text) {
-    const s = String(text || "").replace(/^﻿/, "");
-    const rows = [];
-    let row2 = [], cell = "", inQ = false, i5 = 0;
-    const endCell = () => {
-      row2.push(cell);
-      cell = "";
-    };
-    const endRow = () => {
-      endCell();
-      rows.push(row2);
-      row2 = [];
-    };
-    while (i5 < s.length) {
-      const c = s[i5];
-      if (inQ) {
-        if (c === '"') {
-          if (s[i5 + 1] === '"') {
-            cell += '"';
-            i5 += 2;
-            continue;
-          }
-          inQ = false;
-          i5++;
-          continue;
-        }
-        cell += c;
-        i5++;
-        continue;
-      }
-      if (c === '"') {
-        inQ = true;
-        i5++;
-        continue;
-      }
-      if (c === ",") {
-        endCell();
-        i5++;
-        continue;
-      }
-      if (c === "\r") {
-        i5++;
-        continue;
-      }
-      if (c === "\n") {
-        endRow();
-        i5++;
-        continue;
-      }
-      cell += c;
-      i5++;
-    }
-    if (cell !== "" || row2.length) endRow();
-    return rows;
-  }
-  function csvToJson(text) {
-    const rows = parseCsv(text).filter((r) => r.some((c) => String(c).trim() !== ""));
-    if (!rows.length) return { th: {}, en: {}, keys: [], skipped: 0 };
-    const head2 = rows[0].map((c) => String(c).trim().toLowerCase());
-    const isHeader = head2.includes("key");
-    const idx4 = { key: 0, th: 1, en: 2 };
-    if (isHeader) {
-      idx4.key = head2.indexOf("key");
-      idx4.th = head2.findIndex((h) => h === "th" || h === "th_value" || h === "thai");
-      idx4.en = head2.findIndex((h) => h === "en" || h === "en_value" || h === "english");
-    }
-    const body = isHeader ? rows.slice(1) : rows;
-    const fth = {}, fen = {}, keys4 = [];
-    let skipped = 0;
-    for (const r of body) {
-      const key2 = String(r[idx4.key] == null ? "" : r[idx4.key]).trim();
-      if (!key2) {
-        skipped++;
-        continue;
-      }
-      keys4.push(key2);
-      if (idx4.th >= 0 && r[idx4.th] != null && r[idx4.th] !== "") fth[key2] = String(r[idx4.th]);
-      if (idx4.en >= 0 && r[idx4.en] != null && r[idx4.en] !== "") fen[key2] = String(r[idx4.en]);
-    }
-    return { th: unflatten(fth), en: unflatten(fen), keys: keys4, skipped };
-  }
-  function mergeStrings(base3, patch) {
-    const fb = flatten(base3), fp = flatten(patch);
-    let added = 0, changed = 0;
-    for (const k of Object.keys(fp)) {
-      if (!(k in fb)) added++;
-      else if (fb[k] !== fp[k]) changed++;
-      fb[k] = fp[k];
-    }
-    return { merged: unflatten(fb), added, changed };
-  }
-  function importSummary(res) {
-    if (!res) return "\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08";
-    return `\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32 ${res.keys.length} \u0E04\u0E35\u0E22\u0E4C \xB7 \u0E44\u0E17\u0E22\u0E40\u0E1E\u0E34\u0E48\u0E21/\u0E41\u0E01\u0E49 ${res.thAdded + res.thChanged} \xB7 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29\u0E40\u0E1E\u0E34\u0E48\u0E21/\u0E41\u0E01\u0E49 ${res.enAdded + res.enChanged}` + (res.skipped ? ` \xB7 \u0E02\u0E49\u0E32\u0E21 ${res.skipped} \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C` : "");
-  }
-  var CSV_BOM, CSV_HEADER;
-  var init_i18n_csv = __esm({
-    "src/i18n-csv.js"() {
-      CSV_BOM = "\uFEFF";
-      CSV_HEADER = ["key", "th", "en"];
-    }
-  });
-
   // src/auto-task/event-queue.js
   function detailOf(result) {
     if (result == null) return "";
@@ -61756,10 +62134,10 @@ ${h.text}`;
          *        meta = project.khn.json ที่โหลดไว้ (จะเขียน taskLog ลงตรงนี้)
          *        now  = ฟังก์ชันคืนเวลา (ฉีดเข้ามาได้ → เทสไม่พึ่งนาฬิกาจริง)
          */
-        constructor({ meta: meta2 = null, now = () => Date.now(), onLog = null, onError = null, logMax = TASK_LOG_MAX } = {}) {
+        constructor({ meta: meta2 = null, now = () => Date.now(), onLog: onLog2 = null, onError = null, logMax = TASK_LOG_MAX } = {}) {
           this.meta = meta2;
           this.now = now;
-          this.onLog = onLog;
+          this.onLog = onLog2;
           this.onError = onError;
           this.logMax = logMax;
           this.bus = new EventBus({ onError });
@@ -63125,8 +63503,13 @@ ${h.text}`;
   function escapeHtml2(s) {
     return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   }
+  function panelMinW(md) {
+    const n2 = Number(md && md.minW);
+    return Number.isFinite(n2) && n2 > 0 ? Math.round(n2) : PANEL_MIN_W_DEFAULT;
+  }
   function buildBody(node, opts) {
     const body = el("div", "k-panel-body");
+    body.style.setProperty("--panel-min-w", panelMinW(metaOf(opts, node.id)) + "px");
     if (opts.renderPanelBody) {
       const content = opts.renderPanelBody(node.id, body);
       if (content && content !== body && content.parentNode !== body) body.appendChild(content);
@@ -63398,7 +63781,7 @@ ${h.text}`;
       n2 = n2.parentElement;
     }
   }
-  var fixedPanel;
+  var fixedPanel, PANEL_MIN_W_DEFAULT;
   var init_panel_renderer = __esm({
     "src/panels/panel-renderer.js"() {
       init_core();
@@ -63407,6 +63790,7 @@ ${h.text}`;
       init_panel_layout();
       init_panel_drag();
       fixedPanel = (opts) => (id) => !!metaOf(opts, id).fixed;
+      PANEL_MIN_W_DEFAULT = 200;
     }
   });
 
@@ -63919,7 +64303,7 @@ ${h.text}`;
   function renderOpts() {
     for (const d of PANEL_DEFS) {
       const m = meta.get(d.id) || {};
-      meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id) });
+      meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id), minW: d.minW });
     }
     return {
       meta,
@@ -64726,6 +65110,7 @@ ${h.text}`;
         // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
         {
           id: "dashboard",
+          minW: 620,
           dockW: 640,
           title: "\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14",
           icon: "grid",
@@ -64738,6 +65123,7 @@ ${h.text}`;
         },
         {
           id: "kanban",
+          minW: 800,
           dockW: 640,
           title: "Kanban",
           icon: "grid",
@@ -64750,6 +65136,7 @@ ${h.text}`;
         },
         {
           id: "books",
+          minW: 400,
           dockW: 640,
           title: "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E21",
           icon: "book-content",
@@ -64762,6 +65149,7 @@ ${h.text}`;
         },
         {
           id: "timeline",
+          minW: 620,
           dockW: 640,
           title: "\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32",
           icon: "history",
@@ -64787,6 +65175,7 @@ ${h.text}`;
         // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
         {
           id: "gallery",
+          minW: 600,
           dockW: 640,
           title: "\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E",
           icon: "image",
@@ -64800,6 +65189,7 @@ ${h.text}`;
         // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
         {
           id: "gallery-board",
+          minW: 400,
           dockW: 640,
           title: "\u{1F3A8} \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C",
           icon: "layout",
@@ -64813,6 +65203,7 @@ ${h.text}`;
         // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
         {
           id: "ai-analyzer",
+          minW: 400,
           dockW: 640,
           title: "\u{1F9E0} AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C",
           icon: "brain",
@@ -64839,6 +65230,7 @@ ${h.text}`;
         // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
         {
           id: "network",
+          minW: 400,
           dockW: 640,
           title: "Story Network",
           icon: "grid",
@@ -64851,6 +65243,7 @@ ${h.text}`;
         },
         {
           id: "planner",
+          minW: 800,
           dockW: 640,
           title: "Planner",
           icon: "grid",
@@ -64887,6 +65280,7 @@ ${h.text}`;
         // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
         {
           id: "branch",
+          minW: 700,
           dockW: 640,
           title: "\u{1F33F} \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22",
           icon: "grid",
@@ -65754,8 +66148,8 @@ ${h.text}`;
             byStatus[st] = (byStatus[st] || 0) + 1;
             const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
             try {
-              const { body } = (0, import_md5.parseMdFile)(await kapi.readFile(file));
-              const w = (0, import_md5.countWords)(body);
+              const { body } = (0, import_md4.parseMdFile)(await kapi.readFile(file));
+              const w = (0, import_md4.countWords)(body);
               words += w;
               cw += w;
               sceneRows.push({ title: sc.title, ch: ch.title, file, flag: sc.flag });
@@ -65957,11 +66351,11 @@ ${h.text}`;
       centHost.append(el("div", "dim", "\u0E42\u0E2B\u0E25\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
     }
   }
-  var import_md5;
+  var import_md4;
   var init_dashboard = __esm({
     "src/dashboard.js"() {
       init_core();
-      import_md5 = __toESM(require_md());
+      import_md4 = __toESM(require_md());
       init_word_history();
       init_player_choices();
       init_project_scan();
@@ -65980,21 +66374,21 @@ ${h.text}`;
     return node.nodeType === 1 ? node : node.parentElement;
   }
   function cursorBlock() {
-    const view = state.active?.editor?.view || state.active?.sp?.view;
-    if (view) {
+    const view2 = state.active?.editor?.view || state.active?.sp?.view;
+    if (view2) {
       try {
-        const $from = view.state.selection.$from;
+        const $from = view2.state.selection.$from;
         const cands = [];
-        if ($from.depth >= 1) cands.push(view.nodeDOM($from.before(1)));
-        const at = view.domAtPos($from.pos);
+        if ($from.depth >= 1) cands.push(view2.nodeDOM($from.before(1)));
+        const at = view2.domAtPos($from.pos);
         cands.push(at.node.nodeType === 1 ? at.node.childNodes[at.offset] || at.node : at.node);
         for (const c of cands) {
           const start2 = !c ? null : c.nodeType === 1 ? c : c.parentElement;
           const blk2 = start2 && start2.closest(BLOCK_SEL);
-          if (blk2 && view.dom.contains(blk2)) return { pm: view.dom, blk: blk2 };
+          if (blk2 && view2.dom.contains(blk2)) return { pm: view2.dom, blk: blk2 };
         }
-        const first = view.dom.querySelector(BLOCK_SEL);
-        if (first) return { pm: view.dom, blk: first };
+        const first = view2.dom.querySelector(BLOCK_SEL);
+        if (first) return { pm: view2.dom, blk: first };
       } catch {
       }
     }
@@ -66395,6 +66789,74 @@ ${h.text}`;
     showLog: () => showLog,
     versionDialog: () => versionDialog
   });
+  function buildNetColorFields(box2, s) {
+    const host2 = box2.querySelector("#st-netcol-body");
+    if (!host2) return;
+    const saved = normalizeNetColors(s.netColors);
+    host2.replaceChildren();
+    for (const g of NET_COLOR_GROUPS) {
+      const defs = netColorDefsOf(g.group);
+      if (!defs.length) continue;
+      const h = el("div", "k-set-sub k-full", g.label);
+      host2.append(h);
+      for (const d of defs) {
+        const row2 = el("div", "k-row");
+        row2.append(el("label", null, d.label));
+        const c = el("input");
+        c.type = "color";
+        c.className = "st-netcol";
+        c.dataset.key = d.key;
+        c.value = saved[d.key] || d.def;
+        const txt = el("input");
+        txt.type = "text";
+        txt.className = "st-netcol-t";
+        txt.style.width = "84px";
+        txt.placeholder = d.cssVar ? "\u0E15\u0E32\u0E21\u0E18\u0E35\u0E21" : d.def;
+        txt.value = saved[d.key] || "";
+        txt.oninput = () => {
+          if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value;
+        };
+        c.oninput = () => {
+          txt.value = c.value;
+        };
+        row2.append(c, txt);
+        host2.append(row2);
+      }
+    }
+    const ctl = resolveNetControls(s.netControls);
+    const fill3 = (sel, cur) => {
+      if (!sel) return;
+      sel.replaceChildren();
+      for (const b of MOUSE_BUTTONS) {
+        const o = el("option", null, b.label);
+        o.value = b.value;
+        sel.append(o);
+      }
+      sel.value = cur;
+    };
+    const orbit = box2.querySelector("#st-net-orbit"), pan = box2.querySelector("#st-net-pan");
+    fill3(orbit, ctl.orbitButton);
+    fill3(pan, ctl.panButton);
+    const hint = box2.querySelector("#st-net-hint");
+    const syncHint = () => {
+      if (!hint) return;
+      const c2 = resolveNetControls({ orbitButton: orbit.value, panButton: pan.value });
+      if (pan.value !== c2.panButton) pan.value = c2.panButton;
+      hint.textContent = "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E43\u0E15\u0E49\u0E1C\u0E31\u0E07\u0E08\u0E30\u0E40\u0E1B\u0E47\u0E19: " + controlsHint(c2, true);
+    };
+    if (orbit) orbit.onchange = syncHint;
+    if (pan) pan.onchange = syncHint;
+    syncHint();
+  }
+  function readNetColorFields(box2) {
+    const out = {};
+    for (const c of box2.querySelectorAll(".st-netcol")) {
+      const txt = c.parentElement.querySelector(".st-netcol-t");
+      const v2 = String(txt && txt.value || "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(v2)) out[c.dataset.key] = v2.toLowerCase();
+    }
+    return out;
+  }
   function settingsDialog(openTab) {
     if (!state.root) {
       alert(t("errors.openProjectFirst"));
@@ -66634,20 +67096,13 @@ ${h.text}`;
       <div id="st-keys"></div>
     </div>
     <div class="k-set-page" data-p="netcol">
-      <div class="k-hint" style="margin-bottom:10px">\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E2A\u0E35\u0E02\u0E2D\u0E07\u0E42\u0E2B\u0E19\u0E14\u0E41\u0E25\u0E30\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E43\u0E19 Story Network (\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E1B\u0E47\u0E19 hex \u0E40\u0E0A\u0E48\u0E19 #d97757)</div>
-      <div class="k-set-sub k-full">\u2B24 \u0E2A\u0E35\u0E42\u0E2B\u0E19\u0E14\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14</div>
-      <div class="k-row"><label>\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23</label><input type="color" id="st-nc-char" value="#d97757"><input type="text" id="st-nc-char-t" style="width:80px" placeholder="#d97757"></div>
-      <div class="k-row"><label>\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48</label><input type="color" id="st-nc-loca" value="#7aa8d8"><input type="text" id="st-nc-loca-t" style="width:80px" placeholder="#7aa8d8"></div>
-      <div class="k-row"><label>\u0E44\u0E2D\u0E40\u0E17\u0E21</label><input type="color" id="st-nc-item" value="#6fae8a"><input type="text" id="st-nc-item-t" style="width:80px" placeholder="#6fae8a"></div>
-      <div class="k-row"><label>\u0E15\u0E33\u0E19\u0E32\u0E19</label><input type="color" id="st-nc-lore" value="#b58fc9"><input type="text" id="st-nc-lore-t" style="width:80px" placeholder="#b58fc9"></div>
-      <div class="k-row"><label>\u0E09\u0E32\u0E01</label><input type="color" id="st-nc-scen" value="#e8c95c"><input type="text" id="st-nc-scen-t" style="width:80px" placeholder="#e8c95c"></div>
-      <div class="k-row"><label>\u0E1A\u0E17</label><input type="color" id="st-nc-chap" value="#c08a5e"><input type="text" id="st-nc-chap-t" style="width:80px" placeholder="#c08a5e"></div>
-      <div class="k-row"><label>\u0E40\u0E25\u0E48\u0E21</label><input type="color" id="st-nc-sect" value="#8ec8c8"><input type="text" id="st-nc-sect-t" style="width:80px" placeholder="#8ec8c8"></div>
-      <div class="k-set-sub k-full">\u2501 \u0E40\u0E2A\u0E49\u0E19\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21</div>
-      <div class="k-row"><label>\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07 (\u0E09\u0E32\u0E01\u2194\u0E1A\u0E17\u2194\u0E40\u0E25\u0E48\u0E21)</label><input type="color" id="st-ne-sl" value="#5caf8a"></div>
-      <div class="k-row"><label>\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C (entity\u2194entity)</label><input type="color" id="st-ne-rel" value="#4a4842"></div>
-      <div class="k-row"><label>\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E23\u0E48\u0E27\u0E21 (co-occur)</label><input type="color" id="st-ne-co" value="#8a8885"></div>
-      <div class="k-row"><label>\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u2194\u0E09\u0E32\u0E01</label><input type="color" id="st-ne-es" value="#d9955f"></div>
+      <div class="k-hint" style="margin-bottom:10px">\u0E2A\u0E35\u0E41\u0E25\u0E30\u0E01\u0E32\u0E23\u0E04\u0E27\u0E1A\u0E04\u0E38\u0E21\u0E02\u0E2D\u0E07 Story Network \u2014 \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E19\u0E34\u0E22\u0E32\u0E21\u0E01\u0E25\u0E32\u0E07 (network-theme.js) \u0E08\u0E36\u0E07\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E2A\u0E35\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07\u0E40\u0E2A\u0E21\u0E2D</div>
+      <div class="k-set-sub k-full">\u{1F5B1} \u0E01\u0E32\u0E23\u0E04\u0E27\u0E1A\u0E04\u0E38\u0E21\u0E14\u0E49\u0E27\u0E22\u0E40\u0E21\u0E32\u0E2A\u0E4C</div>
+      <div class="k-row"><label>\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E21\u0E38\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 3D</label><select id="st-net-orbit" class="k-dlg-select"></select></div>
+      <div class="k-row"><label>\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E1C\u0E31\u0E07 (\u0E41\u0E1E\u0E19)</label><select id="st-net-pan" class="k-dlg-select"></select></div>
+      <div class="k-hint k-full" id="st-net-hint" style="margin:2px 0 10px"></div>
+      <div id="st-netcol-body"></div>
+    </div>
     </div>
     <div class="k-dlg-btns"><button class="k-cancel">${t("dialogs.cancel")}</button><button class="k-ok">${t("dialogs.save")}</button></div>`;
     ov.appendChild(box2);
@@ -66745,40 +67200,7 @@ ${h.text}`;
     q("#st-edpt").value = s.edFontPt ?? 12;
     q("#st-sppt").value = s.spFontPt ?? 12;
     q("#st-homethumb").value = s.homeThumb ?? 190;
-    const nc = s.netColors || {};
-    const ncCats = nc.cats || {};
-    const ncEdges = nc.edges || {};
-    const setCol = (id, def) => {
-      const el2 = q("#st-" + id);
-      if (!el2) return;
-      el2.value = ncCats[id] || def;
-      const tEl = q("#st-" + id + "-t");
-      if (tEl) {
-        tEl.value = ncCats[id] || def;
-        tEl.oninput = () => {
-          try {
-            el2.value = tEl.value;
-          } catch {
-          }
-        };
-      }
-    };
-    setCol("nc-char", "#d97757");
-    setCol("nc-loca", "#7aa8d8");
-    setCol("nc-item", "#6fae8a");
-    setCol("nc-lore", "#b58fc9");
-    setCol("nc-scen", "#e8c95c");
-    setCol("nc-chap", "#c08a5e");
-    setCol("nc-sect", "#8ec8c8");
-    const setEdge = (id, def) => {
-      const el2 = q("#st-" + id);
-      if (!el2) return;
-      el2.value = ncEdges[id] || def;
-    };
-    setEdge("ne-sl", "#5caf8a");
-    setEdge("ne-rel", "#4a4842");
-    setEdge("ne-co", "#8a8885");
-    setEdge("ne-es", "#d9955f");
+    buildNetColorFields(box2, s);
     const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
     const previewPt = () => {
       s.edFontPt = parseFloat(q("#st-edpt").value) || 12;
@@ -67690,22 +68112,10 @@ ${h.text}`;
       for (const [sel, key2] of SETUP_FIELDS) m[key2] = q(sel).value.trim();
       g.dailyWords = num4("#st-daily", 500);
       g.projectWords = num4("#st-proj", 5e4);
-      s.netColors = {
-        cats: {
-          "nc-char": q("#st-nc-char")?.value || "#d97757",
-          "nc-loca": q("#st-nc-loca")?.value || "#7aa8d8",
-          "nc-item": q("#st-nc-item")?.value || "#6fae8a",
-          "nc-lore": q("#st-nc-lore")?.value || "#b58fc9",
-          "nc-scen": q("#st-nc-scen")?.value || "#e8c95c",
-          "nc-chap": q("#st-nc-chap")?.value || "#c08a5e",
-          "nc-sect": q("#st-nc-sect")?.value || "#8ec8c8"
-        },
-        edges: {
-          "ne-sl": q("#st-ne-sl")?.value || "#5caf8a",
-          "ne-rel": q("#st-ne-rel")?.value || "#4a4842",
-          "ne-co": q("#st-ne-co")?.value || "#8a8885",
-          "ne-es": q("#st-ne-es")?.value || "#d9955f"
-        }
+      s.netColors = readNetColorFields(box2);
+      s.netControls = {
+        orbitButton: q("#st-net-orbit")?.value || "middle",
+        panButton: q("#st-net-pan")?.value || "left"
       };
       try {
         await preloadLangFontUrls();
@@ -67829,7 +68239,7 @@ ${h.text}`;
         bView.onclick = async () => {
           try {
             const c = await kapi.readFile(s.path);
-            prev.textContent = (isJson ? c : (0, import_md6.parseMdFile)(c).body) || t("panel.emptyContent");
+            prev.textContent = (isJson ? c : (0, import_md5.parseMdFile)(c).body) || t("panel.emptyContent");
           } catch {
             prev.textContent = t("panel.unreadable");
           }
@@ -67927,7 +68337,7 @@ ${h.text}`;
     };
     document.body.append(ov);
   }
-  var import_md6;
+  var import_md5;
   var init_dialogs = __esm({
     "src/dialogs.js"() {
       init_app();
@@ -67938,10 +68348,11 @@ ${h.text}`;
       init_fountain();
       init_dashboard();
       init_ui();
-      import_md6 = __toESM(require_md());
+      import_md5 = __toESM(require_md());
       init_event_ui();
       init_focus_mode();
       init_icons();
+      init_network_theme();
     }
   });
 
@@ -68069,6 +68480,8 @@ ${h.text}`;
     tab.wiki = new WikiEditor(pane, file, entity, {
       projectRoot: state.root,
       labels: fieldLabels(entity.templateId),
+      // [alpha.71 ข้อ 4] หัวการ์ดอ่านจากเทมเพลต — ส่งเป็นฟังก์ชันเพื่อให้เปลี่ยนเทมเพลตแล้วเห็นผลทันที
+      template: (e) => templateOf(e && e.templateId),
       entityTitles: () => smart.titles || [],
       fileOfEntity: (n2) => smart.fileOf[n2] || null,
       invertRole: (r) => INV_C.m && INV_C.m[r] || r,
@@ -68168,6 +68581,8 @@ ${h.text}`;
         smart.loadNames(state.root);
         buildTree2();
         Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.netInst?.refresh()).catch(() => {
+        });
+        Promise.resolve().then(() => (init_maps_ui(), maps_ui_exports)).then((m) => m.refreshMapsIfOpen()).catch(() => {
         });
         for (const t3 of state.tabs.values())
           if (t3.wiki && t3.wiki !== tab.wiki) t3.wiki.reloadIfExists?.();
@@ -68311,7 +68726,370 @@ ${h.text}`;
     }
   });
 
+  // src/floorplan-ui.js
+  var floorplan_ui_exports = {};
+  __export(floorplan_ui_exports, {
+    collectPlacedScenes: () => collectPlacedScenes,
+    openFloorPlan: () => openFloorPlan,
+    refreshOpenFloorPlan: () => refreshOpenFloorPlan,
+    renderFloorPlan: () => renderFloorPlan,
+    renderFloorPlanPanel: () => renderFloorPlanPanel
+  });
+  function fstate() {
+    if (!state._floor) state._floor = { mapId: null, picking: false };
+    return state._floor;
+  }
+  async function renderFloorPlanPanel() {
+    const host2 = $("#floor-body");
+    if (!host2) return false;
+    await renderFloorPlan(host2, fstate().mapId);
+    return true;
+  }
+  async function openFloorPlan() {
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    showPanel2("floorplan");
+    await renderFeaturePanel2("floorplan");
+  }
+  function refreshOpenFloorPlan() {
+    const host2 = $("#floor-body");
+    if (host2 && host2.firstChild) renderFloorPlan(host2, fstate().mapId);
+  }
+  async function collectPlacedScenes() {
+    const out = [];
+    if (!state.root) return out;
+    for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
+      if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"].includes(sec)) continue;
+      const sp = await kapi.join(state.root, sec);
+      if (!await kapi.exists(await kapi.join(sp, "section.json"))) continue;
+      const dr = await kapi.join(sp, "Draft");
+      if (!await kapi.exists(dr)) continue;
+      for (const dn of await kapi.listDirs(dr).catch(() => [])) {
+        const dp = await kapi.join(dr, dn);
+        const dj = await kapi.join(dp, "draft.json");
+        if (!await kapi.exists(dj)) continue;
+        const draft = await kapi.readJson(dj);
+        const scData = await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}));
+        const chMap = scData.chapters || {};
+        for (const ch of draft.chapters || []) {
+          for (const sc of chMap[ch.guid] || []) {
+            if (sc.type === "memo") continue;
+            out.push({
+              ...sc,
+              dPath: dp,
+              chapterName: ch.title,
+              filePath: await kapi.join(dp, "Chapters", ch.folderName, sc.fileName)
+            });
+          }
+        }
+      }
+    }
+    return out;
+  }
+  function byStoryDate(a, b) {
+    const na = extractNum(a.storyDate), nb = extractNum(b.storyDate);
+    if (na != null && nb != null && na !== nb) return na - nb;
+    if (na != null && nb == null) return -1;
+    if (na == null && nb != null) return 1;
+    return String(a.storyDate || "").localeCompare(String(b.storyDate || ""), "th");
+  }
+  async function renderFloorPlan(pane, mapId) {
+    const fs = fstate();
+    pane.innerHTML = "";
+    const { mapImgURL: mapImgURL2, loadMaps: loadMaps2, sceneCtx: sceneCtx2, updateSceneRow: updateSceneRow2, openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const wrap2 = el("div", "floor-wrap");
+    let data2 = { maps: [] };
+    try {
+      data2 = await loadMaps2() || { maps: [] };
+    } catch (e) {
+      log("warn", "floorplan: \u0E42\u0E2B\u0E25\u0E14 maps.json \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+    }
+    const maps = sortMaps(data2.maps || []);
+    const ctx = await sceneCtx2() || await sceneCtx2(state.lastSceneFile);
+    let scenes = [];
+    try {
+      scenes = await collectPlacedScenes();
+    } catch (e) {
+      log("warn", "floorplan: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+    }
+    const wanted = mapId || fs.mapId || ctx && ctx.row.mapId || null;
+    const cur = wanted && findMap(maps, wanted) || maps[0] || null;
+    fs.mapId = cur ? cur.id : null;
+    const redraw = () => renderFloorPlan(pane, fs.mapId);
+    const head2 = el("div", "floor-head");
+    const titleRow = el("div", "floor-title-row");
+    titleRow.append(el("div", "floor-title", "\u{1F4CD} \u0E1C\u0E31\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48"));
+    const sel = el("select", "k-dlg-select");
+    for (const m of maps) {
+      const o = el("option", null, m.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)");
+      o.value = m.id;
+      sel.append(o);
+    }
+    if (cur) sel.value = cur.id;
+    sel.onchange = () => {
+      fs.mapId = sel.value;
+      fs.picking = false;
+      redraw();
+    };
+    if (maps.length) titleRow.append(sel);
+    if (ctx && cur) {
+      const pinB = el(
+        "button",
+        "floor-pinbtn" + (fs.picking ? " on" : ""),
+        fs.picking ? "\u2716 \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E1B\u0E31\u0E01" : "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"
+      );
+      pinB.title = '\u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E09\u0E32\u0E01 "' + (ctx.row.title || "") + '" \u0E40\u0E01\u0E34\u0E14\u0E15\u0E23\u0E07\u0E44\u0E2B\u0E19';
+      pinB.onclick = () => {
+        fs.picking = !fs.picking;
+        redraw();
+      };
+      titleRow.append(pinB);
+      if (ctx.row.mapId) {
+        const clearB = el("button", "floor-pinbtn", "\u{1F6AB} \u0E25\u0E49\u0E32\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07");
+        clearB.title = "\u0E40\u0E2D\u0E32\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48";
+        clearB.onclick = async () => {
+          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+            delete r.mapId;
+            delete r.pinId;
+          });
+          setStatus("\u0E25\u0E49\u0E32\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27");
+          redraw();
+        };
+        titleRow.append(clearB);
+      }
+    }
+    head2.append(titleRow);
+    if (cur) {
+      const crumbs = breadcrumb(maps, cur.id);
+      if (crumbs.length > 1) {
+        const bc = el("div", "floor-crumb");
+        crumbs.forEach((c, i5) => {
+          if (i5) bc.append(el("span", "floor-crumb-sep", "\u203A"));
+          const item = el("span", "floor-crumb-item", c.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)");
+          if (c.id !== cur.id) item.onclick = () => {
+            fs.mapId = c.id;
+            redraw();
+          };
+          else item.classList.add("on");
+          bc.append(item);
+        });
+        head2.append(bc);
+      }
+    }
+    wrap2.append(head2);
+    const main = el("div", "floor-main" + (fs.picking ? " floor-picking" : ""));
+    if (cur && cur.image) {
+      const holder = el("div", "floor-canvas");
+      const img = el("img", "floor-img");
+      img.src = mapImgURL2(cur.image);
+      holder.append(img);
+      for (const p of cur.pins || []) {
+        const dot = el("span", "floor-pin", PIN_KIND[p.kind]?.icon || "\u{1F4CC}");
+        dot.style.left = p.x + "%";
+        dot.style.top = p.y + "%";
+        if (p.color) dot.style.color = p.color;
+        const here2 = scenes.filter((s) => s.mapId === cur.id && s.pinId === p.id);
+        dot.title = (p.label || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)") + (here2.length ? "\n" + here2.map((s) => "\u{1F4C4} " + s.title).join("\n") : "");
+        dot.onclick = (e) => {
+          e.stopPropagation();
+          if (fs.picking && ctx) return bindSceneTo(p.id, p.x, p.y);
+          setStatus("\u0E2B\u0E21\u0E38\u0E14: " + (p.label || "\u2014") + (here2.length ? ` \xB7 ${here2.length} \u0E09\u0E32\u0E01` : ""));
+        };
+        if (here2.length) dot.append(el("span", "floor-pin-count", String(here2.length)));
+        holder.append(dot);
+      }
+      if (ctx && ctx.row.mapId === cur.id) {
+        const pin = (cur.pins || []).find((p) => p.id === ctx.row.pinId);
+        const px2 = pin ? pin.x : ctx.row.pinX, py2 = pin ? pin.y : ctx.row.pinY;
+        if (px2 != null && py2 != null) {
+          const you = el("div", "floor-you");
+          you.style.left = px2 + "%";
+          you.style.top = py2 + "%";
+          you.title = "\u0E04\u0E38\u0E13\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48: " + (ctx.row.title || "");
+          you.append(el("span", "floor-you-dot", "\u25C9"));
+          you.append(el("span", "floor-you-label", ctx.row.title || "\u0E09\u0E32\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19"));
+          holder.append(you);
+        }
+      }
+      if (fs.picking && ctx) {
+        holder.classList.add("floor-canvas-pick");
+        holder.onclick = (e) => {
+          const r = holder.getBoundingClientRect();
+          if (!r.width || !r.height) return;
+          bindSceneTo(
+            null,
+            clamp3((e.clientX - r.left) / r.width * 100),
+            clamp3((e.clientY - r.top) / r.height * 100)
+          );
+        };
+      }
+      main.append(holder);
+      async function bindSceneTo(pinId, x, y) {
+        await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+          r.mapId = cur.id;
+          if (pinId) {
+            r.pinId = pinId;
+            delete r.pinX;
+            delete r.pinY;
+          } else {
+            delete r.pinId;
+            r.pinX = +x.toFixed(1);
+            r.pinY = +y.toFixed(1);
+          }
+        });
+        fs.picking = false;
+        setStatus('\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01 "' + (ctx.row.title || "") + '" \u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 ' + (cur.name || "") + " \u0E41\u0E25\u0E49\u0E27");
+        redraw();
+      }
+    } else {
+      main.append(el("div", "floor-ph", "\u{1F5FA}"));
+      main.append(el("div", "dim", maps.length ? "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B \u2014 \u0E43\u0E2A\u0E48\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (Maps)" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u2014 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u2192 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (Maps)"));
+    }
+    if (fs.picking) main.append(el("div", "floor-pickhint", "\u{1F4CC} \u0E04\u0E25\u0E34\u0E01\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (\u0E2B\u0E23\u0E37\u0E2D\u0E1A\u0E19\u0E2B\u0E21\u0E38\u0E14) \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"));
+    const panel2 = el("div", "floor-panel");
+    panel2.append(el("div", "floor-panel-title", "\u{1F4C4} \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48"));
+    panel2.append(el("div", "floor-cur", ctx ? ctx.row.title || "\u2014" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01"));
+    if (ctx) {
+      const where = ctx.row.mapId ? findMap(maps, ctx.row.mapId) : null;
+      const pin = where && (where.pins || []).find((p) => p.id === ctx.row.pinId);
+      panel2.append(el("div", "dim floor-where", where ? "\u{1F4CD} " + (where.name || "") + (pin ? " \xB7 " + (pin.label || "\u0E2B\u0E21\u0E38\u0E14") : "") : '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \u2014 \u0E01\u0E14 "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"'));
+      if (ctx.row.storyDate) panel2.append(el("div", "dim", "\u{1F552} " + ctx.row.storyDate));
+    }
+    if (cur) {
+      const here2 = scenes.filter((s) => s.mapId === cur.id);
+      panel2.append(el("div", "floor-panel-title", "\u{1F5FA} \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
+      panel2.append(el(
+        "div",
+        "dim",
+        `${cur.name || "\u2014"} \xB7 ${(cur.pins || []).length} \u0E2B\u0E21\u0E38\u0E14 \xB7 ${here2.length} \u0E09\u0E32\u0E01`
+      ));
+    }
+    for (const [key2, label, ph] of FIELDS) {
+      panel2.append(el("div", "floor-panel-title", label));
+      const vals = ctx && Array.isArray(ctx.row[key2]) ? ctx.row[key2] : [];
+      if (!vals.length) panel2.append(el("div", "dim", "\u2014"));
+      vals.forEach((v2, i5) => {
+        const row2 = el("div", "floor-item");
+        row2.append(el("span", "floor-item-text", v2));
+        if (ctx) {
+          const del2 = el("span", "floor-item-del", "\u2715");
+          del2.title = "\u0E25\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E19\u0E35\u0E49";
+          del2.onclick = async () => {
+            await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+              r[key2] = (r[key2] || []).filter((_2, k) => k !== i5);
+              if (!r[key2].length) delete r[key2];
+            });
+            redraw();
+          };
+          row2.append(del2);
+        }
+        panel2.append(row2);
+      });
+      if (ctx) {
+        const add = el("button", "floor-add", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21");
+        add.onclick = async () => {
+          const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+          const v2 = await ask2(label.replace(/^\S+\s/, "") + " \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", { placeholder: ph });
+          if (!v2) return;
+          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+            r[key2] = [...r[key2] || [], v2];
+          });
+          redraw();
+        };
+        panel2.append(add);
+      }
+    }
+    const tl = el("div", "floor-timeline");
+    tl.append(el("div", "floor-panel-title", "\u{1F552} \u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32\u0E02\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49"));
+    const here = cur ? scenes.filter((s) => s.mapId === cur.id).sort(byStoryDate) : [];
+    if (!here.length) {
+      tl.append(el("div", "dim", cur ? '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49 \u2014 \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"' : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
+    } else {
+      const strip = el("div", "floor-tl-strip");
+      for (const s of here) {
+        const item = el("div", "floor-tl-item" + (ctx && ctx.row.id === s.id ? " on" : ""));
+        if (s.color) item.style.borderLeftColor = s.color;
+        item.append(el("div", "floor-tl-when", s.storyDate || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E27\u0E25\u0E32)"));
+        item.append(el("div", "floor-tl-title", s.title || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)"));
+        const pin = (cur.pins || []).find((p) => p.id === s.pinId);
+        if (pin) item.append(el("div", "floor-tl-pin", "\u{1F4CD} " + (pin.label || "\u0E2B\u0E21\u0E38\u0E14")));
+        const seen = [
+          (s.clues || []).length && `\u{1F441}${s.clues.length}`,
+          (s.sounds || []).length && `\u{1F50A}${s.sounds.length}`,
+          (s.discoveries || []).length && `\u{1F4E6}${s.discoveries.length}`
+        ].filter(Boolean);
+        if (seen.length) item.append(el("div", "floor-tl-badges", seen.join(" ")));
+        item.title = [s.title, s.chapterName, s.synopsis].filter(Boolean).join("\n") + "\n\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01";
+        item.onclick = () => openScene2(s.filePath, s.title);
+        strip.append(item);
+      }
+      tl.append(strip);
+    }
+    wrap2.append(main, panel2, tl);
+    pane.append(wrap2);
+  }
+  var FIELDS;
+  var init_floorplan_ui = __esm({
+    "src/floorplan-ui.js"() {
+      init_core();
+      init_maps();
+      init_timeline();
+      FIELDS = [
+        ["clues", "\u{1F441} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19", "\u0E40\u0E0A\u0E48\u0E19 \u0E23\u0E2D\u0E22\u0E40\u0E25\u0E37\u0E2D\u0E14\u0E1A\u0E19\u0E1E\u0E37\u0E49\u0E19"],
+        ["sounds", "\u{1F50A} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E22\u0E34\u0E19", "\u0E40\u0E0A\u0E48\u0E19 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1D\u0E35\u0E40\u0E17\u0E49\u0E32\u0E0A\u0E31\u0E49\u0E19\u0E1A\u0E19"],
+        ["discoveries", "\u{1F4E6} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1E\u0E1A", "\u0E40\u0E0A\u0E48\u0E19 \u0E01\u0E38\u0E0D\u0E41\u0E08\u0E2A\u0E19\u0E34\u0E21"]
+      ];
+    }
+  });
+
   // src/maps-ui.js
+  var maps_ui_exports = {};
+  __export(maps_ui_exports, {
+    MAP_TOOLS: () => MAP_TOOLS,
+    PIN_SCALE_MAX: () => PIN_SCALE_MAX,
+    PIN_SCALE_MIN: () => PIN_SCALE_MIN,
+    PIN_SCALE_STEP: () => PIN_SCALE_STEP,
+    buildShowOnMapRow: () => buildShowOnMapRow,
+    exportMapPng: () => exportMapPng,
+    focusMapPin: () => focusMapPin,
+    openMaps: () => openMaps,
+    pinScaleOf: () => pinScaleOf,
+    printMap: () => printMap,
+    refreshMapsIfOpen: () => refreshMapsIfOpen,
+    renderMaps: () => renderMaps,
+    renderMapsPanel: () => renderMapsPanel,
+    resetMapsView: () => resetMapsView,
+    sceneMapLocation: () => sceneMapLocation
+  });
+  function pinScaleOf(map2) {
+    const n2 = Number(map2 && map2.pinScale);
+    return Number.isFinite(n2) && n2 > 0 ? Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, n2)) : 1;
+  }
+  function resetMapsView() {
+    view.zoom = 1;
+    view.sel.clear();
+    view.clip = [];
+    view.q = "";
+    view.routeEdit = null;
+    view.focusPin = null;
+    view.catFilter = null;
+    view.showRoutes = true;
+    view.tool = "open";
+    view.showLabels = true;
+    scenesCache = null;
+    portraitCache = null;
+  }
+  async function loadPortraits() {
+    if (portraitCache) return portraitCache;
+    portraitCache = /* @__PURE__ */ new Map();
+    try {
+      const { loadAllEntities: loadAllEntities2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      for (const e of await loadAllEntities2()) if (e.file && e.image) portraitCache.set(e.file, e.image);
+    } catch (e) {
+      log("warn", "maps: \u0E2D\u0E48\u0E32\u0E19\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E02\u0E2D\u0E07\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+    }
+    return portraitCache;
+  }
   async function openMaps() {
     showPanel("maps");
     return renderMapsPanel();
@@ -68321,11 +69099,97 @@ ${h.text}`;
     mapsState_C.s = { data: await loadMaps(), currentId: null };
     const all = mapsState_C.s.data.maps;
     mapsState_C.s.currentId = keepId && all.some((m) => m.id === keepId) ? keepId : all.length ? sortMaps(all)[0].id : null;
+    scenesCache = null;
+    portraitCache = null;
     return renderMaps($("#maps-body"));
   }
+  function refreshMapsIfOpen() {
+    if (!isPanelOpen("maps") || !mapsState_C.s || !$("#maps-body")) return;
+    portraitCache = null;
+    renderMaps($("#maps-body"));
+  }
+  async function focusMapPin(mapId, pinId, at) {
+    showPanel("maps");
+    const keepZoom = view.zoom;
+    await renderMapsPanel();
+    const S5 = mapsState_C.s;
+    if (!S5 || !findMap(S5.data.maps, mapId)) {
+      setStatus("\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49 (\u0E2D\u0E32\u0E08\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27)");
+      return false;
+    }
+    S5.currentId = mapId;
+    view.zoom = keepZoom;
+    view.sel.clear();
+    const pin = pinId ? (findMap(S5.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
+    view.focusPin = pin ? { id: pin.id, x: pin.x, y: pin.y } : at && at.x != null ? { id: null, x: at.x, y: at.y } : null;
+    await renderMaps($("#maps-body"));
+    scrollFocusIntoView();
+    return true;
+  }
+  async function sceneMapLocation(row2) {
+    if (!row2 || !row2.mapId) return null;
+    let data2;
+    try {
+      data2 = await loadMaps();
+    } catch {
+      return null;
+    }
+    const map2 = findMap(data2.maps, row2.mapId);
+    if (!map2) return { missing: true, mapId: row2.mapId, text: "(\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27)" };
+    const pin = row2.pinId ? (map2.pins || []).find((p) => p.id === row2.pinId) : null;
+    const x = pin ? pin.x : row2.pinX, y = pin ? pin.y : row2.pinY;
+    return {
+      map: map2,
+      pin,
+      x,
+      y,
+      text: (map2.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)") + (pin ? " \xB7 " + (pin.label || "\u0E2B\u0E21\u0E38\u0E14") : row2.pinX != null ? " \xB7 \u0E1E\u0E34\u0E01\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1B\u0E31\u0E01\u0E40\u0E2D\u0E07" : "")
+    };
+  }
+  async function buildShowOnMapRow(row2) {
+    const loc = await sceneMapLocation(row2);
+    const r = el("div", "wiki-row props-maprow");
+    r.append(el("label", null, t("maps.sceneWhere", "\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48")));
+    const box2 = el("div", "props-maprow-body");
+    if (!loc) {
+      box2.append(el("span", "dim", t("maps.notPlaced", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07")));
+      const b = el("button", "cmp-mini", "\u{1F4CC} " + t("maps.placeIt", "\u0E44\u0E1B\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"));
+      b.title = t("maps.placeItHint", '\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 "\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"');
+      b.onclick = async () => {
+        const { openFloorPlan: openFloorPlan2 } = await Promise.resolve().then(() => (init_floorplan_ui(), floorplan_ui_exports));
+        await openFloorPlan2();
+      };
+      box2.append(b);
+    } else if (loc.missing) {
+      box2.append(el("span", "dim", loc.text));
+    } else {
+      box2.append(el("span", "props-mapwhere", "\u{1F4CD} " + loc.text));
+      const b = el("button", "cmp-mini k-ok props-mapbtn", "\u{1F5FA} " + t("maps.showOnMap", "\u0E14\u0E39\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
+      b.title = t("maps.showOnMapHint", "\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49");
+      b.onclick = () => focusMapPin(
+        loc.map.id,
+        loc.pin ? loc.pin.id : null,
+        loc.x != null ? { x: loc.x, y: loc.y } : null
+      );
+      box2.append(b);
+    }
+    r.append(box2);
+    return r;
+  }
+  function scrollFocusIntoView() {
+    const mark = $("#maps-body .map-focus");
+    const stage = $("#maps-body .map-stage");
+    if (!mark || !stage) return;
+    const mr = mark.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    if (!sr.width) return;
+    stage.scrollLeft += mr.left + mr.width / 2 - (sr.left + sr.width / 2);
+    stage.scrollTop += mr.top + mr.height / 2 - (sr.top + sr.height / 2);
+  }
   async function renderMaps(pane) {
+    if (!pane) return;
     pane.innerHTML = "";
     const S5 = mapsState_C.s;
+    if (!S5) return;
     const maps = S5.data.maps;
     const wrap2 = el("div", "map-wrap");
     pane.append(wrap2);
@@ -68343,19 +69207,55 @@ ${h.text}`;
       ));
       return;
     }
-    const bar = el("div", "map-bar");
-    for (const m of sortMaps(maps)) {
-      const chip = el("div", "map-chip" + (m.id === S5.currentId ? " on" : ""), m.name);
-      const st2 = pinStats(m);
-      if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
-      chip.onclick = () => {
-        S5.currentId = m.id;
-        renderMaps(pane);
+    const search2 = el("input", "map-search");
+    search2.type = "search";
+    search2.placeholder = "\u{1F50D} \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2B\u0E21\u0E38\u0E14 (\u0E0A\u0E37\u0E48\u0E2D/\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38)";
+    search2.value = view.q;
+    search2.oninput = () => {
+      view.q = search2.value;
+      applyPinFilter(wrap2);
+    };
+    head2.append(search2);
+    const groups = groupMaps(maps);
+    if (groups.length > 1) {
+      const catBar = el("div", "map-catbar");
+      const mkCat = (label, val) => {
+        const c = el("div", "map-cat" + (view.catFilter === val ? " on" : ""), label);
+        c.onclick = () => {
+          view.catFilter = val;
+          renderMaps(pane);
+        };
+        catBar.append(c);
       };
-      bar.append(chip);
+      mkCat("\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", null);
+      for (const g of groups) mkCat((g.cat || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E21\u0E27\u0E14)") + " \xB7 " + g.maps.length, g.cat);
+      wrap2.append(catBar);
+    }
+    const bar = el("div", "map-bar");
+    const shown = groups.filter((g) => view.catFilter === null || g.cat === view.catFilter);
+    for (const g of shown) {
+      if (groups.length > 1) bar.append(el("div", "map-bar-cat", g.cat || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E21\u0E27\u0E14)"));
+      const row2 = el("div", "map-bar-row");
+      for (const m of g.maps) {
+        const chip = el("div", "map-chip" + (m.id === S5.currentId ? " on" : ""), m.name);
+        const st2 = pinStats(m);
+        if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
+        chip.onclick = () => {
+          S5.currentId = m.id;
+          view.sel.clear();
+          view.routeEdit = null;
+          view.focusPin = null;
+          renderMaps(pane);
+        };
+        row2.append(chip);
+      }
+      bar.append(row2);
     }
     wrap2.append(bar);
-    const cur = findMap(maps, S5.currentId) || sortMaps(maps)[0];
+    let cur = findMap(maps, S5.currentId);
+    if (!cur || view.catFilter !== null && String(cur.category || "").trim() !== view.catFilter) {
+      cur = shown[0] && shown[0].maps[0] || sortMaps(maps)[0];
+    }
     S5.currentId = cur.id;
     const crumb = breadcrumb(maps, cur.id);
     if (crumb.length > 1) {
@@ -68365,50 +69265,331 @@ ${h.text}`;
         const a = el("span", "map-crumb-item" + (c.id === cur.id ? " on" : ""), c.name);
         a.onclick = () => {
           S5.currentId = c.id;
+          view.sel.clear();
           renderMaps(pane);
         };
         bc.append(a);
       });
       wrap2.append(bc);
     }
+    const redraw = () => renderMaps(pane);
+    const save = async () => {
+      await saveMaps(S5.data);
+    };
     const tools = el("div", "map-tools");
     const nameInp = el("input", "map-name-inp");
     nameInp.value = cur.name;
+    nameInp.title = "\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48";
     nameInp.onchange = async () => {
       cur.name = nameInp.value.trim() || cur.name;
-      await saveMaps(S5.data);
-      renderMaps(pane);
+      await save();
+      redraw();
     };
     tools.append(nameInp);
-    const hint = el("span", "map-hint", "\u0E04\u0E25\u0E34\u0E01\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14 \xB7 \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E41\u0E01\u0E49/\u0E25\u0E34\u0E07\u0E01\u0E4C");
-    tools.append(hint);
+    const catInp = el("input", "map-cat-inp");
+    catInp.value = cur.category || "";
+    catInp.placeholder = "\u0E2B\u0E21\u0E27\u0E14 (\u0E40\u0E0A\u0E48\u0E19 \u0E42\u0E25\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19)";
+    catInp.title = "\u0E2B\u0E21\u0E27\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u2014 \u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49";
+    catInp.setAttribute("list", "map-cat-list");
+    const dl = el("datalist");
+    dl.id = "map-cat-list";
+    for (const g of groups) if (g.cat) {
+      const o = el("option");
+      o.value = g.cat;
+      dl.append(o);
+    }
+    catInp.onchange = async () => {
+      cur.category = catInp.value.trim();
+      await save();
+      redraw();
+    };
+    tools.append(catInp, dl);
     const chgImg = el("button", "cmp-mini", "\u{1F5BC} \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B");
     chgImg.onclick = async () => {
       const it = await pickImage(state.root);
       if (!it) return;
       cur.image = "Images/" + it.file;
-      await saveMaps(S5.data);
-      renderMaps(pane);
+      await save();
+      redraw();
     };
     tools.append(chgImg);
+    const expBtn = el("button", "cmp-mini", "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG");
+    expBtn.title = "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E2B\u0E21\u0E38\u0E14/\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E39\u0E1B\u0E25\u0E07\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B";
+    expBtn.onclick = () => exportMapPng(cur, S5.data.maps);
+    tools.append(expBtn);
+    const prnBtn = el("button", "cmp-mini", "\u{1F5A8} \u0E1E\u0E34\u0E21\u0E1E\u0E4C");
+    prnBtn.onclick = () => printMap(cur, S5.data.maps);
+    tools.append(prnBtn);
     const delMap = el("button", "cmp-mini k-danger", "\u{1F5D1} \u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48");
     delMap.onclick = async () => {
       if (!await confirmBox(`\u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u201C${cur.name}\u201D ?`, "\u0E25\u0E1A")) return;
       S5.data.maps = deleteMap(maps, cur.id);
       S5.currentId = S5.data.maps[0]?.id || null;
-      await saveMaps(S5.data);
-      renderMaps(pane);
+      view.sel.clear();
+      await save();
+      redraw();
     };
     tools.append(delMap);
     wrap2.append(tools);
+    const ov = mapOverlays(cur);
+    const tools2 = el("div", "map-tools2");
+    const zOut = el("button", "cmp-mini", "\u2796");
+    zOut.title = "\u0E0B\u0E39\u0E21\u0E2D\u0E2D\u0E01 (Ctrl+\u0E25\u0E49\u0E2D)";
+    const zIn = el("button", "cmp-mini", "\u2795");
+    zIn.title = "\u0E0B\u0E39\u0E21\u0E40\u0E02\u0E49\u0E32 (Ctrl+\u0E25\u0E49\u0E2D)";
+    const zSlider = el("input", "map-zoom-slider");
+    zSlider.type = "range";
+    zSlider.min = String(MAP_ZOOM_MIN);
+    zSlider.max = String(MAP_ZOOM_MAX);
+    zSlider.step = String(MAP_ZOOM_STEP);
+    zSlider.value = String(view.zoom);
+    const zLabel = el("span", "map-zoom-label", Math.round(view.zoom * 100) + "%");
+    const setZoom = (z, anchor) => {
+      const st2 = wrap2.querySelector(".map-stage");
+      const cv = wrap2.querySelector(".map-canvas");
+      const before = st2 ? { w: st2.scrollWidth, h: st2.scrollHeight, l: st2.scrollLeft, t: st2.scrollTop } : null;
+      view.zoom = clampZoom2(z);
+      zSlider.value = String(view.zoom);
+      zLabel.textContent = Math.round(view.zoom * 100) + "%";
+      if (cv) cv.style.width = view.zoom * 100 + "%";
+      if (st2 && before && before.w) {
+        const ax = anchor ? anchor.x : 0.5, ay = anchor ? anchor.y : 0.5;
+        st2.scrollLeft = zoomScroll(before.l, st2.clientWidth, before.w, st2.scrollWidth, ax);
+        st2.scrollTop = zoomScroll(before.t, st2.clientHeight, before.h, st2.scrollHeight, ay);
+      }
+    };
+    zOut.onclick = () => setZoom(zoomStep(view.zoom, -1));
+    zIn.onclick = () => setZoom(zoomStep(view.zoom, 1));
+    zSlider.oninput = () => setZoom(zSlider.value);
+    const zFit = el("button", "cmp-mini", "\u2922 \u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D");
+    zFit.title = "\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E02\u0E19\u0E32\u0E14\u0E1E\u0E2D\u0E14\u0E35\u0E01\u0E23\u0E2D\u0E1A (100%)";
+    zFit.onclick = () => setZoom(1);
+    tools2.append(el("span", "map-tool-lbl", "\u{1F50D}"), zOut, zSlider, zIn, zLabel, zFit);
+    tools2.append(el("span", "map-tool-sep", ""));
+    const mkOv = (key2, icon2, label) => {
+      const b = el("button", "cmp-mini map-ov-btn" + (ov[key2] ? " on" : ""), icon2 + " " + label);
+      b.onclick = async () => {
+        toggleOverlay(cur, key2);
+        await save();
+        redraw();
+      };
+      tools2.append(b);
+    };
+    mkOv("grid", "\u25A6", "\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14");
+    mkOv("compass", "\u{1F9ED}", "\u0E40\u0E02\u0E47\u0E21\u0E17\u0E34\u0E28");
+    mkOv("scale", "\u{1F4CF}", "\u0E21\u0E32\u0E15\u0E23\u0E32\u0E2A\u0E48\u0E27\u0E19");
+    if (ov.grid) {
+      const gs = el("input", "map-grid-size");
+      gs.type = "number";
+      gs.min = "2";
+      gs.max = "50";
+      gs.value = String(ov.gridSize);
+      gs.title = "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E14\u0E49\u0E32\u0E19";
+      gs.onchange = async () => {
+        cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) };
+        await save();
+        redraw();
+      };
+      tools2.append(gs);
+    }
+    if (ov.scale) {
+      const sl = el("input", "map-scale-lbl");
+      sl.value = ov.scaleLabel;
+      sl.placeholder = "\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A \u0E40\u0E0A\u0E48\u0E19 100 \u0E01\u0E21.";
+      sl.title = "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E15\u0E49\u0E41\u0E16\u0E1A\u0E21\u0E32\u0E15\u0E23\u0E32\u0E2A\u0E48\u0E27\u0E19";
+      sl.onchange = async () => {
+        cur.overlays = { ...ov, scaleLabel: sl.value.trim() };
+        await save();
+        redraw();
+      };
+      tools2.append(sl);
+    }
+    tools2.append(el("span", "map-tool-sep", ""));
+    const rtBtn = el("button", "cmp-mini map-ov-btn" + (view.showRoutes ? " on" : ""), "\u{1F6E3} \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07");
+    rtBtn.title = "\u0E41\u0E2A\u0E14\u0E07/\u0E0B\u0E48\u0E2D\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E21\u0E38\u0E14";
+    rtBtn.onclick = () => {
+      view.showRoutes = !view.showRoutes;
+      redraw();
+    };
+    tools2.append(rtBtn);
+    wrap2.append(tools2);
+    const tools3 = el("div", "map-tools3");
+    const lblBtn = el("button", "cmp-mini map-ov-btn" + (view.showLabels ? " on" : ""), "\u{1F524} \u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D");
+    lblBtn.title = "\u0E41\u0E2A\u0E14\u0E07/\u0E0B\u0E48\u0E2D\u0E19\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E15\u0E49\u0E2B\u0E21\u0E38\u0E14";
+    lblBtn.onclick = () => {
+      view.showLabels = !view.showLabels;
+      redraw();
+    };
+    tools3.append(lblBtn);
+    tools3.append(el("span", "map-tool-sep", ""));
+    for (const tdef of MAP_TOOLS) {
+      const b = el(
+        "button",
+        "cmp-mini map-tool-btn" + (view.tool === tdef.id ? " on" : ""),
+        tdef.icon + " " + tdef.label
+      );
+      b.dataset.tool = tdef.id;
+      b.title = tdef.hint;
+      b.onclick = () => {
+        view.tool = tdef.id;
+        view.routeEdit = null;
+        redraw();
+      };
+      tools3.append(b);
+    }
+    tools3.append(el("span", "map-tool-sep", ""));
+    const curScale = pinScaleOf(cur);
+    const psOut = el("button", "cmp-mini", "\u2796");
+    psOut.title = "\u0E22\u0E48\u0E2D\u0E2B\u0E21\u0E38\u0E14";
+    const psIn = el("button", "cmp-mini", "\u2795");
+    psIn.title = "\u0E02\u0E22\u0E32\u0E22\u0E2B\u0E21\u0E38\u0E14";
+    const psLbl = el("span", "map-zoom-label", Math.round(curScale * 100) + "%");
+    const setScale = async (v2) => {
+      cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v2.toFixed(2)));
+      await save();
+      redraw();
+    };
+    psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
+    psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
+    tools3.append(el("span", "map-tool-lbl", "\u{1F4CD} \u0E02\u0E19\u0E32\u0E14\u0E2B\u0E21\u0E38\u0E14"), psOut, psLbl, psIn);
+    wrap2.append(tools3);
+    const toolHint = (MAP_TOOLS.find((x) => x.id === view.tool) || MAP_TOOLS[0]).hint;
+    const hint = el(
+      "div",
+      "map-hint",
+      "\u0E04\u0E25\u0E34\u0E01\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 = \u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14 \xB7 " + toolHint + " \xB7 Ctrl+\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E25\u0E32\u0E22\u0E15\u0E31\u0E27 \xB7 Shift+\u0E25\u0E32\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E23\u0E2D\u0E1A \xB7 Ctrl+\u0E25\u0E49\u0E2D = \u0E0B\u0E39\u0E21"
+    );
+    wrap2.append(hint);
+    const selBar = el("div", "map-selbar" + (view.sel.size || view.clip.length ? " on" : ""));
+    const selCount = el("span", "map-selcount", view.sel.size ? `\u0E40\u0E25\u0E37\u0E2D\u0E01 ${view.sel.size} \u0E2B\u0E21\u0E38\u0E14` : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E21\u0E38\u0E14");
+    selBar.append(selCount);
+    if (view.sel.size) {
+      const bCopy = el("button", "cmp-mini", "\u29C9 \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01");
+      bCopy.title = "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E27\u0E32\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E14\u0E49";
+      bCopy.onclick = () => {
+        view.clip = clonePins(cur.pins, [...view.sel], 0);
+        setStatus(`\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 ${view.clip.length} \u0E2B\u0E21\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 "\u0E27\u0E32\u0E07"`);
+        redraw();
+      };
+      const bDel = el("button", "cmp-mini k-danger", "\u{1F5D1} \u0E25\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01");
+      bDel.onclick = async () => {
+        const n2 = view.sel.size;
+        if (!await confirmBox(`\u0E25\u0E1A\u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 ${n2} \u0E15\u0E31\u0E27 ?`, "\u0E25\u0E1A")) return;
+        deletePins(cur, [...view.sel]);
+        view.sel.clear();
+        await save();
+        setStatus(`\u0E25\u0E1A ${n2} \u0E2B\u0E21\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27`);
+        redraw();
+      };
+      const bNone = el("button", "cmp-mini", "\u2716 \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E2D\u0E01");
+      bNone.onclick = () => {
+        view.sel.clear();
+        redraw();
+      };
+      selBar.append(bCopy, bDel, bNone);
+    }
+    if (view.clip.length) {
+      const bPaste = el("button", "cmp-mini", `\u{1F4CB} \u0E27\u0E32\u0E07 ${view.clip.length} \u0E2B\u0E21\u0E38\u0E14`);
+      bPaste.title = "\u0E27\u0E32\u0E07\u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E27\u0E49\u0E25\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49";
+      bPaste.onclick = async () => {
+        const added = clonePins(view.clip, view.clip.map((p) => p.id), 2, cur.id);
+        cur.pins = [...cur.pins || [], ...added];
+        view.sel = new Set(added.map((p) => p.id));
+        await save();
+        setStatus(`\u0E27\u0E32\u0E07 ${added.length} \u0E2B\u0E21\u0E38\u0E14\u0E25\u0E07 "${cur.name}" \u0E41\u0E25\u0E49\u0E27`);
+        redraw();
+      };
+      selBar.append(bPaste);
+    }
+    wrap2.append(selBar);
+    const editingRoute = view.routeEdit ? mapRoutes(cur).find((r) => r.id === view.routeEdit) : null;
+    if (editingRoute) {
+      const rb = el("div", "map-routebar");
+      rb.append(el("span", null, `\u{1F6E3} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E48\u0E2D\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 \u201C${editingRoute.name}\u201D \u2014 \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07 (${(editingRoute.pinIds || []).length} \u0E08\u0E38\u0E14)`));
+      const undoB = el("button", "cmp-mini", "\u21A9 \u0E16\u0E2D\u0E22\u0E08\u0E38\u0E14\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14");
+      undoB.onclick = async () => {
+        (editingRoute.pinIds || []).pop();
+        await save();
+        redraw();
+      };
+      const doneB = el("button", "cmp-mini k-ok", "\u2714 \u0E40\u0E2A\u0E23\u0E47\u0E08");
+      doneB.onclick = () => {
+        view.routeEdit = null;
+        redraw();
+      };
+      rb.append(undoB, doneB);
+      wrap2.append(rb);
+    }
+    if (scenesCache === null) {
+      try {
+        scenesCache = await collectPlacedScenes();
+      } catch (e) {
+        log("warn", "maps: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+        scenesCache = [];
+      }
+    }
+    const counts = scenePinCounts(scenesCache, cur.id);
+    const hereScenes = scenesForMap(scenesCache, cur.id);
     const stage = el("div", "map-stage");
     const canvas = el("div", "map-canvas");
+    canvas.style.width = view.zoom * 100 + "%";
     const img = el("img", "map-img");
-    if (cur.image) img.src = mapImgURL(cur.image);
-    else canvas.append(el("div", "map-noimg", '\u{1F4F7} \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B \u2014 \u0E01\u0E14 "\u{1F5BC} \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B"'));
-    if (cur.image) canvas.append(img);
+    if (cur.image) {
+      img.src = mapImgURL(cur.image);
+      canvas.append(img);
+    } else canvas.append(el("div", "map-noimg", '\u{1F4F7} \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B \u2014 \u0E01\u0E14 "\u{1F5BC} \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B"'));
+    if (ov.grid) {
+      const g = el("div", "map-grid");
+      const cell = 100 / ov.gridSize + "%";
+      g.style.backgroundSize = cell + " " + cell;
+      canvas.append(g);
+    }
+    if (view.showRoutes) {
+      const routes = mapRoutes(cur);
+      if (routes.length) {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "map-routes");
+        svg.setAttribute("viewBox", "0 0 100 100");
+        svg.setAttribute("preserveAspectRatio", "none");
+        for (const r of routes) {
+          const pts = routePoints(cur, r);
+          const d = routePath(pts);
+          if (!d) continue;
+          const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("d", d);
+          p.setAttribute("fill", "none");
+          p.setAttribute("stroke", r.color || ROUTE_COLORS[0]);
+          p.setAttribute("stroke-width", r.id === view.routeEdit ? "4" : "2.5");
+          p.setAttribute("stroke-linejoin", "round");
+          p.setAttribute("stroke-linecap", "round");
+          p.setAttribute("vector-effect", "non-scaling-stroke");
+          if (r.dashed) p.setAttribute("stroke-dasharray", "6 5");
+          svg.append(p);
+        }
+        canvas.append(svg);
+        if (editingRoute) {
+          routePoints(cur, editingRoute).forEach((pt, i5) => {
+            const n2 = el("div", "map-route-num", String(i5 + 1));
+            n2.style.left = pt.x + "%";
+            n2.style.top = pt.y + "%";
+            n2.style.background = editingRoute.color || ROUTE_COLORS[0];
+            canvas.append(n2);
+          });
+        }
+      }
+    }
+    let suppressClick = false;
     canvas.onclick = async (e) => {
-      if (e.target !== canvas && e.target !== img) return;
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      if (e.target !== canvas && e.target !== img && !e.target.classList.contains("map-grid")) return;
+      if (view.sel.size) {
+        view.sel.clear();
+        redraw();
+        return;
+      }
       const r = canvas.getBoundingClientRect();
       const x = clamp3((e.clientX - r.left) / r.width * 100);
       const y = clamp3((e.clientY - r.top) / r.height * 100);
@@ -68416,30 +69597,110 @@ ${h.text}`;
       const res = await pinDialog(pin, maps, cur.id);
       if (!res) return;
       cur.pins.push(res);
-      await saveMaps(S5.data);
-      renderMaps(pane);
+      await save();
+      redraw();
     };
+    canvas.onpointerdown = (e) => {
+      if (!e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      const r = canvas.getBoundingClientRect();
+      const box2 = el("div", "map-rubber");
+      canvas.append(box2);
+      const x0 = e.clientX, y0 = e.clientY;
+      const paint = (ev) => {
+        const l = Math.min(x0, ev.clientX) - r.left, t3 = Math.min(y0, ev.clientY) - r.top;
+        box2.style.left = l + "px";
+        box2.style.top = t3 + "px";
+        box2.style.width = Math.abs(ev.clientX - x0) + "px";
+        box2.style.height = Math.abs(ev.clientY - y0) + "px";
+      };
+      paint(e);
+      const up = (ev) => {
+        window.removeEventListener("pointermove", paint);
+        window.removeEventListener("pointerup", up);
+        const x1 = (Math.min(x0, ev.clientX) - r.left) / r.width * 100;
+        const x2 = (Math.max(x0, ev.clientX) - r.left) / r.width * 100;
+        const y1 = (Math.min(y0, ev.clientY) - r.top) / r.height * 100;
+        const y2 = (Math.max(y0, ev.clientY) - r.top) / r.height * 100;
+        box2.remove();
+        if (Math.abs(x2 - x1) < 0.5 && Math.abs(y2 - y1) < 0.5) return;
+        suppressClick = true;
+        for (const p of cur.pins || []) if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) view.sel.add(p.id);
+        redraw();
+      };
+      window.addEventListener("pointermove", paint);
+      window.addEventListener("pointerup", up);
+    };
+    stage.addEventListener("wheel", (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom(zoomStep(view.zoom, e.deltaY < 0 ? 1 : -1));
+    }, { passive: false });
+    const portraits = await loadPortraits();
+    const pinScale = pinScaleOf(cur);
     for (const pin of cur.pins || []) {
-      const el2 = el("div", "map-pin map-pin-" + pin.kind);
+      const selected = view.sel.has(pin.id);
+      const el2 = el("div", "map-pin map-pin-" + pin.kind + (selected ? " sel" : ""));
+      el2.dataset.pin = pin.id;
       el2.style.left = pin.x + "%";
       el2.style.top = pin.y + "%";
+      if (pinScale !== 1) el2.style.setProperty("--pin-scale", String(pinScale));
       if (pin.color) el2.style.setProperty("--pin-color", pin.color);
-      el2.append(el("span", "map-pin-icon", (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
-      if (pin.label) el2.append(el("span", "map-pin-label", pin.label));
-      el2.title = pin.note || pin.label || (PIN_KIND[pin.kind] || {}).label || "";
+      const portraitFile = pin.kind === "entity" && pin.entityFile ? portraits.get(pin.entityFile) : "";
+      if (portraitFile) {
+        const av = el("span", "map-pin-portrait");
+        const im = el("img");
+        im.src = mapImgURL("Images/" + portraitFile);
+        im.alt = pin.label || "";
+        im.onerror = () => {
+          av.replaceWith(el("span", "map-pin-icon", PIN_KIND.entity.icon));
+        };
+        av.append(im);
+        el2.append(av);
+      } else {
+        el2.append(el("span", "map-pin-icon", (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
+      }
+      if (pin.label && view.showLabels) el2.append(el("span", "map-pin-label", pin.label));
+      const scHere = hereScenes.filter((s) => s.pinId === pin.id);
+      if (scHere.length) el2.append(el("span", "map-pin-count", String(scHere.length)));
+      el2.title = [
+        pin.label || (PIN_KIND[pin.kind] || {}).label || "",
+        pin.note,
+        scHere.length ? scHere.map((s) => "\u{1F4C4} " + s.title).join("\n") : ""
+      ].filter(Boolean).join("\n");
       el2.onclick = async (e) => {
         e.stopPropagation();
+        if (e.ctrlKey || e.metaKey) {
+          if (view.sel.has(pin.id)) view.sel.delete(pin.id);
+          else view.sel.add(pin.id);
+          redraw();
+          return;
+        }
+        if (editingRoute) {
+          editingRoute.pinIds = [...editingRoute.pinIds || []];
+          if (editingRoute.pinIds[editingRoute.pinIds.length - 1] !== pin.id) editingRoute.pinIds.push(pin.id);
+          await save();
+          redraw();
+          return;
+        }
         if (e.altKey) return editPin();
+        if (view.tool === "edit") return editPin();
+        if (view.tool === "move") {
+          setStatus("\u0E42\u0E2B\u0E21\u0E14\u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E22\u0E49\u0E32\u0E22");
+          return;
+        }
         if (pin.kind === "portal" && pin.toMap) {
           S5.currentId = pin.toMap;
-          renderMaps(pane);
+          view.sel.clear();
+          view.focusPin = null;
+          redraw();
           return;
         }
         if (pin.kind === "entity" && pin.entityFile) {
           openEntity(pin.entityFile);
           return;
         }
-        editPin();
+        setStatus("\u{1F4CC} " + (pin.label || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)") + (pin.note ? " \u2014 " + pin.note : "") + ' \xB7 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21 "\u270E \u0E41\u0E01\u0E49\u0E44\u0E02" \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E41\u0E01\u0E49\u0E2B\u0E21\u0E38\u0E14\u0E19\u0E35\u0E49');
       };
       el2.oncontextmenu = (e) => {
         e.preventDefault();
@@ -68449,36 +69710,51 @@ ${h.text}`;
       async function editPin() {
         const res = await pinDialog({ ...pin }, maps, cur.id, true);
         if (res === "DELETE") {
-          cur.pins = cur.pins.filter((p) => p.id !== pin.id);
-          await saveMaps(S5.data);
-          renderMaps(pane);
+          deletePins(cur, [pin.id]);
+          view.sel.delete(pin.id);
+          await save();
+          redraw();
           return;
         }
         if (res) {
           Object.assign(pin, res);
-          await saveMaps(S5.data);
-          renderMaps(pane);
+          await save();
+          redraw();
         }
       }
       el2.onpointerdown = (e) => {
-        if (e.button !== 0) return;
+        if (view.tool !== "move") return;
+        if (e.button !== 0 || e.shiftKey) return;
         e.stopPropagation();
         const r = canvas.getBoundingClientRect();
+        const group = selected && view.sel.size > 1 ? [...view.sel] : [pin.id];
+        const start = new Map((cur.pins || []).filter((p) => group.includes(p.id)).map((p) => [p.id, { x: p.x, y: p.y }]));
+        const ox = e.clientX, oy = e.clientY;
         let moved = false;
         const mv = (ev) => {
+          const dx = (ev.clientX - ox) / r.width * 100, dy = (ev.clientY - oy) / r.height * 100;
+          if (!moved && Math.abs(ev.clientX - ox) < 3 && Math.abs(ev.clientY - oy) < 3) return;
           moved = true;
           el2.classList.add("dragging");
-          pin.x = clamp3((ev.clientX - r.left) / r.width * 100);
-          pin.y = clamp3((ev.clientY - r.top) / r.height * 100);
-          el2.style.left = pin.x + "%";
-          el2.style.top = pin.y + "%";
+          for (const p of cur.pins || []) {
+            const s0 = start.get(p.id);
+            if (!s0) continue;
+            p.x = clamp3(s0.x + dx);
+            p.y = clamp3(s0.y + dy);
+            const node = canvas.querySelector(`.map-pin[data-pin="${p.id}"]`);
+            if (node) {
+              node.style.left = p.x + "%";
+              node.style.top = p.y + "%";
+            }
+          }
         };
         const up = async () => {
           window.removeEventListener("pointermove", mv);
           window.removeEventListener("pointerup", up);
           el2.classList.remove("dragging");
           if (moved) {
-            await saveMaps(S5.data);
+            await save();
+            redraw();
           }
         };
         window.addEventListener("pointermove", mv);
@@ -68486,24 +69762,795 @@ ${h.text}`;
       };
       canvas.append(el2);
     }
+    for (const s of hereScenes) {
+      if (s.pinId || s.pinX == null) continue;
+      const d = el("div", "map-scene-dot", "\u25C9");
+      d.style.left = s.pinX + "%";
+      d.style.top = s.pinY + "%";
+      d.title = "\u{1F4C4} " + (s.title || "") + "\n(\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1B\u0E31\u0E01\u0E1E\u0E34\u0E01\u0E31\u0E14\u0E44\u0E27\u0E49\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E2B\u0E21\u0E38\u0E14)";
+      canvas.append(d);
+    }
+    if (view.focusPin) {
+      const f = el("div", "map-focus");
+      f.style.left = view.focusPin.x + "%";
+      f.style.top = view.focusPin.y + "%";
+      canvas.append(f);
+    }
+    if (ov.compass) {
+      const c = el("div", "map-compass");
+      c.innerHTML = '<span class="map-compass-n">N</span><span class="map-compass-needle">\u25B2</span>';
+      c.title = "\u0E17\u0E34\u0E28\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19\u0E02\u0E2D\u0E07\u0E20\u0E32\u0E1E";
+      canvas.append(c);
+    }
+    if (ov.scale) {
+      const sc = el("div", "map-scalebar");
+      sc.append(el("div", "map-scalebar-bar"));
+      sc.append(el("div", "map-scalebar-lbl", ov.scaleLabel || "(\u0E15\u0E31\u0E49\u0E07\u0E23\u0E30\u0E22\u0E30\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E32\u0E07 \u{1F4CF})"));
+      canvas.append(sc);
+    }
     stage.append(canvas);
     wrap2.append(stage);
+    applyPinFilter(wrap2);
+    const rsec = el("div", "map-routes-panel");
+    const rhead = el("div", "map-routes-head");
+    rhead.append(el("span", null, `\u{1F6E3} \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 (${mapRoutes(cur).length})`));
+    const addR = el("button", "cmp-mini", "\uFF0B \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48");
+    addR.onclick = async () => {
+      const name5 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07", { value: "\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48 " + (mapRoutes(cur).length + 1) });
+      if (!name5) return;
+      const r = newRoute(name5, ROUTE_COLORS[mapRoutes(cur).length % ROUTE_COLORS.length]);
+      cur.routes = [...mapRoutes(cur), r];
+      view.routeEdit = r.id;
+      await save();
+      redraw();
+    };
+    rhead.append(addR);
+    rsec.append(rhead);
+    for (const r of mapRoutes(cur)) {
+      const row2 = el("div", "map-route-row" + (r.id === view.routeEdit ? " on" : ""));
+      const sw = el("span", "map-route-sw");
+      sw.style.background = r.color || ROUTE_COLORS[0];
+      row2.append(sw);
+      const pts = routePoints(cur, r);
+      row2.append(el("span", "map-route-name", r.name));
+      row2.append(el("span", "map-route-meta", `${pts.length} \u0E08\u0E38\u0E14 \xB7 \u0E23\u0E30\u0E22\u0E30 ~${routeLength(pts)}`));
+      const bEdit = el("button", "cmp-mini", r.id === view.routeEdit ? "\u2714 \u0E40\u0E2A\u0E23\u0E47\u0E08" : "\u270E \u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14");
+      bEdit.onclick = () => {
+        view.routeEdit = view.routeEdit === r.id ? null : r.id;
+        redraw();
+      };
+      const bColor = el("button", "cmp-mini", "\u{1F3A8}");
+      bColor.title = "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19";
+      bColor.onclick = async () => {
+        const i5 = ROUTE_COLORS.indexOf(r.color);
+        r.color = ROUTE_COLORS[(i5 + 1) % ROUTE_COLORS.length];
+        await save();
+        redraw();
+      };
+      const bDash = el("button", "cmp-mini" + (r.dashed ? " on" : ""), "\u2505");
+      bDash.title = "\u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30 / \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E36\u0E1A";
+      bDash.onclick = async () => {
+        r.dashed = !r.dashed;
+        await save();
+        redraw();
+      };
+      const bRen = el("button", "cmp-mini", "\u270F");
+      bRen.title = "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07";
+      bRen.onclick = async () => {
+        const v2 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07", { value: r.name });
+        if (!v2) return;
+        r.name = v2.trim();
+        await save();
+        redraw();
+      };
+      const bDel = el("button", "cmp-mini k-danger", "\u{1F5D1}");
+      bDel.title = "\u0E25\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 (\u0E2B\u0E21\u0E38\u0E14\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)";
+      bDel.onclick = async () => {
+        if (!await confirmBox(`\u0E25\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 \u201C${r.name}\u201D ? (\u0E2B\u0E21\u0E38\u0E14\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A)`, "\u0E25\u0E1A")) return;
+        deleteRoute(cur, r.id);
+        if (view.routeEdit === r.id) view.routeEdit = null;
+        await save();
+        redraw();
+      };
+      row2.append(bEdit, bColor, bDash, bRen, bDel);
+      rsec.append(row2);
+    }
+    if (!mapRoutes(cur).length) {
+      rsec.append(el(
+        "div",
+        "dim map-route-empty",
+        '\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 = \u0E25\u0E32\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E2B\u0E21\u0E38\u0E14\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A \u0E43\u0E0A\u0E49\u0E40\u0E25\u0E48\u0E32\u0E01\u0E32\u0E23\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 \u2014 \u0E01\u0E14 "\uFF0B \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E25\u0E30\u0E08\u0E38\u0E14'
+      ));
+    }
+    wrap2.append(rsec);
     const st = pinStats(cur);
     wrap2.append(el(
       "div",
       "map-foot",
-      `\u{1F4CD} ${st.entity} \u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 \xB7 \u{1F6AA} ${st.portal} \u0E1B\u0E23\u0E30\u0E15\u0E39 \xB7 \u{1F4CC} ${st.note} \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38`
+      `\u{1F4CD} ${st.entity} \u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 \xB7 \u{1F6AA} ${st.portal} \u0E1B\u0E23\u0E30\u0E15\u0E39 \xB7 \u{1F4CC} ${st.note} \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38 \xB7 \u{1F4C4} ${hereScenes.length} \u0E09\u0E32\u0E01\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49` + (counts[""] ? ` (${counts[""]} \u0E09\u0E32\u0E01\u0E1B\u0E31\u0E01\u0E1E\u0E34\u0E01\u0E31\u0E14\u0E40\u0E2D\u0E07)` : "")
     ));
+    if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
   }
+  function applyPinFilter(wrap2) {
+    const S5 = mapsState_C.s;
+    const cur = S5 && findMap(S5.data.maps, S5.currentId);
+    if (!cur) return;
+    const q = String(view.q || "").trim();
+    let hit = 0;
+    for (const node of wrap2.querySelectorAll(".map-pin")) {
+      const pin = (cur.pins || []).find((p) => p.id === node.dataset.pin);
+      const ok2 = !pin || matchPin(pin, q);
+      node.classList.toggle("map-pin-dim", !!q && !ok2);
+      node.classList.toggle("map-pin-hit", !!q && ok2);
+      if (q && ok2) hit++;
+    }
+    let note = wrap2.querySelector(".map-search-note");
+    if (!note) {
+      note = el("div", "map-search-note");
+      wrap2.querySelector(".map-hint")?.after(note);
+    }
+    note.textContent = q ? `\u{1F50D} "${q}" \u2014 \u0E40\u0E08\u0E2D ${hit} \u0E2B\u0E21\u0E38\u0E14\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49` : "";
+    note.style.display = q ? "" : "none";
+  }
+  async function drawMapToCanvas(map2) {
+    const W0 = 1400;
+    let img = null;
+    if (map2.image) {
+      img = new Image();
+      const src2 = mapImgURL(map2.image);
+      await new Promise((res) => {
+        img.onload = res;
+        img.onerror = () => {
+          img = null;
+          res();
+        };
+        img.src = src2;
+      });
+    }
+    const iw = img && img.naturalWidth || W0;
+    const ih = img && img.naturalHeight || Math.round(W0 * 0.66);
+    const scale2 = Math.min(2, Math.max(1, W0 / iw));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(iw * scale2);
+    cv.height = Math.round(ih * scale2);
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H2 = cv.height;
+    const PX = (x) => x / 100 * W, PY = (y) => y / 100 * H2;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H2);
+    if (img) ctx.drawImage(img, 0, 0, W, H2);
+    const ov = mapOverlays(map2);
+    if (ov.grid) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,0,0,.28)";
+      ctx.lineWidth = Math.max(1, scale2);
+      for (const p of gridLines(ov.gridSize)) {
+        ctx.beginPath();
+        ctx.moveTo(PX(p), 0);
+        ctx.lineTo(PX(p), H2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, PY(p));
+        ctx.lineTo(W, PY(p));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    for (const r of mapRoutes(map2)) {
+      const pts = routePoints(map2, r);
+      if (pts.length < 2) continue;
+      ctx.save();
+      ctx.strokeStyle = r.color || ROUTE_COLORS[0];
+      ctx.lineWidth = 4 * scale2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      if (r.dashed) ctx.setLineDash([12 * scale2, 9 * scale2]);
+      ctx.beginPath();
+      pts.forEach((p, i5) => i5 ? ctx.lineTo(PX(p.x), PY(p.y)) : ctx.moveTo(PX(p.x), PY(p.y)));
+      ctx.stroke();
+      ctx.restore();
+    }
+    const fs = Math.round(15 * scale2);
+    ctx.textBaseline = "middle";
+    for (const pin of map2.pins || []) {
+      const x = PX(pin.x), y = PY(pin.y), rad = 9 * scale2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, rad, 0, Math.PI * 2);
+      ctx.fillStyle = pin.color || (pin.kind === "portal" ? "#5f9fd9" : pin.kind === "entity" ? "#d9575e" : "#d9b757");
+      ctx.fill();
+      ctx.lineWidth = 2 * scale2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      if (pin.label) {
+        ctx.font = `${fs}px "Sarabun", sans-serif`;
+        const tw = ctx.measureText(pin.label).width;
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.fillRect(x + rad + 3 * scale2, y - fs * 0.75, tw + 8 * scale2, fs * 1.5);
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillText(pin.label, x + rad + 7 * scale2, y);
+      }
+      ctx.restore();
+    }
+    if (ov.compass) {
+      ctx.save();
+      const cx2 = W - 60 * scale2, cy2 = 60 * scale2, rr = 34 * scale2;
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, rr, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fill();
+      ctx.lineWidth = 2 * scale2;
+      ctx.strokeStyle = "#333";
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2 - rr * 0.72);
+      ctx.lineTo(cx2 - rr * 0.28, cy2 + rr * 0.4);
+      ctx.lineTo(cx2 + rr * 0.28, cy2 + rr * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = "#c0392b";
+      ctx.fill();
+      ctx.fillStyle = "#222";
+      ctx.font = `bold ${Math.round(13 * scale2)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("N", cx2, cy2 - rr * 0.88);
+      ctx.restore();
+    }
+    if (ov.scale) {
+      ctx.save();
+      const bw = W * 0.18, bx = 40 * scale2, by = H2 - 55 * scale2, bh = 9 * scale2;
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillRect(bx - 6 * scale2, by - 6 * scale2, bw + 12 * scale2, bh + 30 * scale2);
+      ctx.fillStyle = "#222";
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
+      ctx.fillStyle = "#222";
+      ctx.font = `${Math.round(13 * scale2)}px "Sarabun", sans-serif`;
+      ctx.textAlign = "left";
+      ctx.fillText(ov.scaleLabel || "", bx, by + bh + 12 * scale2);
+      ctx.restore();
+    }
+    return cv;
+  }
+  function safeFileName(s) {
+    return String(s || "map").replace(/[\\/:*?"<>|]+/g, "-").trim() || "map";
+  }
+  async function exportMapPng(map2) {
+    try {
+      const cv = await drawMapToCanvas(map2);
+      const b64 = cv.toDataURL("image/png").split(",")[1];
+      const dir = await kapi.join(state.root, "Images");
+      const name5 = await kapi.writeImageData(dir, safeFileName(map2.name) + "-map.png", b64);
+      setStatus("\u{1F4F7} \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E25\u0E07\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E25\u0E49\u0E27: " + (typeof name5 === "string" ? name5 : "map.png"));
+      return true;
+    } catch (e) {
+      log("error", "maps: \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      setStatus("\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + e.message);
+      return false;
+    }
+  }
+  async function printMap(map2) {
+    let layer = null;
+    try {
+      const cv = await drawMapToCanvas(map2);
+      layer = el("div", null);
+      layer.id = "map-print-layer";
+      const im = el("img");
+      im.src = cv.toDataURL("image/png");
+      const cap = el("div", "map-print-cap", map2.name || "");
+      layer.append(im, cap);
+      document.body.append(layer);
+      document.body.classList.add("map-printing", "printing");
+      await new Promise((r) => setTimeout(r, 60));
+      await kapi.print();
+      return true;
+    } catch (e) {
+      log("error", "maps: \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      setStatus("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + e.message);
+      return false;
+    } finally {
+      document.body.classList.remove("map-printing", "printing");
+      if (layer) layer.remove();
+    }
+  }
+  var view, scenesCache, portraitCache, MAP_TOOLS, PIN_SCALE_MIN, PIN_SCALE_MAX, PIN_SCALE_STEP;
   var init_maps_ui = __esm({
     "src/maps-ui.js"() {
       init_app();
       init_core();
       init_gallery();
       init_maps();
+      init_wiki_profile();
       init_ui();
       init_wiki_ui();
       init_panel_ui();
+      init_floorplan_ui();
+      view = {
+        zoom: 1,
+        sel: /* @__PURE__ */ new Set(),
+        // id หมุดที่เลือกอยู่
+        clip: [],
+        // หมุดที่คัดลอกไว้ (วางข้ามแผนที่ได้)
+        q: "",
+        // คำค้นหมุด
+        routeEdit: null,
+        // id เส้นทางที่กำลังต่อจุด
+        showRoutes: true,
+        focusPin: null,
+        // หมุดที่ถูกสั่งให้เพ่ง (มาจากปุ่ม "ดูบนแผนที่" ของฉาก)
+        catFilter: null,
+        // หมวดที่กรองอยู่ (null = ทั้งหมด)
+        // [alpha.71 ข้อ 3] โหมดเครื่องมือ — เดิมคลิกหมุดแล้ว "แก้ไขเลย" ทั้งที่ผู้ใช้แค่อยากดู
+        //   open = คลิกเพื่อเปิดลิงก์/ดู · edit = คลิกเพื่อแก้ · move = ลากย้าย (โหมดอื่นลากไม่ได้)
+        tool: "open",
+        showLabels: true
+        // ปุ่ม "แสดงตัวหนังสือ"
+      };
+      scenesCache = null;
+      portraitCache = null;
+      MAP_TOOLS = [
+        { id: "open", icon: "\u{1F446}", label: "\u0E40\u0E1B\u0E34\u0E14/\u0E14\u0E39", hint: "\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E02\u0E2D\u0E07\u0E2B\u0E21\u0E38\u0E14 (\u0E1B\u0E23\u0E30\u0E15\u0E39/\u0E2B\u0E19\u0E49\u0E32 Wiki) \xB7 \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2D\u0E30\u0E44\u0E23" },
+        { id: "edit", icon: "\u270E", label: "\u0E41\u0E01\u0E49\u0E44\u0E02", hint: "\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2B\u0E21\u0E38\u0E14" },
+        { id: "move", icon: "\u2725", label: "\u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07", hint: "\u0E25\u0E32\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E22\u0E49\u0E32\u0E22 (\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E25\u0E32\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E01\u0E31\u0E19\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E42\u0E14\u0E19\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08)" }
+      ];
+      PIN_SCALE_MIN = 0.6;
+      PIN_SCALE_MAX = 3;
+      PIN_SCALE_STEP = 0.2;
+    }
+  });
+
+  // src/scene-props.js
+  async function sceneProps(dPath, ch, sc) {
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row2) return;
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    const M2 = await readSceneMeta(file, row2);
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog");
+    box2.append(el("div", "k-dlg-title", "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01 \u2014 " + row2.title));
+    const rowOf = /* @__PURE__ */ new Map();
+    const mk = (label, val, tag3 = "input") => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const i5 = el(tag3, "wiki-input");
+      i5.value = val || "";
+      r.append(i5);
+      box2.append(r);
+      rowOf.set(i5, r);
+      return i5;
+    };
+    const mkSelect = (label, options, cur) => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const s = el("select", "wiki-input k-dlg-select");
+      for (const [val, txt] of options) {
+        const o = el("option", null, txt);
+        o.value = val;
+        if (val === cur) o.selected = true;
+        s.append(o);
+      }
+      r.append(s);
+      box2.append(r);
+      return s;
+    };
+    const mkCheck = (label, checked) => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const c = el("input", "wiki-check");
+      c.type = "checkbox";
+      c.checked = !!checked;
+      r.append(c);
+      box2.append(r);
+      return c;
+    };
+    const iSyn = mk("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D", M2.synopsis, "textarea");
+    const iStoryDate = mk("\u0E40\u0E27\u0E25\u0E32\u0E43\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 (\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32)", M2.storyDate);
+    iStoryDate.placeholder = "\u0E40\u0E0A\u0E48\u0E19 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48 3 \xB7 \u0E1B\u0E35\u0E17\u0E35\u0E48 1024 \xB7 \u0E40\u0E0A\u0E49\u0E32\u0E27\u0E31\u0E19\u0E08\u0E31\u0E19\u0E17\u0E23\u0E4C";
+    const iStartPage = mk("\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C)", row2.startPage || "");
+    iStartPage.type = "number";
+    iStartPage.min = "1";
+    iStartPage.placeholder = '1 \u2014 \u0E43\u0E0A\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14 "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32" \u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C';
+    const iPov = mk("\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 (POV)", M2.pov);
+    const iEmotion = mk("\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C", M2.emotion);
+    const iConflict = mk("\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07", M2.conflict);
+    const iStatus = mkSelect(
+      "\u0E2A\u0E16\u0E32\u0E19\u0E30",
+      [["Outline", "\u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07 \u2014"], ...allStatuses().map((s) => [s, s])],
+      allStatuses().includes(row2.status) ? row2.status : "Outline"
+    );
+    const iColor = mkSelect(
+      "\u0E2A\u0E35",
+      [["", "\u2014 \u0E44\u0E21\u0E48\u0E21\u0E35 \u2014"], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + n2])],
+      row2.color || ""
+    );
+    const iFlag = mkCheck("\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14", row2.flag);
+    const iTags = mk("\u0E41\u0E17\u0E47\u0E01 (\u0E04\u0E31\u0E48\u0E19 , )", (M2.tags || []).join(", "));
+    const iNote = mk("\u0E42\u0E19\u0E49\u0E15", M2.note, "textarea");
+    const iFuture = mk("Future Note (\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19)", M2.futureNote || "", "textarea");
+    iFuture.placeholder = "\u0E42\u0E19\u0E49\u0E15\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19 \u2014 \u0E41\u0E2A\u0E14\u0E07\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48\u0E41\u0E25\u0E30 Planner \u0E44\u0E21\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E1B\u0E01\u0E15\u0E34";
+    {
+      const slot = el("div", "props-mapslot");
+      box2.append(slot);
+      Promise.resolve().then(() => (init_maps_ui(), maps_ui_exports)).then(({ buildShowOnMapRow: buildShowOnMapRow2 }) => buildShowOnMapRow2(row2)).then((r) => slot.replaceWith(r)).catch(() => slot.remove());
+    }
+    const iFb = mkCheck("\u23EA \u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15 (Flashback)", M2.isFlashback);
+    const iFf = mkCheck("\u23E9 \u0E25\u0E48\u0E27\u0E07\u0E2B\u0E19\u0E49\u0E32 (Flashforward)", M2.isFlashforward);
+    iFb.addEventListener("change", () => {
+      if (iFb.checked) iFf.checked = false;
+    });
+    iFf.addEventListener("change", () => {
+      if (iFf.checked) iFb.checked = false;
+    });
+    const aiCtx = async () => {
+      let body = "";
+      try {
+        body = (0, import_md6.parseMdFile)(await kapi.readFile(file)).body || "";
+      } catch {
+      }
+      return { body, title: row2.title || "" };
+    };
+    attachAiFieldButton(rowOf.get(iSyn), iSyn, "synopsis", aiCtx);
+    attachAiFieldButton(rowOf.get(iPov), iPov, "pov", aiCtx);
+    attachAiFieldButton(rowOf.get(iEmotion), iEmotion, "emotion", aiCtx);
+    attachAiFieldButton(rowOf.get(iConflict), iConflict, "conflict", aiCtx);
+    const btns = el("div", "k-dlg-btns");
+    const cB = el("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
+    const okB = el("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
+    btns.append(cB, okB);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    cB.onclick = () => ov.remove();
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    okB.onclick = async () => {
+      row2.synopsis = iSyn.value;
+      row2.pov = iPov.value;
+      row2.status = iStatus.value;
+      row2.storyDate = iStoryDate.value.trim();
+      {
+        const sp = parseInt(iStartPage.value, 10);
+        if (Number.isFinite(sp) && sp > 0) row2.startPage = sp;
+        else delete row2.startPage;
+      }
+      row2.emotion = iEmotion.value;
+      row2.conflict = iConflict.value;
+      row2.color = iColor.value;
+      row2.flag = iFlag.checked;
+      row2.note = iNote.value;
+      row2.futureNote = iFuture.value;
+      if (iFb.checked && iFf.checked) iFf.checked = false;
+      row2.isFlashback = iFb.checked;
+      row2.isFlashforward = iFf.checked;
+      row2.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
+      const props = {};
+      for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
+      await writeSceneMeta(file, props);
+      await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      await buildTree2();
+      const openTab = state.tabs.get(file);
+      if (openTab) {
+        openTab.startPage = row2.startPage || 1;
+        updatePageNumberHint();
+        refreshSpView();
+      }
+      ov.remove();
+      setStatus("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27");
+    };
+  }
+  var import_md6;
+  var init_scene_props = __esm({
+    "src/scene-props.js"() {
+      init_app();
+      init_core();
+      init_custom_status();
+      init_spell();
+      init_scene_meta();
+      init_ai_synopsis();
+      import_md6 = __toESM(require_md());
+    }
+  });
+
+  // src/ai-analyzer-ui.js
+  async function analyzerStats(root = state.root) {
+    const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
+    if (!root) return out;
+    const SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research"];
+    try {
+      for (const sec of await kapi.listDirs(root)) {
+        if (SKIP.includes(sec)) {
+          if (sec === "Wiki" || sec === "Bible") {
+            const wp = await kapi.join(root, sec);
+            for (const cat of await kapi.listDirs(wp).catch(() => []))
+              out.entities += (await kapi.listFiles(await kapi.join(wp, cat), ".json").catch(() => [])).length;
+          }
+          continue;
+        }
+        const secPath = await kapi.join(root, sec);
+        if (!await kapi.exists(await kapi.join(secPath, "section.json"))) continue;
+        out.sections++;
+        const dr = await kapi.join(secPath, "Draft");
+        if (!await kapi.exists(dr)) continue;
+        for (const dn of await kapi.listDirs(dr).catch(() => [])) {
+          const dp = await kapi.join(dr, dn);
+          const df = await kapi.join(dp, "draft.json");
+          if (!await kapi.exists(df)) continue;
+          const chs = (await kapi.readJson(df).catch(() => ({}))).chapters || [];
+          out.chapters += chs.length;
+          const scAll = (await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}))).chapters || {};
+          for (const ch of chs) for (const sc of scAll[ch.guid] || []) {
+            if (sc.type === "memo") continue;
+            out.scenes++;
+            out.words += Number(sc.wordCount) || 0;
+          }
+        }
+      }
+    } catch {
+    }
+    return out;
+  }
+  async function renderAIAnalyzerPanel(host2) {
+    const h = host2 || document.getElementById("ai-analyzer-body");
+    if (!h) return null;
+    h.replaceChildren();
+    const wrap2 = el("div", "aia-wrap");
+    const head2 = el("div", "aia-head");
+    const title2 = el("div", "aia-title");
+    title2.innerHTML = iconHtml("brain", 18) + " " + t("panel.aiAnalyzerTitle", "AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C");
+    head2.append(title2);
+    head2.append(el("div", "aia-badge", t("aia.mockup", "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19")));
+    wrap2.append(head2);
+    wrap2.append(el(
+      "div",
+      "aia-lead",
+      t("aia.lead", "\u0E0A\u0E38\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E14\u0E49\u0E27\u0E22 AI \u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E21\u0E32 \u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E27\u0E48\u0E32\u0E41\u0E15\u0E48\u0E25\u0E30\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E08\u0E30\u0E1A\u0E2D\u0E01\u0E2D\u0E30\u0E44\u0E23\u0E1A\u0E49\u0E32\u0E07")
+    ));
+    const stats = await analyzerStats();
+    const bar = el("div", "aia-stats");
+    for (const [label, val] of [
+      ["\u0E40\u0E25\u0E48\u0E21", stats.sections],
+      ["\u0E1A\u0E17", stats.chapters],
+      ["\u0E09\u0E32\u0E01", stats.scenes],
+      ["\u0E04\u0E33", stats.words.toLocaleString()],
+      ["\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki", stats.entities]
+    ]) {
+      const b = el("div", "aia-stat");
+      b.append(el("div", "aia-stat-val", String(val)), el("div", "aia-stat-label", label));
+      bar.append(b);
+    }
+    wrap2.append(bar);
+    const grid = el("div", "aia-grid");
+    for (const c of ANALYZER_CARDS) {
+      const card = el("div", "aia-card");
+      card.dataset.card = c.id;
+      card.append(el("div", "aia-card-head", c.icon + " " + c.title));
+      card.append(el("div", "aia-card-desc", c.desc));
+      const ul = el("ul", "aia-card-list");
+      for (const b of c.bullets) ul.append(el("li", null, b));
+      card.append(ul);
+      const btn = el("button", "aia-run", t("aia.run", "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C"));
+      btn.type = "button";
+      btn.onclick = () => setStatus("\u{1F9E0} \u201C" + c.title + "\u201D \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E1A AI");
+      card.append(btn);
+      grid.append(card);
+    }
+    wrap2.append(grid);
+    wrap2.append(el(
+      "div",
+      "aia-foot",
+      t("aia.foot", "\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E49\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27: \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D \u2192 \u0E15\u0E23\u0E27\u0E08\u0E2B\u0E32\u0E04\u0E33\u0E0B\u0E49\u0E33 \xB7 AI \u2192 \u0E15\u0E23\u0E27\u0E08 Plot Hole \xB7 AI \u2192 \u0E15\u0E23\u0E27\u0E08\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E2D\u0E14\u0E04\u0E25\u0E49\u0E2D\u0E07")
+    ));
+    h.append(wrap2);
+    return wrap2;
+  }
+  var ANALYZER_CARDS;
+  var init_ai_analyzer_ui = __esm({
+    "src/ai-analyzer-ui.js"() {
+      init_core();
+      init_icons();
+      ANALYZER_CARDS = [
+        {
+          id: "pacing",
+          icon: "\u{1F4CA}",
+          title: "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+          desc: "\u0E14\u0E39\u0E27\u0E48\u0E32\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E22\u0E37\u0E14\u0E44\u0E1B \u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E23\u0E27\u0E1A\u0E23\u0E31\u0E14\u0E40\u0E01\u0E34\u0E19 \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\xB7\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E19\u0E32\u0E41\u0E19\u0E48\u0E19\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E15\u0E25\u0E2D\u0E14\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21",
+          bullets: [
+            "\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+            "\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E15\u0E01\u0E15\u0E34\u0E14\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E09\u0E32\u0E01",
+            "\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22 : \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 \u0E15\u0E48\u0E2D\u0E1A\u0E17"
+          ]
+        },
+        {
+          id: "arc",
+          icon: "\u{1F464}",
+          title: "\u0E2A\u0E48\u0E27\u0E19\u0E42\u0E04\u0E49\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+          desc: "\u0E15\u0E34\u0E14\u0E15\u0E32\u0E21\u0E27\u0E48\u0E32\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E41\u0E15\u0E48\u0E25\u0E30\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E0A\u0E48\u0E27\u0E07\u0E44\u0E2B\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \u0E41\u0E25\u0E30\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E19\u0E32\u0E19\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B\u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E1B\u0E25\u0E48\u0E32",
+          bullets: [
+            "\u0E41\u0E1C\u0E19\u0E20\u0E32\u0E1E\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E32\u0E01\u0E0F\u0E15\u0E31\u0E27\u0E15\u0E25\u0E2D\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+            "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E01\u0E34\u0E19 N \u0E1A\u0E17",
+            "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E2D\u0E2D\u0E01\u0E09\u0E32\u0E01"
+          ]
+        },
+        {
+          id: "words",
+          icon: "\u{1F4DD}",
+          title: "\u0E04\u0E33\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1A\u0E48\u0E2D\u0E22",
+          desc: "\u0E2B\u0E32\u0E04\u0E33\u0E41\u0E25\u0E30\u0E27\u0E25\u0E35\u0E17\u0E35\u0E48\u0E0B\u0E49\u0E33\u0E08\u0E19\u0E2A\u0E30\u0E14\u0E38\u0E14\u0E15\u0E32 \u0E41\u0E22\u0E01\u0E15\u0E32\u0E21\u0E1A\u0E17\u0E41\u0E25\u0E30\u0E15\u0E32\u0E21\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14",
+          bullets: [
+            "\u0E04\u0E33\u0E0B\u0E49\u0E33\u0E43\u0E19\u0E23\u0E30\u0E22\u0E30\u0E43\u0E01\u0E25\u0E49 (\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19)",
+            "\u0E04\u0E33\u0E15\u0E34\u0E14\u0E1B\u0E32\u0E01\u0E02\u0E2D\u0E07\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19",
+            "\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E32\u0E01\u0E2B\u0E25\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E28\u0E31\u0E1E\u0E17\u0E4C\u0E15\u0E48\u0E2D\u0E1A\u0E17"
+          ]
+        },
+        {
+          id: "conflict",
+          icon: "\u{1F50D}",
+          title: "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
+          desc: "\u0E15\u0E23\u0E27\u0E08\u0E27\u0E48\u0E32\u0E41\u0E15\u0E48\u0E25\u0E30\u0E09\u0E32\u0E01\u0E21\u0E35\u0E41\u0E23\u0E07\u0E15\u0E49\u0E32\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E40\u0E25\u0E22\u0E21\u0E31\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E31\u0E14\u0E44\u0E14\u0E49",
+          bullets: [
+            "\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E30\u0E1A\u0E38\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
+            "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E04\u0E25\u0E35\u0E48\u0E04\u0E25\u0E32\u0E22",
+            "\u0E08\u0E38\u0E14\u0E1E\u0E25\u0E34\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07 3 \u0E2D\u0E07\u0E01\u0E4C"
+          ]
+        },
+        {
+          id: "length",
+          icon: "\u23F1\uFE0F",
+          title: "\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01",
+          desc: "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01\u0E01\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21 \u0E0A\u0E35\u0E49\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E34\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E31\u0E49\u0E19\u0E41\u0E25\u0E30\u0E22\u0E32\u0E27",
+          bullets: [
+            "\u0E09\u0E32\u0E01\u0E22\u0E32\u0E27\u0E01\u0E27\u0E48\u0E32\u0E04\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07 2 \u0E40\u0E17\u0E48\u0E32\u0E02\u0E36\u0E49\u0E19\u0E44\u0E1B",
+            "\u0E09\u0E32\u0E01\u0E2A\u0E31\u0E49\u0E19\u0E01\u0E27\u0E48\u0E32 150 \u0E04\u0E33",
+            "\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E40\u0E27\u0E25\u0E32\u0E2D\u0E48\u0E32\u0E19 / \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E17"
+          ]
+        }
+      ];
+    }
+  });
+
+  // src/i18n-csv.js
+  function flatten(obj, prefix2 = "") {
+    const out = {};
+    if (!obj || typeof obj !== "object") return out;
+    for (const k of Object.keys(obj)) {
+      const v2 = obj[k];
+      const key2 = prefix2 ? prefix2 + "." + k : k;
+      if (v2 && typeof v2 === "object" && !Array.isArray(v2)) Object.assign(out, flatten(v2, key2));
+      else if (typeof v2 === "string") out[key2] = v2;
+      else if (typeof v2 === "number" || typeof v2 === "boolean") out[key2] = String(v2);
+    }
+    return out;
+  }
+  function unflatten(map2) {
+    const out = {};
+    for (const key2 of Object.keys(map2 || {})) {
+      const parts = String(key2).split(".").filter(Boolean);
+      if (!parts.length) continue;
+      let node = out;
+      for (let i5 = 0; i5 < parts.length - 1; i5++) {
+        const p = parts[i5];
+        if (!node[p] || typeof node[p] !== "object") node[p] = {};
+        node = node[p];
+      }
+      node[parts[parts.length - 1]] = map2[key2];
+    }
+    return out;
+  }
+  function csvCell(v2) {
+    const s = v2 == null ? "" : String(v2);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function jsonToCsv(th, en = {}, opts = {}) {
+    const { bom = true, eol = "\r\n" } = opts;
+    const fth = flatten(th), fen = flatten(en);
+    const keys4 = [.../* @__PURE__ */ new Set([...Object.keys(fth), ...Object.keys(fen)])].sort();
+    const rows = [CSV_HEADER.join(",")];
+    for (const k of keys4) rows.push([csvCell(k), csvCell(fth[k]), csvCell(fen[k])].join(","));
+    return (bom ? CSV_BOM : "") + rows.join(eol) + eol;
+  }
+  function parseCsv(text) {
+    const s = String(text || "").replace(/^﻿/, "");
+    const rows = [];
+    let row2 = [], cell = "", inQ = false, i5 = 0;
+    const endCell = () => {
+      row2.push(cell);
+      cell = "";
+    };
+    const endRow = () => {
+      endCell();
+      rows.push(row2);
+      row2 = [];
+    };
+    while (i5 < s.length) {
+      const c = s[i5];
+      if (inQ) {
+        if (c === '"') {
+          if (s[i5 + 1] === '"') {
+            cell += '"';
+            i5 += 2;
+            continue;
+          }
+          inQ = false;
+          i5++;
+          continue;
+        }
+        cell += c;
+        i5++;
+        continue;
+      }
+      if (c === '"') {
+        inQ = true;
+        i5++;
+        continue;
+      }
+      if (c === ",") {
+        endCell();
+        i5++;
+        continue;
+      }
+      if (c === "\r") {
+        i5++;
+        continue;
+      }
+      if (c === "\n") {
+        endRow();
+        i5++;
+        continue;
+      }
+      cell += c;
+      i5++;
+    }
+    if (cell !== "" || row2.length) endRow();
+    return rows;
+  }
+  function csvToJson(text) {
+    const rows = parseCsv(text).filter((r) => r.some((c) => String(c).trim() !== ""));
+    if (!rows.length) return { th: {}, en: {}, keys: [], skipped: 0 };
+    const head2 = rows[0].map((c) => String(c).trim().toLowerCase());
+    const isHeader = head2.includes("key");
+    const idx4 = { key: 0, th: 1, en: 2 };
+    if (isHeader) {
+      idx4.key = head2.indexOf("key");
+      idx4.th = head2.findIndex((h) => h === "th" || h === "th_value" || h === "thai");
+      idx4.en = head2.findIndex((h) => h === "en" || h === "en_value" || h === "english");
+    }
+    const body = isHeader ? rows.slice(1) : rows;
+    const fth = {}, fen = {}, keys4 = [];
+    let skipped = 0;
+    for (const r of body) {
+      const key2 = String(r[idx4.key] == null ? "" : r[idx4.key]).trim();
+      if (!key2) {
+        skipped++;
+        continue;
+      }
+      keys4.push(key2);
+      if (idx4.th >= 0 && r[idx4.th] != null && r[idx4.th] !== "") fth[key2] = String(r[idx4.th]);
+      if (idx4.en >= 0 && r[idx4.en] != null && r[idx4.en] !== "") fen[key2] = String(r[idx4.en]);
+    }
+    return { th: unflatten(fth), en: unflatten(fen), keys: keys4, skipped };
+  }
+  function mergeStrings(base3, patch) {
+    const fb = flatten(base3), fp = flatten(patch);
+    let added = 0, changed = 0;
+    for (const k of Object.keys(fp)) {
+      if (!(k in fb)) added++;
+      else if (fb[k] !== fp[k]) changed++;
+      fb[k] = fp[k];
+    }
+    return { merged: unflatten(fb), added, changed };
+  }
+  function importSummary(res) {
+    if (!res) return "\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08";
+    return `\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32 ${res.keys.length} \u0E04\u0E35\u0E22\u0E4C \xB7 \u0E44\u0E17\u0E22\u0E40\u0E1E\u0E34\u0E48\u0E21/\u0E41\u0E01\u0E49 ${res.thAdded + res.thChanged} \xB7 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29\u0E40\u0E1E\u0E34\u0E48\u0E21/\u0E41\u0E01\u0E49 ${res.enAdded + res.enChanged}` + (res.skipped ? ` \xB7 \u0E02\u0E49\u0E32\u0E21 ${res.skipped} \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C` : "");
+  }
+  var CSV_BOM, CSV_HEADER;
+  var init_i18n_csv = __esm({
+    "src/i18n-csv.js"() {
+      CSV_BOM = "\uFEFF";
+      CSV_HEADER = ["key", "th", "en"];
     }
   });
 
@@ -73817,11 +75864,11 @@ img{max-width:100%}` }
     const replaceWith = async (w) => {
       ov.remove();
       const t3 = state.active;
-      const view = t3?.editor?.view || t3?.sp?.view;
-      if (!view) return;
-      const sel = view.state.selection;
+      const view2 = t3?.editor?.view || t3?.sp?.view;
+      if (!view2) return;
+      const sel = view2.state.selection;
       if (sel.empty) return;
-      view.dispatch(view.state.tr.insertText(w, sel.from, sel.to));
+      view2.dispatch(view2.state.tr.insertText(w, sel.from, sel.to));
     };
     const load = async (label, relCode) => {
       const sec = el("div");
@@ -74961,10 +77008,10 @@ img{max-width:100%}` }
     }, 0);
     return wrap2;
   }
-  function msgNode(m, view = DEFAULT_VIEW) {
-    if (m.toolResult && view !== "verbose" && view !== "thinking") return el("span", "ai-msg-hidden");
+  function msgNode(m, view2 = DEFAULT_VIEW) {
+    if (m.toolResult && view2 !== "verbose" && view2 !== "thinking") return el("span", "ai-msg-hidden");
     if (m.toolResult) return foldBlock("\u21A9 \u0E1C\u0E25\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E43\u0E2B\u0E49\u0E42\u0E21\u0E40\u0E14\u0E25", m.text, "ai-msg-toolresult");
-    if (view === "summary") return summaryNode(m);
+    if (view2 === "summary") return summaryNode(m);
     const n2 = el("div", "ai-msg ai-msg-" + m.role);
     const who = el(
       "div",
@@ -74982,16 +77029,16 @@ img{max-width:100%}` }
       }, 1200);
     };
     who.append(copy2);
-    const shown = view === "verbose" ? m.text : m.role === "assistant" ? stripToolCalls(m.text) : m.text;
+    const shown = view2 === "verbose" ? m.text : m.role === "assistant" ? stripToolCalls(m.text) : m.text;
     const txt = el("div", "ai-msg-text", shown);
     n2.append(who, txt);
     if (!shown && m.calls && m.calls.length) txt.remove();
-    if (view === "verbose" && m.system) n2.append(foldBlock("\u2699 system prompt \u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E44\u0E1B\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49", m.system));
-    if ((view === "thinking" || view === "verbose") && m.thinking) {
+    if (view2 === "verbose" && m.system) n2.append(foldBlock("\u2699 system prompt \u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E44\u0E1B\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49", m.system));
+    if ((view2 === "thinking" || view2 === "verbose") && m.thinking) {
       n2.append(foldBlock("\u{1F9E0} \u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E42\u0E21\u0E40\u0E14\u0E25", m.thinking, "ai-msg-thinking"));
     }
-    if (m.calls && m.calls.length && view !== "normal") {
-      n2.append(callsNode(m.calls, m.results, view));
+    if (m.calls && m.calls.length && view2 !== "normal") {
+      n2.append(callsNode(m.calls, m.results, view2));
     } else if (m.calls && m.calls.length) {
       const okN = (m.results || []).filter((r) => r.ok).length;
       const line = el(
@@ -75001,7 +77048,7 @@ img{max-width:100%}` }
       );
       n2.append(line);
     }
-    if (view === "verbose" && m.usage) {
+    if (view2 === "verbose" && m.usage) {
       n2.append(el(
         "div",
         "ai-msg-meta dim",
@@ -75034,7 +77081,7 @@ img{max-width:100%}` }
     box2.append(sum2, pre);
     return box2;
   }
-  function callsNode(calls, results, view) {
+  function callsNode(calls, results, view2) {
     const box2 = el("div", "ai-calls");
     box2.append(el("div", "ai-calls-head dim", "\u26A1 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E25\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E33 (" + calls.length + ")"));
     calls.forEach((c, i5) => {
@@ -75044,7 +77091,7 @@ img{max-width:100%}` }
       row2.append(el("span", "ai-call-desc", describeCall(c)));
       if (r && (r.message || r.error)) row2.append(el("span", "ai-call-msg dim", r.error || r.message));
       box2.append(row2);
-      if (view === "verbose") {
+      if (view2 === "verbose") {
         box2.append(foldBlock("JSON \u0E17\u0E35\u0E48\u0E42\u0E21\u0E40\u0E14\u0E25\u0E2A\u0E31\u0E48\u0E07", JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
         if (r && r.data !== void 0 && r.data !== null) {
           box2.append(foldBlock(
@@ -75174,11 +77221,11 @@ img{max-width:100%}` }
     S2.sending = true;
     sendBtn.disabled = true;
     ta.value = "";
-    const view = S2.cur ? S2.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
+    const view2 = S2.cur ? S2.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
     S2.cur = addMessage(s, userMsg);
     await saveSession(S2.cur);
-    body.append(msgNode(userMsg, view));
+    body.append(msgNode(userMsg, view2));
     const pend = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
     const pendWho = el("div", "ai-msg-who dim", "\u{1F916} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14\u2026");
     pend.append(pendWho);
@@ -75220,7 +77267,7 @@ img{max-width:100%}` }
         S2.cur = addMessage(S2.cur, reply);
         await saveSession(S2.cur);
         pend.remove();
-        body.append(msgNode(reply, view));
+        body.append(msgNode(reply, view2));
         break;
       }
       pendWho.textContent = "\u26A1 \u0E01\u0E33\u0E25\u0E31\u0E07\u0E25\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E33 " + calls.length + " \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u2026";
@@ -75230,7 +77277,7 @@ img{max-width:100%}` }
       S2.cur = addMessage(S2.cur, reply);
       S2.cur = addMessage(S2.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
       await saveSession(S2.cur);
-      body.append(msgNode(reply, view));
+      body.append(msgNode(reply, view2));
       body.scrollTop = body.scrollHeight;
       if (results.some((r) => r.cancelled)) {
         pend.remove();
@@ -75797,6 +77844,237 @@ ${String(opts.context).slice(0, 1500)}` : "") + "\n\n\u0E2A\u0E48\u0E07\u0E40\u0
       init_ai_settings();
       init_project_scan();
       SKIP_SECTIONS2 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
+    }
+  });
+
+  // src/branch-plans.js
+  var branch_plans_exports = {};
+  __export(branch_plans_exports, {
+    BRANCH_PLAN_DIR: () => BRANCH_PLAN_DIR,
+    BRANCH_PLAN_EXT: () => BRANCH_PLAN_EXT,
+    BRANCH_PLAN_VERSION: () => BRANCH_PLAN_VERSION,
+    PLAN_DEFAULT_STATUS: () => PLAN_DEFAULT_STATUS,
+    PLAN_STATUSES: () => PLAN_STATUSES,
+    applyPlanChoices: () => applyPlanChoices,
+    comparePlans: () => comparePlans,
+    compareSummary: () => compareSummary,
+    newBranchPlan: () => newBranchPlan,
+    normalizeBranchPlan: () => normalizeBranchPlan,
+    normalizeChoice: () => normalizeChoice,
+    normalizeChoiceMap: () => normalizeChoiceMap,
+    planChoicesFor: () => planChoicesFor,
+    planDirty: () => planDirty,
+    planFromState: () => planFromState,
+    planNameFromFile: () => planNameFromFile,
+    planSummary: () => planSummary,
+    safePlanName: () => safePlanName,
+    setPlanChoices: () => setPlanChoices,
+    snapshotChoices: () => snapshotChoices,
+    sortPlans: () => sortPlans,
+    uniquePlanName: () => uniquePlanName
+  });
+  function newBranchPlan(name5) {
+    return {
+      version: BRANCH_PLAN_VERSION,
+      name: String(name5 || "\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48").trim() || "\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48",
+      note: "",
+      status: PLAN_DEFAULT_STATUS,
+      color: "",
+      tags: [],
+      book: "",
+      choices: {},
+      positions: {},
+      colors: {},
+      view: "tree",
+      zoom: 1,
+      sel: null,
+      updated: ""
+    };
+  }
+  function normalizeChoice(c) {
+    if (!c || typeof c !== "object") return null;
+    const text = String(c.text == null ? "" : c.text).trim();
+    if (!text) return null;
+    const out = { text, nextSceneId: String(c.nextSceneId || "") };
+    if (typeof c.color === "string" && /^#[0-9a-f]{3,8}$/i.test(c.color)) out.color = c.color;
+    return out;
+  }
+  function normalizeChoiceMap(raw) {
+    const out = {};
+    for (const [id, list] of Object.entries(raw && typeof raw === "object" ? raw : {})) {
+      if (!Array.isArray(list)) continue;
+      const arr = list.map(normalizeChoice).filter(Boolean);
+      if (arr.length) out[String(id)] = arr;
+    }
+    return out;
+  }
+  function snapshotChoices(scenes) {
+    const out = {};
+    for (const s of scenes || []) {
+      const arr = s && Array.isArray(s.choices) ? s.choices.map(normalizeChoice).filter(Boolean) : [];
+      if (arr.length) out[String(s.id)] = arr;
+    }
+    return out;
+  }
+  function applyPlanChoices(scenes, plan) {
+    if (!plan || !plan.choices) return (scenes || []).slice();
+    const map2 = normalizeChoiceMap(plan.choices);
+    return (scenes || []).map((s) => ({ ...s, choices: (map2[String(s.id)] || []).map((c) => ({ ...c })) }));
+  }
+  function planChoicesFor(plan, sceneId) {
+    const map2 = plan && plan.choices || {};
+    const list = map2[String(sceneId)];
+    return Array.isArray(list) ? list.map(normalizeChoice).filter(Boolean) : [];
+  }
+  function setPlanChoices(plan, sceneId, list) {
+    if (!plan) return null;
+    plan.choices = plan.choices || {};
+    const arr = (list || []).map(normalizeChoice).filter(Boolean);
+    if (arr.length) plan.choices[String(sceneId)] = arr;
+    else delete plan.choices[String(sceneId)];
+    return plan;
+  }
+  function comparePlans(a, b, titleOf2) {
+    const A = normalizeChoiceMap(a && a.choices), B = normalizeChoiceMap(b && b.choices);
+    const ids = [.../* @__PURE__ */ new Set([...Object.keys(A), ...Object.keys(B)])].sort();
+    const name5 = typeof titleOf2 === "function" ? titleOf2 : (id) => id;
+    return ids.map((id) => {
+      const ta = (A[id] || []).map((c) => c.text + "@" + c.nextSceneId);
+      const tb2 = (B[id] || []).map((c) => c.text + "@" + c.nextSceneId);
+      return {
+        sceneId: id,
+        title: name5(id),
+        a: (A[id] || []).map((c) => c.text),
+        b: (B[id] || []).map((c) => c.text),
+        only: !A[id] ? "b" : !B[id] ? "a" : "both",
+        same: ta.join("|") === tb2.join("|")
+      };
+    });
+  }
+  function compareSummary(rows) {
+    const r = rows || [];
+    return {
+      total: r.length,
+      same: r.filter((x) => x.same).length,
+      diff: r.filter((x) => !x.same && x.only === "both").length,
+      onlyA: r.filter((x) => x.only === "a").length,
+      onlyB: r.filter((x) => x.only === "b").length
+    };
+  }
+  function normalizeBranchPlan(raw, fallbackName) {
+    const r = raw && typeof raw === "object" ? raw : {};
+    const out = newBranchPlan(r.name || fallbackName);
+    out.note = String(r.note || "");
+    out.status = PLAN_STATUSES.includes(r.status) ? r.status : PLAN_DEFAULT_STATUS;
+    out.color = typeof r.color === "string" && /^#[0-9a-f]{3,8}$/i.test(r.color) ? r.color : "";
+    out.tags = Array.isArray(r.tags) ? r.tags.map((x) => String(x).trim()).filter(Boolean) : [];
+    out.book = String(r.book || "");
+    out.choices = normalizeChoiceMap(r.choices);
+    out.view = r.view === "list" ? "list" : "tree";
+    out.zoom = Math.max(0.2, Math.min(3, numOr3(r.zoom, 1)));
+    out.sel = r.sel || null;
+    out.updated = String(r.updated || "");
+    for (const [k, v2] of Object.entries(r.positions || {})) {
+      if (!v2 || typeof v2 !== "object") continue;
+      const x = numOr3(v2.x, null), y = numOr3(v2.y, null);
+      if (x === null || y === null) continue;
+      out.positions[k] = { x, y };
+    }
+    for (const [k, v2] of Object.entries(r.colors || {})) {
+      if (typeof v2 === "string" && /^#[0-9a-f]{3,8}$/i.test(v2)) out.colors[k] = v2;
+    }
+    return out;
+  }
+  function planFromState({
+    name: name5,
+    note,
+    status,
+    color,
+    tags,
+    book,
+    choices,
+    positions,
+    colors,
+    view: view2,
+    zoom,
+    sel,
+    now
+  }) {
+    const p = normalizeBranchPlan({
+      name: name5,
+      note,
+      status,
+      color,
+      tags,
+      book,
+      choices,
+      positions,
+      colors,
+      view: view2,
+      zoom,
+      sel
+    }, name5);
+    p.updated = String(now || "");
+    return p;
+  }
+  function safePlanName(name5) {
+    return String(name5 || "").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 80);
+  }
+  function planNameFromFile(file) {
+    const base3 = String(file || "").split(/[\\/]/).pop() || "";
+    return base3.replace(/\.json$/i, "");
+  }
+  function uniquePlanName(name5, existing) {
+    const taken = new Set((existing || []).map((x) => String(x).toLowerCase()));
+    const base3 = safePlanName(name5) || "\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48";
+    if (!taken.has(base3.toLowerCase())) return base3;
+    for (let i5 = 2; i5 < 999; i5++) {
+      const n2 = `${base3} ${i5}`;
+      if (!taken.has(n2.toLowerCase())) return n2;
+    }
+    return base3 + " " + Date.now().toString(36);
+  }
+  function planDirty(current2, saved) {
+    if (!saved) return !!(current2 && (Object.keys(current2.positions || {}).length || Object.keys(current2.colors || {}).length || Object.keys(current2.choices || {}).length));
+    const pick2 = (p) => JSON.stringify({
+      positions: p.positions || {},
+      colors: p.colors || {},
+      view: p.view,
+      zoom: p.zoom,
+      note: p.note || "",
+      status: p.status || "",
+      color: p.color || "",
+      tags: p.tags || [],
+      book: p.book || "",
+      choices: normalizeChoiceMap(p.choices)
+    });
+    return pick2(current2 || newBranchPlan("")) !== pick2(saved);
+  }
+  function sortPlans(list) {
+    return (list || []).slice().sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "th"));
+  }
+  function planSummary(plan) {
+    const p = plan || {};
+    const parts = [];
+    const ch = normalizeChoiceMap(p.choices);
+    const nCh = Object.values(ch).reduce((n3, l) => n3 + l.length, 0);
+    if (nCh) parts.push(nCh + " \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 / " + Object.keys(ch).length + " \u0E09\u0E32\u0E01");
+    if (p.status && p.status !== PLAN_DEFAULT_STATUS) parts.push(p.status);
+    if ((p.tags || []).length) parts.push("#" + p.tags.join(" #"));
+    const n2 = Object.keys(p.positions || {}).length;
+    if (n2) parts.push(n2 + " \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E08\u0E31\u0E14\u0E40\u0E2D\u0E07");
+    if (p.view === "list") parts.push("\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23");
+    return parts.join(" \xB7 ") || "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E08\u0E31\u0E14\u0E2D\u0E30\u0E44\u0E23";
+  }
+  var BRANCH_PLAN_VERSION, BRANCH_PLAN_DIR, BRANCH_PLAN_EXT, PLAN_STATUSES, PLAN_DEFAULT_STATUS, numOr3;
+  var init_branch_plans = __esm({
+    "src/branch-plans.js"() {
+      BRANCH_PLAN_VERSION = 3;
+      BRANCH_PLAN_DIR = "Branches";
+      BRANCH_PLAN_EXT = ".json";
+      PLAN_STATUSES = ["\u0E23\u0E48\u0E32\u0E07", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33", "\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07", "\u0E2A\u0E33\u0E23\u0E2D\u0E07", "\u0E1E\u0E31\u0E1A\u0E44\u0E27\u0E49"];
+      PLAN_DEFAULT_STATUS = "\u0E23\u0E48\u0E32\u0E07";
+      numOr3 = (v2, d) => Number.isFinite(+v2) ? +v2 : d;
     }
   });
 
@@ -76789,23 +79067,41 @@ details>summary::-webkit-details-marker{display:none}
   // src/branching-ui.js
   var branching_ui_exports = {};
   __export(branching_ui_exports, {
+    branchPlansDir: () => branchPlansDir,
     checkDanglingOnOpen: () => checkDanglingOnOpen,
+    closeBranchPlan: () => closeBranchPlan,
     collectScenes: () => collectScenes,
+    comparePlanDialog: () => comparePlanDialog,
+    compareWithPlan: () => compareWithPlan,
+    currentBranchPlan: () => currentBranchPlan,
+    inBranchPlan: () => inBranchPlan,
+    isBranchPlanDirty: () => isBranchPlanDirty,
+    listBranchPlans: () => listBranchPlans,
     loadNodePositions: () => loadNodePositions,
     loadSceneBodies: () => loadSceneBodies,
     mutateChoices: () => mutateChoices,
+    newPlanFromCurrent: () => newPlanFromCurrent,
+    openBranchPlan: () => openBranchPlan,
     openBranchingTree: () => openBranchingTree,
+    planPropsDialog: () => planPropsDialog,
     refreshOpenBranchPanel: () => refreshOpenBranchTab,
     refreshOpenBranchTab: () => refreshOpenBranchTab,
     renderBranchingPanel: () => renderBranchingPanel,
     renderBranchingTree: () => renderBranchingTree,
+    saveBranchPlan: () => saveBranchPlan,
+    saveBranchPlanAs: () => saveBranchPlanAs,
+    scenesWithPlan: () => scenesWithPlan,
     setNodeColor: () => setNodeColor,
+    setPlanProps: () => setPlanProps,
     syncChoicesFromScene: () => syncChoicesFromScene
   });
   function bstate() {
     if (!state._branch) state._branch = { ...BS_DEFAULTS };
     for (const [k, v2] of Object.entries(BS_DEFAULTS)) if (state._branch[k] === void 0) state._branch[k] = v2;
     return state._branch;
+  }
+  function currentBranchPlan() {
+    return planState;
   }
   function posKey() {
     const s = String(state.root || "").replace(/[\\/]+$/, "").toLowerCase();
@@ -76814,6 +79110,7 @@ details>summary::-webkit-details-marker{display:none}
     return `${POS_PREFIX}:${(h >>> 0).toString(36)}`;
   }
   function loadNodePositions() {
+    if (planState.path && planState.live) return planState.live.positions || {};
     try {
       return JSON.parse(localStorage.getItem(posKey()) || "{}") || {};
     } catch {
@@ -76821,16 +79118,334 @@ details>summary::-webkit-details-marker{display:none}
     }
   }
   function saveNodePositions(pos) {
+    if (planState.path && planState.live) {
+      planState.live.positions = pos;
+      markPlanDirty();
+      return;
+    }
     try {
       localStorage.setItem(posKey(), JSON.stringify(pos));
     } catch {
     }
   }
   function clearNodePositions() {
+    if (planState.path && planState.live) {
+      planState.live.positions = {};
+      markPlanDirty();
+      return;
+    }
     try {
       localStorage.removeItem(posKey());
     } catch {
     }
+  }
+  function markPlanDirty() {
+    if (!planState.path || !planState.live) return;
+    planState.live.updated = (/* @__PURE__ */ new Date()).toISOString();
+    Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.markBranchPlanRow && m.markBranchPlanRow()).catch(() => {
+    });
+  }
+  async function branchPlansDir() {
+    const d = await kapi.join(state.root, BRANCH_PLAN_DIR);
+    await kapi.mkdir(d);
+    return d;
+  }
+  async function listBranchPlans() {
+    if (!state.root) return [];
+    const dir = await kapi.join(state.root, BRANCH_PLAN_DIR);
+    if (!await kapi.exists(dir)) return [];
+    const out = [];
+    for (const f of await kapi.listFiles(dir, ".json").catch(() => [])) {
+      const path = await kapi.join(dir, f);
+      let plan = null;
+      try {
+        plan = normalizeBranchPlan(await kapi.readJson(path), planNameFromFile(f));
+      } catch (e) {
+        log("warn", "branch: \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E1C\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 " + f, e);
+        continue;
+      }
+      out.push({ path, name: plan.name || planNameFromFile(f), plan });
+    }
+    return sortPlans(out);
+  }
+  async function openBranchPlan(path) {
+    try {
+      const plan = normalizeBranchPlan(await kapi.readJson(path), planNameFromFile(path));
+      planState.path = path;
+      planState.name = plan.name;
+      planState.saved = JSON.parse(JSON.stringify(plan));
+      planState.live = plan;
+      const bs = bstate();
+      bs.view = plan.view;
+      bs.zoom = plan.zoom;
+      if (plan.sel) bs.sel = plan.sel;
+      setStatus('\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 "' + plan.name + '" \u0E41\u0E25\u0E49\u0E27');
+      log("info", "branch: \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 " + plan.name, path);
+      return true;
+    } catch (e) {
+      log("error", "branch: \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
+      setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08");
+      return false;
+    }
+  }
+  async function saveBranchPlan(silent) {
+    if (!planState.path || !planState.live) return false;
+    const bs = bstate();
+    const L2 = planState.live;
+    const plan = planFromState({
+      name: planState.name,
+      note: L2.note,
+      status: L2.status,
+      color: L2.color,
+      tags: L2.tags,
+      book: L2.book,
+      choices: L2.choices,
+      positions: L2.positions,
+      colors: L2.colors,
+      view: bs.view,
+      zoom: bs.zoom,
+      sel: bs.sel,
+      now: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    await kapi.writeFile(planState.path, JSON.stringify(plan, null, 2));
+    planState.live = plan;
+    planState.saved = JSON.parse(JSON.stringify(plan));
+    if (!silent) setStatus('\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E1C\u0E19 "' + plan.name + '" \u0E41\u0E25\u0E49\u0E27');
+    try {
+      const m = await Promise.resolve().then(() => (init_app(), app_exports));
+      m.markBranchPlanRow && m.markBranchPlanRow();
+    } catch {
+    }
+    return true;
+  }
+  async function saveBranchPlanAs(name5) {
+    const dir = await branchPlansDir();
+    const existing = (await listBranchPlans()).map((x) => x.name);
+    const finalName = uniquePlanName(name5 || planState.name || "\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48", existing);
+    const path = await kapi.join(dir, safePlanName(finalName) + ".json");
+    const bs = bstate();
+    const src2 = planState.live || newBranchPlan(finalName);
+    const plan = planFromState({
+      name: finalName,
+      note: src2.note,
+      status: src2.status,
+      color: src2.color,
+      tags: src2.tags,
+      book: src2.book,
+      choices: src2.choices,
+      positions: src2.positions || loadNodePositions(),
+      colors: src2.colors || {},
+      view: bs.view,
+      zoom: bs.zoom,
+      sel: bs.sel,
+      now: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    await kapi.writeFile(path, JSON.stringify(plan, null, 2));
+    planState.path = path;
+    planState.name = finalName;
+    planState.live = plan;
+    planState.saved = JSON.parse(JSON.stringify(plan));
+    setStatus('\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E19 "' + finalName + '" \u0E41\u0E25\u0E49\u0E27');
+    return path;
+  }
+  function closeBranchPlan() {
+    planState.path = null;
+    planState.saved = null;
+    planState.live = null;
+    planState.name = "";
+  }
+  function isBranchPlanDirty() {
+    return !!(planState.path && planDirty(planState.live, planState.saved));
+  }
+  function inBranchPlan() {
+    return !!(planState.path && planState.live);
+  }
+  function scenesWithPlan(scenes) {
+    return inBranchPlan() ? applyPlanChoices(scenes, planState.live) : scenes;
+  }
+  async function newPlanFromCurrent(name5) {
+    const scenes = await collectScenes();
+    const base3 = newBranchPlan(name5);
+    base3.choices = inBranchPlan() ? JSON.parse(JSON.stringify(planState.live.choices || {})) : snapshotChoices(scenes);
+    base3.positions = { ...loadNodePositions() };
+    closeBranchPlan();
+    planState.live = base3;
+    return saveBranchPlanAs(name5);
+  }
+  async function compareWithPlan(otherPath) {
+    const scenes = await collectScenes();
+    const titleOf2 = (id) => (scenes.find((x) => String(x.id) === String(id)) || {}).title || id;
+    const other = normalizeBranchPlan(await kapi.readJson(otherPath), planNameFromFile(otherPath));
+    const rows = comparePlans(planState.live, other, titleOf2);
+    return { rows, summary: compareSummary(rows), other };
+  }
+  async function planPropsDialog() {
+    if (!inBranchPlan()) {
+      setStatus("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19");
+      return false;
+    }
+    const L2 = planState.live;
+    const { el: E } = await Promise.resolve().then(() => (init_core(), core_exports));
+    return new Promise((resolve) => {
+      const ov = E("div", "k-overlay");
+      const box2 = E("div", "k-dialog");
+      box2.append(E("div", "k-dlg-title", "\u{1F33F} \u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19 \u2014 " + (planState.name || "")));
+      const mk = (label, val, tag3) => {
+        const r = E("div", "wiki-row");
+        r.append(E("label", null, label));
+        const i5 = E(tag3 || "input", "wiki-input");
+        i5.value = val || "";
+        r.append(i5);
+        box2.append(r);
+        return i5;
+      };
+      const iName = mk("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19", planState.name);
+      const rSt = E("div", "wiki-row");
+      rSt.append(E("label", null, "\u0E2A\u0E16\u0E32\u0E19\u0E30"));
+      const iStatus = E("select", "wiki-input k-dlg-select");
+      for (const st of PLAN_STATUSES) {
+        const o = E("option", null, st);
+        o.value = st;
+        if (st === (L2.status || PLAN_DEFAULT_STATUS)) o.selected = true;
+        iStatus.append(o);
+      }
+      rSt.append(iStatus);
+      box2.append(rSt);
+      const rC = E("div", "wiki-row");
+      rC.append(E("label", null, "\u0E2A\u0E35"));
+      const iColor = E("select", "wiki-input k-dlg-select");
+      {
+        const none2 = E("option", null, "\u2014 \u0E44\u0E21\u0E48\u0E21\u0E35 \u2014");
+        none2.value = "";
+        iColor.append(none2);
+        for (const [n2, hex] of SCENE_COLORS) {
+          const o = E("option", null, "\u25CF " + n2);
+          o.value = hex;
+          if (hex === L2.color) o.selected = true;
+          iColor.append(o);
+        }
+      }
+      rC.append(iColor);
+      box2.append(rC);
+      const iTags = mk("\u0E41\u0E17\u0E47\u0E01 (\u0E04\u0E31\u0E48\u0E19 , )", (L2.tags || []).join(", "));
+      const iBook = mk("\u0E40\u0E25\u0E48\u0E21/\u0E2A\u0E31\u0E07\u0E01\u0E31\u0E14 (\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49)", L2.book);
+      iBook.placeholder = "\u0E40\u0E0A\u0E48\u0E19 \u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07 \u2014 \u0E43\u0E0A\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E41\u0E15\u0E48\u0E25\u0E30\u0E40\u0E25\u0E48\u0E21\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E19\u0E25\u0E30\u0E0A\u0E38\u0E14";
+      const iNote = mk("\u0E42\u0E19\u0E49\u0E15", L2.note, "textarea");
+      const info = E("div", "dim", planSummary(L2));
+      box2.append(info);
+      const btns = E("div", "k-dlg-btns");
+      const cB = E("button", null, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
+      const okB = E("button", "k-ok", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
+      btns.append(cB, okB);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      cB.onclick = () => {
+        ov.remove();
+        resolve(false);
+      };
+      ov.onclick = (e) => {
+        if (e.target === ov) {
+          ov.remove();
+          resolve(false);
+        }
+      };
+      okB.onclick = async () => {
+        setPlanProps({
+          name: iName.value,
+          status: iStatus.value,
+          color: iColor.value,
+          tags: iTags.value.split(",").map((x) => x.trim()).filter(Boolean),
+          book: iBook.value.trim(),
+          note: iNote.value
+        });
+        await saveBranchPlan(true);
+        ov.remove();
+        setStatus("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19\u0E41\u0E25\u0E49\u0E27");
+        try {
+          const m = await Promise.resolve().then(() => (init_app(), app_exports));
+          await m.refreshTreeQueued();
+        } catch {
+        }
+        resolve(true);
+      };
+      iName.focus();
+    });
+  }
+  async function comparePlanDialog() {
+    if (!inBranchPlan()) {
+      setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E01\u0E48\u0E2D\u0E19 \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E2D\u0E22\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E17\u0E35\u0E22\u0E1A");
+      return false;
+    }
+    const list = (await listBranchPlans()).filter((x) => x.path !== planState.path);
+    if (!list.length) {
+      setStatus("\u0E22\u0E31\u0E07\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27 \u2014 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E2D\u0E35\u0E01\u0E41\u0E1C\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E16\u0E36\u0E07\u0E08\u0E30\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E44\u0E14\u0E49");
+      return false;
+    }
+    const { el: E } = await Promise.resolve().then(() => (init_core(), core_exports));
+    const ov = E("div", "k-overlay");
+    const box2 = E("div", "k-dialog k-dialog-wide");
+    box2.append(E("div", "k-dlg-title", "\u21CB \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E41\u0E1C\u0E19 \u2014 " + planState.name));
+    const row2 = E("div", "wiki-row");
+    row2.append(E("label", null, "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E01\u0E31\u0E1A"));
+    const sel = E("select", "wiki-input k-dlg-select");
+    for (const x of list) {
+      const o = E("option", null, x.name);
+      o.value = x.path;
+      sel.append(o);
+    }
+    row2.append(sel);
+    box2.append(row2);
+    const body = E("div", "branch-cmp");
+    box2.append(body);
+    const draw2 = async () => {
+      body.replaceChildren();
+      const { rows, summary, other } = await compareWithPlan(sel.value);
+      body.append(E(
+        "div",
+        "branch-cmp-sum",
+        `\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19 ${summary.same} \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 ${summary.diff} \xB7 \u0E21\u0E35\u0E40\u0E09\u0E1E\u0E32\u0E30 "${planState.name}" ${summary.onlyA} \xB7 \u0E21\u0E35\u0E40\u0E09\u0E1E\u0E32\u0E30 "${other.name}" ${summary.onlyB}`
+      ));
+      if (!rows.length) {
+        body.append(E("div", "dim", "\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E41\u0E1C\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E25\u0E22"));
+        return;
+      }
+      for (const r of rows) {
+        const line = E("div", "branch-cmp-row" + (r.same ? " same" : ""));
+        line.append(E("div", "branch-cmp-title", (r.same ? "=" : "\u2260") + " " + r.title));
+        line.append(E("div", "branch-cmp-side", r.a.join(" \xB7 ") || "\u2014"));
+        line.append(E("div", "branch-cmp-side", r.b.join(" \xB7 ") || "\u2014"));
+        body.append(line);
+      }
+    };
+    sel.onchange = draw2;
+    const btns = E("div", "k-dlg-btns");
+    const cB = E("button", "k-ok", "\u0E1B\u0E34\u0E14");
+    btns.append(cB);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    cB.onclick = () => ov.remove();
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    await draw2();
+    return true;
+  }
+  function setPlanProps(props) {
+    if (!planState.live) return false;
+    const L2 = planState.live;
+    if (props.name !== void 0) {
+      planState.name = String(props.name).trim() || planState.name;
+      L2.name = planState.name;
+    }
+    if (props.status !== void 0) L2.status = PLAN_STATUSES.includes(props.status) ? props.status : PLAN_DEFAULT_STATUS;
+    if (props.color !== void 0) L2.color = props.color || "";
+    if (props.tags !== void 0) L2.tags = props.tags;
+    if (props.book !== void 0) L2.book = props.book || "";
+    if (props.note !== void 0) L2.note = props.note || "";
+    markPlanDirty();
+    return true;
   }
   async function renderBranchingPanel() {
     const host2 = $("#branch-body");
@@ -76931,6 +79546,7 @@ details>summary::-webkit-details-marker{display:none}
         scenes = [];
       }
     }
+    scenes = scenesWithPlan(scenes);
     if (gen !== _renderGen || !pane.isConnected) return;
     const graph = buildGraph(scenes);
     const positions = loadNodePositions();
@@ -76945,6 +79561,77 @@ details>summary::-webkit-details-marker{display:none}
     const titleRow = el("div", "branch-title-row");
     titleRow.append(el("div", "branch-title", "\u{1F33F} " + T2("titleFull", "\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 (Non-linear)")));
     const tools = el("div", "branch-tools");
+    const planWrap = el("div", "branch-plans");
+    const planSel = el("select", "branch-plan-sel");
+    planSel.title = "\u0E41\u0E1C\u0E19\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E19\u0E35\u0E49 \u2014 \u0E2B\u0E19\u0E36\u0E48\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E21\u0E35\u0E44\u0E14\u0E49\u0E2B\u0E25\u0E32\u0E22\u0E41\u0E1C\u0E19 (\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14/\u0E2A\u0E35/\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u0E41\u0E22\u0E01\u0E01\u0E31\u0E19\u0E04\u0E19\u0E25\u0E30\u0E41\u0E1C\u0E19)";
+    const fillPlans = async () => {
+      const list = await listBranchPlans().catch(() => []);
+      planSel.replaceChildren();
+      const o0 = el("option", null, "\u2014 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E41\u0E1C\u0E19 (\u0E08\u0E33\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07) \u2014");
+      o0.value = "";
+      planSel.append(o0);
+      for (const p2 of list) {
+        const o = el("option", null, "\u{1F33F} " + p2.name + (planSummary(p2.plan) ? " \xB7 " + planSummary(p2.plan) : ""));
+        o.value = p2.path;
+        planSel.append(o);
+      }
+      planSel.value = planState.path || "";
+    };
+    planSel.onchange = async () => {
+      if (!planSel.value) {
+        closeBranchPlan();
+        setStatus("\u0E40\u0E25\u0E34\u0E01\u0E43\u0E0A\u0E49\u0E41\u0E1C\u0E19 \u2014 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E08\u0E33\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07");
+      } else await openBranchPlan(planSel.value);
+      redrawUi();
+    };
+    planWrap.append(planSel);
+    const bSave = el("button", "branch-zbtn", "\u{1F4BE}");
+    bSave.title = "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48";
+    bSave.onclick = async () => {
+      if (!planState.path) {
+        setStatus("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 \u2014 \u0E01\u0E14 \u201C\uFF0B\u201D \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19");
+        return;
+      }
+      await saveBranchPlan();
+      await fillPlans();
+    };
+    const bSaveAs = el("button", "branch-zbtn", "\u{1F4BE}+");
+    bSaveAs.title = "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48 (\u0E01\u0E4A\u0E2D\u0E1B\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E35\u0E01\u0E41\u0E1C\u0E19)";
+    bSaveAs.onclick = async () => {
+      const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      const v2 = await ask2("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48", { value: (planState.name || "\u0E41\u0E1C\u0E19") + " \u0E2A\u0E33\u0E40\u0E19\u0E32" });
+      if (!v2) return;
+      await saveBranchPlanAs(v2);
+      await fillPlans();
+      planSel.value = planState.path || "";
+      const { refreshTreeQueued: refreshTreeQueued2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      await refreshTreeQueued2();
+    };
+    const bNew = el("button", "branch-zbtn", "\uFF0B");
+    bNew.title = "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48 (\u0E40\u0E23\u0E34\u0E48\u0E21\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E27\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32)";
+    bNew.onclick = async () => {
+      const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      const v2 = await ask2("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48", { value: "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 " + ((await listBranchPlans()).length + 1) });
+      if (!v2) return;
+      await newPlanFromCurrent(v2);
+      await fillPlans();
+      planSel.value = planState.path || "";
+      const { refreshTreeQueued: refreshTreeQueued2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      await refreshTreeQueued2();
+      redrawUi();
+    };
+    const bProps = el("button", "branch-zbtn", "\u2699");
+    bProps.title = "\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19 \u2014 \u0E2A\u0E16\u0E32\u0E19\u0E30 (\u0E23\u0E48\u0E32\u0E07/\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07/\u0E2A\u0E33\u0E23\u0E2D\u0E07) \xB7 \u0E2A\u0E35 \xB7 \u0E41\u0E17\u0E47\u0E01 \xB7 \u0E40\u0E25\u0E48\u0E21 \xB7 \u0E42\u0E19\u0E49\u0E15";
+    bProps.onclick = async () => {
+      if (await planPropsDialog()) redrawUi();
+    };
+    const bCmp = el("button", "branch-zbtn", "\u21CB");
+    bCmp.title = "\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E01\u0E31\u0E1A\u0E2D\u0E35\u0E01\u0E41\u0E1C\u0E19 \u2014 \u0E14\u0E39\u0E27\u0E48\u0E32\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E15\u0E23\u0E07\u0E44\u0E2B\u0E19";
+    bCmp.onclick = () => comparePlanDialog();
+    planWrap.append(bSave, bSaveAs, bNew, bProps, bCmp);
+    if (planState.path && isBranchPlanDirty()) planWrap.append(el("span", "branch-plan-dirty", "\u25CF"));
+    tools.append(planWrap);
+    fillPlans();
     const viewTog = el("div", "branch-viewtog");
     const bTree = el("button", "branch-viewbtn" + (bs.view === "tree" ? " on" : ""), "\u{1F333} " + T2("viewTree", "\u0E1C\u0E31\u0E07"));
     const bList = el("button", "branch-viewbtn" + (bs.view === "list" ? " on" : ""), "\u2630 " + T2("viewList", "\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23"));
@@ -77656,6 +80343,12 @@ ${T2("mergeNote", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E35\
     }
   }
   function mutateChoices(node, fn) {
+    if (inBranchPlan()) {
+      const cur = planChoicesFor(planState.live, node.id);
+      setPlanChoices(planState.live, node.id, fn([...cur]));
+      markPlanDirty();
+      return Promise.resolve(true);
+    }
     const run2 = async () => {
       const { updateSceneRow: updateSceneRow2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       return updateSceneRow2(node.dPath, node.id, (r) => {
@@ -78167,10 +80860,11 @@ ${preview}` + (found2.length > 8 ? `
     });
     return side;
   }
-  var SVG_NS, svgEl, ZOOM_MIN2, ZOOM_MAX2, PATH_LIMIT, PATH_MAX, T2, summaryLabels, exportLabels, BS_DEFAULTS, POS_PREFIX, SKIP_DIRS8, shortText, _renderGen, _lastScrolledSel, dragChoice, projTitle, safeName3, SVG_STYLE, _choiceQueue, removeChoice;
+  var SVG_NS, svgEl, ZOOM_MIN2, ZOOM_MAX2, PATH_LIMIT, PATH_MAX, T2, summaryLabels, exportLabels, BS_DEFAULTS, planState, POS_PREFIX, SKIP_DIRS8, shortText, _renderGen, _lastScrolledSel, dragChoice, projTitle, safeName3, SVG_STYLE, _choiceQueue, removeChoice;
   var init_branching_ui = __esm({
     "src/branching-ui.js"() {
       init_core();
+      init_branch_plans();
       init_branch_graph();
       SVG_NS = "http://www.w3.org/2000/svg";
       svgEl = (tag3, attrs = {}) => {
@@ -78200,6 +80894,7 @@ ${preview}` + (found2.length > 8 ? `
         empty: T2("emptyGraph", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01")
       });
       BS_DEFAULTS = { sel: null, zoom: 1, view: "tree", sideOpen: true, query: "" };
+      planState = { path: null, saved: null, live: null, name: "" };
       POS_PREFIX = "k2-branch-pos";
       SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
       shortText = (s, n2) => s && s.length > n2 ? s.slice(0, n2 - 1) + "\u2026" : s || "";
@@ -78224,310 +80919,6 @@ ${preview}` + (found2.length > 8 ? `
         list.splice(idx4, 1);
         return list;
       });
-    }
-  });
-
-  // src/floorplan-ui.js
-  function fstate() {
-    if (!state._floor) state._floor = { mapId: null, picking: false };
-    return state._floor;
-  }
-  async function renderFloorPlanPanel() {
-    const host2 = $("#floor-body");
-    if (!host2) return false;
-    await renderFloorPlan(host2, fstate().mapId);
-    return true;
-  }
-  async function openFloorPlan() {
-    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
-    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    showPanel2("floorplan");
-    await renderFeaturePanel2("floorplan");
-  }
-  async function collectPlacedScenes() {
-    const out = [];
-    if (!state.root) return out;
-    for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
-      if (["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"].includes(sec)) continue;
-      const sp = await kapi.join(state.root, sec);
-      if (!await kapi.exists(await kapi.join(sp, "section.json"))) continue;
-      const dr = await kapi.join(sp, "Draft");
-      if (!await kapi.exists(dr)) continue;
-      for (const dn of await kapi.listDirs(dr).catch(() => [])) {
-        const dp = await kapi.join(dr, dn);
-        const dj = await kapi.join(dp, "draft.json");
-        if (!await kapi.exists(dj)) continue;
-        const draft = await kapi.readJson(dj);
-        const scData = await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}));
-        const chMap = scData.chapters || {};
-        for (const ch of draft.chapters || []) {
-          for (const sc of chMap[ch.guid] || []) {
-            if (sc.type === "memo") continue;
-            out.push({
-              ...sc,
-              dPath: dp,
-              chapterName: ch.title,
-              filePath: await kapi.join(dp, "Chapters", ch.folderName, sc.fileName)
-            });
-          }
-        }
-      }
-    }
-    return out;
-  }
-  function byStoryDate(a, b) {
-    const na = extractNum(a.storyDate), nb = extractNum(b.storyDate);
-    if (na != null && nb != null && na !== nb) return na - nb;
-    if (na != null && nb == null) return -1;
-    if (na == null && nb != null) return 1;
-    return String(a.storyDate || "").localeCompare(String(b.storyDate || ""), "th");
-  }
-  async function renderFloorPlan(pane, mapId) {
-    const fs = fstate();
-    pane.innerHTML = "";
-    const { mapImgURL: mapImgURL2, loadMaps: loadMaps2, sceneCtx: sceneCtx2, updateSceneRow: updateSceneRow2, openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    const wrap2 = el("div", "floor-wrap");
-    let data2 = { maps: [] };
-    try {
-      data2 = await loadMaps2() || { maps: [] };
-    } catch (e) {
-      log("warn", "floorplan: \u0E42\u0E2B\u0E25\u0E14 maps.json \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
-    }
-    const maps = sortMaps(data2.maps || []);
-    const ctx = await sceneCtx2() || await sceneCtx2(state.lastSceneFile);
-    let scenes = [];
-    try {
-      scenes = await collectPlacedScenes();
-    } catch (e) {
-      log("warn", "floorplan: \u0E2D\u0E48\u0E32\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
-    }
-    const wanted = mapId || fs.mapId || ctx && ctx.row.mapId || null;
-    const cur = wanted && findMap(maps, wanted) || maps[0] || null;
-    fs.mapId = cur ? cur.id : null;
-    const redraw = () => renderFloorPlan(pane, fs.mapId);
-    const head2 = el("div", "floor-head");
-    const titleRow = el("div", "floor-title-row");
-    titleRow.append(el("div", "floor-title", "\u{1F4CD} \u0E1C\u0E31\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48"));
-    const sel = el("select", "k-dlg-select");
-    for (const m of maps) {
-      const o = el("option", null, m.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)");
-      o.value = m.id;
-      sel.append(o);
-    }
-    if (cur) sel.value = cur.id;
-    sel.onchange = () => {
-      fs.mapId = sel.value;
-      fs.picking = false;
-      redraw();
-    };
-    if (maps.length) titleRow.append(sel);
-    if (ctx && cur) {
-      const pinB = el(
-        "button",
-        "floor-pinbtn" + (fs.picking ? " on" : ""),
-        fs.picking ? "\u2716 \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E1B\u0E31\u0E01" : "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"
-      );
-      pinB.title = '\u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E09\u0E32\u0E01 "' + (ctx.row.title || "") + '" \u0E40\u0E01\u0E34\u0E14\u0E15\u0E23\u0E07\u0E44\u0E2B\u0E19';
-      pinB.onclick = () => {
-        fs.picking = !fs.picking;
-        redraw();
-      };
-      titleRow.append(pinB);
-      if (ctx.row.mapId) {
-        const clearB = el("button", "floor-pinbtn", "\u{1F6AB} \u0E25\u0E49\u0E32\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07");
-        clearB.title = "\u0E40\u0E2D\u0E32\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48";
-        clearB.onclick = async () => {
-          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
-            delete r.mapId;
-            delete r.pinId;
-          });
-          setStatus("\u0E25\u0E49\u0E32\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27");
-          redraw();
-        };
-        titleRow.append(clearB);
-      }
-    }
-    head2.append(titleRow);
-    if (cur) {
-      const crumbs = breadcrumb(maps, cur.id);
-      if (crumbs.length > 1) {
-        const bc = el("div", "floor-crumb");
-        crumbs.forEach((c, i5) => {
-          if (i5) bc.append(el("span", "floor-crumb-sep", "\u203A"));
-          const item = el("span", "floor-crumb-item", c.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)");
-          if (c.id !== cur.id) item.onclick = () => {
-            fs.mapId = c.id;
-            redraw();
-          };
-          else item.classList.add("on");
-          bc.append(item);
-        });
-        head2.append(bc);
-      }
-    }
-    wrap2.append(head2);
-    const main = el("div", "floor-main" + (fs.picking ? " floor-picking" : ""));
-    if (cur && cur.image) {
-      const holder = el("div", "floor-canvas");
-      const img = el("img", "floor-img");
-      img.src = mapImgURL2(cur.image);
-      holder.append(img);
-      for (const p of cur.pins || []) {
-        const dot = el("span", "floor-pin", PIN_KIND[p.kind]?.icon || "\u{1F4CC}");
-        dot.style.left = p.x + "%";
-        dot.style.top = p.y + "%";
-        if (p.color) dot.style.color = p.color;
-        const here2 = scenes.filter((s) => s.mapId === cur.id && s.pinId === p.id);
-        dot.title = (p.label || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)") + (here2.length ? "\n" + here2.map((s) => "\u{1F4C4} " + s.title).join("\n") : "");
-        dot.onclick = (e) => {
-          e.stopPropagation();
-          if (fs.picking && ctx) return bindSceneTo(p.id, p.x, p.y);
-          setStatus("\u0E2B\u0E21\u0E38\u0E14: " + (p.label || "\u2014") + (here2.length ? ` \xB7 ${here2.length} \u0E09\u0E32\u0E01` : ""));
-        };
-        if (here2.length) dot.append(el("span", "floor-pin-count", String(here2.length)));
-        holder.append(dot);
-      }
-      if (ctx && ctx.row.mapId === cur.id) {
-        const pin = (cur.pins || []).find((p) => p.id === ctx.row.pinId);
-        const px2 = pin ? pin.x : ctx.row.pinX, py2 = pin ? pin.y : ctx.row.pinY;
-        if (px2 != null && py2 != null) {
-          const you = el("div", "floor-you");
-          you.style.left = px2 + "%";
-          you.style.top = py2 + "%";
-          you.title = "\u0E04\u0E38\u0E13\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48: " + (ctx.row.title || "");
-          you.append(el("span", "floor-you-dot", "\u25C9"));
-          you.append(el("span", "floor-you-label", ctx.row.title || "\u0E09\u0E32\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19"));
-          holder.append(you);
-        }
-      }
-      if (fs.picking && ctx) {
-        holder.classList.add("floor-canvas-pick");
-        holder.onclick = (e) => {
-          const r = holder.getBoundingClientRect();
-          if (!r.width || !r.height) return;
-          bindSceneTo(
-            null,
-            clamp3((e.clientX - r.left) / r.width * 100),
-            clamp3((e.clientY - r.top) / r.height * 100)
-          );
-        };
-      }
-      main.append(holder);
-      async function bindSceneTo(pinId, x, y) {
-        await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
-          r.mapId = cur.id;
-          if (pinId) {
-            r.pinId = pinId;
-            delete r.pinX;
-            delete r.pinY;
-          } else {
-            delete r.pinId;
-            r.pinX = +x.toFixed(1);
-            r.pinY = +y.toFixed(1);
-          }
-        });
-        fs.picking = false;
-        setStatus('\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01 "' + (ctx.row.title || "") + '" \u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 ' + (cur.name || "") + " \u0E41\u0E25\u0E49\u0E27");
-        redraw();
-      }
-    } else {
-      main.append(el("div", "floor-ph", "\u{1F5FA}"));
-      main.append(el("div", "dim", maps.length ? "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B \u2014 \u0E43\u0E2A\u0E48\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (Maps)" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u2014 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E17\u0E35\u0E48 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u2192 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (Maps)"));
-    }
-    if (fs.picking) main.append(el("div", "floor-pickhint", "\u{1F4CC} \u0E04\u0E25\u0E34\u0E01\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (\u0E2B\u0E23\u0E37\u0E2D\u0E1A\u0E19\u0E2B\u0E21\u0E38\u0E14) \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"));
-    const panel2 = el("div", "floor-panel");
-    panel2.append(el("div", "floor-panel-title", "\u{1F4C4} \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48"));
-    panel2.append(el("div", "floor-cur", ctx ? ctx.row.title || "\u2014" : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01"));
-    if (ctx) {
-      const where = ctx.row.mapId ? findMap(maps, ctx.row.mapId) : null;
-      const pin = where && (where.pins || []).find((p) => p.id === ctx.row.pinId);
-      panel2.append(el("div", "dim floor-where", where ? "\u{1F4CD} " + (where.name || "") + (pin ? " \xB7 " + (pin.label || "\u0E2B\u0E21\u0E38\u0E14") : "") : '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \u2014 \u0E01\u0E14 "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"'));
-      if (ctx.row.storyDate) panel2.append(el("div", "dim", "\u{1F552} " + ctx.row.storyDate));
-    }
-    if (cur) {
-      const here2 = scenes.filter((s) => s.mapId === cur.id);
-      panel2.append(el("div", "floor-panel-title", "\u{1F5FA} \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
-      panel2.append(el(
-        "div",
-        "dim",
-        `${cur.name || "\u2014"} \xB7 ${(cur.pins || []).length} \u0E2B\u0E21\u0E38\u0E14 \xB7 ${here2.length} \u0E09\u0E32\u0E01`
-      ));
-    }
-    for (const [key2, label, ph] of FIELDS) {
-      panel2.append(el("div", "floor-panel-title", label));
-      const vals = ctx && Array.isArray(ctx.row[key2]) ? ctx.row[key2] : [];
-      if (!vals.length) panel2.append(el("div", "dim", "\u2014"));
-      vals.forEach((v2, i5) => {
-        const row2 = el("div", "floor-item");
-        row2.append(el("span", "floor-item-text", v2));
-        if (ctx) {
-          const del2 = el("span", "floor-item-del", "\u2715");
-          del2.title = "\u0E25\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E19\u0E35\u0E49";
-          del2.onclick = async () => {
-            await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
-              r[key2] = (r[key2] || []).filter((_2, k) => k !== i5);
-              if (!r[key2].length) delete r[key2];
-            });
-            redraw();
-          };
-          row2.append(del2);
-        }
-        panel2.append(row2);
-      });
-      if (ctx) {
-        const add = el("button", "floor-add", "+ \u0E40\u0E1E\u0E34\u0E48\u0E21");
-        add.onclick = async () => {
-          const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-          const v2 = await ask2(label.replace(/^\S+\s/, "") + " \u2014 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", { placeholder: ph });
-          if (!v2) return;
-          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
-            r[key2] = [...r[key2] || [], v2];
-          });
-          redraw();
-        };
-        panel2.append(add);
-      }
-    }
-    const tl = el("div", "floor-timeline");
-    tl.append(el("div", "floor-panel-title", "\u{1F552} \u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32\u0E02\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49"));
-    const here = cur ? scenes.filter((s) => s.mapId === cur.id).sort(byStoryDate) : [];
-    if (!here.length) {
-      tl.append(el("div", "dim", cur ? '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49 \u2014 \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 "\u{1F4CC} \u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"' : "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
-    } else {
-      const strip = el("div", "floor-tl-strip");
-      for (const s of here) {
-        const item = el("div", "floor-tl-item" + (ctx && ctx.row.id === s.id ? " on" : ""));
-        if (s.color) item.style.borderLeftColor = s.color;
-        item.append(el("div", "floor-tl-when", s.storyDate || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E27\u0E25\u0E32)"));
-        item.append(el("div", "floor-tl-title", s.title || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)"));
-        const pin = (cur.pins || []).find((p) => p.id === s.pinId);
-        if (pin) item.append(el("div", "floor-tl-pin", "\u{1F4CD} " + (pin.label || "\u0E2B\u0E21\u0E38\u0E14")));
-        const seen = [
-          (s.clues || []).length && `\u{1F441}${s.clues.length}`,
-          (s.sounds || []).length && `\u{1F50A}${s.sounds.length}`,
-          (s.discoveries || []).length && `\u{1F4E6}${s.discoveries.length}`
-        ].filter(Boolean);
-        if (seen.length) item.append(el("div", "floor-tl-badges", seen.join(" ")));
-        item.title = [s.title, s.chapterName, s.synopsis].filter(Boolean).join("\n") + "\n\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01";
-        item.onclick = () => openScene2(s.filePath, s.title);
-        strip.append(item);
-      }
-      tl.append(strip);
-    }
-    wrap2.append(main, panel2, tl);
-    pane.append(wrap2);
-  }
-  var FIELDS;
-  var init_floorplan_ui = __esm({
-    "src/floorplan-ui.js"() {
-      init_core();
-      init_maps();
-      init_timeline();
-      FIELDS = [
-        ["clues", "\u{1F441} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19", "\u0E40\u0E0A\u0E48\u0E19 \u0E23\u0E2D\u0E22\u0E40\u0E25\u0E37\u0E2D\u0E14\u0E1A\u0E19\u0E1E\u0E37\u0E49\u0E19"],
-        ["sounds", "\u{1F50A} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E22\u0E34\u0E19", "\u0E40\u0E0A\u0E48\u0E19 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1D\u0E35\u0E40\u0E17\u0E49\u0E32\u0E0A\u0E31\u0E49\u0E19\u0E1A\u0E19"],
-        ["discoveries", "\u{1F4E6} \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1E\u0E1A", "\u0E40\u0E0A\u0E48\u0E19 \u0E01\u0E38\u0E0D\u0E41\u0E08\u0E2A\u0E19\u0E34\u0E21"]
-      ];
     }
   });
 
@@ -78735,7 +81126,7 @@ ${preview}` + (found2.length > 8 ? `
         }
       };
       KanbanBoard = class {
-        constructor({ io, draftPath, statuses, storage, autoSave = true, onLog } = {}) {
+        constructor({ io, draftPath, statuses, storage, autoSave = true, onLog: onLog2 } = {}) {
           this.io = io;
           this.draftPath = draftPath;
           this.statuses = statuses || DEFAULT_STATUSES;
@@ -78743,7 +81134,7 @@ ${preview}` + (found2.length > 8 ? `
           this.scenes = { chapters: {} };
           this.autoSave = autoSave;
           this.dirty = false;
-          this.onLog = onLog || null;
+          this.onLog = onLog2 || null;
           this.listeners = /* @__PURE__ */ new Set();
         }
         get file() {
@@ -84389,7 +86780,7 @@ ${sc.body || ""}
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
     const list = (blocks || []).filter((b) => b && b.el !== "blank" && String(b.text ?? "").trim() !== "");
-    let sceneNo = Math.max(1, Math.round(numOr3(opts.startScene, 1)));
+    let sceneNo = Math.max(1, Math.round(numOr4(opts.startScene, 1)));
     const body = list.map((b) => {
       if (b.el !== "scene") return para(fdxType(b.el), b.text);
       const n2 = b.sceneNo != null && String(b.sceneNo).trim() !== "" ? String(b.sceneNo).trim() : String(sceneNo++);
@@ -84410,7 +86801,7 @@ ${sc.body || ""}
     ));
     if (hasCustom) {
       for (const p of custom) {
-        const rows = (p && p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => numOr3(a.y, 0) - numOr3(b.y, 0) || numOr3(a.x, 0) - numOr3(b.x, 0));
+        const rows = (p && p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => numOr4(a.y, 0) - numOr4(b.y, 0) || numOr4(a.x, 0) - numOr4(b.x, 0));
         for (const s of rows) {
           const al = s.align === "right" ? "Right" : s.align === "left" ? "Left" : "Center";
           addTitle(s.text, al);
@@ -84431,7 +86822,7 @@ ${title2.join("\n")}
 ` : "";
     return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
   }
-  var FDX_TYPE_MAP2, fdxType, numOr3, XML_BAD, para;
+  var FDX_TYPE_MAP2, fdxType, numOr4, XML_BAD, para;
   var init_export_fdx = __esm({
     "src/export-fdx.js"() {
       FDX_TYPE_MAP2 = {
@@ -84462,7 +86853,7 @@ ${title2.join("\n")}
         raw: "Action"
       };
       fdxType = (el2) => FDX_TYPE_MAP2[el2] || "Action";
-      numOr3 = (v2, d) => {
+      numOr4 = (v2, d) => {
         const n2 = parseFloat(v2);
         return Number.isFinite(n2) ? n2 : d;
       };
@@ -84822,7 +87213,7 @@ ${indent}</Paragraph>`;
   });
 
   // src/export-watermark.js
-  function safeFileName(s) {
+  function safeFileName2(s) {
     return String(s ?? "").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim() || "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D";
   }
   function watermarkText(tpl, ctx = {}) {
@@ -84912,7 +87303,7 @@ ${css}
     for (let i5 = 0; i5 < recipients.length; i5++) {
       const r = recipients[i5];
       const text = watermarkText(r.watermark || wmTemplate, { name: r.name, title: title2, date });
-      const file = `${safeFileName(prefix2)}_${safeFileName(r.name)}.pdf`;
+      const file = `${safeFileName2(prefix2)}_${safeFileName2(r.name)}.pdf`;
       const dest = await api.join(outDir, file);
       if (typeof buildPdf === "function") {
         const bytes = await buildPdf(text, { ...wmOptions });
@@ -97889,9 +100280,9 @@ ${css}
           return void 0;
         };
         AppearanceCharacteristics2.prototype.BG = function() {
-          var BG2 = this.dict.lookup(PDFName_default.of("BG"));
-          if (BG2 instanceof PDFArray_default)
-            return BG2;
+          var BG = this.dict.lookup(PDFName_default.of("BG"));
+          if (BG instanceof PDFArray_default)
+            return BG;
           return void 0;
         };
         AppearanceCharacteristics2.prototype.CA = function() {
@@ -97929,12 +100320,12 @@ ${css}
           return components;
         };
         AppearanceCharacteristics2.prototype.getBackgroundColor = function() {
-          var BG2 = this.BG();
-          if (!BG2)
+          var BG = this.BG();
+          if (!BG)
             return void 0;
           var components = [];
-          for (var idx4 = 0, len5 = BG2 === null || BG2 === void 0 ? void 0 : BG2.size(); idx4 < len5; idx4++) {
-            var component = BG2.get(idx4);
+          for (var idx4 = 0, len5 = BG === null || BG === void 0 ? void 0 : BG.size(); idx4 < len5; idx4++) {
+            var component = BG.get(idx4);
             if (component instanceof PDFNumber_default)
               components.push(component.asNumber());
           }
@@ -97959,8 +100350,8 @@ ${css}
           this.dict.set(PDFName_default.of("BC"), BC);
         };
         AppearanceCharacteristics2.prototype.setBackgroundColor = function(color) {
-          var BG2 = this.dict.context.obj(color);
-          this.dict.set(PDFName_default.of("BG"), BG2);
+          var BG = this.dict.context.obj(color);
+          this.dict.set(PDFName_default.of("BG"), BG);
         };
         AppearanceCharacteristics2.prototype.setCaptions = function(captions) {
           var CA = PDFHexString_default.fromText(captions.normal);
@@ -129421,7 +131812,7 @@ ${css}
         INDEX_1_OFFSET = UTF8_2B_INDEX_2_OFFSET + UTF8_2B_INDEX_2_LENGTH;
         DATA_GRANULARITY = 1 << INDEX_SHIFT;
         function UnicodeTrie2(data2) {
-          var isBuffer2, uncompressedLength, view;
+          var isBuffer2, uncompressedLength, view2;
           isBuffer2 = typeof data2.readUInt32BE === "function" && typeof data2.slice === "function";
           if (isBuffer2 || data2 instanceof Uint8Array) {
             if (isBuffer2) {
@@ -129430,10 +131821,10 @@ ${css}
               uncompressedLength = data2.readUInt32BE(8);
               data2 = data2.slice(12);
             } else {
-              view = new DataView(data2.buffer);
-              this.highStart = view.getUint32(0);
-              this.errorValue = view.getUint32(4);
-              uncompressedLength = view.getUint32(8);
+              view2 = new DataView(data2.buffer);
+              this.highStart = view2.getUint32(0);
+              this.errorValue = view2.getUint32(4);
+              uncompressedLength = view2.getUint32(8);
               data2 = data2.subarray(12);
             }
             data2 = inflate(data2, new Uint8Array(uncompressedLength));
@@ -139475,6 +141866,7 @@ ${css}
     logAtBottom: () => logAtBottom,
     mapImgURL: () => mapImgURL,
     mapsState_C: () => mapsState_C,
+    markBranchPlanRow: () => markBranchPlanRow,
     markDirty: () => markDirty,
     markPlannerRow: () => markPlannerRow,
     netInst: () => netInst,
@@ -139568,6 +141960,7 @@ ${css}
     syncTypeSound: () => syncTypeSound,
     syncWorkspaceWidths: () => syncWorkspaceWidths,
     tb: () => tb,
+    templateOf: () => templateOf,
     toggleContinueds: () => toggleContinueds,
     toggleElementCaps: () => toggleElementCaps,
     toggleGallery: () => toggleGallery,
@@ -140766,8 +143159,15 @@ ${css}
     return true;
   }
   async function loadProject(root) {
+    const t0 = performance.now();
+    logAction("project", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", root);
     try {
-      return await loadProjectInner(root);
+      const r = await loadProjectInner(root);
+      logAction("project", `\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E43\u0E19 ${Math.round(performance.now() - t0)}ms`, root);
+      return r;
+    } catch (e) {
+      log("error", "project: \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + root, e);
+      throw e;
     } finally {
       clearBusy();
     }
@@ -140872,12 +143272,12 @@ ${css}
   }
   function deleteCurrentLine() {
     const t3 = state.active;
-    const view = t3?.editor?.view || t3?.sp?.view;
-    if (!view) {
+    const view2 = t3?.editor?.view || t3?.sp?.view;
+    if (!view2) {
       setStatus("\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E25\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E14\u0E49");
       return false;
     }
-    const st = view.state;
+    const st = view2.state;
     const { $from, $to } = st.selection;
     const d = Math.min($from.depth, $to.depth) || 1;
     const from2 = $from.before(Math.min(d, $from.depth) || 1);
@@ -140891,8 +143291,8 @@ ${css}
     } else {
       tr2 = st.tr.delete(from2, to);
     }
-    view.dispatch(tr2.scrollIntoView());
-    view.focus();
+    view2.dispatch(tr2.scrollIntoView());
+    view2.focus();
     markDirty(t3);
     setStatus("\u0E25\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27");
     return true;
@@ -141121,13 +143521,13 @@ ${css}
     }
     const t3 = state.active;
     if (!t3) return false;
-    const view = (t3.sp || t3.editor) && (t3.sp || t3.editor).view;
-    if (view && typeof msg.pos === "number") {
+    const view2 = (t3.sp || t3.editor) && (t3.sp || t3.editor).view;
+    if (view2 && typeof msg.pos === "number") {
       const { TextSelection: TextSelection2 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
-      view.dispatch(view.state.tr.setSelection(
-        TextSelection2.create(view.state.doc, msg.pos + 1)
+      view2.dispatch(view2.state.tr.setSelection(
+        TextSelection2.create(view2.state.doc, msg.pos + 1)
       ).scrollIntoView());
-      view.focus();
+      view2.focus();
     } else if (t3.plain && typeof msg.line === "number") {
       const lines = t3.plain.value.split("\n");
       let off3 = 0;
@@ -141324,7 +143724,7 @@ ${css}
       if (!raw) ok2 = true;
       else if (s._scene) ok2 = sceneMatchesQuery(s._scene, raw);
       else ok2 = (s.dataset.search || s.textContent.toLowerCase()).includes(ql);
-      if (ok2 && treeScope && !s.dataset.planner) ok2 = s.dataset.chGuid === treeScope.guid;
+      if (ok2 && treeScope && s.dataset.chGuid) ok2 = s.dataset.chGuid === treeScope.guid;
       if (!ok2 && s.dataset.planner) {
         log(
           "info",
@@ -141836,6 +144236,22 @@ ${css}
       fb.append(retry);
       tree.append(fb);
     }
+    try {
+      await buildMapsSection(tree);
+    } catch (e) {
+      log("error", "buildTree: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E2B\u0E21\u0E27\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 \u2014 \u0E02\u0E49\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14\u0E19\u0E35\u0E49\u0E44\u0E1B\u0E01\u0E48\u0E2D\u0E19", e);
+      const fb2 = el("div", "sec");
+      fb2.append(el("div", "sec-title", "\u{1F5FA} \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)"));
+      const retry2 = el("div", "scene add-row", "\u21BB \u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48");
+      retry2.onclick = () => refreshTreeQueued();
+      fb2.append(retry2);
+      tree.append(fb2);
+    }
+    try {
+      await buildBranchPlanSection(tree);
+    } catch (e) {
+      log("error", "buildTree: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E2B\u0E21\u0E27\u0E14\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 \u2014 \u0E02\u0E49\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14\u0E19\u0E35\u0E49\u0E44\u0E1B\u0E01\u0E48\u0E2D\u0E19", e);
+    }
     const imgDir = await kapi.join(state.root, "Images");
     let galAlbums = [], galItems = [];
     if (await kapi.exists(imgDir)) {
@@ -142168,7 +144584,12 @@ ${css}
       return;
     }
     const scrollTop = real.scrollTop, scrollLeft = real.scrollLeft;
-    real.replaceChildren(...tree.childNodes);
+    _treeSwapping = true;
+    try {
+      real.replaceChildren(...tree.childNodes);
+    } finally {
+      _treeSwapping = false;
+    }
     real.scrollTop = scrollTop;
     real.scrollLeft = scrollLeft;
     const q = $("#tree-search");
@@ -142442,13 +144863,14 @@ ${css}
           try {
             const p = await kapi.join(catDir, f);
             const e = await kapi.readJson(p);
+            const port = entityPortrait(e);
             if (e.name) out.push({
               name: e.name,
               cat,
               file: p,
               tags: Array.isArray(e.tags) ? e.tags : [],
               relationships: e.relationships || [],
-              image: "",
+              image: port ? port.file : "",
               desc: e.desc || e.synopsis || ""
             });
           } catch {
@@ -142556,19 +144978,21 @@ ${css}
         loadEntities: async () => {
           try {
             const ents = await loadAllEntities();
-            for (const e of ents) {
-              if (e.image) {
-                try {
-                  const url = await resolveImageUrl(e.image);
-                  if (url) {
-                    const img = new Image();
-                    img.src = url;
-                    e._img = img;
-                  }
-                } catch {
-                }
+            await Promise.all(ents.map(async (e) => {
+              if (!e.image) return;
+              try {
+                const url = await resolveImageUrl(e.image);
+                if (!url) return;
+                const img = new Image();
+                await new Promise((res) => {
+                  img.onload = res;
+                  img.onerror = res;
+                  img.src = url;
+                });
+                if (img.naturalWidth) e._img = img;
+              } catch {
               }
-            }
+            }));
             return ents;
           } catch (e) {
             console.error("SN loadEntities failed:", e);
@@ -142589,11 +145013,11 @@ ${css}
             const existsB = eb.relationships.some((r) => (r.targetName || r.target || "") === a.name);
             if (!existsA) {
               ea.relationships.push({ targetName: b.name, target: b.file, role: label, type });
-              await kapi.writeJson(a.file, ea);
+              await kapi.writeFile(a.file, JSON.stringify(ea, null, 2));
             }
             if (!existsB) {
               eb.relationships.push({ targetName: a.name, target: a.file, role: label, type });
-              await kapi.writeJson(b.file, eb);
+              await kapi.writeFile(b.file, JSON.stringify(eb, null, 2));
             }
             setStatus(`\u{1F517} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C "${label}" \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07 ${a.name} \u2194 ${b.name}`);
           } catch (e) {
@@ -142946,13 +145370,8 @@ ${css}
         if (container) renderPlannerProps(container, ctx);
       });
     }
-    setPanelCloseGuard("planner", (proceed) => {
-      if (!plannerInst || !plannerInst.data || !plannerInst.data.isDirty()) return true;
-      plannerInst.requestClose().then((ok2) => {
-        if (ok2) proceed();
-      });
-      return false;
-    });
+    setPanelCloseGuard("planner", null);
+    registerDirtySources();
     setTimeout(() => {
       try {
         plannerInst._fit();
@@ -143086,18 +145505,14 @@ ${css}
     for (const prev of tree.querySelectorAll(".scene.planner-current")) {
       if (prev === row2) continue;
       prev.classList.remove("planner-current", "planner-dirty");
-      const pn = prev.dataset.plannerName;
-      if (pn) prev.textContent = "\u{1F4CB} " + pn;
     }
     if (!row2) {
       log("warn", "planner/tree: \u0E2B\u0E32\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D", { path, rows: tree.querySelectorAll(".scene[data-planner]").length });
       return false;
     }
-    const nm = row2.dataset.plannerName || "";
     row2.classList.add("planner-current");
     row2.classList.toggle("planner-dirty", !!dirty);
-    if (nm) row2.textContent = "\u25B6 " + nm + (dirty ? " \u25CF" : "");
-    return !!nm;
+    return true;
   }
   function healPlannerRow(path, dirty) {
     if (markPlannerRow(path, dirty)) return true;
@@ -143125,6 +145540,7 @@ ${css}
           const isRow = n2.dataset && n2.dataset.planner;
           const hasRow = n2.querySelector && n2.querySelector("[data-planner]");
           if (isRow || hasRow) {
+            if (_treeSwapping) continue;
             log(
               "warn",
               "planner/tree: \u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 DOM",
@@ -143242,7 +145658,7 @@ ${css}
       const it = el(
         "div",
         "scene" + (isCur ? " planner-current" : "") + (isCur && curDirty ? " planner-dirty" : ""),
-        (isCur ? "\u25B6 " : "\u{1F4CB} ") + b.name + (isCur && curDirty ? " \u25CF" : "")
+        "\u{1F4CB} " + b.name
       );
       it.dataset.path = b.path;
       it.dataset.planner = b.path;
@@ -143282,6 +145698,275 @@ ${css}
       { current: cur, rows: boards.map((b) => b.name) }
     );
     return sec;
+  }
+  async function buildMapsSection(tree) {
+    let data2 = { maps: [] };
+    try {
+      data2 = await loadMaps();
+    } catch (e) {
+      log("warn", "explorer: \u0E2D\u0E48\u0E32\u0E19 maps.json \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+    }
+    const maps = data2.maps || [];
+    const jsonPath = await kapi.join(state.root, "maps.json");
+    const sec = el("div", "sec");
+    const head2 = el("div", "sec-title", `\u{1F5FA} \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (${maps.length})`);
+    const add = el("span", "row-add", "+");
+    add.title = "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2B\u0E21\u0E48";
+    add.onclick = async (e) => {
+      e.stopPropagation();
+      await openMaps();
+      await addMapFlow();
+      await refreshTreeQueued();
+    };
+    head2.append(add);
+    sec.append(head2);
+    makeAccordion(head2, sec, "sec:__maps__");
+    head2.oncontextmenu = (e) => {
+      e.preventDefault();
+      popupMenu(e.clientX, e.clientY, [
+        { label: "\u{1F5FA} \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48", click: () => openMaps() },
+        { label: "\uFF0B \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u2026", click: async () => {
+          await openMaps();
+          await addMapFlow();
+          await refreshTreeQueued();
+        } },
+        "-",
+        { label: "\u{1F4C4} \u0E40\u0E1B\u0E34\u0E14 maps.json", click: () => openPlainFile(jsonPath, "maps.json") },
+        { label: "\u{1F4C2} \u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C", click: () => kapi.revealInOS(jsonPath) }
+      ]);
+    };
+    const groups = groupMaps(maps);
+    const multiCat = groups.length > 1;
+    for (const g of groups) {
+      if (multiCat) {
+        const ch = el("div", "scene map-row-cat", "\u{1F4C1} " + (g.cat || "(\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E21\u0E27\u0E14)"));
+        ch.dataset.nofilter = "1";
+        sec.append(ch);
+      }
+      for (const m of g.maps) {
+        const st = pinStats(m);
+        const nPins = (m.pins || []).length;
+        const nRoutes = mapRoutes(m).length;
+        const it = el(
+          "div",
+          "scene map-row" + (multiCat ? " map-row-in-cat" : ""),
+          "\u{1F5FA} " + (m.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)")
+        );
+        const badge = el(
+          "span",
+          "map-row-badge",
+          nPins ? `${nPins}\u{1F4CD}` + (nRoutes ? ` ${nRoutes}\u{1F6E3}` : "") : "\u2014"
+        );
+        it.append(badge);
+        it.dataset.mapId = m.id;
+        it.dataset.search = [m.name, m.category, ...(m.pins || []).map((p) => p.label)].filter(Boolean).join(" ");
+        it.title = [
+          m.name || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)",
+          m.category ? "\u0E2B\u0E21\u0E27\u0E14: " + m.category : "",
+          `${st.entity} \u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 \xB7 ${st.portal} \u0E1B\u0E23\u0E30\u0E15\u0E39 \xB7 ${st.note} \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38`,
+          m.image ? "\u0E23\u0E39\u0E1B: " + m.image : "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B)"
+        ].filter(Boolean).join("\n");
+        it.onclick = () => openMapFromTree(m.id);
+        it.oncontextmenu = (ev) => {
+          ev.preventDefault();
+          popupMenu(ev.clientX, ev.clientY, [
+            { label: "\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49", click: () => openMapFromTree(m.id) },
+            { label: "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u2026", click: () => renameMapFromTree(m.id) },
+            { label: "\u{1F4C1} \u0E15\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E27\u0E14\u2026", click: () => setMapCategoryFromTree(m.id) },
+            { label: "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 PNG", click: async () => {
+              const d2 = await loadMaps();
+              const mm = findMap(d2.maps, m.id);
+              if (mm) await exportMapPng(mm);
+            } },
+            "-",
+            { label: "\u{1F4C4} \u0E40\u0E1B\u0E34\u0E14 maps.json", click: () => openPlainFile(jsonPath, "maps.json") },
+            { label: "\u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49", danger: true, click: () => deleteMapFromTree(m.id, m.name) }
+          ]);
+        };
+        sec.append(it);
+      }
+    }
+    if (!maps.length) {
+      const empty2 = el("div", "scene add-row", "\uFF0B \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E41\u0E23\u0E01\u2026");
+      empty2.onclick = async () => {
+        await openMaps();
+        await addMapFlow();
+        await refreshTreeQueued();
+      };
+      sec.append(empty2);
+    }
+    tree.append(sec);
+    return sec;
+  }
+  async function buildBranchPlanSection(tree) {
+    const { listBranchPlans: listBranchPlans2, currentBranchPlan: currentBranchPlan2, isBranchPlanDirty: isBranchPlanDirty2, openBranchPlan: openBranchPlan2, saveBranchPlanAs: saveBranchPlanAs2 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+    const { planSummary: planSummary2, safePlanName: safePlanName2 } = await Promise.resolve().then(() => (init_branch_plans(), branch_plans_exports));
+    const plans = await listBranchPlans2();
+    const cur = currentBranchPlan2();
+    const sec = el("div", "sec");
+    const head2 = el("div", "sec-title", `\u{1F33F} \u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22 (${plans.length})`);
+    const add = el("span", "row-add", "+");
+    add.title = "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48";
+    add.onclick = async (e) => {
+      e.stopPropagation();
+      const v2 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48", { value: "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 " + (plans.length + 1) });
+      if (!v2) return;
+      await saveBranchPlanAs2(v2);
+      await refreshTreeQueued();
+      await openBranchingTree();
+    };
+    head2.append(add);
+    sec.append(head2);
+    makeAccordion(head2, sec, "sec:__branchplans__");
+    head2.oncontextmenu = (e) => {
+      e.preventDefault();
+      popupMenu(e.clientX, e.clientY, [
+        { label: "\u{1F33F} \u0E40\u0E1B\u0E34\u0E14\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22", click: () => openBranchingTree() }
+      ]);
+    };
+    for (const p of plans) {
+      const isCur = cur && cur.path === p.path;
+      const dirty = isCur && isBranchPlanDirty2();
+      const it = el(
+        "div",
+        "scene branch-plan-row" + (isCur ? " planner-current" : "") + (dirty ? " planner-dirty" : ""),
+        "\u{1F33F} " + p.name
+      );
+      if (p.plan.color) {
+        const dot = el("span", "sc-dot");
+        dot.style.background = p.plan.color;
+        it.prepend(dot);
+      }
+      if (p.plan.status) it.append(el("span", "sc-status", p.plan.status));
+      it.dataset.path = p.path;
+      it.dataset.branchPlan = p.path;
+      it.dataset.search = p.name;
+      it.title = p.path + String.fromCharCode(10) + planSummary2(p.plan);
+      it.onclick = async () => {
+        await openBranchPlan2(p.path);
+        await openBranchingTree();
+        await refreshTreeQueued();
+      };
+      it.oncontextmenu = (ev) => {
+        ev.preventDefault();
+        popupMenu(ev.clientX, ev.clientY, [
+          { label: "\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E19\u0E35\u0E49", click: async () => {
+            await openBranchPlan2(p.path);
+            await openBranchingTree();
+            await refreshTreeQueued();
+          } },
+          { label: "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u2026", click: async () => {
+            const v2 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19", { value: p.name });
+            if (!v2) return;
+            const dir = await kapi.join(state.root, "Branches");
+            const dst = await kapi.join(dir, safePlanName2(v2) + ".json");
+            if (await kapi.exists(dst)) {
+              setStatus("\u0E21\u0E35\u0E41\u0E1C\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27");
+              return;
+            }
+            const data2 = await kapi.readJson(p.path);
+            data2.name = v2;
+            await kapi.writeFile(dst, JSON.stringify(data2, null, 2));
+            await kapi.remove(p.path);
+            if (cur && cur.path === p.path) await openBranchPlan2(dst);
+            await refreshTreeQueued();
+            setStatus("\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E41\u0E25\u0E49\u0E27");
+          } },
+          { label: "\u2699 \u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19\u2026", click: async () => {
+            const m = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+            if (!cur || cur.path !== p.path) await m.openBranchPlan(p.path);
+            await m.planPropsDialog();
+            await refreshTreeQueued();
+          } },
+          { label: "\u21CB \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E2D\u0E37\u0E48\u0E19\u2026", click: async () => {
+            const m = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+            if (!cur || cur.path !== p.path) await m.openBranchPlan(p.path);
+            await m.comparePlanDialog();
+          } },
+          { label: "\u{1F4C2} \u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C", click: () => kapi.revealInOS(p.path) },
+          "-",
+          { label: "\u0E25\u0E1A (\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30)", danger: true, click: async () => {
+            await deleteToTrash(p.path, p.name);
+            const { closeBranchPlan: closeBranchPlan2 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+            if (cur && cur.path === p.path) closeBranchPlan2();
+            await refreshTreeQueued();
+          } }
+        ]);
+      };
+      sec.append(it);
+    }
+    if (!plans.length) {
+      const empty2 = el("div", "scene add-row", "\uFF0B \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E41\u0E23\u0E01\u2026");
+      empty2.onclick = () => add.onclick({ stopPropagation() {
+      } });
+      sec.append(empty2);
+    }
+    tree.append(sec);
+    return sec;
+  }
+  function markBranchPlanRow() {
+    Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports)).then(({ currentBranchPlan: currentBranchPlan2, isBranchPlanDirty: isBranchPlanDirty2 }) => {
+      const cur = currentBranchPlan2();
+      if (!cur || !cur.path) return;
+      const row2 = document.querySelector(`#tree .branch-plan-row[data-branch-plan="${CSS.escape(cur.path)}"]`);
+      if (!row2) return;
+      row2.classList.add("planner-current");
+      row2.classList.toggle("planner-dirty", isBranchPlanDirty2());
+    }).catch(() => {
+    });
+  }
+  async function openMapFromTree(mapId) {
+    await openMaps();
+    if (mapsState_C.s) {
+      mapsState_C.s.currentId = mapId;
+      await renderMaps($("#maps-body"));
+    }
+  }
+  async function renameMapFromTree(mapId) {
+    const d = await loadMaps();
+    const m = findMap(d.maps, mapId);
+    if (!m) return;
+    const v2 = await ask("\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48", { value: m.name });
+    if (!v2) return;
+    m.name = v2.trim() || m.name;
+    await saveMaps(d);
+    if (mapsState_C.s) {
+      mapsState_C.s.data = d;
+      await renderMaps($("#maps-body"));
+    }
+    await refreshTreeQueued();
+    setStatus("\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27");
+  }
+  async function setMapCategoryFromTree(mapId) {
+    const d = await loadMaps();
+    const m = findMap(d.maps, mapId);
+    if (!m) return;
+    const v2 = await ask(
+      "\u0E2B\u0E21\u0E27\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07 = \u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E2B\u0E21\u0E27\u0E14)",
+      { value: m.category || "", placeholder: "\u0E40\u0E0A\u0E48\u0E19 \u0E42\u0E25\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19 \xB7 \u0E42\u0E25\u0E01\u0E2D\u0E14\u0E35\u0E15 \xB7 \u0E21\u0E34\u0E15\u0E34\u0E2D\u0E37\u0E48\u0E19" }
+    );
+    if (v2 === null || v2 === void 0) return;
+    m.category = String(v2).trim();
+    await saveMaps(d);
+    if (mapsState_C.s) {
+      mapsState_C.s.data = d;
+      await renderMaps($("#maps-body"));
+    }
+    await refreshTreeQueued();
+    setStatus(m.category ? '\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E2B\u0E21\u0E27\u0E14 "' + m.category + '" \u0E41\u0E25\u0E49\u0E27' : "\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2B\u0E21\u0E27\u0E14\u0E41\u0E25\u0E49\u0E27");
+  }
+  async function deleteMapFromTree(mapId, name5) {
+    if (!await confirmBox(`\u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \u201C${name5 || ""}\u201D ?`, "\u0E25\u0E1A")) return;
+    const d = await loadMaps();
+    d.maps = deleteMap(d.maps, mapId);
+    await saveMaps(d);
+    if (mapsState_C.s) {
+      mapsState_C.s.data = d;
+      if (mapsState_C.s.currentId === mapId) mapsState_C.s.currentId = d.maps[0]?.id || null;
+      await renderMaps($("#maps-body"));
+    }
+    await refreshTreeQueued();
+    setStatus("\u0E25\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27");
   }
   async function openFirstSceneOf(secPath) {
     const draftRoot = await kapi.join(secPath, "Draft");
@@ -143583,9 +146268,7 @@ ${css}
     const p = await kapi.join(state.root, "maps.json");
     if (!await kapi.exists(p)) return { version: MAPS_VERSION, maps: [] };
     try {
-      const d = await kapi.readJson(p);
-      d.maps = d.maps || [];
-      return d;
+      return migrateMaps(await kapi.readJson(p));
     } catch {
       return { version: MAPS_VERSION, maps: [] };
     }
@@ -144054,6 +146737,13 @@ ${css}
     const iFlag = mkChk("\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14", row2.flag);
     const iTags = mk("\u0E41\u0E17\u0E47\u0E01 (\u0E04\u0E31\u0E48\u0E19 , )", (row2.tags || []).join(", "));
     const iNote = mk("\u0E42\u0E19\u0E49\u0E15", row2.note, "textarea");
+    try {
+      const mapRow = await buildShowOnMapRow(row2);
+      if (stale2()) return;
+      body.append(mapRow);
+    } catch (e) {
+      log("warn", "props: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E41\u0E16\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", e);
+    }
     const statusLine = el("div", "props-autosave", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34");
     body.append(statusLine);
     const collect = () => {
@@ -145016,9 +147706,13 @@ ${css}
   }
   async function loadTemplates() {
     const file = await kapi.join(state.root, "templates.json");
+    let shippedText = "";
+    try {
+      shippedText = await fetch("templates.json").then((r) => r.text());
+    } catch {
+    }
     if (!await kapi.exists(file)) {
-      const def = await fetch("templates.json").then((r) => r.text());
-      await kapi.writeFile(file, def);
+      if (shippedText) await kapi.writeFile(file, shippedText);
     }
     try {
       state.templatesDoc = await kapi.readJson(file);
@@ -145026,6 +147720,20 @@ ${css}
     } catch (e) {
       state.templates = [];
       setStatus("templates.json \u0E1C\u0E34\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A: " + e.message);
+      return;
+    }
+    try {
+      if (!shippedText) return;
+      const shipped = JSON.parse(shippedText).templates || [];
+      const { templates, changed } = mergeBuiltInTemplateMeta(state.templates, shipped);
+      if (changed) {
+        state.templates = templates;
+        state.templatesDoc.templates = templates;
+        await kapi.writeFile(file, JSON.stringify(state.templatesDoc, null, 2));
+        log("info", "templates: \u0E40\u0E15\u0E34\u0E21\u0E1A\u0E25\u0E47\u0E2D\u0E01 profile \u0E43\u0E2B\u0E49\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27");
+      }
+    } catch (e) {
+      log("warn", "templates: \u0E40\u0E15\u0E34\u0E21\u0E1A\u0E25\u0E47\u0E2D\u0E01 profile \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", e);
     }
   }
   async function writeTemplates() {
@@ -145051,10 +147759,13 @@ ${css}
     return e;
   }
   function fieldLabels(templateId) {
-    const tp = state.templates.find((t3) => t3.id === templateId);
+    const tp = templateOf(templateId);
     const map2 = {};
     for (const f of tp?.fields || []) map2[f.key] = f.label || f.key;
     return map2;
+  }
+  function templateOf(templateId) {
+    return (state.templates || []).find((t3) => t3.id === templateId) || null;
   }
   function openTemplateManager() {
     const key2 = "::templates::";
@@ -145700,30 +148411,37 @@ ${css}
     setStatus("\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27: " + name5);
   }
   async function confirmQuit() {
-    const dirty = [...state.tabs.values()].filter((t3) => t3.dirty);
-    if (!dirty.length) {
+    const items = allDirtyList();
+    logAction(
+      "quit",
+      `\u0E02\u0E2D\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \xB7 \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 ${items.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23`,
+      items.map((x) => x.title)
+    );
+    if (!items.length) {
       kapi.quitNow();
       return "save";
     }
-    const { action, keys: keys4 } = await saveAllDialog(dirtyTabList(), {
-      title: `\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2014 \u0E21\u0E35 ${dirty.length} \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01`,
+    const { action, keys: keys4 } = await saveAllDialog(items, {
+      title: `\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2014 \u0E21\u0E35 ${items.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01`,
       saveLabel: "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E2D\u0E01",
       discardLabel: "\u0E2D\u0E2D\u0E01\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01",
       cancelLabel: "\u0E44\u0E21\u0E48\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27"
     });
     if (action === "save") {
-      const pick2 = new Set(keys4);
-      for (const t3 of dirty) {
-        if (!pick2.has(t3.file)) continue;
-        try {
-          await saveTab(t3);
-        } catch (err2) {
-          log("error", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + (t3.file || t3.title), err2);
-        }
+      const res = await dirtyRegistry.saveKeys(keys4);
+      if (res.failed.length) {
+        for (const f of res.failed) log("error", "quit: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + f.key, f.error);
+        setStatus(`\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 ${res.failed.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 (\u0E14\u0E39\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)`);
+        showPanel("log");
+        renderLogPanel(true);
+        return null;
       }
+      logAction("quit", `\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E23\u0E1A ${res.saved} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21`);
       kapi.quitNow();
-    } else if (action === "discard") kapi.quitNow();
-    else setStatus("\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21");
+    } else if (action === "discard") {
+      logAction("quit", "\u0E1B\u0E34\u0E14\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
+      kapi.quitNow();
+    } else setStatus("\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21");
     return action;
   }
   function entityCreateDialog(cat, tps) {
@@ -146399,6 +149117,7 @@ ${css}
   }
   async function saveTab(tab) {
     if (!tab) return;
+    logAction("save", tab.title || tab.file || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)", tab.file);
     if (isRosterTab(tab)) {
       await saveRosterTab(tab);
       return;
@@ -146480,37 +149199,88 @@ ${css}
   function dirtyTabList() {
     return [...state.tabs.values()].filter((t3) => t3.dirty).map((t3) => ({ key: t3.file, title: t3.title || t3.file, file: t3.file }));
   }
+  function registerDirtySources() {
+    if (dirtyRegistry.has("tabs")) return;
+    registerDirtySource("tabs", {
+      label: "\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48",
+      list: dirtyTabList,
+      save: async (key2) => {
+        const t3 = state.tabs.get(key2);
+        if (!t3) return false;
+        await saveTab(t3);
+        return true;
+      }
+    });
+    registerDirtySource("planner", {
+      label: "\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19",
+      list: () => {
+        if (!plannerInst || !plannerInst.data || !plannerInst.data.isDirty()) return [];
+        const p = plannerInst.data.getPath();
+        return [{ key: p || "::planner::", title: plannerInst.data.getName() || "\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19", file: p || "" }];
+      },
+      save: async () => {
+        if (!plannerInst) return false;
+        return await plannerInst.save(true) !== false;
+      }
+    });
+    registerDirtySource("branch-plan", {
+      label: "\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22",
+      list: () => {
+        const bp = _branchPlanApi;
+        if (!bp || !bp.currentBranchPlan) return [];
+        const cur = bp.currentBranchPlan();
+        if (!cur || !cur.path || !bp.isBranchPlanDirty()) return [];
+        return [{ key: cur.path, title: cur.name || "\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22", file: cur.path }];
+      },
+      save: async () => {
+        if (!_branchPlanApi) return false;
+        return await _branchPlanApi.saveBranchPlan(true) !== false;
+      }
+    });
+    Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports)).then((m) => {
+      _branchPlanApi = m;
+    }).catch(() => {
+    });
+    log("info", "dirty: \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 " + dirtyRegistry.ids().join(", "));
+  }
+  function allDirtyList() {
+    registerDirtySources();
+    return dirtyRegistry.collect().map((x) => ({
+      key: x.key,
+      // ติดชื่อกลุ่มไว้หน้ารายการที่ไม่ใช่ไฟล์ปกติ ผู้ใช้จะได้รู้ว่ามันคืออะไร
+      title: x.source === "tabs" ? x.title : `[${x.sourceLabel}] ${x.title}`,
+      file: x.file
+    }));
+  }
   async function saveAllTabs(silent = false) {
-    let dirty = [...state.tabs.values()].filter((t3) => t3.dirty);
-    if (!dirty.length) {
+    let items = allDirtyList();
+    if (!items.length) {
       setStatus("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
       return 0;
     }
     if (!silent) {
-      const { action, keys: keys4 } = await saveAllDialog(dirtyTabList());
+      const { action, keys: keys4 } = await saveAllDialog(items);
       if (action !== "save") {
         if (action === null) setStatus("\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01");
         return 0;
       }
       const pick2 = new Set(keys4);
-      dirty = dirty.filter((t3) => pick2.has(t3.file));
-      if (!dirty.length) return 0;
+      items = items.filter((x) => pick2.has(x.key));
+      if (!items.length) return 0;
     }
     let n2 = 0;
     try {
-      for (const t3 of dirty) {
-        setBusy(`\u0E01\u0E33\u0E25\u0E31\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 ${n2 + 1}/${dirty.length} \u2014 ${t3.title || t3.file || ""}`);
-        try {
-          await saveTab(t3);
-          n2++;
-        } catch (err2) {
-          log("error", "saveAll \u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27: " + (t3.file || t3.title), err2);
-        }
+      for (const it of items) {
+        setBusy(`\u0E01\u0E33\u0E25\u0E31\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 ${n2 + 1}/${items.length} \u2014 ${it.title || it.key || ""}`);
+        const r = await dirtyRegistry.saveKeys([it.key]);
+        n2 += r.saved;
+        for (const f of r.failed) log("error", "saveAll: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: " + f.key, f.error);
       }
     } finally {
       clearBusy();
     }
-    setStatus(`\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 (${n2} \u0E44\u0E1F\u0E25\u0E4C)`);
+    logAction("saveAll", `\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 ${n2}/${items.length} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23`);
+    setStatus(`\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 (${n2} \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)`);
     updateDirtyBadge();
     refreshStatusBar();
     countProjectWords().then((w) => recordDailyWords(w)).catch(() => {
@@ -146803,10 +149573,10 @@ ${css}
         setStatus("\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E25\u0E2D\u0E07\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07");
         return 0;
       }
-      const view = sp.view;
+      const view2 = sp.view;
       const delSet = new Set(sel);
       const toRemove = [];
-      view.state.doc.forEach((n2, pos) => {
+      view2.state.doc.forEach((n2, pos) => {
         if (n2.type.name === "sp" && delSet.has(n2.attrs.el) && n2.textContent.trim())
           toRemove.push({ pos, size: n2.nodeSize });
       });
@@ -146814,9 +149584,9 @@ ${css}
         setStatus("\u0E44\u0E21\u0E48\u0E1E\u0E1A element \u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02");
         return 0;
       }
-      let tr2 = view.state.tr;
+      let tr2 = view2.state.tr;
       for (const { pos, size } of toRemove.slice().reverse()) tr2 = tr2.delete(pos, pos + size);
-      view.dispatch(tr2);
+      view2.dispatch(tr2);
       if (tab) {
         markDirty(tab);
         scheduleSpSmart(tab);
@@ -147333,12 +150103,12 @@ ${css}
     for (const it of items) {
       box2.append(outlineItemEl(it, () => {
         if (t3.sp || t3.editor) {
-          const view = (t3.sp || t3.editor).view;
+          const view2 = (t3.sp || t3.editor).view;
           Promise.resolve().then(() => (init_dist4(), dist_exports)).then(({ TextSelection: TextSelection2 }) => {
-            view.dispatch(view.state.tr.setSelection(
-              TextSelection2.create(view.state.doc, it.pos + 1)
+            view2.dispatch(view2.state.tr.setSelection(
+              TextSelection2.create(view2.state.doc, it.pos + 1)
             ).scrollIntoView());
-            view.focus();
+            view2.focus();
           });
         } else {
           const lines = t3.plain.value.split("\n");
@@ -147441,21 +150211,126 @@ ${css}
     if (!body) return true;
     return body.scrollHeight - body.scrollTop - body.clientHeight <= LOG_STICK_PX;
   }
-  async function renderLogPanel() {
+  async function renderLogPanel(force) {
     const body = $("#log-body");
     if (!body) return;
+    const host2 = body.parentElement;
+    if (host2 && !host2.querySelector(".k-log-bar")) buildLogBar(host2, body);
+    const recs = logStore.all();
+    if (!force && _logSeq === logStore.lastSeq() && body.dataset.f === logKey()) return;
+    _logSeq = logStore.lastSeq();
+    body.dataset.f = logKey();
     const stick = logAtBottom(body);
     const keepTop = body.scrollTop;
-    let text = "";
-    try {
-      text = await kapi.logRead(800) || "";
-    } catch {
+    const shown = filterLogs(recs, logView).slice(-600);
+    body.replaceChildren();
+    body.classList.add("k-log-list");
+    if (!shown.length) {
+      body.append(el("div", "dim", recs.length ? "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07 \u2014 \u0E25\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E25\u0E49\u0E32\u0E07\u0E04\u0E33\u0E04\u0E49\u0E19" : "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)"));
     }
-    if (!text) text = LOG_BUF.slice(-800).join("\n");
-    if (body.textContent === (text || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)")) return;
-    body.textContent = text || "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)";
+    for (const r of shown) body.append(logRow(r));
+    syncLogBar(host2, recs);
     body.scrollTop = stick ? body.scrollHeight : keepTop;
     updateLogFollowBadge(body, stick);
+  }
+  function logKey() {
+    return [...logView.levels].sort().join(",") + "|" + logView.source + "|" + logView.q;
+  }
+  function logRow(r) {
+    const row2 = el("div", "k-log-row k-log-" + r.level);
+    row2.dataset.seq = String(r.seq);
+    row2.append(el("span", "k-log-time", shortTime(r.ts)));
+    row2.append(el("span", "k-log-lv", LEVEL_META[r.level].icon));
+    if (r.source) row2.append(el("span", "k-log-src", r.source));
+    row2.append(el("span", "k-log-msg", r.msg));
+    if (r.count > 1) row2.append(el("span", "k-log-count", "\xD7" + r.count));
+    if (r.detail) {
+      row2.classList.add("k-log-has-detail");
+      row2.title = "\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14";
+      const det = el("pre", "k-log-detail", r.detail);
+      if (!logView.open.has(r.seq)) det.style.display = "none";
+      row2.append(det);
+      row2.onclick = () => {
+        const on2 = det.style.display === "none";
+        det.style.display = on2 ? "" : "none";
+        if (on2) logView.open.add(r.seq);
+        else logView.open.delete(r.seq);
+      };
+    }
+    return row2;
+  }
+  function buildLogBar(host2, body) {
+    const bar = el("div", "k-log-bar");
+    for (const lv of LEVELS) {
+      const b = el(
+        "button",
+        "k-log-chip k-log-chip-" + lv + (logView.levels.has(lv) ? " on" : ""),
+        LEVEL_META[lv].icon + " " + LEVEL_META[lv].label
+      );
+      b.dataset.lv = lv;
+      b.title = "\u0E41\u0E2A\u0E14\u0E07/\u0E0B\u0E48\u0E2D\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A " + LEVEL_META[lv].label;
+      b.onclick = () => {
+        if (logView.levels.has(lv)) logView.levels.delete(lv);
+        else logView.levels.add(lv);
+        b.classList.toggle("on", logView.levels.has(lv));
+        renderLogPanel(true);
+      };
+      bar.append(b);
+    }
+    const sel = el("select", "k-log-src-sel");
+    sel.title = "\u0E01\u0E23\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E21\u0E32";
+    sel.onchange = () => {
+      logView.source = sel.value;
+      renderLogPanel(true);
+    };
+    bar.append(sel);
+    const q = el("input", "k-log-q");
+    q.type = "search";
+    q.placeholder = "\u{1F50D} \u0E04\u0E49\u0E19\u0E43\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01";
+    q.oninput = () => {
+      logView.q = q.value;
+      renderLogPanel(true);
+    };
+    bar.append(q);
+    const clr = el("button", "k-log-btn", "\u{1F5D1} \u0E25\u0E49\u0E32\u0E07");
+    clr.title = "\u0E25\u0E49\u0E32\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E35\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E1F\u0E25\u0E4C log \u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A)";
+    clr.onclick = () => {
+      logStore.clear();
+      LOG_BUF.length = 0;
+      logView.open.clear();
+      renderLogPanel(true);
+    };
+    bar.append(clr);
+    host2.insertBefore(bar, body);
+    onLog(() => {
+      if (isPanelOpen("log")) renderLogPanel();
+    });
+  }
+  function syncLogBar(host2, recs) {
+    if (!host2) return;
+    const bar = host2.querySelector(".k-log-bar");
+    if (!bar) return;
+    const c = logStore.counts();
+    for (const b of bar.querySelectorAll(".k-log-chip")) {
+      const lv = b.dataset.lv;
+      b.textContent = LEVEL_META[lv].icon + " " + LEVEL_META[lv].label + (c[lv] ? " " + c[lv] : "");
+      b.classList.toggle("k-log-chip-hot", lv === "error" && c.error > 0);
+    }
+    const sel = bar.querySelector(".k-log-src-sel");
+    const srcs = logStore.sources();
+    if (sel.dataset.list !== srcs.join()) {
+      sel.dataset.list = srcs.join();
+      sel.replaceChildren();
+      const o0 = el("option", null, "\u0E17\u0E38\u0E01\u0E17\u0E35\u0E48\u0E21\u0E32");
+      o0.value = "";
+      sel.append(o0);
+      for (const s of srcs) {
+        const o = el("option", null, s);
+        o.value = s;
+        sel.append(o);
+      }
+      sel.value = logView.source;
+    }
   }
   function updateLogFollowBadge(body, stick) {
     const panel2 = body.parentElement;
@@ -147734,6 +150609,7 @@ ${css}
     state._branch = null;
     resetPlayerMode();
     mapsState_C.s = null;
+    resetMapsView();
     galInst = null;
     netInst = null;
     plannerInst = null;
@@ -147757,6 +150633,14 @@ ${css}
   }
   async function handleCommand(ch, ...a) {
     const t3 = state.active;
+    try {
+      log(
+        QUIET_CMDS.has(ch) ? "debug" : "info",
+        "cmd: " + ch,
+        a.length ? a.map((x) => typeof x === "object" ? "[obj]" : String(x)) : void 0
+      );
+    } catch {
+    }
     if (typeof ch === "string" && ch.startsWith("plugin:")) {
       const hit = plugins.shortcuts.find((s) => s.ch === ch);
       if (hit) {
@@ -149667,6 +152551,1457 @@ ${css}
         const mp = await kapi.join(state.root, "maps.json");
         if (await kapi.exists(mp)) await kapi.remove(mp);
       }
+      {
+        const mapsPath = await kapi.join(state.root, "maps.json");
+        const bodyOf = () => $("#maps-body");
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+        await kapi.writeFile(mapsPath, JSON.stringify({ version: "1.0", maps: [
+          {
+            id: "m70a",
+            name: "\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32",
+            image: "Images/world.png",
+            order: 0,
+            pins: [
+              { id: "pA", x: 20, y: 30, kind: "note", label: "\u0E17\u0E48\u0E32\u0E40\u0E23\u0E37\u0E2D" },
+              { id: "pB", x: 60, y: 45, kind: "note", label: "\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17" },
+              { id: "pC", x: 80, y: 70, kind: "portal", toMap: "m70b", label: "\u0E44\u0E1B\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49" }
+            ]
+          },
+          { id: "m70b", name: "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49", image: "Images/city.png", order: 1, pins: [] }
+        ] }, null, 2));
+        {
+          const d70 = await loadMaps();
+          check2(
+            "[70] migrate: maps.json v1.0 \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49 + \u0E40\u0E15\u0E34\u0E21 category/routes/overlays",
+            d70.version === MAPS_VERSION && d70.maps[0].category === "" && Array.isArray(d70.maps[0].routes) && d70.maps[0].overlays.grid === false,
+            JSON.stringify(d70.maps[0].overlays)
+          );
+          check2("[70] migrate: \u0E2B\u0E21\u0E38\u0E14\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22", d70.maps[0].pins.length === 3);
+        }
+        await openMaps();
+        await wait(300);
+        const S70 = mapsState_C.s;
+        check2("[70] \u0E41\u0E1C\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E41\u0E23\u0E01", isPanelOpen("maps") && S70.currentId === "m70a", S70.currentId);
+        {
+          const sl = bodyOf().querySelector(".map-zoom-slider");
+          const cv = bodyOf().querySelector(".map-canvas");
+          check2(
+            "[70-3] \u0E21\u0E35\u0E2A\u0E44\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E0B\u0E39\u0E21 + \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32/\u0E2D\u0E2D\u0E01/\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D",
+            !!sl && bodyOf().querySelectorAll(".map-tools2 .cmp-mini").length >= 4
+          );
+          check2(
+            "[70-3] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 100% \u0E41\u0E25\u0E30\u0E1C\u0E37\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E01\u0E27\u0E49\u0E32\u0E07 100%",
+            bodyOf().querySelector(".map-zoom-label").textContent === "100%" && cv.style.width === "100%",
+            cv.style.width
+          );
+          const zin = [...bodyOf().querySelectorAll(".map-tools2 .cmp-mini")].find((b) => b.textContent.includes("\u2795"));
+          zin.click();
+          await wait(30);
+          check2(
+            "[70-3] \u0E01\u0E14\u0E0B\u0E39\u0E21\u0E40\u0E02\u0E49\u0E32 \u2192 \u0E1C\u0E37\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19\u0E15\u0E32\u0E21\u0E02\u0E31\u0E49\u0E19 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E49\u0E07\u0E41\u0E1C\u0E07)",
+            bodyOf().querySelector(".map-canvas").style.width === "125%" && bodyOf().querySelector(".map-zoom-label").textContent === "125%",
+            bodyOf().querySelector(".map-canvas").style.width
+          );
+          const stage = bodyOf().querySelector(".map-stage");
+          stage.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true }));
+          await wait(20);
+          check2("[70-3] \u0E25\u0E49\u0E2D\u0E40\u0E1B\u0E25\u0E48\u0E32 = \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E14\u0E39 \u0E44\u0E21\u0E48\u0E0B\u0E39\u0E21", bodyOf().querySelector(".map-canvas").style.width === "125%");
+          stage.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, ctrlKey: true, bubbles: true, cancelable: true }));
+          await wait(20);
+          check2(
+            "[70-3] Ctrl+\u0E25\u0E49\u0E2D\u0E25\u0E07 = \u0E0B\u0E39\u0E21\u0E2D\u0E2D\u0E01\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E31\u0E49\u0E19",
+            bodyOf().querySelector(".map-canvas").style.width === "100%",
+            bodyOf().querySelector(".map-canvas").style.width
+          );
+          const fit = [...bodyOf().querySelectorAll(".map-tools2 .cmp-mini")].find((b) => b.textContent.includes("\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D"));
+          fit.click();
+          await wait(30);
+          check2("[70-3] \u0E1B\u0E38\u0E48\u0E21\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B 100%", bodyOf().querySelector(".map-zoom-label").textContent === "100%");
+        }
+        {
+          const ovBtn = (txt) => [...bodyOf().querySelectorAll(".map-ov-btn")].find((b) => b.textContent.includes(txt));
+          check2(
+            "[70-4] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E2D\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E22\u0E4C\u0E1A\u0E19\u0E1C\u0E37\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+            !bodyOf().querySelector(".map-grid") && !bodyOf().querySelector(".map-compass")
+          );
+          ovBtn("\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14").click();
+          await wait(120);
+          check2(
+            "[70-4] \u0E40\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14 \u2192 \u0E21\u0E35 .map-grid + \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E08\u0E33\u0E19\u0E27\u0E19\u0E0A\u0E48\u0E2D\u0E07",
+            !!bodyOf().querySelector(".map-grid") && !!bodyOf().querySelector(".map-grid-size")
+          );
+          ovBtn("\u0E40\u0E02\u0E47\u0E21\u0E17\u0E34\u0E28").click();
+          await wait(120);
+          ovBtn("\u0E21\u0E32\u0E15\u0E23\u0E32\u0E2A\u0E48\u0E27\u0E19").click();
+          await wait(120);
+          check2(
+            "[70-4] \u0E40\u0E02\u0E47\u0E21\u0E17\u0E34\u0E28 + \u0E21\u0E32\u0E15\u0E23\u0E32\u0E2A\u0E48\u0E27\u0E19\u0E42\u0E1C\u0E25\u0E48\u0E04\u0E23\u0E1A",
+            !!bodyOf().querySelector(".map-compass") && !!bodyOf().querySelector(".map-scalebar")
+          );
+          const saved2 = await loadMaps();
+          check2(
+            "[70-4] \u0E42\u0E2D\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E22\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 maps.json (\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)",
+            mapOverlays(findMap(saved2.maps, "m70a")).grid === true && mapOverlays(findMap(saved2.maps, "m70a")).compass === true,
+            JSON.stringify(findMap(saved2.maps, "m70a").overlays)
+          );
+          check2(
+            "[70-4] gridLines: 10 \u0E0A\u0E48\u0E2D\u0E07 \u2192 9 \u0E40\u0E2A\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E1A",
+            gridLines(10).length === 9 && !gridLines(10).includes(0) && !gridLines(10).includes(100)
+          );
+          ovBtn("\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14").click();
+          await wait(120);
+          check2("[70-4] \u0E1B\u0E34\u0E14\u0E01\u0E23\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", !bodyOf().querySelector(".map-grid"));
+        }
+        {
+          const sb = bodyOf().querySelector(".map-search");
+          check2("[70-7] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2B\u0E21\u0E38\u0E14", !!sb);
+          sb.value = "\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17";
+          sb.dispatchEvent(new Event("input", { bubbles: true }));
+          await wait(60);
+          check2(
+            "[70-7] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E16\u0E39\u0E01\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C 1 \u0E15\u0E31\u0E27",
+            bodyOf().querySelectorAll(".map-pin-hit").length === 1,
+            bodyOf().querySelectorAll(".map-pin-hit").length
+          );
+          check2(
+            "[70-7] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E23\u0E35\u0E48",
+            bodyOf().querySelectorAll(".map-pin-dim").length === 2,
+            bodyOf().querySelectorAll(".map-pin-dim").length
+          );
+          check2(
+            "[70-7] \u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E23\u0E38\u0E1B\u0E1C\u0E25\u0E04\u0E49\u0E19\u0E2B\u0E32",
+            (bodyOf().querySelector(".map-search-note").textContent || "").includes("\u0E40\u0E08\u0E2D 1 \u0E2B\u0E21\u0E38\u0E14"),
+            bodyOf().querySelector(".map-search-note").textContent
+          );
+          sb.value = "";
+          sb.dispatchEvent(new Event("input", { bubbles: true }));
+          await wait(60);
+          check2("[70-7] \u0E25\u0E49\u0E32\u0E07\u0E04\u0E33\u0E04\u0E49\u0E19 \u2192 \u0E2B\u0E21\u0E38\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E1B\u0E01\u0E15\u0E34\u0E2B\u0E21\u0E14", bodyOf().querySelectorAll(".map-pin-dim").length === 0);
+        }
+        {
+          const pinNode = (id) => bodyOf().querySelector(`.map-pin[data-pin="${id}"]`);
+          check2(
+            "[70-6] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2192 \u0E41\u0E16\u0E1A\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2B\u0E21\u0E38\u0E14\u0E0B\u0E48\u0E2D\u0E19\u0E2D\u0E22\u0E39\u0E48",
+            !bodyOf().querySelector(".map-selbar.on")
+          );
+          pinNode("pA").dispatchEvent(new MouseEvent("click", { ctrlKey: true, bubbles: true }));
+          await wait(120);
+          pinNode("pB").dispatchEvent(new MouseEvent("click", { ctrlKey: true, bubbles: true }));
+          await wait(120);
+          check2(
+            "[70-6] Ctrl+\u0E04\u0E25\u0E34\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49 2 \u0E2B\u0E21\u0E38\u0E14",
+            (bodyOf().querySelector(".map-selcount").textContent || "").includes("2 \u0E2B\u0E21\u0E38\u0E14"),
+            bodyOf().querySelector(".map-selcount").textContent
+          );
+          check2("[70-6] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E35\u0E2A\u0E16\u0E32\u0E19\u0E30 .sel", bodyOf().querySelectorAll(".map-pin.sel").length === 2);
+          {
+            const cur70 = findMap(mapsState_C.s.data.maps, "m70a");
+            const before = cur70.pins.map((p) => p.x + "," + p.y).join(" ");
+            cur70.pins = movePins(cur70.pins, ["pA", "pB"], 5, 5);
+            check2(
+              "[70-6] \u0E22\u0E49\u0E32\u0E22\u0E01\u0E25\u0E38\u0E48\u0E21: \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2A\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01",
+              cur70.pins[0].x === 25 && cur70.pins[1].x === 65 && cur70.pins[2].x === 80,
+              before + " \u2192 " + cur70.pins.map((p) => p.x + "," + p.y).join(" ")
+            );
+            cur70.pins = movePins(cur70.pins, ["pA", "pB"], -5, -5);
+          }
+          [...bodyOf().querySelectorAll(".map-selbar .cmp-mini")].find((b) => b.textContent.includes("\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01")).click();
+          await wait(150);
+          check2(
+            '[70-6] \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E27\u0E32\u0E07"',
+            !![...bodyOf().querySelectorAll(".map-selbar .cmp-mini")].find((b) => b.textContent.includes("\u0E27\u0E32\u0E07"))
+          );
+          [...bodyOf().querySelectorAll(".map-chip")].find((c) => c.textContent.includes("\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49")).click();
+          await wait(180);
+          check2(
+            "[70-6] \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27 (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E21\u0E38\u0E14)",
+            mapsState_C.s.currentId === "m70b" && bodyOf().querySelectorAll(".map-pin").length === 0
+          );
+          [...bodyOf().querySelectorAll(".map-selbar .cmp-mini")].find((b) => b.textContent.includes("\u0E27\u0E32\u0E07")).click();
+          await wait(250);
+          check2(
+            "[70-6] \u0E27\u0E32\u0E07\u0E2B\u0E21\u0E38\u0E14\u0E02\u0E49\u0E32\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49 2 \u0E15\u0E31\u0E27",
+            bodyOf().querySelectorAll(".map-pin").length === 2,
+            bodyOf().querySelectorAll(".map-pin").length
+          );
+          {
+            const d2 = await loadMaps();
+            const dst = findMap(d2.maps, "m70b");
+            check2(
+              "[70-6] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E27\u0E32\u0E07\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C + id \u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E0A\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
+              dst.pins.length === 2 && !dst.pins.some((p) => p.id === "pA" || p.id === "pB"),
+              dst.pins.map((p) => p.id).join()
+            );
+            check2(
+              "[70-6] \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2B\u0E21\u0E38\u0E14\u0E16\u0E39\u0E01\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E21\u0E32\u0E04\u0E23\u0E1A (\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D)",
+              dst.pins.map((p) => p.label).sort().join() === "\u0E17\u0E48\u0E32\u0E40\u0E23\u0E37\u0E2D,\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17",
+              dst.pins.map((p) => p.label).join()
+            );
+          }
+          {
+            const dst = findMap(mapsState_C.s.data.maps, "m70b");
+            deletePins(dst, dst.pins.map((p) => p.id));
+            await saveMaps(mapsState_C.s.data);
+            await renderMaps(bodyOf());
+            await wait(150);
+            check2("[70-6] \u0E25\u0E1A\u0E2B\u0E21\u0E38\u0E14\u0E2B\u0E25\u0E32\u0E22\u0E15\u0E31\u0E27\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19\u0E44\u0E14\u0E49", bodyOf().querySelectorAll(".map-pin").length === 0);
+          }
+          [...bodyOf().querySelectorAll(".map-chip")].find((c) => c.textContent.includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32")).click();
+          await wait(180);
+        }
+        {
+          const cur70 = findMap(mapsState_C.s.data.maps, "m70a");
+          const rt = newRoute("\u0E40\u0E14\u0E34\u0E19\u0E17\u0E31\u0E1E", "#5f9fd9");
+          addPinToRoute(rt, "pA");
+          addPinToRoute(rt, "pB");
+          cur70.routes = [rt];
+          await saveMaps(mapsState_C.s.data);
+          await renderMaps(bodyOf());
+          await wait(180);
+          check2(
+            "[70-9] \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19 path \u0E1A\u0E19\u0E1C\u0E37\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+            bodyOf().querySelectorAll(".map-routes path").length === 1
+          );
+          check2(
+            "[70-9] \u0E40\u0E2A\u0E49\u0E19\u0E43\u0E0A\u0E49 non-scaling-stroke (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E37\u0E14\u0E15\u0E32\u0E21\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E2A\u0E48\u0E27\u0E19\u0E20\u0E32\u0E1E)",
+            bodyOf().querySelector(".map-routes path").getAttribute("vector-effect") === "non-scaling-stroke"
+          );
+          check2(
+            "[70-9] \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E19\u0E27\u0E19\u0E08\u0E38\u0E14/\u0E23\u0E30\u0E22\u0E30",
+            (bodyOf().querySelector(".map-route-row").textContent || "").includes("2 \u0E08\u0E38\u0E14"),
+            bodyOf().querySelector(".map-route-row").textContent
+          );
+          [...bodyOf().querySelectorAll(".map-route-row .cmp-mini")].find((b) => b.textContent.includes("\u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14")).click();
+          await wait(180);
+          check2("[70-9] \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14 \u2192 \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30", !!bodyOf().querySelector(".map-routebar"));
+          bodyOf().querySelector('.map-pin[data-pin="pC"]').click();
+          await wait(250);
+          {
+            const d3 = await loadMaps();
+            const r3 = mapRoutes(findMap(d3.maps, "m70a"))[0];
+            check2(
+              "[70-9] \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14 = \u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E02\u0E49\u0E32\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48)",
+              r3.pinIds.join() === "pA,pB,pC" && mapsState_C.s.currentId === "m70a",
+              r3.pinIds.join()
+            );
+          }
+          check2(
+            "[70-9] \u0E40\u0E25\u0E02\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E08\u0E38\u0E14\u0E42\u0E1C\u0E25\u0E48\u0E04\u0E23\u0E1A 3 \u0E08\u0E38\u0E14",
+            bodyOf().querySelectorAll(".map-route-num").length === 3,
+            bodyOf().querySelectorAll(".map-route-num").length
+          );
+          [...bodyOf().querySelectorAll(".map-routebar button")].find((b) => b.textContent.includes("\u0E40\u0E2A\u0E23\u0E47\u0E08")).click();
+          await wait(180);
+          check2("[70-9] \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E15\u0E48\u0E2D\u0E08\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27", !bodyOf().querySelector(".map-routebar"));
+          bodyOf().querySelector('.map-pin[data-pin="pC"]').click();
+          await wait(220);
+          check2(
+            "[70-9] \u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 \u0E2B\u0E21\u0E38\u0E14 portal \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E02\u0E49\u0E32\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E15\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21",
+            mapsState_C.s.currentId === "m70b",
+            mapsState_C.s.currentId
+          );
+          mapsState_C.s.currentId = "m70a";
+          await renderMaps(bodyOf());
+          await wait(150);
+        }
+        {
+          check2("[70-8] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E21\u0E27\u0E14 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E2B\u0E21\u0E27\u0E14", !bodyOf().querySelector(".map-catbar"));
+          const d4 = mapsState_C.s.data;
+          findMap(d4.maps, "m70a").category = "\u0E42\u0E25\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19";
+          findMap(d4.maps, "m70b").category = "\u0E42\u0E25\u0E01\u0E2D\u0E14\u0E35\u0E15";
+          await saveMaps(d4);
+          await renderMaps(bodyOf());
+          await wait(180);
+          check2(
+            '[70-8] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E2B\u0E21\u0E27\u0E14 + \u0E1B\u0E38\u0E48\u0E21 "\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" + 2 \u0E2B\u0E21\u0E27\u0E14',
+            bodyOf().querySelectorAll(".map-cat").length === 3,
+            bodyOf().querySelectorAll(".map-cat").length
+          );
+          check2(
+            "[70-8] chip \u0E16\u0E39\u0E01\u0E08\u0E31\u0E14\u0E43\u0E15\u0E49\u0E2B\u0E31\u0E27\u0E2B\u0E21\u0E27\u0E14",
+            bodyOf().querySelectorAll(".map-bar-cat").length === 2
+          );
+          [...bodyOf().querySelectorAll(".map-cat")].find((c) => c.textContent.includes("\u0E42\u0E25\u0E01\u0E2D\u0E14\u0E35\u0E15")).click();
+          await wait(180);
+          check2(
+            "[70-8] \u0E01\u0E23\u0E2D\u0E07\u0E2B\u0E21\u0E27\u0E14 \u2192 \u0E40\u0E2B\u0E47\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2B\u0E21\u0E27\u0E14\u0E19\u0E31\u0E49\u0E19",
+            bodyOf().querySelectorAll(".map-chip").length === 1 && bodyOf().querySelector(".map-chip").textContent.includes("\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49"),
+            bodyOf().querySelectorAll(".map-chip").length
+          );
+          check2(
+            "[70-8] \u0E01\u0E23\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2B\u0E21\u0E27\u0E14\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21)",
+            mapsState_C.s.currentId === "m70b",
+            mapsState_C.s.currentId
+          );
+          [...bodyOf().querySelectorAll(".map-cat")].find((c) => c.textContent.trim() === "\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14").click();
+          await wait(180);
+          check2('[70-8] \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B "\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E40\u0E2B\u0E47\u0E19\u0E04\u0E23\u0E1A', bodyOf().querySelectorAll(".map-chip").length === 2);
+          mapsState_C.s.currentId = "m70a";
+          await renderMaps(bodyOf());
+          await wait(150);
+        }
+        const drafts70 = await listDrafts();
+        const dP70 = drafts70[0].dPath;
+        const scf70 = await kapi.join(dP70, "scenes.json");
+        const scd70 = await kapi.readJson(scf70);
+        const g70 = Object.keys(scd70.chapters)[0];
+        const sc70 = scd70.chapters[g70][0];
+        {
+          sc70.mapId = "m70a";
+          sc70.pinId = "pB";
+          await kapi.writeFile(scf70, JSON.stringify(scd70, null, 2));
+          await renderMapsPanel();
+          await wait(400);
+          const badge = bodyOf().querySelector('.map-pin[data-pin="pB"] .map-pin-count');
+          check2(
+            "[70-2] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E1C\u0E39\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E36\u0E49\u0E19\u0E1B\u0E49\u0E32\u0E22\u0E08\u0E33\u0E19\u0E27\u0E19\u0E09\u0E32\u0E01 (\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E1C\u0E31\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48)",
+            !!badge && badge.textContent === "1",
+            badge && badge.textContent
+          );
+          check2(
+            "[70-2] hover \u0E2B\u0E21\u0E38\u0E14\u0E40\u0E2B\u0E47\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01",
+            (bodyOf().querySelector('.map-pin[data-pin="pB"]').title || "").includes(sc70.title),
+            bodyOf().querySelector('.map-pin[data-pin="pB"]').title
+          );
+          check2(
+            "[70-2] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22",
+            !bodyOf().querySelector('.map-pin[data-pin="pA"] .map-pin-count')
+          );
+          check2(
+            "[70-2] \u0E2A\u0E23\u0E38\u0E1B\u0E17\u0E49\u0E32\u0E22\u0E41\u0E1C\u0E07\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49",
+            (bodyOf().querySelector(".map-foot").textContent || "").includes("1 \u0E09\u0E32\u0E01\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49"),
+            bodyOf().querySelector(".map-foot").textContent
+          );
+          check2(
+            "[70-2] scenePinCounts \u0E19\u0E31\u0E1A\u0E15\u0E48\u0E2D\u0E2B\u0E21\u0E38\u0E14\u0E16\u0E39\u0E01",
+            scenePinCounts([
+              { mapId: "m70a", pinId: "pB" },
+              { mapId: "m70a", pinId: "pB" },
+              { mapId: "m70a" }
+            ], "m70a").pB === 2
+          );
+        }
+        {
+          const ch70 = (await kapi.readJson(await kapi.join(dP70, "draft.json"))).chapters.find((c) => c.guid === g70);
+          const loc = await sceneMapLocation(sc70);
+          check2(
+            "[70-1] sceneMapLocation \u0E2D\u0E48\u0E32\u0E19\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49",
+            !!loc && loc.map.id === "m70a" && loc.pin.id === "pB" && loc.text.includes("\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17"),
+            loc && loc.text
+          );
+          check2("[70-1] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \u2192 null", await sceneMapLocation({ id: "x" }) === null);
+          check2(
+            "[70-1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49\u0E16\u0E39\u0E01\u0E25\u0E1A \u2192 \u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E2B\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E1E\u0E31\u0E07",
+            (await sceneMapLocation({ mapId: "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E23\u0E34\u0E07" })).missing === true
+          );
+          openPropsPanel(dP70, ch70, sc70);
+          await wait(500);
+          const btn = $("#props-body").querySelector(".props-mapbtn");
+          check2('[70-1] \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E14\u0E39\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"', !!btn, $("#props-body").textContent.slice(0, 60));
+          check2(
+            "[70-1] \u0E41\u0E1C\u0E07\u0E1A\u0E2D\u0E01\u0E14\u0E49\u0E27\u0E22\u0E27\u0E48\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E19/\u0E2B\u0E21\u0E38\u0E14\u0E44\u0E2B\u0E19",
+            ($("#props-body").querySelector(".props-mapwhere").textContent || "").includes("\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17")
+          );
+          mapsState_C.s.currentId = "m70b";
+          btn.click();
+          await wait(600);
+          check2(
+            "[70-1] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01",
+            isPanelOpen("maps") && mapsState_C.s.currentId === "m70a",
+            mapsState_C.s.currentId
+          );
+          check2("[70-1] \u0E21\u0E35\u0E27\u0E07\u0E40\u0E1E\u0E48\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E23\u0E07\u0E2B\u0E21\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01", !!bodyOf().querySelector(".map-focus"));
+          sceneProps(dP70, ch70, sc70);
+          await wait(600);
+          {
+            const ovs = [...document.querySelectorAll(".k-overlay")];
+            const bx = ovs[ovs.length - 1];
+            check2(
+              '[70-1] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E01\u0E47\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E14\u0E39\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48" \u0E14\u0E49\u0E27\u0E22 (\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19 50)',
+              !!bx.querySelector(".props-mapbtn"),
+              bx.textContent.slice(0, 60)
+            );
+            const cancelBtn = [...bx.querySelectorAll(".k-dlg-btns button")].find((b) => b.textContent.trim() === "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
+            if (cancelBtn) cancelBtn.click();
+            [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          }
+          const sc70b = scd70.chapters[g70][1];
+          if (sc70b) {
+            openPropsPanel(dP70, ch70, sc70b);
+            await wait(450);
+            check2(
+              "[70-1] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 \u0E40\u0E2B\u0E47\u0E19\u0E04\u0E33\u0E0A\u0E27\u0E19\u0E44\u0E1B\u0E1B\u0E31\u0E01",
+              !!$("#props-body").querySelector(".props-maprow") && ($("#props-body").querySelector(".props-maprow").textContent || "").includes("\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1B\u0E31\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07"),
+              $("#props-body").querySelector(".props-maprow")?.textContent
+            );
+          }
+        }
+        {
+          const imgDir70 = await kapi.join(state.root, "Images");
+          const before = (await kapi.listFiles(imgDir70).catch(() => [])).length;
+          const okPng2 = await exportMapPng(findMap(mapsState_C.s.data.maps, "m70a"));
+          await wait(200);
+          const after = await kapi.listFiles(imgDir70).catch(() => []);
+          check2(
+            "[70-5] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19 PNG \u0E25\u0E07\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49",
+            okPng2 === true && after.length === before + 1,
+            `${before} \u2192 ${after.length}`
+          );
+          check2(
+            "[70-5] \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E32\u0E21\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+            after.some((f) => String(f).includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32") && String(f).endsWith(".png")),
+            after.join()
+          );
+          for (const f of after) if (String(f).includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32-map"))
+            await kapi.remove(await kapi.join(imgDir70, String(f)));
+        }
+        {
+          await buildTree2();
+          await wait(250);
+          const secHead = [...document.querySelectorAll("#tree .sec-title")].find((h) => h.textContent.includes("\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
+          check2(
+            '[70-11] Explorer \u0E21\u0E35\u0E2B\u0E21\u0E27\u0E14 "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48" \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E19\u0E27\u0E19',
+            !!secHead && secHead.textContent.includes("(2)"),
+            secHead && secHead.textContent
+          );
+          const rows = [...document.querySelectorAll("#tree .map-row")];
+          check2("[70-11] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E43\u0E1A", rows.length === 2, rows.length);
+          check2(
+            "[70-11] \u0E41\u0E16\u0E27\u0E42\u0E0A\u0E27\u0E4C\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E21\u0E38\u0E14/\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07",
+            (rows.find((r) => r.textContent.includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32")).textContent || "").includes("3\u{1F4CD}"),
+            rows.map((r) => r.textContent).join(" | ")
+          );
+          check2(
+            "[70-11] \u0E41\u0E16\u0E27\u0E08\u0E31\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E15\u0E32\u0E21\u0E2B\u0E21\u0E27\u0E14\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49",
+            document.querySelectorAll("#tree .map-row-cat").length === 2
+          );
+          check2(
+            "[70-11] \u0E41\u0E16\u0E27\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E44\u0E14\u0E49\u0E14\u0E49\u0E27\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E21\u0E38\u0E14 (data-search)",
+            (rows.find((r) => r.textContent.includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32")).dataset.search || "").includes("\u0E1B\u0E23\u0E32\u0E2A\u0E32\u0E17")
+          );
+          mapsState_C.s.currentId = "m70a";
+          rows.find((r) => r.textContent.includes("\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49")).click();
+          await wait(400);
+          check2(
+            "[70-11] \u0E04\u0E25\u0E34\u0E01\u0E41\u0E16\u0E27\u0E43\u0E19 Explorer \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E43\u0E1A\u0E19\u0E31\u0E49\u0E19",
+            isPanelOpen("maps") && mapsState_C.s.currentId === "m70b",
+            mapsState_C.s.currentId
+          );
+        }
+        {
+          mapsState_C.s.currentId = "m70a";
+          await renderMaps(bodyOf());
+          await wait(200);
+          const stage = bodyOf().querySelector(".map-stage");
+          const zin = [...bodyOf().querySelectorAll(".map-tools2 .cmp-mini")].find((b) => b.textContent.includes("\u2795"));
+          zin.click();
+          await wait(60);
+          zin.click();
+          await wait(60);
+          const canScroll = stage.scrollWidth - stage.clientWidth > 4;
+          check2(
+            "[71-1] \u0E0B\u0E39\u0E21\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E08\u0E2D\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21\u0E0B\u0E49\u0E32\u0E22\u0E1A\u0E19 (\u0E22\u0E36\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07)",
+            !canScroll || stage.scrollLeft > 0,
+            `scrollLeft=${stage.scrollLeft} w=${stage.scrollWidth}/${stage.clientWidth}`
+          );
+          const midBefore = (stage.scrollLeft + stage.clientWidth / 2) / (stage.scrollWidth || 1);
+          zin.click();
+          await wait(80);
+          const midAfter = (stage.scrollLeft + stage.clientWidth / 2) / (stage.scrollWidth || 1);
+          check2(
+            "[71-1] \u0E08\u0E38\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E1A\u0E19\u0E20\u0E32\u0E1E\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E08\u0E38\u0E14\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E0B\u0E39\u0E21",
+            Math.abs(midAfter - midBefore) < 0.06,
+            `${midBefore.toFixed(3)} \u2192 ${midAfter.toFixed(3)}`
+          );
+          [...bodyOf().querySelectorAll(".map-tools2 .cmp-mini")].find((b) => b.textContent.includes("\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D")).click();
+          await wait(80);
+        }
+        {
+          check2(
+            "[71-3] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E2B\u0E21\u0E38\u0E14\u0E04\u0E23\u0E1A (\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D + 3 \u0E42\u0E2B\u0E21\u0E14 + \u0E02\u0E19\u0E32\u0E14)",
+            !!bodyOf().querySelector(".map-tools3") && bodyOf().querySelectorAll(".map-tools3 .map-tool-btn").length === 3,
+            bodyOf().querySelectorAll(".map-tools3 .map-tool-btn").length
+          );
+          check2(
+            "[71-3] \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E40\u0E1B\u0E34\u0E14/\u0E14\u0E39",
+            bodyOf().querySelector('.map-tool-btn[data-tool="open"]').classList.contains("on")
+          );
+          check2("[71-3] \u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E34\u0E14: \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E15\u0E49\u0E2B\u0E21\u0E38\u0E14", bodyOf().querySelectorAll(".map-pin-label").length >= 2);
+          [...bodyOf().querySelectorAll(".map-tools3 .cmp-mini")].find((b) => b.textContent.includes("\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D")).click();
+          await wait(150);
+          check2('[71-3] \u0E1B\u0E34\u0E14 "\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D" \u2192 \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E32\u0E22', bodyOf().querySelectorAll(".map-pin-label").length === 0);
+          [...bodyOf().querySelectorAll(".map-tools3 .cmp-mini")].find((b) => b.textContent.includes("\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D")).click();
+          await wait(150);
+          check2("[71-3] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32", bodyOf().querySelectorAll(".map-pin-label").length >= 2);
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          bodyOf().querySelector('.map-pin[data-pin="pA"]').click();
+          await wait(250);
+          check2(
+            "[71-3] \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E1B\u0E34\u0E14/\u0E14\u0E39: \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49\u0E44\u0E02",
+            document.querySelectorAll(".k-overlay").length === 0,
+            document.querySelectorAll(".k-overlay").length
+          );
+          bodyOf().querySelector('.map-tool-btn[data-tool="edit"]').click();
+          await wait(150);
+          bodyOf().querySelector('.map-pin[data-pin="pA"]').click();
+          await wait(300);
+          const ovs71 = [...document.querySelectorAll(".k-overlay")];
+          check2(
+            "[71-3] \u0E42\u0E2B\u0E21\u0E14\u0E41\u0E01\u0E49\u0E44\u0E02: \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2B\u0E21\u0E38\u0E14",
+            ovs71.length === 1 && (ovs71[0].textContent || "").includes("\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2B\u0E21\u0E38\u0E14"),
+            ovs71.length + ":" + (ovs71[0] ? ovs71[0].textContent.slice(0, 30) : "")
+          );
+          const cB71 = [...ovs71[0].querySelectorAll(".k-dlg-btns button")].find((b) => b.textContent.trim() === "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01");
+          if (cB71) cB71.click();
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          await wait(120);
+          bodyOf().querySelector('.map-tool-btn[data-tool="open"]').click();
+          await wait(150);
+          [...bodyOf().querySelectorAll(".map-tools3 .cmp-mini")].find((b) => b.textContent === "\u2795").click();
+          await wait(250);
+          check2(
+            "[71-3] \u0E1B\u0E38\u0E48\u0E21\u0E02\u0E22\u0E32\u0E22\u0E2B\u0E21\u0E38\u0E14 \u2192 \u0E02\u0E19\u0E32\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E02\u0E36\u0E49\u0E19\u0E41\u0E25\u0E30\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 maps.json",
+            findMap((await loadMaps()).maps, "m70a").pinScale > 1,
+            String(findMap((await loadMaps()).maps, "m70a").pinScale)
+          );
+          check2(
+            "[71-3] \u0E2B\u0E21\u0E38\u0E14\u0E1A\u0E19\u0E08\u0E2D\u0E23\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E02\u0E19\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48 (--pin-scale)",
+            bodyOf().querySelector(".map-pin").style.getPropertyValue("--pin-scale") !== "",
+            bodyOf().querySelector(".map-pin").style.getPropertyValue("--pin-scale")
+          );
+        }
+        {
+          const catFile2 = await kapi.join(state.root, "Wiki", "characters", "cat.json");
+          const catEnt2 = await kapi.readJson(catFile2);
+          catEnt2.images = ["sunset.png"];
+          await kapi.writeFile(catFile2, JSON.stringify(catEnt2, null, 2));
+          const ents71 = await loadAllEntities();
+          const withImg = ents71.find((e) => e.file === catFile2);
+          check2(
+            '[71-2] loadAllEntities \u0E2A\u0E48\u0E07\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E2A\u0E48\u0E07 image:"" \u0E15\u0E32\u0E22\u0E15\u0E31\u0E27)',
+            !!withImg && withImg.image === "sunset.png",
+            withImg && JSON.stringify(withImg.image)
+          );
+          check2(
+            "[71-2] entityPortrait \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E40\u0E01\u0E48\u0E32 (string[]) \u0E41\u0E25\u0E30\u0E43\u0E2B\u0E21\u0E48 (object[])",
+            entityPortrait({ images: ["a.png"] }).file === "a.png" && entityPortrait({ images: [{ file: "b.png" }] }).file === "b.png" && entityPortrait({ images: [] }) === null
+          );
+          const curM = findMap(mapsState_C.s.data.maps, "m70a");
+          curM.pins.push({ ...newPin(45, 25, "entity"), id: "pEnt", entityFile: catFile2, label: "\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27" });
+          await saveMaps(mapsState_C.s.data);
+          await renderMapsPanel();
+          await wait(500);
+          check2(
+            "[71-2] \u0E2B\u0E21\u0E38\u0E14\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E17\u0E35\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27 \u2192 \u0E42\u0E0A\u0E27\u0E4C\u0E23\u0E39\u0E1B\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+            !!bodyOf().querySelector('.map-pin[data-pin="pEnt"] .map-pin-portrait img'),
+            bodyOf().querySelector('.map-pin[data-pin="pEnt"]')?.innerHTML.slice(0, 60)
+          );
+          check2(
+            "[71-2] \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+            !!bodyOf().querySelector('.map-pin[data-pin="pA"] .map-pin-icon') && !bodyOf().querySelector('.map-pin[data-pin="pA"] .map-pin-portrait')
+          );
+          await openNetwork();
+          await wait(900);
+          const nEnt = netInst && netInst.nodes.find((n2) => n2.file === catFile2);
+          check2(
+            "[71-2] Story Network: \u0E42\u0E2B\u0E19\u0E14\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E14\u0E49\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27",
+            !!nEnt && nEnt.image === "sunset.png",
+            nEnt && nEnt.image
+          );
+          check2(
+            "[71-2] Story Network: \u0E23\u0E39\u0E1B\u0E16\u0E39\u0E01\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E08\u0E23\u0E34\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E27\u0E32\u0E14 (_img \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E43\u0E0A\u0E49)",
+            !!nEnt && !!nEnt._img && nEnt._img.naturalWidth > 0,
+            nEnt && nEnt._img ? nEnt._img.naturalWidth : "no _img"
+          );
+          check2(
+            "[71-3] Story Network \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D + 3 \u0E42\u0E2B\u0E21\u0E14 + \u0E2A\u0E44\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E19\u0E32\u0E14\u0E42\u0E2B\u0E19\u0E14",
+            !!document.querySelector("#net-body .net-lbl-btn") && document.querySelectorAll("#net-body .net-tool-btn").length === 3 && !!document.querySelector("#net-body .net-size-slider"),
+            document.querySelectorAll("#net-body .net-tool-btn").length
+          );
+          check2("[71-3] Story Network \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E40\u0E1B\u0E34\u0E14/\u0E14\u0E39", netInst._tool === "open");
+          document.querySelector('#net-body .net-tool-btn[data-tool="move"]').click();
+          await wait(120);
+          check2(
+            "[71-3] \u0E01\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E22\u0E49\u0E32\u0E22 \u2192 \u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E23\u0E34\u0E07 + \u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B",
+            netInst._tool === "move" && netInst.canvas.classList.contains("net-move-mode")
+          );
+          document.querySelector("#net-body .net-lbl-btn").click();
+          await wait(120);
+          check2("[71-3] \u0E1B\u0E34\u0E14\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07", netInst._showLabels === false);
+          document.querySelector("#net-body .net-lbl-btn").click();
+          await wait(60);
+          const szSl = document.querySelector("#net-body .net-size-slider");
+          szSl.value = "180";
+          szSl.dispatchEvent(new Event("input", { bubbles: true }));
+          await wait(120);
+          check2(
+            "[71-3] \u0E2A\u0E44\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E22\u0E32\u0E22/\u0E22\u0E48\u0E2D\u0E42\u0E2B\u0E19\u0E14\u0E21\u0E35\u0E1C\u0E25",
+            Math.abs(netInst._nodeScale - 1.8) < 0.01,
+            String(netInst._nodeScale)
+          );
+          szSl.value = "100";
+          szSl.dispatchEvent(new Event("input", { bubbles: true }));
+          document.querySelector('#net-body .net-tool-btn[data-tool="open"]').click();
+          await wait(120);
+          {
+            const shipped = JSON.parse(await fetch("templates.json").then((r) => r.text())).templates;
+            check2(
+              "[71-4] templates.json \u0E17\u0E35\u0E48\u0E41\u0E16\u0E21\u0E21\u0E32\u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01 profile \u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15",
+              shipped.every((t4) => !!t4.profile),
+              shipped.filter((t4) => !t4.profile).map((t4) => t4.name).join()
+            );
+            check2(
+              "[71-4] \u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E15\u0E34\u0E21\u0E1A\u0E25\u0E47\u0E2D\u0E01 profile \u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E01\u0E48\u0E32\u0E44\u0E21\u0E48\u0E15\u0E01\u0E02\u0E1A\u0E27\u0E19)",
+              (state.templates || []).filter((t4) => t4.builtIn).every((t4) => !!t4.profile),
+              (state.templates || []).filter((t4) => t4.builtIn && !t4.profile).map((t4) => t4.name).join()
+            );
+            check2(
+              '[71-4] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E21\u0E35 field "Status" \u0E08\u0E23\u0E34\u0E07 (\u0E42\u0E04\u0E49\u0E14\u0E40\u0E14\u0E34\u0E21\u0E2D\u0E48\u0E32\u0E19 fields.Status \u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E21\u0E35\u0E43\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15)',
+              state.templates.filter((t4) => t4.entityTypeKey === "characters").every((t4) => (t4.fields || []).some((f) => f.key === "Status"))
+            );
+            const locDir = await kapi.join(state.root, "Wiki", "locations");
+            await kapi.mkdir(locDir);
+            const locTpl = state.templates.find((t4) => t4.entityTypeKey === "locations");
+            const locFile = await kapi.join(locDir, "ent71-loc.json");
+            const locEnt = {
+              id: guid(),
+              entityTypeKey: "locations",
+              name: "\u0E17\u0E48\u0E32\u0E40\u0E23\u0E37\u0E2D\u0E40\u0E01\u0E48\u0E32",
+              aliases: ["\u0E17\u0E48\u0E32\u0E40\u0E01\u0E48\u0E32"],
+              fields: {},
+              customProperties: {},
+              images: ["sunset.png"],
+              sections: [],
+              relationships: [],
+              templateId: locTpl ? locTpl.id : ""
+            };
+            if (locTpl) applyTemplate(locEnt, locTpl);
+            locEnt.fields.Type = "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E17\u0E48\u0E32";
+            locEnt.fields.Region = "\u0E0A\u0E32\u0E22\u0E1D\u0E31\u0E48\u0E07\u0E43\u0E15\u0E49";
+            await kapi.writeFile(locFile, JSON.stringify(locEnt, null, 2));
+            await openEntity(locFile);
+            await wait(500);
+            const wpane = state.tabs.get(locFile).pane;
+            check2(
+              "[71-4] \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E01\u0E47\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E1B\u0E23\u0E44\u0E1F\u0E25\u0E4C (\u0E40\u0E14\u0E34\u0E21\u0E42\u0E04\u0E49\u0E14\u0E01\u0E31\u0E19\u0E44\u0E27\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30 characters)",
+              !!wpane.querySelector(".wiki-prof"),
+              wpane.innerHTML.slice(0, 80)
+            );
+            check2(
+              "[71-4] \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E42\u0E0A\u0E27\u0E4C\u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E44\u0E14\u0E49",
+              !!wpane.querySelector(".wiki-prof-avatar img"),
+              wpane.querySelector(".wiki-prof-avatar")?.innerHTML.slice(0, 60)
+            );
+            check2(
+              '[71-4] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E23\u0E2D\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01 subtitleField \u0E02\u0E2D\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 (\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48 = \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "\u0E1A\u0E17\u0E1A\u0E32\u0E17")',
+              (wpane.querySelector(".wiki-prof-role")?.textContent || "").includes("\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E17\u0E48\u0E32"),
+              wpane.querySelector(".wiki-prof-role")?.textContent
+            );
+            check2(
+              "[71-4] \u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E22\u0E48\u0E2D\u0E21\u0E32\u0E08\u0E32\u0E01 badgeFields \u0E02\u0E2D\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15",
+              (wpane.querySelector(".wiki-prof-badges")?.textContent || "").includes("\u0E0A\u0E32\u0E22\u0E1D\u0E31\u0E48\u0E07\u0E43\u0E15\u0E49"),
+              wpane.querySelector(".wiki-prof-badges")?.textContent
+            );
+            const charTpl = state.templates.find((t4) => t4.entityTypeKey === "characters");
+            catEnt2.templateId = charTpl ? charTpl.id : "";
+            if (charTpl) applyTemplate(catEnt2, charTpl);
+            catEnt2.fields.Role = "\u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E1E\u0E23\u0E30\u0E40\u0E2D\u0E01";
+            catEnt2.fields.Status = "\u0E40\u0E2A\u0E35\u0E22\u0E0A\u0E35\u0E27\u0E34\u0E15";
+            catEnt2.fields.Gender = "\u0E2B\u0E0D\u0E34\u0E07";
+            await kapi.writeFile(catFile2, JSON.stringify(catEnt2, null, 2));
+            await openEntity(catFile2);
+            await wait(500);
+            const cpane = state.tabs.get(catFile2).pane;
+            check2(
+              "[71-4] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E23\u0E2D\u0E07 = \u0E1A\u0E17\u0E1A\u0E32\u0E17\u0E08\u0E32\u0E01\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15",
+              (cpane.querySelector(".wiki-prof-role")?.textContent || "").includes("\u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E1E\u0E23\u0E30\u0E40\u0E2D\u0E01"),
+              cpane.querySelector(".wiki-prof-role")?.textContent
+            );
+            check2(
+              "[71-4] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23: \u0E1B\u0E49\u0E32\u0E22\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07 + \u0E08\u0E31\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E2A\u0E35\u0E08\u0E32\u0E01 statusWords \u0E43\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15",
+              cpane.querySelector(".wiki-prof-status")?.classList.contains("deceased"),
+              cpane.querySelector(".wiki-prof-status")?.className
+            );
+            check2("[71-4] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23: \u0E23\u0E39\u0E1B\u0E1B\u0E23\u0E30\u0E08\u0E33\u0E15\u0E31\u0E27\u0E22\u0E31\u0E07\u0E02\u0E36\u0E49\u0E19\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21", !!cpane.querySelector(".wiki-prof-avatar img"));
+            const keepProf = charTpl.profile;
+            delete charTpl.profile;
+            state.tabs.get(catFile2).wiki.render();
+            await wait(250);
+            check2(
+              "[71-4] \u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01 profile \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E23\u0E2D\u0E07/\u0E2A\u0E16\u0E32\u0E19\u0E30 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E40\u0E14\u0E32\u0E0A\u0E37\u0E48\u0E2D field \u0E43\u0E19\u0E42\u0E04\u0E49\u0E14)",
+              !cpane.querySelector(".wiki-prof-role") && !cpane.querySelector(".wiki-prof-status"),
+              cpane.querySelector(".wiki-prof")?.textContent?.slice(0, 60)
+            );
+            check2(
+              "[71-4] \u0E41\u0E15\u0E48\u0E23\u0E39\u0E1B+\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07 entity \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E2D\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15)",
+              !!cpane.querySelector(".wiki-prof-avatar") && !!cpane.querySelector(".wiki-prof-name")
+            );
+            charTpl.profile = { subtitleField: "Gender", badgeFields: [] };
+            state.tabs.get(catFile2).wiki.labels = fieldLabels(catEnt2.templateId);
+            state.tabs.get(catFile2).wiki.render();
+            await wait(250);
+            check2(
+              "[71-4] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 subtitleField \u0E43\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 \u2192 \u0E2B\u0E31\u0E27\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35",
+              (cpane.querySelector(".wiki-prof-role")?.textContent || "").includes("\u0E2B\u0E0D\u0E34\u0E07"),
+              cpane.querySelector(".wiki-prof-role")?.textContent
+            );
+            charTpl.profile = keepProf;
+            closeTab(locFile);
+            closeTab(catFile2);
+            await kapi.remove(locFile);
+          }
+          delete catEnt2.images;
+          delete catEnt2.fields;
+          await kapi.writeFile(catFile2, JSON.stringify(
+            { name: "\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15", entityTypeKey: "characters", aliases: ["\u0E41\u0E21\u0E27\u0E14\u0E33"] },
+            null,
+            2
+          ));
+          curM.pins = curM.pins.filter((p) => p.id !== "pEnt");
+          await saveMaps(mapsState_C.s.data);
+        }
+        {
+          const catFile2 = await kapi.join(state.root, "Wiki", "characters", "cat.json");
+          const ce2 = await kapi.readJson(catFile2);
+          ce2.images = ["sunset.png"];
+          await kapi.writeFile(catFile2, JSON.stringify(ce2, null, 2));
+          const keepNc = state.settings.netColors;
+          state.settings.netColors = { cats: { "nc-char": "#00ff00" }, edges: {} };
+          await openNetwork();
+          await wait(900);
+          netInst.readColors();
+          netInst.refresh();
+          await wait(900);
+          {
+            const pr = netInst.pane.getBoundingClientRect();
+            check2(
+              "[72-1] \u0E1C\u0E37\u0E19\u0E27\u0E32\u0E14\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E15\u0E31\u0E49\u0E07\u0E1E\u0E37\u0E49\u0E19 300 \u2192 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A\u0E01\u0E27\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A)",
+              Math.abs(netInst.canvas.width - Math.round(pr.width)) <= 1 && Math.abs(netInst.canvas.height - Math.round(pr.height)) <= 1,
+              `canvas=${netInst.canvas.width}x${netInst.canvas.height} box=${Math.round(pr.width)}x${Math.round(pr.height)}`
+            );
+          }
+          check2(
+            "[72-2] \u0E2A\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E1C\u0E31\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01\u0E18\u0E35\u0E21\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E48\u0E32\u0E04\u0E07\u0E17\u0E35\u0E48\u0E43\u0E19\u0E42\u0E04\u0E49\u0E14",
+            !!netInst._bg && netInst._bg === cssVar("--bg", ""),
+            netInst._bg
+          );
+          check2(
+            "[72-2] \u0E0A\u0E34\u0E1B\u0E2B\u0E21\u0E27\u0E14\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E1D\u0E31\u0E07\u0E2A\u0E35\u0E44\u0E27\u0E49\u0E43\u0E19\u0E42\u0E04\u0E49\u0E14)",
+            document.querySelector('#net-body .net-tcat[data-cat="characters"]').style.getPropertyValue("--tcolor") === "#00ff00",
+            document.querySelector('#net-body .net-tcat[data-cat="characters"]')?.style.cssText
+          );
+          check2(
+            "[72-2] \u0E0A\u0E34\u0E1B\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2A\u0E49\u0E19\u0E01\u0E47\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E2A\u0E35\u0E08\u0E23\u0E34\u0E07\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19",
+            [...document.querySelectorAll("#net-body .net-ttype")].every((b) => !!b.dataset.type)
+          );
+          const nodeC = netInst.nodes.find((n2) => n2.file === catFile2);
+          check2("[72-1] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E42\u0E2B\u0E19\u0E14\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E21\u0E35\u0E23\u0E39\u0E1B\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E27\u0E32\u0E14", !!nodeC && !!nodeC._img, String(!!nodeC));
+          if (nodeC && nodeC._img) {
+            netInst._scale = 1;
+            netInst._cx = netInst.canvas.width / 2 - nodeC.x;
+            netInst._cy = netInst.canvas.height / 2 - nodeC.y;
+            netInst.draw();
+            const ctx2 = netInst.canvas.getContext("2d");
+            const sx2 = Math.round(netInst.canvas.width / 2), sy2 = Math.round(netInst.canvas.height / 2);
+            const inView = sx2 > 40 && sy2 > 40;
+            check2("[72-1] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E42\u0E2B\u0E19\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E20\u0E32\u0E1E", inView, `${sx2},${sy2} / ${netInst.canvas.width}x${netInst.canvas.height}`);
+            if (inView) {
+              const px2 = ctx2.getImageData(sx2, sy2, 1, 1).data;
+              const isGreen = px2[1] > 200 && px2[0] < 80 && px2[2] < 80;
+              check2(
+                "[72-1] \u0E01\u0E25\u0E32\u0E07\u0E42\u0E2B\u0E19\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E39\u0E1B \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E35\u0E2B\u0E21\u0E27\u0E14\u0E17\u0E31\u0E1A\u0E23\u0E39\u0E1B (\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E27\u0E32\u0E14\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E31\u0E19)",
+                !isGreen,
+                `rgb(${px2[0]},${px2[1]},${px2[2]})`
+              );
+              check2(
+                "[72-1] \u0E01\u0E25\u0E32\u0E07\u0E42\u0E2B\u0E19\u0E14\u0E21\u0E35\u0E2A\u0E35\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07)",
+                px2[0] > 90 && px2[3] === 255,
+                `rgb(${px2[0]},${px2[1]},${px2[2]})`
+              );
+              const deg2 = netInst.edges.filter((e) => e.a === nodeC || e.b === nodeC).length;
+              const rr2 = Math.max(
+                14 * netInst._nodeScale,
+                Math.min(28 * netInst._nodeScale, 14 * netInst._nodeScale + deg2 * 0.6 * netInst._nodeScale)
+              );
+              const edge2 = ctx2.getImageData(sx2, Math.round(sy2 - rr2), 1, 1).data;
+              check2(
+                "[72-1] \u0E02\u0E2D\u0E1A\u0E27\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E2B\u0E21\u0E27\u0E14 (\u0E22\u0E31\u0E07\u0E14\u0E39\u0E2D\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E21\u0E27\u0E14\u0E2D\u0E30\u0E44\u0E23)",
+                edge2[1] > 120 && edge2[0] < 160,
+                `rgb(${edge2[0]},${edge2[1]},${edge2[2]})`
+              );
+            }
+          }
+          state.settings.netColors = keepNc;
+          netInst.readColors();
+          netInst.draw();
+          await kapi.writeFile(catFile2, JSON.stringify(
+            { name: "\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15", entityTypeKey: "characters", aliases: ["\u0E41\u0E21\u0E27\u0E14\u0E33"] },
+            null,
+            2
+          ));
+        }
+        {
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          showPanel("planner");
+          await renderFeaturePanel("planner");
+          await wait(700);
+          check2("[72-3] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: Planner \u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", isPanelOpen("planner") && !!plannerInst);
+          const tmpNode72 = plannerInst.data.addNode("card", "\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A 72", "", 40, 40);
+          plannerInst._syncDirty && plannerInst._syncDirty();
+          check2("[72-3] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", plannerInst.data.isDirty() === true);
+          hidePanel("planner");
+          await wait(400);
+          check2(
+            "[72-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07 Planner \u0E15\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 = \u0E1B\u0E34\u0E14\u0E40\u0E25\u0E22 \u0E44\u0E21\u0E48\u0E16\u0E32\u0E21",
+            !isPanelOpen("planner") && document.querySelectorAll(".k-overlay").length === 0,
+            `open=${isPanelOpen("planner")} ov=${document.querySelectorAll(".k-overlay").length}`
+          );
+          check2(
+            "[72-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E17\u0E34\u0E49\u0E07\u0E07\u0E32\u0E19 \u2014 \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E22\u0E31\u0E07\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E04\u0E27\u0E32\u0E21\u0E08\u0E33\u0E04\u0E23\u0E1A",
+            !!plannerInst && plannerInst.data.isDirty() === true
+          );
+          const dl = allDirtyList();
+          check2(
+            "[72-4] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E15\u0E48\u0E41\u0E17\u0E47\u0E1A \u2192 \u0E2B\u0E32\u0E22\u0E40\u0E07\u0E35\u0E22\u0E1A\u0E15\u0E2D\u0E19\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)",
+            dl.some((x) => x.title.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19")),
+            JSON.stringify(dl.map((x) => x.title))
+          );
+          check2(
+            "[72-4] \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E21\u0E35\u0E17\u0E31\u0E49\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E41\u0E25\u0E30\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19",
+            dirtyRegistry.has("tabs") && dirtyRegistry.has("planner"),
+            dirtyRegistry.ids().join()
+          );
+          const pk = dl.find((x) => x.title.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19")).key;
+          const rr = await dirtyRegistry.saveKeys([pk]);
+          await wait(300);
+          check2(
+            "[72-4] \u0E2A\u0E31\u0E48\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1C\u0E48\u0E32\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07",
+            rr.saved === 1 && plannerInst.data.isDirty() === false,
+            JSON.stringify(rr) + " dirty=" + plannerInst.data.isDirty()
+          );
+          check2(
+            "[72-4] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E31\u0E19\u0E17\u0E35",
+            !allDirtyList().some((x) => x.title.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19"))
+          );
+          plannerInst.data.removeNode(tmpNode72.id);
+          await plannerInst.save(true);
+          await wait(200);
+        }
+        {
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          logStore.clear();
+          log("info", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A72: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B");
+          log("warn", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A72: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E15\u0E37\u0E2D\u0E19");
+          log("error", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A72: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14", new Error("\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
+          log("debug", "\u0E2D\u0E37\u0E48\u0E1972: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14");
+          showPanel("log");
+          await renderLogPanel(true);
+          await wait(200);
+          const lb = $("#log-body");
+          check2(
+            "[72-5] \u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E16\u0E27\u0E21\u0E35\u0E0A\u0E31\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E14\u0E34\u0E1A\u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27)",
+            lb.querySelectorAll(".k-log-row").length >= 3,
+            lb.querySelectorAll(".k-log-row").length
+          );
+          check2(
+            "[72-5] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D: \u0E0A\u0E34\u0E1B\u0E23\u0E30\u0E14\u0E31\u0E1A 4 \u0E15\u0E31\u0E27 + \u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E21\u0E32 + \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32",
+            document.querySelectorAll(".k-log-bar .k-log-chip").length === 4 && !!document.querySelector(".k-log-src-sel") && !!document.querySelector(".k-log-q")
+          );
+          check2(
+            "[72-5] \u0E0A\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E08\u0E23\u0E34\u0E07\u0E02\u0E2D\u0E07\u0E41\u0E15\u0E48\u0E25\u0E30\u0E23\u0E30\u0E14\u0E31\u0E1A",
+            document.querySelector(".k-log-chip-error").textContent.includes("1"),
+            document.querySelector(".k-log-chip-error").textContent
+          );
+          check2(
+            "[72-5] \u0E41\u0E16\u0E27 error \u0E41\u0E22\u0E01\u0E2A\u0E35\u0E44\u0E14\u0E49 (\u0E2B\u0E32 error \u0E40\u0E08\u0E2D\u0E14\u0E49\u0E27\u0E22\u0E15\u0E32)",
+            lb.querySelectorAll(".k-log-error").length === 1
+          );
+          check2(
+            "[72-5] error \u0E1E\u0E01 stack \u0E21\u0E32\u0E14\u0E49\u0E27\u0E22 + \u0E01\u0E32\u0E07\u0E14\u0E39\u0E44\u0E14\u0E49",
+            !!lb.querySelector(".k-log-error .k-log-detail") && lb.querySelector(".k-log-error .k-log-detail").textContent.includes("\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14")
+          );
+          check2(
+            "[72-5] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E0B\u0E48\u0E2D\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 (debug)",
+            !lb.textContent.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14")
+          );
+          const errRow = lb.querySelector(".k-log-error");
+          errRow.click();
+          await wait(80);
+          check2(
+            "[72-5] \u0E04\u0E25\u0E34\u0E01\u0E41\u0E16\u0E27\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E07\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E44\u0E14\u0E49",
+            lb.querySelector(".k-log-error .k-log-detail").style.display !== "none"
+          );
+          [...document.querySelectorAll(".k-log-chip")].find((b) => b.dataset.lv === "info").click();
+          await wait(120);
+          check2(
+            '[72-5] \u0E1B\u0E34\u0E14\u0E0A\u0E34\u0E1B "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B" \u2192 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 info \u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23',
+            !lb.textContent.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B") && lb.textContent.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14")
+          );
+          [...document.querySelectorAll(".k-log-chip")].find((b) => b.dataset.lv === "info").click();
+          await wait(120);
+          const lq = document.querySelector(".k-log-q");
+          lq.value = "\u0E40\u0E15\u0E37\u0E2D\u0E19";
+          lq.dispatchEvent(new Event("input", { bubbles: true }));
+          await wait(150);
+          check2("[72-5] \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E43\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E14\u0E49", lb.querySelectorAll(".k-log-row").length === 1 && lb.textContent.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E15\u0E37\u0E2D\u0E19"), lb.querySelectorAll(".k-log-row").length);
+          lq.value = "";
+          lq.dispatchEvent(new Event("input", { bubbles: true }));
+          await wait(150);
+          check2(
+            '[72-5] \u0E16\u0E2D\u0E14 "\u0E17\u0E35\u0E48\u0E21\u0E32" \u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34',
+            [...lb.querySelectorAll(".k-log-src")].some((s) => s.textContent === "\u0E17\u0E14\u0E2A\u0E2D\u0E1A72"),
+            [...lb.querySelectorAll(".k-log-src")].map((s) => s.textContent).join()
+          );
+          const ssel = document.querySelector(".k-log-src-sel");
+          check2("[72-5] \u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E21\u0E32\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07", ssel.options.length >= 2, ssel.options.length);
+          const before72 = logStore.counts().error;
+          console.error("\u0E17\u0E14\u0E2A\u0E2D\u0E1A72 console:", new Error("\u0E21\u0E32\u0E08\u0E32\u0E01 console"));
+          await wait(120);
+          check2(
+            "[72-5] console.error \u0E16\u0E39\u0E01\u0E14\u0E31\u0E01\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E09\u0E22 \u0E46)",
+            logStore.counts().error === before72 + 1,
+            `${before72} \u2192 ${logStore.counts().error}`
+          );
+          await renderLogPanel(true);
+          await wait(120);
+          check2(
+            "[72-5] \u0E41\u0E25\u0E30\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E41\u0E1C\u0E07\u0E08\u0E23\u0E34\u0E07",
+            lb.textContent.includes("\u0E21\u0E32\u0E08\u0E32\u0E01 console") || lb.textContent.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A72 console"),
+            lb.textContent.slice(-160)
+          );
+          check2(
+            "[72-5] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E14\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07 (cmd:) \u2014 \u0E44\u0E25\u0E48\u0E22\u0E49\u0E2D\u0E19\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32\u0E01\u0E48\u0E2D\u0E19\u0E1E\u0E31\u0E07\u0E01\u0E14\u0E2D\u0E30\u0E44\u0E23",
+            logStore.all().some((r) => r.source === "cmd") || await (async () => {
+              await handleCommand("save-all");
+              await wait(200);
+              return logStore.all().some((r) => r.source === "cmd");
+            })(),
+            logStore.sources().join()
+          );
+          await kapi.testShot("/tmp/k2_log72.png");
+          check2(
+            "[72-5] \u0E25\u0E49\u0E32\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E14\u0E49",
+            (() => {
+              [...document.querySelectorAll(".k-log-btn")].find((b) => b.textContent.includes("\u0E25\u0E49\u0E32\u0E07")).click();
+              return logStore.size() === 0;
+            })()
+          );
+          hidePanel("log");
+        }
+        {
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          await openNetwork();
+          await wait(900);
+          const posOf = () => netInst.nodes.map((n2) => n2.name + ":" + Math.round(n2.x) + "," + Math.round(n2.y)).join("|");
+          const before73 = posOf();
+          check2("[73-1] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E42\u0E2B\u0E19\u0E14\u0E43\u0E19\u0E1C\u0E31\u0E07", netInst.nodes.length >= 2, netInst.nodes.length);
+          await netInst.refresh();
+          await wait(700);
+          check2(
+            "[73-1] \u0E01\u0E14\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E19\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E2A\u0E38\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07)",
+            before73 === posOf(),
+            (before73 + " \u2192 " + posOf()).slice(0, 150)
+          );
+          {
+            const k = Object.keys(localStorage).find((x) => x.startsWith("k2-net-layout2:")) || "";
+            const stored = JSON.parse(k && localStorage.getItem(k) || "{}");
+            check2(
+              "[73-1] \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E42\u0E2B\u0E19\u0E14 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E35\u0E48\u0E25\u0E32\u0E01",
+              Object.keys(stored).length >= netInst.nodes.filter((n2) => n2.name).length,
+              Object.keys(stored).length + "/" + netInst.nodes.length
+            );
+          }
+          {
+            const target = netInst.nodes[0];
+            let other = null, best = Infinity;
+            for (const n2 of netInst.nodes) {
+              if (n2 === target) continue;
+              const d = Math.hypot(n2.x - target.x, n2.y - target.y);
+              if (d < best) {
+                best = d;
+                other = n2;
+              }
+            }
+            other.x = target.x + 40;
+            other.y = target.y + 30;
+            const d0 = Math.hypot(other.x - target.x, other.y - target.y);
+            netInst._scale = 1;
+            netInst._cx = netInst.canvas.width / 2 - target.x;
+            netInst._cy = netInst.canvas.height / 2 - target.y;
+            netInst.draw();
+            const r0 = netInst.canvas.getBoundingClientRect();
+            netInst.canvas.dispatchEvent(new MouseEvent("mousedown", {
+              bubbles: true,
+              button: 0,
+              shiftKey: true,
+              clientX: r0.left + netInst.canvas.width / 2,
+              clientY: r0.top + netInst.canvas.height / 2
+            }));
+            await wait(150);
+            const d1 = Math.hypot(other.x - target.x, other.y - target.y);
+            const hitProbe = netInst._hit({
+              clientX: r0.left + netInst.canvas.width / 2,
+              clientY: r0.top + netInst.canvas.height / 2
+            });
+            check2(
+              "[73-1] Shift+\u0E04\u0E25\u0E34\u0E01 = \u0E1C\u0E25\u0E31\u0E01\u0E42\u0E2B\u0E19\u0E14\u0E23\u0E2D\u0E1A \u0E46 \u0E2D\u0E2D\u0E01\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E41\u0E23\u0E07\u0E19\u0E49\u0E2D\u0E22\u0E08\u0E19\u0E02\u0E22\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07 1 \u0E1E\u0E34\u0E01\u0E40\u0E0B\u0E25)",
+              d1 > d0 + 100,
+              `${Math.round(d0)} \u2192 ${Math.round(d1)} hit=${hitProbe.node && hitProbe.node.name} xy=${Math.round(hitProbe.x)},${Math.round(hitProbe.y)} target=${Math.round(target.x)},${Math.round(target.y)} canvas=${netInst.canvas.width}x${netInst.canvas.height} rect=${Math.round(r0.width)}x${Math.round(r0.height)}`
+            );
+            const pos1 = Math.round(other.x) + "," + Math.round(other.y);
+            await netInst.refresh();
+            await wait(700);
+            const other2 = netInst.nodes.find((n2) => n2.name === other.name);
+            check2(
+              "[73-1] \u0E1C\u0E25\u0E31\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E32\u0E27\u0E23 \u2014 \u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E25\u0E22)",
+              Math.round(other2.x) + "," + Math.round(other2.y) === pos1,
+              pos1 + " \u2192 " + Math.round(other2.x) + "," + Math.round(other2.y)
+            );
+          }
+        }
+        {
+          const keepCtl = state.settings.netControls;
+          state.settings.netControls = { orbitButton: "middle", panButton: "left" };
+          netInst.readColors();
+          check2(
+            "[73-2] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07\u0E2B\u0E21\u0E38\u0E19 3D (\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E23\u0E38\u0E48\u0E19\u0E01\u0E48\u0E2D\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32)",
+            netInst._controls.orbitButton === "middle"
+          );
+          check2(
+            '[73-2] \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E43\u0E15\u0E49\u0E1C\u0E31\u0E07\u0E1A\u0E2D\u0E01 "\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07" \u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49',
+            (netInst._tip.textContent || "").includes("\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07"),
+            netInst._tip.textContent
+          );
+          state.settings.netControls = { orbitButton: "right", panButton: "left" };
+          netInst.readColors();
+          check2(
+            "[73-2] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \u2192 \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E32\u0E22\u0E15\u0E31\u0E27)",
+            (netInst._tip.textContent || "").includes("\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32") && !(netInst._tip.textContent || "").includes("\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07"),
+            netInst._tip.textContent
+          );
+          state.settings.netControls = { orbitButton: "middle", panButton: "left" };
+          netInst.readColors();
+          netInst._mode3D = true;
+          const rc = netInst.canvas.getBoundingClientRect();
+          netInst.canvas.dispatchEvent(new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            button: 1,
+            clientX: rc.left + 30,
+            clientY: rc.top + 30
+          }));
+          check2("[73-2] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14 3D \u2192 \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E21\u0E38\u0E19\u0E08\u0E23\u0E34\u0E07", !!netInst._orbitDrag);
+          netInst._up();
+          netInst._mode3D = false;
+          state.settings.netControls = keepCtl;
+          netInst.readColors();
+        }
+        {
+          const keepC = state.settings.netColors;
+          check2(
+            "[73-3] \u0E19\u0E34\u0E22\u0E32\u0E21\u0E2A\u0E35\u0E04\u0E23\u0E2D\u0E1A\u0E04\u0E25\u0E38\u0E21\u0E17\u0E38\u0E01\u0E2B\u0E21\u0E27\u0E14\u0E42\u0E2B\u0E19\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E27\u0E32\u0E14",
+            ["characters", "locations", "items", "lore", "scene", "chapter", "book", "section"].every((k) => NET_COLOR_DEFS.some((d) => d.target === "node" && d.id === k))
+          );
+          check2(
+            "[73-3] \u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E15\u0E31\u0E49\u0E07\u0E44\u0E14\u0E49\u0E23\u0E32\u0E22\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E04\u0E38\u0E21\u0E17\u0E38\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17)",
+            REL_TYPES.every((t23) => NET_COLOR_DEFS.some((d) => d.target === "edge" && d.id === t23.key))
+          );
+          state.settings.netColors = { "nc-book": "#00ff00", "ne-rt-enemy": "#ff00ff", "nb-bg": "#010203" };
+          netInst.readColors();
+          check2(
+            "[73-3] \u0E40\u0E25\u0E48\u0E21 (book) \u0E41\u0E22\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E08\u0E32\u0E01\u0E15\u0E2D\u0E19/\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27",
+            netInst._catCol.book === "#00ff00" && netInst._catCol.section !== "#00ff00",
+            netInst._catCol.book + "/" + netInst._catCol.section
+          );
+          check2("[73-3] \u0E2A\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E23\u0E32\u0E22\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E21\u0E35\u0E1C\u0E25\u0E08\u0E23\u0E34\u0E07", netInst._edgeCol.enemy === "#ff00ff");
+          check2("[73-3] \u0E2A\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E1C\u0E31\u0E07\u0E15\u0E31\u0E49\u0E07\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E15\u0E32\u0E21\u0E18\u0E35\u0E21\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E2D\u0E07)", netInst._bg === "#010203");
+          state.settings.netColors = keepC;
+          netInst.readColors();
+          check2("[73-3] \u0E40\u0E2D\u0E32\u0E04\u0E48\u0E32\u0E2D\u0E2D\u0E01 \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E15\u0E32\u0E21\u0E18\u0E35\u0E21", netInst._bg === cssVar("--bg", ""));
+        }
+        {
+          netInst._scale = 1;
+          netInst._cx = 0;
+          netInst._cy = 0;
+          netInst.draw();
+          const t1 = netInst._sb.textContent;
+          check2(
+            "[73-4] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01 X/Y/Z (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 \u2715 \u0E01\u0E31\u0E1A Z \u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E07\u0E28\u0E32)",
+            /X -?\d+/.test(t1) && /Y -?\d+/.test(t1) && /Z -?\d+/.test(t1),
+            t1
+          );
+          const cam0 = { scale: netInst._scale, cx: netInst._cx, cy: netInst._cy };
+          const c0 = viewCenter(cam0, netInst.canvas.width, netInst.canvas.height);
+          netInst._zoom({ deltaY: -100, clientX: 0, clientY: 0, preventDefault() {
+          } });
+          const c1 = viewCenter(
+            { scale: netInst._scale, cx: netInst._cx, cy: netInst._cy },
+            netInst.canvas.width,
+            netInst.canvas.height
+          );
+          check2(
+            "[73-4] \u0E0B\u0E39\u0E21\u0E41\u0E25\u0E49\u0E27\u0E1E\u0E34\u0E01\u0E31\u0E14\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 (\u0E01\u0E25\u0E49\u0E2D\u0E07\u0E22\u0E36\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07)",
+            Math.abs(c1.x - c0.x) < 0.5 && Math.abs(c1.y - c0.y) < 0.5,
+            Math.round(c0.x) + "," + Math.round(c0.y) + " \u2192 " + Math.round(c1.x) + "," + Math.round(c1.y)
+          );
+          check2("[73-4] \u0E0B\u0E39\u0E21\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22)", netInst._scale > 1);
+          netInst._scale = 1;
+          netInst._cx = 0;
+          netInst._cy = 0;
+          netInst.draw();
+          {
+            const ctxA = netInst.canvas.getContext("2d");
+            const h2 = netInst.canvas.height;
+            let found2 = false;
+            for (let dx = 34; dx <= 60 && !found2; dx++) {
+              const px2 = ctxA.getImageData(dx, h2 - 34, 1, 1).data;
+              if (px2[3] === 255 && (px2[0] > 90 || px2[1] > 90)) found2 = true;
+            }
+            check2(
+              "[73-4] \u0E21\u0E35\u0E41\u0E01\u0E19\u0E1A\u0E2D\u0E01\u0E17\u0E34\u0E28\u0E27\u0E32\u0E14\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21\u0E25\u0E48\u0E32\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E1C\u0E31\u0E07",
+              found2,
+              netInst.canvas.width + "x" + h2
+            );
+          }
+          check2("[73-4] axisVectors: 3D \u0E44\u0E14\u0E49\u0E41\u0E01\u0E19 Z \u0E21\u0E32\u0E14\u0E49\u0E27\u0E22", !!axisVectors(0.4, -0.3, true).z);
+        }
+        {
+          const bp = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          bp.closeBranchPlan();
+          check2("[73-5] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19: \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E19", (await bp.listBranchPlans()).length === 0);
+          const p1 = await bp.saveBranchPlanAs("\u0E41\u0E1C\u0E19\u0E2B\u0E25\u0E31\u0E01");
+          check2(
+            "[73-5] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48 \u2192 \u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E19 Branches/",
+            !!p1 && await kapi.exists(p1) && String(p1).includes("Branches"),
+            String(p1)
+          );
+          const p2 = await bp.saveBranchPlanAs("\u0E41\u0E1C\u0E19\u0E2B\u0E25\u0E31\u0E01");
+          check2(
+            "[73-5] \u0E0A\u0E37\u0E48\u0E2D\u0E0B\u0E49\u0E33 \u2192 \u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
+            p2 !== p1 && await kapi.exists(p1) && await kapi.exists(p2),
+            p1 + " | " + p2
+          );
+          const list73 = await bp.listBranchPlans();
+          check2("[73-5] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E19\u0E40\u0E2B\u0E47\u0E19\u0E04\u0E23\u0E1A 2 \u0E41\u0E1C\u0E19", list73.length === 2, list73.map((x) => x.name).join());
+          check2("[73-5] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19\u0E44\u0E14\u0E49", await bp.openBranchPlan(p1) === true && bp.currentBranchPlan().path === p1);
+          check2("[73-5] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07", bp.isBranchPlanDirty() === false);
+          await openBranchingTree();
+          await wait(800);
+          check2(
+            "[73-5] \u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E1C\u0E19 + \u0E1B\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E41\u0E1C\u0E19\u0E04\u0E23\u0E1A",
+            !!document.querySelector("#branch-body .branch-plan-sel") && document.querySelectorAll("#branch-body .branch-plans .branch-zbtn").length === 5,
+            document.querySelectorAll("#branch-body .branch-plans .branch-zbtn").length
+          );
+          check2(
+            '[73-5] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E1C\u0E19\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E04\u0E23\u0E1A (+ \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E41\u0E1C\u0E19")',
+            document.querySelector("#branch-body .branch-plan-sel").options.length === 3,
+            document.querySelector("#branch-body .branch-plan-sel").options.length
+          );
+          await buildTree2();
+          await wait(300);
+          check2(
+            '[73-5] Explorer \u0E21\u0E35\u0E2B\u0E21\u0E27\u0E14 "\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22" \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E19\u0E27\u0E19',
+            [...document.querySelectorAll("#tree .sec-title")].some((h) => h.textContent.includes("\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22") && h.textContent.includes("(2)")),
+            [...document.querySelectorAll("#tree .sec-title")].map((h) => h.textContent).join("|").slice(0, 140)
+          );
+          check2(
+            "[73-5] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E1C\u0E19\u0E43\u0E19 Explorer \u0E04\u0E23\u0E1A",
+            document.querySelectorAll("#tree .branch-plan-row").length === 2
+          );
+          check2(
+            "[73-5] \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E44\u0E27\u0E49",
+            !!document.querySelector("#tree .branch-plan-row.planner-current")
+          );
+          bp.currentBranchPlan().live.colors["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"] = "#ff0000";
+          check2("[73-5] \u0E41\u0E01\u0E49\u0E41\u0E1C\u0E19\u0E41\u0E25\u0E49\u0E27\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", bp.isBranchPlanDirty() === true);
+          check2(
+            "[73-5] \u0E41\u0E1C\u0E19\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 (\u0E01\u0E0E alpha.72 \u0E02\u0E49\u0E2D 4)",
+            allDirtyList().some((x) => x.title.includes("\u0E41\u0E1C\u0E19\u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22")),
+            JSON.stringify(allDirtyList().map((x) => x.title))
+          );
+          await bp.saveBranchPlan(true);
+          check2("[73-5] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E04\u0E49\u0E32\u0E07\u0E2B\u0E32\u0E22", bp.isBranchPlanDirty() === false);
+          check2(
+            "[73-5] \u0E2A\u0E35\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07",
+            (await kapi.readJson(p1)).colors["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"] === "#ff0000"
+          );
+          bp.closeBranchPlan();
+          for (const f of [p1, p2]) if (await kapi.exists(f)) await kapi.remove(f);
+          hidePanel("branch");
+          await buildTree2();
+        }
+        {
+          const wantMin = {
+            kanban: 800,
+            dashboard: 620,
+            planner: 800,
+            branch: 700,
+            timeline: 620,
+            network: 400,
+            books: 400,
+            gallery: 600,
+            "ai-analyzer": 400,
+            "gallery-board": 400
+          };
+          const bad = Object.entries(wantMin).filter(([id, w]) => (PANEL_DEFS.find((d) => d.id === id) || {}).minW !== w);
+          check2(
+            "[73-6] \u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E15\u0E48\u0E33\u0E2A\u0E38\u0E14\u0E16\u0E39\u0E01\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E43\u0E19 PANEL_DEFS \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2E\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E04\u0E49\u0E14\u0E43\u0E19 CSS",
+            bad.length === 0,
+            JSON.stringify(bad)
+          );
+          check2("[73-6] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E30\u0E1A\u0E38 \u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 200px", PANEL_MIN_W_DEFAULT === 200);
+          showPanel("dashboard");
+          await renderFeaturePanel("dashboard");
+          await wait(600);
+          const dashBody = $("#dash-body") && $("#dash-body").closest(".k-panel-body");
+          check2(
+            "[73-6] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E15\u0E48\u0E33\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E19\u0E31\u0E49\u0E19",
+            !!dashBody && dashBody.style.getPropertyValue("--panel-min-w") === "620px",
+            dashBody ? dashBody.style.cssText : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D .k-panel-body"
+          );
+          const dashKid = dashBody && dashBody.firstElementChild;
+          check2(
+            "[73-6] \u0E25\u0E39\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E15\u0E48\u0E33\u0E2A\u0E38\u0E14\u0E08\u0E23\u0E34\u0E07 (\u2192 \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E1A\u0E35\u0E1A\u0E41\u0E04\u0E1A)",
+            !!dashKid && parseInt(getComputedStyle(dashKid).minWidth, 10) === 620,
+            dashKid ? dashKid.id + ":" + getComputedStyle(dashKid).minWidth : "no kid"
+          );
+          check2(
+            "[73-6] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E44\u0E14\u0E49 (overflow:auto)",
+            !!dashBody && /auto|scroll/.test(getComputedStyle(dashBody).overflowX),
+            dashBody ? getComputedStyle(dashBody).overflowX : ""
+          );
+          showPanel("notes");
+          await wait(300);
+          const nb = $("#notes-body") && $("#notes-body").closest(".k-panel-body");
+          check2(
+            "[73-6] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E30\u0E1A\u0E38 minW \u0E44\u0E14\u0E49\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 200px",
+            !nb || nb.style.getPropertyValue("--panel-min-w") === "200px",
+            nb ? nb.style.getPropertyValue("--panel-min-w") : "no notes body"
+          );
+          hidePanel("notes");
+          hidePanel("dashboard");
+        }
+        {
+          const mapsPath74 = await kapi.join(state.root, "maps.json");
+          await kapi.writeFile(mapsPath74, JSON.stringify({ version: "1.1", maps: [
+            { id: "k74a", name: "\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A 74", pins: [], order: 0 }
+          ] }, null, 2));
+          await buildTree2();
+          await wait(250);
+          const mapRows = () => [...document.querySelectorAll("#tree .map-row")];
+          check2(
+            "[74-K1] \u0E01\u0E48\u0E2D\u0E19\u0E15\u0E31\u0E49\u0E07\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15: \u0E40\u0E2B\u0E47\u0E19\u0E41\u0E16\u0E27\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+            mapRows().length === 1 && mapRows()[0].style.display !== "none"
+          );
+          const draft74 = (await listDrafts())[0];
+          const ch74 = (await kapi.readJson(await kapi.join(draft74.dPath, "draft.json"))).chapters[0];
+          setTreeScope({ guid: ch74.guid, label: ch74.title });
+          await wait(200);
+          check2(
+            '[74-K1] \u0E15\u0E31\u0E49\u0E07\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E1A\u0E17\u0E41\u0E25\u0E49\u0E27 \u0E41\u0E16\u0E27\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22 (\u0E15\u0E49\u0E19\u0E15\u0E2D\u0E02\u0E2D\u0E07\u0E2D\u0E32\u0E01\u0E32\u0E23 "\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E1A\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27")',
+            mapRows().length === 1 && mapRows()[0].style.display !== "none",
+            mapRows().map((r) => r.style.display || "show").join()
+          );
+          check2(
+            "[74-K1] \u0E2B\u0E21\u0E27\u0E14\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E01\u0E47\u0E22\u0E31\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E2D\u0E22\u0E39\u0E48",
+            [...document.querySelectorAll("#tree .sec")].some((x) => x.style.display !== "none" && (x.querySelector(".sec-title") || {}).textContent?.includes("\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"))
+          );
+          check2(
+            "[74-K1] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E19\u0E25\u0E30\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E01\u0E23\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34 (\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E22\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19)",
+            [...document.querySelectorAll("#tree .scene[data-ch-guid]")].some((r) => r.style.display === "none") || [...document.querySelectorAll("#tree .scene[data-ch-guid]")].every((r) => r.dataset.chGuid === ch74.guid),
+            "scoped"
+          );
+          setTreeScope(null);
+          await wait(150);
+          if (await kapi.exists(mapsPath74)) await kapi.remove(mapsPath74);
+          await buildTree2();
+        }
+        {
+          showPanel("planner");
+          await renderFeaturePanel("planner");
+          await wait(700);
+          await buildTree2();
+          await wait(250);
+          const prow = [...document.querySelectorAll("#tree .scene[data-planner]")][0];
+          check2("[74-K1] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19", !!prow, document.querySelectorAll("#tree .scene[data-planner]").length);
+          const textBefore = prow.textContent;
+          plannerInst.data.addNode("card", "\u0E01\u0E32\u0E23\u0E4C\u0E14 74", "", 30, 30);
+          plannerInst._syncDirty();
+          await wait(300);
+          const prow2 = document.querySelector("#tree .scene[data-planner]");
+          check2(
+            "[74-K1] \u0E41\u0E01\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27 **\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E16\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A** (\u0E17\u0E35\u0E48\u0E40\u0E14\u0E35\u0E22\u0E27\u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E23\u0E37\u0E49\u0E2D\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E16\u0E27)",
+            prow2.textContent === textBefore,
+            `"${textBefore}" \u2192 "${prow2.textContent}"`
+          );
+          check2(
+            "[74-K1] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E31\u0E0D\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C \u25B6 / \u25CF \u0E1A\u0E19\u0E41\u0E16\u0E27\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27",
+            !prow2.textContent.includes("\u25B6") && !prow2.textContent.includes("\u25CF"),
+            prow2.textContent
+          );
+          check2(
+            "[74-K1] \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E14\u0E49\u0E27\u0E22 class (\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32/\u0E2A\u0E35) \u0E41\u0E17\u0E19",
+            prow2.classList.contains("planner-current") && prow2.classList.contains("planner-dirty"),
+            prow2.className
+          );
+          check2(
+            "[74-K1] CSS \u0E17\u0E33\u0E43\u0E2B\u0E49\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32 + \u0E2A\u0E35\u0E15\u0E48\u0E32\u0E07\u0E08\u0E32\u0E01\u0E1B\u0E01\u0E15\u0E34",
+            getComputedStyle(prow2).fontWeight >= "600" && getComputedStyle(prow2).color !== getComputedStyle(document.querySelector("#tree .scene:not([data-planner])") || prow2).color,
+            getComputedStyle(prow2).fontWeight + "/" + getComputedStyle(prow2).color
+          );
+          for (let i5 = 0; i5 < 5; i5++) markPlannerRow(plannerInst.data.getPath(), i5 % 2 === 0);
+          const prow3 = document.querySelector("#tree .scene[data-planner]");
+          check2(
+            "[74-K1] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E23\u0E31\u0E27 \u0E46 \u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E27\u0E48\u0E32\u0E07",
+            !!prow3 && prow3.textContent.trim().length > 0 && prow3.textContent === textBefore,
+            prow3 ? `"${prow3.textContent}"` : "\u0E2B\u0E32\u0E22"
+          );
+          plannerInst.data.removeNode(plannerInst.data.getAllNodes().slice(-1)[0].id);
+          await plannerInst.save(true);
+          hidePanel("planner");
+        }
+        {
+          const bp = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          const BPD = await Promise.resolve().then(() => (init_branch_plans(), branch_plans_exports));
+          bp.closeBranchPlan();
+          let scenes74 = await bp.collectScenes();
+          if (!scenes74.some((x) => (x.choices || []).length) && scenes74.length) {
+            await bp.mutateChoices(scenes74[0], () => [{ text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19 74", nextSceneId: "" }]);
+            await wait(250);
+            scenes74 = await bp.collectScenes();
+          }
+          const withCh = scenes74.find((x) => (x.choices || []).length);
+          check2(
+            "[74-5] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
+            !!withCh,
+            JSON.stringify(scenes74.map((x) => [x.title, (x.choices || []).length]))
+          );
+          const pathA = await bp.newPlanFromCurrent("\u0E41\u0E1C\u0E19 A");
+          check2(
+            "[74-5] \u0E41\u0E1C\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E48\u0E32\u0E22\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E08\u0E38\u0E14\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19",
+            Object.keys(bp.currentBranchPlan().live.choices).length > 0,
+            JSON.stringify(bp.currentBranchPlan().live.choices).slice(0, 80)
+          );
+          const sceneFileBefore = JSON.stringify(await kapi.readJson(await kapi.join(withCh.dPath, "scenes.json")));
+          await bp.mutateChoices(withCh, (list) => [...list, { text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A", nextSceneId: "" }]);
+          await wait(200);
+          check2(
+            "[74-5] \u0E41\u0E01\u0E49\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 \u2192 \u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19\u0E41\u0E1C\u0E19",
+            BPD.planChoicesFor(bp.currentBranchPlan().live, withCh.id).some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A")
+          );
+          check2(
+            "[74-5] \u0E41\u0E25\u0E30 **\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30 scenes.json** (\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)",
+            JSON.stringify(await kapi.readJson(await kapi.join(withCh.dPath, "scenes.json"))) === sceneFileBefore
+          );
+          check2("[74-5] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", bp.isBranchPlanDirty() === true);
+          await bp.saveBranchPlan(true);
+          check2(
+            "[74-5] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E1C\u0E19\u0E08\u0E23\u0E34\u0E07",
+            (await kapi.readJson(pathA)).choices[withCh.id].some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A")
+          );
+          const pathB = await bp.newPlanFromCurrent("\u0E41\u0E1C\u0E19 B");
+          await bp.mutateChoices(withCh, (list) => [
+            ...list.filter((c) => c.text !== "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A"),
+            { text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 B", nextSceneId: "" }
+          ]);
+          await bp.saveBranchPlan(true);
+          check2(
+            "[74-5] \u0E2A\u0E2D\u0E07\u0E41\u0E1C\u0E19\u0E16\u0E37\u0E2D\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E19\u0E25\u0E30\u0E0A\u0E38\u0E14\u0E08\u0E23\u0E34\u0E07",
+            (await kapi.readJson(pathA)).choices[withCh.id].some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A") && (await kapi.readJson(pathB)).choices[withCh.id].some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 B") && !(await kapi.readJson(pathB)).choices[withCh.id].some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A")
+          );
+          const cmp2 = await bp.compareWithPlan(pathA);
+          check2(
+            "[74-5] \u0E40\u0E17\u0E35\u0E22\u0E1A\u0E41\u0E1C\u0E19\u0E44\u0E14\u0E49 + \u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E01\u0E35\u0E48\u0E09\u0E32\u0E01",
+            cmp2.summary.total >= 1 && cmp2.summary.diff >= 1,
+            JSON.stringify(cmp2.summary)
+          );
+          check2(
+            "[74-5] \u0E1C\u0E25\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 id \u0E14\u0E34\u0E1A",
+            cmp2.rows.some((r) => r.title && r.title !== r.sceneId),
+            JSON.stringify(cmp2.rows[0])
+          );
+          bp.setPlanProps({
+            status: "\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07",
+            color: "#6fae6f",
+            tags: ["\u0E2B\u0E25\u0E31\u0E01", "\u0E2A\u0E48\u0E07\u0E41\u0E25\u0E49\u0E27"],
+            book: "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07",
+            note: "\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E48\u0E21\u0E19\u0E35\u0E49"
+          });
+          await bp.saveBranchPlan(true);
+          const savedB = await kapi.readJson(pathB);
+          check2(
+            "[74-5] \u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1A\u0E1A\u0E09\u0E32\u0E01\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E23\u0E1A (\u0E2A\u0E16\u0E32\u0E19\u0E30/\u0E2A\u0E35/\u0E41\u0E17\u0E47\u0E01/\u0E40\u0E25\u0E48\u0E21/\u0E42\u0E19\u0E49\u0E15)",
+            savedB.status === "\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07" && savedB.color === "#6fae6f" && savedB.tags.join() === "\u0E2B\u0E25\u0E31\u0E01,\u0E2A\u0E48\u0E07\u0E41\u0E25\u0E49\u0E27" && savedB.book === "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07" && savedB.note === "\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E48\u0E21\u0E19\u0E35\u0E49",
+            JSON.stringify({ s: savedB.status, c: savedB.color, t: savedB.tags, b: savedB.book })
+          );
+          check2(
+            "[74-5] \u0E21\u0E35\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E1A\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22",
+            BPD.PLAN_STATUSES.includes("\u0E23\u0E48\u0E32\u0E07") && BPD.PLAN_STATUSES.includes("\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07") && BPD.PLAN_STATUSES.includes("\u0E2A\u0E33\u0E23\u0E2D\u0E07"),
+            BPD.PLAN_STATUSES.join()
+          );
+          await buildTree2();
+          await wait(300);
+          const prow74 = [...document.querySelectorAll("#tree .branch-plan-row")].find((r) => r.textContent.includes("\u0E41\u0E1C\u0E19 B"));
+          check2(
+            "[74-5] Explorer \u0E42\u0E0A\u0E27\u0E4C\u0E1B\u0E49\u0E32\u0E22\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19",
+            !!prow74 && (prow74.querySelector(".sc-status") || {}).textContent === "\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07",
+            prow74 ? prow74.textContent : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E41\u0E16\u0E27"
+          );
+          check2("[74-5] Explorer \u0E42\u0E0A\u0E27\u0E4C\u0E08\u0E38\u0E14\u0E2A\u0E35\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19", !!prow74 && !!prow74.querySelector(".sc-dot"));
+          await openBranchingTree();
+          await wait(800);
+          check2(
+            "[74-5] \u0E41\u0E16\u0E1A\u0E41\u0E1C\u0E19\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E04\u0E23\u0E1A 5 \u0E1B\u0E38\u0E48\u0E21 (\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34 + \u0E40\u0E17\u0E35\u0E22\u0E1A)",
+            document.querySelectorAll("#branch-body .branch-plans .branch-zbtn").length === 5,
+            document.querySelectorAll("#branch-body .branch-plans .branch-zbtn").length
+          );
+          bp.closeBranchPlan();
+          const back = bp.scenesWithPlan(scenes74);
+          check2(
+            "[74-5] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 \u2192 \u0E1C\u0E31\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E43\u0E0A\u0E49\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07 scenes.json",
+            back === scenes74 && !bp.inBranchPlan()
+          );
+          for (const f of [pathA, pathB]) if (await kapi.exists(f)) await kapi.remove(f);
+          hidePanel("branch");
+          await buildTree2();
+        }
+        {
+          hidePanel("kanban");
+          showPanel("kanban", { side: "left", forceMove: true });
+          await wait(600);
+          check2(
+            "[74-6] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E41\u0E1C\u0E07 Kanban \u0E16\u0E39\u0E01\u0E1C\u0E19\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+            getPanelManager().isDocked("kanban") === true
+          );
+          const kBody = $("#kanban-body") && $("#kanban-body").closest(".k-panel-body");
+          check2(
+            "[74-6] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01 (dock) \u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E04\u0E48\u0E32 --panel-min-w \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22",
+            !!kBody && kBody.style.getPropertyValue("--panel-min-w") === "800px",
+            kBody ? kBody.style.cssText || "(\u0E44\u0E21\u0E48\u0E21\u0E35 inline style)" : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D .k-panel-body"
+          );
+          const kKid = kBody && kBody.firstElementChild;
+          check2(
+            "[74-6] \u0E25\u0E39\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E15\u0E48\u0E33\u0E2A\u0E38\u0E14\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19 dock",
+            !!kKid && parseInt(getComputedStyle(kKid).minWidth, 10) === 800,
+            kKid ? kKid.id + ":" + getComputedStyle(kKid).minWidth : "no kid"
+          );
+          check2(
+            "[74-6] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E44\u0E14\u0E49\u0E15\u0E2D\u0E19 dock",
+            !!kBody && /auto|scroll/.test(getComputedStyle(kBody).overflowX),
+            kBody ? getComputedStyle(kBody).overflowX : ""
+          );
+          hidePanel("kanban");
+        }
+        await kapi.testShot("/tmp/k2_maps70.png");
+        delete sc70.mapId;
+        delete sc70.pinId;
+        await kapi.writeFile(scf70, JSON.stringify(scd70, null, 2));
+        setPropsTarget(null, null, null);
+        resetMapsView();
+        mapsState_C.s = null;
+        if (await kapi.exists(mapsPath)) await kapi.remove(mapsPath);
+        await buildTree2();
+      }
       const catDir = await kapi.join(state.root, "Wiki", "characters");
       const pEnt = addEntity(catDir, "characters");
       await new Promise((r) => setTimeout(r, 60));
@@ -150949,8 +155284,13 @@ ${css}
       );
       check2(
         "\u0E17\u0E38\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E44\u0E14\u0E49\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E17\u0E35\u0E48\u0E21\u0E35\u0E2A\u0E35\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 = \u0E40\u0E14\u0E32\u0E08\u0E32\u0E01\u0E1A\u0E17\u0E1A\u0E32\u0E17)",
-        netN.edges.every((e) => !!REL_COLOR[e.type]),
-        JSON.stringify(netN.edges.map((e) => e.type))
+        netN.edges.every((e) => !!netN._edgeCol[e.type]),
+        JSON.stringify(netN.edges.map((e) => [e.type, netN._edgeCol[e.type]]))
+      );
+      check2(
+        "[73-3] \u0E17\u0E38\u0E01\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E40\u0E2A\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1C\u0E31\u0E07\u0E43\u0E0A\u0E49 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E49\u0E15\u0E31\u0E49\u0E07\u0E2A\u0E35\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32",
+        [...new Set(netN.edges.map((e) => e.type))].every((k) => NET_COLOR_DEFS.some((d) => d.target === "edge" && d.id === k)),
+        JSON.stringify([...new Set(netN.edges.map((e) => e.type))])
       );
       hidePanel("network");
       {
@@ -151230,23 +155570,24 @@ ${css}
         plannerInst.data.isDirty() === true && plannerInst.toolbar.classList.contains("is-dirty")
       );
       const closeBlocked = getPanelManager().hidePanel("planner") === false;
-      const askBox = document.querySelector(".k-overlay .k-dialog");
+      await new Promise((r) => setTimeout(r, 150));
       check2(
-        "Planner \u0E1A\u0E31\u0E4A\u0E015: \u0E01\u0E14\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E22\u0E31\u0E1A\u0E22\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 + \u0E02\u0E36\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19",
-        closeBlocked && isPanelOpen("planner") && !!askBox && /ยังไม่ได้บันทึก/.test(askBox.textContent),
-        askBox ? askBox.textContent.slice(0, 60) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19"
+        "[72-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07 Planner \u0E15\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E1B\u0E34\u0E14\u0E40\u0E25\u0E22 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E16\u0E32\u0E21 (\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E32\u0E01 .65)",
+        !closeBlocked && !isPanelOpen("planner") && !document.querySelector(".k-overlay .k-dialog"),
+        `blocked=${closeBlocked} open=${isPanelOpen("planner")}`
       );
-      const saveFirst = [...askBox.querySelectorAll("button")].find((b) => b.textContent.includes("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19"));
       check2(
-        "Planner \u0E1A\u0E31\u0E4A\u0E015: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19 / \u0E17\u0E34\u0E49\u0E07 / \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01",
-        !!saveFirst && askBox.querySelectorAll("button").length === 3
+        "[72-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E07\u0E32\u0E19\u0E22\u0E31\u0E07\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E34\u0E49\u0E07\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E1A",
+        plannerInst.data.isDirty() === true && plannerInst.data.getAllNodes().length === 1
       );
-      saveFirst.click();
+      check2(
+        "[72-4] \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 (\u0E01\u0E31\u0E19\u0E2B\u0E32\u0E22\u0E15\u0E2D\u0E19\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)",
+        allDirtyList().some((x) => x.title.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19")),
+        JSON.stringify(allDirtyList().map((x) => x.title))
+      );
+      await dirtyRegistry.saveKeys([allDirtyList().find((x) => x.title.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19")).key]);
       await new Promise((r) => setTimeout(r, 200));
-      check2(
-        'Planner \u0E1A\u0E31\u0E4A\u0E015: \u0E15\u0E2D\u0E1A "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19" \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E43\u0E2B\u0E49',
-        plannerInst.data.isDirty() === false && !isPanelOpen("planner") && !document.querySelector(".k-overlay")
-      );
+      check2("[72-4] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1C\u0E48\u0E32\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E04\u0E49\u0E32\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B", plannerInst.data.isDirty() === false);
       const b2json = await kapi.readJson(b2);
       check2(
         "Planner \u0E1A\u0E31\u0E4A\u0E015: \u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07",
@@ -151841,16 +156182,21 @@ ${css}
           [...document.querySelectorAll("#tree .sec-title")].some((h) => h.textContent.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19"))
         );
         check2(
-          "[65r3-1] \u0E41\u0E16\u0E27\u0E02\u0E36\u0E49\u0E19 \u25CF \u0E40\u0E1E\u0E23\u0E32\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E02\u0E22\u0E31\u0E1A",
-          pbM.data.isDirty() === true && rowSel().textContent.includes("\u25CF"),
+          '[65r3-1 \u2192 74] \u0E41\u0E16\u0E27\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E14\u0E49\u0E27\u0E22 class \u0E2B\u0E25\u0E31\u0E07\u0E02\u0E22\u0E31\u0E1A',
+          pbM.data.isDirty() === true && rowSel().classList.contains("planner-dirty"),
+          rowSel().className
+        );
+        check2(
+          "[65r3-1 \u2192 74] \u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E16\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E40\u0E25\u0E22",
+          rowSel().textContent.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E2B\u0E25\u0E31\u0E01") && !rowSel().textContent.includes("\u25CF"),
           rowSel().textContent
         );
         await pbM.save();
         await waitMs2(80);
         check2(
-          "[65r3-1] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30 \u25CF \u0E2B\u0E32\u0E22",
-          !!rowSel() && !rowSel().textContent.includes("\u25CF"),
-          rowSel() ? rowSel().textContent : "\u0E2B\u0E32\u0E22"
+          "[65r3-1 \u2192 74] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2B\u0E32\u0E22",
+          !!rowSel() && !rowSel().classList.contains("planner-dirty"),
+          rowSel() ? rowSel().className : "\u0E2B\u0E32\u0E22"
         );
         pbM._deleteNode(mvNode.id);
         await pbM.save();
@@ -151970,8 +156316,8 @@ ${css}
         delete rowAny.dataset.plannerName;
         delete rowAny.dataset.search;
         check2(
-          "[65r4-tree] \u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E16\u0E27\u0E2B\u0E32\u0E22 \u2192 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07 + \u0E2A\u0E31\u0E48\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E43\u0E2B\u0E21\u0E48",
-          markPlannerRow(pbG.data.getPath(), false) === false && rowAny.textContent.trim().length > 0,
+          "[65r4-tree \u2192 74] \u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E16\u0E27\u0E2B\u0E32\u0E22\u0E01\u0E47\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E17\u0E1A \u2014 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E16\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E41\u0E25\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E27\u0E48\u0E32\u0E07",
+          markPlannerRow(pbG.data.getPath(), false) === true && rowAny.textContent.trim().length > 0,
           rowAny.textContent
         );
         rowAny.dataset.plannerName = savedName;
@@ -152073,15 +156419,19 @@ ${css}
         await waitMs2(50);
         const otherRow = [...document.querySelectorAll("#tree .scene[data-planner]")].find((r) => r.dataset.planner !== plannerInst.data.getPath());
         check2(
-          "[65r7] \u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E08\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19 \u{1F4CB} \u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14)",
-          !otherRow || otherRow.textContent.startsWith("\u{1F4CB}") && !otherRow.textContent.includes("\u25CF") && !otherRow.classList.contains("planner-dirty"),
+          "[65r7] \u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19 \u{1F4CB} \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1B\u0E01\u0E15\u0E34)",
+          !otherRow || otherRow.textContent.startsWith("\u{1F4CB}") && !otherRow.textContent.includes("\u25CF") && !otherRow.classList.contains("planner-dirty") && !otherRow.classList.contains("planner-current"),
           otherRow ? otherRow.textContent : "(\u0E21\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27)"
         );
         const dotRow = document.querySelector("#tree .scene[data-planner].planner-dirty");
         check2(
-          "[65r6] \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01: \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E2A\u0E49\u0E21 + \u0E21\u0E35\u0E08\u0E38\u0E14 + \u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2D\u0E22\u0E39\u0E48",
-          !!dotRow && dotRow.textContent.includes("\u25CF") && getComputedStyle(dotRow).display !== "none" && dotRow.textContent.replace(/[▶●s]/g, "").length > 0,
-          dotRow ? JSON.stringify({ t: dotRow.textContent, d: getComputedStyle(dotRow).display }) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27\u0E2A\u0E35\u0E2A\u0E49\u0E21"
+          "[65r6 \u2192 74] \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01: \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35/\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \xB7 \u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2D\u0E22\u0E39\u0E48",
+          !!dotRow && !dotRow.textContent.includes("\u25CF") && dotRow.textContent.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19") && getComputedStyle(dotRow).display !== "none" && Number(getComputedStyle(dotRow).fontWeight) >= 600,
+          dotRow ? JSON.stringify({
+            t: dotRow.textContent,
+            d: getComputedStyle(dotRow).display,
+            w: getComputedStyle(dotRow).fontWeight
+          }) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27"
         );
         await plannerInst.save();
         await waitMs2(60);
@@ -152203,16 +156553,17 @@ ${css}
           !!rowOf() && rowOf().classList.contains("planner-current")
         );
         pbNow._addNode("note", "\u0E17\u0E33\u0E43\u0E2B\u0E49 dirty", "#5f8a6f");
+        const rowTextBefore = rowOf().textContent;
         check2(
-          "[65r2-8] \u0E41\u0E01\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19 \u2192 Explorer \u0E02\u0E36\u0E49\u0E19 \u25CF \u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E40\u0E2D\u0E07)",
-          pbNow.data.isDirty() === true && rowOf().classList.contains("planner-dirty") && rowOf().textContent.includes("\u25CF"),
-          rowOf().textContent
+          "[65r2-8 \u2192 74] \u0E41\u0E01\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19 \u2192 Explorer \u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E40\u0E2D\u0E07)",
+          pbNow.data.isDirty() === true && rowOf().classList.contains("planner-dirty") && rowOf().textContent === rowTextBefore,
+          rowOf().className + " :: " + rowOf().textContent
         );
         await pbNow.save();
         check2(
-          "[65r2-8] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 \u25CF \u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01 Explorer \u0E40\u0E2D\u0E07",
-          pbNow.data.isDirty() === false && !rowOf().classList.contains("planner-dirty") && !rowOf().textContent.includes("\u25CF"),
-          rowOf().textContent
+          "[65r2-8 \u2192 74] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01 Explorer \u0E40\u0E2D\u0E07 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E31\u0E07\u0E40\u0E14\u0E34\u0E21",
+          pbNow.data.isDirty() === false && !rowOf().classList.contains("planner-dirty") && rowOf().textContent === rowTextBefore,
+          rowOf().className + " :: " + rowOf().textContent
         );
         for (const n2 of pbNow.data.getAllNodes()) pbNow.data.removeNode(n2.id);
         pbNow._renderAll();
@@ -152954,12 +157305,12 @@ ${css}
         window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyS", ctrlKey: true, bubbles: true }));
         await new Promise((r) => setTimeout(r, 60));
         check2("Ctrl+S \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E17\u0E47\u0E1A (dirty \u2192 false)", anyTab.dirty === false);
-        const view = anyTab.editor.view;
+        const view2 = anyTab.editor.view;
         const md0 = anyTab.editor.getMarkdown();
-        view.dispatch(view.state.tr.insertText("\u0E17\u0E14\u0E2A\u0E2D\u0E1AZ", 1));
+        view2.dispatch(view2.state.tr.insertText("\u0E17\u0E14\u0E2A\u0E2D\u0E1AZ", 1));
         await new Promise((r) => setTimeout(r, 20));
         const changed = anyTab.editor.getMarkdown() !== md0;
-        view.focus();
+        view2.focus();
         window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyZ", ctrlKey: true, bubbles: true }));
         await new Promise((r) => setTimeout(r, 40));
         check2(
@@ -153599,17 +157950,17 @@ ${css}
         await saveSessionNotes([]);
       }
       {
-        const BG2 = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
-        const gTest = BG2.buildGraph([
+        const BG = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
+        const gTest = BG.buildGraph([
           { id: "a", title: "A", choices: [{ text: "\u0E44\u0E1B B", nextSceneId: "b" }] },
           { id: "b", title: "B" }
         ]);
         check2("branch-graph: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E01\u0E23\u0E32\u0E1F\u0E08\u0E32\u0E01 choices \u0E44\u0E14\u0E49", gTest.edges.length === 1 && !gTest.edges[0].dangling);
-        const aTest = BG2.analyzeGraph(gTest);
+        const aTest = BG.analyzeGraph(gTest);
         check2("branch-graph: \u0E2B\u0E32\u0E08\u0E38\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21/\u0E15\u0E2D\u0E19\u0E08\u0E1A\u0E44\u0E14\u0E49", aTest.roots.join() === "a" && aTest.endings.join() === "b");
         check2(
           "branch-graph: \u0E08\u0E31\u0E14\u0E0A\u0E31\u0E49\u0E19\u0E0B\u0E49\u0E32\u0E22\u2192\u0E02\u0E27\u0E32\u0E15\u0E32\u0E21\u0E04\u0E27\u0E32\u0E21\u0E25\u0E36\u0E01",
-          BG2.layoutGraph(gTest).byId.get("b").x > BG2.layoutGraph(gTest).byId.get("a").x
+          BG.layoutGraph(gTest).byId.get("b").x > BG.layoutGraph(gTest).byId.get("a").x
         );
         const dj2 = await kapi.readJson(await kapi.join(dPath, "draft.json"));
         const sj22 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
@@ -159807,31 +164158,31 @@ ${css}
         const ed = tE.editor;
         ed.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
         await new Promise((r) => setTimeout(r, 80));
-        const view = ed.view;
+        const view2 = ed.view;
         const { TextSelection: TS61 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
         const putCaretEnd = () => {
-          const end = view.state.doc.content.size - 1;
-          view.dispatch(view.state.tr.setSelection(TS61.near(view.state.doc.resolve(end), -1)));
+          const end = view2.state.doc.content.size - 1;
+          view2.dispatch(view2.state.tr.setSelection(TS61.near(view2.state.doc.resolve(end), -1)));
         };
         putCaretEnd();
         const { insertTab: insertTab2, insertHardBreak: insertHardBreak2, insertPageBreak: insertPageBreak2, removeTab: removeTab2 } = await Promise.resolve().then(() => (init_editor(), editor_exports));
         check2(
           "[61-3] Tab \u0E41\u0E17\u0E23\u0E01\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E41\u0E17\u0E47\u0E1A\u0E08\u0E23\u0E34\u0E07",
-          insertTab2(view.state, view.dispatch) === true && ed.getMarkdown() === "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A	",
+          insertTab2(view2.state, view2.dispatch) === true && ed.getMarkdown() === "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A	",
           JSON.stringify(ed.getMarkdown())
         );
         check2(
           "[61-3] Shift+Tab \u0E16\u0E2D\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E43\u0E2A\u0E48",
-          removeTab2(view.state, view.dispatch) === true && ed.getMarkdown() === "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
+          removeTab2(view2.state, view2.dispatch) === true && ed.getMarkdown() === "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
           JSON.stringify(ed.getMarkdown())
         );
         putCaretEnd();
-        insertHardBreak2(view.state, view.dispatch);
-        view.dispatch(view.state.tr.insertText("\u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22"));
+        insertHardBreak2(view2.state, view2.dispatch);
+        view2.dispatch(view2.state.tr.insertText("\u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22"));
         check2(
           "[61-3] Shift+Enter \u0E44\u0E14\u0E49 hard break \u0E43\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48",
-          view.state.doc.childCount === 1,
-          String(view.state.doc.childCount)
+          view2.state.doc.childCount === 1,
+          String(view2.state.doc.childCount)
         );
         check2(
           "[61-3] hard break \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1A\u0E47\u0E01\u0E2A\u0E41\u0E25\u0E0A\u0E17\u0E49\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (CommonMark)",
@@ -162986,7 +167337,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, treeScope, _treeBuilding, _treeQueued, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md12, tr, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, FEATURE_PANELS, _featInFlight, QUIET_CMDS, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_editor();
@@ -162997,6 +167348,9 @@ ${css}
       init_scene_meta();
       init_margin_presets2();
       init_wiki_images();
+      init_wiki_profile();
+      init_log_core();
+      init_dirty_registry();
       init_panel_store();
       init_dist4();
       init_search();
@@ -163065,6 +167419,8 @@ ${css}
       init_panel_layout();
       init_panel_drag();
       init_panel_ui();
+      init_panel_renderer();
+      init_network_theme();
       init_panel_ui();
       init_panel_sync();
       init_panel_renderer();
@@ -163139,6 +167495,7 @@ ${css}
       treeScope = null;
       _treeBuilding = false;
       _treeQueued = false;
+      _treeSwapping = false;
       _treeWaiters = [];
       INV_C = { m: null, cat: {} };
       netInst = null;
@@ -163176,6 +167533,7 @@ ${css}
       TERM_TTL = 700;
       _termCache = { tab: null, at: 0, val: null };
       imgURLBase = /* @__PURE__ */ new Map();
+      _branchPlanApi = null;
       FMTS = ["bold", "italic", "underline", "strike"];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
         "tb-close",
@@ -163219,6 +167577,8 @@ ${css}
         return s.length > n2 ? s.slice(0, n2) + "\u2026" : s;
       };
       LOG_STICK_PX = 24;
+      logView = { levels: /* @__PURE__ */ new Set(["error", "warn", "info"]), source: "", q: "", open: /* @__PURE__ */ new Set() };
+      _logSeq = -1;
       _logTimer = null;
       window.__k2test = (p) => runTest(p);
       window.__k2menu = null;
@@ -163261,6 +167621,16 @@ ${css}
       setPanelShowHook((pid) => {
         renderFeaturePanel(pid);
       });
+      QUIET_CMDS = /* @__PURE__ */ new Set([
+        "zoom-in",
+        "zoom-out",
+        "zoom-reset",
+        "ui-scale",
+        "scroll",
+        "find",
+        "find-next",
+        "find-prev"
+      ]);
       kapi.onMenu(handleCommand);
       window.addEventListener("keydown", onShortcut, true);
       window.addEventListener("keydown", (e) => {
@@ -163612,8 +167982,8 @@ ${css}
         addPanelButton("log", logCopy);
         logCopy.onclick = (e) => {
           e.stopPropagation();
-          const body = $("#log-body");
-          if (body) navigator.clipboard.writeText(body.textContent).then(() => setStatus("\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 log \u0E41\u0E25\u0E49\u0E27"));
+          const txt = exportText(filterLogs(logStore.all(), logView));
+          navigator.clipboard.writeText(txt || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07)").then(() => setStatus(`\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 (${txt ? txt.split("\n").length : 0} \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E15\u0E32\u0E21\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07)`));
         };
         document.addEventListener("contextmenu", (e) => {
           if (!state.root) return;

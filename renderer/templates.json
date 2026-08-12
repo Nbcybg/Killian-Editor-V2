@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "แก้ไฟล์นี้ได้เลยด้วย Notepad — เพิ่ม/ลบ/แก้ field, section, property ได้ทุกจุด. type ที่ใช้ได้: String, Text, Int, Bool, Date, Enum, EntityRef. entityTypeKey = ชื่อโฟลเดอร์ในคลัง Wiki",
+  "note": "แก้ไฟล์นี้ได้เลยด้วย Notepad — เพิ่ม/ลบ/แก้ field, section, property ได้ทุกจุด. type ที่ใช้ได้: String, Text, Int, Bool, Date, Enum, EntityRef. entityTypeKey = ชื่อโฟลเดอร์ในคลัง Wiki | บล็อก \"profile\" = หัวการ์ดโปรไฟล์ (subtitleField/statusField/badgeFields/statusWords) — รูปประจำตัวเป็นของ entity.images ทุกหมวดมีเหมือนกันหมด ไม่ต้องประกาศ",
   "templates": [
     {
       "id": "46757dc9-a838-4e47-b2e0-aaddfeb03bc7",
@@ -80,6 +80,12 @@
           "label": "ลักษณะเด่น",
           "type": "String",
           "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
         }
       ],
       "customPropertyDefs": [],
@@ -103,7 +109,34 @@
       ],
       "includeRelationships": true,
       "includeImages": true,
-      "includeChapterOverrides": true
+      "includeChapterOverrides": true,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
     },
     {
       "id": "06bb92eb-df6f-4e0d-bed8-074002dba31f",
@@ -189,6 +222,12 @@
           "label": "เผ่าพันธุ์",
           "type": "String",
           "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
         }
       ],
       "customPropertyDefs": [
@@ -239,7 +278,34 @@
       ],
       "includeRelationships": true,
       "includeImages": true,
-      "includeChapterOverrides": true
+      "includeChapterOverrides": true,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
     },
     {
       "id": "dc0a9119-2578-496f-8f30-ea8cd6241281",
@@ -325,6 +391,12 @@
           "label": "อาชีพ",
           "type": "String",
           "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
         }
       ],
       "customPropertyDefs": [
@@ -362,7 +434,34 @@
       ],
       "includeRelationships": true,
       "includeImages": true,
-      "includeChapterOverrides": false
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
     },
     {
       "id": "b8b52ac0-4351-4e99-9fba-7ef5935ff42f",
@@ -413,7 +512,15 @@
       ],
       "includeRelationships": false,
       "includeImages": true,
-      "includeChapterOverrides": false
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Type",
+        "statusField": "",
+        "badgeFields": [
+          "Region",
+          "Population"
+        ]
+      }
     },
     {
       "id": "77e863b9-7c70-4e9e-9f2b-014891cdffbb",
@@ -460,7 +567,15 @@
       ],
       "includeRelationships": false,
       "includeImages": true,
-      "includeChapterOverrides": false
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Type",
+        "statusField": "",
+        "badgeFields": [
+          "Owner",
+          "Origin"
+        ]
+      }
     },
     {
       "id": "90c9c9fa-0a21-4a87-8b19-3e2fe9443a83",
@@ -497,7 +612,14 @@
       ],
       "includeRelationships": false,
       "includeImages": true,
-      "includeChapterOverrides": false
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Category",
+        "statusField": "",
+        "badgeFields": [
+          "Era"
+        ]
+      }
     },
     {
       "id": "1f3ac74b-c8f2-4cac-b26a-551355e246f7",
@@ -536,7 +658,14 @@
       ],
       "includeRelationships": false,
       "includeImages": true,
-      "includeChapterOverrides": false
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Category",
+        "statusField": "",
+        "badgeFields": [
+          "Source"
+        ]
+      }
     }
   ]
 }

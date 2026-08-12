@@ -44,7 +44,8 @@ export function refreshOpenFloorPlan() {
 }
 
 // รวบรวมฉากทุกร่างพร้อมข้อมูลที่ผังพื้นที่ต้องใช้ (สถานที่ + เวลาในเรื่อง)
-async function collectPlacedScenes() {
+// [alpha.70] export ออกไปให้แผงแผนที่ (maps-ui.js) ใช้ร่วม — ป้ายจำนวนฉากบนหมุดต้องอ่านชุดเดียวกัน
+export async function collectPlacedScenes() {
   const out = [];
   if (!state.root) return out;
   for (const sec of await kapi.listDirs(state.root).catch(() => [])) {

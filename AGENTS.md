@@ -141,10 +141,25 @@ UI ที่ต้องทำต่อ: `panels/panel-ui.js` · `layout/split-u
 แผง AI (ผู้ช่วยเขียน/ตรวจปม/บทสนทนา/สร้างโลก/แชท) · หน้านำเข้า Scrivener · แถบคอมเมนต์ข้างฉาก
 แล้วค่อยต่อ entry point ตามกฎข้อ 7 (เมนู main.js + `case` ใน `handleCommand`)
 
+### ⚠️ กฎถาวรที่ผู้ใช้กำหนด (alpha.72) — งานค้างต้องขึ้น list เสมอ
+
+> **อะไรที่มีการทิ้งเมื่อปิด หรือ update ตอนปิดโปรแกรม ต้องขึ้น list ทุกครั้ง**
+
+เพิ่มฟีเจอร์ใหม่ที่ถือสถานะค้างในหน่วยความจำ (ไม่ได้เขียนลงไฟล์ทันที) → **ต้อง** ลงทะเบียนที่
+`registerDirtySources()` ใน `app.js` ผ่าน `registerDirtySource(id, { label, list, save })`
+(`src/dirty-registry.js`) · กล่อง "บันทึกทั้งหมด" และ "ปิดโปรแกรม" อ่านจากทะเบียนตัวเดียวนี้
+**ห้ามไปแก้กล่องบันทึกทีละที่** — ของที่ไม่ลงทะเบียนจะหายเงียบตอนปิดโปรแกรม (กระดานวางแผนเคยเป็นแบบนั้น)
+
+คู่กัน: **ปิด "แผง" ≠ ทิ้งงาน** — แผงที่ยังถือสถานะไว้ในหน่วยความจำห้ามตั้ง `setPanelCloseGuard`
+ให้ถามบันทึก · ถามเฉพาะตอนงานกำลังจะหายจริง (เปิดไฟล์อื่นทับ / ทิ้ง / ปิดโปรแกรม)
+
 ### feature modules (แยกจาก app.js — จุดที่ feature ใหม่มาต่อยอด)
 - **dashboard.js** — แดชบอร์ด/สถิติ/analytics
 - **books.js** — จัดการเล่ม/ร่าง (Book Manager)
 - **timeline-ui.js / maps-ui.js** — UI ของเส้นเวลา/แผนที่
+  · [alpha.70] `maps-ui.js` import `collectPlacedScenes` จาก **floorplan-ui.js** (แหล่งเดียวของ "ฉากที่ปักหมุด")
+    — ทิศทางนี้เท่านั้น floorplan-ui **ห้าม** import maps-ui กลับ · `scene-props.js` เรียก `buildShowOnMapRow`
+    ด้วย **dynamic import** เพราะ maps-ui → app.js → scene-props เป็นวง
 - **wiki-ui.js** — หมวด Wiki + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
 - **scene-ops.js** — จัดการฉาก+บท (เพิ่ม/แก้/ลบ/ย้าย/เมนู)
 - **section-ops.js** — จัดการเล่ม (section)
