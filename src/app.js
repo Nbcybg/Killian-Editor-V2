@@ -3540,21 +3540,30 @@ export function auditPlannerRows(when) {
   const sec = [...document.querySelectorAll('#tree .sec')]
     .find((s) => (s.querySelector('.sec-title') || {}).textContent?.includes('กระดานวางแผน'));
   const rows = [...document.querySelectorAll('#tree .scene[data-planner]')];
-  const info = rows.map((r) => ({
-    name: r.dataset.plannerName || '(ไม่มีชื่อ)',
-    text: (r.textContent || '').trim(),
-    display: getComputedStyle(r).display,
-    inline: r.style.display || '(ไม่ตั้ง)',
-  }));
+  // [alpha.75] เดิมดูแค่ `display` → **จับ K-1 ไม่ได้เลย** เพราะแถวถูกทำให้จางด้วย `opacity:0`
+  // (อยู่ใน DOM · display ปกติ · ข้อความครบ แต่มองไม่เห็น) → ต้องดู opacity/visibility ด้วย
+  const info = rows.map((r) => {
+    const cs = getComputedStyle(r);
+    return {
+      name: r.dataset.plannerName || '(ไม่มีชื่อ)',
+      text: (r.textContent || '').trim(),
+      display: cs.display,
+      opacity: cs.opacity,
+      visibility: cs.visibility,
+      cls: r.className,
+      inline: r.style.display || '(ไม่ตั้ง)',
+    };
+  });
   const hidden = info.filter((i) => i.display === 'none').length;
+  const faded = info.filter((i) => parseFloat(i.opacity) < 0.05 || i.visibility === 'hidden').length;
   const blank = info.filter((i) => !i.text).length;
   const secHidden = sec ? (getComputedStyle(sec).display === 'none' || sec.classList.contains('collapsed')) : null;
-  const bad = !sec || !rows.length || hidden || blank;
+  const bad = !sec || !rows.length || hidden || faded || blank;
   log(bad ? 'warn' : 'info',
       `planner/tree ตรวจสภาพ (${when || '-'}): หมวด=${sec ? 'มี' : 'ไม่มี'} แถว=${rows.length} ` +
-      `ซ่อน=${hidden} ว่าง=${blank} หมวดพับ/ซ่อน=${secHidden}`,
+      `ซ่อน=${hidden} จาง=${faded} ว่าง=${blank} หมวดพับ/ซ่อน=${secHidden}`,
       { rows: info, filter: ($('#tree-search') || {}).value || '' });
-  return { sec: !!sec, rows: rows.length, hidden, blank, secHidden, info };
+  return { sec: !!sec, rows: rows.length, hidden, faded, blank, secHidden, info };
 }
 
 /**
@@ -3573,17 +3582,17 @@ export function markPlannerRow(path, dirty) {
   // ทุกครั้งที่สถานะเปลี่ยน ซึ่งเป็นที่เดียวในต้นไม้ที่แก้เนื้อแถวนอก buildTree()
   // (ชื่อว่างเมื่อไหร่ = ได้บรรทัดเปล่า · ลูกอื่นในแถว เช่นป้ายจำนวน ก็หายไปด้วย)
   // ตอนนี้บอกสถานะด้วย **ตัวหนา/สี** ผ่าน class ล้วน ๆ — เนื้อแถวไม่ถูกแตะเลย
-  for (const prev of tree.querySelectorAll('.scene.planner-current')) {
+  for (const prev of tree.querySelectorAll('.scene.k-row-open')) {
     if (prev === row) continue;
-    prev.classList.remove('planner-current', 'planner-dirty');
+    prev.classList.remove('k-row-open', 'k-row-unsaved');
   }
 
   if (!row) {
     log('warn', 'planner/tree: หาแถวกระดานที่เปิดอยู่ไม่เจอ', { path, rows: tree.querySelectorAll('.scene[data-planner]').length });
     return false;
   }
-  row.classList.add('planner-current');
-  row.classList.toggle('planner-dirty', !!dirty);
+  row.classList.add('k-row-open');
+  row.classList.toggle('k-row-unsaved', !!dirty);
   return true;
 }
 
@@ -3729,7 +3738,7 @@ async function buildPlannerSection(tree) {
   for (const b of boards) {
     const isCur = b.path === cur;
     // [alpha.74] ไอคอนคงที่เสมอ · สถานะ "เปิดอยู่/ยังไม่บันทึก" บอกด้วยตัวหนา+สี ไม่ใช่สัญลักษณ์
-    const it = el('div', 'scene' + (isCur ? ' planner-current' : '') + (isCur && curDirty ? ' planner-dirty' : ''),
+    const it = el('div', 'scene' + (isCur ? ' k-row-open' : '') + (isCur && curDirty ? ' k-row-unsaved' : ''),
       '📋 ' + b.name);
     it.dataset.path = b.path;
     it.dataset.planner = b.path;
@@ -3859,7 +3868,7 @@ async function buildBranchPlanSection(tree) {
   for (const p of plans) {
     const isCur = cur && cur.path === p.path;
     const dirty = isCur && isBranchPlanDirty();
-    const it = el('div', 'scene branch-plan-row' + (isCur ? ' planner-current' : '') + (dirty ? ' planner-dirty' : ''),
+    const it = el('div', 'scene branch-plan-row' + (isCur ? ' k-row-open' : '') + (dirty ? ' k-row-unsaved' : ''),
       '🌿 ' + p.name);
     // คุณสมบัติแบบฉาก: จุดสี + ป้ายสถานะ (เหมือนแถวฉากใน Explorer)
     if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = p.plan.color; it.prepend(dot); }
@@ -3919,8 +3928,8 @@ export function markBranchPlanRow() {
     if (!cur || !cur.path) return;
     const row = document.querySelector(`#tree .branch-plan-row[data-branch-plan="${CSS.escape(cur.path)}"]`);
     if (!row) return;
-    row.classList.add('planner-current');
-    row.classList.toggle('planner-dirty', isBranchPlanDirty());
+    row.classList.add('k-row-open');
+    row.classList.toggle('k-row-unsaved', isBranchPlanDirty());
   }).catch(() => {});
 }
 
@@ -11003,7 +11012,7 @@ async function runTest(projectPath) {
         check('[73-5] มีแถวไฟล์แผนใน Explorer ครบ',
               document.querySelectorAll('#tree .branch-plan-row').length === 2);
         check('[73-5] แถวของแผนที่เปิดอยู่ถูกทำเครื่องหมายไว้',
-              !!document.querySelector('#tree .branch-plan-row.planner-current'));
+              !!document.querySelector('#tree .branch-plan-row.k-row-open'));
         bp.currentBranchPlan().live.colors['ทดสอบ'] = '#ff0000';
         check('[73-5] แก้แผนแล้วขึ้นสถานะยังไม่บันทึก', bp.isBranchPlanDirty() === true);
         check('[73-5] แผนขึ้นในทะเบียนงานค้าง (กฎ alpha.72 ข้อ 4)',
@@ -11102,7 +11111,7 @@ async function runTest(projectPath) {
         check('[74-K1] ไม่มีสัญลักษณ์ ▶ / ● บนแถวอีกแล้ว',
               !prow2.textContent.includes('▶') && !prow2.textContent.includes('●'), prow2.textContent);
         check('[74-K1] สถานะบอกด้วย class (ตัวหนา/สี) แทน',
-              prow2.classList.contains('planner-current') && prow2.classList.contains('planner-dirty'),
+              prow2.classList.contains('k-row-open') && prow2.classList.contains('k-row-unsaved'),
               prow2.className);
         check('[74-K1] CSS ทำให้แถวที่ยังไม่บันทึกเป็นตัวหนา + สีต่างจากปกติ',
               getComputedStyle(prow2).fontWeight >= '600' &&
@@ -11229,6 +11238,95 @@ async function runTest(projectPath) {
               !!kBody && /auto|scroll/.test(getComputedStyle(kBody).overflowX),
               kBody ? getComputedStyle(kBody).overflowX : '');
         hidePanel('kanban');
+      }
+
+      // ════════ [alpha.75] K-1 ตัวจริง: แถวถูกทำให้ "จาง" ไม่ใช่ถูกลบ ════════
+      // ต้นตอ: `.planner-dirty` เป็นคลาสของ **จุด ● บนแถบเครื่องมือ Planner** ซึ่งตั้ง `opacity:0`
+      // ไว้เป็นค่าเริ่มต้น — แถวใน Explorer ใช้ชื่อคลาสเดียวกัน จึงรับ opacity:0 ไปด้วย
+      // ทุกครั้งที่กระดานยังไม่บันทึก = แถวจางหายไปทั้งที่ยังอยู่ใน DOM (บทเรียน 10 ซ้ำรอย)
+      {
+        [...document.querySelectorAll('.k-overlay')].forEach((o) => o.remove());
+        showPanel('planner'); await renderFeaturePanel('planner'); await wait(700);
+        await buildTree(); await wait(300);
+        const prow = () => document.querySelector('#tree .scene[data-planner]');
+        check('[75-K1] เตรียมสภาพ: มีแถวกระดานใน Explorer', !!prow());
+        const vis = (e) => {
+          const cs = getComputedStyle(e);
+          return { op: parseFloat(cs.opacity), vis: cs.visibility, disp: cs.display,
+                   w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height };
+        };
+        const before = vis(prow());
+        check('[75-K1] ก่อนแก้: แถวมองเห็นได้ปกติ',
+              before.op >= 0.95 && before.vis === 'visible' && before.disp !== 'none' && before.h > 0,
+              JSON.stringify(before));
+
+        // ทำให้กระดาน "ยังไม่บันทึก" — จังหวะที่ผู้ใช้บอกว่าแถวเปลี่ยนสีแล้วหาย
+        plannerInst.data.addNode('card', 'การ์ดทดสอบ 75', '', 50, 50);
+        plannerInst._syncDirty();
+        await wait(400);
+        const r75 = prow();
+        check('[75-K1] แถวยังอยู่ใน DOM หลังกระดานเป็น "ยังไม่บันทึก"', !!r75);
+        const after = vis(r75);
+        // ⛔ เช็คนี้คือตัวที่ **เดิมไม่มี** — เทสเก่าดูแค่ display จึงผ่านตลอดทั้งที่ผู้ใช้มองไม่เห็นแถว
+        check('[75-K1] ⭐ แถวต้องไม่ถูกทำให้จาง (opacity) — ตัวจริงของ K-1',
+              after.op >= 0.95, JSON.stringify(after) + ' cls=' + r75.className);
+        check('[75-K1] แถวต้องไม่ถูก visibility:hidden', after.vis === 'visible', after.vis);
+        check('[75-K1] แถวต้องยังมีขนาดจริงบนจอ (ไม่ถูกยุบ)', after.h > 0 && after.w > 0,
+              JSON.stringify(after));
+        check('[75-K1] และข้อความยังครบ', (r75.textContent || '').trim().length > 0, r75.textContent);
+        check('[75-K1] ใช้ชื่อคลาสของแถวเอง ไม่ชนกับจุดบนแถบเครื่องมือ Planner',
+              r75.classList.contains('k-row-unsaved') && !r75.classList.contains('planner-dirty'),
+              r75.className);
+        // จุด ● บนแถบเครื่องมือต้องยังทำงานเหมือนเดิม (ไม่ได้พังเพราะแยกคลาส)
+        {
+          const dot = document.querySelector('#planner-body .planner-dirty, .planner-toolbar .planner-dirty');
+          check('[75-K1] จุด ● บนแถบเครื่องมือ Planner ยังโชว์ตอนยังไม่บันทึกเหมือนเดิม',
+                !dot || parseFloat(getComputedStyle(dot).opacity) > 0.5,
+                dot ? getComputedStyle(dot).opacity + ' / ' + (dot.parentElement || {}).className : 'ไม่มีจุด');
+        }
+        // ตัวตรวจสภาพต้องจับ "จาง" ได้แล้ว (เดิมมองไม่เห็นเพราะดูแค่ display)
+        const audit75 = auditPlannerRows('เทส75');
+        check('[75-K1] auditPlannerRows รายงานค่า opacity ของทุกแถว',
+              audit75.info.every((i) => i.opacity !== undefined) && audit75.faded === 0,
+              JSON.stringify(audit75.info));
+
+        // บันทึกแล้วต้องกลับเป็นปกติ
+        await plannerInst.save(true);
+        await wait(300);
+        check('[75-K1] บันทึกแล้วแถวยังมองเห็นได้ + สถานะหาย',
+              !!prow() && parseFloat(getComputedStyle(prow()).opacity) >= 0.95 &&
+              !prow().classList.contains('k-row-unsaved'), prow() ? prow().className : 'หาย');
+        plannerInst.data.removeNode(plannerInst.data.getAllNodes().slice(-1)[0].id);
+        await plannerInst.save(true);
+        hidePanel('planner');
+      }
+
+      // ── กันซ้ำรอยทั้งระบบ: ไม่มีแถวไหนใน Explorer ถูกทำให้จางได้เลย ──
+      {
+        await buildTree(); await wait(250);
+        const rows = [...document.querySelectorAll('#tree .scene')]
+          .filter((r) => !r.classList.contains('add-row') && r.style.display !== 'none');
+        // แถวบางชนิดตั้งใจให้จางอยู่แล้ว (แถวชวนสร้างของแรก/แถวคำอธิบาย) — เกณฑ์คือ "จางจนมองไม่เห็น"
+        const faded = rows.filter((r) => {
+          const cs = getComputedStyle(r);
+          return parseFloat(cs.opacity) < 0.2 || cs.visibility === 'hidden';
+        });
+        check('[75-K1] ทุกแถวใน Explorer มองเห็นได้ (ไม่มีตัวไหนโดนทำให้จาง)',
+              faded.length === 0,
+              faded.map((r) => r.className + ':' + getComputedStyle(r).opacity).join(' | ').slice(0, 200));
+        // คลาสสถานะของแถวต้องไม่ไปใช้ชื่อเดียวกับ widget อื่นอีก
+        check('[75-K1] ไม่มีแถวไหนใช้คลาสของ widget อื่น (planner-dirty/planner-current)',
+              document.querySelectorAll('#tree .planner-dirty, #tree .planner-current').length === 0);
+        // พิสูจน์กลไกโดยตรง: คลาส `planner-dirty` ที่อยู่ **นอก** แถบเครื่องมือ Planner
+        // ต้องไม่ถูกทำให้ opacity:0 อีกแล้ว (ก่อนแก้ ค่านี้ = 0 → นี่คือตัวที่ทำให้แถวหาย)
+        {
+          const probe = el('span', 'planner-dirty', 'DOT');
+          document.body.appendChild(probe);
+          const op = getComputedStyle(probe).opacity;
+          probe.remove();
+          check('[75-K1] * กลไกที่ทำให้แถวหาย: คลาส planner-dirty นอกแถบเครื่องมือไม่ทำให้จางแล้ว',
+                parseFloat(op) >= 0.95, 'opacity=' + op + ' (ก่อนแก้ = 0)');
+        }
       }
 
       await kapi.testShot('/tmp/k2_maps70.png');
@@ -13101,7 +13199,7 @@ async function runTest(projectPath) {
       // [alpha.74] เปลี่ยนวิธีบอกสถานะ: ไม่ใช้สัญลักษณ์ ● แล้ว — ใช้ class + สี/ตัวหนาแทน
       // (การเขียนทับ textContent ของแถวคือที่เดียวที่รื้อเนื้อแถวนอก buildTree — ต้นตอที่สงสัยของ K-1)
       check('[65r3-1 → 74] แถวขึ้นสถานะ "ยังไม่บันทึก" ด้วย class หลังขยับ',
-            pbM.data.isDirty() === true && rowSel().classList.contains('planner-dirty'),
+            pbM.data.isDirty() === true && rowSel().classList.contains('k-row-unsaved'),
             rowSel().className);
       check('[65r3-1 → 74] และข้อความแถวไม่ถูกแตะเลย',
             rowSel().textContent.includes('กระดานหลัก') && !rowSel().textContent.includes('●'),
@@ -13109,7 +13207,7 @@ async function runTest(projectPath) {
       await pbM.save();
       await waitMs2(80);
       check('[65r3-1 → 74] บันทึกแล้วแถวยังอยู่และสถานะหาย',
-            !!rowSel() && !rowSel().classList.contains('planner-dirty'),
+            !!rowSel() && !rowSel().classList.contains('k-row-unsaved'),
             rowSel() ? rowSel().className : 'หาย');
       pbM._deleteNode(mvNode.id);
       await pbM.save();
@@ -13294,10 +13392,10 @@ async function runTest(projectPath) {
         .find((r) => r.dataset.planner !== plannerInst.data.getPath());
       check('[65r7] อัปเดตสถานะแล้วแถวกระดานใบอื่นไม่ถูกแตะ (ยังเป็น 📋 สถานะปกติ)',
             !otherRow || (otherRow.textContent.startsWith('📋') && !otherRow.textContent.includes('●') &&
-                          !otherRow.classList.contains('planner-dirty') &&
-                          !otherRow.classList.contains('planner-current')),
+                          !otherRow.classList.contains('k-row-unsaved') &&
+                          !otherRow.classList.contains('k-row-open')),
             otherRow ? otherRow.textContent : '(มีกระดานใบเดียว)');
-      const dotRow = document.querySelector('#tree .scene[data-planner].planner-dirty');
+      const dotRow = document.querySelector('#tree .scene[data-planner].k-row-unsaved');
       // [alpha.74] สถานะ "ยังไม่บันทึก" = สี + ตัวหนา (ไม่ใช่จุด ●) และข้อความแถวต้องไม่ถูกแตะ
       check('[65r6 → 74] แถวที่ยังไม่บันทึก: เปลี่ยนสี/ตัวหนา · ข้อความเดิมอยู่ครบ · ยังมองเห็นอยู่',
             !!dotRow && !dotRow.textContent.includes('●') &&
@@ -13308,7 +13406,7 @@ async function runTest(projectPath) {
                                       w: getComputedStyle(dotRow).fontWeight }) : 'ไม่มีแถว');
       await plannerInst.save();
       await waitMs2(60);
-      const afterRow = document.querySelector('#tree .scene[data-planner].planner-current');
+      const afterRow = document.querySelector('#tree .scene[data-planner].k-row-open');
       check('[65r6] บันทึกแล้วจุดหาย แต่แถวยังอยู่ครบ',
             !!afterRow && !afterRow.textContent.includes('●') &&
             getComputedStyle(afterRow).display !== 'none',
@@ -13403,16 +13501,16 @@ async function runTest(projectPath) {
       const pbNow = plannerInst;
       const rowOf = () => document.querySelector(`#tree .scene[data-planner="${CSS.escape(pbNow.data.getPath())}"]`);
       check('[65r2-8] แถวกระดานที่เปิดอยู่ถูกทำเครื่องหมายใน Explorer',
-            !!rowOf() && rowOf().classList.contains('planner-current'));
+            !!rowOf() && rowOf().classList.contains('k-row-open'));
       pbNow._addNode('note', 'ทำให้ dirty', '#5f8a6f');
       // [alpha.74] สถานะเป็น class ไม่ใช่สัญลักษณ์ — ข้อความแถวต้องคงเดิมตลอด
       const rowTextBefore = rowOf().textContent;
       check('[65r2-8 → 74] แก้กระดาน → Explorer ขึ้นสถานะทันที (ไม่ต้องรีเฟรชเอง)',
-            pbNow.data.isDirty() === true && rowOf().classList.contains('planner-dirty') &&
+            pbNow.data.isDirty() === true && rowOf().classList.contains('k-row-unsaved') &&
             rowOf().textContent === rowTextBefore, rowOf().className + ' :: ' + rowOf().textContent);
       await pbNow.save();
       check('[65r2-8 → 74] บันทึกแล้วสถานะหายจาก Explorer เอง · ข้อความยังเดิม',
-            pbNow.data.isDirty() === false && !rowOf().classList.contains('planner-dirty') &&
+            pbNow.data.isDirty() === false && !rowOf().classList.contains('k-row-unsaved') &&
             rowOf().textContent === rowTextBefore, rowOf().className + ' :: ' + rowOf().textContent);
 
       for (const n of pbNow.data.getAllNodes()) pbNow.data.removeNode(n.id);

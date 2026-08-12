@@ -145481,37 +145481,44 @@ ${css}
   function auditPlannerRows(when) {
     const sec = [...document.querySelectorAll("#tree .sec")].find((s) => (s.querySelector(".sec-title") || {}).textContent?.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19"));
     const rows = [...document.querySelectorAll("#tree .scene[data-planner]")];
-    const info = rows.map((r) => ({
-      name: r.dataset.plannerName || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)",
-      text: (r.textContent || "").trim(),
-      display: getComputedStyle(r).display,
-      inline: r.style.display || "(\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07)"
-    }));
+    const info = rows.map((r) => {
+      const cs = getComputedStyle(r);
+      return {
+        name: r.dataset.plannerName || "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D)",
+        text: (r.textContent || "").trim(),
+        display: cs.display,
+        opacity: cs.opacity,
+        visibility: cs.visibility,
+        cls: r.className,
+        inline: r.style.display || "(\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07)"
+      };
+    });
     const hidden = info.filter((i5) => i5.display === "none").length;
+    const faded = info.filter((i5) => parseFloat(i5.opacity) < 0.05 || i5.visibility === "hidden").length;
     const blank = info.filter((i5) => !i5.text).length;
     const secHidden = sec ? getComputedStyle(sec).display === "none" || sec.classList.contains("collapsed") : null;
-    const bad = !sec || !rows.length || hidden || blank;
+    const bad = !sec || !rows.length || hidden || faded || blank;
     log(
       bad ? "warn" : "info",
-      `planner/tree \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E20\u0E32\u0E1E (${when || "-"}): \u0E2B\u0E21\u0E27\u0E14=${sec ? "\u0E21\u0E35" : "\u0E44\u0E21\u0E48\u0E21\u0E35"} \u0E41\u0E16\u0E27=${rows.length} \u0E0B\u0E48\u0E2D\u0E19=${hidden} \u0E27\u0E48\u0E32\u0E07=${blank} \u0E2B\u0E21\u0E27\u0E14\u0E1E\u0E31\u0E1A/\u0E0B\u0E48\u0E2D\u0E19=${secHidden}`,
+      `planner/tree \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E20\u0E32\u0E1E (${when || "-"}): \u0E2B\u0E21\u0E27\u0E14=${sec ? "\u0E21\u0E35" : "\u0E44\u0E21\u0E48\u0E21\u0E35"} \u0E41\u0E16\u0E27=${rows.length} \u0E0B\u0E48\u0E2D\u0E19=${hidden} \u0E08\u0E32\u0E07=${faded} \u0E27\u0E48\u0E32\u0E07=${blank} \u0E2B\u0E21\u0E27\u0E14\u0E1E\u0E31\u0E1A/\u0E0B\u0E48\u0E2D\u0E19=${secHidden}`,
       { rows: info, filter: ($("#tree-search") || {}).value || "" }
     );
-    return { sec: !!sec, rows: rows.length, hidden, blank, secHidden, info };
+    return { sec: !!sec, rows: rows.length, hidden, faded, blank, secHidden, info };
   }
   function markPlannerRow(path, dirty) {
     const tree = $("#tree");
     if (!tree) return false;
     const row2 = path ? tree.querySelector(`.scene[data-planner="${CSS.escape(path)}"]`) : null;
-    for (const prev of tree.querySelectorAll(".scene.planner-current")) {
+    for (const prev of tree.querySelectorAll(".scene.k-row-open")) {
       if (prev === row2) continue;
-      prev.classList.remove("planner-current", "planner-dirty");
+      prev.classList.remove("k-row-open", "k-row-unsaved");
     }
     if (!row2) {
       log("warn", "planner/tree: \u0E2B\u0E32\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D", { path, rows: tree.querySelectorAll(".scene[data-planner]").length });
       return false;
     }
-    row2.classList.add("planner-current");
-    row2.classList.toggle("planner-dirty", !!dirty);
+    row2.classList.add("k-row-open");
+    row2.classList.toggle("k-row-unsaved", !!dirty);
     return true;
   }
   function healPlannerRow(path, dirty) {
@@ -145657,7 +145664,7 @@ ${css}
       const isCur = b.path === cur;
       const it = el(
         "div",
-        "scene" + (isCur ? " planner-current" : "") + (isCur && curDirty ? " planner-dirty" : ""),
+        "scene" + (isCur ? " k-row-open" : "") + (isCur && curDirty ? " k-row-unsaved" : ""),
         "\u{1F4CB} " + b.name
       );
       it.dataset.path = b.path;
@@ -145829,7 +145836,7 @@ ${css}
       const dirty = isCur && isBranchPlanDirty2();
       const it = el(
         "div",
-        "scene branch-plan-row" + (isCur ? " planner-current" : "") + (dirty ? " planner-dirty" : ""),
+        "scene branch-plan-row" + (isCur ? " k-row-open" : "") + (dirty ? " k-row-unsaved" : ""),
         "\u{1F33F} " + p.name
       );
       if (p.plan.color) {
@@ -145910,8 +145917,8 @@ ${css}
       if (!cur || !cur.path) return;
       const row2 = document.querySelector(`#tree .branch-plan-row[data-branch-plan="${CSS.escape(cur.path)}"]`);
       if (!row2) return;
-      row2.classList.add("planner-current");
-      row2.classList.toggle("planner-dirty", isBranchPlanDirty2());
+      row2.classList.add("k-row-open");
+      row2.classList.toggle("k-row-unsaved", isBranchPlanDirty2());
     }).catch(() => {
     });
   }
@@ -153710,7 +153717,7 @@ ${css}
           );
           check2(
             "[73-5] \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E44\u0E27\u0E49",
-            !!document.querySelector("#tree .branch-plan-row.planner-current")
+            !!document.querySelector("#tree .branch-plan-row.k-row-open")
           );
           bp.currentBranchPlan().live.colors["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"] = "#ff0000";
           check2("[73-5] \u0E41\u0E01\u0E49\u0E41\u0E1C\u0E19\u0E41\u0E25\u0E49\u0E27\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", bp.isBranchPlanDirty() === true);
@@ -153841,7 +153848,7 @@ ${css}
           );
           check2(
             "[74-K1] \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E14\u0E49\u0E27\u0E22 class (\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32/\u0E2A\u0E35) \u0E41\u0E17\u0E19",
-            prow2.classList.contains("planner-current") && prow2.classList.contains("planner-dirty"),
+            prow2.classList.contains("k-row-open") && prow2.classList.contains("k-row-unsaved"),
             prow2.className
           );
           check2(
@@ -153991,6 +153998,108 @@ ${css}
             kBody ? getComputedStyle(kBody).overflowX : ""
           );
           hidePanel("kanban");
+        }
+        {
+          [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
+          showPanel("planner");
+          await renderFeaturePanel("planner");
+          await wait(700);
+          await buildTree2();
+          await wait(300);
+          const prow = () => document.querySelector("#tree .scene[data-planner]");
+          check2("[75-K1] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E21\u0E35\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E19 Explorer", !!prow());
+          const vis = (e) => {
+            const cs = getComputedStyle(e);
+            return {
+              op: parseFloat(cs.opacity),
+              vis: cs.visibility,
+              disp: cs.display,
+              w: e.getBoundingClientRect().width,
+              h: e.getBoundingClientRect().height
+            };
+          };
+          const before = vis(prow());
+          check2(
+            "[75-K1] \u0E01\u0E48\u0E2D\u0E19\u0E41\u0E01\u0E49: \u0E41\u0E16\u0E27\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E1B\u0E01\u0E15\u0E34",
+            before.op >= 0.95 && before.vis === "visible" && before.disp !== "none" && before.h > 0,
+            JSON.stringify(before)
+          );
+          plannerInst.data.addNode("card", "\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A 75", "", 50, 50);
+          plannerInst._syncDirty();
+          await wait(400);
+          const r75 = prow();
+          check2('[75-K1] \u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 DOM \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E40\u0E1B\u0E47\u0E19 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01"', !!r75);
+          const after = vis(r75);
+          check2(
+            "[75-K1] \u2B50 \u0E41\u0E16\u0E27\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E08\u0E32\u0E07 (opacity) \u2014 \u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07\u0E02\u0E2D\u0E07 K-1",
+            after.op >= 0.95,
+            JSON.stringify(after) + " cls=" + r75.className
+          );
+          check2("[75-K1] \u0E41\u0E16\u0E27\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01 visibility:hidden", after.vis === "visible", after.vis);
+          check2(
+            "[75-K1] \u0E41\u0E16\u0E27\u0E15\u0E49\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E21\u0E35\u0E02\u0E19\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E38\u0E1A)",
+            after.h > 0 && after.w > 0,
+            JSON.stringify(after)
+          );
+          check2("[75-K1] \u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E31\u0E07\u0E04\u0E23\u0E1A", (r75.textContent || "").trim().length > 0, r75.textContent);
+          check2(
+            "[75-K1] \u0E43\u0E0A\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E04\u0E25\u0E32\u0E2A\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E27\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E0A\u0E19\u0E01\u0E31\u0E1A\u0E08\u0E38\u0E14\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D Planner",
+            r75.classList.contains("k-row-unsaved") && !r75.classList.contains("planner-dirty"),
+            r75.className
+          );
+          {
+            const dot = document.querySelector("#planner-body .planner-dirty, .planner-toolbar .planner-dirty");
+            check2(
+              "[75-K1] \u0E08\u0E38\u0E14 \u25CF \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D Planner \u0E22\u0E31\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E15\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+              !dot || parseFloat(getComputedStyle(dot).opacity) > 0.5,
+              dot ? getComputedStyle(dot).opacity + " / " + (dot.parentElement || {}).className : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14"
+            );
+          }
+          const audit75 = auditPlannerRows("\u0E40\u0E17\u0E2A75");
+          check2(
+            "[75-K1] auditPlannerRows \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E04\u0E48\u0E32 opacity \u0E02\u0E2D\u0E07\u0E17\u0E38\u0E01\u0E41\u0E16\u0E27",
+            audit75.info.every((i5) => i5.opacity !== void 0) && audit75.faded === 0,
+            JSON.stringify(audit75.info)
+          );
+          await plannerInst.save(true);
+          await wait(300);
+          check2(
+            "[75-K1] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49 + \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2B\u0E32\u0E22",
+            !!prow() && parseFloat(getComputedStyle(prow()).opacity) >= 0.95 && !prow().classList.contains("k-row-unsaved"),
+            prow() ? prow().className : "\u0E2B\u0E32\u0E22"
+          );
+          plannerInst.data.removeNode(plannerInst.data.getAllNodes().slice(-1)[0].id);
+          await plannerInst.save(true);
+          hidePanel("planner");
+        }
+        {
+          await buildTree2();
+          await wait(250);
+          const rows = [...document.querySelectorAll("#tree .scene")].filter((r) => !r.classList.contains("add-row") && r.style.display !== "none");
+          const faded = rows.filter((r) => {
+            const cs = getComputedStyle(r);
+            return parseFloat(cs.opacity) < 0.2 || cs.visibility === "hidden";
+          });
+          check2(
+            "[75-K1] \u0E17\u0E38\u0E01\u0E41\u0E16\u0E27\u0E43\u0E19 Explorer \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E42\u0E14\u0E19\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E08\u0E32\u0E07)",
+            faded.length === 0,
+            faded.map((r) => r.className + ":" + getComputedStyle(r).opacity).join(" | ").slice(0, 200)
+          );
+          check2(
+            "[75-K1] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27\u0E44\u0E2B\u0E19\u0E43\u0E0A\u0E49\u0E04\u0E25\u0E32\u0E2A\u0E02\u0E2D\u0E07 widget \u0E2D\u0E37\u0E48\u0E19 (planner-dirty/planner-current)",
+            document.querySelectorAll("#tree .planner-dirty, #tree .planner-current").length === 0
+          );
+          {
+            const probe = el("span", "planner-dirty", "DOT");
+            document.body.appendChild(probe);
+            const op = getComputedStyle(probe).opacity;
+            probe.remove();
+            check2(
+              "[75-K1] * \u0E01\u0E25\u0E44\u0E01\u0E17\u0E35\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E41\u0E16\u0E27\u0E2B\u0E32\u0E22: \u0E04\u0E25\u0E32\u0E2A planner-dirty \u0E19\u0E2D\u0E01\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E08\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27",
+              parseFloat(op) >= 0.95,
+              "opacity=" + op + " (\u0E01\u0E48\u0E2D\u0E19\u0E41\u0E01\u0E49 = 0)"
+            );
+          }
         }
         await kapi.testShot("/tmp/k2_maps70.png");
         delete sc70.mapId;
@@ -156183,7 +156292,7 @@ ${css}
         );
         check2(
           '[65r3-1 \u2192 74] \u0E41\u0E16\u0E27\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E14\u0E49\u0E27\u0E22 class \u0E2B\u0E25\u0E31\u0E07\u0E02\u0E22\u0E31\u0E1A',
-          pbM.data.isDirty() === true && rowSel().classList.contains("planner-dirty"),
+          pbM.data.isDirty() === true && rowSel().classList.contains("k-row-unsaved"),
           rowSel().className
         );
         check2(
@@ -156195,7 +156304,7 @@ ${css}
         await waitMs2(80);
         check2(
           "[65r3-1 \u2192 74] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2B\u0E32\u0E22",
-          !!rowSel() && !rowSel().classList.contains("planner-dirty"),
+          !!rowSel() && !rowSel().classList.contains("k-row-unsaved"),
           rowSel() ? rowSel().className : "\u0E2B\u0E32\u0E22"
         );
         pbM._deleteNode(mvNode.id);
@@ -156420,10 +156529,10 @@ ${css}
         const otherRow = [...document.querySelectorAll("#tree .scene[data-planner]")].find((r) => r.dataset.planner !== plannerInst.data.getPath());
         check2(
           "[65r7] \u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19 \u{1F4CB} \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1B\u0E01\u0E15\u0E34)",
-          !otherRow || otherRow.textContent.startsWith("\u{1F4CB}") && !otherRow.textContent.includes("\u25CF") && !otherRow.classList.contains("planner-dirty") && !otherRow.classList.contains("planner-current"),
+          !otherRow || otherRow.textContent.startsWith("\u{1F4CB}") && !otherRow.textContent.includes("\u25CF") && !otherRow.classList.contains("k-row-unsaved") && !otherRow.classList.contains("k-row-open"),
           otherRow ? otherRow.textContent : "(\u0E21\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27)"
         );
-        const dotRow = document.querySelector("#tree .scene[data-planner].planner-dirty");
+        const dotRow = document.querySelector("#tree .scene[data-planner].k-row-unsaved");
         check2(
           "[65r6 \u2192 74] \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01: \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35/\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \xB7 \u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2D\u0E22\u0E39\u0E48",
           !!dotRow && !dotRow.textContent.includes("\u25CF") && dotRow.textContent.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19") && getComputedStyle(dotRow).display !== "none" && Number(getComputedStyle(dotRow).fontWeight) >= 600,
@@ -156435,7 +156544,7 @@ ${css}
         );
         await plannerInst.save();
         await waitMs2(60);
-        const afterRow = document.querySelector("#tree .scene[data-planner].planner-current");
+        const afterRow = document.querySelector("#tree .scene[data-planner].k-row-open");
         check2(
           "[65r6] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E08\u0E38\u0E14\u0E2B\u0E32\u0E22 \u0E41\u0E15\u0E48\u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
           !!afterRow && !afterRow.textContent.includes("\u25CF") && getComputedStyle(afterRow).display !== "none",
@@ -156550,19 +156659,19 @@ ${css}
         const rowOf = () => document.querySelector(`#tree .scene[data-planner="${CSS.escape(pbNow.data.getPath())}"]`);
         check2(
           "[65r2-8] \u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E43\u0E19 Explorer",
-          !!rowOf() && rowOf().classList.contains("planner-current")
+          !!rowOf() && rowOf().classList.contains("k-row-open")
         );
         pbNow._addNode("note", "\u0E17\u0E33\u0E43\u0E2B\u0E49 dirty", "#5f8a6f");
         const rowTextBefore = rowOf().textContent;
         check2(
           "[65r2-8 \u2192 74] \u0E41\u0E01\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19 \u2192 Explorer \u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E40\u0E2D\u0E07)",
-          pbNow.data.isDirty() === true && rowOf().classList.contains("planner-dirty") && rowOf().textContent === rowTextBefore,
+          pbNow.data.isDirty() === true && rowOf().classList.contains("k-row-unsaved") && rowOf().textContent === rowTextBefore,
           rowOf().className + " :: " + rowOf().textContent
         );
         await pbNow.save();
         check2(
           "[65r2-8 \u2192 74] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01 Explorer \u0E40\u0E2D\u0E07 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E31\u0E07\u0E40\u0E14\u0E34\u0E21",
-          pbNow.data.isDirty() === false && !rowOf().classList.contains("planner-dirty") && rowOf().textContent === rowTextBefore,
+          pbNow.data.isDirty() === false && !rowOf().classList.contains("k-row-unsaved") && rowOf().textContent === rowTextBefore,
           rowOf().className + " :: " + rowOf().textContent
         );
         for (const n2 of pbNow.data.getAllNodes()) pbNow.data.removeNode(n2.id);

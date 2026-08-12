@@ -1413,8 +1413,12 @@ body.k-split-on #tabs { display:none !important; }
 .planner-board-name { flex:0 0 auto; color:var(--bright); font-weight:600; padding:0 4px;
   font-size:calc(12.5px * var(--ui-scale, 1)); max-width:180px; overflow:hidden;
   text-overflow:ellipsis; white-space:nowrap; }
-.planner-dirty { flex:0 0 auto; color:var(--accent); opacity:0; font-size:15px; line-height:1;
-  transition:opacity .15s; }
+/* ⚠️ [alpha.75] ต้นตอของบั๊ก K-1 — คลาสนี้เคยไม่ผูกกับแถบเครื่องมือ (`.planner-dirty` ลอย ๆ)
+   แล้ว **แถวใน Explorer ก็ใช้ชื่อคลาสเดียวกัน** → แถวรับ `opacity:0` ไปด้วยทุกครั้งที่กระดานยังไม่บันทึก
+   = แถวจางหายไปต่อหน้าต่อตา (ยังอยู่ใน DOM · display ปกติ · หัวข้อยังนับ (1)) ตรงกับที่ผู้ใช้เจอเป๊ะ
+   ตอนนี้ผูกกับ `.planner-toolbar` เสมอ + แถวใน Explorer เปลี่ยนไปใช้ชื่อ `k-row-*` ของตัวเอง (บทเรียน 10) */
+.planner-toolbar .planner-dirty { flex:0 0 auto; color:var(--accent); opacity:0; font-size:15px;
+  line-height:1; transition:opacity .15s; }
 .planner-toolbar.is-dirty .planner-dirty { opacity:1; }
 
 /* ---- แถบกรอง ---- */
@@ -1531,8 +1535,8 @@ body.k-split-on #tabs { display:none !important; }
 .planner-board-nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ---- แถวกระดานใน Explorer: กำลังเปิด / ยังไม่บันทึก (บั๊ก 65r2-8) ---- */
-.scene.planner-current { color:var(--bright); font-weight:600; }
-.scene.planner-dirty { color:var(--accent); }
+.scene.k-row-open { color:var(--bright); font-weight:600; }
+.scene.k-row-unsaved { color:var(--accent); }
 .scene.planner-filter-note { color:var(--dim); font-style:italic; cursor:default;
   font-size:calc(11.5px * var(--ui-scale, 1)); }
 
@@ -3791,9 +3795,11 @@ body.paper-mode .k-manual-page-break::after { background:var(--paper); color:#a5
    เดิมสลับข้อความแถวเป็น '▶ ชื่อ ●' ตอนเปิด/ยังไม่บันทึก = รื้อลูกของแถวทิ้งทุกครั้งที่สถานะเปลี่ยน
    (ชื่อว่างเมื่อไหร่ก็ได้บรรทัดเปล่า · ป้ายอื่นในแถวหายตามไปด้วย)
    ตอนนี้เนื้อแถวถูกสร้างครั้งเดียวใน buildTree() แล้วไม่มีใครแตะอีก — สถานะบอกด้วย class ล้วน ๆ */
-#tree .scene.planner-current { font-weight:700; color:var(--bright); }
-#tree .scene.planner-dirty { color:#e5878c; }
-#tree .scene.planner-dirty::after { content:'ยังไม่บันทึก'; margin-left:6px; opacity:.85;
+#tree .scene.k-row-open { font-weight:700; color:var(--bright); }
+#tree .scene.k-row-unsaved { color:#e5878c; }
+/* กันพลาดซ้ำรอย K-1: แถวใน Explorer ต้องมองเห็นเสมอ ไม่ว่ากฎไหนจะพยายามทำให้จาง */
+#tree .scene { opacity:1; visibility:visible; }
+#tree .scene.k-row-unsaved::after { content:'ยังไม่บันทึก'; margin-left:6px; opacity:.85;
   font-size:calc(9.5px * var(--ui-scale, 1)); font-weight:400; }
 
 /* [alpha.74] กล่องเทียบแผนผังแตกสาย */
