@@ -979,6 +979,7 @@ ui.app.exportPDFDonePage,ส่งออก PDF แล้ว ({0} หน้า):
 ui.app.exportPDFWatermarkPerson,ส่งออก PDF ลายน้ำรายคน
 ui.app.exportTableWordDone,ส่งออกตารางคำแปลแล้ว ({0} คีย์): 
 ui.app.exportWorkFlow,ส่งออกด้วยเวิร์กโฟลว์
+ui.app.exportFontCssFail,Could not embed fonts into the export
 ui.app.fail, ล้มเหลว
 ui.app.file,นามสกุลไฟล์
 ui.app.fileLangK2Csv,ไฟล์ภาษา (k2_*.csv)
@@ -3190,6 +3191,7 @@ ui.menu.exportChapterRichText,🎬 ส่งออกบทเป็น Rich Tex
 ui.menu.exportDraftMergeMd,ส่งออกฉบับร่างรวมเป็น .md…
 ui.menu.exportFinalDraftFdx,🎬 ส่งออกเป็น Final Draft (.fdx)…
 ui.menu.exportHTMLBlockB,ส่งออกเป็น HTML สำหรับบล็อก… ({0}+{1}+B)
+ui.menu.exportHub,Export… ({0}+{1}+E)
 ui.menu.exportLangCSVKey,🌐 ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…
 ui.menu.exportLayoutPanelJSON,📤 ส่งออกการจัดวางแผง (JSON)…
 ui.menu.exportPDF,ส่งออกเป็น PDF…
@@ -3200,6 +3202,7 @@ ui.menu.exportProjectJson,ส่งออกทั้งโปรเจกต์
 ui.menu.exportProjectZip,ส่งออกทั้งโปรเจกต์เป็น .zip…
 ui.menu.exportRichTextRtf,🎬 ส่งออกเป็น Rich Text (.rtf)…
 ui.menu.exportWorkFlowE,ส่งออกด้วยเวิร์กโฟลว์… ({0}+{1}+E)
+ui.menu.exportWorkFlowSteps,Edit export workflow steps…
 ui.menu.file,File
 ui.menu.file2,ไฟล์
 ui.menu.fitWidePagePaper,พอดีความกว้างหน้ากระดาษ
@@ -4424,6 +4427,7 @@ ui.shortcuts.compile,Compile
 ui.shortcuts.deleteLine,Delete line
 ui.shortcuts.devConsole,Developer console
 ui.shortcuts.exportBlog,Export as Blog HTML
+ui.shortcuts.exportHub,Export hub
 ui.shortcuts.find,Find
 ui.shortcuts.findError,Find Next Error
 ui.shortcuts.focusMode,Focus Mode
@@ -4664,6 +4668,7 @@ ui.task.jobFailed,auto-task: job
 ui.tbcfg.allOff,All off
 ui.tbcfg.allOn,All on
 ui.tbcfg.count,{0} of {1} buttons shown
+ui.tbcfg.customize,Customize toolbar…
 ui.tbcfg.grpAi,AI
 ui.tbcfg.grpAlign,Alignment
 ui.tbcfg.grpExt,Extensions
@@ -4674,10 +4679,13 @@ ui.tbcfg.grpStory,Story tools
 ui.tbcfg.grpStyle,Text style
 ui.tbcfg.grpTabs,Tabs & layout
 ui.tbcfg.grpView,View & modes
+ui.tbcfg.hidden,Hid “{0}”
+ui.tbcfg.hideThis,Hide “{0}”
 ui.tbcfg.hint,Pick which buttons appear — changes apply instantly
 ui.tbcfg.missing,(not on the bar)
 ui.tbcfg.reset,↺ Reset
 ui.tbcfg.resetDone,Toolbar reset to defaults
+ui.tbcfg.showAll,Show all buttons
 ui.tbcfg.title,Customize toolbar
 ui.textCase.aLtErNaTeCAsEToggleItem,aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่
 ui.textCase.capitalizeCaseAllWord,Capitalize Case — ขึ้นต้นทุกคำ
@@ -4840,3 +4848,54 @@ ui.wiki.viewRecoverRestoreVersion,ดู/กู้คืนเวอร์ชั
 ui.words,words
 ui.worldAutoLink.busyLoadIndexLink,(กำลังโหลดดัชนีเชื่อมโยง…)
 ui.worldAutoLink.notHasSceneMention,(ยังไม่มีฉากที่กล่าวถึงเอนทิตี้นี้)
+
+ui.xhub.buildFail,Could not build the output
+ui.xhub.building,Building preview…
+ui.xhub.content,Content
+ui.xhub.donePdf,{0} pages · {1} bookmarks
+ui.xhub.donePdfHtml,"real text, not an image"
+ui.xhub.editSteps,Edit steps…
+ui.xhub.exportFail,Export failed
+ui.xhub.fFdx,Final Draft (FDX)
+ui.xhub.fFdxDesc,For screenplays — opens in Final Draft
+ui.xhub.fHtml,Web page (HTML)
+ui.xhub.fHtmlDesc,One self-contained file with styles inside
+ui.xhub.fJson,Whole project (.json)
+ui.xhub.fJsonDesc,"Project structure only, for other tools"
+ui.xhub.fMd,Markdown
+ui.xhub.fMdDesc,Plain source text any editor can open
+ui.xhub.fPdf,PDF
+ui.xhub.fPdfDesc,"True pages, embedded Thai fonts, selectable text"
+ui.xhub.fRtf,Rich Text (RTF)
+ui.xhub.fRtfDesc,Opens in Word with script margins
+ui.xhub.fTxt,Plain text
+ui.xhub.fTxtDesc,No formatting marks at all
+ui.xhub.fWm,Watermarked PDFs
+ui.xhub.fWmDesc,"One file per recipient, name watermarked in"
+ui.xhub.fZip,Whole project (.zip)
+ui.xhub.fZipDesc,Full backup with images and metadata
+ui.xhub.htmlOpts,HTML options
+ui.xhub.htmlWysiwyg,Use the same page format as on screen
+ui.xhub.needProject,Open a project before exporting
+ui.xhub.noDraft,(no draft in this project)
+ui.xhub.noPreview,(nothing to preview)
+ui.xhub.nothingToExport,Nothing to export
+ui.xhub.openOwnDialog,Open this format’s own dialog…
+ui.xhub.pdfCover,Title pages
+ui.xhub.pdfHeaders,Running headers
+ui.xhub.pdfNoPrinter,"PDF is built in-app, never through the OS printer — real text you can copy and search"
+ui.xhub.pdfNums,Page & scene numbers
+ui.xhub.pdfOpts,PDF options
+ui.xhub.pdfToc,Table of contents (bookmarks)
+ui.xhub.pdfWm,Watermark
+ui.xhub.pdfWmHint,Empty = no watermark
+ui.xhub.rtfFontPt,Font size (pt)
+ui.xhub.rtfOpts,RTF options
+ui.xhub.saveCfgFail,Could not remember export settings
+ui.xhub.scope,Scope
+ui.xhub.scopeDraft,Whole draft
+ui.xhub.scopeTab,Current tab
+ui.xhub.title,Export
+ui.xhub.wfAuto,Auto — match the format
+ui.xhub.fBlog,Blog page (themed)
+ui.xhub.fBlogDesc,Ready-to-post page with built-in themes

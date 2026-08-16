@@ -133,19 +133,12 @@ function buildMenu() {
       { label: tt('ui.menu.save'), click: () => send('save-as') },
       { type: 'separator' },
       { label: ttf('ui.menu.printP', C), click: () => send('print') },
-      { label: tt('ui.menu.exportPDF'), click: () => send('export-pdf') },
-      { label: tt('ui.menu.exportDraftMergeMd'), click: () => send('export-draft') },
-      { label: ttf('ui.menu.exportWorkFlowE', C, S), click: () => send('compile') },
-      { label: ttf('ui.menu.exportHTMLBlockB', C, S), click: () => send('export-blog') },
-      { label: tt('ui.menu.exportProjectZip'), click: () => send('export-zip') },
-      { label: tt('ui.menu.exportProjectJson'), click: () => send('export-json') },
+      // [alpha.81 ข้อ 9] เดิมเมนูนี้มีทางส่งออก 9 ทางแยกกัน ผู้ใช้ต้องเดาเองว่าทางไหนให้ผลอะไร
+      // ตอนนี้เหลือทางเดียว = "ศูนย์รวมการส่งออก" (เลือกรูปแบบ · ตั้งค่า · เห็นตัวอย่างก่อนบันทึก)
+      // ทางเดิมทั้งหมดยังอยู่ครบในกล่องนั้น ไม่มีความสามารถไหนหายไป
+      { label: ttf('ui.menu.exportHub', C, S), click: () => send('export-hub') },
       { type: 'separator' },
-      { label: tt('ui.menu.exportChapterFinalDraft'), click: () => send('export-fdx') },
-      { label: tt('ui.menu.exportChapterRichText'), click: () => send('export-rtf') },
-      { label: tt('ui.menu.exportPDFWatermarkPerson'), click: () => send('export-watermark') },
-      // alpha.59 [69][87][89] — ตัวสร้าง PDF ในโปรแกรม (สารบัญ / เปิดที่หน้าเดิม / ฝังฟอนต์ไทย)
-      { label: tt('ui.menu.exportPDFItemNew'),
-        click: () => send('export-pdf-builtin') },
+      { label: tt('ui.menu.exportWorkFlowSteps'), click: () => send('compile') },
       { label: tt('ui.menu.coverTitlePages'), click: () => send('title-pages') },
       { label: tt('ui.menu.headPaperAllPage'), click: () => send('page-headers') },
       { type: 'separator' },
@@ -344,12 +337,8 @@ function buildMenu() {
       { label: tt('ui.menu.headPaperAllPage'), click: () => send('page-headers') },
       { label: tt('ui.menu.pagePaperGapMargin'), click: () => send('page-setup') },
       { type: 'separator' },
-      { label: tt('ui.menu.exportFinalDraftFdx'), click: () => send('export-fdx') },
-      { label: tt('ui.menu.exportRichTextRtf'), click: () => send('export-rtf') },
-      // alpha.59 [69][87][88][89] — PDF ที่เขียนเองด้วย pdf-lib
-      { label: tt('ui.menu.exportPDFTocCover'),
-        click: () => send('export-pdf-builtin') },
-      { label: tt('ui.menu.exportPDFWatermarkPerson'), click: () => send('export-watermark') },
+      // [alpha.81 ข้อ 9] fdx / rtf / PDF / PDF ลายน้ำ ย้ายเข้าศูนย์รวมการส่งออกหมดแล้ว
+      { label: ttf('ui.menu.exportHub', C, S), click: () => send('export-hub') },
     ] },
     // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
     { id: 'Tools', label: tt('ui.menu.tool'), submenu: [

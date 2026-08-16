@@ -979,6 +979,7 @@ ui.app.exportPDFDonePage,ส่งออก PDF แล้ว ({0} หน้า):
 ui.app.exportPDFWatermarkPerson,ส่งออก PDF ลายน้ำรายคน
 ui.app.exportTableWordDone,ส่งออกตารางคำแปลแล้ว ({0} คีย์): 
 ui.app.exportWorkFlow,ส่งออกด้วยเวิร์กโฟลว์
+ui.app.exportFontCssFail,ฝังฟอนต์ลงไฟล์ส่งออกไม่สำเร็จ
 ui.app.fail, ล้มเหลว
 ui.app.file,นามสกุลไฟล์
 ui.app.fileLangK2Csv,ไฟล์ภาษา (k2_*.csv)
@@ -3190,6 +3191,7 @@ ui.menu.exportChapterRichText,🎬 ส่งออกบทเป็น Rich Tex
 ui.menu.exportDraftMergeMd,ส่งออกฉบับร่างรวมเป็น .md…
 ui.menu.exportFinalDraftFdx,🎬 ส่งออกเป็น Final Draft (.fdx)…
 ui.menu.exportHTMLBlockB,ส่งออกเป็น HTML สำหรับบล็อก… ({0}+{1}+B)
+ui.menu.exportHub,ส่งออก… ({0}+{1}+E)
 ui.menu.exportLangCSVKey,🌐 ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…
 ui.menu.exportLayoutPanelJSON,📤 ส่งออกการจัดวางแผง (JSON)…
 ui.menu.exportPDF,ส่งออกเป็น PDF…
@@ -3200,6 +3202,7 @@ ui.menu.exportProjectJson,ส่งออกทั้งโปรเจกต์
 ui.menu.exportProjectZip,ส่งออกทั้งโปรเจกต์เป็น .zip…
 ui.menu.exportRichTextRtf,🎬 ส่งออกเป็น Rich Text (.rtf)…
 ui.menu.exportWorkFlowE,ส่งออกด้วยเวิร์กโฟลว์… ({0}+{1}+E)
+ui.menu.exportWorkFlowSteps,ปรับขั้นตอนเวิร์กโฟลว์ส่งออก…
 ui.menu.file,ไฟล์
 ui.menu.file2,ไฟล์
 ui.menu.fitWidePagePaper,พอดีความกว้างหน้ากระดาษ
@@ -4424,6 +4427,7 @@ ui.shortcuts.compile,ส่งออกด้วยเวิร์กโฟล�
 ui.shortcuts.deleteLine,ลบทั้งบรรทัด
 ui.shortcuts.devConsole,คอนโซลนักพัฒนา
 ui.shortcuts.exportBlog,ส่งออกเป็น HTML สำหรับบล็อก
+ui.shortcuts.exportHub,ศูนย์รวมการส่งออก
 ui.shortcuts.find,ค้นหา
 ui.shortcuts.findError,ตรวจหาข้อผิดพลาดถัดไป
 ui.shortcuts.focusMode,โหมดโฟกัส
@@ -4664,6 +4668,7 @@ ui.task.jobFailed,auto-task: งาน
 ui.tbcfg.allOff,ปิดหมด
 ui.tbcfg.allOn,เปิดหมด
 ui.tbcfg.count,เปิดอยู่ {0} จาก {1} ปุ่ม
+ui.tbcfg.customize,ปรับแถบเครื่องมือ…
 ui.tbcfg.grpAi,AI
 ui.tbcfg.grpAlign,จัดหน้า
 ui.tbcfg.grpExt,ส่วนเสริม
@@ -4674,10 +4679,13 @@ ui.tbcfg.grpStory,เครื่องมือเล่าเรื่อง
 ui.tbcfg.grpStyle,รูปแบบข้อความ
 ui.tbcfg.grpTabs,แท็บและหน้าจอ
 ui.tbcfg.grpView,มุมมองและโหมด
+ui.tbcfg.hidden,ซ่อนปุ่ม “{0}” แล้ว
+ui.tbcfg.hideThis,ซ่อนปุ่ม “{0}”
 ui.tbcfg.hint,ติ๊กเลือกว่าจะให้ปุ่มไหนโผล่บนแถบ — เห็นผลทันทีที่กด · เส้นคั่นของกลุ่มที่ปิดหมดจะหายไปเอง
 ui.tbcfg.missing,(ยังไม่มีบนแถบ)
 ui.tbcfg.reset,↺ คืนค่าเริ่มต้น
 ui.tbcfg.resetDone,คืนค่าแถบเครื่องมือเป็นค่าเริ่มต้นแล้ว
+ui.tbcfg.showAll,แสดงปุ่มทั้งหมด
 ui.tbcfg.title,ปรับแถบเครื่องมือ
 ui.textCase.aLtErNaTeCAsEToggleItem,aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่
 ui.textCase.capitalizeCaseAllWord,Capitalize Case — ขึ้นต้นทุกคำ
@@ -4840,3 +4848,54 @@ ui.wiki.viewRecoverRestoreVersion,ดู/กู้คืนเวอร์ชั
 ui.words,คำ
 ui.worldAutoLink.busyLoadIndexLink,(กำลังโหลดดัชนีเชื่อมโยง…)
 ui.worldAutoLink.notHasSceneMention,(ยังไม่มีฉากที่กล่าวถึงเอนทิตี้นี้)
+
+ui.xhub.buildFail,สร้างผลลัพธ์ไม่สำเร็จ
+ui.xhub.building,กำลังสร้างตัวอย่าง…
+ui.xhub.content,เนื้อหา
+ui.xhub.donePdf,{0} หน้า · สารบัญ {1} รายการ
+ui.xhub.donePdfHtml,ตัวอักษรจริง (ไม่ใช่ภาพ)
+ui.xhub.editSteps,ปรับขั้นตอน…
+ui.xhub.exportFail,ส่งออกไม่สำเร็จ
+ui.xhub.fFdx,Final Draft (FDX)
+ui.xhub.fFdxDesc,สำหรับบทภาพยนตร์ — เปิดใน Final Draft
+ui.xhub.fHtml,หน้าเว็บ (HTML)
+ui.xhub.fHtmlDesc,ไฟล์เดียวจบ ฝังรูปแบบไว้ในตัว
+ui.xhub.fJson,ทั้งโปรเจกต์ (.json)
+ui.xhub.fJsonDesc,โครงสร้างโปรเจกต์ล้วน สำหรับเครื่องมืออื่น
+ui.xhub.fMd,Markdown
+ui.xhub.fMdDesc,ต้นฉบับข้อความ เปิดแก้ต่อได้ทุกโปรแกรม
+ui.xhub.fPdf,PDF
+ui.xhub.fPdfDesc,หน้ากระดาษจริง ฝังฟอนต์ไทย คัดลอกข้อความได้
+ui.xhub.fRtf,Rich Text (RTF)
+ui.xhub.fRtfDesc,เปิดใน Word ได้ พร้อมระยะขอบของบท
+ui.xhub.fTxt,ข้อความล้วน
+ui.xhub.fTxtDesc,ไม่มีสัญลักษณ์จัดรูปแบบใด ๆ
+ui.xhub.fWm,PDF ลายน้ำรายคน
+ui.xhub.fWmDesc,สร้างไฟล์แยกต่อผู้รับ พร้อมชื่อเป็นลายน้ำ
+ui.xhub.fZip,ทั้งโปรเจกต์ (.zip)
+ui.xhub.fZipDesc,สำรองงานทั้งชุด รวมรูปและเมทาดาทา
+ui.xhub.htmlOpts,ตัวเลือก HTML
+ui.xhub.htmlWysiwyg,ใช้รูปแบบหน้ากระดาษเดียวกับบนจอ
+ui.xhub.needProject,เปิดโปรเจกต์ก่อนจึงจะส่งออกได้
+ui.xhub.noDraft,(ยังไม่มีฉบับร่างในโปรเจกต์นี้)
+ui.xhub.noPreview,(ไม่มีตัวอย่างให้แสดง)
+ui.xhub.nothingToExport,ไม่มีเนื้อหาให้ส่งออก
+ui.xhub.openOwnDialog,เปิดกล่องตั้งค่าของรูปแบบนี้…
+ui.xhub.pdfCover,หน้าปก
+ui.xhub.pdfHeaders,หัวกระดาษทุกหน้า
+ui.xhub.pdfNoPrinter,PDF สร้างในโปรแกรมเอง ไม่ผ่านเครื่องพิมพ์ของระบบ — ได้ตัวอักษรจริง คัดลอกและค้นหาในไฟล์ได้
+ui.xhub.pdfNums,เลขหน้า / เลขฉาก
+ui.xhub.pdfOpts,ตัวเลือก PDF
+ui.xhub.pdfToc,สารบัญ (bookmark)
+ui.xhub.pdfWm,ลายน้ำ
+ui.xhub.pdfWmHint,ว่าง = ไม่ใส่ลายน้ำ
+ui.xhub.rtfFontPt,ขนาดฟอนต์ (pt)
+ui.xhub.rtfOpts,ตัวเลือก RTF
+ui.xhub.saveCfgFail,จำค่าส่งออกไม่สำเร็จ
+ui.xhub.scope,ขอบเขต
+ui.xhub.scopeDraft,ฉบับร่างทั้งเล่ม
+ui.xhub.scopeTab,ฉาก/บทที่เปิดอยู่
+ui.xhub.title,ส่งออก
+ui.xhub.wfAuto,เลือกให้อัตโนมัติตามรูปแบบ
+ui.xhub.fBlog,เว็บบล็อก (ธีม)
+ui.xhub.fBlogDesc,หน้าเว็บพร้อมธีมสำเร็จรูปสำหรับลงบล็อก

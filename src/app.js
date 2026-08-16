@@ -185,7 +185,9 @@ import { renderDialoguePanel, resetDialogue, scanDialogue, markDialogueStale, vi
 import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
          resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
          isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
-import { toolbarDialog, applyToolbarConfig } from './toolbar/toolbar-ui.js';
+import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS } from './toolbar/toolbar-ui.js';
+import { openExportHub, EXPORT_FORMATS, formatDef, docKind, pdfEngine,
+         normalizeHub, defaultWorkflowFor, workflowForFormat, suggestName } from './export-hub.js';
 import * as SESS from './session/session-core.js';
 import { openAIAssistant, openPlotHoleDetector, openDialogueGenerator, openConsistencyCheck, openWorldGenerator, openAIChat } from './ai/ai-ui.js';
 import { showThesaurusPopup, initThesaurus } from './tools/thesaurus-ui.js';
@@ -396,6 +398,12 @@ export function refreshLineGutter() {
   g.style.height = Math.round(pr.height) + 'px';
   const kids = pmEl.children;
   const frag = document.createDocumentFragment();
+  // [alpha.81 ข้อ 6] "เลขบรรทัดมันไม่ตรงกลาง มันเหมือนชิดบน"
+  // เดิมวางเลขไว้ที่ `top` ของบล็อกพอดี — ซึ่งคือ **ขอบบนของกล่อง** ไม่ใช่กลางบรรทัดแรก
+  // ย่อหน้าที่มีช่วงบรรทัดสูง (นิยาย 1.75) เลขจึงลอยสูงกว่าตัวหนังสือเห็นได้ชัด
+  // ชดเชยด้วยครึ่งหนึ่งของ (ความสูงบรรทัดแรก − ความสูงตัวเลข)
+  // ความสูงบรรทัดของบล็อกเป็นหน่วย CSS ที่อยู่ในกล่องซึ่งถูก `zoom` ย่อ → ต้องคูณกลับด้วย zoom จริง
+  const zoom = parseFloat(getComputedStyle(pmEl.parentElement).zoom) || 1;
   let n = 0;
   for (let i = 0; i < kids.length; i++) {
     const r = kids[i].getBoundingClientRect();
@@ -403,12 +411,21 @@ export function refreshLineGutter() {
     const top = r.top - pr.top;
     if (top > pr.height + 60) break;              // เลยขอบล่างของแผงแล้ว — ที่เหลือไม่ต้องดู
     if (top + r.height < -60) continue;           // ยังอยู่เหนือขอบบน
+    const csLh = parseFloat(getComputedStyle(kids[i]).lineHeight);
+    const lineH = Math.min(r.height, (Number.isFinite(csLh) ? csLh * zoom : r.height));
     const d = el('div', 'k-ln-no', String(i + 1));
     d.style.top = Math.round(top) + 'px';
+    d.dataset.lineh = String(Math.round(lineH));
     frag.appendChild(d); n++;
   }
   g.textContent = '';
   g.appendChild(frag);
+  // วัดความสูงจริงของตัวเลขได้หลังอยู่ใน DOM แล้วเท่านั้น (ขนาดตามฟอนต์ + --ui-scale)
+  for (const d of g.children) {
+    const lineH = +d.dataset.lineh || 0;
+    const off = (lineH - d.offsetHeight) / 2;
+    if (off > 0.5) d.style.top = Math.round(parseFloat(d.style.top) + off) + 'px';
+  }
   return n;
 }
 /** ผูกเหตุการณ์ที่ทำให้เลขบรรทัดต้องขยับ (เลื่อนจอ/พิมพ์/สลับแท็บ) — เรียกครั้งเดียวตอนเริ่มโปรแกรม */
@@ -532,6 +549,29 @@ export async function preloadLangFontUrls() {
 /** ยัด @font-face ตามภาษาเข้า <head> — คืนจำนวนแถวที่ใช้จริง */
 export function applyProjectLangFonts() {
   return applyLangFonts(state.settings.langFonts, langFontUrl);
+}
+/**
+ * [alpha.81 ข้อ 8] `@font-face` สำหรับ **ไฟล์ HTML ที่ออกไปนอกโปรแกรม**
+ *
+ * `langFontUrl()` คืนที่อยู่แบบ **สัมพัทธ์** (`assets/fonts/x.ttf`) ซึ่งใช้ได้เฉพาะใน renderer/
+ * ไฟล์ HTML ที่เราเขียนออกไป (หรือไฟล์ชั่วคราวที่หน้าต่างซ่อนใช้ทำ PDF) อยู่คนละที่ →
+ * ที่อยู่สัมพัทธ์นั้นชี้ไปไม่ถึงไฟล์ ฟอนต์เลยตกไปตัวสำรองเงียบ ๆ (ไทยกลายเป็นสี่เหลี่ยม)
+ * ตัวนี้แปลงทุกแถวเป็น `file://` เต็มก่อน จึงฝังลง HTML ที่ไปอยู่ที่ไหนก็ได้
+ * @returns {Promise<string>} CSS ก้อนเดียว (ว่าง = ไม่มีฟอนต์ที่ต้องฝัง)
+ */
+export async function exportFontCss() {
+  try {
+    await preloadLangFontUrls();
+    const dir = await kapi.join(await kapi.appDir(), 'renderer');
+    const abs = new Map();
+    for (const r of normalizeLangFonts(state.settings.langFonts)) {
+      if (!r.builtin) continue;
+      const p = await kapi.join(dir, 'assets', 'fonts', r.builtin);
+      if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
+    }
+    return buildLangFontCss(state.settings.langFonts,
+                            (row) => (row.builtin ? (abs.get(row.builtin) || '') : langFontUrl(row)));
+  } catch (e) { log('warn', tt('ui.app.exportFontCssFail'), e); return ''; }
 }
 
 // ---------------- [alpha.57a ข้อ 1] เสียงเครื่องพิมพ์ดีด ----------------
@@ -4868,7 +4908,7 @@ export async function rosterTextForDraft(dPath) {
   } catch { return ''; }
 }
 
-async function buildDraftModel(dPath, title) {
+export async function buildDraftModel(dPath, title) {
   const model = { title: title || state.title, author: (state.meta && state.meta.author) || '',
                   roster: await rosterTextForDraft(dPath),
                   chapters: [] };
@@ -4885,6 +4925,9 @@ async function buildDraftModel(dPath, title) {
       c.scenes.push({ title: sc.title || '', file, body: (body || '').trim(),
                       synopsis: sc.synopsis || (meta && meta.synopsis) || '',
                       status: sc.status || (meta && meta.status) || '',
+                      // [alpha.81 ข้อ 8] ปลายทาง PDF ต้องรู้ว่านี่ "บทหนัง" หรือ "นิยาย"
+                      // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
+                      format: (meta && meta.format) === 'screenplay' ? 'screenplay' : 'prose',
                       type: isMemo ? 'memo' : 'scene', words: countWords(body || '') });
     }
     model.chapters.push(c);
@@ -4905,7 +4948,7 @@ async function compileDraftText(dPath, title) {
 }
 
 // รายชื่อฉบับร่างทั้งหมดในโปรเจกต์ (เซกชัน / ร่าง)
-async function listDrafts() {
+export async function listDrafts() {
   const drafts = [];
   for (const secName of await kapi.listDirs(state.root)) {
     const secPath = await kapi.join(state.root, secName);
@@ -4930,12 +4973,12 @@ export const SECTION_STATUSES = [
 
 // ---------------- เวิร์กโฟลว์ส่งออก (compile) ----------------
 // เวิร์กโฟลว์ของผู้ใช้เก็บใน project.khn.json → compileWorkflows
-function userWorkflows() {
+export function userWorkflows() {
   if (!state.meta) return [];
   if (!Array.isArray(state.meta.compileWorkflows)) state.meta.compileWorkflows = [];
   return state.meta.compileWorkflows;
 }
-function allWorkflows() { return [...PRESETS, ...userWorkflows()]; }
+export function allWorkflows() { return [...PRESETS, ...userWorkflows()]; }
 
 /** [67][68] ผลลัพธ์เวิร์กโฟลว์ที่เลือกนามสกุล .fdx/.rtf → อ่านเป็นบทแล้วแปลงต่อ */
 export function finalizeCompiled(r) {
@@ -5202,7 +5245,7 @@ export async function exportScript(kind) {
 }
 
 /** URL ของฟอนต์ที่ฝังมากับโปรแกรม — ให้ PDF ที่สร้างนอกหน้าต่างใช้ฟอนต์เดียวกัน */
-async function embeddedFontUrls() {
+export async function embeddedFontUrls() {
   try {
     const dir = await kapi.join(await kapi.appDir(), 'renderer', 'assets', 'fonts');
     const one = async (f) => (await kapi.exists(await kapi.join(dir, f)))
@@ -7663,6 +7706,21 @@ function scheduleRepaginate() {
   }, ms);
 }
 
+/**
+ * [alpha.81 ข้อ 7] บอกมุมมองจัดหน้าว่าเอกสารนี้มีกี่หน้า
+ * CSS ใช้ค่านี้ตั้งความสูงขั้นต่ำของกระดาษ = จำนวนหน้า × ความสูงกระดาษ (+ ช่องว่างระหว่างแผ่น)
+ * → หน้าสุดท้ายเป็น "แผ่นเต็ม" เสมอ ไม่ใช่แผ่นที่ถูกตัดตรงที่เนื้อหาหมด
+ * ตั้งที่ตัว pane ไม่ใช่ :root เพราะแยกจอแล้วสองช่องมีเอกสารคนละเรื่อง คนละจำนวนหน้า
+ * @returns {number} จำนวนหน้าที่ตั้งจริง (0 = ไม่มี pane)
+ */
+export function setLayoutPageCount(tab, count) {
+  const pane = tab && tab.pane;
+  if (!pane) return 0;
+  const n = Math.max(1, Math.round(+count || 1));
+  pane.style.setProperty('--pg-count', String(n));
+  return n;
+}
+
 /** จัดหน้าบทของแท็บ + วาดเส้นคั่นหน้า/เครื่องหมายต่อเนื่อง — คืนข้อความ " · N หน้า" */
 function repaginateNow(t) {
   try {
@@ -7682,6 +7740,7 @@ function repaginateNow(t) {
     const cChanged = setContinueds(marks);
     // วาดใหม่เฉพาะตอนตำแหน่งเส้นเปลี่ยนจริง — dispatch ทุก 300ms ไปกวนตำแหน่งเลื่อนตอนซูม
     if (changed || cChanged) t.sp.refreshGuides();
+    setLayoutPageCount(t, pg.count);       // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();                       // มุมมองเรียงหน้า/ภาพรวมตามเนื้อหาล่าสุด
     _spPageText = ttf('ui.app.page', pg.count);
     return _spPageText;
@@ -7702,6 +7761,7 @@ function repaginateProseNow(t) {
       prosePageStarts(ppg).map((pos, i) => ({ pos, page: base + i + 1 })).slice(1)
         .filter((x) => Number.isFinite(x.pos)));
     if (changed) refreshProsePageBreaks(t.editor.view);
+    setLayoutPageCount(t, ppg.count);      // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();
     return ppg.count;
   } catch (e) { log('warn', tt('ui.app.pageNovelNotOk'), e); return 0; }
@@ -8442,17 +8502,10 @@ async function handleCommand(ch, ...a) {
                   await kapi.print();
                   restoreInactivePanes();
                   setTimeout(() => document.body.classList.remove('printing'), 800); break;
-    case 'export-pdf': {
-      if (!t) break;
-      const p = await kapi.savePdfDialog(t.title + '.pdf');
-      if (p) { document.body.classList.add('printing');
-               hideInactivePanes();
-               await kapi.printToPdf(p);
-               restoreInactivePanes();
-               document.body.classList.remove('printing');
-               setStatus(tt('ui.common.exportPDF') + p); }
-      break;
-    }
+    // [alpha.81 ข้อ 8] เดิมทางนี้ยิง `webContents.printToPDF` ของหน้าจอตรง ๆ —
+    // ได้ A4 ตายตัวไม่ตรงขนาดกระดาษที่ตั้งไว้ และเป็นภาพของหน้าจอ ไม่ใช่เอกสารจริง
+    // ตอนนี้พาไปศูนย์รวมการส่งออกเสมอ (ทางนั้นให้ตัวอักษรจริงและใช้ขนาดกระดาษที่ตั้งไว้)
+    case 'export-pdf': await openExportHub(); break;
     case 'close-tab': if (t) closeTab(t.file); break;
     case 'close-all-tabs': closeAllTabs(); break;
     // [95] ในบทหนัง Ctrl+1/2/3 = scene/action/character (คีย์เดียวกับหัวข้อ 1-3 ของนิยาย)
@@ -8643,6 +8696,8 @@ async function handleCommand(ch, ...a) {
       else bumpPageScale(a[0]);
       break;
     case 'ui-scale': bumpUIScale(a[0]); break;
+    // [alpha.81 ข้อ 9] ทางส่งออกทั้งหมดรวมอยู่ในกล่องเดียว — เมนู ไฟล์ → ส่งออก… (Ctrl+Shift+E)
+    case 'export-hub': await openExportHub(); break;
     case 'compile': openCompileDialog(); break;
     case 'settings': settingsDialog(); break;
     case 'toggle-format': switchFormat(); break;
@@ -8768,6 +8823,20 @@ function onShortcut(e) {
 }
 window.addEventListener('keydown', onShortcut, true);
 // (บันทึกทั้งหมด Ctrl+Alt+S ย้ายเข้าตาราง SHORTCUTS แล้ว — ตั้งใหม่เองได้เหมือนรายการอื่น)
+
+// ---------------- [alpha.81 ข้อ 2] จำสถานะปุ่ม Ctrl/⌘ ไว้ที่ body ----------------
+// ลิงก์ Wiki ในตัวแก้ไขเปิดด้วย **Ctrl+คลิก** เท่านั้น — คลิกเปล่าแค่ย้ายเคอร์เซอร์
+// ตัวชี้เมาส์จึงต้องเป็น "ตัวพิมพ์" ตามปกติ และเป็น "มือ" เฉพาะตอนกดคีย์นั้นค้างจริง ๆ
+// (CSS: `.k-mention { cursor:text }` + `body.k-mod-down .k-mention { cursor:pointer }`)
+export function setModDown(on) {
+  document.body.classList.toggle('k-mod-down', !!on);
+  return !!on;
+}
+const _syncMod = (e) => setModDown(e.ctrlKey || e.metaKey);
+window.addEventListener('keydown', _syncMod, true);
+window.addEventListener('keyup', _syncMod, true);
+window.addEventListener('blur', () => setModDown(false));           // สลับหน้าต่างตอนกดค้าง = ค้างเป็นมือตลอดไป
+window.addEventListener('mousemove', _syncMod, { passive: true, capture: true });
 
 // ---------------- ซูมด้วย Ctrl+ล้อเมาส์ + Ctrl+0 รีเซ็ต (ทั้งโหมดนิยาย/บทหนัง) ----------------
 window.addEventListener('wheel', (e) => {
@@ -9005,6 +9074,29 @@ function syncFloatBarVisible() {
   const wk = state.active?.wiki?.secEditors?.some(({k}) => k?.view?.hasFocus())
           || (state.active?.wiki?.secEditors?.length > 0);
   floatBar.style.display = (ed || wk) ? 'flex' : 'none';
+}
+
+// ═════════ [alpha.81 ข้อ 1] คลิกขวาบนแถบเครื่องมือ / แถบ B I U ═════════
+// เดิมทางเดียวที่จะเอาปุ่มเข้า-ออกได้คือคลิกขวาบนปุ่ม "แผง" ตัวเดียว — ไม่มีใครเดาถูก
+// ตอนนี้คลิกขวา "ที่ไหนก็ได้" บนแถบทั้งสอง → เมนูแบบเดียวกับ Customize Toolbar ของเบราว์เซอร์
+// รายการเมนูมาจาก toolbar-ui.js (ที่เดียวกับกล่องตั้งค่า) — ที่นี่ทำแค่ผูกเหตุการณ์
+let _tbCtxBound = false;
+export function bindToolbarContextMenu() {
+  if (_tbCtxBound) return false;
+  let n = 0;
+  for (const sel of TB_HOSTS) {
+    const bar = document.querySelector(sel);
+    if (!bar) continue;
+    bar.oncontextmenu = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const hit = e.target.closest('[id]');
+      popupMenu(e.clientX, e.clientY,
+                toolbarContextItems(hit && bar.contains(hit) ? hit.id : ''));
+    };
+    n++;
+  }
+  _tbCtxBound = n > 0;
+  return _tbCtxBound;
 }
 
 // ระบบแผงย้ายไป src/panels/* ทั้งหมดแล้ว (alpha.46 — Photoshop-style dock/tab/float)
@@ -9337,6 +9429,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ---- แถบรูปแบบอักษรแบบลอย (ลากย้ายได้ · จำตำแหน่ง) ----
   setupFloatingFormatBar();
+  bindToolbarContextMenu();          // [alpha.81 ข้อ 1] คลิกขวาบนแถบ = เมนูปรับปุ่ม (เหมือนเบราว์เซอร์)
   initLineGutter();                  // [60r2 ข้อ 11] รางเลขบรรทัดฝั่ง UI (ผูก scroll ครั้งเดียว)
   // ---- Panel System (Photoshop-style) — วาดทุกแผงลง #app-root ----
   initPanelSystem();
@@ -18247,8 +18340,11 @@ async function runTest(projectPath) {
             check('[58] ช่องว่างล้ำออกนอกระยะขอบทั้งสองข้าง',
                   parseFloat(bCS.marginLeft) < -1 && parseFloat(bCS.marginRight) < -1,
                   bCS.marginLeft + ' / ' + bCS.marginRight);
-            check('[58] ช่องว่างมีเส้นขอบบน-ล่างคั่น',
-                  parseFloat(bCS.borderTopWidth) >= 1 && parseFloat(bCS.borderBottomWidth) >= 1);
+            // [alpha.81 ข้อ 7] รอยต่อเปลี่ยนจาก "เส้นขอบบน-ล่าง" เป็นชั้นสี
+            // ขาว(ขอบล่างของแผ่นก่อน) → เส้นขอบกระดาษ → พื้นโต๊ะ → เส้นขอบ → ขาว(ขอบบนของแผ่นใหม่)
+            // เพราะเส้นขอบเปล่า ๆ ทำให้เนื้อหน้าถัดไป "ชิดขอบบน" ไม่เหมือนกระดาษจริง
+            check('[58] ช่องว่างวาดเป็นชั้นสี (ขาว–ขอบ–พื้นโต๊ะ–ขอบ–ขาว)',
+                  /linear-gradient/.test(bCS.backgroundImage), bCS.backgroundImage.slice(0, 60));
             const num = brks[0].querySelector('.sp-page-break-num');
             check('[58] มีเลขหน้ากำกับรอยต่อ', !!num && /\d/.test(num.textContent), num && num.textContent);
           }
@@ -23729,6 +23825,273 @@ async function runTest(projectPath) {
         check('[80-4] กดปุ่มเส้นเวลาตอนไม่มีฉากเปิด แผงเปิดจริง',
               await until79(() => isPanelOpen('timeline')));
         hidePanel('timeline');
+      }
+
+      // ════════════════════ [alpha.81] รอบ QOL 9 ข้อ ════════════════════
+      const wait81 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const until81 = async (fn, ms = 4000) => {
+        const t0 = Date.now();
+        while (Date.now() - t0 < ms) { if (await fn()) return true; await wait81(60); }
+        return false;
+      };
+      // เปิดฉากจริงสักฉากไว้ใช้ตลอดบล็อกนี้ (หลายเทสต้องมีตัวแก้ไขสด ๆ อยู่ในสายตา)
+      const anyScene81 = [...state.tabs.values()].find((x) => x.editor || x.sp)
+        || (await (async () => {
+             const f = [...document.querySelectorAll('#tree .scene')][0];
+             if (f) f.click();
+             await until81(() => !!(state.active && (state.active.editor || state.active.sp)));
+             return state.active;
+           })());
+      if (anyScene81 && anyScene81.file) await activate(anyScene81.file);
+
+      // ───────── [81-1] คลิกขวาบนแถบเครื่องมือ / แถบ B I U ─────────
+      {
+        check('[81-1] ผูกเมนูคลิกขวาไว้กับทั้งสองแถบ',
+              TB_HOSTS.every((s) => { const b = document.querySelector(s); return !b || !!b.oncontextmenu; }),
+              TB_HOSTS.map((s) => s + '=' + !!(document.querySelector(s) || {}).oncontextmenu).join(' '));
+        // คลิกขวาบน "ที่ว่าง" ของแถบ → เมนูมีรายการปรับแถบ + แสดงปุ่มทั้งหมด (ไม่มีรายการซ่อน)
+        const blank = toolbarContextItems('');
+        check('[81-1] คลิกขวาที่ว่าง → 2 รายการ', blank.length === 2, JSON.stringify(blank.map((x) => x.label)));
+        check('[81-1] มีรายการ "ปรับแถบเครื่องมือ"', blank.some((x) => x.label === tt('ui.tbcfg.customize')));
+        // คลิกขวาโดนปุ่มที่ซ่อนได้ → มีรายการซ่อนปุ่มนั้นเป็นรายการแรก
+        const onBold = toolbarContextItems('tb-bold');
+        check('[81-1] คลิกขวาบนปุ่ม → มีรายการซ่อนปุ่มนั้น + เส้นคั่น', onBold.length === 4 && onBold[1] === '-',
+              JSON.stringify(onBold.map((x) => (x === '-' ? '-' : x.label))));
+        // ปุ่มที่โปรแกรมคุมเอง ห้ามมีรายการซ่อน (ซ่อนแล้วโหมดเอกสารพัง)
+        check('[81-1] ปุ่มที่ล็อกไว้ไม่มีรายการซ่อน', toolbarContextItems('tb-mode').length === 2);
+        // เมนูโผล่จริงบนหน้าจอ
+        closeMenu();
+        document.querySelector('#toolbar').oncontextmenu(
+          { preventDefault() {}, stopPropagation() {}, clientX: 90, clientY: 60, target: document.querySelector('#toolbar') });
+        check('[81-1] คลิกขวาแล้วเมนูโผล่จริง', !!document.querySelector('.k-menu'));
+        closeMenu();
+      }
+
+      // ───────── [81-2] ลิงก์ Wiki ไม่ทำ "มือชี้" ตอนไม่ได้กด Ctrl ─────────
+      {
+        const probe81 = el('span', 'k-mention', 'x');
+        document.body.append(probe81);
+        setModDown(false);
+        check('[81-2] ไม่กด Ctrl → ตัวชี้เป็นตัวพิมพ์ ไม่ใช่มือ',
+              getComputedStyle(probe81).cursor === 'text', getComputedStyle(probe81).cursor);
+        setModDown(true);
+        check('[81-2] กด Ctrl ค้าง → เปลี่ยนเป็นมือ (ตรงกับ Ctrl+คลิกที่เปิด Wiki ได้จริง)',
+              getComputedStyle(probe81).cursor === 'pointer', getComputedStyle(probe81).cursor);
+        setModDown(false);
+        check('[81-2] ปล่อย Ctrl → กลับเป็นตัวพิมพ์', getComputedStyle(probe81).cursor === 'text');
+        check('[81-2] ไม่ค้างคลาสไว้บน body', !document.body.classList.contains('k-mod-down'));
+        probe81.remove();
+      }
+
+      // ───────── [81-3] แผงคอมเมนต์ต้องตามฉากที่เปิดอยู่เสมอ ─────────
+      {
+        const sc81 = [...state.tabs.values()].filter((x) => x.file && /\.md$/i.test(x.file));
+        if (sc81.length >= 2) {
+          showPanel('comments');
+          const bodyC = $('#comments-body');
+          // สลับสองแท็บ "ติด ๆ กัน" โดยไม่รอรอบแรกจบ — นี่คือสภาพที่ทำให้เดิมวาดฉากเก่าทับ
+          await activate(sc81[0].file);
+          const p1 = renderCommentPanel(bodyC);
+          await activate(sc81[1].file);
+          const p2 = renderCommentPanel(bodyC);
+          await Promise.all([p1, p2]);
+          const head81 = bodyC.querySelector('.k-cm-scene');
+          check('[81-3] วาดซ้อนกันแล้วหัวแผงเป็นฉากที่เปิดอยู่จริง',
+                !!head81 && head81.textContent.includes(sc81[1].title),
+                (head81 && head81.textContent) + ' ควรเป็น ' + sc81[1].title);
+          check('[81-3] รอบที่ถูกแซงคืน null ไม่ไปแตะ DOM', (await p1) === null);
+          // สลับไปแท็บที่ไม่ใช่ .md → ต้องบอกว่าให้เปิดฉากก่อน ไม่ใช่ค้างคอมเมนต์เก่า
+          await activate(sc81[0].file);
+          await renderCommentPanel(bodyC);
+          const head2 = bodyC.querySelector('.k-cm-scene');
+          check('[81-3] สลับกลับแล้วหัวแผงตามมาถูกฉาก',
+                !!head2 && head2.textContent.includes(sc81[0].title), head2 && head2.textContent);
+          hidePanel('comments');
+        }
+      }
+
+      // ───────── [81-4] รายการที่กางออกของ <select> ต้องใช้สีของธีม ─────────
+      {
+        const sel81 = document.getElementById('sp-view-select');
+        check('[81-4] มีตัวเลือกมุมมองอยู่บนแถบลอย', !!sel81);
+        if (sel81) {
+          const rgb = (h) => { const d = el('span'); d.style.color = h; document.body.append(d);
+                               const v = getComputedStyle(d).color; d.remove(); return v; };
+          const varRgb = (v) => rgb(getComputedStyle(document.body).getPropertyValue(v).trim());
+          // ตัวที่ "ไม่ได้ถูกเลือก" คือตัวที่เคยเป็นเทาจาง ๆ บนพื้นขาวของระบบ
+          const plain = [...sel81.options].find((o) => !o.selected);
+          const csP = getComputedStyle(plain);
+          check('[81-4] พื้นของตัวเลือกที่ไม่ได้เลือก = สีแถบของธีม (ไม่ใช่ขาวของระบบ)',
+                csP.backgroundColor === varRgb('--bar'), csP.backgroundColor + ' vs ' + varRgb('--bar'));
+          check('[81-4] หมึกของตัวเลือกที่ไม่ได้เลือก = สีตัวหนังสือของธีม',
+                csP.color === varRgb('--fg'), csP.color + ' vs ' + varRgb('--fg'));
+          const csS = getComputedStyle([...sel81.options].find((o) => o.selected));
+          check('[81-4] ตัวที่เลือกอยู่ใช้สีเน้นของธีม ไม่ใช่น้ำเงินของระบบ',
+                csS.backgroundColor === varRgb('--sel'), csS.backgroundColor + ' vs ' + varRgb('--sel'));
+        }
+      }
+
+      // ───────── [81-5] ธีมสว่าง: ไม่มีพื้นผิวไหนค้างเป็นสีของธีมมืด ─────────
+      {
+        const wasTheme81 = currentTheme();
+        const lum = (c) => { const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c || '');
+                             return m ? (+m[1] * .299 + +m[2] * .587 + +m[3] * .114) : -1; };
+        toggleTheme('light');
+        await wait81(60);
+        // ตัวแปรพื้นผิวทุกตัวต้อง "สว่าง" ในธีมสว่าง — เดิมเป็นเลข hex เขียนตายในกฎ จึงดำอยู่กลางธีมสว่าง
+        const rgbOf = (v) => { const d = el('span'); d.style.color = v; document.body.append(d);
+                               const c = getComputedStyle(d).color; d.remove(); return c; };
+        for (const v of ['--hover', '--hover-soft', '--titlebar', '--sunken', '--chip', '--canvas']) {
+          const val = getComputedStyle(document.body).getPropertyValue(v).trim();
+          check('[81-5] ธีมสว่าง: ' + v + ' เป็นสีสว่าง', lum(rgbOf(val)) > 150, v + '=' + val);
+        }
+        // ของจริงบนหน้าจอ: แถบแท็บกับแถบชื่อหน้าต่างต้องสว่างตามธีม (ภาพที่ผู้ใช้ส่งมาเป็นดำทั้งคู่)
+        const tabEl81 = document.querySelector('#tabs .tab');
+        if (tabEl81) check('[81-5] ธีมสว่าง: แถบแท็บสว่างจริง',
+                           lum(getComputedStyle(tabEl81).backgroundColor) > 150,
+                           getComputedStyle(tabEl81).backgroundColor);
+        const barEl81 = document.getElementById('titlebar');
+        if (barEl81) check('[81-5] ธีมสว่าง: แถบชื่อหน้าต่างสว่างจริง',
+                           lum(getComputedStyle(barEl81).backgroundColor) > 150,
+                           getComputedStyle(barEl81).backgroundColor);
+        toggleTheme('dark');
+        await wait81(60);
+        check('[81-5] ธีมมืด: พื้นผิวกลับมาเข้มเหมือนเดิม',
+              lum(rgbOf(getComputedStyle(document.body).getPropertyValue('--hover').trim())) < 120);
+        if (wasTheme81 === 'light') toggleTheme('light');
+      }
+
+      // ───────── [81-6] โหมดร่าง: รางเลขบรรทัดต้องไม่ทับตัวหนังสือ + เลขอยู่กลางบรรทัด ─────────
+      {
+        const tSp81 = [...state.tabs.values()].find((x) => x.sp) || state.active;
+        if (tSp81 && tSp81.file && (tSp81.sp || tSp81.editor)) {
+          await activate(tSp81.file);
+          const wasLn = !!state.settings.lineNumbers;
+          const wasView = currentSpView();
+          state.settings.lineNumbers = true;
+          document.body.classList.add('k-ln');
+          setSpView('draft');
+          await wait81(120);
+          refreshLineGutter();
+          const g81 = document.getElementById('k-ln-gutter');
+          const pm81 = tSp81.pane.querySelector(':scope > .workspace > .ProseMirror');
+          check('[81-6] รางเลขบรรทัดโผล่ในโหมดร่าง', !!g81 && g81.classList.contains('on'));
+          if (g81 && pm81) {
+            const gr = g81.getBoundingClientRect(), pmr = pm81.getBoundingClientRect();
+            check('[81-6] ตัวหนังสือเริ่มหลังรางเลข ไม่ถูกทับ', pmr.left >= gr.right - 1,
+                  'ข้อความซ้าย=' + Math.round(pmr.left) + ' รางขวา=' + Math.round(gr.right));
+            // เลขต้องอยู่กลางบรรทัดแรกของย่อหน้า ไม่ใช่ชิดขอบบน
+            const nos = [...g81.querySelectorAll('.k-ln-no')];
+            check('[81-6] มีเลขบรรทัดวาดจริง', nos.length > 0, String(nos.length));
+            if (nos.length) {
+              const kid = pm81.children[0];
+              const kr = kid.getBoundingClientRect(), nr = nos[0].getBoundingClientRect();
+              const lh = Math.min(kr.height, parseFloat(getComputedStyle(kid).lineHeight) *
+                                  (parseFloat(getComputedStyle(pm81.parentElement).zoom) || 1));
+              const off = Math.abs((nr.top + nr.height / 2) - (kr.top + lh / 2));
+              check('[81-6] เลขอยู่กลางบรรทัดแรก (ไม่ชิดบน)', off <= 2.5, 'คลาด ' + off.toFixed(2) + 'px');
+            }
+          }
+          // โหมดร่างของบทหนังต้องเป็นคอลัมน์อ่านสบายแบบนิยาย ไม่ยืดเต็มแผง
+          if (pm81) {
+            const paneW = tSp81.pane.getBoundingClientRect().width;
+            check('[81-6] โหมดร่างเป็นคอลัมน์อ่านสบาย ไม่ยืดเต็มแผง',
+                  pm81.getBoundingClientRect().width < paneW,
+                  'ข้อความ=' + Math.round(pm81.getBoundingClientRect().width) + ' แผง=' + Math.round(paneW));
+          }
+          setSpView(wasView);
+          state.settings.lineNumbers = wasLn;
+          document.body.classList.toggle('k-ln', wasLn);
+          await wait81(80);
+        }
+      }
+
+      // ───────── [81-7] มุมมองจัดหน้า = หน้ากระดาษจริง (ขอบบน/ล่าง + หน้าสุดท้ายเต็มแผ่น) ─────────
+      {
+        const t81 = state.active;
+        if (t81 && (t81.sp || t81.editor)) {
+          const wasView = currentSpView();
+          // ตั้งจำนวนหน้าเองเพื่อวัดความสูงขั้นต่ำแบบไม่ต้องพึ่งความยาวเนื้อหาจริง
+          check('[81-7] setLayoutPageCount คืนค่าที่ตั้งจริง', setLayoutPageCount(t81, 3) === 3);
+          check('[81-7] ค่าต่ำกว่า 1 ถูกดันขึ้นเป็น 1', setLayoutPageCount(t81, 0) === 1);
+          setSpView('layout');
+          await wait81(150);
+          const pm = t81.pane.querySelector(':scope > .workspace > .ProseMirror');
+          const pageH = parseFloat(getComputedStyle(pm).minHeight);
+          setLayoutPageCount(t81, 3);
+          await wait81(60);
+          const pageH3 = parseFloat(getComputedStyle(pm).minHeight);
+          check('[81-7] 3 หน้า = กระดาษสูงกว่า 1 หน้าเกินสองเท่า (หน้าสุดท้ายเป็นแผ่นเต็ม)',
+                pageH3 > pageH * 2.5, pageH + ' → ' + pageH3);
+          // รอยต่อหน้าต้องกินที่เท่ากับ ขอบล่าง + ช่องว่าง + ขอบบน (เดิมเท่าช่องว่างอย่างเดียว)
+          // วาง probe ไว้ใน pane **นอก** ProseMirror — ตัวแก้ไขถอด element แปลกปลอมทิ้งทันที
+          // (เคยวางในนั้นแล้ว getComputedStyle คืนค่าว่างเพราะโหนดหลุด DOM ไปก่อนวัด)
+          const probe = el('div', 'sp-page-break');
+          t81.pane.append(probe);
+          await wait81(30);
+          const cs = getComputedStyle(probe);
+          const inPx = (v) => { const d = el('div'); d.style.height = v; d.style.position = 'absolute';
+                                t81.pane.append(d); const h = d.getBoundingClientRect().height; d.remove(); return h; };
+          const want = inPx(getComputedStyle(document.documentElement).getPropertyValue('--mg-top')) +
+                       inPx(getComputedStyle(document.documentElement).getPropertyValue('--mg-bottom'));
+          check('[81-7] รอยต่อหน้ามีระยะขอบของทั้งสองแผ่นอยู่ด้วย',
+                probe.getBoundingClientRect().height > want, cs.height + ' ต้องมากกว่าขอบรวม ' + want);
+          check('[81-7] รอยต่อหน้าวาดเป็นชั้นสี (ขาว–พื้นโต๊ะ–ขาว) ไม่ใช่เส้นเปล่า',
+                /gradient/.test(cs.backgroundImage), cs.backgroundImage.slice(0, 40));
+          probe.remove();
+          setLayoutPageCount(t81, 1);
+          setSpView(wasView);
+          await wait81(80);
+        }
+      }
+
+      // ───────── [81-8 + 81-9] ศูนย์รวมการส่งออก ─────────
+      {
+        // ตรรกะล้วนมี unit test แยก (test/export-hub.test.cjs) — ที่นี่ตรวจ "ต่อจุดครบไหม"
+        check('[81-9] คีย์ลัด Ctrl+Shift+E ชี้ไปศูนย์รวมการส่งออก',
+              SHORTCUTS.some((s) => s[0] === 'KeyE' && s[1] === true && s[2] === true && s[3] === 'export-hub'));
+        const hub = await openExportHub();
+        check('[81-9] กล่องเปิดได้', !!hub && !!document.querySelector('.k-xhub'));
+        if (hub) {
+          const box = document.querySelector('.k-xhub');
+          check('[81-9] มีรายการรูปแบบครบทุกตัว',
+                box.querySelectorAll('.xhub-fmt').length === EXPORT_FORMATS.length,
+                box.querySelectorAll('.xhub-fmt').length + '/' + EXPORT_FORMATS.length);
+          check('[81-9] มีสามคอลัมน์: รูปแบบ · ตั้งค่า · ตัวอย่าง',
+                !!box.querySelector('.xhub-formats') && !!box.querySelector('.xhub-options') &&
+                !!box.querySelector('.xhub-preview'));
+          check('[81-9] เลือก PDF ไว้เป็นค่าเริ่มต้น',
+                box.querySelector('.xhub-fmt.on').dataset.fmt === hub.cfg.format);
+          check('[81-9] ตั้งค่าได้: มีขอบเขต + เวิร์กโฟลว์ + ตัวเลือกของรูปแบบ',
+                !!box.querySelector('#xhub-scope') && !!box.querySelector('#xhub-wf') &&
+                !!box.querySelector('#xhub-wm'));
+          // ตัวอย่างต้องเป็น "ของจริง" — ทางเดียวกับตอนบันทึกไฟล์
+          check('[81-9] ตัวอย่าง PDF วาดหน้ากระดาษจริง',
+                await until81(() => !!box.querySelector('.xhub-pages .sp-page, .xhub-frame')));
+          await hub.setFormat('txt');
+          check('[81-9] เปลี่ยนรูปแบบแล้วตัวอย่างเปลี่ยนตาม',
+                await until81(() => !!box.querySelector('.xhub-pre')));
+          const built = await hub.build();
+          check('[81-8] .txt ที่ได้เป็นข้อความล้วน ไม่มีแท็ก HTML ปน',
+                !!built && !/<(p|h1|div|body)\b/i.test(built.text), (built && built.text || '').slice(0, 80));
+          await hub.setFormat('html');
+          const bh = await hub.build();
+          check('[81-8] .html ที่ได้เป็นหน้าเว็บเต็มใบ', !!bh && /^<!DOCTYPE html>/i.test(bh.html));
+          check('[81-8] .html ฝัง @page ตามขนาดกระดาษจริง (ไม่ใช่ A4 ตายตัว)',
+                /@page\{size:[\d.]+in [\d.]+in/.test(bh.html.replace(/\s*\{\s*/g, '{')),
+                (bh.html.match(/@page[^}]*}/) || [''])[0]);
+          check('[81-8] ตัวสร้าง PDF ของงานชิ้นนี้ไม่ผ่านเครื่องพิมพ์ของระบบ',
+                ['pdflib', 'html'].includes(bh.engine), bh.engine);
+          hub.close();
+          check('[81-9] ปิดกล่องแล้วไม่มีอะไรค้าง', !document.querySelector('.k-xhub'));
+        }
+        // เมนู "ไฟล์" ต้องเหลือทางส่งออกทางเดียว (เดิม 9 ทาง) — ตรวจจากไฟล์ต้นทางของเมนู
+        check('[81-9] เมนูไฟล์เรียกศูนย์รวมการส่งออกแล้ว',
+              await (async () => {
+                try { const s = await kapi.readFile(await kapi.join(await kapi.appDir(), 'main.js'));
+                      return s.includes("send('export-hub')") && !s.includes("send('export-pdf')"); }
+                catch { return true; }
+              })());
       }
 
     out.push('ALL OK');

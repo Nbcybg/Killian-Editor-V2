@@ -583,7 +583,9 @@ export const SHORTCUTS = [
   ['KeyW', true, true, 'close-all-tabs'],
   ['KeyF', true, false, 'find'],
   ['Comma', true, false, 'settings'],
-  ['KeyE', true, true, 'compile'],
+  // [alpha.81 ข้อ 9] Ctrl+Shift+E = "ศูนย์รวมการส่งออก" (เดิมเปิดกล่องเวิร์กโฟลว์ตรง ๆ)
+  // กล่องเวิร์กโฟลว์ยังอยู่ — เข้าจากปุ่ม "ปรับขั้นตอน…" ในศูนย์รวม
+  ['KeyE', true, true, 'export-hub'],
   ['KeyZ', true, false, 'editor-undo'],
   ['KeyZ', true, true, 'editor-redo'],
   ['KeyY', true, false, 'editor-redo'],
@@ -695,7 +697,7 @@ export const SHORTCUT_LABELS = {
   'quick-open': 'shortcuts.quickOpen', 'typewriter': 'shortcuts.typewriter',
   'fmt:align:left': 'shortcuts.alignLeft', 'fmt:align:center': 'shortcuts.alignCenter',
   'fmt:align:right': 'shortcuts.alignRight', 'fmt:align:justify': 'shortcuts.justify',
-  'compile': 'shortcuts.compile', 'save-all': 'shortcuts.saveAll',
+  'export-hub': 'shortcuts.exportHub', 'compile': 'shortcuts.compile', 'save-all': 'shortcuts.saveAll',
   'split-view': 'shortcuts.splitView', 'kanban': 'shortcuts.kanban',
   'export-blog': 'shortcuts.exportBlog', 'close-all-tabs': 'shortcuts.closeAllTabs',
   'line-numbers': 'shortcuts.lineNumbers',
@@ -743,7 +745,7 @@ export const SHORTCUT_LABELS = {
  */
 export const SHORTCUT_CATS = [
   { key: 'file', labelKey: 'ui.shortcuts.catFile',
-    ids: ['save', 'save-as', 'save-all', 'new-project', 'open-project', 'print', 'compile',
+    ids: ['save', 'save-as', 'save-all', 'new-project', 'open-project', 'print', 'export-hub',
           'export-blog', 'close-tab', 'close-all-tabs', 'new-from-template'] },
   { key: 'edit', labelKey: 'ui.shortcuts.catEdit',
     ids: ['editor-undo', 'editor-redo', 'find', 'global-search', 'quick-open', 'goto',

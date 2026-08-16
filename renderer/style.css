@@ -36,6 +36,16 @@
   --fg:#e8e6df; --bright:#faf9f5; --dim:#98958b;
   --accent:#c15f3c; --accent-hi:#d97757; --link:#7aa8d8; --sel:#7a4a2e;
   --orange:#d9955f; --curline:#2d2c29;
+  /* [alpha.81 ข้อ 5] สีพื้นผิวของ "เปลือกโปรแกรม" — เดิมเขียนเป็นเลข hex กระจายทั่วไฟล์
+     ธีมสว่างจึงเปลี่ยนไม่ได้ (แถบแท็บ/แถบชื่อหน้าต่าง/ปุ่มตอนชี้ ยังดำอยู่กลางธีมสว่าง)
+     ทุกพื้นผิวที่ไม่ใช่ --bg/--bar/--side ต้องมีชื่อของตัวเองที่นี่ ห้ามเขียน hex ในกฎ */
+  --hover:#3a3936;        /* พื้นตอนเอาเมาส์ชี้ปุ่ม */
+  --hover-soft:#2b2a27;   /* พื้นตอนชี้แถวในรายการ / แท็บที่ยังไม่ถูกเลือก */
+  --titlebar:#191816;     /* แถบชื่อหน้าต่าง (frameless) */
+  --sunken:#1f1e1c;       /* พื้นจม — บล็อกโค้ด / กล่องผลลัพธ์ / ทูลทิป */
+  --chip:#3d3a34;         /* พื้นป้ายชื่อ (mention / pill) */
+  --danger-soft:#5a2b2b;  /* พื้นปุ่มอันตรายตอนชี้ */
+  --canvas:#262624;       /* พื้นกระดานวาด (Planner) */
 }
 /* [alpha.60r2 ข้อ 10] ธีมสว่าง — Ctrl+Shift+P สลับ dark ↔ light
    สลับเฉพาะ "เปลือกโปรแกรม" ผ่านตัวแปรชุดเดียวกัน · ไม่แตะ --paper-* เลย
@@ -47,8 +57,9 @@ body.theme-light {
   --accent:#b8532f; --accent-hi:#c15f3c; --link:#2f6ba8; --sel:#f0cdb8;
   --orange:#a86b32; --curline:#efece2;
   --paper-surround:#cfccc2;                 /* พื้นรอบกระดาษ — ตัวกระดาษเองไม่เปลี่ยน */
+  --hover:#dcd9cf; --hover-soft:#e2dfd5; --titlebar:#e4e1d7; --sunken:#f2f0e9;
+  --chip:#e7e2d5; --danger-soft:#efd3cb; --canvas:#f6f4ef;
 }
-body.theme-light button:hover { background:#dcd9cf; }
 * { box-sizing:border-box; }
 html,body { height:100%; margin:0; }
 /* --ui-scale (บั๊ก #9) = ขนาด UI ทั้งแอป — ตั้งจาก settings.uiScale ผ่าน applyUIScale()
@@ -60,7 +71,13 @@ body { display:flex; flex-direction:column; background:var(--bg); color:var(--fg
   font-size:calc(var(--ui-fs, 14px) * var(--ui-scale, 1)); line-height:1.5; }
 button, select { font:inherit; color:var(--fg); background:var(--bar);
   border:1px solid transparent; border-radius:6px; padding:4px 10px; cursor:pointer; }
-button:hover { background:#3a3936; }
+button:hover { background:var(--hover); }
+/* [alpha.81 ข้อ 4] รายการที่กางออกของ <select> ("แผง BIU ตัว dropdown เปลี่ยนสี")
+   Chromium วาดรายการนั้นด้วยพื้น **ขาวของระบบ** เสมอ แต่ <option> สืบทอด color จาก <select>
+   ซึ่งเป็น --fg สีอ่อนของธีมมืด → ตัวหนังสือเทาจาง ๆ บนพื้นขาว อ่านไม่ออก
+   ตั้งพื้น/หมึกของ <option> ตรง ๆ ที่นี่ = รายการที่กางออกใช้สีเดียวกับตัวแถบเสมอ */
+select option { background:var(--bar); color:var(--fg); }
+select option:checked, select option:hover { background:var(--sel); color:var(--bright); }
 ::selection { background:var(--sel); color:var(--bright); }
 
 #topbar { display:flex; align-items:center; gap:10px; padding:6px 12px;
@@ -71,7 +88,7 @@ button:hover { background:#3a3936; }
 #toolbar { display:flex; align-items:center; gap:2px; padding:4px 10px;
   background:var(--bar); border-bottom:1px solid var(--border); }
 #toolbar .tb { min-width:32px; background:transparent; }
-#toolbar .tb:hover { background:#3a3936; }
+#toolbar .tb:hover { background:var(--hover); }
 #toolbar .tb.on { background:var(--sel); color:var(--bright); }
 #toolbar .tb.dis { opacity:.4; pointer-events:none; }
 #toolbar .sep { width:1px; height:20px; background:var(--border); margin:0 6px; }
@@ -84,7 +101,7 @@ button:hover { background:#3a3936; }
   background:transparent; transition:background .12s, border-color .12s; }
 .tb.tb-toggle.on::after { background:var(--accent-hi); border-color:var(--accent-hi);
   box-shadow:0 0 4px var(--accent-hi); }
-#tb-mode { -webkit-app-region:no-drag; background:var(--panel,#2b2a27); color:var(--fg);
+#tb-mode { -webkit-app-region:no-drag; background:var(--panel,var(--hover-soft)); color:var(--fg);
   border:1px solid var(--border); border-radius:6px; padding:3px 10px; font-size:calc(12px * var(--ui-scale, 1));
   white-space:nowrap; cursor:pointer; }
 #tb-mode:hover { background:var(--sel); color:var(--bright); }
@@ -148,7 +165,7 @@ body.panel-window #main { padding:0; }
 .k-tab { display:flex; align-items:center; gap:5px; padding:4px 9px; cursor:pointer;
   border-radius:7px 7px 0 0; color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); white-space:nowrap;
   max-width:150px; user-select:none; }
-.k-tab:hover { background:#2b2a27; color:var(--fg); }
+.k-tab:hover { background:var(--hover-soft); color:var(--fg); }
 .k-tab.active { background:var(--bg); color:var(--bright); box-shadow:inset 0 0 0 2px var(--accent-hi); }
 .k-tab-title { overflow:hidden; text-overflow:ellipsis; }
 .k-tab-icon { display:flex; align-items:center; opacity:.85; }
@@ -271,7 +288,7 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 .sec.collapsed > *:not(.sec-title) { display:none; }
 .chapter.collapsed > *:not(.ch-title) { display:none; }
 .scene { padding:3px 8px 3px 22px; border-radius:6px; cursor:pointer; color:var(--fg); }
-.scene:hover { background:#2b2a27; }
+.scene:hover { background:var(--hover-soft); }
 
 #content { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
 /* แถบรูปแบบอักษรแบบลอย — ลากย้ายได้ · จำตำแหน่ง */
@@ -280,13 +297,13 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
   border-radius:9px; box-shadow:0 6px 20px rgba(0,0,0,.4); user-select:none; }
 .k-fmtbar.k-dragging { opacity:.9; box-shadow:0 10px 28px rgba(0,0,0,.55); }
 .k-fmtbar .tb { min-width:30px; background:transparent; border:none; }
-.k-fmtbar .tb:hover { background:#3a3936; }
+.k-fmtbar .tb:hover { background:var(--hover); }
 .k-fmtbar .tb.on { background:var(--sel); color:var(--bright); }
 .k-fmtbar #tb-style { min-width:110px; }
 /* ปุ่มโหมดเอกสาร (📖 นิยาย ▾) + โหมดกระดาษ (📄) ในแถบลอย */
 .k-fmtbar #tb-mode { -webkit-app-region:no-drag; background:transparent; border:none;
   color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); padding:4px 8px; border-radius:6px; white-space:nowrap; cursor:pointer; }
-.k-fmtbar #tb-mode:hover { background:#3a3936; }
+.k-fmtbar #tb-mode:hover { background:var(--hover); }
 .k-fmtbar #tb-paper.on { background:var(--accent-hi); color:#fff; }
 .k-fmtbar-grip { cursor:grab; padding:0 5px; display:flex; flex-direction:column; gap:3px;
   align-self:stretch; align-items:center; justify-content:center; }
@@ -295,7 +312,7 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 #tabs { display:flex; gap:2px; background:var(--side); padding:4px 8px 0;
   border-bottom:1px solid var(--border); overflow-x:auto; }
 .tab { display:flex; align-items:center; gap:8px; padding:6px 12px;
-  background:#2b2a27; border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; }
+  background:var(--hover-soft); border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; }
 .tab.on { background:var(--bg); color:var(--bright); box-shadow:inset 0 0 0 2px var(--accent); }
 .tab-x { color:var(--dim); padding:0 2px; } .tab-x:hover { color:#e5695e; }
 
@@ -362,7 +379,7 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
 /* [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด */
 .ProseMirror hr { border:0; border-top:2px solid var(--border); margin:1.2em 0; height:0; }
 .ProseMirror hr.ProseMirror-selectednode { border-top-color:var(--accent-hi); }
-.ProseMirror pre { background:#1f1e1c; border:1px solid var(--border); border-radius:6px;
+.ProseMirror pre { background:var(--sunken); border:1px solid var(--border); border-radius:6px;
   padding:10px 14px; overflow-x:auto; text-indent:0; margin:.6em 0;
   font-family:"Courier Prime","Courier New",monospace; font-size:.92em; line-height:1.5;
   white-space:pre-wrap; }
@@ -381,16 +398,17 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
    ตอนนี้เป็น "ราง" ซ้ายของแผงแบบ VS Code: เป็นลูกของ #panes จึงอยู่นอกกล่องที่ถูก CSS zoom
    → ไม่เลื่อนตามแนวนอน · ขนาดคงที่ทุกระดับซูม · ไม่กินความกว้างของข้อความเลย
    ตำแหน่ง/ความสูงถูกตั้งจาก JS (refreshLineGutter) ให้ทาบแผงที่กำลังใช้งาน */
-.k-ln-gutter { position:absolute; left:0; top:0; width:46px; z-index:6;
+:root { --ln-w:46px; }                 /* ความกว้างรางเลขบรรทัด (พิกเซลจริง ไม่ตามซูม) */
+.k-ln-gutter { position:absolute; left:0; top:0; width:var(--ln-w); z-index:6;
   display:none; overflow:hidden; pointer-events:none; user-select:none;
   background:var(--bar); border-right:1px solid var(--border); }
 .k-ln-gutter.on { display:block; }
+/* [alpha.81 ข้อ 6] เลขต้องอยู่ "กลางบรรทัดแรกของบล็อก" ไม่ใช่ชิดขอบบนของบล็อก
+   ตำแหน่ง top ตั้งจาก JS (refreshLineGutter) ซึ่งชดเชยครึ่งหนึ่งของความสูงบรรทัดจริงให้แล้ว */
 .k-ln-no { position:absolute; right:8px; width:32px; text-align:right;
   font-size:calc(11px * var(--ui-scale, 1)); line-height:1.35;
   font-family:ui-monospace, Consolas, "Courier New", monospace;
   color:var(--dim); opacity:.75; font-variant-numeric:tabular-nums; }
-/* โหมดร่าง = ข้อความชิดซ้ายจริง ๆ → ต้องเว้นที่ให้รางไม่ทับตัวหนังสือ */
-body.k-ln .pane.sp-view-draft > .workspace > .ProseMirror { padding-left:64px !important; }
 .plain-md { width:100%; height:100%; background:var(--bg); color:var(--fg); border:0;
   resize:none; outline:none; padding:24px 48px; font:15px/1.8 Consolas, monospace; }
 
@@ -426,7 +444,10 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 #findbar input { background:var(--bg); color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:4px 10px; width:200px; }
 #find-n { color:var(--dim); min-width:60px; font-size:calc(12px * var(--ui-scale, 1)); }
-.find-hit { background:#6b5518; border-radius:2px; }
+/* [alpha.81 ข้อ 5] ไฮไลต์ผลค้นหา — ธีมมืดใช้เหลืองเข้ม ธีมสว่างใช้เหลืองอ่อน
+   (เดิมเป็นเหลืองเข้มตายตัว → ธีมสว่างได้หมึกดำบนพื้นเขียวขี้ม้า อ่านแทบไม่ออก) */
+.find-hit { background:var(--find-hit, #6b5518); border-radius:2px; }
+body.theme-light { --find-hit:#ffe08a; }
 
 /* ---------- index/outline ---------- */
 /* เนื้อแผงถูก Panel System วางลง .k-panel-body → ต้องยืดเต็มช่องที่ได้รับ */
@@ -447,7 +468,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 #outline-head { position:relative; }
 .k-panel-float { position:absolute; right:4px; top:4px; cursor:pointer; opacity:.6;
   font-size:calc(13px * var(--ui-scale, 1)); padding:0 4px; border-radius:4px; }
-.k-panel-float:hover { opacity:1; background:#3a3936; }
+.k-panel-float:hover { opacity:1; background:var(--hover); }
 .k-panel-floating { z-index:60; background:var(--side); border:1px solid var(--border);
   border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.5); padding:6px 8px; overflow:auto;
   display:flex; flex-direction:column; }
@@ -460,7 +481,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-panel-floating .k-panel-resize { display:block; }
 .ol-item { padding:3px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis; }
-.ol-item:hover { background:#2b2a27; }
+.ol-item:hover { background:var(--hover-soft); }
 .ol-item.lvl1 { font-weight:600; } .ol-item.lvl2 { padding-left:18px; }
 .ol-item.lvl3 { padding-left:28px; color:var(--dim); }
 .ol-item.lvl4,.ol-item.lvl5,.ol-item.lvl6 { padding-left:38px; color:var(--dim); }
@@ -603,6 +624,42 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   border-radius:8px; padding:10px 12px; margin:12px 0 0; font-size:calc(12px * var(--ui-scale, 1)); white-space:pre-wrap;
   color:var(--fg); }
 .cmp-preview:empty { display:none; }
+
+/* ══════ [alpha.81 ข้อ 8+9] ศูนย์รวมการส่งออก — สามคอลัมน์: รูปแบบ · ตั้งค่า · ตัวอย่าง ══════ */
+.k-dialog.k-xhub { width:1080px; max-width:96vw; }
+.xhub-body { display:grid; grid-template-columns:250px 260px 1fr; gap:14px;
+  height:min(62vh, 560px); min-height:320px; }
+.xhub-formats, .xhub-options { overflow:auto; padding-right:8px;
+  border-right:1px solid var(--border); }
+.xhub-fmt { display:flex; align-items:flex-start; gap:9px; padding:8px 10px; border-radius:8px;
+  cursor:pointer; margin:2px 0; }
+.xhub-fmt:hover { background:var(--bg); }
+.xhub-fmt.on { background:var(--accent-hi); color:#fff; }
+.xhub-fmt.on .xhub-fmt-desc { color:rgba(255,255,255,.82); }
+.xhub-fmt-ic { font-size:calc(17px * var(--ui-scale, 1)); line-height:1.2; flex:0 0 auto; }
+.xhub-fmt-txt { min-width:0; }
+.xhub-fmt-name { font-size:calc(13px * var(--ui-scale, 1)); font-weight:600; }
+.xhub-fmt-desc { font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.35; }
+.xhub-options .k-dlg-select, .xhub-options .k-dlg-input { margin-bottom:6px; }
+.xhub-row { display:flex; align-items:center; gap:8px; padding:4px 2px;
+  font-size:calc(13px * var(--ui-scale, 1)); cursor:pointer; }
+.xhub-row-lbl { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--fg); }
+.xhub-row-hint { font-size:calc(11px * var(--ui-scale, 1)); }
+.xhub-handoff { margin-top:12px; width:100%; }
+/* ช่องตัวอย่าง = พื้นโต๊ะรอบกระดาษ เพื่อให้เห็นขอบแผ่นชัดเหมือนมุมมองเรียงหน้า */
+.xhub-preview { overflow:auto; background:var(--paper-surround, var(--bg));
+  border:1px solid var(--border); border-radius:8px; padding:0; position:relative; }
+.xhub-preview > .dim, .xhub-preview > .k-hint { padding:14px 16px; }
+.xhub-frame { width:100%; height:100%; border:0; background:#fff; display:block; }
+.xhub-pre { margin:0; padding:12px 14px; white-space:pre-wrap; word-break:break-word;
+  font-family:ui-monospace, Consolas, monospace; font-size:calc(12px * var(--ui-scale, 1));
+  color:var(--fg); background:var(--bg); min-height:100%; }
+/* มุมมองหน้ากระดาษในตัวอย่างใช้ .sp-pageview ตัวเดิม — ที่นี่แค่ปลดการตรึงเต็มแผง */
+.xhub-pages { position:relative; min-height:100%; }
+.xhub-pages .sp-pageview { position:relative; inset:auto; }
+.xhub-warn { flex:1; text-align:left; font-size:calc(11.5px * var(--ui-scale, 1));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:900px) { .xhub-body { grid-template-columns:1fr; height:auto; } }
 /* ---------- ตัวจัดการเล่ม (Book Manager) ---------- */
 .books-wrap { max-width:1100px; margin:0 auto; padding:28px 32px 60px; }
 .books-head { display:flex; align-items:center; gap:16px; margin-bottom:22px; }
@@ -860,13 +917,13 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .tpl-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
 .tpl-title { font-size:calc(20px * var(--ui-scale, 1)); color:var(--bright); }
 .tpl-head-btns { display:flex; gap:8px; }
-.tpl-head-btns button { background:var(--panel,#2b2a27); color:var(--fg); border:1px solid var(--border);
+.tpl-head-btns button { background:var(--panel,var(--hover-soft)); color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:6px 12px; font-size:calc(13px * var(--ui-scale, 1)); cursor:pointer; }
 .tpl-head-btns button.k-ok { background:var(--accent-hi); color:#fff; border-color:var(--accent-hi); }
 .tpl-sec { margin-bottom:22px; }
 .tpl-sec-title { color:var(--dim); font-size:calc(13px * var(--ui-scale, 1)); margin-bottom:8px; text-transform:none; }
 .tpl-card { display:flex; align-items:center; justify-content:space-between; gap:12px;
-  background:var(--panel,#2b2a27); border:1px solid var(--border); border-radius:8px;
+  background:var(--panel,var(--hover-soft)); border:1px solid var(--border); border-radius:8px;
   padding:11px 14px; margin-bottom:8px; }
 .tpl-card-name { color:var(--fg); font-size:calc(15px * var(--ui-scale, 1)); display:flex; align-items:center; gap:8px; }
 .tpl-badge { font-size:calc(10px * var(--ui-scale, 1)); color:var(--dim); border:1px solid var(--border); border-radius:4px; padding:0 6px; }
@@ -875,7 +932,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .tpl-card-acts button { background:transparent; color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:5px 11px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer; }
 .tpl-card-acts button:hover { background:var(--sel); }
-.tpl-card-acts button.k-danger-btn:hover { background:#5a2b2b; color:#ff9b9b; }
+.tpl-card-acts button.k-danger-btn:hover { background:var(--danger-soft); color:#ff9b9b; }
 /* modal แก้เทมเพลต */
 .k-tpl-edit { width:560px; max-width:94vw; max-height:86vh; overflow-y:auto; }
 .k-tpl-sub { color:var(--bright); font-size:calc(13px * var(--ui-scale, 1)); margin:16px 0 8px; border-bottom:1px solid var(--border); padding-bottom:4px; }
@@ -885,7 +942,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-tpl-frow .k-dlg-select { flex:0 0 110px; }
 .k-tpl-del { flex:0 0 auto; background:transparent; color:var(--dim); border:1px solid var(--border);
   border-radius:6px; width:30px; height:30px; cursor:pointer; }
-.k-tpl-del:hover { background:#5a2b2b; color:#ff9b9b; }
+.k-tpl-del:hover { background:var(--danger-soft); color:#ff9b9b; }
 .k-tpl-add { align-self:flex-start; margin-top:6px; background:transparent; color:var(--accent-hi);
   border:1px dashed var(--border); border-radius:6px; padding:5px 12px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer; }
 .k-tpl-opts { display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; }
@@ -896,7 +953,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-ver-list { flex:0 0 240px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; }
 .k-ver-item { padding:8px 10px; border-radius:6px; cursor:default; margin-bottom:4px; }
 .k-ver-item.on { background:var(--sel); }
-.k-ver-item:hover { background:var(--panel,#2b2a27); }
+.k-ver-item:hover { background:var(--panel,var(--hover-soft)); }
 .k-ver-time { color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); }
 .k-ver-label { display:inline-block; margin-top:3px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-hi);
   border:1px solid var(--border); border-radius:4px; padding:0 6px; }
@@ -904,7 +961,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-ver-acts button { background:transparent; color:var(--fg); border:1px solid var(--border);
   border-radius:5px; padding:3px 9px; font-size:calc(11.5px * var(--ui-scale, 1)); cursor:pointer; }
 .k-ver-acts button.k-ok { background:var(--accent-hi); color:#fff; border-color:var(--accent-hi); }
-.k-ver-acts button.k-danger-btn:hover { background:#5a2b2b; color:#ff9b9b; }
+.k-ver-acts button.k-danger-btn:hover { background:var(--danger-soft); color:#ff9b9b; }
 .k-ver-prev { flex:1; overflow-y:auto; white-space:pre-wrap; background:var(--bg);
   border:1px solid var(--border); border-radius:8px; padding:12px; font-size:calc(13px * var(--ui-scale, 1));
   color:var(--fg); line-height:1.7; }
@@ -942,12 +999,12 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 
 /* ---------- custom titlebar (หน้าต่าง frameless) ---------- */
 #titlebar { display:flex; align-items:center; gap:2px; height:36px; padding:0 0 0 10px;
-  background:#191816; border-bottom:1px solid var(--border); -webkit-app-region:drag;
+  background:var(--titlebar); border-bottom:1px solid var(--border); -webkit-app-region:drag;
   user-select:none; }
 #tb-logo { color:var(--accent-hi); font-weight:700; margin-right:8px; }
 .tb-menu { -webkit-app-region:no-drag; padding:4px 10px; border-radius:6px;
   cursor:pointer; color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); position:relative; }
-.tb-menu:hover { background:#2b2a27; }
+.tb-menu:hover { background:var(--hover-soft); }
 .k-logview { max-height:60vh; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace;
   font-size:calc(12px * var(--ui-scale, 1)); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 /* [alpha.65r4] เลื่อนขึ้นไปอ่าน = หยุดตามบรรทัดล่าสุด · ปุ่มนี้พากลับไปก้น
@@ -1006,7 +1063,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 #win-btns { -webkit-app-region:no-drag; display:flex; height:100%; }
 .win-btn { width:44px; display:flex; align-items:center; justify-content:center;
   cursor:pointer; color:var(--dim); }
-.win-btn:hover { background:#2b2a27; color:var(--fg); }
+.win-btn:hover { background:var(--hover-soft); color:var(--fg); }
 .win-close:hover { background:#c1493e; color:#fff; }
 #elem-badge { color:var(--accent-hi); font-size:calc(12px * var(--ui-scale, 1)); }
 #elem-badge.elem-pick { cursor:pointer; padding:2px 8px; border:1px solid var(--border);
@@ -1014,8 +1071,13 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 #elem-badge.elem-pick:hover { border-color:var(--accent-hi); }
 
 /* ---------- mention (ชื่อจาก Wiki) ---------- */
-.k-mention { background:#3d3a34; color:var(--link); border-radius:3px;
-  padding:0 1px; cursor:pointer; }
+/* [alpha.81 ข้อ 2] "มือชี้" บนลิงก์ Wiki ในตัวแก้ไข = โกหกผู้ใช้
+   คลิกเปล่า ๆ บนลิงก์ไม่ได้เปิดอะไร มันแค่ย้ายเคอร์เซอร์ (ต้อง Ctrl+คลิกถึงจะเปิด)
+   ตัวชี้จึงต้องเป็น "ตัวพิมพ์" ตามปกติ แล้วเปลี่ยนเป็นมือ **เฉพาะตอนกด Ctrl/⌘ ค้าง**
+   (body.k-mod-down ตั้งจาก app.js) — ตรงกับพฤติกรรมจริงของโปรแกรม */
+.k-mention { background:var(--chip); color:var(--link); border-radius:3px;
+  padding:0 1px; cursor:text; }
+body.k-mod-down .k-mention { cursor:pointer; }
 /* ลิงก์ชื่อในความสัมพันธ์ — คลิกเปิดหน้า Wiki */
 /* จุดสีบอกประเภทความสัมพันธ์ (ครอบครัว/คนรัก/ศัตรู…) หน้าชื่อบทบาท */
 .rel-type-dot { display:inline-block; width:8px; height:8px; border-radius:50%;
@@ -1025,7 +1087,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .wiki-field-link { display:inline-flex; gap:6px; margin-left:8px; align-items:center; }
 .wiki-field-link .wiki-rel-link { font-size:calc(12px * var(--ui-scale, 1)); white-space:nowrap; }
 .wiki-field-links { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
-.wiki-link-pill { background:var(--bg2,#3d3a34); color:var(--link,#e67e22); font-size:calc(12px * var(--ui-scale, 1));
+.wiki-link-pill { background:var(--bg2,var(--chip)); color:var(--link,#e67e22); font-size:calc(12px * var(--ui-scale, 1));
   padding:1px 8px; border-radius:10px; cursor:pointer; border:1px solid var(--border,#555); }
 .wiki-link-pill:hover { background:var(--accent,#e67e22); color:var(--bright,#fff); }
 .wiki-img img { cursor:zoom-in; }
@@ -1254,7 +1316,7 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 .k-panel-ctrls { position:absolute; right:3px; top:2px; display:flex; gap:2px; align-items:center; }
 .k-panel-btn { position:static; right:auto; top:auto; cursor:pointer; opacity:.55;
   font-size:calc(12px * var(--ui-scale, 1)); line-height:1; padding:2px 4px; border-radius:4px; user-select:none; }
-.k-panel-btn:hover { opacity:1; background:#3a3936; }
+.k-panel-btn:hover { opacity:1; background:var(--hover); }
 .k-panel-btn.on { opacity:1; color:var(--accent-hi); }
 /* ปุ่ม float เดิมอยู่ในกล่องแล้ว — ยกเลิกการวางแบบ absolute เดิม */
 .k-panel-ctrls .k-panel-float { position:static; right:auto; top:auto; background:none; }
@@ -1270,7 +1332,7 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 /* ---------- Tooltip ลอยเหนือเคอร์เซอร์ (ข้อ 16) ---------- */
 /* z-index สูงกว่าเมนูป๊อปอัป (90) เพราะต้องอ่านได้แม้ hover อยู่บนเมนู */
 #k-tip { position:fixed; z-index:400; max-width:380px; pointer-events:none;
-  background:#1b1a18; color:var(--bright); border:1px solid var(--accent);
+  background:var(--sunken); color:var(--bright); border:1px solid var(--accent);
   border-radius:8px; padding:6px 10px; font-size:calc(12px * var(--ui-scale, 1)); line-height:1.55;
   box-shadow:0 8px 26px rgba(0,0,0,.55); opacity:0; visibility:hidden;
   transition:opacity .1s ease; }
@@ -1436,12 +1498,12 @@ body.k-split-on #tabs { display:none !important; }
   background:var(--bar); color:var(--dim); border:1px solid var(--border); border-radius:5px;
   cursor:pointer; font-size:13px; line-height:1; }
 .planner-toolbar.has-scroll .planner-scroll-btn { display:block; }
-.planner-scroll-btn:hover:not(:disabled) { background:#3a3936; color:var(--bright); }
+.planner-scroll-btn:hover:not(:disabled) { background:var(--hover); color:var(--bright); }
 .planner-scroll-btn:disabled { opacity:.28; cursor:default; }
 .planner-btn { flex:0 0 auto; background:transparent; color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:4px 9px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer;
   white-space:nowrap; -webkit-app-region:no-drag; }
-.planner-btn:hover { background:#3a3936; color:var(--bright); }
+.planner-btn:hover { background:var(--hover); color:var(--bright); }
 .planner-btn.k-ok { background:var(--accent); color:#fff; border-color:var(--accent); }
 .planner-btn.k-ok:hover { background:var(--accent-hi); }
 .planner-zoom-label { min-width:52px; text-align:center; font-variant-numeric:tabular-nums; }
@@ -1468,13 +1530,13 @@ body.k-split-on #tabs { display:none !important; }
   border-radius:6px; padding:4px 6px; font-size:calc(12.5px * var(--ui-scale, 1)); }
 .planner-btn-small { flex:0 0 auto; background:var(--bar); color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:4px 9px; font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; }
-.planner-btn-small:hover { background:#3a3936; color:var(--bright); }
+.planner-btn-small:hover { background:var(--hover); color:var(--bright); }
 
 /* ---- เวทีกระดาน: กริดเป็น CSS ใต้ canvas (บั๊ก 6) ---- */
 /* [alpha.65r5] min-height ต้องเป็น 0 — ไม่งั้นแผง Planner ย่อลงไม่ต่ำกว่า ~200px
    (เวทีกระดานตั้งพื้นไว้ 120px + แถบบน/กรอง/สถานะ) ผู้ใช้ลากขอบย่อยังไงก็ไม่สุด */
 .planner-stage { position:relative; flex:1 1 auto; min-height:0; min-width:0;
-  overflow:hidden; background:#262624; }
+  overflow:hidden; background:var(--canvas); }
 .planner-stage .canvas-container { position:absolute !important; inset:0; }
 .planner-stage canvas { display:block; }
 .planner-stage.planner-drop-on { outline:2px dashed var(--accent); outline-offset:-6px; }
@@ -1498,7 +1560,7 @@ body.k-split-on #tabs { display:none !important; }
 .planner-rail-btn { position:relative; width:30px; height:28px; display:flex; align-items:center;
   justify-content:center; background:transparent; color:var(--fg); border:1px solid transparent;
   border-radius:7px; cursor:pointer; font-size:14px; line-height:1; padding:0; }
-.planner-rail-btn:hover { background:#3a3936; color:var(--bright); }
+.planner-rail-btn:hover { background:var(--hover); color:var(--bright); }
 .planner-rail-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 .planner-rail-caret { position:absolute; right:1px; bottom:0; font-size:7px; opacity:.65; }
 .planner-rail-sep { height:1px; background:var(--border); margin:3px 2px; }
@@ -1541,7 +1603,7 @@ body.k-split-on #tabs { display:none !important; }
 .planner-ctx-btn { min-width:22px; height:20px; padding:0 4px; background:transparent; color:var(--fg);
   border:1px solid transparent; border-radius:5px; cursor:pointer; flex:0 0 auto;
   font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1; }
-.planner-ctx-btn:hover { background:#3a3936; color:var(--bright); }
+.planner-ctx-btn:hover { background:var(--hover); color:var(--bright); }
 .planner-ctx-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
 .planner-ctx-btn.danger { color:#e05555; }
 .planner-ctx-btn.danger:hover { background:#e0555522; }
@@ -1615,7 +1677,7 @@ body.k-split-on #tabs { display:none !important; }
 .planner-props-actions { display:flex; gap:6px; margin-top:8px; }
 .planner-props-actions button { flex:1; padding:5px; border-radius:6px; border:1px solid var(--border);
   background:var(--bar); color:var(--fg); cursor:pointer; font-size:calc(12px*var(--ui-scale,1)); white-space:nowrap; }
-.planner-props-actions button:hover { background:#3a3936; color:var(--bright); }
+.planner-props-actions button:hover { background:var(--hover); color:var(--bright); }
 .planner-props-actions button.danger { color:#e05555; border-color:#e05555; }
 .planner-props-actions button.danger:hover { background:#e0555520; }
 .planner-edge-ends { background:var(--bg); border:1px solid var(--border); border-radius:6px;
@@ -1647,7 +1709,7 @@ body.k-split-on #tabs { display:none !important; }
 .float-btns { display:flex; gap:2px; }
 .float-btn { width:22px; height:20px; display:flex; align-items:center; justify-content:center;
   border-radius:5px; font-size:calc(13px * var(--ui-scale, 1)); color:var(--fg); cursor:pointer; }
-.float-btn:hover { background:#3a3936; color:var(--bright); }
+.float-btn:hover { background:var(--hover); color:var(--bright); }
 .float-body { position:relative; flex:1; overflow:hidden; }
 .float-body .pane { position:absolute; inset:0; display:block; }
 .float-win.min { height:auto !important; }
@@ -1668,7 +1730,7 @@ body.k-split-on #tabs { display:none !important; }
 
 /* ========== โหมดหน้ากระดาษ (paper mode) — กระดาษสีนวลตา high-contrast แบบสคริปต์จริง ========== */
 /* สีกระดาษปรับได้ที่ตัวแปรนี้ — ค่าเริ่มต้นเป็นครีมนวลตา (ถนอมสายตากว่าขาวจ้า) */
-:root { --paper:#f5f1e6; --paper-ink:#20201c; --paper-edge:#d8d2c2; --paper-surround:#3a3936; }
+:root { --paper:#f5f1e6; --paper-ink:#20201c; --paper-edge:#d8d2c2; --paper-surround:var(--hover); }
 body.paper-mode #panes,
 body.paper-mode .pane { background:var(--paper-surround); }
 
@@ -1809,7 +1871,7 @@ body.paper-mode .sp-raw { color:#888; }
 .tag-body { overflow-y:auto; }
 .tag-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px;
   cursor:pointer; margin:2px 0; transition:background .12s; }
-.tag-item:hover { background:#2b2a27; }
+.tag-item:hover { background:var(--hover-soft); }
 .tag-name { flex:1; color:var(--fg); font-size:calc(13.5px * var(--ui-scale, 1)); }
 .tag-count { background:var(--bar); color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); padding:2px 7px;
   border-radius:999px; min-width:24px; text-align:center; }
@@ -1843,11 +1905,11 @@ body.paper-mode .sp-raw { color:#888; }
 /* บันทึกทั้งหมดปุ่ม */
 #save-all-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
   padding:3px 8px; cursor:pointer; font-size:calc(14px * var(--ui-scale, 1)); }
-#save-all-btn:hover { background:#3a3936; }
+#save-all-btn:hover { background:var(--hover); }
 /* ปุ่มหน้าแรก */
 #home-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
   padding:3px 8px; cursor:pointer; font-size:calc(14px * var(--ui-scale, 1)); }
-#home-btn:hover { background:#3a3936; }
+#home-btn:hover { background:var(--hover); }
 
 /* ====== กลุ่ม 4: Status Bar + Progress Bar + Filter Bar ====== */
 /* Progress bar ใน top bar */
@@ -2045,7 +2107,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
 .sc-tbl-table td { padding:6px 10px; border-bottom:1px solid var(--border);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .sc-tbl-row { transition:background .1s; }
-.sc-tbl-row:hover { background:#2b2a27; }
+.sc-tbl-row:hover { background:var(--hover-soft); }
 
 /* ====== Summary Bar (ข้อ 46) ====== */
 #summary-bar { display:flex; flex-wrap:wrap; gap:4px 12px; padding:6px 8px;
@@ -3124,14 +3186,23 @@ body.reading-mode #k-mode-hint, body.focus-mode #k-mode-hint { display:block; }
 
 /* ---- [57] Draft View: ข้อความล้วนบนพื้นว่าง ไม่มีกระดาษ ---- */
 /* ใช้ !important เพราะกฎกระดาษของ paper-mode มี specificity สูงกว่า (body.paper-mode .pane…) */
+/* [alpha.81 ข้อ 6] "เลขบรรทัดบัง ต้องย่นตัวหนังสือไปทางขวา · ให้ยึดแบบนิยาย"
+   ต้นตอ: โหมดร่างเดิมชิดซ้ายที่ padding 20px แล้วแก้ด้วย `padding-left:64px` ตอนเปิดเลขบรรทัด
+   — แต่ 64px นั้นอยู่ **ใน** กล่องที่โดน `zoom:var(--page-scale)` ย่อ พอผู้ใช้ซูมออกเหลือ ~0.6
+   ระยะจริงบนจอเหลือ ~38px ซึ่งแคบกว่ารางเลข 46px → รางทับตัวหนังสือ (ยิ่งบทหนังยิ่งเห็นชัด
+   เพราะบทหนังกินความกว้างเต็มบรรทัด ไม่มีระยะขอบของนิยายมาช่วย)
+   ตอนนี้: ระยะซ้ายคิดเป็น "พิกเซลจริง" ด้วยการหารกลับด้วย --page-scale → กว้างเท่ากันทุกระดับซูม
+   และเนื้อความเป็นคอลัมน์อ่านสบายแบบนิยายทั้งสองโหมด (บทหนังไม่ยืดเต็มแผงอีกต่อไป) */
+:root { --draft-left:24px; --draft-pad-r:24px; }
+body.k-ln { --draft-left:calc(var(--ln-w) / var(--page-scale, 1) + 14px); }
 .pane.sp-view-draft > .workspace > .ProseMirror,
 body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
   background:transparent !important;
   box-shadow:none !important;
   border:0 !important;
-  width:auto !important; max-width:none !important;
-  padding:20px 20px 40vh !important;
-  margin:0 !important;
+  width:auto !important; max-width:var(--draft-w, 44em) !important;
+  padding:20px var(--draft-pad-r) 40vh !important;
+  margin:0 0 0 var(--draft-left) !important;
   color:var(--fg) !important;
 }
 /* โหมดร่าง = เห็นข้อความล้วน ไม่ต้องเยื้องแบบสคริปต์ (แต่ยังบอกชนิดด้วยสี) */
@@ -3140,7 +3211,7 @@ body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
 .pane.sp-view-draft .sp-transition { text-align:left; }
 .pane.sp-view-draft .sp-act-break { text-align:left; }
 /* ตัวคั่นหน้าในโหมดร่าง = เส้นบาง ๆ · โหมดปกติ = เส้นประชัดขึ้นพร้อมเลขหน้า */
-.pane.sp-view-draft .sp-page-break { border-top:1px solid #4a4a46; margin:8px 0; }
+.pane.sp-view-draft .sp-page-break { border-top:1px solid var(--border); margin:8px 0; }
 .pane.sp-view-draft .sp-page-break .sp-page-break-num { font-size:.7em; }
 
 /* ---- เส้นคั่นหน้าในตัวแก้ไข (widget decoration) ---- */
@@ -3156,12 +3227,21 @@ body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 /* ต่างจากโหมดปกติตรงที่หน้ากระดาษเป็น "สีขาวจริง" และรอยต่อระหว่างหน้าเป็นช่องว่างจริง
    (ไม่ใช่เส้นประ) → เห็นว่าเนื้อหาแต่ละหน้าจบตรงไหนแบบเดียวกับ PDF ที่จะได้
    ความสูงช่องว่าง/ความสูงเนื้อหน้ามาจาก layoutCssVars() ใน sp-view.js (คำนวณจากขนาดกระดาษจริง) */
+/* [alpha.81 ข้อ 7] "มุมมอง Layout ต้องเป็นหน้ากระดาษจริงแบบ MS Word"
+   ปัญหาเดิมมีสองข้อ และมาจากรากเดียวกัน — Layout View เป็น **แผ่นเดียวยาว ๆ**
+   ที่ขีดเส้นคั่นหน้าไว้เฉย ๆ ไม่ใช่กระดาษหลายแผ่นจริง จึงได้ว่า
+     (1) รอยต่อหน้าไม่มีระยะขอบ — เนื้อหน้าถัดไปเริ่มติดเส้นคั่นทันที ("ชิดขอบบน")
+         ทั้งที่กระดาษจริงต้องมี "ขอบล่างของหน้าก่อน + ช่องว่าง + ขอบบนของหน้าใหม่"
+     (2) หน้าสุดท้ายสูงเท่าเนื้อหา ไม่ใช่เต็มแผ่น — เนื้อหมดกลางหน้าแล้วกระดาษก็จบตรงนั้น
+   แก้ที่นี่ทั้งคู่: ความสูงขั้นต่ำ = จำนวนหน้าจริง × ความสูงกระดาษ (+ ช่องว่างระหว่างแผ่น)
+   โดย --pg-count ตั้งจาก JS ทุกครั้งที่จัดหน้าใหม่ (setLayoutPageCount) */
 .pane.sp-view-layout > .workspace > .ProseMirror,
 body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
   background:#ffffff !important; color:#111 !important;
   border:1px solid var(--paper-edge) !important;
   box-shadow:0 0 10px rgba(0,0,0,.35) !important;
-  min-height:var(--page-h, 11in);
+  min-height:calc(var(--page-h, 11in) * var(--pg-count, 1)
+                  + var(--sp-page-gap, 28px) * (var(--pg-count, 1) - 1));
   padding-bottom:var(--mg-bottom, 1in) !important;
   margin-bottom:60px !important;
 }
@@ -3187,16 +3267,27 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
   border-color:#d8d2c2; }
 /* โหมดร่างของนิยาย: ไม่ต้องมีย่อหน้า/ระยะขอบกระดาษ (เห็นข้อความล้วน) */
 .pane.sp-view-draft > .workspace > .ProseMirror p { text-indent:0 !important; }
-/* ช่องว่างระหว่างหน้า — ล้ำออกไปนอกระยะขอบทั้งสองข้างให้เห็นว่า "คนละแผ่น" */
+/* รอยต่อระหว่างแผ่น = ขอบล่างของหน้าเดิม (ขาว) + ช่องว่างจริง (พื้นโต๊ะ) + ขอบบนของหน้าใหม่ (ขาว)
+   วาดด้วย gradient ชั้นเดียวเพราะเส้นคั่นหน้าเป็น widget decoration — มี element เดียวให้ใช้
+   ล้ำออกนอกระยะขอบทั้งสองข้าง จึงเห็นเป็น "คนละแผ่น" เต็มความกว้างกระดาษ */
 .pane.sp-view-layout .sp-page-break {
-  height:var(--sp-page-gap, 28px); border:0;
-  border-top:2px solid var(--paper-edge); border-bottom:2px solid var(--paper-edge);
-  background:var(--paper-surround, #33322f);
+  --pb-gap:var(--sp-page-gap, 28px);
+  --pb-mb:var(--mg-bottom, 1in);
+  height:calc(var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in)); border:0;
   margin:0 calc(-1 * var(--mg-right, 1in)) 0 calc(-1 * var(--mg-left, 1.5in));
+  background:linear-gradient(to bottom,
+    #fff 0, #fff var(--pb-mb),
+    var(--paper-edge) var(--pb-mb), var(--paper-edge) calc(var(--pb-mb) + 2px),
+    var(--paper-surround, #33322f) calc(var(--pb-mb) + 2px),
+    var(--paper-surround, #33322f) calc(var(--pb-mb) + var(--pb-gap) - 2px),
+    var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap) - 2px),
+    var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap)),
+    #fff calc(var(--pb-mb) + var(--pb-gap)), #fff 100%);
 }
-/* เลขหน้าอยู่ตรงกลางช่องว่าง (แบบ footer ของโปรแกรมจัดหน้า) */
+/* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ไม่ใช่กลางแถบทั้งแถบ */
 .pane.sp-view-layout .sp-page-break-num {
-  position:absolute; right:auto; left:50%; top:50%; transform:translate(-50%, -50%);
+  position:absolute; right:auto; left:50%;
+  top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) / 2); transform:translate(-50%, -50%);
   background:transparent; color:var(--dim); padding:0;
   font-size:calc(11px * var(--ui-scale, 1)); }
 
@@ -3366,7 +3457,7 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
 .k-dev-input { width:100%; font-family:"Courier Prime","Courier New",monospace;
   font-size:calc(13px * var(--ui-scale, 1)); resize:vertical; }
 .k-dev-btns { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
-.k-dev-out { background:#1b1a18; border:1px solid var(--border); border-radius:8px;
+.k-dev-out { background:var(--sunken); border:1px solid var(--border); border-radius:8px;
   padding:8px 10px; height:300px; overflow:auto; margin:0;
   font-family:"Courier Prime","Courier New",monospace;
   font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.5;

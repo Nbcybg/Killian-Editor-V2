@@ -154,6 +154,42 @@ export function buildToolbarList(host, opts = {}) {
   return host;
 }
 
+/**
+ * [alpha.81 ข้อ 1] รายการเมนูคลิกขวาของแถบเครื่องมือ / แถบ B I U
+ *
+ * คืนรูปแบบของ `popupMenu()` (`{label, click}` · `'-'` = เส้นคั่น) — app.js เป็นคนผูกเหตุการณ์
+ * ตรรกะ "ปุ่มไหนซ่อนได้ / เก็บค่ายังไง" อยู่ในไฟล์นี้ที่เดียวเหมือนกล่องตั้งค่า
+ *
+ * @param {string} btnId ปุ่มที่เมาส์ชี้อยู่ตอนคลิกขวา ('' = ที่ว่างบนแถบ)
+ */
+export function toolbarContextItems(btnId) {
+  const cfg = () => TC.normalizeToolbar(state.settings && state.settings.toolbar);
+  const save = async (next) => {
+    state.settings.toolbar = next;
+    applyToolbarConfig(next);
+    try {
+      const app = await import('../app.js');
+      await app.saveGlobalSetting('toolbar', next);
+    } catch { /* ยังไม่เปิดโปรเจกต์ก็ใช้ได้ — ค่าอยู่ใน state แล้ว */ }
+  };
+  const items = [];
+  // ปุ่มที่โปรแกรมคุมเอง (LOCKED_BUTTONS) ไม่มีรายการ "ซ่อน" — ซ่อนแล้วโหมดเอกสารพัง
+  if (btnId && TC.isConfigurable(btnId)) {
+    const name = labelOf(btnId);
+    items.push({ label: ttf('ui.tbcfg.hideThis', name), click: async () => {
+      await save(TC.setButtonVisible(cfg(), btnId, false));
+      setStatus(ttf('ui.tbcfg.hidden', name));
+    } });
+    items.push('-');
+  }
+  items.push({ label: tt('ui.tbcfg.customize'), click: () => toolbarDialog() });
+  items.push({ label: tt('ui.tbcfg.showAll'), click: async () => {
+    await save(TC.resetToolbarConfig());
+    setStatus(tt('ui.tbcfg.resetDone'));
+  } });
+  return items;
+}
+
 /** กล่องเดี่ยว — เปิดจากคลิกขวาที่ปุ่ม "จัดการแผง" หรือเมนู มุมมอง */
 export function toolbarDialog() {
   const ov = el('div', 'k-overlay');

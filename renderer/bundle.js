@@ -19723,7 +19723,9 @@
         ["KeyW", true, true, "close-all-tabs"],
         ["KeyF", true, false, "find"],
         ["Comma", true, false, "settings"],
-        ["KeyE", true, true, "compile"],
+        // [alpha.81 ข้อ 9] Ctrl+Shift+E = "ศูนย์รวมการส่งออก" (เดิมเปิดกล่องเวิร์กโฟลว์ตรง ๆ)
+        // กล่องเวิร์กโฟลว์ยังอยู่ — เข้าจากปุ่ม "ปรับขั้นตอน…" ในศูนย์รวม
+        ["KeyE", true, true, "export-hub"],
         ["KeyZ", true, false, "editor-undo"],
         ["KeyZ", true, true, "editor-redo"],
         ["KeyY", true, false, "editor-redo"],
@@ -19853,6 +19855,7 @@
         "fmt:align:center": "shortcuts.alignCenter",
         "fmt:align:right": "shortcuts.alignRight",
         "fmt:align:justify": "shortcuts.justify",
+        "export-hub": "shortcuts.exportHub",
         "compile": "shortcuts.compile",
         "save-all": "shortcuts.saveAll",
         "split-view": "shortcuts.splitView",
@@ -19920,7 +19923,7 @@
             "new-project",
             "open-project",
             "print",
-            "compile",
+            "export-hub",
             "export-blog",
             "close-tab",
             "close-all-tabs",
@@ -21268,6 +21271,33 @@
   });
 
   // src/sp-view.js
+  var sp_view_exports = {};
+  __export(sp_view_exports, {
+    ALL_VIEW_CLASSES: () => ALL_VIEW_CLASSES,
+    LINE_MARK: () => LINE_MARK,
+    OVERVIEW_PX: () => OVERVIEW_PX,
+    SP_VIEWS: () => SP_VIEWS,
+    SP_VIEW_CLASS: () => SP_VIEW_CLASS,
+    SP_VIEW_LABELS: () => SP_VIEW_LABELS,
+    blocksFromDoc: () => blocksFromDoc,
+    findNthScene: () => findNthScene,
+    findPageStart: () => findPageStart,
+    fitScale: () => fitScale,
+    isEditView: () => isEditView,
+    isPageView: () => isPageView,
+    isValidView: () => isValidView,
+    layoutCssVars: () => layoutCssVars,
+    lineEndingType: () => lineEndingType,
+    overviewScale: () => overviewScale,
+    pageMetrics: () => pageMetrics,
+    pageStartPositions: () => pageStartPositions,
+    pagesOf: () => pagesOf,
+    renderPageView: () => renderPageView,
+    scenePositions: () => scenePositions,
+    textWidth: () => textWidth,
+    viewScale: () => viewScale,
+    viewStatusText: () => viewStatusText
+  });
   function pageMetrics(fmt, dpi = 96) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     const m = f.margins;
@@ -21372,6 +21402,10 @@
     }
     return out;
   }
+  function findNthScene(blocks, n2) {
+    const s = scenePositions(blocks)[Math.max(1, Math.round(+n2 || 1)) - 1];
+    return s ? s.pos : null;
+  }
   function pagesOf(blocks, fmt, lines) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     return paginate(blocks, { fmt: f, lines: lines || formatLines(f) });
@@ -21451,7 +21485,7 @@
     const name5 = SP_VIEW_LABELS[mode] || SP_VIEW_LABELS.normal;
     return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
   }
-  var SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, isValidView, isEditView, LINE_MARK, cssIn2;
+  var SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, isValidView, isEditView, OVERVIEW_PX, LINE_MARK, cssIn2;
   var init_sp_view = __esm({
     "src/sp-view.js"() {
       init_i18n();
@@ -21485,6 +21519,7 @@
       isPageView = (mode) => mode === "side" || mode === "overview1" || mode === "overview4";
       isValidView = (mode) => SP_VIEWS.includes(mode);
       isEditView = (mode) => !isPageView(mode);
+      OVERVIEW_PX = { overview1: 1, overview4: 4 };
       LINE_MARK = { hard: "\xB6", soft: "\xB7" };
       cssIn2 = (v2) => num(v2, 0) + "in";
     }
@@ -67485,6 +67520,7 @@ ${h.text}`;
     applyToolbarConfig: () => applyToolbarConfig,
     buildToolbarList: () => buildToolbarList,
     labelOf: () => labelOf2,
+    toolbarContextItems: () => toolbarContextItems,
     toolbarDialog: () => toolbarDialog
   });
   function labelOf2(id) {
@@ -67597,6 +67633,33 @@ ${h.text}`;
     host2.append(foot);
     syncCount();
     return host2;
+  }
+  function toolbarContextItems(btnId) {
+    const cfg = () => normalizeToolbar(state.settings && state.settings.toolbar);
+    const save = async (next) => {
+      state.settings.toolbar = next;
+      applyToolbarConfig(next);
+      try {
+        const app = await Promise.resolve().then(() => (init_app(), app_exports));
+        await app.saveGlobalSetting("toolbar", next);
+      } catch {
+      }
+    };
+    const items = [];
+    if (btnId && isConfigurable(btnId)) {
+      const name5 = labelOf2(btnId);
+      items.push({ label: tf("ui.tbcfg.hideThis", name5), click: async () => {
+        await save(setButtonVisible(cfg(), btnId, false));
+        setStatus(tf("ui.tbcfg.hidden", name5));
+      } });
+      items.push("-");
+    }
+    items.push({ label: t("ui.tbcfg.customize"), click: () => toolbarDialog() });
+    items.push({ label: t("ui.tbcfg.showAll"), click: async () => {
+      await save(resetToolbarConfig());
+      setStatus(t("ui.tbcfg.resetDone"));
+    } });
+    return items;
   }
   function toolbarDialog() {
     const ov = el("div", "k-overlay");
@@ -72759,6 +72822,14 @@ ${h.text}`;
   });
 
   // src/export-zip.js
+  var export_zip_exports = {};
+  __export(export_zip_exports, {
+    commonPrefix: () => commonPrefix,
+    exportProjectJson: () => exportProjectJson,
+    exportProjectZip: () => exportProjectZip,
+    importProjectZip: () => importProjectZip,
+    safeRel: () => safeRel
+  });
   async function exportProjectZip() {
     if (!state.root) {
       setStatus(t("ui.common.cantOpenProject"));
@@ -76373,8 +76444,10 @@ ${BLOCK_END}
   async function renderCommentPanel(host2) {
     host2 = host2 || $("#comments-body");
     if (!host2) return null;
-    host2.innerHTML = "";
+    const gen = ++_cmGen;
     const file = activeFile();
+    const stale2 = () => gen !== _cmGen || activeFile() !== file;
+    host2.innerHTML = "";
     if (!file) {
       host2.append(el("div", "dim", t("cmt.needScene", "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E08\u0E30\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E14\u0E49)")));
       lastList = [];
@@ -76386,10 +76459,13 @@ ${BLOCK_END}
     try {
       all = await store.list(file);
     } catch (e) {
+      if (stale2()) return null;
       log("error", t("cmt.readFailLog", "\u0E2D\u0E48\u0E32\u0E19\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49"), e);
       host2.append(el("div", "dim", t("cmt.readFail", "(\u0E2D\u0E48\u0E32\u0E19\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)")));
       return null;
     }
+    if (stale2()) return null;
+    host2.innerHTML = "";
     const head2 = el("div", "k-cm-head");
     head2.append(el("span", "k-cm-scene", "\u{1F4AC} " + (activeTitle() || file.split(/[\\/]/).pop())));
     const nOpen = openComments(all).length;
@@ -76412,6 +76488,7 @@ ${BLOCK_END}
     for (const c of shown) list.append(commentCard(c, file, host2, 0));
     host2.append(list);
     const sel = await selectionAnchor();
+    if (stale2()) return null;
     const foot = el("div", "k-cm-foot");
     if (sel) {
       const chip = el("div", "k-cm-anchor-chip", t("ui.cmtComment.bind") + short(sel.quote) + "\u201D");
@@ -76637,7 +76714,7 @@ ${BLOCK_END}
     log("info", tf("ui.cmtComment.moveCommentPrevScenes", n2));
     return n2;
   }
-  var _store, filterOpen, lastList, fmtWhen;
+  var _store, filterOpen, lastList, _cmGen, fmtWhen;
   var init_comment_ui = __esm({
     "src/comments/comment-ui.js"() {
       init_i18n();
@@ -76648,6 +76725,7 @@ ${BLOCK_END}
       _store = null;
       filterOpen = false;
       lastList = [];
+      _cmGen = 0;
       fmtWhen = (iso) => {
         try {
           return new Date(iso).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
@@ -76659,6 +76737,13 @@ ${BLOCK_END}
   });
 
   // src/export-blog.js
+  var export_blog_exports = {};
+  __export(export_blog_exports, {
+    BLOG_THEMES: () => BLOG_THEMES,
+    buildBlogHtml: () => buildBlogHtml,
+    exportBlogHTML: () => exportBlogHTML,
+    getBlogOptions: () => getBlogOptions
+  });
   function getBlogOptions() {
     return { ...DEFAULT_OPTS, ...state.meta && state.meta.blogExport || {} };
   }
@@ -85729,3730 +85814,159 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
-  // src/session/session-core.js
-  var session_core_exports = {};
-  __export(session_core_exports, {
-    SESSION_PARTS: () => SESSION_PARTS,
-    SESSION_VERSION: () => SESSION_VERSION2,
-    isStale: () => isStale,
-    mergeSession: () => mergeSession,
-    migrateSession: () => migrateSession,
-    newSession: () => newSession2,
-    normalizeWin: () => normalizeWin,
-    pruneTabs: () => pruneTabs2,
-    sameSession: () => sameSession,
-    sessionKey: () => sessionKey,
-    sessionSummary: () => sessionSummary
-  });
-  function newSession2(root = "") {
+  // src/export-formats.js
+  function docKind(model) {
+    let sp = 0, pr = 0;
+    for (const ch of model && model.chapters || [])
+      for (const sc of ch.scenes || []) {
+        if (sc.type === "memo") continue;
+        if (sc.format === "screenplay") sp++;
+        else pr++;
+      }
+    return sp > pr ? "screenplay" : "prose";
+  }
+  function defaultHubSettings() {
     return {
-      v: SESSION_VERSION2,
-      root: String(root || ""),
-      ts: 0,
-      tabs: { open: [], active: "", scroll: {} },
-      panels: { layout: null, homes: null, workspaces: null, hidden: "" },
-      split: null,
-      ui: {},
-      win: null
+      format: "pdf",
+      scope: "draft",
+      // 'draft' = ฉบับร่างทั้งเล่ม · 'tab' = ฉาก/บทที่เปิดอยู่
+      draft: "",
+      workflow: "",
+      // '' = เลือกให้อัตโนมัติตามรูปแบบ
+      pdf: { toc: true, titlePages: true, headers: true, pageNumbers: true, watermark: "" },
+      html: { wysiwyg: true },
+      rtf: { fontPt: 12 }
     };
   }
-  function migrateSession(raw) {
-    const s = newSession2();
-    if (!raw || typeof raw !== "object") return s;
-    s.root = typeof raw.root === "string" ? raw.root : "";
-    s.ts = Number.isFinite(+raw.ts) ? +raw.ts : 0;
-    const t3 = raw.tabs && typeof raw.tabs === "object" ? raw.tabs : {};
-    const open = Array.isArray(raw.tabs) ? raw.tabs : Array.isArray(t3.open) ? t3.open : [];
-    s.tabs.open = open.filter((x) => typeof x === "string" && x).slice(0, 200);
-    s.tabs.active = typeof t3.active === "string" ? t3.active : "";
-    s.tabs.scroll = t3.scroll && typeof t3.scroll === "object" ? { ...t3.scroll } : {};
-    if (s.tabs.active && !s.tabs.open.includes(s.tabs.active)) s.tabs.active = "";
-    const p = raw.panels && typeof raw.panels === "object" ? raw.panels : {};
-    s.panels.layout = p.layout ?? null;
-    s.panels.homes = p.homes ?? null;
-    s.panels.workspaces = p.workspaces ?? null;
-    s.panels.hidden = typeof p.hidden === "string" ? p.hidden : "";
-    s.split = raw.split ?? null;
-    s.ui = raw.ui && typeof raw.ui === "object" ? { ...raw.ui } : {};
-    s.win = normalizeWin(raw.win);
-    return s;
-  }
-  function normalizeWin(w) {
-    if (!w || typeof w !== "object") return null;
-    const n2 = (v2, min, max2, def) => {
-      const x = Math.round(Number(v2));
-      return Number.isFinite(x) && x >= min && x <= max2 ? x : def;
-    };
-    const width = n2(w.w, 400, 2e4, 0);
-    const height = n2(w.h, 300, 2e4, 0);
-    if (!width || !height) return null;
-    return {
-      x: n2(w.x, -2e4, 2e4, 0),
-      y: n2(w.y, -2e4, 2e4, 0),
-      w: width,
-      h: height,
-      max: !!w.max
-    };
-  }
-  function mergeSession(prev, patch) {
-    const base3 = migrateSession(prev);
-    if (!patch || typeof patch !== "object") return base3;
-    const next = { ...base3 };
-    if (typeof patch.root === "string" && patch.root) next.root = patch.root;
-    if (Number.isFinite(+patch.ts)) next.ts = +patch.ts;
-    for (const k of SESSION_PARTS) {
-      if (patch[k] === void 0) continue;
-      if (k === "tabs" || k === "panels") next[k] = { ...base3[k], ...patch[k] || {} };
-      else next[k] = patch[k];
-    }
-    return migrateSession(next);
-  }
-  function sessionKey(root) {
-    const s = String(root || "").replace(/[\\/]+$/, "").toLowerCase();
-    if (!s) return "default";
-    let h1 = 2166136261, h2 = 16777619;
-    for (let i5 = 0; i5 < s.length; i5++) {
-      h1 = Math.imul(h1 ^ s.charCodeAt(i5), 16777619) >>> 0;
-      h2 = Math.imul(h2 + s.charCodeAt(i5) * (i5 + 1), 2246822507) >>> 0;
-    }
-    const tail = (s.split(/[\\/]/).pop() || "").replace(/[^\w฀-๿-]/g, "").slice(0, 24);
-    return (tail ? tail + "-" : "") + h1.toString(36) + h2.toString(36);
-  }
-  function sameSession(a, b) {
-    const strip = (s) => {
-      const x = { ...migrateSession(s) };
-      x.ts = 0;
-      return JSON.stringify(x);
-    };
-    return strip(a) === strip(b);
-  }
-  function isStale(s, nowMs, days = 90) {
-    const ts = migrateSession(s).ts;
-    if (!ts) return false;
-    const n2 = Number(nowMs);
-    if (!Number.isFinite(n2) || n2 <= 0) return false;
-    return n2 - ts > days * 864e5;
-  }
-  function sessionSummary(s) {
-    const x = migrateSession(s);
-    return {
-      tabs: x.tabs.open.length,
-      hasPanels: !!x.panels.layout,
-      hasSplit: !!x.split,
-      hasWin: !!x.win,
-      active: x.tabs.active
-    };
-  }
-  function pruneTabs2(s, existsList) {
-    const x = migrateSession(s);
-    const keep = new Set(Array.isArray(existsList) ? existsList : []);
-    x.tabs.open = x.tabs.open.filter((f) => keep.has(f));
-    const scroll = {};
-    for (const f of x.tabs.open) if (x.tabs.scroll[f] != null) scroll[f] = x.tabs.scroll[f];
-    x.tabs.scroll = scroll;
-    if (!x.tabs.open.includes(x.tabs.active)) x.tabs.active = x.tabs.open[0] || "";
-    return x;
-  }
-  var SESSION_VERSION2, SESSION_PARTS;
-  var init_session_core = __esm({
-    "src/session/session-core.js"() {
-      SESSION_VERSION2 = 2;
-      SESSION_PARTS = ["tabs", "panels", "split", "ui", "win"];
-    }
-  });
-
-  // src/ai/ai-bridge.js
-  var ai_bridge_exports = {};
-  __export(ai_bridge_exports, {
-    collectDocs: () => collectDocs,
-    getAIClient: () => getAIClient,
-    getRag: () => getRag,
-    ragContext: () => ragContext,
-    resetAI: () => resetAI,
-    tracker: () => tracker
-  });
-  function getAIClient() {
-    if (_client && _client._root === state.root) return _client;
-    _client = new AIClient({
-      http: httpFromKapi(kapi),
-      // settings เป็นฟังก์ชัน → เปลี่ยนใน dialog แล้วมีผลทันที ไม่ต้องสร้าง client ใหม่
-      settings: () => {
-        const ai = getAISettings();
-        return {
-          provider: ai.provider || "openai",
-          model: ai.model || "",
-          temperature: ai.temperature ?? 0.7,
-          maxTokens: ai.maxTokens || 800,
-          ollamaUrl: ai.ollamaUrl || "http://localhost:11434"
-        };
-      },
-      keyStore: new KeyStore({ io: keyIo(), root: state.root || "" }),
-      tracker,
-      log: (lv, msg, extra) => log(lv, msg, extra)
-    });
-    _client._root = state.root;
-    return _client;
-  }
-  async function collectDocs(root) {
-    const docs = [];
-    for (const e of await listEntities(root)) {
-      const body = [
-        Object.values(e.entity.fields || {}).join("\n"),
-        (e.entity.sections || []).map((s) => (s.title || "") + "\n" + (s.content || "")).join("\n")
-      ].join("\n").trim();
-      if (body) docs.push({
-        id: "wiki:" + e.path,
-        text: body,
-        meta: { kind: "wiki", title: e.name, cat: e.cat, path: e.path }
-      });
-    }
-    for (const s of await listScenes(root, { withText: true })) {
-      if (s.text && s.text.trim()) {
-        docs.push({
-          id: "scene:" + s.id,
-          text: s.text,
-          meta: { kind: "scene", title: s.title, sceneId: s.id, path: s.path }
-        });
-      }
-    }
-    return docs;
-  }
-  async function getRag({ rebuild = false, onProgress = null } = {}) {
-    if (!state.root) return null;
-    if (_rag && _ragRoot === state.root && !rebuild) return _rag;
-    const client = getAIClient();
-    let index = new VectorIndex({});
-    const idxPath = await kapi.join(state.root, INDEX_FILE);
-    if (!rebuild) {
-      try {
-        if (await kapi.exists(idxPath)) index = VectorIndex.fromJSON(await kapi.readJson(idxPath));
-      } catch {
-      }
-    }
-    _rag = new RagPipeline({ client, index });
-    _ragRoot = state.root;
-    if (!index.size) {
-      onProgress && onProgress(t("ui.aiBridge.busyNewIndexBody"));
-      const docs = await collectDocs(state.root);
-      const res = await _rag.indexDocs(docs);
-      log("info", t("ui.aiBridge.aiRagNewIndex"), { docs: docs.length, chunks: res.added, model: res.model });
-      try {
-        await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON()));
-      } catch {
-      }
-    }
-    return _rag;
-  }
-  async function ragContext(query, opts = {}) {
-    const rag = await getRag(opts);
-    if (!rag) return { text: "", sources: [], tokens: 0 };
-    try {
-      return await rag.context(query, { k: opts.k || 5, maxTokens: opts.maxTokens || 1500 });
-    } catch (e) {
-      log("warn", t("ui.aiBridge.aiRagRetrieveFail"), e);
-      return buildContext([], {});
-    }
-  }
-  function resetAI() {
-    _client = null;
-    _rag = null;
-    _ragRoot = "";
-  }
-  var _client, _rag, _ragRoot, tracker, keyIo;
-  var init_ai_bridge = __esm({
-    "src/ai/ai-bridge.js"() {
-      init_i18n();
-      init_core();
-      init_ai_core();
-      init_ai_settings();
-      init_project_scan();
-      _client = null;
-      _rag = null;
-      _ragRoot = "";
-      tracker = new CostTracker({});
-      keyIo = () => syncIo();
-    }
-  });
-
-  // src/ai/ai-plot.js
-  var ai_plot_exports = {};
-  __export(ai_plot_exports, {
-    HOLE_TYPES: () => HOLE_TYPES,
-    SEVERITY: () => SEVERITY,
-    SEV_RANK: () => SEV_RANK,
-    batchScenes: () => batchScenes,
-    buildPlotPrompt: () => buildPlotPrompt,
-    dedupeHoles: () => dedupeHoles,
-    detectPlotHoles: () => detectPlotHoles,
-    localChecks: () => localChecks,
-    parsePlotHoles: () => parsePlotHoles,
-    sortHoles: () => sortHoles
-  });
-  function buildPlotPrompt(scenes, opts = {}) {
-    const types2 = opts.types && opts.types.length ? opts.types : Object.keys(HOLE_TYPES);
-    const lines = [];
-    lines.push(t("ui.aiPlot.readSceneAllOrder"));
-    lines.push("");
-    lines.push(t("ui.aiPlot.kindMustCheck"));
-    for (const t3 of types2) lines.push(`- ${t3} (${HOLE_TYPES[t3] || t3})`);
-    lines.push("");
-    lines.push(t("ui.aiPlot.ruleImportant"));
-    lines.push(t("ui.aiPlot.refOnlyItemAppear"));
-    lines.push(t("ui.aiPlot.allItemMustSpecify"));
-    lines.push(t("ui.aiPlot.explainThaiShortAt"));
-    lines.push(t("ui.aiPlot.notFoundProblemReply"));
-    if (opts.focus) lines.push(t("ui.aiPlot.important") + opts.focus);
-    lines.push("");
-    lines.push(t("ui.common.formatAnswerJSONArray"));
-    lines.push(t("ui.aiPlot.typeSeverityCriticalMajor") + t("ui.aiPlot.descriptionExplainProblemThai") + t("ui.aiPlot.evidenceTextShortMain"));
-    lines.push("");
-    lines.push(t("ui.aiPlot.sceneAll"));
-    for (const s of scenes) lines.push(sceneBlock(s));
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: scenes.map((s) => s.id) };
-  }
-  function sceneBlock(s) {
-    const head2 = [`[sceneId: ${s.id}]`, s.title || t("ui.common.notNamed")];
-    if (s.chapterTitle) head2.push(t("ui.common.chapter2") + s.chapterTitle);
-    if (s.storyDate) head2.push(t("ui.aiPlot.timeStory") + s.storyDate);
-    if (s.pov) head2.push(t("ui.common.view2") + s.pov);
-    if (s.characters && s.characters.length) head2.push(t("ui.aiPlot.character") + s.characters.join(", "));
-    return head2.join(" \xB7 ") + "\n" + String(s.text || "").trim() + "\n";
-  }
-  function parsePlotHoles(text, opts = {}) {
-    const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
-    const titles = opts.titles || {};
-    const rows = validate(extractJson(text), SCHEMA).filter((r) => !valid || !r.sceneId || valid.has(r.sceneId)).map((r) => ({
-      ...r,
-      typeLabel: HOLE_TYPES[r.type] || r.type,
-      severityLabel: SEVERITY[r.severity] || r.severity,
-      location: r.sceneId ? { sceneId: r.sceneId, title: titles[r.sceneId] || "", relatedSceneId: r.relatedSceneId || "" } : null,
-      source: "ai"
-    }));
-    return sortHoles(dedupeHoles(rows));
-  }
-  function sortHoles(rows) {
-    return rows.slice().sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0) || String(a.sceneId).localeCompare(String(b.sceneId)));
-  }
-  function dedupeHoles(rows) {
-    const seen = /* @__PURE__ */ new Map();
-    for (const r of rows) {
-      const k = `${r.type}|${r.sceneId}|${String(r.description).slice(0, 40)}`;
-      if (!seen.has(k)) seen.set(k, r);
-    }
-    return [...seen.values()];
-  }
-  function localChecks(scenes = []) {
-    const out = [];
-    const withDate = scenes.map((s, i5) => ({ ...s, _i: i5 })).filter((s) => s.storyDate && numDate(s.storyDate) != null);
-    for (let i5 = 1; i5 < withDate.length; i5++) {
-      const prev = withDate[i5 - 1], cur = withDate[i5];
-      if (numDate(cur.storyDate) < numDate(prev.storyDate)) {
-        out.push({
-          type: "timeline-conflict",
-          severity: "major",
-          source: "local",
-          typeLabel: HOLE_TYPES["timeline-conflict"],
-          severityLabel: SEVERITY.major,
-          description: tf("ui.aiPlot.sceneHasTimeStory", cur.title || cur.id, cur.storyDate, prev.title || prev.id, prev.storyDate),
-          sceneId: cur.id,
-          relatedSceneId: prev.id,
-          evidence: `${prev.storyDate} \u2192 ${cur.storyDate}`,
-          suggestion: t("ui.aiPlot.setSceneSpecifyBody"),
-          location: { sceneId: cur.id, title: cur.title || "", relatedSceneId: prev.id }
-        });
-      }
-    }
-    for (const s of scenes) {
-      if (s.pov && s.text && s.characters && s.characters.length && !s.characters.includes(s.pov)) {
-        out.push({
-          type: "character-continuity",
-          severity: "minor",
-          source: "local",
-          typeLabel: HOLE_TYPES["character-continuity"],
-          severityLabel: SEVERITY.minor,
-          description: tf("ui.aiPlot.sceneSetViewNot", s.title || s.id, s.pov),
-          sceneId: s.id,
-          relatedSceneId: "",
-          evidence: "pov = " + s.pov,
-          suggestion: t("ui.aiPlot.checkSetViewScene"),
-          location: { sceneId: s.id, title: s.title || "", relatedSceneId: "" }
-        });
-      }
-    }
+  function normalizeHub(saved) {
+    const d = defaultHubSettings();
+    const s = saved && typeof saved === "object" ? saved : {};
+    const out = { ...d, ...s };
+    out.format = EXPORT_FORMATS.some((f) => f.key === s.format) ? s.format : d.format;
+    out.scope = s.scope === "tab" ? "tab" : "draft";
+    out.workflow = typeof s.workflow === "string" ? s.workflow : "";
+    out.pdf = { ...d.pdf, ...s.pdf || {} };
+    out.pdf.watermark = String(out.pdf.watermark || "");
+    out.html = { ...d.html, ...s.html || {} };
+    out.rtf = { ...d.rtf, ...s.rtf || {} };
+    out.rtf.fontPt = num(out.rtf.fontPt, 12);
     return out;
   }
-  function numDate(v2) {
-    if (v2 == null) return null;
-    const m = String(v2).replace(/,/g, "").match(/-?\d+(\.\d+)?/);
-    return m ? parseFloat(m[0]) : null;
+  function defaultWorkflowFor(fmtKey, workflows = PRESETS) {
+    const want = { pdf: "pdf", html: "html", txt: "txt", md: "md", rtf: "txt", fdx: "txt" }[fmtKey] || "md";
+    return workflows.find((w) => w.ext === want && w.builtIn) || workflows.find((w) => w.ext === want) || workflows.find((w) => w.id === "manuscript") || workflows[0] || null;
   }
-  async function detectPlotHoles(sceneIds = [], options = {}) {
-    const all = options.scenes || [];
-    const picked = sceneIds && sceneIds.length ? all.filter((s) => sceneIds.includes(s.id)) : all;
-    if (!picked.length) return { ok: false, holes: [], error: t("ui.aiPlot.notFoundSceneCheck"), code: "no-scenes", batches: 0 };
-    const local = options.includeLocal === false ? [] : localChecks(picked);
-    const client = options.client;
-    if (!client) return { ok: !!local.length, holes: sortHoles(local), batches: 0, error: client ? void 0 : t("ui.common.cantSettingsAIClient"), code: "no-client" };
-    const titles = Object.fromEntries(picked.map((s) => [s.id, s.title || ""]));
-    const batches = batchScenes(picked, options.maxTokensPerBatch || 6e3);
-    const holes = [...local];
-    const usage = { input: 0, output: 0, total: 0 };
-    let cost = 0, failed = 0, lastError = "";
-    for (const group of batches) {
-      const built = buildPlotPrompt(group, options);
-      const res = await client.complete({
-        prompt: built.prompt,
-        system: built.system,
-        feature: "plot-holes",
-        model: options.model,
-        temperature: options.temperature ?? 0.2,
-        // งานตรวจสอบ → ความสร้างสรรค์ต่ำ
-        maxTokens: options.maxTokens || 1500
-      });
-      if (!res.ok) {
-        failed++;
-        lastError = res.error;
-        continue;
-      }
-      holes.push(...parsePlotHoles(res.text, { sceneIds: built.sceneIds, titles }));
-      if (res.usage) {
-        usage.input += res.usage.input || 0;
-        usage.output += res.usage.output || 0;
-      }
-      cost += res.cost && res.cost.usd || 0;
-    }
-    usage.total = usage.input + usage.output;
-    const ok2 = failed < batches.length || holes.length > 0;
-    return {
-      ok: ok2,
-      holes: sortHoles(dedupeHoles(holes)),
-      batches: batches.length,
-      failedBatches: failed,
-      usage,
-      cost: { usd: +cost.toFixed(6) },
-      error: ok2 ? void 0 : lastError
-    };
+  function workflowForFormat(wf2, fmtKey) {
+    const src2 = wf2 || PRESETS[0];
+    const wantHtml = fmtKey === "html";
+    const steps = (src2.steps || []).map((s) => ({ key: s.key, on: s.on !== false, opts: { ...s.opts } }));
+    const i5 = steps.findIndex((s) => s.key === "to-html");
+    if (wantHtml) {
+      if (i5 >= 0) steps[i5].on = true;
+      else steps.push(mkStep("to-html", true));
+    } else if (i5 >= 0) steps[i5].on = false;
+    return { ...src2, ext: formatDef(fmtKey).ext, steps };
   }
-  function batchScenes(scenes, maxTokens = 6e3) {
-    const out = [];
-    let cur = [], size = 0;
-    for (const s of scenes) {
-      let text = String(s.text || "");
-      let cost = estimateTokens2(text) + 60;
-      if (cost > maxTokens) {
-        text = chunkText(text, { maxTokens: maxTokens - 100 })[0] || text.slice(0, maxTokens * 3);
-        cost = estimateTokens2(text) + 60;
-      }
-      if (size + cost > maxTokens && cur.length) {
-        out.push(cur);
-        cur = [];
-        size = 0;
-      }
-      cur.push({ ...s, text });
-      size += cost;
-    }
-    if (cur.length) out.push(cur);
-    return out;
+  function suggestName(title2, fmtKey) {
+    const base3 = String(title2 || "export").replace(/[\\/:*?"<>|]/g, "_").trim() || "export";
+    return base3 + "." + formatDef(fmtKey).ext;
   }
-  var HOLE_TYPES, SYSTEM, SCHEMA;
-  var init_ai_plot = __esm({
-    "src/ai/ai-plot.js"() {
-      init_i18n();
-      init_ai_core();
-      HOLE_TYPES = {
-        "character-continuity": t("ui.aiPlot.contCharacter"),
-        "timeline-conflict": t("ui.aiPlot.time"),
-        "motivation-gap": t("ui.aiPlot.missingFind"),
-        "world-rule": t("ui.aiPlot.ruleWorld"),
-        "plot-thread": t("ui.aiPlot.knotStuck"),
-        "pacing": t("ui.aiPlot.paceStory")
-      };
-      SYSTEM = t("ui.aiPlot.youEditorSourceStory") + t("ui.aiPlot.youReportOnlyThing") + t("ui.aiPlot.replyJSONForbidHas");
-      SCHEMA = {
-        type: { required: true, type: "string", enum: Object.keys(HOLE_TYPES), default: "plot-thread" },
-        severity: { required: true, type: "string", enum: Object.keys(SEVERITY), default: "minor" },
-        description: { required: true, type: "string" },
-        sceneId: { type: "string", default: "" },
-        relatedSceneId: { type: "string", default: "" },
-        evidence: { type: "string", default: "" },
-        suggestion: { type: "string", default: "" }
-      };
-    }
-  });
-
-  // src/ai/ai-dialogue.js
-  var ai_dialogue_exports = {};
-  __export(ai_dialogue_exports, {
-    DIALOGUE_FORMATS: () => DIALOGUE_FORMATS,
-    buildDialoguePrompt: () => buildDialoguePrompt,
-    characterProfile: () => characterProfile,
-    generateDialogue: () => generateDialogue,
-    parseDialogue: () => parseDialogue,
-    profileBlock: () => profileBlock,
-    toProse: () => toProse,
-    toScreenplay: () => toScreenplay
-  });
-  function characterProfile(entity) {
-    if (!entity) return null;
-    const src2 = { ...entity.fields || {}, ...entity };
-    const pick2 = (keys4) => {
-      for (const k of keys4) {
-        const v2 = src2[k];
-        if (v2 != null && String(v2).trim()) return String(v2).trim();
-      }
-      return "";
-    };
-    const out = { id: entity.id || "", name: entity.name || entity.title || t("ui.aiDialogue.notName"), aliases: entity.aliases || [] };
-    for (const [key2, keys4] of Object.entries(FIELD_ALIASES)) out[key2] = pick2(keys4);
-    out.relationships = (entity.relationships || []).map((r) => ({
-      target: r.targetName || r.target || "",
-      role: r.role || ""
-    })).filter((r) => r.target);
-    out.notes = entity.notes || entity.summary || "";
-    return out;
-  }
-  function profileBlock(p) {
-    if (!p) return "";
-    const rows = [tf("ui.aiDialogue.name2", p.name) + (p.aliases && p.aliases.length ? tf("ui.aiDialogue.call", p.aliases.join(", ")) : "")];
-    const add = (label, v2) => {
-      if (v2) rows.push(`${label}: ${v2}`);
-    };
-    add(t("ui.aiDialogue.chapter"), p.role);
-    add(t("ui.aiDialogue.msg6"), p.age);
-    add(t("ui.aiDialogue.click"), p.personality);
-    add(t("ui.common.howSpeak"), p.speech);
-    add(t("ui.aiDialogue.msg3"), p.background);
-    add(t("ui.common.goal"), p.goal);
-    add(t("ui.aiDialogue.fearDot"), p.fear);
-    add(t("ui.aiDialogue.msg"), p.quirk);
-    if (p.relationships && p.relationships.length) {
-      rows.push(t("ui.aiDialogue.relation") + p.relationships.map((r) => `${r.target}${r.role ? " (" + r.role + ")" : ""}`).join(", "));
-    }
-    add(t("ui.common.other"), p.notes);
-    return rows.join("\n");
-  }
-  function buildDialoguePrompt(a, b, context2 = {}, opts = {}) {
-    const format3 = opts.format === "prose" ? "prose" : "screenplay";
-    const lines = [];
-    const exchanges = opts.lines || 8;
-    lines.push(tf("ui.aiDialogue.writeDialogueBetweenCharacter", exchanges));
-    lines.push(t("ui.aiDialogue.eachPersonSpeakClick"));
-    if (opts.tone) lines.push(t("ui.aiDialogue.toneMerge") + opts.tone);
-    lines.push("");
-    lines.push(t("ui.aiDialogue.character"));
-    lines.push(profileBlock(a));
-    lines.push("");
-    lines.push(t("ui.aiDialogue.character2"));
-    lines.push(profileBlock(b));
-    const ctx = typeof context2 === "string" ? { situation: context2 } : context2 || {};
-    const cRows = [];
-    if (ctx.situation) cRows.push(t("ui.aiDialogue.msg4") + ctx.situation);
-    if (ctx.place) cRows.push(t("ui.aiDialogue.place") + ctx.place);
-    if (ctx.time) cRows.push(t("ui.aiDialogue.time") + ctx.time);
-    if (ctx.goal) cRows.push(t("ui.aiDialogue.thingEachNeedDialogue") + ctx.goal);
-    if (ctx.conflict) cRows.push(t("ui.common.conflict2") + ctx.conflict);
-    if (ctx.mood) cRows.push(t("ui.aiDialogue.moodScene") + ctx.mood);
-    if (cRows.length) {
-      lines.push("", t("ui.aiDialogue.contextScene"), ...cRows);
-    }
-    if (ctx.before) {
-      lines.push("", t("ui.aiDialogue.textBeforePageWrite"), String(ctx.before).slice(0, 1500));
-    }
-    lines.push("", t("ui.aiDialogue.formatResult"));
-    if (format3 === "screenplay") {
-      lines.push(t("ui.aiDialogue.useFormatScreenplayStyle"));
-      lines.push(t("ui.aiDialogue.name"));
-      lines.push(t("ui.aiDialogue.moodDoShortRemember"));
-      lines.push(t("ui.common.dialogue"));
-      lines.push(t("ui.aiDialogue.forbidPutHeadScene"));
-    } else {
-      lines.push(t("ui.aiDialogue.writeEditDialogueWord"));
-    }
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM2, prompt: prompt2, tokens: estimateTokens2(prompt2), format: format3 };
-  }
-  function parseDialogue(raw, opts = {}) {
-    const format3 = opts.format === "prose" ? "prose" : "screenplay";
-    const text = String(raw || "").replace(/```[a-z]*\n?/gi, "").trim();
-    const out = [];
-    if (format3 === "screenplay") {
-      let cur = null;
-      for (const rawLine of text.split(/\r?\n/)) {
-        const line = rawLine.trim();
-        if (!line) continue;
-        if (line.startsWith("@")) {
-          cur = { speaker: line.slice(1).trim(), paren: "", text: "" };
-          out.push(cur);
-          continue;
-        }
-        const colon = line.match(/^([^:：]{1,30})[:：]\s*(.+)$/);
-        if (colon && !line.startsWith("(")) {
-          cur = { speaker: colon[1].replace(/^@/, "").trim(), paren: "", text: colon[2].trim() };
-          out.push(cur);
-          continue;
-        }
-        if (/^\(.*\)$/.test(line)) {
-          if (cur) cur.paren = line.slice(1, -1).trim();
-          continue;
-        }
-        if (cur) cur.text = cur.text ? cur.text + " " + line : line;
-      }
-    } else {
-      for (const para2 of text.split(/\n{2,}/)) {
-        const t3 = para2.trim();
-        if (!t3) continue;
-        const m = t3.match(/^([^"“”]{0,40}?)\s*[""“](.+)[""”]/);
-        out.push({ speaker: m && m[1].trim() || "", paren: "", text: t3 });
-      }
-    }
-    return { format: format3, lines: out.filter((l) => l.text || l.speaker), text: format3 === "screenplay" ? toScreenplay(out) : text };
-  }
-  function toScreenplay(lines) {
-    const out = [];
-    for (const l of lines || []) {
-      if (!l || !l.speaker && !l.text) continue;
-      if (l.speaker) out.push("@" + l.speaker);
-      if (l.paren) out.push("(" + l.paren + ")");
-      if (l.text) out.push(l.text);
-      out.push("");
-    }
-    return out.join("\n").trim();
-  }
-  function toProse(lines) {
-    return (lines || []).filter((l) => l && l.text).map((l) => {
-      if (!l.speaker) return l.text;
-      const paren = l.paren ? `${l.paren} ` : "";
-      return tf("ui.aiDialogue.speak", l.speaker, paren ? " " + paren : "", l.text).replace(/\s+/g, " ");
-    }).join("\n\n");
-  }
-  async function generateDialogue(characterA, characterB, context2 = {}, options = {}) {
-    const client = options.client;
-    const a = characterA && characterA.personality !== void 0 ? characterA : characterProfile(characterA);
-    const b = characterB && characterB.personality !== void 0 ? characterB : characterProfile(characterB);
-    if (!a || !b) return { ok: false, text: "", lines: [], error: t("ui.aiDialogue.mustHasCharacterItem"), code: "no-characters" };
-    const built = buildDialoguePrompt(a, b, context2, options);
-    if (!client) return { ok: false, text: "", lines: [], prompt: built.prompt, error: t("ui.common.cantSettingsAIClient"), code: "no-client" };
-    const req = {
-      prompt: built.prompt,
-      system: built.system,
-      feature: "dialogue",
-      model: options.model,
-      temperature: options.temperature ?? 0.85,
-      // งานสร้างสรรค์ → สูงหน่อย
-      maxTokens: options.maxTokens || 1200
-    };
-    const res = options.stream && typeof options.onChunk === "function" ? await client.stream(req, options.onChunk) : await client.complete(req);
-    if (!res.ok) return { ...res, lines: [], prompt: built.prompt };
-    const parsed = parseDialogue(res.text, { format: built.format });
-    return {
-      ...res,
-      text: parsed.text,
-      lines: parsed.lines,
-      format: parsed.format,
-      prompt: built.prompt,
-      speakers: [...new Set(parsed.lines.map((l) => l.speaker).filter(Boolean))]
-    };
-  }
-  var SYSTEM2, FIELD_ALIASES, DIALOGUE_FORMATS;
-  var init_ai_dialogue = __esm({
-    "src/ai/ai-dialogue.js"() {
-      init_i18n();
-      init_ai_core();
-      SYSTEM2 = t("ui.aiDialogue.youWriterScreenplayThai") + t("ui.aiDialogue.characterEachItemMust") + t("ui.aiDialogue.sendOnlyDialogueForbid");
-      FIELD_ALIASES = {
-        role: ["role", t("ui.aiDialogue.chapter"), t("ui.aiDialogue.pos")],
-        age: ["age", t("ui.aiDialogue.msg6")],
-        personality: ["personality", t("ui.aiDialogue.click"), t("ui.aiDialogue.msg2"), "traits"],
-        speech: ["speech", "speechStyle", t("ui.aiDialogue.speak2"), t("ui.aiDialogue.msg5"), t("ui.aiDialogue.sound")],
-        background: ["background", t("ui.aiDialogue.msg3"), t("ui.common.history"), "bio"],
-        goal: ["goal", t("ui.common.goal"), "motivation", t("ui.aiDialogue.msg7")],
-        fear: ["fear", t("ui.aiDialogue.fear"), t("ui.aiDialogue.dot"), "weakness"],
-        quirk: ["quirk", t("ui.aiDialogue.only"), t("ui.aiDialogue.msg")]
-      };
-      DIALOGUE_FORMATS = { screenplay: t("ui.common.screenplay"), prose: t("ui.aiDialogue.editHasAction") };
-    }
-  });
-
-  // src/ai/ai-character.js
-  var ai_character_exports = {};
-  __export(ai_character_exports, {
-    ASPECTS: () => ASPECTS,
-    POLITE_PARTICLES: () => POLITE_PARTICLES,
-    PRONOUNS: () => PRONOUNS,
-    SEVERITY: () => SEVERITY,
-    SEV_RANK: () => SEV_RANK,
-    buildConsistencyPrompt: () => buildConsistencyPrompt,
-    checkConsistency: () => checkConsistency,
-    localConsistency: () => localConsistency,
-    parseConsistency: () => parseConsistency,
-    sortIssues: () => sortIssues,
-    speechStats: () => speechStats
-  });
-  function buildConsistencyPrompt(profile, appearances = [], opts = {}) {
-    const aspects = opts.aspects && opts.aspects.length ? opts.aspects : Object.keys(ASPECTS);
-    const lines = [];
-    lines.push(tf("ui.aiCharacter.checkAlwaysCharacterScene", profile.name));
-    lines.push("");
-    lines.push(t("ui.aiCharacter.mustView"));
-    for (const a of aspects) lines.push(`- ${a} (${ASPECTS[a] || a})`);
-    lines.push("");
-    lines.push(t("ui.common.rule"));
-    lines.push(t("ui.aiCharacter.compareSceneSceneCompare"));
-    lines.push(t("ui.aiCharacter.textShortSceneMain"));
-    lines.push(t("ui.aiCharacter.itemEditActEdit"));
-    lines.push(t("ui.aiCharacter.characterAlwaysReplyForbid"));
-    lines.push("");
-    lines.push(t("ui.common.formatAnswerJSONArray"));
-    lines.push(t("ui.aiCharacter.sceneIdAspectSeverityCritical") + t("ui.aiCharacter.issueProblemFoundThai"));
-    lines.push("");
-    lines.push(t("ui.aiCharacter.fileCharacter"));
-    lines.push(profileBlock(profile));
-    lines.push("");
-    lines.push(t("ui.aiCharacter.sceneCharacterAppear"));
-    for (const a of appearances) {
-      lines.push(`[sceneId: ${a.sceneId}] ${a.title || ""}${a.storyDate ? t("ui.aiCharacter.timeStory") + a.storyDate : ""}`);
-      lines.push(String(a.text || "").trim());
-      lines.push("");
-    }
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM3, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: appearances.map((a) => a.sceneId) };
-  }
-  function parseConsistency(text, opts = {}) {
-    const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
-    const titles = opts.titles || {};
-    const rows = validate(extractJson(text), SCHEMA2).filter((r) => !valid || valid.has(r.sceneId)).map((r) => ({
-      ...r,
-      source: "ai",
-      aspectLabel: ASPECTS[r.aspect] || r.aspect,
-      severityLabel: SEVERITY[r.severity] || r.severity,
-      sceneTitle: titles[r.sceneId] || ""
-    }));
-    return sortIssues(dedupe(rows));
-  }
-  function sortIssues(rows) {
-    return rows.slice().sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0) || String(a.sceneId).localeCompare(String(b.sceneId)));
-  }
-  function dedupe(rows) {
-    const seen = /* @__PURE__ */ new Map();
-    for (const r of rows) {
-      const k = `${r.sceneId}|${r.aspect}|${String(r.issue).slice(0, 40)}`;
-      if (!seen.has(k)) seen.set(k, r);
-    }
-    return [...seen.values()];
-  }
-  function speechStats(appearances, characterName) {
-    const out = [];
-    for (const a of appearances || []) {
-      const said = dialogueOf(a.text, characterName);
-      const particles = {}, pronouns = {};
-      for (const p of POLITE_PARTICLES) {
-        const n2 = countOf(said, p);
-        if (n2) particles[p] = n2;
-      }
-      for (const p of PRONOUNS) {
-        const n2 = countWord(said, p);
-        if (n2) pronouns[p] = n2;
-      }
-      out.push({ sceneId: a.sceneId, title: a.title || "", lines: said.length, particles, pronouns });
-    }
-    return out;
-  }
-  function dialogueOf(text, name5) {
-    const src2 = String(text || "");
-    const out = [];
-    const lines = src2.split(/\r?\n/);
-    for (let i5 = 0; i5 < lines.length; i5++) {
-      const l = lines[i5].trim();
-      if (l.startsWith("@") && name5 && l.slice(1).trim().startsWith(name5)) {
-        for (let j = i5 + 1; j < lines.length; j++) {
-          const d = lines[j].trim();
-          if (!d || d.startsWith("@") || d.startsWith(".") || d.startsWith("!")) break;
-          if (/^\(.*\)$/.test(d)) continue;
-          out.push(d);
-        }
-      }
-    }
-    for (const m of src2.matchAll(/[""“]([^""“”\n]{2,200})[""”]/g)) out.push(m[1]);
-    return out;
-  }
-  function localConsistency(appearances, characterName, opts = {}) {
-    const stats = speechStats(appearances, characterName);
-    const issues = [];
-    const dominant = (key2) => {
-      const total = {};
-      for (const s of stats) for (const [k, n2] of Object.entries(s[key2])) total[k] = (total[k] || 0) + n2;
-      const sorted = Object.entries(total).sort((a, b) => b[1] - a[1]);
-      return sorted.length ? sorted[0][0] : null;
-    };
-    const minScenes = opts.minScenes || 2;
-    if (stats.filter((s) => Object.keys(s.particles).length).length >= minScenes) {
-      const main = dominant("particles");
-      for (const s of stats) {
-        const used = Object.keys(s.particles);
-        if (main && used.length && !used.includes(main)) {
-          issues.push(mkIssue(
-            s,
-            "speech",
-            "minor",
-            tf("ui.aiCharacter.sceneUseWordScene", used.join(", "), characterName, main),
-            tf("ui.aiCharacter.checkSetChangeSound", main)
-          ));
-        }
-      }
-    }
-    if (stats.filter((s) => Object.keys(s.pronouns).length).length >= minScenes) {
-      const main = dominant("pronouns");
-      for (const s of stats) {
-        const used = Object.keys(s.pronouns);
-        if (main && used.length && !used.includes(main)) {
-          issues.push(mkIssue(
-            s,
-            "speech",
-            "minor",
-            tf("ui.aiCharacter.sceneCallItemScene", characterName, used.join(", "), main),
-            tf("ui.aiCharacter.cantSetChangePair", main)
-          ));
-        }
-      }
-    }
-    return sortIssues(issues);
-  }
-  function mkIssue(s, aspect, severity, issue, suggestion) {
-    return {
-      sceneId: s.sceneId,
-      sceneTitle: s.title,
-      aspect,
-      severity,
-      issue,
-      suggestion,
-      evidence: "",
-      aspectLabel: ASPECTS[aspect],
-      severityLabel: SEVERITY[severity],
-      source: "local"
-    };
-  }
-  async function checkConsistency(characterId, options = {}) {
-    const entity = options.entity;
-    if (!entity) return { ok: false, issues: [], error: t("ui.aiCharacter.notFoundDataCharacter"), code: "no-entity" };
-    const profile = entity.personality !== void 0 ? entity : characterProfile(entity);
-    const ids = options.sceneIds || options.backlinks && options.backlinks[characterId] || null;
-    const all = options.scenes || [];
-    const names = [profile.name, ...profile.aliases || []].filter(Boolean);
-    const appearances = (ids ? all.filter((s) => ids.includes(s.id)) : all.filter((s) => names.some((n2) => String(s.text || "").includes(n2)))).map((s) => ({ sceneId: s.id, title: s.title || "", text: s.text || "", storyDate: s.storyDate || "" }));
-    if (!appearances.length) return { ok: false, issues: [], error: tf("ui.aiCharacter.notFoundSceneHas", profile.name), code: "no-scenes" };
-    const local = options.includeLocal === false ? [] : localConsistency(appearances, profile.name, options);
-    const client = options.client;
-    if (!client) return { ok: !!local.length, issues: local, error: t("ui.common.cantSettingsAIClient"), code: "no-client", appearances: appearances.length };
-    const built = buildConsistencyPrompt(profile, appearances, options);
-    const res = await client.complete({
-      prompt: built.prompt,
-      system: built.system,
-      feature: "character-consistency",
-      model: options.model,
-      temperature: options.temperature ?? 0.2,
-      maxTokens: options.maxTokens || 1500
-    });
-    if (!res.ok) return { ok: !!local.length, issues: local, error: res.error, code: res.code, appearances: appearances.length };
-    const titles = Object.fromEntries(appearances.map((a) => [a.sceneId, a.title]));
-    const issues = sortIssues(dedupe([...local, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
-    return { ok: true, issues, usage: res.usage, cost: res.cost, appearances: appearances.length, prompt: built.prompt };
-  }
-  var ASPECTS, SYSTEM3, SCHEMA2, POLITE_PARTICLES, PRONOUNS, countOf, countWord;
-  var init_ai_character = __esm({
-    "src/ai/ai-character.js"() {
-      init_i18n();
-      init_ai_core();
-      init_ai_dialogue();
-      ASPECTS = {
-        speech: t("ui.common.howSpeak"),
-        personality: t("ui.aiCharacter.msg"),
-        knowledge: t("ui.aiCharacter.thingCharacterNot"),
-        ability: t("ui.aiCharacter.ability"),
-        appearance: t("ui.aiCharacter.image"),
-        relationship: t("ui.aiCharacter.relationCharacterOther")
-      };
-      SYSTEM3 = t("ui.aiCharacter.youEditorSourceStory") + t("ui.aiCharacter.readFileCharacterScene") + t("ui.aiCharacter.reportOnlyThingText");
-      SCHEMA2 = {
-        sceneId: { required: true, type: "string" },
-        aspect: { type: "string", enum: Object.keys(ASPECTS), default: "personality" },
-        severity: { type: "string", enum: Object.keys(SEVERITY), default: "minor" },
-        issue: { required: true, type: "string" },
-        evidence: { type: "string", default: "" },
-        suggestion: { type: "string", default: "" }
-      };
-      POLITE_PARTICLES = ["\u0E04\u0E23\u0E31\u0E1A", "\u0E04\u0E48\u0E30", "\u0E04\u0E30", "\u0E08\u0E49\u0E30", "\u0E08\u0E49\u0E32", "\u0E2E\u0E30", "\u0E02\u0E2D\u0E23\u0E31\u0E1A", "\u0E40\u0E08\u0E49\u0E32\u0E04\u0E48\u0E30"];
-      PRONOUNS = ["\u0E1C\u0E21", "\u0E09\u0E31\u0E19", "\u0E14\u0E34\u0E09\u0E31\u0E19", "\u0E01\u0E23\u0E30\u0E1C\u0E21", "\u0E2B\u0E19\u0E39", "\u0E02\u0E49\u0E32", "\u0E01\u0E39", "\u0E40\u0E23\u0E32", "\u0E02\u0E49\u0E32\u0E1E\u0E40\u0E08\u0E49\u0E32", "\u0E2D\u0E31\u0E4A\u0E27"];
-      countOf = (lines, needle) => lines.reduce((n2, l) => n2 + (l.split(needle).length - 1), 0);
-      countWord = (lines, w) => lines.reduce((n2, l) => n2 + (l.split(w).length - 1), 0);
-    }
-  });
-
-  // src/ai/ai-world.js
-  var ai_world_exports = {};
-  __export(ai_world_exports, {
-    WORLD_TEMPLATES: () => WORLD_TEMPLATES,
-    WORLD_TYPES: () => WORLD_TYPES,
-    buildWorldPrompt: () => buildWorldPrompt,
-    generateWorld: () => generateWorld,
-    getTemplate: () => getTemplate,
-    parseWorld: () => parseWorld,
-    toMarkdown: () => toMarkdown,
-    toWikiEntity: () => toWikiEntity
-  });
-  function getTemplate(type) {
-    return WORLD_TEMPLATES[type] || null;
-  }
-  function buildWorldPrompt(type, prompt2, opts = {}) {
-    const tpl = getTemplate(type);
-    if (!tpl) return null;
-    const lines = [];
-    lines.push(tf("ui.aiWorld.newWorldStoryCmd", tpl.label, prompt2 || t("ui.aiWorld.authorCantSpecifyThink")));
-    lines.push("");
-    lines.push(t("ui.aiWorld.itemDefine"));
-    lines.push(t("ui.aiWorld.allMustWheelWheel"));
-    lines.push(t("ui.aiWorld.writeThaiConciseUse"));
-    lines.push(t("ui.aiWorld.allHeadingMustHas"));
-    lines.push(t("ui.aiWorld.closeKnotWriteScene"));
-    if (opts.tone) lines.push(t("ui.aiWorld.toneWorld") + opts.tone);
-    if (opts.existing) {
-      lines.push("", t("ui.aiWorld.prevHasForbid"), String(opts.existing).slice(0, 2e3));
-    }
-    if (opts.context) {
-      lines.push("", t("ui.aiWorld.contextStory"), typeof opts.context === "string" ? opts.context : JSON.stringify(opts.context));
-    }
-    lines.push("", t("ui.aiWorld.formatAnswerJSON"));
-    lines.push(JSON.stringify({
-      name: t("ui.common.name"),
-      fields: Object.fromEntries(tpl.fields.filter((f) => f.key !== "name").map((f) => [f.key, f.label])),
-      sections: tpl.sections.map((s) => ({ title: s, body: t("ui.aiWorld.bodySentence") })),
-      tags: [t("ui.aiWorld.wordSearch"), t("ui.aiWorld.wordSearch2")]
-    }, null, 2));
-    const built = lines.join("\n");
-    return { system: SYSTEM4, prompt: built, tokens: estimateTokens2(built), type, template: tpl };
-  }
-  function parseWorld(type, text) {
-    const tpl = getTemplate(type);
-    const data2 = extractJson(text) || {};
-    const obj = Array.isArray(data2) ? data2[0] || {} : data2;
-    const fields = { ...obj.fields || {} };
-    for (const [k, v2] of Object.entries(obj)) {
-      if (["fields", "sections", "tags", "name"].includes(k)) continue;
-      if (typeof v2 === "string" && !(k in fields)) fields[k] = v2;
-    }
-    const keys4 = tpl ? tpl.fields.map((f) => f.key).filter((k) => k !== "name") : Object.keys(fields);
-    const clean = {};
-    for (const k of keys4) clean[k] = str(fields[k]);
-    const sections = validate(obj.sections, {
-      title: { required: true, type: "string" },
-      body: { required: true, type: "string" }
-    });
-    const missing = [
-      ...keys4.filter((k) => !clean[k]),
-      ...(tpl ? tpl.sections : []).filter((s) => !sections.some((x) => x.title.includes(s) || s.includes(x.title)))
-    ];
-    return {
-      type,
-      template: tpl ? tpl.label : type,
-      name: str(obj.name) || str(fields.name) || "",
-      fields: clean,
-      sections,
-      tags: (Array.isArray(obj.tags) ? obj.tags : []).map(str).filter(Boolean),
-      missing,
-      ok: !!(str(obj.name) || sections.length)
-    };
-  }
-  function toWikiEntity(world, opts = {}) {
-    const tpl = getTemplate(world.type);
-    const cat = opts.category || tpl && tpl.category || "lore";
-    const notes = (world.sections || []).map((s) => `## ${s.title}
-${s.body}`).join("\n\n");
-    return {
-      name: world.name || opts.name || t("ui.common.notNamed2"),
-      entityTypeKey: cat,
-      aliases: [],
-      tags: world.tags || [],
-      fields: { ...world.fields, worldType: world.type },
-      notes,
-      createdBy: "ai-world"
-    };
-  }
-  function toMarkdown(world) {
-    const tpl = getTemplate(world.type);
-    const out = [`# ${world.name || t("ui.common.notNamed")}`, ""];
-    const labels = Object.fromEntries((tpl && tpl.fields || []).map((f) => [f.key, f.label]));
-    for (const [k, v2] of Object.entries(world.fields || {})) if (v2) out.push(`- **${labels[k] || k}:** ${v2}`);
-    out.push("");
-    for (const s of world.sections || []) out.push(`## ${s.title}`, s.body, "");
-    if (world.tags && world.tags.length) out.push(t("ui.common.tag3") + world.tags.map((t3) => "#" + t3).join(" "));
-    return out.join("\n").trim();
-  }
-  async function generateWorld(type, prompt2, options = {}) {
-    const built = buildWorldPrompt(type, prompt2, options);
-    if (!built) return { ok: false, error: t("ui.aiWorld.notKnownType") + type, code: "bad-type", types: WORLD_TYPES };
-    const client = options.client;
-    if (!client) return { ok: false, prompt: built.prompt, error: t("ui.common.cantSettingsAIClient"), code: "no-client" };
-    const call = () => client.complete({
-      prompt: built.prompt,
-      system: built.system,
-      feature: "worldbuilding:" + type,
-      model: options.model,
-      temperature: options.temperature ?? 0.9,
-      // สร้างโลก = ต้องการความหลากหลาย
-      maxTokens: options.maxTokens || 1800
-    });
-    let res = await call();
-    if (!res.ok) return { ...res, prompt: built.prompt };
-    let world = parseWorld(type, res.text);
-    if (!world.ok && options.retryOnMissing !== false) {
-      res = await call();
-      if (res.ok) world = parseWorld(type, res.text);
-    }
-    if (!world.ok) return { ok: false, world, prompt: built.prompt, error: t("ui.aiWorld.aIReplyNotAt"), code: "bad-shape", usage: res.usage };
-    return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };
-  }
-  var SYSTEM4, WORLD_TEMPLATES, WORLD_TYPES, str;
-  var init_ai_world = __esm({
-    "src/ai/ai-world.js"() {
-      init_i18n();
-      init_ai_core();
-      SYSTEM4 = t("ui.aiWorld.youNewWorldWorldbuilder") + t("ui.aiWorld.newDetailWheelHas") + t("ui.aiWorld.replyJSONOutlineDefine");
-      WORLD_TEMPLATES = {
-        magic: {
-          label: t("ui.aiWorld.system"),
-          category: "lore",
-          icon: "\u2728",
-          fields: [
-            { key: "name", label: t("ui.aiWorld.nameSystem") },
-            { key: "source", label: t("ui.aiWorld.msg10") },
-            { key: "cost", label: t("ui.aiWorld.must") },
-            { key: "limits", label: t("ui.aiWorld.itemRemember") },
-            { key: "whoCanUse", label: t("ui.aiWorld.use") },
-            { key: "rarity", label: t("ui.aiWorld.spread") }
-          ],
-          sections: [t("ui.aiWorld.ruleSystem"), t("ui.aiWorld.howto"), t("ui.aiWorld.sideEffect"), t("ui.aiWorld.resultNext"), t("ui.aiWorld.knotWriteNext")]
+  var EXPORT_FORMATS, formatDef, pdfEngine;
+  var init_export_formats = __esm({
+    "src/export-formats.js"() {
+      init_compile();
+      init_num();
+      EXPORT_FORMATS = [
+        {
+          key: "pdf",
+          ext: "pdf",
+          icon: "\u{1F4D5}",
+          binary: true,
+          preview: "page",
+          labelKey: "ui.xhub.fPdf",
+          descKey: "ui.xhub.fPdfDesc"
         },
-        city: {
-          label: t("ui.aiWorld.msg8"),
-          category: "locations",
-          icon: "\u{1F3D9}",
-          fields: [
-            { key: "name", label: t("ui.aiWorld.name3") },
-            { key: "population", label: t("ui.aiWorld.msg2") },
-            { key: "geography", label: t("ui.aiWorld.msg4") },
-            { key: "government", label: t("ui.aiWorld.cover") },
-            { key: "economy", label: t("ui.aiWorld.main2") },
-            { key: "landmark", label: t("ui.aiWorld.placeImportant") }
-          ],
-          sections: [t("ui.aiWorld.overviewAmbience"), t("ui.aiWorld.districtImportant"), t("ui.aiWorld.hasPowerGroup"), t("ui.aiWorld.problem"), t("ui.aiWorld.knotWriteNext")]
+        {
+          key: "html",
+          ext: "html",
+          icon: "\u{1F310}",
+          preview: "html",
+          labelKey: "ui.xhub.fHtml",
+          descKey: "ui.xhub.fHtmlDesc"
         },
-        culture: {
-          label: t("ui.aiWorld.msg5"),
-          category: "lore",
-          icon: "\u{1F38E}",
-          fields: [
-            { key: "name", label: t("ui.aiWorld.nameGroup") },
-            { key: "values", label: t("ui.aiWorld.valueMain") },
-            { key: "language", label: t("ui.aiWorld.lang") },
-            { key: "taboo", label: t("ui.aiWorld.itemForbid") },
-            { key: "ritual", label: t("ui.aiWorld.ritualImportant") },
-            { key: "hierarchy", label: t("ui.aiWorld.orderLayer") }
-          ],
-          sections: [t("ui.aiWorld.dailyLife"), t("ui.aiWorld.customFestival"), t("ui.aiWorld.name"), t("ui.aiWorld.relationGroupOther"), t("ui.aiWorld.knotWriteNext")]
+        {
+          key: "md",
+          ext: "md",
+          icon: "\u{1F4DD}",
+          preview: "text",
+          labelKey: "ui.xhub.fMd",
+          descKey: "ui.xhub.fMdDesc"
         },
-        economy: {
-          label: t("ui.aiWorld.msg9"),
-          category: "lore",
-          icon: "\u{1F4B0}",
-          fields: [
-            { key: "name", label: t("ui.aiWorld.nameSystem2") },
-            { key: "currency", label: t("ui.aiWorld.center") },
-            { key: "mainTrade", label: t("ui.aiWorld.main") },
-            { key: "scarcity", label: t("ui.aiWorld.scarce") },
-            { key: "powerHolders", label: t("ui.aiWorld.msg11") },
-            { key: "blackMarket", label: t("ui.aiWorld.dark") }
-          ],
-          sections: [t("ui.aiWorld.structureTrade"), t("ui.aiWorld.classIncome"), t("ui.aiWorld.busyItem"), t("ui.aiWorld.knotWriteNext")]
+        {
+          key: "txt",
+          ext: "txt",
+          icon: "\u{1F163}",
+          preview: "text",
+          labelKey: "ui.xhub.fTxt",
+          descKey: "ui.xhub.fTxtDesc"
         },
-        religion: {
-          label: t("ui.aiWorld.name4"),
-          category: "lore",
-          icon: "\u26E9",
-          fields: [
-            { key: "name", label: t("ui.aiWorld.name2") },
-            { key: "deity", label: t("ui.aiWorld.thing2") },
-            { key: "doctrine", label: t("ui.aiWorld.mainWord") },
-            { key: "clergy", label: t("ui.aiWorld.msg") },
-            { key: "symbol", label: t("ui.aiWorld.msg7") },
-            { key: "heresy", label: t("ui.aiWorld.thing") }
-          ],
-          sections: [t("ui.aiWorld.originLegend"), t("ui.aiWorld.ritual"), t("ui.aiWorld.power"), t("ui.aiWorld.see"), t("ui.aiWorld.knotWriteNext")]
+        {
+          key: "rtf",
+          ext: "rtf",
+          icon: "\u{1F4C4}",
+          preview: "text",
+          labelKey: "ui.xhub.fRtf",
+          descKey: "ui.xhub.fRtfDesc"
         },
-        faction: {
-          label: t("ui.aiWorld.group"),
-          category: "lore",
-          icon: "\u2694",
-          fields: [
-            { key: "name", label: t("ui.common.nameGroup") },
-            { key: "goal", label: t("ui.common.goal") },
-            { key: "leader", label: t("ui.aiWorld.msg3") },
-            { key: "members", label: t("ui.aiWorld.busy") },
-            { key: "methods", label: t("ui.aiWorld.how") },
-            { key: "enemy", label: t("ui.aiWorld.msg6") }
-          ],
-          sections: [t("ui.aiWorld.origin"), t("ui.aiWorld.structureInner"), t("ui.aiWorld.resourceDot"), t("ui.aiWorld.planCurrent"), t("ui.aiWorld.knotWriteNext")]
+        {
+          key: "fdx",
+          ext: "fdx",
+          icon: "\u{1F3AC}",
+          preview: "text",
+          needScript: true,
+          labelKey: "ui.xhub.fFdx",
+          descKey: "ui.xhub.fFdxDesc"
+        },
+        {
+          key: "blog",
+          ext: "html",
+          icon: "\u{1F4F0}",
+          preview: "info",
+          handoff: true,
+          labelKey: "ui.xhub.fBlog",
+          descKey: "ui.xhub.fBlogDesc"
+        },
+        {
+          key: "watermark",
+          ext: "pdf",
+          icon: "\u{1F4A7}",
+          preview: "info",
+          handoff: true,
+          needScript: true,
+          labelKey: "ui.xhub.fWm",
+          descKey: "ui.xhub.fWmDesc"
+        },
+        {
+          key: "zip",
+          ext: "zip",
+          icon: "\u{1F4E6}",
+          preview: "info",
+          handoff: true,
+          labelKey: "ui.xhub.fZip",
+          descKey: "ui.xhub.fZipDesc"
+        },
+        {
+          key: "json",
+          ext: "json",
+          icon: "\u{1F9FE}",
+          preview: "info",
+          handoff: true,
+          labelKey: "ui.xhub.fJson",
+          descKey: "ui.xhub.fJsonDesc"
         }
-      };
-      WORLD_TYPES = Object.keys(WORLD_TEMPLATES);
-      str = (v2) => v2 == null ? "" : typeof v2 === "string" ? v2.trim() : typeof v2 === "object" ? JSON.stringify(v2) : String(v2);
-    }
-  });
-
-  // src/ai/ai-ui.js
-  async function aiReady2() {
-    if (!state.root) {
-      setStatus(t("ai.noProject", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
-      return false;
-    }
-    const r = await aiConfigured();
-    if (r.ok) return true;
-    setStatus("\u274C " + (r.why || t("ai.needSetup", "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E17\u0E35\u0E48 \u0E44\u0E1F\u0E25\u0E4C \u2192 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E01\u0E48\u0E2D\u0E19")));
-    return false;
-  }
-  async function wikiEntityByName(name5) {
-    if (!name5 || !state.root) return null;
-    try {
-      const hit = (await listEntities(state.root)).find((e) => e.name === name5 || (e.aliases || []).includes(name5));
-      return hit ? { ...hit.entity } : null;
-    } catch {
-      return null;
-    }
-  }
-  function showDialog(title2, bodyFn, widthClass = "k-wide") {
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog " + widthClass);
-    box2.append(el("div", "k-dlg-title", title2));
-    bodyFn(box2, ov);
-    ov.append(box2);
-    document.body.append(ov);
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    return { ov, box: box2 };
-  }
-  async function openAIAssistant() {
-    if (!await aiReady2()) return;
-    const t3 = state.active;
-    const sel = t3?.editor ? t3.editor.getSelectedText() : t3?.sp ? t3.sp.getSelectedText() : "";
-    const fullText = t3?.editor ? t3.editor.getText() : t3?.sp ? t3.sp.getText() : "";
-    showDialog(t("ai.assistantTitle", "\u2728 AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19"), (box2, ov) => {
-      const TASK_TH = {
-        expand: t("ai.opExpand", "\u0E02\u0E22\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21"),
-        summarize: t("ai.opSummarize", "\u0E2A\u0E23\u0E38\u0E1B\u0E04\u0E27\u0E32\u0E21"),
-        rewrite: t("ai.opRewrite", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48"),
-        changeTone: t("ai.opTone", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E42\u0E17\u0E19"),
-        continue: t("ai.opContinue", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E48\u0E2D")
-      };
-      const TONE_TH = {
-        formal: t("ai.toneFormal", "\u0E17\u0E32\u0E07\u0E01\u0E32\u0E23"),
-        casual: t("ai.toneCasual", "\u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07"),
-        humorous: t("ai.toneFunny", "\u0E15\u0E25\u0E01"),
-        dark: t("ai.toneDark", "\u0E21\u0E37\u0E14\u0E2B\u0E21\u0E48\u0E19"),
-        romantic: t("ai.toneRomantic", "\u0E42\u0E23\u0E41\u0E21\u0E19\u0E15\u0E34\u0E01"),
-        tense: t("ai.toneTense", "\u0E23\u0E30\u0E17\u0E36\u0E01"),
-        concise: t("ai.toneConcise", "\u0E01\u0E23\u0E30\u0E0A\u0E31\u0E1A"),
-        lyrical: t("ai.toneDetailed", "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14")
-      };
-      const taskSel = el("select");
-      Object.keys(TASK_TH).forEach((v2) => taskSel.append(el("option", "", TASK_TH[v2], { value: v2 })));
-      const toneSel = el("select");
-      toneSel.append(el("option", "", t("ui.ai.notChangeTone"), { value: "" }));
-      Object.keys(TONE_TH).forEach((v2) => toneSel.append(el("option", "", TONE_TH[v2], { value: v2 })));
-      const instrInput = el("textarea");
-      instrInput.placeholder = t("ai.extraHint", "\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E15\u0E34\u0E21 (\u0E16\u0E49\u0E32\u0E21\u0E35)");
-      instrInput.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
-      const textInput = el("textarea");
-      textInput.value = sel || fullText.slice(0, 3e3);
-      textInput.placeholder = t("ai.inputLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E08\u0E30\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25");
-      textInput.style.cssText = "width:100%;min-height:120px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical;margin-top:8px";
-      const resultDiv = el("div");
-      resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
-      const row1 = el("div", "k-row");
-      row1.append(el("label", "", t("ai.opLabel", "\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07: ")), taskSel);
-      row1.append(el("label", "", t("ai.toneLabel", " \u0E42\u0E17\u0E19: ")), toneSel);
-      box2.append(row1);
-      box2.append(instrInput);
-      box2.append(el("label", "", t("ai.textLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21:")));
-      box2.append(textInput);
-      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
-      box2.append(resultDiv);
-      const btns = el("div", "k-dlg-btns");
-      const runBtn = el("button", "k-ok", t("ui.ai.result"));
-      runBtn.onclick = async () => {
-        runBtn.disabled = true;
-        resultDiv.textContent = t("ai.working", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25\u2026");
-        const task = taskSel.value;
-        const tone = toneSel.value;
-        const instr = instrInput.value.trim();
-        const text = textInput.value.trim() || fullText;
-        const { aiAssistant: aiAssistant2 } = await Promise.resolve().then(() => (init_ai_assistant(), ai_assistant_exports));
-        const { getAIClient: getAIClient2, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        let rag = null;
-        try {
-          rag = await getRag2();
-        } catch {
-        }
-        let acc = "";
-        const res = await aiAssistant2(instr, { text }, {
-          client: getAIClient2(),
-          rag,
-          task,
-          tone: tone || void 0,
-          instruction: instr,
-          text,
-          stream: true,
-          onChunk: (c) => {
-            acc += c;
-            resultDiv.textContent = acc;
-          }
-        });
-        if (res.ok) resultDiv.textContent = res.text || acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
-        else resultDiv.textContent = "\u274C " + (res.error || t("ai.errorRetry", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48"));
-        runBtn.disabled = false;
-      };
-      const insertBtn = el("button", "", t("ui.ai.insertScene"));
-      insertBtn.onclick = () => {
-        const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
-        if (t3?.editor) t3.editor.cmd("insertText", r);
-        else if (t3?.sp) t3.sp.cmd("insertText", r);
-        ov.remove();
-        setStatus(t("ai.insertedResult", "\u0E41\u0E17\u0E23\u0E01\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C AI \u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
-      };
-      btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
-      const closeBtn = btns.lastChild;
-      closeBtn.onclick = () => ov.remove();
-      box2.append(btns);
-    });
-  }
-  async function openPlotHoleDetector() {
-    if (!await aiReady2()) return;
-    if (!state.root) {
-      setStatus(t("ai.openProjectFirst", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19"));
-      return;
-    }
-    setStatus(t("ai.plotWorking", "\u{1F50D} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Holes\u2026"));
-    showDialog(t("ai.plotTitle", "\u{1F50D} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Hole"), async (box2, ov) => {
-      const resultDiv = el("div");
-      resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
-      resultDiv.textContent = t("ai.collectingScenes", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E09\u0E32\u0E01\u2026");
-      box2.append(resultDiv);
-      let allScenes = [];
-      try {
-        allScenes = (await listScenes(state.root, { withText: true })).map((s) => ({
-          id: s.id,
-          title: s.title,
-          chapterId: s.chapterId,
-          text: s.text || "",
-          storyDate: s.row.storyDate || "",
-          pov: s.row.pov || ""
-        }));
-      } catch (e) {
-        resultDiv.textContent = t("ai.readFail", "\u274C \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ") + e.message;
-        return;
-      }
-      if (!allScenes.length) {
-        resultDiv.textContent = t("ai.noScenes", "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49)");
-        return;
-      }
-      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
-      const { detectPlotHoles: detectPlotHoles2 } = await Promise.resolve().then(() => (init_ai_plot(), ai_plot_exports));
-      const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-      const res = await detectPlotHoles2([], { client: getAIClient2(), scenes: allScenes });
-      resultDiv.textContent = "";
-      if (!res.holes.length) {
-        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noPlotHoles", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E08\u0E38\u0E14\u0E1A\u0E01\u0E1E\u0E23\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E1E\u0E25\u0E47\u0E2D\u0E15");
-      } else {
-        resultDiv.append(el("div", "dim", tf("ui.ai.foundDotCheckRound", res.holes.length, res.batches)));
-        for (const h of res.holes) {
-          const row2 = el("div");
-          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
-          const sev = { high: "\u{1F534}", medium: "\u{1F7E1}", low: "\u26AA" }[h.severity] || "\u2022";
-          row2.append(el("div", "", `${sev} [${h.type || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${h.description || ""}`));
-          if (h.sceneTitle || h.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (h.sceneTitle || h.sceneId)));
-          if (h.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + h.evidence));
-          if (h.suggestion) row2.append(el("div", "", "\u{1F4A1} " + h.suggestion));
-          resultDiv.append(row2);
-        }
-        if (res.failedBatches) resultDiv.append(el("div", "dim", tf("ui.ai.hasRoundCallAI", res.failedBatches)));
-      }
-      const btns = el("div", "k-dlg-btns");
-      const closeBtn = el("button", "k-cancel", t("ui.common.close"));
-      closeBtn.onclick = () => ov.remove();
-      btns.append(closeBtn);
-      box2.append(btns);
-    });
-  }
-  async function openDialogueGenerator() {
-    if (!await aiReady2()) return;
-    showDialog(t("ai.dialogueTitle", "\u{1F4AC} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32"), (box2, ov) => {
-      box2.style.minWidth = "500px";
-      const charA = el("input");
-      charA.placeholder = t("ui.ai.nameA");
-      const charB = el("input");
-      charB.placeholder = t("ui.ai.nameB");
-      const descA = el("textarea");
-      descA.placeholder = t("ai.charADesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A (\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01, \u0E1E\u0E39\u0E14\u0E08\u0E32, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
-      descA.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
-      const descB = el("textarea");
-      descB.placeholder = t("ai.charBDesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B");
-      descB.style.cssText = descA.style.cssText;
-      const context2 = el("textarea");
-      context2.placeholder = t("ai.dialogueCtx", "\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 (\u0E2A\u0E16\u0E32\u0E19\u0E01\u0E32\u0E23\u0E13\u0E4C, \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
-      context2.style.cssText = descA.style.cssText;
-      const resultDiv = el("div");
-      resultDiv.style.cssText = "max-height:35vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
-      const fmtSel = el("select");
-      fmtSel.append(el("option", "", t("ui.common.screenplay"), { value: "screenplay" }));
-      fmtSel.append(el("option", "", t("ui.ai.edit"), { value: "prose" }));
-      box2.append(el("div", "k-row"));
-      box2.querySelector(".k-row").append(el("label", "", t("ai.charA", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A: ")), charA);
-      box2.append(descA);
-      box2.append(el("label", "", t("ai.charB", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B: ")));
-      box2.append(charB);
-      box2.append(descB);
-      box2.append(el("label", "", t("ai.ctxLabel", "\u0E1A\u0E23\u0E34\u0E1A\u0E17: ")));
-      box2.append(context2);
-      const fmtRow = el("div", "k-row");
-      fmtRow.append(el("label", "", t("ai.formatLabel", "\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A: ")), fmtSel);
-      box2.append(fmtRow);
-      box2.append(el("label", "", t("ai.dialogueLabel", "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32:")));
-      box2.append(resultDiv);
-      const btns = el("div", "k-dlg-btns");
-      const runBtn = el("button", "k-ok", t("ui.ai.new"));
-      runBtn.onclick = async () => {
-        runBtn.disabled = true;
-        resultDiv.textContent = t("ai.dialogueWorking", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u2026");
-        const a = charA.value.trim(), b = charB.value.trim(), ctx = context2.value.trim();
-        if (!a || !b) {
-          resultDiv.textContent = t("ai.needBothChars", "\u274C \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E2A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07");
-          runBtn.disabled = false;
-          return;
-        }
-        const { generateDialogue: generateDialogue2 } = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
-        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const profA = await wikiEntityByName(a) || { name: a };
-        const profB = await wikiEntityByName(b) || { name: b };
-        if (descA.value.trim()) profA.personality = descA.value.trim();
-        if (descB.value.trim()) profB.personality = descB.value.trim();
-        let acc = "";
-        const res = await generateDialogue2(
-          profA,
-          profB,
-          { situation: ctx },
-          {
-            client: getAIClient2(),
-            format: fmtSel.value,
-            stream: true,
-            onChunk: (c) => {
-              acc += c;
-              resultDiv.textContent = acc;
-            }
-          }
-        );
-        if (res.ok) {
-          resultDiv.textContent = res.text;
-          if (res.speakers?.length) resultDiv.title = t("ai.speakerLabel", "\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14: ") + res.speakers.join(", ");
-        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
-        runBtn.disabled = false;
-      };
-      const insertBtn = el("button", "", t("ui.ai.insert"));
-      insertBtn.onclick = () => {
-        const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
-        const t3 = state.active;
-        if (t3?.editor) t3.editor.cmd("insertText", r);
-        else if (t3?.sp) t3.sp.cmd("insertText", r);
-        ov.remove();
-        setStatus(t("ai.insertedDialogue", "\u0E41\u0E17\u0E23\u0E01\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
-      };
-      btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
-      btns.lastChild.onclick = () => ov.remove();
-      box2.append(btns);
-    });
-  }
-  async function openConsistencyCheck(entityPath) {
-    if (!await aiReady2()) return;
-    if (!entityPath) {
-      setStatus(t("ai.pickEntity", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 (\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23) \u0E01\u0E48\u0E2D\u0E19"));
-      return;
-    }
-    let entity;
-    try {
-      entity = await kapi.readJson(entityPath);
-    } catch {
-      setStatus(t("ai.entityReadFail", "\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
-      return;
-    }
-    if (!entity || !entity.name) {
-      setStatus(t("ai.entityUnnamed", "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D"));
-      return;
-    }
-    setStatus(t("ai.consistWorking", "\u{1F3AD} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D\u2026"));
-    showDialog(t("ai.consistTitle", "\u{1F3AD} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D \u2014 ") + entity.name, async (box2, ov) => {
-      const resultDiv = el("div");
-      resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
-      resultDiv.textContent = t("ai.collecting", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u2026");
-      box2.append(resultDiv);
-      const scenes = (await listScenes(state.root, { withText: true })).map((s) => ({ id: s.id, title: s.title, text: s.text || "", storyDate: s.row.storyDate || "" }));
-      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
-      const { checkConsistency: checkConsistency2 } = await Promise.resolve().then(() => (init_ai_character(), ai_character_exports));
-      const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-      const res = await checkConsistency2(entityPath, { client: getAIClient2(), entity, scenes });
-      resultDiv.textContent = "";
-      if (!res.issues.length) {
-        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noInconsist", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D");
-      } else {
-        resultDiv.append(el("div", "dim", tf("ui.ai.foundDotSceneAppear", res.issues.length, res.appearances || 0)));
-        for (const it of res.issues) {
-          const row2 = el("div");
-          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
-          row2.append(el("div", "", `\u2022 [${it.aspect || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${it.issue || ""}`));
-          if (it.sceneTitle || it.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (it.sceneTitle || it.sceneId)));
-          if (it.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + it.evidence));
-          if (it.suggestion) row2.append(el("div", "", "\u{1F4A1} " + it.suggestion));
-          resultDiv.append(row2);
-        }
-      }
-      const btns = el("div", "k-dlg-btns");
-      const closeBtn = el("button", "k-cancel", t("ui.common.close"));
-      closeBtn.onclick = () => ov.remove();
-      btns.append(closeBtn);
-      box2.append(btns);
-    });
-  }
-  async function openWorldGenerator() {
-    if (!await aiReady2()) return;
-    showDialog(t("ai.worldTitle", "\u{1F30D} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E25\u0E01"), (box2, ov) => {
-      const typeSel = el("select");
-      ["magic", "city", "culture", "economy", "religion", "faction"].forEach((v2) => {
-        const labels = { magic: t("ai.wMagic", "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C"), city: t("ai.wCity", "\u0E40\u0E21\u0E37\u0E2D\u0E07"), culture: t("ai.wCulture", "\u0E27\u0E31\u0E12\u0E19\u0E18\u0E23\u0E23\u0E21"), economy: t("ai.wEconomy", "\u0E40\u0E28\u0E23\u0E29\u0E10\u0E01\u0E34\u0E08"), religion: t("ai.wReligion", "\u0E28\u0E32\u0E2A\u0E19\u0E32"), faction: t("ai.wFaction", "\u0E01\u0E25\u0E38\u0E48\u0E21/\u0E1D\u0E48\u0E32\u0E22") };
-        typeSel.append(el("option", "", labels[v2] || v2, { value: v2 }));
-      });
-      const promptInput = el("textarea");
-      promptInput.placeholder = t("ai.worldPrompt", '\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E23\u0E49\u0E32\u0E07 (\u0E40\u0E0A\u0E48\u0E19 "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E19\u0E17\u0E38\u0E19")');
-      promptInput.style.cssText = "width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
-      const resultDiv = el("div");
-      resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:80px;font-size:14px;line-height:1.8";
-      box2.append(el("div", "k-row"));
-      box2.querySelector(".k-row").append(el("label", "", t("ai.kindLabel", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17: ")), typeSel);
-      box2.append(el("label", "", t("ai.detailLabel", "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:")));
-      box2.append(promptInput);
-      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
-      box2.append(resultDiv);
-      const btns = el("div", "k-dlg-btns");
-      const runBtn = el("button", "k-ok", t("ui.ai.new"));
-      let lastWorld = null;
-      runBtn.onclick = async () => {
-        runBtn.disabled = true;
-        resultDiv.textContent = t("ai.generating", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u2026");
-        lastWorld = null;
-        const { generateWorld: generateWorld2, toMarkdown: toMarkdown2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
-        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const res = await generateWorld2(
-          typeSel.value,
-          promptInput.value.trim() || t("ai.freeform", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E32\u0E21\u0E08\u0E34\u0E19\u0E15\u0E19\u0E32\u0E01\u0E32\u0E23"),
-          { client: getAIClient2() }
-        );
-        if (res.ok) {
-          lastWorld = res.world;
-          resultDiv.textContent = toMarkdown2(res.world);
-        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
-        runBtn.disabled = false;
-      };
-      const saveBtn = el("button", "", t("ui.ai.saveWiki"));
-      saveBtn.onclick = async () => {
-        const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
-        const { toWikiEntity: toWikiEntity2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
-        const cats = { magic: "lore", city: "locations", culture: "lore", economy: "lore", religion: "lore", faction: "lore" };
-        const cat = cats[typeSel.value] || "lore";
-        const base3 = lastWorld ? toWikiEntity2(lastWorld, { category: cat }) : {
-          name: promptInput.value.trim().slice(0, 60) || "Worldbuilding",
-          entityTypeKey: cat,
-          aliases: [],
-          fields: { description: r }
-        };
-        const entity = {
-          id: Date.now().toString(36),
-          aliases: [],
-          fields: {},
-          customProperties: {},
-          images: [],
-          relationships: [],
-          chapterOverrides: [],
-          ...base3,
-          sections: (lastWorld?.sections || []).map((s) => ({ title: s.title, content: s.body })).concat(lastWorld ? [] : [{ title: t("ai.description", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22"), content: r }]),
-          created: (/* @__PURE__ */ new Date()).toISOString()
-        };
-        const catDir = await kapi.join(await kapi.join(state.root, "Wiki"), cat);
-        await kapi.mkdir(catDir);
-        const name5 = entity.name || "Worldbuilding";
-        const file = await kapi.join(catDir, name5.replace(/[\/\\:*?"<>|]/g, "_") + ".json");
-        await kapi.writeFile(file, JSON.stringify(entity, null, 2));
-        setStatus(t("ai.savedToWiki", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 Wiki \u0E41\u0E25\u0E49\u0E27: ") + name5);
-      };
-      btns.append(runBtn, saveBtn, el("button", "k-cancel", t("ui.common.close")));
-      btns.lastChild.onclick = () => ov.remove();
-      box2.append(btns);
-    });
-  }
-  async function openAIChat() {
-    if (!await aiReady2()) return;
-    const KEY4 = "::ai-chat::";
-    const { activate: activate2, closeTab: closeTab3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    if (state.tabs.has(KEY4)) {
-      activate2(KEY4);
-      return;
-    }
-    const pane = el("div", "pane");
-    pane.style.cssText = "display:flex;flex-direction:column;height:100%";
-    $("#panes").append(pane);
-    const tabBtn = el("div", "tab");
-    tabBtn.append(el("span", "tab-title", "\u{1F4AC} Chat with Story"));
-    const x = el("span", "tab-x", "\xD7");
-    tabBtn.append(x);
-    $("#tabs").append(tabBtn);
-    const chatArea = el("div");
-    chatArea.style.cssText = "flex:1;overflow-y:auto;padding:12px 24px;font-size:14px;line-height:1.8";
-    pane.append(chatArea);
-    const inputBar = el("div");
-    inputBar.style.cssText = "display:flex;padding:8px 12px;border-top:1px solid var(--border);background:var(--side)";
-    const input = el("input");
-    input.placeholder = t("ai.chatPlaceholder", "\u0E16\u0E32\u0E21\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u2026");
-    input.style.cssText = "flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;outline:none";
-    const sendBtn = el("button", "", "\u25B6");
-    sendBtn.style.cssText = "margin-left:8px;min-width:48px";
-    inputBar.append(input, sendBtn);
-    pane.append(inputBar);
-    const history2 = [];
-    const addMsg = (role, text, track = true) => {
-      const msg = el("div");
-      msg.style.cssText = "margin:6px 0;padding:8px 12px;border-radius:8px;white-space:pre-wrap;" + (role === "user" ? "background:var(--sel);margin-left:40px;" : "background:var(--bar);margin-right:40px;");
-      msg.textContent = text;
-      chatArea.append(msg);
-      chatArea.scrollTop = chatArea.scrollHeight;
-      if (track && text) history2.push({ role: role === "user" ? "user" : "assistant", content: text });
-      return msg;
-    };
-    const addSources = (sources) => {
-      if (!sources || !sources.length) return;
-      const s = el("div", "dim");
-      s.style.cssText = "margin:0 40px 8px 0;font-size:11px";
-      s.textContent = t("ai.sources", "\u{1F4CE} \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07: ") + sources.map((x2) => x2.label).join(" \xB7 ");
-      chatArea.append(s);
-    };
-    sendBtn.onclick = async () => {
-      const q = input.value.trim();
-      if (!q) return;
-      input.value = "";
-      addMsg("user", q);
-      const bubble = addMsg("assistant", "\u2026", false);
-      let ctx = { text: "", sources: [] };
-      try {
-        const { ragContext: ragContext2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        bubble.textContent = t("ai.searchingProject", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026");
-        ctx = await ragContext2(q, { k: 6, maxTokens: 1800 });
-      } catch (e) {
-        log("warn", t("ui.ai.aiChatRAGUse"), e);
-      }
-      const system = t("ui.ai.youAssistantWriterReply") + t("ui.ai.useDataContextMain");
-      const prompt2 = (ctx.text ? ctx.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
-      bubble.textContent = "";
-      let acc = "";
-      try {
-        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const client = getAIClient2();
-        const msgs = history2.slice(-9, -1).filter((m) => m.content);
-        const res = await client.stream(
-          { messages: [...msgs, { role: "user", content: prompt2 }], system, feature: "chat" },
-          (chunk) => {
-            acc += chunk;
-            bubble.textContent = acc;
-            chatArea.scrollTop = chatArea.scrollHeight;
-          }
-        );
-        if (!res.ok) {
-          bubble.textContent = "\u274C " + (res.error || t("ai.callFail", "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
-          return;
-        }
-        if (!acc) {
-          acc = res.text || "";
-          bubble.textContent = acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
-        }
-        history2.push({ role: "assistant", content: acc });
-        addSources(ctx.sources);
-      } catch (e) {
-        log("error", t("ui.ai.aiChatStreamFail"), e);
-        const result = await callAI(prompt2, system);
-        bubble.textContent = result || t("ai.errorMark", "\u274C \u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14");
-      }
-    };
-    input.onkeydown = (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendBtn.click();
-      }
-    };
-    const tab = {
-      file: KEY4,
-      title: "\u{1F4AC} Chat",
-      pane,
-      tabBtn,
-      dirty: false,
-      editor: null,
-      plain: null,
-      wiki: null,
-      gal: null,
-      net: null,
-      planner: null
-    };
-    tabBtn.onclick = (ev) => {
-      if (ev.target !== x) activate2(KEY4);
-    };
-    x.onclick = () => closeTab3(KEY4);
-    state.tabs.set(KEY4, tab);
-    activate2(KEY4);
-    addMsg("assistant", t("ai.greeting", "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35! \u0E16\u0E32\u0E21\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22 \u0E40\u0E0A\u0E48\u0E19") + ' "' + t("ai.sample1", "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E2D\u0E30\u0E44\u0E23\u0E1A\u0E49\u0E32\u0E07") + '" ' + t("ai.orWord", "\u0E2B\u0E23\u0E37\u0E2D") + ' "' + t("ai.sample2", "\u0E0A\u0E48\u0E27\u0E22\u0E2A\u0E23\u0E38\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E15\u0E4C\u0E43\u0E2B\u0E49\u0E2B\u0E19\u0E48\u0E2D\u0E22") + '"');
-  }
-  var init_ai_ui = __esm({
-    "src/ai/ai-ui.js"() {
-      init_i18n();
-      init_core();
-      init_ai_settings();
-      init_project_scan();
-    }
-  });
-
-  // src/tools/thesaurus.js
-  var thesaurus_exports2 = {};
-  __export(thesaurus_exports2, {
-    CACHE_KEY: () => CACHE_KEY,
-    CACHE_MAX: () => CACHE_MAX,
-    CACHE_TTL: () => CACHE_TTL,
-    DATAMUSE: () => DATAMUSE,
-    EN_ANTONYMS: () => EN_ANTONYMS,
-    EN_SYNONYMS: () => EN_SYNONYMS,
-    TH_ANTONYMS: () => TH_ANTONYMS,
-    TH_SYNONYMS: () => TH_SYNONYMS,
-    Thesaurus: () => Thesaurus,
-    ThesaurusCache: () => ThesaurusCache,
-    configure: () => configure,
-    datamuseUrl: () => datamuseUrl,
-    getAntonyms: () => getAntonyms,
-    getSynonyms: () => getSynonyms,
-    isEnglish: () => isEnglish,
-    isThai: () => isThai,
-    loadExtra: () => loadExtra,
-    localLookup: () => localLookup,
-    normalizeWord: () => normalizeWord,
-    parseDatamuse: () => parseDatamuse,
-    shared: () => shared
-  });
-  function normalizeWord(w) {
-    return String(w || "").trim().replace(/[.,!?"'()[\]{}…]/g, "").toLowerCase();
-  }
-  function localLookup(word, kind = "syn", extra = null) {
-    const w = String(word || "").trim();
-    const lower2 = w.toLowerCase();
-    const banks = kind === "ant" ? [extra && extra.antonyms, TH_ANTONYMS, EN_ANTONYMS] : [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS];
-    const out = [];
-    for (const bank of banks) {
-      if (!bank) continue;
-      for (const key2 of [w, lower2]) if (bank[key2]) out.push(...bank[key2]);
-    }
-    if (kind === "syn") {
-      for (const bank of [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS]) {
-        if (!bank) continue;
-        for (const [key2, list] of Object.entries(bank)) {
-          if (list.includes(w) || list.includes(lower2)) out.push(key2, ...list.filter((x) => x !== w && x !== lower2));
-        }
-      }
-    }
-    return uniq(out).filter((x) => x !== w && x !== lower2);
-  }
-  function datamuseUrl(word, kind = "syn", max2 = 15) {
-    const rel = kind === "ant" ? "rel_ant" : "ml";
-    return `${DATAMUSE}?${rel}=${encodeURIComponent(word)}&max=${max2}`;
-  }
-  function parseDatamuse(body, word = "") {
-    let rows;
-    try {
-      rows = typeof body === "string" ? JSON.parse(body) : body;
-    } catch {
-      return [];
-    }
-    if (!Array.isArray(rows)) return [];
-    return uniq(rows.map((r) => r && r.word).filter((w) => w && w !== word));
-  }
-  function defaultStorage4() {
-    if (typeof localStorage !== "undefined") return localStorage;
-    const mem = /* @__PURE__ */ new Map();
-    return { getItem: (k) => mem.has(k) ? mem.get(k) : null, setItem: (k, v2) => mem.set(k, v2), removeItem: (k) => mem.delete(k) };
-  }
-  function configure(opts) {
-    _shared = new Thesaurus(opts);
-    return _shared;
-  }
-  function shared() {
-    return _shared || (_shared = new Thesaurus({}));
-  }
-  function getSynonyms(word) {
-    return shared().getSynonyms(word);
-  }
-  function getAntonyms(word) {
-    return shared().getAntonyms(word);
-  }
-  async function loadExtra(io, root) {
-    try {
-      const p = io.join(root, "Plugins", "thesaurus.json");
-      if (!await io.exists(p)) return null;
-      const j = await io.readJson(p);
-      if (!j) return null;
-      return { synonyms: j.synonyms || {}, antonyms: j.antonyms || {} };
-    } catch {
-      return null;
-    }
-  }
-  var CACHE_KEY, CACHE_TTL, CACHE_MAX, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD2, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
-  var init_thesaurus2 = __esm({
-    "src/tools/thesaurus.js"() {
-      init_i18n();
-      CACHE_KEY = "k2-thes-cache";
-      CACHE_TTL = 30 * 24 * 3600 * 1e3;
-      CACHE_MAX = 500;
-      TH_SYNONYMS = {
-        "\u0E2A\u0E27\u0E22": ["\u0E07\u0E32\u0E21", "\u0E07\u0E14\u0E07\u0E32\u0E21", "\u0E40\u0E25\u0E2D\u0E42\u0E09\u0E21", "\u0E15\u0E23\u0E30\u0E01\u0E32\u0E23\u0E15\u0E32"],
-        "\u0E40\u0E14\u0E34\u0E19": ["\u0E01\u0E49\u0E32\u0E27", "\u0E22\u0E48\u0E32\u0E07", "\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19", "\u0E22\u0E48\u0E32\u0E07\u0E40\u0E17\u0E49\u0E32"],
-        "\u0E1E\u0E39\u0E14": ["\u0E01\u0E25\u0E48\u0E32\u0E27", "\u0E40\u0E2D\u0E48\u0E22", "\u0E1A\u0E2D\u0E01", "\u0E40\u0E1B\u0E23\u0E22", "\u0E1B\u0E23\u0E34\u0E1B\u0E32\u0E01"],
-        "\u0E21\u0E2D\u0E07": ["\u0E08\u0E49\u0E2D\u0E07", "\u0E40\u0E1E\u0E48\u0E07", "\u0E0A\u0E32\u0E22\u0E15\u0E32", "\u0E17\u0E2D\u0E14\u0E2A\u0E32\u0E22\u0E15\u0E32"],
-        "\u0E01\u0E25\u0E31\u0E27": ["\u0E2B\u0E27\u0E32\u0E14\u0E01\u0E25\u0E31\u0E27", "\u0E02\u0E22\u0E32\u0E14", "\u0E1E\u0E23\u0E31\u0E48\u0E19\u0E1E\u0E23\u0E36\u0E07", "\u0E04\u0E23\u0E31\u0E48\u0E19\u0E04\u0E23\u0E49\u0E32\u0E21"],
-        "\u0E42\u0E01\u0E23\u0E18": ["\u0E40\u0E14\u0E37\u0E2D\u0E14\u0E14\u0E32\u0E25", "\u0E02\u0E38\u0E48\u0E19\u0E40\u0E04\u0E37\u0E2D\u0E07", "\u0E09\u0E38\u0E19\u0E40\u0E09\u0E35\u0E22\u0E27", "\u0E40\u0E01\u0E23\u0E35\u0E49\u0E22\u0E27\u0E01\u0E23\u0E32\u0E14"],
-        "\u0E40\u0E28\u0E23\u0E49\u0E32": ["\u0E42\u0E28\u0E01", "\u0E2B\u0E21\u0E48\u0E19\u0E2B\u0E21\u0E2D\u0E07", "\u0E23\u0E30\u0E17\u0E21", "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08"],
-        "\u0E14\u0E35\u0E43\u0E08": ["\u0E22\u0E34\u0E19\u0E14\u0E35", "\u0E1B\u0E25\u0E32\u0E1A\u0E1B\u0E25\u0E37\u0E49\u0E21", "\u0E1B\u0E35\u0E15\u0E34", "\u0E40\u0E1A\u0E34\u0E01\u0E1A\u0E32\u0E19"],
-        "\u0E40\u0E23\u0E47\u0E27": ["\u0E44\u0E27", "\u0E09\u0E31\u0E1A\u0E44\u0E27", "\u0E23\u0E27\u0E14\u0E40\u0E23\u0E47\u0E27", "\u0E1E\u0E25\u0E31\u0E19"],
-        "\u0E43\u0E2B\u0E0D\u0E48": ["\u0E21\u0E2B\u0E36\u0E21\u0E32", "\u0E21\u0E42\u0E2B\u0E2C\u0E32\u0E23", "\u0E42\u0E15", "\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E27\u0E32\u0E07"],
-        "\u0E40\u0E25\u0E47\u0E01": ["\u0E08\u0E34\u0E4B\u0E27", "\u0E01\u0E23\u0E30\u0E08\u0E34\u0E23\u0E34\u0E14", "\u0E19\u0E49\u0E2D\u0E22", "\u0E40\u0E25\u0E47\u0E01\u0E08\u0E49\u0E2D\u0E22"],
-        "\u0E21\u0E37\u0E14": ["\u0E21\u0E37\u0E14\u0E21\u0E34\u0E14", "\u0E2A\u0E25\u0E31\u0E27", "\u0E2D\u0E31\u0E1A\u0E41\u0E2A\u0E07", "\u0E17\u0E21\u0E34\u0E2C"],
-        "\u0E40\u0E07\u0E35\u0E22\u0E1A": ["\u0E2A\u0E07\u0E1A", "\u0E40\u0E07\u0E35\u0E22\u0E1A\u0E2A\u0E07\u0E31\u0E14", "\u0E1B\u0E23\u0E32\u0E28\u0E08\u0E32\u0E01\u0E40\u0E2A\u0E35\u0E22\u0E07", "\u0E2A\u0E07\u0E31\u0E14"],
-        "\u0E15\u0E32\u0E22": ["\u0E2A\u0E34\u0E49\u0E19\u0E43\u0E08", "\u0E14\u0E31\u0E1A\u0E2A\u0E39\u0E0D", "\u0E25\u0E48\u0E27\u0E07\u0E25\u0E31\u0E1A", "\u0E27\u0E32\u0E22\u0E0A\u0E19\u0E21\u0E4C"],
-        "\u0E1A\u0E49\u0E32\u0E19": ["\u0E40\u0E23\u0E37\u0E2D\u0E19", "\u0E17\u0E35\u0E48\u0E1E\u0E31\u0E01", "\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22", "\u0E04\u0E24\u0E2B\u0E32\u0E2A\u0E19\u0E4C"]
-      };
-      TH_ANTONYMS = {
-        "\u0E2A\u0E27\u0E22": ["\u0E02\u0E35\u0E49\u0E40\u0E2B\u0E23\u0E48", "\u0E2D\u0E31\u0E1B\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C"],
-        "\u0E43\u0E2B\u0E0D\u0E48": ["\u0E40\u0E25\u0E47\u0E01", "\u0E08\u0E34\u0E4B\u0E27"],
-        "\u0E40\u0E25\u0E47\u0E01": ["\u0E43\u0E2B\u0E0D\u0E48", "\u0E21\u0E2B\u0E36\u0E21\u0E32"],
-        "\u0E21\u0E37\u0E14": ["\u0E2A\u0E27\u0E48\u0E32\u0E07", "\u0E01\u0E23\u0E30\u0E08\u0E48\u0E32\u0E07"],
-        "\u0E40\u0E07\u0E35\u0E22\u0E1A": ["\u0E14\u0E31\u0E07", "\u0E2D\u0E36\u0E01\u0E17\u0E36\u0E01"],
-        "\u0E40\u0E23\u0E47\u0E27": ["\u0E0A\u0E49\u0E32", "\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E07\u0E0A\u0E49\u0E32"],
-        "\u0E14\u0E35\u0E43\u0E08": ["\u0E40\u0E28\u0E23\u0E49\u0E32", "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08"],
-        "\u0E40\u0E28\u0E23\u0E49\u0E32": ["\u0E14\u0E35\u0E43\u0E08", "\u0E22\u0E34\u0E19\u0E14\u0E35"],
-        "\u0E01\u0E25\u0E31\u0E27": ["\u0E01\u0E25\u0E49\u0E32", "\u0E2B\u0E49\u0E32\u0E27\u0E2B\u0E32\u0E0D"]
-      };
-      EN_SYNONYMS = {
-        big: ["large", "huge", "massive", "enormous"],
-        small: ["little", "tiny", "compact", "minor"],
-        walk: ["stroll", "stride", "wander", "pace"],
-        say: ["tell", "state", "utter", "remark"],
-        look: ["gaze", "stare", "glance", "watch"],
-        happy: ["glad", "joyful", "cheerful", "content"],
-        sad: ["unhappy", "sorrowful", "gloomy", "downcast"],
-        fast: ["quick", "rapid", "swift", "speedy"],
-        dark: ["dim", "gloomy", "shadowy", "murky"],
-        quiet: ["silent", "still", "hushed", "calm"]
-      };
-      EN_ANTONYMS = {
-        big: ["small", "tiny"],
-        small: ["big", "large"],
-        happy: ["sad", "miserable"],
-        sad: ["happy", "glad"],
-        fast: ["slow"],
-        dark: ["bright", "light"],
-        quiet: ["loud", "noisy"]
-      };
-      EN_WORD2 = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
-      isEnglish = (w) => EN_WORD2.test(String(w || "").trim());
-      isThai = (w) => /[฀-๿]/.test(String(w || ""));
-      uniq = (a) => [...new Set(a.filter(Boolean))];
-      DATAMUSE = "https://api.datamuse.com/words";
-      ThesaurusCache = class {
-        constructor({ storage = defaultStorage4(), key: key2 = CACHE_KEY, ttl = CACHE_TTL, max: max2 = CACHE_MAX, now = () => Date.now() } = {}) {
-          this.storage = storage;
-          this.key = key2;
-          this.ttl = ttl;
-          this.max = max2;
-          this.now = now;
-          this.map = this._read();
-        }
-        _read() {
-          try {
-            const o = JSON.parse(this.storage.getItem(this.key) || "{}");
-            return o && typeof o === "object" ? o : {};
-          } catch {
-            return {};
-          }
-        }
-        get(word, kind) {
-          const row2 = this.map[`${kind}:${word}`];
-          if (!row2) return null;
-          if (this.now() - row2.t > this.ttl) {
-            delete this.map[`${kind}:${word}`];
-            return null;
-          }
-          return row2.w;
-        }
-        set(word, kind, words) {
-          this.map[`${kind}:${word}`] = { w: words, t: this.now() };
-          const keys4 = Object.keys(this.map);
-          if (keys4.length > this.max) {
-            keys4.sort((a, b) => this.map[a].t - this.map[b].t).slice(0, keys4.length - this.max).forEach((k) => delete this.map[k]);
-          }
-          this.save();
-          return words;
-        }
-        save() {
-          try {
-            this.storage.setItem(this.key, JSON.stringify(this.map));
-          } catch {
-          }
-        }
-        clear() {
-          this.map = {};
-          this.storage.removeItem(this.key);
-        }
-        get size() {
-          return Object.keys(this.map).length;
-        }
-      };
-      Thesaurus = class {
-        /**
-         * @param {object} o { http, storage, online, extra, providers, now }
-         *        online   = อนุญาตให้ยิงเน็ตไหม (ค่าเริ่มต้น false — ส่งคำผู้ใช้ออกเน็ตต้องเลือกเอง)
-         *        extra    = { synonyms, antonyms } คลังเพิ่มจาก Plugins/thesaurus.json
-         *        providers= ตัวหาเพิ่ม เช่น WordNet ในเครื่อง: [{ name, lookup(word,kind) → string[] }]
-         */
-        constructor({ http = null, storage, online = false, extra = null, providers = [], now = () => Date.now(), max: max2 = 15 } = {}) {
-          this.http = http;
-          this.online = online;
-          this.extra = extra;
-          this.providers = providers;
-          this.max = max2;
-          this.cache = new ThesaurusCache({ storage, now });
-        }
-        setExtra(extra) {
-          this.extra = extra;
-        }
-        async lookup(word, kind = "syn") {
-          const w = normalizeWord(word);
-          if (!w) return { words: [], source: "none", word: w };
-          const cached = this.cache.get(w, kind);
-          if (cached) return { words: cached, source: "cache", word: w };
-          const localWords = localLookup(word, kind, this.extra);
-          for (const p of this.providers) {
-            try {
-              const got = await p.lookup(w, kind);
-              if (got && got.length) {
-                const words = uniq([...localWords, ...got]).slice(0, this.max);
-                this.cache.set(w, kind, words);
-                return { words, source: p.name || "provider", word: w };
-              }
-            } catch {
-            }
-          }
-          if (this.online && this.http && isEnglish(w)) {
-            try {
-              const res = await this.http.fetch(datamuseUrl(w, kind, this.max), { method: "GET" });
-              if (res && res.ok) {
-                const got = parseDatamuse(res.body, w);
-                if (got.length) {
-                  const words = uniq([...localWords, ...got]).slice(0, this.max);
-                  this.cache.set(w, kind, words);
-                  return { words, source: "datamuse", word: w };
-                }
-              }
-            } catch {
-            }
-          }
-          if (localWords.length) {
-            this.cache.set(w, kind, localWords.slice(0, this.max));
-            return { words: localWords.slice(0, this.max), source: "local", word: w };
-          }
-          return { words: [], source: "none", word: w };
-        }
-        /** @returns {Promise<string[]>} — the API required by the spec */
-        async getSynonyms(word) {
-          return (await this.lookup(word, "syn")).words;
-        }
-        /** @returns {Promise<string[]>} */
-        async getAntonyms(word) {
-          return (await this.lookup(word, "ant")).words;
-        }
-        clearCache() {
-          this.cache.clear();
-        }
-      };
-      _shared = null;
-    }
-  });
-
-  // src/tools/thesaurus-ui.js
-  async function showThesaurusPopup(word, x, y) {
-    if (!word) return;
-    const norm3 = word.trim();
-    if (!norm3) return;
-    let syns = [], ants = [];
-    try {
-      const [synRes, antRes] = await Promise.all([
-        getSynonyms(norm3).catch(() => []),
-        getAntonyms(norm3).catch(() => [])
-      ]);
-      syns = Array.isArray(synRes) ? synRes : synRes?.words || [];
-      ants = Array.isArray(antRes) ? antRes : antRes?.words || [];
-    } catch {
-      try {
-        const old2 = await Promise.resolve().then(() => (init_thesaurus(), thesaurus_exports));
-        const items = old2.thesaurusMenuItems ? await old2.thesaurusMenuItems(norm3) : [];
-        if (items.length) {
-          for (const it of items) {
-            if (it.label.startsWith("Syn:")) syns.push(it.label.slice(4));
-            else if (it.label.startsWith("Ant:")) ants.push(it.label.slice(4));
-            else syns.push(it.label);
-          }
-        }
-      } catch {
-      }
-    }
-    if (!syns.length && !ants.length) {
-      setStatus(t("ui.thes.notFound") + norm3 + '"');
-      return;
-    }
-    const old = document.querySelector(".k-thes-popup");
-    if (old) old.remove();
-    const pop = el("div", "k-thes-popup");
-    pop.style.left = Math.min(x, window.innerWidth - 220) + "px";
-    pop.style.top = Math.min(y, window.innerHeight - 300) + "px";
-    if (syns.length) {
-      pop.append(el("div", "k-thes-head", t("ui.toolsThesaurus.thesaurusSynonyms")));
-      for (const s of syns.slice(0, 15)) {
-        const item = el("div", "k-thes-item", s);
-        item.onclick = () => {
-          navigator.clipboard.writeText(s);
-          setStatus(t("ui.thes.copied") + s);
-          pop.remove();
-        };
-        pop.append(item);
-      }
-    }
-    if (ants.length) {
-      pop.append(el("div", "k-thes-head", t("ui.toolsThesaurus.wordOppositeAntonyms")));
-      for (const a of ants.slice(0, 15)) {
-        const item = el("div", "k-thes-item", a);
-        item.onclick = () => {
-          navigator.clipboard.writeText(a);
-          setStatus(t("ui.thes.copied") + a);
-          pop.remove();
-        };
-        pop.append(item);
-      }
-    }
-    const close2 = el("div", "k-thes-close", "\u2715");
-    close2.onclick = () => pop.remove();
-    pop.append(close2);
-    document.body.append(pop);
-    const outside = (e) => {
-      if (!pop.contains(e.target)) {
-        pop.remove();
-        document.removeEventListener("click", outside);
-      }
-    };
-    setTimeout(() => document.addEventListener("click", outside), 0);
-  }
-  async function initThesaurus() {
-    const { loadExtra: loadExtra2, configure: configure2 } = await Promise.resolve().then(() => (init_thesaurus2(), thesaurus_exports2));
-    const { syncIo: syncIo2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
-    let extra = null;
-    try {
-      extra = await loadExtra2(syncIo2(), state.root);
-    } catch {
-      extra = null;
-    }
-    configure2({
-      http: { fetch: (url, opts) => kapi.httpFetch(url, opts) },
-      online: !!(state.settings && state.settings.thesaurus),
-      // ส่งคำออกเน็ต = ต้องเปิดเองในตั้งค่า
-      extra
-    });
-  }
-  var init_thesaurus_ui = __esm({
-    "src/tools/thesaurus-ui.js"() {
-      init_core();
-      init_thesaurus2();
-    }
-  });
-
-  // src/import/import-scrivener.js
-  function parseXml(xml) {
-    const src2 = String(xml || "").replace(/<\?xml[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
-    const root = { tag: "#root", attrs: {}, children: [], text: "" };
-    const stack = [root];
-    const re = /<\s*(\/)?\s*([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/)?\s*>|([^<]+)/g;
-    let m;
-    while (m = re.exec(src2)) {
-      const [, close2, tag3, attrStr, selfClose, textRun] = m;
-      const top = stack[stack.length - 1];
-      if (textRun != null) {
-        top.text += decodeEntities(textRun);
-        continue;
-      }
-      if (close2) {
-        if (stack.length > 1 && stack[stack.length - 1].tag === tag3) stack.pop();
-        continue;
-      }
-      const node = { tag: tag3, attrs: parseAttrs(attrStr), children: [], text: "" };
-      top.children.push(node);
-      if (!selfClose) stack.push(node);
-    }
-    return root;
-  }
-  function parseAttrs(s) {
-    const out = {};
-    for (const m of String(s || "").matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-      out[m[1]] = decodeEntities(m[2] != null ? m[2] : m[3]);
-    }
-    return out;
-  }
-  function decodeEntities(s) {
-    return String(s).replace(/&(#x?[0-9a-f]+|\w+);/gi, (all, e) => {
-      if (e[0] === "#") return String.fromCodePoint(parseInt(e[1] === "x" || e[1] === "X" ? e.slice(2) : e.slice(1), e[1] === "x" || e[1] === "X" ? 16 : 10));
-      return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[e.toLowerCase()] ?? all;
-    });
-  }
-  function findAll(node, tag3, out = []) {
-    for (const c of node.children || []) {
-      if (c.tag === tag3) out.push(c);
-      findAll(c, tag3, out);
-    }
-    return out;
-  }
-  function firstChild(node, tag3) {
-    return (node.children || []).find((c) => c.tag === tag3) || null;
-  }
-  function rtfToText(rtf) {
-    const src2 = String(rtf || "");
-    let out = "";
-    let i5 = 0;
-    let skipDepth = 0;
-    let depth = 0;
-    let ucSkip = 1;
-    while (i5 < src2.length) {
-      const ch = src2[i5];
-      if (ch === "{") {
-        depth++;
-        i5++;
-        continue;
-      }
-      if (ch === "}") {
-        depth--;
-        if (skipDepth && depth < skipDepth) skipDepth = 0;
-        i5++;
-        continue;
-      }
-      if (ch === "\\") {
-        const ctrl = /^\\([a-zA-Z]+)(-?\d+)?[ ]?/.exec(src2.slice(i5));
-        if (ctrl) {
-          const word = ctrl[1], arg = ctrl[2] ? parseInt(ctrl[2], 10) : null;
-          i5 += ctrl[0].length;
-          if (word === "u" && arg != null) {
-            if (!skipDepth) out += String.fromCharCode(arg < 0 ? arg + 65536 : arg);
-            let skipped = 0;
-            while (skipped < ucSkip && i5 < src2.length) {
-              if (src2[i5] === "\\" && src2[i5 + 1] === "'") {
-                i5 += 4;
-                skipped++;
-                continue;
-              }
-              if (src2[i5] === "{" || src2[i5] === "}" || src2[i5] === "\\") break;
-              i5++;
-              skipped++;
-            }
-            continue;
-          }
-          if (word === "uc") {
-            ucSkip = arg == null ? 1 : arg;
-            continue;
-          }
-          if (word === "par" || word === "line") {
-            if (!skipDepth) out += "\n";
-            continue;
-          }
-          if (word === "tab") {
-            if (!skipDepth) out += "	";
-            continue;
-          }
-          if (SKIP_GROUPS.test(word) && !skipDepth) {
-            skipDepth = depth;
-            continue;
-          }
-          continue;
-        }
-        const esc6 = src2[i5 + 1];
-        if (esc6 === "'") {
-          const hex = src2.slice(i5 + 2, i5 + 4);
-          if (!skipDepth) {
-            const code3 = parseInt(hex, 16);
-            if (code3 >= 32) out += String.fromCharCode(code3);
-          }
-          i5 += 4;
-          continue;
-        }
-        if (esc6 === "*") {
-          skipDepth = depth;
-          i5 += 2;
-          continue;
-        }
-        if (!skipDepth && (esc6 === "\\" || esc6 === "{" || esc6 === "}")) out += esc6;
-        i5 += 2;
-        continue;
-      }
-      if (!skipDepth) out += ch;
-      i5++;
-    }
-    return out.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  }
-  function parseBinder(xml) {
-    const doc3 = parseXml(xml);
-    const binder = findAll(doc3, "Binder")[0] || doc3;
-    const walk3 = (node) => (node.children || []).filter((c) => c.tag === "BinderItem").map((item) => {
-      const titleNode = firstChild(item, "Title");
-      const kids = firstChild(item, "Children");
-      const meta2 = firstChild(item, "MetaData");
-      const inc = meta2 ? firstChild(meta2, "IncludeInCompile") : null;
-      return {
-        id: item.attrs.UUID || item.attrs.ID || "",
-        type: item.attrs.Type || "Text",
-        title: (titleNode ? titleNode.text : "").trim(),
-        include: inc ? !/^no$/i.test(inc.text.trim()) : true,
-        // ติ๊ก "Include in Compile" ไว้ไหม
-        children: kids ? walk3(kids) : []
-      };
-    });
-    return walk3(binder);
-  }
-  function mapBinder(binder, opts = {}) {
-    const draftOnly = opts.draftOnly !== false;
-    const roots = draftOnly ? pickDraft(binder) : binder;
-    const chapters = [];
-    let loose = null;
-    const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || t("ui.common.notNamed") });
-    const visit = (items, chapter) => {
-      for (const it of items) {
-        if (opts.onlyCompiled && it.include === false) continue;
-        if (SCRIV_FOLDER.has(it.type) || it.children && it.children.length) {
-          const ch = { title: it.title || t("ui.common.notNamed"), scenes: [] };
-          chapters.push(ch);
-          visit(it.children || [], ch);
-          if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);
-        } else if (SCRIV_TEXT.has(it.type)) {
-          if (!chapter) {
-            loose = loose || { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
-            pushScene(loose, it);
-          } else pushScene(chapter, it);
-        }
-      }
-    };
-    visit(roots, null);
-    if (loose) chapters.unshift(loose);
-    const kept = chapters.filter((c) => c.scenes.length);
-    return {
-      sections: [{ title: opts.sectionTitle || t("ui.common.bookOne"), chapters: kept }],
-      counts: { chapters: kept.length, scenes: kept.reduce((n2, c) => n2 + c.scenes.length, 0) }
-    };
-  }
-  function pickDraft(binder) {
-    const draft = binder.find((b) => b.type === "DraftFolder" || /^(draft|manuscript|ต้นฉบับ)$/i.test(b.title));
-    return draft ? draft.children : binder;
-  }
-  async function importScrivener(filePath, options = {}) {
-    const io = options.io;
-    if (!io) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
-    const warnings = [];
-    let files = [];
-    try {
-      files = await io.listFiles(filePath);
-    } catch {
-      files = [];
-    }
-    const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
-    if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
-    const xml = await io.readFile(io.join(filePath, scrivx));
-    const binder = parseBinder(xml);
-    if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
-    const mapped = mapBinder(binder, options);
-    const title2 = options.title || scrivx.replace(/\.scrivx$/i, "");
-    for (const sec of mapped.sections) {
-      for (const ch of sec.chapters) {
-        for (const sc of ch.scenes) {
-          const rtf = await readDocRtf(io, filePath, sc.srcId);
-          if (rtf == null) {
-            warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
-            sc.body = "";
-            continue;
-          }
-          sc.body = rtfToText(rtf);
-        }
-      }
-    }
-    const plan = buildPlan(mapped, title2, options);
-    if (options.dryRun) return { ok: true, plan, counts: mapped.counts, warnings, written: 0, title: title2 };
-    const dest = options.dest;
-    if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
-    let written = 0;
-    for (const f of plan.files) {
-      const full = io.join(dest, ...f.path);
-      if (io.mkdir) await io.mkdir(dirOf(io, dest, f.path));
-      await io.writeFile(full, f.content);
-      written++;
-      if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
-    }
-    return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
-  }
-  function dirOf(io, dest, parts) {
-    return io.join(dest, ...parts.slice(0, -1));
-  }
-  async function readDocRtf(io, root, id) {
-    const candidates = [
-      ["Files", "Data", id, "content.rtf"],
-      // Scrivener 3
-      ["Files", "Docs", id + ".rtf"],
-      // Scrivener 2
-      ["Files", "Docs", id, "content.rtf"]
-    ];
-    for (const parts of candidates) {
-      const p = io.join(root, ...parts);
-      try {
-        if (await io.exists(p)) return await io.readFile(p);
-      } catch {
-      }
-    }
-    return null;
-  }
-  function buildPlan(mapped, title2, opts = {}) {
-    const files = [];
-    files.push({ path: ["project.khn.json"], content: JSON.stringify({
-      title: title2,
-      type: "killian-project",
-      importedFrom: "scrivener",
-      importedAt: opts.now || null
-    }, null, 2) });
-    mapped.sections.forEach((sec, si) => {
-      const secDir = safeName4(sec.title, t("ui.common.bookOne"));
-      files.push({ path: [secDir, "section.json"], content: JSON.stringify({
-        guid: "s" + (si + 1),
-        title: sec.title,
-        order: si + 1
-      }, null, 2) });
-      const chapters = [];
-      const scenesMap = {};
-      sec.chapters.forEach((ch, ci) => {
-        const guid3 = `c${si + 1}_${ci + 1}`;
-        const folderName = `${String(ci + 1).padStart(2, "0")} - ${safeName4(ch.title, t("ui.common.chapter"))}`;
-        chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
-        scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
-          id: `${guid3}_s${i5 + 1}`,
-          title: sc.title,
-          order: i5 + 1,
-          fileName: `scene-${String(i5 + 1).padStart(2, "0")}.md`
-        }));
-        ch.scenes.forEach((sc, i5) => {
-          files.push({
-            path: [secDir, "Draft", "default", "Chapters", folderName, `scene-${String(i5 + 1).padStart(2, "0")}.md`],
-            content: `---
-title: ${sc.title}
-type: scene
-format: prose
----
-
-${sc.body || ""}
-`
-          });
-        });
-      });
-      files.push({ path: [secDir, "Draft", "default", "draft.json"], content: JSON.stringify({ chapters }, null, 2) });
-      files.push({ path: [secDir, "Draft", "default", "scenes.json"], content: JSON.stringify({ chapters: scenesMap }, null, 2) });
-    });
-    return { files, count: files.length };
-  }
-  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER, safeName4;
-  var init_import_scrivener = __esm({
-    "src/import/import-scrivener.js"() {
-      init_i18n();
-      SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
-      SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
-      SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
-      safeName4 = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 60) || fallback;
-    }
-  });
-
-  // src/import/import-ui.js
-  async function importScrivenerDialog(onOpenProject) {
-    const src2 = await kapi.openProjectDialog();
-    if (!src2) return null;
-    setBusy(t("ui.impOrt.busyReadProjectScrivener"));
-    const io = makeIo();
-    let preview2;
-    try {
-      preview2 = await importScrivener(src2, { io, dryRun: true });
-    } finally {
-      clearBusy();
-    }
-    if (!preview2.ok) {
-      setStatus(t("ui.imp.failed") + preview2.error);
-      return null;
-    }
-    const c = preview2.counts || {};
-    const lines = [
-      t("ui.imp.projectName") + (preview2.title || t("ui.imp.untitled")),
-      t("ui.imp.chapters") + (c.chapters ?? 0) + t("ui.impOrt.scene") + (c.scenes ?? 0),
-      t("ui.imp.filesToCreate") + (preview2.plan?.count ?? 0)
-    ];
-    if (preview2.warnings?.length) lines.push(t("ui.imp.warnPrefix") + preview2.warnings.length + t("ui.imp.warnSuffix"));
-    if (preview2.warnings?.length) log("warn", t("ui.impOrt.scrivenerImportHasWord"), preview2.warnings);
-    if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"))) return null;
-    const dest = await kapi.openProjectDialog();
-    if (!dest) return null;
-    if (await kapi.exists(io.join(dest, "project.khn.json"))) {
-      if (!await confirmBox(t("ui.imp.overwrite"))) return null;
-    }
-    setBusy(t("ui.imp.working"));
-    let res;
-    try {
-      res = await importScrivener(src2, {
-        io,
-        dest,
-        title: preview2.title,
-        now: (/* @__PURE__ */ new Date()).toISOString(),
-        onProgress: (n2, total) => {
-          if (n2 % 10 === 0) setBusy(tf("ui.impOrt.importFile", n2, total));
-        }
-      });
-    } finally {
-      clearBusy();
-    }
-    if (!res.ok) {
-      setStatus(t("ui.imp.failed") + res.error);
-      return null;
-    }
-    setStatus(tf("ui.impOrt.importDoneFile", res.written, dest));
-    log("info", t("ui.impOrt.scrivenerImportOk"), { src: src2, dest, written: res.written });
-    if (onOpenProject) await onOpenProject(dest);
-    return res;
-  }
-  var makeIo;
-  var init_import_ui = __esm({
-    "src/import/import-ui.js"() {
-      init_i18n();
-      init_core();
-      init_import_scrivener();
-      init_ui();
-      init_project_scan();
-      makeIo = () => syncIo();
-    }
-  });
-
-  // src/import-sp.js
-  async function importScreenplayDialog(injectFn) {
-    const filePath = await kapi.openScreenplayFile();
-    if (!filePath) return null;
-    const result = await importScreenplay(filePath, null);
-    if (!result.ok) {
-      alert(t("ui.importSp.importNotOk") + result.error);
-      return null;
-    }
-    const summary = importSummary(result.elements);
-    const lines = [
-      t("ui.importSp.import") + result.importer,
-      t("ui.importSp.file") + filePath.split(/[/\\]/).pop(),
-      "",
-      t("ui.common.scene3") + summary.scenes + t("ui.importSp.character") + summary.characters,
-      t("ui.importSp.dialogue") + summary.dialogueBlocks + t("ui.importSp.caption") + summary.actionBlocks,
-      t("ui.importSp.countWord") + summary.words,
-      "",
-      t("ui.importSp.bodyInNovelScreenplay")
-    ];
-    if (!confirm(lines.join("\n"))) return null;
-    const markdown = elementsToMarkdown(result.elements);
-    if (injectFn) {
-      injectFn(markdown, result.format, summary);
-    }
-    return { markdown, format: result.format, summary };
-  }
-  function detectFormat(filePath) {
-    const lower2 = filePath.toLowerCase();
-    for (const [key2, imp] of Object.entries(SP_IMPORTERS)) {
-      if (lower2.endsWith(imp.ext)) return key2;
-    }
-    if (lower2.endsWith(".txt")) return "fountain";
-    return null;
-  }
-  async function importScreenplay(filePath, format3) {
-    if (!format3) format3 = detectFormat(filePath);
-    if (!format3 || !SP_IMPORTERS[format3]) {
-      return { ok: false, error: t("ui.importSp.notKnownFormatFile") + (filePath.split(/[/\\]/).pop() || filePath) };
-    }
-    const importer = SP_IMPORTERS[format3];
-    let content;
-    try {
-      if (format3 === "celtx") {
-        const raw = await kapi.readBytes(filePath);
-        content = new Uint8Array(raw);
-      } else {
-        content = await kapi.readFile(filePath);
-      }
-    } catch (e) {
-      return { ok: false, error: t("ui.importSp.readFileNotOk") + e.message };
-    }
-    try {
-      const elements = await importer.parse(content);
-      return { ok: true, elements, format: format3, importer: importer.name };
-    } catch (e) {
-      return { ok: false, error: e.message || String(e) };
-    }
-  }
-  function parseFdx(xml) {
-    const parser = new DOMParser();
-    const doc3 = parser.parseFromString(xml, "text/xml");
-    const errNode = doc3.querySelector("parsererror");
-    if (errNode) throw new Error(t("ui.importSp.xMLNotValid") + errNode.textContent);
-    const elements = [];
-    const paragraphs2 = doc3.querySelectorAll("Paragraph");
-    for (const p of paragraphs2) {
-      const type = (p.getAttribute("Type") || "General").trim();
-      const el2 = FDX_TYPE_MAP[type] || "action";
-      const textNodes = p.querySelectorAll("Text");
-      let text;
-      if (textNodes.length) {
-        text = Array.from(textNodes).map((t3) => t3.textContent || "").join("");
-      } else {
-        text = p.textContent || "";
-      }
-      elements.push({ el: el2, text: text.trim() });
-    }
-    return elements;
-  }
-  async function parseCeltx(buffer2) {
-    const zip = new import_jszip3.default();
-    await zip.loadAsync(buffer2);
-    let htmlFile = zip.file("script/index.html") || zip.file("script.html");
-    if (!htmlFile) {
-      const htmlFiles = Object.keys(zip.files).filter((f) => f.endsWith(".html") && !f.startsWith("__MACOSX"));
-      if (htmlFiles.length) htmlFile = zip.file(htmlFiles[0]);
-    }
-    if (!htmlFile) {
-      throw new Error(t("ui.importSp.notFoundFileHTML"));
-    }
-    const html = await htmlFile.async("text");
-    return parseCeltxHtml(html);
-  }
-  function parseCeltxHtml(html) {
-    const parser = new DOMParser();
-    const doc3 = parser.parseFromString(html, "text/html");
-    const elements = [];
-    const blocks = doc3.querySelectorAll('p, div.script-block, div[class*="scene"], div[class*="character"], div[class*="action"], div[class*="dialogue"]');
-    for (const block of blocks) {
-      const cls = (block.className || block.getAttribute("class") || "").toLowerCase();
-      let el2 = "action";
-      for (const [cKey, cEl] of Object.entries(CELTX_TYPE_MAP)) {
-        if (cls.includes(cKey)) {
-          el2 = cEl;
-          break;
-        }
-      }
-      const text = (block.textContent || "").trim();
-      if (!text) continue;
-      elements.push({ el: el2, text });
-    }
-    if (!elements.length) {
-      const paras = doc3.querySelectorAll("p, h1, h2, h3, h4, h5, h6, div");
-      for (const p of paras) {
-        const text = (p.textContent || "").trim();
-        if (text) elements.push({ el: "action", text });
-      }
-    }
-    return elements;
-  }
-  function parseAstx(xml) {
-    const parser = new DOMParser();
-    const doc3 = parser.parseFromString(xml, "text/xml");
-    const errNode = doc3.querySelector("parsererror");
-    if (errNode) throw new Error(t("ui.importSp.xMLNotValid") + errNode.textContent);
-    const elements = [];
-    const paragraphs2 = doc3.querySelectorAll(
-      "paragraph, p, Paragraph, dialogue-block, scene, action, character, transition, note"
-    );
-    for (const p of paragraphs2) {
-      const tag3 = p.tagName.toLowerCase();
-      const typeAttr = (p.getAttribute("type") || "").toLowerCase();
-      const el2 = ASTX_TYPE_MAP[typeAttr] || ASTX_TYPE_MAP[tag3] || "action";
-      const text = (p.textContent || "").trim();
-      if (text) elements.push({ el: el2, text });
-    }
-    if (!elements.length) {
-      const els = doc3.querySelectorAll("*");
-      for (const el2 of els) {
-        const tag3 = el2.tagName.toLowerCase();
-        if (tag3 === "document" || tag3 === "story" || tag3 === "script" || tag3 === "body") continue;
-        if (el2.children.length) continue;
-        const text = (el2.textContent || "").trim();
-        if (text) {
-          const typeAttr = (el2.getAttribute("type") || "").toLowerCase();
-          const k2el = ASTX_TYPE_MAP[typeAttr] || ASTX_TYPE_MAP[tag3] || "action";
-          elements.push({ el: k2el, text });
-        }
-      }
-    }
-    return elements;
-  }
-  function parseFadeIn(jsonStr) {
-    let data2;
-    try {
-      data2 = JSON.parse(jsonStr);
-    } catch (e) {
-      throw new Error(t("ui.common.jSONNotValid") + e.message);
-    }
-    const elements = [];
-    const items = data2.script || data2.elements || data2.blocks || data2.items || data2;
-    function processItem(item) {
-      if (Array.isArray(item)) {
-        for (const sub of item) processItem(sub);
-        return;
-      }
-      if (!item || typeof item !== "object") return;
-      const type = item.type || item.element || item.el || "";
-      const text = item.text || item.content || item.value || item.line || "";
-      if (type || text) {
-        const el2 = FADEIN_TYPE_MAP[type.toLowerCase()] || "action";
-        if (el2 === "dialogue" && !text.trim()) return;
-        elements.push({ el: el2, text: String(text).trim() });
-      }
-      if (item.children) processItem(item.children);
-      if (item.content) processItem(item.content);
-    }
-    processItem(items);
-    return elements;
-  }
-  function parseFountainFromText(text) {
-    return parseScript(text);
-  }
-  function elementsToMarkdown(elements) {
-    const lines = [];
-    let prevType = "action";
-    let prevBlank = true;
-    const guessNames = guessNamesForBlocks(elements);
-    for (let i5 = 0; i5 < elements.length; i5++) {
-      const { el: el2, text } = elements[i5];
-      if (el2 === "blank") {
-        lines.push("");
-        prevBlank = true;
-        continue;
-      }
-      const nextBlank = blockIsBlank(elements[i5 + 1]);
-      const prefix2 = SP_ELEMS[el2]?.prefix || "";
-      let line = prefix2 + text;
-      try {
-        let [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
-        if (got !== el2 && prefix2) {
-          line = prefix2.endsWith(" ") ? prefix2 + text : prefix2 + " " + text;
-          [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
-          if (got !== el2) line = prefix2 + text;
-        }
-        if (got !== el2 && el2 === "action") line = "!" + text;
-      } catch {
-      }
-      lines.push(line);
-      prevBlank = false;
-      prevType = el2;
-    }
-    return lines.join("\n");
-  }
-  function importSummary(elements) {
-    const counts = {};
-    const chars3 = /* @__PURE__ */ new Set();
-    let words = 0;
-    for (const { el: el2, text } of elements) {
-      counts[el2] = (counts[el2] || 0) + 1;
-      if (el2 === "character") {
-        const { name: name5 } = splitCharacter(text);
-        if (name5) chars3.add(name5);
-      }
-      if (text) words += text.split(/[\s\u00A0]+/).filter(Boolean).length;
-    }
-    return {
-      scenes: counts.scene || 0,
-      characters: chars3.size,
-      dialogueBlocks: counts.dialogue || 0,
-      actionBlocks: counts.action || 0,
-      words,
-      counts
-    };
-  }
-  var import_jszip3, SP_IMPORTERS, FDX_TYPE_MAP, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
-  var init_import_sp = __esm({
-    "src/import-sp.js"() {
-      init_i18n();
-      init_fountain();
-      import_jszip3 = __toESM(require_jszip_min());
-      SP_IMPORTERS = {
-        fdx: { name: "Final Draft XML", ext: ".fdx", filter: "fdx", parse: parseFdx },
-        celtx: { name: "Celtx", ext: ".celtx", filter: "celtx", parse: parseCeltx },
-        astx: { name: "Adobe Story", ext: ".astx", filter: "astx", parse: parseAstx },
-        fadein: { name: "Fade In Pro", ext: ".fadein", filter: "fadein", parse: parseFadeIn },
-        fountain: { name: "Fountain", ext: ".fountain", filter: "fountain", parse: parseFountainFromText }
-      };
-      FDX_TYPE_MAP = {
-        "Scene Heading": "scene",
-        "Action": "action",
-        "Character": "character",
-        "Dialogue": "dialogue",
-        "Parenthetical": "parenthetical",
-        "Transition": "transition",
-        "Shot": "shot",
-        "Cast List": "raw",
-        "New Act": "act-break",
-        "End of Act": "transition",
-        "General": "action",
-        "Scene Number": "raw",
-        "Scene Characters": "raw",
-        "Notes": "note",
-        "Synopsis": "note"
-      };
-      CELTX_TYPE_MAP = {
-        "sceneheading": "scene",
-        "action": "action",
-        "character": "character",
-        "dialogue": "dialogue",
-        "parenthetical": "parenthetical",
-        "transition": "transition",
-        "shot": "shot",
-        "text": "action",
-        "chapter-heading": "act-break"
-      };
-      ASTX_TYPE_MAP = {
-        "scene_heading": "scene",
-        "scene-heading": "scene",
-        "action": "action",
-        "character": "character",
-        "dialogue": "dialogue",
-        "parenthetical": "parenthetical",
-        "transition": "transition",
-        "shot": "shot",
-        "chapter": "act-break",
-        "act-break": "act-break",
-        "note": "note",
-        "general": "action"
-      };
-      FADEIN_TYPE_MAP = {
-        "scene-heading": "scene",
-        "scene_heading": "scene",
-        "action": "action",
-        "character": "character",
-        "dialogue": "dialogue",
-        "parenthetical": "parenthetical",
-        "transition": "transition",
-        "shot": "shot",
-        "act-break": "act-break",
-        "chapter-heading": "act-break",
-        "note": "note",
-        "general": "action"
-      };
-    }
-  });
-
-  // src/sp-compare.js
-  function compareScripts(oldText, newText) {
-    const oldBlocks = parseScript(oldText);
-    const newBlocks = parseScript(newText);
-    const oldLines = oldBlocks.map((b) => b.el === "blank" ? "" : (SP_PREFIX[b.el] || "") + b.text);
-    const newLines = newBlocks.map((b) => b.el === "blank" ? "" : (SP_PREFIX[b.el] || "") + b.text);
-    const diffs = lineDiff(oldLines, newLines);
-    return diffs;
-  }
-  function renderComparisonHtml(diffs, labels = {}) {
-    const leftLabel = labels.old || t("ui.spCompare.edition");
-    const rightLabel = labels.new || t("ui.spCompare.editionNew");
-    let html = `<div class="k-compare-wrap">
-<style>
-.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace; font-size:12px;
-  line-height:1.6; max-width:100%; overflow-x:auto; }
-.k-compare-header { display:flex; border-bottom:2px solid #666; margin-bottom:8px; }
-.k-compare-hdr-left, .k-compare-hdr-right { flex:1; padding:4px 8px; font-weight:bold; text-align:center; }
-.k-compare-hdr-left { background:#fff5f5; color:#b00; }
-.k-compare-hdr-right { background:#f5fff5; color:#070; }
-.k-compare-row { display:flex; border-bottom:1px solid #eee; min-height:20px; }
-.k-compare-cell { padding:1px 8px; white-space:pre-wrap; word-break:break-all; flex:1; }
-.k-cmp-del { background:#ffe0e0; color:#b00; }
-.k-cmp-add { background:#e0ffe0; color:#070; }
-.k-cmp-eq  { background:#fff; color:#333; }
-.k-cmp-chg { background:#ffffd0; }
-.k-cmp-chg .k-cmp-add { background:#e0ffe0; }
-.k-cmp-chg .k-cmp-del { background:#ffe0e0; }
-.k-compare-sep { height:4px; background:#ccc; margin:2px 0; }
-.k-compare-empty { color:#aaa; font-style:italic; }
-</style>
-<div class="k-compare-header">
-  <div class="k-compare-hdr-left">${escHtml(leftLabel)}</div>
-  <div class="k-compare-hdr-right">${escHtml(rightLabel)}</div>
-</div>`;
-    for (const d of diffs) {
-      const leftCls = d.type === "delete" ? "k-cmp-del" : d.type === "equal" ? "k-cmp-eq" : "k-cmp-chg";
-      const rightCls = d.type === "insert" ? "k-cmp-add" : d.type === "equal" ? "k-cmp-eq" : "k-cmp-chg";
-      const leftText = d.old != null ? escHtml(d.old) : '<span class="k-compare-empty">\u2014</span>';
-      const rightText = d.new != null ? escHtml(d.new) : '<span class="k-compare-empty">\u2014</span>';
-      if (d.type === "change") {
-        html += `<div class="k-compare-row" style="background:#ffffd0">
-  <div class="k-compare-cell k-cmp-del">${escHtml(d.old || "")}</div>
-  <div class="k-compare-cell k-cmp-add">${escHtml(d.new || "")}</div>
-</div>`;
-      } else if (d.type === "equal") {
-        html += `<div class="k-compare-row">
-  <div class="k-compare-cell k-cmp-eq">${leftText}</div>
-  <div class="k-compare-cell k-cmp-eq">${rightText}</div>
-</div>`;
-      } else if (d.type === "delete") {
-        html += `<div class="k-compare-row">
-  <div class="k-compare-cell k-cmp-del">${leftText}</div>
-  <div class="k-compare-cell k-cmp-eq">&nbsp;</div>
-</div>`;
-      } else if (d.type === "insert") {
-        html += `<div class="k-compare-row">
-  <div class="k-compare-cell k-cmp-eq">&nbsp;</div>
-  <div class="k-compare-cell k-cmp-add">${rightText}</div>
-</div>`;
-      }
-    }
-    html += `</div>`;
-    return html;
-  }
-  function showComparisonDialog(oldText, newText, labels) {
-    const diffs = compareScripts(oldText, newText);
-    const html = renderComparisonHtml(diffs, labels);
-    const ov = document.createElement("div");
-    ov.className = "k-overlay";
-    ov.innerHTML = tf("ui.spCompare.compareClose", html);
-    document.body.appendChild(ov);
-    const stats = diffStats(diffs);
-    const el2 = ov.querySelector(".k-dlg-title");
-    if (el2) {
-      el2.innerHTML += tf("ui.spCompare.msg", stats.equal, stats.inserted, stats.deleted, stats.changed);
-    }
-    ov.querySelector(".k-ok").onclick = () => ov.remove();
-    ov.addEventListener("click", (e) => {
-      if (e.target === ov) ov.remove();
-    });
-  }
-  function diffStats(diffs) {
-    let equal = 0, inserted = 0, deleted = 0, changed = 0;
-    for (const d of diffs) {
-      if (d.type === "equal") equal++;
-      else if (d.type === "insert") inserted++;
-      else if (d.type === "delete") deleted++;
-      else if (d.type === "change") changed++;
-    }
-    return { equal, inserted, deleted, changed, total: diffs.length };
-  }
-  function lineDiff(oldLines, newLines) {
-    const m = oldLines.length;
-    const n2 = newLines.length;
-    const dp = Array.from({ length: m + 1 }, () => new Int32Array(n2 + 1));
-    for (let i6 = 1; i6 <= m; i6++) {
-      for (let j2 = 1; j2 <= n2; j2++) {
-        if (oldLines[i6 - 1] === newLines[j2 - 1]) {
-          dp[i6][j2] = dp[i6 - 1][j2 - 1] + 1;
-        } else {
-          dp[i6][j2] = Math.max(dp[i6 - 1][j2], dp[i6][j2 - 1]);
-        }
-      }
-    }
-    const diffs = [];
-    let i5 = m, j = n2;
-    const result = [];
-    while (i5 > 0 || j > 0) {
-      if (i5 > 0 && j > 0 && oldLines[i5 - 1] === newLines[j - 1]) {
-        result.unshift({ type: "equal", old: oldLines[i5 - 1], new: newLines[j - 1] });
-        i5--;
-        j--;
-      } else if (j > 0 && (i5 === 0 || dp[i5][j - 1] >= dp[i5 - 1][j])) {
-        result.unshift({ type: "insert", new: newLines[j - 1] });
-        j--;
-      } else {
-        result.unshift({ type: "delete", old: oldLines[i5 - 1] });
-        i5--;
-      }
-    }
-    const merged = [];
-    let delBuf = [], insBuf = [];
-    for (const r of result) {
-      if (r.type === "delete") {
-        if (insBuf.length) {
-          if (delBuf.length) merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
-          merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
-          insBuf = [];
-        }
-        delBuf.push(r.old);
-      } else if (r.type === "insert") {
-        insBuf.push(r.new);
-      } else {
-        if (delBuf.length && insBuf.length) {
-          const maxLen = Math.max(delBuf.length, insBuf.length);
-          for (let k = 0; k < maxLen; k++) {
-            const old = k < delBuf.length ? delBuf[k] : "";
-            const nw = k < insBuf.length ? insBuf[k] : "";
-            if (old && nw) merged.push({ type: "change", old, new: nw });
-            else if (old) merged.push({ type: "delete", old });
-            else if (nw) merged.push({ type: "insert", new: nw });
-          }
-        } else if (delBuf.length) {
-          merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
-        } else if (insBuf.length) {
-          merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
-        }
-        delBuf = [];
-        insBuf = [];
-        merged.push(r);
-      }
-    }
-    if (delBuf.length || insBuf.length) {
-      if (delBuf.length && insBuf.length) {
-        const maxLen = Math.max(delBuf.length, insBuf.length);
-        for (let k = 0; k < maxLen; k++) {
-          const old = k < delBuf.length ? delBuf[k] : "";
-          const nw = k < insBuf.length ? insBuf[k] : "";
-          if (old && nw) merged.push({ type: "change", old, new: nw });
-          else if (old) merged.push({ type: "delete", old });
-          else if (nw) merged.push({ type: "insert", new: nw });
-        }
-      } else if (delBuf.length) {
-        merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
-      } else if (insBuf.length) {
-        merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
-      }
-    }
-    return merged;
-  }
-  function escHtml(s) {
-    if (s == null) return "";
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  var NO_PREFIX, SP_PREFIX;
-  var init_sp_compare = __esm({
-    "src/sp-compare.js"() {
-      init_i18n();
-      init_fountain();
-      NO_PREFIX = /* @__PURE__ */ new Set(["dialogue", "parenthetical", "image", "raw", "blank"]);
-      SP_PREFIX = Object.fromEntries(Object.entries(SP_ELEMS).map(([k, v2]) => {
-        if (NO_PREFIX.has(k)) return [k, ""];
-        const p = String(v2.prefix || "");
-        return [k, p && !p.endsWith(" ") ? p + " " : p];
-      }));
-    }
-  });
-
-  // src/roster-ui.js
-  async function rosterPath(secPath) {
-    return kapi.join(secPath, "roster.json");
-  }
-  async function loadRoster(secPath) {
-    try {
-      const p = await rosterPath(secPath);
-      if (await kapi.exists(p)) return normalizeRoster(await kapi.readJson(p));
-    } catch (e) {
-      log("warn", t("ui.roster.readPageListCharacter"), e);
-    }
-    return newRoster();
-  }
-  async function saveRoster(secPath, roster) {
-    const p = await rosterPath(secPath);
-    await kapi.writeFile(p, JSON.stringify(normalizeRoster(roster), null, 2));
-    return p;
-  }
-  async function openRosterFlow() {
-    if (!state.root) {
-      setStatus(t("ui.common.openProjectBefore"));
-      return;
-    }
-    const secs = await listSections();
-    if (!secs.length) {
-      setStatus(t("ui.roster.notHasBookProject"));
-      return;
-    }
-    if (secs.length === 1) return openRoster(secs[0].secPath, secs[0].title);
-    const pick2 = await pickFromList(t("ui.roster.pickBookOpenPage"), secs.map((s) => s.title));
-    const sec = secs.find((s) => s.title === pick2);
-    if (sec) return openRoster(sec.secPath, sec.title);
-  }
-  async function openRoster(secPath, secTitle) {
-    const key2 = rosterKey(secPath);
-    if (state.tabs.has(key2)) {
-      activate(key2);
-      return renderRoster(state.tabs.get(key2));
-    }
-    const pane = el("div", "pane");
-    $("#panes").append(pane);
-    const title2 = t("ui.roster.listCharacter") + (secTitle ? " \u2014 " + secTitle : "");
-    const tabBtn = el("div", "tab");
-    tabBtn.append(el("span", "tab-title", title2));
-    const x = el("span", "tab-x", "\xD7");
-    tabBtn.append(x);
-    $("#tabs").append(tabBtn);
-    const tab = {
-      file: key2,
-      title: title2,
-      pane,
-      tabBtn,
-      dirty: false,
-      secPath,
-      editor: null,
-      plain: null,
-      wiki: null,
-      roster: null
-    };
-    tabBtn.onclick = (e) => {
-      if (e.target !== x) activate(key2);
-    };
-    x.onclick = () => closeTab(key2);
-    state.tabs.set(key2, tab);
-    activate(key2);
-    await renderRoster(tab);
-  }
-  async function wikiCharacters() {
-    const out = [];
-    const scan = async (base3) => {
-      const dir = await kapi.join(base3, "characters");
-      if (!await kapi.exists(dir)) return;
-      for (const f of await kapi.listFiles(dir, ".json")) {
-        try {
-          const e = await kapi.readJson(await kapi.join(dir, f));
-          if (e && e.name) out.push({ name: e.name, detail: (e.summary || e.desc || e.role || "").replace(/\s+/g, " ").trim() });
-        } catch {
-        }
-      }
-    };
-    await scan(await kapi.join(state.root, "Wiki"));
-    await scan(await kapi.join(state.root, "Bible"));
-    return out;
-  }
-  async function renderRoster(tab) {
-    const pane = tab.pane;
-    pane.innerHTML = "";
-    const r = tab.roster || (tab.roster = await loadRoster(tab.secPath));
-    const fmt = mergeSpFormat(spFormatFromSettings());
-    const dirty = () => {
-      if (!tab.dirty) {
-        tab.dirty = true;
-        tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
-      }
-    };
-    const clean = () => {
-      tab.dirty = false;
-      tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
-    };
-    const bar = el("div", "roster-bar");
-    const bAdd = el("button", null, t("ui.roster.addCharacter"));
-    const bWiki = el("button", null, t("ui.roster.fetchWiki"));
-    const bSave = el("button", "k-ok", t("ui.common.save"));
-    const bCopy = el("button", null, t("ui.common.copyText"));
-    const mkChk = (label, key2, tip) => {
-      const w = el("label", "roster-chk");
-      const c = el("input");
-      c.type = "checkbox";
-      c.checked = r[key2] !== false;
-      c.onchange = () => {
-        r[key2] = c.checked;
-        dirty();
-        paint();
-      };
-      w.append(c, document.createTextNode(" " + label));
-      if (tip) w.title = tip;
-      return w;
-    };
-    bar.append(
-      bAdd,
-      bWiki,
-      mkChk(t("ui.roster.showHeadingScene"), "showScene"),
-      mkChk(t("ui.roster.showHeadingTime"), "showTime"),
-      mkChk(t("ui.roster.putActPrintExport"), "includeInExport", t("ui.roster.closeSkipPageAct")),
-      bCopy,
-      bSave
-    );
-    const ws = el("div", "workspace");
-    const page2 = el("div", "roster-page");
-    ws.append(page2);
-    const wrap2 = el("div", "roster-wrap");
-    wrap2.append(bar, ws);
-    pane.append(wrap2);
-    function ce(cls, text, onInput) {
-      const d = el("div", cls, text);
-      d.contentEditable = "true";
-      d.spellcheck = false;
-      d.addEventListener("input", () => {
-        onInput(d.textContent);
-        dirty();
-      });
-      return d;
-    }
-    function paint() {
-      page2.innerHTML = "";
-      page2.append(ce("roster-title", r.title, (v2) => {
-        r.title = v2;
-      }));
-      const cast = el("div", "roster-cast");
-      r.characters.forEach((c, i5) => {
-        const row2 = el("div", "roster-row");
-        const name5 = ce("roster-name", c.name, (v2) => {
-          c.name = v2.replace(/:$/, "");
-        });
-        const detail = ce("roster-detail", c.detail, (v2) => {
-          c.detail = v2;
-        });
-        const del2 = el("span", "roster-del", "\u2715");
-        del2.title = t("ui.roster.delCharacterExitPage");
-        del2.onclick = () => {
-          r.characters.splice(i5, 1);
-          dirty();
-          paint();
-        };
-        row2.append(name5, el("span", "roster-colon", ":"), detail, del2);
-        cast.append(row2);
-      });
-      if (!r.characters.length) cast.append(el("div", "roster-empty", t("ui.roster.notHasListPress")));
-      page2.append(cast);
-      const sec = (key2, headText) => {
-        const box2 = el("div", "roster-sec");
-        box2.dataset.k = key2;
-        box2.append(el("div", "roster-sec-head", headText));
-        box2.append(ce("roster-sec-body", r[key2], (v2) => {
-          r[key2] = v2;
-        }));
-        return box2;
-      };
-      if (r.showScene !== false) page2.append(sec("scene", fmt.strings.sceneTitle));
-      if (r.showTime !== false) page2.append(sec("time", fmt.strings.timeTitle));
-    }
-    paint();
-    bAdd.onclick = () => {
-      r.characters.push({ name: "", detail: "" });
-      dirty();
-      paint();
-    };
-    bWiki.onclick = async () => {
-      const chars3 = await wikiCharacters();
-      if (!chars3.length) {
-        setStatus(t("ui.roster.notFoundCharacterWiki"));
-        return;
-      }
-      const have = new Set(r.characters.map((c) => c.name.trim()));
-      let added = 0;
-      for (const c of chars3) if (c.name && !have.has(c.name.trim())) {
-        r.characters.push(c);
-        added++;
-      }
-      dirty();
-      paint();
-      setStatus(added ? t("ui.roster.addCharacterWiki") + added + t("ui.roster.person") : t("ui.roster.characterWikiCompleteDone"));
-    };
-    bCopy.onclick = () => {
-      const txt = rosterToText(r, fmt);
-      navigator.clipboard.writeText(txt).then(() => setStatus(t("ui.roster.copyPageListCharacter")));
-    };
-    bSave.onclick = async () => {
-      await saveRosterTab(tab);
-    };
-    return wrap2;
-  }
-  async function saveRosterTab(tab) {
-    if (!tab || !tab.secPath || !tab.roster) return false;
-    await saveRoster(tab.secPath, tab.roster);
-    tab.dirty = false;
-    const ttl = tab.tabBtn && tab.tabBtn.querySelector(".tab-title");
-    if (ttl) ttl.textContent = tab.title;
-    setStatus(t("ui.roster.savePageListCharacter"));
-    return true;
-  }
-  function spFormatFromSettings(s) {
-    const st = s || state.settings || {};
-    return {
-      paperSize: st.paperSize,
-      paper: st.customPaper,
-      margins: st.pageMargins,
-      elements: st.spElements,
-      styles: st.spStyles,
-      rules: st.spPageRules,
-      strings: st.spStrings
-    };
-  }
-  async function rosterTextFor(secPath) {
-    const r = await loadRoster(secPath);
-    if (r.includeInExport === false) return "";
-    if (!r.characters.length && !r.scene && !r.time) return "";
-    return rosterToText(r, mergeSpFormat(spFormatFromSettings()));
-  }
-  var ROSTER_PREFIX, rosterKey, isRosterTab;
-  var init_roster_ui = __esm({
-    "src/roster-ui.js"() {
-      init_i18n();
-      init_core();
-      init_app();
-      init_section_ops();
-      ROSTER_PREFIX = "::roster::";
-      rosterKey = (secPath) => ROSTER_PREFIX + secPath;
-      isRosterTab = (tab) => !!(tab && typeof tab.file === "string" && tab.file.startsWith(ROSTER_PREFIX));
-    }
-  });
-
-  // src/smart-terms.js
-  function learnMin(v2) {
-    const n2 = Math.round(parseFloat(v2));
-    if (!Number.isFinite(n2)) return DEFAULT_LEARN_MIN;
-    return Math.max(LEARN_MIN_RANGE[0], Math.min(LEARN_MIN_RANGE[1], n2));
-  }
-  function looksLikeTerm(txt) {
-    const s = String(txt ?? "").trim();
-    if (s.length < 2 || s.length > 60) return false;
-    if (!/[\p{L}]/u.test(s)) return false;
-    if (/^[\d\s\p{P}]+$/u.test(s)) return false;
-    if (/(.)\1{3,}/u.test(s)) return false;
-    if (TH_NOT_FIRST.test(s)) return false;
-    if (TH_DOUBLE_TONE.test(s)) return false;
-    if (TH_DOUBLE_UPPER.test(s)) return false;
-    if (EN_CONS_RUN.test(s)) return false;
-    if (/^[A-Za-z][A-Za-z'’\-]{3,}$/.test(s) && !/[aeiouy]/i.test(s)) return false;
-    return true;
-  }
-  function countTerms(entries) {
-    const m = /* @__PURE__ */ new Map();
-    for (const e of entries || []) {
-      const w = String(e ?? "").trim();
-      if (!w) continue;
-      m.set(w, (m.get(w) || 0) + 1);
-    }
-    return m;
-  }
-  function learnedTerms(counts, opts = {}) {
-    const min = learnMin(opts.min);
-    const pinned = toSet(opts.pinned);
-    const ignored = toSet(opts.ignored);
-    const known = toSet(opts.known);
-    const out = [];
-    for (const [word, n2] of counts || []) {
-      const key2 = lower(word);
-      if (ignored.has(key2)) continue;
-      if (pinned.has(key2)) {
-        out.push([word, n2]);
-        continue;
-      }
-      if (!looksLikeTerm(word)) continue;
-      if (n2 >= min || known.has(key2)) out.push([word, n2]);
-    }
-    out.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "th"));
-    return out.map(([w]) => w);
-  }
-  function pendingTerms(counts, opts = {}) {
-    const min = learnMin(opts.min);
-    const pinned = toSet(opts.pinned);
-    const ignored = toSet(opts.ignored);
-    const known = toSet(opts.known);
-    const out = [];
-    for (const [word, n2] of counts || []) {
-      const key2 = lower(word);
-      if (ignored.has(key2) || pinned.has(key2) || known.has(key2)) continue;
-      if (n2 >= min) continue;
-      out.push({ word, count: n2, ok: looksLikeTerm(word) });
-    }
-    out.sort((a, b) => b.count - a.count || a.word.localeCompare(b.word, "th"));
-    return out;
-  }
-  var DEFAULT_LEARN_MIN, LEARN_MIN_RANGE, TH_NOT_FIRST, TH_DOUBLE_TONE, TH_DOUBLE_UPPER, EN_CONS_RUN, lower, toSet;
-  var init_smart_terms = __esm({
-    "src/smart-terms.js"() {
-      DEFAULT_LEARN_MIN = 2;
-      LEARN_MIN_RANGE = [1, 5];
-      TH_NOT_FIRST = /^[ัำิ-ฺ็-๎ะๅๆ]/;
-      TH_DOUBLE_TONE = /[่-์]{2,}/;
-      TH_DOUBLE_UPPER = /[ัิ-ื]{2,}/;
-      EN_CONS_RUN = /[bcdfghjklmnpqrstvwxz]{6,}/i;
-      lower = (s) => String(s ?? "").trim().toLowerCase();
-      toSet = (v2) => new Set((Array.isArray(v2) ? v2 : []).map(lower).filter(Boolean));
-    }
-  });
-
-  // src/sp-reports.js
-  function parseHeading(text) {
-    const raw = String(text ?? "").trim();
-    let rest = raw, intExt = "";
-    for (const p of INT_EXT) {
-      if (p.re.test(rest)) {
-        intExt = p.kind;
-        rest = rest.replace(p.re, "");
-        break;
-      }
-    }
-    if (!intExt) {
-      for (const p of SCENE_PREFIX) {
-        const pf = p.trim();
-        if (rest.toUpperCase().startsWith(pf.toUpperCase())) {
-          rest = rest.slice(pf.length);
-          break;
-        }
-      }
-    }
-    const parts = rest.split(/\s+[-–—]\s+|\s+[-–—]$/);
-    const location2 = (parts[0] || "").trim().replace(/[-–—]\s*$/, "").trim();
-    const time = parts.length > 1 ? parts.slice(1).join(" - ").trim() : "";
-    return { raw, intExt, location: location2, time };
-  }
-  function cleanCharacterName(text) {
-    const { name: name5 } = splitCharacter(String(text ?? ""));
-    return name5.replace(/\s+/g, " ").trim();
-  }
-  function sceneBreakdown(blocks, opts = {}) {
-    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
-    const lines = opts.lines || formatLines(fmt);
-    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
-    const pages = paginate(blocks, { fmt, lines });
-    const pageOf = /* @__PURE__ */ new Map();
-    for (const pg of pages.pages) {
-      for (const b of pg.blocks || []) {
-        if (Number.isFinite(b.idx) && !pageOf.has(b.idx)) pageOf.set(b.idx, pg.index);
-      }
-    }
-    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
-    const actW = (fmt.elements.action || {}).width || 6;
-    const scenes = [];
-    let cur = null, curChar = "";
-    let seq2 = 0;
-    const list = (blocks || []).filter((b) => b && b.el !== "blank");
-    for (const b of list) {
-      const page2 = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
-      if (b.el === "scene") {
-        const h = parseHeading(b.text);
-        cur = {
-          n: ++seq2,
-          heading: h.raw,
-          location: h.location || t("ui.spReports.notSpecifyPlace"),
-          intExt: h.intExt,
-          time: h.time,
-          page: page2 + startPage - 1,
-          endPage: page2 + startPage - 1,
-          pos: Number.isFinite(b.pos) ? b.pos : null,
-          characters: [],
-          charSet: /* @__PURE__ */ new Set(),
-          actionLines: 0,
-          dialogueLines: 0,
-          totalLines: 0
-        };
-        scenes.push(cur);
-        curChar = "";
-        continue;
-      }
-      if (!cur) {
-        cur = {
-          n: ++seq2,
-          heading: t("ui.spReports.beforeHeadSceneFirst"),
-          location: t("ui.spReports.notSpecifyPlace"),
-          intExt: "",
-          time: "",
-          page: page2 + startPage - 1,
-          endPage: page2 + startPage - 1,
-          pos: Number.isFinite(b.pos) ? b.pos : null,
-          characters: [],
-          charSet: /* @__PURE__ */ new Set(),
-          actionLines: 0,
-          dialogueLines: 0,
-          totalLines: 0
-        };
-        scenes.push(cur);
-      }
-      cur.endPage = Math.max(cur.endPage, page2 + startPage - 1);
-      if (b.el === "character") {
-        curChar = cleanCharacterName(b.text);
-        if (curChar && !cur.charSet.has(curChar)) {
-          cur.charSet.add(curChar);
-          cur.characters.push(curChar);
-        }
-      } else if (b.el === "dialogue") {
-        const n2 = wrapLines(b.text, dlgW);
-        cur.dialogueLines += n2;
-        cur.totalLines += n2;
-      } else if (b.el === "action") {
-        const n2 = wrapLines(b.text, actW);
-        cur.actionLines += n2;
-        cur.totalLines += n2;
-      } else {
-        cur.totalLines += wrapLines(b.text, actW);
-      }
-    }
-    for (const s of scenes) {
-      delete s.charSet;
-      s.pages = Math.max(1, s.endPage - s.page + 1);
-    }
-    return { scenes, pages, totalPages: pages.count };
-  }
-  function generateLocationReport(blocks, opts = {}) {
-    const { scenes, totalPages } = sceneBreakdown(blocks, opts);
-    const groups = opts.groups || null;
-    const nameOf = (loc) => {
-      if (!groups) return loc;
-      for (const g of Object.keys(groups)) {
-        const arr = groups[g] || [];
-        if (arr.some((x) => String(x).trim() === loc)) return g;
-      }
-      return loc;
-    };
-    const map2 = /* @__PURE__ */ new Map();
-    for (const s of scenes) {
-      const key2 = nameOf(s.location);
-      if (!map2.has(key2)) {
-        map2.set(key2, {
-          location: key2,
-          sceneCount: 0,
-          pages: 0,
-          intExt: /* @__PURE__ */ new Set(),
-          characters: [],
-          charSet: /* @__PURE__ */ new Set(),
-          scenes: []
-        });
-      }
-      const g = map2.get(key2);
-      g.sceneCount++;
-      g.pages += s.pages;
-      if (s.intExt) g.intExt.add(s.intExt);
-      for (const c of s.characters) if (!g.charSet.has(c)) {
-        g.charSet.add(c);
-        g.characters.push(c);
-      }
-      g.scenes.push({
-        n: s.n,
-        heading: s.heading,
-        page: s.page,
-        time: s.time,
-        characters: s.characters,
-        pos: s.pos
-      });
-    }
-    const out = [...map2.values()].map((g) => ({
-      location: g.location,
-      sceneCount: g.sceneCount,
-      pages: g.pages,
-      intExt: [...g.intExt].sort(),
-      characters: g.characters,
-      scenes: g.scenes
-    }));
-    out.sort((a, b) => b.sceneCount - a.sceneCount || a.location.localeCompare(b.location, "th"));
-    return { locations: out, totalScenes: scenes.length, totalPages };
-  }
-  function generateCharacterReport(blocks, opts = {}) {
-    const { scenes, totalPages } = sceneBreakdown(blocks, opts);
-    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
-    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
-    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
-    const chars3 = /* @__PURE__ */ new Map();
-    const pageOf = /* @__PURE__ */ new Map();
-    const pages = paginate(blocks, { fmt, lines: opts.lines || formatLines(fmt) });
-    for (const pg of pages.pages) {
-      for (const b of pg.blocks || []) {
-        if (Number.isFinite(b.idx) && !pageOf.has(b.idx)) pageOf.set(b.idx, pg.index);
-      }
-    }
-    let sceneNo = 0, curChar = "";
-    for (const b of (blocks || []).filter((x) => x && x.el !== "blank")) {
-      if (b.el === "scene") {
-        sceneNo++;
-        curChar = "";
-        continue;
-      }
-      if (b.el === "character") {
-        curChar = cleanCharacterName(b.text);
-        continue;
-      }
-      if (b.el !== "dialogue" || !curChar) continue;
-      if (!chars3.has(curChar)) {
-        chars3.set(curChar, {
-          name: curChar,
-          totalLines: 0,
-          speeches: 0,
-          scenes: [],
-          sceneSet: /* @__PURE__ */ new Set(),
-          firstPage: null,
-          lastPage: null
-        });
-      }
-      const c = chars3.get(curChar);
-      const page2 = (Number.isFinite(b.idx) && pageOf.get(b.idx) || 1) + startPage - 1;
-      const n2 = wrapLines(b.text, dlgW);
-      c.totalLines += n2;
-      c.speeches++;
-      c.firstPage = c.firstPage === null ? page2 : Math.min(c.firstPage, page2);
-      c.lastPage = c.lastPage === null ? page2 : Math.max(c.lastPage, page2);
-      if (!c.sceneSet.has(sceneNo)) {
-        c.sceneSet.add(sceneNo);
-        c.scenes.push({ scene: sceneNo, page: page2, lines: n2 });
-      } else {
-        const row2 = c.scenes.find((x) => x.scene === sceneNo);
-        if (row2) row2.lines += n2;
-      }
-    }
-    const out = [...chars3.values()].map((c) => ({
-      name: c.name,
-      totalLines: c.totalLines,
-      speeches: c.speeches,
-      sceneCount: c.sceneSet.size,
-      scenes: c.scenes,
-      firstPage: c.firstPage ?? 0,
-      lastPage: c.lastPage ?? 0,
-      avgLines: c.sceneSet.size ? +(c.totalLines / c.sceneSet.size).toFixed(2) : 0
-    }));
-    out.sort((a, b) => b.totalLines - a.totalLines || a.name.localeCompare(b.name, "th"));
-    const totalLines = out.reduce((s, c) => s + c.totalLines, 0);
-    for (const c of out) c.share = totalLines ? +(c.totalLines / totalLines * 100).toFixed(1) : 0;
-    return { characters: out, totalScenes: scenes.length, totalPages, totalLines };
-  }
-  function chartKind(el2) {
-    if (el2 === "action") return "action";
-    if (el2 === "dialogue") return "dialogue";
-    if (el2 === "character") return "character";
-    return "other";
-  }
-  function generateDialogueChart(blocks, opts = {}) {
-    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
-    const lines = opts.lines || formatLines(fmt);
-    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
-    const pages = paginate(blocks, { fmt, lines });
-    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
-    const out = pages.pages.map((pg) => {
-      const stats = { action: 0, dialogue: 0, character: 0, other: 0 };
-      const density = /* @__PURE__ */ new Map();
-      let curChar = "";
-      for (const b of pg.blocks || []) {
-        const n2 = b.lines || 1;
-        stats[chartKind(b.el)] += n2;
-        if (b.el === "character") curChar = cleanCharacterName(b.text);
-        else if (b.el === "dialogue" && curChar) {
-          density.set(curChar, (density.get(curChar) || 0) + wrapLines(b.text, dlgW));
-        }
-      }
-      const total = CHART_KINDS.reduce((s, k) => s + stats[k], 0) || 1;
-      const pct = {};
-      for (const k of CHART_KINDS) pct[k] = +(stats[k] / total * 100).toFixed(1);
-      return {
-        page: pg.index + startPage - 1,
-        lines: stats,
-        total,
-        percentages: pct,
-        charDensity: [...density.entries()].map(([name5, n2]) => ({ name: name5, lines: n2 })).sort((a, b) => b.lines - a.lines)
-      };
-    });
-    const sum2 = { action: 0, dialogue: 0, character: 0, other: 0 };
-    for (const p of out) for (const k of CHART_KINDS) sum2[k] += p.lines[k];
-    const grand = CHART_KINDS.reduce((s, k) => s + sum2[k], 0) || 1;
-    const overall = {};
-    for (const k of CHART_KINDS) overall[k] = +(sum2[k] / grand * 100).toFixed(1);
-    return { pages: out, totals: sum2, overall, totalPages: pages.count };
-  }
-  function locationReportText(rep) {
-    const out = [tf("ui.spReports.reportPlacePlaceScene", rep.locations.length, rep.totalScenes, rep.totalPages), ""];
-    for (const L2 of rep.locations) {
-      out.push(tf("ui.spReports.scenePage2", L2.location, L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages));
-      for (const s of L2.scenes) {
-        out.push(tf("ui.spReports.scenePage", pad(s.n, 4), pad(s.page, 4), s.heading) + (s.characters.length ? "   [" + s.characters.join(", ") + "]" : ""));
-      }
-      out.push("");
-    }
-    return out.join("\n").trimEnd();
-  }
-  function characterReportText(rep) {
-    const out = [
-      tf("ui.spReports.reportPersonLineDialogue", rep.characters.length, rep.totalLines),
-      "",
-      tf("ui.spReports.ratio", pad(t("ui.common.character"), 24), pad(t("ui.common.scene2"), 6), pad(t("ui.common.dialogue"), 8), pad(t("ui.common.line"), 8), pad(t("ui.common.avgScene"), 12))
-    ];
-    for (const c of rep.characters) {
-      out.push(`${pad(c.name, 24)}${pad(c.sceneCount, 6)}${pad(c.speeches, 8)}${pad(c.totalLines, 8)}${pad(c.avgLines, 12)}${c.share}%`);
-    }
-    return out.join("\n");
-  }
-  function dialogueChartText(rep) {
-    const out = [
-      tf("ui.spReports.graphDialoguePage", rep.totalPages),
-      tf("ui.spReports.mergeStoryActionDialogue", rep.overall.action, rep.overall.dialogue) + tf("ui.spReports.nameOther", rep.overall.character, rep.overall.other),
-      ""
-    ];
-    for (const p of rep.pages) {
-      const bar = "\u2588".repeat(Math.round(p.percentages.dialogue / 5)) + "\u2591".repeat(Math.round(p.percentages.action / 5));
-      out.push(tf("ui.spReports.pageDialogueAction", pad(p.page, 5), pad(bar, 22), p.percentages.dialogue, p.percentages.action));
-    }
-    return out.join("\n");
-  }
-  var INT_EXT, CHART_KINDS, CHART_LABELS, pad;
-  var init_sp_reports = __esm({
-    "src/sp-reports.js"() {
-      init_i18n();
-      init_sp_format();
-      init_fountain();
-      INT_EXT = [
-        { re: /^\s*(int\.?\/ext\.?|i\/e\.?)\s*/i, kind: "INT/EXT" },
-        { re: /^\s*int\.?\s*/i, kind: "INT" },
-        { re: /^\s*ext\.?\s*/i, kind: "EXT" },
-        { re: /^\s*est\.?\s*/i, kind: "EST" },
-        { re: /^\s*ฉากภายใน\s*/, kind: "INT" },
-        { re: /^\s*ฉากภายนอก\s*/, kind: "EXT" },
-        { re: /^\s*ฉาก\s*/, kind: "" }
       ];
-      CHART_KINDS = ["action", "dialogue", "character", "other"];
-      CHART_LABELS = {
-        action: t("ui.common.action"),
-        dialogue: t("ui.common.dialogue"),
-        character: t("ui.spReports.name"),
-        other: t("ui.common.other")
-      };
-      pad = (s, n2) => {
-        s = String(s ?? "");
-        return s + " ".repeat(Math.max(0, n2 - s.length));
-      };
-    }
-  });
-
-  // src/sp-validator.js
-  function meaningful(b) {
-    if (!b) return false;
-    if (b.el === "blank") return false;
-    if (b.el === "action" && !String(b.text ?? "").trim()) return false;
-    return true;
-  }
-  function validateScreenplay(blocks, opts = {}) {
-    const list = Array.isArray(blocks) ? blocks : [];
-    const L2 = { ...DEFAULT_LIMITS, ...opts.limits || {} };
-    const only = Array.isArray(opts.checks) && opts.checks.length ? new Set(opts.checks) : null;
-    const errors = [];
-    const add = (type, i5, el2, msg) => {
-      if (only && !only.has(type)) return;
-      errors.push({ type, block: i5, el: el2, msg, severity: SP_SEVERITY[type] || "warn" });
-    };
-    const idx4 = [];
-    for (let i5 = 0; i5 < list.length; i5++) if (meaningful(list[i5])) idx4.push(i5);
-    let sceneSeen = false;
-    let warnedNoScene = false;
-    for (let k = 0; k < idx4.length; k++) {
-      const i5 = idx4[k];
-      const b = list[i5];
-      const el2 = b.el;
-      const text = String(b.text ?? "").trim();
-      const prev = k > 0 ? list[idx4[k - 1]] : null;
-      const next = k < idx4.length - 1 ? list[idx4[k + 1]] : null;
-      if (!text && NEED_TEXT.includes(el2)) {
-        add(SP_ERRORS.EMPTY_ELEMENT, i5, el2, tf("ui.spValidator.lineEmpty", elLabel(el2)));
-      }
-      if (el2 === "scene") sceneSeen = true;
-      else if (!sceneSeen && !warnedNoScene && ["action", "character", "dialogue", "parenthetical"].includes(el2)) {
-        warnedNoScene = true;
-        add(SP_ERRORS.MISSING_SCENE_HEADING, i5, el2, t("ui.spValidator.hasBodyChapterBefore"));
-      }
-      if (el2 === "scene" && next && next.el === "scene") {
-        add(SP_ERRORS.DOUBLE_SCENE, i5, el2, tf("ui.spValidator.headSceneTwoNot", text || t("ui.common.empty")));
-      }
-      if (el2 === "character" && (!next || !["dialogue", "parenthetical"].includes(next.el))) {
-        add(SP_ERRORS.ORPHAN_CHARACTER, i5, el2, tf("ui.spValidator.characterNotHasDialogue", text));
-      }
-      if (el2 === "dialogue" && (!prev || !["character", "parenthetical", "dialogue"].includes(prev.el))) {
-        add(SP_ERRORS.ORPHAN_DIALOGUE, i5, el2, t("ui.spValidator.dialogueNotNamedCharacter"));
-      }
-      if (el2 === "parenthetical" && (!prev || !["character", "dialogue"].includes(prev.el))) {
-        add(SP_ERRORS.ORPHAN_PARENTHETICAL, i5, el2, t("ui.spValidator.cantCharacterDialogue"));
-      }
-      if (el2 === "parenthetical" && text) {
-        const opens = (text.match(/\(/g) || []).length;
-        const closes = (text.match(/\)/g) || []).length;
-        if (opens !== closes) {
-          add(SP_ERRORS.UNCLOSED_PARENTHETICAL, i5, el2, tf("ui.spValidator.notCompletePair", text));
-        }
-      }
-      const lim = L2[el2];
-      if (lim && text.length > lim) {
-        add(
-          SP_ERRORS.OVERLONG_LINE,
-          i5,
-          el2,
-          tf("ui.spValidator.longChar", elLabel(el2), text.length, lim)
-        );
-      }
-    }
-    return errors;
-  }
-  function errorSummary(errors) {
-    const list = errors || [];
-    const err2 = list.filter((e) => e.severity === "error").length;
-    return { total: list.length, errors: err2, warnings: list.length - err2 };
-  }
-  function summaryText(errors) {
-    const s = errorSummary(errors);
-    if (!s.total) return t("ui.spValidator.notFoundError");
-    const parts = [];
-    if (s.errors) parts.push(tf("ui.spValidator.error", s.errors));
-    if (s.warnings) parts.push(tf("ui.spValidator.itemView", s.warnings));
-    return "\u26A0\uFE0F " + parts.join(" \xB7 ");
-  }
-  function nextError(errors, afterBlock) {
-    const list = (errors || []).slice().sort((a, b) => a.block - b.block);
-    if (!list.length) return null;
-    const n2 = Number.isFinite(afterBlock) ? afterBlock : -1;
-    return list.find((e) => e.block > n2) || list[0];
-  }
-  var SP_ERRORS, SP_SEVERITY, DEFAULT_LIMITS, NEED_TEXT, TH_EL, elLabel;
-  var init_sp_validator = __esm({
-    "src/sp-validator.js"() {
-      init_i18n();
-      SP_ERRORS = {
-        EMPTY_ELEMENT: "empty-element",
-        ORPHAN_CHARACTER: "orphan-character",
-        ORPHAN_DIALOGUE: "orphan-dialogue",
-        ORPHAN_PARENTHETICAL: "orphan-parenthetical",
-        OVERLONG_LINE: "overlong-line",
-        DOUBLE_SCENE: "double-scene",
-        MISSING_SCENE_HEADING: "missing-scene-heading",
-        UNCLOSED_PARENTHETICAL: "unclosed-parenthetical"
-      };
-      SP_SEVERITY = {
-        [SP_ERRORS.EMPTY_ELEMENT]: "warn",
-        [SP_ERRORS.ORPHAN_CHARACTER]: "error",
-        [SP_ERRORS.ORPHAN_DIALOGUE]: "error",
-        [SP_ERRORS.ORPHAN_PARENTHETICAL]: "error",
-        [SP_ERRORS.OVERLONG_LINE]: "warn",
-        [SP_ERRORS.DOUBLE_SCENE]: "warn",
-        [SP_ERRORS.MISSING_SCENE_HEADING]: "warn",
-        [SP_ERRORS.UNCLOSED_PARENTHETICAL]: "error"
-      };
-      DEFAULT_LIMITS = { dialogue: 60, action: 70, scene: 70, character: 40 };
-      NEED_TEXT = ["scene", "character", "dialogue", "parenthetical", "transition", "shot", "act-break"];
-      TH_EL = {
-        scene: t("ui.spValidator.headScene"),
-        action: t("ui.common.action"),
-        character: t("ui.common.character"),
-        dialogue: t("ui.common.dialogue"),
-        parenthetical: t("ui.spValidator.msg2"),
-        transition: t("ui.spValidator.msg"),
-        shot: t("ui.spValidator.shot"),
-        "act-break": t("ui.spValidator.act"),
-        note: t("ui.common.note"),
-        summary: t("ui.common.summary"),
-        outline1: t("ui.spValidator.outline"),
-        outline2: t("ui.spValidator.outline2"),
-        outline3: t("ui.spValidator.outline3"),
-        image: t("ui.common.image"),
-        raw: t("ui.common.other")
-      };
-      elLabel = (el2) => TH_EL[el2] || el2;
-    }
-  });
-
-  // src/export-fdx.js
-  function escapeXml(s) {
-    return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-  }
-  function plainText(s) {
-    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\u00A0/g, " ");
-  }
-  function generateFdx(blocks, meta2 = {}, opts = {}) {
-    const list = (blocks || []).filter((b) => b && b.el !== "blank" && String(b.text ?? "").trim() !== "");
-    let sceneNo = Math.max(1, Math.round(numOr4(opts.startScene, 1)));
-    const body = list.map((b) => {
-      if (b.el !== "scene") return para(fdxType(b.el), b.text);
-      const n2 = b.sceneNo != null && String(b.sceneNo).trim() !== "" ? String(b.sceneNo).trim() : String(sceneNo++);
-      return para(fdxType(b.el), b.text, "    ", ` Number="${escapeXml(n2)}"`);
-    }).join("\n");
-    const title2 = [];
-    const addTitle = (text, align = "Center") => {
-      if (!String(text ?? "").trim()) return;
-      for (const line of String(text).split("\n")) {
-        title2.push(`      <Paragraph Alignment="${align}" Type="Action">
-        <Text>${escapeXml(plainText(line))}</Text>
-      </Paragraph>`);
-      }
-    };
-    const custom = Array.isArray(opts.titlePages) ? opts.titlePages : [];
-    const hasCustom = custom.some((p) => (p && p.strings || []).some(
-      (s) => String(s && s.text || "").trim() !== ""
-    ));
-    if (hasCustom) {
-      for (const p of custom) {
-        const rows = (p && p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => numOr4(a.y, 0) - numOr4(b.y, 0) || numOr4(a.x, 0) - numOr4(b.x, 0));
-        for (const s of rows) {
-          const al = s.align === "right" ? "Right" : s.align === "left" ? "Left" : "Center";
-          addTitle(s.text, al);
-        }
-      }
-    } else {
-      addTitle(meta2.title);
-      addTitle(meta2.author ? t("ui.exportFdx.write") + meta2.author : "");
-      addTitle(meta2.basedOn);
-      addTitle(meta2.contact, "Left");
-      addTitle(meta2.copyright, "Left");
-    }
-    const titlePage = title2.length ? `  <TitlePage>
-    <Content>
-${title2.join("\n")}
-    </Content>
-  </TitlePage>
-` : "";
-    return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
-  }
-  var FDX_TYPE_MAP2, fdxType, numOr4, XML_BAD, para;
-  var init_export_fdx = __esm({
-    "src/export-fdx.js"() {
-      init_i18n();
-      FDX_TYPE_MAP2 = {
-        scene: "Scene Heading",
-        action: "Action",
-        character: "Character",
-        dialogue: "Dialogue",
-        parenthetical: "Parenthetical",
-        transition: "Transition",
-        "transition-in": "Transition",
-        // [alpha.57a] FD มี Transition ชนิดเดียว — ต่างกันที่ระยะเยื้อง
-        subheader: "Shot",
-        // mini-slug ใน FD ลงเป็น Shot
-        intercut: "Scene Heading",
-        // "INTERCUT WITH:" นับเป็นหัวฉากในสายการผลิต
-        shot: "Shot",
-        "act-break": "Act Break",
-        // [alpha.60r3a] `---` บังคับขึ้นหน้าใหม่ — FD ไม่มีชนิดนี้ ลงเป็น Action ว่าง
-        // (การ "ขึ้นหน้าใหม่" ถูกจัดการไปแล้วตอน paginate ก่อนส่งออก)
-        "page-break": "Action",
-        // element ที่ Final Draft ไม่มีตรง ๆ → ลงเป็น Action เพื่อไม่ให้เนื้อหาหาย
-        note: "Action",
-        summary: "Action",
-        outline1: "Action",
-        outline2: "Action",
-        outline3: "Action",
-        image: "Action",
-        raw: "Action"
-      };
-      fdxType = (el2) => FDX_TYPE_MAP2[el2] || "Action";
-      numOr4 = (v2, d) => {
-        const n2 = parseFloat(v2);
-        return Number.isFinite(n2) ? n2 : d;
-      };
-      XML_BAD = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
-      para = (type, text, indent = "    ", attrs = "") => `${indent}<Paragraph Type="${escapeXml(type)}"${attrs}>
-${indent}  <Text>${escapeXml(plainText(text))}</Text>
-${indent}</Paragraph>`;
+      formatDef = (k) => EXPORT_FORMATS.find((f) => f.key === k) || EXPORT_FORMATS[0];
+      pdfEngine = (kind) => kind === "screenplay" ? "pdflib" : "html";
     }
   });
 
@@ -89667,270 +86181,6 @@ ${indent}</Paragraph>`;
         }
       };
       esc4 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-  });
-
-  // src/export-rtf.js
-  function escapeRtf(s) {
-    let out = "";
-    for (const ch of String(s ?? "")) {
-      const c = ch.codePointAt(0);
-      if (ch === "\\") {
-        out += "\\\\";
-        continue;
-      }
-      if (ch === "{") {
-        out += "\\{";
-        continue;
-      }
-      if (ch === "}") {
-        out += "\\}";
-        continue;
-      }
-      if (ch === "\n") {
-        out += "\\line ";
-        continue;
-      }
-      if (ch === "	") {
-        out += "\\tab ";
-        continue;
-      }
-      if (c < 32) continue;
-      if (c < 128) {
-        out += ch;
-        continue;
-      }
-      if (c <= 65535) {
-        out += "\\u" + (c > 32767 ? c - 65536 : c) + "?";
-        continue;
-      }
-      const v2 = c - 65536;
-      const hi = 55296 + (v2 >> 10), lo = 56320 + (v2 & 1023);
-      out += "\\u" + (hi > 32767 ? hi - 65536 : hi) + "?";
-      out += "\\u" + (lo > 32767 ? lo - 65536 : lo) + "?";
-    }
-    return out;
-  }
-  function plainText2(s) {
-    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1");
-  }
-  function paraCtrl(el2, fmt, fontPt) {
-    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const c = f.elements[el2] || f.elements.action;
-    const st = (f.styles[el2] || f.styles.action).print;
-    const tw = textWidth(f.paper, f.margins);
-    const li = Math.max(0, num(c.indent, 0) - f.margins.left);
-    const ri = Math.max(0, tw - li - num(c.width, tw));
-    const sb = Math.max(0, Math.round(num(c.linesBefore, 10) / 10)) * TWIPS_PER_LINE;
-    let s = "\\pard\\plain\\f0\\fs" + rtfFs(fontPt);
-    s += "\\li" + inTw(li) + "\\ri" + inTw(ri);
-    if (sb) s += "\\sb" + Math.round(sb);
-    if (c.keepNext === true) s += "\\keepn";
-    if (el2 === "transition") s += "\\qr";
-    if (st.bold) s += "\\b";
-    if (st.italic) s += "\\i";
-    if (st.underline) s += "\\ul";
-    return { ctrl: s, caps: !!st.caps };
-  }
-  function titlePagesRtf(pages, f) {
-    const out = [];
-    const m = f.margins;
-    const tw = textWidth(f.paper, m);
-    for (const p of pages) {
-      const rows = (p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => num(a.y, 0) - num(b.y, 0) || num(a.x, 0) - num(b.x, 0));
-      let prevY = m.top;
-      for (const s of rows) {
-        const y = num(s.y, 0);
-        const li = Math.max(0, num(s.x, m.left) - m.left);
-        const w = num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw - li);
-        const ri = Math.max(0, tw - li - w);
-        const gap = Math.max(0, y - prevY);
-        const size = Math.round(numTitleSize(s.size) * 2);
-        let ctrl = "\\pard\\plain\\f0\\fs" + size + "\\li" + inTw(li) + "\\ri" + inTw(ri);
-        if (gap > 0) ctrl += "\\sb" + inTw(gap);
-        ctrl += s.align === "center" ? "\\qc" : s.align === "right" ? "\\qr" : "\\ql";
-        if (s.bold) ctrl += "\\b";
-        if (s.italic) ctrl += "\\i";
-        if (s.underline) ctrl += "\\ul";
-        out.push(ctrl + " " + escapeRtf(String(s.text)) + "\\par");
-        prevY = y + numTitleSize(s.size) / 72;
-      }
-      out.push("\\page");
-    }
-    return out;
-  }
-  function generateRtf(blocks, meta2 = {}, fmt = null, opts = {}) {
-    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const m = f.margins;
-    const fs = rtfFs(opts && opts.fontPt);
-    const titles = normalizeTitlePages(opts && opts.titlePages).filter((p) => p.strings.some(
-      (s) => String(s.text ?? "").trim() !== ""
-    ));
-    const head2 = "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1\n{\\fonttbl{\\f0\\fmodern\\fcharset0 Courier Prime;}{\\f1\\fmodern\\fcharset0 Courier New;}}\n\\paperw" + inTw(f.paper.width) + "\\paperh" + inTw(f.paper.height) + "\\margl" + inTw(m.left) + "\\margr" + inTw(m.right) + "\\margt" + inTw(m.top) + "\\margb" + inTw(m.bottom) + "\n\\f0\\fs" + fs + "\n";
-    const out = [];
-    if (titles.length) out.push(...titlePagesRtf(titles, f));
-    const title2 = titles.length ? "" : String(meta2.title || "").trim();
-    if (title2) {
-      const titleTx = f.forceCase === false ? title2 : title2.toUpperCase();
-      out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb2880\\b " + escapeRtf(titleTx) + "\\b0\\par");
-      if (meta2.author) {
-        out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb480 " + escapeRtf(t("ui.exportRtf.write")) + "\\par");
-        out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc " + escapeRtf(String(meta2.author)) + "\\par");
-      }
-      if (meta2.basedOn) out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb480 " + escapeRtf(String(meta2.basedOn)) + "\\par");
-      if (meta2.contact) out.push("\\pard\\plain\\f0\\fs" + fs + "\\ql\\sb2880 " + escapeRtf(String(meta2.contact)) + "\\par");
-      if (meta2.copyright) out.push("\\pard\\plain\\f0\\fs" + fs + "\\ql " + escapeRtf(String(meta2.copyright)) + "\\par");
-      out.push("\\page");
-    }
-    for (const b of blocks || []) {
-      if (!b || b.el === "blank") continue;
-      const text = plainText2(b.text);
-      if (!text.trim() && b.el === "action") continue;
-      const { ctrl, caps } = paraCtrl(b.el, f, opts && opts.fontPt);
-      out.push(ctrl + " " + escapeRtf(caps ? text.toUpperCase() : text) + "\\par");
-    }
-    return head2 + out.join("\n") + "\n}\n";
-  }
-  var TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
-  var init_export_rtf = __esm({
-    "src/export-rtf.js"() {
-      init_i18n();
-      init_sp_format();
-      init_sp_title_pages();
-      init_num();
-      TWIPS_PER_INCH = 1440;
-      TWIPS_PER_LINE = 240;
-      inTw = (v2) => Math.round(num(v2, 0) * TWIPS_PER_INCH);
-      rtfFs = (pt) => Math.round(Math.min(96, Math.max(4, num(pt, 12))) * 2);
-      numTitleSize = (v2) => Math.min(96, Math.max(4, num(v2, 12)));
-    }
-  });
-
-  // src/export-watermark.js
-  function safeFileName2(s) {
-    return String(s ?? "").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim() || t("ui.common.notNamed2");
-  }
-  function watermarkText(tpl, ctx = {}) {
-    const t3 = String(tpl ?? "").trim() || t("ui.watermark.name");
-    return t3.replace(/\{ชื่อ\}|\{name\}/g, ctx.name ?? "").replace(/\{วันที่\}|\{date\}/g, ctx.date ?? "").replace(/\{เรื่อง\}|\{title\}/g, ctx.title ?? "").trim();
-  }
-  function parseRecipients(text) {
-    return String(text ?? "").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map((l) => {
-      const i5 = l.indexOf("|");
-      const name5 = (i5 >= 0 ? l.slice(0, i5) : l).trim();
-      const wm = i5 >= 0 ? l.slice(i5 + 1).trim() : "";
-      return { name: name5, watermark: wm || name5 };
-    }).filter((r) => r.name);
-  }
-  function fontFaceCss(urls) {
-    if (!urls || !urls.regular) return "";
-    const face = (u, w, st) => u ? `@font-face{font-family:"Courier Prime";font-weight:${w};font-style:${st};src:url("${u}") format("truetype");}` : "";
-    return [
-      face(urls.regular, 400, "normal"),
-      face(urls.bold, 700, "normal"),
-      face(urls.italic, 400, "italic"),
-      face(urls.boldItalic, 700, "italic")
-    ].filter(Boolean).join("\n");
-  }
-  function buildWatermarkHtml(pages, fmt, opts = {}) {
-    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const list = pages && pages.pages || pages || [];
-    const wm = { ...DEFAULT_WM, ...opts.wmOptions || {} };
-    const wmText = String(opts.watermark || "").trim();
-    const tw = textWidth(f.paper, f.margins);
-    const ph = +f.paper.height - f.margins.top - f.margins.bottom;
-    const body = list.map((pg) => {
-      const rows = [];
-      if (opts.showPageNumbers !== false && pg.index > 1) {
-        rows.push(`<div class="pg-num">${pg.index}.</div>`);
-      }
-      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc5(pg.continuedTop)}</div>`);
-      for (const b of pg.blocks || []) {
-        rows.push(`<div class="sp sp-${esc5(b.el || "action")}">${esc5(b.text || "")}</div>`);
-      }
-      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc5(pg.continuedBottom)}</div>`);
-      const mark = wmText ? `<div class="wm">${esc5(wmText)}</div>` : "";
-      return `<section class="pg">${mark}<div class="pg-body">${rows.join("")}</div></section>`;
-    }).join("\n");
-    const css = [
-      fontFaceCss(opts.fontUrls),
-      "*{box-sizing:border-box;}",
-      `html,body{margin:0;padding:0;background:#fff;color:#000;font-family:"Courier Prime","Courier Final Draft","Courier New",monospace;font-size:12pt;line-height:1;}`,
-      `.pg{position:relative;width:${+tw.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;page-break-after:always;break-after:page;overflow:hidden;}`,
-      ".pg:last-child{page-break-after:auto;break-after:auto;}",
-      ".pg-body{position:relative;z-index:1;}",
-      ".pg-num{text-align:right;margin-bottom:1em;}",
-      ".sp{white-space:pre-wrap;word-break:break-word;margin:0;}",
-      ".sp-cont-top{text-align:left;}",
-      ".sp-cont-bottom{text-align:right;}",
-      ".sp-more{margin-left:2.2in;}",
-      spCss(f),
-      // ลายน้ำอยู่ใต้ข้อความ (z-index 0) — อ่านบทได้ปกติแต่ถ่ายเอกสารแล้วยังติดไปด้วย
-      `.wm{position:absolute;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;font-size:${wm.fontSize}px;color:${wm.color};transform:rotate(${wm.angle}deg);white-space:nowrap;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}`
-    ].join("\n");
-    return `<!doctype html>
-<html lang="th"><head><meta charset="utf-8">
-<title>${esc5(opts.title || "")}</title>
-<style>
-${css}
-</style>
-</head>
-<body>
-` + body + "\n</body></html>\n";
-  }
-  async function generateWatermarkedPDFs(api, args = {}) {
-    const {
-      pages,
-      fmt,
-      recipients = [],
-      outDir,
-      prefix: prefix2 = "script",
-      wmTemplate = t("ui.watermark.name"),
-      wmOptions,
-      fontUrls,
-      title: title2,
-      date,
-      onProgress,
-      buildPdf
-    } = args;
-    const made = [];
-    for (let i5 = 0; i5 < recipients.length; i5++) {
-      const r = recipients[i5];
-      const text = watermarkText(r.watermark || wmTemplate, { name: r.name, title: title2, date });
-      const file = `${safeFileName2(prefix2)}_${safeFileName2(r.name)}.pdf`;
-      const dest = await api.join(outDir, file);
-      if (typeof buildPdf === "function") {
-        const bytes = await buildPdf(text, { ...wmOptions });
-        await api.writeBytes(dest, Array.from(bytes));
-      } else {
-        const html = buildWatermarkHtml(pages, fmt, { watermark: text, wmOptions, fontUrls, title: title2 });
-        await api.pdfFromHtml(html, dest, {
-          width: num(fmt && fmt.paper && fmt.paper.width, 8.5),
-          height: num(fmt && fmt.paper && fmt.paper.height, 11),
-          margins: fmt && fmt.margins || null
-        });
-      }
-      made.push(dest);
-      if (onProgress) onProgress(i5 + 1, recipients.length, r.name);
-    }
-    return made;
-  }
-  var DEFAULT_WM, esc5;
-  var init_export_watermark = __esm({
-    "src/export-watermark.js"() {
-      init_i18n();
-      init_sp_format();
-      init_num();
-      DEFAULT_WM = {
-        fontSize: 54,
-        // px
-        color: "rgba(0,0,0,0.10)",
-        angle: -35,
-        // องศา
-        repeat: 1
-        // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
-      };
-      esc5 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -111522,12 +107772,12 @@ ${css}
   function objectToString(o) {
     return Object.prototype.toString.call(o);
   }
-  function pad2(n2) {
+  function pad(n2) {
     return n2 < 10 ? "0" + n2.toString(10) : n2.toString(10);
   }
   function timestamp() {
     var d = /* @__PURE__ */ new Date();
-    var time = [pad2(d.getHours()), pad2(d.getMinutes()), pad2(d.getSeconds())].join(":");
+    var time = [pad(d.getHours()), pad(d.getMinutes()), pad(d.getSeconds())].join(":");
     return [d.getDate(), months[d.getMonth()], time].join(" ");
   }
   function log2() {
@@ -143730,6 +139980,23 @@ ${css}
   });
 
   // src/pdf-ui.js
+  var pdf_ui_exports = {};
+  __export(pdf_ui_exports, {
+    buildScriptPdf: () => buildScriptPdf,
+    clearPdfFontCache: () => clearPdfFontCache,
+    currentScriptPage: () => currentScriptPage,
+    openHeaderDialog: () => openHeaderDialog,
+    openTitlePageDialog: () => openTitlePageDialog,
+    pdfExportDialog: () => pdfExportDialog,
+    pdfFontBytes: () => pdfFontBytes,
+    pdfMeta: () => pdfMeta,
+    projectHeaders: () => projectHeaders,
+    projectTitlePages: () => projectTitlePages,
+    saveHeaders: () => saveHeaders,
+    saveTitlePages: () => saveTitlePages,
+    savedPdfOptions: () => savedPdfOptions,
+    writeCompiledPdf: () => writeCompiledPdf
+  });
   function projectTitlePages() {
     return normalizeTitlePages((state.meta || {}).titlePages);
   }
@@ -143913,7 +140180,7 @@ ${css}
       };
       colPages.append(bStd);
     };
-    const renderPreview = () => {
+    const renderPreview2 = () => {
       colPrev.innerHTML = "";
       const page2 = ed.page(pageIdx);
       if (!page2) {
@@ -143972,7 +140239,7 @@ ${css}
       }
       const set = (patch) => {
         ed.updateString(pageIdx, strIdx, patch);
-        renderPreview();
+        renderPreview2();
         renderPages();
       };
       const ta = el("textarea", "k-dlg-input");
@@ -144016,7 +140283,7 @@ ${css}
     };
     render = () => {
       renderPages();
-      renderPreview();
+      renderPreview2();
       renderProps();
     };
     render();
@@ -144379,6 +140646,4465 @@ ${css}
     }
   });
 
+  // src/export-rtf.js
+  var export_rtf_exports = {};
+  __export(export_rtf_exports, {
+    TWIPS_PER_INCH: () => TWIPS_PER_INCH,
+    TWIPS_PER_LINE: () => TWIPS_PER_LINE,
+    escapeRtf: () => escapeRtf,
+    generateRtf: () => generateRtf,
+    inTw: () => inTw,
+    paraCtrl: () => paraCtrl,
+    plainText: () => plainText,
+    rtfFs: () => rtfFs
+  });
+  function escapeRtf(s) {
+    let out = "";
+    for (const ch of String(s ?? "")) {
+      const c = ch.codePointAt(0);
+      if (ch === "\\") {
+        out += "\\\\";
+        continue;
+      }
+      if (ch === "{") {
+        out += "\\{";
+        continue;
+      }
+      if (ch === "}") {
+        out += "\\}";
+        continue;
+      }
+      if (ch === "\n") {
+        out += "\\line ";
+        continue;
+      }
+      if (ch === "	") {
+        out += "\\tab ";
+        continue;
+      }
+      if (c < 32) continue;
+      if (c < 128) {
+        out += ch;
+        continue;
+      }
+      if (c <= 65535) {
+        out += "\\u" + (c > 32767 ? c - 65536 : c) + "?";
+        continue;
+      }
+      const v2 = c - 65536;
+      const hi = 55296 + (v2 >> 10), lo = 56320 + (v2 & 1023);
+      out += "\\u" + (hi > 32767 ? hi - 65536 : hi) + "?";
+      out += "\\u" + (lo > 32767 ? lo - 65536 : lo) + "?";
+    }
+    return out;
+  }
+  function plainText(s) {
+    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1");
+  }
+  function paraCtrl(el2, fmt, fontPt) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const c = f.elements[el2] || f.elements.action;
+    const st = (f.styles[el2] || f.styles.action).print;
+    const tw = textWidth(f.paper, f.margins);
+    const li = Math.max(0, num(c.indent, 0) - f.margins.left);
+    const ri = Math.max(0, tw - li - num(c.width, tw));
+    const sb = Math.max(0, Math.round(num(c.linesBefore, 10) / 10)) * TWIPS_PER_LINE;
+    let s = "\\pard\\plain\\f0\\fs" + rtfFs(fontPt);
+    s += "\\li" + inTw(li) + "\\ri" + inTw(ri);
+    if (sb) s += "\\sb" + Math.round(sb);
+    if (c.keepNext === true) s += "\\keepn";
+    if (el2 === "transition") s += "\\qr";
+    if (st.bold) s += "\\b";
+    if (st.italic) s += "\\i";
+    if (st.underline) s += "\\ul";
+    return { ctrl: s, caps: !!st.caps };
+  }
+  function titlePagesRtf(pages, f) {
+    const out = [];
+    const m = f.margins;
+    const tw = textWidth(f.paper, m);
+    for (const p of pages) {
+      const rows = (p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => num(a.y, 0) - num(b.y, 0) || num(a.x, 0) - num(b.x, 0));
+      let prevY = m.top;
+      for (const s of rows) {
+        const y = num(s.y, 0);
+        const li = Math.max(0, num(s.x, m.left) - m.left);
+        const w = num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw - li);
+        const ri = Math.max(0, tw - li - w);
+        const gap = Math.max(0, y - prevY);
+        const size = Math.round(numTitleSize(s.size) * 2);
+        let ctrl = "\\pard\\plain\\f0\\fs" + size + "\\li" + inTw(li) + "\\ri" + inTw(ri);
+        if (gap > 0) ctrl += "\\sb" + inTw(gap);
+        ctrl += s.align === "center" ? "\\qc" : s.align === "right" ? "\\qr" : "\\ql";
+        if (s.bold) ctrl += "\\b";
+        if (s.italic) ctrl += "\\i";
+        if (s.underline) ctrl += "\\ul";
+        out.push(ctrl + " " + escapeRtf(String(s.text)) + "\\par");
+        prevY = y + numTitleSize(s.size) / 72;
+      }
+      out.push("\\page");
+    }
+    return out;
+  }
+  function generateRtf(blocks, meta2 = {}, fmt = null, opts = {}) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const m = f.margins;
+    const fs = rtfFs(opts && opts.fontPt);
+    const titles = normalizeTitlePages(opts && opts.titlePages).filter((p) => p.strings.some(
+      (s) => String(s.text ?? "").trim() !== ""
+    ));
+    const head2 = "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1\n{\\fonttbl{\\f0\\fmodern\\fcharset0 Courier Prime;}{\\f1\\fmodern\\fcharset0 Courier New;}}\n\\paperw" + inTw(f.paper.width) + "\\paperh" + inTw(f.paper.height) + "\\margl" + inTw(m.left) + "\\margr" + inTw(m.right) + "\\margt" + inTw(m.top) + "\\margb" + inTw(m.bottom) + "\n\\f0\\fs" + fs + "\n";
+    const out = [];
+    if (titles.length) out.push(...titlePagesRtf(titles, f));
+    const title2 = titles.length ? "" : String(meta2.title || "").trim();
+    if (title2) {
+      const titleTx = f.forceCase === false ? title2 : title2.toUpperCase();
+      out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb2880\\b " + escapeRtf(titleTx) + "\\b0\\par");
+      if (meta2.author) {
+        out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb480 " + escapeRtf(t("ui.exportRtf.write")) + "\\par");
+        out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc " + escapeRtf(String(meta2.author)) + "\\par");
+      }
+      if (meta2.basedOn) out.push("\\pard\\plain\\f0\\fs" + fs + "\\qc\\sb480 " + escapeRtf(String(meta2.basedOn)) + "\\par");
+      if (meta2.contact) out.push("\\pard\\plain\\f0\\fs" + fs + "\\ql\\sb2880 " + escapeRtf(String(meta2.contact)) + "\\par");
+      if (meta2.copyright) out.push("\\pard\\plain\\f0\\fs" + fs + "\\ql " + escapeRtf(String(meta2.copyright)) + "\\par");
+      out.push("\\page");
+    }
+    for (const b of blocks || []) {
+      if (!b || b.el === "blank") continue;
+      const text = plainText(b.text);
+      if (!text.trim() && b.el === "action") continue;
+      const { ctrl, caps } = paraCtrl(b.el, f, opts && opts.fontPt);
+      out.push(ctrl + " " + escapeRtf(caps ? text.toUpperCase() : text) + "\\par");
+    }
+    return head2 + out.join("\n") + "\n}\n";
+  }
+  var TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
+  var init_export_rtf = __esm({
+    "src/export-rtf.js"() {
+      init_i18n();
+      init_sp_format();
+      init_sp_title_pages();
+      init_num();
+      TWIPS_PER_INCH = 1440;
+      TWIPS_PER_LINE = 240;
+      inTw = (v2) => Math.round(num(v2, 0) * TWIPS_PER_INCH);
+      rtfFs = (pt) => Math.round(Math.min(96, Math.max(4, num(pt, 12))) * 2);
+      numTitleSize = (v2) => Math.min(96, Math.max(4, num(v2, 12)));
+    }
+  });
+
+  // src/export-fdx.js
+  var export_fdx_exports = {};
+  __export(export_fdx_exports, {
+    FDX_TYPE_MAP: () => FDX_TYPE_MAP,
+    escapeXml: () => escapeXml,
+    fdxType: () => fdxType,
+    generateFdx: () => generateFdx,
+    plainText: () => plainText2
+  });
+  function escapeXml(s) {
+    return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+  function plainText2(s) {
+    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\u00A0/g, " ");
+  }
+  function generateFdx(blocks, meta2 = {}, opts = {}) {
+    const list = (blocks || []).filter((b) => b && b.el !== "blank" && String(b.text ?? "").trim() !== "");
+    let sceneNo = Math.max(1, Math.round(numOr4(opts.startScene, 1)));
+    const body = list.map((b) => {
+      if (b.el !== "scene") return para(fdxType(b.el), b.text);
+      const n2 = b.sceneNo != null && String(b.sceneNo).trim() !== "" ? String(b.sceneNo).trim() : String(sceneNo++);
+      return para(fdxType(b.el), b.text, "    ", ` Number="${escapeXml(n2)}"`);
+    }).join("\n");
+    const title2 = [];
+    const addTitle = (text, align = "Center") => {
+      if (!String(text ?? "").trim()) return;
+      for (const line of String(text).split("\n")) {
+        title2.push(`      <Paragraph Alignment="${align}" Type="Action">
+        <Text>${escapeXml(plainText2(line))}</Text>
+      </Paragraph>`);
+      }
+    };
+    const custom = Array.isArray(opts.titlePages) ? opts.titlePages : [];
+    const hasCustom = custom.some((p) => (p && p.strings || []).some(
+      (s) => String(s && s.text || "").trim() !== ""
+    ));
+    if (hasCustom) {
+      for (const p of custom) {
+        const rows = (p && p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => numOr4(a.y, 0) - numOr4(b.y, 0) || numOr4(a.x, 0) - numOr4(b.x, 0));
+        for (const s of rows) {
+          const al = s.align === "right" ? "Right" : s.align === "left" ? "Left" : "Center";
+          addTitle(s.text, al);
+        }
+      }
+    } else {
+      addTitle(meta2.title);
+      addTitle(meta2.author ? t("ui.exportFdx.write") + meta2.author : "");
+      addTitle(meta2.basedOn);
+      addTitle(meta2.contact, "Left");
+      addTitle(meta2.copyright, "Left");
+    }
+    const titlePage = title2.length ? `  <TitlePage>
+    <Content>
+${title2.join("\n")}
+    </Content>
+  </TitlePage>
+` : "";
+    return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
+  }
+  var FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
+  var init_export_fdx = __esm({
+    "src/export-fdx.js"() {
+      init_i18n();
+      FDX_TYPE_MAP = {
+        scene: "Scene Heading",
+        action: "Action",
+        character: "Character",
+        dialogue: "Dialogue",
+        parenthetical: "Parenthetical",
+        transition: "Transition",
+        "transition-in": "Transition",
+        // [alpha.57a] FD มี Transition ชนิดเดียว — ต่างกันที่ระยะเยื้อง
+        subheader: "Shot",
+        // mini-slug ใน FD ลงเป็น Shot
+        intercut: "Scene Heading",
+        // "INTERCUT WITH:" นับเป็นหัวฉากในสายการผลิต
+        shot: "Shot",
+        "act-break": "Act Break",
+        // [alpha.60r3a] `---` บังคับขึ้นหน้าใหม่ — FD ไม่มีชนิดนี้ ลงเป็น Action ว่าง
+        // (การ "ขึ้นหน้าใหม่" ถูกจัดการไปแล้วตอน paginate ก่อนส่งออก)
+        "page-break": "Action",
+        // element ที่ Final Draft ไม่มีตรง ๆ → ลงเป็น Action เพื่อไม่ให้เนื้อหาหาย
+        note: "Action",
+        summary: "Action",
+        outline1: "Action",
+        outline2: "Action",
+        outline3: "Action",
+        image: "Action",
+        raw: "Action"
+      };
+      fdxType = (el2) => FDX_TYPE_MAP[el2] || "Action";
+      numOr4 = (v2, d) => {
+        const n2 = parseFloat(v2);
+        return Number.isFinite(n2) ? n2 : d;
+      };
+      XML_BAD = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+      para = (type, text, indent = "    ", attrs = "") => `${indent}<Paragraph Type="${escapeXml(type)}"${attrs}>
+${indent}  <Text>${escapeXml(plainText2(text))}</Text>
+${indent}</Paragraph>`;
+    }
+  });
+
+  // src/export-hub.js
+  async function buildModel(A, cfg, drafts) {
+    if (cfg.scope === "tab" && state.active && (state.active.editor || state.active.sp)) {
+      const t3 = state.active;
+      const body = t3.sp ? t3.sp.getMarkdown() : t3.editor.getMarkdown();
+      const model2 = {
+        title: t3.title || state.title,
+        author: state.meta && state.meta.author || "",
+        roster: "",
+        chapters: [{ title: t3.title || "", guid: "tab", scenes: [
+          {
+            title: t3.title || "",
+            file: t3.file,
+            body: String(body || "").trim(),
+            synopsis: "",
+            status: "",
+            type: "scene",
+            format: t3.sp ? "screenplay" : "prose",
+            words: 0
+          }
+        ] }]
+      };
+      return { model: model2, kind: t3.sp ? "screenplay" : "prose" };
+    }
+    const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
+    if (!d) return null;
+    const model = await A.buildDraftModel(d.dPath);
+    return { model, kind: docKind(model) };
+  }
+  async function compose2(A, cfg, model, wf2) {
+    const varCtx = { title: model.title, author: model.author };
+    if ((wf2.steps || []).some((s) => s.on !== false && s.key === "resolve-vars")) {
+      const { buildVarContext: buildVarContext2 } = await Promise.resolve().then(() => (init_template_vars(), template_vars_exports));
+      Object.assign(varCtx, await buildVarContext2(state.root, kapi));
+    }
+    const spf = A.spFormat();
+    return runWorkflow(model, workflowForFormat(wf2, cfg.format), {
+      varCtx,
+      spFormat: spf,
+      proseFormat: A.proseFormat(),
+      paper: spf.paper,
+      margins: spf.margins
+    });
+  }
+  async function proseHtml(A, text, title2, wysiwyg) {
+    const spf = A.spFormat();
+    const html = wysiwyg ? mdToHtml(text, title2, A.proseFormat(), spf.paper, spf.margins) : mdToHtml(text, title2, null, spf.paper, spf.margins);
+    const fontCss = await A.exportFontCss();
+    return fontCss ? html.replace("<style>", "<style>\n" + fontCss + "\n") : html;
+  }
+  async function writeOut(A, cfg, built) {
+    const def = formatDef(cfg.format);
+    const name5 = suggestName(built.title, cfg.format);
+    const dest = def.ext === "pdf" ? await kapi.savePdfDialog(name5) : await kapi.saveAsDialog(name5, def.ext);
+    if (!dest) return null;
+    if (cfg.format === "pdf") {
+      if (built.engine === "pdflib") {
+        const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+        const { buildScriptPdf: buildScriptPdf2, projectTitlePages: projectTitlePages2, projectHeaders: projectHeaders2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+        const o = cfg.pdf;
+        const r = await buildScriptPdf2({
+          blocks: parseScript2(built.text),
+          title: built.title,
+          fmt: A.spFormat(),
+          titlePages: o.titlePages ? projectTitlePages2() : [],
+          headers: o.headers ? projectHeaders2() : { enabled: false },
+          opts: {
+            toc: o.toc,
+            titlePages: o.titlePages,
+            headers: o.headers,
+            pageNumbers: o.pageNumbers,
+            sceneNumbers: o.pageNumbers,
+            watermark: o.watermark,
+            openPage: 0
+          }
+        });
+        await kapi.writeBytes(dest, Array.from(r.bytes));
+        return { dest, note: tf("ui.xhub.donePdf", r.pageCount, r.bookmarks.length) };
+      }
+      await kapi.pdfFromHtml(built.html, dest, { height: num(A.spFormat().paper.height, 11) });
+      return { dest, note: t("ui.xhub.donePdfHtml") };
+    }
+    if (cfg.format === "html") {
+      await kapi.writeFile(dest, built.html);
+      return { dest, note: "" };
+    }
+    await kapi.writeFile(dest, built.text);
+    return { dest, note: "" };
+  }
+  async function buildAll(A, cfg, drafts) {
+    const mk2 = await buildModel(A, cfg, drafts);
+    if (!mk2) return null;
+    const { model, kind } = mk2;
+    const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows());
+    const r = await compose2(A, cfg, model, wf2);
+    const out = {
+      title: model.title,
+      kind,
+      warnings: r.warnings || [],
+      text: r.text,
+      html: "",
+      engine: pdfEngine(kind),
+      blocks: null
+    };
+    if (cfg.format === "html") out.html = await proseHtml(A, r.text, model.title, cfg.html.wysiwyg);
+    if (cfg.format === "pdf" && out.engine === "html")
+      out.html = await proseHtml(A, r.text, model.title, true);
+    if (cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && out.engine === "pdflib") {
+      const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+      out.blocks = parseScript2(r.text);
+    }
+    if (cfg.format === "rtf") {
+      const { generateRtf: generateRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
+      const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+      out.text = generateRtf2(
+        out.blocks,
+        A.scriptMeta(model.title),
+        A.spFormat(),
+        { titlePages: projectTitlePages2(), fontPt: num(cfg.rtf.fontPt, 12) }
+      );
+    }
+    if (cfg.format === "fdx") {
+      const { generateFdx: generateFdx2 } = await Promise.resolve().then(() => (init_export_fdx(), export_fdx_exports));
+      const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+      out.text = generateFdx2(out.blocks, A.scriptMeta(model.title), { titlePages: projectTitlePages2() });
+    }
+    return out;
+  }
+  async function renderPreview(host2, A, cfg, built) {
+    host2.replaceChildren();
+    const def = formatDef(cfg.format);
+    if (def.handoff) {
+      host2.append(el("div", "k-hint xhub-info", t(def.descKey)));
+      return "info";
+    }
+    if (!built) {
+      host2.append(el("div", "dim", t("ui.xhub.noPreview")));
+      return "none";
+    }
+    if (cfg.format === "html" || cfg.format === "pdf" && built.engine === "html") {
+      const fr = el("iframe", "xhub-frame");
+      fr.setAttribute("sandbox", "");
+      fr.srcdoc = built.html;
+      host2.append(fr);
+      return "html";
+    }
+    if (cfg.format === "pdf") {
+      const { renderPageView: renderPageView2, pagesOf: pagesOf2 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
+      const fmt = A.spFormat();
+      const box2 = el("div", "xhub-pages");
+      host2.append(box2);
+      const pages = pagesOf2(built.blocks || [], fmt);
+      renderPageView2(box2, pages, fmt, { scale: 0.42, gap: 14 });
+      return "page";
+    }
+    const pre = el("pre", "xhub-pre");
+    pre.textContent = built.text.slice(0, PREVIEW_CHARS) + (built.text.length > PREVIEW_CHARS ? "\n\u2026" : "");
+    host2.append(pre);
+    return "text";
+  }
+  async function openExportHub() {
+    if (!state.root) {
+      setStatus(t("ui.xhub.needProject"));
+      return null;
+    }
+    const A = await Promise.resolve().then(() => (init_app(), app_exports));
+    const drafts = await A.listDrafts();
+    const cfg = normalizeHub((state.meta || {}).exportHub);
+    if (!drafts.some((d) => d.dPath === cfg.draft)) cfg.draft = drafts.length ? drafts[0].dPath : "";
+    if (!drafts.length) cfg.scope = "tab";
+    const saveCfg = async () => {
+      if (!state.meta) return;
+      state.meta.exportHub = cfg;
+      try {
+        await A.saveProjectMeta();
+      } catch (e) {
+        log("warn", t("ui.xhub.saveCfgFail"), e);
+      }
+    };
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-xhub");
+    box2.append(el("div", "k-dlg-title", t("ui.xhub.title")));
+    const body = el("div", "xhub-body");
+    const colFmt = el("div", "xhub-formats");
+    const colOpt = el("div", "xhub-options");
+    const colPrev = el("div", "xhub-preview");
+    body.append(colFmt, colOpt, colPrev);
+    box2.append(body);
+    const foot = el("div", "k-dlg-btns");
+    const warnLbl = el("span", "dim xhub-warn");
+    const bClose = el("button", "k-cancel", t("ui.common.close"));
+    const bGo = el("button", "k-ok", t("ui.common.export2"));
+    foot.append(warnLbl, bClose, bGo);
+    box2.append(foot);
+    ov.append(box2);
+    document.body.append(ov);
+    const close2 = () => ov.remove();
+    bClose.onclick = close2;
+    ov.onclick = (e) => {
+      if (e.target === ov) close2();
+    };
+    function renderFormats() {
+      colFmt.replaceChildren();
+      for (const f of EXPORT_FORMATS) {
+        const row2 = el("div", "xhub-fmt" + (f.key === cfg.format ? " on" : ""));
+        row2.dataset.fmt = f.key;
+        row2.append(el("span", "xhub-fmt-ic", f.icon));
+        const txt = el("div", "xhub-fmt-txt");
+        txt.append(
+          el("div", "xhub-fmt-name", t(f.labelKey)),
+          el("div", "xhub-fmt-desc dim", t(f.descKey))
+        );
+        row2.append(txt);
+        row2.onclick = () => {
+          cfg.format = f.key;
+          saveCfg();
+          renderFormats();
+          renderOptions();
+          refresh();
+        };
+        colFmt.append(row2);
+      }
+    }
+    const chk = (on2) => {
+      const c = el("input");
+      c.type = "checkbox";
+      c.checked = !!on2;
+      return c;
+    };
+    const optRow = (label, node, hint) => {
+      const r = el("label", "xhub-row");
+      r.append(node, el("span", "xhub-row-lbl", label));
+      if (hint) r.append(el("span", "dim xhub-row-hint", hint));
+      return r;
+    };
+    function renderOptions() {
+      colOpt.replaceChildren();
+      const def = formatDef(cfg.format);
+      if (def.handoff) {
+        colOpt.append(el("div", "k-hint", t(def.descKey)));
+        const b = el("button", "k-ok xhub-handoff", t("ui.xhub.openOwnDialog"));
+        b.onclick = async () => {
+          close2();
+          if (cfg.format === "zip") {
+            const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
+            m.exportProjectZip();
+          } else if (cfg.format === "json") {
+            const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
+            m.exportProjectJson();
+          } else if (cfg.format === "blog") {
+            const m = await Promise.resolve().then(() => (init_export_blog(), export_blog_exports));
+            m.exportBlogHTML();
+          } else A.watermarkDialog();
+        };
+        colOpt.append(b);
+        return;
+      }
+      colOpt.append(el("div", "cmp-sub", t("ui.xhub.scope")));
+      const selScope = el("select", "k-dlg-select");
+      selScope.id = "xhub-scope";
+      for (const [v2, k] of [["draft", "ui.xhub.scopeDraft"], ["tab", "ui.xhub.scopeTab"]]) {
+        const o = el("option", null, t(k));
+        o.value = v2;
+        selScope.append(o);
+      }
+      selScope.value = cfg.scope;
+      selScope.onchange = () => {
+        cfg.scope = selScope.value;
+        saveCfg();
+        renderOptions();
+        refresh();
+      };
+      colOpt.append(selScope);
+      if (cfg.scope === "draft") {
+        const selD = el("select", "k-dlg-select");
+        selD.id = "xhub-draft";
+        for (const d of drafts) {
+          const o = el("option", null, d.label);
+          o.value = d.dPath;
+          selD.append(o);
+        }
+        selD.value = cfg.draft;
+        selD.onchange = () => {
+          cfg.draft = selD.value;
+          saveCfg();
+          refresh();
+        };
+        colOpt.append(selD);
+        if (!drafts.length) colOpt.append(el("div", "dim", t("ui.xhub.noDraft")));
+      }
+      colOpt.append(el("div", "cmp-sub", t("ui.xhub.content")));
+      const selWf = el("select", "k-dlg-select");
+      selWf.id = "xhub-wf";
+      const auto = el("option", null, t("ui.xhub.wfAuto"));
+      auto.value = "";
+      selWf.append(auto);
+      for (const w of A.allWorkflows()) {
+        const o = el("option", null, w.name);
+        o.value = w.id;
+        selWf.append(o);
+      }
+      selWf.value = cfg.workflow;
+      selWf.onchange = () => {
+        cfg.workflow = selWf.value;
+        saveCfg();
+        refresh();
+      };
+      colOpt.append(selWf);
+      const bSteps = el("button", "cmp-mini", t("ui.xhub.editSteps"));
+      bSteps.onclick = () => {
+        close2();
+        A.openCompileDialog();
+      };
+      colOpt.append(bSteps);
+      if (cfg.format === "pdf") {
+        colOpt.append(el("div", "cmp-sub", t("ui.xhub.pdfOpts")));
+        const mk2 = (k, labelKey) => {
+          const c = chk(cfg.pdf[k]);
+          c.onchange = () => {
+            cfg.pdf[k] = c.checked;
+            saveCfg();
+            refresh();
+          };
+          colOpt.append(optRow(t(labelKey), c));
+        };
+        mk2("toc", "ui.xhub.pdfToc");
+        mk2("titlePages", "ui.xhub.pdfCover");
+        mk2("headers", "ui.xhub.pdfHeaders");
+        mk2("pageNumbers", "ui.xhub.pdfNums");
+        const wm = el("input", "k-dlg-input");
+        wm.id = "xhub-wm";
+        wm.value = cfg.pdf.watermark;
+        wm.placeholder = t("ui.xhub.pdfWmHint");
+        wm.onchange = () => {
+          cfg.pdf.watermark = wm.value.trim();
+          saveCfg();
+          refresh();
+        };
+        colOpt.append(el("div", "xhub-row-lbl", t("ui.xhub.pdfWm")), wm);
+        colOpt.append(el("div", "k-hint", t("ui.xhub.pdfNoPrinter")));
+      }
+      if (cfg.format === "html") {
+        colOpt.append(el("div", "cmp-sub", t("ui.xhub.htmlOpts")));
+        const c = chk(cfg.html.wysiwyg);
+        c.onchange = () => {
+          cfg.html.wysiwyg = c.checked;
+          saveCfg();
+          refresh();
+        };
+        colOpt.append(optRow(t("ui.xhub.htmlWysiwyg"), c));
+      }
+      if (cfg.format === "rtf") {
+        colOpt.append(el("div", "cmp-sub", t("ui.xhub.rtfOpts")));
+        const inp = el("input", "k-dlg-input");
+        inp.type = "number";
+        inp.min = "6";
+        inp.max = "48";
+        inp.value = String(num(cfg.rtf.fontPt, 12));
+        inp.onchange = () => {
+          cfg.rtf.fontPt = num(inp.value, 12);
+          saveCfg();
+          refresh();
+        };
+        colOpt.append(el("div", "xhub-row-lbl", t("ui.xhub.rtfFontPt")), inp);
+      }
+    }
+    let built = null;
+    let job = 0;
+    let busy = false;
+    async function refresh() {
+      const def = formatDef(cfg.format);
+      if (def.handoff) {
+        built = null;
+        warnLbl.textContent = "";
+        await renderPreview(colPrev, A, cfg, null);
+        return;
+      }
+      const gen = ++job;
+      colPrev.replaceChildren(el("div", "dim", t("ui.xhub.building")));
+      busy = true;
+      try {
+        const r = await buildAll(A, cfg, drafts);
+        if (gen !== job) return;
+        built = r;
+        warnLbl.textContent = r && r.warnings.length ? r.warnings.join(" \xB7 ") : "";
+        await renderPreview(colPrev, A, cfg, r);
+      } catch (e) {
+        if (gen !== job) return;
+        built = null;
+        log("error", t("ui.xhub.buildFail"), e);
+        colPrev.replaceChildren(el("div", "k-hint", t("ui.xhub.buildFail") + " \u2014 " + (e && e.message ? e.message : e)));
+      } finally {
+        if (gen === job) busy = false;
+      }
+    }
+    bGo.onclick = async () => {
+      const def = formatDef(cfg.format);
+      if (def.handoff) return;
+      if (!await A.checkBeforeExport()) return;
+      bGo.disabled = true;
+      try {
+        const r = built && !busy ? built : await withBusy(t("ui.xhub.building"), () => buildAll(A, cfg, drafts));
+        if (!r) {
+          setStatus(t("ui.xhub.nothingToExport"));
+          return;
+        }
+        const done2 = await writeOut(A, cfg, r);
+        if (!done2) return;
+        await saveCfg();
+        close2();
+        setStatus(t("ui.common.exportDone") + done2.dest + (done2.note ? " \xB7 " + done2.note : ""));
+        log("info", t("ui.xhub.title"), { format: cfg.format, dest: done2.dest, kind: r.kind });
+      } catch (e) {
+        log("error", t("ui.xhub.exportFail"), e);
+        setStatus(t("ui.xhub.exportFail") + " \u2014 " + (e && e.message ? e.message : e));
+      } finally {
+        bGo.disabled = false;
+      }
+    };
+    renderFormats();
+    renderOptions();
+    await refresh();
+    return {
+      ov,
+      cfg,
+      refresh,
+      close: close2,
+      setFormat: (k) => {
+        cfg.format = k;
+        renderFormats();
+        renderOptions();
+        return refresh();
+      },
+      build: () => buildAll(A, cfg, drafts)
+    };
+  }
+  var PREVIEW_CHARS;
+  var init_export_hub = __esm({
+    "src/export-hub.js"() {
+      init_i18n();
+      init_core();
+      init_compile();
+      init_num();
+      init_export_formats();
+      init_export_formats();
+      PREVIEW_CHARS = 8e3;
+    }
+  });
+
+  // src/session/session-core.js
+  var session_core_exports = {};
+  __export(session_core_exports, {
+    SESSION_PARTS: () => SESSION_PARTS,
+    SESSION_VERSION: () => SESSION_VERSION2,
+    isStale: () => isStale,
+    mergeSession: () => mergeSession,
+    migrateSession: () => migrateSession,
+    newSession: () => newSession2,
+    normalizeWin: () => normalizeWin,
+    pruneTabs: () => pruneTabs2,
+    sameSession: () => sameSession,
+    sessionKey: () => sessionKey,
+    sessionSummary: () => sessionSummary
+  });
+  function newSession2(root = "") {
+    return {
+      v: SESSION_VERSION2,
+      root: String(root || ""),
+      ts: 0,
+      tabs: { open: [], active: "", scroll: {} },
+      panels: { layout: null, homes: null, workspaces: null, hidden: "" },
+      split: null,
+      ui: {},
+      win: null
+    };
+  }
+  function migrateSession(raw) {
+    const s = newSession2();
+    if (!raw || typeof raw !== "object") return s;
+    s.root = typeof raw.root === "string" ? raw.root : "";
+    s.ts = Number.isFinite(+raw.ts) ? +raw.ts : 0;
+    const t3 = raw.tabs && typeof raw.tabs === "object" ? raw.tabs : {};
+    const open = Array.isArray(raw.tabs) ? raw.tabs : Array.isArray(t3.open) ? t3.open : [];
+    s.tabs.open = open.filter((x) => typeof x === "string" && x).slice(0, 200);
+    s.tabs.active = typeof t3.active === "string" ? t3.active : "";
+    s.tabs.scroll = t3.scroll && typeof t3.scroll === "object" ? { ...t3.scroll } : {};
+    if (s.tabs.active && !s.tabs.open.includes(s.tabs.active)) s.tabs.active = "";
+    const p = raw.panels && typeof raw.panels === "object" ? raw.panels : {};
+    s.panels.layout = p.layout ?? null;
+    s.panels.homes = p.homes ?? null;
+    s.panels.workspaces = p.workspaces ?? null;
+    s.panels.hidden = typeof p.hidden === "string" ? p.hidden : "";
+    s.split = raw.split ?? null;
+    s.ui = raw.ui && typeof raw.ui === "object" ? { ...raw.ui } : {};
+    s.win = normalizeWin(raw.win);
+    return s;
+  }
+  function normalizeWin(w) {
+    if (!w || typeof w !== "object") return null;
+    const n2 = (v2, min, max2, def) => {
+      const x = Math.round(Number(v2));
+      return Number.isFinite(x) && x >= min && x <= max2 ? x : def;
+    };
+    const width = n2(w.w, 400, 2e4, 0);
+    const height = n2(w.h, 300, 2e4, 0);
+    if (!width || !height) return null;
+    return {
+      x: n2(w.x, -2e4, 2e4, 0),
+      y: n2(w.y, -2e4, 2e4, 0),
+      w: width,
+      h: height,
+      max: !!w.max
+    };
+  }
+  function mergeSession(prev, patch) {
+    const base3 = migrateSession(prev);
+    if (!patch || typeof patch !== "object") return base3;
+    const next = { ...base3 };
+    if (typeof patch.root === "string" && patch.root) next.root = patch.root;
+    if (Number.isFinite(+patch.ts)) next.ts = +patch.ts;
+    for (const k of SESSION_PARTS) {
+      if (patch[k] === void 0) continue;
+      if (k === "tabs" || k === "panels") next[k] = { ...base3[k], ...patch[k] || {} };
+      else next[k] = patch[k];
+    }
+    return migrateSession(next);
+  }
+  function sessionKey(root) {
+    const s = String(root || "").replace(/[\\/]+$/, "").toLowerCase();
+    if (!s) return "default";
+    let h1 = 2166136261, h2 = 16777619;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      h1 = Math.imul(h1 ^ s.charCodeAt(i5), 16777619) >>> 0;
+      h2 = Math.imul(h2 + s.charCodeAt(i5) * (i5 + 1), 2246822507) >>> 0;
+    }
+    const tail = (s.split(/[\\/]/).pop() || "").replace(/[^\w฀-๿-]/g, "").slice(0, 24);
+    return (tail ? tail + "-" : "") + h1.toString(36) + h2.toString(36);
+  }
+  function sameSession(a, b) {
+    const strip = (s) => {
+      const x = { ...migrateSession(s) };
+      x.ts = 0;
+      return JSON.stringify(x);
+    };
+    return strip(a) === strip(b);
+  }
+  function isStale(s, nowMs, days = 90) {
+    const ts = migrateSession(s).ts;
+    if (!ts) return false;
+    const n2 = Number(nowMs);
+    if (!Number.isFinite(n2) || n2 <= 0) return false;
+    return n2 - ts > days * 864e5;
+  }
+  function sessionSummary(s) {
+    const x = migrateSession(s);
+    return {
+      tabs: x.tabs.open.length,
+      hasPanels: !!x.panels.layout,
+      hasSplit: !!x.split,
+      hasWin: !!x.win,
+      active: x.tabs.active
+    };
+  }
+  function pruneTabs2(s, existsList) {
+    const x = migrateSession(s);
+    const keep = new Set(Array.isArray(existsList) ? existsList : []);
+    x.tabs.open = x.tabs.open.filter((f) => keep.has(f));
+    const scroll = {};
+    for (const f of x.tabs.open) if (x.tabs.scroll[f] != null) scroll[f] = x.tabs.scroll[f];
+    x.tabs.scroll = scroll;
+    if (!x.tabs.open.includes(x.tabs.active)) x.tabs.active = x.tabs.open[0] || "";
+    return x;
+  }
+  var SESSION_VERSION2, SESSION_PARTS;
+  var init_session_core = __esm({
+    "src/session/session-core.js"() {
+      SESSION_VERSION2 = 2;
+      SESSION_PARTS = ["tabs", "panels", "split", "ui", "win"];
+    }
+  });
+
+  // src/ai/ai-bridge.js
+  var ai_bridge_exports = {};
+  __export(ai_bridge_exports, {
+    collectDocs: () => collectDocs,
+    getAIClient: () => getAIClient,
+    getRag: () => getRag,
+    ragContext: () => ragContext,
+    resetAI: () => resetAI,
+    tracker: () => tracker
+  });
+  function getAIClient() {
+    if (_client && _client._root === state.root) return _client;
+    _client = new AIClient({
+      http: httpFromKapi(kapi),
+      // settings เป็นฟังก์ชัน → เปลี่ยนใน dialog แล้วมีผลทันที ไม่ต้องสร้าง client ใหม่
+      settings: () => {
+        const ai = getAISettings();
+        return {
+          provider: ai.provider || "openai",
+          model: ai.model || "",
+          temperature: ai.temperature ?? 0.7,
+          maxTokens: ai.maxTokens || 800,
+          ollamaUrl: ai.ollamaUrl || "http://localhost:11434"
+        };
+      },
+      keyStore: new KeyStore({ io: keyIo(), root: state.root || "" }),
+      tracker,
+      log: (lv, msg, extra) => log(lv, msg, extra)
+    });
+    _client._root = state.root;
+    return _client;
+  }
+  async function collectDocs(root) {
+    const docs = [];
+    for (const e of await listEntities(root)) {
+      const body = [
+        Object.values(e.entity.fields || {}).join("\n"),
+        (e.entity.sections || []).map((s) => (s.title || "") + "\n" + (s.content || "")).join("\n")
+      ].join("\n").trim();
+      if (body) docs.push({
+        id: "wiki:" + e.path,
+        text: body,
+        meta: { kind: "wiki", title: e.name, cat: e.cat, path: e.path }
+      });
+    }
+    for (const s of await listScenes(root, { withText: true })) {
+      if (s.text && s.text.trim()) {
+        docs.push({
+          id: "scene:" + s.id,
+          text: s.text,
+          meta: { kind: "scene", title: s.title, sceneId: s.id, path: s.path }
+        });
+      }
+    }
+    return docs;
+  }
+  async function getRag({ rebuild = false, onProgress = null } = {}) {
+    if (!state.root) return null;
+    if (_rag && _ragRoot === state.root && !rebuild) return _rag;
+    const client = getAIClient();
+    let index = new VectorIndex({});
+    const idxPath = await kapi.join(state.root, INDEX_FILE);
+    if (!rebuild) {
+      try {
+        if (await kapi.exists(idxPath)) index = VectorIndex.fromJSON(await kapi.readJson(idxPath));
+      } catch {
+      }
+    }
+    _rag = new RagPipeline({ client, index });
+    _ragRoot = state.root;
+    if (!index.size) {
+      onProgress && onProgress(t("ui.aiBridge.busyNewIndexBody"));
+      const docs = await collectDocs(state.root);
+      const res = await _rag.indexDocs(docs);
+      log("info", t("ui.aiBridge.aiRagNewIndex"), { docs: docs.length, chunks: res.added, model: res.model });
+      try {
+        await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON()));
+      } catch {
+      }
+    }
+    return _rag;
+  }
+  async function ragContext(query, opts = {}) {
+    const rag = await getRag(opts);
+    if (!rag) return { text: "", sources: [], tokens: 0 };
+    try {
+      return await rag.context(query, { k: opts.k || 5, maxTokens: opts.maxTokens || 1500 });
+    } catch (e) {
+      log("warn", t("ui.aiBridge.aiRagRetrieveFail"), e);
+      return buildContext([], {});
+    }
+  }
+  function resetAI() {
+    _client = null;
+    _rag = null;
+    _ragRoot = "";
+  }
+  var _client, _rag, _ragRoot, tracker, keyIo;
+  var init_ai_bridge = __esm({
+    "src/ai/ai-bridge.js"() {
+      init_i18n();
+      init_core();
+      init_ai_core();
+      init_ai_settings();
+      init_project_scan();
+      _client = null;
+      _rag = null;
+      _ragRoot = "";
+      tracker = new CostTracker({});
+      keyIo = () => syncIo();
+    }
+  });
+
+  // src/ai/ai-plot.js
+  var ai_plot_exports = {};
+  __export(ai_plot_exports, {
+    HOLE_TYPES: () => HOLE_TYPES,
+    SEVERITY: () => SEVERITY,
+    SEV_RANK: () => SEV_RANK,
+    batchScenes: () => batchScenes,
+    buildPlotPrompt: () => buildPlotPrompt,
+    dedupeHoles: () => dedupeHoles,
+    detectPlotHoles: () => detectPlotHoles,
+    localChecks: () => localChecks,
+    parsePlotHoles: () => parsePlotHoles,
+    sortHoles: () => sortHoles
+  });
+  function buildPlotPrompt(scenes, opts = {}) {
+    const types2 = opts.types && opts.types.length ? opts.types : Object.keys(HOLE_TYPES);
+    const lines = [];
+    lines.push(t("ui.aiPlot.readSceneAllOrder"));
+    lines.push("");
+    lines.push(t("ui.aiPlot.kindMustCheck"));
+    for (const t3 of types2) lines.push(`- ${t3} (${HOLE_TYPES[t3] || t3})`);
+    lines.push("");
+    lines.push(t("ui.aiPlot.ruleImportant"));
+    lines.push(t("ui.aiPlot.refOnlyItemAppear"));
+    lines.push(t("ui.aiPlot.allItemMustSpecify"));
+    lines.push(t("ui.aiPlot.explainThaiShortAt"));
+    lines.push(t("ui.aiPlot.notFoundProblemReply"));
+    if (opts.focus) lines.push(t("ui.aiPlot.important") + opts.focus);
+    lines.push("");
+    lines.push(t("ui.common.formatAnswerJSONArray"));
+    lines.push(t("ui.aiPlot.typeSeverityCriticalMajor") + t("ui.aiPlot.descriptionExplainProblemThai") + t("ui.aiPlot.evidenceTextShortMain"));
+    lines.push("");
+    lines.push(t("ui.aiPlot.sceneAll"));
+    for (const s of scenes) lines.push(sceneBlock(s));
+    const prompt2 = lines.join("\n");
+    return { system: SYSTEM, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: scenes.map((s) => s.id) };
+  }
+  function sceneBlock(s) {
+    const head2 = [`[sceneId: ${s.id}]`, s.title || t("ui.common.notNamed")];
+    if (s.chapterTitle) head2.push(t("ui.common.chapter2") + s.chapterTitle);
+    if (s.storyDate) head2.push(t("ui.aiPlot.timeStory") + s.storyDate);
+    if (s.pov) head2.push(t("ui.common.view2") + s.pov);
+    if (s.characters && s.characters.length) head2.push(t("ui.aiPlot.character") + s.characters.join(", "));
+    return head2.join(" \xB7 ") + "\n" + String(s.text || "").trim() + "\n";
+  }
+  function parsePlotHoles(text, opts = {}) {
+    const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
+    const titles = opts.titles || {};
+    const rows = validate(extractJson(text), SCHEMA).filter((r) => !valid || !r.sceneId || valid.has(r.sceneId)).map((r) => ({
+      ...r,
+      typeLabel: HOLE_TYPES[r.type] || r.type,
+      severityLabel: SEVERITY[r.severity] || r.severity,
+      location: r.sceneId ? { sceneId: r.sceneId, title: titles[r.sceneId] || "", relatedSceneId: r.relatedSceneId || "" } : null,
+      source: "ai"
+    }));
+    return sortHoles(dedupeHoles(rows));
+  }
+  function sortHoles(rows) {
+    return rows.slice().sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0) || String(a.sceneId).localeCompare(String(b.sceneId)));
+  }
+  function dedupeHoles(rows) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const r of rows) {
+      const k = `${r.type}|${r.sceneId}|${String(r.description).slice(0, 40)}`;
+      if (!seen.has(k)) seen.set(k, r);
+    }
+    return [...seen.values()];
+  }
+  function localChecks(scenes = []) {
+    const out = [];
+    const withDate = scenes.map((s, i5) => ({ ...s, _i: i5 })).filter((s) => s.storyDate && numDate(s.storyDate) != null);
+    for (let i5 = 1; i5 < withDate.length; i5++) {
+      const prev = withDate[i5 - 1], cur = withDate[i5];
+      if (numDate(cur.storyDate) < numDate(prev.storyDate)) {
+        out.push({
+          type: "timeline-conflict",
+          severity: "major",
+          source: "local",
+          typeLabel: HOLE_TYPES["timeline-conflict"],
+          severityLabel: SEVERITY.major,
+          description: tf("ui.aiPlot.sceneHasTimeStory", cur.title || cur.id, cur.storyDate, prev.title || prev.id, prev.storyDate),
+          sceneId: cur.id,
+          relatedSceneId: prev.id,
+          evidence: `${prev.storyDate} \u2192 ${cur.storyDate}`,
+          suggestion: t("ui.aiPlot.setSceneSpecifyBody"),
+          location: { sceneId: cur.id, title: cur.title || "", relatedSceneId: prev.id }
+        });
+      }
+    }
+    for (const s of scenes) {
+      if (s.pov && s.text && s.characters && s.characters.length && !s.characters.includes(s.pov)) {
+        out.push({
+          type: "character-continuity",
+          severity: "minor",
+          source: "local",
+          typeLabel: HOLE_TYPES["character-continuity"],
+          severityLabel: SEVERITY.minor,
+          description: tf("ui.aiPlot.sceneSetViewNot", s.title || s.id, s.pov),
+          sceneId: s.id,
+          relatedSceneId: "",
+          evidence: "pov = " + s.pov,
+          suggestion: t("ui.aiPlot.checkSetViewScene"),
+          location: { sceneId: s.id, title: s.title || "", relatedSceneId: "" }
+        });
+      }
+    }
+    return out;
+  }
+  function numDate(v2) {
+    if (v2 == null) return null;
+    const m = String(v2).replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+  async function detectPlotHoles(sceneIds = [], options = {}) {
+    const all = options.scenes || [];
+    const picked = sceneIds && sceneIds.length ? all.filter((s) => sceneIds.includes(s.id)) : all;
+    if (!picked.length) return { ok: false, holes: [], error: t("ui.aiPlot.notFoundSceneCheck"), code: "no-scenes", batches: 0 };
+    const local = options.includeLocal === false ? [] : localChecks(picked);
+    const client = options.client;
+    if (!client) return { ok: !!local.length, holes: sortHoles(local), batches: 0, error: client ? void 0 : t("ui.common.cantSettingsAIClient"), code: "no-client" };
+    const titles = Object.fromEntries(picked.map((s) => [s.id, s.title || ""]));
+    const batches = batchScenes(picked, options.maxTokensPerBatch || 6e3);
+    const holes = [...local];
+    const usage = { input: 0, output: 0, total: 0 };
+    let cost = 0, failed = 0, lastError = "";
+    for (const group of batches) {
+      const built = buildPlotPrompt(group, options);
+      const res = await client.complete({
+        prompt: built.prompt,
+        system: built.system,
+        feature: "plot-holes",
+        model: options.model,
+        temperature: options.temperature ?? 0.2,
+        // งานตรวจสอบ → ความสร้างสรรค์ต่ำ
+        maxTokens: options.maxTokens || 1500
+      });
+      if (!res.ok) {
+        failed++;
+        lastError = res.error;
+        continue;
+      }
+      holes.push(...parsePlotHoles(res.text, { sceneIds: built.sceneIds, titles }));
+      if (res.usage) {
+        usage.input += res.usage.input || 0;
+        usage.output += res.usage.output || 0;
+      }
+      cost += res.cost && res.cost.usd || 0;
+    }
+    usage.total = usage.input + usage.output;
+    const ok2 = failed < batches.length || holes.length > 0;
+    return {
+      ok: ok2,
+      holes: sortHoles(dedupeHoles(holes)),
+      batches: batches.length,
+      failedBatches: failed,
+      usage,
+      cost: { usd: +cost.toFixed(6) },
+      error: ok2 ? void 0 : lastError
+    };
+  }
+  function batchScenes(scenes, maxTokens = 6e3) {
+    const out = [];
+    let cur = [], size = 0;
+    for (const s of scenes) {
+      let text = String(s.text || "");
+      let cost = estimateTokens2(text) + 60;
+      if (cost > maxTokens) {
+        text = chunkText(text, { maxTokens: maxTokens - 100 })[0] || text.slice(0, maxTokens * 3);
+        cost = estimateTokens2(text) + 60;
+      }
+      if (size + cost > maxTokens && cur.length) {
+        out.push(cur);
+        cur = [];
+        size = 0;
+      }
+      cur.push({ ...s, text });
+      size += cost;
+    }
+    if (cur.length) out.push(cur);
+    return out;
+  }
+  var HOLE_TYPES, SYSTEM, SCHEMA;
+  var init_ai_plot = __esm({
+    "src/ai/ai-plot.js"() {
+      init_i18n();
+      init_ai_core();
+      HOLE_TYPES = {
+        "character-continuity": t("ui.aiPlot.contCharacter"),
+        "timeline-conflict": t("ui.aiPlot.time"),
+        "motivation-gap": t("ui.aiPlot.missingFind"),
+        "world-rule": t("ui.aiPlot.ruleWorld"),
+        "plot-thread": t("ui.aiPlot.knotStuck"),
+        "pacing": t("ui.aiPlot.paceStory")
+      };
+      SYSTEM = t("ui.aiPlot.youEditorSourceStory") + t("ui.aiPlot.youReportOnlyThing") + t("ui.aiPlot.replyJSONForbidHas");
+      SCHEMA = {
+        type: { required: true, type: "string", enum: Object.keys(HOLE_TYPES), default: "plot-thread" },
+        severity: { required: true, type: "string", enum: Object.keys(SEVERITY), default: "minor" },
+        description: { required: true, type: "string" },
+        sceneId: { type: "string", default: "" },
+        relatedSceneId: { type: "string", default: "" },
+        evidence: { type: "string", default: "" },
+        suggestion: { type: "string", default: "" }
+      };
+    }
+  });
+
+  // src/ai/ai-dialogue.js
+  var ai_dialogue_exports = {};
+  __export(ai_dialogue_exports, {
+    DIALOGUE_FORMATS: () => DIALOGUE_FORMATS,
+    buildDialoguePrompt: () => buildDialoguePrompt,
+    characterProfile: () => characterProfile,
+    generateDialogue: () => generateDialogue,
+    parseDialogue: () => parseDialogue,
+    profileBlock: () => profileBlock,
+    toProse: () => toProse,
+    toScreenplay: () => toScreenplay
+  });
+  function characterProfile(entity) {
+    if (!entity) return null;
+    const src2 = { ...entity.fields || {}, ...entity };
+    const pick2 = (keys4) => {
+      for (const k of keys4) {
+        const v2 = src2[k];
+        if (v2 != null && String(v2).trim()) return String(v2).trim();
+      }
+      return "";
+    };
+    const out = { id: entity.id || "", name: entity.name || entity.title || t("ui.aiDialogue.notName"), aliases: entity.aliases || [] };
+    for (const [key2, keys4] of Object.entries(FIELD_ALIASES)) out[key2] = pick2(keys4);
+    out.relationships = (entity.relationships || []).map((r) => ({
+      target: r.targetName || r.target || "",
+      role: r.role || ""
+    })).filter((r) => r.target);
+    out.notes = entity.notes || entity.summary || "";
+    return out;
+  }
+  function profileBlock(p) {
+    if (!p) return "";
+    const rows = [tf("ui.aiDialogue.name2", p.name) + (p.aliases && p.aliases.length ? tf("ui.aiDialogue.call", p.aliases.join(", ")) : "")];
+    const add = (label, v2) => {
+      if (v2) rows.push(`${label}: ${v2}`);
+    };
+    add(t("ui.aiDialogue.chapter"), p.role);
+    add(t("ui.aiDialogue.msg6"), p.age);
+    add(t("ui.aiDialogue.click"), p.personality);
+    add(t("ui.common.howSpeak"), p.speech);
+    add(t("ui.aiDialogue.msg3"), p.background);
+    add(t("ui.common.goal"), p.goal);
+    add(t("ui.aiDialogue.fearDot"), p.fear);
+    add(t("ui.aiDialogue.msg"), p.quirk);
+    if (p.relationships && p.relationships.length) {
+      rows.push(t("ui.aiDialogue.relation") + p.relationships.map((r) => `${r.target}${r.role ? " (" + r.role + ")" : ""}`).join(", "));
+    }
+    add(t("ui.common.other"), p.notes);
+    return rows.join("\n");
+  }
+  function buildDialoguePrompt(a, b, context2 = {}, opts = {}) {
+    const format3 = opts.format === "prose" ? "prose" : "screenplay";
+    const lines = [];
+    const exchanges = opts.lines || 8;
+    lines.push(tf("ui.aiDialogue.writeDialogueBetweenCharacter", exchanges));
+    lines.push(t("ui.aiDialogue.eachPersonSpeakClick"));
+    if (opts.tone) lines.push(t("ui.aiDialogue.toneMerge") + opts.tone);
+    lines.push("");
+    lines.push(t("ui.aiDialogue.character"));
+    lines.push(profileBlock(a));
+    lines.push("");
+    lines.push(t("ui.aiDialogue.character2"));
+    lines.push(profileBlock(b));
+    const ctx = typeof context2 === "string" ? { situation: context2 } : context2 || {};
+    const cRows = [];
+    if (ctx.situation) cRows.push(t("ui.aiDialogue.msg4") + ctx.situation);
+    if (ctx.place) cRows.push(t("ui.aiDialogue.place") + ctx.place);
+    if (ctx.time) cRows.push(t("ui.aiDialogue.time") + ctx.time);
+    if (ctx.goal) cRows.push(t("ui.aiDialogue.thingEachNeedDialogue") + ctx.goal);
+    if (ctx.conflict) cRows.push(t("ui.common.conflict2") + ctx.conflict);
+    if (ctx.mood) cRows.push(t("ui.aiDialogue.moodScene") + ctx.mood);
+    if (cRows.length) {
+      lines.push("", t("ui.aiDialogue.contextScene"), ...cRows);
+    }
+    if (ctx.before) {
+      lines.push("", t("ui.aiDialogue.textBeforePageWrite"), String(ctx.before).slice(0, 1500));
+    }
+    lines.push("", t("ui.aiDialogue.formatResult"));
+    if (format3 === "screenplay") {
+      lines.push(t("ui.aiDialogue.useFormatScreenplayStyle"));
+      lines.push(t("ui.aiDialogue.name"));
+      lines.push(t("ui.aiDialogue.moodDoShortRemember"));
+      lines.push(t("ui.common.dialogue"));
+      lines.push(t("ui.aiDialogue.forbidPutHeadScene"));
+    } else {
+      lines.push(t("ui.aiDialogue.writeEditDialogueWord"));
+    }
+    const prompt2 = lines.join("\n");
+    return { system: SYSTEM2, prompt: prompt2, tokens: estimateTokens2(prompt2), format: format3 };
+  }
+  function parseDialogue(raw, opts = {}) {
+    const format3 = opts.format === "prose" ? "prose" : "screenplay";
+    const text = String(raw || "").replace(/```[a-z]*\n?/gi, "").trim();
+    const out = [];
+    if (format3 === "screenplay") {
+      let cur = null;
+      for (const rawLine of text.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        if (line.startsWith("@")) {
+          cur = { speaker: line.slice(1).trim(), paren: "", text: "" };
+          out.push(cur);
+          continue;
+        }
+        const colon = line.match(/^([^:：]{1,30})[:：]\s*(.+)$/);
+        if (colon && !line.startsWith("(")) {
+          cur = { speaker: colon[1].replace(/^@/, "").trim(), paren: "", text: colon[2].trim() };
+          out.push(cur);
+          continue;
+        }
+        if (/^\(.*\)$/.test(line)) {
+          if (cur) cur.paren = line.slice(1, -1).trim();
+          continue;
+        }
+        if (cur) cur.text = cur.text ? cur.text + " " + line : line;
+      }
+    } else {
+      for (const para2 of text.split(/\n{2,}/)) {
+        const t3 = para2.trim();
+        if (!t3) continue;
+        const m = t3.match(/^([^"“”]{0,40}?)\s*[""“](.+)[""”]/);
+        out.push({ speaker: m && m[1].trim() || "", paren: "", text: t3 });
+      }
+    }
+    return { format: format3, lines: out.filter((l) => l.text || l.speaker), text: format3 === "screenplay" ? toScreenplay(out) : text };
+  }
+  function toScreenplay(lines) {
+    const out = [];
+    for (const l of lines || []) {
+      if (!l || !l.speaker && !l.text) continue;
+      if (l.speaker) out.push("@" + l.speaker);
+      if (l.paren) out.push("(" + l.paren + ")");
+      if (l.text) out.push(l.text);
+      out.push("");
+    }
+    return out.join("\n").trim();
+  }
+  function toProse(lines) {
+    return (lines || []).filter((l) => l && l.text).map((l) => {
+      if (!l.speaker) return l.text;
+      const paren = l.paren ? `${l.paren} ` : "";
+      return tf("ui.aiDialogue.speak", l.speaker, paren ? " " + paren : "", l.text).replace(/\s+/g, " ");
+    }).join("\n\n");
+  }
+  async function generateDialogue(characterA, characterB, context2 = {}, options = {}) {
+    const client = options.client;
+    const a = characterA && characterA.personality !== void 0 ? characterA : characterProfile(characterA);
+    const b = characterB && characterB.personality !== void 0 ? characterB : characterProfile(characterB);
+    if (!a || !b) return { ok: false, text: "", lines: [], error: t("ui.aiDialogue.mustHasCharacterItem"), code: "no-characters" };
+    const built = buildDialoguePrompt(a, b, context2, options);
+    if (!client) return { ok: false, text: "", lines: [], prompt: built.prompt, error: t("ui.common.cantSettingsAIClient"), code: "no-client" };
+    const req = {
+      prompt: built.prompt,
+      system: built.system,
+      feature: "dialogue",
+      model: options.model,
+      temperature: options.temperature ?? 0.85,
+      // งานสร้างสรรค์ → สูงหน่อย
+      maxTokens: options.maxTokens || 1200
+    };
+    const res = options.stream && typeof options.onChunk === "function" ? await client.stream(req, options.onChunk) : await client.complete(req);
+    if (!res.ok) return { ...res, lines: [], prompt: built.prompt };
+    const parsed = parseDialogue(res.text, { format: built.format });
+    return {
+      ...res,
+      text: parsed.text,
+      lines: parsed.lines,
+      format: parsed.format,
+      prompt: built.prompt,
+      speakers: [...new Set(parsed.lines.map((l) => l.speaker).filter(Boolean))]
+    };
+  }
+  var SYSTEM2, FIELD_ALIASES, DIALOGUE_FORMATS;
+  var init_ai_dialogue = __esm({
+    "src/ai/ai-dialogue.js"() {
+      init_i18n();
+      init_ai_core();
+      SYSTEM2 = t("ui.aiDialogue.youWriterScreenplayThai") + t("ui.aiDialogue.characterEachItemMust") + t("ui.aiDialogue.sendOnlyDialogueForbid");
+      FIELD_ALIASES = {
+        role: ["role", t("ui.aiDialogue.chapter"), t("ui.aiDialogue.pos")],
+        age: ["age", t("ui.aiDialogue.msg6")],
+        personality: ["personality", t("ui.aiDialogue.click"), t("ui.aiDialogue.msg2"), "traits"],
+        speech: ["speech", "speechStyle", t("ui.aiDialogue.speak2"), t("ui.aiDialogue.msg5"), t("ui.aiDialogue.sound")],
+        background: ["background", t("ui.aiDialogue.msg3"), t("ui.common.history"), "bio"],
+        goal: ["goal", t("ui.common.goal"), "motivation", t("ui.aiDialogue.msg7")],
+        fear: ["fear", t("ui.aiDialogue.fear"), t("ui.aiDialogue.dot"), "weakness"],
+        quirk: ["quirk", t("ui.aiDialogue.only"), t("ui.aiDialogue.msg")]
+      };
+      DIALOGUE_FORMATS = { screenplay: t("ui.common.screenplay"), prose: t("ui.aiDialogue.editHasAction") };
+    }
+  });
+
+  // src/ai/ai-character.js
+  var ai_character_exports = {};
+  __export(ai_character_exports, {
+    ASPECTS: () => ASPECTS,
+    POLITE_PARTICLES: () => POLITE_PARTICLES,
+    PRONOUNS: () => PRONOUNS,
+    SEVERITY: () => SEVERITY,
+    SEV_RANK: () => SEV_RANK,
+    buildConsistencyPrompt: () => buildConsistencyPrompt,
+    checkConsistency: () => checkConsistency,
+    localConsistency: () => localConsistency,
+    parseConsistency: () => parseConsistency,
+    sortIssues: () => sortIssues,
+    speechStats: () => speechStats
+  });
+  function buildConsistencyPrompt(profile, appearances = [], opts = {}) {
+    const aspects = opts.aspects && opts.aspects.length ? opts.aspects : Object.keys(ASPECTS);
+    const lines = [];
+    lines.push(tf("ui.aiCharacter.checkAlwaysCharacterScene", profile.name));
+    lines.push("");
+    lines.push(t("ui.aiCharacter.mustView"));
+    for (const a of aspects) lines.push(`- ${a} (${ASPECTS[a] || a})`);
+    lines.push("");
+    lines.push(t("ui.common.rule"));
+    lines.push(t("ui.aiCharacter.compareSceneSceneCompare"));
+    lines.push(t("ui.aiCharacter.textShortSceneMain"));
+    lines.push(t("ui.aiCharacter.itemEditActEdit"));
+    lines.push(t("ui.aiCharacter.characterAlwaysReplyForbid"));
+    lines.push("");
+    lines.push(t("ui.common.formatAnswerJSONArray"));
+    lines.push(t("ui.aiCharacter.sceneIdAspectSeverityCritical") + t("ui.aiCharacter.issueProblemFoundThai"));
+    lines.push("");
+    lines.push(t("ui.aiCharacter.fileCharacter"));
+    lines.push(profileBlock(profile));
+    lines.push("");
+    lines.push(t("ui.aiCharacter.sceneCharacterAppear"));
+    for (const a of appearances) {
+      lines.push(`[sceneId: ${a.sceneId}] ${a.title || ""}${a.storyDate ? t("ui.aiCharacter.timeStory") + a.storyDate : ""}`);
+      lines.push(String(a.text || "").trim());
+      lines.push("");
+    }
+    const prompt2 = lines.join("\n");
+    return { system: SYSTEM3, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: appearances.map((a) => a.sceneId) };
+  }
+  function parseConsistency(text, opts = {}) {
+    const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
+    const titles = opts.titles || {};
+    const rows = validate(extractJson(text), SCHEMA2).filter((r) => !valid || valid.has(r.sceneId)).map((r) => ({
+      ...r,
+      source: "ai",
+      aspectLabel: ASPECTS[r.aspect] || r.aspect,
+      severityLabel: SEVERITY[r.severity] || r.severity,
+      sceneTitle: titles[r.sceneId] || ""
+    }));
+    return sortIssues(dedupe(rows));
+  }
+  function sortIssues(rows) {
+    return rows.slice().sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0) || String(a.sceneId).localeCompare(String(b.sceneId)));
+  }
+  function dedupe(rows) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const r of rows) {
+      const k = `${r.sceneId}|${r.aspect}|${String(r.issue).slice(0, 40)}`;
+      if (!seen.has(k)) seen.set(k, r);
+    }
+    return [...seen.values()];
+  }
+  function speechStats(appearances, characterName) {
+    const out = [];
+    for (const a of appearances || []) {
+      const said = dialogueOf(a.text, characterName);
+      const particles = {}, pronouns = {};
+      for (const p of POLITE_PARTICLES) {
+        const n2 = countOf(said, p);
+        if (n2) particles[p] = n2;
+      }
+      for (const p of PRONOUNS) {
+        const n2 = countWord(said, p);
+        if (n2) pronouns[p] = n2;
+      }
+      out.push({ sceneId: a.sceneId, title: a.title || "", lines: said.length, particles, pronouns });
+    }
+    return out;
+  }
+  function dialogueOf(text, name5) {
+    const src2 = String(text || "");
+    const out = [];
+    const lines = src2.split(/\r?\n/);
+    for (let i5 = 0; i5 < lines.length; i5++) {
+      const l = lines[i5].trim();
+      if (l.startsWith("@") && name5 && l.slice(1).trim().startsWith(name5)) {
+        for (let j = i5 + 1; j < lines.length; j++) {
+          const d = lines[j].trim();
+          if (!d || d.startsWith("@") || d.startsWith(".") || d.startsWith("!")) break;
+          if (/^\(.*\)$/.test(d)) continue;
+          out.push(d);
+        }
+      }
+    }
+    for (const m of src2.matchAll(/[""“]([^""“”\n]{2,200})[""”]/g)) out.push(m[1]);
+    return out;
+  }
+  function localConsistency(appearances, characterName, opts = {}) {
+    const stats = speechStats(appearances, characterName);
+    const issues = [];
+    const dominant = (key2) => {
+      const total = {};
+      for (const s of stats) for (const [k, n2] of Object.entries(s[key2])) total[k] = (total[k] || 0) + n2;
+      const sorted = Object.entries(total).sort((a, b) => b[1] - a[1]);
+      return sorted.length ? sorted[0][0] : null;
+    };
+    const minScenes = opts.minScenes || 2;
+    if (stats.filter((s) => Object.keys(s.particles).length).length >= minScenes) {
+      const main = dominant("particles");
+      for (const s of stats) {
+        const used = Object.keys(s.particles);
+        if (main && used.length && !used.includes(main)) {
+          issues.push(mkIssue(
+            s,
+            "speech",
+            "minor",
+            tf("ui.aiCharacter.sceneUseWordScene", used.join(", "), characterName, main),
+            tf("ui.aiCharacter.checkSetChangeSound", main)
+          ));
+        }
+      }
+    }
+    if (stats.filter((s) => Object.keys(s.pronouns).length).length >= minScenes) {
+      const main = dominant("pronouns");
+      for (const s of stats) {
+        const used = Object.keys(s.pronouns);
+        if (main && used.length && !used.includes(main)) {
+          issues.push(mkIssue(
+            s,
+            "speech",
+            "minor",
+            tf("ui.aiCharacter.sceneCallItemScene", characterName, used.join(", "), main),
+            tf("ui.aiCharacter.cantSetChangePair", main)
+          ));
+        }
+      }
+    }
+    return sortIssues(issues);
+  }
+  function mkIssue(s, aspect, severity, issue, suggestion) {
+    return {
+      sceneId: s.sceneId,
+      sceneTitle: s.title,
+      aspect,
+      severity,
+      issue,
+      suggestion,
+      evidence: "",
+      aspectLabel: ASPECTS[aspect],
+      severityLabel: SEVERITY[severity],
+      source: "local"
+    };
+  }
+  async function checkConsistency(characterId, options = {}) {
+    const entity = options.entity;
+    if (!entity) return { ok: false, issues: [], error: t("ui.aiCharacter.notFoundDataCharacter"), code: "no-entity" };
+    const profile = entity.personality !== void 0 ? entity : characterProfile(entity);
+    const ids = options.sceneIds || options.backlinks && options.backlinks[characterId] || null;
+    const all = options.scenes || [];
+    const names = [profile.name, ...profile.aliases || []].filter(Boolean);
+    const appearances = (ids ? all.filter((s) => ids.includes(s.id)) : all.filter((s) => names.some((n2) => String(s.text || "").includes(n2)))).map((s) => ({ sceneId: s.id, title: s.title || "", text: s.text || "", storyDate: s.storyDate || "" }));
+    if (!appearances.length) return { ok: false, issues: [], error: tf("ui.aiCharacter.notFoundSceneHas", profile.name), code: "no-scenes" };
+    const local = options.includeLocal === false ? [] : localConsistency(appearances, profile.name, options);
+    const client = options.client;
+    if (!client) return { ok: !!local.length, issues: local, error: t("ui.common.cantSettingsAIClient"), code: "no-client", appearances: appearances.length };
+    const built = buildConsistencyPrompt(profile, appearances, options);
+    const res = await client.complete({
+      prompt: built.prompt,
+      system: built.system,
+      feature: "character-consistency",
+      model: options.model,
+      temperature: options.temperature ?? 0.2,
+      maxTokens: options.maxTokens || 1500
+    });
+    if (!res.ok) return { ok: !!local.length, issues: local, error: res.error, code: res.code, appearances: appearances.length };
+    const titles = Object.fromEntries(appearances.map((a) => [a.sceneId, a.title]));
+    const issues = sortIssues(dedupe([...local, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
+    return { ok: true, issues, usage: res.usage, cost: res.cost, appearances: appearances.length, prompt: built.prompt };
+  }
+  var ASPECTS, SYSTEM3, SCHEMA2, POLITE_PARTICLES, PRONOUNS, countOf, countWord;
+  var init_ai_character = __esm({
+    "src/ai/ai-character.js"() {
+      init_i18n();
+      init_ai_core();
+      init_ai_dialogue();
+      ASPECTS = {
+        speech: t("ui.common.howSpeak"),
+        personality: t("ui.aiCharacter.msg"),
+        knowledge: t("ui.aiCharacter.thingCharacterNot"),
+        ability: t("ui.aiCharacter.ability"),
+        appearance: t("ui.aiCharacter.image"),
+        relationship: t("ui.aiCharacter.relationCharacterOther")
+      };
+      SYSTEM3 = t("ui.aiCharacter.youEditorSourceStory") + t("ui.aiCharacter.readFileCharacterScene") + t("ui.aiCharacter.reportOnlyThingText");
+      SCHEMA2 = {
+        sceneId: { required: true, type: "string" },
+        aspect: { type: "string", enum: Object.keys(ASPECTS), default: "personality" },
+        severity: { type: "string", enum: Object.keys(SEVERITY), default: "minor" },
+        issue: { required: true, type: "string" },
+        evidence: { type: "string", default: "" },
+        suggestion: { type: "string", default: "" }
+      };
+      POLITE_PARTICLES = ["\u0E04\u0E23\u0E31\u0E1A", "\u0E04\u0E48\u0E30", "\u0E04\u0E30", "\u0E08\u0E49\u0E30", "\u0E08\u0E49\u0E32", "\u0E2E\u0E30", "\u0E02\u0E2D\u0E23\u0E31\u0E1A", "\u0E40\u0E08\u0E49\u0E32\u0E04\u0E48\u0E30"];
+      PRONOUNS = ["\u0E1C\u0E21", "\u0E09\u0E31\u0E19", "\u0E14\u0E34\u0E09\u0E31\u0E19", "\u0E01\u0E23\u0E30\u0E1C\u0E21", "\u0E2B\u0E19\u0E39", "\u0E02\u0E49\u0E32", "\u0E01\u0E39", "\u0E40\u0E23\u0E32", "\u0E02\u0E49\u0E32\u0E1E\u0E40\u0E08\u0E49\u0E32", "\u0E2D\u0E31\u0E4A\u0E27"];
+      countOf = (lines, needle) => lines.reduce((n2, l) => n2 + (l.split(needle).length - 1), 0);
+      countWord = (lines, w) => lines.reduce((n2, l) => n2 + (l.split(w).length - 1), 0);
+    }
+  });
+
+  // src/ai/ai-world.js
+  var ai_world_exports = {};
+  __export(ai_world_exports, {
+    WORLD_TEMPLATES: () => WORLD_TEMPLATES,
+    WORLD_TYPES: () => WORLD_TYPES,
+    buildWorldPrompt: () => buildWorldPrompt,
+    generateWorld: () => generateWorld,
+    getTemplate: () => getTemplate,
+    parseWorld: () => parseWorld,
+    toMarkdown: () => toMarkdown,
+    toWikiEntity: () => toWikiEntity
+  });
+  function getTemplate(type) {
+    return WORLD_TEMPLATES[type] || null;
+  }
+  function buildWorldPrompt(type, prompt2, opts = {}) {
+    const tpl = getTemplate(type);
+    if (!tpl) return null;
+    const lines = [];
+    lines.push(tf("ui.aiWorld.newWorldStoryCmd", tpl.label, prompt2 || t("ui.aiWorld.authorCantSpecifyThink")));
+    lines.push("");
+    lines.push(t("ui.aiWorld.itemDefine"));
+    lines.push(t("ui.aiWorld.allMustWheelWheel"));
+    lines.push(t("ui.aiWorld.writeThaiConciseUse"));
+    lines.push(t("ui.aiWorld.allHeadingMustHas"));
+    lines.push(t("ui.aiWorld.closeKnotWriteScene"));
+    if (opts.tone) lines.push(t("ui.aiWorld.toneWorld") + opts.tone);
+    if (opts.existing) {
+      lines.push("", t("ui.aiWorld.prevHasForbid"), String(opts.existing).slice(0, 2e3));
+    }
+    if (opts.context) {
+      lines.push("", t("ui.aiWorld.contextStory"), typeof opts.context === "string" ? opts.context : JSON.stringify(opts.context));
+    }
+    lines.push("", t("ui.aiWorld.formatAnswerJSON"));
+    lines.push(JSON.stringify({
+      name: t("ui.common.name"),
+      fields: Object.fromEntries(tpl.fields.filter((f) => f.key !== "name").map((f) => [f.key, f.label])),
+      sections: tpl.sections.map((s) => ({ title: s, body: t("ui.aiWorld.bodySentence") })),
+      tags: [t("ui.aiWorld.wordSearch"), t("ui.aiWorld.wordSearch2")]
+    }, null, 2));
+    const built = lines.join("\n");
+    return { system: SYSTEM4, prompt: built, tokens: estimateTokens2(built), type, template: tpl };
+  }
+  function parseWorld(type, text) {
+    const tpl = getTemplate(type);
+    const data2 = extractJson(text) || {};
+    const obj = Array.isArray(data2) ? data2[0] || {} : data2;
+    const fields = { ...obj.fields || {} };
+    for (const [k, v2] of Object.entries(obj)) {
+      if (["fields", "sections", "tags", "name"].includes(k)) continue;
+      if (typeof v2 === "string" && !(k in fields)) fields[k] = v2;
+    }
+    const keys4 = tpl ? tpl.fields.map((f) => f.key).filter((k) => k !== "name") : Object.keys(fields);
+    const clean = {};
+    for (const k of keys4) clean[k] = str(fields[k]);
+    const sections = validate(obj.sections, {
+      title: { required: true, type: "string" },
+      body: { required: true, type: "string" }
+    });
+    const missing = [
+      ...keys4.filter((k) => !clean[k]),
+      ...(tpl ? tpl.sections : []).filter((s) => !sections.some((x) => x.title.includes(s) || s.includes(x.title)))
+    ];
+    return {
+      type,
+      template: tpl ? tpl.label : type,
+      name: str(obj.name) || str(fields.name) || "",
+      fields: clean,
+      sections,
+      tags: (Array.isArray(obj.tags) ? obj.tags : []).map(str).filter(Boolean),
+      missing,
+      ok: !!(str(obj.name) || sections.length)
+    };
+  }
+  function toWikiEntity(world, opts = {}) {
+    const tpl = getTemplate(world.type);
+    const cat = opts.category || tpl && tpl.category || "lore";
+    const notes = (world.sections || []).map((s) => `## ${s.title}
+${s.body}`).join("\n\n");
+    return {
+      name: world.name || opts.name || t("ui.common.notNamed2"),
+      entityTypeKey: cat,
+      aliases: [],
+      tags: world.tags || [],
+      fields: { ...world.fields, worldType: world.type },
+      notes,
+      createdBy: "ai-world"
+    };
+  }
+  function toMarkdown(world) {
+    const tpl = getTemplate(world.type);
+    const out = [`# ${world.name || t("ui.common.notNamed")}`, ""];
+    const labels = Object.fromEntries((tpl && tpl.fields || []).map((f) => [f.key, f.label]));
+    for (const [k, v2] of Object.entries(world.fields || {})) if (v2) out.push(`- **${labels[k] || k}:** ${v2}`);
+    out.push("");
+    for (const s of world.sections || []) out.push(`## ${s.title}`, s.body, "");
+    if (world.tags && world.tags.length) out.push(t("ui.common.tag3") + world.tags.map((t3) => "#" + t3).join(" "));
+    return out.join("\n").trim();
+  }
+  async function generateWorld(type, prompt2, options = {}) {
+    const built = buildWorldPrompt(type, prompt2, options);
+    if (!built) return { ok: false, error: t("ui.aiWorld.notKnownType") + type, code: "bad-type", types: WORLD_TYPES };
+    const client = options.client;
+    if (!client) return { ok: false, prompt: built.prompt, error: t("ui.common.cantSettingsAIClient"), code: "no-client" };
+    const call = () => client.complete({
+      prompt: built.prompt,
+      system: built.system,
+      feature: "worldbuilding:" + type,
+      model: options.model,
+      temperature: options.temperature ?? 0.9,
+      // สร้างโลก = ต้องการความหลากหลาย
+      maxTokens: options.maxTokens || 1800
+    });
+    let res = await call();
+    if (!res.ok) return { ...res, prompt: built.prompt };
+    let world = parseWorld(type, res.text);
+    if (!world.ok && options.retryOnMissing !== false) {
+      res = await call();
+      if (res.ok) world = parseWorld(type, res.text);
+    }
+    if (!world.ok) return { ok: false, world, prompt: built.prompt, error: t("ui.aiWorld.aIReplyNotAt"), code: "bad-shape", usage: res.usage };
+    return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };
+  }
+  var SYSTEM4, WORLD_TEMPLATES, WORLD_TYPES, str;
+  var init_ai_world = __esm({
+    "src/ai/ai-world.js"() {
+      init_i18n();
+      init_ai_core();
+      SYSTEM4 = t("ui.aiWorld.youNewWorldWorldbuilder") + t("ui.aiWorld.newDetailWheelHas") + t("ui.aiWorld.replyJSONOutlineDefine");
+      WORLD_TEMPLATES = {
+        magic: {
+          label: t("ui.aiWorld.system"),
+          category: "lore",
+          icon: "\u2728",
+          fields: [
+            { key: "name", label: t("ui.aiWorld.nameSystem") },
+            { key: "source", label: t("ui.aiWorld.msg10") },
+            { key: "cost", label: t("ui.aiWorld.must") },
+            { key: "limits", label: t("ui.aiWorld.itemRemember") },
+            { key: "whoCanUse", label: t("ui.aiWorld.use") },
+            { key: "rarity", label: t("ui.aiWorld.spread") }
+          ],
+          sections: [t("ui.aiWorld.ruleSystem"), t("ui.aiWorld.howto"), t("ui.aiWorld.sideEffect"), t("ui.aiWorld.resultNext"), t("ui.aiWorld.knotWriteNext")]
+        },
+        city: {
+          label: t("ui.aiWorld.msg8"),
+          category: "locations",
+          icon: "\u{1F3D9}",
+          fields: [
+            { key: "name", label: t("ui.aiWorld.name3") },
+            { key: "population", label: t("ui.aiWorld.msg2") },
+            { key: "geography", label: t("ui.aiWorld.msg4") },
+            { key: "government", label: t("ui.aiWorld.cover") },
+            { key: "economy", label: t("ui.aiWorld.main2") },
+            { key: "landmark", label: t("ui.aiWorld.placeImportant") }
+          ],
+          sections: [t("ui.aiWorld.overviewAmbience"), t("ui.aiWorld.districtImportant"), t("ui.aiWorld.hasPowerGroup"), t("ui.aiWorld.problem"), t("ui.aiWorld.knotWriteNext")]
+        },
+        culture: {
+          label: t("ui.aiWorld.msg5"),
+          category: "lore",
+          icon: "\u{1F38E}",
+          fields: [
+            { key: "name", label: t("ui.aiWorld.nameGroup") },
+            { key: "values", label: t("ui.aiWorld.valueMain") },
+            { key: "language", label: t("ui.aiWorld.lang") },
+            { key: "taboo", label: t("ui.aiWorld.itemForbid") },
+            { key: "ritual", label: t("ui.aiWorld.ritualImportant") },
+            { key: "hierarchy", label: t("ui.aiWorld.orderLayer") }
+          ],
+          sections: [t("ui.aiWorld.dailyLife"), t("ui.aiWorld.customFestival"), t("ui.aiWorld.name"), t("ui.aiWorld.relationGroupOther"), t("ui.aiWorld.knotWriteNext")]
+        },
+        economy: {
+          label: t("ui.aiWorld.msg9"),
+          category: "lore",
+          icon: "\u{1F4B0}",
+          fields: [
+            { key: "name", label: t("ui.aiWorld.nameSystem2") },
+            { key: "currency", label: t("ui.aiWorld.center") },
+            { key: "mainTrade", label: t("ui.aiWorld.main") },
+            { key: "scarcity", label: t("ui.aiWorld.scarce") },
+            { key: "powerHolders", label: t("ui.aiWorld.msg11") },
+            { key: "blackMarket", label: t("ui.aiWorld.dark") }
+          ],
+          sections: [t("ui.aiWorld.structureTrade"), t("ui.aiWorld.classIncome"), t("ui.aiWorld.busyItem"), t("ui.aiWorld.knotWriteNext")]
+        },
+        religion: {
+          label: t("ui.aiWorld.name4"),
+          category: "lore",
+          icon: "\u26E9",
+          fields: [
+            { key: "name", label: t("ui.aiWorld.name2") },
+            { key: "deity", label: t("ui.aiWorld.thing2") },
+            { key: "doctrine", label: t("ui.aiWorld.mainWord") },
+            { key: "clergy", label: t("ui.aiWorld.msg") },
+            { key: "symbol", label: t("ui.aiWorld.msg7") },
+            { key: "heresy", label: t("ui.aiWorld.thing") }
+          ],
+          sections: [t("ui.aiWorld.originLegend"), t("ui.aiWorld.ritual"), t("ui.aiWorld.power"), t("ui.aiWorld.see"), t("ui.aiWorld.knotWriteNext")]
+        },
+        faction: {
+          label: t("ui.aiWorld.group"),
+          category: "lore",
+          icon: "\u2694",
+          fields: [
+            { key: "name", label: t("ui.common.nameGroup") },
+            { key: "goal", label: t("ui.common.goal") },
+            { key: "leader", label: t("ui.aiWorld.msg3") },
+            { key: "members", label: t("ui.aiWorld.busy") },
+            { key: "methods", label: t("ui.aiWorld.how") },
+            { key: "enemy", label: t("ui.aiWorld.msg6") }
+          ],
+          sections: [t("ui.aiWorld.origin"), t("ui.aiWorld.structureInner"), t("ui.aiWorld.resourceDot"), t("ui.aiWorld.planCurrent"), t("ui.aiWorld.knotWriteNext")]
+        }
+      };
+      WORLD_TYPES = Object.keys(WORLD_TEMPLATES);
+      str = (v2) => v2 == null ? "" : typeof v2 === "string" ? v2.trim() : typeof v2 === "object" ? JSON.stringify(v2) : String(v2);
+    }
+  });
+
+  // src/ai/ai-ui.js
+  async function aiReady2() {
+    if (!state.root) {
+      setStatus(t("ai.noProject", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
+      return false;
+    }
+    const r = await aiConfigured();
+    if (r.ok) return true;
+    setStatus("\u274C " + (r.why || t("ai.needSetup", "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E17\u0E35\u0E48 \u0E44\u0E1F\u0E25\u0E4C \u2192 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E01\u0E48\u0E2D\u0E19")));
+    return false;
+  }
+  async function wikiEntityByName(name5) {
+    if (!name5 || !state.root) return null;
+    try {
+      const hit = (await listEntities(state.root)).find((e) => e.name === name5 || (e.aliases || []).includes(name5));
+      return hit ? { ...hit.entity } : null;
+    } catch {
+      return null;
+    }
+  }
+  function showDialog(title2, bodyFn, widthClass = "k-wide") {
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog " + widthClass);
+    box2.append(el("div", "k-dlg-title", title2));
+    bodyFn(box2, ov);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    return { ov, box: box2 };
+  }
+  async function openAIAssistant() {
+    if (!await aiReady2()) return;
+    const t3 = state.active;
+    const sel = t3?.editor ? t3.editor.getSelectedText() : t3?.sp ? t3.sp.getSelectedText() : "";
+    const fullText = t3?.editor ? t3.editor.getText() : t3?.sp ? t3.sp.getText() : "";
+    showDialog(t("ai.assistantTitle", "\u2728 AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19"), (box2, ov) => {
+      const TASK_TH = {
+        expand: t("ai.opExpand", "\u0E02\u0E22\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21"),
+        summarize: t("ai.opSummarize", "\u0E2A\u0E23\u0E38\u0E1B\u0E04\u0E27\u0E32\u0E21"),
+        rewrite: t("ai.opRewrite", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48"),
+        changeTone: t("ai.opTone", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E42\u0E17\u0E19"),
+        continue: t("ai.opContinue", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E48\u0E2D")
+      };
+      const TONE_TH = {
+        formal: t("ai.toneFormal", "\u0E17\u0E32\u0E07\u0E01\u0E32\u0E23"),
+        casual: t("ai.toneCasual", "\u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07"),
+        humorous: t("ai.toneFunny", "\u0E15\u0E25\u0E01"),
+        dark: t("ai.toneDark", "\u0E21\u0E37\u0E14\u0E2B\u0E21\u0E48\u0E19"),
+        romantic: t("ai.toneRomantic", "\u0E42\u0E23\u0E41\u0E21\u0E19\u0E15\u0E34\u0E01"),
+        tense: t("ai.toneTense", "\u0E23\u0E30\u0E17\u0E36\u0E01"),
+        concise: t("ai.toneConcise", "\u0E01\u0E23\u0E30\u0E0A\u0E31\u0E1A"),
+        lyrical: t("ai.toneDetailed", "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14")
+      };
+      const taskSel = el("select");
+      Object.keys(TASK_TH).forEach((v2) => taskSel.append(el("option", "", TASK_TH[v2], { value: v2 })));
+      const toneSel = el("select");
+      toneSel.append(el("option", "", t("ui.ai.notChangeTone"), { value: "" }));
+      Object.keys(TONE_TH).forEach((v2) => toneSel.append(el("option", "", TONE_TH[v2], { value: v2 })));
+      const instrInput = el("textarea");
+      instrInput.placeholder = t("ai.extraHint", "\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E15\u0E34\u0E21 (\u0E16\u0E49\u0E32\u0E21\u0E35)");
+      instrInput.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
+      const textInput = el("textarea");
+      textInput.value = sel || fullText.slice(0, 3e3);
+      textInput.placeholder = t("ai.inputLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E08\u0E30\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25");
+      textInput.style.cssText = "width:100%;min-height:120px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical;margin-top:8px";
+      const resultDiv = el("div");
+      resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
+      const row1 = el("div", "k-row");
+      row1.append(el("label", "", t("ai.opLabel", "\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07: ")), taskSel);
+      row1.append(el("label", "", t("ai.toneLabel", " \u0E42\u0E17\u0E19: ")), toneSel);
+      box2.append(row1);
+      box2.append(instrInput);
+      box2.append(el("label", "", t("ai.textLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21:")));
+      box2.append(textInput);
+      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(resultDiv);
+      const btns = el("div", "k-dlg-btns");
+      const runBtn = el("button", "k-ok", t("ui.ai.result"));
+      runBtn.onclick = async () => {
+        runBtn.disabled = true;
+        resultDiv.textContent = t("ai.working", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25\u2026");
+        const task = taskSel.value;
+        const tone = toneSel.value;
+        const instr = instrInput.value.trim();
+        const text = textInput.value.trim() || fullText;
+        const { aiAssistant: aiAssistant2 } = await Promise.resolve().then(() => (init_ai_assistant(), ai_assistant_exports));
+        const { getAIClient: getAIClient2, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        let rag = null;
+        try {
+          rag = await getRag2();
+        } catch {
+        }
+        let acc = "";
+        const res = await aiAssistant2(instr, { text }, {
+          client: getAIClient2(),
+          rag,
+          task,
+          tone: tone || void 0,
+          instruction: instr,
+          text,
+          stream: true,
+          onChunk: (c) => {
+            acc += c;
+            resultDiv.textContent = acc;
+          }
+        });
+        if (res.ok) resultDiv.textContent = res.text || acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
+        else resultDiv.textContent = "\u274C " + (res.error || t("ai.errorRetry", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48"));
+        runBtn.disabled = false;
+      };
+      const insertBtn = el("button", "", t("ui.ai.insertScene"));
+      insertBtn.onclick = () => {
+        const r = resultDiv.textContent;
+        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        if (t3?.editor) t3.editor.cmd("insertText", r);
+        else if (t3?.sp) t3.sp.cmd("insertText", r);
+        ov.remove();
+        setStatus(t("ai.insertedResult", "\u0E41\u0E17\u0E23\u0E01\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C AI \u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
+      };
+      btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
+      const closeBtn = btns.lastChild;
+      closeBtn.onclick = () => ov.remove();
+      box2.append(btns);
+    });
+  }
+  async function openPlotHoleDetector() {
+    if (!await aiReady2()) return;
+    if (!state.root) {
+      setStatus(t("ai.openProjectFirst", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19"));
+      return;
+    }
+    setStatus(t("ai.plotWorking", "\u{1F50D} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Holes\u2026"));
+    showDialog(t("ai.plotTitle", "\u{1F50D} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Hole"), async (box2, ov) => {
+      const resultDiv = el("div");
+      resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
+      resultDiv.textContent = t("ai.collectingScenes", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E09\u0E32\u0E01\u2026");
+      box2.append(resultDiv);
+      let allScenes = [];
+      try {
+        allScenes = (await listScenes(state.root, { withText: true })).map((s) => ({
+          id: s.id,
+          title: s.title,
+          chapterId: s.chapterId,
+          text: s.text || "",
+          storyDate: s.row.storyDate || "",
+          pov: s.row.pov || ""
+        }));
+      } catch (e) {
+        resultDiv.textContent = t("ai.readFail", "\u274C \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ") + e.message;
+        return;
+      }
+      if (!allScenes.length) {
+        resultDiv.textContent = t("ai.noScenes", "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49)");
+        return;
+      }
+      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
+      const { detectPlotHoles: detectPlotHoles2 } = await Promise.resolve().then(() => (init_ai_plot(), ai_plot_exports));
+      const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+      const res = await detectPlotHoles2([], { client: getAIClient2(), scenes: allScenes });
+      resultDiv.textContent = "";
+      if (!res.holes.length) {
+        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noPlotHoles", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E08\u0E38\u0E14\u0E1A\u0E01\u0E1E\u0E23\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E1E\u0E25\u0E47\u0E2D\u0E15");
+      } else {
+        resultDiv.append(el("div", "dim", tf("ui.ai.foundDotCheckRound", res.holes.length, res.batches)));
+        for (const h of res.holes) {
+          const row2 = el("div");
+          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
+          const sev = { high: "\u{1F534}", medium: "\u{1F7E1}", low: "\u26AA" }[h.severity] || "\u2022";
+          row2.append(el("div", "", `${sev} [${h.type || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${h.description || ""}`));
+          if (h.sceneTitle || h.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (h.sceneTitle || h.sceneId)));
+          if (h.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + h.evidence));
+          if (h.suggestion) row2.append(el("div", "", "\u{1F4A1} " + h.suggestion));
+          resultDiv.append(row2);
+        }
+        if (res.failedBatches) resultDiv.append(el("div", "dim", tf("ui.ai.hasRoundCallAI", res.failedBatches)));
+      }
+      const btns = el("div", "k-dlg-btns");
+      const closeBtn = el("button", "k-cancel", t("ui.common.close"));
+      closeBtn.onclick = () => ov.remove();
+      btns.append(closeBtn);
+      box2.append(btns);
+    });
+  }
+  async function openDialogueGenerator() {
+    if (!await aiReady2()) return;
+    showDialog(t("ai.dialogueTitle", "\u{1F4AC} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32"), (box2, ov) => {
+      box2.style.minWidth = "500px";
+      const charA = el("input");
+      charA.placeholder = t("ui.ai.nameA");
+      const charB = el("input");
+      charB.placeholder = t("ui.ai.nameB");
+      const descA = el("textarea");
+      descA.placeholder = t("ai.charADesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A (\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01, \u0E1E\u0E39\u0E14\u0E08\u0E32, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
+      descA.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
+      const descB = el("textarea");
+      descB.placeholder = t("ai.charBDesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B");
+      descB.style.cssText = descA.style.cssText;
+      const context2 = el("textarea");
+      context2.placeholder = t("ai.dialogueCtx", "\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 (\u0E2A\u0E16\u0E32\u0E19\u0E01\u0E32\u0E23\u0E13\u0E4C, \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
+      context2.style.cssText = descA.style.cssText;
+      const resultDiv = el("div");
+      resultDiv.style.cssText = "max-height:35vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
+      const fmtSel = el("select");
+      fmtSel.append(el("option", "", t("ui.common.screenplay"), { value: "screenplay" }));
+      fmtSel.append(el("option", "", t("ui.ai.edit"), { value: "prose" }));
+      box2.append(el("div", "k-row"));
+      box2.querySelector(".k-row").append(el("label", "", t("ai.charA", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A: ")), charA);
+      box2.append(descA);
+      box2.append(el("label", "", t("ai.charB", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B: ")));
+      box2.append(charB);
+      box2.append(descB);
+      box2.append(el("label", "", t("ai.ctxLabel", "\u0E1A\u0E23\u0E34\u0E1A\u0E17: ")));
+      box2.append(context2);
+      const fmtRow = el("div", "k-row");
+      fmtRow.append(el("label", "", t("ai.formatLabel", "\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A: ")), fmtSel);
+      box2.append(fmtRow);
+      box2.append(el("label", "", t("ai.dialogueLabel", "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32:")));
+      box2.append(resultDiv);
+      const btns = el("div", "k-dlg-btns");
+      const runBtn = el("button", "k-ok", t("ui.ai.new"));
+      runBtn.onclick = async () => {
+        runBtn.disabled = true;
+        resultDiv.textContent = t("ai.dialogueWorking", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u2026");
+        const a = charA.value.trim(), b = charB.value.trim(), ctx = context2.value.trim();
+        if (!a || !b) {
+          resultDiv.textContent = t("ai.needBothChars", "\u274C \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E2A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07");
+          runBtn.disabled = false;
+          return;
+        }
+        const { generateDialogue: generateDialogue2 } = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
+        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        const profA = await wikiEntityByName(a) || { name: a };
+        const profB = await wikiEntityByName(b) || { name: b };
+        if (descA.value.trim()) profA.personality = descA.value.trim();
+        if (descB.value.trim()) profB.personality = descB.value.trim();
+        let acc = "";
+        const res = await generateDialogue2(
+          profA,
+          profB,
+          { situation: ctx },
+          {
+            client: getAIClient2(),
+            format: fmtSel.value,
+            stream: true,
+            onChunk: (c) => {
+              acc += c;
+              resultDiv.textContent = acc;
+            }
+          }
+        );
+        if (res.ok) {
+          resultDiv.textContent = res.text;
+          if (res.speakers?.length) resultDiv.title = t("ai.speakerLabel", "\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14: ") + res.speakers.join(", ");
+        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
+        runBtn.disabled = false;
+      };
+      const insertBtn = el("button", "", t("ui.ai.insert"));
+      insertBtn.onclick = () => {
+        const r = resultDiv.textContent;
+        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        const t3 = state.active;
+        if (t3?.editor) t3.editor.cmd("insertText", r);
+        else if (t3?.sp) t3.sp.cmd("insertText", r);
+        ov.remove();
+        setStatus(t("ai.insertedDialogue", "\u0E41\u0E17\u0E23\u0E01\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
+      };
+      btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
+      btns.lastChild.onclick = () => ov.remove();
+      box2.append(btns);
+    });
+  }
+  async function openConsistencyCheck(entityPath) {
+    if (!await aiReady2()) return;
+    if (!entityPath) {
+      setStatus(t("ai.pickEntity", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 (\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23) \u0E01\u0E48\u0E2D\u0E19"));
+      return;
+    }
+    let entity;
+    try {
+      entity = await kapi.readJson(entityPath);
+    } catch {
+      setStatus(t("ai.entityReadFail", "\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+      return;
+    }
+    if (!entity || !entity.name) {
+      setStatus(t("ai.entityUnnamed", "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D"));
+      return;
+    }
+    setStatus(t("ai.consistWorking", "\u{1F3AD} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D\u2026"));
+    showDialog(t("ai.consistTitle", "\u{1F3AD} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D \u2014 ") + entity.name, async (box2, ov) => {
+      const resultDiv = el("div");
+      resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
+      resultDiv.textContent = t("ai.collecting", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u2026");
+      box2.append(resultDiv);
+      const scenes = (await listScenes(state.root, { withText: true })).map((s) => ({ id: s.id, title: s.title, text: s.text || "", storyDate: s.row.storyDate || "" }));
+      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
+      const { checkConsistency: checkConsistency2 } = await Promise.resolve().then(() => (init_ai_character(), ai_character_exports));
+      const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+      const res = await checkConsistency2(entityPath, { client: getAIClient2(), entity, scenes });
+      resultDiv.textContent = "";
+      if (!res.issues.length) {
+        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noInconsist", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D");
+      } else {
+        resultDiv.append(el("div", "dim", tf("ui.ai.foundDotSceneAppear", res.issues.length, res.appearances || 0)));
+        for (const it of res.issues) {
+          const row2 = el("div");
+          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
+          row2.append(el("div", "", `\u2022 [${it.aspect || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${it.issue || ""}`));
+          if (it.sceneTitle || it.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (it.sceneTitle || it.sceneId)));
+          if (it.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + it.evidence));
+          if (it.suggestion) row2.append(el("div", "", "\u{1F4A1} " + it.suggestion));
+          resultDiv.append(row2);
+        }
+      }
+      const btns = el("div", "k-dlg-btns");
+      const closeBtn = el("button", "k-cancel", t("ui.common.close"));
+      closeBtn.onclick = () => ov.remove();
+      btns.append(closeBtn);
+      box2.append(btns);
+    });
+  }
+  async function openWorldGenerator() {
+    if (!await aiReady2()) return;
+    showDialog(t("ai.worldTitle", "\u{1F30D} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E25\u0E01"), (box2, ov) => {
+      const typeSel = el("select");
+      ["magic", "city", "culture", "economy", "religion", "faction"].forEach((v2) => {
+        const labels = { magic: t("ai.wMagic", "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C"), city: t("ai.wCity", "\u0E40\u0E21\u0E37\u0E2D\u0E07"), culture: t("ai.wCulture", "\u0E27\u0E31\u0E12\u0E19\u0E18\u0E23\u0E23\u0E21"), economy: t("ai.wEconomy", "\u0E40\u0E28\u0E23\u0E29\u0E10\u0E01\u0E34\u0E08"), religion: t("ai.wReligion", "\u0E28\u0E32\u0E2A\u0E19\u0E32"), faction: t("ai.wFaction", "\u0E01\u0E25\u0E38\u0E48\u0E21/\u0E1D\u0E48\u0E32\u0E22") };
+        typeSel.append(el("option", "", labels[v2] || v2, { value: v2 }));
+      });
+      const promptInput = el("textarea");
+      promptInput.placeholder = t("ai.worldPrompt", '\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E23\u0E49\u0E32\u0E07 (\u0E40\u0E0A\u0E48\u0E19 "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E19\u0E17\u0E38\u0E19")');
+      promptInput.style.cssText = "width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
+      const resultDiv = el("div");
+      resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:80px;font-size:14px;line-height:1.8";
+      box2.append(el("div", "k-row"));
+      box2.querySelector(".k-row").append(el("label", "", t("ai.kindLabel", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17: ")), typeSel);
+      box2.append(el("label", "", t("ai.detailLabel", "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:")));
+      box2.append(promptInput);
+      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(resultDiv);
+      const btns = el("div", "k-dlg-btns");
+      const runBtn = el("button", "k-ok", t("ui.ai.new"));
+      let lastWorld = null;
+      runBtn.onclick = async () => {
+        runBtn.disabled = true;
+        resultDiv.textContent = t("ai.generating", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u2026");
+        lastWorld = null;
+        const { generateWorld: generateWorld2, toMarkdown: toMarkdown2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
+        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        const res = await generateWorld2(
+          typeSel.value,
+          promptInput.value.trim() || t("ai.freeform", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E32\u0E21\u0E08\u0E34\u0E19\u0E15\u0E19\u0E32\u0E01\u0E32\u0E23"),
+          { client: getAIClient2() }
+        );
+        if (res.ok) {
+          lastWorld = res.world;
+          resultDiv.textContent = toMarkdown2(res.world);
+        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
+        runBtn.disabled = false;
+      };
+      const saveBtn = el("button", "", t("ui.ai.saveWiki"));
+      saveBtn.onclick = async () => {
+        const r = resultDiv.textContent;
+        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        const { toWikiEntity: toWikiEntity2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
+        const cats = { magic: "lore", city: "locations", culture: "lore", economy: "lore", religion: "lore", faction: "lore" };
+        const cat = cats[typeSel.value] || "lore";
+        const base3 = lastWorld ? toWikiEntity2(lastWorld, { category: cat }) : {
+          name: promptInput.value.trim().slice(0, 60) || "Worldbuilding",
+          entityTypeKey: cat,
+          aliases: [],
+          fields: { description: r }
+        };
+        const entity = {
+          id: Date.now().toString(36),
+          aliases: [],
+          fields: {},
+          customProperties: {},
+          images: [],
+          relationships: [],
+          chapterOverrides: [],
+          ...base3,
+          sections: (lastWorld?.sections || []).map((s) => ({ title: s.title, content: s.body })).concat(lastWorld ? [] : [{ title: t("ai.description", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22"), content: r }]),
+          created: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        const catDir = await kapi.join(await kapi.join(state.root, "Wiki"), cat);
+        await kapi.mkdir(catDir);
+        const name5 = entity.name || "Worldbuilding";
+        const file = await kapi.join(catDir, name5.replace(/[\/\\:*?"<>|]/g, "_") + ".json");
+        await kapi.writeFile(file, JSON.stringify(entity, null, 2));
+        setStatus(t("ai.savedToWiki", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 Wiki \u0E41\u0E25\u0E49\u0E27: ") + name5);
+      };
+      btns.append(runBtn, saveBtn, el("button", "k-cancel", t("ui.common.close")));
+      btns.lastChild.onclick = () => ov.remove();
+      box2.append(btns);
+    });
+  }
+  async function openAIChat() {
+    if (!await aiReady2()) return;
+    const KEY4 = "::ai-chat::";
+    const { activate: activate2, closeTab: closeTab3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    if (state.tabs.has(KEY4)) {
+      activate2(KEY4);
+      return;
+    }
+    const pane = el("div", "pane");
+    pane.style.cssText = "display:flex;flex-direction:column;height:100%";
+    $("#panes").append(pane);
+    const tabBtn = el("div", "tab");
+    tabBtn.append(el("span", "tab-title", "\u{1F4AC} Chat with Story"));
+    const x = el("span", "tab-x", "\xD7");
+    tabBtn.append(x);
+    $("#tabs").append(tabBtn);
+    const chatArea = el("div");
+    chatArea.style.cssText = "flex:1;overflow-y:auto;padding:12px 24px;font-size:14px;line-height:1.8";
+    pane.append(chatArea);
+    const inputBar = el("div");
+    inputBar.style.cssText = "display:flex;padding:8px 12px;border-top:1px solid var(--border);background:var(--side)";
+    const input = el("input");
+    input.placeholder = t("ai.chatPlaceholder", "\u0E16\u0E32\u0E21\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u2026");
+    input.style.cssText = "flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;outline:none";
+    const sendBtn = el("button", "", "\u25B6");
+    sendBtn.style.cssText = "margin-left:8px;min-width:48px";
+    inputBar.append(input, sendBtn);
+    pane.append(inputBar);
+    const history2 = [];
+    const addMsg = (role, text, track = true) => {
+      const msg = el("div");
+      msg.style.cssText = "margin:6px 0;padding:8px 12px;border-radius:8px;white-space:pre-wrap;" + (role === "user" ? "background:var(--sel);margin-left:40px;" : "background:var(--bar);margin-right:40px;");
+      msg.textContent = text;
+      chatArea.append(msg);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      if (track && text) history2.push({ role: role === "user" ? "user" : "assistant", content: text });
+      return msg;
+    };
+    const addSources = (sources) => {
+      if (!sources || !sources.length) return;
+      const s = el("div", "dim");
+      s.style.cssText = "margin:0 40px 8px 0;font-size:11px";
+      s.textContent = t("ai.sources", "\u{1F4CE} \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07: ") + sources.map((x2) => x2.label).join(" \xB7 ");
+      chatArea.append(s);
+    };
+    sendBtn.onclick = async () => {
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = "";
+      addMsg("user", q);
+      const bubble = addMsg("assistant", "\u2026", false);
+      let ctx = { text: "", sources: [] };
+      try {
+        const { ragContext: ragContext2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        bubble.textContent = t("ai.searchingProject", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026");
+        ctx = await ragContext2(q, { k: 6, maxTokens: 1800 });
+      } catch (e) {
+        log("warn", t("ui.ai.aiChatRAGUse"), e);
+      }
+      const system = t("ui.ai.youAssistantWriterReply") + t("ui.ai.useDataContextMain");
+      const prompt2 = (ctx.text ? ctx.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
+      bubble.textContent = "";
+      let acc = "";
+      try {
+        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        const client = getAIClient2();
+        const msgs = history2.slice(-9, -1).filter((m) => m.content);
+        const res = await client.stream(
+          { messages: [...msgs, { role: "user", content: prompt2 }], system, feature: "chat" },
+          (chunk) => {
+            acc += chunk;
+            bubble.textContent = acc;
+            chatArea.scrollTop = chatArea.scrollHeight;
+          }
+        );
+        if (!res.ok) {
+          bubble.textContent = "\u274C " + (res.error || t("ai.callFail", "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+          return;
+        }
+        if (!acc) {
+          acc = res.text || "";
+          bubble.textContent = acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
+        }
+        history2.push({ role: "assistant", content: acc });
+        addSources(ctx.sources);
+      } catch (e) {
+        log("error", t("ui.ai.aiChatStreamFail"), e);
+        const result = await callAI(prompt2, system);
+        bubble.textContent = result || t("ai.errorMark", "\u274C \u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14");
+      }
+    };
+    input.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+      }
+    };
+    const tab = {
+      file: KEY4,
+      title: "\u{1F4AC} Chat",
+      pane,
+      tabBtn,
+      dirty: false,
+      editor: null,
+      plain: null,
+      wiki: null,
+      gal: null,
+      net: null,
+      planner: null
+    };
+    tabBtn.onclick = (ev) => {
+      if (ev.target !== x) activate2(KEY4);
+    };
+    x.onclick = () => closeTab3(KEY4);
+    state.tabs.set(KEY4, tab);
+    activate2(KEY4);
+    addMsg("assistant", t("ai.greeting", "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35! \u0E16\u0E32\u0E21\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22 \u0E40\u0E0A\u0E48\u0E19") + ' "' + t("ai.sample1", "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E2D\u0E30\u0E44\u0E23\u0E1A\u0E49\u0E32\u0E07") + '" ' + t("ai.orWord", "\u0E2B\u0E23\u0E37\u0E2D") + ' "' + t("ai.sample2", "\u0E0A\u0E48\u0E27\u0E22\u0E2A\u0E23\u0E38\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E15\u0E4C\u0E43\u0E2B\u0E49\u0E2B\u0E19\u0E48\u0E2D\u0E22") + '"');
+  }
+  var init_ai_ui = __esm({
+    "src/ai/ai-ui.js"() {
+      init_i18n();
+      init_core();
+      init_ai_settings();
+      init_project_scan();
+    }
+  });
+
+  // src/tools/thesaurus.js
+  var thesaurus_exports2 = {};
+  __export(thesaurus_exports2, {
+    CACHE_KEY: () => CACHE_KEY,
+    CACHE_MAX: () => CACHE_MAX,
+    CACHE_TTL: () => CACHE_TTL,
+    DATAMUSE: () => DATAMUSE,
+    EN_ANTONYMS: () => EN_ANTONYMS,
+    EN_SYNONYMS: () => EN_SYNONYMS,
+    TH_ANTONYMS: () => TH_ANTONYMS,
+    TH_SYNONYMS: () => TH_SYNONYMS,
+    Thesaurus: () => Thesaurus,
+    ThesaurusCache: () => ThesaurusCache,
+    configure: () => configure,
+    datamuseUrl: () => datamuseUrl,
+    getAntonyms: () => getAntonyms,
+    getSynonyms: () => getSynonyms,
+    isEnglish: () => isEnglish,
+    isThai: () => isThai,
+    loadExtra: () => loadExtra,
+    localLookup: () => localLookup,
+    normalizeWord: () => normalizeWord,
+    parseDatamuse: () => parseDatamuse,
+    shared: () => shared
+  });
+  function normalizeWord(w) {
+    return String(w || "").trim().replace(/[.,!?"'()[\]{}…]/g, "").toLowerCase();
+  }
+  function localLookup(word, kind = "syn", extra = null) {
+    const w = String(word || "").trim();
+    const lower2 = w.toLowerCase();
+    const banks = kind === "ant" ? [extra && extra.antonyms, TH_ANTONYMS, EN_ANTONYMS] : [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS];
+    const out = [];
+    for (const bank of banks) {
+      if (!bank) continue;
+      for (const key2 of [w, lower2]) if (bank[key2]) out.push(...bank[key2]);
+    }
+    if (kind === "syn") {
+      for (const bank of [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS]) {
+        if (!bank) continue;
+        for (const [key2, list] of Object.entries(bank)) {
+          if (list.includes(w) || list.includes(lower2)) out.push(key2, ...list.filter((x) => x !== w && x !== lower2));
+        }
+      }
+    }
+    return uniq(out).filter((x) => x !== w && x !== lower2);
+  }
+  function datamuseUrl(word, kind = "syn", max2 = 15) {
+    const rel = kind === "ant" ? "rel_ant" : "ml";
+    return `${DATAMUSE}?${rel}=${encodeURIComponent(word)}&max=${max2}`;
+  }
+  function parseDatamuse(body, word = "") {
+    let rows;
+    try {
+      rows = typeof body === "string" ? JSON.parse(body) : body;
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(rows)) return [];
+    return uniq(rows.map((r) => r && r.word).filter((w) => w && w !== word));
+  }
+  function defaultStorage4() {
+    if (typeof localStorage !== "undefined") return localStorage;
+    const mem = /* @__PURE__ */ new Map();
+    return { getItem: (k) => mem.has(k) ? mem.get(k) : null, setItem: (k, v2) => mem.set(k, v2), removeItem: (k) => mem.delete(k) };
+  }
+  function configure(opts) {
+    _shared = new Thesaurus(opts);
+    return _shared;
+  }
+  function shared() {
+    return _shared || (_shared = new Thesaurus({}));
+  }
+  function getSynonyms(word) {
+    return shared().getSynonyms(word);
+  }
+  function getAntonyms(word) {
+    return shared().getAntonyms(word);
+  }
+  async function loadExtra(io, root) {
+    try {
+      const p = io.join(root, "Plugins", "thesaurus.json");
+      if (!await io.exists(p)) return null;
+      const j = await io.readJson(p);
+      if (!j) return null;
+      return { synonyms: j.synonyms || {}, antonyms: j.antonyms || {} };
+    } catch {
+      return null;
+    }
+  }
+  var CACHE_KEY, CACHE_TTL, CACHE_MAX, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD2, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
+  var init_thesaurus2 = __esm({
+    "src/tools/thesaurus.js"() {
+      init_i18n();
+      CACHE_KEY = "k2-thes-cache";
+      CACHE_TTL = 30 * 24 * 3600 * 1e3;
+      CACHE_MAX = 500;
+      TH_SYNONYMS = {
+        "\u0E2A\u0E27\u0E22": ["\u0E07\u0E32\u0E21", "\u0E07\u0E14\u0E07\u0E32\u0E21", "\u0E40\u0E25\u0E2D\u0E42\u0E09\u0E21", "\u0E15\u0E23\u0E30\u0E01\u0E32\u0E23\u0E15\u0E32"],
+        "\u0E40\u0E14\u0E34\u0E19": ["\u0E01\u0E49\u0E32\u0E27", "\u0E22\u0E48\u0E32\u0E07", "\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19", "\u0E22\u0E48\u0E32\u0E07\u0E40\u0E17\u0E49\u0E32"],
+        "\u0E1E\u0E39\u0E14": ["\u0E01\u0E25\u0E48\u0E32\u0E27", "\u0E40\u0E2D\u0E48\u0E22", "\u0E1A\u0E2D\u0E01", "\u0E40\u0E1B\u0E23\u0E22", "\u0E1B\u0E23\u0E34\u0E1B\u0E32\u0E01"],
+        "\u0E21\u0E2D\u0E07": ["\u0E08\u0E49\u0E2D\u0E07", "\u0E40\u0E1E\u0E48\u0E07", "\u0E0A\u0E32\u0E22\u0E15\u0E32", "\u0E17\u0E2D\u0E14\u0E2A\u0E32\u0E22\u0E15\u0E32"],
+        "\u0E01\u0E25\u0E31\u0E27": ["\u0E2B\u0E27\u0E32\u0E14\u0E01\u0E25\u0E31\u0E27", "\u0E02\u0E22\u0E32\u0E14", "\u0E1E\u0E23\u0E31\u0E48\u0E19\u0E1E\u0E23\u0E36\u0E07", "\u0E04\u0E23\u0E31\u0E48\u0E19\u0E04\u0E23\u0E49\u0E32\u0E21"],
+        "\u0E42\u0E01\u0E23\u0E18": ["\u0E40\u0E14\u0E37\u0E2D\u0E14\u0E14\u0E32\u0E25", "\u0E02\u0E38\u0E48\u0E19\u0E40\u0E04\u0E37\u0E2D\u0E07", "\u0E09\u0E38\u0E19\u0E40\u0E09\u0E35\u0E22\u0E27", "\u0E40\u0E01\u0E23\u0E35\u0E49\u0E22\u0E27\u0E01\u0E23\u0E32\u0E14"],
+        "\u0E40\u0E28\u0E23\u0E49\u0E32": ["\u0E42\u0E28\u0E01", "\u0E2B\u0E21\u0E48\u0E19\u0E2B\u0E21\u0E2D\u0E07", "\u0E23\u0E30\u0E17\u0E21", "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08"],
+        "\u0E14\u0E35\u0E43\u0E08": ["\u0E22\u0E34\u0E19\u0E14\u0E35", "\u0E1B\u0E25\u0E32\u0E1A\u0E1B\u0E25\u0E37\u0E49\u0E21", "\u0E1B\u0E35\u0E15\u0E34", "\u0E40\u0E1A\u0E34\u0E01\u0E1A\u0E32\u0E19"],
+        "\u0E40\u0E23\u0E47\u0E27": ["\u0E44\u0E27", "\u0E09\u0E31\u0E1A\u0E44\u0E27", "\u0E23\u0E27\u0E14\u0E40\u0E23\u0E47\u0E27", "\u0E1E\u0E25\u0E31\u0E19"],
+        "\u0E43\u0E2B\u0E0D\u0E48": ["\u0E21\u0E2B\u0E36\u0E21\u0E32", "\u0E21\u0E42\u0E2B\u0E2C\u0E32\u0E23", "\u0E42\u0E15", "\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E27\u0E32\u0E07"],
+        "\u0E40\u0E25\u0E47\u0E01": ["\u0E08\u0E34\u0E4B\u0E27", "\u0E01\u0E23\u0E30\u0E08\u0E34\u0E23\u0E34\u0E14", "\u0E19\u0E49\u0E2D\u0E22", "\u0E40\u0E25\u0E47\u0E01\u0E08\u0E49\u0E2D\u0E22"],
+        "\u0E21\u0E37\u0E14": ["\u0E21\u0E37\u0E14\u0E21\u0E34\u0E14", "\u0E2A\u0E25\u0E31\u0E27", "\u0E2D\u0E31\u0E1A\u0E41\u0E2A\u0E07", "\u0E17\u0E21\u0E34\u0E2C"],
+        "\u0E40\u0E07\u0E35\u0E22\u0E1A": ["\u0E2A\u0E07\u0E1A", "\u0E40\u0E07\u0E35\u0E22\u0E1A\u0E2A\u0E07\u0E31\u0E14", "\u0E1B\u0E23\u0E32\u0E28\u0E08\u0E32\u0E01\u0E40\u0E2A\u0E35\u0E22\u0E07", "\u0E2A\u0E07\u0E31\u0E14"],
+        "\u0E15\u0E32\u0E22": ["\u0E2A\u0E34\u0E49\u0E19\u0E43\u0E08", "\u0E14\u0E31\u0E1A\u0E2A\u0E39\u0E0D", "\u0E25\u0E48\u0E27\u0E07\u0E25\u0E31\u0E1A", "\u0E27\u0E32\u0E22\u0E0A\u0E19\u0E21\u0E4C"],
+        "\u0E1A\u0E49\u0E32\u0E19": ["\u0E40\u0E23\u0E37\u0E2D\u0E19", "\u0E17\u0E35\u0E48\u0E1E\u0E31\u0E01", "\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2D\u0E32\u0E28\u0E31\u0E22", "\u0E04\u0E24\u0E2B\u0E32\u0E2A\u0E19\u0E4C"]
+      };
+      TH_ANTONYMS = {
+        "\u0E2A\u0E27\u0E22": ["\u0E02\u0E35\u0E49\u0E40\u0E2B\u0E23\u0E48", "\u0E2D\u0E31\u0E1B\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C"],
+        "\u0E43\u0E2B\u0E0D\u0E48": ["\u0E40\u0E25\u0E47\u0E01", "\u0E08\u0E34\u0E4B\u0E27"],
+        "\u0E40\u0E25\u0E47\u0E01": ["\u0E43\u0E2B\u0E0D\u0E48", "\u0E21\u0E2B\u0E36\u0E21\u0E32"],
+        "\u0E21\u0E37\u0E14": ["\u0E2A\u0E27\u0E48\u0E32\u0E07", "\u0E01\u0E23\u0E30\u0E08\u0E48\u0E32\u0E07"],
+        "\u0E40\u0E07\u0E35\u0E22\u0E1A": ["\u0E14\u0E31\u0E07", "\u0E2D\u0E36\u0E01\u0E17\u0E36\u0E01"],
+        "\u0E40\u0E23\u0E47\u0E27": ["\u0E0A\u0E49\u0E32", "\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E07\u0E0A\u0E49\u0E32"],
+        "\u0E14\u0E35\u0E43\u0E08": ["\u0E40\u0E28\u0E23\u0E49\u0E32", "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08"],
+        "\u0E40\u0E28\u0E23\u0E49\u0E32": ["\u0E14\u0E35\u0E43\u0E08", "\u0E22\u0E34\u0E19\u0E14\u0E35"],
+        "\u0E01\u0E25\u0E31\u0E27": ["\u0E01\u0E25\u0E49\u0E32", "\u0E2B\u0E49\u0E32\u0E27\u0E2B\u0E32\u0E0D"]
+      };
+      EN_SYNONYMS = {
+        big: ["large", "huge", "massive", "enormous"],
+        small: ["little", "tiny", "compact", "minor"],
+        walk: ["stroll", "stride", "wander", "pace"],
+        say: ["tell", "state", "utter", "remark"],
+        look: ["gaze", "stare", "glance", "watch"],
+        happy: ["glad", "joyful", "cheerful", "content"],
+        sad: ["unhappy", "sorrowful", "gloomy", "downcast"],
+        fast: ["quick", "rapid", "swift", "speedy"],
+        dark: ["dim", "gloomy", "shadowy", "murky"],
+        quiet: ["silent", "still", "hushed", "calm"]
+      };
+      EN_ANTONYMS = {
+        big: ["small", "tiny"],
+        small: ["big", "large"],
+        happy: ["sad", "miserable"],
+        sad: ["happy", "glad"],
+        fast: ["slow"],
+        dark: ["bright", "light"],
+        quiet: ["loud", "noisy"]
+      };
+      EN_WORD2 = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
+      isEnglish = (w) => EN_WORD2.test(String(w || "").trim());
+      isThai = (w) => /[฀-๿]/.test(String(w || ""));
+      uniq = (a) => [...new Set(a.filter(Boolean))];
+      DATAMUSE = "https://api.datamuse.com/words";
+      ThesaurusCache = class {
+        constructor({ storage = defaultStorage4(), key: key2 = CACHE_KEY, ttl = CACHE_TTL, max: max2 = CACHE_MAX, now = () => Date.now() } = {}) {
+          this.storage = storage;
+          this.key = key2;
+          this.ttl = ttl;
+          this.max = max2;
+          this.now = now;
+          this.map = this._read();
+        }
+        _read() {
+          try {
+            const o = JSON.parse(this.storage.getItem(this.key) || "{}");
+            return o && typeof o === "object" ? o : {};
+          } catch {
+            return {};
+          }
+        }
+        get(word, kind) {
+          const row2 = this.map[`${kind}:${word}`];
+          if (!row2) return null;
+          if (this.now() - row2.t > this.ttl) {
+            delete this.map[`${kind}:${word}`];
+            return null;
+          }
+          return row2.w;
+        }
+        set(word, kind, words) {
+          this.map[`${kind}:${word}`] = { w: words, t: this.now() };
+          const keys4 = Object.keys(this.map);
+          if (keys4.length > this.max) {
+            keys4.sort((a, b) => this.map[a].t - this.map[b].t).slice(0, keys4.length - this.max).forEach((k) => delete this.map[k]);
+          }
+          this.save();
+          return words;
+        }
+        save() {
+          try {
+            this.storage.setItem(this.key, JSON.stringify(this.map));
+          } catch {
+          }
+        }
+        clear() {
+          this.map = {};
+          this.storage.removeItem(this.key);
+        }
+        get size() {
+          return Object.keys(this.map).length;
+        }
+      };
+      Thesaurus = class {
+        /**
+         * @param {object} o { http, storage, online, extra, providers, now }
+         *        online   = อนุญาตให้ยิงเน็ตไหม (ค่าเริ่มต้น false — ส่งคำผู้ใช้ออกเน็ตต้องเลือกเอง)
+         *        extra    = { synonyms, antonyms } คลังเพิ่มจาก Plugins/thesaurus.json
+         *        providers= ตัวหาเพิ่ม เช่น WordNet ในเครื่อง: [{ name, lookup(word,kind) → string[] }]
+         */
+        constructor({ http = null, storage, online = false, extra = null, providers = [], now = () => Date.now(), max: max2 = 15 } = {}) {
+          this.http = http;
+          this.online = online;
+          this.extra = extra;
+          this.providers = providers;
+          this.max = max2;
+          this.cache = new ThesaurusCache({ storage, now });
+        }
+        setExtra(extra) {
+          this.extra = extra;
+        }
+        async lookup(word, kind = "syn") {
+          const w = normalizeWord(word);
+          if (!w) return { words: [], source: "none", word: w };
+          const cached = this.cache.get(w, kind);
+          if (cached) return { words: cached, source: "cache", word: w };
+          const localWords = localLookup(word, kind, this.extra);
+          for (const p of this.providers) {
+            try {
+              const got = await p.lookup(w, kind);
+              if (got && got.length) {
+                const words = uniq([...localWords, ...got]).slice(0, this.max);
+                this.cache.set(w, kind, words);
+                return { words, source: p.name || "provider", word: w };
+              }
+            } catch {
+            }
+          }
+          if (this.online && this.http && isEnglish(w)) {
+            try {
+              const res = await this.http.fetch(datamuseUrl(w, kind, this.max), { method: "GET" });
+              if (res && res.ok) {
+                const got = parseDatamuse(res.body, w);
+                if (got.length) {
+                  const words = uniq([...localWords, ...got]).slice(0, this.max);
+                  this.cache.set(w, kind, words);
+                  return { words, source: "datamuse", word: w };
+                }
+              }
+            } catch {
+            }
+          }
+          if (localWords.length) {
+            this.cache.set(w, kind, localWords.slice(0, this.max));
+            return { words: localWords.slice(0, this.max), source: "local", word: w };
+          }
+          return { words: [], source: "none", word: w };
+        }
+        /** @returns {Promise<string[]>} — the API required by the spec */
+        async getSynonyms(word) {
+          return (await this.lookup(word, "syn")).words;
+        }
+        /** @returns {Promise<string[]>} */
+        async getAntonyms(word) {
+          return (await this.lookup(word, "ant")).words;
+        }
+        clearCache() {
+          this.cache.clear();
+        }
+      };
+      _shared = null;
+    }
+  });
+
+  // src/tools/thesaurus-ui.js
+  async function showThesaurusPopup(word, x, y) {
+    if (!word) return;
+    const norm3 = word.trim();
+    if (!norm3) return;
+    let syns = [], ants = [];
+    try {
+      const [synRes, antRes] = await Promise.all([
+        getSynonyms(norm3).catch(() => []),
+        getAntonyms(norm3).catch(() => [])
+      ]);
+      syns = Array.isArray(synRes) ? synRes : synRes?.words || [];
+      ants = Array.isArray(antRes) ? antRes : antRes?.words || [];
+    } catch {
+      try {
+        const old2 = await Promise.resolve().then(() => (init_thesaurus(), thesaurus_exports));
+        const items = old2.thesaurusMenuItems ? await old2.thesaurusMenuItems(norm3) : [];
+        if (items.length) {
+          for (const it of items) {
+            if (it.label.startsWith("Syn:")) syns.push(it.label.slice(4));
+            else if (it.label.startsWith("Ant:")) ants.push(it.label.slice(4));
+            else syns.push(it.label);
+          }
+        }
+      } catch {
+      }
+    }
+    if (!syns.length && !ants.length) {
+      setStatus(t("ui.thes.notFound") + norm3 + '"');
+      return;
+    }
+    const old = document.querySelector(".k-thes-popup");
+    if (old) old.remove();
+    const pop = el("div", "k-thes-popup");
+    pop.style.left = Math.min(x, window.innerWidth - 220) + "px";
+    pop.style.top = Math.min(y, window.innerHeight - 300) + "px";
+    if (syns.length) {
+      pop.append(el("div", "k-thes-head", t("ui.toolsThesaurus.thesaurusSynonyms")));
+      for (const s of syns.slice(0, 15)) {
+        const item = el("div", "k-thes-item", s);
+        item.onclick = () => {
+          navigator.clipboard.writeText(s);
+          setStatus(t("ui.thes.copied") + s);
+          pop.remove();
+        };
+        pop.append(item);
+      }
+    }
+    if (ants.length) {
+      pop.append(el("div", "k-thes-head", t("ui.toolsThesaurus.wordOppositeAntonyms")));
+      for (const a of ants.slice(0, 15)) {
+        const item = el("div", "k-thes-item", a);
+        item.onclick = () => {
+          navigator.clipboard.writeText(a);
+          setStatus(t("ui.thes.copied") + a);
+          pop.remove();
+        };
+        pop.append(item);
+      }
+    }
+    const close2 = el("div", "k-thes-close", "\u2715");
+    close2.onclick = () => pop.remove();
+    pop.append(close2);
+    document.body.append(pop);
+    const outside = (e) => {
+      if (!pop.contains(e.target)) {
+        pop.remove();
+        document.removeEventListener("click", outside);
+      }
+    };
+    setTimeout(() => document.addEventListener("click", outside), 0);
+  }
+  async function initThesaurus() {
+    const { loadExtra: loadExtra2, configure: configure2 } = await Promise.resolve().then(() => (init_thesaurus2(), thesaurus_exports2));
+    const { syncIo: syncIo2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
+    let extra = null;
+    try {
+      extra = await loadExtra2(syncIo2(), state.root);
+    } catch {
+      extra = null;
+    }
+    configure2({
+      http: { fetch: (url, opts) => kapi.httpFetch(url, opts) },
+      online: !!(state.settings && state.settings.thesaurus),
+      // ส่งคำออกเน็ต = ต้องเปิดเองในตั้งค่า
+      extra
+    });
+  }
+  var init_thesaurus_ui = __esm({
+    "src/tools/thesaurus-ui.js"() {
+      init_core();
+      init_thesaurus2();
+    }
+  });
+
+  // src/import/import-scrivener.js
+  function parseXml(xml) {
+    const src2 = String(xml || "").replace(/<\?xml[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    const root = { tag: "#root", attrs: {}, children: [], text: "" };
+    const stack = [root];
+    const re = /<\s*(\/)?\s*([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/)?\s*>|([^<]+)/g;
+    let m;
+    while (m = re.exec(src2)) {
+      const [, close2, tag3, attrStr, selfClose, textRun] = m;
+      const top = stack[stack.length - 1];
+      if (textRun != null) {
+        top.text += decodeEntities(textRun);
+        continue;
+      }
+      if (close2) {
+        if (stack.length > 1 && stack[stack.length - 1].tag === tag3) stack.pop();
+        continue;
+      }
+      const node = { tag: tag3, attrs: parseAttrs(attrStr), children: [], text: "" };
+      top.children.push(node);
+      if (!selfClose) stack.push(node);
+    }
+    return root;
+  }
+  function parseAttrs(s) {
+    const out = {};
+    for (const m of String(s || "").matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+      out[m[1]] = decodeEntities(m[2] != null ? m[2] : m[3]);
+    }
+    return out;
+  }
+  function decodeEntities(s) {
+    return String(s).replace(/&(#x?[0-9a-f]+|\w+);/gi, (all, e) => {
+      if (e[0] === "#") return String.fromCodePoint(parseInt(e[1] === "x" || e[1] === "X" ? e.slice(2) : e.slice(1), e[1] === "x" || e[1] === "X" ? 16 : 10));
+      return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[e.toLowerCase()] ?? all;
+    });
+  }
+  function findAll(node, tag3, out = []) {
+    for (const c of node.children || []) {
+      if (c.tag === tag3) out.push(c);
+      findAll(c, tag3, out);
+    }
+    return out;
+  }
+  function firstChild(node, tag3) {
+    return (node.children || []).find((c) => c.tag === tag3) || null;
+  }
+  function rtfToText(rtf) {
+    const src2 = String(rtf || "");
+    let out = "";
+    let i5 = 0;
+    let skipDepth = 0;
+    let depth = 0;
+    let ucSkip = 1;
+    while (i5 < src2.length) {
+      const ch = src2[i5];
+      if (ch === "{") {
+        depth++;
+        i5++;
+        continue;
+      }
+      if (ch === "}") {
+        depth--;
+        if (skipDepth && depth < skipDepth) skipDepth = 0;
+        i5++;
+        continue;
+      }
+      if (ch === "\\") {
+        const ctrl = /^\\([a-zA-Z]+)(-?\d+)?[ ]?/.exec(src2.slice(i5));
+        if (ctrl) {
+          const word = ctrl[1], arg = ctrl[2] ? parseInt(ctrl[2], 10) : null;
+          i5 += ctrl[0].length;
+          if (word === "u" && arg != null) {
+            if (!skipDepth) out += String.fromCharCode(arg < 0 ? arg + 65536 : arg);
+            let skipped = 0;
+            while (skipped < ucSkip && i5 < src2.length) {
+              if (src2[i5] === "\\" && src2[i5 + 1] === "'") {
+                i5 += 4;
+                skipped++;
+                continue;
+              }
+              if (src2[i5] === "{" || src2[i5] === "}" || src2[i5] === "\\") break;
+              i5++;
+              skipped++;
+            }
+            continue;
+          }
+          if (word === "uc") {
+            ucSkip = arg == null ? 1 : arg;
+            continue;
+          }
+          if (word === "par" || word === "line") {
+            if (!skipDepth) out += "\n";
+            continue;
+          }
+          if (word === "tab") {
+            if (!skipDepth) out += "	";
+            continue;
+          }
+          if (SKIP_GROUPS.test(word) && !skipDepth) {
+            skipDepth = depth;
+            continue;
+          }
+          continue;
+        }
+        const esc6 = src2[i5 + 1];
+        if (esc6 === "'") {
+          const hex = src2.slice(i5 + 2, i5 + 4);
+          if (!skipDepth) {
+            const code3 = parseInt(hex, 16);
+            if (code3 >= 32) out += String.fromCharCode(code3);
+          }
+          i5 += 4;
+          continue;
+        }
+        if (esc6 === "*") {
+          skipDepth = depth;
+          i5 += 2;
+          continue;
+        }
+        if (!skipDepth && (esc6 === "\\" || esc6 === "{" || esc6 === "}")) out += esc6;
+        i5 += 2;
+        continue;
+      }
+      if (!skipDepth) out += ch;
+      i5++;
+    }
+    return out.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function parseBinder(xml) {
+    const doc3 = parseXml(xml);
+    const binder = findAll(doc3, "Binder")[0] || doc3;
+    const walk3 = (node) => (node.children || []).filter((c) => c.tag === "BinderItem").map((item) => {
+      const titleNode = firstChild(item, "Title");
+      const kids = firstChild(item, "Children");
+      const meta2 = firstChild(item, "MetaData");
+      const inc = meta2 ? firstChild(meta2, "IncludeInCompile") : null;
+      return {
+        id: item.attrs.UUID || item.attrs.ID || "",
+        type: item.attrs.Type || "Text",
+        title: (titleNode ? titleNode.text : "").trim(),
+        include: inc ? !/^no$/i.test(inc.text.trim()) : true,
+        // ติ๊ก "Include in Compile" ไว้ไหม
+        children: kids ? walk3(kids) : []
+      };
+    });
+    return walk3(binder);
+  }
+  function mapBinder(binder, opts = {}) {
+    const draftOnly = opts.draftOnly !== false;
+    const roots = draftOnly ? pickDraft(binder) : binder;
+    const chapters = [];
+    let loose = null;
+    const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || t("ui.common.notNamed") });
+    const visit = (items, chapter) => {
+      for (const it of items) {
+        if (opts.onlyCompiled && it.include === false) continue;
+        if (SCRIV_FOLDER.has(it.type) || it.children && it.children.length) {
+          const ch = { title: it.title || t("ui.common.notNamed"), scenes: [] };
+          chapters.push(ch);
+          visit(it.children || [], ch);
+          if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);
+        } else if (SCRIV_TEXT.has(it.type)) {
+          if (!chapter) {
+            loose = loose || { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
+            pushScene(loose, it);
+          } else pushScene(chapter, it);
+        }
+      }
+    };
+    visit(roots, null);
+    if (loose) chapters.unshift(loose);
+    const kept = chapters.filter((c) => c.scenes.length);
+    return {
+      sections: [{ title: opts.sectionTitle || t("ui.common.bookOne"), chapters: kept }],
+      counts: { chapters: kept.length, scenes: kept.reduce((n2, c) => n2 + c.scenes.length, 0) }
+    };
+  }
+  function pickDraft(binder) {
+    const draft = binder.find((b) => b.type === "DraftFolder" || /^(draft|manuscript|ต้นฉบับ)$/i.test(b.title));
+    return draft ? draft.children : binder;
+  }
+  async function importScrivener(filePath, options = {}) {
+    const io = options.io;
+    if (!io) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
+    const warnings = [];
+    let files = [];
+    try {
+      files = await io.listFiles(filePath);
+    } catch {
+      files = [];
+    }
+    const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
+    if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
+    const xml = await io.readFile(io.join(filePath, scrivx));
+    const binder = parseBinder(xml);
+    if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
+    const mapped = mapBinder(binder, options);
+    const title2 = options.title || scrivx.replace(/\.scrivx$/i, "");
+    for (const sec of mapped.sections) {
+      for (const ch of sec.chapters) {
+        for (const sc of ch.scenes) {
+          const rtf = await readDocRtf(io, filePath, sc.srcId);
+          if (rtf == null) {
+            warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
+            sc.body = "";
+            continue;
+          }
+          sc.body = rtfToText(rtf);
+        }
+      }
+    }
+    const plan = buildPlan(mapped, title2, options);
+    if (options.dryRun) return { ok: true, plan, counts: mapped.counts, warnings, written: 0, title: title2 };
+    const dest = options.dest;
+    if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
+    let written = 0;
+    for (const f of plan.files) {
+      const full = io.join(dest, ...f.path);
+      if (io.mkdir) await io.mkdir(dirOf(io, dest, f.path));
+      await io.writeFile(full, f.content);
+      written++;
+      if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
+    }
+    return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
+  }
+  function dirOf(io, dest, parts) {
+    return io.join(dest, ...parts.slice(0, -1));
+  }
+  async function readDocRtf(io, root, id) {
+    const candidates = [
+      ["Files", "Data", id, "content.rtf"],
+      // Scrivener 3
+      ["Files", "Docs", id + ".rtf"],
+      // Scrivener 2
+      ["Files", "Docs", id, "content.rtf"]
+    ];
+    for (const parts of candidates) {
+      const p = io.join(root, ...parts);
+      try {
+        if (await io.exists(p)) return await io.readFile(p);
+      } catch {
+      }
+    }
+    return null;
+  }
+  function buildPlan(mapped, title2, opts = {}) {
+    const files = [];
+    files.push({ path: ["project.khn.json"], content: JSON.stringify({
+      title: title2,
+      type: "killian-project",
+      importedFrom: "scrivener",
+      importedAt: opts.now || null
+    }, null, 2) });
+    mapped.sections.forEach((sec, si) => {
+      const secDir = safeName4(sec.title, t("ui.common.bookOne"));
+      files.push({ path: [secDir, "section.json"], content: JSON.stringify({
+        guid: "s" + (si + 1),
+        title: sec.title,
+        order: si + 1
+      }, null, 2) });
+      const chapters = [];
+      const scenesMap = {};
+      sec.chapters.forEach((ch, ci) => {
+        const guid3 = `c${si + 1}_${ci + 1}`;
+        const folderName = `${String(ci + 1).padStart(2, "0")} - ${safeName4(ch.title, t("ui.common.chapter"))}`;
+        chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
+        scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
+          id: `${guid3}_s${i5 + 1}`,
+          title: sc.title,
+          order: i5 + 1,
+          fileName: `scene-${String(i5 + 1).padStart(2, "0")}.md`
+        }));
+        ch.scenes.forEach((sc, i5) => {
+          files.push({
+            path: [secDir, "Draft", "default", "Chapters", folderName, `scene-${String(i5 + 1).padStart(2, "0")}.md`],
+            content: `---
+title: ${sc.title}
+type: scene
+format: prose
+---
+
+${sc.body || ""}
+`
+          });
+        });
+      });
+      files.push({ path: [secDir, "Draft", "default", "draft.json"], content: JSON.stringify({ chapters }, null, 2) });
+      files.push({ path: [secDir, "Draft", "default", "scenes.json"], content: JSON.stringify({ chapters: scenesMap }, null, 2) });
+    });
+    return { files, count: files.length };
+  }
+  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER, safeName4;
+  var init_import_scrivener = __esm({
+    "src/import/import-scrivener.js"() {
+      init_i18n();
+      SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
+      SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
+      SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
+      safeName4 = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 60) || fallback;
+    }
+  });
+
+  // src/import/import-ui.js
+  async function importScrivenerDialog(onOpenProject) {
+    const src2 = await kapi.openProjectDialog();
+    if (!src2) return null;
+    setBusy(t("ui.impOrt.busyReadProjectScrivener"));
+    const io = makeIo();
+    let preview2;
+    try {
+      preview2 = await importScrivener(src2, { io, dryRun: true });
+    } finally {
+      clearBusy();
+    }
+    if (!preview2.ok) {
+      setStatus(t("ui.imp.failed") + preview2.error);
+      return null;
+    }
+    const c = preview2.counts || {};
+    const lines = [
+      t("ui.imp.projectName") + (preview2.title || t("ui.imp.untitled")),
+      t("ui.imp.chapters") + (c.chapters ?? 0) + t("ui.impOrt.scene") + (c.scenes ?? 0),
+      t("ui.imp.filesToCreate") + (preview2.plan?.count ?? 0)
+    ];
+    if (preview2.warnings?.length) lines.push(t("ui.imp.warnPrefix") + preview2.warnings.length + t("ui.imp.warnSuffix"));
+    if (preview2.warnings?.length) log("warn", t("ui.impOrt.scrivenerImportHasWord"), preview2.warnings);
+    if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"))) return null;
+    const dest = await kapi.openProjectDialog();
+    if (!dest) return null;
+    if (await kapi.exists(io.join(dest, "project.khn.json"))) {
+      if (!await confirmBox(t("ui.imp.overwrite"))) return null;
+    }
+    setBusy(t("ui.imp.working"));
+    let res;
+    try {
+      res = await importScrivener(src2, {
+        io,
+        dest,
+        title: preview2.title,
+        now: (/* @__PURE__ */ new Date()).toISOString(),
+        onProgress: (n2, total) => {
+          if (n2 % 10 === 0) setBusy(tf("ui.impOrt.importFile", n2, total));
+        }
+      });
+    } finally {
+      clearBusy();
+    }
+    if (!res.ok) {
+      setStatus(t("ui.imp.failed") + res.error);
+      return null;
+    }
+    setStatus(tf("ui.impOrt.importDoneFile", res.written, dest));
+    log("info", t("ui.impOrt.scrivenerImportOk"), { src: src2, dest, written: res.written });
+    if (onOpenProject) await onOpenProject(dest);
+    return res;
+  }
+  var makeIo;
+  var init_import_ui = __esm({
+    "src/import/import-ui.js"() {
+      init_i18n();
+      init_core();
+      init_import_scrivener();
+      init_ui();
+      init_project_scan();
+      makeIo = () => syncIo();
+    }
+  });
+
+  // src/import-sp.js
+  async function importScreenplayDialog(injectFn) {
+    const filePath = await kapi.openScreenplayFile();
+    if (!filePath) return null;
+    const result = await importScreenplay(filePath, null);
+    if (!result.ok) {
+      alert(t("ui.importSp.importNotOk") + result.error);
+      return null;
+    }
+    const summary = importSummary(result.elements);
+    const lines = [
+      t("ui.importSp.import") + result.importer,
+      t("ui.importSp.file") + filePath.split(/[/\\]/).pop(),
+      "",
+      t("ui.common.scene3") + summary.scenes + t("ui.importSp.character") + summary.characters,
+      t("ui.importSp.dialogue") + summary.dialogueBlocks + t("ui.importSp.caption") + summary.actionBlocks,
+      t("ui.importSp.countWord") + summary.words,
+      "",
+      t("ui.importSp.bodyInNovelScreenplay")
+    ];
+    if (!confirm(lines.join("\n"))) return null;
+    const markdown = elementsToMarkdown(result.elements);
+    if (injectFn) {
+      injectFn(markdown, result.format, summary);
+    }
+    return { markdown, format: result.format, summary };
+  }
+  function detectFormat(filePath) {
+    const lower2 = filePath.toLowerCase();
+    for (const [key2, imp] of Object.entries(SP_IMPORTERS)) {
+      if (lower2.endsWith(imp.ext)) return key2;
+    }
+    if (lower2.endsWith(".txt")) return "fountain";
+    return null;
+  }
+  async function importScreenplay(filePath, format3) {
+    if (!format3) format3 = detectFormat(filePath);
+    if (!format3 || !SP_IMPORTERS[format3]) {
+      return { ok: false, error: t("ui.importSp.notKnownFormatFile") + (filePath.split(/[/\\]/).pop() || filePath) };
+    }
+    const importer = SP_IMPORTERS[format3];
+    let content;
+    try {
+      if (format3 === "celtx") {
+        const raw = await kapi.readBytes(filePath);
+        content = new Uint8Array(raw);
+      } else {
+        content = await kapi.readFile(filePath);
+      }
+    } catch (e) {
+      return { ok: false, error: t("ui.importSp.readFileNotOk") + e.message };
+    }
+    try {
+      const elements = await importer.parse(content);
+      return { ok: true, elements, format: format3, importer: importer.name };
+    } catch (e) {
+      return { ok: false, error: e.message || String(e) };
+    }
+  }
+  function parseFdx(xml) {
+    const parser = new DOMParser();
+    const doc3 = parser.parseFromString(xml, "text/xml");
+    const errNode = doc3.querySelector("parsererror");
+    if (errNode) throw new Error(t("ui.importSp.xMLNotValid") + errNode.textContent);
+    const elements = [];
+    const paragraphs2 = doc3.querySelectorAll("Paragraph");
+    for (const p of paragraphs2) {
+      const type = (p.getAttribute("Type") || "General").trim();
+      const el2 = FDX_TYPE_MAP2[type] || "action";
+      const textNodes = p.querySelectorAll("Text");
+      let text;
+      if (textNodes.length) {
+        text = Array.from(textNodes).map((t3) => t3.textContent || "").join("");
+      } else {
+        text = p.textContent || "";
+      }
+      elements.push({ el: el2, text: text.trim() });
+    }
+    return elements;
+  }
+  async function parseCeltx(buffer2) {
+    const zip = new import_jszip3.default();
+    await zip.loadAsync(buffer2);
+    let htmlFile = zip.file("script/index.html") || zip.file("script.html");
+    if (!htmlFile) {
+      const htmlFiles = Object.keys(zip.files).filter((f) => f.endsWith(".html") && !f.startsWith("__MACOSX"));
+      if (htmlFiles.length) htmlFile = zip.file(htmlFiles[0]);
+    }
+    if (!htmlFile) {
+      throw new Error(t("ui.importSp.notFoundFileHTML"));
+    }
+    const html = await htmlFile.async("text");
+    return parseCeltxHtml(html);
+  }
+  function parseCeltxHtml(html) {
+    const parser = new DOMParser();
+    const doc3 = parser.parseFromString(html, "text/html");
+    const elements = [];
+    const blocks = doc3.querySelectorAll('p, div.script-block, div[class*="scene"], div[class*="character"], div[class*="action"], div[class*="dialogue"]');
+    for (const block of blocks) {
+      const cls = (block.className || block.getAttribute("class") || "").toLowerCase();
+      let el2 = "action";
+      for (const [cKey, cEl] of Object.entries(CELTX_TYPE_MAP)) {
+        if (cls.includes(cKey)) {
+          el2 = cEl;
+          break;
+        }
+      }
+      const text = (block.textContent || "").trim();
+      if (!text) continue;
+      elements.push({ el: el2, text });
+    }
+    if (!elements.length) {
+      const paras = doc3.querySelectorAll("p, h1, h2, h3, h4, h5, h6, div");
+      for (const p of paras) {
+        const text = (p.textContent || "").trim();
+        if (text) elements.push({ el: "action", text });
+      }
+    }
+    return elements;
+  }
+  function parseAstx(xml) {
+    const parser = new DOMParser();
+    const doc3 = parser.parseFromString(xml, "text/xml");
+    const errNode = doc3.querySelector("parsererror");
+    if (errNode) throw new Error(t("ui.importSp.xMLNotValid") + errNode.textContent);
+    const elements = [];
+    const paragraphs2 = doc3.querySelectorAll(
+      "paragraph, p, Paragraph, dialogue-block, scene, action, character, transition, note"
+    );
+    for (const p of paragraphs2) {
+      const tag3 = p.tagName.toLowerCase();
+      const typeAttr = (p.getAttribute("type") || "").toLowerCase();
+      const el2 = ASTX_TYPE_MAP[typeAttr] || ASTX_TYPE_MAP[tag3] || "action";
+      const text = (p.textContent || "").trim();
+      if (text) elements.push({ el: el2, text });
+    }
+    if (!elements.length) {
+      const els = doc3.querySelectorAll("*");
+      for (const el2 of els) {
+        const tag3 = el2.tagName.toLowerCase();
+        if (tag3 === "document" || tag3 === "story" || tag3 === "script" || tag3 === "body") continue;
+        if (el2.children.length) continue;
+        const text = (el2.textContent || "").trim();
+        if (text) {
+          const typeAttr = (el2.getAttribute("type") || "").toLowerCase();
+          const k2el = ASTX_TYPE_MAP[typeAttr] || ASTX_TYPE_MAP[tag3] || "action";
+          elements.push({ el: k2el, text });
+        }
+      }
+    }
+    return elements;
+  }
+  function parseFadeIn(jsonStr) {
+    let data2;
+    try {
+      data2 = JSON.parse(jsonStr);
+    } catch (e) {
+      throw new Error(t("ui.common.jSONNotValid") + e.message);
+    }
+    const elements = [];
+    const items = data2.script || data2.elements || data2.blocks || data2.items || data2;
+    function processItem(item) {
+      if (Array.isArray(item)) {
+        for (const sub of item) processItem(sub);
+        return;
+      }
+      if (!item || typeof item !== "object") return;
+      const type = item.type || item.element || item.el || "";
+      const text = item.text || item.content || item.value || item.line || "";
+      if (type || text) {
+        const el2 = FADEIN_TYPE_MAP[type.toLowerCase()] || "action";
+        if (el2 === "dialogue" && !text.trim()) return;
+        elements.push({ el: el2, text: String(text).trim() });
+      }
+      if (item.children) processItem(item.children);
+      if (item.content) processItem(item.content);
+    }
+    processItem(items);
+    return elements;
+  }
+  function parseFountainFromText(text) {
+    return parseScript(text);
+  }
+  function elementsToMarkdown(elements) {
+    const lines = [];
+    let prevType = "action";
+    let prevBlank = true;
+    const guessNames = guessNamesForBlocks(elements);
+    for (let i5 = 0; i5 < elements.length; i5++) {
+      const { el: el2, text } = elements[i5];
+      if (el2 === "blank") {
+        lines.push("");
+        prevBlank = true;
+        continue;
+      }
+      const nextBlank = blockIsBlank(elements[i5 + 1]);
+      const prefix2 = SP_ELEMS[el2]?.prefix || "";
+      let line = prefix2 + text;
+      try {
+        let [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
+        if (got !== el2 && prefix2) {
+          line = prefix2.endsWith(" ") ? prefix2 + text : prefix2 + " " + text;
+          [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
+          if (got !== el2) line = prefix2 + text;
+        }
+        if (got !== el2 && el2 === "action") line = "!" + text;
+      } catch {
+      }
+      lines.push(line);
+      prevBlank = false;
+      prevType = el2;
+    }
+    return lines.join("\n");
+  }
+  function importSummary(elements) {
+    const counts = {};
+    const chars3 = /* @__PURE__ */ new Set();
+    let words = 0;
+    for (const { el: el2, text } of elements) {
+      counts[el2] = (counts[el2] || 0) + 1;
+      if (el2 === "character") {
+        const { name: name5 } = splitCharacter(text);
+        if (name5) chars3.add(name5);
+      }
+      if (text) words += text.split(/[\s\u00A0]+/).filter(Boolean).length;
+    }
+    return {
+      scenes: counts.scene || 0,
+      characters: chars3.size,
+      dialogueBlocks: counts.dialogue || 0,
+      actionBlocks: counts.action || 0,
+      words,
+      counts
+    };
+  }
+  var import_jszip3, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
+  var init_import_sp = __esm({
+    "src/import-sp.js"() {
+      init_i18n();
+      init_fountain();
+      import_jszip3 = __toESM(require_jszip_min());
+      SP_IMPORTERS = {
+        fdx: { name: "Final Draft XML", ext: ".fdx", filter: "fdx", parse: parseFdx },
+        celtx: { name: "Celtx", ext: ".celtx", filter: "celtx", parse: parseCeltx },
+        astx: { name: "Adobe Story", ext: ".astx", filter: "astx", parse: parseAstx },
+        fadein: { name: "Fade In Pro", ext: ".fadein", filter: "fadein", parse: parseFadeIn },
+        fountain: { name: "Fountain", ext: ".fountain", filter: "fountain", parse: parseFountainFromText }
+      };
+      FDX_TYPE_MAP2 = {
+        "Scene Heading": "scene",
+        "Action": "action",
+        "Character": "character",
+        "Dialogue": "dialogue",
+        "Parenthetical": "parenthetical",
+        "Transition": "transition",
+        "Shot": "shot",
+        "Cast List": "raw",
+        "New Act": "act-break",
+        "End of Act": "transition",
+        "General": "action",
+        "Scene Number": "raw",
+        "Scene Characters": "raw",
+        "Notes": "note",
+        "Synopsis": "note"
+      };
+      CELTX_TYPE_MAP = {
+        "sceneheading": "scene",
+        "action": "action",
+        "character": "character",
+        "dialogue": "dialogue",
+        "parenthetical": "parenthetical",
+        "transition": "transition",
+        "shot": "shot",
+        "text": "action",
+        "chapter-heading": "act-break"
+      };
+      ASTX_TYPE_MAP = {
+        "scene_heading": "scene",
+        "scene-heading": "scene",
+        "action": "action",
+        "character": "character",
+        "dialogue": "dialogue",
+        "parenthetical": "parenthetical",
+        "transition": "transition",
+        "shot": "shot",
+        "chapter": "act-break",
+        "act-break": "act-break",
+        "note": "note",
+        "general": "action"
+      };
+      FADEIN_TYPE_MAP = {
+        "scene-heading": "scene",
+        "scene_heading": "scene",
+        "action": "action",
+        "character": "character",
+        "dialogue": "dialogue",
+        "parenthetical": "parenthetical",
+        "transition": "transition",
+        "shot": "shot",
+        "act-break": "act-break",
+        "chapter-heading": "act-break",
+        "note": "note",
+        "general": "action"
+      };
+    }
+  });
+
+  // src/sp-compare.js
+  function compareScripts(oldText, newText) {
+    const oldBlocks = parseScript(oldText);
+    const newBlocks = parseScript(newText);
+    const oldLines = oldBlocks.map((b) => b.el === "blank" ? "" : (SP_PREFIX[b.el] || "") + b.text);
+    const newLines = newBlocks.map((b) => b.el === "blank" ? "" : (SP_PREFIX[b.el] || "") + b.text);
+    const diffs = lineDiff(oldLines, newLines);
+    return diffs;
+  }
+  function renderComparisonHtml(diffs, labels = {}) {
+    const leftLabel = labels.old || t("ui.spCompare.edition");
+    const rightLabel = labels.new || t("ui.spCompare.editionNew");
+    let html = `<div class="k-compare-wrap">
+<style>
+.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace; font-size:12px;
+  line-height:1.6; max-width:100%; overflow-x:auto; }
+.k-compare-header { display:flex; border-bottom:2px solid #666; margin-bottom:8px; }
+.k-compare-hdr-left, .k-compare-hdr-right { flex:1; padding:4px 8px; font-weight:bold; text-align:center; }
+.k-compare-hdr-left { background:#fff5f5; color:#b00; }
+.k-compare-hdr-right { background:#f5fff5; color:#070; }
+.k-compare-row { display:flex; border-bottom:1px solid #eee; min-height:20px; }
+.k-compare-cell { padding:1px 8px; white-space:pre-wrap; word-break:break-all; flex:1; }
+.k-cmp-del { background:#ffe0e0; color:#b00; }
+.k-cmp-add { background:#e0ffe0; color:#070; }
+.k-cmp-eq  { background:#fff; color:#333; }
+.k-cmp-chg { background:#ffffd0; }
+.k-cmp-chg .k-cmp-add { background:#e0ffe0; }
+.k-cmp-chg .k-cmp-del { background:#ffe0e0; }
+.k-compare-sep { height:4px; background:#ccc; margin:2px 0; }
+.k-compare-empty { color:#aaa; font-style:italic; }
+</style>
+<div class="k-compare-header">
+  <div class="k-compare-hdr-left">${escHtml(leftLabel)}</div>
+  <div class="k-compare-hdr-right">${escHtml(rightLabel)}</div>
+</div>`;
+    for (const d of diffs) {
+      const leftCls = d.type === "delete" ? "k-cmp-del" : d.type === "equal" ? "k-cmp-eq" : "k-cmp-chg";
+      const rightCls = d.type === "insert" ? "k-cmp-add" : d.type === "equal" ? "k-cmp-eq" : "k-cmp-chg";
+      const leftText = d.old != null ? escHtml(d.old) : '<span class="k-compare-empty">\u2014</span>';
+      const rightText = d.new != null ? escHtml(d.new) : '<span class="k-compare-empty">\u2014</span>';
+      if (d.type === "change") {
+        html += `<div class="k-compare-row" style="background:#ffffd0">
+  <div class="k-compare-cell k-cmp-del">${escHtml(d.old || "")}</div>
+  <div class="k-compare-cell k-cmp-add">${escHtml(d.new || "")}</div>
+</div>`;
+      } else if (d.type === "equal") {
+        html += `<div class="k-compare-row">
+  <div class="k-compare-cell k-cmp-eq">${leftText}</div>
+  <div class="k-compare-cell k-cmp-eq">${rightText}</div>
+</div>`;
+      } else if (d.type === "delete") {
+        html += `<div class="k-compare-row">
+  <div class="k-compare-cell k-cmp-del">${leftText}</div>
+  <div class="k-compare-cell k-cmp-eq">&nbsp;</div>
+</div>`;
+      } else if (d.type === "insert") {
+        html += `<div class="k-compare-row">
+  <div class="k-compare-cell k-cmp-eq">&nbsp;</div>
+  <div class="k-compare-cell k-cmp-add">${rightText}</div>
+</div>`;
+      }
+    }
+    html += `</div>`;
+    return html;
+  }
+  function showComparisonDialog(oldText, newText, labels) {
+    const diffs = compareScripts(oldText, newText);
+    const html = renderComparisonHtml(diffs, labels);
+    const ov = document.createElement("div");
+    ov.className = "k-overlay";
+    ov.innerHTML = tf("ui.spCompare.compareClose", html);
+    document.body.appendChild(ov);
+    const stats = diffStats(diffs);
+    const el2 = ov.querySelector(".k-dlg-title");
+    if (el2) {
+      el2.innerHTML += tf("ui.spCompare.msg", stats.equal, stats.inserted, stats.deleted, stats.changed);
+    }
+    ov.querySelector(".k-ok").onclick = () => ov.remove();
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov) ov.remove();
+    });
+  }
+  function diffStats(diffs) {
+    let equal = 0, inserted = 0, deleted = 0, changed = 0;
+    for (const d of diffs) {
+      if (d.type === "equal") equal++;
+      else if (d.type === "insert") inserted++;
+      else if (d.type === "delete") deleted++;
+      else if (d.type === "change") changed++;
+    }
+    return { equal, inserted, deleted, changed, total: diffs.length };
+  }
+  function lineDiff(oldLines, newLines) {
+    const m = oldLines.length;
+    const n2 = newLines.length;
+    const dp = Array.from({ length: m + 1 }, () => new Int32Array(n2 + 1));
+    for (let i6 = 1; i6 <= m; i6++) {
+      for (let j2 = 1; j2 <= n2; j2++) {
+        if (oldLines[i6 - 1] === newLines[j2 - 1]) {
+          dp[i6][j2] = dp[i6 - 1][j2 - 1] + 1;
+        } else {
+          dp[i6][j2] = Math.max(dp[i6 - 1][j2], dp[i6][j2 - 1]);
+        }
+      }
+    }
+    const diffs = [];
+    let i5 = m, j = n2;
+    const result = [];
+    while (i5 > 0 || j > 0) {
+      if (i5 > 0 && j > 0 && oldLines[i5 - 1] === newLines[j - 1]) {
+        result.unshift({ type: "equal", old: oldLines[i5 - 1], new: newLines[j - 1] });
+        i5--;
+        j--;
+      } else if (j > 0 && (i5 === 0 || dp[i5][j - 1] >= dp[i5 - 1][j])) {
+        result.unshift({ type: "insert", new: newLines[j - 1] });
+        j--;
+      } else {
+        result.unshift({ type: "delete", old: oldLines[i5 - 1] });
+        i5--;
+      }
+    }
+    const merged = [];
+    let delBuf = [], insBuf = [];
+    for (const r of result) {
+      if (r.type === "delete") {
+        if (insBuf.length) {
+          if (delBuf.length) merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
+          merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
+          insBuf = [];
+        }
+        delBuf.push(r.old);
+      } else if (r.type === "insert") {
+        insBuf.push(r.new);
+      } else {
+        if (delBuf.length && insBuf.length) {
+          const maxLen = Math.max(delBuf.length, insBuf.length);
+          for (let k = 0; k < maxLen; k++) {
+            const old = k < delBuf.length ? delBuf[k] : "";
+            const nw = k < insBuf.length ? insBuf[k] : "";
+            if (old && nw) merged.push({ type: "change", old, new: nw });
+            else if (old) merged.push({ type: "delete", old });
+            else if (nw) merged.push({ type: "insert", new: nw });
+          }
+        } else if (delBuf.length) {
+          merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
+        } else if (insBuf.length) {
+          merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
+        }
+        delBuf = [];
+        insBuf = [];
+        merged.push(r);
+      }
+    }
+    if (delBuf.length || insBuf.length) {
+      if (delBuf.length && insBuf.length) {
+        const maxLen = Math.max(delBuf.length, insBuf.length);
+        for (let k = 0; k < maxLen; k++) {
+          const old = k < delBuf.length ? delBuf[k] : "";
+          const nw = k < insBuf.length ? insBuf[k] : "";
+          if (old && nw) merged.push({ type: "change", old, new: nw });
+          else if (old) merged.push({ type: "delete", old });
+          else if (nw) merged.push({ type: "insert", new: nw });
+        }
+      } else if (delBuf.length) {
+        merged.push(...delBuf.map((d) => ({ type: "delete", old: d })));
+      } else if (insBuf.length) {
+        merged.push(...insBuf.map((d) => ({ type: "insert", new: d })));
+      }
+    }
+    return merged;
+  }
+  function escHtml(s) {
+    if (s == null) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  var NO_PREFIX, SP_PREFIX;
+  var init_sp_compare = __esm({
+    "src/sp-compare.js"() {
+      init_i18n();
+      init_fountain();
+      NO_PREFIX = /* @__PURE__ */ new Set(["dialogue", "parenthetical", "image", "raw", "blank"]);
+      SP_PREFIX = Object.fromEntries(Object.entries(SP_ELEMS).map(([k, v2]) => {
+        if (NO_PREFIX.has(k)) return [k, ""];
+        const p = String(v2.prefix || "");
+        return [k, p && !p.endsWith(" ") ? p + " " : p];
+      }));
+    }
+  });
+
+  // src/roster-ui.js
+  async function rosterPath(secPath) {
+    return kapi.join(secPath, "roster.json");
+  }
+  async function loadRoster(secPath) {
+    try {
+      const p = await rosterPath(secPath);
+      if (await kapi.exists(p)) return normalizeRoster(await kapi.readJson(p));
+    } catch (e) {
+      log("warn", t("ui.roster.readPageListCharacter"), e);
+    }
+    return newRoster();
+  }
+  async function saveRoster(secPath, roster) {
+    const p = await rosterPath(secPath);
+    await kapi.writeFile(p, JSON.stringify(normalizeRoster(roster), null, 2));
+    return p;
+  }
+  async function openRosterFlow() {
+    if (!state.root) {
+      setStatus(t("ui.common.openProjectBefore"));
+      return;
+    }
+    const secs = await listSections();
+    if (!secs.length) {
+      setStatus(t("ui.roster.notHasBookProject"));
+      return;
+    }
+    if (secs.length === 1) return openRoster(secs[0].secPath, secs[0].title);
+    const pick2 = await pickFromList(t("ui.roster.pickBookOpenPage"), secs.map((s) => s.title));
+    const sec = secs.find((s) => s.title === pick2);
+    if (sec) return openRoster(sec.secPath, sec.title);
+  }
+  async function openRoster(secPath, secTitle) {
+    const key2 = rosterKey(secPath);
+    if (state.tabs.has(key2)) {
+      activate(key2);
+      return renderRoster(state.tabs.get(key2));
+    }
+    const pane = el("div", "pane");
+    $("#panes").append(pane);
+    const title2 = t("ui.roster.listCharacter") + (secTitle ? " \u2014 " + secTitle : "");
+    const tabBtn = el("div", "tab");
+    tabBtn.append(el("span", "tab-title", title2));
+    const x = el("span", "tab-x", "\xD7");
+    tabBtn.append(x);
+    $("#tabs").append(tabBtn);
+    const tab = {
+      file: key2,
+      title: title2,
+      pane,
+      tabBtn,
+      dirty: false,
+      secPath,
+      editor: null,
+      plain: null,
+      wiki: null,
+      roster: null
+    };
+    tabBtn.onclick = (e) => {
+      if (e.target !== x) activate(key2);
+    };
+    x.onclick = () => closeTab(key2);
+    state.tabs.set(key2, tab);
+    activate(key2);
+    await renderRoster(tab);
+  }
+  async function wikiCharacters() {
+    const out = [];
+    const scan = async (base3) => {
+      const dir = await kapi.join(base3, "characters");
+      if (!await kapi.exists(dir)) return;
+      for (const f of await kapi.listFiles(dir, ".json")) {
+        try {
+          const e = await kapi.readJson(await kapi.join(dir, f));
+          if (e && e.name) out.push({ name: e.name, detail: (e.summary || e.desc || e.role || "").replace(/\s+/g, " ").trim() });
+        } catch {
+        }
+      }
+    };
+    await scan(await kapi.join(state.root, "Wiki"));
+    await scan(await kapi.join(state.root, "Bible"));
+    return out;
+  }
+  async function renderRoster(tab) {
+    const pane = tab.pane;
+    pane.innerHTML = "";
+    const r = tab.roster || (tab.roster = await loadRoster(tab.secPath));
+    const fmt = mergeSpFormat(spFormatFromSettings());
+    const dirty = () => {
+      if (!tab.dirty) {
+        tab.dirty = true;
+        tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
+      }
+    };
+    const clean = () => {
+      tab.dirty = false;
+      tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
+    };
+    const bar = el("div", "roster-bar");
+    const bAdd = el("button", null, t("ui.roster.addCharacter"));
+    const bWiki = el("button", null, t("ui.roster.fetchWiki"));
+    const bSave = el("button", "k-ok", t("ui.common.save"));
+    const bCopy = el("button", null, t("ui.common.copyText"));
+    const mkChk = (label, key2, tip) => {
+      const w = el("label", "roster-chk");
+      const c = el("input");
+      c.type = "checkbox";
+      c.checked = r[key2] !== false;
+      c.onchange = () => {
+        r[key2] = c.checked;
+        dirty();
+        paint();
+      };
+      w.append(c, document.createTextNode(" " + label));
+      if (tip) w.title = tip;
+      return w;
+    };
+    bar.append(
+      bAdd,
+      bWiki,
+      mkChk(t("ui.roster.showHeadingScene"), "showScene"),
+      mkChk(t("ui.roster.showHeadingTime"), "showTime"),
+      mkChk(t("ui.roster.putActPrintExport"), "includeInExport", t("ui.roster.closeSkipPageAct")),
+      bCopy,
+      bSave
+    );
+    const ws = el("div", "workspace");
+    const page2 = el("div", "roster-page");
+    ws.append(page2);
+    const wrap2 = el("div", "roster-wrap");
+    wrap2.append(bar, ws);
+    pane.append(wrap2);
+    function ce(cls, text, onInput) {
+      const d = el("div", cls, text);
+      d.contentEditable = "true";
+      d.spellcheck = false;
+      d.addEventListener("input", () => {
+        onInput(d.textContent);
+        dirty();
+      });
+      return d;
+    }
+    function paint() {
+      page2.innerHTML = "";
+      page2.append(ce("roster-title", r.title, (v2) => {
+        r.title = v2;
+      }));
+      const cast = el("div", "roster-cast");
+      r.characters.forEach((c, i5) => {
+        const row2 = el("div", "roster-row");
+        const name5 = ce("roster-name", c.name, (v2) => {
+          c.name = v2.replace(/:$/, "");
+        });
+        const detail = ce("roster-detail", c.detail, (v2) => {
+          c.detail = v2;
+        });
+        const del2 = el("span", "roster-del", "\u2715");
+        del2.title = t("ui.roster.delCharacterExitPage");
+        del2.onclick = () => {
+          r.characters.splice(i5, 1);
+          dirty();
+          paint();
+        };
+        row2.append(name5, el("span", "roster-colon", ":"), detail, del2);
+        cast.append(row2);
+      });
+      if (!r.characters.length) cast.append(el("div", "roster-empty", t("ui.roster.notHasListPress")));
+      page2.append(cast);
+      const sec = (key2, headText) => {
+        const box2 = el("div", "roster-sec");
+        box2.dataset.k = key2;
+        box2.append(el("div", "roster-sec-head", headText));
+        box2.append(ce("roster-sec-body", r[key2], (v2) => {
+          r[key2] = v2;
+        }));
+        return box2;
+      };
+      if (r.showScene !== false) page2.append(sec("scene", fmt.strings.sceneTitle));
+      if (r.showTime !== false) page2.append(sec("time", fmt.strings.timeTitle));
+    }
+    paint();
+    bAdd.onclick = () => {
+      r.characters.push({ name: "", detail: "" });
+      dirty();
+      paint();
+    };
+    bWiki.onclick = async () => {
+      const chars3 = await wikiCharacters();
+      if (!chars3.length) {
+        setStatus(t("ui.roster.notFoundCharacterWiki"));
+        return;
+      }
+      const have = new Set(r.characters.map((c) => c.name.trim()));
+      let added = 0;
+      for (const c of chars3) if (c.name && !have.has(c.name.trim())) {
+        r.characters.push(c);
+        added++;
+      }
+      dirty();
+      paint();
+      setStatus(added ? t("ui.roster.addCharacterWiki") + added + t("ui.roster.person") : t("ui.roster.characterWikiCompleteDone"));
+    };
+    bCopy.onclick = () => {
+      const txt = rosterToText(r, fmt);
+      navigator.clipboard.writeText(txt).then(() => setStatus(t("ui.roster.copyPageListCharacter")));
+    };
+    bSave.onclick = async () => {
+      await saveRosterTab(tab);
+    };
+    return wrap2;
+  }
+  async function saveRosterTab(tab) {
+    if (!tab || !tab.secPath || !tab.roster) return false;
+    await saveRoster(tab.secPath, tab.roster);
+    tab.dirty = false;
+    const ttl = tab.tabBtn && tab.tabBtn.querySelector(".tab-title");
+    if (ttl) ttl.textContent = tab.title;
+    setStatus(t("ui.roster.savePageListCharacter"));
+    return true;
+  }
+  function spFormatFromSettings(s) {
+    const st = s || state.settings || {};
+    return {
+      paperSize: st.paperSize,
+      paper: st.customPaper,
+      margins: st.pageMargins,
+      elements: st.spElements,
+      styles: st.spStyles,
+      rules: st.spPageRules,
+      strings: st.spStrings
+    };
+  }
+  async function rosterTextFor(secPath) {
+    const r = await loadRoster(secPath);
+    if (r.includeInExport === false) return "";
+    if (!r.characters.length && !r.scene && !r.time) return "";
+    return rosterToText(r, mergeSpFormat(spFormatFromSettings()));
+  }
+  var ROSTER_PREFIX, rosterKey, isRosterTab;
+  var init_roster_ui = __esm({
+    "src/roster-ui.js"() {
+      init_i18n();
+      init_core();
+      init_app();
+      init_section_ops();
+      ROSTER_PREFIX = "::roster::";
+      rosterKey = (secPath) => ROSTER_PREFIX + secPath;
+      isRosterTab = (tab) => !!(tab && typeof tab.file === "string" && tab.file.startsWith(ROSTER_PREFIX));
+    }
+  });
+
+  // src/smart-terms.js
+  function learnMin(v2) {
+    const n2 = Math.round(parseFloat(v2));
+    if (!Number.isFinite(n2)) return DEFAULT_LEARN_MIN;
+    return Math.max(LEARN_MIN_RANGE[0], Math.min(LEARN_MIN_RANGE[1], n2));
+  }
+  function looksLikeTerm(txt) {
+    const s = String(txt ?? "").trim();
+    if (s.length < 2 || s.length > 60) return false;
+    if (!/[\p{L}]/u.test(s)) return false;
+    if (/^[\d\s\p{P}]+$/u.test(s)) return false;
+    if (/(.)\1{3,}/u.test(s)) return false;
+    if (TH_NOT_FIRST.test(s)) return false;
+    if (TH_DOUBLE_TONE.test(s)) return false;
+    if (TH_DOUBLE_UPPER.test(s)) return false;
+    if (EN_CONS_RUN.test(s)) return false;
+    if (/^[A-Za-z][A-Za-z'’\-]{3,}$/.test(s) && !/[aeiouy]/i.test(s)) return false;
+    return true;
+  }
+  function countTerms(entries) {
+    const m = /* @__PURE__ */ new Map();
+    for (const e of entries || []) {
+      const w = String(e ?? "").trim();
+      if (!w) continue;
+      m.set(w, (m.get(w) || 0) + 1);
+    }
+    return m;
+  }
+  function learnedTerms(counts, opts = {}) {
+    const min = learnMin(opts.min);
+    const pinned = toSet(opts.pinned);
+    const ignored = toSet(opts.ignored);
+    const known = toSet(opts.known);
+    const out = [];
+    for (const [word, n2] of counts || []) {
+      const key2 = lower(word);
+      if (ignored.has(key2)) continue;
+      if (pinned.has(key2)) {
+        out.push([word, n2]);
+        continue;
+      }
+      if (!looksLikeTerm(word)) continue;
+      if (n2 >= min || known.has(key2)) out.push([word, n2]);
+    }
+    out.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "th"));
+    return out.map(([w]) => w);
+  }
+  function pendingTerms(counts, opts = {}) {
+    const min = learnMin(opts.min);
+    const pinned = toSet(opts.pinned);
+    const ignored = toSet(opts.ignored);
+    const known = toSet(opts.known);
+    const out = [];
+    for (const [word, n2] of counts || []) {
+      const key2 = lower(word);
+      if (ignored.has(key2) || pinned.has(key2) || known.has(key2)) continue;
+      if (n2 >= min) continue;
+      out.push({ word, count: n2, ok: looksLikeTerm(word) });
+    }
+    out.sort((a, b) => b.count - a.count || a.word.localeCompare(b.word, "th"));
+    return out;
+  }
+  var DEFAULT_LEARN_MIN, LEARN_MIN_RANGE, TH_NOT_FIRST, TH_DOUBLE_TONE, TH_DOUBLE_UPPER, EN_CONS_RUN, lower, toSet;
+  var init_smart_terms = __esm({
+    "src/smart-terms.js"() {
+      DEFAULT_LEARN_MIN = 2;
+      LEARN_MIN_RANGE = [1, 5];
+      TH_NOT_FIRST = /^[ัำิ-ฺ็-๎ะๅๆ]/;
+      TH_DOUBLE_TONE = /[่-์]{2,}/;
+      TH_DOUBLE_UPPER = /[ัิ-ื]{2,}/;
+      EN_CONS_RUN = /[bcdfghjklmnpqrstvwxz]{6,}/i;
+      lower = (s) => String(s ?? "").trim().toLowerCase();
+      toSet = (v2) => new Set((Array.isArray(v2) ? v2 : []).map(lower).filter(Boolean));
+    }
+  });
+
+  // src/sp-reports.js
+  function parseHeading(text) {
+    const raw = String(text ?? "").trim();
+    let rest = raw, intExt = "";
+    for (const p of INT_EXT) {
+      if (p.re.test(rest)) {
+        intExt = p.kind;
+        rest = rest.replace(p.re, "");
+        break;
+      }
+    }
+    if (!intExt) {
+      for (const p of SCENE_PREFIX) {
+        const pf = p.trim();
+        if (rest.toUpperCase().startsWith(pf.toUpperCase())) {
+          rest = rest.slice(pf.length);
+          break;
+        }
+      }
+    }
+    const parts = rest.split(/\s+[-–—]\s+|\s+[-–—]$/);
+    const location2 = (parts[0] || "").trim().replace(/[-–—]\s*$/, "").trim();
+    const time = parts.length > 1 ? parts.slice(1).join(" - ").trim() : "";
+    return { raw, intExt, location: location2, time };
+  }
+  function cleanCharacterName(text) {
+    const { name: name5 } = splitCharacter(String(text ?? ""));
+    return name5.replace(/\s+/g, " ").trim();
+  }
+  function sceneBreakdown(blocks, opts = {}) {
+    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
+    const lines = opts.lines || formatLines(fmt);
+    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
+    const pages = paginate(blocks, { fmt, lines });
+    const pageOf = /* @__PURE__ */ new Map();
+    for (const pg of pages.pages) {
+      for (const b of pg.blocks || []) {
+        if (Number.isFinite(b.idx) && !pageOf.has(b.idx)) pageOf.set(b.idx, pg.index);
+      }
+    }
+    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
+    const actW = (fmt.elements.action || {}).width || 6;
+    const scenes = [];
+    let cur = null, curChar = "";
+    let seq2 = 0;
+    const list = (blocks || []).filter((b) => b && b.el !== "blank");
+    for (const b of list) {
+      const page2 = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
+      if (b.el === "scene") {
+        const h = parseHeading(b.text);
+        cur = {
+          n: ++seq2,
+          heading: h.raw,
+          location: h.location || t("ui.spReports.notSpecifyPlace"),
+          intExt: h.intExt,
+          time: h.time,
+          page: page2 + startPage - 1,
+          endPage: page2 + startPage - 1,
+          pos: Number.isFinite(b.pos) ? b.pos : null,
+          characters: [],
+          charSet: /* @__PURE__ */ new Set(),
+          actionLines: 0,
+          dialogueLines: 0,
+          totalLines: 0
+        };
+        scenes.push(cur);
+        curChar = "";
+        continue;
+      }
+      if (!cur) {
+        cur = {
+          n: ++seq2,
+          heading: t("ui.spReports.beforeHeadSceneFirst"),
+          location: t("ui.spReports.notSpecifyPlace"),
+          intExt: "",
+          time: "",
+          page: page2 + startPage - 1,
+          endPage: page2 + startPage - 1,
+          pos: Number.isFinite(b.pos) ? b.pos : null,
+          characters: [],
+          charSet: /* @__PURE__ */ new Set(),
+          actionLines: 0,
+          dialogueLines: 0,
+          totalLines: 0
+        };
+        scenes.push(cur);
+      }
+      cur.endPage = Math.max(cur.endPage, page2 + startPage - 1);
+      if (b.el === "character") {
+        curChar = cleanCharacterName(b.text);
+        if (curChar && !cur.charSet.has(curChar)) {
+          cur.charSet.add(curChar);
+          cur.characters.push(curChar);
+        }
+      } else if (b.el === "dialogue") {
+        const n2 = wrapLines(b.text, dlgW);
+        cur.dialogueLines += n2;
+        cur.totalLines += n2;
+      } else if (b.el === "action") {
+        const n2 = wrapLines(b.text, actW);
+        cur.actionLines += n2;
+        cur.totalLines += n2;
+      } else {
+        cur.totalLines += wrapLines(b.text, actW);
+      }
+    }
+    for (const s of scenes) {
+      delete s.charSet;
+      s.pages = Math.max(1, s.endPage - s.page + 1);
+    }
+    return { scenes, pages, totalPages: pages.count };
+  }
+  function generateLocationReport(blocks, opts = {}) {
+    const { scenes, totalPages } = sceneBreakdown(blocks, opts);
+    const groups = opts.groups || null;
+    const nameOf = (loc) => {
+      if (!groups) return loc;
+      for (const g of Object.keys(groups)) {
+        const arr = groups[g] || [];
+        if (arr.some((x) => String(x).trim() === loc)) return g;
+      }
+      return loc;
+    };
+    const map2 = /* @__PURE__ */ new Map();
+    for (const s of scenes) {
+      const key2 = nameOf(s.location);
+      if (!map2.has(key2)) {
+        map2.set(key2, {
+          location: key2,
+          sceneCount: 0,
+          pages: 0,
+          intExt: /* @__PURE__ */ new Set(),
+          characters: [],
+          charSet: /* @__PURE__ */ new Set(),
+          scenes: []
+        });
+      }
+      const g = map2.get(key2);
+      g.sceneCount++;
+      g.pages += s.pages;
+      if (s.intExt) g.intExt.add(s.intExt);
+      for (const c of s.characters) if (!g.charSet.has(c)) {
+        g.charSet.add(c);
+        g.characters.push(c);
+      }
+      g.scenes.push({
+        n: s.n,
+        heading: s.heading,
+        page: s.page,
+        time: s.time,
+        characters: s.characters,
+        pos: s.pos
+      });
+    }
+    const out = [...map2.values()].map((g) => ({
+      location: g.location,
+      sceneCount: g.sceneCount,
+      pages: g.pages,
+      intExt: [...g.intExt].sort(),
+      characters: g.characters,
+      scenes: g.scenes
+    }));
+    out.sort((a, b) => b.sceneCount - a.sceneCount || a.location.localeCompare(b.location, "th"));
+    return { locations: out, totalScenes: scenes.length, totalPages };
+  }
+  function generateCharacterReport(blocks, opts = {}) {
+    const { scenes, totalPages } = sceneBreakdown(blocks, opts);
+    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
+    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
+    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
+    const chars3 = /* @__PURE__ */ new Map();
+    const pageOf = /* @__PURE__ */ new Map();
+    const pages = paginate(blocks, { fmt, lines: opts.lines || formatLines(fmt) });
+    for (const pg of pages.pages) {
+      for (const b of pg.blocks || []) {
+        if (Number.isFinite(b.idx) && !pageOf.has(b.idx)) pageOf.set(b.idx, pg.index);
+      }
+    }
+    let sceneNo = 0, curChar = "";
+    for (const b of (blocks || []).filter((x) => x && x.el !== "blank")) {
+      if (b.el === "scene") {
+        sceneNo++;
+        curChar = "";
+        continue;
+      }
+      if (b.el === "character") {
+        curChar = cleanCharacterName(b.text);
+        continue;
+      }
+      if (b.el !== "dialogue" || !curChar) continue;
+      if (!chars3.has(curChar)) {
+        chars3.set(curChar, {
+          name: curChar,
+          totalLines: 0,
+          speeches: 0,
+          scenes: [],
+          sceneSet: /* @__PURE__ */ new Set(),
+          firstPage: null,
+          lastPage: null
+        });
+      }
+      const c = chars3.get(curChar);
+      const page2 = (Number.isFinite(b.idx) && pageOf.get(b.idx) || 1) + startPage - 1;
+      const n2 = wrapLines(b.text, dlgW);
+      c.totalLines += n2;
+      c.speeches++;
+      c.firstPage = c.firstPage === null ? page2 : Math.min(c.firstPage, page2);
+      c.lastPage = c.lastPage === null ? page2 : Math.max(c.lastPage, page2);
+      if (!c.sceneSet.has(sceneNo)) {
+        c.sceneSet.add(sceneNo);
+        c.scenes.push({ scene: sceneNo, page: page2, lines: n2 });
+      } else {
+        const row2 = c.scenes.find((x) => x.scene === sceneNo);
+        if (row2) row2.lines += n2;
+      }
+    }
+    const out = [...chars3.values()].map((c) => ({
+      name: c.name,
+      totalLines: c.totalLines,
+      speeches: c.speeches,
+      sceneCount: c.sceneSet.size,
+      scenes: c.scenes,
+      firstPage: c.firstPage ?? 0,
+      lastPage: c.lastPage ?? 0,
+      avgLines: c.sceneSet.size ? +(c.totalLines / c.sceneSet.size).toFixed(2) : 0
+    }));
+    out.sort((a, b) => b.totalLines - a.totalLines || a.name.localeCompare(b.name, "th"));
+    const totalLines = out.reduce((s, c) => s + c.totalLines, 0);
+    for (const c of out) c.share = totalLines ? +(c.totalLines / totalLines * 100).toFixed(1) : 0;
+    return { characters: out, totalScenes: scenes.length, totalPages, totalLines };
+  }
+  function chartKind(el2) {
+    if (el2 === "action") return "action";
+    if (el2 === "dialogue") return "dialogue";
+    if (el2 === "character") return "character";
+    return "other";
+  }
+  function generateDialogueChart(blocks, opts = {}) {
+    const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
+    const lines = opts.lines || formatLines(fmt);
+    const startPage = Math.max(1, Math.round(+opts.startPage || 1));
+    const pages = paginate(blocks, { fmt, lines });
+    const dlgW = (fmt.elements.dialogue || {}).width || 3.5;
+    const out = pages.pages.map((pg) => {
+      const stats = { action: 0, dialogue: 0, character: 0, other: 0 };
+      const density = /* @__PURE__ */ new Map();
+      let curChar = "";
+      for (const b of pg.blocks || []) {
+        const n2 = b.lines || 1;
+        stats[chartKind(b.el)] += n2;
+        if (b.el === "character") curChar = cleanCharacterName(b.text);
+        else if (b.el === "dialogue" && curChar) {
+          density.set(curChar, (density.get(curChar) || 0) + wrapLines(b.text, dlgW));
+        }
+      }
+      const total = CHART_KINDS.reduce((s, k) => s + stats[k], 0) || 1;
+      const pct = {};
+      for (const k of CHART_KINDS) pct[k] = +(stats[k] / total * 100).toFixed(1);
+      return {
+        page: pg.index + startPage - 1,
+        lines: stats,
+        total,
+        percentages: pct,
+        charDensity: [...density.entries()].map(([name5, n2]) => ({ name: name5, lines: n2 })).sort((a, b) => b.lines - a.lines)
+      };
+    });
+    const sum2 = { action: 0, dialogue: 0, character: 0, other: 0 };
+    for (const p of out) for (const k of CHART_KINDS) sum2[k] += p.lines[k];
+    const grand = CHART_KINDS.reduce((s, k) => s + sum2[k], 0) || 1;
+    const overall = {};
+    for (const k of CHART_KINDS) overall[k] = +(sum2[k] / grand * 100).toFixed(1);
+    return { pages: out, totals: sum2, overall, totalPages: pages.count };
+  }
+  function locationReportText(rep) {
+    const out = [tf("ui.spReports.reportPlacePlaceScene", rep.locations.length, rep.totalScenes, rep.totalPages), ""];
+    for (const L2 of rep.locations) {
+      out.push(tf("ui.spReports.scenePage2", L2.location, L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages));
+      for (const s of L2.scenes) {
+        out.push(tf("ui.spReports.scenePage", pad2(s.n, 4), pad2(s.page, 4), s.heading) + (s.characters.length ? "   [" + s.characters.join(", ") + "]" : ""));
+      }
+      out.push("");
+    }
+    return out.join("\n").trimEnd();
+  }
+  function characterReportText(rep) {
+    const out = [
+      tf("ui.spReports.reportPersonLineDialogue", rep.characters.length, rep.totalLines),
+      "",
+      tf("ui.spReports.ratio", pad2(t("ui.common.character"), 24), pad2(t("ui.common.scene2"), 6), pad2(t("ui.common.dialogue"), 8), pad2(t("ui.common.line"), 8), pad2(t("ui.common.avgScene"), 12))
+    ];
+    for (const c of rep.characters) {
+      out.push(`${pad2(c.name, 24)}${pad2(c.sceneCount, 6)}${pad2(c.speeches, 8)}${pad2(c.totalLines, 8)}${pad2(c.avgLines, 12)}${c.share}%`);
+    }
+    return out.join("\n");
+  }
+  function dialogueChartText(rep) {
+    const out = [
+      tf("ui.spReports.graphDialoguePage", rep.totalPages),
+      tf("ui.spReports.mergeStoryActionDialogue", rep.overall.action, rep.overall.dialogue) + tf("ui.spReports.nameOther", rep.overall.character, rep.overall.other),
+      ""
+    ];
+    for (const p of rep.pages) {
+      const bar = "\u2588".repeat(Math.round(p.percentages.dialogue / 5)) + "\u2591".repeat(Math.round(p.percentages.action / 5));
+      out.push(tf("ui.spReports.pageDialogueAction", pad2(p.page, 5), pad2(bar, 22), p.percentages.dialogue, p.percentages.action));
+    }
+    return out.join("\n");
+  }
+  var INT_EXT, CHART_KINDS, CHART_LABELS, pad2;
+  var init_sp_reports = __esm({
+    "src/sp-reports.js"() {
+      init_i18n();
+      init_sp_format();
+      init_fountain();
+      INT_EXT = [
+        { re: /^\s*(int\.?\/ext\.?|i\/e\.?)\s*/i, kind: "INT/EXT" },
+        { re: /^\s*int\.?\s*/i, kind: "INT" },
+        { re: /^\s*ext\.?\s*/i, kind: "EXT" },
+        { re: /^\s*est\.?\s*/i, kind: "EST" },
+        { re: /^\s*ฉากภายใน\s*/, kind: "INT" },
+        { re: /^\s*ฉากภายนอก\s*/, kind: "EXT" },
+        { re: /^\s*ฉาก\s*/, kind: "" }
+      ];
+      CHART_KINDS = ["action", "dialogue", "character", "other"];
+      CHART_LABELS = {
+        action: t("ui.common.action"),
+        dialogue: t("ui.common.dialogue"),
+        character: t("ui.spReports.name"),
+        other: t("ui.common.other")
+      };
+      pad2 = (s, n2) => {
+        s = String(s ?? "");
+        return s + " ".repeat(Math.max(0, n2 - s.length));
+      };
+    }
+  });
+
+  // src/sp-validator.js
+  function meaningful(b) {
+    if (!b) return false;
+    if (b.el === "blank") return false;
+    if (b.el === "action" && !String(b.text ?? "").trim()) return false;
+    return true;
+  }
+  function validateScreenplay(blocks, opts = {}) {
+    const list = Array.isArray(blocks) ? blocks : [];
+    const L2 = { ...DEFAULT_LIMITS, ...opts.limits || {} };
+    const only = Array.isArray(opts.checks) && opts.checks.length ? new Set(opts.checks) : null;
+    const errors = [];
+    const add = (type, i5, el2, msg) => {
+      if (only && !only.has(type)) return;
+      errors.push({ type, block: i5, el: el2, msg, severity: SP_SEVERITY[type] || "warn" });
+    };
+    const idx4 = [];
+    for (let i5 = 0; i5 < list.length; i5++) if (meaningful(list[i5])) idx4.push(i5);
+    let sceneSeen = false;
+    let warnedNoScene = false;
+    for (let k = 0; k < idx4.length; k++) {
+      const i5 = idx4[k];
+      const b = list[i5];
+      const el2 = b.el;
+      const text = String(b.text ?? "").trim();
+      const prev = k > 0 ? list[idx4[k - 1]] : null;
+      const next = k < idx4.length - 1 ? list[idx4[k + 1]] : null;
+      if (!text && NEED_TEXT.includes(el2)) {
+        add(SP_ERRORS.EMPTY_ELEMENT, i5, el2, tf("ui.spValidator.lineEmpty", elLabel(el2)));
+      }
+      if (el2 === "scene") sceneSeen = true;
+      else if (!sceneSeen && !warnedNoScene && ["action", "character", "dialogue", "parenthetical"].includes(el2)) {
+        warnedNoScene = true;
+        add(SP_ERRORS.MISSING_SCENE_HEADING, i5, el2, t("ui.spValidator.hasBodyChapterBefore"));
+      }
+      if (el2 === "scene" && next && next.el === "scene") {
+        add(SP_ERRORS.DOUBLE_SCENE, i5, el2, tf("ui.spValidator.headSceneTwoNot", text || t("ui.common.empty")));
+      }
+      if (el2 === "character" && (!next || !["dialogue", "parenthetical"].includes(next.el))) {
+        add(SP_ERRORS.ORPHAN_CHARACTER, i5, el2, tf("ui.spValidator.characterNotHasDialogue", text));
+      }
+      if (el2 === "dialogue" && (!prev || !["character", "parenthetical", "dialogue"].includes(prev.el))) {
+        add(SP_ERRORS.ORPHAN_DIALOGUE, i5, el2, t("ui.spValidator.dialogueNotNamedCharacter"));
+      }
+      if (el2 === "parenthetical" && (!prev || !["character", "dialogue"].includes(prev.el))) {
+        add(SP_ERRORS.ORPHAN_PARENTHETICAL, i5, el2, t("ui.spValidator.cantCharacterDialogue"));
+      }
+      if (el2 === "parenthetical" && text) {
+        const opens = (text.match(/\(/g) || []).length;
+        const closes = (text.match(/\)/g) || []).length;
+        if (opens !== closes) {
+          add(SP_ERRORS.UNCLOSED_PARENTHETICAL, i5, el2, tf("ui.spValidator.notCompletePair", text));
+        }
+      }
+      const lim = L2[el2];
+      if (lim && text.length > lim) {
+        add(
+          SP_ERRORS.OVERLONG_LINE,
+          i5,
+          el2,
+          tf("ui.spValidator.longChar", elLabel(el2), text.length, lim)
+        );
+      }
+    }
+    return errors;
+  }
+  function errorSummary(errors) {
+    const list = errors || [];
+    const err2 = list.filter((e) => e.severity === "error").length;
+    return { total: list.length, errors: err2, warnings: list.length - err2 };
+  }
+  function summaryText(errors) {
+    const s = errorSummary(errors);
+    if (!s.total) return t("ui.spValidator.notFoundError");
+    const parts = [];
+    if (s.errors) parts.push(tf("ui.spValidator.error", s.errors));
+    if (s.warnings) parts.push(tf("ui.spValidator.itemView", s.warnings));
+    return "\u26A0\uFE0F " + parts.join(" \xB7 ");
+  }
+  function nextError(errors, afterBlock) {
+    const list = (errors || []).slice().sort((a, b) => a.block - b.block);
+    if (!list.length) return null;
+    const n2 = Number.isFinite(afterBlock) ? afterBlock : -1;
+    return list.find((e) => e.block > n2) || list[0];
+  }
+  var SP_ERRORS, SP_SEVERITY, DEFAULT_LIMITS, NEED_TEXT, TH_EL, elLabel;
+  var init_sp_validator = __esm({
+    "src/sp-validator.js"() {
+      init_i18n();
+      SP_ERRORS = {
+        EMPTY_ELEMENT: "empty-element",
+        ORPHAN_CHARACTER: "orphan-character",
+        ORPHAN_DIALOGUE: "orphan-dialogue",
+        ORPHAN_PARENTHETICAL: "orphan-parenthetical",
+        OVERLONG_LINE: "overlong-line",
+        DOUBLE_SCENE: "double-scene",
+        MISSING_SCENE_HEADING: "missing-scene-heading",
+        UNCLOSED_PARENTHETICAL: "unclosed-parenthetical"
+      };
+      SP_SEVERITY = {
+        [SP_ERRORS.EMPTY_ELEMENT]: "warn",
+        [SP_ERRORS.ORPHAN_CHARACTER]: "error",
+        [SP_ERRORS.ORPHAN_DIALOGUE]: "error",
+        [SP_ERRORS.ORPHAN_PARENTHETICAL]: "error",
+        [SP_ERRORS.OVERLONG_LINE]: "warn",
+        [SP_ERRORS.DOUBLE_SCENE]: "warn",
+        [SP_ERRORS.MISSING_SCENE_HEADING]: "warn",
+        [SP_ERRORS.UNCLOSED_PARENTHETICAL]: "error"
+      };
+      DEFAULT_LIMITS = { dialogue: 60, action: 70, scene: 70, character: 40 };
+      NEED_TEXT = ["scene", "character", "dialogue", "parenthetical", "transition", "shot", "act-break"];
+      TH_EL = {
+        scene: t("ui.spValidator.headScene"),
+        action: t("ui.common.action"),
+        character: t("ui.common.character"),
+        dialogue: t("ui.common.dialogue"),
+        parenthetical: t("ui.spValidator.msg2"),
+        transition: t("ui.spValidator.msg"),
+        shot: t("ui.spValidator.shot"),
+        "act-break": t("ui.spValidator.act"),
+        note: t("ui.common.note"),
+        summary: t("ui.common.summary"),
+        outline1: t("ui.spValidator.outline"),
+        outline2: t("ui.spValidator.outline2"),
+        outline3: t("ui.spValidator.outline3"),
+        image: t("ui.common.image"),
+        raw: t("ui.common.other")
+      };
+      elLabel = (el2) => TH_EL[el2] || el2;
+    }
+  });
+
+  // src/export-watermark.js
+  function safeFileName2(s) {
+    return String(s ?? "").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim() || t("ui.common.notNamed2");
+  }
+  function watermarkText(tpl, ctx = {}) {
+    const t3 = String(tpl ?? "").trim() || t("ui.watermark.name");
+    return t3.replace(/\{ชื่อ\}|\{name\}/g, ctx.name ?? "").replace(/\{วันที่\}|\{date\}/g, ctx.date ?? "").replace(/\{เรื่อง\}|\{title\}/g, ctx.title ?? "").trim();
+  }
+  function parseRecipients(text) {
+    return String(text ?? "").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map((l) => {
+      const i5 = l.indexOf("|");
+      const name5 = (i5 >= 0 ? l.slice(0, i5) : l).trim();
+      const wm = i5 >= 0 ? l.slice(i5 + 1).trim() : "";
+      return { name: name5, watermark: wm || name5 };
+    }).filter((r) => r.name);
+  }
+  function fontFaceCss(urls) {
+    if (!urls || !urls.regular) return "";
+    const face = (u, w, st) => u ? `@font-face{font-family:"Courier Prime";font-weight:${w};font-style:${st};src:url("${u}") format("truetype");}` : "";
+    return [
+      face(urls.regular, 400, "normal"),
+      face(urls.bold, 700, "normal"),
+      face(urls.italic, 400, "italic"),
+      face(urls.boldItalic, 700, "italic")
+    ].filter(Boolean).join("\n");
+  }
+  function buildWatermarkHtml(pages, fmt, opts = {}) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const list = pages && pages.pages || pages || [];
+    const wm = { ...DEFAULT_WM, ...opts.wmOptions || {} };
+    const wmText = String(opts.watermark || "").trim();
+    const tw = textWidth(f.paper, f.margins);
+    const ph = +f.paper.height - f.margins.top - f.margins.bottom;
+    const body = list.map((pg) => {
+      const rows = [];
+      if (opts.showPageNumbers !== false && pg.index > 1) {
+        rows.push(`<div class="pg-num">${pg.index}.</div>`);
+      }
+      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc5(pg.continuedTop)}</div>`);
+      for (const b of pg.blocks || []) {
+        rows.push(`<div class="sp sp-${esc5(b.el || "action")}">${esc5(b.text || "")}</div>`);
+      }
+      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc5(pg.continuedBottom)}</div>`);
+      const mark = wmText ? `<div class="wm">${esc5(wmText)}</div>` : "";
+      return `<section class="pg">${mark}<div class="pg-body">${rows.join("")}</div></section>`;
+    }).join("\n");
+    const css = [
+      fontFaceCss(opts.fontUrls),
+      "*{box-sizing:border-box;}",
+      `html,body{margin:0;padding:0;background:#fff;color:#000;font-family:"Courier Prime","Courier Final Draft","Courier New",monospace;font-size:12pt;line-height:1;}`,
+      `.pg{position:relative;width:${+tw.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;page-break-after:always;break-after:page;overflow:hidden;}`,
+      ".pg:last-child{page-break-after:auto;break-after:auto;}",
+      ".pg-body{position:relative;z-index:1;}",
+      ".pg-num{text-align:right;margin-bottom:1em;}",
+      ".sp{white-space:pre-wrap;word-break:break-word;margin:0;}",
+      ".sp-cont-top{text-align:left;}",
+      ".sp-cont-bottom{text-align:right;}",
+      ".sp-more{margin-left:2.2in;}",
+      spCss(f),
+      // ลายน้ำอยู่ใต้ข้อความ (z-index 0) — อ่านบทได้ปกติแต่ถ่ายเอกสารแล้วยังติดไปด้วย
+      `.wm{position:absolute;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;font-size:${wm.fontSize}px;color:${wm.color};transform:rotate(${wm.angle}deg);white-space:nowrap;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}`
+    ].join("\n");
+    return `<!doctype html>
+<html lang="th"><head><meta charset="utf-8">
+<title>${esc5(opts.title || "")}</title>
+<style>
+${css}
+</style>
+</head>
+<body>
+` + body + "\n</body></html>\n";
+  }
+  async function generateWatermarkedPDFs(api, args = {}) {
+    const {
+      pages,
+      fmt,
+      recipients = [],
+      outDir,
+      prefix: prefix2 = "script",
+      wmTemplate = t("ui.watermark.name"),
+      wmOptions,
+      fontUrls,
+      title: title2,
+      date,
+      onProgress,
+      buildPdf
+    } = args;
+    const made = [];
+    for (let i5 = 0; i5 < recipients.length; i5++) {
+      const r = recipients[i5];
+      const text = watermarkText(r.watermark || wmTemplate, { name: r.name, title: title2, date });
+      const file = `${safeFileName2(prefix2)}_${safeFileName2(r.name)}.pdf`;
+      const dest = await api.join(outDir, file);
+      if (typeof buildPdf === "function") {
+        const bytes = await buildPdf(text, { ...wmOptions });
+        await api.writeBytes(dest, Array.from(bytes));
+      } else {
+        const html = buildWatermarkHtml(pages, fmt, { watermark: text, wmOptions, fontUrls, title: title2 });
+        await api.pdfFromHtml(html, dest, {
+          width: num(fmt && fmt.paper && fmt.paper.width, 8.5),
+          height: num(fmt && fmt.paper && fmt.paper.height, 11),
+          margins: fmt && fmt.margins || null
+        });
+      }
+      made.push(dest);
+      if (onProgress) onProgress(i5 + 1, recipients.length, r.name);
+    }
+    return made;
+  }
+  var DEFAULT_WM, esc5;
+  var init_export_watermark = __esm({
+    "src/export-watermark.js"() {
+      init_i18n();
+      init_sp_format();
+      init_num();
+      DEFAULT_WM = {
+        fontSize: 54,
+        // px
+        color: "rgba(0,0,0,0.10)",
+        angle: -35,
+        // องศา
+        repeat: 1
+        // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
+      };
+      esc5 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  });
+
   // src/app.js
   var app_exports = {};
   __export(app_exports, {
@@ -144393,6 +145119,7 @@ ${css}
     addMapFlow: () => addMapFlow,
     allCatKeys: () => allCatKeys,
     allShortcutRows: () => allShortcutRows,
+    allWorkflows: () => allWorkflows,
     anyPageModel: () => anyPageModel,
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
@@ -144407,10 +145134,12 @@ ${css}
     applyZoomVars: () => applyZoomVars,
     auditPlannerRows: () => auditPlannerRows,
     bindMainWindowSync: () => bindMainWindowSync,
+    bindToolbarContextMenu: () => bindToolbarContextMenu,
     bootGlobalSettings: () => bootGlobalSettings,
     bootPanelWindow: () => bootPanelWindow,
     bootSequence: () => bootSequence,
     broadcastActiveScene: () => broadcastActiveScene,
+    buildDraftModel: () => buildDraftModel,
     buildSpReport: () => buildSpReport,
     buildTree: () => buildTree2,
     captureSession: () => captureSession,
@@ -144432,9 +145161,11 @@ ${css}
     defaultPlannerPath: () => defaultPlannerPath,
     deleteCurrentLine: () => deleteCurrentLine,
     drawPanel: () => drawPanel,
+    embeddedFontUrls: () => embeddedFontUrls,
     entityCreateDialog: () => entityCreateDialog,
     entitySearchBlob: () => entitySearchBlob,
     eventDialog: () => eventDialog,
+    exportFontCss: () => exportFontCss,
     exportLanguageCsv: () => exportLanguageCsv,
     exportScript: () => exportScript,
     extensionMenu: () => extensionMenu,
@@ -144458,6 +145189,7 @@ ${css}
     invertRole: () => invertRole,
     isFeaturePanel: () => isFeaturePanel,
     langFontUrl: () => langFontUrl,
+    listDrafts: () => listDrafts,
     listPlannerBoards: () => listPlannerBoards,
     listRefTargets: () => listRefTargets,
     listSnapshots: () => listSnapshots,
@@ -144537,6 +145269,8 @@ ${css}
     sceneEventsFromProject: () => sceneEventsFromProject,
     scheduleLineGutter: () => scheduleLineGutter,
     scriptMeta: () => scriptMeta,
+    setLayoutPageCount: () => setLayoutPageCount,
+    setModDown: () => setModDown,
     setPluginDisabled: () => setPluginDisabled,
     setSpView: () => setSpView,
     shortcutClashes: () => shortcutClashes,
@@ -144589,6 +145323,7 @@ ${css}
     updatePageNumberHint: () => updatePageNumberHint,
     updateSceneRow: () => updateSceneRow,
     updateToolbarTitles: () => updateToolbarTitles,
+    userWorkflows: () => userWorkflows,
     versionAtLeast: () => versionAtLeast2,
     watchPlannerRows: () => watchPlannerRows,
     watermarkDialog: () => watermarkDialog,
@@ -144723,6 +145458,7 @@ ${css}
     g.style.height = Math.round(pr.height) + "px";
     const kids = pmEl.children;
     const frag = document.createDocumentFragment();
+    const zoom = parseFloat(getComputedStyle(pmEl.parentElement).zoom) || 1;
     let n2 = 0;
     for (let i5 = 0; i5 < kids.length; i5++) {
       const r = kids[i5].getBoundingClientRect();
@@ -144730,13 +145466,21 @@ ${css}
       const top = r.top - pr.top;
       if (top > pr.height + 60) break;
       if (top + r.height < -60) continue;
+      const csLh = parseFloat(getComputedStyle(kids[i5]).lineHeight);
+      const lineH = Math.min(r.height, Number.isFinite(csLh) ? csLh * zoom : r.height);
       const d = el("div", "k-ln-no", String(i5 + 1));
       d.style.top = Math.round(top) + "px";
+      d.dataset.lineh = String(Math.round(lineH));
       frag.appendChild(d);
       n2++;
     }
     g.textContent = "";
     g.appendChild(frag);
+    for (const d of g.children) {
+      const lineH = +d.dataset.lineh || 0;
+      const off3 = (lineH - d.offsetHeight) / 2;
+      if (off3 > 0.5) d.style.top = Math.round(parseFloat(d.style.top) + off3) + "px";
+    }
     return n2;
   }
   function initLineGutter() {
@@ -144847,6 +145591,25 @@ ${css}
   }
   function applyProjectLangFonts() {
     return applyLangFonts(state.settings.langFonts, langFontUrl);
+  }
+  async function exportFontCss() {
+    try {
+      await preloadLangFontUrls();
+      const dir = await kapi.join(await kapi.appDir(), "renderer");
+      const abs = /* @__PURE__ */ new Map();
+      for (const r of normalizeLangFonts(state.settings.langFonts)) {
+        if (!r.builtin) continue;
+        const p = await kapi.join(dir, "assets", "fonts", r.builtin);
+        if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
+      }
+      return buildLangFontCss(
+        state.settings.langFonts,
+        (row2) => row2.builtin ? abs.get(row2.builtin) || "" : langFontUrl(row2)
+      );
+    } catch (e) {
+      log("warn", t("ui.app.exportFontCssFail"), e);
+      return "";
+    }
   }
   function onTypeKey(ev) {
     if (!isTypeSound()) return;
@@ -149653,6 +150416,9 @@ ${css}
           body: (body || "").trim(),
           synopsis: sc.synopsis || meta2 && meta2.synopsis || "",
           status: sc.status || meta2 && meta2.status || "",
+          // [alpha.81 ข้อ 8] ปลายทาง PDF ต้องรู้ว่านี่ "บทหนัง" หรือ "นิยาย"
+          // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
+          format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
           words: (0, import_md13.countWords)(body || "")
         });
@@ -152735,6 +153501,13 @@ ${css}
       repaginateNow(t3);
     }, ms);
   }
+  function setLayoutPageCount(tab, count) {
+    const pane = tab && tab.pane;
+    if (!pane) return 0;
+    const n2 = Math.max(1, Math.round(+count || 1));
+    pane.style.setProperty("--pg-count", String(n2));
+    return n2;
+  }
   function repaginateNow(t3) {
     try {
       const fmt = spFormat();
@@ -152747,6 +153520,7 @@ ${css}
       const marks2 = spContinuedOn() ? computeContinueds(pg, fmt) : [];
       const cChanged = setContinueds(marks2);
       if (changed || cChanged) t3.sp.refreshGuides();
+      setLayoutPageCount(t3, pg.count);
       refreshSpView();
       _spPageText = tf("ui.app.page", pg.count);
       return _spPageText;
@@ -152766,6 +153540,7 @@ ${css}
         prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base3 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos))
       );
       if (changed) refreshProsePageBreaks(t3.editor.view);
+      setLayoutPageCount(t3, ppg.count);
       refreshSpView();
       return ppg.count;
     } catch (e) {
@@ -153532,19 +154307,12 @@ ${css}
         restoreInactivePanes();
         setTimeout(() => document.body.classList.remove("printing"), 800);
         break;
-      case "export-pdf": {
-        if (!t3) break;
-        const p = await kapi.savePdfDialog(t3.title + ".pdf");
-        if (p) {
-          document.body.classList.add("printing");
-          hideInactivePanes();
-          await kapi.printToPdf(p);
-          restoreInactivePanes();
-          document.body.classList.remove("printing");
-          setStatus(t("ui.common.exportPDF") + p);
-        }
+      // [alpha.81 ข้อ 8] เดิมทางนี้ยิง `webContents.printToPDF` ของหน้าจอตรง ๆ —
+      // ได้ A4 ตายตัวไม่ตรงขนาดกระดาษที่ตั้งไว้ และเป็นภาพของหน้าจอ ไม่ใช่เอกสารจริง
+      // ตอนนี้พาไปศูนย์รวมการส่งออกเสมอ (ทางนั้นให้ตัวอักษรจริงและใช้ขนาดกระดาษที่ตั้งไว้)
+      case "export-pdf":
+        await openExportHub();
         break;
-      }
       case "close-tab":
         if (t3) closeTab(t3.file);
         break;
@@ -153887,6 +154655,10 @@ ${css}
       case "ui-scale":
         bumpUIScale(a[0]);
         break;
+      // [alpha.81 ข้อ 9] ทางส่งออกทั้งหมดรวมอยู่ในกล่องเดียว — เมนู ไฟล์ → ส่งออก… (Ctrl+Shift+E)
+      case "export-hub":
+        await openExportHub();
+        break;
       case "compile":
         openCompileDialog();
         break;
@@ -154122,6 +154894,10 @@ ${css}
       }
     }
   }
+  function setModDown(on2) {
+    document.body.classList.toggle("k-mod-down", !!on2);
+    return !!on2;
+  }
   function effectiveShortcuts() {
     const ov = state.settings && state.settings.shortcuts || {};
     return SHORTCUTS.map((s) => {
@@ -154356,6 +155132,27 @@ ${css}
     const ed = getActiveEditor();
     const wk = state.active?.wiki?.secEditors?.some(({ k }) => k?.view?.hasFocus()) || state.active?.wiki?.secEditors?.length > 0;
     floatBar.style.display = ed || wk ? "flex" : "none";
+  }
+  function bindToolbarContextMenu() {
+    if (_tbCtxBound) return false;
+    let n2 = 0;
+    for (const sel of TB_HOSTS) {
+      const bar = document.querySelector(sel);
+      if (!bar) continue;
+      bar.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const hit = e.target.closest("[id]");
+        popupMenu(
+          e.clientX,
+          e.clientY,
+          toolbarContextItems(hit && bar.contains(hit) ? hit.id : "")
+        );
+      };
+      n2++;
+    }
+    _tbCtxBound = n2 > 0;
+    return _tbCtxBound;
   }
   function showLoader(msg) {
     return setBusy(msg || t("ui.app.busyRun"));
@@ -164569,8 +165366,9 @@ ${css}
                 bCS.marginLeft + " / " + bCS.marginRight
               );
               check2(
-                "[58] \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19",
-                parseFloat(bCS.borderTopWidth) >= 1 && parseFloat(bCS.borderBottomWidth) >= 1
+                "[58] \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E31\u0E49\u0E19\u0E2A\u0E35 (\u0E02\u0E32\u0E27\u2013\u0E02\u0E2D\u0E1A\u2013\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u2013\u0E02\u0E2D\u0E1A\u2013\u0E02\u0E32\u0E27)",
+                /linear-gradient/.test(bCS.backgroundImage),
+                bCS.backgroundImage.slice(0, 60)
               );
               const num4 = brks[0].querySelector(".sp-page-break-num");
               check2("[58] \u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E33\u0E01\u0E31\u0E1A\u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D", !!num4 && /\d/.test(num4.textContent), num4 && num4.textContent);
@@ -171457,6 +172255,333 @@ ${css}
         );
         hidePanel("timeline");
       }
+      const wait81 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const until81 = async (fn, ms = 4e3) => {
+        const t0 = Date.now();
+        while (Date.now() - t0 < ms) {
+          if (await fn()) return true;
+          await wait81(60);
+        }
+        return false;
+      };
+      const anyScene81 = [...state.tabs.values()].find((x) => x.editor || x.sp) || await (async () => {
+        const f = [...document.querySelectorAll("#tree .scene")][0];
+        if (f) f.click();
+        await until81(() => !!(state.active && (state.active.editor || state.active.sp)));
+        return state.active;
+      })();
+      if (anyScene81 && anyScene81.file) await activate(anyScene81.file);
+      {
+        check2(
+          "[81-1] \u0E1C\u0E39\u0E01\u0E40\u0E21\u0E19\u0E39\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E44\u0E27\u0E49\u0E01\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E41\u0E16\u0E1A",
+          TB_HOSTS.every((s) => {
+            const b = document.querySelector(s);
+            return !b || !!b.oncontextmenu;
+          }),
+          TB_HOSTS.map((s) => s + "=" + !!(document.querySelector(s) || {}).oncontextmenu).join(" ")
+        );
+        const blank = toolbarContextItems("");
+        check2("[81-1] \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 \u2192 2 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23", blank.length === 2, JSON.stringify(blank.map((x) => x.label)));
+        check2('[81-1] \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 "\u0E1B\u0E23\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D"', blank.some((x) => x.label === t("ui.tbcfg.customize")));
+        const onBold = toolbarContextItems("tb-bold");
+        check2(
+          "[81-1] \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E1B\u0E38\u0E48\u0E21 \u2192 \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E0B\u0E48\u0E2D\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E19\u0E31\u0E49\u0E19 + \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19",
+          onBold.length === 4 && onBold[1] === "-",
+          JSON.stringify(onBold.map((x) => x === "-" ? "-" : x.label))
+        );
+        check2("[81-1] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E27\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E0B\u0E48\u0E2D\u0E19", toolbarContextItems("tb-mode").length === 2);
+        closeMenu();
+        document.querySelector("#toolbar").oncontextmenu(
+          { preventDefault() {
+          }, stopPropagation() {
+          }, clientX: 90, clientY: 60, target: document.querySelector("#toolbar") }
+        );
+        check2("[81-1] \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E41\u0E25\u0E49\u0E27\u0E40\u0E21\u0E19\u0E39\u0E42\u0E1C\u0E25\u0E48\u0E08\u0E23\u0E34\u0E07", !!document.querySelector(".k-menu"));
+        closeMenu();
+      }
+      {
+        const probe81 = el("span", "k-mention", "x");
+        document.body.append(probe81);
+        setModDown(false);
+        check2(
+          "[81-2] \u0E44\u0E21\u0E48\u0E01\u0E14 Ctrl \u2192 \u0E15\u0E31\u0E27\u0E0A\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E21\u0E37\u0E2D",
+          getComputedStyle(probe81).cursor === "text",
+          getComputedStyle(probe81).cursor
+        );
+        setModDown(true);
+        check2(
+          "[81-2] \u0E01\u0E14 Ctrl \u0E04\u0E49\u0E32\u0E07 \u2192 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E21\u0E37\u0E2D (\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A Ctrl+\u0E04\u0E25\u0E34\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14 Wiki \u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07)",
+          getComputedStyle(probe81).cursor === "pointer",
+          getComputedStyle(probe81).cursor
+        );
+        setModDown(false);
+        check2("[81-2] \u0E1B\u0E25\u0E48\u0E2D\u0E22 Ctrl \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C", getComputedStyle(probe81).cursor === "text");
+        check2("[81-2] \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E04\u0E25\u0E32\u0E2A\u0E44\u0E27\u0E49\u0E1A\u0E19 body", !document.body.classList.contains("k-mod-down"));
+        probe81.remove();
+      }
+      {
+        const sc81 = [...state.tabs.values()].filter((x) => x.file && /\.md$/i.test(x.file));
+        if (sc81.length >= 2) {
+          showPanel("comments");
+          const bodyC = $("#comments-body");
+          await activate(sc81[0].file);
+          const p1 = renderCommentPanel(bodyC);
+          await activate(sc81[1].file);
+          const p2 = renderCommentPanel(bodyC);
+          await Promise.all([p1, p2]);
+          const head81 = bodyC.querySelector(".k-cm-scene");
+          check2(
+            "[81-3] \u0E27\u0E32\u0E14\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+            !!head81 && head81.textContent.includes(sc81[1].title),
+            (head81 && head81.textContent) + " \u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 " + sc81[1].title
+          );
+          check2("[81-3] \u0E23\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E41\u0E0B\u0E07\u0E04\u0E37\u0E19 null \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E41\u0E15\u0E30 DOM", await p1 === null);
+          await activate(sc81[0].file);
+          await renderCommentPanel(bodyC);
+          const head2 = bodyC.querySelector(".k-cm-scene");
+          check2(
+            "[81-3] \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E15\u0E32\u0E21\u0E21\u0E32\u0E16\u0E39\u0E01\u0E09\u0E32\u0E01",
+            !!head2 && head2.textContent.includes(sc81[0].title),
+            head2 && head2.textContent
+          );
+          hidePanel("comments");
+        }
+      }
+      {
+        const sel81 = document.getElementById("sp-view-select");
+        check2("[81-4] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22", !!sel81);
+        if (sel81) {
+          const rgb2 = (h) => {
+            const d = el("span");
+            d.style.color = h;
+            document.body.append(d);
+            const v4 = getComputedStyle(d).color;
+            d.remove();
+            return v4;
+          };
+          const varRgb = (v4) => rgb2(getComputedStyle(document.body).getPropertyValue(v4).trim());
+          const plain = [...sel81.options].find((o) => !o.selected);
+          const csP = getComputedStyle(plain);
+          check2(
+            "[81-4] \u0E1E\u0E37\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01 = \u0E2A\u0E35\u0E41\u0E16\u0E1A\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E32\u0E27\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A)",
+            csP.backgroundColor === varRgb("--bar"),
+            csP.backgroundColor + " vs " + varRgb("--bar")
+          );
+          check2(
+            "[81-4] \u0E2B\u0E21\u0E36\u0E01\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01 = \u0E2A\u0E35\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21",
+            csP.color === varRgb("--fg"),
+            csP.color + " vs " + varRgb("--fg")
+          );
+          const csS = getComputedStyle([...sel81.options].find((o) => o.selected));
+          check2(
+            "[81-4] \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E0A\u0E49\u0E2A\u0E35\u0E40\u0E19\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E19\u0E49\u0E33\u0E40\u0E07\u0E34\u0E19\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A",
+            csS.backgroundColor === varRgb("--sel"),
+            csS.backgroundColor + " vs " + varRgb("--sel")
+          );
+        }
+      }
+      {
+        const wasTheme81 = currentTheme();
+        const lum = (c) => {
+          const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c || "");
+          return m ? +m[1] * 0.299 + +m[2] * 0.587 + +m[3] * 0.114 : -1;
+        };
+        toggleTheme("light");
+        await wait81(60);
+        const rgbOf = (v4) => {
+          const d = el("span");
+          d.style.color = v4;
+          document.body.append(d);
+          const c = getComputedStyle(d).color;
+          d.remove();
+          return c;
+        };
+        for (const v4 of ["--hover", "--hover-soft", "--titlebar", "--sunken", "--chip", "--canvas"]) {
+          const val = getComputedStyle(document.body).getPropertyValue(v4).trim();
+          check2("[81-5] \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: " + v4 + " \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E2A\u0E27\u0E48\u0E32\u0E07", lum(rgbOf(val)) > 150, v4 + "=" + val);
+        }
+        const tabEl81 = document.querySelector("#tabs .tab");
+        if (tabEl81) check2(
+          "[81-5] \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: \u0E41\u0E16\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E2A\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+          lum(getComputedStyle(tabEl81).backgroundColor) > 150,
+          getComputedStyle(tabEl81).backgroundColor
+        );
+        const barEl81 = document.getElementById("titlebar");
+        if (barEl81) check2(
+          "[81-5] \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: \u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2A\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+          lum(getComputedStyle(barEl81).backgroundColor) > 150,
+          getComputedStyle(barEl81).backgroundColor
+        );
+        toggleTheme("dark");
+        await wait81(60);
+        check2(
+          "[81-5] \u0E18\u0E35\u0E21\u0E21\u0E37\u0E14: \u0E1E\u0E37\u0E49\u0E19\u0E1C\u0E34\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E02\u0E49\u0E21\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+          lum(rgbOf(getComputedStyle(document.body).getPropertyValue("--hover").trim())) < 120
+        );
+        if (wasTheme81 === "light") toggleTheme("light");
+      }
+      {
+        const tSp81 = [...state.tabs.values()].find((x) => x.sp) || state.active;
+        if (tSp81 && tSp81.file && (tSp81.sp || tSp81.editor)) {
+          await activate(tSp81.file);
+          const wasLn = !!state.settings.lineNumbers;
+          const wasView = currentSpView();
+          state.settings.lineNumbers = true;
+          document.body.classList.add("k-ln");
+          setSpView("draft");
+          await wait81(120);
+          refreshLineGutter();
+          const g81 = document.getElementById("k-ln-gutter");
+          const pm81 = tSp81.pane.querySelector(":scope > .workspace > .ProseMirror");
+          check2("[81-6] \u0E23\u0E32\u0E07\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07", !!g81 && g81.classList.contains("on"));
+          if (g81 && pm81) {
+            const gr = g81.getBoundingClientRect(), pmr = pm81.getBoundingClientRect();
+            check2(
+              "[81-6] \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E23\u0E32\u0E07\u0E40\u0E25\u0E02 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A",
+              pmr.left >= gr.right - 1,
+              "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E0B\u0E49\u0E32\u0E22=" + Math.round(pmr.left) + " \u0E23\u0E32\u0E07\u0E02\u0E27\u0E32=" + Math.round(gr.right)
+            );
+            const nos = [...g81.querySelectorAll(".k-ln-no")];
+            check2("[81-6] \u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07", nos.length > 0, String(nos.length));
+            if (nos.length) {
+              const kid = pm81.children[0];
+              const kr = kid.getBoundingClientRect(), nr = nos[0].getBoundingClientRect();
+              const lh = Math.min(kr.height, parseFloat(getComputedStyle(kid).lineHeight) * (parseFloat(getComputedStyle(pm81.parentElement).zoom) || 1));
+              const off3 = Math.abs(nr.top + nr.height / 2 - (kr.top + lh / 2));
+              check2("[81-6] \u0E40\u0E25\u0E02\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 (\u0E44\u0E21\u0E48\u0E0A\u0E34\u0E14\u0E1A\u0E19)", off3 <= 2.5, "\u0E04\u0E25\u0E32\u0E14 " + off3.toFixed(2) + "px");
+            }
+          }
+          if (pm81) {
+            const paneW = tSp81.pane.getBoundingClientRect().width;
+            check2(
+              "[81-6] \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E1A\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E22\u0E37\u0E14\u0E40\u0E15\u0E47\u0E21\u0E41\u0E1C\u0E07",
+              pm81.getBoundingClientRect().width < paneW,
+              "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21=" + Math.round(pm81.getBoundingClientRect().width) + " \u0E41\u0E1C\u0E07=" + Math.round(paneW)
+            );
+          }
+          setSpView(wasView);
+          state.settings.lineNumbers = wasLn;
+          document.body.classList.toggle("k-ln", wasLn);
+          await wait81(80);
+        }
+      }
+      {
+        const t81 = state.active;
+        if (t81 && (t81.sp || t81.editor)) {
+          const wasView = currentSpView();
+          check2("[81-7] setLayoutPageCount \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07", setLayoutPageCount(t81, 3) === 3);
+          check2("[81-7] \u0E04\u0E48\u0E32\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 1 \u0E16\u0E39\u0E01\u0E14\u0E31\u0E19\u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19 1", setLayoutPageCount(t81, 0) === 1);
+          setSpView("layout");
+          await wait81(150);
+          const pm2 = t81.pane.querySelector(":scope > .workspace > .ProseMirror");
+          const pageH = parseFloat(getComputedStyle(pm2).minHeight);
+          setLayoutPageCount(t81, 3);
+          await wait81(60);
+          const pageH3 = parseFloat(getComputedStyle(pm2).minHeight);
+          check2(
+            "[81-7] 3 \u0E2B\u0E19\u0E49\u0E32 = \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E2A\u0E39\u0E07\u0E01\u0E27\u0E48\u0E32 1 \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E01\u0E34\u0E19\u0E2A\u0E2D\u0E07\u0E40\u0E17\u0E48\u0E32 (\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E40\u0E15\u0E47\u0E21)",
+            pageH3 > pageH * 2.5,
+            pageH + " \u2192 " + pageH3
+          );
+          const probe = el("div", "sp-page-break");
+          t81.pane.append(probe);
+          await wait81(30);
+          const cs = getComputedStyle(probe);
+          const inPx = (v4) => {
+            const d = el("div");
+            d.style.height = v4;
+            d.style.position = "absolute";
+            t81.pane.append(d);
+            const h = d.getBoundingClientRect().height;
+            d.remove();
+            return h;
+          };
+          const want = inPx(getComputedStyle(document.documentElement).getPropertyValue("--mg-top")) + inPx(getComputedStyle(document.documentElement).getPropertyValue("--mg-bottom"));
+          check2(
+            "[81-7] \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E14\u0E49\u0E27\u0E22",
+            probe.getBoundingClientRect().height > want,
+            cs.height + " \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32\u0E02\u0E2D\u0E1A\u0E23\u0E27\u0E21 " + want
+          );
+          check2(
+            "[81-7] \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E31\u0E49\u0E19\u0E2A\u0E35 (\u0E02\u0E32\u0E27\u2013\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u2013\u0E02\u0E32\u0E27) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E1B\u0E25\u0E48\u0E32",
+            /gradient/.test(cs.backgroundImage),
+            cs.backgroundImage.slice(0, 40)
+          );
+          probe.remove();
+          setLayoutPageCount(t81, 1);
+          setSpView(wasView);
+          await wait81(80);
+        }
+      }
+      {
+        check2(
+          "[81-9] \u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14 Ctrl+Shift+E \u0E0A\u0E35\u0E49\u0E44\u0E1B\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01",
+          SHORTCUTS.some((s) => s[0] === "KeyE" && s[1] === true && s[2] === true && s[3] === "export-hub")
+        );
+        const hub = await openExportHub();
+        check2("[81-9] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!hub && !!document.querySelector(".k-xhub"));
+        if (hub) {
+          const box2 = document.querySelector(".k-xhub");
+          check2(
+            "[81-9] \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
+            box2.querySelectorAll(".xhub-fmt").length === EXPORT_FORMATS.length,
+            box2.querySelectorAll(".xhub-fmt").length + "/" + EXPORT_FORMATS.length
+          );
+          check2(
+            "[81-9] \u0E21\u0E35\u0E2A\u0E32\u0E21\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C: \u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A \xB7 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \xB7 \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07",
+            !!box2.querySelector(".xhub-formats") && !!box2.querySelector(".xhub-options") && !!box2.querySelector(".xhub-preview")
+          );
+          check2(
+            "[81-9] \u0E40\u0E25\u0E37\u0E2D\u0E01 PDF \u0E44\u0E27\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19",
+            box2.querySelector(".xhub-fmt.on").dataset.fmt === hub.cfg.format
+          );
+          check2(
+            "[81-9] \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49: \u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15 + \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C + \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A",
+            !!box2.querySelector("#xhub-scope") && !!box2.querySelector("#xhub-wf") && !!box2.querySelector("#xhub-wm")
+          );
+          check2(
+            "[81-9] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 PDF \u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+            await until81(() => !!box2.querySelector(".xhub-pages .sp-page, .xhub-frame"))
+          );
+          await hub.setFormat("txt");
+          check2(
+            "[81-9] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21",
+            await until81(() => !!box2.querySelector(".xhub-pre"))
+          );
+          const built = await hub.build();
+          check2(
+            "[81-8] .txt \u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E27\u0E19 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E01 HTML \u0E1B\u0E19",
+            !!built && !/<(p|h1|div|body)\b/i.test(built.text),
+            (built && built.text || "").slice(0, 80)
+          );
+          await hub.setFormat("html");
+          const bh = await hub.build();
+          check2("[81-8] .html \u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A\u0E40\u0E15\u0E47\u0E21\u0E43\u0E1A", !!bh && /^<!DOCTYPE html>/i.test(bh.html));
+          check2(
+            "[81-8] .html \u0E1D\u0E31\u0E07 @page \u0E15\u0E32\u0E21\u0E02\u0E19\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 A4 \u0E15\u0E32\u0E22\u0E15\u0E31\u0E27)",
+            /@page\{size:[\d.]+in [\d.]+in/.test(bh.html.replace(/\s*\{\s*/g, "{")),
+            (bh.html.match(/@page[^}]*}/) || [""])[0]
+          );
+          check2(
+            "[81-8] \u0E15\u0E31\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07 PDF \u0E02\u0E2D\u0E07\u0E07\u0E32\u0E19\u0E0A\u0E34\u0E49\u0E19\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A",
+            ["pdflib", "html"].includes(bh.engine),
+            bh.engine
+          );
+          hub.close();
+          check2("[81-9] \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E04\u0E49\u0E32\u0E07", !document.querySelector(".k-xhub"));
+        }
+        check2(
+          "[81-9] \u0E40\u0E21\u0E19\u0E39\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E23\u0E35\u0E22\u0E01\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",
+          await (async () => {
+            try {
+              const s = await kapi.readFile(await kapi.join(await kapi.appDir(), "main.js"));
+              return s.includes("send('export-hub')") && !s.includes("send('export-pdf')");
+            } catch {
+              return true;
+            }
+          })()
+        );
+      }
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -171468,7 +172593,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -171569,6 +172694,7 @@ ${css}
       init_dialogue_ui();
       init_toolbar_config();
       init_toolbar_ui();
+      init_export_hub();
       init_session_core();
       init_ai_ui();
       init_thesaurus_ui();
@@ -171851,6 +172977,11 @@ ${css}
       ]);
       kapi.onMenu(handleCommand);
       window.addEventListener("keydown", onShortcut, true);
+      _syncMod = (e) => setModDown(e.ctrlKey || e.metaKey);
+      window.addEventListener("keydown", _syncMod, true);
+      window.addEventListener("keyup", _syncMod, true);
+      window.addEventListener("blur", () => setModDown(false));
+      window.addEventListener("mousemove", _syncMod, { passive: true, capture: true });
       window.addEventListener("wheel", (e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
         if (!e.target.closest || !e.target.closest(".ProseMirror")) return;
@@ -171892,6 +173023,7 @@ ${css}
         "tb-gallery": "gallery"
       };
       floatBar = null;
+      _tbCtxBound = false;
       TIP_GAP = 6;
       _tipEl = null;
       _tipHost = null;
@@ -172139,6 +173271,7 @@ ${css}
         $("#zoom-reset").onclick = () => resetPageScale();
         $("#tree-search").oninput = (e) => filterTree(e.target.value);
         setupFloatingFormatBar();
+        bindToolbarContextMenu();
         initLineGutter();
         initPanelSystem();
         onPanelLayoutChange(() => {

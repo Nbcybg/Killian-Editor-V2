@@ -124,7 +124,7 @@ const resolve = (tbl, key) => tbl[key] || tbl['ui.' + key];
 {
   const ids = new Set(C.SHORTCUTS.map((s) => C.shortcutId(s)));
   const MUST = ['save', 'save-as', 'save-all', 'print', 'find', 'global-search', 'quick-open',
-                'settings', 'compile', 'close-tab', 'split-view', 'focus-mode', 'typewriter',
+                'settings', 'export-hub', 'close-tab', 'split-view', 'focus-mode', 'typewriter',
                 'reading-mode', 'insert-image', 'quick-note',
                 'toggle-panel:dashboard', 'toggle-panel:timeline', 'toggle-panel:maps',
                 'toggle-panel:network', 'toggle-panel:planner', 'toggle-panel:dialogue',

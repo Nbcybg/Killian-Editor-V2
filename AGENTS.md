@@ -60,6 +60,13 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
 
 ### engine (pure logic — มีอยู่เดิม)
 editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js · wiki.js · gallery.js · network.js · planner.js · timeline.js · maps.js · compile.js · fountain.js · sceneFilter.js · search.js · ui.js · nav.js
+- **export-formats.js** (alpha.81, บริสุทธิ์ · import ได้แค่ compile.js + num.js) — ตรรกะของศูนย์รวมการส่งออก:
+  `EXPORT_FORMATS` (ตารางปลายทาง 9 แบบ · **แหล่งความจริงเดียว**) · `docKind(model)` (บทหนัง/นิยาย
+  ตัดสินจากฉากส่วนใหญ่ · **โน้ตไม่มีสิทธิ์โหวต**) · `pdfEngine(kind)` → `'pdflib'`|`'html'`
+  (**ไม่มีทางไหนผ่านเครื่องพิมพ์ของระบบ** — ทางนั้นให้ PDF ที่เป็นภาพ ไม่มีตัวอักษร) ·
+  `workflowForFormat(wf, fmt)` (บังคับ `to-html` ให้ตรงปลายทาง **โดยไม่แก้ของที่ผู้ใช้บันทึกไว้**) ·
+  `normalizeHub`/`suggestName` · **unit test 51 ข้อ** (`node test/export-hub.test.cjs`)
+  · UI อยู่ที่ `export-hub.js` (`openExportHub()` — เมนู ไฟล์ → ส่งออก… · Ctrl+Shift+E)
 - **sp-format.js** (alpha.56, บริสุทธิ์) — รูปแบบบทภาพยนตร์ระดับใช้งานจริง (ข้อ 81–85, 92, 97):
   `PAPER_SIZES`/`MARGIN_DEFAULTS`/`linesPerPage`/`textWidth` · `SP_ELEMENT_CONFIG` (เยื้อง/กว้าง/เว้นบรรทัด
   ต่อ element · หน่วยนิ้ว วัดจากขอบกระดาษ) · `SP_ELEMENT_STYLES` (screen vs print) · `PAGE_BREAK_RULES` ·

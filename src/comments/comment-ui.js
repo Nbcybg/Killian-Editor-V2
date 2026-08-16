@@ -52,6 +52,14 @@ function activeTitle() { return (state.active && state.active.title) || ''; }
 let filterOpen = false;          // true = แสดงเฉพาะที่ยังไม่ปิดเรื่อง
 let lastList = [];               // คอมเมนต์ที่วาดอยู่ (ใช้คืนไฮไลต์หลังเลิกชี้ — ห้ามอ่านกลับจาก DOM เพราะข้อความถูกตัดสั้น)
 
+// ───────── [alpha.81 ข้อ 3] "คอมเมนต์ไม่ sync กับฉากที่เปิด บางทีก็ sync งง" ─────────
+// ต้นตอ: `renderCommentPanel` เป็น async และมี await หลายจุด (อ่านไฟล์ · หาสมอจากข้อความที่เลือก)
+// สลับแท็บเร็ว ๆ = มีการวาดสองรอบซ้อนกัน รอบของ "ฉากเก่า" อ่านไฟล์เสร็จทีหลังจึงเขียนทับ
+// ผลคือหัวแผงเป็นฉากใหม่บ้างฉากเก่าบ้าง แล้วแต่ว่าไฟล์ไหนอ่านเสร็จก่อน (จึงดู "งง" ไม่ใช่ค้างตายตัว)
+// แก้: ให้ทุกรอบถือเลขประจำรอบ — หลังทุก await ถ้ามีรอบใหม่เกิดขึ้นแล้ว หรือฉากที่เปิดอยู่
+// เปลี่ยนไปแล้ว ให้ทิ้งผลของรอบตัวเองทันที (ห้ามแตะ DOM)
+let _cmGen = 0;
+
 // ───────── ไฮไลต์สมอในตัวแก้ไข ─────────
 function editorView() {
   const t = state.active;
@@ -100,8 +108,11 @@ const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString('th-TH', { 
 export async function renderCommentPanel(host) {
   host = host || $('#comments-body');
   if (!host) return null;
-  host.innerHTML = '';
+  const gen = ++_cmGen;
   const file = activeFile();
+  // รอบนี้ยังเป็นรอบล่าสุดอยู่ไหม และฉากที่เปิดยังเป็นฉากเดิมไหม (เรียกหลังทุก await)
+  const stale = () => gen !== _cmGen || activeFile() !== file;
+  host.innerHTML = '';
   if (!file) {
     host.append(el('div', 'dim', tr('cmt.needScene', '(เปิดฉากก่อนจึงจะคอมเมนต์ได้)')));
     lastList = [];
@@ -112,7 +123,12 @@ export async function renderCommentPanel(host) {
   const store = commentStore();
   let all = [];
   try { all = await store.list(file); }
-  catch (e) { log('error', tr('cmt.readFailLog', 'อ่านคอมเมนต์ไม่ได้'), e); host.append(el('div', 'dim', tr('cmt.readFail', '(อ่านคอมเมนต์ไม่ได้)'))); return null; }
+  catch (e) {
+    if (stale()) return null;
+    log('error', tr('cmt.readFailLog', 'อ่านคอมเมนต์ไม่ได้'), e); host.append(el('div', 'dim', tr('cmt.readFail', '(อ่านคอมเมนต์ไม่ได้)'))); return null;
+  }
+  if (stale()) return null;              // สลับฉากไปแล้วระหว่างอ่านไฟล์ — รอบใหม่กำลังวาดของจริงอยู่
+  host.innerHTML = '';                   // ล้างซ้ำ: รอบก่อนหน้าอาจเพิ่งใส่ของค้างไว้
 
   // หัวแผง: ชื่อฉาก + ตัวกรอง
   const head = el('div', 'k-cm-head');
@@ -134,6 +150,7 @@ export async function renderCommentPanel(host) {
 
   // กล่องเพิ่มคอมเมนต์ใหม่
   const sel = await selectionAnchor();
+  if (stale()) return null;              // selectionAnchor อ่านไฟล์ด้วย — ต้องเช็คซ้ำ
   const foot = el('div', 'k-cm-foot');
   if (sel) {
     const chip = el('div', 'k-cm-anchor-chip', tt('ui.cmtComment.bind') + short(sel.quote) + '”');
