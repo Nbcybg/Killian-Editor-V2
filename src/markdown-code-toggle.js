@@ -38,35 +38,10 @@ export const MD_PREFIXES = SP_MD_PREFIXES;
  * @param {string} text
  * @returns {number} 0 = ไม่มีรหัสให้ซ่อน
  */
-export function prefixLen(text) {
-  const s = String(text || '');
-  if (!s) return 0;
-  for (const p of MD_PREFIXES) {
-    if (!s.startsWith(p)) continue;
-    const rest = s.slice(p.length);
-    if (!rest.trim()) return 0;                       // มีแต่รหัส ไม่มีเนื้อ → เป็นข้อความจริง
-    if (p === '.') {
-      // `.` ของ fountain ติดกับชื่อฉากเสมอ (`.INT. บ้าน`) — จุดของประโยคไม่เป็นแบบนี้
-      if (/^[\s.\d]/.test(rest)) return 0;
-      return 1;
-    }
-    if (p === '!') {
-      if (/^\[[^\]\n]*\]\(/.test(rest)) return 0;     // ![alt](src) = รูปจริง ห้ามซ่อน
-      return 1;                                       // `!ข้อความ` = บรรยายบังคับแบบ v1
-    }
-    // `@` / `>` เดี่ยว ๆ ต้องติดกับเนื้อหา — เว้นวรรคแปลว่าเป็นข้อความปกติ
-    // (`>> ` / `<< ` ที่มีวรรคถูกจับไปแล้วข้างบน เพราะเรียงยาวก่อนสั้น)
-    if ((p === '@' || p === '>') && /^\s/.test(rest)) return 0;
-    return p.length;
-  }
-  return 0;
-}
-
-/** ความยาวของวงเล็บปิดท้ายโน้ต `((…))` (pure) — 0 = ไม่มี */
-export function suffixLen(text) {
-  const s = String(text || '');
-  return (s.startsWith('((') && s.endsWith('))') && s.length > 4) ? 2 : 0;
-}
+// [alpha.81r ข้อ 4] ตัวจริงย้ายไป fountain.js แล้ว — ตัวส่งออก (`stripFountainCodes`) ใช้ชุดเดียวกัน
+// ถ้าปล่อยให้มีสองชุด บนจอจะซ่อนอย่างหนึ่งแต่ไฟล์ที่ส่งออกตัดอีกอย่าง
+import { prefixLen, suffixLen } from './fountain.js';
+export { prefixLen, suffixLen };
 
 // ───────── ปลั๊กอิน ─────────
 let _on = true;             // ค่าเริ่มต้น = เปิด (ซ่อนรหัส) ตามสเปก

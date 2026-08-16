@@ -335,9 +335,14 @@ export function settingsDialog(openTab) {
   buildNetColorFields(box, s);
   // ── end Story Network colors
   // พรีวิวขนาดฟอนต์ทันที (ยกเลิก = คืนค่าเดิม)
+  // [alpha.81r ข้อ 1] ช่องนี้กับ "ขนาด (pt)" ในแท็บ 📖 รูปแบบนิยาย = **ตัวเลขเดียวกัน**
+  // (เดิมเป็นคนละที่เก็บ ตั้งช่องหนึ่งแล้วอีกช่องไม่ขยับ → จอกับไฟล์ที่ส่งออกไม่ตรงกัน)
   const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
   const previewPt = () => {
-    s.edFontPt = parseFloat(q('#st-edpt').value) || 12;
+    const pt = parseFloat(q('#st-edpt').value) || 12;
+    s.edFontPt = pt;
+    s.prose = { ...(s.prose || {}), fontPt: pt };
+    const mirror = q('#st-pr-pt'); if (mirror) mirror.value = String(pt);
     s.spFontPt = parseFloat(q('#st-sppt').value) || 12;
     applyZoomVars(parseInt(q('#st-font').value, 10) || 0);
   };
@@ -428,6 +433,9 @@ export function settingsDialog(openTab) {
   const readProse = () => {
     P.fontFamily = q('#st-pr-font').value || '';
     P.fontPt = parseFloat(q('#st-pr-pt').value) || 12;
+    // ตัวเลขเดียวกับ "ขนาดฟอนต์นิยาย (pt)" ในแท็บ การเขียน — ต้องเดินตามกันทั้งสองทาง
+    s.edFontPt = P.fontPt;
+    const mirrorEd = q('#st-edpt'); if (mirrorEd) mirrorEd.value = String(P.fontPt);
     P.lineHeight = parseFloat(q('#st-pr-lh').value) || 1.75;
     P.paraSpacing = parseFloat(q('#st-pr-para').value) || 0;
     P.firstLineIndent = parseFloat(q('#st-pr-indent').value) || 0;
@@ -1060,6 +1068,8 @@ export function settingsDialog(openTab) {
     s.spCycleEnabled = W.cycleOn;
     s.spDialogueContinues = W.dlgContinues;
     // ขนาดฟอนต์เป็นพอยต์ + ขนาดการ์ดหน้าแรก
+    // ที่เก็บจริงของขนาดฟอนต์นิยาย = settings.prose.fontPt (เขียนทีเดียวตอน readProse ด้านล่าง)
+    // สองช่องนี้สะท้อนกันตอนพิมพ์แล้ว จึงอ่านช่องไหนก็ได้ค่าเดียวกัน
     s.edFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-edpt').value) || 12));
     s.spFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-sppt').value) || 12));
     s.homeThumb = Math.min(400, Math.max(120, parseInt(q('#st-homethumb').value, 10) || 190));

@@ -4899,3 +4899,7 @@ ui.xhub.title,ส่งออก
 ui.xhub.wfAuto,เลือกให้อัตโนมัติตามรูปแบบ
 ui.xhub.fBlog,เว็บบล็อก (ธีม)
 ui.xhub.fBlogDesc,หน้าเว็บพร้อมธีมสำเร็จรูปสำหรับลงบล็อก
+ui.xhub.docKind,ชนิดเอกสาร
+ui.xhub.kindAuto,ตามไฟล์ต้นทาง
+ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
+ui.xhub.kindScript,บทภาพยนตร์

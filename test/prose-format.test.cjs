@@ -184,5 +184,44 @@ check('[กฎ20] ตั้งระยะห่างย่อหน้าเ�
   P.mergeProseFormat({ paraSpacing: 0 }).paraSpacing === 0,
   P.mergeProseFormat({ paraSpacing: 0 }).paraSpacing);
 
+// ═══════ [alpha.81r ข้อ 1+2] จอกับไฟล์ที่ส่งออกต้องใช้ฟอนต์/ขนาดชุดเดียวกัน ═══════
+// เดิม proseCss (ตัวแก้ไข) ไม่ตั้ง font-family เลย — ฟอนต์นิยายที่เลือกไว้มีผลแค่ตอนส่งออก
+{
+  const f = P.mergeProseFormat({ fontFamily: '"ฟอนต์ทดสอบ", serif', fontPt: 14 });
+  const css = P.proseCss(f, '.X');
+  check('proseCss ตั้ง font-family ให้ตัวแก้ไขแล้ว', /font-family:"ฟอนต์ทดสอบ", serif/.test(css), css.slice(0, 120));
+  check('proseCss ตั้งขนาดผ่าน --ed-fs (ค่าสำรอง = ขนาดจริงจาก fontPt)',
+        css.includes('font-size:var(--ed-fs, ' + P.proseFontPx(f) + 'px)'), css.slice(0, 160));
+  const ex = P.proseExportCss(f);
+  check('ฟอนต์ที่ส่งออกเป็นตัวเดียวกับที่ตั้ง', ex.includes('"ฟอนต์ทดสอบ", serif'));
+  check('ขนาดที่ส่งออกคิดจาก fontPt ตัวเดียวกัน', ex.includes('font-size:14pt'), ex.slice(0, 120));
+  // เลขบทอัตโนมัติเคยมีแต่บนจอ — เปิดแล้วไฟล์ที่ส่งออกไม่มีเลขบท (จอ ≠ ไฟล์)
+  const fn = P.mergeProseFormat({ headingNumber: true, headingNumberLevel: 2 });
+  check('เปิดเลขบท → CSS ตอนส่งออกมี counter ให้ด้วย',
+        /counter-increment:k-chap/.test(P.proseExportCss(fn)) &&
+        /counter\(k-chap\)/.test(P.proseExportCss(fn)));
+  check('เลขบทของจอกับของไฟล์ใช้ระดับหัวข้อเดียวกัน',
+        P.proseExportCss(fn).includes('h2{counter-increment:k-chap}') &&
+        P.proseCss(fn, '.X').includes('.X h2{counter-increment:k-chap}'));
+  check('ปิดเลขบท → ไม่มี counter ทั้งสองฝั่ง',
+        !/counter-increment/.test(P.proseExportCss(P.mergeProseFormat({ headingNumber: false }))));
+}
+
+// ═══════ [alpha.81r ข้อ 5] Markdown → บล็อกนิยาย (ใช้จัดหน้าในช่องตัวอย่าง) ═══════
+{
+  const b = P.mdToProseBlocks('# หัวข้อ\n\nย่อหน้าแรก\n> ยกคำพูด\n- รายการ\n---\nย่อหน้าท้าย');
+  check('แยกบล็อกได้ครบ 6 ชิ้น (บรรทัดว่างไม่นับ)', b.length === 6, b.length + ':' + b.map((x) => x.type).join(','));
+  check('หัวข้อได้ type/level ถูก', b[0].type === 'h1' && b[0].level === 1 && b[0].text === 'หัวข้อ');
+  check('ย่อหน้าเป็น p', b[1].type === 'p' && b[1].text === 'ย่อหน้าแรก');
+  check('ยกคำพูดถอด > ออก', b[2].type === 'blockquote' && b[2].text === 'ยกคำพูด');
+  check('รายการถอดสัญลักษณ์ออก', b[3].type === 'li' && b[3].text === 'รายการ');
+  check('เส้นคั่นเป็น hr', b[4].type === 'hr');
+  check('idx เรียงต่อเนื่อง', b.every((x, i) => x.idx === i));
+  check('ข้อความว่างได้อาเรย์ว่าง', P.mdToProseBlocks('').length === 0 && P.mdToProseBlocks(null).length === 0);
+  // รูปแบบเดียวกับ proseBlocksFromDoc → เอาไปเข้า paginateProse ได้ตรง ๆ
+  const pg = P.paginateProse(P.mdToProseBlocks('ก\n'.repeat(400)), { fmt: P.mergeProseFormat({}) });
+  check('เอาไปจัดหน้าได้จริง (ยาว ๆ แล้วได้หลายหน้า)', pg.count > 1, String(pg.count));
+}
+
 console.log(`\nprose-format: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

@@ -121,5 +121,34 @@ check('cloneWorkflow เติมขั้นตอนที่พรีเซ�
   return c.steps.some((s) => s.key === 'omit-elements' && s.on === false);
 })());
 
+// ═══════ [alpha.81r ข้อ 6] "ส่งออกไม่ควรมีหัวเรื่อง ชื่อไฟล์ มานะ" ═══════
+// เดิม runWorkflow ยัด `# <ชื่อเรื่อง>` ลงไปเสมอ แม้ไม่ได้เปิดขั้นตอน "หน้าปก"
+// → ส่งออกฉากเดียวก็ได้ชื่อไฟล์เป็น h1 ติดมาทุกครั้ง และไม่มีทางปิด
+{
+  const model = { title: 'ชื่อไฟล์ของฉัน', author: '', chapters: [
+    { title: '', scenes: [{ title: '', body: 'เนื้อเรื่องบรรทัดเดียว', type: 'scene', words: 3 }] }] };
+  const wfBare = { id: 'w', name: 'w', ext: 'md', steps: [CP.mkStep('skip-memo')] };
+  const bare = CP.runWorkflow(model, wfBare).text;
+  check('ไม่เปิดหน้าปก → ไม่มีชื่อเรื่องโผล่ในผลลัพธ์', !bare.includes('ชื่อไฟล์ของฉัน'), bare.slice(0, 60));
+  check('ไม่เปิดหน้าปก → ไม่มีหัวข้อ h1 เลย', !/^#\s/m.test(bare), bare.slice(0, 60));
+  check('เนื้อเรื่องยังอยู่ครบ', bare.includes('เนื้อเรื่องบรรทัดเดียว'));
+
+  const wfCover = { id: 'w2', name: 'w2', ext: 'md', steps: [CP.mkStep('cover')] };
+  const cov = CP.runWorkflow(model, wfCover).text;
+  check('เปิดหน้าปก → ชื่อเรื่องกลับมา (ชื่อเรื่องมาจากขั้นตอนนี้ที่เดียว)',
+        cov.includes('# ชื่อไฟล์ของฉัน'), cov.slice(0, 60));
+
+  // บท/ฉากที่ไม่มีชื่อ ต้องไม่ได้หัวข้อเปล่า `##` ลอย ๆ (เกิดกับขอบเขต "ฉากที่เปิดอยู่")
+  const wfHead = { id: 'w3', name: 'w3', ext: 'md',
+                   steps: [CP.mkStep('chapter-heading'), CP.mkStep('scene-heading')] };
+  const head = CP.runWorkflow(model, wfHead).text;
+  check('บทไม่มีชื่อ → ไม่มี `##` เปล่า', !/^##\s*$/m.test(head), JSON.stringify(head.slice(0, 40)));
+  check('ฉากไม่มีชื่อ → ไม่มี `###` เปล่า', !/^###\s*$/m.test(head));
+
+  const named = { ...model, chapters: [{ title: 'บทที่หนึ่ง', scenes: model.chapters[0].scenes }] };
+  check('บทที่มีชื่อยังได้หัวข้อเหมือนเดิม',
+        CP.runWorkflow(named, wfHead).text.includes('## บทที่หนึ่ง'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

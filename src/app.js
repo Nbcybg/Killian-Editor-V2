@@ -338,7 +338,13 @@ export function applyZoomVars(uiOff) {
   R.setProperty('--ui-fs', (14 + off) + 'px');
   // ขนาดฐาน = พอยต์ที่ผู้ใช้กรอกใน "ตั้งค่า → การเขียน" (ค่าเริ่มต้น 12pt ทั้งนิยายและบทหนัง)
   // [บั๊ก 26] หนีบทั้งสองฝั่งเหมือนกัน — เดิม edfs ไม่ถูกหนีบเลย (ตั้ง 1pt แล้วได้ค่าติดลบ)
-  const edBase = ptToPx(state.settings.edFontPt ?? 12);
+  // [alpha.81r ข้อ 1+2] ขนาดฟอนต์นิยายเคยมี **สองที่เก็บ** ที่ไม่รู้จักกัน:
+  //   · `settings.edFontPt`     → --ed-fs  (สิ่งที่เห็นบนจอ)
+  //   · `settings.prose.fontPt` → proseExportCss / มุมมองเรียงหน้า (สิ่งที่ได้ตอนส่งออก)
+  // ตั้งช่องหนึ่งแล้วอีกช่องไม่ขยับ → จอกับไฟล์ไม่ตรงกัน และหน้ากระดาษในโหมดเรียงหน้า
+  // จุตัวอักษรไม่เท่ากับโหมดจัดหน้า (ข้อ 8) · ตอนนี้ **`prose.fontPt` เป็นตัวจริงตัวเดียว**
+  // (`edFontPt` เหลือไว้อ่านเป็นค่าเริ่มต้นของโปรเจกต์เก่าเท่านั้น — ดู proseFormatSettings)
+  const edBase = ptToPx(proseFormat().fontPt);
   const spBase = ptToPx(state.settings.spFontPt ?? 12);
   const edfs = Math.max(9, Math.min(96, +edBase.toFixed(2)));
   const spfs = Math.max(9, Math.min(96, +spBase.toFixed(2)));
@@ -503,8 +509,20 @@ export function applyPageVars() {
 }
 
 // ---------------- [alpha.58r บั๊ก 16–24] รูปแบบ "นิยาย" ----------------
-/** ค่ารูปแบบนิยายที่ผู้ใช้ตั้ง (ดิบ) — เก็บก้อนเดียวใน project.khn.json → settings.prose */
-export function proseFormatSettings() { return (state.settings || {}).prose || {}; }
+/**
+ * ค่ารูปแบบนิยายที่ผู้ใช้ตั้ง (ดิบ) — เก็บก้อนเดียวใน project.khn.json → settings.prose
+ *
+ * [alpha.81r ข้อ 1] โปรเจกต์เก่าเก็บขนาดฟอนต์นิยายไว้ที่ `settings.edFontPt` (คนละที่กับ
+ * `settings.prose.fontPt` ที่ใช้ตอนส่งออก) — เปิดโปรเจกต์เก่าแล้วต้องได้ขนาดเดิม ไม่ใช่ 12pt
+ * จึงรับค่าเก่ามาเป็น "ค่าเริ่มต้น" เมื่อ `prose.fontPt` ยังไม่เคยถูกตั้ง
+ */
+export function proseFormatSettings() {
+  const p = (state.settings || {}).prose || {};
+  if (p.fontPt === undefined && (state.settings || {}).edFontPt !== undefined) {
+    return { ...p, fontPt: num(state.settings.edFontPt, 12) };
+  }
+  return p;
+}
 /** รูปแบบนิยายที่ใช้จริง (merge กับค่ามาตรฐานแล้ว) */
 export function proseFormat() { return mergeProseFormat(proseFormatSettings()); }
 /** ยัดตัวแปร CSS + <style> ของรูปแบบนิยายเข้าหน้าเว็บ */
@@ -781,8 +799,12 @@ function drawProsePageView(tab) {
   const host = pageViewHost(tab, (pos) => gotoProsePos(tab, pos));
   const pageWpx = spf.paper.width * 96;
   const vs = viewScale(spViewMode, tab.pane.clientWidth || 900, pageWpx, 20);
+  // [alpha.81r ข้อ 7] มุมมองเรียงหน้า/ภาพรวมของนิยายเคยใส่เลขหน้าให้ **เสมอ** (ไม่ดูสวิตช์เลย)
+  // ขณะที่ตัวแก้ไขไม่เคยมีเลขหน้าให้นิยายเลย → ผู้ใช้เห็นเลข "โผล่ผิดที่" ทั้งที่กดเปิด/ปิดก็ไม่เปลี่ยน
+  // ตอนนี้ทั้งสองที่ฟังสวิตช์ตัวเดียวกัน (spFormat().pageNumbers.show)
   renderProsePageView(host, pg, pf, { scale: vs.scale, perRow: vs.perRow, gap: 20,
                                       paper: spf.paper, margins: spf.margins,
+                                      showPageNumbers: !!spf.pageNumbers.show,
                                       startPage: currentStartPage(tab) });
   return pg.count;
 }
@@ -911,7 +933,12 @@ export function updatePageNumberHint() {
   const pane = t2 && t2.pane;
   if (!pane) return '';
   const fmt = spFormat();
-  const label = (t2.sp && fmt.pageNumbers.show) ? pageNumberLabel(1, fmt, currentStartPage(t2)) : '';
+  // [alpha.81r ข้อ 7] "เปิดเลขหน้าแล้วไม่แสดงเลย · มันควรแสดงในโหมดจัดหน้า"
+  // ต้นตอ: เงื่อนไขนี้ผูกกับ `t2.sp` — เลขหน้าจึงมีเฉพาะแท็บ **บทภาพยนตร์**
+  // ส่วนแท็บนิยายไม่เคยได้เลขหน้าบนหน้ากระดาษเลย ทั้งที่ใช้ขนาดกระดาษ/ระยะขอบชุดเดียวกัน
+  // (และเห็นเลขในโหมดเรียงหน้า/ภาพรวมอยู่แล้ว จึงดูเหมือน "เลขไปโผล่ผิดที่")
+  const isDoc = !!(t2.sp || t2.editor);
+  const label = (isDoc && fmt.pageNumbers.show) ? pageNumberLabel(1, fmt, currentStartPage(t2)) : '';
   pane.style.setProperty('--pg-no-first', label ? JSON.stringify(label) : '""');
   return label;
 }
@@ -17393,11 +17420,13 @@ async function runTest(projectPath) {
       check('[ฟอนต์] กรอกขนาดบทหนัง 14pt → --sp-fs ตามค่าที่กรอก',
             Math.abs(parseFloat(rootVar('--sp-fs')) - 14 * 4 / 3) < 0.05, rootVar('--sp-fs'));
       // [บั๊ก 26] ค่าที่เล็กจนติดลบต้องถูกหนีบ ไม่หลุดเป็นเลขติดลบ
-      const keepEdPt = S.edFontPt;
-      S.edFontPt = 1; S.uiFontSize = -6; applyZoomVars();
-      check('[26] edFontPt เล็กสุด ๆ ยังถูกหนีบไม่ต่ำกว่า 9px',
+      // [alpha.81r ข้อ 1] ตั้งที่ prose.fontPt = ที่เก็บจริงของขนาดฟอนต์นิยาย
+      const keepPrFs = JSON.parse(JSON.stringify(S.prose || {}));
+      S.prose = { ...(S.prose || {}), fontPt: 1 }; S.uiFontSize = -6; applyZoomVars();
+      check('[26] ขนาดฟอนต์นิยายเล็กสุด ๆ ยังถูกหนีบไม่ต่ำกว่า 9px',
             parseFloat(rootVar('--ed-fs')) >= 9, rootVar('--ed-fs'));
-      S.edFontPt = keepEdPt; S.uiFontSize = 0; applyZoomVars();
+      S.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
+      S.uiFontSize = 0; applyZoomVars();
       check('[ฟอนต์] ขนาดนิยายไม่ถูกกระทบ', rootVar('--ed-fs') === edFsBefore,
             edFsBefore + ' → ' + rootVar('--ed-fs'));
       S.spFontPt = 12; applyZoomVars();
@@ -19408,12 +19437,21 @@ async function runTest(projectPath) {
       toggleShowFormat(false);
 
       // ---- [26] หนีบขนาดฟอนต์ ----
-      const keepPt = S2.edFontPt;
-      S2.edFontPt = 1; applyZoomVars();
-      check('[26] edFontPt = 1 ยังได้ค่าไม่ต่ำกว่า 9px', parseFloat(rv('--ed-fs')) >= 9, rv('--ed-fs'));
-      S2.edFontPt = 500; applyZoomVars();
-      check('[26] edFontPt สูงเกินก็ถูกหนีบ', parseFloat(rv('--ed-fs')) <= 96, rv('--ed-fs'));
-      S2.edFontPt = keepPt ?? 12; applyZoomVars();
+      // [alpha.81r ข้อ 1] ที่เก็บจริงของขนาดฟอนต์นิยายย้ายมาเป็น settings.prose.fontPt แล้ว
+      // (เดิมเทสนี้ตั้ง edFontPt แล้วบังเอิญผ่าน เพราะโปรเจกต์ทดสอบยังไม่มี prose.fontPt)
+      const keepPr26 = JSON.parse(JSON.stringify(S2.prose || {}));
+      const setPt26 = (pt) => { S2.prose = { ...(S2.prose || {}), fontPt: pt }; applyZoomVars(); };
+      setPt26(1);
+      check('[26] ขนาดฟอนต์นิยาย = 1 ยังได้ค่าไม่ต่ำกว่า 9px', parseFloat(rv('--ed-fs')) >= 9, rv('--ed-fs'));
+      setPt26(500);
+      check('[26] ขนาดฟอนต์นิยายสูงเกินก็ถูกหนีบ', parseFloat(rv('--ed-fs')) <= 96, rv('--ed-fs'));
+      setPt26(18);
+      check('[81r-1] ตั้งที่ prose.fontPt แล้ว --ed-fs ขยับตามจริง',
+            Math.abs(parseFloat(rv('--ed-fs')) - ptToPx(18)) < 0.05, rv('--ed-fs'));
+      check('[81r-1] มุมมองเรียงหน้าใช้ตัวเลขเดียวกัน (จอ = ไฟล์ = หน้ากระดาษ)',
+            Math.abs(proseFontPx(proseFormat()) - parseFloat(rv('--ed-fs'))) < 0.05,
+            proseFontPx(proseFormat()) + ' vs ' + rv('--ed-fs'));
+      S2.prose = Object.keys(keepPr26).length ? keepPr26 : null; applyZoomVars();
 
       // ---- [ข้อ 4] คอนโซลนักพัฒนา ----
       const devOv = openDevConsole();
@@ -24062,12 +24100,13 @@ async function runTest(projectPath) {
                 !!box.querySelector('.xhub-preview'));
           check('[81-9] เลือก PDF ไว้เป็นค่าเริ่มต้น',
                 box.querySelector('.xhub-fmt.on').dataset.fmt === hub.cfg.format);
-          check('[81-9] ตั้งค่าได้: มีขอบเขต + เวิร์กโฟลว์ + ตัวเลือกของรูปแบบ',
-                !!box.querySelector('#xhub-scope') && !!box.querySelector('#xhub-wf') &&
-                !!box.querySelector('#xhub-wm'));
+          check('[81-9] ตั้งค่าได้: มีขอบเขต + ชนิดเอกสาร + เวิร์กโฟลว์ + ตัวเลือกของรูปแบบ',
+                !!box.querySelector('#xhub-scope') && !!box.querySelector('#xhub-kind') &&
+                !!box.querySelector('#xhub-wf') && !!box.querySelector('#xhub-wm'));
           // ตัวอย่างต้องเป็น "ของจริง" — ทางเดียวกับตอนบันทึกไฟล์
           check('[81-9] ตัวอย่าง PDF วาดหน้ากระดาษจริง',
-                await until81(() => !!box.querySelector('.xhub-pages .sp-page, .xhub-frame')));
+                await until81(() => !!box.querySelector('.xhub-preview .sp-pageview .sp-page')),
+                box.querySelector('.xhub-preview').innerHTML.slice(0, 80));
           await hub.setFormat('txt');
           check('[81-9] เปลี่ยนรูปแบบแล้วตัวอย่างเปลี่ยนตาม',
                 await until81(() => !!box.querySelector('.xhub-pre')));
@@ -24082,8 +24121,96 @@ async function runTest(projectPath) {
                 (bh.html.match(/@page[^}]*}/) || [''])[0]);
           check('[81-8] ตัวสร้าง PDF ของงานชิ้นนี้ไม่ผ่านเครื่องพิมพ์ของระบบ',
                 ['pdflib', 'html'].includes(bh.engine), bh.engine);
+          // ── [alpha.81r] รอบเก็บบั๊กของศูนย์รวมการส่งออก ──
+          // [81r-6] ไม่มีหัวเรื่อง/ชื่อไฟล์ติดไปในงาน (ขอบเขต "ฉากที่เปิดอยู่")
+          hub.cfg.scope = 'tab'; await hub.setFormat('txt');
+          const bTab = await hub.build();
+          check('[81r-6] ส่งออกฉากที่เปิดอยู่ → ไม่มีชื่อไฟล์เป็นหัวข้อ',
+                !!bTab && !bTab.text.startsWith('# '), (bTab && bTab.text || '').slice(0, 60));
+          check('[81r-6] ไม่มีหัวข้อเปล่า ## / ### ลอย ๆ',
+                !!bTab && !/^#{2,3}\s*$/m.test(bTab.text));
+          // [81r-4] ไม่มีรหัส fountain ติดไปในไฟล์
+          check('[81r-4] ผลลัพธ์ไม่มีรหัส @ / .หัวฉาก / ((โน้ต)) นำหน้าบรรทัด',
+                !!bTab && !/^\s*(@\S|\.[^\s.\d]|>\S|\(\()/m.test(bTab.text),
+                (bTab && (bTab.text.match(/^\s*(@\S|\.[^\s.\d]|>\S|\(\().*/m) || [''])[0]) || '');
+          // [81r-3] บังคับชนิดเอกสารได้ — อยู่โหมดนิยายก็สั่งออกเป็นบทภาพยนตร์ได้
+          hub.cfg.kind = 'screenplay'; await hub.setFormat('pdf');
+          const bScript = await hub.build();
+          check('[81r-3] บังคับ "บทภาพยนตร์" → ใช้ตัวสร้าง PDF ของบท',
+                !!bScript && bScript.kind === 'screenplay' && bScript.engine === 'pdflib',
+                bScript && bScript.kind + '/' + bScript.engine);
+          check('[81r-3] ทางบท = มีบล็อกที่พาร์สแล้ว (ไม่ใช่ข้อความดิบ)',
+                !!bScript && Array.isArray(bScript.blocks) && bScript.blocks.length > 0);
+          hub.cfg.kind = 'prose';
+          const bProse = await hub.build();
+          check('[81r-3] บังคับ "นิยาย" → ใช้ทาง HTML→PDF',
+                !!bProse && bProse.kind === 'prose' && bProse.engine === 'html');
+          // [81r-5] ช่องตัวอย่างต้องเป็นหน้ากระดาษจริงทั้งสองชนิด (host ต้องมีคลาส sp-pageview)
+          await hub.refresh();
+          check('[81r-5] ตัวอย่าง PDF นิยายวาดหน้ากระดาษจริง',
+                await until81(() => !!box.querySelector('.xhub-preview .sp-pageview .ed-page')),
+                box.querySelector('.xhub-preview').className);
+          {
+            const pv = box.querySelector('.xhub-preview .sp-pageview');
+            const pg1 = pv && pv.querySelector('.sp-page');
+            check('[81r-5] หน้ากระดาษอยู่ในกรอบตัวอย่าง ไม่หลุดออกไป',
+                  !!pg1 && pg1.getBoundingClientRect().left >= pv.getBoundingClientRect().left - 2,
+                  pg1 ? Math.round(pg1.getBoundingClientRect().left) + ' vs ' +
+                        Math.round(pv.getBoundingClientRect().left) : 'ไม่มีหน้า');
+            check('[81r-5] หน้ากระดาษได้สีกระดาษจริง (กฎ .sp-pageview ทำงาน)',
+                  !!pg1 && getComputedStyle(pg1).backgroundColor !== 'rgba(0, 0, 0, 0)',
+                  pg1 && getComputedStyle(pg1).backgroundColor);
+          }
+          hub.cfg.kind = 'auto'; hub.cfg.scope = 'draft';
           hub.close();
           check('[81-9] ปิดกล่องแล้วไม่มีอะไรค้าง', !document.querySelector('.k-xhub'));
+        }
+        // [81r-1+2] จอกับไฟล์ที่ส่งออกต้องใช้ฟอนต์/ขนาดชุดเดียวกัน
+        {
+          const pf81 = proseFormat();
+          const css81 = document.getElementById('k-prose-format');
+          check('[81r-1] CSS ของตัวแก้ไขนิยายตั้งฟอนต์ตามที่ผู้ใช้เลือก (เดิมไม่ตั้งเลย)',
+                !!css81 && css81.textContent.includes('font-family:' + proseFontStack(pf81)),
+                (css81 && css81.textContent.slice(0, 90)) || 'ไม่มี <style>');
+          const edFs = parseFloat(getComputedStyle(document.documentElement)
+                        .getPropertyValue('--ed-fs'));
+          check('[81r-1] ขนาดบนจอคิดจาก prose.fontPt ตัวเดียวกับตอนส่งออก',
+                Math.abs(edFs - proseFontPx(pf81)) < 0.05, edFs + ' vs ' + proseFontPx(pf81));
+          // เปลี่ยนค่าที่เดียวแล้วต้องขยับทั้งจอและตัวส่งออก (เดิมมีสองที่เก็บที่ไม่รู้จักกัน)
+          const keepPr = JSON.parse(JSON.stringify(state.settings.prose || {}));
+          state.settings.prose = { ...(state.settings.prose || {}), fontPt: 20 };
+          applyZoomVars(); applyProseVars();
+          check('[81r-2] ตั้ง fontPt = 20 แล้วจอขยับตาม',
+                Math.abs(parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--ed-fs')) - ptToPx(20)) < 0.05);
+          state.settings.prose = keepPr;
+          applyZoomVars(); applyProseVars();
+        }
+        // [81r-7] เลขหน้าต้องโผล่บนหน้ากระดาษของ "นิยาย" ด้วย ไม่ใช่เฉพาะบทภาพยนตร์
+        {
+          const tp81 = [...state.tabs.values()].find((x) => x.editor);
+          if (tp81) {
+            await activate(tp81.file);
+            const keepPn = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            // มาตรฐานอุตสาหกรรม: หน้าแรกไม่ใส่เลข (firstPage:false) — เปิดไว้ในเทสเพื่อวัดหน้าแรกได้
+            togglePageNumbers(true);
+            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
+            applyPageVars();
+            await wait81(80);
+            const lbl = updatePageNumberHint();
+            check('[81r-7] แท็บนิยายได้ป้ายเลขหน้า (เดิมเงื่อนไขผูกกับ tab.sp เท่านั้น)',
+                  !!lbl, JSON.stringify(lbl));
+            const pmP = tp81.pane.querySelector(':scope > .workspace > .ProseMirror');
+            const before = pmP && getComputedStyle(pmP, '::before').content;
+            check('[81r-7] เลขหน้าโผล่บนกระดาษจริง (::before มีเนื้อหา)',
+                  !!before && before !== 'none' && before !== '""', String(before));
+            togglePageNumbers(false);
+            await wait81(60);
+            const off = getComputedStyle(pmP, '::before').content;
+            check('[81r-7] ปิดแล้วหายจริง', off === 'none' || off === '""', String(off));
+            state.settings.spPageNumbers = keepPn;
+            applyPageVars(); updatePageNumberHint();
+          }
         }
         // เมนู "ไฟล์" ต้องเหลือทางส่งออกทางเดียว (เดิม 9 ทาง) — ตรวจจากไฟล์ต้นทางของเมนู
         check('[81-9] เมนูไฟล์เรียกศูนย์รวมการส่งออกแล้ว',

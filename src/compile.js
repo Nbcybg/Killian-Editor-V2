@@ -356,14 +356,16 @@ export function runWorkflow(model0, workflow,
   // ---- 2) ช่วงประกอบข้อความ ----
   const out = [];
   const st0 = modelStats(model);
+  // [alpha.81r ข้อ 6] "ส่งออกไม่ควรมีหัวเรื่อง ชื่อไฟล์ มานะ"
+  // เดิมกิ่ง else ยัด `# <ชื่อเรื่อง>` ลงไป **เสมอ** แม้เวิร์กโฟลว์จะไม่ได้เปิดขั้นตอน "หน้าปก"
+  // → ส่งออกฉากเดียวก็ได้ชื่อไฟล์เป็นหัวข้อ h1 ติดมาด้วยทุกครั้ง ลบไม่ได้เลยสักทาง
+  // ตอนนี้ชื่อเรื่องมาจากขั้นตอน "หน้าปก" ที่เดียว — ไม่เปิด = ไม่มี
   if (has('cover')) {
-    out.push('# ' + model.title, '');
+    if (String(model.title || '').trim()) out.push('# ' + model.title, '');
     const au = String(opt('cover', 'author', '') || model.author || '').trim();
     if (au) out.push(au, '');
     out.push(tf('ui.compile.wordChapterScene', st0.words.toLocaleString(), st0.chapters, st0.scenes), '');
     if (has('page-break')) out.push(PAGE_BREAK, '');
-  } else {
-    out.push('# ' + model.title, '');
   }
   // [97] หน้ารายชื่อตัวละคร — วางก่อนเนื้อเรื่อง แล้วขึ้นหน้าใหม่
   if (has('roster') && String(model.roster || '').trim()) {
@@ -375,13 +377,15 @@ export function runWorkflow(model0, workflow,
   for (const ch of model.chapters) {
     cn++;
     if (has('page-break') && cn > 1) out.push(PAGE_BREAK, '');
-    if (has('chapter-heading'))
+    // [alpha.81r ข้อ 6] บท/ฉากที่ไม่มีชื่อ ต้องไม่ได้หัวข้อเปล่า (`##` ลอย ๆ)
+    // — เกิดกับการส่งออก "ฉากที่เปิดอยู่" ซึ่งไม่มีชื่อบทให้ใช้
+    if (has('chapter-heading') && String(ch.title || '').trim())
       out.push(fill(opt('chapter-heading', 'template', '## {title}'), cn, ch.title || '', varCtx), '');
     let sn = 0;
     for (const s of ch.scenes) {
       sn++;
       if (has('scene-separator') && sn > 1 && sep.trim()) out.push(sep, '');
-      if (has('scene-heading'))
+      if (has('scene-heading') && String(s.title || '').trim())
         out.push(fill(opt('scene-heading', 'template', '### {title}'), sn, s.title || '', varCtx), '');
       if (has('scene-meta'))
         out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), (s.words || 0).toLocaleString()), '');

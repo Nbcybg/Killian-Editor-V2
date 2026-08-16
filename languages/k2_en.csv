@@ -4899,3 +4899,7 @@ ui.xhub.title,Export
 ui.xhub.wfAuto,Auto — match the format
 ui.xhub.fBlog,Blog page (themed)
 ui.xhub.fBlogDesc,Ready-to-post page with built-in themes
+ui.xhub.docKind,Document type
+ui.xhub.kindAuto,Match the source files
+ui.xhub.kindProse,Novel (prose)
+ui.xhub.kindScript,Screenplay

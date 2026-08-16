@@ -136,7 +136,13 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
   const out = [];
   const q = f.quote;
-  out.push(`${sel}{line-height:${f.lineHeight};text-align:${f.align}}`);
+  // [alpha.81r ข้อ 1+2] "ตัวหนังสือไม่ตรงกับที่ตั้งไว้เลย"
+  // ต้นตอ: กฎนี้ **ไม่เคยตั้ง font-family/font-size ให้ตัวแก้ไข** — ฟอนต์นิยายที่ผู้ใช้เลือก
+  // ถูกใช้แค่ตอนส่งออก (`proseExportCss`) กับมุมมองเรียงหน้าเท่านั้น บนจอจึงเป็นฟอนต์ UI
+  // เขียนอย่างหนึ่ง ได้อีกอย่าง · ผู้ใช้สั่งว่า "มุมมอง layout คือตัว override" →
+  // ทั้งสองที่ต้องอ่านจาก proseFormat ชุดเดียวกัน (ขนาดผ่าน --ed-fs ที่คิดจาก fontPt ตัวเดียวกัน)
+  out.push(`${sel}{font-family:${proseFontStack(f)};font-size:var(--ed-fs, ${proseFontPx(f)}px);` +
+           `line-height:${f.lineHeight};text-align:${f.align}}`);
   out.push(`${sel} p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`);
   // ย่อหน้าแรกของเอกสาร/หลังหัวข้อ ไม่ย่อ (ธรรมเนียมการจัดหน้าหนังสือ)
   if (!f.indentAfterHeading) {
@@ -204,10 +210,20 @@ export function proseExportCss(fmt, paper, margins) {
                'body > p:first-of-type,h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}'];
   f.headings.forEach((h, i) => {
     out.push(`h${i + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` +
+             (h.italic ? 'font-style:italic;' : '') +
              `margin:${h.before}em 0 ${h.after}em;font-family:${proseHeadingStack(f)}` +
              (h.align ? ';text-align:' + h.align : '') +
              (f.headingColor ? ';color:' + f.headingColor : '') + '}');
   });
+  // [alpha.81r ข้อ 2] "ส่งออกต้องตรงกับมุมมองจัดหน้า" — เลขบทอัตโนมัติเคยมีแต่บนจอ
+  // (proseCss ใส่ counter ให้ แต่ proseExportCss ไม่เคยมี) → เปิดเลขบทแล้วไฟล์ที่ได้ไม่มีเลขบท
+  if (f.headingNumber) {
+    const lv = f.headingNumberLevel;
+    out.push('body{counter-reset:k-chap}');
+    out.push(`h${lv}{counter-increment:k-chap}`);
+    out.push(`h${lv}::before{content:"${headingNumberText(f, '" counter(k-chap) "')}\\A";` +
+             'white-space:pre;display:block;font-size:.62em;opacity:.72;font-weight:400}');
+  }
   const q = f.quote;
   out.push(`blockquote{font-style:${q.italic ? 'italic' : 'normal'};` +
            `padding-left:${q.indent}in;margin:1em 0;` +
@@ -371,6 +387,31 @@ export function proseBlocksFromDoc(doc) {
     if (name === 'figure') { b.src = node.attrs.resolved || node.attrs.src; b.alt = node.attrs.alt || ''; }
     out.push(b);
   });
+  return out;
+}
+
+/**
+ * [alpha.81r ข้อ 5] Markdown → บล็อกนิยาย (pure) — รูปแบบเดียวกับ `proseBlocksFromDoc`
+ *
+ * ตัวอย่างในกล่องส่งออกไม่มีเอกสาร ProseMirror ให้เดินโหนด (เนื้อหาถูกประกอบมาเป็นข้อความแล้ว)
+ * จึงต้องมีทางแปลงจากข้อความกลับเป็นบล็อกเพื่อ "จัดหน้า" ให้เห็นหน้ากระดาษจริง
+ * — ใช้เกณฑ์ระดับบรรทัดชุดเดียวกับ `mdToHtmlBody` ใน compile.js (หัวข้อ/ยกคำพูด/รายการ/เส้นคั่น)
+ */
+export function mdToProseBlocks(md) {
+  const out = [];
+  let i = 0;
+  for (const raw of String(md == null ? '' : md).split('\n')) {
+    const line = raw.replace(/\s+$/, '');
+    if (!line.trim()) continue;                       // บรรทัดว่างไม่ใช่บล็อก (ย่อหน้าคั่นกันเอง)
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) { out.push({ type: 'h' + h[1].length, level: h[1].length, text: h[2], idx: i++ }); continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out.push({ type: 'hr', text: '', idx: i++ }); continue; }
+    const li = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(line);
+    if (li) { out.push({ type: 'li', text: li[1], idx: i++ }); continue; }
+    const bq = /^\s*>\s?(.*)$/.exec(line);
+    if (bq) { out.push({ type: 'blockquote', text: bq[1], idx: i++ }); continue; }
+    out.push({ type: 'p', text: line, idx: i++ });
+  }
   return out;
 }
 

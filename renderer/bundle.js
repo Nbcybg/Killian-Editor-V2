@@ -14814,6 +14814,37 @@
   });
 
   // src/prose-format.js
+  var prose_format_exports = {};
+  __export(prose_format_exports, {
+    DEFAULT_PROSE_FONT: () => DEFAULT_PROSE_FONT,
+    DPI: () => DPI,
+    HEADING_DEFAULTS: () => HEADING_DEFAULTS,
+    PROSE_DEFAULTS: () => PROSE_DEFAULTS,
+    PT_PX: () => PT_PX,
+    QUOTE_DEFAULTS: () => QUOTE_DEFAULTS,
+    findProsePageStart: () => findProsePageStart,
+    headingNumberText: () => headingNumberText,
+    mdToProseBlocks: () => mdToProseBlocks,
+    mergeProseFormat: () => mergeProseFormat,
+    paginateProse: () => paginateProse,
+    proseBlockLines: () => proseBlockLines,
+    proseBlocksFromDoc: () => proseBlocksFromDoc,
+    proseCharsPerLine: () => proseCharsPerLine,
+    proseCss: () => proseCss,
+    proseCssVars: () => proseCssVars,
+    proseExportCss: () => proseExportCss,
+    proseFontPx: () => proseFontPx,
+    proseFontStack: () => proseFontStack,
+    proseHeadingStack: () => proseHeadingStack,
+    proseHeadings: () => proseHeadings,
+    proseLinePx: () => proseLinePx,
+    proseLinesPerPage: () => proseLinesPerPage,
+    proseMetrics: () => proseMetrics,
+    prosePageCount: () => prosePageCount,
+    prosePageLabel: () => prosePageLabel,
+    prosePageStarts: () => prosePageStarts,
+    proseWrap: () => proseWrap
+  });
   function mergeProseFormat(user) {
     const u = user || {};
     const headings = HEADING_DEFAULTS.map((d, i5) => ({ ...d, ...(u.headings || [])[i5] || {} }));
@@ -14854,7 +14885,7 @@
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     const out = [];
     const q = f.quote;
-    out.push(`${sel}{line-height:${f.lineHeight};text-align:${f.align}}`);
+    out.push(`${sel}{font-family:${proseFontStack(f)};font-size:var(--ed-fs, ${proseFontPx(f)}px);line-height:${f.lineHeight};text-align:${f.align}}`);
     out.push(`${sel} p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`);
     if (!f.indentAfterHeading) {
       out.push(`${sel} > p:first-child,${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
@@ -14914,8 +14945,14 @@
       "body > p:first-of-type,h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}"
     ];
     f.headings.forEach((h, i5) => {
-      out.push(`h${i5 + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};margin:${h.before}em 0 ${h.after}em;font-family:${proseHeadingStack(f)}` + (h.align ? ";text-align:" + h.align : "") + (f.headingColor ? ";color:" + f.headingColor : "") + "}");
+      out.push(`h${i5 + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` + (h.italic ? "font-style:italic;" : "") + `margin:${h.before}em 0 ${h.after}em;font-family:${proseHeadingStack(f)}` + (h.align ? ";text-align:" + h.align : "") + (f.headingColor ? ";color:" + f.headingColor : "") + "}");
     });
+    if (f.headingNumber) {
+      const lv = f.headingNumberLevel;
+      out.push("body{counter-reset:k-chap}");
+      out.push(`h${lv}{counter-increment:k-chap}`);
+      out.push(`h${lv}::before{content:"${headingNumberText(f, '" counter(k-chap) "')}\\A";white-space:pre;display:block;font-size:.62em;opacity:.72;font-weight:400}`);
+    }
     const q = f.quote;
     out.push(`blockquote{font-style:${q.italic ? "italic" : "normal"};padding-left:${q.indent}in;margin:1em 0;` + (q.border ? "border-left:3px solid #ccc" : "border-left:0") + (q.color ? ";color:" + q.color : ";color:#555") + "}");
     out.push("blockquote p{text-indent:0}");
@@ -15031,6 +15068,9 @@
     if (!pages.length) pages.push({ index: 1, blocks: [] });
     return { pages, count: pages.length };
   }
+  function prosePageCount(blocks, opts) {
+    return paginateProse(blocks, opts).count;
+  }
   function prosePageLabel(index, fmt, startPage) {
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     if (!f.pageNumbers) return "";
@@ -15063,6 +15103,35 @@
       }
       out.push(b);
     });
+    return out;
+  }
+  function mdToProseBlocks(md) {
+    const out = [];
+    let i5 = 0;
+    for (const raw of String(md == null ? "" : md).split("\n")) {
+      const line = raw.replace(/\s+$/, "");
+      if (!line.trim()) continue;
+      const h = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (h) {
+        out.push({ type: "h" + h[1].length, level: h[1].length, text: h[2], idx: i5++ });
+        continue;
+      }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+        out.push({ type: "hr", text: "", idx: i5++ });
+        continue;
+      }
+      const li = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(line);
+      if (li) {
+        out.push({ type: "li", text: li[1], idx: i5++ });
+        continue;
+      }
+      const bq = /^\s*>\s?(.*)$/.exec(line);
+      if (bq) {
+        out.push({ type: "blockquote", text: bq[1], idx: i5++ });
+        continue;
+      }
+      out.push({ type: "p", text: line, idx: i5++ });
+    }
     return out;
   }
   function prosePageStarts(pages) {
@@ -15241,6 +15310,23 @@
   });
 
   // src/prose-view.js
+  var prose_view_exports = {};
+  __export(prose_view_exports, {
+    PROSE_VIEWS: () => PROSE_VIEWS,
+    PROSE_VIEW_LABELS: () => PROSE_VIEW_LABELS,
+    isProseEditView: () => isProseEditView,
+    isProsePageView: () => isProsePageView,
+    isValidProseView: () => isValidProseView,
+    proseLayoutCssVars: () => proseLayoutCssVars,
+    proseLinePx: () => proseLinePx,
+    prosePageBreakPlugin: () => prosePageBreakPlugin,
+    prosePageBreaks: () => prosePageBreaks,
+    prosePagesOf: () => prosePagesOf,
+    proseViewStatusText: () => proseViewStatusText,
+    refreshProsePageBreaks: () => refreshProsePageBreaks,
+    renderProsePageView: () => renderProsePageView,
+    setProsePageBreaks: () => setProsePageBreaks
+  });
   function proseLayoutCssVars(fmt, paper, margins, gapPx = 28) {
     const mt = proseMetrics(fmt, paper, margins);
     return {
@@ -15323,7 +15409,11 @@
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
-  var PROSE_VIEW_LABELS, ED_PB, setProsePageBreaks, prosePageBreaks, prosePageBreakPlugin, refreshProsePageBreaks, cssIn;
+  function proseViewStatusText(mode, pageCount2) {
+    const name5 = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
+    return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
+  }
+  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, prosePageBreakPlugin, refreshProsePageBreaks, cssIn;
   var init_prose_view = __esm({
     "src/prose-view.js"() {
       init_i18n();
@@ -15331,6 +15421,7 @@
       init_sp_format();
       init_num();
       init_page_break_plugin();
+      PROSE_VIEWS = ["normal", "layout", "draft", "side", "overview1", "overview4"];
       PROSE_VIEW_LABELS = {
         normal: t("ui.common.normalPagePaper"),
         layout: t("ui.common.arrangePageSeePage"),
@@ -15339,6 +15430,9 @@
         overview1: t("ui.common.overviewPxChar"),
         overview4: t("ui.common.overviewPxChar2")
       };
+      isValidProseView = (m) => PROSE_VIEWS.includes(m);
+      isProsePageView = (m) => m === "side" || m === "overview1" || m === "overview4";
+      isProseEditView = (m) => !isProsePageView(m);
       ED_PB = createPageBreakPlugin({
         key: "kedpagebreak",
         cls: "sp-page-break ed-page-break",
@@ -15375,8 +15469,11 @@
     guessNamesForBlocks: () => guessNamesForBlocks,
     lineFor: () => lineFor,
     parseScript: () => parseScript,
+    prefixLen: () => prefixLen,
     setSpRules: () => setSpRules,
     splitCharacter: () => splitCharacter,
+    stripFountainCodes: () => stripFountainCodes,
+    suffixLen: () => suffixLen,
     withExtension: () => withExtension
   });
   function setSpRules(partial) {
@@ -15528,6 +15625,39 @@
       else if (el2 === "scene") s = "### " + text;
     }
     return s;
+  }
+  function prefixLen(text) {
+    const s = String(text || "");
+    if (!s) return 0;
+    for (const p of SP_MD_PREFIXES) {
+      if (!s.startsWith(p)) continue;
+      const rest = s.slice(p.length);
+      if (!rest.trim()) return 0;
+      if (p === ".") {
+        if (/^[\s.\d]/.test(rest)) return 0;
+        return 1;
+      }
+      if (p === "!") {
+        if (/^\[[^\]\n]*\]\(/.test(rest)) return 0;
+        return 1;
+      }
+      if ((p === "@" || p === ">") && /^\s/.test(rest)) return 0;
+      return p.length;
+    }
+    return 0;
+  }
+  function suffixLen(text) {
+    const s = String(text || "");
+    return s.startsWith("((") && s.endsWith("))") && s.length > 4 ? 2 : 0;
+  }
+  function stripFountainCodes(text) {
+    return String(text == null ? "" : text).split("\n").map((line) => {
+      const n2 = prefixLen(line);
+      if (!n2) return line;
+      const body = line.slice(n2);
+      const cut = suffixLen(line);
+      return cut ? body.slice(0, body.length - cut) : body;
+    }).join("\n");
   }
   var SP_ELEMS, TAB_CYCLE, NEXT_ELEM, IMG_RE, SP_RULES, SCENE_RE, TRANS_RE, RAW_PREFIX, TIMES, TRANSITIONS, SCENE_PREFIX, PARENTHETICALS, CHAR_EXTENSIONS, TRANSITIONS_IN, INTERCUTS, CAN_TAKE_PAREN, CAN_TAKE_DOUBLE_PAREN, guessNamesFor, guessNamesForBlocks, blockIsBlank, SP_MD_PREFIXES;
   var init_fountain = __esm({
@@ -15705,30 +15835,6 @@
   });
 
   // src/markdown-code-toggle.js
-  function prefixLen(text) {
-    const s = String(text || "");
-    if (!s) return 0;
-    for (const p of MD_PREFIXES) {
-      if (!s.startsWith(p)) continue;
-      const rest = s.slice(p.length);
-      if (!rest.trim()) return 0;
-      if (p === ".") {
-        if (/^[\s.\d]/.test(rest)) return 0;
-        return 1;
-      }
-      if (p === "!") {
-        if (/^\[[^\]\n]*\]\(/.test(rest)) return 0;
-        return 1;
-      }
-      if ((p === "@" || p === ">") && /^\s/.test(rest)) return 0;
-      return p.length;
-    }
-    return 0;
-  }
-  function suffixLen(text) {
-    const s = String(text || "");
-    return s.startsWith("((") && s.endsWith("))") && s.length > 4 ? 2 : 0;
-  }
   function setMarkdownCodes(on2) {
     const v2 = on2 !== false;
     if (v2 === _on) return false;
@@ -15779,15 +15885,15 @@
   function refreshMarkdownCodes(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(MD_CODE_KEY, true));
   }
-  var MD_CODE_KEY, MD_HIDE_CLASS, MD_PREFIXES, _on;
+  var MD_CODE_KEY, MD_HIDE_CLASS, _on;
   var init_markdown_code_toggle = __esm({
     "src/markdown-code-toggle.js"() {
       init_dist4();
       init_dist5();
       init_fountain();
+      init_fountain();
       MD_CODE_KEY = new PluginKey("kmdcodes");
       MD_HIDE_CLASS = "k-md-hide-prefix";
-      MD_PREFIXES = SP_MD_PREFIXES;
       _on = true;
     }
   });
@@ -60749,13 +60855,11 @@ ${mdToHtmlBody(md)}
     const out = [];
     const st0 = modelStats(model);
     if (has2("cover")) {
-      out.push("# " + model.title, "");
+      if (String(model.title || "").trim()) out.push("# " + model.title, "");
       const au = String(opt("cover", "author", "") || model.author || "").trim();
       if (au) out.push(au, "");
       out.push(tf("ui.compile.wordChapterScene", st0.words.toLocaleString(), st0.chapters, st0.scenes), "");
       if (has2("page-break")) out.push(PAGE_BREAK, "");
-    } else {
-      out.push("# " + model.title, "");
     }
     if (has2("roster") && String(model.roster || "").trim()) {
       out.push(String(model.roster).trim(), "");
@@ -60766,13 +60870,13 @@ ${mdToHtmlBody(md)}
     for (const ch of model.chapters) {
       cn++;
       if (has2("page-break") && cn > 1) out.push(PAGE_BREAK, "");
-      if (has2("chapter-heading"))
+      if (has2("chapter-heading") && String(ch.title || "").trim())
         out.push(fill(opt("chapter-heading", "template", "## {title}"), cn, ch.title || "", varCtx), "");
       let sn = 0;
       for (const s of ch.scenes) {
         sn++;
         if (has2("scene-separator") && sn > 1 && sep.trim()) out.push(sep, "");
-        if (has2("scene-heading"))
+        if (has2("scene-heading") && String(s.title || "").trim())
           out.push(fill(opt("scene-heading", "template", "### {title}"), sn, s.title || "", varCtx), "");
         if (has2("scene-meta"))
           out.push(tf("ui.compile.word", s.status || t("ui.compile.notSpecifyStatus"), (s.words || 0).toLocaleString()), "");
@@ -68319,7 +68423,11 @@ ${h.text}`;
     buildNetColorFields(box2, s);
     const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
     const previewPt = () => {
-      s.edFontPt = parseFloat(q("#st-edpt").value) || 12;
+      const pt = parseFloat(q("#st-edpt").value) || 12;
+      s.edFontPt = pt;
+      s.prose = { ...s.prose || {}, fontPt: pt };
+      const mirror = q("#st-pr-pt");
+      if (mirror) mirror.value = String(pt);
       s.spFontPt = parseFloat(q("#st-sppt").value) || 12;
       applyZoomVars(parseInt(q("#st-font").value, 10) || 0);
     };
@@ -68441,6 +68549,9 @@ ${h.text}`;
     const readProse = () => {
       P.fontFamily = q("#st-pr-font").value || "";
       P.fontPt = parseFloat(q("#st-pr-pt").value) || 12;
+      s.edFontPt = P.fontPt;
+      const mirrorEd = q("#st-edpt");
+      if (mirrorEd) mirrorEd.value = String(P.fontPt);
       P.lineHeight = parseFloat(q("#st-pr-lh").value) || 1.75;
       P.paraSpacing = parseFloat(q("#st-pr-para").value) || 0;
       P.firstLineIndent = parseFloat(q("#st-pr-indent").value) || 0;
@@ -85830,6 +85941,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       format: "pdf",
       scope: "draft",
       // 'draft' = ฉบับร่างทั้งเล่ม · 'tab' = ฉาก/บทที่เปิดอยู่
+      kind: "auto",
+      // 'auto' = ตามชนิดของฉากในเล่ม · 'prose' · 'screenplay' = บังคับ
       draft: "",
       workflow: "",
       // '' = เลือกให้อัตโนมัติตามรูปแบบ
@@ -85844,6 +85957,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const out = { ...d, ...s };
     out.format = EXPORT_FORMATS.some((f) => f.key === s.format) ? s.format : d.format;
     out.scope = s.scope === "tab" ? "tab" : "draft";
+    out.kind = s.kind === "prose" || s.kind === "screenplay" ? s.kind : "auto";
     out.workflow = typeof s.workflow === "string" ? s.workflow : "";
     out.pdf = { ...d.pdf, ...s.pdf || {} };
     out.pdf.watermark = String(out.pdf.watermark || "");
@@ -140897,6 +141011,7 @@ ${indent}</Paragraph>`;
 
   // src/export-hub.js
   async function buildModel(A, cfg, drafts) {
+    const forced = cfg.kind === "prose" || cfg.kind === "screenplay" ? cfg.kind : "";
     if (cfg.scope === "tab" && state.active && (state.active.editor || state.active.sp)) {
       const t3 = state.active;
       const body = t3.sp ? t3.sp.getMarkdown() : t3.editor.getMarkdown();
@@ -140904,9 +141019,9 @@ ${indent}</Paragraph>`;
         title: t3.title || state.title,
         author: state.meta && state.meta.author || "",
         roster: "",
-        chapters: [{ title: t3.title || "", guid: "tab", scenes: [
+        chapters: [{ title: "", guid: "tab", scenes: [
           {
-            title: t3.title || "",
+            title: "",
             file: t3.file,
             body: String(body || "").trim(),
             synopsis: "",
@@ -140917,12 +141032,12 @@ ${indent}</Paragraph>`;
           }
         ] }]
       };
-      return { model: model2, kind: t3.sp ? "screenplay" : "prose" };
+      return { model: model2, kind: forced || (t3.sp ? "screenplay" : "prose") };
     }
     const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
     if (!d) return null;
     const model = await A.buildDraftModel(d.dPath);
-    return { model, kind: docKind(model) };
+    return { model, kind: forced || docKind(model) };
   }
   async function compose2(A, cfg, model, wf2) {
     const varCtx = { title: model.title, author: model.author };
@@ -140990,22 +141105,23 @@ ${indent}</Paragraph>`;
     const { model, kind } = mk2;
     const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows());
     const r = await compose2(A, cfg, model, wf2);
+    const engine2 = pdfEngine(kind);
+    const { parseScript: parseScript2, stripFountainCodes: stripFountainCodes2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+    const viaScript = cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
+    const text = viaScript ? r.text : stripFountainCodes2(r.text);
     const out = {
       title: model.title,
       kind,
       warnings: r.warnings || [],
-      text: r.text,
+      text,
       html: "",
-      engine: pdfEngine(kind),
+      engine: engine2,
       blocks: null
     };
-    if (cfg.format === "html") out.html = await proseHtml(A, r.text, model.title, cfg.html.wysiwyg);
-    if (cfg.format === "pdf" && out.engine === "html")
-      out.html = await proseHtml(A, r.text, model.title, true);
-    if (cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && out.engine === "pdflib") {
-      const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
-      out.blocks = parseScript2(r.text);
-    }
+    if (cfg.format === "html") out.html = await proseHtml(A, text, model.title, cfg.html.wysiwyg);
+    if (cfg.format === "pdf" && engine2 === "html")
+      out.html = await proseHtml(A, text, model.title, true);
+    if (viaScript) out.blocks = parseScript2(r.text);
     if (cfg.format === "rtf") {
       const { generateRtf: generateRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
       const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
@@ -141034,21 +141150,41 @@ ${indent}</Paragraph>`;
       host2.append(el("div", "dim", t("ui.xhub.noPreview")));
       return "none";
     }
-    if (cfg.format === "html" || cfg.format === "pdf" && built.engine === "html") {
+    if (cfg.format === "pdf") {
+      const box2 = el("div", "sp-pageview xhub-pv");
+      host2.append(box2);
+      const fmt = A.spFormat();
+      const w = host2.clientWidth || 420;
+      if (built.engine === "pdflib") {
+        const { renderPageView: renderPageView2, pagesOf: pagesOf2, fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
+        const fs = fitScale3(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
+        renderPageView2(
+          box2,
+          pagesOf2(built.blocks || [], fmt),
+          fmt,
+          { scale: fs.scale, gap: 14, startPage: 1 }
+        );
+      } else {
+        const { fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
+        const { renderProsePageView: renderProsePageView2, prosePagesOf: prosePagesOf2 } = await Promise.resolve().then(() => (init_prose_view(), prose_view_exports));
+        const { mdToProseBlocks: mdToProseBlocks2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
+        const pf = A.proseFormat();
+        const fs = fitScale3(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
+        renderProsePageView2(
+          box2,
+          prosePagesOf2(mdToProseBlocks2(built.text), pf, fmt.paper, fmt.margins),
+          pf,
+          { scale: fs.scale, gap: 14, paper: fmt.paper, margins: fmt.margins }
+        );
+      }
+      return "page";
+    }
+    if (cfg.format === "html") {
       const fr = el("iframe", "xhub-frame");
       fr.setAttribute("sandbox", "");
       fr.srcdoc = built.html;
       host2.append(fr);
       return "html";
-    }
-    if (cfg.format === "pdf") {
-      const { renderPageView: renderPageView2, pagesOf: pagesOf2 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
-      const fmt = A.spFormat();
-      const box2 = el("div", "xhub-pages");
-      host2.append(box2);
-      const pages = pagesOf2(built.blocks || [], fmt);
-      renderPageView2(box2, pages, fmt, { scale: 0.42, gap: 14 });
-      return "page";
     }
     const pre = el("pre", "xhub-pre");
     pre.textContent = built.text.slice(0, PREVIEW_CHARS) + (built.text.length > PREVIEW_CHARS ? "\n\u2026" : "");
@@ -141185,6 +141321,25 @@ ${indent}</Paragraph>`;
         colOpt.append(selD);
         if (!drafts.length) colOpt.append(el("div", "dim", t("ui.xhub.noDraft")));
       }
+      colOpt.append(el("div", "cmp-sub", t("ui.xhub.docKind")));
+      const selKind = el("select", "k-dlg-select");
+      selKind.id = "xhub-kind";
+      for (const [v2, k] of [
+        ["auto", "ui.xhub.kindAuto"],
+        ["prose", "ui.xhub.kindProse"],
+        ["screenplay", "ui.xhub.kindScript"]
+      ]) {
+        const o = el("option", null, t(k));
+        o.value = v2;
+        selKind.append(o);
+      }
+      selKind.value = cfg.kind;
+      selKind.onchange = () => {
+        cfg.kind = selKind.value;
+        saveCfg();
+        refresh();
+      };
+      colOpt.append(selKind);
       colOpt.append(el("div", "cmp-sub", t("ui.xhub.content")));
       const selWf = el("select", "k-dlg-select");
       selWf.id = "xhub-wf";
@@ -145400,7 +145555,7 @@ ${css}
     const R = document.documentElement.style;
     const off3 = uiOff === void 0 ? uiFontOffset() : parseInt(uiOff, 10) || 0;
     R.setProperty("--ui-fs", 14 + off3 + "px");
-    const edBase = ptToPx(state.settings.edFontPt ?? 12);
+    const edBase = ptToPx(proseFormat().fontPt);
     const spBase = ptToPx(state.settings.spFontPt ?? 12);
     const edfs = Math.max(9, Math.min(96, +edBase.toFixed(2)));
     const spfs = Math.max(9, Math.min(96, +spBase.toFixed(2)));
@@ -145548,7 +145703,11 @@ ${css}
     return fmt;
   }
   function proseFormatSettings() {
-    return (state.settings || {}).prose || {};
+    const p = (state.settings || {}).prose || {};
+    if (p.fontPt === void 0 && (state.settings || {}).edFontPt !== void 0) {
+      return { ...p, fontPt: num(state.settings.edFontPt, 12) };
+    }
+    return p;
   }
   function proseFormat() {
     return mergeProseFormat(proseFormatSettings());
@@ -145783,6 +145942,7 @@ ${css}
       gap: 20,
       paper: spf.paper,
       margins: spf.margins,
+      showPageNumbers: !!spf.pageNumbers.show,
       startPage: currentStartPage(tab)
     });
     return pg.count;
@@ -145881,7 +146041,8 @@ ${css}
     const pane = t22 && t22.pane;
     if (!pane) return "";
     const fmt = spFormat();
-    const label = t22.sp && fmt.pageNumbers.show ? pageNumberLabel(1, fmt, currentStartPage(t22)) : "";
+    const isDoc = !!(t22.sp || t22.editor);
+    const label = isDoc && fmt.pageNumbers.show ? pageNumberLabel(1, fmt, currentStartPage(t22)) : "";
     pane.style.setProperty("--pg-no-first", label ? JSON.stringify(label) : '""');
     return label;
   }
@@ -164209,16 +164370,16 @@ ${css}
           Math.abs(parseFloat(rootVar("--sp-fs")) - 14 * 4 / 3) < 0.05,
           rootVar("--sp-fs")
         );
-        const keepEdPt = S8.edFontPt;
-        S8.edFontPt = 1;
+        const keepPrFs = JSON.parse(JSON.stringify(S8.prose || {}));
+        S8.prose = { ...S8.prose || {}, fontPt: 1 };
         S8.uiFontSize = -6;
         applyZoomVars();
         check2(
-          "[26] edFontPt \u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
+          "[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
           parseFloat(rootVar("--ed-fs")) >= 9,
           rootVar("--ed-fs")
         );
-        S8.edFontPt = keepEdPt;
+        S8.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
         S8.uiFontSize = 0;
         applyZoomVars();
         check2(
@@ -166766,14 +166927,27 @@ ${css}
         S22.pageMargins = keepMg;
         applyPageVars();
         toggleShowFormat(false);
-        const keepPt = S22.edFontPt;
-        S22.edFontPt = 1;
-        applyZoomVars();
-        check2("[26] edFontPt = 1 \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49\u0E04\u0E48\u0E32\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px", parseFloat(rv("--ed-fs")) >= 9, rv("--ed-fs"));
-        S22.edFontPt = 500;
-        applyZoomVars();
-        check2("[26] edFontPt \u0E2A\u0E39\u0E07\u0E40\u0E01\u0E34\u0E19\u0E01\u0E47\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A", parseFloat(rv("--ed-fs")) <= 96, rv("--ed-fs"));
-        S22.edFontPt = keepPt ?? 12;
+        const keepPr26 = JSON.parse(JSON.stringify(S22.prose || {}));
+        const setPt26 = (pt) => {
+          S22.prose = { ...S22.prose || {}, fontPt: pt };
+          applyZoomVars();
+        };
+        setPt26(1);
+        check2("[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22 = 1 \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49\u0E04\u0E48\u0E32\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px", parseFloat(rv("--ed-fs")) >= 9, rv("--ed-fs"));
+        setPt26(500);
+        check2("[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22\u0E2A\u0E39\u0E07\u0E40\u0E01\u0E34\u0E19\u0E01\u0E47\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A", parseFloat(rv("--ed-fs")) <= 96, rv("--ed-fs"));
+        setPt26(18);
+        check2(
+          "[81r-1] \u0E15\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48 prose.fontPt \u0E41\u0E25\u0E49\u0E27 --ed-fs \u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07",
+          Math.abs(parseFloat(rv("--ed-fs")) - ptToPx(18)) < 0.05,
+          rv("--ed-fs")
+        );
+        check2(
+          "[81r-1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 (\u0E08\u0E2D = \u0E44\u0E1F\u0E25\u0E4C = \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29)",
+          Math.abs(proseFontPx(proseFormat()) - parseFloat(rv("--ed-fs"))) < 0.05,
+          proseFontPx(proseFormat()) + " vs " + rv("--ed-fs")
+        );
+        S22.prose = Object.keys(keepPr26).length ? keepPr26 : null;
         applyZoomVars();
         const devOv = openDevConsole();
         await new Promise((r) => setTimeout(r, 80));
@@ -172536,12 +172710,13 @@ ${css}
             box2.querySelector(".xhub-fmt.on").dataset.fmt === hub.cfg.format
           );
           check2(
-            "[81-9] \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49: \u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15 + \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C + \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A",
-            !!box2.querySelector("#xhub-scope") && !!box2.querySelector("#xhub-wf") && !!box2.querySelector("#xhub-wm")
+            "[81-9] \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49: \u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15 + \u0E0A\u0E19\u0E34\u0E14\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 + \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C + \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A",
+            !!box2.querySelector("#xhub-scope") && !!box2.querySelector("#xhub-kind") && !!box2.querySelector("#xhub-wf") && !!box2.querySelector("#xhub-wm")
           );
           check2(
             "[81-9] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 PDF \u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
-            await until81(() => !!box2.querySelector(".xhub-pages .sp-page, .xhub-frame"))
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-pageview .sp-page")),
+            box2.querySelector(".xhub-preview").innerHTML.slice(0, 80)
           );
           await hub.setFormat("txt");
           check2(
@@ -172567,8 +172742,122 @@ ${css}
             ["pdflib", "html"].includes(bh.engine),
             bh.engine
           );
+          hub.cfg.scope = "tab";
+          await hub.setFormat("txt");
+          const bTab = await hub.build();
+          check2(
+            "[81r-6] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D",
+            !!bTab && !bTab.text.startsWith("# "),
+            (bTab && bTab.text || "").slice(0, 60)
+          );
+          check2(
+            "[81r-6] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E40\u0E1B\u0E25\u0E48\u0E32 ## / ### \u0E25\u0E2D\u0E22 \u0E46",
+            !!bTab && !/^#{2,3}\s*$/m.test(bTab.text)
+          );
+          check2(
+            "[81r-4] \u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E2B\u0E31\u0E2A @ / .\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01 / ((\u0E42\u0E19\u0E49\u0E15)) \u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+            !!bTab && !/^\s*(@\S|\.[^\s.\d]|>\S|\(\()/m.test(bTab.text),
+            bTab && (bTab.text.match(/^\s*(@\S|\.[^\s.\d]|>\S|\(\().*/m) || [""])[0] || ""
+          );
+          hub.cfg.kind = "screenplay";
+          await hub.setFormat("pdf");
+          const bScript = await hub.build();
+          check2(
+            '[81r-3] \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A "\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C" \u2192 \u0E43\u0E0A\u0E49\u0E15\u0E31\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07 PDF \u0E02\u0E2D\u0E07\u0E1A\u0E17',
+            !!bScript && bScript.kind === "screenplay" && bScript.engine === "pdflib",
+            bScript && bScript.kind + "/" + bScript.engine
+          );
+          check2(
+            "[81r-3] \u0E17\u0E32\u0E07\u0E1A\u0E17 = \u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E1E\u0E32\u0E23\u0E4C\u0E2A\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E14\u0E34\u0E1A)",
+            !!bScript && Array.isArray(bScript.blocks) && bScript.blocks.length > 0
+          );
+          hub.cfg.kind = "prose";
+          const bProse = await hub.build();
+          check2(
+            '[81r-3] \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A "\u0E19\u0E34\u0E22\u0E32\u0E22" \u2192 \u0E43\u0E0A\u0E49\u0E17\u0E32\u0E07 HTML\u2192PDF',
+            !!bProse && bProse.kind === "prose" && bProse.engine === "html"
+          );
+          await hub.refresh();
+          check2(
+            "[81r-5] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 PDF \u0E19\u0E34\u0E22\u0E32\u0E22\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-pageview .ed-page")),
+            box2.querySelector(".xhub-preview").className
+          );
+          {
+            const pv = box2.querySelector(".xhub-preview .sp-pageview");
+            const pg1 = pv && pv.querySelector(".sp-page");
+            check2(
+              "[81r-5] \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E44\u0E1B",
+              !!pg1 && pg1.getBoundingClientRect().left >= pv.getBoundingClientRect().left - 2,
+              pg1 ? Math.round(pg1.getBoundingClientRect().left) + " vs " + Math.round(pv.getBoundingClientRect().left) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32"
+            );
+            check2(
+              "[81r-5] \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E14\u0E49\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 (\u0E01\u0E0E .sp-pageview \u0E17\u0E33\u0E07\u0E32\u0E19)",
+              !!pg1 && getComputedStyle(pg1).backgroundColor !== "rgba(0, 0, 0, 0)",
+              pg1 && getComputedStyle(pg1).backgroundColor
+            );
+          }
+          hub.cfg.kind = "auto";
+          hub.cfg.scope = "draft";
           hub.close();
           check2("[81-9] \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E04\u0E49\u0E32\u0E07", !document.querySelector(".k-xhub"));
+        }
+        {
+          const pf81 = proseFormat();
+          const css81 = document.getElementById("k-prose-format");
+          check2(
+            "[81r-1] CSS \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E34\u0E22\u0E32\u0E22\u0E15\u0E31\u0E49\u0E07\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07\u0E40\u0E25\u0E22)",
+            !!css81 && css81.textContent.includes("font-family:" + proseFontStack(pf81)),
+            css81 && css81.textContent.slice(0, 90) || "\u0E44\u0E21\u0E48\u0E21\u0E35 <style>"
+          );
+          const edFs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ed-fs"));
+          check2(
+            "[81r-1] \u0E02\u0E19\u0E32\u0E14\u0E1A\u0E19\u0E08\u0E2D\u0E04\u0E34\u0E14\u0E08\u0E32\u0E01 prose.fontPt \u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E15\u0E2D\u0E19\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01",
+            Math.abs(edFs - proseFontPx(pf81)) < 0.05,
+            edFs + " vs " + proseFontPx(pf81)
+          );
+          const keepPr = JSON.parse(JSON.stringify(state.settings.prose || {}));
+          state.settings.prose = { ...state.settings.prose || {}, fontPt: 20 };
+          applyZoomVars();
+          applyProseVars();
+          check2(
+            "[81r-2] \u0E15\u0E31\u0E49\u0E07 fontPt = 20 \u0E41\u0E25\u0E49\u0E27\u0E08\u0E2D\u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21",
+            Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ed-fs")) - ptToPx(20)) < 0.05
+          );
+          state.settings.prose = keepPr;
+          applyZoomVars();
+          applyProseVars();
+        }
+        {
+          const tp81 = [...state.tabs.values()].find((x) => x.editor);
+          if (tp81) {
+            await activate(tp81.file);
+            const keepPn = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            togglePageNumbers(true);
+            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
+            applyPageVars();
+            await wait81(80);
+            const lbl = updatePageNumberHint();
+            check2(
+              "[81r-7] \u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E1B\u0E49\u0E32\u0E22\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A tab.sp \u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19)",
+              !!lbl,
+              JSON.stringify(lbl)
+            );
+            const pmP = tp81.pane.querySelector(":scope > .workspace > .ProseMirror");
+            const before = pmP && getComputedStyle(pmP, "::before").content;
+            check2(
+              "[81r-7] \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 (::before \u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32)",
+              !!before && before !== "none" && before !== '""',
+              String(before)
+            );
+            togglePageNumbers(false);
+            await wait81(60);
+            const off3 = getComputedStyle(pmP, "::before").content;
+            check2("[81r-7] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07", off3 === "none" || off3 === '""', String(off3));
+            state.settings.spPageNumbers = keepPn;
+            applyPageVars();
+            updatePageNumberHint();
+          }
         }
         check2(
           "[81-9] \u0E40\u0E21\u0E19\u0E39\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E23\u0E35\u0E22\u0E01\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",

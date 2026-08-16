@@ -33,25 +33,33 @@ export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, norm
 
 const PREVIEW_CHARS = 8000;
 
-/** โมเดลเนื้อหาตามขอบเขตที่เลือก — คืน {model, kind} */
+/**
+ * โมเดลเนื้อหาตามขอบเขตที่เลือก — คืน {model, kind}
+ *
+ * [alpha.81r ข้อ 6] ขอบเขต "ฉากที่เปิดอยู่" **ไม่มีชื่อบท** — ชื่อแท็บคือชื่อไฟล์ ไม่ใช่เนื้อเรื่อง
+ * ปล่อยว่างไว้ แล้ว runWorkflow จะข้ามหัวข้อให้เอง (ไม่มี `## ชื่อไฟล์` ติดไปในงาน)
+ * [alpha.81r ข้อ 3] ชนิดเอกสารถูก **บังคับ** ได้จากกล่อง (cfg.kind) — อยู่โหมดนิยายแล้วสั่ง
+ * ส่งออกเป็นบทภาพยนตร์ ต้องได้รูปแบบบทจริง ๆ ไม่ใช่ตัดสินจากไฟล์ต้นทางอย่างเดียว
+ */
 async function buildModel(A, cfg, drafts) {
+  const forced = cfg.kind === 'prose' || cfg.kind === 'screenplay' ? cfg.kind : '';
   if (cfg.scope === 'tab' && state.active && (state.active.editor || state.active.sp)) {
     const t = state.active;
     const body = t.sp ? t.sp.getMarkdown() : t.editor.getMarkdown();
     const model = {
       title: t.title || state.title, author: (state.meta && state.meta.author) || '', roster: '',
-      chapters: [{ title: t.title || '', guid: 'tab', scenes: [
-        { title: t.title || '', file: t.file, body: String(body || '').trim(),
+      chapters: [{ title: '', guid: 'tab', scenes: [
+        { title: '', file: t.file, body: String(body || '').trim(),
           synopsis: '', status: '', type: 'scene',
           format: t.sp ? 'screenplay' : 'prose', words: 0 },
       ] }],
     };
-    return { model, kind: t.sp ? 'screenplay' : 'prose' };
+    return { model, kind: forced || (t.sp ? 'screenplay' : 'prose') };
   }
   const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
   if (!d) return null;
   const model = await A.buildDraftModel(d.dPath);
-  return { model, kind: docKind(model) };
+  return { model, kind: forced || docKind(model) };
 }
 
 /** ประกอบเนื้อหาผ่านเวิร์กโฟลว์ — คืนผลของ runWorkflow (มี text / ext / warnings) */
@@ -127,16 +135,21 @@ async function buildAll(A, cfg, drafts) {
   const wf = A.allWorkflows().find((w) => w.id === cfg.workflow)
           || defaultWorkflowFor(cfg.format, A.allWorkflows());
   const r = await compose(A, cfg, model, wf);
+  const engine = pdfEngine(kind);
+  const { parseScript, stripFountainCodes } = await import('./fountain.js');
+  // [alpha.81r ข้อ 4] ทางที่ผ่าน `parseScript` (PDF บทหนัง · rtf · fdx) พาร์เซอร์กินรหัสไปแล้ว
+  // ทางที่เหลือเป็น Markdown ล้วน ๆ ต้องตัดรหัส fountain (`@ชื่อ` `.หัวฉาก` `((โน้ต))`) เองที่นี่
+  // ไม่งั้นมันติดไปในไฟล์ที่ส่งให้คนอ่าน ทั้งที่บนจอถูกซ่อนไว้ตลอด
+  const viaScript = cfg.format === 'rtf' || cfg.format === 'fdx' ||
+                    (cfg.format === 'pdf' && engine === 'pdflib');
+  const text = viaScript ? r.text : stripFountainCodes(r.text);
   const out = { title: model.title, kind, warnings: r.warnings || [],
-                text: r.text, html: '', engine: pdfEngine(kind), blocks: null };
+                text, html: '', engine, blocks: null };
 
-  if (cfg.format === 'html') out.html = await proseHtml(A, r.text, model.title, cfg.html.wysiwyg);
-  if (cfg.format === 'pdf' && out.engine === 'html')
-    out.html = await proseHtml(A, r.text, model.title, true);
-  if (cfg.format === 'rtf' || cfg.format === 'fdx' || (cfg.format === 'pdf' && out.engine === 'pdflib')) {
-    const { parseScript } = await import('./fountain.js');
-    out.blocks = parseScript(r.text);
-  }
+  if (cfg.format === 'html') out.html = await proseHtml(A, text, model.title, cfg.html.wysiwyg);
+  if (cfg.format === 'pdf' && engine === 'html')
+    out.html = await proseHtml(A, text, model.title, true);
+  if (viaScript) out.blocks = parseScript(r.text);
   if (cfg.format === 'rtf') {
     const { generateRtf } = await import('./export-rtf.js');
     const { projectTitlePages } = await import('./pdf-ui.js');
@@ -161,22 +174,43 @@ async function renderPreview(host, A, cfg, built) {
   }
   if (!built) { host.append(el('div', 'dim', tt('ui.xhub.noPreview'))); return 'none'; }
 
-  if (cfg.format === 'html' || (cfg.format === 'pdf' && built.engine === 'html')) {
+  // ลำดับสำคัญ: PDF ต้องมาก่อนเสมอ
+  // [alpha.81r ข้อ 5] เดิมเงื่อนไข `format==='pdf' && engine==='html'` ถูกรวมไว้กับกิ่ง iframe
+  // → PDF ของ **นิยาย** ได้ตัวอย่างเป็นหน้าเว็บไหลยาว ไม่ใช่หน้ากระดาษที่แบ่งหน้าแล้ว
+  //   (กิ่งวาดหน้ากระดาษของนิยายกลายเป็นโค้ดตายที่ไม่มีทางถูกเรียก)
+  // ปลายทางเป็น PDF = ต้องเห็น "แผ่นกระดาษ" เสมอ · ปลายทางเป็น HTML ค่อยโชว์หน้าเว็บจริง
+  if (cfg.format === 'pdf') {
+    // [alpha.81r ข้อ 5] "ตัวอย่างเพี้ยน" — ต้นตอ: `renderPageView()` เอา `.sp-page-slot` ใส่
+    // host **ตรง ๆ** โดยหน้าตาทั้งหมด (flex · พื้นโต๊ะ · สีกระดาษ · ฟอนต์) มาจากกฎที่ขึ้นต้นด้วย
+    // `.sp-pageview` แต่ผมส่ง div ที่ไม่มีคลาสนั้นไปเป็น host → ไม่มีกฎไหนตรงเลยสักข้อ
+    // ได้กล่องเปล่ากับหน้ากระดาษที่หลุดไปมุมหนึ่ง · host ต้องมีคลาส `sp-pageview` เสมอ
+    const box = el('div', 'sp-pageview xhub-pv');
+    host.append(box);
+    const fmt = A.spFormat();
+    const w = host.clientWidth || 420;
+    if (built.engine === 'pdflib') {
+      const { renderPageView, pagesOf, fitScale } = await import('./sp-view.js');
+      const fs = fitScale(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
+      renderPageView(box, pagesOf(built.blocks || [], fmt), fmt,
+                     { scale: fs.scale, gap: 14, startPage: 1 });
+    } else {
+      // นิยายต้องใช้ตัววาดของนิยาย — ตัววาดบทจะจัดหน้าแบบสคริปต์ให้ทั้งที่เนื้อเป็นร้อยแก้ว
+      const { fitScale } = await import('./sp-view.js');
+      const { renderProsePageView, prosePagesOf } = await import('./prose-view.js');
+      const { mdToProseBlocks } = await import('./prose-format.js');
+      const pf = A.proseFormat();
+      const fs = fitScale(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
+      renderProsePageView(box, prosePagesOf(mdToProseBlocks(built.text), pf, fmt.paper, fmt.margins),
+                          pf, { scale: fs.scale, gap: 14, paper: fmt.paper, margins: fmt.margins });
+    }
+    return 'page';
+  }
+  if (cfg.format === 'html') {
     const fr = el('iframe', 'xhub-frame');
     fr.setAttribute('sandbox', '');                 // ตัวอย่างต้องไม่รันสคริปต์ใด ๆ
     fr.srcdoc = built.html;
     host.append(fr);
     return 'html';
-  }
-  if (cfg.format === 'pdf') {
-    // บทภาพยนตร์ → วาดหน้ากระดาษด้วยตัวเดียวกับ "มุมมองเรียงหน้า" (จัดหน้าชุดเดียวกับที่ PDF ใช้)
-    const { renderPageView, pagesOf } = await import('./sp-view.js');
-    const fmt = A.spFormat();
-    const box = el('div', 'xhub-pages');
-    host.append(box);
-    const pages = pagesOf(built.blocks || [], fmt);
-    renderPageView(box, pages, fmt, { scale: 0.42, gap: 14 });
-    return 'page';
   }
   const pre = el('pre', 'xhub-pre');
   pre.textContent = built.text.slice(0, PREVIEW_CHARS) +
@@ -284,6 +318,18 @@ export async function openExportHub() {
       colOpt.append(selD);
       if (!drafts.length) colOpt.append(el('div', 'dim', tt('ui.xhub.noDraft')));
     }
+
+    // [alpha.81r ข้อ 3] ชนิดเอกสาร — บังคับได้ ไม่ใช่เดาจากไฟล์อย่างเดียว
+    // "อยู่โหมดนิยายแล้วส่งออกเป็นหนัง ต้องได้รูปแบบหนังจริง ๆ"
+    colOpt.append(el('div', 'cmp-sub', tt('ui.xhub.docKind')));
+    const selKind = el('select', 'k-dlg-select'); selKind.id = 'xhub-kind';
+    for (const [v, k] of [['auto', 'ui.xhub.kindAuto'], ['prose', 'ui.xhub.kindProse'],
+                          ['screenplay', 'ui.xhub.kindScript']]) {
+      const o = el('option', null, tt(k)); o.value = v; selKind.append(o);
+    }
+    selKind.value = cfg.kind;
+    selKind.onchange = () => { cfg.kind = selKind.value; saveCfg(); refresh(); };
+    colOpt.append(selKind);
 
     // เวิร์กโฟลว์เนื้อหา
     colOpt.append(el('div', 'cmp-sub', tt('ui.xhub.content')));

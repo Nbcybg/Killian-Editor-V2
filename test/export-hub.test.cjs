@@ -103,6 +103,11 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('รูปแบบที่ไม่มีในตารางถูกโยนทิ้ง', T.normalizeHub({ format: 'exe' }).format === 'pdf');
   check('scope นอกรายการตกเป็น draft', T.normalizeHub({ scope: 'zzz' }).scope === 'draft');
   check('scope=tab เก็บไว้', T.normalizeHub({ scope: 'tab' }).scope === 'tab');
+  // [alpha.81r ข้อ 3] "อยู่โหมดนิยายแล้วส่งออกเป็นหนัง ต้องได้รูปแบบหนังจริง ๆ"
+  check('ค่าเริ่มต้นของชนิดเอกสาร = ตามไฟล์', d.kind === 'auto');
+  check('บังคับเป็นบทภาพยนตร์ได้', T.normalizeHub({ kind: 'screenplay' }).kind === 'screenplay');
+  check('บังคับเป็นนิยายได้', T.normalizeHub({ kind: 'prose' }).kind === 'prose');
+  check('ชนิดนอกรายการตกเป็น auto', T.normalizeHub({ kind: 'comic' }).kind === 'auto');
   check('ค่าย่อยที่ผู้ใช้ตั้งไว้ไม่หาย',
         T.normalizeHub({ pdf: { toc: false } }).pdf.toc === false);
   check('ค่าย่อยที่ขาดถูกเติมจากค่าเริ่มต้น',

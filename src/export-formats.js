@@ -68,6 +68,7 @@ export function defaultHubSettings() {
   return {
     format: 'pdf',
     scope: 'draft',            // 'draft' = ฉบับร่างทั้งเล่ม · 'tab' = ฉาก/บทที่เปิดอยู่
+    kind: 'auto',              // 'auto' = ตามชนิดของฉากในเล่ม · 'prose' · 'screenplay' = บังคับ
     draft: '',
     workflow: '',              // '' = เลือกให้อัตโนมัติตามรูปแบบ
     pdf: { toc: true, titlePages: true, headers: true, pageNumbers: true, watermark: '' },
@@ -83,6 +84,7 @@ export function normalizeHub(saved) {
   const out = { ...d, ...s };
   out.format = EXPORT_FORMATS.some((f) => f.key === s.format) ? s.format : d.format;
   out.scope = s.scope === 'tab' ? 'tab' : 'draft';
+  out.kind = s.kind === 'prose' || s.kind === 'screenplay' ? s.kind : 'auto';
   out.workflow = typeof s.workflow === 'string' ? s.workflow : '';
   out.pdf = { ...d.pdf, ...(s.pdf || {}) };
   out.pdf.watermark = String(out.pdf.watermark || '');
