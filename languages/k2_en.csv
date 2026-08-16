@@ -2290,6 +2290,7 @@ ui.dialogue.errWrite,Could not write the file
 ui.dialogue.everyone,Everyone · {0}
 ui.dialogue.exportCsv,Export CSV
 ui.dialogue.exported,Exported:
+ui.dialogue.guessedN,{0} guessed
 ui.dialogue.lineNo,line {0}
 ui.dialogue.noMatch,No dialogue matches the filter
 ui.dialogue.noneFound,"No dialogue found — dialogue is text in quotes, or lines under @character"
@@ -2301,6 +2302,8 @@ ui.dialogue.scanning,Scanning dialogue…
 ui.dialogue.searchPh,"Search dialogue, speaker, scene"
 ui.dialogue.srcProse,Prose (quotes)
 ui.dialogue.srcScript,Screenplay
+ui.dialogue.sureOnly,Certain only
+ui.dialogue.sureOnlyHint,Hide rows where the speaker was guessed from turn-taking
 ui.dialogue.unclosedHint,Quote is not closed on this line
 ui.dialogue.unknown,Unattributed
 ui.dialogue.warnNames,Could not read character list
@@ -2308,6 +2311,7 @@ ui.dialogue.whereBack,Speaker taken from text after the quote
 ui.dialogue.whereFront,Speaker taken from text before the quote
 ui.dialogue.whereNone,No speaker name found
 ui.dialogue.whereTag,Speaker from the @character tag
+ui.dialogue.whereTurn,Guessed from turn-taking (no name on either side)
 ui.dirty.dirtyRegistryProviderMust,dirty-registry: provider ต้องมี list()
 ui.dirty.notHasItemSave,ไม่มีตัวบันทึก
 ui.dirty.saveNotOk,บันทึกไม่สำเร็จ
@@ -3357,6 +3361,7 @@ ui.net.clickNodeOpenPage,คลิกโหนด = เปิดหน้าน�
 ui.net.clickNodeOpenPage2,คลิกโหนด = เปิดหน้านั้นไปแก้ไข
 ui.net.clickOpen,ดับเบิลคลิก = เปิด
 ui.net.clickRight,คลิกขวา
+ui.net.colorGroupHint,Click a swatch or type a hex code · empty = default
 ui.net.colorLineLinkOther,สีเส้นเชื่อมอื่น ๆ
 ui.net.colorLineTypeRelation,สีเส้น (ตามประเภทความสัมพันธ์)
 ui.net.colorNodeCat,สีโหนด (ตามหมวด)
@@ -3387,6 +3392,16 @@ ui.net.open2,📖 เปิด
 ui.net.openBook,📂 เปิดเล่ม
 ui.net.openChapter,📂 เปิดบท
 ui.net.openModeDDone,(เปิดโหมด 3D แล้วลาก{0} = หมุนมุมมอง)
+ui.net.presetApplied,"Applied colour set ""{0}"""
+ui.net.presetCustom,— custom —
+ui.net.presetDel,Delete set
+ui.net.presetDelAsk,"Delete colour set ""{0}"""
+ui.net.presetDelNo,Built-in sets cannot be deleted
+ui.net.presetHint,"Pick a set to recolour the whole graph — tweak individual colours, then save as a new set"
+ui.net.presetLabel,Colour preset
+ui.net.presetSave,Save as new set
+ui.net.presetSaveAsk,Name your colour set
+ui.net.presetSaved,"Saved colour set ""{0}"""
 ui.net.relation,🔗 ความสัมพันธ์ (
 ui.net.repeat,📋 ทำซ้ำ
 ui.net.reset,รีเซ็ต
@@ -3412,6 +3427,11 @@ ui.net.unsetPinNode,📌 ปลดหมุดโหนดนี้
 ui.net.wheelZoom,ล้อ = ซูม
 ui.net.xYZ,แกนบอกทิศ (X/Y/Z)
 ui.net.zoom, · ซูม {0}%
+ui.netPreset.cable,Cable
+ui.netPreset.default,Default
+ui.netPreset.flower,Flower
+ui.netPreset.rainbow,Rainbow
+ui.netPreset.xrite,X-Rite
 ui.noDraftToExport,No drafts to export
 ui.notes.backStuck,เอากลับมาเป็นค้างอยู่
 ui.notes.clearNoteAllDone,ล้างโน้ตทั้งหมดแล้ว
@@ -4121,12 +4141,31 @@ ui.plug.enable,Enable
 ui.plug.enabled,Enabled {0}
 ui.plug.errAutoOff,"Disabled automatically so the app still starts — fix it, then enable"
 ui.plug.errBadEntry,entry points outside the plugin folder
+ui.plug.errBadUrl,Cannot read that link — use https://github.com/user/repo
 ui.plug.errExists,A folder named {0} already exists
+ui.plug.errExtract,Could not extract the plugin
+ui.plug.errFetch,Download failed
+ui.plug.errFetchStatus,Download failed (status {0}) — check the link and branch
 ui.plug.errLoad,Failed to load:
 ui.plug.errMakeSample,Could not create the sample plugin
 ui.plug.errNoDir,Could not open the folder
+ui.plug.errNoFiles,Nothing to install
+ui.plug.errNoManifest,No plugin.json inside — probably not a Killian plugin
 ui.plug.errNoName,No name in plugin.json and no folder name
+ui.plug.errNotZip,Only GitHub links or .zip files are supported
+ui.plug.errNoUrl,No link given
 ui.plug.errRun,Plugin command failed
+ui.plug.errSubNotFound,The subfolder in the link was not found
+ui.plug.errTooBig,File too large (over 25MB)
+ui.plug.errUninstall,Could not uninstall
+ui.plug.install,Install from link
+ui.plug.installAsk,"GitHub link (or user/repo, or a .zip URL)"
+ui.plug.installConfirm,"Install into folder ""{0}"" — {1} files"
+ui.plug.installed,Installed {0} ({1} files)
+ui.plug.installFetching,Downloading plugin…
+ui.plug.installHint,Paste a GitHub link and the app installs it for you
+ui.plug.installOverwrite,"Folder ""{0}"" already exists — overwrite?"
+ui.plug.installWarn,⚠ Plugins run with full access to your project files — only install from sources you trust
 ui.plug.makeSample,Create sample
 ui.plug.makeSampleHint,Create a working sample plugin to start from
 ui.plug.minVer,Requires at least
@@ -4150,6 +4189,10 @@ ui.plug.stOk,active
 ui.plug.stOld,too old
 ui.plug.summary,{0} total · {1} active
 ui.plug.summaryErr, · {0} failed
+ui.plug.uninstall,Uninstall
+ui.plug.uninstallAsk,"Uninstall ""{0}"" — deletes its folder"
+ui.plug.uninstalled,Uninstalled {0}
+ui.plug.uninstallHint,Delete this plugin's folder
 ui.plugin.failed,Plugin crashed - disabled for now
 ui.plugin.loaded,Plugins loaded
 ui.plugin.needsNewer,Requires a newer version of Killian
@@ -4627,6 +4670,7 @@ ui.tbcfg.grpExt,Extensions
 ui.tbcfg.grpFind,Search
 ui.tbcfg.grpInsert,Insert
 ui.tbcfg.grpPanels,Panels
+ui.tbcfg.grpStory,Story tools
 ui.tbcfg.grpStyle,Text style
 ui.tbcfg.grpTabs,Tabs & layout
 ui.tbcfg.grpView,View & modes

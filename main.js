@@ -392,7 +392,6 @@ function buildMenu() {
         chk(tt('ui.menu.splitTopBottom'), toggles.splitView === 'down', () => send('split-view', 'down')),
         { label: tt('ui.menu.cancelSplitPageScreen'), enabled: !!toggles.splitView, click: () => send('split-close') },
       ] },
-      { label: tt('ui.menu.hubCentralizeBacklinksStats'), click: () => send('centralize') },
       { label: tt('ui.menu.graphStoryBreakBranch'), click: () => send('branching') },
       { label: tt('ui.menu.trialPlayStoryBreak'), click: () => send('player-mode') },
       { label: tt('ui.menu.newChoiceTextScene'), click: () => send('branch-sync') },
@@ -1007,6 +1006,81 @@ H('pdf:fromHtml', async (html, outPath, opts = {}) => {
 });
 H('recent:push', (p) => { pushRecent(p); return true; });
 H('recent:list', () => readRecent());
+
+// ───────── [alpha.80] ติดตั้ง/ถอนปลั๊กอิน ─────────
+//
+// โหลดซิป + แตกไฟล์ต้องทำใน main (renderer ไม่มี fs และ http:fetch คืนเป็นข้อความล้วน
+// ซึ่งทำให้ไฟล์ไบนารีพัง) · ตรรกะเลือกโฟลเดอร์/กัน zip-slip อยู่ใน src/plugins/plugin-install.js
+// แต่ **ตรวจซ้ำที่นี่อีกชั้น** — ด่านสุดท้ายก่อนเขียนลงดิสก์ต้องไม่เชื่อฝั่ง renderer
+const MAX_PLUGIN_ZIP = 25 * 1024 * 1024;     // 25MB — ปลั๊กอินที่ใหญ่กว่านี้ผิดปกติแน่
+function safeUnder(baseDir, target) {
+  const rel = path.relative(baseDir, target);
+  return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+/** โหลดซิปจาก URL (ตามรีไดเรกต์ของ codeload ให้เอง) */
+async function fetchZip(url) {
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) return { ok: false, status: res.status };
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > MAX_PLUGIN_ZIP) return { ok: false, status: 0, tooBig: true };
+  return { ok: true, buf };
+}
+H('plugins:fetchZip', async (urls) => {
+  let last = 0;
+  for (const u of (urls || [])) {
+    try {
+      const r = await fetchZip(String(u));
+      if (r.ok) return { ok: true, url: u, names: await zipNames(r.buf), id: cacheZip(u, r.buf) };
+      if (r.tooBig) return { ok: false, tooBig: true };
+      last = r.status;
+    } catch (e) { last = -1; }
+  }
+  return { ok: false, status: last };
+});
+// เก็บซิปที่โหลดมาไว้ชั่วคราว เพื่อไม่ต้องโหลดซ้ำตอนผู้ใช้กดยืนยัน
+const zipCache = new Map();
+function cacheZip(url, buf) {
+  const id = 'z' + zipCache.size + '-' + Buffer.byteLength(String(url));
+  zipCache.set(id, buf);
+  if (zipCache.size > 4) zipCache.delete(zipCache.keys().next().value);
+  return id;
+}
+async function zipNames(buf) {
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(buf);
+  return Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+}
+/** เขียนไฟล์ที่เลือกไว้ลงโฟลเดอร์ปลั๊กอิน — `files` = [{from,to}] จาก filesToInstall */
+H('plugins:extract', async (id, destDir, files) => {
+  const buf = zipCache.get(id);
+  if (!buf) return { ok: false, reason: 'expired' };
+  const JSZip = require('jszip');
+  const zip = await JSZip.loadAsync(buf);
+  const base = path.resolve(destDir);
+  fs.mkdirSync(base, { recursive: true });
+  let n = 0;
+  for (const f of (files || [])) {
+    const target = path.resolve(base, f.to);
+    if (!safeUnder(base, target)) continue;             // ด่านสุดท้ายกัน zip-slip
+    const entry = zip.files[f.from];
+    if (!entry || entry.dir) continue;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, Buffer.from(await entry.async('nodebuffer')));
+    n++;
+  }
+  return { ok: n > 0, written: n };
+});
+/** ถอนปลั๊กอิน — ลบทั้งโฟลเดอร์ แต่ต้องอยู่ใต้ที่เก็บปลั๊กอินจริงเท่านั้น */
+H('plugins:uninstall', (baseDir, folder) => {
+  try {
+    const base = path.resolve(baseDir);
+    const target = path.resolve(base, String(folder || ''));
+    if (!safeUnder(base, target)) return { ok: false, reason: 'outside' };
+    if (!fs.existsSync(target)) return { ok: false, reason: 'missing' };
+    fs.rmSync(target, { recursive: true, force: true });
+    return { ok: true };
+  } catch (e) { return { ok: false, reason: e.message }; }
+});
 
 // ───────── [alpha.79] เซสชัน: "จำทุกอย่างล่าสุด" ─────────
 //

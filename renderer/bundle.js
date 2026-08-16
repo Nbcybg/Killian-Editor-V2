@@ -13931,7 +13931,7 @@
           if (run2.sig.has("strike")) need.add("~~");
           if (run2.sig.has("underline")) need.add("_");
           if (ks) need.add(ks);
-          const bad = stack.findIndex((mk) => !need.has(mk));
+          const bad = stack.findIndex((mk2) => !need.has(mk2));
           const pool3 = /* @__PURE__ */ new Set();
           if (bad !== -1) {
             for (let j = stack.length - 1; j >= bad; j--) {
@@ -13940,10 +13940,10 @@
             }
             stack = stack.slice(0, bad);
           }
-          for (const mk of need) if (!stack.includes(mk)) pool3.add(mk);
-          for (const mk of [...pool3].sort((a, b) => extent(b, idx4) - extent(a, idx4))) {
-            out += mk;
-            stack.push(mk);
+          for (const mk2 of need) if (!stack.includes(mk2)) pool3.add(mk2);
+          for (const mk2 of [...pool3].sort((a, b) => extent(b, idx4) - extent(a, idx4))) {
+            out += mk2;
+            stack.push(mk2);
           }
           out += run2.text;
         });
@@ -16443,7 +16443,7 @@
             case "clear": {
               const { from: from2, to } = v2.state.selection;
               let tr4 = v2.state.tr;
-              for (const mk of Object.values(s.marks)) tr4 = tr4.removeMark(from2, to, mk);
+              for (const mk2 of Object.values(s.marks)) tr4 = tr4.removeMark(from2, to, mk2);
               v2.dispatch(tr4);
               v2.focus();
               return;
@@ -16466,9 +16466,9 @@
         activeMarks() {
           const st = this.view.state;
           const out = {};
-          for (const [k, mk] of Object.entries(schema.marks)) {
+          for (const [k, mk2] of Object.entries(schema.marks)) {
             const { from: from2, $from, to, empty: empty2 } = st.selection;
-            out[k] = empty2 ? !!mk.isInSet(st.storedMarks || $from.marks()) : st.doc.rangeHasMark(from2, to, mk);
+            out[k] = empty2 ? !!mk2.isInSet(st.storedMarks || $from.marks()) : st.doc.rangeHasMark(from2, to, mk2);
           }
           const p = st.selection.$from.parent;
           out.block = p.type.name === "heading" ? "h" + p.attrs.level : p.type.name === "code_block" ? "code" : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === "blockquote" ? "quote" : "p";
@@ -22143,8 +22143,8 @@
             c(v2.state, v2.dispatch, v2);
             v2.focus();
           };
-          const mk = { bold: "strong", italic: "em", underline: "underline", strike: "strike" }[name5];
-          if (mk) return run2(toggleMark(spSchema.marks[mk]));
+          const mk2 = { bold: "strong", italic: "em", underline: "underline", strike: "strike" }[name5];
+          if (mk2) return run2(toggleMark(spSchema.marks[mk2]));
           if (name5 === "undo") return run2(undo);
           if (name5 === "redo") return run2(redo);
           if (name5 === "align") return this.setAlign(arg);
@@ -26171,13 +26171,13 @@
           sel.onchange = () => {
             setCurrentAlbum(sel.value, "board");
           };
-          const mk = (label, fn, title2) => {
+          const mk2 = (label, fn, title2) => {
             const b = el("button", "cmp-mini", label);
             if (title2) b.title = title2;
             b.onclick = fn;
             return b;
           };
-          const more = mk("\u22EF", (e) => {
+          const more = mk2("\u22EF", (e) => {
             const r = e.currentTarget.getBoundingClientRect();
             popupMenu(r.left, r.bottom + 4, [
               { label: t("ui.galleryMoodboard.arrangeAuto"), click: () => this.tidy() },
@@ -26187,7 +26187,7 @@
               { label: t("ui.galleryMoodboard.clearBoardNotDel"), danger: true, click: () => this.clear() }
             ]);
           }, t("ui.galleryMoodboard.cmdAddFillBoard"));
-          bar.append(sel, mk(t("ui.common.fitScreen"), () => this.fit()), more);
+          bar.append(sel, mk2(t("ui.common.fitScreen"), () => this.fit()), more);
           return bar;
         }
         bindBoard(board2) {
@@ -28815,17 +28815,17 @@
           this._batch = bar;
           const n2 = el("span", "gal2-batch-n");
           bar.append(n2);
-          const mk = (label, fn, cls) => {
+          const mk2 = (label, fn, cls) => {
             const b = el("button", "cmp-mini" + (cls ? " " + cls : ""), label);
             b.onclick = fn;
             bar.append(b);
             return b;
           };
-          mk(t("ui.gallery.moveAlbum2"), () => this.moveSelection());
-          mk(t("ui.gallery.tag"), () => this.tagSelection());
-          mk(t("ui.gallery.exportPick"), () => this.exportSelection());
-          mk(t("ui.common.del2"), () => this.deleteSelection(), "k-danger");
-          mk("\u2715", () => {
+          mk2(t("ui.gallery.moveAlbum2"), () => this.moveSelection());
+          mk2(t("ui.gallery.tag"), () => this.tagSelection());
+          mk2(t("ui.gallery.exportPick"), () => this.exportSelection());
+          mk2(t("ui.common.del2"), () => this.deleteSelection(), "k-danger");
+          mk2("\u2715", () => {
             this.state.sel.clear();
             this.syncSelection();
           });
@@ -29581,6 +29581,25 @@
   });
 
   // src/network-theme.js
+  var network_theme_exports = {};
+  __export(network_theme_exports, {
+    DEFAULT_NET_CONTROLS: () => DEFAULT_NET_CONTROLS,
+    MOUSE_BUTTONS: () => MOUSE_BUTTONS,
+    NET_COLOR_DEFS: () => NET_COLOR_DEFS,
+    NET_COLOR_GROUPS: () => NET_COLOR_GROUPS,
+    axisVectors: () => axisVectors,
+    buttonIndex: () => buttonIndex,
+    buttonLabel: () => buttonLabel,
+    controlsHint: () => controlsHint,
+    defaultNetColors: () => defaultNetColors,
+    needsNetColorMigration: () => needsNetColorMigration,
+    netColorDefsOf: () => netColorDefsOf,
+    normalizeNetColors: () => normalizeNetColors,
+    resolveNetColors: () => resolveNetColors,
+    resolveNetControls: () => resolveNetControls,
+    viewCenter: () => viewCenter,
+    zoomAtCenter: () => zoomAtCenter
+  });
   function netColorDefsOf(group) {
     return NET_COLOR_DEFS.filter((d) => d.group === group);
   }
@@ -29593,6 +29612,11 @@
       if (!v2) v2 = d.cssVar ? String(readVar(d.cssVar) || "").trim() || d.def : d.def;
       out[d.target][d.id] = v2;
     }
+    return out;
+  }
+  function defaultNetColors() {
+    const out = {};
+    for (const d of NET_COLOR_DEFS) out[d.key] = d.def;
     return out;
   }
   function normalizeNetColors(saved) {
@@ -29609,6 +29633,9 @@
       } else out[k] = v2;
     }
     return out;
+  }
+  function needsNetColorMigration(saved) {
+    return !!(saved && typeof saved === "object" && (saved.cats || saved.edges));
   }
   function buttonLabel(v2) {
     const m = MOUSE_BUTTONS.find((x) => x.value === v2);
@@ -59638,15 +59665,15 @@
         }
         // ═════════════════ อื่น ๆ ═════════════════
         loadSample() {
-          const mk = (o) => this.data.addNodeRaw(o);
+          const mk2 = (o) => this.data.addNodeRaw(o);
           this.data._nodes = [];
           this.data._edges = [];
           this.data._groups = [];
-          const a = mk({ type: "scene", title: t("ui.planner.sceneOpenStory"), color: "#3f3e3a", x: 120, y: 140, tags: [t("ui.planner.openStory")], synopsis: t("ui.planner.itemFoundStoryNormal"), status: t("ui.common.busyWrite") });
-          const b = mk({ type: "scene", title: t("ui.planner.scene"), color: "#5f7a9f", x: 460, y: 140, tags: [t("ui.planner.dot")], synopsis: t("ui.planner.openLift"), status: t("ui.planner.outlineDraft") });
-          const c = mk({ type: "entity", title: t("ui.planner.characterMain"), color: "#7a6f9f", x: 290, y: 340 });
-          mk({ type: "sticky", title: "", synopsis: t("ui.planner.knotStory"), color: "#f2c14e", x: 660, y: 330, width: 160, height: 160 });
-          mk({ type: "shape", shape: "diamond", title: t("ui.planner.decide"), color: "#4a6fa5", x: 470, y: 350, width: 170, height: 120 });
+          const a = mk2({ type: "scene", title: t("ui.planner.sceneOpenStory"), color: "#3f3e3a", x: 120, y: 140, tags: [t("ui.planner.openStory")], synopsis: t("ui.planner.itemFoundStoryNormal"), status: t("ui.common.busyWrite") });
+          const b = mk2({ type: "scene", title: t("ui.planner.scene"), color: "#5f7a9f", x: 460, y: 140, tags: [t("ui.planner.dot")], synopsis: t("ui.planner.openLift"), status: t("ui.planner.outlineDraft") });
+          const c = mk2({ type: "entity", title: t("ui.planner.characterMain"), color: "#7a6f9f", x: 290, y: 340 });
+          mk2({ type: "sticky", title: "", synopsis: t("ui.planner.knotStory"), color: "#f2c14e", x: 660, y: 330, width: 160, height: 160 });
+          mk2({ type: "shape", shape: "diamond", title: t("ui.planner.decide"), color: "#4a6fa5", x: 470, y: 350, width: 170, height: 120 });
           this.data.addEdge(a.id, "right", b.id, "left", { label: t("ui.planner.cont"), routing: "curved" });
           this.data.addEdge(c.id, "top", a.id, "bottom", { label: t("ui.planner.appear"), routing: "orthogonal", arrowEnd: "triangle" });
           this.data.markDirty();
@@ -66499,16 +66526,15 @@ ${h.text}`;
     }
   });
 
-  // src/centralize-ui.js
-  var centralize_ui_exports = {};
-  __export(centralize_ui_exports, {
-    markCentralizeStale: () => markCentralizeStale,
-    onCentralizeShown: () => onCentralizeShown,
-    openCentralizeUI: () => openCentralizeUI,
-    renderCentralize: () => renderCentralize,
-    resetCentralize: () => resetCentralize
+  // src/dash-review.js
+  var dash_review_exports = {};
+  __export(dash_review_exports, {
+    markReviewStale: () => markReviewStale,
+    onReviewShown: () => onReviewShown,
+    renderReview: () => renderReview,
+    resetReview: () => resetReview
   });
-  function markCentralizeStale() {
+  function markReviewStale() {
     stale = true;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
@@ -66518,55 +66544,29 @@ ${h.text}`;
       });
     }, REFRESH_DELAY);
   }
-  function onCentralizeShown() {
+  function onReviewShown() {
     if (!stale) return;
     Promise.resolve().then(() => (init_dashboard(), dashboard_exports)).then((m) => m.refreshDashboardIfOpen()).catch(() => {
     });
   }
-  function resetCentralize() {
+  function resetReview() {
     stale = true;
     if (timer) {
       clearTimeout(timer);
       timer = null;
     }
   }
-  async function openCentralizeUI() {
-    if (!state.root) {
-      setStatus(t("ui.common.cantOpenProject"));
-      return;
-    }
-    const { openDashboard: openDashboard2 } = await Promise.resolve().then(() => (init_dashboard(), dashboard_exports));
-    await openDashboard2();
-    setTimeout(() => {
-      const sec = document.querySelector("#dash-body .dash-cent");
-      if (sec) sec.scrollIntoView({ block: "start" });
-    }, 60);
-    setStatus(t("ui.central.hubDashboardDonePart"));
-  }
   async function openSceneById(sceneId, fallbackTitle) {
     const hit = await findScenePath(state.root, sceneId);
     if (hit && await kapi.exists(hit.path)) {
       const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       openScene2(hit.path, hit.title || fallbackTitle);
-    } else setStatus(t("ui.common.notFoundFileScene"));
+    }
   }
-  async function renderCentralize(pane, opts = {}) {
+  async function renderReview(pane) {
     pane.innerHTML = "";
-    const wrap2 = el("div", "cent-wrap" + (opts.embedded ? " cent-embedded" : ""));
+    const wrap2 = el("div", "cent-wrap cent-embedded");
     pane.append(wrap2);
-    const headRow = el("div", "cent-head");
-    headRow.append(el("div", "cent-title", t("ui.central.hub")));
-    const liveDot = el("span", "cent-live", t("ui.central.fresh"));
-    liveDot.title = t("ui.central.updateAutoAllTimes");
-    headRow.append(liveDot);
-    const refreshB = el("button", "cent-refresh", t("ui.central.newIndexNew"));
-    refreshB.onclick = () => {
-      resetAutoLink();
-      stale = true;
-      renderCentralize(pane, opts);
-    };
-    headRow.append(refreshB);
-    wrap2.append(headRow);
     const loading = el("div", "dim", t("ui.central.busyNewIndexLink"));
     wrap2.append(loading);
     let scenes = [], entities = [], autoLink2 = null;
@@ -66582,38 +66582,6 @@ ${h.text}`;
       log("error", t("ui.central.centralizeNewIndexNot"), e);
     }
     loading.remove();
-    const stats = el("div", "cent-panel");
-    stats.append(el("div", "cent-panel-title", t("ui.central.stats")));
-    const words = scenes.reduce((n2, s) => n2 + (s.row && s.row.wordCount || 0), 0);
-    const byCat = {};
-    for (const e of entities) byCat[e.cat || e.entityTypeKey || t("ui.common.other")] = (byCat[e.cat || e.entityTypeKey || t("ui.common.other")] || 0) + 1;
-    const grid = el("div", "cent-stats-grid");
-    const statCard = (num4, label) => {
-      const c = el("div", "cent-stat-card");
-      c.append(el("div", "cent-stat-num", String(num4)), el("div", "cent-stat-lbl", label));
-      grid.append(c);
-    };
-    statCard(scenes.length.toLocaleString(), t("ui.common.scene2"));
-    statCard(words.toLocaleString(), t("ui.common.word2"));
-    statCard(entities.length.toLocaleString(), "Wiki");
-    if (autoLink2) {
-      const s = autoLink2.stats();
-      statCard(s.links.toLocaleString(), t("ui.central.dotLink"));
-    }
-    stats.append(grid);
-    stats.append(el(
-      "div",
-      "cent-stat",
-      tf("ui.central.sceneWordCharacter", scenes.length, words.toLocaleString(), byCat.characters || 0)
-    ));
-    if (Object.keys(byCat).length) {
-      stats.append(el(
-        "div",
-        "cent-stat",
-        "\u{1F5C2} " + Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, n2]) => `${c} ${n2}`).join(" \xB7 ")
-      ));
-    }
-    wrap2.append(stats);
     const blinks = el("div", "cent-panel");
     blinks.append(el("div", "cent-panel-title", t("ui.central.backlinksSceneToWiki")));
     const blList = el("div", "cent-list");
@@ -66623,16 +66591,11 @@ ${h.text}`;
     } else {
       const ranked = entities.map((e) => ({ ent: e, links: autoLink2.getRelatedScenes(e.path || e.id) })).filter((r) => r.links.length).sort((a, b) => b.links.length - a.links.length);
       if (!ranked.length) {
-        blList.append(el(
-          "div",
-          "dim",
-          t("ui.central.notHasBacklinksPrint")
-        ));
+        blList.append(el("div", "dim", t("ui.central.notHasBacklinksPrint")));
       } else {
         for (const { ent, links } of ranked.slice(0, 15)) {
           const row2 = el("div", "cent-link-row");
-          const name5 = el("strong", null, ent.name);
-          row2.append(name5, el("span", null, tf("ui.central.scene", links.length)));
+          row2.append(el("strong", null, ent.name), el("span", null, tf("ui.central.scene", links.length)));
           links.slice(0, 3).forEach((l, i5) => {
             if (i5) row2.append(el("span", null, ", "));
             const a = el("span", "cent-scene-link", l.title || l.sceneId);
@@ -66667,8 +66630,6 @@ ${h.text}`;
       const t22 = state.meta.wordHistory.find((w) => w.date === today2);
       if (!t22 || !t22.words) pending.push({ text: t("ui.central.cantWrite") });
     }
-    const cs = choiceStats();
-    if (cs.total) pending.push({ text: tf("ui.central.saveDecisionTimes", cs.total) });
     if (!pending.length) {
       todoList.append(el("div", "dim", t("ui.central.allCurrent")));
     } else {
@@ -66685,14 +66646,13 @@ ${h.text}`;
     wrap2.append(todo);
   }
   var REFRESH_DELAY, stale, timer;
-  var init_centralize_ui = __esm({
-    "src/centralize-ui.js"() {
+  var init_dash_review = __esm({
+    "src/dash-review.js"() {
       init_i18n();
       init_core();
       init_auto_link_ui();
       init_project_scan();
       init_session_notes();
-      init_player_choices();
       REFRESH_DELAY = 1500;
       stale = true;
       timer = null;
@@ -66950,8 +66910,8 @@ ${h.text}`;
     const centHost = el("div", "dash-cent");
     wrap2.append(centHost);
     try {
-      const { renderCentralize: renderCentralize2 } = await Promise.resolve().then(() => (init_centralize_ui(), centralize_ui_exports));
-      await renderCentralize2(centHost, { embedded: true });
+      const { renderReview: renderReview2 } = await Promise.resolve().then(() => (init_dash_review(), dash_review_exports));
+      await renderReview2(centHost);
     } catch (e) {
       centHost.append(el("div", "dim", t("ui.dash.loadPartHubNot")));
     }
@@ -67056,6 +67016,268 @@ ${h.text}`;
       BLOCK_SEL = "p, h1, h2, h3, h4, h5, h6, li, blockquote, .sp-block";
       _fmActive = false;
       _fmStyle = null;
+    }
+  });
+
+  // src/net-presets.js
+  var net_presets_exports = {};
+  __export(net_presets_exports, {
+    BUILTIN_PRESETS: () => BUILTIN_PRESETS,
+    PRESET_KEYS: () => PRESET_KEYS,
+    addPreset: () => addPreset,
+    allPresets: () => allPresets,
+    applyPreset: () => applyPreset,
+    builtinPreset: () => builtinPreset,
+    canRemove: () => canRemove,
+    matchPreset: () => matchPreset,
+    newPresetId: () => newPresetId,
+    normalizeColors: () => normalizeColors,
+    normalizePresets: () => normalizePresets,
+    presetLabel: () => presetLabel,
+    removePreset: () => removePreset
+  });
+  function mk(list) {
+    const out = {};
+    PRESET_KEYS.forEach((k, i5) => {
+      if (list[i5]) out[k] = list[i5];
+    });
+    return out;
+  }
+  function presetLabel(p) {
+    if (!p) return "";
+    if (!p.builtIn) return p.name || p.id;
+    const f = BUILTIN_LABELS[p.id];
+    return f ? f() : p.name || p.id;
+  }
+  function builtinPreset(id) {
+    return BUILTIN_PRESETS.find((p) => p.id === id) || null;
+  }
+  function allPresets(saved) {
+    const mine = normalizePresets(saved);
+    return [...BUILTIN_PRESETS, ...mine];
+  }
+  function normalizePresets(saved) {
+    if (!Array.isArray(saved)) return [];
+    const seen = new Set(BUILTIN_PRESETS.map((p) => p.id));
+    const out = [];
+    for (const raw of saved) {
+      if (!raw || typeof raw !== "object") continue;
+      const id = String(raw.id || "").trim();
+      const name5 = String(raw.name || "").trim();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, name: name5 || id, builtIn: false, colors: normalizeColors(raw.colors) });
+    }
+    return out;
+  }
+  function normalizeColors(colors) {
+    const out = {};
+    if (!colors || typeof colors !== "object") return out;
+    const known = new Set(PRESET_KEYS);
+    for (const k of Object.keys(colors)) {
+      const v2 = String(colors[k] || "").trim();
+      if (known.has(k) && /^#[0-9a-fA-F]{6}$/.test(v2)) out[k] = v2.toLowerCase();
+    }
+    return out;
+  }
+  function newPresetId(name5, existing) {
+    const base3 = String(name5 || "").trim().toLowerCase().replace(/[^\w฀-๿-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "preset";
+    const taken = /* @__PURE__ */ new Set([
+      ...BUILTIN_PRESETS.map((p) => p.id),
+      ...normalizePresets(existing).map((p) => p.id)
+    ]);
+    if (!taken.has(base3)) return base3;
+    for (let i5 = 2; i5 < 999; i5++) if (!taken.has(base3 + "-" + i5)) return base3 + "-" + i5;
+    return base3 + "-x";
+  }
+  function addPreset(saved, name5, colors) {
+    const list = normalizePresets(saved);
+    const id = newPresetId(name5, saved);
+    return [...list, {
+      id,
+      name: String(name5 || id).trim() || id,
+      builtIn: false,
+      colors: normalizeColors(colors)
+    }];
+  }
+  function removePreset(saved, id) {
+    return normalizePresets(saved).filter((p) => p.id !== id);
+  }
+  function canRemove(id) {
+    return !!id && !builtinPreset(id);
+  }
+  function applyPreset(current2, preset) {
+    const cur = current2 && typeof current2 === "object" ? { ...current2 } : {};
+    const p = preset && preset.colors ? normalizeColors(preset.colors) : {};
+    return { ...cur, ...p };
+  }
+  function matchPreset(current2, saved) {
+    const cur = normalizeColors(current2);
+    for (const p of allPresets(saved)) {
+      const pc = normalizeColors(p.colors);
+      const keys4 = Object.keys(pc);
+      if (!keys4.length) continue;
+      if (keys4.every((k) => cur[k] === pc[k])) return p.id;
+    }
+    return "";
+  }
+  var PRESET_KEYS, BUILTIN_COLORS, BUILTIN_PRESETS, BUILTIN_LABELS;
+  var init_net_presets = __esm({
+    "src/net-presets.js"() {
+      init_i18n();
+      PRESET_KEYS = [
+        // โหนด 8 หมวด
+        "nc-char",
+        "nc-loca",
+        "nc-item",
+        "nc-lore",
+        "nc-scen",
+        "nc-chap",
+        "nc-book",
+        "nc-sect",
+        // เส้นตามประเภทความสัมพันธ์ 9 แบบ (คีย์จริงคือ `ne-rt-<ชนิด>` — ดู network-theme.js)
+        "ne-rt-family",
+        "ne-rt-romantic",
+        "ne-rt-ally",
+        "ne-rt-rival",
+        "ne-rt-enemy",
+        "ne-rt-mentor",
+        "ne-rt-acquaintance",
+        "ne-rt-neutral",
+        "ne-rt-custom",
+        // เส้นเชื่อมอื่น ๆ
+        "ne-sl",
+        "ne-co",
+        "ne-es"
+      ];
+      BUILTIN_COLORS = {
+        default: [
+          "#d97757",
+          "#7aa8d8",
+          "#6fae8a",
+          "#b58fc9",
+          "#e8c95c",
+          "#c08a5e",
+          "#a8d870",
+          "#8ec8c8",
+          "#e06c75",
+          "#e06ca0",
+          "#61afef",
+          "#e5c07b",
+          "#be5046",
+          "#98c379",
+          "#abb2bf",
+          "#5c6370",
+          "#c678dd",
+          "#5caf8a",
+          "#8a8885",
+          "#d9955f"
+        ],
+        // สีสายไฟ/สายสัญญาณตามมาตรฐาน (น้ำตาล-ส้ม-ฟ้า-เขียว + คู่ขาวลาย)
+        cable: [
+          "#a0522d",
+          "#1f6fb4",
+          "#2e8b57",
+          "#e08a1e",
+          "#8b7355",
+          "#4a7ba7",
+          "#5f9e6e",
+          "#b8860b",
+          "#c0562d",
+          "#d4699a",
+          "#3b8ed0",
+          "#d99a2b",
+          "#9c3b2e",
+          "#4f9c5a",
+          "#9aa0a6",
+          "#5a6470",
+          "#8e6bb5",
+          "#3f8f7a",
+          "#77736e",
+          "#b8763f"
+        ],
+        // โทนดอกไม้ — อ่อน อิ่ม ไม่แสบตา
+        flower: [
+          "#e8748c",
+          "#8ab6e8",
+          "#86c98f",
+          "#c39ae0",
+          "#f2d06b",
+          "#e0a06a",
+          "#b8dd7a",
+          "#7fd0c4",
+          "#ef7b91",
+          "#f090b8",
+          "#74b6ec",
+          "#f0c274",
+          "#d05f62",
+          "#9ad186",
+          "#c9c2d8",
+          "#8b93a8",
+          "#cf8fe0",
+          "#6cc4a3",
+          "#a9a49c",
+          "#eda874"
+        ],
+        // อิงแผ่นเทียบสี ColorChecker (X-Rite) — สีมาตรฐานที่แยกออกจากกันชัดที่สุด
+        xrite: [
+          "#c04b3c",
+          "#4b6fa8",
+          "#5a9a52",
+          "#8e5aa0",
+          "#e0b03a",
+          "#b06a3a",
+          "#8db83f",
+          "#4fa6a0",
+          "#d0402f",
+          "#c2528f",
+          "#3f7fc0",
+          "#dba33c",
+          "#9b2f26",
+          "#6aa84f",
+          "#b0b0aa",
+          "#666a70",
+          "#9a5bb5",
+          "#3f9c86",
+          "#8a8781",
+          "#c47a41"
+        ],
+        // ไล่ตามลำดับสีรุ้ง — ดูปราดเดียวรู้ลำดับหมวด
+        rainbow: [
+          "#e24a4a",
+          "#e2894a",
+          "#e2c94a",
+          "#96cc4a",
+          "#4acc72",
+          "#4accc4",
+          "#4a8fe2",
+          "#8a4ae2",
+          "#e24a8f",
+          "#e24a4a",
+          "#e2894a",
+          "#e2c94a",
+          "#96cc4a",
+          "#4acc72",
+          "#4accc4",
+          "#4a8fe2",
+          "#8a4ae2",
+          "#4accc4",
+          "#9aa0a6",
+          "#e2894a"
+        ]
+      };
+      BUILTIN_PRESETS = Object.keys(BUILTIN_COLORS).map((id) => ({
+        id,
+        builtIn: true,
+        colors: mk(BUILTIN_COLORS[id])
+      }));
+      BUILTIN_LABELS = {
+        default: () => t("ui.netPreset.default"),
+        cable: () => t("ui.netPreset.cable"),
+        flower: () => t("ui.netPreset.flower"),
+        xrite: () => t("ui.netPreset.xrite"),
+        rainbow: () => t("ui.netPreset.rainbow")
+      };
     }
   });
 
@@ -67224,7 +67446,22 @@ ${h.text}`;
           // [alpha.79] แผงบทพูด
           { id: "tb-codex" },
           { id: "tb-history" },
-          { id: "tb-record" }
+          { id: "tb-record" },
+          // [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบ
+          { id: "tb-comments" },
+          { id: "tb-notes-panel" },
+          { id: "tb-log" }
+        ] },
+        { key: "story", labelKey: "ui.tbcfg.grpStory", buttons: [
+          { id: "tb-timeline" },
+          { id: "tb-maps" },
+          { id: "tb-books" },
+          { id: "tb-network" },
+          { id: "tb-planner" },
+          { id: "tb-branch" },
+          { id: "tb-floorplan" },
+          { id: "tb-player" },
+          { id: "tb-gallery-board" }
         ] },
         { key: "ai", labelKey: "ui.tbcfg.grpAi", buttons: [
           { id: "tb-ai" },
@@ -67739,36 +67976,118 @@ ${h.text}`;
     const host2 = box2.querySelector("#st-netcol-body");
     if (!host2) return;
     const saved = normalizeNetColors(s.netColors);
+    const work = { ...saved };
     host2.replaceChildren();
+    const pbox = el("div", "k-netp");
+    const prow = el("div", "k-netp-row");
+    prow.append(el("label", "k-netp-label", t("ui.net.presetLabel")));
+    const psel = el("select", "k-dlg-select k-netp-sel");
+    const fillPresets = () => {
+      psel.replaceChildren();
+      const o0 = el("option", null, t("ui.net.presetCustom"));
+      o0.value = "";
+      psel.append(o0);
+      for (const p of allPresets(s.netPresets)) {
+        const o = el("option", null, presetLabel(p));
+        o.value = p.id;
+        psel.append(o);
+      }
+      psel.value = matchPreset(work, s.netPresets);
+    };
+    const swatches = el("div", "k-netp-swatch");
+    const drawSwatch = (id) => {
+      swatches.replaceChildren();
+      const p = allPresets(s.netPresets).find((x) => x.id === id);
+      if (!p) return;
+      for (const k of Object.keys(p.colors).slice(0, 12)) {
+        const dot = el("span", "k-netp-dot");
+        dot.style.background = p.colors[k];
+        swatches.append(dot);
+      }
+    };
+    psel.onchange = () => {
+      const p = allPresets(s.netPresets).find((x) => x.id === psel.value);
+      if (!p) {
+        drawSwatch("");
+        return;
+      }
+      Object.assign(work, applyPreset(work, p));
+      paintFields();
+      drawSwatch(p.id);
+      setStatus(tf("ui.net.presetApplied", presetLabel(p)));
+    };
+    prow.append(psel);
+    const saveP = el("button", "k-key-btn", t("ui.net.presetSave"));
+    saveP.onclick = async () => {
+      const name5 = await ask(t("ui.net.presetSaveAsk"), { value: "" });
+      if (!name5) return;
+      s.netPresets = addPreset(s.netPresets, name5, work);
+      fillPresets();
+      psel.value = matchPreset(work, s.netPresets);
+      setStatus(tf("ui.net.presetSaved", name5));
+    };
+    const delP = el("button", "k-reset-btn", t("ui.net.presetDel"));
+    delP.onclick = async () => {
+      const id = psel.value;
+      if (!canRemove(id)) {
+        setStatus(t("ui.net.presetDelNo"));
+        return;
+      }
+      const p = allPresets(s.netPresets).find((x) => x.id === id);
+      if (!await confirmBox(tf("ui.net.presetDelAsk", presetLabel(p)), t("ui.net.presetDel"))) return;
+      s.netPresets = removePreset(s.netPresets, id);
+      fillPresets();
+    };
+    prow.append(saveP, delP);
+    pbox.append(prow, swatches, el("div", "k-hint", t("ui.net.presetHint")));
+    host2.append(pbox);
+    const fields = [];
     for (const g of NET_COLOR_GROUPS) {
       const defs = netColorDefsOf(g.group);
       if (!defs.length) continue;
-      const h = el("div", "k-set-sub k-full", g.label);
-      host2.append(h);
+      host2.append(el("div", "k-set-sub k-full", g.label));
+      const grid = el("div", "k-netc-grid");
       for (const d of defs) {
-        const row2 = el("div", "k-row");
-        row2.append(el("label", null, d.label));
+        const cell = el("div", "k-netc-cell");
         const c = el("input");
         c.type = "color";
         c.className = "st-netcol";
         c.dataset.key = d.key;
-        c.value = saved[d.key] || d.def;
+        c.value = work[d.key] || d.def || "#888888";
+        const name5 = el("span", "k-netc-name", d.label);
+        name5.title = d.label;
         const txt = el("input");
         txt.type = "text";
         txt.className = "st-netcol-t";
-        txt.style.width = "84px";
-        txt.placeholder = d.cssVar ? t("ui.dlg.theme") : d.def;
-        txt.value = saved[d.key] || "";
+        txt.placeholder = d.cssVar ? t("ui.dlg.theme") : d.def || "";
+        txt.value = work[d.key] || "";
         txt.oninput = () => {
-          if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value;
+          if (/^#[0-9a-f]{6}$/i.test(txt.value)) {
+            c.value = txt.value;
+            work[d.key] = txt.value;
+          } else if (!txt.value) delete work[d.key];
+          psel.value = matchPreset(work, s.netPresets);
         };
         c.oninput = () => {
           txt.value = c.value;
+          work[d.key] = c.value;
+          psel.value = matchPreset(work, s.netPresets);
         };
-        row2.append(c, txt);
-        host2.append(row2);
+        cell.append(c, name5, txt);
+        grid.append(cell);
+        fields.push({ d, c, txt });
+      }
+      host2.append(grid);
+    }
+    host2.append(el("div", "k-hint", t("ui.net.colorGroupHint")));
+    function paintFields() {
+      for (const f of fields) {
+        f.c.value = work[f.d.key] || f.d.def || "#888888";
+        f.txt.value = work[f.d.key] || "";
       }
     }
+    fillPresets();
+    drawSwatch(psel.value);
     const ctl = resolveNetControls(s.netControls);
     const fill3 = (sel, cur) => {
       if (!sel) return;
@@ -69226,6 +69545,7 @@ ${h.text}`;
       init_focus_mode();
       init_icons();
       init_network_theme();
+      init_net_presets();
     }
   });
 
@@ -70984,7 +71304,7 @@ ${h.text}`;
     const box2 = el("div", "k-dialog");
     box2.append(el("div", "k-dlg-title", t("ui.scene.propsScene") + row2.title));
     const rowOf = /* @__PURE__ */ new Map();
-    const mk = (label, val, tag3 = "input") => {
+    const mk2 = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
@@ -71018,16 +71338,16 @@ ${h.text}`;
       box2.append(r);
       return c;
     };
-    const iSyn = mk(t("ui.common.synopsis"), M2.synopsis, "textarea");
-    const iStoryDate = mk(t("ui.common.timeStoryLineTime"), M2.storyDate);
+    const iSyn = mk2(t("ui.common.synopsis"), M2.synopsis, "textarea");
+    const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), M2.storyDate);
     iStoryDate.placeholder = t("ui.scene.egDate");
-    const iStartPage = mk(t("ui.scene.pageNumStartScreenplay"), row2.startPage || "");
+    const iStartPage = mk2(t("ui.scene.pageNumStartScreenplay"), row2.startPage || "");
     iStartPage.type = "number";
     iStartPage.min = "1";
     iStartPage.placeholder = t("ui.scene.useOpenPageNumSettings");
-    const iPov = mk(t("ui.common.viewPOV"), M2.pov);
-    const iEmotion = mk(t("ui.common.mood"), M2.emotion);
-    const iConflict = mk(t("ui.common.conflict"), M2.conflict);
+    const iPov = mk2(t("ui.common.viewPOV"), M2.pov);
+    const iEmotion = mk2(t("ui.common.mood"), M2.emotion);
+    const iConflict = mk2(t("ui.common.conflict"), M2.conflict);
     const iStatus = mkSelect(
       t("ui.common.status"),
       [["Outline", t("ui.common.notSet")], ...allStatuses().map((s) => [s, dataLabel(s)])],
@@ -71039,9 +71359,9 @@ ${h.text}`;
       row2.color || ""
     );
     const iFlag = mkCheck(t("ui.common.pinPin"), row2.flag);
-    const iTags = mk(t("ui.common.tag2"), (M2.tags || []).join(", "));
-    const iNote = mk(t("ui.common.note"), M2.note, "textarea");
-    const iFuture = mk(t("ui.scene.futureNoteWriter"), M2.futureNote || "", "textarea");
+    const iTags = mk2(t("ui.common.tag2"), (M2.tags || []).join(", "));
+    const iNote = mk2(t("ui.common.note"), M2.note, "textarea");
+    const iFuture = mk2(t("ui.scene.futureNoteWriter"), M2.futureNote || "", "textarea");
     iFuture.placeholder = t("ui.scene.noteWriterShowOnly");
     {
       const slot = el("div", "props-mapslot");
@@ -71426,7 +71746,7 @@ ${h.text}`;
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-section-props");
     box2.append(el("div", "k-dlg-title", t("ui.section.propsBook") + (d.title || sec?.title || "")));
-    const mk = (label, val, tag3 = "input") => {
+    const mk2 = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
@@ -71435,7 +71755,7 @@ ${h.text}`;
       box2.append(r);
       return { row: r, input: i5 };
     };
-    const iTitle = mk(t("ui.section.nameBook"), d.title || sec?.title || "").input;
+    const iTitle = mk2(t("ui.section.nameBook"), d.title || sec?.title || "").input;
     const rStatus = el("div", "wiki-row");
     rStatus.append(el("label", null, t("ui.common.status")));
     const iStatus = el("select", "wiki-input k-dlg-select");
@@ -71447,9 +71767,9 @@ ${h.text}`;
     }
     rStatus.append(iStatus);
     box2.append(rStatus);
-    const iBlurb = mk(t("ui.section.wordBlurb"), d.blurb || "", "textarea").input;
+    const iBlurb = mk2(t("ui.section.wordBlurb"), d.blurb || "", "textarea").input;
     iBlurb.placeholder = t("ui.section.textShortUseSuggest");
-    const iOrder = mk(t("ui.section.orderBook"), d.order || "").input;
+    const iOrder = mk2(t("ui.section.orderBook"), d.order || "").input;
     iOrder.type = "number";
     iOrder.min = "1";
     const coverRow = el("div", "wiki-row");
@@ -71716,7 +72036,7 @@ ${h.text}`;
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-chapter-props");
     box2.append(el("div", "k-dlg-title", t("ui.scene.propsChapter") + (cur.title || "")));
-    const mk = (label, val, tag3 = "input") => {
+    const mk2 = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
@@ -71749,18 +72069,18 @@ ${h.text}`;
       box2.append(r);
       return c;
     };
-    const iTitle = mk(t("ui.scene.nameChapter"), cur.title || "");
+    const iTitle = mk2(t("ui.scene.nameChapter"), cur.title || "");
     const statuses = allStatuses();
     const iStatus = mkSel(
       t("ui.common.status"),
       [["Outline", t("ui.common.notSet")], ...statuses.map((s) => [s, dataLabel(s)])],
       statuses.includes(cur.status) ? cur.status : "Outline"
     );
-    const iAct = mk(t("ui.scene.actAct"), cur.act || "");
+    const iAct = mk2(t("ui.scene.actAct"), cur.act || "");
     iAct.placeholder = t("ui.scene.iIIIIIName");
-    const iDate = mk(t("ui.scene.dateDefineSend"), cur.date || "");
+    const iDate = mk2(t("ui.scene.dateDefineSend"), cur.date || "");
     iDate.placeholder = t("ui.scene.egPage");
-    const iNote = mk(t("ui.scene.noteChapter"), cur.note || "", "textarea");
+    const iNote = mk2(t("ui.scene.noteChapter"), cur.note || "", "textarea");
     const iFav = mkChk(t("ui.scene.chapterImportantFavorite"), cur.isFavorite);
     return new Promise((resolve) => {
       const btns = el("div", "k-dlg-btns");
@@ -72633,7 +72953,7 @@ ${h.text}`;
   }
   function buildHomeActions(opts = {}) {
     const actions = el("div", "home-actions");
-    const mk = (cls, label, title2) => {
+    const mk2 = (cls, label, title2) => {
       const b = el("button", cls, label);
       if (title2) b.title = title2;
       return b;
@@ -72641,23 +72961,23 @@ ${h.text}`;
     const viewWrap = el("div", "home-view-modes");
     const viewBtns = {};
     for (const v2 of HOME_VIEWS) {
-      const b = mk("home-view-mode", v2.icon + " " + v2.label, t("ui.common.view") + v2.label);
+      const b = mk2("home-view-mode", v2.icon + " " + v2.label, t("ui.common.view") + v2.label);
       b.dataset.view = v2.id;
       b.onclick = () => applyView(v2.id);
       viewBtns[v2.id] = b;
       viewWrap.append(b);
     }
-    const findBtn = mk("home-btn-find", t("ui.home.search"), t("ui.home.searchProjectNameAuthor"));
+    const findBtn = mk2("home-btn-find", t("ui.home.search"), t("ui.home.searchProjectNameAuthor"));
     const findInp = el("input", "home-find-input");
     findInp.type = "search";
     findInp.placeholder = t("ui.home.searchProject");
     findInp.style.display = "none";
-    const exportBtn = mk("home-btn-export", t("home.export", "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"), t("ui.home.exportProjectOpenFile"));
-    const importBtn = mk("home-btn-import", t("home.import", "\u{1F4E5} \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32"), t("ui.home.importProjectFileZip"));
+    const exportBtn = mk2("home-btn-export", t("home.export", "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"), t("ui.home.exportProjectOpenFile"));
+    const importBtn = mk2("home-btn-import", t("home.import", "\u{1F4E5} \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32"), t("ui.home.importProjectFileZip"));
     const spacer = el("div", "home-actions-spacer");
-    const newBtn = mk("k-ok home-btn-new", t("home.newProject", "\u2795 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48"));
-    const openBtn = mk("home-btn-open", t("home.openProject", "\u{1F4C2} \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
-    const closeBtn = mk("home-btn-close", t("home.close", "\u2715 \u0E1B\u0E34\u0E14"), t("ui.home.closePageFirst"));
+    const newBtn = mk2("k-ok home-btn-new", t("home.newProject", "\u2795 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48"));
+    const openBtn = mk2("home-btn-open", t("home.openProject", "\u{1F4C2} \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
+    const closeBtn = mk2("home-btn-close", t("home.close", "\u2715 \u0E1B\u0E34\u0E14"), t("ui.home.closePageFirst"));
     function applyView(mode) {
       const m = setHomeView(mode);
       for (const v2 of HOME_VIEWS) viewBtns[v2.id].classList.toggle("on", v2.id === m);
@@ -76145,13 +76465,13 @@ ${BLOCK_END}
     top.append(el("span", "k-cm-author", "\u{1F464} " + (c.author || t("ui.common.notSpecifyName"))));
     top.append(el("span", "k-cm-when", fmtWhen(c.timestamp) + (c.editedAt ? t("cmt.edited", " (\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E25\u0E49\u0E27)") : "")));
     const acts = el("span", "k-cm-acts");
-    const mk = (label, title2, fn, cls) => {
+    const mk2 = (label, title2, fn, cls) => {
       const b = el("span", "k-cm-act" + (cls ? " " + cls : ""), label);
       b.title = title2;
       b.onclick = fn;
       return b;
     };
-    if (!depth) acts.append(mk(
+    if (!depth) acts.append(mk2(
       c.resolved ? "\u21A9" : "\u2713",
       c.resolved ? t("cmt.reopen", "\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07") : t("cmt.resolve", "\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (resolve)"),
       async () => {
@@ -76160,9 +76480,9 @@ ${BLOCK_END}
         renderCommentPanel(host2);
       }
     ));
-    acts.append(mk("\u270F\uFE0F", t("cmt.edit", "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21"), () => startEdit()));
-    acts.append(mk("\u21A9\u{1F4AC}", t("cmt.reply", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A"), () => startReply()));
-    acts.append(mk("\u{1F5D1}", t("cmt.deleteHint", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49 (\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E18\u0E23\u0E14\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A)"), async () => {
+    acts.append(mk2("\u270F\uFE0F", t("cmt.edit", "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21"), () => startEdit()));
+    acts.append(mk2("\u21A9\u{1F4AC}", t("cmt.reply", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A"), () => startReply()));
+    acts.append(mk2("\u{1F5D1}", t("cmt.deleteHint", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49 (\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E18\u0E23\u0E14\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A)"), async () => {
       const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
       if (!await confirmBox2(t("cmt.deleteConfirm", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49 (\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E18\u0E23\u0E14\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14) ?"), t("cmt.delete", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C"))) return;
       await store.remove(file, c.id);
@@ -80028,7 +80348,7 @@ details>summary::-webkit-details-marker{display:none}
       const ov = E("div", "k-overlay");
       const box2 = E("div", "k-dialog");
       box2.append(E("div", "k-dlg-title", t("ui.branch.propsPlan") + (planState.name || "")));
-      const mk = (label, val, tag3) => {
+      const mk2 = (label, val, tag3) => {
         const r = E("div", "wiki-row");
         r.append(E("label", null, label));
         const i5 = E(tag3 || "input", "wiki-input");
@@ -80037,7 +80357,7 @@ details>summary::-webkit-details-marker{display:none}
         box2.append(r);
         return i5;
       };
-      const iName = mk(t("ui.common.namePlan"), planState.name);
+      const iName = mk2(t("ui.common.namePlan"), planState.name);
       const rSt = E("div", "wiki-row");
       rSt.append(E("label", null, t("ui.common.status")));
       const iStatus = E("select", "wiki-input k-dlg-select");
@@ -80065,10 +80385,10 @@ details>summary::-webkit-details-marker{display:none}
       }
       rC.append(iColor);
       box2.append(rC);
-      const iTags = mk(t("ui.common.tag2"), (L2.tags || []).join(", "));
-      const iBook = mk(t("ui.branch.bookSkipEmpty"), L2.book);
+      const iTags = mk2(t("ui.common.tag2"), (L2.tags || []).join(", "));
+      const iBook = mk2(t("ui.branch.bookSkipEmpty"), L2.book);
       iBook.placeholder = t("ui.branch.egBookOneUse");
-      const iNote = mk(t("ui.common.note"), L2.note, "textarea");
+      const iNote = mk2(t("ui.common.note"), L2.note, "textarea");
       const info = E("div", "dim", planSummary(L2));
       box2.append(info);
       const btns = E("div", "k-dlg-btns");
@@ -80550,7 +80870,7 @@ details>summary::-webkit-details-marker{display:none}
       const markerFor = (color) => {
         const id = "bg-arrow-" + color.replace(/[^a-z0-9]/gi, "");
         if (!markers.has(id)) {
-          const mk = svgEl("marker", {
+          const mk2 = svgEl("marker", {
             id,
             viewBox: "0 0 10 10",
             refX: "9",
@@ -80559,8 +80879,8 @@ details>summary::-webkit-details-marker{display:none}
             markerHeight: "6",
             orient: "auto-start-reverse"
           });
-          mk.append(svgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color }));
-          defs.append(mk);
+          mk2.append(svgEl("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color }));
+          defs.append(mk2);
           markers.set(id, true);
         }
         return id;
@@ -81252,7 +81572,7 @@ ${preview2}` + (found2.length > 8 ? `
   }
   function colorRow(current2, onPick) {
     const row2 = el("div", "branch-colors");
-    const mk = (value, label, cls) => {
+    const mk2 = (value, label, cls) => {
       const dot = el("span", "branch-color" + (cls ? " " + cls : "") + (current2 === value ? " on" : ""));
       if (value) dot.style.background = value;
       dot.title = label;
@@ -81260,8 +81580,8 @@ ${preview2}` + (found2.length > 8 ? `
       row2.append(dot);
       return dot;
     };
-    mk("", tr2("colorNone", t("ui.branch.notDefineColor")), "branch-color-none").textContent = "\u2205";
-    for (const [name5, hex] of SCENE_COLORS) mk(hex, name5);
+    mk2("", tr2("colorNone", t("ui.branch.notDefineColor")), "branch-color-none").textContent = "\u2205";
+    for (const [name5, hex] of SCENE_COLORS) mk2(hex, name5);
     return row2;
   }
   function showAllPathsDialog(graph, startId) {
@@ -82349,15 +82669,15 @@ ${preview2}` + (found2.length > 8 ? `
     const before = side === "left" || side === "top";
     const nl = leaf(newTabId);
     const loc = locate2(root, targetLeafId);
-    const mk = (existing) => split2(wantRow ? "row" : "col", before ? [nl, existing] : [existing, nl]);
-    if (!loc) return mk(root);
+    const mk2 = (existing) => split2(wantRow ? "row" : "col", before ? [nl, existing] : [existing, nl]);
+    if (!loc) return mk2(root);
     const parent = loc.parent;
     if (parent.type === "split" && parent.dir === (wantRow ? "row" : "col")) {
       const at = before ? loc.index : loc.index + 1;
       parent.children.splice(at, 0, nl);
       parent.sizes = even(parent.children.length);
     } else {
-      parent.children[loc.index] = mk(parent.children[loc.index]);
+      parent.children[loc.index] = mk2(parent.children[loc.index]);
     }
     return root;
   }
@@ -84137,6 +84457,116 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
+  // src/plugins/plugin-install.js
+  var plugin_install_exports = {};
+  __export(plugin_install_exports, {
+    DEFAULT_REFS: () => DEFAULT_REFS,
+    INSTALL_WARN_KEY: () => INSTALL_WARN_KEY,
+    SRC_GITHUB: () => SRC_GITHUB,
+    SRC_ZIP: () => SRC_ZIP,
+    filesToInstall: () => filesToInstall,
+    installSummary: () => installSummary,
+    isJunk: () => isJunk,
+    isSafeRel: () => isSafeRel,
+    parseSource: () => parseSource,
+    pickPluginRoot: () => pickPluginRoot,
+    zipCandidates: () => zipCandidates
+  });
+  function parseSource(input) {
+    const raw = String(input == null ? "" : input).trim();
+    if (!raw) return { kind: "", ok: false, reason: "ui.plug.errNoUrl" };
+    if (/^https?:\/\//i.test(raw) && /\.zip(\?.*)?$/i.test(raw)) {
+      return { kind: SRC_ZIP, url: raw, ok: true };
+    }
+    const m = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s#?]+)(?:\/tree\/([^/\s#?]+)((?:\/[^\s#?]+)?))?/i.exec(raw);
+    if (m) {
+      return {
+        kind: SRC_GITHUB,
+        ok: true,
+        owner: m[1],
+        repo: String(m[2]).replace(/\.git$/i, ""),
+        ref: m[3] || "",
+        sub: (m[4] || "").replace(/^\/+|\/+$/g, "")
+      };
+    }
+    const short2 = /^([\w.-]+)\/([\w.-]+)$/.exec(raw);
+    if (short2) {
+      return {
+        kind: SRC_GITHUB,
+        ok: true,
+        owner: short2[1],
+        repo: short2[2].replace(/\.git$/i, ""),
+        ref: "",
+        sub: ""
+      };
+    }
+    if (/^https?:\/\//i.test(raw)) return { kind: "", ok: false, reason: "ui.plug.errNotZip" };
+    return { kind: "", ok: false, reason: "ui.plug.errBadUrl" };
+  }
+  function zipCandidates(src2) {
+    if (!src2 || !src2.ok) return [];
+    if (src2.kind === SRC_ZIP) return [src2.url];
+    const refs = src2.ref ? [src2.ref] : DEFAULT_REFS;
+    return refs.map((r) => `https://codeload.github.com/${enc(src2.owner)}/${enc(src2.repo)}/zip/refs/heads/${enc(r)}`);
+  }
+  function pickPluginRoot(paths, sub = "") {
+    const list = (paths || []).map((p) => String(p || "").replace(/\\/g, "/")).filter(Boolean);
+    const manifests = list.filter((p) => p === "plugin.json" || p.endsWith("/plugin.json"));
+    if (!manifests.length) return { ok: false, reason: "ui.plug.errNoManifest" };
+    const wanted = String(sub || "").replace(/^\/+|\/+$/g, "");
+    const roots = manifests.map((p) => p.slice(0, Math.max(0, p.length - "plugin.json".length)).replace(/\/$/, ""));
+    let pool3 = roots;
+    if (wanted) {
+      const hit = roots.filter((r) => r === wanted || r.endsWith("/" + wanted));
+      if (!hit.length) return { ok: false, reason: "ui.plug.errSubNotFound" };
+      pool3 = hit;
+    }
+    pool3 = [...pool3].sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+    return { ok: true, root: pool3[0] };
+  }
+  function filesToInstall(paths, root) {
+    const pre = root ? root.replace(/\/$/, "") + "/" : "";
+    const out = [];
+    for (const raw of paths || []) {
+      const p = String(raw || "").replace(/\\/g, "/");
+      if (!p || p.endsWith("/")) continue;
+      if (pre && !p.startsWith(pre)) continue;
+      const rel = pre ? p.slice(pre.length) : p;
+      if (!rel || !isSafeRel(rel)) continue;
+      if (isJunk(rel)) continue;
+      out.push({ from: p, to: rel });
+    }
+    return out;
+  }
+  function isSafeRel(rel) {
+    const p = String(rel || "").replace(/\\/g, "/");
+    if (!p || p.startsWith("/") || /^[A-Za-z]:/.test(p)) return false;
+    return !p.split("/").some((seg) => seg === ".." || seg === "" || seg === ".");
+  }
+  function isJunk(rel) {
+    const p = String(rel || "");
+    return /(^|\/)(\.git|\.github|node_modules|__MACOSX)(\/|$)/.test(p) || /(^|\/)\.DS_Store$/.test(p) || /(^|\/)Thumbs\.db$/i.test(p);
+  }
+  function installSummary(files) {
+    const list = files || [];
+    const bytes = list.reduce((n2, f) => n2 + (f.size || 0), 0);
+    return {
+      count: list.length,
+      bytes,
+      hasCode: list.some((f) => /\.(js|mjs|cjs)$/i.test(f.to))
+    };
+  }
+  var SRC_GITHUB, SRC_ZIP, DEFAULT_REFS, enc, INSTALL_WARN_KEY;
+  var init_plugin_install = __esm({
+    "src/plugins/plugin-install.js"() {
+      SRC_GITHUB = "github";
+      SRC_ZIP = "zip";
+      DEFAULT_REFS = ["main", "master"];
+      enc = (s) => encodeURIComponent(String(s || "")).replace(/%2F/gi, "/");
+      INSTALL_WARN_KEY = "ui.plug.installWarn";
+    }
+  });
+
   // src/plugins/plugin-panel.js
   function resetPluginPanel() {
     state._plugins = null;
@@ -84208,6 +84638,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         setStatus(t("ui.plug.errNoDir") + " " + (e.message || e));
       }
     }));
+    btns.append(mkBtn(
+      t("ui.plug.install"),
+      t("ui.plug.installHint"),
+      () => installFlow(host2, app)
+    ));
     btns.append(mkBtn(
       t("ui.plug.makeSample"),
       t("ui.plug.makeSampleHint"),
@@ -84290,14 +84725,108 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }));
     acts.append(mkBtn(t("ui.plug.openFolder"), "", async () => {
       try {
-        const base3 = p.origin === ORIGIN_PROJECT ? await kapi.join(state.root, "Plugins") : await kapi.globalPluginsDir();
-        await kapi.revealInOS(await kapi.join(base3, p.folder || p.name));
+        await kapi.revealInOS(await kapi.join(await baseDirOf(p), p.folder || p.name));
       } catch (e) {
         setStatus(t("ui.plug.errNoDir") + " " + (e.message || e));
       }
     }));
+    const del2 = mkBtn(t("ui.plug.uninstall"), t("ui.plug.uninstallHint"), () => uninstall(p, host2, app));
+    del2.classList.add("k-plug-danger");
+    acts.append(del2);
     card.append(acts);
     return card;
+  }
+  async function baseDirOf(p) {
+    return p.origin === ORIGIN_PROJECT ? kapi.join(state.root, "Plugins") : kapi.globalPluginsDir();
+  }
+  async function uninstall(p, host2, appMod) {
+    const app = appMod || await Promise.resolve().then(() => (init_app(), app_exports));
+    const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+    if (!await confirmBox2(tf("ui.plug.uninstallAsk", p.name), t("ui.plug.uninstall"))) return false;
+    try {
+      const base3 = await baseDirOf(p);
+      const r = await kapi.pluginUninstall(base3, p.folder || p.name);
+      if (!r || !r.ok) {
+        setStatus(t("ui.plug.errUninstall") + " " + (r && r.reason || ""));
+        return false;
+      }
+      app.setPluginDisabled(p.name, false);
+      await app.reloadPlugins();
+      if (host2) await renderPluginPanel(host2);
+      setStatus(tf("ui.plug.uninstalled", p.name));
+      return true;
+    } catch (e) {
+      log("error", t("ui.plug.errUninstall"), e);
+      setStatus(t("ui.plug.errUninstall") + " " + (e.message || e));
+      return false;
+    }
+  }
+  async function installFlow(host2, appMod) {
+    const app = appMod || await Promise.resolve().then(() => (init_app(), app_exports));
+    const { ask: ask2, confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+    const PI = await Promise.resolve().then(() => (init_plugin_install(), plugin_install_exports));
+    const url = await ask2(t("ui.plug.installAsk"), { placeholder: "https://github.com/user/repo" });
+    if (!url) return false;
+    const src2 = PI.parseSource(url);
+    if (!src2.ok) {
+      setStatus(t(src2.reason));
+      return false;
+    }
+    setStatus(t("ui.plug.installFetching"));
+    let got = null;
+    try {
+      got = await kapi.pluginFetchZip(PI.zipCandidates(src2));
+    } catch (e) {
+      setStatus(t("ui.plug.errFetch") + " " + (e.message || e));
+      return false;
+    }
+    if (!got || !got.ok) {
+      setStatus(got && got.tooBig ? t("ui.plug.errTooBig") : tf("ui.plug.errFetchStatus", got && got.status || 0));
+      return false;
+    }
+    const root = PI.pickPluginRoot(got.names, src2.sub);
+    if (!root.ok) {
+      setStatus(t(root.reason));
+      return false;
+    }
+    const files = PI.filesToInstall(got.names, root.root);
+    if (!files.length) {
+      setStatus(t("ui.plug.errNoFiles"));
+      return false;
+    }
+    const leaf2 = (root.root || "").split("/").pop() || src2.repo || "plugin";
+    const folder = safePluginFolder(leaf2.replace(/-(main|master)$/i, ""));
+    const sum2 = PI.installSummary(files);
+    const okGo = await confirmBox2(
+      tf("ui.plug.installConfirm", folder, sum2.count) + "\n\n" + t(PI.INSTALL_WARN_KEY),
+      t("ui.plug.install")
+    );
+    if (!okGo) return false;
+    try {
+      const base3 = await kapi.globalPluginsDir();
+      if (!base3) {
+        setStatus(t("ui.plug.errNoDir"));
+        return false;
+      }
+      const dir = await kapi.join(base3, folder);
+      if (await kapi.exists(dir)) {
+        if (!await confirmBox2(tf("ui.plug.installOverwrite", folder), t("ui.plug.install"))) return false;
+      }
+      const r = await kapi.pluginExtract(got.id, dir, files);
+      if (!r || !r.ok) {
+        setStatus(t("ui.plug.errExtract"));
+        return false;
+      }
+      app.setPluginDisabled(folder, false);
+      await app.reloadPlugins();
+      if (host2) await renderPluginPanel(host2);
+      setStatus(tf("ui.plug.installed", folder, r.written));
+      return true;
+    } catch (e) {
+      log("error", t("ui.plug.errExtract"), e);
+      setStatus(t("ui.plug.errExtract") + " " + (e.message || e));
+      return false;
+    }
   }
   function statusLabel(st) {
     if (st === ST_OK) return t("ui.plug.stOk");
@@ -84363,16 +84892,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     QUOTE_PAIRS: () => QUOTE_PAIRS,
     SRC_PROSE: () => SRC_PROSE,
     SRC_SCRIPT: () => SRC_SCRIPT,
+    TURN_GAP: () => TURN_GAP,
     WHERE_BACK: () => WHERE_BACK,
     WHERE_FRONT: () => WHERE_FRONT,
     WHERE_NONE: () => WHERE_NONE,
     WHERE_TAG: () => WHERE_TAG,
+    WHERE_TURN: () => WHERE_TURN,
     characterFromTag: () => characterFromTag,
     countWords: () => countWords3,
     extractDialogue: () => extractDialogue,
+    extractRaw: () => extractRaw,
     filterDialogue: () => filterDialogue,
     findQuotes: () => findQuotes,
     groupByScene: () => groupByScene,
+    guessTurns: () => guessTurns,
+    guessedCount: () => guessedCount,
     isScriptCode: () => isScriptCode,
     nameNear: () => nameNear,
     preview: () => preview,
@@ -84440,6 +84974,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return /^(#{1,6}\s|@|\(\(|>>|<<|!\s|\/\/\/|=\s|\$\w+\s|---+$|\||\.[^.\s])/.test(s) || /^\s*<!--/.test(s);
   }
   function extractDialogue(text, opts = {}) {
+    const rows = extractRaw(text, opts);
+    return opts.guessTurns === false ? rows : guessTurns(rows);
+  }
+  function extractRaw(text, opts = {}) {
     const names = Array.isArray(opts.names) ? opts.names : [];
     const script2 = opts.script !== false;
     const backTag = opts.backTag !== false;
@@ -84486,6 +85024,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           where: WHERE_TAG,
           source: SRC_SCRIPT,
           closed: true,
+          guessed: false,
           pair: ["", ""]
         });
         afterChar = false;
@@ -84518,6 +85057,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           text: q.text,
           speaker,
           where,
+          guessed: false,
           source: script2 && cur ? SRC_SCRIPT : SRC_PROSE,
           closed: q.closed,
           pair: q.pair
@@ -84526,6 +85066,39 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (quotes.length) afterChar = false;
     }
     return out;
+  }
+  function guessTurns(rows) {
+    const list = (rows || []).map((r) => ({ ...r }));
+    let i5 = 0;
+    while (i5 < list.length) {
+      let j = i5;
+      while (j + 1 < list.length && list[j + 1].line - list[j].line <= TURN_GAP) j++;
+      resolveRun(list.slice(i5, j + 1));
+      i5 = j + 1;
+    }
+    return list;
+  }
+  function resolveRun(run2) {
+    if (run2.some((r) => r.source === SRC_SCRIPT)) return;
+    const named = [...new Set(run2.filter((r) => r.speaker).map((r) => r.speaker))];
+    if (named.length !== 2) return;
+    let prev = "";
+    for (const r of run2) {
+      if (r.speaker) {
+        prev = r.speaker;
+        continue;
+      }
+      if (!prev) continue;
+      const other = named.find((n2) => n2 !== prev);
+      if (!other) continue;
+      r.speaker = other;
+      r.where = WHERE_TURN;
+      r.guessed = true;
+      prev = other;
+    }
+  }
+  function guessedCount(rows) {
+    return (rows || []).filter((r) => r && r.guessed).length;
   }
   function replaceDialogue(text, row2, next) {
     if (!row2 || typeof row2.line !== "number") return null;
@@ -84617,7 +85190,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const t3 = String(s || "").replace(/\s+/g, " ").trim();
     return t3.length > max2 ? t3.slice(0, max2 - 1) + "\u2026" : t3;
   }
-  var QUOTE_PAIRS, OPENERS, SRC_PROSE, SRC_SCRIPT, WHERE_FRONT, WHERE_BACK, WHERE_TAG, WHERE_NONE, TRIM_CHARS;
+  var QUOTE_PAIRS, OPENERS, SRC_PROSE, SRC_SCRIPT, WHERE_FRONT, WHERE_BACK, WHERE_TAG, WHERE_TURN, WHERE_NONE, TURN_GAP, TRIM_CHARS;
   var init_dialogue_core = __esm({
     "src/dialogue/dialogue-core.js"() {
       QUOTE_PAIRS = [
@@ -84639,7 +85212,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       WHERE_FRONT = "front";
       WHERE_BACK = "back";
       WHERE_TAG = "tag";
+      WHERE_TURN = "turn";
       WHERE_NONE = "none";
+      TURN_GAP = 6;
       TRIM_CHARS = /[\s \t.,:;!?—–\-…()[\]{}<>"'“”‘’]+$/;
     }
   });
@@ -84649,6 +85224,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   __export(dialogue_ui_exports, {
     applyEdit: () => applyEdit,
     exportCsv: () => exportCsv,
+    markDialogueStale: () => markDialogueStale,
     openAt: () => openAt,
     renderDialoguePanel: () => renderDialoguePanel,
     resetDialogue: () => resetDialogue,
@@ -84658,6 +85234,22 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   });
   function resetDialogue() {
     state._dialogue = null;
+  }
+  function markDialogueStale() {
+    const s = state._dialogue;
+    if (!s) return;
+    s.rows = null;
+    clearTimeout(_staleTimer);
+    _staleTimer = setTimeout(async () => {
+      _staleTimer = null;
+      const host2 = $("#dialogue-body");
+      if (!host2 || !host2.isConnected || !host2.children.length) return;
+      try {
+        await renderDialoguePanel(host2);
+      } catch (e) {
+        log("warn", t("ui.dialogue.errScan"), e);
+      }
+    }, RESCAN_DELAY);
   }
   async function collectNames(root) {
     const set = /* @__PURE__ */ new Set();
@@ -84755,7 +85347,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function visibleRows() {
     const s = S6();
-    return filterDialogue(s.rows || [], s.f);
+    const rows = filterDialogue(s.rows || [], s.f);
+    return s.f.sureOnly ? rows.filter((r) => !r.guessed) : rows;
   }
   async function renderDialoguePanel(host2) {
     const h = host2 || $("#dialogue-body");
@@ -84841,7 +85434,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       s.f.source = v2;
       redraw();
     });
-    r22.append(secSel, chSel, scSel, srcSel);
+    const sure = el("label", "k-dlgp-sure");
+    const sureBox = el("input");
+    sureBox.type = "checkbox";
+    sureBox.checked = !!s.f.sureOnly;
+    sureBox.onchange = () => {
+      s.f.sureOnly = sureBox.checked;
+      rebuild();
+    };
+    sure.append(sureBox, document.createTextNode(t("ui.dialogue.sureOnly")));
+    sure.title = t("ui.dialogue.sureOnlyHint");
+    r22.append(secSel, chSel, scSel, srcSel, sure);
     bar.append(r22);
     const chips = el("div", "k-dlgp-chips");
     const stats = speakerStats(filterDialogue(s.rows, { ...s.f, speakers: null }));
@@ -84869,8 +85472,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const count = el("div", "k-dlgp-count dim");
     bar.append(count);
     function syncCount() {
-      const n2 = visibleRows().length;
-      count.textContent = tf("ui.dialogue.count", n2, (S6().rows || []).length);
+      const rows = visibleRows();
+      const g = guessedCount(rows);
+      count.textContent = tf("ui.dialogue.count", rows.length, (S6().rows || []).length) + (g ? " \xB7 " + tf("ui.dialogue.guessedN", g) : "");
     }
     syncCount();
     function rebuild() {
@@ -84923,7 +85527,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function rowEl(r) {
     const s = S6();
-    const d = el("div", "k-dlgp-item" + (r.speaker ? "" : " k-dlgp-item-unk"));
+    const d = el("div", "k-dlgp-item" + (r.speaker ? "" : " k-dlgp-item-unk") + (r.guessed ? " k-dlgp-item-guess" : ""));
     d.dataset.line = String(r.line);
     d.dataset.scene = String(r.sceneId || "");
     const who = el("span", "k-dlgp-who", r.speaker || t("ui.dialogue.unknown"));
@@ -84985,6 +85589,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (where === WHERE_FRONT) return t("ui.dialogue.whereFront");
     if (where === WHERE_BACK) return t("ui.dialogue.whereBack");
     if (where === WHERE_TAG) return t("ui.dialogue.whereTag");
+    if (where === WHERE_TURN) return t("ui.dialogue.whereTurn");
     return t("ui.dialogue.whereNone");
   }
   async function refreshKeepingFilters() {
@@ -85100,7 +85705,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  var import_md12, S6, _scanning, rowKey;
+  var import_md12, S6, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
   var init_dialogue_ui = __esm({
     "src/dialogue/dialogue-ui.js"() {
       init_i18n();
@@ -85112,11 +85717,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         rows: null,
         names: [],
         scenes: [],
-        f: { section: "", chapter: "", scene: "", speakers: [], q: "", source: "" },
+        f: { section: "", chapter: "", scene: "", speakers: [], q: "", source: "", sureOnly: false },
         editing: null,
         scanning: false,
         error: ""
       });
+      RESCAN_DELAY = 1200;
+      _staleTimer = null;
       _scanning = null;
       rowKey = (r) => [r.path, r.line, r.open].join("|");
     }
@@ -111645,23 +112252,23 @@ ${css}
     this.iconv = codec.iconv;
   }
   function detectEncoding(buf, defaultEncoding) {
-    var enc = defaultEncoding || "utf-16le";
+    var enc2 = defaultEncoding || "utf-16le";
     if (buf.length >= 2) {
       if (buf[0] == 254 && buf[1] == 255)
-        enc = "utf-16be";
+        enc2 = "utf-16be";
       else if (buf[0] == 255 && buf[1] == 254)
-        enc = "utf-16le";
+        enc2 = "utf-16le";
       else {
         var asciiCharsLE = 0, asciiCharsBE = 0, _len = Math.min(buf.length - buf.length % 2, 64);
         for (var i5 = 0; i5 < _len; i5 += 2) {
           if (buf[i5] === 0 && buf[i5 + 1] !== 0) asciiCharsBE++;
           if (buf[i5] !== 0 && buf[i5 + 1] === 0) asciiCharsLE++;
         }
-        if (asciiCharsBE > asciiCharsLE) enc = "utf-16be";
-        else if (asciiCharsBE < asciiCharsLE) enc = "utf-16le";
+        if (asciiCharsBE > asciiCharsLE) enc2 = "utf-16be";
+        else if (asciiCharsBE < asciiCharsLE) enc2 = "utf-16le";
       }
     }
-    return enc;
+    return enc2;
   }
   function Utf7Codec(codecOptions, iconv) {
     this.iconv = iconv;
@@ -117342,8 +117949,8 @@ ${css}
           if (this.charReceived) {
             var cr = this.charReceived;
             var buf = this.charBuffer;
-            var enc = this.encoding;
-            res += buf.slice(0, cr).toString(enc);
+            var enc2 = this.encoding;
+            res += buf.slice(0, cr).toString(enc2);
           }
           return res;
         };
@@ -117381,9 +117988,9 @@ ${css}
       Readable.prototype.isPaused = function() {
         return this._readableState.flowing === false;
       };
-      Readable.prototype.setEncoding = function(enc) {
-        this._readableState.decoder = new string_decoder_1(enc);
-        this._readableState.encoding = enc;
+      Readable.prototype.setEncoding = function(enc2) {
+        this._readableState.decoder = new string_decoder_1(enc2);
+        this._readableState.encoding = enc2;
         return this;
       };
       MAX_HWM = 8388608;
@@ -127656,8 +128263,8 @@ ${css}
         var modules = [internal, utf16, utf7, sbcsCodec, sbcsData, sbcsDataGenerated, dbcsCodec, dbcsData];
         for (var i5 = 0; i5 < modules.length; i5++) {
           var module = modules[i5];
-          for (var enc in module) {
-            if (Object.prototype.hasOwnProperty.call(module, enc)) exports[enc] = module[enc];
+          for (var enc2 in module) {
+            if (Object.prototype.hasOwnProperty.call(module, enc2)) exports[enc2] = module[enc2];
           }
         }
       });
@@ -127769,8 +128376,8 @@ ${css}
             "utf16le": true,
             "utf-16le": true
           };
-          Buffer$7.isNativeEncoding = function(enc) {
-            return enc && nodeNativeEncodings[enc.toLowerCase()];
+          Buffer$7.isNativeEncoding = function(enc2) {
+            return enc2 && nodeNativeEncodings[enc2.toLowerCase()];
           };
           var SlowBuffer = buffer.SlowBuffer;
           original.SlowBufferToString = SlowBuffer.prototype.toString;
@@ -127865,9 +128472,9 @@ ${css}
           if (iconv.supportsStreams) {
             var Readable2 = Stream2.Readable;
             original.ReadableSetEncoding = Readable2.prototype.setEncoding;
-            Readable2.prototype.setEncoding = function setEncoding(enc, options) {
-              this._readableState.decoder = iconv.getDecoder(enc, options);
-              this._readableState.encoding = enc;
+            Readable2.prototype.setEncoding = function setEncoding(enc2, options) {
+              this._readableState.decoder = iconv.getDecoder(enc2, options);
+              this._readableState.encoding = enc2;
             };
             Readable2.prototype.collect = iconv._collect;
           }
@@ -127917,9 +128524,9 @@ ${css}
           var trail = decoder.end();
           return trail ? res + trail : res;
         };
-        iconv.encodingExists = function encodingExists(enc) {
+        iconv.encodingExists = function encodingExists(enc2) {
           try {
-            iconv.getCodec(enc);
+            iconv.getCodec(enc2);
             return true;
           } catch (e) {
             return false;
@@ -127930,30 +128537,30 @@ ${css}
         iconv._codecDataCache = {};
         iconv.getCodec = function getCodec(encoding) {
           if (!iconv.encodings) iconv.encodings = encodings;
-          var enc = iconv._canonicalizeEncoding(encoding);
+          var enc2 = iconv._canonicalizeEncoding(encoding);
           var codecOptions = {};
           while (true) {
-            var codec = iconv._codecDataCache[enc];
+            var codec = iconv._codecDataCache[enc2];
             if (codec) return codec;
-            var codecDef = iconv.encodings[enc];
+            var codecDef = iconv.encodings[enc2];
             switch (typeof codecDef) {
               case "string":
-                enc = codecDef;
+                enc2 = codecDef;
                 break;
               case "object":
                 for (var key2 in codecDef) {
                   codecOptions[key2] = codecDef[key2];
                 }
-                if (!codecOptions.encodingName) codecOptions.encodingName = enc;
-                enc = codecDef.type;
+                if (!codecOptions.encodingName) codecOptions.encodingName = enc2;
+                enc2 = codecDef.type;
                 break;
               case "function":
-                if (!codecOptions.encodingName) codecOptions.encodingName = enc;
+                if (!codecOptions.encodingName) codecOptions.encodingName = enc2;
                 codec = new codecDef(codecOptions, iconv);
                 iconv._codecDataCache[codecOptions.encodingName] = codec;
                 return codec;
               default:
-                throw new Error("Encoding not recognized: '" + encoding + "' (searched as: '" + enc + "')");
+                throw new Error("Encoding not recognized: '" + encoding + "' (searched as: '" + enc2 + "')");
             }
           }
         };
@@ -145149,7 +145756,7 @@ ${css}
     resetAI();
     resetSplitSystem();
     resetKanban();
-    resetCentralize();
+    resetReview();
     resetCommentStore();
     _cmMigrated.clear();
     clearCommentAnchors();
@@ -148325,7 +148932,7 @@ ${css}
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog");
       box2.append(el("div", "k-dlg-title", canDelete ? t("ui.app.editEvent") : t("ui.app.addEvent")));
-      const mk = (label, val, ph, tag3 = "input") => {
+      const mk2 = (label, val, ph, tag3 = "input") => {
         const r = el("div", "wiki-row");
         r.append(el("label", null, label));
         const i5 = el(tag3, "wiki-input");
@@ -148335,10 +148942,10 @@ ${css}
         box2.append(r);
         return i5;
       };
-      const iTitle = mk(t("ui.app.nameEvent"), ev.title, t("ui.app.eg3"));
-      const iWhen = mk(t("ui.app.timeStoryStart"), ev.when, t("ui.app.egDate"));
-      const iWhenEnd = mk(t("ui.app.timeEndNotForce"), ev.whenEnd, t("ui.app.skipEmptyEventDot"));
-      const iTrack = mk(t("ui.app.lineStory"), ev.track, t("ui.app.egLineMainView"));
+      const iTitle = mk2(t("ui.app.nameEvent"), ev.title, t("ui.app.eg3"));
+      const iWhen = mk2(t("ui.app.timeStoryStart"), ev.when, t("ui.app.egDate"));
+      const iWhenEnd = mk2(t("ui.app.timeEndNotForce"), ev.whenEnd, t("ui.app.skipEmptyEventDot"));
+      const iTrack = mk2(t("ui.app.lineStory"), ev.track, t("ui.app.egLineMainView"));
       if (knownTracks.length) {
         const dl = el("datalist");
         dl.id = "tl-tracks";
@@ -148350,9 +148957,9 @@ ${css}
         iTrack.setAttribute("list", "tl-tracks");
         box2.append(dl);
       }
-      const iSort = mk(t("ui.app.orderItemNumNot"), ev.sort ?? "", t("ui.app.useReorderTimeText"));
+      const iSort = mk2(t("ui.app.orderItemNumNot"), ev.sort ?? "", t("ui.app.useReorderTimeText"));
       iSort.type = "number";
-      const iDesc = mk(t("ui.app.detail"), ev.desc, "", "textarea");
+      const iDesc = mk2(t("ui.app.detail"), ev.desc, "", "textarea");
       let refs = normalizeRefs(ev.refs);
       const refRow = el("div", "wiki-row k-ev-refs");
       refRow.append(el("label", null, t("ui.app.ref")));
@@ -148853,7 +149460,7 @@ ${css}
     verRow.append(verBtns);
     body.append(verRow);
     const rowOf = /* @__PURE__ */ new Map();
-    const mk = (label, val, tag3 = "input") => {
+    const mk2 = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const i5 = el(tag3, "wiki-input");
@@ -148887,16 +149494,16 @@ ${css}
       body.append(r);
       return c;
     };
-    const iSyn = mk(t("ui.common.synopsis"), row2.synopsis, "textarea");
-    const iStoryDate = mk(t("ui.common.timeStoryLineTime"), row2.storyDate);
+    const iSyn = mk2(t("ui.common.synopsis"), row2.synopsis, "textarea");
+    const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), row2.storyDate);
     iStoryDate.placeholder = t("ui.app.date");
-    const iStartPage = mk(t("ui.app.pageNumStartChapter"), row2.startPage || "");
+    const iStartPage = mk2(t("ui.app.pageNumStartChapter"), row2.startPage || "");
     iStartPage.type = "number";
     iStartPage.min = "1";
     iStartPage.placeholder = "1";
-    const iPov = mk(t("ui.common.viewPOV"), row2.pov);
-    const iEmotion = mk(t("ui.common.mood"), row2.emotion);
-    const iConflict = mk(t("ui.common.conflict"), row2.conflict);
+    const iPov = mk2(t("ui.common.viewPOV"), row2.pov);
+    const iEmotion = mk2(t("ui.common.mood"), row2.emotion);
+    const iConflict = mk2(t("ui.common.conflict"), row2.conflict);
     const statuses = allStatuses();
     const iStatus = mkSel(
       t("ui.common.status"),
@@ -148905,8 +149512,8 @@ ${css}
     );
     const iColor = mkSel(t("ui.common.color"), [["", t("ui.common.notHas")], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + dataLabel(n2)])], row2.color || "");
     const iFlag = mkChk(t("ui.common.pinPin"), row2.flag);
-    const iTags = mk(t("ui.common.tag2"), (row2.tags || []).join(", "));
-    const iNote = mk(t("ui.common.note"), row2.note, "textarea");
+    const iTags = mk2(t("ui.common.tag2"), (row2.tags || []).join(", "));
+    const iNote = mk2(t("ui.common.note"), row2.note, "textarea");
     try {
       const mapRow = await buildShowOnMapRow(row2);
       if (stale2()) return;
@@ -149432,7 +150039,7 @@ ${css}
     const box2 = el("div", "k-dialog k-wm-dlg");
     box2.append(el("div", "k-dlg-title", t("ui.app.exportPDFWatermarkPerson")));
     box2.append(el("div", "dim", tf("ui.app.chapterPageFilePerson", src2.title, pages.count)));
-    const mk = (label, node) => {
+    const mk2 = (label, node) => {
       const r = el("div", "k-row");
       r.append(el("label", null, label), node);
       return r;
@@ -149441,26 +150048,26 @@ ${css}
     ta.rows = 6;
     ta.placeholder = t("ui.app.oneLineOnePerson");
     ta.value = saved.recipients || "";
-    box2.append(mk(t("ui.app.list"), ta));
+    box2.append(mk2(t("ui.app.list"), ta));
     const tpl = el("input", "k-dlg-input");
     tpl.value = saved.template || t("ui.app.nameDate");
-    box2.append(mk(t("ui.app.styleWatermark"), tpl));
+    box2.append(mk2(t("ui.app.styleWatermark"), tpl));
     box2.append(el("div", "dim", t("ui.app.useNameDateStory")));
     const pre = el("input", "k-dlg-input");
     pre.value = saved.prefix || safeName(src2.title);
-    box2.append(mk(t("ui.app.wordPageNameFile"), pre));
+    box2.append(mk2(t("ui.app.wordPageNameFile"), pre));
     const size = el("input", "k-dlg-input");
     size.type = "number";
     size.min = "10";
     size.max = "200";
     size.value = String(saved.fontSize || DEFAULT_WM.fontSize);
-    box2.append(mk(t("ui.app.sizeWatermarkPx"), size));
+    box2.append(mk2(t("ui.app.sizeWatermarkPx"), size));
     const ang = el("input", "k-dlg-input");
     ang.type = "number";
     ang.min = "-90";
     ang.max = "90";
     ang.value = String(saved.angle ?? DEFAULT_WM.angle);
-    box2.append(mk(t("ui.app.corner"), ang));
+    box2.append(mk2(t("ui.app.corner"), ang));
     const dirRow = el("div", "k-row");
     const dirLbl = el("span", "dim", saved.outDir || t("ui.app.cantPickFolder"));
     let outDir = saved.outDir || "";
@@ -150008,15 +150615,15 @@ ${css}
         ));
         card.append(info);
         const acts = el("div", "tpl-card-acts");
-        const mk = (label, fn, cls) => {
+        const mk2 = (label, fn, cls) => {
           const b = el("button", cls || null, label);
           b.onclick = fn;
           return b;
         };
         acts.append(
-          mk(t("ui.common.edit"), () => templateEditModal(tp)),
-          mk(t("ui.app.repeat"), () => duplicateTemplate(tp)),
-          mk(t("ui.common.del"), async () => {
+          mk2(t("ui.common.edit"), () => templateEditModal(tp)),
+          mk2(t("ui.app.repeat"), () => duplicateTemplate(tp)),
+          mk2(t("ui.common.del"), async () => {
             if (await confirmBox(tf("ui.app.delTemplate", tp.name))) {
               state.templates = state.templates.filter((t3) => t3 !== tp);
               await writeTemplates();
@@ -151274,7 +151881,7 @@ ${css}
     const saveAllBtn = $("#save-all-btn");
     if (saveAllBtn) saveAllBtn.style.display = state.root ? "" : "none";
     try {
-      onCentralizeShown();
+      onReviewShown();
     } catch {
     }
     refreshCommentsPanel();
@@ -151352,9 +151959,14 @@ ${css}
       snapshotFile(tab.file).catch(() => {
       });
     try {
-      markCentralizeStale();
+      markReviewStale();
     } catch (e) {
       log("warn", t("ui.app.markCentralizeStaleFail"), e);
+    }
+    try {
+      markDialogueStale();
+    } catch (e) {
+      log("warn", t("ui.dialogue.errScan"), e);
     }
     await refreshBacklinksAfterSave(tab, body);
     try {
@@ -152084,6 +152696,9 @@ ${css}
     $("#tb-record")?.classList.toggle("on", isPanelOpen("record") || isTornOff("record"));
     $("#tb-dialogue")?.classList.toggle("on", isPanelOpen("dialogue") || isTornOff("dialogue"));
     $("#tb-plugins")?.classList.toggle("on", isPanelOpen("plugins"));
+    for (const [btnId, pid] of TB_PANEL_BUTTONS) {
+      $("#" + btnId)?.classList.toggle("on", isPanelOpen(pid) || isTornOff(pid));
+    }
     $("#tb-md-codes")?.classList.toggle("on", showMarkdownCodes());
     applyToolbarConfig();
     syncFloatBarVisible();
@@ -153084,9 +153699,6 @@ ${css}
         renderFeaturePanel("search");
         syncMenuToggles();
         refreshToolbar();
-        break;
-      case "centralize":
-        openCentralizeUI();
         break;
       case "branching":
         openBranchingTree();
@@ -160669,11 +161281,11 @@ ${css}
           );
           vp.scrollLeft = 0;
           vp.scrollTop = 0;
-          const mk = (type, x, y, btn2) => new MouseEvent(
+          const mk2 = (type, x, y, btn2) => new MouseEvent(
             type,
             { bubbles: true, cancelable: true, clientX: x, clientY: y, button: btn2 }
           );
-          const down = mk("mousedown", 300, 300, 1);
+          const down = mk2("mousedown", 300, 300, 1);
           vp.dispatchEvent(down);
           check2("[r-4] \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07: \u0E01\u0E31\u0E19 autoscroll \u0E02\u0E2D\u0E07 Chromium (preventDefault)", down.defaultPrevented);
           check2("[r-4] \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07: \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E25\u0E32\u0E01\u0E1C\u0E31\u0E07", vp.classList.contains("branch-panning"));
@@ -161020,30 +161632,38 @@ ${css}
         hidePanel("floorplan");
       }
       {
-        await openCentralizeUI();
+        await openDashboard();
         await new Promise((r) => setTimeout(r, 1400));
         check2(
-          "\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27)",
-          isPanelOpen("dashboard") && !state.tabs.has("::centralize::") && !!document.querySelector("#dash-body .dash-cent")
+          '[80-5] \u0E2A\u0E48\u0E27\u0E19 "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E04\u0E27\u0E23\u0E14\u0E39" \u0E2D\u0E22\u0E39\u0E48\u0E17\u0E49\u0E32\u0E22\u0E41\u0E1C\u0E07\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14',
+          isPanelOpen("dashboard") && !!document.querySelector("#dash-body .dash-wrap .dash-cent .cent-wrap.cent-embedded")
         );
-        check2("\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E04\u0E33\u0E19\u0E27\u0E13\u0E2A\u0E16\u0E34\u0E15\u0E34\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07)", !!document.querySelector(".cent-stat"));
-        check2("\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E21\u0E35\u0E41\u0E1C\u0E07 backlinks", !!document.querySelector(".cent-list"));
+        check2("[80-5] \u0E21\u0E35\u0E41\u0E1C\u0E07 Backlinks", !!document.querySelector(".dash-cent .cent-list"));
         check2(
-          "\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E41\u0E2A\u0E14\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2A\u0E16\u0E34\u0E15\u0E34 (\u0E09\u0E32\u0E01/\u0E04\u0E33/Wiki/\u0E08\u0E38\u0E14\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E42\u0E22\u0E07)",
-          document.querySelectorAll(".cent-stat-card").length >= 3,
-          String(document.querySelectorAll(".cent-stat-card").length)
-        );
-        check2(
-          "\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E19\u0E31\u0E1A\u0E08\u0E38\u0E14\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E42\u0E22\u0E07\u0E08\u0E32\u0E01 Auto-link Engine",
-          [...document.querySelectorAll(".cent-stat-lbl")].some((d) => d.textContent === "\u0E08\u0E38\u0E14\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E42\u0E22\u0E07")
+          '[80-5] \u0E21\u0E35\u0E41\u0E1C\u0E07 "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15"',
+          document.querySelectorAll(".dash-cent .cent-panel").length >= 2,
+          String(document.querySelectorAll(".dash-cent .cent-panel").length)
         );
         check2(
-          "\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E43\u0E2B\u0E21\u0E48 + \u0E1B\u0E49\u0E32\u0E22\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E2A\u0E14",
-          !!document.querySelector(".cent-refresh") && !!document.querySelector(".cent-live")
+          "[80-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2A\u0E16\u0E34\u0E15\u0E34\u0E0B\u0E49\u0E33\u0E01\u0E31\u0E1A\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19\u0E02\u0E2D\u0E07\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27",
+          document.querySelectorAll(".dash-cent .cent-stat-card").length === 0,
+          String(document.querySelectorAll(".dash-cent .cent-stat-card").length)
         );
         check2(
-          '\u0E2A\u0E48\u0E27\u0E19\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E2D\u0E22\u0E39\u0E48 "\u0E17\u0E49\u0E32\u0E22" \u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14 (\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E2A\u0E16\u0E34\u0E15\u0E34\u0E40\u0E14\u0E34\u0E21 \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19)',
-          !!document.querySelector("#dash-body .dash-wrap .dash-cent .cent-wrap.cent-embedded")
+          "[80-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07/\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E02\u0E2D\u0E07\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E41\u0E25\u0E49\u0E27",
+          !document.querySelector(".cent-refresh") && !document.querySelector(".cent-live")
+        );
+        check2("[80-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A ::centralize:: \u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D", !state.tabs.has("::centralize::"));
+        check2("[80-5] \u0E25\u0E1A\u0E44\u0E1F\u0E25\u0E4C centralize-ui.js \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27", (() => {
+          try {
+            return typeof openCentralizeUI === "undefined";
+          } catch {
+            return true;
+          }
+        })());
+        check2(
+          "[80-5] \u0E2A\u0E16\u0E34\u0E15\u0E34\u0E2B\u0E25\u0E31\u0E01\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+          !!document.querySelector("#dash-body .dash-apanel, #dash-body .dash-stat")
         );
       }
       {
@@ -170617,6 +171237,226 @@ ${css}
           panelDesc("dialogue") + " | " + panelDesc("plugins")
         );
       }
+      {
+        const DC80 = await Promise.resolve().then(() => (init_dialogue_core(), dialogue_core_exports));
+        const DU80 = await Promise.resolve().then(() => (init_dialogue_ui(), dialogue_ui_exports));
+        const dj80 = await kapi.readJson(await kapi.join(dPath, "draft.json"));
+        const sj80 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
+        const ch80 = dj80.chapters.find((c) => (sj80.chapters[c.guid] || []).length) || dj80.chapters[0];
+        const dir80 = await kapi.join(await kapi.join(dPath, "Chapters"), ch80.folderName);
+        const f80 = await kapi.join(dir80, "dlg-prose2.md");
+        await kapi.writeFile(
+          f80,
+          [
+            "---",
+            "title: \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E19\u0E34\u0E22\u0E32\u0E22",
+            "type: scene",
+            "format: prose",
+            "---",
+            "",
+            '"\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A" \u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15\u0E17\u0E31\u0E01\u0E17\u0E32\u0E22',
+            "",
+            '\u0E40\u0E2D\u0E01\u0E20\u0E1E\u0E40\u0E07\u0E22\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E36\u0E49\u0E19\u0E21\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E15\u0E2D\u0E1A\u0E27\u0E48\u0E32 "\u0E21\u0E32\u0E2A\u0E32\u0E22\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27\u0E19\u0E30"',
+            "",
+            '"\u0E02\u0E2D\u0E42\u0E17\u0E29\u0E04\u0E23\u0E31\u0E1A \u0E1C\u0E21\u0E15\u0E34\u0E14\u0E1D\u0E19" \u0E40\u0E02\u0E32\u0E15\u0E2D\u0E1A',
+            "",
+            '"\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E23\u0E2B\u0E23\u0E2D\u0E01" \u0E40\u0E18\u0E2D\u0E22\u0E34\u0E49\u0E21',
+            ""
+          ].join("\n")
+        );
+        await kapi.writeFile(
+          await kapi.join(await kapi.join(await kapi.join(state.root, "Wiki"), "characters"), "ekk80.json"),
+          JSON.stringify({ name: "\u0E40\u0E2D\u0E01\u0E20\u0E1E", entityTypeKey: "characters", aliases: [] }, null, 2)
+        );
+        sj80.chapters[ch80.guid] = (sj80.chapters[ch80.guid] || []).concat([
+          { id: "dlg-p2", title: "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E19\u0E34\u0E22\u0E32\u0E22", order: 95, fileName: "dlg-prose2.md" }
+        ]);
+        await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj80, null, 2));
+        resetDialogue();
+        showPanel("dialogue");
+        await renderFeaturePanel("dialogue");
+        await until79(() => DU80.visibleRows().some((r) => r.sceneId === "dlg-p2"), 12e3);
+        const mine80 = DU80.visibleRows().filter((r) => r.sceneId === "dlg-p2");
+        check2(
+          "[80-1] \u0E08\u0E31\u0E1A\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E43\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A 4 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+          mine80.length === 4,
+          JSON.stringify(mine80.map((r) => r.speaker + "|" + r.where))
+        );
+        check2(
+          '[80-1] \u0E17\u0E38\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E23\u0E30\u0E1A\u0E38\u0E04\u0E19\u0E1E\u0E39\u0E14\u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E2A\u0E23\u0E23\u0E1E\u0E19\u0E32\u0E21\u0E15\u0E01\u0E44\u0E1B\u0E01\u0E2D\u0E07 "\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38")',
+          mine80.every((r) => r.speaker),
+          JSON.stringify(mine80.map((r) => (r.speaker || "-") + "|" + r.where))
+        );
+        check2(
+          "[80-1] \u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\u0E23\u0E39\u0E49\u0E08\u0E32\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E14\u0E32",
+          mine80[0].guessed === false && mine80[1].guessed === false
+        );
+        check2(
+          "[80-1] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E23\u0E23\u0E1E\u0E19\u0E32\u0E21\u0E16\u0E39\u0E01\u0E40\u0E14\u0E32\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E31\u0E19\u0E1E\u0E39\u0E14",
+          mine80[2].where === DC80.WHERE_TURN && mine80[2].guessed === true,
+          JSON.stringify(mine80[2])
+        );
+        check2(
+          "[80-1] \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E40\u0E14\u0E32\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A\u0E1A\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E15\u0E48\u0E32\u0E07\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E41\u0E19\u0E48\u0E43\u0E08",
+          !!document.querySelector("#dialogue-body .k-dlgp-item-guess")
+        );
+        const sureBox = document.querySelector("#dialogue-body .k-dlgp-sure input");
+        check2('[80-1] \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E35\u0E48\u0E41\u0E19\u0E48\u0E43\u0E08"', !!sureBox);
+        sureBox.checked = true;
+        sureBox.dispatchEvent(new Event("change"));
+        check2(
+          "[80-1] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E14\u0E32",
+          await until79(() => DU80.visibleRows().every((r) => !r.guessed))
+        );
+        sureBox.checked = false;
+        sureBox.dispatchEvent(new Event("change"));
+        await until79(() => DU80.visibleRows().some((r) => r.guessed));
+        await openScene(f80, "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E19\u0E34\u0E22\u0E32\u0E22");
+        const tabD = state.tabs.get(f80);
+        check2("[80-1] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E14\u0E49", !!tabD);
+        tabD.editor.setMarkdown(tabD.editor.getMarkdown() + '\n\n"\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32" \u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15\u0E1E\u0E39\u0E14\u0E40\u0E2A\u0E23\u0E34\u0E21');
+        markDirty(tabD);
+        await saveTab(tabD);
+        check2(
+          "[80-1] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E01\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E14\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A)",
+          await until79(() => DU80.visibleRows().some((r) => /ประโยคที่เพิ่งเพิ่มเข้ามา/.test(r.text)), 12e3),
+          JSON.stringify(DU80.visibleRows().filter((r) => r.sceneId === "dlg-p2").map((r) => r.text))
+        );
+        closeTab(f80);
+        hidePanel("dialogue");
+      }
+      {
+        const PI80 = await Promise.resolve().then(() => (init_plugin_install(), plugin_install_exports));
+        check2(
+          "[80-2] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07/\u0E16\u0E2D\u0E19\u0E43\u0E19 kapi",
+          typeof kapi.pluginFetchZip === "function" && typeof kapi.pluginExtract === "function" && typeof kapi.pluginUninstall === "function"
+        );
+        const src80 = PI80.parseSource("https://github.com/user/repo");
+        check2("[80-2] \u0E2D\u0E48\u0E32\u0E19\u0E25\u0E34\u0E07\u0E01\u0E4C GitHub \u0E44\u0E14\u0E49", src80.ok && src80.repo === "repo");
+        check2("[80-2] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19 URL \u0E0B\u0E34\u0E1B\u0E44\u0E14\u0E49", PI80.zipCandidates(src80).length === 2);
+        const gdir80 = await kapi.globalPluginsDir();
+        await kapi.mkdir(await kapi.join(gdir80, "k2del"));
+        await kapi.writeFile(
+          await kapi.join(await kapi.join(gdir80, "k2del"), "plugin.json"),
+          '{"name":"k2del","entry":"main.js"}'
+        );
+        await kapi.writeFile(await kapi.join(await kapi.join(gdir80, "k2del"), "main.js"), "// vide");
+        check2(
+          "[80-2] \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E27\u0E49\u0E16\u0E2D\u0E19",
+          await kapi.exists(await kapi.join(gdir80, "k2del"))
+        );
+        const rDel = await kapi.pluginUninstall(gdir80, "k2del");
+        check2(
+          "[80-2] \u0E16\u0E2D\u0E19\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07",
+          rDel && rDel.ok && !await kapi.exists(await kapi.join(gdir80, "k2del")),
+          JSON.stringify(rDel)
+        );
+        const rBad = await kapi.pluginUninstall(gdir80, "../../shouldNotDelete");
+        check2(
+          "[80-2] \u0E2A\u0E31\u0E48\u0E07\u0E25\u0E1A\u0E19\u0E2D\u0E01\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 = \u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18",
+          rBad && rBad.ok === false && rBad.reason === "outside",
+          JSON.stringify(rBad)
+        );
+      }
+      {
+        const NP80 = await Promise.resolve().then(() => (init_net_presets(), net_presets_exports));
+        const NT80 = await Promise.resolve().then(() => (init_network_theme(), network_theme_exports));
+        const real80 = new Set(NT80.NET_COLOR_DEFS.map((d) => d.key));
+        check2(
+          "[80-3] \u0E04\u0E35\u0E22\u0E4C\u0E43\u0E19\u0E0A\u0E38\u0E14\u0E2A\u0E35\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
+          NP80.PRESET_KEYS.every((k) => real80.has(k)),
+          NP80.PRESET_KEYS.filter((k) => !real80.has(k)).join(" ")
+        );
+        check2(
+          "[80-3] \u0E21\u0E35\u0E0A\u0E38\u0E14\u0E43\u0E19\u0E15\u0E31\u0E27\u0E04\u0E23\u0E1A 5 \u0E0A\u0E38\u0E14",
+          ["default", "cable", "flower", "xrite", "rainbow"].every((id) => !!NP80.builtinPreset(id))
+        );
+        check2(
+          "[80-3] \u0E0A\u0E37\u0E48\u0E2D\u0E0A\u0E38\u0E14\u0E44\u0E21\u0E48\u0E42\u0E0A\u0E27\u0E4C\u0E15\u0E31\u0E27\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32",
+          NP80.BUILTIN_PRESETS.every((p) => !/^ui[.]/.test(NP80.presetLabel(p))),
+          NP80.BUILTIN_PRESETS.map((p) => NP80.presetLabel(p)).join(",")
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        settingsDialog("netcol");
+        await wait79(240);
+        const dlg80 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        check2("[80-3] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E38\u0E14\u0E2A\u0E35\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E23\u0E39\u0E1B", !!dlg80.querySelector(".k-netp-sel"));
+        const psel80 = dlg80.querySelector(".k-netp-sel");
+        check2(
+          '[80-3] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E0A\u0E38\u0E14\u0E04\u0E23\u0E1A (\u0E23\u0E27\u0E21\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E15\u0E31\u0E49\u0E07\u0E40\u0E2D\u0E07")',
+          psel80.options.length >= 6,
+          String(psel80.options.length)
+        );
+        check2(
+          "[80-3] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E0A\u0E38\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E30\u0E25\u0E1A\u0E0A\u0E38\u0E14",
+          [...dlg80.querySelectorAll("#st-netcol-body button")].length >= 2
+        );
+        const grids80 = dlg80.querySelectorAll("#st-netcol-body .k-netc-grid");
+        check2("[80-3] \u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E35\u0E08\u0E31\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E23\u0E34\u0E14", grids80.length >= 3, String(grids80.length));
+        const cells80 = dlg80.querySelectorAll("#st-netcol-body .k-netc-cell");
+        check2(
+          "[80-3] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E35\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E21\u0E01\u0E25\u0E32\u0E07",
+          cells80.length === NT80.NET_COLOR_DEFS.length,
+          cells80.length + "/" + NT80.NET_COLOR_DEFS.length
+        );
+        check2(
+          "[80-3] \u0E41\u0E15\u0E48\u0E25\u0E30\u0E0A\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E04\u0E23\u0E1A: \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35 + \u0E0A\u0E37\u0E48\u0E2D + \u0E23\u0E2B\u0E31\u0E2A\u0E2A\u0E35",
+          [...cells80].every((c) => c.querySelector("input[type=color]") && c.querySelector(".k-netc-name") && c.querySelector(".st-netcol-t"))
+        );
+        const gridCells = [...grids80[0].children];
+        check2("[80-3] \u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E19\u0E01\u0E23\u0E34\u0E14\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E23\u0E07\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E08\u0E23\u0E34\u0E07", (() => {
+          if (gridCells.length < 2) return true;
+          const lefts = gridCells.map((c) => Math.round(c.getBoundingClientRect().left));
+          return new Set(lefts).size <= Math.ceil(gridCells.length / 2) + 1;
+        })(), JSON.stringify(gridCells.slice(0, 4).map((c) => Math.round(c.getBoundingClientRect().left))));
+        const before80 = dlg80.querySelector("#st-netcol-body input[type=color]").value;
+        psel80.value = "rainbow";
+        psel80.dispatchEvent(new Event("change"));
+        await wait79(80);
+        const after80 = dlg80.querySelector("#st-netcol-body input[type=color]").value;
+        check2(
+          "[80-3] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E35\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07",
+          after80.toLowerCase() === NP80.builtinPreset("rainbow").colors["nc-char"],
+          before80 + " -> " + after80
+        );
+        dlg80.querySelector(".k-cancel").click();
+        await wait79(140);
+      }
+      {
+        const TB80 = await Promise.resolve().then(() => (init_toolbar_config(), toolbar_config_exports));
+        const SKIP80 = /* @__PURE__ */ new Set(["toolbar", "docs", "statusbar", "planner-props"]);
+        const noBtn = PANEL_DEFS.map((d) => d.id).filter((id) => SKIP80.has(id) ? false : !(document.getElementById("tb-" + id) || document.getElementById("tb-" + id + "-panel") || id === "notes" && document.getElementById("tb-notes-panel")));
+        check2("[80-7] \u0E17\u0E38\u0E01\u0E41\u0E1C\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E41\u0E25\u0E49\u0E27", noBtn.length === 0, noBtn.join(" "));
+        check2(
+          "[80-7] \u0E1B\u0E38\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E14\u0E49\u0E27\u0E22",
+          ["tb-timeline", "tb-maps", "tb-network", "tb-planner", "tb-branch", "tb-log"].every((id) => TB80.allButtonIds().includes(id))
+        );
+        closeAllTabs();
+        await wait79(240);
+        check2("[80-4] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27", !state.active || !state.active.editor);
+        refreshToolbar();
+        await wait79(100);
+        for (const id of ["tb-dialogue", "tb-plugins", "tb-timeline", "tb-maps", "tb-network"]) {
+          const b = document.getElementById(id);
+          check2(
+            "[80-4] \u0E1B\u0E38\u0E48\u0E21 " + id + " \u0E01\u0E14\u0E44\u0E14\u0E49\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01",
+            !!b && b.disabled === false,
+            b ? "disabled=" + b.disabled : "no button"
+          );
+        }
+        document.getElementById("tb-dialogue").click();
+        check2(
+          "[80-4] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E15\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14 \u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E08\u0E23\u0E34\u0E07",
+          await until79(() => isPanelOpen("dialogue"))
+        );
+        hidePanel("dialogue");
+        document.getElementById("tb-timeline").click();
+        check2(
+          "[80-4] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32\u0E15\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14 \u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E08\u0E23\u0E34\u0E07",
+          await until79(() => isPanelOpen("timeline"))
+        );
+        hidePanel("timeline");
+      }
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -170628,7 +171468,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, TB_SC_MAP, floatBar, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -170706,7 +171546,7 @@ ${css}
       init_player_choices();
       init_visual_tags();
       init_session_notes();
-      init_centralize_ui();
+      init_dash_review();
       init_kanban_ui();
       init_panel_layout();
       init_panel_drag();
@@ -170846,6 +171686,20 @@ ${css}
       imgURLBase = /* @__PURE__ */ new Map();
       _branchPlanApi = null;
       FMTS = ["bold", "italic", "underline", "strike"];
+      TB_PANEL_BUTTONS = [
+        ["tb-timeline", "timeline"],
+        ["tb-maps", "maps"],
+        ["tb-books", "books"],
+        ["tb-network", "network"],
+        ["tb-planner", "planner"],
+        ["tb-branch", "branch"],
+        ["tb-floorplan", "floorplan"],
+        ["tb-player", "player"],
+        ["tb-gallery-board", "gallery-board"],
+        ["tb-comments", "comments"],
+        ["tb-notes-panel", "notes"],
+        ["tb-log", "log"]
+      ];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
         "tb-close",
         "tb-close-all",
@@ -170874,7 +171728,24 @@ ${css}
         // [alpha.69] สามแผงใหม่ทำงานระดับโปรเจกต์ทั้งหมด — ไม่ต้องมีฉากเปิดอยู่ก็กดได้
         "tb-codex",
         "tb-history",
-        "tb-record"
+        "tb-record",
+        // [alpha.80] **ปุ่มแผงทุกตัวต้องกดได้โดยไม่ต้องเปิดฉากก่อน**
+        // แผงพวกนี้อ่านจากไฟล์ทั้งผลงาน ไม่ได้ผูกกับฉากที่เปิดอยู่เลย —
+        // เดิมถูก disable ไปพร้อมปุ่มจัดรูปแบบ ทำให้ "เปิดโปรแกรมมาแล้วกดแผงบทพูดไม่ได้"
+        "tb-dialogue",
+        "tb-plugins",
+        "tb-timeline",
+        "tb-maps",
+        "tb-books",
+        "tb-network",
+        "tb-planner",
+        "tb-branch",
+        "tb-floorplan",
+        "tb-player",
+        "tb-gallery-board",
+        "tb-comments",
+        "tb-notes-panel",
+        "tb-log"
       ]);
       _smartJob = null;
       countJob = null;
@@ -171205,6 +172076,13 @@ ${css}
           togglePanel("plugins");
           refreshToolbar();
         });
+        for (const [btnId, pid] of TB_PANEL_BUTTONS) {
+          const b0 = $("#" + btnId);
+          if (b0) b0.onclick = () => {
+            togglePanel(pid);
+            refreshToolbar();
+          };
+        }
         $("#tb-panels").onclick = () => togglePanelDialog();
         $("#tb-panels").oncontextmenu = (e) => {
           e.preventDefault();

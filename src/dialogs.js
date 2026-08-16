@@ -29,37 +29,124 @@ import { iconHtml } from './icons.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
 import { NET_COLOR_GROUPS, NET_COLOR_DEFS, netColorDefsOf, normalizeNetColors,
          MOUSE_BUTTONS, resolveNetControls, controlsHint } from './network-theme.js';
+// [alpha.80] ชุดสีสำเร็จรูป — เลือกชุดเดียวได้สีทั้งผัง ไม่ต้องไล่ตั้ง 27 ช่อง
+import { allPresets, builtinPreset, presetLabel, applyPreset, matchPreset,
+         addPreset, removePreset, canRemove } from './net-presets.js';
 
 /**
  * สร้างช่องสีทั้งหมดของ Story Network จาก NET_COLOR_DEFS
  * เพิ่มสีใหม่ในนิยามกลาง = ช่องโผล่ในกล่องตั้งค่าเอง ไม่ต้องมาแก้ที่นี่อีก
+ *
+ * [alpha.80] ยกเครื่องหน้าตา — เดิมเป็น `k-row` เรียงลงมา 27 แถว ช่องสีลอยไม่ตรงคอลัมน์
+ * (ผู้ใช้ส่งภาพมาว่า "เรียงไม่สวยเลย") · ตอนนี้เป็น **กริดการ์ดสี** จัดคอลัมน์ตรงกันทุกแถว
+ * และมี **ชุดสีสำเร็จรูป** อยู่บนสุด — เลือกชุดเดียวจบ
  */
 function buildNetColorFields(box, s) {
   const host = box.querySelector('#st-netcol-body');
   if (!host) return;
   const saved = normalizeNetColors(s.netColors);
+  const work = { ...saved };                    // สำเนาทำงาน — เขียนกลับตอนกดบันทึกเท่านั้น
   host.replaceChildren();
+
+  // ───────── ชุดสีสำเร็จรูป ─────────
+  const pbox = el('div', 'k-netp');
+  const prow = el('div', 'k-netp-row');
+  prow.append(el('label', 'k-netp-label', t('ui.net.presetLabel')));
+  const psel = el('select', 'k-dlg-select k-netp-sel');
+  const fillPresets = () => {
+    psel.replaceChildren();
+    const o0 = el('option', null, t('ui.net.presetCustom')); o0.value = ''; psel.append(o0);
+    for (const p of allPresets(s.netPresets)) {
+      const o = el('option', null, presetLabel(p)); o.value = p.id; psel.append(o);
+    }
+    psel.value = matchPreset(work, s.netPresets);
+  };
+  const swatches = el('div', 'k-netp-swatch');
+  const drawSwatch = (id) => {
+    swatches.replaceChildren();
+    const p = allPresets(s.netPresets).find((x) => x.id === id);
+    if (!p) return;
+    for (const k of Object.keys(p.colors).slice(0, 12)) {
+      const dot = el('span', 'k-netp-dot');
+      dot.style.background = p.colors[k];
+      swatches.append(dot);
+    }
+  };
+  psel.onchange = () => {
+    const p = allPresets(s.netPresets).find((x) => x.id === psel.value);
+    if (!p) { drawSwatch(''); return; }
+    Object.assign(work, applyPreset(work, p));
+    paintFields();
+    drawSwatch(p.id);
+    setStatus(tf('ui.net.presetApplied', presetLabel(p)));
+  };
+  prow.append(psel);
+
+  const saveP = el('button', 'k-key-btn', t('ui.net.presetSave'));
+  saveP.onclick = async () => {
+    const name = await ask(t('ui.net.presetSaveAsk'), { value: '' });
+    if (!name) return;
+    s.netPresets = addPreset(s.netPresets, name, work);
+    fillPresets();
+    psel.value = matchPreset(work, s.netPresets);
+    setStatus(tf('ui.net.presetSaved', name));
+  };
+  const delP = el('button', 'k-reset-btn', t('ui.net.presetDel'));
+  delP.onclick = async () => {
+    const id = psel.value;
+    if (!canRemove(id)) { setStatus(t('ui.net.presetDelNo')); return; }
+    const p = allPresets(s.netPresets).find((x) => x.id === id);
+    if (!(await confirmBox(tf('ui.net.presetDelAsk', presetLabel(p)), t('ui.net.presetDel')))) return;
+    s.netPresets = removePreset(s.netPresets, id);
+    fillPresets();
+  };
+  prow.append(saveP, delP);
+  pbox.append(prow, swatches, el('div', 'k-hint', t('ui.net.presetHint')));
+  host.append(pbox);
+
+  // ───────── ช่องสีทั้งหมด (กริด) ─────────
+  const fields = [];
   for (const g of NET_COLOR_GROUPS) {
     const defs = netColorDefsOf(g.group);
     if (!defs.length) continue;
-    const h = el('div', 'k-set-sub k-full', g.label);
-    host.append(h);
+    host.append(el('div', 'k-set-sub k-full', g.label));
+    const grid = el('div', 'k-netc-grid');
     for (const d of defs) {
-      const row = el('div', 'k-row');
-      row.append(el('label', null, d.label));
+      const cell = el('div', 'k-netc-cell');
       const c = el('input'); c.type = 'color'; c.className = 'st-netcol';
       c.dataset.key = d.key;
-      c.value = saved[d.key] || d.def;
+      c.value = work[d.key] || d.def || '#888888';
+      const name = el('span', 'k-netc-name', d.label);
+      name.title = d.label;
       const txt = el('input'); txt.type = 'text'; txt.className = 'st-netcol-t';
-      txt.style.width = '84px'; txt.placeholder = d.cssVar ? t('ui.dlg.theme') : d.def;
-      txt.value = saved[d.key] || '';
+      txt.placeholder = d.cssVar ? t('ui.dlg.theme') : (d.def || '');
+      txt.value = work[d.key] || '';
       // พิมพ์เลขสีเองก็ได้ · เว้นว่าง = ใช้ค่าเริ่มต้น/ตามธีม
-      txt.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(txt.value)) c.value = txt.value; };
-      c.oninput = () => { txt.value = c.value; };
-      row.append(c, txt);
-      host.append(row);
+      txt.oninput = () => {
+        if (/^#[0-9a-f]{6}$/i.test(txt.value)) { c.value = txt.value; work[d.key] = txt.value; }
+        else if (!txt.value) delete work[d.key];
+        psel.value = matchPreset(work, s.netPresets);
+      };
+      c.oninput = () => { txt.value = c.value; work[d.key] = c.value;
+                          psel.value = matchPreset(work, s.netPresets); };
+      cell.append(c, name, txt);
+      grid.append(cell);
+      fields.push({ d, c, txt });
+    }
+    host.append(grid);
+  }
+  host.append(el('div', 'k-hint', t('ui.net.colorGroupHint')));
+
+  /** วาดค่าจากสำเนาทำงานลงช่องทั้งหมด (ใช้ตอนเลือกชุดสำเร็จรูป) */
+  function paintFields() {
+    for (const f of fields) {
+      f.c.value = work[f.d.key] || f.d.def || '#888888';
+      f.txt.value = work[f.d.key] || '';
     }
   }
+  fillPresets();
+  drawSwatch(psel.value);
+
   // ปุ่มเมาส์ + คำอธิบายที่ sync กับค่าที่เลือก
   const ctl = resolveNetControls(s.netControls);
   const fill = (sel, cur) => {

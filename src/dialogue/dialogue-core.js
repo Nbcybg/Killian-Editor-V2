@@ -35,7 +35,28 @@ export const SRC_SCRIPT = 'script';     // บทพูดของบทภา�
 export const WHERE_FRONT = 'front';
 export const WHERE_BACK = 'back';
 export const WHERE_TAG = 'tag';         // รหัส @ ของบทภาพยนตร์
+export const WHERE_TURN = 'turn';       // เดาจากการสลับกันพูด (ไม่มีชื่อทั้งสองฝั่ง)
 export const WHERE_NONE = 'none';
+
+/**
+ * [alpha.80] **สรรพนามไทยคือต้นตอที่ทำให้นิยายระบุคนพูดไม่ได้**
+ *
+ * บทภาพยนตร์มีรหัส `@ชื่อ` จึงชัดเจนเสมอ แต่นิยายไทยเขียนแบบนี้เป็นปกติ:
+ *
+ *     "สวัสดีครับ" โทระกล่าว          ← มีชื่อ (จับได้)
+ *     "มาสายอีกแล้ว" เธอตอบ           ← **สรรพนาม** ไม่มีชื่อ (จับไม่ได้)
+ *     "ขอโทษครับ" เขาก้มหน้า          ← **สรรพนาม** ไม่มีชื่อ (จับไม่ได้)
+ *
+ * ในบทสนทนาจริง สองบรรทัดล่างคือ "คนเดิมสองคนสลับกันพูด" — คนอ่านรู้เองจากบริบท
+ * ตัวจับจึงต้องรู้ด้วย ไม่งั้นบทพูดครึ่งเรื่องตกไปกอง "ไม่ระบุ" ทั้งที่อ่านออกว่าใครพูด
+ *
+ * กติกาที่ใช้ (อนุรักษ์นิยม — เดาเฉพาะตอนที่มั่นใจ):
+ *   · นับเฉพาะ "ช่วงบทสนทนา" = บทพูดที่ติดกัน (คั่นด้วยบรรยายได้ไม่เกิน GAP บรรทัด)
+ *   · ในช่วงนั้นต้องมีคนที่ **ระบุชื่อชัดเจนแล้ว 2 คน** เท่านั้น
+ *   · บทพูดที่ไม่มีชื่อ → ยกให้ "คนที่ไม่ใช่คนพูดก่อนหน้า" (สลับกันพูดตามธรรมเนียม)
+ * ผลลัพธ์ติดธง `guessed:true` เสมอ — หน้าจอแสดงต่างจากที่รู้ชื่อแน่ ๆ และกรองออกได้
+ */
+export const TURN_GAP = 6;              // บรรยายคั่นได้กี่บรรทัดถึงยังนับเป็นบทสนทนาเดียวกัน
 
 // ── ตัดคำ/ตัวคั่นที่ไม่ใช่ชื่อ ───────────────────────────────────────
 // ใช้ตัดหางประโยคก่อนหาชื่อ เช่น `สมชายพูดว่า "…"` → prefix = `สมชายพูดว่า`
@@ -126,10 +147,18 @@ export function isScriptCode(line) {
  * @param {string[]} [opts.names] ชื่อตัวละครที่รู้จัก (Wiki + ชื่อที่พิมพ์ในบท)
  * @param {boolean} [opts.script] ไฟล์นี้เป็นบทภาพยนตร์ (เปิดโหมดอ่านรหัส @)
  * @param {boolean} [opts.backTag] ยอมให้หาชื่อ "ด้านหลัง" เครื่องหมายปิดด้วย (ค่าเริ่มต้น: ใช่)
+ * @param {boolean} [opts.guessTurns] เดาคนพูดจากการสลับกันพูดในบทสนทนา (ค่าเริ่มต้น: ใช่)
  * @returns {Array<{line:number, open:number, close:number, text:string, speaker:string,
- *                  where:string, source:string, closed:boolean, pair:[string,string]}>}
+ *                  where:string, source:string, closed:boolean, guessed:boolean,
+ *                  pair:[string,string]}>}
  */
 export function extractDialogue(text, opts = {}) {
+  const rows = extractRaw(text, opts);
+  return opts.guessTurns === false ? rows : guessTurns(rows);
+}
+
+/** ตัดบทพูดแบบตรงไปตรงมา (ยังไม่เดาการสลับกันพูด) */
+export function extractRaw(text, opts = {}) {
   const names = Array.isArray(opts.names) ? opts.names : [];
   const script = opts.script !== false;          // อ่านรหัส @ เสมอ เว้นแต่สั่งปิด
   const backTag = opts.backTag !== false;
@@ -156,7 +185,7 @@ export function extractDialogue(text, opts = {}) {
     if (script && afterChar && cur && !quotes.length) {
       out.push({ line: ln, open: 0, close: line.length, text: line,
                  speaker: cur, where: WHERE_TAG, source: SRC_SCRIPT,
-                 closed: true, pair: ['', ''] });
+                 closed: true, guessed: false, pair: ['', ''] });
       afterChar = false;
       continue;
     }
@@ -173,13 +202,62 @@ export function extractDialogue(text, opts = {}) {
         if (back) { speaker = back; where = WHERE_BACK; }
       }
       out.push({ line: ln, open: q.open, close: q.close, text: q.text,
-                 speaker, where,
+                 speaker, where, guessed: false,
                  source: script && cur ? SRC_SCRIPT : SRC_PROSE,
                  closed: q.closed, pair: q.pair });
     }
     if (quotes.length) afterChar = false;
   }
   return out;
+}
+
+/**
+ * [alpha.80] เดาคนพูดของบทพูดที่ไม่มีชื่อทั้งสองฝั่ง จาก "การสลับกันพูด"
+ *
+ * ทำเฉพาะในนิยาย (บทภาพยนตร์รู้จากรหัส `@` อยู่แล้ว) และเฉพาะช่วงที่มั่นใจ:
+ * ช่วงบทสนทนาที่มีคน **ระบุชื่อชัดเจน 2 คนพอดี** → บทพูดที่ไม่มีชื่อยกให้คนที่ไม่ใช่คนพูดก่อนหน้า
+ *
+ * ที่จงใจ **ไม่** ทำ: ช่วงที่มีคนพูด 3 คนขึ้นไป (สลับไม่เป็นแบบแผน) และช่วงที่รู้ชื่อแค่คนเดียว
+ * (จะกลายเป็นยกทุกบรรทัดให้คนเดียวซึ่งผิดแน่ ๆ) — ปล่อยเป็น "ไม่ระบุ" ดีกว่าเดาผิด
+ *
+ * @param {Array} rows ผลจาก extractRaw (ต้องเรียงตามบรรทัด)
+ * @returns {Array} แถวชุดใหม่ (ไม่แก้ของเดิม)
+ */
+export function guessTurns(rows) {
+  const list = (rows || []).map((r) => ({ ...r }));
+  // ตัดเป็นช่วงบทสนทนา: ห่างกันเกิน TURN_GAP บรรทัด = คนละวง
+  let i = 0;
+  while (i < list.length) {
+    let j = i;
+    while (j + 1 < list.length
+           && (list[j + 1].line - list[j].line) <= TURN_GAP) j++;
+    resolveRun(list.slice(i, j + 1));
+    i = j + 1;
+  }
+  return list;
+}
+
+function resolveRun(run) {
+  // เฉพาะนิยาย — บทภาพยนตร์มีรหัสบอกอยู่แล้ว ไม่ต้องเดา
+  if (run.some((r) => r.source === SRC_SCRIPT)) return;
+  const named = [...new Set(run.filter((r) => r.speaker).map((r) => r.speaker))];
+  if (named.length !== 2) return;                 // เดาได้เฉพาะบทสนทนาสองคน
+  let prev = '';
+  for (const r of run) {
+    if (r.speaker) { prev = r.speaker; continue; }
+    if (!prev) continue;                          // ยังไม่มีใครพูดก่อนหน้า = เดาไม่ได้
+    const other = named.find((n) => n !== prev);
+    if (!other) continue;
+    r.speaker = other;
+    r.where = WHERE_TURN;
+    r.guessed = true;
+    prev = other;
+  }
+}
+
+/** นับว่าเดาไปกี่แถว (โชว์บนแผงให้ผู้ใช้รู้ว่าอะไรแน่ อะไรเดา) */
+export function guessedCount(rows) {
+  return (rows || []).filter((r) => r && r.guessed).length;
 }
 
 /**

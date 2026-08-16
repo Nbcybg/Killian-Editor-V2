@@ -80,6 +80,8 @@ function buildBar(host, counts, app) {
       await kapi.revealInOS(d);
     } catch (e) { setStatus(tt('ui.plug.errNoDir') + ' ' + (e.message || e)); }
   }));
+  btns.append(mkBtn(tt('ui.plug.install'), tt('ui.plug.installHint'),
+                    () => installFlow(host, app)));
   btns.append(mkBtn(tt('ui.plug.makeSample'), tt('ui.plug.makeSampleHint'),
                     () => makeSample(host, app)));
   const apiBtn = mkBtn(tt('ui.plug.apiDoc'), tt('ui.plug.apiDocHint'), async () => {
@@ -161,14 +163,108 @@ function cardFor(p, host, app) {
   }));
   acts.append(mkBtn(tt('ui.plug.openFolder'), '', async () => {
     try {
-      const base = p.origin === PC.ORIGIN_PROJECT
-        ? await kapi.join(state.root, 'Plugins')
-        : await kapi.globalPluginsDir();
-      await kapi.revealInOS(await kapi.join(base, p.folder || p.name));
+      await kapi.revealInOS(await kapi.join(await baseDirOf(p), p.folder || p.name));
     } catch (e) { setStatus(tt('ui.plug.errNoDir') + ' ' + (e.message || e)); }
   }));
+  // ── ถอนการติดตั้ง — ลบโฟลเดอร์จริง จึงต้องถามก่อนเสมอ ──
+  const del = mkBtn(tt('ui.plug.uninstall'), tt('ui.plug.uninstallHint'), () => uninstall(p, host, app));
+  del.classList.add('k-plug-danger');
+  acts.append(del);
   card.append(acts);
   return card;
+}
+
+/** โฟลเดอร์ที่ปลั๊กอินตัวนี้อยู่ (ของผู้ใช้ หรือของผลงาน) */
+async function baseDirOf(p) {
+  return p.origin === PC.ORIGIN_PROJECT
+    ? kapi.join(state.root, 'Plugins')
+    : kapi.globalPluginsDir();
+}
+
+/** ถอนการติดตั้ง */
+export async function uninstall(p, host, appMod) {
+  const app = appMod || await import('../app.js');
+  const { confirmBox } = await import('../ui.js');
+  if (!(await confirmBox(ttf('ui.plug.uninstallAsk', p.name), tt('ui.plug.uninstall')))) return false;
+  try {
+    const base = await baseDirOf(p);
+    const r = await kapi.pluginUninstall(base, p.folder || p.name);
+    if (!r || !r.ok) { setStatus(tt('ui.plug.errUninstall') + ' ' + ((r && r.reason) || '')); return false; }
+    // ถอนแล้วต้องล้างธง "ปิดไว้" ด้วย ไม่งั้นติดตั้งชื่อเดิมใหม่แล้วมันถูกปิดตั้งแต่วินาทีแรก
+    app.setPluginDisabled(p.name, false);
+    await app.reloadPlugins();
+    if (host) await renderPluginPanel(host);
+    setStatus(ttf('ui.plug.uninstalled', p.name));
+    return true;
+  } catch (e) {
+    log('error', tt('ui.plug.errUninstall'), e);
+    setStatus(tt('ui.plug.errUninstall') + ' ' + (e.message || e));
+    return false;
+  }
+}
+
+/**
+ * ติดตั้งจากลิงก์ GitHub
+ *
+ * ลำดับ: ถามลิงก์ → แปลงเป็น URL ซิป → โหลด → หาโฟลเดอร์ปลั๊กอินในซิป →
+ * **ถามยืนยันพร้อมบอกว่าจะเขียนอะไรลงเครื่องกี่ไฟล์** → แตกไฟล์ → โหลดปลั๊กอินใหม่
+ *
+ * ที่ต้องถามยืนยัน เพราะปลั๊กอินรันโค้ดได้เต็มที่ในโปรแกรม — ผู้ใช้ต้องรู้ตัวว่ากำลังเชื่อคนเขียน
+ */
+export async function installFlow(host, appMod) {
+  const app = appMod || await import('../app.js');
+  const { ask, confirmBox } = await import('../ui.js');
+  const PI = await import('./plugin-install.js');
+
+  const url = await ask(tt('ui.plug.installAsk'), { placeholder: 'https://github.com/user/repo' });
+  if (!url) return false;
+  const src = PI.parseSource(url);
+  if (!src.ok) { setStatus(tt(src.reason)); return false; }
+
+  setStatus(tt('ui.plug.installFetching'));
+  let got = null;
+  try { got = await kapi.pluginFetchZip(PI.zipCandidates(src)); }
+  catch (e) { setStatus(tt('ui.plug.errFetch') + ' ' + (e.message || e)); return false; }
+  if (!got || !got.ok) {
+    setStatus(got && got.tooBig ? tt('ui.plug.errTooBig')
+                                : ttf('ui.plug.errFetchStatus', (got && got.status) || 0));
+    return false;
+  }
+
+  const root = PI.pickPluginRoot(got.names, src.sub);
+  if (!root.ok) { setStatus(tt(root.reason)); return false; }
+  const files = PI.filesToInstall(got.names, root.root);
+  if (!files.length) { setStatus(tt('ui.plug.errNoFiles')); return false; }
+
+  // ชื่อโฟลเดอร์ปลายทาง = ชื่อโฟลเดอร์ในซิป (หรือชื่อ repo ถ้าอยู่ราก)
+  const leaf = (root.root || '').split('/').pop() || src.repo || 'plugin';
+  const folder = PC.safePluginFolder(leaf.replace(/-(main|master)$/i, ''));
+  const sum = PI.installSummary(files);
+
+  const okGo = await confirmBox(
+    ttf('ui.plug.installConfirm', folder, sum.count) + '\n\n' + tt(PI.INSTALL_WARN_KEY),
+    tt('ui.plug.install'));
+  if (!okGo) return false;
+
+  try {
+    const base = await kapi.globalPluginsDir();
+    if (!base) { setStatus(tt('ui.plug.errNoDir')); return false; }
+    const dir = await kapi.join(base, folder);
+    if (await kapi.exists(dir)) {
+      if (!(await confirmBox(ttf('ui.plug.installOverwrite', folder), tt('ui.plug.install')))) return false;
+    }
+    const r = await kapi.pluginExtract(got.id, dir, files);
+    if (!r || !r.ok) { setStatus(tt('ui.plug.errExtract')); return false; }
+    app.setPluginDisabled(folder, false);       // เผื่อชื่อเดิมเคยถูกปิดไว้
+    await app.reloadPlugins();
+    if (host) await renderPluginPanel(host);
+    setStatus(ttf('ui.plug.installed', folder, r.written));
+    return true;
+  } catch (e) {
+    log('error', tt('ui.plug.errExtract'), e);
+    setStatus(tt('ui.plug.errExtract') + ' ' + (e.message || e));
+    return false;
+  }
 }
 
 function statusLabel(st) {

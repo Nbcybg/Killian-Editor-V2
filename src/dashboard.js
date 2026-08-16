@@ -241,14 +241,14 @@ export async function renderDashboard(pane) {
     wrap.append(d);
   }
 
-  // ───────── [alpha.62 บั๊ก 15] ศูนย์รวมย้ายมาอยู่ในแดชบอร์ด ─────────
-  // ทั้งสองหน้าตอบคำถามเดียวกัน ("ตอนนี้เรื่องเป็นยังไง") และนับสถิติจากไฟล์ชุดเดียวกัน
-  // → เดิมต้องเปิดสองที่ แล้วตัวเลขไม่ตรงกันเพราะสแกนคนละรอบ · ตอนนี้ต่อท้ายในแผงเดียว
+  // ───────── [alpha.80] "สิ่งที่ควรดู" — Backlinks + สิ่งที่ต้องอัปเดต ─────────
+  // เดิมเป็นแผง "ศูนย์รวม" ที่มีสถิติ ฉาก/คำ/Wiki ซ้ำกับด้านบนของแดชบอร์ดเป๊ะ ๆ
+  // (นับคนละรอบด้วย ตัวเลขจึงไม่ตรงกันเป็นประจำ) → ตัดสถิติทิ้ง เหลือเฉพาะสองส่วนที่ไม่ซ้ำใคร
   const centHost = el('div', 'dash-cent');
   wrap.append(centHost);
   try {
-    const { renderCentralize } = await import('./centralize-ui.js');
-    await renderCentralize(centHost, { embedded: true });
+    const { renderReview } = await import('./dash-review.js');
+    await renderReview(centHost);
   } catch (e) {
     centHost.append(el('div', 'dim', t('ui.dash.loadPartHubNot')));
   }

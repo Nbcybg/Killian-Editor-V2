@@ -3991,3 +3991,36 @@ body.paper-mode .k-manual-page-break::after { background:var(--paper); color:#a5
 .k-plug-api-sig { font-family:ui-monospace, Consolas, monospace; color:var(--accent-hi);
   font-size:calc(11.5px * var(--ui-scale, 1)); word-break:break-word; }
 .k-plug-api-desc { font-size:calc(11px * var(--ui-scale, 1)); line-height:1.5; }
+
+/* ═══════════ [alpha.80] ตั้งค่า Story Network — ชุดสีสำเร็จรูป + กริดช่องสี ═══════════ */
+/* เดิมเป็น .k-row เรียงลงมา 27 แถว ช่องสีลอยไม่ตรงคอลัมน์ (ผู้ใช้ส่งภาพมาว่าเรียงไม่สวย)
+   ตอนนี้เป็นกริดการ์ด: [ช่องสี][ชื่อ][รหัสสี] ตรงคอลัมน์กันทุกแถว */
+.k-netp { border:1px solid var(--border); border-radius:10px; padding:10px 12px;
+  margin-bottom:14px; background:var(--card-bg, rgba(255,255,255,.03)); }
+.k-netp-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.k-netp-label { font-weight:600; font-size:calc(12.5px * var(--ui-scale, 1)); }
+.k-netp-sel { flex:1; min-width:150px; max-width:280px; }
+.k-netp-swatch { display:flex; gap:3px; flex-wrap:wrap; margin:8px 0 4px; }
+.k-netp-dot { width:18px; height:18px; border-radius:4px; border:1px solid var(--border); }
+
+.k-netc-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+  gap:6px 14px; margin:4px 0 12px; }
+.k-netc-cell { display:flex; align-items:center; gap:8px; padding:3px 0; min-width:0; }
+.k-netc-name { flex:1; min-width:0; font-size:calc(12px * var(--ui-scale, 1));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.k-netc-cell input[type=color] { flex:0 0 auto; width:30px; height:24px; padding:0;
+  border:1px solid var(--border); border-radius:5px; background:none; cursor:pointer; }
+.k-netc-cell .st-netcol-t { flex:0 0 78px; width:78px; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 6px;
+  font-family:ui-monospace, Consolas, monospace; font-size:calc(11px * var(--ui-scale, 1)); }
+.k-netc-cell .st-netcol-t:focus { outline:none; border-color:var(--accent-hi); }
+
+/* ปุ่มอันตรายบนการ์ดปลั๊กอิน (ถอนการติดตั้ง) */
+.k-plug-btn.k-plug-danger { color:#e06c50; border-color:#7a3a30; }
+.k-plug-btn.k-plug-danger:hover { background:#e06c50; border-color:#e06c50; color:#fff; }
+
+/* แถวบทพูดที่ "เดา" คนพูดจากการสลับกันพูด — ต้องดูออกว่าไม่ใช่ของแน่ */
+.k-dlgp-item-guess .k-dlgp-who { opacity:.75; font-style:italic; }
+.k-dlgp-item-guess .k-dlgp-who::after { content:'?'; margin-left:2px; opacity:.7; }
+.k-dlgp-sure { display:flex; align-items:center; gap:5px; font-size:calc(11px * var(--ui-scale, 1));
+  color:var(--dim); white-space:nowrap; cursor:pointer; }

@@ -58,7 +58,8 @@ const NAMES = ['สมชาย', 'สมหญิง', 'สม', 'กมล', '
     '',
     'จบฉาก',
   ].join('\n');
-  const rows = D.extractDialogue(md, { names: NAMES });
+  // ปิดการเดาการสลับกันพูด — บล็อกนี้ตรวจ "การจับชื่อจากข้อความ" ล้วน ๆ
+  const rows = D.extractDialogue(md, { names: NAMES, guessTurns: false });
   check('ได้ 3 บทพูด', rows.length === 3, rows.length);
   check('ชื่อหน้าเครื่องหมาย = คนพูด',
         rows[0].speaker === 'สมชาย' && rows[0].where === D.WHERE_FRONT, JSON.stringify(rows[0]));
@@ -71,8 +72,12 @@ const NAMES = ['สมชาย', 'สมหญิง', 'สม', 'กมล', '
         'สมชายพูดว่า "สวัสดีตอนเช้า"'.indexOf('"') === rows[0].open);
   check('ที่มา = นิยาย', rows.every((r) => r.source === D.SRC_PROSE));
 
-  const off = D.extractDialogue(md, { names: NAMES, backTag: false });
+  const off = D.extractDialogue(md, { names: NAMES, backTag: false, guessTurns: false });
   check('ปิดการหาชื่อด้านหลังได้', off[1].speaker === '');
+  // เปิดการเดา (ค่าเริ่มต้น) → บรรทัดที่ 3 ได้คนพูดจากการสลับ พร้อมติดธงว่าเดา
+  const on = D.extractDialogue(md, { names: NAMES });
+  check('เปิดการเดา: บรรทัดที่ไม่มีชื่อได้คนพูดจากการสลับ',
+        on[2].speaker === 'สมชาย' && on[2].guessed === true, JSON.stringify(on[2]));
 }
 
 // ═══════════ extractDialogue — บทภาพยนตร์ ═══════════
@@ -105,6 +110,62 @@ const NAMES = ['สมชาย', 'สมหญิง', 'สม', 'กมล', '
   const r2 = D.extractDialogue(sp2, { names: NAMES });
   check('มีเครื่องหมายคำพูดใต้ @ → ยังเป็นของตัวละครนั้น',
         r2.length === 1 && r2[0].speaker === 'กมล' && r2[0].text === 'เอาน่า');
+}
+
+// ═══════════ [alpha.80] เดาคนพูดจากการสลับกันพูด (นิยายไทยใช้สรรพนาม) ═══════════
+{
+  const md = [
+    '"สวัสดีครับ" โทระกล่าวทักทาย',
+    '',
+    'สมหญิงเงยหน้าขึ้นมอง แล้วตอบว่า "มาสายอีกแล้วนะ"',
+    '',
+    '"ขอโทษครับ ผมติดฝน" เขาตอบ',
+    '',
+    '"ไม่เป็นไรหรอก" เธอยิ้ม',
+  ].join('\n');
+  const rows = D.extractDialogue(md, { names: NAMES.concat(['โทระ']) });
+  check('บทสนทนาสองคน: ระบุคนพูดได้ครบทุกบรรทัด',
+        rows.length === 4 && rows.every((r) => r.speaker),
+        JSON.stringify(rows.map((r) => r.speaker + '|' + r.where)));
+  check('สองบรรทัดแรกรู้จากชื่อจริง (ไม่ใช่เดา)',
+        rows[0].guessed === false && rows[1].guessed === false);
+  check('บรรทัดที่ใช้สรรพนาม = สลับกลับไปคนแรก', rows[2].speaker === 'โทระ'
+        && rows[2].where === D.WHERE_TURN && rows[2].guessed === true, JSON.stringify(rows[2]));
+  check('บรรทัดถัดไปสลับอีกครั้ง', rows[3].speaker === 'สมหญิง' && rows[3].guessed === true);
+  check('guessedCount นับเฉพาะที่เดา', D.guessedCount(rows) === 2, D.guessedCount(rows));
+  check('ปิดการเดาได้',
+        D.extractDialogue(md, { names: NAMES.concat(['โทระ']), guessTurns: false })
+          .filter((r) => r.speaker).length === 2);
+
+  // มีคนพูดสามคน = สลับไม่เป็นแบบแผน → ห้ามเดา
+  const three = ['"ก" สมชายพูด', '"ข" สมหญิงพูด', '"ค" กมลพูด', '"ง" เขาพูด'].join('\n');
+  const r3 = D.extractDialogue(three, { names: NAMES });
+  check('บทสนทนาสามคนขึ้นไป → ไม่เดา', r3[3].speaker === '' && r3[3].guessed === false,
+        JSON.stringify(r3.map((r) => r.speaker)));
+
+  // รู้ชื่อคนเดียว → เดาไม่ได้ (ไม่งั้นยกทุกบรรทัดให้คนเดียวซึ่งผิดแน่)
+  const one = ['"ก" สมชายพูด', '"ข" เขาตอบ', '"ค" เธอตอบ'].join('\n');
+  const r1 = D.extractDialogue(one, { names: NAMES });
+  check('รู้ชื่อแค่คนเดียว → ไม่เดา', r1.filter((r) => r.guessed).length === 0,
+        JSON.stringify(r1.map((r) => r.speaker)));
+
+  // ห่างกันมาก = คนละวงสนทนา
+  const far = ['"ก" สมชายพูด', '"ข" สมหญิงพูด'].concat(Array(10).fill('บรรยายยาว ๆ'))
+    .concat(['"ค" เขาพูด']).join('\n');
+  const rf = D.extractDialogue(far, { names: NAMES });
+  check('ห่างเกิน TURN_GAP = คนละวง ไม่ลากคนเดิมมาเดา',
+        rf[2].speaker === '', JSON.stringify(rf.map((r) => r.speaker)));
+
+  // บทภาพยนตร์ไม่ต้องเดา (มีรหัส @ อยู่แล้ว)
+  const sp = ['@สมชาย', 'ประโยคหนึ่ง', '', '@สมหญิง', 'ประโยคสอง'].join('\n');
+  check('บทภาพยนตร์: ไม่มีการเดาเลย',
+        D.extractDialogue(sp, { names: NAMES }).every((r) => !r.guessed));
+  check('guessTurns รับรายการว่างได้', D.guessTurns([]).length === 0 && D.guessTurns(null).length === 0);
+  check('guessTurns ไม่แก้ของเดิม', (() => {
+    const src = D.extractRaw(md, { names: NAMES.concat(['โทระ']) });
+    D.guessTurns(src);
+    return src[2].speaker === '';
+  })());
 }
 
 // ═══════════ replaceDialogue — เขียนกลับ ═══════════

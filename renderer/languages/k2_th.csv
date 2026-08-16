@@ -2290,6 +2290,7 @@ ui.dialogue.errWrite,เขียนไฟล์ไม่สำเร็จ
 ui.dialogue.everyone,ทุกคน · {0}
 ui.dialogue.exportCsv,ส่งออก CSV
 ui.dialogue.exported,ส่งออกแล้ว:
+ui.dialogue.guessedN,เดา {0}
 ui.dialogue.lineNo,บรรทัด {0}
 ui.dialogue.noMatch,ไม่มีบทพูดที่ตรงกับตัวกรอง
 ui.dialogue.noneFound,ยังไม่พบบทพูดในผลงานนี้ — บทพูดคือข้อความในเครื่องหมายคำพูด หรือบรรทัดใต้ @ชื่อตัวละคร
@@ -2301,6 +2302,8 @@ ui.dialogue.scanning,กำลังกวาดบทพูดทั้งผ�
 ui.dialogue.searchPh,ค้นในบทพูด · ชื่อคนพูด · ชื่อฉาก
 ui.dialogue.srcProse,นิยาย (เครื่องหมายคำพูด)
 ui.dialogue.srcScript,บทภาพยนตร์
+ui.dialogue.sureOnly,เฉพาะที่แน่ใจ
+ui.dialogue.sureOnlyHint,ซ่อนแถวที่เดาคนพูดจากการสลับกันพูด — เหลือเฉพาะที่มีชื่อระบุจริง
 ui.dialogue.unclosedHint,เครื่องหมายคำพูดยังไม่ปิดในบรรทัดนี้
 ui.dialogue.unknown,ไม่ระบุ
 ui.dialogue.warnNames,อ่านรายชื่อตัวละครไม่ได้
@@ -2308,6 +2311,7 @@ ui.dialogue.whereBack,รู้ชื่อจากข้อความด้�
 ui.dialogue.whereFront,รู้ชื่อจากข้อความด้านหน้าเครื่องหมายคำพูด
 ui.dialogue.whereNone,ไม่พบชื่อคนพูดทั้งด้านหน้าและด้านหลัง
 ui.dialogue.whereTag,รู้ชื่อจากรหัส @ตัวละคร ของบทภาพยนตร์
+ui.dialogue.whereTurn,เดาจากการสลับกันพูดในบทสนทนา (ไม่มีชื่อทั้งสองฝั่ง)
 ui.dirty.dirtyRegistryProviderMust,dirty-registry: provider ต้องมี list()
 ui.dirty.notHasItemSave,ไม่มีตัวบันทึก
 ui.dirty.saveNotOk,บันทึกไม่สำเร็จ
@@ -3357,6 +3361,7 @@ ui.net.clickNodeOpenPage,คลิกโหนด = เปิดหน้าน�
 ui.net.clickNodeOpenPage2,คลิกโหนด = เปิดหน้านั้นไปแก้ไข
 ui.net.clickOpen,ดับเบิลคลิก = เปิด
 ui.net.clickRight,คลิกขวา
+ui.net.colorGroupHint,คลิกช่องสีเพื่อเลือก หรือพิมพ์รหัสสีเอง · เว้นว่าง = ใช้ค่าเริ่มต้น
 ui.net.colorLineLinkOther,สีเส้นเชื่อมอื่น ๆ
 ui.net.colorLineTypeRelation,สีเส้น (ตามประเภทความสัมพันธ์)
 ui.net.colorNodeCat,สีโหนด (ตามหมวด)
@@ -3387,6 +3392,16 @@ ui.net.open2,📖 เปิด
 ui.net.openBook,📂 เปิดเล่ม
 ui.net.openChapter,📂 เปิดบท
 ui.net.openModeDDone,(เปิดโหมด 3D แล้วลาก{0} = หมุนมุมมอง)
+ui.net.presetApplied,"ใช้ชุดสี ""{0}"" แล้ว"
+ui.net.presetCustom,— ตั้งเอง —
+ui.net.presetDel,ลบชุดนี้
+ui.net.presetDelAsk,"ลบชุดสี ""{0}"""
+ui.net.presetDelNo,ชุดที่มากับโปรแกรมลบไม่ได้
+ui.net.presetHint,"เลือกชุดเดียวได้สีทั้งผังทันที — แก้ทีละช่องต่อได้ แล้วกด ""บันทึกเป็นชุดใหม่"""
+ui.net.presetLabel,ชุดสีสำเร็จรูป
+ui.net.presetSave,บันทึกเป็นชุดใหม่
+ui.net.presetSaveAsk,ตั้งชื่อชุดสีของคุณ
+ui.net.presetSaved,"บันทึกชุดสี ""{0}"" แล้ว"
 ui.net.relation,🔗 ความสัมพันธ์ (
 ui.net.repeat,📋 ทำซ้ำ
 ui.net.reset,รีเซ็ต
@@ -3412,6 +3427,11 @@ ui.net.unsetPinNode,📌 ปลดหมุดโหนดนี้
 ui.net.wheelZoom,ล้อ = ซูม
 ui.net.xYZ,แกนบอกทิศ (X/Y/Z)
 ui.net.zoom, · ซูม {0}%
+ui.netPreset.cable,สายไฟ (Cable)
+ui.netPreset.default,ค่าเดิมของโปรแกรม
+ui.netPreset.flower,ดอกไม้ (Flower)
+ui.netPreset.rainbow,สีรุ้ง (Rainbow)
+ui.netPreset.xrite,แผ่นเทียบสี (X-Rite)
 ui.noDraftToExport,ยังไม่มีฉบับร่างให้ส่งออก
 ui.notes.backStuck,เอากลับมาเป็นค้างอยู่
 ui.notes.clearNoteAllDone,ล้างโน้ตทั้งหมดแล้ว
@@ -4121,12 +4141,31 @@ ui.plug.enable,เปิดใช้
 ui.plug.enabled,เปิดใช้ {0} แล้ว
 ui.plug.errAutoOff,ถูกปิดอัตโนมัติเพื่อไม่ให้โปรแกรมเปิดไม่ขึ้น — แก้ไฟล์แล้วกดเปิดใช้
 ui.plug.errBadEntry,entry ชี้ออกนอกโฟลเดอร์ปลั๊กอิน
+ui.plug.errBadUrl,อ่านลิงก์ไม่ออก — ใช้รูปแบบ https://github.com/user/repo
 ui.plug.errExists,มีโฟลเดอร์ชื่อ {0} อยู่แล้ว
+ui.plug.errExtract,แตกไฟล์ปลั๊กอินไม่สำเร็จ
+ui.plug.errFetch,โหลดปลั๊กอินไม่สำเร็จ
+ui.plug.errFetchStatus,โหลดไม่สำเร็จ (รหัส {0}) — เช็คลิงก์และชื่อ branch
 ui.plug.errLoad,โหลดไม่สำเร็จ:
 ui.plug.errMakeSample,สร้างปลั๊กอินตัวอย่างไม่สำเร็จ
 ui.plug.errNoDir,เปิดโฟลเดอร์ไม่ได้
+ui.plug.errNoFiles,ไม่มีไฟล์ให้ติดตั้ง
+ui.plug.errNoManifest,ในซิปไม่มีไฟล์ plugin.json — อาจไม่ใช่ปลั๊กอินของ Killian
 ui.plug.errNoName,ไม่มีชื่อใน plugin.json และชื่อโฟลเดอร์ก็ว่าง
+ui.plug.errNotZip,รองรับเฉพาะลิงก์ GitHub หรือไฟล์ .zip
+ui.plug.errNoUrl,ยังไม่ได้ใส่ลิงก์
 ui.plug.errRun,รันคำสั่งของปลั๊กอินไม่สำเร็จ
+ui.plug.errSubNotFound,ไม่เจอโฟลเดอร์ย่อยที่ระบุในลิงก์
+ui.plug.errTooBig,ไฟล์ใหญ่เกินไป (เกิน 25MB) — ปลั๊กอินไม่ควรใหญ่ขนาดนี้
+ui.plug.errUninstall,ถอนปลั๊กอินไม่สำเร็จ
+ui.plug.install,ติดตั้งจากลิงก์
+ui.plug.installAsk,ลิงก์ GitHub ของปลั๊กอิน (หรือ user/repo หรือลิงก์ไฟล์ .zip)
+ui.plug.installConfirm,"ติดตั้งลงโฟลเดอร์ ""{0}"" — เขียนไฟล์ {1} ไฟล์"
+ui.plug.installed,ติดตั้ง {0} แล้ว ({1} ไฟล์)
+ui.plug.installFetching,กำลังโหลดปลั๊กอิน…
+ui.plug.installHint,วางลิงก์ GitHub ของปลั๊กอิน แล้วโปรแกรมโหลดมาติดตั้งให้
+ui.plug.installOverwrite,"มีโฟลเดอร์ ""{0}"" อยู่แล้ว — เขียนทับไหม"
+ui.plug.installWarn,⚠ ปลั๊กอินรันโค้ดได้เต็มที่ในโปรแกรม (อ่าน-เขียนไฟล์ในผลงานได้) — ติดตั้งเฉพาะจากคนที่เชื่อถือได้
 ui.plug.makeSample,สร้างตัวอย่าง
 ui.plug.makeSampleHint,สร้างปลั๊กอินที่ทำงานได้จริงให้ดูเป็นแบบ — เปิดไฟล์ไปแก้ต่อได้เลย
 ui.plug.minVer,ต้องใช้รุ่นอย่างน้อย
@@ -4150,6 +4189,10 @@ ui.plug.stOk,ทำงานอยู่
 ui.plug.stOld,รุ่นไม่พอ
 ui.plug.summary,ทั้งหมด {0} · ทำงานอยู่ {1}
 ui.plug.summaryErr, · มีปัญหา {0}
+ui.plug.uninstall,ถอนออก
+ui.plug.uninstallAsk,"ถอน ""{0}"" ออก — ลบโฟลเดอร์ทิ้งถาวร"
+ui.plug.uninstalled,ถอน {0} ออกแล้ว
+ui.plug.uninstallHint,ลบโฟลเดอร์ของปลั๊กอินนี้ออกจากเครื่อง
 ui.plugin.failed,ปลั๊กอินพัง — ปิดไว้ชั่วคราว
 ui.plugin.loaded,โหลดปลั๊กอิน
 ui.plugin.needsNewer,ต้องใช้ Killian รุ่นใหม่กว่านี้
@@ -4627,6 +4670,7 @@ ui.tbcfg.grpExt,ส่วนเสริม
 ui.tbcfg.grpFind,ค้นหา
 ui.tbcfg.grpInsert,แทรก
 ui.tbcfg.grpPanels,แผง
+ui.tbcfg.grpStory,เครื่องมือเล่าเรื่อง
 ui.tbcfg.grpStyle,รูปแบบข้อความ
 ui.tbcfg.grpTabs,แท็บและหน้าจอ
 ui.tbcfg.grpView,มุมมองและโหมด

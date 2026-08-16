@@ -40,6 +40,11 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.60r3 ข้อ 7] ปลั๊กอินระดับผู้ใช้ (%APPDATA%/Killian2/Plugins/) — คืน path ให้ใช้ fs:* ต่อ
   globalPluginsDir: call('plugins:globalDir'),
   listGlobalPlugins: call('plugins:listGlobal'),
+  // [alpha.80] ติดตั้ง/ถอนปลั๊กอินจากลิงก์ GitHub — โหลด+แตกซิปต้องทำใน main
+  // (http:fetch คืนเป็นข้อความล้วน ใช้กับไฟล์ไบนารีไม่ได้)
+  pluginFetchZip: call('plugins:fetchZip'),
+  pluginExtract: call('plugins:extract'),
+  pluginUninstall: call('plugins:uninstall'),
   readGlobalSettings: call('settings:readGlobal'),    // [alpha.60 ข้อ 94] อ่าน global settings จาก userData
   writeGlobalSettings: call('settings:writeGlobal'),  // [alpha.60 ข้อ 94] เขียน global settings ไป userData
   print: call('win:print'), printToPdf: call('win:printToPdf'),

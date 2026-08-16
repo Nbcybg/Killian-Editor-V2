@@ -20,12 +20,34 @@ import * as DC from './dialogue-core.js';
 
 const S = () => (state._dialogue || (state._dialogue = {
   rows: null, names: [], scenes: [],
-  f: { section: '', chapter: '', scene: '', speakers: [], q: '', source: '' },
+  f: { section: '', chapter: '', scene: '', speakers: [], q: '', source: '', sureOnly: false },
   editing: null, scanning: false, error: '',
 }));
 
 /** ล้างเมื่อปิดโปรเจกต์ (ไม่งั้นโปรเจกต์ใหม่เห็นบทพูดของเก่า) */
 export function resetDialogue() { state._dialogue = null; }
+
+/**
+ * [alpha.80] บันทึกฉากแล้ว → บทพูดในแผงล้าสมัยทันที
+ *
+ * เรียกจาก `saveTab()` ทุกครั้ง · **หน่วงและรวบ** เพราะการกวาดอ่านไฟล์ทั้งผลงาน
+ * ถ้ายิงทุกครั้งที่ autosave จะหน่วงทั้งแอป (บทเรียนเดียวกับ markCentralizeStale)
+ * แผงปิดอยู่ = แค่ทิ้งผลเก่า ไม่กวาดใหม่ (กวาดตอนเปิดแผงครั้งหน้าเอง)
+ */
+const RESCAN_DELAY = 1200;
+let _staleTimer = null;
+export function markDialogueStale() {
+  const s = state._dialogue;
+  if (!s) return;
+  s.rows = null;                                  // ทิ้งผลเก่าเสมอ
+  clearTimeout(_staleTimer);
+  _staleTimer = setTimeout(async () => {
+    _staleTimer = null;
+    const host = $('#dialogue-body');
+    if (!host || !host.isConnected || !host.children.length) return;   // แผงไม่ได้เปิดอยู่
+    try { await renderDialoguePanel(host); } catch (e) { log('warn', tt('ui.dialogue.errScan'), e); }
+  }, RESCAN_DELAY);
+}
 
 /** รายชื่อตัวละครที่ใช้จับ "ใครพูด" — Wiki + ชื่อที่ SmartType เก็บจากตัวบท */
 async function collectNames(root) {
@@ -102,7 +124,8 @@ async function scanDialogueInner() {
 /** รายการที่ผ่านตัวกรองตอนนี้ */
 export function visibleRows() {
   const s = S();
-  return DC.filterDialogue(s.rows || [], s.f);
+  const rows = DC.filterDialogue(s.rows || [], s.f);
+  return s.f.sureOnly ? rows.filter((r) => !r.guessed) : rows;
 }
 
 // ───────────────────────── หน้าจอ ─────────────────────────
@@ -185,7 +208,14 @@ function buildBar(host) {
     [DC.SRC_SCRIPT, tt('ui.dialogue.srcScript')],
   ], s.f.source, (v) => { s.f.source = v; redraw(); });
 
-  r2.append(secSel, chSel, scSel, srcSel);
+  // [alpha.80] สวิตช์ "เฉพาะที่แน่ใจ" — ซ่อนแถวที่เดาคนพูดจากการสลับกันพูด
+  const sure = el('label', 'k-dlgp-sure');
+  const sureBox = el('input'); sureBox.type = 'checkbox'; sureBox.checked = !!s.f.sureOnly;
+  sureBox.onchange = () => { s.f.sureOnly = sureBox.checked; rebuild(); };
+  sure.append(sureBox, document.createTextNode(tt('ui.dialogue.sureOnly')));
+  sure.title = tt('ui.dialogue.sureOnlyHint');
+
+  r2.append(secSel, chSel, scSel, srcSel, sure);
   bar.append(r2);
 
   // ── แถวที่ 3: ตัวละคร (ชิปกดเลือกได้หลายคน) ──
@@ -212,8 +242,10 @@ function buildBar(host) {
   const count = el('div', 'k-dlgp-count dim');
   bar.append(count);
   function syncCount() {
-    const n = visibleRows().length;
-    count.textContent = ttf('ui.dialogue.count', n, (S().rows || []).length);
+    const rows = visibleRows();
+    const g = DC.guessedCount(rows);
+    count.textContent = ttf('ui.dialogue.count', rows.length, (S().rows || []).length)
+      + (g ? ' · ' + ttf('ui.dialogue.guessedN', g) : '');
   }
   syncCount();
 
@@ -260,7 +292,8 @@ function drawList(body) {
 /** แถวบทพูดหนึ่งบรรทัด */
 function rowEl(r) {
   const s = S();
-  const d = el('div', 'k-dlgp-item' + (r.speaker ? '' : ' k-dlgp-item-unk'));
+  const d = el('div', 'k-dlgp-item' + (r.speaker ? '' : ' k-dlgp-item-unk')
+                                     + (r.guessed ? ' k-dlgp-item-guess' : ''));
   d.dataset.line = String(r.line);
   d.dataset.scene = String(r.sceneId || '');
 
@@ -320,6 +353,7 @@ function whereHint(where) {
   if (where === DC.WHERE_FRONT) return tt('ui.dialogue.whereFront');
   if (where === DC.WHERE_BACK) return tt('ui.dialogue.whereBack');
   if (where === DC.WHERE_TAG) return tt('ui.dialogue.whereTag');
+  if (where === DC.WHERE_TURN) return tt('ui.dialogue.whereTurn');
   return tt('ui.dialogue.whereNone');
 }
 

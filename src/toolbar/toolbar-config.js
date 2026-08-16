@@ -49,6 +49,13 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-kanban' }, { id: 'tb-dashboard' },
     { id: 'tb-dialogue' },                       // [alpha.79] แผงบทพูด
     { id: 'tb-codex' }, { id: 'tb-history' }, { id: 'tb-record' },
+    // [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบ
+    { id: 'tb-comments' }, { id: 'tb-notes-panel' }, { id: 'tb-log' },
+  ] },
+  { key: 'story', labelKey: 'ui.tbcfg.grpStory', buttons: [
+    { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-network' },
+    { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
+    { id: 'tb-gallery-board' },
   ] },
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
     { id: 'tb-ai' }, { id: 'tb-ai-chat' }, { id: 'tb-ai-analyzer' },

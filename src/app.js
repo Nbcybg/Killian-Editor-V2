@@ -133,7 +133,8 @@ import { openFloorPlan, renderFloorPlan, renderFloorPlanPanel } from './floorpla
 import { showPlayerHistory } from './player-choices.js';
 import { manageVisualTags, renderAllTagChips, applyVisualTagStyle, visualTagFor } from './visual-tags.js';
 import { quickNote, showAllNotes, getSessionNotes, addSessionNote, saveSessionNotes } from './session-notes.js';
-import { openCentralizeUI, markCentralizeStale, onCentralizeShown, resetCentralize } from './centralize-ui.js';
+// [alpha.80] "ศูนย์รวม" ถูกลบทิ้ง (ข้อมูลซ้ำกับแดชบอร์ด) — เหลือเฉพาะส่วนที่ไม่ซ้ำ
+import { markReviewStale, onReviewShown, resetReview } from './dash-review.js';
 // ---- Part 1+2 integrations ----
 import { openKanban, resetKanban, renderKanbanPanel } from './kanban/kanban-ui.js';
 import * as PL from './panels/panel-layout.js';
@@ -178,7 +179,7 @@ import { EventBus } from './auto-task/event-queue.js';
 // [alpha.79] แผงปลั๊กอิน · แผงบทพูด · เอาปุ่มเข้า-ออกจากแถบเครื่องมือ · จำสถานะล่าสุด
 import { ORIGIN_USER, ORIGIN_PROJECT } from './plugins/plugin-core.js';
 import { renderPluginPanel, resetPluginPanel } from './plugins/plugin-panel.js';
-import { renderDialoguePanel, resetDialogue, scanDialogue, visibleRows as dialogueRows,
+import { renderDialoguePanel, resetDialogue, scanDialogue, markDialogueStale, visibleRows as dialogueRows,
          openAt as dialogueOpenAt, applyEdit as dialogueApplyEdit,
          selectInEditor as dialogueSelect } from './dialogue/dialogue-ui.js';
 import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
@@ -1433,7 +1434,7 @@ async function closeProjectIfAny() {
   state.tabs.clear(); state.active = null; state.root = null;
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
-  resetCentralize(); resetCommentStore(); _cmMigrated.clear(); clearCommentAnchors();
+  resetReview(); resetCommentStore(); _cmMigrated.clear(); clearCommentAnchors();
   imgURLBase.clear();
   clearFeaturePanels();                 // บั๊ก #18: เนื้อแผงฟีเจอร์เป็นของโปรเจกต์เดิม ต้องล้าง
   $('#tree').innerHTML = ''; $('#outline').innerHTML = '';
@@ -6819,9 +6820,9 @@ export function activate(file) {
   // แสดงปุ่มบันทึกทั้งหมดเมื่อมีโปรเจกต์เปิด
   const saveAllBtn = $('#save-all-btn');
   if (saveAllBtn) saveAllBtn.style.display = state.root ? '' : 'none';
-  // [alpha.62 บั๊ก 15] ศูนย์รวมอยู่ในแดชบอร์ดแล้ว — รีเฟรชผ่าน onCentralizeShown() ตัวเดิม
+  // [alpha.62 บั๊ก 15] ศูนย์รวมอยู่ในแดชบอร์ดแล้ว — รีเฟรชผ่าน onReviewShown() ตัวเดิม
   // (ตัวมันเองเป็นคนเช็คว่าแผงแดชบอร์ดเปิดอยู่ไหม จึงเรียกได้ทุกครั้งที่สลับแท็บ)
-  try { onCentralizeShown(); } catch {}
+  try { onReviewShown(); } catch {}
   // แผงคอมเมนต์ผูกกับ "ฉากที่เปิดอยู่" — สลับแท็บแล้วต้องเปลี่ยนตาม (ไม่งั้นคอมเมนต์ฉากเก่าค้าง)
   refreshCommentsPanel();
   // [alpha.68] แผงที่ผูกกับฉากซึ่งถูกฉีกไปอยู่อีกจอ ต้องตามฉากที่เปิดอยู่ให้ทันเหมือนแผงในหน้าต่างนี้
@@ -6899,7 +6900,9 @@ export async function saveTab(tab) {
   if (state.settings.autoBackup !== false && isSnapshotable(tab))
     snapshotFile(tab.file).catch(() => {});
   // เนื้อหาเปลี่ยน → ดัชนีเชื่อมโยงของศูนย์รวมล้าสมัย (ข้อ 87 real-time)
-  try { markCentralizeStale(); } catch (e) { log('warn', tt('ui.app.markCentralizeStaleFail'), e); }
+  try { markReviewStale(); } catch (e) { log('warn', tt('ui.app.markCentralizeStaleFail'), e); }
+  // [alpha.80] บันทึกฉากแล้ว แผงบทพูดต้องตามให้ทัน (หน่วง+รวบใน markDialogueStale เอง)
+  try { markDialogueStale(); } catch (e) { log('warn', tt('ui.dialogue.errScan'), e); }
   // [alpha.60r3 ข้อ 1] ดัชนี Wiki↔ฉากต้องตามทันด้วย ไม่งั้น "ฉากที่กล่าวถึง" ค้างอยู่ที่ค่าตอนเปิดโปรแกรม
   await refreshBacklinksAfterSave(tab, body);
   // [alpha.65] Story Network — refresh when scenes are saved (scene links may change)
@@ -7493,6 +7496,18 @@ function updateToolbarTitles() {
 // re-export ให้ core.js เรียกหลังเปลี่ยนภาษา
 export { updateToolbarTitles };
 
+/**
+ * [alpha.80] ปุ่มบนแถบ → แผงที่มันเปิด (ตารางเดียว ใช้ทั้งผูกคลิกและอัปเดตสถานะ .on)
+ * เดิมเขียนมือทีละบรรทัดสองที่ → เพิ่มแผงใหม่แล้วลืมที่ใดที่หนึ่งเป็นประจำ
+ */
+const TB_PANEL_BUTTONS = [
+  ['tb-timeline', 'timeline'], ['tb-maps', 'maps'], ['tb-books', 'books'],
+  ['tb-network', 'network'], ['tb-planner', 'planner'], ['tb-branch', 'branch'],
+  ['tb-floorplan', 'floorplan'], ['tb-player', 'player'],
+  ['tb-gallery-board', 'gallery-board'], ['tb-comments', 'comments'],
+  ['tb-notes-panel', 'notes'], ['tb-log', 'log'],
+];
+
 // บั๊ก #11: ปุ่มที่ทำงานระดับโปรเจกต์/หน้าต่าง — ไม่ต้องมีฉากเปิดอยู่ก็ใช้ได้
 const ALWAYS_ON_TB = new Set([
   'tb-close', 'tb-close-all', 'tb-focus', 'tb-typewriter', 'tb-linenum', 'tb-quickopen',
@@ -7502,6 +7517,12 @@ const ALWAYS_ON_TB = new Set([
   'tb-ai-analyzer', 'tb-md-codes',       // [alpha.60r3 ข้อ 5 · ข้อ 6]
   // [alpha.69] สามแผงใหม่ทำงานระดับโปรเจกต์ทั้งหมด — ไม่ต้องมีฉากเปิดอยู่ก็กดได้
   'tb-codex', 'tb-history', 'tb-record',
+  // [alpha.80] **ปุ่มแผงทุกตัวต้องกดได้โดยไม่ต้องเปิดฉากก่อน**
+  // แผงพวกนี้อ่านจากไฟล์ทั้งผลงาน ไม่ได้ผูกกับฉากที่เปิดอยู่เลย —
+  // เดิมถูก disable ไปพร้อมปุ่มจัดรูปแบบ ทำให้ "เปิดโปรแกรมมาแล้วกดแผงบทพูดไม่ได้"
+  'tb-dialogue', 'tb-plugins',
+  'tb-timeline', 'tb-maps', 'tb-books', 'tb-network', 'tb-planner', 'tb-branch',
+  'tb-floorplan', 'tb-player', 'tb-gallery-board', 'tb-comments', 'tb-notes-panel', 'tb-log',
 ]);
 
 function refreshToolbar() {
@@ -7582,9 +7603,12 @@ function refreshToolbar() {
   $('#tb-codex')?.classList.toggle('on', isPanelOpen('codex') || isTornOff('codex'));
   $('#tb-history')?.classList.toggle('on', isPanelOpen('history') || isTornOff('history'));
   $('#tb-record')?.classList.toggle('on', isPanelOpen('record') || isTornOff('record'));
-  // [alpha.79] แผงบทพูด + แผงปลั๊กอิน
+  // [alpha.79] แผงบทพูด + แผงปลั๊กอิน · [alpha.80] แผงที่เพิ่งได้ปุ่มบนแถบ
   $('#tb-dialogue')?.classList.toggle('on', isPanelOpen('dialogue') || isTornOff('dialogue'));
   $('#tb-plugins')?.classList.toggle('on', isPanelOpen('plugins'));
+  for (const [btnId, pid] of TB_PANEL_BUTTONS) {
+    $('#' + btnId)?.classList.toggle('on', isPanelOpen(pid) || isTornOff(pid));
+  }
   $('#tb-md-codes')?.classList.toggle('on', showMarkdownCodes());
   // [alpha.79] ปุ่มที่ผู้ใช้ซ่อนไว้ ต้องซ่อนต่อทุกครั้งที่แถบถูกวาดใหม่ —
   // refreshToolbar เขียน style.display ของหลายปุ่มตามโหมดเอกสาร จึงต้องทาบทับทีหลังเสมอ
@@ -8507,7 +8531,6 @@ async function handleCommand(ch, ...a) {
     case 'quick-open': openQuickOpen(); break;
     // [alpha.62 บั๊ก 20] วิ่งผ่าน renderFeaturePanel เหมือนแผงอื่น — dedupe การวาดซ้ำให้ด้วย
     case 'global-search': showPanel('search'); renderFeaturePanel('search'); syncMenuToggles(); refreshToolbar(); break;
-    case 'centralize': openCentralizeUI(); break;
     case 'branching': openBranchingTree(); syncMenuToggles(); break;
     case 'branch-sync': syncChoicesFromScene(); break;
     // [alpha.66 ข้อ 9] ทดลองเล่น — เดินตามทางเลือกเหมือนผู้เล่น (อ่านอย่างเดียว)
@@ -9250,6 +9273,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // [alpha.79] แผงบทพูด + แผงปลั๊กอิน (สวิตช์เหมือนปุ่มแผงตัวอื่น)
   $('#tb-dialogue') && ($('#tb-dialogue').onclick = () => { togglePanel('dialogue'); refreshToolbar(); });
   $('#tb-plugins') && ($('#tb-plugins').onclick = () => { togglePanel('plugins'); refreshToolbar(); });
+  // [alpha.80] ผูกปุ่มแผงที่เพิ่งเพิ่มทั้งชุดจากตารางเดียว — เพิ่มแผงใหม่ = แก้ที่ TB_PANEL_BUTTONS ที่เดียว
+  for (const [btnId, pid] of TB_PANEL_BUTTONS) {
+    const b0 = $('#' + btnId);
+    if (b0) b0.onclick = () => { togglePanel(pid); refreshToolbar(); };
+  }
   // คลิก = จัดการแผง · คลิกขวา = ปรับปุ่มบนแถบเครื่องมือ (เอาปุ่มเข้า-ออก)
   $('#tb-panels').onclick = () => togglePanelDialog();
   $('#tb-panels').oncontextmenu = (e) => { e.preventDefault(); toolbarDialog(); };
@@ -15736,25 +15764,32 @@ async function runTest(projectPath) {
       hidePanel('floorplan');
     }
 
-    // ---- ศูนย์รวม (ข้อ 87): ใช้ Auto-link Engine ไม่ใช่สแกนดิบ ----
+    // ---- [alpha.80] "สิ่งที่ควรดู" ในแดชบอร์ด (แทน "ศูนย์รวม" ที่ถูกลบทิ้ง) ----
     {
-      // [alpha.62 บั๊ก 15] ศูนย์รวมอยู่ในแดชบอร์ดแล้ว — เปิดแดชบอร์ดก็ต้องเห็นครบ
-      await openCentralizeUI();
+      // ผู้ใช้ชี้ว่าแดชบอร์ดกับศูนย์รวมแสดงข้อมูลซ้ำกัน → ตัดแผงสถิติของศูนย์รวมทิ้งทั้งก้อน
+      // เหลือเฉพาะสองส่วนที่ไม่ซ้ำใคร: Backlinks กับ สิ่งที่ต้องอัปเดต
+      await openDashboard();
       await new Promise((r) => setTimeout(r, 1400));
-      check('ศูนย์รวมอยู่ในแผงแดชบอร์ด (ไม่ใช่แท็บของตัวเองแล้ว)',
-            isPanelOpen('dashboard') && !state.tabs.has('::centralize::')
-            && !!document.querySelector('#dash-body .dash-cent'));
-      check('ศูนย์รวมคำนวณสถิติได้ (ไม่ค้างที่ว่าง)', !!document.querySelector('.cent-stat'));
-      check('ศูนย์รวมมีแผง backlinks', !!document.querySelector('.cent-list'));
-      check('ศูนย์รวมแสดงการ์ดสถิติ (ฉาก/คำ/Wiki/จุดเชื่อมโยง)',
-            document.querySelectorAll('.cent-stat-card').length >= 3,
-            String(document.querySelectorAll('.cent-stat-card').length));
-      check('ศูนย์รวมนับจุดเชื่อมโยงจาก Auto-link Engine',
-            [...document.querySelectorAll('.cent-stat-lbl')].some((d) => d.textContent === 'จุดเชื่อมโยง'));
-      check('ศูนย์รวมมีปุ่มสร้างดัชนีใหม่ + ป้ายอัปเดตสด',
-            !!document.querySelector('.cent-refresh') && !!document.querySelector('.cent-live'));
-      check('ส่วนศูนย์รวมอยู่ "ท้าย" แดชบอร์ด (ต่อจากสถิติเดิม ไม่ทับกัน)',
-            !!document.querySelector('#dash-body .dash-wrap .dash-cent .cent-wrap.cent-embedded'));
+      check('[80-5] ส่วน "สิ่งที่ควรดู" อยู่ท้ายแผงแดชบอร์ด',
+            isPanelOpen('dashboard')
+            && !!document.querySelector('#dash-body .dash-wrap .dash-cent .cent-wrap.cent-embedded'));
+      check('[80-5] มีแผง Backlinks', !!document.querySelector('.dash-cent .cent-list'));
+      check('[80-5] มีแผง "สิ่งที่ต้องอัปเดต"',
+            document.querySelectorAll('.dash-cent .cent-panel').length >= 2,
+            String(document.querySelectorAll('.dash-cent .cent-panel').length));
+      // ── ของที่ต้อง **หายไปแล้ว** (นี่คือหัวใจของข้อนี้) ──
+      check('[80-5] ไม่มีการ์ดสถิติซ้ำกับด้านบนของแดชบอร์ดแล้ว',
+            document.querySelectorAll('.dash-cent .cent-stat-card').length === 0,
+            String(document.querySelectorAll('.dash-cent .cent-stat-card').length));
+      check('[80-5] ไม่มีหัวเรื่อง/ปุ่มรีเฟรชของศูนย์รวมแล้ว',
+            !document.querySelector('.cent-refresh') && !document.querySelector('.cent-live'));
+      check('[80-5] ไม่มีแท็บ ::centralize:: หลงเหลือ', !state.tabs.has('::centralize::'));
+      check('[80-5] ลบไฟล์ centralize-ui.js ออกจากโปรเจกต์แล้ว', (() => {
+        try { return typeof openCentralizeUI === 'undefined'; } catch { return true; }
+      })());
+      // สถิติของจริงยังอยู่ครบด้านบน (ลบของซ้ำ ไม่ใช่ลบข้อมูล)
+      check('[80-5] สถิติหลักยังอยู่ในแดชบอร์ดเหมือนเดิม',
+            !!document.querySelector('#dash-body .dash-apanel, #dash-body .dash-stat'));
     }
 
     // ---- Visual Tags (ข้อ 84): ชิปสีต้องโผล่ใน Explorer + แถบตัวกรอง ----
@@ -23518,6 +23553,182 @@ async function runTest(projectPath) {
         check('[79-7] แผงใหม่มีคำอธิบายจริง',
               panelDesc('dialogue').length > 8 && panelDesc('plugins').length > 8,
               panelDesc('dialogue') + ' | ' + panelDesc('plugins'));
+      }
+
+      // ════════════════════ [alpha.80] รอบปรับย่อย 7 ข้อ ════════════════════
+      // ───────── [80-1] แผงบทพูด: นิยาย + รีเฟรชหลังบันทึก ─────────
+      {
+        const DC80 = await import('./dialogue/dialogue-core.js');
+        const DU80 = await import('./dialogue/dialogue-ui.js');
+        // ฉากนิยายที่ใช้ "สรรพนาม" แบบที่คนไทยเขียนจริง — เดิมตกไปกอง "ไม่ระบุ" ทั้งหมด
+        const dj80 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+        const sj80 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+        const ch80 = dj80.chapters.find((c) => (sj80.chapters[c.guid] || []).length) || dj80.chapters[0];
+        const dir80 = await kapi.join(await kapi.join(dPath, 'Chapters'), ch80.folderName);
+        const f80 = await kapi.join(dir80, 'dlg-prose2.md');
+        await kapi.writeFile(f80,
+          ['---', 'title: บทสนทนานิยาย', 'type: scene', 'format: prose', '---', '',
+           '"สวัสดีครับ" ยัยแมวเก้าชีวิตทักทาย',
+           '',
+           'เอกภพเงยหน้าขึ้นมองแล้วตอบว่า "มาสายอีกแล้วนะ"',
+           '',
+           '"ขอโทษครับ ผมติดฝน" เขาตอบ',
+           '',
+           '"ไม่เป็นไรหรอก" เธอยิ้ม', ''].join('\n'));
+        await kapi.writeFile(
+          await kapi.join(await kapi.join(await kapi.join(state.root, 'Wiki'), 'characters'), 'ekk80.json'),
+          JSON.stringify({ name: 'เอกภพ', entityTypeKey: 'characters', aliases: [] }, null, 2));
+        sj80.chapters[ch80.guid] = (sj80.chapters[ch80.guid] || []).concat([
+          { id: 'dlg-p2', title: 'บทสนทนานิยาย', order: 95, fileName: 'dlg-prose2.md' }]);
+        await kapi.writeFile(await kapi.join(dPath, 'scenes.json'), JSON.stringify(sj80, null, 2));
+
+        resetDialogue();
+        showPanel('dialogue');
+        await renderFeaturePanel('dialogue');
+        await until79(() => DU80.visibleRows().some((r) => r.sceneId === 'dlg-p2'), 12000);
+        const mine80 = DU80.visibleRows().filter((r) => r.sceneId === 'dlg-p2');
+        check('[80-1] จับบทพูดในนิยายได้ครบ 4 บรรทัด', mine80.length === 4,
+              JSON.stringify(mine80.map((r) => r.speaker + '|' + r.where)));
+        check('[80-1] ทุกบรรทัดระบุคนพูดได้ (เดิมสรรพนามตกไปกอง "ไม่ระบุ")',
+              mine80.every((r) => r.speaker),
+              JSON.stringify(mine80.map((r) => (r.speaker || '-') + '|' + r.where)));
+        check('[80-1] สองบรรทัดแรกรู้จากชื่อจริง ไม่ใช่เดา',
+              mine80[0].guessed === false && mine80[1].guessed === false);
+        check('[80-1] บรรทัดสรรพนามถูกเดาจากการสลับกันพูด',
+              mine80[2].where === DC80.WHERE_TURN && mine80[2].guessed === true,
+              JSON.stringify(mine80[2]));
+        check('[80-1] แถวที่เดามีคลาสบอกให้เห็นต่างจากที่แน่ใจ',
+              !!document.querySelector('#dialogue-body .k-dlgp-item-guess'));
+        const sureBox = document.querySelector('#dialogue-body .k-dlgp-sure input');
+        check('[80-1] มีสวิตช์ "เฉพาะที่แน่ใจ"', !!sureBox);
+        sureBox.checked = true; sureBox.dispatchEvent(new Event('change'));
+        check('[80-1] เปิดแล้วเหลือเฉพาะแถวที่ไม่ได้เดา',
+              await until79(() => DU80.visibleRows().every((r) => !r.guessed)));
+        sureBox.checked = false; sureBox.dispatchEvent(new Event('change'));
+        await until79(() => DU80.visibleRows().some((r) => r.guessed));
+
+        // ── รีเฟรชอัตโนมัติหลังบันทึกฉาก ──
+        await openScene(f80, 'บทสนทนานิยาย');
+        const tabD = state.tabs.get(f80);
+        check('[80-1] เปิดฉากทดสอบเป็นแท็บได้', !!tabD);
+        tabD.editor.setMarkdown(tabD.editor.getMarkdown()
+          + '\n\n"ประโยคที่เพิ่งเพิ่มเข้ามา" ยัยแมวเก้าชีวิตพูดเสริม');
+        markDirty(tabD);
+        await saveTab(tabD);
+        check('[80-1] บันทึกฉากแล้วแผงบทพูดกวาดใหม่เอง (ไม่ต้องกดรีเฟรช)',
+              await until79(() => DU80.visibleRows()
+                .some((r) => /ประโยคที่เพิ่งเพิ่มเข้ามา/.test(r.text)), 12000),
+              JSON.stringify(DU80.visibleRows().filter((r) => r.sceneId === 'dlg-p2').map((r) => r.text)));
+        closeTab(f80);
+        hidePanel('dialogue');
+      }
+
+      // ───────── [80-2] ติดตั้ง/ถอนปลั๊กอิน ─────────
+      {
+        const PI80 = await import('./plugins/plugin-install.js');
+        check('[80-2] มีช่องติดตั้ง/ถอนใน kapi',
+              typeof kapi.pluginFetchZip === 'function' && typeof kapi.pluginExtract === 'function'
+              && typeof kapi.pluginUninstall === 'function');
+        const src80 = PI80.parseSource('https://github.com/user/repo');
+        check('[80-2] อ่านลิงก์ GitHub ได้', src80.ok && src80.repo === 'repo');
+        check('[80-2] แปลงเป็น URL ซิปได้', PI80.zipCandidates(src80).length === 2);
+        const gdir80 = await kapi.globalPluginsDir();
+        await kapi.mkdir(await kapi.join(gdir80, 'k2del'));
+        await kapi.writeFile(await kapi.join(await kapi.join(gdir80, 'k2del'), 'plugin.json'),
+                             '{"name":"k2del","entry":"main.js"}');
+        await kapi.writeFile(await kapi.join(await kapi.join(gdir80, 'k2del'), 'main.js'), '// vide');
+        check('[80-2] สร้างปลั๊กอินทดสอบไว้ถอน',
+              await kapi.exists(await kapi.join(gdir80, 'k2del')));
+        const rDel = await kapi.pluginUninstall(gdir80, 'k2del');
+        check('[80-2] ถอนออกแล้วโฟลเดอร์หายจริง',
+              rDel && rDel.ok && !(await kapi.exists(await kapi.join(gdir80, 'k2del'))),
+              JSON.stringify(rDel));
+        // **กันลบนอกขอบเขต** — ด่านสำคัญที่สุดของฟีเจอร์นี้
+        const rBad = await kapi.pluginUninstall(gdir80, '../../shouldNotDelete');
+        check('[80-2] สั่งลบนอกโฟลเดอร์ปลั๊กอิน = ถูกปฏิเสธ',
+              rBad && rBad.ok === false && rBad.reason === 'outside', JSON.stringify(rBad));
+      }
+
+      // ───────── [80-3] ชุดสีสำเร็จรูปของ Story Network ─────────
+      {
+        const NP80 = await import('./net-presets.js');
+        const NT80 = await import('./network-theme.js');
+        const real80 = new Set(NT80.NET_COLOR_DEFS.map((d) => d.key));
+        check('[80-3] คีย์ในชุดสีมีอยู่จริงทุกตัว',
+              NP80.PRESET_KEYS.every((k) => real80.has(k)),
+              NP80.PRESET_KEYS.filter((k) => !real80.has(k)).join(' '));
+        check('[80-3] มีชุดในตัวครบ 5 ชุด',
+              ['default', 'cable', 'flower', 'xrite', 'rainbow']
+                .every((id) => !!NP80.builtinPreset(id)));
+        check('[80-3] ชื่อชุดไม่โชว์ตัวคีย์ภาษา',
+              NP80.BUILTIN_PRESETS.every((p) => !/^ui[.]/.test(NP80.presetLabel(p))),
+              NP80.BUILTIN_PRESETS.map((p) => NP80.presetLabel(p)).join(','));
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        settingsDialog('netcol');
+        await wait79(240);
+        const dlg80 = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        check('[80-3] มีตัวเลือกชุดสีสำเร็จรูป', !!dlg80.querySelector('.k-netp-sel'));
+        const psel80 = dlg80.querySelector('.k-netp-sel');
+        check('[80-3] รายการชุดครบ (รวมตัวเลือก "ตั้งเอง")',
+              psel80.options.length >= 6, String(psel80.options.length));
+        check('[80-3] มีปุ่มบันทึกชุดใหม่และลบชุด',
+              [...dlg80.querySelectorAll('#st-netcol-body button')].length >= 2);
+        const grids80 = dlg80.querySelectorAll('#st-netcol-body .k-netc-grid');
+        check('[80-3] ช่องสีจัดเป็นกริด', grids80.length >= 3, String(grids80.length));
+        const cells80 = dlg80.querySelectorAll('#st-netcol-body .k-netc-cell');
+        check('[80-3] จำนวนช่องสีเท่ากับนิยามกลาง',
+              cells80.length === NT80.NET_COLOR_DEFS.length,
+              cells80.length + '/' + NT80.NET_COLOR_DEFS.length);
+        check('[80-3] แต่ละช่องมีครบ: ตัวเลือกสี + ชื่อ + รหัสสี',
+              [...cells80].every((c) => c.querySelector('input[type=color]')
+                && c.querySelector('.k-netc-name') && c.querySelector('.st-netcol-t')));
+        const gridCells = [...grids80[0].children];
+        check('[80-3] ช่องในกริดเรียงตรงคอลัมน์จริง', (() => {
+          if (gridCells.length < 2) return true;
+          const lefts = gridCells.map((c) => Math.round(c.getBoundingClientRect().left));
+          return new Set(lefts).size <= Math.ceil(gridCells.length / 2) + 1;
+        })(), JSON.stringify(gridCells.slice(0, 4).map((c) => Math.round(c.getBoundingClientRect().left))));
+        const before80 = dlg80.querySelector('#st-netcol-body input[type=color]').value;
+        psel80.value = 'rainbow'; psel80.dispatchEvent(new Event('change'));
+        await wait79(80);
+        const after80 = dlg80.querySelector('#st-netcol-body input[type=color]').value;
+        check('[80-3] เลือกชุดแล้วสีในช่องเปลี่ยนตามจริง',
+              after80.toLowerCase() === NP80.builtinPreset('rainbow').colors['nc-char'],
+              before80 + ' -> ' + after80);
+        dlg80.querySelector('.k-cancel').click();
+        await wait79(140);
+      }
+
+      // ───────── [80-4] + [80-7] ปุ่มแผงบนแถบ ─────────
+      {
+        const TB80 = await import('./toolbar/toolbar-config.js');
+        const SKIP80 = new Set(['toolbar', 'docs', 'statusbar', 'planner-props']);
+        const noBtn = PANEL_DEFS.map((d) => d.id).filter((id) => (SKIP80.has(id) ? false : !(
+          document.getElementById('tb-' + id) || document.getElementById('tb-' + id + '-panel')
+          || (id === 'notes' && document.getElementById('tb-notes-panel')))));
+        check('[80-7] ทุกแผงมีปุ่มบนแถบเครื่องมือแล้ว', noBtn.length === 0, noBtn.join(' '));
+        check('[80-7] ปุ่มใหม่อยู่ในรายการตั้งค่าแถบเครื่องมือด้วย',
+              ['tb-timeline', 'tb-maps', 'tb-network', 'tb-planner', 'tb-branch', 'tb-log']
+                .every((id) => TB80.allButtonIds().includes(id)));
+
+        closeAllTabs();
+        await wait79(240);
+        check('[80-4] ไม่มีฉากเปิดอยู่แล้ว', !state.active || !state.active.editor);
+        refreshToolbar();
+        await wait79(100);
+        for (const id of ['tb-dialogue', 'tb-plugins', 'tb-timeline', 'tb-maps', 'tb-network']) {
+          const b = document.getElementById(id);
+          check('[80-4] ปุ่ม ' + id + ' กดได้โดยไม่ต้องเปิดฉาก', !!b && b.disabled === false,
+                b ? 'disabled=' + b.disabled : 'no button');
+        }
+        document.getElementById('tb-dialogue').click();
+        check('[80-4] กดปุ่มบทพูดตอนไม่มีฉากเปิด แผงเปิดจริง',
+              await until79(() => isPanelOpen('dialogue')));
+        hidePanel('dialogue');
+        document.getElementById('tb-timeline').click();
+        check('[80-4] กดปุ่มเส้นเวลาตอนไม่มีฉากเปิด แผงเปิดจริง',
+              await until79(() => isPanelOpen('timeline')));
+        hidePanel('timeline');
       }
 
     out.push('ALL OK');
