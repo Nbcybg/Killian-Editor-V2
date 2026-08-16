@@ -118,6 +118,24 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('ลายน้ำเป็นสตริงเสมอ', typeof T.normalizeHub({ pdf: { watermark: 5 } }).pdf.watermark === 'string');
 }
 
+// ═══════════ [alpha.81r3] หน้าแรกของเนื้อเรื่องต้องมีเลขหน้า ═══════════
+// ธรรมเนียม "หน้าแรกไม่ใส่เลข" ถูกต้องตอนหน้าแรกของไฟล์ = หน้าปก
+// แต่กล่องนี้แยกหน้าปก/หน้ารายชื่อออกไปเป็นหน้าหน้าเล่มแล้ว หน้าที่เหลือหน้าแรกคือ "หน้า 1"
+{
+  const base = { paper: { width: 8.5, height: 11 },
+                 pageNumbers: { show: true, right: 1, top: 0.5, suffix: '.', firstPage: false } };
+  const out = T.exportPageNumberFmt(base);
+  check('บังคับให้หน้าแรกมีเลขหน้า', out.pageNumbers.firstPage === true);
+  check('ค่าอื่นของเลขหน้าไม่ถูกแตะ',
+        out.pageNumbers.right === 1 && out.pageNumbers.top === 0.5 && out.pageNumbers.suffix === '.');
+  check('ส่วนอื่นของรูปแบบยังอยู่ครบ', out.paper.width === 8.5 && out.paper.height === 11);
+  check('ไม่แก้ของเดิม (คืนสำเนาเสมอ)', base.pageNumbers.firstPage === false);
+  check('ปิดสวิตช์เลขหน้าไว้ก็ยังปิดอยู่ (ไม่ไปเปิดให้เอง)',
+        T.exportPageNumberFmt({ pageNumbers: { show: false } }).pageNumbers.show === false);
+  check('ไม่มี pageNumbers เลยก็ไม่พัง', T.exportPageNumberFmt({}).pageNumbers.firstPage === true);
+  check('ค่าว่าง/undefined ไม่พัง', T.exportPageNumberFmt(null).pageNumbers.firstPage === true);
+}
+
 // ═══════════ ชื่อไฟล์ที่เสนอ ═══════════
 {
   check('ต่อนามสกุลตามรูปแบบ', T.suggestName('เล่มหนึ่ง', 'pdf') === 'เล่มหนึ่ง.pdf');

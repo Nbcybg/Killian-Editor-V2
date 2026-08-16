@@ -95,8 +95,14 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
     page.style.fontSize = proseFontPx(f) + 'px';
     page.style.lineHeight = String(f.lineHeight);
 
+    // [alpha.81r3] "หน้า 1 ใน preview ไม่ขึ้นเลขหน้า"
+    // กิ่งสำรองเดิมข้ามหน้าแรกตายตัว (`pg.index > 1`) และไม่สนใจ `startPage` ด้วย —
+    // พอกล่องส่งออกแยกหน้าปก/หน้ารายชื่อไปเป็นหน้าหน้าเล่มแล้ว หน้าแรกที่เหลือคือ "หน้า 1 ของ
+    // เนื้อเรื่อง" ซึ่งต้องมีเลข · ผู้เรียกสั่งได้ด้วย opts.numberFirst
+    const start = Math.max(1, Math.round(+opts.startPage || 1));
     const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage)
-                                : (opts.showPageNumbers !== false && pg.index > 1 ? String(pg.index) : '');
+      : (opts.showPageNumbers !== false && (pg.index > 1 || opts.numberFirst)
+          ? String(start + pg.index - 1) : '');
     if (label) {
       const n = document.createElement('div');
       n.className = 'sp-page-num';

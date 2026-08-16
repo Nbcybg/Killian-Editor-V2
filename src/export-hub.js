@@ -24,10 +24,10 @@ import { $, el, state, setStatus, log, withBusy } from './core.js';
 import { runWorkflow, mdToHtml } from './compile.js';
 import { num } from './num.js';
 // ตรรกะล้วน (ตารางรูปแบบ · เลือกตัวสร้าง · ค่าที่จำไว้) อยู่ใน export-formats.js — ทดสอบด้วย node ได้
-import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub,
+import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
          defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
 export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, normalizeHub,
-         defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
+         exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
 
 // ═══════════════════════ ส่วน UI ═══════════════════════
 
@@ -168,7 +168,9 @@ async function writeOut(A, cfg, built) {
       // ฝั่งบทภาพยนตร์ทำเป็น **หน้าปกเพิ่มอีกหนึ่งแผ่น** ต่อท้ายหน้าปกจริง —
       // ตัวสร้าง PDF นับเลขหน้าจาก "หน้าเนื้อเรื่อง" อยู่แล้ว (`titles.length` เป็นตัวเลื่อน)
       // หน้ารายชื่อจึงไม่ถูกนับเลขไปด้วยโดยอัตโนมัติ ตรงกับที่ผู้ใช้ต้องการ
-      const fmtS = A.spFormat();
+      // [alpha.81r3] หน้าปก/รายชื่อถูกแยกเป็นหน้าหน้าเล่มแล้ว → หน้าแรกที่เหลือคือ "หน้า 1 ของเนื้อเรื่อง"
+      // ซึ่งต้องมีเลขหน้า (ธรรมเนียม "หน้าแรกไม่ใส่เลข" มีไว้ตอนหน้าแรกของไฟล์คือหน้าปก)
+      const fmtS = exportPageNumberFmt(A.spFormat());
       const titles = o.titlePages ? [...projectTitlePages()] : [];
       const roster = o.roster !== false ? String(built.roster || '').trim() : '';
       if (roster) {
@@ -196,7 +198,7 @@ async function writeOut(A, cfg, built) {
     const { mergeAndNumber } = await import('./pdf-generator.js');
     const { pdfFontBytes } = await import('./pdf-ui.js');
     const r = await mergeAndNumber(front ? [front] : [], body, {
-      fmt: A.spFormat(), fonts: await pdfFontBytes(),
+      fmt: exportPageNumberFmt(A.spFormat()), fonts: await pdfFontBytes(),
       pageNumbers: o.pageNumbers !== false, startPage: 1,
       fontPt: num(A.proseFormat().fontPt, 12), meta: { title: built.title },
     });
@@ -321,7 +323,9 @@ async function renderPreview(host, A, cfg, built) {
                         { maxPerRow: 1, minScale: 0.15 });
     if (built.engine === 'pdflib') {
       const { renderPageView, pagesOf } = await import('./sp-view.js');
-      renderPageView(box, pagesOf(built.blocks || [], fmt), fmt,
+      // ตัวอย่างต้องใช้กฎเลขหน้าชุดเดียวกับไฟล์จริง ไม่งั้นหน้า 1 มีเลขในไฟล์แต่ไม่มีในตัวอย่าง
+      const fmtN = exportPageNumberFmt(fmt);
+      renderPageView(box, pagesOf(built.blocks || [], fmtN), fmtN,
                      { scale: fs.scale, gap: 14, startPage: 1 });
     } else {
       // นิยายต้องใช้ตัววาดของนิยาย — ตัววาดบทจะจัดหน้าแบบสคริปต์ให้ทั้งที่เนื้อเป็นร้อยแก้ว
@@ -330,7 +334,8 @@ async function renderPreview(host, A, cfg, built) {
       const pf = A.proseFormat();
       renderProsePageView(box, prosePagesOf(mdToProseBlocks(built.text), pf, fmt.paper, fmt.margins),
                           pf, { scale: fs.scale, gap: 14, paper: fmt.paper, margins: fmt.margins,
-                                showPageNumbers: cfg.pdf.pageNumbers !== false });
+                                showPageNumbers: cfg.pdf.pageNumbers !== false,
+                                numberFirst: true, startPage: 1 });
     }
     // หน้าปก/หน้ารายชื่อ ต้องเห็นในตัวอย่างด้วย — ติ๊กแล้วต้องมีอะไรเปลี่ยนบนจอเสมอ
     renderFrontPreview(box, built, cfg, fmt.paper, fs.scale);

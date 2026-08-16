@@ -186,7 +186,7 @@ import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGro
          resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
          isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
 import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS } from './toolbar/toolbar-ui.js';
-import { openExportHub, EXPORT_FORMATS, formatDef, docKind, pdfEngine,
+import { openExportHub, EXPORT_FORMATS, formatDef, docKind, pdfEngine, exportPageNumberFmt,
          normalizeHub, defaultWorkflowFor, workflowForFormat, suggestName } from './export-hub.js';
 import * as SESS from './session/session-core.js';
 import { openAIAssistant, openPlotHoleDetector, openDialogueGenerator, openConsistencyCheck, openWorldGenerator, openAIChat } from './ai/ai-ui.js';
@@ -24195,6 +24195,26 @@ async function runTest(projectPath) {
                 [...box.querySelectorAll('.xhub-row-lbl')].some((x) => x.textContent === tt('ui.xhub.pdfRoster')));
           check('[81r2] ตัวอย่างโชว์หน้าปกให้เห็น',
                 await until81(() => !!box.querySelector('.xhub-preview .sp-page.xhub-front-cover')));
+          // [81r3] "หน้า 1 ใน preview ไม่ขึ้นเลขหน้า" — หน้าปก/รายชื่อถูกแยกไปเป็นหน้าหน้าเล่มแล้ว
+          // หน้าแรกที่เหลือคือหน้า 1 ของเนื้อเรื่อง ต้องมีเลข (ตัวอย่างกับไฟล์ต้องใช้กฎเดียวกัน)
+          check('[81r3] exportPageNumberFmt บังคับเลขหน้าให้หน้าแรก',
+                exportPageNumberFmt(spFormat()).pageNumbers.firstPage === true);
+          check('[81r3] ไม่แก้ค่าที่ผู้ใช้ตั้งไว้ในโปรเจกต์',
+                spFormat().pageNumbers.firstPage === mergeSpFormat(state.settings).pageNumbers.firstPage);
+          {
+            const keepPn3 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            togglePageNumbers(true);
+            hub.cfg.pdf.pageNumbers = true;
+            await hub.refresh();
+            const firstNum = await until81(() => {
+              const p1 = box.querySelector('.xhub-preview .sp-pageview .ed-page, ' +
+                                           '.xhub-preview .sp-pageview .sp-page:not(.xhub-front)');
+              return p1 && p1.querySelector('.sp-page-num') &&
+                     /\d/.test(p1.querySelector('.sp-page-num').textContent);
+            });
+            check('[81r3] หน้าแรกของเนื้อเรื่องในตัวอย่างมีเลขหน้า', firstNum);
+            state.settings.spPageNumbers = keepPn3; applyPageVars();
+          }
           hub.cfg.pdf.titlePages = false; hub.cfg.pdf.roster = false;
           const bOff = await hub.build();
           check('[81r2] ปิดทั้งสองสวิตช์ → ไม่มีหน้าหน้าเล่มเลย', !!bOff && !bOff.frontHtml);

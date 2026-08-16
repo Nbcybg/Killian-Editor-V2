@@ -15369,7 +15369,8 @@
       page2.style.fontFamily = proseFontStack(f);
       page2.style.fontSize = proseFontPx(f) + "px";
       page2.style.lineHeight = String(f.lineHeight);
-      const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage) : opts.showPageNumbers !== false && pg.index > 1 ? String(pg.index) : "";
+      const start = Math.max(1, Math.round(+opts.startPage || 1));
+      const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage) : opts.showPageNumbers !== false && (pg.index > 1 || opts.numberFirst) ? String(start + pg.index - 1) : "";
       if (label) {
         const n2 = document.createElement("div");
         n2.className = "sp-page-num";
@@ -85936,6 +85937,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
     return sp > pr ? "screenplay" : "prose";
   }
+  function exportPageNumberFmt(fmt) {
+    const f = fmt || {};
+    return { ...f, pageNumbers: { ...f.pageNumbers || {}, firstPage: true } };
+  }
   function defaultHubSettings() {
     return {
       format: "pdf",
@@ -141182,7 +141187,7 @@ ${pages.join("\n")}
       if (built.engine === "pdflib") {
         const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
         const { buildScriptPdf: buildScriptPdf2, projectTitlePages: projectTitlePages2, projectHeaders: projectHeaders2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
-        const fmtS = A.spFormat();
+        const fmtS = exportPageNumberFmt(A.spFormat());
         const titles = o.titlePages ? [...projectTitlePages2()] : [];
         const roster = o.roster !== false ? String(built.roster || "").trim() : "";
         if (roster) {
@@ -141220,7 +141225,7 @@ ${pages.join("\n")}
       const { mergeAndNumber: mergeAndNumber2 } = await Promise.resolve().then(() => (init_pdf_generator(), pdf_generator_exports));
       const { pdfFontBytes: pdfFontBytes2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
       const r = await mergeAndNumber2(front ? [front] : [], body, {
-        fmt: A.spFormat(),
+        fmt: exportPageNumberFmt(A.spFormat()),
         fonts: await pdfFontBytes2(),
         pageNumbers: o.pageNumbers !== false,
         startPage: 1,
@@ -141343,10 +141348,11 @@ ${pages.join("\n")}
       );
       if (built.engine === "pdflib") {
         const { renderPageView: renderPageView2, pagesOf: pagesOf2 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
+        const fmtN = exportPageNumberFmt(fmt);
         renderPageView2(
           box2,
-          pagesOf2(built.blocks || [], fmt),
-          fmt,
+          pagesOf2(built.blocks || [], fmtN),
+          fmtN,
           { scale: fs.scale, gap: 14, startPage: 1 }
         );
       } else {
@@ -141362,7 +141368,9 @@ ${pages.join("\n")}
             gap: 14,
             paper: fmt.paper,
             margins: fmt.margins,
-            showPageNumbers: cfg.pdf.pageNumbers !== false
+            showPageNumbers: cfg.pdf.pageNumbers !== false,
+            numberFirst: true,
+            startPage: 1
           }
         );
       }
@@ -173033,6 +173041,27 @@ ${css}
             "[81r2] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19",
             await until81(() => !!box2.querySelector(".xhub-preview .sp-page.xhub-front-cover"))
           );
+          check2(
+            "[81r3] exportPageNumberFmt \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01",
+            exportPageNumberFmt(spFormat()).pageNumbers.firstPage === true
+          );
+          check2(
+            "[81r3] \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
+            spFormat().pageNumbers.firstPage === mergeSpFormat(state.settings).pageNumbers.firstPage
+          );
+          {
+            const keepPn3 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            togglePageNumbers(true);
+            hub.cfg.pdf.pageNumbers = true;
+            await hub.refresh();
+            const firstNum = await until81(() => {
+              const p1 = box2.querySelector(".xhub-preview .sp-pageview .ed-page, .xhub-preview .sp-pageview .sp-page:not(.xhub-front)");
+              return p1 && p1.querySelector(".sp-page-num") && /\d/.test(p1.querySelector(".sp-page-num").textContent);
+            });
+            check2("[81r3] \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32", firstNum);
+            state.settings.spPageNumbers = keepPn3;
+            applyPageVars();
+          }
           hub.cfg.pdf.titlePages = false;
           hub.cfg.pdf.roster = false;
           const bOff = await hub.build();
