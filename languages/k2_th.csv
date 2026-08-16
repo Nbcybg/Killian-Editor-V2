@@ -900,6 +900,7 @@ ui.app.copyResultConsoleDone,คัดลอกผลจากคอนโซล
 ui.app.copySaveDoneLine,คัดลอกบันทึกแล้ว ({0} บรรทัดตามตัวกรอง)
 ui.app.corner,มุมเอียง (องศา)
 ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
+ui.app.coverBookReadNot,อ่านรูปปกของเล่มไม่ได้
 ui.app.ctrlEnter,▶ รัน (Ctrl+Enter)
 ui.app.currentTopDisk,ปัจจุบัน (บนดิสก์)
 ui.app.data,ข้อมูล
@@ -4903,3 +4904,6 @@ ui.xhub.docKind,ชนิดเอกสาร
 ui.xhub.kindAuto,ตามไฟล์ต้นทาง
 ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
 ui.xhub.kindScript,บทภาพยนตร์
+ui.xhub.pdfRoster,"หน้ารายชื่อตัวละคร"
+ui.xhub.pdfFrontNoNum,"หน้าปกและหน้ารายชื่อไม่ถูกนับเลขหน้า — เลขหน้าเริ่มที่หน้าแรกของเนื้อเรื่อง"
+ui.xhub.donePdfPages,"{0} หน้า (หน้าหน้าเล่ม {1} หน้า ไม่นับเลข)"

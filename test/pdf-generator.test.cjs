@@ -417,6 +417,39 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
       JSON.stringify(G.splitFontRuns('ก' + EMO + 'ข', true)));
   }
 
+  // ═══ [alpha.81r2] ต่อ PDF + ประทับเลขหน้าเฉพาะเนื้อเรื่อง ═══
+  // ผู้ใช้สั่ง: "เลขหน้าจะไม่นับที่หน้าปก และหน้า cast of character"
+  // Chromium สั่งแบบนั้นไม่ได้ → เราต่อเองแล้ววาดเลขหน้าเองหลังหน้าหน้าเล่ม
+  {
+    const blk = (n) => Array.from({ length: n }, () => ({ el: 'action', text: 'บรรทัด' }));
+    const mk = async (n) => (await G.generatePdf({
+      blocks: blk(n), fmt: fmt, meta: {}, opts: { toc: false, titlePages: false,
+        headers: false, pageNumbers: false } })).bytes;
+    const front1 = await mk(1);
+    const body = await mk(120);                       // ยาวพอให้ได้หลายหน้า
+    const bodyPages = (await G.generatePdf({ blocks: blk(120), fmt: fmt, meta: {},
+      opts: { toc: false, titlePages: false, headers: false, pageNumbers: false } })).pageCount;
+
+    const numFmt = { ...fmt, pageNumbers: { show: true, right: 1, top: 0.5, suffix: '.', firstPage: true } };
+    const r = await G.mergeAndNumber([front1], body, { fmt: numFmt, startPage: 1 });
+    check('[81r2] ต่อหน้าครบ = หน้าหน้าเล่ม + เนื้อเรื่อง',
+          r.pageCount === 1 + bodyPages, r.pageCount + ' vs ' + (1 + bodyPages));
+    check('[81r2] รายงานจำนวนหน้าหน้าเล่มถูก', r.frontCount === 1, String(r.frontCount));
+    check('[81r2] ได้ไบต์ PDF ที่ถูกต้อง',
+          r.bytes instanceof Uint8Array && String.fromCharCode(...r.bytes.slice(0, 4)) === '%PDF');
+    // ไม่มีหน้าหน้าเล่มเลยก็ต้องทำงาน (ผู้ใช้ปิดทั้งสองสวิตช์)
+    const r0 = await G.mergeAndNumber([], body, { fmt: numFmt, startPage: 1 });
+    check('[81r2] ไม่มีหน้าหน้าเล่ม → เนื้อเรื่องล้วน', r0.frontCount === 0 && r0.pageCount === bodyPages);
+    // ปิดเลขหน้า = ไม่วาดอะไรเพิ่ม แต่ยังต่อหน้าให้
+    const rNo = await G.mergeAndNumber([front1], body, { fmt, pageNumbers: false });
+    check('[81r2] ปิดเลขหน้าแล้วยังต่อหน้าครบ', rNo.pageCount === 1 + bodyPages);
+    check('[81r2] ไฟล์ที่ประทับเลขหน้าใหญ่กว่าไฟล์ที่ไม่ประทับ (มีการวาดจริง)',
+          r.bytes.length > rNo.bytes.length, r.bytes.length + ' vs ' + rNo.bytes.length);
+    // ก้อนหน้าเล่มหลายก้อน (ปก + รายชื่อ)
+    const r2 = await G.mergeAndNumber([front1, front1], body, { fmt: numFmt });
+    check('[81r2] หน้าหน้าเล่มหลายก้อนต่อกันได้', r2.frontCount === 2 && r2.pageCount === 2 + bodyPages);
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('FAIL exception | ' + (e && e.stack || e)); process.exit(1); });

@@ -71,7 +71,10 @@ export function defaultHubSettings() {
     kind: 'auto',              // 'auto' = ตามชนิดของฉากในเล่ม · 'prose' · 'screenplay' = บังคับ
     draft: '',
     workflow: '',              // '' = เลือกให้อัตโนมัติตามรูปแบบ
-    pdf: { toc: true, titlePages: true, headers: true, pageNumbers: true, watermark: '' },
+    // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
+    // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
+    pdf: { toc: true, titlePages: true, roster: true, headers: true,
+           pageNumbers: true, watermark: '' },
     html: { wysiwyg: true },
     rtf: { fontPt: 12 },
   };

@@ -85946,7 +85946,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       draft: "",
       workflow: "",
       // '' = เลือกให้อัตโนมัติตามรูปแบบ
-      pdf: { toc: true, titlePages: true, headers: true, pageNumbers: true, watermark: "" },
+      // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
+      // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
+      pdf: {
+        toc: true,
+        titlePages: true,
+        roster: true,
+        headers: true,
+        pageNumbers: true,
+        watermark: ""
+      },
       html: { wysiwyg: true },
       rtf: { fontPt: 12 }
     };
@@ -139612,6 +139621,24 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   });
 
   // src/pdf-generator.js
+  var pdf_generator_exports = {};
+  __export(pdf_generator_exports, {
+    OMITTABLE_ELEMENTS: () => OMITTABLE_ELEMENTS,
+    PDF_DEFAULTS: () => PDF_DEFAULTS,
+    PDF_FONT_FILES: () => PDF_FONT_FILES,
+    PT_PER_IN: () => PT_PER_IN,
+    addOutline: () => addOutline,
+    embedFonts: () => embedFonts,
+    generatePdf: () => generatePdf,
+    layoutPageLines: () => layoutPageLines,
+    mergeAndNumber: () => mergeAndNumber,
+    mergePdfOptions: () => mergePdfOptions,
+    needsLatinFont: () => needsLatinFont,
+    sanitizeForStandardFont: () => sanitizeForStandardFont,
+    setOpenPage: () => setOpenPage,
+    splitFontRuns: () => splitFontRuns,
+    wrapTextLines: () => wrapTextLines
+  });
   function needsLatinFont(ch) {
     const cp = String(ch).codePointAt(0);
     if (!Number.isFinite(cp)) return false;
@@ -140023,6 +140050,47 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     doc3.catalog.set(PDFName_default.of("Outlines"), outlinesRef);
     doc3.catalog.set(PDFName_default.of("PageMode"), PDFName_default.of("UseOutlines"));
     return refs.length;
+  }
+  async function mergeAndNumber(frontParts, bodyBytes, o = {}) {
+    const fmt = o.fmt && o.fmt.elements ? o.fmt : mergeSpFormat(o.fmt);
+    const out = await PDFDocument_default.create();
+    const add = async (src2) => {
+      const b = toBytes(src2);
+      if (!b || !b.length) return 0;
+      const d = await PDFDocument_default.load(b, { ignoreEncryption: true });
+      const pages = await out.copyPages(d, d.getPageIndices());
+      for (const p of pages) out.addPage(p);
+      return pages.length;
+    };
+    let frontCount = 0;
+    for (const part of frontParts || []) frontCount += await add(part);
+    const bodyStart = out.getPageCount();
+    await add(bodyBytes);
+    if (o.pageNumbers !== false && fmt.pageNumbers && fmt.pageNumbers.show) {
+      const set = await embedFonts(out, o.fonts);
+      const { draw: draw2, widthOf } = makeDrawer(set, set.custom);
+      const size = numClamp(o.fontPt, 12, 4, 96);
+      const pages = out.getPages();
+      for (let i5 = bodyStart; i5 < pages.length; i5++) {
+        const label = pageNumberLabel(i5 - bodyStart + 1, fmt, o.startPage);
+        if (!label) continue;
+        const page2 = pages[i5];
+        const w = widthOf(pickFont(set, false, false), label, size);
+        draw2(page2, label, {
+          x: page2.getWidth() - (fmt.pageNumbers.right || 1) * PT_PER_IN - w,
+          boxWidth: 0,
+          y: page2.getHeight() - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82,
+          size
+        });
+      }
+    }
+    if (o.meta && o.meta.title) {
+      try {
+        out.setTitle(String(o.meta.title));
+      } catch {
+      }
+    }
+    return { bytes: await out.save(), pageCount: out.getPageCount(), frontCount };
   }
   function setOpenPage(doc3, index) {
     const pages = doc3.getPages();
@@ -141037,7 +141105,12 @@ ${indent}</Paragraph>`;
     const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
     if (!d) return null;
     const model = await A.buildDraftModel(d.dPath);
-    return { model, kind: forced || docKind(model) };
+    return {
+      model,
+      kind: forced || docKind(model),
+      dPath: d.dPath,
+      coverUrl: await A.sectionCoverUrl(d.dPath)
+    };
   }
   async function compose2(A, cfg, model, wf2) {
     const varCtx = { title: model.title, author: model.author };
@@ -141060,25 +141133,77 @@ ${indent}</Paragraph>`;
     const fontCss = await A.exportFontCss();
     return fontCss ? html.replace("<style>", "<style>\n" + fontCss + "\n") : html;
   }
+  async function frontMatterHtml(A, cfg, model, coverUrl) {
+    const wantCover = cfg.pdf.titlePages !== false;
+    const roster = cfg.pdf.roster !== false ? String(model.roster || "").trim() : "";
+    if (!wantCover && !roster) return "";
+    const spf = A.spFormat();
+    const esc6 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const pages = [];
+    if (wantCover) {
+      pages.push('<section class="k-front k-cover">' + (coverUrl ? `<img class="k-cover-img" src="${esc6(coverUrl)}" alt="">` : "") + `<div class="k-cover-title">${esc6(model.title || "")}</div>` + (model.author ? `<div class="k-cover-author">${esc6(model.author)}</div>` : "") + "</section>");
+    }
+    if (roster) {
+      pages.push('<section class="k-front k-cast"><pre class="k-cast-body">' + esc6(roster) + "</pre></section>");
+    }
+    const m = spf.margins;
+    const { proseFontStack: proseFontStack2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
+    const pf = A.proseFormat();
+    const css = [
+      `@page{size:${spf.paper.width}in ${spf.paper.height}in;margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`,
+      "html,body{margin:0;padding:0}",
+      `body{font-family:${proseFontStack2(pf)};font-size:${pf.fontPt}pt;line-height:1.5;color:#111}`,
+      // ความสูงหนึ่งหน้าเต็ม (หักระยะขอบบน-ล่าง) → แต่ละ section = หนึ่งแผ่นเป๊ะ
+      `.k-front{height:${+(spf.paper.height - m.top - m.bottom).toFixed(3)}in;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;break-after:page;page-break-after:always;overflow:hidden}`,
+      ".k-front:last-child{break-after:auto;page-break-after:auto}",
+      ".k-cover-img{max-width:100%;max-height:62%;object-fit:contain;margin-bottom:.5in}",
+      ".k-cover-title{font-size:2.1em;font-weight:700;line-height:1.25}",
+      ".k-cover-author{font-size:1.15em;margin-top:.28in;opacity:.85}",
+      ".k-cast{justify-content:flex-start;text-align:left;align-items:stretch}",
+      ".k-cast-body{font-family:inherit;white-space:pre-wrap;margin:0;font-size:1em;line-height:1.6}"
+    ].join("\n");
+    const fontCss = await A.exportFontCss();
+    return `<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>${esc6(model.title || "")}</title>
+<style>
+${fontCss}
+${css}
+</style></head><body>
+${pages.join("\n")}
+</body></html>`;
+  }
   async function writeOut(A, cfg, built) {
     const def = formatDef(cfg.format);
     const name5 = suggestName(built.title, cfg.format);
     const dest = def.ext === "pdf" ? await kapi.savePdfDialog(name5) : await kapi.saveAsDialog(name5, def.ext);
     if (!dest) return null;
     if (cfg.format === "pdf") {
+      const o = cfg.pdf;
       if (built.engine === "pdflib") {
         const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
         const { buildScriptPdf: buildScriptPdf2, projectTitlePages: projectTitlePages2, projectHeaders: projectHeaders2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
-        const o = cfg.pdf;
-        const r = await buildScriptPdf2({
+        const fmtS = A.spFormat();
+        const titles = o.titlePages ? [...projectTitlePages2()] : [];
+        const roster = o.roster !== false ? String(built.roster || "").trim() : "";
+        if (roster) {
+          titles.push({ strings: [{
+            text: roster,
+            x: fmtS.margins.left,
+            y: fmtS.margins.top,
+            size: num(state.settings.spFontPt, 12),
+            align: "left",
+            width: Math.max(1, fmtS.paper.width - fmtS.margins.left - fmtS.margins.right)
+          }] });
+        }
+        const r3 = await buildScriptPdf2({
           blocks: parseScript2(built.text),
           title: built.title,
-          fmt: A.spFormat(),
-          titlePages: o.titlePages ? projectTitlePages2() : [],
+          fmt: fmtS,
+          titlePages: titles,
           headers: o.headers ? projectHeaders2() : { enabled: false },
           opts: {
             toc: o.toc,
-            titlePages: o.titlePages,
+            titlePages: titles.length > 0,
             headers: o.headers,
             pageNumbers: o.pageNumbers,
             sceneNumbers: o.pageNumbers,
@@ -141086,11 +141211,24 @@ ${indent}</Paragraph>`;
             openPage: 0
           }
         });
-        await kapi.writeBytes(dest, Array.from(r.bytes));
-        return { dest, note: tf("ui.xhub.donePdf", r.pageCount, r.bookmarks.length) };
+        await kapi.writeBytes(dest, Array.from(r3.bytes));
+        return { dest, note: tf("ui.xhub.donePdf", r3.pageCount, r3.bookmarks.length) };
       }
-      await kapi.pdfFromHtml(built.html, dest, { height: num(A.spFormat().paper.height, 11) });
-      return { dest, note: t("ui.xhub.donePdfHtml") };
+      const h = { height: num(A.spFormat().paper.height, 11) };
+      const front = built.frontHtml ? await kapi.pdfHtmlToBytes(built.frontHtml, h) : null;
+      const body = await kapi.pdfHtmlToBytes(built.html, h);
+      const { mergeAndNumber: mergeAndNumber2 } = await Promise.resolve().then(() => (init_pdf_generator(), pdf_generator_exports));
+      const { pdfFontBytes: pdfFontBytes2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+      const r = await mergeAndNumber2(front ? [front] : [], body, {
+        fmt: A.spFormat(),
+        fonts: await pdfFontBytes2(),
+        pageNumbers: o.pageNumbers !== false,
+        startPage: 1,
+        fontPt: num(A.proseFormat().fontPt, 12),
+        meta: { title: built.title }
+      });
+      await kapi.writeBytes(dest, Array.from(r.bytes));
+      return { dest, note: tf("ui.xhub.donePdfPages", r.pageCount, r.frontCount) };
     }
     if (cfg.format === "html") {
       await kapi.writeFile(dest, built.html);
@@ -141104,7 +141242,8 @@ ${indent}</Paragraph>`;
     if (!mk2) return null;
     const { model, kind } = mk2;
     const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows());
-    const r = await compose2(A, cfg, model, wf2);
+    const wf22 = { ...wf2, steps: (wf2.steps || []).map((s) => s.key === "cover" || s.key === "roster" ? { ...s, on: false } : s) };
+    const r = await compose2(A, cfg, model, wf22);
     const engine2 = pdfEngine(kind);
     const { parseScript: parseScript2, stripFountainCodes: stripFountainCodes2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
     const viaScript = cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
@@ -141115,12 +141254,17 @@ ${indent}</Paragraph>`;
       warnings: r.warnings || [],
       text,
       html: "",
+      frontHtml: "",
+      roster: model.roster || "",
+      coverUrl: mk2.coverUrl || "",
       engine: engine2,
       blocks: null
     };
     if (cfg.format === "html") out.html = await proseHtml(A, text, model.title, cfg.html.wysiwyg);
-    if (cfg.format === "pdf" && engine2 === "html")
+    if (cfg.format === "pdf" && engine2 === "html") {
       out.html = await proseHtml(A, text, model.title, true);
+      out.frontHtml = await frontMatterHtml(A, cfg, model, mk2.coverUrl || "");
+    }
     if (viaScript) out.blocks = parseScript2(r.text);
     if (cfg.format === "rtf") {
       const { generateRtf: generateRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
@@ -141139,6 +141283,42 @@ ${indent}</Paragraph>`;
     }
     return out;
   }
+  function renderFrontPreview(box2, built, cfg, paper, scale2) {
+    const wantCover = cfg.pdf.titlePages !== false;
+    const roster = cfg.pdf.roster !== false ? String(built.roster || "").trim() : "";
+    if (!wantCover && !roster) return 0;
+    const frag = document.createDocumentFragment();
+    const pxW = paper.width * 96 * scale2, pxH = paper.height * 96 * scale2;
+    const mkPage = (cls) => {
+      const slot = el("div", "sp-page-slot");
+      slot.style.width = pxW + "px";
+      slot.style.height = pxH + "px";
+      const page2 = el("div", "sp-page xhub-front " + cls);
+      page2.style.width = paper.width + "in";
+      page2.style.height = paper.height + "in";
+      page2.style.transform = "scale(" + scale2 + ")";
+      slot.append(page2);
+      frag.append(slot);
+      return page2;
+    };
+    let n2 = 0;
+    if (wantCover) {
+      const p = mkPage("xhub-front-cover");
+      if (built.coverUrl) {
+        const img = el("img", "xhub-front-img");
+        img.src = built.coverUrl;
+        p.append(img);
+      }
+      p.append(el("div", "xhub-front-title", built.title || ""));
+      n2++;
+    }
+    if (roster) {
+      mkPage("xhub-front-cast").append(el("pre", "xhub-front-cast-body", roster));
+      n2++;
+    }
+    box2.prepend(frag);
+    return n2;
+  }
   async function renderPreview(host2, A, cfg, built) {
     host2.replaceChildren();
     const def = formatDef(cfg.format);
@@ -141154,10 +141334,15 @@ ${indent}</Paragraph>`;
       const box2 = el("div", "sp-pageview xhub-pv");
       host2.append(box2);
       const fmt = A.spFormat();
-      const w = host2.clientWidth || 420;
+      const { fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
+      const fs = fitScale3(
+        host2.clientWidth || 420,
+        fmt.paper.width * 96,
+        14,
+        { maxPerRow: 1, minScale: 0.15 }
+      );
       if (built.engine === "pdflib") {
-        const { renderPageView: renderPageView2, pagesOf: pagesOf2, fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
-        const fs = fitScale3(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
+        const { renderPageView: renderPageView2, pagesOf: pagesOf2 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
         renderPageView2(
           box2,
           pagesOf2(built.blocks || [], fmt),
@@ -141165,18 +141350,23 @@ ${indent}</Paragraph>`;
           { scale: fs.scale, gap: 14, startPage: 1 }
         );
       } else {
-        const { fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
         const { renderProsePageView: renderProsePageView2, prosePagesOf: prosePagesOf2 } = await Promise.resolve().then(() => (init_prose_view(), prose_view_exports));
         const { mdToProseBlocks: mdToProseBlocks2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
         const pf = A.proseFormat();
-        const fs = fitScale3(w, fmt.paper.width * 96, 14, { maxPerRow: 1, minScale: 0.15 });
         renderProsePageView2(
           box2,
           prosePagesOf2(mdToProseBlocks2(built.text), pf, fmt.paper, fmt.margins),
           pf,
-          { scale: fs.scale, gap: 14, paper: fmt.paper, margins: fmt.margins }
+          {
+            scale: fs.scale,
+            gap: 14,
+            paper: fmt.paper,
+            margins: fmt.margins,
+            showPageNumbers: cfg.pdf.pageNumbers !== false
+          }
         );
       }
+      renderFrontPreview(box2, built, cfg, fmt.paper, fs.scale);
       return "page";
     }
     if (cfg.format === "html") {
@@ -141377,8 +141567,10 @@ ${indent}</Paragraph>`;
         };
         mk2("toc", "ui.xhub.pdfToc");
         mk2("titlePages", "ui.xhub.pdfCover");
+        mk2("roster", "ui.xhub.pdfRoster");
         mk2("headers", "ui.xhub.pdfHeaders");
         mk2("pageNumbers", "ui.xhub.pdfNums");
+        colOpt.append(el("div", "k-hint", t("ui.xhub.pdfFrontNoNum")));
         const wm = el("input", "k-dlg-input");
         wm.id = "xhub-wm";
         wm.value = cfg.pdf.watermark;
@@ -145424,6 +145616,7 @@ ${css}
     sceneEventsFromProject: () => sceneEventsFromProject,
     scheduleLineGutter: () => scheduleLineGutter,
     scriptMeta: () => scriptMeta,
+    sectionCoverUrl: () => sectionCoverUrl,
     setLayoutPageCount: () => setLayoutPageCount,
     setModDown: () => setModDown,
     setPluginDisabled: () => setPluginDisabled,
@@ -150541,6 +150734,21 @@ ${css}
       return commit(true);
     };
     backScroll();
+  }
+  async function sectionCoverUrl(dPath) {
+    try {
+      const secPath = String(dPath || "").replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, "");
+      if (!secPath || secPath === String(dPath)) return "";
+      const sf = await kapi.join(secPath, "section.json");
+      if (!await kapi.exists(sf)) return "";
+      const rel = (await kapi.readJson(sf)).cover;
+      if (!rel) return "";
+      const abs = await kapi.resolve(secPath, rel);
+      return await kapi.exists(abs) ? kapi.toFileURL(abs) : "";
+    } catch (e) {
+      log("warn", t("ui.app.coverBookReadNot"), e);
+      return "";
+    }
   }
   async function rosterTextForDraft(dPath) {
     try {
@@ -172797,6 +173005,50 @@ ${css}
               pg1 && getComputedStyle(pg1).backgroundColor
             );
           }
+          hub.cfg.kind = "prose";
+          hub.cfg.scope = "draft";
+          hub.cfg.pdf.titlePages = true;
+          hub.cfg.pdf.roster = true;
+          await hub.setFormat("pdf");
+          const bOn = await hub.build();
+          check2(
+            "[81r2] \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 \u2192 \u0E21\u0E35 HTML \u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E25\u0E48\u0E21\u0E16\u0E39\u0E01\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+            !!bOn && !!bOn.frontHtml,
+            (bOn && bOn.frontHtml || "").slice(0, 40)
+          );
+          check2(
+            '[81r2] \u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E43\u0E0A\u0E49\u0E23\u0E39\u0E1B\u0E1B\u0E01\u0E08\u0E32\u0E01 "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E21"',
+            !!bOn && (!bOn.coverUrl || bOn.frontHtml.includes(bOn.coverUrl)),
+            bOn && bOn.coverUrl
+          );
+          check2(
+            "[81r2] \u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E25\u0E48\u0E21\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07 (break-after:page)",
+            !!bOn && /break-after:page/.test(bOn.frontHtml)
+          );
+          check2(
+            "[81r2] \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07",
+            [...box2.querySelectorAll(".xhub-row-lbl")].some((x) => x.textContent === t("ui.xhub.pdfRoster"))
+          );
+          check2(
+            "[81r2] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19",
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page.xhub-front-cover"))
+          );
+          hub.cfg.pdf.titlePages = false;
+          hub.cfg.pdf.roster = false;
+          const bOff = await hub.build();
+          check2("[81r2] \u0E1B\u0E34\u0E14\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E25\u0E48\u0E21\u0E40\u0E25\u0E22", !!bOff && !bOff.frontHtml);
+          await hub.refresh();
+          check2(
+            "[81r2] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E2D\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E2D\u0E2D\u0E01\u0E15\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22",
+            await until81(() => !box2.querySelector(".xhub-preview .sp-page.xhub-front-cover"))
+          );
+          check2(
+            '[81r2] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E0B\u0E49\u0E33\u0E08\u0E32\u0E01\u0E02\u0E31\u0E49\u0E19\u0E15\u0E2D\u0E19 "\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01" \u0E02\u0E2D\u0E07\u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E42\u0E1F\u0E25\u0E27\u0E4C',
+            !!bOff && !bOff.text.startsWith("# "),
+            (bOff && bOff.text || "").slice(0, 40)
+          );
+          hub.cfg.pdf.titlePages = true;
+          hub.cfg.pdf.roster = true;
           hub.cfg.kind = "auto";
           hub.cfg.scope = "draft";
           hub.close();

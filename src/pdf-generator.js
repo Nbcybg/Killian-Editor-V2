@@ -514,6 +514,58 @@ export function addOutline(doc, entries) {
   return refs.length;
 }
 
+/**
+ * [alpha.81r2] ต่อ PDF หลายก้อนเป็นเล่มเดียว แล้วประทับเลขหน้า **เฉพาะเนื้อเรื่อง**
+ *
+ * ═══ ทำไมต้องมี ═══
+ * PDF ของนิยายเกิดจาก `printToPDF` ของ Chromium ซึ่งไม่มีทางสั่งว่า "อย่านับหน้าปก"
+ * (Chromium ไม่รองรับ margin box ของ `@page` และ footerTemplate ก็นับทุกหน้าเสมอ)
+ * ผู้ใช้บอกชัดว่า **เลขหน้าไม่นับหน้าปกและหน้ารายชื่อตัวละคร** ซึ่งเป็นธรรมเนียมหนังสือจริง
+ * ทางที่คุมได้จริงคือประกอบเองทีหลัง: หน้าปก/รายชื่อเป็น PDF ก้อนหนึ่ง เนื้อเรื่องอีกก้อนหนึ่ง
+ * เอามาต่อกันแล้ววาดเลขหน้าลงเฉพาะก้อนหลัง — เลขหน้าเริ่มที่ 1 ของเนื้อเรื่องเสมอ
+ *
+ * @param {Array<Uint8Array|number[]>} frontParts ก้อนหน้าแรก ๆ ที่ **ไม่นับเลขหน้า**
+ * @param {Uint8Array|number[]} bodyBytes         เนื้อเรื่อง (นับเลขหน้าจาก 1)
+ * @param {object} o { fmt, fonts, pageNumbers, startPage }
+ * @returns {Promise<{bytes:Uint8Array, pageCount:number, frontCount:number}>}
+ */
+export async function mergeAndNumber(frontParts, bodyBytes, o = {}) {
+  const fmt = o.fmt && o.fmt.elements ? o.fmt : mergeSpFormat(o.fmt);
+  const out = await PDFDocument.create();
+  const add = async (src) => {
+    const b = toBytes(src);
+    if (!b || !b.length) return 0;
+    const d = await PDFDocument.load(b, { ignoreEncryption: true });
+    const pages = await out.copyPages(d, d.getPageIndices());
+    for (const p of pages) out.addPage(p);
+    return pages.length;
+  };
+  let frontCount = 0;
+  for (const part of (frontParts || [])) frontCount += await add(part);
+  const bodyStart = out.getPageCount();
+  await add(bodyBytes);
+
+  if (o.pageNumbers !== false && fmt.pageNumbers && fmt.pageNumbers.show) {
+    const set = await embedFonts(out, o.fonts);
+    const { draw, widthOf } = makeDrawer(set, set.custom);
+    const size = numClamp(o.fontPt, 12, 4, 96);
+    const pages = out.getPages();
+    for (let i = bodyStart; i < pages.length; i++) {
+      // index ของ "หน้าในเนื้อเรื่อง" เริ่มที่ 1 — หน้าปก/รายชื่อไม่ถูกนับเลย
+      const label = pageNumberLabel(i - bodyStart + 1, fmt, o.startPage);
+      if (!label) continue;
+      const page = pages[i];
+      const w = widthOf(pickFont(set, false, false), label, size);
+      draw(page, label, {
+        x: page.getWidth() - (fmt.pageNumbers.right || 1) * PT_PER_IN - w, boxWidth: 0,
+        y: page.getHeight() - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82, size,
+      });
+    }
+  }
+  if (o.meta && o.meta.title) { try { out.setTitle(String(o.meta.title)); } catch {} }
+  return { bytes: await out.save(), pageCount: out.getPageCount(), frontCount };
+}
+
 /** [89] ให้โปรแกรมอ่าน PDF เปิดมาที่หน้า index (0-based) */
 export function setOpenPage(doc, index) {
   const pages = doc.getPages();

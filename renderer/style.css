@@ -657,6 +657,14 @@ body.theme-light { --find-hit:#ffe08a; }
 /* [alpha.81r ข้อ 5] มุมมองหน้ากระดาษในช่องตัวอย่าง = `.sp-pageview` ตัวจริง (ได้หน้าตาครบทุกกฎ)
    ที่นี่แค่ปลดการตรึงเต็มแผง (`position:absolute; inset:0`) ให้มันไหลอยู่ในช่องตัวอย่างแทน */
 .xhub-preview .sp-pageview.xhub-pv { position:relative; inset:auto; min-height:100%; z-index:auto; }
+/* [alpha.81r2] หน้าหน้าเล่มในตัวอย่าง (ปก + รายชื่อตัวละคร) — ใช้กล่อง .sp-page ตัวเดิม
+   จึงได้ขนาด/เงา/สีกระดาษเท่ากับหน้าเนื้อเรื่องเป๊ะ ที่นี่คุมแค่การจัดวางข้างใน */
+.sp-page.xhub-front { display:flex; flex-direction:column; align-items:center;
+  justify-content:center; text-align:center; padding:1in; box-sizing:border-box; }
+.xhub-front-img { max-width:100%; max-height:62%; object-fit:contain; margin-bottom:.4in; }
+.xhub-front-title { font-size:2.1em; font-weight:700; line-height:1.25; color:var(--paper-ink); }
+.sp-page.xhub-front-cast { justify-content:flex-start; align-items:stretch; text-align:left; }
+.xhub-front-cast-body { margin:0; white-space:pre-wrap; font:inherit; color:var(--paper-ink); }
 .xhub-warn { flex:1; text-align:left; font-size:calc(11.5px * var(--ui-scale, 1));
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media (max-width:900px) { .xhub-body { grid-template-columns:1fr; height:auto; } }

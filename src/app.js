@@ -4927,6 +4927,24 @@ const propsFlush_C = { fn: null };
 // อ่านฉบับร่างทั้งชุดจากดิสก์ → โครงสร้างกลาง (ใช้ทั้งส่งออกแบบเดิมและเวิร์กโฟลว์)
 // ชนิด memo ยังคงอยู่ในโมเดล — ให้ขั้นตอน "ตัดโน้ต" เป็นคนคัดออก (ค่าเริ่มต้นเปิดไว้ทุกพรีเซ็ต)
 /** [97] ข้อความหน้ารายชื่อตัวละครของ "เล่ม" ที่ฉบับร่างนี้อยู่ (ว่าง = ปิดสวิตช์ใส่ตอนส่งออก) */
+/**
+ * [alpha.81r2] `file://` ของรูปปกเล่มที่ฉบับร่างนี้อยู่ (จาก "จัดการเล่ม" → section.json → cover)
+ * ผู้ใช้สั่งว่าหน้าปกของ **นิยาย** ต้องใช้รูปนี้ (บทภาพยนตร์ใช้หน้าปกของบทตามเดิม)
+ * @returns {Promise<string>} '' = เล่มนี้ยังไม่ได้ตั้งรูปปก
+ */
+export async function sectionCoverUrl(dPath) {
+  try {
+    const secPath = String(dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
+    if (!secPath || secPath === String(dPath)) return '';
+    const sf = await kapi.join(secPath, 'section.json');
+    if (!(await kapi.exists(sf))) return '';
+    const rel = (await kapi.readJson(sf)).cover;
+    if (!rel) return '';
+    const abs = await kapi.resolve(secPath, rel);
+    return (await kapi.exists(abs)) ? kapi.toFileURL(abs) : '';
+  } catch (e) { log('warn', tt('ui.app.coverBookReadNot'), e); return ''; }
+}
+
 export async function rosterTextForDraft(dPath) {
   try {
     const secPath = String(dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
@@ -24161,6 +24179,32 @@ async function runTest(projectPath) {
                   !!pg1 && getComputedStyle(pg1).backgroundColor !== 'rgba(0, 0, 0, 0)',
                   pg1 && getComputedStyle(pg1).backgroundColor);
           }
+          // ── [alpha.81r2] ตัวเลือก PDF ต้อง "มีผลจริง" (เดิมติ๊กแล้วไม่มีอะไรเปลี่ยนเลย) ──
+          hub.cfg.kind = 'prose'; hub.cfg.scope = 'draft';
+          hub.cfg.pdf.titlePages = true; hub.cfg.pdf.roster = true;
+          await hub.setFormat('pdf');
+          const bOn = await hub.build();
+          check('[81r2] เปิดหน้าปก → มี HTML ของหน้าหน้าเล่มถูกสร้างจริง',
+                !!bOn && !!bOn.frontHtml, (bOn && bOn.frontHtml || '').slice(0, 40));
+          check('[81r2] หน้าปกของนิยายใช้รูปปกจาก "จัดการเล่ม"',
+                !!bOn && (!bOn.coverUrl || bOn.frontHtml.includes(bOn.coverUrl)),
+                bOn && bOn.coverUrl);
+          check('[81r2] หน้าหน้าเล่มขึ้นหน้าใหม่จริง (break-after:page)',
+                !!bOn && /break-after:page/.test(bOn.frontHtml));
+          check('[81r2] มีสวิตช์หน้ารายชื่อตัวละครในกล่อง',
+                [...box.querySelectorAll('.xhub-row-lbl')].some((x) => x.textContent === tt('ui.xhub.pdfRoster')));
+          check('[81r2] ตัวอย่างโชว์หน้าปกให้เห็น',
+                await until81(() => !!box.querySelector('.xhub-preview .sp-page.xhub-front-cover')));
+          hub.cfg.pdf.titlePages = false; hub.cfg.pdf.roster = false;
+          const bOff = await hub.build();
+          check('[81r2] ปิดทั้งสองสวิตช์ → ไม่มีหน้าหน้าเล่มเลย', !!bOff && !bOff.frontHtml);
+          await hub.refresh();
+          check('[81r2] ตัวอย่างเอาหน้าปกออกตามด้วย',
+                await until81(() => !box.querySelector('.xhub-preview .sp-page.xhub-front-cover')));
+          // ขั้นตอน cover/roster ของเวิร์กโฟลว์ต้องถูกปิด ไม่ให้ซ้อนกับหน้าที่กล่องนี้ทำเอง
+          check('[81r2] ไม่มีชื่อเรื่องซ้ำจากขั้นตอน "หน้าปก" ของเวิร์กโฟลว์',
+                !!bOff && !bOff.text.startsWith('# '), (bOff && bOff.text || '').slice(0, 40));
+          hub.cfg.pdf.titlePages = true; hub.cfg.pdf.roster = true;
           hub.cfg.kind = 'auto'; hub.cfg.scope = 'draft';
           hub.close();
           check('[81-9] ปิดกล่องแล้วไม่มีอะไรค้าง', !document.querySelector('.k-xhub'));

@@ -956,7 +956,7 @@ H('win:printToPdf', async (outPath) => {
 // [70] สร้าง PDF จาก HTML ที่ renderer ประกอบมา (ลายน้ำรายคน) — ใช้หน้าต่างซ่อน
 // เขียน HTML ลงไฟล์ชั่วคราวก่อนแล้ว loadFile: data: URL ยาวเกินขีดจำกัดเมื่อบทยาว
 // และ @font-face ที่ชี้ไป file:// ต้องมี origin เป็นไฟล์จริงจึงโหลดฟอนต์ได้
-H('pdf:fromHtml', async (html, outPath, opts = {}) => {
+async function htmlToPdfBuffer(html, opts = {}) {
   const tmpDir = path.join(app.getPath('temp'), 'killian2-pdf');
   fs.mkdirSync(tmpDir, { recursive: true });
   const tmpFile = path.join(tmpDir, 'wm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.html');
@@ -970,29 +970,42 @@ H('pdf:fromHtml', async (html, outPath, opts = {}) => {
       await w.webContents.executeJavaScript(
         'document.fonts && document.fonts.ready ? document.fonts.ready.then(() => true) : true');
     } catch {}
+    // [alpha.81r2] รูปปกจาก "จัดการเล่ม" เป็น <img src="file://…"> — ต้องโหลดเสร็จก่อนพิมพ์
+    // ไม่งั้นได้หน้าปกเปล่า (fonts.ready ไม่รอรูป)
+    try {
+      await w.webContents.executeJavaScript(
+        'Promise.all([...document.images].filter(i=>!i.complete)' +
+        '.map(i=>new Promise(r=>{i.onload=i.onerror=r}))).then(()=>true)');
+    } catch {}
     // ให้ `@page` ใน HTML (สร้างจาก sp-format → ขนาดกระดาษ+ระยะขอบชุดเดียวกับบนจอ) เป็นตัวกำหนด
     // อย่าส่ง pageSize เป็นตัวเลขเอง — หน่วยของ Electron เปลี่ยนไปมาระหว่างรุ่น (นิ้ว/ไมครอน)
     // ใส่ผิดหน่วยแล้วได้ "Failed to generate PDF: Printing failed" เฉย ๆ
-    let data;
     try {
-      data = await w.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true });
+      return await w.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true });
     } catch (e) {
       // เผื่อ HTML ที่ส่งมาไม่มี @page — ถอยไปใช้ชื่อขนาดมาตรฐาน
       const h = +opts.height || 11;
-      data = await w.webContents.printToPDF({
+      return await w.webContents.printToPDF({
         printBackground: true,
         pageSize: Math.abs(h - 11.69) < 0.1 ? 'A4' : Math.abs(h - 14) < 0.1 ? 'Legal' : 'Letter',
         margins: { marginType: 'none' },
       });
     }
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, data);
-    return true;
   } finally {
     try { w.destroy(); } catch {}
     try { fs.unlinkSync(tmpFile); } catch {}
   }
+}
+H('pdf:fromHtml', async (html, outPath, opts = {}) => {
+  const data = await htmlToPdfBuffer(html, opts);
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, data);
+  return true;
 });
+// [alpha.81r2] คืน "ไบต์" แทนการเขียนไฟล์ — ฝั่ง renderer ต้องเอา PDF หลายก้อนมาต่อกัน
+// (หน้าปก + หน้ารายชื่อตัวละคร + เนื้อเรื่อง) แล้วประทับเลขหน้าเองด้วย pdf-lib
+// จึงคุมได้ว่า "เลขหน้าไม่นับหน้าปกและหน้ารายชื่อ" ตามธรรมเนียมหนังสือจริง
+H('pdf:htmlToBytes', async (html, opts = {}) => Array.from(await htmlToPdfBuffer(html, opts)));
 H('recent:push', (p) => { pushRecent(p); return true; });
 H('recent:list', () => readRecent());
 

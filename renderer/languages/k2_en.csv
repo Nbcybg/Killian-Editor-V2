@@ -900,6 +900,7 @@ ui.app.copyResultConsoleDone,คัดลอกผลจากคอนโซล
 ui.app.copySaveDoneLine,คัดลอกบันทึกแล้ว ({0} บรรทัดตามตัวกรอง)
 ui.app.corner,มุมเอียง (องศา)
 ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
+ui.app.coverBookReadNot,Could not read the book cover image
 ui.app.ctrlEnter,▶ รัน (Ctrl+Enter)
 ui.app.currentTopDisk,ปัจจุบัน (บนดิสก์)
 ui.app.data,ข้อมูล
@@ -4903,3 +4904,6 @@ ui.xhub.docKind,Document type
 ui.xhub.kindAuto,Match the source files
 ui.xhub.kindProse,Novel (prose)
 ui.xhub.kindScript,Screenplay
+ui.xhub.pdfRoster,"Cast of characters page"
+ui.xhub.pdfFrontNoNum,"Cover and cast pages are not numbered — numbering starts at the first body page"
+ui.xhub.donePdfPages,"{0} pages ({1} unnumbered front pages)"
