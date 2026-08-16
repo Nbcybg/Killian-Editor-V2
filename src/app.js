@@ -69,7 +69,7 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
          t, i18n, loadLanguage, scanLanguages, languageCatalog, applyDataI18n, onLanguageChanged,
          csvToTable, tableToCsv, langFileName, fallbackLangName,
-         SHORTCUTS, SHORTCUT_LABELS, shortcutId,
+         SHORTCUTS, SHORTCUT_LABELS, shortcutId, SHORTCUT_CATS, shortcutCat, needsAlt,
          formatShortcut, accelText, withShortcut, num,
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
@@ -175,6 +175,17 @@ import { renderRecordPanel, resetRecords } from './record/record-ui.js';
 import { setAutoSync, isAutoSyncOn, renderAutoSyncSection, resetTaskEngine } from './auto-task/event-ui.js';
 // [alpha.60r3 ข้อ 7] EventBus ก้อนเดียวที่ปลั๊กอินทุกตัวใช้ร่วมกัน (k2.on / k2.emit)
 import { EventBus } from './auto-task/event-queue.js';
+// [alpha.79] แผงปลั๊กอิน · แผงบทพูด · เอาปุ่มเข้า-ออกจากแถบเครื่องมือ · จำสถานะล่าสุด
+import { ORIGIN_USER, ORIGIN_PROJECT } from './plugins/plugin-core.js';
+import { renderPluginPanel, resetPluginPanel } from './plugins/plugin-panel.js';
+import { renderDialoguePanel, resetDialogue, scanDialogue, visibleRows as dialogueRows,
+         openAt as dialogueOpenAt, applyEdit as dialogueApplyEdit,
+         selectInEditor as dialogueSelect } from './dialogue/dialogue-ui.js';
+import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
+         resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
+         isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
+import { toolbarDialog, applyToolbarConfig } from './toolbar/toolbar-ui.js';
+import * as SESS from './session/session-core.js';
 import { openAIAssistant, openPlotHoleDetector, openDialogueGenerator, openConsistencyCheck, openWorldGenerator, openAIChat } from './ai/ai-ui.js';
 import { showThesaurusPopup, initThesaurus } from './tools/thesaurus-ui.js';
 import { importScrivenerDialog } from './import/import-ui.js';
@@ -1511,14 +1522,21 @@ async function loadProjectInner(root) {
   loadPlugins();
   // ---- เริ่มระบบใหม่ (Part 1+2) ----
   setBusy(tt('ui.app.busyLayoutPanelTab'));
+  // [alpha.79] **ต้องกู้เซสชันก่อน initPanelSystem** — ระบบแผงอ่าน localStorage ตอนเริ่มครั้งเดียว
+  // (ไฟล์เซสชันเป็นตัวจริง · localStorage เป็นแค่ที่พักระหว่างรัน ซึ่งหายตอนถูกฆ่ากลางคัน)
+  const _sess = sessionOff() ? null : await restoreSessionLayout(root);
   initPanelSystem();                                 // Panel System
   // sync toolbar toggle .on states + [60r2 ข้อ 1/11] ความกว้าง workspace และรางเลขบรรทัด
   onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter();
-                              recenterOnPaneResize(); });
+                              recenterOnPaneResize();
+                              markSessionDirty(); });   // [alpha.79] เลย์เอาต์เปลี่ยน = ต้องจำ
   // แผงฟีเจอร์ (บั๊ก #18) ต้องเรียกหลัง initPanelSystem ไม่งั้น showPanel ยังไม่รู้จักแผง
   await renderOpenFeaturePanels();                   // เลย์เอาต์ที่กู้มาอาจมีแผงเปิดค้าง = กล่องเปล่า
-  // [alpha.60r ข้อ 2] กู้คืนแท็บที่เปิดค้างจากเซสชันก่อน
-  await restoreOpenTabs();
+  // [alpha.79] กู้แท็บจากไฟล์เซสชันก่อน (ทันสมัยกว่า เพราะเขียนทุก 45 วินาที) —
+  // ไม่มีเซสชันค่อยตกไปใช้ `openTabs` ใน project.khn.json แบบเดิม (โปรเจกต์ที่ย้ายเครื่องมา)
+  const _restored = await restoreSessionTabs(_sess);
+  if (!_restored) await restoreOpenTabs();
+  if (!sessionOff()) startSessionWatch();
   if (!state.tabs.size) openDashboard();
   initThesaurus().catch(() => {});                   // Thesaurus engine
   ensureAutoLink().catch(() => {});                  // Backlinks index
@@ -1851,7 +1869,7 @@ async function gotoOutlineItem(msg) {
  * **แท็บที่ยังพิมพ์ค้าง (dirty) ห้ามแตะ** — งานที่ยังไม่บันทึกของผู้ใช้สำคัญกว่าเสมอ
  * (และแผงที่ฉีกออกไปก็ถูกล็อกอ่านอย่างเดียวอยู่แล้วตอนที่นี่ dirty — ดู applySceneGuard)
  */
-async function reloadTabsFromDisk(changedPath) {
+export async function reloadTabsFromDisk(changedPath) {
   if (PANEL_WIN || !changedPath) return 0;
   const hits = tabsToReload([...state.tabs.values()], changedPath);
   let n = 0;
@@ -1944,21 +1962,191 @@ async function saveOpenTabs() {
       JSON.stringify(state.meta, null, 2));
   } catch (e) { log('warn', tt('ui.app.saveOpenTabsNotOk'), e); }
 }
-// [alpha.60r ข้อ 2] กู้คืนแท็บที่เคยเปิดค้างไว้
+/**
+ * [alpha.60r ข้อ 2] กู้คืนแท็บที่เคยเปิดค้างไว้
+ *
+ * [alpha.79 · แก้บั๊กที่ไม่เคยทำงานเลย] เดิมเรียก `activate(full)` —
+ * แต่ `activate()` แค่ **สลับไปแท็บที่เปิดอยู่แล้ว** มันไม่เปิดไฟล์ให้
+ * (และคืน `undefined` เสมอ → `if (tab)` ไม่เคยจริง จึงไม่มีแม้แต่บรรทัด log)
+ * ผลคือฟีเจอร์ "กู้แท็บที่เปิดค้าง" ไม่เคยเปิดอะไรได้เลยตั้งแต่วันแรก
+ * ตอนนี้ใช้ `openTabAt()` ซึ่งเปิดไฟล์จริงตามชนิด (.md = ฉาก · .json = Wiki · อื่น ๆ = ข้อความ)
+ */
 async function restoreOpenTabs() {
   const files = state.meta?.openTabs || state.settings?.openTabs;
-  if (!files || !files.length) return;
+  if (!files || !files.length) return 0;
   const restored = [];
   for (const f of files) {
     try {
       const full = f.startsWith(state.root) ? f : await kapi.join(state.root, f);
-      if (await kapi.exists(full)) {
-        const tab = await activate(full);
-        if (tab) restored.push(full);
-      }
+      if (await openTabAt(full)) restored.push(full);
     } catch {}
   }
   if (restored.length) log('info', ttf('ui.app.recoverRestoreTab', restored.length));
+  return restored.length;
+}
+
+/** เปิดไฟล์เป็นแท็บตามชนิดของมัน — คืน true เมื่อมีแท็บนั้นอยู่จริงหลังเรียก */
+async function openTabAt(full) {
+  if (!full) return false;
+  if (state.tabs.has(full)) return true;
+  if (!(await kapi.exists(full))) return false;
+  await openPathSmart(full);
+  return state.tabs.has(full);
+}
+
+// ═══════════════════ [alpha.79] เซสชัน — "จำทุกอย่างล่าสุด" ═══════════════════
+//
+// ═══ ต้นตอที่ผู้ใช้เจอ ═══
+//   1. เลย์เอาต์แผงอยู่ใน localStorage ซึ่ง Chromium **เขียนลงดิสก์แบบหน่วงเวลา** —
+//      ปิดโปรแกรมปกติทัน แต่ force quit / โปรแกรมพัง ไม่ทัน → แผงหายทั้งชุด
+//   2. "ไฟล์ที่เปิดค้าง" ถูกบันทึกเฉพาะใน `closeProjectIfAny()` เท่านั้น
+//      ซึ่งเป็นทางของ "เปลี่ยนโปรเจกต์" — **ปิดโปรแกรมทั้งตัวไม่เคยผ่านทางนั้นเลย**
+//
+// ═══ ทางแก้ ═══
+// เขียนภาพรวมทั้งหมดลงไฟล์จริงผ่าน main (`session:write` ใช้ temp+rename = ไม่มีไฟล์ครึ่งใบ)
+// และเขียน **เป็นระยะระหว่างใช้งาน** ไม่ใช่แค่ตอนปิด → ถูกฆ่ากลางคันก็เสียแค่ไม่กี่วินาที
+//
+// รูปร่างข้อมูล/การกู้/กันไฟล์เสีย อยู่ใน `session/session-core.js` (บริสุทธิ์ · 44 checks)
+
+const SESSION_SAVE_MS = 8000;          // หน่วงหลังมีอะไรเปลี่ยน
+const SESSION_TICK_MS = 45000;         // เขียนซ้ำเป็นระยะ เผื่อโดนฆ่ากลางคัน
+let _sessTimer = null, _sessTick = null, _sessLast = null, _sessRestoring = false;
+
+/** เก็บภาพสถานะตอนนี้ทั้งก้อน */
+export async function captureSession() {
+  const s = SESS.newSession(state.root || '');
+  s.ts = Date.now();
+  try {
+    s.tabs.open = [...state.tabs.keys()].filter((f) => !f.startsWith('::') && !f.endsWith('.json'));
+    s.tabs.active = (state.active && state.active.file) || '';
+    const scroll = {};
+    for (const [f, tab] of state.tabs) {
+      const box = tab && tab.pane && tab.pane.querySelector('.ProseMirror');
+      const sc = box && box.parentElement ? box.parentElement.scrollTop : 0;
+      if (sc) scroll[f] = Math.round(sc);
+    }
+    s.tabs.scroll = scroll;
+  } catch (e) { log('warn', tt('ui.session.warnTabs'), e); }
+  // แผง/แยกจอ: อ่านจาก localStorage ก้อนเดียวกับที่ระบบแผงใช้ (ที่นี่แค่ "ก๊อปลงไฟล์ให้ปลอดภัย")
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+  s.panels.layout = ls('k2-panel-layout');
+  s.panels.homes = ls('k2-panel-home');
+  s.panels.workspaces = ls('k2-panel-workspaces');
+  s.split = ls('k2-split-layout');
+  // เก็บ **ทั้งเนมสเปซ `k2-*` ของ localStorage** ไม่ใช่ไล่ทีละคีย์ —
+  // ค่าจำเล็ก ๆ ของ UI มีกระจายอยู่หลายที่ (ต้นไม้ที่พับ · สวิตช์ค้นหา · มุมมองหน้าแรก ·
+  // จุดบอกโครงใน Navigation …) ไล่เก็บทีละตัวแล้วลืมแน่นอนเมื่อมีคนเพิ่มคีย์ใหม่
+  const lsAll = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('k2-')) lsAll[k] = localStorage.getItem(k);
+    }
+  } catch {}
+  s.ui = {
+    ls: lsAll,
+    zoom: pageScale,
+    paper: state.settings.paperMode !== false,
+    reading: document.body.classList.contains('reading-mode'),
+    focus: document.body.classList.contains('focus-mode'),
+  };
+  try { s.win = SESS.normalizeWin(await kapi.winBounds()); } catch {}
+  return s;
+}
+
+/** เขียนเซสชันลงไฟล์ (ข้ามถ้าไม่มีอะไรเปลี่ยนจากครั้งก่อน) */
+export async function saveUiSession(force) {
+  if (PANEL_WIN || _sessRestoring) return false;      // หน้าต่างแผงไม่ได้ถือเซสชัน
+  if (!state.root) return false;
+  try {
+    const s = await captureSession();
+    if (!force && _sessLast && SESS.sameSession(_sessLast, s)) return false;
+    _sessLast = s;
+    const ok = await kapi.sessionWrite(SESS.sessionKey(state.root), s);
+    return !!ok;
+  } catch (e) { log('warn', tt('ui.session.warnSave'), e); return false; }
+}
+
+/** ขอให้บันทึกเซสชัน (หน่วงรวบ — เรียกถี่แค่ไหนก็ได้) */
+export function markSessionDirty() {
+  if (PANEL_WIN || _sessRestoring) return;
+  clearTimeout(_sessTimer);
+  _sessTimer = setTimeout(() => saveUiSession(), SESSION_SAVE_MS);
+}
+
+/** เริ่มระบบเซสชัน — ตัวจับเหตุการณ์ทั้งหมดผูกครั้งเดียวตอนเปิดโปรแกรม */
+export function startSessionWatch() {
+  if (PANEL_WIN || _sessTick) return false;
+  _sessTick = setInterval(() => saveUiSession(), SESSION_TICK_MS);
+  // ทางออกทุกทางที่เบราว์เซอร์ยิงให้ — pagehide/visibilitychange ทำงานแม้ตอนถูกปิดกะทันหัน
+  window.addEventListener('beforeunload', () => { saveUiSession(true); });
+  window.addEventListener('pagehide', () => { saveUiSession(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveUiSession(true); });
+  window.addEventListener('resize', () => markSessionDirty());
+  // (การเปลี่ยนเลย์เอาต์แผงเรียก markSessionDirty() จากใน callback ของ onPanelLayoutChange
+  //  ที่ตั้งไว้ตอนเปิดโปรเจกต์ — ตัวนั้นรับ callback ได้ตัวเดียว จึงห้ามลงทะเบียนซ้อนที่นี่)
+  return true;
+}
+
+/**
+ * โหมดเทสห้ามกู้/บันทึกเซสชันอัตโนมัติ
+ *
+ * e2e ต้อง **idempotent** (บทเรียนข้อ 4) — `runTest()` ล้าง `k2-panel-layout` ทิ้งตอนเริ่มทุกรอบ
+ * ถ้าปล่อยให้ระบบเซสชันกู้ไฟล์ของรอบก่อนกลับเข้ามา เลย์เอาต์รอบก่อนจะย้อนมาทับทันที
+ * → รอบที่สองได้ผลไม่เหมือนรอบแรกโดยที่โค้ดไม่เปลี่ยนเลย (อาการหลอกที่สุด)
+ * เทสของระบบเซสชันเองเรียกฟังก์ชันพวกนี้ตรง ๆ ใน `[79-3]` จึงยังครอบคลุมเต็มที่
+ */
+const sessionOff = () => {
+  try { return !!globalThis.__k2testing || location.search.includes('k2test'); } catch { return false; }
+};
+
+/** กู้เซสชันของโปรเจกต์นี้ — เรียก **ก่อน** initPanelSystem (แผงอ่าน localStorage ตอนเริ่ม) */
+export async function restoreSessionLayout(root) {
+  if (PANEL_WIN || !root) return null;
+  let raw = null;
+  try { raw = await kapi.sessionRead(SESS.sessionKey(root)); } catch { return null; }
+  if (!raw) return null;
+  const s = SESS.migrateSession(raw);
+  if (SESS.isStale(s, Date.now(), 180)) { log('info', tt('ui.session.tooOld')); return null; }
+  _sessRestoring = true;
+  try {
+    // ยัดกลับเข้า localStorage ให้ระบบแผง/แยกจอ อ่านเจอเหมือนเดิมทุกประการ
+    // (คืนค่าจำเล็ก ๆ ทั้งเนมสเปซก่อน แล้วค่อยทับด้วยของหลักที่เก็บแยกไว้)
+    const raw = (s.ui && s.ui.ls && typeof s.ui.ls === 'object') ? s.ui.ls : {};
+    for (const k of Object.keys(raw)) {
+      try { if (k.startsWith('k2-') && typeof raw[k] === 'string') localStorage.setItem(k, raw[k]); } catch {}
+    }
+    const put = (k, v) => { try { if (v) localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+    put('k2-panel-layout', s.panels.layout);
+    put('k2-panel-home', s.panels.homes);
+    put('k2-panel-workspaces', s.panels.workspaces);
+    put('k2-split-layout', s.split);
+    if (s.win) { try { await kapi.winSetBounds(s.win); } catch {} }
+  } finally { _sessRestoring = false; }
+  log('info', ttf('ui.session.restored', SESS.sessionSummary(s).tabs));
+  return s;
+}
+
+/** กู้ส่วนที่ต้องทำ **หลัง** เปิดโปรเจกต์เสร็จ (แท็บ + ซูม) */
+export async function restoreSessionTabs(s) {
+  if (!s || PANEL_WIN) return 0;
+  const exists = [];
+  for (const f of s.tabs.open) { try { if (await kapi.exists(f)) exists.push(f); } catch {} }
+  const pruned = SESS.pruneTabs(s, exists);
+  let n = 0;
+  for (const f of pruned.tabs.open) {
+    // ต้อง **เปิด** ไฟล์ ไม่ใช่ activate เฉย ๆ (activate สลับได้เฉพาะแท็บที่เปิดอยู่แล้ว)
+    try { if (await openTabAt(f)) n++; } catch {}
+  }
+  // ปิดท้ายด้วยแท็บที่ผู้ใช้ดูอยู่ล่าสุด — ตอนนี้แท็บนั้นถูกเปิดแล้วจึง activate ได้จริง
+  if (pruned.tabs.active && state.tabs.has(pruned.tabs.active)) {
+    try { activate(pruned.tabs.active); } catch {}
+  }
+  if (s.ui && Number.isFinite(+s.ui.zoom) && +s.ui.zoom > 0) {
+    try { setPageScale(+s.ui.zoom); } catch {}
+  }
+  if (n) log('info', ttf('ui.session.restoredTabs', n));
+  return n;
 }
 
 // ขอบเขตการค้น: จำกัดผลการกรองไว้เฉพาะบทที่เลือก (คลิกขวาที่หัวบท → ค้นเฉพาะในบทนี้)
@@ -4461,7 +4649,7 @@ function toggleReading(on) {
 // ---------------- คุณสมบัติฉาก ----------------
 
 // เวอร์ชันแอปปัจจุบัน (จาก package.json) — ใช้บันทึกว่าแก้ไฟล์ด้วยเวอร์ชันไหน
-const APP_VERSION = (typeof kapi !== 'undefined' && kapi.appVersion) ? kapi.appVersion : '2.0.0';
+export const APP_VERSION = (typeof kapi !== 'undefined' && kapi.appVersion) ? kapi.appVersion : '2.0.0';
 
 // ปรับการแก้ไขได้/ไม่ได้ของแท็บที่เปิดอยู่ตามสถานะล็อก (ProseMirror อ่าน editable ใหม่เมื่อ dispatch)
 function applyLockToTab(tab) {
@@ -5271,14 +5459,16 @@ async function loadPlugins() {
   plugins.shortcuts = []; plugins.panels = [];
 
   // (dir, ที่มา) — ของผู้ใช้ก่อน แล้วให้ของโปรเจกต์ทับได้ด้วยชื่อเดียวกัน
+  // [alpha.79] `origin` ต้องเป็น **ค่าคงที่** ไม่ใช่ข้อความที่แปลตามภาษา —
+  // แผงปลั๊กอินเอาไปเทียบว่า "ของโปรเจกต์หรือของผู้ใช้" ถ้าเป็นข้อความแปล พอสลับภาษาก็เทียบไม่ตรงทันที
   const sources = [];
   try {
     const g = await kapi.globalPluginsDir?.();
-    if (g && await kapi.exists(g)) sources.push([g, tt('ui.app.user')]);
+    if (g && await kapi.exists(g)) sources.push([g, ORIGIN_USER]);
   } catch {}
   if (state.root) {
     const p = await kapi.join(state.root, 'Plugins');
-    if (await kapi.exists(p)) sources.push([p, tt('ui.common.project')]);
+    if (await kapi.exists(p)) sources.push([p, ORIGIN_PROJECT]);
   }
   if (!sources.length) { const b = $('#tb-plug'); if (b) b.style.display = 'none'; return plugins; }
 
@@ -5288,7 +5478,13 @@ async function loadPlugins() {
     try { names = await kapi.listDirs(dir); } catch { continue; }
     for (const name of names) {
       if (name === 'dictionaries') continue;            // โฟลเดอร์พจนานุกรม ไม่ใช่ปลั๊กอิน
-      if (pluginDisabled(name)) { plugins.failed.push({ name, origin, error: tt('ui.app.close2') }); continue; }
+      // [alpha.79] `skipped` แยก "ผู้ใช้ปิดเอง" ออกจาก "โหลดแล้วพัง" —
+      // ทั้งสองอย่างลงกอง failed เหมือนกัน แต่ต้องแสดงผลคนละแบบ
+      // (ไม่งั้นปลั๊กอินที่ผู้ใช้กดปิดจะขึ้นป้าย "มีปัญหา" สีแดงทั้งที่ไม่มีอะไรพัง)
+      if (pluginDisabled(name)) {
+        plugins.failed.push({ name, origin, folder: name, skipped: true, error: tt('ui.app.close2') });
+        continue;
+      }
       try {
         const manifest = await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
         if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
@@ -5300,11 +5496,11 @@ async function loadPlugins() {
         // ชื่อซ้ำ = ของโปรเจกต์ (มาทีหลัง) ทับของผู้ใช้ — บันทึกไว้ตัวเดียว
         if (seen.has(name)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name);
         seen.add(name);
-        plugins.loaded.push({ name, origin,
+        plugins.loaded.push({ name, origin, folder: name,
           version: manifest.version || '', author: manifest.author || '',
           description: manifest.description || '', minAppVersion: manifest.minAppVersion || '' });
       } catch (e) {
-        plugins.failed.push({ name, origin, error: e.message });
+        plugins.failed.push({ name, origin, folder: name, error: e.message });
         // พังตอนโหลด = ปิดไว้ก่อน กันเปิดโปรแกรมไม่ขึ้นรอบหน้า (ผู้ใช้เปิดกลับได้จากกล่องจัดการ)
         setPluginDisabled(name, true);
         log('error', tt('ui.app.plugin2') + name + tt('ui.app.close'), e);
@@ -5319,6 +5515,15 @@ async function loadPlugins() {
 }
 /** รายชื่อปลั๊กอินที่โหลดสำเร็จ/ล้มเหลว (คอนโซลนักพัฒนา + เทสอ่าน) */
 export function pluginList() { return { ...plugins, loaded: [...plugins.loaded], failed: [...plugins.failed] }; }
+/**
+ * [alpha.79] โหลดปลั๊กอินใหม่ทั้งชุด — แผงจัดการเรียกหลังเปิด/ปิด/สร้างปลั๊กอิน
+ * `loadPlugins()` ถอดคีย์ลัดของรอบก่อนออกให้เองอยู่แล้ว จึงเรียกซ้ำได้ไม่ทับซ้อน
+ */
+export async function reloadPlugins() {
+  const r = await loadPlugins();
+  refreshToolbar();
+  return r;
+}
 
 // ---------------- คลังรูปภาพ (แผง — [alpha.60r1 ข้อ 21]) ----------------
 // เดิมเป็น "แท็บเอกสาร" (::gallery::) จึงไปแย่งแถบแท็บกับฉากที่กำลังเขียน และวางคู่กับ
@@ -6001,6 +6206,11 @@ async function createProjectAt(parent, name) {
  * @returns {Promise<'save'|'discard'|null>} สิ่งที่ผู้ใช้เลือก (คืนค่าเพื่อให้ selftest ตรวจได้)
  */
 async function confirmQuit() {
+  // [alpha.79] **บันทึกเซสชันก่อนทุกอย่าง** — เดิมทางนี้ไม่เคยจดอะไรเลย
+  // (`saveOpenTabs()` อยู่ใน closeProjectIfAny ซึ่งเป็นทางของ "เปลี่ยนโปรเจกต์" เท่านั้น)
+  // ต้องมาก่อนกล่องถาม เพราะถ้าผู้ใช้กด "ออกโดยไม่บันทึก" เราก็ยังอยากจำได้ว่าเปิดอะไรไว้
+  await saveUiSession(true);
+  await saveOpenTabs();
   // [alpha.72 ข้อ 4] อ่านจากทะเบียนงานค้าง ไม่ใช่แค่ state.tabs — กระดานวางแผนเคยหายเงียบตรงนี้
   const items = allDirtyList();
   logAction('quit', ttf('ui.app.closeAppPendingList', items.length),
@@ -6605,6 +6815,7 @@ export function activate(file) {
   refreshToolbar(); refreshModeBtn(); scheduleCount(); scheduleOutline();
   updateDirtyBadge();
   refreshStatusBar();
+  markSessionDirty();                          // [alpha.79] สลับ/เปิดแท็บ = สถานะล่าสุดเปลี่ยน
   // แสดงปุ่มบันทึกทั้งหมดเมื่อมีโปรเจกต์เปิด
   const saveAllBtn = $('#save-all-btn');
   if (saveAllBtn) saveAllBtn.style.display = state.root ? '' : 'none';
@@ -6983,6 +7194,7 @@ export function closeTab(file) {
     closeTabInSplit(file);                               // ปิดไฟล์ที่แสดงอยู่ในช่องไหน → ยุบช่องนั้นด้วย
     const next = [...state.tabs.keys()].pop();
     if (next) activate(next); else { state.active = null; refreshToolbar(); updateDirtyBadge(); }
+    markSessionDirty();                        // [alpha.79] ปิดแท็บสุดท้ายก็ต้องจำ (activate ไม่ถูกเรียก)
   };
   if (t.dirty) saveTab(t).then(done); else done();
 }
@@ -7370,7 +7582,13 @@ function refreshToolbar() {
   $('#tb-codex')?.classList.toggle('on', isPanelOpen('codex') || isTornOff('codex'));
   $('#tb-history')?.classList.toggle('on', isPanelOpen('history') || isTornOff('history'));
   $('#tb-record')?.classList.toggle('on', isPanelOpen('record') || isTornOff('record'));
+  // [alpha.79] แผงบทพูด + แผงปลั๊กอิน
+  $('#tb-dialogue')?.classList.toggle('on', isPanelOpen('dialogue') || isTornOff('dialogue'));
+  $('#tb-plugins')?.classList.toggle('on', isPanelOpen('plugins'));
   $('#tb-md-codes')?.classList.toggle('on', showMarkdownCodes());
+  // [alpha.79] ปุ่มที่ผู้ใช้ซ่อนไว้ ต้องซ่อนต่อทุกครั้งที่แถบถูกวาดใหม่ —
+  // refreshToolbar เขียน style.display ของหลายปุ่มตามโหมดเอกสาร จึงต้องทาบทับทีหลังเสมอ
+  applyToolbarConfig();
   syncFloatBarVisible();
   syncMenuToggles();          // เมนู native ติ๊กถูกตามสถานะจริง (ส่งเฉพาะตอนค่าเปลี่ยน)
 }
@@ -8085,6 +8303,9 @@ const FEATURE_PANELS = {
   codex:     () => renderCodexPanel($('#codex-body')),
   history:   () => renderHistoryPanel($('#history-body')),
   record:    () => renderRecordPanel($('#record-body')),
+  // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
+  dialogue:  () => renderDialoguePanel($('#dialogue-body')),
+  plugins:   () => renderPluginPanel($('#plugins-body')),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
 // วาดค้างอยู่ = ใช้รอบเดียวกัน — openX() เรียก showPanel (hook เริ่มวาด) แล้ว await ต่อ
@@ -8118,10 +8339,14 @@ export function clearFeaturePanels() {
                      // [alpha.66] ผัง/รอบการเล่นเป็นของโปรเจกต์เดิมล้วน ๆ
                      '#branch-body', '#player-body',
                      // [alpha.69] สารานุกรม/ประวัติ/บันทึก ผูกกับโปรเจกต์ทั้งหมด
-                     '#codex-body', '#history-body', '#record-body']) {
+                     '#codex-body', '#history-body', '#record-body',
+                     // [alpha.79] บทพูดเป็นของโปรเจกต์เดิม · แผงปลั๊กอินก็เปลี่ยนตามโปรเจกต์
+                     // (ปลั๊กอินระดับโปรเจกต์อยู่ใน <โปรเจกต์>/Plugins)
+                     '#dialogue-body', '#plugins-body']) {
     const n = $(sel); if (n) n.innerHTML = '';
   }
   resetCodex(); resetHistory(); resetRecords();
+  resetDialogue(); resetPluginPanel();
   state._branch = null;
   resetPlayerMode();
   // #notes-body ไม่ล้าง — สมุดโน้ตด่วนเป็นของผู้ใช้ ไม่ผูกกับโปรเจกต์ (เก็บใน localStorage)
@@ -8374,6 +8599,8 @@ async function handleCommand(ch, ...a) {
     // แผงฟีเจอร์ (บั๊ก #18) วาดเนื้อหาผ่าน hook ใน showPanel แล้ว
     case 'toggle-panel': togglePanel(a[0]); syncMenuToggles(); break;
     case 'reset-panels': resetPanels(); syncMenuToggles(); break;
+    // [alpha.79] ปรับปุ่มบนแถบเครื่องมือ (เมนู มุมมอง · คลิกขวาที่ปุ่ม "จัดการแผง" · ตั้งค่า)
+    case 'toolbar-config': toolbarDialog(); break;
     case 'export-panel-layout': await exportPanelLayout(); break;
     // [alpha.61 ข้อ 1] สวิตช์ลำดับเปิดโปรแกรม (เก็บที่ global settings — ใช้ร่วมทุกโปรเจกต์)
     case 'delete-line': deleteCurrentLine(); break;
@@ -8505,7 +8732,9 @@ function onShortcut(e) {
   const ae = document.activeElement;
   const inField = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
   for (const [code, needCtrl, needShift, ch, ...args] of effectiveShortcuts()) {
-    if (e.code === code && !!needCtrl === ctrl && !!needShift === e.shiftKey && !e.altKey) {
+    // [alpha.79] ช่องที่สองรับ 'ctrl+alt' ได้แล้ว — ต้องเทียบ Alt ด้วย ไม่ใช่บังคับ !altKey ทื่อ ๆ
+    if (e.code === code && !!needCtrl === ctrl && !!needShift === e.shiftKey
+        && needsAlt(needCtrl) === e.altKey) {
       // undo/redo: ในช่อง input/textarea ให้เบราว์เซอร์จัดการเอง (อย่าไปขับ PM)
       if ((ch === 'editor-undo' || ch === 'editor-redo') && inField) return;
       e.preventDefault();
@@ -8515,13 +8744,7 @@ function onShortcut(e) {
   }
 }
 window.addEventListener('keydown', onShortcut, true);
-
-// บันทึกทั้งหมด: Ctrl+Alt+S (แยกจาก SHORTCUTS หลักที่บังคับ !altKey — กันชน save/save-as)
-window.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.altKey && !e.shiftKey && e.code === 'KeyS') {
-    e.preventDefault(); handleCommand('save-all');
-  }
-}, true);
+// (บันทึกทั้งหมด Ctrl+Alt+S ย้ายเข้าตาราง SHORTCUTS แล้ว — ตั้งใหม่เองได้เหมือนรายการอื่น)
 
 // ---------------- ซูมด้วย Ctrl+ล้อเมาส์ + Ctrl+0 รีเซ็ต (ทั้งโหมดนิยาย/บทหนัง) ----------------
 window.addEventListener('wheel', (e) => {
@@ -8548,6 +8771,43 @@ function effectiveShortcuts() {
     const o = ov[shortcutId(s)];
     return o ? [o.code, o.ctrl, o.shift, ...s.slice(3)] : s;
   });
+}
+
+/**
+ * [alpha.79] คีย์ลัดทั้งตาราง พร้อมชื่อและข้อความปุ่ม — **ทางเดียว** ที่ทั้ง
+ * หน้า "ปุ่มลัดทั้งหมด" และแท็บ ตั้งค่า → ปุ่มลัด ใช้ร่วมกัน
+ * (เดิมสองที่นั้นมีรายการของตัวเอง จึงไม่ตรงกันและตกหล่นเรื่อยมา)
+ * @returns {Array<{id, code, ctrl, shift, alt, ch, args, label, accel, custom}>}
+ */
+export function allShortcutRows() {
+  const ov = (state.settings && state.settings.shortcuts) || {};
+  return SHORTCUTS.map((s) => {
+    const id = shortcutId(s);
+    const o = ov[id];
+    const code = o ? o.code : s[0];
+    const ctrl = o ? o.ctrl : s[1];
+    const shift = o ? o.shift : s[2];
+    return {
+      id, code, ctrl, shift, alt: needsAlt(ctrl),
+      ch: s[3], args: s.slice(4),
+      label: tt(SHORTCUT_LABELS[id] || id),
+      accel: formatShortcut(code, ctrl, shift),
+      custom: !!o,
+    };
+  });
+}
+
+/** คีย์ลัดที่ชนกัน (ปุ่มเดียวกันเป๊ะ) — คืนแผนที่ accel → รายการ id ที่ชน */
+export function shortcutClashes(rows) {
+  const m = new Map();
+  for (const r of (rows || allShortcutRows())) {
+    const k = r.accel;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(r.id);
+  }
+  const bad = {};
+  for (const [k, ids] of m) if (ids.length > 1) bad[k] = ids;
+  return bad;
 }
 
 // ---------------- ระบบลากย้าย + จำตำแหน่งหน้าต่างย่อย (floating panels) ----------------
@@ -8987,7 +9247,12 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#tb-outline-panel').onclick = () => { togglePanel('outline'); refreshToolbar(); };
   $('#tb-props-panel').onclick = () => { togglePanel('props'); refreshToolbar(); };
   $('#tb-search-panel').onclick = () => { togglePanel('search'); refreshToolbar(); };
+  // [alpha.79] แผงบทพูด + แผงปลั๊กอิน (สวิตช์เหมือนปุ่มแผงตัวอื่น)
+  $('#tb-dialogue') && ($('#tb-dialogue').onclick = () => { togglePanel('dialogue'); refreshToolbar(); });
+  $('#tb-plugins') && ($('#tb-plugins').onclick = () => { togglePanel('plugins'); refreshToolbar(); });
+  // คลิก = จัดการแผง · คลิกขวา = ปรับปุ่มบนแถบเครื่องมือ (เอาปุ่มเข้า-ออก)
   $('#tb-panels').onclick = () => togglePanelDialog();
+  $('#tb-panels').oncontextmenu = (e) => { e.preventDefault(); toolbarDialog(); };
   $('#tb-split').onclick = () => handleCommand('split-view');
   $('#tb-close').onclick = () => { const t = state.active; if (t) closeTab(t.file); };
   $('#tb-close-all').onclick = () => closeAllTabs();
@@ -9049,7 +9314,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initPanelSystem();
   // [60r2 ข้อ 1 + 11] ขยับ/ปรับขนาดแผง = พื้นที่กระดาษเปลี่ยน → กว้าง workspace + รางเลขบรรทัดต้องตาม
   onPanelLayoutChange(() => { refreshToolbar(); syncWorkspaceWidths(); scheduleLineGutter();
-                              recenterOnPaneResize(); });
+                              recenterOnPaneResize();
+                              markSessionDirty(); });   // [alpha.79] เลย์เอาต์เปลี่ยน = ต้องจำ
   startLogAutoRefresh();
   // ---- Split View — ผูก SplitManager เข้ากับ #panes + ลากหัวแท็บไปวางในช่องได้ ----
   // closeTab: บั๊ก #12 — × บนแท็บย่อยของช่อง เอาแท็บออกจากช่องนั้น
@@ -9579,54 +9845,38 @@ function showShortcutsDialog() {
   const box = el('div', 'k-dialog k-wide k-keys-dlg');
   box.append(el('div', 'k-dlg-title', t('allShortcutsTitle')));
 
-  // กลุ่มคีย์ลัด: [category i18n key, shortcut IDs]
-  const catKeys = {
-    'shortcutCategories.file': ['save', 'save-all', 'global-search'],
-    'shortcutCategories.edit': ['fmt:bold', 'fmt:italic', 'fmt:underline', 'fmt:strike', 'find', 'editor-undo', 'editor-redo'],
-    'shortcutCategories.format': ['fmt:heading:1', 'fmt:heading:2', 'fmt:heading:3', 'fmt:paragraph',
-      'fmt:ul', 'fmt:ol', 'fmt:align:left', 'fmt:align:center', 'fmt:align:right', 'fmt:align:justify',
-      'toggle-format'],
-    // [alpha.60r2 ข้อ 10] paper-mode ไม่มีคีย์ลัดแล้ว — Ctrl+Shift+P = สลับธีม
-    'shortcutCategories.view': ['toggle-theme', 'focus-mode', 'quick-open', 'typewriter', 'settings'],
-    'shortcutCategories.navigation': ['toggle-format', 'close-tab', 'compile'],
-  };
-  // รวบรวมคีย์ลัดทั้งหมดพร้อม accel text
-  const scMap = {};
-  for (const s of SHORTCUTS) {
-    const id = shortcutId(s);
-    if (SHORTCUT_LABELS[id]) {
-      scMap[id] = { label: t(SHORTCUT_LABELS[id], SHORTCUT_LABELS[id]), accel: formatShortcut(s[0], s[1], s[2]) };
-    }
-  }
-  // เพิ่ม save-all (Ctrl+Shift+S)
-  scMap['save-all'] = { label: t('shortcuts.saveAll'), accel: formatShortcut('KeyS', true, true) };
-  // เพิ่ม zoom (Ctrl+=, Ctrl+-, Ctrl+Shift+0)
-  const zoomItems = [
-    [t('status.zoom') + ' +', formatShortcut('Equal', true, false)],
-    [t('status.zoom') + ' −', formatShortcut('Minus', true, false)],
-    [t('status.zoomReset'), formatShortcut('Digit0', true, true)],
-  ];
+  // [alpha.79] **สร้างจากตาราง SHORTCUTS ทั้งหมด ไม่ใช่รายการที่พิมพ์มือ**
+  //
+  // ของเดิมพิมพ์ id ไว้เอง 5 หมวด รวม 26 รายการ ขณะที่ตารางจริงมีเกือบ 80 —
+  // คีย์ลัดที่เพิ่มทีหลังจึงไม่เคยโผล่ในหน้านี้เลย (และไม่มีใครรู้ตัว)
+  // ตอนนี้กวาดจาก effectiveShortcuts() → เห็นค่าที่ผู้ใช้ตั้งเองด้วย และไม่มีทางตกหล่น
+  const rows = allShortcutRows();
+  const byCat = new Map(SHORTCUT_CATS.map((c) => [c.key, []]));
+  for (const r of rows) (byCat.get(shortcutCat(r.id)) || byCat.get('other')).push(r);
+  // คีย์ลัดที่ไม่ได้อยู่ในตาราง (ดักแยกในโค้ด) — ต้องขึ้นหน้านี้ด้วย ไม่งั้นผู้ใช้ไม่มีทางรู้
+  byCat.get('view').push(
+    { label: tt('ui.status.zoom') + ' +', accel: formatShortcut('Equal', true, false) },
+    { label: tt('ui.status.zoom') + ' −', accel: formatShortcut('Minus', true, false) },
+    { label: tt('ui.status.zoomReset'), accel: formatShortcut('Digit0', true, true) },
+    { label: tt('ui.shortcuts.zoomWheel'), accel: 'Ctrl + ' + tt('ui.shortcuts.wheel') },
+  );
+  byCat.get('script').push(
+    { label: tt('ui.shortcuts.spNextElem'), accel: 'Tab' },
+    { label: tt('ui.shortcuts.spPrevElem'), accel: 'Shift+Tab' },
+    { label: tt('ui.shortcuts.spSwitchElem'), accel: 'Ctrl+↑ / Ctrl+↓' },
+  );
 
   const grid = el('div', 'k-keys-grid');
-  for (const [catKey, ids] of Object.entries(catKeys)) {
+  for (const c of SHORTCUT_CATS) {
+    const list = byCat.get(c.key) || [];
+    if (!list.length) continue;
     const sec = el('div', 'k-keys-sec');
-    sec.append(el('div', 'k-keys-cat', t(catKey, catKey)));
-    for (const id of ids) {
-      const sc = scMap[id];
-      if (!sc) continue;
+    sec.append(el('div', 'k-keys-cat', tt(c.labelKey)));
+    for (const r of list) {
       const row = el('div', 'k-keys-row');
-      row.append(el('span', 'k-keys-name', sc.label));
-      row.append(el('span', 'k-keys-key', sc.accel));
+      row.append(el('span', 'k-keys-name', r.label));
+      row.append(el('span', 'k-keys-key', r.accel));
       sec.append(row);
-    }
-    // เพิ่ม zoom items ใน view category
-    if (catKey === 'shortcutCategories.view') {
-      for (const [label, accel] of zoomItems) {
-        const row = el('div', 'k-keys-row');
-        row.append(el('span', 'k-keys-name', label));
-        row.append(el('span', 'k-keys-key', accel));
-        sec.append(row);
-      }
     }
     grid.append(sec);
   }
@@ -14757,10 +15007,13 @@ async function runTest(projectPath) {
 
     // ---- คีย์ลัดต้องไม่ชนกัน (เคยยิง 3 คำสั่งพร้อมกันที่ Ctrl+Shift+F) ----
     {
+      // [alpha.79] ตารางรับ Ctrl+Alt แล้ว → ต้องนับ Alt เป็นส่วนหนึ่งของคีย์ด้วย
+      // (ไม่งั้น Ctrl+Alt+I จะถูกมองว่าชนกับ Ctrl+I ทั้งที่คนละปุ่มกัน)
       const seen = new Map();
       let clash = '';
-      for (const [code, ctrl, shift, ch] of SHORTCUTS) {
-        const k = `${code}|${!!ctrl}|${!!shift}`;
+      for (const s of SHORTCUTS) {
+        const [code, ctrl, shift, ch] = s;
+        const k = `${code}|${!!ctrl}|${needsAlt(ctrl)}|${!!shift}`;
         if (seen.has(k)) clash = `${k} → ${seen.get(k)} + ${ch}`;
         seen.set(k, ch);
       }
@@ -16105,8 +16358,14 @@ async function runTest(projectPath) {
         const sc = SHORTCUTS.find((x) => x[0] === 'KeyP' && x[1] === true && x[2] === true);
         check('[10] Ctrl+Shift+P ผูกกับ toggle-theme แล้ว', !!sc && sc[3] === 'toggle-theme',
               sc && sc[3]);
-        check('[10] ไม่มีคีย์ลัดไหนผูกกับ paper-mode อีก',
-              !SHORTCUTS.some((x) => x[3] === 'paper-mode'));
+        // [alpha.79] เจตนาเดิมของข้อนี้คือ "Ctrl+Shift+P ต้องไม่ใช่โหมดหน้ากระดาษแล้ว"
+        // ไม่ใช่ "ห้ามโหมดหน้ากระดาษมีคีย์ลัดเลย" — รอบ .79 ให้คีย์ใหม่ไปเป็น Ctrl+Alt+U
+        // (พื้นที่ Ctrl+Alt เพิ่งเปิดใช้ได้ในรอบนี้ · ผู้ใช้สั่งว่า "คีย์ลัดต้องมีให้ครบ")
+        check('[10] Ctrl+Shift+P ไม่ผูกกับโหมดหน้ากระดาษแล้ว',
+              !SHORTCUTS.some((x) => x[3] === 'paper-mode' && x[0] === 'KeyP' && x[1] === true && x[2] === true));
+        check('[10] โหมดหน้ากระดาษมีคีย์ลัดของตัวเอง (Ctrl+Alt+U)',
+              SHORTCUTS.some((x) => x[3] === 'paper-mode' && x[1] === 'ctrl+alt'),
+              JSON.stringify(SHORTCUTS.filter((x) => x[3] === 'paper-mode')));
         check('[10] มีปุ่มธีมบนแถบเครื่องมือ', !!$('#tb-theme'));
         check('[10] ปุ่มโหมดหน้ากระดาษยังอยู่ (ปิดฟีเจอร์ไม่ได้ แค่ย้ายคีย์ลัด)', !!$('#tb-paper'));
         // จำค่ากระดาษไว้ก่อน — ธีมต้องไม่ไปแตะมัน
@@ -22802,6 +23061,463 @@ async function runTest(projectPath) {
         check('[63-12] รูปกลับมาอยู่ที่เดิม',
               await kapi.exists(await kapi.join(imagesDir63, 'sunset.png')));
         hidePanel('gallery');
+      }
+
+      // ════════════════════ [alpha.79] 6 เรื่อง QOL ════════════════════
+      const wait79 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const until79 = async (fn, ms = 4000) => {
+        const t0 = Date.now();
+        while (Date.now() - t0 < ms) { if (await fn()) return true; await wait79(60); }
+        return false;
+      };
+
+      // ───────── [79-1] แผงปลั๊กอิน — ต้อง "ใช้ได้จริง" ─────────
+      {
+        // บล็อกเทสปลั๊กอินก่อนหน้า (r3-7) ลบโฟลเดอร์ k2test/k2bad ทิ้งแล้วแต่ไม่ได้โหลดใหม่
+        // → รายการในหน่วยความจำยังค้างของที่ไม่มีอยู่จริง · อ่านใหม่ก่อนเริ่มเทสแผง
+        await reloadPlugins();
+        showPanel('plugins');
+        check('[79-1] เปิดแผงปลั๊กอินได้', isPanelOpen('plugins'));
+        await renderFeaturePanel('plugins');
+        const host = $('#plugins-body');
+        check('[79-1] แผงปลั๊กอินวาดเนื้อหาแล้ว', !!host && host.children.length > 0);
+        // fixture มีปลั๊กอินของโปรเจกต์อยู่ตัวหนึ่ง (Plugins/demo) → ต้องโผล่เป็นการ์ด
+        const ok79 = await until79(() => $('#plugins-body .k-plug-card'));
+        check('[79-1] เห็นการ์ดปลั๊กอินที่ติดตั้งอยู่', ok79,
+              $('#plugins-body') ? $('#plugins-body').textContent.slice(0, 120) : 'ไม่มี host');
+        const card79 = $('#plugins-body .k-plug-card');
+        check('[79-1] การ์ดบอกชื่อปลั๊กอิน', !!card79 && !!card79.dataset.plugin, card79 && card79.className);
+        check('[79-1] การ์ดมีปุ่มเปิด/ปิด และปุ่มเปิดโฟลเดอร์',
+              !!card79 && card79.querySelectorAll('.k-plug-acts .k-plug-btn').length >= 2);
+        // ปลั๊กอินของ fixture ลงทะเบียนคำสั่งไว้ → ต้องมีปุ่มให้กดจริง (พิสูจน์ว่าระบบทำงาน)
+        check('[79-1] เห็นคำสั่งที่ปลั๊กอินลงทะเบียนไว้',
+              !!$('#plugins-body .k-plug-cmd'),
+              $('#plugins-body').textContent.slice(0, 160));
+        check('[79-1] ปลั๊กอินของโปรเจกต์ถูกจดที่มาเป็นค่าคงที่ (ไม่ใช่ข้อความแปล)',
+              pluginList().loaded.every((p) => p.origin === 'user' || p.origin === 'project'),
+              JSON.stringify(pluginList().loaded.map((p) => p.origin)));
+        // เอกสาร API ในตัว
+        const apiBtn79 = [...document.querySelectorAll('#plugins-body .k-plug-btn')]
+          .find((b) => b.textContent === tr('ui.plug.apiDoc'));
+        check('[79-1] มีปุ่มเปิดเอกสาร API', !!apiBtn79);
+        apiBtn79.click();
+        check('[79-1] เอกสาร API โผล่พร้อมรายการคำสั่ง',
+              await until79(() => document.querySelectorAll('#plugins-body .k-plug-api-row').length >= 12));
+        apiBtn79.click();
+        await until79(() => !document.querySelector('#plugins-body .k-plug-api'));
+
+        // ── เปิด/ปิดปลั๊กอิน แล้วสถานะต้องเปลี่ยนจริง ──
+        // **เลือกการ์ดของตัวที่ "ทำงานอยู่" เจาะจง** — การ์ดเรียงเอาตัวมีปัญหาขึ้นก่อน
+        // และเทสปลั๊กอินบล็อกก่อนหน้าอาจทิ้ง `Plugins/k2test` ที่ถูกปิดไว้ค้างอยู่
+        // (หยิบการ์ดใบแรกมั่ว ๆ = ไปกดปุ่ม "เปิดใช้" ของตัวที่ปิดอยู่แทน แล้วเทียบผลผิดทาง)
+        await renderFeaturePanel('plugins');
+        const okCard = document.querySelector('#plugins-body .k-plug-card.k-plug-ok');
+        check('[79-1] มีการ์ดของปลั๊กอินที่ทำงานอยู่ให้ทดสอบสวิตช์', !!okCard,
+              [...document.querySelectorAll('#plugins-body .k-plug-card')]
+                .map((c) => c.dataset.plugin + ':' + c.className).join(' | '));
+        const name79 = okCard.dataset.plugin;
+        okCard.querySelector('.k-plug-acts .k-plug-btn').click();
+        check('[79-1] กดปิดแล้วปลั๊กอินถูกจดว่าปิด',
+              await until79(() => pluginDisabled(name79)), name79);
+        check('[79-1] ปิดแล้วไม่เหลือคำสั่งของปลั๊กอินตัวนั้น',
+              await until79(() => !pluginList().commands.some((c) => c.plugin === name79)));
+        // วาดใหม่ตรง ๆ (ไม่ผ่าน renderFeaturePanel ซึ่งรวบรอบซ้ำ) แล้วรอให้การ์ดโผล่จริง
+        await renderPluginPanel($('#plugins-body'));
+        const cardsNow = () => [...document.querySelectorAll('#plugins-body .k-plug-card')];
+        await until79(() => cardsNow().some((c) => c.dataset.plugin === name79));
+        const offCard = cardsNow().find((c) => c.dataset.plugin === name79);
+        check('[79-1] การ์ดของตัวที่ปิดแล้วขึ้นสถานะ "ปิดอยู่"',
+              !!offCard && offCard.classList.contains('k-plug-off'),
+              'หา=' + name79 + ' · การ์ด=' + JSON.stringify(cardsNow().map((c) => c.dataset.plugin + '/' + c.className))
+              + ' · loaded=' + JSON.stringify(pluginList().loaded.map((p) => p.name))
+              + ' · failed=' + JSON.stringify(pluginList().failed.map((p) => p.name + ':' + (p.skipped ? 'skip' : 'err'))));
+        offCard.querySelector('.k-plug-acts .k-plug-btn').click();
+        check('[79-1] กดเปิดกลับได้', await until79(() => !pluginDisabled(name79)));
+        check('[79-1] เปิดกลับแล้วคำสั่งกลับมา',
+              await until79(() => pluginList().commands.some((c) => c.plugin === name79)));
+        hidePanel('plugins');
+      }
+
+      // ───────── [79-2] แผงบทพูด ─────────
+      {
+        const DC79 = await import('./dialogue/dialogue-core.js');
+        const DU79 = await import('./dialogue/dialogue-ui.js');
+
+        // ── สร้างฉากของตัวเองสำหรับเทสนี้ ──
+        // **ห้ามพึ่งเนื้อฉากของ fixture**: เทสรอบก่อนหน้าหลายสิบบล็อกเขียนทับ scene-01/02 ไปแล้ว
+        // (จัดหน้า · ซ่อนรหัสมาร์กดาวน์ · สลับนิยาย↔บท · คอมเมนต์ …) เนื้อเดิมจึงไม่เหลือ
+        const dj79 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+        const sj79 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+        const ch79 = dj79.chapters.find((c) => (sj79.chapters[c.guid] || []).length) || dj79.chapters[0];
+        const dir79 = await kapi.join(await kapi.join(dPath, 'Chapters'), ch79.folderName);
+        await kapi.writeFile(await kapi.join(dir79, 'dlg-prose.md'),
+          ['---', 'title: ฉากบทพูดนิยาย', 'type: scene', 'format: prose', '---', '',
+           'ค่ำวันนั้นลมพัดเย็น',
+           'ยัยแมวเก้าชีวิตพูดว่า "ตลาดนี้เปลี่ยนไปมากเลยนะ"',
+           '"เธอมาสายอีกแล้ว" ยัยแมวเก้าชีวิตบ่นกลับทันที',
+           '"ไม่มีใครรู้ว่าใครพูดประโยคนี้"', ''].join('\n'));
+        await kapi.writeFile(await kapi.join(dir79, 'dlg-script.md'),
+          ['---', 'title: ฉากบทพูดบทหนัง', 'type: scene', 'format: screenplay', '---', '',
+           '### INT. ตลาด - เย็น', 'โทระยืนอยู่ริมแผง', '@โทระ', 'สวัสดีครับ', ''].join('\n'));
+        sj79.chapters[ch79.guid] = (sj79.chapters[ch79.guid] || []).concat([
+          { id: 'dlg-p', title: 'ฉากบทพูดนิยาย', order: 90, fileName: 'dlg-prose.md' },
+          { id: 'dlg-s', title: 'ฉากบทพูดบทหนัง', order: 91, fileName: 'dlg-script.md' },
+        ]);
+        await kapi.writeFile(await kapi.join(dPath, 'scenes.json'), JSON.stringify(sj79, null, 2));
+        // ตัวละครที่ใช้ทดสอบ "ชื่อหน้า/หลังเครื่องหมายคำพูด" ต้องมีอยู่จริงใน Wiki
+        // (เทสรอบก่อนหน้าเปลี่ยนชื่อ/ลบเอนทิตี้ของ fixture ไปได้ — เขียนทับให้แน่ใจ)
+        const SPK79 = 'ยัยแมวเก้าชีวิต';
+        await kapi.writeFile(
+          await kapi.join(await kapi.join(await kapi.join(state.root, 'Wiki'), 'characters'), 'cat79.json'),
+          JSON.stringify({ name: SPK79, entityTypeKey: 'characters', aliases: [] }, null, 2));
+        resetDialogue();                       // ทิ้งผลกวาดของรอบก่อน (ถ้ามี)
+
+        showPanel('dialogue');
+        check('[79-2] เปิดแผงบทพูดได้', isPanelOpen('dialogue'));
+        await renderFeaturePanel('dialogue');
+        check('[79-2] แผงกวาดบทพูดเสร็จและมีรายการ',
+              await until79(() => document.querySelectorAll('#dialogue-body .k-dlgp-item').length >= 3, 12000),
+              $('#dialogue-body') ? $('#dialogue-body').textContent.slice(0, 200) : 'ไม่มี host');
+        const rows79 = DU79.visibleRows();
+        const mine79 = rows79.filter((r) => r.sceneId === 'dlg-p' || r.sceneId === 'dlg-s');
+        check('[79-2] เจอบทพูดครบทั้ง 4 รายการของฉากทดสอบ', mine79.length === 4,
+              JSON.stringify(mine79.map((r) => r.speaker + '|' + r.text)));
+        // ชื่อด้านหน้าเครื่องหมายคำพูด = คนพูด
+        const front79 = rows79.find((r) => /ตลาดนี้เปลี่ยนไป/.test(r.text));
+        check('[79-2] ชื่อหน้าเครื่องหมายคำพูด = คนพูด',
+              !!front79 && front79.speaker === SPK79 && front79.where === DC79.WHERE_FRONT,
+              JSON.stringify(front79));
+        // ชื่อด้านหลัง
+        const back79b = rows79.find((r) => /เธอมาสายอีกแล้ว/.test(r.text));
+        check('[79-2] ไม่มีชื่อด้านหน้า → ดูด้านหลังให้',
+              !!back79b && back79b.speaker === SPK79 && back79b.where === DC79.WHERE_BACK,
+              JSON.stringify(back79b));
+        // ไม่ระบุ
+        const unk79 = rows79.find((r) => /ไม่มีใครรู้ว่าใครพูด/.test(r.text));
+        check('[79-2] ไม่เจอชื่อทั้งสองฝั่ง = ไม่ระบุ', !!unk79 && unk79.speaker === '',
+              JSON.stringify(unk79));
+        // บทภาพยนตร์: @ตัวละคร
+        const sp79 = rows79.find((r) => r.sceneId === 'dlg-s');
+        check('[79-2] บทภาพยนตร์: อ่านคนพูดจากรหัส @',
+              !!sp79 && sp79.speaker === 'โทระ' && sp79.where === DC79.WHERE_TAG,
+              JSON.stringify(sp79));
+        // ตำแหน่ง เล่ม/บท/ฉาก ครบทุกแถว
+        check('[79-2] ทุกแถวรู้ว่ามาจาก เล่ม/บท/ฉาก ไหน',
+              rows79.every((r) => r.section && r.chapterId && r.sceneId && r.path));
+        check('[79-2] ทุกแถวมีเลขบรรทัด', rows79.every((r) => Number.isInteger(r.line) && r.line >= 0));
+        // ชิปตัวละคร + ตัวกรอง
+        const chips79 = document.querySelectorAll('#dialogue-body .k-dlgp-chip');
+        check('[79-2] มีชิปตัวละครให้กรอง (รวม "ทุกคน")', chips79.length >= 3, chips79.length);
+        const catChip = [...chips79].find((c) => c.textContent.startsWith(SPK79));
+        check('[79-2] มีชิปของตัวละครที่พูดจริง', !!catChip);
+        catChip.click();
+        check('[79-2] กรองตามตัวละครแล้วเหลือเฉพาะของคนนั้น',
+              await until79(() => {
+                const v = DU79.visibleRows();
+                return v.length > 0 && v.every((r) => r.speaker === SPK79);
+              }), JSON.stringify(DU79.visibleRows().map((r) => r.speaker)));
+        // เอาตัวกรองออก
+        const allChip = document.querySelector('#dialogue-body .k-dlgp-chip');
+        allChip.click();
+        await until79(() => DU79.visibleRows().length === rows79.length);
+        check('[79-2] ยกเลิกตัวกรองแล้วกลับมาครบ', DU79.visibleRows().length === rows79.length);
+        // ค้นข้อความ
+        const q79 = $('#dialogue-body .k-dlgp-q');
+        q79.value = 'มาสาย'; q79.dispatchEvent(new Event('input'));
+        // ผลที่เหลือต้องตรงคำค้น "ทุกแถว" — ไม่ผูกกับจำนวน เพราะฉากอื่นในผลงานทดสอบ
+        // อาจมีคำเดียวกันได้ (เทสก่อนหน้าเขียนเนื้อฉากใหม่ตลอดเวลา)
+        check('[79-2] ช่องค้นหากรองได้',
+              await until79(() => {
+                const v = DU79.visibleRows();
+                return v.length >= 1 && v.length < rows79.length && v.every((r) => /มาสาย/.test(r.text));
+              }),
+              JSON.stringify(DU79.visibleRows().map((r) => r.text)));
+        q79.value = ''; q79.dispatchEvent(new Event('input'));
+        await until79(() => DU79.visibleRows().length === rows79.length);
+
+        // ── คลิกแล้วกระโดดไปที่บทพูดจริง ──
+        const jumpRow = DU79.visibleRows().find((r) => /เธอมาสายอีกแล้ว/.test(r.text));
+        check('[79-2] คลิกแถวแล้วกระโดดไปที่บทพูดนั้นได้', await DU79.openAt(jumpRow));
+        await wait79(200);
+        const selText = (() => {
+          const t2 = state.active;
+          const v = t2 && ((t2.sp && t2.sp.view) || (t2.editor && t2.editor.view));
+          if (!v) return '';
+          const { from, to } = v.state.selection;
+          return v.state.doc.textBetween(from, to);
+        })();
+        check('[79-2] ข้อความที่ถูกเลือก = บทพูดนั้นเป๊ะ', selText === jumpRow.text,
+              JSON.stringify(selText));
+
+        // ── แก้บทพูดแล้วเขียนกลับลงไฟล์จริง ──
+        const target79 = DU79.visibleRows().find((r) => /ตลาดนี้เปลี่ยนไป/.test(r.text));
+        const before79 = await kapi.readFile(target79.path);
+        const okEdit = await DU79.applyEdit(target79, 'ตลาดนี้ยังเหมือนเดิมทุกอย่าง');
+        check('[79-2] แก้บทพูดแล้วบันทึกสำเร็จ', okEdit === true);
+        const after79 = await kapi.readFile(target79.path);
+        check('[79-2] ไฟล์มีข้อความใหม่แล้ว', /ตลาดนี้ยังเหมือนเดิมทุกอย่าง/.test(after79));
+        check('[79-2] เครื่องหมายคำพูดยังอยู่ครบ',
+              /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79), after79.slice(0, 300));
+        // เทียบ "เนื้อฉาก" ไม่ใช่ทั้งไฟล์ — dumpMdFile ประกอบ frontmatter ใหม่ทุกครั้ง
+        // (ลำดับคีย์/บรรทัดว่างท้ายอาจต่างจากไฟล์ที่เขียนด้วยมือ) จำนวนบรรทัดทั้งไฟล์จึงไม่ใช่ตัวชี้วัด
+        const bodyBefore79 = parseMdFile(before79).body.split('\n');
+        const bodyAfter79 = parseMdFile(after79).body.split('\n');
+        check('[79-2] แก้แล้วเปลี่ยนแค่บรรทัดเดียว บรรทัดอื่นไม่ถูกแตะ',
+              bodyAfter79.length === bodyBefore79.length
+              && bodyAfter79.filter((l, i) => l !== bodyBefore79[i]).length === 1,
+              JSON.stringify({ n: [bodyBefore79.length, bodyAfter79.length],
+                               diff: bodyAfter79.filter((l, i) => l !== bodyBefore79[i]) }));
+        check('[79-2] บทพูดอื่นในฉากเดียวกันยังอยู่ครบ',
+              /เธอมาสายอีกแล้ว/.test(after79) && /ไม่มีใครรู้ว่าใครพูด/.test(after79)
+              && /ค่ำวันนั้นลมพัดเย็น/.test(after79));
+        // แก้ซ้ำด้วยข้อมูลเก่า (ข้อความเดิมไม่ตรงแล้ว) → ต้องปฏิเสธ ไม่ใช่เขียนทับ
+        const stale79 = { ...target79, text: 'ตลาดนี้เปลี่ยนไปมากเลยนะ' };
+        check('[79-2] ข้อมูลเก่า → ปฏิเสธการเขียน (ไม่ทำเนื้อเรื่องหาย)',
+              (await DU79.applyEdit(stale79, 'ไม่ควรถูกเขียน')) === false);
+        check('[79-2] ไฟล์ไม่เปลี่ยนหลังถูกปฏิเสธ',
+              (await kapi.readFile(target79.path)) === after79);
+        // คืนค่าเดิมให้เทสรอบหน้าเริ่มจากสภาพเดียวกัน
+        await kapi.writeFile(target79.path, before79);
+        hidePanel('dialogue');
+      }
+
+      // ───────── [79-3] จำสถานะล่าสุด (เซสชัน) ─────────
+      {
+        const SS79 = await import('./session/session-core.js');
+        check('[79-3] มีช่องเขียน/อ่านเซสชันใน kapi',
+              typeof kapi.sessionWrite === 'function' && typeof kapi.sessionRead === 'function');
+        const snap79 = await captureSession();
+        check('[79-3] ภาพสถานะรู้ว่าเปิดโปรเจกต์ไหน', snap79.root === state.root, snap79.root);
+        check('[79-3] ภาพสถานะเก็บรายการแท็บที่เปิดอยู่',
+              Array.isArray(snap79.tabs.open) && snap79.tabs.open.length === [...state.tabs.keys()]
+                .filter((f) => !f.startsWith('::') && !f.endsWith('.json')).length,
+              JSON.stringify(snap79.tabs.open));
+        check('[79-3] ภาพสถานะเก็บเลย์เอาต์แผง', !!snap79.panels.layout);
+        check('[79-3] ภาพสถานะเก็บกล่องหน้าต่าง', !!snap79.win && snap79.win.w > 0,
+              JSON.stringify(snap79.win));
+        // เขียนจริงแล้วอ่านกลับต้องได้ของเดิม
+        check('[79-3] บันทึกเซสชันลงไฟล์สำเร็จ', (await saveUiSession(true)) === true);
+        const readBack = await kapi.sessionRead(SS79.sessionKey(state.root));
+        check('[79-3] อ่านเซสชันกลับมาได้', !!readBack);
+        check('[79-3] เนื้อหาที่อ่านกลับตรงกับที่เขียน',
+              SS79.sameSession(readBack, snap79),
+              JSON.stringify(SS79.sessionSummary(readBack)) + ' vs ' + JSON.stringify(SS79.sessionSummary(snap79)));
+        check('[79-3] คีย์ไฟล์เสถียร (path เดิม = คีย์เดิม)',
+              SS79.sessionKey(state.root) === SS79.sessionKey(state.root + '/'));
+        // กู้กลับ: ยัดเลย์เอาต์เข้า localStorage ให้ระบบแผงอ่านเจอ
+        localStorage.removeItem('k2-panel-layout');
+        const got79 = await restoreSessionLayout(state.root);
+        check('[79-3] กู้เซสชันคืนได้', !!got79);
+        check('[79-3] กู้แล้วเลย์เอาต์แผงกลับเข้า localStorage',
+              !!localStorage.getItem('k2-panel-layout'));
+        // ไฟล์เสีย/ไม่มี ต้องไม่ทำโปรแกรมพัง
+        check('[79-3] ไม่มีเซสชันของโปรเจกต์ที่ไม่รู้จัก = คืน null ไม่พัง',
+              (await restoreSessionLayout('C:/ไม่มีอยู่จริง/ที่ไหนสักแห่ง')) === null);
+        check('[79-3] ปิดโปรแกรมต้องผ่าน saveUiSession — มีฟังก์ชันจริง',
+              typeof saveUiSession === 'function' && typeof captureSession === 'function');
+      }
+
+      // ───────── [79-4] หน้าตั้งค่า: หัวข้ออยู่ด้านซ้าย + จัดกลุ่ม ─────────
+      {
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        settingsDialog();
+        await wait79(160);
+        const dlg79 = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        check('[79-4] เปิดกล่องตั้งค่าได้', !!dlg79);
+        check('[79-4] มีรายการหัวข้อด้านซ้าย (ไม่ใช่แท็บบนหัวแล้ว)',
+              !!dlg79.querySelector('.k-set-nav') && !dlg79.querySelector('.k-set-tabs'));
+        check('[79-4] รายการซ้ายแบ่งเป็นกลุ่มอย่างน้อย 2 กลุ่ม',
+              dlg79.querySelectorAll('.k-set-navgrp').length >= 2);
+        const tabs79 = dlg79.querySelectorAll('.k-set-tab');
+        check('[79-4] มีหัวข้อครบอย่างน้อย 13 หัวข้อ', tabs79.length >= 13, tabs79.length);
+        check('[79-4] ทุกหัวข้อมีหน้าเนื้อหาคู่กัน', (() => {
+          const pages = new Set([...dlg79.querySelectorAll('.k-set-page')].map((p) => p.dataset.p));
+          return [...tabs79].every((x) => pages.has(x.dataset.p));
+        })(), [...tabs79].map((x) => x.dataset.p).join(','));
+        // รายการซ้ายต้องอยู่ "ซ้ายจริง" ไม่ใช่แค่ชื่อคลาส (บทเรียนข้อ 32: วัดของจริง)
+        const navBox = dlg79.querySelector('.k-set-nav').getBoundingClientRect();
+        const mainBox = dlg79.querySelector('.k-set-main').getBoundingClientRect();
+        check('[79-4] รายการอยู่ทางซ้ายของเนื้อหาจริง ๆ',
+              navBox.right <= mainBox.left + 2 && navBox.width > 100,
+              JSON.stringify({ nav: navBox.right, main: mainBox.left, w: navBox.width }));
+        check('[79-4] รายการซ้ายมองเห็นได้จริง (opacity/visibility/ขนาด)', (() => {
+          const cs = getComputedStyle(dlg79.querySelector('.k-set-nav'));
+          return cs.display !== 'none' && cs.visibility !== 'hidden'
+                 && parseFloat(cs.opacity) > 0.5 && navBox.height > 40;
+        })());
+        // ช่องค้นหาหัวข้อ
+        const navQ79 = dlg79.querySelector('#st-nav-q');
+        check('[79-4] มีช่องค้นหาหัวข้อ', !!navQ79);
+        navQ79.value = 'ปุ่มลัด'; navQ79.dispatchEvent(new Event('input'));
+        await wait79(60);
+        const shown79 = [...dlg79.querySelectorAll('.k-set-tab')]
+          .filter((x) => !x.classList.contains('k-set-tab-off'));
+        check('[79-4] ค้นหาแล้วเหลือเฉพาะหัวข้อที่ตรง', shown79.length >= 1 && shown79.length < tabs79.length,
+              shown79.map((x) => x.dataset.p).join(','));
+        check('[79-4] ค้นหาแล้วสลับไปหน้าที่ตรงให้เลย',
+              !!dlg79.querySelector('.k-set-page.on[data-p="keys"]'));
+        navQ79.value = ''; navQ79.dispatchEvent(new Event('input'));
+        await wait79(60);
+        check('[79-4] ล้างคำค้นแล้วหัวข้อกลับมาครบ',
+              [...dlg79.querySelectorAll('.k-set-tab')]
+                .filter((x) => !x.classList.contains('k-set-tab-off')).length === tabs79.length);
+        // หน้า "แถบเครื่องมือ" ในตั้งค่า
+        const tbTab79 = [...tabs79].find((x) => x.dataset.p === 'toolbar');
+        check('[79-4] มีหัวข้อ "แถบเครื่องมือ" ในหน้าตั้งค่า', !!tbTab79);
+        tbTab79.click();
+        check('[79-4] หน้าแถบเครื่องมือมีรายการปุ่มจริง',
+              await until79(() => dlg79.querySelectorAll('#st-toolbar-host .k-tbcfg-row').length >= 30),
+              dlg79.querySelectorAll('#st-toolbar-host .k-tbcfg-row').length);
+        dlg79.querySelector('.k-cancel').click();
+        await wait79(120);
+      }
+
+      // ───────── [79-5] เอาปุ่มเข้า-ออกจากแถบเครื่องมือ ─────────
+      {
+        const TB79 = await import('./toolbar/toolbar-config.js');
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        // ทุก id ในนิยามต้องมีปุ่มจริงอยู่บนแถบ (ไม่งั้นตั้งค่าให้ปุ่มที่ไม่มีอยู่)
+        const ghost79 = TB79.allButtonIds().filter((id) => !document.getElementById(id));
+        check('[79-5] ทุกปุ่มในนิยามมีอยู่จริงใน index.html', ghost79.length === 0, ghost79.join(','));
+        // ปุ่มบนแถบที่ตั้งค่าไม่ได้เลย ต้องเป็นเฉพาะที่ตั้งใจ (กันปุ่มใหม่หลุดรายการ)
+        const barIds79 = [...$('#toolbar').children]
+          .filter((k) => k.id && !k.classList.contains('sep')).map((k) => k.id);
+        const unlisted79 = barIds79.filter((id) => !TB79.allButtonIds().includes(id)
+                                              && !TB79.LOCKED_BUTTONS.includes(id));
+        check('[79-5] ไม่มีปุ่มบนแถบที่ตกหล่นจากรายการตั้งค่า', unlisted79.length === 0,
+              unlisted79.join(','));
+
+        const aiBtn79 = $('#tb-ai');
+        state.settings.toolbar = TB79.resetToolbarConfig();
+        applyToolbarConfig();
+        check('[79-5] ค่าเริ่มต้น: ปุ่มมองเห็น', !aiBtn79.classList.contains('tb-hidden'));
+        state.settings.toolbar = TB79.setButtonVisible(state.settings.toolbar, 'tb-ai', false);
+        applyToolbarConfig();
+        check('[79-5] ปิดปุ่มแล้วหายจากแถบจริง',
+              aiBtn79.classList.contains('tb-hidden')
+              && getComputedStyle(aiBtn79).display === 'none',
+              getComputedStyle(aiBtn79).display);
+        // refreshToolbar เขียน style.display เอง — ต้องไม่ทำให้ปุ่มที่ผู้ใช้ปิดโผล่กลับมา
+        refreshToolbar();
+        await wait79(60);
+        check('[79-5] วาดแถบใหม่แล้วปุ่มที่ปิดไว้ยังหายอยู่ (ไม่ถูก refreshToolbar ดันกลับ)',
+              getComputedStyle(aiBtn79).display === 'none');
+        // ปิดทั้งกลุ่ม → เส้นคั่นต้องไม่ลอยค้าง
+        state.settings.toolbar = TB79.setGroupVisible(state.settings.toolbar, 'align', false);
+        applyToolbarConfig();
+        const alignIds79 = ['tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify'];
+        check('[79-5] ปิดทั้งกลุ่มจัดหน้าแล้วปุ่มหายหมด',
+              alignIds79.every((id) => {
+                const b = document.getElementById(id);
+                return b && getComputedStyle(b).display === 'none';
+              }),
+              JSON.stringify({
+                cfg: state.settings.toolbar,
+                dom: alignIds79.map((id) => {
+                  const b = document.getElementById(id);
+                  return id + '=' + (!b ? 'ไม่มีปุ่ม'
+                    : (b.classList.contains('tb-hidden') ? 'cls+' : 'cls-')
+                      + getComputedStyle(b).display
+                      + (b.parentElement ? '@' + b.parentElement.id : '@หลุด'));
+                }),
+              }));
+        const seps79 = [...$('#toolbar').querySelectorAll('span.sep')];
+        const visSeps = seps79.filter((s) => getComputedStyle(s).display !== 'none');
+        check('[79-5] ไม่มีเส้นคั่นสองอันติดกันหลังซ่อนทั้งกลุ่ม', (() => {
+          const kids = [...$('#toolbar').children].filter((k) => getComputedStyle(k).display !== 'none');
+          for (let i = 1; i < kids.length; i++) {
+            if (kids[i].classList.contains('sep') && kids[i - 1].classList.contains('sep')) return false;
+          }
+          return !kids.length || !kids[0].classList.contains('sep');
+        })(), visSeps.length + ' เส้น');
+        // กล่องตั้งค่า
+        const ovTb = toolbarDialog();
+        await wait79(120);
+        check('[79-5] เปิดกล่องปรับแถบเครื่องมือได้', !!document.querySelector('.k-dialog.k-tbcfg'));
+        const rowsTb = document.querySelectorAll('.k-tbcfg-row');
+        check('[79-5] กล่องแสดงปุ่มครบทุกตัว', rowsTb.length === TB79.allButtonIds().length,
+              rowsTb.length + '/' + TB79.allButtonIds().length);
+        check('[79-5] สวิตช์สะท้อนสถานะจริง', (() => {
+          const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-ai');
+          return r && r.querySelector('.k-tbcfg-sw').checked === false;
+        })());
+        check('[79-5] ชื่อปุ่มในกล่องมาจาก tooltip ของปุ่มจริง (ไม่มีตารางชื่อซ้ำอีกชุด)', (() => {
+          const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-bold');
+          const nm = r && r.querySelector('.k-tbcfg-name').textContent;
+          return !!nm && nm.length > 1 && !/^tb-/.test(nm) && !/Ctrl/.test(nm);
+        })(), (() => { const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-bold');
+                       return r ? r.querySelector('.k-tbcfg-name').textContent : ''; })());
+        // กดสวิตช์กลับ แล้วปุ่มต้องโผล่ทันที
+        const swAi = [...rowsTb].find((x) => x.dataset.btn === 'tb-ai').querySelector('.k-tbcfg-sw');
+        swAi.checked = true; swAi.dispatchEvent(new Event('change'));
+        await wait79(80);
+        check('[79-5] ติ๊กกลับแล้วปุ่มโผล่ทันที', getComputedStyle(aiBtn79).display !== 'none');
+        ovTb.remove();
+        // คืนค่าเริ่มต้นให้เทสรอบหน้า
+        state.settings.toolbar = TB79.resetToolbarConfig();
+        applyToolbarConfig();
+        check('[79-5] คืนค่าเริ่มต้นแล้วปุ่มกลับมาครบ',
+              TB79.allButtonIds().every((id) => {
+                const b = document.getElementById(id);
+                return !b || !b.classList.contains('tb-hidden');
+              }));
+      }
+
+      // ───────── [79-6] คีย์ลัดครบ ─────────
+      {
+        const rows6 = allShortcutRows();
+        check('[79-6] ตารางคีย์ลัดมีอย่างน้อย 70 รายการ', rows6.length >= 70, rows6.length);
+        check('[79-6] ทุกรายการมีชื่อที่แปลแล้ว (ไม่ใช่ตัวคีย์ดิบ)',
+              rows6.every((r) => r.label && !/^(ui\.|shortcuts\.)/.test(r.label)),
+              rows6.filter((r) => /^(ui\.|shortcuts\.)/.test(r.label)).map((r) => r.id).join(' · '));
+        check('[79-6] ไม่มีคีย์ลัดชนกัน',
+              Object.keys(shortcutClashes(rows6)).length === 0,
+              JSON.stringify(shortcutClashes(rows6)));
+        check('[79-6] รองรับ Ctrl+Alt แล้ว',
+              rows6.some((r) => r.alt) && rows6.filter((r) => r.alt).every((r) => /Alt/.test(r.accel)));
+        check('[79-6] บันทึกทั้งหมดอยู่ในตาราง (ตั้งใหม่เองได้แล้ว)',
+              rows6.some((r) => r.id === 'save-all' && r.alt));
+        // ทุกหมวดมีรายการอยู่จริง
+        const catCount = {};
+        for (const r of rows6) catCount[shortcutCat(r.id)] = (catCount[shortcutCat(r.id)] || 0) + 1;
+        check('[79-6] ทุกหมวดมีคีย์ลัดอยู่จริง',
+              SHORTCUT_CATS.every((c) => catCount[c.key] > 0), JSON.stringify(catCount));
+        // หน้า "ปุ่มลัดทั้งหมด" ต้องสร้างจากตาราง ไม่ใช่รายการที่พิมพ์มือ
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        showShortcutsDialog();
+        await wait79(140);
+        const kdlg = [...document.querySelectorAll('.k-dialog.k-keys-dlg')].pop();
+        check('[79-6] เปิดหน้าปุ่มลัดทั้งหมดได้', !!kdlg);
+        const kRows = kdlg.querySelectorAll('.k-keys-row');
+        check('[79-6] หน้าปุ่มลัดแสดงครบเกือบทั้งตาราง (ไม่ใช่แค่ 26 รายการที่พิมพ์มือ)',
+              kRows.length >= rows6.length, kRows.length + ' / ' + rows6.length);
+        check('[79-6] ไม่มีบรรทัดไหนโชว์ตัวคีย์ภาษาดิบ',
+              ![...kRows].some((r) => /ui\.|shortcuts\./.test(r.textContent)),
+              [...kRows].filter((r) => /ui\.|shortcuts\./.test(r.textContent))
+                .map((r) => r.textContent).slice(0, 3).join(' | '));
+        check('[79-6] หมวดในหน้านี้มีชื่อภาษาไทย ไม่ใช่คีย์',
+              ![...kdlg.querySelectorAll('.k-keys-cat')].some((c) => /^ui\./.test(c.textContent)));
+        kdlg.querySelector('.k-ok').click();
+        await wait79(80);
+      }
+
+      // ───────── [79-7] แผงใหม่ต้องอยู่ในเมนู + คำอธิบายแผงต้องไม่โชว์ตัวคีย์ ─────────
+      {
+        const menu79 = await kapi.menuPanelIds();
+        check('[79-7] แผงบทพูดกับแผงปลั๊กอินอยู่ในเมนูแล้ว',
+              menu79.ids.includes('dialogue') && menu79.ids.includes('plugins'),
+              menu79.ids.join(','));
+        const missing79 = PANEL_DEFS.map((d) => d.id)
+          .filter((id) => !menu79.ids.includes(id) && !menu79.skip.includes(id)
+                       && !['toolbar', 'docs', 'statusbar'].includes(id));
+        check('[79-7] ไม่มีแผงตกหล่นจากเมนู', missing79.length === 0, missing79.join(','));
+        // [แก้บั๊กเก่า] panelDesc เคยคืน "panel.desc_tree" มาตั้งแต่ .77 เพราะ t() เลิกรับค่าสำรอง
+        const badDesc = PANEL_DEFS.map((d) => d.id)
+          .filter((id) => /^panel\.desc_/.test(panelDesc(id)));
+        check('[79-7] คำอธิบายแผงไม่โชว์ตัวคีย์ภาษาแล้ว', badDesc.length === 0, badDesc.join(','));
+        check('[79-7] แผงใหม่มีคำอธิบายจริง',
+              panelDesc('dialogue').length > 8 && panelDesc('plugins').length > 8,
+              panelDesc('dialogue') + ' | ' + panelDesc('plugins'));
       }
 
     out.push('ALL OK');

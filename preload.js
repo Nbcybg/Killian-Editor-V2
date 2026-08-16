@@ -45,6 +45,11 @@ contextBridge.exposeInMainWorld('kapi', {
   print: call('win:print'), printToPdf: call('win:printToPdf'),
   pdfFromHtml: call('pdf:fromHtml'),         // [70] สร้าง PDF จาก HTML (หน้าต่างซ่อน)
   pushRecent: call('recent:push'), listRecent: call('recent:list'),
+  // [alpha.79] เซสชัน "จำทุกอย่างล่าสุด" — เก็บเป็นไฟล์จริง ไม่ใช่ localStorage
+  // (localStorage เขียนลงดิสก์แบบหน่วงเวลา → force quit ทีไรก็หายทุกที)
+  sessionRead: call('session:read'), sessionWrite: call('session:write'),
+  sessionClear: call('session:clear'),
+  winBounds: call('win:bounds'), winSetBounds: call('win:setBounds'),
   testShot: call('test:shot'), testShotTearOff: call('test:shotTearOff'), revealInOS: call('shell:reveal'),
   // [alpha.62 บั๊ก 3] คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า navigator.clipboard ในหน้าต่างไร้ขอบ
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),

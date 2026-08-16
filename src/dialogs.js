@@ -866,9 +866,46 @@ export function settingsDialog(openTab) {
   const gotoTab = (name) => {
     box.querySelectorAll('.k-set-tab').forEach((x) => x.classList.toggle('on', x.dataset.p === name));
     box.querySelectorAll('.k-set-page').forEach((p) => p.classList.toggle('on', p.dataset.p === name));
+    // เลื่อนเนื้อหากลับบนสุดเมื่อสลับหัวข้อ (ไม่งั้นหน้าใหม่เปิดมาค้างกลางหน้า)
+    const main = box.querySelector('.k-set-main');
+    if (main) main.scrollTop = 0;
   };
   box.querySelectorAll('.k-set-tab').forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
   if (openTab) gotoTab(openTab);      // เปิดตรงแท็บที่ผู้เรียกระบุ (ex. เมนู "ข้อมูลผลงาน")
+
+  // ── [alpha.79] รายการหัวข้อด้านซ้าย: ช่องค้นหา ──
+  // กล่องตั้งค่ามี 13 หน้า — หาหัวข้อไม่เจอเป็นปัญหาจริง ช่องนี้กรองจากทั้งชื่อและคำค้นที่ติดไว้ (data-find)
+  const navQ = q('#st-nav-q');
+  if (navQ) {
+    navQ.oninput = () => {
+      const v = navQ.value.trim().toLowerCase();
+      let firstHit = null;
+      box.querySelectorAll('.k-set-tab').forEach((x) => {
+        const hay = (x.textContent + ' ' + (x.dataset.find || '')).toLowerCase();
+        const hit = !v || hay.includes(v);
+        x.classList.toggle('k-set-tab-off', !hit);
+        if (hit && !firstHit) firstHit = x;
+      });
+      // หัวกลุ่มที่ไม่เหลือหัวข้อใต้มันแล้ว ต้องหายไปด้วย (ไม่งั้นเหลือหัวลอย ๆ)
+      box.querySelectorAll('.k-set-navgrp').forEach((g) => {
+        let n = g.nextElementSibling, any = false;
+        while (n && !n.classList.contains('k-set-navgrp')) {
+          if (n.classList.contains('k-set-tab') && !n.classList.contains('k-set-tab-off')) { any = true; break; }
+          n = n.nextElementSibling;
+        }
+        g.classList.toggle('k-set-tab-off', !any);
+      });
+      if (v && firstHit) gotoTab(firstHit.dataset.p);
+    };
+  }
+
+  // ── [alpha.79] หน้า "แถบเครื่องมือ" — ใช้ตัวสร้างรายการตัวเดียวกับกล่องเดี่ยว ──
+  const tbHost = q('#st-toolbar-host');
+  if (tbHost) {
+    import('./toolbar/toolbar-ui.js')
+      .then((m) => m.buildToolbarList(tbHost, { compact: true }))
+      .catch((e) => log('warn', t('ui.dlg.warnToolbarPage'), e));
+  }
   q('#st-font').oninput = () => applyZoomVars(parseInt(q('#st-font').value, 10) || 0);
 
   const close = () => ov.remove();

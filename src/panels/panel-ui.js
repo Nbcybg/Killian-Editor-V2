@@ -98,6 +98,13 @@ export const PANEL_DEFS = [
     desc: t('ui.panel.doFileProjectDone') },
   { id: 'record', dockW: 460,    title: t('ui.common.journal'),  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
     desc: t('ui.panel.noteDoMoodCount') },
+  // ── [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน ──
+  { id: 'dialogue', minW: 460, dockW: 620, title: t('ui.panel.dialogueTitle'), icon: 'chat',
+    adopt: '#dialogue-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.dialogueTitle',
+    desc: t('ui.panel.dialogueDesc') },
+  { id: 'plugins', minW: 420, dockW: 520, title: t('ui.panel.pluginsTitle'), icon: 'extension',
+    adopt: '#plugins-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.pluginsTitle',
+    desc: t('ui.panel.pluginsDesc') },
 ];
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
 //
@@ -120,6 +127,10 @@ export const TEAROFF_PANELS = new Set([
   'player', 'ai-analyzer',
   // [alpha.69] สามตัวใหม่ — วาดจากไฟล์โปรเจกต์ล้วน ๆ ทั้งหมด ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้ตั้งแต่วันแรก
   'codex', 'history', 'record',
+  // [alpha.79] แผงบทพูดกวาดจากไฟล์ทั้งโปรเจกต์ (ฝากหน้าต่างหลักเปิดฉากให้ผ่าน panel-sync)
+  'dialogue',
+  // (แผง `plugins` **ไม่ใส่** — ปลั๊กอินลงทะเบียนคำสั่ง/แผงเข้ากับ context ของหน้าต่างหลัก
+  //  ฉีกออกไปแล้วปุ่ม "รันคำสั่ง" จะไปเรียกในหน้าต่างที่ไม่มีปลั๊กอินตัวนั้นอยู่)
 ]);
 /** แผงนี้ฉีกออกเป็นหน้าต่างได้ไหม (หน้าต่างลูกฉีกซ้อนไม่ได้) */
 export function canTearOff(id) {
@@ -230,11 +241,17 @@ export function mountPanelWindow(id) {
 
 // ชื่อแผงตามภาษาที่โหลดอยู่ (fallback = ชื่อไทยในตาราง) — เรียกใหม่ทุกครั้งที่ render
 function titleOf(d) { return d.i18n ? t(d.i18n, d.title) : d.title; }
-// [alpha.60r3 ข้อ 8] คำอธิบายแผง — i18n key `panel.desc_<id>` (fallback = ข้อความไทยในตาราง)
+/**
+ * คำอธิบายแผง
+ *
+ * [alpha.79 · แก้บั๊ก] เดิมเป็น `t('panel.desc_<id>', d.desc)` ซึ่งเป็นซากของระบบภาษารุ่นเก่า —
+ * ตั้งแต่ .77 `t()` **ไม่รับค่าสำรอง** และไม่เคยมีคีย์ `panel.desc_*` อยู่ในไฟล์ภาษาเลย
+ * ผลคือกล่อง "จัดการแผง" โชว์คำว่า `panel.desc_tree` แทนคำอธิบายจริงมาตั้งแต่รอบนั้น
+ * ตอนนี้อ่านจาก `d.desc` ตรง ๆ (ซึ่งเป็นค่าที่มาจากไฟล์ภาษาอยู่แล้ว)
+ */
 export function panelDesc(id) {
   const d = PANEL_DEFS.find((x) => x.id === panelId(id));
-  if (!d) return '';
-  return t('panel.desc_' + d.id.replace(/-/g, '_'), d.desc || '');
+  return d ? (d.desc || '') : '';
 }
 
 let pm = null;

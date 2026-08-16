@@ -563,8 +563,17 @@ export function applyDataI18n() {
 }
 
 // ---- คีย์ลัด (ย้ายจาก app.js → core.js) ----
+//
+// [alpha.79] **ช่องที่สองรับ Alt ได้แล้ว** — เดิมเป็น boolean ล้วน (`true` = ต้องกด Ctrl)
+// ตอนนี้ใส่ `'ctrl+alt'` ได้ด้วย ทำให้มีพื้นที่ว่างอีกชุดใหญ่สำหรับ "สวิตช์แผง"
+// (Ctrl / Ctrl+Shift เต็มไปด้วยคำสั่งจัดรูปแบบจนไม่เหลือที่แล้ว)
+//   · รูปเดิม `true` / `false` ยังใช้ได้ทุกประการ — `!!needCtrl` ยังเป็น true สำหรับสตริง
+//   · `shortcutId()` ยังตัดจากดัชนี 3 เหมือนเดิม → ปุ่มลัดที่ผู้ใช้ตั้งเองไม่กระทบ
+//
+// **หมายเหตุแป้นพิมพ์**: บนแป้นพิมพ์ยุโรปบางแบบ AltGr = Ctrl+Alt — ถ้าใครใช้แป้นแบบนั้น
+// ให้ตั้งใหม่ได้ที่ ตั้งค่า → ปุ่มลัด (ทุกรายการในตารางนี้ตั้งเองได้หมด)
 export const SHORTCUTS = [
-  // [code, needCtrl, needShift, channel, ...args]
+  // [code, needCtrl, needShift, channel, ...args]   · needCtrl: true | false | 'ctrl+alt'
   ['KeyS', true, false, 'save'],
   ['KeyS', true, true, 'save-as'],
   ['KeyN', true, false, 'new-project'],
@@ -629,6 +638,46 @@ export const SHORTCUTS = [
   ['BracketLeft', true, true, 'panels-hide-right'],
   // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
   ['KeyY', true, true, 'workspace-menu'],
+
+  // ═══════════ [alpha.79] ชุดใหญ่ที่ขาดไป ═══════════
+  // ── คำสั่งเอกสาร (Ctrl+Shift) ──
+  ['KeyI', true, true, 'insert-image'],
+  ['KeyQ', true, true, 'quick-note'],
+  ['KeyH', true, true, 'reading-mode'],
+  ['KeyN', true, true, 'new-from-template'],
+  ['Period', true, true, 'goto-page'],
+  ['Comma', true, true, 'goto-scene'],
+  ['BracketRight', true, true, 'panels-hide-left'],   // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งขวา)
+  ['KeyU', 'ctrl+alt', false, 'paper-mode'],
+  ['KeyR', 'ctrl+alt', false, 'line-numbers'],
+  // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
+  ['Digit1', 'ctrl+alt', false, 'chapter'],
+  ['Digit2', 'ctrl+alt', false, 'scene'],
+  ['Digit3', 'ctrl+alt', false, 'character'],
+  ['Digit4', 'ctrl+alt', false, 'location'],
+  ['Digit5', 'ctrl+alt', false, 'memo'],
+  // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
+  ['KeyS', 'ctrl+alt', false, 'save-all'],
+  // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
+  ['KeyD', 'ctrl+alt', false, 'toggle-panel', 'dashboard'],
+  ['KeyT', 'ctrl+alt', false, 'toggle-panel', 'timeline'],
+  ['KeyM', 'ctrl+alt', false, 'toggle-panel', 'maps'],
+  ['KeyN', 'ctrl+alt', false, 'toggle-panel', 'network'],
+  ['KeyP', 'ctrl+alt', false, 'toggle-panel', 'planner'],
+  ['KeyB', 'ctrl+alt', false, 'toggle-panel', 'branch'],
+  ['KeyK', 'ctrl+alt', false, 'toggle-panel', 'books'],
+  ['KeyC', 'ctrl+alt', false, 'toggle-panel', 'codex'],
+  ['KeyH', 'ctrl+alt', false, 'toggle-panel', 'history'],
+  ['KeyJ', 'ctrl+alt', false, 'toggle-panel', 'record'],
+  ['KeyG', 'ctrl+alt', false, 'toggle-panel', 'gallery-board'],
+  ['KeyF', 'ctrl+alt', false, 'toggle-panel', 'floorplan'],
+  ['KeyY', 'ctrl+alt', false, 'toggle-panel', 'player'],
+  ['KeyA', 'ctrl+alt', false, 'toggle-panel', 'ai-analyzer'],
+  ['KeyO', 'ctrl+alt', false, 'toggle-panel', 'comments'],
+  ['KeyI', 'ctrl+alt', false, 'toggle-panel', 'props'],
+  // [alpha.79] แผงใหม่สองตัวของรอบนี้
+  ['KeyL', 'ctrl+alt', false, 'toggle-panel', 'dialogue'],
+  ['KeyE', 'ctrl+alt', false, 'toggle-panel', 'plugins'],
 ];
 
 export const shortcutId = (s) => s.slice(3).join(':');
@@ -650,6 +699,7 @@ export const SHORTCUT_LABELS = {
   'split-view': 'shortcuts.splitView', 'kanban': 'shortcuts.kanban',
   'export-blog': 'shortcuts.exportBlog', 'close-all-tabs': 'shortcuts.closeAllTabs',
   'line-numbers': 'shortcuts.lineNumbers',
+  'delete-line': 'ui.shortcuts.deleteLine',
   'gallery': 'shortcuts.gallery',
   'sp-element:parenthetical': 'shortcuts.spParenthetical', 'sp-element:dialogue': 'shortcuts.spDialogue',
   'sp-element:transition': 'shortcuts.spTransition', 'sp-element:shot': 'shortcuts.spShot',
@@ -660,20 +710,95 @@ export const SHORTCUT_LABELS = {
   // [alpha.66r3] ระบบจัดการพื้นที่ + เวิร์กสเปซ
   'panels-hide-all': 'shortcuts.panelsHideAll', 'panels-hide-right': 'shortcuts.panelsHideRight',
   'panels-hide-left': 'shortcuts.panelsHideLeft', 'workspace-menu': 'shortcuts.workspaceMenu',
+  // ── [alpha.79] ชุดใหม่ ──
+  'insert-image': 'ui.shortcuts.insertImage', 'quick-note': 'ui.shortcuts.quickNote',
+  'reading-mode': 'ui.shortcuts.readingMode', 'new-from-template': 'ui.shortcuts.newFromTemplate',
+  'goto-page': 'ui.shortcuts.gotoPage', 'goto-scene': 'ui.shortcuts.gotoScene',
+  'chapter': 'ui.shortcuts.newChapter', 'scene': 'ui.shortcuts.newScene',
+  'character': 'ui.shortcuts.newCharacter', 'location': 'ui.shortcuts.newLocation',
+  'memo': 'ui.shortcuts.newMemo',
+  'toggle-panel:dashboard': 'ui.shortcuts.panelDashboard',
+  'toggle-panel:timeline': 'ui.shortcuts.panelTimeline',
+  'toggle-panel:maps': 'ui.shortcuts.panelMaps',
+  'toggle-panel:network': 'ui.shortcuts.panelNetwork',
+  'toggle-panel:planner': 'ui.shortcuts.panelPlanner',
+  'toggle-panel:branch': 'ui.shortcuts.panelBranch',
+  'toggle-panel:books': 'ui.shortcuts.panelBooks',
+  'toggle-panel:codex': 'ui.shortcuts.panelCodex',
+  'toggle-panel:history': 'ui.shortcuts.panelHistory',
+  'toggle-panel:record': 'ui.shortcuts.panelRecord',
+  'toggle-panel:gallery-board': 'ui.shortcuts.panelGalleryBoard',
+  'toggle-panel:floorplan': 'ui.shortcuts.panelFloorplan',
+  'toggle-panel:player': 'ui.shortcuts.panelPlayer',
+  'toggle-panel:ai-analyzer': 'ui.shortcuts.panelAiAnalyzer',
+  'toggle-panel:comments': 'ui.shortcuts.panelComments',
+  'toggle-panel:props': 'ui.shortcuts.panelProps',
+  'toggle-panel:dialogue': 'ui.shortcuts.panelDialogue',
+  'toggle-panel:plugins': 'ui.shortcuts.panelPlugins',
 };
+
+/**
+ * [alpha.79] หมวดของคีย์ลัด — ใช้จัดกลุ่มในหน้า ตั้งค่า → ปุ่มลัด
+ * แถวไหนไม่อยู่ในตารางนี้ตกไปหมวด "อื่น ๆ" (ไม่หายไปเงียบ ๆ)
+ */
+export const SHORTCUT_CATS = [
+  { key: 'file', labelKey: 'ui.shortcuts.catFile',
+    ids: ['save', 'save-as', 'save-all', 'new-project', 'open-project', 'print', 'compile',
+          'export-blog', 'close-tab', 'close-all-tabs', 'new-from-template'] },
+  { key: 'edit', labelKey: 'ui.shortcuts.catEdit',
+    ids: ['editor-undo', 'editor-redo', 'find', 'global-search', 'quick-open', 'goto',
+          'goto-page', 'goto-scene', 'select-scene', 'delete-line', 'nbsp', 'insert-image'] },
+  { key: 'format', labelKey: 'ui.shortcuts.catFormat',
+    ids: ['fmt:bold', 'fmt:italic', 'fmt:underline', 'fmt:strike', 'fmt:heading:1', 'fmt:heading:2',
+          'fmt:heading:3', 'fmt:paragraph', 'fmt:ul', 'fmt:ol', 'fmt:clear',
+          'fmt:align:left', 'fmt:align:center', 'fmt:align:right', 'fmt:align:justify'] },
+  { key: 'script', labelKey: 'ui.shortcuts.catScript',
+    ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
+          'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
+  { key: 'view', labelKey: 'ui.shortcuts.catView',
+    ids: ['toggle-theme', 'paper-mode', 'focus-mode', 'typewriter', 'reading-mode', 'line-numbers',
+          'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu'] },
+  { key: 'create', labelKey: 'ui.shortcuts.catCreate',
+    ids: ['chapter', 'scene', 'character', 'location', 'memo', 'quick-note'] },
+  { key: 'panels', labelKey: 'ui.shortcuts.catPanels',
+    ids: ['kanban', 'gallery', 'toggle-panel:dashboard', 'toggle-panel:timeline', 'toggle-panel:maps',
+          'toggle-panel:network', 'toggle-panel:planner', 'toggle-panel:branch', 'toggle-panel:books',
+          'toggle-panel:codex', 'toggle-panel:history', 'toggle-panel:record',
+          'toggle-panel:gallery-board', 'toggle-panel:floorplan', 'toggle-panel:player',
+          'toggle-panel:ai-analyzer', 'toggle-panel:comments', 'toggle-panel:props',
+          'toggle-panel:dialogue', 'toggle-panel:plugins'] },
+  { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console'] },
+];
+
+/** หมวดของคีย์ลัดหนึ่งรายการ — ไม่รู้จัก = 'other' */
+export function shortcutCat(id) {
+  for (const c of SHORTCUT_CATS) if (c.ids.includes(id)) return c.key;
+  return 'other';
+}
 
 const isMac = (() => { try { return navigator.platform.toLowerCase().includes('mac'); } catch { return false; } })();
 
 // แปลง code/ctrl/shift เป็นข้อความ (ใช้ใน title/tooltip/ปุ่มลัด)
-export function formatShortcut(code, ctrl, shift) {
+// [alpha.79] `ctrl` เป็น `'ctrl+alt'` ได้ → แสดง Ctrl+Alt (⌥ บน mac)
+export function formatShortcut(code, ctrl, shift, alt) {
   const parts = [];
+  const withAlt = alt || String(ctrl).includes('alt');
   if (ctrl) parts.push(isMac ? '⌘' : 'Ctrl');
+  if (withAlt) parts.push(isMac ? '⌥' : 'Alt');
   if (shift) parts.push(isMac ? '⇧' : 'Shift');
-  let key = code.replace(/^Key/, '').replace(/^Digit/, '');
+  let key = String(code || '').replace(/^Key/, '').replace(/^Digit/, '');
   if (code === 'Comma') key = ','; else if (code === 'Space') key = 'Space';
+  else if (code === 'Period') key = '.'; else if (code === 'Slash') key = '/';
+  else if (code === 'Backslash') key = '\\'; else if (code === 'Backquote') key = '`';
+  else if (code === 'BracketLeft') key = '['; else if (code === 'BracketRight') key = ']';
+  else if (code === 'Semicolon') key = ';'; else if (code === 'Quote') key = "'";
+  else if (code === 'Minus') key = '-'; else if (code === 'Equal') key = '=';
   parts.push(key);
   return parts.join(isMac ? '' : '+');
 }
+
+/** ต้องกด Alt ด้วยไหม (ช่องที่สองของตาราง SHORTCUTS) */
+export function needsAlt(needCtrl) { return String(needCtrl).includes('alt'); }
 
 // ชื่อเก่า (he กัน break import ใน dialogs.js)
 export const accelText = formatShortcut;

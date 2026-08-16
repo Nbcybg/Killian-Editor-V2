@@ -124,25 +124,39 @@ check('importSummary บอกจำนวนแถวที่ข้าม', su
 check('importSummary รับ null ได้', typeof S.importSummary(null) === 'string');
 
 // ───────── ทดสอบกับไฟล์ภาษาจริงของโปรเจกต์ (round-trip ปิดวง) ─────────
+//
+// [alpha.79 · แก้เทสที่พังมาตั้งแต่ .76] เดิมอ่าน `languages/th.json` + `en.json`
+// ซึ่ง **ถูกลบไปตั้งแต่รอบ .76** (ย้ายไป CSV) → เทสนี้ throw ตั้งแต่บรรทัดแรก
+// ทำให้ `npm run test:unit` หยุดกลางทางและไฟล์เทสที่เหลือไม่ได้รันเลย
+// ตอนนี้ round-trip กับ **ไฟล์ CSV จริง** แทน — ซึ่งเป็นแหล่งความจริงเดียวของระบบภาษาแล้ว
 const fs = require('fs');
-const thReal = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'languages', 'th.json'), 'utf-8'));
-const enReal = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'languages', 'en.json'), 'utf-8'));
-const realCsv = S.jsonToCsv(thReal, enReal);
+const langDir = path.join(__dirname, '..', 'languages');
+const { lexCsv } = require('../tools/csv-lite.cjs');
+const thTbl = lexCsv(fs.readFileSync(path.join(langDir, 'k2_th.csv'), 'utf8'));
+const enTbl = lexCsv(fs.readFileSync(path.join(langDir, 'k2_en.csv'), 'utf8'));
+check('ไฟล์ภาษาจริงมีคีย์เกิน 3,000 รายการ', Object.keys(thTbl).length > 3000,
+  Object.keys(thTbl).length);
+check('ไฟล์ไทย/อังกฤษมีจำนวนคีย์เท่ากัน',
+  Object.keys(thTbl).length === Object.keys(enTbl).length,
+  Object.keys(thTbl).length + ' vs ' + Object.keys(enTbl).length);
+// jsonToCsv/csvToJson ยังใช้กับ "ส่งออก/นำเข้าตารางแปล" อยู่ → round-trip ต้องปิดวงกับของจริง
+const realTree = {};
+for (const k of Object.keys(thTbl)) {
+  const parts = k.split('.');
+  let cur = realTree;
+  for (let i = 0; i < parts.length - 1; i++) cur = (cur[parts[i]] = cur[parts[i]] || {});
+  cur[parts[parts.length - 1]] = thTbl[k];
+}
+const realCsv = S.jsonToCsv(realTree, realTree);
 const realBack = S.csvToJson(realCsv);
-const flatThReal = S.flatten(thReal);
+const flatThReal = S.flatten(realTree);
 const flatBack = S.flatten(realBack.th);
-check('ไฟล์ th.json จริง: จำนวนคีย์เท่าเดิมหลัง round-trip',
+check('ไฟล์ภาษาจริง: จำนวนคีย์เท่าเดิมหลัง round-trip',
   Object.keys(flatBack).length === Object.keys(flatThReal).length,
   Object.keys(flatBack).length + ' vs ' + Object.keys(flatThReal).length);
 let diff = 0;
 for (const k of Object.keys(flatThReal)) if (flatBack[k] !== flatThReal[k]) diff++;
-check('ไฟล์ th.json จริง: ทุกค่าตรงกันหลัง round-trip', diff === 0, diff + ' ค่าเพี้ยน');
-// เทียบทีละคีย์ ไม่ใช่ JSON.stringify — CSV เรียงคีย์ A→Z ลำดับคีย์จึงต่างจากไฟล์ต้นฉบับเสมอ
-const flatEnReal = S.flatten(enReal), flatEnBack = S.flatten(realBack.en);
-let diffEn = 0;
-for (const k of Object.keys(flatEnReal)) if (flatEnBack[k] !== flatEnReal[k]) diffEn++;
-check('ไฟล์ en.json จริง: ทุกค่าตรงกันหลัง round-trip',
-  diffEn === 0 && Object.keys(flatEnBack).length === Object.keys(flatEnReal).length, diffEn);
+check('ไฟล์ภาษาจริง: ทุกค่าตรงกันหลัง round-trip', diff === 0, diff + ' ค่าเพี้ยน');
 check('CSV ของไฟล์จริงมีคีย์เกิน 300 รายการ (ครอบคลุมทั้งแอป)',
   realBack.keys.length > 300, realBack.keys.length);
 

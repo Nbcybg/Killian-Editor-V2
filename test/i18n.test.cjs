@@ -120,13 +120,20 @@ for (const f of files) {
   check(`${f}: มีชื่อภาษาให้กล่องตั้งค่าแสดง`, !!t['meta.nativeName']);
   check(`${f}: มีข้อความเกิน 500 คีย์`, Object.keys(t).length > 500, Object.keys(t).length);
 }
-// ภาษาไทย = ภาษาต้นฉบับ → ทุก msgid ต้องมีค่า (ไม่งั้นแปลว่าไฟล์หลุด)
+// [alpha.79 · แก้เทสที่ล้าสมัยตั้งแต่ .77]
+// สองข้อเดิมเช็คว่า "คีย์เป็นข้อความไทย" (แนว gettext ของ .76) — แต่ .77 เปลี่ยนเป็นคีย์ดอตพาธแล้ว
+// จำนวนจึงเป็น 0 เสมอและเทสแดงมาตลอด (ไม่มีใครเห็น เพราะ i18n-csv.test พังก่อนจนชุดหยุดกลางทาง)
+// ตอนนี้เช็ค **กฎของ .77 จริง ๆ**: คีย์ต้องเป็นดอตพาธล้วน ห้ามมีข้อความไทยเป็นคีย์
 const thTable = S.csvToTable(fs.readFileSync(path.join(langDir, 'k2_th.csv'), 'utf8'));
 const enTable = S.csvToTable(fs.readFileSync(path.join(langDir, 'k2_en.csv'), 'utf8'));
-const thaiMsgids = Object.keys(thTable).filter((k) => /[฀-๿]/.test(k));
-check('k2_th.csv มี msgid ภาษาไทยเกิน 1,000 รายการ', thaiMsgids.length > 1000, thaiMsgids.length);
-check('ทุก msgid ในไฟล์ไทยมีค่าเป็นตัวเอง (ต้นฉบับ)',
-  thaiMsgids.every((k) => thTable[k] === k), thaiMsgids.find((k) => thTable[k] !== k));
+const thaiKeys = Object.keys(thTable).filter((k) => /[฀-๿]/.test(k));
+check('k2_th.csv ไม่มีคีย์ที่เป็นข้อความไทย (คีย์ต้องเป็นดอตพาธ)',
+  thaiKeys.length === 0, thaiKeys.slice(0, 3).join(' | '));
+check('k2_th.csv มีคีย์เกิน 3,000 รายการ', Object.keys(thTable).length > 3000,
+  Object.keys(thTable).length);
+check('ทุกคีย์อยู่ในรูป ui.<module>.<name> หรือ meta.*',
+  Object.keys(thTable).every((k) => /^(ui|meta)\.[\w.:-]+$/.test(k)),
+  Object.keys(thTable).filter((k) => !/^(ui|meta)\.[\w.:-]+$/.test(k)).slice(0, 3).join(' | '));
 check('คีย์ของ en เป็นชุดย่อยของ th (ไม่มีคีย์กำพร้า)',
   Object.keys(enTable).filter((k) => !k.startsWith('meta.') && !(k in thTable)).length === 0,
   Object.keys(enTable).filter((k) => !k.startsWith('meta.') && !(k in thTable)).slice(0, 3).join(' | '));

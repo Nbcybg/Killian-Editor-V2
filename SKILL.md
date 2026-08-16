@@ -1091,6 +1091,56 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
+## เวอร์ชัน (ล่าสุด **alpha.79** · e2e ALL OK · unit ทั้งชุดผ่าน)
+
+**.79 — 🧰 รอบ QOL 6 เรื่องจากผู้ใช้ + รูเก่าที่เจอระหว่างทาง 4 รู**
+
+โมดูลบริสุทธิ์ใหม่ 4 ตัว (มี unit test ครบ · รวม 198 checks) + เทสประตูกันพลาดอีก 2 ไฟล์:
+
+| ไฟล์ | หน้าที่ | checks |
+|---|---|---|
+| `src/dialogue/dialogue-core.js` | จับบทพูดจากเครื่องหมายคำพูด/`@ตัวละคร` · หาคนพูด · **เขียนกลับลงไฟล์อย่างปลอดภัย** | 70 |
+| `src/toolbar/toolbar-config.js` | เอาปุ่มเข้า-ออกจากแถบ · **`layoutToolbar()` คิดเส้นคั่นใหม่** | 40 |
+| `src/session/session-core.js` | รูปร่าง/กู้/กันไฟล์เสียของ "จำทุกอย่างล่าสุด" | 44 |
+| `src/plugins/plugin-core.js` | manifest · สถานะ · รวมรายการ · ปลั๊กอินตัวอย่าง · เอกสาร API | 48 |
+| `test/shortcuts.test.cjs` | ปุ่มชนกัน · ไม่มีชื่อ · ชื่อชี้คีย์ภาษาที่ไม่มีจริง · แย่งคีย์ copy/paste | 26 |
+| `test/settings-tpl.test.cjs` | เทมเพลตกล่องตั้งค่ามีทุก `#st-*` ที่โค้ดอ้าง · `{0}..{43}` ครบ · div ปิดครบ | 31 |
+
+**ฝั่ง UI**: `dialogue/dialogue-ui.js` · `plugins/plugin-panel.js` · `toolbar/toolbar-ui.js`
+· เซสชันอยู่ใน app.js (`captureSession`/`saveUiSession`/`restoreSessionLayout`/`restoreSessionTabs`)
+
+### สิ่งที่ต้องรู้ก่อนแตะของพวกนี้
+
+- **แผงใหม่ 2 ตัว**: `dialogue` (Ctrl+Alt+L) · `plugins` (Ctrl+Alt+E)
+  · `plugins` **ไม่อยู่ใน TEAROFF_PANELS** โดยตั้งใจ — ปลั๊กอินลงทะเบียนกับ context ของหน้าต่างหลัก
+- **ตาราง `SHORTCUTS` ช่องที่สองรับ `'ctrl+alt'` แล้ว** (เพิ่มจาก `true`/`false`)
+  · `needsAlt()` ใน core.js เป็นตัวตัดสิน · **ที่ไหนเทียบคีย์ซ้ำต้องนับ Alt ด้วย**
+    (เจอมาแล้ว: e2e เดิมใช้ `!!ctrl` → Ctrl+Alt+I ถูกมองว่าชนกับ Ctrl+I)
+- **ซ่อนปุ่มบนแถบด้วยคลาส `.tb-hidden` + `!important` เท่านั้น** ห้ามใช้ `style.display`
+  — `refreshToolbar()` เขียน `style.display` ของหลายปุ่มเองตามโหมดเอกสาร จะแย่งกัน
+  · `applyToolbarConfig()` ถูกเรียกท้าย `refreshToolbar()` เสมอ (ทาบทับทีหลัง)
+- **เซสชันเป็นไฟล์ ไม่ใช่ localStorage**: `<userData>/sessions/<คีย์>.json` เขียนแบบ temp+rename
+  · `restoreSessionLayout()` ต้องเรียก **ก่อน `initPanelSystem()`** (ระบบแผงอ่าน localStorage ตอนเริ่มครั้งเดียว)
+  · `onPanelLayoutChange()` **รับ callback ได้ตัวเดียว** — ห้ามลงทะเบียนซ้อน ให้ไปเติมใน callback ที่มีอยู่
+- **โครง HTML ของกล่องตั้งค่าอยู่ในไฟล์ภาษา** คีย์ `ui.dlg.alphaItemLevelUser` — แก้หน้าตาต้องแก้ที่ CSV
+  (ดูกฎถาวรใน AGENTS.md · สำเนาไฟล์ไว้ก่อนแก้เสมอ)
+
+### 🐞 รูเก่าที่เจอระหว่างทาง (ไม่ได้อยู่ในโจทย์)
+
+| อาการ | ต้นตอ |
+|---|---|
+| กล่อง "จัดการแผง" โชว์ `panel.desc_tree` | `panelDesc()` เป็น `t('panel.desc_<id>', d.desc)` — ตั้งแต่ .77 `t()` **ไม่รับค่าสำรอง** และไม่เคยมีคีย์นั้นในไฟล์ภาษา |
+| ตั้งค่า → ปุ่มลัด โชว์ `shortcuts.spDialogue` | 10 คีย์ตกหล่นตอนย้ายมา CSV |
+| **`npm run test:unit` หยุดกลางทางตั้งแต่ .76** | `test/i18n-csv.test.cjs` อ่าน `languages/th.json` ที่ถูกลบไปตอน .76 → throw ทันที **ไฟล์เทสที่เหลือไม่ได้รันเลยตั้งแต่นั้น** |
+| (ซ่อนใต้ข้อบน) `test/i18n.test.cjs` แดงตั้งแต่ .77 | ยังเช็คกฎของ .76 ("คีย์เป็นข้อความไทย") ซึ่ง .77 เปลี่ยนเป็นดอตพาธแล้ว |
+
+> **บทเรียน**: เทสที่ throw ตั้งแต่ import จะ **กลืนไฟล์เทสที่เหลือทั้งชุด** เพราะ `npm run test:unit`
+> ต่อกันด้วย `&&` · เช็ค exit code ของทั้งชุดเสมอ อย่าดูแค่บรรทัดท้าย
+
+**เครื่องมือใหม่**: `tools/i18n-add.cjs <keys.json>` — เพิ่มคีย์ลงไฟล์ภาษาทุกไฟล์พร้อมกัน
+
+---
+
 ## เวอร์ชัน (ล่าสุด **alpha.74** · e2e ALL OK · unit ทั้งชุดผ่าน รวม `branch-plans` 68 + `network-theme` 50 + `log-core` 52)
 
 **.74 — ✅ ปิดเคส K-1 ได้แล้ว (แถวหายจาก Explorer) + แผนผังแตกสายเก็บทางเลือกเอง**

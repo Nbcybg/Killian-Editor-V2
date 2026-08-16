@@ -1,0 +1,5 @@
+{
+ "(ไม่มีข้อความ)": "ui.core.notHasText2",
+ "resource: โหลดไม่สำเร็จ <": "ui.core.resourceLoadNotOk2",
+ "ไม่พบภาษา \"{{0}}\" ใช้ภาษาอังกฤษแทน": "ui.core.notFoundLangUse2"
+}

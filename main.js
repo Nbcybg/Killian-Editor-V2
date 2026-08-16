@@ -417,6 +417,8 @@ function buildMenu() {
                 toggles.panels[p.id], () => send('toggle-panel', p.id)))),
         { type: 'separator' },
         { label: tt('ui.menu.managePanelShowHide'), click: () => send('panel-system') },
+        // [alpha.79] เอาปุ่มเข้า-ออกจากแถบเครื่องมือ
+        { label: tt('ui.menu.toolbarCfg'), click: () => send('toolbar-config') },
         { label: tt('ui.menu.exportLayoutPanelJSON'), click: () => send('export-panel-layout') },
         { label: tt('ui.menu.resetLayoutPanelAll'), click: () => send('reset-panels') },
       ] },
@@ -705,6 +707,10 @@ const MENU_PANELS = [
   { id: 'codex', label: tt('ui.menu.codexCodex') },
   { id: 'history', label: tt('ui.common.historyRun') },
   { id: 'record', label: tt('ui.common.journal') },
+  { sep: true },
+  // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
+  { id: 'dialogue', label: tt('ui.menu.dialoguePanel') },
+  { id: 'plugins', label: tt('ui.menu.pluginsPanel') },
 ];
 /** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
 const MENU_PANELS_SKIP = {
@@ -1001,6 +1007,53 @@ H('pdf:fromHtml', async (html, outPath, opts = {}) => {
 });
 H('recent:push', (p) => { pushRecent(p); return true; });
 H('recent:list', () => readRecent());
+
+// ───────── [alpha.79] เซสชัน: "จำทุกอย่างล่าสุด" ─────────
+//
+// **ทำไมต้องเป็นไฟล์ ไม่ใช่ localStorage**
+// Chromium เขียน localStorage ลงดิสก์แบบหน่วงเวลา — ปิดโปรแกรมปกติทัน แต่ force quit /
+// โปรแกรมพัง / ไฟดับ ไม่ทัน · ผู้ใช้จึงกลับมาเจอแผงหายทั้งชุดทุกครั้งที่ปิดแบบไม่ปกติ
+// ที่นี่เขียนด้วย `fs.writeFileSync` ผ่าน temp + rename = ได้ไฟล์ครบเสมอ ไม่มีไฟล์ครึ่งใบ
+function sessionDir() { return path.join(app.getPath('userData'), 'sessions'); }
+function sessionFile(key) {
+  const safe = String(key || 'default').replace(/[^\w฀-๿.-]/g, '_').slice(0, 80);
+  return path.join(sessionDir(), safe + '.json');
+}
+H('session:read', (key) => {
+  try { return JSON.parse(fs.readFileSync(sessionFile(key), 'utf-8')); } catch { return null; }
+});
+H('session:write', (key, data) => {
+  try {
+    fs.mkdirSync(sessionDir(), { recursive: true });
+    const f = sessionFile(key);
+    const tmp = f + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data), 'utf-8');
+    fs.renameSync(tmp, f);                       // atomic — ไม่มีทางได้ไฟล์ครึ่งใบแม้ถูกฆ่ากลางคัน
+    return true;
+  } catch (e) { return false; }
+});
+H('session:clear', (key) => { try { fs.unlinkSync(sessionFile(key)); return true; } catch { return false; } });
+/** กล่องหน้าต่างตอนนี้ — main รู้ค่าจริงกว่า renderer (รวมสถานะขยายเต็มจอ) */
+H('win:bounds', () => {
+  try {
+    const b = win.getNormalBounds ? win.getNormalBounds() : win.getBounds();
+    return { x: b.x, y: b.y, w: b.width, h: b.height, max: win.isMaximized() };
+  } catch { return null; }
+});
+H('win:setBounds', (box) => {
+  try {
+    if (!box) return false;
+    const { screen } = require('electron');
+    // หน้าต่างต้องอยู่บนจอที่ยังมีอยู่จริง — ต่อจอที่สองแล้วถอดออก พิกัดเดิมจะพาไปนอกจอ
+    const areas = screen.getAllDisplays().map((d) => d.workArea);
+    const onScreen = areas.some((a) => box.x + box.w > a.x + 40 && box.x < a.x + a.width - 40
+                                    && box.y + 40 > a.y && box.y < a.y + a.height - 40);
+    if (onScreen) win.setBounds({ x: box.x, y: box.y, width: box.w, height: box.h });
+    else win.setSize(box.w, box.h);
+    if (box.max) win.maximize();
+    return true;
+  } catch { return false; }
+});
 H('win:minimize', () => win.minimize());
 H('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
 H('win:close', () => win.close());

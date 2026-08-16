@@ -139,6 +139,9 @@
   <button id="tb-codex" class="tb tb-toggle" title="📚 สารานุกรม (Codex — เอนทิตี้ Wiki ทั้งเล่ม · ส่งออกเป็นเว็บได้)" data-icon="book-content"></button>
   <button id="tb-history" class="tb tb-toggle" title="🕘 ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้)" data-icon="history"></button>
   <button id="tb-record" class="tb tb-toggle" title="🗒 บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)" data-icon="note"></button>
+  <!-- [alpha.79] แผงบทพูด (รวมบทพูดทั้งผลงาน) + แผงจัดการปลั๊กอิน -->
+  <button id="tb-dialogue" class="tb tb-toggle" title="บทพูดทั้งผลงาน (Ctrl+Alt+L)" data-icon="chat"></button>
+  <button id="tb-plugins" class="tb tb-toggle" title="ปลั๊กอิน (Ctrl+Alt+E)" data-icon="extension"></button>
   <button id="tb-plug" class="tb" title="คำสั่งจากปลั๊กอิน" style="display:none" data-icon="extension"></button>
 </div>
 <div id="findbar">
@@ -220,6 +223,9 @@
     <div id="codex-panel" class="k-featpanel"><div id="codex-body"></div></div>
     <div id="history-panel" class="k-featpanel"><div id="history-body"></div></div>
     <div id="record-panel" class="k-featpanel"><div id="record-body"></div></div>
+    <!-- [alpha.79] แผงบทพูด + แผงปลั๊กอิน -->
+    <div id="dialogue-panel" class="k-featpanel"><div id="dialogue-body"></div></div>
+    <div id="plugins-panel" class="k-featpanel"><div id="plugins-body"></div></div>
 </div>
 <div id="statusbar"><span id="status" data-i18n="app.ready">พร้อม</span>
   <!-- [alpha.62 บั๊ก 9+10] "กำลังทำอะไรอยู่" — แทนหน้าจอ loading เต็มจอที่เคยทับกล่องบันทึก
