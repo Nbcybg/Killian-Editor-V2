@@ -17,9 +17,11 @@ const md = [
   '$shot มุมกว้างตลาด',
 ].join('\n');
 const blocks = parseScript(md);
+// [alpha.78] "ผมมีเรื่องจะบอก" (บรรทัดที่ 2 ของบทพูด) = **บรรยาย** ตามค่าเริ่มต้นแนว Final Draft
+// — บรรทัดถัดจากบทพูดไม่ต่อเป็นบทพูดอีกแล้ว · อยากได้แบบเดิมเปิด `spDialogueContinues` ในตั้งค่า
 const expect = ['scene','scene','action','action','blank','character','parenthetical',
   // $shot กลายเป็น element 'shot' ตั้งแต่ [50] — เทสเดิมยังคาดหวัง 'raw' อยู่ (ไม่ได้อยู่ใน test:unit จึงไม่มีใครเห็น)
-  'dialogue','dialogue','blank','transition','outline1','summary','note','shot'];
+  'dialogue','action','blank','transition','outline1','summary','note','shot'];
 const got = blocks.map((b) => b.el);
 if (JSON.stringify(got) !== JSON.stringify(expect))
   throw new Error('classify mismatch: ' + JSON.stringify(got));
@@ -43,7 +45,9 @@ console.log('round-trip OK');
 
 // ═══════ alpha.57a ข้อ 2 — element ใหม่ + ส่วนเสริมท้ายชื่อตัวละคร ═══════
 import { splitCharacter, withExtension, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
-         TRANSITIONS_IN, INTERCUTS, SP_MD_PREFIXES, classify } from '../src/fountain.js';
+         TRANSITIONS_IN, INTERCUTS, SP_MD_PREFIXES, classify,
+         blockIsBlank, guessNamesFor, guessNamesForBlocks,
+         SP_RULES, setSpRules } from '../src/fountain.js';
 let n = 0;
 const t = (name, cond, extra) => {
   if (!cond) throw new Error('FAIL ' + name + (extra !== undefined ? ' | ' + extra : ''));
@@ -154,5 +158,105 @@ t('ใส่ส่วนเสริมทับของเดิม (ไม่
 t('ส่วนเสริมว่าง = ถอดออก', withExtension('สมชาย (V.O.)', '') === 'สมชาย');
 t('เติมวงเล็บให้เองถ้าผู้ใช้พิมพ์มาโดด ๆ', withExtension('สมชาย', 'V.O.') === 'สมชาย (V.O.)');
 t('ชื่อว่าง + ส่วนเสริม → ไม่มีวรรคนำ', withExtension('', '(V.O.)') === '(V.O.)');
+
+// ═══════ [alpha.78] บรรยายภาษาไทยสั้น ๆ ต้องไม่กลายเป็น "ชื่อตัวละคร" ═══════
+//
+// ต้นตอ: เกณฑ์เดา "ชื่อตัวละคร" ใช้ `s.split(/\s+/).length <= 3` — ภาษาไทยไม่เว้นวรรค
+// ทั้งบรรทัดจึงนับเป็น 1 คำเสมอ → บรรยายสั้นทุกบรรทัด (`ฝนตก`) เข้าเกณฑ์
+// แล้ว lineFor() เขียนกลับเป็น `@ฝนตก` = **บันทึกครั้งเดียวไฟล์เสียถาวร**
+//
+// กติกาที่ใช้แก้ (ตรงกับ fountain แท้): ตัวละคร = มีบรรทัดว่างข้างบน + **ไม่มี**ข้างล่าง
+{
+  const script = ['### INT. ห้องครัว - กลางวัน', '', 'ห้องครัวเงียบ', '',
+    '@สมชาย', '((เหนื่อย))', 'วันนี้ยาวจริง ๆ', '', 'ลมพัดม่านไหว', '',
+    '@มาลี (V.O.)', 'กลับมาแล้วเหรอ', '', 'ฝนตก'].join('\n');
+  const b = parseScript(script);
+  const els = b.filter((x) => x.el !== 'blank').map((x) => x.el);
+  t('บรรยายไทยสั้น ๆ ยังเป็น action ทั้งหมด',
+    JSON.stringify(els) === JSON.stringify(['scene', 'action', 'character', 'parenthetical',
+      'dialogue', 'action', 'character', 'dialogue', 'action']), JSON.stringify(els));
+
+  // ไป-กลับต้องได้ไฟล์เดิมเป๊ะ — ไม่มี `@` และไม่มี `!` งอกขึ้นมา
+  let pb = true, pt = 'action';
+  const back = b.map((x, i) => {
+    const s = lineFor(x.el, x.text, pb, pt, i + 1 >= b.length || b[i + 1].el === 'blank');
+    pb = x.el === 'blank'; if (x.el !== 'blank') pt = x.el;
+    return s;
+  }).join('\n');
+  t('บันทึกแล้วไฟล์ไม่เปลี่ยนแม้แต่ตัวเดียว', back === script,
+    '\n' + back + '\n--- ควรเป็น ---\n' + script);
+  t('ไม่มี @ งอกหน้าบรรยาย', !/^@(ห้องครัวเงียบ|ลมพัดม่านไหว|ฝนตก)$/m.test(back));
+}
+// ตัวจับชื่ออัตโนมัติยังทำงานเมื่อมีบทพูดตามมาติด ๆ (เคสนำเข้า/วางข้อความดิบ)
+t('ชื่อไทยที่มีบทพูดตามติด = ตัวละคร',
+  parseScript('ตัวเอก\nสวัสดีครับ')[0].el === 'character');
+t('ชื่ออังกฤษพิมพ์ใหญ่ที่มีบทพูดตามติด = ตัวละคร',
+  parseScript('NAZARENA\nHello there.')[0].el === 'character');
+t('ชื่อที่ไม่มีอะไรตามมา = บรรยาย (ไม่ใช่ตัวละครกำพร้า)',
+  parseScript('ตัวเอก\n\nฉากต่อไป')[0].el === 'action');
+// บรรทัดว่างปิดบล็อกบทสนทนา — ย่อหน้าถัดจากบทพูดต้องไม่ใช่ "บทพูดกำพร้า"
+t('ย่อหน้าหลังบทพูด (มีบรรทัดว่างคั่น) = บรรยาย',
+  parseScript('@สมชาย\nสวัสดี\n\nเขาเดินออกไปจากห้องอย่างเงียบ ๆ').at(-1).el === 'action');
+// [alpha.78] ค่าเริ่มต้นแนว Final Draft — บรรทัดที่สองไม่ต่อเป็นบทพูดแล้ว (เปิดกฎได้ในตั้งค่า)
+t('บทพูดบรรทัดที่สอง = บรรยาย ตามค่าเริ่มต้น',
+  parseScript('@สมชาย\nสวัสดี\nผมมาแล้ว').at(-1).el === 'action');
+
+// ═══════ [alpha.78] บรรยาย = ข้อความเปล่า จริง ๆ (ไม่มี ! · ไม่เติมบรรทัดว่าง) ═══════
+//
+// มาตรฐานของงานเขียนบทคือ **Final Draft** ซึ่ง element เป็นก้อนอยู่แล้ว ไม่มีความกำกวม
+// ไฟล์ของเราเป็นข้อความล้วน จึงต้องมีกฎว่า "บรรทัดถัดจากบทพูดคืออะไร" — และกฎนั้น
+// **ผู้ใช้ตั้งเอง** (`SP_RULES.dialogueContinues`) ไม่ใช่ให้โค้ดยัดรหัสลงไฟล์แทน
+{
+  const write = (blocks) => {          // จำลอง SPEditor.getMarkdown()
+    const out = []; let pb = true, pt = 'action';
+    const gn = guessNamesForBlocks(blocks);
+    blocks.forEach((b, i) => {
+      const s = lineFor(b.el, b.text, pb, pt, blockIsBlank(blocks[i + 1]), gn);
+      out.push(s);
+      if (!String(s).trim()) pb = true; else { pb = false; pt = b.el; }
+    });
+    return out.join('\n');
+  };
+  const read = (md) => parseScript(md).map((b) => ({ el: b.el, text: b.text }));
+
+  t('ค่าเริ่มต้นคือแนว Final Draft (บรรทัดถัดจากบทพูด = บรรยาย)', SP_RULES.dialogueContinues === false);
+
+  const doc = [{ el: 'character', text: 'MC' }, { el: 'dialogue', text: '"ใส่ใจคนที่จะกินไง"' },
+    { el: 'action', text: 'เด็กนั่งฟังอยู่ครู่หนึ่งแบบที่ไม่รู้ว่าเข้าใจหรือเปล่า' },
+    { el: 'action', text: 'ตลกฝืดๆ อีกแล้วนะเรา' },
+    { el: 'action', text: 'ฝนตก' }, { el: 'action', text: 'เขายืนอยู่ตรงนั้น' }];
+  const md = write(doc);
+  t('ไม่มี ! นำหน้าบรรยายเลย', !/^!/m.test(md), JSON.stringify(md));
+  t('ไม่มีบรรทัดว่างงอกขึ้นมาเอง', !/\n\n/.test(md), JSON.stringify(md));
+  t('ไฟล์เป็นข้อความเปล่าล้วนตามที่กำหนด',
+    md === ['@MC', '"ใส่ใจคนที่จะกินไง"', 'เด็กนั่งฟังอยู่ครู่หนึ่งแบบที่ไม่รู้ว่าเข้าใจหรือเปล่า',
+            'ตลกฝืดๆ อีกแล้วนะเรา', 'ฝนตก', 'เขายืนอยู่ตรงนั้น'].join('\n'), JSON.stringify(md));
+  t('อ่านกลับได้โครงบล็อกเดิมเป๊ะ', JSON.stringify(read(md)) === JSON.stringify(doc), JSON.stringify(read(md)));
+  t('บันทึกซ้ำได้ไฟล์เดิม', write(read(md)) === md);
+
+  // เปิดกฎ "บทพูดต่อ" (แนว fountain) → บรรทัดถัดจากบทพูดกลายเป็นบทพูด และบรรยายต้องมี ! บังคับ
+  setSpRules({ dialogueContinues: true });
+  t('เปิดกฎแล้ว บรรทัดถัดจากบทพูด = บทพูด',
+    parseScript('@MC\nสวัสดี\nเขาเดินออกไปจากห้องอย่างเงียบ ๆ').at(-1).el === 'dialogue');
+  t('เปิดกฎแล้ว บรรยายต้องเขียน ! บังคับ', /^!/m.test(write(doc)), JSON.stringify(write(doc)));
+  setSpRules({ dialogueContinues: false });                    // คืนค่าเริ่มต้นให้เทสอื่น
+  t('ปิดกฎกลับ บรรทัดถัดจากบทพูด = บรรยาย',
+    parseScript('@MC\nสวัสดี\nเขาเดินออกไปจากห้องอย่างเงียบ ๆ').at(-1).el === 'action');
+  t('บรรทัดใต้ชื่อตัวละครยังเป็นบทพูดเสมอ (นิยามของ element ไม่ใช่ตัวเลือก)',
+    parseScript('@MC\nสวัสดี')[1].el === 'dialogue');
+  t('บรรทัดใต้วงเล็บยังเป็นบทพูดเสมอ',
+    parseScript('@MC\n((กระซิบ))\nสวัสดี').at(-1).el === 'dialogue');
+
+  t('blockIsBlank: บล็อกบรรยายที่ไม่มีข้อความ = ว่าง',
+    blockIsBlank({ el: 'action', text: '  ' }) && blockIsBlank(undefined) && !blockIsBlank({ el: 'action', text: 'ก' }));
+  // ตัวเดาชื่ออัตโนมัติมีไว้สำหรับ "สคริปต์ดิบ" ที่วางมาโดยไม่มี `@` เท่านั้น
+  t('สคริปต์ดิบไม่มี @ → ยังเดาชื่อตัวละครให้', parseScript('ตัวเอก\nสวัสดีครับ')[0].el === 'character');
+  t('ไฟล์ที่ใช้ @ อยู่แล้ว → เลิกเดา บรรยายสั้นเป็นบรรยาย',
+    parseScript('@มาลี\nสวัสดี\n\nฝนตก\nเขายืนอยู่').map((b) => b.el).join(',')
+      === 'character,dialogue,blank,action,action',
+    parseScript('@มาลี\nสวัสดี\n\nฝนตก\nเขายืนอยู่').map((b) => b.el).join(','));
+  t('guessNamesFor อ่านจากตัว @ ต้นบรรทัดเท่านั้น',
+    guessNamesFor('ก\nข') && !guessNamesFor('ก\n@มาลี') && guessNamesFor('เมล a@b.com'));
+}
 
 console.log('alpha.57a fountain OK (' + n + ' checks)');

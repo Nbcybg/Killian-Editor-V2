@@ -13,7 +13,8 @@ import { t, tf } from './i18n.js';
 import { resolveVars } from './template-vars.js';
 // [alpha.58 · 55–56] ส่งออกบทภาพยนตร์พร้อมข้อความต่อเนื่อง — ใช้เอนจินจัดหน้าตัวเดียวกับบนจอ
 // [alpha.59 · 88] classify — ใช้ระบุประเภท element ของแต่ละบรรทัดตอน "ตัดออกตอนส่งออก"
-import { parseScript, lineFor, classify } from './fountain.js';
+import { parseScript, lineFor, classify, blockIsBlank,
+         guessNamesFor, guessNamesForBlocks } from './fountain.js';
 import { paginate, mergeSpFormat } from './sp-format.js';
 import { pagesWithContinueds } from './sp-continued.js';
 // [alpha.58r บั๊ก 19] WYSIWYG — HTML ที่ส่งออกต้องใช้ฟอนต์/ช่วงบรรทัด/ย่อหน้า ชุดเดียวกับบนจอ
@@ -32,14 +33,20 @@ export function insertContinueds(text, fmt) {
   const f = mergeSpFormat(fmt);
   const pages = pagesWithContinueds(paginate(parseScript(String(text ?? '')), { fmt: f }), f);
   const out = [];
+  // ตัวเดาชื่ออัตโนมัติคิดจาก "ทั้งบท" ไม่ใช่ทีละหน้า — ต้องตรงกับตอนอ่านไฟล์กลับ
+  const guessNames = guessNamesForBlocks(pages.flatMap((p) => p.blocks || []));
   pages.forEach((pg, i) => {
     if (i) out.push('', PAGE_BREAK, '');
     let prevBlank = true, prevType = 'action';
-    for (const b of pg.blocks || []) {
+    const bl = pg.blocks || [];
+    for (let i = 0; i < bl.length; i++) {
+      const b = bl[i];
       if (b.el === 'continued-top' || b.el === 'continued-bottom' || b.el === 'more') {
         out.push(b.text || ''); prevBlank = false; continue;
       }
-      const line = lineFor(b.el, b.text || '', prevBlank, prevType);
+      // บล็อกถัดไปว่างไหม — ตัวจับชื่อตัวละครอัตโนมัติใน classify ต้องรู้ (ดู fountain.js)
+      const nextBlank = blockIsBlank(bl[i + 1]);
+      const line = lineFor(b.el, b.text || '', prevBlank, prevType, nextBlank, guessNames);
       out.push(line);
       if (!String(line).trim()) prevBlank = true;
       else { prevBlank = false; prevType = b.el; }
@@ -68,9 +75,14 @@ export function omitElements(text, types) {
   if (!drop.size || !s) return s;
   const out = [];
   let prevBlank = true, prevType = 'action', prevLine;
-  for (const line of s.split('\n')) {
+  const src = s.split('\n');
+  const guessNames = guessNamesFor(s);
+  for (let i = 0; i < src.length; i++) {
+    const line = src[i];
     // ส่ง prevLine ด้วยเหมือน parseScript — `((…))` ต้องแยก "โน้ต" ออกจาก "วงเล็บใต้ตัวละคร" ให้ถูก
-    const [el] = classify(line, prevBlank, prevType, prevLine);
+    // และส่งบรรทัดถัดไปว่างไหม + ตัวเดาชื่อ — ต้องตัดสินเหมือน parseScript เป๊ะ ไม่งั้นตัด element ผิดตัว
+    const [el] = classify(line, prevBlank, prevType, prevLine,
+                          i + 1 >= src.length || src[i + 1].trim() === '', guessNames);
     prevLine = line;
     if (el === 'blank') { out.push(''); prevBlank = true; continue; }
     if (drop.has(el)) continue;

@@ -15364,16 +15364,27 @@
     SCENE_RE: () => SCENE_RE,
     SP_ELEMS: () => SP_ELEMS,
     SP_MD_PREFIXES: () => SP_MD_PREFIXES,
+    SP_RULES: () => SP_RULES,
     TAB_CYCLE: () => TAB_CYCLE,
     TIMES: () => TIMES,
     TRANSITIONS: () => TRANSITIONS,
     TRANSITIONS_IN: () => TRANSITIONS_IN,
+    blockIsBlank: () => blockIsBlank,
     classify: () => classify,
+    guessNamesFor: () => guessNamesFor,
+    guessNamesForBlocks: () => guessNamesForBlocks,
     lineFor: () => lineFor,
     parseScript: () => parseScript,
+    setSpRules: () => setSpRules,
     splitCharacter: () => splitCharacter,
     withExtension: () => withExtension
   });
+  function setSpRules(partial) {
+    if (partial && typeof partial === "object") {
+      if ("dialogueContinues" in partial) SP_RULES.dialogueContinues = !!partial.dialogueContinues;
+    }
+    return SP_RULES;
+  }
   function splitCharacter(text) {
     const s = String(text ?? "").trim();
     const m = /^(.*?)\s*(\([^()]*\))\s*$/.exec(s);
@@ -15387,7 +15398,7 @@
     const wrapped = e.startsWith("(") && e.endsWith(")") ? e : "(" + e.replace(/^\(|\)$/g, "") + ")";
     return name5 ? name5 + " " + wrapped : wrapped;
   }
-  function classify(line, prevBlank = true, prevType = "action", prevLine = void 0) {
+  function classify(line, prevBlank = true, prevType = "action", prevLine = void 0, nextBlank = false, guessNames = true) {
     const s = line.trim();
     if (s === "") return ["blank", ""];
     if (IMG_RE.test(s)) return ["image", s];
@@ -15420,18 +15431,25 @@
     if (SCENE_RE.test(s)) return ["scene", s];
     if (TRANS_RE.test(s) && s.length <= 30) return ["transition", s];
     if (s.startsWith("(") && s.endsWith(")") && CAN_TAKE_PAREN(prevType, prevBlank)) return ["parenthetical", s];
-    {
+    if (guessNames) {
       const looksLikeName = !/[.!?…,;:"]$/.test(s) && !/^["'“]/.test(s) && (/[A-Za-z]/.test(s) && s === s.toUpperCase() && s.length <= 40 || s.length <= 25 && s.split(/\s+/).length <= 3);
-      if (prevBlank && looksLikeName) return ["character", s];
+      if (prevBlank && !nextBlank && looksLikeName) return ["character", s];
     }
-    if (["character", "parenthetical", "dialogue"].includes(prevType)) return ["dialogue", s];
+    if (!prevBlank) {
+      if (prevType === "character" || prevType === "parenthetical") return ["dialogue", s];
+      if (prevType === "dialogue" && SP_RULES.dialogueContinues) return ["dialogue", s];
+    }
     return ["action", s];
   }
   function parseScript(md) {
     const out = [];
+    const lines = md.split("\n");
+    const guessNames = guessNamesFor(md);
     let prevBlank = true, prevType = "action", prevLine;
-    for (const line of md.split("\n")) {
-      const [el2, text] = classify(line, prevBlank, prevType, prevLine);
+    for (let i5 = 0; i5 < lines.length; i5++) {
+      const line = lines[i5];
+      const nextBlank = i5 + 1 >= lines.length || lines[i5 + 1].trim() === "";
+      const [el2, text] = classify(line, prevBlank, prevType, prevLine, nextBlank, guessNames);
       if (el2 === "blank") {
         out.push({ el: "blank", text: "" });
         prevBlank = true;
@@ -15445,7 +15463,7 @@
     }
     return out;
   }
-  function lineFor(el2, text, prevBlank, prevType) {
+  function lineFor(el2, text, prevBlank, prevType, nextBlank = false, guessNames = true) {
     if (el2 === "blank" || el2 === "action" && text.trim() === "") return "";
     if (el2 === "raw" || el2 === "image") return text;
     let s;
@@ -15503,7 +15521,7 @@
       default:
         s = text;
     }
-    const [got] = classify(s, prevBlank, prevType);
+    const [got] = classify(s, prevBlank, prevType, void 0, nextBlank, guessNames);
     if (got !== el2) {
       if (el2 === "action") s = "!" + text;
       else if (el2 === "character") s = "@" + text;
@@ -15511,7 +15529,7 @@
     }
     return s;
   }
-  var SP_ELEMS, TAB_CYCLE, NEXT_ELEM, IMG_RE, SCENE_RE, TRANS_RE, RAW_PREFIX, TIMES, TRANSITIONS, SCENE_PREFIX, PARENTHETICALS, CHAR_EXTENSIONS, TRANSITIONS_IN, INTERCUTS, CAN_TAKE_PAREN, CAN_TAKE_DOUBLE_PAREN, SP_MD_PREFIXES;
+  var SP_ELEMS, TAB_CYCLE, NEXT_ELEM, IMG_RE, SP_RULES, SCENE_RE, TRANS_RE, RAW_PREFIX, TIMES, TRANSITIONS, SCENE_PREFIX, PARENTHETICALS, CHAR_EXTENSIONS, TRANSITIONS_IN, INTERCUTS, CAN_TAKE_PAREN, CAN_TAKE_DOUBLE_PAREN, guessNamesFor, guessNamesForBlocks, blockIsBlank, SP_MD_PREFIXES;
   var init_fountain = __esm({
     "src/fountain.js"() {
       SP_ELEMS = {
@@ -15581,6 +15599,7 @@
         raw: "action"
       };
       IMG_RE = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
+      SP_RULES = { dialogueContinues: false };
       SCENE_RE = /^\s*(int\.?|ext\.?|est\.?|i\/e|int\.?\/ext\.?|ฉาก)[\s.:]/i;
       TRANS_RE = /(cut to:|dissolve to:|smash cut to:|match cut to:|fade out\.?|fade to black\.?|to:)\s*$/i;
       RAW_PREFIX = /^\$(cast|seq|endact)\b/i;
@@ -15659,6 +15678,9 @@
         if (prevLine === void 0) return true;
         return /^\s*@/.test(String(prevLine));
       };
+      guessNamesFor = (md) => !/^[ \t]*@/m.test(String(md ?? ""));
+      guessNamesForBlocks = (blocks) => !(Array.isArray(blocks) && blocks.some((b) => b && b.el === "character"));
+      blockIsBlank = (b) => !b || b.el === "blank" || b.el === "action" && !String(b.text ?? "").trim();
       SP_MD_PREFIXES = [
         "$intercut ",
         "$shot ",
@@ -15720,7 +15742,7 @@
       if (!node.isTextblock) return;
       const first = node.firstChild;
       if (!first || !first.isText || !first.text) return;
-      const n2 = prefixLen(first.text);
+      const n2 = prefixLen(node.textContent);
       if (n2 > 0) {
         out.push(Decoration.inline(pos + 1, pos + 1 + n2, { class: MD_HIDE_CLASS }));
       }
@@ -15780,6 +15802,7 @@
     insertHardBreak: () => insertHardBreak,
     insertPageBreak: () => insertPageBreak,
     insertTab: () => insertTab,
+    keepScroll: () => keepScroll,
     mentionPlugin: () => mentionPlugin,
     refreshCommentAnchors: () => refreshCommentAnchors,
     refreshFocusLine: () => refreshFocusLine,
@@ -16040,6 +16063,39 @@
       return true;
     }
     return false;
+  }
+  function scrollerOf(el2) {
+    for (let n2 = el2; n2 && n2 !== document.body; n2 = n2.parentElement) {
+      const ov = getComputedStyle(n2).overflowY;
+      if (/(auto|scroll|overlay)/.test(ov) && n2.scrollHeight > n2.clientHeight + 1) return n2;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  function selectionInView(view2, sc) {
+    try {
+      const { from: from2, to } = view2.state.selection;
+      const a = view2.coordsAtPos(from2), b = view2.coordsAtPos(to);
+      const box2 = sc === document.scrollingElement || sc === document.documentElement ? { top: 0, bottom: window.innerHeight } : sc.getBoundingClientRect();
+      return b.bottom > box2.top && a.top < box2.bottom;
+    } catch {
+      return false;
+    }
+  }
+  function keepScroll(view2, run2) {
+    if (!view2 || !view2.dom || !view2.dom.isConnected) return run2();
+    const sc = scrollerOf(view2.dom);
+    const top = sc.scrollTop, left = sc.scrollLeft;
+    const lock = selectionInView(view2, sc);
+    const out = run2();
+    if (lock) {
+      const restore = () => {
+        if (sc.scrollTop !== top) sc.scrollTop = top;
+        if (sc.scrollLeft !== left) sc.scrollLeft = left;
+      };
+      restore();
+      requestAnimationFrame(restore);
+    }
+    return out;
   }
   var import_md, mentionKey, spellKey, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, KEditor;
   var init_editor = __esm({
@@ -16318,6 +16374,7 @@
           return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, "\n");
         }
         /** [alpha.58r บั๊ก 20] ย้ายเคอร์เซอร์ไปตำแหน่ง pos แล้วเลื่อนจอให้เห็น (คู่กับ SPEditor.gotoPos) */
+        // (นิยาม keepScroll อยู่ท้ายไฟล์ — ใช้ร่วมกับ SPEditor)
         gotoPos(pos) {
           const v2 = this.view;
           const p = Math.max(0, Math.min(Number(pos) || 0, v2.state.doc.content.size));
@@ -16327,6 +16384,9 @@
         }
         // ---------- commands (เรียกจากเมนู Electron — คีย์ลัดเลยใช้ได้ทุก layout รวมไทย) ----------
         cmd(name5, arg) {
+          return keepScroll(this.view, () => this._cmd(name5, arg));
+        }
+        _cmd(name5, arg) {
           const s = schema;
           const v2 = this.view;
           const run2 = (c) => {
@@ -19000,7 +19060,7 @@
     i18n: () => i18n,
     isLangFontUsable: () => isUsable,
     isPanelWindow: () => isPanelWindow,
-    keepScroll: () => keepScroll,
+    keepScroll: () => keepScroll2,
     langCodeFromFile: () => langCodeFromFile,
     langFileName: () => langFileName,
     langInfo: () => langInfo,
@@ -19086,7 +19146,7 @@
     for (const e of base3.querySelectorAll("*")) add(e);
     return snap2;
   }
-  function keepScroll(root) {
+  function keepScroll2(root) {
     const get3 = typeof root === "function" ? root : () => root;
     const snap2 = scrollSnapshot(get3());
     const fn = restoreScrollSnap(get3, snap2);
@@ -19511,6 +19571,11 @@
         spCycle: null,
         spCycleKeys: null,
         spCycleEnabled: true,
+        // [alpha.78] บรรทัดถัดจาก "บทพูด" โดยไม่มีบรรทัดว่างคั่น = อะไร
+        //   false (ค่าเริ่มต้น · แนว Final Draft) = บรรยาย — เขียนเปล่า ๆ ได้เลย ไม่ต้องมี `!` นำหน้า
+        //   true  (แนว fountain) = บทพูดบรรทัดถัดไป — บรรยายต้องเขียน `!` บังคับ
+        // เป็นกฎที่ผู้ใช้ตั้งเอง (ตั้งค่า → การเขียน) ไม่ใช่ค่าที่โค้ดเดาแทน
+        spDialogueContinues: false,
         // [alpha.61 ข้อ 4] "ให้อิสระเรื่องตัวพิมพ์" — ทั้งสามตัวนี้คือจุดที่บทหนังเคยบังคับ case
         //   spForceCase      = บังคับ ALL-CAPS ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน)
         //   spAutoCapitalize = แก้ตัวแรกของประโยคเป็นตัวใหญ่ให้อัตโนมัติขณะพิมพ์
@@ -21558,9 +21623,10 @@
             handleKeyDown(view2, ev) {
               if (ev.key === "(" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
                 const el2 = self2.curElement();
-                const { node, pos } = self2.curBlock();
-                if (el2 === "dialogue" && node && node.content.size === 0) {
+                const cur = self2.curBlock();
+                if (el2 === "dialogue" && cur && cur.node.content.size === 0) {
                   ev.preventDefault();
+                  const { node, pos } = cur;
                   const from2 = view2.state.selection.from;
                   let tr4 = view2.state.tr;
                   tr4 = tr4.setNodeMarkup(pos, null, { el: "parenthetical", align: node.attrs.align || null });
@@ -21648,8 +21714,9 @@
         }
         /** [alpha.57a ข้อ 2] ใส่/ถอด "ส่วนเสริม" ท้ายชื่อตัวละคร — เว้นจากชื่อ 1 วรรคเสมอ */
         setExtension(ext) {
-          const { node, pos } = this.curBlock();
-          if (!node || node.attrs.el !== "character") return false;
+          const b = this.curBlock();
+          if (!b || b.node.attrs.el !== "character") return false;
+          const { node, pos } = b;
           const next = withExtension(node.textContent || "", ext);
           const v2 = this.view;
           const from2 = pos + 1, to = pos + 1 + node.content.size;
@@ -21661,12 +21728,9 @@
         }
         /** ส่วนเสริมของบล็อกตัวละครที่เคอร์เซอร์อยู่ ('' = ไม่มี) */
         curExtension() {
-          try {
-            const { node } = this.curBlock();
-            return node.attrs.el === "character" ? splitCharacter(node.textContent || "").ext : "";
-          } catch {
-            return "";
-          }
+          const b = this.curBlock();
+          if (!b || b.node.attrs.el !== "character") return "";
+          return splitCharacter(b.node.textContent || "").ext;
         }
         /** [78] ย้ายเคอร์เซอร์ไปตำแหน่ง pos แล้วเลื่อนจอให้เห็น */
         gotoPos(pos) {
@@ -21679,22 +21743,37 @@
           v2.focus();
           return true;
         }
+        /**
+         * บล็อก sp ที่เคอร์เซอร์อยู่ — **คืน `null` ได้** เมื่อ selection ไม่ได้อยู่ในบล็อก sp
+         *
+         * [alpha.78] เดิมคืน `{ node: $f.node(1), pos: $f.before(1) }` ดื้อ ๆ
+         * เอกสารบทหนังเป็น `(sp|spimage)+` — เลือกรูป (atom) อยู่ = NodeSelection ระดับบนสุด
+         * `$f.depth` เป็น 0 → `node` เป็น undefined · ผู้เรียกที่ไม่ได้กันไว้ก็ throw
+         * และถ้า throw ใน `dispatchTransaction` (เช่น `_autoDetect` หลัง insertImage) **renderer ตายทั้งตัว**
+         * → ย้ายการกันมาไว้ที่ต้นทางที่เดียว ผู้เรียกเช็ค null พอ
+         */
         curBlock() {
           const $f = this.view.state.selection.$from;
-          return { node: $f.node(1), pos: $f.before(1) };
+          if ($f.depth < 1) return null;
+          const node = $f.node(1);
+          if (!node || node.type !== spSchema.nodes.sp) return null;
+          return { node, pos: $f.before(1) };
         }
         curElement() {
-          try {
-            return this.curBlock().node.attrs.el;
-          } catch {
-            return "action";
-          }
+          const b = this.curBlock();
+          return b ? b.node.attrs.el : "action";
         }
         setElement(el2) {
-          const { node, pos } = this.curBlock();
-          this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, { el: el2, align: node.attrs.align || null }));
+          const b = this.curBlock();
+          if (!b) return false;
+          this.view.dispatch(this.view.state.tr.setNodeMarkup(
+            b.pos,
+            null,
+            { el: el2, align: b.node.attrs.align || null }
+          ));
           this.view.focus();
           if (this.onElement) this.onElement(el2);
+          return true;
         }
         // จัดหน้าบล็อกบทหนังในช่วงเลือก (arg: 'left'|'center'|'right'|'justify')
         setAlign(align) {
@@ -21712,11 +21791,8 @@
           v2.focus();
         }
         curAlign() {
-          try {
-            return this.curBlock().node.attrs.align || "left";
-          } catch {
-            return "left";
-          }
+          const b = this.curBlock();
+          return b && b.node.attrs.align || "left";
         }
         cycle(dir) {
           const cur = this.curElement();
@@ -21742,9 +21818,11 @@
         _autoDetect() {
           const el2 = this.curElement();
           if (el2 === "scene") return;
-          const text = this.curBlock().node.textContent.trim();
+          const cur = this.curBlock();
+          if (!cur) return;
+          const text = cur.node.textContent.trim();
           if (/^(int\.|ext\.|int\/ext\.|i\/e\.|est\.|ฉาก)\s/i.test(text)) {
-            const { node, pos } = this.curBlock();
+            const { node, pos } = cur;
             this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, {
               el: "scene",
               align: node.attrs.align || null
@@ -21797,21 +21875,55 @@
           return true;
         }
         // sameEl = true → ขึ้นบรรทัดใหม่ชนิดเดิม (ใช้ตอนผู้ใช้ปิดระบบปุ่มสลับ element)
+        //
+        // [alpha.78] **Enter กลางบล็อกต้องผ่าบล็อกจริง**
+        // เดิมทำอย่างเดียวคือ `insert($from.after(1))` = แทรกบล็อกเปล่าต่อท้ายเสมอ
+        // → เคอร์เซอร์อยู่กลางประโยคแล้วกด Enter ข้อความ**ไม่ถูกแบ่ง** ได้แค่บล็อกว่างงอกข้างล่าง
+        //   (และถ้าเลือกข้อความไว้ ตัวที่เลือกก็ไม่ถูกลบ) — พิมพ์แทรกกลางฉากที่เขียนไว้แล้วไม่ได้เลย
+        //
+        // กติกา:
+        //   · เคอร์เซอร์ท้ายบล็อก **หรือต้นบล็อก** → เหมือนเดิมเป๊ะ: บล็อกใหม่ว่าง ชนิด "ถัดไปตามครรลอง"
+        //     (ท้ายบล็อก = ทางที่ใช้บ่อยสุด พิมพ์หัวฉากจบแล้ว Enter ได้บรรยายต่อ · ต้นบล็อกคงไว้
+        //      ตามกติกา "Enter = ไป element ถัดไป" ที่ตั้งใจออกแบบไว้ — มีเทส [51] คุมอยู่)
+        //   · **มีข้อความทั้งสองฝั่งของเคอร์เซอร์** → ผ่าบล็อก และ **ท่อนหลังคงชนิดเดิม** ไม่ใช่ "ชนิดถัดไป"
+        //     เพราะท่อนหลังคือเนื้อเดียวกับท่อนหน้า (ผ่ากลางบทพูดต้องได้บทพูด ไม่ใช่บรรยาย)
         enter(sameEl) {
           const v2 = this.view;
           const cur = this.curElement();
           const spCycle = state.settings?.spCycle || DEFAULT_SP_CYCLE;
           const nextEl = sameEl ? cur : spCycle[cur]?.enter || NEXT_ELEM[cur] || "action";
+          let tr4 = v2.state.tr;
+          {
+            const s = tr4.selection;
+            const inOneSp = s.$from.depth >= 1 && s.$from.parent.type === spSchema.nodes.sp && s.$to.parent === s.$from.parent;
+            if (!s.empty && inOneSp) tr4 = tr4.deleteSelection();
+          }
+          const $f = tr4.selection.$from;
+          const midway = $f.parent.type === spSchema.nodes.sp && $f.parentOffset > 0 && $f.parentOffset < $f.parent.content.size;
+          if (midway) {
+            const tailEl = $f.parent.attrs.el;
+            tr4 = tr4.split($f.pos, 1, [{
+              type: spSchema.nodes.sp,
+              attrs: { el: tailEl, align: $f.parent.attrs.align || null }
+            }]);
+            tr4 = tr4.setSelection(TextSelection.near(tr4.doc.resolve(tr4.mapping.map($f.pos)), 1));
+            v2.dispatch(tr4.scrollIntoView());
+            if (this.onElement) this.onElement(tailEl);
+            return true;
+          }
           const sp = spSchema.nodes.sp.create({ el: nextEl });
-          const { $from } = v2.state.selection;
-          const insertAt = $from.after(1);
-          let tr4 = v2.state.tr.insert(insertAt, sp);
+          const insertAt = $f.depth >= 1 ? $f.after(1) : tr4.selection.to;
+          tr4 = tr4.insert(insertAt, sp);
           tr4 = tr4.setSelection(TextSelection.create(tr4.doc, insertAt + 1));
           v2.dispatch(tr4.scrollIntoView());
           if (this.onElement) this.onElement(nextEl);
           return true;
         }
+        // [alpha.78] ล็อกตำแหน่งเลื่อนหน้าถ้าช่วงที่เลือกยังเห็นอยู่ (ดู keepScroll ใน editor.js)
         cmd(name5, arg) {
+          return keepScroll(this.view, () => this._cmd(name5, arg));
+        }
+        _cmd(name5, arg) {
           const v2 = this.view;
           const run2 = (c) => {
             c(v2.state, v2.dispatch, v2);
@@ -21831,18 +21943,20 @@
         }
         getMarkdown() {
           const lines = [];
-          let prevBlank = true, prevType = "action";
+          const nodes = [];
           this.view.state.doc.forEach((node) => {
-            if (node.type.name === "spimage") {
-              const line2 = node.attrs.md || `![${node.attrs.alt || ""}](${node.attrs.src || ""})`;
-              lines.push(line2);
-              prevBlank = false;
-              prevType = "action";
-              return;
-            }
-            const el2 = node.attrs.el;
-            const text = el2 === "raw" ? node.textContent : inlineToMd(node.toJSON().content || []);
-            const line = lineFor(el2, text, prevBlank, prevType);
+            nodes.push(node);
+          });
+          const asBlock = (node) => node.type.name === "spimage" ? { el: "image", text: node.attrs.md || `![${node.attrs.alt || ""}](${node.attrs.src || ""})` } : {
+            el: node.attrs.el,
+            text: node.attrs.el === "raw" ? node.textContent : inlineToMd(node.toJSON().content || [])
+          };
+          const guessNames = guessNamesForBlocks(nodes.map(asBlock));
+          let prevBlank = true, prevType = "action";
+          nodes.forEach((node, i5) => {
+            const { el: el2, text } = asBlock(node);
+            const nextBlank = i5 + 1 >= nodes.length || blockIsBlank(asBlock(nodes[i5 + 1]));
+            const line = lineFor(el2, text, prevBlank, prevType, nextBlank, guessNames);
             lines.push(line);
             if (line.trim() === "") prevBlank = true;
             else {
@@ -60123,16 +60237,20 @@
     const f = mergeSpFormat(fmt);
     const pages = pagesWithContinueds(paginate(parseScript(String(text ?? "")), { fmt: f }), f);
     const out = [];
+    const guessNames = guessNamesForBlocks(pages.flatMap((p) => p.blocks || []));
     pages.forEach((pg, i5) => {
       if (i5) out.push("", PAGE_BREAK, "");
       let prevBlank = true, prevType = "action";
-      for (const b of pg.blocks || []) {
+      const bl = pg.blocks || [];
+      for (let i6 = 0; i6 < bl.length; i6++) {
+        const b = bl[i6];
         if (b.el === "continued-top" || b.el === "continued-bottom" || b.el === "more") {
           out.push(b.text || "");
           prevBlank = false;
           continue;
         }
-        const line = lineFor(b.el, b.text || "", prevBlank, prevType);
+        const nextBlank = blockIsBlank(bl[i6 + 1]);
+        const line = lineFor(b.el, b.text || "", prevBlank, prevType, nextBlank, guessNames);
         out.push(line);
         if (!String(line).trim()) prevBlank = true;
         else {
@@ -60149,8 +60267,18 @@
     if (!drop.size || !s) return s;
     const out = [];
     let prevBlank = true, prevType = "action", prevLine;
-    for (const line of s.split("\n")) {
-      const [el2] = classify(line, prevBlank, prevType, prevLine);
+    const src2 = s.split("\n");
+    const guessNames = guessNamesFor(s);
+    for (let i5 = 0; i5 < src2.length; i5++) {
+      const line = src2[i5];
+      const [el2] = classify(
+        line,
+        prevBlank,
+        prevType,
+        prevLine,
+        i5 + 1 >= src2.length || src2[i5 + 1].trim() === "",
+        guessNames
+      );
       prevLine = line;
       if (el2 === "blank") {
         out.push("");
@@ -64590,7 +64718,7 @@ ${h.text}`;
       if (seen.has(key2)) return;
       seen.add(key2);
       const sel = a ? anchorSelector(a) : null;
-      const job = keepScroll(sel ? () => document.querySelector(sel) : h);
+      const job = keepScroll2(sel ? () => document.querySelector(sel) : h);
       const k = memoKey(a);
       if (k && job.snap && job.snap.length) scrollMemo.set(k, job.snap);
       jobs.push(job);
@@ -64601,7 +64729,7 @@ ${h.text}`;
         if (h.contains(e) || seen.has(e)) continue;
         if (!e.scrollTop && !e.scrollLeft) continue;
         seen.add(e);
-        jobs.push(keepScroll(e));
+        jobs.push(keepScroll2(e));
       }
     } catch {
     }
@@ -67110,6 +67238,7 @@ ${h.text}`;
       strings: { ...SP_STRINGS, ...s.spStrings || {} },
       keys: spCycleKeys(s),
       cycleOn: s.spCycleEnabled !== false,
+      dlgContinues: s.spDialogueContinues === true,
       // [alpha.57a ข้อ 2] เลขฉาก + เลขหน้า
       sceneNumbers: { ...SCENE_NUMBER_DEFAULTS, ...s.spSceneNumbers || {} },
       pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...s.spPageNumbers || {} },
@@ -67125,9 +67254,13 @@ ${h.text}`;
     ov.appendChild(box2);
     document.body.appendChild(ov);
     const q = (id) => box2.querySelector(id);
-    const applySpFont = (v2) => {
-      if (v2) document.documentElement.style.setProperty("--sp-font", v2);
-      else document.documentElement.style.removeProperty("--sp-font");
+    const applySpFont = (v2, rows) => {
+      const list = rows || state.settings.langFonts;
+      const nLang = normalizeLangFonts(list).filter(isUsable).length;
+      document.documentElement.style.setProperty(
+        "--sp-font",
+        withLangFamily(v2 || DEFAULT_SCRIPT_FONT, nLang > 0)
+      );
     };
     (async () => {
       const fs = q("#st-fontfamily");
@@ -67176,7 +67309,7 @@ ${h.text}`;
           if (f.value === (origSpFontFamily || "")) opt.selected = true;
           spFs.appendChild(opt);
         }
-        spFs.onchange = () => applySpFont(spFs.value);
+        spFs.onchange = () => applySpFont(spFs.value, W.langFonts);
       }
     })();
     q("#st-title").value = m.title || "";
@@ -67704,6 +67837,10 @@ ${h.text}`;
     q("#st-spcycle-on").onchange = () => {
       W.cycleOn = q("#st-spcycle-on").checked;
     };
+    q("#st-spdlgcont").checked = W.dlgContinues;
+    q("#st-spdlgcont").onchange = () => {
+      W.dlgContinues = q("#st-spdlgcont").checked;
+    };
     const KEY_LABELS = {
       enter: t("ui.dlg.elementPrevEnter"),
       tab: t("ui.dlg.togglePagePrevTab"),
@@ -68111,10 +68248,15 @@ ${h.text}`;
       applyZoomVars(origFont);
       applyPageVars();
       applyUIScale(origUiScale);
+      setTypeVolume(origSnd.vol);
+      const nLangBack = applyProjectLangFonts();
       s.spFontFamily = origSpFontFamily;
       applySpFont(origSpFontFamily);
-      setTypeVolume(origSnd.vol);
-      applyProjectLangFonts();
+      s.fontFamily = origFontFamily;
+      document.documentElement.style.setProperty(
+        "--ed-font",
+        withLangFamily(proseFormat().fontFamily || origFontFamily || DEFAULT_PROSE_FONT, nLangBack > 0)
+      );
       s.focusDim = origDim;
       applyFocusDim();
       document.body.classList.toggle("k-ln", origLn);
@@ -68164,6 +68306,7 @@ ${h.text}`;
       s.spCycle = JSON.parse(JSON.stringify(workSpCycle));
       s.spCycleKeys = JSON.parse(JSON.stringify(W.keys));
       s.spCycleEnabled = W.cycleOn;
+      s.spDialogueContinues = W.dlgContinues;
       s.edFontPt = Math.min(48, Math.max(6, parseFloat(q("#st-edpt").value) || 12));
       s.spFontPt = Math.min(48, Math.max(6, parseFloat(q("#st-sppt").value) || 12));
       s.homeThumb = Math.min(400, Math.max(120, parseInt(q("#st-homethumb").value, 10) || 190));
@@ -79516,7 +79659,7 @@ details>summary::-webkit-details-marker{display:none}
     const gen = ++_renderGen;
     pane.classList.add("branch-host");
     const oldVp = pane.querySelector(".branch-viewport");
-    const keepScroll2 = oldVp ? { left: oldVp.scrollLeft, top: oldVp.scrollTop } : null;
+    const keepScroll3 = oldVp ? { left: oldVp.scrollLeft, top: oldVp.scrollTop } : null;
     let scenes = opts.scenes;
     if (!scenes) {
       try {
@@ -80010,11 +80153,11 @@ details>summary::-webkit-details-marker{display:none}
     shell.append(main);
     if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw, redrawUi));
     pane.replaceChildren(shell);
-    if (keepScroll2) {
+    if (keepScroll3) {
       const vp = pane.querySelector(".branch-viewport");
       if (vp) {
-        vp.scrollLeft = keepScroll2.left;
-        vp.scrollTop = keepScroll2.top;
+        vp.scrollLeft = keepScroll3.left;
+        vp.scrollTop = keepScroll3.top;
       }
     }
     function applyFilter() {
@@ -85649,19 +85792,22 @@ ${sc.body || ""}
     const lines = [];
     let prevType = "action";
     let prevBlank = true;
-    for (const { el: el2, text } of elements) {
+    const guessNames = guessNamesForBlocks(elements);
+    for (let i5 = 0; i5 < elements.length; i5++) {
+      const { el: el2, text } = elements[i5];
       if (el2 === "blank") {
         lines.push("");
         prevBlank = true;
         continue;
       }
+      const nextBlank = blockIsBlank(elements[i5 + 1]);
       const prefix2 = SP_ELEMS[el2]?.prefix || "";
       let line = prefix2 + text;
       try {
-        let [got] = classify(line, prevBlank, prevType);
+        let [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
         if (got !== el2 && prefix2) {
           line = prefix2.endsWith(" ") ? prefix2 + text : prefix2 + " " + text;
-          [got] = classify(line, prevBlank, prevType);
+          [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
           if (got !== el2) line = prefix2 + text;
         }
         if (got !== el2 && el2 === "action") line = "!" + text;
@@ -141987,6 +142133,7 @@ ${css}
   function applySettings() {
     applyZoomVars();
     applyUIScale();
+    setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
     const spFmt = applyPageVars();
     setFormatGuide(!!state.settings.spShowFormat, spFmt);
     document.body.classList.toggle("sp-show-format", !!state.settings.spShowFormat);
@@ -146613,7 +146760,7 @@ ${css}
     if (!body) return;
     const gen = ++_propsGen;
     const stale2 = () => gen !== _propsGen;
-    const backScroll = keepScroll(body);
+    const backScroll = keepScroll2(body);
     body.replaceChildren();
     if (!propsTarget_C.t) {
       body.append(el("div", "dim", t("ui.app.pickSceneViewProps")));
@@ -150580,7 +150727,7 @@ ${css}
     if (!f) return Promise.resolve(false);
     if (_featInFlight.has(pid)) return _featInFlight.get(pid);
     const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
-    const backScroll = keepScroll(() => document.querySelector(sel));
+    const backScroll = keepScroll2(() => document.querySelector(sel));
     const p = Promise.resolve().then(f).catch((e) => {
       log("error", t("ui.app.drawPanel") + pid + t("ui.app.fail"), e);
     }).finally(() => _featInFlight.delete(pid)).then(() => {
@@ -152094,7 +152241,9 @@ ${css}
       );
       check2(
         "\u0E23\u0E39\u0E1B\u0E19\u0E34\u0E22\u0E32\u0E22\u0E42\u0E0A\u0E27\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E2D\u0E19 hover (title \u0E21\u0E35\u0E04\u0E48\u0E32)",
-        !!document.querySelector(".pane.on figure img")?.getAttribute("title")
+        !!document.querySelector(".pane.on figure img")?.getAttribute("title"),
+        // เดิมรายงาน `undefined` เวลาแดง — ไล่ต่อไม่ได้เลยว่ารูปไหน/ใน pane ไหน
+        [...document.querySelectorAll(".pane.on figure")].map((f) => f.outerHTML.slice(0, 160)).join(" || ") + " | panes=" + document.querySelectorAll(".pane.on").length
       );
       const { TextSelection: TextSelection2 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
       let pos = null;
@@ -152117,6 +152266,66 @@ ${css}
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
         (0, import_md12.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
+      {
+        const longBody = Array.from(
+          { length: 120 },
+          (_2, i5) => `\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E17\u0E35\u0E48 ${i5 + 1} \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E2A\u0E21\u0E04\u0E27\u0E23\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E01\u0E34\u0E14\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19`
+        ).join("\n\n");
+        t3.editor.setMarkdown(longBody);
+        await new Promise((r) => setTimeout(r, 200));
+        activate(t3.file);
+        await new Promise((r) => setTimeout(r, 150));
+        const vv = t3.editor.view;
+        let sc = vv.dom;
+        while (sc && sc !== document.body) {
+          const ov = getComputedStyle(sc).overflowY;
+          if (/(auto|scroll|overlay)/.test(ov) && sc.scrollHeight > sc.clientHeight + 1) break;
+          sc = sc.parentElement;
+        }
+        if (!sc || sc === document.body) sc = document.scrollingElement || document.documentElement;
+        check2(
+          "[a78] \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E08\u0E30\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E14\u0E49",
+          sc.scrollHeight > sc.clientHeight + 10,
+          `${sc.scrollHeight}/${sc.clientHeight}`
+        );
+        sc.scrollTop = Math.floor((sc.scrollHeight - sc.clientHeight) / 2);
+        const midTop = sc.scrollTop;
+        vv.dispatch(vv.state.tr.setSelection(
+          TextSelection2.create(vv.state.doc, 1, vv.state.doc.content.size - 1)
+        ));
+        t3.editor.cmd("bold");
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+        check2(
+          "[a78] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E08\u0E31\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A \u2192 \u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+          Math.abs(sc.scrollTop - midTop) <= 2,
+          `${midTop} \u2192 ${sc.scrollTop}`
+        );
+        t3.editor.cmd("bold");
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+        const endPos = vv.state.doc.content.size - 1;
+        vv.dispatch(vv.state.tr.setSelection(
+          TextSelection2.create(vv.state.doc, Math.max(1, endPos - 20), endPos)
+        ));
+        sc.scrollTop = 0;
+        await new Promise((r) => setTimeout(r, 30));
+        t3.editor.cmd("bold");
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+        check2(
+          "[a78] \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E2D \u2192 \u0E22\u0E31\u0E07\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E15\u0E32\u0E21\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+          sc.scrollTop > 10,
+          String(sc.scrollTop)
+        );
+        t3.editor.setMarkdown(orig);
+        await new Promise((r) => setTimeout(r, 200));
+        await saveTab(t3);
+        check2(
+          "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
+          (0, import_md12.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md12.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+        );
+        activate(t3.file);
+        await new Promise((r) => setTimeout(r, 150));
+      }
       t3.editor.view.dispatch(t3.editor.view.state.tr.setSelection(
         TextSelection2.create(t3.editor.view.state.doc, pos, pos + "\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07".length)
       ));
@@ -155098,10 +155307,74 @@ ${css}
           "classify: \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E22\u0E32\u0E27\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
           classify2("\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01\u0E08\u0E19\u0E21\u0E2D\u0E07\u0E41\u0E17\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E02\u0E49\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E25\u0E22", true, "action")[0] === "action"
         );
+        check2(
+          "classify: \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2A\u0E31\u0E49\u0E19\u0E17\u0E35\u0E48\u0E15\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07 \u2260 \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+          classify2("\u0E1D\u0E19\u0E15\u0E01", true, "action", void 0, true)[0] === "action"
+        );
+        check2(
+          "classify: \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E17\u0E22\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E15\u0E32\u0E21\u0E15\u0E34\u0E14 \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+          classify2("\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E01", true, "action", void 0, false)[0] === "character"
+        );
+        check2(
+          "classify: \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E1A\u0E17\u0E1E\u0E39\u0E14 (\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19) = \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32",
+          classify2("\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E2B\u0E49\u0E2D\u0E07", true, "dialogue", void 0, true)[0] === "action"
+        );
       }
-      const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
-      const semA = parseScript2(spTab.sp.getMarkdown());
-      const semB = parseScript2(spOrig);
+      {
+        const thaiScript = [
+          "### INT. \u0E2B\u0E49\u0E2D\u0E07\u0E04\u0E23\u0E31\u0E27 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19",
+          "",
+          "\u0E2B\u0E49\u0E2D\u0E07\u0E04\u0E23\u0E31\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A",
+          "",
+          "@\u0E2A\u0E21\u0E0A\u0E32\u0E22",
+          "((\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22))",
+          "\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u0E22\u0E32\u0E27\u0E08\u0E23\u0E34\u0E07 \u0E46",
+          "",
+          "\u0E25\u0E21\u0E1E\u0E31\u0E14\u0E21\u0E48\u0E32\u0E19\u0E44\u0E2B\u0E27",
+          "",
+          "@\u0E21\u0E32\u0E25\u0E35 (V.O.)",
+          "\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E23\u0E2D",
+          "",
+          ">> CUT TO:",
+          "",
+          "\u0E1D\u0E19\u0E15\u0E01"
+        ].join("\n");
+        const before = spTab.sp.getMarkdown();
+        spTab.sp.setMarkdown(thaiScript);
+        await new Promise((r) => setTimeout(r, 150));
+        const rt = spTab.sp.getMarkdown();
+        check2(
+          "[a78] \u0E1A\u0E17\u0E44\u0E17\u0E22\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23",
+          rt === thaiScript,
+          JSON.stringify(rt)
+        );
+        check2("[a78] \u0E44\u0E21\u0E48\u0E21\u0E35 @ \u0E07\u0E2D\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2A\u0E31\u0E49\u0E19", !/^@(ห้องครัวเงียบ|ลมพัดม่านไหว|ฝนตก)$/m.test(rt));
+        check2("[a78] \u0E44\u0E21\u0E48\u0E21\u0E35 ! \u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E40\u0E25\u0E22", !/^!/m.test(rt), JSON.stringify(rt));
+        check2("[a78] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E01\u0E0E = \u0E41\u0E19\u0E27 Final Draft", SP_RULES.dialogueContinues === false);
+        check2("[a78] DEFAULT_SETTINGS \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E1B\u0E23\u0E31\u0E1A", "spDialogueContinues" in DEFAULT_SETTINGS);
+        {
+          const b1 = parseScript("@\u0E2A\u0E21\u0E0A\u0E32\u0E22\n\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\n\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E2B\u0E49\u0E2D\u0E07");
+          check2("[a78] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E1A\u0E17\u0E1E\u0E39\u0E14 = \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E23\u0E2B\u0E31\u0E2A)", b1.at(-1).el === "action", b1.at(-1).el);
+          check2("[a78] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E40\u0E2A\u0E21\u0E2D", b1[1].el === "dialogue", b1[1].el);
+          setSpRules({ dialogueContinues: true });
+          check2(
+            "[a78] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E0E\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E15\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07",
+            parseScript("@\u0E2A\u0E21\u0E0A\u0E32\u0E22\n\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\n\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E2B\u0E49\u0E2D\u0E07").at(-1).el === "dialogue"
+          );
+          setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
+        }
+        const elsTh = [];
+        spTab.sp.view.state.doc.forEach((n2) => elsTh.push(n2.attrs.el));
+        check2(
+          "[a78] \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2A\u0E31\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19 element \u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23/\u0E1A\u0E17\u0E1E\u0E39\u0E14)",
+          elsTh.filter((e) => e === "character").length === 2,
+          JSON.stringify(elsTh)
+        );
+        spTab.sp.setMarkdown(before);
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      const semA = parseScript(spTab.sp.getMarkdown());
+      const semB = parseScript(spOrig);
       check2(
         "\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 round-trip \u0E01\u0E15\u0E34\u0E01\u0E32 v1 (element+\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E23\u0E07\u0E17\u0E38\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14)",
         semA.length === semB.length && semA.every((x, i5) => x.el === semB[i5].el && x.text === semB[i5].text),
@@ -155116,6 +155389,71 @@ ${css}
       vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, chPos + 1 + n2len(vsp, chPos))));
       spTab.sp.enter();
       check2("Enter \u0E2B\u0E25\u0E31\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 \u2192 \u0E1A\u0E17\u0E1E\u0E39\u0E14", spTab.sp.curElement() === "dialogue");
+      {
+        const blocksOf = () => {
+          const a = [];
+          vsp.state.doc.forEach((nd) => a.push(nd));
+          return a;
+        };
+        spTab.sp.setElement("action");
+        vsp.dispatch(vsp.state.tr.insertText("\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07"));
+        const before = blocksOf();
+        let pos2 = null;
+        vsp.state.doc.forEach((nd, off3) => {
+          if (nd.textContent === "\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07") pos2 = off3;
+        });
+        check2("[a78] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E01\u0E25\u0E32\u0E07\u0E17\u0E32\u0E07\u0E44\u0E14\u0E49", pos2 !== null);
+        vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, pos2 + 1 + 4)));
+        spTab.sp.enter();
+        const after = blocksOf();
+        check2(
+          "[a78] Enter \u0E01\u0E25\u0E32\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01 \u2192 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E40\u0E1E\u0E34\u0E48\u0E21 1",
+          after.length === before.length + 1,
+          `${before.length} \u2192 ${after.length}`
+        );
+        const i5 = after.findIndex((nd) => nd.textContent === "\u0E2B\u0E19\u0E49\u0E32");
+        check2(
+          "[a78] \u0E17\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C",
+          i5 >= 0,
+          JSON.stringify(after.map((nd) => nd.textContent))
+        );
+        if (i5 >= 0) {
+          check2(
+            "[a78] \u0E17\u0E48\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E07)",
+            after[i5 + 1] && after[i5 + 1].textContent === "\u0E2B\u0E25\u0E31\u0E07",
+            JSON.stringify(after[i5 + 1] && after[i5 + 1].textContent)
+          );
+          check2(
+            "[a78] \u0E17\u0E48\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E14\u0E34\u0E21 (\u0E1C\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22)",
+            after[i5 + 1] && after[i5 + 1].attrs.el === "action",
+            after[i5 + 1] && after[i5 + 1].attrs.el
+          );
+          check2(
+            "[a78] \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E49\u0E19\u0E17\u0E48\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07",
+            vsp.state.selection.$from.parent.textContent === "\u0E2B\u0E25\u0E31\u0E07" && vsp.state.selection.$from.parentOffset === 0,
+            vsp.state.selection.$from.parent.textContent + "@" + vsp.state.selection.$from.parentOffset
+          );
+        }
+        const p2 = after.findIndex((nd) => nd.textContent === "\u0E2B\u0E19\u0E49\u0E32");
+        let off22 = 0;
+        vsp.state.doc.forEach((nd, o) => {
+          if (nd.textContent === "\u0E2B\u0E19\u0E49\u0E32") off22 = o;
+        });
+        vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, off22 + 1, off22 + 1 + 4)));
+        spTab.sp.enter();
+        const after2 = blocksOf();
+        check2(
+          "[a78] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27 Enter \u2192 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E32\u0E22\u0E44\u0E1B",
+          !after2.some((nd) => nd.textContent === "\u0E2B\u0E19\u0E49\u0E32"),
+          JSON.stringify(after2.map((nd) => nd.textContent)) + " | " + p2
+        );
+        let lastOff = null, acc = 0;
+        vsp.state.doc.forEach((nd) => {
+          if (nd.type.name === "sp") lastOff = acc + nd.nodeSize - 1;
+          acc += nd.nodeSize;
+        });
+        if (lastOff !== null) vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, lastOff)));
+      }
       spTab.sp.cycle(1);
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A element \u0E44\u0E14\u0E49 (Ctrl+\u2191/\u2193 \xB7 Tab \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27)",
@@ -160464,7 +160802,7 @@ ${css}
           S6.spElements = null;
           S6.spStyles = null;
           applyPageVars();
-          const blocks = parseScript2(spT.sp.getMarkdown());
+          const blocks = parseScript(spT.sp.getMarkdown());
           const pgInfo = paginate(blocks, { fmt: spFormat() });
           check2("[84] \u0E04\u0E33\u0E19\u0E27\u0E13\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E44\u0E14\u0E49", pgInfo.count >= 1, String(pgInfo.count));
           scheduleCount();
@@ -160845,7 +161183,7 @@ ${css}
             state.settings.spCheckBeforeExport = false;
             check2("[54] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E15\u0E23\u0E27\u0E08\u0E01\u0E48\u0E2D\u0E19\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E32\u0E21\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08", await checkBeforeExport() === true);
             state.settings.spCheckBeforeExport = true;
-            const blocksEx = parseScript2(spT.sp.getMarkdown());
+            const blocksEx = parseScript(spT.sp.getMarkdown());
             const xml = generateFdx(blocksEx, scriptMeta("\u0E1A\u0E17\u0E17\u0E14\u0E2A\u0E2D\u0E1A"));
             check2(
               "[67] \u0E2A\u0E23\u0E49\u0E32\u0E07 FDX \u0E08\u0E32\u0E01\u0E1A\u0E17\u0E1A\u0E19\u0E08\u0E2D\u0E44\u0E14\u0E49 + \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01/\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23/\u0E1A\u0E17\u0E1E\u0E39\u0E14",
@@ -160866,7 +161204,7 @@ ${css}
               rtf.includes("\\paperw12240") && rtf.includes("\\margl2160")
             );
             const pgWm = pagesOf(
-              parseScript2(spT.sp.getMarkdown()),
+              parseScript(spT.sp.getMarkdown()),
               spFormat(),
               linesPerPage(spFormat().paper, spFormat().margins)
             );
@@ -161233,10 +161571,10 @@ ${css}
             );
             check2("[57a-5] \u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E27\u0E49\u0E17\u0E49\u0E32\u0E22 stack", spFont.includes("Courier"), spFont);
             try {
-              await document.fonts.load('16px "Courier Thai Mono"');
+              await document.fonts.load('16px "Courier Thai Mono"', "\u0E01");
               check2(
                 "[57a-5] \u0E42\u0E2B\u0E25\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22\u0E17\u0E35\u0E48\u0E1D\u0E31\u0E07\u0E21\u0E32\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
-                document.fonts.check('16px "Courier Thai Mono"')
+                document.fonts.check('16px "Courier Thai Mono"', "\u0E01")
               );
             } catch (e) {
               check2("[57a-5] \u0E42\u0E2B\u0E25\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22\u0E17\u0E35\u0E48\u0E1D\u0E31\u0E07\u0E21\u0E32\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", false, String(e));
@@ -161249,6 +161587,75 @@ ${css}
             );
             state.settings.langFonts = keep;
             applySettings();
+          }
+          {
+            const keepLF = state.settings.langFonts;
+            state.settings.langFonts = [
+              { id: "thai", label: "\u0E44\u0E17\u0E22", range: "U+0E00-0E7F", builtin: "CourierThaiMono.ttf", enabled: true }
+            ];
+            applySettings();
+            const spBefore = document.documentElement.style.getPropertyValue("--sp-font");
+            const edBefore = document.documentElement.style.getPropertyValue("--ed-font");
+            check2(
+              "[a78] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E16\u0E39\u0E01\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07\u0E17\u0E31\u0E49\u0E07\u0E1A\u0E17\u0E41\u0E25\u0E30\u0E19\u0E34\u0E22\u0E32\u0E22",
+              spBefore.includes(LANG_FAMILY) && edBefore.includes(LANG_FAMILY),
+              spBefore + " | " + edBefore
+            );
+            document.querySelectorAll(".k-overlay").forEach((x) => x.remove());
+            settingsDialog();
+            await new Promise((r) => setTimeout(r, 400));
+            const dlg = [...document.querySelectorAll(".k-settings")].pop();
+            check2("[a78] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49", !!dlg);
+            dlg.querySelector(".k-cancel").click();
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "[a78] \u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+              document.documentElement.style.getPropertyValue("--sp-font").includes(LANG_FAMILY),
+              document.documentElement.style.getPropertyValue("--sp-font")
+            );
+            check2(
+              "[a78] \u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+              document.documentElement.style.getPropertyValue("--ed-font").includes(LANG_FAMILY),
+              document.documentElement.style.getPropertyValue("--ed-font")
+            );
+            check2(
+              "[a78] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E41\u0E15\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E17\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49\u0E40\u0E1B\u0E4A\u0E30",
+              document.documentElement.style.getPropertyValue("--sp-font") === spBefore,
+              spBefore + " \u2192 " + document.documentElement.style.getPropertyValue("--sp-font")
+            );
+            document.querySelectorAll(".k-overlay").forEach((x) => x.remove());
+            state.settings.langFonts = keepLF;
+            applySettings();
+          }
+          {
+            for (const fam of ["Courier Thai Mono", "Courier Thai Proportional"]) {
+              await document.fonts.load(`16px "${fam}"`, "\u0E01").catch(() => {
+              });
+            }
+            const cvs = document.createElement("canvas");
+            const cx2 = cvs.getContext("2d");
+            const w = (font, text) => {
+              cx2.font = font;
+              return cx2.measureText(text).width;
+            };
+            for (const fam of ["Courier Thai Mono", "Courier Thai Proportional"]) {
+              const withThai = `16px "${fam}", "Courier Prime", monospace`;
+              const latinOnly = '16px "Courier Prime", monospace';
+              for (const [ch, name5] of [["\u2026", "\u0E08\u0E38\u0E14\u0E44\u0E02\u0E48\u0E1B\u0E25\u0E32"], ["\u2014", "\u0E02\u0E35\u0E14\u0E22\u0E32\u0E27"], ["\u201C", "\u0E2D\u0E31\u0E0D\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E40\u0E1B\u0E34\u0E14"]]) {
+                const a = w(withThai, ch);
+                check2(`[a78] ${fam}: ${name5} \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E01\u0E27\u0E49\u0E32\u0E07 0`, a > 1, `${ch} = ${a}px`);
+                check2(
+                  `[a78] ${fam}: ${name5} \u0E15\u0E01\u0E44\u0E1B\u0E43\u0E0A\u0E49 Courier Prime \u0E15\u0E32\u0E21\u0E25\u0E39\u0E01\u0E42\u0E0B\u0E48`,
+                  Math.abs(a - w(latinOnly, ch)) < 0.5,
+                  `${a} vs ${w(latinOnly, ch)}`
+                );
+              }
+              check2(
+                `[a78] ${fam}: \u0E2D\u0E31\u0E01\u0E29\u0E23\u0E44\u0E17\u0E22\u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48`,
+                Math.abs(w(withThai, "\u0E01\u0E02\u0E04\u0E07") - w(latinOnly, "\u0E01\u0E02\u0E04\u0E07")) > 0.5,
+                `${w(withThai, "\u0E01\u0E02\u0E04\u0E07")} vs ${w(latinOnly, "\u0E01\u0E02\u0E04\u0E07")}`
+              );
+            }
           }
           {
             const sc = spT.pane.querySelector(".sp-scene");
@@ -162308,6 +162715,10 @@ ${css}
           [...document.querySelectorAll(".k-set-tab")].find((x) => x.dataset.p === "sp").click();
           check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E1B\u0E34\u0E14/\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A\u0E1B\u0E38\u0E48\u0E21", !!document.querySelector(".k-settings #st-spcycle-on"));
           check2(
+            '[a78] \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E1A\u0E17\u0E1E\u0E39\u0E14" \u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E1B\u0E23\u0E31\u0E1A\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32',
+            !!document.querySelector(".k-settings #st-spdlgcont")
+          );
+          check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E21\u0E35\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E04\u0E23\u0E1A 3 \u0E1B\u0E38\u0E48\u0E21",
             document.querySelectorAll(".k-settings #st-spkeys .k-key-row").length === 3
           );
@@ -162939,7 +163350,7 @@ ${css}
             activate(spTab2.file);
             await new Promise((r) => setTimeout(r, 150));
             const live = blocksFromDoc(spTab2.sp.view.state.doc).filter((b) => b.el !== "blank");
-            const viaMd = parseScript2(spTab2.sp.getMarkdown()).filter((b) => b.el !== "blank");
+            const viaMd = parseScript(spTab2.sp.getMarkdown()).filter((b) => b.el !== "blank");
             check2(
               "[6] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07\u0E21\u0E35\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01 markdown",
               live.length >= viaMd.length,
@@ -164051,7 +164462,7 @@ ${css}
           );
           check2("[r3-6] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30", prefixLen("\u0E40\u0E18\u0E2D\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32") === 0);
           {
-            const b = parseScript2([
+            const b = parseScript([
               "@dave (V.O.)",
               "((\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A))",
               "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A",
@@ -164132,6 +164543,31 @@ ${css}
               tC.editor.getMarkdown().includes("@\u0E17\u0E2D\u0E23\u0E48\u0E32"),
               tC.editor.getMarkdown().slice(0, 40)
             );
+            for (const [src2, code3, label] of [
+              ["!**\u0E40\u0E14\u0E47\u0E01\u0E19\u0E31\u0E48\u0E07\u0E1F\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E39\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07**", "!", "\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32"],
+              ["@**\u0E17\u0E2D\u0E23\u0E48\u0E32**", "@", "\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32"],
+              [">> *CUT TO:*", ">> ", "\u0E17\u0E23\u0E32\u0E19\u0E0B\u0E34\u0E0A\u0E31\u0E19\u0E40\u0E2D\u0E35\u0E22\u0E07"]
+            ]) {
+              tC.editor.setMarkdown(src2);
+              await new Promise((r) => setTimeout(r, 150));
+              activate(fileC);
+              await new Promise((r) => setTimeout(r, 120));
+              const hid = [...tC.pane.querySelectorAll("." + MD_HIDE_CLASS)];
+              check2(
+                `[a78] \u0E0B\u0E48\u0E2D\u0E19\u0E23\u0E2B\u0E31\u0E2A\u0E44\u0E14\u0E49\u0E41\u0E21\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E1B\u0E47\u0E19${label}`,
+                hid.some((x) => x.textContent === code3),
+                JSON.stringify(hid.map((x) => x.textContent)) + " | " + src2
+              );
+              check2(
+                `[a78] ${label}: \u0E44\u0E1F\u0E25\u0E4C .md \u0E22\u0E31\u0E07\u0E21\u0E35\u0E23\u0E2B\u0E31\u0E2A\u0E04\u0E23\u0E1A`,
+                tC.editor.getMarkdown().startsWith(code3),
+                tC.editor.getMarkdown().slice(0, 20)
+              );
+            }
+            tC.editor.setMarkdown("@\u0E17\u0E2D\u0E23\u0E48\u0E32\n\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E08\u0E49\u0E32");
+            await new Promise((r) => setTimeout(r, 150));
+            activate(fileC);
+            await new Promise((r) => setTimeout(r, 120));
             toggleMarkdownCodes();
             await new Promise((r) => setTimeout(r, 200));
             check2(

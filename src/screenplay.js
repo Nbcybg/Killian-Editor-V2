@@ -7,7 +7,8 @@ import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, chainCommands } from 'prosemirror-commands';
 import { parseScript, lineFor, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
-         splitCharacter, withExtension } from './fountain.js';
+         splitCharacter, withExtension, blockIsBlank,
+         guessNamesForBlocks } from './fountain.js';
 import { state, DEFAULT_SP_CYCLE, spCycleKeys, spKeyMatch } from './core.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
@@ -53,7 +54,8 @@ export const spSchema = new Schema({
 
 // inline **หนา** ฯลฯ — ชุดเดียวกับ md.js (import ตรงจะวนกันเอง จึงรับผ่านพารามิเตอร์)
 import { mdToDoc, docToMd } from './md.js';
-import { spellPlugin, mentionPlugin, refreshMentions, focusLinePlugin, commentAnchorPlugin } from './editor.js';
+import { spellPlugin, mentionPlugin, refreshMentions, focusLinePlugin, commentAnchorPlugin,
+         keepScroll } from './editor.js';
 // [61] แสดงรูปแบบ + [57] เส้นคั่นหน้าในตัวแก้ไข
 import { spFormatGuidePlugin, spPageBreakPlugin, spSceneNumberPlugin, spContinuedPlugin,
          refreshFormatGuide, refreshPageBreaks, refreshSceneNumbers,
@@ -149,9 +151,10 @@ export class SPEditor {
         // → ตอนนี้แปลงเฉพาะ "บทพูดที่ยังไม่มีข้อความ" เท่านั้น
         if (ev.key === '(' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
           const el = self.curElement();
-          const { node, pos } = self.curBlock();
-          if (el === 'dialogue' && node && node.content.size === 0) {
+          const cur = self.curBlock();
+          if (el === 'dialogue' && cur && cur.node.content.size === 0) {
             ev.preventDefault();
+            const { node, pos } = cur;
             const from = view.state.selection.from;
             let tr = view.state.tr;
             tr = tr.setNodeMarkup(pos, null, { el: 'parenthetical', align: node.attrs.align || null });
@@ -235,8 +238,9 @@ export class SPEditor {
 
   /** [alpha.57a ข้อ 2] ใส่/ถอด "ส่วนเสริม" ท้ายชื่อตัวละคร — เว้นจากชื่อ 1 วรรคเสมอ */
   setExtension(ext) {
-    const { node, pos } = this.curBlock();
-    if (!node || node.attrs.el !== 'character') return false;
+    const b = this.curBlock();
+    if (!b || b.node.attrs.el !== 'character') return false;
+    const { node, pos } = b;
     const next = withExtension(node.textContent || '', ext);
     const v = this.view;
     const from = pos + 1, to = pos + 1 + node.content.size;
@@ -248,10 +252,9 @@ export class SPEditor {
   }
   /** ส่วนเสริมของบล็อกตัวละครที่เคอร์เซอร์อยู่ ('' = ไม่มี) */
   curExtension() {
-    try {
-      const { node } = this.curBlock();
-      return node.attrs.el === 'character' ? splitCharacter(node.textContent || '').ext : '';
-    } catch { return ''; }
+    const b = this.curBlock();
+    if (!b || b.node.attrs.el !== 'character') return '';
+    return splitCharacter(b.node.textContent || '').ext;
   }
 
   /** [78] ย้ายเคอร์เซอร์ไปตำแหน่ง pos แล้วเลื่อนจอให้เห็น */
@@ -266,17 +269,32 @@ export class SPEditor {
     return true;
   }
 
+  /**
+   * บล็อก sp ที่เคอร์เซอร์อยู่ — **คืน `null` ได้** เมื่อ selection ไม่ได้อยู่ในบล็อก sp
+   *
+   * [alpha.78] เดิมคืน `{ node: $f.node(1), pos: $f.before(1) }` ดื้อ ๆ
+   * เอกสารบทหนังเป็น `(sp|spimage)+` — เลือกรูป (atom) อยู่ = NodeSelection ระดับบนสุด
+   * `$f.depth` เป็น 0 → `node` เป็น undefined · ผู้เรียกที่ไม่ได้กันไว้ก็ throw
+   * และถ้า throw ใน `dispatchTransaction` (เช่น `_autoDetect` หลัง insertImage) **renderer ตายทั้งตัว**
+   * → ย้ายการกันมาไว้ที่ต้นทางที่เดียว ผู้เรียกเช็ค null พอ
+   */
   curBlock() {
     const $f = this.view.state.selection.$from;
-    return { node: $f.node(1), pos: $f.before(1) };
+    if ($f.depth < 1) return null;
+    const node = $f.node(1);
+    if (!node || node.type !== spSchema.nodes.sp) return null;
+    return { node, pos: $f.before(1) };
   }
-  curElement() { try { return this.curBlock().node.attrs.el; } catch { return 'action'; } }
+  curElement() { const b = this.curBlock(); return b ? b.node.attrs.el : 'action'; }
 
   setElement(el) {
-    const { node, pos } = this.curBlock();
-    this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, { el, align: node.attrs.align || null }));
+    const b = this.curBlock();
+    if (!b) return false;                      // เลือกรูปอยู่ = ไม่มีบล็อกให้เปลี่ยนชนิด
+    this.view.dispatch(this.view.state.tr.setNodeMarkup(b.pos, null,
+      { el, align: b.node.attrs.align || null }));
     this.view.focus();
     if (this.onElement) this.onElement(el);
+    return true;
   }
 
   // จัดหน้าบล็อกบทหนังในช่วงเลือก (arg: 'left'|'center'|'right'|'justify')
@@ -293,7 +311,7 @@ export class SPEditor {
     if (changed) v.dispatch(tr);
     v.focus();
   }
-  curAlign() { try { return this.curBlock().node.attrs.align || 'left'; } catch { return 'left'; } }
+  curAlign() { const b = this.curBlock(); return (b && b.node.attrs.align) || 'left'; }
 
   cycle(dir) {
     const cur = this.curElement();
@@ -320,9 +338,13 @@ export class SPEditor {
   _autoDetect() {
     const el = this.curElement();
     if (el === 'scene') return;
-    const text = this.curBlock().node.textContent.trim();
+    // เลือกรูปอยู่ = ไม่มีบล็อกให้ตรวจ · ห้าม throw เด็ดขาด — ตรงนี้ถูกเรียกใน dispatchTransaction
+    // ถ้า throw ที่นี่ renderer ตายทั้งตัว ไม่ใช่แค่คำสั่งนั้นล้ม (เจอจริงตอน insertImage)
+    const cur = this.curBlock();
+    if (!cur) return;
+    const text = cur.node.textContent.trim();
     if (/^(int\.|ext\.|int\/ext\.|i\/e\.|est\.|ฉาก)\s/i.test(text)) {
-      const { node, pos } = this.curBlock();
+      const { node, pos } = cur;
       this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, {
         el: 'scene', align: node.attrs.align || null
       }));
@@ -377,22 +399,67 @@ export class SPEditor {
   }
 
   // sameEl = true → ขึ้นบรรทัดใหม่ชนิดเดิม (ใช้ตอนผู้ใช้ปิดระบบปุ่มสลับ element)
+  //
+  // [alpha.78] **Enter กลางบล็อกต้องผ่าบล็อกจริง**
+  // เดิมทำอย่างเดียวคือ `insert($from.after(1))` = แทรกบล็อกเปล่าต่อท้ายเสมอ
+  // → เคอร์เซอร์อยู่กลางประโยคแล้วกด Enter ข้อความ**ไม่ถูกแบ่ง** ได้แค่บล็อกว่างงอกข้างล่าง
+  //   (และถ้าเลือกข้อความไว้ ตัวที่เลือกก็ไม่ถูกลบ) — พิมพ์แทรกกลางฉากที่เขียนไว้แล้วไม่ได้เลย
+  //
+  // กติกา:
+  //   · เคอร์เซอร์ท้ายบล็อก **หรือต้นบล็อก** → เหมือนเดิมเป๊ะ: บล็อกใหม่ว่าง ชนิด "ถัดไปตามครรลอง"
+  //     (ท้ายบล็อก = ทางที่ใช้บ่อยสุด พิมพ์หัวฉากจบแล้ว Enter ได้บรรยายต่อ · ต้นบล็อกคงไว้
+  //      ตามกติกา "Enter = ไป element ถัดไป" ที่ตั้งใจออกแบบไว้ — มีเทส [51] คุมอยู่)
+  //   · **มีข้อความทั้งสองฝั่งของเคอร์เซอร์** → ผ่าบล็อก และ **ท่อนหลังคงชนิดเดิม** ไม่ใช่ "ชนิดถัดไป"
+  //     เพราะท่อนหลังคือเนื้อเดียวกับท่อนหน้า (ผ่ากลางบทพูดต้องได้บทพูด ไม่ใช่บรรยาย)
   enter(sameEl) {
     const v = this.view;
     const cur = this.curElement();
     const spCycle = state.settings?.spCycle || DEFAULT_SP_CYCLE;
     const nextEl = sameEl ? cur : ((spCycle[cur]?.enter) || NEXT_ELEM[cur] || 'action');
+
+    let tr = v.state.tr;
+    // เลือกข้อความ **ในบล็อก sp เดียวกัน** ไว้แล้วกด Enter = ทับของที่เลือก แล้วค่อยผ่า
+    // จำกัดไว้แค่กรณีนี้เท่านั้น — ถ้าเลือก "รูป" อยู่ (NodeSelection) แล้วเผลอ deleteSelection
+    // รูปจะหายไปหนึ่งใบ แล้วบล็อกใหม่มาแทน = จำนวนบล็อกเท่าเดิม (Enter กลายเป็นลบรูป)
+    {
+      const s = tr.selection;
+      const inOneSp = s.$from.depth >= 1 && s.$from.parent.type === spSchema.nodes.sp &&
+                      s.$to.parent === s.$from.parent;
+      if (!s.empty && inOneSp) tr = tr.deleteSelection();
+    }
+    const $f = tr.selection.$from;
+
+    // รูป (spimage) เป็น atom ไม่มี inline ให้ผ่า → ใช้ทางเดิม (แทรกบล็อกใหม่ต่อท้าย)
+    // ผ่าเฉพาะตอน "มีข้อความทั้งสองฝั่ง" — ต้นบล็อก/ท้ายบล็อกไม่มีอะไรให้ผ่าอยู่แล้ว
+    const midway = $f.parent.type === spSchema.nodes.sp &&
+                   $f.parentOffset > 0 && $f.parentOffset < $f.parent.content.size;
+
+    if (midway) {
+      const tailEl = $f.parent.attrs.el;
+      tr = tr.split($f.pos, 1, [{ type: spSchema.nodes.sp,
+                                  attrs: { el: tailEl, align: $f.parent.attrs.align || null } }]);
+      // เคอร์เซอร์ไปต้นท่อนหลัง (split ดันตำแหน่งเดิมออกมานอกบล็อกแรก)
+      tr = tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map($f.pos)), 1));
+      v.dispatch(tr.scrollIntoView());
+      if (this.onElement) this.onElement(tailEl);
+      return true;
+    }
+
     const sp = spSchema.nodes.sp.create({ el: nextEl });
-    const { $from } = v.state.selection;
-    const insertAt = $from.after(1);
-    let tr = v.state.tr.insert(insertAt, sp);
+    // เลือกรูปอยู่ (NodeSelection ระดับบนสุด · depth 0) → `$f.after(1)` throw
+    // ใช้ปลายของ selection แทน = แทรกบล็อกใหม่ต่อจากรูป
+    const insertAt = $f.depth >= 1 ? $f.after(1) : tr.selection.to;
+    tr = tr.insert(insertAt, sp);
     tr = tr.setSelection(TextSelection.create(tr.doc, insertAt + 1));
     v.dispatch(tr.scrollIntoView());
     if (this.onElement) this.onElement(nextEl);
     return true;
   }
 
-  cmd(name, arg) {
+  // [alpha.78] ล็อกตำแหน่งเลื่อนหน้าถ้าช่วงที่เลือกยังเห็นอยู่ (ดู keepScroll ใน editor.js)
+  cmd(name, arg) { return keepScroll(this.view, () => this._cmd(name, arg)); }
+
+  _cmd(name, arg) {
     const v = this.view;
     const run = (c) => { c(v.state, v.dispatch, v); v.focus(); };
     const mk = { bold: 'strong', italic: 'em', underline: 'underline', strike: 'strike' }[name];
@@ -411,17 +478,23 @@ export class SPEditor {
 
   getMarkdown() {
     const lines = [];
+    // เก็บโหนดเป็นอาร์เรย์ก่อน — lineFor ต้องรู้ว่า "บล็อกถัดไปว่างไหม" (ตัวจับชื่อตัวละคร
+    // อัตโนมัติใน classify บังคับให้ตัวละครมีบทพูดตามมาติด ๆ) ไม่งั้นบรรยายสั้น ๆ ที่ตามด้วย
+    // บรรทัดว่างจะถูกเติม `!` นำหน้าโดยไม่จำเป็น
+    const nodes = [];
+    this.view.state.doc.forEach((node) => { nodes.push(node); });
+    const asBlock = (node) => node.type.name === 'spimage'
+      ? { el: 'image', text: node.attrs.md || `![${node.attrs.alt || ''}](${node.attrs.src || ''})` }
+      : { el: node.attrs.el,
+          text: node.attrs.el === 'raw' ? node.textContent : inlineToMd(node.toJSON().content || []) };
+    // เอกสารมีบล็อกตัวละครอยู่ = ไฟล์จะมี `@` แน่นอน → ตอนอ่านกลับตัวเดาชื่อจะถูกปิด
+    // ตรงนี้ต้องปิดตามให้ตรงกัน ไม่งั้นเขียนกันเหนียวด้วย `!` ทั้งที่ไม่จำเป็น
+    const guessNames = guessNamesForBlocks(nodes.map(asBlock));
     let prevBlank = true, prevType = 'action';
-    this.view.state.doc.forEach((node) => {
-      if (node.type.name === 'spimage') {          // รูป → คืนบรรทัด md เดิม (ไม่กลายเป็นข้อความ)
-        const line = node.attrs.md || `![${node.attrs.alt || ''}](${node.attrs.src || ''})`;
-        lines.push(line); prevBlank = false; prevType = 'action'; return;
-      }
-      const el = node.attrs.el;
-      const text = el === 'raw'
-        ? node.textContent
-        : inlineToMd(node.toJSON().content || []);
-      const line = lineFor(el, text, prevBlank, prevType);
+    nodes.forEach((node, i) => {
+      const { el, text } = asBlock(node);
+      const nextBlank = i + 1 >= nodes.length || blockIsBlank(asBlock(nodes[i + 1]));
+      const line = lineFor(el, text, prevBlank, prevType, nextBlank, guessNames);
       lines.push(line);
       if (line.trim() === '') prevBlank = true;
       else { prevBlank = false; prevType = el; }

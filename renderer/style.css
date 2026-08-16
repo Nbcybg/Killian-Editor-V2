@@ -14,11 +14,22 @@
   src:url("assets/fonts/CourierPrime-BoldItalic.ttf") format("truetype"); }
 /* ฟอนต์ไทยตระกูล Courier (alpha.57a) — ให้บทภาพยนตร์ภาษาไทยได้หน้าตาเดียวกับต้นฉบับ
    ประกาศเป็นวงศ์ของตัวเองไว้ ผู้ใช้เลือกใช้ผ่าน ตั้งค่า → ฟอนต์ตามภาษา (unicode-range)
-   หรือเลือกเป็นฟอนต์หลักก็ได้ · Mono = ทุกตัวกว้างเท่ากัน · Proportional = กว้างตามตัวอักษร */
+   หรือเลือกเป็นฟอนต์หลักก็ได้ · Mono = ทุกตัวกว้างเท่ากัน · Proportional = กว้างตามตัวอักษร
+
+   [alpha.78] **unicode-range บังคับไว้ที่ตัวประกาศเลย ห้ามถอด**
+   ฟอนต์คู่นี้เป็นฟอนต์ไทยปี 1998 ที่ cmap เอาช่วง General Punctuation ไปชี้ทับด้วย
+   **glyph วรรณยุกต์** — ตรวจจากไฟล์จริงแล้ว (advance = 0 · bbox ลอยเหนือเส้นฐาน):
+       …  U+2026 → glyph 213  advance 0  bbox [-741,1538,-41,1874]
+       ๊  U+0E4A → glyph 823  advance 0  bbox [-721,1454,-20,1790]   ← แทบทับกันสนิท
+   ผลคือผู้ใช้ที่เลือกฟอนต์นี้เป็นฟอนต์หลัก พิมพ์ `…` แล้ว **เห็นเป็นวรรณยุกต์ ๊ ลอย ๆ**
+   (เช่นเดียวกับ `—` `–` `“` `”` `·` `©`) · จำกัดช่วงไว้แค่ไทย = ตัวอื่นตกไป Courier Prime
+   ตามลูกโซ่ ซึ่งเป็นพฤติกรรมเดียวกับ `needsLatinFont()` ของฝั่ง PDF (pdf-generator.js) */
 @font-face { font-family:"Courier Thai Mono"; font-weight:400; font-style:normal; font-display:swap;
-  src:url("assets/fonts/CourierThaiMono.ttf") format("truetype"); }
+  src:url("assets/fonts/CourierThaiMono.ttf") format("truetype");
+  unicode-range:U+0E00-0E7F, U+F700-F71F; }
 @font-face { font-family:"Courier Thai Proportional"; font-weight:400; font-style:normal; font-display:swap;
-  src:url("assets/fonts/CourierThaiProp.ttf") format("truetype"); }
+  src:url("assets/fonts/CourierThaiProp.ttf") format("truetype");
+  unicode-range:U+0E00-0E7F, U+F700-F71F; }
 
 :root {
   --bg:#262624; --side:#1f1e1c; --bar:#30302d; --border:#3f3e3a;

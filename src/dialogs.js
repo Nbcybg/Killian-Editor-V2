@@ -12,7 +12,8 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
          PAGE_BREAK_RULES, SP_STRINGS, mergeSpFormat, linesPerPage, formatLines,
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, defaultLangFonts, normalizeLangFonts,
-         normalizeRange, buildLangFontCss, applyLangFonts } from './core.js';
+         normalizeRange, buildLangFontCss, applyLangFonts,
+         isLangFontUsable, withLangFamily } from './core.js';
 import { setTypeVolume, playType } from './typewriter-sound.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
@@ -109,6 +110,7 @@ export function settingsDialog(openTab) {
     strings: { ...SP_STRINGS, ...(s.spStrings || {}) },
     keys: spCycleKeys(s),
     cycleOn: s.spCycleEnabled !== false,
+    dlgContinues: s.spDialogueContinues === true,
     // [alpha.57a ข้อ 2] เลขฉาก + เลขหน้า
     sceneNumbers: { ...SCENE_NUMBER_DEFAULTS, ...(s.spSceneNumbers || {}) },
     pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...(s.spPageNumbers || {}) },
@@ -125,10 +127,23 @@ export function settingsDialog(openTab) {
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);
-  // พรีวิวฟอนต์บทหนังสด ๆ (บั๊ก #2) — ว่าง = ถอด var ทิ้ง ให้ CSS fallback เป็น Courier New
-  const applySpFont = (v) => {
-    if (v) document.documentElement.style.setProperty('--sp-font', v);
-    else document.documentElement.style.removeProperty('--sp-font');
+  /**
+   * พรีวิวฟอนต์บทหนังสด ๆ (บั๊ก #2)
+   *
+   * [alpha.78] **ต้องประกอบสแตกเหมือน `applySettings()` เป๊ะ** — คือเอา `LANG_FAMILY`
+   * (ฟอนต์ตามภาษา) ไปนำหน้าด้วยเมื่อมีแถวที่ใช้งานได้
+   *
+   * เดิมตั้ง `--sp-font` เป็นสแตกดิบ ๆ ไม่มีตัวนำหน้า → **ฟอนต์ตามภาษาหลุดหายทันที**
+   * ทั้งตอนเลื่อนดูตัวเลือกในกล่อง และตอน "กดยกเลิก" (cancel เรียกตัวนี้เสมอ)
+   * ผู้ใช้ที่ตั้งฟอนต์ตามภาษาไว้จึงเห็นบทเด้งกลับไปเป็นฟอนต์พื้นทุกครั้งที่กดยกเลิก
+   * @param {string} v สแตกฟอนต์บท ('' = ใช้ค่ามาตรฐาน เหมือนที่ applySettings ทำ)
+   * @param {any[]} [rows] แถวฟอนต์ตามภาษาที่ "กำลังถูกใช้จริง" ตอนนี้ (ไม่ส่ง = ของที่บันทึกไว้)
+   */
+  const applySpFont = (v, rows) => {
+    const list = rows || state.settings.langFonts;
+    const nLang = normalizeLangFonts(list).filter(isLangFontUsable).length;
+    document.documentElement.style.setProperty(
+      '--sp-font', withLangFamily(v || DEFAULT_SCRIPT_FONT, nLang > 0));
   };
 
   // โหลดฟอนต์จาก Fonts/ ในโปรเจกต์ (async, โหลดทีหลังไม่บล็อก)
@@ -181,7 +196,8 @@ export function settingsDialog(openTab) {
       }
       // เห็นผลทันทีระหว่างเลือก (ยกเลิก = คืนค่าเดิม)
       // ตั้ง --sp-font ตรง ๆ ไม่เรียก applySettings() — ไม่งั้นจะไปรีเซ็ตพรีวิวขนาดฟอนต์ที่กำลังเลื่อนอยู่
-      spFs.onchange = () => applySpFont(spFs.value);
+      // ระหว่างอยู่ในกล่อง ให้ใช้แถวฟอนต์ตามภาษา "ที่กำลังพรีวิวอยู่" (W.langFonts)
+      spFs.onchange = () => applySpFont(spFs.value, W.langFonts);
     }
   })();
   q('#st-title').value = m.title || '';
@@ -547,6 +563,9 @@ export function settingsDialog(openTab) {
   // ---- [แก้ไข feature 1] ปุ่มสลับ element ตั้งเองได้ + สวิตช์เปิด/ปิด ----
   q('#st-spcycle-on').checked = W.cycleOn;
   q('#st-spcycle-on').onchange = () => { W.cycleOn = q('#st-spcycle-on').checked; };
+  // [alpha.78] กฎ "บรรทัดถัดจากบทพูดคืออะไร" — ผู้ใช้ตั้งเอง ไม่ใช่โค้ดตัดสินแทน
+  q('#st-spdlgcont').checked = W.dlgContinues;
+  q('#st-spdlgcont').onchange = () => { W.dlgContinues = q('#st-spdlgcont').checked; };
   const KEY_LABELS = { enter: t('ui.dlg.elementPrevEnter'),
                        tab: t('ui.dlg.togglePagePrevTab'),
                        shiftTab: t('ui.dlg.toggleUndoPrevShift') };
@@ -860,9 +879,15 @@ export function settingsDialog(openTab) {
     applyZoomVars(origFont);
     applyPageVars();                       // คืนรูปแบบหน้ากระดาษ/บทตามค่าที่บันทึกไว้จริง
     applyUIScale(origUiScale);
-    s.spFontFamily = origSpFontFamily; applySpFont(origSpFontFamily);
     setTypeVolume(origSnd.vol);
-    applyProjectLangFonts();               // คืน @font-face ตามภาษาที่บันทึกไว้จริง
+    // [alpha.78] คืนฟอนต์ตามลำดับที่ถูกต้อง: @font-face ตามภาษาก่อน แล้วค่อยประกอบสแตก
+    // (สลับลำดับไม่ได้ — และห้ามตั้ง --sp-font แบบดิบ ไม่งั้นฟอนต์ตามภาษาหลุดหายตอนกดยกเลิก)
+    const nLangBack = applyProjectLangFonts();   // คืน @font-face ตามภาษาที่บันทึกไว้จริง
+    s.spFontFamily = origSpFontFamily;
+    applySpFont(origSpFontFamily);               // ไม่ส่ง rows = ใช้ของที่บันทึกไว้
+    s.fontFamily = origFontFamily;
+    document.documentElement.style.setProperty('--ed-font',
+      withLangFamily(proseFormat().fontFamily || origFontFamily || DEFAULT_PROSE_FONT, nLangBack > 0));
     s.focusDim = origDim; applyFocusDim();
     document.body.classList.toggle('k-ln', origLn);
     s.spellCheck = origSpell; s.autoMention = origMention;
@@ -909,6 +934,7 @@ export function settingsDialog(openTab) {
     s.spCycle = JSON.parse(JSON.stringify(workSpCycle));
     s.spCycleKeys = JSON.parse(JSON.stringify(W.keys));
     s.spCycleEnabled = W.cycleOn;
+    s.spDialogueContinues = W.dlgContinues;
     // ขนาดฟอนต์เป็นพอยต์ + ขนาดการ์ดหน้าแรก
     s.edFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-edpt').value) || 12));
     s.spFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-sppt').value) || 12));

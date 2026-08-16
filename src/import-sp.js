@@ -2,7 +2,8 @@
 // FDX · Celtx (ZIP+HTML) · Adobe Story (XML) · Fade In Pro (JSON) · Fountain (markup)
 // คืน element list → convertToK2Elements → fountain markdown → inject เข้า SPEditor
 import { t } from './i18n.js';
-import { parseScript, SP_ELEMS, classify, splitCharacter } from './fountain.js';
+import { parseScript, SP_ELEMS, classify, splitCharacter,
+         blockIsBlank, guessNamesForBlocks } from './fountain.js';
 import JSZip from 'jszip';
 
 // [62-66] ตารางนำเข้าทั้ง 5 รูปแบบ — name/ext ใช้ใน UI · parse รับ content (string|Uint8Array)
@@ -326,14 +327,19 @@ export function elementsToMarkdown(elements) {
   const lines = [];
   let prevType = 'action';
   let prevBlank = true;
+  // เอกสารมีตัวละคร = ไฟล์จะมี `@` → ตอนอ่านกลับตัวเดาชื่อถูกปิด · ปิดตามให้ตรงกัน
+  const guessNames = guessNamesForBlocks(elements);
 
-  for (const { el, text } of elements) {
+  for (let i = 0; i < elements.length; i++) {
+    const { el, text } = elements[i];
     if (el === 'blank') {
       lines.push('');
       prevBlank = true;
       continue;
     }
 
+    // บล็อกถัดไปว่างไหม — ต้องส่งให้ classify เหมือน lineFor() ไม่งั้นสองที่ตัดสินไม่ตรงกัน
+    const nextBlank = blockIsBlank(elements[i + 1]);
     const prefix = SP_ELEMS[el]?.prefix || '';
     let line = prefix + text;
 
@@ -342,11 +348,11 @@ export function elementsToMarkdown(elements) {
     // (เดิมรองรับแค่ action/character/scene จาก ~15 ชนิด — ชนิดอื่นที่ classify เดาผิด
     //  จะเงียบไปเลย เช่น ฉากย่อย/สลับฉาก/ทรานซิชันเข้า ที่มี prefix `$sub `/`$intercut `/`$in `)
     try {
-      let [got] = classify(line, prevBlank, prevType);
+      let [got] = classify(line, prevBlank, prevType, undefined, nextBlank, guessNames);
       if (got !== el && prefix) {
         // prefix สัญลักษณ์เดี่ยว (. ! @ > (( ) เขียนติดข้อความได้ · prefix คำ ($sub …) ต้องมีวรรค
         line = prefix.endsWith(' ') ? prefix + text : prefix + ' ' + text;
-        [got] = classify(line, prevBlank, prevType);
+        [got] = classify(line, prevBlank, prevType, undefined, nextBlank, guessNames);
         if (got !== el) line = prefix + text;          // แบบไม่มีวรรคยังใกล้เคียงกว่าไม่ใส่เลย
       }
       // [alpha.60r3a] "บรรยาย" ไม่มี prefix ของตัวเองแล้ว (มาตรฐานใหม่ = ข้อความเปล่า)

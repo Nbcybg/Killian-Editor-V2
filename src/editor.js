@@ -461,6 +461,7 @@ export class KEditor {
   getText() { return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, '\n'); }
 
   /** [alpha.58r บั๊ก 20] ย้ายเคอร์เซอร์ไปตำแหน่ง pos แล้วเลื่อนจอให้เห็น (คู่กับ SPEditor.gotoPos) */
+  // (นิยาม keepScroll อยู่ท้ายไฟล์ — ใช้ร่วมกับ SPEditor)
   gotoPos(pos) {
     const v = this.view;
     const p = Math.max(0, Math.min(Number(pos) || 0, v.state.doc.content.size));
@@ -470,7 +471,9 @@ export class KEditor {
   }
 
   // ---------- commands (เรียกจากเมนู Electron — คีย์ลัดเลยใช้ได้ทุก layout รวมไทย) ----------
-  cmd(name, arg) {
+  cmd(name, arg) { return keepScroll(this.view, () => this._cmd(name, arg)); }
+
+  _cmd(name, arg) {
     const s = schema; const v = this.view;
     const run = (c) => { c(v.state, v.dispatch, v); v.focus(); };
     switch (name) {
@@ -546,4 +549,58 @@ export class KEditor {
 
   focus() { this.view.focus(); }
   destroy() { this.view.destroy(); }
+}
+
+// ══════ [alpha.78] ล็อกตำแหน่งเลื่อนหน้าเวลาสั่งคำสั่งจัดรูปแบบ ══════
+//
+// อาการ: เลือกข้อความทั้งหน้าแล้วกดเปลี่ยนรูปแบบตัวอักษร → จอกระโดด
+// ต้นเหตุมีสองทางและทำงานพร้อมกัน:
+//   1. `view.focus()` — เบราว์เซอร์เลื่อนไปหา selection ให้เองเมื่อ contenteditable ได้โฟกัส
+//   2. `tr.scrollIntoView()` ที่ติดมากับบางคำสั่ง (สลับตัวพิมพ์ · เส้นคั่น · undo/redo)
+// ทั้งคู่เล็งไปที่ "ปลายของ selection" — เลือกทั้งหน้าแล้วปลายอยู่ท้ายเอกสาร จอเลยดีดลงไปสุด
+//
+// กติกาที่ต้องการ: **ถ้าช่วงที่เลือกยังเห็นอยู่บนจอ ห้ามเลื่อน** · หลุดจอไปแล้วค่อยกระโดดตาม
+// (ไม่ได้ปิด scrollIntoView ทิ้ง — แค่คืนตำแหน่งเดิมเมื่อไม่มีเหตุต้องเลื่อน)
+
+/** กล่องที่เลื่อนได้ซึ่งครอบตัวแก้ไขอยู่ (ไม่เจอ = ใช้ตัวเลื่อนของเอกสาร) */
+function scrollerOf(el) {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const ov = getComputedStyle(n).overflowY;
+    if (/(auto|scroll|overlay)/.test(ov) && n.scrollHeight > n.clientHeight + 1) return n;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+/** ช่วงที่เลือก "ยังเห็นอยู่" ในกล่องเลื่อนไหม — วัดจากช่วงทั้งช่วง ไม่ใช่แค่ปลาย */
+function selectionInView(view, sc) {
+  try {
+    const { from, to } = view.state.selection;
+    const a = view.coordsAtPos(from), b = view.coordsAtPos(to);
+    const box = (sc === document.scrollingElement || sc === document.documentElement)
+      ? { top: 0, bottom: window.innerHeight }
+      : sc.getBoundingClientRect();
+    return b.bottom > box.top && a.top < box.bottom;
+  } catch { return false; }
+}
+
+/**
+ * รันคำสั่งแล้วคืนตำแหน่งเลื่อนเดิมให้ ถ้าตอนสั่ง "ช่วงที่เลือกยังอยู่ในสายตา"
+ * @param {import('prosemirror-view').EditorView} view
+ * @param {() => any} run
+ */
+export function keepScroll(view, run) {
+  if (!view || !view.dom || !view.dom.isConnected) return run();
+  const sc = scrollerOf(view.dom);
+  const top = sc.scrollTop, left = sc.scrollLeft;
+  const lock = selectionInView(view, sc);
+  const out = run();
+  if (lock) {
+    const restore = () => {
+      if (sc.scrollTop !== top) sc.scrollTop = top;
+      if (sc.scrollLeft !== left) sc.scrollLeft = left;
+    };
+    restore();                                  // กันตัวที่เลื่อนแบบซิงโครนัส (focus/scrollIntoView)
+    requestAnimationFrame(restore);             // กันตัวที่เลื่อนหลังเบราว์เซอร์วาดใหม่
+  }
+  return out;
 }

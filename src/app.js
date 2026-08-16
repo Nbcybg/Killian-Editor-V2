@@ -40,7 +40,7 @@ import { PlannerBoard } from './planner/planner.js';
 import { renderPlannerProps } from './planner/planner-props.js';
 import { SP_ELEMS, TIMES, TRANSITIONS, TRANSITIONS_IN, INTERCUTS, SCENE_PREFIX, TAB_CYCLE,
          PARENTHETICALS, CHAR_EXTENSIONS, splitCharacter, withExtension,
-         classify, parseScript } from './fountain.js';
+         classify, parseScript, setSpRules, SP_RULES } from './fountain.js';
 import { refreshMentions } from './editor.js';
 import { refreshSpell } from './editor.js';
 import { commentAnchors, refreshCommentAnchors } from './editor.js';
@@ -246,6 +246,9 @@ async function loadSettings(meta) {
 export function applySettings() {
   applyZoomVars();
   applyUIScale();
+  // [alpha.78] กฎการอ่านบท (ผู้ใช้ตั้งเอง) → ส่งให้ fountain.js ก่อนอย่างอื่นเสมอ
+  // ทุกอย่างที่พาร์สบทหลังจากนี้ (ตัวแก้ไข/แบ่งหน้า/ส่งออก) ต้องใช้กฎชุดเดียวกัน
+  setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
   const spFmt = applyPageVars();                     // [85] ขนาดกระดาษ + ระยะขอบ + รูปแบบ element บทหนัง
   // [61] แสดงรูปแบบ — คืนสถานะจาก settings ทุกครั้งที่โหลด/เปลี่ยนค่าตั้ง
   setFormatGuide(!!state.settings.spShowFormat, spFmt);
@@ -9689,7 +9692,10 @@ async function runTest(projectPath) {
     check('รูปนิยายไม่โชว์ชื่อใต้รูป (ไม่มี figcaption)',
           !document.querySelector('.pane.on figure figcaption'));
     check('รูปนิยายโชว์ชื่อตอน hover (title มีค่า)',
-          !!document.querySelector('.pane.on figure img')?.getAttribute('title'));
+          !!document.querySelector('.pane.on figure img')?.getAttribute('title'),
+          // เดิมรายงาน `undefined` เวลาแดง — ไล่ต่อไม่ได้เลยว่ารูปไหน/ใน pane ไหน
+          [...document.querySelectorAll('.pane.on figure')].map((f) => f.outerHTML.slice(0, 160))
+            .join(' || ') + ' | panes=' + document.querySelectorAll('.pane.on').length);
 
     // เลือกคำ "ความหวัง" ท้ายย่อหน้าแรก แล้วสั่งหนาผ่าน command (เส้นทางเดียวกับเมนู)
     const { TextSelection } = await import('prosemirror-state');
@@ -9709,6 +9715,61 @@ async function runTest(projectPath) {
     t.editor.cmd('bold'); await saveTab(t);   // คืนสภาพ
     check('กดซ้ำคืนสภาพไฟล์เดิม',
           parseMdFile(await kapi.readFile(t.file)).body === orig);
+
+    // ---- [alpha.78] ล็อกตำแหน่งเลื่อนหน้าเวลาสั่งจัดรูปแบบ ----
+    // เลือกทั้งหน้าแล้วกดเปลี่ยนรูปแบบ จอต้องไม่กระโดด (เดิม focus()+scrollIntoView
+    // เล็งไปที่ "ปลาย" ของ selection → เลือกทั้งเอกสารแล้วจอดีดลงไปสุด)
+    {
+      // ทำเอกสารให้ยาวพอจะเลื่อนได้จริง
+      const longBody = Array.from({ length: 120 },
+        (_, i) => `ย่อหน้าทดสอบการเลื่อนหน้าลำดับที่ ${i + 1} ข้อความยาวพอสมควรเพื่อให้เกิดแถบเลื่อน`).join('\n\n');
+      t.editor.setMarkdown(longBody);
+      await new Promise((r) => setTimeout(r, 200));
+      activate(t.file);
+      await new Promise((r) => setTimeout(r, 150));
+      const vv = t.editor.view;
+      // หา "กล่องที่เลื่อนได้" ตัวเดียวกับที่ keepScroll ใช้
+      let sc = vv.dom;
+      while (sc && sc !== document.body) {
+        const ov = getComputedStyle(sc).overflowY;
+        if (/(auto|scroll|overlay)/.test(ov) && sc.scrollHeight > sc.clientHeight + 1) break;
+        sc = sc.parentElement;
+      }
+      if (!sc || sc === document.body) sc = document.scrollingElement || document.documentElement;
+      check('[a78] เอกสารทดสอบยาวพอจะเลื่อนได้', sc.scrollHeight > sc.clientHeight + 10,
+            `${sc.scrollHeight}/${sc.clientHeight}`);
+      // (ก) เลือกทั้งเอกสาร + เลื่อนไปกลางหน้า → ช่วงที่เลือกยังเห็นอยู่ = ห้ามเลื่อน
+      sc.scrollTop = Math.floor((sc.scrollHeight - sc.clientHeight) / 2);
+      const midTop = sc.scrollTop;
+      vv.dispatch(vv.state.tr.setSelection(
+        TextSelection.create(vv.state.doc, 1, vv.state.doc.content.size - 1)));
+      t.editor.cmd('bold');
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+      check('[a78] เลือกทั้งหน้าแล้วจัดรูปแบบ → แถบเลื่อนอยู่ที่เดิม',
+            Math.abs(sc.scrollTop - midTop) <= 2, `${midTop} → ${sc.scrollTop}`);
+      t.editor.cmd('bold');                              // ถอนตัวหนาออก
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+      // (ข) ช่วงที่เลือกอยู่ท้ายเอกสาร แต่จอถูกเลื่อนไปบนสุด = มองไม่เห็น → ต้องกระโดดตาม
+      const endPos = vv.state.doc.content.size - 1;
+      vv.dispatch(vv.state.tr.setSelection(
+        TextSelection.create(vv.state.doc, Math.max(1, endPos - 20), endPos)));
+      sc.scrollTop = 0;
+      await new Promise((r) => setTimeout(r, 30));
+      t.editor.cmd('bold');
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+      check('[a78] ช่วงที่เลือกหลุดจอ → ยังกระโดดตามให้เหมือนเดิม', sc.scrollTop > 10,
+            String(sc.scrollTop));
+      // คืนเนื้อหาเดิม **แล้วเขียนลงไฟล์ด้วย** — ฉากนี้มีรูปที่เทสข้างบนใช้ตรวจ
+      // ถ้าปล่อยไว้แค่ในหน่วยความจำ พอบันทึกอัตโนมัติทำงาน/selftest วนรอบสอง รูปจะหายทั้งใบ
+      t.editor.setMarkdown(orig);
+      await new Promise((r) => setTimeout(r, 200));
+      await saveTab(t);
+      check('[a78] คืนไฟล์ฉากกลับเป็นของเดิมครบ',
+            parseMdFile(await kapi.readFile(t.file)).body === orig,
+            parseMdFile(await kapi.readFile(t.file)).body.slice(0, 60));
+      activate(t.file);
+      await new Promise((r) => setTimeout(r, 150));
+    }
 
     // Enter ต้องพารูปแบบไปบรรทัดใหม่ (บั๊กที่แจ้ง: ขึ้นบรรทัดแล้ว reset)
     t.editor.view.dispatch(t.editor.view.state.tr.setSelection(
@@ -12215,9 +12276,53 @@ async function runTest(projectPath) {
       check('classify: ชื่อมีขีดกลาง (Frinton-Smith) = ตัวละคร', classify('Frinton-Smith', true, 'action')[0] === 'character');
       check('classify: ชื่อไทย (ตัวเอก) = ตัวละคร', classify('ตัวเอก', true, 'action')[0] === 'character');
       check('classify: บรรยายยาวไม่ใช่ตัวละคร',
-            classify('ฝนตกหนักมากจนมองแทบไม่เห็นทางข้างหน้าเลย', true, 'action')[0] === 'action'); }
+            classify('ฝนตกหนักมากจนมองแทบไม่เห็นทางข้างหน้าเลย', true, 'action')[0] === 'action');
+      // [alpha.78] บรรยาย**สั้น**ภาษาไทยต้องไม่กลายเป็นชื่อตัวละคร — ไทยไม่เว้นวรรค
+      // ทั้งบรรทัดจึงนับเป็น "1 คำ" เสมอ เกณฑ์ ≤25 ตัว/≤3 คำ จึงกินบรรยายสั้นทุกบรรทัด
+      // กติกาที่ใช้แก้: ตัวละครต้องมีบทพูดตามมา **ติดกัน** (ไม่มีบรรทัดว่างคั่น)
+      check('classify: บรรยายสั้นที่ตามด้วยบรรทัดว่าง ≠ ตัวละคร',
+            classify('ฝนตก', true, 'action', undefined, true)[0] === 'action');
+      check('classify: ชื่อไทยที่มีบทพูดตามติด ยังเป็นตัวละคร',
+            classify('ตัวเอก', true, 'action', undefined, false)[0] === 'character');
+      check('classify: ย่อหน้าหลังบทพูด (มีบรรทัดว่างคั่น) = บรรยาย ไม่ใช่บทพูดกำพร้า',
+            classify('เขาเดินออกไปจากห้อง', true, 'dialogue', undefined, true)[0] === 'action'); }
+    // [alpha.78] ไป-กลับ **ระดับตัวอักษร** ผ่านตัวแก้ไขจริง — บทไทยที่เขียนตามมาตรฐาน 60r3a
+    // บันทึกแล้วต้องได้ไฟล์เดิมเป๊ะ (เดิมได้ `@ห้องครัวเงียบ` = ไฟล์เสียถาวรตั้งแต่บันทึกครั้งแรก)
+    {
+      const thaiScript = ['### INT. ห้องครัว - กลางวัน', '', 'ห้องครัวเงียบ', '',
+        '@สมชาย', '((เหนื่อย))', 'วันนี้ยาวจริง ๆ', '', 'ลมพัดม่านไหว', '',
+        '@มาลี (V.O.)', 'กลับมาแล้วเหรอ', '', '>> CUT TO:', '', 'ฝนตก'].join('\n');
+      const before = spTab.sp.getMarkdown();
+      spTab.sp.setMarkdown(thaiScript);
+      await new Promise((r) => setTimeout(r, 150));
+      const rt = spTab.sp.getMarkdown();
+      check('[a78] บทไทยไป-กลับได้ไฟล์เดิมเป๊ะทุกตัวอักษร', rt === thaiScript,
+            JSON.stringify(rt));
+      check('[a78] ไม่มี @ งอกหน้าบรรยายสั้น', !/^@(ห้องครัวเงียบ|ลมพัดม่านไหว|ฝนตก)$/m.test(rt));
+      // « บรรยาย = ข้อความเปล่า » ตามที่ผู้ใช้กำหนด — ห้ามมีรหัสนำหน้า และห้ามงอกบรรทัดว่าง
+      check('[a78] ไม่มี ! นำหน้าบรรยายเลย', !/^!/m.test(rt), JSON.stringify(rt));
+      // กฎ "บรรทัดถัดจากบทพูด" เป็นของผู้ใช้ — ค่าเริ่มต้นแนว Final Draft = บรรยาย
+      check('[a78] ค่าเริ่มต้นของกฎ = แนว Final Draft', SP_RULES.dialogueContinues === false);
+      check('[a78] DEFAULT_SETTINGS มีสวิตช์ให้ผู้ใช้ปรับ', 'spDialogueContinues' in DEFAULT_SETTINGS);
+      {
+        const b1 = parseScript('@สมชาย\nสวัสดี\nเขาเดินออกไปจากห้อง');
+        check('[a78] บรรทัดถัดจากบทพูด = บรรยาย (ไม่ต้องมีรหัส)', b1.at(-1).el === 'action', b1.at(-1).el);
+        check('[a78] บรรทัดใต้ชื่อตัวละครยังเป็นบทพูดเสมอ', b1[1].el === 'dialogue', b1[1].el);
+        setSpRules({ dialogueContinues: true });
+        check('[a78] เปิดกฎแล้วเป็นบทพูดต่อจริง',
+              parseScript('@สมชาย\nสวัสดี\nเขาเดินออกไปจากห้อง').at(-1).el === 'dialogue');
+        setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
+      }
+      const elsTh = [];
+      spTab.sp.view.state.doc.forEach((n) => elsTh.push(n.attrs.el));
+      check('[a78] บรรยายสั้นเป็น element บรรยายจริง (ไม่ใช่ตัวละคร/บทพูด)',
+            elsTh.filter((e) => e === 'character').length === 2, JSON.stringify(elsTh));
+      spTab.sp.setMarkdown(before);                 // คืนสภาพให้เทสถัดไปใช้ต่อ
+      await new Promise((r) => setTimeout(r, 150));
+    }
     // เทียบเชิงความหมาย: classify กลับต้องได้ element+ข้อความเหมือนต้นฉบับทุกบรรทัด
-    const { parseScript } = await import('./fountain.js');
+    // (`parseScript` นำเข้าที่หัวไฟล์อยู่แล้ว — เดิม re-import ซ้ำในบล็อกนี้ ทำให้ชื่อถูกบัง
+    //  ทั้งบล็อก แล้วโค้ดที่อยู่ "ก่อนหน้า" บรรทัดนั้นเรียกไม่ได้เลย (TDZ))
     const semA = parseScript(spTab.sp.getMarkdown());
     const semB = parseScript(spOrig);
     check('บทหนัง round-trip กติกา v1 (element+ข้อความตรงทุกบรรทัด)',
@@ -12233,6 +12338,53 @@ async function runTest(projectPath) {
     function n2len(v, off) { return v.state.doc.nodeAt(off).content.size; }
     spTab.sp.enter();
     check('Enter หลังตัวละคร → บทพูด', spTab.sp.curElement() === 'dialogue');
+    // [alpha.78] Enter **กลางบล็อก** ต้องผ่าบล็อกจริง — เดิมแทรกบล็อกเปล่าต่อท้ายอย่างเดียว
+    // ข้อความไม่ถูกแบ่ง = พิมพ์แทรกกลางฉากที่เขียนไว้แล้วไม่ได้เลย
+    {
+      const blocksOf = () => { const a = []; vsp.state.doc.forEach((nd) => a.push(nd)); return a; };
+      // เตรียมบล็อก "บรรยาย" ที่มีเนื้อหาแน่ ๆ แล้ววางเคอร์เซอร์กลางข้อความ
+      spTab.sp.setElement('action');
+      vsp.dispatch(vsp.state.tr.insertText('หน้าหลัง'));
+      const before = blocksOf();
+      let pos = null;
+      vsp.state.doc.forEach((nd, off) => { if (nd.textContent === 'หน้าหลัง') pos = off; });
+      check('[a78] เตรียมบล็อกกลางทางได้', pos !== null);
+      vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, pos + 1 + 4)));  // กลางพอดี
+      spTab.sp.enter();
+      const after = blocksOf();
+      check('[a78] Enter กลางบล็อก → จำนวนบล็อกเพิ่ม 1', after.length === before.length + 1,
+            `${before.length} → ${after.length}`);
+      const i = after.findIndex((nd) => nd.textContent === 'หน้า');
+      check('[a78] ท่อนหน้าเหลือข้อความก่อนเคอร์เซอร์', i >= 0,
+            JSON.stringify(after.map((nd) => nd.textContent)));
+      if (i >= 0) {
+        check('[a78] ท่อนหลังได้ข้อความหลังเคอร์เซอร์ (ไม่ใช่บล็อกว่าง)',
+              after[i + 1] && after[i + 1].textContent === 'หลัง',
+              JSON.stringify(after[i + 1] && after[i + 1].textContent));
+        check('[a78] ท่อนหลังคงชนิดเดิม (ผ่ากลางบรรยายต้องได้บรรยาย)',
+              after[i + 1] && after[i + 1].attrs.el === 'action', after[i + 1] && after[i + 1].attrs.el);
+        check('[a78] เคอร์เซอร์ไปอยู่ต้นท่อนหลัง',
+              vsp.state.selection.$from.parent.textContent === 'หลัง' &&
+              vsp.state.selection.$from.parentOffset === 0,
+              vsp.state.selection.$from.parent.textContent + '@' + vsp.state.selection.$from.parentOffset);
+      }
+      // เลือกข้อความไว้แล้วกด Enter = ตัวที่เลือกต้องถูกแทนที่ ไม่ใช่ค้างอยู่
+      const p2 = after.findIndex((nd) => nd.textContent === 'หน้า');
+      let off2 = 0; vsp.state.doc.forEach((nd, o) => { if (nd.textContent === 'หน้า') off2 = o; });
+      vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, off2 + 1, off2 + 1 + 4)));
+      spTab.sp.enter();
+      const after2 = blocksOf();
+      check('[a78] เลือกทั้งบล็อกแล้ว Enter → ข้อความที่เลือกหายไป',
+            !after2.some((nd) => nd.textContent === 'หน้า'),
+            JSON.stringify(after2.map((nd) => nd.textContent)) + ' | ' + p2);
+      // คืนเคอร์เซอร์ไว้ท้ายบล็อก sp ตัวสุดท้าย (ห้ามปล่อยให้ไปค้างบนโหนดรูป — เทสถัดไปพิมพ์ต่อ)
+      let lastOff = null, acc = 0;
+      vsp.state.doc.forEach((nd) => {
+        if (nd.type.name === 'sp') lastOff = acc + nd.nodeSize - 1;
+        acc += nd.nodeSize;
+      });
+      if (lastOff !== null) vsp.dispatch(vsp.state.tr.setSelection(TS2.create(vsp.state.doc, lastOff)));
+    }
     spTab.sp.cycle(1);
     // alpha.57a: TAB_CYCLE แทรก transition-in ไว้ก่อน transition → ถัดจากบทพูดคือ "ทรานซิชันเข้า"
     check('สลับ element ได้ (Ctrl+↑/↓ · Tab ไม่สลับแล้ว)', spTab.sp.curElement() === 'transition-in',
@@ -17535,10 +17687,12 @@ async function runTest(projectPath) {
                 edFont + ' | ' + spFont);
           check('[57a-5] ยังเก็บฟอนต์เดิมไว้ท้าย stack', spFont.includes('Courier'), spFont);
           // ฟอนต์ไทยที่ฝังมาต้องโหลดได้จริง (ไม่ใช่แค่ประกาศ @font-face)
+          // [alpha.78] ต้องส่ง "ข้อความไทย" ไปด้วย — @font-face ถูกจำกัด unicode-range ไว้ที่ไทย
+          // (ค่าเริ่มต้นของ check/load คือ "BESbswy" ซึ่งเป็นละติน → นอกช่วง = คืน false ตลอด)
           try {
-            await document.fonts.load('16px "Courier Thai Mono"');
+            await document.fonts.load('16px "Courier Thai Mono"', 'ก');
             check('[57a-5] โหลดไฟล์ฟอนต์ไทยที่ฝังมาได้จริง',
-                  document.fonts.check('16px "Courier Thai Mono"'));
+                  document.fonts.check('16px "Courier Thai Mono"', 'ก'));
           } catch (e) { check('[57a-5] โหลดไฟล์ฟอนต์ไทยที่ฝังมาได้จริง', false, String(e)); }
           // ปิดทุกแถว = กลับไปใช้ stack เดิม ไม่มีวงศ์รวมนำหน้า
           state.settings.langFonts = [{ id: 'thai', range: 'U+0E00-0E7F', builtin: 'x.ttf', enabled: false }];
@@ -17547,6 +17701,67 @@ async function runTest(projectPath) {
                 !document.documentElement.style.getPropertyValue('--sp-font').includes(LANG_FAMILY));
           state.settings.langFonts = keep;
           applySettings();
+        }
+
+        // ---- [alpha.78] กด "ยกเลิก" ในตั้งค่า ต้องไม่ทำฟอนต์ตามภาษาหลุดหาย ----
+        // เดิมปุ่มยกเลิกตั้ง `--sp-font` เป็นสแตกดิบ (ไม่มี LANG_FAMILY นำหน้า)
+        // → ผู้ใช้ที่ตั้งฟอนต์ตามภาษาไว้ เห็นบทเด้งกลับเป็นฟอนต์พื้นทุกครั้งที่กดยกเลิก
+        {
+          const keepLF = state.settings.langFonts;
+          state.settings.langFonts = [
+            { id: 'thai', label: 'ไทย', range: 'U+0E00-0E7F', builtin: 'CourierThaiMono.ttf', enabled: true },
+          ];
+          applySettings();
+          const spBefore = document.documentElement.style.getPropertyValue('--sp-font');
+          const edBefore = document.documentElement.style.getPropertyValue('--ed-font');
+          check('[a78] เตรียมสภาพ: ฟอนต์ตามภาษาถูกใช้จริงทั้งบทและนิยาย',
+                spBefore.includes(LANG_FAMILY) && edBefore.includes(LANG_FAMILY),
+                spBefore + ' | ' + edBefore);
+          document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
+          settingsDialog();
+          await new Promise((r) => setTimeout(r, 400));
+          const dlg = [...document.querySelectorAll('.k-settings')].pop();
+          check('[a78] เปิดกล่องตั้งค่าได้', !!dlg);
+          dlg.querySelector('.k-cancel').click();
+          await new Promise((r) => setTimeout(r, 250));
+          check('[a78] กดยกเลิกแล้วฟอนต์ตามภาษาของบทยังอยู่',
+                document.documentElement.style.getPropertyValue('--sp-font').includes(LANG_FAMILY),
+                document.documentElement.style.getPropertyValue('--sp-font'));
+          check('[a78] กดยกเลิกแล้วฟอนต์ตามภาษาของนิยายยังอยู่',
+                document.documentElement.style.getPropertyValue('--ed-font').includes(LANG_FAMILY),
+                document.documentElement.style.getPropertyValue('--ed-font'));
+          check('[a78] ยกเลิกแล้วสแตกกลับไปเท่าของที่บันทึกไว้เป๊ะ',
+                document.documentElement.style.getPropertyValue('--sp-font') === spBefore,
+                spBefore + ' → ' + document.documentElement.style.getPropertyValue('--sp-font'));
+          document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
+          state.settings.langFonts = keepLF;
+          applySettings();
+        }
+
+        // ---- [alpha.78] `…` `—` `“` ต้องไม่กลายเป็นวรรณยุกต์ลอย เมื่อเลือกฟอนต์ไทยตระกูล Courier ----
+        // CourierThaiMono/Prop (ฟอนต์ปี 1998) เอาช่วง General Punctuation ไปชี้ทับด้วย glyph
+        // วรรณยุกต์ (advance = 0) → `…` ออกมาหน้าตาเหมือน `๊` · แก้ด้วย unicode-range ใน style.css
+        {
+          for (const fam of ['Courier Thai Mono', 'Courier Thai Proportional']) {
+            await document.fonts.load(`16px "${fam}"`, 'ก').catch(() => {});
+          }
+          const cvs = document.createElement('canvas');
+          const cx = cvs.getContext('2d');
+          const w = (font, text) => { cx.font = font; return cx.measureText(text).width; };
+          for (const fam of ['Courier Thai Mono', 'Courier Thai Proportional']) {
+            const withThai = `16px "${fam}", "Courier Prime", monospace`;
+            const latinOnly = '16px "Courier Prime", monospace';
+            for (const [ch, name] of [['…', 'จุดไข่ปลา'], ['—', 'ขีดยาว'], ['“', 'อัญประกาศเปิด']]) {
+              const a = w(withThai, ch);
+              check(`[a78] ${fam}: ${name} ไม่ใช่มาร์กกว้าง 0`, a > 1, `${ch} = ${a}px`);
+              check(`[a78] ${fam}: ${name} ตกไปใช้ Courier Prime ตามลูกโซ่`,
+                    Math.abs(a - w(latinOnly, ch)) < 0.5, `${a} vs ${w(latinOnly, ch)}`);
+            }
+            // ...แต่อักษรไทยต้องยังใช้ฟอนต์นั้นอยู่ (ไม่ได้ปิดทั้งวงศ์ทิ้ง)
+            check(`[a78] ${fam}: อักษรไทยยังใช้ฟอนต์นี้อยู่`,
+                  Math.abs(w(withThai, 'กขคง') - w(latinOnly, 'กขคง')) > 0.5,
+                  `${w(withThai, 'กขคง')} vs ${w(latinOnly, 'กขคง')}`);
+          }
         }
 
         // ---- ข้อ 5 (ต่อ): "สระ/วรรณยุกต์ลอย" มี 2 ต้นเหตุ — CSS และตัวฟอนต์เอง ----
@@ -18371,6 +18586,8 @@ async function runTest(projectPath) {
         // แท็บปุ่มบทหนัง
         [...document.querySelectorAll('.k-set-tab')].find((x) => x.dataset.p === 'sp').click();
         check('[ปุ่มบทหนัง] มีสวิตช์เปิด/ปิดระบบปุ่ม', !!document.querySelector('.k-settings #st-spcycle-on'));
+        check('[a78] มีสวิตช์ "บรรทัดถัดจากบทพูด" ให้ผู้ใช้ปรับในตั้งค่า',
+              !!document.querySelector('.k-settings #st-spdlgcont'));
         check('[ปุ่มบทหนัง] มีที่ตั้งปุ่มเองครบ 3 ปุ่ม',
               document.querySelectorAll('.k-settings #st-spkeys .k-key-row').length === 3);
         document.querySelector('.k-settings .k-ok').click();
@@ -19817,6 +20034,27 @@ async function runTest(projectPath) {
             check('[r3-6] ไฟล์ .md ไม่ถูกแก้ — getMarkdown ยังมีรหัสครบ',
                   tC.editor.getMarkdown().includes('@ทอร่า'),
                   tC.editor.getMarkdown().slice(0, 40));
+            // [alpha.78] รหัสที่อยู่ "นอกช่วงตัวหนา" — ProseMirror ตัดเป็นคนละ text node
+            // เดิม scanMdCodes อ่านแค่ firstChild.text = '!' ล้วน ๆ → prefixLen คืน 0 → ไม่ซ่อนอะไรเลย
+            // (ผู้ใช้เจอเป็น "! ค้างหน้าบรรยายทุกบรรทัดที่จัดรูปแบบไว้")
+            for (const [src, code, label] of [['!**เด็กนั่งฟังอยู่ครู่หนึ่ง**', '!', 'ตัวหนา'],
+                                              ['@**ทอร่า**', '@', 'ชื่อตัวหนา'],
+                                              ['>> *CUT TO:*', '>> ', 'ทรานซิชันเอียง']]) {
+              tC.editor.setMarkdown(src);
+              await new Promise((r) => setTimeout(r, 150));
+              activate(fileC);
+              await new Promise((r) => setTimeout(r, 120));
+              const hid = [...tC.pane.querySelectorAll('.' + MD_HIDE_CLASS)];
+              check(`[a78] ซ่อนรหัสได้แม้เนื้อหาเป็น${label}`,
+                    hid.some((x) => x.textContent === code),
+                    JSON.stringify(hid.map((x) => x.textContent)) + ' | ' + src);
+              check(`[a78] ${label}: ไฟล์ .md ยังมีรหัสครบ`,
+                    tC.editor.getMarkdown().startsWith(code), tC.editor.getMarkdown().slice(0, 20));
+            }
+            tC.editor.setMarkdown('@ทอร่า\nสวัสดีจ้า');
+            await new Promise((r) => setTimeout(r, 150));
+            activate(fileC);
+            await new Promise((r) => setTimeout(r, 120));
             // ปิดสวิตช์ → รหัสกลับมา
             toggleMarkdownCodes();
             await new Promise((r) => setTimeout(r, 200));

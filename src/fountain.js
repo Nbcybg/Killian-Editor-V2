@@ -67,6 +67,33 @@ export const NEXT_ELEM = { scene: 'action', action: 'action', character: 'dialog
 // บรรทัดที่เป็นรูปทั้งบรรทัด ![alt](src) — ใช้ร่วมกับ md.js
 export const IMG_RE = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
 
+/**
+ * [alpha.78] **กฎการอ่านบทที่ผู้ใช้ตั้งเอง** — ไม่ใช่ค่าที่โค้ดตัดสินแทน
+ *
+ * มาตรฐานของงานเขียนบทคือ **Final Draft** ซึ่ง element เป็น "ก้อน" อยู่แล้ว ไม่มีความกำกวม
+ * แต่ไฟล์ของเราเป็นข้อความล้วน จึงต้องมีกฎว่า "บรรทัดถัดจากบทพูดคืออะไร"
+ *
+ *   dialogueContinues = false (ค่าเริ่มต้น · แนว Final Draft)
+ *       @สมชาย            → ตัวละคร
+ *       "สวัสดีจ้า"        → บทพูด
+ *       เขาเดินออกไป       → **บรรยาย** — เขียนเปล่า ๆ ได้เลย ไม่ต้องมี `!` ไม่ต้องเว้นบรรทัด
+ *
+ *   dialogueContinues = true (แนว fountain)
+ *       บรรทัดที่ 3 ข้างบนกลายเป็น "บทพูดบรรทัดถัดไป" → บรรยายต้องเขียน `!` นำหน้า
+ *       ใช้เมื่อเขียนบทพูดยาวหลายบรรทัดติดกันเป็นปกติ
+ *
+ * ตั้งที่ ตั้งค่า → การเขียน · แอปเรียก `setSpRules()` ตอน applySettings()
+ * เป็นค่าระดับโปรแกรม (ไม่ใช่ต่อไฟล์) จึงเก็บเป็นตัวแปรโมดูล — โมดูลนี้ยังบริสุทธิ์
+ * (ผลลัพธ์ขึ้นกับ input + กฎที่ตั้งไว้เท่านั้น) และเทสตั้งกฎเองได้ตรง ๆ
+ */
+export const SP_RULES = { dialogueContinues: false };
+export function setSpRules(partial) {
+  if (partial && typeof partial === 'object') {
+    if ('dialogueContinues' in partial) SP_RULES.dialogueContinues = !!partial.dialogueContinues;
+  }
+  return SP_RULES;
+}
+
 export const SCENE_RE = /^\s*(int\.?|ext\.?|est\.?|i\/e|int\.?\/ext\.?|ฉาก)[\s.:]/i;
 const TRANS_RE = /(cut to:|dissolve to:|smash cut to:|match cut to:|fade out\.?|fade to black\.?|to:)\s*$/i;
 const RAW_PREFIX = /^\$(cast|seq|endact)\b/i;
@@ -140,7 +167,21 @@ const CAN_TAKE_DOUBLE_PAREN = (prevType, prevLine, prevBlank) => {
   return /^\s*@/.test(String(prevLine));
 };
 
-export function classify(line, prevBlank = true, prevType = 'action', prevLine = undefined) {
+/**
+ * @param {boolean} [nextBlank] บรรทัดถัดไปเป็นบรรทัดว่าง (หรือจบไฟล์) หรือไม่
+ *   ใช้กับ "ตัวจับชื่อตัวละครอัตโนมัติ" เท่านั้น — ตัวละครต้องมีบทพูดต่อท้ายเสมอ (ดูด้านล่าง)
+ *   ไม่ส่งมา = ไม่รู้ → ถือว่าไม่ว่าง (พฤติกรรมเดิม) เพื่อให้ผู้เรียกที่มีแค่บรรทัดเดียวยังทำงานได้
+ */
+/**
+ * @param {boolean} [guessNames] เปิด "ตัวเดาชื่อตัวละครอัตโนมัติ" ไหม
+ *   มาตรฐาน fountain ไม่เดาชื่อจากบรรทัดตัวพิมพ์เล็ก/ภาษาไทยเลย — ชื่อที่ไม่ใช่ ALL-CAPS
+ *   **ต้องเขียน `@` บังคับ** ตัวเดานี้จึงมีไว้สำหรับ "วางสคริปต์ดิบ/นำเข้า" ที่ไม่มี `@` เท่านั้น
+ *   → เอกสารที่ใช้ `@` อยู่แล้ว (ทุกไฟล์ที่ตัวแก้ไขเขียนเอง) ปิดตัวเดาทิ้ง
+ *   ไม่งั้นบรรยายไทยสั้น ๆ ต้นย่อหน้าจะถูกเดาเป็นชื่อ แล้ว `lineFor` ต้องเติม `!` กันไว้ตลอด
+ *   · ไม่ส่งมา = เปิด (พฤติกรรมเดิม สำหรับผู้เรียกที่ดูทีละบรรทัด)
+ */
+export function classify(line, prevBlank = true, prevType = 'action', prevLine = undefined,
+                         nextBlank = false, guessNames = true) {
   const s = line.trim();
   if (s === '') return ['blank', ''];
   if (IMG_RE.test(s)) return ['image', s];           // ![alt](src) ทั้งบรรทัด = รูป
@@ -186,22 +227,49 @@ export function classify(line, prevBlank = true, prevType = 'action', prevLine =
   // เดิมบังคับ "พิมพ์ใหญ่ล้วน" ทำให้ชื่อผสมพิมพ์เล็ก (Nazarena, Frinton-Smith) และชื่อไทยไม่ถูกจับ
   // เกณฑ์ใหม่: อยู่หลังบรรทัดว่าง + ไม่จบด้วยเครื่องหมายวรรค + ไม่ขึ้นด้วยอัญประกาศ +
   //   (เป็นตัวพิมพ์ใหญ่ล้วนแบบอังกฤษ)  หรือ  (สั้นมาก ≤ 25 ตัว และไม่เกิน 3 คำ)
-  {
+  //
+  // **ต้องมีบรรทัดถัดไปที่ไม่ว่างเสมอ** (ตัวละคร = บรรทัดที่มีบรรทัดว่างข้างบน
+  // และ **ไม่มี**บรรทัดว่างข้างล่าง เพราะบทพูดต้องตามมาติด ๆ) — ถ้าไม่บังคับข้อนี้
+  // เกณฑ์ "≤ 25 ตัว และไม่เกิน 3 คำ" จะกิน **บรรยายสั้นภาษาไทยทุกบรรทัด**: ไทยไม่เว้นวรรค
+  // ทั้งบรรทัดจึงนับเป็น 1 คำเสมอ → "ฝนตก" / "ลมพัดม่านไหว" กลายเป็นชื่อตัวละคร
+  // แล้ว lineFor() เขียนกลับเป็น `@ฝนตก` = บันทึกครั้งเดียวไฟล์เสียถาวร
+  if (guessNames) {
     const looksLikeName = !/[.!?…,;:"]$/.test(s) && !/^["'“]/.test(s) &&
       ((/[A-Za-z]/.test(s) && s === s.toUpperCase() && s.length <= 40) ||
        (s.length <= 25 && s.split(/\s+/).length <= 3));
-    if (prevBlank && looksLikeName) return ['character', s];
+    if (prevBlank && !nextBlank && looksLikeName) return ['character', s];
   }
-  if (['character', 'parenthetical', 'dialogue'].includes(prevType)) return ['dialogue', s];
+  // บทพูดต่อจากบล็อกตัวละคร **ต้องติดกัน** — บรรทัดว่างปิดบล็อกบทสนทนาเสมอ (กติกาเดียวกับ
+  // CAN_TAKE_PAREN) ไม่งั้นบรรยายย่อหน้าถัดไปหลังบทพูดจะกลายเป็น "บทพูดกำพร้า" ทั้งย่อหน้า
+  if (!prevBlank) {
+    // บรรทัดใต้ "ชื่อตัวละคร" / "วงเล็บ" = บทพูดเสมอ (นิยามของ element ไม่ใช่ตัวเลือก)
+    if (prevType === 'character' || prevType === 'parenthetical') return ['dialogue', s];
+    // บรรทัดใต้ "บทพูด" — ตรงนี้เป็น **กฎที่ผู้ใช้ตั้งเอง** (ดู SP_RULES.dialogueContinues)
+    if (prevType === 'dialogue' && SP_RULES.dialogueContinues) return ['dialogue', s];
+  }
   return ['action', s];
 }
 
+/**
+ * เอกสารนี้ใช้ `@` บังคับชื่อตัวละครอยู่แล้วหรือยัง — ถ้าใช่ ปิดตัวเดาชื่ออัตโนมัติทิ้ง
+ * (ไฟล์ทุกใบที่ตัวแก้ไขเขียนเองเข้าข่ายนี้ · สคริปต์ดิบที่ผู้ใช้วางมาไม่เข้าข่าย จึงยังเดาให้)
+ */
+export const guessNamesFor = (md) => !/^[ \t]*@/m.test(String(md ?? ''));
+/** เวอร์ชันที่รับ "ลำดับบล็อก" — ตัวเขียนไฟล์ใช้ตัวนี้ ให้ตัดสินตรงกับตอนอ่านกลับเป๊ะ */
+export const guessNamesForBlocks = (blocks) =>
+  !(Array.isArray(blocks) && blocks.some((b) => b && b.el === 'character'));
+
 export function parseScript(md) {
   const out = [];
+  const lines = md.split('\n');
+  const guessNames = guessNamesFor(md);
   let prevBlank = true, prevType = 'action', prevLine;
-  for (const line of md.split('\n')) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     // ส่ง "บรรทัดก่อนหน้าแบบดิบ" ไปด้วย — `((…))` ต้องรู้ว่าตัวละครข้างบนเขียน `@` ไว้จริงไหม
-    const [el, text] = classify(line, prevBlank, prevType, prevLine);
+    // และส่ง "บรรทัดถัดไปว่างไหม" — ตัวจับชื่อตัวละครอัตโนมัติต้องมีบทพูดตามมาติด ๆ
+    const nextBlank = i + 1 >= lines.length || lines[i + 1].trim() === '';
+    const [el, text] = classify(line, prevBlank, prevType, prevLine, nextBlank, guessNames);
     if (el === 'blank') { out.push({ el: 'blank', text: '' }); prevBlank = true; prevLine = line; continue; }
     out.push({ el, text });
     prevBlank = false; prevType = el; prevLine = line;
@@ -210,7 +278,7 @@ export function parseScript(md) {
 }
 
 // serialize บรรทัดเดียว: ใส่ prefix เท่าที่จำเป็นให้ classify อ่านกลับได้ element เดิม
-export function lineFor(el, text, prevBlank, prevType) {
+export function lineFor(el, text, prevBlank, prevType, nextBlank = false, guessNames = true) {
   if (el === 'blank' || (el === 'action' && text.trim() === '')) return '';
   if (el === 'raw' || el === 'image') return text;   // รูปเก็บ md เดิมทั้งบรรทัด
   let s;
@@ -237,7 +305,7 @@ export function lineFor(el, text, prevBlank, prevType) {
     case 'character': s = '@' + text; break;
     default: s = text;                              // action / dialogue
   }
-  const [got] = classify(s, prevBlank, prevType);
+  const [got] = classify(s, prevBlank, prevType, undefined, nextBlank, guessNames);
   if (got !== el) {
     if (el === 'action') s = '!' + text;            // กันโดนตีเป็นอย่างอื่น (ไม่มีวรรค = บรรยายบังคับ)
     else if (el === 'character') s = '@' + text;
@@ -245,6 +313,10 @@ export function lineFor(el, text, prevBlank, prevType) {
   }
   return s;
 }
+
+/** บล็อกถัดไปนับเป็น "บรรทัดว่าง" ไหม — ใช้ร่วมกันทุกตัวเขียนไฟล์ ให้ตัดสินเหมือนกันเป๊ะ */
+export const blockIsBlank = (b) =>
+  !b || b.el === 'blank' || (b.el === 'action' && !String(b.text ?? '').trim());
 
 /**
  * [alpha.60r3a] รหัสนำหน้าบรรทัดที่ "โหมดนิยายจะเห็นเป็นข้อความดิบ" — ใช้โดย markdown-code-toggle.js

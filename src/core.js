@@ -263,6 +263,11 @@ export const PROJECT_DEFAULTS = {
   // รูปแบบบทภาพยนตร์
   spElements: null, spStyles: null, spPageRules: null, spStrings: null,
   spCycle: null, spCycleKeys: null, spCycleEnabled: true,
+  // [alpha.78] บรรทัดถัดจาก "บทพูด" โดยไม่มีบรรทัดว่างคั่น = อะไร
+  //   false (ค่าเริ่มต้น · แนว Final Draft) = บรรยาย — เขียนเปล่า ๆ ได้เลย ไม่ต้องมี `!` นำหน้า
+  //   true  (แนว fountain) = บทพูดบรรทัดถัดไป — บรรยายต้องเขียน `!` บังคับ
+  // เป็นกฎที่ผู้ใช้ตั้งเอง (ตั้งค่า → การเขียน) ไม่ใช่ค่าที่โค้ดเดาแทน
+  spDialogueContinues: false,
   // [alpha.61 ข้อ 4] "ให้อิสระเรื่องตัวพิมพ์" — ทั้งสามตัวนี้คือจุดที่บทหนังเคยบังคับ case
   //   spForceCase      = บังคับ ALL-CAPS ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน)
   //   spAutoCapitalize = แก้ตัวแรกของประโยคเป็นตัวใหญ่ให้อัตโนมัติขณะพิมพ์

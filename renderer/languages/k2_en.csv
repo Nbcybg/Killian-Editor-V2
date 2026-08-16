@@ -2448,6 +2448,7 @@ ui.dlg.alphaItemLevelUser,"
     </div>
     <div class=""k-set-page"" data-p=""sp"">
       <div class=""k-row""><label>เปิดระบบปุ่มสลับ element<span class=""k-hint"">ปิด = Enter ขึ้นบรรทัดใหม่ชนิดเดิม · ปุ่มอื่นไม่ทำงาน</span></label><input type=""checkbox"" id=""st-spcycle-on""></div>
+      <div class=""k-row""><label>Line after dialogue continues the dialogue<span class=""k-hint"">Off (default, Final Draft style) = the next line is Action and needs no prefix · On = for multi-line speeches; Action must then start with !</span></label><input type=""checkbox"" id=""st-spdlgcont""></div>
       <div class=""k-set-sub"">ปุ่มที่ใช้ (กด ""เปลี่ยน"" แล้วกดปุ่มใหม่)</div>
       <div id=""st-spkeys""></div>
       <div class=""k-hint"" style=""margin:12px 0"">ควบคุมว่าปุ่มแต่ละตัวจะสร้างหรือสลับเป็น element ใด</div>

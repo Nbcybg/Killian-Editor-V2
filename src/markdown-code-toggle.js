@@ -89,7 +89,14 @@ export function scanMdCodes(doc, from, to) {
     if (!node.isTextblock) return;
     const first = node.firstChild;
     if (!first || !first.isText || !first.text) return;
-    const n = prefixLen(first.text);
+    // [alpha.78] ต้องอ่านจาก `node.textContent` ไม่ใช่ `first.text`
+    //
+    // ProseMirror ตัด inline เป็นคนละ text node ทุกครั้งที่ "ชุด mark" เปลี่ยน — บรรทัด
+    // `!**เด็กนั่งฟัง…**` จึงมีลูกสองตัว: `'!'` (ไม่มี mark) กับ `'เด็กนั่งฟัง…'` (ตัวหนา)
+    // เดิมส่งแค่ `first.text` = `'!'` ล้วน ๆ → `prefixLen` เห็นว่า "มีแต่รหัส ไม่มีเนื้อ"
+    // แล้วคืน 0 → **รหัสไม่ถูกซ่อนเลยทุกบรรทัดที่จัดรูปแบบตัวอักษรไว้**
+    // (decoration แบบ inline คร่อมข้าม text node ได้อยู่แล้ว จึงใช้ความยาวจากข้อความรวมได้ตรง ๆ)
+    const n = prefixLen(node.textContent);
     if (n > 0) {
       // pos = ตำแหน่งของบล็อก · +1 = เข้าไปข้างใน
       out.push(Deco.inline(pos + 1, pos + 1 + n, { class: MD_HIDE_CLASS }));
