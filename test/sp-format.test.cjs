@@ -277,9 +277,27 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
     SF.wrapLines(mixed, 6) >= 1 && SF.wrapLines(mixed, 6) <= 2, SF.wrapLines(mixed, 6));
   check('[wrap] ไทย+ละตินผสม กล่องแคบมาก → หลายบรรทัด',
     SF.wrapLines(mixed, 1) >= 4, SF.wrapLines(mixed, 1));
-  check('[wrap] วรรณยุกต์/สระ นับเป็นตัวอักษรด้วย (ไม่ใช่ความกว้าง 0)',
-    SF.wrapLines('กิ่ง'.repeat(10), 1) === SF.wrapLines('x'.repeat(40), 1),
+  // [alpha.82] เช็คนี้เคยล็อกพฤติกรรม **ที่ผิด** ไว้ตรง ๆ ว่า "สระ/วรรณยุกต์นับเป็นตัวอักษรด้วย"
+  // ซึ่งเป็นต้นตอที่ทำให้บทไทยตัดหน้าเร็วเกินจริง — วัดจากการวาดจริง (Courier Thai Mono 12pt
+  // กว้าง 6") พบว่า wrapLines เดาเกินความจริง **45.8%** · `กิ่ง` = 4 code point แต่กว้างแค่ 2 ตัว
+  // (`ิ` กับ `่` ซ้อนบน `ก` ไม่กินความกว้างเลย) จึงต้องเท่ากับ `x` 20 ตัว ไม่ใช่ 40
+  check('[wrap] สระ/วรรณยุกต์ไม่กินความกว้าง (กิ่ง×10 = 20 ตัว ไม่ใช่ 40)',
+    SF.wrapLines('กิ่ง'.repeat(10), 1) === SF.wrapLines('x'.repeat(20), 1),
+    SF.wrapLines('กิ่ง'.repeat(10), 1) + ' vs ' + SF.wrapLines('x'.repeat(20), 1));
+  check('[wrap] ...และต้องน้อยกว่าตอนนับทุก code point',
+    SF.wrapLines('กิ่ง'.repeat(10), 1) < SF.wrapLines('x'.repeat(40), 1),
     SF.wrapLines('กิ่ง'.repeat(10), 1) + ' vs ' + SF.wrapLines('x'.repeat(40), 1));
+  // splitText ต้องใช้เกณฑ์เดียวกับ wrapLines เป๊ะ ไม่งั้นหัวที่ตัดมายาวไม่ตรงกับบรรทัดที่จองไว้
+  // ข้อบังคับจริงคือ "หัวที่ตัดมา n บรรทัด ต้องวัดด้วย wrapLines แล้วได้ n เป๊ะ"
+  // ถ้าสองตัวนี้ใช้คนละเกณฑ์ หน้าจะจองที่ไว้ n บรรทัดแต่ข้อความจริงล้นหรือขาด
+  {
+    const long = 'กิ่ง '.repeat(20).trim();
+    for (const n of [1, 2, 3]) {
+      const h = SF.splitText(long, 1, n).head;
+      check('[wrap] splitText หัว ' + n + ' บรรทัด วัดด้วย wrapLines ได้ ' + n + ' เป๊ะ',
+        SF.wrapLines(h, 1) === n, SF.wrapLines(h, 1) + ' :: ' + JSON.stringify(h));
+    }
+  }
   check('[wrap] ข้อความว่าง = 1 บรรทัดเสมอ (ไม่ใช่ 0)', SF.wrapLines('   ', 6) === 1);
   check('[wrap] wrapLines ความกว้าง 0 ไม่พัง (อย่างน้อย 1 คอลัมน์)',
     SF.wrapLines('กขค', 0) >= 1, SF.wrapLines('กขค', 0));

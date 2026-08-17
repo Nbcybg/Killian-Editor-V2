@@ -3234,6 +3234,67 @@ body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
 body.paper-mode .sp-page-break { border-top-color:#c9c2ae; }
 body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 
+/* ---- [alpha.82] เส้นคั่นหน้าของนิยาย — สองแบบ เลือกได้ในตั้งค่า ----
+
+   แบบ "เส้นบาง" : กล่องสูง 0 ไม่มี margin · เส้นวาดด้วย ::before แบบ absolute
+   แบบ "แยกแผ่นจริง" (`body.k-page-gaps` · ค่าเริ่มต้น): กล่องสูงเท่า ขอบล่างกระดาษ + แถบคั่น
+   + ขอบบนกระดาษ เห็นเป็นคนละแผ่นเหมือน Word ขณะพิมพ์
+
+   ทั้งสองแบบไม่กระทบตัวเลข เพราะ measureProseBlocks() หักความสูงของกล่องพวกนี้ออกก่อนเสมอ
+   (พิกัดที่ใช้หั่นหน้าเป็นแบบ "ไม่มีช่องว่างคั่นหน้า") ถ้าไม่หัก การวัดรอบถัดไปจะเพี้ยนแล้ววนไม่จบ */
+.ed-page-break { margin:0; height:0; border-top:0; }
+.ed-page-break::before { content:''; position:absolute; left:0; right:0; top:0;
+  border-top:1px dashed var(--border); }
+body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
+.ed-page-break > .sp-page-break-num { top:-1.05em; }
+
+/* ตัดกลางย่อหน้า (ย่อหน้ายาวข้ามหน้า) — widget ต้องเป็น inline ไม่งั้น <div> ใน <p>
+   จะฉีกกล่องบรรทัด · กว้าง/สูงเป็นศูนย์ แล้ววาดเส้นล้ำออกไปเต็มความกว้างพื้นที่พิมพ์ */
+.ed-page-break.k-pb-inline { display:inline-block; width:0; height:0;
+  overflow:visible; vertical-align:top; text-indent:0; }
+.ed-page-break.k-pb-inline::before { left:0; right:auto; width:var(--text-w, 6in); top:-1px; }
+.ed-page-break.k-pb-inline > .sp-page-break-num { right:auto; left:var(--text-w, 6in);
+  transform:translateX(-100%); }
+
+/* ── แบบ "แยกแผ่นจริง" ────────────────────────────────────────────────────────
+   ความสูง = ขอบล่างของหน้าที่จบ + แถบคั่น + ขอบบนของหน้าถัดไป
+   ตัวกล่องเป็นสีกระดาษ (ต่อจากหน้าเดิม) แล้ว ::before ทาสีพื้นรอบกระดาษเฉพาะช่วงแถบคั่น
+   ล้ำออกนอกระยะขอบซ้าย/ขวาด้วย margin ติดลบ ให้เห็นว่าเป็นคนละแผ่นจริง ๆ
+   โหมดจัดหน้า (sp-view-layout) มีช่องว่างคั่นหน้าเป็นของตัวเองอยู่แล้ว จึงถูกกันออกจากกฎชุดนี้
+   ทั้งหมด — ไม่งั้นซ้อนสองชั้นแล้วระยะขอบถูกวาดซ้ำ */
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break {
+  height:calc(var(--mg-bottom, 1in) + var(--k-gap-band, 28px) + var(--mg-top, 1in));
+  margin:0 calc(-1 * var(--mg-right, 1in)) 0 calc(-1 * var(--mg-left, 1.5in));
+  border-top:0;
+}
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break::before {
+  top:var(--mg-bottom, 1in); bottom:var(--mg-top, 1in);
+  left:0; right:0; border-top:0;
+  background:var(--paper-surround, #3a3936);
+  box-shadow:inset 0 1px 0 var(--paper-edge, #d8d2c2), inset 0 -1px 0 var(--paper-edge, #d8d2c2);
+}
+/* เลขหน้าอยู่กลางแถบคั่น แบบ footer ของโปรแกรมจัดหน้า */
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break > .sp-page-break-num {
+  left:50%; right:auto; transform:translate(-50%, -50%);
+  top:calc(var(--mg-bottom, 1in) + var(--k-gap-band, 28px) / 2);
+  background:transparent; color:var(--dim);
+}
+/* ตัดกลางย่อหน้า: ต้องกว้างเต็มแผ่น (เลยระยะขอบทั้งสองข้าง) จึงถูกดันขึ้นบรรทัดของตัวเอง
+   vertical-align:top ทำให้กล่องบรรทัดสูงเท่ากล่องนี้พอดี — ไม่มีส่วนเกินให้การวัดคลาดเคลื่อน */
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-inline {
+  display:inline-block; vertical-align:top; overflow:visible; text-indent:0;
+  width:calc(100% + var(--mg-left, 1.5in) + var(--mg-right, 1in));
+  margin:0 0 0 calc(-1 * var(--mg-left, 1.5in));
+}
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-inline::before {
+  width:auto; left:0; right:0;
+}
+
+/* [alpha.82] กล่องครอบเนื้อหาในมุมมองหน้ากระดาษของนิยาย — สำเนาเนื้อหาจริงถูกเลื่อนขึ้น
+   แล้วครอบให้เหลือเฉพาะช่วงของหน้านั้น (ดู renderProseClipPages) */
+.ed-page-clip { position:relative; overflow:hidden; }
+.ed-page-clip > .ProseMirror { pointer-events:none; user-select:none; }
+
 /* ══════════ alpha.58 · [58] Layout View — เห็น "หน้ากระดาษจริง" ขณะพิมพ์ ══════════ */
 /* ต่างจากโหมดปกติตรงที่หน้ากระดาษเป็น "สีขาวจริง" และรอยต่อระหว่างหน้าเป็นช่องว่างจริง
    (ไม่ใช่เส้นประ) → เห็นว่าเนื้อหาแต่ละหน้าจบตรงไหนแบบเดียวกับ PDF ที่จะได้

@@ -19,6 +19,9 @@
 import { t } from './i18n.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS, textWidth } from './sp-format.js';
 import { num } from './num.js';
+// [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — ใช้ร่วมกับฝั่งบทภาพยนตร์
+import { visualLength } from './text-width.js';
+export { visualLength, ZERO_WIDTH_RE } from './text-width.js';
 
 const clamp = (v, lo, hi, d) => {
   const n = parseFloat(v);
@@ -289,9 +292,10 @@ export function proseWrap(text, cols, indentCols = 0) {
     if (!words.length) { total += 1; continue; }
     let line = 0, used = Math.max(0, Math.round(indentCols));
     for (const w of words) {
-      const need = used ? used + 1 + w.length : w.length;
+      const wl = visualLength(w);
+      const need = used ? used + 1 + wl : wl;
       if (need <= c) used = need;
-      else { line++; used = w.length; while (used > c) { line++; used -= c; } }
+      else { line++; used = wl; while (used > c) { line++; used -= c; } }
     }
     total += line + 1;
   }

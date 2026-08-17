@@ -19,7 +19,13 @@ const stubEl = () => ({ style: {}, classList: { add() {}, remove() {}, toggle() 
 globalThis.document = { createElement: stubEl, body: stubEl(), documentElement: stubEl(),
   addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] };
 globalThis.window = { addEventListener() {}, localStorage: { getItem: () => null, setItem() {} } };
-globalThis.navigator = { platform: 'Win32' };
+// [alpha.82] Node 21+ มี `navigator` เป็น global ของตัวเองแบบ **เขียนทับไม่ได้** →
+// `globalThis.navigator = …` เงียบหายไปเฉย ๆ แล้ว core.js อ่าน `navigator.platform` ได้
+// 'MacIntel' จริงจากเครื่อง → isMac = true → ทุกเช็คที่คาดข้อความแบบ Windows พังหมด 6 ข้อ
+// (เทสนี้ตั้งใจล็อกเป็น Win32 เพื่อให้ผลเท่ากันทุกเครื่อง) — ต้องยัดด้วย defineProperty
+Object.defineProperty(globalThis, 'navigator', {
+  value: { platform: 'Win32' }, configurable: true, writable: true,
+});
 globalThis.localStorage = globalThis.window.localStorage;
 const C = require(out);
 

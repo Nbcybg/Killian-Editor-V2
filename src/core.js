@@ -278,6 +278,9 @@ export const PROJECT_DEFAULTS = {
   spShowFormat: false, spCheckBeforeExport: true, spLineLimits: null,
   spSceneNumbers: null, spPageNumbers: null,
   spContinued: null, spLineHeight: 1, spPageGap: 28,
+  // [alpha.82] แยกหน้าเป็นแผ่นจริงขณะพิมพ์ (ขอบล่าง + แถบคั่น + ขอบบน) แบบ Word
+  // ปิด = เส้นประบาง ๆ แบบเดิม · ไม่กระทบตัวเลขหน้าไม่ว่าเปิดหรือปิด
+  paperGaps: true, paperGapBand: 28,
   // รูปแบบนิยาย (prose)
   prose: null,
   // ฟอนต์ตามภาษา

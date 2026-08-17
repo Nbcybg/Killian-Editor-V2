@@ -36,15 +36,26 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
   }
   function breaks() { return list.slice(); }
 
+  /**
+   * [alpha.82] เส้นคั่นหน้าอยู่กลางย่อหน้าได้แล้ว (การจัดหน้าจริงตัดตาม "บรรทัด" ไม่ใช่ย่อหน้า)
+   * ตำแหน่งที่อยู่ใน textblock ต้องวาดด้วย element ระดับ inline ไม่งั้น <div> ใน <p>
+   * จะฉีกกล่องบรรทัดของย่อหน้าและดันข้อความเลื่อน → การวัดรอบถัดไปเพี้ยนตาม
+   * ตัวแปร inline จึงกว้าง/สูงเป็นศูนย์ แล้ววาดเส้นด้วย ::before แบบ absolute (ไม่กินที่เลย)
+   */
+  function isInline(doc, pos) {
+    try { return !!doc.resolve(pos).parent.isTextblock; } catch { return false; }
+  }
+
   function decos(doc) {
     if (!list.length || !doc) return DecoSet.empty;
     const max = doc.content.size;
     const out = [];
     for (const b of list) {
       if (b.pos > max) continue;
+      const inline = isInline(doc, b.pos);
       out.push(Deco.widget(b.pos, () => {
-        const d = document.createElement('div');
-        d.className = cls;
+        const d = document.createElement(inline ? 'span' : 'div');
+        d.className = cls + (inline ? ' k-pb-inline' : '');
         d.dataset.page = String(b.page || '');
         d.setAttribute('contenteditable', 'false');
         const lbl = document.createElement('span');
@@ -52,7 +63,7 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
         lbl.textContent = text(b.page);
         d.append(lbl);
         return d;
-      }, { side: -1, key: decoKey + b.pos + '-' + b.page }));
+      }, { side: -1, key: decoKey + b.pos + '-' + b.page + (inline ? 'i' : '') }));
     }
     return DecoSet.create(doc, out);
   }

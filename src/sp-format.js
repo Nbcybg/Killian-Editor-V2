@@ -12,6 +12,8 @@
 
 import { t } from './i18n.js';
 import { num } from './num.js';
+// [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — บรรทัด/หน้าของบทจะเกินจริงเกือบครึ่ง
+import { visualLength } from './text-width.js';
 
 // ───────── 85. ขนาดกระดาษ + ระยะขอบ ─────────
 export const PAPER_SIZES = {
@@ -367,9 +369,10 @@ export function wrapLines(text, widthIn, cpi = CHARS_PER_INCH) {
     if (!words.length) { total += 1; continue; }
     let line = 0, used = 0;
     for (const w of words) {
-      const need = used ? used + 1 + w.length : w.length;
+      const wl = visualLength(w);
+      const need = used ? used + 1 + wl : wl;
       if (need <= cols) { used = need; }
-      else { line++; used = w.length; while (used > cols) { line++; used -= cols; } }
+      else { line++; used = wl; while (used > cols) { line++; used -= cols; } }
     }
     total += line + 1;
   }
@@ -502,7 +505,9 @@ export function splitText(text, widthIn, n) {
   let cur = '';
   for (const w of words) {
     const next = cur ? cur + ' ' + w : w;
-    if (next.length <= cols) cur = next;
+    // [alpha.82] วัดด้วยความกว้างที่มองเห็น ไม่ใช่จำนวนตัวอักษร — ต้องใช้เกณฑ์เดียวกับ
+    // wrapLines() เป๊ะ ไม่งั้น "หัวที่ตัดมา" ยาวไม่เท่าจำนวนบรรทัดที่บัญชีหน้าจองไว้
+    if (visualLength(next) <= cols) cur = next;
     else { if (cur) lines.push(cur); cur = w; }
   }
   if (cur) lines.push(cur);

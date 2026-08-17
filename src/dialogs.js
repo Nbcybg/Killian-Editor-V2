@@ -206,6 +206,9 @@ export function settingsDialog(openTab) {
     // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
     spLineHeight: Number.isFinite(+s.spLineHeight) ? +s.spLineHeight : 1,
     spPageGap: parseInt(s.spPageGap, 10) || 28,
+    // [alpha.82] แยกหน้าเป็นแผ่นจริงขณะพิมพ์
+    paperGaps: s.paperGaps !== false,
+    paperGapBand: Number.isFinite(parseInt(s.paperGapBand, 10)) ? parseInt(s.paperGapBand, 10) : 28,
   };
 
   const ov = el('div', 'k-overlay');
@@ -536,6 +539,15 @@ export function settingsDialog(openTab) {
   // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท — เปลี่ยนแล้ว "บรรทัด/หน้า" ต้องเปลี่ยนตามทันที
   numIn('#st-splh', () => W.spLineHeight, (v) => { W.spLineHeight = Math.max(0.8, Math.min(2.5, v)); });
   numIn('#st-sppagegap', () => W.spPageGap, (v) => { W.spPageGap = Math.max(8, Math.min(120, Math.round(v))); });
+  // [alpha.82] แยกหน้าเป็นแผ่นจริง — พรีวิวทันทีเหมือนค่าหน้ากระดาษตัวอื่น
+  numIn('#st-papergapband', () => W.paperGapBand, (v) => { W.paperGapBand = Math.max(0, Math.min(200, Math.round(v))); });
+  {
+    const cb = q('#st-papergaps');
+    if (cb) {
+      cb.checked = W.paperGaps !== false;
+      cb.onchange = () => { W.paperGaps = cb.checked; pageInfo(); previewPage(); };
+    }
+  }
   numIn('#st-paper-w', () => W.customPaper.width, (v) => { W.customPaper.width = v; });
   numIn('#st-paper-h', () => W.customPaper.height, (v) => { W.customPaper.height = v; });
   for (const side of ['top', 'bottom', 'left', 'right'])
@@ -598,11 +610,13 @@ export function settingsDialog(openTab) {
     const keep = { paperSize: s.paperSize, customPaper: s.customPaper, pageMargins: s.pageMargins,
                    spElements: s.spElements, spStyles: s.spStyles,
                    spSceneNumbers: s.spSceneNumbers, spPageNumbers: s.spPageNumbers,
-                   spLineHeight: s.spLineHeight, spPageGap: s.spPageGap };
+                   spLineHeight: s.spLineHeight, spPageGap: s.spPageGap,
+                   paperGaps: s.paperGaps, paperGapBand: s.paperGapBand };
     Object.assign(s, { paperSize: W.paperSize, customPaper: W.customPaper, pageMargins: W.margins,
                        spElements: W.elements, spStyles: W.styles,
                        spSceneNumbers: W.sceneNumbers, spPageNumbers: W.pageNumbers,
-                       spLineHeight: W.spLineHeight, spPageGap: W.spPageGap });
+                       spLineHeight: W.spLineHeight, spPageGap: W.spPageGap,
+                       paperGaps: W.paperGaps, paperGapBand: W.paperGapBand });
     applyPageVars();
     try { updatePageNumberHint(); refreshSpView(); } catch {}
     Object.assign(s, keep);   // ค่าจริงยังไม่เปลี่ยนจนกว่าจะกดบันทึก
@@ -645,8 +659,9 @@ export function settingsDialog(openTab) {
     W.paperSize = 'letter'; W.customPaper = { width: 8.5, height: 11 };
     W.margins = { ...MARGIN_DEFAULTS };
     W.rules = { ...PAGE_BREAK_RULES }; W.strings = { ...SP_STRINGS };
-    W.spLineHeight = 1; W.spPageGap = 28;
+    W.spLineHeight = 1; W.spPageGap = 28; W.paperGaps = true; W.paperGapBand = 28;
     q('#st-splh').value = '1'; q('#st-sppagegap').value = '28';
+    q('#st-papergaps').checked = true; q('#st-papergapband').value = '28';
     paperSel.value = 'letter';
     for (const side of ['top', 'bottom', 'left', 'right']) q('#st-mg-' + side).value = W.margins[side];
     q('#st-paper-w').value = W.customPaper.width; q('#st-paper-h').value = W.customPaper.height;
@@ -1087,6 +1102,8 @@ export function settingsDialog(openTab) {
     s.spPageNumbers = { ...W.pageNumbers };
     s.spLineHeight = W.spLineHeight;              // [alpha.58r บั๊ก 5]
     s.spPageGap = W.spPageGap;
+    s.paperGaps = W.paperGaps !== false;          // [alpha.82]
+    s.paperGapBand = W.paperGapBand;
     s.typeSound = q('#st-typesnd').checked;
     s.typeSoundMode = q('#st-typesnd-mode').value === 'typewriter' ? 'typewriter' : 'always';
     s.typeSoundAlways = s.typeSoundMode === 'always';   // คีย์เก่า — ให้รุ่นก่อนอ่านต่อได้
