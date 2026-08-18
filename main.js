@@ -699,6 +699,8 @@ const MENU_PANELS = [
   // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
   { id: 'dialogue', label: tt('ui.menu.dialoguePanel') },
   { id: 'plugins', label: tt('ui.menu.pluginsPanel') },
+  // [alpha.82] ห้องซ้อมบท
+  { id: 'dlgb', label: tt('ui.menu.dlgbPanel') },
 ];
 /** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
 const MENU_PANELS_SKIP = {

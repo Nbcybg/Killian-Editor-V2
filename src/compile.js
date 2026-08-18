@@ -239,8 +239,14 @@ export function mdToHtmlBody(md) {
     const line = raw.replace(/\s+$/, '');
     if (line.trim() === PAGE_BREAK) { closeList(); out.push('<div class="pb"></div>'); continue; }
     if (!line.trim()) { closeList(); continue; }
-    const h = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (h) { closeList(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+    // [alpha.83 ข้อ 1] หัวข้อว่าง (`###` ล้วน) = บรรทัดว่าง — ไม่ใช่ย่อหน้าที่มีข้อความ `###`
+    const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
+    if (h) {
+      closeList();
+      const ht = String(h[2] || '').trim();
+      if (ht) out.push(`<h${h[1].length}>${inline(ht)}</h${h[1].length}>`);
+      continue;
+    }
     if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { closeList(); out.push('<hr>'); continue; }
     const ul = /^\s*[-*+]\s+(.*)$/.exec(line);
     const ol = /^\s*\d+\.\s+(.*)$/.exec(line);

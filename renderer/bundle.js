@@ -5526,19 +5526,19 @@
       console["warn"]("TextSelection endpoint not pointing into a node with inline content (" + $pos.parent.type.name + ")");
     }
   }
-  function findSelectionIn(doc3, node, pos, index, dir, text = false) {
+  function findSelectionIn(doc3, node, pos, index, dir2, text = false) {
     if (node.inlineContent)
       return TextSelection.create(doc3, pos);
-    for (let i5 = index - (dir > 0 ? 0 : 1); dir > 0 ? i5 < node.childCount : i5 >= 0; i5 += dir) {
+    for (let i5 = index - (dir2 > 0 ? 0 : 1); dir2 > 0 ? i5 < node.childCount : i5 >= 0; i5 += dir2) {
       let child = node.child(i5);
       if (!child.isAtom) {
-        let inner = findSelectionIn(doc3, child, pos + dir, dir < 0 ? child.childCount : 0, dir, text);
+        let inner = findSelectionIn(doc3, child, pos + dir2, dir2 < 0 ? child.childCount : 0, dir2, text);
         if (inner)
           return inner;
       } else if (!text && NodeSelection.isSelectable(child)) {
-        return NodeSelection.create(doc3, pos - (dir < 0 ? child.nodeSize : 0));
+        return NodeSelection.create(doc3, pos - (dir2 < 0 ? child.nodeSize : 0));
       }
-      pos += child.nodeSize * dir;
+      pos += child.nodeSize * dir2;
     }
     return null;
   }
@@ -5687,12 +5687,12 @@
         selections. Will return null when no valid selection position is
         found.
         */
-        static findFrom($pos, dir, textOnly = false) {
-          let inner = $pos.parent.inlineContent ? new TextSelection($pos) : findSelectionIn($pos.node(0), $pos.parent, $pos.pos, $pos.index(), dir, textOnly);
+        static findFrom($pos, dir2, textOnly = false) {
+          let inner = $pos.parent.inlineContent ? new TextSelection($pos) : findSelectionIn($pos.node(0), $pos.parent, $pos.pos, $pos.index(), dir2, textOnly);
           if (inner)
             return inner;
           for (let depth = $pos.depth - 1; depth >= 0; depth--) {
-            let found2 = dir < 0 ? findSelectionIn($pos.node(0), $pos.node(depth), $pos.before(depth + 1), $pos.index(depth), dir, textOnly) : findSelectionIn($pos.node(0), $pos.node(depth), $pos.after(depth + 1), $pos.index(depth) + 1, dir, textOnly);
+            let found2 = dir2 < 0 ? findSelectionIn($pos.node(0), $pos.node(depth), $pos.before(depth + 1), $pos.index(depth), dir2, textOnly) : findSelectionIn($pos.node(0), $pos.node(depth), $pos.after(depth + 1), $pos.index(depth) + 1, dir2, textOnly);
             if (found2)
               return found2;
           }
@@ -6453,27 +6453,27 @@
   });
 
   // node_modules/prosemirror-view/dist/index.js
-  function scanFor(node, off3, targetNode, targetOff, dir) {
+  function scanFor(node, off3, targetNode, targetOff, dir2) {
     var _a;
     for (; ; ) {
       if (node == targetNode && off3 == targetOff)
         return true;
-      if (off3 == (dir < 0 ? 0 : nodeSize(node))) {
+      if (off3 == (dir2 < 0 ? 0 : nodeSize(node))) {
         let parent = node.parentNode;
         if (!parent || parent.nodeType != 1 || hasBlockDesc(node) || atomElements.test(node.nodeName) || node.contentEditable == "false")
           return false;
-        off3 = domIndex(node) + (dir < 0 ? 0 : 1);
+        off3 = domIndex(node) + (dir2 < 0 ? 0 : 1);
         node = parent;
       } else if (node.nodeType == 1) {
-        let child = node.childNodes[off3 + (dir < 0 ? -1 : 0)];
+        let child = node.childNodes[off3 + (dir2 < 0 ? -1 : 0)];
         if (child.nodeType == 1 && child.contentEditable == "false") {
           if ((_a = child.pmViewDesc) === null || _a === void 0 ? void 0 : _a.ignoreForSelection)
-            off3 += dir;
+            off3 += dir2;
           else
             return false;
         } else {
           node = child;
-          off3 = dir < 0 ? nodeSize(node) : 0;
+          off3 = dir2 < 0 ? nodeSize(node) : 0;
         }
       } else {
         return false;
@@ -6962,11 +6962,11 @@
         active.focus();
     }
   }
-  function endOfTextblockVertical(view2, state2, dir) {
+  function endOfTextblockVertical(view2, state2, dir2) {
     let sel = state2.selection;
-    let $pos = dir == "up" ? sel.$from : sel.$to;
+    let $pos = dir2 == "up" ? sel.$from : sel.$to;
     return withFlushedState(view2, state2, () => {
-      let { node: dom } = view2.docView.domFromPos($pos.pos, dir == "up" ? -1 : 1);
+      let { node: dom } = view2.docView.domFromPos($pos.pos, dir2 == "up" ? -1 : 1);
       for (; ; ) {
         let nearest = view2.docView.nearestDesc(dom, true);
         if (!nearest)
@@ -6988,14 +6988,14 @@
           continue;
         for (let i5 = 0; i5 < boxes.length; i5++) {
           let box2 = boxes[i5];
-          if (box2.bottom > box2.top + 1 && (dir == "up" ? coords.top - box2.top > (box2.bottom - coords.top) * 2 : box2.bottom - coords.bottom > (coords.bottom - box2.top) * 2))
+          if (box2.bottom > box2.top + 1 && (dir2 == "up" ? coords.top - box2.top > (box2.bottom - coords.top) * 2 : box2.bottom - coords.bottom > (coords.bottom - box2.top) * 2))
             return false;
         }
       }
       return true;
     });
   }
-  function endOfTextblockHorizontal(view2, state2, dir) {
+  function endOfTextblockHorizontal(view2, state2, dir2) {
     let { $head } = state2.selection;
     if (!$head.parent.isTextblock)
       return false;
@@ -7004,11 +7004,11 @@
     if (!sel)
       return $head.pos == $head.start() || $head.pos == $head.end();
     if (!maybeRTL.test($head.parent.textContent) || !sel.modify)
-      return dir == "left" || dir == "backward" ? atStart : atEnd;
+      return dir2 == "left" || dir2 == "backward" ? atStart : atEnd;
     return withFlushedState(view2, state2, () => {
       let { focusNode: oldNode, focusOffset: oldOff, anchorNode, anchorOffset } = view2.domSelectionRange();
       let oldBidiLevel = sel.caretBidiLevel;
-      sel.modify("move", dir, "character");
+      sel.modify("move", dir2, "character");
       let parentDOM = $head.depth ? view2.docView.domAfterPos($head.before()) : view2.dom;
       let { focusNode: newNode, focusOffset: newOff } = view2.domSelectionRange();
       let result = newNode && !parentDOM.contains(newNode.nodeType == 1 ? newNode : newNode.parentNode) || oldNode == newNode && oldOff == newOff;
@@ -7023,12 +7023,12 @@
       return result;
     });
   }
-  function endOfTextblock(view2, state2, dir) {
-    if (cachedState == state2 && cachedDir == dir)
+  function endOfTextblock(view2, state2, dir2) {
+    if (cachedState == state2 && cachedDir == dir2)
       return cachedResult;
     cachedState = state2;
-    cachedDir = dir;
-    return cachedResult = dir == "up" || dir == "down" ? endOfTextblockVertical(view2, state2, dir) : endOfTextblockHorizontal(view2, state2, dir);
+    cachedDir = dir2;
+    return cachedResult = dir2 == "up" || dir2 == "down" ? endOfTextblockVertical(view2, state2, dir2) : endOfTextblockHorizontal(view2, state2, dir2);
   }
   function docViewDesc(doc3, outerDeco, innerDeco, dom, view2) {
     applyOuterDeco(dom, outerDeco, doc3);
@@ -7505,51 +7505,51 @@
     let domSel = view2.domSelectionRange();
     return isEquivalentPosition(anchorDOM.node, anchorDOM.offset, domSel.anchorNode, domSel.anchorOffset);
   }
-  function moveSelectionBlock(state2, dir) {
+  function moveSelectionBlock(state2, dir2) {
     let { $anchor, $head } = state2.selection;
-    let $side = dir > 0 ? $anchor.max($head) : $anchor.min($head);
-    let $start = !$side.parent.inlineContent ? $side : $side.depth ? state2.doc.resolve(dir > 0 ? $side.after() : $side.before()) : null;
-    return $start && Selection.findFrom($start, dir);
+    let $side = dir2 > 0 ? $anchor.max($head) : $anchor.min($head);
+    let $start = !$side.parent.inlineContent ? $side : $side.depth ? state2.doc.resolve(dir2 > 0 ? $side.after() : $side.before()) : null;
+    return $start && Selection.findFrom($start, dir2);
   }
   function apply(view2, sel) {
     view2.dispatch(view2.state.tr.setSelection(sel).scrollIntoView());
     return true;
   }
-  function selectHorizontally(view2, dir, mods) {
+  function selectHorizontally(view2, dir2, mods) {
     let sel = view2.state.selection;
     if (sel instanceof TextSelection) {
       if (mods.indexOf("s") > -1) {
-        let { $head } = sel, node = $head.textOffset ? null : dir < 0 ? $head.nodeBefore : $head.nodeAfter;
+        let { $head } = sel, node = $head.textOffset ? null : dir2 < 0 ? $head.nodeBefore : $head.nodeAfter;
         if (!node || node.isText || !node.isLeaf)
           return false;
-        let $newHead = view2.state.doc.resolve($head.pos + node.nodeSize * (dir < 0 ? -1 : 1));
+        let $newHead = view2.state.doc.resolve($head.pos + node.nodeSize * (dir2 < 0 ? -1 : 1));
         return apply(view2, new TextSelection(sel.$anchor, $newHead));
       } else if (!sel.empty) {
         return false;
-      } else if (view2.endOfTextblock(dir > 0 ? "forward" : "backward")) {
-        let next = moveSelectionBlock(view2.state, dir);
+      } else if (view2.endOfTextblock(dir2 > 0 ? "forward" : "backward")) {
+        let next = moveSelectionBlock(view2.state, dir2);
         if (next && next instanceof NodeSelection)
           return apply(view2, next);
         return false;
       } else if (!(mac && mods.indexOf("m") > -1)) {
-        let $head = sel.$head, node = $head.textOffset ? null : dir < 0 ? $head.nodeBefore : $head.nodeAfter, desc;
+        let $head = sel.$head, node = $head.textOffset ? null : dir2 < 0 ? $head.nodeBefore : $head.nodeAfter, desc;
         if (!node || node.isText)
           return false;
-        let nodePos = dir < 0 ? $head.pos - node.nodeSize : $head.pos;
+        let nodePos = dir2 < 0 ? $head.pos - node.nodeSize : $head.pos;
         if (!(node.isAtom || (desc = view2.docView.descAt(nodePos)) && !desc.contentDOM))
           return false;
         if (NodeSelection.isSelectable(node)) {
-          return apply(view2, new NodeSelection(dir < 0 ? view2.state.doc.resolve($head.pos - node.nodeSize) : $head));
+          return apply(view2, new NodeSelection(dir2 < 0 ? view2.state.doc.resolve($head.pos - node.nodeSize) : $head));
         } else if (webkit) {
-          return apply(view2, new TextSelection(view2.state.doc.resolve(dir < 0 ? nodePos : nodePos + node.nodeSize)));
+          return apply(view2, new TextSelection(view2.state.doc.resolve(dir2 < 0 ? nodePos : nodePos + node.nodeSize)));
         } else {
           return false;
         }
       }
     } else if (sel instanceof NodeSelection && sel.node.isInline) {
-      return apply(view2, new TextSelection(dir > 0 ? sel.$to : sel.$from));
+      return apply(view2, new TextSelection(dir2 > 0 ? sel.$to : sel.$from));
     } else {
-      let next = moveSelectionBlock(view2.state, dir);
+      let next = moveSelectionBlock(view2.state, dir2);
       if (next)
         return apply(view2, next);
       return false;
@@ -7558,12 +7558,12 @@
   function nodeLen(node) {
     return node.nodeType == 3 ? node.nodeValue.length : node.childNodes.length;
   }
-  function isIgnorable(dom, dir) {
+  function isIgnorable(dom, dir2) {
     let desc = dom.pmViewDesc;
-    return desc && desc.size == 0 && (dir < 0 || dom.nextSibling || dom.nodeName != "BR");
+    return desc && desc.size == 0 && (dir2 < 0 || dom.nextSibling || dom.nodeName != "BR");
   }
-  function skipIgnoredNodes(view2, dir) {
-    return dir < 0 ? skipIgnoredNodesBefore(view2) : skipIgnoredNodesAfter(view2);
+  function skipIgnoredNodes(view2, dir2) {
+    return dir2 < 0 ? skipIgnoredNodesBefore(view2) : skipIgnoredNodesAfter(view2);
   }
   function skipIgnoredNodesBefore(view2) {
     let sel = view2.domSelectionRange();
@@ -7738,26 +7738,26 @@
     let computed = getComputedStyle(view2.dom).direction;
     return computed == "rtl" ? "rtl" : "ltr";
   }
-  function selectVertically(view2, dir, mods) {
+  function selectVertically(view2, dir2, mods) {
     let sel = view2.state.selection;
     if (sel instanceof TextSelection && !sel.empty || mods.indexOf("s") > -1)
       return false;
     if (mac && mods.indexOf("m") > -1)
       return false;
     let { $from, $to } = sel;
-    if (!$from.parent.inlineContent || view2.endOfTextblock(dir < 0 ? "up" : "down")) {
-      let next = moveSelectionBlock(view2.state, dir);
+    if (!$from.parent.inlineContent || view2.endOfTextblock(dir2 < 0 ? "up" : "down")) {
+      let next = moveSelectionBlock(view2.state, dir2);
       if (next && next instanceof NodeSelection)
         return apply(view2, next);
     }
     if (!$from.parent.inlineContent) {
-      let side = dir < 0 ? $from : $to;
-      let beyond = sel instanceof AllSelection ? Selection.near(side, dir) : Selection.findFrom(side, dir);
+      let side = dir2 < 0 ? $from : $to;
+      let beyond = sel instanceof AllSelection ? Selection.near(side, dir2) : Selection.findFrom(side, dir2);
       return beyond ? apply(view2, beyond) : false;
     }
     return false;
   }
-  function stopNativeHorizontalDelete(view2, dir) {
+  function stopNativeHorizontalDelete(view2, dir2) {
     if (!(view2.state.selection instanceof TextSelection))
       return true;
     let { $head, $anchor, empty: empty2 } = view2.state.selection;
@@ -7765,12 +7765,12 @@
       return true;
     if (!empty2)
       return false;
-    if (view2.endOfTextblock(dir > 0 ? "forward" : "backward"))
+    if (view2.endOfTextblock(dir2 > 0 ? "forward" : "backward"))
       return true;
-    let nextNode = !$head.textOffset && (dir < 0 ? $head.nodeBefore : $head.nodeAfter);
+    let nextNode = !$head.textOffset && (dir2 < 0 ? $head.nodeBefore : $head.nodeAfter);
     if (nextNode && !nextNode.isText) {
       let tr4 = view2.state.tr;
-      if (dir < 0)
+      if (dir2 < 0)
         tr4.delete($head.pos - nextNode.nodeSize, $head.pos);
       else
         tr4.delete($head.pos, $head.pos + nextNode.nodeSize);
@@ -7816,11 +7816,11 @@
     } else if (code3 == 13 || code3 == 27) {
       return true;
     } else if (code3 == 37 || mac && code3 == 66 && mods == "c") {
-      let dir = code3 == 37 ? findDirection(view2, view2.state.selection.from) == "ltr" ? -1 : 1 : -1;
-      return selectHorizontally(view2, dir, mods) || skipIgnoredNodes(view2, dir);
+      let dir2 = code3 == 37 ? findDirection(view2, view2.state.selection.from) == "ltr" ? -1 : 1 : -1;
+      return selectHorizontally(view2, dir2, mods) || skipIgnoredNodes(view2, dir2);
     } else if (code3 == 39 || mac && code3 == 70 && mods == "c") {
-      let dir = code3 == 39 ? findDirection(view2, view2.state.selection.from) == "ltr" ? 1 : -1 : 1;
-      return selectHorizontally(view2, dir, mods) || skipIgnoredNodes(view2, dir);
+      let dir2 = code3 == 39 ? findDirection(view2, view2.state.selection.from) == "ltr" ? 1 : -1 : 1;
+      return selectHorizontally(view2, dir2, mods) || skipIgnoredNodes(view2, dir2);
     } else if (code3 == 38 || mac && code3 == 80 && mods == "c") {
       return selectVertically(view2, -1, mods) || skipIgnoredNodes(view2, -1);
     } else if (code3 == 40 || mac && code3 == 78 && mods == "c") {
@@ -11402,7 +11402,7 @@
         }
         updateStateInner(state2, prevProps) {
           var _a;
-          let prev = this.state, redraw = false, updateSel = false;
+          let prev = this.state, redraw2 = false, updateSel = false;
           if (state2.storedMarks && this.composing) {
             clearComposition(this);
             updateSel = true;
@@ -11413,7 +11413,7 @@
             let nodeViews = buildNodeViews(this);
             if (changedNodeViews(nodeViews, this.nodeViews)) {
               this.nodeViews = nodeViews;
-              redraw = true;
+              redraw2 = true;
             }
           }
           if (pluginsChanged || prevProps.handleDOMEvents != this._props.handleDOMEvents) {
@@ -11423,7 +11423,7 @@
           updateCursorWrapper(this);
           let innerDeco = viewDecorations(this), outerDeco = computeDocDeco(this);
           let scroll = prev.plugins != state2.plugins && !prev.doc.eq(state2.doc) ? "reset" : state2.scrollToSelection > prev.scrollToSelection ? "to selection" : "preserve";
-          let updateDoc = redraw || !this.docView.matchesNode(state2.doc, outerDeco, innerDeco);
+          let updateDoc = redraw2 || !this.docView.matchesNode(state2.doc, outerDeco, innerDeco);
           if (updateDoc || !state2.selection.eq(prev.selection))
             updateSel = true;
           let oldScrollPos = scroll == "preserve" && updateSel && this.dom.style.overflowAnchor == null && storeScrollPos(this);
@@ -11434,7 +11434,7 @@
               let chromeKludge = chrome ? this.trackWrites = this.domSelectionRange().focusNode : null;
               if (this.composing)
                 this.input.compositionNode = findCompositionNode(this);
-              if (redraw || !this.docView.update(state2.doc, outerDeco, innerDeco, this)) {
+              if (redraw2 || !this.docView.update(state2.doc, outerDeco, innerDeco, this)) {
                 this.docView.updateOuterDeco(outerDeco);
                 this.docView.destroy();
                 this.docView = docViewDesc(state2.doc, outerDeco, innerDeco, this.dom, this);
@@ -11662,8 +11662,8 @@
         to the view's current state by default, but it is possible to
         pass a different state.
         */
-        endOfTextblock(dir, state2) {
-          return endOfTextblock(this, state2 || this.state, dir);
+        endOfTextblock(dir2, state2) {
+          return endOfTextblock(this, state2 || this.state, dir2);
         }
         /**
         Run the editor's paste logic with the given HTML string. The
@@ -12609,7 +12609,7 @@
       dispatch(state2.tr.join($pos.pos).scrollIntoView());
     return true;
   }
-  function deleteBarrier(state2, $cut, dispatch, dir) {
+  function deleteBarrier(state2, $cut, dispatch, dir2) {
     let before = $cut.nodeBefore, after = $cut.nodeAfter, conn, match;
     let isolated = before.type.spec.isolating || after.type.spec.isolating;
     if (!isolated && joinMaybeClear(state2, $cut, dispatch))
@@ -12629,7 +12629,7 @@
       }
       return true;
     }
-    let selAfter = after.type.spec.isolating || dir > 0 && isolated ? null : Selection.findFrom($cut, 1);
+    let selAfter = after.type.spec.isolating || dir2 > 0 && isolated ? null : Selection.findFrom($cut, 1);
     let range3 = selAfter && selAfter.$from.blockRange(selAfter.$to), target = range3 && liftTarget(range3);
     if (target != null && target >= $cut.depth) {
       if (dispatch)
@@ -13559,18 +13559,18 @@
       }
     });
   }
-  function arrow(axis, dir) {
-    const dirStr = axis == "vert" ? dir > 0 ? "down" : "up" : dir > 0 ? "right" : "left";
+  function arrow(axis, dir2) {
+    const dirStr = axis == "vert" ? dir2 > 0 ? "down" : "up" : dir2 > 0 ? "right" : "left";
     return function(state2, dispatch, view2) {
       let sel = state2.selection;
-      let $start = dir > 0 ? sel.$to : sel.$from, mustMove = sel.empty;
+      let $start = dir2 > 0 ? sel.$to : sel.$from, mustMove = sel.empty;
       if (sel instanceof TextSelection) {
         if (!view2.endOfTextblock(dirStr) || $start.depth == 0)
           return false;
         mustMove = false;
-        $start = state2.doc.resolve(dir > 0 ? $start.after() : $start.before());
+        $start = state2.doc.resolve(dir2 > 0 ? $start.after() : $start.before());
       }
-      let $found = GapCursor.findGapCursorFrom($start, dir, mustMove);
+      let $found = GapCursor.findGapCursorFrom($start, dir2, mustMove);
       if (!$found)
         return false;
       if (dispatch)
@@ -13669,36 +13669,36 @@
         /**
         @internal
         */
-        static findGapCursorFrom($pos, dir, mustMove = false) {
+        static findGapCursorFrom($pos, dir2, mustMove = false) {
           search: for (; ; ) {
             if (!mustMove && _GapCursor.valid($pos))
               return $pos;
             let pos = $pos.pos, next = null;
             for (let d = $pos.depth; ; d--) {
               let parent = $pos.node(d);
-              if (dir > 0 ? $pos.indexAfter(d) < parent.childCount : $pos.index(d) > 0) {
-                next = parent.child(dir > 0 ? $pos.indexAfter(d) : $pos.index(d) - 1);
+              if (dir2 > 0 ? $pos.indexAfter(d) < parent.childCount : $pos.index(d) > 0) {
+                next = parent.child(dir2 > 0 ? $pos.indexAfter(d) : $pos.index(d) - 1);
                 break;
               } else if (d == 0) {
                 return null;
               }
-              pos += dir;
+              pos += dir2;
               let $cur = $pos.doc.resolve(pos);
               if (_GapCursor.valid($cur))
                 return $cur;
             }
             for (; ; ) {
-              let inside = dir > 0 ? next.firstChild : next.lastChild;
+              let inside = dir2 > 0 ? next.firstChild : next.lastChild;
               if (!inside) {
                 if (next.isAtom && !next.isText && !NodeSelection.isSelectable(next)) {
-                  $pos = $pos.doc.resolve(pos + next.nodeSize * dir);
+                  $pos = $pos.doc.resolve(pos + next.nodeSize * dir2);
                   mustMove = false;
                   continue search;
                 }
                 break;
               }
               next = inside;
-              pos += dir;
+              pos += dir2;
               let $cur = $pos.doc.resolve(pos);
               if (_GapCursor.valid($cur))
                 return $cur;
@@ -13741,7 +13741,7 @@
         [/(?<![\w_])_([^_\n]+)_(?![\w_])/, ["underline"]],
         [/~~([^~\n]+)~~/, ["strike"]]
       ];
-      var RE_H = /^(#{1,6}) /;
+      var RE_H = /^(#{1,6})(?: |$)/;
       var RE_UL = /^[-*] /;
       var RE_OL = /^(\d+)\. /;
       var RE_IMG = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
@@ -13850,12 +13850,9 @@
             out.push({ type: "figure", attrs: { src: m[2], alt: m[1], md: line.trimEnd() } });
             i5++;
           } else if (m = RE_H.exec(line)) {
-            const content = inlineNodes(line.slice(m[0].length));
-            out.push({
-              type: "heading",
-              attrs: { level: m[1].length, align },
-              ...content.length ? { content } : {}
-            });
+            const rest = line.slice(m[0].length);
+            const content = rest.trim() ? inlineNodes(rest) : [];
+            out.push(content.length ? { type: "heading", attrs: { level: m[1].length, align }, ...{ content } } : { type: "paragraph", attrs: { align } });
             i5++;
           } else if (line.startsWith("> ")) {
             const ps = [];
@@ -13994,9 +13991,11 @@
               lines.push(a.md || `![${a.alt || ""}](${a.src || ""})`);
               break;
             }
-            case "heading":
-              lines.push(alignPfx(node) + "#".repeat((node.attrs || {}).level || 1) + " " + inlineToMd2(node.content));
+            case "heading": {
+              const ht = inlineToMd2(node.content);
+              lines.push(ht.trim() ? alignPfx(node) + "#".repeat((node.attrs || {}).level || 1) + " " + ht : "");
               break;
+            }
             case "blockquote":
               for (const p of node.content || []) lines.push("> " + inlineToMd2(p.content));
               break;
@@ -14102,12 +14101,12 @@
     view2.dispatch(view2.state.tr.setMeta(searchKey, q));
     return searchKey.getState(view2.state).matches.length;
   }
-  function gotoMatch(view2, dir) {
+  function gotoMatch(view2, dir2) {
     const { matches: matches2 } = searchKey.getState(view2.state);
     if (!matches2.length) return 0;
     const cur = view2.state.selection.from;
-    let m = dir > 0 ? matches2.find((x) => x.from > cur) : [...matches2].reverse().find((x) => x.from < cur);
-    if (!m) m = dir > 0 ? matches2[0] : matches2[matches2.length - 1];
+    let m = dir2 > 0 ? matches2.find((x) => x.from > cur) : [...matches2].reverse().find((x) => x.from < cur);
+    if (!m) m = dir2 > 0 ? matches2[0] : matches2[matches2.length - 1];
     view2.dispatch(view2.state.tr.setSelection(
       TextSelection.create(view2.state.doc, m.from, m.to)
     ).scrollIntoView());
@@ -14334,16 +14333,231 @@
   });
 
   // src/text-width.js
+  var text_width_exports = {};
+  __export(text_width_exports, {
+    DPI: () => DPI,
+    FALLBACK_CPI: () => FALLBACK_CPI,
+    TOK_ATOM: () => TOK_ATOM,
+    TOK_RUN: () => TOK_RUN,
+    TOK_SPACE: () => TOK_SPACE,
+    ZERO_WIDTH_RE: () => ZERO_WIDTH_RE,
+    bumpMeasureEpoch: () => bumpMeasureEpoch,
+    fitPrefix: () => fitPrefix,
+    hasMeasurer: () => hasMeasurer,
+    measureEpoch: () => measureEpoch,
+    measureWidth: () => measureWidth,
+    setMeasurer: () => setMeasurer,
+    takeVisual: () => takeVisual,
+    tokenize: () => tokenize,
+    visualLength: () => visualLength,
+    wrapCuts: () => wrapCuts,
+    wrapLineStrings: () => wrapLineStrings,
+    wrapText: () => wrapText,
+    wrapVisual: () => wrapVisual
+  });
   function visualLength(text) {
     return String(text ?? "").replace(ZERO_WIDTH_RE, "").length;
   }
-  var ZERO_WIDTH_RE;
+  function bumpMeasureEpoch() {
+    _epoch++;
+    _wrapCache = /* @__PURE__ */ new Map();
+  }
+  function measureEpoch() {
+    return _epoch;
+  }
+  function setMeasurer(fn) {
+    _measure = typeof fn === "function" ? fn : null;
+    bumpMeasureEpoch();
+  }
+  function hasMeasurer() {
+    return !!_measure;
+  }
+  function measureWidth(text, o = {}) {
+    const s = String(text ?? "");
+    if (!s) return 0;
+    if (!o.heuristic && _measure) {
+      const w = _measure(s, o.kind || "sp");
+      if (Number.isFinite(w) && w >= 0) return w;
+    }
+    return visualLength(s) / (o.cpi > 0 ? o.cpi : FALLBACK_CPI) * DPI;
+  }
+  function tokenize(para2) {
+    const s = String(para2 ?? "");
+    const out = [];
+    let i5 = 0;
+    while (i5 < s.length) {
+      const start = i5;
+      const ch = s[i5];
+      let t3;
+      if (SPACE_RE.test(ch)) t3 = TOK_SPACE;
+      else if (BREAKABLE_RE.test(ch)) t3 = TOK_RUN;
+      else t3 = TOK_ATOM;
+      let j = i5 + 1;
+      while (j < s.length) {
+        const c = s[j];
+        const tj = SPACE_RE.test(c) ? TOK_SPACE : BREAKABLE_RE.test(c) ? TOK_RUN : TOK_ATOM;
+        if (tj !== t3 && !ZERO_WIDTH_ONE.test(c)) break;
+        j++;
+      }
+      out.push({ t: t3, s: s.slice(start, j), i: start });
+      i5 = j;
+    }
+    return out;
+  }
+  function fitPrefix(s, maxPx, measure2) {
+    if (!s || maxPx <= 0) return 0;
+    let lo = 0, hi = s.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (measure2(s.slice(0, mid)) <= maxPx) lo = mid;
+      else hi = mid - 1;
+    }
+    let k = lo;
+    if (k > 0 && k < s.length) {
+      const c = s.charCodeAt(k - 1);
+      if (c >= 55296 && c <= 56319) k--;
+    }
+    while (k < s.length && ZERO_WIDTH_ONE.test(s[k])) k++;
+    return k;
+  }
+  function wrapCuts(text, widthIn, o = {}) {
+    const s = String(text ?? "");
+    const ck = `${_epoch}|${o.kind || "sp"}|${widthIn}|${o.indentIn || 0}|${o.cpi || ""}|${o.heuristic ? 1 : 0}|${s}`;
+    const hit = _wrapCache.get(ck);
+    if (hit) return hit;
+    const limit = Math.max(0.05, +widthIn || 0.05) * DPI;
+    const measure2 = (t3) => measureWidth(t3, o);
+    const spaceW = measure2(" ");
+    const indent = Math.max(0, Math.min(limit - 1, (+o.indentIn || 0) * DPI));
+    const cuts = [];
+    let paraStart = 0;
+    for (const para2 of s.split("\n")) {
+      if (paraStart > 0) cuts.push(paraStart);
+      let lineW = 0, hasContent = false, pendSpace = false;
+      const base3 = () => cuts.length === 0 ? indent : 0;
+      const cutAt = (i5) => {
+        cuts.push(i5);
+        lineW = 0;
+        hasContent = false;
+        pendSpace = false;
+      };
+      for (const tok of tokenize(para2)) {
+        const at = paraStart + tok.i;
+        if (tok.t === TOK_SPACE) {
+          if (hasContent) pendSpace = true;
+          continue;
+        }
+        const sepW = pendSpace && hasContent ? spaceW : 0;
+        const avail = limit - base3() - lineW - sepW;
+        const room = () => limit - base3();
+        if (tok.t === TOK_ATOM) {
+          const w = measure2(tok.s);
+          if (w <= avail) {
+            lineW += sepW + w;
+            hasContent = true;
+            pendSpace = false;
+            continue;
+          }
+          if (hasContent) cutAt(at);
+          let off4 = at, rest2 = tok.s;
+          for (; ; ) {
+            const k = fitPrefix(rest2, room(), measure2);
+            if (k >= rest2.length) break;
+            const step = Math.max(1, k);
+            off4 += step;
+            rest2 = rest2.slice(step);
+            cutAt(off4);
+          }
+          lineW = measure2(rest2);
+          hasContent = !!rest2;
+          continue;
+        }
+        let off3 = at, rest = tok.s;
+        if (avail > 0) {
+          const k = fitPrefix(rest, avail, measure2);
+          if (k > 0) {
+            lineW += sepW + measure2(rest.slice(0, k));
+            hasContent = true;
+            pendSpace = false;
+            off3 += k;
+            rest = rest.slice(k);
+          }
+        }
+        if (!rest) continue;
+        cutAt(off3);
+        for (; ; ) {
+          const k = fitPrefix(rest, room(), measure2);
+          if (k >= rest.length) break;
+          const step = Math.max(1, k);
+          off3 += step;
+          rest = rest.slice(step);
+          cutAt(off3);
+        }
+        lineW = measure2(rest);
+        hasContent = !!rest;
+      }
+      paraStart += para2.length + 1;
+    }
+    if (_wrapCache.size >= WRAP_CACHE_CAP) _wrapCache = /* @__PURE__ */ new Map();
+    _wrapCache.set(ck, cuts);
+    return cuts;
+  }
+  function wrapLineStrings(text, widthIn, o = {}) {
+    const s = String(text ?? "");
+    const cuts = wrapCuts(s, widthIn, o);
+    const bounds = [0, ...cuts, s.length];
+    const out = [];
+    for (let i5 = 0; i5 < bounds.length - 1; i5++) {
+      out.push(s.slice(bounds[i5], bounds[i5 + 1]).replace(/\s+$/, ""));
+    }
+    return out.length ? out : [""];
+  }
+  function wrapText(text, widthIn, o = {}) {
+    if (!String(text ?? "").trim()) return 1;
+    return wrapCuts(text, widthIn, o).length + 1;
+  }
+  function wrapVisual(text, cols, indentCols = 0) {
+    const c = Math.max(1, Math.floor(cols));
+    return wrapText(text, c / FALLBACK_CPI, {
+      heuristic: true,
+      cpi: FALLBACK_CPI,
+      indentIn: Math.max(0, Math.min(c - 1, Math.round(indentCols) || 0)) / FALLBACK_CPI
+    });
+  }
+  function takeVisual(text, cols) {
+    const s = String(text ?? "");
+    const c = Math.max(0, Math.floor(cols));
+    if (c <= 0) return ["", s];
+    let w = 0, i5 = 0;
+    while (i5 < s.length) {
+      if (!ZERO_WIDTH_ONE.test(s[i5])) {
+        if (w + 1 > c) break;
+        w++;
+      }
+      i5++;
+    }
+    while (i5 < s.length && ZERO_WIDTH_ONE.test(s[i5])) i5++;
+    return [s.slice(0, i5), s.slice(i5)];
+  }
+  var DPI, FALLBACK_CPI, ZERO_WIDTH_RE, ZERO_WIDTH_ONE, _measure, WRAP_CACHE_CAP, _wrapCache, _epoch, BREAKABLE_RE, SPACE_RE, TOK_SPACE, TOK_ATOM, TOK_RUN;
   var init_text_width = __esm({
     "src/text-width.js"() {
+      DPI = 96;
+      FALLBACK_CPI = 10;
       ZERO_WIDTH_RE = new RegExp(
         "[\\u0E31\\u0E34-\\u0E3A\\u0E47-\\u0E4E\\u0300-\\u036F\\u0483-\\u0489\\u0591-\\u05BD\\u064B-\\u065F\\u0670\\u200B-\\u200D\\uFEFF]",
         "g"
       );
+      ZERO_WIDTH_ONE = new RegExp(ZERO_WIDTH_RE.source);
+      _measure = null;
+      WRAP_CACHE_CAP = 4e3;
+      _wrapCache = /* @__PURE__ */ new Map();
+      _epoch = 0;
+      BREAKABLE_RE = /[฀-๿ក-៿က-႟⺀-鿿ꥠ-꥿가-힯豈-﫿＀-｠]/;
+      SPACE_RE = /\s/;
+      TOK_SPACE = "space";
+      TOK_ATOM = "atom";
+      TOK_RUN = "run";
     }
   });
 
@@ -14462,7 +14676,11 @@
       "text-transform:" + (st.caps ? "uppercase" : "none"),
       "font-weight:" + (st.bold ? "700" : "400"),
       "font-style:" + (st.italic ? "italic" : "normal"),
-      "text-decoration:" + (st.underline ? "underline" : "none")
+      "text-decoration:" + (st.underline ? "underline" : "none"),
+      // [alpha.83r ข้อ 2] คำยาวที่ไม่มีจุดตัดต้องถูกหั่น ไม่งั้นทะลุขอบกระดาษ
+      // — ตัวจัดหน้าหั่นกลางคำอยู่แล้ว จอต้องหั่นตรงกัน ไม่งั้นตัวเลขหน้าไม่ตรงกับที่เห็น
+      "overflow-wrap:break-word",
+      "word-break:break-word"
     ].join(";");
     const tw = textWidth(f.paper, f.margins);
     for (const k of SP_ELEMENT_KEYS) {
@@ -14477,6 +14695,8 @@
     }
     const so = sceneNumberOffsets(f);
     out.push(".sp.sp-scene{position:relative}");
+    out.push(".sp.sp-cont-right{text-align:right}");
+    out.push(".sp.sp-cont-left{text-align:left}");
     out.push(".k-scene-no{position:absolute;top:0;white-space:nowrap;user-select:none;pointer-events:none;text-transform:none;font-weight:400;font-style:normal;text-decoration:none}");
     out.push(`.k-scene-no-l{left:${so.left}in}`);
     out.push(`.k-scene-no-r{right:${so.right}in}`);
@@ -14494,42 +14714,19 @@
     return out.join("\n");
   }
   function wrapLines(text, widthIn, cpi = CHARS_PER_INCH) {
-    const cols = Math.max(1, Math.floor(num(widthIn, 6) * cpi));
-    const s = String(text ?? "");
-    if (!s.trim()) return 1;
-    let total = 0;
-    for (const para2 of s.split("\n")) {
-      const words = para2.split(/\s+/).filter(Boolean);
-      if (!words.length) {
-        total += 1;
-        continue;
-      }
-      let line = 0, used = 0;
-      for (const w of words) {
-        const wl = visualLength(w);
-        const need = used ? used + 1 + wl : wl;
-        if (need <= cols) {
-          used = need;
-        } else {
-          line++;
-          used = wl;
-          while (used > cols) {
-            line++;
-            used -= cols;
-          }
-        }
-      }
-      total += line + 1;
-    }
-    return Math.max(1, total);
+    return wrapText(text, num(widthIn, 6), { kind: "sp", cpi });
+  }
+  function wrapScriptLines(text, widthIn, cpi = CHARS_PER_INCH) {
+    return wrapLineStrings(text, num(widthIn, 6), { kind: "sp", cpi });
   }
   function paginate(blocks, opts = {}) {
     const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
-    const R = fmt.rules, S7 = fmt.strings;
+    const R = fmt.rules, S8 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
     const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
     const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
+    const wantSceneMarks = CT.enabled !== false && CT.scene !== false;
     const pages = [];
     let cur = [], used = 0, lastChar = "";
     let sceneSeq = 0, curScene = 0, pageSceneStart = 0;
@@ -14560,7 +14757,7 @@
         continue;
       }
       if (b.el === "character") lastChar = String(b.text || "");
-      const before = cur.length ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+      const before = cur.length && b.split !== "tail" ? Math.round(num(c.linesBefore, 10) / 10) : 0;
       const body = wrapLines(b.text, c.width);
       const need = before + body;
       const free = perPage - used;
@@ -14573,18 +14770,31 @@
       const isAct = b.el === "action" || b.el === "note" || b.el === "summary";
       const minBot = isDlg ? R.minDialogueLinesAtBottom : R.minActionLinesAtBottom;
       const minTop = isDlg ? R.minDialogueLinesAtTop : R.minActionLinesAtTop;
-      const canBottom = free - before;
-      if ((isDlg || isAct) && canBottom >= minBot && body - canBottom >= minTop) {
+      const moreLines = isDlg && wantDlgMarkers ? 1 : 0;
+      const contLines = wantSceneMarks && curScene > 0 ? 1 : 0;
+      const canBottom = Math.min(
+        free - before - moreLines - contLines,
+        body - Math.max(1, minTop)
+      );
+      if ((isDlg || isAct) && canBottom >= minBot) {
         const head2 = splitText(b.text, c.width, canBottom);
-        addBlock({ ...b, text: head2.head, lines: canBottom, split: "head" });
-        if (isDlg && wantDlgMarkers) addBlock({ el: "more", text: S7.dialogueMore, lines: 1, more: true });
+        addBlock({
+          ...b,
+          text: head2.head,
+          lines: canBottom,
+          split: "head",
+          contIn: !!b.contIn,
+          contOut: true
+        });
+        if (moreLines) addBlock({ el: "more", text: S8.dialogueMore, lines: 1, more: true });
         pushPage();
+        used += contLines;
         if (isDlg && wantDlgMarkers && lastChar) {
-          addBlock({ el: "character", text: lastChar + " " + S7.dialogueContd, lines: 1, contd: true });
+          addBlock({ el: "character", text: lastChar + " " + S8.dialogueContd, lines: 1, contd: true });
           used += 1;
         }
-        addBlock({ ...b, text: head2.rest, lines: body - canBottom, split: "tail" });
-        used += body - canBottom;
+        list[i5] = { ...b, text: head2.rest, split: "tail", contIn: true, contOut: false };
+        i5--;
         continue;
       }
       const carry = [];
@@ -14594,7 +14804,7 @@
         }
       }
       for (const x of carry) used -= x.lines || 1;
-      pushPage();
+      if (cur.length) pushPage();
       for (const x of carry) {
         cur.push(x);
         used += x.lines || 1;
@@ -14609,7 +14819,7 @@
   }
   function annotateContinued(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const S7 = f.strings;
+    const S8 = f.strings;
     const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const on2 = CT.enabled !== false && CT.scene !== false;
     for (const p of pages) {
@@ -14617,10 +14827,14 @@
       delete p.continuedTop;
       delete p.contdRun;
     }
+    const splitsAcross = (n2) => {
+      const fb = (n2.blocks || [])[0];
+      return !!fb && (fb.contIn === true || fb.contd === true);
+    };
     let run2 = 1, contScene = 0;
     for (let i5 = 0; i5 < pages.length - 1; i5++) {
       const p = pages[i5], n2 = pages[i5 + 1];
-      const spans = on2 && p.sceneEnd > 0 && n2.sceneStart === p.sceneEnd;
+      const spans = on2 && p.sceneEnd > 0 && n2.sceneStart === p.sceneEnd && splitsAcross(n2);
       if (!spans) {
         run2 = 1;
         contScene = 0;
@@ -14631,28 +14845,19 @@
         contScene = p.sceneEnd;
       }
       run2++;
-      p.continuedBottom = S7.continuedBottom;
+      p.continuedBottom = S8.continuedBottom;
       n2.contdRun = run2;
-      n2.continuedTop = CT.number !== false && run2 > 2 ? `${S7.continuedTop} (${run2 - 1})` : S7.continuedTop;
+      n2.continuedTop = CT.number !== false && run2 > 2 ? `${S8.continuedTop} (${run2 - 1})` : S8.continuedTop;
     }
     return pages;
   }
   function splitText(text, widthIn, n2) {
-    const cols = Math.max(1, Math.floor(num(widthIn, 6) * CHARS_PER_INCH));
-    const words = String(text ?? "").split(/\s+/).filter(Boolean);
-    const lines = [];
-    let cur = "";
-    for (const w of words) {
-      const next = cur ? cur + " " + w : w;
-      if (visualLength(next) <= cols) cur = next;
-      else {
-        if (cur) lines.push(cur);
-        cur = w;
-      }
-    }
-    if (cur) lines.push(cur);
-    const k = Math.max(1, Math.min(n2, lines.length - 1 >= 1 ? lines.length - 1 : 1));
-    return { head: lines.slice(0, k).join(" "), rest: lines.slice(k).join(" ") };
+    const s = String(text ?? "");
+    const cuts = wrapCuts(s, num(widthIn, 6), { kind: "sp" });
+    if (!cuts.length) return { head: s, rest: "" };
+    const k = Math.max(1, Math.min(Math.round(n2) || 1, cuts.length));
+    const at = cuts[k - 1];
+    return { head: s.slice(0, at).replace(/\s+$/, ""), rest: s.slice(at) };
   }
   function pageCount(blocks, opts) {
     return paginate(blocks, opts).count;
@@ -14740,6 +14945,10 @@
         // [alpha.60r3a] `---` บังคับขึ้นหน้าใหม่ — ไม่กินบรรทัดของตัวเอง (paginate ปิดหน้าให้แทน)
         "page-break": { indent: 1.5, width: 6, linesBefore: 0, linesBetween: 0, keepNext: false },
         note: { indent: 1.5, width: 6, linesBefore: 10, linesBetween: 10, keepNext: false },
+        // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — กว้างเต็มพื้นที่พิมพ์ทั้งคู่
+        // ตัวขวาชิดขวาด้วย text-align (ดู spCss) ให้ตรงกับ (CONTINUED) ของตัวอัตโนมัติเป๊ะ
+        "cont-left": { indent: 1.5, width: 6, linesBefore: 10, linesBetween: 10, keepNext: true },
+        "cont-right": { indent: 1.5, width: 6, linesBefore: 10, linesBetween: 10, keepNext: false },
         summary: { indent: 1.5, width: 6, linesBefore: 10, linesBetween: 10, keepNext: false },
         outline1: { indent: 1.5, width: 6, linesBefore: 10, linesBetween: 10, keepNext: true },
         outline2: { indent: 1.7, width: 5.8, linesBefore: 10, linesBetween: 10, keepNext: true },
@@ -14763,6 +14972,8 @@
         "act-break": { screen: ST(true, true, false, false), print: ST(true, true, false, true) },
         "page-break": { screen: ST(false, false, false, false), print: ST(false, false, false, false) },
         note: { screen: ST(false, false, true, false), print: ST(false, false, true, false) },
+        "cont-left": { screen: ST(false, false, true, false), print: ST(false, false, true, false) },
+        "cont-right": { screen: ST(false, false, true, false), print: ST(false, false, true, false) },
         summary: { screen: ST(false, false, true, false), print: ST(false, false, true, false) },
         outline1: { screen: ST(false, true, false, false), print: ST(false, true, false, false) },
         outline2: { screen: ST(false, true, false, false), print: ST(false, true, false, false) },
@@ -14802,7 +15013,7 @@
         timeTitle: "Time"
       };
       SCENE_NUMBER_DEFAULTS = { show: false, left: 0.75, right: 1, suffix: "" };
-      PAGE_NUMBER_DEFAULTS = { show: false, right: 1, top: 0.5, suffix: ".", firstPage: false };
+      PAGE_NUMBER_DEFAULTS = { show: false, right: 1, top: 0.5, suffix: ".", firstPage: true };
       DEFAULT_SP_FORMAT = {
         paperSize: "letter",
         paper: { width: 8.5, height: 11 },
@@ -14833,7 +15044,7 @@
   var prose_format_exports = {};
   __export(prose_format_exports, {
     DEFAULT_PROSE_FONT: () => DEFAULT_PROSE_FONT,
-    DPI: () => DPI,
+    DPI: () => DPI2,
     HEADING_DEFAULTS: () => HEADING_DEFAULTS,
     PROSE_DEFAULTS: () => PROSE_DEFAULTS,
     PT_PX: () => PT_PX,
@@ -14955,7 +15166,10 @@
       `max-width:${+tw.toFixed(3)}in`,
       "margin:3em auto",
       "padding:0 1.2em",
-      `text-align:${f.align}`
+      `text-align:${f.align}`,
+      // [alpha.83r ข้อ 2] คำยาวที่ไม่มีจุดตัดต้องถูกหั่น — ตรงกับที่ตัวจัดหน้าคิดไว้
+      "overflow-wrap:break-word",
+      "word-break:break-word"
     ].join(";");
     const out = [
       `body{${body}}`,
@@ -14987,13 +15201,13 @@
     const p = paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...margins || {} };
     const usable = Math.max(0.5, num(p.height, 11) - num(m.top, 1) - num(m.bottom, 1));
-    return Math.max(1, Math.floor(usable * DPI / proseLinePx(f)));
+    return Math.max(1, Math.floor(usable * DPI2 / proseLinePx(f)));
   }
   function proseCharsPerLine(fmt, paper, margins) {
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     const p = paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...margins || {} };
-    const wPx = textWidth(p, m) * DPI;
+    const wPx = textWidth(p, m) * DPI2;
     return Math.max(10, Math.floor(wPx / (proseFontPx(f) * f.avgCharEm)));
   }
   function proseMetrics(fmt, paper, margins) {
@@ -15006,41 +15220,15 @@
       charsPerLine: proseCharsPerLine(f, p, m),
       usableWidth: +textWidth(p, m).toFixed(4),
       usableHeight: +usableH.toFixed(4),
-      pageWidthPx: Math.round(num(p.width, 8.5) * DPI),
-      pageHeightPx: Math.round(num(p.height, 11) * DPI),
-      bodyHeightPx: Math.round(usableH * DPI),
+      pageWidthPx: Math.round(num(p.width, 8.5) * DPI2),
+      pageHeightPx: Math.round(num(p.height, 11) * DPI2),
+      bodyHeightPx: Math.round(usableH * DPI2),
       lineHeightPx: proseLinePx(f),
       fontPx: proseFontPx(f)
     };
   }
   function proseWrap(text, cols, indentCols = 0) {
-    const s = String(text ?? "");
-    if (!s.trim()) return 1;
-    const c = Math.max(1, Math.floor(cols));
-    let total = 0;
-    for (const para2 of s.split("\n")) {
-      const words = para2.split(/\s+/).filter(Boolean);
-      if (!words.length) {
-        total += 1;
-        continue;
-      }
-      let line = 0, used = Math.max(0, Math.round(indentCols));
-      for (const w of words) {
-        const wl = visualLength(w);
-        const need = used ? used + 1 + wl : wl;
-        if (need <= c) used = need;
-        else {
-          line++;
-          used = wl;
-          while (used > c) {
-            line++;
-            used -= c;
-          }
-        }
-      }
-      total += line + 1;
-    }
-    return Math.max(1, total);
+    return wrapVisual(text, cols, indentCols);
   }
   function proseBlockLines(b, fmt, cols) {
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
@@ -15059,7 +15247,7 @@
       const c = Math.max(4, cols - 6);
       return proseWrap(text, c) + (f.paraSpacing ? Math.ceil(f.paraSpacing) : 0);
     }
-    const indentCols = f.firstLineIndent ? Math.round(f.firstLineIndent * DPI / (proseFontPx(f) * f.avgCharEm)) : 0;
+    const indentCols = f.firstLineIndent ? Math.round(f.firstLineIndent * DPI2 / (proseFontPx(f) * f.avgCharEm)) : 0;
     return proseWrap(text, cols, indentCols) + (f.paraSpacing ? Math.ceil(f.paraSpacing) : 0);
   }
   function paginateProse(blocks, opts = {}) {
@@ -15130,9 +15318,11 @@
     for (const raw of String(md == null ? "" : md).split("\n")) {
       const line = raw.replace(/\s+$/, "");
       if (!line.trim()) continue;
-      const h = /^(#{1,6})\s+(.*)$/.exec(line);
+      const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
       if (h) {
-        out.push({ type: "h" + h[1].length, level: h[1].length, text: h[2], idx: i5++ });
+        const ht = String(h[2] || "").trim();
+        if (!ht) continue;
+        out.push({ type: "h" + h[1].length, level: h[1].length, text: ht, idx: i5++ });
         continue;
       }
       if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
@@ -15182,7 +15372,7 @@
     }
     return out;
   }
-  var clamp, PT_PX, DPI, DEFAULT_PROSE_FONT, H, HEADING_DEFAULTS, QUOTE_DEFAULTS, PROSE_DEFAULTS, proseFontPx, proseLinePx;
+  var clamp, PT_PX, DPI2, DEFAULT_PROSE_FONT, H, HEADING_DEFAULTS, QUOTE_DEFAULTS, PROSE_DEFAULTS, proseFontPx, proseLinePx;
   var init_prose_format = __esm({
     "src/prose-format.js"() {
       init_i18n();
@@ -15195,7 +15385,7 @@
         return Number.isFinite(n2) ? Math.max(lo, Math.min(hi, n2)) : d;
       };
       PT_PX = 4 / 3;
-      DPI = 96;
+      DPI2 = 96;
       DEFAULT_PROSE_FONT = '"Sarabun", "TH Sarabun New", "Noto Serif Thai", "Noto Sans Thai", Georgia, "Times New Roman", serif';
       H = (size, bold, before, after) => ({ size, bold, italic: false, before, after, align: "" });
       HEADING_DEFAULTS = [
@@ -15271,6 +15461,21 @@
     const text = label || ((page2) => t("ui.common.page2") + (page2 || ""));
     let list = [];
     let sig = "";
+    let numFn = null;
+    function setNumberLabel(fn) {
+      const before = numSig();
+      numFn = typeof fn === "function" ? fn : null;
+      return numSig() !== before;
+    }
+    const numOf = (page2) => {
+      if (!numFn) return "";
+      try {
+        return String(numFn(page2) ?? "");
+      } catch {
+        return "";
+      }
+    };
+    const numSig = () => list.map((b) => numOf(b.page)).join(",");
     function setBreaks(next) {
       const clean = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
       const s = clean.map((b) => b.pos + ":" + b.page).join(",");
@@ -15305,8 +15510,18 @@
           lbl.className = "sp-page-break-num";
           lbl.textContent = text(b.page);
           d.append(lbl);
+          const pn = numOf(b.page);
+          if (pn) {
+            const no = document.createElement("span");
+            no.className = "sp-page-no-next";
+            no.textContent = pn;
+            d.append(no);
+          }
           return d;
-        }, { side: -1, key: decoKey + b.pos + "-" + b.page + (inline2 ? "i" : "") }));
+        }, {
+          side: -1,
+          key: decoKey + b.pos + "-" + b.page + (inline2 ? "i" : "") + "-" + numOf(b.page)
+        }));
       }
       return DecorationSet.create(doc3, out);
     }
@@ -15328,7 +15543,7 @@
     function refresh(view2) {
       if (view2) view2.dispatch(view2.state.tr.setMeta(key2, true));
     }
-    return { key: key2, setBreaks, breaks, plugin, refresh };
+    return { key: key2, setBreaks, breaks, setNumberLabel, plugin, refresh };
   }
   var init_page_break_plugin = __esm({
     "src/page-break-plugin.js"() {
@@ -15354,7 +15569,8 @@
     proseViewStatusText: () => proseViewStatusText,
     refreshProsePageBreaks: () => refreshProsePageBreaks,
     renderProsePageView: () => renderProsePageView,
-    setProsePageBreaks: () => setProsePageBreaks
+    setProsePageBreaks: () => setProsePageBreaks,
+    setProsePageNumberLabel: () => setProsePageNumberLabel
   });
   function proseLayoutCssVars(fmt, paper, margins, gapPx = 28) {
     const mt = proseMetrics(fmt, paper, margins);
@@ -15399,10 +15615,12 @@
       page2.style.fontSize = proseFontPx(f) + "px";
       page2.style.lineHeight = String(f.lineHeight);
       const start = Math.max(1, Math.round(+opts.startPage || 1));
-      const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage) : opts.showPageNumbers !== false && (pg.index > 1 || opts.numberFirst) ? String(start + pg.index - 1) : "";
+      const label = typeof opts.label === "function" ? String(opts.label(pg.index) ?? "") : opts.showPageNumbers === void 0 ? prosePageLabel(pg.index, f, opts.startPage) : opts.showPageNumbers && (pg.index > 1 || opts.numberFirst !== false) ? String(start + pg.index - 1) : "";
       if (label) {
         const n2 = document.createElement("div");
         n2.className = "sp-page-num";
+        n2.style.top = cssIn(num(opts.numTop, 0.5));
+        n2.style.right = cssIn(num(opts.numRight, 1));
         n2.textContent = label;
         page2.append(n2);
       }
@@ -15443,7 +15661,7 @@
     const name5 = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
     return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
   }
-  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, prosePageBreakPlugin, refreshProsePageBreaks, cssIn;
+  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, setProsePageNumberLabel, prosePageBreakPlugin, refreshProsePageBreaks, cssIn;
   var init_prose_view = __esm({
     "src/prose-view.js"() {
       init_i18n();
@@ -15470,6 +15688,7 @@
       });
       setProsePageBreaks = ED_PB.setBreaks;
       prosePageBreaks = ED_PB.breaks;
+      setProsePageNumberLabel = ED_PB.setNumberLabel;
       prosePageBreakPlugin = ED_PB.plugin;
       refreshProsePageBreaks = ED_PB.refresh;
       cssIn = (v2) => num(v2, 0) + "in";
@@ -15528,6 +15747,7 @@
   function classify(line, prevBlank = true, prevType = "action", prevLine = void 0, nextBlank = false, guessNames = true) {
     const s = line.trim();
     if (s === "") return ["blank", ""];
+    if (/^#{1,6}$/.test(s)) return ["blank", ""];
     if (IMG_RE.test(s)) return ["image", s];
     if (/^-{3,}$/.test(s)) return ["page-break", ""];
     if (s.startsWith("#### ")) return ["subheader", s.slice(5).trim()];
@@ -15542,6 +15762,8 @@
     if (s.startsWith("$in ")) return ["transition-in", s.slice(4).trim()];
     if (s.startsWith("$sub ")) return ["subheader", s.slice(5).trim()];
     if (s.startsWith("$intercut ")) return ["intercut", s.slice(10).trim()];
+    if (s.startsWith("$contl ")) return ["cont-left", s.slice(7).trim()];
+    if (s.startsWith("$contr ")) return ["cont-right", s.slice(7).trim()];
     if (RAW_PREFIX.test(s)) return ["raw", line];
     if (s.startsWith("((") && s.endsWith("))")) {
       const inner = s.slice(2, -2).trim();
@@ -15591,8 +15813,9 @@
     return out;
   }
   function lineFor(el2, text, prevBlank, prevType, nextBlank = false, guessNames = true) {
-    if (el2 === "blank" || el2 === "action" && text.trim() === "") return "";
+    if (el2 === "blank") return "";
     if (el2 === "raw" || el2 === "image") return text;
+    if (el2 !== "page-break" && String(text ?? "").trim() === "") return "";
     let s;
     switch (el2) {
       // ── [alpha.60r3a] เขียนด้วยมาตรฐานใหม่เสมอ (อ่านได้ทั้งเก่า-ใหม่ แต่เขียนแบบใหม่อย่างเดียว) ──
@@ -15619,6 +15842,13 @@
         s = "$intercut " + text;
         break;
       // ไม่มีรหัสมาร์กดาวน์เทียบเท่า
+      case "cont-left":
+        s = "$contl " + text;
+        break;
+      // [alpha.83r ข้อ 3] ต่อเนื่องแบบพิมพ์เอง
+      case "cont-right":
+        s = "$contr " + text;
+        break;
       case "parenthetical": {
         const inner = text.replace(/^\(+|\)+$/g, "").trim();
         s = "((" + inner + "))";
@@ -15717,6 +15947,11 @@
         outline2: { th: "\u0E42\u0E04\u0E23\u0E07 2", prefix: "## " },
         outline3: { th: "\u0E42\u0E04\u0E23\u0E07 3", prefix: "##### " },
         note: { th: "\u0E42\u0E19\u0E49\u0E15", prefix: "/// " },
+        // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — ผู้ใช้ขอไว้คู่กับสวิตช์ปิดตัวอัตโนมัติ
+        // ตัวอัตโนมัติเป็น decoration (ลบไม่ได้ · ไม่อยู่ในไฟล์) สองตัวนี้เป็น **บล็อกจริงในไฟล์**
+        // จึงคุมข้อความ/ตำแหน่งเองได้ทั้งหมด และกินบรรทัดของหน้าตามปกติเหมือนบล็อกอื่น
+        "cont-left": { th: "\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07 (\u0E0B\u0E49\u0E32\u0E22)", prefix: "$contl " },
+        "cont-right": { th: "\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07 (\u0E02\u0E27\u0E32)", prefix: "$contr " },
         image: { th: "\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E", prefix: "" },
         // ![alt](src) — แสดงเป็นรูปจริงในบทหนัง
         raw: { th: "\u0E2D\u0E37\u0E48\u0E19 \u0E46", prefix: "" }
@@ -15735,7 +15970,9 @@
         "shot",
         "act-break",
         "page-break",
-        "note"
+        "note",
+        "cont-left",
+        "cont-right"
       ];
       NEXT_ELEM = {
         scene: "action",
@@ -15756,7 +15993,9 @@
         outline3: "action",
         note: "action",
         image: "action",
-        raw: "action"
+        raw: "action",
+        "cont-left": "action",
+        "cont-right": "action"
       };
       IMG_RE = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
       SP_RULES = { dialogueContinues: false };
@@ -15840,14 +16079,16 @@
       };
       guessNamesFor = (md) => !/^[ \t]*@/m.test(String(md ?? ""));
       guessNamesForBlocks = (blocks) => !(Array.isArray(blocks) && blocks.some((b) => b && b.el === "character"));
-      blockIsBlank = (b) => !b || b.el === "blank" || b.el === "action" && !String(b.text ?? "").trim();
+      blockIsBlank = (b) => !b || b.el === "blank" || b.el !== "page-break" && b.el !== "image" && b.el !== "raw" && !String(b.text ?? "").trim();
       SP_MD_PREFIXES = [
         "$intercut ",
+        "$contl ",
+        "$contr ",
         "$shot ",
         "$sub ",
         "$act ",
         "$in ",
-        // v1 (ยังเปิดไฟล์เก่าได้)
+        // v1 + ต่อเนื่องแบบพิมพ์เอง
         ">> ",
         "<< ",
         "/// ",
@@ -16002,7 +16243,10 @@
         out.push(Decoration.inline(
           pos + m.index,
           pos + m.index + m[0].length,
-          { class: "k-mention", title: t("ui.editor.ctrlClickOpenWiki") }
+          // [alpha.83 ข้อ 8] ไม่มี `title=` แล้ว — ป้ายลอยของระบบโผล่ทับตำแหน่งเคอร์เซอร์
+          // แล้วคลิกแทรกกลางคำไม่ได้ (ป้ายกินพื้นที่ทับจุดที่จะคลิกพอดี)
+          // สีของ .k-mention บอกอยู่แล้วว่าเป็นลิงก์ Wiki — คำใบ้ปุ่มลัดอยู่ในเมนูคลิกขวา
+          { class: "k-mention" }
         ));
       }
     });
@@ -16042,7 +16286,9 @@
         out.push(Decoration.inline(
           pos + b.start,
           pos + b.end,
-          { class: "k-spell-bad", title: t("ui.editor.press") + b.word }
+          // [alpha.83 ข้อ 7] เส้นหยักแดงบอกครบแล้ว — ป้ายลอย "น่าจะสะกดผิด: …"
+          // เด้งตามเมาส์ทุกคำ รบกวนสายตาและทับเคอร์เซอร์ (เหตุผลเดียวกับ .k-mention)
+          { class: "k-spell-bad" }
         ));
       }
     });
@@ -16598,6 +16844,22 @@
           this.view.dispatch(this.view.state.tr.replaceSelectionWith(node).scrollIntoView());
           this.view.focus();
         }
+        /**
+         * [alpha.82] แทรกข้อความหลายบรรทัดตรงเคอร์เซอร์ — บรรทัดว่าง/ขึ้นบรรทัดใหม่ = ย่อหน้าใหม่จริง
+         *
+         * เดิมโค้ดที่อยากแทรกข้อความเรียก `cmd('insertText', …)` ซึ่ง **ไม่มีอยู่ใน switch ของ cmd()**
+         * → ตกลงไปที่ default แล้วเงียบหายไปเฉย ๆ (ปุ่ม "แทรก" ของกล่องสร้างบทสนทนาจึงไม่เคยทำงาน)
+         * `tr.insertText()` ตรง ๆ ก็ใช้ไม่ได้ เพราะ `\n` ในย่อหน้าเดียวไม่ได้แปลว่าขึ้นย่อหน้าใหม่
+         * @returns {boolean} true = แทรกสำเร็จ
+         */
+        insertLines(text) {
+          const v2 = this.view;
+          if (!v2 || !String(text ?? "").length) return false;
+          const nodes = String(text).replace(/\r\n?/g, "\n").split("\n").map((line) => schema.nodes.paragraph.create(null, line ? schema.text(line) : null));
+          v2.dispatch(v2.state.tr.replaceSelection(new Slice(Fragment.fromArray(nodes), 1, 1)).scrollIntoView());
+          v2.focus();
+          return true;
+        }
         // ---------- state สำหรับ toolbar ----------
         activeMarks() {
           const st = this.view.state;
@@ -16622,6 +16884,28 @@
   });
 
   // src/prose-measure.js
+  var prose_measure_exports = {};
+  __export(prose_measure_exports, {
+    CUT_FAIL: () => CUT_FAIL,
+    DPI: () => DPI3,
+    GAP_CLASS: () => GAP_CLASS,
+    MEASURE_CLASS: () => MEASURE_CLASS,
+    WIDOW_LINES: () => WIDOW_LINES,
+    domLineRects: () => domLineRects,
+    lineBreakOffsets: () => lineBreakOffsets,
+    lineCut: () => lineCut,
+    lineStartCharOffset: () => lineStartCharOffset,
+    measureProseBlocks: () => measureProseBlocks,
+    measureProseLayout: () => measureProseLayout,
+    proseBreakList: () => proseBreakList,
+    proseMeasuredCount: () => proseMeasuredCount,
+    prosePosAtCut: () => prosePosAtCut,
+    renderProseClipPages: () => renderProseClipPages,
+    resetCutFail: () => resetCutFail,
+    sliceProsePages: () => sliceProsePages,
+    withMeasureMode: () => withMeasureMode,
+    zoomFactorOf: () => zoomFactorOf
+  });
   function lineCut(block, pageStart, limit) {
     const offs2 = block && block.lineOffsets || null;
     if (!offs2 || !offs2.length) return null;
@@ -16668,6 +16952,9 @@
     const end = Math.max(num(totalHeight, last2 ? last2.top + last2.height : 0), pageStart);
     return starts.map((y, i5) => ({ start: y, end: i5 + 1 < starts.length ? starts[i5 + 1] : end }));
   }
+  function proseMeasuredCount(blocks, contentHeight, totalHeight) {
+    return sliceProsePages(blocks, contentHeight, totalHeight).length;
+  }
   function lineBreakOffsets(lines) {
     return (lines || []).slice(1).map((l) => l.offset).filter((o) => o > 0.5);
   }
@@ -16702,13 +16989,15 @@
     rects.sort((a, b) => a.r.top - b.r.top);
     const top0 = el2.getBoundingClientRect().top;
     const lines = [];
-    let lineBottom = -Infinity;
+    let lastTop = -Infinity, lastH = 0;
     for (const { r, node } of rects) {
-      if (r.top >= lineBottom - 1) {
+      const tol = Math.max(2, Math.min(lastH * 0.5, 12));
+      if (r.top > lastTop + tol) {
         lines.push({ offset: (r.top - top0 - gapAbove(r.top)) / z, top: r.top, node });
-        lineBottom = r.bottom;
+        lastTop = r.top;
+        lastH = r.height;
       } else {
-        lineBottom = Math.max(lineBottom, r.bottom);
+        lastH = Math.max(lastH, r.height);
       }
     }
     return lines;
@@ -16779,28 +17068,47 @@
     }
     return { blocks, totalHeight };
   }
+  function withMeasureMode(fn) {
+    const root = typeof document !== "undefined" ? document.body : null;
+    const added = !!(root && !root.classList.contains(MEASURE_CLASS));
+    if (added) root.classList.add(MEASURE_CLASS);
+    try {
+      return fn();
+    } finally {
+      if (added) root.classList.remove(MEASURE_CLASS);
+    }
+  }
   function measureProseLayout(view2, opts = {}) {
     const pm2 = view2 && view2.dom;
     if (!pm2 || !pm2.isConnected || typeof pm2.getBoundingClientRect !== "function") return null;
-    const rect = pm2.getBoundingClientRect();
-    if (!(rect.width > 0) || !(rect.height > 0)) return null;
     const paper = opts.paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...opts.margins || {} };
-    const contentHeight = (num(paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)) * DPI2;
+    const contentHeight = (num(paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)) * DPI3;
     if (!(contentHeight > 8)) return null;
-    const z = zoomFactorOf(pm2);
-    const padTop = parseFloat(getComputedStyle(pm2).paddingTop) || 0;
-    const origin = rect.top + padTop * z;
-    const { blocks, totalHeight } = measureProseBlocks(pm2, origin, z);
-    if (!blocks.length) return null;
-    return {
-      blocks,
-      totalHeight,
-      contentHeight,
-      zoomFactor: z,
-      origin,
-      pageHeight: num(paper.height, 11) * DPI2
-    };
+    return withMeasureMode(() => {
+      const rect = pm2.getBoundingClientRect();
+      if (!(rect.width > 0) || !(rect.height > 0)) return null;
+      const z = zoomFactorOf(pm2);
+      const padTop = parseFloat(getComputedStyle(pm2).paddingTop) || 0;
+      const origin = rect.top + padTop * z;
+      const { blocks, totalHeight } = measureProseBlocks(pm2, origin, z);
+      if (!blocks.length) return null;
+      return {
+        blocks,
+        totalHeight,
+        contentHeight,
+        zoomFactor: z,
+        origin,
+        pageHeight: num(paper.height, 11) * DPI3
+      };
+    });
+  }
+  function resetCutFail() {
+    CUT_FAIL.detached = 0;
+    CUT_FAIL.noLine = 0;
+    CUT_FAIL.noBlock = 0;
+    CUT_FAIL.threw = 0;
+    CUT_FAIL.ok = 0;
   }
   function prosePosAtCut(view2, blocks, y) {
     if (!view2 || !Number.isFinite(y)) return null;
@@ -16818,24 +17126,37 @@
       const want = y - b.top;
       for (const ln of b.lines || []) {
         if (Math.abs(ln.offset - want) > 0.6) continue;
+        if (!ln.node || !ln.node.isConnected) {
+          CUT_FAIL.detached++;
+          return null;
+        }
         try {
-          return view2.posAtDOM(ln.node, lineStartCharOffset(ln.node, ln.top));
+          const zNow = zoomFactorOf(view2.dom);
+          const topNow = b.el.getBoundingClientRect().top + ln.offset * zNow;
+          const p = view2.posAtDOM(ln.node, lineStartCharOffset(ln.node, topNow));
+          CUT_FAIL.ok++;
+          return p;
         } catch {
+          CUT_FAIL.threw++;
           return null;
         }
       }
+      CUT_FAIL.noLine++;
       return null;
     }
+    CUT_FAIL.noBlock++;
     return null;
   }
   function proseBreakList(view2, blocks, pages, basePage = 1) {
-    const out = [];
-    const list = pages || [];
-    for (let i5 = 1; i5 < list.length; i5++) {
-      const pos = prosePosAtCut(view2, blocks, list[i5].start);
-      if (Number.isFinite(pos) && pos > 0) out.push({ pos, page: basePage + i5 });
-    }
-    return out;
+    return withMeasureMode(() => {
+      const out = [];
+      const list = pages || [];
+      for (let i5 = 1; i5 < list.length; i5++) {
+        const pos = prosePosAtCut(view2, blocks, list[i5].start);
+        if (Number.isFinite(pos) && pos > 0) out.push({ pos, page: basePage + i5 });
+      }
+      return out;
+    });
   }
   function renderProseClipPages(host2, pm2, pages, opts = {}) {
     const paper = opts.paper || PAPER_SIZES.letter;
@@ -16843,7 +17164,7 @@
     const scale2 = num(opts.scale, 1) || 1;
     const pw = num(paper.width, 8.5), ph = num(paper.height, 11);
     const textW = Math.max(0.5, pw - num(m.left, 1.5) - num(m.right, 1));
-    const contentH = Math.max(8, (ph - num(m.top, 1) - num(m.bottom, 1)) * DPI2);
+    const contentH = Math.max(8, (ph - num(m.top, 1) - num(m.bottom, 1)) * DPI3);
     const list = pages && pages.pages || pages || [];
     host2.innerHTML = "";
     host2.style.setProperty("--sp-pv-scale", String(scale2));
@@ -16856,8 +17177,8 @@
     for (const pg of list) {
       const slot = document.createElement("div");
       slot.className = "sp-page-slot";
-      slot.style.width = pw * DPI2 * scale2 + "px";
-      slot.style.height = ph * DPI2 * scale2 + "px";
+      slot.style.width = pw * DPI3 * scale2 + "px";
+      slot.style.height = ph * DPI3 * scale2 + "px";
       const page2 = document.createElement("div");
       page2.className = "sp-page ed-page";
       page2.dataset.page = String(pg.index ?? els.length + 1);
@@ -16872,12 +17193,15 @@
       if (label) {
         const n2 = document.createElement("div");
         n2.className = "sp-page-num";
+        n2.style.top = num(opts.numTop, 0.5) + "in";
+        n2.style.right = num(opts.numRight, 1) + "in";
         n2.textContent = label;
         page2.append(n2);
       }
       const clip2 = document.createElement("div");
       clip2.className = "ed-page-clip";
-      clip2.style.height = contentH + "px";
+      const sliceH = num(pg.end, NaN) - num(pg.start, 0);
+      clip2.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
       const sp = opts.startPos && opts.startPos[els.length];
       if (Number.isFinite(sp)) clip2.dataset.pos = String(sp);
       const inner = master.cloneNode(true);
@@ -16890,14 +17214,16 @@
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
-  var DPI2, GAP_CLASS, WIDOW_LINES;
+  var DPI3, GAP_CLASS, WIDOW_LINES, MEASURE_CLASS, CUT_FAIL;
   var init_prose_measure = __esm({
     "src/prose-measure.js"() {
       init_sp_format();
       init_num();
-      DPI2 = 96;
+      DPI3 = 96;
       GAP_CLASS = "ed-page-break";
       WIDOW_LINES = 2;
+      MEASURE_CLASS = "k-measuring";
+      CUT_FAIL = { detached: 0, noLine: 0, noBlock: 0, threw: 0, ok: 0 };
     }
   });
 
@@ -17397,8 +17723,8 @@
   function tabs(children, active = 0, id = nid("t")) {
     return { type: "tabs", id, children, active };
   }
-  function dock(dir, children, sizes, id = nid("d")) {
-    return { type: "dock", id, dir, children, sizes: sizes || evenSizes(children.length) };
+  function dock(dir2, children, sizes, id = nid("d")) {
+    return { type: "dock", id, dir: dir2, children, sizes: sizes || evenSizes(children.length) };
   }
   function evenSizes(n2) {
     return Array.from({ length: n2 }, () => +(1 / n2).toFixed(4));
@@ -19410,6 +19736,7 @@
     BUILTIN_FONT_FILES: () => BUILTIN_FONT_FILES,
     CAPS_ELEMENTS: () => CAPS_ELEMENTS,
     CAT_ICON: () => CAT_ICON,
+    CONTINUED_DEFAULTS: () => CONTINUED_DEFAULTS,
     DEFAULT_GOALS: () => DEFAULT_GOALS,
     DEFAULT_SCRIPT_FONT: () => DEFAULT_SCRIPT_FONT,
     DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
@@ -20030,6 +20357,9 @@
         spContinued: null,
         spLineHeight: 1,
         spPageGap: 28,
+        // [alpha.83r ข้อ 1] ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์ที่บันทึกไว้ก่อน .82
+        // (ตอนนั้นค่าเริ่มต้นคือ "หน้าแรกไม่ใส่เลข" แล้วมันติดมาถาวรจนเลขหน้า 1 ไม่ขึ้นเลย)
+        pgFirstMigrated: false,
         // [alpha.82] แยกหน้าเป็นแผ่นจริงขณะพิมพ์ (ขอบล่าง + แถบคั่น + ขอบบน) แบบ Word
         // ปิด = เส้นประบาง ๆ แบบเดิม · ไม่กระทบตัวเลขหน้าไม่ว่าเปิดหรือปิด
         paperGaps: true,
@@ -21296,8 +21626,8 @@
               } else {
                 const src2 = await kapi.openImageDialog();
                 if (!src2) return;
-                const dir = await kapi.join(this.projectRoot, "Images");
-                setAvatar(await kapi.copyInto(src2, dir));
+                const dir2 = await kapi.join(this.projectRoot, "Images");
+                setAvatar(await kapi.copyInto(src2, dir2));
               }
             };
             avatar.oncontextmenu = (e) => {
@@ -21433,8 +21763,8 @@
           addImg.onclick = async () => {
             const src2 = await kapi.openImageDialog();
             if (!src2) return;
-            const dir = await kapi.join(this.projectRoot, "Images");
-            const name5 = await kapi.copyInto(src2, dir);
+            const dir2 = await kapi.join(this.projectRoot, "Images");
+            const name5 = await kapi.copyInto(src2, dir2);
             this.e.images = addImage(this.e.images, name5);
             this.markDirty();
             this.render();
@@ -21835,7 +22165,6 @@
     const list = pages && pages.pages || pages || [];
     const scale2 = opts.scale ?? 1;
     const gap = opts.gap ?? 20;
-    const showNums = opts.showPageNumbers !== false;
     const pw = +f.paper.width, ph = +f.paper.height;
     const pxW = pw * 96 * scale2, pxH = ph * 96 * scale2;
     host2.innerHTML = "";
@@ -21857,14 +22186,12 @@
       page2.style.paddingLeft = cssIn2(f.margins.left);
       page2.style.paddingRight = cssIn2(f.margins.right);
       page2.style.transform = "scale(" + scale2 + ")";
-      const label = f.pageNumbers && f.pageNumbers.show ? pageNumberLabel(pg.index, f, opts.startPage) : showNums && pg.index > 1 ? pg.index + "." : "";
+      const label = opts.showPageNumbers === false ? "" : pageNumberLabel(pg.index, f, opts.startPage);
       if (label) {
         const num4 = document.createElement("div");
         num4.className = "sp-page-num";
-        if (f.pageNumbers && f.pageNumbers.show) {
-          num4.style.top = cssIn2(f.pageNumbers.top);
-          num4.style.right = cssIn2(f.pageNumbers.right);
-        }
+        num4.style.top = cssIn2(f.pageNumbers.top);
+        num4.style.right = cssIn2(f.pageNumbers.right);
         num4.textContent = label;
         page2.append(num4);
       }
@@ -22082,7 +22409,7 @@
   function refreshContinueds(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(ctKey, true));
   }
-  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, ctKey, _conts, _contSig;
+  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, setSpPageNumberLabel, ctKey, _conts, _contSig;
   var init_sp_format_guide = __esm({
     "src/sp-format-guide.js"() {
       init_i18n();
@@ -22105,6 +22432,7 @@
       pageBreaks = SP_PB.breaks;
       spPageBreakPlugin = SP_PB.plugin;
       refreshPageBreaks = SP_PB.refresh;
+      setSpPageNumberLabel = SP_PB.setNumberLabel;
       ctKey = new PluginKey("kspcontinued");
       _conts = [];
       _contSig = "";
@@ -22313,19 +22641,19 @@
               }
               const cycleOn = state.settings?.spCycleEnabled !== false;
               const K = spCycleKeys(state.settings);
-              for (const dir of ["shiftTab", "tab", "enter"]) {
-                if (!spKeyMatch(K[dir], ev)) continue;
+              for (const dir2 of ["shiftTab", "tab", "enter"]) {
+                if (!spKeyMatch(K[dir2], ev)) continue;
                 if (onKeyDown && onKeyDown(ev)) {
                   ev.preventDefault();
                   return true;
                 }
                 if (!cycleOn) {
-                  if (dir !== "enter") return false;
+                  if (dir2 !== "enter") return false;
                   ev.preventDefault();
                   return self2.enter(true);
                 }
                 ev.preventDefault();
-                return dir === "enter" ? self2.enter() : self2._tabCycle(dir);
+                return dir2 === "enter" ? self2.enter() : self2._tabCycle(dir2);
               }
               return onKeyDown ? onKeyDown(ev) : false;
             },
@@ -22372,6 +22700,25 @@
           const v2 = this.view;
           const doc3 = spDocFromMarkdown(md, this.resolveSrc);
           v2.dispatch(v2.state.tr.replaceWith(0, v2.state.doc.content.size, doc3.content));
+          return true;
+        }
+        /**
+         * [alpha.82] แทรกบทฉบับ fountain ตรงเคอร์เซอร์ — `@ชื่อ` กลายเป็น element "ตัวละคร" จริง
+         *
+         * แทรกเป็นข้อความเปล่าไม่ได้: doc ของบทเป็นลำดับโหนด `sp` ที่มี attr `el` กำกับชนิดอยู่
+         * ยัด `@โทระ` ลงไปดื้อ ๆ จะได้บรรทัด action ที่หน้าตาเหมือนชื่อตัวละครแต่จัดหน้า/ส่งออกผิดหมด
+         * @returns {boolean}
+         */
+        insertScript(md) {
+          const v2 = this.view;
+          const text = String(md ?? "").trim();
+          if (!v2 || !text) return false;
+          const doc3 = spDocFromMarkdown(text, this.resolveSrc);
+          const nodes = [];
+          doc3.content.forEach((n2) => nodes.push(n2));
+          if (!nodes.length) return false;
+          v2.dispatch(v2.state.tr.replaceSelection(new Slice(Fragment.fromArray(nodes), 0, 0)).scrollIntoView());
+          v2.focus();
           return true;
         }
         // [61][57] วาด decoration ของ "แสดงรูปแบบ" / เส้นคั่นหน้าใหม่ (เรียกหลังเปลี่ยนค่าตั้ง)
@@ -22463,10 +22810,10 @@
           const b = this.curBlock();
           return b && b.node.attrs.align || "left";
         }
-        cycle(dir) {
+        cycle(dir2) {
           const cur = this.curElement();
           const i5 = TAB_CYCLE.indexOf(cur);
-          const next = TAB_CYCLE[(i5 === -1 ? 0 : i5 + dir + TAB_CYCLE.length) % TAB_CYCLE.length];
+          const next = TAB_CYCLE[(i5 === -1 ? 0 : i5 + dir2 + TAB_CYCLE.length) % TAB_CYCLE.length];
           this.setElement(next);
         }
         // [95] Per-element switch — Ctrl+1..9
@@ -22474,12 +22821,12 @@
           this.setElement(el2);
         }
         // [51] Tab/Shift-Tab cycle ตาม spCycle
-        _tabCycle(dir) {
+        _tabCycle(dir2) {
           const cur = this.curElement();
           const spCycle = state.settings?.spCycle || DEFAULT_SP_CYCLE;
           const cfg = spCycle[cur];
           if (!cfg) return true;
-          const nextEl = cfg[dir];
+          const nextEl = cfg[dir2];
           if (nextEl) this.setElement(nextEl);
           return true;
         }
@@ -23038,10 +23385,10 @@
     return J(api, root, IMAGES_DIR);
   }
   async function albumDir(api, root, id) {
-    const dir = await imagesDir(api, root);
+    const dir2 = await imagesDir(api, root);
     const rel = albumRel(id);
-    if (!rel) return dir;
-    return J(api, dir, ...rel.split("/"));
+    if (!rel) return dir2;
+    return J(api, dir2, ...rel.split("/"));
   }
   async function readJsonSafe(api, file, fallback) {
     try {
@@ -23055,12 +23402,12 @@
     await api.writeFile(file, JSON.stringify(data2, null, 2));
   }
   async function listAlbums(api, root) {
-    const dir = await imagesDir(api, root);
-    const doc3 = await readJsonSafe(api, await J(api, dir, ALBUMS_JSON), null);
+    const dir2 = await imagesDir(api, root);
+    const doc3 = await readJsonSafe(api, await J(api, dir2, ALBUMS_JSON), null);
     let albums = normalizeAlbums(doc3);
     const known = new Set(albums.map((a) => a.id));
     const walk3 = async (relParts) => {
-      const abs = relParts.length ? await J(api, dir, ...relParts) : dir;
+      const abs = relParts.length ? await J(api, dir2, ...relParts) : dir2;
       let subs = [];
       try {
         subs = await api.listDirs(abs) || [];
@@ -23091,26 +23438,26 @@
     return sortAlbums(alive);
   }
   async function saveAlbums(api, root, albums) {
-    const dir = await imagesDir(api, root);
-    await api.mkdir(dir);
-    await writeJson(api, await J(api, dir, ALBUMS_JSON), { version: 1, albums: albums.filter((a) => a.id !== ROOT_ALBUM || a.cover) });
+    const dir2 = await imagesDir(api, root);
+    await api.mkdir(dir2);
+    await writeJson(api, await J(api, dir2, ALBUMS_JSON), { version: 1, albums: albums.filter((a) => a.id !== ROOT_ALBUM || a.cover) });
     return albums;
   }
   async function readAlbumDoc(api, root, id) {
-    const dir = await albumDir(api, root, id);
-    const doc3 = await readJsonSafe(api, await J(api, dir, ALBUM_META), null);
+    const dir2 = await albumDir(api, root, id);
+    const doc3 = await readJsonSafe(api, await J(api, dir2, ALBUM_META), null);
     return normalizeAlbumDoc(doc3, albumBaseName(id));
   }
   async function writeAlbumDoc(api, root, id, doc3) {
-    const dir = await albumDir(api, root, id);
-    await api.mkdir(dir);
-    await writeJson(api, await J(api, dir, ALBUM_META), normalizeAlbumDoc(doc3, albumBaseName(id)));
+    const dir2 = await albumDir(api, root, id);
+    await api.mkdir(dir2);
+    await writeJson(api, await J(api, dir2, ALBUM_META), normalizeAlbumDoc(doc3, albumBaseName(id)));
     return doc3;
   }
   async function listAlbumFiles(api, root, id) {
-    const dir = await albumDir(api, root, id);
-    if (!await api.exists(dir)) return [];
-    const files = await api.listFiles(dir, "") || [];
+    const dir2 = await albumDir(api, root, id);
+    if (!await api.exists(dir2)) return [];
+    const files = await api.listFiles(dir2, "") || [];
     return files.filter(isImageFile).sort((a, b) => a.localeCompare(b, "th"));
   }
   async function getAlbumImages(api, root, id, { write: write3 = true } = {}) {
@@ -23130,18 +23477,18 @@
   }
   async function syncFlatIndex(api, root, entries) {
     const items = entries || await allImages(api, root);
-    const dir = await imagesDir(api, root);
-    await api.mkdir(dir);
-    await writeJson(api, await J(api, dir, FLAT_JSON), flatIndexFrom(items));
+    const dir2 = await imagesDir(api, root);
+    await api.mkdir(dir2);
+    await writeJson(api, await J(api, dir2, FLAT_JSON), flatIndexFrom(items));
     return items;
   }
   async function migrateFromFlat(api, root) {
-    const dir = await imagesDir(api, root);
-    if (!await api.exists(dir)) {
-      await api.mkdir(dir);
+    const dir2 = await imagesDir(api, root);
+    if (!await api.exists(dir2)) {
+      await api.mkdir(dir2);
       return { adopted: 0, captions: 0 };
     }
-    const flat = await readJsonSafe(api, await J(api, dir, FLAT_JSON), null);
+    const flat = await readJsonSafe(api, await J(api, dir2, FLAT_JSON), null);
     const caps = captionsFromFlat(flat);
     const files = await listAlbumFiles(api, root, ROOT_ALBUM);
     const doc3 = await readAlbumDoc(api, root, ROOT_ALBUM);
@@ -23165,8 +23512,8 @@
     const albums = await listAlbums(api, root);
     const id = albumId(parent, clean);
     if (albums.some((a) => a.id === id)) throw new Error(t("ui.galleryAlbum.hasAlbumName"));
-    const dir = await albumDir(api, root, id);
-    await api.mkdir(dir);
+    const dir2 = await albumDir(api, root, id);
+    await api.mkdir(dir2);
     const rec = normalizeAlbum({
       id,
       name: clean,
@@ -23219,9 +23566,9 @@
     return { ...r, movedTo: dst };
   }
   async function addImageFile(api, root, id, srcPath) {
-    const dir = await albumDir(api, root, id);
-    await api.mkdir(dir);
-    const name5 = await api.copyInto(srcPath, dir);
+    const dir2 = await albumDir(api, root, id);
+    await api.mkdir(dir2);
+    const name5 = await api.copyInto(srcPath, dir2);
     let doc3 = await readAlbumDoc(api, root, id);
     doc3 = syncAlbumDoc(doc3, [...Object.keys(doc3.images), name5]);
     await writeAlbumDoc(api, root, id, doc3);
@@ -23254,8 +23601,8 @@
     };
   }
   async function deleteImage(api, root, id, file, { recycleDir = "Recycle" } = {}) {
-    const dir = await albumDir(api, root, id);
-    const src2 = await J(api, dir, file);
+    const dir2 = await albumDir(api, root, id);
+    const src2 = await J(api, dir2, file);
     const dst = await J(api, root, recycleDir, Date.now().toString(36) + "-" + file);
     if (await api.exists(src2)) await api.move(src2, dst);
     const doc3 = await readAlbumDoc(api, root, id);
@@ -23280,14 +23627,14 @@
     if (info.kind === "image") {
       const albums = await listAlbums(api, root);
       const album = info.album && albums.some((a) => a.id === info.album) ? info.album : ROOT_ALBUM;
-      const dir = await albumDir(api, root, album);
-      await api.mkdir(dir);
+      const dir2 = await albumDir(api, root, album);
+      await api.mkdir(dir2);
       let name5 = info.file;
       const ext = (name5.match(/\.[^.]+$/) || [""])[0];
       const stem = ext ? name5.slice(0, -ext.length) : name5;
       let n2 = 1;
-      while (await api.exists(await J(api, dir, name5))) name5 = stem + "-" + n2++ + ext;
-      await api.move(trashPath, await J(api, dir, name5));
+      while (await api.exists(await J(api, dir2, name5))) name5 = stem + "-" + n2++ + ext;
+      await api.move(trashPath, await J(api, dir2, name5));
       const doc3 = await readAlbumDoc(api, root, album);
       await writeAlbumDoc(api, root, album, setImageMeta2(doc3, name5, info.meta || {}));
       return { kind: "image", album, file: name5 };
@@ -23601,8 +23948,8 @@
   function rewriteImageRefs(text, oldPath, newPath) {
     const s = String(text || "");
     const oldFile = basename(oldPath);
-    const newRel = String(newPath || "");
-    if (!oldFile || !newRel) return { text: s, changed: 0 };
+    const newRel2 = String(newPath || "");
+    if (!oldFile || !newRel2) return { text: s, changed: 0 };
     let changed = 0;
     const swap2 = (p) => {
       const clean = cleanRef(p);
@@ -23610,7 +23957,7 @@
       const i5 = clean.toLowerCase().lastIndexOf("images/");
       if (i5 < 0) return null;
       changed++;
-      return clean.slice(0, i5 + "images/".length) + newRel;
+      return clean.slice(0, i5 + "images/".length) + newRel2;
     };
     let out = s.replace(MD_IMG, (m0, alt, p) => {
       const np = swap2(p);
@@ -23625,16 +23972,16 @@
   async function scanUsage(api, root, { titleOf: titleOf2 = null, maxFiles = 4e3 } = {}) {
     const docs = [];
     let count = 0;
-    const walk3 = async (dir, depth) => {
+    const walk3 = async (dir2, depth) => {
       if (depth > 8 || count >= maxFiles) return;
       let files = [];
       try {
-        files = await api.listFiles(dir, ".md") || [];
+        files = await api.listFiles(dir2, ".md") || [];
       } catch {
       }
       for (const f of files) {
         if (count >= maxFiles) return;
-        const p = await api.join(dir, f);
+        const p = await api.join(dir2, f);
         let text = "";
         try {
           text = await api.readFile(p);
@@ -23646,12 +23993,12 @@
       }
       let subs = [];
       try {
-        subs = await api.listDirs(dir) || [];
+        subs = await api.listDirs(dir2) || [];
       } catch {
       }
       for (const s of subs) {
         if (SKIP_DIRS2.has(s) || s.startsWith(".")) continue;
-        await walk3(await api.join(dir, s), depth + 1);
+        await walk3(await api.join(dir2, s), depth + 1);
       }
     };
     await walk3(root, 0);
@@ -24140,8 +24487,8 @@
           function n2(e2, t4, r3, n3, i6, s2) {
             var a, o, h = e2.file, u = e2.compression, l = s2 !== O.utf8encode, f = I.transformTo("string", s2(h.name)), c = I.transformTo("string", O.utf8encode(h.name)), d = h.comment, p = I.transformTo("string", s2(d)), m = I.transformTo("string", O.utf8encode(d)), _2 = c.length !== h.name.length, g = m.length !== d.length, b = "", v2 = "", y = "", w = h.dir, k = h.date, x = { crc32: 0, compressedSize: 0, uncompressedSize: 0 };
             t4 && !r3 || (x.crc32 = e2.crc32, x.compressedSize = e2.compressedSize, x.uncompressedSize = e2.uncompressedSize);
-            var S7 = 0;
-            t4 && (S7 |= 8), l || !_2 && !g || (S7 |= 2048);
+            var S8 = 0;
+            t4 && (S8 |= 8), l || !_2 && !g || (S8 |= 2048);
             var z = 0, C = 0;
             w && (z |= 16), "UNIX" === i6 ? (C = 798, z |= (function(e3, t5) {
               var r4 = e3;
@@ -24150,7 +24497,7 @@
               return 63 & (e3 || 0);
             })(h.dosPermissions)), a = k.getUTCHours(), a <<= 6, a |= k.getUTCMinutes(), a <<= 5, a |= k.getUTCSeconds() / 2, o = k.getUTCFullYear() - 1980, o <<= 4, o |= k.getUTCMonth() + 1, o <<= 5, o |= k.getUTCDate(), _2 && (v2 = A(1, 1) + A(B(f), 4) + c, b += "up" + A(v2.length, 2) + v2), g && (y = A(1, 1) + A(B(p), 4) + m, b += "uc" + A(y.length, 2) + y);
             var E = "";
-            return E += "\n\0", E += A(S7, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
+            return E += "\n\0", E += A(S8, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
           }
           var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
           function s(e2, t4, r3, n3) {
@@ -25416,7 +25763,7 @@
           };
         }, {}], 46: [function(e, t3, r) {
           "use strict";
-          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S7 = 258, z = S7 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
+          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S8 = 258, z = S8 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
           function R(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
@@ -25440,14 +25787,14 @@
             e2.pending_buf[e2.pending++] = t4 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t4;
           }
           function L2(e2, t4) {
-            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S7, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
+            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S8, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
             e2.prev_length >= e2.good_match && (i6 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
             do {
               if (u2[(r3 = t4) + a2] === p2 && u2[r3 + a2 - 1] === d2 && u2[r3] === u2[s2] && u2[++r3] === u2[s2 + 1]) {
                 s2 += 2, r3++;
                 do {
                 } while (u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && s2 < c2);
-                if (n3 = S7 - (c2 - s2), s2 = c2 - S7, a2 < n3) {
+                if (n3 = S8 - (c2 - s2), s2 = c2 - S8, a2 < n3) {
                   if (e2.match_start = t4, o2 <= (a2 = n3)) break;
                   d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
                 }
@@ -25589,15 +25936,15 @@
                 return e3.insert = 0, t5 === f ? (N(e3, true), 0 === e3.strm.avail_out ? O : B) : e3.last_lit && (N(e3, false), 0 === e3.strm.avail_out) ? A : I;
               })(n3, t4) : 3 === n3.strategy ? (function(e3, t5) {
                 for (var r4, n4, i7, s3, a3 = e3.window; ; ) {
-                  if (e3.lookahead <= S7) {
-                    if (j(e3), e3.lookahead <= S7 && t5 === l) return A;
+                  if (e3.lookahead <= S8) {
+                    if (j(e3), e3.lookahead <= S8 && t5 === l) return A;
                     if (0 === e3.lookahead) break;
                   }
                   if (e3.match_length = 0, e3.lookahead >= x && 0 < e3.strstart && (n4 = a3[i7 = e3.strstart - 1]) === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7]) {
-                    s3 = e3.strstart + S7;
+                    s3 = e3.strstart + S8;
                     do {
                     } while (n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && i7 < s3);
-                    e3.match_length = S7 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
+                    e3.match_length = S8 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
                   }
                   if (e3.match_length >= x ? (r4 = u._tr_tally(e3, 1, e3.match_length - x), e3.lookahead -= e3.match_length, e3.strstart += e3.match_length, e3.match_length = 0) : (r4 = u._tr_tally(e3, 0, e3.window[e3.strstart]), e3.lookahead--, e3.strstart++), r4 && (N(e3, false), 0 === e3.strm.avail_out)) return A;
                 }
@@ -25628,7 +25975,7 @@
         }, {}], 48: [function(e, t3, r) {
           "use strict";
           t3.exports = function(e2, t4) {
-            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S7, z, C;
+            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S8, z, C;
             r3 = e2.state, n2 = e2.next_in, z = e2.input, i5 = n2 + (e2.avail_in - 5), s = e2.next_out, C = e2.output, a = s - (t4 - e2.avail_out), o = s + (e2.avail_out - 257), h = r3.dmax, u = r3.wsize, l = r3.whave, f = r3.wnext, c = r3.window, d = r3.hold, p = r3.bits, m = r3.lencode, _2 = r3.distcode, g = (1 << r3.lenbits) - 1, b = (1 << r3.distbits) - 1;
             e: do {
               p < 15 && (d += z[n2++] << p, p += 8, d += z[n2++] << p, p += 8), v2 = m[d & g];
@@ -25666,25 +26013,25 @@
                         e2.msg = "invalid distance too far back", r3.mode = 30;
                         break e;
                       }
-                      if (S7 = c, (x = 0) === f) {
+                      if (S8 = c, (x = 0) === f) {
                         if (x += u - y, y < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
-                          x = s - k, S7 = C;
+                          x = s - k, S8 = C;
                         }
                       } else if (f < y) {
                         if (x += u + f - y, (y -= f) < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
                           if (x = 0, f < w) {
                             for (w -= y = f; C[s++] = c[x++], --y; ) ;
-                            x = s - k, S7 = C;
+                            x = s - k, S8 = C;
                           }
                         }
                       } else if (x += f - y, y < w) {
                         for (w -= y; C[s++] = c[x++], --y; ) ;
-                        x = s - k, S7 = C;
+                        x = s - k, S8 = C;
                       }
-                      for (; 2 < w; ) C[s++] = S7[x++], C[s++] = S7[x++], C[s++] = S7[x++], w -= 3;
-                      w && (C[s++] = S7[x++], 1 < w && (C[s++] = S7[x++]));
+                      for (; 2 < w; ) C[s++] = S8[x++], C[s++] = S8[x++], C[s++] = S8[x++], w -= 3;
+                      w && (C[s++] = S8[x++], 1 < w && (C[s++] = S8[x++]));
                     } else {
                       for (x = s - k; C[s++] = C[x++], C[s++] = C[x++], C[s++] = C[x++], 2 < (w -= 3); ) ;
                       w && (C[s++] = C[x++], 1 < w && (C[s++] = C[x++]));
@@ -25742,7 +26089,7 @@
           r.inflateReset = o, r.inflateReset2 = h, r.inflateResetKeep = a, r.inflateInit = function(e2) {
             return u(e2, 15);
           }, r.inflateInit2 = u, r.inflate = function(e2, t4) {
-            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S7, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S8, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
             if (!e2 || !e2.state || !e2.output || !e2.input && 0 !== e2.avail_in) return U;
             12 === (r3 = e2.state).mode && (r3.mode = 13), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, f2 = o2, c2 = h2, x = N;
             e: for (; ; ) switch (r3.mode) {
@@ -25915,7 +26262,7 @@
                   r3.lens[A[r3.have++]] = 7 & u2, u2 >>>= 3, l2 -= 3;
                 }
                 for (; r3.have < 19; ) r3.lens[A[r3.have++]] = 0;
-                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S7 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S7), r3.lenbits = S7.bits, x) {
+                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S8 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S8), r3.lenbits = S8.bits, x) {
                   e2.msg = "invalid code lengths set", r3.mode = 30;
                   break;
                 }
@@ -25963,11 +26310,11 @@
                   e2.msg = "invalid code -- missing end-of-block", r3.mode = 30;
                   break;
                 }
-                if (r3.lenbits = 9, S7 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S7), r3.lenbits = S7.bits, x) {
+                if (r3.lenbits = 9, S8 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S8), r3.lenbits = S8.bits, x) {
                   e2.msg = "invalid literal/lengths set", r3.mode = 30;
                   break;
                 }
-                if (r3.distbits = 6, r3.distcode = r3.distdyn, S7 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S7), r3.distbits = S7.bits, x) {
+                if (r3.distbits = 6, r3.distcode = r3.distdyn, S8 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S8), r3.distbits = S8.bits, x) {
                   e2.msg = "invalid distances set", r3.mode = 30;
                   break;
                 }
@@ -26112,7 +26459,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S7 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S8 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -26122,21 +26469,21 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S7 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S8 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S7, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S7, y = u = 1 << x; i5[c + (E >> S7) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S8, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S8, y = u = 1 << x; i5[c + (E >> S8) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
                 b = t4[r3 + a[v2]];
               }
               if (k < b && (E & f) !== l) {
-                for (0 === S7 && (S7 = k), c += y, z = 1 << (x = b - S7); x + S7 < w && !((z -= O[x + S7]) <= 0); ) x++, z <<= 1;
+                for (0 === S8 && (S8 = k), c += y, z = 1 << (x = b - S8); x + S8 < w && !((z -= O[x + S8]) <= 0); ) x++, z <<= 1;
                 if (C += 1 << x, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
                 i5[l = E & f] = k << 24 | x << 16 | c - s | 0;
               }
             }
-            return 0 !== E && (i5[c + E] = b - S7 << 24 | 64 << 16 | 0), o.bits = k, 0;
+            return 0 !== E && (i5[c + E] = b - S8 << 24 | 64 << 16 | 0), o.bits = k, 0;
           };
         }, { "../utils/common": 41 }], 51: [function(e, t3, r) {
           "use strict";
@@ -26147,7 +26494,7 @@
           function n2(e2) {
             for (var t4 = e2.length; 0 <= --t4; ) e2[t4] = 0;
           }
-          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S7 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
+          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S8 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
           n2(z);
           var C = new Array(2 * f);
           n2(C);
@@ -26273,11 +26620,11 @@
               return o;
             })(e2)), Y(e2, e2.l_desc), Y(e2, e2.d_desc), a2 = (function(e3) {
               var t5;
-              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S7[t5] + 1]; t5--) ;
+              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S8[t5] + 1]; t5--) ;
               return e3.opt_len += 3 * (t5 + 1) + 5 + 5 + 4, t5;
             })(e2), i6 = e2.opt_len + 3 + 7 >>> 3, (s2 = e2.static_len + 3 + 7 >>> 3) <= i6 && (i6 = s2)) : i6 = s2 = r3 + 5, r3 + 4 <= i6 && -1 !== t4 ? J2(e2, t4, r3, n3) : 4 === e2.strategy || s2 === i6 ? (P(e2, 2 + (n3 ? 1 : 0), 3), K(e2, z, C)) : (P(e2, 4 + (n3 ? 1 : 0), 3), (function(e3, t5, r4, n4) {
               var i7;
-              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S7[i7] + 1], 3);
+              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S8[i7] + 1], 3);
               V2(e3, e3.dyn_ltree, t5 - 1), V2(e3, e3.dyn_dtree, r4 - 1);
             })(e2, e2.l_desc.max_code + 1, e2.d_desc.max_code + 1, a2 + 1), K(e2, e2.dyn_ltree, e2.dyn_dtree)), W(e2), n3 && M2(e2);
           }, r._tr_tally = function(e2, t4, r3) {
@@ -28445,12 +28792,12 @@
       for (let i5 = 0; i5 < list.length; i5++) {
         const it = list[i5];
         setBusy(tf("ui.galleryAi.aIBusySetCaption", i5 + 1, list.length, it.file));
-        const ctx = contextOf(it, usage);
-        const prompt2 = tf("ui.galleryAi.setCaptionShortImage", ctx);
+        const ctx2 = contextOf(it, usage);
+        const prompt2 = tf("ui.galleryAi.setCaptionShortImage", ctx2);
         let text = await visionAsk(prompt2, SYS_CAP, await thumbDataUrl(root, it.path));
         if (!text) {
           text = await callAI(
-            tf("ui.galleryAi.setCaptionShortImage2", ctx),
+            tf("ui.galleryAi.setCaptionShortImage2", ctx2),
             SYS_CAP
           ) || "";
         }
@@ -28489,8 +28836,8 @@
       for (let i5 = 0; i5 < list.length; i5++) {
         const it = list[i5];
         setBusy(tf("ui.galleryAi.aIBusySuggestTag", i5 + 1, list.length, it.file));
-        const ctx = contextOf(it, usage);
-        const prompt2 = tf("ui.galleryAi.setTagImage", ctx, hint);
+        const ctx2 = contextOf(it, usage);
+        const prompt2 = tf("ui.galleryAi.setTagImage", ctx2, hint);
         let text = await visionAsk(prompt2, SYS_TAG, await thumbDataUrl(root, it.path));
         if (!text) text = await callAI(prompt2, SYS_TAG) || "";
         const tags = parseTagAnswer(text, { entities });
@@ -29410,15 +29757,15 @@
         /** ลากไฟล์จาก Finder/Explorer มาวางในตาราง */
         async importDropped(files) {
           const album = this.state.album === ALL_ALBUM2 ? ROOT_ALBUM2 : this.state.album;
-          const dir = await albumDir(kapi, this.root, album);
-          await kapi.mkdir(dir);
+          const dir2 = await albumDir(kapi, this.root, album);
+          await kapi.mkdir(dir2);
           let n2 = 0;
           await withBusy(t("ui.gallery.busyAddImage"), async () => {
             for (const f of files) {
               try {
                 const buf = new Uint8Array(await f.arrayBuffer());
                 const base64 = btoa(Array.from(buf, (b) => String.fromCharCode(b)).join(""));
-                await kapi.writeImageData(dir, f.name, base64);
+                await kapi.writeImageData(dir2, f.name, base64);
                 n2++;
               } catch (err2) {
                 setStatus(t("ui.gallery.addImageNotOk") + err2.message);
@@ -32075,10 +32422,10 @@
           try {
             if (path) this._path = path;
             const p = await this._defaultPath();
-            const dir = p.replace(/[\\/][^\\/]*$/, "");
-            if (dir && dir !== p && this._io.mkdir) {
+            const dir2 = p.replace(/[\\/][^\\/]*$/, "");
+            if (dir2 && dir2 !== p && this._io.mkdir) {
               try {
-                await this._io.mkdir(dir);
+                await this._io.mkdir(dir2);
               } catch {
               }
             }
@@ -32373,12 +32720,12 @@
           } else if (mode === "back") {
             this._nodes = picked.concat(rest);
           } else if (mode === "forward" || mode === "backward") {
-            const dir = mode === "forward" ? 1 : -1;
+            const dir2 = mode === "forward" ? 1 : -1;
             const arr = this._nodes.slice();
-            const order = dir > 0 ? arr.map((n2, i5) => i5).reverse() : arr.map((n2, i5) => i5);
+            const order = dir2 > 0 ? arr.map((n2, i5) => i5).reverse() : arr.map((n2, i5) => i5);
             for (const i5 of order) {
               if (!set.has(arr[i5].id)) continue;
-              const j = i5 + dir;
+              const j = i5 + dir2;
               if (j < 0 || j >= arr.length) continue;
               if (set.has(arr[j].id)) continue;
               const tmp = arr[i5];
@@ -33766,7 +34113,7 @@
            * @param {Number} y y coordinate
            * @param {Number} tolerance Tolerance
            */
-          isTransparent: function(ctx, x, y, tolerance) {
+          isTransparent: function(ctx2, x, y, tolerance) {
             if (tolerance > 0) {
               if (x > tolerance) {
                 x -= tolerance;
@@ -33779,7 +34126,7 @@
                 y = 0;
               }
             }
-            var _isTransparent = true, i5, temp, imageData = ctx.getImageData(x, y, tolerance * 2 || 1, tolerance * 2 || 1), l = imageData.data.length;
+            var _isTransparent = true, i5, temp, imageData = ctx2.getImageData(x, y, tolerance * 2 || 1, tolerance * 2 || 1), l = imageData.data.length;
             for (i5 = 3; i5 < l; i5 += 4) {
               temp = imageData.data[i5];
               _isTransparent = temp <= 0;
@@ -35138,9 +35485,9 @@
             impl._classList = null;
           }
         }
-        function setImageSmoothing(ctx, value) {
-          ctx.imageSmoothingEnabled = ctx.imageSmoothingEnabled || ctx.webkitImageSmoothingEnabled || ctx.mozImageSmoothingEnabled || ctx.msImageSmoothingEnabled || ctx.oImageSmoothingEnabled;
-          ctx.imageSmoothingEnabled = value;
+        function setImageSmoothing(ctx2, value) {
+          ctx2.imageSmoothingEnabled = ctx2.imageSmoothingEnabled || ctx2.webkitImageSmoothingEnabled || ctx2.mozImageSmoothingEnabled || ctx2.msImageSmoothingEnabled || ctx2.oImageSmoothingEnabled;
+          ctx2.imageSmoothingEnabled = value;
         }
         fabric4.util.setImageSmoothing = setImageSmoothing;
         fabric4.util.getById = getById;
@@ -37717,46 +38064,46 @@
       (function(global2) {
         "use strict";
         var fabric5 = global2.fabric || (global2.fabric = {}), degreesToRadians2 = fabric5.util.degreesToRadians, controls = fabric5.controlsUtils;
-        function renderCircleControl(ctx, left, top, styleOverride, fabricObject) {
+        function renderCircleControl(ctx2, left, top, styleOverride, fabricObject) {
           styleOverride = styleOverride || {};
           var xSize = this.sizeX || styleOverride.cornerSize || fabricObject.cornerSize, ySize = this.sizeY || styleOverride.cornerSize || fabricObject.cornerSize, transparentCorners = typeof styleOverride.transparentCorners !== "undefined" ? styleOverride.transparentCorners : fabricObject.transparentCorners, methodName = transparentCorners ? "stroke" : "fill", stroke2 = !transparentCorners && (styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor), myLeft = left, myTop = top, size;
-          ctx.save();
-          ctx.fillStyle = styleOverride.cornerColor || fabricObject.cornerColor;
-          ctx.strokeStyle = styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor;
+          ctx2.save();
+          ctx2.fillStyle = styleOverride.cornerColor || fabricObject.cornerColor;
+          ctx2.strokeStyle = styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor;
           if (xSize > ySize) {
             size = xSize;
-            ctx.scale(1, ySize / xSize);
+            ctx2.scale(1, ySize / xSize);
             myTop = top * xSize / ySize;
           } else if (ySize > xSize) {
             size = ySize;
-            ctx.scale(xSize / ySize, 1);
+            ctx2.scale(xSize / ySize, 1);
             myLeft = left * ySize / xSize;
           } else {
             size = xSize;
           }
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(myLeft, myTop, size / 2, 0, 2 * Math.PI, false);
-          ctx[methodName]();
+          ctx2.lineWidth = 1;
+          ctx2.beginPath();
+          ctx2.arc(myLeft, myTop, size / 2, 0, 2 * Math.PI, false);
+          ctx2[methodName]();
           if (stroke2) {
-            ctx.stroke();
+            ctx2.stroke();
           }
-          ctx.restore();
+          ctx2.restore();
         }
-        function renderSquareControl(ctx, left, top, styleOverride, fabricObject) {
+        function renderSquareControl(ctx2, left, top, styleOverride, fabricObject) {
           styleOverride = styleOverride || {};
           var xSize = this.sizeX || styleOverride.cornerSize || fabricObject.cornerSize, ySize = this.sizeY || styleOverride.cornerSize || fabricObject.cornerSize, transparentCorners = typeof styleOverride.transparentCorners !== "undefined" ? styleOverride.transparentCorners : fabricObject.transparentCorners, methodName = transparentCorners ? "stroke" : "fill", stroke2 = !transparentCorners && (styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor), xSizeBy2 = xSize / 2, ySizeBy2 = ySize / 2;
-          ctx.save();
-          ctx.fillStyle = styleOverride.cornerColor || fabricObject.cornerColor;
-          ctx.strokeStyle = styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor;
-          ctx.lineWidth = 1;
-          ctx.translate(left, top);
-          ctx.rotate(degreesToRadians2(fabricObject.angle));
-          ctx[methodName + "Rect"](-xSizeBy2, -ySizeBy2, xSize, ySize);
+          ctx2.save();
+          ctx2.fillStyle = styleOverride.cornerColor || fabricObject.cornerColor;
+          ctx2.strokeStyle = styleOverride.cornerStrokeColor || fabricObject.cornerStrokeColor;
+          ctx2.lineWidth = 1;
+          ctx2.translate(left, top);
+          ctx2.rotate(degreesToRadians2(fabricObject.angle));
+          ctx2[methodName + "Rect"](-xSizeBy2, -ySizeBy2, xSize, ySize);
           if (stroke2) {
-            ctx.strokeRect(-xSizeBy2, -ySizeBy2, xSize, ySize);
+            ctx2.strokeRect(-xSizeBy2, -ySizeBy2, xSize, ySize);
           }
-          ctx.restore();
+          ctx2.restore();
         }
         controls.renderCircleControl = renderCircleControl;
         controls.renderSquareControl = renderSquareControl;
@@ -38047,14 +38394,14 @@
           * @param {Object} styleOverride
           * @param {fabric.Object} fabricObject the object where the control is about to be rendered
           */
-          render: function(ctx, left, top, styleOverride, fabricObject) {
+          render: function(ctx2, left, top, styleOverride, fabricObject) {
             styleOverride = styleOverride || {};
             switch (styleOverride.cornerStyle || fabricObject.cornerStyle) {
               case "circle":
-                fabric5.controlsUtils.renderCircleControl.call(this, ctx, left, top, styleOverride, fabricObject);
+                fabric5.controlsUtils.renderCircleControl.call(this, ctx2, left, top, styleOverride, fabricObject);
                 break;
               default:
-                fabric5.controlsUtils.renderSquareControl.call(this, ctx, left, top, styleOverride, fabricObject);
+                fabric5.controlsUtils.renderSquareControl.call(this, ctx2, left, top, styleOverride, fabricObject);
             }
           }
         };
@@ -38323,20 +38670,20 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @return {CanvasGradient}
              */
-            toLive: function(ctx) {
+            toLive: function(ctx2) {
               var gradient, coords = fabric4.util.object.clone(this.coords), i5, len5;
               if (!this.type) {
                 return;
               }
               if (this.type === "linear") {
-                gradient = ctx.createLinearGradient(
+                gradient = ctx2.createLinearGradient(
                   coords.x1,
                   coords.y1,
                   coords.x2,
                   coords.y2
                 );
               } else if (this.type === "radial") {
-                gradient = ctx.createRadialGradient(
+                gradient = ctx2.createRadialGradient(
                   coords.x1,
                   coords.y1,
                   coords.r1,
@@ -38559,7 +38906,7 @@
              * @param {CanvasRenderingContext2D} ctx Context to create pattern
              * @return {CanvasPattern}
              */
-            toLive: function(ctx) {
+            toLive: function(ctx2) {
               var source = this.source;
               if (!source) {
                 return "";
@@ -38572,7 +38919,7 @@
                   return "";
                 }
               }
-              return ctx.createPattern(source, this.repeat);
+              return ctx2.createPattern(source, this.repeat);
             }
           }
         );
@@ -39412,8 +39759,8 @@
              * @return {fabric.Canvas} thisArg
              * @chainable
              */
-            clearContext: function(ctx) {
-              ctx.clearRect(0, 0, this.width, this.height);
+            clearContext: function(ctx2) {
+              ctx2.clearRect(0, 0, this.width, this.height);
               return this;
             },
             /**
@@ -39510,57 +39857,57 @@
              * @return {fabric.Canvas} instance
              * @chainable
              */
-            renderCanvas: function(ctx, objects) {
+            renderCanvas: function(ctx2, objects) {
               var v2 = this.viewportTransform, path = this.clipPath;
               this.cancelRequestedRender();
               this.calcViewportBoundaries();
-              this.clearContext(ctx);
-              fabric4.util.setImageSmoothing(ctx, this.imageSmoothingEnabled);
-              this.fire("before:render", { ctx });
-              this._renderBackground(ctx);
-              ctx.save();
-              ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
-              this._renderObjects(ctx, objects);
-              ctx.restore();
+              this.clearContext(ctx2);
+              fabric4.util.setImageSmoothing(ctx2, this.imageSmoothingEnabled);
+              this.fire("before:render", { ctx: ctx2 });
+              this._renderBackground(ctx2);
+              ctx2.save();
+              ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+              this._renderObjects(ctx2, objects);
+              ctx2.restore();
               if (!this.controlsAboveOverlay && this.interactive) {
-                this.drawControls(ctx);
+                this.drawControls(ctx2);
               }
               if (path) {
                 path.canvas = this;
                 path.shouldCache();
                 path._transformDone = true;
                 path.renderCache({ forClipping: true });
-                this.drawClipPathOnCanvas(ctx);
+                this.drawClipPathOnCanvas(ctx2);
               }
-              this._renderOverlay(ctx);
+              this._renderOverlay(ctx2);
               if (this.controlsAboveOverlay && this.interactive) {
-                this.drawControls(ctx);
+                this.drawControls(ctx2);
               }
-              this.fire("after:render", { ctx });
+              this.fire("after:render", { ctx: ctx2 });
             },
             /**
              * Paint the cached clipPath on the lowerCanvasEl
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            drawClipPathOnCanvas: function(ctx) {
+            drawClipPathOnCanvas: function(ctx2) {
               var v2 = this.viewportTransform, path = this.clipPath;
-              ctx.save();
-              ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
-              ctx.globalCompositeOperation = "destination-in";
-              path.transform(ctx);
-              ctx.scale(1 / path.zoomX, 1 / path.zoomY);
-              ctx.drawImage(path._cacheCanvas, -path.cacheTranslationX, -path.cacheTranslationY);
-              ctx.restore();
+              ctx2.save();
+              ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+              ctx2.globalCompositeOperation = "destination-in";
+              path.transform(ctx2);
+              ctx2.scale(1 / path.zoomX, 1 / path.zoomY);
+              ctx2.drawImage(path._cacheCanvas, -path.cacheTranslationX, -path.cacheTranslationY);
+              ctx2.restore();
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {Array} objects to render
              */
-            _renderObjects: function(ctx, objects) {
+            _renderObjects: function(ctx2, objects) {
               var i5, len5;
               for (i5 = 0, len5 = objects.length; i5 < len5; ++i5) {
-                objects[i5] && objects[i5].render(ctx);
+                objects[i5] && objects[i5].render(ctx2);
               }
             },
             /**
@@ -39568,54 +39915,54 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {string} property 'background' or 'overlay'
              */
-            _renderBackgroundOrOverlay: function(ctx, property) {
+            _renderBackgroundOrOverlay: function(ctx2, property) {
               var fill3 = this[property + "Color"], object = this[property + "Image"], v2 = this.viewportTransform, needsVpt = this[property + "Vpt"];
               if (!fill3 && !object) {
                 return;
               }
               if (fill3) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(this.width, 0);
-                ctx.lineTo(this.width, this.height);
-                ctx.lineTo(0, this.height);
-                ctx.closePath();
-                ctx.fillStyle = fill3.toLive ? fill3.toLive(ctx, this) : fill3;
+                ctx2.save();
+                ctx2.beginPath();
+                ctx2.moveTo(0, 0);
+                ctx2.lineTo(this.width, 0);
+                ctx2.lineTo(this.width, this.height);
+                ctx2.lineTo(0, this.height);
+                ctx2.closePath();
+                ctx2.fillStyle = fill3.toLive ? fill3.toLive(ctx2, this) : fill3;
                 if (needsVpt) {
-                  ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+                  ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
                 }
-                ctx.transform(1, 0, 0, 1, fill3.offsetX || 0, fill3.offsetY || 0);
+                ctx2.transform(1, 0, 0, 1, fill3.offsetX || 0, fill3.offsetY || 0);
                 var m = fill3.gradientTransform || fill3.patternTransform;
-                m && ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
-                ctx.fill();
-                ctx.restore();
+                m && ctx2.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+                ctx2.fill();
+                ctx2.restore();
               }
               if (object) {
-                ctx.save();
+                ctx2.save();
                 var skipOffscreen = this.skipOffscreen;
                 this.skipOffscreen = needsVpt;
                 if (needsVpt) {
-                  ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+                  ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
                 }
-                object.render(ctx);
+                object.render(ctx2);
                 this.skipOffscreen = skipOffscreen;
-                ctx.restore();
+                ctx2.restore();
               }
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderBackground: function(ctx) {
-              this._renderBackgroundOrOverlay(ctx, "background");
+            _renderBackground: function(ctx2) {
+              this._renderBackgroundOrOverlay(ctx2, "background");
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderOverlay: function(ctx) {
-              this._renderBackgroundOrOverlay(ctx, "overlay");
+            _renderOverlay: function(ctx2) {
+              this._renderBackgroundOrOverlay(ctx2, "overlay");
             },
             /**
              * Returns coordinates of a center of canvas.
@@ -40326,13 +40673,13 @@
               if (!el2 || !el2.getContext) {
                 return null;
               }
-              var ctx = el2.getContext("2d");
-              if (!ctx) {
+              var ctx2 = el2.getContext("2d");
+              if (!ctx2) {
                 return null;
               }
               switch (methodName) {
                 case "setLineDash":
-                  return typeof ctx.setLineDash !== "undefined";
+                  return typeof ctx2.setLineDash !== "undefined";
                 default:
                   return null;
               }
@@ -40409,23 +40756,23 @@
            * @private
            * @param {CanvasRenderingContext2D} ctx
            */
-          _setBrushStyles: function(ctx) {
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = this.width;
-            ctx.lineCap = this.strokeLineCap;
-            ctx.miterLimit = this.strokeMiterLimit;
-            ctx.lineJoin = this.strokeLineJoin;
-            ctx.setLineDash(this.strokeDashArray || []);
+          _setBrushStyles: function(ctx2) {
+            ctx2.strokeStyle = this.color;
+            ctx2.lineWidth = this.width;
+            ctx2.lineCap = this.strokeLineCap;
+            ctx2.miterLimit = this.strokeMiterLimit;
+            ctx2.lineJoin = this.strokeLineJoin;
+            ctx2.setLineDash(this.strokeDashArray || []);
           },
           /**
            * Sets the transformation on given context
            * @param {RenderingContext2d} ctx context to render on
            * @private
            */
-          _saveAndTransform: function(ctx) {
+          _saveAndTransform: function(ctx2) {
             var v2 = this.canvas.viewportTransform;
-            ctx.save();
-            ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+            ctx2.save();
+            ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
           },
           /**
            * Sets brush shadow styles
@@ -40435,14 +40782,14 @@
             if (!this.shadow) {
               return;
             }
-            var canvas = this.canvas, shadow = this.shadow, ctx = canvas.contextTop, zoom = canvas.getZoom();
+            var canvas = this.canvas, shadow = this.shadow, ctx2 = canvas.contextTop, zoom = canvas.getZoom();
             if (canvas && canvas._isRetinaScaling()) {
               zoom *= fabric4.devicePixelRatio;
             }
-            ctx.shadowColor = shadow.color;
-            ctx.shadowBlur = shadow.blur * zoom;
-            ctx.shadowOffsetX = shadow.offsetX * zoom;
-            ctx.shadowOffsetY = shadow.offsetY * zoom;
+            ctx2.shadowColor = shadow.color;
+            ctx2.shadowBlur = shadow.blur * zoom;
+            ctx2.shadowOffsetX = shadow.offsetX * zoom;
+            ctx2.shadowOffsetY = shadow.offsetY * zoom;
           },
           needsFullRender: function() {
             var color = new fabric4.Color(this.color);
@@ -40453,9 +40800,9 @@
            * @private
            */
           _resetShadow: function() {
-            var ctx = this.canvas.contextTop;
-            ctx.shadowColor = "";
-            ctx.shadowBlur = ctx.shadowOffsetX = ctx.shadowOffsetY = 0;
+            var ctx2 = this.canvas.contextTop;
+            ctx2.shadowColor = "";
+            ctx2.shadowBlur = ctx2.shadowOffsetX = ctx2.shadowOffsetY = 0;
           },
           /**
            * Check is pointer is outside canvas boundaries
@@ -40508,9 +40855,9 @@
              * Invoked inside on mouse down and mouse move
              * @param {Object} pointer
              */
-            _drawSegment: function(ctx, p1, p2) {
+            _drawSegment: function(ctx2, p1, p2) {
               var midPoint = p1.midPointFrom(p2);
-              ctx.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+              ctx2.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
               return midPoint;
             },
             /**
@@ -40543,15 +40890,15 @@
                   this.canvas.clearContext(this.canvas.contextTop);
                   this._render();
                 } else {
-                  var points = this._points, length = points.length, ctx = this.canvas.contextTop;
-                  this._saveAndTransform(ctx);
+                  var points = this._points, length = points.length, ctx2 = this.canvas.contextTop;
+                  this._saveAndTransform(ctx2);
                   if (this.oldEnd) {
-                    ctx.beginPath();
-                    ctx.moveTo(this.oldEnd.x, this.oldEnd.y);
+                    ctx2.beginPath();
+                    ctx2.moveTo(this.oldEnd.x, this.oldEnd.y);
                   }
-                  this.oldEnd = this._drawSegment(ctx, points[length - 2], points[length - 1], true);
-                  ctx.stroke();
-                  ctx.restore();
+                  this.oldEnd = this._drawSegment(ctx2, points[length - 2], points[length - 1], true);
+                  ctx2.stroke();
+                  ctx2.restore();
                 }
               }
             },
@@ -40615,11 +40962,11 @@
              * @private
              * @param {CanvasRenderingContext2D} [ctx]
              */
-            _render: function(ctx) {
+            _render: function(ctx2) {
               var i5, len5, p1 = this._points[0], p2 = this._points[1];
-              ctx = ctx || this.canvas.contextTop;
-              this._saveAndTransform(ctx);
-              ctx.beginPath();
+              ctx2 = ctx2 || this.canvas.contextTop;
+              this._saveAndTransform(ctx2);
+              ctx2.beginPath();
               if (this._points.length === 2 && p1.x === p2.x && p1.y === p2.y) {
                 var width = this.width / 1e3;
                 p1 = new fabric4.Point(p1.x, p1.y);
@@ -40627,15 +40974,15 @@
                 p1.x -= width;
                 p2.x += width;
               }
-              ctx.moveTo(p1.x, p1.y);
+              ctx2.moveTo(p1.x, p1.y);
               for (i5 = 1, len5 = this._points.length; i5 < len5; i5++) {
-                this._drawSegment(ctx, p1, p2);
+                this._drawSegment(ctx2, p1, p2);
                 p1 = this._points[i5];
                 p2 = this._points[i5 + 1];
               }
-              ctx.lineTo(p1.x, p1.y);
-              ctx.stroke();
-              ctx.restore();
+              ctx2.lineTo(p1.x, p1.y);
+              ctx2.stroke();
+              ctx2.restore();
             },
             /**
              * Converts points to SVG path
@@ -40700,8 +41047,8 @@
              * and add it to the fabric canvas.
              */
             _finalizeAndAddPath: function() {
-              var ctx = this.canvas.contextTop;
-              ctx.closePath();
+              var ctx2 = this.canvas.contextTop;
+              ctx2.closePath();
               if (this.decimate) {
                 this._points = this.decimatePoints(this._points, this.decimate);
               }
@@ -40746,17 +41093,17 @@
            * @param {Object} pointer
            */
           drawDot: function(pointer) {
-            var point = this.addPoint(pointer), ctx = this.canvas.contextTop;
-            this._saveAndTransform(ctx);
-            this.dot(ctx, point);
-            ctx.restore();
+            var point = this.addPoint(pointer), ctx2 = this.canvas.contextTop;
+            this._saveAndTransform(ctx2);
+            this.dot(ctx2, point);
+            ctx2.restore();
           },
-          dot: function(ctx, point) {
-            ctx.fillStyle = point.fill;
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2, false);
-            ctx.closePath();
-            ctx.fill();
+          dot: function(ctx2, point) {
+            ctx2.fillStyle = point.fill;
+            ctx2.beginPath();
+            ctx2.arc(point.x, point.y, point.radius, 0, Math.PI * 2, false);
+            ctx2.closePath();
+            ctx2.fill();
           },
           /**
            * Invoked on mouse down
@@ -40772,12 +41119,12 @@
            * @private
            */
           _render: function() {
-            var ctx = this.canvas.contextTop, i5, len5, points = this.points;
-            this._saveAndTransform(ctx);
+            var ctx2 = this.canvas.contextTop, i5, len5, points = this.points;
+            this._saveAndTransform(ctx2);
             for (i5 = 0, len5 = points.length; i5 < len5; i5++) {
-              this.dot(ctx, points[i5]);
+              this.dot(ctx2, points[i5]);
             }
-            ctx.restore();
+            ctx2.restore();
           },
           /**
            * Invoked on mouse move
@@ -40968,29 +41315,29 @@
            * Render new chunk of spray brush
            */
           render: function(sprayChunk) {
-            var ctx = this.canvas.contextTop, i5, len5;
-            ctx.fillStyle = this.color;
-            this._saveAndTransform(ctx);
+            var ctx2 = this.canvas.contextTop, i5, len5;
+            ctx2.fillStyle = this.color;
+            this._saveAndTransform(ctx2);
             for (i5 = 0, len5 = sprayChunk.length; i5 < len5; i5++) {
               var point = sprayChunk[i5];
               if (typeof point.opacity !== "undefined") {
-                ctx.globalAlpha = point.opacity;
+                ctx2.globalAlpha = point.opacity;
               }
-              ctx.fillRect(point.x, point.y, point.width, point.width);
+              ctx2.fillRect(point.x, point.y, point.width, point.width);
             }
-            ctx.restore();
+            ctx2.restore();
           },
           /**
            * Render all spray chunks
            */
           _render: function() {
-            var ctx = this.canvas.contextTop, i5, ilen;
-            ctx.fillStyle = this.color;
-            this._saveAndTransform(ctx);
+            var ctx2 = this.canvas.contextTop, i5, ilen;
+            ctx2.fillStyle = this.color;
+            this._saveAndTransform(ctx2);
             for (i5 = 0, ilen = this.sprayChunks.length; i5 < ilen; i5++) {
               this.render(this.sprayChunks[i5]);
             }
-            ctx.restore();
+            ctx2.restore();
           },
           /**
            * @param {Object} pointer
@@ -41042,16 +41389,16 @@
            * Creates "pattern" instance property
            * @param {CanvasRenderingContext2D} ctx
            */
-          getPattern: function(ctx) {
-            return ctx.createPattern(this.source || this.getPatternSrc(), "repeat");
+          getPattern: function(ctx2) {
+            return ctx2.createPattern(this.source || this.getPatternSrc(), "repeat");
           },
           /**
            * Sets brush styles
            * @param {CanvasRenderingContext2D} ctx
            */
-          _setBrushStyles: function(ctx) {
-            this.callSuper("_setBrushStyles", ctx);
-            ctx.strokeStyle = this.getPattern(ctx);
+          _setBrushStyles: function(ctx2) {
+            this.callSuper("_setBrushStyles", ctx2);
+            ctx2.strokeStyle = this.getPattern(ctx2);
           },
           /**
            * Creates path
@@ -41403,17 +41750,17 @@
               this.renderCanvas(canvasToDrawOn, this._chooseObjectsToRender());
               return this;
             },
-            renderTopLayer: function(ctx) {
-              ctx.save();
+            renderTopLayer: function(ctx2) {
+              ctx2.save();
               if (this.isDrawingMode && this._isCurrentlyDrawing) {
                 this.freeDrawingBrush && this.freeDrawingBrush._render();
                 this.contextTopDirty = true;
               }
               if (this.selection && this._groupSelector) {
-                this._drawSelection(ctx);
+                this._drawSelection(ctx2);
                 this.contextTopDirty = true;
               }
-              ctx.restore();
+              ctx2.restore();
             },
             /**
              * Method to render only the top canvas.
@@ -41422,9 +41769,9 @@
              * @chainable
              */
             renderTop: function() {
-              var ctx = this.contextTop;
-              this.clearContext(ctx);
-              this.renderTopLayer(ctx);
+              var ctx2 = this.contextTop;
+              this.clearContext(ctx2);
+              this.renderTopLayer(ctx2);
               this.fire("after:render");
               return this;
             },
@@ -41453,16 +41800,16 @@
                 );
                 return isTransparent;
               }
-              var ctx = this.contextCache, originalColor = target.selectionBackgroundColor, v2 = this.viewportTransform;
+              var ctx2 = this.contextCache, originalColor = target.selectionBackgroundColor, v2 = this.viewportTransform;
               target.selectionBackgroundColor = "";
-              this.clearContext(ctx);
-              ctx.save();
-              ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
-              target.render(ctx);
-              ctx.restore();
+              this.clearContext(ctx2);
+              ctx2.save();
+              ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+              target.render(ctx2);
+              ctx2.restore();
               target.selectionBackgroundColor = originalColor;
               var isTransparent = fabric4.util.isTransparent(
-                ctx,
+                ctx2,
                 x,
                 y,
                 this.targetFindTolerance
@@ -41609,23 +41956,23 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx to draw the selection on
              */
-            _drawSelection: function(ctx) {
+            _drawSelection: function(ctx2) {
               var selector = this._groupSelector, viewportStart = new fabric4.Point(selector.ex, selector.ey), start = fabric4.util.transformPoint(viewportStart, this.viewportTransform), viewportExtent = new fabric4.Point(selector.ex + selector.left, selector.ey + selector.top), extent = fabric4.util.transformPoint(viewportExtent, this.viewportTransform), minX = Math.min(start.x, extent.x), minY = Math.min(start.y, extent.y), maxX = Math.max(start.x, extent.x), maxY = Math.max(start.y, extent.y), strokeOffset = this.selectionLineWidth / 2;
               if (this.selectionColor) {
-                ctx.fillStyle = this.selectionColor;
-                ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+                ctx2.fillStyle = this.selectionColor;
+                ctx2.fillRect(minX, minY, maxX - minX, maxY - minY);
               }
               if (!this.selectionLineWidth || !this.selectionBorderColor) {
                 return;
               }
-              ctx.lineWidth = this.selectionLineWidth;
-              ctx.strokeStyle = this.selectionBorderColor;
+              ctx2.lineWidth = this.selectionLineWidth;
+              ctx2.strokeStyle = this.selectionBorderColor;
               minX += strokeOffset;
               minY += strokeOffset;
               maxX -= strokeOffset;
               maxY -= strokeOffset;
-              fabric4.Object.prototype._setLineDash.call(this, ctx, this.selectionDashArray);
-              ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+              fabric4.Object.prototype._setLineDash.call(this, ctx2, this.selectionDashArray);
+              ctx2.strokeRect(minX, minY, maxX - minX, maxY - minY);
             },
             /**
              * Method that determines what object we are clicking on
@@ -42063,10 +42410,10 @@
              * Draws objects' controls (borders/controls)
              * @param {CanvasRenderingContext2D} ctx Context to render controls on
              */
-            drawControls: function(ctx) {
+            drawControls: function(ctx2) {
               var activeObject = this._activeObject;
               if (activeObject) {
-                activeObject._renderControls(ctx);
+                activeObject._renderControls(ctx2);
               }
             },
             /**
@@ -43999,10 +44346,10 @@
              * Transforms context when rendering an object
              * @param {CanvasRenderingContext2D} ctx Context
              */
-            transform: function(ctx) {
-              var needFullTransform = this.group && !this.group._transformDone || this.group && this.canvas && ctx === this.canvas.contextTop;
+            transform: function(ctx2) {
+              var needFullTransform = this.group && !this.group._transformDone || this.group && this.canvas && ctx2 === this.canvas.contextTop;
               var m = this.calcTransformMatrix(!needFullTransform);
-              ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+              ctx2.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
             },
             /**
              * Returns an object representation of an instance
@@ -44194,31 +44541,31 @@
              * Renders an object on a specified context
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            render: function(ctx) {
+            render: function(ctx2) {
               if (this.isNotVisible()) {
                 return;
               }
               if (this.canvas && this.canvas.skipOffscreen && !this.group && !this.isOnScreen()) {
                 return;
               }
-              ctx.save();
-              this._setupCompositeOperation(ctx);
-              this.drawSelectionBackground(ctx);
-              this.transform(ctx);
-              this._setOpacity(ctx);
-              this._setShadow(ctx, this);
+              ctx2.save();
+              this._setupCompositeOperation(ctx2);
+              this.drawSelectionBackground(ctx2);
+              this.transform(ctx2);
+              this._setOpacity(ctx2);
+              this._setShadow(ctx2, this);
               if (this.shouldCache()) {
                 this.renderCache();
-                this.drawCacheOnCanvas(ctx);
+                this.drawCacheOnCanvas(ctx2);
               } else {
                 this._removeCacheCanvas();
                 this.dirty = false;
-                this.drawObject(ctx);
+                this.drawObject(ctx2);
                 if (this.objectCaching && this.statefullCache) {
                   this.saveState({ propertySet: "cacheProperties" });
                 }
               }
-              ctx.restore();
+              ctx2.restore();
             },
             renderCache: function(options) {
               options = options || {};
@@ -44309,37 +44656,37 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {fabric.Object} clipPath
              */
-            drawClipPathOnCache: function(ctx, clipPath) {
-              ctx.save();
+            drawClipPathOnCache: function(ctx2, clipPath) {
+              ctx2.save();
               if (clipPath.inverted) {
-                ctx.globalCompositeOperation = "destination-out";
+                ctx2.globalCompositeOperation = "destination-out";
               } else {
-                ctx.globalCompositeOperation = "destination-in";
+                ctx2.globalCompositeOperation = "destination-in";
               }
               if (clipPath.absolutePositioned) {
                 var m = fabric5.util.invertTransform(this.calcTransformMatrix());
-                ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+                ctx2.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
               }
-              clipPath.transform(ctx);
-              ctx.scale(1 / clipPath.zoomX, 1 / clipPath.zoomY);
-              ctx.drawImage(clipPath._cacheCanvas, -clipPath.cacheTranslationX, -clipPath.cacheTranslationY);
-              ctx.restore();
+              clipPath.transform(ctx2);
+              ctx2.scale(1 / clipPath.zoomX, 1 / clipPath.zoomY);
+              ctx2.drawImage(clipPath._cacheCanvas, -clipPath.cacheTranslationX, -clipPath.cacheTranslationY);
+              ctx2.restore();
             },
             /**
              * Execute the drawing operation for an object on a specified context
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            drawObject: function(ctx, forClipping) {
+            drawObject: function(ctx2, forClipping) {
               var originalFill = this.fill, originalStroke = this.stroke;
               if (forClipping) {
                 this.fill = "black";
                 this.stroke = "";
-                this._setClippingProperties(ctx);
+                this._setClippingProperties(ctx2);
               } else {
-                this._renderBackground(ctx);
+                this._renderBackground(ctx2);
               }
-              this._render(ctx);
-              this._drawClipPath(ctx, this.clipPath);
+              this._render(ctx2);
+              this._drawClipPath(ctx2, this.clipPath);
               this.fill = originalFill;
               this.stroke = originalStroke;
             },
@@ -44348,7 +44695,7 @@
              * @param {CanvasRenderingContext2D} ctx
              * @param {fabric.Object} clipPath
              */
-            _drawClipPath: function(ctx, clipPath) {
+            _drawClipPath: function(ctx2, clipPath) {
               if (!clipPath) {
                 return;
               }
@@ -44356,15 +44703,15 @@
               clipPath.shouldCache();
               clipPath._transformDone = true;
               clipPath.renderCache({ forClipping: true });
-              this.drawClipPathOnCache(ctx, clipPath);
+              this.drawClipPathOnCache(ctx2, clipPath);
             },
             /**
              * Paint the cached copy of the object on the target context.
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            drawCacheOnCanvas: function(ctx) {
-              ctx.scale(1 / this.zoomX, 1 / this.zoomY);
-              ctx.drawImage(this._cacheCanvas, -this.cacheTranslationX, -this.cacheTranslationY);
+            drawCacheOnCanvas: function(ctx2) {
+              ctx2.scale(1 / this.zoomX, 1 / this.zoomY);
+              ctx2.drawImage(this._cacheCanvas, -this.cacheTranslationX, -this.cacheTranslationY);
             },
             /**
              * Check if cache is dirty
@@ -44394,66 +44741,66 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderBackground: function(ctx) {
+            _renderBackground: function(ctx2) {
               if (!this.backgroundColor) {
                 return;
               }
               var dim = this._getNonTransformedDimensions();
-              ctx.fillStyle = this.backgroundColor;
-              ctx.fillRect(
+              ctx2.fillStyle = this.backgroundColor;
+              ctx2.fillRect(
                 -dim.x / 2,
                 -dim.y / 2,
                 dim.x,
                 dim.y
               );
-              this._removeShadow(ctx);
+              this._removeShadow(ctx2);
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _setOpacity: function(ctx) {
+            _setOpacity: function(ctx2) {
               if (this.group && !this.group._transformDone) {
-                ctx.globalAlpha = this.getObjectOpacity();
+                ctx2.globalAlpha = this.getObjectOpacity();
               } else {
-                ctx.globalAlpha *= this.opacity;
+                ctx2.globalAlpha *= this.opacity;
               }
             },
-            _setStrokeStyles: function(ctx, decl) {
+            _setStrokeStyles: function(ctx2, decl) {
               var stroke2 = decl.stroke;
               if (stroke2) {
-                ctx.lineWidth = decl.strokeWidth;
-                ctx.lineCap = decl.strokeLineCap;
-                ctx.lineDashOffset = decl.strokeDashOffset;
-                ctx.lineJoin = decl.strokeLineJoin;
-                ctx.miterLimit = decl.strokeMiterLimit;
+                ctx2.lineWidth = decl.strokeWidth;
+                ctx2.lineCap = decl.strokeLineCap;
+                ctx2.lineDashOffset = decl.strokeDashOffset;
+                ctx2.lineJoin = decl.strokeLineJoin;
+                ctx2.miterLimit = decl.strokeMiterLimit;
                 if (stroke2.toLive) {
                   if (stroke2.gradientUnits === "percentage" || stroke2.gradientTransform || stroke2.patternTransform) {
-                    this._applyPatternForTransformedGradient(ctx, stroke2);
+                    this._applyPatternForTransformedGradient(ctx2, stroke2);
                   } else {
-                    ctx.strokeStyle = stroke2.toLive(ctx, this);
-                    this._applyPatternGradientTransform(ctx, stroke2);
+                    ctx2.strokeStyle = stroke2.toLive(ctx2, this);
+                    this._applyPatternGradientTransform(ctx2, stroke2);
                   }
                 } else {
-                  ctx.strokeStyle = decl.stroke;
+                  ctx2.strokeStyle = decl.stroke;
                 }
               }
             },
-            _setFillStyles: function(ctx, decl) {
+            _setFillStyles: function(ctx2, decl) {
               var fill3 = decl.fill;
               if (fill3) {
                 if (fill3.toLive) {
-                  ctx.fillStyle = fill3.toLive(ctx, this);
-                  this._applyPatternGradientTransform(ctx, decl.fill);
+                  ctx2.fillStyle = fill3.toLive(ctx2, this);
+                  this._applyPatternGradientTransform(ctx2, decl.fill);
                 } else {
-                  ctx.fillStyle = fill3;
+                  ctx2.fillStyle = fill3;
                 }
               }
             },
-            _setClippingProperties: function(ctx) {
-              ctx.globalAlpha = 1;
-              ctx.strokeStyle = "transparent";
-              ctx.fillStyle = "#000000";
+            _setClippingProperties: function(ctx2) {
+              ctx2.globalAlpha = 1;
+              ctx2.strokeStyle = "transparent";
+              ctx2.fillStyle = "#000000";
             },
             /**
              * @private
@@ -44461,14 +44808,14 @@
              * @param {CanvasRenderingContext2D} ctx Context to set the dash line on
              * @param {Array} dashArray array representing dashes
              */
-            _setLineDash: function(ctx, dashArray) {
+            _setLineDash: function(ctx2, dashArray) {
               if (!dashArray || dashArray.length === 0) {
                 return;
               }
               if (1 & dashArray.length) {
                 dashArray.push.apply(dashArray, dashArray);
               }
-              ctx.setLineDash(dashArray);
+              ctx2.setLineDash(dashArray);
             },
             /**
              * Renders controls and borders for the object
@@ -44476,36 +44823,36 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {Object} [styleOverride] properties to override the object style
              */
-            _renderControls: function(ctx, styleOverride) {
+            _renderControls: function(ctx2, styleOverride) {
               var vpt = this.getViewportTransform(), matrix = this.calcTransformMatrix(), options, drawBorders, drawControls;
               styleOverride = styleOverride || {};
               drawBorders = typeof styleOverride.hasBorders !== "undefined" ? styleOverride.hasBorders : this.hasBorders;
               drawControls = typeof styleOverride.hasControls !== "undefined" ? styleOverride.hasControls : this.hasControls;
               matrix = fabric5.util.multiplyTransformMatrices(vpt, matrix);
               options = fabric5.util.qrDecompose(matrix);
-              ctx.save();
-              ctx.translate(options.translateX, options.translateY);
-              ctx.lineWidth = 1 * this.borderScaleFactor;
+              ctx2.save();
+              ctx2.translate(options.translateX, options.translateY);
+              ctx2.lineWidth = 1 * this.borderScaleFactor;
               if (!this.group) {
-                ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
+                ctx2.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
               }
               if (this.flipX) {
                 options.angle -= 180;
               }
-              ctx.rotate(degreesToRadians2(this.group ? options.angle : this.angle));
+              ctx2.rotate(degreesToRadians2(this.group ? options.angle : this.angle));
               if (styleOverride.forActiveSelection || this.group) {
-                drawBorders && this.drawBordersInGroup(ctx, options, styleOverride);
+                drawBorders && this.drawBordersInGroup(ctx2, options, styleOverride);
               } else {
-                drawBorders && this.drawBorders(ctx, styleOverride);
+                drawBorders && this.drawBorders(ctx2, styleOverride);
               }
-              drawControls && this.drawControls(ctx, styleOverride);
-              ctx.restore();
+              drawControls && this.drawControls(ctx2, styleOverride);
+              ctx2.restore();
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _setShadow: function(ctx) {
+            _setShadow: function(ctx2) {
               if (!this.shadow) {
                 return;
               }
@@ -44519,21 +44866,21 @@
                 multX *= fabric5.devicePixelRatio;
                 multY *= fabric5.devicePixelRatio;
               }
-              ctx.shadowColor = shadow.color;
-              ctx.shadowBlur = shadow.blur * fabric5.browserShadowBlurConstant * (multX + multY) * (scaling.scaleX + scaling.scaleY) / 4;
-              ctx.shadowOffsetX = shadow.offsetX * multX * scaling.scaleX;
-              ctx.shadowOffsetY = shadow.offsetY * multY * scaling.scaleY;
+              ctx2.shadowColor = shadow.color;
+              ctx2.shadowBlur = shadow.blur * fabric5.browserShadowBlurConstant * (multX + multY) * (scaling.scaleX + scaling.scaleY) / 4;
+              ctx2.shadowOffsetX = shadow.offsetX * multX * scaling.scaleX;
+              ctx2.shadowOffsetY = shadow.offsetY * multY * scaling.scaleY;
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _removeShadow: function(ctx) {
+            _removeShadow: function(ctx2) {
               if (!this.shadow) {
                 return;
               }
-              ctx.shadowColor = "";
-              ctx.shadowBlur = ctx.shadowOffsetX = ctx.shadowOffsetY = 0;
+              ctx2.shadowColor = "";
+              ctx2.shadowBlur = ctx2.shadowOffsetX = ctx2.shadowOffsetY = 0;
             },
             /**
              * @private
@@ -44542,19 +44889,19 @@
              * @return {Object} offset.offsetX offset for text rendering
              * @return {Object} offset.offsetY offset for text rendering
              */
-            _applyPatternGradientTransform: function(ctx, filler) {
+            _applyPatternGradientTransform: function(ctx2, filler) {
               if (!filler || !filler.toLive) {
                 return { offsetX: 0, offsetY: 0 };
               }
               var t3 = filler.gradientTransform || filler.patternTransform;
               var offsetX = -this.width / 2 + filler.offsetX || 0, offsetY = -this.height / 2 + filler.offsetY || 0;
               if (filler.gradientUnits === "percentage") {
-                ctx.transform(this.width, 0, 0, this.height, offsetX, offsetY);
+                ctx2.transform(this.width, 0, 0, this.height, offsetX, offsetY);
               } else {
-                ctx.transform(1, 0, 0, 1, offsetX, offsetY);
+                ctx2.transform(1, 0, 0, 1, offsetX, offsetY);
               }
               if (t3) {
-                ctx.transform(t3[0], t3[1], t3[2], t3[3], t3[4], t3[5]);
+                ctx2.transform(t3[0], t3[1], t3[2], t3[3], t3[4], t3[5]);
               }
               return { offsetX, offsetY };
             },
@@ -44562,13 +44909,13 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderPaintInOrder: function(ctx) {
+            _renderPaintInOrder: function(ctx2) {
               if (this.paintFirst === "stroke") {
-                this._renderStroke(ctx);
-                this._renderFill(ctx);
+                this._renderStroke(ctx2);
+                this._renderFill(ctx2);
               } else {
-                this._renderFill(ctx);
-                this._renderStroke(ctx);
+                this._renderFill(ctx2);
+                this._renderStroke(ctx2);
               }
             },
             /**
@@ -44584,41 +44931,41 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderFill: function(ctx) {
+            _renderFill: function(ctx2) {
               if (!this.fill) {
                 return;
               }
-              ctx.save();
-              this._setFillStyles(ctx, this);
+              ctx2.save();
+              this._setFillStyles(ctx2, this);
               if (this.fillRule === "evenodd") {
-                ctx.fill("evenodd");
+                ctx2.fill("evenodd");
               } else {
-                ctx.fill();
+                ctx2.fill();
               }
-              ctx.restore();
+              ctx2.restore();
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderStroke: function(ctx) {
+            _renderStroke: function(ctx2) {
               if (!this.stroke || this.strokeWidth === 0) {
                 return;
               }
               if (this.shadow && !this.shadow.affectStroke) {
-                this._removeShadow(ctx);
+                this._removeShadow(ctx2);
               }
-              ctx.save();
+              ctx2.save();
               if (this.strokeUniform && this.group) {
                 var scaling = this.getObjectScaling();
-                ctx.scale(1 / scaling.scaleX, 1 / scaling.scaleY);
+                ctx2.scale(1 / scaling.scaleX, 1 / scaling.scaleY);
               } else if (this.strokeUniform) {
-                ctx.scale(1 / this.scaleX, 1 / this.scaleY);
+                ctx2.scale(1 / this.scaleX, 1 / this.scaleY);
               }
-              this._setLineDash(ctx, this.strokeDashArray);
-              this._setStrokeStyles(ctx, this);
-              ctx.stroke();
-              ctx.restore();
+              this._setLineDash(ctx2, this.strokeDashArray);
+              this._setStrokeStyles(ctx2, this);
+              ctx2.stroke();
+              ctx2.restore();
             },
             /**
              * This function try to patch the missing gradientTransform on canvas gradients.
@@ -44631,7 +44978,7 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {fabric.Gradient} filler a fabric gradient instance
              */
-            _applyPatternForTransformedGradient: function(ctx, filler) {
+            _applyPatternForTransformedGradient: function(ctx2, filler) {
               var dims2 = this._limitCacheSize(this._getCacheCanvasDimensions()), pCanvas = fabric5.util.createCanvasElement(), pCtx, retinaScaling = this.canvas.getRetinaScaling(), width = dims2.x / this.scaleX / retinaScaling, height = dims2.y / this.scaleY / retinaScaling;
               pCanvas.width = Math.ceil(width);
               pCanvas.height = Math.ceil(height);
@@ -44648,14 +44995,14 @@
                 dims2.zoomY / this.scaleY / retinaScaling
               );
               this._applyPatternGradientTransform(pCtx, filler);
-              pCtx.fillStyle = filler.toLive(ctx);
+              pCtx.fillStyle = filler.toLive(ctx2);
               pCtx.fill();
-              ctx.translate(-this.width / 2 - this.strokeWidth / 2, -this.height / 2 - this.strokeWidth / 2);
-              ctx.scale(
+              ctx2.translate(-this.width / 2 - this.strokeWidth / 2, -this.height / 2 - this.strokeWidth / 2);
+              ctx2.scale(
                 retinaScaling * this.scaleX / dims2.zoomX,
                 retinaScaling * this.scaleY / dims2.zoomY
               );
-              ctx.strokeStyle = pCtx.createPattern(pCanvas, "no-repeat");
+              ctx2.strokeStyle = pCtx.createPattern(pCanvas, "no-repeat");
             },
             /**
              * This function is an helper for svg import. it returns the center of the object in the svg
@@ -44958,9 +45305,9 @@
              * custom composition operation for the particular object can be specified using globalCompositeOperation property
              * @param {CanvasRenderingContext2D} ctx Rendering canvas context
              */
-            _setupCompositeOperation: function(ctx) {
+            _setupCompositeOperation: function(ctx2) {
               if (this.globalCompositeOperation) {
-                ctx.globalCompositeOperation = this.globalCompositeOperation;
+                ctx2.globalCompositeOperation = this.globalCompositeOperation;
               }
             },
             /**
@@ -46211,18 +46558,18 @@
              * @return {fabric.Object} thisArg
              * @chainable
              */
-            drawSelectionBackground: function(ctx) {
+            drawSelectionBackground: function(ctx2) {
               if (!this.selectionBackgroundColor || this.canvas && !this.canvas.interactive || this.canvas && this.canvas._activeObject !== this) {
                 return this;
               }
-              ctx.save();
+              ctx2.save();
               var center = this.getCenterPoint(), wh = this._calculateCurrentDimensions(), vpt = this.canvas.viewportTransform;
-              ctx.translate(center.x, center.y);
-              ctx.scale(1 / vpt[0], 1 / vpt[3]);
-              ctx.rotate(degreesToRadians2(this.angle));
-              ctx.fillStyle = this.selectionBackgroundColor;
-              ctx.fillRect(-wh.x / 2, -wh.y / 2, wh.x, wh.y);
-              ctx.restore();
+              ctx2.translate(center.x, center.y);
+              ctx2.scale(1 / vpt[0], 1 / vpt[3]);
+              ctx2.rotate(degreesToRadians2(this.angle));
+              ctx2.fillStyle = this.selectionBackgroundColor;
+              ctx2.fillRect(-wh.x / 2, -wh.y / 2, wh.x, wh.y);
+              ctx2.restore();
               return this;
             },
             /**
@@ -46234,35 +46581,35 @@
              * @return {fabric.Object} thisArg
              * @chainable
              */
-            drawBorders: function(ctx, styleOverride) {
+            drawBorders: function(ctx2, styleOverride) {
               styleOverride = styleOverride || {};
               var wh = this._calculateCurrentDimensions(), strokeWidth = this.borderScaleFactor, width = wh.x + strokeWidth, height = wh.y + strokeWidth, hasControls = typeof styleOverride.hasControls !== "undefined" ? styleOverride.hasControls : this.hasControls, shouldStroke = false;
-              ctx.save();
-              ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
-              this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray);
-              ctx.strokeRect(
+              ctx2.save();
+              ctx2.strokeStyle = styleOverride.borderColor || this.borderColor;
+              this._setLineDash(ctx2, styleOverride.borderDashArray || this.borderDashArray);
+              ctx2.strokeRect(
                 -width / 2,
                 -height / 2,
                 width,
                 height
               );
               if (hasControls) {
-                ctx.beginPath();
+                ctx2.beginPath();
                 this.forEachControl(function(control, key2, fabricObject) {
                   if (control.withConnection && control.getVisibility(fabricObject, key2)) {
                     shouldStroke = true;
-                    ctx.moveTo(control.x * width, control.y * height);
-                    ctx.lineTo(
+                    ctx2.moveTo(control.x * width, control.y * height);
+                    ctx2.lineTo(
                       control.x * width + control.offsetX,
                       control.y * height + control.offsetY
                     );
                   }
                 });
                 if (shouldStroke) {
-                  ctx.stroke();
+                  ctx2.stroke();
                 }
               }
-              ctx.restore();
+              ctx2.restore();
               return this;
             },
             /**
@@ -46275,19 +46622,19 @@
              * @return {fabric.Object} thisArg
              * @chainable
              */
-            drawBordersInGroup: function(ctx, options, styleOverride) {
+            drawBordersInGroup: function(ctx2, options, styleOverride) {
               styleOverride = styleOverride || {};
               var bbox = fabric4.util.sizeAfterTransform(this.width, this.height, options), strokeWidth = this.strokeWidth, strokeUniform = this.strokeUniform, borderScaleFactor = this.borderScaleFactor, width = bbox.x + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleX) + borderScaleFactor, height = bbox.y + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleY) + borderScaleFactor;
-              ctx.save();
-              this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray);
-              ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
-              ctx.strokeRect(
+              ctx2.save();
+              this._setLineDash(ctx2, styleOverride.borderDashArray || this.borderDashArray);
+              ctx2.strokeStyle = styleOverride.borderColor || this.borderColor;
+              ctx2.strokeRect(
                 -width / 2,
                 -height / 2,
                 width,
                 height
               );
-              ctx.restore();
+              ctx2.restore();
               return this;
             },
             /**
@@ -46299,19 +46646,19 @@
              * @return {fabric.Object} thisArg
              * @chainable
              */
-            drawControls: function(ctx, styleOverride) {
+            drawControls: function(ctx2, styleOverride) {
               styleOverride = styleOverride || {};
-              ctx.save();
+              ctx2.save();
               var retinaScaling = 1, matrix, p;
               if (this.canvas) {
                 retinaScaling = this.canvas.getRetinaScaling();
               }
-              ctx.setTransform(retinaScaling, 0, 0, retinaScaling, 0, 0);
-              ctx.strokeStyle = ctx.fillStyle = styleOverride.cornerColor || this.cornerColor;
+              ctx2.setTransform(retinaScaling, 0, 0, retinaScaling, 0, 0);
+              ctx2.strokeStyle = ctx2.fillStyle = styleOverride.cornerColor || this.cornerColor;
               if (!this.transparentCorners) {
-                ctx.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
+                ctx2.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
               }
-              this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray);
+              this._setLineDash(ctx2, styleOverride.cornerDashArray || this.cornerDashArray);
               this.setCoords();
               if (this.group) {
                 matrix = this.group.calcTransformMatrix();
@@ -46322,10 +46669,10 @@
                   if (matrix) {
                     p = fabric4.util.transformPoint(p, matrix);
                   }
-                  control.render(ctx, p.x, p.y, styleOverride, fabricObject);
+                  control.render(ctx2, p.x, p.y, styleOverride, fabricObject);
                 }
               });
-              ctx.restore();
+              ctx2.restore();
               return this;
             },
             /**
@@ -46717,16 +47064,16 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
-              ctx.beginPath();
+            _render: function(ctx2) {
+              ctx2.beginPath();
               var p = this.calcLinePoints();
-              ctx.moveTo(p.x1, p.y1);
-              ctx.lineTo(p.x2, p.y2);
-              ctx.lineWidth = this.strokeWidth;
-              var origStrokeStyle = ctx.strokeStyle;
-              ctx.strokeStyle = this.stroke || ctx.fillStyle;
-              this.stroke && this._renderStroke(ctx);
-              ctx.strokeStyle = origStrokeStyle;
+              ctx2.moveTo(p.x1, p.y1);
+              ctx2.lineTo(p.x2, p.y2);
+              ctx2.lineWidth = this.strokeWidth;
+              var origStrokeStyle = ctx2.strokeStyle;
+              ctx2.strokeStyle = this.stroke || ctx2.fillStyle;
+              this.stroke && this._renderStroke(ctx2);
+              ctx2.strokeStyle = origStrokeStyle;
             },
             /**
              * This function is an helper for svg import. it returns the center of the object in the svg
@@ -46934,9 +47281,9 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx context to render on
              */
-            _render: function(ctx) {
-              ctx.beginPath();
-              ctx.arc(
+            _render: function(ctx2) {
+              ctx2.beginPath();
+              ctx2.arc(
                 0,
                 0,
                 this.radius,
@@ -46944,7 +47291,7 @@
                 degreesToRadians2(this.endAngle),
                 false
               );
-              this._renderPaintInOrder(ctx);
+              this._renderPaintInOrder(ctx2);
             },
             /**
              * Returns horizontal radius of an object (according to how an object is scaled)
@@ -47020,14 +47367,14 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
+            _render: function(ctx2) {
               var widthBy2 = this.width / 2, heightBy2 = this.height / 2;
-              ctx.beginPath();
-              ctx.moveTo(-widthBy2, heightBy2);
-              ctx.lineTo(0, -heightBy2);
-              ctx.lineTo(widthBy2, heightBy2);
-              ctx.closePath();
-              this._renderPaintInOrder(ctx);
+              ctx2.beginPath();
+              ctx2.moveTo(-widthBy2, heightBy2);
+              ctx2.lineTo(0, -heightBy2);
+              ctx2.lineTo(widthBy2, heightBy2);
+              ctx2.closePath();
+              this._renderPaintInOrder(ctx2);
             },
             /* _TO_SVG_START_ */
             /**
@@ -47161,11 +47508,11 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx context to render on
              */
-            _render: function(ctx) {
-              ctx.beginPath();
-              ctx.save();
-              ctx.transform(1, 0, 0, this.ry / this.rx, 0, 0);
-              ctx.arc(
+            _render: function(ctx2) {
+              ctx2.beginPath();
+              ctx2.save();
+              ctx2.transform(1, 0, 0, this.ry / this.rx, 0, 0);
+              ctx2.arc(
                 0,
                 0,
                 this.rx,
@@ -47173,8 +47520,8 @@
                 piBy2,
                 false
               );
-              ctx.restore();
-              this._renderPaintInOrder(ctx);
+              ctx2.restore();
+              this._renderPaintInOrder(ctx2);
             }
           }
         );
@@ -47249,20 +47596,20 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
+            _render: function(ctx2) {
               var rx = this.rx ? Math.min(this.rx, this.width / 2) : 0, ry = this.ry ? Math.min(this.ry, this.height / 2) : 0, w = this.width, h = this.height, x = -this.width / 2, y = -this.height / 2, isRounded = rx !== 0 || ry !== 0, k = 1 - 0.5522847498;
-              ctx.beginPath();
-              ctx.moveTo(x + rx, y);
-              ctx.lineTo(x + w - rx, y);
-              isRounded && ctx.bezierCurveTo(x + w - k * rx, y, x + w, y + k * ry, x + w, y + ry);
-              ctx.lineTo(x + w, y + h - ry);
-              isRounded && ctx.bezierCurveTo(x + w, y + h - k * ry, x + w - k * rx, y + h, x + w - rx, y + h);
-              ctx.lineTo(x + rx, y + h);
-              isRounded && ctx.bezierCurveTo(x + k * rx, y + h, x, y + h - k * ry, x, y + h - ry);
-              ctx.lineTo(x, y + ry);
-              isRounded && ctx.bezierCurveTo(x, y + k * ry, x + k * rx, y, x + rx, y);
-              ctx.closePath();
-              this._renderPaintInOrder(ctx);
+              ctx2.beginPath();
+              ctx2.moveTo(x + rx, y);
+              ctx2.lineTo(x + w - rx, y);
+              isRounded && ctx2.bezierCurveTo(x + w - k * rx, y, x + w, y + k * ry, x + w, y + ry);
+              ctx2.lineTo(x + w, y + h - ry);
+              isRounded && ctx2.bezierCurveTo(x + w, y + h - k * ry, x + w - k * rx, y + h, x + w - rx, y + h);
+              ctx2.lineTo(x + rx, y + h);
+              isRounded && ctx2.bezierCurveTo(x + k * rx, y + h, x, y + h - k * ry, x, y + h - ry);
+              ctx2.lineTo(x, y + ry);
+              isRounded && ctx2.bezierCurveTo(x, y + k * ry, x + k * rx, y, x + rx, y);
+              ctx2.closePath();
+              this._renderPaintInOrder(ctx2);
             },
             /**
              * Returns object representation of an instance
@@ -47471,16 +47818,16 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            commonRender: function(ctx) {
+            commonRender: function(ctx2) {
               var point, len5 = this.points.length, x = this.pathOffset.x, y = this.pathOffset.y;
               if (!len5 || isNaN(this.points[len5 - 1].y)) {
                 return false;
               }
-              ctx.beginPath();
-              ctx.moveTo(this.points[0].x - x, this.points[0].y - y);
+              ctx2.beginPath();
+              ctx2.moveTo(this.points[0].x - x, this.points[0].y - y);
               for (var i5 = 0; i5 < len5; i5++) {
                 point = this.points[i5];
-                ctx.lineTo(point.x - x, point.y - y);
+                ctx2.lineTo(point.x - x, point.y - y);
               }
               return true;
             },
@@ -47488,11 +47835,11 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
-              if (!this.commonRender(ctx)) {
+            _render: function(ctx2) {
+              if (!this.commonRender(ctx2)) {
                 return;
               }
-              this._renderPaintInOrder(ctx);
+              this._renderPaintInOrder(ctx2);
             },
             /**
              * Returns complexity of an instance
@@ -47547,12 +47894,12 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
-              if (!this.commonRender(ctx)) {
+            _render: function(ctx2) {
+              if (!this.commonRender(ctx2)) {
                 return;
               }
-              ctx.closePath();
-              this._renderPaintInOrder(ctx);
+              ctx2.closePath();
+              this._renderPaintInOrder(ctx2);
             }
           }
         );
@@ -47614,9 +47961,9 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx context to render path on
              */
-            _renderPathCommands: function(ctx) {
+            _renderPathCommands: function(ctx2) {
               var current2, subpathStartX = 0, subpathStartY = 0, x = 0, y = 0, controlX = 0, controlY = 0, l = -this.pathOffset.x, t3 = -this.pathOffset.y;
-              ctx.beginPath();
+              ctx2.beginPath();
               for (var i5 = 0, len5 = this.path.length; i5 < len5; ++i5) {
                 current2 = this.path[i5];
                 switch (current2[0]) {
@@ -47624,21 +47971,21 @@
                   case "L":
                     x = current2[1];
                     y = current2[2];
-                    ctx.lineTo(x + l, y + t3);
+                    ctx2.lineTo(x + l, y + t3);
                     break;
                   case "M":
                     x = current2[1];
                     y = current2[2];
                     subpathStartX = x;
                     subpathStartY = y;
-                    ctx.moveTo(x + l, y + t3);
+                    ctx2.moveTo(x + l, y + t3);
                     break;
                   case "C":
                     x = current2[5];
                     y = current2[6];
                     controlX = current2[3];
                     controlY = current2[4];
-                    ctx.bezierCurveTo(
+                    ctx2.bezierCurveTo(
                       current2[1] + l,
                       current2[2] + t3,
                       controlX + l,
@@ -47648,7 +47995,7 @@
                     );
                     break;
                   case "Q":
-                    ctx.quadraticCurveTo(
+                    ctx2.quadraticCurveTo(
                       current2[1] + l,
                       current2[2] + t3,
                       current2[3] + l,
@@ -47663,7 +48010,7 @@
                   case "Z":
                     x = subpathStartX;
                     y = subpathStartY;
-                    ctx.closePath();
+                    ctx2.closePath();
                     break;
                 }
               }
@@ -47672,9 +48019,9 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx context to render path on
              */
-            _render: function(ctx) {
-              this._renderPathCommands(ctx);
-              this._renderPaintInOrder(ctx);
+            _render: function(ctx2) {
+              this._renderPathCommands(ctx2);
+              this._renderPaintInOrder(ctx2);
             },
             /**
              * Returns string representation of an instance
@@ -48093,9 +48440,9 @@
              * Renders instance on a given context
              * @param {CanvasRenderingContext2D} ctx context to render instance on
              */
-            render: function(ctx) {
+            render: function(ctx2) {
               this._transformDone = true;
-              this.callSuper("render", ctx);
+              this.callSuper("render", ctx2);
               this._transformDone = false;
             },
             /**
@@ -48143,11 +48490,11 @@
              * Execute the drawing operation for an object on a specified context
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            drawObject: function(ctx) {
+            drawObject: function(ctx2) {
               for (var i5 = 0, len5 = this._objects.length; i5 < len5; i5++) {
-                this._objects[i5].render(ctx);
+                this._objects[i5].render(ctx2);
               }
-              this._drawClipPath(ctx, this.clipPath);
+              this._drawClipPath(ctx2, this.clipPath);
             },
             /**
              * Check if cache is dirty
@@ -48458,19 +48805,19 @@
              * @param {Object} [styleOverride] properties to override the object style
              * @param {Object} [childrenOverride] properties to override the children overrides
              */
-            _renderControls: function(ctx, styleOverride, childrenOverride) {
-              ctx.save();
-              ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
+            _renderControls: function(ctx2, styleOverride, childrenOverride) {
+              ctx2.save();
+              ctx2.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
               childrenOverride = childrenOverride || {};
               if (typeof childrenOverride.hasControls === "undefined") {
                 childrenOverride.hasControls = false;
               }
               childrenOverride.forActiveSelection = true;
               for (var i5 = 0, len5 = this._objects.length; i5 < len5; i5++) {
-                this._objects[i5]._renderControls(ctx, childrenOverride);
+                this._objects[i5]._renderControls(ctx2, childrenOverride);
               }
-              this.callSuper("_renderControls", ctx, styleOverride);
-              ctx.restore();
+              this.callSuper("_renderControls", ctx2, styleOverride);
+              ctx2.restore();
             }
           }
         );
@@ -48684,18 +49031,18 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _stroke: function(ctx) {
+            _stroke: function(ctx2) {
               if (!this.stroke || this.strokeWidth === 0) {
                 return;
               }
               var w = this.width / 2, h = this.height / 2;
-              ctx.beginPath();
-              ctx.moveTo(-w, -h);
-              ctx.lineTo(w, -h);
-              ctx.lineTo(w, h);
-              ctx.lineTo(-w, h);
-              ctx.lineTo(-w, -h);
-              ctx.closePath();
+              ctx2.beginPath();
+              ctx2.moveTo(-w, -h);
+              ctx2.lineTo(w, -h);
+              ctx2.lineTo(w, h);
+              ctx2.lineTo(-w, h);
+              ctx2.lineTo(-w, -h);
+              ctx2.closePath();
             },
             /**
              * Returns object representation of an instance
@@ -48937,22 +49284,22 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
-              fabric4.util.setImageSmoothing(ctx, this.imageSmoothing);
+            _render: function(ctx2) {
+              fabric4.util.setImageSmoothing(ctx2, this.imageSmoothing);
               if (this.isMoving !== true && this.resizeFilter && this._needsResize()) {
                 this.applyResizeFilters();
               }
-              this._stroke(ctx);
-              this._renderPaintInOrder(ctx);
+              this._stroke(ctx2);
+              this._renderPaintInOrder(ctx2);
             },
             /**
              * Paint the cached copy of the object on the target context.
              * it will set the imageSmoothing for the draw operation
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            drawCacheOnCanvas: function(ctx) {
-              fabric4.util.setImageSmoothing(ctx, this.imageSmoothing);
-              fabric4.Object.prototype.drawCacheOnCanvas.call(this, ctx);
+            drawCacheOnCanvas: function(ctx2) {
+              fabric4.util.setImageSmoothing(ctx2, this.imageSmoothing);
+              fabric4.Object.prototype.drawCacheOnCanvas.call(this, ctx2);
             },
             /**
              * Decide if the object should cache or not. Create its own cache level
@@ -48968,13 +49315,13 @@
             shouldCache: function() {
               return this.needsItsOwnCache();
             },
-            _renderFill: function(ctx) {
+            _renderFill: function(ctx2) {
               var elementToDraw = this._element;
               if (!elementToDraw) {
                 return;
               }
               var scaleX = this._filterScalingX, scaleY = this._filterScalingY, w = this.width, h = this.height, min = Math.min, max2 = Math.max, cropX = max2(this.cropX, 0), cropY = max2(this.cropY, 0), elWidth2 = elementToDraw.naturalWidth || elementToDraw.width, elHeight = elementToDraw.naturalHeight || elementToDraw.height, sX = cropX * scaleX, sY = cropY * scaleY, sW = min(w * scaleX, elWidth2 - sX), sH = min(h * scaleY, elHeight - sY), x = -w / 2, y = -h / 2, maxDestW = min(w, elWidth2 / scaleX - cropX), maxDestH = min(h, elHeight / scaleY - cropY);
-              elementToDraw && ctx.drawImage(elementToDraw, sX, sY, sW, sH, x, y, maxDestW, maxDestH);
+              elementToDraw && ctx2.drawImage(elementToDraw, sX, sY, sW, sH, x, y, maxDestW, maxDestH);
             },
             /**
              * needed to check if image needs resize
@@ -49518,11 +49865,11 @@
         }
       }
       function copyGLTo2DDrawImage(gl, pipelineState) {
-        var glCanvas = gl.canvas, targetCanvas = pipelineState.targetCanvas, ctx = targetCanvas.getContext("2d");
-        ctx.translate(0, targetCanvas.height);
-        ctx.scale(1, -1);
+        var glCanvas = gl.canvas, targetCanvas = pipelineState.targetCanvas, ctx2 = targetCanvas.getContext("2d");
+        ctx2.translate(0, targetCanvas.height);
+        ctx2.scale(1, -1);
         var sourceY = glCanvas.height - targetCanvas.height;
-        ctx.drawImage(
+        ctx2.drawImage(
           glCanvas,
           0,
           sourceY,
@@ -49535,12 +49882,12 @@
         );
       }
       function copyGLTo2DPutImageData(gl, pipelineState) {
-        var targetCanvas = pipelineState.targetCanvas, ctx = targetCanvas.getContext("2d"), dWidth = pipelineState.destinationWidth, dHeight = pipelineState.destinationHeight, numBytes = dWidth * dHeight * 4;
+        var targetCanvas = pipelineState.targetCanvas, ctx2 = targetCanvas.getContext("2d"), dWidth = pipelineState.destinationWidth, dHeight = pipelineState.destinationHeight, numBytes = dWidth * dHeight * 4;
         var u8 = new Uint8Array(this.imageBuffer, 0, numBytes);
         var u8Clamped = new Uint8ClampedArray(this.imageBuffer, 0, numBytes);
         gl.readPixels(0, 0, dWidth, dHeight, gl.RGBA, gl.UNSIGNED_BYTE, u8);
         var imgData = new ImageData(u8Clamped, dWidth, dHeight);
-        ctx.putImageData(imgData, 0, 0);
+        ctx2.putImageData(imgData, 0, 0);
       }
       (function() {
         "use strict";
@@ -49574,10 +49921,10 @@
            * @param {HTMLCanvasElement} targetCanvas The destination for filtered output to be drawn.
            */
           applyFilters: function(filters, sourceElement, sourceWidth, sourceHeight, targetCanvas) {
-            var ctx = targetCanvas.getContext("2d");
-            ctx.drawImage(sourceElement, 0, 0, sourceWidth, sourceHeight);
-            var imageData = ctx.getImageData(0, 0, sourceWidth, sourceHeight);
-            var originalImageData = ctx.getImageData(0, 0, sourceWidth, sourceHeight);
+            var ctx2 = targetCanvas.getContext("2d");
+            ctx2.drawImage(sourceElement, 0, 0, sourceWidth, sourceHeight);
+            var imageData = ctx2.getImageData(0, 0, sourceWidth, sourceHeight);
+            var originalImageData = ctx2.getImageData(0, 0, sourceWidth, sourceHeight);
             var pipelineState = {
               sourceWidth,
               sourceHeight,
@@ -49585,7 +49932,7 @@
               originalEl: sourceElement,
               originalImageData,
               canvasEl: targetCanvas,
-              ctx,
+              ctx: ctx2,
               filterBackend: this
             };
             filters.forEach(function(filter) {
@@ -49595,7 +49942,7 @@
               targetCanvas.width = pipelineState.imageData.width;
               targetCanvas.height = pipelineState.imageData.height;
             }
-            ctx.putImageData(pipelineState.imageData, 0, 0);
+            ctx2.putImageData(pipelineState.imageData, 0, 0);
             return pipelineState;
           }
         };
@@ -51406,7 +51753,7 @@
              * @returns {ImageData}
              */
             sliceByTwo: function(options, oW, oH, dW, dH) {
-              var imageData = options.imageData, mult = 0.5, doneW = false, doneH = false, stepW = oW * mult, stepH = oH * mult, resources = fabric5.filterBackend.resources, tmpCanvas, ctx, sX = 0, sY = 0, dX = oW, dY = 0;
+              var imageData = options.imageData, mult = 0.5, doneW = false, doneH = false, stepW = oW * mult, stepH = oH * mult, resources = fabric5.filterBackend.resources, tmpCanvas, ctx2, sX = 0, sY = 0, dX = oW, dY = 0;
               if (!resources.sliceByTwo) {
                 resources.sliceByTwo = document.createElement("canvas");
               }
@@ -51415,9 +51762,9 @@
                 tmpCanvas.width = oW * 1.5;
                 tmpCanvas.height = oH;
               }
-              ctx = tmpCanvas.getContext("2d");
-              ctx.clearRect(0, 0, oW * 1.5, oH);
-              ctx.putImageData(imageData, 0, 0);
+              ctx2 = tmpCanvas.getContext("2d");
+              ctx2.clearRect(0, 0, oW * 1.5, oH);
+              ctx2.putImageData(imageData, 0, 0);
               dW = floor(dW);
               dH = floor(dH);
               while (!doneW || !doneH) {
@@ -51435,12 +51782,12 @@
                   stepH = dH;
                   doneH = true;
                 }
-                ctx.drawImage(tmpCanvas, sX, sY, oW, oH, dX, dY, stepW, stepH);
+                ctx2.drawImage(tmpCanvas, sX, sY, oW, oH, dX, dY, stepW, stepH);
                 sX = dX;
                 sY = dY;
                 dY += stepH;
               }
-              return ctx.getImageData(sX, sY, dW, dH);
+              return ctx2.getImageData(sX, sY, dW, dH);
             },
             /**
              * Filter lanczosResize
@@ -52656,27 +53003,27 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
+            _render: function(ctx2) {
               var path = this.path;
-              path && !path.isNotVisible() && path._render(ctx);
-              this._setTextStyles(ctx);
-              this._renderTextLinesBackground(ctx);
-              this._renderTextDecoration(ctx, "underline");
-              this._renderText(ctx);
-              this._renderTextDecoration(ctx, "overline");
-              this._renderTextDecoration(ctx, "linethrough");
+              path && !path.isNotVisible() && path._render(ctx2);
+              this._setTextStyles(ctx2);
+              this._renderTextLinesBackground(ctx2);
+              this._renderTextDecoration(ctx2, "underline");
+              this._renderText(ctx2);
+              this._renderTextDecoration(ctx2, "overline");
+              this._renderTextDecoration(ctx2, "linethrough");
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderText: function(ctx) {
+            _renderText: function(ctx2) {
               if (this.paintFirst === "stroke") {
-                this._renderTextStroke(ctx);
-                this._renderTextFill(ctx);
+                this._renderTextStroke(ctx2);
+                this._renderTextFill(ctx2);
               } else {
-                this._renderTextFill(ctx);
-                this._renderTextStroke(ctx);
+                this._renderTextFill(ctx2);
+                this._renderTextStroke(ctx2);
               }
             },
             /**
@@ -52689,22 +53036,22 @@
              * @param {String} [charStyle.fontWeight] Font weight
              * @param {String} [charStyle.fontStyle] Font style (italic|normal)
              */
-            _setTextStyles: function(ctx, charStyle, forMeasuring) {
-              ctx.textBaseline = "alphabetic";
+            _setTextStyles: function(ctx2, charStyle, forMeasuring) {
+              ctx2.textBaseline = "alphabetic";
               if (this.path) {
                 switch (this.pathAlign) {
                   case "center":
-                    ctx.textBaseline = "middle";
+                    ctx2.textBaseline = "middle";
                     break;
                   case "ascender":
-                    ctx.textBaseline = "top";
+                    ctx2.textBaseline = "top";
                     break;
                   case "descender":
-                    ctx.textBaseline = "bottom";
+                    ctx2.textBaseline = "bottom";
                     break;
                 }
               }
-              ctx.font = this._getFontDeclaration(charStyle, forMeasuring);
+              ctx2.font = this._getFontDeclaration(charStyle, forMeasuring);
             },
             /**
              * calculate and return the text Width measuring each line.
@@ -52731,19 +53078,19 @@
              * @param {Number} top Top position of text
              * @param {Number} lineIndex Index of a line in a text
              */
-            _renderTextLine: function(method2, ctx, line, left, top, lineIndex) {
-              this._renderChars(method2, ctx, line, left, top, lineIndex);
+            _renderTextLine: function(method2, ctx2, line, left, top, lineIndex) {
+              this._renderChars(method2, ctx2, line, left, top, lineIndex);
             },
             /**
              * Renders the text background for lines, taking care of style
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderTextLinesBackground: function(ctx) {
+            _renderTextLinesBackground: function(ctx2) {
               if (!this.textBackgroundColor && !this.styleHas("textBackgroundColor")) {
                 return;
               }
-              var heightOfLine, lineLeftOffset, originalFill = ctx.fillStyle, line, lastColor, leftOffset = this._getLeftOffset(), lineTopOffset = this._getTopOffset(), boxStart = 0, boxWidth = 0, charBox, currentColor, path = this.path, drawStart;
+              var heightOfLine, lineLeftOffset, originalFill = ctx2.fillStyle, line, lastColor, leftOffset = this._getLeftOffset(), lineTopOffset = this._getTopOffset(), boxStart = 0, boxWidth = 0, charBox, currentColor, path = this.path, drawStart;
               for (var i5 = 0, len5 = this._textLines.length; i5 < len5; i5++) {
                 heightOfLine = this.getHeightOfLine(i5);
                 if (!this.textBackgroundColor && !this.styleHas("textBackgroundColor", i5)) {
@@ -52759,24 +53106,24 @@
                   charBox = this.__charBounds[i5][j];
                   currentColor = this.getValueOfPropertyAt(i5, j, "textBackgroundColor");
                   if (path) {
-                    ctx.save();
-                    ctx.translate(charBox.renderLeft, charBox.renderTop);
-                    ctx.rotate(charBox.angle);
-                    ctx.fillStyle = currentColor;
-                    currentColor && ctx.fillRect(
+                    ctx2.save();
+                    ctx2.translate(charBox.renderLeft, charBox.renderTop);
+                    ctx2.rotate(charBox.angle);
+                    ctx2.fillStyle = currentColor;
+                    currentColor && ctx2.fillRect(
                       -charBox.width / 2,
                       -heightOfLine / this.lineHeight * (1 - this._fontSizeFraction),
                       charBox.width,
                       heightOfLine / this.lineHeight
                     );
-                    ctx.restore();
+                    ctx2.restore();
                   } else if (currentColor !== lastColor) {
                     drawStart = leftOffset + lineLeftOffset + boxStart;
                     if (this.direction === "rtl") {
                       drawStart = this.width - drawStart - boxWidth;
                     }
-                    ctx.fillStyle = lastColor;
-                    lastColor && ctx.fillRect(
+                    ctx2.fillStyle = lastColor;
+                    lastColor && ctx2.fillRect(
                       drawStart,
                       lineTopOffset,
                       boxWidth,
@@ -52794,8 +53141,8 @@
                   if (this.direction === "rtl") {
                     drawStart = this.width - drawStart - boxWidth;
                   }
-                  ctx.fillStyle = currentColor;
-                  ctx.fillRect(
+                  ctx2.fillStyle = currentColor;
+                  ctx2.fillRect(
                     drawStart,
                     lineTopOffset,
                     boxWidth,
@@ -52804,8 +53151,8 @@
                 }
                 lineTopOffset += heightOfLine;
               }
-              ctx.fillStyle = originalFill;
-              this._removeShadow(ctx);
+              ctx2.fillStyle = originalFill;
+              this._removeShadow(ctx2);
             },
             /**
              * @private
@@ -52849,19 +53196,19 @@
                 kernedWidth = coupleWidth - previousWidth;
               }
               if (width === void 0 || previousWidth === void 0 || coupleWidth === void 0) {
-                var ctx = this.getMeasuringContext();
-                this._setTextStyles(ctx, charStyle, true);
+                var ctx2 = this.getMeasuringContext();
+                this._setTextStyles(ctx2, charStyle, true);
               }
               if (width === void 0) {
-                kernedWidth = width = ctx.measureText(_char).width;
+                kernedWidth = width = ctx2.measureText(_char).width;
                 fontCache2[_char] = width;
               }
               if (previousWidth === void 0 && stylesAreEqual && previousChar) {
-                previousWidth = ctx.measureText(previousChar).width;
+                previousWidth = ctx2.measureText(previousChar).width;
                 fontCache2[previousChar] = previousWidth;
               }
               if (stylesAreEqual && coupleWidth === void 0) {
-                coupleWidth = ctx.measureText(couple).width;
+                coupleWidth = ctx2.measureText(couple).width;
                 fontCache2[couple] = coupleWidth;
                 kernedWidth = coupleWidth - previousWidth;
               }
@@ -53032,14 +53379,14 @@
              * @param {CanvasRenderingContext2D} ctx Context to render on
              * @param {String} method Method name ("fillText" or "strokeText")
              */
-            _renderTextCommon: function(ctx, method2) {
-              ctx.save();
+            _renderTextCommon: function(ctx2, method2) {
+              ctx2.save();
               var lineHeights = 0, left = this._getLeftOffset(), top = this._getTopOffset();
               for (var i5 = 0, len5 = this._textLines.length; i5 < len5; i5++) {
                 var heightOfLine = this.getHeightOfLine(i5), maxHeight = heightOfLine / this.lineHeight, leftOffset = this._getLineLeftOffset(i5);
                 this._renderTextLine(
                   method2,
-                  ctx,
+                  ctx2,
                   this._textLines[i5],
                   left + leftOffset,
                   top + lineHeights + maxHeight,
@@ -53047,35 +53394,35 @@
                 );
                 lineHeights += heightOfLine;
               }
-              ctx.restore();
+              ctx2.restore();
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderTextFill: function(ctx) {
+            _renderTextFill: function(ctx2) {
               if (!this.fill && !this.styleHas("fill")) {
                 return;
               }
-              this._renderTextCommon(ctx, "fillText");
+              this._renderTextCommon(ctx2, "fillText");
             },
             /**
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderTextStroke: function(ctx) {
+            _renderTextStroke: function(ctx2) {
               if ((!this.stroke || this.strokeWidth === 0) && this.isEmptyStyles()) {
                 return;
               }
               if (this.shadow && !this.shadow.affectStroke) {
-                this._removeShadow(ctx);
+                this._removeShadow(ctx2);
               }
-              ctx.save();
-              this._setLineDash(ctx, this.strokeDashArray);
-              ctx.beginPath();
-              this._renderTextCommon(ctx, "strokeText");
-              ctx.closePath();
-              ctx.restore();
+              ctx2.save();
+              this._setLineDash(ctx2, this.strokeDashArray);
+              ctx2.beginPath();
+              this._renderTextCommon(ctx2, "strokeText");
+              ctx2.closePath();
+              ctx2.restore();
             },
             /**
              * @private
@@ -53086,18 +53433,18 @@
              * @param {Number} top
              * @param {Number} lineIndex
              */
-            _renderChars: function(method2, ctx, line, left, top, lineIndex) {
-              var lineHeight = this.getHeightOfLine(lineIndex), isJustify = this.textAlign.indexOf("justify") !== -1, actualStyle, nextStyle, charsToRender = "", charBox, boxWidth = 0, timeToRender, path = this.path, shortCut = !isJustify && this.charSpacing === 0 && this.isEmptyStyles(lineIndex) && !path, isLtr = this.direction === "ltr", sign = this.direction === "ltr" ? 1 : -1, drawingLeft, currentDirection = ctx.canvas.getAttribute("dir");
-              ctx.save();
+            _renderChars: function(method2, ctx2, line, left, top, lineIndex) {
+              var lineHeight = this.getHeightOfLine(lineIndex), isJustify = this.textAlign.indexOf("justify") !== -1, actualStyle, nextStyle, charsToRender = "", charBox, boxWidth = 0, timeToRender, path = this.path, shortCut = !isJustify && this.charSpacing === 0 && this.isEmptyStyles(lineIndex) && !path, isLtr = this.direction === "ltr", sign = this.direction === "ltr" ? 1 : -1, drawingLeft, currentDirection = ctx2.canvas.getAttribute("dir");
+              ctx2.save();
               if (currentDirection !== this.direction) {
-                ctx.canvas.setAttribute("dir", isLtr ? "ltr" : "rtl");
-                ctx.direction = isLtr ? "ltr" : "rtl";
-                ctx.textAlign = isLtr ? "left" : "right";
+                ctx2.canvas.setAttribute("dir", isLtr ? "ltr" : "rtl");
+                ctx2.direction = isLtr ? "ltr" : "rtl";
+                ctx2.textAlign = isLtr ? "left" : "right";
               }
               top -= lineHeight * this._fontSizeFraction / this.lineHeight;
               if (shortCut) {
-                this._renderChar(method2, ctx, lineIndex, 0, line.join(""), left, top, lineHeight);
-                ctx.restore();
+                this._renderChar(method2, ctx2, lineIndex, 0, line.join(""), left, top, lineHeight);
+                ctx2.restore();
                 return;
               }
               for (var i5 = 0, len5 = line.length - 1; i5 <= len5; i5++) {
@@ -53122,14 +53469,14 @@
                 }
                 if (timeToRender) {
                   if (path) {
-                    ctx.save();
-                    ctx.translate(charBox.renderLeft, charBox.renderTop);
-                    ctx.rotate(charBox.angle);
-                    this._renderChar(method2, ctx, lineIndex, i5, charsToRender, -boxWidth / 2, 0, lineHeight);
-                    ctx.restore();
+                    ctx2.save();
+                    ctx2.translate(charBox.renderLeft, charBox.renderTop);
+                    ctx2.rotate(charBox.angle);
+                    this._renderChar(method2, ctx2, lineIndex, i5, charsToRender, -boxWidth / 2, 0, lineHeight);
+                    ctx2.restore();
                   } else {
                     drawingLeft = left;
-                    this._renderChar(method2, ctx, lineIndex, i5, charsToRender, drawingLeft, top, lineHeight);
+                    this._renderChar(method2, ctx2, lineIndex, i5, charsToRender, drawingLeft, top, lineHeight);
                   }
                   charsToRender = "";
                   actualStyle = nextStyle;
@@ -53137,7 +53484,7 @@
                   boxWidth = 0;
                 }
               }
-              ctx.restore();
+              ctx2.restore();
             },
             /**
              * This function try to patch the missing gradientTransform on canvas gradients.
@@ -53167,34 +53514,34 @@
               pCtx.fill();
               return pCtx.createPattern(pCanvas, "no-repeat");
             },
-            handleFiller: function(ctx, property, filler) {
+            handleFiller: function(ctx2, property, filler) {
               var offsetX, offsetY;
               if (filler.toLive) {
                 if (filler.gradientUnits === "percentage" || filler.gradientTransform || filler.patternTransform) {
                   offsetX = -this.width / 2;
                   offsetY = -this.height / 2;
-                  ctx.translate(offsetX, offsetY);
-                  ctx[property] = this._applyPatternGradientTransformText(filler);
+                  ctx2.translate(offsetX, offsetY);
+                  ctx2[property] = this._applyPatternGradientTransformText(filler);
                   return { offsetX, offsetY };
                 } else {
-                  ctx[property] = filler.toLive(ctx, this);
-                  return this._applyPatternGradientTransform(ctx, filler);
+                  ctx2[property] = filler.toLive(ctx2, this);
+                  return this._applyPatternGradientTransform(ctx2, filler);
                 }
               } else {
-                ctx[property] = filler;
+                ctx2[property] = filler;
               }
               return { offsetX: 0, offsetY: 0 };
             },
-            _setStrokeStyles: function(ctx, decl) {
-              ctx.lineWidth = decl.strokeWidth;
-              ctx.lineCap = this.strokeLineCap;
-              ctx.lineDashOffset = this.strokeDashOffset;
-              ctx.lineJoin = this.strokeLineJoin;
-              ctx.miterLimit = this.strokeMiterLimit;
-              return this.handleFiller(ctx, "strokeStyle", decl.stroke);
+            _setStrokeStyles: function(ctx2, decl) {
+              ctx2.lineWidth = decl.strokeWidth;
+              ctx2.lineCap = this.strokeLineCap;
+              ctx2.lineDashOffset = this.strokeDashOffset;
+              ctx2.lineJoin = this.strokeLineJoin;
+              ctx2.miterLimit = this.strokeMiterLimit;
+              return this.handleFiller(ctx2, "strokeStyle", decl.stroke);
             },
-            _setFillStyles: function(ctx, decl) {
-              return this.handleFiller(ctx, "fillStyle", decl.fill);
+            _setFillStyles: function(ctx2, decl) {
+              return this.handleFiller(ctx2, "fillStyle", decl.fill);
             },
             /**
              * @private
@@ -53207,24 +53554,24 @@
              * @param {Number} top Top coordinate
              * @param {Number} lineHeight Height of the line
              */
-            _renderChar: function(method2, ctx, lineIndex, charIndex, _char, left, top) {
+            _renderChar: function(method2, ctx2, lineIndex, charIndex, _char, left, top) {
               var decl = this._getStyleDeclaration(lineIndex, charIndex), fullDecl = this.getCompleteStyleDeclaration(lineIndex, charIndex), shouldFill = method2 === "fillText" && fullDecl.fill, shouldStroke = method2 === "strokeText" && fullDecl.stroke && fullDecl.strokeWidth, fillOffsets, strokeOffsets;
               if (!shouldStroke && !shouldFill) {
                 return;
               }
-              ctx.save();
-              shouldFill && (fillOffsets = this._setFillStyles(ctx, fullDecl));
-              shouldStroke && (strokeOffsets = this._setStrokeStyles(ctx, fullDecl));
-              ctx.font = this._getFontDeclaration(fullDecl);
+              ctx2.save();
+              shouldFill && (fillOffsets = this._setFillStyles(ctx2, fullDecl));
+              shouldStroke && (strokeOffsets = this._setStrokeStyles(ctx2, fullDecl));
+              ctx2.font = this._getFontDeclaration(fullDecl);
               if (decl && decl.textBackgroundColor) {
-                this._removeShadow(ctx);
+                this._removeShadow(ctx2);
               }
               if (decl && decl.deltaY) {
                 top += decl.deltaY;
               }
-              shouldFill && ctx.fillText(_char, left - fillOffsets.offsetX, top - fillOffsets.offsetY);
-              shouldStroke && ctx.strokeText(_char, left - strokeOffsets.offsetX, top - strokeOffsets.offsetY);
-              ctx.restore();
+              shouldFill && ctx2.fillText(_char, left - fillOffsets.offsetX, top - fillOffsets.offsetY);
+              shouldStroke && ctx2.strokeText(_char, left - strokeOffsets.offsetX, top - strokeOffsets.offsetY);
+              ctx2.restore();
             },
             /**
              * Turns the character into a 'superior figure' (i.e. 'superscript')
@@ -53347,13 +53694,13 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _renderTextDecoration: function(ctx, type) {
+            _renderTextDecoration: function(ctx2, type) {
               if (!this[type] && !this.styleHas(type)) {
                 return;
               }
-              ctx.save();
+              ctx2.save();
               if (type === "overline" || type === "linethrough") {
-                this._removeShadow(ctx);
+                this._removeShadow(ctx2);
               }
               var heightOfLine, size, _size, lineLeftOffset, dy, _dy, line, lastDecoration, leftOffset = this._getLeftOffset(), topOffset = this._getTopOffset(), top, boxStart, boxWidth, charBox, currentDecoration, maxHeight, currentFill, lastFill, path = this.path, charSpacing = this._getWidthOfCharSpacing(), offsetY = this.offsets[type];
               for (var i5 = 0, len5 = this._textLines.length; i5 < len5; i5++) {
@@ -53379,25 +53726,25 @@
                   _size = this.getHeightOfChar(i5, j);
                   _dy = this.getValueOfPropertyAt(i5, j, "deltaY");
                   if (path && currentDecoration && currentFill) {
-                    ctx.save();
-                    ctx.fillStyle = lastFill;
-                    ctx.translate(charBox.renderLeft, charBox.renderTop);
-                    ctx.rotate(charBox.angle);
-                    ctx.fillRect(
+                    ctx2.save();
+                    ctx2.fillStyle = lastFill;
+                    ctx2.translate(charBox.renderLeft, charBox.renderTop);
+                    ctx2.rotate(charBox.angle);
+                    ctx2.fillRect(
                       -charBox.kernedWidth / 2,
                       offsetY * _size + _dy,
                       charBox.kernedWidth,
                       this.fontSize / 15
                     );
-                    ctx.restore();
+                    ctx2.restore();
                   } else if ((currentDecoration !== lastDecoration || currentFill !== lastFill || _size !== size || _dy !== dy) && boxWidth > 0) {
                     var drawStart = leftOffset + lineLeftOffset + boxStart;
                     if (this.direction === "rtl") {
                       drawStart = this.width - drawStart - boxWidth;
                     }
                     if (lastDecoration && lastFill) {
-                      ctx.fillStyle = lastFill;
-                      ctx.fillRect(
+                      ctx2.fillStyle = lastFill;
+                      ctx2.fillRect(
                         drawStart,
                         top + offsetY * size + dy,
                         boxWidth,
@@ -53418,8 +53765,8 @@
                 if (this.direction === "rtl") {
                   drawStart = this.width - drawStart - boxWidth;
                 }
-                ctx.fillStyle = currentFill;
-                currentDecoration && currentFill && ctx.fillRect(
+                ctx2.fillStyle = currentFill;
+                currentDecoration && currentFill && ctx2.fillRect(
                   drawStart,
                   top + offsetY * size + dy,
                   boxWidth - charSpacing,
@@ -53427,7 +53774,7 @@
                 );
                 topOffset += heightOfLine;
               }
-              ctx.restore();
+              ctx2.restore();
             },
             /**
              * return font declaration string for canvas context
@@ -53450,7 +53797,7 @@
              * Renders text instance on a specified context
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            render: function(ctx) {
+            render: function(ctx2) {
               if (!this.visible) {
                 return;
               }
@@ -53460,7 +53807,7 @@
               if (this._shouldClearDimensionCache()) {
                 this.initDimensions();
               }
-              this.callSuper("render", ctx);
+              this.callSuper("render", ctx2);
             },
             /**
              * Returns the text as an array of lines.
@@ -54083,9 +54430,9 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            render: function(ctx) {
+            render: function(ctx2) {
               this.clearContextTop();
-              this.callSuper("render", ctx);
+              this.callSuper("render", ctx2);
               this.cursorOffsetCache = {};
               this.renderCursorOrSelection();
             },
@@ -54093,8 +54440,8 @@
              * @private
              * @param {CanvasRenderingContext2D} ctx Context to render on
              */
-            _render: function(ctx) {
-              this.callSuper("_render", ctx);
+            _render: function(ctx2) {
+              this.callSuper("_render", ctx2);
             },
             /**
              * Prepare and clean the contextTop
@@ -54103,12 +54450,12 @@
               if (!this.isEditing || !this.canvas || !this.canvas.contextTop) {
                 return;
               }
-              var ctx = this.canvas.contextTop, v2 = this.canvas.viewportTransform;
-              ctx.save();
-              ctx.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
-              this.transform(ctx);
-              this._clearTextArea(ctx);
-              skipRestore || ctx.restore();
+              var ctx2 = this.canvas.contextTop, v2 = this.canvas.viewportTransform;
+              ctx2.save();
+              ctx2.transform(v2[0], v2[1], v2[2], v2[3], v2[4], v2[5]);
+              this.transform(ctx2);
+              this._clearTextArea(ctx2);
+              skipRestore || ctx2.restore();
             },
             /**
              * Renders cursor or selection (depending on what exists)
@@ -54118,18 +54465,18 @@
               if (!this.isEditing || !this.canvas || !this.canvas.contextTop) {
                 return;
               }
-              var boundaries = this._getCursorBoundaries(), ctx = this.canvas.contextTop;
+              var boundaries = this._getCursorBoundaries(), ctx2 = this.canvas.contextTop;
               this.clearContextTop(true);
               if (this.selectionStart === this.selectionEnd) {
-                this.renderCursor(boundaries, ctx);
+                this.renderCursor(boundaries, ctx2);
               } else {
-                this.renderSelection(boundaries, ctx);
+                this.renderSelection(boundaries, ctx2);
               }
-              ctx.restore();
+              ctx2.restore();
             },
-            _clearTextArea: function(ctx) {
+            _clearTextArea: function(ctx2) {
               var width = this.width + 4, height = this.height + 4;
-              ctx.clearRect(-width / 2, -height / 2, width, height);
+              ctx2.clearRect(-width / 2, -height / 2, width, height);
             },
             /**
              * Returns cursor boundaries (left, top, leftOffset, topOffset)
@@ -54183,15 +54530,15 @@
              * @param {Object} boundaries
              * @param {CanvasRenderingContext2D} ctx transformed context to draw on
              */
-            renderCursor: function(boundaries, ctx) {
+            renderCursor: function(boundaries, ctx2) {
               var cursorLocation = this.get2DCursorLocation(), lineIndex = cursorLocation.lineIndex, charIndex = cursorLocation.charIndex > 0 ? cursorLocation.charIndex - 1 : 0, charHeight = this.getValueOfPropertyAt(lineIndex, charIndex, "fontSize"), multiplier = this.scaleX * this.canvas.getZoom(), cursorWidth = this.cursorWidth / multiplier, topOffset = boundaries.topOffset, dy = this.getValueOfPropertyAt(lineIndex, charIndex, "deltaY");
               topOffset += (1 - this._fontSizeFraction) * this.getHeightOfLine(lineIndex) / this.lineHeight - charHeight * (1 - this._fontSizeFraction);
               if (this.inCompositionMode) {
-                this.renderSelection(boundaries, ctx);
+                this.renderSelection(boundaries, ctx2);
               }
-              ctx.fillStyle = this.cursorColor || this.getValueOfPropertyAt(lineIndex, charIndex, "fill");
-              ctx.globalAlpha = this.__isMousedown ? 1 : this._currentCursorOpacity;
-              ctx.fillRect(
+              ctx2.fillStyle = this.cursorColor || this.getValueOfPropertyAt(lineIndex, charIndex, "fill");
+              ctx2.globalAlpha = this.__isMousedown ? 1 : this._currentCursorOpacity;
+              ctx2.fillRect(
                 boundaries.left + boundaries.leftOffset - cursorWidth / 2,
                 topOffset + boundaries.top + dy,
                 cursorWidth,
@@ -54203,7 +54550,7 @@
              * @param {Object} boundaries Object with left/top/leftOffset/topOffset
              * @param {CanvasRenderingContext2D} ctx transformed context to draw on
              */
-            renderSelection: function(boundaries, ctx) {
+            renderSelection: function(boundaries, ctx2) {
               var selectionStart = this.inCompositionMode ? this.hiddenTextarea.selectionStart : this.selectionStart, selectionEnd = this.inCompositionMode ? this.hiddenTextarea.selectionEnd : this.selectionEnd, isJustify = this.textAlign.indexOf("justify") !== -1, start = this.get2DCursorLocation(selectionStart), end = this.get2DCursorLocation(selectionEnd), startLine = start.lineIndex, endLine = end.lineIndex, startChar = start.charIndex < 0 ? 0 : start.charIndex, endChar = end.charIndex < 0 ? 0 : end.charIndex;
               for (var i5 = startLine; i5 <= endLine; i5++) {
                 var lineOffset = this._getLineLeftOffset(i5) || 0, lineHeight = this.getHeightOfLine(i5), realLineHeight = 0, boxStart = 0, boxEnd = 0;
@@ -54226,16 +54573,16 @@
                 }
                 var drawStart = boundaries.left + lineOffset + boxStart, drawWidth = boxEnd - boxStart, drawHeight = lineHeight, extraTop = 0;
                 if (this.inCompositionMode) {
-                  ctx.fillStyle = this.compositionColor || "black";
+                  ctx2.fillStyle = this.compositionColor || "black";
                   drawHeight = 1;
                   extraTop = lineHeight;
                 } else {
-                  ctx.fillStyle = this.selectionColor;
+                  ctx2.fillStyle = this.selectionColor;
                 }
                 if (this.direction === "rtl") {
                   drawStart = this.width - drawStart - drawWidth;
                 }
-                ctx.fillRect(
+                ctx2.fillRect(
                   drawStart,
                   boundaries.top + boundaries.topOffset + extraTop,
                   drawWidth,
@@ -58647,14 +58994,14 @@
       syncArrows();
     }, { passive: false });
     let holdTimer = null;
-    const nudge = (dir) => {
-      strip.scrollLeft += dir * 90;
+    const nudge = (dir2) => {
+      strip.scrollLeft += dir2 * 90;
       syncArrows();
     };
-    for (const [btn2, dir] of [[left, -1], [right, 1]]) {
-      btn2.onclick = () => nudge(dir);
+    for (const [btn2, dir2] of [[left, -1], [right, 1]]) {
+      btn2.onclick = () => nudge(dir2);
       btn2.onmousedown = () => {
-        holdTimer = setInterval(() => nudge(dir), 90);
+        holdTimer = setInterval(() => nudge(dir2), 90);
       };
       const stop = () => {
         clearInterval(holdTimer);
@@ -59298,13 +59645,13 @@
          * เดิมชื่อซ้ำแล้วขึ้นแค่ข้อความบนแถบสถานะ ผู้ใช้ไม่ทันเห็นว่ากระดานไม่ถูกสร้าง
          */
         async _askBoardName(title2, initial, okLabel) {
-          const dir = await this.boardsDir();
+          const dir2 = await this.boardsDir();
           let value = initial;
           for (; ; ) {
             const name5 = await ask(title2, { value, okLabel: okLabel || t("ui.common.new") });
             if (!name5) return null;
             const safe2 = _safeName(name5);
-            const p = await kapi.join(dir, safe2 + ".json");
+            const p = await kapi.join(dir2, safe2 + ".json");
             if (!await kapi.exists(p)) return { name: safe2, path: p, overwrite: false };
             const act = await choose(tf("ui.common.hasBoardNameProject", safe2), [
               { label: t("ui.common.renameNew"), value: "again", primary: true },
@@ -59325,9 +59672,9 @@
             t("ui.common.new")
           );
           if (!picked) return null;
-          const dir = await this.boardsDir();
+          const dir2 = await this.boardsDir();
           try {
-            await kapi.mkdir(dir);
+            await kapi.mkdir(dir2);
           } catch {
           }
           const p = picked.path;
@@ -59351,10 +59698,10 @@
           const out = [];
           const legacy = await kapi.join(this.root, "planner.json");
           if (await kapi.exists(legacy)) out.push({ path: legacy, name: t("ui.common.boardMain") });
-          const dir = await this.boardsDir();
-          if (await kapi.exists(dir)) {
-            for (const f of await kapi.listFiles(dir, ".json").catch(() => [])) {
-              out.push({ path: await kapi.join(dir, f), name: f.replace(/\.json$/i, "") });
+          const dir2 = await this.boardsDir();
+          if (await kapi.exists(dir2)) {
+            for (const f of await kapi.listFiles(dir2, ".json").catch(() => [])) {
+              out.push({ path: await kapi.join(dir2, f), name: f.replace(/\.json$/i, "") });
             }
           }
           return out;
@@ -59393,9 +59740,9 @@
         async saveAs() {
           const picked = await this._askBoardName(t("ui.planner.saveBoardName"), this.data.getName() + t("ui.common.msg2"), t("ui.common.save"));
           if (!picked) return false;
-          const dir = await this.boardsDir();
+          const dir2 = await this.boardsDir();
           try {
-            await kapi.mkdir(dir);
+            await kapi.mkdir(dir2);
           } catch {
           }
           this._persistViewport(true);
@@ -60025,14 +60372,14 @@
             else this.syncContextBar();
           }
           if (!this._propsCallback) return;
-          const ctx = { mode, data: data2 };
+          const ctx2 = { mode, data: data2 };
           if (mode === "node" && data2) {
-            ctx.connections = this.data.edgesTouching([data2.id]).map((e) => {
+            ctx2.connections = this.data.edgesTouching([data2.id]).map((e) => {
               const out = e.from.nodeId === data2.id;
               const other = this.data.getNode(out ? e.to.nodeId : e.from.nodeId);
               return { id: e.id, dir: out ? "out" : "in", label: e.label, otherTitle: other && other.title || "?" };
             });
-            ctx.onChangeNode = (props) => {
+            ctx2.onChangeNode = (props) => {
               this.data.updateNode(data2.id, props);
               const n2 = this.data.getNode(data2.id);
               this.renderer.rebuildNode(n2);
@@ -60044,34 +60391,34 @@
               this.renderer.refresh();
               this._snapshot();
             };
-            ctx.onPickFile = () => this._svc.pickFile ? this._svc.pickFile() : Promise.resolve(null);
-            ctx.onConnectFrom = () => {
+            ctx2.onPickFile = () => this._svc.pickFile ? this._svc.pickFile() : Promise.resolve(null);
+            ctx2.onConnectFrom = () => {
               this._pickTool("connector");
               setStatus(t("ui.planner.toolLineLinkClick"));
             };
-            ctx.onCenterNode = (id) => this.centerOn(id);
-            ctx.onRevealFile = (file) => {
+            ctx2.onCenterNode = (id) => this.centerOn(id);
+            ctx2.onRevealFile = (file) => {
               if (this._onReveal && file) this._onReveal(file);
               else setStatus(t("ui.planner.cardCantBindFile"));
             };
-            ctx.onDeleteNode = (id) => this._deleteNode(id);
-            ctx.onDuplicateNode = (id) => this._duplicateSelected([id]);
-            ctx.onDeleteEdge = (id) => this._deleteEdge(id);
-            ctx.onSelectEdgeId = (id) => this.selectEdge(id);
+            ctx2.onDeleteNode = (id) => this._deleteNode(id);
+            ctx2.onDuplicateNode = (id) => this._duplicateSelected([id]);
+            ctx2.onDeleteEdge = (id) => this._deleteEdge(id);
+            ctx2.onSelectEdgeId = (id) => this.selectEdge(id);
           } else if (mode === "edge" && data2) {
             const a = this.data.getNode(data2.from.nodeId), b = this.data.getNode(data2.to.nodeId);
-            ctx.endpoints = { from: a && a.title || "?", to: b && b.title || "?" };
-            ctx.onChangeEdge = (props) => this._changeEdge(data2.id, props);
-            ctx.onDeleteEdge = (id) => this._deleteEdge(id);
-            ctx.onFlipEdge = (id) => this._flipEdge(id);
+            ctx2.endpoints = { from: a && a.title || "?", to: b && b.title || "?" };
+            ctx2.onChangeEdge = (props) => this._changeEdge(data2.id, props);
+            ctx2.onDeleteEdge = (id) => this._deleteEdge(id);
+            ctx2.onFlipEdge = (id) => this._flipEdge(id);
           } else if (mode === "many" && data2) {
-            ctx.onChangeMany = (props) => this._changeMany(props, data2);
-            ctx.onAlign = (m) => this._align(m, data2);
-            ctx.onGroup = () => this._createGroupFromSelection();
-            ctx.onDuplicate = () => this._duplicateSelected(data2);
-            ctx.onDeleteSelected = () => this._deleteSelected();
+            ctx2.onChangeMany = (props) => this._changeMany(props, data2);
+            ctx2.onAlign = (m) => this._align(m, data2);
+            ctx2.onGroup = () => this._createGroupFromSelection();
+            ctx2.onDuplicate = () => this._duplicateSelected(data2);
+            ctx2.onDeleteSelected = () => this._deleteSelected();
           }
-          this._propsCallback(ctx);
+          this._propsCallback(ctx2);
         }
         centerOn(id) {
           const n2 = this.data.getNode(id);
@@ -60264,16 +60611,16 @@
   });
 
   // src/planner/planner-props.js
-  function renderPlannerProps(container, ctx) {
+  function renderPlannerProps(container, ctx2) {
     if (!container) return;
-    const { mode, data: data2 } = ctx || {};
+    const { mode, data: data2 } = ctx2 || {};
     container.innerHTML = "";
-    if (mode === "node" && data2) _renderNodeProps(container, data2, ctx);
-    else if (mode === "edge" && data2) _renderEdgeProps(container, data2, ctx);
-    else if (mode === "many" && data2) _renderManyProps(container, data2, ctx);
+    if (mode === "node" && data2) _renderNodeProps(container, data2, ctx2);
+    else if (mode === "edge" && data2) _renderEdgeProps(container, data2, ctx2);
+    else if (mode === "many" && data2) _renderManyProps(container, data2, ctx2);
     else container.innerHTML = t("ui.plannerProps.clickCardLineLink") + t("ui.plannerProps.dragDotColorRound");
   }
-  function _renderNodeProps(container, n2, ctx) {
+  function _renderNodeProps(container, n2, ctx2) {
     const wrap2 = el("div", "planner-props-wrap");
     wrap2.appendChild(_head("\u270F\uFE0F " + (TYPE_LABELS[n2.type] || t("ui.plannerProps.object"))));
     const isText = n2.type === "text";
@@ -60315,7 +60662,7 @@
       b.onclick = () => {
         const i5 = rows.querySelector("#plp-color");
         if (i5) i5.value = c;
-        ctx.onChangeNode && ctx.onChangeNode({ color: c });
+        ctx2.onChangeNode && ctx2.onChangeNode({ color: c });
       };
       swatch.appendChild(b);
     }
@@ -60343,22 +60690,22 @@
     wrap2.appendChild(actions);
     const actions2 = el("div", "planner-props-actions");
     const dupBtn = el("button", "", t("ui.common.repeat"));
-    dupBtn.onclick = () => ctx.onDuplicateNode && ctx.onDuplicateNode(n2.id);
+    dupBtn.onclick = () => ctx2.onDuplicateNode && ctx2.onDuplicateNode(n2.id);
     const delBtn = el("button", "danger", t("ui.plannerProps.delObject"));
-    delBtn.onclick = () => ctx.onDeleteNode && ctx.onDeleteNode(n2.id);
+    delBtn.onclick = () => ctx2.onDeleteNode && ctx2.onDeleteNode(n2.id);
     actions2.append(dupBtn, delBtn);
     wrap2.appendChild(actions2);
-    const conns = ctx.connections || [];
+    const conns = ctx2.connections || [];
     if (conns.length) {
       wrap2.appendChild(_head(t("ui.plannerProps.lineNext") + conns.length + ")"));
       const list = el("div", "planner-conn-list");
       for (const c of conns) {
         const row2 = el("div", "planner-conn-row");
         const name5 = el("span", "planner-conn-name", `${c.dir === "out" ? "\u2192" : "\u2190"} ${c.otherTitle}${c.label ? " \xB7 " + c.label : ""}`);
-        name5.onclick = () => ctx.onSelectEdgeId && ctx.onSelectEdgeId(c.id);
+        name5.onclick = () => ctx2.onSelectEdgeId && ctx2.onSelectEdgeId(c.id);
         const del2 = el("button", "planner-conn-del", "\u2715");
         del2.title = t("ui.plannerProps.delLine");
-        del2.onclick = () => ctx.onDeleteEdge && ctx.onDeleteEdge(c.id);
+        del2.onclick = () => ctx2.onDeleteEdge && ctx2.onDeleteEdge(c.id);
         row2.append(name5, del2);
         list.appendChild(row2);
       }
@@ -60367,7 +60714,7 @@
     container.appendChild(wrap2);
     const q = (id) => wrap2.querySelector("#" + id);
     const deb = _debouncer();
-    const set = (props) => ctx.onChangeNode && ctx.onChangeNode(props);
+    const set = (props) => ctx2.onChangeNode && ctx2.onChangeNode(props);
     q("plp-title").oninput = () => deb(() => set({ title: q("plp-title").value }));
     q("plp-type").onchange = () => set({ type: q("plp-type").value });
     if (q("plp-shape")) q("plp-shape").onchange = () => set({ shape: q("plp-shape").value });
@@ -60388,8 +60735,8 @@
     q("plp-tags").oninput = () => deb(() => set({ tags: q("plp-tags").value.split(",").map((s) => s.trim()).filter(Boolean) }));
     q("plp-lock").onchange = () => set({ locked: q("plp-lock").checked });
     q("plp-pick").onclick = async () => {
-      if (!ctx.onPickFile) return;
-      const picked = await ctx.onPickFile();
+      if (!ctx2.onPickFile) return;
+      const picked = await ctx2.onPickFile();
       if (!picked) return;
       q("plp-file").value = picked.path || "";
       const props = { file: picked.path || null };
@@ -60400,12 +60747,12 @@
       q("plp-file").value = "";
       set({ file: null });
     };
-    q("plp-link").onclick = () => ctx.onConnectFrom && ctx.onConnectFrom(n2.id);
-    q("plp-center").onclick = () => ctx.onCenterNode && ctx.onCenterNode(n2.id);
-    q("plp-reveal").onclick = () => ctx.onRevealFile && ctx.onRevealFile(n2.file);
+    q("plp-link").onclick = () => ctx2.onConnectFrom && ctx2.onConnectFrom(n2.id);
+    q("plp-center").onclick = () => ctx2.onCenterNode && ctx2.onCenterNode(n2.id);
+    q("plp-reveal").onclick = () => ctx2.onRevealFile && ctx2.onRevealFile(n2.file);
     if (fileRow && !n2.file) fileRow.classList.add("planner-unlinked");
   }
-  function _renderEdgeProps(container, e, ctx) {
+  function _renderEdgeProps(container, e, ctx2) {
     const wrap2 = el("div", "planner-props-wrap");
     wrap2.appendChild(_head(t("ui.plannerProps.lineLink")));
     const rows = el("div", "planner-props-body");
@@ -60416,10 +60763,10 @@
       rows.appendChild(row2);
       return row2;
     };
-    if (ctx.endpoints) {
+    if (ctx2.endpoints) {
       add(
         t("ui.plannerProps.linkTo"),
-        `<div class="planner-edge-ends">${_esc(ctx.endpoints.from)} <b>\u2192</b> ${_esc(ctx.endpoints.to)}</div>`
+        `<div class="planner-edge-ends">${_esc(ctx2.endpoints.from)} <b>\u2192</b> ${_esc(ctx2.endpoints.to)}</div>`
       );
     }
     add(t("ui.plannerProps.badge"), tf("ui.plannerProps.msg3", _esc(e.label)));
@@ -60440,7 +60787,7 @@
       b.onclick = () => {
         styleBtns.querySelectorAll("button").forEach((x) => x.classList.remove("active"));
         b.classList.add("active");
-        ctx.onChangeEdge && ctx.onChangeEdge({ style: s });
+        ctx2.onChangeEdge && ctx2.onChangeEdge({ style: s });
       };
       styleBtns.appendChild(b);
     }
@@ -60464,15 +60811,15 @@
     </div>`);
     const actions = el("div", "planner-props-actions");
     const flip = el("button", "", t("ui.common.toggle"));
-    flip.onclick = () => ctx.onFlipEdge && ctx.onFlipEdge(e.id);
+    flip.onclick = () => ctx2.onFlipEdge && ctx2.onFlipEdge(e.id);
     const delBtn = el("button", "danger", t("ui.plannerProps.delLine2"));
-    delBtn.onclick = () => ctx.onDeleteEdge && ctx.onDeleteEdge(e.id);
+    delBtn.onclick = () => ctx2.onDeleteEdge && ctx2.onDeleteEdge(e.id);
     actions.append(flip, delBtn);
     wrap2.appendChild(actions);
     container.appendChild(wrap2);
     const q = (id) => wrap2.querySelector("#" + id);
     const deb = _debouncer();
-    const set = (p) => ctx.onChangeEdge && ctx.onChangeEdge(p);
+    const set = (p) => ctx2.onChangeEdge && ctx2.onChangeEdge(p);
     q("plpe-label").oninput = () => deb(() => set({ label: q("plpe-label").value }));
     q("plpe-color").oninput = () => deb(() => set({ color: q("plpe-color").value }));
     q("plpe-width").oninput = () => {
@@ -60487,7 +60834,7 @@
     q("plpe-fp").onchange = () => set({ fromPort: q("plpe-fp").value });
     q("plpe-tp").onchange = () => set({ toPort: q("plpe-tp").value });
   }
-  function _renderManyProps(container, ids, ctx) {
+  function _renderManyProps(container, ids, ctx2) {
     const wrap2 = el("div", "planner-props-wrap");
     wrap2.appendChild(_head(tf("ui.plannerProps.pickItem", ids.length)));
     const rows = el("div", "planner-props-body");
@@ -60498,7 +60845,7 @@
     for (const c of ["#3f3e3a", "#5f7a9f", "#7a6f9f", "#5f8a6f", "#d97757", "#f2c14e", "#c1666b", "#4a6fa5"]) {
       const b = el("button", "planner-swatch");
       b.style.background = c;
-      b.onclick = () => ctx.onChangeMany && ctx.onChangeMany({ color: c });
+      b.onclick = () => ctx2.onChangeMany && ctx2.onChangeMany({ color: c });
       sw.appendChild(b);
     }
     colorRow2.appendChild(sw);
@@ -60518,18 +60865,18 @@
     ];
     for (const [k, label] of ALIGNS) {
       const b = el("button", "", label);
-      b.onclick = () => ctx.onAlign && ctx.onAlign(k);
+      b.onclick = () => ctx2.onAlign && ctx2.onAlign(k);
       grid.appendChild(b);
     }
     alignRow.appendChild(grid);
     rows.appendChild(alignRow);
     const actions = el("div", "planner-props-actions");
     const g = el("button", "", t("ui.plannerProps.group"));
-    g.onclick = () => ctx.onGroup && ctx.onGroup();
+    g.onclick = () => ctx2.onGroup && ctx2.onGroup();
     const d = el("button", "", t("ui.common.repeat"));
-    d.onclick = () => ctx.onDuplicate && ctx.onDuplicate();
+    d.onclick = () => ctx2.onDuplicate && ctx2.onDuplicate();
     const del2 = el("button", "danger", t("ui.plannerProps.delAll"));
-    del2.onclick = () => ctx.onDeleteSelected && ctx.onDeleteSelected();
+    del2.onclick = () => ctx2.onDeleteSelected && ctx2.onDeleteSelected();
     actions.append(g, d, del2);
     wrap2.appendChild(actions);
     container.appendChild(wrap2);
@@ -60778,7 +61125,7 @@
   async function buildVarContext(root, api) {
     const wikiRoot2 = await api.join(root, "Wiki");
     if (!await api.exists(wikiRoot2)) return {};
-    const ctx = {};
+    const ctx2 = {};
     const fieldCount = {};
     for (const cat of await api.listDirs(wikiRoot2)) {
       const catDir = await api.join(wikiRoot2, cat);
@@ -60793,16 +61140,16 @@
             continue;
           }
           if (!entity || !entity.name) continue;
-          ctx[entity.name] = entity.name;
+          ctx2[entity.name] = entity.name;
           fieldCount[entity.name] = (fieldCount[entity.name] || 0) + 1;
           for (const [k, v2] of Object.entries(entity.fields || {})) {
             const dk = `${entity.name}.${k}`;
-            ctx[dk] = String(v2 ?? "");
+            ctx2[dk] = String(v2 ?? "");
             fieldCount[dk] = 1;
-            if (k in ctx) {
+            if (k in ctx2) {
               fieldCount[k] = (fieldCount[k] || 1) + 1;
             } else {
-              ctx[k] = String(v2 ?? "");
+              ctx2[k] = String(v2 ?? "");
               fieldCount[k] = 1;
             }
           }
@@ -60811,15 +61158,15 @@
       }
     }
     for (const [k, count] of Object.entries(fieldCount)) {
-      if (count > 1) delete ctx[k];
+      if (count > 1) delete ctx2[k];
     }
-    return ctx;
+    return ctx2;
   }
-  function resolveVars(text, ctx = {}) {
+  function resolveVars(text, ctx2 = {}) {
     if (!text) return "";
     return String(text).replace(/\{\{([\w.\u0E00-\u0E7F]+)\}\}/g, (_2, k) => {
       const key2 = k.trim();
-      return key2 in ctx && ctx[key2] != null ? String(ctx[key2]) : _2;
+      return key2 in ctx2 && ctx2[key2] != null ? String(ctx2[key2]) : _2;
     });
   }
   var init_template_vars = __esm({
@@ -61043,10 +61390,11 @@
         closeList();
         continue;
       }
-      const h = /^(#{1,6})\s+(.*)$/.exec(line);
+      const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
       if (h) {
         closeList();
-        out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`);
+        const ht = String(h[2] || "").trim();
+        if (ht) out.push(`<h${h[1].length}>${inline(ht)}</h${h[1].length}>`);
         continue;
       }
       if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
@@ -61429,9 +61777,9 @@ ${mdToHtmlBody(md)}
       esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       inline = (s) => esc(s).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`).replace(/(\*\*|__)(.*?)\1/g, "<strong>$2</strong>").replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, "<em>$1</em>").replace(/(?<!_)_(?!_)([^_]+)_(?!_)/g, "<em>$1</em>").replace(/~~(.*?)~~/g, "<del>$1</del>");
       escapeHtml = esc;
-      fill = (tpl, n2, title2, ctx = {}) => {
+      fill = (tpl, n2, title2, ctx2 = {}) => {
         let s = String(tpl == null ? "" : tpl).replace(/\{n\}/g, n2).replace(/\{title\}/g, title2);
-        return resolveVars(s, ctx);
+        return resolveVars(s, ctx2);
       };
     }
   });
@@ -61667,9 +62015,9 @@ ${mdToHtmlBody(md)}
     if (!Number.isFinite(n2)) return 1;
     return Math.max(MAP_ZOOM_MIN, Math.min(MAP_ZOOM_MAX, n2));
   }
-  function zoomStep(z, dir) {
+  function zoomStep(z, dir2) {
     const cur = clampZoom2(z);
-    const steps = Math.round(cur / MAP_ZOOM_STEP) + (dir > 0 ? 1 : -1);
+    const steps = Math.round(cur / MAP_ZOOM_STEP) + (dir2 > 0 ? 1 : -1);
     return clampZoom2(steps * MAP_ZOOM_STEP);
   }
   function zoomScroll(scroll, client, before, after, anchor = 0.5) {
@@ -62032,7 +62380,7 @@ ${mdToHtmlBody(md)}
     }
     return out;
   }
-  function tokenize(text) {
+  function tokenize2(text) {
     if (!text) return [];
     const seg = getSegmenter();
     if (!seg) return tokenizeFallback(text);
@@ -62045,7 +62393,7 @@ ${mdToHtmlBody(md)}
     return out;
   }
   function tokenizeQuery(text) {
-    return tokenize(text).map((t3) => t3.word);
+    return tokenize2(text).map((t3) => t3.word);
   }
   var _segmenter, _segTried, _THAI;
   var init_search_engine = __esm({
@@ -62826,8 +63174,8 @@ ${h.text}`;
       lines.push(t("ui.aiAssistant.formatResultScreenplayHead"));
     }
     if (language && language !== "th") lines.push(t("ui.aiAssistant.replyLang") + language);
-    const ctx = contextBlock(context2);
-    if (ctx) lines.push("", ctx);
+    const ctx2 = contextBlock(context2);
+    if (ctx2) lines.push("", ctx2);
     if (text) lines.push("", t("ui.aiAssistant.textSource"), text);
     const prompt2 = lines.join("\n");
     return { system: SYSTEM_TH, prompt: prompt2, tokens: estimateTokens2(prompt2) };
@@ -62857,10 +63205,10 @@ ${h.text}`;
     if (!client) return { ok: false, text: "", error: t("ui.aiAssistant.cantSettingsAIClient"), code: "no-client", prompt: "" };
     const task = options.task || "custom";
     const source = options.text != null ? options.text : context2 && context2.text || "";
-    let ctx = context2;
+    let ctx2 = context2;
     if (options.rag && typeof options.rag.retrieve === "function") {
       const hits = await options.rag.retrieve(prompt2 || source, options.k || 5);
-      ctx = { ...context2 || {}, retrieved: hits };
+      ctx2 = { ...context2 || {}, retrieved: hits };
     }
     const built = buildPrompt(task, {
       text: source,
@@ -62869,7 +63217,7 @@ ${h.text}`;
       length: options.length,
       language: options.language,
       format: options.format,
-      context: ctx
+      context: ctx2
     });
     const req = {
       prompt: built.prompt,
@@ -62880,7 +63228,7 @@ ${h.text}`;
       feature: options.feature || "assistant:" + task
     };
     const res = options.stream && typeof options.onChunk === "function" ? await client.stream(req, options.onChunk) : await client.complete(req);
-    return { ...res, prompt: built.prompt, task, sources: ctx && ctx.retrieved ? ctx.retrieved.map((h) => h.id) : [] };
+    return { ...res, prompt: built.prompt, task, sources: ctx2 && ctx2.retrieved ? ctx2.retrieved.map((h) => h.id) : [] };
   }
   function expand(text, options = {}) {
     return aiAssistant("", { text }, { ...options, task: "expand", text });
@@ -62961,7 +63309,7 @@ ${h.text}`;
   function generateSceneSynopsis(body, title2, onResult) {
     return generateSceneField("synopsis", body, title2, onResult);
   }
-  function attachAiFieldButton(row2, input, field, ctx, onFilled) {
+  function attachAiFieldButton(row2, input, field, ctx2, onFilled) {
     const def = AI_SCENE_FIELDS[field];
     if (!row2 || !input || !def) return null;
     const b = el("button", "k-ai-fill", "\u2728");
@@ -62975,7 +63323,7 @@ ${h.text}`;
       const prev = b.textContent;
       b.textContent = "\u23F3";
       try {
-        const c = await ctx() || {};
+        const c = await ctx2() || {};
         await generateSceneField(field, c.body || "", c.title || "", (val) => {
           input.value = val;
           input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -63396,7 +63744,7 @@ ${h.text}`;
         onError: (e, type) => log("error", t("ui.task.jobFailed") + type + t("ui.task.failedSuffix"), { error: e && e.message })
       });
       installDefaultRules(engine);
-      engine.registerTask("rename-entity", async (payload, ctx) => {
+      engine.registerTask("rename-entity", async (payload, ctx2) => {
         const files = payload.files && payload.files.length ? payload.files : await listTextFiles(state.root);
         const run2 = renameEntityTask({
           readFile: (p) => kapi.readFile(p).catch(() => null),
@@ -64017,27 +64365,27 @@ ${h.text}`;
     }
     return best;
   }
-  function applyDrop(pm2, panelId2, hit, ctx = {}) {
+  function applyDrop(pm2, panelId2, hit, ctx2 = {}) {
     if (!hit) return false;
-    const draggingGroup = !!(ctx.floatId && (pm2.floats || []).some((f) => f.id === ctx.floatId && f.panel && f.panel.type === "tabs"));
+    const draggingGroup = !!(ctx2.floatId && (pm2.floats || []).some((f) => f.id === ctx2.floatId && f.panel && f.panel.type === "tabs"));
     if (draggingGroup && hit.kind !== "floatgroup") {
       if (hit.kind === "tab" || hit.kind === "merge") return false;
       return pm2.dockFloatGroup(
-        ctx.floatId,
+        ctx2.floatId,
         hit.zone,
         hit.targetId,
-        { edge: hit.kind === "edge", isFixedPanel: ctx.isFixedPanel }
+        { edge: hit.kind === "edge", isFixedPanel: ctx2.isFixedPanel }
       );
     }
     if (hit.kind === "floatgroup") return pm2.groupIntoFloat(panelId2, hit.targetId);
-    if (hit.kind === "edge") return pm2.dockAtEdge(panelId2, hit.zone, ctx.isFixedPanel);
+    if (hit.kind === "edge") return pm2.dockAtEdge(panelId2, hit.zone, ctx2.isFixedPanel);
     if (hit.kind === "tab") return pm2.addTabAt(panelId2, hit.targetId, hit.tabIndex);
     if (hit.targetId === panelId2) return false;
     return pm2.dockPanel(panelId2, hit.zone, hit.targetId);
   }
-  function startPanelDrag(e, panelId2, pm2, ctx = {}) {
+  function startPanelDrag(e, panelId2, pm2, ctx2 = {}) {
     if (e.button !== 0) return;
-    const host2 = ctx.host || document.getElementById("app-root") || document.body;
+    const host2 = ctx2.host || document.getElementById("app-root") || document.body;
     const sx2 = e.clientX, sy2 = e.clientY;
     let moved = false, ghost = null;
     const ov = createDropOverlay();
@@ -64054,16 +64402,16 @@ ${h.text}`;
         document.body.classList.add("k-panel-dragging");
         ghost = document.createElement("div");
         ghost.className = "k-drag-ghost";
-        ghost.textContent = ctx.ghostLabel || panelId2;
+        ghost.textContent = ctx2.ghostLabel || panelId2;
         document.body.appendChild(ghost);
       }
       if (ghost) {
         ghost.style.left = ev.clientX + 12 + "px";
         ghost.style.top = ev.clientY + 14 + "px";
       }
-      if (!ctx.floatOnly) {
+      if (!ctx2.floatOnly) {
         hit = detectSnapTarget(ev.clientX, ev.clientY, host2, panelId2);
-        if (hit && hit.kind === "merge" && !ctx.allowGroup) hit = null;
+        if (hit && hit.kind === "merge" && !ctx2.allowGroup) hit = null;
         if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
         else ov.hide();
       }
@@ -64077,18 +64425,18 @@ ${h.text}`;
       if (!moved) return;
       const ux = ev.clientX || ev.clientY ? ev.clientX : lastX;
       const uy = ev.clientX || ev.clientY ? ev.clientY : lastY;
-      if (ctx.onReorder && ctx.onReorder(ux, uy)) return;
-      if (!ctx.floatOnly && hit) {
-        applyDrop(pm2, panelId2, hit, ctx);
+      if (ctx2.onReorder && ctx2.onReorder(ux, uy)) return;
+      if (!ctx2.floatOnly && hit) {
+        applyDrop(pm2, panelId2, hit, ctx2);
         return;
       }
       if (!hit) {
-        const box2 = ctx.floatBox ? ctx.floatBox() : null;
+        const box2 = ctx2.floatBox ? ctx2.floatBox() : null;
         pm2.floatPanel(panelId2, clampFloat({
           x: ux - 60,
           y: uy - 12,
-          w: box2 && box2.w || ctx.floatW || 320,
-          h: box2 && box2.h || ctx.floatH || 300
+          w: box2 && box2.w || ctx2.floatW || 320,
+          h: box2 && box2.h || ctx2.floatH || 300
         }), { fromDock: !!box2 });
       }
     };
@@ -64112,27 +64460,27 @@ ${h.text}`;
     const r = e.getBoundingClientRect();
     return r.width > 40 && r.height > 40 ? { w: Math.round(r.width), h: Math.round(r.height) } : null;
   }
-  function makePanelDraggable(header, panelId2, pm2, ctx = {}) {
+  function makePanelDraggable(header, panelId2, pm2, ctx2 = {}) {
     header.addEventListener("mousedown", (e) => {
       if (e.target.closest(".k-panel-btn") || e.target.closest(".k-panel-ctrls") || e.target.closest(".k-panel-btns")) return;
       const onTitle = !!e.target.closest(".k-panel-head-title") || !!e.target.closest(".k-panel-head-icon");
       const allowGroup = onTitle && inGroupHandle(header, e.clientX);
-      const box2 = panelBoxOf(panelId2, ctx.host);
-      startPanelDrag(e, panelId2, pm2, { ...ctx, allowGroup, floatBox: () => box2 });
+      const box2 = panelBoxOf(panelId2, ctx2.host);
+      startPanelDrag(e, panelId2, pm2, { ...ctx2, allowGroup, floatBox: () => box2 });
     });
     header.classList.add("k-can-group");
   }
-  function makeTabDraggable(tab, panelId2, tabsId, index, pm2, ctx = {}) {
+  function makeTabDraggable(tab, panelId2, tabsId, index, pm2, ctx2 = {}) {
     tab.addEventListener("mousedown", (e) => {
       if (e.target.closest(".k-panel-btn")) return;
       const bar = tab.parentNode;
-      const box2 = panelBoxOf(panelId2, ctx.host);
+      const box2 = panelBoxOf(panelId2, ctx2.host);
       startPanelDrag(e, panelId2, pm2, {
-        ...ctx,
+        ...ctx2,
         floatBox: () => box2,
         allowGroup: true,
         // ลากหัวแท็บ = ตั้งใจจัดกลุ่มอยู่แล้ว
-        ghostLabel: ctx.ghostLabel || tab.textContent.trim(),
+        ghostLabel: ctx2.ghostLabel || tab.textContent.trim(),
         onReorder: (mx, my) => {
           if (!bar) return false;
           const r = bar.getBoundingClientRect();
@@ -64192,12 +64540,12 @@ ${h.text}`;
     }
     return { x: sx2, y: sy2, snapped };
   }
-  function makeFloatDraggable(header, popup, panelId2, pm2, ctx = {}) {
+  function makeFloatDraggable(header, popup, panelId2, pm2, ctx2 = {}) {
     header.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
       if (e.target.closest(".k-panel-btn") || e.target.closest(".k-panel-ctrls") || e.target.closest(".k-panel-btns")) return;
-      const host2 = ctx.host || document.getElementById("app-root") || document.body;
-      const onFloatBar = !!(ctx.floatId && header.classList.contains("k-float-tabbar"));
+      const host2 = ctx2.host || document.getElementById("app-root") || document.body;
+      const onFloatBar = !!(ctx2.floatId && header.classList.contains("k-float-tabbar"));
       if (onFloatBar && e.target.closest(".k-tab")) return;
       const canDock = onFloatBar ? !e.target.closest(".k-tab") && !e.target.closest(".k-panel-btn") : !!e.target.closest(".k-panel-head-title") && inGroupHandle(header, e.clientX);
       const sx2 = e.clientX, sy2 = e.clientY;
@@ -64224,7 +64572,7 @@ ${h.text}`;
         popup.classList.remove("k-float-snapped");
         if (!moved) return;
         if (!popup.isConnected) return;
-        if (hit && applyDrop(pm2, panelId2, hit, ctx)) return;
+        if (hit && applyDrop(pm2, panelId2, hit, ctx2)) return;
         const c = clampFloat({
           x: popup.offsetLeft,
           y: popup.offsetTop,
@@ -64233,7 +64581,7 @@ ${h.text}`;
         });
         popup.style.left = c.x + "px";
         popup.style.top = c.y + "px";
-        if (ctx.floatId) pm2.moveFloatBox(ctx.floatId, { x: c.x, y: c.y });
+        if (ctx2.floatId) pm2.moveFloatBox(ctx2.floatId, { x: c.x, y: c.y });
         else pm2.moveFloat(panelId2, { x: c.x, y: c.y });
       };
       document.addEventListener("mousemove", move);
@@ -64689,8 +65037,8 @@ ${h.text}`;
     (container || document.body).appendChild(pop);
     return pop;
   }
-  function createResizeHandle(dockId, index, dir, pm2, nextIndex) {
-    const row2 = dir === "row";
+  function createResizeHandle(dockId, index, dir2, pm2, nextIndex) {
+    const row2 = dir2 === "row";
     const h = el("div", "k-resize-handle " + (row2 ? "k-rh-col" : "k-rh-row"));
     h.dataset.dockId = dockId;
     h.dataset.index = String(index);
@@ -66405,6 +66753,21 @@ ${h.text}`;
           i18n: "panel.dialogueTitle",
           desc: t("ui.panel.dialogueDesc")
         },
+        // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
+        // ตัวนี้ให้ AI สวมบทตัวละครจาก Wiki คุยกันสด ๆ แล้วหยิบบรรทัดที่ชอบไปใส่บท)
+        {
+          id: "dlgb",
+          minW: 420,
+          dockW: 620,
+          title: t("ui.panel.dlgbTitle"),
+          icon: "chat",
+          adopt: "#dlgb-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "panel.dlgbTitle",
+          desc: t("ui.panel.dlgbDesc")
+        },
         {
           id: "plugins",
           minW: 420,
@@ -67897,6 +68260,8 @@ ${h.text}`;
           { id: "tb-dashboard" },
           { id: "tb-dialogue" },
           // [alpha.79] แผงบทพูด
+          { id: "tb-dlgb" },
+          // [alpha.82] ห้องซ้อมบท
           { id: "tb-codex" },
           { id: "tb-history" },
           { id: "tb-record" },
@@ -68626,6 +68991,9 @@ ${h.text}`;
       // [alpha.57a ข้อ 2] เลขฉาก + เลขหน้า
       sceneNumbers: { ...SCENE_NUMBER_DEFAULTS, ...s.spSceneNumbers || {} },
       pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...s.spPageNumbers || {} },
+      // [alpha.83r ข้อ 3] สวิตช์ "ใส่ CONTINUED อัตโนมัติ" — ผู้ใช้ขอให้อยู่ในตั้งค่าโปรเจกต์
+      // (เดิมมีแต่ในเมนู "บท" ซึ่งหาไม่เจอถ้าไม่รู้ว่ามี) · ปิดแล้วพิมพ์เองด้วยบล็อก cont-left/right
+      continued: { ...CONTINUED_DEFAULTS, ...s.spContinued || {} },
       // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา (สำเนาทำงาน)
       langFonts: normalizeLangFonts(s.langFonts),
       // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
@@ -68792,8 +69160,15 @@ ${h.text}`;
     q("#st-pr-qb").checked = !!P.quote.border;
     q("#st-pr-qind").value = P.quote.indent;
     q("#st-pr-qcolor").value = P.quote.color || "";
-    q("#st-pr-pgnum").checked = !!P.pageNumbers;
-    q("#st-pr-pgfirst").checked = !!P.pageNumberFirst;
+    const syncPgNum = () => {
+      const a1 = q("#st-pr-pgnum"), b1 = q("#st-pr-pgfirst");
+      const a2 = q("#st-pn-show"), b2 = q("#st-pn-first");
+      if (a1) a1.checked = !!W.pageNumbers.show;
+      if (b1) b1.checked = W.pageNumbers.firstPage !== false;
+      if (a2) a2.checked = !!W.pageNumbers.show;
+      if (b2) b2.checked = W.pageNumbers.firstPage !== false;
+    };
+    syncPgNum();
     const headBody = q("#st-pr-heads tbody");
     const renderHeads = () => {
       headBody.innerHTML = "";
@@ -68883,13 +69258,20 @@ ${h.text}`;
       P.quote.border = q("#st-pr-qb").checked;
       P.quote.indent = parseFloat(q("#st-pr-qind").value) || 0;
       P.quote.color = q("#st-pr-qcolor").value.trim();
-      P.pageNumbers = q("#st-pr-pgnum").checked;
-      P.pageNumberFirst = q("#st-pr-pgfirst").checked;
+      W.pageNumbers.show = q("#st-pr-pgnum").checked;
+      W.pageNumbers.firstPage = q("#st-pr-pgfirst").checked;
+      P.pageNumbers = W.pageNumbers.show;
+      P.pageNumberFirst = W.pageNumbers.firstPage;
       return P;
     };
     const previewProse = () => {
       const f = mergeProseFormat(readProse());
       applyProseVars(f);
+      syncPgNum();
+      try {
+        previewPage();
+      } catch {
+      }
       const paper = PAPER_SIZES[W.paperSize] || PAPER_SIZES.letter;
       const pp = W.paperSize === "custom" ? W.customPaper : paper;
       q("#st-pr-info").textContent = tf("ui.dlg.linePage2", proseLinesPerPage(f, pp, W.margins)) + tf("ui.dlg.charLine", proseCharsPerLine(f, pp, W.margins));
@@ -68940,8 +69322,7 @@ ${h.text}`;
       q("#st-pr-qb").checked = !!P.quote.border;
       q("#st-pr-qind").value = P.quote.indent;
       q("#st-pr-qcolor").value = P.quote.color || "";
-      q("#st-pr-pgnum").checked = !!P.pageNumbers;
-      q("#st-pr-pgfirst").checked = !!P.pageNumberFirst;
+      syncPgNum();
       renderHeads();
       previewProse();
     };
@@ -69116,11 +69497,16 @@ ${h.text}`;
         previewPage();
       };
     }
+    chk("#st-ct-auto", () => W.continued.enabled !== false, (v2) => {
+      W.continued.enabled = v2;
+    });
     chk("#st-pn-show", () => W.pageNumbers.show, (v2) => {
       W.pageNumbers.show = v2;
+      syncPgNum();
     });
     chk("#st-pn-first", () => W.pageNumbers.firstPage, (v2) => {
       W.pageNumbers.firstPage = v2;
+      syncPgNum();
     });
     numIn("#st-pn-right", () => W.pageNumbers.right, (v2) => {
       W.pageNumbers.right = v2;
@@ -69146,6 +69532,7 @@ ${h.text}`;
         spStyles: s.spStyles,
         spSceneNumbers: s.spSceneNumbers,
         spPageNumbers: s.spPageNumbers,
+        spContinued: s.spContinued,
         spLineHeight: s.spLineHeight,
         spPageGap: s.spPageGap,
         paperGaps: s.paperGaps,
@@ -69159,6 +69546,7 @@ ${h.text}`;
         spStyles: W.styles,
         spSceneNumbers: W.sceneNumbers,
         spPageNumbers: W.pageNumbers,
+        spContinued: W.continued,
         spLineHeight: W.spLineHeight,
         spPageGap: W.spPageGap,
         paperGaps: W.paperGaps,
@@ -69265,10 +69653,10 @@ ${h.text}`;
     function renderSpKeys() {
       const host2 = q("#st-spkeys");
       host2.innerHTML = "";
-      for (const dir of ["enter", "tab", "shiftTab"]) {
+      for (const dir2 of ["enter", "tab", "shiftTab"]) {
         const row2 = el("div", "k-key-row");
-        row2.append(el("span", "k-key-label", KEY_LABELS[dir]));
-        const accel = el("span", "k-key-accel", spKeyLabel(W.keys[dir]));
+        row2.append(el("span", "k-key-label", KEY_LABELS[dir2]));
+        const accel = el("span", "k-key-accel", spKeyLabel(W.keys[dir2]));
         row2.append(accel);
         const edit = el("button", "k-key-btn", t("ui.dlg.change"));
         const reset = el("button", "k-key-btn", "\u21BA");
@@ -69281,7 +69669,7 @@ ${h.text}`;
             e.stopPropagation();
             if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
             window.removeEventListener("keydown", grab, true);
-            W.keys[dir] = {
+            W.keys[dir2] = {
               code: e.code,
               shift: e.shiftKey,
               ctrl: e.ctrlKey || e.metaKey,
@@ -69293,7 +69681,7 @@ ${h.text}`;
           window.addEventListener("keydown", grab, true);
         };
         reset.onclick = () => {
-          W.keys[dir] = { ...DEFAULT_SP_CYCLE_KEYS[dir] };
+          W.keys[dir2] = { ...DEFAULT_SP_CYCLE_KEYS[dir2] };
           renderSpKeys();
           syncCycleHeads();
         };
@@ -69322,17 +69710,17 @@ ${h.text}`;
         const row2 = el("tr");
         const label = SP_ELEMS[k] && SP_ELEMS[k].th || k;
         row2.append(el("td", "", label));
-        for (const dir of ["enter", "tab", "shiftTab"]) {
+        for (const dir2 of ["enter", "tab", "shiftTab"]) {
           const sel = el("select");
           for (const opt of cycleOpts) {
             const o = el("option");
             o.value = opt;
             o.textContent = SP_ELEMS[opt] && SP_ELEMS[opt].th || opt;
-            if (workSpCycle[k][dir] === opt) o.selected = true;
+            if (workSpCycle[k][dir2] === opt) o.selected = true;
             sel.append(o);
           }
           sel.onchange = () => {
-            workSpCycle[k][dir] = sel.value;
+            workSpCycle[k][dir2] = sel.value;
           };
           const td = el("td");
           td.append(sel);
@@ -69489,9 +69877,9 @@ ${h.text}`;
       try {
         const src2 = await kapi.openFileDialog("font");
         if (!src2) return;
-        const dir = await kapi.join(state.root, "Fonts");
-        await kapi.mkdir(dir);
-        const dst = await kapi.copyInto(src2, dir);
+        const dir2 = await kapi.join(state.root, "Fonts");
+        await kapi.mkdir(dir2);
+        const dst = await kapi.copyInto(src2, dir2);
         const name5 = String(dst || src2).split(/[\\/]/).pop();
         if (!projectFonts.includes(name5)) projectFonts.push(name5);
         await preloadLangFontUrls();
@@ -69513,8 +69901,8 @@ ${h.text}`;
     };
     (async () => {
       try {
-        const dir = await kapi.join(state.root, "Fonts");
-        if (await kapi.exists(dir)) projectFonts = await kapi.listFiles(dir);
+        const dir2 = await kapi.join(state.root, "Fonts");
+        if (await kapi.exists(dir2)) projectFonts = await kapi.listFiles(dir2);
       } catch {
       }
       renderFonts();
@@ -69767,6 +70155,7 @@ ${h.text}`;
       s.spStrings = { ...W.strings };
       s.spSceneNumbers = { ...W.sceneNumbers };
       s.spPageNumbers = { ...W.pageNumbers };
+      s.spContinued = { ...W.continued };
       s.spLineHeight = W.spLineHeight;
       s.spPageGap = W.spPageGap;
       s.paperGaps = W.paperGaps !== false;
@@ -70406,9 +70795,9 @@ ${h.text}`;
   }
   async function duplicateEntity(file) {
     const e = await kapi.readJson(file);
-    const dir = file.replace(/[\\/][^\\/]*$/, "");
+    const dir2 = file.replace(/[\\/][^\\/]*$/, "");
     const copy2 = { ...e, id: guid(), name: (e.name || "entity") + t("ui.common.msg"), created: (/* @__PURE__ */ new Date()).toISOString() };
-    const nf = await kapi.join(dir, safeName(copy2.name) + "-" + Date.now().toString(36) + ".json");
+    const nf = await kapi.join(dir2, safeName(copy2.name) + "-" + Date.now().toString(36) + ".json");
     await kapi.writeFile(nf, JSON.stringify(copy2, null, 2));
     await buildTree2();
     await smart.loadNames(state.root);
@@ -70511,17 +70900,17 @@ ${h.text}`;
       log("warn", t("ui.floorplan.floorplanLoadMapsJson"), e);
     }
     const maps = sortMaps(data2.maps || []);
-    const ctx = await sceneCtx2() || await sceneCtx2(state.lastSceneFile);
+    const ctx2 = await sceneCtx2() || await sceneCtx2(state.lastSceneFile);
     let scenes = [];
     try {
       scenes = await collectPlacedScenes();
     } catch (e) {
       log("warn", t("ui.floorplan.floorplanReadSceneCant"), e);
     }
-    const wanted = mapId || fs.mapId || ctx && ctx.row.mapId || null;
+    const wanted = mapId || fs.mapId || ctx2 && ctx2.row.mapId || null;
     const cur = wanted && findMap(maps, wanted) || maps[0] || null;
     fs.mapId = cur ? cur.id : null;
-    const redraw = () => renderFloorPlan(pane, fs.mapId);
+    const redraw2 = () => renderFloorPlan(pane, fs.mapId);
     const head2 = el("div", "floor-head");
     const titleRow = el("div", "floor-title-row");
     titleRow.append(el("div", "floor-title", t("ui.common.graphArea")));
@@ -70535,31 +70924,31 @@ ${h.text}`;
     sel.onchange = () => {
       fs.mapId = sel.value;
       fs.picking = false;
-      redraw();
+      redraw2();
     };
     if (maps.length) titleRow.append(sel);
-    if (ctx && cur) {
+    if (ctx2 && cur) {
       const pinB = el(
         "button",
         "floor-pinbtn" + (fs.picking ? " on" : ""),
         fs.picking ? t("ui.floorplan.cancelPin") : t("ui.floorplan.pinPosScene2")
       );
-      pinB.title = t("ui.floorplan.clickBtnDoneClick") + (ctx.row.title || "") + t("ui.floorplan.occurAt");
+      pinB.title = t("ui.floorplan.clickBtnDoneClick") + (ctx2.row.title || "") + t("ui.floorplan.occurAt");
       pinB.onclick = () => {
         fs.picking = !fs.picking;
-        redraw();
+        redraw2();
       };
       titleRow.append(pinB);
-      if (ctx.row.mapId) {
+      if (ctx2.row.mapId) {
         const clearB = el("button", "floor-pinbtn", t("ui.floorplan.clearPos"));
         clearB.title = t("ui.floorplan.sceneExitMap");
         clearB.onclick = async () => {
-          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+          await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
             delete r.mapId;
             delete r.pinId;
           });
           setStatus(t("ui.floorplan.clearPosSceneDone"));
-          redraw();
+          redraw2();
         };
         titleRow.append(clearB);
       }
@@ -70574,7 +70963,7 @@ ${h.text}`;
           const item = el("span", "floor-crumb-item", c.name || t("ui.common.notNamed"));
           if (c.id !== cur.id) item.onclick = () => {
             fs.mapId = c.id;
-            redraw();
+            redraw2();
           };
           else item.classList.add("on");
           bc.append(item);
@@ -70598,26 +70987,26 @@ ${h.text}`;
         dot.title = (p.label || t("ui.common.notNamed")) + (here2.length ? "\n" + here2.map((s) => "\u{1F4C4} " + s.title).join("\n") : "");
         dot.onclick = (e) => {
           e.stopPropagation();
-          if (fs.picking && ctx) return bindSceneTo(p.id, p.x, p.y);
+          if (fs.picking && ctx2) return bindSceneTo(p.id, p.x, p.y);
           setStatus(t("ui.floorplan.pin") + (p.label || "\u2014") + (here2.length ? tf("ui.floorplan.scene", here2.length) : ""));
         };
         if (here2.length) dot.append(el("span", "floor-pin-count", String(here2.length)));
         holder.append(dot);
       }
-      if (ctx && ctx.row.mapId === cur.id) {
-        const pin = (cur.pins || []).find((p) => p.id === ctx.row.pinId);
-        const px2 = pin ? pin.x : ctx.row.pinX, py2 = pin ? pin.y : ctx.row.pinY;
+      if (ctx2 && ctx2.row.mapId === cur.id) {
+        const pin = (cur.pins || []).find((p) => p.id === ctx2.row.pinId);
+        const px2 = pin ? pin.x : ctx2.row.pinX, py2 = pin ? pin.y : ctx2.row.pinY;
         if (px2 != null && py2 != null) {
           const you = el("div", "floor-you");
           you.style.left = px2 + "%";
           you.style.top = py2 + "%";
-          you.title = t("ui.floorplan.you") + (ctx.row.title || "");
+          you.title = t("ui.floorplan.you") + (ctx2.row.title || "");
           you.append(el("span", "floor-you-dot", "\u25C9"));
-          you.append(el("span", "floor-you-label", ctx.row.title || t("ui.floorplan.sceneCurrent")));
+          you.append(el("span", "floor-you-label", ctx2.row.title || t("ui.floorplan.sceneCurrent")));
           holder.append(you);
         }
       }
-      if (fs.picking && ctx) {
+      if (fs.picking && ctx2) {
         holder.classList.add("floor-canvas-pick");
         holder.onclick = (e) => {
           const r = holder.getBoundingClientRect();
@@ -70631,7 +71020,7 @@ ${h.text}`;
       }
       main.append(holder);
       async function bindSceneTo(pinId, x, y) {
-        await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+        await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
           r.mapId = cur.id;
           if (pinId) {
             r.pinId = pinId;
@@ -70644,8 +71033,8 @@ ${h.text}`;
           }
         });
         fs.picking = false;
-        setStatus(t("ui.floorplan.pinPosScene") + (ctx.row.title || "") + t("ui.floorplan.topMap") + (cur.name || "") + t("ui.floorplan.done"));
-        redraw();
+        setStatus(t("ui.floorplan.pinPosScene") + (ctx2.row.title || "") + t("ui.floorplan.topMap") + (cur.name || "") + t("ui.floorplan.done"));
+        redraw2();
       }
     } else {
       main.append(el("div", "floor-ph", "\u{1F5FA}"));
@@ -70654,12 +71043,12 @@ ${h.text}`;
     if (fs.picking) main.append(el("div", "floor-pickhint", t("ui.floorplan.clickTopMapTop")));
     const panel2 = el("div", "floor-panel");
     panel2.append(el("div", "floor-panel-title", t("ui.floorplan.sceneOpen")));
-    panel2.append(el("div", "floor-cur", ctx ? ctx.row.title || "\u2014" : t("ui.floorplan.cantOpenScene")));
-    if (ctx) {
-      const where = ctx.row.mapId ? findMap(maps, ctx.row.mapId) : null;
-      const pin = where && (where.pins || []).find((p) => p.id === ctx.row.pinId);
+    panel2.append(el("div", "floor-cur", ctx2 ? ctx2.row.title || "\u2014" : t("ui.floorplan.cantOpenScene")));
+    if (ctx2) {
+      const where = ctx2.row.mapId ? findMap(maps, ctx2.row.mapId) : null;
+      const pin = where && (where.pins || []).find((p) => p.id === ctx2.row.pinId);
       panel2.append(el("div", "dim floor-where", where ? "\u{1F4CD} " + (where.name || "") + (pin ? " \xB7 " + (pin.label || t("ui.common.pin")) : "") : t("ui.floorplan.cantPinPosPress")));
-      if (ctx.row.storyDate) panel2.append(el("div", "dim", "\u{1F552} " + ctx.row.storyDate));
+      if (ctx2.row.storyDate) panel2.append(el("div", "dim", "\u{1F552} " + ctx2.row.storyDate));
     }
     if (cur) {
       const here2 = scenes.filter((s) => s.mapId === cur.id);
@@ -70672,35 +71061,35 @@ ${h.text}`;
     }
     for (const [key2, label, ph] of FIELDS) {
       panel2.append(el("div", "floor-panel-title", label));
-      const vals = ctx && Array.isArray(ctx.row[key2]) ? ctx.row[key2] : [];
+      const vals = ctx2 && Array.isArray(ctx2.row[key2]) ? ctx2.row[key2] : [];
       if (!vals.length) panel2.append(el("div", "dim", "\u2014"));
       vals.forEach((v2, i5) => {
         const row2 = el("div", "floor-item");
         row2.append(el("span", "floor-item-text", v2));
-        if (ctx) {
+        if (ctx2) {
           const del2 = el("span", "floor-item-del", "\u2715");
           del2.title = t("ui.floorplan.delList");
           del2.onclick = async () => {
-            await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+            await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
               r[key2] = (r[key2] || []).filter((_2, k) => k !== i5);
               if (!r[key2].length) delete r[key2];
             });
-            redraw();
+            redraw2();
           };
           row2.append(del2);
         }
         panel2.append(row2);
       });
-      if (ctx) {
+      if (ctx2) {
         const add = el("button", "floor-add", t("ui.common.add"));
         add.onclick = async () => {
           const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
           const v2 = await ask2(label.replace(/^\S+\s/, "") + t("ui.floorplan.addList"), { placeholder: ph });
           if (!v2) return;
-          await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+          await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
             r[key2] = [...r[key2] || [], v2];
           });
-          redraw();
+          redraw2();
         };
         panel2.append(add);
       }
@@ -70713,7 +71102,7 @@ ${h.text}`;
     } else {
       const strip = el("div", "floor-tl-strip");
       for (const s of here) {
-        const item = el("div", "floor-tl-item" + (ctx && ctx.row.id === s.id ? " on" : ""));
+        const item = el("div", "floor-tl-item" + (ctx2 && ctx2.row.id === s.id ? " on" : ""));
         if (s.color) item.style.borderLeftColor = s.color;
         item.append(el("div", "floor-tl-when", s.storyDate || t("ui.common.notSpecifyTime")));
         item.append(el("div", "floor-tl-title", s.title || t("ui.common.notNamed")));
@@ -70819,15 +71208,15 @@ ${h.text}`;
     showPanel("maps");
     const keepZoom = view.zoom;
     await renderMapsPanel();
-    const S7 = mapsState_C.s;
-    if (!S7 || !findMap(S7.data.maps, mapId)) {
+    const S8 = mapsState_C.s;
+    if (!S8 || !findMap(S8.data.maps, mapId)) {
       setStatus(t("ui.maps.notFoundMapScene"));
       return false;
     }
-    S7.currentId = mapId;
+    S8.currentId = mapId;
     view.zoom = keepZoom;
     view.sel.clear();
-    const pin = pinId ? (findMap(S7.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
+    const pin = pinId ? (findMap(S8.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
     view.focusPin = pin ? { id: pin.id, x: pin.x, y: pin.y } : at && at.x != null ? { id: null, x: at.x, y: at.y } : null;
     await renderMaps($("#maps-body"));
     scrollFocusIntoView();
@@ -70895,9 +71284,9 @@ ${h.text}`;
   async function renderMaps(pane) {
     if (!pane) return;
     pane.innerHTML = "";
-    const S7 = mapsState_C.s;
-    if (!S7) return;
-    const maps = S7.data.maps;
+    const S8 = mapsState_C.s;
+    if (!S8) return;
+    const maps = S8.data.maps;
     const wrap2 = el("div", "map-wrap");
     pane.append(wrap2);
     const head2 = el("div", "map-head");
@@ -70944,11 +71333,11 @@ ${h.text}`;
       if (groups.length > 1) bar.append(el("div", "map-bar-cat", g.cat || t("ui.common.notSpecifyCat")));
       const row2 = el("div", "map-bar-row");
       for (const m of g.maps) {
-        const chip = el("div", "map-chip" + (m.id === S7.currentId ? " on" : ""), m.name);
+        const chip = el("div", "map-chip" + (m.id === S8.currentId ? " on" : ""), m.name);
         const st2 = pinStats(m);
         if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
         chip.onclick = () => {
-          S7.currentId = m.id;
+          S8.currentId = m.id;
           view.sel.clear();
           view.routeEdit = null;
           view.focusPin = null;
@@ -70959,11 +71348,11 @@ ${h.text}`;
       bar.append(row2);
     }
     wrap2.append(bar);
-    let cur = findMap(maps, S7.currentId);
+    let cur = findMap(maps, S8.currentId);
     if (!cur || view.catFilter !== null && String(cur.category || "").trim() !== view.catFilter) {
       cur = shown[0] && shown[0].maps[0] || sortMaps(maps)[0];
     }
-    S7.currentId = cur.id;
+    S8.currentId = cur.id;
     const crumb = breadcrumb(maps, cur.id);
     if (crumb.length > 1) {
       const bc = el("div", "map-crumb");
@@ -70971,7 +71360,7 @@ ${h.text}`;
         if (i5) bc.append(el("span", "map-crumb-sep", "\u203A"));
         const a = el("span", "map-crumb-item" + (c.id === cur.id ? " on" : ""), c.name);
         a.onclick = () => {
-          S7.currentId = c.id;
+          S8.currentId = c.id;
           view.sel.clear();
           renderMaps(pane);
         };
@@ -70979,9 +71368,9 @@ ${h.text}`;
       });
       wrap2.append(bc);
     }
-    const redraw = () => renderMaps(pane);
+    const redraw2 = () => renderMaps(pane);
     const save = async () => {
-      await saveMaps(S7.data);
+      await saveMaps(S8.data);
     };
     const tools = el("div", "map-tools");
     const nameInp = el("input", "map-name-inp");
@@ -70990,7 +71379,7 @@ ${h.text}`;
     nameInp.onchange = async () => {
       cur.name = nameInp.value.trim() || cur.name;
       await save();
-      redraw();
+      redraw2();
     };
     tools.append(nameInp);
     const catInp = el("input", "map-cat-inp");
@@ -71008,7 +71397,7 @@ ${h.text}`;
     catInp.onchange = async () => {
       cur.category = catInp.value.trim();
       await save();
-      redraw();
+      redraw2();
     };
     tools.append(catInp, dl);
     const chgImg = el("button", "cmp-mini", t("ui.maps.changeImage"));
@@ -71017,24 +71406,24 @@ ${h.text}`;
       if (!it) return;
       cur.image = "Images/" + it.file;
       await save();
-      redraw();
+      redraw2();
     };
     tools.append(chgImg);
     const expBtn = el("button", "cmp-mini", t("ui.common.exportPNG"));
     expBtn.title = t("ui.maps.saveMapReadyPin");
-    expBtn.onclick = () => exportMapPng(cur, S7.data.maps);
+    expBtn.onclick = () => exportMapPng(cur, S8.data.maps);
     tools.append(expBtn);
     const prnBtn = el("button", "cmp-mini", t("ui.maps.print"));
-    prnBtn.onclick = () => printMap(cur, S7.data.maps);
+    prnBtn.onclick = () => printMap(cur, S8.data.maps);
     tools.append(prnBtn);
     const delMap = el("button", "cmp-mini k-danger", t("ui.maps.delMap"));
     delMap.onclick = async () => {
       if (!await confirmBox(tf("ui.common.delMap", cur.name), t("ui.common.del"))) return;
-      S7.data.maps = deleteMap(maps, cur.id);
-      S7.currentId = S7.data.maps[0]?.id || null;
+      S8.data.maps = deleteMap(maps, cur.id);
+      S8.currentId = S8.data.maps[0]?.id || null;
       view.sel.clear();
       await save();
-      redraw();
+      redraw2();
     };
     tools.append(delMap);
     wrap2.append(tools);
@@ -71078,7 +71467,7 @@ ${h.text}`;
       b.onclick = async () => {
         toggleOverlay(cur, key2);
         await save();
-        redraw();
+        redraw2();
       };
       tools2.append(b);
     };
@@ -71095,7 +71484,7 @@ ${h.text}`;
       gs.onchange = async () => {
         cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) };
         await save();
-        redraw();
+        redraw2();
       };
       tools2.append(gs);
     }
@@ -71107,7 +71496,7 @@ ${h.text}`;
       sl.onchange = async () => {
         cur.overlays = { ...ov, scaleLabel: sl.value.trim() };
         await save();
-        redraw();
+        redraw2();
       };
       tools2.append(sl);
     }
@@ -71116,7 +71505,7 @@ ${h.text}`;
     rtBtn.title = t("ui.maps.showHideRouteBetween");
     rtBtn.onclick = () => {
       view.showRoutes = !view.showRoutes;
-      redraw();
+      redraw2();
     };
     tools2.append(rtBtn);
     wrap2.append(tools2);
@@ -71125,7 +71514,7 @@ ${h.text}`;
     lblBtn.title = t("ui.maps.showHideLabelUnder");
     lblBtn.onclick = () => {
       view.showLabels = !view.showLabels;
-      redraw();
+      redraw2();
     };
     tools3.append(lblBtn);
     tools3.append(el("span", "map-tool-sep", ""));
@@ -71140,7 +71529,7 @@ ${h.text}`;
       b.onclick = () => {
         view.tool = tdef.id;
         view.routeEdit = null;
-        redraw();
+        redraw2();
       };
       tools3.append(b);
     }
@@ -71154,7 +71543,7 @@ ${h.text}`;
     const setScale = async (v2) => {
       cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v2.toFixed(2)));
       await save();
-      redraw();
+      redraw2();
     };
     psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
     psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
@@ -71176,7 +71565,7 @@ ${h.text}`;
       bCopy.onclick = () => {
         view.clip = clonePins(cur.pins, [...view.sel], 0);
         setStatus(tf("ui.maps.copyPinDoneOpen", view.clip.length));
-        redraw();
+        redraw2();
       };
       const bDel = el("button", "cmp-mini k-danger", t("ui.maps.delPick"));
       bDel.onclick = async () => {
@@ -71186,12 +71575,12 @@ ${h.text}`;
         view.sel.clear();
         await save();
         setStatus(tf("ui.maps.delPinDone", n2));
-        redraw();
+        redraw2();
       };
       const bNone = el("button", "cmp-mini", t("ui.maps.cancelPick"));
       bNone.onclick = () => {
         view.sel.clear();
-        redraw();
+        redraw2();
       };
       selBar.append(bCopy, bDel, bNone);
     }
@@ -71204,7 +71593,7 @@ ${h.text}`;
         view.sel = new Set(added.map((p) => p.id));
         await save();
         setStatus(tf("ui.maps.pastePinDone", added.length, cur.name));
-        redraw();
+        redraw2();
       };
       selBar.append(bPaste);
     }
@@ -71217,12 +71606,12 @@ ${h.text}`;
       undoB.onclick = async () => {
         (editingRoute.pinIds || []).pop();
         await save();
-        redraw();
+        redraw2();
       };
       const doneB = el("button", "cmp-mini k-ok", t("ui.maps.done"));
       doneB.onclick = () => {
         view.routeEdit = null;
-        redraw();
+        redraw2();
       };
       rb.append(undoB, doneB);
       wrap2.append(rb);
@@ -71294,7 +71683,7 @@ ${h.text}`;
       if (e.target !== canvas && e.target !== img && !e.target.classList.contains("map-grid")) return;
       if (view.sel.size) {
         view.sel.clear();
-        redraw();
+        redraw2();
         return;
       }
       const r = canvas.getBoundingClientRect();
@@ -71305,7 +71694,7 @@ ${h.text}`;
       if (!res) return;
       cur.pins.push(res);
       await save();
-      redraw();
+      redraw2();
     };
     canvas.onpointerdown = (e) => {
       if (!e.shiftKey || e.button !== 0) return;
@@ -71333,7 +71722,7 @@ ${h.text}`;
         if (Math.abs(x2 - x1) < 0.5 && Math.abs(y2 - y1) < 0.5) return;
         suppressClick = true;
         for (const p of cur.pins || []) if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) view.sel.add(p.id);
-        redraw();
+        redraw2();
       };
       window.addEventListener("pointermove", paint);
       window.addEventListener("pointerup", up);
@@ -71380,14 +71769,14 @@ ${h.text}`;
         if (e.ctrlKey || e.metaKey) {
           if (view.sel.has(pin.id)) view.sel.delete(pin.id);
           else view.sel.add(pin.id);
-          redraw();
+          redraw2();
           return;
         }
         if (editingRoute) {
           editingRoute.pinIds = [...editingRoute.pinIds || []];
           if (editingRoute.pinIds[editingRoute.pinIds.length - 1] !== pin.id) editingRoute.pinIds.push(pin.id);
           await save();
-          redraw();
+          redraw2();
           return;
         }
         if (e.altKey) return editPin();
@@ -71397,10 +71786,10 @@ ${h.text}`;
           return;
         }
         if (pin.kind === "portal" && pin.toMap) {
-          S7.currentId = pin.toMap;
+          S8.currentId = pin.toMap;
           view.sel.clear();
           view.focusPin = null;
-          redraw();
+          redraw2();
           return;
         }
         if (pin.kind === "entity" && pin.entityFile) {
@@ -71420,13 +71809,13 @@ ${h.text}`;
           deletePins(cur, [pin.id]);
           view.sel.delete(pin.id);
           await save();
-          redraw();
+          redraw2();
           return;
         }
         if (res) {
           Object.assign(pin, res);
           await save();
-          redraw();
+          redraw2();
         }
       }
       el2.onpointerdown = (e) => {
@@ -71461,7 +71850,7 @@ ${h.text}`;
           el2.classList.remove("dragging");
           if (moved) {
             await save();
-            redraw();
+            redraw2();
           }
         };
         window.addEventListener("pointermove", mv);
@@ -71509,7 +71898,7 @@ ${h.text}`;
       cur.routes = [...mapRoutes(cur), r];
       view.routeEdit = r.id;
       await save();
-      redraw();
+      redraw2();
     };
     rhead.append(addR);
     rsec.append(rhead);
@@ -71524,7 +71913,7 @@ ${h.text}`;
       const bEdit = el("button", "cmp-mini", r.id === view.routeEdit ? t("ui.maps.done") : t("ui.maps.nextDot"));
       bEdit.onclick = () => {
         view.routeEdit = view.routeEdit === r.id ? null : r.id;
-        redraw();
+        redraw2();
       };
       const bColor = el("button", "cmp-mini", "\u{1F3A8}");
       bColor.title = t("ui.maps.recolorLine");
@@ -71532,14 +71921,14 @@ ${h.text}`;
         const i5 = ROUTE_COLORS.indexOf(r.color);
         r.color = ROUTE_COLORS[(i5 + 1) % ROUTE_COLORS.length];
         await save();
-        redraw();
+        redraw2();
       };
       const bDash = el("button", "cmp-mini" + (r.dashed ? " on" : ""), "\u2505");
       bDash.title = t("ui.maps.lineLineSolid");
       bDash.onclick = async () => {
         r.dashed = !r.dashed;
         await save();
-        redraw();
+        redraw2();
       };
       const bRen = el("button", "cmp-mini", "\u270F");
       bRen.title = t("ui.maps.changeNameRoute");
@@ -71548,7 +71937,7 @@ ${h.text}`;
         if (!v2) return;
         r.name = v2.trim();
         await save();
-        redraw();
+        redraw2();
       };
       const bDel = el("button", "cmp-mini k-danger", "\u{1F5D1}");
       bDel.title = t("ui.maps.delRoutePin");
@@ -71557,7 +71946,7 @@ ${h.text}`;
         deleteRoute(cur, r.id);
         if (view.routeEdit === r.id) view.routeEdit = null;
         await save();
-        redraw();
+        redraw2();
       };
       row2.append(bEdit, bColor, bDash, bRen, bDel);
       rsec.append(row2);
@@ -71579,8 +71968,8 @@ ${h.text}`;
     if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
   }
   function applyPinFilter(wrap2) {
-    const S7 = mapsState_C.s;
-    const cur = S7 && findMap(S7.data.maps, S7.currentId);
+    const S8 = mapsState_C.s;
+    const cur = S8 && findMap(S8.data.maps, S8.currentId);
     if (!cur) return;
     const q = String(view.q || "").trim();
     let hit = 0;
@@ -71620,102 +72009,102 @@ ${h.text}`;
     const cv = document.createElement("canvas");
     cv.width = Math.round(iw * scale2);
     cv.height = Math.round(ih * scale2);
-    const ctx = cv.getContext("2d");
+    const ctx2 = cv.getContext("2d");
     const W = cv.width, H2 = cv.height;
     const PX = (x) => x / 100 * W, PY = (y) => y / 100 * H2;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, W, H2);
-    if (img) ctx.drawImage(img, 0, 0, W, H2);
+    ctx2.fillStyle = "#ffffff";
+    ctx2.fillRect(0, 0, W, H2);
+    if (img) ctx2.drawImage(img, 0, 0, W, H2);
     const ov = mapOverlays(map2);
     if (ov.grid) {
-      ctx.save();
-      ctx.strokeStyle = "rgba(0,0,0,.28)";
-      ctx.lineWidth = Math.max(1, scale2);
+      ctx2.save();
+      ctx2.strokeStyle = "rgba(0,0,0,.28)";
+      ctx2.lineWidth = Math.max(1, scale2);
       for (const p of gridLines(ov.gridSize)) {
-        ctx.beginPath();
-        ctx.moveTo(PX(p), 0);
-        ctx.lineTo(PX(p), H2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, PY(p));
-        ctx.lineTo(W, PY(p));
-        ctx.stroke();
+        ctx2.beginPath();
+        ctx2.moveTo(PX(p), 0);
+        ctx2.lineTo(PX(p), H2);
+        ctx2.stroke();
+        ctx2.beginPath();
+        ctx2.moveTo(0, PY(p));
+        ctx2.lineTo(W, PY(p));
+        ctx2.stroke();
       }
-      ctx.restore();
+      ctx2.restore();
     }
     for (const r of mapRoutes(map2)) {
       const pts = routePoints(map2, r);
       if (pts.length < 2) continue;
-      ctx.save();
-      ctx.strokeStyle = r.color || ROUTE_COLORS[0];
-      ctx.lineWidth = 4 * scale2;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      if (r.dashed) ctx.setLineDash([12 * scale2, 9 * scale2]);
-      ctx.beginPath();
-      pts.forEach((p, i5) => i5 ? ctx.lineTo(PX(p.x), PY(p.y)) : ctx.moveTo(PX(p.x), PY(p.y)));
-      ctx.stroke();
-      ctx.restore();
+      ctx2.save();
+      ctx2.strokeStyle = r.color || ROUTE_COLORS[0];
+      ctx2.lineWidth = 4 * scale2;
+      ctx2.lineJoin = "round";
+      ctx2.lineCap = "round";
+      if (r.dashed) ctx2.setLineDash([12 * scale2, 9 * scale2]);
+      ctx2.beginPath();
+      pts.forEach((p, i5) => i5 ? ctx2.lineTo(PX(p.x), PY(p.y)) : ctx2.moveTo(PX(p.x), PY(p.y)));
+      ctx2.stroke();
+      ctx2.restore();
     }
     const fs = Math.round(15 * scale2);
-    ctx.textBaseline = "middle";
+    ctx2.textBaseline = "middle";
     for (const pin of map2.pins || []) {
       const x = PX(pin.x), y = PY(pin.y), rad = 9 * scale2;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, rad, 0, Math.PI * 2);
-      ctx.fillStyle = pin.color || (pin.kind === "portal" ? "#5f9fd9" : pin.kind === "entity" ? "#d9575e" : "#d9b757");
-      ctx.fill();
-      ctx.lineWidth = 2 * scale2;
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
+      ctx2.save();
+      ctx2.beginPath();
+      ctx2.arc(x, y, rad, 0, Math.PI * 2);
+      ctx2.fillStyle = pin.color || (pin.kind === "portal" ? "#5f9fd9" : pin.kind === "entity" ? "#d9575e" : "#d9b757");
+      ctx2.fill();
+      ctx2.lineWidth = 2 * scale2;
+      ctx2.strokeStyle = "#ffffff";
+      ctx2.stroke();
       if (pin.label) {
-        ctx.font = `${fs}px "Sarabun", sans-serif`;
-        const tw = ctx.measureText(pin.label).width;
-        ctx.fillStyle = "rgba(255,255,255,.88)";
-        ctx.fillRect(x + rad + 3 * scale2, y - fs * 0.75, tw + 8 * scale2, fs * 1.5);
-        ctx.fillStyle = "#1a1a1a";
-        ctx.fillText(pin.label, x + rad + 7 * scale2, y);
+        ctx2.font = `${fs}px "Sarabun", sans-serif`;
+        const tw = ctx2.measureText(pin.label).width;
+        ctx2.fillStyle = "rgba(255,255,255,.88)";
+        ctx2.fillRect(x + rad + 3 * scale2, y - fs * 0.75, tw + 8 * scale2, fs * 1.5);
+        ctx2.fillStyle = "#1a1a1a";
+        ctx2.fillText(pin.label, x + rad + 7 * scale2, y);
       }
-      ctx.restore();
+      ctx2.restore();
     }
     if (ov.compass) {
-      ctx.save();
+      ctx2.save();
       const cx2 = W - 60 * scale2, cy2 = 60 * scale2, rr = 34 * scale2;
-      ctx.beginPath();
-      ctx.arc(cx2, cy2, rr, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fill();
-      ctx.lineWidth = 2 * scale2;
-      ctx.strokeStyle = "#333";
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx2, cy2 - rr * 0.72);
-      ctx.lineTo(cx2 - rr * 0.28, cy2 + rr * 0.4);
-      ctx.lineTo(cx2 + rr * 0.28, cy2 + rr * 0.4);
-      ctx.closePath();
-      ctx.fillStyle = "#c0392b";
-      ctx.fill();
-      ctx.fillStyle = "#222";
-      ctx.font = `bold ${Math.round(13 * scale2)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.fillText("N", cx2, cy2 - rr * 0.88);
-      ctx.restore();
+      ctx2.beginPath();
+      ctx2.arc(cx2, cy2, rr, 0, Math.PI * 2);
+      ctx2.fillStyle = "rgba(255,255,255,.85)";
+      ctx2.fill();
+      ctx2.lineWidth = 2 * scale2;
+      ctx2.strokeStyle = "#333";
+      ctx2.stroke();
+      ctx2.beginPath();
+      ctx2.moveTo(cx2, cy2 - rr * 0.72);
+      ctx2.lineTo(cx2 - rr * 0.28, cy2 + rr * 0.4);
+      ctx2.lineTo(cx2 + rr * 0.28, cy2 + rr * 0.4);
+      ctx2.closePath();
+      ctx2.fillStyle = "#c0392b";
+      ctx2.fill();
+      ctx2.fillStyle = "#222";
+      ctx2.font = `bold ${Math.round(13 * scale2)}px sans-serif`;
+      ctx2.textAlign = "center";
+      ctx2.fillText("N", cx2, cy2 - rr * 0.88);
+      ctx2.restore();
     }
     if (ov.scale) {
-      ctx.save();
+      ctx2.save();
       const bw = W * 0.18, bx = 40 * scale2, by = H2 - 55 * scale2, bh = 9 * scale2;
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      ctx.fillRect(bx - 6 * scale2, by - 6 * scale2, bw + 12 * scale2, bh + 30 * scale2);
-      ctx.fillStyle = "#222";
-      ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
-      ctx.fillStyle = "#222";
-      ctx.font = `${Math.round(13 * scale2)}px "Sarabun", sans-serif`;
-      ctx.textAlign = "left";
-      ctx.fillText(ov.scaleLabel || "", bx, by + bh + 12 * scale2);
-      ctx.restore();
+      ctx2.fillStyle = "rgba(255,255,255,.85)";
+      ctx2.fillRect(bx - 6 * scale2, by - 6 * scale2, bw + 12 * scale2, bh + 30 * scale2);
+      ctx2.fillStyle = "#222";
+      ctx2.fillRect(bx, by, bw, bh);
+      ctx2.fillStyle = "#fff";
+      ctx2.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
+      ctx2.fillStyle = "#222";
+      ctx2.font = `${Math.round(13 * scale2)}px "Sarabun", sans-serif`;
+      ctx2.textAlign = "left";
+      ctx2.fillText(ov.scaleLabel || "", bx, by + bh + 12 * scale2);
+      ctx2.restore();
     }
     return cv;
   }
@@ -71726,8 +72115,8 @@ ${h.text}`;
     try {
       const cv = await drawMapToCanvas(map2);
       const b64 = cv.toDataURL("image/png").split(",")[1];
-      const dir = await kapi.join(state.root, "Images");
-      const name5 = await kapi.writeImageData(dir, safeFileName(map2.name) + "-map.png", b64);
+      const dir2 = await kapi.join(state.root, "Images");
+      const name5 = await kapi.writeImageData(dir2, safeFileName(map2.name) + "-map.png", b64);
       setStatus(t("ui.maps.saveMapLibraryImage") + (typeof name5 === "string" ? name5 : "map.png"));
       return true;
     } catch (e) {
@@ -71829,7 +72218,7 @@ ${h.text}`;
       rowOf.set(i5, r);
       return i5;
     };
-    const mkSelect = (label, options, cur) => {
+    const mkSelect2 = (label, options, cur) => {
       const r = el("div", "wiki-row");
       r.append(el("label", null, label));
       const s = el("select", "wiki-input k-dlg-select");
@@ -71863,12 +72252,12 @@ ${h.text}`;
     const iPov = mk2(t("ui.common.viewPOV"), M2.pov);
     const iEmotion = mk2(t("ui.common.mood"), M2.emotion);
     const iConflict = mk2(t("ui.common.conflict"), M2.conflict);
-    const iStatus = mkSelect(
+    const iStatus = mkSelect2(
       t("ui.common.status"),
       [["Outline", t("ui.common.notSet")], ...allStatuses().map((s) => [s, dataLabel(s)])],
       allStatuses().includes(row2.status) ? row2.status : "Outline"
     );
-    const iColor = mkSelect(
+    const iColor = mkSelect2(
       t("ui.common.color"),
       [["", t("ui.common.notHas")], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + dataLabel(n2)])],
       row2.color || ""
@@ -72210,18 +72599,18 @@ ${h.text}`;
   async function addSection() {
     const title2 = await ask(t("ui.section.nameBookNew"), { placeholder: t("ui.section.egBookTwo") });
     if (!title2) return;
-    let dir = await kapi.join(state.root, safeName(title2));
-    if (await kapi.exists(dir)) dir += "-" + Date.now().toString(36).slice(-4);
+    let dir2 = await kapi.join(state.root, safeName(title2));
+    if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
     let maxOrder = 0;
     for (const nm of await kapi.listDirs(state.root)) {
       const sp = await kapi.join(state.root, nm, "section.json");
       if (await kapi.exists(sp)) maxOrder = Math.max(maxOrder, (await kapi.readJson(sp)).order || 0);
     }
     await kapi.writeFile(
-      await kapi.join(dir, "section.json"),
+      await kapi.join(dir2, "section.json"),
       JSON.stringify({ guid: guid(), title: title2, order: maxOrder + 1 }, null, 2)
     );
-    const dr = await kapi.join(dir, "Draft", "default");
+    const dr = await kapi.join(dir2, "Draft", "default");
     const ch = {
       guid: guid(),
       title: t("ui.common.chapterOne2"),
@@ -72652,7 +73041,7 @@ ${h.text}`;
     refreshNetwork();
   }
   async function deleteChapter(dPath, ch) {
-    const dir = await kapi.join(dPath, "Chapters", ch.folderName);
+    const dir2 = await kapi.join(dPath, "Chapters", ch.folderName);
     if (!await confirmBox(tf("ui.scene.delChapterChapterAll", ch.title))) return;
     const dst = await kapi.join(
       state.root,
@@ -72660,7 +73049,7 @@ ${h.text}`;
       Date.now().toString(36) + "-" + ch.folderName
     );
     const scenesNow = (await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters?.[ch.guid] || [];
-    await kapi.move(dir, dst);
+    await kapi.move(dir2, dst);
     await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
       { kind: "chapter", dPath, ch, scenes: scenesNow },
       null,
@@ -72773,12 +73162,12 @@ ${h.text}`;
     await buildTree2();
     openScene(await kapi.join(dPath, "Chapters", ch.folderName, fileName), newTitle);
   }
-  async function moveSceneOrder(dPath, ch, sc, dir) {
+  async function moveSceneOrder(dPath, ch, sc, dir2) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     const list = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     const i5 = list.findIndex((x) => x.id === sc.id);
-    const j = i5 + dir;
+    const j = i5 + dir2;
     if (i5 < 0 || j < 0 || j >= list.length) return;
     const oa = list[i5].order || 0, ob = list[j].order || 0;
     list[i5].order = ob;
@@ -73291,9 +73680,9 @@ ${h.text}`;
     try {
       const zip = new import_jszip2.default();
       let nFiles = 0;
-      const addDir = async (dir, prefix2 = "") => {
-        for (const f of await kapi.listFiles(dir, "").catch(() => [])) {
-          const full = await kapi.join(dir, f);
+      const addDir = async (dir2, prefix2 = "") => {
+        for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
+          const full = await kapi.join(dir2, f);
           try {
             if (BIN_EXT.test(f)) {
               const bytes2 = await kapi.readBytes(full);
@@ -73307,9 +73696,9 @@ ${h.text}`;
             log("warn", t("ui.exportZip.exportZipSkipFile") + full, e);
           }
         }
-        for (const d of await kapi.listDirs(dir).catch(() => [])) {
+        for (const d of await kapi.listDirs(dir2).catch(() => [])) {
           if (SKIP_DIRS4.includes(d)) continue;
-          await addDir(await kapi.join(dir, d), prefix2 + d + "/");
+          await addDir(await kapi.join(dir2, d), prefix2 + d + "/");
         }
       };
       await addDir(state.root);
@@ -74158,14 +74547,14 @@ ${h.text}`;
       const includeMd = chkMd.checked;
       const includeJson = chkJson.checked;
       try {
-        const searchDir = async (dir) => {
-          const entries = await kapi.listDirs(dir).catch(() => []);
-          for (const name5 of entries) await searchDir(await kapi.join(dir, name5));
-          const files = await kapi.listFiles(dir, "").catch(() => []);
+        const searchDir = async (dir2) => {
+          const entries = await kapi.listDirs(dir2).catch(() => []);
+          for (const name5 of entries) await searchDir(await kapi.join(dir2, name5));
+          const files = await kapi.listFiles(dir2, "").catch(() => []);
           for (const f of files) {
             const ext = f.split(".").pop().toLowerCase();
             if (ext === "md" && includeMd || ext === "json" && includeJson) {
-              const fp = await kapi.join(dir, f);
+              const fp = await kapi.join(dir2, f);
               try {
                 if (searchNameOnly) {
                   if (f.toLowerCase().includes(ql))
@@ -74990,7 +75379,7 @@ ${h.text}`;
   function isInverse(type) {
     return type.startsWith("inverse");
   }
-  function tokenize2(pattern) {
+  function tokenize3(pattern) {
     const tokens = [];
     const len5 = pattern.length;
     let i5 = 0;
@@ -75031,7 +75420,7 @@ ${h.text}`;
   }
   function parseQuery2(pattern, options = {}) {
     return pattern.replace(/\\\|/g, ESCAPED_PIPE).split(OR_TOKEN).map((item) => {
-      const query = tokenize2(item.replace(/\u0000/g, "|").trim()).filter((item2) => item2 && !!item2.trim());
+      const query = tokenize3(item.replace(/\u0000/g, "|").trim()).filter((item2) => item2 && !!item2.trim());
       const results = [];
       for (let i5 = 0, len5 = query.length; i5 < len5; i5 += 1) {
         const queryItem = query[i5];
@@ -75153,11 +75542,11 @@ ${h.text}`;
       console.warn(`[Fuse] tokenize regex ${regex2} lacks the global flag; only the first match per text will be returned. Add the 'g' flag.`);
     }
   }
-  function resolveTokenize(tokenize3) {
-    if (typeof tokenize3 === "function") {
+  function resolveTokenize(tokenize4) {
+    if (typeof tokenize4 === "function") {
       let validated = false;
       return (text) => {
-        const result = tokenize3(text);
+        const result = tokenize4(text);
         if (!validated) {
           validated = true;
           if (!Array.isArray(result) || result.some((t3) => typeof t3 !== "string")) throw new Error(`[Fuse] tokenize function must return string[]; received ${Array.isArray(result) ? "array containing non-strings" : typeof result}.`);
@@ -75165,14 +75554,14 @@ ${h.text}`;
         return result;
       };
     }
-    if (tokenize3 instanceof RegExp) {
-      if (!tokenize3.global) warnNonGlobal(tokenize3);
-      return (text) => text.match(tokenize3) || [];
+    if (tokenize4 instanceof RegExp) {
+      if (!tokenize4.global) warnNonGlobal(tokenize4);
+      return (text) => text.match(tokenize4) || [];
     }
     return (text) => text.match(DEFAULT_TOKEN) || [];
   }
-  function createAnalyzer({ isCaseSensitive = false, ignoreDiacritics = false, tokenize: tokenize3 } = {}) {
-    const tokenizeFn = resolveTokenize(tokenize3);
+  function createAnalyzer({ isCaseSensitive = false, ignoreDiacritics = false, tokenize: tokenize4 } = {}) {
+    const tokenizeFn = resolveTokenize(tokenize4);
     return { tokenize(text) {
       if (!isCaseSensitive) text = text.toLowerCase();
       if (ignoreDiacritics) text = stripDiacritics(text);
@@ -76282,15 +76671,15 @@ ${h.text}`;
   async function scanProject(root) {
     const out = [];
     const rootLen = root.length;
-    const scan = async (dir) => {
-      for (const f of await kapi.listFiles(dir, "").catch(() => [])) {
-        const fp = await kapi.join(dir, f);
+    const scan = async (dir2) => {
+      for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
+        const fp = await kapi.join(dir2, f);
         const rel = fp.slice(rootLen).replace(/^[\\/]/, "").replace(/\\/g, "/");
         out.push({ path: fp, name: f, rel, ext: (f.split(".").pop() || "").toLowerCase() });
       }
-      for (const d of await kapi.listDirs(dir).catch(() => [])) {
+      for (const d of await kapi.listDirs(dir2).catch(() => [])) {
         if (SKIP_DIRS5.includes(d)) continue;
-        await scan(await kapi.join(dir, d));
+        await scan(await kapi.join(dir2, d));
       }
     };
     await scan(root);
@@ -76484,13 +76873,13 @@ ${h.text}`;
       if (await kapi.exists(dest)) await kapi.remove(dest);
       await kapi.mkdir(dest);
       const files = [];
-      const scan = async (dir, rel) => {
-        for (const name5 of await kapi.listFiles(dir, "").catch(() => [])) {
-          files.push({ src: await kapi.join(dir, name5), rel: rel ? rel + "/" + name5 : name5 });
+      const scan = async (dir2, rel) => {
+        for (const name5 of await kapi.listFiles(dir2, "").catch(() => [])) {
+          files.push({ src: await kapi.join(dir2, name5), rel: rel ? rel + "/" + name5 : name5 });
         }
-        for (const name5 of await kapi.listDirs(dir).catch(() => [])) {
+        for (const name5 of await kapi.listDirs(dir2).catch(() => [])) {
           if (SKIP_DIRS6.includes(name5)) continue;
-          await scan(await kapi.join(dir, name5), rel ? rel + "/" + name5 : name5);
+          await scan(await kapi.join(dir2, name5), rel ? rel + "/" + name5 : name5);
         }
       };
       await scan(state.root, "");
@@ -77079,7 +77468,7 @@ ${BLOCK_END}
       card.append(box2);
       ta.focus();
       no.onclick = () => box2.remove();
-      const send2 = async () => {
+      const send3 = async () => {
         const v2 = ta.value.trim();
         if (!v2) {
           box2.remove();
@@ -77089,11 +77478,11 @@ ${BLOCK_END}
         setStatus(t("cmt.replied", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27"));
         renderCommentPanel(host2);
       };
-      ok2.onclick = send2;
+      ok2.onclick = send3;
       ta.onkeydown = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          send2();
+          send3();
         }
       };
     }
@@ -78089,8 +78478,8 @@ img{max-width:100%}` }
         async "entity.create"(a) {
           if (await findEntityFile(a.name)) return err(tf("ui.aiActions.hasUseEntityUpdate", a.name));
           const cat = String(a.cat || "characters").trim();
-          const dir = await kapi.join(await wikiBase(), cat);
-          await kapi.mkdir(dir);
+          const dir2 = await kapi.join(await wikiBase(), cat);
+          await kapi.mkdir(dir2);
           const e = {
             id: guid2(),
             entityTypeKey: cat,
@@ -78105,7 +78494,7 @@ img{max-width:100%}` }
             templateId: "",
             created: (/* @__PURE__ */ new Date()).toISOString()
           };
-          const file = await kapi.join(dir, safeName2(a.name) + "-" + Date.now().toString(36) + ".json");
+          const file = await kapi.join(dir2, safeName2(a.name) + "-" + Date.now().toString(36) + ".json");
           await kapi.writeFile(file, JSON.stringify(e, null, 2));
           return ok(tf("ui.aiActions.newCatDone", a.name, cat));
         },
@@ -78137,15 +78526,15 @@ img{max-width:100%}` }
         },
         async "book.create"(a) {
           const title2 = String(a.title);
-          let dir = await kapi.join(state.root, safeName2(title2));
-          if (await kapi.exists(dir)) dir += "-" + Date.now().toString(36).slice(-4);
+          let dir2 = await kapi.join(state.root, safeName2(title2));
+          if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
           const books = await listBooks();
           const order = Math.max(0, ...books.map((b) => b.order || 0)) + 1;
           await kapi.writeFile(
-            await kapi.join(dir, "section.json"),
+            await kapi.join(dir2, "section.json"),
             JSON.stringify({ guid: guid2(), title: title2, order }, null, 2)
           );
-          const dr = await kapi.join(dir, "Draft", "default");
+          const dr = await kapi.join(dir2, "Draft", "default");
           const ch = {
             guid: guid2(),
             title: t("ui.common.chapterOne2"),
@@ -78209,12 +78598,12 @@ img{max-width:100%}` }
           if (!b) return err(t("ui.aiActions.notFoundBook"));
           const c = await findChapter(b, a.title);
           if (!c) return err(tf("ui.aiActions.notFoundChapter", a.title));
-          const dir = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
+          const dir2 = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
           const sf = await kapi.join(b.draftPath, "scenes.json");
           const sdata = await kapi.exists(sf) ? await kapi.readJson(sf) : { chapters: {} };
           const scenes = (sdata.chapters || {})[c.ch.guid] || [];
-          if (await kapi.exists(dir)) {
-            const dst = await moveToTrash(dir);
+          if (await kapi.exists(dir2)) {
+            const dst = await moveToTrash(dir2);
             await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
               { kind: "chapter", dPath: b.draftPath, ch: c.ch, scenes },
               null,
@@ -78833,8 +79222,8 @@ img{max-width:100%}` }
     const tp = toolsSystemPrompt(cap);
     if (tp) system += "\n\n" + tp;
     try {
-      const ctx = await collectScope(S2.cur);
-      if (ctx) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S2.cur.scope) + "):\n" + ctx;
+      const ctx2 = await collectScope(S2.cur);
+      if (ctx2) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S2.cur.scope) + "):\n" + ctx2;
     } catch (e) {
       log("warn", t("ui.aiChatPanel.aiChatCollectContext"), e);
     }
@@ -80492,12 +80881,12 @@ details>summary::-webkit-details-marker{display:none}
       try {
         const { KEditor: KEditor2 } = await Promise.resolve().then(() => (init_editor(), editor_exports));
         const { resolveImg: resolveImg2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-        const dir = node.filePath ? node.filePath.replace(/[\\/][^\\/]*$/, "") : "";
+        const dir2 = node.filePath ? node.filePath.replace(/[\\/][^\\/]*$/, "") : "";
         ps.editor = new KEditor2(mount, {
           markdown: text,
           editable: () => false,
           // อ่านอย่างเดียวจริง ๆ
-          resolveSrc: (p) => dir ? resolveImg2(dir, p) : p
+          resolveSrc: (p) => dir2 ? resolveImg2(dir2, p) : p
         });
         mount.classList.add("player-readonly");
       } catch (e) {
@@ -80747,11 +81136,11 @@ details>summary::-webkit-details-marker{display:none}
   }
   async function listBranchPlans() {
     if (!state.root) return [];
-    const dir = await kapi.join(state.root, BRANCH_PLAN_DIR);
-    if (!await kapi.exists(dir)) return [];
+    const dir2 = await kapi.join(state.root, BRANCH_PLAN_DIR);
+    if (!await kapi.exists(dir2)) return [];
     const out = [];
-    for (const f of await kapi.listFiles(dir, ".json").catch(() => [])) {
-      const path = await kapi.join(dir, f);
+    for (const f of await kapi.listFiles(dir2, ".json").catch(() => [])) {
+      const path = await kapi.join(dir2, f);
       let plan = null;
       try {
         plan = normalizeBranchPlan(await kapi.readJson(path), planNameFromFile(f));
@@ -80814,10 +81203,10 @@ details>summary::-webkit-details-marker{display:none}
     return true;
   }
   async function saveBranchPlanAs(name5) {
-    const dir = await branchPlansDir();
+    const dir2 = await branchPlansDir();
     const existing = (await listBranchPlans()).map((x) => x.name);
     const finalName = uniquePlanName(name5 || planState.name || t("ui.common.newPlan"), existing);
-    const path = await kapi.join(dir, safePlanName(finalName) + ".json");
+    const path = await kapi.join(dir2, safePlanName(finalName) + ".json");
     const bs = bstate();
     const src2 = planState.live || newBranchPlan(finalName);
     const plan = planFromState({
@@ -81147,7 +81536,7 @@ details>summary::-webkit-details-marker{display:none}
     const positions = loadNodePositions();
     const layout = layoutGraph(graph, { positions });
     const analysis = analyzeGraph(graph);
-    const redraw = (o) => renderBranchingTree(pane, o);
+    const redraw2 = (o) => renderBranchingTree(pane, o);
     const redrawUi = () => renderBranchingTree(pane, { scenes });
     const shell = el("div", "branch-shell");
     const main = el("div", "branch-main");
@@ -81312,16 +81701,16 @@ details>summary::-webkit-details-marker{display:none}
     if (dupN) {
       const mergeB = el("button", "branch-zbtn branch-dup", "\u{1F9F9}" + dupN);
       mergeB.title = tr2("mergeDupHint", t("ui.branch.mergeChoiceDup")) + ` (${dupN})`;
-      mergeB.onclick = () => mergeAllDuplicates(graph, redraw);
+      mergeB.onclick = () => mergeAllDuplicates(graph, redraw2);
       tools.append(mergeB);
     }
     const scanB = el("button", "branch-zbtn", "\u{1F50E}");
     scanB.title = tr2("scanHint", t("ui.branch.scanAllSceneFind"));
-    scanB.onclick = () => scanAllScenes(scenes, redraw);
+    scanB.onclick = () => scanAllScenes(scenes, redraw2);
     tools.append(scanB);
     const refreshB = el("button", "branch-zbtn", "\u{1F504}");
     refreshB.title = tr2("reload", t("ui.branch.readScenesJsonNew"));
-    refreshB.onclick = () => redraw();
+    refreshB.onclick = () => redraw2();
     tools.append(refreshB);
     const sideTog = el("button", "branch-zbtn", bs.sideOpen ? "\u25B6" : "\u25C0");
     sideTog.title = bs.sideOpen ? tr2("hideSide", t("ui.branch.hidePanelChoice")) : tr2("showSide", t("ui.branch.showPanelChoice"));
@@ -81347,13 +81736,13 @@ details>summary::-webkit-details-marker{display:none}
     if (brokeN) {
       const b = addWarn("bw-lost", `\u{1F494} ${brokeN} ${tr2("warnBroken", t("ui.branch.choicePointSceneNot"))}`);
       b.classList.add("branch-badge-btn");
-      b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw, redrawUi);
+      b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw2, redrawUi);
     }
     if (analysis.unreachable.length) addWarn("bw-lost", `\u{1F6AB} ${analysis.unreachable.length} ${tr2("warnLost", t("ui.branch.sceneNotTo"))}`);
     if (analysis.cycles.length) addWarn("bw-loop", `\u{1F501} ${analysis.cycles.length} ${tr2("warnLoop", t("ui.branch.sceneDup"))}`);
     if (analysis.endings.length) addWarn("bw-end", `\u{1F3C1} ${analysis.endings.length} ${tr2("sumEndings", t("ui.common.actEnd"))}`);
     if (warn.childNodes.length) wrap2.append(warn);
-    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw));
+    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw2));
     if (!analysis.total) {
       wrap2.append(el(
         "div",
@@ -81547,7 +81936,7 @@ details>summary::-webkit-details-marker{display:none}
         box2.addEventListener("drop", async (ev) => {
           ev.preventDefault();
           box2.classList.remove("bn-drop");
-          await dropChoiceOn(n2, graph, redraw);
+          await dropChoiceOn(n2, graph, redraw2);
         });
         nodeEls.set(n2.id, box2);
         canvas.append(box2);
@@ -81592,7 +81981,7 @@ details>summary::-webkit-details-marker{display:none}
           del2.onclick = async (e) => {
             e.stopPropagation();
             await removeChoice(n2, idx4);
-            redraw();
+            redraw2();
           };
           row2.append(del2);
           choices.append(row2);
@@ -81614,7 +82003,7 @@ details>summary::-webkit-details-marker{display:none}
         card.addEventListener("drop", async (ev) => {
           ev.preventDefault();
           card.classList.remove("bn-drop");
-          await dropChoiceOn(n2, graph, redraw);
+          await dropChoiceOn(n2, graph, redraw2);
         });
         cardEls.set(n2.id, card);
         tree.append(card);
@@ -81623,7 +82012,7 @@ details>summary::-webkit-details-marker{display:none}
     }
     main.append(wrap2);
     shell.append(main);
-    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw, redrawUi));
+    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw2, redrawUi));
     pane.replaceChildren(shell);
     if (keepScroll3) {
       const vp = pane.querySelector(".branch-viewport");
@@ -81665,7 +82054,7 @@ details>summary::-webkit-details-marker{display:none}
     }
     _lastScrolledSel = bs.sel;
   }
-  function makeNodeDraggable(box2, n2, layout, bs, ctx) {
+  function makeNodeDraggable(box2, n2, layout, bs, ctx2) {
     let start = null;
     box2.addEventListener("mousedown", (ev) => {
       if (ev.button !== 0) return;
@@ -81685,8 +82074,8 @@ details>summary::-webkit-details-marker{display:none}
         box2.style.top = n2.y + "px";
         layout.width = Math.max(layout.width, n2.x + NODE_W + PAD);
         layout.height = Math.max(layout.height, n2.y + NODE_H + PAD);
-        ctx.sizeCanvas();
-        ctx.redrawEdgesOf(n2.id);
+        ctx2.sizeCanvas();
+        ctx2.redrawEdgesOf(n2.id);
       };
       const onUp = () => {
         document.removeEventListener("mousemove", onMove);
@@ -81711,10 +82100,10 @@ details>summary::-webkit-details-marker{display:none}
         return;
       }
       bs.sel = n2.id;
-      ctx.redraw();
+      ctx2.redraw();
     };
   }
-  async function dropChoiceOn(target, graph, redraw) {
+  async function dropChoiceOn(target, graph, redraw2) {
     const d = dragChoice;
     dragChoice = null;
     if (!d || !target || d.node.id === target.id) return false;
@@ -81724,10 +82113,10 @@ details>summary::-webkit-details-marker{display:none}
     });
     await mutateChoices(target, (list) => [...list, { ...d.choice }]);
     setStatus(`${tr2("movedChoice", t("ui.branch.moveChoice"))} "${d.choice.text}" \u2192 ${target.title}`);
-    redraw();
+    redraw2();
     return true;
   }
-  async function mergeAllDuplicates(graph, redraw) {
+  async function mergeAllDuplicates(graph, redraw2) {
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const targets = [];
     for (const n2 of graph.nodes) {
@@ -81752,10 +82141,10 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     if (!ok2) return 0;
     for (const x of targets) await mutateChoices(x.node, () => x.list);
     setStatus(`${tr2("mergedDone", t("ui.branch.mergeChoiceDupDone"))} ${total}`);
-    redraw();
+    redraw2();
     return total;
   }
-  function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
+  function showBrokenDialog(graph, analysis, bs, redraw2, redrawUi = redraw2) {
     const rows = analysis.dangling.filter((e) => e.to);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog branch-dlg");
@@ -81785,7 +82174,7 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
         if (src2) {
           await removeChoice(src2, e.idx);
           ov.remove();
-          redraw();
+          redraw2();
         }
       };
       row2.append(fix2, del2);
@@ -81923,12 +82312,12 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
       const cv = document.createElement("canvas");
       cv.width = Math.round(built.w * scale2);
       cv.height = Math.round(built.h * scale2);
-      const ctx = cv.getContext("2d");
-      ctx.scale(scale2, scale2);
-      ctx.drawImage(img, 0, 0);
+      const ctx2 = cv.getContext("2d");
+      ctx2.scale(scale2, scale2);
+      ctx2.drawImage(img, 0, 0);
       const b64 = cv.toDataURL("image/png").split(",")[1];
-      const dir = await kapi.join(state.root, "Images");
-      const name5 = await kapi.writeImageData(dir, safeName3(projTitle()) + "-branching.png", b64);
+      const dir2 = await kapi.join(state.root, "Images");
+      const name5 = await kapi.writeImageData(dir2, safeName3(projTitle()) + "-branching.png", b64);
       setStatus("\u{1F4F7} " + tr2("pngSaved", t("ui.branch.saveImageGraphLibrary")) + (typeof name5 === "string" ? name5 : "branching.png"));
       return true;
     } catch (e) {
@@ -81999,8 +82388,8 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
   }
   async function syncChoicesFromScene() {
     const { sceneCtx: sceneCtx2, updateSceneRow: updateSceneRow2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    const ctx = await sceneCtx2();
-    if (!ctx) {
+    const ctx2 = await sceneCtx2();
+    if (!ctx2) {
       setStatus(tr2("needScene", t("ui.branch.openSceneBeforeDonePrint")));
       return 0;
     }
@@ -82019,19 +82408,19 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
       setStatus(tr2("noMarker", t("ui.branch.notFoundChoiceScene")));
       return 0;
     }
-    const { missing } = diffChoiceMarkers(markers, ctx.row.choices || []);
+    const { missing } = diffChoiceMarkers(markers, ctx2.row.choices || []);
     if (!missing.length) {
       setStatus(tr2("allLinked", t("ui.branch.choiceSceneBindComplete")) + markers.length + ")");
       return 0;
     }
-    await updateSceneRow2(ctx.dPath, ctx.row.id, (r) => {
+    await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
       r.choices = [...r.choices || [], ...missing.map((t22) => ({ text: t22, nextSceneId: "" }))];
     });
     setStatus(tr2("addedFromText", t("ui.branch.addChoiceText")) + missing.length + tr2("addedFromTextTail", t("ui.branch.listDefineToGraph")));
     refreshOpenBranchTab();
     return missing.length;
   }
-  async function scanAllScenes(scenes, redraw) {
+  async function scanAllScenes(scenes, redraw2) {
     const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
@@ -82064,10 +82453,10 @@ ${preview2}` + (found2.length > 8 ? `
       await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((x) => ({ text: x, nextSceneId: "" }))]);
     }
     setStatus(`${tr2("scanDone", t("ui.branch.bindChoiceTextDone"))} ${total}`);
-    redraw();
+    redraw2();
     return total;
   }
-  function buildAdder(graph, bs, redraw) {
+  function buildAdder(graph, bs, redraw2) {
     const adder = el("div", "branch-adder");
     adder.append(el("span", "branch-adder-lbl", "\u2795 " + tr2("addChoice", t("ui.branch.addChoice3"))));
     const fromSel = el("select", "k-field-select");
@@ -82098,7 +82487,7 @@ ${preview2}` + (found2.length > 8 ? `
       textInp.value = "";
       bs.sel = from2.id;
       setStatus(tr2("added", t("ui.branch.addChoiceDone")));
-      redraw();
+      redraw2();
     };
     addB.onclick = doAdd;
     textInp.onkeydown = (e) => {
@@ -82193,7 +82582,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (e.target === ov) ov.remove();
     };
   }
-  function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) {
+  function buildInspector(graph, layout, analysis, bs, redraw2, redrawUi = redraw2) {
     const side = el("div", "branch-side");
     const shead = el("div", "branch-side-head");
     shead.append(el("span", null, "\u{1F3AF} " + tr2("inspector", t("ui.branch.choiceScene"))));
@@ -82246,7 +82635,7 @@ ${preview2}` + (found2.length > 8 ? `
     body.append(colorRow(node.color, async (c) => {
       await setNodeColor(node, c);
       setStatus(c ? tr2("colorSet", t("ui.branch.recolorCardDone")) : tr2("colorClear", t("ui.branch.clearColorCardDone")));
-      redraw();
+      redraw2();
     }));
     const docSec = el("div", "branch-doc");
     docSec.append(el("div", "branch-side-sub", "\u{1F517} " + tr2("docChoices", t("ui.branch.choiceBodyScene"))));
@@ -82278,7 +82667,7 @@ ${preview2}` + (found2.length > 8 ? `
           b.onclick = async () => {
             await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
             setStatus(`${tr2("docLinked1", t("ui.branch.bindChoiceDone"))}: ${txt}`);
-            redraw();
+            redraw2();
           };
           row2.append(b);
           docBody.append(row2);
@@ -82287,7 +82676,7 @@ ${preview2}` + (found2.length > 8 ? `
         all.onclick = async () => {
           await mutateChoices(node, (list) => [...list, ...missing.map((x) => ({ text: x, nextSceneId: "" }))]);
           setStatus(tr2("docLinkedAll", t("ui.branch.bindChoiceTextComplete")));
-          redraw();
+          redraw2();
         };
         docBody.append(all);
       }
@@ -82300,7 +82689,7 @@ ${preview2}` + (found2.length > 8 ? `
           b.onclick = async () => {
             if (await insertMarkerIntoScene(node, txt)) {
               setStatus(tr2("docInserted", t("ui.branch.insertSceneDone")));
-              redraw();
+              redraw2();
             }
           };
           row2.append(b);
@@ -82344,7 +82733,7 @@ ${preview2}` + (found2.length > 8 ? `
           return list;
         });
         setStatus(tr2("textEdited", t("ui.branch.editTextChoiceDone")));
-        redraw();
+        redraw2();
       };
       tIn.onblur = commitText;
       tIn.onkeydown = (e) => {
@@ -82366,7 +82755,7 @@ ${preview2}` + (found2.length > 8 ? `
           return list;
         });
         setStatus(tr2("targetChanged", t("ui.branch.changeToDone")));
-        redraw();
+        redraw2();
       };
       const colB = el("button", "branch-edit-col", "\u{1F3A8}");
       colB.title = tr2("lineColor", t("ui.branch.colorLineChoice"));
@@ -82380,7 +82769,7 @@ ${preview2}` + (found2.length > 8 ? `
             return list;
           });
           setStatus(col ? tr2("lineColorSet", t("ui.branch.recolorLineDone")) : tr2("lineColorClear", t("ui.branch.clearColorLineDone")));
-          redraw();
+          redraw2();
         });
         pop.classList.add("branch-colors-pop");
         row2.after(pop);
@@ -82397,13 +82786,13 @@ ${preview2}` + (found2.length > 8 ? `
         await recordChoice2(node.id, node.title, c.text);
         bs.sel = target.id;
         openSceneFromGraph(target, false);
-        redraw();
+        redraw2();
       };
       const delB = el("button", "branch-edit-del", "\u2715");
       delB.title = tr2("delChoice", t("ui.branch.delChoice2"));
       delB.onclick = async () => {
         await removeChoice(node, idx4);
-        redraw();
+        redraw2();
       };
       row2.append(grip, tIn, tSel, colB, goB, delB);
       body.append(row2);
@@ -82419,7 +82808,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (!txt) return;
       await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
       await insertMarkerIntoScene(node, txt);
-      redraw();
+      redraw2();
     };
     body.append(addB);
     const info = enumeratePathsInfo(graph, node.id, PATH_LIMIT);
@@ -82588,7 +82977,7 @@ ${preview2}` + (found2.length > 8 ? `
         key: key2,
         label: key2 === UNSET ? UNSET_LABEL : key2,
         cards: list.map((c) => {
-          const { _seq: _seq4, ...rest } = c;
+          const { _seq: _seq5, ...rest } = c;
           return rest;
         }),
         count: list.length,
@@ -83112,8 +83501,8 @@ ${preview2}` + (found2.length > 8 ? `
   function leaf(tabId, id = nid2("l")) {
     return syncLeaf({ type: "leaf", id, tabs: tabId == null ? [] : [tabId], active: 0 });
   }
-  function split2(dir, children, sizes, id = nid2("sp")) {
-    return { type: "split", id, dir, children, sizes: sizes || even(children.length) };
+  function split2(dir2, children, sizes, id = nid2("sp")) {
+    return { type: "split", id, dir: dir2, children, sizes: sizes || even(children.length) };
   }
   function syncLeaf(l) {
     if (!Array.isArray(l.tabs)) l.tabs = l.tabId == null ? [] : [l.tabId];
@@ -83849,12 +84238,12 @@ ${preview2}` + (found2.length > 8 ? `
     sm.store.update(next);
     return true;
   }
-  function createSplit(tabId, dir) {
+  function createSplit(tabId, dir2) {
     const panes = panesEl();
     if (!panes) return null;
     const sm = getSplitManager();
     const cur = tabId || state.active?.file || [...state.tabs.keys()].find((f) => tabOf(f)) || null;
-    const d = dir === "down" ? "down" : "right";
+    const d = dir2 === "down" ? "down" : "right";
     const side = d === "down" ? "bottom" : "right";
     if (!sm.root) sm.open(cur);
     else if (cur && !sm.has(cur)) sm.open(cur);
@@ -83883,20 +84272,20 @@ ${preview2}` + (found2.length > 8 ? `
     if (tid && tid !== state.active?.file && state.tabs.has(tid)) hooks.activate?.(tid);
     return true;
   }
-  function toggleSplit(tabId, dir) {
+  function toggleSplit(tabId, dir2) {
     const sm = getSplitManager();
     if (isSplit()) {
-      if (dir && dir !== splitDir()) {
+      if (dir2 && dir2 !== splitDir()) {
         const next = JSON.parse(JSON.stringify(sm.root));
-        if (next.type === "split") next.dir = dir === "down" ? "col" : "row";
+        if (next.type === "split") next.dir = dir2 === "down" ? "col" : "row";
         sm.store.update(next);
-        setStatus(t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (dir === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")));
+        setStatus(t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (dir2 === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")));
         return true;
       }
       closeSplit();
       return false;
     }
-    return !!createSplit(tabId, dir);
+    return !!createSplit(tabId, dir2);
   }
   function openInSplit(tabId, side = "right") {
     const sm = getSplitManager();
@@ -84158,8 +84547,8 @@ ${preview2}` + (found2.length > 8 ? `
     if (!t3) return "";
     return t3.split(/\n{2,}/).map((p) => `<p>${esc3(p).replace(/\n/g, "<br>")}</p>`).join("\n");
   }
-  function entityPage(e, ctx) {
-    const { pages, siteTitle, nav: nav2, labels, mentions } = ctx;
+  function entityPage(e, ctx2) {
+    const { pages, siteTitle, nav: nav2, labels, mentions } = ctx2;
     const ent = e.entity || {};
     const rows = infoRows(ent);
     const rels = relationRows(ent, pages);
@@ -84186,15 +84575,15 @@ ${relSec}${seenSec}
 </article>`;
     return page(e.name, siteTitle, `<div class="layout">${main}${info}</div>`, { nav: nav2 });
   }
-  function indexPage(entities, ctx) {
-    const { pages, siteTitle, nav: nav2, labels } = ctx;
+  function indexPage(entities, ctx2) {
+    const { pages, siteTitle, nav: nav2, labels } = ctx2;
     const cards = entities.map((e) => `<a class="card" href="${esc3(pages.get(e.path))}" data-n="${esc3((e.name + " " + (e.aliases || []).join(" ") + " " + catLabel3(e.cat, labels)).toLowerCase())}">
 <div class="n">${esc3(e.name)}</div><div class="d">${esc3(catLabel3(e.cat, labels))}</div></a>`).join("\n");
     const body = tf("ui.codexBuild.varQDocumentGetElementById", entities.length, cards);
     return page(t("ui.common.pageFirst"), siteTitle, body, { nav: nav2 });
   }
-  function categoryPage(cat, entities, ctx) {
-    const { pages, siteTitle, nav: nav2, labels } = ctx;
+  function categoryPage(cat, entities, ctx2) {
+    const { pages, siteTitle, nav: nav2, labels } = ctx2;
     const label = catLabel3(cat, labels);
     const list = entities.length ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc3(pages.get(e.path))}">
 <div class="n">${esc3(e.name)}</div><div class="d">${esc3((e.aliases || []).join(" \xB7 "))}</div></a>`).join("")}</div>` : t("ui.codexBuild.notHasListCat");
@@ -84209,15 +84598,15 @@ ${relSec}${seenSec}
       { href: "index.html", label: t("ui.common.pageFirst") },
       ...cats.map((c) => ({ href: "cat-" + slug(c) + ".html", label: catLabel3(c, labels) }))
     ];
-    const ctx = { pages, siteTitle: opts.siteTitle || "Codex", nav: nav2, labels, mentions: opts.mentions || {} };
-    const files = [{ name: "index.html", text: indexPage(list, ctx) }];
+    const ctx2 = { pages, siteTitle: opts.siteTitle || "Codex", nav: nav2, labels, mentions: opts.mentions || {} };
+    const files = [{ name: "index.html", text: indexPage(list, ctx2) }];
     for (const c of cats) {
       files.push({
         name: "cat-" + slug(c) + ".html",
-        text: categoryPage(c, list.filter((e) => e.cat === c), ctx)
+        text: categoryPage(c, list.filter((e) => e.cat === c), ctx2)
       });
     }
-    for (const e of list) files.push({ name: pages.get(e.path), text: entityPage(e, ctx) });
+    for (const e of list) files.push({ name: pages.get(e.path), text: entityPage(e, ctx2) });
     return files;
   }
   function codexStats(entities) {
@@ -84428,13 +84817,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         setStatus(t("ui.codex.notHasExport"));
         return;
       }
-      const dir = await kapi.openDirDialog();
-      if (!dir) return;
+      const dir2 = await kapi.openDirDialog();
+      if (!dir2) return;
       setStatus(t("ui.codex.busyNewWebCodex"));
       try {
         const mentions = await collectMentions(ents);
         const files = buildCodexSite(ents, { siteTitle: state.title || "Codex", labels, mentions });
-        const out = await kapi.join(dir, "codex");
+        const out = await kapi.join(dir2, "codex");
         await kapi.mkdir(out);
         for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
         setStatus(tf("ui.codex.exportWebCodexDone", files.length, out));
@@ -84672,7 +85061,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     q.value = s.q;
     q.oninput = () => {
       s.q = q.value;
-      drawList2();
+      drawList3();
     };
     const moodSel = el("select", "k-rec-mood-f");
     for (const m of MOODS) {
@@ -84683,7 +85072,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     moodSel.value = s.mood;
     moodSel.onchange = () => {
       s.mood = moodSel.value;
-      drawList2();
+      drawList3();
     };
     const csvBtn = el("button", null, t("ui.recOrd.exportCSV"));
     csvBtn.onclick = exportCsv2;
@@ -84736,7 +85125,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       tags.value = "";
       setStatus(t("ui.recOrd.noteSaveDone"));
       drawStats();
-      drawList2();
+      drawList3();
     };
     const row2 = el("div", "k-rec-form-row");
     row2.append(dayIn, mood2, words, mins, tags, add);
@@ -84760,7 +85149,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         stats.append(b);
       }
     }
-    function drawList2() {
+    function drawList3() {
       list.replaceChildren();
       const rows = filterEntries(s.data.entries, { q: s.q, mood: s.mood });
       if (!rows.length) {
@@ -84795,12 +85184,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           await saveRecords(updateEntry(s.data, e.id, { text: ed.value.trim() }));
           s.editing = null;
           drawStats();
-          drawList2();
+          drawList3();
           setStatus(t("ui.recOrd.editSaveDone"));
         };
         no.onclick = () => {
           s.editing = null;
-          drawList2();
+          drawList3();
         };
         const btns = el("div", "k-rec-card-btns");
         btns.append(ok2, no);
@@ -84818,7 +85207,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       edit.title = t("ui.common.edit");
       edit.onclick = () => {
         s.editing = e.id;
-        drawList2();
+        drawList3();
       };
       const del2 = el("span", "k-rec-act", "\u{1F5D1}");
       del2.title = t("ui.common.del");
@@ -84828,7 +85217,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         await saveRecords(removeEntry(s.data, e.id));
         setStatus(t("ui.recOrd.delSaveDone"));
         drawStats();
-        drawList2();
+        drawList3();
       };
       foot.append(el("span", "k-rec-spacer"), edit, del2);
       card.append(foot);
@@ -84848,7 +85237,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       log("info", t("ui.recOrd.recordExportCSV") + rows.length + t("ui.common.list"));
     }
     drawStats();
-    drawList2();
+    drawList3();
     return true;
   }
   async function openRecord() {
@@ -85345,11 +85734,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         setStatus(t("ui.plug.errNoDir"));
         return false;
       }
-      const dir = await kapi.join(base3, folder);
-      if (await kapi.exists(dir)) {
+      const dir2 = await kapi.join(base3, folder);
+      if (await kapi.exists(dir2)) {
         if (!await confirmBox2(tf("ui.plug.installOverwrite", folder), t("ui.plug.install"))) return false;
       }
-      const r = await kapi.pluginExtract(got.id, dir, files);
+      const r = await kapi.pluginExtract(got.id, dir2, files);
       if (!r || !r.ok) {
         setStatus(t("ui.plug.errExtract"));
         return false;
@@ -85395,14 +85784,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         setStatus(t("ui.plug.errNoDir"));
         return false;
       }
-      const dir = await kapi.join(base3, folder);
-      if (await kapi.exists(dir)) {
+      const dir2 = await kapi.join(base3, folder);
+      if (await kapi.exists(dir2)) {
         setStatus(tf("ui.plug.errExists", folder));
         return false;
       }
-      await kapi.mkdir(dir);
+      await kapi.mkdir(dir2);
       const files = samplePluginFiles(name5, app.APP_VERSION);
-      for (const f of Object.keys(files)) await kapi.writeFile(await kapi.join(dir, f), files[f]);
+      for (const f of Object.keys(files)) await kapi.writeFile(await kapi.join(dir2, f), files[f]);
       await app.reloadPlugins();
       if (host2) await renderPluginPanel(host2);
       setStatus(tf("ui.plug.sampleMade", name5));
@@ -85911,7 +86300,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function buildBar2(host2) {
     const s = S6();
     const bar = el("div", "k-dlgp-bar");
-    const redraw = () => {
+    const redraw2 = () => {
       const b = host2.querySelector(".k-dlgp-list");
       if (b) drawList(b);
       syncCount();
@@ -85923,7 +86312,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     q.value = s.f.q;
     q.oninput = () => {
       s.f.q = q.value;
-      redraw();
+      redraw2();
     };
     const refresh = el("button", "k-dlgp-btn");
     refresh.textContent = t("ui.common.refresh");
@@ -85962,14 +86351,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const scenesOpt = s.scenes.filter((x) => (!s.f.section || x.section === s.f.section) && (!s.f.chapter || x.chapterId === s.f.chapter)).map((x) => [x.id, x.title || x.id]);
     const scSel = pick2(t("ui.dialogue.allScenes"), scenesOpt, s.f.scene, (v2) => {
       s.f.scene = v2;
-      redraw();
+      redraw2();
     });
     const srcSel = pick2(t("ui.dialogue.allSources"), [
       [SRC_PROSE, t("ui.dialogue.srcProse")],
       [SRC_SCRIPT, t("ui.dialogue.srcScript")]
     ], s.f.source, (v2) => {
       s.f.source = v2;
-      redraw();
+      redraw2();
     });
     const sure = el("label", "k-dlgp-sure");
     const sureBox = el("input");
@@ -86266,6 +86655,1829 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
+  // src/dialogue/builder-core.js
+  var builder_core_exports = {};
+  __export(builder_core_exports, {
+    AI_PICK: () => AI_PICK,
+    ALL_LISTEN: () => ALL_LISTEN,
+    ANY_RANDOM: () => ANY_RANDOM,
+    BUILDER_DIR: () => BUILDER_DIR,
+    BUILDER_VERSION: () => BUILDER_VERSION,
+    DEFAULT_LENGTH: () => DEFAULT_LENGTH,
+    DEFAULT_POLICY: () => DEFAULT_POLICY,
+    DEFAULT_SEND_MODE: () => DEFAULT_SEND_MODE,
+    KIND_DIRECTOR: () => KIND_DIRECTOR,
+    KIND_LINE: () => KIND_LINE,
+    KIND_USER: () => KIND_USER,
+    MAX_CAST: () => MAX_CAST,
+    PERSONA_FIELDS: () => PERSONA_FIELDS,
+    PRESET_FILE: () => PRESET_FILE,
+    SEND_MODES: () => SEND_MODES,
+    TURN_LENGTHS: () => TURN_LENGTHS,
+    TURN_POLICIES: () => TURN_POLICIES,
+    _resetIds: () => _resetIds,
+    addCast: () => addCast,
+    blurbFromEntity: () => blurbFromEntity,
+    buildBatchRequest: () => buildBatchRequest,
+    buildMessages: () => buildMessages,
+    buildPickerRequest: () => buildPickerRequest,
+    buildSystem: () => buildSystem,
+    buildTurnRequest: () => buildTurnRequest,
+    castById: () => castById,
+    castName: () => castName,
+    estimateTokens: () => estimateTokens,
+    lastSpoken: () => lastSpoken,
+    lengthDef: () => lengthDef,
+    listenerOptions: () => listenerOptions,
+    newCastMember: () => newCastMember,
+    newPreset: () => newPreset,
+    newRel: () => newRel,
+    newSession: () => newSession2,
+    newTurn: () => newTurn,
+    nextPair: () => nextPair,
+    parseBatch: () => parseBatch,
+    parsePickedSpeaker: () => parsePickedSpeaker,
+    parseSpokenLine: () => parseSpokenLine,
+    personaFromEntity: () => personaFromEntity,
+    policyDef: () => policyDef,
+    relOf: () => relOf,
+    relsFromEntities: () => relsFromEntities,
+    removeCast: () => removeCast,
+    resolvePair: () => resolvePair,
+    searchSessions: () => searchSessions2,
+    sendModeDef: () => sendModeDef,
+    sessionDirty: () => sessionDirty,
+    sessionFileName: () => sessionFileName2,
+    sessionFromPreset: () => sessionFromPreset,
+    sessionStats: () => sessionStats2,
+    sessionToScreenplay: () => sessionToScreenplay,
+    setRel: () => setRel,
+    sortSessions: () => sortSessions2,
+    speakerOptions: () => speakerOptions,
+    titleFromSituation: () => titleFromSituation,
+    turnAsHeard: () => turnAsHeard,
+    turnCue: () => turnCue,
+    turnToScreenplay: () => turnToScreenplay
+  });
+  function policyDef(id) {
+    return TURN_POLICIES.find((p) => p.id === id) || TURN_POLICIES[0];
+  }
+  function sendModeDef(id) {
+    return SEND_MODES.find((m) => m.id === id) || SEND_MODES[0];
+  }
+  function lengthDef(id) {
+    return TURN_LENGTHS.find((l) => l.id === id) || TURN_LENGTHS[1];
+  }
+  function nextId(prefix2) {
+    _seq4 += 1;
+    return prefix2 + _seq4.toString(36);
+  }
+  function _resetIds() {
+    _seq4 = 0;
+  }
+  function newCastMember(patch = {}) {
+    return {
+      id: patch.id || nextId("c"),
+      name: patch.name || "",
+      aliases: Array.isArray(patch.aliases) ? [...patch.aliases] : [],
+      wikiPath: patch.wikiPath || "",
+      cat: patch.cat || "characters",
+      persona: patch.persona || "",
+      // ใบบทบาทของตัวเอง (เต็ม)
+      blurb: patch.blurb || "",
+      // การ์ดสาธารณะ — คนอื่นเห็นแค่บรรทัดนี้
+      selfPronoun: patch.selfPronoun || "",
+      // สรรพนามเรียกตัวเอง
+      providerId: patch.providerId || "",
+      // '' = ตามโปรเจกต์
+      model: patch.model || "",
+      // '' = ตามผู้ให้บริการ
+      params: patch.params ? { ...patch.params } : {}
+      // ทับเฉพาะคีย์ที่ตั้งจริง
+    };
+  }
+  function newRel(from2, to, patch = {}) {
+    return { from: from2, to, how: patch.how || "", callThem: patch.callThem || "" };
+  }
+  function newPreset(patch = {}) {
+    return {
+      id: patch.id || nextId("p"),
+      name: patch.name || "",
+      note: patch.note || "",
+      cast: (patch.cast || []).map(newCastMember),
+      rels: (patch.rels || []).map((r) => newRel(r.from, r.to, r))
+    };
+  }
+  function newSession2(patch = {}) {
+    return {
+      v: BUILDER_VERSION,
+      id: patch.id || nextId("s"),
+      title: patch.title || "",
+      created: patch.created || 0,
+      updated: patch.updated || 0,
+      presetId: patch.presetId || "",
+      presetName: patch.presetName || "",
+      // สำเนาเต็ม — ไม่อ้าง preset (ข้อ 3 ของหลักคิด)
+      cast: (patch.cast || []).map(newCastMember),
+      rels: (patch.rels || []).map((r) => newRel(r.from, r.to, r)),
+      situation: patch.situation || "",
+      policy: patch.policy || DEFAULT_POLICY,
+      mode: patch.mode || DEFAULT_SEND_MODE,
+      len: patch.len || DEFAULT_LENGTH,
+      paren: patch.paren !== false,
+      // อนุญาตวงเล็บอารมณ์ (ยกเว้นสั่งปิด)
+      next: patch.next ? { ...patch.next } : { speaker: "", listener: "" },
+      turns: (patch.turns || []).map((x) => ({ ...x })),
+      archived: !!patch.archived
+    };
+  }
+  function newTurn(patch = {}) {
+    return {
+      id: patch.id || nextId("t"),
+      kind: patch.kind || KIND_LINE,
+      speaker: patch.speaker || "",
+      listener: patch.listener || "",
+      text: patch.text || "",
+      paren: patch.paren || "",
+      thinking: patch.thinking || "",
+      // ความคิดของโมเดล — ผู้ใช้กางดูได้
+      model: patch.model || "",
+      provider: patch.provider || "",
+      usage: patch.usage || null,
+      ms: patch.ms || 0,
+      inserted: patch.inserted || null,
+      // {scene, at} เมื่อกดแทรกลงบทแล้ว
+      ts: patch.ts || 0
+    };
+  }
+  function sessionFromPreset(preset, patch = {}) {
+    const p = preset || {};
+    return newSession2({
+      presetId: p.id || "",
+      presetName: p.name || "",
+      cast: (p.cast || []).map((c) => ({ ...c })),
+      rels: (p.rels || []).map((r) => ({ ...r })),
+      ...patch
+    });
+  }
+  function castById(session, id) {
+    return (session && session.cast || []).find((c) => c.id === id) || null;
+  }
+  function castName(session, id) {
+    if (id === ALL_LISTEN) return t("ui.dlgBuilder.everyone");
+    if (id === ANY_RANDOM) return t("ui.dlgBuilder.randomPick");
+    if (id === AI_PICK) return t("ui.dlgBuilder.aiPick");
+    const c = castById(session, id);
+    return c ? c.name : "";
+  }
+  function relOf(session, from2, to) {
+    return (session && session.rels || []).find((r) => r.from === from2 && r.to === to) || null;
+  }
+  function setRel(session, from2, to, patch = {}) {
+    if (!session) return null;
+    session.rels = session.rels || [];
+    const i5 = session.rels.findIndex((r) => r.from === from2 && r.to === to);
+    const how = (patch.how ?? (i5 >= 0 ? session.rels[i5].how : "")) || "";
+    const callThem = (patch.callThem ?? (i5 >= 0 ? session.rels[i5].callThem : "")) || "";
+    if (!how.trim() && !callThem.trim()) {
+      if (i5 >= 0) session.rels.splice(i5, 1);
+      return null;
+    }
+    const row2 = newRel(from2, to, { how, callThem });
+    if (i5 >= 0) session.rels[i5] = row2;
+    else session.rels.push(row2);
+    return row2;
+  }
+  function addCast(holder, member) {
+    if (!holder) return null;
+    holder.cast = holder.cast || [];
+    if (holder.cast.length >= MAX_CAST) return null;
+    const m = newCastMember(member);
+    holder.cast.push(m);
+    return m;
+  }
+  function removeCast(holder, id) {
+    if (!holder || !holder.cast) return false;
+    const i5 = holder.cast.findIndex((c) => c.id === id);
+    if (i5 < 0) return false;
+    holder.cast.splice(i5, 1);
+    holder.rels = (holder.rels || []).filter((r) => r.from !== id && r.to !== id);
+    if (holder.next) {
+      if (holder.next.speaker === id) holder.next.speaker = "";
+      if (holder.next.listener === id) holder.next.listener = "";
+    }
+    return true;
+  }
+  function pickField(src2, names) {
+    for (const n2 of names) {
+      const v2 = src2[n2];
+      if (v2 != null && String(v2).trim()) return String(v2).trim();
+    }
+    return "";
+  }
+  function personaFromEntity(entity, name5) {
+    const e = entity || {};
+    const src2 = { ...e.fields || {}, ...e };
+    const nm = name5 || e.name || e.title || "";
+    const rows = [tf("ui.dlgBuilder.personaYouAre", nm)];
+    for (const f of PERSONA_FIELDS) {
+      const v2 = pickField(src2, f.names);
+      if (v2) rows.push(`${f.label}: ${v2}`);
+    }
+    const extra = e.desc || e.synopsis || e.notes || e.summary || "";
+    if (extra) rows.push(String(extra).trim());
+    return rows.join("\n");
+  }
+  function blurbFromEntity(entity) {
+    const e = entity || {};
+    const src2 = { ...e.fields || {}, ...e };
+    const one = String(e.desc || e.synopsis || "").split(/\r?\n/)[0] || pickField(src2, PERSONA_FIELDS[0].names) || "";
+    return one.trim().slice(0, 80);
+  }
+  function relsFromEntities(cast, entityByName) {
+    const out = [];
+    for (const c of cast || []) {
+      const e = entityByName && entityByName[c.name] || null;
+      for (const r of e && e.relationships || []) {
+        const target = r.targetName || r.target || "";
+        const to = (cast || []).find((x) => x.name === target);
+        if (!to || to.id === c.id) continue;
+        if (!String(r.role || "").trim()) continue;
+        out.push(newRel(c.id, to.id, { how: String(r.role).trim() }));
+      }
+    }
+    return out;
+  }
+  function lastSpoken(session) {
+    const turns = session && session.turns || [];
+    for (let i5 = turns.length - 1; i5 >= 0; i5--) {
+      if (turns[i5].kind !== KIND_DIRECTOR && turns[i5].speaker) return turns[i5];
+    }
+    return null;
+  }
+  function nextPair(session, rnd = () => 0) {
+    const cast = session && session.cast || [];
+    if (!cast.length) return { speaker: "", listener: "" };
+    const last2 = lastSpoken(session);
+    const policy = session && session.policy || DEFAULT_POLICY;
+    const ids = cast.map((c) => c.id);
+    if (policy === "manual") return { ...session.next || { speaker: "", listener: "" } };
+    if (!last2) return { speaker: ids[0], listener: ids[1] || ALL_LISTEN };
+    if (policy === "ai") return { speaker: AI_PICK, listener: last2.speaker || ALL_LISTEN };
+    if (policy === "random") {
+      return { speaker: ANY_RANDOM, listener: last2.speaker || ALL_LISTEN };
+    }
+    if (policy === "round") {
+      const i5 = ids.indexOf(last2.speaker);
+      return { speaker: ids[(i5 + 1) % ids.length], listener: ALL_LISTEN };
+    }
+    if (!last2.listener || last2.listener === ALL_LISTEN) {
+      return {
+        speaker: cast.length > 2 ? AI_PICK : ids.find((x) => x !== last2.speaker) || ids[0],
+        listener: last2.speaker
+      };
+    }
+    return { speaker: last2.listener, listener: last2.speaker };
+  }
+  function resolvePair(session, pair, rnd = () => 0) {
+    const cast = session && session.cast || [];
+    const ids = cast.map((c) => c.id);
+    const last2 = lastSpoken(session);
+    let speaker = pair && pair.speaker || "";
+    let listener = pair && pair.listener || "";
+    if (speaker === ANY_RANDOM) {
+      const pool3 = ids.filter((x) => x !== (last2 && last2.speaker));
+      const use = pool3.length ? pool3 : ids;
+      speaker = use[Math.min(use.length - 1, Math.floor(rnd() * use.length))] || "";
+    }
+    if (listener === ANY_RANDOM) {
+      const pool3 = ids.filter((x) => x !== speaker);
+      const use = pool3.length ? pool3 : ids;
+      listener = use[Math.min(use.length - 1, Math.floor(rnd() * use.length))] || "";
+    }
+    return { speaker, listener, needAi: speaker === AI_PICK };
+  }
+  function speakerOptions(session) {
+    const cast = session && session.cast || [];
+    const rows = cast.map((c) => ({ id: c.id, label: c.name }));
+    rows.push({ id: ANY_RANDOM, label: t("ui.dlgBuilder.randomPick") });
+    if (cast.length > 2) rows.push({ id: AI_PICK, label: t("ui.dlgBuilder.aiPick") });
+    return rows;
+  }
+  function listenerOptions(session) {
+    const rows = (session && session.cast || []).map((c) => ({ id: c.id, label: c.name }));
+    rows.push({ id: ALL_LISTEN, label: t("ui.dlgBuilder.everyone") });
+    rows.push({ id: ANY_RANDOM, label: t("ui.dlgBuilder.randomPick") });
+    return rows;
+  }
+  function buildSystem(session, charId) {
+    const me = castById(session, charId);
+    if (!me) return "";
+    const rows = [];
+    rows.push(me.persona || tf("ui.dlgBuilder.personaYouAre", me.name));
+    const pron = [];
+    if (me.selfPronoun) pron.push(tf("ui.dlgBuilder.pronSelf", me.selfPronoun));
+    for (const other of session.cast || []) {
+      if (other.id === charId) continue;
+      const r = relOf(session, charId, other.id);
+      if (r && r.callThem) pron.push(tf("ui.dlgBuilder.pronOther", other.name, r.callThem));
+    }
+    if (pron.length) rows.push("", t("ui.dlgBuilder.headPronoun"), ...pron);
+    const others = (session.cast || []).filter((c) => c.id !== charId);
+    if (others.length) {
+      rows.push("", t("ui.dlgBuilder.headOthers"));
+      for (const o of others) {
+        const r = relOf(session, charId, o.id);
+        const bits3 = [o.name];
+        if (o.blurb) bits3.push(o.blurb);
+        if (r && r.how) bits3.push(r.how);
+        rows.push("- " + bits3.join(" \xB7 "));
+      }
+    }
+    if (session.situation) rows.push("", t("ui.dlgBuilder.headSituation"), session.situation);
+    rows.push("", t("ui.dlgBuilder.headRules"));
+    rows.push(tf("ui.dlgBuilder.ruleOnlyMe", me.name));
+    rows.push(lengthDef(session.len).rule);
+    rows.push(session.paren !== false ? t("ui.dlgBuilder.ruleParenOn") : t("ui.dlgBuilder.ruleParenOff"));
+    rows.push(t("ui.dlgBuilder.ruleNoName"));
+    rows.push(t("ui.dlgBuilder.ruleNoNarrate"));
+    return rows.join("\n");
+  }
+  function turnAsHeard(session, turn) {
+    if (!turn) return "";
+    if (turn.kind === KIND_DIRECTOR) return tf("ui.dlgBuilder.heardDirector", turn.text);
+    const nm = castName(session, turn.speaker) || t("ui.dlgBuilder.unknownName");
+    const paren = turn.paren ? `(${turn.paren}) ` : "";
+    return `${nm}: ${paren}${turn.text}`;
+  }
+  function buildMessages(session, charId, { maxTokens = 6e3 } = {}) {
+    const turns = session && session.turns || [];
+    const rows = [];
+    for (const tn of turns) {
+      if (!tn.text && tn.kind !== KIND_DIRECTOR) continue;
+      if (tn.kind !== KIND_DIRECTOR && tn.speaker === charId) {
+        const paren = tn.paren ? `(${tn.paren}) ` : "";
+        rows.push({ role: "assistant", content: paren + tn.text });
+      } else {
+        const line = turnAsHeard(session, tn);
+        const prev = rows[rows.length - 1];
+        if (prev && prev.role === "user") prev.content += "\n" + line;
+        else rows.push({ role: "user", content: line });
+      }
+    }
+    const out = [];
+    let used = 0;
+    for (let i5 = rows.length - 1; i5 >= 0; i5--) {
+      const cost = estimateTokens(rows[i5].content);
+      if (used + cost > maxTokens && out.length) break;
+      used += cost;
+      out.unshift(rows[i5]);
+    }
+    if (out.length && out[0].role === "assistant") {
+      out.unshift({
+        role: "user",
+        content: session && session.situation ? tf("ui.dlgBuilder.sceneOpen", session.situation) : t("ui.dlgBuilder.sceneOpenBare")
+      });
+    }
+    return out;
+  }
+  function turnCue(session, speaker, listener) {
+    const to = listener === ALL_LISTEN || !listener ? t("ui.dlgBuilder.everyone") : castName(session, listener);
+    return tf("ui.dlgBuilder.cueYourTurn", to);
+  }
+  function buildTurnRequest(session, speaker, listener, opts = {}) {
+    const me = castById(session, speaker);
+    if (!me) return null;
+    const messages = buildMessages(session, speaker, opts);
+    messages.push({ role: "user", content: turnCue(session, speaker, listener) });
+    return {
+      system: buildSystem(session, speaker),
+      messages,
+      maxTokens: lengthDef(session.len).maxTokens,
+      cast: me
+    };
+  }
+  function buildBatchRequest(session, lines = 6, opts = {}) {
+    const cast = session && session.cast || [];
+    if (!cast.length) return null;
+    const rows = [tf("ui.dlgBuilder.batchWrite", lines)];
+    rows.push("", t("ui.dlgBuilder.headCast"));
+    for (const c of cast) {
+      rows.push(`- ${c.name}${c.blurb ? " \xB7 " + c.blurb : ""}${c.selfPronoun ? " \xB7 " + tf("ui.dlgBuilder.pronSelf", c.selfPronoun) : ""}`);
+      if (c.persona) rows.push("  " + c.persona.replace(/\n/g, "\n  "));
+    }
+    const rels = (session.rels || []).filter((r) => r.how || r.callThem);
+    if (rels.length) {
+      rows.push("", t("ui.dlgBuilder.headRels"));
+      for (const r of rels) {
+        const bits3 = [`${castName(session, r.from)} \u2192 ${castName(session, r.to)}`];
+        if (r.how) bits3.push(r.how);
+        if (r.callThem) bits3.push(tf("ui.dlgBuilder.pronOther", castName(session, r.to), r.callThem));
+        rows.push("- " + bits3.join(" \xB7 "));
+      }
+    }
+    if (session.situation) rows.push("", t("ui.dlgBuilder.headSituation"), session.situation);
+    rows.push("", t("ui.dlgBuilder.headRules"));
+    rows.push(lengthDef(session.len).rule);
+    rows.push(session.paren !== false ? t("ui.dlgBuilder.ruleParenOn") : t("ui.dlgBuilder.ruleParenOff"));
+    rows.push(t("ui.dlgBuilder.batchFormat"));
+    const messages = buildMessages(session, "__none__", opts);
+    messages.push({ role: "user", content: rows.join("\n") });
+    return {
+      system: t("ui.dlgBuilder.batchSystem"),
+      messages,
+      maxTokens: lengthDef(session.len).maxTokens * lines
+    };
+  }
+  function buildPickerRequest(session) {
+    const cast = session && session.cast || [];
+    if (cast.length < 2) return null;
+    const rows = [t("ui.dlgBuilder.pickAsk")];
+    rows.push(cast.map((c) => c.name).join(" / "));
+    if (session.situation) rows.push("", t("ui.dlgBuilder.headSituation"), session.situation);
+    const recent = (session.turns || []).slice(-6).map((tn) => turnAsHeard(session, tn));
+    if (recent.length) rows.push("", t("ui.dlgBuilder.headRecent"), ...recent);
+    rows.push("", t("ui.dlgBuilder.pickAnswerOnlyName"));
+    return {
+      system: t("ui.dlgBuilder.pickSystem"),
+      messages: [{ role: "user", content: rows.join("\n") }],
+      maxTokens: 24
+    };
+  }
+  function parsePickedSpeaker(session, raw) {
+    const txt = String(raw || "").trim();
+    if (!txt) return "";
+    const cast = session && session.cast || [];
+    const sorted = [...cast].sort((a, b) => (b.name || "").length - (a.name || "").length);
+    for (const c of sorted) if (c.name && txt.includes(c.name)) return c.id;
+    return "";
+  }
+  function parseSpokenLine(raw, name5 = "", opts = {}) {
+    let txt = String(raw || "").replace(FENCE, "").trim();
+    let paren = "";
+    if (!txt) return { text: "", paren: "" };
+    const aliases = [name5, ...Array.isArray(opts.aliases) ? opts.aliases : []].filter(Boolean);
+    for (let i5 = 0; i5 < 3; i5++) {
+      const before = txt;
+      txt = txt.replace(/^@[^\n]{1,40}\n+/, "");
+      for (const a of aliases) {
+        const esc6 = a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        txt = txt.replace(new RegExp("^\\s*" + esc6 + "\\s*[:\uFF1A]\\s*"), "");
+      }
+      if (txt === before) break;
+      txt = txt.trim();
+    }
+    const pm2 = txt.match(/^\(([^)]{1,60})\)\s*/);
+    if (pm2) {
+      paren = pm2[1].trim();
+      txt = txt.slice(pm2[0].length).trim();
+    }
+    const q = txt.match(/^["“”「『«](.+)["“”」』»]$/s);
+    if (q && !/["“”]/.test(q[1])) txt = q[1].trim();
+    return { text: txt, paren };
+  }
+  function parseBatch(session, raw) {
+    const txt = String(raw || "").replace(FENCE, "").trim();
+    const out = [];
+    let cur = null;
+    for (const rawLine of txt.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      if (line.startsWith("@")) {
+        const id = parsePickedSpeaker(session, line.slice(1));
+        cur = { speaker: id, text: "", paren: "" };
+        out.push(cur);
+        continue;
+      }
+      const colon = line.match(/^([^:：]{1,30})[:：]\s*(.*)$/);
+      if (colon) {
+        const id = parsePickedSpeaker(session, colon[1]);
+        if (id) {
+          const p = parseSpokenLine(colon[2]);
+          cur = { speaker: id, text: p.text, paren: p.paren };
+          out.push(cur);
+          continue;
+        }
+      }
+      if (/^\(.*\)$/.test(line)) {
+        if (cur) cur.paren = line.slice(1, -1).trim();
+        continue;
+      }
+      if (cur) cur.text = cur.text ? cur.text + " " + line : line;
+    }
+    return out.filter((r) => r.speaker && r.text);
+  }
+  function turnToScreenplay(session, turn) {
+    if (!turn || !turn.text) return "";
+    if (turn.kind === KIND_DIRECTOR) return turn.text;
+    const nm = castName(session, turn.speaker);
+    const rows = [];
+    if (nm) rows.push("@" + nm);
+    if (turn.paren) rows.push("(" + turn.paren + ")");
+    rows.push(turn.text);
+    return rows.join("\n");
+  }
+  function sessionToScreenplay(session, turns) {
+    const rows = (turns || session && session.turns || []).map((tn) => turnToScreenplay(session, tn)).filter(Boolean);
+    return rows.join("\n\n");
+  }
+  function titleFromSituation(text, max2 = 40) {
+    const one = String(text || "").replace(/\s+/g, " ").trim();
+    if (!one) return t("ui.dlgBuilder.untitled");
+    if (one.length <= max2) return one;
+    return one.slice(0, max2).replace(/\s+\S*$/, "") + "\u2026";
+  }
+  function sessionFileName2(session, taken = []) {
+    const base3 = String(session && session.title || t("ui.dlgBuilder.untitled")).replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60) || t("ui.dlgBuilder.untitled");
+    const reserved = base3.toLowerCase() === "presets" ? base3 + "_" : base3;
+    let name5 = reserved + ".json";
+    let i5 = 2;
+    const used = new Set((taken || []).map((x) => String(x).toLowerCase()));
+    while (used.has(name5.toLowerCase())) {
+      name5 = `${reserved} (${i5}).json`;
+      i5++;
+    }
+    return name5;
+  }
+  function sessionStats2(session) {
+    const turns = session && session.turns || [];
+    let input = 0, output = 0, calls = 0, ms = 0;
+    for (const tn of turns) {
+      if (!tn.usage) continue;
+      calls++;
+      input += tn.usage.input || 0;
+      output += tn.usage.output || 0;
+      ms += tn.ms || 0;
+    }
+    const spoken = turns.filter((x) => x.kind !== KIND_DIRECTOR).length;
+    return {
+      turns: turns.length,
+      spoken,
+      calls,
+      input,
+      output,
+      total: input + output,
+      ms,
+      inserted: turns.filter((x) => x.inserted).length
+    };
+  }
+  function sessionDirty(session, savedAt) {
+    if (!session) return false;
+    return (session.updated || 0) > (savedAt || 0);
+  }
+  function sortSessions2(rows) {
+    return [...rows || []].sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  }
+  function searchSessions2(rows, query, { includeArchived = false } = {}) {
+    const q = String(query || "").trim().toLowerCase();
+    return sortSessions2((rows || []).filter((s) => {
+      if (!includeArchived && s.archived) return false;
+      if (!q) return true;
+      const hay = [
+        s.title,
+        s.situation,
+        s.presetName,
+        ...(s.cast || []).map((c) => c.name)
+      ].join(" ").toLowerCase();
+      return hay.includes(q);
+    }));
+  }
+  var BUILDER_DIR, PRESET_FILE, BUILDER_VERSION, MAX_CAST, ANY_RANDOM, ALL_LISTEN, AI_PICK, TURN_POLICIES, DEFAULT_POLICY, SEND_MODES, DEFAULT_SEND_MODE, TURN_LENGTHS, DEFAULT_LENGTH, KIND_LINE, KIND_USER, KIND_DIRECTOR, _seq4, PERSONA_FIELDS, FENCE;
+  var init_builder_core = __esm({
+    "src/dialogue/builder-core.js"() {
+      init_i18n();
+      init_ai_session();
+      BUILDER_DIR = "Dialogues";
+      PRESET_FILE = "presets.json";
+      BUILDER_VERSION = 1;
+      MAX_CAST = 5;
+      ANY_RANDOM = "__random__";
+      ALL_LISTEN = "__all__";
+      AI_PICK = "__ai__";
+      TURN_POLICIES = [
+        { id: "pingpong", label: t("ui.dlgBuilder.policyPingPong"), hint: t("ui.dlgBuilder.policyPingPongHint") },
+        { id: "round", label: t("ui.dlgBuilder.policyRound"), hint: t("ui.dlgBuilder.policyRoundHint") },
+        { id: "random", label: t("ui.dlgBuilder.policyRandom"), hint: t("ui.dlgBuilder.policyRandomHint") },
+        { id: "ai", label: t("ui.dlgBuilder.policyAi"), hint: t("ui.dlgBuilder.policyAiHint") },
+        { id: "manual", label: t("ui.dlgBuilder.policyManual"), hint: t("ui.dlgBuilder.policyManualHint") }
+      ];
+      DEFAULT_POLICY = "pingpong";
+      SEND_MODES = [
+        { id: "each", label: t("ui.dlgBuilder.modeEach"), hint: t("ui.dlgBuilder.modeEachHint"), perChar: true },
+        { id: "batch", label: t("ui.dlgBuilder.modeBatch"), hint: t("ui.dlgBuilder.modeBatchHint"), perChar: false }
+      ];
+      DEFAULT_SEND_MODE = "each";
+      TURN_LENGTHS = [
+        { id: "short", label: t("ui.dlgBuilder.lenShort"), rule: t("ui.dlgBuilder.lenShortRule"), maxTokens: 200 },
+        { id: "medium", label: t("ui.dlgBuilder.lenMedium"), rule: t("ui.dlgBuilder.lenMediumRule"), maxTokens: 380 },
+        { id: "long", label: t("ui.dlgBuilder.lenLong"), rule: t("ui.dlgBuilder.lenLongRule"), maxTokens: 700 }
+      ];
+      DEFAULT_LENGTH = "medium";
+      KIND_LINE = "line";
+      KIND_USER = "user";
+      KIND_DIRECTOR = "director";
+      _seq4 = 0;
+      PERSONA_FIELDS = [
+        { key: "role", label: "\u0E1A\u0E17\u0E1A\u0E32\u0E17", names: ["role", "\u0E1A\u0E17\u0E1A\u0E32\u0E17"] },
+        { key: "age", label: "\u0E2D\u0E32\u0E22\u0E38", names: ["age", "\u0E2D\u0E32\u0E22\u0E38"] },
+        { key: "personality", label: "\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01", names: ["personality", "traits", "\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01", "\u0E19\u0E34\u0E2A\u0E31\u0E22"] },
+        { key: "speech", label: "\u0E27\u0E34\u0E18\u0E35\u0E1E\u0E39\u0E14", names: ["speech", "speechStyle", "\u0E27\u0E34\u0E18\u0E35\u0E1E\u0E39\u0E14", "\u0E01\u0E32\u0E23\u0E1E\u0E39\u0E14"] },
+        { key: "background", label: "\u0E20\u0E39\u0E21\u0E34\u0E2B\u0E25\u0E31\u0E07", names: ["background", "bio", "\u0E20\u0E39\u0E21\u0E34\u0E2B\u0E25\u0E31\u0E07", "\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34"] },
+        { key: "goal", label: "\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22", names: ["goal", "motivation", "\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22"] },
+        { key: "fear", label: "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E01\u0E25\u0E31\u0E27", names: ["fear", "weakness", "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E01\u0E25\u0E31\u0E27", "\u0E08\u0E38\u0E14\u0E2D\u0E48\u0E2D\u0E19"] },
+        { key: "quirk", label: "\u0E19\u0E34\u0E2A\u0E31\u0E22\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27", names: ["quirk", "\u0E19\u0E34\u0E2A\u0E31\u0E22\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27"] }
+      ];
+      FENCE = /```[a-z]*\n?/gi;
+    }
+  });
+
+  // src/dialogue/builder-ui.js
+  var builder_ui_exports = {};
+  __export(builder_ui_exports, {
+    builderDirtyList: () => builderDirtyList,
+    builderState: () => builderState,
+    renderBuilderPanel: () => renderBuilderPanel,
+    resetBuilder: () => resetBuilder,
+    saveBuilderDirty: () => saveBuilderDirty
+  });
+  function resetBuilder() {
+    S7.root = null;
+    S7.view = "list";
+    S7.sessions = [];
+    S7.presets = [];
+    S7.cur = null;
+    S7.curFile = "";
+    S7.savedAt = 0;
+    S7.query = "";
+    S7.sending = false;
+    S7.entities = null;
+  }
+  function builderDirtyList() {
+    return sessionDirty(S7.cur, S7.savedAt) ? [S7.cur.title || t("ui.dlgb.untitledRow")] : [];
+  }
+  async function saveBuilderDirty() {
+    if (!sessionDirty(S7.cur, S7.savedAt)) return true;
+    return await saveSession2();
+  }
+  async function dir() {
+    if (!state.root) return null;
+    const d = await kapi.join(state.root, BUILDER_DIR);
+    if (!await kapi.exists(d)) await kapi.mkdir(d);
+    return d;
+  }
+  async function loadAll(force) {
+    if (!state.root) {
+      S7.sessions = [];
+      S7.presets = [];
+      S7.root = null;
+      return;
+    }
+    if (!force && S7.root === state.root) return;
+    S7.root = state.root;
+    S7.sessions = [];
+    S7.presets = [];
+    const d = await dir();
+    if (!d) return;
+    try {
+      const pf = await kapi.join(d, PRESET_FILE);
+      if (await kapi.exists(pf)) {
+        const raw = await kapi.readJson(pf);
+        S7.presets = (raw && Array.isArray(raw.presets) ? raw.presets : []).map(newPreset);
+      }
+    } catch (e) {
+      log("warn", t("ui.dlgb.errReadPresets"), e);
+    }
+    for (const f of await kapi.listFiles(d, ".json")) {
+      if (f === PRESET_FILE) continue;
+      try {
+        const raw = await kapi.readJson(await kapi.join(d, f));
+        if (raw && Array.isArray(raw.turns)) S7.sessions.push({ file: f, data: newSession2(raw) });
+      } catch (e) {
+        log("warn", t("ui.dlgb.errReadSession") + f, e);
+      }
+    }
+  }
+  async function savePresets() {
+    const d = await dir();
+    if (!d) return false;
+    await kapi.writeFile(
+      await kapi.join(d, PRESET_FILE),
+      JSON.stringify({ v: BUILDER_VERSION, presets: S7.presets }, null, 2)
+    );
+    return true;
+  }
+  async function saveSession2(sess, file) {
+    const s = sess || S7.cur;
+    if (!s) return false;
+    const d = await dir();
+    if (!d) return false;
+    s.updated = Date.now();
+    if (!s.created) s.created = s.updated;
+    let name5 = file || S7.curFile;
+    if (!name5) {
+      name5 = sessionFileName2(s, S7.sessions.map((r) => r.file));
+      S7.curFile = name5;
+    }
+    try {
+      await kapi.writeFile(await kapi.join(d, name5), JSON.stringify(s, null, 2));
+    } catch (e) {
+      log("error", t("ui.dlgb.errSaveSession"), e);
+      setStatus(t("ui.dlgb.errSaveSession"));
+      return false;
+    }
+    const row2 = S7.sessions.find((r) => r.file === name5);
+    if (row2) row2.data = s;
+    else S7.sessions.push({ file: name5, data: s });
+    if (s === S7.cur) S7.savedAt = s.updated;
+    return true;
+  }
+  async function wikiRows(force) {
+    if (S7.entities && !force) return S7.entities;
+    try {
+      S7.entities = await listEntities(state.root);
+    } catch {
+      S7.entities = [];
+    }
+    return S7.entities;
+  }
+  async function renderBuilderPanel(host2) {
+    S7.host = host2 || $("#dlgb-body");
+    if (!S7.host) return;
+    if (!state.root) {
+      S7.host.replaceChildren(el("div", "dlgb-empty", t("ui.dlgb.openProjectFirst")));
+      return;
+    }
+    await loadAll();
+    if (S7.view === "session" && S7.cur) drawSession();
+    else drawList2();
+  }
+  function redraw() {
+    renderBuilderPanel(S7.host);
+  }
+  function drawList2() {
+    const wrap2 = el("div", "dlgb-list");
+    const bar = el("div", "dlgb-listbar");
+    const q = el("input", "dlgb-search");
+    q.placeholder = t("ui.dlgb.searchPh");
+    q.value = S7.query;
+    q.oninput = () => {
+      S7.query = q.value;
+      drawRows();
+    };
+    const bNew = el("button", "dlgb-new", t("ui.dlgb.newSession"));
+    bNew.onclick = () => newSessionFlow();
+    const bCast = el("button", "", t("ui.dlgb.managePresets"));
+    bCast.onclick = () => presetManager();
+    bar.append(q, bNew, bCast);
+    const rows = el("div", "dlgb-rows");
+    wrap2.append(bar, rows);
+    const arch = el(
+      "div",
+      "dlgb-archtoggle",
+      S7.showArchived ? t("ui.dlgb.hideArchived") : t("ui.dlgb.showArchived")
+    );
+    arch.onclick = () => {
+      S7.showArchived = !S7.showArchived;
+      drawList2();
+    };
+    wrap2.append(arch);
+    function drawRows() {
+      rows.replaceChildren();
+      const list = searchSessions2(
+        S7.sessions.map((r) => r.data),
+        S7.query,
+        { includeArchived: S7.showArchived }
+      );
+      if (!list.length) {
+        rows.append(el("div", "dlgb-empty", S7.query ? t("ui.dlgb.noMatch") : t("ui.dlgb.noSession")));
+        return;
+      }
+      for (const s of list) {
+        const file = (S7.sessions.find((r) => r.data === s) || {}).file || "";
+        const row2 = el("div", "dlgb-row" + (s.archived ? " archived" : ""));
+        const main = el("div", "dlgb-row-main");
+        main.append(el("div", "dlgb-row-title", s.title || t("ui.dlgb.untitledRow")));
+        const cast = (s.cast || []).map((c) => c.name).filter(Boolean).join(" \xB7 ");
+        main.append(el("div", "dlgb-row-sub", cast || t("ui.dlgb.noCast")));
+        const st = sessionStats2(s);
+        const meta2 = el("div", "dlgb-row-meta");
+        meta2.append(el("span", "", tf("ui.dlgb.nTurns", st.spoken)));
+        if (st.inserted) meta2.append(el("span", "", tf("ui.dlgb.nInserted", st.inserted)));
+        row2.append(main, meta2);
+        row2.onclick = () => openSession(s, file);
+        row2.oncontextmenu = (e) => {
+          e.preventDefault();
+          sessionMenu2(e, s, file);
+        };
+        rows.append(row2);
+      }
+    }
+    drawRows();
+    S7.host.replaceChildren(wrap2);
+  }
+  function sessionMenu2(ev, s, file) {
+    popupMenu(ev.clientX, ev.clientY, [
+      { label: t("ui.dlgb.mRename"), click: async () => {
+        const v2 = await ask(t("ui.dlgb.mRename"), { value: s.title });
+        if (v2 == null) return;
+        s.title = v2.trim() || s.title;
+        await saveSession2(s, file);
+        redraw();
+      } },
+      { label: t("ui.dlgb.mDuplicate"), click: async () => {
+        const copy2 = newSession2({
+          ...s,
+          id: "",
+          title: s.title + t("ui.dlgb.copySuffix"),
+          created: 0,
+          updated: 0
+        });
+        const name5 = sessionFileName2(copy2, S7.sessions.map((r) => r.file));
+        await saveSession2(copy2, name5);
+        setStatus(t("ui.dlgb.duplicated"));
+        redraw();
+      } },
+      { label: s.archived ? t("ui.dlgb.mUnarchive") : t("ui.dlgb.mArchive"), click: async () => {
+        s.archived = !s.archived;
+        await saveSession2(s, file);
+        redraw();
+      } },
+      "-",
+      { label: t("ui.dlgb.mDelete"), danger: true, click: async () => {
+        if (!await confirmBox(tf("ui.dlgb.confirmDelete", s.title || t("ui.dlgb.untitledRow")))) return;
+        const d = await dir();
+        try {
+          await kapi.remove(await kapi.join(d, file));
+        } catch (e) {
+          log("warn", t("ui.dlgb.errDelete"), e);
+        }
+        S7.sessions = S7.sessions.filter((r) => r.file !== file);
+        if (S7.cur === s) {
+          S7.cur = null;
+          S7.curFile = "";
+          S7.view = "list";
+        }
+        redraw();
+      } }
+    ]);
+  }
+  function openSession(s, file) {
+    S7.cur = s;
+    S7.curFile = file;
+    S7.savedAt = s.updated || 0;
+    S7.view = "session";
+    if (!s.next || !s.next.speaker && !s.next.listener) s.next = nextPair(s, Math.random);
+    drawSession();
+  }
+  async function newSessionFlow() {
+    await loadAll(true);
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-wide");
+    box2.append(el("div", "k-dlg-title", t("ui.dlgb.newSession")));
+    box2.append(el("label", "", t("ui.dlgb.pickPreset")));
+    const sel = el("select", "dlgb-full");
+    for (const p of S7.presets) sel.append(el("option", "", `${p.name} (${(p.cast || []).length})`));
+    [...sel.options].forEach((o, i5) => {
+      o.value = S7.presets[i5].id;
+    });
+    if (!S7.presets.length) {
+      const o = el("option", "", t("ui.dlgb.noPresetYet"));
+      o.value = "";
+      sel.append(o);
+    }
+    box2.append(sel);
+    const bMake = el("button", "", t("ui.dlgb.makePreset"));
+    bMake.onclick = async () => {
+      ov.remove();
+      await presetManager();
+    };
+    box2.append(bMake);
+    box2.append(el("label", "", t("ui.dlgb.situationLabel")));
+    const sit = el("textarea", "dlgb-ta");
+    sit.placeholder = t("ui.dlgb.situationPh");
+    box2.append(sit);
+    box2.append(el("label", "", t("ui.dlgb.titleLabel")));
+    const title2 = el("input", "dlgb-full");
+    title2.placeholder = t("ui.dlgb.titleAutoPh");
+    box2.append(title2);
+    const btns = el("div", "k-dlg-btns");
+    const ok2 = el("button", "k-ok", t("ui.dlgb.create"));
+    ok2.onclick = async () => {
+      const p = S7.presets.find((x) => x.id === sel.value);
+      if (!p) {
+        setStatus(t("ui.dlgb.needPreset"));
+        return;
+      }
+      const s = sessionFromPreset(p, {
+        situation: sit.value.trim(),
+        title: title2.value.trim() || titleFromSituation(sit.value)
+      });
+      s.next = nextPair(s, Math.random);
+      ov.remove();
+      const name5 = sessionFileName2(s, S7.sessions.map((r) => r.file));
+      await saveSession2(s, name5);
+      openSession(s, name5);
+    };
+    const cancel = el("button", "k-cancel", t("ui.common.cancel"));
+    cancel.onclick = () => ov.remove();
+    btns.append(ok2, cancel);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    sit.focus();
+  }
+  function drawSession() {
+    const s = S7.cur;
+    if (!s) {
+      S7.view = "list";
+      drawList2();
+      return;
+    }
+    if (!s.next) s.next = nextPair(s, Math.random);
+    const wrap2 = el("div", "dlgb-session");
+    const head2 = el("div", "dlgb-head");
+    const back = el("button", "dlgb-back", "\u2190");
+    back.title = t("ui.dlgb.backToList");
+    back.onclick = async () => {
+      await saveBuilderDirty();
+      S7.view = "list";
+      drawList2();
+    };
+    const title2 = el("div", "dlgb-title", s.title || t("ui.dlgb.untitledRow"));
+    title2.title = s.situation || "";
+    const st = sessionStats2(s);
+    const badge = el("button", "dlgb-ctx", tf("ui.dlgb.badge", st.spoken, st.total));
+    badge.title = tf("ui.dlgb.badgeTip", st.calls, st.input, st.output, Math.round(st.ms / 100) / 10);
+    const eye = el("button", "dlgb-eye" + (S7.showThinking ? " on" : ""), S7.showThinking ? "\u{1F9E0}" : "\u{1F4AC}");
+    eye.title = S7.showThinking ? t("ui.dlgb.viewThinking") : t("ui.dlgb.viewNormal");
+    eye.onclick = () => {
+      S7.showThinking = !S7.showThinking;
+      drawSession();
+    };
+    const more = el("button", "dlgb-more", "\u22EF");
+    more.onclick = (e) => sessionHeadMenu(e);
+    head2.append(back, title2, el("div", "dlgb-head-right"));
+    head2.lastChild.append(badge, eye, more);
+    wrap2.append(head2);
+    const opts = el("div", "dlgb-opts");
+    opts.append(mkSelect(TURN_POLICIES, s.policy, (v2) => {
+      s.policy = v2;
+      s.next = nextPair(s, Math.random);
+      touch();
+      drawSession();
+    }, t("ui.dlgb.policyLabel")));
+    opts.append(mkSelect(
+      SEND_MODES,
+      s.mode,
+      (v2) => {
+        s.mode = v2;
+        touch();
+        drawSession();
+      },
+      t("ui.dlgb.modeLabel")
+    ));
+    opts.append(mkSelect(TURN_LENGTHS, s.len, (v2) => {
+      s.len = v2;
+      touch();
+    }, t("ui.dlgb.lenLabel")));
+    const paren = el("label", "dlgb-check");
+    const pcb = el("input");
+    pcb.type = "checkbox";
+    pcb.checked = s.paren !== false;
+    pcb.onchange = () => {
+      s.paren = pcb.checked;
+      touch();
+    };
+    paren.append(pcb, document.createTextNode(t("ui.dlgb.parenLabel")));
+    opts.append(paren);
+    wrap2.append(opts);
+    const msgs = el("div", "dlgb-msgs");
+    if (s.situation) msgs.append(el("div", "dlgb-situation", s.situation));
+    if (!s.turns.length) msgs.append(el("div", "dlgb-empty", t("ui.dlgb.pressSendToStart")));
+    for (const tn of s.turns) msgs.append(bubble(s, tn));
+    wrap2.append(msgs);
+    wrap2.append(composer2(s));
+    S7.host.replaceChildren(wrap2);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function touch() {
+    if (S7.cur) S7.cur.updated = Date.now();
+  }
+  function mkSelect(defs, value, onChange, label) {
+    const w = el("label", "dlgb-opt");
+    w.append(el("span", "dlgb-opt-label", label));
+    const sel = el("select");
+    for (const d of defs) {
+      const o = el("option", "", d.label);
+      o.value = d.id;
+      if (d.hint || d.rule) o.title = d.hint || d.rule;
+      sel.append(o);
+    }
+    sel.value = value;
+    const def = defs.find((d) => d.id === value);
+    sel.title = def && (def.hint || def.rule) || "";
+    sel.onchange = () => onChange(sel.value);
+    w.append(sel);
+    return w;
+  }
+  function bubble(s, tn) {
+    const isDir = tn.kind === KIND_DIRECTOR;
+    const n2 = el("div", "dlgb-bubble" + (isDir ? " dlgb-director" : "") + (tn.kind === KIND_USER ? " dlgb-usertyped" : ""));
+    const head2 = el("div", "dlgb-bub-head");
+    if (isDir) head2.append(el("span", "dlgb-bub-name", "\u{1F3AC} " + t("ui.dlgb.director")));
+    else {
+      head2.append(el("span", "dlgb-bub-name", castName(s, tn.speaker) || t("ui.dlgb.unknown")));
+      const to = castName(s, tn.listener);
+      if (to) head2.append(el("span", "dlgb-bub-to", tf("ui.dlgb.toWhom", to)));
+    }
+    if (tn.inserted) {
+      const chk = el("span", "dlgb-bub-ins", "\u2713");
+      chk.title = tf("ui.dlgb.insertedInto", tn.inserted.scene || "");
+      head2.append(chk);
+    }
+    if (tn.model) {
+      const m = el("span", "dlgb-bub-model", tn.model);
+      head2.append(m);
+    }
+    n2.append(head2);
+    const body = el("div", "dlgb-bub-body");
+    if (tn.paren) body.append(el("div", "dlgb-bub-paren", "(" + tn.paren + ")"));
+    body.append(el("div", "dlgb-bub-text", tn.text));
+    n2.append(body);
+    if (tn.thinking) {
+      const fold = el("details", "dlgb-think");
+      if (S7.showThinking) fold.open = true;
+      fold.append(el("summary", "dlgb-think-sum", t("ui.dlgb.modelThinking")));
+      fold.append(el("pre", "dlgb-think-pre", tn.thinking));
+      n2.append(fold);
+    }
+    const acts = el("div", "dlgb-bub-acts");
+    if (!isDir) {
+      acts.append(mkAct("\u21BB", t("ui.dlgb.actReroll"), () => reroll(tn)));
+    }
+    acts.append(mkAct("\u270E", t("ui.dlgb.actEdit"), () => editTurn(tn)));
+    acts.append(mkAct("\u2B07", t("ui.dlgb.actInsert"), () => insertTurn(tn)));
+    acts.append(mkAct("\u{1F5D1}", t("ui.dlgb.actDelete"), async () => {
+      S7.cur.turns = S7.cur.turns.filter((x) => x.id !== tn.id);
+      touch();
+      await saveSession2();
+      drawSession();
+    }));
+    n2.append(acts);
+    return n2;
+  }
+  function mkAct(icon2, tip, fn) {
+    const b = el("button", "dlgb-act", icon2);
+    b.title = tip;
+    b.onclick = fn;
+    return b;
+  }
+  function composer2(s) {
+    const box2 = el("div", "dlgb-composer");
+    const pick2 = el("div", "dlgb-pick");
+    const spk = el("select", "dlgb-pick-sel");
+    for (const o of speakerOptions(s)) {
+      const x = el("option", "", o.label);
+      x.value = o.id;
+      spk.append(x);
+    }
+    spk.value = s.next && s.next.speaker || "";
+    spk.onchange = () => {
+      s.next.speaker = spk.value;
+      touch();
+    };
+    const lis = el("select", "dlgb-pick-sel");
+    for (const o of listenerOptions(s)) {
+      const x = el("option", "", o.label);
+      x.value = o.id;
+      lis.append(x);
+    }
+    lis.value = s.next && s.next.listener || ALL_LISTEN;
+    lis.onchange = () => {
+      s.next.listener = lis.value;
+      touch();
+    };
+    pick2.append(spk, el("span", "dlgb-pick-mid", t("ui.dlgb.speaksTo")), lis);
+    box2.append(pick2);
+    const row2 = el("div", "dlgb-sendrow");
+    const inp = el("textarea", "dlgb-input");
+    inp.placeholder = t("ui.dlgb.inputPh");
+    inp.rows = 2;
+    inp.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send2(inp);
+      }
+    };
+    const bSend = el("button", "dlgb-send k-ok", S7.sending ? t("ui.dlgb.sending") : t("ui.dlgb.send"));
+    bSend.disabled = S7.sending;
+    bSend.onclick = () => send2(inp);
+    const bCont = el("button", "dlgb-cont", t("ui.dlgb.keepTalking"));
+    bCont.title = t("ui.dlgb.keepTalkingTip");
+    bCont.disabled = S7.sending;
+    bCont.onclick = () => {
+      const last2 = lastSpoken(s);
+      if (last2) {
+        s.next = { speaker: last2.speaker, listener: last2.listener };
+      }
+      send2(inp);
+    };
+    const bDir = el("button", "dlgb-dir", "\u{1F3AC}");
+    bDir.title = t("ui.dlgb.directorTip");
+    bDir.onclick = () => directorNote();
+    row2.append(inp, bSend, bCont, bDir);
+    box2.append(row2);
+    return box2;
+  }
+  async function providerFor(member) {
+    const base3 = member && member.providerId ? await providerById(member.providerId) : await currentProvider();
+    if (!base3) return null;
+    const p = { ...base3 };
+    if (member && member.model) p.model = member.model;
+    if (member && member.params && Object.keys(member.params).length) {
+      p.params = { ...base3.params || {}, ...member.params };
+    }
+    return p;
+  }
+  async function send2(inp) {
+    const s = S7.cur;
+    if (!s || S7.sending) return;
+    const cfg = await aiConfigured();
+    if (!cfg.ok) {
+      setStatus(cfg.why);
+      return;
+    }
+    const typed = inp ? inp.value.trim() : "";
+    let pair = resolvePair(s, s.next || {}, Math.random);
+    if (typed) {
+      if (!pair.speaker || pair.needAi) {
+        const first = (s.cast[0] || {}).id;
+        pair = { speaker: pair.needAi ? first : pair.speaker || first, listener: pair.listener };
+      }
+      s.turns.push(newTurn({
+        kind: KIND_USER,
+        speaker: pair.speaker,
+        listener: pair.listener,
+        text: typed,
+        ts: Date.now()
+      }));
+      if (inp) inp.value = "";
+      s.next = nextPair(s, Math.random);
+      touch();
+      await saveSession2();
+      drawSession();
+      return;
+    }
+    S7.sending = true;
+    drawSession();
+    try {
+      if (s.mode === "batch") await sendBatch(s);
+      else await sendOne(s, pair);
+    } catch (e) {
+      log("error", t("ui.dlgb.errSend"), e);
+      setStatus(t("ui.dlgb.errSend"));
+    } finally {
+      S7.sending = false;
+      s.next = nextPair(s, Math.random);
+      touch();
+      await saveSession2();
+      drawSession();
+    }
+  }
+  async function sendOne(s, pair) {
+    let speaker = pair.speaker;
+    if (pair.needAi) {
+      const pk = buildPickerRequest(s);
+      const prov2 = await currentProvider();
+      if (pk && prov2) {
+        const res2 = await complete(prov2, { system: pk.system, messages: pk.messages });
+        if (res2.ok) speaker = parsePickedSpeaker(s, res2.text);
+      }
+      if (!speaker) {
+        speaker = resolvePair(s, { speaker: ANY_RANDOM, listener: pair.listener }, Math.random).speaker;
+      }
+    }
+    if (!speaker) {
+      setStatus(t("ui.dlgb.needSpeaker"));
+      return;
+    }
+    const req = buildTurnRequest(s, speaker, pair.listener);
+    if (!req) {
+      setStatus(t("ui.dlgb.needSpeaker"));
+      return;
+    }
+    const prov = await providerFor(req.cast);
+    if (!prov) {
+      setStatus(t("ui.dlgb.noProvider"));
+      return;
+    }
+    const t0 = Date.now();
+    const res = await complete(prov, { system: req.system, messages: req.messages });
+    if (!res.ok) {
+      setStatus("\u274C " + (res.error || t("ui.dlgb.errSend")));
+      return;
+    }
+    const parsed = parseSpokenLine(res.text, req.cast.name, { aliases: req.cast.aliases });
+    if (!parsed.text) {
+      setStatus(t("ui.dlgb.emptyReply"));
+      return;
+    }
+    s.turns.push(newTurn({
+      speaker,
+      listener: pair.listener,
+      text: parsed.text,
+      paren: parsed.paren,
+      thinking: res.thinking || "",
+      model: res.model || "",
+      provider: res.provider || "",
+      usage: res.usage || null,
+      ms: Date.now() - t0,
+      ts: Date.now()
+    }));
+  }
+  async function sendBatch(s) {
+    const req = buildBatchRequest(s, 6);
+    if (!req) return;
+    const prov = await currentProvider();
+    if (!prov) {
+      setStatus(t("ui.dlgb.noProvider"));
+      return;
+    }
+    const t0 = Date.now();
+    const res = await complete(prov, { system: req.system, messages: req.messages });
+    if (!res.ok) {
+      setStatus("\u274C " + (res.error || t("ui.dlgb.errSend")));
+      return;
+    }
+    const rows = parseBatch(s, res.text);
+    if (!rows.length) {
+      setStatus(t("ui.dlgb.emptyReply"));
+      return;
+    }
+    const ms = Date.now() - t0;
+    rows.forEach((r, i5) => {
+      s.turns.push(newTurn({
+        speaker: r.speaker,
+        listener: ALL_LISTEN,
+        text: r.text,
+        paren: r.paren,
+        // ความคิด/ต้นทุนติดที่บรรทัดแรกก้อนเดียว — ไม่งั้นป้ายสถิตินับซ้ำ
+        thinking: i5 === 0 ? res.thinking || "" : "",
+        model: res.model || "",
+        usage: i5 === 0 ? res.usage || null : null,
+        ms: i5 === 0 ? ms : 0,
+        ts: Date.now()
+      }));
+    });
+  }
+  async function reroll(tn) {
+    const s = S7.cur;
+    if (!s || S7.sending) return;
+    const cfg = await aiConfigured();
+    if (!cfg.ok) {
+      setStatus(cfg.why);
+      return;
+    }
+    const i5 = s.turns.findIndex((x) => x.id === tn.id);
+    if (i5 < 0) return;
+    const after = s.turns.slice(i5 + 1);
+    s.turns = s.turns.slice(0, i5);
+    S7.sending = true;
+    drawSession();
+    try {
+      await sendOne(s, { speaker: tn.speaker, listener: tn.listener, needAi: false });
+    } catch (e) {
+      log("error", t("ui.dlgb.errSend"), e);
+      s.turns.push(tn);
+    } finally {
+      s.turns.push(...after);
+      S7.sending = false;
+      touch();
+      await saveSession2();
+      drawSession();
+    }
+  }
+  async function editTurn(tn) {
+    const cur = (tn.paren ? `(${tn.paren}) ` : "") + tn.text;
+    const v2 = await ask(t("ui.dlgb.actEdit"), { value: cur, allowEmpty: true });
+    if (v2 == null) return;
+    const p = parseSpokenLine(v2);
+    tn.text = p.text;
+    tn.paren = p.paren;
+    touch();
+    await saveSession2();
+    drawSession();
+  }
+  async function insertTurn(tn) {
+    const txt = turnToScreenplay(S7.cur, tn);
+    if (!txt) return;
+    if (!insertToEditor(txt)) return;
+    tn.inserted = { scene: state.active && (state.active.title || state.active.file) || "", at: Date.now() };
+    touch();
+    await saveSession2();
+    drawSession();
+  }
+  function insertToEditor(txt) {
+    const tab = state.active;
+    if (!tab || !tab.editor && !tab.sp) {
+      setStatus(t("ui.dlgb.noEditor"));
+      return false;
+    }
+    const ok2 = tab.sp ? tab.sp.insertScript(txt) : tab.editor.insertLines(txt);
+    if (!ok2) {
+      setStatus(t("ui.dlgb.noEditor"));
+      return false;
+    }
+    setStatus(t("ui.dlgb.inserted"));
+    return true;
+  }
+  async function insertAll() {
+    const s = S7.cur;
+    if (!s) return;
+    const txt = sessionToScreenplay(s);
+    if (!txt) {
+      setStatus(t("ui.dlgb.nothingToInsert"));
+      return;
+    }
+    if (!insertToEditor(txt)) return;
+    const at = Date.now();
+    const scene = state.active && (state.active.title || state.active.file) || "";
+    for (const tn of s.turns) if (!tn.inserted) tn.inserted = { scene, at };
+    touch();
+    await saveSession2();
+    drawSession();
+  }
+  async function directorNote() {
+    const v2 = await ask(t("ui.dlgb.directorTitle"), { placeholder: t("ui.dlgb.directorPh") });
+    if (v2 == null || !v2.trim()) return;
+    S7.cur.turns.push(newTurn({ kind: KIND_DIRECTOR, text: v2.trim(), ts: Date.now() }));
+    touch();
+    await saveSession2();
+    drawSession();
+  }
+  function sessionHeadMenu(ev) {
+    const s = S7.cur;
+    popupMenu(ev.clientX, ev.clientY, [
+      { label: t("ui.dlgb.mEditCast"), click: () => castEditor(s, async () => {
+        touch();
+        await saveSession2();
+        drawSession();
+      }) },
+      { label: t("ui.dlgb.mEditSituation"), click: async () => {
+        const v2 = await ask(t("ui.dlgb.situationLabel"), { value: s.situation, allowEmpty: true });
+        if (v2 == null) return;
+        s.situation = v2;
+        touch();
+        await saveSession2();
+        drawSession();
+      } },
+      { label: t("ui.dlgb.mRename"), click: async () => {
+        const v2 = await ask(t("ui.dlgb.mRename"), { value: s.title });
+        if (v2 == null || !v2.trim()) return;
+        s.title = v2.trim();
+        touch();
+        await saveSession2();
+        drawSession();
+      } },
+      "-",
+      { label: t("ui.dlgb.mInsertAll"), click: () => insertAll() },
+      { label: t("ui.dlgb.mSaveAsPreset"), click: async () => {
+        const v2 = await ask(t("ui.dlgb.mSaveAsPreset"), { value: s.presetName || s.title });
+        if (v2 == null || !v2.trim()) return;
+        const p = newPreset({ name: v2.trim(), cast: s.cast, rels: s.rels });
+        S7.presets.push(p);
+        await savePresets();
+        setStatus(t("ui.dlgb.presetSaved"));
+      } },
+      "-",
+      { label: t("ui.dlgb.mClearTurns"), danger: true, click: async () => {
+        if (!await confirmBox(t("ui.dlgb.confirmClear"))) return;
+        s.turns = [];
+        s.next = nextPair(s, Math.random);
+        touch();
+        await saveSession2();
+        drawSession();
+      } }
+    ]);
+  }
+  async function presetManager() {
+    await loadAll(true);
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-wide");
+    box2.append(el("div", "k-dlg-title", t("ui.dlgb.managePresets")));
+    const list = el("div", "dlgb-preset-list");
+    box2.append(list);
+    function draw2() {
+      list.replaceChildren();
+      if (!S7.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
+      for (const p of S7.presets) {
+        const row2 = el("div", "dlgb-preset-row");
+        const main = el("div", "dlgb-preset-main");
+        main.append(el("div", "dlgb-row-title", p.name));
+        main.append(el(
+          "div",
+          "dlgb-row-sub",
+          (p.cast || []).map((c) => c.name).join(" \xB7 ") || t("ui.dlgb.noCast")
+        ));
+        const bEdit = el("button", "", t("ui.dlgb.edit"));
+        bEdit.onclick = () => castEditor(p, async () => {
+          await savePresets();
+          draw2();
+        });
+        const bDel = el("button", "k-danger", t("ui.dlgb.delete"));
+        bDel.onclick = async () => {
+          if (!await confirmBox(tf("ui.dlgb.confirmDeletePreset", p.name))) return;
+          S7.presets = S7.presets.filter((x) => x !== p);
+          await savePresets();
+          draw2();
+        };
+        row2.append(main, bEdit, bDel);
+        list.append(row2);
+      }
+    }
+    draw2();
+    const btns = el("div", "k-dlg-btns");
+    const bAdd = el("button", "k-ok", t("ui.dlgb.addPreset"));
+    bAdd.onclick = async () => {
+      const v2 = await ask(t("ui.dlgb.presetNameAsk"));
+      if (v2 == null || !v2.trim()) return;
+      const p = newPreset({ name: v2.trim() });
+      S7.presets.push(p);
+      await savePresets();
+      castEditor(p, async () => {
+        await savePresets();
+        draw2();
+      });
+    };
+    const bClose = el("button", "k-cancel", t("ui.common.close"));
+    bClose.onclick = () => {
+      ov.remove();
+      redraw();
+    };
+    btns.append(bAdd, bClose);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) {
+        ov.remove();
+        redraw();
+      }
+    };
+  }
+  async function castEditor(holder, onSave) {
+    const rows = await wikiRows();
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-wide dlgb-cast-dlg");
+    box2.append(el("div", "k-dlg-title", tf("ui.dlgb.castTitle", holder.name || holder.title || "")));
+    const body = el("div", "dlgb-cast-body");
+    box2.append(body);
+    function draw2() {
+      body.replaceChildren();
+      body.append(el("div", "dlgb-sec", tf("ui.dlgb.castCount", (holder.cast || []).length, MAX_CAST)));
+      for (const c of holder.cast || []) body.append(castCard(c));
+      if ((holder.cast || []).length < MAX_CAST) {
+        const add = el("div", "dlgb-add");
+        const sel = el("select", "dlgb-full");
+        const o0 = el("option", "", t("ui.dlgb.pickFromWiki"));
+        o0.value = "";
+        sel.append(o0);
+        for (const r of rows) {
+          if ((holder.cast || []).some((c) => c.name === r.name)) continue;
+          const o = el("option", "", `${r.name} \xB7 ${r.cat}`);
+          o.value = r.path;
+          sel.append(o);
+        }
+        const bAdd = el("button", "", t("ui.dlgb.addToCast"));
+        bAdd.onclick = () => {
+          const r = rows.find((x) => x.path === sel.value);
+          if (!r) return;
+          const m = addCast(holder, {
+            name: r.name,
+            aliases: r.aliases || [],
+            wikiPath: r.path,
+            cat: r.cat,
+            persona: personaFromEntity(r.entity, r.name),
+            blurb: blurbFromEntity(r.entity)
+          });
+          if (!m) {
+            setStatus(tf("ui.dlgb.castFull", MAX_CAST));
+            return;
+          }
+          const byName = {};
+          for (const x of rows) byName[x.name] = x.entity;
+          for (const rel of relsFromEntities(holder.cast, byName)) {
+            if (!relOf(holder, rel.from, rel.to)) {
+              holder.rels = holder.rels || [];
+              holder.rels.push(rel);
+            }
+          }
+          onSave();
+          draw2();
+        };
+        add.append(sel, bAdd);
+        body.append(add);
+        if (!rows.length) body.append(el("div", "dlgb-hint", t("ui.dlgb.noWikiChars")));
+      }
+      const cast = holder.cast || [];
+      if (cast.length >= 2) {
+        body.append(el("div", "dlgb-sec", t("ui.dlgb.relSection")));
+        body.append(el("div", "dlgb-hint", t("ui.dlgb.relHint")));
+        for (const a of cast) for (const b of cast) {
+          if (a.id === b.id) continue;
+          const r = relOf(holder, a.id, b.id) || { how: "", callThem: "" };
+          const card = el("div", "dlgb-rel");
+          card.append(el("div", "dlgb-rel-head", tf("ui.dlgb.relPair", a.name, b.name)));
+          const how = el("input", "dlgb-full");
+          how.placeholder = t("ui.dlgb.relHowPh");
+          how.value = r.how;
+          const call = el("input", "dlgb-pron");
+          call.placeholder = t("ui.dlgb.relCallPh");
+          call.value = r.callThem;
+          const apply4 = () => {
+            setRel(holder, a.id, b.id, { how: how.value, callThem: call.value });
+            onSave();
+          };
+          how.onchange = apply4;
+          call.onchange = apply4;
+          card.append(how, call);
+          body.append(card);
+        }
+      }
+    }
+    function castCard(c) {
+      const card = el("div", "dlgb-cast-card");
+      const head2 = el("div", "dlgb-cast-head");
+      head2.append(el("span", "dlgb-cast-name", c.name));
+      const pron = el("input", "dlgb-pron");
+      pron.placeholder = t("ui.dlgb.selfPronPh");
+      pron.value = c.selfPronoun;
+      pron.title = t("ui.dlgb.selfPronTip");
+      pron.onchange = () => {
+        c.selfPronoun = pron.value.trim();
+        onSave();
+      };
+      const bDel = el("button", "k-danger dlgb-cast-del", "\u2715");
+      bDel.title = t("ui.dlgb.removeFromCast");
+      bDel.onclick = () => {
+        removeCast(holder, c.id);
+        onSave();
+        draw2();
+      };
+      head2.append(pron, bDel);
+      card.append(head2);
+      const blurb = el("input", "dlgb-full");
+      blurb.placeholder = t("ui.dlgb.blurbPh");
+      blurb.value = c.blurb;
+      blurb.title = t("ui.dlgb.blurbTip");
+      blurb.onchange = () => {
+        c.blurb = blurb.value.trim();
+        onSave();
+      };
+      card.append(blurb);
+      const per = el("textarea", "dlgb-ta");
+      per.placeholder = t("ui.dlgb.personaPh");
+      per.value = c.persona;
+      per.onchange = () => {
+        c.persona = per.value;
+        onSave();
+      };
+      card.append(per);
+      const bGen = el("button", "dlgb-mini", t("ui.dlgb.genFromWiki"));
+      bGen.onclick = async () => {
+        const r = (await wikiRows()).find((x) => x.path === c.wikiPath || x.name === c.name);
+        if (!r) {
+          setStatus(t("ui.dlgb.wikiNotFound"));
+          return;
+        }
+        c.persona = personaFromEntity(r.entity, c.name);
+        if (!c.blurb) c.blurb = blurbFromEntity(r.entity);
+        onSave();
+        draw2();
+      };
+      card.append(bGen);
+      const fold = el("details", "dlgb-override");
+      fold.append(el("summary", "dlgb-think-sum", t("ui.dlgb.overrideTitle")));
+      const grid = el("div", "dlgb-override-grid");
+      const pv = el("select");
+      const pv0 = el("option", "", t("ui.dlgb.useProjectProvider"));
+      pv0.value = "";
+      pv.append(pv0);
+      for (const p of providerList()) {
+        const o = el("option", "", p.name);
+        o.value = p.id;
+        pv.append(o);
+      }
+      pv.value = c.providerId || "";
+      pv.onchange = () => {
+        c.providerId = pv.value;
+        onSave();
+      };
+      grid.append(mkField(t("ui.dlgb.providerLabel"), pv));
+      const md = el("input");
+      md.placeholder = t("ui.dlgb.useProviderModel");
+      md.value = c.model || "";
+      md.onchange = () => {
+        c.model = md.value.trim();
+        onSave();
+      };
+      grid.append(mkField(t("ui.dlgb.modelLabel"), md));
+      for (const def of PARAM_DEFS) {
+        if (def.type === "kv") continue;
+        let inp;
+        if (def.type === "select") {
+          inp = el("select");
+          const o0 = el("option", "", t("ui.dlgb.useProviderValue"));
+          o0.value = "";
+          inp.append(o0);
+          for (const v2 of def.options) {
+            if (v2 === "") continue;
+            const o = el("option", "", v2);
+            o.value = v2;
+            inp.append(o);
+          }
+        } else {
+          inp = el("input");
+          inp.type = "number";
+          if (def.min != null) inp.min = def.min;
+          if (def.max != null) inp.max = def.max;
+          if (def.step != null) inp.step = def.step;
+          inp.placeholder = t("ui.dlgb.useProviderValue");
+        }
+        const cv = c.params ? c.params[def.key] : void 0;
+        inp.value = cv == null ? "" : String(cv);
+        inp.onchange = () => {
+          c.params = c.params || {};
+          const raw = inp.value.trim();
+          if (raw === "") delete c.params[def.key];
+          else c.params[def.key] = def.type === "select" ? raw : Number(raw);
+          onSave();
+        };
+        grid.append(mkField(def.label, inp, def.th));
+      }
+      fold.append(grid);
+      card.append(fold);
+      return card;
+    }
+    function mkField(label, inp, tip) {
+      const w = el("div", "dlgb-field");
+      const l = el("label", "", label);
+      if (tip) l.title = tip;
+      w.append(l, inp);
+      return w;
+    }
+    draw2();
+    const btns = el("div", "k-dlg-btns");
+    const bClose = el("button", "k-ok", t("ui.common.close"));
+    bClose.onclick = () => {
+      ov.remove();
+      if (S7.view === "session") drawSession();
+    };
+    btns.append(bClose);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) {
+        ov.remove();
+        if (S7.view === "session") drawSession();
+      }
+    };
+  }
+  function builderState() {
+    return S7;
+  }
+  var S7;
+  var init_builder_ui = __esm({
+    "src/dialogue/builder-ui.js"() {
+      init_i18n();
+      init_core();
+      init_ui();
+      init_project_scan();
+      init_ai_provider_ui();
+      init_ai_settings();
+      init_ai_providers();
+      init_builder_core();
+      S7 = {
+        host: null,
+        root: null,
+        // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
+        view: "list",
+        // list | session
+        sessions: [],
+        // [{ file, data }]
+        presets: [],
+        cur: null,
+        // เซสชันที่เปิดอยู่
+        curFile: "",
+        savedAt: 0,
+        // เวลาที่บันทึกครั้งล่าสุด (ใช้คู่ sessionDirty)
+        query: "",
+        showArchived: false,
+        sending: false,
+        showThinking: false,
+        // 💬 ปกติ / 🧠 ความคิด
+        entities: null
+        // แคชรายชื่อจาก Wiki
+      };
+    }
+  });
+
+  // src/text-measure.js
+  var text_measure_exports = {};
+  __export(text_measure_exports, {
+    installTextMeasurer: () => installTextMeasurer,
+    refreshTextMeasurer: () => refreshTextMeasurer,
+    textMeasurerInfo: () => textMeasurerInfo,
+    uninstallTextMeasurer: () => uninstallTextMeasurer
+  });
+  function ctx() {
+    if (_ctx2) return _ctx2;
+    try {
+      const cv = document.createElement("canvas");
+      cv.width = 1;
+      cv.height = 1;
+      _ctx2 = cv.getContext("2d");
+    } catch {
+      _ctx2 = null;
+    }
+    return _ctx2;
+  }
+  function cssVar2(name5) {
+    try {
+      return getComputedStyle(document.documentElement).getPropertyValue(name5).trim();
+    } catch {
+      return "";
+    }
+  }
+  function fontFor(kind) {
+    const isSp = kind !== "prose";
+    const size = cssVar2(isSp ? "--sp-fs" : "--ed-fs") || "16px";
+    const family = cssVar2(isSp ? "--sp-font" : "--ed-font") || (isSp ? '"Courier Prime", monospace' : "Georgia, serif");
+    return `${size} ${family}`;
+  }
+  function installTextMeasurer() {
+    if (!ctx()) {
+      setMeasurer(null);
+      return false;
+    }
+    refreshTextMeasurer();
+    setMeasurer((text, kind) => {
+      const c = ctx();
+      if (!c) return NaN;
+      const k = kind === "prose" ? "prose" : "sp";
+      let font = _fontOf[k];
+      if (!font) {
+        font = _fontOf[k] = fontFor(k);
+      }
+      const key2 = font + "\0" + text;
+      const hit = _cache.get(key2);
+      if (hit !== void 0) return hit;
+      if (_cache.size >= CACHE_CAP) _cache.clear();
+      c.font = font;
+      let w = NaN;
+      try {
+        w = c.measureText(text).width;
+      } catch {
+        return NaN;
+      }
+      if (!Number.isFinite(w)) return NaN;
+      _cache.set(key2, w);
+      return w;
+    });
+    return true;
+  }
+  function refreshTextMeasurer() {
+    _cache = /* @__PURE__ */ new Map();
+    _fontOf = { sp: "", prose: "" };
+    bumpMeasureEpoch();
+  }
+  function uninstallTextMeasurer() {
+    setMeasurer(null);
+    refreshTextMeasurer();
+  }
+  function textMeasurerInfo() {
+    return {
+      sp: _fontOf.sp || fontFor("sp"),
+      prose: _fontOf.prose || fontFor("prose"),
+      cached: _cache.size,
+      ok: !!ctx()
+    };
+  }
+  var CACHE_CAP, _ctx2, _cache, _fontOf;
+  var init_text_measure = __esm({
+    "src/text-measure.js"() {
+      init_text_width();
+      CACHE_CAP = 2e4;
+      _ctx2 = null;
+      _cache = /* @__PURE__ */ new Map();
+      _fontOf = { sp: "", prose: "" };
+    }
+  });
+
   // src/export-formats.js
   function docKind(model) {
     let sp = 0, pr = 0;
@@ -86279,7 +88491,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function exportPageNumberFmt(fmt) {
     const f = fmt || {};
-    return { ...f, pageNumbers: { ...f.pageNumbers || {}, firstPage: true } };
+    return { ...f, pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...f.pageNumbers || {} } };
   }
   function defaultHubSettings() {
     return {
@@ -86344,6 +88556,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     "src/export-formats.js"() {
       init_compile();
       init_num();
+      init_sp_format();
       EXPORT_FORMATS = [
         {
           key: "pdf",
@@ -86687,10 +88900,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const n2 = Math.round(num(v2, d));
     return Math.max(0, Math.min(10, Number.isFinite(n2) ? n2 : d));
   }
-  function resolveHeaderVars(text, ctx = {}) {
+  function resolveHeaderVars(text, ctx2 = {}) {
     const map2 = /* @__PURE__ */ new Map();
     for (const v2 of HEADER_VARS) {
-      const val = ctx[v2.key] ?? ctx[v2.key.toLowerCase()] ?? "";
+      const val = ctx2[v2.key] ?? ctx2[v2.key.toLowerCase()] ?? "";
       map2.set(v2.key.toLowerCase(), String(val));
       map2.set(v2.th, String(val));
     }
@@ -86717,12 +88930,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     ));
     return Math.max(4, total - headerLineCount(hdr));
   }
-  function headerStringsFor(index, hdr, ctx = {}) {
+  function headerStringsFor(index, hdr, ctx2 = {}) {
     const h = hdr && "strings" in hdr ? hdr : mergeHeaders(hdr);
     if (!h.enabled) return [];
     const i5 = Math.max(1, Math.round(num(index, 1)));
     if (i5 === 1 && !h.firstPage) return [];
-    const c = { ...ctx, PAGE: ctx.PAGE ?? i5 };
+    const c = { ...ctx2, PAGE: ctx2.PAGE ?? i5 };
     return visibleRows2(h).map((r) => {
       let text = resolveHeaderVars(r.text, c);
       if (r.caps) text = text.toUpperCase();
@@ -96237,12 +98450,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               d = l(b.u, (1 << j) - 1, J2 + h, N, d, b.v);
               var r = V2.V(b.v, 0, J2, b.C);
               X2 = (1 << r) - 1;
-              var S7 = V2.V(b.v, J2, h, b.D);
-              u = (1 << S7) - 1;
+              var S8 = V2.V(b.v, J2, h, b.D);
+              u = (1 << S8) - 1;
               M2(b.C, r);
               I(b.C, r, v2);
-              M2(b.D, S7);
-              I(b.D, S7, C);
+              M2(b.D, S8);
+              I(b.D, S8, C);
             }
             while (true) {
               var T3 = v2[e(N, d) & X2];
@@ -107877,7 +110090,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function cwd() {
     return "/";
   }
-  function chdir(dir) {
+  function chdir(dir2) {
     throw new Error("process.chdir is not supported");
   }
   function umask() {
@@ -107983,23 +110196,23 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return debugs[set];
   }
   function inspect(obj, opts) {
-    var ctx = {
+    var ctx2 = {
       seen: [],
       stylize: stylizeNoColor
     };
-    if (arguments.length >= 3) ctx.depth = arguments[2];
-    if (arguments.length >= 4) ctx.colors = arguments[3];
+    if (arguments.length >= 3) ctx2.depth = arguments[2];
+    if (arguments.length >= 4) ctx2.colors = arguments[3];
     if (isBoolean2(opts)) {
-      ctx.showHidden = opts;
+      ctx2.showHidden = opts;
     } else if (opts) {
-      _extend(ctx, opts);
+      _extend(ctx2, opts);
     }
-    if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-    if (isUndefined(ctx.depth)) ctx.depth = 2;
-    if (isUndefined(ctx.colors)) ctx.colors = false;
-    if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-    if (ctx.colors) ctx.stylize = stylizeWithColor;
-    return formatValue2(ctx, obj, ctx.depth);
+    if (isUndefined(ctx2.showHidden)) ctx2.showHidden = false;
+    if (isUndefined(ctx2.depth)) ctx2.depth = 2;
+    if (isUndefined(ctx2.colors)) ctx2.colors = false;
+    if (isUndefined(ctx2.customInspect)) ctx2.customInspect = true;
+    if (ctx2.colors) ctx2.stylize = stylizeWithColor;
+    return formatValue2(ctx2, obj, ctx2.depth);
   }
   function stylizeWithColor(str2, styleType) {
     var style = inspect.styles[styleType];
@@ -108019,23 +110232,23 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     });
     return hash2;
   }
-  function formatValue2(ctx, value, recurseTimes) {
-    if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
+  function formatValue2(ctx2, value, recurseTimes) {
+    if (ctx2.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
     value.inspect !== inspect && // Also filter out any prototype objects using the circular check.
     !(value.constructor && value.constructor.prototype === value)) {
-      var ret = value.inspect(recurseTimes, ctx);
+      var ret = value.inspect(recurseTimes, ctx2);
       if (!isString2(ret)) {
-        ret = formatValue2(ctx, ret, recurseTimes);
+        ret = formatValue2(ctx2, ret, recurseTimes);
       }
       return ret;
     }
-    var primitive = formatPrimitive(ctx, value);
+    var primitive = formatPrimitive(ctx2, value);
     if (primitive) {
       return primitive;
     }
     var keys4 = Object.keys(value);
     var visibleKeys = arrayToHash(keys4);
-    if (ctx.showHidden) {
+    if (ctx2.showHidden) {
       keys4 = Object.getOwnPropertyNames(value);
     }
     if (isError(value) && (keys4.indexOf("message") >= 0 || keys4.indexOf("description") >= 0)) {
@@ -108044,13 +110257,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (keys4.length === 0) {
       if (isFunction(value)) {
         var name5 = value.name ? ": " + value.name : "";
-        return ctx.stylize("[Function" + name5 + "]", "special");
+        return ctx2.stylize("[Function" + name5 + "]", "special");
       }
       if (isRegExp(value)) {
-        return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+        return ctx2.stylize(RegExp.prototype.toString.call(value), "regexp");
       }
       if (isDate(value)) {
-        return ctx.stylize(Date.prototype.toString.call(value), "date");
+        return ctx2.stylize(Date.prototype.toString.call(value), "date");
       }
       if (isError(value)) {
         return formatError(value);
@@ -108079,77 +110292,77 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     if (recurseTimes < 0) {
       if (isRegExp(value)) {
-        return ctx.stylize(RegExp.prototype.toString.call(value), "regexp");
+        return ctx2.stylize(RegExp.prototype.toString.call(value), "regexp");
       } else {
-        return ctx.stylize("[Object]", "special");
+        return ctx2.stylize("[Object]", "special");
       }
     }
-    ctx.seen.push(value);
+    ctx2.seen.push(value);
     var output;
     if (array) {
-      output = formatArray(ctx, value, recurseTimes, visibleKeys, keys4);
+      output = formatArray(ctx2, value, recurseTimes, visibleKeys, keys4);
     } else {
       output = keys4.map(function(key2) {
-        return formatProperty(ctx, value, recurseTimes, visibleKeys, key2, array);
+        return formatProperty(ctx2, value, recurseTimes, visibleKeys, key2, array);
       });
     }
-    ctx.seen.pop();
+    ctx2.seen.pop();
     return reduceToSingleString(output, base3, braces);
   }
-  function formatPrimitive(ctx, value) {
-    if (isUndefined(value)) return ctx.stylize("undefined", "undefined");
+  function formatPrimitive(ctx2, value) {
+    if (isUndefined(value)) return ctx2.stylize("undefined", "undefined");
     if (isString2(value)) {
       var simple = "'" + JSON.stringify(value).replace(/^"|"$/g, "").replace(/'/g, "\\'").replace(/\\"/g, '"') + "'";
-      return ctx.stylize(simple, "string");
+      return ctx2.stylize(simple, "string");
     }
-    if (isNumber2(value)) return ctx.stylize("" + value, "number");
-    if (isBoolean2(value)) return ctx.stylize("" + value, "boolean");
-    if (isNull(value)) return ctx.stylize("null", "null");
+    if (isNumber2(value)) return ctx2.stylize("" + value, "number");
+    if (isBoolean2(value)) return ctx2.stylize("" + value, "boolean");
+    if (isNull(value)) return ctx2.stylize("null", "null");
   }
   function formatError(value) {
     return "[" + Error.prototype.toString.call(value) + "]";
   }
-  function formatArray(ctx, value, recurseTimes, visibleKeys, keys4) {
+  function formatArray(ctx2, value, recurseTimes, visibleKeys, keys4) {
     var output = [];
     for (var i5 = 0, l = value.length; i5 < l; ++i5) {
       if (hasOwnProperty(value, String(i5))) {
-        output.push(formatProperty(ctx, value, recurseTimes, visibleKeys, String(i5), true));
+        output.push(formatProperty(ctx2, value, recurseTimes, visibleKeys, String(i5), true));
       } else {
         output.push("");
       }
     }
     keys4.forEach(function(key2) {
       if (!key2.match(/^\d+$/)) {
-        output.push(formatProperty(ctx, value, recurseTimes, visibleKeys, key2, true));
+        output.push(formatProperty(ctx2, value, recurseTimes, visibleKeys, key2, true));
       }
     });
     return output;
   }
-  function formatProperty(ctx, value, recurseTimes, visibleKeys, key2, array) {
+  function formatProperty(ctx2, value, recurseTimes, visibleKeys, key2, array) {
     var name5, str2, desc;
     desc = Object.getOwnPropertyDescriptor(value, key2) || {
       value: value[key2]
     };
     if (desc.get) {
       if (desc.set) {
-        str2 = ctx.stylize("[Getter/Setter]", "special");
+        str2 = ctx2.stylize("[Getter/Setter]", "special");
       } else {
-        str2 = ctx.stylize("[Getter]", "special");
+        str2 = ctx2.stylize("[Getter]", "special");
       }
     } else {
       if (desc.set) {
-        str2 = ctx.stylize("[Setter]", "special");
+        str2 = ctx2.stylize("[Setter]", "special");
       }
     }
     if (!hasOwnProperty(visibleKeys, key2)) {
       name5 = "[" + key2 + "]";
     }
     if (!str2) {
-      if (ctx.seen.indexOf(desc.value) < 0) {
+      if (ctx2.seen.indexOf(desc.value) < 0) {
         if (isNull(recurseTimes)) {
-          str2 = formatValue2(ctx, desc.value, null);
+          str2 = formatValue2(ctx2, desc.value, null);
         } else {
-          str2 = formatValue2(ctx, desc.value, recurseTimes - 1);
+          str2 = formatValue2(ctx2, desc.value, recurseTimes - 1);
         }
         if (str2.indexOf("\n") > -1) {
           if (array) {
@@ -108163,7 +110376,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         }
       } else {
-        str2 = ctx.stylize("[Circular]", "special");
+        str2 = ctx2.stylize("[Circular]", "special");
       }
     }
     if (isUndefined(name5)) {
@@ -108173,10 +110386,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       name5 = JSON.stringify("" + key2);
       if (name5.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
         name5 = name5.substr(1, name5.length - 2);
-        name5 = ctx.stylize(name5, "name");
+        name5 = ctx2.stylize(name5, "name");
       } else {
         name5 = name5.replace(/'/g, "\\'").replace(/\\"/g, '"').replace(/(^"|"$)/g, "'");
-        name5 = ctx.stylize(name5, "string");
+        name5 = ctx2.stylize(name5, "string");
       }
     }
     return name5 + ": " + str2;
@@ -113314,7 +115527,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           if (y < x) return 1;
           return 0;
         };
-        function bidirectionalIndexOf(buffer2, val, byteOffset, encoding, dir) {
+        function bidirectionalIndexOf(buffer2, val, byteOffset, encoding, dir2) {
           if (buffer2.length === 0) return -1;
           if (typeof byteOffset === "string") {
             encoding = byteOffset;
@@ -113326,14 +115539,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           byteOffset = +byteOffset;
           if (numberIsNaN3(byteOffset)) {
-            byteOffset = dir ? 0 : buffer2.length - 1;
+            byteOffset = dir2 ? 0 : buffer2.length - 1;
           }
           if (byteOffset < 0) byteOffset = buffer2.length + byteOffset;
           if (byteOffset >= buffer2.length) {
-            if (dir) return -1;
+            if (dir2) return -1;
             else byteOffset = buffer2.length - 1;
           } else if (byteOffset < 0) {
-            if (dir) byteOffset = 0;
+            if (dir2) byteOffset = 0;
             else return -1;
           }
           if (typeof val === "string") {
@@ -113343,21 +115556,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             if (val.length === 0) {
               return -1;
             }
-            return arrayIndexOf(buffer2, val, byteOffset, encoding, dir);
+            return arrayIndexOf(buffer2, val, byteOffset, encoding, dir2);
           } else if (typeof val === "number") {
             val = val & 255;
             if (typeof Uint8Array.prototype.indexOf === "function") {
-              if (dir) {
+              if (dir2) {
                 return Uint8Array.prototype.indexOf.call(buffer2, val, byteOffset);
               } else {
                 return Uint8Array.prototype.lastIndexOf.call(buffer2, val, byteOffset);
               }
             }
-            return arrayIndexOf(buffer2, [val], byteOffset, encoding, dir);
+            return arrayIndexOf(buffer2, [val], byteOffset, encoding, dir2);
           }
           throw new TypeError("val must be string, number or Buffer");
         }
-        function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
+        function arrayIndexOf(arr, val, byteOffset, encoding, dir2) {
           var indexSize = 1;
           var arrLength = arr.length;
           var valLength = val.length;
@@ -113381,7 +115594,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
           var i5;
-          if (dir) {
+          if (dir2) {
             var foundIndex = -1;
             for (i5 = byteOffset; i5 < arrLength; i5++) {
               if (read3(arr, i5) === read3(val, foundIndex === -1 ? 0 : i5 - foundIndex)) {
@@ -125697,10 +127910,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               this.lengthType = lengthType != null ? lengthType : "count";
             }
             ArrayT2.prototype.decode = function(stream2, parent) {
-              var ctx, i5, length, pos, res, target, _i2;
+              var ctx2, i5, length, pos, res, target, _i2;
               pos = stream2.pos;
               res = [];
-              ctx = parent;
+              ctx2 = parent;
               if (this.length != null) {
                 length = utils$1.resolveLength(this.length, stream2, parent);
               }
@@ -125720,58 +127933,58 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                     value: length
                   }
                 });
-                ctx = res;
+                ctx2 = res;
               }
               if (length == null || this.lengthType === "bytes") {
                 target = length != null ? stream2.pos + length : (parent != null ? parent._length : void 0) ? parent._startOffset + parent._length : stream2.length;
                 while (stream2.pos < target) {
-                  res.push(this.type.decode(stream2, ctx));
+                  res.push(this.type.decode(stream2, ctx2));
                 }
               } else {
                 for (i5 = _i2 = 0; _i2 < length; i5 = _i2 += 1) {
-                  res.push(this.type.decode(stream2, ctx));
+                  res.push(this.type.decode(stream2, ctx2));
                 }
               }
               return res;
             };
-            ArrayT2.prototype.size = function(array, ctx) {
+            ArrayT2.prototype.size = function(array, ctx2) {
               var item, size, _i2, _len;
               if (!array) {
-                return this.type.size(null, ctx) * utils$1.resolveLength(this.length, null, ctx);
+                return this.type.size(null, ctx2) * utils$1.resolveLength(this.length, null, ctx2);
               }
               size = 0;
               if (this.length instanceof NumberT) {
                 size += this.length.size();
-                ctx = {
-                  parent: ctx
+                ctx2 = {
+                  parent: ctx2
                 };
               }
               for (_i2 = 0, _len = array.length; _i2 < _len; _i2++) {
                 item = array[_i2];
-                size += this.type.size(item, ctx);
+                size += this.type.size(item, ctx2);
               }
               return size;
             };
             ArrayT2.prototype.encode = function(stream2, array, parent) {
-              var ctx, i5, item, ptr2, _i2, _len;
-              ctx = parent;
+              var ctx2, i5, item, ptr2, _i2, _len;
+              ctx2 = parent;
               if (this.length instanceof NumberT) {
-                ctx = {
+                ctx2 = {
                   pointers: [],
                   startOffset: stream2.pos,
                   parent
                 };
-                ctx.pointerOffset = stream2.pos + this.size(array, ctx);
+                ctx2.pointerOffset = stream2.pos + this.size(array, ctx2);
                 this.length.encode(stream2, array.length);
               }
               for (_i2 = 0, _len = array.length; _i2 < _len; _i2++) {
                 item = array[_i2];
-                this.type.encode(stream2, item, ctx);
+                this.type.encode(stream2, item, ctx2);
               }
               if (this.length instanceof NumberT) {
                 i5 = 0;
-                while (i5 < ctx.pointers.length) {
-                  ptr2 = ctx.pointers[i5++];
+                while (i5 < ctx2.pointers.length) {
+                  ptr2 = ctx2.pointers[i5++];
                   ptr2.type.encode(stream2, ptr2.val);
                 }
               }
@@ -125820,26 +128033,26 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               stream2.pos += length * this.type.size(null, parent);
               return res;
             };
-            LazyArrayT2.prototype.size = function(val, ctx) {
+            LazyArrayT2.prototype.size = function(val, ctx2) {
               if (val instanceof LazyArray2) {
                 val = val.toArray();
               }
-              return LazyArrayT2.__super__.size.call(this, val, ctx);
+              return LazyArrayT2.__super__.size.call(this, val, ctx2);
             };
-            LazyArrayT2.prototype.encode = function(stream2, val, ctx) {
+            LazyArrayT2.prototype.encode = function(stream2, val, ctx2) {
               if (val instanceof LazyArray2) {
                 val = val.toArray();
               }
-              return LazyArrayT2.__super__.encode.call(this, stream2, val, ctx);
+              return LazyArrayT2.__super__.encode.call(this, stream2, val, ctx2);
             };
             return LazyArrayT2;
           })(ArrayT);
           LazyArray2 = (function() {
-            function LazyArray3(type, length, stream2, ctx) {
+            function LazyArray3(type, length, stream2, ctx2) {
               this.type = type;
               this.length = length;
               this.stream = stream2;
-              this.ctx = ctx;
+              this.ctx = ctx2;
               this.base = this.stream.pos;
               this.items = [];
             }
@@ -126200,14 +128413,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               }
             };
             Struct3.prototype.size = function(val, parent, includePointers) {
-              var ctx, key2, size, type, _ref;
+              var ctx2, key2, size, type, _ref;
               if (val == null) {
                 val = {};
               }
               if (includePointers == null) {
                 includePointers = true;
               }
-              ctx = {
+              ctx2 = {
                 parent,
                 val,
                 pointerSize: 0
@@ -126217,37 +128430,37 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               for (key2 in _ref) {
                 type = _ref[key2];
                 if (type.size != null) {
-                  size += type.size(val[key2], ctx);
+                  size += type.size(val[key2], ctx2);
                 }
               }
               if (includePointers) {
-                size += ctx.pointerSize;
+                size += ctx2.pointerSize;
               }
               return size;
             };
             Struct3.prototype.encode = function(stream2, val, parent) {
-              var ctx, i5, key2, ptr2, type, _ref, _ref1;
+              var ctx2, i5, key2, ptr2, type, _ref, _ref1;
               if ((_ref = this.preEncode) != null) {
                 _ref.call(val, stream2);
               }
-              ctx = {
+              ctx2 = {
                 pointers: [],
                 startOffset: stream2.pos,
                 parent,
                 val,
                 pointerSize: 0
               };
-              ctx.pointerOffset = stream2.pos + this.size(val, ctx, false);
+              ctx2.pointerOffset = stream2.pos + this.size(val, ctx2, false);
               _ref1 = this.fields;
               for (key2 in _ref1) {
                 type = _ref1[key2];
                 if (type.encode != null) {
-                  type.encode(stream2, val[key2], ctx);
+                  type.encode(stream2, val[key2], ctx2);
                 }
               }
               i5 = 0;
-              while (i5 < ctx.pointers.length) {
-                ptr2 = ctx.pointers[i5++];
+              while (i5 < ctx2.pointers.length) {
+                ptr2 = ctx2.pointers[i5++];
                 ptr2.type.encode(stream2, ptr2.val, ptr2.parent);
               }
             };
@@ -126323,28 +128536,28 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               return res;
             };
             VersionedStruct3.prototype.size = function(val, parent, includePointers) {
-              var ctx, fields, key2, size, type, _ref;
+              var ctx2, fields, key2, size, type, _ref;
               if (includePointers == null) {
                 includePointers = true;
               }
               if (!val) {
                 throw new Error("Not a fixed size");
               }
-              ctx = {
+              ctx2 = {
                 parent,
                 val,
                 pointerSize: 0
               };
               size = 0;
               if (typeof this.type !== "string") {
-                size += this.type.size(val.version, ctx);
+                size += this.type.size(val.version, ctx2);
               }
               if (this.versions.header) {
                 _ref = this.versions.header;
                 for (key2 in _ref) {
                   type = _ref[key2];
                   if (type.size != null) {
-                    size += type.size(val[key2], ctx);
+                    size += type.size(val[key2], ctx2);
                   }
                 }
               }
@@ -126355,27 +128568,27 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               for (key2 in fields) {
                 type = fields[key2];
                 if (type.size != null) {
-                  size += type.size(val[key2], ctx);
+                  size += type.size(val[key2], ctx2);
                 }
               }
               if (includePointers) {
-                size += ctx.pointerSize;
+                size += ctx2.pointerSize;
               }
               return size;
             };
             VersionedStruct3.prototype.encode = function(stream2, val, parent) {
-              var ctx, fields, i5, key2, ptr2, type, _ref, _ref1;
+              var ctx2, fields, i5, key2, ptr2, type, _ref, _ref1;
               if ((_ref = this.preEncode) != null) {
                 _ref.call(val, stream2);
               }
-              ctx = {
+              ctx2 = {
                 pointers: [],
                 startOffset: stream2.pos,
                 parent,
                 val,
                 pointerSize: 0
               };
-              ctx.pointerOffset = stream2.pos + this.size(val, ctx, false);
+              ctx2.pointerOffset = stream2.pos + this.size(val, ctx2, false);
               if (typeof this.type !== "string") {
                 this.type.encode(stream2, val.version);
               }
@@ -126384,7 +128597,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 for (key2 in _ref1) {
                   type = _ref1[key2];
                   if (type.encode != null) {
-                    type.encode(stream2, val[key2], ctx);
+                    type.encode(stream2, val[key2], ctx2);
                   }
                 }
               }
@@ -126392,12 +128605,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               for (key2 in fields) {
                 type = fields[key2];
                 if (type.encode != null) {
-                  type.encode(stream2, val[key2], ctx);
+                  type.encode(stream2, val[key2], ctx2);
                 }
               }
               i5 = 0;
-              while (i5 < ctx.pointers.length) {
-                ptr2 = ctx.pointers[i5++];
+              while (i5 < ctx2.pointers.length) {
+                ptr2 = ctx2.pointers[i5++];
                 ptr2.type.encode(stream2, ptr2.val, ptr2.parent);
               }
             };
@@ -126432,27 +128645,27 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 _base3.lazy = false;
               }
             }
-            Pointer3.prototype.relativeToGetter = function(ctx) {
+            Pointer3.prototype.relativeToGetter = function(ctx2) {
               return this.options.relativeTo.split(".").reduce(function(obj, prop) {
                 return obj[prop];
-              }, ctx);
+              }, ctx2);
             };
-            Pointer3.prototype.decode = function(stream2, ctx) {
+            Pointer3.prototype.decode = function(stream2, ctx2) {
               var c, decodeValue, offset, ptr2, relative, val;
-              offset = this.offsetType.decode(stream2, ctx);
+              offset = this.offsetType.decode(stream2, ctx2);
               if (offset === this.options.nullValue && this.options.allowNull) {
                 return null;
               }
               relative = function() {
                 switch (this.options.type) {
                   case "local":
-                    return ctx._startOffset;
+                    return ctx2._startOffset;
                   case "immediate":
                     return stream2.pos - this.offsetType.size();
                   case "parent":
-                    return ctx.parent._startOffset;
+                    return ctx2.parent._startOffset;
                   default:
-                    c = ctx;
+                    c = ctx2;
                     while (c.parent) {
                       c = c.parent;
                     }
@@ -126460,7 +128673,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 }
               }.call(this);
               if (this.options.relativeTo) {
-                relative += this.relativeToGetter(ctx);
+                relative += this.relativeToGetter(ctx2);
               }
               ptr2 = offset + relative;
               if (this.type != null) {
@@ -126473,7 +128686,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                     }
                     pos = stream2.pos;
                     stream2.pos = ptr2;
-                    val = _this.type.decode(stream2, ctx);
+                    val = _this.type.decode(stream2, ctx2);
                     stream2.pos = pos;
                     return val;
                   };
@@ -126488,19 +128701,19 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 return ptr2;
               }
             };
-            Pointer3.prototype.size = function(val, ctx) {
+            Pointer3.prototype.size = function(val, ctx2) {
               var parent, type;
-              parent = ctx;
+              parent = ctx2;
               switch (this.options.type) {
                 case "local":
                 case "immediate":
                   break;
                 case "parent":
-                  ctx = ctx.parent;
+                  ctx2 = ctx2.parent;
                   break;
                 default:
-                  while (ctx.parent) {
-                    ctx = ctx.parent;
+                  while (ctx2.parent) {
+                    ctx2 = ctx2.parent;
                   }
               }
               type = this.type;
@@ -126511,39 +128724,39 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 type = val.type;
                 val = val.value;
               }
-              if (val && ctx) {
-                ctx.pointerSize += type.size(val, parent);
+              if (val && ctx2) {
+                ctx2.pointerSize += type.size(val, parent);
               }
               return this.offsetType.size();
             };
-            Pointer3.prototype.encode = function(stream2, val, ctx) {
+            Pointer3.prototype.encode = function(stream2, val, ctx2) {
               var parent, relative, type;
-              parent = ctx;
+              parent = ctx2;
               if (val == null) {
                 this.offsetType.encode(stream2, this.options.nullValue);
                 return;
               }
               switch (this.options.type) {
                 case "local":
-                  relative = ctx.startOffset;
+                  relative = ctx2.startOffset;
                   break;
                 case "immediate":
                   relative = stream2.pos + this.offsetType.size(val, parent);
                   break;
                 case "parent":
-                  ctx = ctx.parent;
-                  relative = ctx.startOffset;
+                  ctx2 = ctx2.parent;
+                  relative = ctx2.startOffset;
                   break;
                 default:
                   relative = 0;
-                  while (ctx.parent) {
-                    ctx = ctx.parent;
+                  while (ctx2.parent) {
+                    ctx2 = ctx2.parent;
                   }
               }
               if (this.options.relativeTo) {
                 relative += this.relativeToGetter(parent.val);
               }
-              this.offsetType.encode(stream2, ctx.pointerOffset - relative);
+              this.offsetType.encode(stream2, ctx2.pointerOffset - relative);
               type = this.type;
               if (type == null) {
                 if (!(val instanceof VoidPointer)) {
@@ -126552,12 +128765,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 type = val.type;
                 val = val.value;
               }
-              ctx.pointers.push({
+              ctx2.pointers.push({
                 type,
                 val,
                 parent
               });
-              return ctx.pointerOffset += type.size(val, parent);
+              return ctx2.pointerOffset += type.size(val, parent);
             };
             return Pointer3;
           })();
@@ -127560,11 +129773,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           this.type = type;
         }
         var _proto = CFFIndex2.prototype;
-        _proto.getCFFVersion = function getCFFVersion(ctx) {
-          while (ctx && !ctx.hdrSize) {
-            ctx = ctx.parent;
+        _proto.getCFFVersion = function getCFFVersion(ctx2) {
+          while (ctx2 && !ctx2.hdrSize) {
+            ctx2 = ctx2.parent;
           }
-          return ctx ? ctx.version : -1;
+          return ctx2 ? ctx2.version : -1;
         };
         _proto.decode = function decode3(stream2, parent) {
           var version2 = this.getCFFVersion(parent);
@@ -128482,14 +130695,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
         };
-        _proto.encodeOperands = function encodeOperands(type, stream2, ctx, operands) {
+        _proto.encodeOperands = function encodeOperands(type, stream2, ctx2, operands) {
           var _this2 = this;
           if (Array.isArray(type)) {
             return operands.map(function(op, i5) {
-              return _this2.encodeOperands(type[i5], stream2, ctx, op)[0];
+              return _this2.encodeOperands(type[i5], stream2, ctx2, op)[0];
             });
           } else if (type.encode != null) {
-            return type.encode(stream2, operands, ctx);
+            return type.encode(stream2, operands, ctx2);
           } else if (typeof operands === "number") {
             return [operands];
           } else if (typeof operands === "boolean") {
@@ -128545,7 +130758,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           if (includePointers === void 0) {
             includePointers = true;
           }
-          var ctx = {
+          var ctx2 = {
             parent,
             val: dict,
             pointerSize: 0,
@@ -128558,7 +130771,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             if (val == null || deepEqual_1(val, field[3])) {
               continue;
             }
-            var operands = this.encodeOperands(field[2], null, ctx, val);
+            var operands = this.encodeOperands(field[2], null, ctx2, val);
             for (var _iterator2 = _createForOfIteratorHelperLoose$2(operands), _step2; !(_step2 = _iterator2()).done; ) {
               var op = _step2.value;
               len5 += CFFOperand.size(op);
@@ -128567,26 +130780,26 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             len5 += key2.length;
           }
           if (includePointers) {
-            len5 += ctx.pointerSize;
+            len5 += ctx2.pointerSize;
           }
           return len5;
         };
         _proto.encode = function encode(stream2, dict, parent) {
-          var ctx = {
+          var ctx2 = {
             pointers: [],
             startOffset: stream2.pos,
             parent,
             val: dict,
             pointerSize: 0
           };
-          ctx.pointerOffset = stream2.pos + this.size(dict, ctx, false);
+          ctx2.pointerOffset = stream2.pos + this.size(dict, ctx2, false);
           for (var _iterator3 = _createForOfIteratorHelperLoose$2(this.ops), _step3; !(_step3 = _iterator3()).done; ) {
             var field = _step3.value;
             var val = dict[field[1]];
             if (val == null || deepEqual_1(val, field[3])) {
               continue;
             }
-            var operands = this.encodeOperands(field[2], stream2, ctx, val);
+            var operands = this.encodeOperands(field[2], stream2, ctx2, val);
             for (var _iterator4 = _createForOfIteratorHelperLoose$2(operands), _step4; !(_step4 = _iterator4()).done; ) {
               var op = _step4.value;
               CFFOperand.encode(stream2, op);
@@ -128598,8 +130811,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
           var i5 = 0;
-          while (i5 < ctx.pointers.length) {
-            var ptr2 = ctx.pointers[i5++];
+          while (i5 < ctx2.pointers.length) {
+            var ptr2 = ctx2.pointers[i5++];
             ptr2.type.encode(stream2, ptr2.val, ptr2.parent);
           }
           return;
@@ -128626,14 +130839,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           };
           return _r$Pointer.prototype.decode.call(this, stream2, parent, operands);
         };
-        _proto.encode = function encode(stream2, value, ctx) {
+        _proto.encode = function encode(stream2, value, ctx2) {
           if (!stream2) {
             this.offsetType = {
               size: function size() {
                 return 0;
               }
             };
-            this.size(value, ctx);
+            this.size(value, ctx2);
             return [new Ptr(0)];
           }
           var ptr2 = null;
@@ -128642,7 +130855,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               return ptr2 = val;
             }
           };
-          _r$Pointer.prototype.encode.call(this, stream2, value, ctx);
+          _r$Pointer.prototype.encode.call(this, stream2, value, ctx2);
           return [new Ptr(ptr2)];
         };
         return CFFPointer2;
@@ -128946,15 +131159,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return this.type.decode(stream2, parent, operands);
         };
-        _proto.size = function size(value, ctx) {
-          return this.type.size(value, ctx);
+        _proto.size = function size(value, ctx2) {
+          return this.type.size(value, ctx2);
         };
-        _proto.encode = function encode(stream2, value, ctx) {
+        _proto.encode = function encode(stream2, value, ctx2) {
           var index = this.predefinedOps.indexOf(value);
           if (index !== -1) {
             return index;
           }
-          return this.type.encode(stream2, value, ctx);
+          return this.type.encode(stream2, value, ctx2);
         };
         return PredefinedOp2;
       })();
@@ -129065,11 +131278,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           parent.length = operands[0];
           return ptr.decode(stream2, parent, [operands[1]]);
         };
-        _proto4.size = function size(dict, ctx) {
-          return [CFFPrivateDict.size(dict, ctx, false), ptr.size(dict, ctx)[0]];
+        _proto4.size = function size(dict, ctx2) {
+          return [CFFPrivateDict.size(dict, ctx2, false), ptr.size(dict, ctx2)[0]];
         };
-        _proto4.encode = function encode(stream2, dict, ctx) {
-          return [CFFPrivateDict.size(dict, ctx, false), ptr.encode(stream2, dict, ctx)[0]];
+        _proto4.encode = function encode(stream2, dict, ctx2) {
+          return [CFFPrivateDict.size(dict, ctx2, false), ptr.encode(stream2, dict, ctx2)[0]];
         };
         return CFFPrivateOp2;
       })();
@@ -129676,8 +131889,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return new restructure.Struct(fields);
         };
-        _proto.size = function size(val, ctx) {
-          return this.buildStruct(ctx).size(val, ctx);
+        _proto.size = function size(val, ctx2) {
+          return this.buildStruct(ctx2).size(val, ctx2);
         };
         _proto.decode = function decode3(stream2, parent) {
           var res = this.buildStruct(parent).decode(stream2, parent);
@@ -130330,17 +132543,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             this.type = type;
           }
           var _proto3 = Shadow2.prototype;
-          _proto3.decode = function decode3(stream2, ctx) {
-            ctx = ctx.parent.parent;
-            return this.type.decode(stream2, ctx);
+          _proto3.decode = function decode3(stream2, ctx2) {
+            ctx2 = ctx2.parent.parent;
+            return this.type.decode(stream2, ctx2);
           };
-          _proto3.size = function size(val, ctx) {
-            ctx = ctx.parent.parent;
-            return this.type.size(val, ctx);
+          _proto3.size = function size(val, ctx2) {
+            ctx2 = ctx2.parent.parent;
+            return this.type.size(val, ctx2);
           };
-          _proto3.encode = function encode(stream2, val, ctx) {
-            ctx = ctx.parent.parent;
-            return this.type.encode(stream2, val, ctx);
+          _proto3.encode = function encode(stream2, val, ctx2) {
+            ctx2 = ctx2.parent.parent;
+            return this.type.encode(stream2, val, ctx2);
           };
           return Shadow2;
         })();
@@ -132468,8 +134681,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         _proto.process = function process3(glyphs, reverse, processEntry) {
           var currentState = START_OF_TEXT_STATE;
           var index = reverse ? glyphs.length - 1 : 0;
-          var dir = reverse ? -1 : 1;
-          while (dir === 1 && index <= glyphs.length || dir === -1 && index >= -1) {
+          var dir2 = reverse ? -1 : 1;
+          while (dir2 === 1 && index <= glyphs.length || dir2 === -1 && index >= -1) {
             var glyph2 = null;
             var classCode = OUT_OF_BOUNDS_CLASS;
             var shouldAdvance = true;
@@ -132495,7 +134708,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
             currentState = entry.newState;
             if (shouldAdvance) {
-              index += dir;
+              index += dir2;
             }
           }
           return glyphs;
@@ -132804,9 +135017,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 var result = input.map(function(g2) {
                   return g2.id;
                 });
-                var _cache = _this.inputCache[found2];
-                if (_cache) {
-                  _cache.push(result);
+                var _cache2 = _this.inputCache[found2];
+                if (_cache2) {
+                  _cache2.push(result);
                 } else {
                   _this.inputCache[found2] = [result];
                 }
@@ -133110,10 +135323,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         _proto.shouldIgnore = function shouldIgnore(glyph2) {
           return this.flags.ignoreMarks && glyph2.isMark || this.flags.ignoreBaseGlyphs && glyph2.isBase || this.flags.ignoreLigatures && glyph2.isLigature || this.markAttachmentType && glyph2.isMark && glyph2.markAttachmentType !== this.markAttachmentType;
         };
-        _proto.move = function move(dir) {
-          this.index += dir;
+        _proto.move = function move(dir2) {
+          this.index += dir2;
           while (0 <= this.index && this.index < this.glyphs.length && this.shouldIgnore(this.glyphs[this.index])) {
-            this.index += dir;
+            this.index += dir2;
           }
           if (0 > this.index || this.index >= this.glyphs.length) {
             return null;
@@ -133149,10 +135362,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           if (count === void 0) {
             count = 1;
           }
-          var dir = count < 0 ? -1 : 1;
+          var dir2 = count < 0 ? -1 : 1;
           count = Math.abs(count);
           while (count--) {
-            this.move(dir);
+            this.move(dir2);
           }
           return this.glyphs[this.index];
         };
@@ -134852,9 +137065,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var _proto = Path2.prototype;
         _proto.toFunction = function toFunction() {
           var _this = this;
-          return function(ctx) {
+          return function(ctx2) {
             return _this.commands.forEach(function(c) {
-              return ctx[c.command].apply(ctx, c.args);
+              return ctx2[c.command].apply(ctx2, c.args);
             });
           };
         };
@@ -135109,14 +137322,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               return String.fromCharCode(post2.map[this.id]);
           }
         };
-        _proto.render = function render(ctx, size) {
-          ctx.save();
+        _proto.render = function render(ctx2, size) {
+          ctx2.save();
           var scale2 = 1 / this._font.head.unitsPerEm * size;
-          ctx.scale(scale2, scale2);
+          ctx2.scale(scale2, scale2);
           var fn = this.path.toFunction();
-          fn(ctx);
-          ctx.fill();
-          ctx.restore();
+          fn(ctx2);
+          ctx2.fill();
+          ctx2.restore();
         };
         _createClass$6(Glyph2, [{
           key: "cbox",
@@ -136007,18 +138220,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             buflen: end - start
           });
         };
-        _proto.render = function render(ctx, size) {
+        _proto.render = function render(ctx2, size) {
           var img = this.getImageForSize(size);
           if (img != null) {
             var scale2 = size / this._font.unitsPerEm;
-            ctx.image(img.data, {
+            ctx2.image(img.data, {
               height: size,
               x: img.originX,
               y: (this.bbox.minY - img.originY) * scale2
             });
           }
           if (this._font.sbix.flags.renderOutlines) {
-            _TTFGlyph.prototype.render.call(this, ctx, size);
+            _TTFGlyph.prototype.render.call(this, ctx2, size);
           }
         };
         return SBIXGlyph2;
@@ -136043,11 +138256,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return bbox;
         };
-        _proto.render = function render(ctx, size) {
+        _proto.render = function render(ctx2, size) {
           for (var _iterator2 = _createForOfIteratorHelperLoose$n(this.layers), _step2; !(_step2 = _iterator2()).done; ) {
             var _step$value = _step2.value, glyph2 = _step$value.glyph, color = _step$value.color;
-            ctx.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
-            glyph2.render(ctx, size);
+            ctx2.fillColor([color.red, color.green, color.blue], color.alpha / 255 * 100);
+            glyph2.render(ctx2, size);
           }
           return;
         };
@@ -140015,34 +142228,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return o;
   }
   function wrapTextLines(text, widthIn, cpi = CHARS_PER_INCH) {
-    const cols = Math.max(1, Math.floor(num(widthIn, 6) * cpi));
     const s = String(text ?? "");
     if (!s.trim()) return [""];
-    const out = [];
-    for (const para2 of s.split("\n")) {
-      const words = para2.split(/\s+/).filter(Boolean);
-      if (!words.length) {
-        out.push("");
-        continue;
-      }
-      let cur = "";
-      for (const w of words) {
-        const need = cur ? cur.length + 1 + w.length : w.length;
-        if (need <= cols) {
-          cur = cur ? cur + " " + w : w;
-          continue;
-        }
-        out.push(cur);
-        let rest = w;
-        while (rest.length > cols) {
-          out.push(rest.slice(0, cols));
-          rest = rest.slice(cols);
-        }
-        cur = rest;
-      }
-      out.push(cur);
-    }
-    return out.length ? out : [""];
+    return wrapScriptLines(s, num(widthIn, 6), cpi);
   }
   function layoutPageLines(page2, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
@@ -140113,8 +142301,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const t3 = clean(text);
       if (!t3) return 0;
       const runs = splitFontRuns(t3, !!set.latin);
-      const fontFor = (r) => r.latin ? pickFont(set.latin, bold, italic) : pickFont(set, bold, italic);
-      const ws = runs.map((r) => widthOf(fontFor(r), r.text, size));
+      const fontFor2 = (r) => r.latin ? pickFont(set.latin, bold, italic) : pickFont(set, bold, italic);
+      const ws = runs.map((r) => widthOf(fontFor2(r), r.text, size));
       const w = ws.reduce((a, b) => a + b, 0);
       let px2 = x;
       if (boxWidth > 0) {
@@ -140125,7 +142313,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const ux = Math.cos(rad), uy = Math.sin(rad);
       let cx2 = px2, cy2 = y;
       runs.forEach((r, i5) => {
-        const opts = { x: cx2, y: cy2, size, font: fontFor(r) };
+        const opts = { x: cx2, y: cy2, size, font: fontFor2(r) };
         if (color) opts.color = color;
         if (Number.isFinite(opacity)) opts.opacity = opacity;
         if (rotate) opts.rotate = rotate;
@@ -140371,10 +142559,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function addOutline(doc3, entries) {
     const list = (entries || []).filter((e) => e && String(e.title || "").trim());
     if (!list.length) return 0;
-    const ctx = doc3.context;
+    const ctx2 = doc3.context;
     const pages = doc3.getPages();
-    const outlinesRef = ctx.nextRef();
-    const refs = list.map(() => ctx.nextRef());
+    const outlinesRef = ctx2.nextRef();
+    const refs = list.map(() => ctx2.nextRef());
     list.forEach((e, i5) => {
       const p = pages[Math.max(0, Math.min(pages.length - 1, e.pageIndex | 0))];
       const dict = {
@@ -140384,9 +142572,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       };
       if (i5 > 0) dict.Prev = refs[i5 - 1];
       if (i5 < refs.length - 1) dict.Next = refs[i5 + 1];
-      ctx.assign(refs[i5], ctx.obj(dict));
+      ctx2.assign(refs[i5], ctx2.obj(dict));
     });
-    ctx.assign(outlinesRef, ctx.obj({
+    ctx2.assign(outlinesRef, ctx2.obj({
       Type: "Outlines",
       First: refs[0],
       Last: refs[refs.length - 1],
@@ -140454,6 +142642,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_i18n();
       init_es2();
       init_fontkit_es();
+      init_sp_format();
       init_sp_format();
       init_sp_headers();
       init_sp_title_pages();
@@ -140555,11 +142744,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     FONT_CACHE.set = null;
     FONT_CACHE.stamp = "";
   }
-  async function fontStamp(dir, files) {
+  async function fontStamp(dir2, files) {
     const parts = [];
     for (const f of files) {
       try {
-        const p = await kapi.join(dir, f);
+        const p = await kapi.join(dir2, f);
         parts.push(f + ":" + (await kapi.mtime(p) || 0));
       } catch {
         parts.push(f + ":?");
@@ -140569,16 +142758,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   async function pdfFontBytes() {
     const out = { regular: null, latin: null, file: "" };
-    let dir = "";
+    let dir2 = "";
     const L2 = PDF_FONT_FILES.latin;
     const all = [...PDF_FONT_FILES.main, L2.regular, L2.bold, L2.italic, L2.boldItalic].filter(Boolean);
     try {
-      dir = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
-      const stamp = await fontStamp(dir, all);
+      dir2 = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
+      const stamp = await fontStamp(dir2, all);
       if (FONT_CACHE.set && FONT_CACHE.stamp === stamp) return FONT_CACHE.set;
       FONT_CACHE.stamp = stamp;
       const read3 = async (f) => {
-        const p = await kapi.join(dir, f);
+        const p = await kapi.join(dir2, f);
         return await kapi.exists(p) ? new Uint8Array(await kapi.readBytes(p)) : null;
       };
       for (const f of PDF_FONT_FILES.main) {
@@ -141408,7 +143597,11 @@ ${title2.join("\n")}
         outline2: "Action",
         outline3: "Action",
         image: "Action",
-        raw: "Action"
+        raw: "Action",
+        // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — Final Draft ไม่มีชนิดนี้ (ของมันเป็นตัวเลือกจัดหน้า)
+        // ลงเป็น Action เพื่อให้ข้อความไม่หายไปจากไฟล์ที่ส่งออก
+        "cont-left": "Action",
+        "cont-right": "Action"
       };
       fdxType = (el2) => FDX_TYPE_MAP[el2] || "Action";
       numOr4 = (v2, d) => {
@@ -142047,14 +144240,14 @@ ${pages.join("\n")}
     isStale: () => isStale,
     mergeSession: () => mergeSession,
     migrateSession: () => migrateSession,
-    newSession: () => newSession2,
+    newSession: () => newSession3,
     normalizeWin: () => normalizeWin,
     pruneTabs: () => pruneTabs2,
     sameSession: () => sameSession,
     sessionKey: () => sessionKey,
     sessionSummary: () => sessionSummary
   });
-  function newSession2(root = "") {
+  function newSession3(root = "") {
     return {
       v: SESSION_VERSION2,
       root: String(root || ""),
@@ -142067,7 +144260,7 @@ ${pages.join("\n")}
     };
   }
   function migrateSession(raw) {
-    const s = newSession2();
+    const s = newSession3();
     if (!raw || typeof raw !== "object") return s;
     s.root = typeof raw.root === "string" ? raw.root : "";
     s.ts = Number.isFinite(+raw.ts) ? +raw.ts : 0;
@@ -142555,19 +144748,19 @@ ${pages.join("\n")}
     lines.push("");
     lines.push(t("ui.aiDialogue.character2"));
     lines.push(profileBlock(b));
-    const ctx = typeof context2 === "string" ? { situation: context2 } : context2 || {};
+    const ctx2 = typeof context2 === "string" ? { situation: context2 } : context2 || {};
     const cRows = [];
-    if (ctx.situation) cRows.push(t("ui.aiDialogue.msg4") + ctx.situation);
-    if (ctx.place) cRows.push(t("ui.aiDialogue.place") + ctx.place);
-    if (ctx.time) cRows.push(t("ui.aiDialogue.time") + ctx.time);
-    if (ctx.goal) cRows.push(t("ui.aiDialogue.thingEachNeedDialogue") + ctx.goal);
-    if (ctx.conflict) cRows.push(t("ui.common.conflict2") + ctx.conflict);
-    if (ctx.mood) cRows.push(t("ui.aiDialogue.moodScene") + ctx.mood);
+    if (ctx2.situation) cRows.push(t("ui.aiDialogue.msg4") + ctx2.situation);
+    if (ctx2.place) cRows.push(t("ui.aiDialogue.place") + ctx2.place);
+    if (ctx2.time) cRows.push(t("ui.aiDialogue.time") + ctx2.time);
+    if (ctx2.goal) cRows.push(t("ui.aiDialogue.thingEachNeedDialogue") + ctx2.goal);
+    if (ctx2.conflict) cRows.push(t("ui.common.conflict2") + ctx2.conflict);
+    if (ctx2.mood) cRows.push(t("ui.aiDialogue.moodScene") + ctx2.mood);
     if (cRows.length) {
       lines.push("", t("ui.aiDialogue.contextScene"), ...cRows);
     }
-    if (ctx.before) {
-      lines.push("", t("ui.aiDialogue.textBeforePageWrite"), String(ctx.before).slice(0, 1500));
+    if (ctx2.before) {
+      lines.push("", t("ui.aiDialogue.textBeforePageWrite"), String(ctx2.before).slice(0, 1500));
     }
     lines.push("", t("ui.aiDialogue.formatResult"));
     if (format3 === "screenplay") {
@@ -143234,8 +145427,8 @@ ${s.body}`).join("\n\n");
       insertBtn.onclick = () => {
         const r = resultDiv.textContent;
         if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
-        if (t3?.editor) t3.editor.cmd("insertText", r);
-        else if (t3?.sp) t3.sp.cmd("insertText", r);
+        if (t3?.sp) t3.sp.insertScript(r);
+        else if (t3?.editor) t3.editor.insertLines(r);
         ov.remove();
         setStatus(t("ai.insertedResult", "\u0E41\u0E17\u0E23\u0E01\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C AI \u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
       };
@@ -143343,7 +145536,7 @@ ${s.body}`).join("\n\n");
       runBtn.onclick = async () => {
         runBtn.disabled = true;
         resultDiv.textContent = t("ai.dialogueWorking", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u2026");
-        const a = charA.value.trim(), b = charB.value.trim(), ctx = context2.value.trim();
+        const a = charA.value.trim(), b = charB.value.trim(), ctx2 = context2.value.trim();
         if (!a || !b) {
           resultDiv.textContent = t("ai.needBothChars", "\u274C \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E2A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07");
           runBtn.disabled = false;
@@ -143359,7 +145552,7 @@ ${s.body}`).join("\n\n");
         const res = await generateDialogue2(
           profA,
           profB,
-          { situation: ctx },
+          { situation: ctx2 },
           {
             client: getAIClient2(),
             format: fmtSel.value,
@@ -143381,8 +145574,8 @@ ${s.body}`).join("\n\n");
         const r = resultDiv.textContent;
         if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
         const t3 = state.active;
-        if (t3?.editor) t3.editor.cmd("insertText", r);
-        else if (t3?.sp) t3.sp.cmd("insertText", r);
+        if (t3?.sp) t3.sp.insertScript(r);
+        else if (t3?.editor) t3.editor.insertLines(r);
         ov.remove();
         setStatus(t("ai.insertedDialogue", "\u0E41\u0E17\u0E23\u0E01\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
       };
@@ -143567,18 +145760,18 @@ ${s.body}`).join("\n\n");
       if (!q) return;
       input.value = "";
       addMsg("user", q);
-      const bubble = addMsg("assistant", "\u2026", false);
-      let ctx = { text: "", sources: [] };
+      const bubble2 = addMsg("assistant", "\u2026", false);
+      let ctx2 = { text: "", sources: [] };
       try {
         const { ragContext: ragContext2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        bubble.textContent = t("ai.searchingProject", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026");
-        ctx = await ragContext2(q, { k: 6, maxTokens: 1800 });
+        bubble2.textContent = t("ai.searchingProject", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026");
+        ctx2 = await ragContext2(q, { k: 6, maxTokens: 1800 });
       } catch (e) {
         log("warn", t("ui.ai.aiChatRAGUse"), e);
       }
       const system = t("ui.ai.youAssistantWriterReply") + t("ui.ai.useDataContextMain");
-      const prompt2 = (ctx.text ? ctx.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
-      bubble.textContent = "";
+      const prompt2 = (ctx2.text ? ctx2.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
+      bubble2.textContent = "";
       let acc = "";
       try {
         const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
@@ -143588,24 +145781,24 @@ ${s.body}`).join("\n\n");
           { messages: [...msgs, { role: "user", content: prompt2 }], system, feature: "chat" },
           (chunk) => {
             acc += chunk;
-            bubble.textContent = acc;
+            bubble2.textContent = acc;
             chatArea.scrollTop = chatArea.scrollHeight;
           }
         );
         if (!res.ok) {
-          bubble.textContent = "\u274C " + (res.error || t("ai.callFail", "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+          bubble2.textContent = "\u274C " + (res.error || t("ai.callFail", "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
           return;
         }
         if (!acc) {
           acc = res.text || "";
-          bubble.textContent = acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
+          bubble2.textContent = acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
         }
         history2.push({ role: "assistant", content: acc });
-        addSources(ctx.sources);
+        addSources(ctx2.sources);
       } catch (e) {
         log("error", t("ui.ai.aiChatStreamFail"), e);
         const result = await callAI(prompt2, system);
-        bubble.textContent = result || t("ai.errorMark", "\u274C \u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14");
+        bubble2.textContent = result || t("ai.errorMark", "\u274C \u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14");
       }
     };
     input.onkeydown = (e) => {
@@ -144946,11 +147139,11 @@ ${sc.body || ""}
   async function wikiCharacters() {
     const out = [];
     const scan = async (base3) => {
-      const dir = await kapi.join(base3, "characters");
-      if (!await kapi.exists(dir)) return;
-      for (const f of await kapi.listFiles(dir, ".json")) {
+      const dir2 = await kapi.join(base3, "characters");
+      if (!await kapi.exists(dir2)) return;
+      for (const f of await kapi.listFiles(dir2, ".json")) {
         try {
-          const e = await kapi.readJson(await kapi.join(dir, f));
+          const e = await kapi.readJson(await kapi.join(dir2, f));
           if (e && e.name) out.push({ name: e.name, detail: (e.summary || e.desc || e.role || "").replace(/\s+/g, " ").trim() });
         } catch {
         }
@@ -145676,9 +147869,9 @@ ${sc.body || ""}
   function safeFileName2(s) {
     return String(s ?? "").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim() || t("ui.common.notNamed2");
   }
-  function watermarkText(tpl, ctx = {}) {
+  function watermarkText(tpl, ctx2 = {}) {
     const t3 = String(tpl ?? "").trim() || t("ui.watermark.name");
-    return t3.replace(/\{ชื่อ\}|\{name\}/g, ctx.name ?? "").replace(/\{วันที่\}|\{date\}/g, ctx.date ?? "").replace(/\{เรื่อง\}|\{title\}/g, ctx.title ?? "").trim();
+    return t3.replace(/\{ชื่อ\}|\{name\}/g, ctx2.name ?? "").replace(/\{วันที่\}|\{date\}/g, ctx2.date ?? "").replace(/\{เรื่อง\}|\{title\}/g, ctx2.title ?? "").trim();
   }
   function parseRecipients(text) {
     return String(text ?? "").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map((l) => {
@@ -145900,6 +148093,7 @@ ${css}
     markDirty: () => markDirty,
     markPlannerRow: () => markPlannerRow,
     markSessionDirty: () => markSessionDirty,
+    migratePageNumberFirst: () => migratePageNumberFirst,
     netInst: () => netInst,
     newPlannerBoard: () => newPlannerBoard,
     newProject: () => newProject,
@@ -146036,7 +148230,18 @@ ${css}
     }
     state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...meta2.settings || {} };
     state.goals = { ...DEFAULT_GOALS, ...meta2.goals || {} };
+    migratePageNumberFirst();
     applySettings();
+  }
+  function migratePageNumberFirst() {
+    const s2 = state.settings;
+    if (s2.pgFirstMigrated) return false;
+    s2.pgFirstMigrated = true;
+    const pn = s2.spPageNumbers;
+    if (!pn || pn.firstPage !== false) return false;
+    s2.spPageNumbers = { ...pn, firstPage: true };
+    log("info", t("ui.app.migPageNumFirst"));
+    return true;
   }
   function applySettings() {
     applyZoomVars();
@@ -146061,6 +148266,7 @@ ${css}
     applyProseVars(pf);
     const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
     document.documentElement.style.setProperty("--sp-font", withLangFamily(spStack, nLang > 0));
+    refreshTextMeasurer();
     setTypeVolume(state.settings.typeSoundVolume ?? 0.5);
     syncTypeSound();
     applySpellcheck();
@@ -146103,6 +148309,7 @@ ${css}
     const spfs = Math.max(9, Math.min(96, +spBase.toFixed(2)));
     R.setProperty("--ed-fs", edfs + "px");
     R.setProperty("--sp-fs", spfs + "px");
+    refreshTextMeasurer();
     R.setProperty("--page-scale", pageScale.toFixed(3));
     bumpProseLayout();
     syncWorkspaceWidths();
@@ -146236,6 +148443,12 @@ ${css}
       for (const tb2 of state.tabs.values()) if (tb2.sp) refreshSceneNumbers(tb2.sp.view);
     }
     document.body.classList.toggle("sp-page-numbers", !!fmt.pageNumbers.show);
+    if (setSpPageNumberLabel(pageNumberLabelFor(fmt))) {
+      for (const tb2 of state.tabs.values()) if (tb2.sp) tb2.sp.refreshGuides();
+    }
+    if (setProsePageNumberLabel(prosePageNumberLabelFor(fmt))) {
+      for (const tb2 of state.tabs.values()) if (tb2.editor) refreshProsePageBreaks(tb2.editor.view);
+    }
     const lv = layoutCssVars(fmt, state.settings.spPageGap);
     for (const k of Object.keys(lv)) R.setProperty(k, lv[k]);
     document.body.classList.toggle("k-page-gaps", state.settings.paperGaps !== false);
@@ -146304,11 +148517,11 @@ ${css}
   async function exportFontCss() {
     try {
       await preloadLangFontUrls();
-      const dir = await kapi.join(await kapi.appDir(), "renderer");
+      const dir2 = await kapi.join(await kapi.appDir(), "renderer");
       const abs = /* @__PURE__ */ new Map();
       for (const r of normalizeLangFonts(state.settings.langFonts)) {
         if (!r.builtin) continue;
-        const p = await kapi.join(dir, "assets", "fonts", r.builtin);
+        const p = await kapi.join(dir2, "assets", "fonts", r.builtin);
         if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
       }
       return buildLangFontCss(
@@ -146341,8 +148554,8 @@ ${css}
     }
     return want;
   }
-  function bumpPageScale(dir) {
-    setPageScale(pageScale + (dir > 0 ? 0.1 : -0.1));
+  function bumpPageScale(dir2) {
+    setPageScale(pageScale + (dir2 > 0 ? 0.1 : -0.1));
   }
   function scrollHosts() {
     return [...document.querySelectorAll(".pane.on, .k-split-pane > .pane, .roster-wrap > .workspace")].filter((e) => e && e.scrollWidth);
@@ -146501,6 +148714,7 @@ ${css}
     if (!t22 || !t22.editor || !t22.editor.view) return null;
     const doc3 = t22.editor.view.state.doc;
     if (_mzCache && _mzCache.tab === t22 && _mzCache.doc === doc3 && _mzCache.epoch === _mzEpoch) {
+      if (_mzCache.data) _mzCache.data.__fromCache = true;
       return _mzCache.data;
     }
     const f = spf || spFormat();
@@ -146510,6 +148724,7 @@ ${css}
       return null;
     }
     mz.pages = sliceProsePages(mz.blocks, mz.contentHeight, mz.totalHeight).map((p, i5) => ({ ...p, index: i5 + 1 }));
+    mz.__fromCache = false;
     _mzCache = { tab: t22, doc: doc3, epoch: _mzEpoch, data: mz };
     return mz;
   }
@@ -146523,10 +148738,11 @@ ${css}
     return starts;
   }
   function proseClipLabel(index, pf, spf, startPage) {
-    const start = Math.max(1, Math.round(+startPage || 1));
-    if (pf.pageNumbers) return prosePageLabel(index, pf, start);
-    if (!spf.pageNumbers.show) return "";
-    return String(start + index - 1);
+    const pn = spf.pageNumbers;
+    if (!pn.show) return "";
+    const i5 = Math.max(1, Math.round(+index || 1));
+    if (i5 === 1 && pn.firstPage === false) return "";
+    return String(Math.max(1, Math.round(+startPage || 1)) + i5 - 1);
   }
   function drawProsePageView(tab) {
     if (!tab || !tab.editor || !tab.pane) return 0;
@@ -146546,6 +148762,8 @@ ${css}
         paper: spf.paper,
         margins: spf.margins,
         startPos,
+        numTop: spf.pageNumbers.top,
+        numRight: spf.pageNumbers.right,
         label: (n2) => proseClipLabel(n2, pf, spf, start)
       });
       return mz.pages.length;
@@ -146558,7 +148776,9 @@ ${css}
       gap: 20,
       paper: spf.paper,
       margins: spf.margins,
-      showPageNumbers: !!spf.pageNumbers.show,
+      numTop: spf.pageNumbers.top,
+      numRight: spf.pageNumbers.right,
+      label: (n2) => proseClipLabel(n2, pf, spf, currentStartPage(tab)),
       startPage: currentStartPage(tab)
     });
     return pg.count;
@@ -146652,13 +148872,23 @@ ${css}
     const n2 = parseInt(t22 && t22.startPage, 10);
     return Number.isFinite(n2) && n2 > 0 ? n2 : 1;
   }
+  function pageNumberLabelFor(fmt) {
+    if (!fmt.pageNumbers.show) return null;
+    return (page2) => String(page2) + (fmt.pageNumbers.suffix || "");
+  }
+  function prosePageNumberLabelFor(spf) {
+    if (!spf.pageNumbers.show) return null;
+    return (page2) => String(page2);
+  }
   function updatePageNumberHint() {
     const t22 = state.active;
     const pane = t22 && t22.pane;
     if (!pane) return "";
     const fmt = spFormat();
     const isDoc = !!(t22.sp || t22.editor);
-    const label = isDoc && fmt.pageNumbers.show ? pageNumberLabel(1, fmt, currentStartPage(t22)) : "";
+    const mk2 = t22.sp ? pageNumberLabelFor(fmt) : prosePageNumberLabelFor(fmt);
+    const first = Math.max(1, Math.round(+currentStartPage(t22) || 1));
+    const label = isDoc && mk2 && fmt.pageNumbers.firstPage !== false ? mk2(first) : "";
     pane.style.setProperty("--pg-no-first", label ? JSON.stringify(label) : '""');
     return label;
   }
@@ -147172,9 +149402,9 @@ ${css}
     if (state.root) saveProjectMeta().catch((e) => log("warn", t("ui.app.saveSizeUINot"), e));
     setStatus(t("ui.status.uiScale") + ": " + Math.round(s * 100) + "%");
   }
-  function bumpUIScale(dir) {
+  function bumpUIScale(dir2) {
     const cur = parseFloat(state.settings.uiScale) || 1;
-    setUIScale(dir === 0 ? 1 : cur + (dir > 0 ? 0.1 : -0.1));
+    setUIScale(dir2 === 0 ? 1 : cur + (dir2 > 0 ? 0.1 : -0.1));
   }
   function showSourceView() {
     const tab = state.active;
@@ -147643,8 +149873,8 @@ ${css}
     state.active = remoteTab(msg);
     if (msg.file) state.lastSceneFile = msg.file;
     if (panelId(PANEL_WIN) === "props") {
-      const ctx = msg.file ? await sceneCtx(msg.file) : null;
-      setPropsTarget(ctx && ctx.dPath, ctx && ctx.ch, ctx && ctx.row);
+      const ctx2 = msg.file ? await sceneCtx(msg.file) : null;
+      setPropsTarget(ctx2 && ctx2.dPath, ctx2 && ctx2.ch, ctx2 && ctx2.row);
     }
     await drawPanelWindow();
     return true;
@@ -147833,7 +150063,7 @@ ${css}
     return state.tabs.has(full);
   }
   async function captureSession() {
-    const s = newSession2(state.root || "");
+    const s = newSession3(state.root || "");
     s.ts = Date.now();
     try {
       s.tabs.open = [...state.tabs.keys()].filter((f) => !f.startsWith("::") && !f.endsWith(".json"));
@@ -148410,15 +150640,15 @@ ${css}
                   { label: t("ui.app.changeName2"), click: () => renameScene(dPath, ch, sc) },
                   // ข้อ 78: แนะนำชื่อจากเนื้อฉากจริง (ส่งเนื้อหาไปเป็นบริบทให้ AI)
                   { label: t("ui.app.suggestNameSceneAI"), click: async () => {
-                    let ctx = "";
+                    let ctx2 = "";
                     try {
-                      ctx = await kapi.readFile(scEl.dataset.path);
+                      ctx2 = await kapi.readFile(scEl.dataset.path);
                     } catch {
                     }
                     showAITitleSuggestions(
                       sc.title || "",
                       (title2) => setSceneTitle(dPath, ch, sc, title2),
-                      { kind: "scene", context: ctx }
+                      { kind: "scene", context: ctx2 }
                     );
                   } },
                   "-",
@@ -148459,11 +150689,11 @@ ${css}
                 { label: "\u2699 " + t("ui.app.chapterProps"), click: () => chapterProps(dPath, ch) },
                 // ข้อ 78: บริบท = ชื่อฉากทั้งบท (พอให้ AI เดาเนื้อบทได้โดยไม่ต้องอ่านทุกไฟล์)
                 { label: t("ui.app.suggestNameChapterAI"), click: () => {
-                  const ctx = (scenesAll[ch.guid] || []).map((s) => "- " + (s.title || "")).join("\n");
+                  const ctx2 = (scenesAll[ch.guid] || []).map((s) => "- " + (s.title || "")).join("\n");
                   showAITitleSuggestions(
                     ch.title || "",
                     (title2) => setChapterTitle(dPath, ch, title2),
-                    { kind: "chapter", context: ctx }
+                    { kind: "chapter", context: ctx2 }
                   );
                 } },
                 { label: t("ui.common.orderNumNew"), click: () => renumberChapters(dPath) },
@@ -149692,10 +151922,10 @@ ${css}
       }
     });
     if (plannerInst.setPropsCallback) {
-      plannerInst.setPropsCallback((ctx) => {
+      plannerInst.setPropsCallback((ctx2) => {
         showPanel("planner-props");
         const container = $("#planner-props-body");
-        if (container) renderPlannerProps(container, ctx);
+        if (container) renderPlannerProps(container, ctx2);
       });
     }
     setPanelCloseGuard("planner", null);
@@ -149712,9 +151942,9 @@ ${css}
   async function defaultPlannerPath() {
     const legacy = await kapi.join(state.root, "planner.json");
     if (await kapi.exists(legacy)) return legacy;
-    const dir = await kapi.join(state.root, "Planners");
-    const files = await kapi.exists(dir) ? await kapi.listFiles(dir, ".json").catch(() => []) : [];
-    if (files.length) return kapi.join(dir, files[0]);
+    const dir2 = await kapi.join(state.root, "Planners");
+    const files = await kapi.exists(dir2) ? await kapi.listFiles(dir2, ".json").catch(() => []) : [];
+    if (files.length) return kapi.join(dir2, files[0]);
     return legacy;
   }
   async function plannerAbs(f) {
@@ -149791,10 +152021,10 @@ ${css}
     if (!state.root) return out;
     const legacy = await kapi.join(state.root, "planner.json");
     if (await kapi.exists(legacy)) out.push({ path: legacy, name: t("ui.common.boardMain"), legacy: true });
-    const dir = await kapi.join(state.root, "Planners");
-    if (await kapi.exists(dir)) {
-      for (const f of await kapi.listFiles(dir, ".json").catch(() => [])) {
-        out.push({ path: await kapi.join(dir, f), name: f.replace(/\.json$/i, ""), legacy: false });
+    const dir2 = await kapi.join(state.root, "Planners");
+    if (await kapi.exists(dir2)) {
+      for (const f of await kapi.listFiles(dir2, ".json").catch(() => [])) {
+        out.push({ path: await kapi.join(dir2, f), name: f.replace(/\.json$/i, ""), legacy: false });
       }
     }
     return out;
@@ -149906,13 +152136,13 @@ ${css}
     return _plannerRowObs;
   }
   async function newPlannerBoard(nameArg) {
-    const dir = await kapi.join(state.root, "Planners");
+    const dir2 = await kapi.join(state.root, "Planners");
     let value = nameArg || t("ui.common.board2") + ((await listPlannerBoards()).length + 1);
     let p = null;
     for (; ; ) {
       const name5 = nameArg || await ask(t("ui.common.nameBoardNew"), { value, okLabel: t("ui.common.new") });
       if (!name5) return null;
-      p = await kapi.join(dir, safeBoardName(name5) + ".json");
+      p = await kapi.join(dir2, safeBoardName(name5) + ".json");
       if (!await kapi.exists(p)) break;
       if (nameArg) {
         setStatus(tf("ui.app.hasBoardName", safeBoardName(name5)));
@@ -149927,7 +152157,7 @@ ${css}
       if (!act) return null;
       value = safeBoardName(name5) + " 2";
     }
-    await kapi.mkdir(dir);
+    await kapi.mkdir(dir2);
     await kapi.writeFile(p, JSON.stringify({ version: "4.0", nodes: [], edges: [], groups: [] }, null, 2));
     await refreshTreeQueued();
     await openPlanner(p);
@@ -149938,9 +152168,9 @@ ${css}
   async function renamePlannerBoard(b) {
     const v2 = await ask(t("ui.app.changeNameBoard"), { value: b.name });
     if (!v2 || v2 === b.name) return null;
-    const dir = await kapi.join(state.root, "Planners");
-    await kapi.mkdir(dir);
-    const dst = await kapi.join(dir, safeBoardName(v2) + ".json");
+    const dir2 = await kapi.join(state.root, "Planners");
+    await kapi.mkdir(dir2);
+    const dst = await kapi.join(dir2, safeBoardName(v2) + ".json");
     if (await kapi.exists(dst)) {
       setStatus(t("ui.app.hasBoardName2"));
       return null;
@@ -149954,11 +152184,11 @@ ${css}
     return dst;
   }
   async function duplicatePlannerBoard(b) {
-    const dir = await kapi.join(state.root, "Planners");
-    await kapi.mkdir(dir);
+    const dir2 = await kapi.join(state.root, "Planners");
+    await kapi.mkdir(dir2);
     let n2 = 1, dst;
     do {
-      dst = await kapi.join(dir, safeBoardName(b.name + t("ui.common.msg2") + (n2 > 1 ? " " + n2 : "")) + ".json");
+      dst = await kapi.join(dir2, safeBoardName(b.name + t("ui.common.msg2") + (n2 > 1 ? " " + n2 : "")) + ".json");
       n2++;
     } while (await kapi.exists(dst));
     await kapi.writeFile(dst, await kapi.readFile(b.path));
@@ -150193,8 +152423,8 @@ ${css}
           { label: t("ui.app.changeName2"), click: async () => {
             const v2 = await ask(t("ui.common.namePlan"), { value: p.name });
             if (!v2) return;
-            const dir = await kapi.join(state.root, "Branches");
-            const dst = await kapi.join(dir, safePlanName2(v2) + ".json");
+            const dir2 = await kapi.join(state.root, "Branches");
+            const dst = await kapi.join(dir2, safePlanName2(v2) + ".json");
             if (await kapi.exists(dst)) {
               setStatus(t("ui.app.plannedName"));
               return;
@@ -151593,8 +153823,8 @@ ${css}
   }
   async function embeddedFontUrls() {
     try {
-      const dir = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
-      const one = async (f) => await kapi.exists(await kapi.join(dir, f)) ? kapi.toFileURL(await kapi.join(dir, f)) : "";
+      const dir2 = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
+      const one = async (f) => await kapi.exists(await kapi.join(dir2, f)) ? kapi.toFileURL(await kapi.join(dir2, f)) : "";
       return {
         regular: await one("CourierPrime-Regular.ttf"),
         bold: await one("CourierPrime-Bold.ttf"),
@@ -151900,10 +154130,10 @@ ${css}
       return plugins;
     }
     const seen = /* @__PURE__ */ new Set();
-    for (const [dir, origin] of sources) {
+    for (const [dir2, origin] of sources) {
       let names = [];
       try {
-        names = await kapi.listDirs(dir);
+        names = await kapi.listDirs(dir2);
       } catch {
         continue;
       }
@@ -151914,12 +154144,12 @@ ${css}
           continue;
         }
         try {
-          const manifest2 = await kapi.readJson(await kapi.join(dir, name5, "plugin.json"));
+          const manifest2 = await kapi.readJson(await kapi.join(dir2, name5, "plugin.json"));
           if (manifest2.minAppVersion && !versionAtLeast2(APP_VERSION, manifest2.minAppVersion)) {
             plugins.failed.push({ name: name5, origin, error: t("ui.app.mustUseKillian") + manifest2.minAppVersion + t("ui.app.up") });
             continue;
           }
-          const code3 = await kapi.readFile(await kapi.join(dir, name5, manifest2.entry || "main.js"));
+          const code3 = await kapi.readFile(await kapi.join(dir2, name5, manifest2.entry || "main.js"));
           new Function("k2", code3)(pluginApi(name5));
           if (seen.has(name5)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name5);
           seen.add(name5);
@@ -152487,18 +154717,18 @@ ${css}
     return null;
   }
   async function syncSceneMetaFromFiles(dPath) {
-    const dir = dPath || (await sceneCtx())?.dPath;
-    if (!dir) {
+    const dir2 = dPath || (await sceneCtx())?.dPath;
+    if (!dir2) {
       setStatus(t("ui.app.openSceneDraftBeforeProps"));
       return 0;
     }
-    const sf = await kapi.join(dir, "scenes.json");
+    const sf = await kapi.join(dir2, "scenes.json");
     const d = await kapi.readJson(sf);
-    const draft = await kapi.readJson(await kapi.join(dir, "draft.json"));
+    const draft = await kapi.readJson(await kapi.join(dir2, "draft.json"));
     let n2 = 0;
     for (const ch of draft.chapters || []) {
       for (const row2 of (d.chapters || {})[ch.guid] || []) {
-        const file = await kapi.join(dir, "Chapters", ch.folderName, row2.fileName);
+        const file = await kapi.join(dir2, "Chapters", ch.folderName, row2.fileName);
         const m = await readSceneMeta(file, row2);
         for (const k of SCENE_HEAVY_KEYS) {
           const before = JSON.stringify(row2[k] ?? null), after = JSON.stringify(m[k] ?? null);
@@ -152579,8 +154809,8 @@ ${css}
     if (!cols.length) cols.push([1, i18n.lang || "th"]);
     const body = hasHead ? rows.slice(1) : rows;
     const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
-    const dir = await kapi.join(state.root, "languages");
-    await kapi.mkdir(dir);
+    const dir2 = await kapi.join(state.root, "languages");
+    await kapi.mkdir(dir2);
     for (const [ci, lang] of cols) {
       const patch = {};
       for (const r of body) {
@@ -152594,7 +154824,7 @@ ${css}
         if (v2 !== "") patch[k] = v2;
       }
       if (!Object.keys(patch).length) continue;
-      const file = await kapi.join(dir, langFileName(lang));
+      const file = await kapi.join(dir2, langFileName(lang));
       let base3 = {};
       try {
         if (await kapi.exists(file)) base3 = csvToTable(await kapi.readFile(file));
@@ -152931,9 +155161,9 @@ ${css}
   async function addMemo() {
     const title2 = await ask(t("ui.app.nameMemo"));
     if (!title2) return;
-    const dir = await kapi.join(state.root, "Memos");
-    await kapi.mkdir(dir);
-    const file = await kapi.join(dir, safeName(title2) + "-" + Date.now().toString(36) + ".md");
+    const dir2 = await kapi.join(state.root, "Memos");
+    await kapi.mkdir(dir2);
+    const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
     await kapi.writeFile(file, (0, import_md13.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
@@ -152964,8 +155194,8 @@ ${css}
       body,
       locked: meta2.locked === true || meta2.locked === "true"
     };
-    const dir = file.replace(/[\\/][^\\/]*$/, "");
-    mountEditor(tab, dir, body);
+    const dir2 = file.replace(/[\\/][^\\/]*$/, "");
+    mountEditor(tab, dir2, body);
     tabBtn.onclick = (e) => {
       if (e.target !== x) activate(file);
     };
@@ -152973,7 +155203,7 @@ ${css}
     state.tabs.set(file, tab);
     activate(file);
   }
-  function mountEditor(tab, dir, body) {
+  function mountEditor(tab, dir2, body) {
     const pane = tab.pane;
     const mount = pane.querySelector(".workspace") || pane;
     if ((tab.meta.format || "prose") === "screenplay") {
@@ -152993,7 +155223,7 @@ ${css}
         },
         onElement: (elName) => setElementBadge(elName),
         getChecker: spellChecker,
-        resolveSrc: (p) => resolveImg(dir, p),
+        resolveSrc: (p) => resolveImg(dir2, p),
         // รูปในบทหนัง render จริง
         getNames: () => state.settings.autoMention !== false ? smart.names : [],
         // ลิงก์ Wiki
@@ -153022,7 +155252,7 @@ ${css}
           scheduleOutline();
           setTimeout(() => smart.check(tab.editor.view), 0);
         },
-        resolveSrc: (p) => resolveImg(dir, p),
+        resolveSrc: (p) => resolveImg(dir2, p),
         // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce
         onKeyDown: (ev) => {
           repaginateOnEnter(tab, ev);
@@ -153073,7 +155303,7 @@ ${css}
     if (to === cur) return;
     const src2 = tab.editor || tab.sp;
     const body = tab.dirty ? src2.getMarkdown() : tab.body ?? src2.getMarkdown();
-    const dir = tab.file.replace(/[\\/][^\\/]*$/, "");
+    const dir2 = tab.file.replace(/[\\/][^\\/]*$/, "");
     tab.editor?.destroy();
     tab.sp?.destroy();
     tab.editor = null;
@@ -153082,7 +155312,7 @@ ${css}
     tab.pane.appendChild(el("div", "workspace"));
     tab.meta.format = to;
     tab.body = body;
-    mountEditor(tab, dir, body);
+    mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     await kapi.writeFile(tab.file, (0, import_md13.dumpMdFile)(tab.meta, body));
     tab.dirty = false;
@@ -153404,11 +155634,11 @@ ${css}
       })));
     };
   }
-  function resolveImg(dir, rel) {
-    const key2 = dir + "||" + rel;
+  function resolveImg(dir2, rel) {
+    const key2 = dir2 + "||" + rel;
     if (imgURLBase.has(key2)) return imgURLBase.get(key2);
-    const guess = "file://" + (dir + "/" + rel).replace(/\\/g, "/");
-    kapi.resolve(dir, rel).then(async (abs) => {
+    const guess = "file://" + (dir2 + "/" + rel).replace(/\\/g, "/");
+    kapi.resolve(dir2, rel).then(async (abs) => {
       if (!await kapi.exists(abs)) {
         const base3 = rel.split("/").pop();
         abs = await kapi.join(state.root, "Images", base3);
@@ -153553,12 +155783,12 @@ ${css}
   async function refreshBacklinksAfterSave(tab, body) {
     if (!autoLinkReady() || !tab || !tab.file) return;
     try {
-      const ctx = await sceneCtx(tab.file);
-      if (!ctx || !ctx.row) return;
+      const ctx2 = await sceneCtx(tab.file);
+      if (!ctx2 || !ctx2.row) return;
       const changed = updateSceneLink({
-        id: ctx.row.id,
-        title: ctx.row.title || "",
-        chapterId: ctx.ch.guid,
+        id: ctx2.row.id,
+        title: ctx2.row.title || "",
+        chapterId: ctx2.ch.guid,
         text: body || ""
       });
       if (!changed) return;
@@ -153617,6 +155847,11 @@ ${css}
         if (!_branchPlanApi) return false;
         return await _branchPlanApi.saveBranchPlan(true) !== false;
       }
+    });
+    registerDirtySource("dlgb", {
+      label: t("ui.app.dlgbSource"),
+      list: () => builderDirtyList().map((title2) => ({ key: "::dlgb::" + title2, title: title2, file: "" })),
+      save: async () => await saveBuilderDirty() !== false
     });
     Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports)).then((m) => {
       _branchPlanApi = m;
@@ -153683,9 +155918,9 @@ ${css}
     return kapi.join(state.root, "Snapshots", rel.replace(/[\\/]/g, "__"));
   }
   async function listSnapshots(file) {
-    const dir = await snapDirFor(file);
-    if (!dir || !await kapi.exists(dir)) return [];
-    const names = await kapi.listFiles(dir, ".md");
+    const dir2 = await snapDirFor(file);
+    if (!dir2 || !await kapi.exists(dir2)) return [];
+    const names = await kapi.listFiles(dir2, ".md");
     const out = [];
     for (const fn of names) {
       const base3 = fn.replace(/\.md$/i, "");
@@ -153694,7 +155929,7 @@ ${css}
         name: fn,
         ts: idx4 < 0 ? base3 : base3.slice(0, idx4),
         label: idx4 < 0 ? "" : base3.slice(idx4 + 2),
-        path: await kapi.join(dir, fn)
+        path: await kapi.join(dir2, fn)
       });
     }
     return out.sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0);
@@ -153714,11 +155949,11 @@ ${css}
       } catch {
       }
     }
-    const dir = await snapDirFor(file);
-    if (!dir) return;
-    await kapi.mkdir(dir);
+    const dir2 = await snapDirFor(file);
+    if (!dir2) return;
+    await kapi.mkdir(dir2);
     const fn = label ? `${tsStamp()}__${sanitizeLabel(label)}.md` : `${tsStamp()}.md`;
-    await kapi.writeFile(await kapi.join(dir, fn), content);
+    await kapi.writeFile(await kapi.join(dir2, fn), content);
     await pruneSnapshots(file);
   }
   async function pruneSnapshots(file) {
@@ -154326,10 +156561,11 @@ ${css}
       const base3 = currentStartPage(t3) - 1;
       const starts = pageStartPositions(pg);
       const changed = setPageBreaks(starts.map((pos, i5) => ({ pos, page: base3 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos)));
+      const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt));
       updatePageNumberHint();
       const marks2 = spContinuedOn() ? computeContinueds(pg, fmt) : [];
       const cChanged = setContinueds(marks2);
-      if (changed || cChanged) t3.sp.refreshGuides();
+      if (changed || cChanged || nChanged) t3.sp.refreshGuides();
       setLayoutPageCount(t3, pg.count);
       refreshSpView();
       _spPageText = tf("ui.app.page", pg.count);
@@ -154345,10 +156581,22 @@ ${css}
       const spf = spFormat();
       const mz = proseMeasured(t3, spf);
       if (mz) {
-        const changed2 = setProsePageBreaks(
-          proseBreakList(t3.editor.view, mz.blocks, mz.pages, currentStartPage(t3))
-        );
-        if (changed2) refreshProsePageBreaks(t3.editor.view);
+        resetCutFail();
+        const list82 = proseBreakList(t3.editor.view, mz.blocks, mz.pages, currentStartPage(t3));
+        state._mzDiag = {
+          path: "measured",
+          pages: mz.pages.length,
+          breaks: list82.length,
+          cached: !!(mz && mz.__fromCache),
+          why: { ...CUT_FAIL }
+        };
+        const changed2 = setProsePageBreaks(list82);
+        const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+        if (nChanged && !changed2) refreshProsePageBreaks(t3.editor.view);
+        if (changed2) {
+          refreshProsePageBreaks(t3.editor.view);
+          bumpProseLayout();
+        }
         setLayoutPageCount(t3, mz.pages.length);
         refreshSpView();
         return mz.pages.length;
@@ -154356,11 +156604,13 @@ ${css}
       const pf = proseFormat();
       const pblocks = proseBlocksFromDoc(t3.editor.view.state.doc);
       const ppg = prosePagesOf(pblocks, pf, spf.paper, spf.margins);
+      state._mzDiag = { path: "estimate", pages: ppg.count, breaks: -1, cached: false };
       const base3 = currentStartPage(t3) - 1;
       const changed = setProsePageBreaks(
         prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base3 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos))
       );
-      if (changed) refreshProsePageBreaks(t3.editor.view);
+      const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+      if (changed || nChanged2) refreshProsePageBreaks(t3.editor.view);
       setLayoutPageCount(t3, ppg.count);
       refreshSpView();
       return ppg.count;
@@ -155025,8 +157275,10 @@ ${css}
       "#record-body",
       // [alpha.79] บทพูดเป็นของโปรเจกต์เดิม · แผงปลั๊กอินก็เปลี่ยนตามโปรเจกต์
       // (ปลั๊กอินระดับโปรเจกต์อยู่ใน <โปรเจกต์>/Plugins)
+      // [alpha.82] ห้องซ้อมบทเก็บเซสชันไว้ใน <โปรเจกต์>/Dialogues — ของโปรเจกต์เดิมล้วน ๆ
       "#dialogue-body",
-      "#plugins-body"
+      "#plugins-body",
+      "#dlgb-body"
     ]) {
       const n2 = $(sel);
       if (n2) n2.innerHTML = "";
@@ -155036,6 +157288,7 @@ ${css}
     resetRecords();
     resetDialogue();
     resetPluginPanel();
+    resetBuilder();
     state._branch = null;
     resetPlayerMode();
     mapsState_C.s = null;
@@ -155719,6 +157972,13 @@ ${css}
     document.body.classList.toggle("k-mod-down", !!on2);
     return !!on2;
   }
+  function setHoverHint(text) {
+    const v2 = String(text || "");
+    if (v2 === _hoverHint) return;
+    _hoverHint = v2;
+    const box2 = $("#status-center");
+    if (box2) box2.textContent = v2;
+  }
   function effectiveShortcuts() {
     const ov = state.settings && state.settings.shortcuts || {};
     return SHORTCUTS.map((s) => {
@@ -156088,15 +158348,15 @@ ${css}
       setStatus(t("ui.app.notHasDraftNew"));
       return null;
     }
-    const ctx = await sceneCtx();
+    const ctx2 = await sceneCtx();
     let si = 0, di = 0, ci = 0;
-    if (ctx) {
+    if (ctx2) {
       outer: for (let a = 0; a < tree.length; a++)
         for (let b = 0; b < tree[a].drafts.length; b++)
-          if (tree[a].drafts[b].dPath === ctx.dPath) {
+          if (tree[a].drafts[b].dPath === ctx2.dPath) {
             si = a;
             di = b;
-            const k = tree[a].drafts[b].chapters.findIndex((c) => c.guid === ctx.ch.guid);
+            const k = tree[a].drafts[b].chapters.findIndex((c) => c.guid === ctx2.ch.guid);
             ci = k < 0 ? 0 : k;
             break outer;
           }
@@ -163800,8 +166060,8 @@ ${css}
         check2("RAG \u0E2A\u0E23\u0E49\u0E32\u0E07 vector index \u0E44\u0E14\u0E49", !!rag && rag.index.size > 0, "chunks=" + rag?.index.size);
         const hits = await rag.retrieve("\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07", 3);
         check2("RAG \u0E04\u0E49\u0E19\u0E04\u0E37\u0E19\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E44\u0E14\u0E49 (offline embed)", Array.isArray(hits) && hits.length > 0, JSON.stringify(hits.length));
-        const ctx = await ragContext("\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07", { k: 3, maxTokens: 400 });
-        check2("RAG \u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07", !!ctx.text && ctx.sources.length > 0);
+        const ctx2 = await ragContext("\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07", { k: 3, maxTokens: 400 });
+        check2("RAG \u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07", !!ctx2.text && ctx2.sources.length > 0);
         check2(
           "RAG \u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E44\u0E27\u0E49\u0E43\u0E0A\u0E49\u0E23\u0E2D\u0E1A\u0E2B\u0E19\u0E49\u0E32",
           await kapi.exists(await kapi.join(state.root, ".ai-index.json"))
@@ -164695,8 +166955,8 @@ ${css}
             "resolveVars \u0E23\u0E2D\u0E07\u0E23\u0E31\u0E1A key \u0E44\u0E17\u0E22",
             resolveVars2("\u0E0A\u0E37\u0E48\u0E2D {{\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23}}", { \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23: "\u0E08\u0E2D\u0E2B\u0E4C\u0E19" }) === "\u0E0A\u0E37\u0E48\u0E2D \u0E08\u0E2D\u0E2B\u0E4C\u0E19"
           );
-          const ctx = await buildVarContext2(state.root, kapi);
-          check2("buildVarContext \u0E44\u0E21\u0E48 throw", ctx && typeof ctx === "object");
+          const ctx2 = await buildVarContext2(state.root, kapi);
+          check2("buildVarContext \u0E44\u0E21\u0E48 throw", ctx2 && typeof ctx2 === "object");
           check2(
             "STEP_DEFS \u0E21\u0E35 resolve-vars",
             STEP_DEFS.some((s) => s.key === "resolve-vars" && s.stage === "model")
@@ -164974,15 +167234,15 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 40));
         resetPageScale();
-        const S8 = state.settings;
+        const S9 = state.settings;
         const CS = (sel) => getComputedStyle(document.querySelector(sel));
         const rootVar = (n2) => getComputedStyle(document.documentElement).getPropertyValue(n2).trim();
         check2(
           "[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A \u0E1A\u0E191 \u0E25\u0E48\u0E32\u0E071 \u0E0B\u0E49\u0E32\u0E221.5 \u0E02\u0E27\u0E321 \u0E19\u0E34\u0E49\u0E27",
-          S8.pageMargins.top === 1 && S8.pageMargins.bottom === 1 && S8.pageMargins.left === 1.5 && S8.pageMargins.right === 1,
-          JSON.stringify(S8.pageMargins)
+          S9.pageMargins.top === 1 && S9.pageMargins.bottom === 1 && S9.pageMargins.left === 1.5 && S9.pageMargins.right === 1,
+          JSON.stringify(S9.pageMargins)
         );
-        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S8.paperSize === "letter");
+        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S9.paperSize === "letter");
         check2(
           "[85] --page-w / --mg-left \u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E1A\u0E19 :root",
           rootVar("--page-w") === "8.5in" && rootVar("--mg-left") === "1.5in",
@@ -164993,14 +167253,14 @@ ${css}
           linesPerPage(spFormat().paper, spFormat().margins) === 54,
           String(linesPerPage(spFormat().paper, spFormat().margins))
         );
-        S8.paperSize = "a4";
+        S9.paperSize = "a4";
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E19\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 A4 \u2192 --page-w \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", rootVar("--page-w") === "8.27in", rootVar("--page-w"));
-        S8.paperSize = "letter";
-        S8.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
+        S9.paperSize = "letter";
+        S9.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 2 \u0E19\u0E34\u0E49\u0E27 \u2192 --mg-left \u0E15\u0E32\u0E21", rootVar("--mg-left") === "2in", rootVar("--mg-left"));
-        S8.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
+        S9.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
         applyPageVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E43\u0E0A\u0E49 Courier Final Draft \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19",
@@ -165019,35 +167279,35 @@ ${css}
         );
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E10\u0E32\u0E19 12pt = 16px \u0E17\u0E31\u0E49\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E30\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07",
-          S8.edFontPt === 12 && S8.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
+          S9.edFontPt === 12 && S9.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
         );
         applyZoomVars();
         const edFsBefore = rootVar("--ed-fs");
-        S8.spFontPt = 14;
+        S9.spFontPt = 14;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E01\u0E23\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 14pt \u2192 --sp-fs \u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01",
           Math.abs(parseFloat(rootVar("--sp-fs")) - 14 * 4 / 3) < 0.05,
           rootVar("--sp-fs")
         );
-        const keepPrFs = JSON.parse(JSON.stringify(S8.prose || {}));
-        S8.prose = { ...S8.prose || {}, fontPt: 1 };
-        S8.uiFontSize = -6;
+        const keepPrFs = JSON.parse(JSON.stringify(S9.prose || {}));
+        S9.prose = { ...S9.prose || {}, fontPt: 1 };
+        S9.uiFontSize = -6;
         applyZoomVars();
         check2(
           "[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
           parseFloat(rootVar("--ed-fs")) >= 9,
           rootVar("--ed-fs")
         );
-        S8.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
-        S8.uiFontSize = 0;
+        S9.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
+        S9.uiFontSize = 0;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E23\u0E30\u0E17\u0E1A",
           rootVar("--ed-fs") === edFsBefore,
           edFsBefore + " \u2192 " + rootVar("--ed-fs")
         );
-        S8.spFontPt = 12;
+        S9.spFontPt = 12;
         applyZoomVars();
         const spStyleEl = document.getElementById("k-sp-format");
         check2('[81] \u0E21\u0E35 <style id="k-sp-format"> \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07', !!spStyleEl && spStyleEl.textContent.includes(".sp.sp-character{"));
@@ -165084,7 +167344,7 @@ ${css}
             !!scEl && Math.abs(parseFloat(getComputedStyle(scEl).marginTop) - 2 * parseFloat(getComputedStyle(scEl).fontSize)) < 2,
             scEl && getComputedStyle(scEl).marginTop
           );
-          S8.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
+          S9.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
           applyPageVars();
           const cs2 = getComputedStyle(spT.pane.querySelector(".sp-character"));
           check2(
@@ -165097,7 +167357,7 @@ ${css}
             Math.abs(parseFloat(cs2.marginTop) - 3 * parseFloat(cs2.fontSize)) < 2,
             cs2.marginTop
           );
-          S8.spStyles = { character: {
+          S9.spStyles = { character: {
             screen: { caps: false, bold: true, italic: false, underline: false },
             print: { caps: true, bold: false, italic: false, underline: true }
           } };
@@ -165109,8 +167369,8 @@ ${css}
             "[83] \u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E19\u0E08\u0E2D (\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C)",
             /@media print\{[\s\S]*\.sp\.sp-character\{[^}]*text-decoration:underline/.test(document.getElementById("k-sp-format").textContent)
           );
-          S8.spElements = null;
-          S8.spStyles = null;
+          S9.spElements = null;
+          S9.spStyles = null;
           applyPageVars();
           const blocks = parseScript(spT.sp.getMarkdown());
           const pgInfo = paginate(blocks, { fmt: spFormat() });
@@ -165118,7 +167378,7 @@ ${css}
           scheduleCount();
           await new Promise((r) => setTimeout(r, 400));
           check2("[84] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07", /\d+ หน้า/.test($("#wc").textContent), $("#wc").textContent);
-          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S8.spAutoPaginate === false, String(S8.spAutoPaginate));
+          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S9.spAutoPaginate === false, String(S9.spAutoPaginate));
           check2("[96] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E19\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35", /\d+ หน้า/.test($("#wc").textContent));
           check2(
             "[96] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1B\u0E34\u0E14 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19 1 \u0E2B\u0E19\u0E49\u0E32)",
@@ -165127,7 +167387,7 @@ ${css}
           );
           {
             const before = $("#wc").textContent;
-            S8.spAutoPaginate = true;
+            S9.spAutoPaginate = true;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
             check2(
@@ -165140,7 +167400,7 @@ ${css}
               $("#wc").textContent.replace(/^.*·/, "") === before.replace(/^.*·/, ""),
               before + " \u2192 " + $("#wc").textContent
             );
-            S8.spAutoPaginate = false;
+            S9.spAutoPaginate = false;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
           }
@@ -165150,20 +167410,20 @@ ${css}
             { el: "dialogue", text: "\u0E1E\u0E39\u0E14\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(60) }
           ];
           const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
-          S8.spPageRules = { minDialogueLinesAtBottom: 99 };
+          S9.spPageRules = { minDialogueLinesAtBottom: 99 };
           const split22 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[84] \u0E1B\u0E23\u0E31\u0E1A\u0E01\u0E0E minDialogueLinesAtBottom \u2192 \u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07",
             split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && !split22.pages.flatMap((p) => p.blocks).some((b) => b.split === "head")
           );
-          S8.spPageRules = null;
-          S8.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
+          S9.spPageRules = null;
+          S9.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
           const pgTh = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[92] \u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (MORE) \u0E41\u0E25\u0E49\u0E27\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07",
             pgTh.pages.flatMap((p) => p.blocks).some((b) => b.el === "more" && b.text === "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)")
           );
-          S8.spStrings = null;
+          S9.spStrings = null;
           spT.sp.setElement("character");
           smart.items = ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27"];
           smart.sel = 0;
@@ -165187,22 +167447,22 @@ ${css}
           );
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D Tab / Shift+Tab / Enter",
-            spCycleKeys(S8).tab.code === "Tab" && spCycleKeys(S8).shiftTab.shift === true && spCycleKeys(S8).enter.code === "Enter"
+            spCycleKeys(S9).tab.code === "Tab" && spCycleKeys(S9).shiftTab.shift === true && spCycleKeys(S9).enter.code === "Enter"
           );
-          S8.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S8).tab.code === "BracketRight");
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S8).enter.code === "Enter");
+          S9.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S9).tab.code === "BracketRight");
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S9).enter.code === "Enter");
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01",
             spKeyLabel({ code: "Tab", shift: true }) === "Shift+Tab",
             spKeyLabel({ code: "Tab", shift: true })
           );
-          S8.spCycleKeys = null;
-          S8.spCycleEnabled = false;
+          S9.spCycleKeys = null;
+          S9.spCycleEnabled = false;
           spT.sp.setElement("character");
           spT.sp.enter(true);
           check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A \u2192 Enter \u0E44\u0E14\u0E49\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E14\u0E34\u0E21 (\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23)", spT.sp.curElement() === "character");
-          S8.spCycleEnabled = true;
+          S9.spCycleEnabled = true;
           spT.sp.setElement("character");
           spT.sp.enter();
           check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E30\u0E1A\u0E1A \u2192 Enter \u0E2B\u0E25\u0E31\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E44\u0E14\u0E49\u0E1A\u0E17\u0E1E\u0E39\u0E14", spT.sp.curElement() === "dialogue");
@@ -165588,9 +167848,32 @@ ${css}
                 const guess = wrapLines(txt, fmt82.elements[kind].width);
                 const real = Math.round(elS.getBoundingClientRect().height / zSp / lineH82);
                 seen++;
-                if (guess !== real && !bad++) worstTxt = kind + " \u0E40\u0E14\u0E32=" + guess + " \u0E08\u0E23\u0E34\u0E07=" + real;
+                if (guess !== real && !bad++) {
+                  const wIn = elS.getBoundingClientRect().width / zSp / 96;
+                  const vis = txt.replace(/[ัิ-ฺ็-๎]/g, "").length;
+                  worstTxt = `${kind} \u0E40\u0E14\u0E32=${guess} \u0E08\u0E23\u0E34\u0E07=${real} \xB7 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23=${txt.length} \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19=${vis} \xB7 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07=${wIn.toFixed(2)}in (\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 ${fmt82.elements[kind].width}in) \xB7 \u0E15\u0E31\u0E27/\u0E19\u0E34\u0E49\u0E27\u0E17\u0E35\u0E48\u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19=${(vis / (real * wIn)).toFixed(1)} (\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48 10)`;
+                }
               }
               check2("[82] \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E17\u0E22\u0E43\u0E2B\u0E49\u0E15\u0E23\u0E27\u0E08\u0E08\u0E23\u0E34\u0E07", seen >= 10, seen);
+              {
+                const TM82 = await Promise.resolve().then(() => (init_text_measure(), text_measure_exports));
+                const TW82 = await Promise.resolve().then(() => (init_text_width(), text_width_exports));
+                const info82 = TM82.textMeasurerInfo();
+                check2("[82] \u0E15\u0E31\u0E27\u0E27\u0E31\u0E14\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E14\u0E49\u0E27\u0E22 canvas \u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E41\u0E25\u0E49\u0E27", TW82.hasMeasurer() && info82.ok);
+                check2(
+                  "[82] \u0E15\u0E31\u0E27\u0E27\u0E31\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E08\u0E32\u0E01\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 CSS \u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07",
+                  /px/.test(info82.sp) && info82.sp.length > 6,
+                  info82.sp
+                );
+                const probe82 = "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E17\u0E22";
+                const measured = TW82.measureWidth(probe82, { kind: "sp" });
+                const grid82 = TW82.visualLength(probe82) / 10 * 96;
+                check2(
+                  "[82] \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E27\u0E31\u0E14\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E08\u0E32\u0E01\u0E01\u0E23\u0E34\u0E14)",
+                  measured > 0 && Math.abs(measured - grid82) > 0.01,
+                  measured.toFixed(2) + " vs \u0E01\u0E23\u0E34\u0E14 " + grid82.toFixed(2)
+                );
+              }
               check2(
                 "[82] \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E40\u0E14\u0E32 = \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E17\u0E38\u0E01\u0E1A\u0E25\u0E47\u0E2D\u0E01",
                 bad === 0,
@@ -165750,15 +168033,24 @@ ${css}
               document.body.classList.contains("sp-page-numbers")
             );
             check2(
-              "[57a-2] \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32 12 \u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02 (\u0E18\u0E23\u0E23\u0E21\u0E40\u0E19\u0E35\u0E22\u0E21\u0E1A\u0E17)",
-              updatePageNumberHint() === "",
+              "[82] \u0E2B\u0E19\u0E49\u0E32\u0E09\u0E32\u0E01\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32 12 \u0E44\u0E14\u0E49\u0E40\u0E25\u0E02 12 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07)",
+              updatePageNumberHint() === "12.",
               JSON.stringify(updatePageNumberHint())
             );
             check2(
-              "[57a-2] \u0E40\u0E1B\u0E34\u0E14 firstPage \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E44\u0E14\u0E49\u0E40\u0E25\u0E02 12",
-              pageNumberLabel(1, spFormat(), 12) === "" && pageNumberLabel(2, spFormat(), 12) === "13.",
-              pageNumberLabel(2, spFormat(), 12)
+              "[82] \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E25\u0E48\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E25\u0E02\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C",
+              pageNumberLabel(1, spFormat(), 12) === "12." && pageNumberLabel(2, spFormat(), 12) === "13.",
+              pageNumberLabel(1, spFormat(), 12) + "/" + pageNumberLabel(2, spFormat(), 12)
             );
+            {
+              const keepFp = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+              check2(
+                '[82] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E15\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21',
+                pageNumberLabel(1, spFormat(), 12) === ""
+              );
+              state.settings.spPageNumbers = keepFp;
+            }
             check2("[57a-2] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E31\u0E1A\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E25\u0E02\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E1E\u0E2D)", (() => {
               const brk = pageBreaks();
               return !brk.length || brk[0].page >= 12;
@@ -166286,7 +168578,8 @@ ${css}
             check2("[55] \u0E23\u0E30\u0E1A\u0E1A\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spContinuedOn());
             const longScene = [
               ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E19\u0E2D\u0E19 - \u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19",
-              ...Array.from({ length: 130 }, (_2, i5) => "!\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48 " + i5 + " \u0E43\u0E2B\u0E49\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14")
+              "!" + "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E09\u0E32\u0E01\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01\u0E08\u0E19\u0E25\u0E49\u0E19\u0E44\u0E1B\u0E2B\u0E25\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32 ".repeat(500),
+              ...Array.from({ length: 20 }, (_2, i5) => "!\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48 " + i5 + " \u0E43\u0E2B\u0E49\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14")
             ].join("\n");
             spT58.sp.setMarkdown(longScene);
             await new Promise((r) => setTimeout(r, 800));
@@ -166783,7 +169076,7 @@ ${css}
           }
         }
         {
-          S8.homeThumb = 220;
+          S9.homeThumb = 220;
           applySettings();
           check2(
             "#12 \u0E15\u0E31\u0E49\u0E07\u0E02\u0E19\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E43\u0E19 settings \u0E44\u0E14\u0E49 (--home-thumb)",
@@ -166812,7 +169105,7 @@ ${css}
             );
           }
           ovHome.remove();
-          S8.homeThumb = 190;
+          S9.homeThumb = 190;
           applySettings();
         }
         {
@@ -167684,17 +169977,102 @@ ${css}
             })
           );
           {
+            repaginateFast(T3);
+            await new Promise((r) => setTimeout(r, 200));
+            const run1 = prosePageBreaks().map((b) => b.pos).join(",");
+            const diag1 = JSON.parse(JSON.stringify(state._mzDiag || {}));
+            repaginateFast(T3);
+            await new Promise((r) => setTimeout(r, 200));
+            const run2 = prosePageBreaks().map((b) => b.pos).join(",");
+            repaginateFast(T3);
+            await new Promise((r) => setTimeout(r, 200));
+            const run3 = prosePageBreaks().map((b) => b.pos).join(",");
+            const a1 = run1.split(","), a2 = run2.split(",");
+            let d1 = -1;
+            for (let i5 = 0; i5 < Math.max(a1.length, a2.length); i5++) {
+              if (a1[i5] !== a2[i5]) {
+                d1 = i5;
+                break;
+              }
+            }
+            {
+              const PM82 = await Promise.resolve().then(() => (init_prose_measure(), prose_measure_exports));
+              const sfx = spFormat();
+              const g82 = T3.pane.querySelector("." + PM82.GAP_CLASS);
+              let hOff = -1, hOn = -1;
+              if (g82) {
+                hOff = g82.getBoundingClientRect().height;
+                document.body.classList.add(PM82.MEASURE_CLASS);
+                hOn = g82.getBoundingClientRect().height;
+                document.body.classList.remove(PM82.MEASURE_CLASS);
+              }
+              check2(
+                "[82] \u0E42\u0E2B\u0E21\u0E14\u0E27\u0E31\u0E14\u0E22\u0E38\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E08\u0E23\u0E34\u0E07",
+                !g82 || hOn === 0,
+                `\u0E1E\u0E1A\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 ${g82 ? "\u0E43\u0E0A\u0E48" : "\u0E44\u0E21\u0E48"} \xB7 \u0E2A\u0E39\u0E07\u0E1B\u0E01\u0E15\u0E34 ${hOff} \u2192 \u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E27\u0E31\u0E14 ${hOn}`
+              );
+              const mWith = PM82.measureProseLayout(
+                T3.editor.view,
+                { paper: sfx.paper, margins: sfx.margins }
+              );
+              const nWith = PM82.sliceProsePages(mWith.blocks, mWith.contentHeight, mWith.totalHeight).length;
+              const nGaps = T3.pane.querySelectorAll("." + PM82.GAP_CLASS).length;
+              setProsePageBreaks([]);
+              refreshProsePageBreaks(T3.editor.view);
+              await new Promise((r) => setTimeout(r, 150));
+              const mNo = PM82.measureProseLayout(
+                T3.editor.view,
+                { paper: sfx.paper, margins: sfx.margins }
+              );
+              const nNo = PM82.sliceProsePages(mNo.blocks, mNo.contentHeight, mNo.totalHeight).length;
+              check2(
+                "[82] \u2605 \u0E1C\u0E25\u0E01\u0E32\u0E23\u0E27\u0E31\u0E14\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E01\u0E31\u0E1A\u0E27\u0E48\u0E32\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E35\u0E48\u0E2D\u0E31\u0E19",
+                nWith === nNo,
+                `\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 ${nGaps} \u0E2D\u0E31\u0E19 \u2192 ${nWith} \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E22 \u2192 ${nNo} \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E2A\u0E39\u0E07\u0E23\u0E27\u0E21 ${mWith.totalHeight.toFixed(1)} vs ${mNo.totalHeight.toFixed(1)} \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 ${(mWith.blocks[0].lineOffsets || []).length} vs ${(mNo.blocks[0].lineOffsets || []).length}`
+              );
+              bumpProseLayout();
+              repaginateFast(T3);
+              await new Promise((r) => setTimeout(r, 200));
+            }
+            const whyN = state._mzDiag && state._mzDiag.why || {};
+            check2(
+              "[82] \u0E41\u0E1B\u0E25\u0E07\u0E1E\u0E34\u0E01\u0E31\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E08\u0E38\u0E14 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E32\u0E22\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46",
+              whyN.detached === 0 && whyN.threw === 0 && whyN.noLine === 0 && whyN.noBlock === 0,
+              JSON.stringify(whyN)
+            );
+            check2(
+              "[82] \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E25\u0E39\u0E48\u0E40\u0E02\u0E49\u0E32 (\u0E23\u0E2D\u0E1A 2 = \u0E23\u0E2D\u0E1A 3)",
+              run2 === run3,
+              `${a2.length} \u2192 ${run3.split(",").length} \u0E08\u0E38\u0E14 \xB7 \u0E23\u0E2D\u0E1A1 ${a1.length} \u0E23\u0E2D\u0E1A2 ${a2.length} \u0E23\u0E2D\u0E1A3 ${run3.split(",").length} \xB7 \u0E23\u0E2D\u0E1A1 ${JSON.stringify(diag1)} \xB7 \u0E23\u0E2D\u0E1A3 ${JSON.stringify(state._mzDiag)}`
+            );
+          }
+          {
             const sfp = spFormat();
             const mzp = measureProseLayout(T3.editor.view, { paper: sfp.paper, margins: sfp.margins });
             const pgp = sliceProsePages(mzp.blocks, mzp.contentHeight, mzp.totalHeight);
-            let worstP = 1;
+            let worstP = 1, worstI = -1;
             for (let i5 = 0; i5 + 1 < pgp.length; i5++) {
-              worstP = Math.min(worstP, (pgp[i5 + 1].start - pgp[i5].start) / mzp.contentHeight);
+              const fill3 = (pgp[i5 + 1].start - pgp[i5].start) / mzp.contentHeight;
+              if (fill3 < worstP) {
+                worstP = fill3;
+                worstI = i5;
+              }
+            }
+            const lhP = mzp.blocks[0] && mzp.blocks[0].lineOffsets && mzp.blocks[0].lineOffsets.length > 1 ? mzp.blocks[0].lineOffsets[1] - mzp.blocks[0].lineOffsets[0] : 0;
+            const slackP = (1 - worstP) * mzp.contentHeight;
+            const offsW = mzp.blocks[0] && mzp.blocks[0].lineOffsets || [];
+            let nearW = "";
+            if (worstI >= 0 && offsW.length) {
+              const yCut = pgp[worstI + 1].start - mzp.blocks[0].top;
+              let j = offsW.findIndex((o) => o >= yCut - 0.5);
+              if (j < 0) j = offsW.length - 1;
+              const seg = offsW.slice(Math.max(0, j - 2), j + 3);
+              nearW = " \xB7 offset \u0E23\u0E2D\u0E1A\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14 " + seg.map((o) => o.toFixed(1)).join(",") + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E2B\u0E48\u0E32\u0E07 " + seg.slice(1).map((o, q) => (o - seg[q]).toFixed(1)).join(",");
             }
             check2(
               "[82] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E22\u0E32\u0E27: \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E15\u0E47\u0E21\u0E40\u0E01\u0E34\u0E19 95%",
               worstP > 0.95,
-              "\u0E42\u0E2B\u0E27\u0E48\u0E2A\u0E38\u0E14 = " + (worstP * 100).toFixed(1) + "%"
+              `\u0E42\u0E2B\u0E27\u0E48\u0E2A\u0E38\u0E14 = ${(worstP * 100).toFixed(1)}% \u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 ${worstI + 1}/${pgp.length} \xB7 \u0E40\u0E2B\u0E25\u0E37\u0E2D ${slackP.toFixed(0)}px` + (lhP > 0 ? ` = ${(slackP / lhP).toFixed(2)} \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (\u0E2A\u0E39\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 ${lhP.toFixed(1)}px)` : "") + ` \xB7 \u0E1A\u0E25\u0E47\u0E2D\u0E01 ${mzp.blocks.length} \u0E43\u0E1A` + nearW
             );
           }
           {
@@ -167726,10 +170104,22 @@ ${css}
             check2("[82] \u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30", nA2 === nB2, nA2 + " vs " + nB2);
             repaginateFast(T3);
             await new Promise((r) => setTimeout(r, 200));
-            check2(
-              "[82] \u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21\u0E17\u0E38\u0E01\u0E08\u0E38\u0E14",
-              prosePageBreaks().map((b) => b.pos).join(",") === before
-            );
+            {
+              const after = prosePageBreaks().map((b) => b.pos).join(",");
+              const bA = before.split(","), aA = after.split(",");
+              let firstDiff = -1;
+              for (let i5 = 0; i5 < Math.max(bA.length, aA.length); i5++) {
+                if (bA[i5] !== aA[i5]) {
+                  firstDiff = i5;
+                  break;
+                }
+              }
+              check2(
+                "[82] \u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21\u0E17\u0E38\u0E01\u0E08\u0E38\u0E14",
+                after === before,
+                `\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14 ${bA.length} \u2192 ${aA.length} \xB7 \u0E15\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48 ${firstDiff} (${bA[firstDiff]} \u2192 ${aA[firstDiff]}) \xB7 \u0E2A\u0E39\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E19\u0E49\u0E32 ${mzA.contentHeight.toFixed(1)} \u2192 ${mzB.contentHeight.toFixed(1)} \xB7 \u0E2A\u0E39\u0E07\u0E23\u0E27\u0E21 ${mzA.totalHeight.toFixed(1)} \u2192 ${mzB.totalHeight.toFixed(1)}`
+              );
+            }
             S22.paperGaps = false;
             applyPageVars();
             await new Promise((r) => setTimeout(r, 150));
@@ -167803,9 +170193,9 @@ ${css}
           const spf15 = spFormat();
           const want = (spf15.paper.height - spf15.margins.top - spf15.margins.bottom) * 96;
           check2(
-            "[82] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E2D\u0E1A\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E1E\u0E2D\u0E14\u0E35",
-            !!clip2 && Math.abs(parseFloat(clip2.style.height) - want) < 0.5,
-            clip2 && clip2.style.height
+            "[83-3] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E27\u0E01\u0E40\u0E2A\u0E21\u0E2D",
+            !!clip2 && parseFloat(clip2.style.height) <= want + 0.5 && parseFloat(clip2.style.height) > 0,
+            (clip2 && clip2.style.height) + " <= " + want
           );
           check2(
             "[82] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
@@ -169429,16 +171819,16 @@ ${css}
           [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
         }
       }
-      const S7 = state.settings;
+      const S8 = state.settings;
       {
         check2(
           '[61-1] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D "\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E30 "\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01"',
           GLOBAL_DEFAULTS.openLastProject === false && GLOBAL_DEFAULTS.showHomeOnStartup === false,
           JSON.stringify([GLOBAL_DEFAULTS.openLastProject, GLOBAL_DEFAULTS.showHomeOnStartup])
         );
-        const keepA = S7.openLastProject, keepB = S7.showHomeOnStartup;
+        const keepA = S8.openLastProject, keepB = S8.showHomeOnStartup;
         await toggleOpenLastProject(true);
-        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S7.openLastProject === true);
+        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S8.openLastProject === true);
         const g1 = await bootGlobalSettings();
         check2(
           "[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 global settings (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
@@ -169446,15 +171836,15 @@ ${css}
           JSON.stringify(g1.openLastProject)
         );
         await toggleOpenLastProject(false);
-        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S7.openLastProject === false);
+        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S8.openLastProject === false);
         await toggleShowHomeAlways(true);
         check2(
           '[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E2A\u0E21\u0E2D" \u0E17\u0E33\u0E07\u0E32\u0E19\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01',
-          S7.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
+          S8.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
         );
         await toggleShowHomeAlways(false);
-        S7.openLastProject = keepA;
-        S7.showHomeOnStartup = keepB;
+        S8.openLastProject = keepA;
+        S8.showHomeOnStartup = keepB;
       }
       {
         const scEl = document.querySelector("#tree .scene:not(.add-row)");
@@ -169574,7 +171964,7 @@ ${css}
         );
       }
       {
-        const keepFC = S7.spForceCase;
+        const keepFC = S8.spForceCase;
         toggleSpCase("spForceCase", false);
         const cssOff = document.getElementById("k-sp-format").textContent;
         check2(
@@ -169588,12 +171978,12 @@ ${css}
           /text-transform:uppercase/.test(document.getElementById("k-sp-format").textContent)
         );
         toggleSpCase("spAutoCapitalize", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S7.spAutoCapitalize === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S8.spAutoCapitalize === false);
         toggleSpCase("spAutoCapitalize", true);
         toggleSpCase("spAutoCorrectI", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S7.spAutoCorrectI === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S8.spAutoCorrectI === false);
         toggleSpCase("spAutoCorrectI", true);
-        S7.spForceCase = keepFC;
+        S8.spForceCase = keepFC;
       }
       {
         const AP = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
@@ -172015,10 +174405,10 @@ ${css}
           CAPS_ELEMENTS.includes("character") && CAPS_ELEMENTS.includes("scene"),
           CAPS_ELEMENTS.join(",")
         );
-        const keepStyles = JSON.parse(JSON.stringify(S7.spStyles || {}));
-        const keepFC11 = S7.spForceCase;
-        S7.spForceCase = true;
-        S7.spStyles = {};
+        const keepStyles = JSON.parse(JSON.stringify(S8.spStyles || {}));
+        const keepFC11 = S8.spForceCase;
+        S8.spForceCase = true;
+        S8.spStyles = {};
         applySettings();
         check2("[62-11] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19: \u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E2B\u0E0D\u0E48", elementCaps(spFormat(), "character"));
         toggleElementCaps("character", false);
@@ -172035,14 +174425,14 @@ ${css}
         );
         toggleElementCaps("character", true);
         check2("[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", elementCaps(spFormat(), "character"));
-        S7.spForceCase = false;
+        S8.spForceCase = false;
         applySettings();
         check2("[62-11] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 = \u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E25\u0E34\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A", !elementCaps(spFormat(), "scene"));
         toggleElementCaps("scene", true);
         check2(
           "[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E19\u0E34\u0E14\u0E02\u0E13\u0E30\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 \u2192 \u0E1B\u0E25\u0E38\u0E01\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
-          S7.spForceCase !== false && elementCaps(spFormat(), "scene"),
-          String(S7.spForceCase)
+          S8.spForceCase !== false && elementCaps(spFormat(), "scene"),
+          String(S8.spForceCase)
         );
         const src11 = {};
         const out11 = setElementCaps(src11, "character", false);
@@ -172050,8 +174440,8 @@ ${css}
           "[62-11] setElementCaps \u0E04\u0E37\u0E19 object \u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
           Object.keys(src11).length === 0 && out11.character.screen.caps === false
         );
-        S7.spStyles = keepStyles;
-        S7.spForceCase = keepFC11;
+        S8.spStyles = keepStyles;
+        S8.spForceCase = keepFC11;
         applySettings();
       }
       {
@@ -173789,7 +176179,11 @@ ${css}
             await until81(() => !!box2.querySelector(".xhub-preview .sp-page.xhub-front-cover"))
           );
           check2(
-            "[81r3] exportPageNumberFmt \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01",
+            "[82] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D",
+            exportPageNumberFmt(spFormat()).pageNumbers.firstPage === spFormat().pageNumbers.firstPage
+          );
+          check2(
+            "[82] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E2B\u0E19\u0E49\u0E32\u0E09\u0E32\u0E01\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02",
             exportPageNumberFmt(spFormat()).pageNumbers.firstPage === true
           );
           check2(
@@ -173887,6 +176281,373 @@ ${css}
             updatePageNumberHint();
           }
         }
+        {
+          const wait83 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const until83 = async (fn, ms = 3e3) => {
+            const t0 = Date.now();
+            for (; ; ) {
+              try {
+                if (fn()) return true;
+              } catch {
+              }
+              if (Date.now() - t0 > ms) return false;
+              await wait83(60);
+            }
+          };
+          check2(
+            "[83-7] \u0E04\u0E33\u0E17\u0E35\u0E48\u0E19\u0E48\u0E32\u0E08\u0E30\u0E2A\u0E30\u0E01\u0E14\u0E1C\u0E34\u0E14\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E25\u0E2D\u0E22 (title)",
+            document.querySelectorAll(".k-spell-bad[title]").length === 0,
+            document.querySelectorAll(".k-spell-bad[title]").length
+          );
+          check2(
+            "[83-8] \u0E0A\u0E37\u0E48\u0E2D\u0E17\u0E35\u0E48\u0E25\u0E34\u0E07\u0E01\u0E4C Wiki \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E25\u0E2D\u0E22 (title) \u0E21\u0E32\u0E1A\u0E31\u0E07\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C",
+            document.querySelectorAll(".k-mention[title]").length === 0,
+            document.querySelectorAll(".k-mention[title]").length
+          );
+          const tp83 = [...state.tabs.values()].find((x) => x.editor);
+          if (tp83) {
+            await activate(tp83.file);
+            const keep83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            const keepView = currentSpView();
+            togglePageNumbers(false);
+            await wait83(120);
+            setSpView("side");
+            await until83(() => !!tp83.pane.querySelector(".sp-pageview .ed-page .ed-page-clip"));
+            const clipTop = () => {
+              const c = tp83.pane.querySelector(".sp-pageview .ed-page .ed-page-clip");
+              const pgEl = c && c.closest(".sp-page");
+              return c && pgEl ? c.getBoundingClientRect().top - pgEl.getBoundingClientRect().top : NaN;
+            };
+            const clipH = () => {
+              const c = tp83.pane.querySelector(".sp-pageview .ed-page .ed-page-clip");
+              return c ? c.getBoundingClientRect().height : NaN;
+            };
+            const top0 = clipTop(), h02 = clipH();
+            togglePageNumbers(true);
+            await until83(() => !!tp83.pane.querySelector(".sp-pageview .ed-page .sp-page-num"));
+            const numEl = tp83.pane.querySelector(".sp-pageview .ed-page .sp-page-num");
+            check2(
+              "[83-5] \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02 (\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E19\u0E49\u0E32 1 \u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E44\u0E14\u0E49\u0E40\u0E25\u0E02)",
+              !!numEl && /^[0-9]+$/.test(numEl.textContent.trim()),
+              numEl && numEl.textContent
+            );
+            check2(
+              "[83-2] \u2605 \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2D\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E22\u0E4C \u2014 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E14\u0E31\u0E19\u0E25\u0E07",
+              Number.isFinite(top0) && Math.abs(clipTop() - top0) < 1.5,
+              top0 + " -> " + clipTop()
+            );
+            check2(
+              "[83-2] \u2026\u0E41\u0E25\u0E30\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 (\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E02\u0E22\u0E32\u0E22)",
+              Number.isFinite(h02) && Math.abs(clipH() - h02) < 1.5,
+              h02 + " -> " + clipH()
+            );
+            check2(
+              "[83-2] \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2A\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E08\u0E23\u0E34\u0E07 (position:absolute)",
+              !!numEl && getComputedStyle(numEl).position === "absolute",
+              numEl && getComputedStyle(numEl).position
+            );
+            {
+              const f83 = spFormat();
+              const clips = [...tp83.pane.querySelectorAll(".sp-pageview .ed-page .ed-page-clip")];
+              const bodyH = (f83.paper.height - f83.margins.top - f83.margins.bottom) * 96;
+              check2(
+                "[83-3] \u0E01\u0E23\u0E2D\u0E1A\u0E04\u0E23\u0E2D\u0E1A\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C",
+                clips.length > 0 && clips.every((c) => parseFloat(c.style.height) <= bodyH + 0.6),
+                clips.map((c) => c.style.height).join(",")
+              );
+            }
+            for (const mode of ["normal", "layout"]) {
+              setSpView(mode);
+              await wait83(150);
+              repaginateFast(tp83);
+              const ok2 = await until83(() => tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next").length > 0, 4e3);
+              const nodes = [...tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next")];
+              check2(
+                "[83-4] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 " + mode + ': \u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E1B\u0E49\u0E32\u0E22 "\u0E2B\u0E19\u0E49\u0E32 N")',
+                ok2 && nodes.length > 0,
+                nodes.length
+              );
+              if (nodes.length) {
+                const st = getComputedStyle(nodes[0]);
+                const r = nodes[0].getBoundingClientRect();
+                check2(
+                  "[83-4] \u2026\u0E41\u0E25\u0E30\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (" + mode + ")",
+                  st.display !== "none" && st.visibility !== "hidden" && parseFloat(st.opacity) > 0.05 && r.width > 0 && r.height > 0,
+                  st.display + "/" + st.visibility + "/" + st.opacity + "/" + Math.round(r.width) + "x" + Math.round(r.height)
+                );
+                check2(
+                  "[83-4] \u2026\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E25\u0E49\u0E27\u0E19 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E41\u0E1A\u0E1A\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C)",
+                  /^[0-9]+$/.test(nodes[0].textContent.trim()),
+                  nodes[0].textContent
+                );
+              }
+              togglePageNumbers(false);
+              await wait83(200);
+              check2(
+                "[83-4] \u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E40\u0E25\u0E02\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07 (" + mode + ")",
+                await until83(() => tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next").length === 0, 3e3),
+                tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next").length
+              );
+              togglePageNumbers(true);
+              await wait83(150);
+            }
+            setSpView(keepView);
+            state.settings.spPageNumbers = keep83;
+            applyPageVars();
+            updatePageNumberHint();
+            await wait83(120);
+          }
+          {
+            const spScene83 = [...document.querySelectorAll(".scene")].find((x) => x.textContent.includes("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"));
+            check2("[83-5] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E2A\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49", !!spScene83);
+            if (spScene83) {
+              spScene83.click();
+              await wait83(450);
+            }
+            const ts83 = state.active && state.active.sp ? state.active : null;
+            check2("[83-5] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E08\u0E23\u0E34\u0E07", !!ts83);
+            if (ts83) {
+              const keepS = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+              const keepV = currentSpView();
+              togglePageNumbers(false);
+              setSpView("side");
+              await until83(() => !!ts83.pane.querySelector(".sp-pageview .sp-page"));
+              await wait83(250);
+              check2(
+                "[83-5] \u2605 \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2A\u0E31\u0E01\u0E2B\u0E19\u0E49\u0E32 (\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E19\u0E49\u0E32 2+ \u0E15\u0E34\u0E14\u0E15\u0E32\u0E22\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
+                ts83.pane.querySelectorAll(".sp-pageview .sp-page-num").length === 0,
+                ts83.pane.querySelectorAll(".sp-pageview .sp-page-num").length
+              );
+              togglePageNumbers(true);
+              await wait83(300);
+              const nums = [...ts83.pane.querySelectorAll(".sp-pageview .sp-page-num")];
+              check2(
+                "[83-5] \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02\u0E14\u0E49\u0E27\u0E22",
+                nums.length > 0 && !!ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
+                nums.map((n2) => n2.textContent).join(",")
+              );
+              check2(
+                "[83-5] \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2D\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E22\u0E4C (\u0E44\u0E21\u0E48\u0E14\u0E31\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32)",
+                nums.length > 0 && getComputedStyle(nums[0]).position === "absolute",
+                nums.length && getComputedStyle(nums[0]).position
+              );
+              setSpView(keepV);
+              state.settings.spPageNumbers = keepS;
+              applyPageVars();
+              updatePageNumberHint();
+              await wait83(120);
+            }
+          }
+          {
+            const fmt83 = spFormat();
+            const lines83 = 20;
+            const cut = [
+              { el: "scene", text: "INT. \u0E17\u0E32\u0E07\u0E40\u0E14\u0E34\u0E19 - \u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19" },
+              { el: "action", text: "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(400) }
+            ];
+            const pgCut = pagesOf(cut, fmt83, lines83);
+            const usedOf = (p) => p.blocks.reduce((a, b) => a + (b.lines || 1), 0) + (p.continuedTop ? 1 : 0) + (p.continuedBottom ? 1 : 0);
+            check2(
+              "[83-6] \u2605 \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32 (\u0E19\u0E31\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 CONTINUED \u0E14\u0E49\u0E27\u0E22) \u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E42\u0E04\u0E27\u0E15\u0E32\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32",
+              pgCut.pages.every((p) => usedOf(p) <= lines83),
+              JSON.stringify(pgCut.pages.map(usedOf))
+            );
+            check2(
+              "[83-6] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E2B\u0E31\u0E48\u0E19\u0E04\u0E23\u0E48\u0E2D\u0E21\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E44\u0E14\u0E49 (CONTINUED)/CONTINUED: \u0E15\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21",
+              pgCut.pages.some((p) => p.continuedBottom) && pgCut.pages.some((p) => p.continuedTop)
+            );
+            const apart = [
+              { el: "scene", text: "INT. \u0E17\u0E32\u0E07\u0E40\u0E14\u0E34\u0E19 - \u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19" },
+              ...Array.from({ length: 40 }, (_2, i5) => ({ el: "action", text: "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22 " + i5 }))
+            ];
+            const pgApart = pagesOf(apart, fmt83, lines83);
+            check2(
+              "[83-6] \u2605 \u0E09\u0E32\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E41\u0E15\u0E48\u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01 \u2192 \u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19 CONTINUED",
+              pgApart.pages.length > 1 && pgApart.pages.every((p) => !p.continuedTop && !p.continuedBottom),
+              JSON.stringify(pgApart.pages.map((p) => [p.continuedTop || "", p.continuedBottom || ""]))
+            );
+          }
+          {
+            const keepMig = state.settings.pgFirstMigrated;
+            const keepPn83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            state.settings.pgFirstMigrated = false;
+            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+            const moved = migratePageNumberFirst();
+            check2(
+              "[83r-1] \u2605 \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E01\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1E\u0E01 firstPage:false \u0E21\u0E32 \u2192 \u0E16\u0E39\u0E01\u0E22\u0E49\u0E32\u0E22\u0E43\u0E2B\u0E49\u0E40\u0E1B\u0E47\u0E19 true",
+              moved === true && state.settings.spPageNumbers.firstPage === true,
+              JSON.stringify(state.settings.spPageNumbers)
+            );
+            check2(
+              "[83r-1] \u0E22\u0E49\u0E32\u0E22\u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u2014 \u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E17\u0E35\u0E2B\u0E25\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A\u0E0B\u0E49\u0E33",
+              (() => {
+                state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+                const again2 = migratePageNumberFirst();
+                return again2 === false && state.settings.spPageNumbers.firstPage === false;
+              })()
+            );
+            state.settings.pgFirstMigrated = keepMig;
+            state.settings.spPageNumbers = keepPn83;
+            applyPageVars();
+            const spScene83b = [...document.querySelectorAll(".scene")].find((x) => x.textContent.includes("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"));
+            if (spScene83b) {
+              spScene83b.click();
+              await wait83(450);
+            }
+            const tsp = state.active && state.active.sp ? state.active : null;
+            if (tsp) {
+              setSpView("normal");
+              togglePageNumbers(true);
+              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
+              applyPageVars();
+              updatePageNumberHint();
+              await wait83(200);
+              const pmS = tsp.pane.querySelector(":scope > .workspace > .ProseMirror");
+              const bf = pmS && getComputedStyle(pmS, "::before").content;
+              check2(
+                "[83r-1] \u2605 \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 \u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+                !!bf && bf !== "none" && bf !== '""',
+                String(bf)
+              );
+              const keepMd = tsp.sp.getMarkdown();
+              tsp.sp.setMarkdown([
+                ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E17\u0E14\u0E25\u0E2D\u0E07 - \u0E40\u0E0A\u0E49\u0E32",
+                "!" + "A".repeat(600),
+                "!" + "d".repeat(600)
+              ].join("\n"));
+              await wait83(600);
+              const f83b = spFormat();
+              const twPx = (f83b.paper.width - f83b.margins.left - f83b.margins.right) * 96;
+              const blocks83 = [...tsp.pane.querySelectorAll(".ProseMirror .sp-action")];
+              const widest = blocks83.reduce((a, b) => Math.max(a, b.scrollWidth), 0);
+              check2(
+                "[83r-2] \u2605 \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02: \u0E04\u0E33\u0E22\u0E32\u0E27 600 \u0E15\u0E31\u0E27\u0E16\u0E39\u0E01\u0E2B\u0E31\u0E48\u0E19 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C",
+                blocks83.length > 0 && widest <= twPx + 2,
+                Math.round(widest) + " vs " + Math.round(twPx)
+              );
+              setSpView("side");
+              await until83(() => !!tsp.pane.querySelector(".sp-pageview .sp-page .sp"), 5e3);
+              await wait83(300);
+              {
+                const pgEl = tsp.pane.querySelector(".sp-pageview .sp-page");
+                const sps = [...tsp.pane.querySelectorAll(".sp-pageview .sp-page .sp-action")];
+                const worst = sps.reduce((a, b) => Math.max(a, b.scrollWidth - b.clientWidth), 0);
+                check2(
+                  "[83r-2] \u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E2B\u0E19\u0E49\u0E32: \u0E04\u0E33\u0E22\u0E32\u0E27\u0E16\u0E39\u0E01\u0E2B\u0E31\u0E48\u0E19\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19 (\u0E44\u0E21\u0E48\u0E17\u0E30\u0E25\u0E38\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29)",
+                  !!pgEl && sps.length > 0 && worst <= 1,
+                  worst
+                );
+                const csSp = sps.length && getComputedStyle(sps[0]).overflowWrap;
+                check2(
+                  "[83r-2] \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E40\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07 overflow-wrap \u0E43\u0E2B\u0E49\u0E41\u0E25\u0E49\u0E27",
+                  csSp === "break-word" || csSp === "anywhere",
+                  csSp
+                );
+              }
+              setSpView("normal");
+              await wait83(200);
+              check2(
+                "[83r-3] \u0E21\u0E35 element \u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07\u0E0B\u0E49\u0E32\u0E22/\u0E02\u0E27\u0E32\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E25\u0E32\u0E07",
+                !!SP_ELEMS["cont-left"] && !!SP_ELEMS["cont-right"] && TAB_CYCLE.includes("cont-left") && TAB_CYCLE.includes("cont-right")
+              );
+              check2(
+                "[83r-3] \u0E21\u0E35\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E14\u0E49\u0E27\u0E22",
+                [...$("#tb-sp-elem").options].some((o) => o.value === "cont-left") && [...$("#tb-sp-elem").options].some((o) => o.value === "cont-right")
+              );
+              tsp.sp.setMarkdown([
+                ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E19\u0E2D\u0E19 - \u0E40\u0E0A\u0E49\u0E32",
+                "!\u0E40\u0E02\u0E32\u0E19\u0E2D\u0E19\u0E2D\u0E22\u0E39\u0E48",
+                "$contr (\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B)",
+                "$contl \u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E48\u0E2D\u0E19:"
+              ].join("\n"));
+              await wait83(500);
+              const els83 = [];
+              tsp.sp.view.state.doc.forEach((n2) => els83.push(n2.attrs && n2.attrs.el));
+              check2(
+                "[83r-3] \u2605 \u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22)",
+                els83.includes("cont-right") && els83.includes("cont-left"),
+                els83.join(",")
+              );
+              check2(
+                "[83r-3] \u2605 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E14\u0E49\u0E23\u0E2B\u0E31\u0E2A\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30 (round-trip \u0E1B\u0E34\u0E14\u0E27\u0E07)",
+                tsp.sp.getMarkdown().includes("$contr (\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B)") && tsp.sp.getMarkdown().includes("$contl \u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E48\u0E2D\u0E19:"),
+                JSON.stringify(tsp.sp.getMarkdown())
+              );
+              {
+                const rEl = tsp.pane.querySelector(".ProseMirror .sp-cont-right");
+                const lEl = tsp.pane.querySelector(".ProseMirror .sp-cont-left");
+                check2(
+                  "[83r-3] \u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07 (\u0E02\u0E27\u0E32) \u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32 \xB7 (\u0E0B\u0E49\u0E32\u0E22) \u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22",
+                  !!rEl && !!lEl && getComputedStyle(rEl).textAlign === "right" && getComputedStyle(lEl).textAlign === "left",
+                  rEl && getComputedStyle(rEl).textAlign
+                );
+              }
+              tsp.sp.setMarkdown(keepMd);
+              await wait83(400);
+              state.settings.spPageNumbers = keepPn83;
+              applyPageVars();
+              updatePageNumberHint();
+            }
+            {
+              const keepCt = JSON.parse(JSON.stringify(state.settings.spContinued || {}));
+              settingsDialog("page");
+              await until83(() => !!document.querySelector(".k-dialog.k-settings"), 4e3);
+              const box83 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+              const ctBox = box83 && box83.querySelector("#st-ct-auto");
+              check2('[83r-3] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48 CONTINUED \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34"', !!ctBox);
+              if (ctBox) {
+                check2("[83r-3] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E04\u0E48\u0E32\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19 (\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)", ctBox.checked === true, ctBox.checked);
+                ctBox.checked = false;
+                ctBox.dispatchEvent(new Event("change", { bubbles: true }));
+                box83.querySelector(".k-ok").click();
+                await wait83(300);
+                check2(
+                  "[83r-3] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 settings \u0E08\u0E23\u0E34\u0E07",
+                  state.settings.spContinued && state.settings.spContinued.enabled === false,
+                  JSON.stringify(state.settings.spContinued)
+                );
+              } else {
+                for (const ov2 of document.querySelectorAll(".k-overlay")) ov2.remove();
+              }
+              state.settings.spContinued = keepCt;
+              applyPageVars();
+            }
+            {
+              const probe = document.createElement("span");
+              probe.className = "k-spell-bad";
+              probe.textContent = "\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+              document.body.append(probe);
+              check2(
+                "[83r-4] \u2605 \u0E04\u0E33\u0E17\u0E35\u0E48\u0E2A\u0E30\u0E01\u0E14\u0E1C\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E1E\u0E34\u0E21\u0E1E\u0E4C (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 context-menu)",
+                getComputedStyle(probe).cursor === "text",
+                getComputedStyle(probe).cursor
+              );
+              probe.remove();
+              const m = document.createElement("span");
+              m.className = "k-mention";
+              m.textContent = "\u0E42\u0E17\u0E23\u0E30";
+              document.body.append(m);
+              {
+                m.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+                await wait83(60);
+                const sc = $("#status-center");
+                check2(
+                  "[83r-4] \u2605 \u0E0A\u0E35\u0E49\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E25\u0E34\u0E07\u0E01\u0E4C Wiki \u2192 \u0E04\u0E33\u0E43\u0E1A\u0E49\u0E02\u0E36\u0E49\u0E19\u0E17\u0E35\u0E48\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07",
+                  !!sc && sc.textContent.trim().length > 0,
+                  sc && sc.textContent
+                );
+                m.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+                await wait83(60);
+                check2("[83r-4] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E33\u0E43\u0E1A\u0E49\u0E2B\u0E32\u0E22", !!sc && sc.textContent === "", sc && sc.textContent);
+              }
+              m.remove();
+              check2(
+                "[83r-4] \u0E44\u0E21\u0E48\u0E21\u0E35 title= \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E1A\u0E19 .k-mention / .k-spell-bad",
+                document.querySelectorAll(".k-mention[title], .k-spell-bad[title]").length === 0
+              );
+            }
+          }
+        }
         check2(
           "[81-9] \u0E40\u0E21\u0E19\u0E39\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E23\u0E35\u0E22\u0E01\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",
           await (async () => {
@@ -173899,6 +176660,191 @@ ${css}
           })()
         );
       }
+      {
+        const B82 = await Promise.resolve().then(() => (init_builder_core(), builder_core_exports));
+        const U82 = await Promise.resolve().then(() => (init_builder_ui(), builder_ui_exports));
+        const wait82 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until82 = async (fn, ms = 4e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            if (fn()) return true;
+            await wait82(50);
+          }
+          return false;
+        };
+        check2(
+          "[82-1] \u0E41\u0E1C\u0E07 dlgb \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 PANEL_DEFS + \u0E21\u0E35\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 DOM",
+          PANEL_DEFS.some((d) => d.id === "dlgb" && d.adopt === "#dlgb-panel") && !!$("#dlgb-body")
+        );
+        const menu82 = await kapi.menuPanelIds();
+        check2(
+          "[82-1] \u0E41\u0E1C\u0E07 dlgb \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39 native \u0E14\u0E49\u0E27\u0E22",
+          menu82.ids.includes("dlgb"),
+          JSON.stringify(menu82.ids.slice(-4))
+        );
+        const tbB82 = document.getElementById("tb-dlgb");
+        check2("[82-1] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01 disable", !!tbB82 && !tbB82.disabled);
+        check2(
+          "[82-1] \u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E14\u0E49\u0E27\u0E22",
+          (await Promise.resolve().then(() => (init_toolbar_config(), toolbar_config_exports))).allButtonIds().includes("tb-dlgb")
+        );
+        U82.resetBuilder();
+        showPanel("dlgb");
+        check2("[82-1] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E44\u0E14\u0E49", isPanelOpen("dlgb"));
+        await renderFeaturePanel("dlgb");
+        check2(
+          "[82-1] \u0E41\u0E1C\u0E07\u0E27\u0E32\u0E14\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27",
+          await until82(() => !!document.querySelector("#dlgb-body .dlgb-list")),
+          ($("#dlgb-body") || {}).textContent
+        );
+        const ents82 = await listEntities(state.root);
+        check2("[82-2] fixture \u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E43\u0E19 Wiki \u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01", ents82.length >= 2, String(ents82.length));
+        const preset82 = B82.newPreset({ name: "\u0E04\u0E13\u0E30\u0E17\u0E14\u0E2A\u0E2D\u0E1A 82" });
+        for (const e of ents82.slice(0, 2)) {
+          B82.addCast(preset82, {
+            name: e.name,
+            wikiPath: e.path,
+            cat: e.cat,
+            persona: B82.personaFromEntity(e.entity, e.name),
+            blurb: B82.blurbFromEntity(e.entity)
+          });
+        }
+        check2("[82-2] \u0E14\u0E36\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E08\u0E32\u0E01 Wiki \u0E40\u0E02\u0E49\u0E32\u0E04\u0E13\u0E30\u0E44\u0E14\u0E49 2 \u0E15\u0E31\u0E27", preset82.cast.length === 2);
+        check2(
+          "[82-2] \u0E43\u0E1A\u0E1A\u0E17\u0E1A\u0E32\u0E17\u0E16\u0E39\u0E01\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01 Wiki \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E48\u0E32\u0E27\u0E48\u0E32\u0E07",
+          preset82.cast.every((c) => c.persona && c.persona.includes(c.name))
+        );
+        const A82 = preset82.cast[0], BB82 = preset82.cast[1];
+        A82.selfPronoun = "\u0E1C\u0E21";
+        B82.setRel(preset82, A82.id, BB82.id, { how: "\u0E41\u0E1F\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0B\u0E35\u0E19\u0E19\u0E35\u0E49", callThem: "\u0E04\u0E38\u0E13" });
+        const sess82 = B82.sessionFromPreset(preset82, {
+          situation: "\u0E19\u0E31\u0E48\u0E07\u0E14\u0E37\u0E48\u0E21\u0E17\u0E35\u0E48\u0E25\u0E32\u0E19\u0E40\u0E1A\u0E35\u0E22\u0E23\u0E4C\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E25\u0E34\u0E01\u0E07\u0E32\u0E19",
+          title: "\u0E40\u0E17\u0E2A\u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17 82"
+        });
+        check2(
+          "[82-3] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E04\u0E13\u0E30\u0E21\u0E32\u0E40\u0E15\u0E47\u0E21 \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E2D\u0E49\u0E32\u0E07 preset",
+          sess82.cast.length === 2 && sess82.rels.length === 1 && sess82.presetId === preset82.id
+        );
+        sess82.turns.push(B82.newTurn({
+          speaker: A82.id,
+          listener: BB82.id,
+          text: "\u0E01\u0E47\u0E41\u0E04\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22",
+          paren: "\u0E22\u0E34\u0E49\u0E21\u0E40\u0E08\u0E37\u0E48\u0E2D\u0E19",
+          thinking: "\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E42\u0E21\u0E40\u0E14\u0E25\u0E15\u0E2D\u0E19\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E19\u0E35\u0E49",
+          model: "test-model",
+          usage: { input: 120, output: 20 },
+          ts: Date.now()
+        }));
+        sess82.turns.push(B82.newTurn({
+          speaker: BB82.id,
+          listener: A82.id,
+          text: "\u0E40\u0E2B\u0E23\u0E2D \u0E44\u0E21\u0E48\u0E40\u0E0A\u0E37\u0E48\u0E2D",
+          ts: Date.now()
+        }));
+        const dlgDir82 = await kapi.join(state.root, B82.BUILDER_DIR);
+        if (!await kapi.exists(dlgDir82)) await kapi.mkdir(dlgDir82);
+        const file82 = B82.sessionFileName(sess82, []);
+        await kapi.writeFile(await kapi.join(dlgDir82, file82), JSON.stringify(sess82, null, 2));
+        check2(
+          "[82-3] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E43\u0E19 Dialogues/ (\u0E01\u0E4A\u0E2D\u0E1B/\u0E41\u0E0A\u0E23\u0E4C\u0E44\u0E14\u0E49)",
+          await kapi.exists(await kapi.join(dlgDir82, file82)),
+          file82
+        );
+        const back82 = await kapi.readJson(await kapi.join(dlgDir82, file82));
+        check2(
+          "[82-3] \u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E04\u0E13\u0E30 \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C \u0E41\u0E25\u0E30\u0E1A\u0E17\u0E1E\u0E39\u0E14",
+          back82.cast.length === 2 && back82.rels.length === 1 && back82.turns.length === 2 && back82.turns[0].thinking.length > 0
+        );
+        BB82.persona = "\u0E04\u0E27\u0E32\u0E21\u0E25\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E19\u0E35\u0E49\u0E04\u0E37\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E32\u0E22\u0E25\u0E31\u0E1A";
+        sess82.cast[1].persona = BB82.persona;
+        const sys82 = B82.buildSystem(sess82, A82.id);
+        check2(
+          "[82-4] prompt \u0E21\u0E35\u0E43\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 + \u0E2A\u0E23\u0E23\u0E1E\u0E19\u0E32\u0E21 + \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E02\u0E2D\u0E07\u0E0B\u0E35\u0E19",
+          sys82.includes("\u0E1C\u0E21") && sys82.includes("\u0E41\u0E1F\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0B\u0E35\u0E19\u0E19\u0E35\u0E49") && sys82.includes("\u0E25\u0E32\u0E19\u0E40\u0E1A\u0E35\u0E22\u0E23\u0E4C")
+        );
+        check2("[82-4] \u2605 \u0E43\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E23\u0E31\u0E48\u0E27\u0E40\u0E02\u0E49\u0E32 prompt", !sys82.includes("\u0E2A\u0E32\u0E22\u0E25\u0E31\u0E1A"));
+        const msgs82 = B82.buildMessages(sess82, A82.id);
+        check2(
+          "[82-4] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 = assistant \xB7 \u0E02\u0E2D\u0E07\u0E04\u0E19\u0E2D\u0E37\u0E48\u0E19 = user",
+          msgs82.some((m) => m.role === "assistant" && m.content.includes("\u0E01\u0E47\u0E41\u0E04\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22")) && msgs82.some((m) => m.role === "user" && m.content.includes(BB82.name)),
+          JSON.stringify(msgs82)
+        );
+        const proseTab82 = [...state.tabs.values()].find((x) => x.editor);
+        if (proseTab82) {
+          await activate(proseTab82.file);
+          const line82 = B82.turnToScreenplay(sess82, sess82.turns[0]);
+          check2(
+            "[82-5] \u2605 \u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E17\u0E35\u0E48\u0E08\u0E30\u0E41\u0E17\u0E23\u0E01 = @\u0E0A\u0E37\u0E48\u0E2D + (\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A) + \u0E1A\u0E17\u0E1E\u0E39\u0E14",
+            line82 === "@" + A82.name + "\n(\u0E22\u0E34\u0E49\u0E21\u0E40\u0E08\u0E37\u0E48\u0E2D\u0E19)\n\u0E01\u0E47\u0E41\u0E04\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22",
+            line82
+          );
+          const v82 = proseTab82.editor.view;
+          const before82 = v82.state.doc.textBetween(0, v82.state.doc.content.size, "\n");
+          const okIns82 = proseTab82.editor.insertLines(line82);
+          check2("[82-5] \u0E15\u0E31\u0E27\u0E41\u0E17\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E27\u0E48\u0E32\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", okIns82 === true);
+          await wait82(60);
+          const after82 = v82.state.doc.textBetween(0, v82.state.doc.content.size, "\n");
+          check2(
+            "[82-5] \u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E22\u0E32\u0E27\u0E02\u0E36\u0E49\u0E19 + \u0E21\u0E35 @\u0E0A\u0E37\u0E48\u0E2D)",
+            after82.length > before82.length && after82.includes("@" + A82.name),
+            after82.slice(-80)
+          );
+          check2(
+            "[82-5] \u0E41\u0E17\u0E23\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49 3 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E17\u0E35\u0E48\u0E21\u0E35 \\n",
+            after82.includes("@" + A82.name + "\n(\u0E22\u0E34\u0E49\u0E21\u0E40\u0E08\u0E37\u0E48\u0E2D\u0E19)\n\u0E01\u0E47\u0E41\u0E04\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22")
+          );
+        }
+        const spTab82 = [...state.tabs.values()].find((x) => x.sp);
+        if (spTab82) {
+          await activate(spTab82.file);
+          const v82s = spTab82.sp.view;
+          const nBefore = v82s.state.doc.childCount;
+          const okSp82 = spTab82.sp.insertScript(B82.turnToScreenplay(sess82, sess82.turns[0]));
+          check2("[82-5] \u0E15\u0E31\u0E27\u0E41\u0E17\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E27\u0E48\u0E32\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", okSp82 === true);
+          await wait82(60);
+          const els82 = [];
+          v82s.state.doc.forEach((n2) => els82.push((n2.attrs || {}).el + "|" + n2.textContent));
+          const iChar = els82.findIndex((x) => x === "character|" + A82.name);
+          check2("[82-5] \u2605 @\u0E0A\u0E37\u0E48\u0E2D \u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 element \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E08\u0E23\u0E34\u0E07", iChar >= 0, els82.join(" / ").slice(0, 200));
+          check2(
+            "[82-5] \u2605 \u0E15\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C \u0E41\u0E25\u0E49\u0E27\u0E1A\u0E17\u0E1E\u0E39\u0E14",
+            iChar >= 0 && els82[iChar + 1] === "parenthetical|(\u0E22\u0E34\u0E49\u0E21\u0E40\u0E08\u0E37\u0E48\u0E2D\u0E19)" && els82[iChar + 2] === "dialogue|\u0E01\u0E47\u0E41\u0E04\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E48\u0E2D\u0E22",
+            els82.slice(iChar, iChar + 3).join(" / ")
+          );
+          check2(
+            "[82-5] \u0E41\u0E17\u0E23\u0E01\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E19\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E02\u0E36\u0E49\u0E19 3 \u0E43\u0E1A",
+            v82s.state.doc.childCount === nBefore + 3,
+            nBefore + " -> " + v82s.state.doc.childCount
+          );
+        }
+        {
+          const host82 = $("#dlgb-body");
+          const probe = el("div", "dlgb-think");
+          const sum2 = el("summary", "dlgb-think-sum", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14");
+          probe.append(sum2);
+          host82.append(probe);
+          const cs82 = getComputedStyle(sum2);
+          const box82 = sum2.getBoundingClientRect();
+          check2(
+            "[82-6] \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E42\u0E21\u0E40\u0E14\u0E25\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (opacity+visibility+\u0E02\u0E19\u0E32\u0E14)",
+            cs82.display !== "none" && cs82.visibility !== "hidden" && parseFloat(cs82.opacity || "1") > 0.05 && box82.width > 0 && box82.height > 0,
+            `${cs82.display}/${cs82.visibility}/${cs82.opacity}/${box82.width}x${box82.height}`
+          );
+          probe.remove();
+        }
+        check2(
+          "[82-7] \u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27",
+          dirtyRegistry.ids().includes("dlgb"),
+          dirtyRegistry.ids().join(",")
+        );
+        try {
+          await kapi.remove(await kapi.join(dlgDir82, file82));
+        } catch {
+        }
+        U82.resetBuilder();
+        hidePanel("dlgb");
+        check2("[82-8] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E44\u0E14\u0E49", !isPanelOpen("dlgb"));
+      }
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -173910,7 +176856,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md13, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -174010,6 +176956,8 @@ ${css}
       init_plugin_core();
       init_plugin_panel();
       init_dialogue_ui();
+      init_builder_ui();
+      init_text_measure();
       init_toolbar_config();
       init_toolbar_ui();
       init_export_hub();
@@ -174144,7 +177092,9 @@ ${css}
         ["tb-gallery-board", "gallery-board"],
         ["tb-comments", "comments"],
         ["tb-notes-panel", "notes"],
-        ["tb-log", "log"]
+        ["tb-log", "log"],
+        ["tb-dlgb", "dlgb"]
+        // [alpha.82] ห้องซ้อมบท
       ];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
         "tb-close",
@@ -174180,6 +177130,7 @@ ${css}
         // เดิมถูก disable ไปพร้อมปุ่มจัดรูปแบบ ทำให้ "เปิดโปรแกรมมาแล้วกดแผงบทพูดไม่ได้"
         "tb-dialogue",
         "tb-plugins",
+        "tb-dlgb",
         "tb-timeline",
         "tb-maps",
         "tb-books",
@@ -174279,7 +177230,9 @@ ${css}
         record: () => renderRecordPanel($("#record-body")),
         // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
         dialogue: () => renderDialoguePanel($("#dialogue-body")),
-        plugins: () => renderPluginPanel($("#plugins-body"))
+        plugins: () => renderPluginPanel($("#plugins-body")),
+        // [alpha.82] ห้องซ้อมบท
+        dlgb: () => renderBuilderPanel($("#dlgb-body"))
       };
       _featInFlight = /* @__PURE__ */ new Map();
       setPanelShowHook((pid) => {
@@ -174302,6 +177255,14 @@ ${css}
       window.addEventListener("keyup", _syncMod, true);
       window.addEventListener("blur", () => setModDown(false));
       window.addEventListener("mousemove", _syncMod, { passive: true, capture: true });
+      _hoverHint = "";
+      document.addEventListener("mouseover", (e) => {
+        const el2 = e.target && e.target.closest ? e.target.closest(".k-mention") : null;
+        setHoverHint(el2 ? t("ui.editor.ctrlClickOpenWiki") : "");
+      }, { passive: true, capture: true });
+      document.addEventListener("mouseout", (e) => {
+        if (e.target && e.target.closest && e.target.closest(".k-mention")) setHoverHint("");
+      }, { passive: true, capture: true });
       window.addEventListener("wheel", (e) => {
         if (!(e.ctrlKey || e.metaKey)) return;
         if (!e.target.closest || !e.target.closest(".ProseMirror")) return;
@@ -174737,6 +177698,7 @@ ${css}
           markDirty(state.active);
           doFind();
         };
+        installTextMeasurer();
         if (PANEL_WIN) {
           bootPanelWindow();
           return;

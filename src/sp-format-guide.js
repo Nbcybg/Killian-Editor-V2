@@ -135,6 +135,8 @@ export const setPageBreaks = SP_PB.setBreaks;
 export const pageBreaks = SP_PB.breaks;
 export const spPageBreakPlugin = SP_PB.plugin;
 export const refreshPageBreaks = SP_PB.refresh;
+/** [alpha.83 ข้อ 4] ตัวทำ "เลขหน้าจริง" ที่มุมขวาบนของหน้าถัดไป (โหมดปกติ/จัดหน้า) */
+export const setSpPageNumberLabel = SP_PB.setNumberLabel;
 
 // ───────── alpha.58 · 55–56 · CONTINUED / (MORE) / (cont'd) ─────────
 // เครื่องหมายพวกนี้ "ไม่ใช่เนื้อบท" — ห้ามแทรกเป็นข้อความจริง ไม่งั้นไฟล์ .md เพี้ยนและลบไม่ออก

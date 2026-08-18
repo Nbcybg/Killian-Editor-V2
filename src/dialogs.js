@@ -10,7 +10,7 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
          PAGE_BREAK_RULES, SP_STRINGS, mergeSpFormat, linesPerPage, formatLines,
-         SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS,
+         SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, CONTINUED_DEFAULTS,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, defaultLangFonts, normalizeLangFonts,
          normalizeRange, buildLangFontCss, applyLangFonts,
          isLangFontUsable, withLangFamily } from './core.js';
@@ -201,6 +201,9 @@ export function settingsDialog(openTab) {
     // [alpha.57a ข้อ 2] เลขฉาก + เลขหน้า
     sceneNumbers: { ...SCENE_NUMBER_DEFAULTS, ...(s.spSceneNumbers || {}) },
     pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...(s.spPageNumbers || {}) },
+    // [alpha.83r ข้อ 3] สวิตช์ "ใส่ CONTINUED อัตโนมัติ" — ผู้ใช้ขอให้อยู่ในตั้งค่าโปรเจกต์
+    // (เดิมมีแต่ในเมนู "บท" ซึ่งหาไม่เจอถ้าไม่รู้ว่ามี) · ปิดแล้วพิมพ์เองด้วยบล็อก cont-left/right
+    continued: { ...CONTINUED_DEFAULTS, ...(s.spContinued || {}) },
     // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา (สำเนาทำงาน)
     langFonts: normalizeLangFonts(s.langFonts),
     // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
@@ -395,8 +398,18 @@ export function settingsDialog(openTab) {
   q('#st-pr-qb').checked = !!P.quote.border;
   q('#st-pr-qind').value = P.quote.indent;
   q('#st-pr-qcolor').value = P.quote.color || '';
-  q('#st-pr-pgnum').checked = !!P.pageNumbers;
-  q('#st-pr-pgfirst').checked = !!P.pageNumberFirst;
+  // [alpha.83 ข้อ 4] สองช่องนี้ = **สวิตช์เดียวกับ** "เลขหน้า" ในแท็บหน้ากระดาษ (W.pageNumbers)
+  // เดิมเป็นคนละที่เก็บ → เปิดที่นี่แล้วตัวแก้ไข/โหมดจัดหน้าไม่ขึ้นเลข เปิดอีกที่แล้วมุมมองเรียงหน้า
+  // ไม่ขึ้นเลข · ตอนนี้เขียนลง W.pageNumbers ตัวเดียว แล้วสะท้อนกลับให้ P เพื่อความเข้ากันได้
+  const syncPgNum = () => {
+    const a1 = q('#st-pr-pgnum'), b1 = q('#st-pr-pgfirst');
+    const a2 = q('#st-pn-show'), b2 = q('#st-pn-first');
+    if (a1) a1.checked = !!W.pageNumbers.show;
+    if (b1) b1.checked = W.pageNumbers.firstPage !== false;
+    if (a2) a2.checked = !!W.pageNumbers.show;
+    if (b2) b2.checked = W.pageNumbers.firstPage !== false;
+  };
+  syncPgNum();
 
   const headBody = q('#st-pr-heads tbody');
   const renderHeads = () => {
@@ -453,13 +466,17 @@ export function settingsDialog(openTab) {
     P.quote.border = q('#st-pr-qb').checked;
     P.quote.indent = parseFloat(q('#st-pr-qind').value) || 0;
     P.quote.color = q('#st-pr-qcolor').value.trim();
-    P.pageNumbers = q('#st-pr-pgnum').checked;
-    P.pageNumberFirst = q('#st-pr-pgfirst').checked;
+    W.pageNumbers.show = q('#st-pr-pgnum').checked;
+    W.pageNumbers.firstPage = q('#st-pr-pgfirst').checked;
+    P.pageNumbers = W.pageNumbers.show;
+    P.pageNumberFirst = W.pageNumbers.firstPage;
     return P;
   };
   const previewProse = () => {
     const f = mergeProseFormat(readProse());
     applyProseVars(f);
+    syncPgNum();
+    try { previewPage(); } catch {}          // เลขหน้าเปลี่ยน = หน้ากระดาษต้องอัปเดตทันที
     const paper = PAPER_SIZES[W.paperSize] || PAPER_SIZES.letter;
     const pp = W.paperSize === 'custom' ? W.customPaper : paper;
     q('#st-pr-info').textContent =
@@ -491,7 +508,7 @@ export function settingsDialog(openTab) {
     q('#st-pr-hnumlv').value = P.headingNumberLevel;
     q('#st-pr-qi').checked = !!P.quote.italic; q('#st-pr-qb').checked = !!P.quote.border;
     q('#st-pr-qind').value = P.quote.indent; q('#st-pr-qcolor').value = P.quote.color || '';
-    q('#st-pr-pgnum').checked = !!P.pageNumbers; q('#st-pr-pgfirst').checked = !!P.pageNumberFirst;
+    syncPgNum();          // พรีเซ็ตรูปแบบนิยายไม่ยุ่งกับเลขหน้า (คนละเรื่องกัน)
     renderHeads(); previewProse();
   };
   q('#st-pr-reset').onclick = () => loadProse(null);
@@ -596,8 +613,9 @@ export function settingsDialog(openTab) {
   numIn('#st-sn-right', () => W.sceneNumbers.right, (v) => { W.sceneNumbers.right = v; });
   { const i = q('#st-sn-suffix'); i.value = W.sceneNumbers.suffix || '';
     i.oninput = () => { W.sceneNumbers.suffix = i.value; previewPage(); }; }
-  chk('#st-pn-show', () => W.pageNumbers.show, (v) => { W.pageNumbers.show = v; });
-  chk('#st-pn-first', () => W.pageNumbers.firstPage, (v) => { W.pageNumbers.firstPage = v; });
+  chk('#st-ct-auto', () => W.continued.enabled !== false, (v) => { W.continued.enabled = v; });
+  chk('#st-pn-show', () => W.pageNumbers.show, (v) => { W.pageNumbers.show = v; syncPgNum(); });
+  chk('#st-pn-first', () => W.pageNumbers.firstPage, (v) => { W.pageNumbers.firstPage = v; syncPgNum(); });
   numIn('#st-pn-right', () => W.pageNumbers.right, (v) => { W.pageNumbers.right = v; });
   numIn('#st-pn-top', () => W.pageNumbers.top, (v) => { W.pageNumbers.top = v; });
   { const i = q('#st-pn-suffix'); i.value = W.pageNumbers.suffix || '';
@@ -610,11 +628,13 @@ export function settingsDialog(openTab) {
     const keep = { paperSize: s.paperSize, customPaper: s.customPaper, pageMargins: s.pageMargins,
                    spElements: s.spElements, spStyles: s.spStyles,
                    spSceneNumbers: s.spSceneNumbers, spPageNumbers: s.spPageNumbers,
+                   spContinued: s.spContinued,
                    spLineHeight: s.spLineHeight, spPageGap: s.spPageGap,
                    paperGaps: s.paperGaps, paperGapBand: s.paperGapBand };
     Object.assign(s, { paperSize: W.paperSize, customPaper: W.customPaper, pageMargins: W.margins,
                        spElements: W.elements, spStyles: W.styles,
                        spSceneNumbers: W.sceneNumbers, spPageNumbers: W.pageNumbers,
+                       spContinued: W.continued,
                        spLineHeight: W.spLineHeight, spPageGap: W.spPageGap,
                        paperGaps: W.paperGaps, paperGapBand: W.paperGapBand });
     applyPageVars();
@@ -1100,6 +1120,7 @@ export function settingsDialog(openTab) {
     // [alpha.57a] เลขฉาก + เลขหน้า + เสียงพิมพ์ + ฟอนต์ตามภาษา
     s.spSceneNumbers = { ...W.sceneNumbers };
     s.spPageNumbers = { ...W.pageNumbers };
+    s.spContinued = { ...W.continued };           // [alpha.83r ข้อ 3]
     s.spLineHeight = W.spLineHeight;              // [alpha.58r บั๊ก 5]
     s.spPageGap = W.spPageGap;
     s.paperGaps = W.paperGaps !== false;          // [alpha.82]

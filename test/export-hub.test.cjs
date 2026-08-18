@@ -125,7 +125,11 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   const base = { paper: { width: 8.5, height: 11 },
                  pageNumbers: { show: true, right: 1, top: 0.5, suffix: '.', firstPage: false } };
   const out = T.exportPageNumberFmt(base);
-  check('บังคับให้หน้าแรกมีเลขหน้า', out.pageNumbers.firstPage === true);
+  // [alpha.82] เลิกบังคับทับค่าที่ผู้ใช้ตั้ง — เดิมจอไม่มีเลข 1 แต่ PDF มี (สองฝั่งอ่านคนละที่)
+  // ตอนนี้ค่าเริ่มต้นเป็น "หน้าฉากแรกมีเลข" อยู่แล้ว ตัวนี้จึงแค่เติมค่าที่ขาดให้ครบ
+  check('เคารพค่าที่ผู้ใช้ตั้ง (ไม่บังคับทับ)', out.pageNumbers.firstPage === false);
+  check('ค่าที่ไม่ได้ตั้งถูกเติมจากค่าเริ่มต้น',
+        T.exportPageNumberFmt({ pageNumbers: { show: true } }).pageNumbers.firstPage === true);
   check('ค่าอื่นของเลขหน้าไม่ถูกแตะ',
         out.pageNumbers.right === 1 && out.pageNumbers.top === 0.5 && out.pageNumbers.suffix === '.');
   check('ส่วนอื่นของรูปแบบยังอยู่ครบ', out.paper.width === 8.5 && out.paper.height === 11);

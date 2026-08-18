@@ -204,7 +204,6 @@ export function renderPageView(host, pages, fmt, opts = {}) {
   const list = (pages && pages.pages) || pages || [];
   const scale = opts.scale ?? 1;
   const gap = opts.gap ?? 20;
-  const showNums = opts.showPageNumbers !== false;
   const pw = +f.paper.width, ph = +f.paper.height;
   const pxW = pw * 96 * scale, pxH = ph * 96 * scale;
 
@@ -232,16 +231,19 @@ export function renderPageView(host, pages, fmt, opts = {}) {
 
     // [alpha.57a ข้อ 2] เลขหน้า — เปิด/ปิดได้ที่ตั้งค่าโปรเจกต์ · ตำแหน่งวัดจากขอบกระดาษ
     // (ค่าเริ่มต้น: ชิดขวา 1" จากขอบขวา · 0.5" จากขอบบน · เริ่มนับที่ startPage ของไฟล์นั้น)
-    const label = f.pageNumbers && f.pageNumbers.show
-      ? pageNumberLabel(pg.index, f, opts.startPage)
-      : (showNums && pg.index > 1 ? pg.index + '.' : '');
+    //
+    // [alpha.83 ข้อ 5] **ตัดกิ่งสำรองทิ้ง** — เดิมเมื่อปิดสวิตช์เลขหน้า โค้ดจะตกไปพิมพ์
+    // `pg.index + '.'` ให้ทุกหน้าตั้งแต่หน้า 2 อยู่ดี → ผู้ใช้ปิดเลขหน้าแล้วเลขไม่หาย
+    // ("ติดตายเลย เอาออกไม่ได้") และหน้า 1 **ไม่เคยได้เลข** ไม่ว่าจะตั้งค่ายังไง
+    // ตอนนี้มีกฎเดียว: `pageNumberLabel()` ซึ่งอ่าน show/firstPage/suffix/startPage ชุดเดียว
+    const label = opts.showPageNumbers === false
+      ? '' : pageNumberLabel(pg.index, f, opts.startPage);
     if (label) {
       const num = document.createElement('div');
       num.className = 'sp-page-num';
-      if (f.pageNumbers && f.pageNumbers.show) {
-        num.style.top = cssIn(f.pageNumbers.top);
-        num.style.right = cssIn(f.pageNumbers.right);
-      }
+      // ตำแหน่งเป็น "โอเวอร์เลย์" เสมอ — วัดจากขอบกระดาษจริง ไม่กินที่ในสายเนื้อหา
+      num.style.top = cssIn(f.pageNumbers.top);
+      num.style.right = cssIn(f.pageNumbers.right);
       num.textContent = label;
       page.append(num);
     }

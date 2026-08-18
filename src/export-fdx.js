@@ -27,6 +27,10 @@ export const FDX_TYPE_MAP = {
   outline3: 'Action',
   image: 'Action',
   raw: 'Action',
+  // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — Final Draft ไม่มีชนิดนี้ (ของมันเป็นตัวเลือกจัดหน้า)
+  // ลงเป็น Action เพื่อให้ข้อความไม่หายไปจากไฟล์ที่ส่งออก
+  'cont-left': 'Action',
+  'cont-right': 'Action',
 };
 export const fdxType = (el) => FDX_TYPE_MAP[el] || 'Action';
 

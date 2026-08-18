@@ -10,7 +10,9 @@ const PATS = [
   [/(?<![\w_])_([^_\n]+)_(?![\w_])/, ['underline']],
   [/~~([^~\n]+)~~/, ['strike']],
 ];
-const RE_H = /^(#{1,6}) /;
+// [alpha.83 ข้อ 1] `###` ล้วน ๆ (ไม่มีวรรค/ไม่มีข้อความ) ก็เป็นหัวข้อว่างตามมาตรฐาน CommonMark
+// — ต้องจับให้ได้ ไม่งั้นกลายเป็น "ย่อหน้าที่มีข้อความ ###" ค้างอยู่ในไฟล์ตลอดไป
+const RE_H = /^(#{1,6})(?: |$)/;
 const RE_UL = /^[-*] /;
 const RE_OL = /^(\d+)\. /;
 const RE_IMG = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
@@ -134,9 +136,12 @@ function mdToDoc(md, alignMap) {
       out.push({ type: 'figure', attrs: { src: m[2], alt: m[1], md: line.trimEnd() } });
       i++;
     } else if ((m = RE_H.exec(line))) {
-      const content = inlineNodes(line.slice(m[0].length));
-      out.push({ type: 'heading', attrs: { level: m[1].length, align },
-                 ...(content.length ? { content } : {}) });
+      const rest = line.slice(m[0].length);
+      const content = rest.trim() ? inlineNodes(rest) : [];
+      // หัวข้อที่ไม่มีข้อความ (รวมกรณีมีแต่วรรค) = บรรทัดว่าง — เขียนกลับเป็นบรรทัดว่างจริง ๆ
+      out.push(content.length
+        ? { type: 'heading', attrs: { level: m[1].length, align }, ...{ content } }
+        : { type: 'paragraph', attrs: { align } });
       i++;
     } else if (line.startsWith('> ')) {
       const ps = [];
@@ -273,9 +278,15 @@ function docToMd(doc, opts) {
         lines.push(a.md || `![${a.alt || ''}](${a.src || ''})`);
         break;
       }
-      case 'heading':
-        lines.push(alignPfx(node) + '#'.repeat((node.attrs || {}).level || 1) + ' ' + inlineToMd(node.content));
+      case 'heading': {
+        // [alpha.83 ข้อ 1] หัวข้อที่ไม่มีข้อความ = บรรทัดว่าง **ห้ามเขียน `### ` เปล่า ๆ ลงไฟล์**
+        // เดิมเขียน `'### ' + ''` ออกมาเป็น `"### "` (มีวรรคท้าย) ซึ่งดูเหมือนบรรทัดว่างในตัวแก้ไข
+        // แต่ทุกตัวที่อ่านไฟล์กลับจะ `replace(/\s+$/,'')` ก่อน แล้วกฎหัวข้อ `#{1,6}\s+` ไม่แมตช์
+        // → กลายเป็น **ย่อหน้าที่มีข้อความ `###`** ทั้งใน PDF และ HTML (ดู mdToProseBlocks/mdToHtmlBody)
+        const ht = inlineToMd(node.content);
+        lines.push(ht.trim() ? alignPfx(node) + '#'.repeat((node.attrs || {}).level || 1) + ' ' + ht : '');
         break;
+      }
       case 'blockquote':
         for (const p of node.content || []) lines.push('> ' + inlineToMd(p.content));
         break;

@@ -24,6 +24,22 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
   const text = label || ((page) => t('ui.common.page2') + (page || ''));
   let list = [];
   let sig = '';
+  // [alpha.83 ข้อ 4] "เลขหน้าจริง" ของหน้าที่เริ่มตรงเส้นคั่นนี้ — วางเป็นโอเวอร์เลย์ที่มุมขวาบน
+  // ของหน้าถัดไป (ตำแหน่งเดียวกับที่ PDF พิมพ์) · null = ปิดเลขหน้า
+  // เดิมโหมดปกติ/จัดหน้ามีเลขแค่ **หน้าแรก** (ผ่าน `::before` ของ .ProseMirror) หน้า 2 เป็นต้นไป
+  // มีแต่ป้าย "หน้า N" กลางแถบคั่น ผู้ใช้จึงเห็นว่า "เปิดเลขหน้าแล้วไม่ขึ้น"
+  let numFn = null;
+  /** ตั้งตัวทำป้ายเลขหน้า — คืน true เมื่อผลลัพธ์ที่ได้เปลี่ยนจริง (ผู้เรียกค่อย refresh) */
+  function setNumberLabel(fn) {
+    const before = numSig();
+    numFn = typeof fn === 'function' ? fn : null;
+    return numSig() !== before;
+  }
+  const numOf = (page) => {
+    if (!numFn) return '';
+    try { return String(numFn(page) ?? ''); } catch { return ''; }
+  };
+  const numSig = () => list.map((b) => numOf(b.page)).join(',');
 
   /** ตั้งรายการเส้นคั่นหน้า — คืน true เมื่อเปลี่ยนจริง */
   function setBreaks(next) {
@@ -62,8 +78,16 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
         lbl.className = 'sp-page-break-num';
         lbl.textContent = text(b.page);
         d.append(lbl);
+        const pn = numOf(b.page);
+        if (pn) {
+          const no = document.createElement('span');
+          no.className = 'sp-page-no-next';
+          no.textContent = pn;
+          d.append(no);
+        }
         return d;
-      }, { side: -1, key: decoKey + b.pos + '-' + b.page + (inline ? 'i' : '') }));
+      }, { side: -1,
+           key: decoKey + b.pos + '-' + b.page + (inline ? 'i' : '') + '-' + numOf(b.page) }));
     }
     return DecoSet.create(doc, out);
   }
@@ -86,5 +110,5 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
     if (view) view.dispatch(view.state.tr.setMeta(key, true));
   }
 
-  return { key, setBreaks, breaks, plugin, refresh };
+  return { key, setBreaks, breaks, setNumberLabel, plugin, refresh };
 }

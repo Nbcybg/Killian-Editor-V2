@@ -20,7 +20,7 @@ import { t } from './i18n.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS, textWidth } from './sp-format.js';
 import { num } from './num.js';
 // [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — ใช้ร่วมกับฝั่งบทภาพยนตร์
-import { visualLength } from './text-width.js';
+import { visualLength, wrapVisual } from './text-width.js';
 export { visualLength, ZERO_WIDTH_RE } from './text-width.js';
 
 const clamp = (v, lo, hi, d) => {
@@ -207,6 +207,8 @@ export function proseExportCss(fmt, paper, margins) {
     `max-width:${+tw.toFixed(3)}in`,
     'margin:3em auto', 'padding:0 1.2em',
     `text-align:${f.align}`,
+    // [alpha.83r ข้อ 2] คำยาวที่ไม่มีจุดตัดต้องถูกหั่น — ตรงกับที่ตัวจัดหน้าคิดไว้
+    'overflow-wrap:break-word', 'word-break:break-word',
   ].join(';');
   const out = [`body{${body}}`,
                `p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`,
@@ -282,24 +284,8 @@ export function proseMetrics(fmt, paper, margins) {
 
 /** จำนวนบรรทัดที่ข้อความหนึ่งย่อหน้ากินจริง (หน่วย = บรรทัดของเนื้อเรื่อง) */
 export function proseWrap(text, cols, indentCols = 0) {
-  const s = String(text ?? '');
-  if (!s.trim()) return 1;
-  const c = Math.max(1, Math.floor(cols));
-  let total = 0;
-  for (const para of s.split('\n')) {
-    const words = para.split(/\s+/).filter(Boolean);
-    // ไทยไม่มีช่องว่างระหว่างคำ → คำเดียวยาวมาก ตัดตามความกว้างล้วน
-    if (!words.length) { total += 1; continue; }
-    let line = 0, used = Math.max(0, Math.round(indentCols));
-    for (const w of words) {
-      const wl = visualLength(w);
-      const need = used ? used + 1 + wl : wl;
-      if (need <= c) used = need;
-      else { line++; used = wl; while (used > c) { line++; used -= c; } }
-    }
-    total += line + 1;
-  }
-  return Math.max(1, total);
+  // [alpha.82] ตรรกะจริงอยู่ที่ text-width.js แหล่งเดียว (ดูคำอธิบายบั๊ก off-by-one ที่นั่น)
+  return wrapVisual(text, cols, indentCols);
 }
 
 /** จำนวนบรรทัด (รวมระยะเว้นก่อน/หลัง) ที่บล็อกหนึ่งกินบนหน้า */
@@ -407,8 +393,15 @@ export function mdToProseBlocks(md) {
   for (const raw of String(md == null ? '' : md).split('\n')) {
     const line = raw.replace(/\s+$/, '');
     if (!line.trim()) continue;                       // บรรทัดว่างไม่ใช่บล็อก (ย่อหน้าคั่นกันเอง)
-    const h = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (h) { out.push({ type: 'h' + h[1].length, level: h[1].length, text: h[2], idx: i++ }); continue; }
+    // [alpha.83 ข้อ 1] `\s+` ตัวเดิมบังคับว่าต้องมีวรรค — แต่บรรทัดถูก rtrim ไปแล้วข้างบน
+    // `"### "` (หัวข้อว่างที่ md.js เคยเขียนลงไฟล์) จึงเหลือ `"###"` แล้วตกไปเป็นย่อหน้า
+    // ที่มีข้อความ `###` โผล่กลางเรื่องทั้งใน PDF และตัวอย่างส่งออก
+    const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
+    if (h) {
+      const ht = String(h[2] || '').trim();
+      if (!ht) continue;                              // หัวข้อว่าง = บรรทัดว่าง ไม่ใช่บล็อก
+      out.push({ type: 'h' + h[1].length, level: h[1].length, text: ht, idx: i++ }); continue;
+    }
     if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out.push({ type: 'hr', text: '', idx: i++ }); continue; }
     const li = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(line);
     if (li) { out.push({ type: 'li', text: li[1], idx: i++ }); continue; }

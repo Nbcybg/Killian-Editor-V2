@@ -1,6 +1,6 @@
 // บทหนัง WYSIWYG — element แบบ Final Draft (ยกพฤติกรรมจาก v1)
 // Tab = วน element · Enter = ไป element ถัดไปตามครรลอง · ไฟล์เก็บเป็นกติกา v1 เป๊ะ
-import { Schema } from 'prosemirror-model';
+import { Schema, Fragment, Slice } from 'prosemirror-model';
 import { EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { history, undo, redo } from 'prosemirror-history';
@@ -227,6 +227,29 @@ export class SPEditor {
     const v = this.view;
     const doc = spDocFromMarkdown(md, this.resolveSrc);
     v.dispatch(v.state.tr.replaceWith(0, v.state.doc.content.size, doc.content));
+    return true;
+  }
+
+  /**
+   * [alpha.82] แทรกบทฉบับ fountain ตรงเคอร์เซอร์ — `@ชื่อ` กลายเป็น element "ตัวละคร" จริง
+   *
+   * แทรกเป็นข้อความเปล่าไม่ได้: doc ของบทเป็นลำดับโหนด `sp` ที่มี attr `el` กำกับชนิดอยู่
+   * ยัด `@โทระ` ลงไปดื้อ ๆ จะได้บรรทัด action ที่หน้าตาเหมือนชื่อตัวละครแต่จัดหน้า/ส่งออกผิดหมด
+   * @returns {boolean}
+   */
+  insertScript(md) {
+    const v = this.view;
+    const text = String(md ?? '').trim();
+    if (!v || !text) return false;
+    const doc = spDocFromMarkdown(text, this.resolveSrc);
+    const nodes = [];
+    doc.content.forEach((n) => nodes.push(n));
+    if (!nodes.length) return false;
+    // openStart/openEnd = 0 → แต่ละ element เป็นบล็อกของตัวเอง ไม่ไปเชื่อมกับบล็อกที่เคอร์เซอร์อยู่
+    // (ต่างจากนิยาย — ที่นั่นเชื่อมกลางย่อหน้าได้ ที่นี่เชื่อมแล้วชนิด element เพี้ยน)
+    v.dispatch(v.state.tr.replaceSelection(new Slice(Fragment.fromArray(nodes), 0, 0))
+      .scrollIntoView());
+    v.focus();
     return true;
   }
 

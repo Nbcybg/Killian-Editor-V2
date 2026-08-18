@@ -13,7 +13,7 @@
 import { t } from './i18n.js';
 import { num } from './num.js';
 // [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — บรรทัด/หน้าของบทจะเกินจริงเกือบครึ่ง
-import { visualLength } from './text-width.js';
+import { visualLength, wrapText, wrapLineStrings, wrapCuts } from './text-width.js';
 
 // ───────── 85. ขนาดกระดาษ + ระยะขอบ ─────────
 export const PAPER_SIZES = {
@@ -84,6 +84,10 @@ export const SP_ELEMENT_CONFIG = {
   // [alpha.60r3a] `---` บังคับขึ้นหน้าใหม่ — ไม่กินบรรทัดของตัวเอง (paginate ปิดหน้าให้แทน)
   'page-break':  { indent: 1.5, width: 6.0, linesBefore: 0,  linesBetween: 0,  keepNext: false },
   note:          { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: false },
+  // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — กว้างเต็มพื้นที่พิมพ์ทั้งคู่
+  // ตัวขวาชิดขวาด้วย text-align (ดู spCss) ให้ตรงกับ (CONTINUED) ของตัวอัตโนมัติเป๊ะ
+  'cont-left':   { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: true },
+  'cont-right':  { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: false },
   summary:       { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: false },
   outline1:      { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: true },
   outline2:      { indent: 1.7, width: 5.8, linesBefore: 10, linesBetween: 10, keepNext: true },
@@ -115,6 +119,8 @@ export const SP_ELEMENT_STYLES = {
   'act-break':   { screen: ST(true,  true,  false, false), print: ST(true,  true,  false, true) },
   'page-break':  { screen: ST(false, false, false, false), print: ST(false, false, false, false) },
   note:          { screen: ST(false, false, true,  false), print: ST(false, false, true,  false) },
+  'cont-left':   { screen: ST(false, false, true,  false), print: ST(false, false, true,  false) },
+  'cont-right':  { screen: ST(false, false, true,  false), print: ST(false, false, true,  false) },
   summary:       { screen: ST(false, false, true,  false), print: ST(false, false, true,  false) },
   outline1:      { screen: ST(false, true,  false, false), print: ST(false, true,  false, false) },
   outline2:      { screen: ST(false, true,  false, false), print: ST(false, true,  false, false) },
@@ -191,8 +197,12 @@ export const SP_STRINGS = {
 // เลขฉาก: อยู่ข้าง ๆ หัวฉากทั้งสองฝั่ง — ซ้ายวัด 0.75" จากขอบกระดาษซ้าย · ขวาวัด 1" จากขอบขวา
 export const SCENE_NUMBER_DEFAULTS = { show: false, left: 0.75, right: 1.0, suffix: '' };
 // เลขหน้า: ชิดขวา 1" จากขอบขวา · 0.5" จากขอบบนของกระดาษ · มีเฉพาะไฟล์ที่เป็นฉาก
-// firstPage=false → ไม่พิมพ์เลขบนหน้าแรก (ธรรมเนียมบทภาพยนตร์)
-export const PAGE_NUMBER_DEFAULTS = { show: false, right: 1.0, top: 0.5, suffix: '.', firstPage: false };
+// firstPage=false → ไม่พิมพ์เลขบนหน้าแรกของ **เนื้อเรื่อง**
+//
+// [alpha.82] ค่าเริ่มต้นเปลี่ยนเป็น true — "ธรรมเนียมบทที่หน้าแรกไม่ใส่เลข" หมายถึงหน้าปก
+// ซึ่งสมัยนั้นเป็นหน้าแรกของไฟล์ · ตั้งแต่ .81r2 ปก/หน้ารายชื่อตัวละครแยกเป็น "หน้าหน้าเล่ม"
+// ที่ไม่ถูกนับเลขอยู่แล้ว → หน้าแรกที่ผู้ใช้เห็นคือ **หน้าฉากแรก** ซึ่งต้องเป็นเลข 1
+export const PAGE_NUMBER_DEFAULTS = { show: false, right: 1.0, top: 0.5, suffix: '.', firstPage: true };
 
 /** ตำแหน่งเลขฉากเทียบกับ "กล่องหัวฉาก" (นิ้ว · ค่าติดลบ = ล้ำออกนอกกล่องไปทางนั้น) */
 export function sceneNumberOffsets(fmt) {
@@ -306,6 +316,10 @@ export function spCss(fmt) {
     'font-weight:' + (st.bold ? '700' : '400'),
     'font-style:' + (st.italic ? 'italic' : 'normal'),
     'text-decoration:' + (st.underline ? 'underline' : 'none'),
+    // [alpha.83r ข้อ 2] คำยาวที่ไม่มีจุดตัดต้องถูกหั่น ไม่งั้นทะลุขอบกระดาษ
+    // — ตัวจัดหน้าหั่นกลางคำอยู่แล้ว จอต้องหั่นตรงกัน ไม่งั้นตัวเลขหน้าไม่ตรงกับที่เห็น
+    'overflow-wrap:break-word',
+    'word-break:break-word',
   ].join(';');
   const tw = textWidth(f.paper, f.margins);
   for (const k of SP_ELEMENT_KEYS) {
@@ -326,6 +340,9 @@ export function spCss(fmt) {
   // (คำนวณระยะเป็น "นิ้ว" ที่นี่ ไม่ใช้ calc(%) ด้วยเหตุผลเดียวกับความกว้างด้านบน)
   const so = sceneNumberOffsets(f);
   out.push('.sp.sp-scene{position:relative}');
+  // [alpha.83r ข้อ 3] "ต่อเนื่อง (ขวา)" ที่ผู้ใช้พิมพ์เอง — ชิดขวาแบบเดียวกับ (CONTINUED) อัตโนมัติ
+  out.push('.sp.sp-cont-right{text-align:right}');
+  out.push('.sp.sp-cont-left{text-align:left}');
   out.push('.k-scene-no{position:absolute;top:0;white-space:nowrap;user-select:none;' +
            'pointer-events:none;text-transform:none;font-weight:400;font-style:normal;text-decoration:none}');
   out.push(`.k-scene-no-l{left:${so.left}in}`);
@@ -360,23 +377,14 @@ export function spCss(fmt) {
 // ───────── 84. การจัดหน้า (pagination) ─────────
 /** จำนวนบรรทัดที่ข้อความหนึ่งบล็อกกินจริง เมื่อกว้าง width นิ้ว */
 export function wrapLines(text, widthIn, cpi = CHARS_PER_INCH) {
-  const cols = Math.max(1, Math.floor(num(widthIn, 6) * cpi));
-  const s = String(text ?? '');
-  if (!s.trim()) return 1;
-  let total = 0;
-  for (const para of s.split('\n')) {
-    const words = para.split(/\s+/).filter(Boolean);
-    if (!words.length) { total += 1; continue; }
-    let line = 0, used = 0;
-    for (const w of words) {
-      const wl = visualLength(w);
-      const need = used ? used + 1 + wl : wl;
-      if (need <= cols) { used = need; }
-      else { line++; used = wl; while (used > cols) { line++; used -= cols; } }
-    }
-    total += line + 1;
-  }
-  return Math.max(1, total);
+  // [alpha.82] วัดจากความกว้างจริงของฟอนต์ (ถ้าติดตั้งตัววัดไว้) ไม่ใช่กริดตัวอักษรต่อนิ้ว
+  // — `cpi` เหลือไว้เป็นทางสำรองตอนยังไม่มีตัววัด (เทสด้วย node / ก่อนฟอนต์พร้อม)
+  // ตัวตัดบรรทัดเป็นตัวเดียวกับที่ PDF ใช้ จึงได้จำนวนบรรทัดตรงกันโดยโครงสร้าง
+  return wrapText(text, num(widthIn, 6), { kind: 'sp', cpi });
+}
+/** บรรทัดจริง ๆ ของบล็อกหนึ่ง (ตัวเดียวกับที่ wrapLines นับ) */
+export function wrapScriptLines(text, widthIn, cpi = CHARS_PER_INCH) {
+  return wrapLineStrings(text, num(widthIn, 6), { kind: 'sp', cpi });
 }
 
 /**
@@ -394,6 +402,7 @@ export function paginate(blocks, opts = {}) {
 
   const CT = { ...CONTINUED_DEFAULTS, ...(fmt.continued || {}) };
   const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
+  const wantSceneMarks = CT.enabled !== false && CT.scene !== false;
 
   const pages = [];
   let cur = [], used = 0, lastChar = '';
@@ -421,7 +430,8 @@ export function paginate(blocks, opts = {}) {
     // ตัวมันเองไม่กินบรรทัดและไม่ถูกใส่ลงหน้าใด (เป็นคำสั่ง ไม่ใช่เนื้อหา)
     if (b.el === 'page-break') { if (cur.length) pushPage(); continue; }
     if (b.el === 'character') lastChar = String(b.text || '');
-    const before = cur.length ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    // ท่อนหางที่ไหลมาจากหน้าก่อนไม่ต้องเว้นบรรทัดนำ (มันคือย่อหน้าเดิมที่ถูกหั่น)
+    const before = cur.length && b.split !== 'tail' ? Math.round(num(c.linesBefore, 10) / 10) : 0;
     const body = wrapLines(b.text, c.width);
     const need = before + body;
     const free = perPage - used;
@@ -433,20 +443,47 @@ export function paginate(blocks, opts = {}) {
     const isAct = b.el === 'action' || b.el === 'note' || b.el === 'summary';
     const minBot = isDlg ? R.minDialogueLinesAtBottom : R.minActionLinesAtBottom;
     const minTop = isDlg ? R.minDialogueLinesAtTop : R.minActionLinesAtTop;
-    const canBottom = free - before;
 
-    if ((isDlg || isAct) && canBottom >= minBot && body - canBottom >= minTop) {
+    // [alpha.83 ข้อ 6] ★ **เครื่องหมายต่อเนื่องกินบรรทัดของหน้า — จองไว้ตรงนี้เลย**
+    //
+    // เดิม annotateContinued() ทำงาน *หลัง* จัดหน้าเสร็จ แล้วแปะ (CONTINUED) ท้ายหน้า /
+    // CONTINUED: ต้นหน้าเข้าไปเฉย ๆ → หน้าที่เต็มพอดี 30 บรรทัดกลายเป็น 31 แล้วล้นขอบล่างทุกครั้ง
+    // (`(MORE)` ก็เป็นแบบเดียวกัน — ไม่เคยถูกหักออกจากโควตาเลย)
+    //
+    // เคยลองแก้ด้วยการ "จัดหน้าซ้ำจนลู่เข้า" แล้วพบว่า **ไม่ลู่เสมอไป**: ความกว้างจริงของฟอนต์
+    // ทำให้จำนวนบรรทัดขยับตามจุดตัด แล้วรายการจองแกว่งไปมาไม่จบ → ยังมีหน้าที่ล้นหลุดออกมา
+    //
+    // ที่ถูกคือจองตรงจุดที่ *ตัดสินใจหั่นบล็อก* พอดี เพราะที่นี่รู้ครบแล้วว่า
+    // หน้านี้จะได้ (CONTINUED) ท้ายหน้า และหน้าถัดไปจะได้ CONTINUED: ต้นหน้า —
+    // เงื่อนไขเดียวกับ annotateContinued() เป๊ะ (บล็อกถูกหั่น + อยู่ในฉากเดียวกัน = `curScene > 0`)
+    // จึงไม่ต้องวนซ้ำ ไม่มีทางแกว่ง และตัวเลขตรงกันโดยโครงสร้าง
+    const moreLines = isDlg && wantDlgMarkers ? 1 : 0;
+    const contLines = wantSceneMarks && curScene > 0 ? 1 : 0;
+    // [alpha.83 ข้อ 6] เดิมถ้าท่อนที่ยกไปหน้าใหม่สั้นกว่า minTop จะ **ไม่ตัดเลย** แล้วยกทั้งก้อน
+    // ไปหน้าใหม่ — ซึ่งกับ *ท่อนหางของบล็อกที่ถูกหั่นมาแล้ว* แปลว่ามันจะกองอยู่หน้าถัดไปทั้งก้อน
+    // ทั้งที่โควตาไม่พอ (หน้าละ 20 บรรทัดกลายเป็น 21) · ที่ถูกคือ **ดึงบรรทัดขึ้นมาน้อยลง**
+    // ให้ท้ายเหลือครบ minTop พอดี แล้วค่อยตัด — กฎ widow/orphan ยังได้ตามเดิมและไม่มีหน้าล้น
+    const canBottom = Math.min(free - before - moreLines - contLines,
+                               body - Math.max(1, minTop));
+
+    if ((isDlg || isAct) && canBottom >= minBot) {
       // แบ่งครึ่ง: ท้ายหน้าใส่ (MORE) · ต้นหน้าใหม่ทวนชื่อ + (cont'd)
       const head = splitText(b.text, c.width, canBottom);
-      addBlock({ ...b, text: head.head, lines: canBottom, split: 'head' });
-      if (isDlg && wantDlgMarkers) addBlock({ el: 'more', text: S.dialogueMore, lines: 1, more: true });
+      // `contIn`/`contOut` = "ไหลมาจากหน้าก่อน" / "ไหลต่อไปหน้าถัดไป" — บล็อกเดียวเป็นได้ทั้งคู่
+      // (ย่อหน้ายาวข้ามสามหน้า) ซึ่ง `split:'head'|'tail'` ตัวเดียวบอกไม่ได้
+      addBlock({ ...b, text: head.head, lines: canBottom,
+                 split: 'head', contIn: !!b.contIn, contOut: true });
+      if (moreLines) addBlock({ el: 'more', text: S.dialogueMore, lines: 1, more: true });
       pushPage();
+      used += contLines;                 // CONTINUED: ต้นหน้าใหม่
       if (isDlg && wantDlgMarkers && lastChar) {
         addBlock({ el: 'character', text: lastChar + ' ' + S.dialogueContd, lines: 1, contd: true });
         used += 1;
       }
-      addBlock({ ...b, text: head.rest, lines: body - canBottom, split: 'tail' });
-      used += body - canBottom;
+      // **ป้อนท่อนหางกลับเข้าลูป** — เดิมยัดลงหน้าใหม่ทั้งก้อนโดยไม่ตรวจซ้ำ
+      // ย่อหน้าเดียวที่ยาวเกินสองหน้าจึงได้หน้าที่สูงเท่าไรก็ได้ (อาการ "หน้ากระดาษไม่เท่ากัน")
+      list[i] = { ...b, text: head.rest, split: 'tail', contIn: true, contOut: false };
+      i--;
       continue;
     }
     // ยกทั้งบล็อกไปหน้าใหม่ — หัวฉาก/ชื่อตัวละครต้องพาบล็อกก่อนหน้าที่ผูกกันไปด้วย
@@ -457,7 +494,7 @@ export function paginate(blocks, opts = {}) {
       }
     }
     for (const x of carry) used -= x.lines || 1;
-    pushPage();
+    if (cur.length) pushPage();
     for (const x of carry) { cur.push(x); used += x.lines || 1; }
     addBlock({ ...b, lines: body });
     used += body;
@@ -481,10 +518,19 @@ export function annotateContinued(pages, fmt) {
   const CT = { ...CONTINUED_DEFAULTS, ...(f.continued || {}) };
   const on = CT.enabled !== false && CT.scene !== false;
   for (const p of pages) { delete p.continuedBottom; delete p.continuedTop; delete p.contdRun; }
+  // [alpha.83 ข้อ 6] **CONTINUED ใช้กับ "บล็อกที่ต่อกัน" เท่านั้น**
+  // เดิมพอฉากเดียวกันกินสองหน้าก็ขึ้น CONTINUED ทันที แม้รอยต่อจะอยู่ *ระหว่าง* บล็อก
+  // (บรรยายจบพอดีบรรทัดสุดท้าย แล้วบรรยายก้อนถัดไปเริ่มหน้าใหม่ = คนละบล็อก แค่บรรทัดติดกัน)
+  // ตอนนี้ต้องมีบล็อกที่ถูก *หั่นกลาง* คร่อมรอยต่อจริง ๆ — หน้าถัดไปจึงต้องเริ่มด้วยท่อนหาง
+  // (`split:'tail'`) หรือชื่อตัวละคร + (cont'd) ที่ตัวจัดหน้าเติมให้คู่กับท่อนหาง
+  const splitsAcross = (n) => {
+    const fb = (n.blocks || [])[0];
+    return !!fb && (fb.contIn === true || fb.contd === true);
+  };
   let run = 1, contScene = 0;
   for (let i = 0; i < pages.length - 1; i++) {
     const p = pages[i], n = pages[i + 1];
-    const spans = on && p.sceneEnd > 0 && n.sceneStart === p.sceneEnd;
+    const spans = on && p.sceneEnd > 0 && n.sceneStart === p.sceneEnd && splitsAcross(n);
     if (!spans) { run = 1; contScene = 0; continue; }
     // เปลี่ยนฉากแล้ว = เริ่มนับใหม่ (ไม่งั้นฉากใหม่ที่ข้ามหน้าครั้งแรกได้เลข (2) ทันที)
     if (p.sceneEnd !== contScene) { run = 1; contScene = p.sceneEnd; }
@@ -497,22 +543,20 @@ export function annotateContinued(pages, fmt) {
   return pages;
 }
 
-/** ตัดข้อความให้ส่วนแรกยาว n บรรทัด (กว้าง widthIn นิ้ว) — คืน {head, rest} */
+/**
+ * ตัดข้อความให้ส่วนแรกยาว n บรรทัด (กว้าง widthIn นิ้ว) — คืน {head, rest}
+ *
+ * [alpha.82] ใช้รอยตัดชุดเดียวกับ wrapLines() — เดิมที่นี่เป็นอัลกอริทึมชุดที่สาม
+ * ที่ต้อง "ตรงกับอีกสองชุดเป๊ะ" — หัวที่ตัดมายาวไม่เท่าที่หน้าจองไว้เมื่อไหร่ ข้อความก็ล้นหน้า
+ * · และตัดจาก **ข้อความต้นฉบับ** ตรง ๆ จึงไม่มีช่องว่างแปลกปลอมโผล่เข้ามาเหมือนตอน join เอง
+ */
 export function splitText(text, widthIn, n) {
-  const cols = Math.max(1, Math.floor(num(widthIn, 6) * CHARS_PER_INCH));
-  const words = String(text ?? '').split(/\s+/).filter(Boolean);
-  const lines = [];
-  let cur = '';
-  for (const w of words) {
-    const next = cur ? cur + ' ' + w : w;
-    // [alpha.82] วัดด้วยความกว้างที่มองเห็น ไม่ใช่จำนวนตัวอักษร — ต้องใช้เกณฑ์เดียวกับ
-    // wrapLines() เป๊ะ ไม่งั้น "หัวที่ตัดมา" ยาวไม่เท่าจำนวนบรรทัดที่บัญชีหน้าจองไว้
-    if (visualLength(next) <= cols) cur = next;
-    else { if (cur) lines.push(cur); cur = w; }
-  }
-  if (cur) lines.push(cur);
-  const k = Math.max(1, Math.min(n, lines.length - 1 >= 1 ? lines.length - 1 : 1));
-  return { head: lines.slice(0, k).join(' '), rest: lines.slice(k).join(' ') };
+  const s = String(text ?? '');
+  const cuts = wrapCuts(s, num(widthIn, 6), { kind: 'sp' });
+  if (!cuts.length) return { head: s, rest: '' };
+  const k = Math.max(1, Math.min(Math.round(n) || 1, cuts.length));
+  const at = cuts[k - 1];
+  return { head: s.slice(0, at).replace(/\s+$/, ''), rest: s.slice(at) };
 }
 
 /** นับหน้าอย่างเดียว (ใช้กับแถบสถานะ — เร็วกว่า paginate เต็มรูปแบบเล็กน้อย) */

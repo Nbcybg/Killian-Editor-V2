@@ -1,6 +1,6 @@
 // ProseMirror editor — หัวใจของ Killian 2 (word-processor grade)
 import { t as tt, t } from './i18n.js';
-import { Schema } from 'prosemirror-model';
+import { Schema, Fragment, Slice } from 'prosemirror-model';
 import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { history, undo, redo } from 'prosemirror-history';
@@ -96,7 +96,10 @@ function mentionScan(doc, rx, from, to) {
     let m;
     while ((m = rx.exec(node.text))) {
       out.push(Deco.inline(pos + m.index, pos + m.index + m[0].length,
-        { class: 'k-mention', title: tt('ui.editor.ctrlClickOpenWiki') }));
+        // [alpha.83 ข้อ 8] ไม่มี `title=` แล้ว — ป้ายลอยของระบบโผล่ทับตำแหน่งเคอร์เซอร์
+        // แล้วคลิกแทรกกลางคำไม่ได้ (ป้ายกินพื้นที่ทับจุดที่จะคลิกพอดี)
+        // สีของ .k-mention บอกอยู่แล้วว่าเป็นลิงก์ Wiki — คำใบ้ปุ่มลัดอยู่ในเมนูคลิกขวา
+        { class: 'k-mention' }));
     }
   });
   return out;
@@ -134,7 +137,9 @@ function spellScan(doc, checkFn, from, to) {
     }
     for (const b of checkFn(node.text)) {
       out.push(Deco.inline(pos + b.start, pos + b.end,
-        { class: 'k-spell-bad', title: tt('ui.editor.press') + b.word }));
+        // [alpha.83 ข้อ 7] เส้นหยักแดงบอกครบแล้ว — ป้ายลอย "น่าจะสะกดผิด: …"
+        // เด้งตามเมาส์ทุกคำ รบกวนสายตาและทับเคอร์เซอร์ (เหตุผลเดียวกับ .k-mention)
+        { class: 'k-spell-bad' }));
     }
   });
   return out;
@@ -527,6 +532,27 @@ export class KEditor {
     const node = schema.nodes.figure.create({ src, alt, md, resolved: this.resolveSrc(src) });
     this.view.dispatch(this.view.state.tr.replaceSelectionWith(node).scrollIntoView());
     this.view.focus();
+  }
+
+  /**
+   * [alpha.82] แทรกข้อความหลายบรรทัดตรงเคอร์เซอร์ — บรรทัดว่าง/ขึ้นบรรทัดใหม่ = ย่อหน้าใหม่จริง
+   *
+   * เดิมโค้ดที่อยากแทรกข้อความเรียก `cmd('insertText', …)` ซึ่ง **ไม่มีอยู่ใน switch ของ cmd()**
+   * → ตกลงไปที่ default แล้วเงียบหายไปเฉย ๆ (ปุ่ม "แทรก" ของกล่องสร้างบทสนทนาจึงไม่เคยทำงาน)
+   * `tr.insertText()` ตรง ๆ ก็ใช้ไม่ได้ เพราะ `\n` ในย่อหน้าเดียวไม่ได้แปลว่าขึ้นย่อหน้าใหม่
+   * @returns {boolean} true = แทรกสำเร็จ
+   */
+  insertLines(text) {
+    const v = this.view;
+    if (!v || !String(text ?? '').length) return false;
+    const nodes = String(text).replace(/\r\n?/g, '\n').split('\n').map((line) =>
+      schema.nodes.paragraph.create(null, line ? schema.text(line) : null));
+    // openStart/openEnd = 1 → ย่อหน้าแรกกับย่อหน้าสุดท้ายเชื่อมกับข้อความที่เคอร์เซอร์อยู่
+    // (ไม่งั้นแทรกกลางย่อหน้าแล้วได้ย่อหน้าเปล่าคร่อมหัวท้าย)
+    v.dispatch(v.state.tr.replaceSelection(new Slice(Fragment.fromArray(nodes), 1, 1))
+      .scrollIntoView());
+    v.focus();
+    return true;
   }
 
   // ---------- state สำหรับ toolbar ----------

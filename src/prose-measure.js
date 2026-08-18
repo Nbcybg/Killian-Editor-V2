@@ -167,13 +167,23 @@ export function domLineRects(el, zoomFactor) {
 
   const top0 = el.getBoundingClientRect().top;
   const lines = [];
-  let lineBottom = -Infinity;
+  // [alpha.82] จัดกลุ่มด้วย **ขอบบน** ไม่ใช่ขอบล่าง
+  //
+  // ของเดิมใช้ `r.top >= lineBottom - 1` ซึ่งเปราะมาก เพราะ "ขอบล่าง" ขึ้นกับความสูงของกล่อง
+  // ซึ่งเปลี่ยนได้เมื่อมี widget (เส้นคั่นหน้า) แทรกอยู่ในบรรทัดนั้น — กล่องสูงขึ้นนิดเดียว
+  // บรรทัดถัดไปก็ถูกนับรวมเป็นบรรทัดเดียวกัน (หรือแยกเกิน) ผิดไป 1 บรรทัด
+  // อาการที่วัดได้: จัดหน้าซ้ำแล้วจำนวนหน้าสลับไปมา 19 ↔ 20 ไม่รู้จบ
+  //
+  // ขอบบนของ rect ที่อยู่บรรทัดเดียวกันเท่ากันเสมอ (ต่างกันระดับ sub-pixel)
+  // ส่วนคนละบรรทัดห่างกันเท่าระยะบรรทัด — เกณฑ์นี้จึงไม่สนใจว่ากล่องสูงเท่าไร
+  let lastTop = -Infinity, lastH = 0;
   for (const { r, node } of rects) {
-    if (r.top >= lineBottom - 1) {
+    const tol = Math.max(2, Math.min(lastH * 0.5, 12));
+    if (r.top > lastTop + tol) {
       lines.push({ offset: (r.top - top0 - gapAbove(r.top)) / z, top: r.top, node });
-      lineBottom = r.bottom;
+      lastTop = r.top; lastH = r.height;
     } else {
-      lineBottom = Math.max(lineBottom, r.bottom);      // ชิ้นส่วนอื่นของบรรทัดเดียวกัน
+      lastH = Math.max(lastH, r.height);                // ชิ้นส่วนอื่นของบรรทัดเดียวกัน
     }
   }
   return lines;
@@ -257,6 +267,40 @@ export function measureProseBlocks(pm, origin, zoomFactor) {
 }
 
 /**
+ * คลาสที่ทำให้ "เส้นคั่นหน้า" ยุบเหลือศูนย์ชั่วคราวระหว่างวัด (นิยามกฎอยู่ใน style.css)
+ *
+ * ═══ ทำไมต้องมี ═══
+ * ตัวจัดหน้าเป็นวงจรป้อนกลับ: **วัด DOM → ได้จุดตัด → แทรกเส้นคั่นลง DOM → วัดอีกรอบ**
+ * เส้นคั่นในโหมด "แยกหน้าเป็นแผ่นจริง" กินที่จริง (ขอบล่าง+แถบ+ขอบบน ≈ 220px ต่ออัน)
+ * เดิมแก้ด้วยการ "หักความสูงเส้นคั่นออกตอนคำนวณ" ซึ่งหักได้ถูกในระดับความสูงรวมจริง
+ * (วัดแล้ว totalHeight เท่ากันเป๊ะทั้งเปิด/ปิดช่องว่าง) แต่ **ไม่ถูกในระดับตำแหน่งบรรทัด** —
+ * เส้นคั่นแบบตัดกลางย่อหน้าเป็น inline-block กว้างเต็มแผ่น มันจึง **เปลี่ยนการตัดบรรทัด
+ * ของย่อหน้าที่มันไปแทรกอยู่** ซึ่งหักออกทีหลังไม่ได้เลย
+ * ผลคือรันจัดหน้าซ้ำโดยไม่เปลี่ยนอะไร ได้คนละคำตอบ (วัดได้จริง: 20 หน้า → 6 หน้า)
+ *
+ * ทางแก้ที่ถูกคือทำให้ **ผลของการวัดไม่ขึ้นกับผลของการวัดรอบก่อน** — ยุบเส้นคั่นให้เหลือ
+ * ศูนย์ก่อนวัดเสมอ แล้วค่อยคืนสภาพ · เพิ่ม/ถอดคลาสในจังหวะเดียวกัน เบราว์เซอร์ไม่ได้วาด
+ * ระหว่างนั้น จึงไม่มีการกะพริบ
+ */
+export const MEASURE_CLASS = 'k-measuring';
+
+/**
+ * ทำงาน `fn` ในสภาพ "เส้นคั่นหน้าถูกยุบเหลือศูนย์"
+ *
+ * **ทุกการอ่านเรขาคณิตที่ป้อนตัวจัดหน้าต้องผ่านตัวนี้** — ไม่ใช่แค่ตอนวัด แต่รวมถึงตอน
+ * แปลงพิกัด Y กลับเป็นตำแหน่งในเอกสารด้วย (`proseBreakList`) เพราะตัวแปลงค้นจาก
+ * **พิกัดจริงบนจอ** ที่จำไว้ตอนวัด ถ้าตอนแปลงมีเส้นคั่นกางอยู่ ตัวอักษรจะไม่อยู่ที่เดิมแล้ว
+ * → หาไม่เจอ → เส้นคั่นหายทีละจุด (วัดได้จริง: 20 จุด เหลือ 5)
+ * ซ้อนกันได้ปลอดภัย — ชั้นในเห็นว่ามีคลาสอยู่แล้วจึงไม่ถอดทิ้ง
+ */
+export function withMeasureMode(fn) {
+  const root = typeof document !== 'undefined' ? document.body : null;
+  const added = !!(root && !root.classList.contains(MEASURE_CLASS));
+  if (added) root.classList.add(MEASURE_CLASS);
+  try { return fn(); } finally { if (added) root.classList.remove(MEASURE_CLASS); }
+}
+
+/**
  * วัดทั้งหน้าเอกสารของแท็บนิยายหนึ่งแท็บ
  * @returns {null|{blocks:Array,totalHeight:number,contentHeight:number,zoomFactor:number,origin:number,pageHeight:number}}
  *          null = วัดไม่ได้ (ยังไม่ได้ต่อ DOM / ซ่อนอยู่) → ผู้เรียกตกไปใช้ตัวประมาณ
@@ -264,27 +308,37 @@ export function measureProseBlocks(pm, origin, zoomFactor) {
 export function measureProseLayout(view, opts = {}) {
   const pm = view && view.dom;
   if (!pm || !pm.isConnected || typeof pm.getBoundingClientRect !== 'function') return null;
-  const rect = pm.getBoundingClientRect();
-  if (!(rect.width > 0) || !(rect.height > 0)) return null;
 
   const paper = opts.paper || PAPER_SIZES.letter;
   const m = { ...MARGIN_DEFAULTS, ...(opts.margins || {}) };
   const contentHeight = (num(paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)) * DPI;
   if (!(contentHeight > 8)) return null;
 
-  const z = zoomFactorOf(pm);
-  const padTop = parseFloat(getComputedStyle(pm).paddingTop) || 0;
-  const origin = rect.top + padTop * z;
-  const { blocks, totalHeight } = measureProseBlocks(pm, origin, z);
-  if (!blocks.length) return null;
-  return { blocks, totalHeight, contentHeight, zoomFactor: z, origin,
-           pageHeight: num(paper.height, 11) * DPI };
+  // ยุบเส้นคั่นหน้าทั้งหมดก่อนวัด — ต้องครอบ **ทุกการอ่าน DOM** ของรอบนี้
+  return withMeasureMode(() => {
+    const rect = pm.getBoundingClientRect();
+    if (!(rect.width > 0) || !(rect.height > 0)) return null;
+    const z = zoomFactorOf(pm);
+    const padTop = parseFloat(getComputedStyle(pm).paddingTop) || 0;
+    const origin = rect.top + padTop * z;
+    const { blocks, totalHeight } = measureProseBlocks(pm, origin, z);
+    if (!blocks.length) return null;
+    return { blocks, totalHeight, contentHeight, zoomFactor: z, origin,
+             pageHeight: num(paper.height, 11) * DPI };
+  });
 }
 
 /**
  * แปลงพิกัด Y ที่หั่นได้ กลับเป็น "ตำแหน่งในเอกสาร" ของ ProseMirror
  * @returns {number|null}
  */
+/** ตัวนับเหตุผลที่แปลงพิกัดกลับไม่สำเร็จ — ไล่บั๊ก "เส้นคั่นหายทีละจุด" */
+export const CUT_FAIL = { detached: 0, noLine: 0, noBlock: 0, threw: 0, ok: 0 };
+export function resetCutFail() {
+  CUT_FAIL.detached = 0; CUT_FAIL.noLine = 0; CUT_FAIL.noBlock = 0;
+  CUT_FAIL.threw = 0; CUT_FAIL.ok = 0;
+}
+
 export function prosePosAtCut(view, blocks, y) {
   if (!view || !Number.isFinite(y)) return null;
   const list = blocks || [];
@@ -301,11 +355,31 @@ export function prosePosAtCut(view, blocks, y) {
     const want = y - b.top;
     for (const ln of b.lines || []) {
       if (Math.abs(ln.offset - want) > 0.6) continue;
-      try { return view.posAtDOM(ln.node, lineStartCharOffset(ln.node, ln.top)); }
-      catch { return null; }
+      // [alpha.82] โหนดที่จำไว้อาจ "ตายแล้ว" — ProseMirror วาดย่อหน้าใหม่ทุกครั้งที่
+      // decoration เปลี่ยน (เส้นคั่นหน้าเป็น widget decoration) text node เดิมจึงหลุดจาก
+      // เอกสาร แล้ว posAtDOM() โยน error → จุดตัดถูกทิ้งเงียบ ๆ
+      if (!ln.node || !ln.node.isConnected) { CUT_FAIL.detached++; return null; }
+      try {
+        // [alpha.82] **คำนวณพิกัดจอใหม่ตอนใช้ ห้ามใช้ `ln.top` ที่จำไว้ตอนวัด**
+        //
+        // `lineStartCharOffset()` เทียบกับพิกัดจอสัมบูรณ์ (คลาดเกิน 0.5px ก็หาไม่เจอ)
+        // แต่ผลการวัดถูกแคชไว้ข้ามหลายรอบ — ระหว่างนั้นเนื้อหาเลื่อนได้ทั้งจากการแทรกเส้นคั่น
+        // และจากการเลื่อนจอ → ค่าที่จำไว้ชี้ไปคนละที่ แล้วจุดตัดถูกทิ้งเงียบ ๆ
+        // (วัดได้จริง: ผลการวัดก้อนเดียวกันเป๊ะ แปลงสำเร็จ 20/20 แล้วรอบถัดมาเหลือ 5/20)
+        //
+        // `offset` (ระยะจากขอบบนบล็อก) เป็นค่าเสถียร จึงยึดอันนั้นแล้วบวกกับตำแหน่งบล็อก
+        // "ตอนนี้" — ผู้เรียกอยู่ในโหมดยุบเส้นคั่นอยู่แล้ว ช่องว่างจึงไม่มีผลกับผลลัพธ์
+        const zNow = zoomFactorOf(view.dom);
+        const topNow = b.el.getBoundingClientRect().top + ln.offset * zNow;
+        const p = view.posAtDOM(ln.node, lineStartCharOffset(ln.node, topNow));
+        CUT_FAIL.ok++;
+        return p;
+      } catch { CUT_FAIL.threw++; return null; }
     }
+    CUT_FAIL.noLine++;
     return null;
   }
+  CUT_FAIL.noBlock++;
   return null;
 }
 
@@ -314,13 +388,16 @@ export function prosePosAtCut(view, blocks, y) {
  * @param {number} basePage เลขหน้าเริ่มต้นของไฟล์ (1 = ปกติ)
  */
 export function proseBreakList(view, blocks, pages, basePage = 1) {
-  const out = [];
-  const list = pages || [];
-  for (let i = 1; i < list.length; i++) {
-    const pos = prosePosAtCut(view, blocks, list[i].start);
-    if (Number.isFinite(pos) && pos > 0) out.push({ pos, page: basePage + i });
-  }
-  return out;
+  // ต้องอยู่ในโหมด "ยุบเส้นคั่น" เหมือนตอนวัด ไม่งั้นพิกัดที่จำไว้ชี้ไปคนละที่กับของจริง
+  return withMeasureMode(() => {
+    const out = [];
+    const list = pages || [];
+    for (let i = 1; i < list.length; i++) {
+      const pos = prosePosAtCut(view, blocks, list[i].start);
+      if (Number.isFinite(pos) && pos > 0) out.push({ pos, page: basePage + i });
+    }
+    return out;
+  });
 }
 
 // ═══════════════════ มุมมองหน้ากระดาษ (เรียงหน้าคู่ / ภาพรวม) ═══════════════════
@@ -374,13 +451,23 @@ export function renderProseClipPages(host, pm, pages, opts = {}) {
     if (label) {
       const n = document.createElement('div');
       n.className = 'sp-page-num';
+      // [alpha.83 ข้อ 2] **โอเวอร์เลย์เสมอ** — เดิมเป็นกล่องในสายเนื้อหา (`margin-bottom:1em`)
+      // เปิดเลขหน้าทีเดียว เนื้อหาทั้งหน้าถูกดันลงราวหนึ่งบรรทัดครึ่ง แล้วบรรทัดล่างสุดถูก
+      // `overflow:hidden` ของหน้ากระดาษเฉือนหายไป (บั๊กข้อ 3: "ตัวหนังสือขาดที่ขอบล่าง")
+      n.style.top = num(opts.numTop, 0.5) + 'in';
+      n.style.right = num(opts.numRight, 1) + 'in';
       n.textContent = label;
       page.append(n);
     }
 
     const clip = document.createElement('div');
     clip.className = 'ed-page-clip';
-    clip.style.height = contentH + 'px';
+    // [alpha.83 ข้อ 3] สูงเท่า "ช่วงที่หั่นไว้จริง" ไม่ใช่ความสูงพื้นที่พิมพ์เต็มเสมอ
+    // หน้าที่จบก่อนขอบล่าง (ตัดตามบรรทัด/ยกทั้งย่อหน้า) จะมีที่ว่างเหลือ — ถ้าครอบเต็มความสูง
+    // ช่องว่างนั้นจะไปโชว์ **บรรทัดแรกของหน้าถัดไป** ค้างอยู่ท้ายหน้านี้
+    const sliceH = num(pg.end, NaN) - num(pg.start, 0);
+    clip.style.height = (Number.isFinite(sliceH) && sliceH > 0
+      ? Math.min(contentH, sliceH) : contentH) + 'px';
     // ตำแหน่งในเอกสารของหัวหน้า — คลิกหน้าไหนแล้วกระโดดไปตรงนั้นได้ (เหมือนตัววาดเดิม)
     const sp = opts.startPos && opts.startPos[els.length];
     if (Number.isFinite(sp)) clip.dataset.pos = String(sp);

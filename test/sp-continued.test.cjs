@@ -41,8 +41,11 @@ check('CONTINUED: อยู่ก่อนชื่อ+(cont\'d) ต้นหน
 
 // ── ฉากข้ามหน้า ──
 const withPos = (arr) => arr.map((b, i) => ({ ...b, pos: (i + 1) * 10, idx: i }));
+// [alpha.83 ข้อ 6] CONTINUED ใช้กับ "บล็อกที่ถูกหั่นคร่อมหน้า" เท่านั้น (กฎที่ผู้ใช้สั่ง)
+// — บรรยายก้อนสั้น ๆ 40 ก้อนที่รอยต่ออยู่ระหว่างก้อน **ไม่ใช่** เคสของ CONTINUED อีกต่อไป
 const longScene = withPos([{ el: 'scene', text: 'INT. ห้องนอน - กลางคืน' },
-  ...Array.from({ length: 40 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i }))]);
+  ...Array.from({ length: 12 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i })),
+  { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }]);
 const pagesA = SF.paginate(longScene, { lines: 20 });
 const marksA = CT.computeContinueds(pagesA, SF.mergeSpFormat());
 check('ฉากยาวข้ามหน้า → ได้เครื่องหมาย', marksA.length > 0, marksA.length);
@@ -59,7 +62,8 @@ check('ข้ามหลายหน้า → มีเลขกำกับ�
 check('เลขกำกับเริ่มที่ (2) ไม่ใช่ (1)', !marksA.some((m) => m.text === 'CONTINUED: (1)'));
 
 // ── ไม่มีหัวฉาก = ไม่มีเครื่องหมายฉาก ──
-const noScene = withPos(Array.from({ length: 40 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i })));
+const noScene = withPos([...Array.from({ length: 12 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i })),
+  { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }]);
 const marksN = CT.computeContinueds(SF.paginate(noScene, { lines: 20 }), SF.mergeSpFormat());
 check('ไม่มีหัวฉาก → ไม่มี (CONTINUED)/CONTINUED:',
   !marksN.some((m) => m.type === 'continued-top' || m.type === 'continued-bottom'));
@@ -114,10 +118,14 @@ check('pageAnchor หน้าว่าง → null', CT.pageAnchor({ blocks: []
 
 // ── หน้าที่พร้อมพิมพ์ (ส่งออก) ──
 const withMarks = CT.pagesWithContinueds(pagesA, SF.mergeSpFormat());
-check('pagesWithContinueds ใส่ CONTINUED: เป็นบล็อกจริงต้นหน้า 2',
-  withMarks[1].blocks[0].el === 'continued-top');
-check('pagesWithContinueds ใส่ (CONTINUED) ท้ายหน้า 1',
-  withMarks[0].blocks[withMarks[0].blocks.length - 1].el === 'continued-bottom');
+// [alpha.83 ข้อ 6] หน้าที่ได้ CONTINUED ไม่ใช่หน้าแรกเสมอไปแล้ว — หาหน้าที่มีจริง
+const iBot = pagesA.pages.findIndex((p) => p.continuedBottom);
+const iTop = pagesA.pages.findIndex((p) => p.continuedTop);
+check('pagesWithContinueds ใส่ CONTINUED: เป็นบล็อกจริงต้นหน้าที่ต่อจากฉากเดิม',
+  iTop > 0 && withMarks[iTop].blocks[0].el === 'continued-top', iTop);
+check('pagesWithContinueds ใส่ (CONTINUED) ท้ายหน้าที่ยังไม่จบบล็อก',
+  iBot >= 0 && withMarks[iBot].blocks[withMarks[iBot].blocks.length - 1].el === 'continued-bottom',
+  iBot);
 check('pagesWithContinueds ไม่ทำลายบล็อกเดิม',
   withMarks[0].blocks.filter((b) => b.el === 'action').length ===
   pagesA.pages[0].blocks.filter((b) => b.el === 'action').length);
@@ -134,14 +142,16 @@ check('CONTINUED: ชิดซ้าย', /\.sp-continued-top[^}]*text-align:lef
 
 // ── ส่งออกผ่าน compile.js (ขั้นตอน sp-continued) ──
 const CP = build('compile.js', 'k2-spcont-compile-test.cjs');
+// [alpha.83 ข้อ 6] ต้องมี "บล็อกเดียวที่ยาวจนถูกหั่นคร่อมหน้า" ไม่งั้นไม่มี CONTINUED ตามกฎใหม่
 const scriptText = ['.INT. ห้องนอน - กลางคืน',
-  ...Array.from({ length: 90 }, (_, i) => '!บรรยายฉากที่ ' + i)].join('\n');
+  '!' + 'บรรยายยาวมากจนล้นหน้า '.repeat(400),
+  ...Array.from({ length: 20 }, (_, i) => '!บรรยายฉากที่ ' + i)].join('\n');
 const withCont = CP.insertContinueds(scriptText);
 check('[compile] แทรก CONTINUED: ลงในข้อความส่งออก', withCont.includes('CONTINUED:'));
 check('[compile] แทรก (CONTINUED) ท้ายหน้า', withCont.includes('(CONTINUED)'));
 check('[compile] คั่นหน้าด้วยเครื่องหมายขึ้นหน้าใหม่', withCont.includes(CP.PAGE_BREAK));
 check('[compile] เนื้อบทเดิมยังอยู่ครบ',
-  withCont.includes('บรรยายฉากที่ 0') && withCont.includes('บรรยายฉากที่ 89'));
+  withCont.includes('บรรยายฉากที่ 0') && withCont.includes('บรรยายฉากที่ 19'));
 // [alpha.60r3a] มาตรฐานรหัสใหม่: หัวฉากเขียนออกเป็น `### ` (H3) — รับรหัสเดิม (`.` / INT.) ด้วย
 check('[compile] หัวฉากยัง round-trip ได้ (### / จุด / INT.)',
   /(^|\n)(### |\.|INT\.)/.test(withCont),

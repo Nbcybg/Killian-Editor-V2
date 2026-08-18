@@ -11,10 +11,11 @@ import { PROSE_DEFAULTS, DEFAULT_PROSE_FONT, HEADING_DEFAULTS, QUOTE_DEFAULTS,
          proseExportCss } from './prose-format.js';
 import { PROSE_VIEWS, PROSE_VIEW_LABELS, isProsePageView, isProseEditView, isValidProseView,
          proseLayoutCssVars, prosePagesOf, setProsePageBreaks, prosePageBreaks,
-         refreshProsePageBreaks, renderProsePageView, proseViewStatusText } from './prose-view.js';
+         refreshProsePageBreaks, renderProsePageView, proseViewStatusText,
+         setProsePageNumberLabel } from './prose-view.js';
 // [alpha.82] จัดหน้านิยายจากการวัดของจริงบนจอ — แทนที่การเดาจากจำนวนตัวอักษร
 import { measureProseLayout, sliceProsePages, proseBreakList,
-         renderProseClipPages } from './prose-measure.js';
+         renderProseClipPages, CUT_FAIL, resetCutFail } from './prose-measure.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ · [ข้อ 6] ระยะขอบสำเร็จรูป
 import { CASE_MODES, CASE_SHORT } from './text-case.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติฉาก: frontmatter = แหล่งความจริง · scenes.json = ดัชนี
@@ -185,6 +186,11 @@ import { renderPluginPanel, resetPluginPanel } from './plugins/plugin-panel.js';
 import { renderDialoguePanel, resetDialogue, scanDialogue, markDialogueStale, visibleRows as dialogueRows,
          openAt as dialogueOpenAt, applyEdit as dialogueApplyEdit,
          selectInEditor as dialogueSelect } from './dialogue/dialogue-ui.js';
+// [alpha.82] ห้องซ้อมบท — AI สวมบทตัวละครจาก Wiki คุยกันทีละเทิร์น
+import { renderBuilderPanel, resetBuilder, builderDirtyList, saveBuilderDirty,
+         builderState } from './dialogue/builder-ui.js';
+// [alpha.82] ตัววัดความกว้างตัวอักษรจริง — เสียบเข้า text-width.js (ที่บริสุทธิ์)
+import { installTextMeasurer, refreshTextMeasurer } from './text-measure.js';
 import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
          resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
          isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
@@ -211,7 +217,8 @@ import { SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, 
          pageMetrics, layoutCssVars, isEditView } from './sp-view.js';
 import { setFormatGuide, isFormatGuide, setPageBreaks, pageBreaks,
          setSceneNumbers, isSceneNumbers, refreshSceneNumbers,
-         setContinueds, continueds, refreshContinueds } from './sp-format-guide.js';
+         setContinueds, continueds, refreshContinueds,
+         setSpPageNumberLabel } from './sp-format-guide.js';
 // ---- alpha.58: ระบบต่อเนื่อง (55/56) + รายงานบท (71/72/73) ----
 import { computeContinueds, continuedSummary, continuedStatusText, pagesWithContinueds,
          CONTINUED_DEFAULTS } from './sp-continued.js';
@@ -256,7 +263,33 @@ async function loadSettings(meta) {
   // project settings ชนะ global (project overrides global for overlapping keys)
   state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...(meta.settings || {}) };
   state.goals = { ...DEFAULT_GOALS, ...(meta.goals || {}) };
+  migratePageNumberFirst();
   applySettings();
+}
+
+/**
+ * [alpha.83r ข้อ 1] ★ "เลขหน้า 1 ไม่ขึ้น แก้หลายรอบยังไม่ได้"
+ *
+ * ต้นตอไม่ได้อยู่ในโค้ดที่วาด — อยู่ใน **ค่าที่โปรเจกต์เก่าพกติดมา**
+ * ก่อน alpha.82 ค่าเริ่มต้นของ `pageNumbers.firstPage` คือ `false` (ธรรมเนียมบทที่หน้าแรก
+ * = หน้าปก จึงไม่ใส่เลข) ทุกโปรเจกต์ที่ *บันทึกตั้งค่าไว้ตอนนั้น* จึงมี `firstPage:false`
+ * เขียนค้างอยู่ใน project.khn.json อย่างถาวร — `mergeSpFormat` เคารพค่านั้นเสมอ
+ *
+ * ตั้งแต่ .81r2 ปก/หน้ารายชื่อตัวละครแยกเป็น "หน้าหน้าเล่ม" ที่ไม่ถูกนับอยู่แล้ว
+ * หน้าแรกที่เหลือคือ **หน้า 1 ของเนื้อเรื่อง** ซึ่งต้องมีเลข · และในโหมดปกติ/จัดหน้า
+ * หน้าแรกเป็นหน้าเดียวที่วาดเลขได้ ผู้ใช้จึงเห็นว่า "เปิดเลขหน้าแล้วไม่ขึ้นเลยสักตัว"
+ *
+ * ย้ายให้ **ครั้งเดียว** แล้วปักธงไว้ — ปิดเองทีหลังได้ ไม่ถูกทับซ้ำอีก
+ */
+export function migratePageNumberFirst() {
+  const s2 = state.settings;
+  if (s2.pgFirstMigrated) return false;
+  s2.pgFirstMigrated = true;
+  const pn = s2.spPageNumbers;
+  if (!pn || pn.firstPage !== false) return false;
+  s2.spPageNumbers = { ...pn, firstPage: true };
+  log('info', tt('ui.app.migPageNumFirst'));
+  return true;
 }
 
 // นำ settings ปัจจุบันไปใช้: ขนาดฟอนต์ตัวแก้ไข + จับเวลา autosave
@@ -288,6 +321,8 @@ export function applySettings() {
   // ฟอนต์บทหนังแยกจากนิยาย (บั๊ก #2) — ว่าง = Courier Final Draft เช่นกัน
   const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
   document.documentElement.style.setProperty('--sp-font', withLangFamily(spStack, nLang > 0));
+  // [alpha.82] ฟอนต์เปลี่ยน = ความกว้างที่วัดไว้ใช้ไม่ได้แล้ว
+  refreshTextMeasurer();
   // [alpha.57a ข้อ 1] เสียงเครื่องพิมพ์ดีด
   setTypeVolume(state.settings.typeSoundVolume ?? 0.5);
   syncTypeSound();
@@ -353,6 +388,7 @@ export function applyZoomVars(uiOff) {
   const spfs = Math.max(9, Math.min(96, +spBase.toFixed(2)));
   R.setProperty('--ed-fs', edfs + 'px');
   R.setProperty('--sp-fs', spfs + 'px');
+  refreshTextMeasurer();     // [alpha.82] ขนาดตัวอักษรเปลี่ยน = ความกว้างที่แคชไว้ใช้ไม่ได้
   R.setProperty('--page-scale', pageScale.toFixed(3));
   bumpProseLayout();          // [alpha.82] ขนาดฟอนต์เปลี่ยน = ต้องวัดหน้าใหม่
   syncWorkspaceWidths();
@@ -497,6 +533,12 @@ export function applyPageVars() {
     for (const tb of state.tabs.values()) if (tb.sp) refreshSceneNumbers(tb.sp.view);
   }
   document.body.classList.toggle('sp-page-numbers', !!fmt.pageNumbers.show);
+  // [alpha.83 ข้อ 4] ป้ายเลขหน้าบนเส้นคั่นหน้า (หน้า 2 เป็นต้นไปในโหมดปกติ/จัดหน้า)
+  // เปลี่ยนพร้อมสวิตช์ทันที ไม่ต้องรอรอบจัดหน้าถัดไป
+  if (setSpPageNumberLabel(pageNumberLabelFor(fmt)))
+    for (const tb of state.tabs.values()) if (tb.sp) tb.sp.refreshGuides();
+  if (setProsePageNumberLabel(prosePageNumberLabelFor(fmt)))
+    for (const tb of state.tabs.values()) if (tb.editor) refreshProsePageBreaks(tb.editor.view);
   // [alpha.58 · 58] Layout View — ความสูงเนื้อหน้า/ช่องว่างคั่นหน้า คิดจากขนาดกระดาษจริง
   const lv = layoutCssVars(fmt, state.settings.spPageGap);
   for (const k of Object.keys(lv)) R.setProperty(k, lv[k]);
@@ -845,6 +887,7 @@ function proseMeasured(tab, spf) {
   if (!t2 || !t2.editor || !t2.editor.view) return null;
   const doc = t2.editor.view.state.doc;
   if (_mzCache && _mzCache.tab === t2 && _mzCache.doc === doc && _mzCache.epoch === _mzEpoch) {
+    if (_mzCache.data) _mzCache.data.__fromCache = true;
     return _mzCache.data;
   }
   const f = spf || spFormat();
@@ -852,6 +895,7 @@ function proseMeasured(tab, spf) {
   if (!mz) { _mzCache = null; return null; }
   mz.pages = sliceProsePages(mz.blocks, mz.contentHeight, mz.totalHeight)
     .map((p, i) => ({ ...p, index: i + 1 }));
+  mz.__fromCache = false;
   _mzCache = { tab: t2, doc, epoch: _mzEpoch, data: mz };
   return mz;
 }
@@ -876,10 +920,16 @@ function proseMeasuredStarts(view, mz, basePage) {
  * [alpha.81r ข้อ 7] ฟังสวิตช์ตัวเดียวกับตัวแก้ไข · [alpha.81r3] หน้าแรกของเนื้อเรื่องมีเลข
  */
 function proseClipLabel(index, pf, spf, startPage) {
-  const start = Math.max(1, Math.round(+startPage || 1));
-  if (pf.pageNumbers) return prosePageLabel(index, pf, start);
-  if (!spf.pageNumbers.show) return '';
-  return String(start + index - 1);
+  // [alpha.83 ข้อ 4] **สวิตช์เดียว** — เดิมนิยายมีสองชุดที่ไม่รู้จักกัน:
+  //   `settings.prose.pageNumbers`  (แท็บ 📖 รูปแบบนิยาย → ใช้เฉพาะมุมมองเรียงหน้า/ภาพรวม)
+  //   `settings.spPageNumbers.show` (เมนู/แท็บหน้ากระดาษ → ใช้กับตัวแก้ไข)
+  // ผู้ใช้กดเปิดช่องหนึ่ง แล้วอีกมุมมองไม่ขึ้นเลข ("ใช้ layout คนละชุดเหรอ")
+  // ตอนนี้ทุกมุมมองอ่าน spPageNumbers ตัวเดียว (กล่องตั้งค่านิยายเขียนลงตัวเดียวกันแล้ว)
+  const pn = spf.pageNumbers;
+  if (!pn.show) return '';
+  const i = Math.max(1, Math.round(+index || 1));
+  if (i === 1 && pn.firstPage === false) return '';
+  return String(Math.max(1, Math.round(+startPage || 1)) + i - 1);
 }
 
 function drawProsePageView(tab) {
@@ -899,6 +949,7 @@ function drawProsePageView(tab) {
     renderProseClipPages(host, tab.editor.view.dom, mz.pages, {
       scale: vs.scale, perRow: vs.perRow, gap: 20, paper: spf.paper, margins: spf.margins,
       startPos,
+      numTop: spf.pageNumbers.top, numRight: spf.pageNumbers.right,
       label: (n) => proseClipLabel(n, pf, spf, start),
     });
     return mz.pages.length;
@@ -911,7 +962,8 @@ function drawProsePageView(tab) {
   // ตอนนี้ทั้งสองที่ฟังสวิตช์ตัวเดียวกัน (spFormat().pageNumbers.show)
   renderProsePageView(host, pg, pf, { scale: vs.scale, perRow: vs.perRow, gap: 20,
                                       paper: spf.paper, margins: spf.margins,
-                                      showPageNumbers: !!spf.pageNumbers.show,
+                                      numTop: spf.pageNumbers.top, numRight: spf.pageNumbers.right,
+                                      label: (n) => proseClipLabel(n, pf, spf, currentStartPage(tab)),
                                       startPage: currentStartPage(tab) });
   return pg.count;
 }
@@ -1034,6 +1086,24 @@ export function currentStartPage(tab) {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
+/**
+ * [alpha.83 ข้อ 4] ตัวทำป้าย "เลขหน้าจริง" ของหน้าที่เริ่มตรงเส้นคั่นแต่ละเส้น
+ *
+ * เดิมโหมดปกติ/จัดหน้ามีเลขหน้าแค่ **หน้าแรก** (`::before` ของ .ProseMirror) หน้าถัดไปมีแต่ป้าย
+ * "หน้า N" กลางแถบคั่น ผู้ใช้จึงเห็นว่า "เปิดเลขหน้าแล้วไม่ขึ้นในมุมมองปกติกับจัดหน้า"
+ * — เลขที่เส้นคั่นสร้างให้เป็นเลขของ **หน้าถัดไป** จึงไม่ต้องสน firstPage (หน้าแรกไม่มีเส้นคั่น)
+ * · คืน null เมื่อปิดสวิตช์ → ปลั๊กอินไม่วาดอะไรเลย
+ */
+function pageNumberLabelFor(fmt) {
+  if (!fmt.pageNumbers.show) return null;
+  return (page) => String(page) + (fmt.pageNumbers.suffix || '');
+}
+/** เวอร์ชันของนิยาย — ไม่มีคำต่อท้าย (จุดท้ายเลขเป็นธรรมเนียมของบทภาพยนตร์) */
+function prosePageNumberLabelFor(spf) {
+  if (!spf.pageNumbers.show) return null;
+  return (page) => String(page);
+}
+
 /** วาดเลขหน้าของ "หน้าแรก" บนหน้ากระดาษในตัวแก้ไข (หน้าถัด ๆ ไปอยู่บนเส้นคั่นหน้า) */
 export function updatePageNumberHint() {
   const t2 = state.active;
@@ -1045,7 +1115,11 @@ export function updatePageNumberHint() {
   // ส่วนแท็บนิยายไม่เคยได้เลขหน้าบนหน้ากระดาษเลย ทั้งที่ใช้ขนาดกระดาษ/ระยะขอบชุดเดียวกัน
   // (และเห็นเลขในโหมดเรียงหน้า/ภาพรวมอยู่แล้ว จึงดูเหมือน "เลขไปโผล่ผิดที่")
   const isDoc = !!(t2.sp || t2.editor);
-  const label = (isDoc && fmt.pageNumbers.show) ? pageNumberLabel(1, fmt, currentStartPage(t2)) : '';
+  // [alpha.83 ข้อ 4] นิยายไม่ใส่จุดท้ายเลข (เป็นธรรมเนียมของบทภาพยนตร์) — กฎเดียวกับ
+  // ป้ายบนเส้นคั่นหน้าและมุมมองหน้ากระดาษ ทุกที่จึงเขียนเลขเหมือนกันเป๊ะ
+  const mk = t2.sp ? pageNumberLabelFor(fmt) : prosePageNumberLabelFor(fmt);
+  const first = Math.max(1, Math.round(+currentStartPage(t2) || 1));
+  const label = (isDoc && mk && fmt.pageNumbers.firstPage !== false) ? mk(first) : '';
   pane.style.setProperty('--pg-no-first', label ? JSON.stringify(label) : '""');
   return label;
 }
@@ -7197,6 +7271,12 @@ function registerDirtySources() {
       return (await _branchPlanApi.saveBranchPlan(true)) !== false;
     },
   });
+  // [alpha.82] เซสชันห้องซ้อมบทถือเทิร์นที่เพิ่งคุยไว้ในหน่วยความจำเหมือนกัน (กฎ alpha.72)
+  registerDirtySource('dlgb', {
+    label: tt('ui.app.dlgbSource'),
+    list: () => builderDirtyList().map((title) => ({ key: '::dlgb::' + title, title, file: '' })),
+    save: async () => (await saveBuilderDirty()) !== false,
+  });
   // โหลด API ของผังแตกสายไว้ล่วงหน้า — ทะเบียนถูกถามตอนจะปิดโปรแกรม รอ import ไม่ทัน
   import('./branching-ui.js').then((m) => { _branchPlanApi = m; }).catch(() => {});
   log('info', tt('ui.app.dirtyPending') + dirtyRegistry.ids().join(', '));
@@ -7713,6 +7793,7 @@ const TB_PANEL_BUTTONS = [
   ['tb-floorplan', 'floorplan'], ['tb-player', 'player'],
   ['tb-gallery-board', 'gallery-board'], ['tb-comments', 'comments'],
   ['tb-notes-panel', 'notes'], ['tb-log', 'log'],
+  ['tb-dlgb', 'dlgb'],                         // [alpha.82] ห้องซ้อมบท
 ];
 
 // บั๊ก #11: ปุ่มที่ทำงานระดับโปรเจกต์/หน้าต่าง — ไม่ต้องมีฉากเปิดอยู่ก็ใช้ได้
@@ -7727,7 +7808,7 @@ const ALWAYS_ON_TB = new Set([
   // [alpha.80] **ปุ่มแผงทุกตัวต้องกดได้โดยไม่ต้องเปิดฉากก่อน**
   // แผงพวกนี้อ่านจากไฟล์ทั้งผลงาน ไม่ได้ผูกกับฉากที่เปิดอยู่เลย —
   // เดิมถูก disable ไปพร้อมปุ่มจัดรูปแบบ ทำให้ "เปิดโปรแกรมมาแล้วกดแผงบทพูดไม่ได้"
-  'tb-dialogue', 'tb-plugins',
+  'tb-dialogue', 'tb-plugins', 'tb-dlgb',
   'tb-timeline', 'tb-maps', 'tb-books', 'tb-network', 'tb-planner', 'tb-branch',
   'tb-floorplan', 'tb-player', 'tb-gallery-board', 'tb-comments', 'tb-notes-panel', 'tb-log',
 ]);
@@ -7898,12 +7979,14 @@ function repaginateNow(t) {
     const starts = pageStartPositions(pg);
     const changed = setPageBreaks(starts.map((pos, i) => ({ pos, page: base + i + 1 })).slice(1)
       .filter((x) => Number.isFinite(x.pos)));
+    // [alpha.83 ข้อ 4] เลขหน้าจริงของหน้าที่ 2 เป็นต้นไปในโหมดปกติ/จัดหน้า
+    const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt));
     updatePageNumberHint();
     // [alpha.58 · 55–56] เครื่องหมายต่อเนื่อง — คิดจากผลจัดหน้าชุดเดียวกัน จึงตรงกับเส้นคั่นหน้าเสมอ
     const marks = spContinuedOn() ? computeContinueds(pg, fmt) : [];
     const cChanged = setContinueds(marks);
     // วาดใหม่เฉพาะตอนตำแหน่งเส้นเปลี่ยนจริง — dispatch ทุก 300ms ไปกวนตำแหน่งเลื่อนตอนซูม
-    if (changed || cChanged) t.sp.refreshGuides();
+    if (changed || cChanged || nChanged) t.sp.refreshGuides();
     setLayoutPageCount(t, pg.count);       // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();                       // มุมมองเรียงหน้า/ภาพรวมตามเนื้อหาล่าสุด
     _spPageText = ttf('ui.app.page', pg.count);
@@ -7921,9 +8004,25 @@ function repaginateProseNow(t) {
     // [alpha.82] ทางหลัก — วัดของจริงบนจอ (ตัดตามบรรทัด · ตัดกลางย่อหน้าได้)
     const mz = proseMeasured(t, spf);
     if (mz) {
-      const changed = setProsePageBreaks(
-        proseBreakList(t.editor.view, mz.blocks, mz.pages, currentStartPage(t)));
-      if (changed) refreshProsePageBreaks(t.editor.view);
+      resetCutFail();
+      const list82 = proseBreakList(t.editor.view, mz.blocks, mz.pages, currentStartPage(t));
+      // [alpha.82] ตัวรายงานสำหรับไล่บั๊ก "จัดหน้าซ้ำได้คนละคำตอบ"
+      // แปลงพิกัดกลับไม่สำเร็จจะถูกทิ้งเงียบ ๆ → ต้องเห็นว่าหน้ากับเส้นคั่นห่างกันแค่ไหน
+      state._mzDiag = { path: 'measured', pages: mz.pages.length, breaks: list82.length,
+                        cached: !!(mz && mz.__fromCache), why: { ...CUT_FAIL } };
+      const changed = setProsePageBreaks(list82);
+      // [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของหน้าถัดไป (โหมดปกติ/จัดหน้าของนิยาย)
+      const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+      if (nChanged && !changed) refreshProsePageBreaks(t.editor.view);
+      if (changed) {
+        refreshProsePageBreaks(t.editor.view);
+        // [alpha.82] เส้นคั่นหน้าเป็น widget decoration — ProseMirror **วาดย่อหน้าใหม่ทั้งใบ**
+        // ตอน decoration เปลี่ยน text node ที่ผลการวัดจำไว้จึงหลุดจากเอกสารทันที
+        // ใช้ต่อไม่ได้อีก (posAtDOM โยน error → จุดตัดถูกทิ้งเงียบ ๆ ทีละจุด)
+        // ทิ้งผลที่แคชไว้ แล้วให้รอบหน้าวัดใหม่จากโหนดจริง — เรขาคณิตถูกตรึงด้วยโหมด
+        // "ยุบเส้นคั่น" อยู่แล้ว รอบหน้าจึงได้จุดตัดชุดเดิม แล้วหยุดนิ่ง (ไม่วนไม่รู้จบ)
+        bumpProseLayout();
+      }
       setLayoutPageCount(t, mz.pages.length);   // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
       refreshSpView();
       return mz.pages.length;
@@ -7932,11 +8031,13 @@ function repaginateProseNow(t) {
     const pf = proseFormat();
     const pblocks = proseBlocksFromDoc(t.editor.view.state.doc);
     const ppg = prosePagesOf(pblocks, pf, spf.paper, spf.margins);
+    state._mzDiag = { path: 'estimate', pages: ppg.count, breaks: -1, cached: false };
     const base = currentStartPage(t) - 1;
     const changed = setProsePageBreaks(
       prosePageStarts(ppg).map((pos, i) => ({ pos, page: base + i + 1 })).slice(1)
         .filter((x) => Number.isFinite(x.pos)));
-    if (changed) refreshProsePageBreaks(t.editor.view);
+    const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+    if (changed || nChanged2) refreshProsePageBreaks(t.editor.view);
     setLayoutPageCount(t, ppg.count);      // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();
     return ppg.count;
@@ -8566,6 +8667,8 @@ const FEATURE_PANELS = {
   // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
   dialogue:  () => renderDialoguePanel($('#dialogue-body')),
   plugins:   () => renderPluginPanel($('#plugins-body')),
+  // [alpha.82] ห้องซ้อมบท
+  dlgb:      () => renderBuilderPanel($('#dlgb-body')),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
 // วาดค้างอยู่ = ใช้รอบเดียวกัน — openX() เรียก showPanel (hook เริ่มวาด) แล้ว await ต่อ
@@ -8602,11 +8705,12 @@ export function clearFeaturePanels() {
                      '#codex-body', '#history-body', '#record-body',
                      // [alpha.79] บทพูดเป็นของโปรเจกต์เดิม · แผงปลั๊กอินก็เปลี่ยนตามโปรเจกต์
                      // (ปลั๊กอินระดับโปรเจกต์อยู่ใน <โปรเจกต์>/Plugins)
-                     '#dialogue-body', '#plugins-body']) {
+                     // [alpha.82] ห้องซ้อมบทเก็บเซสชันไว้ใน <โปรเจกต์>/Dialogues — ของโปรเจกต์เดิมล้วน ๆ
+                     '#dialogue-body', '#plugins-body', '#dlgb-body']) {
     const n = $(sel); if (n) n.innerHTML = '';
   }
   resetCodex(); resetHistory(); resetRecords();
-  resetDialogue(); resetPluginPanel();
+  resetDialogue(); resetPluginPanel(); resetBuilder();
   state._branch = null;
   resetPlayerMode();
   // #notes-body ไม่ล้าง — สมุดโน้ตด่วนเป็นของผู้ใช้ ไม่ผูกกับโปรเจกต์ (เก็บใน localStorage)
@@ -9013,6 +9117,26 @@ window.addEventListener('keydown', _syncMod, true);
 window.addEventListener('keyup', _syncMod, true);
 window.addEventListener('blur', () => setModDown(false));           // สลับหน้าต่างตอนกดค้าง = ค้างเป็นมือตลอดไป
 window.addEventListener('mousemove', _syncMod, { passive: true, capture: true });
+
+// ---------------- [alpha.83r ข้อ 4] คำใบ้ "Ctrl+คลิก เปิดใน Wiki" ไปอยู่แถบสถานะ ----------------
+// เดิมเป็น `title=` ของ decoration → ป้ายลอยของระบบเด้งตามเมาส์แล้ว **ทับตำแหน่งที่กำลังจะคลิก**
+// (แก้ไปแล้วในรอบก่อนด้วยการถอด title ทิ้ง แต่คำใบ้ก็หายไปด้วย)
+// ตอนนี้ขึ้นกลางแถบสถานะด้านล่างแทน — เห็นชัด ไม่บังอะไร และไม่ขวางเคอร์เซอร์
+let _hoverHint = '';
+function setHoverHint(text) {
+  const v = String(text || '');
+  if (v === _hoverHint) return;
+  _hoverHint = v;
+  const box = $('#status-center');
+  if (box) box.textContent = v;
+}
+document.addEventListener('mouseover', (e) => {
+  const el2 = e.target && e.target.closest ? e.target.closest('.k-mention') : null;
+  setHoverHint(el2 ? tt('ui.editor.ctrlClickOpenWiki') : '');
+}, { passive: true, capture: true });
+document.addEventListener('mouseout', (e) => {
+  if (e.target && e.target.closest && e.target.closest('.k-mention')) setHoverHint('');
+}, { passive: true, capture: true });
 
 // ---------------- ซูมด้วย Ctrl+ล้อเมาส์ + Ctrl+0 รีเซ็ต (ทั้งโหมดนิยาย/บทหนัง) ----------------
 window.addEventListener('wheel', (e) => {
@@ -9730,6 +9854,12 @@ window.addEventListener('DOMContentLoaded', () => {
                                     markDirty(state.active); doFind(); };
   $('#find-repall').onclick = () => { const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
                                       setStatus(tt('ui.app.replace') + n + tt('ui.app.msg2')); markDirty(state.active); doFind(); };
+  // [alpha.82] ติดตั้งตัววัดความกว้างข้อความ — **ต้องอยู่ก่อนทุกทางแยก**
+  // ทุกอย่างที่นับบรรทัด/นับหน้าอ่านผ่านตัวนี้ · เคยวางไว้ใน bootSequence() แล้วพบว่า
+  // โหมดเทส (`?k2test`) กับหน้าต่างแผงที่ฉีกออกมา **ไม่เดินผ่าน bootSequence เลย**
+  // → ตกไปใช้กริด 10 ตัว/นิ้วเงียบ ๆ ทั้งที่โค้ดดูเหมือนติดตั้งแล้ว
+  // ติดตั้งไม่สำเร็จ (ไม่มี canvas) = ตกไปใช้ heuristic ของ text-width.js เอง ไม่พัง
+  installTextMeasurer();
   // [alpha.67] หน้าต่างแผงที่ฉีกออกมามีลำดับเริ่มของตัวเอง (และไม่มี autosave — ไม่ได้ถือเอกสาร)
   if (PANEL_WIN) { bootPanelWindow(); return; }
   bindMainWindowSync();
@@ -18040,9 +18170,34 @@ async function runTest(projectPath) {
               const guess = wrapLines(txt, fmt82.elements[kind].width);
               const real = Math.round(elS.getBoundingClientRect().height / zSp / lineH82);
               seen++;
-              if (guess !== real && !bad++) worstTxt = kind + ' เดา=' + guess + ' จริง=' + real;
+              if (guess !== real && !bad++) {
+                // [alpha.82] เก็บหลักฐานพอที่จะตัดสินว่า "อัลกอริทึมผิด" หรือ "ค่า 10 ตัว/นิ้วผิด"
+                const wIn = elS.getBoundingClientRect().width / zSp / 96;
+                const vis = txt.replace(/[ัิ-ฺ็-๎]/g, '').length;
+                worstTxt = `${kind} เดา=${guess} จริง=${real}`
+                  + ` · ตัวอักษร=${txt.length} มองเห็น=${vis}`
+                  + ` · กล่องกว้าง=${wIn.toFixed(2)}in (ตั้งไว้ ${fmt82.elements[kind].width}in)`
+                  + ` · ตัว/นิ้วที่ควรเป็น=${(vis / (real * wIn)).toFixed(1)} (ใช้อยู่ 10)`;
+              }
             }
             check('[82] บทหนัง: มีบล็อกไทยให้ตรวจจริง', seen >= 10, seen);
+            // [alpha.82] ตัววัดต้องติดตั้งจริง ไม่งั้นตกไปใช้กริด 10 ตัว/นิ้วเงียบ ๆ แล้วเทสข้างล่างพัง
+            // โดยไม่มีใครรู้ว่าเพราะอะไร
+            {
+              const TM82 = await import('./text-measure.js');
+              const TW82 = await import('./text-width.js');
+              const info82 = TM82.textMeasurerInfo();
+              check('[82] ตัววัดความกว้างด้วย canvas ติดตั้งแล้ว', TW82.hasMeasurer() && info82.ok);
+              check('[82] ตัววัดอ่านฟอนต์บทหนังจากตัวแปร CSS ตัวเดียวกับที่วาดจริง',
+                    /px/.test(info82.sp) && info82.sp.length > 6, info82.sp);
+              // ความกว้างที่วัดได้ต้องไม่ใช่ค่าของกริด — ต่างจาก visualLength/10 นิ้ว
+              const probe82 = 'ทดสอบความกว้างของข้อความไทย';
+              const measured = TW82.measureWidth(probe82, { kind: 'sp' });
+              const grid82 = (TW82.visualLength(probe82) / 10) * 96;
+              check('[82] ค่าที่วัดได้เป็นความกว้างจริง (ไม่ใช่ตัวเลขจากกริด)',
+                    measured > 0 && Math.abs(measured - grid82) > 0.01,
+                    measured.toFixed(2) + ' vs กริด ' + grid82.toFixed(2));
+            }
             check('[82] บทหนัง: บรรทัดที่เดา = บรรทัดที่วาดจริง ทุกบล็อก',
                   bad === 0, bad + '/' + seen + ' บล็อกไม่ตรง · ' + worstTxt);
             // ...ผลลัพธ์: หน้าถูกเติมจนเกือบเต็มโควตาบรรทัดของบท (ไม่ตัดเร็วเกินจริง)
@@ -18165,12 +18320,21 @@ async function runTest(projectPath) {
           await new Promise((r) => setTimeout(r, 400));
           check('[57a-2] เปิดเลขหน้า → body ติดคลาส sp-page-numbers',
                 document.body.classList.contains('sp-page-numbers'));
-          check('[57a-2] หน้าแรกของไฟล์ที่เริ่มหน้า 12 ไม่ใส่เลข (ธรรมเนียมบท)',
-                updatePageNumberHint() === '', JSON.stringify(updatePageNumberHint()));
-          check('[57a-2] เปิด firstPage แล้วหน้าแรกได้เลข 12',
-                pageNumberLabel(1, spFormat(), 12) === '' &&
+          // [alpha.82] ผู้ใช้กำหนดกฎชัด: "ที่ไม่นับหน้าคือปกกับหน้ารายชื่อตัวละคร
+          // แต่อันนี้มันฉาก ดังนั้นหน้าแรกต้องนับ 1" → หน้าฉากแรกได้เลขเสมอ
+          check('[82] หน้าฉากแรกของไฟล์ที่เริ่มหน้า 12 ได้เลข 12 (ไม่ใช่เว้นว่าง)',
+                updatePageNumberHint() === '12.', JSON.stringify(updatePageNumberHint()));
+          check('[82] เลขหน้าไล่ต่อจากเลขเริ่มต้นของไฟล์',
+                pageNumberLabel(1, spFormat(), 12) === '12.' &&
                 pageNumberLabel(2, spFormat(), 12) === '13.',
-                pageNumberLabel(2, spFormat(), 12));
+                pageNumberLabel(1, spFormat(), 12) + '/' + pageNumberLabel(2, spFormat(), 12));
+          {   // ปิดสวิตช์แล้วต้องกลับไปเว้นหน้าแรกได้ (คนที่อยากได้หน้าตาบทแบบเดิม)
+            const keepFp = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+            check('[82] ปิดสวิตช์ "ใส่เลขบนหน้าแรก" แล้วหน้าแรกเว้นว่างตามเดิม',
+                  pageNumberLabel(1, spFormat(), 12) === '');
+            state.settings.spPageNumbers = keepFp;
+          }
           check('[57a-2] เส้นคั่นหน้าในตัวแก้ไขนับต่อจากเลขเริ่มต้น (ถ้าบทยาวพอ)', (() => {
             const brk = pageBreaks();
             return !brk.length || brk[0].page >= 12;
@@ -18620,8 +18784,11 @@ async function runTest(projectPath) {
         {
           check('[55] ระบบต่อเนื่องเปิดเป็นค่าเริ่มต้น', spContinuedOn());
           // ฉากเดียวยาวข้ามหลายหน้า
+          // [alpha.83 ข้อ 6] CONTINUED ใช้กับ "บล็อกที่ถูกหั่นคร่อมหน้า" เท่านั้น (กฎที่ผู้ใช้สั่ง)
+          // บรรยายก้อนสั้น ๆ หลายก้อนที่รอยต่ออยู่ *ระหว่าง* ก้อน ไม่ใช่เคสของ CONTINUED อีกต่อไป
           const longScene = ['.INT. ห้องนอน - กลางคืน',
-            ...Array.from({ length: 130 }, (_, i) => '!บรรยายฉากที่ ' + i + ' ให้ยาวพอเต็มบรรทัด')].join('\n');
+            '!' + 'บรรยายฉากยาวมากจนล้นไปหลายหน้า '.repeat(500),
+            ...Array.from({ length: 20 }, (_, i) => '!บรรยายฉากที่ ' + i + ' ให้ยาวพอเต็มบรรทัด')].join('\n');
           spT58.sp.setMarkdown(longScene);
           await new Promise((r) => setTimeout(r, 800));
           const marks = spT58.pane.querySelectorAll('.sp-cont-mark');
@@ -19683,17 +19850,103 @@ async function runTest(projectPath) {
         check('[82] จุดตัดอยู่ "กลางย่อหน้า" จริง',
               brks.every((b) => { try { return doc82.resolve(b.pos).parent.isTextblock; }
                                   catch { return false; } }));
+        // ── [alpha.82] จัดหน้าต้อง **ไม่ขึ้นกับจำนวนรอบที่รัน** ──
+        // ตัววัดอ่านจาก DOM ที่มีเส้นคั่นหน้า (ซึ่งตัวมันเองก็ถูกแทรกจากรอบก่อน) อยู่ด้วย
+        // ถ้าหักผลของเส้นคั่นออกไม่หมด รอบถัดไปจะได้จุดตัดใหม่ → ป้อนกลับเป็นวงจรไม่รู้จบ
+        // เทสนี้แยกอาการนั้นออกจากเรื่อง "เปิด/ปิดช่องว่าง" ให้ชัด (ไม่แตะสวิตช์อะไรเลย)
+        {
+          repaginateFast(T);
+          await new Promise((r) => setTimeout(r, 200));
+          const run1 = prosePageBreaks().map((b) => b.pos).join(',');
+          const diag1 = JSON.parse(JSON.stringify(state._mzDiag || {}));
+          repaginateFast(T);
+          await new Promise((r) => setTimeout(r, 200));
+          const run2 = prosePageBreaks().map((b) => b.pos).join(',');
+          repaginateFast(T);
+          await new Promise((r) => setTimeout(r, 200));
+          const run3 = prosePageBreaks().map((b) => b.pos).join(',');
+          const a1 = run1.split(','), a2 = run2.split(',');
+          let d1 = -1;
+          for (let i = 0; i < Math.max(a1.length, a2.length); i++) {
+            if (a1[i] !== a2[i]) { d1 = i; break; }
+          }
+          // [alpha.82] ตรวจสมมติฐานพื้นฐานสองข้อที่ทุกอย่างวางอยู่บนนั้น — ก่อนหน้านี้เชื่อไปเองว่าจริง
+          {
+            const PM82 = await import('./prose-measure.js');
+            const sfx = spFormat();
+            // (1) คลาสโหมดวัดยุบเส้นคั่นได้จริงหรือเปล่า
+            const g82 = T.pane.querySelector('.' + PM82.GAP_CLASS);
+            let hOff = -1, hOn = -1;
+            if (g82) {
+              hOff = g82.getBoundingClientRect().height;
+              document.body.classList.add(PM82.MEASURE_CLASS);
+              hOn = g82.getBoundingClientRect().height;
+              document.body.classList.remove(PM82.MEASURE_CLASS);
+            }
+            check('[82] โหมดวัดยุบเส้นคั่นเหลือศูนย์จริง', !g82 || hOn === 0,
+                  `พบเส้นคั่น ${g82 ? 'ใช่' : 'ไม่'} · สูงปกติ ${hOff} → ในโหมดวัด ${hOn}`);
+            // (2) ผลการวัดต้องไม่ขึ้นกับว่าตอนนั้นมีเส้นคั่นอยู่กี่อัน
+            const mWith = PM82.measureProseLayout(T.editor.view,
+              { paper: sfx.paper, margins: sfx.margins });
+            const nWith = PM82.sliceProsePages(mWith.blocks, mWith.contentHeight, mWith.totalHeight).length;
+            const nGaps = T.pane.querySelectorAll('.' + PM82.GAP_CLASS).length;
+            setProsePageBreaks([]); refreshProsePageBreaks(T.editor.view);
+            await new Promise((r) => setTimeout(r, 150));
+            const mNo = PM82.measureProseLayout(T.editor.view,
+              { paper: sfx.paper, margins: sfx.margins });
+            const nNo = PM82.sliceProsePages(mNo.blocks, mNo.contentHeight, mNo.totalHeight).length;
+            check('[82] ★ ผลการวัดไม่ขึ้นกับว่ามีเส้นคั่นอยู่กี่อัน', nWith === nNo,
+                  `มีเส้นคั่น ${nGaps} อัน → ${nWith} หน้า · ไม่มีเลย → ${nNo} หน้า`
+                  + ` · สูงรวม ${mWith.totalHeight.toFixed(1)} vs ${mNo.totalHeight.toFixed(1)}`
+                  + ` · บรรทัด ${(mWith.blocks[0].lineOffsets || []).length}`
+                  + ` vs ${(mNo.blocks[0].lineOffsets || []).length}`);
+            bumpProseLayout();
+            repaginateFast(T);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          // ★ ข้อที่สำคัญที่สุด: การแปลงพิกัดกลับต้องไม่ "ทิ้งจุดตัดเงียบ ๆ" อีก
+          // (เดิมโหนดที่จำไว้ตายไปแล้ว posAtDOM โยน error แล้วจุดนั้นหายไปจากรายการ)
+          const whyN = (state._mzDiag && state._mzDiag.why) || {};
+          check('[82] แปลงพิกัดกลับสำเร็จครบทุกจุด ไม่มีเส้นคั่นหายเงียบ ๆ',
+                whyN.detached === 0 && whyN.threw === 0 && whyN.noLine === 0 && whyN.noBlock === 0,
+                JSON.stringify(whyN));
+          // ระบบจัดหน้าเป็นวงจรป้อนกลับ (วัด → แทรกเส้นคั่น → วัดใหม่) — เหมือนโปรแกรมจัดหน้า
+          // ทุกตัว มันจึงไม่จำเป็นต้องนิ่งตั้งแต่รอบแรก แต่ **ต้องลู่เข้า** ไม่ใช่แกว่งไปเรื่อย ๆ
+          check('[82] จัดหน้าซ้ำแล้วลู่เข้า (รอบ 2 = รอบ 3)', run2 === run3,
+                `${a2.length} → ${run3.split(',').length} จุด`
+                + ` · รอบ1 ${a1.length} รอบ2 ${a2.length} รอบ3 ${run3.split(',').length}`
+                + ` · รอบ1 ${JSON.stringify(diag1)} · รอบ3 ${JSON.stringify(state._mzDiag)}`);
+        }
         // ตัดกลางย่อหน้าได้ = แทบไม่เหลือช่องว่างท้ายหน้าเลย (ของเดิมยกทั้งย่อหน้า เหลือได้เป็นสิบบรรทัด)
         {
           const sfp = spFormat();
           const mzp = measureProseLayout(T.editor.view, { paper: sfp.paper, margins: sfp.margins });
           const pgp = sliceProsePages(mzp.blocks, mzp.contentHeight, mzp.totalHeight);
-          let worstP = 1;
+          let worstP = 1, worstI = -1;
           for (let i = 0; i + 1 < pgp.length; i++) {
-            worstP = Math.min(worstP, (pgp[i + 1].start - pgp[i].start) / mzp.contentHeight);
+            const fill = (pgp[i + 1].start - pgp[i].start) / mzp.contentHeight;
+            if (fill < worstP) { worstP = fill; worstI = i; }
+          }
+          // [alpha.82] บอกให้พอตัดสินได้ว่า "เหลือกี่บรรทัด" และเป็นหน้าไหน (ท้ายเล่มมีกฎ widow คุมอยู่)
+          const lhP = mzp.blocks[0] && mzp.blocks[0].lineOffsets && mzp.blocks[0].lineOffsets.length > 1
+            ? mzp.blocks[0].lineOffsets[1] - mzp.blocks[0].lineOffsets[0] : 0;
+          const slackP = (1 - worstP) * mzp.contentHeight;
+          // [alpha.82] ดัมป์ offset รอบจุดตัดของหน้าที่โหว่ที่สุด — จะได้เห็นว่ามีบรรทัดสูงผิดปกติไหม
+          const offsW = (mzp.blocks[0] && mzp.blocks[0].lineOffsets) || [];
+          let nearW = '';
+          if (worstI >= 0 && offsW.length) {
+            const yCut = pgp[worstI + 1].start - mzp.blocks[0].top;
+            let j = offsW.findIndex((o) => o >= yCut - 0.5);
+            if (j < 0) j = offsW.length - 1;
+            const seg = offsW.slice(Math.max(0, j - 2), j + 3);
+            nearW = ' · offset รอบจุดตัด ' + seg.map((o) => o.toFixed(1)).join(',')
+                  + ' · ระยะห่าง ' + seg.slice(1).map((o, q) => (o - seg[q]).toFixed(1)).join(',');
           }
           check('[82] ย่อหน้าเดียวยาว: ทุกหน้าเต็มเกิน 95%', worstP > 0.95,
-                'โหว่สุด = ' + (worstP * 100).toFixed(1) + '%');
+                `โหว่สุด = ${(worstP * 100).toFixed(1)}% ที่หน้า ${worstI + 1}/${pgp.length}`
+                + ` · เหลือ ${slackP.toFixed(0)}px`
+                + (lhP > 0 ? ` = ${(slackP / lhP).toFixed(2)} บรรทัด (สูงบรรทัด ${lhP.toFixed(1)}px)` : '')
+                + ` · บล็อก ${mzp.blocks.length} ใบ` + nearW);
         }
         // ── แยกหน้าเป็นแผ่นจริง: เปลี่ยนแค่ "ภาพ" ตัวเลขต้องไม่ขยับ ──
         {
@@ -19726,8 +19979,20 @@ async function runTest(projectPath) {
           check('[82] เปิดช่องว่างแล้วจำนวนหน้าเท่าเดิมเป๊ะ', nA === nB, nA + ' vs ' + nB);
           repaginateFast(T);
           await new Promise((r) => setTimeout(r, 200));
-          check('[82] เปิดช่องว่างแล้วจุดตัดหน้าอยู่ที่เดิมทุกจุด',
-                prosePageBreaks().map((b) => b.pos).join(',') === before);
+          {
+            const after = prosePageBreaks().map((b) => b.pos).join(',');
+            // [alpha.82] เก็บหลักฐานพอที่จะรู้ว่า "เลื่อนไปกี่จุด · จุดแรกที่ต่างคือจุดไหน"
+            const bA = before.split(','), aA = after.split(',');
+            let firstDiff = -1;
+            for (let i = 0; i < Math.max(bA.length, aA.length); i++) {
+              if (bA[i] !== aA[i]) { firstDiff = i; break; }
+            }
+            check('[82] เปิดช่องว่างแล้วจุดตัดหน้าอยู่ที่เดิมทุกจุด', after === before,
+                  `จุดตัด ${bA.length} → ${aA.length} · ต่างที่ตัวที่ ${firstDiff}`
+                  + ` (${bA[firstDiff]} → ${aA[firstDiff]})`
+                  + ` · สูงเนื้อหน้า ${mzA.contentHeight.toFixed(1)} → ${mzB.contentHeight.toFixed(1)}`
+                  + ` · สูงรวม ${mzA.totalHeight.toFixed(1)} → ${mzB.totalHeight.toFixed(1)}`);
+          }
 
           S2.paperGaps = false; applyPageVars();
           await new Promise((r) => setTimeout(r, 150));
@@ -19790,9 +20055,13 @@ async function runTest(projectPath) {
         const clip = T.pane.querySelector('.sp-pageview .ed-page-clip');
         const spf15 = spFormat();
         const want = (spf15.paper.height - spf15.margins.top - spf15.margins.bottom) * 96;
-        check('[82] กล่องครอบสูงเท่าพื้นที่พิมพ์พอดี',
-              !!clip && Math.abs(parseFloat(clip.style.height) - want) < 0.5,
-              clip && clip.style.height);
+        // [alpha.83 ข้อ 3] กล่องครอบสูง "เท่าที่หั่นไว้จริง" ไม่ใช่เต็มพื้นที่พิมพ์เสมอ
+        // หน้าที่จบก่อนขอบล่างจะมีที่ว่างเหลือ — ถ้าครอบเต็มความสูง ที่ว่างนั้นจะไปโชว์
+        // บรรทัดแรกของหน้าถัดไปค้างอยู่ท้ายหน้านี้ (อาการที่ผู้ใช้เจอ)
+        check('[83-3] กล่องครอบไม่เกินพื้นที่พิมพ์ และเป็นบวกเสมอ',
+              !!clip && parseFloat(clip.style.height) <= want + 0.5 &&
+              parseFloat(clip.style.height) > 0,
+              (clip && clip.style.height) + ' <= ' + want);
         check('[82] สำเนาในหน้ากระดาษไม่มีเส้นคั่นหน้าติดไปด้วย',
               !!clip && !clip.querySelector('.ed-page-break'));
         const pg2 = T.pane.querySelectorAll('.sp-pageview .ed-page')[1];
@@ -24605,7 +24874,11 @@ async function runTest(projectPath) {
                 await until81(() => !!box.querySelector('.xhub-preview .sp-page.xhub-front-cover')));
           // [81r3] "หน้า 1 ใน preview ไม่ขึ้นเลขหน้า" — หน้าปก/รายชื่อถูกแยกไปเป็นหน้าหน้าเล่มแล้ว
           // หน้าแรกที่เหลือคือหน้า 1 ของเนื้อเรื่อง ต้องมีเลข (ตัวอย่างกับไฟล์ต้องใช้กฎเดียวกัน)
-          check('[81r3] exportPageNumberFmt บังคับเลขหน้าให้หน้าแรก',
+          // [alpha.82] เลิก "บังคับทับ" — จอกับ PDF ต้องอ่านค่าเดียวกัน (เดิมจอไม่มีเลข 1 แต่ PDF มี)
+          check('[82] ส่งออกใช้ค่าเลขหน้าชุดเดียวกับหน้าจอ',
+                exportPageNumberFmt(spFormat()).pageNumbers.firstPage
+                  === spFormat().pageNumbers.firstPage);
+          check('[82] ค่าเริ่มต้น = หน้าฉากแรกมีเลข',
                 exportPageNumberFmt(spFormat()).pageNumbers.firstPage === true);
           check('[81r3] ไม่แก้ค่าที่ผู้ใช้ตั้งไว้ในโปรเจกต์',
                 spFormat().pageNumbers.firstPage === mergeSpFormat(state.settings).pageNumbers.firstPage);
@@ -24684,6 +24957,315 @@ async function runTest(projectPath) {
             applyPageVars(); updatePageNumberHint();
           }
         }
+
+        // ══════════ [alpha.83] รอบเก็บบั๊กเลขหน้า / CONTINUED / ป้ายลอย ══════════
+        {
+          const wait83 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const until83 = async (fn, ms = 3000) => {
+            const t0 = Date.now();
+            for (;;) { try { if (fn()) return true; } catch {}
+                       if (Date.now() - t0 > ms) return false; await wait83(60); }
+          };
+          // ── ข้อ 7+8: ไม่มีป้ายลอยของระบบ (title=) บนคำผิด/ชื่อที่ลิงก์ Wiki ──
+          check('[83-7] คำที่น่าจะสะกดผิดไม่มีป้ายลอย (title)',
+                document.querySelectorAll('.k-spell-bad[title]').length === 0,
+                document.querySelectorAll('.k-spell-bad[title]').length);
+          check('[83-8] ชื่อที่ลิงก์ Wiki ไม่มีป้ายลอย (title) มาบังเคอร์เซอร์',
+                document.querySelectorAll('.k-mention[title]').length === 0,
+                document.querySelectorAll('.k-mention[title]').length);
+
+          const tp83 = [...state.tabs.values()].find((x) => x.editor);
+          if (tp83) {
+            await activate(tp83.file);
+            const keep83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            const keepView = currentSpView();
+            togglePageNumbers(false);
+            await wait83(120);
+
+            // ── ข้อ 2: เปิดเลขหน้าแล้วเนื้อหาบนหน้ากระดาษต้องไม่ขยับ (โอเวอร์เลย์ ไม่ใช่กล่องในสาย) ──
+            setSpView('side');
+            await until83(() => !!tp83.pane.querySelector('.sp-pageview .ed-page .ed-page-clip'));
+            const clipTop = () => {
+              const c = tp83.pane.querySelector('.sp-pageview .ed-page .ed-page-clip');
+              const pgEl = c && c.closest('.sp-page');
+              return c && pgEl ? c.getBoundingClientRect().top - pgEl.getBoundingClientRect().top : NaN;
+            };
+            const clipH = () => {
+              const c = tp83.pane.querySelector('.sp-pageview .ed-page .ed-page-clip');
+              return c ? c.getBoundingClientRect().height : NaN;
+            };
+            const top0 = clipTop(), h0 = clipH();
+            togglePageNumbers(true);
+            await until83(() => !!tp83.pane.querySelector('.sp-pageview .ed-page .sp-page-num'));
+            const numEl = tp83.pane.querySelector('.sp-pageview .ed-page .sp-page-num');
+            check('[83-5] นิยาย: เปิดเลขหน้า → หน้าแรกมีเลข (เดิมหน้า 1 ไม่เคยได้เลข)',
+                  !!numEl && /^[0-9]+$/.test(numEl.textContent.trim()), numEl && numEl.textContent);
+            check('[83-2] ★ เลขหน้าเป็นโอเวอร์เลย์ — เนื้อหาไม่ถูกดันลง',
+                  Number.isFinite(top0) && Math.abs(clipTop() - top0) < 1.5,
+                  top0 + ' -> ' + clipTop());
+            check('[83-2] …และความสูงพื้นที่เนื้อหาเท่าเดิม (หน้าไม่ขยาย)',
+                  Number.isFinite(h0) && Math.abs(clipH() - h0) < 1.5, h0 + ' -> ' + clipH());
+            check('[83-2] เลขหน้าถูกถอดออกจากสายเนื้อหาจริง (position:absolute)',
+                  !!numEl && getComputedStyle(numEl).position === 'absolute',
+                  numEl && getComputedStyle(numEl).position);
+            // ── ข้อ 3: กรอบครอบต้องไม่โชว์บรรทัดแรกของหน้าถัดไปค้างท้ายหน้านี้ ──
+            {
+              const f83 = spFormat();
+              const clips = [...tp83.pane.querySelectorAll('.sp-pageview .ed-page .ed-page-clip')];
+              const bodyH = (f83.paper.height - f83.margins.top - f83.margins.bottom) * 96;
+              check('[83-3] กรอบครอบทุกหน้าไม่เกินความสูงพื้นที่พิมพ์',
+                    clips.length > 0 && clips.every((c) => parseFloat(c.style.height) <= bodyH + 0.6),
+                    clips.map((c) => c.style.height).join(','));
+            }
+            // ── ข้อ 4: โหมดปกติ/จัดหน้า ต้องมีเลขหน้าของหน้าถัด ๆ ไปด้วย ไม่ใช่แค่หน้าแรก ──
+            for (const mode of ['normal', 'layout']) {
+              setSpView(mode);
+              await wait83(150);
+              repaginateFast(tp83);
+              const ok = await until83(() =>
+                tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next').length > 0, 4000);
+              const nodes = [...tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next')];
+              check('[83-4] มุมมอง ' + mode + ': หน้าถัดไปมีเลขหน้าจริง (ไม่ใช่แค่ป้าย "หน้า N")',
+                    ok && nodes.length > 0, nodes.length);
+              if (nodes.length) {
+                // บทเรียน K-1: "มองเห็นไหม" ต้องวัด opacity/visibility/ขนาดจริง ไม่ใช่แค่ display
+                const st = getComputedStyle(nodes[0]);
+                const r = nodes[0].getBoundingClientRect();
+                check('[83-4] …และมองเห็นได้จริง (' + mode + ')',
+                      st.display !== 'none' && st.visibility !== 'hidden' &&
+                      parseFloat(st.opacity) > 0.05 && r.width > 0 && r.height > 0,
+                      st.display + '/' + st.visibility + '/' + st.opacity + '/' +
+                      Math.round(r.width) + 'x' + Math.round(r.height));
+                check('[83-4] …เลขบนเส้นคั่นเป็นตัวเลขล้วน (ไม่มีจุดท้ายแบบบทภาพยนตร์)',
+                      /^[0-9]+$/.test(nodes[0].textContent.trim()), nodes[0].textContent);
+              }
+              togglePageNumbers(false);
+              await wait83(200);
+              check('[83-4] ปิดเลขหน้า → เลขบนเส้นคั่นหายจริง (' + mode + ')',
+                    await until83(() =>
+                      tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next').length === 0, 3000),
+                    tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next').length);
+              togglePageNumbers(true);
+              await wait83(150);
+            }
+            setSpView(keepView);
+            state.settings.spPageNumbers = keep83;
+            applyPageVars(); updatePageNumberHint();
+            await wait83(120);
+          }
+
+          // ── ข้อ 5: บทภาพยนตร์ — ปิดเลขหน้าแล้วต้องหายจริง (เดิมหน้า 2+ ยังขึ้นเสมอ) ──
+          {
+            // ต้องเปิดฉากบทภาพยนตร์เองเสมอ — แท็บบทของบล็อกก่อนหน้าถูกปิดไปแล้ว
+            // (รอบแรกเขียนเป็น `find(x => x.sp)` เฉย ๆ แล้ว **ทั้งบล็อกถูกข้ามเงียบ ๆ**
+            //  ผลเทสผ่านทั้งที่ไม่ได้ทดสอบอะไรเลย — กับดักเดียวกับบทเรียนข้อ 2)
+            const spScene83 = [...document.querySelectorAll('.scene')]
+              .find((x) => x.textContent.includes('บทหนังทดสอบ'));
+            check('[83-5] เปิดฉากบทภาพยนตร์สำหรับเทสเลขหน้าได้', !!spScene83);
+            if (spScene83) { spScene83.click(); await wait83(450); }
+            const ts83 = state.active && state.active.sp ? state.active : null;
+            check('[83-5] แท็บที่เปิดเป็นบทภาพยนตร์จริง', !!ts83);
+            if (ts83) {
+              const keepS = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+              const keepV = currentSpView();
+              togglePageNumbers(false);
+              setSpView('side');
+              await until83(() => !!ts83.pane.querySelector('.sp-pageview .sp-page'));
+              await wait83(250);
+              check('[83-5] ★ บทหนัง: ปิดเลขหน้า → ไม่มีเลขสักหน้า (เดิมหน้า 2+ ติดตายเอาออกไม่ได้)',
+                    ts83.pane.querySelectorAll('.sp-pageview .sp-page-num').length === 0,
+                    ts83.pane.querySelectorAll('.sp-pageview .sp-page-num').length);
+              togglePageNumbers(true);
+              await wait83(300);
+              const nums = [...ts83.pane.querySelectorAll('.sp-pageview .sp-page-num')];
+              check('[83-5] บทหนัง: เปิดเลขหน้า → หน้าแรกมีเลขด้วย',
+                    nums.length > 0 &&
+                    !!ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
+                    nums.map((n) => n.textContent).join(','));
+              check('[83-5] บทหนัง: เลขหน้าเป็นโอเวอร์เลย์ (ไม่ดันเนื้อหา)',
+                    nums.length > 0 && getComputedStyle(nums[0]).position === 'absolute',
+                    nums.length && getComputedStyle(nums[0]).position);
+              setSpView(keepV);
+              state.settings.spPageNumbers = keepS;
+              applyPageVars(); updatePageNumberHint();
+              await wait83(120);
+            }
+          }
+
+          // ── ข้อ 6: CONTINUED ต้องกินบรรทัด และใช้เฉพาะบล็อกที่ถูกหั่นคร่อมหน้า ──
+          {
+            const fmt83 = spFormat();
+            const lines83 = 20;
+            const cut = [{ el: 'scene', text: 'INT. ทางเดิน - กลางคืน' },
+                         { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }];
+            const pgCut = pagesOf(cut, fmt83, lines83);
+            const usedOf = (p) => p.blocks.reduce((a, b) => a + (b.lines || 1), 0)
+                                  + (p.continuedTop ? 1 : 0) + (p.continuedBottom ? 1 : 0);
+            check('[83-6] ★ ทุกหน้า (นับบรรทัด CONTINUED ด้วย) ไม่เกินโควตาของหน้า',
+                  pgCut.pages.every((p) => usedOf(p) <= lines83),
+                  JSON.stringify(pgCut.pages.map(usedOf)));
+            check('[83-6] บล็อกที่ถูกหั่นคร่อมหน้า → ได้ (CONTINUED)/CONTINUED: ตามเดิม',
+                  pgCut.pages.some((p) => p.continuedBottom) && pgCut.pages.some((p) => p.continuedTop));
+            const apart = [{ el: 'scene', text: 'INT. ทางเดิน - กลางคืน' },
+                           ...Array.from({ length: 40 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i }))];
+            const pgApart = pagesOf(apart, fmt83, lines83);
+            check('[83-6] ★ ฉากเดียวกันแต่รอยต่ออยู่ระหว่างบล็อก → ไม่ขึ้น CONTINUED',
+                  pgApart.pages.length > 1 &&
+                  pgApart.pages.every((p) => !p.continuedTop && !p.continuedBottom),
+                  JSON.stringify(pgApart.pages.map((p) => [p.continuedTop || '', p.continuedBottom || ''])));
+          }
+
+          // ══════════ [alpha.83r] รอบเก็บบั๊กต่อจาก .83 (4 ข้อ) ══════════
+          {
+            // ── ข้อ 1: เลขหน้า 1 ไม่ขึ้น — ต้นตอคือค่าเก่าที่โปรเจกต์พกมา (firstPage:false) ──
+            const keepMig = state.settings.pgFirstMigrated;
+            const keepPn83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
+            state.settings.pgFirstMigrated = false;
+            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+            const moved = migratePageNumberFirst();
+            check('[83r-1] ★ โปรเจกต์เก่าที่พก firstPage:false มา → ถูกย้ายให้เป็น true',
+                  moved === true && state.settings.spPageNumbers.firstPage === true,
+                  JSON.stringify(state.settings.spPageNumbers));
+            check('[83r-1] ย้ายครั้งเดียว — ปิดเองทีหลังแล้วไม่ถูกทับซ้ำ',
+                  (() => {
+                    state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
+                    const again = migratePageNumberFirst();
+                    return again === false && state.settings.spPageNumbers.firstPage === false;
+                  })());
+            state.settings.pgFirstMigrated = keepMig;
+            state.settings.spPageNumbers = keepPn83;
+            applyPageVars();
+
+            // เลขหน้าหน้าแรกต้องโผล่จริงบนกระดาษของ **บทภาพยนตร์** ด้วย (เดิมเทสมีแต่ฝั่งนิยาย)
+            const spScene83b = [...document.querySelectorAll('.scene')]
+              .find((x) => x.textContent.includes('บทหนังทดสอบ'));
+            if (spScene83b) { spScene83b.click(); await wait83(450); }
+            const tsp = state.active && state.active.sp ? state.active : null;
+            if (tsp) {
+              setSpView('normal');
+              togglePageNumbers(true);
+              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
+              applyPageVars(); updatePageNumberHint();
+              await wait83(200);
+              const pmS = tsp.pane.querySelector(':scope > .workspace > .ProseMirror');
+              const bf = pmS && getComputedStyle(pmS, '::before').content;
+              check('[83r-1] ★ บทหนัง โหมดปกติ: หน้าแรกมีเลขหน้าบนกระดาษจริง',
+                    !!bf && bf !== 'none' && bf !== '""', String(bf));
+
+              // ── ข้อ 2: คำยาวที่ไม่มีจุดตัดต้องถูกหั่น ไม่ทะลุขอบกระดาษ ──
+              const keepMd = tsp.sp.getMarkdown();
+              tsp.sp.setMarkdown(['.INT. ห้องทดลอง - เช้า',
+                                  '!' + 'A'.repeat(600),
+                                  '!' + 'd'.repeat(600)].join('\n'));
+              await wait83(600);
+              const f83b = spFormat();
+              const twPx = (f83b.paper.width - f83b.margins.left - f83b.margins.right) * 96;
+              const blocks83 = [...tsp.pane.querySelectorAll('.ProseMirror .sp-action')];
+              const widest = blocks83.reduce((a, b) => Math.max(a, b.scrollWidth), 0);
+              check('[83r-2] ★ ตัวแก้ไข: คำยาว 600 ตัวถูกหั่น ไม่ล้นความกว้างพื้นที่พิมพ์',
+                    blocks83.length > 0 && widest <= twPx + 2,
+                    Math.round(widest) + ' vs ' + Math.round(twPx));
+              setSpView('side');
+              await until83(() => !!tsp.pane.querySelector('.sp-pageview .sp-page .sp'), 5000);
+              await wait83(300);
+              {
+                const pgEl = tsp.pane.querySelector('.sp-pageview .sp-page');
+                const sps = [...tsp.pane.querySelectorAll('.sp-pageview .sp-page .sp-action')];
+                const worst = sps.reduce((a, b) => Math.max(a, b.scrollWidth - b.clientWidth), 0);
+                check('[83r-2] ★ มุมมองเรียงหน้า: คำยาวถูกหั่นเหมือนกัน (ไม่ทะลุกระดาษ)',
+                      !!pgEl && sps.length > 0 && worst <= 1, worst);
+                const csSp = sps.length && getComputedStyle(sps[0]).overflowWrap;
+                check('[83r-2] หน้ากระดาษที่ประกอบเองตั้ง overflow-wrap ให้แล้ว',
+                      csSp === 'break-word' || csSp === 'anywhere', csSp);
+              }
+              setSpView('normal');
+              await wait83(200);
+
+              // ── ข้อ 3: บล็อก "ต่อเนื่อง" แบบพิมพ์เอง + สวิตช์ปิดตัวอัตโนมัติ ──
+              check('[83r-3] มี element ต่อเนื่องซ้าย/ขวาในตารางกลาง',
+                    !!SP_ELEMS['cont-left'] && !!SP_ELEMS['cont-right'] &&
+                    TAB_CYCLE.includes('cont-left') && TAB_CYCLE.includes('cont-right'));
+              check('[83r-3] มีให้เลือกบนแถบเครื่องมือด้วย',
+                    [...$('#tb-sp-elem').options].some((o) => o.value === 'cont-left') &&
+                    [...$('#tb-sp-elem').options].some((o) => o.value === 'cont-right'));
+              tsp.sp.setMarkdown(['.INT. ห้องนอน - เช้า', '!เขานอนอยู่',
+                                  '$contr (ต่อหน้าถัดไป)', '$contl ต่อจากหน้าก่อน:'].join('\n'));
+              await wait83(500);
+              const els83 = [];
+              tsp.sp.view.state.doc.forEach((n) => els83.push(n.attrs && n.attrs.el));
+              check('[83r-3] ★ อ่านกลับได้เป็นบล็อกต่อเนื่องจริง (ไม่กลายเป็นบรรยาย)',
+                    els83.includes('cont-right') && els83.includes('cont-left'), els83.join(','));
+              check('[83r-3] ★ เขียนกลับลงไฟล์ได้รหัสเดิมเป๊ะ (round-trip ปิดวง)',
+                    tsp.sp.getMarkdown().includes('$contr (ต่อหน้าถัดไป)') &&
+                    tsp.sp.getMarkdown().includes('$contl ต่อจากหน้าก่อน:'),
+                    JSON.stringify(tsp.sp.getMarkdown()));
+              {
+                const rEl = tsp.pane.querySelector('.ProseMirror .sp-cont-right');
+                const lEl = tsp.pane.querySelector('.ProseMirror .sp-cont-left');
+                check('[83r-3] ต่อเนื่อง (ขวา) ชิดขวา · (ซ้าย) ชิดซ้าย',
+                      !!rEl && !!lEl && getComputedStyle(rEl).textAlign === 'right' &&
+                      getComputedStyle(lEl).textAlign === 'left',
+                      rEl && getComputedStyle(rEl).textAlign);
+              }
+              tsp.sp.setMarkdown(keepMd);
+              await wait83(400);
+              state.settings.spPageNumbers = keepPn83;
+              applyPageVars(); updatePageNumberHint();
+            }
+
+            // สวิตช์ "ใส่ CONTINUED อัตโนมัติ" ต้องอยู่ในกล่องตั้งค่าโปรเจกต์
+            {
+              const keepCt = JSON.parse(JSON.stringify(state.settings.spContinued || {}));
+              settingsDialog('page');
+              await until83(() => !!document.querySelector('.k-dialog.k-settings'), 4000);
+              const box83 = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+              const ctBox = box83 && box83.querySelector('#st-ct-auto');
+              check('[83r-3] ★ ตั้งค่าโปรเจกต์มีสวิตช์ "ใส่ CONTINUED อัตโนมัติ"', !!ctBox);
+              if (ctBox) {
+                check('[83r-3] สวิตช์สะท้อนค่าปัจจุบัน (เปิดอยู่)', ctBox.checked === true, ctBox.checked);
+                ctBox.checked = false; ctBox.dispatchEvent(new Event('change', { bubbles: true }));
+                box83.querySelector('.k-ok').click();
+                await wait83(300);
+                check('[83r-3] ★ ปิดแล้วบันทึกลง settings จริง',
+                      state.settings.spContinued && state.settings.spContinued.enabled === false,
+                      JSON.stringify(state.settings.spContinued));
+              } else {
+                for (const ov2 of document.querySelectorAll('.k-overlay')) ov2.remove();
+              }
+              state.settings.spContinued = keepCt;
+              applyPageVars();
+            }
+
+            // ── ข้อ 4: เคอร์เซอร์ + คำใบ้ Ctrl+คลิก ไปอยู่แถบสถานะ ──
+            {
+              const probe = document.createElement('span');
+              probe.className = 'k-spell-bad';
+              probe.textContent = 'ทดสอบ';
+              document.body.append(probe);
+              check('[83r-4] ★ คำที่สะกดผิดใช้เคอร์เซอร์พิมพ์ (ไม่ใช่ context-menu)',
+                    getComputedStyle(probe).cursor === 'text', getComputedStyle(probe).cursor);
+              probe.remove();
+              // ใช้ probe เสมอ — เอกสารที่เปิดอยู่ตอนนั้นอาจไม่มีชื่อที่ลิงก์ Wiki สักตัว
+              // (รอบแรกเขียนเป็น `querySelector('.k-mention')` แล้ว **เทสถูกข้ามเงียบ ๆ**)
+              const m = document.createElement('span');
+              m.className = 'k-mention'; m.textContent = 'โทระ';
+              document.body.append(m);
+              {
+                m.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+                await wait83(60);
+                const sc = $('#status-center');
+                check('[83r-4] ★ ชี้ที่ชื่อลิงก์ Wiki → คำใบ้ขึ้นที่แถบสถานะด้านล่าง',
+                      !!sc && sc.textContent.trim().length > 0, sc && sc.textContent);
+                m.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+                await wait83(60);
+                check('[83r-4] เลื่อนเมาส์ออกแล้วคำใบ้หาย', !!sc && sc.textContent === '', sc && sc.textContent);
+              }
+              m.remove();
+              check('[83r-4] ไม่มี title= เหลือบน .k-mention / .k-spell-bad',
+                    document.querySelectorAll('.k-mention[title], .k-spell-bad[title]').length === 0);
+            }
+          }
+        }
         // เมนู "ไฟล์" ต้องเหลือทางส่งออกทางเดียว (เดิม 9 ทาง) — ตรวจจากไฟล์ต้นทางของเมนู
         check('[81-9] เมนูไฟล์เรียกศูนย์รวมการส่งออกแล้ว',
               await (async () => {
@@ -24691,6 +25273,159 @@ async function runTest(projectPath) {
                       return s.includes("send('export-hub')") && !s.includes("send('export-pdf')"); }
                 catch { return true; }
               })());
+      }
+
+      // ══════════ [alpha.82] ห้องซ้อมบท ══════════
+      // ฟีเจอร์นี้ยิง API จริงไม่ได้ในเทส → พิสูจน์ทุกอย่างที่พิสูจน์ได้โดยไม่ยิง:
+      // แผงเปิดได้ · สร้าง/บันทึก/อ่านกลับไฟล์เซสชัน · คณะจาก Wiki · แทรกลงบทเป็นบทหนัง ·
+      // ช่องความคิดของโมเดลโผล่จริง (วัด opacity ตามบทเรียน K-1 ไม่ใช่แค่ display)
+      {
+        const B82 = await import('./dialogue/builder-core.js');
+        const U82 = await import('./dialogue/builder-ui.js');
+        const wait82 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until82 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { if (fn()) return true; await wait82(50); }
+          return false;
+        };
+
+        check('[82-1] แผง dlgb อยู่ใน PANEL_DEFS + มีที่อยู่ใน DOM',
+              PANEL_DEFS.some((d) => d.id === 'dlgb' && d.adopt === '#dlgb-panel') && !!$('#dlgb-body'));
+        const menu82 = await kapi.menuPanelIds();
+        check('[82-1] แผง dlgb อยู่ในเมนู native ด้วย', menu82.ids.includes('dlgb'),
+              JSON.stringify(menu82.ids.slice(-4)));
+        // กฎ [80-7]: ทุกแผงต้องมีปุ่มบนแถบเครื่องมือ และกดได้โดยไม่ต้องเปิดฉากก่อน
+        const tbB82 = document.getElementById('tb-dlgb');
+        check('[82-1] มีปุ่มห้องซ้อมบทบนแถบเครื่องมือ และไม่ถูก disable', !!tbB82 && !tbB82.disabled);
+        check('[82-1] ปุ่มอยู่ในรายการตั้งค่าแถบเครื่องมือด้วย',
+              (await import('./toolbar/toolbar-config.js')).allButtonIds().includes('tb-dlgb'));
+
+        U82.resetBuilder();
+        showPanel('dlgb');
+        check('[82-1] เปิดแผงห้องซ้อมบทได้', isPanelOpen('dlgb'));
+        await renderFeaturePanel('dlgb');
+        check('[82-1] แผงวาดรายการเซสชันแล้ว',
+              await until82(() => !!document.querySelector('#dlgb-body .dlgb-list')),
+              ($('#dlgb-body') || {}).textContent);
+
+        // ── สร้างคณะจากตัวละครใน Wiki จริงของ fixture ──
+        const ents82 = await listEntities(state.root);
+        check('[82-2] fixture มีตัวละครใน Wiki ให้เลือก', ents82.length >= 2, String(ents82.length));
+        const preset82 = B82.newPreset({ name: 'คณะทดสอบ 82' });
+        for (const e of ents82.slice(0, 2)) {
+          B82.addCast(preset82, { name: e.name, wikiPath: e.path, cat: e.cat,
+                                  persona: B82.personaFromEntity(e.entity, e.name),
+                                  blurb: B82.blurbFromEntity(e.entity) });
+        }
+        check('[82-2] ดึงตัวละครจาก Wiki เข้าคณะได้ 2 ตัว', preset82.cast.length === 2);
+        check('[82-2] ใบบทบาทถูกสร้างจาก Wiki ไม่ใช่ค่าว่าง',
+              preset82.cast.every((c) => c.persona && c.persona.includes(c.name)));
+
+        const A82 = preset82.cast[0], BB82 = preset82.cast[1];
+        A82.selfPronoun = 'ผม';
+        B82.setRel(preset82, A82.id, BB82.id, { how: 'แฟนใหม่เฉพาะซีนนี้', callThem: 'คุณ' });
+
+        // ── เซสชัน: สร้าง → มีเทิร์น → บันทึก → อ่านกลับจากดิสก์ ──
+        const sess82 = B82.sessionFromPreset(preset82, {
+          situation: 'นั่งดื่มที่ลานเบียร์หลังเลิกงาน', title: 'เทสห้องซ้อมบท 82' });
+        check('[82-3] เซสชันสำเนาคณะมาเต็ม ไม่ได้อ้าง preset',
+              sess82.cast.length === 2 && sess82.rels.length === 1 && sess82.presetId === preset82.id);
+        sess82.turns.push(B82.newTurn({ speaker: A82.id, listener: BB82.id, text: 'ก็แค่เหนื่อย',
+                                        paren: 'ยิ้มเจื่อน', thinking: 'ความคิดของโมเดลตอนเลือกประโยคนี้',
+                                        model: 'test-model', usage: { input: 120, output: 20 }, ts: Date.now() }));
+        sess82.turns.push(B82.newTurn({ speaker: BB82.id, listener: A82.id, text: 'เหรอ ไม่เชื่อ',
+                                        ts: Date.now() }));
+
+        const dlgDir82 = await kapi.join(state.root, B82.BUILDER_DIR);
+        if (!(await kapi.exists(dlgDir82))) await kapi.mkdir(dlgDir82);
+        const file82 = B82.sessionFileName(sess82, []);
+        await kapi.writeFile(await kapi.join(dlgDir82, file82), JSON.stringify(sess82, null, 2));
+        check('[82-3] เซสชันเป็นไฟล์เดียวใน Dialogues/ (ก๊อป/แชร์ได้)',
+              await kapi.exists(await kapi.join(dlgDir82, file82)), file82);
+        const back82 = await kapi.readJson(await kapi.join(dlgDir82, file82));
+        check('[82-3] อ่านกลับแล้วได้ครบทั้งคณะ ความสัมพันธ์ และบทพูด',
+              back82.cast.length === 2 && back82.rels.length === 1 && back82.turns.length === 2
+              && back82.turns[0].thinking.length > 0);
+
+        // ── prompt: ตัวละครต้องไม่เห็นใบของคนอื่น ──
+        BB82.persona = 'ความลับของตัวนี้คือเป็นสายลับ';
+        sess82.cast[1].persona = BB82.persona;
+        const sys82 = B82.buildSystem(sess82, A82.id);
+        check('[82-4] prompt มีใบของตัวเอง + สรรพนาม + ความสัมพันธ์ของซีน',
+              sys82.includes('ผม') && sys82.includes('แฟนใหม่เฉพาะซีนนี้') && sys82.includes('ลานเบียร์'));
+        check('[82-4] ★ ใบของตัวอื่นไม่รั่วเข้า prompt', !sys82.includes('สายลับ'));
+        const msgs82 = B82.buildMessages(sess82, A82.id);
+        check('[82-4] บรรทัดตัวเอง = assistant · ของคนอื่น = user',
+              msgs82.some((m) => m.role === 'assistant' && m.content.includes('ก็แค่เหนื่อย'))
+              && msgs82.some((m) => m.role === 'user' && m.content.includes(BB82.name)),
+              JSON.stringify(msgs82));
+
+        // ── แทรกลงบทเป็นรูปแบบบทภาพยนตร์เสมอ (แม้อยู่ในแท็บนิยาย) ──
+        const proseTab82 = [...state.tabs.values()].find((x) => x.editor);
+        if (proseTab82) {
+          await activate(proseTab82.file);
+          const line82 = B82.turnToScreenplay(sess82, sess82.turns[0]);
+          check('[82-5] ★ รูปแบบที่จะแทรก = @ชื่อ + (วงเล็บ) + บทพูด',
+                line82 === '@' + A82.name + '\n(ยิ้มเจื่อน)\nก็แค่เหนื่อย', line82);
+          const v82 = proseTab82.editor.view;
+          const before82 = v82.state.doc.textBetween(0, v82.state.doc.content.size, '\n');
+          // เดิมเทสเรียก cmd('insertText') ตามโค้ดเก่า แล้วมันเงียบหาย — cmd() ไม่มีคำสั่งนี้
+          const okIns82 = proseTab82.editor.insertLines(line82);
+          check('[82-5] ตัวแทรกของนิยายคืนค่าว่าสำเร็จ', okIns82 === true);
+          await wait82(60);
+          const after82 = v82.state.doc.textBetween(0, v82.state.doc.content.size, '\n');
+          check('[82-5] แทรกลงแท็บนิยายได้จริง (ยาวขึ้น + มี @ชื่อ)',
+                after82.length > before82.length && after82.includes('@' + A82.name),
+                after82.slice(-80));
+          check('[82-5] แทรกแล้วได้ 3 ย่อหน้าจริง ไม่ใช่ก้อนเดียวที่มี \\n',
+                after82.includes('@' + A82.name + '\n(ยิ้มเจื่อน)\nก็แค่เหนื่อย'));
+        }
+        // ── แท็บบทหนัง: `@ชื่อ` ต้องกลายเป็น element "ตัวละคร" จริง ไม่ใช่บรรทัด action ──
+        const spTab82 = [...state.tabs.values()].find((x) => x.sp);
+        if (spTab82) {
+          await activate(spTab82.file);
+          const v82s = spTab82.sp.view;
+          const nBefore = v82s.state.doc.childCount;
+          const okSp82 = spTab82.sp.insertScript(B82.turnToScreenplay(sess82, sess82.turns[0]));
+          check('[82-5] ตัวแทรกของบทหนังคืนค่าว่าสำเร็จ', okSp82 === true);
+          await wait82(60);
+          const els82 = [];
+          v82s.state.doc.forEach((n) => els82.push((n.attrs || {}).el + '|' + n.textContent));
+          const iChar = els82.findIndex((x) => x === 'character|' + A82.name);
+          check('[82-5] ★ @ชื่อ กลายเป็น element ตัวละครจริง', iChar >= 0, els82.join(' / ').slice(0, 200));
+          check('[82-5] ★ ตามด้วยวงเล็บอารมณ์ แล้วบทพูด',
+                iChar >= 0 && els82[iChar + 1] === 'parenthetical|(ยิ้มเจื่อน)'
+                && els82[iChar + 2] === 'dialogue|ก็แค่เหนื่อย',
+                els82.slice(iChar, iChar + 3).join(' / '));
+          check('[82-5] แทรกแล้วโหนดเพิ่มขึ้น 3 ใบ', v82s.state.doc.childCount === nBefore + 3,
+                nBefore + ' -> ' + v82s.state.doc.childCount);
+        }
+
+        // ── ช่องความคิดของโมเดลต้อง "มองเห็นได้จริง" (บทเรียน K-1) ──
+        {
+          const host82 = $('#dlgb-body');
+          const probe = el('div', 'dlgb-think');
+          const sum = el('summary', 'dlgb-think-sum', 'ทดสอบความคิด');
+          probe.append(sum);
+          host82.append(probe);
+          const cs82 = getComputedStyle(sum);
+          const box82 = sum.getBoundingClientRect();
+          check('[82-6] ช่องความคิดของโมเดลมองเห็นได้จริง (opacity+visibility+ขนาด)',
+                cs82.display !== 'none' && cs82.visibility !== 'hidden'
+                && parseFloat(cs82.opacity || '1') > 0.05 && box82.width > 0 && box82.height > 0,
+                `${cs82.display}/${cs82.visibility}/${cs82.opacity}/${box82.width}x${box82.height}`);
+          probe.remove();
+        }
+
+        // ── งานค้างต้องขึ้นทะเบียน (กฎข้อ 1 ของผู้ใช้) ──
+        check('[82-7] ห้องซ้อมบทลงทะเบียนเป็นแหล่งงานค้างแล้ว',
+              dirtyRegistry.ids().includes('dlgb'), dirtyRegistry.ids().join(','));
+
+        // ── ทำความสะอาด: ลบไฟล์เทสทิ้ง ไม่ให้ค้างในโปรเจกต์ทดสอบ ──
+        try { await kapi.remove(await kapi.join(dlgDir82, file82)); } catch {}
+        U82.resetBuilder();
+        hidePanel('dlgb');
+        check('[82-8] ปิดแผงห้องซ้อมบทได้', !isPanelOpen('dlgb'));
       }
 
     out.push('ALL OK');

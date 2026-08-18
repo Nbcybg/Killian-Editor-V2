@@ -108,12 +108,34 @@ check('paginate: ไม่มีหัวฉาก → ไม่มี (CONTINUE
 check('paginate: ไม่มีหัวฉาก → ไม่มี CONTINUED: ต้นหน้า', !pg.pages[1].continuedTop);
 const sceneLong = [{ el: 'scene', text: 'INT. ห้องนอน - กลางคืน' }, ...many];
 const pgS = SF.paginate(sceneLong, { lines: 20 });
-check('paginate: ฉากเดียวข้ามหน้า → ท้ายหน้ามี (CONTINUED)',
-  pgS.pages[0].continuedBottom === '(CONTINUED)', pgS.pages[0].continuedBottom);
-check('paginate: ฉากเดียวข้ามหน้า → ต้นหน้า 2 มี CONTINUED:',
-  pgS.pages[1].continuedTop === 'CONTINUED:', pgS.pages[1].continuedTop);
-check('paginate: ข้ามหน้าที่สามขึ้นไปใส่เลขกำกับ',
-  pgS.count < 3 || pgS.pages[2].continuedTop === 'CONTINUED: (2)', pgS.pages[2] && pgS.pages[2].continuedTop);
+// [alpha.83 ข้อ 6] **กฎใหม่ตามที่ผู้ใช้สั่ง**: CONTINUED ใช้กับ "บล็อกที่ถูกหั่นคร่อมหน้า" เท่านั้น
+// ฉากเดียวกันที่รอยต่ออยู่ *ระหว่าง* บล็อก (บรรยายจบพอดี แล้วก้อนใหม่ขึ้นหน้าใหม่)
+// = คนละบล็อก แค่บรรทัดติดกัน → ห้ามขึ้น CONTINUED
+check('[83-6] ฉากข้ามหน้าแต่ไม่มีบล็อกถูกหั่น → ไม่มี (CONTINUED)',
+  !pgS.pages[0].continuedBottom, pgS.pages[0].continuedBottom);
+check('[83-6] …และต้นหน้า 2 ก็ไม่มี CONTINUED:',
+  !pgS.pages[1].continuedTop, pgS.pages[1].continuedTop);
+// บรรยายก้อนเดียวยาวจนถูกหั่นคร่อมหน้า = เคสที่ CONTINUED มีไว้ใช้จริง
+const sceneSplit = [{ el: 'scene', text: 'INT. ห้องนอน - กลางคืน' },
+  { el: 'action', text: 'บรรยายยาวมาก '.repeat(220) }];
+const pgSp = SF.paginate(sceneSplit, { lines: 20 });
+const flatSp = pgSp.pages.flatMap((p) => p.blocks);
+check('[83-6] บรรยายถูกหั่นคร่อมหน้าจริง',
+  flatSp.some((b) => b.split === 'head') && flatSp.some((b) => b.split === 'tail'),
+  JSON.stringify(pgSp.pages.map((p) => p.blocks.map((b) => b.el + ':' + (b.split || '-')))));
+check('[83-6] บล็อกถูกหั่น → ท้ายหน้ามี (CONTINUED)',
+  pgSp.pages[0].continuedBottom === '(CONTINUED)', pgSp.pages[0].continuedBottom);
+check('[83-6] บล็อกถูกหั่น → ต้นหน้า 2 มี CONTINUED:',
+  pgSp.pages[1].continuedTop === 'CONTINUED:', pgSp.pages[1].continuedTop);
+check('[83-6] ข้ามหน้าที่สามขึ้นไปใส่เลขกำกับ',
+  pgSp.count < 3 || pgSp.pages[2].continuedTop === 'CONTINUED: (2)',
+  pgSp.pages[2] && pgSp.pages[2].continuedTop);
+// ★ ต้นเหตุของบั๊ก: CONTINUED ต้อง **กินบรรทัดของหน้า** ไม่ใช่งอกเกินโควตา
+const linesOf = (p) => p.blocks.reduce((a, b) => a + (b.lines || 1), 0)
+  + (p.continuedTop ? 1 : 0) + (p.continuedBottom ? 1 : 0);
+check('[83-6] ★ ทุกหน้า (รวมบรรทัด CONTINUED) ไม่เกินโควตา 20 บรรทัด',
+  pgSp.pages.every((p) => linesOf(p) <= 20),
+  JSON.stringify(pgSp.pages.map(linesOf)));
 // หัวฉากใหม่ต้นหน้า = ฉากก่อนหน้าจบพอดี → ห้ามมี CONTINUED
 // (หัวฉาก 1 บรรทัด + บรรยาย 9 ก้อน × 2 บรรทัด = 19 บรรทัด → หัวฉากถัดไปลงหน้าใหม่พอดี)
 const twoScenes = [{ el: 'scene', text: 'INT. ก - วัน' },
@@ -127,17 +149,44 @@ check('paginate: ขึ้นฉากใหม่ต้นหน้า → ไ�
 check('paginate: เลขฉากเริ่ม/จบของแต่ละหน้าถูกบันทึกไว้',
   pgS.pages.every((p) => Number.isFinite(p.sceneStart) && Number.isFinite(p.sceneEnd)));
 // ปิดระบบต่อเนื่องได้
-const pgOff = SF.paginate(sceneLong, { lines: 20, fmt: SF.mergeSpFormat({ continued: { enabled: false } }) });
+const pgOff = SF.paginate(sceneSplit, { lines: 20, fmt: SF.mergeSpFormat({ continued: { enabled: false } }) });
 check('paginate: ปิดระบบต่อเนื่อง → ไม่มี CONTINUED เลย',
   pgOff.pages.every((p) => !p.continuedTop && !p.continuedBottom));
+// [alpha.83 ข้อ 6] ★ กวาดทุกความยาว × ทุกโควตา — **ห้ามมีหน้าไหนล้นแม้แต่บรรทัดเดียว**
+// (นับบรรทัดของ CONTINUED:/(CONTINUED)/(MORE) ที่วาดบนหน้าเข้าไปด้วย)
+// เทสนี้คือประตูกันบั๊ก "หน้ากระดาษล้น margin · หน้าไม่เท่ากัน" ที่ผู้ใช้รายงาน
+{
+  const usedOf = (pg) => pg.blocks.reduce((a, b) => a + (b.lines || 1), 0)
+    + (pg.continuedTop ? 1 : 0) + (pg.continuedBottom ? 1 : 0);
+  const over = [];
+  for (let n = 20; n <= 800; n += 7) {
+    for (const lines of [12, 20, 30, 54]) {
+      const doc = [{ el: 'scene', text: 'INT. ทางเดิน - กลางคืน' },
+                   { el: 'action', text: 'บรรยายยาวมาก '.repeat(n) }];
+      const r = SF.paginate(doc, { lines });
+      if (r.pages.some((pg) => usedOf(pg) > lines)) over.push('action ' + n + '/' + lines);
+    }
+    if (n <= 600) {
+      const doc = [{ el: 'scene', text: 'INT. ครัว - เช้า' }, { el: 'character', text: 'ทอร่า' },
+                   { el: 'dialogue', text: 'พูดยาว '.repeat(n) }];
+      const r = SF.paginate(doc, { lines: 20 });
+      if (r.pages.some((pg) => usedOf(pg) > 20)) over.push('dialogue ' + n);
+    }
+  }
+  check('[83-6] ★ กวาด 450+ เคส: ไม่มีหน้าไหนล้นโควตาเลยสักหน้า',
+    over.length === 0, over.slice(0, 5).join(' · '));
+}
 check('paginate: บทว่าง → 1 หน้า', SF.paginate([]).count === 1);
 check('pageCount ตรงกับ paginate().count', SF.pageCount(many, { lines: 20 }) === pg.count);
 
 // บทพูดยาวข้ามหน้า → ต้องมี (MORE) + ทวนชื่อ + (cont'd)
+// [alpha.82] ของเดิม repeat(40) = **พอดีเส้นแบ่งเป๊ะ** (13 บรรทัด + ชื่อ 1 = 14 = โควตาหน้า)
+// ตอนที่นับบรรทัดเกินจริงมันจึง "ข้ามหน้า" พอนับถูกมันก็ลงหน้าเดียวพอดี
+// → เทสกลายเป็นการวัด "อัลกอริทึมนับเกินไหม" แทน "บทพูดข้ามหน้าได้ไหม" · ขยายให้ยาวเกินหน้าชัด ๆ
 const longDlg = [
   { el: 'action', text: 'x '.repeat(30) },
   { el: 'character', text: 'ทอร่า' },
-  { el: 'dialogue', text: 'คำพูดยาวมาก '.repeat(40) },
+  { el: 'dialogue', text: 'คำพูดยาวมาก '.repeat(70) },
 ];
 const pd = SF.paginate(longDlg, { lines: 14 });
 const flat = pd.pages.flatMap((p) => p.blocks);
@@ -245,7 +294,12 @@ check('[57a] เลขหน้าชิดขวา 1" · 0.5" จากขอ�
 {
   const on = SF.mergeSpFormat({ pageNumbers: { show: true } });
   check('[57a] ปิดอยู่ → ไม่มีเลขหน้าเลย', SF.pageNumberLabel(3, F0, 1) === '');
-  check('[57a] หน้าแรกไม่ใส่เลข (ธรรมเนียมบท)', SF.pageNumberLabel(1, on, 1) === '');
+  // [alpha.82] ค่าเริ่มต้นเปลี่ยนแล้ว — ปก/หน้ารายชื่อตัวละครเป็นหน้าหน้าเล่มที่ไม่ถูกนับอยู่แล้ว
+  // หน้าแรกที่ผู้ใช้เห็นคือ "หน้าฉากแรก" ซึ่งต้องเป็นเลข 1
+  check('[82] หน้าฉากแรกได้เลข 1 เป็นค่าเริ่มต้น', SF.pageNumberLabel(1, on, 1) === '1.',
+    SF.pageNumberLabel(1, on, 1));
+  check('[82] ปิดสวิตช์แล้วยังเว้นหน้าแรกได้',
+    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: false } }), 1) === '');
   check('[57a] หน้า 2 = "2."', SF.pageNumberLabel(2, on, 1) === '2.');
   check('[57a] เริ่มนับที่ 12 → หน้าที่ 2 ของไฟล์ = "13."', SF.pageNumberLabel(2, on, 12) === '13.');
   check('[57a] เปิด firstPage → หน้าแรกได้เลขเริ่มต้น',
@@ -266,12 +320,21 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
   // wrapLines นับเป็น "จำนวนตัวอักษร" ไม่ใช่ความกว้างจริง — ไทยไม่มีช่องว่างระหว่างคำ
   // จึงถูกนับเป็นคำเดียวยาว ๆ แล้วถูกหั่นทุก cols ตัว (พฤติกรรมที่ paginate/PDF ต้องตรงกันเป๊ะ)
   const thai40 = 'ก'.repeat(40);
-  // ข้อควรรู้: "คำแรกที่ยาวเกินบรรทัด" ทำให้ wrapLines นับเพิ่ม 1 บรรทัด (บรรทัดว่างนำหน้า)
-  // ยอมได้ — ดีกว่าข้อความล้นขอบล่าง · pdf-generator.wrapTextLines มิเรอร์พฤติกรรมนี้เป๊ะ
-  check('[wrap] ไทยล้วน 40 ตัว บนกล่อง 2 นิ้ว (20 ตัว) = 2 บรรทัดจริง + 1 บรรทัดนำ',
-    SF.wrapLines(thai40, 2) === 3, SF.wrapLines(thai40, 2));
-  check('[wrap] ไทย 41 ตัว = เพิ่มอีกบรรทัด',
-    SF.wrapLines(thai40 + 'ก', 2) === 4, SF.wrapLines(thai40 + 'ก', 2));
+  // [alpha.82] **เดิมเทสสองข้อนี้ล็อกบั๊กเอาไว้** — คอมเมนต์เก่าเขียนว่า "คำแรกที่ยาวเกินบรรทัด
+  // ทำให้นับเพิ่ม 1 บรรทัด (บรรทัดว่างนำหน้า) ยอมได้" · แต่ไทยไม่มีช่องว่างคั่น **ทุกย่อหน้า**
+  // จึงเป็น "คำแรกที่ยาวเกินบรรทัด" เสมอ → เกินจริงย่อหน้าละ 1 บรรทัดทั้งเอกสาร
+  // นั่นคือต้นตอที่หน้ากระดาษบนจอสูงไม่เท่ากันและตัดหน้าเร็วเกินจริง
+  check('[wrap] ไทยล้วน 40 ตัว บนกล่อง 2 นิ้ว (20 ตัว) = 2 บรรทัดพอดี ไม่มีบรรทัดเปล่านำ',
+    SF.wrapLines(thai40, 2) === 2, SF.wrapLines(thai40, 2));
+  check('[wrap] ไทย 41 ตัว = ล้นไปบรรทัดที่ 3',
+    SF.wrapLines(thai40 + 'ก', 2) === 3, SF.wrapLines(thai40 + 'ก', 2));
+  check('[wrap] ไทยพอดีบรรทัดเดียว (20 ตัว) = 1 บรรทัด',
+    SF.wrapLines('ก'.repeat(20), 2) === 1, SF.wrapLines('ก'.repeat(20), 2));
+  check('[wrap] สระ/วรรณยุกต์ไม่กินความกว้าง — 20 พยัญชนะ + สระ ยังเป็น 1 บรรทัด',
+    SF.wrapLines('กิ'.repeat(20), 2) === 1, SF.wrapLines('กิ'.repeat(20), 2));
+  // ข้อความที่มีของอยู่บนบรรทัดแล้ว ตามด้วยไทยยาว ๆ → ไทยต้องไหลต่อจากที่ค้าง ไม่ใช่ขึ้นบรรทัดใหม่ทั้งก้อน
+  check('[wrap] ไทยยาวไหลต่อจากคำที่ค้างบนบรรทัด',
+    SF.wrapLines('ab ' + 'ก'.repeat(37), 2) === 2, SF.wrapLines('ab ' + 'ก'.repeat(37), 2));
   const mixed = 'ทอร่าพูดว่า OK then she left ห้องครัวไปเงียบ ๆ';
   check('[wrap] ไทย+ละตินผสม ตัดที่ช่องว่างของฝั่งละติน',
     SF.wrapLines(mixed, 6) >= 1 && SF.wrapLines(mixed, 6) <= 2, SF.wrapLines(mixed, 6));

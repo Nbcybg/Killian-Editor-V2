@@ -105,8 +105,9 @@ export async function openAIAssistant() {
     insertBtn.onclick = () => {
       const r = resultDiv.textContent;
       if (!r || r.startsWith('❌') || r.startsWith('กำลัง')) return;
-      if (t?.editor) t.editor.cmd('insertText', r);
-      else if (t?.sp) t.sp.cmd('insertText', r);
+      // [alpha.82] เดิมเรียก cmd('insertText') ที่ไม่มีอยู่จริง → ปุ่มนี้ก็ไม่เคยแทรกอะไรเลย
+      if (t?.sp) t.sp.insertScript(r);
+      else if (t?.editor) t.editor.insertLines(r);
       ov.remove();
       setStatus(tr('ai.insertedResult', 'แทรกผลลัพธ์ AI ลงฉากแล้ว'));
     };
@@ -239,9 +240,11 @@ export async function openDialogueGenerator() {
     insertBtn.onclick = () => {
       const r = resultDiv.textContent;
       if (!r || r.startsWith('❌') || r.startsWith('กำลัง')) return;
+      // [alpha.82] เดิมเรียก cmd('insertText') ซึ่ง **ไม่มีใน switch ของ cmd()** ทั้งสองตัวแก้ไข
+      // → ตกไปที่ default เงียบ ๆ ปุ่มนี้จึงไม่เคยแทรกอะไรลงฉากเลยตั้งแต่วันแรก
       const t = state.active;
-      if (t?.editor) t.editor.cmd('insertText', r);
-      else if (t?.sp) t.sp.cmd('insertText', r);
+      if (t?.sp) t.sp.insertScript(r);
+      else if (t?.editor) t.editor.insertLines(r);
       ov.remove(); setStatus(tr('ai.insertedDialogue', 'แทรกบทสนทนาลงฉากแล้ว'));
     };
     btns.append(runBtn, insertBtn, el('button', 'k-cancel', tt('ui.common.close')));

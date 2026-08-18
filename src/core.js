@@ -278,6 +278,9 @@ export const PROJECT_DEFAULTS = {
   spShowFormat: false, spCheckBeforeExport: true, spLineLimits: null,
   spSceneNumbers: null, spPageNumbers: null,
   spContinued: null, spLineHeight: 1, spPageGap: 28,
+  // [alpha.83r ข้อ 1] ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์ที่บันทึกไว้ก่อน .82
+  // (ตอนนั้นค่าเริ่มต้นคือ "หน้าแรกไม่ใส่เลข" แล้วมันติดมาถาวรจนเลขหน้า 1 ไม่ขึ้นเลย)
+  pgFirstMigrated: false,
   // [alpha.82] แยกหน้าเป็นแผ่นจริงขณะพิมพ์ (ขอบล่าง + แถบคั่น + ขอบบน) แบบ Word
   // ปิด = เส้นประบาง ๆ แบบเดิม · ไม่กระทบตัวเลขหน้าไม่ว่าเปิดหรือปิด
   paperGaps: true, paperGapBand: 28,
@@ -423,7 +426,7 @@ export { PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES, SP_
          linesPerPage, formatLines, lineHeightIn, clampLineHeight,
          textWidth, wrapLines, paginate, pageCount, splitText, annotateContinued,
          newRoster, normalizeRoster, rosterToText, ROSTER_VERSION,
-         SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, sceneNumberOffsets, pageNumberLabel,
+         SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, CONTINUED_DEFAULTS, sceneNumberOffsets, pageNumberLabel,
          // [alpha.62 บั๊ก 11] ตัวพิมพ์ใหญ่รายชนิด element
          CAPS_ELEMENTS, elementCaps, setElementCaps } from './sp-format.js';
 // ฟอนต์ตามภาษา (alpha.57a ข้อ 5) — โมดูลบริสุทธิ์ ส่งต่อจาก lang-fonts.js

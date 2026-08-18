@@ -346,8 +346,11 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     (asText(rBold.bytes).match(/\/FontFile2/g) || []).length === 1);
 
   // ── [55][56] CONTINUED ในไฟล์ PDF ──
+  // [alpha.83 ข้อ 6] CONTINUED ขึ้นเฉพาะเมื่อ "บล็อกถูกหั่นคร่อมหน้า" — บรรยายก้อนสั้น ๆ
+  // ที่รอยต่ออยู่ระหว่างก้อนไม่ใช่เคสของ CONTINUED อีกต่อไป จึงต้องมีก้อนยาวจริง ๆ
   const oneLongScene = [{ el: 'scene', text: 'INT. ทางเดินยาว - กลางคืน', sceneNo: 1 }];
-  for (let i = 0; i < 70; i++) oneLongScene.push({ el: 'action', text: 'เดินต่อไป ' + i });
+  oneLongScene.push({ el: 'action', text: 'เดินต่อไปเรื่อย ๆ ไม่มีที่สิ้นสุด '.repeat(300) });
+  for (let i = 0; i < 20; i++) oneLongScene.push({ el: 'action', text: 'เดินต่อไป ' + i });
   const rCont = await G.generatePdf({
     blocks: oneLongScene, fmt, fonts: { regular: thaiFont },
     opts: { titlePages: false, toc: false } });
@@ -360,8 +363,11 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
   check('[55] เปิดระบบต่อเนื่อง → มีข้อความ CONTINUED วาดเพิ่มในไฟล์',
     drawOps(rCont.bytes) > drawOps(rContOff.bytes),
     `${drawOps(rCont.bytes)} vs ${drawOps(rContOff.bytes)}`);
-  check('[55] ปิดแล้วจำนวนหน้าเท่าเดิม (เครื่องหมายวาดในระยะขอบ ไม่กินบรรทัด)',
-    rCont.scriptPages === rContOff.scriptPages,
+  // [alpha.83 ข้อ 6] **กลับด้านจากเดิม** — ผู้ใช้สั่งว่า CONTINUED ต้อง *กินบรรทัดของหน้า*
+  // (เดิมวาดทับระยะขอบแล้วหน้ากลายเป็น 31 บรรทัดจาก 30 → ล้นขอบล่างทุกหน้าที่มีเครื่องหมาย)
+  // เปิดแล้วจำนวนหน้าจึงมากกว่าหรือเท่ากับตอนปิดเสมอ ไม่มีทางน้อยกว่า
+  check('[55] เปิดระบบต่อเนื่อง → เครื่องหมายกินบรรทัด (หน้าไม่น้อยกว่าตอนปิด)',
+    rCont.scriptPages >= rContOff.scriptPages,
     `${rCont.scriptPages} vs ${rContOff.scriptPages}`);
   // ฟอนต์มาตรฐาน (ASCII) → หา "(CONTINUED)" เป็นข้อความในไฟล์ได้ตรง ๆ
   const rContStd = await G.generatePdf({

@@ -1105,8 +1105,11 @@ body.k-mod-down .k-mention { cursor:pointer; }
 .k-lightbox-img { max-width:92vw; max-height:86vh; border-radius:8px; box-shadow:0 12px 48px rgba(0,0,0,.7); }
 .k-lightbox-cap { color:var(--bright); font-size:calc(13px * var(--ui-scale, 1)); }
 /* ตรวจคำผิด (พจนานุกรม) — ขีดเส้นใต้หยักแดง · คลิกขวาเพื่อเพิ่มลงพจนานุกรม */
+/* [alpha.83r ข้อ 4] `cursor:context-menu` ทำให้ลูกศรเปลี่ยนรูปทุกครั้งที่ผ่านคำที่สะกดผิด
+   จนกะตำแหน่งคลิกแทรกเคอร์เซอร์ไม่ได้ — คลิกขวายังเปิดเมนู "เพิ่มลงพจนานุกรม" ได้เหมือนเดิม
+   (เส้นหยักแดงคือสัญญาณ ไม่ใช่รูปเคอร์เซอร์) */
 .k-spell-bad { text-decoration:underline wavy #e5695e; text-decoration-skip-ink:none;
-  text-underline-offset:2px; cursor:context-menu; }
+  text-underline-offset:2px; cursor:text; }
 
 /* ---------- บทหนัง WYSIWYG แบบ Final Draft (หน้ากระดาษ courier + ระยะมาตรฐาน) ---------- */
 /* พื้นที่แก้บทหนังทำเป็น "หน้ากระดาษ" กว้างคงที่ กึ่งกลาง อ่านง่ายเหมือนสคริปต์จริง
@@ -3290,6 +3293,25 @@ body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-in
   width:auto; left:0; right:0;
 }
 
+/* ── [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของ "หน้าถัดไป" บนเส้นคั่นหน้า ──
+   เดิมโหมดปกติ/จัดหน้ามีเลขหน้าเฉพาะหน้าแรก (::before ของ .ProseMirror) — หน้า 2 เป็นต้นไป
+   เห็นแค่ป้าย "หน้า N" กลางแถบคั่น ผู้ใช้จึงรายงานว่า "เปิดเลขหน้าแล้วไม่ขึ้น"
+   ซ่อนไว้เป็นค่าเริ่มต้น แล้วเปิดเฉพาะโหมดที่มี "ขอบบนของแผ่นถัดไป" ให้วางจริง ๆ
+   (บทเรียน K-1: กฎของ widget ต้องผูกกับที่อยู่ของมันเสมอ) */
+.sp-page-break > .sp-page-no-next { display:none; position:absolute;
+  color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
+  pointer-events:none; user-select:none; }
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break > .sp-page-no-next,
+.pane.sp-view-layout .sp-page-break > .sp-page-no-next {
+  display:block; right:var(--pg-no-right, 1in);
+  top:calc(var(--mg-bottom, 1in) + var(--k-pb-band, var(--sp-page-gap, 28px)) + var(--pg-no-top, .5in));
+}
+body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break {
+  --k-pb-band:var(--k-gap-band, 28px);
+}
+/* ปิดเลขหน้าอยู่ = ไม่มีอะไรให้โชว์ (ตัวเลขไม่ถูกสร้างตั้งแต่ต้นทาง แต่กันไว้อีกชั้น) */
+body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
+
 /* [alpha.82] กล่องครอบเนื้อหาในมุมมองหน้ากระดาษของนิยาย — สำเนาเนื้อหาจริงถูกเลื่อนขึ้น
    แล้วครอบให้เหลือเฉพาะช่วงของหน้านั้น (ดู renderProseClipPages) */
 .ed-page-clip { position:relative; overflow:hidden; }
@@ -3400,20 +3422,33 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
   font-family:var(--sp-font, "Courier Prime", "Courier New", monospace);
   font-size:var(--sp-fs, 16px); line-height:var(--sp-lh, 1); overflow:hidden; cursor:pointer; }
 .sp-pageview .sp-page:hover { outline:2px solid var(--accent-hi); }
-.sp-pageview .sp { color:var(--paper-ink); white-space:pre-wrap; }
+/* [alpha.83r ข้อ 2] ★ **คำยาวที่ไม่มีจุดตัดต้องถูกหั่น** — ไม่งั้นทะลุขอบกระดาษ
+   ตัวจัดหน้า (`wrapCuts` ใน text-width.js) หั่นกลางคำอยู่แล้วเมื่อคำเดียวยาวเกินหนึ่งบรรทัด
+   (แบบเดียวกับ unipdf) แต่หน้ากระดาษที่วาดเองไม่เคยตั้ง overflow-wrap เลย
+   → จอกับตัวเลขที่ใช้ตัดหน้า **ไม่ตรงกัน** แล้วไฟล์ที่ส่งออกก็ล้นตาม
+   `.ProseMirror` มี `word-wrap:break-word` อยู่แล้ว ที่ขาดคือหน้ากระดาษที่ประกอบเอง */
+.sp-pageview .sp { color:var(--paper-ink); white-space:pre-wrap;
+  overflow-wrap:break-word; word-break:break-word; }
 .sp-pageview .sp-scene, .sp-pageview .sp-character, .sp-pageview .sp-transition { color:#000; }
 .sp-pageview .sp-parenthetical { color:#555; }
-.sp-page-num { text-align:right; color:#555; margin-bottom:1em; }
-/* alpha.57a: เมื่อเปิด "เลขหน้า" ตำแหน่งวัดจากขอบกระดาษจริง (inline style จาก renderPageView) */
-.sp-page[style] > .sp-page-num[style*="top"] { position:absolute; margin:0; }
+/* [alpha.83 ข้อ 2] เลขหน้าบนหน้ากระดาษ = **โอเวอร์เลย์เสมอ**
+   เดิมเป็นกล่องในสายเนื้อหาที่กลายเป็น absolute เฉพาะตอนมี inline `top` (ซึ่งมีแค่ทางบทภาพยนตร์)
+   → ฝั่งนิยายเปิดเลขหน้าแล้วเนื้อหาถูกดันลงทั้งหน้า และบรรทัดล่างสุดถูกเฉือนหาย
+   ตำแหน่งจริงมาจาก inline style (นิ้ว วัดจากขอบกระดาษ) ที่ตัววาดทุกตัวใส่มาให้ */
+.sp-page-num { position:absolute; margin:0; text-align:right; color:#555;
+  top:var(--pg-no-top, .5in); right:var(--pg-no-right, 1in);
+  pointer-events:none; user-select:none; z-index:2; }
 .sp-pageview .sp-page { position:relative; }
 .sp-pageview .k-scene-no { color:#555; }
 .sp-continued-top { color:#555; }
-.sp-continued-bottom { text-align:right; color:#555; margin-top:1em; }
+/* [alpha.83 ข้อ 6] (CONTINUED) ท้ายหน้ากินหนึ่งบรรทัดพอดี — `margin-top:1em` เดิมทำให้
+   กินสองบรรทัดแล้วล้นระยะขอบล่าง (ตอนนี้ paginate() จองบรรทัดให้ล่วงหน้าแล้ว) */
+.sp-continued-bottom { text-align:right; color:#555; margin-top:0; }
 .sp-pageview .sp-more { margin-left:2.2in; color:#333; }
 /* [alpha.58r บั๊ก 15+20] มุมมองหน้ากระดาษของ "นิยาย" (renderProsePageView) */
 .sp-pageview .ed-page { color:var(--paper-ink); }
 .sp-pageview .ed-page p, .sp-pageview .ed-page li { color:var(--paper-ink); margin-top:0; }
+.sp-pageview .ed-page, .sp-pageview .sp-page { overflow-wrap:break-word; word-break:break-word; }
 .sp-pageview .ed-page h1, .sp-pageview .ed-page h2, .sp-pageview .ed-page h3,
 .sp-pageview .ed-page h4, .sp-pageview .ed-page h5, .sp-pageview .ed-page h6 {
   color:#111; margin:1em 0 .4em; line-height:1.3; }
@@ -4187,3 +4222,173 @@ body.paper-mode .k-manual-page-break::after { background:var(--paper); color:#a5
 .k-dlgp-item-guess .k-dlgp-who::after { content:'?'; margin-left:2px; opacity:.7; }
 .k-dlgp-sure { display:flex; align-items:center; gap:5px; font-size:calc(11px * var(--ui-scale, 1));
   color:var(--dim); white-space:nowrap; cursor:pointer; }
+
+/* ═══════════ [alpha.82] แผง 🎭 ห้องซ้อมบท ═══════════
+   บทเรียน K-1: ทุกคลาสมีคำนำหน้าของตัวเอง (dlgb-) และกฎที่ต้องชนะผูกกับที่อยู่เสมอ
+   ห้ามมีคลาสลอย ๆ ที่ชื่อไปชนกับแถวใน Explorer หรือ widget อื่นได้ */
+.k-panel[data-panel-id="dlgb"] > .k-panel-body { min-height:0; }
+.dlgb-list, .dlgb-session { display:flex; flex-direction:column; height:100%; min-height:0; padding:8px; gap:8px; }
+.dlgb-empty { padding:18px; text-align:center; color:var(--dim);
+  font-size:calc(12.5px * var(--ui-scale, 1)); }
+.dlgb-hint { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); margin:2px 0 6px; }
+
+/* รายการเซสชัน */
+.dlgb-listbar { display:flex; gap:6px; flex:0 0 auto; }
+.dlgb-search { flex:1; min-width:0; padding:6px 10px; border-radius:6px;
+  background:var(--bg); color:var(--fg); border:1px solid var(--border); font:inherit; }
+.dlgb-search:focus { outline:none; border-color:var(--accent-hi); }
+.dlgb-listbar button { white-space:nowrap; padding:6px 10px; }
+.dlgb-rows { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:4px; }
+.dlgb-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px;
+  border:1px solid transparent; cursor:pointer; }
+.dlgb-row:hover { background:var(--sel); border-color:var(--border); }
+.dlgb-row.archived { opacity:.55; }
+.dlgb-row-main { flex:1; min-width:0; }
+.dlgb-row-title { color:var(--bright); font-size:calc(12.5px * var(--ui-scale, 1));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dlgb-row-sub { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dlgb-row-meta { flex:0 0 auto; text-align:right; color:var(--dim);
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.dlgb-row-meta span { display:block; }
+.dlgb-archtoggle { flex:0 0 auto; color:var(--dim); cursor:pointer; text-align:center;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-archtoggle:hover { color:var(--fg); }
+
+/* หัวเซสชัน */
+.dlgb-head { flex:0 0 auto; display:flex; align-items:center; gap:8px;
+  padding-bottom:6px; border-bottom:1px solid var(--border); }
+.dlgb-back, .dlgb-more, .dlgb-eye { background:none; border:1px solid transparent; color:var(--dim);
+  cursor:pointer; border-radius:5px; padding:2px 7px; }
+.dlgb-back:hover, .dlgb-more:hover, .dlgb-eye:hover { color:var(--fg); border-color:var(--border); }
+.dlgb-eye.on { color:var(--accent-hi); border-color:var(--accent); }
+.dlgb-title { flex:1; min-width:0; color:var(--bright); font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dlgb-head-right { flex:0 0 auto; display:flex; align-items:center; gap:6px; }
+.dlgb-ctx { background:var(--bar); border:1px solid var(--border); border-radius:999px;
+  color:var(--dim); cursor:default; padding:2px 10px; font-size:calc(10.5px * var(--ui-scale, 1)); }
+
+/* แถบตั้งค่า */
+.dlgb-opts { flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; }
+.dlgb-opt { display:flex; align-items:center; gap:4px; font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-opt-label { color:var(--dim); }
+.dlgb-opt select, .dlgb-pick-sel { background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 6px; font:inherit;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-check { display:flex; align-items:center; gap:4px; color:var(--dim); cursor:pointer;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+
+/* บทสนทนา */
+.dlgb-msgs { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+  padding:8px 2px; }
+.dlgb-situation { color:var(--dim); font-style:italic; text-align:center; padding:4px 10px;
+  font-size:calc(11.5px * var(--ui-scale, 1)); border-bottom:1px dashed var(--border); }
+.dlgb-bubble { border:1px solid var(--border); border-radius:8px; padding:7px 10px;
+  background:var(--bar); }
+.dlgb-bubble.dlgb-director { background:var(--sunken); border-style:dashed; }
+.dlgb-bubble.dlgb-usertyped { border-color:var(--accent); }
+.dlgb-bub-head { display:flex; align-items:center; gap:6px; margin-bottom:3px;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-bub-name { color:var(--accent-hi); font-weight:600; }
+.dlgb-bub-to, .dlgb-bub-model { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); }
+.dlgb-bub-model { margin-left:auto; opacity:.7; }
+.dlgb-bub-ins { color:#6bbf72; }
+.dlgb-bub-paren { color:var(--dim); font-style:italic;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+.dlgb-bub-text { color:var(--fg); line-height:1.75; white-space:pre-wrap;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+.dlgb-bub-acts { display:flex; gap:2px; justify-content:flex-end; margin-top:4px; }
+.dlgb-act { background:none; border:1px solid transparent; color:var(--dim); cursor:pointer;
+  border-radius:4px; padding:1px 6px; font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-act:hover { color:var(--bright); border-color:var(--border); background:var(--hover); }
+
+/* ความคิดของโมเดล — กางดูได้ทุกฟอง (ปุ่มบนหัวแผงกางให้ทั้งหมดทีเดียว) */
+.dlgb-think { margin-top:5px; border-top:1px dashed var(--border); padding-top:4px; }
+.dlgb-think-sum { color:var(--dim); cursor:pointer; font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-think-sum:hover { color:var(--fg); }
+.dlgb-think-pre { margin:4px 0 0; padding:6px 8px; background:var(--sunken); border-radius:5px;
+  color:var(--dim); font-style:italic; white-space:pre-wrap; max-height:220px; overflow-y:auto;
+  font-size:calc(11px * var(--ui-scale, 1)); line-height:1.6; }
+
+/* แถบส่ง */
+.dlgb-composer { flex:0 0 auto; display:flex; flex-direction:column; gap:5px;
+  border-top:1px solid var(--border); padding-top:6px; }
+.dlgb-pick { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.dlgb-pick-mid { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-sendrow { display:flex; align-items:flex-end; gap:5px; }
+.dlgb-input { flex:1; min-width:0; resize:vertical; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:6px 8px; font:inherit;
+  font-size:calc(12.5px * var(--ui-scale, 1)); }
+.dlgb-input:focus { outline:none; border-color:var(--accent-hi); }
+.dlgb-sendrow button { white-space:nowrap; padding:6px 10px; }
+
+/* กล่องจัดการคณะ */
+.dlgb-full { width:100%; box-sizing:border-box; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:5px 8px; font:inherit;
+  font-size:calc(12px * var(--ui-scale, 1)); margin:3px 0; }
+.dlgb-ta { width:100%; box-sizing:border-box; min-height:66px; resize:vertical;
+  background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+  padding:6px 8px; font:inherit; font-size:calc(12px * var(--ui-scale, 1)); margin:3px 0; }
+.dlgb-pron { flex:0 0 130px; width:130px; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 6px; font:inherit;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-cast-body { max-height:58vh; overflow-y:auto; padding-right:4px; }
+.dlgb-sec { color:var(--bright); font-weight:600; margin:12px 0 4px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.dlgb-cast-card { border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+  margin-bottom:8px; background:var(--side); }
+.dlgb-cast-head { display:flex; align-items:center; gap:8px; }
+.dlgb-cast-name { flex:1; color:var(--accent-hi); font-weight:600; }
+.dlgb-cast-del { flex:0 0 auto; padding:2px 8px; }
+.dlgb-mini { padding:3px 9px; font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-add { display:flex; gap:6px; align-items:center; margin:6px 0; }
+.dlgb-add select { flex:1; min-width:0; }
+.dlgb-rel { border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin-bottom:6px;
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.dlgb-rel-head { flex:0 0 100%; color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-rel .dlgb-full { flex:1; min-width:120px; width:auto; margin:0; }
+.dlgb-override { margin-top:6px; }
+.dlgb-override-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+  gap:6px 10px; margin-top:6px; }
+.dlgb-field { display:flex; flex-direction:column; gap:2px; }
+.dlgb-field label { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); }
+.dlgb-field input, .dlgb-field select { background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 6px; font:inherit;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-preset-list { max-height:50vh; overflow-y:auto; }
+.dlgb-preset-row { display:flex; align-items:center; gap:8px; padding:7px 8px;
+  border:1px solid var(--border); border-radius:6px; margin-bottom:6px; }
+.dlgb-preset-main { flex:1; min-width:0; }
+
+/* ═══════════ [alpha.82] โหมด "กำลังวัด" — เส้นคั่นหน้าต้องไม่กินที่ระหว่างวัด ═══════════
+   ตัวจัดหน้าเป็นวงจรป้อนกลับ: วัด DOM → ได้จุดตัด → แทรกเส้นคั่นลง DOM → วัดอีกรอบ
+   เส้นคั่นแบบตัดกลางย่อหน้าเป็น inline-block กว้างเต็มแผ่น มันจึง **เปลี่ยนการตัดบรรทัด
+   ของย่อหน้าที่มันไปแทรกอยู่** — หักความสูงออกทีหลังแก้ไม่ได้ เพราะการไหลของข้อความเปลี่ยนไปแล้ว
+   (อาการจริงที่วัดได้: สั่งจัดหน้าซ้ำโดยไม่เปลี่ยนอะไร ได้ 20 หน้า แล้วเหลือ 6 หน้า)
+   คลาสนี้ถูกใส่/ถอดในจังหวะเดียวกันใน measureProseLayout() เบราว์เซอร์ไม่ได้วาดระหว่างนั้น
+   จึงไม่มีการกะพริบ · ต้องชนะทุกกฎด้วย !important เพราะกฎเดิมมี specificity สูง */
+body.k-measuring .ed-page-break,
+body.k-measuring .sp-page-break,
+body.k-measuring .k-prose-page-break {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  /* [alpha.82] ต้องเป็น display:none — **ไม่ใช่ inline**
+     `height`/`width` ไม่มีผลกับ inline element ที่ไม่ใช่ replaced (สเปก CSS)
+     ตอนแรกเขียน `display:inline` แล้ว height:0 ถูกเมินทั้งหมด เส้นคั่นยังกินกล่องบรรทัด
+     อยู่ 19px (วัดได้จริง: 220px → 19px ไม่ใช่ 0) → ผลการวัดยังขึ้นกับจำนวนเส้นคั่น
+     แล้วจัดหน้าซ้ำก็แกว่ง 19 ↔ 20 หน้าไม่รู้จบ */
+  display: none !important;
+}
+body.k-measuring .ed-page-break::before,
+body.k-measuring .ed-page-break::after,
+body.k-measuring .sp-page-break::before,
+body.k-measuring .sp-page-break::after,
+body.k-measuring .ed-page-break > *,
+body.k-measuring .sp-page-break > * {
+  display: none !important;
+}

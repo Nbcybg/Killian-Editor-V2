@@ -7,6 +7,8 @@
 // import ได้เฉพาะโมดูลบริสุทธิ์ (compile.js · num.js) — **ห้าม import core.js**
 import { PRESETS, mkStep } from './compile.js';
 import { num } from './num.js';
+// [alpha.82] เลขหน้าของเนื้อเรื่องอ่านค่าตั้งต้นชุดเดียวกับหน้าจอ (ไม่บังคับทับอีกแล้ว)
+import { PAGE_NUMBER_DEFAULTS } from './sp-format.js';
 
 // ═══════════════════════ ส่วนบริสุทธิ์ (ไม่แตะ DOM / ไม่แตะ kapi) ═══════════════════════
 
@@ -75,7 +77,10 @@ export const pdfEngine = (kind) => (kind === 'screenplay' ? 'pdflib' : 'html');
  */
 export function exportPageNumberFmt(fmt) {
   const f = fmt || {};
-  return { ...f, pageNumbers: { ...(f.pageNumbers || {}), firstPage: true } };
+  // [alpha.82] เดิมบังคับ `firstPage: true` ทับค่าที่ผู้ใช้ตั้ง เพื่อให้หน้าฉากแรกใน PDF มีเลข
+  // — แต่หน้าจอไม่ได้ใช้ทางนี้ **จอกับ PDF จึงไม่ตรงกัน** (จอไม่มีเลข 1 แต่ PDF มี)
+  // ตอนนี้ค่าเริ่มต้นเป็น true อยู่แล้ว จึงเลิกบังคับ แล้วให้ทั้งสองฝั่งอ่านค่าเดียวกันจริง ๆ
+  return { ...f, pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...(f.pageNumbers || {}) } };
 }
 
 /** ค่าเริ่มต้นของกล่องส่งออก */

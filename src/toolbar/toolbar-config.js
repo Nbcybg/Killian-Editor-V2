@@ -48,6 +48,7 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-search-panel' }, { id: 'tb-note' }, { id: 'tb-panels' },
     { id: 'tb-kanban' }, { id: 'tb-dashboard' },
     { id: 'tb-dialogue' },                       // [alpha.79] แผงบทพูด
+    { id: 'tb-dlgb' },                           // [alpha.82] ห้องซ้อมบท
     { id: 'tb-codex' }, { id: 'tb-history' }, { id: 'tb-record' },
     // [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบ
     { id: 'tb-comments' }, { id: 'tb-notes-panel' }, { id: 'tb-log' },

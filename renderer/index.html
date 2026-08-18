@@ -55,6 +55,8 @@
     <option value="act-break">ตอน</option>
     <option value="page-break">— ขึ้นหน้าใหม่ (---)</option>
     <option value="note">โน้ต</option>
+    <option value="cont-left">ต่อเนื่อง (ซ้าย)</option>
+    <option value="cont-right">ต่อเนื่อง (ขวา)</option>
   </select>
   <!-- alpha.57a ข้อ 2: ส่วนเสริมท้ายชื่อตัวละคร (V.O./O.S./cont'd) — เว้นจากชื่อ 1 วรรค -->
   <button id="tb-sp-ext" class="tb" style="display:none" title="ส่วนเสริมท้ายชื่อตัวละคร (Extension)">( )</button>
@@ -141,6 +143,7 @@
   <button id="tb-record" class="tb tb-toggle" title="🗒 บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)" data-icon="note"></button>
   <!-- [alpha.79] แผงบทพูด (รวมบทพูดทั้งผลงาน) + แผงจัดการปลั๊กอิน -->
   <button id="tb-dialogue" class="tb tb-toggle" title="บทพูดทั้งผลงาน (Ctrl+Alt+L)" data-icon="chat"></button>
+  <button id="tb-dlgb" class="tb tb-toggle" title="ห้องซ้อมบท — ให้ AI สวมบทตัวละครคุยกัน" data-icon="chat"></button>
   <button id="tb-plugins" class="tb tb-toggle" title="ปลั๊กอิน (Ctrl+Alt+E)" data-icon="extension"></button>
   <!-- [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบเลย — ต้องเข้าถึงได้จากที่เดียวกับแผงอื่น
        (ซ่อนตัวที่ไม่ใช้ได้ที่ ตั้งค่า → แถบเครื่องมือ) -->
@@ -239,6 +242,7 @@
     <div id="record-panel" class="k-featpanel"><div id="record-body"></div></div>
     <!-- [alpha.79] แผงบทพูด + แผงปลั๊กอิน -->
     <div id="dialogue-panel" class="k-featpanel"><div id="dialogue-body"></div></div>
+    <div id="dlgb-panel" class="k-featpanel"><div id="dlgb-body"></div></div>
     <div id="plugins-panel" class="k-featpanel"><div id="plugins-body"></div></div>
 </div>
 <div id="statusbar"><span id="status" data-i18n="app.ready">พร้อม</span>

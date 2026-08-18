@@ -102,6 +102,11 @@ export const PANEL_DEFS = [
   { id: 'dialogue', minW: 460, dockW: 620, title: t('ui.panel.dialogueTitle'), icon: 'chat',
     adopt: '#dialogue-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.dialogueTitle',
     desc: t('ui.panel.dialogueDesc') },
+  // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
+  // ตัวนี้ให้ AI สวมบทตัวละครจาก Wiki คุยกันสด ๆ แล้วหยิบบรรทัดที่ชอบไปใส่บท)
+  { id: 'dlgb', minW: 420, dockW: 620, title: t('ui.panel.dlgbTitle'), icon: 'chat',
+    adopt: '#dlgb-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.dlgbTitle',
+    desc: t('ui.panel.dlgbDesc') },
   { id: 'plugins', minW: 420, dockW: 520, title: t('ui.panel.pluginsTitle'), icon: 'extension',
     adopt: '#plugins-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.pluginsTitle',
     desc: t('ui.panel.pluginsDesc') },

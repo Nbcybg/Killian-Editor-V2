@@ -52,17 +52,24 @@ export const SP_ELEMS = {
   outline2: { th: 'โครง 2', prefix: '## ' },
   outline3: { th: 'โครง 3', prefix: '##### ' },
   note: { th: 'โน้ต', prefix: '/// ' },
+  // [alpha.83r ข้อ 3] "ต่อเนื่อง" แบบพิมพ์เอง — ผู้ใช้ขอไว้คู่กับสวิตช์ปิดตัวอัตโนมัติ
+  // ตัวอัตโนมัติเป็น decoration (ลบไม่ได้ · ไม่อยู่ในไฟล์) สองตัวนี้เป็น **บล็อกจริงในไฟล์**
+  // จึงคุมข้อความ/ตำแหน่งเองได้ทั้งหมด และกินบรรทัดของหน้าตามปกติเหมือนบล็อกอื่น
+  'cont-left': { th: 'ต่อเนื่อง (ซ้าย)', prefix: '$contl ' },
+  'cont-right': { th: 'ต่อเนื่อง (ขวา)', prefix: '$contr ' },
   image: { th: 'รูปภาพ', prefix: '' },          // ![alt](src) — แสดงเป็นรูปจริงในบทหนัง
   raw: { th: 'อื่น ๆ', prefix: '' },            // element ที่ v2 ยังไม่ทำ UI — คงบรรทัดเดิมเป๊ะ
 };
 export const TAB_CYCLE = ['action', 'scene', 'subheader', 'character', 'parenthetical', 'dialogue',
-  'transition-in', 'transition', 'intercut', 'shot', 'act-break', 'page-break', 'note'];
+  'transition-in', 'transition', 'intercut', 'shot', 'act-break', 'page-break', 'note',
+  'cont-left', 'cont-right'];
 export const NEXT_ELEM = { scene: 'action', action: 'action', character: 'dialogue',
   parenthetical: 'dialogue', dialogue: 'action', transition: 'scene',
   'transition-in': 'scene', subheader: 'action', intercut: 'action',
   shot: 'action', 'act-break': 'action', 'page-break': 'scene',
   summary: 'action', outline1: 'outline2', outline2: 'outline3', outline3: 'action',
-  note: 'action', image: 'action', raw: 'action' };
+  note: 'action', image: 'action', raw: 'action',
+  'cont-left': 'action', 'cont-right': 'action' };
 
 // บรรทัดที่เป็นรูปทั้งบรรทัด ![alt](src) — ใช้ร่วมกับ md.js
 export const IMG_RE = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
@@ -184,6 +191,10 @@ export function classify(line, prevBlank = true, prevType = 'action', prevLine =
                          nextBlank = false, guessNames = true) {
   const s = line.trim();
   if (s === '') return ['blank', ''];
+  // [alpha.83r ข้อ 1] `#`…`######` ล้วน ๆ ไม่มีข้อความ = หัวข้อว่างตามมาตรฐาน CommonMark
+  // → **บรรทัดว่าง** ไม่ใช่บรรยายที่มีข้อความ `###`
+  // (md.js ทำอย่างเดียวกันฝั่งนิยายแล้ว — ไฟล์เก่าที่มี `### ` ค้างจึงหายทั้งสองโหมด)
+  if (/^#{1,6}$/.test(s)) return ['blank', ''];
   if (IMG_RE.test(s)) return ['image', s];           // ![alt](src) ทั้งบรรทัด = รูป
   // ── [alpha.60r3a] มาตรฐานใหม่ (มาร์กดาวน์) — ตรวจก่อนของเก่าเสมอ ──
   // `---` (สามขีดขึ้นไป) ล้วน ๆ ทั้งบรรทัด = บังคับขึ้นหน้าใหม่
@@ -201,6 +212,8 @@ export function classify(line, prevBlank = true, prevType = 'action', prevLine =
   if (s.startsWith('$in ')) return ['transition-in', s.slice(4).trim()];
   if (s.startsWith('$sub ')) return ['subheader', s.slice(5).trim()];
   if (s.startsWith('$intercut ')) return ['intercut', s.slice(10).trim()];
+  if (s.startsWith('$contl ')) return ['cont-left', s.slice(7).trim()];
+  if (s.startsWith('$contr ')) return ['cont-right', s.slice(7).trim()];
   if (RAW_PREFIX.test(s)) return ['raw', line];
   // `((…))` — ใต้บรรทัดตัวละคร = วงเล็บ (มาตรฐานใหม่) · ที่อื่น = โน้ตแบบ v1 (ไฟล์เก่าไม่พัง)
   if (s.startsWith('((') && s.endsWith('))')) {
@@ -279,8 +292,13 @@ export function parseScript(md) {
 
 // serialize บรรทัดเดียว: ใส่ prefix เท่าที่จำเป็นให้ classify อ่านกลับได้ element เดิม
 export function lineFor(el, text, prevBlank, prevType, nextBlank = false, guessNames = true) {
-  if (el === 'blank' || (el === 'action' && text.trim() === '')) return '';
+  if (el === 'blank') return '';
   if (el === 'raw' || el === 'image') return text;   // รูปเก็บ md เดิมทั้งบรรทัด
+  // [alpha.83 ข้อ 1] **บล็อกที่ไม่มีข้อความ = บรรทัดว่าง ทุกชนิด** ไม่ใช่แค่ `action`
+  // เดิมหัวฉากเปล่า ๆ (เกิดตั้งแต่ตอนสร้างเอกสารใหม่ — spDocFromMarkdown ใส่ `{el:'scene'}` ให้)
+  // ถูกเขียนลงไฟล์เป็น `"### "` แล้วโผล่เป็นข้อความ `###` กลางเรื่องในโหมดนิยาย/PDF
+  // (`page-break` ยกเว้น — เป็น *คำสั่ง* ที่ไม่มีข้อความอยู่แล้ว)
+  if (el !== 'page-break' && String(text ?? '').trim() === '') return '';
   let s;
   switch (el) {
     // ── [alpha.60r3a] เขียนด้วยมาตรฐานใหม่เสมอ (อ่านได้ทั้งเก่า-ใหม่ แต่เขียนแบบใหม่อย่างเดียว) ──
@@ -291,6 +309,8 @@ export function lineFor(el, text, prevBlank, prevType, nextBlank = false, guessN
     case 'transition-in': s = '<< ' + text; break;
     case 'subheader': s = '#### ' + text; break;
     case 'intercut': s = '$intercut ' + text; break;   // ไม่มีรหัสมาร์กดาวน์เทียบเท่า
+    case 'cont-left': s = '$contl ' + text; break;     // [alpha.83r ข้อ 3] ต่อเนื่องแบบพิมพ์เอง
+    case 'cont-right': s = '$contr ' + text; break;
     case 'parenthetical': {
       // เขียนเป็น `((…))` เสมอ — วงเล็บชั้นเดียวชนกับข้อความปกติที่บังเอิญอยู่ในวงเล็บ
       const inner = text.replace(/^\(+|\)+$/g, '').trim();
@@ -316,7 +336,8 @@ export function lineFor(el, text, prevBlank, prevType, nextBlank = false, guessN
 
 /** บล็อกถัดไปนับเป็น "บรรทัดว่าง" ไหม — ใช้ร่วมกันทุกตัวเขียนไฟล์ ให้ตัดสินเหมือนกันเป๊ะ */
 export const blockIsBlank = (b) =>
-  !b || b.el === 'blank' || (b.el === 'action' && !String(b.text ?? '').trim());
+  !b || b.el === 'blank' ||
+  (b.el !== 'page-break' && b.el !== 'image' && b.el !== 'raw' && !String(b.text ?? '').trim());
 
 /**
  * [alpha.60r3a] รหัสนำหน้าบรรทัดที่ "โหมดนิยายจะเห็นเป็นข้อความดิบ" — ใช้โดย markdown-code-toggle.js
@@ -327,7 +348,7 @@ export const blockIsBlank = (b) =>
  * **เรียงยาวก่อนสั้นเสมอ** — `>` จะกิน `>> ` และ `$in ` จะไม่มีวันถูกจับถ้าเรียงผิด
  */
 export const SP_MD_PREFIXES = [
-  '$intercut ', '$shot ', '$sub ', '$act ', '$in ',       // v1 (ยังเปิดไฟล์เก่าได้)
+  '$intercut ', '$contl ', '$contr ', '$shot ', '$sub ', '$act ', '$in ',   // v1 + ต่อเนื่องแบบพิมพ์เอง
   '>> ', '<< ', '/// ', '// ', '= ', '((',                 // มาตรฐานใหม่
   '!', '@', '>', '.',                                      // ตัวอักษรเดียว — ต้องอยู่ท้ายสุด
 ];

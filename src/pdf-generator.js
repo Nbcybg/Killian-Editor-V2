@@ -16,6 +16,9 @@
 import { t as tt, t } from './i18n.js';
 import { PDFDocument, StandardFonts, PDFName, PDFHexString, degrees, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+// [alpha.82] ต้องนับความกว้างแบบเดียวกับ wrapLines() เป๊ะ ไม่งั้น PDF กับหน้าจอตัดหน้าคนละที่
+
+import { wrapScriptLines } from './sp-format.js';
 import { mergeSpFormat, textWidth, lineHeightIn, paginate, pageNumberLabel,
          CHARS_PER_INCH } from './sp-format.js';
 import { mergeHeaders, headerStringsFor, headerLineCount, linesForBody } from './sp-headers.js';
@@ -103,33 +106,16 @@ export function mergePdfOptions(user) {
   return o;
 }
 
-// ───────── ตัดบรรทัดแบบเดียวกับ wrapLines() ใน sp-format ─────────
-// **สำคัญ**: ต้องได้ "จำนวนบรรทัดเท่ากับ wrapLines() เป๊ะ" ไม่ใช่แค่ใกล้เคียง
-// เพราะ paginate() ใช้ wrapLines() ตัดสินว่าบล็อกไหนอยู่หน้าไหน — ถ้าตัววาดได้มากกว่า
-// ข้อความจะล้นขอบล่างของกระดาษ (บทเรียน 51: จอกับกระดาษต้องใช้เลขชุดเดียวกัน)
-// จึงมิเรอร์อัลกอริทึมของ wrapLines ทุกกรณี รวมกรณี "คำแรกของย่อหน้ายาวเกินบรรทัด"
-// ที่ wrapLines นับเพิ่มหนึ่งบรรทัด (จะได้บรรทัดว่างนำหน้า — ยอมได้ ดีกว่าข้อความล้นหน้า)
-/** ตัดข้อความเป็นบรรทัดตามจำนวนตัวอักษรต่อบรรทัด — คืนอาร์เรย์บรรทัดจริง */
+// ───── ตัดบรรทัด ─────
+// [alpha.82] **ใช้ตัวตัดบรรทัดตัวเดียวกับหน้าจอ** — `wrapScriptLines()` ใน sp-format.js
+// เดิมที่นี่มีอัลกอริทึมอีกชุด พร้อมคอมเมนต์ว่า "ต้องเหมือน wrapLines() เป๊ะ"
+// — แล้วมันก็ไม่เหมือนจริง (ดันบรรทัดเปล่าออกมาทุกย่อหน้าไทย)
+// สองชุดที่ต้องตรงกันเป๊ะ = ต้องเป็นชุดเดียว
+/** ตัดข้อความเป็นบรรทัด — คืนอาร์เรย์บรรทัดจริง */
 export function wrapTextLines(text, widthIn, cpi = CHARS_PER_INCH) {
-  const cols = Math.max(1, Math.floor(num(widthIn, 6) * cpi));
   const s = String(text ?? '');
   if (!s.trim()) return [''];
-  const out = [];
-  for (const para of s.split('\n')) {
-    const words = para.split(/\s+/).filter(Boolean);
-    if (!words.length) { out.push(''); continue; }
-    let cur = '';
-    for (const w of words) {
-      const need = cur ? cur.length + 1 + w.length : w.length;
-      if (need <= cols) { cur = cur ? cur + ' ' + w : w; continue; }
-      out.push(cur);                          // = line++ ของ wrapLines
-      let rest = w;
-      while (rest.length > cols) { out.push(rest.slice(0, cols)); rest = rest.slice(cols); }
-      cur = rest;
-    }
-    out.push(cur);
-  }
-  return out.length ? out : [''];
+  return wrapScriptLines(s, num(widthIn, 6), cpi);
 }
 
 /**

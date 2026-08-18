@@ -50,6 +50,8 @@ const ED_PB = createPageBreakPlugin({
 /** ตั้งรายการเส้นคั่นหน้าของนิยาย — คืน true เมื่อเปลี่ยนจริง (บทเรียน 44: อย่า dispatch ซ้ำ) */
 export const setProsePageBreaks = ED_PB.setBreaks;
 export const prosePageBreaks = ED_PB.breaks;
+/** [alpha.83 ข้อ 4] ตัวทำ "เลขหน้าจริง" บนหน้าถัดไปของเส้นคั่นแต่ละเส้น */
+export const setProsePageNumberLabel = ED_PB.setNumberLabel;
 export const prosePageBreakPlugin = ED_PB.plugin;
 export const refreshProsePageBreaks = ED_PB.refresh;
 
@@ -95,17 +97,23 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
     page.style.fontSize = proseFontPx(f) + 'px';
     page.style.lineHeight = String(f.lineHeight);
 
-    // [alpha.81r3] "หน้า 1 ใน preview ไม่ขึ้นเลขหน้า"
-    // กิ่งสำรองเดิมข้ามหน้าแรกตายตัว (`pg.index > 1`) และไม่สนใจ `startPage` ด้วย —
-    // พอกล่องส่งออกแยกหน้าปก/หน้ารายชื่อไปเป็นหน้าหน้าเล่มแล้ว หน้าแรกที่เหลือคือ "หน้า 1 ของ
-    // เนื้อเรื่อง" ซึ่งต้องมีเลข · ผู้เรียกสั่งได้ด้วย opts.numberFirst
+    // [alpha.83 ข้อ 4+5] ป้ายเลขหน้ามาจาก **ผู้เรียก** เป็นหลัก (`opts.label`) เพื่อให้
+    // ทุกมุมมองของนิยาย — ตัวแก้ไข · จัดหน้า · เรียงหน้า · ตัวอย่างส่งออก — ใช้กฎเดียวกันเป๊ะ
+    // เดิมที่นี่มีกฎของตัวเอง (`pg.index > 1`) ซึ่งไม่ตรงกับตัวแก้ไข ผู้ใช้จึงเห็นเลข
+    // "โผล่บ้างหายบ้าง" แล้วแต่ว่าอยู่มุมมองไหน
     const start = Math.max(1, Math.round(+opts.startPage || 1));
-    const label = f.pageNumbers ? prosePageLabel(pg.index, f, opts.startPage)
-      : (opts.showPageNumbers !== false && (pg.index > 1 || opts.numberFirst)
-          ? String(start + pg.index - 1) : '');
+    const label = typeof opts.label === 'function'
+      ? String(opts.label(pg.index) ?? '')
+      : (opts.showPageNumbers === undefined
+          ? prosePageLabel(pg.index, f, opts.startPage)
+          : (opts.showPageNumbers && (pg.index > 1 || opts.numberFirst !== false)
+              ? String(start + pg.index - 1) : ''));
     if (label) {
       const n = document.createElement('div');
       n.className = 'sp-page-num';
+      // โอเวอร์เลย์เสมอ — ระยะจากขอบกระดาษจริง (ไม่ดันเนื้อหาลง ดูบั๊กข้อ 2)
+      n.style.top = cssIn(num(opts.numTop, 0.5));
+      n.style.right = cssIn(num(opts.numRight, 1));
       n.textContent = label;
       page.append(n);
     }
