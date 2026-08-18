@@ -74,6 +74,12 @@ export function lineCut(block, pageStart, limit) {
  * @returns {Array<{start:number,end:number}>} ช่วง Y ของแต่ละหน้า
  */
 export function sliceProsePages(blocks, contentHeight, totalHeight) {
+  // [alpha.85 ข้อ 2] `lineOffsets` เป็นแบบขี้เกียจแล้ว — การอ่านมันคือการอ่าน DOM จริง
+  // จึงต้องอยู่ในโหมดยุบเส้นคั่นเสมอ ตาข่ายนี้กันไม่ให้ผู้เรียกที่ลืมครอบทำผลเพี้ยนเงียบ ๆ
+  // (ซ้อนกันได้ · ไม่มี document เช่นตอน unit test = ไม่ทำอะไรเลย)
+  return withMeasureMode(() => sliceProsePagesRaw(blocks, contentHeight, totalHeight));
+}
+function sliceProsePagesRaw(blocks, contentHeight, totalHeight) {
   const list = Array.isArray(blocks) ? blocks.filter(Boolean) : [];
   const ch = Math.max(1, num(contentHeight, 0));
   const starts = [0];
@@ -239,14 +245,31 @@ export function measureProseBlocks(pm, origin, zoomFactor) {
     if (el.classList && el.classList.contains(GAP_CLASS)) { gapAccum += rect.height; continue; }
     if (!(rect.height > 0)) continue;
     const innerGap = innerGapHeight(el);
-    const lines = domLineRects(el, z);
     const top = (rect.top - origin - gapAccum) / z;
     const height = (rect.height - innerGap) / z;
-    blocks.push({
-      top, height, el, lines,
-      lineOffsets: lineBreakOffsets(lines),
-      ...blockRules(el),
+    const b = { top, height, el, ...blockRules(el) };
+    // [alpha.85 ข้อ 2] **วัดบรรทัดแบบขี้เกียจ** — ตัวที่แพงที่สุดของทั้งระบบ
+    //
+    // `domLineRects()` เดินทุก text node ในบล็อกแล้วเรียก getClientRects() ทีละตัว
+    // ของเดิมทำให้ **ทุกบล็อกในเอกสาร ทุกครั้งที่กดปุ่ม** ทั้งที่ `sliceProsePages()`
+    // ใช้ค่านี้เฉพาะ "บล็อกที่คร่อมขอบหน้า" ซึ่งมีแค่ประมาณจำนวนหน้า (5 จาก 200)
+    // วัดจริงก่อนแก้: 200 ย่อหน้า = 6.5ms ต่อรอบ · 800 ย่อหน้า = 20.8ms → กดค้างแล้วสะดุด
+    //
+    // ⚠ ผู้เรียกต้องอ่านค่าพวกนี้ **ในโหมด withMeasureMode เท่านั้น** เพราะตอนนี้มันไปอ่าน
+    // DOM ทีหลัง ไม่ใช่ตอนวัดแล้ว (ดู proseMeasured / proseBreakList)
+    let _lines = null;
+    Object.defineProperty(b, 'lines', {
+      configurable: true, enumerable: false,
+      get() { if (!_lines) _lines = domLineRects(el, z); return _lines; },
+      set(v) { _lines = v; },
     });
+    let _offs = null;
+    Object.defineProperty(b, 'lineOffsets', {
+      configurable: true, enumerable: false,
+      get() { if (!_offs) _offs = lineBreakOffsets(this.lines); return _offs; },
+      set(v) { _offs = v; },
+    });
+    blocks.push(b);
     gapAccum += innerGap;
     totalHeight = Math.max(totalHeight, top + height);
   }

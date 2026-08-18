@@ -348,16 +348,21 @@ export function spCss(fmt) {
   out.push(`.k-scene-no-l{left:${so.left}in}`);
   out.push(`.k-scene-no-r{right:${so.right}in}`);
   // [alpha.58 · 55–56] ข้อความต่อเนื่อง — (MORE) เยื้องแนวชื่อตัวละคร · CONTINUED: ชิดซ้าย · (CONTINUED) ชิดขวา
+  // [alpha.84 ข้อ 2] `--k-ct-off` = ระยะชดเชยตอนเครื่องหมายถูกวาด **ข้างใน** บล็อก
+  // (บทพูดยาวถูกหั่นกลาง → widget อยู่ใน .sp-dialogue ซึ่งเยื้องมาแล้ว) ค่าปกติ = 0
   const ct = { ...CONTINUED_DEFAULTS, ...(f.continued || {}) };
   const moreML = Math.max(0, +(num(ct.indent, 3.7) - left).toFixed(4));
-  out.push(`.sp.sp-more{margin-left:${moreML}in;width:auto;max-width:none;` +
+  out.push(`.sp.sp-more{margin-left:calc(${moreML}in + var(--k-ct-off, 0in));width:auto;max-width:none;` +
            'margin-top:0;margin-bottom:0;text-transform:none}');
-  out.push(`.sp-continued-top,.sp-cont-top{margin-left:0;width:${+tw.toFixed(4)}in;text-align:left}`);
-  out.push(`.sp-continued-bottom,.sp-cont-bottom{margin-left:0;width:${+tw.toFixed(4)}in;text-align:right}`);
+  out.push(`.sp-continued-top,.sp-cont-top{margin-left:var(--k-ct-off, 0in);` +
+           `width:${+tw.toFixed(4)}in;text-align:left}`);
+  out.push(`.sp-continued-bottom,.sp-cont-bottom{margin-left:var(--k-ct-off, 0in);` +
+           `width:${+tw.toFixed(4)}in;text-align:right}`);
   // [alpha.58r บั๊ก 10] ชื่อตัวละคร + (cont'd) ต้นหน้า — วางแนวเดียวกับ element `character` จริง
   // เดิมไม่มีกฎตรงนี้เลย จึงตกไปใช้ค่าคงที่ใน style.css แล้วไม่ขยับตามที่ผู้ใช้ตั้งระยะเยื้อง
   const contdML = Math.max(0, +(num(f.elements.character?.indent, 3.7) - left).toFixed(4));
-  out.push(`.sp.sp-contd,.sp-cont-mark.sp-contd{margin-left:${contdML}in;width:auto;max-width:none;` +
+  out.push('.sp.sp-contd,.sp-cont-mark.sp-contd{' +
+           `margin-left:calc(${contdML}in + var(--k-ct-off, 0in));width:auto;max-width:none;` +
            'margin-top:0;margin-bottom:0}');
   // ขนาดกระดาษ + ระยะขอบตอนพิมพ์ (@page ใช้ CSS variable ไม่ได้ จึงต้องสร้างเป็นข้อความ)
   // orphans/widows = กฎ widow/orphan ระดับบรรทัดของเบราว์เซอร์ (ข้อ 84)
@@ -422,16 +427,41 @@ export function paginate(blocks, opts = {}) {
     cur = []; used = 0; pageSceneStart = curScene;   // หน้าใหม่เริ่มด้วยฉากเดิมจนกว่าจะเจอหัวฉากใหม่
   };
 
-  const list = (blocks || []).filter((b) => b && b.el !== 'blank');
+  // ═══ [alpha.86 ★ ต้นตอของ "บทหนังตัดหน้าผิดตลอด"] บรรทัดว่างเป็นของจริง ห้ามทิ้ง ═══
+  //
+  // เดิมบรรทัดนี้เขียนว่า `.filter((b) => b.el !== 'blank')` — ทิ้งบรรทัดว่างทั้งหมด
+  // แล้วไปสร้างช่องไฟจาก `linesBefore` แทน · **แต่บนจอบรรทัดว่างมีตัวตนจริง**
+  // (`spDocFromMarkdown` แปลงบรรทัดว่างในไฟล์เป็นโหนด sp ว่าง ๆ · CSS `.sp{min-height:1em}`)
+  //
+  // ผลคือช่องไฟหนึ่งช่องระหว่างสองบล็อก:
+  //   จอ   = margin-top ของบรรทัดว่าง (1) + ตัวบรรทัดว่าง (1) + margin-top ของบล็อกถัดไป (1) = **3**
+  //   โมเดล = linesBefore ของบล็อกถัดไป                                                     = **1**
+  // เพี้ยน 2 บรรทัดต่อช่องไฟ · บทหนึ่งหน้ามีช่องไฟหลายสิบ → คลาดเป็นหน้า ๆ และสะสมลงไปเรื่อย ๆ
+  // (นิยายไม่เจอเพราะมันวัด DOM จริง ไม่ได้เดา)
+  //
+  // ที่ถูกคือ **นับบรรทัดว่างเป็น 1 บรรทัดตามที่ตาเห็น** แล้ว *ไม่* เติม linesBefore ซ้ำ
+  // เมื่อมีบรรทัดว่างคั่นอยู่แล้ว · ฝั่ง CSS ตัด margin ของบรรทัดว่างทิ้งให้ตรงกัน (ดู style.css)
+  // → จอ · โมเดล · PDF · มุมมองหน้าคู่ ได้ตัวเลขเดียวกันทั้งหมด
+  const list = (blocks || []).filter(Boolean);
+  let prevBlank = false;                 // บล็อกก่อนหน้าเป็นบรรทัดว่างไหม (ช่องไฟมีอยู่แล้ว)
   for (let i = 0; i < list.length; i++) {
     const b = list[i];
     const c = cfg(b.el);
     // [alpha.60r3a] `---` = บังคับขึ้นหน้าใหม่ — ปิดหน้าปัจจุบันแล้วไปต่อหน้าถัดไป
     // ตัวมันเองไม่กินบรรทัดและไม่ถูกใส่ลงหน้าใด (เป็นคำสั่ง ไม่ใช่เนื้อหา)
-    if (b.el === 'page-break') { if (cur.length) pushPage(); continue; }
+    if (b.el === 'page-break') { if (cur.length) pushPage(); prevBlank = false; continue; }
+    // บรรทัดว่าง = 1 บรรทัดเต็ม ๆ ไม่มีช่องไฟนำหน้า (ตัวมันเองคือช่องไฟ)
+    if (b.el === 'blank') {
+      if (cur.length && used < perPage) { addBlock({ ...b, lines: 1 }); used += 1; }
+      prevBlank = true;
+      continue;
+    }
     if (b.el === 'character') lastChar = String(b.text || '');
     // ท่อนหางที่ไหลมาจากหน้าก่อนไม่ต้องเว้นบรรทัดนำ (มันคือย่อหน้าเดิมที่ถูกหั่น)
-    const before = cur.length && b.split !== 'tail' ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    // และถ้ามีบรรทัดว่างคั่นมาแล้ว ช่องไฟก็ถูกใช้ไปแล้ว ไม่เติมซ้ำ
+    const before = cur.length && b.split !== 'tail' && !prevBlank
+      ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    prevBlank = false;
     const body = wrapLines(b.text, c.width);
     const need = before + body;
     const free = perPage - used;
@@ -457,32 +487,47 @@ export function paginate(blocks, opts = {}) {
     // หน้านี้จะได้ (CONTINUED) ท้ายหน้า และหน้าถัดไปจะได้ CONTINUED: ต้นหน้า —
     // เงื่อนไขเดียวกับ annotateContinued() เป๊ะ (บล็อกถูกหั่น + อยู่ในฉากเดียวกัน = `curScene > 0`)
     // จึงไม่ต้องวนซ้ำ ไม่มีทางแกว่ง และตัวเลขตรงกันโดยโครงสร้าง
-    const moreLines = isDlg && wantDlgMarkers ? 1 : 0;
-    const contLines = wantSceneMarks && curScene > 0 ? 1 : 0;
+    // [alpha.86] ★ **เครื่องหมายต่อเนื่องมีสองระบบ และกินบรรทัดไม่เท่ากัน**
+    //
+    //   บทพูดถูกหั่น  → `(MORE)` ท้ายหน้า + `ชื่อ (CONT'D)` ต้นหน้าใหม่ = **กินบรรทัดจริง**
+    //                   (เป็นเนื้อบทตามธรรมเนียม ต้องจองโควตาให้)
+    //   ฉากข้ามหน้า   → `(CONTINUED)` / `CONTINUED:` = **วาดในระยะขอบ ไม่กินบรรทัดเลย**
+    //                   (แบบเดียวกับ betterfountain และแบบเดียวกับที่ `pdf-generator.js`
+    //                    วาดอยู่แล้ว — ดูคอมเมนต์ที่นั่น: "paginate() ไม่กันบรรทัดไว้ให้สองตัวนี้")
+    //
+    // alpha.83 เคยเผลอจองบรรทัดให้ CONTINUED ด้วย → จอเสียโควตาไป 1 บรรทัด/หน้า
+    // ในขณะที่ PDF ไม่เสีย = จอกับไฟล์ตัดคนละที่ · ตอนนี้ถอดออกแล้ว ตรงกันทุกทาง
+    const dlgSplit = isDlg && wantDlgMarkers && !!lastChar;
+    const moreLines = dlgSplit ? 1 : 0;
     // [alpha.83 ข้อ 6] เดิมถ้าท่อนที่ยกไปหน้าใหม่สั้นกว่า minTop จะ **ไม่ตัดเลย** แล้วยกทั้งก้อน
     // ไปหน้าใหม่ — ซึ่งกับ *ท่อนหางของบล็อกที่ถูกหั่นมาแล้ว* แปลว่ามันจะกองอยู่หน้าถัดไปทั้งก้อน
     // ทั้งที่โควตาไม่พอ (หน้าละ 20 บรรทัดกลายเป็น 21) · ที่ถูกคือ **ดึงบรรทัดขึ้นมาน้อยลง**
     // ให้ท้ายเหลือครบ minTop พอดี แล้วค่อยตัด — กฎ widow/orphan ยังได้ตามเดิมและไม่มีหน้าล้น
-    const canBottom = Math.min(free - before - moreLines - contLines,
-                               body - Math.max(1, minTop));
+    const canBottom = Math.min(free - before - moreLines, body - Math.max(1, minTop));
 
     if ((isDlg || isAct) && canBottom >= minBot) {
       // แบ่งครึ่ง: ท้ายหน้าใส่ (MORE) · ต้นหน้าใหม่ทวนชื่อ + (cont'd)
       const head = splitText(b.text, c.width, canBottom);
+      // [alpha.84 ข้อ 2] **จำ "จุดตัด" เป็นระยะตัวอักษรจากต้นบล็อกเดิม**
+      // ท่อนหางถือ `pos` ของบล็อกต้นฉบับ (มันคือย่อหน้าเดียวกัน) — ถ้าไม่จำ cut ไว้
+      // ตัววาดฝั่ง ProseMirror จะเอาเส้นคั่นหน้า/(MORE)/ชื่อ+(cont'd) ไปแปะที่ *ต้นบล็อก*
+      // ทั้งก้อน แทนที่จะเป็นบรรทัดที่ถูกหั่นจริง (โหมดปกติ/จัดหน้าจึงตัดคนละที่กับหน้าคู่)
+      const at = String(b.text ?? '').length - String(head.rest ?? '').length;
       // `contIn`/`contOut` = "ไหลมาจากหน้าก่อน" / "ไหลต่อไปหน้าถัดไป" — บล็อกเดียวเป็นได้ทั้งคู่
       // (ย่อหน้ายาวข้ามสามหน้า) ซึ่ง `split:'head'|'tail'` ตัวเดียวบอกไม่ได้
       addBlock({ ...b, text: head.head, lines: canBottom,
                  split: 'head', contIn: !!b.contIn, contOut: true });
       if (moreLines) addBlock({ el: 'more', text: S.dialogueMore, lines: 1, more: true });
       pushPage();
-      used += contLines;                 // CONTINUED: ต้นหน้าใหม่
-      if (isDlg && wantDlgMarkers && lastChar) {
+      if (dlgSplit) {
         addBlock({ el: 'character', text: lastChar + ' ' + S.dialogueContd, lines: 1, contd: true });
         used += 1;
       }
       // **ป้อนท่อนหางกลับเข้าลูป** — เดิมยัดลงหน้าใหม่ทั้งก้อนโดยไม่ตรวจซ้ำ
       // ย่อหน้าเดียวที่ยาวเกินสองหน้าจึงได้หน้าที่สูงเท่าไรก็ได้ (อาการ "หน้ากระดาษไม่เท่ากัน")
-      list[i] = { ...b, text: head.rest, split: 'tail', contIn: true, contOut: false };
+      // cut สะสม เพราะท่อนหางถูกหั่นซ้ำได้อีก (ย่อหน้าเดียวข้ามสามหน้า)
+      list[i] = { ...b, text: head.rest, split: 'tail', contIn: true, contOut: false,
+                  cut: num(b.cut, 0) + at };
       i--;
       continue;
     }
@@ -494,8 +539,17 @@ export function paginate(blocks, opts = {}) {
       }
     }
     for (const x of carry) used -= x.lines || 1;
+    const opened = cur.length > 0;          // ได้ขึ้นหน้าใหม่จริงไหม (กันวนไม่จบด้านล่าง)
     if (cur.length) pushPage();
     for (const x of carry) { cur.push(x); used += x.lines || 1; }
+    // [alpha.85 ข้อ 1] **ป้อนกลับเข้าลูปแทนที่จะยัดทั้งก้อน**
+    //
+    // เดิมเส้นทาง "ยกทั้งบล็อกไปหน้าใหม่" เขียนบล็อกลงหน้าใหม่ตรง ๆ โดยไม่ตรวจซ้ำว่าพอไหม
+    // บทพูดที่ยาวเกินหนึ่งหน้าและบังเอิญมาถึงตอนหน้าเดิมเหลือที่น้อยเกินจะหั่น (canBottom < minBot)
+    // จึงกองอยู่หน้าใหม่ทั้งก้อน — วัดได้จริง: หน้าละ 20 บรรทัด แต่ได้หน้าที่มี 28 บรรทัด
+    // (เส้นทางที่หั่นครึ่งแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.83 แต่เส้นทางนี้ถูกลืม)
+    // `opened` กันกรณีอยู่ต้นหน้าว่าง ๆ อยู่แล้ว — ป้อนกลับก็ไม่มีอะไรดีขึ้น มีแต่จะวนไม่จบ
+    if (opened && body > perPage - used) { list[i] = b; i--; continue; }
     addBlock({ ...b, lines: body });
     used += body;
   }
@@ -527,10 +581,18 @@ export function annotateContinued(pages, fmt) {
     const fb = (n.blocks || [])[0];
     return !!fb && (fb.contIn === true || fb.contd === true);
   };
+  // [alpha.85 ข้อ 1] รอยต่อที่เป็น "บทพูดถูกหั่น" ใช้ระบบ (MORE)/(CONT'D) ไปแล้ว
+  // ห้ามใส่ CONTINUED ซ้ำอีกชั้น (ตัวจัดหน้าก็ไม่ได้จองบรรทัดไว้ให้ด้วย — จะล้นหน้า)
+  const dialogueBreak = (p, n) => {
+    const lb = (p.blocks || []).slice(-1)[0];
+    const fb = (n.blocks || [])[0];
+    return (!!lb && lb.more === true) || (!!fb && fb.contd === true);
+  };
   let run = 1, contScene = 0;
   for (let i = 0; i < pages.length - 1; i++) {
     const p = pages[i], n = pages[i + 1];
-    const spans = on && p.sceneEnd > 0 && n.sceneStart === p.sceneEnd && splitsAcross(n);
+    const spans = on && p.sceneEnd > 0 && n.sceneStart === p.sceneEnd
+                  && splitsAcross(n) && !dialogueBreak(p, n);
     if (!spans) { run = 1; contScene = 0; continue; }
     // เปลี่ยนฉากแล้ว = เริ่มนับใหม่ (ไม่งั้นฉากใหม่ที่ข้ามหน้าครั้งแรกได้เลข (2) ทันที)
     if (p.sceneEnd !== contScene) { run = 1; contScene = p.sceneEnd; }
@@ -557,6 +619,36 @@ export function splitText(text, widthIn, n) {
   const k = Math.max(1, Math.min(Math.round(n) || 1, cuts.length));
   const at = cuts[k - 1];
   return { head: s.slice(0, at).replace(/\s+$/, ''), rest: s.slice(at) };
+}
+
+/**
+ * [alpha.84 ข้อ 2] ตำแหน่ง **ในเอกสาร ProseMirror** ของบล็อกหนึ่งหลังจัดหน้าแล้ว
+ *
+ * บล็อกปกติ → `pos` = ตำแหน่งของโหนด (ระดับบล็อก)
+ * ท่อนหางของบล็อกที่ถูกหั่นกลาง (`cut > 0`) → ตำแหน่ง **ในเนื้อข้อความ** ของโหนดเดิม
+ *   = `pos + 1 + cut`  (บวก 1 = ข้ามขอบเปิดของโหนด ตามโมเดลตำแหน่งของ ProseMirror)
+ *
+ * ถ้าไม่คิด cut ทุกอย่างที่อ้าง "ต้นหน้าถัดไป" (เส้นคั่นหน้า · (MORE) · CONTINUED · ชื่อ+(cont'd))
+ * จะไปกองที่หัวย่อหน้าทั้งก้อน — ตรงข้ามกับหน้าที่ตัวจัดหน้าคิดไว้จริง
+ * @returns {number|null} null = บล็อกสังเคราะห์ (ไม่มีตัวตนในเอกสาร)
+ */
+export function blockDocPos(b) {
+  if (!b || !Number.isFinite(b.pos)) return null;
+  const cut = num(b.cut, 0);
+  return cut > 0 ? b.pos + 1 + cut : b.pos;
+}
+
+/** บล็อกนี้ถูกหั่นกลางย่อหน้ามาไหม (ตำแหน่งของมันอยู่ "ใน" โหนด ไม่ใช่ระหว่างโหนด) */
+export function isMidBlock(b) { return !!b && num(b.cut, 0) > 0; }
+
+/**
+ * ระยะเยื้องของ element หนึ่ง เทียบจาก **ขอบพื้นที่พิมพ์** (นิ้ว) — ตัวเดียวกับที่ spCss ใช้
+ * ใช้ชดเชยตำแหน่งของเครื่องหมายที่ถูกวาดไว้ *ข้างใน* บล็อก (มันสืบระยะเยื้องของบล็อกมาด้วย)
+ */
+export function elementIndentIn(fmt, el) {
+  const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+  const c = f.elements[el] || f.elements.action;
+  return Math.max(0, +(num(c.indent, f.margins.left) - f.margins.left).toFixed(4));
 }
 
 /** นับหน้าอย่างเดียว (ใช้กับแถบสถานะ — เร็วกว่า paginate เต็มรูปแบบเล็กน้อย) */

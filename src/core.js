@@ -432,7 +432,11 @@ export { PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES, SP_
 // ฟอนต์ตามภาษา (alpha.57a ข้อ 5) — โมดูลบริสุทธิ์ ส่งต่อจาก lang-fonts.js
 export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, defaultLangFonts, normalizeLangFonts,
          normalizeRange, cssFamilyName, isUsable as isLangFontUsable, buildLangFontCss,
-         withLangFamily, applyLangFonts } from './lang-fonts.js';
+         withLangFamily, applyLangFonts,
+         // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
+         SP_THAI_FAMILY, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_DEFAULTS,
+         normalizeSpThai, spThaiSources, buildSpThaiCss, withSpThaiFamily,
+         applySpThaiFont } from './lang-fonts.js';
 
 // ---- ระบบภาษา (i18n) ----
 // เอนจินจริงอยู่ `src/i18n.js` (บริสุทธิ์ · โมดูลที่ import core ไม่ได้ก็ใช้ได้) — ตรงนี้เหลือแค่

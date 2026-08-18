@@ -48,25 +48,31 @@ const longScene = withPos([{ el: 'scene', text: 'INT. ห้องนอน - �
   { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }]);
 const pagesA = SF.paginate(longScene, { lines: 20 });
 const marksA = CT.computeContinueds(pagesA, SF.mergeSpFormat());
-check('ฉากยาวข้ามหน้า → ได้เครื่องหมาย', marksA.length > 0, marksA.length);
-check('มี (CONTINUED) ท้ายหน้า',
-  marksA.some((m) => m.type === 'continued-bottom' && m.text === '(CONTINUED)'));
-check('มี CONTINUED: ต้นหน้า',
-  marksA.some((m) => m.type === 'continued-top' && m.text.startsWith('CONTINUED:')));
+// [alpha.86] ★ (CONTINUED)/CONTINUED: **ไม่อยู่ใน marks อีกแล้ว** — มันถูกวาดเป็นโอเวอร์เลย์
+// ในระยะขอบบนตัว widget เส้นคั่นหน้า (เหมือนที่ pdf-generator.js ทำมาตลอด) จึงไม่กินบรรทัด
+// ตัวข้อความยังคำนวณโดย annotateContinued() และอยู่ที่ `page.continuedTop/continuedBottom`
+check('[86] marks มีแต่เครื่องหมายที่เป็นเนื้อบทจริง (more/contd) เท่านั้น',
+  marksA.every((m) => m.type === 'more' || m.type === 'contd'),
+  marksA.map((m) => m.type).join(','));
+check('[86] (CONTINUED) ท้ายหน้า อยู่ที่หน้า ไม่ใช่ที่ marks',
+  pagesA.pages.some((p) => p.continuedBottom === '(CONTINUED)'));
+check('[86] CONTINUED: ต้นหน้า อยู่ที่หน้า',
+  pagesA.pages.some((p) => String(p.continuedTop || '').startsWith('CONTINUED:')));
 check('ทุกเครื่องหมายมีตำแหน่งจริงในเอกสาร',
   marksA.every((m) => Number.isFinite(m.pos) && m.pos > 0));
 check('ทุกเครื่องหมายมีคลาส CSS', marksA.every((m) => !!m.cls));
 check('ข้ามหลายหน้า → มีเลขกำกับอย่างน้อยหนึ่งอัน',
-  pagesA.count < 3 || marksA.some((m) => /CONTINUED: \(\d+\)/.test(m.text)),
-  marksA.map((m) => m.text).join(' / '));
-check('เลขกำกับเริ่มที่ (2) ไม่ใช่ (1)', !marksA.some((m) => m.text === 'CONTINUED: (1)'));
+  pagesA.count < 3 || pagesA.pages.some((p) => /CONTINUED: \(\d+\)/.test(p.continuedTop || '')),
+  pagesA.pages.map((p) => p.continuedTop || '-').join(' / '));
+check('เลขกำกับเริ่มที่ (2) ไม่ใช่ (1)',
+  !pagesA.pages.some((p) => p.continuedTop === 'CONTINUED: (1)'));
 
 // ── ไม่มีหัวฉาก = ไม่มีเครื่องหมายฉาก ──
 const noScene = withPos([...Array.from({ length: 12 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i })),
   { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }]);
-const marksN = CT.computeContinueds(SF.paginate(noScene, { lines: 20 }), SF.mergeSpFormat());
+const pagesN = SF.paginate(noScene, { lines: 20 });
 check('ไม่มีหัวฉาก → ไม่มี (CONTINUED)/CONTINUED:',
-  !marksN.some((m) => m.type === 'continued-top' || m.type === 'continued-bottom'));
+  pagesN.pages.every((p) => !p.continuedTop && !p.continuedBottom));
 
 // ── บทพูดข้ามหน้า ──
 const dlg = withPos([{ el: 'scene', text: 'INT. ครัว - เช้า' },
@@ -95,22 +101,26 @@ check('ปิดเฉพาะบทพูด → ไม่มี (MORE)',
     .some((m) => m.type === 'more'));
 const noNum = SF.mergeSpFormat({ continued: { number: false } });
 check('ปิดเลขกำกับ → ไม่มีวงเล็บตัวเลข',
-  !CT.computeContinueds(SF.paginate(longScene, { lines: 20, fmt: noNum }), noNum)
-    .some((m) => /CONTINUED: \(\d+\)/.test(m.text)));
+  SF.paginate(longScene, { lines: 20, fmt: noNum })
+    .pages.every((p) => !/CONTINUED: \(\d+\)/.test(p.continuedTop || '')));
 
 // ── ข้อความที่ผู้ใช้ตั้งเอง (ข้อ 92) ──
 const thai = SF.mergeSpFormat({ strings: { continuedBottom: '(ต่อหน้าถัดไป)', continuedTop: 'ต่อจากหน้าก่อน:' } });
-const marksTH = CT.computeContinueds(SF.paginate(longScene, { lines: 20, fmt: thai }), thai);
+const pagesTH = SF.paginate(longScene, { lines: 20, fmt: thai });
 check('ใช้ข้อความไทยที่ผู้ใช้ตั้งได้',
-  marksTH.some((m) => m.text === '(ต่อหน้าถัดไป)') &&
-  marksTH.some((m) => m.text.startsWith('ต่อจากหน้าก่อน:')));
+  pagesTH.pages.some((p) => p.continuedBottom === '(ต่อหน้าถัดไป)') &&
+  pagesTH.pages.some((p) => String(p.continuedTop || '').startsWith('ต่อจากหน้าก่อน:')));
 
 // ── ตัวช่วยอื่น ──
 check('continuedsFromBlocks ให้ผลเท่ากับเรียกสองขั้น',
   CT.continuedsFromBlocks(longScene, { lines: 20 }).length === marksA.length);
-const sum = CT.continuedSummary(marksA);
-check('continuedSummary นับครบ', sum.total === marksA.length && sum['continued-top'] > 0);
-check('continuedStatusText อ่านรู้เรื่อง', /ต่อเนื่อง/.test(CT.continuedStatusText(marksA)));
+// [alpha.86] สรุปต้องรับ `pages` ด้วย เพราะเครื่องหมายฉากอยู่ที่หน้า ไม่ได้อยู่ใน marks
+const sum = CT.continuedSummary(marksA, pagesA);
+check('continuedSummary นับครบทั้งสองแหล่ง (marks + pages)',
+  sum.total > marksA.length && sum['continued-top'] > 0, JSON.stringify(sum));
+check('continuedSummary ไม่ส่ง pages ก็ยังนับ marks ได้',
+  CT.continuedSummary(marksA).total === marksA.length);
+check('continuedStatusText อ่านรู้เรื่อง', /ต่อเนื่อง/.test(CT.continuedStatusText(marksA, pagesA)));
 check('continuedStatusText ตอนไม่มีอะไร', CT.continuedStatusText([]) === 'ต่อเนื่อง: ไม่มี');
 check('pageAnchor คืนตำแหน่งบล็อกจริงตัวแรก',
   CT.pageAnchor(pagesA.pages[1]) === (pagesA.pages[1].blocks.find((b) => Number.isFinite(b.pos)) || {}).pos);
@@ -165,6 +175,135 @@ check('[compile] พรีเซ็ตของนิยายไม่เปิ
 check('[compile] มีพรีเซ็ตบทภาพยนตร์ที่เปิด sp-continued ให้เลย (บั๊ก 13)',
   !!CP.PRESETS.find((p) => p.id === 'screenplay' && spOn(p)));
 check('[compile] ข้อความว่าง → ไม่พัง', typeof CP.insertContinueds('') === 'string');
+
+// ═══ [alpha.84 ข้อ 2] จุดตัดต้องเป็น "บรรทัดที่ถูกหั่น" ไม่ใช่หัวย่อหน้า ═══
+// อาการเดิม: โหมดปกติ/จัดหน้าเอาเส้นคั่นหน้า + (MORE) + ชื่อ+(cont'd) ไปกองไว้ที่ต้นบทพูด
+// ทั้งก้อน (เพราะท่อนหางถือ `pos` ของบล็อกเดิม) — มุมมองหน้าคู่ถูกอยู่แล้วเพราะมันวาดจาก
+// ผล paginate ตรง ๆ ไม่ต้องแปลงกลับเป็นตำแหน่งในเอกสาร
+{
+  const fmt = SF.mergeSpFormat({});
+  const long = Array.from({ length: 140 }, (_, i) => 'บทพูดยาวมากบรรทัดที่' + i + ' ').join('');
+  let at = 0;
+  const mk = (el, text) => { const b = { el, text, pos: at }; at += text.length + 2; return b; };
+  const blocks = [mk('scene', 'INT. ROOM - DAY'), mk('character', 'TORA'), mk('dialogue', long)];
+  const dlgPos = blocks[2].pos;
+  const pg = SF.paginate(blocks, { fmt });
+  check('[84-2] บทพูดยาวถูกหั่นข้ามหน้าจริง', pg.count >= 2, String(pg.count));
+
+  const tail = pg.pages[1].blocks.find((b) => b.split === 'tail');
+  check('[84-2] ท่อนหางจำระยะตัวอักษรของจุดตัดไว้ (cut)',
+    !!tail && Number.isFinite(tail.cut) && tail.cut > 0, tail && tail.cut);
+  check('[84-2] ท่อนหางคือข้อความส่วนที่เหลือจริง ๆ ตามระยะ cut',
+    !!tail && long.slice(tail.cut) === tail.text);
+  check('[84-2] ท่อนหางยังถือ pos ของบล็อกเดิม (มันคือย่อหน้าเดียวกัน)',
+    !!tail && tail.pos === dlgPos);
+
+  check('[84-2] blockDocPos: บล็อกปกติ = ตำแหน่งของโหนด',
+    SF.blockDocPos({ el: 'action', pos: 42 }) === 42);
+  check('[84-2] blockDocPos: ท่อนหาง = pos + 1 + cut (ตำแหน่งในเนื้อข้อความ)',
+    SF.blockDocPos({ el: 'dialogue', pos: 42, cut: 7 }) === 50);
+  check('[84-2] blockDocPos: บล็อกสังเคราะห์ (ไม่มี pos) → null',
+    SF.blockDocPos({ el: 'more', text: '(MORE)' }) === null);
+  check('[84-2] isMidBlock บอกได้ว่าอยู่กลางย่อหน้าไหม',
+    SF.isMidBlock(tail) === true && SF.isMidBlock(blocks[0]) === false);
+  check('[84-2] elementIndentIn: บทพูด 2.5" − ขอบซ้าย 1.5" = 1"',
+    SF.elementIndentIn(fmt, 'dialogue') === 1 && SF.elementIndentIn(fmt, 'action') === 0);
+
+  const anchor = CT.pageAnchor(pg.pages[1]);
+  check('[84-2] pageAnchor ไม่ใช่หัวบล็อกอีกแล้ว', anchor !== dlgPos, `${anchor} vs ${dlgPos}`);
+  check('[84-2] pageAnchor = ตำแหน่งของบรรทัดที่ถูกหั่นจริง',
+    anchor === dlgPos + 1 + tail.cut, `${anchor} vs ${dlgPos + 1 + tail.cut}`);
+
+  const marks = CT.computeContinueds(pg, fmt);
+  check('[84-2] เครื่องหมายทุกตัวย้ายไปจุดตัดพร้อมกัน (ไม่กระจัดกระจาย)',
+    marks.length > 0 && marks.every((m) => m.pos === anchor), JSON.stringify(marks.map((m) => m.pos)));
+  check('[84-2] เครื่องหมายรู้ว่าตัวเองถูกวาดในบล็อก + ระยะที่ต้องหักคืน',
+    marks.every((m) => m.mid === true && m.off === 1),
+    JSON.stringify(marks.map((m) => [m.type, m.mid, m.off])));
+  check("[84-2] ชุดเครื่องหมายยังครบเหมือนเดิม ((MORE) + ชื่อ+(cont'd))",
+    marks.some((m) => m.type === 'more') && marks.some((m) => m.type === 'contd'));
+
+  // รอยต่อ *ระหว่างบล็อก* ต้องไม่เปลี่ยนพฤติกรรมเดิมเลย
+  const plain = Array.from({ length: 80 }, (_, i) => ({ el: 'action', text: 'บรรยาย ' + i, pos: i * 12 }));
+  const pgP = SF.paginate(plain, { fmt, lines: 20 });
+  const mP = CT.computeContinueds(pgP, fmt);
+  check('[84-2] รอยต่อระหว่างบล็อกยังเป็นตำแหน่งระดับบล็อกเหมือนเดิม',
+    mP.every((m) => m.mid === false && m.off === 0));
+}
+
+// ═══ [alpha.85 ข้อ 1] หนึ่งรอยต่อ = เครื่องหมายชุดเดียว + บัญชีบรรทัดต้องลงตัว ═══
+// กฎที่ผู้ใช้กำหนด: หน้าละ 20 บรรทัด → เนื้อ 19 + เครื่องหมาย 1 เสมอ
+// บทพูดถูกหั่น = (MORE) ท้ายหน้า · ชื่อ (CONT'D) ต้นหน้าใหม่ · **ห้ามมี CONTINUED**
+{
+  const fmt = SF.mergeSpFormat({});
+  const LINES = 20;
+  // ผลรวมบรรทัดที่หน้าหนึ่งกินจริง = บรรทัดของบล็อก + ระยะเว้นนำหน้าของบล็อกที่ไม่ใช่ตัวแรก
+  // บล็อกสังเคราะห์ ((MORE) · ชื่อ+(cont'd)) ถูกจองไว้เป็น 1 บรรทัดตรง ๆ ไม่มีระยะเว้นนำหน้า
+  const usedLines = (pg) => (pg.blocks || []).reduce((a, b, i) => {
+    if (b.more || b.contd) return a + 1;
+    const c = fmt.elements[b.el] || fmt.elements.action;
+    const before = i && b.split !== 'tail' ? Math.round((c.linesBefore ?? 10) / 10) : 0;
+    return a + before + (b.lines || 1);
+  }, 0);
+  const has = (pg, k) => (pg.blocks || []).some((b) => b[k] === true);
+
+  // — บทพูดยาวถูกหั่นกลาง —
+  const dlg = SF.paginate([{ el: 'scene', text: 'INT. ROOM - DAY' },
+                           { el: 'character', text: 'TORA' },
+                           { el: 'dialogue', text: 'พูดยาว '.repeat(200) }],
+                          { fmt, lines: LINES });
+  check('[85-1] บทพูดยาวถูกหั่นข้ามหน้า', dlg.count >= 2, String(dlg.count));
+  check('[85-1] ท้ายหน้าแรกมี (MORE)', has(dlg.pages[0], 'more'));
+  check("[85-1] ต้นหน้าที่สองเป็นชื่อตัวละคร + (cont'd)",
+    dlg.pages[1].blocks[0].contd === true &&
+    dlg.pages[1].blocks[0].text.includes('TORA') &&
+    dlg.pages[1].blocks[0].text.includes("cont'd"), JSON.stringify(dlg.pages[1].blocks[0]));
+  check('[85-1] ★ บทพูดถูกหั่น = ห้ามมี (CONTINUED) ท้ายหน้า',
+    !dlg.pages[0].continuedBottom, dlg.pages[0].continuedBottom);
+  check('[85-1] ★ บทพูดถูกหั่น = ห้ามมี CONTINUED: ต้นหน้า',
+    !dlg.pages[1].continuedTop, dlg.pages[1].continuedTop);
+  check('[85-1] ★ หน้าแรกใช้ครบ 20 บรรทัดพอดี (เนื้อ 19 + MORE 1)',
+    usedLines(dlg.pages[0]) === LINES, usedLines(dlg.pages[0]));
+  check('[85-1] ไม่มีหน้าไหนล้นโควตา',
+    dlg.pages.every((p) => usedLines(p) <= LINES),
+    JSON.stringify(dlg.pages.map(usedLines)));
+  check('[85-1] computeContinueds คืนเฉพาะ more + contd (CONTINUED อยู่ที่หน้า)',
+    CT.computeContinueds(dlg, fmt).every((m) => m.type === 'more' || m.type === 'contd'),
+    JSON.stringify(CT.computeContinueds(dlg, fmt).map((m) => m.type)));
+
+  // — บรรยายยาวถูกหั่น (ฉากข้ามหน้าแบบไม่ใช่บทพูด) —
+  const act = SF.paginate([{ el: 'scene', text: 'INT. ROOM - DAY' },
+                           { el: 'action', text: 'บรรยายยาว '.repeat(200) }],
+                          { fmt, lines: LINES });
+  check('[85-1] บรรยายถูกหั่น → มี (CONTINUED) ท้ายหน้า',
+    act.pages[0].continuedBottom === '(CONTINUED)', act.pages[0].continuedBottom);
+  check('[85-1] บรรยายถูกหั่น → มี CONTINUED: ต้นหน้าใหม่',
+    /^CONTINUED:/.test(act.pages[1].continuedTop || ''), act.pages[1].continuedTop);
+  check('[85-1] ★ บรรยายถูกหั่น = ห้ามมี (MORE)',
+    !has(act.pages[0], 'more') && !has(act.pages[1], 'contd'));
+  // [alpha.86] CONTINUED ไปอยู่ในระยะขอบแล้ว → เนื้อหน้าใช้โควตาได้เต็ม 20 ไม่ต้องเจียดให้
+  check('[85-1] ★ หน้าแรกใช้โควตาเต็ม 20 บรรทัด (CONTINUED ไม่กินที่)',
+    usedLines(act.pages[0]) === LINES, usedLines(act.pages[0]));
+  check('[85-1] ไม่มีหน้าไหนล้นโควตา',
+    act.pages.every((p) => usedLines(p) <= LINES),
+    JSON.stringify(act.pages.map(usedLines)));
+
+  // — ไม่มีหน้าไหนได้ทั้งสองระบบพร้อมกัน ไม่ว่าเนื้อหาแบบไหน —
+  const mixed = SF.paginate([{ el: 'scene', text: 'INT. A - DAY' },
+                             { el: 'action', text: 'บรรยาย '.repeat(120) },
+                             { el: 'character', text: 'CASSIE' },
+                             { el: 'dialogue', text: 'พูด '.repeat(300) },
+                             { el: 'action', text: 'จบ' }], { fmt, lines: LINES });
+  check('[85-1] ★ ไม่มีหน้าไหนมีทั้ง (MORE) และ (CONTINUED) พร้อมกัน',
+    mixed.pages.every((p) => !(has(p, 'more') && p.continuedBottom)),
+    JSON.stringify(mixed.pages.map((p) => [has(p, 'more'), !!p.continuedBottom])));
+  check("[85-1] ★ ไม่มีหน้าไหนขึ้นทั้ง CONTINUED: และ ชื่อ (cont'd)",
+    mixed.pages.every((p) => !(has(p, 'contd') && p.continuedTop)),
+    JSON.stringify(mixed.pages.map((p) => [has(p, 'contd'), !!p.continuedTop])));
+  check('[85-1] ทุกหน้าอยู่ในโควตา 20 บรรทัด',
+    mixed.pages.every((p) => usedLines(p) <= LINES),
+    JSON.stringify(mixed.pages.map(usedLines)));
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

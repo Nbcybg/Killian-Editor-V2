@@ -18,8 +18,13 @@ import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
  *   o.cls      คลาส CSS ของเส้น (คั่นหลายคลาสด้วยช่องว่างได้)
  *   o.decoKey  คำนำหน้า key ของ widget decoration (กัน ProseMirror ใช้ widget ซ้ำผิดตัว)
  *   o.label    ฟังก์ชันทำข้อความบนป้าย — ไม่ใส่ = "หน้า N"
+ *   o.midMode  จุดตัดที่ตกกลางย่อหน้าจะวาดเป็นอะไร
+ *              'inline' (ค่าเริ่มต้น · นิยาย) = <span> กว้าง/สูง 0 แล้ววาดเส้นด้วย ::before
+ *                       — จำเป็นเพราะการจัดหน้าของนิยาย **วัดจาก DOM** กล่องที่กินที่จะทำให้วนไม่จบ
+ *              'block'  (บทภาพยนตร์) = <div> จริงคั่นกลางย่อหน้า ดันเนื้อที่เหลือลงไปข้างล่าง
+ *                       — ปลอดภัยเพราะบทวัดความกว้างจากฟอนต์ (text-width.js) ไม่ได้อ่าน DOM เลย
  */
-export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
+export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMode }) {
   const key = new PMKey(keyName);
   const text = label || ((page) => t('ui.common.page2') + (page || ''));
   let list = [];
@@ -41,14 +46,39 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
   };
   const numSig = () => list.map((b) => numOf(b.page)).join(',');
 
+  // [alpha.84 ข้อ 2] ลายเซ็นต้องรวม `ind` ด้วย — ย้ายจุดตัดไปอยู่ใน element ที่เยื้องต่างกัน
+  // โดยตำแหน่งเท่าเดิมเป็นไปได้ (แก้ข้อความก่อนหน้า) ถ้าไม่รวมไว้ แถบคั่นจะค้างที่ระยะเดิม
+  const sigOf = (l) => l.map((b) => [b.pos, b.page, b.ind ?? '',
+                                    b.contTop || '', b.contBottom || ''].join(':')).join(',');
+
   /** ตั้งรายการเส้นคั่นหน้า — คืน true เมื่อเปลี่ยนจริง */
   function setBreaks(next) {
     const clean = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
-    const s = clean.map((b) => b.pos + ':' + b.page).join(',');
+    const s = sigOf(clean);
     if (s === sig) return false;
     sig = s;
     list = clean;
     return true;
+  }
+
+  /**
+   * [alpha.85 ข้อ 2] ★ เลื่อนตำแหน่งที่จำไว้ตามการแก้ไข — **หัวใจของการแก้อาการกระพริบ**
+   *
+   * ของเดิม `apply()` เจอ `docChanged` แล้ว **สร้าง decoration ใหม่จาก `list` เดิม** ทันที
+   * ซึ่ง `list` ยังเป็นตำแหน่งของ *ก่อน* แก้ไข → พิมพ์ 1 ตัวเหนือเส้นคั่น ตำแหน่งเดิมจึงตกไป
+   * อยู่ "ท้ายย่อหน้าก่อนหน้า" แทนที่จะเป็นรอยต่อระหว่างย่อหน้า → widget พลิกจากระดับบล็อก
+   * เป็นระดับ inline (คนละคีย์) → ProseMirror ทิ้ง DOM แล้วสร้างใหม่ · พอจัดหน้าเสร็จอีก 100ms
+   * ตำแหน่งจริงมาถึง ก็พลิกกลับเป็นบล็อกอีกครั้ง = **สร้างใหม่สองรอบต่อการกดปุ่มหนึ่งครั้ง**
+   * แถบคั่นแผ่นสูงราว 220px จึงหายแล้วโผล่ ๆ ตลอดเวลาที่พิมพ์
+   *
+   * ที่ถูกคือเลื่อนตำแหน่งตาม `tr.mapping` ไปเลย — ได้ทั้งความถูกต้องระหว่างรอจัดหน้ารอบใหม่
+   * และเมื่อผลจัดหน้าออกมาตรงกับที่เลื่อนไว้ `setBreaks` ก็คืน false → ไม่ต้องวาดใหม่เลยสักครั้ง
+   */
+  function mapBreaks(mapping) {
+    if (!list.length) return;
+    list = list.map((b) => ({ ...b, pos: mapping.map(b.pos, -1) }))
+               .filter((b) => Number.isFinite(b.pos) && b.pos > 0);
+    sig = sigOf(list);
   }
   function breaks() { return list.slice(); }
 
@@ -66,18 +96,32 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
     if (!list.length || !doc) return DecoSet.empty;
     const max = doc.content.size;
     const out = [];
+    const asBlock = midMode === 'block';
     for (const b of list) {
       if (b.pos > max) continue;
-      const inline = isInline(doc, b.pos);
+      const mid = isInline(doc, b.pos);
+      const inline = mid && !asBlock;
+      const inBlock = mid && asBlock;
       out.push(Deco.widget(b.pos, () => {
         const d = document.createElement(inline ? 'span' : 'div');
-        d.className = cls + (inline ? ' k-pb-inline' : '');
+        d.className = cls + (inline ? ' k-pb-inline' : inBlock ? ' k-pb-in-block' : '');
         d.dataset.page = String(b.page || '');
+        // [alpha.84 ข้อ 2] อยู่ในบล็อกที่เยื้องมาแล้ว → บอก CSS ว่าต้องหักกลับกี่นิ้ว
+        if (inBlock && Number.isFinite(b.ind)) d.style.setProperty('--k-pb-ind', b.ind + 'in');
         d.setAttribute('contenteditable', 'false');
         const lbl = document.createElement('span');
         lbl.className = 'sp-page-break-num';
         lbl.textContent = text(b.page);
         d.append(lbl);
+        // [alpha.86] (CONTINUED) ท้ายหน้า / CONTINUED: ต้นหน้าใหม่ — **โอเวอร์เลย์ในระยะขอบ**
+        // ไม่ใช่บล็อกในเนื้อหน้า จึงไม่กินโควตาบรรทัด (ตรงกับที่ pdf-generator.js วาดมาตลอด)
+        for (const [key, cls] of [['contBottom', 'sp-cont-bottom'], ['contTop', 'sp-cont-top']]) {
+          if (!b[key]) continue;
+          const m = document.createElement('span');
+          m.className = 'sp-cont-edge ' + cls;
+          m.textContent = b[key];
+          d.append(m);
+        }
         const pn = numOf(b.page);
         if (pn) {
           const no = document.createElement('span');
@@ -86,8 +130,14 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
           d.append(no);
         }
         return d;
+      // [alpha.85 ข้อ 2] ★ **key ห้ามมี `pos`** — ไม่งั้นกดปุ่มทีเดียวก็เปลี่ยนคีย์ของเส้นคั่น
+      // ทุกเส้นที่อยู่ใต้เคอร์เซอร์ (ตำแหน่งเลื่อนไป 1) ProseMirror จึง **ทิ้ง DOM เดิมแล้วสร้างใหม่**
+      // ทั้งแถบ — แถบคั่นแผ่นสูงราว 220px หายไปแล้วโผล่กลับทุกครั้ง = อาการ "กด Enter แล้วกระพริบ"
+      // คีย์ที่ผูกกับ "หน้าที่เท่าไร + รูปแบบที่วาด" คงที่ระหว่างพิมพ์ PM จึงแค่ย้ายตำแหน่งให้
       }, { side: -1,
-           key: decoKey + b.pos + '-' + b.page + (inline ? 'i' : '') + '-' + numOf(b.page) }));
+           key: decoKey + b.page + (inline ? 'i' : inBlock ? 'b' : '') +
+                '-' + (b.ind ?? '') + '-' + numOf(b.page) +
+                '-' + (b.contTop || '') + '-' + (b.contBottom || '') }));
     }
     return DecoSet.create(doc, out);
   }
@@ -98,8 +148,11 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label }) {
       state: {
         init: (_c, st) => decos(st.doc),
         apply(tr, prev, _o, st) {
-          if (!tr.docChanged && !tr.getMeta(key)) return prev.map(tr.mapping, tr.doc);
-          return decos(st.doc);
+          if (tr.getMeta(key)) return decos(st.doc);      // มีรายการใหม่จากตัวจัดหน้า → วาดใหม่
+          if (!tr.docChanged) return prev;                // ไม่มีอะไรขยับ → ใช้ของเดิมทั้งชุด
+          mapBreaks(tr.mapping);
+          // ส่งชุดเดิมผ่าน mapping — Decoration ตัวเดิมถูกใช้ซ้ำ ProseMirror จึงไม่แตะ DOM เลย
+          return prev.map(tr.mapping, tr.doc);
         },
       },
       props: { decorations(state) { return key.getState(state); } },

@@ -14,7 +14,7 @@ import { PROSE_VIEWS, PROSE_VIEW_LABELS, isProsePageView, isProseEditView, isVal
          refreshProsePageBreaks, renderProsePageView, proseViewStatusText,
          setProsePageNumberLabel } from './prose-view.js';
 // [alpha.82] จัดหน้านิยายจากการวัดของจริงบนจอ — แทนที่การเดาจากจำนวนตัวอักษร
-import { measureProseLayout, sliceProsePages, proseBreakList,
+import { measureProseLayout, sliceProsePages, proseBreakList, withMeasureMode, zoomFactorOf,
          renderProseClipPages, CUT_FAIL, resetCutFail } from './prose-measure.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ · [ข้อ 6] ระยะขอบสำเร็จรูป
 import { CASE_MODES, CASE_SHORT } from './text-case.js';
@@ -68,6 +68,8 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, pageNumberLabel,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, defaultLangFonts, normalizeLangFonts,
          buildLangFontCss, withLangFamily, applyLangFonts,
+         SP_THAI_DEFAULTS, SP_THAI_FALLBACKS, normalizeSpThai, buildSpThaiCss,
+         withSpThaiFamily, applySpThaiFont,
          SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX,
          SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, dataLabel, BUILTIN_CATS, CAT_ICON,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
@@ -213,6 +215,7 @@ import { openRosterFlow, openRoster, renderRoster, saveRosterTab, isRosterTab,
 // ---- alpha.57: มุมมองบท (57/59/60/61) · ไปยังหน้า-ฉาก (78) · ตรวจข้อผิดพลาด (54) · ส่งออก 67/68/70 ----
 import { SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, isValidView,
          fitScale, overviewScale, viewScale, blocksFromDoc, pagesOf, pageStartPositions,
+         pageStartMarks,
          findPageStart, scenePositions, findNthScene, renderPageView, viewStatusText,
          pageMetrics, layoutCssVars, isEditView } from './sp-view.js';
 import { setFormatGuide, isFormatGuide, setPageBreaks, pageBreaks,
@@ -319,8 +322,12 @@ export function applySettings() {
   document.documentElement.style.setProperty('--ed-font', withLangFamily(edStack, nLang > 0));
   applyProseVars(pf);                                // [16][17][23][24] ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด
   // ฟอนต์บทหนังแยกจากนิยาย (บั๊ก #2) — ว่าง = Courier Final Draft เช่นกัน
+  // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบท ต้องมาก่อน "K2 Lang" และก่อนสแตกของผู้ใช้
+  // (ฟอนต์บทเริ่มด้วย Courier Prime ที่ไม่มีอักษรไทย → ไทยตกไปฟอนต์สำรองที่เมตริกคนละเรื่อง)
+  applySpThaiFont(spThaiCfg());
   const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
-  document.documentElement.style.setProperty('--sp-font', withLangFamily(spStack, nLang > 0));
+  document.documentElement.style.setProperty(
+    '--sp-font', withSpThaiFamily(withLangFamily(spStack, nLang > 0), spThaiCfg()));
   // [alpha.82] ฟอนต์เปลี่ยน = ความกว้างที่วัดไว้ใช้ไม่ได้แล้ว
   refreshTextMeasurer();
   // [alpha.57a ข้อ 1] เสียงเครื่องพิมพ์ดีด
@@ -893,7 +900,9 @@ function proseMeasured(tab, spf) {
   const f = spf || spFormat();
   const mz = measureWithEditorVisible(t2, f);
   if (!mz) { _mzCache = null; return null; }
-  mz.pages = sliceProsePages(mz.blocks, mz.contentHeight, mz.totalHeight)
+  // [alpha.85 ข้อ 2] ตั้งแต่ทำ lineOffsets เป็นแบบขี้เกียจ การหั่นหน้าคือคนที่ไป "อ่าน DOM"
+  // จริง ๆ จึงต้องอยู่ในโหมดยุบเส้นคั่นเหมือนตอนวัด ไม่งั้นพิกัดบรรทัดคลาดกับที่วัดไว้
+  mz.pages = withMeasureMode(() => sliceProsePages(mz.blocks, mz.contentHeight, mz.totalHeight))
     .map((p, i) => ({ ...p, index: i + 1 }));
   mz.__fromCache = false;
   _mzCache = { tab: t2, doc, epoch: _mzEpoch, data: mz };
@@ -1034,6 +1043,50 @@ export function toggleShowFormat(on) {
 
 // ═════════ alpha.58 · 55–56 · ระบบต่อเนื่อง (CONTINUED / MORE / cont'd) ═════════
 /** ระบบต่อเนื่องเปิดอยู่ไหม (ค่าเริ่มต้น = เปิด ตามธรรมเนียมบทภาพยนตร์) */
+// ═════════ [alpha.84 ข้อ 4] ย่อหน้าอัตโนมัติของ "นิยาย" — สวิตช์บนแถบรูปแบบ ═════════
+// เดิมปรับได้เฉพาะใน ตั้งค่า → รูปแบบนิยาย → ย่อหน้าบรรทัดแรก (นิ้ว) ซึ่งลึกเกินกว่าจะสลับไปมา
+// ปิดแล้วต้อง **จำระยะเดิมไว้** ไม่งั้นเปิดกลับมาได้ 0.5 นิ้วเสมอ ทับค่าที่ผู้ใช้ตั้งเอง
+export function proseIndentOn() { return num(proseFormat().firstLineIndent, 0) > 0; }
+export function toggleProseIndent(on) {
+  const pf = proseFormat();
+  const v = on === undefined ? !proseIndentOn() : !!on;
+  const prev = num(state.settings.proseIndentPrev, 0) || num(pf.firstLineIndent, 0)
+               || PROSE_DEFAULTS.firstLineIndent;
+  if (!v && num(pf.firstLineIndent, 0) > 0) state.settings.proseIndentPrev = pf.firstLineIndent;
+  state.settings.prose = { ...proseFormatSettings(), firstLineIndent: v ? prev : 0 };
+  applyProseVars(proseFormat());
+  bumpProseLayout();                  // ระยะย่อหน้าเปลี่ยน = ต้องวัดหน้าใหม่ (alpha.82)
+  scheduleCount();
+  refreshSpView();
+  saveProjectMeta(); syncMenuToggles(); refreshToolbar();
+  setStatus(v ? ttf('ui.app.proseIndentOn', prev) : tt('ui.app.proseIndentOff'));
+  return v;
+}
+
+/**
+ * [alpha.84 ข้อ 1] ค่าตั้ง "ปรับสัดส่วนฟอนต์ไทยในบทภาพยนตร์" — เก็บใน project.khn.json
+ * ค่าเริ่มต้นเปิดไว้ เพราะสแตกฟอนต์บทมาตรฐาน (Courier Prime) ไม่มีอักษรไทยเลย
+ * ตัวไทยจึงตกไปฟอนต์สำรองที่ตัวใหญ่กว่าและล้นกล่องบรรทัด `line-height:1` ของบททุกครั้ง
+ */
+export function spThaiCfg() {
+  return normalizeSpThai({ ...SP_THAI_DEFAULTS, ...(state.settings.spThaiFont || {}) });
+}
+/** เปิด/ปิดตัวปรับสัดส่วน (หรือแก้ค่าบางตัวแล้วใช้ผลทันที) */
+export function setSpThaiFont(patch) {
+  state.settings.spThaiFont = normalizeSpThai({ ...spThaiCfg(), ...(patch || {}) });
+  applySettings();
+  refreshSpView();
+  saveProjectMeta(); syncMenuToggles(); refreshToolbar();
+  return state.settings.spThaiFont;
+}
+export function toggleSpThaiFont(on) {
+  const c = spThaiCfg();
+  const v = on === undefined ? !c.enabled : !!on;
+  setSpThaiFont({ enabled: v });
+  setStatus(v ? ttf('ui.app.spThaiOn', c.size) : tt('ui.app.spThaiOff'));
+  return v;
+}
+
 export function spContinuedOn() {
   const c = state.settings.spContinued;
   return !c || c.enabled !== false;
@@ -1046,7 +1099,8 @@ export function toggleContinueds(on) {
   applyPageVars();
   scheduleCount();                    // คำนวณเครื่องหมายใหม่ (ตัวเดียวกับที่นับหน้า)
   refreshSpView();
-  saveProjectMeta(); syncMenuToggles();
+  // [alpha.84 ข้อ 3] มีปุ่มบนแถบแล้ว → ต้องรีเฟรชแถบด้วย ไม่งั้นปุ่มติดไฟค้างสถานะเก่า
+  saveProjectMeta(); syncMenuToggles(); refreshToolbar();
   setStatus(cur.enabled
     ? tt('ui.app.textContOpenCONTINUED')
     : tt('ui.app.textContClose'));
@@ -7868,6 +7922,19 @@ function refreshToolbar() {
     spExt.title = onChar ? tt('ui.app.partNameVO')
                          : tt('ui.app.pasteLineCharacterBefore');
   }
+  // [alpha.84 ข้อ 3+4] สวิตช์เฉพาะโหมด — ต่อเนื่อง = บทเท่านั้น · ย่อหน้า = นิยายเท่านั้น
+  const spCont = $('#tb-sp-cont');
+  if (spCont) {
+    spCont.style.display = sp ? '' : 'none';
+    spCont.classList.toggle('on', spContinuedOn());
+    spCont.classList.toggle('dis', !sp);
+  }
+  const tbInd = $('#tb-indent');
+  if (tbInd) {
+    tbInd.style.display = ed ? '' : 'none';
+    tbInd.classList.toggle('on', proseIndentOn());
+    tbInd.classList.toggle('dis', !ed);
+  }
   $('#tb-paper').classList.toggle('on', state.settings.paperMode !== false);
   applyTheme();                       // [60r2 ข้อ 10] ปุ่มธีมสะท้อนสถานะจริง
   // ปุ่มสวิตช์อื่น ๆ ต้องสะท้อนสถานะจริงด้วย ไม่งั้นจุดบอกสถานะโกหก
@@ -7976,8 +8043,18 @@ function repaginateNow(t) {
     // เส้นคั่นหน้าในตัวแก้ไข — หน้า 2 เป็นต้นไป
     // [alpha.57a] เลขบนเส้นคั่นนับต่อจาก "เลขหน้าเริ่มต้น" ของไฟล์ (ตั้งในคุณสมบัติฉาก)
     const base = currentStartPage(t) - 1;
-    const starts = pageStartPositions(pg);
-    const changed = setPageBreaks(starts.map((pos, i) => ({ pos, page: base + i + 1 })).slice(1)
+    // [alpha.84 ข้อ 2] ต้องใช้ `pageStartMarks` ไม่ใช่ตำแหน่งเปล่า ๆ — หน้าที่เริ่มกลางบทพูด
+    // ที่ถูกหั่นให้ตำแหน่ง "ในเนื้อข้อความ" + ระยะเยื้องของบล็อกนั้นมาด้วย
+    // (เดิมได้แค่ pos ของหัวย่อหน้า → โหมดปกติ/จัดหน้าตัดคนละที่กับมุมมองหน้าคู่)
+    const starts = pageStartMarks(pg, fmt);
+    // [alpha.86] (CONTINUED)/CONTINUED: เดินทางไปกับ "เส้นคั่นหน้า" ไม่ใช่ decoration แยก —
+    // หน้าที่ i จบด้วย continuedBottom · หน้าที่ i+1 เริ่มด้วย continuedTop
+    const onCt = spContinuedOn();
+    const changed = setPageBreaks(starts
+      .map((st, i) => ({ pos: st.pos, page: base + i + 1, mid: st.mid, ind: st.indent,
+                         contBottom: onCt ? (pg.pages[i - 1] || {}).continuedBottom || '' : '',
+                         contTop: onCt ? (pg.pages[i] || {}).continuedTop || '' : '' }))
+      .slice(1)
       .filter((x) => Number.isFinite(x.pos)));
     // [alpha.83 ข้อ 4] เลขหน้าจริงของหน้าที่ 2 เป็นต้นไปในโหมดปกติ/จัดหน้า
     const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt));
@@ -9052,6 +9129,9 @@ async function handleCommand(ch, ...a) {
     case 'sp-show-format': toggleShowFormat(a[0]); break;
     // ---- alpha.58: ระบบต่อเนื่อง (55/56) · รายงานบท (71/72/73) ----
     case 'sp-continued': toggleContinueds(a[0]); break;
+    // [alpha.84] สวิตช์ใหม่บนแถบรูปแบบ
+    case 'sp-thai-font': toggleSpThaiFont(a[0]); break;
+    case 'prose-indent': toggleProseIndent(a[0]); break;
     case 'sp-report': openSpReport(a[0] || 'location'); break;
     case 'goto': gotoDialog(a[0]); break;
     case 'goto-page': gotoPage(a[0]); break;
@@ -9345,6 +9425,8 @@ function setupFloatingFormatBar() {
    '#tb-bold', '#tb-italic', '#tb-underline', '#tb-strike',
    '#tb-ul', '#tb-ol', '#tb-quote',
    '#tb-align-left', '#tb-align-center', '#tb-align-right', '#tb-align-justify',
+   // [alpha.84 ข้อ 3+4] สวิตช์ที่ผู้ใช้ขอให้อยู่ "ใกล้มือ" — ต่อเนื่อง (บท) · ย่อหน้า (นิยาย)
+   '#tb-indent', '#tb-sp-cont',
    '#tb-img', '#tb-source', '#tb-read', '#tb-gsearch'].forEach((sel) => {
     const e0 = $(sel); if (e0) bar.append(e0);
   });
@@ -9633,6 +9715,9 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#tb-source').onclick = () => showSourceView();
   $('#tb-theme') && ($('#tb-theme').onclick = () => toggleTheme());   // [60r2 ข้อ 10]
   $('#tb-paper').onclick = () => togglePaper();
+  // [alpha.84 ข้อ 3+4] สวิตช์ใหม่บนแถบรูปแบบ
+  const bCont = $('#tb-sp-cont'); if (bCont) bCont.onclick = () => toggleContinueds();
+  const bInd = $('#tb-indent'); if (bInd) bInd.onclick = () => toggleProseIndent();
   $('#tb-paper').classList.toggle('on', state.settings.paperMode !== false);
   // ---- ปุ่มโหมดอ่าน + ค้นหาทั้งโปรเจกต์ ----
   $('#tb-read').onclick = () => toggleReading();
@@ -17555,6 +17640,78 @@ async function runTest(projectPath) {
       activate(t.file);
     }
 
+    // ---- [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ ----
+    // ผู้ใช้: "Courier Prime ใช้ในนิยายได้ไม่มีปัญหาทั้งไทยและละติน แต่ในบทหนังเพี้ยนมาก"
+    // เพราะสแตกของบทเริ่มด้วยฟอนต์ที่ไม่มีอักษรไทย ตัวไทยจึงตกไปฟอนต์สำรองที่เมตริกคนละชุด
+    // แล้วล้นกล่องบรรทัด line-height:1 ของบท (วัดจริง: ไทยสูงรวม 137% ของกล่อง)
+    {
+      const origThai84 = state.settings.spThaiFont ? { ...state.settings.spThaiFont } : null;
+      const origSpF84 = state.settings.spFontFamily || '';
+      state.settings.spFontFamily = '';
+      state.settings.spThaiFont = null;
+      applySettings();
+      check('[84-1] เปิดใช้เป็นค่าเริ่มต้น (โปรเจกต์ที่ไม่เคยตั้งอะไรก็หายเพี้ยนทันที)',
+            spThaiCfg().enabled === true && spThaiCfg().size === 85, JSON.stringify(spThaiCfg()));
+      const st84 = document.getElementById('k-sp-thai');
+      check('[84-1] มี <style id="k-sp-thai"> พร้อม size-adjust',
+            !!st84 && st84.textContent.includes('size-adjust:85%'), st84 && st84.textContent.slice(0, 90));
+      check('[84-1] จำกัดเฉพาะช่วงอักษรไทย (ไม่แตะตัวละติน)',
+            !!st84 && st84.textContent.includes('unicode-range:U+0E00-0E7F'));
+      const spFont84 = document.documentElement.style.getPropertyValue('--sp-font');
+      check('[84-1] วงศ์ตัวปรับอยู่หน้าสุดของ --sp-font', spFont84.trim().startsWith('"K2 SP Thai"'),
+            spFont84);
+      check('[84-1] ไม่แตะฟอนต์ฝั่งนิยายเลย (นิยายไม่ได้มีปัญหานี้)',
+            !(document.documentElement.style.getPropertyValue('--ed-font') || '').includes('K2 SP Thai'),
+            document.documentElement.style.getPropertyValue('--ed-font'));
+      // ตัวปรับต้องมีผลกับกล่อง .sp จริง — ไม่ใช่แค่ตัวแปร CSS ลอย ๆ
+      {
+        const probe = el('div', 'sp sp-action', 'ทดสอบไทย');
+        document.body.appendChild(probe);
+        check('[84-1] บล็อกบทหนังใช้วงศ์ตัวปรับจริง',
+              getComputedStyle(probe).fontFamily.includes('K2 SP Thai'),
+              getComputedStyle(probe).fontFamily);
+        probe.remove();
+      }
+      // สวิตช์ปิด/เปิด
+      toggleSpThaiFont(false);
+      check('[84-1] ปิดสวิตช์ → CSS หาย และวงศ์หลุดออกจากสแตก',
+            (document.getElementById('k-sp-thai').textContent || '') === '' &&
+            !document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'));
+      toggleSpThaiFont(true);
+      check('[84-1] เปิดกลับ → กลับมาครบ',
+            document.getElementById('k-sp-thai').textContent.includes('size-adjust') &&
+            document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'));
+      setSpThaiFont({ size: 92 });
+      check('[84-1] ปรับ % แล้วเห็นผลทันที + จำลง settings',
+            document.getElementById('k-sp-thai').textContent.includes('size-adjust:92%') &&
+            state.settings.spThaiFont.size === 92);
+      check('[84-1] คำสั่ง sp-thai-font มีจริงใน handleCommand',
+            /case ['"]sp-thai-font['"]/.test(String(handleCommand)));
+      // กล่องตั้งค่า → แท็บ "ฟอนต์" ต้องมีช่องจริง
+      settingsDialog('fonts');
+      await new Promise((r) => setTimeout(r, 150));
+      check('[84-1] แท็บฟอนต์มีสวิตช์ + ช่อง % + ช่องเลือกฟอนต์ไทย',
+            !!document.querySelector('#st-spthai-on') && !!document.querySelector('#st-spthai-size') &&
+            !!document.querySelector('#st-spthai-family'));
+      check('[84-1] ช่องในกล่องโชว์ค่าที่ใช้อยู่จริง',
+            document.querySelector('#st-spthai-on').checked === true &&
+            +document.querySelector('#st-spthai-size').value === 92,
+            document.querySelector('#st-spthai-size').value);
+      check('[84-1] มีตัวอย่างที่ใช้ระยะบรรทัดของบทจริง (1 เท่า)',
+            !!document.querySelector('#st-spthai-sample') &&
+            getComputedStyle(document.querySelector('#st-spthai-sample')).lineHeight
+              === getComputedStyle(document.querySelector('#st-spthai-sample')).fontSize,
+            getComputedStyle(document.querySelector('#st-spthai-sample')).lineHeight);
+      document.querySelector('.k-dialog .k-cancel').click();
+      await new Promise((r) => setTimeout(r, 60));
+      check('[84-1] กดยกเลิกแล้ววงศ์ตัวปรับไม่หลุดหาย (บทเรียน alpha.78)',
+            document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'),
+            document.documentElement.style.getPropertyValue('--sp-font'));
+      state.settings.spThaiFont = origThai84;
+      state.settings.spFontFamily = origSpF84;
+      applySettings();
+    }
+
     // ---- บั๊ก #2: ฟอนต์บทหนังตั้งค่าได้แยกจากนิยาย ----
     {
       check('#2 DEFAULT_SETTINGS มี spFontFamily', 'spFontFamily' in DEFAULT_SETTINGS);
@@ -17567,9 +17724,11 @@ async function runTest(projectPath) {
             document.documentElement.style.getPropertyValue('--sp-font'));
       state.settings.spFontFamily = '"TH Sarabun New", sans-serif';
       applySettings();
+      // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบท ถูกเสียบไว้หน้าสุดเสมอ (เปิดเป็นค่าเริ่มต้น)
+      // → เทียบแบบ "ลงท้ายด้วยสแตกที่ตั้ง" ไม่ใช่เท่ากันเป๊ะเหมือนเดิม
       check('#2 ตั้งฟอนต์บทหนัง → --sp-font ถูกเซ็ต',
             getComputedStyle(document.documentElement).getPropertyValue('--sp-font').trim()
-              === '"TH Sarabun New", sans-serif',
+              .endsWith('"TH Sarabun New", sans-serif'),
             getComputedStyle(document.documentElement).getPropertyValue('--sp-font'));
       // ต้องมีผลกับ .sp จริง และต้องไม่ไปเปลี่ยนฟอนต์ฝั่งนิยาย
       const spProbe = el('div', 'sp sp-action', 'ทดสอบ');
@@ -18474,9 +18633,14 @@ async function runTest(projectPath) {
           applySettings();
           const edFont = document.documentElement.style.getPropertyValue('--ed-font');
           const spFont = document.documentElement.style.getPropertyValue('--sp-font');
+          // [alpha.84 ข้อ 1] ฝั่งบทมี "K2 SP Thai" (ตัวปรับสัดส่วนไทย) นำหน้าอีกชั้นหนึ่ง
+          // — ตั้งใจให้เป็นแบบนี้: ตัวปรับต้องชนะทุกอย่างในช่วงอักษรไทยของบท
           check('[57a-5] วงศ์รวมถูกเอาไปนำหน้า font stack ทั้งนิยายและบทหนัง',
-                edFont.startsWith('"' + LANG_FAMILY + '"') && spFont.startsWith('"' + LANG_FAMILY + '"'),
+                edFont.startsWith('"' + LANG_FAMILY + '"') && spFont.includes('"' + LANG_FAMILY + '"'),
                 edFont + ' | ' + spFont);
+          check('[84-1] ในบท ตัวปรับสัดส่วนไทยต้องมาก่อน "วงศ์รวมตามภาษา" เสมอ',
+                spFont.trim().startsWith('"K2 SP Thai"') &&
+                spFont.indexOf('K2 SP Thai') < spFont.indexOf(LANG_FAMILY), spFont);
           check('[57a-5] ยังเก็บฟอนต์เดิมไว้ท้าย stack', spFont.includes('Courier'), spFont);
           // ฟอนต์ไทยที่ฝังมาต้องโหลดได้จริง (ไม่ใช่แค่ประกาศ @font-face)
           // [alpha.78] ต้องส่ง "ข้อความไทย" ไปด้วย — @font-face ถูกจำกัด unicode-range ไว้ที่ไทย
@@ -18791,30 +18955,28 @@ async function runTest(projectPath) {
             ...Array.from({ length: 20 }, (_, i) => '!บรรยายฉากที่ ' + i + ' ให้ยาวพอเต็มบรรทัด')].join('\n');
           spT58.sp.setMarkdown(longScene);
           await new Promise((r) => setTimeout(r, 800));
-          const marks = spT58.pane.querySelectorAll('.sp-cont-mark');
-          check('[55] ฉากข้ามหน้า → มีเครื่องหมายต่อเนื่องในตัวแก้ไข', marks.length >= 2, marks.length);
-          const texts = [...marks].map((m) => m.textContent);
-          check('[55] มี (CONTINUED) ท้ายหน้า', texts.includes('(CONTINUED)'), texts.join(' | '));
-          check('[56] มี CONTINUED: ต้นหน้า', texts.some((x) => x.startsWith('CONTINUED:')));
-          const bot = spT58.pane.querySelector('.sp-cont-mark.sp-continued-bottom');
-          const top = spT58.pane.querySelector('.sp-cont-mark.sp-continued-top');
-          check('[55] (CONTINUED) ชิดขวา', getComputedStyle(bot).textAlign === 'right');
-          check('[56] CONTINUED: ชิดซ้าย', getComputedStyle(top).textAlign === 'left');
-          check('[55] เครื่องหมายแก้ไขไม่ได้ (ไม่ใช่ข้อความในไฟล์)',
-                bot.getAttribute('contenteditable') === 'false' &&
-                getComputedStyle(bot).pointerEvents === 'none');
+          // [alpha.86] (CONTINUED)/CONTINUED: = โอเวอร์เลย์ในระยะขอบ วาดเป็นลูกของเส้นคั่นหน้า
+          // ไม่ใช่บล็อกในเนื้อหน้าอีกแล้ว จึงไม่กินโควตาบรรทัด (เหมือน pdf-generator.js)
+          const edges = [...spT58.pane.querySelectorAll('.sp-cont-edge')];
+          const texts = edges.map((m) => m.textContent);
+          check('[86] ฉากข้ามหน้า → มีเครื่องหมายต่อเนื่องในตัวแก้ไข', edges.length >= 2, edges.length);
+          check('[86] มี (CONTINUED) ท้ายหน้า', texts.includes('(CONTINUED)'), texts.join(' | '));
+          check('[86] มี CONTINUED: ต้นหน้า', texts.some((x) => x.startsWith('CONTINUED:')));
+          const bot = spT58.pane.querySelector('.sp-cont-edge.sp-cont-bottom');
+          const top = spT58.pane.querySelector('.sp-cont-edge.sp-cont-top');
+          check('[86] ★ วาดอยู่ในเส้นคั่นหน้า (ไม่ใช่บล็อกในเนื้อหน้า)',
+                !!bot && !!top && !!bot.closest('.sp-page-break') && !!top.closest('.sp-page-break'));
+          check('[86] ★ ไม่กินที่ในเนื้อหน้า (absolute)',
+                getComputedStyle(bot).position === 'absolute' &&
+                getComputedStyle(top).position === 'absolute');
+          check('[86] (CONTINUED) ชิดขวา', getComputedStyle(bot).textAlign === 'right');
+          check('[86] CONTINUED: ชิดซ้าย', getComputedStyle(top).textAlign === 'left');
+          check('[86] เครื่องหมายกดไม่โดน/เลือกไม่ได้',
+                getComputedStyle(bot).pointerEvents === 'none' &&
+                getComputedStyle(bot).userSelect === 'none');
           check('[55] เครื่องหมายไม่หลุดไปอยู่ในไฟล์ .md',
                 !spT58.sp.getMarkdown().includes('(CONTINUED)') &&
                 !spT58.sp.getMarkdown().includes('CONTINUED:'));
-          // ท้ายหน้าต้องมาก่อนเส้นคั่นหน้า · ต้นหน้าต้องมาหลัง
-          {
-            const all = [...spT58.pane.querySelectorAll('.sp-cont-mark, .sp-page-break')];
-            const iBot = all.indexOf(bot), iTop = all.indexOf(top);
-            const iBrk = all.findIndex((n) => n.classList.contains('sp-page-break'));
-            check('[55] (CONTINUED) อยู่เหนือเส้นคั่นหน้า · CONTINUED: อยู่ใต้',
-                  iBot >= 0 && iBrk > iBot && iTop > iBrk,
-                  `bot=${iBot} brk=${iBrk} top=${iTop}`);
-          }
           // ข้ามหลายหน้า → เลขกำกับ
           check('[56] ข้ามหลายหน้าติดกันมีเลขกำกับ CONTINUED: (2)',
                 texts.some((x) => /^CONTINUED: \(\d+\)$/.test(x)), texts.join(' | '));
@@ -18840,6 +19002,57 @@ async function runTest(projectPath) {
                     Math.abs(moreEl.getBoundingClientRect().left - chEl.getBoundingClientRect().left) < 4,
                     `${moreEl.getBoundingClientRect().left} vs ${chEl.getBoundingClientRect().left}`);
             }
+            // ═══ [alpha.84 ข้อ 2] จุดตัดต้องอยู่ "ตรงบรรทัดที่ถูกหั่น" ไม่ใช่หัวย่อหน้า ═══
+            // เดิมทุกอย่างถูกแปะที่ pos ของบล็อกทั้งก้อน → โหมดปกติ/จัดหน้าตัดคนละที่กับหน้าคู่
+            const dlgEl = spT58.pane.querySelector('.sp-dialogue');
+            const brkIn = spT58.pane.querySelector('.sp-page-break.k-pb-in-block');
+            check('[84-2] บทพูดถูกหั่นกลาง → เส้นคั่นหน้าเป็นแบบ "ในบล็อก"', !!brkIn);
+            check('[84-2] เส้นคั่นหน้าอยู่ข้างในบล็อกบทพูดจริง (ไม่ใช่ก่อนทั้งก้อน)',
+                  !!brkIn && !!dlgEl && dlgEl.contains(brkIn));
+            if (brkIn && dlgEl) {
+              const bT = brkIn.getBoundingClientRect().top, dT = dlgEl.getBoundingClientRect().top;
+              check('[84-2] จุดตัดอยู่ต่ำกว่าหัวบทพูดหลายบรรทัด (ตัดกลางจริง)',
+                    bT - dT > 100, `brk=${Math.round(bT)} dlg=${Math.round(dT)}`);
+              // ระยะเยื้องถูกหักกลับแล้ว → ขอบซ้ายของแถบคั่นต้องตรงกับขอบซ้ายของ *พื้นที่พิมพ์*
+              const actEl = spT58.pane.querySelector('.sp-action');
+              if (actEl) {
+                check('[84-2] แถบคั่นหน้าหักระยะเยื้องของบล็อกคืนแล้ว (ตรงขอบพื้นที่พิมพ์)',
+                      Math.abs(brkIn.getBoundingClientRect().left
+                               - actEl.getBoundingClientRect().left) < 4,
+                      `${brkIn.getBoundingClientRect().left} vs ${actEl.getBoundingClientRect().left}`);
+              }
+              check('[84-2] เส้นคั่นหน้าได้ระยะเยื้องของบล็อกมาทาง --k-pb-ind',
+                    /in$/.test(brkIn.style.getPropertyValue('--k-pb-ind') || ''),
+                    brkIn.style.getPropertyValue('--k-pb-ind'));
+            }
+            const contdEl = [...spT58.pane.querySelectorAll('.sp-cont-mark.sp-contd')][0];
+            check("[84-2] ชื่อ+(cont'd) ถูกวาดในบล็อก แล้วหักระยะเยื้องคืน (--k-ct-off)",
+                  !!contdEl && contdEl.classList.contains('k-ct-in-block') &&
+                  /^-\d/.test(contdEl.style.getPropertyValue('--k-ct-off') || ''),
+                  contdEl && contdEl.style.getPropertyValue('--k-ct-off'));
+            if (contdEl && chEl) {
+              check("[84-2] ชื่อ+(cont'd) เยื้องแนวเดียวกับชื่อตัวละครจริง",
+                    Math.abs(contdEl.getBoundingClientRect().left
+                             - chEl.getBoundingClientRect().left) < 4,
+                    `${contdEl.getBoundingClientRect().left} vs ${chEl.getBoundingClientRect().left}`);
+            }
+            // เทียบกับ "หน้าคู่" ซึ่งเคยเป็นตัวเดียวที่ตัดถูก — ตอนนี้ต้องได้จำนวนหน้าเท่ากัน
+            // และเส้นคั่นในตัวแก้ไขต้องมีเท่ากับจำนวนหน้า − 1
+            {
+              const pgD = pagesOf(blocksFromDoc(spT58.sp.view.state.doc), spFormat());
+              const brks84 = spT58.pane.querySelectorAll('.sp-page-break');
+              check('[84-2] เส้นคั่นในโหมดปกติ = จำนวนหน้าที่ตัวจัดหน้าคิด − 1',
+                    brks84.length === pgD.count - 1, `${brks84.length} vs ${pgD.count - 1}`);
+              // ตำแหน่งที่ paginate คืนต้องเป็น "ในเนื้อข้อความ" ไม่ใช่หัวโหนด
+              // (บทนี้มีบรรยาย 42 บรรทัดนำหน้า รอยต่อแรกจึงเป็นรอยต่อ *ระหว่างบล็อก* ตามปกติ —
+              //  ที่ต้องมีคือ "อย่างน้อยหนึ่งรอยต่อ" ที่ตกกลางบทพูดแล้วพกระยะเยื้องมาด้วย)
+              const mk84 = pageStartMarks(pgD, spFormat());
+              check('[84-2] pageStartMarks มีหน้าที่เริ่มกลางบล็อก พร้อมระยะเยื้องของ element',
+                    mk84.some((x) => x.mid === true && x.indent > 0),
+                    JSON.stringify(mk84));
+              check('[84-2] หน้าที่ไม่ได้ตัดกลางบล็อกยังได้ตำแหน่งระดับบล็อกเหมือนเดิม',
+                    mk84.every((x) => x.mid || x.pos === null || Number.isInteger(x.pos)));
+            }
           }
           // ฉากจบพอดีหน้า → ห้ามมี CONTINUED (บั๊กของ .57 ที่ใส่ทุกคู่หน้าโดยไม่ดูฉาก)
           {
@@ -18858,14 +19071,48 @@ async function runTest(projectPath) {
           toggleContinueds(false);
           await new Promise((r) => setTimeout(r, 700));
           check('[55] ปิดสวิตช์แล้วเครื่องหมายหายหมด',
-                spT58.pane.querySelectorAll('.sp-cont-mark').length === 0);
+                spT58.pane.querySelectorAll('.sp-cont-mark, .sp-cont-edge').length === 0);
           check('[55] สถานะถูกจำลง settings', state.settings.spContinued.enabled === false);
           toggleContinueds(true);
           await new Promise((r) => setTimeout(r, 700));
+          // เอกสารตอนนี้เป็นเคส "บทพูดถูกหั่น" → เครื่องหมายที่กลับมาคือ (MORE)/(cont'd)
           check('[55] เปิดกลับแล้วเครื่องหมายกลับมา',
-                spT58.pane.querySelectorAll('.sp-cont-mark').length > 0);
+                spT58.pane.querySelectorAll('.sp-cont-mark, .sp-cont-edge').length > 0);
+          // [alpha.86] ★ เครื่องหมาย **ฉาก** อยู่ในระยะขอบ → เปิด/ปิดแล้วจำนวนหน้าต้องเท่าเดิมเป๊ะ
+          // (ต่างจาก (MORE)/(cont'd) ที่เป็นเนื้อบทจริง — ปิดแล้วหน้าย่อมเปลี่ยน)
+          {
+            const bl86 = blocksFromDoc(spT58.sp.view.state.doc);
+            const f86 = (scene) => mergeSpFormat({ ...spFormat(), continued: { ...CONTINUED_DEFAULTS, scene } });
+            check('[86] ★ เปิด/ปิด CONTINUED ของฉาก แล้วจำนวนหน้าเท่าเดิม (ไม่กินโควตา)',
+                  pagesOf(bl86, f86(true)).count === pagesOf(bl86, f86(false)).count,
+                  `เปิด ${pagesOf(bl86, f86(true)).count} · ปิด ${pagesOf(bl86, f86(false)).count}`);
+          }
           check('[55] handleCommand รู้จักคำสั่ง sp-continued',
                 /case ['"]sp-continued['"]/.test(String(handleCommand)));
+          // ═══ [alpha.84 ข้อ 3] ปุ่มสลับบนแถบรูปแบบ — "หลายคนแนะนำว่าให้ทำปุ่ม toggle" ═══
+          {
+            const bC = $('#tb-sp-cont');
+            check('[84-3] มีปุ่มสลับข้อความต่อเนื่องบนแถบ', !!bC);
+            refreshToolbar();
+            check('[84-3] ปุ่มโผล่เฉพาะแท็บบทภาพยนตร์', !!bC && bC.style.display !== 'none');
+            check('[84-3] ปุ่มติดไฟตามสถานะจริง', !!bC && bC.classList.contains('on') === spContinuedOn());
+            bC.click();
+            await new Promise((r) => setTimeout(r, 700));
+            check('[84-3] กดปุ่มแล้วปิดจริง (เครื่องหมายหายจากจอ)',
+                  !spContinuedOn() && !bC.classList.contains('on') &&
+                  spT58.pane.querySelectorAll('.sp-cont-mark').length === 0);
+            bC.click();
+            await new Promise((r) => setTimeout(r, 700));
+            check('[84-3] กดซ้ำแล้วกลับมา',
+                  spContinuedOn() && bC.classList.contains('on') &&
+                  spT58.pane.querySelectorAll('.sp-cont-mark').length > 0);
+            check('[84-3] ปุ่มอยู่บนแถบรูปแบบลอย (ใกล้มือตอนเขียน)',
+                  !!floatBar && !!floatBar.querySelector('#tb-sp-cont'));
+            check('[84-3] ปุ่มมีตัวจัดการคลิกจริง (ไม่ใช่ปุ่มตายบนแถบ)',
+                  typeof bC.onclick === 'function');
+            check('[84-3] ซ่อนปุ่มได้จากกล่องปรับแต่งแถบเครื่องมือ',
+                  tbConfigurable('tb-sp-cont'));
+          }
         }
 
         // ---- [71][72][73] รายงาน ----
@@ -19415,8 +19662,11 @@ async function runTest(projectPath) {
 
       // ---- #2 ฟอนต์ Courier Prime ฝังมากับโปรแกรม (ไม่ต้องลงเครื่อง) ----
       // [alpha.58r บั๊ก 18] บทภาพยนตร์ = Courier Prime · นิยาย = ตัวพิมพ์แบบสัดส่วน (คนละชุดกันแล้ว)
-      check('#2 ฟอนต์บทภาพยนตร์ชี้ไป Courier Prime เป็นตัวแรก',
-            /^\s*"Courier Prime"/.test(rootVar2('--sp-font')), rootVar2('--sp-font'));
+      // [alpha.84 ข้อ 1] มี "K2 SP Thai" (ตัวปรับสัดส่วนไทย · ครอบเฉพาะ U+0E00-0E7F) นำหน้าอีกชั้น
+      // → ตัวละตินยังตกมาที่ Courier Prime เป็นตัวแรกเหมือนเดิมทุกประการ
+      check('#2 ฟอนต์บทภาพยนตร์ชี้ไป Courier Prime เป็นตัวแรก (ถัดจากตัวปรับสัดส่วนไทย)',
+            /^\s*("K2 SP Thai",\s*)?"Courier Prime"/.test(rootVar2('--sp-font')),
+            rootVar2('--sp-font'));
       check('[18] ฟอนต์นิยายไม่ใช่ Courier แล้ว',
             !/Courier/i.test(rootVar2('--ed-font')), rootVar2('--ed-font'));
       try { await document.fonts.load('16px "Courier Prime"'); } catch {}
@@ -19704,6 +19954,212 @@ async function runTest(projectPath) {
       togglePaper(true);
       toggleReading(false); await new Promise((r) => setTimeout(r, 200));
 
+      // ═══ [alpha.85 ข้อ 2] "กด Enter แล้วโคตรกระพริบ" — เส้นคั่นหน้าต้อง **ไม่ถูกสร้างใหม่** ═══
+      // ต้นเหตุ: key ของ widget decoration มี `pos` อยู่ด้วย → พิมพ์ทีเดียวตำแหน่งของทุกเส้น
+      // ใต้เคอร์เซอร์เลื่อนไป 1 → คีย์เปลี่ยนหมด → ProseMirror ทิ้ง DOM เดิมแล้วสร้างใหม่ทั้งแถบ
+      // (แถบคั่นแผ่นสูงราว 220px หายแล้วโผล่ทุกครั้ง = ที่ตาเห็นว่ากระพริบ)
+      // เทสนี้จับ "ตัวตนของ DOM" ตรง ๆ — เอา pos กลับใส่คีย์เมื่อไหร่ เทสนี้แดงทันที
+      {
+        const para85 = 'ทดสอบเส้นคั่นหน้าและการจัดหน้าเอกสารนิยายที่ยาวพอสมควร '.repeat(4);
+        // ย่อหน้าแรกสั้น ๆ โดยตั้งใจ — พิมพ์เพิ่ม 1 ตัวแล้ว **การไหลของข้อความไม่เปลี่ยนเลย**
+        // (ไม่มีบรรทัดงอกออกมา) เหลือตัวแปรเดียวคือ "ตำแหน่งในเอกสารของทุกอย่างเลื่อนไป 1"
+        // ซึ่งคือเงื่อนไขที่ทำให้คีย์แบบเก่า (มี pos) พังทั้งแถบ
+        T.editor.setMarkdown(['สั้น',
+          ...Array.from({ length: 120 }, (_, i) => 'ย่อหน้าที่ ' + i + ' ' + para85)].join('\n'));
+        await new Promise((r) => setTimeout(r, 700));
+        repaginateProseNow(T);
+        await new Promise((r) => setTimeout(r, 200));
+        const pmEl = T.pane.querySelector(':scope > .workspace > .ProseMirror');
+        const before85 = [...pmEl.querySelectorAll('.ed-page-break')];
+        check('[85-2] เอกสารทดสอบมีเส้นคั่นหน้าหลายเส้น', before85.length >= 2, before85.length);
+        // พิมพ์ต่อท้ายย่อหน้าแรก — ตำแหน่งของเส้นคั่นทุกเส้นเลื่อนไป 1 แต่หน้าตาหน้ากระดาษเท่าเดิม
+        const v85 = T.editor.view;
+        v85.dispatch(v85.state.tr.insertText('ก', v85.state.doc.child(0).nodeSize - 1));
+        repaginateProseNow(T);
+        await new Promise((r) => setTimeout(r, 200));
+        const after85 = [...pmEl.querySelectorAll('.ed-page-break')];
+        const kept = after85.filter((el) => before85.includes(el)).length;
+        check('[85-2] จำนวนหน้าไม่เปลี่ยน (พิมพ์แล้วข้อความไม่ไหลใหม่)',
+              after85.length === before85.length, `${before85.length} → ${after85.length}`);
+        const sig85 = (el) => (el.dataset.page || '?') + (el.classList.contains('k-pb-inline') ? 'i' : '')
+                              + '@' + (el.parentElement && el.parentElement.tagName);
+        check('[85-2] ★ พิมพ์แล้วเส้นคั่นหน้าเป็น DOM ตัวเดิมทุกเส้น (ไม่สร้างใหม่ = ไม่กระพริบ)',
+              kept === before85.length && kept >= 2,
+              `เดิม ${before85.map(sig85).join(',')} | ใหม่ ${after85.map(sig85).join(',')}`
+              + ` | หาย ${before85.filter((e) => !after85.includes(e)).map(sig85).join(',')}`);
+        // กด Enter (เส้นทาง repaginateFast) ก็ต้องไม่สร้างใหม่เหมือนกัน
+        v85.dispatch(v85.state.tr.split(v85.state.doc.child(0).nodeSize - 1));
+        repaginateFast(T);
+        await new Promise((r) => setTimeout(r, 200));
+        const after85b = [...pmEl.querySelectorAll('.ed-page-break')];
+        const kept2 = after85b.filter((el) => before85.includes(el)).length;
+        // กด Enter = มีย่อหน้าใหม่งอกจริง หน้าอาจขยับได้บ้าง แต่ต้องไม่ใช่ "สร้างใหม่ทั้งแถบ"
+        check('[85-2] ★ กด Enter แล้วเส้นคั่นส่วนใหญ่ยังเป็น DOM ตัวเดิม',
+              kept2 >= Math.ceil(after85b.length * 0.8) && kept2 >= 2,
+              `ตัวเดิมที่ยังอยู่ ${kept2} จาก ${after85b.length}`);
+
+        // [85-2] วัดบรรทัดแบบขี้เกียจ — บล็อกที่ไม่ได้ถูกหั่นต้องไม่ถูกเดิน text node เลย
+        const spf85 = spFormat();
+        const mz85 = measureProseLayout(v85, { paper: spf85.paper, margins: spf85.margins });
+        check('[85-2] วัดหน้าได้ผลจริง', !!mz85 && mz85.blocks.length > 50, mz85 && mz85.blocks.length);
+        check('[85-2] lineOffsets ยังอ่านได้เหมือนเดิม (แค่คำนวณตอนถูกถาม)',
+              Array.isArray(mz85.blocks[0].lineOffsets), typeof mz85.blocks[0].lineOffsets);
+        {
+          // จับจำนวนบล็อกที่ "ถูกถาม" จริงระหว่างหั่นหน้า — ต้องน้อยกว่าจำนวนบล็อกทั้งหมดมาก
+          const mz85b = measureProseLayout(v85, { paper: spf85.paper, margins: spf85.margins });
+          let asked = 0;
+          for (const b of mz85b.blocks) {
+            const real = Object.getOwnPropertyDescriptor(b, 'lineOffsets').get;
+            Object.defineProperty(b, 'lineOffsets', {
+              configurable: true, get() { asked++; return real.call(this); },
+            });
+          }
+          sliceProsePages(mz85b.blocks, mz85b.contentHeight, mz85b.totalHeight);
+          check('[85-2] ★ หั่นหน้าถาม lineOffsets เฉพาะบล็อกที่คร่อมขอบหน้า ไม่ใช่ทั้งเอกสาร',
+                asked > 0 && asked < mz85b.blocks.length / 3,
+                `ถาม ${asked} จาก ${mz85b.blocks.length} บล็อก`);
+        }
+      }
+
+      // ==== SP DRIFT PROBE (ชั่วคราว) — โมเดลของบท vs ที่เบราว์เซอร์วาดจริง ====
+      {
+        const spScD = [...document.querySelectorAll('.scene')]
+          .find((x) => x.textContent.includes('บทหนังทดสอบ'));
+        if (spScD) spScD.click();
+        await new Promise((r) => setTimeout(r, 500));
+        const spT = state.active && state.active.sp ? state.active : null;
+        if (spT) {
+          const TH = 'โตราเดินเข้ามาในห้องแล้วมองไปที่หน้าต่างฝนตกหนักมากจนมองอะไรไม่เห็นเลยสักอย่าง ';
+          const EN = 'Tora walks into the room and looks at the window while the rain keeps falling. ';
+          const md = ['.INT. ห้องนอน - กลางคืน',
+            '!' + TH.repeat(3), '!' + EN.repeat(3),
+            '@ทอร่า', TH.repeat(2),
+            '@TORA', EN.repeat(2),
+            '!' + TH.repeat(6),
+            ...Array.from({ length: 30 }, (_, i) => '!บรรยายสั้น ' + i)].join('\n');
+          spT.sp.setMarkdown(md);
+          await new Promise((r) => setTimeout(r, 800));
+          repaginateNow(spT);
+          await new Promise((r) => setTimeout(r, 300));
+          const fmtD = spFormat();
+          const blocksD = blocksFromDoc(spT.sp.view.state.doc);
+          const pmD = spT.pane.querySelector(':scope > .workspace > .ProseMirror');
+          const zD = zoomFactorOf(pmD);
+          const lhPx = 96 / 6 * (fmtD.lineHeight || 1);
+          const els = [...pmD.children].filter((e) => e.classList && e.classList.contains('sp'));
+          const rows = [];
+          for (let k = 0; k < Math.min(blocksD.length, els.length); k++) {
+            const b = blocksD[k], e = els[k];
+            const c = fmtD.elements[b.el] || fmtD.elements.action;
+            const model = wrapLines(b.text, c.width);
+            const cs = getComputedStyle(e);
+            const domH = e.getBoundingClientRect().height / zD;
+            rows.push({ el: b.el, model,
+                        dom: +(domH / lhPx).toFixed(2),
+                        mt: +(parseFloat(cs.marginTop) / zD / lhPx).toFixed(2),
+                        w: +(e.getBoundingClientRect().width / zD / 96).toFixed(3),
+                        wModel: c.width,
+                        txt: String(b.text).slice(0, 14) });
+          }
+          const drift = rows.filter((r) => Math.abs(r.model - r.dom) > 0.05);
+          // เส้นคั่นหน้าจริงอยู่ตรงไหนเทียบกับขอบกระดาษ
+          const brkD = [...pmD.querySelectorAll('.sp-page-break')].map((e) => {
+            const top = (e.getBoundingClientRect().top - pmD.getBoundingClientRect().top) / zD;
+            return +(top).toFixed(1);
+          });
+          const padTopD = parseFloat(getComputedStyle(pmD).paddingTop) / zD;
+          await kapi.writeFile('/tmp/k2spdrift.json', JSON.stringify({
+            lhPx, padTopD, linesPerPage: formatLines(fmtD),
+            pages: pagesOf(blocksD, fmtD).count,
+            fontPt: state.settings.spFontPt ?? 12, spLh: fmtD.lineHeight,
+            spFont: getComputedStyle(document.documentElement).getPropertyValue('--sp-font').trim().slice(0, 60),
+            spFs: getComputedStyle(document.documentElement).getPropertyValue('--sp-fs').trim(),
+            breakTops: brkD,
+            pageEdge: 9 * 96,
+            totalModelLines: rows.reduce((a, r) => a + r.model, 0),
+            totalDomLines: +rows.reduce((a, r) => a + r.dom + r.mt, 0).toFixed(2),
+            driftCount: drift.length, rows: rows.slice(0, 12), drift: drift.slice(0, 12),
+          }, null, 1));
+          check('SP DRIFT PROBE เขียนผลแล้ว', true, 'drift=' + drift.length + '/' + rows.length);
+          activate(T.file);
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      }
+
+      // ═══ [alpha.85 ข้อ 4] เคสที่ผู้ใช้ส่งมา: บรรทัดว่างเยอะ ๆ + คำยาวที่ไม่มีช่องว่างเลย ═══
+      //
+      // อาการที่รายงาน (บิลด์ alpha.84): พิมพ์ AbcdefghijklmnopqrstuvwxyzABC…0123456789 ต่อกัน 10 รอบ
+      // แล้วกด Enter ไล่ลงมา — แถบสถานะขึ้นว่า 4 หน้า แต่ **ไม่มีเส้นคั่นหน้าโผล่เลยสักเส้น**
+      // จนถึงบรรทัดที่ 123 · มุมมองหน้าคู่ก็เห็นแค่หน้าเดียว
+      //
+      // ต้นตอคือ apply() ของปลั๊กอินที่สร้าง decoration ใหม่จาก "ตำแหน่งเก่า" ทุกครั้งที่ doc เปลี่ยน
+      // (ดูข้อ 2) — เทสนี้ล็อกความสัมพันธ์ที่ต้องจริงเสมอไว้: **เส้นคั่นที่วาด = จำนวนหน้า − 1**
+      {
+        const W85 = 'AbcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const pm85 = T.pane.querySelector(':scope > .workspace > .ProseMirror');
+        const pagesNow = () => (proseMeasured(T, spFormat()) || { pages: [] }).pages.length;
+        const drawnNow = () => pm85.querySelectorAll('.ed-page-break').length;
+
+        // (ก) เปิดเอกสารที่มีบรรทัดว่าง 122 บรรทัดแล้วตามด้วยคำยาวก้อนเดียว
+        T.editor.setMarkdown([...Array.from({ length: 122 }, () => ''), W85.repeat(10)].join('\n'));
+        await new Promise((r) => setTimeout(r, 700));
+        resetCutFail();
+        repaginateProseNow(T);
+        await new Promise((r) => setTimeout(r, 250));
+        check('[85-4] เอกสารนี้ยาวหลายหน้าจริง', pagesNow() >= 4, pagesNow());
+        check('[85-4] ★ เส้นคั่นหน้าที่วาด = จำนวนหน้า − 1 (ไม่ใช่ศูนย์)',
+              drawnNow() === pagesNow() - 1, `วาด ${drawnNow()} · หน้า ${pagesNow()}`);
+        check('[85-4] แปลงพิกัดกลับเป็นตำแหน่งในเอกสารได้ครบ ไม่มีจุดตัดถูกทิ้ง',
+              CUT_FAIL.detached === 0 && CUT_FAIL.noLine === 0 &&
+              CUT_FAIL.noBlock === 0 && CUT_FAIL.threw === 0, JSON.stringify(CUT_FAIL));
+        check('[85-4] คำยาวที่ไม่มีช่องว่างถูกหั่นให้อยู่ในความกว้างกระดาษ',
+              pm85.lastElementChild.getBoundingClientRect().width
+                <= pm85.getBoundingClientRect().width + 1);
+
+        // (ข) เส้นทาง "กด Enter จริง" ทีละครั้ง — จำนวนหน้ากับเส้นคั่นต้องเดินไปด้วยกันตลอด
+        T.editor.setMarkdown(W85.repeat(10));
+        await new Promise((r) => setTimeout(r, 600));
+        const v85b = T.editor.view;
+        let bad85 = '';
+        for (let k = 1; k <= 90; k++) {
+          v85b.dispatch(v85b.state.tr.split(1));      // = กด Enter ที่ต้นเอกสาร
+          repaginateFast(T);                          // เส้นทางเดียวกับ repaginateOnEnter()
+          if (k % 15) continue;
+          await new Promise((r) => setTimeout(r, 120));
+          if (drawnNow() !== pagesNow() - 1) {
+            bad85 = `บรรทัด ${v85b.state.doc.childCount}: วาด ${drawnNow()} · หน้า ${pagesNow()}`;
+            break;
+          }
+        }
+        check('[85-4] ★ กด Enter ไล่ลงมา 90 ครั้ง เส้นคั่นตามจำนวนหน้าตลอดทาง', !bad85, bad85);
+        check('[85-4] จบแล้วยังหลายหน้าอยู่ (ไม่ยุบกลับเหลือหน้าเดียว)', pagesNow() >= 4, pagesNow());
+
+        // (ค) มุมมองหน้าคู่ต้องเห็นจำนวนหน้าเท่ากับที่ตัวแก้ไขคิด (รูปที่ 4 ของผู้ใช้เห็นหน้าเดียว)
+        setSpView('side');
+        await new Promise((r) => setTimeout(r, 700));
+        const sidePages = T.pane.querySelectorAll('.sp-pageview .sp-page').length;
+        check('[85-4] ★ มุมมองหน้าคู่เห็นจำนวนหน้าเท่ากับตัวแก้ไข',
+              sidePages === pagesNow(), `หน้าคู่ ${sidePages} · ตัวแก้ไข ${pagesNow()}`);
+        setSpView('normal');
+        await new Promise((r) => setTimeout(r, 400));
+      }
+
+      // ═══ [alpha.85 ข้อ 3] เปิดฉากใหม่แล้วกระดาษต้องเป็น "แผ่นเต็ม" ไม่ใช่แผ่นเตี้ย ═══
+      {
+        T.editor.setMarkdown('sdcdcdcdcdcdcdcdcdcdcdc');
+        await new Promise((r) => setTimeout(r, 500));
+        repaginateProseNow(T);
+        await new Promise((r) => setTimeout(r, 250));
+        const pm3 = T.pane.querySelector(':scope > .workspace > .ProseMirror');
+        const h3 = pm3.getBoundingClientRect().height / (zoomFactorOf(pm3) || 1);
+        const pageH = spFormat().paper.height * 96;
+        check('[85-3] ★ ฉากที่มีข้อความบรรทัดเดียว กระดาษยังสูงเต็มแผ่น',
+              h3 >= pageH - 4, `สูง ${Math.round(h3)} · หนึ่งแผ่น ${Math.round(pageH)}`);
+        check('[85-3] กระดาษกว้างเท่าหน้ากระดาษจริง',
+              Math.abs(pm3.getBoundingClientRect().width / (zoomFactorOf(pm3) || 1)
+                       - spFormat().paper.width * 96) < 4);
+      }
+
       // ---- [16][17][23][24] รูปแบบนิยาย ----
       const pf0 = proseFormat();
       check('[16] มี --ed-indent (ย่อหน้าบรรทัดแรก)', /in$/.test(rv('--ed-indent')), rv('--ed-indent'));
@@ -19717,6 +20173,42 @@ async function runTest(projectPath) {
       check('[16] ย่อหน้าที่สองมี text-indent จริง',
             parseFloat(getComputedStyle(p2).textIndent) > 10,
             getComputedStyle(p2).textIndent);
+      // ═══ [alpha.84 ข้อ 4] สวิตช์ย่อหน้าอัตโนมัติบนแถบรูปแบบ ═══
+      // ผู้ใช้: "บางครั้งเราไม่อยากได้ย่อหน้าไง มันรำคาญ" — เดิมต้องเข้า ตั้งค่า → รูปแบบนิยาย
+      {
+        S2.prose = { ...pf0, firstLineIndent: 0.5 };
+        applyProseVars(proseFormat());
+        await new Promise((r) => setTimeout(r, 120));
+        const bI = $('#tb-indent');
+        check('[84-4] มีปุ่มย่อหน้าอัตโนมัติบนแถบ', !!bI);
+        refreshToolbar();
+        check('[84-4] ปุ่มโผล่เฉพาะแท็บนิยาย + ติดไฟตามสถานะจริง',
+              !!bI && bI.style.display !== 'none' && bI.classList.contains('on') && proseIndentOn());
+        bI.click();
+        await new Promise((r) => setTimeout(r, 200));
+        check('[84-4] กดปุ่มแล้วย่อหน้าหายจริงบนจอ',
+              parseFloat(getComputedStyle(p2).textIndent) < 1 && !proseIndentOn() &&
+              !bI.classList.contains('on'),
+              getComputedStyle(p2).textIndent);
+        check('[84-4] จำระยะเดิมไว้ก่อนปิด (ไม่ทับค่าที่ผู้ใช้ตั้งเอง)',
+              state.settings.proseIndentPrev === 0.5, state.settings.proseIndentPrev);
+        bI.click();
+        await new Promise((r) => setTimeout(r, 200));
+        check('[84-4] กดซ้ำแล้วได้ระยะ "เดิมของผู้ใช้" กลับมา ไม่ใช่ค่ามาตรฐาน',
+              proseFormat().firstLineIndent === 0.5 && bI.classList.contains('on') &&
+              parseFloat(getComputedStyle(p2).textIndent) > 10,
+              getComputedStyle(p2).textIndent);
+        // ตั้งเองเป็นค่าแปลก ๆ แล้วปิด-เปิด ต้องได้ค่านั้นคืน
+        S2.prose = { ...proseFormatSettings(), firstLineIndent: 1.25 };
+        applyProseVars(proseFormat());
+        toggleProseIndent(false); toggleProseIndent(true);
+        check('[84-4] ปิด-เปิดแล้วยังได้ระยะที่ตั้งเองคืนครบ',
+              proseFormat().firstLineIndent === 1.25, proseFormat().firstLineIndent);
+        check('[84-4] คำสั่ง prose-indent มีจริงใน handleCommand',
+              /case ['"]prose-indent['"]/.test(String(handleCommand)));
+        check('[84-4] ปุ่มอยู่บนแถบรูปแบบลอย', !!floatBar && !!floatBar.querySelector('#tb-indent'));
+        check('[84-4] ซ่อนปุ่มได้จากกล่องปรับแต่งแถบเครื่องมือ', tbConfigurable('tb-indent'));
+      }
       S2.prose = { ...pf0, firstLineIndent: 0, lineHeight: 2.4, paraSpacing: 1 };
       applyProseVars(proseFormat());
       await new Promise((r) => setTimeout(r, 120));
@@ -25099,10 +25591,20 @@ async function runTest(projectPath) {
             const cut = [{ el: 'scene', text: 'INT. ทางเดิน - กลางคืน' },
                          { el: 'action', text: 'บรรยายยาวมาก '.repeat(400) }];
             const pgCut = pagesOf(cut, fmt83, lines83);
-            const usedOf = (p) => p.blocks.reduce((a, b) => a + (b.lines || 1), 0)
-                                  + (p.continuedTop ? 1 : 0) + (p.continuedBottom ? 1 : 0);
-            check('[83-6] ★ ทุกหน้า (นับบรรทัด CONTINUED ด้วย) ไม่เกินโควตาของหน้า',
-                  pgCut.pages.every((p) => usedOf(p) <= lines83),
+            // [alpha.86] CONTINUED ไม่กินบรรทัดอีกแล้ว (วาดในระยะขอบ) — บัญชีที่ถูกคือ
+            // บรรทัดของบล็อก + ระยะเว้นนำหน้า · (MORE)/(cont'd) ยังเป็นเนื้อบทจริงจึงนับ 1
+            const usedOf = (p) => (p.blocks || []).reduce((a, b, i) => {
+              if (b.more || b.contd || b.el === 'blank') return a + (b.lines || 1);
+              const c = fmt83.elements[b.el] || fmt83.elements.action;
+              const before = i && b.split !== 'tail' ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+              return a + before + (b.lines || 1);
+            }, 0);
+            // ไม่มีหน้าไหนล้น · และต้องมีหน้าที่ใช้ "เต็มโควตาพอดี" อย่างน้อยหนึ่งหน้า
+            // (ถ้า CONTINUED ยังกินบรรทัดอยู่ จะไม่มีหน้าไหนแตะ 20 ได้เลย)
+            // หน้าที่ได้ 19 เป็นเรื่องปกติ — กฎ widow/orphan ยกบล็อกไปทั้งก้อนแทนที่จะหั่น
+            check('[86] ★ ไม่มีหน้าไหนล้นโควตา และมีหน้าที่ใช้เต็มโควตาพอดี',
+                  pgCut.pages.every((p) => usedOf(p) <= lines83) &&
+                  pgCut.pages.some((p) => usedOf(p) === lines83),
                   JSON.stringify(pgCut.pages.map(usedOf)));
             check('[83-6] บล็อกที่ถูกหั่นคร่อมหน้า → ได้ (CONTINUED)/CONTINUED: ตามเดิม',
                   pgCut.pages.some((p) => p.continuedBottom) && pgCut.pages.some((p) => p.continuedTop));

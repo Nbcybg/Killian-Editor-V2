@@ -129,6 +129,101 @@ export function normalizeLangFonts(list) {
   }));
 }
 
+// ═════════ [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของ "บทภาพยนตร์" ═════════
+//
+// อาการที่ผู้ใช้เจอ: ฟอนต์ Courier Prime ใช้ในโหมดนิยายได้สวยทั้งไทยและละติน
+// แต่พอเป็นบทภาพยนตร์กลับ "เพี้ยนมาก" — ตัวไทยใหญ่เกิน วรรณยุกต์ชนบรรทัดบน บางตัวหายไปเลย
+//
+// ต้นเหตุ (วัดจริงด้วย canvas ที่ 100px):
+//   · สแตกนิยายเริ่มด้วย **Sarabun** ซึ่งเป็นฟอนต์ไทย → ไทยกับละตินมาจากวงศ์เดียวกัน สัดส่วนตรงกัน
+//   · สแตกบทเริ่มด้วย **Courier Prime** ซึ่ง *ไม่มีอักษรไทยเลย* → ไทยตกไปที่ฟอนต์สำรอง
+//     (Ayuthaya บน macOS) ที่มีเมตริกคนละชุด: Courier Prime ขึ้นสูง 66 / ลงลึก 22
+//     ส่วน Ayuthaya ตัวไทยขึ้นสูง 107 / ลงลึก 30 = **สูงรวม 137 ในกล่องบรรทัดที่สูงแค่ 100**
+//   · บทภาพยนตร์ใช้ `line-height:1` ตายตัว (6 บรรทัด/นิ้ว = มาตรฐานอุตสาหกรรม ห้ามขยับ
+//     ไม่งั้นหน้าละ 54 บรรทัดเพี้ยนทั้งระบบ) → ตัวไทยจึงล้นกล่องบรรทัดแล้วชนกันเอง
+//
+// วิธีแก้: ประกาศ @font-face ของ "ช่วงอักษรไทย" ทับด้วย `size-adjust` (+ ascent/descent-override
+// ถ้าต้องการ) แล้วเอาไปไว้หน้าสุดของ --sp-font → เบราว์เซอร์ย่อกลิฟไทยลงให้พอดีกล่องบรรทัด
+// **โดยไม่แตะระยะบรรทัดและไม่แตะโหมดนิยายเลย** · 85% คือค่าที่วัดแล้วตรงกับ Courier Prime ที่สุด
+
+/** ชื่อวงศ์ที่สร้างขึ้นสำหรับ "ไทยในบทภาพยนตร์" — ต้องมาก่อน Courier Prime ใน --sp-font */
+export const SP_THAI_FAMILY = 'K2 SP Thai';
+/** ช่วงอักษรไทย (รวมเลขไทยและอักขระพิเศษ) */
+export const SP_THAI_RANGE = 'U+0E00-0E7F';
+/** ลูกโซ่ฟอนต์ไทยมาตรฐาน — ตัวแรกที่เครื่องมีจะถูกใช้ (mac → Ayuthaya · win → Leelawadee UI) */
+export const SP_THAI_FALLBACKS = ['Ayuthaya', 'Thonburi', 'Leelawadee UI', 'Sarabun', 'Tahoma'];
+
+export const SP_THAI_DEFAULTS = {
+  enabled: true,
+  family: '',      // '' = ใช้ SP_THAI_FALLBACKS ตามลำดับ
+  size: 85,        // size-adjust (%) — 85 = ค่าที่วัดแล้วตัวไทยเท่า Courier Prime พอดี
+  ascent: 0,       // ascent-override (%) · 0 = ไม่ override
+  descent: 0,      // descent-override (%) · 0 = ไม่ override
+};
+
+const clampPct = (v, lo, hi, dflt) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt;
+};
+
+/** ทำให้ค่าที่อ่านจาก project.khn.json อยู่ในรูปที่ใช้ได้เสมอ */
+export function normalizeSpThai(cfg) {
+  const c = cfg && typeof cfg === 'object' ? cfg : {};
+  return {
+    enabled: c.enabled !== false,
+    family: cssFamilyName(c.family),
+    size: clampPct(c.size, 50, 150, SP_THAI_DEFAULTS.size),
+    ascent: clampPct(c.ascent, 0, 200, 0),
+    descent: clampPct(c.descent, 0, 200, 0),
+  };
+}
+
+/** รายชื่อฟอนต์ที่จะลองใช้จริง (ของผู้ใช้มาก่อน แล้วค่อยลูกโซ่มาตรฐาน) */
+export function spThaiSources(cfg) {
+  const c = normalizeSpThai(cfg);
+  return c.family ? [c.family, ...SP_THAI_FALLBACKS.filter((f) => f !== c.family)]
+                  : SP_THAI_FALLBACKS.slice();
+}
+
+/**
+ * CSS ของตัวปรับสัดส่วน — คืน '' เมื่อปิดสวิตช์ (ผู้เรียกจะได้ล้าง <style> ทิ้ง)
+ * ใช้ `local()` ล้วน ๆ เพราะฟอนต์ไทยของระบบแจกมากับโปรแกรมไม่ได้ (สิทธิ์ของผู้ผลิต)
+ */
+export function buildSpThaiCss(cfg) {
+  const c = normalizeSpThai(cfg);
+  if (!c.enabled) return '';
+  const src = spThaiSources(c).map((f) => `local("${f}")`).join(',');
+  if (!src) return '';
+  const over = (c.ascent > 0 ? `ascent-override:${c.ascent}%;` : '')
+             + (c.descent > 0 ? `descent-override:${c.descent}%;` : '');
+  return `@font-face{font-family:"${SP_THAI_FAMILY}";font-display:swap;src:${src};` +
+         `unicode-range:${SP_THAI_RANGE};size-adjust:${c.size}%;${over}}`;
+}
+
+/** เอา "K2 SP Thai" ไปนำหน้าสแตกฟอนต์บท (ปิดสวิตช์ = คืนสแตกเดิมไม่แตะต้อง) */
+export function withSpThaiFamily(stack, cfg) {
+  const s = String(stack || '').trim();
+  if (!normalizeSpThai(cfg).enabled) return s;
+  if (s.startsWith(`"${SP_THAI_FAMILY}"`)) return s;
+  return `"${SP_THAI_FAMILY}"` + (s ? ', ' + s : '');
+}
+
+/**
+ * ยัด <style id="k-sp-thai"> เข้า <head> — เรียกซ้ำได้
+ * @returns {boolean} true = ตัวปรับสัดส่วนทำงานอยู่
+ */
+export function applySpThaiFont(cfg) {
+  const css = buildSpThaiCss(cfg);
+  let st = document.getElementById('k-sp-thai');
+  if (!st) {
+    st = document.createElement('style');
+    st.id = 'k-sp-thai';
+    document.head.appendChild(st);
+  }
+  st.textContent = css;
+  return !!css;
+}
+
 // ───────── ส่วนที่แตะ DOM ─────────
 /**
  * ยัด <style id="k-lang-fonts"> เข้า <head> — เรียกซ้ำได้ (เขียนทับก้อนเดิม)

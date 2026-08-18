@@ -155,6 +155,53 @@ export function tokenize(para) {
  * จำนวนอักขระที่ยาวที่สุดของ `s` ที่กว้างไม่เกิน `maxPx` (ค้นแบบทวิภาค — วัด O(log n) ครั้ง)
  * ไม่ตัดคาอักขระซ้อนและไม่ตัดคา surrogate pair
  */
+// ────────────────────────────────────────────────────────────────
+// [alpha.86] ขอบคำของภาษาที่ไม่มีช่องว่าง — ถาม ICU ตัวเดียวกับที่ Chromium ใช้
+//
+// เดิมไฟล์นี้ถือว่าไทย/เขมร/พม่า/CJK "ตัดตรงไหนก็ได้" (TOK_RUN) เพราะ canvas บอกจุดตัดไม่ได้
+// แต่ Chromium ตัดด้วย ICU แบบมีพจนานุกรม → ทุกบล็อกไทยคลาดกันได้ ±1 บรรทัด แบบสุ่ม
+// `Intl.Segmenter` **คือ ICU ตัวเดียวกัน** ที่ผูกมากับ V8 อยู่แล้ว (โปรเจกต์ใช้ใน search-engine.js)
+// ถามมันแทนการเดา จุดตัดจึงตรงกับที่เบราว์เซอร์วาดจริง
+// ────────────────────────────────────────────────────────────────
+let _seg = null, _segTried = false;
+function segmenter() {
+  if (_segTried) return _seg;
+  _segTried = true;
+  try {
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) _seg = new Intl.Segmenter('th', { granularity: 'word' });
+  } catch { _seg = null; }
+  return _seg;
+}
+const BP_CACHE_CAP = 4000;
+let _bpCache = new Map();
+
+/** ตำแหน่งที่ขึ้นบรรทัดใหม่ได้ภายในสตริง (เรียงน้อย→มาก) · null = ไม่มี ICU ให้ใช้ */
+export function breakPoints(s) {
+  const seg = segmenter();
+  if (!seg || !s) return null;
+  const hit = _bpCache.get(s);
+  if (hit) return hit;
+  const out = [];
+  try { for (const part of seg.segment(s)) if (part.index > 0) out.push(part.index); }
+  catch { return null; }
+  if (_bpCache.size >= BP_CACHE_CAP) _bpCache = new Map();
+  _bpCache.set(s, out);
+  return out;
+}
+
+/**
+ * ถอยจุดตัด `k` กลับมาที่ขอบคำที่ ICU ยอม
+ * @returns {number} 0 = ไม่มีขอบคำไหนอยู่ก่อน k เลย (ผู้เรียกตัดสินใจเองว่าจะยกทั้งก้อนหรือตัดกลางคำ)
+ */
+export function snapWord(s, k) {
+  if (k <= 0 || k >= s.length) return k;
+  const bp = breakPoints(s);
+  if (!bp || !bp.length) return k;
+  let best = 0;
+  for (const p of bp) { if (p > k) break; best = p; }
+  return best;
+}
+
 export function fitPrefix(s, maxPx, measure) {
   if (!s || maxPx <= 0) return 0;
   let lo = 0, hi = s.length;
@@ -240,10 +287,12 @@ export function wrapCuts(text, widthIn, o = {}) {
         continue;
       }
 
-      // TOK_RUN — ไทย/CJK ตัดตรงไหนก็ได้ จึง "เติมเต็มบรรทัดปัจจุบันก่อน แล้วไหลต่อ"
+      // TOK_RUN — ไทย/CJK: "เติมเต็มบรรทัดปัจจุบันก่อน แล้วไหลต่อ"
+      // [alpha.86] จุดตัดต้องถอยไปที่ขอบคำของ ICU ก่อนเสมอ (snapWord) ให้ตรงกับ Chromium
       let off = at, rest = tok.s;
       if (avail > 0) {
-        const k = fitPrefix(rest, avail, measure);
+        // ไม่มีขอบคำไหนพอดีบรรทัดนี้ → snapWord คืน 0 = ยกทั้งก้อนไปบรรทัดใหม่ (ถูกแล้ว)
+        const k = snapWord(rest, fitPrefix(rest, avail, measure));
         if (k > 0) {
           lineW += sepW + measure(rest.slice(0, k));
           hasContent = true; pendSpace = false;
@@ -253,9 +302,10 @@ export function wrapCuts(text, widthIn, o = {}) {
       if (!rest) continue;
       cutAt(off);
       for (;;) {
-        const k = fitPrefix(rest, room(), measure);
-        if (k >= rest.length) break;
-        const step = Math.max(1, k);
+        const raw = fitPrefix(rest, room(), measure);
+        if (raw >= rest.length) break;
+        // ที่ต้นบรรทัดต้องเดินหน้าให้ได้เสมอ — ไม่มีขอบคำก็ยอมตัดกลางคำเหมือนที่เบราว์เซอร์ทำ
+        const step = Math.max(1, snapWord(rest, raw) || raw);
         off += step; rest = rest.slice(step);
         cutAt(off);
       }

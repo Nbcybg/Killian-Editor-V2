@@ -2518,6 +2518,18 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-hint"" style=""margin-bottom:10px"">
         ฟอนต์บทมาตรฐาน (Courier) ไม่มีอักษรไทย — กำหนดเองได้ว่า ""ช่วงอักขระไหน ใช้ฟอนต์อะไร""
         เพิ่มได้ไม่จำกัด · ใช้ได้ทั้งโหมดนิยายและบทภาพยนตร์ · แถวบนสุดมีลำดับก่อน</div>
+      <div class=""k-set-sub k-full"">🎬 ฟอนต์ไทยในบทภาพยนตร์ — ปรับสัดส่วนให้เท่า Courier</div>
+      <div class=""k-hint"" style=""margin-bottom:8px"">
+        สแตกฟอนต์ของบทเริ่มด้วย Courier Prime ซึ่ง <b>ไม่มีอักษรไทยเลย</b> ตัวไทยจึงตกไปฟอนต์สำรองของระบบ
+        ที่มีเมตริกคนละชุด — ตัวใหญ่กว่าและล้นระยะบรรทัดของบท (ตายตัวที่ 1/6 นิ้ว = 6 บรรทัด/นิ้ว)
+        วรรณยุกต์จึงชนบรรทัดบนหรือหายไป · โหมดนิยายไม่เจอปัญหานี้เพราะสแตกของมันเริ่มด้วยฟอนต์ไทยอยู่แล้ว
+        <br>สวิตช์นี้ย่อ <b>เฉพาะอักษรไทย</b> ให้พอดี — ไม่แตะระยะบรรทัด ไม่แตะโหมดนิยาย</div>
+      <div class=""k-row""><label>ปรับสัดส่วนฟอนต์ไทย<span class=""k-hint"">ปิด = ปล่อยตามระบบ (อาการเดิม)</span></label><input type=""checkbox"" id=""st-spthai-on""></div>
+      <div class=""k-row""><label>ขนาดตัวไทย (%)<span class=""k-hint"">85 = ค่าที่วัดแล้วเท่า Courier Prime พอดี</span></label><input type=""number"" id=""st-spthai-size"" min=""50"" max=""150"" step=""1"" class=""k-dlg-input""></div>
+      <div class=""k-row""><label>ฟอนต์ไทยที่ใช้<span class=""k-hint"">อัตโนมัติ = ไล่ Ayuthaya → Thonburi → Leelawadee UI → Sarabun → Tahoma</span></label><select id=""st-spthai-family"" class=""k-dlg-select""></select></div>
+      <div class=""k-hint"" style=""margin-top:8px"">ตัวอย่างจริง (ระยะบรรทัดของบทภาพยนตร์)</div>
+      <div id=""st-spthai-sample"" class=""k-spthai-sample""></div>
+      <div class=""k-set-sub k-full"" style=""margin-top:16px"">🔤 ฟอนต์ตามช่วงอักขระ (ใช้ได้ทั้งนิยายและบท)</div>
       <div id=""st-fonts-list""></div>
       <div style=""margin-top:12px; display:flex; gap:8px; flex-wrap:wrap"">
         <button id=""st-fonts-add"" class=""k-key-btn"">➕ เพิ่มแถว</button>
@@ -4908,166 +4920,172 @@ ui.xhub.docKind,Document type
 ui.xhub.kindAuto,Match the source files
 ui.xhub.kindProse,Novel (prose)
 ui.xhub.kindScript,Screenplay
-ui.xhub.pdfRoster,"Cast of characters page"
-ui.xhub.pdfFrontNoNum,"Cover and cast pages are not numbered — numbering starts at the first body page"
-ui.xhub.donePdfPages,"{0} pages ({1} unnumbered front pages)"
-ui.dlgBuilder.aiPick,"🤖 Let AI choose"
-ui.dlgBuilder.everyone,"everyone"
-ui.dlgBuilder.randomPick,"🎲 Random"
-ui.dlgBuilder.untitled,"Untitled"
-ui.dlgBuilder.unknownName,"Unknown"
-ui.dlgBuilder.policyPingPong,"Back and forth"
+ui.xhub.pdfRoster,Cast of characters page
+ui.xhub.pdfFrontNoNum,Cover and cast pages are not numbered — numbering starts at the first body page
+ui.xhub.donePdfPages,{0} pages ({1} unnumbered front pages)
+ui.dlgBuilder.aiPick,🤖 Let AI choose
+ui.dlgBuilder.everyone,everyone
+ui.dlgBuilder.randomPick,🎲 Random
+ui.dlgBuilder.untitled,Untitled
+ui.dlgBuilder.unknownName,Unknown
+ui.dlgBuilder.policyPingPong,Back and forth
 ui.dlgBuilder.policyPingPongHint,"A speaks to B, then B answers A — best for two characters"
-ui.dlgBuilder.policyRound,"Round robin"
+ui.dlgBuilder.policyRound,Round robin
 ui.dlgBuilder.policyRoundHint,"Follow the cast order, speaking to everyone — best for 3-5 characters"
-ui.dlgBuilder.policyRandom,"Random speaker"
+ui.dlgBuilder.policyRandom,Random speaker
 ui.dlgBuilder.policyRandomHint,"Pick a random next speaker, never the one who just spoke"
-ui.dlgBuilder.policyAi,"Let AI choose"
-ui.dlgBuilder.policyAiHint,"Let the model decide who has a reason to speak next"
-ui.dlgBuilder.policyManual,"Manual"
-ui.dlgBuilder.policyManualHint,"Never advance the pickers — choose every turn yourself"
-ui.dlgBuilder.modeEach,"One at a time"
+ui.dlgBuilder.policyAi,Let AI choose
+ui.dlgBuilder.policyAiHint,Let the model decide who has a reason to speak next
+ui.dlgBuilder.policyManual,Manual
+ui.dlgBuilder.policyManualHint,Never advance the pickers — choose every turn yourself
+ui.dlgBuilder.modeEach,One at a time
 ui.dlgBuilder.modeEachHint,"One call per line — per-character models work, stays in character best"
-ui.dlgBuilder.modeBatch,"All at once"
+ui.dlgBuilder.modeBatch,All at once
 ui.dlgBuilder.modeBatchHint,"One call returns many lines, much cheaper, but every character shares one model"
-ui.dlgBuilder.lenShort,"Short"
-ui.dlgBuilder.lenShortRule,"Answer with a single short sentence"
-ui.dlgBuilder.lenMedium,"Medium"
-ui.dlgBuilder.lenMediumRule,"Answer in 1-2 sentences"
-ui.dlgBuilder.lenLong,"Long"
+ui.dlgBuilder.lenShort,Short
+ui.dlgBuilder.lenShortRule,Answer with a single short sentence
+ui.dlgBuilder.lenMedium,Medium
+ui.dlgBuilder.lenMediumRule,Answer in 1-2 sentences
+ui.dlgBuilder.lenLong,Long
 ui.dlgBuilder.lenLongRule,"Up to 4 sentences, but still spoken dialogue — never a narrated paragraph"
-ui.dlgBuilder.personaYouAre,"You are {0}"
+ui.dlgBuilder.personaYouAre,You are {0}
 ui.dlgBuilder.pronSelf,"refers to self as ""{0}"""
 ui.dlgBuilder.pronOther,"calls {0} ""{1}"""
-ui.dlgBuilder.headPronoun,"— Pronouns you must use (never switch mid-conversation) —"
-ui.dlgBuilder.headOthers,"— Others present (as far as you know them) —"
-ui.dlgBuilder.headSituation,"— Situation —"
-ui.dlgBuilder.headRules,"— Reply rules —"
-ui.dlgBuilder.headCast,"— Cast —"
-ui.dlgBuilder.headRels,"— Relationships in this scene —"
-ui.dlgBuilder.headRecent,"— Recent dialogue —"
-ui.dlgBuilder.ruleOnlyMe,"Reply only as {0}"
-ui.dlgBuilder.ruleParenOn,"You may prefix a short emotion or action in parentheses when needed"
-ui.dlgBuilder.ruleParenOff,"Never add parentheses describing emotion or action"
+ui.dlgBuilder.headPronoun,— Pronouns you must use (never switch mid-conversation) —
+ui.dlgBuilder.headOthers,— Others present (as far as you know them) —
+ui.dlgBuilder.headSituation,— Situation —
+ui.dlgBuilder.headRules,— Reply rules —
+ui.dlgBuilder.headCast,— Cast —
+ui.dlgBuilder.headRels,— Relationships in this scene —
+ui.dlgBuilder.headRecent,— Recent dialogue —
+ui.dlgBuilder.ruleOnlyMe,Reply only as {0}
+ui.dlgBuilder.ruleParenOn,You may prefix a short emotion or action in parentheses when needed
+ui.dlgBuilder.ruleParenOff,Never add parentheses describing emotion or action
 ui.dlgBuilder.ruleNoName,"Never prefix your own name, and never speak for anyone else"
-ui.dlgBuilder.ruleNoNarrate,"Never narrate the scene or explain what is happening — speak only"
-ui.dlgBuilder.cueYourTurn,"Your turn — speak to {0}"
-ui.dlgBuilder.heardDirector,"[event] {0}"
-ui.dlgBuilder.sceneOpen,"The scene begins: {0}"
-ui.dlgBuilder.sceneOpenBare,"The scene begins"
-ui.dlgBuilder.batchSystem,"You are a screenwriter. Write natural dialogue that matches each character's personality."
-ui.dlgBuilder.batchWrite,"Continue this conversation for another {0} lines"
+ui.dlgBuilder.ruleNoNarrate,Never narrate the scene or explain what is happening — speak only
+ui.dlgBuilder.cueYourTurn,Your turn — speak to {0}
+ui.dlgBuilder.heardDirector,[event] {0}
+ui.dlgBuilder.sceneOpen,The scene begins: {0}
+ui.dlgBuilder.sceneOpenBare,The scene begins
+ui.dlgBuilder.batchSystem,You are a screenwriter. Write natural dialogue that matches each character's personality.
+ui.dlgBuilder.batchWrite,Continue this conversation for another {0} lines
 ui.dlgBuilder.batchFormat,"Format: a line with @CharacterName, then the dialogue on the next line, with a blank line between speakers. No scene headings, no action lines."
-ui.dlgBuilder.pickSystem,"You are the director. Choose which character should speak next."
+ui.dlgBuilder.pickSystem,You are the director. Choose which character should speak next.
 ui.dlgBuilder.pickAsk,"From the dialogue below, which character has the strongest reason to speak next? Choose from:"
 ui.dlgBuilder.pickAnswerOnlyName,"Answer with the character name only, nothing else"
-ui.panel.dlgbTitle,"Rehearsal Room"
+ui.panel.dlgbTitle,Rehearsal Room
 ui.panel.dlgbDesc,"Let AI play your Wiki characters turn by turn, then drop the lines you like into the script at the cursor — open it when you are stuck on dialogue"
-ui.menu.dlgbPanel,"🎭 Rehearsal Room"
-ui.app.dlgbSource,"Rehearsal Room"
-ui.dlgb.openProjectFirst,"Open a project first"
-ui.dlgb.searchPh,"Search sessions…"
-ui.dlgb.newSession,"+ New session"
-ui.dlgb.managePresets,"Cast presets"
-ui.dlgb.showArchived,"Show archived"
-ui.dlgb.hideArchived,"Hide archived"
+ui.menu.dlgbPanel,🎭 Rehearsal Room
+ui.app.dlgbSource,Rehearsal Room
+ui.dlgb.openProjectFirst,Open a project first
+ui.dlgb.searchPh,Search sessions…
+ui.dlgb.newSession,+ New session
+ui.dlgb.managePresets,Cast presets
+ui.dlgb.showArchived,Show archived
+ui.dlgb.hideArchived,Hide archived
 ui.dlgb.noSession,"No sessions yet — press ""New session"" to start"
-ui.dlgb.noMatch,"No session matches that search"
-ui.dlgb.untitledRow,"Untitled session"
-ui.dlgb.noCast,"No characters in this cast yet"
-ui.dlgb.nTurns,"{0} lines"
-ui.dlgb.nInserted,"{0} inserted"
-ui.dlgb.mRename,"Rename"
-ui.dlgb.mDuplicate,"Duplicate"
-ui.dlgb.copySuffix,"​ (copy)"
-ui.dlgb.duplicated,"Session duplicated"
-ui.dlgb.mArchive,"Archive"
-ui.dlgb.mUnarchive,"Unarchive"
-ui.dlgb.mDelete,"Delete session"
+ui.dlgb.noMatch,No session matches that search
+ui.dlgb.untitledRow,Untitled session
+ui.dlgb.noCast,No characters in this cast yet
+ui.dlgb.nTurns,{0} lines
+ui.dlgb.nInserted,{0} inserted
+ui.dlgb.mRename,Rename
+ui.dlgb.mDuplicate,Duplicate
+ui.dlgb.copySuffix,​ (copy)
+ui.dlgb.duplicated,Session duplicated
+ui.dlgb.mArchive,Archive
+ui.dlgb.mUnarchive,Unarchive
+ui.dlgb.mDelete,Delete session
 ui.dlgb.confirmDelete,"Delete the session ""{0}""?"
-ui.dlgb.errDelete,"Could not delete the session file"
-ui.dlgb.errReadPresets,"Could not read cast presets"
-ui.dlgb.errReadSession,"Could not read session: "
-ui.dlgb.errSaveSession,"Could not save the session"
-ui.dlgb.pickPreset,"Pick a cast"
-ui.dlgb.noPresetYet,"No cast presets yet"
-ui.dlgb.makePreset,"Create / edit casts"
-ui.dlgb.situationLabel,"What is happening right now"
+ui.dlgb.errDelete,Could not delete the session file
+ui.dlgb.errReadPresets,Could not read cast presets
+ui.dlgb.errReadSession,Could not read session: 
+ui.dlgb.errSaveSession,Could not save the session
+ui.dlgb.pickPreset,Pick a cast
+ui.dlgb.noPresetYet,No cast presets yet
+ui.dlgb.makePreset,Create / edit casts
+ui.dlgb.situationLabel,What is happening right now
 ui.dlgb.situationPh,"e.g. the whole group is drinking at the beer garden after work, the rain just stopped"
-ui.dlgb.titleLabel,"Session name"
-ui.dlgb.titleAutoPh,"Leave blank to name it from the situation"
-ui.dlgb.create,"Create"
-ui.dlgb.needPreset,"Pick a cast first"
-ui.dlgb.backToList,"Back to session list"
-ui.dlgb.badge,"{0} lines · {1} tokens"
-ui.dlgb.badgeTip,"{0} calls · in {1} · out {2} · {3}s total"
-ui.dlgb.viewNormal,"Now showing dialogue only — click to expand every model thought"
-ui.dlgb.viewThinking,"Model thoughts expanded — click to collapse"
-ui.dlgb.policyLabel,"Turn order"
-ui.dlgb.modeLabel,"Calls"
-ui.dlgb.lenLabel,"Length"
-ui.dlgb.parenLabel,"Parentheticals"
-ui.dlgb.pressSendToStart,"Just press Send — no need to type. The AI will play the characters you picked."
-ui.dlgb.director,"Director"
-ui.dlgb.unknown,"Unknown"
-ui.dlgb.toWhom,"→ {0}"
-ui.dlgb.insertedInto,"Inserted into: {0}"
-ui.dlgb.modelThinking,"🧠 Model thinking"
-ui.dlgb.actReroll,"Regenerate this line"
-ui.dlgb.actEdit,"Edit text"
-ui.dlgb.actInsert,"Insert at cursor"
-ui.dlgb.actDelete,"Delete this line"
-ui.dlgb.speaksTo,"speaks to"
-ui.dlgb.inputPh,"Leave blank to let the AI speak · type to make this line yours (costs no tokens)"
-ui.dlgb.send,"▶ Send"
-ui.dlgb.sending,"Talking…"
-ui.dlgb.keepTalking,"⤵ Keep talking"
-ui.dlgb.keepTalkingTip,"Let the same character speak one more line"
-ui.dlgb.directorTip,"Drop an event into the scene (lights out · a knock at the door)"
-ui.dlgb.directorTitle,"What happens"
-ui.dlgb.directorPh,"e.g. the lights go out"
-ui.dlgb.errSend,"The AI call failed"
-ui.dlgb.emptyReply,"The model returned nothing"
-ui.dlgb.needSpeaker,"No speaker selected"
-ui.dlgb.noProvider,"No AI provider configured"
-ui.dlgb.noEditor,"Open the scene first and put the cursor where you want the line"
-ui.dlgb.inserted,"Line inserted into the scene"
-ui.dlgb.nothingToInsert,"There is nothing to insert yet"
-ui.dlgb.mEditCast,"Edit this session's cast"
-ui.dlgb.mEditSituation,"Edit the situation"
-ui.dlgb.mInsertAll,"Insert the whole session"
-ui.dlgb.mSaveAsPreset,"Save this cast as a preset"
-ui.dlgb.presetSaved,"Cast preset saved"
-ui.dlgb.mClearTurns,"Clear all dialogue"
-ui.dlgb.confirmClear,"Clear every line in this session?"
-ui.dlgb.addPreset,"+ New cast"
-ui.dlgb.presetNameAsk,"Name this cast"
+ui.dlgb.titleLabel,Session name
+ui.dlgb.titleAutoPh,Leave blank to name it from the situation
+ui.dlgb.create,Create
+ui.dlgb.needPreset,Pick a cast first
+ui.dlgb.backToList,Back to session list
+ui.dlgb.badge,{0} lines · {1} tokens
+ui.dlgb.badgeTip,{0} calls · in {1} · out {2} · {3}s total
+ui.dlgb.viewNormal,Now showing dialogue only — click to expand every model thought
+ui.dlgb.viewThinking,Model thoughts expanded — click to collapse
+ui.dlgb.policyLabel,Turn order
+ui.dlgb.modeLabel,Calls
+ui.dlgb.lenLabel,Length
+ui.dlgb.parenLabel,Parentheticals
+ui.dlgb.pressSendToStart,Just press Send — no need to type. The AI will play the characters you picked.
+ui.dlgb.director,Director
+ui.dlgb.unknown,Unknown
+ui.dlgb.toWhom,→ {0}
+ui.dlgb.insertedInto,Inserted into: {0}
+ui.dlgb.modelThinking,🧠 Model thinking
+ui.dlgb.actReroll,Regenerate this line
+ui.dlgb.actEdit,Edit text
+ui.dlgb.actInsert,Insert at cursor
+ui.dlgb.actDelete,Delete this line
+ui.dlgb.speaksTo,speaks to
+ui.dlgb.inputPh,Leave blank to let the AI speak · type to make this line yours (costs no tokens)
+ui.dlgb.send,▶ Send
+ui.dlgb.sending,Talking…
+ui.dlgb.keepTalking,⤵ Keep talking
+ui.dlgb.keepTalkingTip,Let the same character speak one more line
+ui.dlgb.directorTip,Drop an event into the scene (lights out · a knock at the door)
+ui.dlgb.directorTitle,What happens
+ui.dlgb.directorPh,e.g. the lights go out
+ui.dlgb.errSend,The AI call failed
+ui.dlgb.emptyReply,The model returned nothing
+ui.dlgb.needSpeaker,No speaker selected
+ui.dlgb.noProvider,No AI provider configured
+ui.dlgb.noEditor,Open the scene first and put the cursor where you want the line
+ui.dlgb.inserted,Line inserted into the scene
+ui.dlgb.nothingToInsert,There is nothing to insert yet
+ui.dlgb.mEditCast,Edit this session's cast
+ui.dlgb.mEditSituation,Edit the situation
+ui.dlgb.mInsertAll,Insert the whole session
+ui.dlgb.mSaveAsPreset,Save this cast as a preset
+ui.dlgb.presetSaved,Cast preset saved
+ui.dlgb.mClearTurns,Clear all dialogue
+ui.dlgb.confirmClear,Clear every line in this session?
+ui.dlgb.addPreset,+ New cast
+ui.dlgb.presetNameAsk,Name this cast
 ui.dlgb.confirmDeletePreset,"Delete the cast ""{0}""?"
-ui.dlgb.edit,"Edit"
-ui.dlgb.delete,"Delete"
-ui.dlgb.castTitle,"Cast: {0}"
-ui.dlgb.castCount,"Characters in this cast ({0}/{1})"
-ui.dlgb.castFull,"At most {0} characters"
-ui.dlgb.pickFromWiki,"— pick from Wiki —"
-ui.dlgb.addToCast,"Add to cast"
+ui.dlgb.edit,Edit
+ui.dlgb.delete,Delete
+ui.dlgb.castTitle,Cast: {0}
+ui.dlgb.castCount,Characters in this cast ({0}/{1})
+ui.dlgb.castFull,At most {0} characters
+ui.dlgb.pickFromWiki,— pick from Wiki —
+ui.dlgb.addToCast,Add to cast
 ui.dlgb.noWikiChars,"No Wiki characters yet — create them in the Wiki, then come back"
-ui.dlgb.removeFromCast,"Remove from cast"
-ui.dlgb.selfPronPh,"self pronoun"
-ui.dlgb.selfPronTip,"The pronoun this character uses for themselves — locked so the model cannot switch mid-conversation"
-ui.dlgb.blurbPh,"One-line blurb — this is all the other characters get to see"
+ui.dlgb.removeFromCast,Remove from cast
+ui.dlgb.selfPronPh,self pronoun
+ui.dlgb.selfPronTip,The pronoun this character uses for themselves — locked so the model cannot switch mid-conversation
+ui.dlgb.blurbPh,One-line blurb — this is all the other characters get to see
 ui.dlgb.blurbTip,"The other characters in the room see only this line, never this character's full sheet"
 ui.dlgb.personaPh,"Character sheet — plain language is fine, e.g. You are Tora. You speak in short clipped lines and hate explaining yourself."
-ui.dlgb.genFromWiki,"⟳ Build sheet from Wiki"
-ui.dlgb.wikiNotFound,"That character was not found in the Wiki"
-ui.dlgb.relSection,"Relationships in this scene"
+ui.dlgb.genFromWiki,⟳ Build sheet from Wiki
+ui.dlgb.wikiNotFound,That character was not found in the Wiki
+ui.dlgb.relSection,Relationships in this scene
 ui.dlgb.relHint,"Leave blank to use the Wiki · fill it in when this scene differs (Wiki says boss, this scene says lovers)"
-ui.dlgb.relPair,"{0} sees {1} as"
-ui.dlgb.relHowPh,"relationship in this scene"
-ui.dlgb.relCallPh,"calls them"
-ui.dlgb.overrideTitle,"⚙ Model and parameters for this character"
-ui.dlgb.providerLabel,"Provider"
-ui.dlgb.modelLabel,"Model"
-ui.dlgb.useProjectProvider,"Project default"
-ui.dlgb.useProviderModel,"Provider default"
-ui.dlgb.useProviderValue,"Provider default"
+ui.dlgb.relPair,{0} sees {1} as
+ui.dlgb.relHowPh,relationship in this scene
+ui.dlgb.relCallPh,calls them
+ui.dlgb.overrideTitle,⚙ Model and parameters for this character
+ui.dlgb.providerLabel,Provider
+ui.dlgb.modelLabel,Model
+ui.dlgb.useProjectProvider,Project default
+ui.dlgb.useProviderModel,Provider default
+ui.dlgb.useProviderValue,Provider default
 ui.app.migPageNumFirst,"ย้ายค่าเก่า: เปิด ""ใส่เลขบนหน้าแรก"" ให้อัตโนมัติ (โปรเจกต์บันทึกไว้ก่อน alpha.82)"
+ui.app.spThaiOn,Screenplay Thai font: scaled to {0}%
+ui.app.spThaiOff,Screenplay Thai font: not scaled (system fallback)
+ui.app.proseIndentOn,Auto first-line indent: on ({0} in)
+ui.app.proseIndentOff,Auto first-line indent: off
+ui.dlg.spThaiAuto,Automatic (first available)
+ui.dlg.spThaiSample,"INT. BEDROOM - NIGHT / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"

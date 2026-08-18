@@ -74,12 +74,39 @@ check('[9] --sp-body-h ยังเป็นความสูงจริง', 
 // ═══ [10] spCss สร้างกฎ .sp-contd ═══
 const css = F.spCss(f1);
 check('[10] มีกฎ .sp-contd', /\.sp\.sp-contd|\.sp-cont-mark\.sp-contd/.test(css), css.slice(0, 100));
+// [alpha.84 ข้อ 2] สูตรมี var(--k-ct-off) พ่วงมาด้วย (ระยะชดเชยตอนถูกวาดในบล็อก · ปกติ = 0)
 check('[10] .sp-contd เยื้องแนวเดียวกับชื่อตัวละคร (3.7-1.5 = 2.2in)',
-  /sp-contd[^}]*margin-left:2\.2in/.test(css));
+  /sp-contd[^}]*margin-left:calc\(2\.2in \+ var\(--k-ct-off, 0in\)\)/.test(css));
 const css2 = F.spCss(F.mergeSpFormat({ elements: { character: { indent: 4 } } }));
 check('[10] เปลี่ยนระยะเยื้องตัวละคร → .sp-contd ขยับตาม',
-  /sp-contd[^}]*margin-left:2\.5in/.test(css2));
+  /sp-contd[^}]*margin-left:calc\(2\.5in \+ var\(--k-ct-off, 0in\)\)/.test(css2));
+check('[10] .sp-contd/.sp-more มีช่องชดเชยตอนถูกวาดในบล็อก (--k-ct-off)',
+  /sp-more\{margin-left:calc\([^)]*\+ var\(--k-ct-off, 0in\)\)/.test(css) &&
+  css.includes('.sp-continued-top,.sp-cont-top{margin-left:var(--k-ct-off, 0in)'));
 check('[10] ยังมีกฎ .sp-more เหมือนเดิม', css.includes('.sp.sp-more{'));
+
+// ═══ [alpha.84 ข้อ 2] pageStartPositions / pageStartMarks คิด cut ด้วย ═══
+{
+  const fmt84 = F.mergeSpFormat({});
+  const long84 = Array.from({ length: 140 }, (_, i) => 'บทพูดยาวมากบรรทัดที่' + i + ' ').join('');
+  let at84 = 0;
+  const mk84 = (el, text) => { const b = { el, text, pos: at84 }; at84 += text.length + 2; return b; };
+  const bl84 = [mk84('scene', 'INT. ROOM - DAY'), mk84('character', 'TORA'), mk84('dialogue', long84)];
+  const dlgPos84 = bl84[2].pos;
+  const pg84 = V.pagesOf(bl84, fmt84);
+  const st84 = V.pageStartPositions(pg84);
+  check('[84-2] หน้าแรกยังเริ่มที่ 0', st84[0] === 0, String(st84[0]));
+  check('[84-2] หน้าถัดไปไม่ใช่หัวบล็อกบทพูดอีกแล้ว', st84[1] !== dlgPos84,
+    `${st84[1]} vs ${dlgPos84}`);
+  check('[84-2] หน้าถัดไป = ตำแหน่งในเนื้อข้อความของบล็อกเดิม', st84[1] > dlgPos84);
+  const mks84 = V.pageStartMarks(pg84, fmt84);
+  check('[84-2] pageStartMarks บอกทั้งตำแหน่ง/กลางบล็อก/ระยะเยื้อง',
+    mks84[1].pos === st84[1] && mks84[1].mid === true && mks84[1].indent === 1,
+    JSON.stringify(mks84[1]));
+  check('[84-2] หน้าแรกไม่ใช่รอยตัดกลางบล็อก', mks84[0].mid === false && mks84[0].indent === 0);
+  check('[84-2] pageFirstBlock ข้ามบล็อกสังเคราะห์ที่ไม่มี pos',
+    V.pageFirstBlock({ blocks: [{ el: 'more', text: '(MORE)' }, { el: 'action', pos: 9 }] }).pos === 9);
+}
 
 // ═══ [12] pinned ชนะ looksLikeTerm ═══
 const counts = new Map([['ก่้อน', 1], ['ทอร่า', 3], ['พมิมพ์', 1]]);

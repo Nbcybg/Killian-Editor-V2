@@ -13,7 +13,10 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, CONTINUED_DEFAULTS,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, defaultLangFonts, normalizeLangFonts,
          normalizeRange, buildLangFontCss, applyLangFonts,
-         isLangFontUsable, withLangFamily } from './core.js';
+         isLangFontUsable, withLangFamily,
+         // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
+         SP_THAI_DEFAULTS, SP_THAI_FALLBACKS, SP_THAI_FAMILY, normalizeSpThai,
+         applySpThaiFont, withSpThaiFamily } from './core.js';
 import { setTypeVolume, playType } from './typewriter-sound.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
@@ -186,6 +189,7 @@ export function settingsDialog(openTab) {
   const origFont = parseInt(s.uiFontSize, 10) || 0;
   const origFontFamily = s.fontFamily || '';
   const origSpFontFamily = s.spFontFamily || '';
+  const origSpThai = s.spThaiFont ? { ...s.spThaiFont } : null;   // [alpha.84 ข้อ 1]
   // ---- [81-85][92] สำเนาทำงานของรูปแบบหน้ากระดาษ/บทภาพยนตร์ (ยังไม่แตะของจริงจนกดบันทึก) ----
   const W = {
     paperSize: PAPER_SIZES[s.paperSize] ? s.paperSize : 'letter',
@@ -206,6 +210,8 @@ export function settingsDialog(openTab) {
     continued: { ...CONTINUED_DEFAULTS, ...(s.spContinued || {}) },
     // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา (สำเนาทำงาน)
     langFonts: normalizeLangFonts(s.langFonts),
+    // [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ (สำเนาทำงาน)
+    spThai: normalizeSpThai({ ...SP_THAI_DEFAULTS, ...(s.spThaiFont || {}) }),
     // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
     spLineHeight: Number.isFinite(+s.spLineHeight) ? +s.spLineHeight : 1,
     spPageGap: parseInt(s.spPageGap, 10) || 28,
@@ -232,11 +238,14 @@ export function settingsDialog(openTab) {
    * @param {string} v สแตกฟอนต์บท ('' = ใช้ค่ามาตรฐาน เหมือนที่ applySettings ทำ)
    * @param {any[]} [rows] แถวฟอนต์ตามภาษาที่ "กำลังถูกใช้จริง" ตอนนี้ (ไม่ส่ง = ของที่บันทึกไว้)
    */
-  const applySpFont = (v, rows) => {
+  const applySpFont = (v, rows, thai) => {
     const list = rows || state.settings.langFonts;
     const nLang = normalizeLangFonts(list).filter(isLangFontUsable).length;
+    // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนไทยต้องนำหน้าเสมอ ด้วยเหตุผลเดียวกับบทเรียน alpha.78
+    // (ตั้งสแตกดิบ ๆ = ตัวปรับหลุดหาย แล้วตัวไทยเด้งกลับไปเพี้ยนทันทีระหว่างเลื่อนดู/กดยกเลิก)
+    const cfg = thai || W.spThai;
     document.documentElement.style.setProperty(
-      '--sp-font', withLangFamily(v || DEFAULT_SCRIPT_FONT, nLang > 0));
+      '--sp-font', withSpThaiFamily(withLangFamily(v || DEFAULT_SCRIPT_FONT, nLang > 0), cfg));
   };
 
   // โหลดฟอนต์จาก Fonts/ ในโปรเจกต์ (async, โหลดทีหลังไม่บล็อก)
@@ -804,6 +813,38 @@ export function settingsDialog(openTab) {
     sample.textContent = t('ui.dlg.iNTNightSceneOne');
     sample.style.fontFamily = `"${LANG_FAMILY}", ` + (q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT);
   };
+  // ---- [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ ----
+  {
+    const on = q('#st-spthai-on'), size = q('#st-spthai-size'), fam = q('#st-spthai-family');
+    const sample = q('#st-spthai-sample');
+    if (on && size && fam) {
+      fam.innerHTML = '';
+      for (const [v, label] of [['', t('ui.dlg.spThaiAuto')], ...SP_THAI_FALLBACKS.map((f) => [f, f])]) {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = label;
+        if (v === W.spThai.family) o.selected = true;
+        fam.appendChild(o);
+      }
+      on.checked = W.spThai.enabled;
+      size.value = W.spThai.size;
+      /** เห็นผลทันทีระหว่างตั้งค่า — ยกเลิกแล้ว applySettings() คืนของจริงให้เอง */
+      const previewThai = () => {
+        W.spThai = normalizeSpThai({ enabled: on.checked, size: size.value, family: fam.value });
+        size.disabled = fam.disabled = !on.checked;
+        applySpThaiFont(W.spThai);
+        applySpFont(q('#st-spfontfamily')?.value ?? s.spFontFamily, W.langFonts, W.spThai);
+        if (sample) {
+          // เก็บใน CSV บรรทัดเดียวไม่ได้ → คั่นด้วย " / " แล้วคลายเป็นบรรทัดจริงตอนแสดง
+          sample.textContent = t('ui.dlg.spThaiSample').split(' / ').join('\n');
+          sample.style.fontFamily = withSpThaiFamily(
+            q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT, W.spThai);
+        }
+      };
+      on.onchange = size.oninput = fam.onchange = previewThai;
+      previewThai();
+    }
+  }
+
   function renderFonts() {
     fontsHost.innerHTML = '';
     if (!W.langFonts.length) fontsHost.append(el('div', 'cmp-empty', t('ui.dlg.notHasRowPress')));
@@ -1051,7 +1092,10 @@ export function settingsDialog(openTab) {
     // (สลับลำดับไม่ได้ — และห้ามตั้ง --sp-font แบบดิบ ไม่งั้นฟอนต์ตามภาษาหลุดหายตอนกดยกเลิก)
     const nLangBack = applyProjectLangFonts();   // คืน @font-face ตามภาษาที่บันทึกไว้จริง
     s.spFontFamily = origSpFontFamily;
-    applySpFont(origSpFontFamily);               // ไม่ส่ง rows = ใช้ของที่บันทึกไว้
+    // [alpha.84 ข้อ 1] คืนตัวปรับสัดส่วนไทยที่บันทึกไว้จริงก่อน แล้วค่อยประกอบสแตก
+    const thaiBack = normalizeSpThai({ ...SP_THAI_DEFAULTS, ...(origSpThai || {}) });
+    applySpThaiFont(thaiBack);
+    applySpFont(origSpFontFamily, null, thaiBack);   // ไม่ส่ง rows = ใช้ของที่บันทึกไว้
     s.fontFamily = origFontFamily;
     document.documentElement.style.setProperty('--ed-font',
       withLangFamily(proseFormat().fontFamily || origFontFamily || DEFAULT_PROSE_FONT, nLangBack > 0));
@@ -1130,6 +1174,7 @@ export function settingsDialog(openTab) {
     s.typeSoundAlways = s.typeSoundMode === 'always';   // คีย์เก่า — ให้รุ่นก่อนอ่านต่อได้
     s.typeSoundVolume = Math.min(1, Math.max(0, parseFloat(q('#st-typesnd-vol').value) || 0));
     s.langFonts = JSON.parse(JSON.stringify(W.langFonts));
+    s.spThaiFont = { ...W.spThai };               // [alpha.84 ข้อ 1]
     // [alpha.58r บั๊ก 16–24] รูปแบบนิยายทั้งชุด (เก็บก้อนเดียวที่ settings.prose)
     s.prose = JSON.parse(JSON.stringify(mergeProseFormat(readProse())));
     // [98] ข้อมูลผลงาน

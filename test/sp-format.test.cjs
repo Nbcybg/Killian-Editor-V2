@@ -130,12 +130,26 @@ check('[83-6] บล็อกถูกหั่น → ต้นหน้า 2 �
 check('[83-6] ข้ามหน้าที่สามขึ้นไปใส่เลขกำกับ',
   pgSp.count < 3 || pgSp.pages[2].continuedTop === 'CONTINUED: (2)',
   pgSp.pages[2] && pgSp.pages[2].continuedTop);
-// ★ ต้นเหตุของบั๊ก: CONTINUED ต้อง **กินบรรทัดของหน้า** ไม่ใช่งอกเกินโควตา
-const linesOf = (p) => p.blocks.reduce((a, b) => a + (b.lines || 1), 0)
-  + (p.continuedTop ? 1 : 0) + (p.continuedBottom ? 1 : 0);
-check('[83-6] ★ ทุกหน้า (รวมบรรทัด CONTINUED) ไม่เกินโควตา 20 บรรทัด',
-  pgSp.pages.every((p) => linesOf(p) <= 20),
-  JSON.stringify(pgSp.pages.map(linesOf)));
+// [alpha.86] ★ บัญชีบรรทัดที่ "ตรงกับที่ตาเห็น"
+//   · (MORE) / ชื่อ+(cont'd) = เนื้อบทจริง → นับ 1 บรรทัด (paginate จองโควตาให้)
+//   · (CONTINUED) / CONTINUED: = วาดใน **ระยะขอบ** → **ไม่นับ** (เหมือน pdf-generator.js)
+//   · ระยะเว้นนำหน้าบล็อก (linesBefore) กินโควตาด้วย ต้องบวกเข้าไป ไม่งั้นเทสหลวมเกินจริง
+const FMT86 = SF.mergeSpFormat({});
+const pageLines = (pg, fmt = FMT86) => (pg.blocks || []).reduce((a, b, i) => {
+  if (b.more || b.contd || b.el === 'blank') return a + (b.lines || 1);
+  const c = fmt.elements[b.el] || fmt.elements.action;
+  const before = i && b.split !== 'tail' ? Math.round((c.linesBefore ?? 10) / 10) : 0;
+  return a + before + (b.lines || 1);
+}, 0);
+
+check('[86] ★ ทุกหน้าใช้โควตา 20 บรรทัดได้เต็ม และไม่ล้น',
+  pgSp.pages.every((p) => pageLines(p) <= 20),
+  JSON.stringify(pgSp.pages.map((p) => pageLines(p))));
+// ถ้า CONTINUED ยังกินบรรทัดอยู่ จะไม่มีหน้าไหนแตะ 20 ได้เลย — เทสนี้คือประตูกันการถอยกลับ
+// (หน้าที่ได้ 19 เป็นเรื่องปกติ: กฎ widow/orphan ยกบล็อกไปทั้งก้อนแทนที่จะหั่น)
+check('[86] ★ CONTINUED อยู่ในระยะขอบ ไม่กินโควตา → มีหน้าที่ใช้เต็ม 20 พอดี',
+  pgSp.pages.some((p) => pageLines(p) === 20),
+  JSON.stringify(pgSp.pages.map((p) => pageLines(p))));
 // หัวฉากใหม่ต้นหน้า = ฉากก่อนหน้าจบพอดี → ห้ามมี CONTINUED
 // (หัวฉาก 1 บรรทัด + บรรยาย 9 ก้อน × 2 บรรทัด = 19 บรรทัด → หัวฉากถัดไปลงหน้าใหม่พอดี)
 const twoScenes = [{ el: 'scene', text: 'INT. ก - วัน' },
@@ -156,8 +170,7 @@ check('paginate: ปิดระบบต่อเนื่อง → ไม่�
 // (นับบรรทัดของ CONTINUED:/(CONTINUED)/(MORE) ที่วาดบนหน้าเข้าไปด้วย)
 // เทสนี้คือประตูกันบั๊ก "หน้ากระดาษล้น margin · หน้าไม่เท่ากัน" ที่ผู้ใช้รายงาน
 {
-  const usedOf = (pg) => pg.blocks.reduce((a, b) => a + (b.lines || 1), 0)
-    + (pg.continuedTop ? 1 : 0) + (pg.continuedBottom ? 1 : 0);
+  const usedOf = (pg) => pageLines(pg);
   const over = [];
   for (let n = 20; n <= 800; n += 7) {
     for (const lines of [12, 20, 30, 54]) {
@@ -333,8 +346,16 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
   check('[wrap] สระ/วรรณยุกต์ไม่กินความกว้าง — 20 พยัญชนะ + สระ ยังเป็น 1 บรรทัด',
     SF.wrapLines('กิ'.repeat(20), 2) === 1, SF.wrapLines('กิ'.repeat(20), 2));
   // ข้อความที่มีของอยู่บนบรรทัดแล้ว ตามด้วยไทยยาว ๆ → ไทยต้องไหลต่อจากที่ค้าง ไม่ใช่ขึ้นบรรทัดใหม่ทั้งก้อน
-  check('[wrap] ไทยยาวไหลต่อจากคำที่ค้างบนบรรทัด',
-    SF.wrapLines('ab ' + 'ก'.repeat(37), 2) === 2, SF.wrapLines('ab ' + 'ก'.repeat(37), 2));
+  // [alpha.86] ก×37 ไม่มีขอบคำของ ICU อยู่ข้างใน = "คำเดียวที่ตัดไม่ได้"
+  // UAX#14 + `overflow-wrap:break-word` สั่งว่า: ยกไปขึ้นบรรทัดใหม่ก่อน ถ้ายังไม่พอค่อยหั่นกลางคำ
+  // → 'ab' / ก×20 / ก×17 = 3 บรรทัด ซึ่งคือสิ่งที่ Chromium วาดจริง
+  // (ของเดิมได้ 2 เพราะโมเดลถือว่าไทยตัดตรงไหนก็ได้ จึงเติมท้ายบรรทัดแรกทันที = ไม่ตรงกับจอ)
+  check('[wrap] คำไทยที่ตัดไม่ได้ ต้องยกไปบรรทัดใหม่ก่อน (ตามที่เบราว์เซอร์ทำ)',
+    SF.wrapLines('ab ' + 'ก'.repeat(37), 2) === 3, SF.wrapLines('ab ' + 'ก'.repeat(37), 2));
+  // ไทยที่มีขอบคำจริง ต้องไหลต่อจากที่ค้างบนบรรทัดได้ตามปกติ
+  check('[wrap] ไทยที่มีขอบคำ ไหลต่อจากคำที่ค้างบนบรรทัดได้',
+    SF.wrapLines('ab ' + 'กินข้าวแล้วออกไปเดินเล่นที่สวนสาธารณะ', 2) <= 3,
+    SF.wrapLines('ab ' + 'กินข้าวแล้วออกไปเดินเล่นที่สวนสาธารณะ', 2));
   const mixed = 'ทอร่าพูดว่า OK then she left ห้องครัวไปเงียบ ๆ';
   check('[wrap] ไทย+ละตินผสม ตัดที่ช่องว่างของฝั่งละติน',
     SF.wrapLines(mixed, 6) >= 1 && SF.wrapLines(mixed, 6) <= 2, SF.wrapLines(mixed, 6));

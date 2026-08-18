@@ -105,5 +105,54 @@ check('รายการ null ไม่พัง', LF.buildLangFontCss(null, ur
     LF.defaultLangFonts()[0].range === 'U+0E00-0E7F' && LF.defaultLangFonts()[0].enabled === false);
 }
 
+// ═══ [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ ═══
+{
+  check('ค่าเริ่มต้นเปิดไว้ที่ 85% (วัดแล้วเท่า Courier Prime)',
+    LF.SP_THAI_DEFAULTS.enabled === true && LF.SP_THAI_DEFAULTS.size === 85);
+  const d = LF.normalizeSpThai(undefined);
+  check('normalizeSpThai: ไม่ส่งอะไรมา → ได้ค่าเริ่มต้นครบ',
+    d.enabled === true && d.size === 85 && d.family === '' && d.ascent === 0 && d.descent === 0);
+  check('normalizeSpThai: หนีบขนาดไว้ 50–150',
+    LF.normalizeSpThai({ size: 5 }).size === 50 && LF.normalizeSpThai({ size: 999 }).size === 150);
+  check('normalizeSpThai: ค่าไม่ใช่ตัวเลข → คืนค่าเริ่มต้น',
+    LF.normalizeSpThai({ size: 'x' }).size === 85);
+  check('normalizeSpThai: ล้างอักขระอันตรายออกจากชื่อฟอนต์ (กัน CSS injection)',
+    LF.normalizeSpThai({ family: 'A";}body{x' }).family === 'Abodyx',
+    LF.normalizeSpThai({ family: 'A";}body{x' }).family);
+  check('ชื่อฟอนต์ที่ถูกล้างแล้วยังยัดลง CSS ได้อย่างปลอดภัย',
+    !LF.buildSpThaiCss({ family: 'A";}body{x' }).includes('body{'));
+
+  const css = LF.buildSpThaiCss({});
+  check('สร้าง @font-face ของวงศ์ K2 SP Thai', css.includes('font-family:"' + LF.SP_THAI_FAMILY + '"'));
+  check('จำกัดเฉพาะช่วงอักษรไทย', css.includes('unicode-range:U+0E00-0E7F'));
+  check('มี size-adjust ซึ่งเป็นหัวใจของการแก้', css.includes('size-adjust:85%'));
+  check('ใช้ local() ล้วน (ฟอนต์ไทยของระบบแจกไม่ได้)',
+    css.includes('local("Ayuthaya")') && !css.includes('url('));
+  check('ไม่ใส่ ascent/descent-override ถ้าไม่ได้ตั้ง',
+    !css.includes('ascent-override') && !css.includes('descent-override'));
+  const css2 = LF.buildSpThaiCss({ ascent: 90, descent: 25, size: 80 });
+  check('ตั้ง ascent/descent แล้วออกมาใน CSS',
+    css2.includes('ascent-override:90%') && css2.includes('descent-override:25%') &&
+    css2.includes('size-adjust:80%'));
+  check('ปิดสวิตช์ = ไม่มี CSS เลย', LF.buildSpThaiCss({ enabled: false }) === '');
+
+  check('เลือกฟอนต์เองแล้วมันมาก่อนลูกโซ่มาตรฐาน',
+    LF.spThaiSources({ family: 'Sarabun' })[0] === 'Sarabun' &&
+    LF.spThaiSources({ family: 'Sarabun' }).filter((f) => f === 'Sarabun').length === 1);
+  check('ไม่เลือก = ใช้ลูกโซ่มาตรฐานทั้งชุด',
+    LF.spThaiSources({}).join(',') === LF.SP_THAI_FALLBACKS.join(','));
+
+  const stack = '"Courier Prime", monospace';
+  check('withSpThaiFamily: เอาวงศ์ไปไว้หน้าสุด',
+    LF.withSpThaiFamily(stack, {}) === '"K2 SP Thai", ' + stack);
+  check('withSpThaiFamily: เรียกซ้ำไม่ซ้อน',
+    LF.withSpThaiFamily(LF.withSpThaiFamily(stack, {}), {}) === '"K2 SP Thai", ' + stack);
+  check('withSpThaiFamily: ปิดสวิตช์ = คืนสแตกเดิมไม่แตะ',
+    LF.withSpThaiFamily(stack, { enabled: false }) === stack);
+  check('withSpThaiFamily: ต้องมาก่อน K2 Lang ด้วย (ไทยของบทชนะฟอนต์ตามภาษา)',
+    LF.withSpThaiFamily(LF.withLangFamily(stack, true), {})
+      .startsWith('"K2 SP Thai", "K2 Lang"'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

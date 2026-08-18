@@ -122,8 +122,10 @@ export function refreshSceneNumbers(view) {
 // ───────── 57. เส้นคั่นหน้าในตัวแก้ไข ─────────
 // ตำแหน่งมาจาก paginate() ที่ app.js เรียกใน scheduleCount (debounce 300ms)
 // เก็บเป็นตัวแปรระดับโมดูลแบบเดียวกับสมอคอมเมนต์ — plugin แค่หยิบไปวาด
+// [alpha.84 ข้อ 2] `midMode:'block'` — จุดตัดที่ตกกลางบทพูดยาวต้องเป็นแถบคั่นจริงที่ดัน
+// เนื้อที่เหลือลงหน้าใหม่ (นิยายใช้ 'inline' เพราะมันวัดหน้าจาก DOM · บทวัดจากฟอนต์ล้วน)
 const SP_PB = createPageBreakPlugin({
-  key: 'ksppagebreak', cls: 'sp-page-break', decoKey: 'pb',
+  key: 'ksppagebreak', cls: 'sp-page-break', decoKey: 'pb', midMode: 'block',
 });
 /**
  * ตั้งรายการเส้นคั่นหน้า — คืน true เมื่อ "เปลี่ยนจริง"
@@ -146,13 +148,25 @@ let _conts = [];
 let _contSig = '';
 
 /** ตั้งรายการเครื่องหมายต่อเนื่อง — คืน true เมื่อ "เปลี่ยนจริง" (ผู้เรียกค่อย dispatch · บทเรียน 44) */
+// [alpha.84 ข้อ 2] ลายเซ็นต้องรวม mid/off — เครื่องหมายชุดเดิมที่ย้ายเข้า-ออกจากกลางบล็อก
+// ได้ตำแหน่งเท่าเดิมแต่ต้องวาดคนละระยะ
+const ctSigOf = (l) => l.map((m) => [m.pos, m.type, m.text, m.mid ? 1 : 0, m.off || 0].join(':')).join('|');
+
 export function setContinueds(list) {
   const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
-  const sig = next.map((m) => m.pos + ':' + m.type + ':' + m.text).join('|');
+  const sig = ctSigOf(next);
   if (sig === _contSig) return false;
   _contSig = sig;
   _conts = next;
   return true;
+}
+
+/** [alpha.85 ข้อ 2] เลื่อนตำแหน่งตามการแก้ไข — เหตุผลเดียวกับ mapBreaks() ของเส้นคั่นหน้า */
+function mapContinueds(mapping) {
+  if (!_conts.length) return;
+  _conts = _conts.map((m) => ({ ...m, pos: mapping.map(m.pos, -1) }))
+                 .filter((m) => Number.isFinite(m.pos) && m.pos > 0);
+  _contSig = ctSigOf(_conts);
 }
 export function continueds() { return _conts.slice(); }
 
@@ -164,12 +178,17 @@ function ctDecos(doc) {
     if (m.pos > max) continue;
     out.push(Deco.widget(m.pos, () => {
       const d = document.createElement('div');
-      d.className = 'sp sp-cont-mark ' + (m.cls || '');
+      d.className = 'sp sp-cont-mark ' + (m.cls || '') + (m.mid ? ' k-ct-in-block' : '');
       d.dataset.contType = m.type;
       d.textContent = m.text;
+      // [alpha.84 ข้อ 2] ตกกลางบทพูด = widget อยู่ **ใน** บล็อกที่เยื้องมาแล้ว → หักระยะคืน
+      if (m.mid) d.style.setProperty('--k-ct-off', '-' + (m.off || 0) + 'in');
       d.setAttribute('contenteditable', 'false');
       return d;
-    }, { side: m.side ?? 0, key: 'ct' + m.pos + m.type + m.text }));
+    // [alpha.85 ข้อ 2] เหตุผลเดียวกับเส้นคั่นหน้า — คีย์ผูกกับ "หน้า + ชนิด + ข้อความ"
+    // ไม่ใช่ตำแหน่ง ไม่งั้น (MORE)/CONTINUED ถูกสร้างใหม่ทุกครั้งที่พิมพ์
+    }, { side: m.side ?? 0,
+         key: 'ct' + m.page + m.type + m.text + (m.mid ? 'b' + (m.off || 0) : '') }));
   }
   return DecoSet.create(doc, out);
 }
@@ -180,8 +199,10 @@ export function spContinuedPlugin() {
     state: {
       init: (_c, st) => ctDecos(st.doc),
       apply(tr, prev, _o, st) {
-        if (!tr.docChanged && !tr.getMeta(ctKey)) return prev.map(tr.mapping, tr.doc);
-        return ctDecos(st.doc);
+        if (tr.getMeta(ctKey)) return ctDecos(st.doc);
+        if (!tr.docChanged) return prev;
+        mapContinueds(tr.mapping);
+        return prev.map(tr.mapping, tr.doc);
       },
     },
     props: { decorations(state) { return ctKey.getState(state); } },

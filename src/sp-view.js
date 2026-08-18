@@ -11,7 +11,7 @@
 import { t, tf } from './i18n.js';
 import { paginate, mergeSpFormat, textWidth, wrapLines, CHARS_PER_INCH, LINE_HEIGHT_IN,
          linesPerPage, pageNumberLabel, lineHeightIn, formatLines,
-         clampLineHeight } from './sp-format.js';
+         clampLineHeight, blockDocPos, isMidBlock, elementIndentIn } from './sp-format.js';
 import { num } from './num.js';
 
 // ───────── รายการโหมด ─────────
@@ -151,12 +151,35 @@ export function blocksFromDoc(doc) {
 }
 
 // ───────── 78. หาตำแหน่งของหน้า / ฉาก ─────────
-/** ตำแหน่งเริ่มต้นของแต่ละหน้า (index 0 = หน้า 1) — บล็อกแรกของหน้าที่มี pos จริง */
+/** บล็อกแรกของหน้าที่ "มีตัวตนจริง" ในเอกสาร (บล็อกสังเคราะห์ไม่มี pos) */
+export function pageFirstBlock(pg) {
+  return ((pg && pg.blocks) || []).find((x) => Number.isFinite(x && x.pos)) || null;
+}
+/**
+ * ตำแหน่งเริ่มต้นของแต่ละหน้า (index 0 = หน้า 1)
+ * [alpha.84 ข้อ 2] คิด `cut` ด้วย — หน้าที่เริ่มกลางบทพูดที่ถูกหั่นต้องได้ตำแหน่ง
+ * "ในเนื้อข้อความ" ไม่ใช่หัวย่อหน้า (ไม่งั้นเส้นคั่นหน้าไปโผล่ก่อนทั้งบล็อก)
+ */
 export function pageStartPositions(pages) {
   const list = (pages && pages.pages) || pages || [];
   return list.map((pg) => {
-    const b = (pg.blocks || []).find((x) => Number.isFinite(x && x.pos));
-    return b ? b.pos : null;
+    const b = pageFirstBlock(pg);
+    return b ? blockDocPos(b) : null;
+  });
+}
+/**
+ * [alpha.84 ข้อ 2] ข้อมูลครบของ "จุดเริ่มหน้า" — ตำแหน่ง + อยู่กลางบล็อกไหม + ระยะเยื้องของบล็อกนั้น
+ * ตัววาดต้องรู้ทั้งสามอย่าง: กลางบล็อก = widget ถูกวาดข้างในบล็อก จึงสืบระยะเยื้องมาด้วย
+ * แล้วต้องชดเชยกลับ ไม่งั้นเส้นคั่นหน้า/แถบคั่นแผ่นเลื่อนไปตามระยะเยื้องของ element
+ * @returns {Array<{pos:number|null, mid:boolean, indent:number}>}
+ */
+export function pageStartMarks(pages, fmt) {
+  const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+  const list = (pages && pages.pages) || pages || [];
+  return list.map((pg) => {
+    const b = pageFirstBlock(pg);
+    if (!b) return { pos: null, mid: false, indent: 0 };
+    return { pos: blockDocPos(b), mid: isMidBlock(b), indent: elementIndentIn(f, b.el) };
   });
 }
 /** ตำแหน่งในเอกสารของหน้าที่ n (1-based) — null เมื่อไม่มี */

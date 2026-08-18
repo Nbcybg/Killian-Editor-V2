@@ -367,7 +367,13 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
    ทั้งที่โหมดกระดาษควรเปลี่ยนแค่ "สี/เงา/เส้นขอบ" · ตอนนี้ทั้งสองโหมดใช้ --mg-* ชุดเดียวกัน */
 .pane:not(.wiki-pane) > .workspace > .ProseMirror {
   padding:var(--mg-top) var(--mg-right) calc(var(--mg-bottom) + 32vh) var(--mg-left);
-  margin:28px auto 40vh; }
+  margin:28px auto 40vh;
+  /* [alpha.85 ข้อ 3] ★ กระดาษต้องสูง "เต็มแผ่น" เสมอ แม้ฉากยังว่าง
+     เดิมความสูงมาจากเนื้อหาล้วน ๆ → เปิดฉากใหม่แล้วได้กระดาษเตี้ยจัตุรัส ไม่เหมือนแผ่นจริง
+     ตั้งเป็น "หนึ่งแผ่น" พอ ไม่คูณจำนวนหน้า — เนื้อหาที่ยาวกว่านั้นดันความสูงเองอยู่แล้ว
+     (เคยลองคูณ --pg-count แล้วเอกสาร 60 หน้าได้กล่องสูงเกินเนื้อหาไปหลักหมื่นพิกเซล)
+     box-sizing:border-box ทั่วโปรเจกต์ ค่านี้จึงเป็นความสูงของ "แผ่น" ตรง ๆ */
+  min-height:var(--page-h, 11in); }
 /* [alpha.58r บั๊ก 16+17] ย่อหน้า/ช่วงบรรทัดของนิยาย มาจาก prose-format.js (ตัวแปร --ed-*) */
 .ProseMirror p { margin:0 0 var(--ed-para, .35em); text-indent:var(--ed-indent, 0); }
 .ProseMirror h1,.ProseMirror h2,.ProseMirror h3,.ProseMirror h4,
@@ -1126,13 +1132,34 @@ body.k-mod-down .k-mention { cursor:pointer; }
    ปรับได้ที่ ตั้งค่า → หน้ากระดาษ ผ่าน --sp-lh (ค่ามาตรฐาน = 1) */
 .sp { font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace);
   font-size:var(--sp-fs, 16px);
-  line-height:var(--sp-lh, 1); margin:0; min-height:1em; white-space:pre-wrap; }
+  /* [alpha.86] ★ ระยะบรรทัดต้องเป็น "ความสูงบรรทัดของโมเดล" (พิกเซล) ไม่ใช่ตัวคูณของขนาดฟอนต์
+     `--sp-lh` เป็นตัวคูณ → พอผู้ใช้ตั้งฟอนต์บทเป็น 11pt จอได้บรรทัดละ 14.67px
+     ขณะที่ paginate() ยังคิด ⅙ นิ้ว = 16px ตายตัว → เพี้ยน 1.33px ทุกบรรทัด สะสมทั้งหน้า
+     `--sp-line-h` มาจาก layoutCssVars() = `lineHeightIn(fmt) × 96` คือกริดของโมเดลเป๊ะ ๆ
+     (ตัวคูณ --sp-lh ยังมีผลอยู่ เพราะมันถูกคิดเข้าไปใน lineHeightIn() แล้ว) */
+  line-height:var(--sp-line-h, 16px); margin:0; min-height:var(--sp-line-h, 16px);
+  white-space:pre-wrap; }
 /* [81][82][83] ระยะเยื้อง/ความกว้าง/ระยะเว้นบรรทัด/ตัวพิมพ์ ของแต่ละ element
    ค่าจริงถูก "สร้างเป็น CSS" จาก sp-format.js แล้วยัดใน <style id="k-sp-format"> (specificity .sp.sp-x)
    กฎด้านล่างจึงเหลือแค่ "สี" + fallback สำหรับตอนที่ยังไม่มีโปรเจกต์เปิด */
 /* alpha.57a: เอา letter-spacing ออกจากหัวฉาก/ทรานซิชัน — CSS letter-spacing เติมช่องไฟ
    "หลังทุก glyph" รวมสระ/วรรณยุกต์ไทยที่ความกว้าง 0 ด้วย → มองเห็นเป็นวรรณยุกต์ลอยหลุดจากพยัญชนะ
    (อาการที่ผู้ใช้เจอตอนตั้งฟอนต์ไทย ไม่ใช่ความผิดของไฟล์ฟอนต์) */
+/* ═══ [alpha.86] ★ บรรทัดว่างของบท = 1 บรรทัดพอดี ห้ามได้ช่องไฟซ้อน ═══
+   `spDocFromMarkdown()` แปลงบรรทัดว่างในไฟล์เป็นโหนด sp ว่าง ๆ (el=action) ซึ่งมีตัวตนจริง
+   ถ้าปล่อยให้มันได้ margin-top ของ action ด้วย ช่องไฟหนึ่งช่องจะกลายเป็น 3 บรรทัดบนจอ
+   (margin ของบรรทัดว่าง + ตัวบรรทัดว่าง + margin ของบล็อกถัดไป) ขณะที่โมเดลนับ 1
+   → บทตัดหน้าผิดสะสมทั้งเรื่อง · ตอนนี้: บรรทัดว่างสูง 1 บรรทัดเป๊ะ ไม่มี margin
+   และบล็อกที่ตามหลังบรรทัดว่างก็ไม่ต้องเว้นซ้ำ (ตรงกับกฎ `prevBlank` ใน paginate())
+
+   ตรวจ "ว่าง" จาก DOM ตรง ๆ: โหนด sp ที่ว่างมีลูกตัวเดียวคือ <br> ที่ ProseMirror ใส่ให้
+   (schema ของบทไม่มี hard-break ผู้ใช้สร้าง <br> เองไม่ได้ เกณฑ์นี้จึงชี้ขาด) */
+.sp:has(> br.ProseMirror-trailingBreak:only-child) {
+  margin-top:0 !important; margin-bottom:0 !important;
+  height:var(--sp-line-h, 16px); min-height:0;
+}
+.sp:has(> br.ProseMirror-trailingBreak:only-child) + .sp { margin-top:0 !important; }
+
 .sp-scene { color:var(--link); }
 .sp-character { color:var(--bright); }
 .sp-parenthetical { color:var(--dim); }
@@ -3237,6 +3264,19 @@ body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
 body.paper-mode .sp-page-break { border-top-color:#c9c2ae; }
 body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 
+/* ---- [alpha.84 ข้อ 2] เส้นคั่นหน้าของ "บท" ที่ตกกลางย่อหน้า (บทพูดยาวถูกหั่น) ----
+   ต่างจากนิยาย: บทวาดเป็น <div> จริง (midMode:'block') เพราะการจัดหน้าของบทวัดความกว้าง
+   จากฟอนต์ล้วน ๆ ไม่ได้อ่าน DOM — กล่องที่กินที่จึงไม่ทำให้การวัดรอบถัดไปเพี้ยน
+   ตัว widget อยู่ **ข้างใน** บล็อก (.sp-dialogue ฯลฯ) จึงสืบระยะเยื้อง/ความกว้างของบล็อกมาด้วย
+   `--k-pb-ind` (ตั้งจาก JS = ระยะเยื้องของ element นั้นเป็นนิ้ว) คือระยะที่ต้องหักกลับ */
+.sp-page-break.k-pb-in-block { margin-left:calc(-1 * var(--k-pb-ind, 0in));
+  width:var(--text-w, 6in); }
+
+/* เครื่องหมายต่อเนื่องที่ตกกลางบล็อกก็สืบระยะเยื้องมาเหมือนกัน — หักคืนด้วย --k-ct-off
+   (ตัวแปรถูกใส่ไว้ในสูตร margin-left ของกฎที่ spCss สร้าง จึงไม่ต้องมีกฎซ้ำที่นี่)
+   ที่นี่เหลือแค่ "ห้ามกล่องกว้างเกินบล็อกแม่" ซึ่ง width:auto ของ .sp-more/.sp-contd ทำอยู่แล้ว */
+.sp-cont-mark.k-ct-in-block { max-width:none; }
+
 /* ---- [alpha.82] เส้นคั่นหน้าของนิยาย — สองแบบ เลือกได้ในตั้งค่า ----
 
    แบบ "เส้นบาง" : กล่องสูง 0 ไม่มี margin · เส้นวาดด้วย ::before แบบ absolute
@@ -3378,12 +3418,39 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
     var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap)),
     #fff calc(var(--pb-mb) + var(--pb-gap)), #fff 100%);
 }
+/* [alpha.84 ข้อ 2] จุดตัดกลางบทพูด — แถบคั่นแผ่นต้องกว้างเต็มกระดาษเหมือนกรณีปกติ
+   แต่ตัวมันอยู่ในบล็อกที่เยื้องมาแล้ว จึงคิดระยะซ้ายจาก "ขอบซ้ายกระดาษ" ตรง ๆ:
+   ถอยกลับ = ระยะขอบซ้ายของกระดาษ + ระยะเยื้องของ element แล้วกางเต็มความกว้างกระดาษ */
+.pane.sp-view-layout .sp-page-break.k-pb-in-block {
+  margin:0 0 0 calc(-1 * (var(--mg-left, 1.5in) + var(--k-pb-ind, 0in)));
+  width:var(--page-w, 8.5in);
+}
 /* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ไม่ใช่กลางแถบทั้งแถบ */
 .pane.sp-view-layout .sp-page-break-num {
   position:absolute; right:auto; left:50%;
   top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) / 2); transform:translate(-50%, -50%);
   background:transparent; color:var(--dim); padding:0;
   font-size:calc(11px * var(--ui-scale, 1)); }
+
+/* ═══ [alpha.86] (CONTINUED) / CONTINUED: — โอเวอร์เลย์ในระยะขอบ ไม่กินบรรทัด ═══
+   วาดเป็นลูกของ widget เส้นคั่นหน้า (ไม่ใช่บล็อกในเนื้อหน้า) เหมือนที่ pdf-generator.js
+   ทำมาตลอด → การจัดหน้าไม่ขยับเลยไม่ว่าจะเปิดหรือปิดเครื่องหมายพวกนี้ */
+.sp-cont-edge { position:absolute; white-space:pre; pointer-events:none; user-select:none;
+  font-family:var(--sp-font, "Courier Prime", monospace); font-size:var(--sp-fs, 16px);
+  line-height:var(--sp-lh, 1); font-style:italic; opacity:.75; color:var(--dim); }
+/* โหมดปกติ: เส้นประบาง ๆ มี margin 14px หัวท้าย — วางคร่อมเส้นพอดี */
+.sp-cont-edge.sp-cont-bottom { right:0; bottom:2px; text-align:right; }
+.sp-cont-edge.sp-cont-top    { left:0;  top:2px;    text-align:left; }
+body.paper-mode .sp-cont-edge { color:#6b6552; }
+/* โหมดจัดหน้า: มีแถบระยะขอบจริง — วางไว้ "ในขอบล่างของแผ่นก่อน" และ "ขอบบนของแผ่นใหม่" */
+.pane.sp-view-layout .sp-cont-edge { color:#555; opacity:.9; }
+/* กล่องของเส้นคั่นในโหมดนี้ = ขอบล่างแผ่นก่อน + ช่องว่าง + ขอบบนแผ่นใหม่
+   → นับจากบนของกล่อง = อยู่ในขอบล่างของแผ่นก่อน · นับจากล่าง = อยู่ในขอบบนของแผ่นใหม่ */
+.pane.sp-view-layout .sp-cont-edge.sp-cont-bottom { top:.15in; bottom:auto; }
+.pane.sp-view-layout .sp-cont-edge.sp-cont-top {
+  top:auto; bottom:calc(var(--mg-top, 1in) - .75in); }
+/* โหมดร่าง = ข้อความล้วน ไม่ต้องมีเครื่องหมายจัดหน้า */
+.pane.sp-view-draft .sp-cont-edge { display:none; }
 
 /* ---- alpha.58 · [55][56] เครื่องหมายต่อเนื่อง (CONTINUED / MORE / cont'd) ---- */
 /* วาดด้วย decoration — ไม่ใช่ข้อความจริงในไฟล์ จึงลบไม่ได้และไม่หลุดไปอยู่ใน .md */
@@ -3545,6 +3612,10 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
 .k-font-script { min-width:150px; }
 .k-font-pick { flex:1 1 240px; min-width:180px; }
 .k-font-range, .k-font-family { flex:1 1 170px; min-width:150px; }
+/* [alpha.84 ข้อ 1] ตัวอย่างฟอนต์ไทยในบท — ต้องใช้ระยะบรรทัดของ "บท" จริง (1 เท่า)
+   ไม่งั้นตัวอย่างสวยแต่ของจริงยังชนกัน (ซึ่งคืออาการที่ผู้ใช้รายงานมา) */
+.k-spthai-sample { background:#fff; color:#111; border:1px solid var(--border); border-radius:4px;
+  padding:10px 12px; margin-top:6px; font-size:18px; line-height:1; white-space:pre-wrap; }
 .k-font-range.bad { border-color:#e5695e; color:#e5695e; }
 #st-fonts-sample { border:1px solid var(--border); border-radius:8px; padding:10px 14px;
   background:var(--bg); color:var(--fg); overflow-x:auto; white-space:nowrap; }

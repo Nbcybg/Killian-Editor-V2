@@ -11,7 +11,8 @@
 // "ตำแหน่งในเอกสาร + ข้อความ" เพื่อให้ ProseMirror วาดเป็น decoration ได้
 
 import { t, tf } from './i18n.js';
-import { mergeSpFormat, paginate, CONTINUED_DEFAULTS } from './sp-format.js';
+import { mergeSpFormat, paginate, CONTINUED_DEFAULTS,
+         blockDocPos, isMidBlock, elementIndentIn } from './sp-format.js';
 
 export { CONTINUED_DEFAULTS };
 
@@ -34,10 +35,18 @@ export const CONTINUED_SIDE = {
   more: -40, 'continued-bottom': -30, 'continued-top': 10, contd: 20,
 };
 
-/** ตำแหน่งในเอกสารของบล็อกแรกในหน้าที่ยัง "มีตัวตนจริง" (บล็อกสังเคราะห์ไม่มี pos) */
+/** บล็อกแรกในหน้าที่ยัง "มีตัวตนจริง" (บล็อกสังเคราะห์ เช่น (MORE) ไม่มี pos) */
+function firstReal(page) {
+  return ((page && page.blocks) || []).find((x) => x && Number.isFinite(x.pos)) || null;
+}
+/**
+ * ตำแหน่งในเอกสารของบล็อกแรกในหน้า
+ * [alpha.84 ข้อ 2] คิด `cut` ด้วย — หน้าที่เริ่มกลางบทพูดที่ถูกหั่น ต้องได้ตำแหน่งของ
+ * *บรรทัดที่ถูกหั่นจริง* ไม่ใช่หัวย่อหน้า ไม่งั้นเครื่องหมายทั้งชุดไปกองผิดที่
+ */
 export function pageAnchor(page) {
-  const b = (page && page.blocks || []).find((x) => x && Number.isFinite(x.pos));
-  return b ? b.pos : null;
+  const b = firstReal(page);
+  return b ? blockDocPos(b) : null;
 }
 
 /** บล็อกสุดท้ายของหน้า (ใช้ดูว่าจบด้วย (MORE) ไหม) */
@@ -63,19 +72,24 @@ export function computeContinueds(pages, fmt) {
     const cur = list[i], next = list[i + 1];
     const pos = pageAnchor(next);
     if (!Number.isFinite(pos)) continue;
+    // [alpha.84 ข้อ 2] เครื่องหมายที่ตกกลางบล็อกถูกวาด *ข้างใน* บล็อกนั้น จึงสืบระยะเยื้อง
+    // ของ element มาด้วย — ส่ง `off` ไปให้ตัววาดหักกลับ (CSS: --k-ct-off)
+    const nb = firstReal(next);
+    const mid = isMidBlock(nb);
+    const off = mid ? elementIndentIn(f, nb.el) : 0;
     const add = (type, text) => {
       if (!text) return;
-      out.push({ pos, page: cur.index, type, text: String(text),
+      out.push({ pos, page: cur.index, type, text: String(text), mid, off,
                  side: CONTINUED_SIDE[type], cls: CONTINUED_CLASS[type] });
     };
     if (CT.dialogue !== false) {
       const lb = lastBlock(cur);
       if (lb && lb.more) add('more', lb.text || f.strings.dialogueMore);
     }
-    if (CT.scene !== false) {
-      add('continued-bottom', cur.continuedBottom);
-      add('continued-top', next.continuedTop);
-    }
+    // [alpha.86] `(CONTINUED)` / `CONTINUED:` ไม่ใช่ decoration ในเนื้อเอกสารอีกแล้ว —
+    // มันถูกวาดเป็นโอเวอร์เลย์ใน "ระยะขอบ" บนตัว widget เส้นคั่นหน้า (ดู page-break-plugin.js)
+    // เหมือนที่ pdf-generator.js ทำมาตลอด จึงไม่กินบรรทัดของหน้า
+    // ที่เหลือไว้ตรงนี้มีแค่สองตัวที่ **เป็นเนื้อบทจริง** คือ (MORE) และ ชื่อ+(cont'd)
     if (CT.dialogue !== false) {
       const fb = (next.blocks || [])[0];
       if (fb && fb.contd) add('contd', fb.text || '');
@@ -90,19 +104,29 @@ export function continuedsFromBlocks(blocks, opts = {}) {
   return computeContinueds(paginate(blocks, { fmt, lines: opts.lines }), fmt);
 }
 
-/** สรุปจำนวนเครื่องหมายแต่ละชนิด (ใช้กับแถบสถานะ/เทส) */
-export function continuedSummary(marks) {
+/**
+ * สรุปจำนวนเครื่องหมายแต่ละชนิด (ใช้กับแถบสถานะ/เทส)
+ * [alpha.86] `(CONTINUED)`/`CONTINUED:` ไม่ได้อยู่ใน `marks` แล้ว (ย้ายไปเป็นโอเวอร์เลย์บน
+ * เส้นคั่นหน้า) จึงนับจาก `pages` ที่ annotateContinued() ทำเครื่องหมายไว้แทน
+ * @param {Array} marks   ผลจาก computeContinueds() — มีแต่ more / contd
+ * @param {{pages:Array}|Array} [pages] ผลจาก paginate() — ใช้เพื่อนับฉากที่ข้ามหน้า
+ */
+export function continuedSummary(marks, pages) {
   const out = { more: 0, contd: 0, 'continued-top': 0, 'continued-bottom': 0, total: 0 };
   for (const m of marks || []) {
     if (!(m.type in out)) continue;
     out[m.type]++; out.total++;
   }
+  for (const p of (pages && pages.pages) || pages || []) {
+    if (p.continuedTop) { out['continued-top']++; out.total++; }
+    if (p.continuedBottom) { out['continued-bottom']++; out.total++; }
+  }
   return out;
 }
 
 /** ข้อความบรรยายสำหรับแถบสถานะ */
-export function continuedStatusText(marks) {
-  const s = continuedSummary(marks);
+export function continuedStatusText(marks, pages) {
+  const s = continuedSummary(marks, pages);
   if (!s.total) return t('ui.spContinued.contNotHas');
   return tf('ui.spContinued.contSceneDialogue', s['continued-top'], s.more);
 }

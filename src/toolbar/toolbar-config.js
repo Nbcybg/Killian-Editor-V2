@@ -29,6 +29,9 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-style' }, { id: 'tb-case' },
     { id: 'tb-bold' }, { id: 'tb-italic' }, { id: 'tb-underline' }, { id: 'tb-strike' },
     { id: 'tb-ul' }, { id: 'tb-ol' }, { id: 'tb-quote' },
+    // [alpha.84 ข้อ 3+4] สวิตช์ย่อหน้าอัตโนมัติ (นิยาย) · ข้อความต่อเนื่อง (บท)
+    // โปรแกรมคุม `style.display` ตามโหมดเอกสารอยู่แล้ว — ตรงนี้คุมแค่ "ผู้ใช้อยากเห็นไหม"
+    { id: 'tb-indent' }, { id: 'tb-sp-cont' },
   ] },
   { key: 'align', labelKey: 'ui.tbcfg.grpAlign', buttons: [
     { id: 'tb-align-left' }, { id: 'tb-align-center' },
