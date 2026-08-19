@@ -3,6 +3,7 @@ import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { callAI, aiConfigured, getAISettings } from './ai-settings.js';
 import { listEntities } from './project-scan.js';
+import { hashText } from './num.js';
 
 const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
@@ -16,11 +17,9 @@ async function aiReady() {
 }
 
 // แฮชสั้น ๆ ของเนื้อหา (djb2) — ใช้ตัดสินว่าเนื้อเรื่องเปลี่ยนไปจากตอนสรุปครั้งก่อนหรือยัง
-export function hashText(s) {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
+// [alpha.87] ตัวจริงย้ายไปอยู่ num.js (โมดูลบริสุทธิ์ ไม่ import อะไรเลย) เพราะ convert.js
+// ต้องใช้ตัวเดียวกันแต่เรียกจากที่นี่ไม่ได้ — ไฟล์นี้ import core.js ซึ่งแตะ DOM
+export { hashText };
 
 /**
  * รวบรวมเนื้อหาทั้งโปรเจกต์เป็นข้อความก้อนเดียวสำหรับป้อน AI

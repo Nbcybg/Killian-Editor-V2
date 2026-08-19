@@ -472,6 +472,58 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
     SF.elementCaps(SF.mergeSpFormat({ forceCase: false, styles: SF.setElementCaps({}, 'scene', true) }), 'scene') === false);
 }
 
+// ═══ [alpha.87 ข้อ A] ★ บรรทัดว่างเต็มหน้าแล้วต้อง "ขึ้นหน้าใหม่" ไม่ใช่ถูกกลืนทิ้ง ═══
+// อาการที่ผู้ใช้เจอ: กด Enter ค้างในบล็อกบรรยาย → หน้ากระดาษยืดยาวไปเรื่อย ๆ ไม่มีเส้นคั่นเลย
+// ต้นตอ: `if (cur.length && used < perPage)` — พอหน้าเต็ม บรรทัดว่างที่เหลือไม่ถูกนับ
+// ไม่ถูกเก็บ และไม่ทำให้ขึ้นหน้าใหม่ · วัดได้: ป้อน 201 บล็อก ได้ 1 หน้า และหายไป 147 ก้อน
+{
+  const F = SF.mergeSpFormat({});
+  const perPage = SF.linesPerPage(F.paper, F.margins, SF.lineHeightIn(F));
+  const blocks = [{ el: 'action', text: 'บรรยายเปิดเรื่อง' }];
+  for (let i = 0; i < 200; i++) blocks.push({ el: 'blank', text: '' });
+  const pg = SF.paginate(blocks, { fmt: F });
+  const kept = pg.pages.reduce((n, p) => n + p.blocks.length, 0);
+
+  check('[87-A] ★ บรรทัดว่างล้วนยังตัดหน้าให้ (ไม่ยืดเป็นแผ่นเดียว)',
+    pg.pages.length >= 4, pg.pages.length + ' หน้า');
+  check('[87-A] ★ ไม่มีบล็อกไหนถูกกลืนหาย', kept === blocks.length,
+    kept + '/' + blocks.length);
+  check('[87-A] ไม่มีหน้าไหนเกินโควตา',
+    pg.pages.every((p) => p.blocks.length <= perPage),
+    pg.pages.map((p) => p.blocks.length).join(','));
+  check('[87-A] หน้าที่เต็มมีบรรทัดครบโควตาพอดี (ไม่ตัดเร็วเกินจริง)',
+    pg.pages[0].blocks.length === perPage, pg.pages[0].blocks.length + ' vs ' + perPage);
+
+  // บรรทัดว่างที่ต้นหน้าก็ต้องนับ — บนจอมันมีตัวตนจริง (โหนด sp สูงหนึ่งบรรทัด)
+  const onlyBlank = SF.paginate(Array.from({ length: 120 }, () => ({ el: 'blank', text: '' })),
+    { fmt: F });
+  check('[87-A] เอกสารที่มีแต่บรรทัดว่างก็ยังแบ่งหน้า',
+    onlyBlank.pages.length >= 2, onlyBlank.pages.length + ' หน้า');
+  check('[87-A] บรรทัดว่างต้นหน้าไม่ถูกทิ้ง (จอกับโมเดลนับเท่ากัน)',
+    onlyBlank.pages.reduce((n, p) => n + p.blocks.length, 0) === 120,
+    onlyBlank.pages.map((p) => p.blocks.length).join(','));
+}
+
+// ═══ [alpha.87 ข้อ D] ★ เลขฉากต้องอยู่บรรทัดเดียวกับหัวฉากของตัวเอง ═══
+// `.k-scene-no` วางแบบ absolute · `top:0` = ขอบบนของ **padding box** ซึ่งตั้งแต่ระยะเว้นบรรทัด
+// ย้ายจาก margin มาเป็น padding (alpha.87 ข้อ 4) อยู่เหนือบรรทัดข้อความเท่ากับ linesBefore
+// → เลขฉากไปลอยคนละบรรทัดกับหัวฉาก · ต้องเลื่อนลงมาเท่า `--k-pad` ที่กฎของบล็อกตั้งไว้
+{
+  const css = SF.spCss(SF.mergeSpFormat({}));
+  check('[87-D] ★ กฎของบล็อกประกาศระยะเว้นนำเป็นตัวแปร --k-pad',
+    /\.sp\.sp-scene\{--k-pad:\d+;/.test(css), (css.match(/\.sp\.sp-scene\{[^}]{0,40}/) || [''])[0]);
+  check('[87-D] ★ เลขฉากเลื่อนลงตาม --k-pad (ไม่ใช่ top:0)',
+    /\.k-scene-no\{position:absolute;top:calc\(var\(--k-pad/.test(css),
+    (css.match(/\.k-scene-no\{[^}]{0,60}/) || [''])[0]);
+  check('[87-D] padding-top ของบล็อกใช้ตัวแปรตัวเดียวกัน (สองที่ห้ามหลุดจากกัน)',
+    /padding-top:calc\(var\(--k-pad\)/.test(css));
+  // หัวฉากมี linesBefore มากกว่า 0 จริง ไม่งั้นเทสข้างบนผ่านแบบไม่มีความหมาย
+  const F = SF.mergeSpFormat({});
+  check('[87-D] หัวฉากมีระยะเว้นนำจริง (เทสข้างบนจึงมีความหมาย)',
+    Math.round((F.elements.scene.linesBefore ?? 10) / 10) >= 1,
+    String(F.elements.scene.linesBefore));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 try { fs.unlinkSync(tmp); } catch {}
 if (fail) process.exit(1);

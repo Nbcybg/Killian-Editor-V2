@@ -22,3 +22,16 @@ export function numClamp(v, d, min, max) {
 export function numInt(v, d = 0) {
   return Math.round(num(v, d));
 }
+
+/**
+ * แฮชสั้น ๆ ของข้อความ (djb2) — "เนื้อหาเปลี่ยนไปจากตอนที่จดไว้หรือยัง"
+ * ย้ายมาจาก ai-summary.js ตอน alpha.87 (ที่นั่น import core.js ซึ่งแตะ DOM
+ * → โมดูลบริสุทธิ์อย่าง convert.js เรียกไม่ได้) · ai-summary.js re-export ตัวนี้ต่อ
+ * **มีที่เดียวในโปรแกรม** — ห้ามเขียนแฮชตัวใหม่ ค่าที่จดไว้ในไฟล์งานต้องตรงกันข้ามเวอร์ชัน
+ */
+export function hashText(s) {
+  const t = String(s ?? '');
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}

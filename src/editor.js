@@ -45,13 +45,35 @@ function changedRange(tr) {
   return from <= to ? { from, to } : null;
 }
 
-/** ขยายช่วงให้ครอบบล็อกระดับบนทั้งใบ (decoration คิดจากทั้งบล็อกเสมอ) */
+/**
+ * ขยายช่วงให้ครอบบล็อกระดับบนทั้งใบ (decoration คิดจากทั้งบล็อกเสมอ)
+ *
+ * [alpha.87 ข้อ 5] ★ **ต้นตอของอาการหน่วงตอนพิมพ์**
+ *
+ * ของเดิม: `$f.depth ? $f.before(1) : 0` และ `$t.depth ? $t.after(1) : size`
+ * ตำแหน่งที่ **อยู่ระหว่างบล็อก** มี depth = 0 — ซึ่งเกิดขึ้นทุกครั้งที่ "กด Enter"
+ * (แทรกบล็อกใหม่ = ขอบเขตที่เปลี่ยนตกอยู่ที่รอยต่อระหว่างบล็อกพอดี)
+ * โค้ดจึงตีความว่า **ทั้งเอกสารเปลี่ยน** แล้วสแกนใหม่ตั้งแต่ 0 ถึง doc.content.size
+ *
+ * วัดจริง (บท 400 บล็อก): กด Enter หนึ่งครั้ง → ปลั๊กอิน decoration **ทั้งสามตัว**
+ * (ตรวจคำผิด · ชื่อ Wiki · คอมเมนต์) สแกน **100% ของเอกสาร** ตัวละหนึ่งรอบ
+ * ยิ่งเอกสารยาว ยิ่งหน่วง — เป็นสาเหตุที่ "ตัดหน้าตามไม่ทัน" ทั้งที่ตัวจัดหน้าเองไม่ได้ช้า
+ * (มันแค่ไม่เคยได้คิวเมนเธรด)
+ *
+ * ที่ถูก: ตำแหน่งระหว่างบล็อก = แตะบล็อกที่ **ประกบตำแหน่งนั้น** ไม่ใช่ทั้งเอกสาร
+ * → สแกนอย่างมาก 2 บล็อกต่อการกดหนึ่งครั้ง ไม่ว่าเอกสารจะยาวแค่ไหน
+ */
 function blockRange(doc, from, to) {
   const size = doc.content.size;
   const clamp = (v) => Math.max(0, Math.min(v, size));
-  const $f = doc.resolve(clamp(from));
-  const $t = doc.resolve(clamp(to));
-  return { from: $f.depth ? $f.before(1) : 0, to: $t.depth ? $t.after(1) : size };
+  const f = clamp(from), t = clamp(to);
+  const $f = doc.resolve(f), $t = doc.resolve(t);
+  let a, b;
+  if ($f.depth) a = $f.before(1);
+  else { const ch = doc.childBefore(f); a = ch && ch.node ? ch.offset : f; }
+  if ($t.depth) b = $t.after(1);
+  else { const ch = doc.childAfter(t); b = ch && ch.node ? ch.offset + ch.node.nodeSize : t; }
+  return { from: clamp(Math.min(a, b)), to: clamp(Math.max(a, b)) };
 }
 
 /**

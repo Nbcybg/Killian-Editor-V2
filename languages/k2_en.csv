@@ -893,6 +893,10 @@ ui.app.compareVersion,เทียบเวอร์ชัน —
 ui.app.compareVersion2,⇋ เทียบเวอร์ชัน
 ui.app.compareVersion3,⇋ เทียบเวอร์ชัน…
 ui.app.consoleDev,🛠 คอนโซลนักพัฒนา
+ui.app.convertGo,แปลงเลย
+ui.app.convertLoss,"สลับโหมดแล้วบล็อกบางชนิดจะเปลี่ยนไปแบบย้อนกลับไม่ได้ — {0} · แปลงต่อไหม ?"
+ui.app.convertLostItem,{0} → {1} ({2})
+ui.app.convertLostMore, และอีก {0} ชนิด
 ui.app.copyReportDone,คัดลอกรายงานแล้ว
 ui.app.copyReportNotOk,คัดลอกรายงานไม่สำเร็จ
 ui.app.copyResult,📋 คัดลอกผล

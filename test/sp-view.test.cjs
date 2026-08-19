@@ -163,5 +163,68 @@ check('[58] ALL_VIEW_CLASSES ครอบคลุมทุกโหมด (ล�
   SV.SP_VIEWS.filter((m) => m !== 'normal')
     .every((m) => SV.SP_VIEW_CLASS[m].split(' ').every((c) => SV.ALL_VIEW_CLASSES.includes(c))));
 
+// ── [alpha.87 ข้อ 1–4] ตำแหน่งของ CONTINUED — ต้องอยู่ "ในระยะขอบ" เท่านั้น ──
+// paginate() ไม่จองบรรทัดให้สองตัวนี้ ถ้ามันไปยืนในสายเนื้อหน้าเมื่อไหร่
+// เนื้อหน้าจะเกินความจุแล้วกระดาษยืด = เรนเดอร์ไม่เท่ากัน + ล้นขอบ
+{
+  const F = (over = {}) => ({ paper: { width: 8.5, height: 11 },
+    margins: { top: 1, bottom: 1, left: 1.5, right: 1 }, lineHeight: 1, ...over });
+  const b = SV.continuedBox(F());
+  check('[87] CONTINUED ชิดแนวขอบซ้ายของพื้นที่พิมพ์ (x = mgL เหมือน pdf-generator)',
+    b.left === 1.5, JSON.stringify(b));
+  check('[87] กว้างเท่าพื้นที่พิมพ์ (ตัวขวาจึงชิดขอบขวาพอดี)', b.width === 6, b.width);
+  check('[87] ตัวบนอยู่ "หนึ่งบรรทัดเหนือเนื้อหน้า" = baseline(-1) ของ PDF',
+    Math.abs(b.topIn - (1 - 1 / 6)) < 1e-4, b.topIn);
+  check('[87] ตัวล่างอยู่ "หนึ่งบรรทัดใต้เนื้อหน้า" = baseline(bodyLines) ของ PDF',
+    Math.abs(b.bottomIn - (1 - 1 / 6)) < 1e-4, b.bottomIn);
+  check('[87] ยังอยู่ในระยะขอบ ไม่ล้ำเข้าพื้นที่พิมพ์',
+    b.topIn >= 0 && b.topIn < 1 && b.bottomIn >= 0 && b.bottomIn < 1);
+
+  // ผู้ใช้ตั้งช่วงบรรทัดกว้างขึ้น → บรรทัดสูงขึ้น → ต้องถอยห่างขอบมากขึ้นตาม
+  const b15 = SV.continuedBox(F({ lineHeight: 1.5 }));
+  check('[87] ช่วงบรรทัด 1.5 → หนึ่งบรรทัด = 0.25in และตำแหน่งขยับตาม',
+    Math.abs(b15.lineIn - 0.25) < 1e-6 && Math.abs(b15.topIn - 0.75) < 1e-4,
+    b15.lineIn + ' / ' + b15.topIn);
+  check('[87] ช่วงบรรทัดกว้างขึ้นแล้วต้องไม่หลุดออกนอกกระดาษ', b15.topIn >= 0);
+
+  // ระยะขอบแคบกว่าหนึ่งบรรทัด — ห้ามได้ค่าติดลบ (จะหลุดออกนอกแผ่น)
+  const bTight = SV.continuedBox(F({ margins: { top: 0.1, bottom: 0.1, left: 1.5, right: 1 } }));
+  check('[87] ระยะขอบแคบกว่าหนึ่งบรรทัด → หนีบที่ 0 ไม่ติดลบ',
+    bTight.topIn === 0 && bTight.bottomIn === 0, JSON.stringify(bTight));
+
+  // ระยะขอบซ้ายที่ผู้ใช้ตั้งเองต้องถูกเคารพ (ข้อ 3 ของผู้ใช้: โหมดจัดหน้าเคยวาดชิดขอบกระดาษ)
+  const bWide = SV.continuedBox(F({ margins: { top: 1, bottom: 1, left: 2, right: 1.25 } }));
+  check('[87] เปลี่ยนระยะขอบซ้าย/ขวา แล้วกล่องขยับตามจริง',
+    bWide.left === 2 && Math.abs(bWide.width - 5.25) < 1e-4,
+    bWide.left + ' / ' + bWide.width);
+}
+
+// ═══ [alpha.87 ข้อ B] ★ "บล็อกว่าง = บรรทัดว่าง" ต้องเป็นจริงกับ **ทุกชนิด** ═══
+// อาการที่ผู้ใช้เจอ: กด Enter ค้างในบล็อกตัวละคร → หน้าสั้นผิดปกติ (ใช้กระดาษแค่ครึ่งแผ่น)
+// ต้นตอ: `blocksFromDoc` เขียนว่า `el === 'action' && !text.trim()` → ตัวละคร/หัวฉากว่าง
+// ยังถูกนับเป็นบล็อกจริง = linesBefore + 1 บรรทัด ขณะที่ CSS ตัดระยะเว้นของบล็อกว่างทุกชนิดทิ้ง
+// → จอนับ 1 บรรทัด โมเดลนับ 2 · โมเดลจึงคิดว่าหน้าเต็มทั้งที่จอเพิ่งใช้ไปครึ่งแผ่น
+{
+  const fakeDoc = (els) => ({ forEach(cb) {
+    let off = 0;
+    for (const [el, text] of els) {
+      cb({ type: { name: 'sp' }, attrs: { el }, textContent: text }, off);
+      off += (text.length || 0) + 2;
+    }
+  } });
+  for (const el of ['character', 'scene', 'transition', 'dialogue', 'parenthetical', 'action']) {
+    const b = SV.blocksFromDoc(fakeDoc([[el, '']]))[0];
+    check('[87-B] ★ ' + el + ' ที่ยังไม่พิมพ์ข้อความ = บรรทัดว่าง', b.el === 'blank', b.el);
+  }
+  // มีข้อความแล้วต้องเป็นชนิดของตัวเอง
+  const filled = SV.blocksFromDoc(fakeDoc([['character', 'โทระ'], ['scene', 'INT. บ้าน - เย็น']]));
+  check('[87-B] มีข้อความแล้วยังเป็นชนิดเดิม',
+    filled[0].el === 'character' && filled[1].el === 'scene',
+    filled.map((x) => x.el).join(','));
+  // `page-break` เป็น *คำสั่ง* ที่ไม่มีข้อความอยู่แล้ว — ห้ามกลายเป็นบรรทัดว่าง
+  const pb = SV.blocksFromDoc(fakeDoc([['page-break', '']]))[0];
+  check('[87-B] ขึ้นหน้าใหม่ยังเป็นคำสั่ง ไม่ใช่บรรทัดว่าง', pb.el === 'page-break', pb.el);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

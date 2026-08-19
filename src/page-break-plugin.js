@@ -115,6 +115,10 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
         d.append(lbl);
         // [alpha.86] (CONTINUED) ท้ายหน้า / CONTINUED: ต้นหน้าใหม่ — **โอเวอร์เลย์ในระยะขอบ**
         // ไม่ใช่บล็อกในเนื้อหน้า จึงไม่กินโควตาบรรทัด (ตรงกับที่ pdf-generator.js วาดมาตลอด)
+        // [alpha.87 ข้อ 1] บอก CSS ว่าเส้นคั่นเส้นนี้ **มีโอเวอร์เลย์มายืนด้วย** จึงต้องเปิด
+        // ช่องว่างให้เท่าความสูงหนึ่งบรรทัดของฟอนต์บท — margin 14px เดิมเตี้ยกว่าตัวหนังสือ
+        // แล้วโอเวอร์เลย์ล้นไปทับบรรทัดข้างเคียง (ดูกฎ .sp-page-break.k-pb-cont)
+        if (b.contTop || b.contBottom) d.classList.add('k-pb-cont');
         for (const [key, cls] of [['contBottom', 'sp-cont-bottom'], ['contTop', 'sp-cont-top']]) {
           if (!b[key]) continue;
           const m = document.createElement('span');

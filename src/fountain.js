@@ -334,6 +334,28 @@ export function lineFor(el, text, prevBlank, prevType, nextBlank = false, guessN
   return s;
 }
 
+/**
+ * [alpha.87] ประกอบบล็อกของบทกลับเป็นมาร์กดาวน์ — **ตัวเขียนตัวเดียวของโปรแกรม**
+ * เดิมลูปนี้ถูกคัดลอกไว้ใน screenplay.js (getMarkdown) และ convert.js ต้องการอีกชุด
+ * สามชุดที่ต้องตัดสิน prevBlank/prevType/guessNames ให้ตรงกันเป๊ะ = บั๊กรอเกิด
+ * @param {Array<{el:string,text?:string}>} blocks
+ */
+export function blocksToMd(blocks) {
+  const list = Array.from(blocks || []);
+  // ตัวเดาชื่ออัตโนมัติคิดจาก "ทั้งเอกสาร" — ต้องตรงกับตอนอ่านไฟล์กลับ (ดู guessNamesFor)
+  const guessNames = guessNamesForBlocks(list);
+  const lines = [];
+  let prevBlank = true, prevType = 'action';
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i] || {};
+    const line = lineFor(b.el, b.text || '', prevBlank, prevType, blockIsBlank(list[i + 1]), guessNames);
+    lines.push(line);
+    if (String(line).trim() === '') prevBlank = true;
+    else { prevBlank = false; prevType = b.el; }
+  }
+  return lines.join('\n');
+}
+
 /** บล็อกถัดไปนับเป็น "บรรทัดว่าง" ไหม — ใช้ร่วมกันทุกตัวเขียนไฟล์ ให้ตัดสินเหมือนกันเป๊ะ */
 export const blockIsBlank = (b) =>
   !b || b.el === 'blank' ||

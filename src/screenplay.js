@@ -6,9 +6,8 @@ import { EditorView } from 'prosemirror-view';
 import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, chainCommands } from 'prosemirror-commands';
-import { parseScript, lineFor, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
-         splitCharacter, withExtension, blockIsBlank,
-         guessNamesForBlocks } from './fountain.js';
+import { parseScript, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
+         splitCharacter, withExtension, blocksToMd } from './fountain.js';
 import { state, DEFAULT_SP_CYCLE, spCycleKeys, spKeyMatch } from './core.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
@@ -468,6 +467,30 @@ export class SPEditor {
       return true;
     }
 
+    // ═══ [alpha.87 ข้อ 3] ★ เคอร์เซอร์อยู่ **ต้นบล็อกที่มีข้อความ** → ดันบรรทัดเดิมลง ═══
+    //
+    // เดิมทุกกรณีที่ไม่ใช่ "กลางบล็อก" ถูกเหมารวมเป็น "แทรกบล็อกใหม่ต่อท้าย" เหมือนกันหมด
+    // → วางเคอร์เซอร์หน้าบรรทัดแล้วกด Enter **บรรทัดนั้นไม่ขยับ** แต่ได้บล็อกว่างงอกข้างล่าง
+    // แล้วเคอร์เซอร์กระโดดตามลงไป (ผู้ใช้: "มันจะไม่ enter ลงมา มันจะขึ้นบรรทัดใหม่เลย")
+    //
+    // ที่ถูกคือกติกาเดียวกับโปรแกรมเขียนทุกตัว: **แทรกบรรทัดว่างไว้ข้างบน** แล้วเคอร์เซอร์
+    // ยังอยู่กับข้อความเดิมซึ่งเลื่อนลงมาหนึ่งบรรทัด · บล็อกว่างที่แทรกใช้ชนิดเดียวกับบล็อกเดิม
+    // (ไม่มีข้อความอยู่แล้ว = นับเป็นบรรทัดว่างทั้งในไฟล์ · บนจอ · ในตัวจัดหน้า)
+    //
+    // บล็อกที่ *ว่างอยู่แล้ว* ไม่เข้าเงื่อนไขนี้ — ต้นบล็อกกับท้ายบล็อกเป็นที่เดียวกัน
+    // จึงยังไปทางเดิม (สร้าง element ถัดไปตามครรลอง) ตามที่ออกแบบไว้ใน alpha.78
+    if ($f.depth >= 1 && $f.parent.type === spSchema.nodes.sp &&
+        $f.parentOffset === 0 && $f.parent.content.size > 0) {
+      const above = spSchema.nodes.sp.create({ el: $f.parent.attrs.el,
+                                               align: $f.parent.attrs.align || null });
+      const at = $f.before(1);
+      tr = tr.insert(at, above);
+      tr = tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map($f.pos)));
+      v.dispatch(tr.scrollIntoView());
+      if (this.onElement) this.onElement($f.parent.attrs.el);
+      return true;
+    }
+
     const sp = spSchema.nodes.sp.create({ el: nextEl });
     // เลือกรูปอยู่ (NodeSelection ระดับบนสุด · depth 0) → `$f.after(1)` throw
     // ใช้ปลายของ selection แทน = แทรกบล็อกใหม่ต่อจากรูป
@@ -500,29 +523,15 @@ export class SPEditor {
   }
 
   getMarkdown() {
-    const lines = [];
-    // เก็บโหนดเป็นอาร์เรย์ก่อน — lineFor ต้องรู้ว่า "บล็อกถัดไปว่างไหม" (ตัวจับชื่อตัวละคร
-    // อัตโนมัติใน classify บังคับให้ตัวละครมีบทพูดตามมาติด ๆ) ไม่งั้นบรรยายสั้น ๆ ที่ตามด้วย
-    // บรรทัดว่างจะถูกเติม `!` นำหน้าโดยไม่จำเป็น
+    // [alpha.87] ลูปประกอบบรรทัดย้ายไปอยู่ที่ blocksToMd() ใน fountain.js ที่เดียว
+    // (convert.js ต้องใช้ตัวเดียวกัน — สองชุดที่ตัดสิน prevBlank/guessNames ต่างกัน = ไฟล์เพี้ยน)
     const nodes = [];
     this.view.state.doc.forEach((node) => { nodes.push(node); });
     const asBlock = (node) => node.type.name === 'spimage'
       ? { el: 'image', text: node.attrs.md || `![${node.attrs.alt || ''}](${node.attrs.src || ''})` }
       : { el: node.attrs.el,
           text: node.attrs.el === 'raw' ? node.textContent : inlineToMd(node.toJSON().content || []) };
-    // เอกสารมีบล็อกตัวละครอยู่ = ไฟล์จะมี `@` แน่นอน → ตอนอ่านกลับตัวเดาชื่อจะถูกปิด
-    // ตรงนี้ต้องปิดตามให้ตรงกัน ไม่งั้นเขียนกันเหนียวด้วย `!` ทั้งที่ไม่จำเป็น
-    const guessNames = guessNamesForBlocks(nodes.map(asBlock));
-    let prevBlank = true, prevType = 'action';
-    nodes.forEach((node, i) => {
-      const { el, text } = asBlock(node);
-      const nextBlank = i + 1 >= nodes.length || blockIsBlank(asBlock(nodes[i + 1]));
-      const line = lineFor(el, text, prevBlank, prevType, nextBlank, guessNames);
-      lines.push(line);
-      if (line.trim() === '') prevBlank = true;
-      else { prevBlank = false; prevType = el; }
-    });
-    return lines.join('\n');
+    return blocksToMd(nodes.map(asBlock));
   }
 
   // แทรกรูปในบทหนัง (เรียกจาก insertImage ของ app.js)

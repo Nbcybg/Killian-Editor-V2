@@ -2,6 +2,8 @@
 import { t as tt, tf as ttf, T, tf } from './i18n.js';
 import { KEditor } from './editor.js';
 import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString } from './md.js';
+// [alpha.87] แปลงเอกสารข้ามโหมด นิยาย ↔ บทหนัง (โมดูลบริสุทธิ์ — เทสที่ test/convert.test.mjs)
+import { convertBody, lossReport, kindLabel } from './convert.js';
 // ---- alpha.58r: รูปแบบ + มุมมองหน้ากระดาษของ "นิยาย" (บั๊ก 15–24) ----
 import { PROSE_DEFAULTS, DEFAULT_PROSE_FONT, HEADING_DEFAULTS, QUOTE_DEFAULTS,
          mergeProseFormat, proseCssVars, proseCss, proseFontStack, proseHeadingStack,
@@ -461,7 +463,13 @@ export function refreshLineGutter() {
   for (let i = 0; i < kids.length; i++) {
     const r = kids[i].getBoundingClientRect();
     if (!r.height) continue;
-    const top = r.top - pr.top;
+    // [alpha.87 ข้อ C] ★ เลขต้องทาบ "บรรทัดข้อความแรก" ไม่ใช่ขอบบนของกล่อง
+    // ตั้งแต่ระยะเว้นบรรทัดของบทย้ายจาก margin ไปเป็น padding (เพื่อให้ตรงกับโมเดล)
+    // ขอบบนกล่อง = บนสุดของช่องไฟนำ ไม่ใช่ตัวหนังสือ → เลขลอยสูงขึ้นเรื่อย ๆ ตามระยะเว้น
+    // (ของ margin เดิมอยู่ *นอก* กล่อง จึงไม่มีอาการนี้) · หักช่องไฟนำออกก่อนเสมอ
+    const csPad = parseFloat(getComputedStyle(kids[i]).paddingTop);
+    const padTop = Number.isFinite(csPad) ? csPad * zoom : 0;
+    const top = r.top - pr.top + padTop;
     if (top > pr.height + 60) break;              // เลยขอบล่างของแผงแล้ว — ที่เหลือไม่ต้องดู
     if (top + r.height < -60) continue;           // ยังอยู่เหนือขอบบน
     const csLh = parseFloat(getComputedStyle(kids[i]).lineHeight);
@@ -6786,11 +6794,24 @@ async function switchFormat(target) {
   const to = target || (cur === 'prose' ? 'screenplay' : 'prose');
   if (to === cur) return;
 
-  // ถ้าผู้ใช้ยังไม่ได้แก้ ใช้ body เดิม (คงไบต์เดิมแบบ v1 — ไม่ re-serialize ข้าม grammar ซึ่งทำเนื้อหาเพี้ยน)
-  // ถ้าแก้แล้ว เก็บงานจริงจากตัวแก้ไขปัจจุบัน
   const src = tab.editor || tab.sp;
-  const body = tab.dirty ? src.getMarkdown() : (tab.body ?? src.getMarkdown());
+  const was = tab.dirty ? src.getMarkdown() : (tab.body ?? src.getMarkdown());
   const dir = tab.file.replace(/[\\/][^\\/]*$/, '');
+
+  // [alpha.87] **แปลงจริง** — เดิมยกไบต์ชุดเดิมให้อีกไวยากรณ์อ่านแล้วเขียนทับทันที
+  // `> ยกคำพูด` → ทรานซิชัน (`>>`) · `- รายการ` → ชื่อตัวละคร (`@- …`) = งานเสียถาวร
+  const conv = convertBody(was, to, tab.meta);
+  // ชั้น 3 (โครงเปลี่ยนจนใช้แผนที่ที่จดไว้ไม่ได้) เท่านั้นที่มีของหาย — ต้องบอกก่อนเสมอ
+  if (conv.mode === 'table') {
+    const lost = lossReport(was, to);
+    if (lost.length) {
+      const what = lost.slice(0, 4)
+        .map((x) => ttf('ui.app.convertLostItem', kindLabel(x.from), kindLabel(x.to), x.n)).join(' · ');
+      const more = lost.length > 4 ? ttf('ui.app.convertLostMore', lost.length - 4) : '';
+      if (!(await confirmBox(ttf('ui.app.convertLoss', what + more), tt('ui.app.convertGo')))) return;
+    }
+  }
+  const body = conv.body;
 
   tab.editor?.destroy(); tab.sp?.destroy();
   tab.editor = null; tab.sp = null;
@@ -6800,9 +6821,14 @@ async function switchFormat(target) {
   tab.pane.appendChild(el('div', 'workspace'));
   tab.meta.format = to;
   tab.body = body;
+  // แผนที่ชนิดบล็อกของ "ฝั่งที่เพิ่งจากมา" — ไม่ใช่สำเนาเนื้อหา แค่ RLE ตัวอักษรเดียว
+  // แปลงกลับสำเร็จเมื่อไหร่ลบทิ้ง → ไฟล์ที่ไม่เคยสลับโหมดไม่มีโอเวอร์เฮดสักไบต์
+  if (conv.mode === 'table') { tab.meta.spMap = conv.spMap; tab.meta.spHash = conv.spHash; }
+  else { delete tab.meta.spMap; delete tab.meta.spHash; }
+  // ทรานซิชันของบท = ย่อหน้าชิดขวาของนิยาย · ว่างเมื่อไหร่ไม่แตะ align เดิมของผู้ใช้
+  if (conv.align && Object.keys(conv.align).length) tab.meta.align = '[' + alignToString(conv.align) + ']';
   mountEditor(tab, dir, body);
 
-  // เขียนลงไฟล์ทันทีให้ format บนดิสก์ตรงกับที่เห็น (เนื้อหาไม่เปลี่ยน)
   tab.meta.modified = new Date().toISOString();
   await kapi.writeFile(tab.file, dumpMdFile(tab.meta, body));
   tab.dirty = false;
@@ -7997,6 +8023,8 @@ function heavyDelay(tab) {
 }
 
 let countJob = null;
+// [alpha.87 ข้อ E] เวลาที่ scheduleCount() ได้ "ทำงานจริง" ครั้งล่าสุด — ใช้คุมเพดานเวลารอ
+let _countRunAt = 0;
 // [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติ — debounce ตามช่วงเวลาที่ตั้ง
 let repaginateJob = null;
 /**
@@ -8149,7 +8177,24 @@ let _spPageText = '';
 function scheduleCount() {
   clearTimeout(countJob);
   const t0 = state.active;
+  // ═══ [alpha.87 ข้อ E] ★ **เพดานเวลารอ** — debounce ล้วนจะไม่เคยได้ยิงเลย ═══
+  //
+  // เดิมบรรทัดนี้เป็น `setTimeout(…, heavyDelay(t0))` คู่กับ `clearTimeout` ข้างบน = debounce แท้
+  // ทุก input รีเซ็ตตัวจับเวลาใหม่หมด → **ถ้าผู้ใช้ป้อนถี่กว่าเวลาหน่วง มันจะไม่ทำงานสักครั้ง**
+  // ผู้ใช้กด Ctrl+V ค้าง (คีย์ซ้ำ ~30 ครั้ง/วินาที = ทุก 33ms ซึ่งถี่กว่า 100ms) จึงเห็นกระดาษ
+  // ยืดยาวออกไปเรื่อย ๆ โดยไม่มีเส้นคั่นหน้าเลย จนกว่าจะปล่อยมือ
+  // (กด Enter ไม่เจอเพราะมีทางลัดเฉพาะตัวที่ `repaginateOnEnter` — วาง/พิมพ์ไม่มี)
+  //
+  // แก้แบบ debounce-with-maxWait: ยังรวบงานถี่ ๆ เหมือนเดิม แต่**การันตีว่าอย่างช้าที่สุด
+  // ทุก ๆ `cap` มิลลิวินาที ต้องได้จัดหน้าหนึ่งครั้ง** ระหว่างที่ยังป้อนไม่หยุด
+  // เอกสารยาวยืดเพดานตามเวลาหน่วง (งานหนักขึ้นก็ยอมให้ห่างขึ้น)
+  const wait = t0 ? heavyDelay(t0) : 100;
+  const now = Date.now();
+  if (!_countRunAt) _countRunAt = now;
+  const cap = Math.max(400, wait * 2);
+  const due = Math.max(0, cap - (now - _countRunAt));
   countJob = setTimeout(() => {
+    _countRunAt = Date.now();
     const t = state.active;
     if (!t || t.wiki || t.gal || t.isJson || t.net || t.dash || t.planner || (!t.editor && !t.sp && !t.plain)) { $('#wc').textContent = ''; return; }
     // [alpha.58 บั๊ก 4] บทภาพยนตร์นับจาก "ข้อความในเอกสาร" ไม่ใช่ getMarkdown()
@@ -8183,7 +8228,7 @@ function scheduleCount() {
     updateErrorBadge();
     updateProgressBar();
     scheduleLineGutter();                 // [60r2 ข้อ 11] เนื้อหาเปลี่ยน = เลขบรรทัดเปลี่ยนตาม
-  }, t0 ? heavyDelay(t0) : 100);
+  }, Math.min(wait, due));
 }
 
 
@@ -10587,19 +10632,51 @@ async function runTest(projectPath) {
     // t เป็นฉากนิยาย (disk = orig). สลับไปบทหนังแล้วกลับ ต้องไม่เสียเนื้อหา + frontmatter ถูก
     const fmtOf = async (f) => (parseMdFile(await kapi.readFile(f)).meta.format || 'prose');
     check('เริ่มต้นเป็นโหมดนิยาย', !!t.editor && !t.sp && (await fmtOf(t.file)) === 'prose');
-    await switchFormat('screenplay');
+    // [alpha.87] ชั้น 3 (ยังไม่เคยจดแผนที่ไว้) ต้อง **ถามก่อน** ว่าจะเสียอะไร — ตอบให้ด้วย
+    // ปุ่มจริงในกล่องจริง ไม่ใช่ stub · คืน promise ของ switchFormat ให้ await ต่อได้
+    const answerConvert = async (go, ok) => {
+      const done = go();
+      await new Promise((r) => setTimeout(r, 80));
+      const box = [...document.querySelectorAll('.k-overlay .k-dialog')].pop();
+      box?.querySelector(ok ? '.k-ok' : '.k-cancel')?.click();
+      return { done: await done, asked: !!box, box };
+    };
+    const ask87 = await answerConvert(() => switchFormat('screenplay'), false);
+    check('[87] แปลงชั้น 3 ถามก่อนเสมอว่าจะเสียอะไร', ask87.asked);
+    check('[87] กล่องบอกชนิดที่จะเปลี่ยนเป็นภาษาคน',
+          /ยกคำพูด|รายการ|หัวข้อ/.test(ask87.box?.textContent || ''),
+          ask87.box?.textContent);
+    check('[87] ตอบยกเลิก = ไม่สลับโหมด ไม่แตะไฟล์',
+          !!state.active.editor && !state.active.sp &&
+          parseMdFile(await kapi.readFile(t.file)).body === orig);
+    await answerConvert(() => switchFormat('screenplay'), true);
     check('สลับเป็นบทหนัง → ตัวแก้ไข element + editor นิยายถูกปิด',
           !!state.active.sp && !state.active.editor);
     check('สลับโหมดเขียน format ลง frontmatter (screenplay)',
           (await fmtOf(t.file)) === 'screenplay');
-    check('สลับโหมดไม่แก้เนื้อหาบนดิสก์',
-          parseMdFile(await kapi.readFile(t.file)).body === orig,
-          JSON.stringify(parseMdFile(await kapi.readFile(t.file)).body));
+    // [alpha.87] เดิมยกไบต์ชุดเดิมให้ไวยากรณ์บทอ่านแล้วเขียนทับ → `> ยกคำพูด` กลายเป็น `>>`
+    // และ `- รายการ` กลายเป็น `@- รายการ` (ชื่อตัวละคร) = งานเสียถาวรตั้งแต่บันทึกครั้งแรก
+    const spDisk87 = parseMdFile(await kapi.readFile(t.file));
+    check('สลับโหมดแล้ว **แปลงจริง** ไม่ใช่ยกไบต์เดิมไปให้อีกไวยากรณ์อ่าน',
+          !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
+          JSON.stringify(spDisk87.body).slice(0, 200));
+    check('จดแผนที่ชนิดบล็อกไว้ในไฟล์ (ไม่ใช่สำเนาเนื้อหา)',
+          !!spDisk87.meta.spMap && !!spDisk87.meta.spHash &&
+          spDisk87.meta.spMap.length < orig.length / 4,
+          spDisk87.meta.spMap + ' / ' + spDisk87.meta.spHash);
     check('ปุ่มโหมดบน toolbar ขึ้น "บทหนัง"', $('#tb-mode').textContent.includes('บทหนัง'));
-    await switchFormat('prose');
+    const backAsk87 = await answerConvert(() => switchFormat('prose'), true);
+    check('[87] ขากลับใช้แผนที่ที่จดไว้ = ไม่มีของหาย จึงไม่ถาม', !backAsk87.asked);
     check('สลับกลับเป็นนิยาย → editor นิยายกลับมา',
           !!state.active.editor && !state.active.sp);
     check('frontmatter กลับเป็น prose', (await fmtOf(t.file)) === 'prose');
+    // **หัวใจของ alpha.87**: สลับไป-กลับโดยไม่แก้อะไร ต้องได้ไฟล์เดิมเป๊ะทุกไบต์
+    const backDisk87 = parseMdFile(await kapi.readFile(t.file));
+    check('สลับไป-กลับได้เนื้อหาเดิมเป๊ะทุกไบต์', backDisk87.body === orig,
+          JSON.stringify(backDisk87.body));
+    check('แปลงกลับสำเร็จแล้วลบ spMap/spHash ทิ้ง (ไฟล์ไม่มีโอเวอร์เฮดค้าง)',
+          !backDisk87.meta.spMap && !backDisk87.meta.spHash,
+          JSON.stringify(backDisk87.meta));
     check('เนื้อหาหลักอยู่ครบหลังสลับไป-กลับ',
           state.active.editor.getText().includes('ความหวัง') &&
           !!document.querySelector('.pane.on figure img'),
@@ -10626,12 +10703,43 @@ async function runTest(projectPath) {
       sp.switchTo('scene');
       check('[95] switchTo → scene', sp.curElement() === 'scene');
 
-      // [51] Enter ใช้ spCycle สร้าง element ถัดไป
+      // [51] Enter ใช้ spCycle สร้าง element ถัดไป — **เมื่อเคอร์เซอร์อยู่ท้ายบล็อก**
+      // [alpha.87 ข้อ 3] ต้นบล็อกที่มีข้อความมีกติกาของตัวเองแล้ว (ดูเทสถัดไป) จึงต้องระบุ
+      // ตำแหน่งเคอร์เซอร์ให้ชัด ไม่ปล่อยตามสภาพที่เทสก่อนหน้าทิ้งไว้
+      const toEnd = () => { const b = sp.curBlock();
+        sp.view.dispatch(sp.view.state.tr.setSelection(
+          TextSelection.create(sp.view.state.doc, b.pos + 1 + b.node.content.size))); };
+      toEnd();
       const cur1 = sp.curElement();
       sp.enter();
       const nextAfterEnter = sp.curElement();
-      check('[51] Enter สร้าง element ตาม spCycle', nextAfterEnter !== cur1,
+      check('[51] Enter ท้ายบล็อก สร้าง element ตาม spCycle', nextAfterEnter !== cur1,
             cur1 + ' → ' + nextAfterEnter);
+
+      // ═══ [alpha.87 ข้อ 3] ★ Enter ที่ **ต้นบล็อกที่มีข้อความ** = ดันบรรทัดเดิมลง ═══
+      // เดิมทุกกรณีที่ไม่ใช่กลางบล็อกถูกเหมาเป็น "แทรกบล็อกใหม่ต่อท้าย" → วางเคอร์เซอร์
+      // หน้าบรรทัดแล้วกด Enter บรรทัดนั้นไม่ขยับ แต่ได้บล็อกว่างงอกข้างล่างแล้วเคอร์เซอร์
+      // กระโดดตามลงไป (ผู้ใช้: "มันจะไม่ enter ลงมา")
+      {
+        sp.switchTo('action');
+        const b0 = sp.curBlock();
+        sp.view.dispatch(sp.view.state.tr.delete(b0.pos + 1, b0.pos + 1 + b0.node.content.size));
+        sp.view.dispatch(sp.view.state.tr.insertText('ข้อความเดิม'));
+        const nBefore = sp.view.state.doc.childCount;
+        const cur = sp.curBlock();
+        sp.view.dispatch(sp.view.state.tr.setSelection(
+          TextSelection.create(sp.view.state.doc, cur.pos + 1)));   // ต้นบล็อก
+        sp.enter();
+        const doc87 = sp.view.state.doc;
+        const texts = []; doc87.forEach((n) => texts.push(n.textContent));
+        const i87 = texts.indexOf('ข้อความเดิม');
+        check('[87-3] ★ Enter ต้นบล็อก แทรกบรรทัดว่างไว้ข้างบน (ข้อความเดิมไม่ขยับที่)',
+              i87 > 0 && texts[i87 - 1] === '' && doc87.childCount === nBefore + 1,
+              JSON.stringify(texts.slice(Math.max(0, i87 - 2), i87 + 1)));
+        check('[87-3] ★ เคอร์เซอร์ยังอยู่กับข้อความเดิม (ไม่กระโดดไปบล็อกว่าง)',
+              sp.curBlock().node.textContent === 'ข้อความเดิม',
+              JSON.stringify(sp.curBlock().node.textContent));
+      }
 
       // [51] Tab cycle เปลี่ยน element ปัจจุบัน
       const cur2 = sp.curElement();
@@ -17895,20 +18003,82 @@ async function runTest(projectPath) {
         if (dl) {
           const ds = getComputedStyle(dl);
           check('[81] บทพูดเยื้อง 1.0 นิ้ว (2.5-1.5)', Math.abs(parseFloat(ds.marginLeft) - 1.0 * 96) < 2, ds.marginLeft);
-          check('[82] บทพูดไม่เว้นบรรทัดก่อน (linesBefore 0)', parseFloat(ds.marginTop) === 0, ds.marginTop);
+          // [alpha.87 ข้อ 4] ระยะเว้นบรรทัดย้ายจาก margin ไป padding — margin ต้องเป็น 0 ทุกชนิด
+          check('[82] บทพูดไม่เว้นบรรทัดก่อน (linesBefore 0)',
+                parseFloat(ds.paddingTop) === 0 && parseFloat(ds.marginTop) === 0,
+                ds.paddingTop + ' / ' + ds.marginTop);
         }
-        const scEl = spT.pane.querySelector('.sp-scene');
-        check('[82] หัวฉากเว้น 2 บรรทัดก่อน (margin-top = 2em)',
-              !!scEl && Math.abs(parseFloat(getComputedStyle(scEl).marginTop) - 2 * parseFloat(getComputedStyle(scEl).fontSize)) < 2,
-              scEl && getComputedStyle(scEl).marginTop);
+        // [alpha.87 ข้อ 4] บล็อก **แรกของหน้า** ไม่มีระยะเว้นนำโดยตั้งใจ (paginate ให้ before = 0)
+        // จึงต้องวัดหัวฉากที่ *ไม่ใช่* ตัวแรกของเอกสาร ไม่งั้นวัดได้ 0 แล้วเข้าใจผิดว่าพัง
+        // เอกสารทดสอบมีหัวฉากเดียวและมันเป็นบล็อกแรกพอดี — เติมอีกอันท้ายเอกสารเพื่อวัด
+        let _docSize87 = 0;
+        {
+          // ต้องมีบล็อก **ที่มีข้อความ** คั่นก่อนหัวฉาก ไม่งั้นกฎ "ไม่เว้นซ้ำหลังบรรทัดว่าง"
+          // จะตัด padding ให้ 0 (ซึ่งถูกต้อง) แล้ววัดระยะเว้นของหัวฉากไม่ได้
+          const v87s = spT.sp.view;
+          const S87 = v87s.state.schema;
+          _docSize87 = v87s.state.doc.content.size;   // ไว้คืนสภาพหลังวัดเสร็จ
+          v87s.dispatch(v87s.state.tr.insert(v87s.state.doc.content.size,
+            S87.nodes.sp.create({ el: 'action' }, S87.text('บรรยายคั่นก่อนหัวฉาก'))));
+          v87s.dispatch(v87s.state.tr.insert(v87s.state.doc.content.size,
+            S87.nodes.sp.create({ el: 'scene' }, S87.text('INT. ห้องที่สอง - เช้า'))));
+        }
+        await new Promise((r) => setTimeout(r, 250));
+        const scAll = [...spT.pane.querySelectorAll('.sp-scene')];
+        // เลือกหัวฉากที่ "มีบล็อกซึ่งมีข้อความอยู่ข้างบนติดกัน" — เงื่อนไขเดียวที่ระยะเว้นนำมีผลจริง
+        // (บล็อกแรกของหน้า และบล็อกที่ตามหลังบรรทัดว่าง ถูกตัดระยะเว้นทิ้งโดยตั้งใจทั้งคู่)
+        const prevOk87 = (x) => { const pv = x.previousElementSibling;
+          return !!pv && pv.classList.contains('sp') && !pv.classList.contains('sp-page-break')
+                 && !!pv.textContent.trim(); };
+        const scEl = scAll.find(prevOk87) || scAll[0];
+        const scDiag87 = 'scenes=' + scAll.length + ' ok=' + scAll.filter(prevOk87).length +
+          ' prev=' + (scEl && scEl.previousElementSibling
+            ? scEl.previousElementSibling.className + '/' + scEl.previousElementSibling.textContent.length
+            : '(none)');
+        // ═══ [alpha.87 ข้อ 4] ★ ระยะเว้นบรรทัดต้องเป็น padding บน "กริดบรรทัดของโมเดล" ═══
+        // เดิมเป็น `margin-top:2em` ซึ่งผิดสองชั้น: (1) CSS ยุบ margin ที่ติดกันเป็น max()
+        // แต่ paginate() บวก → หน้าล้น/โหว่ (2) `em` ผูกกับขนาดฟอนต์ ไม่ใช่ความสูงบรรทัดของโมเดล
+        // ตั้งฟอนต์ 11pt แล้ว 1 บรรทัดของ CSS = 14.67px ขณะที่โมเดลคิด ⅙ นิ้ว = 16px
+        {
+          const lh87 = parseFloat(getComputedStyle(document.documentElement)
+                                    .getPropertyValue('--sp-line-h')) || 16;
+          const scs87 = scEl && getComputedStyle(scEl);
+          check('[87-4] ★ หัวฉากเว้น 2 บรรทัดก่อน ด้วย padding บนกริดบรรทัดของโมเดล',
+                !!scEl && Math.abs(parseFloat(scs87.paddingTop) - 2 * lh87) < 1,
+                scEl && scs87.paddingTop + ' (ต้องเป็น ' + (2 * lh87) + 'px) · ' + scDiag87);
+          check('[87-4] ★ ไม่ใช้ margin แล้ว (margin ยุบรวมกันได้ = ตัวเลขไม่ตรงกับโมเดล)',
+                !!scEl && parseFloat(scs87.marginTop) === 0, scEl && scs87.marginTop);
+          // ระยะเว้นต้อง **บวกกัน** ไม่ใช่ยุบเป็น max() — วัดจากระยะห่างจริงของสองบล็อกที่ติดกัน
+          const kids87 = [...spT.pane.querySelectorAll('.ProseMirror > .sp')];
+          const pair87 = kids87.find((e, i) => i > 0 &&
+            parseFloat(getComputedStyle(e).paddingTop) > 0 &&
+            parseFloat(getComputedStyle(kids87[i - 1]).paddingBottom) >= 0);
+          if (pair87) {
+            const i87 = kids87.indexOf(pair87);
+            const prev87 = kids87[i87 - 1].getBoundingClientRect();
+            const gap87 = pair87.getBoundingClientRect().top - prev87.bottom;
+            check('[87-4] บล็อกที่ติดกันไม่ยุบระยะเว้นเข้าหากัน (ช่องว่างจริง = 0 เพราะอยู่ใน padding)',
+                  Math.abs(gap87) < 1.5, gap87.toFixed(1));
+          }
+        }
+        // **คืนสภาพเอกสาร** — บล็อกที่แทรกไว้เพื่อวัดต้องไม่ค้างไปกวนเทสถัด ๆ ไป (กฎ idempotent)
+        if (_docSize87) {
+          const v87r = spT.sp.view;
+          if (v87r.state.doc.content.size > _docSize87)
+            v87r.dispatch(v87r.state.tr.delete(_docSize87, v87r.state.doc.content.size));
+          await new Promise((r) => setTimeout(r, 200));
+        }
         // ปรับค่าแล้วต้องเปลี่ยนจริง
         S.spElements = { character: { indent: 4.5, width: 3.0, linesBefore: 30, linesBetween: 10 } };
         applyPageVars();
         const cs2 = getComputedStyle(spT.pane.querySelector('.sp-character'));
         check('[81] แก้ระยะเยื้องตัวละครใน settings → มีผลทันที (4.5-1.5=3in)',
               Math.abs(parseFloat(cs2.marginLeft) - 3 * 96) < 2, cs2.marginLeft);
+        // [alpha.87 ข้อ 4] ระยะเว้นเป็น padding บนกริดบรรทัดของโมเดล (--sp-line-h) ไม่ใช่ em ของฟอนต์
         check('[82] แก้ระยะเว้นบรรทัดก่อน (30 = 3 บรรทัด) → มีผลทันที',
-              Math.abs(parseFloat(cs2.marginTop) - 3 * parseFloat(cs2.fontSize)) < 2, cs2.marginTop);
+              Math.abs(parseFloat(cs2.paddingTop) - 3 * (parseFloat(getComputedStyle(
+                document.documentElement).getPropertyValue('--sp-line-h')) || 16)) < 1,
+              cs2.paddingTop);
         S.spStyles = { character: { screen: { caps: false, bold: true, italic: false, underline: false },
                                     print: { caps: true, bold: false, italic: false, underline: true } } };
         applyPageVars();
@@ -18327,7 +18497,12 @@ async function runTest(projectPath) {
               // และมันสูง 0 บนจอ จึงไม่มีบรรทัดให้เทียบ
               if (kind === 'page-break' || kind === 'blank') continue;
               const guess = wrapLines(txt, fmt82.elements[kind].width);
-              const real = Math.round(elS.getBoundingClientRect().height / zSp / lineH82);
+              // [alpha.87 ข้อ 4] ระยะเว้นบรรทัดย้ายมาอยู่ใน padding ของกล่อง (ยุบไม่ได้ = ตรงกับโมเดล)
+              // ตัววัดนี้เทียบ "จำนวนบรรทัดของข้อความ" จึงต้องหักช่องไฟนำ/ตามออกก่อนหาร
+              const csS87 = getComputedStyle(elS);
+              const padS87 = parseFloat(csS87.paddingTop) + parseFloat(csS87.paddingBottom);
+              const real = Math.round(
+                (elS.getBoundingClientRect().height / zSp - padS87) / lineH82);
               seen++;
               if (guess !== real && !bad++) {
                 // [alpha.82] เก็บหลักฐานพอที่จะตัดสินว่า "อัลกอริทึมผิด" หรือ "ค่า 10 ตัว/นิ้วผิด"
@@ -20121,6 +20296,7 @@ async function runTest(projectPath) {
         await new Promise((r) => setTimeout(r, 600));
         const v85b = T.editor.view;
         let bad85 = '';
+        const t85perf = performance.now();            // [alpha.87 ข้อ 5] ยามเฝ้าความเร็ว (ดูข้างล่าง)
         for (let k = 1; k <= 90; k++) {
           v85b.dispatch(v85b.state.tr.split(1));      // = กด Enter ที่ต้นเอกสาร
           repaginateFast(T);                          // เส้นทางเดียวกับ repaginateOnEnter()
@@ -20132,7 +20308,47 @@ async function runTest(projectPath) {
           }
         }
         check('[85-4] ★ กด Enter ไล่ลงมา 90 ครั้ง เส้นคั่นตามจำนวนหน้าตลอดทาง', !bad85, bad85);
+        // ═══ [alpha.87 ข้อ 5] ★ ยามเฝ้า "พิมพ์แล้วไม่หน่วง" ═══
+        // อาการเดิม: กด Enter หนึ่งครั้ง = ปลั๊กอิน decoration ทั้งสามตัว (ตรวจคำผิด/ชื่อ Wiki/
+        // คอมเมนต์) สแกน **ทั้งเอกสาร** เพราะตำแหน่งที่เปลี่ยนตกอยู่ระหว่างบล็อก (depth 0)
+        // แล้ว blockRange() ตีความว่า "ทั้งเอกสารเปลี่ยน" · ซ้ำด้วย spell.check() ที่สร้าง Set
+        // จากพจนานุกรม 81,000 คำใหม่ทุกครั้งที่ถูกเรียก
+        // วัดจริงก่อนแก้: 5,243ms ต่อการกดหนึ่งครั้ง (เอกสาร 25 หน้า) · หลังแก้: 16ms
+        //
+        // เกณฑ์ตั้งไว้หลวมมาก (90 ครั้งใน 20 วินาที = 222ms/ครั้ง) เพราะเครื่อง CI/เครื่องที่
+        // โหลดหนักช้ากว่ากันได้หลายเท่า — แต่ของเดิมใช้เวลาระดับ **นาที** จึงจับได้แน่นอน
+        // ถ้าใครเผลอทำให้กลับไปสแกนทั้งเอกสารต่อการพิมพ์หนึ่งครั้งอีก
+        {
+          const ms85 = performance.now() - t85perf;
+          check('[87-5] ★ กด Enter 90 ครั้งไม่หน่วง (ไม่สแกนทั้งเอกสารต่อการพิมพ์หนึ่งครั้ง)',
+                ms85 < 20000, Math.round(ms85) + 'ms (' + Math.round(ms85 / 90) + 'ms/ครั้ง)');
+        }
         check('[85-4] จบแล้วยังหลายหน้าอยู่ (ไม่ยุบกลับเหลือหน้าเดียว)', pagesNow() >= 4, pagesNow());
+
+        // ═══ [alpha.87 ข้อ E] ★ ป้อนถี่ไม่หยุด ต้องได้จัดหน้า "ระหว่างทาง" ═══
+        // scheduleCount() เป็น debounce ล้วน — ทุก input รีเซ็ตตัวจับเวลา ถ้าผู้ใช้ป้อนถี่กว่า
+        // เวลาหน่วง (กด Ctrl+V ค้าง = ~30 ครั้ง/วินาที) มันจะ **ไม่เคยได้ยิงเลย** จนกว่าจะปล่อยมือ
+        // ผู้ใช้จึงเห็นกระดาษยืดยาวออกไปโดยไม่มีเส้นคั่นหน้า
+        // ที่แก้: debounce-with-maxWait — อย่างช้าที่สุดทุก ๆ cap ต้องได้จัดหน้าหนึ่งครั้ง
+        {
+          T.editor.setMarkdown(W85.repeat(10));
+          await new Promise((r) => setTimeout(r, 700));
+          const v87 = T.editor.view;
+          scheduleCount();
+          await new Promise((r) => setTimeout(r, 400));
+          const before87 = drawnNow();          // จุดตั้งต้น (สภาพค้างจากเทสก่อนหน้าไม่สำคัญ)
+          // ป้อนทุก 20ms (ถี่กว่าเวลาหน่วง 100ms) ติดกัน 60 รอบ ≈ 1.2 วินาที — **ไม่หยุดพักเลย**
+          for (let k = 0; k < 60; k++) {
+            v87.dispatch(v87.state.tr.split(1));
+            scheduleCount();
+            await new Promise((r) => setTimeout(r, 20));
+          }
+          // ยังไม่ได้หยุดพัก — ตรงนี้ต้องมีเส้นคั่นแล้ว
+          // (ของเดิมเป็น 0 เพราะ debounce ถูกรีเซ็ตทุก 20ms จึงไม่เคยยิงสักครั้ง)
+          const drawnMid = drawnNow();
+          check('[87-E] ★ ป้อนถี่ไม่หยุด ยังจัดหน้าให้ระหว่างทาง (ไม่รอปล่อยมือ)',
+                drawnMid > before87, 'ก่อนป้อน ' + before87 + ' → ระหว่างป้อน ' + drawnMid);
+        }
 
         // (ค) มุมมองหน้าคู่ต้องเห็นจำนวนหน้าเท่ากับที่ตัวแก้ไขคิด (รูปที่ 4 ของผู้ใช้เห็นหน้าเดียว)
         setSpView('side');
@@ -20140,8 +20356,81 @@ async function runTest(projectPath) {
         const sidePages = T.pane.querySelectorAll('.sp-pageview .sp-page').length;
         check('[85-4] ★ มุมมองหน้าคู่เห็นจำนวนหน้าเท่ากับตัวแก้ไข',
               sidePages === pagesNow(), `หน้าคู่ ${sidePages} · ตัวแก้ไข ${pagesNow()}`);
+
+        // ═══ [alpha.87 ข้อ 2+4] กระดาษต้องเป็น "กระดาษ" — สูงเท่ากันทุกแผ่น ไม่มีแผ่นไหนล้น ═══
+        // เดิม: CONTINUED ถูกวาดเป็นบล็อกในเนื้อหน้าทั้งที่ paginate() ไม่จองบรรทัดให้ +
+        // `min-height` ปล่อยให้กระดาษยืด + `border:1px` กินพื้นที่พิมพ์ไป 2px ทุกแผ่น +
+        // ระยะเว้นบรรทัดเป็น margin ซึ่ง CSS ยุบแต่โมเดลบวก → แผ่นไม่เท่ากันและล้นขอบล่าง
+        {
+          const pgs87 = [...T.pane.querySelectorAll('.sp-pageview .sp-page')];
+          const hs87 = [...new Set(pgs87.map((p) => Math.round(p.getBoundingClientRect().height)))];
+          check('[87-2] ★ กระดาษทุกแผ่นสูงเท่ากันเป๊ะ', hs87.length <= 1, hs87.join(','));
+          check('[87-2] กระดาษตั้งความสูงตายตัว ไม่ใช่ min-height (ยืดไม่ได้)',
+                pgs87.every((p) => p.style.height && !p.style.minHeight),
+                pgs87[0] ? pgs87[0].style.height + ' / ' + (pgs87[0].style.minHeight || '-') : '-');
+          // พื้นที่พิมพ์ต้องหารด้วยความสูงบรรทัดได้ลงตัว = จำนวนบรรทัดที่โมเดลจองไว้เป๊ะ
+          const lh87 = parseFloat(getComputedStyle(document.documentElement)
+                                    .getPropertyValue('--sp-line-h')) || 16;
+          const bodies87 = pgs87.map((p) => {
+            const cs = getComputedStyle(p);
+            return p.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+          });
+          check('[87-4] ★ เส้นขอบกระดาษไม่กินพื้นที่พิมพ์ (พื้นที่ = จำนวนบรรทัดเต็ม)',
+                bodies87.every((b) => Math.abs(b / lh87 - Math.round(b / lh87)) < 0.02),
+                bodies87.slice(0, 2).map((b) => (b / lh87).toFixed(2)).join(','));
+          // เนื้อหาของแต่ละแผ่นต้องไม่ทะลุขอบล่างของพื้นที่พิมพ์
+          const over87 = pgs87.map((p) => {
+            const cs = getComputedStyle(p);
+            const bs = [...p.querySelectorAll('.sp')];
+            if (!bs.length) return 0;
+            const last = bs[bs.length - 1];
+            return last.offsetTop + last.offsetHeight - (p.clientHeight - parseFloat(cs.paddingBottom));
+          });
+          check('[87-4] ★ ไม่มีแผ่นไหนเนื้อหาล้นพื้นที่พิมพ์',
+                over87.every((o) => o <= 1),
+                'ล้นสูงสุด ' + Math.max(0, ...over87).toFixed(1) + 'px');
+          check('[87-4] บล็อกแรกของหน้าไม่มีระยะเว้นนำ (ตรงกับ before = 0 ของ paginate)',
+                pgs87.every((p) => { const b = p.querySelector('.sp');
+                  return !b || parseFloat(getComputedStyle(b).paddingTop) === 0; }));
+          // CONTINUED ต้องเป็นโอเวอร์เลย์ในระยะขอบ ไม่ใช่บล็อกที่กินบรรทัดในเนื้อหน้า
+          const cm87 = [...T.pane.querySelectorAll('.sp-pageview .sp-cont-page')];
+          if (cm87.length) {
+            check('[87-2] CONTINUED บนหน้ากระดาษเป็นโอเวอร์เลย์ (absolute) ไม่กินบรรทัด',
+                  cm87.every((m) => getComputedStyle(m).position === 'absolute'));
+            check('[87-3] CONTINUED เคารพระยะขอบซ้าย (ไม่ชิดขอบกระดาษ)',
+                  cm87.every((m) => parseFloat(m.style.left) > 0), cm87[0].style.left);
+          }
+        }
         setSpView('normal');
         await new Promise((r) => setTimeout(r, 400));
+
+        // ═══ [alpha.87 ข้อ 1] (CONTINUED) ในโหมดปกติต้องไม่ทับตัวหนังสือ ═══
+        {
+          const brk87 = [...T.pane.querySelectorAll('.sp-page-break.k-pb-cont')];
+          if (brk87.length) {
+            const band = brk87[0].getBoundingClientRect().height;
+            const mark = brk87[0].querySelector('.sp-cont-edge');
+            const mh = mark ? mark.getBoundingClientRect().height : 0;
+            check('[87-1] ★ เส้นคั่นที่มี CONTINUED เปิดแถบให้เครื่องหมายยืนได้',
+                  band >= mh * 2, `แถบ ${band.toFixed(1)}px · เครื่องหมาย ${mh.toFixed(1)}px`);
+            // เครื่องหมายต้องอยู่ในกล่องของเส้นคั่น = ทับบรรทัดข้างเคียงไม่ได้โดยโครงสร้าง
+            const wr = brk87[0].getBoundingClientRect();
+            check('[87-1] ★ เครื่องหมายอยู่ในกล่องของเส้นคั่น ไม่ล้นไปทับบรรทัด',
+                  [...brk87[0].querySelectorAll('.sp-cont-edge')].every((m) => {
+                    const r = m.getBoundingClientRect();
+                    return r.top >= wr.top - 0.5 && r.bottom <= wr.bottom + 0.5;
+                  }));
+            // ป้าย "หน้า N" ต้องไม่ชนกับ (CONTINUED) (เคยทับกัน 5.8px)
+            const num87 = brk87[0].querySelector('.sp-page-break-num');
+            const bot87 = brk87[0].querySelector('.sp-cont-bottom');
+            if (num87 && bot87) {
+              const a = num87.getBoundingClientRect(), b = bot87.getBoundingClientRect();
+              const hit = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5 &&
+                          Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5;
+              check('[87-1] ป้ายเลขหน้าไม่ชนกับ (CONTINUED)', !hit);
+            }
+          }
+        }
       }
 
       // ═══ [alpha.85 ข้อ 3] เปิดฉากใหม่แล้วกระดาษต้องเป็น "แผ่นเต็ม" ไม่ใช่แผ่นเตี้ย ═══

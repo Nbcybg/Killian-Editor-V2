@@ -1152,13 +1152,35 @@ body.k-mod-down .k-mention { cursor:pointer; }
    → บทตัดหน้าผิดสะสมทั้งเรื่อง · ตอนนี้: บรรทัดว่างสูง 1 บรรทัดเป๊ะ ไม่มี margin
    และบล็อกที่ตามหลังบรรทัดว่างก็ไม่ต้องเว้นซ้ำ (ตรงกับกฎ `prevBlank` ใน paginate())
 
-   ตรวจ "ว่าง" จาก DOM ตรง ๆ: โหนด sp ที่ว่างมีลูกตัวเดียวคือ <br> ที่ ProseMirror ใส่ให้
-   (schema ของบทไม่มี hard-break ผู้ใช้สร้าง <br> เองไม่ได้ เกณฑ์นี้จึงชี้ขาด) */
-.sp:has(> br.ProseMirror-trailingBreak:only-child) {
+   ตรวจ "ว่าง" จาก DOM ตรง ๆ: โหนด sp ที่ว่างมี <br> ที่ ProseMirror ใส่ให้
+   (schema ของบทไม่มี hard-break ผู้ใช้สร้าง <br> เองไม่ได้ เกณฑ์นี้จึงชี้ขาด)
+
+   [alpha.87 ข้อ B] ★ **เดิมใช้ `:only-child` ซึ่งพลาดบล็อกว่างที่มี widget อยู่ด้วย**
+   หัวฉากว่างมี widget เลขฉากสองตัว (.k-scene-no) + IMG.ProseMirror-separator อยู่ในกล่อง
+   → `:only-child` ไม่แมตช์ → หัวฉาก/ตัวละครว่างยังได้ระยะเว้นนำเต็ม ๆ (32px) บนจอ
+   ขณะที่โมเดลนับเป็นบรรทัดว่าง 1 บรรทัด = จอกับโมเดลไม่ตรงกันทุกบล็อกว่างที่ไม่ใช่ `action`
+   วัดจริงกับ 156 บล็อก (มีข้อความ 8 · ว่าง 148): เกณฑ์หลวมนี้จับผิด 0 จับพลาด 0 */
+.sp:has(> br.ProseMirror-trailingBreak) {
+  /* [alpha.87 ข้อ D] ตัด padding แล้วต้องตัดตัวแปรที่ widget ในบล็อกใช้อ้างอิงด้วย
+     (เลขฉากของ "หัวฉากว่าง" ไม่งั้นยังเลื่อนลงมา 2 บรรทัดทั้งที่บล็อกสูงบรรทัดเดียว) */
+  --k-pad:0;
   margin-top:0 !important; margin-bottom:0 !important;
+  /* [alpha.87 ข้อ 4] ระยะเว้นบรรทัดย้ายจาก margin ไปเป็น padding (ยุบไม่ได้ = ตรงกับโมเดล)
+     กฎ "บรรทัดว่างสูง 1 บรรทัดพอดี" จึงต้องตัด padding ด้วย ไม่ใช่แค่ margin */
+  padding-top:0 !important; padding-bottom:0 !important;
   height:var(--sp-line-h, 16px); min-height:0;
 }
-.sp:has(> br.ProseMirror-trailingBreak:only-child) + .sp { margin-top:0 !important; }
+.sp:has(> br.ProseMirror-trailingBreak) + .sp {
+  margin-top:0 !important; padding-top:0 !important; }
+
+/* [alpha.87 ข้อ 4] ★ **บล็อกแรกของหน้าไม่มีระยะเว้นนำ** — จอต้องตรงกับโมเดล
+   `paginate()` ให้ `before = 0` กับบล็อกแรกของทุกหน้า (j === 0) เพราะระยะขอบกระดาษ
+   ทำหน้าที่นั้นอยู่แล้ว · แต่บนจอบล็อกยังใส่ padding-top ของตัวเองเต็ม ๆ
+   วัดจริง: ขอบบนกระดาษ → บรรทัดแรก (หัวฉาก) ได้ **129px** ทั้งที่ระยะขอบบน = 96px (1 นิ้ว)
+   เกินมา 32px = linesBefore ของหัวฉาก → ทุกหน้าเริ่มต่ำกว่าที่โมเดลคิด และเคอร์เซอร์
+   ไม่ตรงกริดบรรทัด (ผู้ใช้: "เหมือนมันห้อย … cursor ไม่ตรงบรรทัด") */
+.pane.sp-pane > .workspace > .ProseMirror > .sp:first-child,
+.sp-page-break + .sp { padding-top:0 !important; }
 
 .sp-scene { color:var(--link); }
 .sp-character { color:var(--bright); }
@@ -3258,6 +3280,31 @@ body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
 /* ---- เส้นคั่นหน้าในตัวแก้ไข (widget decoration) ---- */
 .sp-page-break { position:relative; height:0; border-top:1px dashed var(--border);
   margin:14px 0; user-select:none; pointer-events:none; }
+/* [alpha.87 ข้อ 1] ★ **(CONTINUED) ทับตัวหนังสือ**
+   กล่องเส้นคั่นสูง 0 + margin 14px แต่ตัวหนังสือของโอเวอร์เลย์สูงหนึ่งบรรทัดของฟอนต์บท
+   (วัดจริงในแอป: --sp-fs 16px → สูง 16.8px และโตตามซูม) → ล้นไปทับบรรทัดข้างเคียง
+   **แก้ด้วย margin ไม่ได้** — วัดแล้วยังทับเท่าเดิม เพราะ margin ยุบรวมกับ margin ของบล็อก
+   (linesBefore ของบท) และ leading ของกล่องบรรทัดกินเข้ามาอีก ระยะที่ได้จริงจึงไม่ใช่ 20px
+   ที่ถูกคือ **ให้เครื่องหมายอยู่ในกล่องของเส้นคั่นเอง**: เปิดแถบสูงสองบรรทัด วาดเส้นประ
+   ตรงกลางด้วย ::before แล้ววาง (CONTINUED) ในครึ่งบน · CONTINUED: ในครึ่งล่าง
+   → ทับไม่ได้โดยโครงสร้าง ไม่ต้องพึ่งพฤติกรรมของ margin เลย
+   ปลอดภัยกับตัวเลข: การจัดหน้าของบทมาจากโมเดล (sp-format.js) ไม่เคยอ่าน DOM
+   (นิยายใช้ .ed-page-break คนละคลาส จึงไม่โดนกฎนี้ — ของนิยายวัด DOM ห้ามแตะ) */
+.sp-page-break.k-pb-cont { --sp-cont-h:calc(var(--sp-fs, 16px) * var(--sp-lh, 1));
+  height:calc(var(--sp-cont-h) * 3 + 8px); margin:0; border-top:0; }
+.sp-page-break.k-pb-cont::before { content:''; position:absolute; left:0; right:0; top:50%;
+  border-top:1px dashed var(--border); }
+body.paper-mode .sp-page-break.k-pb-cont::before { border-top-color:#c9c2ae; }
+.sp-page-break.k-pb-cont > .sp-cont-bottom { bottom:calc(50% + 2px); top:auto; }
+.sp-page-break.k-pb-cont > .sp-cont-top { top:calc(50% + 2px); bottom:auto; }
+/* ป้าย "หน้า N" ต้องไม่ชนกับ (CONTINUED) — ทั้งคู่เคยชิดขวาในครึ่งบนเดียวกัน
+   (วัดจริง: ทับกัน 5.8px) · ย้ายป้ายมาคร่อมกลางเส้นประแบบเดียวกับโหมดจัดหน้า
+   พื้นหลังของป้ายบังเส้นประให้เองอยู่แล้ว → ครึ่งบนเหลือ (CONTINUED) ชิดขวาตัวเดียว
+   ครึ่งล่างเหลือ CONTINUED: ชิดซ้ายตัวเดียว ไม่มีอะไรชนกันอีก */
+.sp-page-break.k-pb-cont > .sp-page-break-num {
+  top:50%; right:auto; left:50%; transform:translate(-50%, -50%); }
+/* โหมดจัดหน้ามีแถบระยะขอบกระดาษจริงอยู่แล้ว — ไม่ต้องมีแถบนี้ทับซ้อน */
+.pane.sp-view-layout .sp-page-break.k-pb-cont::before { display:none; }
 .sp-page-break-num { position:absolute; right:0; top:-.85em;
   font-size:calc(10px * var(--ui-scale, 1)); color:var(--dim);
   background:var(--bg); padding:0 6px; border-radius:3px; }
@@ -3446,9 +3493,17 @@ body.paper-mode .sp-cont-edge { color:#6b6552; }
 .pane.sp-view-layout .sp-cont-edge { color:#555; opacity:.9; }
 /* กล่องของเส้นคั่นในโหมดนี้ = ขอบล่างแผ่นก่อน + ช่องว่าง + ขอบบนแผ่นใหม่
    → นับจากบนของกล่อง = อยู่ในขอบล่างของแผ่นก่อน · นับจากล่าง = อยู่ในขอบบนของแผ่นใหม่ */
-.pane.sp-view-layout .sp-cont-edge.sp-cont-bottom { top:.15in; bottom:auto; }
+/* [alpha.87 ข้อ 3] ★ **CONTINUED ไม่เคารพระยะขอบซ้าย/ขวา** — ในโหมดนี้กล่องของเส้นคั่น
+   ถูกกางเต็มความกว้าง *กระดาษ* (margin ติดลบทั้งสองข้าง เพื่อวาดรอยต่อแผ่น) → `left:0`
+   ของลูกที่เป็น absolute จึงหมายถึง **ขอบกระดาษ** ไม่ใช่ขอบพื้นที่พิมพ์
+   ต้องเยื้องเข้ามาเท่าระยะขอบจริง ให้ตรงแนวกับ x = mgL ที่ pdf-generator.js ใช้ */
+.pane.sp-view-layout .sp-cont-edge { width:var(--text-w, 6in); }
 .pane.sp-view-layout .sp-cont-edge.sp-cont-top {
+  left:var(--mg-left, 1.5in); right:auto; text-align:left;
   top:auto; bottom:calc(var(--mg-top, 1in) - .75in); }
+.pane.sp-view-layout .sp-cont-edge.sp-cont-bottom {
+  left:var(--mg-left, 1.5in); right:auto; text-align:right;
+  top:.15in; bottom:auto; }
 /* โหมดร่าง = ข้อความล้วน ไม่ต้องมีเครื่องหมายจัดหน้า */
 .pane.sp-view-draft .sp-cont-edge { display:none; }
 
@@ -3482,10 +3537,15 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
   gap:var(--sp-pv-gap, 20px); padding:var(--sp-pv-gap, 20px);
   background:var(--paper-surround); }
 .sp-page-slot { flex:0 0 auto; position:relative; }
+/* [alpha.87 ข้อ 4] ★ **เส้นขอบกระดาษกินเนื้อที่พิมพ์ไป 2px**
+   `* { box-sizing:border-box }` ทั่วโปรเจกต์ → `border:1px` ทำให้ clientHeight ของแผ่น 11in
+   เหลือ 1054px ไม่ใช่ 1056px · หักระยะขอบ 1in+1in แล้วได้พื้นที่พิมพ์ 862px = **53.88 บรรทัด**
+   ขณะที่ paginate() จองไว้ 54 บรรทัด (9in ÷ ⅙in) → ทุกหน้าล้น 2px ตายตัว
+   วาดเส้นขอบด้วย box-shadow แทน (อยู่นอกกล่อง ไม่กินที่) → พื้นที่พิมพ์ = 864px = 54 บรรทัดพอดี */
 .sp-pageview .sp-page { position:absolute; left:0; top:0; transform-origin:top left;
   background:var(--paper); color:var(--paper-ink);
-  border:1px solid var(--paper-edge); border-radius:2px;
-  box-shadow:0 2px 14px rgba(0,0,0,.30);
+  border:0; border-radius:2px;
+  box-shadow:0 0 0 1px var(--paper-edge), 0 2px 14px rgba(0,0,0,.30);
   font-family:var(--sp-font, "Courier Prime", "Courier New", monospace);
   font-size:var(--sp-fs, 16px); line-height:var(--sp-lh, 1); overflow:hidden; cursor:pointer; }
 .sp-pageview .sp-page:hover { outline:2px solid var(--accent-hi); }
@@ -3507,10 +3567,16 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
   pointer-events:none; user-select:none; z-index:2; }
 .sp-pageview .sp-page { position:relative; }
 .sp-pageview .k-scene-no { color:#555; }
-.sp-continued-top { color:#555; }
-/* [alpha.83 ข้อ 6] (CONTINUED) ท้ายหน้ากินหนึ่งบรรทัดพอดี — `margin-top:1em` เดิมทำให้
-   กินสองบรรทัดแล้วล้นระยะขอบล่าง (ตอนนี้ paginate() จองบรรทัดให้ล่วงหน้าแล้ว) */
-.sp-continued-bottom { text-align:right; color:#555; margin-top:0; }
+/* [alpha.87 ข้อ 2+4] ★ **CONTINUED บนหน้ากระดาษ = โอเวอร์เลย์ในระยะขอบ** เหมือนเลขหน้า
+   เดิมเป็น <div> ในสายเนื้อหน้า แต่ `paginate()` **ไม่จองบรรทัดให้** (ตั้งใจ — ดู sp-format.js)
+   → เนื้อหน้าเกินความจุ 1–2 บรรทัดทุกแผ่นที่มีเครื่องหมาย แล้ว min-height ดันกระดาษให้ยืด
+   = "เรนเดอร์กระดาษไม่เท่ากัน" และ "หน้ากระดาษล้น" · ตำแหน่งมาจาก continuedBox() (นิ้ว)
+   ซึ่งคิดจากสูตรเดียวกับ pdf-generator.js เป๊ะ → จอกับ PDF ตรงกันโดยโครงสร้าง */
+.sp-cont-page { position:absolute; margin:0; color:#555; white-space:pre;
+  pointer-events:none; user-select:none; z-index:2; }
+.sp-cont-page.sp-continued-top { text-align:left; }
+.sp-cont-page.sp-continued-bottom { text-align:right; }
+body.paper-mode .sp-cont-page { color:#6b6552; }
 .sp-pageview .sp-more { margin-left:2.2in; color:#333; }
 /* [alpha.58r บั๊ก 15+20] มุมมองหน้ากระดาษของ "นิยาย" (renderProsePageView) */
 .sp-pageview .ed-page { color:var(--paper-ink); }

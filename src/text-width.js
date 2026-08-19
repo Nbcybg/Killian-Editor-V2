@@ -204,7 +204,22 @@ export function snapWord(s, k) {
 
 export function fitPrefix(s, maxPx, measure) {
   if (!s || maxPx <= 0) return 0;
-  let lo = 0, hi = s.length;
+  // ═══ [alpha.87 ข้อ 1] ★ **หาหน้าต่างค้นหาแบบทวีคูณก่อน binary search** ═══
+  //
+  // เดิมเริ่มด้วย `hi = s.length` — binary search จึงวัดสตริง **ยาวเท่าข้อความที่เหลือทั้งก้อน**
+  // ตั้งแต่ครั้งแรก · ผู้เรียก (wrapCuts) ตัดคำยาวทีละบรรทัดโดยส่ง "ส่วนที่เหลือ" เข้ามาใหม่ทุกรอบ
+  // → ข้อความที่ไม่มีช่องว่างเลย 38,000 อักขระ = **คำเดียว** ถูกวัดแบบ O(n²):
+  //   ~640 บรรทัด × ~15 ครั้ง × เฉลี่ย 19,000 อักขระ ≈ 180 ล้านอักขระต่อการพิมพ์หนึ่งตัว
+  // วัดจริงด้วยโปรไฟล์ CPU: measureText 57.2% + fitPrefix 13.7% = **815ms ต่อการพิมพ์หนึ่งตัว**
+  //
+  // หนึ่งบรรทัดยาวได้ไม่กี่สิบอักขระ จึงไม่มีเหตุผลให้วัดทั้งก้อน — ขยายหน้าต่างทีละเท่าตัว
+  // จากเล็กไปใหญ่จนเกิน maxPx แล้วค่อย binary search ในหน้าต่างนั้น
+  // **ผลลัพธ์เท่าเดิมทุกกรณี** ต่างแค่ความยาวสตริงที่ส่งให้ measure (≈ 2 เท่าของที่พอดีจริง)
+  let lo = 0, hi = Math.min(s.length, 64);
+  while (hi < s.length && measure(s.slice(0, hi)) <= maxPx) {
+    lo = hi;
+    hi = Math.min(s.length, hi * 2);
+  }
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     if (measure(s.slice(0, mid)) <= maxPx) lo = mid; else hi = mid - 1;

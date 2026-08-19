@@ -329,12 +329,29 @@ export function spCss(fmt) {
     // ความกว้างต้องไม่ล้นพื้นที่พิมพ์ (บาง element เช่นทรานซิชันตั้ง indent+width เกินขอบขวาได้)
     // คำนวณเป็นนิ้วที่นี่ ไม่ใช้ max-width:calc(100% - …) เพราะ 100% รวมเส้นขอบกระดาษด้วย → เพี้ยน 2px
     const w = Math.max(0.3, Math.min(num(c.width, 6), +(tw - ml).toFixed(4)));
-    const mt = num(c.linesBefore, 10) / 10;
-    const mb = num(c.linesBetween, 10) / 10 - 1;      // 1 บรรทัดคือระยะของตัวมันเอง
+    // [alpha.87 ข้อ 4] ★ **ระยะเว้นบรรทัดต้องเป็น padding บนกริดบรรทัดของโมเดล**
+    //
+    // เดิมเป็น `margin-top:<n>em` ซึ่งผิดสองชั้นพร้อมกัน:
+    //   1. CSS **ยุบ** margin ที่ติดกันเป็น max() แต่ paginate() **บวก** → หน้าที่มีบล็อกหลายก้อน
+    //      ติดกันสั้นกว่าที่โมเดลคิด (เห็นเป็นช่องว่างโหว่กลางหน้า) และบางหน้าล้นขอบล่าง
+    //      วัดจริงในแอป: หน้าหนึ่งมี 54 บรรทัด (โควตา 55) แต่สูง 882.9px เกินพื้นที่ 862px
+    //   2. `em` ผูกกับ **ขนาดฟอนต์** ไม่ใช่ความสูงบรรทัดของโมเดล — ตั้งฟอนต์ 11pt แล้ว
+    //      1 บรรทัดของ CSS = 14.67px ขณะที่โมเดลคิด ⅙ นิ้ว = 16px (บทเรียนเดียวกับ alpha.86
+    //      ที่แก้ line-height ไปแล้ว แต่ตกระยะเว้นบรรทัดไว้)
+    //
+    // padding ยุบไม่ได้ + `--sp-line-h` คือกริดของโมเดลเป๊ะ → DOM สูงเท่าที่โมเดลนับทุกบรรทัด
+    // ปัดเป็นจำนวนเต็มบรรทัดให้ตรงกับ `Math.round(linesBefore/10)` ที่ paginate() ใช้
+    const mt = Math.round(num(c.linesBefore, 10) / 10);
+    const mb = Math.round(num(c.linesBetween, 10) / 10) - 1;   // 1 บรรทัดคือระยะของตัวมันเอง
     // [alpha.60r3a] `page-break` ใช้คลาส `sp-page-break-el` (ชื่อ `sp-page-break` เป็นของเส้นคั่นหน้าอัตโนมัติ)
     const cls = k === 'page-break' ? 'page-break-el' : k;
-    out.push(`.sp.sp-${cls}{margin-left:${ml}in;width:${w}in;max-width:none;` +
-             `margin-top:${mt}em;margin-bottom:${Math.max(0, mb)}em;${decl(s.screen)}}`);
+    const LH = 'var(--sp-line-h, 16px)';
+    // [alpha.87 ข้อ D] เก็บ "ระยะเว้นนำ" ไว้ในตัวแปร CSS ด้วย — widget ที่วางแบบ absolute
+    // ในบล็อก (เลขฉาก) ต้องเลื่อนลงมาให้เท่ากัน ไม่งั้นมันไปลอยอยู่เหนือข้อความของตัวเอง
+    out.push(`.sp.sp-${cls}{--k-pad:${mt};margin-left:${ml}in;width:${w}in;max-width:none;` +
+             `margin-top:0;margin-bottom:0;` +
+             `padding-top:calc(var(--k-pad) * ${LH});padding-bottom:calc(${Math.max(0, mb)} * ${LH});` +
+             `${decl(s.screen)}}`);
   }
   // [alpha.57a ข้อ 2] เลขฉากสองฝั่งของหัวฉาก — วางแบบ absolute เทียบกับกล่องหัวฉาก
   // (คำนวณระยะเป็น "นิ้ว" ที่นี่ ไม่ใช้ calc(%) ด้วยเหตุผลเดียวกับความกว้างด้านบน)
@@ -343,7 +360,13 @@ export function spCss(fmt) {
   // [alpha.83r ข้อ 3] "ต่อเนื่อง (ขวา)" ที่ผู้ใช้พิมพ์เอง — ชิดขวาแบบเดียวกับ (CONTINUED) อัตโนมัติ
   out.push('.sp.sp-cont-right{text-align:right}');
   out.push('.sp.sp-cont-left{text-align:left}');
-  out.push('.k-scene-no{position:absolute;top:0;white-space:nowrap;user-select:none;' +
+  // [alpha.87 ข้อ D] ★ **เลขฉากเพี้ยน** — `top:0` ของ absolute คือขอบบนของ *padding box*
+  // ตั้งแต่ระยะเว้นบรรทัดย้ายจาก margin มาเป็น padding (alpha.87 ข้อ 4 — เพื่อให้ตรงกับโมเดล)
+  // ขอบนั้นอยู่ **เหนือบรรทัดข้อความ** เท่ากับ linesBefore ของหัวฉาก (2 บรรทัด)
+  // → เลขฉากไปลอยอยู่คนละบรรทัดกับหัวฉากของตัวเอง (ยิ่งฉากเยอะยิ่งเห็นชัด)
+  // เลื่อนลงมาเท่าระยะเว้นนำที่บล็อกนั้นใช้จริง (`--k-pad` ที่กฎด้านบนตั้งไว้ให้)
+  out.push('.k-scene-no{position:absolute;top:calc(var(--k-pad, 0) * var(--sp-line-h, 16px));' +
+           'white-space:nowrap;user-select:none;' +
            'pointer-events:none;text-transform:none;font-weight:400;font-style:normal;text-decoration:none}');
   out.push(`.k-scene-no-l{left:${so.left}in}`);
   out.push(`.k-scene-no-r{right:${so.right}in}`);
@@ -451,8 +474,21 @@ export function paginate(blocks, opts = {}) {
     // ตัวมันเองไม่กินบรรทัดและไม่ถูกใส่ลงหน้าใด (เป็นคำสั่ง ไม่ใช่เนื้อหา)
     if (b.el === 'page-break') { if (cur.length) pushPage(); prevBlank = false; continue; }
     // บรรทัดว่าง = 1 บรรทัดเต็ม ๆ ไม่มีช่องไฟนำหน้า (ตัวมันเองคือช่องไฟ)
+    //
+    // [alpha.87 ข้อ A] ★ **เดิมบรรทัดว่างที่เกินโควตาถูกกลืนทิ้งเงียบ ๆ**
+    // เงื่อนไขเก่า `if (cur.length && used < perPage)` แปลว่า พอหน้าหนึ่งเต็ม
+    // บรรทัดว่างที่เหลือ **ไม่ถูกนับ ไม่ถูกเก็บ และไม่ทำให้ขึ้นหน้าใหม่** —
+    // ผู้ใช้กด Enter ค้างในบล็อกบรรยาย จอจึงยืดยาวไปเรื่อย ๆ โดยไม่มีเส้นคั่นหน้าเลย
+    // วัดจริง: ป้อน 201 บล็อก (บรรยาย 1 + บรรทัดว่าง 200) → ได้ **1 หน้า** และ
+    // **บล็อกหายไป 147 ก้อน** จากผลลัพธ์ของ paginate()
+    //
+    // และ `cur.length` (ทิ้งบรรทัดว่างที่ต้นหน้า) ก็ทำให้ตัวเลขไม่ตรงกับจอเช่นกัน —
+    // บนจอบรรทัดว่างต้นหน้า **มีตัวตนจริง** (เป็นโหนด sp ที่สูงหนึ่งบรรทัด)
+    // กติกาเดียวที่ทำให้จอ·โมเดล·PDF ตรงกันคือ **นับทุกบรรทัดว่างเป็น 1 บรรทัด**
     if (b.el === 'blank') {
-      if (cur.length && used < perPage) { addBlock({ ...b, lines: 1 }); used += 1; }
+      if (used >= perPage) pushPage();
+      addBlock({ ...b, lines: 1 });
+      used += 1;
       prevBlank = true;
       continue;
     }

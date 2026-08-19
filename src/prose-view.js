@@ -87,7 +87,10 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
     page.className = 'sp-page ed-page';
     page.dataset.page = String(pg.index);
     page.style.width = cssIn(pw);
-    page.style.minHeight = cssIn(ph);
+    // [alpha.87 ข้อ 2+4] **height ไม่ใช่ min-height** — กระดาษต้องสูงเท่ากันทุกแผ่น
+    // min-height ปล่อยให้แผ่นที่เนื้อเกินความจุ "ยืด" ออกไป = เรนเดอร์ไม่เท่ากัน
+    // (ฝั่งบทแก้ที่ sp-view.js ด้วยเหตุผลเดียวกัน · ตัววาดหน้าหน้าเล่มใช้ height อยู่แล้ว)
+    page.style.height = cssIn(ph);
     page.style.paddingTop = cssIn(m.top);
     page.style.paddingBottom = cssIn(m.bottom);
     page.style.paddingLeft = cssIn(m.left);

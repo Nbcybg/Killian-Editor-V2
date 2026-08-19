@@ -2,6 +2,10 @@
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const root = process.argv[2] || '/tmp/k2proj';
 fs.rmSync(root, { recursive: true, force: true });
+// [alpha.87] e2e ต้อง **idempotent** (บทเรียนข้อ 4) — เทส "เปิดโปรเจกต์ใหม่ต้องปิดของเก่า"
+// สร้างโปรเจกต์ข้าง ๆ ไว้แล้วไม่เคยลบ · รอบแรกผ่าน รอบสองเจอโฟลเดอร์ค้าง → แท็บเก่าไม่ถูกปิด
+// (อาการโผล่เฉพาะตอนรัน e2e ซ้ำบนเครื่องที่ /tmp ไม่ถูกล้างระหว่างรอบ)
+fs.rmSync(path.join(path.dirname(root), 'โปรเจกต์ทดสอบปิดเก่า'), { recursive: true, force: true });
 const w = (p, d) => { fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, typeof d === 'string' ? d : JSON.stringify(d, null, 2)); };
 w(path.join(root, 'project.khn.json'), { title: 'ปีศาจแห่งบางกอก', type: 'killian-project' });

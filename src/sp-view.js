@@ -71,6 +71,35 @@ export function pageMetrics(fmt, dpi = 96) {
   };
 }
 
+/**
+ * [alpha.87] ตำแหน่งของ `CONTINUED:` / `(CONTINUED)` บนกระดาษ — **หน่วยนิ้ว วัดจากขอบกระดาษ**
+ *
+ * `paginate()` ไม่จองบรรทัดให้สองตัวนี้ (ดูคอมเมนต์ยาวใน sp-format.js) มันจึงต้องถูกวาด
+ * **ในระยะขอบ** เท่านั้น · `pdf-generator.js` ทำถูกมาตลอด: บนที่ `baseline(-1)`
+ * = หนึ่งบรรทัดเหนือเนื้อหน้า · ล่างที่ `baseline(bodyLines)` = หนึ่งบรรทัดใต้เนื้อหน้า
+ *
+ * เดิมมุมมองเรียงหน้า (`renderPageView`) วาดมันเป็น **บล็อกในสายเนื้อหา** →
+ * เนื้อหน้าเกินความจุที่โมเดลคิดไป 1–2 บรรทัด แล้ว `min-height` ปล่อยให้กระดาษยืด
+ * = "เรนเดอร์กระดาษไม่เท่ากัน" + "หน้ากระดาษล้น" · ตัวนี้คือแหล่งความจริงเดียวของตำแหน่ง
+ * ทั้งจอและ PDF ต่อจากนี้
+ * @returns {{left:number, width:number, topIn:number, bottomIn:number, lineIn:number}}
+ *   topIn/bottomIn = ระยะจากขอบกระดาษบน/ล่างถึงขอบบน/ล่างของกล่องข้อความ
+ */
+export function continuedBox(fmt) {
+  const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+  const m = f.margins;
+  const lineIn = lineHeightIn(f);
+  // หนึ่งบรรทัดเหนือ/ใต้พื้นที่พิมพ์ — ระยะขอบ 1 นิ้ว = 6 บรรทัด จึงมีที่เหลือแน่นอน
+  // หนีบไม่ให้ติดลบเมื่อผู้ใช้ตั้งระยะขอบแคบกว่าหนึ่งบรรทัด (ไม่งั้นหลุดออกนอกกระดาษ)
+  return {
+    left: +m.left.toFixed(4),
+    width: +textWidth(f.paper, m).toFixed(4),
+    topIn: +Math.max(0, m.top - lineIn).toFixed(4),
+    bottomIn: +Math.max(0, m.bottom - lineIn).toFixed(4),
+    lineIn: +lineIn.toFixed(6),
+  };
+}
+
 /** ตัวแปร CSS ของ Layout View — ช่องว่างระหว่างหน้า + ความสูงเนื้อหน้า */
 export function layoutCssVars(fmt, gapPx = 28) {
   const mt = pageMetrics(fmt);
@@ -142,7 +171,20 @@ export function blocksFromDoc(doc) {
     }
     const el = (node.attrs && node.attrs.el) || 'action';
     const text = node.textContent || '';
-    const blank = el === 'action' && !text.trim();
+    // [alpha.87 ข้อ B] ★ **บล็อกว่าง = บรรทัดว่าง ทุกชนิด ไม่ใช่แค่ `action`**
+    //
+    // เดิมเขียนว่า `el === 'action' && !text.trim()` → บล็อก **ตัวละคร/หัวฉาก/ทรานซิชัน
+    // ที่ยังไม่ได้พิมพ์ข้อความ** ถูกนับเป็นบล็อกจริง = `linesBefore` + 1 บรรทัด
+    // ขณะที่ฝั่ง CSS ตัด margin/padding ของ **บล็อกว่างทุกชนิด** ทิ้ง แล้วบังคับสูง 1 บรรทัด
+    // (กฎ `.sp:has(> br.ProseMirror-trailingBreak:only-child)` ใน style.css)
+    // → ตัวละครว่างหนึ่งก้อน: จอนับ 1 บรรทัด · โมเดลนับ 2 บรรทัด
+    //   ผู้ใช้กด Enter ค้างในบล็อกตัวละคร โมเดลจึงคิดว่าหน้าเต็มตั้งแต่ 27 ก้อน
+    //   ทั้งที่จอเพิ่งใช้ไปครึ่งแผ่น = "หน้าสั้นมาก" ที่ผู้ใช้เห็น
+    //
+    // กติกานี้ตรงกับ `lineFor()` ใน fountain.js อยู่แล้ว (บล็อกไม่มีข้อความ = เขียนเป็น
+    // บรรทัดว่างลงไฟล์ ทุกชนิด — alpha.83 ข้อ 1) · ตอนนี้ทั้งไฟล์ · จอ · โมเดล ใช้นิยามเดียวกัน
+    // `page-break` ยกเว้น: เป็น *คำสั่ง* ที่ไม่มีข้อความอยู่แล้ว
+    const blank = !text.trim() && el !== 'page-break';
     const b = { el: blank ? 'blank' : el, text, pos: offset, idx: i++ };
     if (b.el === 'scene') b.sceneNo = ++scene;      // [alpha.57a] เลขฉากไล่ตามลำดับในไฟล์
     out.push(b);
@@ -245,7 +287,11 @@ export function renderPageView(host, pages, fmt, opts = {}) {
     page.className = 'sp-page';
     page.dataset.page = String(pg.index);
     page.style.width = cssIn(pw);
-    page.style.minHeight = cssIn(ph);
+    // [alpha.87] **height ไม่ใช่ min-height** — กระดาษคือกระดาษ สูงเท่าที่ตั้งไว้เสมอ
+    // เดิมเป็น min-height: อะไรที่ล้นความจุจะ "ดันกระดาษให้ยืด" → หน้าแต่ละแผ่นสูงไม่เท่ากัน
+    // (ตัวการคือ CONTINUED ที่เคยถูกวาดเป็นบล็อกในเนื้อหน้า — ย้ายเป็นโอเวอร์เลย์แล้วข้างล่าง)
+    // ตัววาดหน้าหน้าเล่มใน export-hub.js ใช้ `height` มาตั้งแต่ต้น ตอนนี้ตรงกันทั้งสองที่
+    page.style.height = cssIn(ph);
     page.style.paddingTop = cssIn(f.margins.top);
     page.style.paddingBottom = cssIn(f.margins.bottom);
     page.style.paddingLeft = cssIn(f.margins.left);
@@ -270,12 +316,19 @@ export function renderPageView(host, pages, fmt, opts = {}) {
       num.textContent = label;
       page.append(num);
     }
-    if (pg.continuedTop) {
-      const ct = document.createElement('div');
-      ct.className = 'sp-continued-top';
-      ct.textContent = pg.continuedTop;
-      page.append(ct);
-    }
+    // [alpha.87] CONTINUED = **โอเวอร์เลย์ในระยะขอบ** เหมือนเลขหน้า ไม่ใช่บล็อกในเนื้อหน้า
+    // (paginate() ไม่จองบรรทัดให้ → ถ้าวาดในสายเนื้อหาจะเกินความจุแล้วกระดาษยืด)
+    const cbox = continuedBox(f);
+    const putCont = (which, text) => {
+      const d = document.createElement('div');
+      d.className = 'sp-cont-page sp-continued-' + which;
+      d.style.left = cssIn(cbox.left);
+      d.style.width = cssIn(cbox.width);
+      d.style[which === 'top' ? 'top' : 'bottom'] = cssIn(which === 'top' ? cbox.topIn : cbox.bottomIn);
+      d.textContent = text;
+      page.append(d);
+    };
+    if (pg.continuedTop) putCont('top', pg.continuedTop);
     for (const b of pg.blocks || []) {
       const d = document.createElement('div');
       d.className = 'sp sp-' + (b.el || 'action');
@@ -292,12 +345,12 @@ export function renderPageView(host, pages, fmt, opts = {}) {
       }
       page.append(d);
     }
-    if (pg.continuedBottom) {
-      const cb = document.createElement('div');
-      cb.className = 'sp-continued-bottom';
-      cb.textContent = pg.continuedBottom;
-      page.append(cb);
-    }
+    // [alpha.87 ข้อ 4] บล็อกแรกของหน้า **ไม่มีระยะเว้นนำ** — ตรงกับ paginate() ที่ตั้ง
+    // `before = 0` เมื่อหน้ายังว่าง (`cur.length === 0`) · ถ้าไม่ตัด หน้าที่ขึ้นด้วยหัวฉาก
+    // จะล้นไป 2 บรรทัด (วัดจริง: 32px) ทั้งที่จำนวนบรรทัดในโมเดลยังไม่เกินโควตา
+    const firstBlock = page.querySelector('.sp');
+    if (firstBlock) firstBlock.style.paddingTop = '0';
+    if (pg.continuedBottom) putCont('bottom', pg.continuedBottom);
     slot.append(page);
     host.append(slot);
     els.push(page);

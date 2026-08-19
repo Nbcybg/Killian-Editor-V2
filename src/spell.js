@@ -12,6 +12,31 @@ const base = { th: new Set(), en: new Set(), loaded: false };
 let extraTh = new Set();
 let extraEn = new Set();
 
+// [alpha.87 ข้อ 5] ★ **คลังคำที่รวมแล้ว — คิดครั้งเดียว ไม่ใช่ทุกครั้งที่ตรวจ**
+//
+// ของเดิม `check()` เขียนว่า `extraTh.size ? new Set([...base.th, ...extraTh]) : base.th`
+// = ทุกครั้งที่ตรวจข้อความหนึ่งก้อน จะ **สร้าง Set ใหม่จากพจนานุกรมทั้งเล่ม** (ไทย 61,000 คำ
+// + อังกฤษ 20,000 คำ) · ผู้ใช้เพิ่มคำเข้าพจนานุกรมส่วนตัวแค่ **คำเดียว** ก็เข้าเงื่อนไขนี้ทันที
+//
+// วัดจริง (เอกสารบท 25 หน้า · 700 บล็อก):
+//     ไม่มีคำเสริม    25ms/รอบ   (0.04ms ต่อบล็อก)
+//     มีคำเสริม 1 คำ  3,433ms/รอบ (4.90ms ต่อบล็อก) = **ช้าลง 139 เท่า**
+// โปรไฟล์ CPU ตอนกด Enter ค้าง: check() กิน 64.6% ของเวลาทั้งหมด + GC อีก 32.2%
+// (ขยะจากการสร้าง Set ทิ้ง ๆ) รวม **96.8%** → เมนเธรดค้าง 5.2 วินาทีต่อการกดหนึ่งครั้ง
+// ตัวจัดหน้าไม่ได้ช้าเลย มันแค่ไม่เคยได้คิว
+//
+// รวมล่วงหน้าแล้วเก็บไว้ · เปลี่ยนเฉพาะตอนคลังคำเปลี่ยนจริง (loadBase/setExtra)
+let mergedTh = null, mergedEn = null;
+function invalidateMerged() { mergedTh = null; mergedEn = null; }
+function knownTh() {
+  if (!mergedTh) mergedTh = extraTh.size ? new Set([...base.th, ...extraTh]) : base.th;
+  return mergedTh;
+}
+function knownEn() {
+  if (!mergedEn) mergedEn = extraEn.size ? new Set([...base.en, ...extraEn]) : base.en;
+  return mergedEn;
+}
+
 // ป้อนคลังคำหลักจากข้อความไฟล์ dict (เรียกครั้งเดียวตอนเริ่ม)
 export function loadBase(thText, enText) {
   base.th = new Set(); base.en = new Set();
@@ -24,6 +49,7 @@ export function loadBase(thText, enText) {
     if (s) base.en.add(s);
   }
   base.loaded = true;
+  invalidateMerged();
 }
 
 export function ready() { return base.loaded && (base.th.size > 0 || base.en.size > 0); }
@@ -37,6 +63,7 @@ export function setExtra(words) {
     if (THAI_FULL.test(s)) extraTh.add(s);
     extraEn.add(s.toLowerCase());
   }
+  invalidateMerged();
 }
 
 // ---- ตัดคำไทยแบบ DP (maximal matching) หา 'ช่วงที่ตัดไม่ลงเลย' ----
@@ -76,8 +103,8 @@ function badThaiSpans(run, known) {
 // ---- ตรวจข้อความ → [{start, end, word}] (offset ในสตริง) ----
 export function check(text) {
   if (!text || !base.loaded) return [];
-  const thKnown = extraTh.size ? new Set([...base.th, ...extraTh]) : base.th;
-  const enKnown = extraEn.size ? new Set([...base.en, ...extraEn]) : base.en;
+  const thKnown = knownTh();
+  const enKnown = knownEn();
   const out = [];
   let m;
   THAI_RE.lastIndex = 0;

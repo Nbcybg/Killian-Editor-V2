@@ -463,7 +463,10 @@ export function renderProseClipPages(host, pm, pages, opts = {}) {
     page.className = 'sp-page ed-page';
     page.dataset.page = String(pg.index ?? (els.length + 1));
     page.style.width = pw + 'in';
-    page.style.minHeight = ph + 'in';
+    // [alpha.87 ข้อ 2+4] **height ไม่ใช่ min-height** — กระดาษต้องสูงเท่ากันทุกแผ่น
+    // min-height ปล่อยให้แผ่นที่เนื้อเกินความจุ "ยืด" ออกไป = เรนเดอร์ไม่เท่ากัน
+    // (ฝั่งบทแก้ที่ sp-view.js ด้วยเหตุผลเดียวกัน · ตัววาดหน้าหน้าเล่มใช้ height อยู่แล้ว)
+    page.style.height = ph + 'in';
     page.style.paddingTop = num(m.top, 1) + 'in';
     page.style.paddingBottom = num(m.bottom, 1) + 'in';
     page.style.paddingLeft = num(m.left, 1.5) + 'in';
