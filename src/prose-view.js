@@ -53,6 +53,8 @@ export const prosePageBreaks = ED_PB.breaks;
 /** [alpha.83 ข้อ 4] ตัวทำ "เลขหน้าจริง" บนหน้าถัดไปของเส้นคั่นแต่ละเส้น */
 export const setProsePageNumberLabel = ED_PB.setNumberLabel;
 export const prosePageBreakPlugin = ED_PB.plugin;
+/** [alpha.93 ข้อ 5] ทาที่ว่างท้ายหน้าลงกล่องเส้นคั่นที่วาดแล้ว (ไม่ผ่าน ProseMirror) */
+export const applyProsePagePads = ED_PB.applyPads;
 export const refreshProsePageBreaks = ED_PB.refresh;
 
 // ───────── การวาดหน้ากระดาษจริง (side / overview) ─────────

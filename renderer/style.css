@@ -3351,24 +3351,38 @@ body.reading-mode #k-mode-hint, body.focus-mode #k-mode-hint { display:block; }
    และเนื้อความเป็นคอลัมน์อ่านสบายแบบนิยายทั้งสองโหมด (บทหนังไม่ยืดเต็มแผงอีกต่อไป) */
 :root { --draft-left:24px; --draft-pad-r:24px; }
 body.k-ln { --draft-left:calc(var(--ln-w) / var(--page-scale, 1) + 14px); }
+/* [alpha.93 ข้อ 3] ★ โหมดร่าง = "ข้อความล้วนแบบ VS Code" — ไม่ตัดคำ ไม่แบ่งหน้า
+   ผู้ใช้: *"ในมุมมองหน้าร่าง-ข้อความล้วน มีการตัดคำ ซึ่งมันไม่ใช่ · ข้อความยาวมันต้องทำเป็น
+            horizontal scroll สิ แบบ vs code · จะต้องไม่มีการแบ่งหน้า แต่อันนี้มีแบ่งหน้า"*
+   เดิมโหมดนี้ยังเป็น "คอลัมน์อ่านสบาย 44em" (ตัดคำ) + โชว์เส้นคั่นหน้าบาง ๆ ซึ่งขัดกับ
+   จุดประสงค์ของมัน — โหมดร่างมีไว้ดู **ตัวบทดิบ** ไม่ใช่ดูว่าหน้ากระดาษตกตรงไหน
+   `white-space:pre` = ไม่ขึ้นบรรทัดเอง · `width:max-content` = กว้างตามบรรทัดที่ยาวที่สุด
+   แล้ว `.pane { overflow:auto }` ให้แถบเลื่อนแนวนอนมาเอง */
 .pane.sp-view-draft > .workspace > .ProseMirror,
 body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
   background:transparent !important;
   box-shadow:none !important;
   border:0 !important;
-  width:auto !important; max-width:var(--draft-w, 44em) !important;
+  white-space:pre !important;
+  width:max-content !important; min-width:100% !important; max-width:none !important;
   padding:20px var(--draft-pad-r) 40vh !important;
   margin:0 0 0 var(--draft-left) !important;
   color:var(--fg) !important;
 }
+/* บล็อกลูกก็ต้องไม่ตัดคำและกว้างตามเนื้อหา ไม่ใช่ 100% ของกล่องแม่ */
+.pane.sp-view-draft > .workspace > .ProseMirror > * {
+  white-space:pre !important; width:max-content !important; max-width:none !important;
+  overflow-wrap:normal !important; word-break:normal !important; }
+/* ไม่มีการแบ่งหน้าในโหมดร่าง — ทั้งเส้นคั่นของนิยายและของบทภาพยนตร์ */
+.pane.sp-view-draft .sp-page-break,
+.pane.sp-view-draft .ed-page-break { display:none !important; }
 /* โหมดร่าง = เห็นข้อความล้วน ไม่ต้องเยื้องแบบสคริปต์ (แต่ยังบอกชนิดด้วยสี) */
 .pane.sp-view-draft .sp { margin-left:0 !important; width:auto !important;
   margin-top:.2em !important; margin-bottom:.2em !important; }
 .pane.sp-view-draft .sp-transition { text-align:left; }
 .pane.sp-view-draft .sp-act-break { text-align:left; }
-/* ตัวคั่นหน้าในโหมดร่าง = เส้นบาง ๆ · โหมดปกติ = เส้นประชัดขึ้นพร้อมเลขหน้า */
-.pane.sp-view-draft .sp-page-break { border-top:1px solid var(--border); margin:8px 0; }
-.pane.sp-view-draft .sp-page-break .sp-page-break-num { font-size:.7em; }
+/* [alpha.93 ข้อ 3] เดิมโหมดร่างวาดตัวคั่นหน้าเป็นเส้นบาง ๆ — ตอนนี้โหมดร่าง "ไม่มีหน้า" แล้ว
+   กฎการซ่อนอยู่ด้านบน (บล็อกของ alpha.93) · ปล่อยกฎเก่าไว้จะเป็น dead rule ที่ชวนสับสน */
 
 /* ---- เส้นคั่นหน้าในตัวแก้ไข (widget decoration) ---- */
 .sp-page-break { position:relative; height:0; border-top:1px dashed var(--border);
@@ -3427,11 +3441,19 @@ body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 
    ความสูงของกล่องเส้นคั่นไม่กระทบตัวเลข เพราะ measureProseBlocks() หักออกก่อนวัดเสมอ
    (พิกัดที่ใช้หั่นหน้าเป็นแบบ "ไม่มีช่องว่างคั่นหน้า") ถ้าไม่หัก การวัดรอบถัดไปจะเพี้ยนแล้ววนไม่จบ */
-.ed-page-break { margin:0; height:0; border-top:0; }
-.ed-page-break::before { content:''; position:absolute; left:0; right:0; top:0;
+/* [alpha.93 ข้อ 5] ★ กล่องเส้นคั่นสูงเท่า "ที่ว่างท้ายหน้า" ที่มันปิด (--k-pb-pad)
+   หน้าหนึ่ง ๆ ใช้พื้นที่ไปไม่เต็มเสมอ (บรรทัดถัดไปสูงเกินที่เหลือก็ต้องยกไปหน้าใหม่)
+   ก้นหน้าที่ยังว่างนั้นบนกระดาษจริงมีอยู่ แต่บนจอเราไม่เคยวาด → เส้นคั่นเลยขยับเข้ามาชิด
+   ข้อความ ระยะระหว่างหน้าจึงไม่เท่ากัน (วัดจริง: ต่างกัน 32.8px)
+   เส้นประย้ายไปอยู่ **ก้นกล่อง** แล้ว — ที่ว่างอยู่เหนือมัน = ก้นของหน้าที่กำลังจะจบ */
+/* ★ กางที่ว่างด้วย `margin-top` ไม่ใช่ `height` — กล่องต้องคง "ความเป็นกล่องว่าง" ไว้
+   (สูง 0 · ไม่มีขอบ/พื้นใน) เพื่อให้ margin ของย่อหน้าบน-ล่างยังยุบรวมกับมันเป็นก้อนเดียว
+   ถ้าใช้ height กล่องจะเลิกว่าง margin เลิกยุบ แล้วระยะเกินมาไม่เท่ากันในแต่ละรอยต่อ */
+.ed-page-break { margin:var(--k-pb-pad, 0px) 0 0; height:0; border-top:0; }
+.ed-page-break::before { content:''; position:absolute; left:0; right:0; top:0; bottom:auto;
   border-top:1px dashed var(--border); }
 body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
-.ed-page-break > .sp-page-break-num { top:-1.05em; }
+.ed-page-break > .sp-page-break-num { top:-1.05em; bottom:auto; }
 
 /* ── [alpha.88 ข้อ 1] ★ ตัดกลางย่อหน้า (ย่อหน้ายาวข้ามหน้า) ──────────────────────
    widget ต้องเป็น inline (ไม่งั้น <div> ใน <p> ฉีกกล่องบรรทัด) **แต่ต้องกินทั้งบรรทัด**
@@ -3446,12 +3468,19 @@ body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
    ความสูงตั้งให้ **สูงกว่า strut ของย่อหน้าเล็กน้อย** เพื่อให้กล่องบรรทัดสูงเท่ากล่องนี้เป๊ะ —
    measureProseBlocks() หักความสูงของ `.ed-page-break` ออกจากการวัด ถ้ากล่องบรรทัดสูงกว่า
    กล่อง widget เมื่อไหร่ ส่วนต่างจะสะสมเป็นความคลาดเคลื่อนของจุดตัดทุกหน้า */
+/* [alpha.93 ข้อ 5] แถบหนึ่งบรรทัดเหมือนเดิม + ที่ว่างท้ายหน้าต่อขึ้นไปข้างบน
+   (จุดตัดกลางย่อหน้าเหลือที่ว่างไม่เกินหนึ่งบรรทัดเสมอ แต่ก็ต้องนับให้ครบ ไม่งั้นยังเหลื่อม) */
+/* [alpha.93 ข้อ 5] กางที่ว่างด้วย `margin-top` เหมือนตัวระดับบล็อก (inline-block กิน margin
+   แนวตั้งจริงและไม่ยุบรวมกับใคร) → **ขอบบนของกล่อง = รอยต่อหน้าเสมอ** ทั้งสองชนิด
+   ตัววัดและตัวเทสจึงอ้างจุดเดียวกันได้ ไม่ต้องแยกเคส */
 .ed-page-break.k-pb-inline { display:inline-block; width:100%;
-  height:calc(var(--ed-lh, 1.75) * 1em + 2px);
-  overflow:visible; vertical-align:top; text-indent:0; margin:0; }
-.ed-page-break.k-pb-inline::before { left:0; right:0; width:auto; top:50%; }
-.ed-page-break.k-pb-inline > .sp-page-break-num { right:0; left:auto; top:50%;
-  transform:translateY(-50%); }
+  --k-pb-strip:calc(var(--ed-lh, 1.75) * 1em + 2px);
+  height:var(--k-pb-strip);
+  overflow:visible; vertical-align:top; text-indent:0;
+  margin:var(--k-pb-pad, 0px) 0 0; }
+.ed-page-break.k-pb-inline::before { left:0; right:0; width:auto; top:0; bottom:auto; }
+.ed-page-break.k-pb-inline > .sp-page-break-num { right:0; left:auto;
+  top:calc(var(--k-pb-strip) / 2); bottom:auto; transform:translateY(-50%); }
 
 /* ── [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของ "หน้าถัดไป" บนเส้นคั่นหน้า ──
    เดิมโหมดปกติ/จัดหน้ามีเลขหน้าเฉพาะหน้าแรก (::before ของ .ProseMirror) — หน้า 2 เป็นต้นไป
@@ -3462,16 +3491,16 @@ body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
   color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
   pointer-events:none; user-select:none; }
 .pane.sp-view-layout .sp-page-break > .sp-page-no-next {
-  display:block; right:var(--pg-no-right, 1in);
+  display:block; right:var(--pg-no-right, 1in); bottom:auto;
   top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) + var(--pg-no-top, .5in));
 }
 /* [alpha.88 ข้อ 3] มุมมองปกติไม่มี "ขอบบนของแผ่นถัดไป" ให้วางเลขหน้าอีกแล้ว
    (สวิตช์ "แผ่นจริงขณะพิมพ์" ถูกตัดทิ้ง) → วางไว้ปลายซ้ายของเส้นคั่น ตรงข้ามป้าย "หน้า N" */
 .pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break > .sp-page-no-next {
-  display:block; left:0; right:auto; top:-1.05em;
+  display:block; left:0; right:auto; top:-1.05em; bottom:auto;
 }
 .pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break.k-pb-inline > .sp-page-no-next {
-  top:50%; transform:translateY(-50%);
+  top:calc(var(--k-pb-strip) / 2); bottom:auto; transform:translateY(-50%);
 }
 /* ปิดเลขหน้าอยู่ = ไม่มีอะไรให้โชว์ (ตัวเลขไม่ถูกสร้างตั้งแต่ต้นทาง แต่กันไว้อีกชั้น) */
 body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
@@ -3531,8 +3560,13 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 .pane.sp-view-layout .sp-page-break {
   --pb-gap:var(--sp-page-gap, 28px);
   --pb-mb:var(--mg-bottom, 1in);
+  /* [alpha.93 ข้อ 5] ที่ว่างท้ายหน้ากางด้วย `margin-top` (พื้นหลังตรงนั้นเป็นสีกระดาษอยู่แล้ว)
+     กล่องแถบคั่นจึงคงสูตรเดิม ไม่ต้องบวก pad เข้าไปอีก — ไม่งั้นนับซ้ำสองเท่า */
+  margin-top:var(--k-pb-pad, 0px);
   height:calc(var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in)); border:0;
-  margin:0 calc(-1 * var(--mg-right, 1in)) 0 calc(-1 * var(--mg-left, 1.5in));
+  margin-right:calc(-1 * var(--mg-right, 1in));
+  margin-left:calc(-1 * var(--mg-left, 1.5in));
+  margin-bottom:0;
   background:linear-gradient(to bottom,
     #fff 0, #fff var(--pb-mb),
     var(--paper-edge) var(--pb-mb), var(--paper-edge) calc(var(--pb-mb) + 2px),
@@ -3562,7 +3596,7 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 .pane.sp-view-layout .sp-page-break.k-pb-inline::before { top:0; }
 /* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ไม่ใช่กลางแถบทั้งแถบ */
 .pane.sp-view-layout .sp-page-break-num {
-  position:absolute; right:auto; left:50%;
+  position:absolute; right:auto; left:50%; bottom:auto;
   top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) / 2); transform:translate(-50%, -50%);
   background:transparent; color:var(--dim); padding:0;
   font-size:calc(11px * var(--ui-scale, 1)); }

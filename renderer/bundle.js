@@ -15619,6 +15619,7 @@
           d.className = cls + (inline2 ? " k-pb-inline" : inBlock ? " k-pb-in-block" : "");
           d.dataset.page = String(b.page || "");
           if (inBlock && Number.isFinite(b.ind)) d.style.setProperty("--k-pb-ind", b.ind + "in");
+          if (Number.isFinite(b.pad) && b.pad > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
           d.setAttribute("contenteditable", "false");
           const lbl = document.createElement("span");
           lbl.className = "sp-page-break-num";
@@ -15667,7 +15668,19 @@
     function refresh(view2) {
       if (view2) view2.dispatch(view2.state.tr.setMeta(key2, true));
     }
-    return { key: key2, setBreaks, breaks, setNumberLabel, plugin, refresh };
+    function applyPads(dom) {
+      if (!dom || !dom.querySelectorAll) return 0;
+      const els = dom.querySelectorAll("." + cls.split(" ").pop());
+      if (els.length !== list.length) return 0;
+      let n2 = 0;
+      els.forEach((e, i5) => {
+        const pad3 = Number(list[i5] && list[i5].pad);
+        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && pad3 > 0.5 ? pad3 : 0) + "px");
+        n2++;
+      });
+      return n2;
+    }
+    return { key: key2, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads };
   }
   var init_page_break_plugin = __esm({
     "src/page-break-plugin.js"() {
@@ -15682,6 +15695,7 @@
   __export(prose_view_exports, {
     PROSE_VIEWS: () => PROSE_VIEWS,
     PROSE_VIEW_LABELS: () => PROSE_VIEW_LABELS,
+    applyProsePagePads: () => applyProsePagePads,
     isProseEditView: () => isProseEditView,
     isProsePageView: () => isProsePageView,
     isValidProseView: () => isValidProseView,
@@ -15785,7 +15799,7 @@
     const name5 = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
     return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
   }
-  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, setProsePageNumberLabel, prosePageBreakPlugin, refreshProsePageBreaks, cssIn;
+  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, setProsePageNumberLabel, prosePageBreakPlugin, applyProsePagePads, refreshProsePageBreaks, cssIn;
   var init_prose_view = __esm({
     "src/prose-view.js"() {
       init_i18n();
@@ -15814,6 +15828,7 @@
       prosePageBreaks = ED_PB.breaks;
       setProsePageNumberLabel = ED_PB.setNumberLabel;
       prosePageBreakPlugin = ED_PB.plugin;
+      applyProsePagePads = ED_PB.applyPads;
       refreshProsePageBreaks = ED_PB.refresh;
       cssIn = (v2) => num(v2, 0) + "in";
     }
@@ -17731,13 +17746,25 @@
     CUT_FAIL.noBlock++;
     return null;
   }
-  function proseBreakList(view2, blocks, pages, basePage = 1) {
+  function proseBreakList(view2, blocks, pages, basePage = 1, contentHeight = 0) {
     return withMeasureMode(() => {
       const out = [];
       const list = pages || [];
+      const ch = num(contentHeight, 0);
       for (let i5 = 1; i5 < list.length; i5++) {
         const pos = prosePosAtCut(view2, blocks, list[i5].start);
-        if (Number.isFinite(pos) && pos > 0) out.push({ pos, page: basePage + i5 });
+        if (!Number.isFinite(pos) || pos <= 0) continue;
+        const used = list[i5].start - list[i5 - 1].start;
+        let g = 0;
+        const bl = blocks || [];
+        for (let j = 1; j < bl.length; j++) {
+          if (Math.abs(num(bl[j].top, -1e9) - list[i5].start) < 0.6) {
+            g = Math.max(0, num(bl[j - 1].spaceAfterPx, 0));
+            break;
+          }
+        }
+        const pad3 = ch > 0 ? Math.max(0, Math.round((ch - used + g) * 10) / 10) : 0;
+        out.push({ pos, page: basePage + i5, pad: pad3 });
       }
       return out;
     });
@@ -151895,6 +151922,7 @@ ${css}
     repaginateFast: () => repaginateFast,
     reportPanelWindowHealth: () => reportPanelWindowHealth,
     requestOpenInMain: () => requestOpenInMain,
+    resetViewScroll: () => resetViewScroll,
     resolveImg: () => resolveImg,
     restoreSessionLayout: () => restoreSessionLayout,
     restoreSessionTabs: () => restoreSessionTabs,
@@ -152586,10 +152614,48 @@ ${css}
     if (!t22 || !t22.editor) return false;
     return t22.editor.gotoPos(pos);
   }
+  function viewScrollFrac(pane) {
+    const max2 = Math.max(1, pane.scrollHeight - pane.clientHeight);
+    return Math.min(1, Math.max(0, pane.scrollTop / max2));
+  }
+  function rememberViewScroll(tab, mode) {
+    if (!tab || !tab.pane || !mode) return;
+    if (!tab.viewScroll) tab.viewScroll = {};
+    tab.viewScroll[mode] = {
+      top: tab.pane.scrollTop,
+      left: tab.pane.scrollLeft,
+      frac: viewScrollFrac(tab.pane)
+    };
+  }
+  function restoreViewScroll(tab, mode, fallbackFrac) {
+    if (!tab || !tab.pane || !mode) return;
+    const pane = tab.pane;
+    const saved = tab.viewScroll && tab.viewScroll[mode];
+    const apply4 = () => {
+      if (!pane.isConnected) return;
+      const max2 = Math.max(0, pane.scrollHeight - pane.clientHeight);
+      const want = saved ? saved.top : (fallbackFrac || 0) * max2;
+      pane.scrollTop = Math.min(Math.max(0, want), max2);
+      const maxX = Math.max(0, pane.scrollWidth - pane.clientWidth);
+      pane.scrollLeft = Math.min(Math.max(0, saved ? saved.left || 0 : 0), maxX);
+    };
+    apply4();
+    requestAnimationFrame(apply4);
+    setTimeout(apply4, 140);
+  }
+  function resetViewScroll(tab) {
+    if (tab) tab.viewScroll = null;
+  }
   function setSpView(mode, quiet) {
     const m = isValidView(mode) ? mode : "normal";
-    spViewMode = m;
     const tab = state.active;
+    const prevMode = spViewMode;
+    let frac = 0;
+    if (tab && tab.pane && prevMode !== m) {
+      rememberViewScroll(tab, prevMode);
+      frac = viewScrollFrac(tab.pane);
+    }
+    spViewMode = m;
     document.querySelectorAll(".pane").forEach((p) => {
       p.classList.remove(...ALL_VIEW_CLASSES);
       if (p !== (tab && tab.pane)) clearPageView(p);
@@ -152606,6 +152672,7 @@ ${css}
     syncMenuToggles();
     syncWorkspaceWidths();
     scheduleLineGutter();
+    if (tab && tab.pane && prevMode !== m) restoreViewScroll(tab, m, frac);
     if (!quiet) setStatus(viewStatusText(m, pages ?? void 0));
     return m;
   }
@@ -153913,8 +153980,7 @@ ${css}
       s.tabs.active = state.active && state.active.file || "";
       const scroll = {};
       for (const [f, tab] of state.tabs) {
-        const box2 = tab && tab.pane && tab.pane.querySelector(".ProseMirror");
-        const sc = box2 && box2.parentElement ? box2.parentElement.scrollTop : 0;
+        const sc = tab && tab.pane ? tab.pane.scrollTop : 0;
         if (sc) scroll[f] = Math.round(sc);
       }
       s.tabs.scroll = scroll;
@@ -154004,10 +154070,17 @@ ${css}
     _sessRestoring = true;
     try {
       const raw2 = s.ui && s.ui.ls && typeof s.ui.ls === "object" ? s.ui.ls : {};
-      for (const k of Object.keys(raw2)) {
-        try {
-          if (k.startsWith("k2-") && typeof raw2[k] === "string") localStorage.setItem(k, raw2[k]);
-        } catch {
+      let lsTs = 0;
+      try {
+        lsTs = +(localStorage.getItem("k2-ls-ts") || 0) || 0;
+      } catch {
+      }
+      if (!(lsTs && s.ts && lsTs > s.ts)) {
+        for (const k of Object.keys(raw2)) {
+          try {
+            if (k.startsWith("k2-") && typeof raw2[k] === "string") localStorage.setItem(k, raw2[k]);
+          } catch {
+          }
         }
       }
       const put = (k, v2) => {
@@ -154060,6 +154133,20 @@ ${css}
         setPageScale(+s.ui.zoom);
       } catch {
       }
+    }
+    const back = pruned.tabs.scroll || {};
+    if (Object.keys(back).length) {
+      const put = () => {
+        for (const [f, y] of Object.entries(back)) {
+          const tb2 = state.tabs.get(f);
+          if (!tb2 || !tb2.pane) continue;
+          const max2 = Math.max(0, tb2.pane.scrollHeight - tb2.pane.clientHeight);
+          tb2.pane.scrollTop = Math.min(Math.max(0, +y || 0), max2);
+        }
+      };
+      put();
+      setTimeout(put, 250);
+      setTimeout(put, 900);
     }
     if (n2) log("info", tf("ui.session.restoredTabs", n2));
     return n2;
@@ -160494,6 +160581,42 @@ ${css}
       return _spPageText;
     }
   }
+  function tuneProsePagePads(t3) {
+    if (!t3 || !t3.editor || !t3.pane) return false;
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (nowMs < _padTuneUntil) return false;
+    const view2 = t3.editor.view;
+    const pm2 = view2.dom;
+    if (!pm2.isConnected) return false;
+    const list = prosePageBreaks();
+    if (!list.length) return false;
+    const els = [...pm2.querySelectorAll(".ed-page-break")];
+    if (els.length !== list.length) return false;
+    const spf = spFormat();
+    const target = (num(spf.paper.height, 11) - num(spf.margins.top, 1) - num(spf.margins.bottom, 1)) * 96;
+    if (!(target > 8)) return false;
+    const z = zoomFactorOf(pm2) || 1;
+    const cs = getComputedStyle(pm2);
+    const top0 = pm2.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
+    const lineY = (e) => (e.getBoundingClientRect().top - top0) / z;
+    const firstBlk = [...pm2.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
+    let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+    let changed = false;
+    for (let i5 = 0; i5 < els.length; i5++) {
+      const y = lineY(els[i5]);
+      const delta = target - (y - prev);
+      prev = y;
+      if (Math.abs(delta) < 0.5) continue;
+      const want = Math.max(0, Math.round((num(list[i5].pad, 0) + delta) * 10) / 10);
+      if (Math.abs(want - num(list[i5].pad, 0)) < 0.05) continue;
+      list[i5].pad = want;
+      changed = true;
+    }
+    if (!changed) return false;
+    _padTuneUntil = nowMs + 400;
+    applyProsePagePads(pm2);
+    return true;
+  }
   function repaginateProseNow(t3) {
     if (!t3 || !t3.editor) return 0;
     try {
@@ -160501,7 +160624,13 @@ ${css}
       const mz = proseMeasured(t3, spf);
       if (mz) {
         resetCutFail();
-        const list82 = proseBreakList(t3.editor.view, mz.blocks, mz.pages, currentStartPage(t3));
+        const list82 = proseBreakList(
+          t3.editor.view,
+          mz.blocks,
+          mz.pages,
+          currentStartPage(t3),
+          mz.contentHeight
+        );
         state._mzDiag = {
           path: "measured",
           pages: mz.pages.length,
@@ -160518,6 +160647,13 @@ ${css}
         }
         setLayoutPageCount(t3, mz.pages.length);
         refreshSpView();
+        requestAnimationFrame(() => {
+          try {
+            applyProsePagePads(t3.editor.view.dom);
+            tuneProsePagePads(t3);
+          } catch {
+          }
+        });
         return mz.pages.length;
       }
       const pf = proseFormat();
@@ -161962,6 +162098,11 @@ ${css}
     const l = uiLayout();
     l[key2] = { ...l[key2] || {}, ...val };
     localStorage.setItem("k2-ui-layout", JSON.stringify(l));
+    try {
+      localStorage.setItem(LS_TS_KEY, String(Date.now()));
+    } catch {
+    }
+    markSessionDirty();
   }
   function makeDraggable(elm, handle, opts = {}) {
     const { key: key2, defaultPos } = opts;
@@ -168386,8 +168527,15 @@ ${css}
         const pT = deleteToTrash(await kapi.join(state.root, "Memos", memoFiles[1]), "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07");
         for (let i5 = 0; i5 < 100 && !document.querySelector(".k-dialog .k-ok"); i5++)
           await new Promise((r) => setTimeout(r, 50));
-        document.querySelector(".k-dialog .k-ok")?.click();
-        await pT;
+        const okBtn = document.querySelector(".k-dialog .k-ok");
+        okBtn?.click();
+        await Promise.race([pT, new Promise((r) => setTimeout(r, 8e3))]);
+        check2(
+          "[93] \u0E25\u0E1A memo \u0E25\u0E07\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E42\u0E1C\u0E25\u0E48\u0E41\u0E25\u0E30\u0E01\u0E14\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E23\u0E2D\u0E15\u0E25\u0E2D\u0E14\u0E01\u0E32\u0E25)",
+          !!okBtn,
+          "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E43\u0E19 5 \u0E27\u0E34\u0E19\u0E32\u0E17\u0E35"
+        );
+        for (const ov of document.querySelectorAll(".k-overlay")) ov.remove();
       }
       activate(t22.file);
       openFind();
@@ -174892,13 +175040,19 @@ ${css}
           );
           {
             const gapsAll = Array.from(T3.pane.querySelectorAll(".ed-page-break"));
-            const gapSum = gapsAll.reduce((a, g) => a + g.getBoundingClientRect().height, 0);
             const lastB = mz.blocks[mz.blocks.length - 1];
             const rawTop = (lastB.el.getBoundingClientRect().top - mz.origin) / mz.zoomFactor;
+            const flatTop = withMeasureMode(() => (lastB.el.getBoundingClientRect().top - mz.origin) / mz.zoomFactor);
+            const gapSum = rawTop - lastB.top;
             check2(
-              "[82] \u0E01\u0E32\u0E23\u0E27\u0E31\u0E14\u0E2B\u0E31\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E2D\u0E01\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E2D\u0E31\u0E19",
-              Math.abs(rawTop - lastB.top - gapSum / mz.zoomFactor) < 1.5,
-              "\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 " + (rawTop - lastB.top - gapSum / mz.zoomFactor).toFixed(2) + "px \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E27\u0E21 " + gapSum.toFixed(0) + "px"
+              '[82] \u2605 \u0E1E\u0E34\u0E01\u0E31\u0E14\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E2B\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1A\u0E1A "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32" (\u0E27\u0E31\u0E14\u0E0B\u0E49\u0E33\u0E44\u0E14\u0E49\u0E04\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21)',
+              Math.abs(flatTop - lastB.top) < 1.5,
+              "\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 " + (flatTop - lastB.top).toFixed(2) + "px"
+            );
+            check2(
+              "[82] \u0E41\u0E25\u0E30\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E14\u0E31\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34 (\u0E21\u0E35\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E49\u0E2B\u0E31\u0E01\u0E08\u0E23\u0E34\u0E07)",
+              gapSum > 1,
+              gapSum.toFixed(1) + "px"
             );
             check2(
               "[82] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E2B\u0E31\u0E01\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E40\u0E1E\u0E23\u0E32\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22)",
@@ -175210,6 +175364,155 @@ ${css}
             );
             T3.editor.setMarkdown(keep6);
             await new Promise((r) => setTimeout(r, 300));
+          }
+          {
+            const w93 = (ms) => new Promise((r) => setTimeout(r, ms));
+            const keep93 = T3.editor.getMarkdown();
+            const keepView93 = currentSpView();
+            const pm93 = T3.editor.view.dom;
+            const pane93 = T3.pane;
+            const lineRects = (node) => {
+              const rg = document.createRange();
+              rg.selectNodeContents(node);
+              return [...rg.getClientRects()].filter((r) => r.height > 0.5 && r.width > 0.5);
+            };
+            const findP = (needle) => [...pm93.querySelectorAll("p,h1,h2,h3,blockquote")].find((n2) => (n2.textContent || "").includes(needle));
+            const LONG_EN = "\u0E41\u0E01\u0E41\u0E40\u0E14cdcdcsd" + "c".repeat(220) + "dcdcd";
+            const LONG_TH = "\u0E01\u0E01" + "\u0E1F\u0E2B\u0E01\u0E14".repeat(70);
+            setSpView("normal", true);
+            T3.editor.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E2A\u0E31\u0E49\u0E19 \u0E46\n\n" + LONG_EN + "\n\n" + LONG_TH + "\n\n\u0E1B\u0E34\u0E14\u0E17\u0E49\u0E32\u0E22");
+            await w93(450);
+            const inkOverflow = (node) => {
+              const pr = pm93.getBoundingClientRect(), cp = getComputedStyle(pm93);
+              const right = pr.right - parseFloat(cp.paddingRight);
+              const left = pr.left + parseFloat(cp.paddingLeft);
+              let over = 0;
+              for (const r of lineRects(node))
+                over = Math.max(over, r.right - right, left - r.left);
+              return over;
+            };
+            for (const [lbl, needle] of [["\u0E25\u0E32\u0E15\u0E34\u0E19", "cdcdcsd"], ["\u0E44\u0E17\u0E22", "\u0E1F\u0E2B\u0E01\u0E14"]]) {
+              const node = findP(needle);
+              const over = node ? inkOverflow(node) : 999;
+              const rs = node ? lineRects(node) : [];
+              const pr = pm93.getBoundingClientRect(), cp = getComputedStyle(pm93);
+              const inLeft = pr.left + parseFloat(cp.paddingLeft);
+              const ind = parseFloat(getComputedStyle(node).textIndent) || 0;
+              note("[93-1] " + lbl + ": " + rs.length + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \xB7 \u0E25\u0E49\u0E19 " + over.toFixed(1) + "px \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48 +" + (rs.length ? (rs[0].left - inLeft).toFixed(1) : "?") + " (\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 " + ind.toFixed(1) + ") \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E16\u0E31\u0E14\u0E44\u0E1B\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48 +" + (rs.length > 1 ? (rs[1].left - inLeft).toFixed(1) : "-"));
+              check2(
+                "[93-1] \u2605 \u0E04\u0E33\u0E22\u0E32\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14 (" + lbl + ") \u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+                over <= 1.5,
+                over.toFixed(1) + "px"
+              );
+              check2(
+                "[93-1] \u2605 \u0E04\u0E33\u0E22\u0E32\u0E27 (" + lbl + ") \u0E22\u0E31\u0E07\u0E40\u0E04\u0E32\u0E23\u0E1E\u0E23\u0E30\u0E22\u0E30\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01",
+                rs.length > 0 && Math.abs(rs[0].left - inLeft - ind) <= 1.5,
+                rs.length ? (rs[0].left - inLeft).toFixed(1) + " \u0E04\u0E27\u0E23\u0E44\u0E14\u0E49 " + ind.toFixed(1) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14"
+              );
+              check2(
+                "[93-1] \u2605 \u0E04\u0E33\u0E22\u0E32\u0E27 (" + lbl + ") \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E15\u0E48\u0E2D \u0E46 \u0E44\u0E1B\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E1E\u0E2D\u0E14\u0E35",
+                rs.length < 2 || Math.abs(rs[1].left - inLeft) <= 1.5,
+                rs.length > 1 ? (rs[1].left - inLeft).toFixed(1) : "-"
+              );
+            }
+            setSpView("draft");
+            await w93(450);
+            const dLong = findP("cdcdcsd");
+            const dLines = dLong ? lineRects(dLong).length : 0;
+            note("[93-3] \u0E23\u0E48\u0E32\u0E07: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E22\u0E32\u0E27 = " + dLines + " \xB7 white-space=" + getComputedStyle(pm93).whiteSpace + " \xB7 pane scroll=" + pane93.scrollWidth + "/" + pane93.clientWidth);
+            check2("[93-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E15\u0E31\u0E14\u0E04\u0E33 \u2014 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E32\u0E27\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27", dLines === 1, dLines);
+            check2(
+              "[93-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E41\u0E17\u0E19 (\u0E41\u0E1A\u0E1A VS Code)",
+              pane93.scrollWidth > pane93.clientWidth + 4,
+              pane93.scrollWidth + " vs " + pane93.clientWidth
+            );
+            check2(
+              "[93-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32",
+              [...pane93.querySelectorAll(".ed-page-break,.sp-page-break")].every((e) => e.getBoundingClientRect().height === 0),
+              "\u0E22\u0E31\u0E07\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E17\u0E35\u0E48\u0E2A\u0E39\u0E07\u0E01\u0E27\u0E48\u0E32 0"
+            );
+            setSpView("normal", true);
+            T3.editor.setMarkdown(("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D " + "\u0E01\u0E02\u0E04\u0E07".repeat(40) + "\n\n").repeat(40));
+            await w93(600);
+            repaginateFast(T3);
+            await w93(300);
+            pane93.scrollTop = 1200;
+            await w93(150);
+            const sc02 = pane93.scrollTop;
+            setSpView("draft");
+            await w93(450);
+            pane93.scrollTop = 120;
+            await w93(120);
+            const scD = pane93.scrollTop;
+            setSpView("normal");
+            await w93(450);
+            const sc1 = pane93.scrollTop;
+            setSpView("draft");
+            await w93(450);
+            const scD2 = pane93.scrollTop;
+            note("[93-4] \u0E1B\u0E01\u0E15\u0E34 " + sc02 + " \u2192 \u0E23\u0E48\u0E32\u0E07 " + scD + " \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E1B\u0E01\u0E15\u0E34 " + sc1 + " \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07 " + scD2);
+            check2(
+              "[93-4] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E02\u0E36\u0E49\u0E19\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
+              Math.abs(sc1 - sc02) <= 8,
+              sc02 + " \u2192 " + sc1
+            );
+            check2(
+              "[93-4] \u2605 \u0E41\u0E15\u0E48\u0E25\u0E30\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E33\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E01\u0E31\u0E19)",
+              Math.abs(scD2 - scD) <= 8,
+              scD + " \u2192 " + scD2
+            );
+            setSpView("normal", true);
+            await w93(300);
+            pane93.scrollTop = 700;
+            await w93(120);
+            const snap93 = await captureSession();
+            note("[93-4] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E14\u0E49 " + JSON.stringify(snap93.tabs.scroll).slice(0, 90));
+            check2(
+              "[93-4] \u2605 \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E47\u0E19 0 \u0E40\u0E2A\u0E21\u0E2D)",
+              Object.values(snap93.tabs.scroll || {}).some((v4) => v4 > 100),
+              JSON.stringify(snap93.tabs.scroll)
+            );
+            pane93.scrollTop = 0;
+            const mixed = [];
+            for (let i5 = 1; i5 <= 14; i5++) {
+              mixed.push("## \u0E1A\u0E17\u0E17\u0E35\u0E48 " + i5);
+              mixed.push("\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E49\u0E32\u0E19 " + "\u0E25\u0E21\u0E2B\u0E19\u0E32\u0E27\u0E1E\u0E31\u0E14\u0E1C\u0E48\u0E32\u0E19\u0E43\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E19\u0E23\u0E39\u0E49\u0E2A\u0E36\u0E01\u0E40\u0E22\u0E47\u0E19\u0E40\u0E09\u0E35\u0E22\u0E1A ".repeat(6));
+              if (i5 % 3 === 0) mixed.push("> \u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E35\u0E48\u0E22\u0E01\u0E21\u0E32 " + "\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E22\u0E32\u0E27 \u0E46 ".repeat(8));
+              if (i5 % 4 === 0) mixed.push(LONG_EN);
+              mixed.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B " + "\u0E40\u0E2A\u0E35\u0E22\u0E07\u0E19\u0E01\u0E23\u0E49\u0E2D\u0E07\u0E14\u0E31\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E23\u0E34\u0E21\u0E17\u0E32\u0E07 ".repeat(7));
+            }
+            T3.editor.setMarkdown(mixed.join("\n\n"));
+            await w93(800);
+            repaginateFast(T3);
+            await w93(500);
+            const brTops = [...pm93.querySelectorAll(".ed-page-break")].map((e) => e.getBoundingClientRect().top);
+            const brGaps = [];
+            for (let i5 = 1; i5 < brTops.length; i5++) brGaps.push(+(brTops[i5] - brTops[i5 - 1]).toFixed(1));
+            const firstBlk93 = [...pm93.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
+            if (firstBlk93 && brTops.length)
+              brGaps.unshift(+(brTops[0] - firstBlk93.getBoundingClientRect().top).toFixed(1));
+            const spread = brGaps.length ? Math.max(...brGaps) - Math.min(...brGaps) : 0;
+            note("[93-5] \u0E1B\u0E01\u0E15\u0E34: " + brTops.length + " \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 \xB7 \u0E23\u0E30\u0E22\u0E30 = " + brGaps.slice(0, 10).join(" , ") + " \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + spread.toFixed(1) + "px");
+            check2(
+              "[93-5] \u2605\u2605 \u0E23\u0E30\u0E22\u0E30\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32 (\u0E01\u0E48\u0E2D\u0E19\u0E41\u0E01\u0E49\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 32.8px)",
+              brGaps.length >= 3 && spread <= 2,
+              brGaps.slice(0, 8).join(" , ")
+            );
+            setSpView("side");
+            await w93(900);
+            const phs = [...pane93.querySelectorAll(".sp-pageview .ed-page")].map((e) => +e.getBoundingClientRect().height.toFixed(1));
+            const pspread = phs.length ? Math.max(...phs) - Math.min(...phs) : 0;
+            note("[93-5] \u0E40\u0E23\u0E35\u0E22\u0E07\u0E2B\u0E19\u0E49\u0E32: " + phs.length + " \u0E41\u0E1C\u0E48\u0E19 \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + pspread.toFixed(1) + "px");
+            check2("[93-5] \u2605 \u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E41\u0E1C\u0E48\u0E19", pspread <= 0.6, phs.slice(0, 8).join(","));
+            setSpView("layout");
+            await w93(900);
+            const lh = [...pm93.querySelectorAll(".ed-page-break")].map((e) => +e.getBoundingClientRect().height.toFixed(1));
+            const lspread = lh.length ? Math.max(...lh) - Math.min(...lh) : 0;
+            note("[93-5] \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19 " + lh.length + " \u0E2D\u0E31\u0E19 \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + lspread.toFixed(1) + "px");
+            check2("[93-5] \u2605 \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E43\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E2D\u0E31\u0E19", lspread <= 0.6, lh.slice(0, 8).join(","));
+            setSpView(keepView93 === "draft" ? "normal" : keepView93, true);
+            T3.editor.setMarkdown(keep93);
+            await w93(400);
           }
           T3.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
           await new Promise((r) => setTimeout(r, 250));
@@ -182681,7 +182984,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _padTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -182977,6 +183280,7 @@ ${css}
       countJob = null;
       _countRunAt = 0;
       repaginateJob = null;
+      _padTuneUntil = 0;
       _fastPageJob = 0;
       _spPageText = "";
       outlineJob = null;
@@ -183112,6 +183416,7 @@ ${css}
           bumpPageScale(-1);
         }
       }, true);
+      LS_TS_KEY = "k2-ls-ts";
       TB_SC_MAP = {
         "tb-bold": "fmt:bold",
         "tb-italic": "fmt:italic",

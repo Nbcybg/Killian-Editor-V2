@@ -12,7 +12,7 @@ import { PROSE_DEFAULTS, DEFAULT_PROSE_FONT, HEADING_DEFAULTS, QUOTE_DEFAULTS,
          prosePageStarts, findProsePageStart, proseHeadings, headingNumberText,
          proseExportCss } from './prose-format.js';
 import { PROSE_VIEWS, PROSE_VIEW_LABELS, isProsePageView, isProseEditView, isValidProseView,
-         proseLayoutCssVars, prosePagesOf, setProsePageBreaks, prosePageBreaks,
+         proseLayoutCssVars, prosePagesOf, setProsePageBreaks, prosePageBreaks, applyProsePagePads,
          refreshProsePageBreaks, renderProsePageView, proseViewStatusText,
          setProsePageNumberLabel } from './prose-view.js';
 // [alpha.82] จัดหน้านิยายจากการวัดของจริงบนจอ — แทนที่การเดาจากจำนวนตัวอักษร
@@ -1026,10 +1026,61 @@ export function gotoProsePos(tab, pos) {
 }
 
 /** เปลี่ยนโหมดมุมมองของบทหนัง */
+// ═════════ [alpha.93 ข้อ 4] ★ ตำแหน่งเลื่อนจอ "ต่อมุมมอง" ═════════
+//
+// ผู้ใช้: *"การสลับมุมมองไม่ได้ lock เอาไว้ มันเลยงงมาก ๆ ต้อง lock scroll bar
+//          คำนวณเลยว่า scroll bar เก็บค่าว่ามุมมองนี้อยู่ตรงไหน"*
+//
+// เดิมสลับมุมมองแล้วเนื้อหาถูกวาดใหม่ทั้งก้อน → ความสูงเปลี่ยน → เบราว์เซอร์รีเซ็ตไปบนสุด
+// อ่านอยู่หน้า 40 กดดูมุมมองจัดหน้าแล้วกลับมา = เริ่มใหม่ที่หน้า 1 ทุกครั้ง
+//
+// เก็บตำแหน่งของแต่ละมุมมองไว้กับแท็บ · มุมมองที่ยังไม่เคยเข้าใช้ **สัดส่วน** ของมุมมองเดิมแทน
+// (ความสูงรวมของแต่ละมุมมองไม่เท่ากัน — จำเป็นพิกเซลดิบข้ามมุมมองจะไปโผล่คนละที่)
+//
+// ตัวที่เลื่อนจริงคือ `.pane` (`overflow:auto`) — ไม่ใช่ `.workspace` (ที่ระบบเซสชันเคยอ่านผิด)
+function viewScrollFrac(pane) {
+  const max = Math.max(1, pane.scrollHeight - pane.clientHeight);
+  return Math.min(1, Math.max(0, pane.scrollTop / max));
+}
+function rememberViewScroll(tab, mode) {
+  if (!tab || !tab.pane || !mode) return;
+  if (!tab.viewScroll) tab.viewScroll = {};
+  tab.viewScroll[mode] = { top: tab.pane.scrollTop, left: tab.pane.scrollLeft,
+                           frac: viewScrollFrac(tab.pane) };
+}
+function restoreViewScroll(tab, mode, fallbackFrac) {
+  if (!tab || !tab.pane || !mode) return;
+  const pane = tab.pane;
+  const saved = tab.viewScroll && tab.viewScroll[mode];
+  const apply = () => {
+    if (!pane.isConnected) return;
+    const max = Math.max(0, pane.scrollHeight - pane.clientHeight);
+    const want = saved ? saved.top : (fallbackFrac || 0) * max;
+    pane.scrollTop = Math.min(Math.max(0, want), max);
+    // [alpha.93 ข้อ 3+4] แนวนอนด้วย — โหมดร่างเลื่อนแนวนอนได้แล้ว ถ้าไม่คืนค่า/ไม่รีเซ็ต
+    // มุมมองอื่นจะถูกเลื่อนค้างไว้ แล้ว "รางเลขบรรทัด" (ตรึงกับ pane) ไปทับตัวหนังสือ
+    const maxX = Math.max(0, pane.scrollWidth - pane.clientWidth);
+    pane.scrollLeft = Math.min(Math.max(0, saved ? (saved.left || 0) : 0), maxX);
+  };
+  // มุมมองหน้ากระดาษวาดแบบ async (ครอบเนื้อหา/ปรับสเกล) — ความสูงยังไม่นิ่งในเฟรมแรก
+  // จึงตั้งซ้ำสามจังหวะ: ทันที · เฟรมถัดไป · หลังวาดเสร็จ (บทเรียน "อย่าวัดผลทันทีหลังสั่งวาด")
+  apply();
+  requestAnimationFrame(apply);
+  setTimeout(apply, 140);
+}
+/** ล้างความจำตำแหน่งเลื่อนของแท็บ (เนื้อหาเปลี่ยนทั้งก้อน = ตำแหน่งเดิมไม่มีความหมายแล้ว) */
+export function resetViewScroll(tab) { if (tab) tab.viewScroll = null; }
+
 export function setSpView(mode, quiet) {
   const m = isValidView(mode) ? mode : 'normal';
-  spViewMode = m;
   const tab = state.active;
+  const prevMode = spViewMode;
+  let frac = 0;
+  if (tab && tab.pane && prevMode !== m) {
+    rememberViewScroll(tab, prevMode);
+    frac = viewScrollFrac(tab.pane);
+  }
+  spViewMode = m;
   // ล้างคลาสเก่าออกจากทุก pane (สลับแท็บไปมาแล้วคลาสค้างเป็นเหตุให้หน้าจอเพี้ยน)
   document.querySelectorAll('.pane').forEach((p) => {
     p.classList.remove(...ALL_VIEW_CLASSES);
@@ -1047,6 +1098,8 @@ export function setSpView(mode, quiet) {
   syncMenuToggles();
   syncWorkspaceWidths();
   scheduleLineGutter();          // [60r2 ข้อ 11] มุมมองหน้ากระดาษ = ปิดเลขบรรทัดเอง
+  // [alpha.93 ข้อ 4] กลับไปที่เดิมของมุมมองนี้ — ทำหลังวาดเสร็จ ไม่งั้นความสูงยังเป็นของเก่า
+  if (tab && tab.pane && prevMode !== m) restoreViewScroll(tab, m, frac);
   if (!quiet) setStatus(viewStatusText(m, pages ?? undefined));
   return m;
 }
@@ -2404,10 +2457,12 @@ export async function captureSession() {
   try {
     s.tabs.open = [...state.tabs.keys()].filter((f) => !f.startsWith('::') && !f.endsWith('.json'));
     s.tabs.active = (state.active && state.active.file) || '';
+    // [alpha.93 ข้อ 4] ★ ตัวที่เลื่อนจริงคือ `.pane` (`overflow:auto`) ไม่ใช่ `.workspace`
+    // เดิมอ่าน `.ProseMirror` แล้วขึ้นไปหาพ่อ ซึ่งได้ `.workspace` — ตัวนั้น**ไม่เคยเลื่อน**
+    // จึงได้ 0 เสมอ และ `s.tabs.scroll` ว่างเปล่ามาตลอดโดยไม่มีใครรู้
     const scroll = {};
     for (const [f, tab] of state.tabs) {
-      const box = tab && tab.pane && tab.pane.querySelector('.ProseMirror');
-      const sc = box && box.parentElement ? box.parentElement.scrollTop : 0;
+      const sc = tab && tab.pane ? tab.pane.scrollTop : 0;
       if (sc) scroll[f] = Math.round(sc);
     }
     s.tabs.scroll = scroll;
@@ -2498,8 +2553,15 @@ export async function restoreSessionLayout(root) {
     // ยัดกลับเข้า localStorage ให้ระบบแผง/แยกจอ อ่านเจอเหมือนเดิมทุกประการ
     // (คืนค่าจำเล็ก ๆ ทั้งเนมสเปซก่อน แล้วค่อยทับด้วยของหลักที่เก็บแยกไว้)
     const raw = (s.ui && s.ui.ls && typeof s.ui.ls === 'object') ? s.ui.ls : {};
-    for (const k of Object.keys(raw)) {
-      try { if (k.startsWith('k2-') && typeof raw[k] === 'string') localStorage.setItem(k, raw[k]); } catch {}
+    // [alpha.93 ข้อ 2] ★ ห้ามเอาภาพเก่ามาทับของที่ใหม่กว่า
+    // localStorage อยู่ยงข้ามการเปิด-ปิดโปรแกรมด้วยตัวเองอยู่แล้ว · ไฟล์เซสชันเป็นแค่ **สำเนาสำรอง**
+    // (ไว้กู้ตอนย้ายเครื่อง/ไฟล์หาย) ถ้าสำเนานั้นเก่ากว่าของจริง การยัดกลับ = ย้อนงานผู้ใช้
+    let lsTs = 0;
+    try { lsTs = +(localStorage.getItem('k2-ls-ts') || 0) || 0; } catch {}
+    if (!(lsTs && s.ts && lsTs > s.ts)) {
+      for (const k of Object.keys(raw)) {
+        try { if (k.startsWith('k2-') && typeof raw[k] === 'string') localStorage.setItem(k, raw[k]); } catch {}
+      }
     }
     const put = (k, v) => { try { if (v) localStorage.setItem(k, JSON.stringify(v)); } catch {} };
     put('k2-panel-layout', s.panels.layout);
@@ -2529,6 +2591,21 @@ export async function restoreSessionTabs(s) {
   }
   if (s.ui && Number.isFinite(+s.ui.zoom) && +s.ui.zoom > 0) {
     try { setPageScale(+s.ui.zoom); } catch {}
+  }
+  // [alpha.93 ข้อ 4] ★ ตำแหน่งเลื่อนจอถูก **เก็บมาตลอดแต่ไม่เคยถูกเอากลับมาใช้เลย**
+  // (และค่าที่เก็บก็เป็น 0 เสมอเพราะอ่านผิดตัว — ดู captureSession) → เปิดโปรเจกต์แล้ว
+  // ทุกแท็บเริ่มที่บรรทัดแรกเสมอ ทั้งที่ตั้งใจจะกลับไปตรงที่ค้างไว้
+  const back = pruned.tabs.scroll || {};
+  if (Object.keys(back).length) {
+    const put = () => {
+      for (const [f, y] of Object.entries(back)) {
+        const tb = state.tabs.get(f);
+        if (!tb || !tb.pane) continue;
+        const max = Math.max(0, tb.pane.scrollHeight - tb.pane.clientHeight);
+        tb.pane.scrollTop = Math.min(Math.max(0, +y || 0), max);
+      }
+    };
+    put(); setTimeout(put, 250); setTimeout(put, 900);   // เนื้อหา/การจัดหน้ายังทยอยวาด
   }
   if (n) log('info', ttf('ui.session.restoredTabs', n));
   return n;
@@ -8194,6 +8271,70 @@ function repaginateNow(t) {
   } catch (e) { log('warn', tt('ui.app.pageChapterNotOk'), e); return _spPageText; }
 }
 /**
+ * [alpha.93 ข้อ 5] ★ ปรับ "ที่ว่างท้ายหน้า" จาก **เรขาคณิตจริงบนจอ** จนทุกหน้าสูงเท่ากันเป๊ะ
+ *
+ * ค่าที่ `proseBreakList` คำนวณไว้เป็นการเดาที่ดีแล้ว แต่ระยะจริงบนจอยังเพี้ยนได้จาก
+ * เรื่องที่โมเดลไม่รู้: การยุบ margin ระหว่างย่อหน้าที่ประกบเส้นคั่น (หัวข้อกับย่อหน้าธรรมดา
+ * ยุบไม่เท่ากัน) · ซูมหน้ากระดาษ · โหมดมุมมองที่กล่องเส้นคั่นหน้าตาไม่เหมือนกัน
+ *
+ * แทนที่จะไล่ทำนายทุกกรณี ให้ **วัดของจริงแล้วชดเชย**: ระยะระหว่างเส้นคั่นควรเป็น
+ * "ความสูงพื้นที่พิมพ์" เป๊ะ ๆ ต่างเท่าไรก็บวกกลับเข้าไปในที่ว่างของหน้านั้น
+ * เพิ่ม pad ของหน้า i แล้วทุกอย่างใต้มันเลื่อนลงเท่ากันหมด → ระยะของหน้าอื่นไม่เปลี่ยน
+ * ค่าที่วัดได้รอบเดียวจึงใช้ได้ทั้งชุด (ไม่ต้องวนซ้ำ)
+ *
+ * ปลอดภัยกับวงจรจัดหน้า เพราะการวัดหน้าอยู่ในโหมด `k-measuring` ที่ซ่อนเส้นคั่นทั้งหมด
+ * — pad จึงไม่มีทางย้อนกลับไปเปลี่ยนจุดตัด
+ *
+ * @returns {boolean} true = ปรับจริง (สั่งวาดเส้นใหม่แล้ว)
+ */
+let _padTuneUntil = 0;
+function tuneProsePagePads(t) {
+  if (!t || !t.editor || !t.pane) return false;
+  // กันวนกับตัวเอง: การวาดเส้นใหม่อาจไปกระตุ้นให้จัดหน้ารอบใหม่ แล้วเรียกกลับมาที่นี่อีก
+  // (รอบเดียวก็ตรงแล้ว — เพิ่ม pad ของหน้าไหน ทุกอย่างใต้มันเลื่อนลงเท่ากันหมด)
+  const nowMs = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if (nowMs < _padTuneUntil) return false;
+  const view = t.editor.view;
+  const pm = view.dom;
+  if (!pm.isConnected) return false;
+  const list = prosePageBreaks();
+  if (!list.length) return false;
+  const els = [...pm.querySelectorAll('.ed-page-break')];
+  if (els.length !== list.length) return false;         // ยังวาดไม่ครบ — รอรอบหน้า
+  const spf = spFormat();
+  const target = (num(spf.paper.height, 11) - num(spf.margins.top, 1)
+                  - num(spf.margins.bottom, 1)) * 96;
+  if (!(target > 8)) return false;
+  const z = zoomFactorOf(pm) || 1;
+  const cs = getComputedStyle(pm);
+  const top0 = pm.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
+  // ที่ว่างท้ายหน้ากางด้วย `margin-top` → **ขอบบนของกล่อง = รอยต่อหน้า** ทั้งชนิดบล็อกและ inline
+  const lineY = (e) => (e.getBoundingClientRect().top - top0) / z;
+  // ★ หน้าแรกเริ่มที่ **ขอบบนของบล็อกแรก** ไม่ใช่ขอบในของกระดาษ
+  // ตัววัดบังคับ `blocks[0].top = 0` แล้วยุบระยะเว้นนำของบล็อกแรกเข้าไปในความสูงของมัน
+  // → บนจอ บล็อกแรกยังกาง margin-top ของตัวเอง (หัวข้อ `##` มีราว 30px) ถ้านับจากขอบใน
+  // กระดาษ หน้าแรกจะ "สูงเกิน" เท่ากับ margin นั้นเสมอ ทั้งที่หน้าอื่นตรงเป๊ะ
+  const firstBlk = [...pm.children].find((e) => e.nodeType === 1
+    && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
+  let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+  let changed = false;
+  for (let i = 0; i < els.length; i++) {
+    const y = lineY(els[i]);
+    const delta = target - (y - prev);
+    prev = y;
+    if (Math.abs(delta) < 0.5) continue;
+    const want = Math.max(0, Math.round((num(list[i].pad, 0) + delta) * 10) / 10);
+    if (Math.abs(want - num(list[i].pad, 0)) < 0.05) continue;
+    list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
+    changed = true;
+  }
+  if (!changed) return false;
+  _padTuneUntil = nowMs + 400;
+  applyProsePagePads(pm);                  // ทาลง DOM ตรง ๆ — ไม่ dispatch ไม่สร้าง DOM ใหม่
+  return true;
+}
+
+/**
  * [alpha.58r บั๊ก 20 · แยกออกมาใน alpha.60r2 ข้อ 3] จัดหน้าเอกสาร "นิยาย" + วาดเส้นคั่นหน้า
  * @returns {number} จำนวนหน้า (0 = คำนวณไม่ได้)
  */
@@ -8205,7 +8346,9 @@ function repaginateProseNow(t) {
     const mz = proseMeasured(t, spf);
     if (mz) {
       resetCutFail();
-      const list82 = proseBreakList(t.editor.view, mz.blocks, mz.pages, currentStartPage(t));
+      // [alpha.93 ข้อ 5] ส่งความสูงพื้นที่พิมพ์เข้าไปด้วย → แต่ละเส้นคั่นรู้ว่าต้องอมที่ว่างเท่าไร
+      const list82 = proseBreakList(t.editor.view, mz.blocks, mz.pages,
+                                    currentStartPage(t), mz.contentHeight);
       // [alpha.82] ตัวรายงานสำหรับไล่บั๊ก "จัดหน้าซ้ำได้คนละคำตอบ"
       // แปลงพิกัดกลับไม่สำเร็จจะถูกทิ้งเงียบ ๆ → ต้องเห็นว่าหน้ากับเส้นคั่นห่างกันแค่ไหน
       state._mzDiag = { path: 'measured', pages: mz.pages.length, breaks: list82.length,
@@ -8225,6 +8368,11 @@ function repaginateProseNow(t) {
       }
       setLayoutPageCount(t, mz.pages.length);   // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
       refreshSpView();
+      // [alpha.93 ข้อ 5] ทาที่ว่างท้ายหน้าลงกล่องที่วาดแล้ว + เก็บเศษที่โมเดลเดาพลาด
+      // (ต้องรอให้เบราว์เซอร์วาดเส้นคั่นก่อนถึงจะวัดได้ — บทเรียน "อย่าวัดทันทีหลังสั่งวาด")
+      requestAnimationFrame(() => {
+        try { applyProsePagePads(t.editor.view.dom); tuneProsePagePads(t); } catch {}
+      });
       return mz.pages.length;
     }
     // สำรอง — ประมาณจากจำนวนตัวอักษร (ใช้ตอนแท็บยังไม่ถูกต่อเข้า DOM เท่านั้น)
@@ -9429,7 +9577,19 @@ function uiLayout() { try { return JSON.parse(localStorage.getItem('k2-ui-layout
 function saveUiLayout(key, val) {
   const l = uiLayout(); l[key] = { ...(l[key] || {}), ...val };
   localStorage.setItem('k2-ui-layout', JSON.stringify(l));
+  // [alpha.93 ข้อ 2] ★ "แถบรูปแบบบางทีจำตำแหน่ง บางทีไม่จำ"
+  //
+  // ตำแหน่งถูกเขียนลง localStorage ทันทีที่ปล่อยเมาส์อยู่แล้ว — แต่ **เซสชันไม่รู้เรื่องด้วย**
+  // ระบบเซสชันก๊อป `k2-*` ทั้งเนมสเปซลงไฟล์ แล้ว **ยัดกลับทับ localStorage ตอนเปิดโปรเจกต์**
+  // ถ้าไฟล์เซสชันยังเป็นภาพก่อนลาก (เขียนซ้ำทุก 45 วิ) การเปิดครั้งถัดไปจะเอาตำแหน่งเก่ามาทับ
+  // → ลากแล้วรอสักพักค่อยปิด = จำได้ · ลากแล้วปิดเลย = ไม่จำ ("บางทีจำ บางทีไม่จำ" พอดี)
+  //
+  // แก้: ทุกครั้งที่เลย์เอาต์เปลี่ยน บอกเซสชันด้วย + ปั๊มเวลาไว้ให้ฝั่งกู้คืนเทียบได้
+  try { localStorage.setItem(LS_TS_KEY, String(Date.now())); } catch {}
+  markSessionDirty();
 }
+/** เวลาที่ค่าจำเล็ก ๆ ของ UI ถูกแก้ล่าสุด — ใช้กันไฟล์เซสชันเก่ามาทับของใหม่ */
+const LS_TS_KEY = 'k2-ls-ts';
 // ทำให้ element ลากย้ายได้ด้วย handle + คืนค่าตำแหน่งที่เคยบันทึกไว้
 // opts: { key, defaultPos:{left,top}, resizable, onEnd }
 function makeDraggable(elm, handle, opts = {}) {
@@ -15425,7 +15585,14 @@ async function runTest(projectPath) {
       // ถ้าคลิกไม่โดน `await pT` จะค้างตลอดกาล (กับดักเทสข้อ 1: ฟังก์ชันที่มีกล่องยืนยัน)
       for (let i = 0; i < 100 && !document.querySelector('.k-dialog .k-ok'); i++)
         await new Promise((r) => setTimeout(r, 50));
-      document.querySelector('.k-dialog .k-ok')?.click(); await pT;
+      const okBtn = document.querySelector('.k-dialog .k-ok');
+      okBtn?.click();
+      // [alpha.93] กล่องไม่โผล่/คลิกไม่โดน = `await pT` ค้างตลอดกาล แล้วผลเทสหยุดนิ่ง
+      // กลางทางโดยไม่มี FAIL ไม่มี STOP (กับดักที่เผาเวลาไปหลายรอบ) → ใส่นาฬิกาจับตายไว้
+      await Promise.race([pT, new Promise((r) => setTimeout(r, 8000))]);
+      check('[93] ลบ memo ลงถังขยะ: กล่องยืนยันโผล่และกดได้จริง (ไม่ค้างรอตลอดกาล)',
+            !!okBtn, 'ไม่พบปุ่มยืนยันใน 5 วินาที');
+      for (const ov of document.querySelectorAll('.k-overlay')) ov.remove();
     }
     activate(t2.file);
 
@@ -21016,13 +21183,24 @@ async function runTest(projectPath) {
         //   (พิกัดที่ใช้หั่นหน้าเป็นแบบ "ไม่มีช่องว่าง") ไม่งั้นวัดรอบถัดไปเพี้ยนแล้ววนไม่จบ
         {
           const gapsAll = Array.from(T.pane.querySelectorAll('.ed-page-break'));
-          const gapSum = gapsAll.reduce((a, g) => a + g.getBoundingClientRect().height, 0);
           const lastB = mz.blocks[mz.blocks.length - 1];
           const rawTop = (lastB.el.getBoundingClientRect().top - mz.origin) / mz.zoomFactor;
-          check('[82] การวัดหักความสูงช่องว่างคั่นหน้าออกครบทุกอัน',
-                Math.abs(rawTop - lastB.top - gapSum / mz.zoomFactor) < 1.5,
-                'ต่างกัน ' + (rawTop - lastB.top - gapSum / mz.zoomFactor).toFixed(2) +
-                'px · ช่องว่างรวม ' + gapSum.toFixed(0) + 'px');
+          // [alpha.93 ข้อ 5] เดิมข้อนี้เทียบ "ระยะที่เกินมา" กับ **ผลรวมความสูงกล่องเส้นคั่น**
+          // ซึ่งใช้ได้ตอนที่ช่องว่างมาจากความสูงล้วน ๆ · ตอนนี้ที่ว่างท้ายหน้ากางด้วย `margin`
+          // (อยู่นอกกล่อง getBoundingClientRect มองไม่เห็น) และยังยุบรวมกับ margin ของย่อหน้า
+          // ข้างเคียงอีกชั้น → เลขนั้นไม่ใช่ตัววัดที่ถูกอีกต่อไป
+          //
+          // สิ่งที่ข้อนี้ต้องกันจริง ๆ คือ **วงจรป้อนกลับ**: พิกัดที่เอาไปหั่นหน้าต้องเป็นแบบ
+          // "ไม่มีช่องว่างคั่นหน้า" เสมอ ไม่งั้นวัดรอบถัดไปเพี้ยนแล้วจำนวนหน้าแกว่งไม่จบ
+          // → วัดซ้ำในโหมดวัดต้องได้พิกัดเดิมเป๊ะ และในโหมดปกติต้องเห็นว่าช่องว่างดันจริง
+          const flatTop = withMeasureMode(() =>
+            (lastB.el.getBoundingClientRect().top - mz.origin) / mz.zoomFactor);
+          const gapSum = rawTop - lastB.top;
+          check('[82] ★ พิกัดที่ใช้หั่นหน้าเป็นแบบ "ไม่มีช่องว่างคั่นหน้า" (วัดซ้ำได้ค่าเดิม)',
+                Math.abs(flatTop - lastB.top) < 1.5,
+                'ต่างกัน ' + (flatTop - lastB.top).toFixed(2) + 'px');
+          check('[82] และช่องว่างคั่นหน้าดันเนื้อหาลงจริงในโหมดปกติ (มีของให้หักจริง)',
+                gapSum > 1, gapSum.toFixed(1) + 'px');
           check('[82] มีช่องว่างคั่นหน้าให้หักจริง (ไม่ใช่ผ่านเพราะไม่มีอะไรเลย)',
                 gapsAll.length >= 1, gapsAll.length);
         }
@@ -21308,6 +21486,145 @@ async function runTest(projectPath) {
 
           T.editor.setMarkdown(keep6);
           await new Promise((r) => setTimeout(r, 300));
+        }
+        // ══════════ [alpha.93] รอบเก็บอาการที่ผู้ใช้แจ้ง 5 ข้อ ══════════
+        {
+          const w93 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const keep93 = T.editor.getMarkdown();
+          const keepView93 = currentSpView();
+          const pm93 = T.editor.view.dom;
+          const pane93 = T.pane;
+          const lineRects = (node) => {
+            const rg = document.createRange(); rg.selectNodeContents(node);
+            return [...rg.getClientRects()].filter((r) => r.height > 0.5 && r.width > 0.5);
+          };
+          const findP = (needle) =>
+            [...pm93.querySelectorAll('p,h1,h2,h3,blockquote')]
+              .find((n) => (n.textContent || '').includes(needle));
+          // คำยาวที่ "ไม่มีจุดตัดคำเลย" ทั้งฝั่งลาตินและฝั่งไทย — เคสจริงของผู้ใช้
+          const LONG_EN = 'แกแเด' + 'cdcdcsd' + 'c'.repeat(220) + 'dcdcd';
+          const LONG_TH = 'กก' + 'ฟหกด'.repeat(70);
+
+          // ── ข้อ 1: คำยาวต้องอยู่ในพื้นที่พิมพ์ ไม่ล้นออกนอกกระดาษ ──
+          setSpView('normal', true);
+          T.editor.setMarkdown('บรรทัดปกติสั้น ๆ\n\n' + LONG_EN + '\n\n' + LONG_TH + '\n\nปิดท้าย');
+          await w93(450);
+          const inkOverflow = (node) => {
+            const pr = pm93.getBoundingClientRect(), cp = getComputedStyle(pm93);
+            const right = pr.right - parseFloat(cp.paddingRight);
+            const left = pr.left + parseFloat(cp.paddingLeft);
+            let over = 0;
+            for (const r of lineRects(node))
+              over = Math.max(over, r.right - right, left - r.left);
+            return over;
+          };
+          for (const [lbl, needle] of [['ลาติน', 'cdcdcsd'], ['ไทย', 'ฟหกด']]) {
+            const node = findP(needle);
+            const over = node ? inkOverflow(node) : 999;
+            const rs = node ? lineRects(node) : [];
+            const pr = pm93.getBoundingClientRect(), cp = getComputedStyle(pm93);
+            const inLeft = pr.left + parseFloat(cp.paddingLeft);
+            const ind = parseFloat(getComputedStyle(node).textIndent) || 0;
+            note('[93-1] ' + lbl + ': ' + rs.length + ' บรรทัด · ล้น ' + over.toFixed(1)
+                 + 'px · บรรทัดแรกเริ่มที่ +' + (rs.length ? (rs[0].left - inLeft).toFixed(1) : '?')
+                 + ' (ย่อหน้า ' + ind.toFixed(1) + ') · บรรทัดถัดไปเริ่มที่ +'
+                 + (rs.length > 1 ? (rs[1].left - inLeft).toFixed(1) : '-'));
+            check('[93-1] ★ คำยาวไม่มีจุดตัด (' + lbl + ') ต้องอยู่ในพื้นที่พิมพ์ ไม่ล้นออกนอกกระดาษ',
+                  over <= 1.5, over.toFixed(1) + 'px');
+            check('[93-1] ★ คำยาว (' + lbl + ') ยังเคารพระยะย่อหน้าบรรทัดแรก',
+                  rs.length > 0 && Math.abs((rs[0].left - inLeft) - ind) <= 1.5,
+                  rs.length ? (rs[0].left - inLeft).toFixed(1) + ' ควรได้ ' + ind.toFixed(1) : 'ไม่มีบรรทัด');
+            check('[93-1] ★ คำยาว (' + lbl + ') บรรทัดต่อ ๆ ไปเริ่มที่ขอบพื้นที่พิมพ์พอดี',
+                  rs.length < 2 || Math.abs(rs[1].left - inLeft) <= 1.5,
+                  rs.length > 1 ? (rs[1].left - inLeft).toFixed(1) : '-');
+          }
+
+          // ── ข้อ 3: โหมดร่าง = ข้อความล้วนแบบ VS Code (ไม่ตัดคำ · เลื่อนแนวนอน · ไม่มีหน้า) ──
+          setSpView('draft');
+          await w93(450);
+          const dLong = findP('cdcdcsd');
+          const dLines = dLong ? lineRects(dLong).length : 0;
+          note('[93-3] ร่าง: บรรทัดของคำยาว = ' + dLines + ' · white-space='
+               + getComputedStyle(pm93).whiteSpace
+               + ' · pane scroll=' + pane93.scrollWidth + '/' + pane93.clientWidth);
+          check('[93-3] ★ โหมดร่างไม่ตัดคำ — ย่อหน้ายาวอยู่บรรทัดเดียว', dLines === 1, dLines);
+          check('[93-3] ★ โหมดร่างมีแถบเลื่อนแนวนอนแทน (แบบ VS Code)',
+                pane93.scrollWidth > pane93.clientWidth + 4,
+                pane93.scrollWidth + ' vs ' + pane93.clientWidth);
+          check('[93-3] ★ โหมดร่างไม่มีการแบ่งหน้า',
+                [...pane93.querySelectorAll('.ed-page-break,.sp-page-break')]
+                  .every((e) => e.getBoundingClientRect().height === 0), 'ยังมีเส้นคั่นที่สูงกว่า 0');
+
+          // ── ข้อ 4: สลับมุมมองแล้วต้องกลับมาที่เดิมของมุมมองนั้น ──
+          setSpView('normal', true);
+          T.editor.setMarkdown(('ย่อหน้าทดสอบการเลื่อนจอ ' + 'กขคง'.repeat(40) + '\n\n').repeat(40));
+          await w93(600); repaginateFast(T); await w93(300);
+          pane93.scrollTop = 1200; await w93(150);
+          const sc0 = pane93.scrollTop;
+          setSpView('draft'); await w93(450);
+          pane93.scrollTop = 120; await w93(120);          // ตั้งตำแหน่งของ "โหมดร่าง" ไว้คนละที่
+          const scD = pane93.scrollTop;
+          setSpView('normal'); await w93(450);
+          const sc1 = pane93.scrollTop;
+          setSpView('draft'); await w93(450);
+          const scD2 = pane93.scrollTop;
+          note('[93-4] ปกติ ' + sc0 + ' → ร่าง ' + scD + ' → กลับปกติ ' + sc1 + ' → กลับร่าง ' + scD2);
+          check('[93-4] ★ กลับมาโหมดปกติแล้วอยู่ที่เดิม (ไม่เด้งขึ้นบนสุด)',
+                Math.abs(sc1 - sc0) <= 8, sc0 + ' → ' + sc1);
+          check('[93-4] ★ แต่ละมุมมองจำตำแหน่งของตัวเอง (ไม่ปนกัน)',
+                Math.abs(scD2 - scD) <= 8, scD + ' → ' + scD2);
+          setSpView('normal', true); await w93(300);
+
+          // เซสชันต้องอ่านตำแหน่งจากตัวที่เลื่อนจริง (`.pane`) ไม่ใช่ `.workspace` ที่ไม่เคยเลื่อน
+          pane93.scrollTop = 700; await w93(120);
+          const snap93 = await captureSession();
+          note('[93-4] เซสชันเก็บตำแหน่งเลื่อนได้ ' + JSON.stringify(snap93.tabs.scroll).slice(0, 90));
+          check('[93-4] ★ เซสชันเก็บตำแหน่งเลื่อนของแท็บได้จริง (เดิมเป็น 0 เสมอ)',
+                Object.values(snap93.tabs.scroll || {}).some((v) => v > 100),
+                JSON.stringify(snap93.tabs.scroll));
+          pane93.scrollTop = 0;
+
+          // ── ข้อ 5: หน้ากระดาษต้องสูงเท่ากันทุกแผ่น — เอกสาร "ของจริง" ที่มีของปนหลายชนิด ──
+          const mixed = [];
+          for (let i = 1; i <= 14; i++) {
+            mixed.push('## บทที่ ' + i);
+            mixed.push('เขาเดินออกจากบ้าน ' + 'ลมหนาวพัดผ่านใบหน้าจนรู้สึกเย็นเฉียบ '.repeat(6));
+            if (i % 3 === 0) mixed.push('> คำพูดที่ยกมา ' + 'อ้างอิงยาว ๆ '.repeat(8));
+            if (i % 4 === 0) mixed.push(LONG_EN);
+            mixed.push('ย่อหน้าถัดไป ' + 'เสียงนกร้องดังมาจากต้นไม้ริมทาง '.repeat(7));
+          }
+          T.editor.setMarkdown(mixed.join('\n\n'));
+          await w93(800); repaginateFast(T); await w93(500);
+          const brTops = [...pm93.querySelectorAll('.ed-page-break')]
+            .map((e) => e.getBoundingClientRect().top);
+          const brGaps = [];
+          for (let i = 1; i < brTops.length; i++) brGaps.push(+(brTops[i] - brTops[i - 1]).toFixed(1));
+          // หน้าแรกวัดจาก "ขอบบนของบล็อกแรก" (ตรงกับที่ตัววัดใช้เป็นพิกัด 0)
+          const firstBlk93 = [...pm93.children].find((e) => e.nodeType === 1
+            && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
+          if (firstBlk93 && brTops.length)
+            brGaps.unshift(+(brTops[0] - firstBlk93.getBoundingClientRect().top).toFixed(1));
+          const spread = brGaps.length ? Math.max(...brGaps) - Math.min(...brGaps) : 0;
+          note('[93-5] ปกติ: ' + brTops.length + ' เส้นคั่น · ระยะ = ' + brGaps.slice(0, 10).join(' , ')
+               + ' · ต่างกันมากสุด ' + spread.toFixed(1) + 'px');
+          check('[93-5] ★★ ระยะระหว่างหน้าในโหมดปกติเท่ากันทุกหน้า (ก่อนแก้ต่างกัน 32.8px)',
+                brGaps.length >= 3 && spread <= 2, brGaps.slice(0, 8).join(' , '));
+          setSpView('side'); await w93(900);
+          const phs = [...pane93.querySelectorAll('.sp-pageview .ed-page')]
+            .map((e) => +e.getBoundingClientRect().height.toFixed(1));
+          const pspread = phs.length ? Math.max(...phs) - Math.min(...phs) : 0;
+          note('[93-5] เรียงหน้า: ' + phs.length + ' แผ่น · ต่างกันมากสุด ' + pspread.toFixed(1) + 'px');
+          check('[93-5] ★ แผ่นกระดาษที่วาดสูงเท่ากันทุกแผ่น', pspread <= 0.6, phs.slice(0, 8).join(','));
+          setSpView('layout'); await w93(900);
+          const lh = [...pm93.querySelectorAll('.ed-page-break')]
+            .map((e) => +e.getBoundingClientRect().height.toFixed(1));
+          const lspread = lh.length ? Math.max(...lh) - Math.min(...lh) : 0;
+          note('[93-5] จัดหน้า: แถบคั่นแผ่น ' + lh.length + ' อัน · ต่างกันมากสุด ' + lspread.toFixed(1) + 'px');
+          check('[93-5] ★ แถบคั่นแผ่นในมุมมองจัดหน้าสูงเท่ากันทุกอัน', lspread <= 0.6, lh.slice(0, 8).join(','));
+
+          setSpView(keepView93 === 'draft' ? 'normal' : keepView93, true);
+          T.editor.setMarkdown(keep93);
+          await w93(400);
         }
         T.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
         await new Promise((r) => setTimeout(r, 250));

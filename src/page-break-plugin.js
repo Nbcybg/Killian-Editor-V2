@@ -48,6 +48,10 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
 
   // [alpha.84 ข้อ 2] ลายเซ็นต้องรวม `ind` ด้วย — ย้ายจุดตัดไปอยู่ใน element ที่เยื้องต่างกัน
   // โดยตำแหน่งเท่าเดิมเป็นไปได้ (แก้ข้อความก่อนหน้า) ถ้าไม่รวมไว้ แถบคั่นจะค้างที่ระยะเดิม
+  // [alpha.93 ข้อ 5] ★ **`pad` ห้ามอยู่ในลายเซ็นและห้ามอยู่ในคีย์ของ widget**
+  // ที่ว่างท้ายหน้าเปลี่ยนได้ทุกครั้งที่พิมพ์ ถ้าเอาไปปนกับ "ตัวตน" ของเส้นคั่น ProseMirror
+  // จะทิ้ง DOM เดิมแล้วสร้างใหม่ทั้งแถบทุกตัวอักษร = อาการกระพริบที่ alpha.85 เพิ่งแก้ไป
+  // → pad ถูกทาลง DOM ตรง ๆ ทีหลังผ่าน `applyPads()` แทน (ไม่ผ่านการ diff ของ PM เลย)
   const sigOf = (l) => l.map((b) => [b.pos, b.page, b.ind ?? '',
                                     b.contTop || '', b.contBottom || ''].join(':')).join(',');
 
@@ -108,6 +112,8 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
         d.dataset.page = String(b.page || '');
         // [alpha.84 ข้อ 2] อยู่ในบล็อกที่เยื้องมาแล้ว → บอก CSS ว่าต้องหักกลับกี่นิ้ว
         if (inBlock && Number.isFinite(b.ind)) d.style.setProperty('--k-pb-ind', b.ind + 'in');
+        // [alpha.93 ข้อ 5] ที่ว่างท้ายหน้าที่เส้นนี้ปิด — CSS เอาไปกางเป็นก้นหน้าที่ยังว่าง
+        if (Number.isFinite(b.pad) && b.pad > 0.5) d.style.setProperty('--k-pb-pad', b.pad + 'px');
         d.setAttribute('contenteditable', 'false');
         const lbl = document.createElement('span');
         lbl.className = 'sp-page-break-num';
@@ -167,5 +173,24 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
     if (view) view.dispatch(view.state.tr.setMeta(key, true));
   }
 
-  return { key, setBreaks, breaks, setNumberLabel, plugin, refresh };
+  /**
+   * [alpha.93 ข้อ 5] ทา "ที่ว่างท้ายหน้า" ลงบนกล่องเส้นคั่นที่วาดไว้แล้ว — **ไม่ผ่าน ProseMirror**
+   * widget ของ PM ถูก `ignoreMutation` อยู่แล้ว การแก้ style ตรง ๆ จึงไม่กวนการอ่าน DOM กลับ
+   * และไม่ทำให้ DOM ถูกสร้างใหม่ (เงื่อนไขเดียวที่ทำให้แถบคั่นแผ่นกระพริบตอนพิมพ์)
+   * @returns {number} จำนวนกล่องที่ทาได้ (0 = ยังวาดไม่ครบ)
+   */
+  function applyPads(dom) {
+    if (!dom || !dom.querySelectorAll) return 0;
+    const els = dom.querySelectorAll('.' + cls.split(' ').pop());
+    if (els.length !== list.length) return 0;
+    let n = 0;
+    els.forEach((e, i) => {
+      const pad = Number(list[i] && list[i].pad);
+      e.style.setProperty('--k-pb-pad', (Number.isFinite(pad) && pad > 0.5 ? pad : 0) + 'px');
+      n++;
+    });
+    return n;
+  }
+
+  return { key, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads };
 }

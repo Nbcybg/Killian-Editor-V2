@@ -20,7 +20,7 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **3,419 checks · ALL OK** (alpha.92) — ห้ามทำให้จำนวนลดลง
+ปัจจุบัน **3,436 checks · ALL OK** (alpha.93) — ห้ามทำให้จำนวนลดลง
 (unit `npm run test:unit` = **4,560 ข้อ · 68 ไฟล์** · ~20 วินาที)
 **[alpha.92] `test:unit` รันผ่าน `tools/run-unit.cjs`** — หาไฟล์ `test/*.test.{cjs,mjs,js}` เอง
 และ **รันให้ครบทุกไฟล์เสมอ** แล้วค่อยสรุปว่าไฟล์ไหนแดง (เดิมเป็นสาย `&&` — แดงตัวเดียว
