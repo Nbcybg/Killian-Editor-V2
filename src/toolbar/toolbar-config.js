@@ -38,7 +38,9 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-align-right' }, { id: 'tb-align-justify' },
   ] },
   { key: 'insert', labelKey: 'ui.tbcfg.grpInsert', buttons: [
-    { id: 'tb-img' }, { id: 'tb-gallery' }, { id: 'tb-source' },
+    { id: 'tb-img' }, { id: 'tb-gallery' },
+    { id: 'tb-visual' },                         // [alpha.90] เล่าด้วยภาพ (สตอรีบอร์ดของฉาก)
+    { id: 'tb-source' },
   ] },
   { key: 'find', labelKey: 'ui.tbcfg.grpFind', buttons: [
     { id: 'tb-gsearch' }, { id: 'tb-quickopen' },

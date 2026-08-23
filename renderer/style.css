@@ -2866,7 +2866,7 @@ body.paper-mode .sp.sp-page-break-el { border-top-color:#c9a06a; color:#a5752f; 
   border-radius:8px; padding:6px 8px; text-align:center; }
 .aia-stat-val { font-weight:700; font-size:calc(15px * var(--ui-scale, 1)); }
 .aia-stat-label { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
-.aia-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px; }
+.aia-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:10px; align-items:start; }
 .aia-card { background:var(--bar); border:1px solid var(--border); border-radius:10px;
   padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
 .aia-card-head { font-weight:600; font-size:calc(13.5px * var(--ui-scale, 1)); }
@@ -2879,6 +2879,89 @@ body.paper-mode .sp.sp-page-break-el { border-top-color:#c9a06a; color:#a5752f; 
 .aia-run:hover { color:var(--fg); border-color:var(--accent); }
 .aia-foot { color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.7;
   border-top:1px solid var(--border); padding-top:8px; }
+
+/* ====== [alpha.89] เปิดใช้งานจริง — แถบขอบเขต · แถบสัดส่วน · ผลลัพธ์ ====== */
+.aia-mini { background:none; border:1px solid var(--border); border-radius:6px;
+  color:var(--dim); cursor:pointer; padding:1px 10px; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aia-mini:hover { color:var(--fg); border-color:var(--accent); }
+.aia-head > .aia-mini { margin-left:auto; }
+.aia-scope { display:flex; flex-direction:column; gap:6px; }
+.aia-scope-btns { display:flex; gap:4px; flex-wrap:wrap; }
+.aia-scope-btn { background:none; border:1px solid var(--border); border-radius:999px;
+  color:var(--dim); cursor:pointer; padding:2px 12px; font-size:calc(12px * var(--ui-scale, 1)); }
+.aia-scope-btn:hover { color:var(--fg); }
+.aia-scope-btn.on { color:var(--fg); border-color:var(--accent); background:var(--bar); font-weight:600; }
+.aia-scope-sel { background:var(--bg); color:var(--fg); border:1px solid var(--border);
+  border-radius:6px; padding:3px 6px; font-size:calc(12px * var(--ui-scale, 1)); max-width:100%; }
+.aia-scope-line { color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aia-opts { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.aia-check { display:flex; align-items:center; gap:6px; color:var(--dim);
+  font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; }
+.aia-run-all { margin-left:auto; }
+.aia-run[disabled] { opacity:.5; cursor:default; }
+.aia-result { display:flex; flex-direction:column; gap:8px; }
+.aia-result:empty { display:none; }
+.aia-busy { color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); }
+.aia-err { color:#e06c5a; font-size:calc(12px * var(--ui-scale, 1)); line-height:1.6; }
+.aia-warn { color:#d9b757; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aia-hint { color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); font-style:italic; }
+.aia-sub-head { font-weight:600; font-size:calc(12.5px * var(--ui-scale, 1)); margin-top:4px; }
+.aia-bars { display:flex; flex-direction:column; gap:3px; max-height:340px; overflow-y:auto; }
+.aia-bar-row { padding:2px 0; }
+.aia-bar-row.is-link { cursor:pointer; }
+.aia-bar-row.is-link:hover .aia-bar-label { color:var(--accent); text-decoration:underline; }
+.aia-bar-head { display:flex; justify-content:space-between; gap:8px;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aia-bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aia-bar-val { color:var(--dim); flex:0 0 auto; }
+.aia-bar-track { height:5px; border-radius:3px; background:var(--border); overflow:hidden; }
+.aia-bar-fill { height:100%; background:var(--accent,#d97757); }
+.aia-bar-fill.tone-slow { background:#6f8fd0; }
+.aia-bar-fill.tone-fast { background:#d9b757; }
+.aia-bar-sub { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); line-height:1.5; }
+.aia-chips { display:flex; gap:4px; flex-wrap:wrap; }
+.aia-chip { font-size:calc(10.5px * var(--ui-scale, 1)); color:var(--dim);
+  border:1px solid var(--border); border-radius:999px; padding:0 8px; }
+.aia-notes { margin:0; padding-left:18px; color:var(--dim);
+  font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.7; }
+.aia-notes li.is-link { cursor:pointer; }
+.aia-notes li.is-link:hover { color:var(--accent); }
+.aia-note-title { color:var(--fg); }
+.aia-score-total { font-weight:700; font-size:calc(14px * var(--ui-scale, 1)); }
+.aia-findings { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.aia-finding { border-left:3px solid var(--border); padding:2px 0 2px 8px;
+  font-size:calc(12px * var(--ui-scale, 1)); line-height:1.6; }
+.aia-finding.sev-critical { border-left-color:#e06c5a; }
+.aia-finding.sev-major { border-left-color:#d9b757; }
+.aia-finding.is-link { cursor:pointer; }
+.aia-finding.is-link:hover .aia-find-title { text-decoration:underline; }
+.aia-sev { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); margin-right:6px; }
+.aia-find-title { font-weight:600; }
+.aia-find-detail, .aia-find-fix { color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aia-ai-text { color:var(--fg); font-size:calc(12px * var(--ui-scale, 1)); line-height:1.7; white-space:pre-wrap; }
+.aia-cost { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); }
+
+/* ====== [alpha.89r] แถบเครื่องมือ · โทเคนก่อน/หลัง · กล่องเซสชัน ====== */
+.aia-tools { display:flex; gap:6px; flex-wrap:wrap; }
+.aia-usage { display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between;
+  border:1px dashed var(--border); border-radius:8px; padding:5px 9px;
+  font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); }
+.aia-usage-before { color:var(--fg); }
+.aia-chip-est { border-color:var(--accent); color:var(--accent); }
+.aia-card-btns { display:flex; align-items:center; gap:6px; margin-top:2px; }
+.aia-sess-dlg { min-width:min(560px, 88vw); }
+.aia-sess-list { display:flex; flex-direction:column; gap:6px; max-height:52vh; overflow-y:auto;
+  margin:8px 0; }
+.aia-sess-item { display:flex; align-items:center; gap:8px; justify-content:space-between;
+  border:1px solid var(--border); border-radius:8px; padding:6px 9px; }
+.aia-sess-info { min-width:0; }
+.aia-sess-name { font-weight:600; font-size:calc(12.5px * var(--ui-scale, 1));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aia-sess-meta { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); line-height:1.5; }
+.aia-sess-acts { display:flex; gap:4px; flex:0 0 auto; }
+.aia-sess-acts .aia-mini { margin-left:0; }
+.aia-mini.k-danger { color:#e06c5a; border-color:#e06c5a; }
+
 
 /* ====== [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เติมช่องคุณสมบัติฉาก ====== */
 .k-ai-fill { flex:0 0 auto; align-self:flex-start; margin-left:4px;
@@ -4534,3 +4617,160 @@ body.k-measuring .ed-page-break > *,
 body.k-measuring .sp-page-break > * {
   display: none !important;
 }
+
+
+/* ====== เล่าด้วยภาพ (Visual telling) ====== */
+/* selector ทุกตัวผูกกับที่อยู่ของมัน (.vis-wrap / .vis-player) — บทเรียนข้อ 32 */
+.vis-wrap { display:flex; flex-direction:column; height:100%; min-height:0; padding:12px 16px; gap:10px; }
+.vis-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex:0 0 auto; }
+.vis-bar .vis-btn { font-size:calc(12.5px * var(--ui-scale, 1)); padding:4px 10px;
+  border:1px solid var(--border); background:var(--bar); border-radius:6px; white-space:nowrap; }
+.vis-bar .vis-btn:hover { background:var(--hover); }
+.vis-bar .vis-btn.on { background:var(--accent); color:var(--bright); border-color:var(--accent-hi); }
+.vis-bar .vis-sp { width:1px; height:20px; background:var(--border); margin:0 4px; }
+.vis-bar .vis-views { display:flex; gap:4px; }
+.vis-bar .vis-count { color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); margin-left:6px; }
+.vis-bar .vis-warn { color:var(--orange); font-size:calc(12px * var(--ui-scale, 1)); }
+
+/* ข้อ 4: กว้างเกินจอ → เลื่อนแนวนอนในกรอบตัวเอง ไม่ดันทั้งหน้า */
+.vis-body { flex:1; min-height:0; overflow:auto; }
+.vis-body .vis-empty { color:var(--dim); text-align:center; padding:40px 20px; font-style:italic; }
+
+/* — มุมมองตาราง — */
+.vis-body .vis-table { display:grid; gap:0; align-items:stretch;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+.vis-body .vis-th { position:sticky; top:0; z-index:2; background:var(--bg); color:var(--dim);
+  font-weight:600; font-size:calc(11.5px * var(--ui-scale, 1)); padding:8px 10px;
+  border-bottom:2px solid var(--border); white-space:nowrap; user-select:none;
+  overflow:hidden; text-overflow:ellipsis; }
+.vis-body .vis-td { padding:8px 10px; border-bottom:1px solid var(--border); min-width:0; }
+.vis-body .vis-td-move, .vis-body .vis-td-del { padding:8px 4px; }
+
+/* มือจับลากปรับความกว้างคอลัมน์ (ข้อ 3) */
+.vis-wrap .vis-th { position:sticky; }
+.vis-wrap .vis-grip { position:absolute; top:0; right:0; width:7px; height:100%;
+  cursor:col-resize; z-index:3; }
+.vis-wrap .vis-grip:hover { background:var(--accent); opacity:.65; }
+.vis-body .vis-th-move, .vis-body .vis-th-del { border-bottom:2px solid var(--border); }
+
+/* ราง ▲▼ หน้าลำดับ: สองแถว บน/ล่าง (ข้อ 8) */
+/* ▲▼ ต้องอยู่ระดับเดียวกับเลขลำดับ ไม่ใช่กลางแถวที่สูงตามรูป */
+.vis-wrap .vis-td-move { display:flex; flex-direction:column; align-items:center;
+  justify-content:flex-start; gap:3px; padding-top:8px; }
+.vis-wrap .vis-td-del { display:flex; align-items:flex-start; justify-content:center; }
+.vis-wrap .vis-no-num { color:var(--dim); font-variant-numeric:tabular-nums;
+  font-size:calc(15px * var(--ui-scale, 1)); }
+
+.vis-wrap .vis-mini { padding:1px 6px; line-height:1.6; font-size:calc(11px * var(--ui-scale, 1));
+  background:transparent; border:1px solid var(--border); border-radius:4px; }
+.vis-wrap .vis-mini:hover { background:var(--hover); }
+.vis-wrap .vis-mini:disabled { opacity:.25; cursor:default; }
+.vis-wrap .vis-mini:disabled:hover { background:transparent; }
+.vis-wrap .vis-mini-del:hover { background:var(--danger-soft); }
+
+/* ข้อ 9: รูปในคอลัมน์ frame ต้องใหญ่ — เต็มความกว้างคอลัมน์ที่ผู้ใช้ลากไว้ */
+.vis-wrap .vis-img { display:flex; flex-direction:column; gap:5px; }
+.vis-wrap .vis-thumb { width:100%; max-height:340px; border-radius:4px; border:1px solid var(--border);
+  cursor:zoom-in; object-fit:contain; background:var(--sunken); }
+.vis-wrap .vis-noimg { width:100%; height:120px; display:flex; align-items:center; justify-content:center;
+  border:1px dashed var(--border); border-radius:4px; color:var(--dim);
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.vis-wrap .vis-img-tools { display:flex; gap:4px; }
+
+/* action: หนึ่งบรรทัดที่ผูก = หนึ่งย่อหน้า */
+.vis-wrap .vis-text { display:flex; flex-direction:column; gap:6px; }
+.vis-wrap .vis-line { display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; }
+.vis-wrap .vis-text-body { white-space:pre-wrap; word-break:break-word; flex:1; min-width:0; }
+.vis-wrap .vis-text-empty { color:var(--dim); font-style:italic; }
+.vis-wrap .vis-text-foot { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.vis-wrap .vis-bindn { font-size:calc(11px * var(--ui-scale, 1)); }
+.vis-wrap .vis-tag { font-size:calc(10.5px * var(--ui-scale, 1)); padding:1px 6px; border-radius:8px;
+  border:1px solid currentColor; white-space:nowrap; }
+.vis-wrap .vis-tag-changed { color:var(--orange); }
+.vis-pick .vis-tag-used { color:var(--dim); }
+
+/* เลขบรรทัดในฉาก (ข้อ 5) — โชว์เมื่อเปิด "แสดงเลขบรรทัด" ในตั้งค่า */
+.vis-wrap .vis-lineno, .vis-pick .vis-lineno { flex:0 0 auto; min-width:22px; text-align:right;
+  color:var(--dim); font-variant-numeric:tabular-nums;
+  font-size:calc(10.5px * var(--ui-scale, 1)); opacity:.85; }
+
+/* ตัวละคร/สถานที่ในบรรทัดที่ผูก (ข้อ 2) */
+.vis-wrap .vis-ents { display:flex; flex-wrap:wrap; gap:4px; }
+.vis-wrap .vis-ent { background:var(--chip); border-radius:10px; padding:1px 8px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.vis-wrap .vis-ent.has-wiki { cursor:pointer; color:var(--link); }
+.vis-wrap .vis-ent.has-wiki:hover { background:var(--hover); text-decoration:underline; }
+
+.vis-wrap .vis-remark { width:100%; resize:vertical; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:5px 8px; font:inherit;
+  font-size:calc(12.5px * var(--ui-scale, 1)); outline:none; }
+.vis-wrap .vis-remark:focus { border-color:var(--accent-hi); }
+
+.vis-wrap .vis-cmts { display:flex; flex-direction:column; gap:4px; }
+.vis-wrap .vis-cmt { background:var(--chip); border-radius:6px; padding:3px 8px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.vis-wrap .vis-cmt.done { opacity:.55; text-decoration:line-through; }
+.vis-wrap .vis-cmt-who { color:var(--dim); margin-left:6px; font-size:calc(11px * var(--ui-scale, 1)); }
+
+/* — มุมมองรายการ — */
+.vis-body.vis-view-list { display:flex; flex-direction:column; gap:10px; }
+.vis-body.vis-view-list .vis-card { border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+  background:var(--side); display:flex; flex-direction:column; gap:6px; max-width:900px; }
+.vis-body.vis-view-list .vis-card-head { display:flex; align-items:center; gap:6px;
+  border-bottom:1px solid var(--border); padding-bottom:6px; }
+.vis-body.vis-view-list .vis-card-no { font-size:calc(16px * var(--ui-scale, 1)); font-weight:600;
+  color:var(--bright); min-width:26px; }
+.vis-body.vis-view-list .vis-card-line { display:flex; gap:10px; align-items:flex-start; }
+.vis-body.vis-view-list .vis-card-label { flex:0 0 84px; color:var(--dim);
+  font-size:calc(11.5px * var(--ui-scale, 1)); padding-top:3px; }
+.vis-body.vis-view-list .vis-card-val { flex:1; min-width:0; }
+.vis-body.vis-view-list .vis-thumb { max-width:460px; max-height:300px; }
+.vis-body.vis-view-list .vis-noimg { max-width:460px; }
+
+/* — กล่องเลือกบรรทัด — */
+.vis-pick .vis-pick-hint { margin-bottom:8px; }
+.vis-pick .vis-pick-list { max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:2px;
+  border:1px solid var(--border); border-radius:6px; padding:6px; }
+.vis-pick .vis-pick-row { display:flex; gap:8px; align-items:flex-start; padding:5px 6px;
+  border-radius:5px; cursor:pointer; }
+.vis-pick .vis-pick-row:hover { background:var(--hover-soft); }
+.vis-pick .vis-pick-text { white-space:pre-wrap; word-break:break-word; flex:1;
+  font-size:calc(12.5px * var(--ui-scale, 1)); }
+
+/* — เต็มจอแบบสไลด์ (ข้อ 7: รูปเต็มจอ · ข้อความเป็นแผ่นซ้อน ซ่อนได้) — */
+.vis-player { position:fixed; inset:0; z-index:9000; background:#000; outline:none; }
+.vis-player .vis-pl-stage { position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; overflow:hidden; cursor:pointer; }
+.vis-player .vis-pl-img { width:100%; height:100%; object-fit:contain; }
+.vis-player .vis-pl-noimg { color:#666; font-size:16px; }
+.vis-player .vis-pl-box { position:absolute; left:0; right:0; bottom:52px; z-index:2;
+  max-height:38vh; overflow:auto; padding:16px 8vw 20px; cursor:pointer;
+  color:#f4f1ea; background:linear-gradient(to top, rgba(0,0,0,.88) 62%, rgba(0,0,0,0));
+  transition:opacity .18s; }
+.vis-player.text-off .vis-pl-box { opacity:0; pointer-events:none; }
+.vis-player .vis-pl-scene { color:var(--accent-hi); font-size:13px; margin-bottom:6px; }
+.vis-player .vis-pl-text { font-size:21px; line-height:1.75; white-space:pre-wrap; word-break:break-word;
+  text-shadow:0 1px 3px rgba(0,0,0,.9); }
+.vis-player .vis-pl-remark { margin-top:10px; color:#b9b4a9; font-size:13.5px; white-space:pre-wrap;
+  border-left:2px solid var(--accent); padding-left:8px; }
+.vis-player .vis-pl-nav { position:absolute; left:0; right:0; bottom:0; z-index:3;
+  display:flex; align-items:center; justify-content:center; gap:14px; padding:8px;
+  background:rgba(0,0,0,.65); }
+.vis-player .vis-pl-btn { background:#1a1a1a; color:#e8e6df; border:1px solid #333; border-radius:6px;
+  padding:4px 14px; }
+.vis-player .vis-pl-btn:disabled { opacity:.35; cursor:default; }
+.vis-player .vis-pl-btn.on { background:var(--accent); border-color:var(--accent-hi); }
+.vis-player .vis-pl-count { color:#9a968c; font-variant-numeric:tabular-nums; min-width:70px;
+  text-align:center; }
+
+/* แถวลูกใน Explorer */
+#tree .vis-row { padding-left:34px; color:var(--dim); }
+#tree .vis-row:hover { color:var(--fg); }
+
+/* เลขบรรทัดในหน้า Wiki (ข้อ 5) — แต่ละกล่องนับของตัวเองเริ่มที่ 1
+   (นับรวมทั้งหน้าไม่มีความหมาย เพราะ Wiki มีตัวแก้ไขหลายกล่องในหน้าเดียว) */
+body.k-ln .wiki-pane .wiki-body { position:relative; padding-left:34px; }
+body.k-ln .wiki-pane .wiki-ln { position:absolute; left:0; top:0; width:28px; text-align:right;
+  color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); font-variant-numeric:tabular-nums;
+  pointer-events:none; user-select:none; z-index:1; }
+body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }

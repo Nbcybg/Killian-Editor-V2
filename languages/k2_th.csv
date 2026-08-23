@@ -127,9 +127,9 @@ ui.aia.dotPaceScene,จุดที่จังหวะตกติดกัน
 ui.aia.dotStoryCompareStructure,จุดพลิกของเรื่องเทียบโครงสร้าง 3 องก์
 ui.aia.dragWordNextChapter,ความหลากหลายของคำศัพท์ต่อบท
 ui.aia.findWordDupSplit,หาคำและวลีที่ซ้ำจนสะดุดตา แยกตามบทและตามตัวละครผู้พูด
-ui.aia.foot,ระหว่างนี้ใช้ของที่ทำงานจริงได้แล้ว: เครื่องมือ → ตรวจหาคำซ้ำ · AI → ตรวจ Plot Hole · AI → ตรวจความสอดคล้อง
+ui.aia.foot,ผลทุกชนิดคำนวณจากไฟล์จริงในโปรเจกต์ · คลิกแถวเพื่อกระโดดไปฉากนั้น
 ui.aia.graphLongSceneOrder,กราฟความยาวฉากเรียงตามลำดับเรื่อง
-ui.aia.lead,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI ที่กำลังจะมา ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง
+ui.aia.lead,วิเคราะห์ต้นฉบับ 11 แบบ เลือกขอบเขตได้ทั้งโปรเจกต์ · เฉพาะเล่ม · เฉพาะบท · เฉพาะฉาก ทุกแบบคำนวณเองได้โดยไม่ต้องใช้ AI แล้วให้ AI อ่านต่อถ้าตั้งค่าไว้
 ui.aia.longScene,ความยาวฉาก
 ui.aia.mockup,ตัวอย่างหน้าตา — ยังไม่เปิดใช้งาน
 ui.aia.nowShowSamplePage,ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง
@@ -3514,7 +3514,7 @@ ui.panel.confirmDeleteWorkflow,"ลบเวิร์กโฟลว์ ""%s"" ?
 ui.panel.confirmRestore,กู้คืนเวอร์ชันนี้ทับของปัจจุบัน?
 ui.panel.dashboardTitle,แดชบอร์ด
 ui.panel.dataCollapseTaskOpen,ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ
-ui.panel.desc_ai_analyzer,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)
+ui.panel.desc_ai_analyzer,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก · Plot Hole · ความสอดคล้อง · คู่จิ้น · ให้คะแนน · Screentime
 ui.panel.desc_books,จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม
 ui.panel.desc_branch,ผังเรื่องแบบแตกสาย — กล่องฉากต่อกันด้วยเส้นทางเลือก · ลากย้ายการ์ดได้ · เลือกสีการ์ด/เส้นได้ · เตือนทางตัน วงวนซ้ำ และทางเลือกที่ยังไม่ระบุปลายทาง · ส่งออกเป็น HTML/Markdown/JSON/รูปได้
 ui.panel.desc_comments,คอมเมนต์ของฉากที่เปิดอยู่ — ตอบกลับเป็นเธรด ปิดงานได้ · เก็บท้ายไฟล์ .md จึงติดไปกับไฟล์เสมอ
@@ -3608,7 +3608,7 @@ ui.panel.searchPlaceholder,🔍 ค้นหา / กรอง — เช่น 
 ui.panel.searchTextProjectAll,ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น
 ui.panel.searchToggle,เปิด/ปิดช่องค้นหา
 ui.panel.selectScene,เลือกฉากเพื่อดูคุณสมบัติ
-ui.panel.setToolAnalyzeSource,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)
+ui.panel.setToolAnalyzeSource,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก · Plot Hole · ความสอดคล้อง · คู่จิ้น · ให้คะแนน · Screentime
 ui.panel.sortBy,เรียงตาม
 ui.panel.sortDefault,เรียงตามค่าเริ่มต้น
 ui.panel.sortModified,เวลาแก้ไข
@@ -5091,3 +5091,256 @@ ui.app.proseIndentOn,ย่อหน้าอัตโนมัติ: เปิ
 ui.app.proseIndentOff,ย่อหน้าอัตโนมัติ: ปิด
 ui.dlg.spThaiAuto,อัตโนมัติ (ตัวแรกที่เครื่องมี)
 ui.dlg.spThaiSample,"INT. ห้องนอน - กลางคืน / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"
+ui.aia.scopeProject,ทั้งโปรเจกต์
+ui.aia.scopeBook,เฉพาะเล่ม
+ui.aia.scopeChapter,เฉพาะบท
+ui.aia.scopeScene,เฉพาะฉาก
+ui.aia.nScene, · {0} ฉาก
+ui.aia.stTempoAvg,จังหวะเฉลี่ย
+ui.aia.stDialogueAvg,บทสนทนาเฉลี่ย
+ui.aia.stSlowRun,ช่วงอืด
+ui.aia.stFastRun,ช่วงรัว
+ui.aia.stCharAppear,ตัวละครที่ปรากฏ
+ui.aia.stChapter,บท
+ui.aia.stCharGap,ตัวละครที่หายไปนาน
+ui.aia.stUniqueWord,คำไม่ซ้ำ
+ui.aia.stRichWord,ความหลากหลายของคำ
+ui.aia.stSceneHasConflict,ฉากที่มีความขัดแย้ง
+ui.aia.stNoConflict,ฉากที่ไม่พบร่องรอย
+ui.aia.stConflictDensity,ความหนาแน่นต่อพันคำ
+ui.aia.stAvgWordScene,คำเฉลี่ยต่อฉาก
+ui.aia.stMedian,ค่ากลาง
+ui.aia.stTooLong,ฉากยาวผิดปกติ
+ui.aia.stReadTime,เวลาอ่านทั้งหมด
+ui.aia.unitMin, นาที
+ui.aia.stRepeatFound,คำซ้ำที่พบ
+ui.aia.stSceneAffected,ฉากที่ได้รับผล
+ui.aia.stWindow,ระยะที่นับว่าซ้ำ
+ui.aia.unitWord, คำ
+ui.aia.stPairFound,คู่ที่พบ
+ui.aia.stTopPair,คู่ที่แรงที่สุด
+ui.aia.stRomanceWord,คำเชิงรักทั้งหมด
+ui.aia.stLead,ตัวละครหลัก
+ui.aia.stLeadShare,สัดส่วนของตัวหลัก
+ui.aia.stSilentChar,ตัวละครที่ไม่โผล่เลย
+ui.aia.stScoreLocal,คะแนนจากตัวเลข
+ui.aia.stHasStoryDate,ฉากที่ระบุเวลาในเรื่อง
+ui.aia.stNoPov,ฉากที่ไม่ได้ระบุมุมมอง
+ui.aia.stCharOnce,ตัวละครที่โผล่ครั้งเดียว
+ui.aia.crPacing,จังหวะเรื่อง
+ui.aia.crPacingNote,จังหวะเฉลี่ย {0} · ช่วงอืด {1} ช่วง
+ui.aia.crDialogue,สัดส่วนบทสนทนา
+ui.aia.crDialogueNote,บทสนทนาเฉลี่ย {0}% ของเนื้อฉาก
+ui.aia.crConflict,ความขัดแย้ง
+ui.aia.crConflictNote,ฉากที่ไม่พบร่องรอยความขัดแย้ง {0} ฉาก
+ui.aia.crSceneLen,ความสม่ำเสมอของความยาวฉาก
+ui.aia.crSceneLenNote,เฉลี่ย {0} คำ · เบี่ยงเบน {1} คำ
+ui.aia.crLanguage,ความสะอาดของภาษา
+ui.aia.crLanguageNote,พบคำซ้ำระยะใกล้ {0} จุด
+ui.aia.crCast,การกระจายน้ำหนักตัวละคร
+ui.aia.crCastNote,ตัวละคร {0} ตัว · ตัวหลักกิน {1}%
+ui.aia.dPacing,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน — คิดจากสัดส่วนบทพูด ความยาวประโยค และความยาวฉาก
+ui.aia.dArc,ตัวละครแต่ละตัวโผล่ถี่แค่ไหนในแต่ละบท และหายไปช่วงไหนบ้าง
+ui.aia.dWords,คำที่ใช้บ่อยที่สุด พร้อมอัตราต่อหมื่นคำ (ตัดคำหยุดและชื่อตัวละครออกแล้ว)
+ui.aia.dConflict,ฉากไหนมีร่องรอยความขัดแย้ง ฉากไหนเรียบจนไม่มีแรงผลัก
+ui.aia.dLength,เทียบความยาวฉากกับค่ากลาง พร้อมเวลาอ่านโดยประมาณ
+ui.aia.tPlotHole,ตรวจ Plot Hole
+ui.aia.dPlotHole,หาจุดที่เนื้อเรื่องขัดกันเอง ปมที่เปิดแล้วไม่ปิด และแรงจูงใจที่หายไป
+ui.aia.tContinuity,ตรวจความสอดคล้อง
+ui.aia.dContinuity,ตรวจว่ารายละเอียดของตัวละครและโลกคงเส้นคงวาตลอดขอบเขตที่เลือก
+ui.aia.tRepeat,ตรวจหาคำซ้ำ
+ui.aia.dRepeat,คำเดียวกันโผล่ซ้ำในระยะใกล้จนอ่านแล้วสะดุด
+ui.aia.tShipping,คู่จิ้น / เส้นความสัมพันธ์
+ui.aia.dShipping,คู่ตัวละครที่อยู่ด้วยกันบ่อยและมีน้ำหนักเชิงรักมากที่สุด
+ui.aia.tScore,ให้คะแนน
+ui.aia.dScore,คะแนนสองชั้น: ชั้นจากตัวเลขล้วน และชั้นจากการอ่านของ AI
+ui.aia.tScreentime,Screentime / น้ำหนักตัวละคร
+ui.aia.dScreentime,ใครกินพื้นที่เล่าเรื่องไปเท่าไร วัดจากฉากที่ปรากฏและจำนวนครั้งที่ถูกเอ่ยถึง
+ui.aia.noteNoPov,ยังไม่ได้ระบุมุมมอง
+ui.aia.noteCharOnce,โผล่ครั้งเดียวทั้งขอบเขต — ตรวจว่าตั้งใจหรือหลุด
+ui.aia.sysEditor,คุณคือบรรณาธิการต้นฉบับที่อ่านละเอียดและตรงไปตรงมา วิเคราะห์เฉพาะสิ่งที่ปรากฏในข้อมูลที่ให้มา ห้ามแต่งเหตุการณ์หรือรายละเอียดที่ไม่มีในต้นฉบับ ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON
+ui.aia.taskPacing,อ่านตัวเลขจังหวะรายฉากแล้วบอกว่าช่วงไหนหน่วง ช่วงไหนรัวเกินไป และควรตัดหรือขยายตรงไหน
+ui.aia.taskArc,ดูการปรากฏตัวของตัวละครแต่ละตัวแล้วบอกว่าเส้นเรื่องของใครขาดช่วง ใครหายนานเกินไป และใครยังไม่มีพัฒนาการ
+ui.aia.taskWords,ดูคำที่ใช้บ่อยแล้วบอกว่าคำไหนเป็นคำติดปากที่ควรลด และคำไหนสะท้อนแก่นเรื่องจริง ๆ
+ui.aia.taskConflict,ประเมินว่าแต่ละฉากมีความขัดแย้งจริงหรือไม่ ใครต้องการอะไร ใครขวาง และฉากไหนควรเพิ่มแรงเสียดทาน
+ui.aia.taskLength,ดูความยาวฉากแล้วบอกว่าฉากไหนควรหั่น ฉากไหนสั้นจนไม่ทันรู้สึก และจังหวะพักของเล่มพอดีหรือยัง
+ui.aia.taskPlotHole,หาจุดที่เนื้อเรื่องขัดแย้งกันเอง ปมที่เปิดแล้วไม่ปิด แรงจูงใจที่หายไป และเวลาที่ไม่ลงรอย
+ui.aia.taskContinuity,ตรวจว่ารายละเอียดของตัวละครและโลก (ชื่อ ลักษณะ ความสามารถ กฎของโลก) คงเส้นคงวาหรือขัดกันเอง
+ui.aia.taskRepeat,ดูรายการคำซ้ำระยะใกล้แล้วบอกว่าจุดไหนน่ารำคาญจริง และเสนอคำแทนที่เข้ากับน้ำเสียงของเรื่อง
+ui.aia.taskShipping,ประเมินเคมีของคู่ตัวละครที่พบ ว่าคู่ไหนมีน้ำหนักจริง คู่ไหนยังขาดฉากที่ทำให้ผู้อ่านเชื่อ
+ui.aia.taskScore,ให้คะแนนต้นฉบับตามหัวข้อ (เปิดเรื่อง จังหวะ ตัวละคร บทสนทนา ภาษา ปมและความน่าติดตาม) หัวข้อละ 0-10 พร้อมเหตุผลสั้น ๆ
+ui.aia.taskScreentime,ดูน้ำหนักการปรากฏของตัวละครแล้วบอกว่าการกระจายเหมาะกับเรื่องแบบนี้หรือไม่ ใครควรได้พื้นที่มากขึ้นหรือน้อยลง
+ui.aia.dgPacing,{0} [{1}] จังหวะ={2} บทพูด={3}% {4} คำ
+ui.aia.dgArc,{0}: ถูกเอ่ยถึง {1} ครั้ง ใน {2} ฉาก
+ui.aia.dgArcGap, · หายไปช่วง: {0}
+ui.aia.dgWords,{0} ×{1} ({2} ต่อหมื่นคำ)
+ui.aia.dgConflict,{0} [{1}] ไม่พบร่องรอยความขัดแย้ง
+ui.aia.dgLength,{0} [{1}] {2} คำ ({3} นาที)
+ui.aia.dgRepeat,“{0}” ×{1} ใน {2} [{3}] ห่างกันสั้นสุด {4} คำ
+ui.aia.dgShipping,{0} × {1}: อยู่ร่วมกัน {2} ฉาก · คะแนน {3}
+ui.aia.dgScreentime,{0}: {1} ฉาก · {2} ครั้ง · {3}%
+ui.aia.dgScore,{0}: {1}/10 — {2}
+ui.aia.dgNote,{0} [{1}] {2}
+ui.aia.pHeadScope,ขอบเขตที่วิเคราะห์: 
+ui.aia.pHeadTask,งานที่ต้องทำ: 
+ui.aia.pHeadNumbers,ตัวเลขที่โปรแกรมนับมาแล้ว (ถือว่าถูกต้อง ห้ามนับใหม่):
+ui.aia.pRules,กฎ: อ้างอิงเฉพาะสิ่งที่ปรากฏในข้อมูลข้างต้นและเนื้อฉากที่แนบมา · ถ้าอ้างถึงฉากใดให้ใส่ sceneId ให้ตรง · เขียนเป็นภาษาไทย กระชับ ตรงประเด็น · ถ้าไม่มีอะไรควรบอก ให้ตอบเป็นรายการว่าง []
+ui.aia.pFormatFindings,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""อธิบาย"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉากถ้ามี"",""suggestion"":""ข้อเสนอแนะ""}"
+ui.aia.pFormatScore,"รูปแบบคำตอบ: JSON object {""criteria"":[{""label"":""หัวข้อ"",""score"":0-10,""note"":""เหตุผลสั้น ๆ""}],""total"":0-10,""summary"":""สรุปหนึ่งย่อหน้า""}"
+ui.aia.pHeadScenes,เนื้อฉาก:
+ui.aia.pTruncated, (แนบมาบางส่วนเพราะยาวเกินงบ)
+ui.aia.errUnknownKind,ไม่รู้จักชนิดการวิเคราะห์นี้
+ui.aia.errNoScene,ไม่พบฉากในขอบเขตที่เลือก
+ui.aia.errAiFail,เรียก AI ไม่สำเร็จ
+ui.aia.errOpenScene,เปิดฉากจากแผงวิเคราะห์ไม่สำเร็จ
+ui.aia.errRun,วิเคราะห์ล้มเหลว
+ui.aia.rowPacing,{0} คำ · บทพูด {1}% · ประโยคเฉลี่ย {2} คำ
+ui.aia.slowRun,ช่วงอืด
+ui.aia.fastRun,ช่วงรัว
+ui.aia.runRange,{0} → {1} · ติดกัน {2}
+ui.aia.arcHead,{0} — {1} ครั้ง ใน {2} ฉาก
+ui.aia.arcGap,หายไปช่วง
+ui.aia.noMarker,ไม่พบร่องรอย
+ui.aia.rowLength,{0} คำ · {1} นาที
+ui.aia.rowRepeat,{0} · ห่างกันสั้นสุด {1} คำ
+ui.aia.rowShip,อยู่ร่วมกัน {0} ฉาก · ถูกเอ่ย {1} ครั้ง
+ui.aia.rowScreentime,{0} ฉาก · {1} ครั้ง
+ui.aia.scoreLocalHead,คะแนนจากตัวเลข
+ui.aia.aiHead,ความเห็นจาก AI
+ui.aia.scoreAiHead,คะแนนจาก AI
+ui.aia.aiNoFinding,AI ไม่พบประเด็นที่ควรแจ้ง
+ui.aia.usage,ใช้ไป {0} โทเคน · ประมาณ ${1}
+ui.aia.busy,กำลังวิเคราะห์…
+ui.aia.done,เสร็จแล้ว
+ui.aia.truncated,เนื้อหายาวเกินงบ — AI อ่านได้บางส่วน ลองแคบขอบเขตลงเพื่อผลที่ละเอียดกว่า
+ui.aia.aiOffHint,แสดงเฉพาะผลที่คำนวณเอง (ยังไม่ได้ตั้งค่า AI หรือปิดการใช้ AI ไว้)
+ui.aia.reload,โหลดใหม่
+ui.aia.noProject,ยังไม่ได้เปิดโปรเจกต์
+ui.aia.useAI,ใช้ AI ต่อยอด
+ui.aia.runAll,วิเคราะห์ทั้งหมด
+ui.aia.tagNeedAI,ต้องใช้ AI
+ui.aia.csScene,ฉาก
+ui.aia.csChapter,บท
+ui.aia.csWords,จำนวนคำ
+ui.aia.csDialogue,บทสนทนา %
+ui.aia.csAvgSent,ประโยคเฉลี่ย (คำ)
+ui.aia.csTempo,จังหวะ
+ui.aia.csCharacter,ตัวละคร
+ui.aia.csCount,จำนวนครั้ง
+ui.aia.csWord,คำ
+ui.aia.csPer10k,ต่อหมื่นคำ
+ui.aia.csScore,คะแนน
+ui.aia.csDensity,ความหนาแน่นต่อพันคำ
+ui.aia.csMarkers,ร่องรอยที่พบ
+ui.aia.csMinutes,นาที
+ui.aia.csPages,หน้า
+ui.aia.csClosest,ห่างกันสั้นสุด (คำ)
+ui.aia.csSideA,ตัวละคร A
+ui.aia.csSideB,ตัวละคร B
+ui.aia.csSharedScenes,ฉากที่อยู่ร่วมกัน
+ui.aia.csMentions,ถูกเอ่ยถึง
+ui.aia.csShare,สัดส่วน %
+ui.aia.csCriterion,หัวข้อ
+ui.aia.csNote,หมายเหตุ
+ui.aia.csTitle,หัวข้อ
+ui.aia.csAnalysis,การวิเคราะห์
+ui.aia.csScope,ขอบเขต
+ui.aia.csStat,สถิติ
+ui.aia.csValue,ค่า
+ui.aia.csSummary,บทสรุป
+ui.aia.csSeverity,ระดับ
+ui.aia.csDetail,รายละเอียด
+ui.aia.csSuggestion,ข้อเสนอแนะ
+ui.aia.csTokenUsed,โทเคนที่ใช้
+ui.aia.csCostUsd,ค่าใช้จ่าย (USD)
+ui.aia.csSession,เซสชัน
+ui.aia.csCreated,สร้างเมื่อ
+ui.aia.aiSettings,ตั้งค่า AI
+ui.aia.aiSettingsTip,เปิดกล่องตั้งค่าผู้ให้บริการ AI โดยไม่ต้องเข้าเมนูตั้งค่า
+ui.aia.sessionSave,บันทึกเซสชัน
+ui.aia.sessionSaveTip,เก็บผลของขอบเขตนี้ไว้ในโปรเจกต์ (โฟลเดอร์ Analysis)
+ui.aia.sessionSaveTitle,ตั้งชื่อเซสชัน
+ui.aia.sessionList,เซสชัน
+ui.aia.sessionListTip,เปิดเซสชันที่บันทึกไว้ในโปรเจกต์
+ui.aia.sessionTitle,เซสชันการวิเคราะห์
+ui.aia.sessionEmpty,ยังไม่มีเซสชันที่บันทึกไว้ในโปรเจกต์นี้
+ui.aia.sessionOpen,เปิด
+ui.aia.sessionKinds,{0} ชนิด
+ui.aia.sessionCost,{0} โทเคน · ${1}
+ui.aia.sessionAuto,วิเคราะห์ {0}
+ui.aia.sessionCurrent,เซสชันที่เปิดอยู่: {0}
+ui.aia.sessionSaved,"บันทึกเซสชัน ""{0}"" แล้ว"
+ui.aia.sessionOpened,"เปิดเซสชัน ""{0}"""
+ui.aia.sessionDeleted,"ลบเซสชัน ""{0}"" แล้ว"
+ui.aia.confirmDelSession,"ลบเซสชัน ""{0}"" ทิ้ง?"
+ui.aia.errSessionRead,อ่านไฟล์เซสชันไม่ได้: 
+ui.aia.errSessionSave,บันทึกเซสชันไม่สำเร็จ
+ui.aia.errSessionDel,ลบเซสชันไม่สำเร็จ
+ui.aia.errNothingToSave,ยังไม่มีผลวิเคราะห์ให้บันทึก — กดวิเคราะห์ก่อน
+ui.aia.exportCsv,ส่งออก CSV
+ui.aia.exportCsvTip,ส่งออกทุกผลในขอบเขตนี้เป็นไฟล์ CSV (เปิดใน Excel/Sheets ได้)
+ui.aia.exportCsvOne,ส่งออกผลของชนิดนี้เป็น CSV
+ui.aia.csvSaved,บันทึก CSV ที่ {0}
+ui.aia.errCsv,เขียนไฟล์ CSV ไม่สำเร็จ
+ui.aia.errNothingToExport,ยังไม่มีผลให้ส่งออก — กดวิเคราะห์ก่อน
+ui.aia.estTokens,≈ {0} โทเคน · {1}
+ui.aia.estTip,ประมาณการก่อนยิง AI — เนื้อฉาก + คำสั่ง + เพดานคำตอบ
+ui.aia.estAll,ทั้ง 11 ชนิด ≈ {0} โทเคน · {1}
+ui.aia.estOff,ปิดการใช้ AI อยู่ — ไม่มีค่าใช้จ่าย
+ui.aia.usedSoFar,ใช้ไปแล้ว {0} ครั้ง · {1} โทเคน · {2}
+ui.aia.usedNone,ยังไม่ได้เรียก AI ในขอบเขตนี้
+ui.app.aiAnalysis,ผลวิเคราะห์ AI
+ui.vis.addFree,➕ แถวว่าง
+ui.vis.addRow,➕ เพิ่มจากบรรทัดในฉาก
+ui.vis.addSelected,เพิ่มที่เลือก
+ui.vis.allUsed,ทุกบรรทัดถูกใส่ในตารางแล้ว
+ui.vis.changedCount,มี {0} แถวที่ต้นทางเปลี่ยนไปแล้ว
+ui.vis.clearImage,เอารูปออก
+ui.vis.close,ปิด
+ui.vis.colComment,คอมเมนต์
+ui.vis.colNo,ลำดับ
+ui.vis.colRemark,หมายเหตุ
+ui.vis.colScene,ฉาก
+ui.vis.cols,⚙ คอลัมน์
+ui.vis.delRow,ลบแถวนี้
+ui.vis.delRowAsk,ลบแถวนี้ออกจากตารางเล่าด้วยภาพ?
+ui.vis.down,เลื่อนลง
+ui.vis.empty,ยังไม่มีแถว — กดปุ่มเพิ่มจากบรรทัดในฉากเพื่อเริ่ม
+ui.vis.freeRow,(แถวว่าง — ยังไม่ได้ผูกกับบรรทัดไหน)
+ui.vis.menu,🎬 เล่าด้วยภาพ
+ui.vis.needScene,ยังไม่ได้เลือกฉาก
+ui.vis.next,ถัดไป
+ui.vis.noImage,ไม่มีรูป
+ui.vis.noLines,ฉากนี้ยังไม่มีข้อความให้เลือก
+ui.vis.ofTotal,{0}/{1}
+ui.vis.open,เปิดตารางเล่าด้วยภาพ
+ui.vis.pickImage,เลือกรูปจากคลัง หรือเพิ่มรูปใหม่
+ui.vis.pickLine,เลือกบรรทัดจากฉาก
+ui.vis.pickLineHint,ติ๊กบรรทัดที่อยากทำเป็นภาพ — เลือกได้หลายบรรทัด
+ui.vis.prev,ก่อนหน้า
+ui.vis.remarkPh,หมายเหตุ…
+ui.vis.reveal,แสดงไฟล์ในโฟลเดอร์
+ui.vis.rowNum,{0} แถว
+ui.vis.saved,บันทึกตารางเล่าด้วยภาพแล้ว
+ui.vis.selectAll,เลือกทั้งหมด
+ui.vis.statusChanged,ต้นทางถูกแก้ไปแล้ว — กดเพื่ออัปเดตข้อความ
+ui.vis.statusChangedTag,ต้นทางเปลี่ยน
+ui.vis.syncAll,⟳ อัปเดตทั้งหมด
+ui.vis.title,เล่าด้วยภาพ
+ui.vis.up,เลื่อนขึ้น
+ui.vis.viewFull,⛶ เต็มจอ
+ui.vis.viewList,รายการ
+ui.vis.viewTable,ตาราง
+
+ui.vis.allLost,บรรทัดที่ผูกไว้ถูกลบจากฉากไปแล้วทั้งหมด
+ui.vis.boundN,ผูก {0} บรรทัด
+ui.vis.colAction,action
+ui.vis.colDragW,ลากเพื่อปรับความกว้างคอลัมน์
+ui.vis.colEntities,ตัวละคร/สถานที่
+ui.vis.colFrame,frame
+ui.vis.colResetW,คืนความกว้างคอลัมน์เป็นค่าเริ่มต้น
+ui.vis.editBind,แก้บรรทัดที่ผูก
+ui.vis.editBindHint,ติ๊กเพิ่มเพื่อผูกหลายบรรทัดเข้าแถวเดียว · ติ๊กออกเพื่อเลิกผูก (แถวไม่หาย)
+ui.vis.lineUsed,ใช้ในแถวอื่นแล้ว
+ui.vis.openWiki,เปิดหน้า Wiki ของตัวนี้
+ui.vis.toggleText,ซ่อน/แสดงข้อความ (H)

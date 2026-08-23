@@ -27,6 +27,11 @@ export async function restoreFromTrash(p, fname) {
     if (info.kind === 'scene') {
       const dst = await kapi.join(info.dPath, 'Chapters', info.folderName, info.sc.fileName);
       await kapi.move(p, dst);
+      // ตาราง "เล่าด้วยภาพ" ถูกเก็บคู่กันมาเป็น <ไฟล์ในถังขยะ>.vis.csv → กลับไปข้างฉากเหมือนเดิม
+      try {
+        if (await kapi.exists(p + '.vis.csv'))
+          await kapi.move(p + '.vis.csv', dst.replace(/\.md$/i, '') + '_vis.csv');
+      } catch {}
       const sf = await kapi.join(info.dPath, 'scenes.json');
       const d = await kapi.readJson(sf);
       d.chapters = d.chapters || {};

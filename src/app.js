@@ -89,7 +89,10 @@ import { sceneProps } from './scene-props.js';
 import { attachAiFieldButton, generateSceneSynopsis, fieldPrompt, cleanResult,
          AI_SCENE_FIELD_KEYS } from './ai-synopsis.js';
 // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-import { renderAIAnalyzerPanel, ANALYZER_CARDS, analyzerStats } from './ai-analyzer-ui.js';
+import { renderAIAnalyzerPanel, ANALYZER_CARDS, analyzerStats,
+         runAnalysis, resetAnalyzer, collectScenes, currentResults,
+         analyzerDirtyList, saveSession as saveAnalysisSession,
+         listSessions, openSession, exportAllCsv } from './ai-analyzer-ui.js';
 // [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสนำหน้าบรรทัด
 import { setMarkdownCodes, markdownCodesOn, refreshMarkdownCodes,
          prefixLen as mdPrefixLen, suffixLen as mdSuffixLen, MD_HIDE_CLASS } from './markdown-code-toggle.js';
@@ -112,6 +115,7 @@ import { openHome, renderHome, showHomeDialog } from './home-ui.js';
 import { openTagPane, renderTagList, filterByTag } from './tag-pane.js';
 import { openGlobalSearch, bindGlobalSearchShortcut, renderSearchPanel } from './global-search.js';
 import { openSceneTable } from './scene-table.js';
+import { openVisual, createVisual, hasVis, visPathOf, renderVisual, openVisualForActive, VIS_TAB } from './visual/vis-ui.js';
 import { openScratchpad, renderNotesPanel } from './scratchpad.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
 import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
@@ -434,7 +438,9 @@ function lnGutterEl(make) {
 export function refreshLineGutter() {
   const t = state.active;
   const pane = t && t.pane;
-  // wiki ใช้ตัวแก้ไขหลายกล่องในหน้าเดียว — นับบรรทัดรวมไม่มีความหมาย จึงไม่วาดราง
+  // [alpha.90 ข้อ 5] wiki มีตัวแก้ไขหลายกล่องในหน้าเดียว — รางเดียวนับรวมไม่มีความหมาย
+  // จึงให้ **แต่ละกล่องมีรางของตัวเอง** นับเริ่มที่ 1 ของกล่องนั้น (รางกลางยังปิดอยู่)
+  if (pane && pane.classList.contains('wiki-pane')) return refreshWikiLineNos(pane);
   const pmEl = pane && !pane.classList.contains('wiki-pane')
     ? pane.querySelector(':scope > .workspace > .ProseMirror') : null;
   // มุมมองเรียงหน้า/ภาพรวม = อ่านอย่างเดียว ไม่มีเคอร์เซอร์ → ปิดเลขบรรทัดอัตโนมัติ
@@ -487,6 +493,36 @@ export function refreshLineGutter() {
     const off = (lineH - d.offsetHeight) / 2;
     if (off > 0.5) d.style.top = Math.round(parseFloat(d.style.top) + off) + 'px';
   }
+  return n;
+}
+/**
+ * [alpha.90 ข้อ 5] เลขบรรทัดในหน้า Wiki — หนึ่งรางต่อหนึ่งกล่องเนื้อหา
+ * ระวัง: ราง**อยู่ในกล่อง**ไม่ใช่ลอยทับทั้งแผง → ปิด/เปิดหัวข้อแล้วเลขไม่ค้างผิดที่
+ * และล้างรางเก่าทุกครั้งก่อนวาด ไม่งั้น render() ของ WikiEditor ทำให้เลขซ้อนกันเป็นชั้น ๆ
+ */
+export function refreshWikiLineNos(pane) {
+  const show = !!state.settings.lineNumbers;
+  let n = 0;
+  for (const box of pane.querySelectorAll('.wiki-sec-ed')) {
+    let g = box.querySelector(':scope > .wiki-ln');
+    if (!show) { if (g) g.remove(); continue; }
+    const pm = box.querySelector(':scope > .ProseMirror');
+    if (!pm) { if (g) g.remove(); continue; }
+    if (!g) { g = el('div', 'wiki-ln'); box.insertBefore(g, box.firstChild); }
+    const br = box.getBoundingClientRect();
+    const frag = document.createDocumentFragment();
+    const kids = pm.children;
+    for (let i = 0; i < kids.length; i++) {
+      const r = kids[i].getBoundingClientRect();
+      if (!r.height) continue;
+      const d = el('div', 'wiki-ln-no', String(i + 1));
+      d.style.top = Math.round(r.top - br.top) + 'px';
+      frag.appendChild(d); n++;
+    }
+    g.textContent = '';
+    g.appendChild(frag);
+  }
+  pane.classList.toggle('wiki-ln-on', show);
   return n;
 }
 /** ผูกเหตุการณ์ที่ทำให้เลขบรรทัดต้องขยับ (เลื่อนจอ/พิมพ์/สลับแท็บ) — เรียกครั้งเดียวตอนเริ่มโปรแกรม */
@@ -1755,6 +1791,7 @@ async function closeProjectIfAny() {
   state.tabs.clear(); state.active = null; state.root = null;
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
+  resetAnalyzer();                      // [alpha.89] ฉาก/ตัวละครที่แผงวิเคราะห์แคชไว้เป็นของโปรเจกต์เดิม
   resetReview(); resetCommentStore(); _cmMigrated.clear(); clearCommentAnchors();
   imgURLBase.clear();
   clearFeaturePanels();                 // บั๊ก #18: เนื้อแผงฟีเจอร์เป็นของโปรเจกต์เดิม ต้องล้าง
@@ -2667,6 +2704,11 @@ async function _buildTreeInner() {
           .sort((a, b) => (a.order || 0) - (b.order || 0));
         const scenesAll = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters || {};
         for (const ch of chapters) {
+          // ไฟล์ทั้งหมดในโฟลเดอร์บท — ใช้ดูว่าฉากไหนมีตาราง "เล่าด้วยภาพ" (เรียกครั้งเดียวต่อบท)
+          // try/catch ของตัวเอง: พังตรงนี้ห้ามทำให้ทั้งต้นไม้ค้างของเก่า (บทเรียนข้อ 30)
+          let chFiles = [];
+          try { chFiles = await kapi.listFiles(await kapi.join(dPath, 'Chapters', ch.folderName)); } catch {}
+          const visSet = new Set(chFiles.filter((f) => /_vis\.csv$/i.test(f)).map((f) => f.toLowerCase()));
           const chEl = el('div', 'chapter');
           const chHead = el('div', 'ch-title');
           chHead.innerHTML = iconHtml('folder', 14) + ' ' + ch.title;
@@ -2813,6 +2855,9 @@ async function _buildTreeInner() {
                   await openScene(scEl.dataset.path, sc.title);
                   await openCommentsPanel();
                 } },
+              { label: tt('ui.vis.menu'), click: async () => (await hasVis(scEl.dataset.path)
+                  ? openVisual(scEl.dataset.path, sc.title)
+                  : createVisual(scEl.dataset.path, sc.title)) },
               { label: tt('ui.app.repeat'), click: () => duplicateScene(dPath, ch, sc) },
               { label: tt('ui.app.changeName2'), click: () => renameScene(dPath, ch, sc) },
               // ข้อ 78: แนะนำชื่อจากเนื้อฉากจริง (ส่งเนื้อหาไปเป็นบริบทให้ AI)
@@ -2842,6 +2887,19 @@ async function _buildTreeInner() {
               { label: tt('ui.app.delMoveTrash'), danger: true, click: () => deleteScene(dPath, ch, sc) },
             ]); };
             chEl.append(scEl);
+            // แถวลูก "เล่าด้วยภาพ" — โผล่เฉพาะฉากที่มีไฟล์ตารางจริง
+            if (visSet.has(sc.fileName.replace(/\.md$/i, '').toLowerCase() + '_vis.csv')) {
+              const vEl = el('div', 'scene vis-row', '🎬 ' + tt('ui.vis.title'));
+              vEl.dataset.nofilter = '1';
+              vEl.dataset.path = scEl.dataset.path;
+              vEl.onclick = (ev) => { ev.stopPropagation(); openVisual(scEl.dataset.path, sc.title); };
+              vEl.oncontextmenu = (ev) => { ev.preventDefault(); ev.stopPropagation();
+                popupMenu(ev.clientX, ev.clientY, [
+                  { label: tt('ui.vis.open'), click: () => openVisual(scEl.dataset.path, sc.title) },
+                  { label: tt('ui.vis.reveal'), click: async () => kapi.revealInOS(await visPathOf(scEl.dataset.path)) },
+                ]); };
+              chEl.append(vEl);
+            }
           }
           // Empty state: บทที่ยังไม่มีฉาก
           if ((scenesAll[ch.guid] || []).length === 0) {
@@ -3250,7 +3308,7 @@ async function _buildTreeInner() {
   // ---- ถังขยะ (<root>/Recycle) — กู้คืน / ลบถาวร ----
   const recDir = await kapi.join(state.root, 'Recycle');
   const recItems = await kapi.exists(recDir)
-    ? (await kapi.listFiles(recDir)).filter((f) => !f.endsWith('.k2restore.json')) : [];
+    ? (await kapi.listFiles(recDir)).filter((f) => !f.endsWith('.k2restore.json') && !f.endsWith('.vis.csv')) : [];
   const recDirs = await kapi.exists(recDir) ? await kapi.listDirs(recDir) : [];
   const all = [...recItems, ...recDirs];
   const tSec = el('div', 'sec');
@@ -3266,6 +3324,7 @@ async function _buildTreeInner() {
         { label: tt('ui.app.del'), danger: true, click: async () => {
             if (!(await confirmBox(ttf('ui.app.delRecoverRestoreCant', label), tt('ui.app.del')))) return;
             await kapi.remove(p); await kapi.remove(p + '.k2restore.json');
+            try { if (await kapi.exists(p + '.vis.csv')) await kapi.remove(p + '.vis.csv'); } catch {}
             await buildTree(); setStatus(tt('ui.app.delDone') + label);
           } },
       ]); };
@@ -7350,6 +7409,13 @@ function registerDirtySources() {
       return (await _branchPlanApi.saveBranchPlan(true)) !== false;
     },
   });
+  // [alpha.89r] ผลวิเคราะห์ที่ยิง AI ไปแล้วแต่ยังไม่ได้บันทึกเป็นเซสชัน
+  // — เสียเงินไปแล้ว หายแล้วหายเลย (ผลที่คำนวณเองไม่เข้าทะเบียน กดใหม่ได้ค่าเดิมเป๊ะ)
+  registerDirtySource('analysis', {
+    label: tt('ui.app.aiAnalysis'),
+    list: analyzerDirtyList,
+    save: async () => (await saveAnalysisSession()) !== null,
+  });
   // [alpha.82] เซสชันห้องซ้อมบทถือเทิร์นที่เพิ่งคุยไว้ในหน่วยความจำเหมือนกัน (กฎ alpha.72)
   registerDirtySource('dlgb', {
     label: tt('ui.app.dlgbSource'),
@@ -7968,6 +8034,10 @@ function refreshToolbar() {
   $('#tb-focus')?.classList.toggle('on', document.body.classList.contains('focus-mode'));
   $('#tb-typewriter')?.classList.toggle('on', isTypewriter());
   $('#tb-linenum')?.classList.toggle('on', !!state.settings.lineNumbers);
+  // ปุ่ม "เล่าด้วยภาพ" ใช้ได้เฉพาะตอนเปิดฉากอยู่ (ตารางผูกกับฉากเสมอ) — ใช้คลาส .dis
+  // ตัวเดียวกับปุ่มอื่นในแถบ ไม่ใช่ .disabled (ระบบ refreshToolbar จัดการคลาสนี้อยู่แล้ว)
+  $('#tb-visual')?.classList.toggle('dis',
+    !(state.active && /\.md$/i.test(state.active.file || '')));
   $('#tb-tree-panel')?.classList.toggle('on', isPanelOpen('tree'));
   $('#tb-outline-panel')?.classList.toggle('on', isPanelOpen('outline'));
   $('#tb-props-panel')?.classList.toggle('on', isPanelOpen('props'));
@@ -9808,6 +9878,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#tb-focus').onclick = () => handleCommand('focus-mode');
   $('#tb-typewriter').onclick = () => handleCommand('typewriter');
   $('#tb-linenum').onclick = () => handleCommand('line-numbers');
+  $('#tb-visual').onclick = () => openVisualForActive();
   $('#tb-quickopen').onclick = () => handleCommand('quick-open');
   // ---- ปุ่มลัด Cheatsheet (? / Ctrl+Shift+/) ----
   document.addEventListener('keydown', (e) => {
@@ -14873,7 +14944,10 @@ async function runTest(projectPath) {
       cks[1].checked = false; cks[2].checked = false;
       bx.querySelector('.k-ok').click();
     }
-    await new Promise((r) => setTimeout(r, 200));
+    // [alpha.90] เดิมรอเวลาตายตัว 200ms แล้ววัดผลเลย → แดงเป็นครั้งคราวบนตัว packaged
+    // (บูตช้ากว่า dev · บทเรียนข้อ 41) · รอ "เงื่อนไขจริง" คือป้ายหายจากต้นไม้ ไม่ใช่เดาเวลา
+    for (let i = 0; i < 40 && document.querySelector('.scene .tree-flash'); i++)
+      await new Promise((r) => setTimeout(r, 50));
     const scClear = await readSc0();
     check('เอาป้ายออกได้ → ไม่มีป้ายค้างใน Explorer',
           scClear.isFlashback === false && scClear.isFlashforward === false &&
@@ -22090,34 +22164,232 @@ async function runTest(projectPath) {
                 tr('app.ready') !== 'พร้อมแล้วจ้า', tr('app.ready'));
         }
 
-        // ---- [r3-5] แผง AI วิเคราะห์ ----
+        // ---- [r3-5] แผง AI วิเคราะห์ (alpha.89 — ของจริงแล้ว ไม่ใช่ตัวอย่างหน้าตา) ----
         {
+          const waitFor = async (fn, tries = 60, ms = 50) => {
+            for (let i = 0; i < tries; i++) { if (fn()) return true; await new Promise((r) => setTimeout(r, ms)); }
+            return !!fn();
+          };
+          // แผงวาดใหม่แบบ async หลายทาง → รอให้ปุ่มโผล่ก่อนค่อยคลิก
+          const clickWhen = async (sel) => {
+            await waitFor(() => !!$(sel));
+            const n = $(sel);
+            if (!n) throw new Error('ไม่พบปุ่ม: ' + sel);
+            n.click();
+          };
           check('[r3-5] แผง ai-analyzer อยู่ใน PANEL_DEFS',
                 PANEL_DEFS.some((d) => d.id === 'ai-analyzer'));
           check('[r3-5] มี element เจ้าบ้านใน index.html', !!$('#ai-analyzer-panel'));
-          check('[r3-5] การ์ดตัวอย่าง 5 ใบครบตามสเปก', ANALYZER_CARDS.length === 5,
+          check('[r3-5] การ์ดครบ 11 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 11,
                 ANALYZER_CARDS.map((c) => c.id).join(','));
+          check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11',
+                ANALYZER_CARDS.map((c) => c.id).join(',')
+                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime');
+          check('[r3-5] ไม่มีคีย์ภาษาหลุดมาเป็นชื่อการ์ด',
+                !ANALYZER_CARDS.some((c) => c.title.startsWith('ui.') || c.desc.startsWith('ui.')),
+                ANALYZER_CARDS.filter((c) => c.title.startsWith('ui.')).map((c) => c.id).join(','));
           showPanel('ai-analyzer');
           await renderFeaturePanel('ai-analyzer');
-          await new Promise((r) => setTimeout(r, 250));
           const aiaHost = $('#ai-analyzer-body');
+          // แผงอ่านไฟล์ทั้งโปรเจกต์แบบ async — ห้ามวัดผลทันทีหลังสั่งวาด (บทเรียน alpha.65r)
+          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 11);
           check('[r3-5] เปิดแผงแล้ววาดเนื้อหาจริง', !!aiaHost.querySelector('.aia-wrap'));
-          check('[r3-5] วาดการ์ดครบ 5 ใบ', aiaHost.querySelectorAll('.aia-card').length === 5,
+          check('[r3-5] วาดการ์ดครบ 11 ใบ', aiaHost.querySelectorAll('.aia-card').length === 11,
                 aiaHost.querySelectorAll('.aia-card').length);
           const aiaTxt = aiaHost.textContent;
-          for (const kw of ['จังหวะเรื่อง', 'ส่วนโค้งตัวละคร', 'คำที่ใช้บ่อย', 'ความขัดแย้ง', 'ความยาวฉาก']) {
+          for (const kw of ['จังหวะเรื่อง', 'ส่วนโค้งตัวละคร', 'คำที่ใช้บ่อย', 'ความขัดแย้ง', 'ความยาวฉาก',
+                            'Plot Hole', 'ความสอดคล้อง', 'คำซ้ำ', 'คู่จิ้น', 'ให้คะแนน', 'Screentime']) {
             check('[r3-5] การ์ด "' + kw + '" แสดงบนแผง', aiaTxt.includes(kw));
           }
-          check('[r3-5] บอกชัดว่าเป็นตัวอย่างหน้าตา (ไม่หลอกว่าเป็นผลจริง)',
-                !!aiaHost.querySelector('.aia-badge'));
-          check('[r3-5] แถบสถิติอ่านตัวเลขจริงจากโปรเจกต์',
-                aiaHost.querySelectorAll('.aia-stat').length === 5);
+          check('[r3-5] ไม่มีคีย์ภาษาดิบโผล่บนแผง', !/ui\.[a-z]+\.[A-Za-z]/.test(aiaTxt),
+                (aiaTxt.match(/ui\.[a-z]+\.[A-Za-z0-9_]+/) || [''])[0]);
+          check('[r3-5] ไม่มีป้าย "ยังไม่เปิดใช้งาน" แล้ว', !aiaHost.querySelector('.aia-badge'));
+
+          // ── แถบขอบเขต 4 ระดับ ──
+          const scopeBtns = [...aiaHost.querySelectorAll('.aia-scope-btn')];
+          check('[r3-5] มีปุ่มขอบเขต 4 ระดับ', scopeBtns.length === 4,
+                scopeBtns.map((b) => b.dataset.scope).join(','));
+          check('[r3-5] ค่าเริ่มต้น = ทั้งโปรเจกต์',
+                scopeBtns[0].dataset.scope === 'project' && scopeBtns[0].classList.contains('on'));
+          check('[r3-5] ทั้งโปรเจกต์ยังไม่มีช่องเลือกย่อย', !aiaHost.querySelector('.aia-scope-sel'));
           const st5 = await analyzerStats();
           check('[r3-5] นับฉากในโปรเจกต์ทดสอบได้ > 0', st5.scenes > 0, JSON.stringify(st5));
+          check('[r3-5] แถบสถิติอ่านตัวเลขจริงจากโปรเจกต์',
+                aiaHost.querySelectorAll('.aia-stat').length === 5);
+
+          // ── สลับเป็น "เฉพาะบท" แล้วต้องมีช่องเลือกบท ──
+          scopeBtns.find((b) => b.dataset.scope === 'chapter').click();
+          await waitFor(() => !!$('#ai-analyzer-body .aia-scope-sel'));
+          const chSel = $('#ai-analyzer-body .aia-scope-sel');
+          check('[r3-5] เลือก "เฉพาะบท" แล้วมีช่องเลือกบท', !!chSel && chSel.options.length > 0,
+                chSel ? chSel.options.length : 'ไม่มี');
+          check('[r3-5] ปุ่มที่เลือกติดสถานะ on',
+                $('#ai-analyzer-body .aia-scope-btn[data-scope="chapter"]').classList.contains('on'));
+          const chScenes = (await collectScenes()).filter((x) => x.chapterId === chSel.value).length;
+          check('[r3-5] บรรทัดบอกขอบเขตนับฉากตรงกับบทที่เลือก',
+                $('#ai-analyzer-body .aia-scope-line').textContent.includes(String(chScenes)),
+                $('#ai-analyzer-body .aia-scope-line').textContent + ' | ควรเป็น ' + chScenes);
+
+          // ── สั่งวิเคราะห์จริง (ชั้นคำนวณเอง — ไม่ยิง API) ──
+          const rLen = await runAnalysis('length');
+          check('[r3-5] วิเคราะห์ความยาวฉากได้ผลจริง', !!rLen && !rLen.error && rLen.local.rows.length === chScenes,
+                JSON.stringify(rLen && rLen.local && rLen.local.stats));
+          check('[r3-5] ไม่ได้ตั้งค่า AI → ยังได้ผลชั้นคำนวณเอง (ai = null)', rLen.ai === null);
+          const lenCard = $('#ai-analyzer-body .aia-card[data-card="length"] .aia-result');
+          check('[r3-5] ผลถูกวาดลงการ์ดของชนิดนั้น', !!lenCard && !!lenCard.querySelector('.aia-bars'));
+          check('[r3-5] มีคำใบ้ว่ายังไม่ได้เปิด AI', !!lenCard.querySelector('.aia-hint'));
+          // "มองเห็นไหม" ต้องวัด opacity/visibility/ขนาดจริง ไม่ใช่แค่ display (บทเรียน K-1)
+          const lenCS = getComputedStyle(lenCard);
+          check('[r3-5] ผลลัพธ์มองเห็นได้จริง (ไม่โปร่งใส/ไม่ถูกซ่อน)',
+                lenCS.display !== 'none' && lenCS.visibility !== 'hidden'
+                && +lenCS.opacity > 0.5 && lenCard.getBoundingClientRect().height > 0,
+                lenCS.display + '/' + lenCS.visibility + '/' + lenCS.opacity);
+
+          // ── ขอบเขต "เฉพาะฉาก" ต้องเหลือฉากเดียว ──
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="scene"]');
+          await waitFor(() => !!$('#ai-analyzer-body .aia-scope-sel'));
+          const rOne = await runAnalysis('length');
+          check('[r3-5] ขอบเขตเฉพาะฉาก → วิเคราะห์ฉากเดียว', !!rOne && rOne.scenes === 1,
+                rOne && rOne.scenes);
+          check('[r3-5] เปลี่ยนขอบเขตแล้วผลไม่ปนกับของเดิม',
+                rOne.local.rows.length === 1 && rLen.local.rows.length === chScenes);
+
+          // ── ชนิดที่เหลือกดแล้วต้องได้ผล ไม่ใช่การ์ดว่าง ──
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="project"]');
+          await waitFor(() => !$('#ai-analyzer-body .aia-scope-sel'));
+          for (const id of ['pacing', 'words', 'conflict', 'repeat', 'screentime', 'score']) {
+            const r = await runAnalysis(id);
+            check('[r3-5] วิเคราะห์ "' + id + '" คืนตัวเลขจริง',
+                  !!r && !r.error && Array.isArray(r.local.stats) && r.local.stats.length > 0,
+                  r && r.error);
+          }
           check('[r3-5] ปุ่ม toolbar #tb-ai-analyzer มีจริงและติด .on ตอนแผงเปิด',
                 !!$('#tb-ai-analyzer') && (refreshToolbar(), $('#tb-ai-analyzer').classList.contains('on')));
           hidePanel('ai-analyzer'); refreshToolbar();
           check('[r3-5] ปิดแผงแล้วปุ่มไม่ติด .on', !$('#tb-ai-analyzer').classList.contains('on'));
+        }
+
+        // ---- [89r] เซสชัน · โทเคนก่อน/หลัง · ส่งออก CSV · ปุ่มตั้งค่า AI ----
+        {
+          const waitFor = async (fn, tries = 60, ms = 50) => {
+            for (let i = 0; i < tries; i++) { if (fn()) return true; await new Promise((r) => setTimeout(r, ms)); }
+            return !!fn();
+          };
+          const clickWhen = async (sel) => {
+            await waitFor(() => !!$(sel));
+            const n = $(sel);
+            if (!n) throw new Error('ไม่พบปุ่ม: ' + sel);
+            n.click();
+          };
+          // รอจนแผงวาดของรอบใหม่เสร็จ — เงื่อนไข "ไม่มี X" เป็นจริงชั่วคราวระหว่างล้างกับเติม
+          const settled = async (extra) => waitFor(() =>
+            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 11
+            && !!$('#aia-usage') && (!extra || extra()));
+          showPanel('ai-analyzer');
+          await renderFeaturePanel('ai-analyzer');
+          await settled();
+
+          // ── ข้อ 4: ปุ่มตั้งค่า AI อยู่บนแผง ไม่ต้องเข้าเมนูตั้งค่า ──
+          check('[89r] มีปุ่มตั้งค่า AI บนแผง', !!$('#aia-ai-settings'));
+          check('[89r] มีปุ่มบันทึกเซสชัน/เปิดเซสชัน/ส่งออก CSV',
+                !!$('#aia-save-session') && !!$('#aia-open-session') && !!$('#aia-export-csv'));
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());   // ล้างกล่องค้างจากเทสก่อนหน้า
+          await clickWhen('#aia-ai-settings');
+          const gotDlg = await waitFor(() => !!$('.k-ai-settings'));
+          check('[89r] กดแล้วเปิดกล่องตั้งค่า AI ได้จริง', gotDlg);
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          await waitFor(() => !$('.k-ai-settings'));
+          check('[89r] ปิดกล่องแล้วไม่ค้างบนจอ', !$('.k-ai-settings'));
+          await renderFeaturePanel('ai-analyzer');
+          await settled();
+
+          // ── ข้อ 2: บอกโทเคน "ก่อนใช้" และ "หลังใช้" ──
+          const uline = $('#aia-usage');
+          check('[89r] มีแถบโทเคนบนแผง', !!uline);
+          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 11 ชนิด)',
+                !!uline.querySelector('.aia-usage-before')
+                && /\d/.test(uline.querySelector('.aia-usage-before').textContent),
+                uline.textContent);
+          check('[89r] บอกยอดที่ใช้ไปแล้ว (ยังไม่ได้เรียก AI → บอกว่ายังไม่ได้เรียก)',
+                !!uline.querySelector('.aia-usage-after'), uline.textContent);
+          const estChips = document.querySelectorAll('#ai-analyzer-body .aia-chip-est');
+          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 11, estChips.length);
+          check('[89r] ชิปบอกทั้งจำนวนโทเคนและราคา',
+                /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes('$'),
+                estChips[0].textContent);
+          const estProject = estChips[0].textContent;
+          // ขอบเขตแคบลง → ประมาณการต้องลดลง (ไม่ใช่เลขคงที่ที่โชว์ไว้เฉย ๆ)
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="scene"]');
+          await settled(() => !!$('#ai-analyzer-body .aia-scope-sel'));
+          const numOf = (s) => Number(String(s).replace(/[^0-9]/g, '').slice(0, 8)) || 0;
+          check('[89r] เลือกฉากเดียวแล้วประมาณการลดลง',
+                numOf(document.querySelectorAll('#ai-analyzer-body .aia-chip-est')[0].textContent) < numOf(estProject),
+                document.querySelectorAll('#ai-analyzer-body .aia-chip-est')[0].textContent + ' vs ' + estProject);
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="project"]');
+          await settled(() => !$('#ai-analyzer-body .aia-scope-sel'));
+          // ปิดการใช้ AI → ต้องบอกตรง ๆ ว่าไม่มีค่าใช้จ่าย และไม่โชว์ชิปประมาณการ
+          await clickWhen('#aia-use-ai');
+          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 0);
+          check('[89r] ปิด AI แล้วไม่มีชิปประมาณโทเคน', document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 0);
+          check('[89r] ปิด AI แล้วบอกว่าไม่มีค่าใช้จ่าย',
+                $('#aia-usage').textContent.includes('ไม่มีค่าใช้จ่าย'), $('#aia-usage').textContent);
+          await clickWhen('#aia-use-ai');
+          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 11);
+
+          // ── ข้อ 1: เซสชันเก็บในโปรเจกต์ ──
+          await runAnalysis('length');
+          await runAnalysis('words');
+          const sv = await saveAnalysisSession('เทสเซสชัน');
+          check('[89r] บันทึกเซสชันได้', !!sv && !!sv.file, JSON.stringify(sv && sv.session && sv.session.id));
+          const anaDir = await kapi.join(state.root, 'Analysis');
+          check('[89r] เซสชันถูกเก็บในโปรเจกต์ (โฟลเดอร์ Analysis)', await kapi.exists(anaDir));
+          check('[89r] ไฟล์เซสชันมีอยู่จริงบนดิสก์', await kapi.exists(sv.file), sv.file);
+          const rawSess = await kapi.readJson(sv.file);
+          check('[89r] ไฟล์เซสชันเก็บผลทั้งสองชนิดที่วิเคราะห์ไว้',
+                !!rawSess.results.length && !!rawSess.results.words, Object.keys(rawSess.results || {}).join());
+          check('[89r] ไฟล์เซสชันเก็บขอบเขตไว้ด้วย', rawSess.scope && rawSess.scope.kind === 'project');
+          const sessRows = await listSessions();
+          check('[89r] เซสชันขึ้นในรายการ', sessRows.some((r) => r.name === 'เทสเซสชัน'),
+                sessRows.map((r) => r.name).join());
+          // เปิดกลับมาแล้วต้องได้ผลเดิมโดยไม่ต้องวิเคราะห์ใหม่
+          resetAnalyzer();
+          await renderFeaturePanel('ai-analyzer');
+          await settled();
+          check('[89r] ล้างแล้วไม่มีผลค้าง', Object.keys(currentResults()).length === 0);
+          await openSession((await listSessions()).find((r) => r.name === 'เทสเซสชัน'));
+          // เซสชันเก็บ ทุกชนิดที่วิเคราะห์ไว้ในขอบเขตนั้น (บล็อก r3-5 วิเคราะห์ไว้ก่อนแล้วหลายชนิด)
+          // → เทียบกับสิ่งที่อยู่ในไฟล์จริง ไม่ใช่เดารายชื่อไว้ล่วงหน้า
+          const savedKeys = Object.keys(rawSess.results).sort().join();
+          check('[89r] เปิดเซสชันแล้วผลกลับมาครบเท่าที่บันทึกไว้',
+                Object.keys(currentResults()).sort().join() === savedKeys,
+                Object.keys(currentResults()).sort().join() + ' vs ' + savedKeys);
+          check('[89r] ผลที่เพิ่งวิเคราะห์อยู่ในเซสชันด้วย',
+                !!currentResults().length && !!currentResults().words);
+          await renderFeaturePanel('ai-analyzer');
+          await waitFor(() => !!$('#ai-analyzer-body .aia-card[data-card="length"] .aia-bars'));
+          check('[89r] ผลจากเซสชันถูกวาดบนการ์ดจริง',
+                !!$('#ai-analyzer-body .aia-card[data-card="length"] .aia-bars'));
+
+          // ── ข้อ 3: ส่งออก CSV ──
+          const csvPath2 = await kapi.join(state.root, 'ana-test.csv');
+          const wrote = await exportAllCsv(csvPath2);
+          check('[89r] ส่งออก CSV สำเร็จ', wrote === csvPath2 && await kapi.exists(csvPath2));
+          const csvTxt = await kapi.readFile(csvPath2);
+          check('[89r] CSV ขึ้นต้นด้วย BOM (Excel อ่านไทยออก)', csvTxt.charCodeAt(0) === 0xFEFF);
+          check('[89r] CSV มีทั้งสองชนิดที่บันทึกไว้',
+                csvTxt.includes('ความยาวฉาก') && csvTxt.includes('คำที่ใช้บ่อย'));
+          check('[89r] CSV มีหัวตารางของจริง', csvTxt.includes('นาที') && csvTxt.includes('ต่อหมื่นคำ'));
+          check('[89r] CSV ขึ้นบรรทัดด้วย CRLF', !/[^\r]\n/.test(csvTxt));
+
+          // ── กฎงานค้าง alpha.72: ผลที่คำนวณเองไม่นับเป็นงานค้าง (กดใหม่ได้ฟรี) ──
+          check('[89r] ผลที่ไม่ได้ยิง AI ไม่ขึ้นเป็นงานค้าง', analyzerDirtyList().length === 0,
+                analyzerDirtyList().map((x) => x.title).join());
+          allDirtyList();                       // บังคับให้ทะเบียนถูกลงทะเบียนก่อนตรวจ
+          check('[89r] แหล่งงานค้าง "analysis" ลงทะเบียนไว้แล้ว', dirtyRegistry.has('analysis'));
+
+          await kapi.remove(csvPath2);
+          await kapi.remove(sv.file);
+          hidePanel('ai-analyzer'); refreshToolbar();
         }
 
         // ---- [r3-6] ซ่อนรหัสนำหน้าบรรทัด ----
@@ -26524,6 +26796,440 @@ async function runTest(projectPath) {
         U82.resetBuilder();
         hidePanel('dlgb');
         check('[82-8] ปิดแผงห้องซ้อมบทได้', !isPanelOpen('dlgb'));
+      }
+
+      // ══════════ เล่าด้วยภาพ (Visual telling) ══════════
+      {
+        const VU = await import('./visual/vis-ui.js');
+        const VCx = await import('./visual/vis-core.js');
+        const VP = await import('./visual/vis-player.js');
+        const waitV = (ms) => new Promise((r) => setTimeout(r, ms));
+        const paneV = () => state.tabs.get(keyV).pane;
+        const stV_ = () => state.tabs.get(keyV).visState;
+        const dPathV = await kapi.join(state.root, 'เล่มหนึ่ง', 'Draft', 'default');
+        const chDirV = await kapi.join(dPathV, 'Chapters', '01 - บทที่หนึ่ง');
+        const scPathV = await kapi.join(chDirV, 'scene-01.md');
+        const spPathV = await kapi.join(chDirV, 'scene-02.md');
+        const visPathV = await VU.visPathOf(scPathV);
+        const keyV = '::vis::' + scPathV;
+
+        check('[V-1] ไฟล์ตารางอยู่ข้างไฟล์ฉาก ชื่อ <ฉาก>_vis.csv',
+              visPathV === (await kapi.join(chDirV, 'scene-01_vis.csv')), visPathV);
+        check('[V-1] ยังไม่มีไฟล์ → hasVis เป็นเท็จ', (await VU.hasVis(scPathV)) === false);
+
+        // ── [ข้อ 6] ปุ่มบนแถบเครื่องมือ: เปิดฉากแล้วกดปุ่มได้เลย ไม่ต้องคลิกขวา ──
+        await openScene(scPathV, 'ตลาดเก่า');
+        await waitV(250);
+        const tbVis = $('#tb-visual');
+        check('[V-2] ★ มีปุ่ม "เล่าด้วยภาพ" บนแถบเครื่องมือ', !!tbVis);
+        refreshToolbar();
+        check('[V-2] เปิดฉากอยู่ → ปุ่มกดได้', tbVis && !tbVis.classList.contains('dis'));
+        tbVis.click();
+        await waitV(700);
+        check('[V-2] กดปุ่มแล้วสร้างไฟล์ + เปิดแท็บ',
+              (await kapi.exists(visPathV)) && state.tabs.has(keyV));
+        check('[V-2] แท็บที่เปิดคือแท็บที่ active', !!state.active && state.active.file === keyV,
+              state.active && state.active.file);
+        check('[V-2] ไฟล์ที่สร้างมี BOM (Excel ไทยไม่เพี้ยน)',
+              (await kapi.readFile(visPathV)).charCodeAt(0) === 0xFEFF);
+
+        // แถวลูกใน Explorer — ต้อง "มองเห็นได้จริง" ไม่ใช่แค่มีใน DOM (บทเรียน K-1)
+        await buildTree();
+        const vRowV = [...document.querySelectorAll('#tree .vis-row')].find((r) => r.dataset.path === scPathV);
+        check('[V-3] แถว "เล่าด้วยภาพ" โผล่ใน Explorer ใต้ฉากที่มีไฟล์', !!vRowV);
+        if (vRowV) {
+          const csV = getComputedStyle(vRowV), bxV = vRowV.getBoundingClientRect();
+          check('[V-3] ★ แถวมองเห็นได้จริง (opacity+visibility+ขนาด)',
+                csV.display !== 'none' && csV.visibility !== 'hidden'
+                && parseFloat(csV.opacity || '1') > 0.05 && bxV.width > 0 && bxV.height > 0,
+                csV.display + '/' + csV.visibility + '/' + csV.opacity + '/' + bxV.width + 'x' + bxV.height);
+        }
+        check('[V-3] ฉากที่ยังไม่มีไฟล์ ไม่มีแถวลูก',
+              ![...document.querySelectorAll('#tree .vis-row')].some((r) => r.dataset.path === spPathV));
+
+        check('[V-4] แตกย่อหน้าจากเนื้อฉากได้', stV_().lines.length >= 4, stV_().lines.length);
+        check('[V-4] ตารางใหม่เริ่มว่าง (ผู้ใช้เลือกบรรทัดเอง)', stV_().rows.length === 0);
+        check('[V-4] ตารางเปล่าโชว์ข้อความว่ายังไม่มีแถว', !!paneV().querySelector('.vis-empty'));
+
+        // ── กล่องเลือกบรรทัด: ติ๊ก 2 บรรทัด → ได้ 2 แถว ──
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());   // กันกล่องค้างจากเทสก่อน
+        const pV = VU.pickLinesDialog(stV_());
+        await waitV(80);
+        const dlgV = [...document.querySelectorAll('.k-dialog.vis-pick')].pop();
+        check('[V-5] กล่องเลือกบรรทัดเปิดขึ้น', !!dlgV);
+        const cbsV = dlgV ? [...dlgV.querySelectorAll('.vis-pick-row input')] : [];
+        check('[V-5] มีบรรทัดให้เลือกครบตามเนื้อฉาก', cbsV.length === stV_().lines.length,
+              cbsV.length + '/' + stV_().lines.length);
+        // ย่อหน้าที่ 2 คือตัวที่จะถูกแก้ใน [V-10]
+        cbsV[0].checked = true; cbsV[0].dispatchEvent(new Event('change'));
+        cbsV[1].checked = true; cbsV[1].dispatchEvent(new Event('change'));
+        dlgV.querySelector('.k-ok').click();
+        await pV;
+        await waitV(250);
+
+        check('[V-6] ได้ 2 แถวตามที่ติ๊ก', stV_().rows.length === 2, stV_().rows.length);
+        check('[V-6] เลขลำดับ 1,2', stV_().rows[0].no === 1 && stV_().rows[1].no === 2);
+        check('[V-6] แถวพกสำเนาข้อความต้นทางมาด้วย',
+              stV_().rows[0].text === stV_().lines[0].text && stV_().rows[1].text === stV_().lines[1].text);
+        const diskV = VCx.parseVis(await kapi.readFile(visPathV));
+        check('[V-6] ★ บันทึกลงไฟล์ทันที ไม่มีงานค้าง (กฎข้อ 1)', diskV.length === 2, diskV.length);
+        check('[V-6] ข้อความในไฟล์ตรงกับบนจอ', diskV[1].text === stV_().rows[1].text);
+
+        // ── ตาราง: ราง ▲▼ หน้าสุด + ปุ่มลบท้ายสุด (ข้อ 8) ──
+        const tblV = paneV().querySelector('.vis-table');
+        check('[V-7] วาดเป็นตาราง grid', !!tblV);
+        const colsShownV = VCx.visibleCols(state.meta && state.meta.visColumns);
+        check('[V-7] คอลัมน์ "ฉาก" ปิดไว้เป็นค่าเริ่มต้น', !colsShownV.includes('scene'));
+        check('[V-7] คอลัมน์ตัวละคร/สถานที่เปิดไว้ (ข้อ 2)', colsShownV.includes('entities'));
+        check('[V-7] หัวตาราง = คอลัมน์ที่เปิด + รางปุ่มหัวท้าย',
+              tblV.querySelectorAll('.vis-th').length === colsShownV.length + 2,
+              tblV.querySelectorAll('.vis-th').length + '/' + (colsShownV.length + 2));
+        const gridCols = tblV.style.gridTemplateColumns.trim().split(/\s+/);
+        check('[V-8] ★ รางเลื่อนลำดับอยู่คอลัมน์แรกสุด', !!tblV.querySelector('.vis-th-move')
+              && tblV.children[0].classList.contains('vis-th-move'),
+              [...tblV.children].slice(0, 3).map((c) => c.className).join(' | '));
+        check('[V-8] ★ ปุ่มลบอยู่ท้ายสุด หลังคอมเมนต์',
+              tblV.children[colsShownV.length + 1].classList.contains('vis-th-del'),
+              (tblV.children[colsShownV.length + 1] || {}).className);
+        const mvCell = tblV.querySelector('.vis-td-move');
+        check('[V-8] ราง ▲▼ มีสองปุ่ม', mvCell && mvCell.querySelectorAll('.vis-mini').length === 2);
+        {
+          const csMv = getComputedStyle(mvCell);
+          check('[V-8] ★ ▲▼ เรียงบน-ล่าง (สองแถว)', csMv.flexDirection === 'column', csMv.flexDirection);
+        }
+        check('[V-8] แถวแรกกดเลื่อนขึ้นไม่ได้', mvCell.querySelector('.vis-up').disabled === true);
+
+        // ── [ข้อ 4] กว้างเกิน 1000px → เลื่อนแนวนอนได้ ──
+        check('[V-9] ★ ตารางกว้างเกิน 1000px', parseFloat(tblV.style.width) > 1000, tblV.style.width);
+        {
+          const bodyV = paneV().querySelector('.vis-body');
+          check('[V-9] ★ กรอบตารางเลื่อนแนวนอนได้ (ไม่ดันทั้งหน้า)',
+                getComputedStyle(bodyV).overflowX !== 'visible'
+                && bodyV.scrollWidth > bodyV.clientWidth,
+                getComputedStyle(bodyV).overflowX + ' ' + bodyV.scrollWidth + '>' + bodyV.clientWidth);
+        }
+
+        // ── ย้ายลำดับด้วยปุ่ม ▼ บนแถวแรก ──
+        const firstTextV = stV_().rows[0].text;
+        tblV.querySelector('.vis-td-move .vis-down').click();
+        await waitV(250);
+        check('[V-10] ★ ย้ายลำดับแล้วสลับจริง', stV_().rows[1].text === firstTextV,
+              stV_().rows[1].text.slice(0, 20));
+        check('[V-10] เลขลำดับเขียนใหม่', stV_().rows[0].no === 1 && stV_().rows[1].no === 2);
+        check('[V-10] ลำดับใหม่ลงไฟล์แล้ว',
+              VCx.parseVis(await kapi.readFile(visPathV))[1].text === firstTextV);
+
+        // ── [ข้อ 1] ผูกหลายบรรทัดต่อหนึ่งแถว + แก้ (เพิ่ม/ลบ) ──
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        const pE = VU.pickLinesDialog(stV_(), 0);
+        await waitV(80);
+        const dlgE = [...document.querySelectorAll('.k-dialog.vis-pick')].pop();
+        const cbsE = [...dlgE.querySelectorAll('.vis-pick-row input')];
+        check('[V-11] แก้การผูก: เห็นทุกบรรทัดของฉาก', cbsE.length === stV_().lines.length);
+        check('[V-11] ★ บรรทัดที่แถวนี้ผูกอยู่ถูกติ๊กไว้ให้แล้ว',
+              cbsE.filter((c) => c.checked).length === 1, cbsE.filter((c) => c.checked).length);
+        const addIdx = cbsE.findIndex((c) => !c.checked);
+        cbsE[addIdx].checked = true; cbsE[addIdx].dispatchEvent(new Event('change'));
+        dlgE.querySelector('.k-ok').click();
+        await pE;
+        await waitV(250);
+        const resE = VCx.resolveRow(stV_().rows[0], stV_().lines);
+        check('[V-11] ★ หนึ่งแถวผูกได้ 2 บรรทัด', resE.live.length === 2, resE.live.length);
+        check('[V-11] ไฟล์เก็บสองสมอ',
+              VCx.parseRefs(VCx.parseVis(await kapi.readFile(visPathV))[0].ref).length === 2);
+        check('[V-11] ช่อง action วาดสองย่อหน้า',
+              paneV().querySelectorAll('.vis-td-text .vis-line').length >= 3,
+              paneV().querySelectorAll('.vis-td-text .vis-line').length);
+
+        // ลบบรรทัดออกจากการผูก (ติ๊กออก)
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        const pR = VU.pickLinesDialog(stV_(), 0);
+        await waitV(80);
+        const dlgR = [...document.querySelectorAll('.k-dialog.vis-pick')].pop();
+        const cbsR = [...dlgR.querySelectorAll('.vis-pick-row input')].filter((c) => c.checked);
+        cbsR[0].checked = false; cbsR[0].dispatchEvent(new Event('change'));
+        dlgR.querySelector('.k-ok').click();
+        await pR;
+        await waitV(250);
+        check('[V-11] ★ ติ๊กออกแล้วเลิกผูกบรรทัดนั้น',
+              VCx.resolveRow(stV_().rows[0], stV_().lines).live.length === 1);
+        check('[V-11] จำนวนแถวเท่าเดิม (ไม่ลบแถว)', stV_().rows.length === 2);
+
+        // ── [ข้อ 2] คอลัมน์ตัวละคร/สถานที่ ──
+        {
+          // สร้างตัวละครใน Wiki ที่ "โผล่ในเนื้อฉากจริง" แล้วโหลดรายชื่อใหม่
+          // (ของที่ fixture แถมมาชื่อ "ยัยแมวเก้าชีวิต" ซึ่งไม่ได้เขียนเต็มชื่อในฉาก)
+          const toraF = await kapi.join(state.root, 'Wiki', 'characters', 'tora.json');
+          await kapi.writeFile(toraF, JSON.stringify(
+            { name: 'โทระ', entityTypeKey: 'characters', aliases: [] }, null, 2));
+          await smart.loadNames(state.root);
+          check('[V-12] รายชื่อ Wiki มีตัวละครที่เพิ่งสร้าง', (smart.names || []).includes('โทระ'));
+          const iTora = stV_().lines.findIndex((l) => l.text.includes('โทระ'));
+          check('[V-12] เนื้อฉากมีชื่อตัวละครนี้อยู่จริง', iTora >= 0);
+          VCx.bindRow(stV_().rows[0], stV_().lines, [iTora].filter((x) => x >= 0));
+          await kapi.writeFile(visPathV, VCx.dumpVis(stV_().rows));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          const entCell = paneV().querySelector('.vis-td-entities .vis-ents');
+          check('[V-12] มีคอลัมน์ตัวละคร/สถานที่ในตาราง', !!entCell);
+          const chips = entCell ? [...entCell.querySelectorAll('.vis-ent')] : [];
+          check('[V-12] ★ ชื่อจาก Wiki ที่โผล่ในบรรทัดที่ผูก ขึ้นเป็นชิป',
+                chips.some((c) => c.textContent === 'โทระ'),
+                chips.map((c) => c.textContent).join('|'));
+          check('[V-12] ★ ชิปที่มีหน้า Wiki คลิกเปิดได้ (ข้อ 5)',
+                chips.some((c) => c.classList.contains('has-wiki')));
+        }
+
+        // ── [ข้อ 3] ลากปรับความกว้างคอลัมน์ ──
+        {
+          const th = paneV().querySelector('.vis-th-image');
+          check('[V-13] หัวคอลัมน์ frame มีมือจับลาก', !!th && !!th.querySelector('.vis-grip'));
+          check('[V-13] ชื่อคอลัมน์เปลี่ยนเป็น frame แล้ว', th.textContent.trim() === 'frame', th.textContent);
+          check('[V-13] ชื่อคอลัมน์ข้อความเปลี่ยนเป็น action แล้ว',
+                paneV().querySelector('.vis-th-text').textContent.trim() === 'action');
+          const grip = th.querySelector('.vis-grip');
+          const r0 = th.getBoundingClientRect();
+          grip.dispatchEvent(new MouseEvent('mousedown', { clientX: r0.right, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: r0.right + 120, bubbles: true }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+          await waitV(350);
+          const savedW = ((await kapi.readJson(await kapi.join(state.root, 'project.khn.json'))).visColumns || [])
+            .find((c) => c.key === 'image');
+          check('[V-13] ★ ลากแล้วคอลัมน์กว้างขึ้นจริง',
+                paneV().querySelector('.vis-th-image').getBoundingClientRect().width > r0.width + 60,
+                r0.width + ' → ' + paneV().querySelector('.vis-th-image').getBoundingClientRect().width);
+          check('[V-13] ★ ความกว้างถูกบันทึกลง project.khn.json',
+                !!savedW && savedW.w > VCx.VIS_COL_W.image, savedW && savedW.w);
+        }
+
+        // ── [ข้อ 9] รูปในคอลัมน์ต้องใหญ่ ──
+        stV_().rows[0].image = 'sunset.png';
+        await kapi.writeFile(visPathV, VCx.dumpVis(stV_().rows));
+        await VU.renderVisual(keyV);
+        await waitV(350);
+        {
+          const thumbV = paneV().querySelector('.vis-thumb');
+          check('[V-14] รูปขึ้นเป็นภาพจริง', !!thumbV && /sunset\.png$/.test(thumbV.src || ''),
+                thumbV ? String(thumbV.src).slice(-30) : 'ไม่มี');
+          check('[V-14] ★ รูปกว้างอย่างน้อย 200px (ไม่ใช่ thumbnail จิ๋ว)',
+                thumbV.getBoundingClientRect().width >= 200, thumbV.getBoundingClientRect().width);
+        }
+        try { await kapi.testShot('/tmp/k2_vis_table.png'); } catch {}
+
+        // ── [ข้อ 5] เลขบรรทัดโชว์ในตารางได้ ──
+        {
+          const wasLn = !!state.settings.lineNumbers;
+          state.settings.lineNumbers = true;
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check('[V-15] ★ เปิดเลขบรรทัดแล้วโชว์ในตารางเล่าด้วยภาพ',
+                paneV().querySelectorAll('.vis-td-text .vis-lineno').length > 0,
+                paneV().querySelectorAll('.vis-td-text .vis-lineno').length);
+          const lnEl = paneV().querySelector('.vis-td-text .vis-lineno');
+          const csLn = getComputedStyle(lnEl), bxLn = lnEl.getBoundingClientRect();
+          check('[V-15] เลขบรรทัดมองเห็นได้จริง',
+                csLn.display !== 'none' && csLn.visibility !== 'hidden'
+                && parseFloat(csLn.opacity || '1') > 0.05 && bxLn.width > 0 && bxLn.height > 0);
+          state.settings.lineNumbers = false;
+          await VU.renderVisual(keyV);
+          await waitV(250);
+          check('[V-15] ปิดแล้วเลขหายไป',
+                paneV().querySelectorAll('.vis-td-text .vis-lineno').length === 0);
+          state.settings.lineNumbers = wasLn;
+        }
+
+        // ── [ข้อ 5] เลขบรรทัดในหน้า Wiki (แต่ละกล่องนับของตัวเอง) ──
+        {
+          const wasLn = !!state.settings.lineNumbers;
+          const wf = await kapi.join(state.root, 'Wiki', 'characters', 'cat.json');
+          const we = await kapi.readJson(wf);
+          we.sections = [{ title: 'ประวัติ', content: 'บรรทัดหนึ่ง\n\nบรรทัดสอง\n\nบรรทัดสาม' }];
+          await kapi.writeFile(wf, JSON.stringify(we, null, 2));
+          await openEntity(wf);
+          await waitV(600);
+          state.settings.lineNumbers = true;
+          applySettings();
+          const drawn = refreshLineGutter();
+          await waitV(200);
+          const wPane = state.active && state.active.pane;
+          check('[V-16] เปิดหน้า Wiki อยู่จริง',
+                !!wPane && wPane.classList.contains('wiki-pane'));
+          check('[V-16] ★ Wiki มีเลขบรรทัดแล้ว (เดิมถูกข้ามทั้งหน้า)',
+                drawn > 0 && wPane.querySelectorAll('.wiki-ln-no').length > 0,
+                drawn + '/' + (wPane ? wPane.querySelectorAll('.wiki-ln-no').length : -1));
+          check('[V-16] ★ แต่ละกล่องนับเริ่มที่ 1 ของตัวเอง (ไม่ใช่นับรวมทั้งหน้า)',
+                [...wPane.querySelectorAll('.wiki-sec-ed')].every((b) => {
+                  const ns = [...b.querySelectorAll('.wiki-ln-no')].map((d) => d.textContent);
+                  return !ns.length || ns[0] === '1';
+                }));
+          {
+            const d0 = wPane.querySelector('.wiki-ln-no');
+            const cs0 = getComputedStyle(d0), bx0 = d0.getBoundingClientRect();
+            check('[V-16] เลขบรรทัด Wiki มองเห็นได้จริง',
+                  cs0.display !== 'none' && cs0.visibility !== 'hidden'
+                  && parseFloat(cs0.opacity || '1') > 0.05 && bx0.width > 0 && bx0.height > 0);
+          }
+          state.settings.lineNumbers = false;
+          applySettings();
+          refreshLineGutter();
+          await waitV(150);
+          check('[V-16] ปิดแล้วเลขใน Wiki หายไป', wPane.querySelectorAll('.wiki-ln-no').length === 0);
+          state.settings.lineNumbers = wasLn;
+          applySettings();
+          await activate(keyV);
+          await waitV(200);
+        }
+
+        // ── sync: แก้เนื้อฉากแล้วต้อง "แจ้ง" ไม่ใช่เขียนทับเงียบ ──
+        {
+          const rawV = await kapi.readFile(scPathV);
+          await kapi.writeFile(scPathV, rawV.replace('ค่ำวันนั้น', 'ค่ำคืนนั้น'));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          const resV = VCx.resolveAll(stV_().rows, stV_().lines);
+          check('[V-17] ★ ต้นทางถูกแก้ → สถานะ changed (ไม่ลบ ไม่เขียนทับ)',
+                resV.some((r) => r.status === 'changed'), resV.map((r) => r.status).join(','));
+          check('[V-17] แถบเครื่องมือเตือนจำนวนแถวที่ต้องอัปเดต', !!paneV().querySelector('.vis-warn'));
+          const syncAllV = paneV().querySelector('.vis-syncall');
+          check('[V-17] มีปุ่มอัปเดตทั้งหมด', !!syncAllV);
+          if (syncAllV) syncAllV.click();
+          await waitV(400);
+          check('[V-17] อัปเดตแล้วไม่เหลือแถวที่ต้องอัปเดต',
+                VCx.resolveAll(stV_().rows, stV_().lines).every((r) => r.status !== 'changed'),
+                VCx.resolveAll(stV_().rows, stV_().lines).map((r) => r.status).join(','));
+          check('[V-17] ข้อความใหม่ถูกเก็บลงไฟล์',
+                (await kapi.readFile(visPathV)).includes('ค่ำคืนนั้น'));
+        }
+
+        // ── [ข้อ 1] บรรทัดที่ผูกถูกลบจากฉาก → "ก็ไม่มี" แต่แถวยังอยู่ ──
+        {
+          const before = stV_().rows.length;
+          const rawV = await kapi.readFile(scPathV);
+          const target = stV_().lines.find((l) => l.text.includes('ค่ำคืนนั้น'));
+          await kapi.writeFile(scPathV, rawV.replace(target.text, 'เขียนใหม่หมดไม่เหลือเค้าเดิมสักคำเดียว'));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check('[V-18] ★ บรรทัดหาย → แถวยังอยู่ครบ (ไม่ลบแถว)', stV_().rows.length === before,
+                stV_().rows.length + '/' + before);
+          const anyLost = VCx.resolveAll(stV_().rows, stV_().lines)
+            .some((r) => r.parts.some((p) => p.status === 'lost'));
+          check('[V-18] ★ สมอที่หายถูกทำเครื่องหมาย lost แต่ยังอยู่ในไฟล์', anyLost);
+          check('[V-18] ไฟล์ยังเก็บสมอเดิมไว้ (เผื่อผู้เขียนกู้ข้อความคืน)',
+                VCx.parseVis(await kapi.readFile(visPathV)).length === before);
+          await kapi.writeFile(scPathV, rawV);       // คืนเนื้อฉากเดิม
+          await VU.renderVisual(keyV);
+          await waitV(300);
+        }
+
+        // ── เนื้อฉากต้องไม่ถูกแตะเลย (ตารางนี้อ่านอย่างเดียว) ──
+        check('[V-19] ★ ตารางไม่เคยเขียนทับเนื้อฉาก',
+              !(await kapi.readFile(scPathV)).includes('_vis'));
+
+        // ── มุมมองรายการ ──
+        state._visView = 'list';
+        await VU.renderVisual(keyV);
+        await waitV(300);
+        try { await kapi.testShot('/tmp/k2_vis_list.png'); } catch {}
+        check('[V-20] มุมมองรายการวาดเป็นการ์ด', paneV().querySelectorAll('.vis-card').length === 2,
+              paneV().querySelectorAll('.vis-card').length);
+        state._visView = 'table';
+        await VU.renderVisual(keyV);
+        await waitV(250);
+
+        // ── แสดง/ซ่อนคอลัมน์ (เก็บใน project.khn.json ไม่ใช่ localStorage) ──
+        {
+          const before = paneV().querySelectorAll('.vis-th').length;
+          const cfgV = VCx.normalizeCols(state.meta && state.meta.visColumns);
+          VCx.toggleCol(cfgV, 'remark');
+          state.meta.visColumns = cfgV.map((c) => ({ key: c.key, on: c.on, w: c.w }));
+          await saveProjectMeta();
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check('[V-21] ซ่อนคอลัมน์แล้วหัวตารางลดลง',
+                paneV().querySelectorAll('.vis-th').length === before - 1,
+                paneV().querySelectorAll('.vis-th').length + '/' + before);
+          const metaOnDiskV = await kapi.readJson(await kapi.join(state.root, 'project.khn.json'));
+          check('[V-21] ★ ค่าคอลัมน์เก็บใน project.khn.json (พกไปกับโปรเจกต์)',
+                (metaOnDiskV.visColumns || []).some((c) => c.key === 'remark' && c.on === false));
+          VCx.toggleCol(cfgV, 'remark');
+          state.meta.visColumns = cfgV.map((c) => ({ key: c.key, on: c.on, w: c.w }));
+          await saveProjectMeta();
+          await VU.renderVisual(keyV);
+          await waitV(250);
+        }
+
+        // ── [ข้อ 7] เต็มจอ: รูปเต็มจอ · ข้อความเป็นแผ่นซ้อน ซ่อนได้ ──
+        VP.openVisPlayer(stV_(), 0);
+        await waitV(300);
+        check('[V-22] เปิดเต็มจอได้', VP.visPlayerOpen() && !!document.querySelector('.vis-player'));
+        {
+          const plBoxV = document.querySelector('.vis-player').getBoundingClientRect();
+          check('[V-22] แผ่นเต็มจอจริง',
+                plBoxV.width >= window.innerWidth - 2 && plBoxV.height >= window.innerHeight - 2,
+                plBoxV.width + 'x' + plBoxV.height);
+          const stg = document.querySelector('.vis-player .vis-pl-stage').getBoundingClientRect();
+          check('[V-22] ★ เวทีรูปกินเต็มจอ ไม่ถูกกล่องข้อความเบียด',
+                stg.width >= window.innerWidth - 2 && stg.height >= window.innerHeight - 2,
+                stg.width + 'x' + stg.height);
+          const imEl = document.querySelector('.vis-player .vis-pl-img').getBoundingClientRect();
+          check('[V-22] ★ รูปขยายเต็มความกว้างจอ', imEl.width >= window.innerWidth - 2, imEl.width);
+        }
+        try { await kapi.testShot('/tmp/k2_vis_player.png'); } catch {}
+        check('[V-22] เริ่มที่แถวแรก', VP.visPlayerAt() === 0);
+        check('[V-22] ปุ่มย้อนกลับปิดอยู่ที่แถวแรก',
+              document.querySelector('.vis-player .vis-pl-prev').disabled === true);
+        // ซ่อน/แสดงข้อความ
+        check('[V-23] เริ่มมาข้อความโชว์อยู่', !VP.visPlayerTextHidden()
+              && parseFloat(getComputedStyle(document.querySelector('.vis-pl-box')).opacity) > 0.5);
+        document.querySelector('.vis-player .vis-pl-eye').click();
+        await waitV(300);
+        check('[V-23] ★ กด 👁 แล้วข้อความถูกซ่อน', VP.visPlayerTextHidden()
+              && parseFloat(getComputedStyle(document.querySelector('.vis-pl-box')).opacity) < 0.1,
+              getComputedStyle(document.querySelector('.vis-pl-box')).opacity);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', code: 'KeyH', bubbles: true }));
+        await waitV(300);
+        check('[V-23] ★ คีย์ H สลับกลับมาโชว์ได้', !VP.visPlayerTextHidden());
+        document.querySelector('.vis-player .vis-pl-next').click();
+        await waitV(150);
+        check('[V-24] ★ กดเดินหน้าแล้วไปแถวถัดไป', VP.visPlayerAt() === 1);
+        check('[V-24] ★ ไม่มีสัญลักษณ์มาร์กดาวน์โผล่บนสไลด์',
+              !/\*\*|~~/.test(document.querySelector('.vis-player .vis-pl-text').textContent),
+              document.querySelector('.vis-player .vis-pl-text').textContent.slice(0, 40));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+        await waitV(150);
+        check('[V-24] ลูกศรซ้ายย้อนกลับได้', VP.visPlayerAt() === 0);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await waitV(150);
+        check('[V-24] Esc ปิดเต็มจอ', !VP.visPlayerOpen() && !document.querySelector('.vis-player'));
+
+        // ── ลบแถว: ปุ่มอยู่ท้ายสุด ──
+        {
+          const before = stV_().rows.length;
+          const delBtn = paneV().querySelector('.vis-td-del .vis-mini-del');
+          check('[V-25] ปุ่มลบอยู่ในคอลัมน์ท้ายสุด', !!delBtn);
+          delBtn.click();
+          await waitV(150);
+          const ovD = [...document.querySelectorAll('.k-overlay')].pop();
+          ovD.querySelector('.k-dialog .k-ok').click();
+          await waitV(350);
+          check('[V-25] ★ ลบแถวได้จริง', stV_().rows.length === before - 1,
+                stV_().rows.length + '/' + before);
+          check('[V-25] ลบแล้วลงไฟล์ทันที',
+                VCx.parseVis(await kapi.readFile(visPathV)).length === before - 1);
+        }
+
+        // ── ไฟล์คู่ต้องเดินตามฉาก: ทำสำเนาฉาก ──
+        {
+          const scJsonV = await kapi.join(dPathV, 'scenes.json');
+          const beforeIdsV = new Set((await kapi.readJson(scJsonV)).chapters.c1.map((x) => x.id));
+          const rowV = (await kapi.readJson(scJsonV)).chapters.c1.find((x) => x.id === 'sc1');
+          await duplicateScene(dPathV, { guid: 'c1', folderName: '01 - บทที่หนึ่ง', title: 'บทที่หนึ่ง' }, rowV);
+          await waitV(600);
+          const dupRowV = (await kapi.readJson(scJsonV)).chapters.c1.find((x) => !beforeIdsV.has(x.id));
+          check('[V-26] ★ ทำสำเนาฉากแล้วไฟล์ตารางไปด้วย',
+                !!dupRowV && (await kapi.exists(await kapi.join(chDirV, VCx.visFileName(dupRowV.fileName)))),
+                dupRowV ? dupRowV.fileName : 'ไม่มีฉากสำเนา');
+        }
       }
 
     out.push('ALL OK');

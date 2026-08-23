@@ -8,6 +8,9 @@ import { ask, confirmBox, popupMenu } from './ui.js';
 import { dumpMdFile, parseMdFile } from './md.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติหนักของฉากอยู่ใน frontmatter — เขียนผ่านที่นี่ที่เดียว
 import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
+// ตาราง "เล่าด้วยภาพ" เป็นไฟล์คู่ข้างฉาก (<ชื่อฉาก>_vis.csv) — ทุกที่ที่ย้าย/ลบ/ทำสำเนาฉาก
+// ต้องพาไฟล์นี้ไปด้วย ไม่งั้นกลายเป็นไฟล์กำพร้าที่ผู้ใช้มองไม่เห็นแต่ยังกินที่
+import { visFileName } from './visual/vis-core.js';
 
 export async function renameScene(dPath, ch, sc) {
   const title = await ask(tt('ui.scene.nameSceneNew'), { value: sc.title }); if (!title) return;
@@ -132,6 +135,7 @@ export async function deleteScene(dPath, ch, sc) {
   const d = await kapi.readJson(sf);
   d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
   await buildTree(); refreshNetwork();
 }
 
@@ -225,6 +229,7 @@ export async function duplicateScene(dPath, ch, sc) {
   d.chapters[ch.guid] = [...list, nrow];
   await kapi.writeFile(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), dumpMdFile(meta, body));
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await copyVisSidecar(dPath, ch.folderName, row.fileName, fileName);
   await buildTree();
   openScene(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), newTitle);
 }
@@ -263,6 +268,7 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
 
   // ย้ายไฟล์เนื้อหาจริงก่อน แล้วค่อยแก้ทะเบียน (ถ้าย้ายไฟล์พลาด ทะเบียนยังตรงของเดิม)
   await kapi.move(oldPath, await kapi.join(dPath, 'Chapters', dstCh.folderName, newFile));
+  await moveVisSidecar(dPath, ch.folderName, row.fileName, dstCh.folderName, newFile);
   d.chapters[ch.guid] = from.filter((x) => x.id !== sc.id);
   row.order = order; row.fileName = newFile; row.chapterGuid = dstCh.guid;
   d.chapters[dstCh.guid] = [...dst, row];
@@ -355,4 +361,39 @@ export function renumberMenuItems(dPath) {
   return [
     { label: tt('ui.common.orderNumNew'), click: () => renumberChapters(dPath) },
   ];
+}
+
+
+// ───────── ไฟล์คู่ของ "เล่าด้วยภาพ" ─────────
+// ทั้งสามตัวห้าม throw — ฉากย้าย/ลบสำเร็จไปแล้ว ไฟล์คู่พลาดต้องไม่ทำให้ทั้งงานล้ม
+async function visOf(dPath, folderName, fileName) {
+  return kapi.join(dPath, 'Chapters', folderName, visFileName(fileName));
+}
+async function moveVisSidecar(dPath, srcFolder, srcFile, dstFolder, dstFile) {
+  try {
+    const src = await visOf(dPath, srcFolder, srcFile);
+    if (!(await kapi.exists(src))) return false;
+    await kapi.move(src, await visOf(dPath, dstFolder, dstFile));
+    return true;
+  } catch { return false; }
+}
+async function copyVisSidecar(dPath, folderName, srcFile, dstFile) {
+  try {
+    const src = await visOf(dPath, folderName, srcFile);
+    if (!(await kapi.exists(src))) return false;
+    await kapi.writeFile(await visOf(dPath, folderName, dstFile), await kapi.readFile(src));
+    return true;
+  } catch { return false; }
+}
+/**
+ * ฉากถูกย้ายไปถังขยะที่ `trashPath` แล้ว — เอาตารางไปเก็บเป็น `<trashPath>.vis.csv`
+ * (ไม่ใช้ deleteToTrash เพราะมันถามยืนยันซ้ำ · ชื่อคู่กันแบบนี้ทำให้กู้คืนพร้อมฉากได้ในที่เดียว)
+ */
+async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
+  try {
+    const src = await visOf(dPath, folderName, fileName);
+    if (!trashPath || !(await kapi.exists(src))) return false;
+    await kapi.move(src, trashPath + '.vis.csv');
+    return true;
+  } catch { return false; }
 }

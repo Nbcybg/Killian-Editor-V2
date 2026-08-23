@@ -35,7 +35,8 @@ export function syncIo() {
   };
 }
 
-export const SKIP_DIRS = ['Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research'];
+export const SKIP_DIRS = ['Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research',
+                          'Analysis'];   // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
 export const WIKI_DIRS = ['Wiki', 'Bible'];
 
 /** chapterGuid → folderName จาก draft.json */

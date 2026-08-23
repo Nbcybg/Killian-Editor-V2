@@ -127,9 +127,9 @@ ui.aia.dotPaceScene,จุดที่จังหวะตกติดกัน
 ui.aia.dotStoryCompareStructure,จุดพลิกของเรื่องเทียบโครงสร้าง 3 องก์
 ui.aia.dragWordNextChapter,ความหลากหลายของคำศัพท์ต่อบท
 ui.aia.findWordDupSplit,หาคำและวลีที่ซ้ำจนสะดุดตา แยกตามบทและตามตัวละครผู้พูด
-ui.aia.foot,"Meanwhile, these already work: Tools -> Word History - AI -> Plot Hole Detector - AI -> Consistency Check"
+ui.aia.foot,Every figure comes from the real files in your project · click a row to jump to that scene.
 ui.aia.graphLongSceneOrder,กราฟความยาวฉากเรียงตามลำดับเรื่อง
-ui.aia.lead,A set of AI manuscript analysis tools that are on the way. This is a mockup so you can see what each report will tell you.
+ui.aia.lead,"Eleven ways to analyse the manuscript, scoped to the whole project, one book, one chapter or one scene. Every one computes locally; AI adds a reading on top when configured."
 ui.aia.longScene,ความยาวฉาก
 ui.aia.mockup,Mockup - not enabled yet
 ui.aia.nowShowSamplePage,ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง
@@ -3514,7 +3514,7 @@ ui.panel.confirmDeleteWorkflow,"Delete workflow ""%s""?"
 ui.panel.confirmRestore,Restore this version over the current one?
 ui.panel.dashboardTitle,Dashboard
 ui.panel.dataCollapseTaskOpen,ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ
-ui.panel.desc_ai_analyzer,"AI manuscript analysis - pacing, character arcs, repeated words, conflict and scene length (mockup for now)."
+ui.panel.desc_ai_analyzer,"AI manuscript analysis — pacing, character arcs, repeats, conflict, scene length, plot holes, continuity, shipping, scoring, screentime."
 ui.panel.desc_books,"Manage books and drafts - cover, blurb, status, per-book statistics, drag to reorder."
 ui.panel.desc_branch,"The branching story map — scene cards joined by choice links · drag cards around · pick card/line colours · warns about dead ends, loops and choices with no target · exports to HTML/Markdown/JSON/image"
 ui.panel.desc_comments,"Comments on the open scene - threaded replies, resolvable. Stored at the end of the .md file so they travel with it."
@@ -3608,7 +3608,7 @@ ui.panel.searchPlaceholder,Search / Filter — e.g. status:draft tag:action
 ui.panel.searchTextProjectAll,ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น
 ui.panel.searchToggle,Toggle search bar
 ui.panel.selectScene,Select a scene to view properties
-ui.panel.setToolAnalyzeSource,ชุดเครื่องมือวิเคราะห์ต้นฉบับด้วย AI — จังหวะเรื่อง · ส่วนโค้งตัวละคร · คำซ้ำ · ความขัดแย้ง · ความยาวฉาก (ยังเป็นตัวอย่างหน้าตา)
+ui.panel.setToolAnalyzeSource,"AI manuscript analysis — pacing, character arcs, repeats, conflict, scene length, plot holes, continuity, shipping, scoring, screentime."
 ui.panel.sortBy,Sort by
 ui.panel.sortDefault,Default order
 ui.panel.sortModified,Modified time
@@ -5091,3 +5091,256 @@ ui.app.proseIndentOn,Auto first-line indent: on ({0} in)
 ui.app.proseIndentOff,Auto first-line indent: off
 ui.dlg.spThaiAuto,Automatic (first available)
 ui.dlg.spThaiSample,"INT. BEDROOM - NIGHT / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"
+ui.aia.scopeProject,Whole project
+ui.aia.scopeBook,This book
+ui.aia.scopeChapter,This chapter
+ui.aia.scopeScene,This scene
+ui.aia.nScene, · {0} scenes
+ui.aia.stTempoAvg,Avg tempo
+ui.aia.stDialogueAvg,Avg dialogue
+ui.aia.stSlowRun,Slow runs
+ui.aia.stFastRun,Fast runs
+ui.aia.stCharAppear,Characters seen
+ui.aia.stChapter,Chapters
+ui.aia.stCharGap,Characters with gaps
+ui.aia.stUniqueWord,Unique words
+ui.aia.stRichWord,Lexical variety
+ui.aia.stSceneHasConflict,Scenes with conflict
+ui.aia.stNoConflict,Scenes with none
+ui.aia.stConflictDensity,Markers per 1k words
+ui.aia.stAvgWordScene,Avg words / scene
+ui.aia.stMedian,Median
+ui.aia.stTooLong,Outlier-long scenes
+ui.aia.stReadTime,Total reading time
+ui.aia.unitMin, min
+ui.aia.stRepeatFound,Repeats found
+ui.aia.stSceneAffected,Scenes affected
+ui.aia.stWindow,Proximity window
+ui.aia.unitWord, words
+ui.aia.stPairFound,Pairs found
+ui.aia.stTopPair,Strongest pair
+ui.aia.stRomanceWord,Romance cues
+ui.aia.stLead,Lead
+ui.aia.stLeadShare,Lead share
+ui.aia.stSilentChar,Never mentioned
+ui.aia.stScoreLocal,Metric score
+ui.aia.stHasStoryDate,Scenes with story date
+ui.aia.stNoPov,Scenes without POV
+ui.aia.stCharOnce,One-shot characters
+ui.aia.crPacing,Pacing
+ui.aia.crPacingNote,Avg tempo {0} · {1} slow runs
+ui.aia.crDialogue,Dialogue balance
+ui.aia.crDialogueNote,Dialogue averages {0}% of scene text
+ui.aia.crConflict,Conflict
+ui.aia.crConflictNote,{0} scenes show no conflict markers
+ui.aia.crSceneLen,Scene-length consistency
+ui.aia.crSceneLenNote,Mean {0} words · sd {1}
+ui.aia.crLanguage,Prose cleanliness
+ui.aia.crLanguageNote,{0} close repeats found
+ui.aia.crCast,Cast balance
+ui.aia.crCastNote,{0} characters · lead takes {1}%
+ui.aia.dPacing,"Which scenes drag and which rush — from dialogue share, sentence length and scene length."
+ui.aia.dArc,"How often each character appears per chapter, and where they disappear."
+ui.aia.dWords,Most-used words with a per-10k rate (stopwords and character names removed).
+ui.aia.dConflict,Which scenes carry conflict and which are flat.
+ui.aia.dLength,"Scene length against the median, with estimated reading time."
+ui.aia.tPlotHole,Plot holes
+ui.aia.dPlotHole,"Contradictions, threads left open, and missing motivation."
+ui.aia.tContinuity,Continuity check
+ui.aia.dContinuity,Whether character and world details stay consistent across the chosen scope.
+ui.aia.tRepeat,Repeated words
+ui.aia.dRepeat,The same word reappearing close enough to trip the reader.
+ui.aia.tShipping,Shipping / love interest
+ui.aia.dShipping,Character pairs that share the most scenes and romantic weight.
+ui.aia.tScore,Score
+ui.aia.dScore,Two layers: a metric score and an AI reading.
+ui.aia.tScreentime,Screentime / character weight
+ui.aia.dScreentime,"Who takes up the page, by scenes present and mentions."
+ui.aia.noteNoPov,No POV set
+ui.aia.noteCharOnce,Appears once in the whole scope — deliberate or dropped?
+ui.aia.sysEditor,"You are a meticulous, blunt manuscript editor. Analyse only what appears in the material given; never invent events or details. Answer with JSON only, nothing outside the JSON."
+ui.aia.taskPacing,"Read the per-scene tempo numbers and say where the story drags, where it rushes, and what to cut or expand."
+ui.aia.taskArc,"From each character’s appearances, say whose arc breaks, who vanishes for too long, and who shows no development."
+ui.aia.taskWords,"From the frequent words, say which are author tics to trim and which genuinely carry the theme."
+ui.aia.taskConflict,"Judge whether each scene has real conflict: who wants what, who blocks it, and which scenes need more friction."
+ui.aia.taskLength,"From scene lengths, say which to split, which are too short to land, and whether the breathing room is right."
+ui.aia.taskPlotHole,"Find self-contradictions, threads opened and never closed, missing motivation, and timeline clashes."
+ui.aia.taskContinuity,"Check whether character and world details (names, traits, abilities, rules) stay consistent or contradict."
+ui.aia.taskRepeat,"From the close-repeat list, say which really grate and suggest replacements that fit the voice."
+ui.aia.taskShipping,"Assess the chemistry of the pairs found: which carry real weight, which still lack the scene that sells it."
+ui.aia.taskScore,"Score the manuscript per criterion (opening, pacing, characters, dialogue, prose, hook) 0-10 each, with a one-line reason."
+ui.aia.taskScreentime,"From the screentime split, say whether the distribution suits this story, and who needs more or less room."
+ui.aia.dgPacing,{0} [{1}] tempo={2} dialogue={3}% {4} words
+ui.aia.dgArc,{0}: mentioned {1} times across {2} scenes
+ui.aia.dgArcGap, · absent: {0}
+ui.aia.dgWords,{0} ×{1} ({2} per 10k)
+ui.aia.dgConflict,{0} [{1}] no conflict marker found
+ui.aia.dgLength,{0} [{1}] {2} words ({3} min)
+ui.aia.dgRepeat,"“{0}” ×{1} in {2} [{3}], closest {4} words apart"
+ui.aia.dgShipping,{0} × {1}: {2} shared scenes · score {3}
+ui.aia.dgScreentime,{0}: {1} scenes · {2} mentions · {3}%
+ui.aia.dgScore,{0}: {1}/10 — {2}
+ui.aia.dgNote,{0} [{1}] {2}
+ui.aia.pHeadScope,Scope: 
+ui.aia.pHeadTask,Task: 
+ui.aia.pHeadNumbers,Numbers already counted by the app (treat as correct; do not recount):
+ui.aia.pRules,"Rules: cite only what appears above or in the attached scenes · include the exact sceneId when you refer to a scene · be concise and specific · if there is nothing to report, answer with an empty array []."
+ui.aia.pFormatFindings,"Answer format: a JSON array of {""title"":""short title"",""detail"":""explanation"",""severity"":""critical|major|minor"",""sceneId"":""scene id if any"",""suggestion"":""what to do""}"
+ui.aia.pFormatScore,"Answer format: a JSON object {""criteria"":[{""label"":""criterion"",""score"":0-10,""note"":""one-line reason""}],""total"":0-10,""summary"":""one paragraph""}"
+ui.aia.pHeadScenes,Scene text:
+ui.aia.pTruncated, (partial — over the token budget)
+ui.aia.errUnknownKind,Unknown analysis type
+ui.aia.errNoScene,No scenes in the chosen scope
+ui.aia.errAiFail,The AI call failed
+ui.aia.errOpenScene,Could not open the scene from the analyzer panel
+ui.aia.errRun,Analysis failed
+ui.aia.rowPacing,{0} words · {1}% dialogue · {2} words/sentence
+ui.aia.slowRun,Slow run
+ui.aia.fastRun,Fast run
+ui.aia.runRange,{0} → {1} · {2} in a row
+ui.aia.arcHead,{0} — {1} mentions across {2} scenes
+ui.aia.arcGap,Absent
+ui.aia.noMarker,No markers
+ui.aia.rowLength,{0} words · {1} min
+ui.aia.rowRepeat,{0} · closest {1} words apart
+ui.aia.rowShip,{0} shared scenes · {1} mentions
+ui.aia.rowScreentime,{0} scenes · {1} mentions
+ui.aia.scoreLocalHead,Metric score
+ui.aia.aiHead,AI reading
+ui.aia.scoreAiHead,AI score
+ui.aia.aiNoFinding,The AI found nothing worth flagging
+ui.aia.usage,{0} tokens · about ${1}
+ui.aia.busy,Analysing…
+ui.aia.done,done
+ui.aia.truncated,Too long for one request — the AI saw only part of it. Narrow the scope for a closer read.
+ui.aia.aiOffHint,Showing the computed layer only (AI is off or not configured).
+ui.aia.reload,Reload
+ui.aia.noProject,No project open
+ui.aia.useAI,Use AI
+ui.aia.runAll,Run all
+ui.aia.tagNeedAI,needs AI
+ui.aia.csScene,Scene
+ui.aia.csChapter,Chapter
+ui.aia.csWords,Words
+ui.aia.csDialogue,Dialogue %
+ui.aia.csAvgSent,Avg sentence (words)
+ui.aia.csTempo,Tempo
+ui.aia.csCharacter,Character
+ui.aia.csCount,Count
+ui.aia.csWord,Word
+ui.aia.csPer10k,Per 10k
+ui.aia.csScore,Score
+ui.aia.csDensity,Per 1k words
+ui.aia.csMarkers,Markers
+ui.aia.csMinutes,Minutes
+ui.aia.csPages,Pages
+ui.aia.csClosest,Closest gap (words)
+ui.aia.csSideA,Character A
+ui.aia.csSideB,Character B
+ui.aia.csSharedScenes,Shared scenes
+ui.aia.csMentions,Mentions
+ui.aia.csShare,Share %
+ui.aia.csCriterion,Criterion
+ui.aia.csNote,Note
+ui.aia.csTitle,Title
+ui.aia.csAnalysis,Analysis
+ui.aia.csScope,Scope
+ui.aia.csStat,Statistic
+ui.aia.csValue,Value
+ui.aia.csSummary,Summary
+ui.aia.csSeverity,Severity
+ui.aia.csDetail,Detail
+ui.aia.csSuggestion,Suggestion
+ui.aia.csTokenUsed,Tokens used
+ui.aia.csCostUsd,Cost (USD)
+ui.aia.csSession,Session
+ui.aia.csCreated,Created
+ui.aia.aiSettings,AI settings
+ui.aia.aiSettingsTip,Open the AI provider settings without going through the settings menu
+ui.aia.sessionSave,Save session
+ui.aia.sessionSaveTip,Store the results for this scope inside the project (Analysis folder)
+ui.aia.sessionSaveTitle,Name this session
+ui.aia.sessionList,Sessions
+ui.aia.sessionListTip,Open a session saved in this project
+ui.aia.sessionTitle,Analysis sessions
+ui.aia.sessionEmpty,No sessions saved in this project yet
+ui.aia.sessionOpen,Open
+ui.aia.sessionKinds,{0} kinds
+ui.aia.sessionCost,{0} tokens · ${1}
+ui.aia.sessionAuto,Analysis of {0}
+ui.aia.sessionCurrent,Open session: {0}
+ui.aia.sessionSaved,Saved session “{0}”
+ui.aia.sessionOpened,Opened session “{0}”
+ui.aia.sessionDeleted,Deleted session “{0}”
+ui.aia.confirmDelSession,Delete session “{0}”?
+ui.aia.errSessionRead,Could not read session file: 
+ui.aia.errSessionSave,Could not save the session
+ui.aia.errSessionDel,Could not delete the session
+ui.aia.errNothingToSave,Nothing to save yet — run an analysis first
+ui.aia.exportCsv,Export CSV
+ui.aia.exportCsvTip,Export every result in this scope as CSV (opens in Excel/Sheets)
+ui.aia.exportCsvOne,Export this analysis as CSV
+ui.aia.csvSaved,CSV saved to {0}
+ui.aia.errCsv,Could not write the CSV file
+ui.aia.errNothingToExport,Nothing to export yet — run an analysis first
+ui.aia.estTokens,≈ {0} tokens · {1}
+ui.aia.estTip,Estimate before calling the AI — scene text + instructions + reply cap
+ui.aia.estAll,All 11 kinds ≈ {0} tokens · {1}
+ui.aia.estOff,AI is off — nothing will be charged
+ui.aia.usedSoFar,Used {0} calls · {1} tokens · {2}
+ui.aia.usedNone,No AI calls in this scope yet
+ui.app.aiAnalysis,AI analysis results
+ui.vis.addFree,➕ Blank row
+ui.vis.addRow,➕ Add from scene lines
+ui.vis.addSelected,Add selected
+ui.vis.allUsed,Every line is already in the table
+ui.vis.changedCount,{0} row(s) whose source line changed
+ui.vis.clearImage,Remove image
+ui.vis.close,Close
+ui.vis.colComment,Comment
+ui.vis.colNo,Order
+ui.vis.colRemark,Remark
+ui.vis.colScene,Scene
+ui.vis.cols,⚙ Columns
+ui.vis.delRow,Delete this row
+ui.vis.delRowAsk,Remove this row from the visual telling table?
+ui.vis.down,Move down
+ui.vis.empty,No rows yet — use Add from scene lines to start
+ui.vis.freeRow,(blank row — not bound to any line)
+ui.vis.menu,🎬 Visual telling
+ui.vis.needScene,No scene selected
+ui.vis.next,Next
+ui.vis.noImage,No image
+ui.vis.noLines,This scene has no text to pick yet
+ui.vis.ofTotal,{0}/{1}
+ui.vis.open,Open visual telling table
+ui.vis.pickImage,Pick from gallery or add a new image
+ui.vis.pickLine,Pick lines from the scene
+ui.vis.pickLineHint,Tick the lines you want to illustrate — multiple allowed
+ui.vis.prev,Previous
+ui.vis.remarkPh,Remark…
+ui.vis.reveal,Show file in folder
+ui.vis.rowNum,{0} rows
+ui.vis.saved,Visual telling table saved
+ui.vis.selectAll,Select all
+ui.vis.statusChanged,The source line changed — click to update the text
+ui.vis.statusChangedTag,source changed
+ui.vis.syncAll,⟳ Update all
+ui.vis.title,Visual telling
+ui.vis.up,Move up
+ui.vis.viewFull,⛶ Full screen
+ui.vis.viewList,List
+ui.vis.viewTable,Table
+
+ui.vis.allLost,Every bound line was deleted from the scene
+ui.vis.boundN,{0} lines bound
+ui.vis.colAction,action
+ui.vis.colDragW,Drag to resize this column
+ui.vis.colEntities,Characters / places
+ui.vis.colFrame,frame
+ui.vis.colResetW,Reset column widths
+ui.vis.editBind,Edit bound lines
+ui.vis.editBindHint,Tick to bind more lines to this row · untick to unbind (the row stays)
+ui.vis.lineUsed,used by another row
+ui.vis.openWiki,Open this entry in the Wiki
+ui.vis.toggleText,Hide / show text (H)

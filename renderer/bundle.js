@@ -945,10 +945,10 @@
   function isStyleRule(rule) {
     return rule.style != null;
   }
-  function wsOptionsFor(type, preserveWhitespace, base3) {
+  function wsOptionsFor(type, preserveWhitespace, base4) {
     if (preserveWhitespace != null)
       return (preserveWhitespace ? OPT_PRESERVE_WS : 0) | (preserveWhitespace === "full" ? OPT_PRESERVE_WS_FULL : 0);
-    return type && type.whitespace == "pre" ? OPT_PRESERVE_WS | OPT_PRESERVE_WS_FULL : base3 & ~OPT_OPEN_LEFT;
+    return type && type.whitespace == "pre" ? OPT_PRESERVE_WS | OPT_PRESERVE_WS_FULL : base4 & ~OPT_OPEN_LEFT;
   }
   function normalizeList(dom) {
     for (let child = dom.firstChild, prevItem = null; child; child = child.nextSibling) {
@@ -2360,9 +2360,9 @@
           return this.sameMarkup(other) && this.text == other.text;
         }
         toJSON() {
-          let base3 = super.toJSON();
-          base3.text = this.text;
-          return base3;
+          let base4 = super.toJSON();
+          base4.text = this.text;
+          return base4;
         }
       };
       ContentMatch = class _ContentMatch {
@@ -3953,11 +3953,11 @@
     tr4.step(new ReplaceAroundStep(pos, pos + node.nodeSize, pos + 1, pos + node.nodeSize - 1, new Slice(Fragment.from(newNode), 0, 0), 1, true));
   }
   function canSplit(doc3, pos, depth = 1, typesAfter) {
-    let $pos = doc3.resolve(pos), base3 = $pos.depth - depth;
+    let $pos = doc3.resolve(pos), base4 = $pos.depth - depth;
     let innerType = typesAfter && typesAfter[typesAfter.length - 1] || $pos.parent;
-    if (base3 < 0 || $pos.parent.type.spec.isolating || !$pos.parent.canReplace($pos.index(), $pos.parent.childCount) || !innerType.type.validContent($pos.parent.content.cutByIndex($pos.index(), $pos.parent.childCount)))
+    if (base4 < 0 || $pos.parent.type.spec.isolating || !$pos.parent.canReplace($pos.index(), $pos.parent.childCount) || !innerType.type.validContent($pos.parent.content.cutByIndex($pos.index(), $pos.parent.childCount)))
       return false;
-    for (let d = $pos.depth - 1, i5 = depth - 2; d > base3; d--, i5--) {
+    for (let d = $pos.depth - 1, i5 = depth - 2; d > base4; d--, i5--) {
       let node = $pos.node(d), index2 = $pos.index(d);
       if (node.type.spec.isolating)
         return false;
@@ -3969,9 +3969,9 @@
       if (!node.canReplace(index2 + 1, node.childCount) || !after.type.validContent(rest))
         return false;
     }
-    let index = $pos.indexAfter(base3);
+    let index = $pos.indexAfter(base4);
     let baseType = typesAfter && typesAfter[0];
-    return $pos.node(base3).canReplaceWith(index, index, baseType ? baseType.type : $pos.node(base3 + 1).type);
+    return $pos.node(base4).canReplaceWith(index, index, baseType ? baseType.type : $pos.node(base4 + 1).type);
   }
   function split(tr4, pos, depth = 1, typesAfter) {
     let $pos = tr4.doc.resolve(pos), before = Fragment.empty, after = Fragment.empty;
@@ -7861,15 +7861,15 @@
     let text = view2.someProp("clipboardTextSerializer", (f) => f(slice3, view2)) || slice3.content.textBetween(0, slice3.content.size, "\n\n");
     return { dom: wrap2, text, slice: slice3 };
   }
-  function parseFromClipboard(view2, text, html, plainText3, $context) {
+  function parseFromClipboard(view2, text, html, plainText4, $context) {
     let inCode = $context.parent.type.spec.code;
     let dom, slice3;
     if (!html && !text)
       return null;
-    let asText = !!text && (plainText3 || inCode || !html);
+    let asText = !!text && (plainText4 || inCode || !html);
     if (asText) {
       view2.someProp("transformPastedText", (f) => {
-        text = f(text, inCode || plainText3, view2);
+        text = f(text, inCode || plainText4, view2);
       });
       if (inCode) {
         slice3 = new Slice(Fragment.from(view2.state.schema.text(text.replace(/\r\n?/g, "\n"))), 0, 0);
@@ -7878,7 +7878,7 @@
         });
         return slice3;
       }
-      let parsed = view2.someProp("clipboardTextParser", (f) => f(text, $context, plainText3, view2));
+      let parsed = view2.someProp("clipboardTextParser", (f) => f(text, $context, plainText4, view2));
       if (parsed) {
         slice3 = parsed;
       } else {
@@ -8312,9 +8312,9 @@
   function capturePaste(view2, event) {
     if (!view2.dom.parentNode)
       return;
-    let plainText3 = view2.input.shiftKey || view2.state.selection.$from.parent.type.spec.code;
-    let target = view2.dom.parentNode.appendChild(document.createElement(plainText3 ? "textarea" : "div"));
-    if (!plainText3)
+    let plainText4 = view2.input.shiftKey || view2.state.selection.$from.parent.type.spec.code;
+    let target = view2.dom.parentNode.appendChild(document.createElement(plainText4 ? "textarea" : "div"));
+    if (!plainText4)
       target.contentEditable = "true";
     target.style.cssText = "position: fixed; left: -10000px; top: 10px";
     target.focus();
@@ -8323,7 +8323,7 @@
       view2.focus();
       if (target.parentNode)
         target.parentNode.removeChild(target);
-      if (plainText3)
+      if (plainText4)
         doPaste(view2, target.value, null, plain, event);
       else
         doPaste(view2, target.textContent, target.innerHTML, plain, event);
@@ -8829,8 +8829,8 @@
       }, 20);
     }
     let chFrom = change.start, chTo = change.endA;
-    let mkTr = (base3) => {
-      let tr4 = base3 || view2.state.tr.replace(chFrom, chTo, parse3.doc.slice(change.start - parse3.from, change.endB - parse3.from));
+    let mkTr = (base4) => {
+      let tr4 = base4 || view2.state.tr.replace(chFrom, chTo, parse3.doc.slice(change.start - parse3.from, change.endB - parse3.from));
       if (parse3.sel) {
         let sel2 = resolveSelection(view2, tr4.doc, parse3.sel);
         if (sel2 && !(chrome && view2.composing && sel2.empty && (change.start != change.endB || view2.input.lastChromeDelete < Date.now() - 100) && (sel2.head == chFrom || sel2.head == tr4.mapping.map(chTo) - 1) || ie && sel2.empty && sel2.head == chFrom))
@@ -9304,11 +9304,11 @@
         }
         // Used to find a DOM range in a single parent for a given changed
         // range.
-        parseRange(from2, to, base3 = 0) {
+        parseRange(from2, to, base4 = 0) {
           if (this.children.length == 0)
             return { node: this.contentDOM, from: from2, to, fromOffset: 0, toOffset: this.contentDOM.childNodes.length };
           let fromOffset = -1, toOffset = -1;
-          for (let offset = base3, i5 = 0; ; i5++) {
+          for (let offset = base4, i5 = 0; ; i5++) {
             let child = this.children[i5], end = offset + child.size;
             if (fromOffset == -1 && from2 <= end) {
               let childBase = offset + child.border;
@@ -11402,7 +11402,7 @@
         }
         updateStateInner(state2, prevProps) {
           var _a;
-          let prev = this.state, redraw2 = false, updateSel = false;
+          let prev = this.state, redraw3 = false, updateSel = false;
           if (state2.storedMarks && this.composing) {
             clearComposition(this);
             updateSel = true;
@@ -11413,7 +11413,7 @@
             let nodeViews = buildNodeViews(this);
             if (changedNodeViews(nodeViews, this.nodeViews)) {
               this.nodeViews = nodeViews;
-              redraw2 = true;
+              redraw3 = true;
             }
           }
           if (pluginsChanged || prevProps.handleDOMEvents != this._props.handleDOMEvents) {
@@ -11423,7 +11423,7 @@
           updateCursorWrapper(this);
           let innerDeco = viewDecorations(this), outerDeco = computeDocDeco(this);
           let scroll = prev.plugins != state2.plugins && !prev.doc.eq(state2.doc) ? "reset" : state2.scrollToSelection > prev.scrollToSelection ? "to selection" : "preserve";
-          let updateDoc = redraw2 || !this.docView.matchesNode(state2.doc, outerDeco, innerDeco);
+          let updateDoc = redraw3 || !this.docView.matchesNode(state2.doc, outerDeco, innerDeco);
           if (updateDoc || !state2.selection.eq(prev.selection))
             updateSel = true;
           let oldScrollPos = scroll == "preserve" && updateSel && this.dom.style.overflowAnchor == null && storeScrollPos(this);
@@ -11434,7 +11434,7 @@
               let chromeKludge = chrome ? this.trackWrites = this.domSelectionRange().focusNode : null;
               if (this.composing)
                 this.input.compositionNode = findCompositionNode(this);
-              if (redraw2 || !this.docView.update(state2.doc, outerDeco, innerDeco, this)) {
+              if (redraw3 || !this.docView.update(state2.doc, outerDeco, innerDeco, this)) {
                 this.docView.updateOuterDeco(outerDeco);
                 this.docView.destroy();
                 this.docView = docViewDesc(state2.doc, outerDeco, innerDeco, this.dom, this);
@@ -13752,7 +13752,7 @@
       var RE_HARDBREAK = /(^|[^\\])((?:\\\\)*)\\$/;
       var endsWithHardBreak = (s) => RE_HARDBREAK.test(s);
       var stripHardBreak = (s) => s.slice(0, -1);
-      function parseInline(s, base3 = []) {
+      function parseInline(s, base4 = []) {
         const segs = [];
         while (s) {
           let best = null;
@@ -13761,12 +13761,12 @@
             if (m2 && (best === null || m2.index < best.m.index)) best = { m: m2, marks: marks3 };
           }
           if (!best) {
-            segs.push({ text: s, marks: base3 });
+            segs.push({ text: s, marks: base4 });
             break;
           }
           const { m, marks: marks2 } = best;
-          if (m.index) segs.push({ text: s.slice(0, m.index), marks: base3 });
-          segs.push(...parseInline(m[1], [.../* @__PURE__ */ new Set([...base3, ...marks2])]));
+          if (m.index) segs.push({ text: s.slice(0, m.index), marks: base4 });
+          segs.push(...parseInline(m[1], [.../* @__PURE__ */ new Set([...base4, ...marks2])]));
           s = s.slice(m.index + m[0].length);
         }
         return segs;
@@ -14016,7 +14016,7 @@
         return lines.join("\n");
       }
       var K2_COMMENTS_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
-      function parseMdFile12(text) {
+      function parseMdFile13(text) {
         let meta2 = {}, body = String(text || "").replace(K2_COMMENTS_RE, "");
         text = body;
         if (text.startsWith("---")) {
@@ -14040,7 +14040,7 @@
         out.push("---\n");
         return out.join("\n") + body;
       }
-      function countWords5(body) {
+      function countWords6(body) {
         const t3 = body.replace(/[#>*_~\-!\[\]()]/g, " ");
         let n2 = 0;
         for (const chunk of t3.split(/\s+/)) {
@@ -14052,9 +14052,9 @@
       module.exports = {
         mdToDoc: mdToDoc4,
         docToMd: docToMd4,
-        parseMdFile: parseMdFile12,
+        parseMdFile: parseMdFile13,
         dumpMdFile: dumpMdFile6,
-        countWords: countWords5,
+        countWords: countWords6,
         collectAlign: collectAlign2,
         alignToString: alignToString2,
         alignFromString: alignFromString2
@@ -14482,7 +14482,7 @@
     for (const para2 of s.split("\n")) {
       if (paraStart > 0) cuts.push(paraStart);
       let lineW = 0, hasContent = false, pendSpace = false;
-      const base3 = () => cuts.length === 0 ? indent : 0;
+      const base4 = () => cuts.length === 0 ? indent : 0;
       const cutAt = (i5) => {
         cuts.push(i5);
         lineW = 0;
@@ -14496,8 +14496,8 @@
           continue;
         }
         const sepW = pendSpace && hasContent ? spaceW : 0;
-        const avail = limit - base3() - lineW - sepW;
-        const room = () => limit - base3();
+        const avail = limit - base4() - lineW - sepW;
+        const room = () => limit - base4();
         if (tok.t === TOK_ATOM) {
           const w = measure2(tok.s);
           if (w <= avail) {
@@ -14782,7 +14782,7 @@
   function paginate(blocks, opts = {}) {
     const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
-    const R = fmt.rules, S8 = fmt.strings;
+    const R = fmt.rules, S9 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
     const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
     const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
@@ -14854,10 +14854,10 @@
           contIn: !!b.contIn,
           contOut: true
         });
-        if (moreLines) addBlock({ el: "more", text: S8.dialogueMore, lines: 1, more: true });
+        if (moreLines) addBlock({ el: "more", text: S9.dialogueMore, lines: 1, more: true });
         pushPage();
         if (dlgSplit) {
-          addBlock({ el: "character", text: lastChar + " " + S8.dialogueContd, lines: 1, contd: true });
+          addBlock({ el: "character", text: lastChar + " " + S9.dialogueContd, lines: 1, contd: true });
           used += 1;
         }
         list[i5] = {
@@ -14899,7 +14899,7 @@
   }
   function annotateContinued(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const S8 = f.strings;
+    const S9 = f.strings;
     const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const on2 = CT.enabled !== false && CT.scene !== false;
     for (const p of pages) {
@@ -14930,9 +14930,9 @@
         contScene = p.sceneEnd;
       }
       run3++;
-      p.continuedBottom = S8.continuedBottom;
+      p.continuedBottom = S9.continuedBottom;
       n2.contdRun = run3;
-      n2.continuedTop = CT.number !== false && run3 > 2 ? `${S8.continuedTop} (${run3 - 1})` : S8.continuedTop;
+      n2.continuedTop = CT.number !== false && run3 > 2 ? `${S9.continuedTop} (${run3 - 1})` : S9.continuedTop;
     }
     return pages;
   }
@@ -14973,13 +14973,13 @@
     };
   }
   function normalizeRoster(r) {
-    const base3 = newRoster();
-    if (!r || typeof r !== "object") return base3;
+    const base4 = newRoster();
+    if (!r || typeof r !== "object") return base4;
     return {
-      ...base3,
+      ...base4,
       ...r,
       version: ROSTER_VERSION,
-      title: typeof r.title === "string" && r.title.trim() ? r.title : base3.title,
+      title: typeof r.title === "string" && r.title.trim() ? r.title : base4.title,
       characters: (Array.isArray(r.characters) ? r.characters : []).map((c) => ({ name: String(c?.name ?? ""), detail: String(c?.detail ?? "") })),
       scene: String(r.scene ?? ""),
       time: String(r.time ?? ""),
@@ -16396,8 +16396,8 @@
   }
   function blockRange(doc3, from2, to) {
     const size = doc3.content.size;
-    const clamp5 = (v2) => Math.max(0, Math.min(v2, size));
-    const f = clamp5(from2), t3 = clamp5(to);
+    const clamp6 = (v2) => Math.max(0, Math.min(v2, size));
+    const f = clamp6(from2), t3 = clamp6(to);
     const $f = doc3.resolve(f), $t = doc3.resolve(t3);
     let a, b;
     if ($f.depth) a = $f.before(1);
@@ -16410,7 +16410,7 @@
       const ch = doc3.childAfter(t3);
       b = ch && ch.node ? ch.offset + ch.node.nodeSize : t3;
     }
-    return { from: clamp5(Math.min(a, b)), to: clamp5(Math.max(a, b)) };
+    return { from: clamp6(Math.min(a, b)), to: clamp6(Math.max(a, b)) };
   }
   function incrementalDecoState(key2, scan) {
     const full = (doc3) => DecorationSet.create(doc3, scan(doc3, 0, doc3.content.size));
@@ -20458,17 +20458,17 @@
     }
     return n2 || null;
   }
-  function scrollSnapshot(base3) {
+  function scrollSnapshot(base4) {
     const snap2 = [];
-    if (!base3) return snap2;
+    if (!base4) return snap2;
     const add = (e) => {
       const top = e.scrollTop, left = e.scrollLeft;
       if (!top && !left) return;
-      const path = elPath(base3, e);
+      const path = elPath(base4, e);
       if (path) snap2.push({ path, top, left });
     };
-    add(base3);
-    for (const e of base3.querySelectorAll("*")) add(e);
+    add(base4);
+    for (const e of base4.querySelectorAll("*")) add(e);
     return snap2;
   }
   function keepScroll2(root) {
@@ -21764,7 +21764,16 @@
     "src/project-scan.js"() {
       init_i18n();
       init_core();
-      SKIP_DIRS = ["Images", "Memos", "Recycle", "Snapshots", "Backups", "Plugins", "Research"];
+      SKIP_DIRS = [
+        "Images",
+        "Memos",
+        "Recycle",
+        "Snapshots",
+        "Backups",
+        "Plugins",
+        "Research",
+        "Analysis"
+      ];
       WIKI_DIRS = ["Wiki", "Bible"];
     }
   });
@@ -24143,9 +24152,9 @@
     let synced = syncAlbumDoc(doc3, files);
     let capsUsed = 0;
     for (const [f, cap] of Object.entries(caps)) {
-      const base3 = f.split("/").pop();
-      if (synced.images[base3] && cap && !doc3.images[base3]) {
-        synced = setImageMeta2(synced, base3, { caption: cap });
+      const base4 = f.split("/").pop();
+      if (synced.images[base4] && cap && !doc3.images[base4]) {
+        synced = setImageMeta2(synced, base4, { caption: cap });
         capsUsed++;
       }
     }
@@ -24295,13 +24304,13 @@
     return next;
   }
   async function findImagePath(api, root, fileName, albums) {
-    const base3 = String(fileName || "").split("/").pop();
+    const base4 = String(fileName || "").split("/").pop();
     const list = albums || await listAlbums(api, root);
     for (const a of list) {
       const files = await listAlbumFiles(api, root, a.id);
-      if (files.includes(base3)) {
+      if (files.includes(base4)) {
         const rel = albumRel(a.id);
-        return rel ? rel + "/" + base3 : base3;
+        return rel ? rel + "/" + base4 : base4;
       }
     }
     return "";
@@ -25134,8 +25143,8 @@
           function n2(e2, t4, r3, n3, i6, s2) {
             var a, o, h = e2.file, u = e2.compression, l = s2 !== O.utf8encode, f = I.transformTo("string", s2(h.name)), c = I.transformTo("string", O.utf8encode(h.name)), d = h.comment, p = I.transformTo("string", s2(d)), m = I.transformTo("string", O.utf8encode(d)), _2 = c.length !== h.name.length, g = m.length !== d.length, b = "", v2 = "", y = "", w = h.dir, k = h.date, x = { crc32: 0, compressedSize: 0, uncompressedSize: 0 };
             t4 && !r3 || (x.crc32 = e2.crc32, x.compressedSize = e2.compressedSize, x.uncompressedSize = e2.uncompressedSize);
-            var S8 = 0;
-            t4 && (S8 |= 8), l || !_2 && !g || (S8 |= 2048);
+            var S9 = 0;
+            t4 && (S9 |= 8), l || !_2 && !g || (S9 |= 2048);
             var z = 0, C = 0;
             w && (z |= 16), "UNIX" === i6 ? (C = 798, z |= (function(e3, t5) {
               var r4 = e3;
@@ -25144,7 +25153,7 @@
               return 63 & (e3 || 0);
             })(h.dosPermissions)), a = k.getUTCHours(), a <<= 6, a |= k.getUTCMinutes(), a <<= 5, a |= k.getUTCSeconds() / 2, o = k.getUTCFullYear() - 1980, o <<= 4, o |= k.getUTCMonth() + 1, o <<= 5, o |= k.getUTCDate(), _2 && (v2 = A(1, 1) + A(B(f), 4) + c, b += "up" + A(v2.length, 2) + v2), g && (y = A(1, 1) + A(B(p), 4) + m, b += "uc" + A(y.length, 2) + y);
             var E = "";
-            return E += "\n\0", E += A(S8, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
+            return E += "\n\0", E += A(S9, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
           }
           var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
           function s(e2, t4, r3, n3) {
@@ -26410,7 +26419,7 @@
           };
         }, {}], 46: [function(e, t3, r) {
           "use strict";
-          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S8 = 258, z = S8 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
+          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S9 = 258, z = S9 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
           function R(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
@@ -26434,14 +26443,14 @@
             e2.pending_buf[e2.pending++] = t4 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t4;
           }
           function L2(e2, t4) {
-            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S8, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
+            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S9, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
             e2.prev_length >= e2.good_match && (i6 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
             do {
               if (u2[(r3 = t4) + a2] === p2 && u2[r3 + a2 - 1] === d2 && u2[r3] === u2[s2] && u2[++r3] === u2[s2 + 1]) {
                 s2 += 2, r3++;
                 do {
                 } while (u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && s2 < c2);
-                if (n3 = S8 - (c2 - s2), s2 = c2 - S8, a2 < n3) {
+                if (n3 = S9 - (c2 - s2), s2 = c2 - S9, a2 < n3) {
                   if (e2.match_start = t4, o2 <= (a2 = n3)) break;
                   d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
                 }
@@ -26583,15 +26592,15 @@
                 return e3.insert = 0, t5 === f ? (N(e3, true), 0 === e3.strm.avail_out ? O : B) : e3.last_lit && (N(e3, false), 0 === e3.strm.avail_out) ? A : I;
               })(n3, t4) : 3 === n3.strategy ? (function(e3, t5) {
                 for (var r4, n4, i7, s3, a3 = e3.window; ; ) {
-                  if (e3.lookahead <= S8) {
-                    if (j(e3), e3.lookahead <= S8 && t5 === l) return A;
+                  if (e3.lookahead <= S9) {
+                    if (j(e3), e3.lookahead <= S9 && t5 === l) return A;
                     if (0 === e3.lookahead) break;
                   }
                   if (e3.match_length = 0, e3.lookahead >= x && 0 < e3.strstart && (n4 = a3[i7 = e3.strstart - 1]) === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7]) {
-                    s3 = e3.strstart + S8;
+                    s3 = e3.strstart + S9;
                     do {
                     } while (n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && i7 < s3);
-                    e3.match_length = S8 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
+                    e3.match_length = S9 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
                   }
                   if (e3.match_length >= x ? (r4 = u._tr_tally(e3, 1, e3.match_length - x), e3.lookahead -= e3.match_length, e3.strstart += e3.match_length, e3.match_length = 0) : (r4 = u._tr_tally(e3, 0, e3.window[e3.strstart]), e3.lookahead--, e3.strstart++), r4 && (N(e3, false), 0 === e3.strm.avail_out)) return A;
                 }
@@ -26622,7 +26631,7 @@
         }, {}], 48: [function(e, t3, r) {
           "use strict";
           t3.exports = function(e2, t4) {
-            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S8, z, C;
+            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S9, z, C;
             r3 = e2.state, n2 = e2.next_in, z = e2.input, i5 = n2 + (e2.avail_in - 5), s = e2.next_out, C = e2.output, a = s - (t4 - e2.avail_out), o = s + (e2.avail_out - 257), h = r3.dmax, u = r3.wsize, l = r3.whave, f = r3.wnext, c = r3.window, d = r3.hold, p = r3.bits, m = r3.lencode, _2 = r3.distcode, g = (1 << r3.lenbits) - 1, b = (1 << r3.distbits) - 1;
             e: do {
               p < 15 && (d += z[n2++] << p, p += 8, d += z[n2++] << p, p += 8), v2 = m[d & g];
@@ -26660,25 +26669,25 @@
                         e2.msg = "invalid distance too far back", r3.mode = 30;
                         break e;
                       }
-                      if (S8 = c, (x = 0) === f) {
+                      if (S9 = c, (x = 0) === f) {
                         if (x += u - y, y < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
-                          x = s - k, S8 = C;
+                          x = s - k, S9 = C;
                         }
                       } else if (f < y) {
                         if (x += u + f - y, (y -= f) < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
                           if (x = 0, f < w) {
                             for (w -= y = f; C[s++] = c[x++], --y; ) ;
-                            x = s - k, S8 = C;
+                            x = s - k, S9 = C;
                           }
                         }
                       } else if (x += f - y, y < w) {
                         for (w -= y; C[s++] = c[x++], --y; ) ;
-                        x = s - k, S8 = C;
+                        x = s - k, S9 = C;
                       }
-                      for (; 2 < w; ) C[s++] = S8[x++], C[s++] = S8[x++], C[s++] = S8[x++], w -= 3;
-                      w && (C[s++] = S8[x++], 1 < w && (C[s++] = S8[x++]));
+                      for (; 2 < w; ) C[s++] = S9[x++], C[s++] = S9[x++], C[s++] = S9[x++], w -= 3;
+                      w && (C[s++] = S9[x++], 1 < w && (C[s++] = S9[x++]));
                     } else {
                       for (x = s - k; C[s++] = C[x++], C[s++] = C[x++], C[s++] = C[x++], 2 < (w -= 3); ) ;
                       w && (C[s++] = C[x++], 1 < w && (C[s++] = C[x++]));
@@ -26736,7 +26745,7 @@
           r.inflateReset = o, r.inflateReset2 = h, r.inflateResetKeep = a, r.inflateInit = function(e2) {
             return u(e2, 15);
           }, r.inflateInit2 = u, r.inflate = function(e2, t4) {
-            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S8, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S9, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
             if (!e2 || !e2.state || !e2.output || !e2.input && 0 !== e2.avail_in) return U;
             12 === (r3 = e2.state).mode && (r3.mode = 13), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, f2 = o2, c2 = h2, x = N;
             e: for (; ; ) switch (r3.mode) {
@@ -26909,7 +26918,7 @@
                   r3.lens[A[r3.have++]] = 7 & u2, u2 >>>= 3, l2 -= 3;
                 }
                 for (; r3.have < 19; ) r3.lens[A[r3.have++]] = 0;
-                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S8 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S8), r3.lenbits = S8.bits, x) {
+                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S9 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S9), r3.lenbits = S9.bits, x) {
                   e2.msg = "invalid code lengths set", r3.mode = 30;
                   break;
                 }
@@ -26957,11 +26966,11 @@
                   e2.msg = "invalid code -- missing end-of-block", r3.mode = 30;
                   break;
                 }
-                if (r3.lenbits = 9, S8 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S8), r3.lenbits = S8.bits, x) {
+                if (r3.lenbits = 9, S9 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S9), r3.lenbits = S9.bits, x) {
                   e2.msg = "invalid literal/lengths set", r3.mode = 30;
                   break;
                 }
-                if (r3.distbits = 6, r3.distcode = r3.distdyn, S8 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S8), r3.distbits = S8.bits, x) {
+                if (r3.distbits = 6, r3.distcode = r3.distdyn, S9 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S9), r3.distbits = S9.bits, x) {
                   e2.msg = "invalid distances set", r3.mode = 30;
                   break;
                 }
@@ -27106,7 +27115,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S8 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S9 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -27116,21 +27125,21 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S8 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S9 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S8, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S8, y = u = 1 << x; i5[c + (E >> S8) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S9, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S9, y = u = 1 << x; i5[c + (E >> S9) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
                 b = t4[r3 + a[v2]];
               }
               if (k < b && (E & f) !== l) {
-                for (0 === S8 && (S8 = k), c += y, z = 1 << (x = b - S8); x + S8 < w && !((z -= O[x + S8]) <= 0); ) x++, z <<= 1;
+                for (0 === S9 && (S9 = k), c += y, z = 1 << (x = b - S9); x + S9 < w && !((z -= O[x + S9]) <= 0); ) x++, z <<= 1;
                 if (C += 1 << x, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
                 i5[l = E & f] = k << 24 | x << 16 | c - s | 0;
               }
             }
-            return 0 !== E && (i5[c + E] = b - S8 << 24 | 64 << 16 | 0), o.bits = k, 0;
+            return 0 !== E && (i5[c + E] = b - S9 << 24 | 64 << 16 | 0), o.bits = k, 0;
           };
         }, { "../utils/common": 41 }], 51: [function(e, t3, r) {
           "use strict";
@@ -27141,7 +27150,7 @@
           function n2(e2) {
             for (var t4 = e2.length; 0 <= --t4; ) e2[t4] = 0;
           }
-          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S8 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
+          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S9 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
           n2(z);
           var C = new Array(2 * f);
           n2(C);
@@ -27267,11 +27276,11 @@
               return o;
             })(e2)), Y(e2, e2.l_desc), Y(e2, e2.d_desc), a2 = (function(e3) {
               var t5;
-              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S8[t5] + 1]; t5--) ;
+              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S9[t5] + 1]; t5--) ;
               return e3.opt_len += 3 * (t5 + 1) + 5 + 5 + 4, t5;
             })(e2), i6 = e2.opt_len + 3 + 7 >>> 3, (s2 = e2.static_len + 3 + 7 >>> 3) <= i6 && (i6 = s2)) : i6 = s2 = r3 + 5, r3 + 4 <= i6 && -1 !== t4 ? J2(e2, t4, r3, n3) : 4 === e2.strategy || s2 === i6 ? (P(e2, 2 + (n3 ? 1 : 0), 3), K(e2, z, C)) : (P(e2, 4 + (n3 ? 1 : 0), 3), (function(e3, t5, r4, n4) {
               var i7;
-              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S8[i7] + 1], 3);
+              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S9[i7] + 1], 3);
               V2(e3, e3.dyn_ltree, t5 - 1), V2(e3, e3.dyn_dtree, r4 - 1);
             })(e2, e2.l_desc.max_code + 1, e2.d_desc.max_code + 1, a2 + 1), K(e2, e2.dyn_ltree, e2.dyn_dtree)), W(e2), n3 && M2(e2);
           }, r._tr_tally = function(e2, t4, r3) {
@@ -27460,8 +27469,8 @@
         g.drawImage(img, x, y, it.w * scale2, it.h * scale2);
       }
       clearBusy();
-      const base3 = safe(albumId2 === ROOT_ALBUM ? "moodboard" : albumBaseName(albumId2)) + "-moodboard.png";
-      const dest = await kapi.saveAsDialog(base3);
+      const base4 = safe(albumId2 === ROOT_ALBUM ? "moodboard" : albumBaseName(albumId2)) + "-moodboard.png";
+      const dest = await kapi.saveAsDialog(base4);
       if (!dest) return false;
       setBusy(t("ui.galleryExport.busyWriteFileImage"));
       const dataUrl = canvas.toDataURL("image/png");
@@ -27807,15 +27816,15 @@
           const d = await this.doc();
           let board2 = d.moodBoard;
           let i5 = 0;
-          const base3 = at ? { x: snap(at.x), y: snap(at.y) } : { x: 40, y: 40 };
+          const base4 = at ? { x: snap(at.x), y: snap(at.y) } : { x: 40, y: 40 };
           for (const p of list) {
             const nat = await naturalSize(await urlOf(this.root, p));
             const size = sizeForAspect(DEFAULT_SIZE, nat.w, nat.h);
             const rel = albumRel(this.albumId);
             const file = rel && p.startsWith(rel + "/") ? p.slice(rel.length + 1) : rel ? p : p;
             board2 = addToBoard(board2, file, {
-              x: base3.x + i5 % 4 * 24,
-              y: base3.y + i5 % 4 * 24,
+              x: base4.x + i5 % 4 * 24,
+              y: base4.y + i5 % 4 * 24,
               w: size.w,
               h: size.h
             });
@@ -28007,15 +28016,15 @@
     return h;
   }
   function modelsRequests(provider) {
-    const base3 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
-    if (!base3) return [];
+    const base4 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
+    if (!base4) return [];
     const headers = buildHeaders(provider);
     const paths = ["/models", "/v1/models", "/api/tags"];
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     for (const p of paths) {
-      if (p === "/v1/models" && /\/v1$/i.test(base3)) continue;
-      const url = base3 + p;
+      if (p === "/v1/models" && /\/v1$/i.test(base4)) continue;
+      const url = base4 + p;
       if (seen.has(url)) continue;
       seen.add(url);
       out.push({ url, method: "GET", headers });
@@ -28032,9 +28041,9 @@
     return out.sort((a, b) => a.localeCompare(b));
   }
   function chatRequest(provider, { messages = [], system = "", stream: stream2 = false, model } = {}) {
-    const base3 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
+    const base4 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
     const pr = normalizeParams(provider && provider.params || {});
-    const url = /\/chat\/completions$/i.test(base3) ? base3 : /\/v1$/i.test(base3) ? base3 + "/chat/completions" : base3 + "/v1/chat/completions";
+    const url = /\/chat\/completions$/i.test(base4) ? base4 : /\/v1$/i.test(base4) ? base4 + "/chat/completions" : base4 + "/v1/chat/completions";
     const body = {
       model: model || provider && provider.model || "",
       messages: system ? [{ role: "system", content: system }, ...messages] : messages
@@ -28430,9 +28439,9 @@
   }
   function searchSessions(rows, query, { includeArchived = false } = {}) {
     const q = String(query || "").trim().toLowerCase();
-    const base3 = (rows || []).filter((s) => includeArchived || !s.archived);
-    if (!q) return sortSessions(base3);
-    const hit = base3.filter((s) => {
+    const base4 = (rows || []).filter((s) => includeArchived || !s.archived);
+    if (!q) return sortSessions(base4);
+    const hit = base4.filter((s) => {
       if (String(s.title || "").toLowerCase().includes(q)) return true;
       return (s.messages || []).some((m) => String(m.text || "").toLowerCase().includes(q));
     });
@@ -31238,10 +31247,10 @@
         fx += (centerX - a.x) * gravity;
         fy += (centerY - a.y) * gravity;
         fz += (centerZ - (a.z || 0)) * gravity;
-        const clamp5 = 22 * damping;
-        a.x += Math.max(-clamp5, Math.min(clamp5, fx * damping));
-        a.y += Math.max(-clamp5, Math.min(clamp5, fy * damping));
-        a.z = (a.z || 0) + Math.max(-clamp5, Math.min(clamp5, fz * damping));
+        const clamp6 = 22 * damping;
+        a.x += Math.max(-clamp6, Math.min(clamp6, fx * damping));
+        a.y += Math.max(-clamp6, Math.min(clamp6, fy * damping));
+        a.z = (a.z || 0) + Math.max(-clamp6, Math.min(clamp6, fz * damping));
       }
     }
   }
@@ -33041,8 +33050,8 @@
         }
         /** ชื่อกระดานที่เอาไว้โชว์บนหัวแผง (planner.json เดิม = "กระดานหลัก") */
         getName() {
-          const base3 = this.getFileBase();
-          return base3 === "planner" ? t("ui.common.boardMain") : base3;
+          const base4 = this.getFileBase();
+          return base4 === "planner" ? t("ui.common.boardMain") : base4;
         }
         async _defaultPath() {
           if (this._path) return this._path;
@@ -35399,8 +35408,8 @@
           return (1 - t3) * (1 - t3) * (1 - t3);
         }
         function getPointOnCubicBezierIterator(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) {
-          return function(pct) {
-            var c1 = CB1(pct), c2 = CB2(pct), c3 = CB3(pct), c4 = CB4(pct);
+          return function(pct2) {
+            var c1 = CB1(pct2), c2 = CB2(pct2), c3 = CB3(pct2), c4 = CB4(pct2);
             return {
               x: p4x * c1 + p3x * c2 + p2x * c3 + p1x * c4,
               y: p4y * c1 + p3y * c2 + p2y * c3 + p1y * c4
@@ -35408,8 +35417,8 @@
           };
         }
         function getTangentCubicIterator(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) {
-          return function(pct) {
-            var invT = 1 - pct, tangentX = 3 * invT * invT * (p2x - p1x) + 6 * invT * pct * (p3x - p2x) + 3 * pct * pct * (p4x - p3x), tangentY = 3 * invT * invT * (p2y - p1y) + 6 * invT * pct * (p3y - p2y) + 3 * pct * pct * (p4y - p3y);
+          return function(pct2) {
+            var invT = 1 - pct2, tangentX = 3 * invT * invT * (p2x - p1x) + 6 * invT * pct2 * (p3x - p2x) + 3 * pct2 * pct2 * (p4x - p3x), tangentY = 3 * invT * invT * (p2y - p1y) + 6 * invT * pct2 * (p3y - p2y) + 3 * pct2 * pct2 * (p4y - p3y);
             return Math.atan2(tangentY, tangentX);
           };
         }
@@ -35423,8 +35432,8 @@
           return (1 - t3) * (1 - t3);
         }
         function getPointOnQuadraticBezierIterator(p1x, p1y, p2x, p2y, p3x, p3y) {
-          return function(pct) {
-            var c1 = QB1(pct), c2 = QB2(pct), c3 = QB3(pct);
+          return function(pct2) {
+            var c1 = QB1(pct2), c2 = QB2(pct2), c3 = QB3(pct2);
             return {
               x: p3x * c1 + p2x * c2 + p1x * c3,
               y: p3y * c1 + p2y * c2 + p1y * c3
@@ -35432,8 +35441,8 @@
           };
         }
         function getTangentQuadraticIterator(p1x, p1y, p2x, p2y, p3x, p3y) {
-          return function(pct) {
-            var invT = 1 - pct, tangentX = 2 * invT * (p2x - p1x) + 2 * pct * (p3x - p2x), tangentY = 2 * invT * (p2y - p1y) + 2 * pct * (p3y - p2y);
+          return function(pct2) {
+            var invT = 1 - pct2, tangentX = 2 * invT * (p2x - p1x) + 2 * pct2 * (p3x - p2x), tangentY = 2 * invT * (p2y - p1y) + 2 * pct2 * (p3y - p2y);
             return Math.atan2(tangentY, tangentX);
           };
         }
@@ -58227,7 +58236,7 @@
         _arrowHead(kind, pt, angleDeg, color, w, opacity) {
           if (!kind || kind === "none" || !pt) return null;
           const s = 7 + w * 1.6;
-          const base3 = {
+          const base4 = {
             left: pt.x,
             top: pt.y,
             originX: "center",
@@ -58242,16 +58251,16 @@
           };
           let o;
           if (kind === "circle") {
-            o = new import_fabric.fabric.Circle({ ...base3, angle: 0, radius: s * 0.42 });
+            o = new import_fabric.fabric.Circle({ ...base4, angle: 0, radius: s * 0.42 });
           } else if (kind === "diamond") {
-            o = new import_fabric.fabric.Rect({ ...base3, width: s * 0.8, height: s * 0.8, angle: angleDeg + 45 });
+            o = new import_fabric.fabric.Rect({ ...base4, width: s * 0.8, height: s * 0.8, angle: angleDeg + 45 });
           } else if (kind === "bar") {
-            o = new import_fabric.fabric.Rect({ ...base3, width: Math.max(2, w), height: s * 1.4 });
+            o = new import_fabric.fabric.Rect({ ...base4, width: Math.max(2, w), height: s * 1.4 });
           } else if (kind === "triangle") {
-            o = new import_fabric.fabric.Triangle({ ...base3, width: s * 1.15, height: s * 1.15 });
+            o = new import_fabric.fabric.Triangle({ ...base4, width: s * 1.15, height: s * 1.15 });
           } else {
             o = new import_fabric.fabric.Path(`M ${-s * 0.7} ${-s * 0.9} L 0 0 L ${s * 0.7} ${-s * 0.9}`, {
-              ...base3,
+              ...base4,
               fill: "",
               stroke: color,
               strokeWidth: Math.max(1.5, w),
@@ -63034,15 +63043,15 @@ ${mdToHtmlBody(md)}
     const re = /[A-Za-z0-9_]+|[\u0E00-\u0E7F]+/g;
     let m;
     while ((m = re.exec(text)) !== null) {
-      const chunk = m[0], base3 = m.index;
+      const chunk = m[0], base4 = m.index;
       if (_THAI.test(chunk[0])) {
         if (chunk.length === 1) {
-          out.push({ word: chunk, pos: base3 });
+          out.push({ word: chunk, pos: base4 });
           continue;
         }
-        for (let i5 = 0; i5 < chunk.length - 1; i5++) out.push({ word: chunk.slice(i5, i5 + 2), pos: base3 + i5 });
+        for (let i5 = 0; i5 < chunk.length - 1; i5++) out.push({ word: chunk.slice(i5, i5 + 2), pos: base4 + i5 });
       } else {
-        out.push({ word: chunk.toLowerCase(), pos: base3 });
+        out.push({ word: chunk.toLowerCase(), pos: base4 });
       }
     }
     return out;
@@ -65735,12 +65744,12 @@ ${h.text}`;
       const total = row2 ? pr.width + nr.width : pr.height + nr.height;
       if (total <= 0) return;
       const start = row2 ? e.clientX : e.clientY;
-      const base3 = row2 ? pr.width : pr.height;
+      const base4 = row2 ? pr.width : pr.height;
       const baseNext = row2 ? nr.width : nr.height;
       const pxMode = isPx(prev) || isPx(next);
       const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
-      let ratio = base3 / total;
-      let pxPrev = base3, pxNext = baseNext;
+      let ratio = base4 / total;
+      let pxPrev = base4, pxNext = baseNext;
       document.body.classList.add("k-resizing");
       const flexEl = h.parentElement && h.parentElement.querySelector(":scope > .k-flex-child");
       const flexR = flexEl ? flexEl.getBoundingClientRect() : null;
@@ -65751,17 +65760,17 @@ ${h.text}`;
         if (pxMode) {
           const lim = MIN_PANEL_PX;
           let dd = d;
-          if (isPx(prev)) dd = Math.max(lim - base3, dd);
+          if (isPx(prev)) dd = Math.max(lim - base4, dd);
           if (isPx(next)) dd = Math.min(baseNext - lim, dd);
           if (isPx(prev) && !isPx(next)) dd = Math.min(dd, slack);
           if (isPx(next) && !isPx(prev)) dd = Math.max(dd, -slack);
-          pxPrev = base3 + dd;
+          pxPrev = base4 + dd;
           pxNext = baseNext - dd;
           if (isPx(prev)) prev.style.flex = "0 1 " + Math.round(pxPrev) + "px";
           if (isPx(next)) next.style.flex = "0 1 " + Math.round(pxNext) + "px";
           return;
         }
-        ratio = Math.max(0.05, Math.min(0.95, (base3 + d) / total));
+        ratio = Math.max(0.05, Math.min(0.95, (base4 + d) / total));
         prev.style.flexGrow = String(growSum * ratio);
         next.style.flexGrow = String(growSum * (1 - ratio));
       };
@@ -68215,16 +68224,16 @@ ${h.text}`;
     vE.textContent = allEnts.length.toLocaleString();
     const goal = parseInt(state.goals.projectWords, 10) || 0;
     if (goal > 0) {
-      const pct = Math.min(100, Math.round(words / goal * 100));
+      const pct2 = Math.min(100, Math.round(words / goal * 100));
       const gwrap = el("div", "dash-goal");
       gwrap.append(el(
         "div",
         "dash-goal-label",
-        tf("ui.dash.goalWord", words.toLocaleString(), goal.toLocaleString(), pct)
+        tf("ui.dash.goalWord", words.toLocaleString(), goal.toLocaleString(), pct2)
       ));
       const bar = el("div", "dash-goal-bar");
       const fill3 = el("div", "dash-goal-fill");
-      fill3.style.width = pct + "%";
+      fill3.style.width = pct2 + "%";
       bar.append(fill3);
       gwrap.append(bar);
       wrap2.append(gwrap);
@@ -68275,8 +68284,8 @@ ${h.text}`;
         fill3.style.background = palette[i5 % palette.length];
         track.append(fill3);
         line.append(track);
-        const pct = total ? Math.round(r.n / total * 100) : 0;
-        line.append(el("div", "dash-stat-val", `${r.n.toLocaleString()} (${pct}%)`));
+        const pct2 = total ? Math.round(r.n / total * 100) : 0;
+        line.append(el("div", "dash-stat-val", `${r.n.toLocaleString()} (${pct2}%)`));
         box2.append(line);
       });
       return box2;
@@ -68564,14 +68573,14 @@ ${h.text}`;
     return out;
   }
   function newPresetId(name5, existing) {
-    const base3 = String(name5 || "").trim().toLowerCase().replace(/[^\w฀-๿-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "preset";
+    const base4 = String(name5 || "").trim().toLowerCase().replace(/[^\w฀-๿-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "preset";
     const taken = /* @__PURE__ */ new Set([
       ...BUILTIN_PRESETS.map((p) => p.id),
       ...normalizePresets(existing).map((p) => p.id)
     ]);
-    if (!taken.has(base3)) return base3;
-    for (let i5 = 2; i5 < 999; i5++) if (!taken.has(base3 + "-" + i5)) return base3 + "-" + i5;
-    return base3 + "-x";
+    if (!taken.has(base4)) return base4;
+    for (let i5 = 2; i5 < 999; i5++) if (!taken.has(base4 + "-" + i5)) return base4 + "-" + i5;
+    return base4 + "-x";
   }
   function addPreset(saved, name5, colors) {
     const list = normalizePresets(saved);
@@ -68909,6 +68918,8 @@ ${h.text}`;
         { key: "insert", labelKey: "ui.tbcfg.grpInsert", buttons: [
           { id: "tb-img" },
           { id: "tb-gallery" },
+          { id: "tb-visual" },
+          // [alpha.90] เล่าด้วยภาพ (สตอรีบอร์ดของฉาก)
           { id: "tb-source" }
         ] },
         { key: "find", labelKey: "ui.tbcfg.grpFind", buttons: [
@@ -71592,7 +71603,7 @@ ${h.text}`;
     const wanted = mapId || fs.mapId || ctx2 && ctx2.row.mapId || null;
     const cur = wanted && findMap(maps, wanted) || maps[0] || null;
     fs.mapId = cur ? cur.id : null;
-    const redraw2 = () => renderFloorPlan(pane, fs.mapId);
+    const redraw3 = () => renderFloorPlan(pane, fs.mapId);
     const head2 = el("div", "floor-head");
     const titleRow = el("div", "floor-title-row");
     titleRow.append(el("div", "floor-title", t("ui.common.graphArea")));
@@ -71606,7 +71617,7 @@ ${h.text}`;
     sel.onchange = () => {
       fs.mapId = sel.value;
       fs.picking = false;
-      redraw2();
+      redraw3();
     };
     if (maps.length) titleRow.append(sel);
     if (ctx2 && cur) {
@@ -71618,7 +71629,7 @@ ${h.text}`;
       pinB.title = t("ui.floorplan.clickBtnDoneClick") + (ctx2.row.title || "") + t("ui.floorplan.occurAt");
       pinB.onclick = () => {
         fs.picking = !fs.picking;
-        redraw2();
+        redraw3();
       };
       titleRow.append(pinB);
       if (ctx2.row.mapId) {
@@ -71630,7 +71641,7 @@ ${h.text}`;
             delete r.pinId;
           });
           setStatus(t("ui.floorplan.clearPosSceneDone"));
-          redraw2();
+          redraw3();
         };
         titleRow.append(clearB);
       }
@@ -71645,7 +71656,7 @@ ${h.text}`;
           const item = el("span", "floor-crumb-item", c.name || t("ui.common.notNamed"));
           if (c.id !== cur.id) item.onclick = () => {
             fs.mapId = c.id;
-            redraw2();
+            redraw3();
           };
           else item.classList.add("on");
           bc.append(item);
@@ -71716,7 +71727,7 @@ ${h.text}`;
         });
         fs.picking = false;
         setStatus(t("ui.floorplan.pinPosScene") + (ctx2.row.title || "") + t("ui.floorplan.topMap") + (cur.name || "") + t("ui.floorplan.done"));
-        redraw2();
+        redraw3();
       }
     } else {
       main.append(el("div", "floor-ph", "\u{1F5FA}"));
@@ -71756,7 +71767,7 @@ ${h.text}`;
               r[key2] = (r[key2] || []).filter((_2, k) => k !== i5);
               if (!r[key2].length) delete r[key2];
             });
-            redraw2();
+            redraw3();
           };
           row2.append(del2);
         }
@@ -71771,7 +71782,7 @@ ${h.text}`;
           await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
             r[key2] = [...r[key2] || [], v2];
           });
-          redraw2();
+          redraw3();
         };
         panel2.append(add);
       }
@@ -71890,15 +71901,15 @@ ${h.text}`;
     showPanel("maps");
     const keepZoom = view.zoom;
     await renderMapsPanel();
-    const S8 = mapsState_C.s;
-    if (!S8 || !findMap(S8.data.maps, mapId)) {
+    const S9 = mapsState_C.s;
+    if (!S9 || !findMap(S9.data.maps, mapId)) {
       setStatus(t("ui.maps.notFoundMapScene"));
       return false;
     }
-    S8.currentId = mapId;
+    S9.currentId = mapId;
     view.zoom = keepZoom;
     view.sel.clear();
-    const pin = pinId ? (findMap(S8.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
+    const pin = pinId ? (findMap(S9.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
     view.focusPin = pin ? { id: pin.id, x: pin.x, y: pin.y } : at && at.x != null ? { id: null, x: at.x, y: at.y } : null;
     await renderMaps($("#maps-body"));
     scrollFocusIntoView();
@@ -71966,9 +71977,9 @@ ${h.text}`;
   async function renderMaps(pane) {
     if (!pane) return;
     pane.innerHTML = "";
-    const S8 = mapsState_C.s;
-    if (!S8) return;
-    const maps = S8.data.maps;
+    const S9 = mapsState_C.s;
+    if (!S9) return;
+    const maps = S9.data.maps;
     const wrap2 = el("div", "map-wrap");
     pane.append(wrap2);
     const head2 = el("div", "map-head");
@@ -72015,11 +72026,11 @@ ${h.text}`;
       if (groups.length > 1) bar.append(el("div", "map-bar-cat", g.cat || t("ui.common.notSpecifyCat")));
       const row2 = el("div", "map-bar-row");
       for (const m of g.maps) {
-        const chip = el("div", "map-chip" + (m.id === S8.currentId ? " on" : ""), m.name);
+        const chip = el("div", "map-chip" + (m.id === S9.currentId ? " on" : ""), m.name);
         const st2 = pinStats(m);
         if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
         chip.onclick = () => {
-          S8.currentId = m.id;
+          S9.currentId = m.id;
           view.sel.clear();
           view.routeEdit = null;
           view.focusPin = null;
@@ -72030,11 +72041,11 @@ ${h.text}`;
       bar.append(row2);
     }
     wrap2.append(bar);
-    let cur = findMap(maps, S8.currentId);
+    let cur = findMap(maps, S9.currentId);
     if (!cur || view.catFilter !== null && String(cur.category || "").trim() !== view.catFilter) {
       cur = shown[0] && shown[0].maps[0] || sortMaps(maps)[0];
     }
-    S8.currentId = cur.id;
+    S9.currentId = cur.id;
     const crumb = breadcrumb(maps, cur.id);
     if (crumb.length > 1) {
       const bc = el("div", "map-crumb");
@@ -72042,7 +72053,7 @@ ${h.text}`;
         if (i5) bc.append(el("span", "map-crumb-sep", "\u203A"));
         const a = el("span", "map-crumb-item" + (c.id === cur.id ? " on" : ""), c.name);
         a.onclick = () => {
-          S8.currentId = c.id;
+          S9.currentId = c.id;
           view.sel.clear();
           renderMaps(pane);
         };
@@ -72050,9 +72061,9 @@ ${h.text}`;
       });
       wrap2.append(bc);
     }
-    const redraw2 = () => renderMaps(pane);
+    const redraw3 = () => renderMaps(pane);
     const save = async () => {
-      await saveMaps(S8.data);
+      await saveMaps(S9.data);
     };
     const tools = el("div", "map-tools");
     const nameInp = el("input", "map-name-inp");
@@ -72061,7 +72072,7 @@ ${h.text}`;
     nameInp.onchange = async () => {
       cur.name = nameInp.value.trim() || cur.name;
       await save();
-      redraw2();
+      redraw3();
     };
     tools.append(nameInp);
     const catInp = el("input", "map-cat-inp");
@@ -72079,7 +72090,7 @@ ${h.text}`;
     catInp.onchange = async () => {
       cur.category = catInp.value.trim();
       await save();
-      redraw2();
+      redraw3();
     };
     tools.append(catInp, dl);
     const chgImg = el("button", "cmp-mini", t("ui.maps.changeImage"));
@@ -72088,24 +72099,24 @@ ${h.text}`;
       if (!it) return;
       cur.image = "Images/" + it.file;
       await save();
-      redraw2();
+      redraw3();
     };
     tools.append(chgImg);
     const expBtn = el("button", "cmp-mini", t("ui.common.exportPNG"));
     expBtn.title = t("ui.maps.saveMapReadyPin");
-    expBtn.onclick = () => exportMapPng(cur, S8.data.maps);
+    expBtn.onclick = () => exportMapPng(cur, S9.data.maps);
     tools.append(expBtn);
     const prnBtn = el("button", "cmp-mini", t("ui.maps.print"));
-    prnBtn.onclick = () => printMap(cur, S8.data.maps);
+    prnBtn.onclick = () => printMap(cur, S9.data.maps);
     tools.append(prnBtn);
     const delMap = el("button", "cmp-mini k-danger", t("ui.maps.delMap"));
     delMap.onclick = async () => {
       if (!await confirmBox(tf("ui.common.delMap", cur.name), t("ui.common.del"))) return;
-      S8.data.maps = deleteMap(maps, cur.id);
-      S8.currentId = S8.data.maps[0]?.id || null;
+      S9.data.maps = deleteMap(maps, cur.id);
+      S9.currentId = S9.data.maps[0]?.id || null;
       view.sel.clear();
       await save();
-      redraw2();
+      redraw3();
     };
     tools.append(delMap);
     wrap2.append(tools);
@@ -72149,7 +72160,7 @@ ${h.text}`;
       b.onclick = async () => {
         toggleOverlay(cur, key2);
         await save();
-        redraw2();
+        redraw3();
       };
       tools2.append(b);
     };
@@ -72166,7 +72177,7 @@ ${h.text}`;
       gs.onchange = async () => {
         cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) };
         await save();
-        redraw2();
+        redraw3();
       };
       tools2.append(gs);
     }
@@ -72178,7 +72189,7 @@ ${h.text}`;
       sl.onchange = async () => {
         cur.overlays = { ...ov, scaleLabel: sl.value.trim() };
         await save();
-        redraw2();
+        redraw3();
       };
       tools2.append(sl);
     }
@@ -72187,7 +72198,7 @@ ${h.text}`;
     rtBtn.title = t("ui.maps.showHideRouteBetween");
     rtBtn.onclick = () => {
       view.showRoutes = !view.showRoutes;
-      redraw2();
+      redraw3();
     };
     tools2.append(rtBtn);
     wrap2.append(tools2);
@@ -72196,7 +72207,7 @@ ${h.text}`;
     lblBtn.title = t("ui.maps.showHideLabelUnder");
     lblBtn.onclick = () => {
       view.showLabels = !view.showLabels;
-      redraw2();
+      redraw3();
     };
     tools3.append(lblBtn);
     tools3.append(el("span", "map-tool-sep", ""));
@@ -72211,7 +72222,7 @@ ${h.text}`;
       b.onclick = () => {
         view.tool = tdef.id;
         view.routeEdit = null;
-        redraw2();
+        redraw3();
       };
       tools3.append(b);
     }
@@ -72225,7 +72236,7 @@ ${h.text}`;
     const setScale = async (v2) => {
       cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v2.toFixed(2)));
       await save();
-      redraw2();
+      redraw3();
     };
     psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
     psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
@@ -72247,7 +72258,7 @@ ${h.text}`;
       bCopy.onclick = () => {
         view.clip = clonePins(cur.pins, [...view.sel], 0);
         setStatus(tf("ui.maps.copyPinDoneOpen", view.clip.length));
-        redraw2();
+        redraw3();
       };
       const bDel = el("button", "cmp-mini k-danger", t("ui.maps.delPick"));
       bDel.onclick = async () => {
@@ -72257,12 +72268,12 @@ ${h.text}`;
         view.sel.clear();
         await save();
         setStatus(tf("ui.maps.delPinDone", n2));
-        redraw2();
+        redraw3();
       };
       const bNone = el("button", "cmp-mini", t("ui.maps.cancelPick"));
       bNone.onclick = () => {
         view.sel.clear();
-        redraw2();
+        redraw3();
       };
       selBar.append(bCopy, bDel, bNone);
     }
@@ -72275,7 +72286,7 @@ ${h.text}`;
         view.sel = new Set(added.map((p) => p.id));
         await save();
         setStatus(tf("ui.maps.pastePinDone", added.length, cur.name));
-        redraw2();
+        redraw3();
       };
       selBar.append(bPaste);
     }
@@ -72288,12 +72299,12 @@ ${h.text}`;
       undoB.onclick = async () => {
         (editingRoute.pinIds || []).pop();
         await save();
-        redraw2();
+        redraw3();
       };
       const doneB = el("button", "cmp-mini k-ok", t("ui.maps.done"));
       doneB.onclick = () => {
         view.routeEdit = null;
-        redraw2();
+        redraw3();
       };
       rb.append(undoB, doneB);
       wrap2.append(rb);
@@ -72365,7 +72376,7 @@ ${h.text}`;
       if (e.target !== canvas && e.target !== img && !e.target.classList.contains("map-grid")) return;
       if (view.sel.size) {
         view.sel.clear();
-        redraw2();
+        redraw3();
         return;
       }
       const r = canvas.getBoundingClientRect();
@@ -72376,7 +72387,7 @@ ${h.text}`;
       if (!res) return;
       cur.pins.push(res);
       await save();
-      redraw2();
+      redraw3();
     };
     canvas.onpointerdown = (e) => {
       if (!e.shiftKey || e.button !== 0) return;
@@ -72404,7 +72415,7 @@ ${h.text}`;
         if (Math.abs(x2 - x1) < 0.5 && Math.abs(y2 - y1) < 0.5) return;
         suppressClick = true;
         for (const p of cur.pins || []) if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) view.sel.add(p.id);
-        redraw2();
+        redraw3();
       };
       window.addEventListener("pointermove", paint);
       window.addEventListener("pointerup", up);
@@ -72451,14 +72462,14 @@ ${h.text}`;
         if (e.ctrlKey || e.metaKey) {
           if (view.sel.has(pin.id)) view.sel.delete(pin.id);
           else view.sel.add(pin.id);
-          redraw2();
+          redraw3();
           return;
         }
         if (editingRoute) {
           editingRoute.pinIds = [...editingRoute.pinIds || []];
           if (editingRoute.pinIds[editingRoute.pinIds.length - 1] !== pin.id) editingRoute.pinIds.push(pin.id);
           await save();
-          redraw2();
+          redraw3();
           return;
         }
         if (e.altKey) return editPin();
@@ -72468,10 +72479,10 @@ ${h.text}`;
           return;
         }
         if (pin.kind === "portal" && pin.toMap) {
-          S8.currentId = pin.toMap;
+          S9.currentId = pin.toMap;
           view.sel.clear();
           view.focusPin = null;
-          redraw2();
+          redraw3();
           return;
         }
         if (pin.kind === "entity" && pin.entityFile) {
@@ -72491,13 +72502,13 @@ ${h.text}`;
           deletePins(cur, [pin.id]);
           view.sel.delete(pin.id);
           await save();
-          redraw2();
+          redraw3();
           return;
         }
         if (res) {
           Object.assign(pin, res);
           await save();
-          redraw2();
+          redraw3();
         }
       }
       el2.onpointerdown = (e) => {
@@ -72532,7 +72543,7 @@ ${h.text}`;
           el2.classList.remove("dragging");
           if (moved) {
             await save();
-            redraw2();
+            redraw3();
           }
         };
         window.addEventListener("pointermove", mv);
@@ -72580,7 +72591,7 @@ ${h.text}`;
       cur.routes = [...mapRoutes(cur), r];
       view.routeEdit = r.id;
       await save();
-      redraw2();
+      redraw3();
     };
     rhead.append(addR);
     rsec.append(rhead);
@@ -72595,7 +72606,7 @@ ${h.text}`;
       const bEdit = el("button", "cmp-mini", r.id === view.routeEdit ? t("ui.maps.done") : t("ui.maps.nextDot"));
       bEdit.onclick = () => {
         view.routeEdit = view.routeEdit === r.id ? null : r.id;
-        redraw2();
+        redraw3();
       };
       const bColor = el("button", "cmp-mini", "\u{1F3A8}");
       bColor.title = t("ui.maps.recolorLine");
@@ -72603,14 +72614,14 @@ ${h.text}`;
         const i5 = ROUTE_COLORS.indexOf(r.color);
         r.color = ROUTE_COLORS[(i5 + 1) % ROUTE_COLORS.length];
         await save();
-        redraw2();
+        redraw3();
       };
       const bDash = el("button", "cmp-mini" + (r.dashed ? " on" : ""), "\u2505");
       bDash.title = t("ui.maps.lineLineSolid");
       bDash.onclick = async () => {
         r.dashed = !r.dashed;
         await save();
-        redraw2();
+        redraw3();
       };
       const bRen = el("button", "cmp-mini", "\u270F");
       bRen.title = t("ui.maps.changeNameRoute");
@@ -72619,7 +72630,7 @@ ${h.text}`;
         if (!v2) return;
         r.name = v2.trim();
         await save();
-        redraw2();
+        redraw3();
       };
       const bDel = el("button", "cmp-mini k-danger", "\u{1F5D1}");
       bDel.title = t("ui.maps.delRoutePin");
@@ -72628,7 +72639,7 @@ ${h.text}`;
         deleteRoute(cur, r.id);
         if (view.routeEdit === r.id) view.routeEdit = null;
         await save();
-        redraw2();
+        redraw3();
       };
       row2.append(bEdit, bColor, bDash, bRen, bDel);
       rsec.append(row2);
@@ -72650,8 +72661,8 @@ ${h.text}`;
     if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
   }
   function applyPinFilter(wrap2) {
-    const S8 = mapsState_C.s;
-    const cur = S8 && findMap(S8.data.maps, S8.currentId);
+    const S9 = mapsState_C.s;
+    const cur = S9 && findMap(S9.data.maps, S9.currentId);
     if (!cur) return;
     const q = String(view.q || "").trim();
     let hit = 0;
@@ -73034,43 +73045,1771 @@ ${h.text}`;
     }
   });
 
-  // src/ai-analyzer-ui.js
-  async function analyzerStats(root = state.root) {
-    const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
-    if (!root) return out;
-    const SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research"];
+  // src/ai/ai-bridge.js
+  var ai_bridge_exports = {};
+  __export(ai_bridge_exports, {
+    collectDocs: () => collectDocs,
+    getAIClient: () => getAIClient,
+    getRag: () => getRag,
+    ragContext: () => ragContext,
+    resetAI: () => resetAI,
+    tracker: () => tracker
+  });
+  function getAIClient() {
+    if (_client && _client._root === state.root) return _client;
+    _client = new AIClient({
+      http: httpFromKapi(kapi),
+      // settings เป็นฟังก์ชัน → เปลี่ยนใน dialog แล้วมีผลทันที ไม่ต้องสร้าง client ใหม่
+      settings: () => {
+        const ai = getAISettings();
+        return {
+          provider: ai.provider || "openai",
+          model: ai.model || "",
+          temperature: ai.temperature ?? 0.7,
+          maxTokens: ai.maxTokens || 800,
+          ollamaUrl: ai.ollamaUrl || "http://localhost:11434"
+        };
+      },
+      keyStore: new KeyStore({ io: keyIo(), root: state.root || "" }),
+      tracker,
+      log: (lv, msg, extra) => log(lv, msg, extra)
+    });
+    _client._root = state.root;
+    return _client;
+  }
+  async function collectDocs(root) {
+    const docs = [];
+    for (const e of await listEntities(root)) {
+      const body = [
+        Object.values(e.entity.fields || {}).join("\n"),
+        (e.entity.sections || []).map((s) => (s.title || "") + "\n" + (s.content || "")).join("\n")
+      ].join("\n").trim();
+      if (body) docs.push({
+        id: "wiki:" + e.path,
+        text: body,
+        meta: { kind: "wiki", title: e.name, cat: e.cat, path: e.path }
+      });
+    }
+    for (const s of await listScenes(root, { withText: true })) {
+      if (s.text && s.text.trim()) {
+        docs.push({
+          id: "scene:" + s.id,
+          text: s.text,
+          meta: { kind: "scene", title: s.title, sceneId: s.id, path: s.path }
+        });
+      }
+    }
+    return docs;
+  }
+  async function getRag({ rebuild = false, onProgress = null } = {}) {
+    if (!state.root) return null;
+    if (_rag && _ragRoot === state.root && !rebuild) return _rag;
+    const client = getAIClient();
+    let index = new VectorIndex({});
+    const idxPath = await kapi.join(state.root, INDEX_FILE);
+    if (!rebuild) {
+      try {
+        if (await kapi.exists(idxPath)) index = VectorIndex.fromJSON(await kapi.readJson(idxPath));
+      } catch {
+      }
+    }
+    _rag = new RagPipeline({ client, index });
+    _ragRoot = state.root;
+    if (!index.size) {
+      onProgress && onProgress(t("ui.aiBridge.busyNewIndexBody"));
+      const docs = await collectDocs(state.root);
+      const res = await _rag.indexDocs(docs);
+      log("info", t("ui.aiBridge.aiRagNewIndex"), { docs: docs.length, chunks: res.added, model: res.model });
+      try {
+        await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON()));
+      } catch {
+      }
+    }
+    return _rag;
+  }
+  async function ragContext(query, opts = {}) {
+    const rag = await getRag(opts);
+    if (!rag) return { text: "", sources: [], tokens: 0 };
     try {
-      for (const sec of await kapi.listDirs(root)) {
-        if (SKIP.includes(sec)) {
-          if (sec === "Wiki" || sec === "Bible") {
-            const wp = await kapi.join(root, sec);
-            for (const cat of await kapi.listDirs(wp).catch(() => []))
-              out.entities += (await kapi.listFiles(await kapi.join(wp, cat), ".json").catch(() => [])).length;
-          }
-          continue;
+      return await rag.context(query, { k: opts.k || 5, maxTokens: opts.maxTokens || 1500 });
+    } catch (e) {
+      log("warn", t("ui.aiBridge.aiRagRetrieveFail"), e);
+      return buildContext([], {});
+    }
+  }
+  function resetAI() {
+    _client = null;
+    _rag = null;
+    _ragRoot = "";
+  }
+  var _client, _rag, _ragRoot, tracker, keyIo;
+  var init_ai_bridge = __esm({
+    "src/ai/ai-bridge.js"() {
+      init_i18n();
+      init_core();
+      init_ai_core();
+      init_ai_settings();
+      init_project_scan();
+      _client = null;
+      _rag = null;
+      _ragRoot = "";
+      tracker = new CostTracker({});
+      keyIo = () => syncIo();
+    }
+  });
+
+  // src/ai/ai-analyze.js
+  function filterScope(scenes, scope = {}) {
+    const kind = SCOPE_KINDS.includes(scope.kind) ? scope.kind : "project";
+    const all = Array.isArray(scenes) ? scenes : [];
+    if (kind === "book") return scope.sectionKey ? all.filter((s) => s.sectionKey === scope.sectionKey) : all.slice();
+    if (kind === "chapter") return scope.chapterId ? all.filter((s) => s.chapterId === scope.chapterId) : all.slice();
+    if (kind === "scene") return scope.sceneId ? all.filter((s) => s.id === scope.sceneId) : [];
+    return all.slice();
+  }
+  function describeScope(scope = {}, scenes = []) {
+    const kind = SCOPE_KINDS.includes(scope.kind) ? scope.kind : "project";
+    const picked = filterScope(scenes, scope);
+    let name5 = "";
+    if (kind === "book") name5 = picked[0] && picked[0].sectionTitle || scope.sectionKey || "";
+    else if (kind === "chapter") name5 = picked[0] && picked[0].chapterTitle || scope.chapterId || "";
+    else if (kind === "scene") name5 = picked[0] && picked[0].title || scope.sceneId || "";
+    return {
+      kind,
+      name: name5,
+      count: picked.length,
+      text: SCOPE_LABELS[kind] + (name5 ? ": " + name5 : "") + tf("ui.aia.nScene", picked.length)
+    };
+  }
+  function plainText(md) {
+    return String(md || "").replace(/<!--[\s\S]*?-->/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^#{1,6}\s+/gm, "").replace(/[*_`~>]/g, "").replace(/\r/g, "").trim();
+  }
+  function wordsOf(text) {
+    return tokenize2(plainText(text)).map((x) => x.word);
+  }
+  function countWords2(text) {
+    return wordsOf(text).length;
+  }
+  function isStopword(w) {
+    return TH_STOPWORDS.has(w) || EN_STOPWORDS.has(String(w).toLowerCase()) || w.length < 2 || /^\d+$/.test(w);
+  }
+  function dialogueRatio(text) {
+    const s = plainText(text);
+    if (!s) return 0;
+    let inside = 0;
+    for (const m of s.matchAll(/[“"„«](.*?)[”"»]/gs)) inside += m[1].length;
+    for (const m of s.matchAll(/^\s*[—–-]\s*(.+)$/gm)) inside += m[1].length;
+    return Math.min(1, inside / s.length);
+  }
+  function splitSentences(text) {
+    return plainText(text).split(SENT_SPLIT).map((x) => x.trim()).filter(Boolean);
+  }
+  function mean(a) {
+    return a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  }
+  function median(a) {
+    if (!a.length) return 0;
+    const s = a.slice().sort((x, y) => x - y);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function stdev(a) {
+    if (a.length < 2) return 0;
+    const m = mean(a);
+    return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1));
+  }
+  function nameForms(c) {
+    return [c.name, ...c.aliases || []].filter((x) => x && String(x).trim()).map(String);
+  }
+  function countMentions(text, character) {
+    const s = plainText(text);
+    let n2 = 0;
+    for (const form of nameForms(character)) {
+      if (!form) continue;
+      let i5 = 0;
+      while ((i5 = s.indexOf(form, i5)) !== -1) {
+        n2++;
+        i5 += form.length;
+      }
+    }
+    return n2;
+  }
+  function analyzePacing(scenes = []) {
+    const rows = scenes.map((s) => {
+      const text = plainText(s.text);
+      const w = countWords2(text);
+      const dr = dialogueRatio(text);
+      const sents = splitSentences(text);
+      const avgSent = sents.length ? w / sents.length : 0;
+      const tempo = Math.round(100 * (0.45 * dr + 0.35 * (1 - clamp4((avgSent - 6) / 30, 0, 1)) + 0.2 * (1 - clamp4((w - 300) / 1500, 0, 1))));
+      return {
+        id: s.id,
+        title: s.title,
+        chapterTitle: s.chapterTitle || "",
+        words: w,
+        dialogue: +(dr * 100).toFixed(1),
+        avgSentence: +avgSent.toFixed(1),
+        tempo: clamp4(tempo, 0, 100)
+      };
+    });
+    const temps = rows.map((r) => r.tempo);
+    const avg = +mean(temps).toFixed(1), sd = +stdev(temps).toFixed(1);
+    const slowRuns = findRuns(rows, (r) => r.tempo < avg - sd * 0.5);
+    const fastRuns = findRuns(rows, (r) => r.tempo > avg + sd * 0.5);
+    return {
+      rows,
+      avg,
+      sd,
+      slowRuns,
+      fastRuns,
+      stats: [
+        { label: t("ui.aia.stTempoAvg"), value: avg },
+        { label: t("ui.aia.stDialogueAvg"), value: +mean(rows.map((r) => r.dialogue)).toFixed(1) + "%" },
+        { label: t("ui.aia.stSlowRun"), value: slowRuns.length },
+        { label: t("ui.aia.stFastRun"), value: fastRuns.length }
+      ]
+    };
+  }
+  function findRuns(rows, testFn, minLen = 2) {
+    const out = [];
+    let cur = [];
+    for (const r of rows) {
+      if (testFn(r)) cur.push(r);
+      else {
+        if (cur.length >= minLen) out.push(cur);
+        cur = [];
+      }
+    }
+    if (cur.length >= minLen) out.push(cur);
+    return out.map((g) => ({
+      from: g[0].title || g[0].id,
+      to: g[g.length - 1].title || g[g.length - 1].id,
+      count: g.length,
+      sceneId: g[0].id
+    }));
+  }
+  function analyzeArc(scenes = [], characters = []) {
+    const chapters = chapterOrder(scenes);
+    const chars3 = characters.map((c) => {
+      const perScene = scenes.map((s) => ({
+        id: s.id,
+        title: s.title,
+        chapterId: s.chapterId,
+        count: countMentions(s.text, c)
+      }));
+      const perChapter = chapters.map((ch) => ({
+        chapterId: ch.chapterId,
+        chapterTitle: ch.chapterTitle,
+        count: perScene.filter((x) => x.chapterId === ch.chapterId).reduce((a, b) => a + b.count, 0)
+      }));
+      const seen = perScene.filter((x) => x.count > 0);
+      const gaps = gapRuns(perChapter);
+      return {
+        name: c.name,
+        total: perScene.reduce((a, b) => a + b.count, 0),
+        scenes: seen.length,
+        perChapter,
+        perScene,
+        first: seen[0] ? seen[0].title : "",
+        last: seen.length ? seen[seen.length - 1].title : "",
+        firstSceneId: seen[0] ? seen[0].id : "",
+        gaps
+      };
+    }).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
+    return {
+      chapters,
+      chars: chars3,
+      stats: [
+        { label: t("ui.aia.stCharAppear"), value: chars3.length },
+        { label: t("ui.aia.stChapter"), value: chapters.length },
+        { label: t("ui.aia.stCharGap"), value: chars3.filter((c) => c.gaps.length).length }
+      ]
+    };
+  }
+  function gapRuns(perChapter) {
+    const out = [];
+    let start = -1;
+    const firstSeen = perChapter.findIndex((c) => c.count > 0);
+    const lastSeen = perChapter.map((c) => c.count > 0).lastIndexOf(true);
+    if (firstSeen < 0) return out;
+    for (let i5 = firstSeen; i5 <= lastSeen; i5++) {
+      if (perChapter[i5].count === 0) {
+        if (start < 0) start = i5;
+      } else {
+        if (start >= 0 && i5 - start >= 2) out.push({ from: perChapter[start].chapterTitle, to: perChapter[i5 - 1].chapterTitle, count: i5 - start });
+        start = -1;
+      }
+    }
+    return out;
+  }
+  function chapterOrder(scenes = []) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const s of scenes) if (!seen.has(s.chapterId)) seen.set(s.chapterId, { chapterId: s.chapterId, chapterTitle: s.chapterTitle || s.chapterId });
+    return [...seen.values()];
+  }
+  function analyzeWords(scenes = [], opts = {}) {
+    const top = opts.top || 40;
+    const skipNames = new Set((opts.characters || []).flatMap(nameForms));
+    const counts = /* @__PURE__ */ new Map();
+    let total = 0;
+    for (const s of scenes) {
+      for (const w of wordsOf(s.text)) {
+        total++;
+        if (isStopword(w) || skipNames.has(w)) continue;
+        counts.set(w, (counts.get(w) || 0) + 1);
+      }
+    }
+    const rows = [...counts.entries()].map(([word, count]) => ({ word, count, per10k: total ? +(1e4 * count / total).toFixed(1) : 0 })).sort((a, b) => b.count - a.count || a.word.localeCompare(b.word)).slice(0, top);
+    return {
+      rows,
+      total,
+      unique: counts.size,
+      stats: [
+        { label: t("ui.common.word2"), value: total.toLocaleString() },
+        { label: t("ui.aia.stUniqueWord"), value: counts.size.toLocaleString() },
+        { label: t("ui.aia.stRichWord"), value: total ? +(100 * counts.size / total).toFixed(1) + "%" : "0%" }
+      ]
+    };
+  }
+  function analyzeConflict(scenes = []) {
+    const rows = scenes.map((s) => {
+      const text = plainText(s.text);
+      const hits = [];
+      for (const w of CONFLICT_WORDS) {
+        let n2 = 0, i5 = 0;
+        while ((i5 = text.indexOf(w, i5)) !== -1) {
+          n2++;
+          i5 += w.length;
         }
-        const secPath = await kapi.join(root, sec);
-        if (!await kapi.exists(await kapi.join(secPath, "section.json"))) continue;
-        out.sections++;
-        const dr = await kapi.join(secPath, "Draft");
-        if (!await kapi.exists(dr)) continue;
-        for (const dn of await kapi.listDirs(dr).catch(() => [])) {
-          const dp = await kapi.join(dr, dn);
-          const df = await kapi.join(dp, "draft.json");
-          if (!await kapi.exists(df)) continue;
-          const chs = (await kapi.readJson(df).catch(() => ({}))).chapters || [];
-          out.chapters += chs.length;
-          const scAll = (await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}))).chapters || {};
-          for (const ch of chs) for (const sc of scAll[ch.guid] || []) {
+        if (n2) hits.push({ word: w, count: n2 });
+      }
+      hits.sort((a, b) => b.count - a.count);
+      const words = countWords2(text);
+      const total = hits.reduce((a, b) => a + b.count, 0);
+      return {
+        id: s.id,
+        title: s.title,
+        chapterTitle: s.chapterTitle || "",
+        words,
+        hits: hits.slice(0, 6),
+        score: total,
+        density: words ? +(1e3 * total / words).toFixed(1) : 0
+      };
+    });
+    const empty2 = rows.filter((r) => r.score === 0 && r.words > 40);
+    return {
+      rows,
+      empty: empty2,
+      coverage: rows.length ? pct(rows.length - empty2.length, rows.length) : 0,
+      stats: [
+        { label: t("ui.aia.stSceneHasConflict"), value: rows.length - empty2.length + "/" + rows.length },
+        { label: t("ui.aia.stNoConflict"), value: empty2.length },
+        { label: t("ui.aia.stConflictDensity"), value: +mean(rows.map((r) => r.density)).toFixed(1) }
+      ]
+    };
+  }
+  function analyzeLength(scenes = []) {
+    const rows = scenes.map((s) => {
+      const w = countWords2(s.text);
+      return {
+        id: s.id,
+        title: s.title,
+        chapterTitle: s.chapterTitle || "",
+        words: w,
+        minutes: +(w / WORDS_PER_MIN).toFixed(1),
+        pages: +(w / 250).toFixed(1)
+      };
+    });
+    const ws = rows.map((r) => r.words);
+    const avg = +mean(ws).toFixed(0), med = +median(ws).toFixed(0), sd = stdev(ws);
+    const long = rows.filter((r) => sd > 0 && r.words > avg + 2 * sd);
+    const short2 = rows.filter((r) => sd > 0 && r.words < avg - 2 * sd);
+    const total = ws.reduce((a, b) => a + b, 0);
+    return {
+      rows,
+      avg,
+      median: med,
+      sd: +sd.toFixed(0),
+      long,
+      short: short2,
+      total,
+      stats: [
+        { label: t("ui.aia.stAvgWordScene"), value: avg.toLocaleString() },
+        { label: t("ui.aia.stMedian"), value: med.toLocaleString() },
+        { label: t("ui.aia.stTooLong"), value: long.length },
+        { label: t("ui.aia.stReadTime"), value: Math.round(total / WORDS_PER_MIN) + t("ui.aia.unitMin") }
+      ]
+    };
+  }
+  function analyzeRepeats(scenes = [], opts = {}) {
+    const win = opts.window || 60, minCount = opts.minCount || 2, top = opts.top || 60;
+    const skipNames = new Set((opts.characters || []).flatMap(nameForms));
+    const rows = [];
+    for (const s of scenes) {
+      const ws = wordsOf(s.text);
+      const last2 = /* @__PURE__ */ new Map();
+      const cluster = /* @__PURE__ */ new Map();
+      for (let i5 = 0; i5 < ws.length; i5++) {
+        const w = ws[i5];
+        if (isStopword(w) || skipNames.has(w)) continue;
+        const prev = last2.get(w);
+        if (prev != null && i5 - prev <= win) {
+          const c = cluster.get(w) || { word: w, count: 1, closest: Infinity };
+          c.count++;
+          c.closest = Math.min(c.closest, i5 - prev);
+          cluster.set(w, c);
+        }
+        last2.set(w, i5);
+      }
+      for (const c of cluster.values()) {
+        if (c.count >= minCount) rows.push({ ...c, id: s.id, title: s.title, chapterTitle: s.chapterTitle || "" });
+      }
+    }
+    rows.sort((a, b) => b.count - a.count || a.closest - b.closest);
+    return {
+      rows: rows.slice(0, top),
+      totalFound: rows.length,
+      window: win,
+      stats: [
+        { label: t("ui.aia.stRepeatFound"), value: rows.length },
+        { label: t("ui.aia.stSceneAffected"), value: new Set(rows.map((r) => r.id)).size },
+        { label: t("ui.aia.stWindow"), value: win + t("ui.aia.unitWord") }
+      ]
+    };
+  }
+  function analyzeShipping(scenes = [], characters = []) {
+    const present = scenes.map((s) => {
+      const text = plainText(s.text);
+      const hits = characters.map((c) => ({ c, n: countMentions(text, c) })).filter((x) => x.n > 0);
+      let heat = 0;
+      for (const w of ROMANCE_WORDS) {
+        let i5 = 0;
+        while ((i5 = text.indexOf(w, i5)) !== -1) {
+          heat++;
+          i5 += w.length;
+        }
+      }
+      return { scene: s, hits, heat, words: countWords2(text) };
+    });
+    const pairs = /* @__PURE__ */ new Map();
+    for (const p of present) {
+      for (let i5 = 0; i5 < p.hits.length; i5++) for (let j = i5 + 1; j < p.hits.length; j++) {
+        const [a, b] = [p.hits[i5].c.name, p.hits[j].c.name].sort((x, y) => x.localeCompare(y));
+        const k = a + "|" + b;
+        const row2 = pairs.get(k) || { a, b, scenes: 0, mentions: 0, heat: 0, words: 0, sceneIds: [] };
+        row2.scenes++;
+        row2.mentions += p.hits[i5].n + p.hits[j].n;
+        row2.heat += p.heat;
+        row2.words += p.words;
+        row2.sceneIds.push(p.scene.id);
+        pairs.set(k, row2);
+      }
+    }
+    const rows = [...pairs.values()].map((r) => ({
+      ...r,
+      // คะแนน = ได้อยู่ด้วยกันบ่อย + ถูกพูดถึงเยอะ + ฉากที่อยู่ด้วยกันมีคำเชิงรักหนาแน่น
+      score: +(r.scenes * 2 + Math.sqrt(r.mentions) + (r.words ? 300 * r.heat / r.words : 0)).toFixed(1)
+    })).sort((x, y) => y.score - x.score);
+    return {
+      rows: rows.slice(0, 30),
+      totalPairs: rows.length,
+      stats: [
+        { label: t("ui.aia.stPairFound"), value: rows.length },
+        { label: t("ui.aia.stTopPair"), value: rows[0] ? rows[0].a + " \xD7 " + rows[0].b : "\u2014" },
+        { label: t("ui.aia.stRomanceWord"), value: present.reduce((a, b) => a + b.heat, 0) }
+      ]
+    };
+  }
+  function analyzeScreentime(scenes = [], characters = []) {
+    const totalWords = scenes.reduce((a, s) => a + countWords2(s.text), 0);
+    const rows = characters.map((c) => {
+      let inScenes = 0, mentions = 0, words = 0;
+      const sceneIds = [];
+      for (const s of scenes) {
+        const n2 = countMentions(s.text, c);
+        if (n2 > 0) {
+          inScenes++;
+          mentions += n2;
+          words += countWords2(s.text);
+          sceneIds.push(s.id);
+        }
+      }
+      return {
+        name: c.name,
+        cat: c.cat || "",
+        scenes: inScenes,
+        mentions,
+        words,
+        share: pct(words, totalWords),
+        sceneIds: sceneIds.slice(0, 40)
+      };
+    }).filter((r) => r.mentions > 0).sort((a, b) => b.words - a.words || b.mentions - a.mentions);
+    const lead = rows[0];
+    return {
+      rows,
+      totalWords,
+      stats: [
+        { label: t("ui.aia.stCharAppear"), value: rows.length },
+        { label: t("ui.aia.stLead"), value: lead ? lead.name : "\u2014" },
+        { label: t("ui.aia.stLeadShare"), value: lead ? lead.share + "%" : "0%" },
+        { label: t("ui.aia.stSilentChar"), value: characters.length - rows.length }
+      ]
+    };
+  }
+  function analyzeScoreLocal(scenes = [], characters = []) {
+    const pace = analyzePacing(scenes);
+    const len5 = analyzeLength(scenes);
+    const con = analyzeConflict(scenes);
+    const rep = analyzeRepeats(scenes, { characters });
+    const st = analyzeScreentime(scenes, characters);
+    const words = len5.total;
+    const balance = st.rows.length > 1 ? 10 - clamp4((st.rows[0].share - 100 / st.rows.length) / 8, 0, 10) : 5;
+    const criteria = [
+      {
+        key: "pacing",
+        label: t("ui.aia.crPacing"),
+        score: round1(clamp4(10 - Math.abs(pace.avg - 55) / 5, 0, 10)),
+        note: tf("ui.aia.crPacingNote", pace.avg, pace.slowRuns.length)
+      },
+      {
+        key: "dialogue",
+        label: t("ui.aia.crDialogue"),
+        score: round1(clamp4(10 - Math.abs(mean(pace.rows.map((r) => r.dialogue)) - 35) / 4, 0, 10)),
+        note: tf("ui.aia.crDialogueNote", +mean(pace.rows.map((r) => r.dialogue)).toFixed(1))
+      },
+      {
+        key: "conflict",
+        label: t("ui.aia.crConflict"),
+        score: round1(con.coverage / 10),
+        note: tf("ui.aia.crConflictNote", con.empty.length)
+      },
+      {
+        key: "consistency",
+        label: t("ui.aia.crSceneLen"),
+        score: round1(clamp4(10 - (len5.avg ? 10 * len5.sd / len5.avg : 0), 0, 10)),
+        note: tf("ui.aia.crSceneLenNote", len5.avg, len5.sd)
+      },
+      {
+        key: "language",
+        label: t("ui.aia.crLanguage"),
+        score: round1(clamp4(10 - (words ? 400 * rep.totalFound / words : 0), 0, 10)),
+        note: tf("ui.aia.crLanguageNote", rep.totalFound)
+      },
+      {
+        key: "cast",
+        label: t("ui.aia.crCast"),
+        score: round1(clamp4(balance, 0, 10)),
+        note: tf("ui.aia.crCastNote", st.rows.length, st.rows[0] ? st.rows[0].share : 0)
+      }
+    ];
+    const total = round1(mean(criteria.map((c) => c.score)));
+    return {
+      criteria,
+      total,
+      source: "local",
+      stats: [
+        { label: t("ui.aia.stScoreLocal"), value: total + "/10" },
+        { label: t("ui.common.scene2"), value: scenes.length },
+        { label: t("ui.common.word2"), value: words.toLocaleString() }
+      ]
+    };
+  }
+  function round1(v2) {
+    return +(Number(v2) || 0).toFixed(1);
+  }
+  function analysisById(id) {
+    return ANALYSES.find((a) => a.id === id) || null;
+  }
+  function runLocal(id, scenes = [], characters = [], opts = {}) {
+    switch (id) {
+      case "pacing":
+        return analyzePacing(scenes);
+      case "arc":
+        return analyzeArc(scenes, characters);
+      case "words":
+        return analyzeWords(scenes, { ...opts, characters });
+      case "conflict":
+        return analyzeConflict(scenes);
+      case "length":
+        return analyzeLength(scenes);
+      case "repeat":
+        return analyzeRepeats(scenes, { ...opts, characters });
+      case "shipping":
+        return analyzeShipping(scenes, characters);
+      case "screentime":
+        return analyzeScreentime(scenes, characters);
+      case "score":
+        return analyzeScoreLocal(scenes, characters);
+      case "plothole":
+        return localPlotSummary(scenes);
+      case "continuity":
+        return localContinuity(scenes, characters);
+      default:
+        return { stats: [] };
+    }
+  }
+  function localPlotSummary(scenes = []) {
+    const dated = scenes.filter((s) => s.storyDate);
+    const noPov = scenes.filter((s) => !s.pov && countWords2(s.text) > 40);
+    return {
+      stats: [
+        { label: t("ui.common.scene2"), value: scenes.length },
+        { label: t("ui.aia.stHasStoryDate"), value: dated.length },
+        { label: t("ui.aia.stNoPov"), value: noPov.length }
+      ],
+      rows: noPov.map((s) => ({ id: s.id, title: s.title, note: t("ui.aia.noteNoPov") }))
+    };
+  }
+  function localContinuity(scenes = [], characters = []) {
+    const st = analyzeScreentime(scenes, characters);
+    const thin = st.rows.filter((r) => r.scenes === 1 && r.mentions === 1);
+    return {
+      stats: [
+        { label: t("ui.aia.stCharAppear"), value: st.rows.length },
+        { label: t("ui.aia.stCharOnce"), value: thin.length },
+        { label: t("ui.common.scene2"), value: scenes.length }
+      ],
+      rows: thin.map((r) => ({ id: r.sceneIds[0] || "", title: r.name, note: t("ui.aia.noteCharOnce") }))
+    };
+  }
+  function localDigest(id, local = {}) {
+    const lines = [];
+    for (const s of local.stats || []) lines.push(`- ${s.label}: ${s.value}`);
+    const takeRows = (rows, fmt, n2 = 12) => (rows || []).slice(0, n2).forEach((r) => lines.push("- " + fmt(r)));
+    if (id === "pacing") takeRows(local.rows, (r) => tf("ui.aia.dgPacing", r.title, r.id, r.tempo, r.dialogue, r.words), 20);
+    if (id === "arc") takeRows(local.chars, (c) => tf("ui.aia.dgArc", c.name, c.total, c.scenes) + (c.gaps.length ? tf("ui.aia.dgArcGap", c.gaps.map((g) => g.from + "\u2192" + g.to).join(", ")) : ""));
+    if (id === "words") takeRows(local.rows, (r) => tf("ui.aia.dgWords", r.word, r.count, r.per10k), 30);
+    if (id === "conflict") takeRows(local.empty, (r) => tf("ui.aia.dgConflict", r.title, r.id), 20);
+    if (id === "length") takeRows(local.rows, (r) => tf("ui.aia.dgLength", r.title, r.id, r.words, r.minutes), 25);
+    if (id === "repeat") takeRows(local.rows, (r) => tf("ui.aia.dgRepeat", r.word, r.count, r.title, r.id, r.closest), 25);
+    if (id === "shipping") takeRows(local.rows, (r) => tf("ui.aia.dgShipping", r.a, r.b, r.scenes, r.score), 15);
+    if (id === "screentime") takeRows(local.rows, (r) => tf("ui.aia.dgScreentime", r.name, r.scenes, r.mentions, r.share), 20);
+    if (id === "score") takeRows(local.criteria, (c) => tf("ui.aia.dgScore", c.label, c.score, c.note), 10);
+    if (id === "plothole" || id === "continuity") takeRows(local.rows, (r) => tf("ui.aia.dgNote", r.title, r.id, r.note), 20);
+    return lines.join("\n");
+  }
+  function sceneBlocks(scenes = [], budget = 6e3) {
+    const out = [];
+    let used = 0;
+    for (const s of scenes) {
+      let text = plainText(s.text);
+      const head2 = [`[sceneId: ${s.id}]`, s.title || t("ui.common.notNamed")];
+      if (s.chapterTitle) head2.push(t("ui.common.chapter2") + s.chapterTitle);
+      if (s.pov) head2.push(t("ui.common.view2") + s.pov);
+      if (s.storyDate) head2.push(t("ui.aiPlot.timeStory") + s.storyDate);
+      let cost = estimateTokens2(text) + 40;
+      if (used + cost > budget) {
+        const left = budget - used - 40;
+        if (left < 120) break;
+        text = chunkText(text, { maxTokens: left })[0] || text.slice(0, left * 3);
+        cost = estimateTokens2(text) + 40;
+      }
+      out.push(head2.join(" \xB7 ") + "\n" + text);
+      used += cost;
+      if (used >= budget) break;
+    }
+    return { blocks: out, tokens: used, truncated: out.length < scenes.length };
+  }
+  function buildAnalysisPrompt(id, { scenes = [], local = {}, scope = {}, focus = "", budget = 6e3 } = {}) {
+    const def = analysisById(id);
+    const task = t(AI_TASK_KEYS[id] || "");
+    const sc = describeScope(scope, scenes);
+    const { blocks, tokens, truncated } = sceneBlocks(scenes, budget);
+    const lines = [];
+    lines.push(t("ui.aia.pHeadScope") + sc.text);
+    lines.push("");
+    lines.push(t("ui.aia.pHeadTask") + (def ? def.title : id));
+    lines.push(task);
+    lines.push("");
+    const digest = localDigest(id, local);
+    if (digest) {
+      lines.push(t("ui.aia.pHeadNumbers"));
+      lines.push(digest);
+      lines.push("");
+    }
+    lines.push(t("ui.aia.pRules"));
+    if (focus) lines.push(t("ui.aiPlot.important") + focus);
+    lines.push("");
+    lines.push(id === "score" ? t("ui.aia.pFormatScore") : t("ui.aia.pFormatFindings"));
+    lines.push("");
+    if (blocks.length) {
+      lines.push(t("ui.aia.pHeadScenes") + (truncated ? t("ui.aia.pTruncated") : ""));
+      lines.push(blocks.join("\n\n"));
+    }
+    const prompt2 = lines.join("\n");
+    return {
+      system: AI_SYSTEM,
+      prompt: prompt2,
+      tokens: estimateTokens2(prompt2) + tokens,
+      sceneIds: scenes.map((s) => s.id),
+      truncated
+    };
+  }
+  function parseAnalysisReply(id, text, opts = {}) {
+    const raw = String(text || "");
+    if (id === "score") {
+      const data2 = extractJson(raw);
+      const arr = data2 && (data2.criteria || data2.scores || data2.items) || data2;
+      const rows2 = validate(arr, SCORE_SCHEMA).map((r) => ({ ...r, score: clamp4(round1(r.score), 0, 10) }));
+      const given = data2 && typeof data2 === "object" && !Array.isArray(data2) && Number(data2.total);
+      const total = isFinite(given) && given > 0 ? clamp4(round1(given), 0, 10) : round1(mean(rows2.map((r) => r.score)));
+      return { kind: "score", rows: rows2, total, summary: data2 && data2.summary || "", raw };
+    }
+    const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
+    const rows = validate(extractJson(raw), FINDING_SCHEMA).filter((r) => !valid || !r.sceneId || valid.has(r.sceneId)).map((r) => ({ ...r, severityLabel: SEVERITY[r.severity] || r.severity })).sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0));
+    return { kind: "findings", rows, raw };
+  }
+  async function analyze(id, o = {}) {
+    const def = analysisById(id);
+    if (!def) return { id, error: t("ui.aia.errUnknownKind"), local: { stats: [] }, ai: null };
+    const scenes = filterScope(o.scenes || [], o.scope || {});
+    if (!scenes.length) return { id, error: t("ui.aia.errNoScene"), local: { stats: [] }, ai: null, scope: describeScope(o.scope, o.scenes || []) };
+    const local = runLocal(id, scenes, o.characters || [], o);
+    const scope = describeScope(o.scope, o.scenes || []);
+    if (o.useAI === false || !o.client) return { id, local, ai: null, scope, scenes: scenes.length };
+    const built = buildAnalysisPrompt(id, { scenes, local, scope: o.scope, focus: o.focus, budget: o.budget || 6e3 });
+    const res = await o.client.complete({
+      prompt: built.prompt,
+      system: built.system,
+      feature: "analyze:" + id,
+      temperature: o.temperature ?? 0.3,
+      maxTokens: o.maxTokens || 1200
+    });
+    if (!res || !res.ok) return { id, local, ai: { ok: false, error: res && res.error || t("ui.aia.errAiFail") }, scope, scenes: scenes.length };
+    const parsed = parseAnalysisReply(id, res.text, { sceneIds: built.sceneIds });
+    return {
+      id,
+      local,
+      scope,
+      scenes: scenes.length,
+      truncated: built.truncated,
+      ai: { ok: true, ...parsed, usage: res.usage, cost: res.cost }
+    };
+  }
+  function scopeTokens(scenes = [], scope = {}, budget = 6e3) {
+    const picked = filterScope(scenes, scope);
+    const { tokens, truncated } = sceneBlocks(picked, budget);
+    return { scenes: picked.length, sceneTokens: tokens, truncated };
+  }
+  function estimateAnalysis(id, base4 = {}, maxOut = 0) {
+    const overhead = estimateTokens2(AI_SYSTEM) + estimateTokens2(t(AI_TASK_KEYS[id] || "")) + 240;
+    const digest = Math.min(900, 40 + (base4.scenes || 0) * 14);
+    const input = (base4.sceneTokens || 0) + overhead + digest;
+    const output = maxOut || (id === "score" ? 900 : 1200);
+    return { id, scenes: base4.scenes || 0, input, output, total: input + output, truncated: !!base4.truncated };
+  }
+  function estimateTotal(ids = ANALYSIS_IDS, base4 = {}) {
+    let input = 0, output = 0;
+    for (const id of ids) {
+      const e = estimateAnalysis(id, base4);
+      input += e.input;
+      output += e.output;
+    }
+    return { input, output, total: input + output, count: ids.length };
+  }
+  function estimateUsd(provider, model, est = {}) {
+    return estimateCost(provider || "openai", model || "", { input: est.input || 0, output: est.output || 0 }).usd;
+  }
+  function usageOfResults(results = {}) {
+    let tokens = 0, usd2 = 0, calls = 0;
+    for (const r of Object.values(results || {})) {
+      const ai = r && r.ai;
+      if (!ai || !ai.ok) continue;
+      calls++;
+      tokens += ai.usage && (ai.usage.total || (ai.usage.input || 0) + (ai.usage.output || 0)) || 0;
+      usd2 += ai.cost && ai.cost.usd || 0;
+    }
+    return { tokens, usd: +usd2.toFixed(6), calls };
+  }
+  function newAnalysisSession(o = {}) {
+    const now = o.now || Date.now();
+    return {
+      v: ANALYSIS_SESSION_VERSION,
+      id: o.id || "ana-" + now,
+      name: String(o.name || "").trim(),
+      created: o.created || new Date(now).toISOString(),
+      project: o.project || "",
+      scope: { kind: "project", sectionKey: "", chapterId: "", sceneId: "", ...o.scope || {} },
+      scopeText: o.scopeText || "",
+      useAI: o.useAI !== false,
+      usage: o.usage || usageOfResults(o.results || {}),
+      results: o.results || {}
+    };
+  }
+  function migrateAnalysisSession(raw) {
+    const r = raw && typeof raw === "object" ? raw : {};
+    const results = {};
+    for (const [k, v2] of Object.entries(r.results || {})) {
+      if (!ANALYSIS_IDS.includes(k) || !v2 || typeof v2 !== "object") continue;
+      results[k] = {
+        id: k,
+        local: v2.local || { stats: [] },
+        ai: v2.ai || null,
+        scope: v2.scope || null,
+        scenes: Number(v2.scenes) || 0,
+        error: v2.error || void 0
+      };
+    }
+    return newAnalysisSession({ ...r, results, usage: r.usage || usageOfResults(results) });
+  }
+  function sessionSummary(s = {}) {
+    const u = s.usage || { tokens: 0, usd: 0 };
+    return {
+      id: s.id || "",
+      name: s.name || s.id || "",
+      created: s.created || "",
+      scopeText: s.scopeText || "",
+      kinds: Object.keys(s.results || {}).length,
+      tokens: u.tokens || 0,
+      usd: u.usd || 0
+    };
+  }
+  function sessionFileName2(s = {}) {
+    const base4 = String(s.name || s.id || "analysis").replace(/[\\/:*?"<>|]+/g, "-").trim().slice(0, 80);
+    return (base4 || String(s.id || "analysis")) + ".json";
+  }
+  function csvEscape(v2) {
+    const s = v2 == null ? "" : String(v2);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csvJoin(rows = []) {
+    return rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
+  }
+  function localTable(id, local = {}) {
+    const L2 = local || {};
+    const H2 = (...a) => a;
+    if (id === "pacing" && L2.rows) return [
+      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csDialogue"), t("ui.aia.csAvgSent"), t("ui.aia.csTempo")),
+      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.dialogue, r.avgSentence, r.tempo])
+    ];
+    if (id === "arc" && L2.chars) {
+      const rows = [H2(t("ui.aia.csCharacter"), t("ui.aia.csChapter"), t("ui.aia.csCount"))];
+      for (const c of L2.chars) for (const ch of c.perChapter) rows.push([c.name, ch.chapterTitle, ch.count]);
+      return rows;
+    }
+    if (id === "words" && L2.rows) return [
+      H2(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csPer10k")),
+      ...L2.rows.map((r) => [r.word, r.count, r.per10k])
+    ];
+    if (id === "conflict" && L2.rows) return [
+      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csScore"), t("ui.aia.csDensity"), t("ui.aia.csMarkers")),
+      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + "\xD7" + h.count).join(" ")])
+    ];
+    if (id === "length" && L2.rows) return [
+      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csMinutes"), t("ui.aia.csPages")),
+      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.minutes, r.pages])
+    ];
+    if (id === "repeat" && L2.rows) return [
+      H2(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csClosest"), t("ui.aia.csScene"), t("ui.aia.csChapter")),
+      ...L2.rows.map((r) => [r.word, r.count, r.closest, r.title, r.chapterTitle])
+    ];
+    if (id === "shipping" && L2.rows) return [
+      H2(t("ui.aia.csSideA"), t("ui.aia.csSideB"), t("ui.aia.csSharedScenes"), t("ui.aia.csMentions"), t("ui.aia.csScore")),
+      ...L2.rows.map((r) => [r.a, r.b, r.scenes, r.mentions, r.score])
+    ];
+    if (id === "screentime" && L2.rows) return [
+      H2(t("ui.aia.csCharacter"), t("ui.common.scene2"), t("ui.aia.csMentions"), t("ui.aia.csWords"), t("ui.aia.csShare")),
+      ...L2.rows.map((r) => [r.name, r.scenes, r.mentions, r.words, r.share])
+    ];
+    if (id === "score" && L2.criteria) return [
+      H2(t("ui.aia.csCriterion"), t("ui.aia.csScore"), t("ui.aia.csNote")),
+      ...L2.criteria.map((c) => [c.label, c.score, c.note])
+    ];
+    if (L2.rows && L2.rows.length) return [H2(t("ui.aia.csTitle"), t("ui.aia.csNote")), ...L2.rows.map((r) => [r.title, r.note || ""])];
+    return null;
+  }
+  function resultCsv(id, res = {}) {
+    const def = analysisById(id);
+    const rows = [];
+    rows.push([t("ui.aia.csAnalysis"), def ? def.title : id]);
+    if (res.scope && res.scope.text) rows.push([t("ui.aia.csScope"), res.scope.text]);
+    rows.push([]);
+    const stats = res.local && res.local.stats || [];
+    if (stats.length) {
+      rows.push([t("ui.aia.csStat"), t("ui.aia.csValue")]);
+      for (const s of stats) rows.push([s.label, s.value]);
+      rows.push([]);
+    }
+    const tbl = localTable(id, res.local);
+    if (tbl) {
+      rows.push(...tbl);
+      rows.push([]);
+    }
+    const ai = res.ai;
+    if (ai && ai.ok && ai.kind === "score" && ai.rows && ai.rows.length) {
+      rows.push([t("ui.aia.scoreAiHead"), String(ai.total)]);
+      rows.push([t("ui.aia.csCriterion"), t("ui.aia.csScore"), t("ui.aia.csNote")]);
+      for (const r of ai.rows) rows.push([r.label, r.score, r.note]);
+      if (ai.summary) rows.push([t("ui.aia.csSummary"), ai.summary]);
+      rows.push([]);
+    } else if (ai && ai.ok && ai.rows && ai.rows.length) {
+      rows.push([t("ui.aia.aiHead")]);
+      rows.push([t("ui.aia.csSeverity"), t("ui.aia.csTitle"), t("ui.aia.csDetail"), t("ui.aia.csSuggestion"), t("ui.aia.csScene")]);
+      for (const r of ai.rows) rows.push([r.severityLabel || r.severity, r.title, r.detail, r.suggestion, r.sceneId]);
+      rows.push([]);
+    }
+    if (ai && ai.ok && ai.usage) {
+      rows.push([t("ui.aia.csTokenUsed"), ai.usage.total || 0, t("ui.aia.csCostUsd"), ai.cost && ai.cost.usd || 0]);
+    }
+    return csvJoin(rows);
+  }
+  function sessionCsv(session = {}) {
+    const parts = [];
+    const head2 = [
+      [t("ui.aia.csSession"), session.name || session.id || ""],
+      [t("ui.aia.csCreated"), session.created || ""],
+      [t("ui.aia.csScope"), session.scopeText || ""],
+      [
+        t("ui.aia.csTokenUsed"),
+        session.usage && session.usage.tokens || 0,
+        t("ui.aia.csCostUsd"),
+        session.usage && session.usage.usd || 0
+      ],
+      []
+    ];
+    parts.push(csvJoin(head2));
+    for (const id of ANALYSIS_IDS) {
+      const r = (session.results || {})[id];
+      if (!r) continue;
+      parts.push(resultCsv(id, r));
+    }
+    return "\uFEFF" + parts.join("\r\n");
+  }
+  var TH_STOPWORDS, EN_STOPWORDS, CONFLICT_WORDS, ROMANCE_WORDS, SENT_SPLIT, SCOPE_KINDS, SCOPE_LABELS, clamp4, pct, WORDS_PER_MIN, ANALYSES, ANALYSIS_IDS, AI_SYSTEM, AI_TASK_KEYS, FINDING_SCHEMA, SCORE_SCHEMA, ANALYSIS_SESSION_VERSION, SESSION_DIR2;
+  var init_ai_analyze = __esm({
+    "src/ai/ai-analyze.js"() {
+      init_i18n();
+      init_search_engine();
+      init_ai_core();
+      TH_STOPWORDS = /* @__PURE__ */ new Set([
+        "\u0E17\u0E35\u0E48",
+        "\u0E41\u0E25\u0E30",
+        "\u0E02\u0E2D\u0E07",
+        "\u0E43\u0E19",
+        "\u0E40\u0E1B\u0E47\u0E19",
+        "\u0E44\u0E21\u0E48",
+        "\u0E43\u0E2B\u0E49",
+        "\u0E21\u0E35",
+        "\u0E44\u0E14\u0E49",
+        "\u0E27\u0E48\u0E32",
+        "\u0E08\u0E30",
+        "\u0E01\u0E32\u0E23",
+        "\u0E04\u0E27\u0E32\u0E21",
+        "\u0E01\u0E31\u0E1A",
+        "\u0E41\u0E15\u0E48",
+        "\u0E01\u0E47",
+        "\u0E21\u0E32",
+        "\u0E44\u0E1B",
+        "\u0E2D\u0E22\u0E39\u0E48",
+        "\u0E41\u0E25\u0E49\u0E27",
+        "\u0E19\u0E35\u0E49",
+        "\u0E19\u0E31\u0E49\u0E19",
+        "\u0E40\u0E02\u0E32",
+        "\u0E40\u0E18\u0E2D",
+        "\u0E21\u0E31\u0E19",
+        "\u0E09\u0E31\u0E19",
+        "\u0E1C\u0E21",
+        "\u0E04\u0E38\u0E13",
+        "\u0E40\u0E23\u0E32",
+        "\u0E15\u0E49\u0E2D\u0E07",
+        "\u0E08\u0E32\u0E01",
+        "\u0E22\u0E31\u0E07",
+        "\u0E16\u0E36\u0E07",
+        "\u0E40\u0E21\u0E37\u0E48\u0E2D",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07",
+        "\u0E2B\u0E19\u0E36\u0E48\u0E07",
+        "\u0E04\u0E19",
+        "\u0E17\u0E33",
+        "\u0E14\u0E49\u0E27\u0E22",
+        "\u0E40\u0E1E\u0E23\u0E32\u0E30",
+        "\u0E0B\u0E36\u0E48\u0E07",
+        "\u0E2B\u0E23\u0E37\u0E2D",
+        "\u0E16\u0E49\u0E32",
+        "\u0E15\u0E31\u0E27",
+        "\u0E40\u0E1E\u0E37\u0E48\u0E2D",
+        "\u0E42\u0E14\u0E22",
+        "\u0E1A\u0E19",
+        "\u0E15\u0E48\u0E2D",
+        "\u0E1E\u0E2D",
+        "\u0E04\u0E23\u0E31\u0E1A",
+        "\u0E04\u0E48\u0E30",
+        "\u0E04\u0E30",
+        "\u0E19\u0E30",
+        "\u0E2A\u0E34",
+        "\u0E25\u0E48\u0E30",
+        "\u0E2D\u0E35\u0E01",
+        "\u0E17\u0E31\u0E49\u0E07",
+        "\u0E01\u0E31\u0E19",
+        "\u0E40\u0E2D\u0E07",
+        "\u0E44\u0E27\u0E49",
+        "\u0E21\u0E32\u0E01",
+        "\u0E19\u0E49\u0E2D\u0E22",
+        "\u0E08\u0E19",
+        "\u0E08\u0E23\u0E34\u0E07",
+        "\u0E40\u0E25\u0E22",
+        "\u0E46",
+        "\u0E46\u0E46"
+      ]);
+      EN_STOPWORDS = /* @__PURE__ */ new Set([
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "of",
+        "to",
+        "in",
+        "on",
+        "at",
+        "is",
+        "was",
+        "were",
+        "be",
+        "been",
+        "are",
+        "it",
+        "its",
+        "he",
+        "she",
+        "they",
+        "his",
+        "her",
+        "him",
+        "them",
+        "that",
+        "this",
+        "with",
+        "for",
+        "as",
+        "by",
+        "from",
+        "not",
+        "no",
+        "so",
+        "if",
+        "then",
+        "had",
+        "has",
+        "have",
+        "i",
+        "you",
+        "we",
+        "me",
+        "my",
+        "your",
+        "our",
+        "do",
+        "did",
+        "does",
+        "up",
+        "out",
+        "about"
+      ]);
+      CONFLICT_WORDS = [
+        "\u0E17\u0E30\u0E40\u0E25\u0E32\u0E30",
+        "\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
+        "\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18",
+        "\u0E42\u0E01\u0E23\u0E18",
+        "\u0E40\u0E16\u0E35\u0E22\u0E07",
+        "\u0E15\u0E48\u0E2D\u0E2A\u0E39\u0E49",
+        "\u0E2A\u0E39\u0E49",
+        "\u0E41\u0E22\u0E48\u0E07",
+        "\u0E02\u0E39\u0E48",
+        "\u0E15\u0E30\u0E42\u0E01\u0E19",
+        "\u0E14\u0E48\u0E32",
+        "\u0E06\u0E48\u0E32",
+        "\u0E2B\u0E19\u0E35",
+        "\u0E44\u0E25\u0E48",
+        "\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A",
+        "\u0E2B\u0E49\u0E32\u0E21",
+        "\u0E02\u0E31\u0E14\u0E02\u0E27\u0E32\u0E07",
+        "\u0E15\u0E48\u0E2D\u0E15\u0E49\u0E32\u0E19",
+        "\u0E17\u0E23\u0E22\u0E28",
+        "\u0E42\u0E01\u0E2B\u0E01",
+        "\u0E2B\u0E25\u0E2D\u0E01",
+        "\u0E41\u0E04\u0E49\u0E19",
+        "\u0E40\u0E01\u0E25\u0E35\u0E22\u0E14",
+        "\u0E17\u0E49\u0E32\u0E17\u0E32\u0E22",
+        "\u0E15\u0E48\u0E2D\u0E23\u0E2D\u0E07",
+        "\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08",
+        "\u0E40\u0E25\u0E37\u0E2D\u0E01",
+        "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08",
+        "\u0E01\u0E25\u0E31\u0E27",
+        "\u0E2A\u0E07\u0E2A\u0E31\u0E22",
+        "\u0E23\u0E30\u0E40\u0E1A\u0E34\u0E14",
+        "\u0E22\u0E34\u0E07"
+      ];
+      ROMANCE_WORDS = [
+        "\u0E23\u0E31\u0E01",
+        "\u0E0A\u0E2D\u0E1A",
+        "\u0E04\u0E34\u0E14\u0E16\u0E36\u0E07",
+        "\u0E01\u0E2D\u0E14",
+        "\u0E08\u0E39\u0E1A",
+        "\u0E2B\u0E31\u0E27\u0E43\u0E08",
+        "\u0E43\u0E08\u0E2A\u0E31\u0E48\u0E19",
+        "\u0E41\u0E01\u0E49\u0E21\u0E41\u0E14\u0E07",
+        "\u0E40\u0E02\u0E34\u0E19",
+        "\u0E2D\u0E32\u0E22",
+        "\u0E2B\u0E27\u0E07",
+        "\u0E2B\u0E48\u0E27\u0E07",
+        "\u0E08\u0E31\u0E1A\u0E21\u0E37\u0E2D",
+        "\u0E2A\u0E1A\u0E15\u0E32",
+        "\u0E22\u0E34\u0E49\u0E21",
+        "\u0E2D\u0E1A\u0E2D\u0E38\u0E48\u0E19",
+        "\u0E04\u0E39\u0E48",
+        "\u0E41\u0E15\u0E48\u0E07\u0E07\u0E32\u0E19",
+        "\u0E2A\u0E32\u0E23\u0E20\u0E32\u0E1E",
+        "\u0E2B\u0E36\u0E07",
+        "\u0E17\u0E19",
+        "\u0E04\u0E34\u0E14"
+      ];
+      SENT_SPLIT = /[.!?]+[\s"'”)\]]*|\n+|\s{2,}/;
+      SCOPE_KINDS = ["project", "book", "chapter", "scene"];
+      SCOPE_LABELS = {
+        project: t("ui.aia.scopeProject"),
+        book: t("ui.aia.scopeBook"),
+        chapter: t("ui.aia.scopeChapter"),
+        scene: t("ui.aia.scopeScene")
+      };
+      clamp4 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
+      pct = (v2, total) => total ? +(100 * v2 / total).toFixed(1) : 0;
+      WORDS_PER_MIN = 220;
+      ANALYSES = [
+        { id: "pacing", icon: "\u{1F4CA}", ai: "assist", title: t("ui.aia.analyzePaceStory"), desc: t("ui.aia.dPacing") },
+        { id: "arc", icon: "\u{1F464}", ai: "assist", title: t("ui.aia.partCurveCharacter"), desc: t("ui.aia.dArc"), needsChars: true },
+        { id: "words", icon: "\u{1F4DD}", ai: "assist", title: t("ui.aia.wordUse"), desc: t("ui.aia.dWords") },
+        { id: "conflict", icon: "\u2694\uFE0F", ai: "assist", title: t("ui.common.conflict"), desc: t("ui.aia.dConflict") },
+        { id: "length", icon: "\u23F1\uFE0F", ai: "assist", title: t("ui.aia.longScene"), desc: t("ui.aia.dLength") },
+        { id: "plothole", icon: "\u{1F573}\uFE0F", ai: "core", title: t("ui.aia.tPlotHole"), desc: t("ui.aia.dPlotHole") },
+        { id: "continuity", icon: "\u{1F517}", ai: "core", title: t("ui.aia.tContinuity"), desc: t("ui.aia.dContinuity"), needsChars: true },
+        { id: "repeat", icon: "\u{1F501}", ai: "assist", title: t("ui.aia.tRepeat"), desc: t("ui.aia.dRepeat") },
+        { id: "shipping", icon: "\u{1F49E}", ai: "assist", title: t("ui.aia.tShipping"), desc: t("ui.aia.dShipping"), needsChars: true },
+        { id: "score", icon: "\u2B50", ai: "core", title: t("ui.aia.tScore"), desc: t("ui.aia.dScore") },
+        { id: "screentime", icon: "\u{1F3AC}", ai: "assist", title: t("ui.aia.tScreentime"), desc: t("ui.aia.dScreentime"), needsChars: true }
+      ];
+      ANALYSIS_IDS = ANALYSES.map((a) => a.id);
+      AI_SYSTEM = t("ui.aia.sysEditor");
+      AI_TASK_KEYS = {
+        pacing: "ui.aia.taskPacing",
+        arc: "ui.aia.taskArc",
+        words: "ui.aia.taskWords",
+        conflict: "ui.aia.taskConflict",
+        length: "ui.aia.taskLength",
+        plothole: "ui.aia.taskPlotHole",
+        continuity: "ui.aia.taskContinuity",
+        repeat: "ui.aia.taskRepeat",
+        shipping: "ui.aia.taskShipping",
+        score: "ui.aia.taskScore",
+        screentime: "ui.aia.taskScreentime"
+      };
+      FINDING_SCHEMA = {
+        title: { required: true, type: "string" },
+        detail: { type: "string", default: "" },
+        severity: { type: "string", enum: Object.keys(SEVERITY), default: "minor" },
+        sceneId: { type: "string", default: "" },
+        suggestion: { type: "string", default: "" }
+      };
+      SCORE_SCHEMA = {
+        label: { required: true, type: "string" },
+        score: { required: true, type: "number" },
+        note: { type: "string", default: "" }
+      };
+      ANALYSIS_SESSION_VERSION = 1;
+      SESSION_DIR2 = "Analysis";
+    }
+  });
+
+  // src/ai-analyzer-ui.js
+  function currentResults() {
+    const out = {};
+    for (const id of ANALYSIS_IDS) {
+      const r = S2.results.get(resultKey(id));
+      if (r) out[id] = r;
+    }
+    return out;
+  }
+  function resetAnalyzer() {
+    S2.root = "";
+    S2.scenes = [];
+    S2.characters = [];
+    S2.loaded = false;
+    S2.base = null;
+    S2.results.clear();
+    S2.running.clear();
+    S2.saved.clear();
+    S2.session = { id: "", name: "", file: "" };
+    S2.scope = { kind: "project", sectionKey: "", chapterId: "", sceneId: "" };
+  }
+  function analyzerDirtyList() {
+    const out = [];
+    for (const [key2, res] of S2.results) {
+      if (S2.saved.has(key2) || !res || !res.ai || !res.ai.ok) continue;
+      const def = analysisById(res.id);
+      out.push({ key: key2, title: (def ? def.title : res.id) + " \u2014 " + (res.scope && res.scope.text || ""), file: "" });
+    }
+    return out;
+  }
+  async function collectScenes(root = state.root) {
+    const out = [];
+    if (!root) return out;
+    const secs = [];
+    for (const sec of await kapi.listDirs(root).catch(() => [])) {
+      if (SKIP.includes(sec)) continue;
+      const sp = await kapi.join(root, sec);
+      const sj = await kapi.join(sp, "section.json");
+      if (!await kapi.exists(sj)) continue;
+      const meta2 = await kapi.readJson(sj).catch(() => ({}));
+      secs.push({ key: sec, path: sp, title: meta2.title || sec, order: Number(meta2.order) || 0 });
+    }
+    secs.sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+    for (const sec of secs) {
+      const dr = await kapi.join(sec.path, "Draft");
+      if (!await kapi.exists(dr)) continue;
+      for (const dn of await kapi.listDirs(dr).catch(() => [])) {
+        const dp = await kapi.join(dr, dn);
+        const dj = await kapi.join(dp, "draft.json");
+        if (!await kapi.exists(dj)) continue;
+        const draft = await kapi.readJson(dj).catch(() => ({}));
+        const scData = await kapi.readJson(await kapi.join(dp, "scenes.json")).catch(() => ({}));
+        const chMap = scData.chapters || {};
+        for (const ch of draft.chapters || []) {
+          for (const sc of chMap[ch.guid] || []) {
             if (sc.type === "memo") continue;
-            out.scenes++;
-            out.words += Number(sc.wordCount) || 0;
+            const file = await kapi.join(dp, "Chapters", ch.folderName || ch.guid, sc.fileName || sc.id + ".md");
+            let text = "";
+            try {
+              text = await kapi.exists(file) ? await kapi.readFile(file) : "";
+            } catch {
+              text = "";
+            }
+            out.push({
+              id: sc.id,
+              title: sc.title || sc.fileName || "",
+              path: file,
+              draftPath: dp,
+              sectionKey: sec.key,
+              sectionTitle: sec.title,
+              chapterId: ch.guid,
+              chapterTitle: ch.title || ch.folderName || "",
+              pov: sc.pov || "",
+              storyDate: sc.storyDate || "",
+              status: sc.status || "",
+              text,
+              words: countWords2(text)
+            });
           }
         }
       }
-    } catch {
     }
     return out;
+  }
+  async function collectCharacters(root = state.root) {
+    const ents = await listEntities(root).catch(() => []);
+    const chars3 = ents.filter((e) => e.cat === "characters");
+    const use = chars3.length ? chars3 : ents;
+    return use.map((e) => ({ name: e.name, aliases: e.aliases || [], cat: e.cat, file: e.path }));
+  }
+  async function ensureLoaded(force = false) {
+    if (S2.loaded && S2.root === state.root && !force) return;
+    S2.root = state.root || "";
+    S2.results.clear();
+    S2.saved.clear();
+    S2.base = null;
+    if (!S2.root) {
+      S2.scenes = [];
+      S2.characters = [];
+      S2.loaded = true;
+      return;
+    }
+    S2.scenes = await collectScenes(S2.root);
+    S2.characters = await collectCharacters(S2.root);
+    S2.loaded = true;
+    const cur = currentSceneId();
+    if (cur && !S2.scope.sceneId) S2.scope.sceneId = cur;
+  }
+  function currentSceneId() {
+    const f = state.active && state.active.file;
+    if (!f) return "";
+    const hit = S2.scenes.find((s) => s.path === f);
+    return hit ? hit.id : "";
+  }
+  async function analyzerStats(root = state.root) {
+    const out = { scenes: 0, chapters: 0, sections: 0, words: 0, entities: 0 };
+    if (!root) return out;
+    const scenes = S2.loaded && S2.root === root ? S2.scenes : await collectScenes(root);
+    out.scenes = scenes.length;
+    out.chapters = new Set(scenes.map((s) => s.chapterId)).size;
+    out.sections = new Set(scenes.map((s) => s.sectionKey)).size;
+    out.words = scenes.reduce((a, s) => a + (s.words || 0), 0);
+    out.entities = (await listEntities(root).catch(() => [])).length;
+    return out;
+  }
+  async function refreshPrice() {
+    try {
+      const p = await currentProvider();
+      if (p) {
+        S2.price = { provider: p.provider || p.kind || "openai", model: p.model || "" };
+        return S2.price;
+      }
+    } catch {
+    }
+    const ai = getAISettings();
+    S2.price = { provider: ai.provider || "openai", model: ai.model || "" };
+    return S2.price;
+  }
+  function base3() {
+    if (!S2.base || S2.base.key !== scopeKey()) {
+      S2.base = { key: scopeKey(), ...scopeTokens(S2.scenes, S2.scope) };
+    }
+    return S2.base;
+  }
+  function statsBar(stats) {
+    const bar = el("div", "aia-stats");
+    for (const s of stats || []) {
+      const b = el("div", "aia-stat");
+      b.append(el("div", "aia-stat-val", String(s.value)), el("div", "aia-stat-label", s.label));
+      bar.append(b);
+    }
+    return bar;
+  }
+  function barList(items, opts = {}) {
+    const wrap2 = el("div", "aia-bars");
+    const max2 = Math.max(1, ...items.map((i5) => Number(i5.value) || 0));
+    for (const it of items.slice(0, opts.limit || 40)) {
+      const row2 = el("div", "aia-bar-row");
+      if (it.sceneId) {
+        row2.classList.add("is-link");
+        row2.onclick = () => jumpToScene(it.sceneId);
+      }
+      const head2 = el("div", "aia-bar-head");
+      head2.append(el("span", "aia-bar-label", it.label));
+      head2.append(el("span", "aia-bar-val", String(it.display != null ? it.display : it.value)));
+      const track = el("div", "aia-bar-track");
+      const fill3 = el("div", "aia-bar-fill" + (it.tone ? " tone-" + it.tone : ""));
+      fill3.style.width = Math.round(100 * (Number(it.value) || 0) / max2) + "%";
+      track.append(fill3);
+      row2.append(head2, track);
+      if (it.sub) row2.append(el("div", "aia-bar-sub", it.sub));
+      wrap2.append(row2);
+    }
+    return wrap2;
+  }
+  function chipList(items) {
+    const wrap2 = el("div", "aia-chips");
+    for (const it of items) {
+      const c = el("span", "aia-chip" + (it.cls ? " " + it.cls : ""), it.label);
+      if (it.title) c.title = it.title;
+      wrap2.append(c);
+    }
+    return wrap2;
+  }
+  function noteList(items) {
+    const ul = el("ul", "aia-notes");
+    for (const it of items) {
+      const li = el("li", null);
+      li.append(el("span", "aia-note-title", it.title));
+      if (it.note) li.append(el("span", "aia-note-body", " \u2014 " + it.note));
+      if (it.sceneId) {
+        li.classList.add("is-link");
+        li.onclick = () => jumpToScene(it.sceneId);
+      }
+      ul.append(li);
+    }
+    return ul;
+  }
+  function miniBtn(label, title2, onClick, cls) {
+    const b = el("button", "aia-mini" + (cls ? " " + cls : ""), label);
+    b.type = "button";
+    if (title2) b.title = title2;
+    b.onclick = onClick;
+    return b;
+  }
+  function afterClosed(ov, fn) {
+    if (!ov || !ov.isConnected) {
+      fn();
+      return;
+    }
+    const obs = new MutationObserver(() => {
+      if (!ov.isConnected) {
+        obs.disconnect();
+        fn();
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  }
+  async function jumpToScene(sceneId) {
+    const sc = S2.scenes.find((s) => s.id === sceneId);
+    if (!sc) return;
+    try {
+      await openScene(sc.path, sc.title);
+    } catch (e) {
+      log("warn", t("ui.aia.errOpenScene"), e);
+    }
+  }
+  function renderLocal(id, local) {
+    const box2 = el("div", "aia-result-local");
+    box2.append(statsBar(local.stats));
+    const L2 = local;
+    if (id === "pacing") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.title || r.id,
+        value: r.tempo,
+        display: r.tempo,
+        sub: tf("ui.aia.rowPacing", r.words, r.dialogue, r.avgSentence),
+        sceneId: r.id,
+        tone: r.tempo < L2.avg - L2.sd * 0.5 ? "slow" : r.tempo > L2.avg + L2.sd * 0.5 ? "fast" : ""
+      }))));
+      if (L2.slowRuns.length) box2.append(noteList(L2.slowRuns.map((g) => ({
+        title: t("ui.aia.slowRun"),
+        note: tf("ui.aia.runRange", g.from, g.to, g.count),
+        sceneId: g.sceneId
+      }))));
+      if (L2.fastRuns.length) box2.append(noteList(L2.fastRuns.map((g) => ({
+        title: t("ui.aia.fastRun"),
+        note: tf("ui.aia.runRange", g.from, g.to, g.count),
+        sceneId: g.sceneId
+      }))));
+    } else if (id === "arc") {
+      for (const c of L2.chars.slice(0, 8)) {
+        box2.append(el("div", "aia-sub-head", tf("ui.aia.arcHead", c.name, c.total, c.scenes)));
+        box2.append(barList(c.perChapter.map((ch) => ({ label: ch.chapterTitle, value: ch.count, display: ch.count }))));
+        if (c.gaps.length) box2.append(noteList(c.gaps.map((g) => ({
+          title: t("ui.aia.arcGap"),
+          note: tf("ui.aia.runRange", g.from, g.to, g.count)
+        }))));
+      }
+    } else if (id === "words") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.word,
+        value: r.count,
+        display: r.count + " (" + r.per10k + ")"
+      })), { limit: 40 }));
+    } else if (id === "conflict") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.title || r.id,
+        value: r.score,
+        display: r.score,
+        sub: r.hits.map((h) => h.word + "\xD7" + h.count).join(" \xB7 ") || t("ui.aia.noMarker"),
+        sceneId: r.id,
+        tone: r.score === 0 ? "slow" : ""
+      }))));
+    } else if (id === "length") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.title || r.id,
+        value: r.words,
+        display: tf("ui.aia.rowLength", r.words, r.minutes),
+        sceneId: r.id,
+        tone: L2.long.includes(r) ? "fast" : L2.short.includes(r) ? "slow" : ""
+      }))));
+    } else if (id === "repeat") {
+      box2.append(barList(
+        L2.rows.map((r) => ({
+          label: r.word,
+          value: r.count,
+          display: r.count + "\xD7",
+          sub: tf("ui.aia.rowRepeat", r.title || r.id, r.closest),
+          sceneId: r.id
+        })),
+        { limit: 40 }
+      ));
+    } else if (id === "shipping") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.a + " \xD7 " + r.b,
+        value: r.score,
+        display: r.score,
+        sub: tf("ui.aia.rowShip", r.scenes, r.mentions),
+        sceneId: r.sceneIds[0]
+      }))));
+    } else if (id === "screentime") {
+      box2.append(barList(L2.rows.map((r) => ({
+        label: r.name,
+        value: r.words,
+        display: r.share + "%",
+        sub: tf("ui.aia.rowScreentime", r.scenes, r.mentions),
+        sceneId: r.sceneIds[0]
+      }))));
+    } else if (id === "score") {
+      box2.append(scoreBox(L2.criteria, L2.total, t("ui.aia.scoreLocalHead")));
+    } else if (L2.rows && L2.rows.length) {
+      box2.append(noteList(L2.rows.map((r) => ({ title: r.title, note: r.note, sceneId: r.id }))));
+    }
+    return box2;
+  }
+  function scoreBox(criteria, total, head2) {
+    const wrap2 = el("div", "aia-score");
+    wrap2.append(el("div", "aia-score-total", (head2 ? head2 + " " : "") + total + "/10"));
+    wrap2.append(barList((criteria || []).map((c) => ({ label: c.label, value: c.score, display: c.score + "/10", sub: c.note }))));
+    return wrap2;
+  }
+  function renderAI(id, ai) {
+    const box2 = el("div", "aia-result-ai");
+    box2.append(el("div", "aia-sub-head", t("ui.aia.aiHead")));
+    if (!ai.ok) {
+      box2.append(el("div", "aia-err", "\u274C " + (ai.error || t("ui.aia.errAiFail"))));
+      return box2;
+    }
+    if (ai.kind === "score") {
+      box2.append(scoreBox(ai.rows, ai.total, t("ui.aia.scoreAiHead")));
+      if (ai.summary) box2.append(el("div", "aia-ai-text", ai.summary));
+    } else if (ai.rows && ai.rows.length) {
+      const ul = el("ul", "aia-findings");
+      for (const r of ai.rows) {
+        const li = el("li", "aia-finding sev-" + r.severity);
+        li.append(el("span", "aia-sev", r.severityLabel));
+        li.append(el("span", "aia-find-title", r.title));
+        if (r.detail) li.append(el("div", "aia-find-detail", r.detail));
+        if (r.suggestion) li.append(el("div", "aia-find-fix", "\u2192 " + r.suggestion));
+        if (r.sceneId) {
+          li.classList.add("is-link");
+          li.onclick = () => jumpToScene(r.sceneId);
+        }
+        ul.append(li);
+      }
+      box2.append(ul);
+    } else {
+      box2.append(el("div", "aia-ai-text", (ai.raw || "").trim() || t("ui.aia.aiNoFinding")));
+    }
+    if (ai.usage) box2.append(el(
+      "div",
+      "aia-cost",
+      tf("ui.aia.usage", fmtTok(ai.usage.total || 0), (ai.cost && ai.cost.usd || 0).toFixed(4))
+    ));
+    return box2;
+  }
+  async function runAnalysis(id, host2) {
+    const def = analysisById(id);
+    if (!def) return null;
+    await ensureLoaded();
+    const key2 = resultKey(id);
+    if (S2.running.has(key2)) return null;
+    S2.running.add(key2);
+    const slot = host2 || document.querySelector(`.aia-card[data-card="${id}"] .aia-result`);
+    if (slot) {
+      slot.replaceChildren(el("div", "aia-busy", t("ui.aia.busy")));
+    }
+    let useAI = S2.useAI;
+    if (useAI) {
+      const cfg = await aiConfigured();
+      if (!cfg.ok) {
+        useAI = false;
+      }
+    }
+    let res;
+    try {
+      res = await analyze(id, {
+        scenes: S2.scenes,
+        characters: S2.characters,
+        scope: S2.scope,
+        client: useAI ? getAIClient() : null,
+        useAI
+      });
+    } catch (e) {
+      log("error", t("ui.aia.errRun"), e);
+      res = { id, error: String(e && e.message || e), local: { stats: [] }, ai: null };
+    }
+    S2.running.delete(key2);
+    S2.results.set(key2, res);
+    S2.saved.delete(key2);
+    if (slot) paintResult(slot, res);
+    syncUsageLine();
+    setStatus("\u{1F9E0} " + def.title + " \u2014 " + (res.error ? res.error : t("ui.aia.done")));
+    return res;
+  }
+  function paintResult(slot, res) {
+    slot.replaceChildren();
+    if (!res) return;
+    if (res.error) {
+      slot.append(el("div", "aia-err", "\u26A0 " + res.error));
+      return;
+    }
+    if (res.scope) slot.append(el("div", "aia-scope-line", res.scope.text));
+    slot.append(renderLocal(res.id, res.local || {}));
+    if (res.truncated) slot.append(el("div", "aia-warn", t("ui.aia.truncated")));
+    if (res.ai) slot.append(renderAI(res.id, res.ai));
+    else slot.append(el("div", "aia-hint", t("ui.aia.aiOffHint")));
+  }
+  async function runAll() {
+    for (const a of ANALYSES) await runAnalysis(a.id);
+  }
+  async function sessionDir(create2 = false) {
+    if (!state.root) return "";
+    const d = await kapi.join(state.root, SESSION_DIR2);
+    if (create2 && !await kapi.exists(d)) await kapi.mkdir(d);
+    return d;
+  }
+  async function listSessions() {
+    const d = await sessionDir();
+    if (!d || !await kapi.exists(d)) return [];
+    const out = [];
+    for (const f of await kapi.listFiles(d, ".json").catch(() => [])) {
+      const p = await kapi.join(d, f);
+      try {
+        const s = migrateAnalysisSession(await kapi.readJson(p));
+        out.push({ file: p, fileName: f, session: s, ...sessionSummary(s) });
+      } catch (e) {
+        log("warn", t("ui.aia.errSessionRead") + f, e);
+      }
+    }
+    out.sort((a, b) => String(b.created).localeCompare(String(a.created)));
+    return out;
+  }
+  async function saveSession(name5) {
+    if (!state.root) {
+      setStatus(t("ui.aia.noProject"));
+      return null;
+    }
+    const results = currentResults();
+    if (!Object.keys(results).length) {
+      setStatus(t("ui.aia.errNothingToSave"));
+      return null;
+    }
+    const nm = String(name5 || S2.session.name || "").trim() || tf("ui.aia.sessionAuto", describeScope(S2.scope, S2.scenes).name || t("ui.aia.scopeProject"));
+    const sess = newAnalysisSession({
+      id: S2.session.id || void 0,
+      name: nm,
+      project: state.title || "",
+      scope: S2.scope,
+      scopeText: describeScope(S2.scope, S2.scenes).text,
+      useAI: S2.useAI,
+      results
+    });
+    const dir2 = await sessionDir(true);
+    const file = await kapi.join(dir2, safeName(sessionFileName2(sess)));
+    try {
+      await kapi.writeFile(file, JSON.stringify(sess, null, 2));
+    } catch (e) {
+      log("error", t("ui.aia.errSessionSave"), e);
+      setStatus("\u274C " + t("ui.aia.errSessionSave"));
+      return null;
+    }
+    S2.session = { id: sess.id, name: sess.name, file };
+    for (const id of Object.keys(results)) S2.saved.add(resultKey(id));
+    setStatus("\u{1F4BE} " + tf("ui.aia.sessionSaved", sess.name));
+    return { file, session: sess };
+  }
+  async function openSession(row2) {
+    if (!row2 || !row2.session) return false;
+    await ensureLoaded();
+    const s = row2.session;
+    S2.scope = { kind: "project", sectionKey: "", chapterId: "", sceneId: "", ...s.scope || {} };
+    S2.useAI = s.useAI !== false;
+    S2.base = null;
+    for (const [id, res] of Object.entries(s.results || {})) {
+      const key2 = id + "||" + scopeKey();
+      S2.results.set(key2, res);
+      S2.saved.add(key2);
+    }
+    S2.session = { id: s.id, name: s.name, file: row2.file };
+    setStatus("\u{1F4C2} " + tf("ui.aia.sessionOpened", s.name || s.id));
+    return true;
+  }
+  async function deleteSession(row2) {
+    if (!row2 || !row2.file) return false;
+    if (!await confirmBox(tf("ui.aia.confirmDelSession", row2.name || row2.fileName))) return false;
+    try {
+      await kapi.remove(row2.file);
+    } catch (e) {
+      log("error", t("ui.aia.errSessionDel"), e);
+      return false;
+    }
+    if (S2.session.file === row2.file) S2.session = { id: "", name: "", file: "" };
+    setStatus("\u{1F5D1} " + tf("ui.aia.sessionDeleted", row2.name || row2.fileName));
+    return true;
+  }
+  async function sessionDialog(host2) {
+    const rows = await listSessions();
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog aia-sess-dlg");
+    box2.append(el("div", "k-dlg-title", t("ui.aia.sessionTitle")));
+    const close2 = () => ov.remove();
+    if (!rows.length) box2.append(el("div", "aia-hint", t("ui.aia.sessionEmpty")));
+    const list = el("div", "aia-sess-list");
+    for (const r of rows) {
+      const item = el("div", "aia-sess-item");
+      const info = el("div", "aia-sess-info");
+      info.append(el("div", "aia-sess-name", r.name));
+      info.append(el(
+        "div",
+        "aia-sess-meta",
+        [
+          r.created.replace("T", " ").slice(0, 16),
+          r.scopeText,
+          tf("ui.aia.sessionKinds", r.kinds),
+          tf("ui.aia.sessionCost", fmtTok(r.tokens), r.usd.toFixed(4))
+        ].filter(Boolean).join(" \xB7 ")
+      ));
+      item.append(info);
+      const acts = el("div", "aia-sess-acts");
+      acts.append(miniBtn(t("ui.aia.sessionOpen"), "", async () => {
+        close2();
+        await openSession(r);
+        renderAIAnalyzerPanel(host2);
+      }));
+      acts.append(miniBtn(t("ui.aia.exportCsv"), "", () => exportSessionCsv(r.session)));
+      acts.append(miniBtn(t("ui.common.del"), "", async () => {
+        if (await deleteSession(r)) {
+          close2();
+          sessionDialog(host2);
+        }
+      }, "k-danger"));
+      item.append(acts);
+      list.append(item);
+    }
+    box2.append(list);
+    const btns = el("div", "k-dlg-btns");
+    const closeBtn = el("button", "k-ok", t("ui.common.close"));
+    closeBtn.onclick = close2;
+    btns.append(closeBtn);
+    box2.append(btns);
+    ov.append(box2);
+    ov.onclick = (e) => {
+      if (e.target === ov) close2();
+    };
+    document.body.append(ov);
+    return ov;
+  }
+  async function writeCsv(defName, text, outPath) {
+    const p = outPath || await kapi.saveAsDialog(defName, "csv");
+    if (!p) return null;
+    try {
+      await kapi.writeFile(p, text);
+    } catch (e) {
+      log("error", t("ui.aia.errCsv"), e);
+      setStatus("\u274C " + t("ui.aia.errCsv"));
+      return null;
+    }
+    setStatus("\u2913 " + tf("ui.aia.csvSaved", p));
+    return p;
+  }
+  async function exportResultCsv(id, outPath) {
+    const res = S2.results.get(resultKey(id));
+    if (!res) {
+      setStatus(t("ui.aia.errNothingToExport"));
+      return null;
+    }
+    const def = analysisById(id);
+    return writeCsv(safeName((def ? def.title : id) + ".csv"), "\uFEFF" + resultCsv(id, res), outPath);
+  }
+  async function exportAllCsv(outPath) {
+    const results = currentResults();
+    if (!Object.keys(results).length) {
+      setStatus(t("ui.aia.errNothingToExport"));
+      return null;
+    }
+    const sess = newAnalysisSession({
+      name: S2.session.name || t("ui.common.aIAnalyze"),
+      project: state.title || "",
+      scope: S2.scope,
+      scopeText: describeScope(S2.scope, S2.scenes).text,
+      useAI: S2.useAI,
+      results
+    });
+    return exportSessionCsv(sess, outPath);
+  }
+  async function exportSessionCsv(sess, outPath) {
+    if (!sess) return null;
+    return writeCsv(safeName((sess.name || "analysis") + ".csv"), sessionCsv(sess), outPath);
   }
   async function renderAIAnalyzerPanel(host2) {
     const h = host2 || document.getElementById("ai-analyzer-body");
@@ -73079,116 +74818,239 @@ ${h.text}`;
     const wrap2 = el("div", "aia-wrap");
     const head2 = el("div", "aia-head");
     const title2 = el("div", "aia-title");
-    title2.innerHTML = iconHtml("brain", 18) + " " + t("panel.aiAnalyzerTitle", "AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C");
+    title2.innerHTML = iconHtml("brain", 18) + " " + t("panel.aiAnalyzerTitle");
     head2.append(title2);
-    head2.append(el("div", "aia-badge", t("aia.mockup", "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 \u2014 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19")));
+    head2.append(miniBtn(t("ui.aia.reload"), "", async () => {
+      await ensureLoaded(true);
+      renderAIAnalyzerPanel(h);
+    }));
     wrap2.append(head2);
-    wrap2.append(el(
-      "div",
-      "aia-lead",
-      t("aia.lead", "\u0E0A\u0E38\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E14\u0E49\u0E27\u0E22 AI \u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E08\u0E30\u0E21\u0E32 " + t("ui.aia.nowShowSamplePage"))
-    ));
-    const stats = await analyzerStats();
-    const bar = el("div", "aia-stats");
-    for (const [label, val] of [
-      [t("ui.common.book"), stats.sections],
-      [t("ui.common.chapter"), stats.chapters],
-      [t("ui.common.scene2"), stats.scenes],
-      [t("ui.common.word2"), stats.words.toLocaleString()],
-      [t("ui.aia.wiki"), stats.entities]
-    ]) {
-      const b = el("div", "aia-stat");
-      b.append(el("div", "aia-stat-val", String(val)), el("div", "aia-stat-label", label));
-      bar.append(b);
+    h.append(wrap2);
+    await ensureLoaded();
+    if (!S2.root) {
+      wrap2.append(el("div", "aia-lead", t("ui.aia.noProject")));
+      return wrap2;
     }
-    wrap2.append(bar);
+    await refreshPrice();
+    wrap2.append(el("div", "aia-lead", t("ui.aia.lead")));
+    const tools = el("div", "aia-tools");
+    const setBtn = miniBtn("\u2699 " + t("ui.aia.aiSettings"), t("ui.aia.aiSettingsTip"), async () => {
+      const ov = await showAISettingsDialog();
+      if (!ov) return;
+      afterClosed(ov, async () => {
+        await refreshPrice();
+        renderAIAnalyzerPanel(h);
+      });
+    });
+    setBtn.id = "aia-ai-settings";
+    tools.append(setBtn);
+    const saveBtn = miniBtn("\u{1F4BE} " + t("ui.aia.sessionSave"), t("ui.aia.sessionSaveTip"), async () => {
+      const nm = await ask(t("ui.aia.sessionSaveTitle"), {
+        value: S2.session.name || describeScope(S2.scope, S2.scenes).text,
+        allowEmpty: true
+      });
+      if (nm === null) return;
+      await saveSession(nm);
+      renderAIAnalyzerPanel(h);
+    });
+    saveBtn.id = "aia-save-session";
+    tools.append(saveBtn);
+    const listBtn = miniBtn("\u{1F4C2} " + t("ui.aia.sessionList"), t("ui.aia.sessionListTip"), () => sessionDialog(h));
+    listBtn.id = "aia-open-session";
+    tools.append(listBtn);
+    const csvBtn = miniBtn("\u2913 " + t("ui.aia.exportCsv"), t("ui.aia.exportCsvTip"), () => exportAllCsv());
+    csvBtn.id = "aia-export-csv";
+    tools.append(csvBtn);
+    wrap2.append(tools);
+    if (S2.session.name) wrap2.append(el("div", "aia-scope-line", tf("ui.aia.sessionCurrent", S2.session.name)));
+    wrap2.append(scopeBar(h));
+    const picked = filterScope(S2.scenes, S2.scope);
+    wrap2.append(statsBar([
+      { label: t("ui.common.book"), value: new Set(picked.map((s) => s.sectionKey)).size },
+      { label: t("ui.common.chapter"), value: new Set(picked.map((s) => s.chapterId)).size },
+      { label: t("ui.common.scene2"), value: picked.length },
+      { label: t("ui.common.word2"), value: picked.reduce((a, s) => a + s.words, 0).toLocaleString() },
+      { label: t("ui.aia.wiki"), value: S2.characters.length }
+    ]));
+    const opts = el("div", "aia-opts");
+    const lbl = el("label", "aia-check");
+    const cb = el("input");
+    cb.type = "checkbox";
+    cb.checked = S2.useAI;
+    cb.id = "aia-use-ai";
+    cb.onchange = () => {
+      S2.useAI = cb.checked;
+      renderAIAnalyzerPanel(h);
+    };
+    lbl.append(cb, el("span", null, t("ui.aia.useAI")));
+    opts.append(lbl);
+    const all = el("button", "aia-run aia-run-all", t("ui.aia.runAll"));
+    all.type = "button";
+    all.onclick = async () => {
+      all.disabled = true;
+      try {
+        await runAll();
+      } finally {
+        all.disabled = false;
+      }
+    };
+    opts.append(all);
+    wrap2.append(opts);
+    wrap2.append(usageLine());
+    const b = base3();
     const grid = el("div", "aia-grid");
-    for (const c of ANALYZER_CARDS) {
+    for (const c of ANALYSES) {
       const card = el("div", "aia-card");
       card.dataset.card = c.id;
       card.append(el("div", "aia-card-head", c.icon + " " + c.title));
       card.append(el("div", "aia-card-desc", c.desc));
-      const ul = el("ul", "aia-card-list");
-      for (const b of c.bullets) ul.append(el("li", null, b));
-      card.append(ul);
-      const btn2 = el("button", "aia-run", t("aia.run", "\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C"));
+      const chips = [];
+      if (c.ai === "core") chips.push({ label: t("ui.aia.tagNeedAI") });
+      if (S2.useAI) {
+        const e = estimateAnalysis(c.id, b);
+        chips.push({ cls: "aia-chip-est", label: tf(
+          "ui.aia.estTokens",
+          fmtTok(e.total),
+          fmtUsd(estimateUsd(S2.price.provider, S2.price.model, e))
+        ), title: t("ui.aia.estTip") });
+      }
+      if (chips.length) card.append(chipList(chips));
+      const row2 = el("div", "aia-card-btns");
+      const btn2 = el("button", "aia-run", t("ui.aia.run"));
       btn2.type = "button";
-      btn2.onclick = () => setStatus("\u{1F9E0} \u201C" + c.title + t("ui.aia.samplePageCantNext"));
-      card.append(btn2);
+      btn2.onclick = () => runAnalysis(c.id);
+      row2.append(btn2);
+      row2.append(miniBtn("\u2913", t("ui.aia.exportCsvOne"), () => exportResultCsv(c.id)));
+      card.append(row2);
+      const slot = el("div", "aia-result");
+      const prev = S2.results.get(resultKey(c.id));
+      if (prev) paintResult(slot, prev);
+      card.append(slot);
       grid.append(card);
     }
     wrap2.append(grid);
-    wrap2.append(el(
-      "div",
-      "aia-foot",
-      t("aia.foot", "\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E49\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27: " + t("ui.aia.toolCheckFindWord"))
-    ));
-    h.append(wrap2);
     return wrap2;
   }
-  var ANALYZER_CARDS;
+  function usageLine() {
+    const line = el("div", "aia-usage");
+    line.id = "aia-usage";
+    paintUsage(line);
+    return line;
+  }
+  function paintUsage(line) {
+    line.replaceChildren();
+    const b = base3();
+    const used = usageOfResults(currentResults());
+    if (S2.useAI) {
+      const tot = estimateTotal(ANALYSIS_IDS, b);
+      line.append(el(
+        "span",
+        "aia-usage-before",
+        tf("ui.aia.estAll", fmtTok(tot.total), fmtUsd(estimateUsd(S2.price.provider, S2.price.model, tot)))
+      ));
+    } else {
+      line.append(el("span", "aia-usage-before", t("ui.aia.estOff")));
+    }
+    line.append(el(
+      "span",
+      "aia-usage-after",
+      used.calls ? tf("ui.aia.usedSoFar", used.calls, fmtTok(used.tokens), fmtUsd(used.usd)) : t("ui.aia.usedNone")
+    ));
+  }
+  function syncUsageLine() {
+    const line = document.getElementById("aia-usage");
+    if (line) paintUsage(line);
+  }
+  function scopeBar(h) {
+    const bar = el("div", "aia-scope");
+    const btns = el("div", "aia-scope-btns");
+    for (const kind of SCOPE_KINDS) {
+      const b = el("button", "aia-scope-btn" + (S2.scope.kind === kind ? " on" : ""), SCOPE_LABELS[kind]);
+      b.type = "button";
+      b.dataset.scope = kind;
+      b.onclick = () => {
+        S2.scope.kind = kind;
+        if (kind === "scene" && !S2.scope.sceneId) S2.scope.sceneId = currentSceneId() || S2.scenes[0] && S2.scenes[0].id || "";
+        if (kind === "book" && !S2.scope.sectionKey) S2.scope.sectionKey = S2.scenes[0] && S2.scenes[0].sectionKey || "";
+        if (kind === "chapter" && !S2.scope.chapterId) S2.scope.chapterId = S2.scenes[0] && S2.scenes[0].chapterId || "";
+        renderAIAnalyzerPanel(h);
+      };
+      btns.append(b);
+    }
+    bar.append(btns);
+    if (S2.scope.kind !== "project") {
+      const sel = el("select", "aia-scope-sel");
+      const seen = /* @__PURE__ */ new Set();
+      for (const s of S2.scenes) {
+        let val = "", label = "";
+        if (S2.scope.kind === "book") {
+          val = s.sectionKey;
+          label = s.sectionTitle;
+        } else if (S2.scope.kind === "chapter") {
+          val = s.chapterId;
+          label = (s.sectionTitle ? s.sectionTitle + " \xB7 " : "") + s.chapterTitle;
+        } else {
+          val = s.id;
+          label = (s.chapterTitle ? s.chapterTitle + " \xB7 " : "") + (s.title || s.id);
+        }
+        if (!val || seen.has(val)) continue;
+        seen.add(val);
+        const o = el("option", null, label);
+        o.value = val;
+        sel.append(o);
+      }
+      const field = S2.scope.kind === "book" ? "sectionKey" : S2.scope.kind === "chapter" ? "chapterId" : "sceneId";
+      if (S2.scope[field]) sel.value = S2.scope[field];
+      if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+      S2.scope[field] = sel.value;
+      sel.onchange = () => {
+        S2.scope[field] = sel.value;
+        renderAIAnalyzerPanel(h);
+      };
+      bar.append(sel);
+    }
+    bar.append(el("div", "aia-scope-line", describeScope(S2.scope, S2.scenes).text));
+    return bar;
+  }
+  var ANALYZER_CARDS, SKIP, S2, scopeKey, resultKey, fmtTok, fmtUsd;
   var init_ai_analyzer_ui = __esm({
     "src/ai-analyzer-ui.js"() {
       init_i18n();
       init_core();
       init_icons();
-      ANALYZER_CARDS = [
-        {
-          id: "pacing",
-          icon: "\u{1F4CA}",
-          title: t("ui.aia.analyzePaceStory"),
-          desc: t("ui.aia.viewSceneSceneCompare"),
-          bullets: [
-            t("ui.aia.graphLongSceneOrder"),
-            t("ui.aia.dotPaceScene"),
-            t("ui.aia.ratioActionDialogueNext")
-          ]
-        },
-        {
-          id: "arc",
-          icon: "\u{1F464}",
-          title: t("ui.aia.partCurveCharacter"),
-          desc: t("ui.aia.characterEachItemAppear"),
-          bullets: [
-            t("ui.aia.planImageAppearItem"),
-            t("ui.aia.characterFindNChapter"),
-            t("ui.aia.characterMentionNotOut")
-          ]
-        },
-        {
-          id: "words",
-          icon: "\u{1F4DD}",
-          title: t("ui.aia.wordUse"),
-          desc: t("ui.aia.findWordDupSplit"),
-          bullets: [
-            t("ui.aia.wordDupGapPara"),
-            t("ui.aia.wordWriter"),
-            t("ui.aia.dragWordNextChapter")
-          ]
-        },
-        {
-          id: "conflict",
-          icon: "\u{1F50D}",
-          title: t("ui.common.conflict"),
-          desc: t("ui.aia.checkEachSceneHas"),
-          bullets: [
-            t("ui.aia.sceneCantSpecifyConflict"),
-            t("ui.aia.conflictStuckNot"),
-            t("ui.aia.dotStoryCompareStructure")
-          ]
-        },
-        {
-          id: "length",
-          icon: "\u23F1\uFE0F",
-          title: t("ui.aia.longScene"),
-          desc: t("ui.aia.compareLongSceneValue"),
-          bullets: [
-            t("ui.aia.sceneLongValueCenter"),
-            t("ui.aia.sceneShortWord"),
-            t("ui.aia.timeReadCountPage")
-          ]
-        }
-      ];
+      init_ui();
+      init_project_scan();
+      init_ai_bridge();
+      init_ai_settings();
+      init_ai_provider_ui();
+      init_app();
+      init_ai_analyze();
+      ANALYZER_CARDS = ANALYSES;
+      SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research", "Backups", "Analysis"];
+      S2 = {
+        root: "",
+        scenes: [],
+        // ฉากทั้งโปรเจกต์ เรียงตามลำดับจริง
+        characters: [],
+        // เอนทิตี้ Wiki ที่ใช้เป็น "ตัวละคร"
+        scope: { kind: "project", sectionKey: "", chapterId: "", sceneId: "" },
+        useAI: true,
+        results: /* @__PURE__ */ new Map(),
+        // `${id}||${scopeKey}` → ผลลัพธ์ล่าสุด
+        saved: /* @__PURE__ */ new Set(),
+        // คีย์ผลที่ถูกบันทึกลงเซสชันแล้ว (ที่เหลือ = งานค้างตามกฎ alpha.72)
+        running: /* @__PURE__ */ new Set(),
+        session: { id: "", name: "", file: "" },
+        // เซสชันที่เปิด/บันทึกล่าสุด
+        price: { provider: "", model: "" },
+        base: null,
+        // โทเคนของเนื้อฉากในขอบเขตปัจจุบัน (คิดครั้งเดียว)
+        loaded: false
+      };
+      scopeKey = (sc = S2.scope) => [sc.kind, sc.sectionKey, sc.chapterId, sc.sceneId].join("|");
+      resultKey = (id) => id + "||" + scopeKey();
+      fmtTok = (n2) => Number(n2 || 0).toLocaleString();
+      fmtUsd = (n2) => "$" + Number(n2 || 0).toFixed(4);
     }
   });
 
@@ -73485,6 +75347,11 @@ ${h.text}`;
       if (info.kind === "scene") {
         const dst = await kapi.join(info.dPath, "Chapters", info.folderName, info.sc.fileName);
         await kapi.move(p, dst);
+        try {
+          if (await kapi.exists(p + ".vis.csv"))
+            await kapi.move(p + ".vis.csv", dst.replace(/\.md$/i, "") + "_vis.csv");
+        } catch {
+        }
         const sf = await kapi.join(info.dPath, "scenes.json");
         const d = await kapi.readJson(sf);
         d.chapters = d.chapters || {};
@@ -73510,9 +75377,9 @@ ${h.text}`;
       } catch {
       }
       const w = await kapi.join(state.root, "Wiki");
-      const base3 = await kapi.exists(w) ? w : await kapi.exists(await kapi.join(state.root, "Bible")) ? await kapi.join(state.root, "Bible") : w;
-      await kapi.mkdir(await kapi.join(base3, cat));
-      await kapi.move(p, await kapi.join(base3, cat, fname.replace(/^[a-z0-9]+-/, "")));
+      const base4 = await kapi.exists(w) ? w : await kapi.exists(await kapi.join(state.root, "Bible")) ? await kapi.join(state.root, "Bible") : w;
+      await kapi.mkdir(await kapi.join(base4, cat));
+      await kapi.move(p, await kapi.join(base4, cat, fname.replace(/^[a-z0-9]+-/, "")));
     } else {
       await kapi.mkdir(await kapi.join(state.root, "Memos"));
       await kapi.move(p, await kapi.join(state.root, "Memos", fname.replace(/^[a-z0-9]+-/, "")));
@@ -73524,8 +75391,8 @@ ${h.text}`;
   }
   async function deleteToTrash(file, label) {
     if (!await confirmBox(tf("ui.trash.delMoveTrashProject", label))) return null;
-    const base3 = file.split(/[\\/]/).pop();
-    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base3);
+    const base4 = file.split(/[\\/]/).pop();
+    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
     await kapi.move(file, dst);
     if (state.tabs.has(file)) {
       state.tabs.get(file).dirty = false;
@@ -73566,6 +75433,441 @@ ${h.text}`;
       init_app();
       init_core();
       init_ui();
+    }
+  });
+
+  // src/visual/vis-core.js
+  var vis_core_exports = {};
+  __export(vis_core_exports, {
+    COL_W_MAX: () => COL_W_MAX,
+    COL_W_MIN: () => COL_W_MIN,
+    CSV_BOM: () => CSV_BOM,
+    REF_SEP: () => REF_SEP,
+    SIMILAR_MIN: () => SIMILAR_MIN,
+    SNAP_SEP: () => SNAP_SEP,
+    VIS_COL_DEFAULT_OFF: () => VIS_COL_DEFAULT_OFF,
+    VIS_COL_KEYS: () => VIS_COL_KEYS,
+    VIS_COL_W: () => VIS_COL_W,
+    VIS_FIXED_W: () => VIS_FIXED_W,
+    VIS_HEADER: () => VIS_HEADER,
+    bindRow: () => bindRow,
+    boundIdxs: () => boundIdxs,
+    clampColW: () => clampColW,
+    commentsForText: () => commentsForText,
+    csvCell: () => csvCell,
+    displayText: () => displayText,
+    dumpVis: () => dumpVis,
+    entitiesIn: () => entitiesIn,
+    insertRow: () => insertRow,
+    joinSnaps: () => joinSnaps,
+    lineHash: () => lineHash,
+    lineUsage: () => lineUsage,
+    liveLineNos: () => liveLineNos,
+    liveText: () => liveText,
+    makeRef: () => makeRef,
+    makeRow: () => makeRow,
+    moveCol: () => moveCol,
+    moveRow: () => moveRow,
+    normText: () => normText,
+    normalizeCols: () => normalizeCols,
+    parseCsv: () => parseCsv2,
+    parseRef: () => parseRef,
+    parseRefs: () => parseRefs,
+    parseVis: () => parseVis,
+    removeRow: () => removeRow,
+    renumber: () => renumber,
+    resolveAll: () => resolveAll,
+    resolveRow: () => resolveRow,
+    rowFromLines: () => rowFromLines,
+    sceneFileOfVis: () => sceneFileOfVis,
+    setColWidth: () => setColWidth,
+    similarity: () => similarity2,
+    splitLines: () => splitLines,
+    splitSnaps: () => splitSnaps,
+    syncRow: () => syncRow,
+    toggleCol: () => toggleCol,
+    totalWidth: () => totalWidth,
+    unusedLines: () => unusedLines,
+    visFileName: () => visFileName,
+    visibleCols: () => visibleCols
+  });
+  function visFileName(sceneFileName) {
+    const s = String(sceneFileName || "").trim();
+    if (!s) return "";
+    return s.replace(/\.md$/i, "") + "_vis.csv";
+  }
+  function sceneFileOfVis(visName) {
+    const m = /^(.*)_vis\.csv$/i.exec(String(visName || "").trim());
+    return m ? m[1] + ".md" : "";
+  }
+  function normText(s) {
+    return String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+  }
+  function lineHash(s) {
+    const t3 = normText(s);
+    let h = 5381;
+    for (let i5 = 0; i5 < t3.length; i5++) h = (h << 5) + h + t3.charCodeAt(i5) >>> 0;
+    return h.toString(36);
+  }
+  function makeRef(idx4, text) {
+    return String(idx4 | 0) + "|" + lineHash(text);
+  }
+  function parseRef(ref) {
+    const s = String(ref || "").trim();
+    if (!s) return { idx: -1, hash: "" };
+    const i5 = s.indexOf("|");
+    if (i5 < 0) return { idx: -1, hash: s };
+    return { idx: parseInt(s.slice(0, i5), 10) || 0, hash: s.slice(i5 + 1) };
+  }
+  function parseRefs(ref) {
+    return String(ref || "").split(REF_SEP).map((x) => x.trim()).filter(Boolean).map(parseRef);
+  }
+  function splitSnaps(text) {
+    const s = String(text == null ? "" : text);
+    if (!s.trim()) return [];
+    return s.split(/\n\s*\n/).map((x) => x.trim());
+  }
+  function joinSnaps(list) {
+    return (list || []).join(SNAP_SEP);
+  }
+  function trigrams(s) {
+    const t3 = normText(s);
+    const out = /* @__PURE__ */ new Set();
+    if (t3.length <= 3) {
+      if (t3) out.add(t3);
+      return out;
+    }
+    for (let i5 = 0; i5 + 3 <= t3.length; i5++) out.add(t3.slice(i5, i5 + 3));
+    return out;
+  }
+  function similarity2(a, b) {
+    const A = trigrams(a), B = trigrams(b);
+    if (!A.size || !B.size) return A.size === B.size ? 1 : 0;
+    let hit = 0;
+    for (const g of A) if (B.has(g)) hit++;
+    return hit / (A.size + B.size - hit);
+  }
+  function splitLines(body, format3 = "prose") {
+    const raw = String(body || "").replace(/<!--align:[^>]*-->/g, "").replace(/\r\n/g, "\n");
+    const parts = format3 === "screenplay" ? raw.split("\n") : raw.split(/\n\s*\n/);
+    const out = [];
+    for (const p of parts) {
+      const text = p.trim();
+      if (!text) continue;
+      out.push({ i: out.length, text });
+    }
+    return out;
+  }
+  function displayText(raw) {
+    let s = String(raw == null ? "" : raw);
+    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+    s = s.replace(/^\s{0,3}>\s?/gm, "");
+    s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
+    s = s.replace(/^\s{0,3}\d+[.)]\s+/gm, "");
+    s = s.replace(/~~([^~]+)~~/g, "$1");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+    s = s.replace(/(^|[^_])_([^_\n]+)_/g, "$1$2");
+    s = s.replace(/`([^`]+)`/g, "$1");
+    return s.replace(/[ \t]+$/gm, "");
+  }
+  function entitiesIn(text, names) {
+    const s = displayText(text);
+    if (!s || !names || !names.length) return [];
+    const sorted = [...new Set(names.filter(Boolean).map(String))].sort((a, b) => b.length - a.length);
+    const taken = new Array(s.length).fill(false);
+    const hits = [];
+    for (const n2 of sorted) {
+      if (!n2) continue;
+      let from2 = 0, at;
+      while ((at = s.indexOf(n2, from2)) >= 0) {
+        let free = true;
+        for (let k = at; k < at + n2.length; k++) if (taken[k]) {
+          free = false;
+          break;
+        }
+        if (free) {
+          for (let k = at; k < at + n2.length; k++) taken[k] = true;
+          hits.push({ at, name: n2 });
+        }
+        from2 = at + 1;
+      }
+    }
+    hits.sort((a, b) => a.at - b.at);
+    const out = [];
+    for (const h of hits) if (!out.includes(h.name)) out.push(h.name);
+    return out;
+  }
+  function makeRow({ no = 0, ref = "", image = "", text = "", remark = "" } = {}) {
+    return {
+      no: no | 0,
+      ref: String(ref || ""),
+      image: String(image || ""),
+      text: String(text || ""),
+      remark: String(remark || "")
+    };
+  }
+  function rowFromLines(lines) {
+    const ls = Array.isArray(lines) ? lines : [lines];
+    return makeRow({
+      ref: ls.map((l) => makeRef(l.i, l.text)).join(REF_SEP),
+      text: joinSnaps(ls.map((l) => l.text))
+    });
+  }
+  function bindRow(row2, lines, idxs) {
+    const byI = new Map((lines || []).map((l) => [l.i, l]));
+    const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
+    row2.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
+    row2.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
+    return row2;
+  }
+  function renumber(rows) {
+    (rows || []).forEach((r, i5) => {
+      r.no = i5 + 1;
+    });
+    return rows;
+  }
+  function moveRow(rows, idx4, dir2) {
+    const j = idx4 + (dir2 < 0 ? -1 : 1);
+    if (idx4 < 0 || idx4 >= rows.length || j < 0 || j >= rows.length) return idx4;
+    const [r] = rows.splice(idx4, 1);
+    rows.splice(j, 0, r);
+    renumber(rows);
+    return j;
+  }
+  function insertRow(rows, idx4, row2) {
+    const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
+    rows.splice(at, 0, row2);
+    renumber(rows);
+    return at;
+  }
+  function removeRow(rows, idx4) {
+    if (idx4 < 0 || idx4 >= rows.length) return null;
+    const [r] = rows.splice(idx4, 1);
+    renumber(rows);
+    return r;
+  }
+  function resolvePart(hash2, snap2, ls, hintIdx) {
+    if (ls[hintIdx] && lineHash(ls[hintIdx].text) === hash2)
+      return { status: "ok", idx: hintIdx, text: ls[hintIdx].text, snap: snap2 };
+    for (let k = 0; k < ls.length; k++)
+      if (lineHash(ls[k].text) === hash2) return { status: "ok", idx: k, text: ls[k].text, snap: snap2 };
+    let best = -1, bs = 0;
+    for (let k = 0; k < ls.length; k++) {
+      const s = similarity2(ls[k].text, snap2);
+      if (s > bs) {
+        bs = s;
+        best = k;
+      }
+    }
+    if (best >= 0 && bs >= SIMILAR_MIN)
+      return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
+    return { status: "lost", idx: -1, text: "", snap: snap2 };
+  }
+  function resolveRow(row2, lines) {
+    const ls = lines || [];
+    const refs = parseRefs(row2 && row2.ref);
+    const snaps = splitSnaps(row2 && row2.text);
+    if (!refs.length) return { status: "free", parts: [], live: [] };
+    const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
+    const live = parts.filter((p) => p.status !== "lost");
+    const status = parts.some((p) => p.status === "changed") ? "changed" : live.length ? "ok" : "lost";
+    return { status, parts, live };
+  }
+  function resolveAll(rows, lines) {
+    return (rows || []).map((r) => resolveRow(r, lines));
+  }
+  function liveText(res) {
+    return (res && res.live ? res.live : []).map((p) => p.text).join(SNAP_SEP);
+  }
+  function liveLineNos(res) {
+    return (res && res.live ? res.live : []).map((p) => p.idx + 1);
+  }
+  function syncRow(row2, res) {
+    if (!res || !res.parts || !res.parts.length) return row2;
+    const refs = parseRefs(row2.ref);
+    const snaps = splitSnaps(row2.text);
+    const nextRefs = [], nextSnaps = [];
+    res.parts.forEach((p, i5) => {
+      if (p.status === "lost") {
+        nextRefs.push(refs[i5] ? String(refs[i5].idx) + "|" + refs[i5].hash : "");
+        nextSnaps.push(snaps[i5] == null ? "" : snaps[i5]);
+      } else {
+        nextRefs.push(makeRef(p.idx, p.text));
+        nextSnaps.push(p.text);
+      }
+    });
+    row2.ref = nextRefs.filter(Boolean).join(REF_SEP);
+    row2.text = joinSnaps(nextSnaps);
+    return row2;
+  }
+  function boundIdxs(row2, lines) {
+    return resolveRow(row2, lines).live.map((p) => p.idx);
+  }
+  function lineUsage(rows, lines) {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of rows || [])
+      for (const i5 of boundIdxs(r, lines)) m.set(i5, (m.get(i5) || 0) + 1);
+    return m;
+  }
+  function unusedLines(rows, lines) {
+    const used = lineUsage(rows, lines);
+    return (lines || []).filter((l) => !used.has(l.i));
+  }
+  function commentsForText(text, comments) {
+    const t3 = normText(text);
+    if (!t3) return [];
+    return (comments || []).filter((c) => {
+      const q = normText(c && c.anchor && c.anchor.quote);
+      return !!q && (t3.includes(q) || q.includes(t3));
+    });
+  }
+  function clampColW(w, key2) {
+    const n2 = Math.round(Number(w));
+    if (!Number.isFinite(n2)) return VIS_COL_W[key2] || 160;
+    return Math.max(COL_W_MIN, Math.min(COL_W_MAX, n2));
+  }
+  function normalizeCols(cfg) {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    for (const c of Array.isArray(cfg) ? cfg : []) {
+      const key2 = typeof c === "string" ? c : c && c.key;
+      if (!VIS_COL_KEYS.includes(key2) || seen.has(key2)) continue;
+      seen.add(key2);
+      out.push({
+        key: key2,
+        on: typeof c === "string" ? true : c.on !== false,
+        w: clampColW(typeof c === "string" ? VIS_COL_W[key2] : c.w, key2)
+      });
+    }
+    for (const key2 of VIS_COL_KEYS)
+      if (!seen.has(key2)) out.push({ key: key2, on: !VIS_COL_DEFAULT_OFF.includes(key2), w: VIS_COL_W[key2] });
+    if (!out.some((c) => c.on)) out.forEach((c) => {
+      c.on = true;
+    });
+    return out;
+  }
+  function toggleCol(cols, key2) {
+    const c = cols.find((x) => x.key === key2);
+    if (!c) return cols;
+    if (c.on && cols.filter((x) => x.on).length === 1) return cols;
+    c.on = !c.on;
+    return cols;
+  }
+  function moveCol(cols, key2, dir2) {
+    const i5 = cols.findIndex((x) => x.key === key2);
+    const j = i5 + (dir2 < 0 ? -1 : 1);
+    if (i5 < 0 || j < 0 || j >= cols.length) return cols;
+    const [c] = cols.splice(i5, 1);
+    cols.splice(j, 0, c);
+    return cols;
+  }
+  function setColWidth(cols, key2, w) {
+    const c = cols.find((x) => x.key === key2);
+    if (c) c.w = clampColW(w, key2);
+    return cols;
+  }
+  function visibleCols(cols) {
+    return normalizeCols(cols).filter((c) => c.on).map((c) => c.key);
+  }
+  function totalWidth(cols) {
+    return normalizeCols(cols).filter((c) => c.on).reduce((a, c) => a + c.w, 0) + VIS_FIXED_W;
+  }
+  function csvCell(v2) {
+    const s = String(v2 == null ? "" : v2);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function parseCsv2(text) {
+    const s = String(text || "").replace(/^﻿/, "");
+    const rows = [];
+    let row2 = [], cell = "", q = false;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const ch = s[i5];
+      if (q) {
+        if (ch === '"') {
+          if (s[i5 + 1] === '"') {
+            cell += '"';
+            i5++;
+          } else q = false;
+        } else cell += ch;
+        continue;
+      }
+      if (ch === '"') {
+        q = true;
+        continue;
+      }
+      if (ch === ",") {
+        row2.push(cell);
+        cell = "";
+        continue;
+      }
+      if (ch === "\r") continue;
+      if (ch === "\n") {
+        row2.push(cell);
+        rows.push(row2);
+        row2 = [];
+        cell = "";
+        continue;
+      }
+      cell += ch;
+    }
+    if (cell !== "" || row2.length) {
+      row2.push(cell);
+      rows.push(row2);
+    }
+    return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
+  }
+  function parseVis(text) {
+    const table9 = parseCsv2(text);
+    if (!table9.length) return [];
+    let start = 0;
+    const head2 = table9[0].map((h) => String(h || "").trim().toLowerCase());
+    const idxOf = {};
+    if (head2.includes("ref") || head2.includes("no")) {
+      start = 1;
+      VIS_HEADER.forEach((k) => {
+        idxOf[k] = head2.indexOf(k);
+      });
+    } else {
+      VIS_HEADER.forEach((k, i5) => {
+        idxOf[k] = i5;
+      });
+    }
+    const rows = [];
+    for (let r = start; r < table9.length; r++) {
+      const t3 = table9[r];
+      const g = (k) => idxOf[k] >= 0 ? t3[idxOf[k]] || "" : "";
+      rows.push(makeRow({
+        no: parseInt(g("no"), 10) || 0,
+        ref: g("ref"),
+        image: g("image"),
+        text: g("text"),
+        remark: g("remark")
+      }));
+    }
+    return renumber(rows);
+  }
+  function dumpVis(rows) {
+    const out = [VIS_HEADER.join(",")];
+    for (const r of renumber(rows || []))
+      out.push(VIS_HEADER.map((k) => csvCell(r[k])).join(","));
+    return CSV_BOM + out.join("\r\n") + "\r\n";
+  }
+  var REF_SEP, SNAP_SEP, SIMILAR_MIN, VIS_COL_KEYS, VIS_COL_DEFAULT_OFF, VIS_COL_W, COL_W_MIN, COL_W_MAX, VIS_FIXED_W, CSV_BOM, VIS_HEADER;
+  var init_vis_core = __esm({
+    "src/visual/vis-core.js"() {
+      REF_SEP = ";";
+      SNAP_SEP = "\n\n";
+      SIMILAR_MIN = 0.4;
+      VIS_COL_KEYS = ["no", "scene", "image", "text", "entities", "remark", "comment"];
+      VIS_COL_DEFAULT_OFF = ["scene"];
+      VIS_COL_W = { no: 64, scene: 150, image: 300, text: 340, entities: 170, remark: 240, comment: 220 };
+      COL_W_MIN = 56;
+      COL_W_MAX = 1200;
+      VIS_FIXED_W = 40 + 42;
+      CSV_BOM = "\uFEFF";
+      VIS_HEADER = ["no", "ref", "image", "text", "remark"];
     }
   });
 
@@ -73719,6 +76021,7 @@ ${h.text}`;
     const d = await kapi.readJson(sf);
     d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
     await buildTree2();
     refreshNetwork();
   }
@@ -73841,6 +76144,7 @@ ${h.text}`;
     d.chapters[ch.guid] = [...list, nrow];
     await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md9.dumpMdFile)(meta2, body));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await copyVisSidecar(dPath, ch.folderName, row2.fileName, fileName);
     await buildTree2();
     openScene(await kapi.join(dPath, "Chapters", ch.folderName, fileName), newTitle);
   }
@@ -73876,6 +76180,7 @@ ${h.text}`;
     const order = Math.max(0, ...dst.map((s) => s.order || 0)) + 1;
     const newFile = await uniqueSceneFileName(dPath, dstCh.folderName, order);
     await kapi.move(oldPath, await kapi.join(dPath, "Chapters", dstCh.folderName, newFile));
+    await moveVisSidecar(dPath, ch.folderName, row2.fileName, dstCh.folderName, newFile);
     d.chapters[ch.guid] = from2.filter((x) => x.id !== sc.id);
     row2.order = order;
     row2.fileName = newFile;
@@ -73965,6 +76270,39 @@ ${h.text}`;
     await buildTree2();
     setStatus(t("ui.scene.orderChapterSceneNew") + chapters.length + t("ui.scene.chapter"));
   }
+  async function visOf(dPath, folderName, fileName) {
+    return kapi.join(dPath, "Chapters", folderName, visFileName(fileName));
+  }
+  async function moveVisSidecar(dPath, srcFolder, srcFile, dstFolder, dstFile) {
+    try {
+      const src2 = await visOf(dPath, srcFolder, srcFile);
+      if (!await kapi.exists(src2)) return false;
+      await kapi.move(src2, await visOf(dPath, dstFolder, dstFile));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function copyVisSidecar(dPath, folderName, srcFile, dstFile) {
+    try {
+      const src2 = await visOf(dPath, folderName, srcFile);
+      if (!await kapi.exists(src2)) return false;
+      await kapi.writeFile(await visOf(dPath, folderName, dstFile), await kapi.readFile(src2));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
+    try {
+      const src2 = await visOf(dPath, folderName, fileName);
+      if (!trashPath || !await kapi.exists(src2)) return false;
+      await kapi.move(src2, trashPath + ".vis.csv");
+      return true;
+    } catch {
+      return false;
+    }
+  }
   var import_md9;
   var init_scene_ops = __esm({
     "src/scene-ops.js"() {
@@ -73976,6 +76314,7 @@ ${h.text}`;
       init_ui();
       import_md9 = __toESM(require_md());
       init_scene_meta();
+      init_vis_core();
     }
   });
 
@@ -74416,8 +76755,8 @@ ${h.text}`;
         return false;
       }
       const strip = commonPrefix(entries);
-      const base3 = String(src2).split(/[\\/]/).pop().replace(/\.zip$/i, "") || "project";
-      let dest = await kapi.join(parent, base3);
+      const base4 = String(src2).split(/[\\/]/).pop().replace(/\.zip$/i, "") || "project";
+      let dest = await kapi.join(parent, base4);
       if (await kapi.exists(dest)) dest += "-" + Date.now().toString(36).slice(-4);
       await kapi.mkdir(dest);
       let n2 = 0;
@@ -75596,6 +77935,1024 @@ ${h.text}`;
       init_custom_status();
       _sortCol = "order";
       _sortDir = "asc";
+    }
+  });
+
+  // src/comments/comment-core.js
+  var comment_core_exports = {};
+  __export(comment_core_exports, {
+    BLOCK_END: () => BLOCK_END,
+    BLOCK_START: () => BLOCK_START,
+    CommentStore: () => CommentStore,
+    addComment: () => addComment,
+    countComments: () => countComments,
+    deleteComment: () => deleteComment,
+    editComment: () => editComment,
+    findComment: () => findComment,
+    fromScenesJson: () => fromScenesJson,
+    makeComment: () => makeComment,
+    mergeComments: () => mergeComments,
+    normalizeAnchor: () => normalizeAnchor,
+    openComments: () => openComments,
+    parseComments: () => parseComments,
+    quoteAt: () => quoteAt,
+    reanchor: () => reanchor,
+    reanchorAll: () => reanchorAll,
+    replyTo: () => replyTo,
+    resolveComment: () => resolveComment,
+    serializeComments: () => serializeComments,
+    stripComments: () => stripComments2
+  });
+  function makeComment({ text, author = "", position = null, now = Date.now(), id = null } = {}) {
+    return {
+      id: id || newId2(now),
+      author: String(author || ""),
+      text: String(text || ""),
+      timestamp: new Date(now).toISOString(),
+      resolved: false,
+      replies: [],
+      anchor: normalizeAnchor(position)
+    };
+  }
+  function normalizeAnchor(position) {
+    if (position == null) return null;
+    if (typeof position === "number") return { start: position, end: position, quote: "" };
+    const { start = 0, end = start, quote = "" } = position;
+    return { start: num3(start), end: num3(end), quote: String(quote || "") };
+  }
+  function parseComments(md) {
+    const m = BLOCK_RE.exec(String(md || ""));
+    if (!m) return [];
+    try {
+      const arr = JSON.parse(m[1].trim());
+      return Array.isArray(arr) ? arr.map(fix) : [];
+    } catch {
+      return [];
+    }
+  }
+  function fix(c) {
+    return {
+      id: c.id || newId2(Date.now()),
+      author: c.author || "",
+      text: c.text || "",
+      timestamp: c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
+      resolved: !!c.resolved,
+      replies: Array.isArray(c.replies) ? c.replies.map(fix) : [],
+      anchor: c.anchor ? normalizeAnchor(c.anchor) : null
+    };
+  }
+  function stripComments2(md) {
+    return String(md || "").replace(BLOCK_RE, "").replace(/\s+$/, "");
+  }
+  function mergeComments(md, comments) {
+    const body = stripComments2(md);
+    if (!comments || !comments.length) return body ? body + "\n" : "";
+    return `${body}
+
+${BLOCK_START}
+${JSON.stringify(comments, null, 1)}
+${BLOCK_END}
+`;
+  }
+  function serializeComments(comments) {
+    return mergeComments("", comments);
+  }
+  function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {
+    const c = makeComment({ text, author, position, now, id });
+    return { comments: [...comments || [], c], comment: c };
+  }
+  function replyTo(comments, parentId, { text, author, now = Date.now(), id } = {}) {
+    const reply = makeComment({ text, author, now, id });
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === parentId) {
+        found2 = true;
+        return { ...c, replies: [...c.replies, reply] };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    const out = walk3(comments || []);
+    return { comments: out, reply: found2 ? reply : null, ok: found2 };
+  }
+  function resolveComment(comments, id, resolved = true) {
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return { ...c, resolved: !!resolved, resolvedAt: resolved ? (/* @__PURE__ */ new Date()).toISOString() : null };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function editComment(comments, id, text) {
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return { ...c, text: String(text), editedAt: (/* @__PURE__ */ new Date()).toISOString() };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function deleteComment(comments, id) {
+    let found2 = false;
+    const walk3 = (list) => list.filter((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return false;
+      }
+      return true;
+    }).map((c) => c.replies.length ? { ...c, replies: walk3(c.replies) } : c);
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function findComment(comments, id) {
+    for (const c of comments || []) {
+      if (c.id === id) return c;
+      const inner = findComment(c.replies, id);
+      if (inner) return inner;
+    }
+    return null;
+  }
+  function countComments(comments) {
+    return (comments || []).reduce((n2, c) => n2 + 1 + countComments(c.replies), 0);
+  }
+  function openComments(comments) {
+    return (comments || []).filter((c) => !c.resolved);
+  }
+  function reanchor(text, anchor) {
+    if (!anchor) return null;
+    const src2 = String(text || "");
+    const q = anchor.quote;
+    if (!q) {
+      const start = Math.min(anchor.start, src2.length);
+      return { ...anchor, start, end: Math.min(anchor.end, src2.length) };
+    }
+    if (src2.slice(anchor.start, anchor.end) === q) return { ...anchor };
+    let best = -1, bestDist = Infinity, from2 = 0, idx4;
+    while ((idx4 = src2.indexOf(q, from2)) >= 0) {
+      const d = Math.abs(idx4 - anchor.start);
+      if (d < bestDist) {
+        bestDist = d;
+        best = idx4;
+      }
+      from2 = idx4 + 1;
+    }
+    if (best < 0) return { ...anchor, lost: true };
+    return { start: best, end: best + q.length, quote: q };
+  }
+  function reanchorAll(text, comments) {
+    return (comments || []).map((c) => c.anchor ? { ...c, anchor: reanchor(text, c.anchor) } : c);
+  }
+  function quoteAt(text, start, end) {
+    return String(text || "").slice(start, end);
+  }
+  function fromScenesJson(scenesJson, opts = {}) {
+    const out = {};
+    const chapters = scenesJson && scenesJson.chapters || {};
+    for (const cg of Object.keys(chapters)) {
+      for (const row2 of chapters[cg] || []) {
+        if (!row2 || !Array.isArray(row2.comments) || !row2.comments.length) continue;
+        out[row2.id] = row2.comments.map((c) => ({
+          id: c.id || newId2(Date.now()),
+          author: c.author || opts.author || "",
+          text: c.text || "",
+          timestamp: c.date || c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
+          resolved: !!c.resolved,
+          replies: [],
+          anchor: null
+        }));
+      }
+    }
+    return out;
+  }
+  var BLOCK_START, BLOCK_END, BLOCK_RE, _seq3, newId2, num3, CommentStore;
+  var init_comment_core = __esm({
+    "src/comments/comment-core.js"() {
+      BLOCK_START = "<!-- k2-comments";
+      BLOCK_END = "-->";
+      BLOCK_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
+      _seq3 = 0;
+      newId2 = (now) => "c" + Number(now).toString(36) + (_seq3++).toString(36);
+      num3 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
+      CommentStore = class {
+        constructor({ io, now = () => Date.now(), author = "" } = {}) {
+          this.io = io;
+          this.now = now;
+          this.author = author;
+        }
+        /** @returns {Promise<{body, comments}>} */
+        async read(path) {
+          let raw = "";
+          try {
+            raw = await this.io.readFile(path) || "";
+          } catch {
+            raw = "";
+          }
+          return { body: stripComments2(raw), comments: parseComments(raw), raw };
+        }
+        async write(path, body, comments) {
+          await this.io.writeFile(path, mergeComments(body, comments));
+          return true;
+        }
+        /** Add a comment to a scene file. position = number | {start,end,quote} */
+        async add(path, position, text, opts = {}) {
+          const { body, comments } = await this.read(path);
+          const anchor = normalizeAnchor(position);
+          if (anchor && !anchor.quote && anchor.end > anchor.start) anchor.quote = quoteAt(body, anchor.start, anchor.end);
+          const res = addComment(comments, { text, author: opts.author ?? this.author, position: anchor, now: this.now() });
+          await this.write(path, body, res.comments);
+          return res.comment;
+        }
+        async reply(path, parentId, text, opts = {}) {
+          const { body, comments } = await this.read(path);
+          const res = replyTo(comments, parentId, { text, author: opts.author ?? this.author, now: this.now() });
+          if (!res.ok) return null;
+          await this.write(path, body, res.comments);
+          return res.reply;
+        }
+        async resolve(path, id, resolved = true) {
+          const { body, comments } = await this.read(path);
+          const res = resolveComment(comments, id, resolved);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async edit(path, id, text) {
+          const { body, comments } = await this.read(path);
+          const res = editComment(comments, id, text);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async remove(path, id) {
+          const { body, comments } = await this.read(path);
+          const res = deleteComment(comments, id);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async list(path, { openOnly = false, reanchor: doReanchor = true } = {}) {
+          const { body, comments } = await this.read(path);
+          const list = doReanchor ? reanchorAll(body, comments) : comments;
+          return openOnly ? openComments(list) : list;
+        }
+        /** Save an edited body while keeping the comments (re-anchored against the new text). */
+        async saveBody(path, newBody) {
+          const { comments } = await this.read(path);
+          await this.write(path, newBody, reanchorAll(newBody, comments));
+          return true;
+        }
+      };
+    }
+  });
+
+  // src/visual/vis-player.js
+  var vis_player_exports = {};
+  __export(vis_player_exports, {
+    closeVisPlayer: () => closeVisPlayer,
+    openVisPlayer: () => openVisPlayer,
+    visPlayerAt: () => visPlayerAt,
+    visPlayerGo: () => visPlayerGo,
+    visPlayerOpen: () => visPlayerOpen,
+    visPlayerTextHidden: () => visPlayerTextHidden,
+    visPlayerToggleText: () => visPlayerToggleText
+  });
+  function openVisPlayer(st, startAt = 0) {
+    if (_cur) closeVisPlayer();
+    const rows = st && st.rows || [];
+    if (!rows.length) return null;
+    const lines = st && st.lines || [];
+    let i5 = Math.max(0, Math.min(rows.length - 1, startAt | 0));
+    let hidden = false;
+    const ov = el("div", "vis-player");
+    ov.tabIndex = 0;
+    const stage = el("div", "vis-pl-stage");
+    const img = el("img", "vis-pl-img");
+    const noimg = el("div", "vis-pl-noimg", t("ui.vis.noImage"));
+    stage.append(img, noimg);
+    const boxWrap = el("div", "vis-pl-box");
+    const scene = el("div", "vis-pl-scene", st.sceneTitle || "");
+    const text = el("div", "vis-pl-text");
+    const remark = el("div", "vis-pl-remark");
+    boxWrap.append(scene, text, remark);
+    const nav2 = el("div", "vis-pl-nav");
+    const prev = el("button", "vis-pl-btn vis-pl-prev", "\u25C0");
+    prev.title = t("ui.vis.prev");
+    const counter = el("span", "vis-pl-count");
+    const next = el("button", "vis-pl-btn vis-pl-next", "\u25B6");
+    next.title = t("ui.vis.next");
+    const eye = el("button", "vis-pl-btn vis-pl-eye", "\u{1F441}");
+    eye.title = t("ui.vis.toggleText");
+    const close2 = el("button", "vis-pl-btn vis-pl-close", "\u2715");
+    close2.title = t("ui.vis.close");
+    nav2.append(prev, counter, next, eye, close2);
+    ov.append(stage, boxWrap, nav2);
+    document.body.append(ov);
+    const draw2 = async () => {
+      const r = rows[i5];
+      if (r.image) {
+        img.src = await kapi.toFileURL(await kapi.join(state.root, "Images", r.image));
+        img.style.display = "";
+        noimg.style.display = "none";
+      } else {
+        img.removeAttribute("src");
+        img.style.display = "none";
+        noimg.style.display = "";
+      }
+      const live = liveText(resolveRow(r, lines));
+      text.textContent = displayText(live || r.text);
+      remark.textContent = r.remark || "";
+      remark.style.display = r.remark ? "" : "none";
+      counter.textContent = tf("ui.vis.ofTotal", i5 + 1, rows.length);
+      prev.disabled = i5 === 0;
+      next.disabled = i5 === rows.length - 1;
+    };
+    const go = (d) => {
+      const j = i5 + d;
+      if (j < 0 || j >= rows.length) return;
+      i5 = j;
+      draw2();
+    };
+    const toggleText = () => {
+      hidden = !hidden;
+      ov.classList.toggle("text-off", hidden);
+      eye.classList.toggle("on", hidden);
+    };
+    prev.onclick = (e) => {
+      e.stopPropagation();
+      go(-1);
+    };
+    next.onclick = (e) => {
+      e.stopPropagation();
+      go(1);
+    };
+    eye.onclick = (e) => {
+      e.stopPropagation();
+      toggleText();
+    };
+    close2.onclick = (e) => {
+      e.stopPropagation();
+      closeVisPlayer();
+    };
+    stage.onclick = (e) => go(e.clientX < window.innerWidth / 2 ? -1 : 1);
+    boxWrap.onclick = () => go(1);
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        return closeVisPlayer();
+      }
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+        e.preventDefault();
+        return go(1);
+      }
+      if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        return go(-1);
+      }
+      if (e.key === "Home") {
+        e.preventDefault();
+        i5 = 0;
+        return draw2();
+      }
+      if (e.key === "End") {
+        e.preventDefault();
+        i5 = rows.length - 1;
+        return draw2();
+      }
+      if (e.code === "KeyH") {
+        e.preventDefault();
+        return toggleText();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    _cur = { ov, onKey, at: () => i5, go, draw: draw2, toggleText, isHidden: () => hidden };
+    ov.focus();
+    draw2();
+    return _cur;
+  }
+  function closeVisPlayer() {
+    if (!_cur) return false;
+    document.removeEventListener("keydown", _cur.onKey, true);
+    _cur.ov.remove();
+    _cur = null;
+    return true;
+  }
+  function visPlayerOpen() {
+    return !!_cur;
+  }
+  function visPlayerAt() {
+    return _cur ? _cur.at() : -1;
+  }
+  function visPlayerGo(d) {
+    if (_cur) _cur.go(d);
+  }
+  function visPlayerTextHidden() {
+    return !!(_cur && _cur.isHidden());
+  }
+  function visPlayerToggleText() {
+    if (_cur) _cur.toggleText();
+  }
+  var _cur;
+  var init_vis_player = __esm({
+    "src/visual/vis-player.js"() {
+      init_core();
+      init_vis_core();
+      _cur = null;
+    }
+  });
+
+  // src/visual/vis-ui.js
+  var vis_ui_exports = {};
+  __export(vis_ui_exports, {
+    VIS_TAB: () => VIS_TAB,
+    createVisual: () => createVisual,
+    hasVis: () => hasVis,
+    openVisual: () => openVisual,
+    openVisualForActive: () => openVisualForActive,
+    pickLinesDialog: () => pickLinesDialog,
+    renderVisual: () => renderVisual,
+    visPathOf: () => visPathOf
+  });
+  function dirOf(p) {
+    const i5 = Math.max(String(p).lastIndexOf("/"), String(p).lastIndexOf("\\"));
+    return i5 < 0 ? "" : String(p).slice(0, i5);
+  }
+  function baseOf(p) {
+    const i5 = Math.max(String(p).lastIndexOf("/"), String(p).lastIndexOf("\\"));
+    return String(p).slice(i5 + 1);
+  }
+  async function visPathOf(scenePath2) {
+    return kapi.join(dirOf(scenePath2), visFileName(baseOf(scenePath2)));
+  }
+  async function hasVis(scenePath2) {
+    try {
+      return await kapi.exists(await visPathOf(scenePath2));
+    } catch {
+      return false;
+    }
+  }
+  async function loadAll(scenePath2) {
+    const raw = await kapi.readFile(scenePath2);
+    const { meta: meta2, body } = (0, import_md11.parseMdFile)(raw);
+    const format3 = meta2.format === "screenplay" ? "screenplay" : "prose";
+    const vp = await visPathOf(scenePath2);
+    let rows = [];
+    try {
+      if (await kapi.exists(vp)) rows = parseVis(await kapi.readFile(vp));
+    } catch (e) {
+      log("warn", "vis: cannot read table", String(e));
+    }
+    return {
+      visPath: vp,
+      rows,
+      lines: splitLines(body, format3),
+      comments: parseComments(raw),
+      sceneTitle: meta2.title || baseOf(scenePath2).replace(/\.md$/i, ""),
+      format: format3
+    };
+  }
+  async function saveRows(st, quiet) {
+    await kapi.writeFile(st.visPath, dumpVis(st.rows));
+    if (!quiet) setStatus(t("ui.vis.saved"));
+  }
+  function readCols() {
+    return normalizeCols(state.meta && state.meta.visColumns);
+  }
+  async function writeCols(cols) {
+    if (!state.meta) return;
+    state.meta.visColumns = cols.map((c) => ({ key: c.key, on: c.on, w: c.w }));
+    const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await saveProjectMeta2();
+  }
+  async function imgUrl(rel) {
+    if (!rel) return "";
+    if (_imgUrl.has(rel)) return _imgUrl.get(rel);
+    const u = await kapi.toFileURL(await kapi.join(state.root, "Images", rel));
+    _imgUrl.set(rel, u);
+    return u;
+  }
+  async function openVisual(scenePath2, sceneTitle) {
+    if (!scenePath2) {
+      setStatus(t("ui.vis.needScene"));
+      return;
+    }
+    const key2 = VIS_TAB + scenePath2;
+    const { activate: activate2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    if (state.tabs.has(key2)) {
+      activate2(key2);
+      return renderVisual(key2);
+    }
+    const pane = el("div", "pane");
+    $("#panes").append(pane);
+    const tabBtn = el("div", "tab");
+    tabBtn.append(el("span", "tab-title", "\u{1F3AC} " + (sceneTitle || t("ui.vis.title"))));
+    const x = el("span", "tab-x", "\xD7");
+    tabBtn.append(x);
+    $("#tabs").append(tabBtn);
+    const tab = {
+      file: key2,
+      title: "\u{1F3AC} " + (sceneTitle || t("ui.vis.title")),
+      pane,
+      tabBtn,
+      dirty: false,
+      editor: null,
+      plain: null,
+      wiki: null,
+      gal: null,
+      dash: true,
+      visScene: scenePath2
+    };
+    tabBtn.onclick = (e) => {
+      if (e.target !== x) Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.activate(key2));
+    };
+    x.onclick = async () => {
+      const { closeTab: closeTab3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      closeTab3(key2);
+    };
+    state.tabs.set(key2, tab);
+    activate2(key2);
+    await renderVisual(key2);
+  }
+  async function renderVisual(key2) {
+    const tab = state.tabs.get(key2);
+    if (!tab) return;
+    const st = await loadAll(tab.visScene);
+    st.scenePath = tab.visScene;
+    st.key = key2;
+    tab.visState = st;
+    const pane = tab.pane;
+    pane.innerHTML = "";
+    const wrap2 = el("div", "vis-wrap");
+    wrap2.append(buildBar(st));
+    const body = el("div", "vis-body");
+    wrap2.append(body);
+    pane.append(wrap2);
+    await drawBody(st, body);
+  }
+  async function redraw(st) {
+    const tab = state.tabs.get(st.key);
+    const body = tab && tab.pane.querySelector(".vis-body");
+    if (body) await drawBody(st, body);
+  }
+  function buildBar(st) {
+    const bar = el("div", "vis-bar");
+    const add = el("button", "vis-btn vis-add", t("ui.vis.addRow"));
+    add.onclick = () => pickLinesDialog(st);
+    bar.append(add);
+    const free = el("button", "vis-btn vis-addfree", t("ui.vis.addFree"));
+    free.onclick = async () => {
+      insertRow(st.rows, -1, makeRow({}));
+      await saveRows(st);
+      await redraw(st);
+    };
+    bar.append(free);
+    bar.append(el("span", "vis-sp"));
+    const views = el("div", "vis-views");
+    for (const [v2, label] of [["table", t("ui.vis.viewTable")], ["list", t("ui.vis.viewList")]]) {
+      const b = el("button", "vis-btn vis-view" + (visView() === v2 ? " on" : ""), label);
+      b.dataset.view = v2;
+      b.onclick = async () => {
+        state._visView = v2;
+        await renderVisual(st.key);
+      };
+      views.append(b);
+    }
+    const full = el("button", "vis-btn vis-full", t("ui.vis.viewFull"));
+    full.onclick = async () => (await Promise.resolve().then(() => (init_vis_player(), vis_player_exports))).openVisPlayer(st);
+    views.append(full);
+    bar.append(views);
+    bar.append(el("span", "vis-sp"));
+    const colBtn = el("button", "vis-btn vis-cols", t("ui.vis.cols"));
+    colBtn.onclick = (e) => colMenu(e, st);
+    bar.append(colBtn);
+    bar.append(el("span", "vis-count", tf("ui.vis.rowNum", st.rows.length)));
+    const changed = resolveAll(st.rows, st.lines).filter((r) => r.status === "changed").length;
+    if (changed) {
+      bar.append(el("span", "vis-warn", tf("ui.vis.changedCount", changed)));
+      const syncAll = el("button", "vis-btn vis-syncall", t("ui.vis.syncAll"));
+      syncAll.onclick = async () => {
+        const res = resolveAll(st.rows, st.lines);
+        st.rows.forEach((r, i5) => {
+          if (res[i5].status === "changed") syncRow(r, res[i5]);
+        });
+        await saveRows(st);
+        await renderVisual(st.key);
+      };
+      bar.append(syncAll);
+    }
+    const reveal = el("button", "vis-btn vis-reveal", t("ui.vis.reveal"));
+    reveal.onclick = () => kapi.revealInOS(st.visPath);
+    bar.append(reveal);
+    return bar;
+  }
+  function visView() {
+    return state._visView === "list" ? "list" : "table";
+  }
+  function colMenu(e, st) {
+    const cols = readCols();
+    const L2 = COL_LABEL();
+    const items = [];
+    for (const c of cols)
+      items.push({ label: (c.on ? "\u2611 " : "\u2610 ") + L2[c.key], click: async () => {
+        toggleCol(cols, c.key);
+        await writeCols(cols);
+        await renderVisual(st.key);
+      } });
+    items.push("-");
+    cols.forEach((c, i5) => {
+      if (i5 === 0) return;
+      items.push({ label: "\u25B2 " + L2[c.key], click: async () => {
+        moveCol(cols, c.key, -1);
+        await writeCols(cols);
+        await renderVisual(st.key);
+      } });
+    });
+    items.push("-");
+    items.push({ label: t("ui.vis.colResetW"), click: async () => {
+      for (const c of cols) c.w = VIS_COL_W[c.key];
+      await writeCols(cols);
+      await renderVisual(st.key);
+    } });
+    popupMenu(e.clientX, e.clientY, items);
+  }
+  async function drawBody(st, body) {
+    body.innerHTML = "";
+    body.className = "vis-body vis-view-" + visView();
+    if (!st.rows.length) {
+      body.append(el("div", "vis-empty", t("ui.vis.empty")));
+      return;
+    }
+    const cols = readCols().filter((c) => c.on);
+    const L2 = COL_LABEL();
+    const res = resolveAll(st.rows, st.lines);
+    const names = smart && smart.names || [];
+    if (visView() === "table") {
+      const table9 = el("div", "vis-table");
+      applyGrid(table9, cols);
+      table9.append(el("div", "vis-th vis-th-move", ""));
+      for (const c of cols) table9.append(headCell(st, c, L2[c.key]));
+      table9.append(el("div", "vis-th vis-th-del", ""));
+      for (let i5 = 0; i5 < st.rows.length; i5++) {
+        table9.append(moveCell(st, i5));
+        for (const c of cols) {
+          const cell = el("div", "vis-td vis-td-" + c.key);
+          cell.dataset.row = String(i5);
+          cell.dataset.col = c.key;
+          cell.append(await fieldFor(st, i5, res[i5], c.key, names));
+          table9.append(cell);
+        }
+        table9.append(delCell(st, i5));
+      }
+      body.append(table9);
+    } else {
+      for (let i5 = 0; i5 < st.rows.length; i5++) body.append(await cardFor(st, i5, res[i5], cols, names));
+    }
+  }
+  function applyGrid(table9, cols) {
+    const ws = cols.map((c) => c.w);
+    table9.style.gridTemplateColumns = "40px " + ws.map((w) => w + "px").join(" ") + " 42px";
+    table9.style.width = ws.reduce((a, b) => a + b, 0) + VIS_FIXED_W + "px";
+  }
+  function headCell(st, col, label) {
+    const th = el("div", "vis-th vis-th-" + col.key, label);
+    const grip = el("div", "vis-grip");
+    grip.title = t("ui.vis.colDragW");
+    grip.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const x0 = e.clientX, w0 = col.w;
+      const table9 = th.closest(".vis-table");
+      const cols = readCols().filter((c) => c.on);
+      const move = (ev) => {
+        col.w = clampColW(w0 + (ev.clientX - x0), col.key);
+        applyGrid(table9, cols.map((c) => c.key === col.key ? col : c));
+      };
+      const up = async () => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        const all = readCols();
+        setColWidth(all, col.key, col.w);
+        await writeCols(all);
+        await renderVisual(st.key);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    };
+    th.append(grip);
+    return th;
+  }
+  function moveCell(st, i5) {
+    const cell = el("div", "vis-td vis-td-move");
+    cell.dataset.row = String(i5);
+    const up = el("button", "vis-mini vis-up", "\u25B2");
+    up.title = t("ui.vis.up");
+    up.disabled = i5 === 0;
+    up.onclick = async () => {
+      moveRow(st.rows, i5, -1);
+      await saveRows(st, true);
+      await redraw(st);
+    };
+    const dn = el("button", "vis-mini vis-down", "\u25BC");
+    dn.title = t("ui.vis.down");
+    dn.disabled = i5 === st.rows.length - 1;
+    dn.onclick = async () => {
+      moveRow(st.rows, i5, 1);
+      await saveRows(st, true);
+      await redraw(st);
+    };
+    cell.append(up, dn);
+    return cell;
+  }
+  function delCell(st, i5) {
+    const cell = el("div", "vis-td vis-td-del");
+    cell.dataset.row = String(i5);
+    const del2 = el("button", "vis-mini vis-mini-del", "\u2715");
+    del2.title = t("ui.vis.delRow");
+    del2.onclick = async () => {
+      if (!await confirmBox(t("ui.vis.delRowAsk"))) return;
+      removeRow(st.rows, i5);
+      await saveRows(st);
+      await renderVisual(st.key);
+    };
+    cell.append(del2);
+    return cell;
+  }
+  async function cardFor(st, i5, res, cols, names) {
+    const card = el("div", "vis-card");
+    card.dataset.row = String(i5);
+    const L2 = COL_LABEL();
+    const head2 = el("div", "vis-card-head");
+    head2.append(el("span", "vis-card-no", String(st.rows[i5].no)));
+    const up = el("button", "vis-mini vis-up", "\u25B2");
+    up.disabled = i5 === 0;
+    up.onclick = async () => {
+      moveRow(st.rows, i5, -1);
+      await saveRows(st, true);
+      await redraw(st);
+    };
+    const dn = el("button", "vis-mini vis-down", "\u25BC");
+    dn.disabled = i5 === st.rows.length - 1;
+    dn.onclick = async () => {
+      moveRow(st.rows, i5, 1);
+      await saveRows(st, true);
+      await redraw(st);
+    };
+    const del2 = el("button", "vis-mini vis-mini-del", "\u2715");
+    del2.title = t("ui.vis.delRow");
+    del2.onclick = async () => {
+      if (!await confirmBox(t("ui.vis.delRowAsk"))) return;
+      removeRow(st.rows, i5);
+      await saveRows(st);
+      await renderVisual(st.key);
+    };
+    head2.append(up, dn, del2);
+    card.append(head2);
+    for (const c of cols) {
+      if (c.key === "no") continue;
+      const line = el("div", "vis-card-line vis-card-" + c.key);
+      line.append(el("div", "vis-card-label", L2[c.key]));
+      const v2 = el("div", "vis-card-val");
+      v2.append(await fieldFor(st, i5, res, c.key, names));
+      line.append(v2);
+      card.append(line);
+    }
+    return card;
+  }
+  async function fieldFor(st, i5, res, key2, names) {
+    const row2 = st.rows[i5];
+    if (key2 === "no") return el("span", "vis-no-num", String(row2.no));
+    if (key2 === "scene") return el("span", "vis-scene", st.sceneTitle);
+    if (key2 === "image") {
+      const box2 = el("div", "vis-img");
+      if (row2.image) {
+        const im = el("img", "vis-thumb");
+        im.src = await imgUrl(row2.image);
+        im.title = row2.image;
+        im.onclick = async () => imageLightbox(await imgUrl(row2.image), row2.image);
+        box2.append(im);
+      } else {
+        box2.append(el("div", "vis-noimg", t("ui.vis.noImage")));
+      }
+      const tools = el("div", "vis-img-tools");
+      const pick2 = el("button", "vis-mini vis-pick", row2.image ? "\u21C4" : "\uFF0B");
+      pick2.title = t("ui.vis.pickImage");
+      pick2.onclick = async () => {
+        const got = await pickImage(state.root);
+        if (!got) return;
+        row2.image = got.file;
+        await saveRows(st);
+        await redraw(st);
+      };
+      tools.append(pick2);
+      if (row2.image) {
+        const clr = el("button", "vis-mini", "\u2715");
+        clr.title = t("ui.vis.clearImage");
+        clr.onclick = async () => {
+          row2.image = "";
+          await saveRows(st);
+          await redraw(st);
+        };
+        tools.append(clr);
+      }
+      box2.append(tools);
+      return box2;
+    }
+    if (key2 === "text") {
+      const box2 = el("div", "vis-text vis-st-" + res.status);
+      const showLn = !!(state.settings && state.settings.lineNumbers);
+      if (res.status === "free") {
+        box2.append(el("div", "vis-text-body vis-text-empty", t("ui.vis.freeRow")));
+      } else if (!res.live.length) {
+        box2.append(el("div", "vis-text-body vis-text-empty", t("ui.vis.allLost")));
+      } else {
+        for (const p of res.live) {
+          const one = el("div", "vis-line");
+          if (showLn) one.append(el("span", "vis-lineno", String(p.idx + 1)));
+          one.append(el("span", "vis-text-body", displayText(p.text)));
+          if (p.status === "changed") {
+            const b = el("button", "vis-mini vis-sync", "\u27F3");
+            b.title = t("ui.vis.statusChanged");
+            b.onclick = async () => {
+              syncRow(row2, res);
+              await saveRows(st);
+              await renderVisual(st.key);
+            };
+            one.append(el("span", "vis-tag vis-tag-changed", t("ui.vis.statusChangedTag")), b);
+          }
+          box2.append(one);
+        }
+      }
+      const foot = el("div", "vis-text-foot");
+      const bind3 = el("button", "vis-mini vis-bind", "\u21C4");
+      bind3.title = t("ui.vis.editBind");
+      bind3.onclick = () => pickLinesDialog(st, i5);
+      foot.append(bind3);
+      if (res.live.length > 1) foot.append(el("span", "dim vis-bindn", tf("ui.vis.boundN", res.live.length)));
+      box2.append(foot);
+      return box2;
+    }
+    if (key2 === "entities") {
+      const box2 = el("div", "vis-ents");
+      const found2 = entitiesIn(liveText(res), names);
+      if (!found2.length) box2.append(el("span", "dim vis-noent", "\u2014"));
+      for (const n2 of found2) {
+        const chip = el("span", "vis-ent", n2);
+        const file = smart && smart.fileOf ? smart.fileOf[n2] : null;
+        if (file) {
+          chip.classList.add("has-wiki");
+          chip.title = t("ui.vis.openWiki");
+          chip.onclick = async () => {
+            const { openEntity: openEntity2 } = await Promise.resolve().then(() => (init_wiki_ui(), wiki_ui_exports));
+            openEntity2(file);
+          };
+        }
+        box2.append(chip);
+      }
+      return box2;
+    }
+    if (key2 === "remark") {
+      const inp = el("textarea", "vis-remark");
+      inp.value = row2.remark;
+      inp.placeholder = t("ui.vis.remarkPh");
+      inp.rows = 3;
+      let timer2 = null;
+      inp.oninput = () => {
+        row2.remark = inp.value;
+        clearTimeout(timer2);
+        timer2 = setTimeout(() => saveRows(st, true), 400);
+      };
+      inp.onblur = () => {
+        clearTimeout(timer2);
+        saveRows(st);
+      };
+      return inp;
+    }
+    if (key2 === "comment") {
+      const box2 = el("div", "vis-cmts");
+      const cs = commentsForText(liveText(res) || row2.text, st.comments);
+      if (!cs.length) box2.append(el("span", "dim vis-nocmt", "\u2014"));
+      for (const c of cs) {
+        const chip = el("div", "vis-cmt" + (c.resolved ? " done" : ""));
+        chip.append(el("span", "vis-cmt-text", c.text));
+        if (c.author) chip.append(el("span", "vis-cmt-who", c.author));
+        chip.title = c.text;
+        box2.append(chip);
+      }
+      return box2;
+    }
+    return el("span");
+  }
+  function pickLinesDialog(st, rowIdx) {
+    return new Promise((resolve) => {
+      const edit = typeof rowIdx === "number";
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide vis-pick");
+      box2.append(el("div", "k-dlg-title", edit ? t("ui.vis.editBind") : t("ui.vis.pickLine")));
+      box2.append(el("div", "dim vis-pick-hint", edit ? t("ui.vis.editBindHint") : t("ui.vis.pickLineHint")));
+      const list = el("div", "vis-pick-list");
+      const usage = lineUsage(st.rows, st.lines);
+      const mine = new Set(edit ? boundIdxs(st.rows[rowIdx], st.lines) : []);
+      const pool3 = edit ? st.lines : st.lines.filter((l) => !usage.has(l.i));
+      const picked = new Set(mine);
+      if (!st.lines.length) list.append(el("div", "dim", t("ui.vis.noLines")));
+      else if (!pool3.length) list.append(el("div", "dim", t("ui.vis.allUsed")));
+      const showLn = !!(state.settings && state.settings.lineNumbers);
+      for (const line of pool3) {
+        const r = el("label", "vis-pick-row");
+        const cb = el("input");
+        cb.type = "checkbox";
+        cb.checked = mine.has(line.i);
+        cb.dataset.line = String(line.i);
+        cb.onchange = () => {
+          if (cb.checked) picked.add(line.i);
+          else picked.delete(line.i);
+        };
+        r.append(cb);
+        if (showLn) r.append(el("span", "vis-lineno", String(line.i + 1)));
+        r.append(el("span", "vis-pick-text", displayText(line.text)));
+        if (usage.has(line.i) && !mine.has(line.i))
+          r.append(el("span", "vis-tag vis-tag-used", t("ui.vis.lineUsed")));
+        list.append(r);
+      }
+      box2.append(list);
+      const btns = el("div", "k-dlg-btns");
+      if (pool3.length > 1) {
+        const all = el("button", "vis-selall", t("ui.vis.selectAll"));
+        all.onclick = () => {
+          list.querySelectorAll("input").forEach((cb, k) => {
+            cb.checked = true;
+            picked.add(pool3[k].i);
+          });
+        };
+        btns.append(all);
+      }
+      const ok2 = el("button", "k-ok", edit ? t("ui.common.save") : t("ui.vis.addSelected"));
+      const cancel = el("button", null, t("ui.common.cancel"));
+      btns.append(ok2, cancel);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      cancel.onclick = () => done2(false);
+      ov.onclick = (e) => {
+        if (e.target === ov) done2(false);
+      };
+      ok2.onclick = async () => {
+        const byI = new Map(st.lines.map((l) => [l.i, l]));
+        const sel = [...picked].sort((a, b) => a - b);
+        if (edit) {
+          bindRow(st.rows[rowIdx], st.lines, sel);
+        } else {
+          if (!sel.length) return done2(false);
+          for (const i5 of sel) insertRow(st.rows, -1, rowFromLines([byI.get(i5)]));
+        }
+        await saveRows(st);
+        done2(true);
+        await renderVisual(st.key);
+      };
+    });
+  }
+  async function createVisual(scenePath2, sceneTitle) {
+    const vp = await visPathOf(scenePath2);
+    if (!await kapi.exists(vp)) await kapi.writeFile(vp, dumpVis([]));
+    const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await buildTree3();
+    await openVisual(scenePath2, sceneTitle);
+  }
+  async function openVisualForActive() {
+    const tab = state.active;
+    const f = tab && tab.file;
+    if (!f || !/\.md$/i.test(f)) {
+      setStatus(t("ui.vis.needScene"));
+      return false;
+    }
+    if (await hasVis(f)) await openVisual(f, tab.title);
+    else await createVisual(f, tab.title);
+    return true;
+  }
+  var import_md11, VIS_TAB, COL_LABEL, _imgUrl;
+  var init_vis_ui = __esm({
+    "src/visual/vis-ui.js"() {
+      init_core();
+      init_ui();
+      init_gallery();
+      init_wiki();
+      init_comment_core();
+      import_md11 = __toESM(require_md());
+      init_vis_core();
+      VIS_TAB = "::vis::";
+      COL_LABEL = () => ({
+        no: t("ui.vis.colNo"),
+        scene: t("ui.vis.colScene"),
+        image: t("ui.vis.colFrame"),
+        text: t("ui.vis.colAction"),
+        entities: t("ui.vis.colEntities"),
+        remark: t("ui.vis.colRemark"),
+        comment: t("ui.vis.colComment")
+      });
+      _imgUrl = /* @__PURE__ */ new Map();
     }
   });
 
@@ -77620,273 +80977,6 @@ ${h.text}`;
     }
   });
 
-  // src/comments/comment-core.js
-  var comment_core_exports = {};
-  __export(comment_core_exports, {
-    BLOCK_END: () => BLOCK_END,
-    BLOCK_START: () => BLOCK_START,
-    CommentStore: () => CommentStore,
-    addComment: () => addComment,
-    countComments: () => countComments,
-    deleteComment: () => deleteComment,
-    editComment: () => editComment,
-    findComment: () => findComment,
-    fromScenesJson: () => fromScenesJson,
-    makeComment: () => makeComment,
-    mergeComments: () => mergeComments,
-    normalizeAnchor: () => normalizeAnchor,
-    openComments: () => openComments,
-    parseComments: () => parseComments,
-    quoteAt: () => quoteAt,
-    reanchor: () => reanchor,
-    reanchorAll: () => reanchorAll,
-    replyTo: () => replyTo,
-    resolveComment: () => resolveComment,
-    serializeComments: () => serializeComments,
-    stripComments: () => stripComments2
-  });
-  function makeComment({ text, author = "", position = null, now = Date.now(), id = null } = {}) {
-    return {
-      id: id || newId2(now),
-      author: String(author || ""),
-      text: String(text || ""),
-      timestamp: new Date(now).toISOString(),
-      resolved: false,
-      replies: [],
-      anchor: normalizeAnchor(position)
-    };
-  }
-  function normalizeAnchor(position) {
-    if (position == null) return null;
-    if (typeof position === "number") return { start: position, end: position, quote: "" };
-    const { start = 0, end = start, quote = "" } = position;
-    return { start: num3(start), end: num3(end), quote: String(quote || "") };
-  }
-  function parseComments(md) {
-    const m = BLOCK_RE.exec(String(md || ""));
-    if (!m) return [];
-    try {
-      const arr = JSON.parse(m[1].trim());
-      return Array.isArray(arr) ? arr.map(fix) : [];
-    } catch {
-      return [];
-    }
-  }
-  function fix(c) {
-    return {
-      id: c.id || newId2(Date.now()),
-      author: c.author || "",
-      text: c.text || "",
-      timestamp: c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
-      resolved: !!c.resolved,
-      replies: Array.isArray(c.replies) ? c.replies.map(fix) : [],
-      anchor: c.anchor ? normalizeAnchor(c.anchor) : null
-    };
-  }
-  function stripComments2(md) {
-    return String(md || "").replace(BLOCK_RE, "").replace(/\s+$/, "");
-  }
-  function mergeComments(md, comments) {
-    const body = stripComments2(md);
-    if (!comments || !comments.length) return body ? body + "\n" : "";
-    return `${body}
-
-${BLOCK_START}
-${JSON.stringify(comments, null, 1)}
-${BLOCK_END}
-`;
-  }
-  function serializeComments(comments) {
-    return mergeComments("", comments);
-  }
-  function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {
-    const c = makeComment({ text, author, position, now, id });
-    return { comments: [...comments || [], c], comment: c };
-  }
-  function replyTo(comments, parentId, { text, author, now = Date.now(), id } = {}) {
-    const reply = makeComment({ text, author, now, id });
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === parentId) {
-        found2 = true;
-        return { ...c, replies: [...c.replies, reply] };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    const out = walk3(comments || []);
-    return { comments: out, reply: found2 ? reply : null, ok: found2 };
-  }
-  function resolveComment(comments, id, resolved = true) {
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return { ...c, resolved: !!resolved, resolvedAt: resolved ? (/* @__PURE__ */ new Date()).toISOString() : null };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function editComment(comments, id, text) {
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return { ...c, text: String(text), editedAt: (/* @__PURE__ */ new Date()).toISOString() };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function deleteComment(comments, id) {
-    let found2 = false;
-    const walk3 = (list) => list.filter((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return false;
-      }
-      return true;
-    }).map((c) => c.replies.length ? { ...c, replies: walk3(c.replies) } : c);
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function findComment(comments, id) {
-    for (const c of comments || []) {
-      if (c.id === id) return c;
-      const inner = findComment(c.replies, id);
-      if (inner) return inner;
-    }
-    return null;
-  }
-  function countComments(comments) {
-    return (comments || []).reduce((n2, c) => n2 + 1 + countComments(c.replies), 0);
-  }
-  function openComments(comments) {
-    return (comments || []).filter((c) => !c.resolved);
-  }
-  function reanchor(text, anchor) {
-    if (!anchor) return null;
-    const src2 = String(text || "");
-    const q = anchor.quote;
-    if (!q) {
-      const start = Math.min(anchor.start, src2.length);
-      return { ...anchor, start, end: Math.min(anchor.end, src2.length) };
-    }
-    if (src2.slice(anchor.start, anchor.end) === q) return { ...anchor };
-    let best = -1, bestDist = Infinity, from2 = 0, idx4;
-    while ((idx4 = src2.indexOf(q, from2)) >= 0) {
-      const d = Math.abs(idx4 - anchor.start);
-      if (d < bestDist) {
-        bestDist = d;
-        best = idx4;
-      }
-      from2 = idx4 + 1;
-    }
-    if (best < 0) return { ...anchor, lost: true };
-    return { start: best, end: best + q.length, quote: q };
-  }
-  function reanchorAll(text, comments) {
-    return (comments || []).map((c) => c.anchor ? { ...c, anchor: reanchor(text, c.anchor) } : c);
-  }
-  function quoteAt(text, start, end) {
-    return String(text || "").slice(start, end);
-  }
-  function fromScenesJson(scenesJson, opts = {}) {
-    const out = {};
-    const chapters = scenesJson && scenesJson.chapters || {};
-    for (const cg of Object.keys(chapters)) {
-      for (const row2 of chapters[cg] || []) {
-        if (!row2 || !Array.isArray(row2.comments) || !row2.comments.length) continue;
-        out[row2.id] = row2.comments.map((c) => ({
-          id: c.id || newId2(Date.now()),
-          author: c.author || opts.author || "",
-          text: c.text || "",
-          timestamp: c.date || c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
-          resolved: !!c.resolved,
-          replies: [],
-          anchor: null
-        }));
-      }
-    }
-    return out;
-  }
-  var BLOCK_START, BLOCK_END, BLOCK_RE, _seq3, newId2, num3, CommentStore;
-  var init_comment_core = __esm({
-    "src/comments/comment-core.js"() {
-      BLOCK_START = "<!-- k2-comments";
-      BLOCK_END = "-->";
-      BLOCK_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
-      _seq3 = 0;
-      newId2 = (now) => "c" + Number(now).toString(36) + (_seq3++).toString(36);
-      num3 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
-      CommentStore = class {
-        constructor({ io, now = () => Date.now(), author = "" } = {}) {
-          this.io = io;
-          this.now = now;
-          this.author = author;
-        }
-        /** @returns {Promise<{body, comments}>} */
-        async read(path) {
-          let raw = "";
-          try {
-            raw = await this.io.readFile(path) || "";
-          } catch {
-            raw = "";
-          }
-          return { body: stripComments2(raw), comments: parseComments(raw), raw };
-        }
-        async write(path, body, comments) {
-          await this.io.writeFile(path, mergeComments(body, comments));
-          return true;
-        }
-        /** Add a comment to a scene file. position = number | {start,end,quote} */
-        async add(path, position, text, opts = {}) {
-          const { body, comments } = await this.read(path);
-          const anchor = normalizeAnchor(position);
-          if (anchor && !anchor.quote && anchor.end > anchor.start) anchor.quote = quoteAt(body, anchor.start, anchor.end);
-          const res = addComment(comments, { text, author: opts.author ?? this.author, position: anchor, now: this.now() });
-          await this.write(path, body, res.comments);
-          return res.comment;
-        }
-        async reply(path, parentId, text, opts = {}) {
-          const { body, comments } = await this.read(path);
-          const res = replyTo(comments, parentId, { text, author: opts.author ?? this.author, now: this.now() });
-          if (!res.ok) return null;
-          await this.write(path, body, res.comments);
-          return res.reply;
-        }
-        async resolve(path, id, resolved = true) {
-          const { body, comments } = await this.read(path);
-          const res = resolveComment(comments, id, resolved);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async edit(path, id, text) {
-          const { body, comments } = await this.read(path);
-          const res = editComment(comments, id, text);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async remove(path, id) {
-          const { body, comments } = await this.read(path);
-          const res = deleteComment(comments, id);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async list(path, { openOnly = false, reanchor: doReanchor = true } = {}) {
-          const { body, comments } = await this.read(path);
-          const list = doReanchor ? reanchorAll(body, comments) : comments;
-          return openOnly ? openComments(list) : list;
-        }
-        /** Save an edited body while keeping the comments (re-anchored against the new text). */
-        async saveBody(path, newBody) {
-          const { comments } = await this.read(path);
-          await this.write(path, newBody, reanchorAll(newBody, comments));
-          return true;
-        }
-      };
-    }
-  });
-
   // src/comments/comment-ui.js
   function commentStore() {
     if (!_store) {
@@ -78279,8 +81369,8 @@ ${BLOCK_END}
         continue;
       }
       try {
-        const base3 = src2.split(/[\\/]/).pop();
-        const fp = await kapi.join(state.root, "Images", base3);
+        const base4 = src2.split(/[\\/]/).pop();
+        const fp = await kapi.join(state.root, "Images", base4);
         if (!await kapi.exists(fp)) {
           cache2.set(src2, src2);
           continue;
@@ -78289,7 +81379,7 @@ ${BLOCK_END}
         let bin = "";
         for (let i5 = 0; i5 < bytes.length; i5 += 8192)
           bin += String.fromCharCode.apply(null, bytes.slice(i5, i5 + 8192));
-        const mime = MIME[(base3.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
+        const mime = MIME[(base4.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
         const uri = `data:${mime};base64,${btoa(bin)}`;
         cache2.set(src2, uri);
         html = html.split(`src="${src2}"`).join(`src="${uri}"`);
@@ -78326,7 +81416,7 @@ ${BLOCK_END}
             const fp = await kapi.join(dp, "Chapters", ch.folderName, sc.fileName);
             try {
               const raw = await kapi.readFile(fp);
-              const { body: md } = (0, import_md11.parseMdFile)(raw);
+              const { body: md } = (0, import_md12.parseMdFile)(raw);
               const clean = stripMentions(stripComments(md));
               let inner = mdToHtmlBody(clean);
               if (o.embedImages) inner = await embedImages(inner, imgCache);
@@ -78445,13 +81535,13 @@ ${head2}${inner}
       clearBusy();
     }
   }
-  var import_md11, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME;
+  var import_md12, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME;
   var init_export_blog = __esm({
     "src/export-blog.js"() {
       init_i18n();
       init_core();
       init_compile();
-      import_md11 = __toESM(require_md());
+      import_md12 = __toESM(require_md());
       SKIP_SECTIONS = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
       BLOG_THEMES = {
         medium: { label: t("ui.exportBlog.mediumCard"), css: `
@@ -79084,8 +82174,8 @@ img{max-width:100%}` }
     return [{ title: t("ui.common.desc"), content: String(description || "") }];
   }
   async function moveToTrash(p) {
-    const base3 = String(p).split(/[\\/]/).pop();
-    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base3);
+    const base4 = String(p).split(/[\\/]/).pop();
+    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
     await kapi.move(p, dst);
     return dst;
   }
@@ -79113,12 +82203,12 @@ img{max-width:100%}` }
     } catch {
     }
   }
-  var import_md12, SKIP_DIRS7, guid2, safeName2, eq, ok, err, HANDLERS;
+  var import_md13, SKIP_DIRS7, guid2, safeName2, eq, ok, err, HANDLERS;
   var init_ai_actions = __esm({
     "src/ai/ai-actions.js"() {
       init_i18n();
       init_core();
-      import_md12 = __toESM(require_md());
+      import_md13 = __toESM(require_md());
       init_project_scan();
       SKIP_DIRS7 = ["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", "Sessions"];
       guid2 = () => "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -79149,7 +82239,7 @@ img{max-width:100%}` }
           const sc = await findScene(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body } = (0, import_md12.parseMdFile)(raw);
+          const { meta: meta2, body } = (0, import_md13.parseMdFile)(raw);
           return ok(tf("ui.aiActions.readSceneDone", sc.title), { title: sc.title, book: sc.section, meta: meta2, text: body });
         },
         async "entity.read"(a) {
@@ -79322,7 +82412,7 @@ img{max-width:100%}` }
           };
           d.chapters[c.ch.guid] = [...list, sc];
           const file = await kapi.join(b.draftPath, "Chapters", c.ch.folderName, sc.fileName);
-          await kapi.writeFile(file, (0, import_md12.dumpMdFile)(
+          await kapi.writeFile(file, (0, import_md13.dumpMdFile)(
             { title: sc.title, type: "scene", format: "prose", pov: "", tags: [] },
             String(a.text || "")
           ));
@@ -79333,11 +82423,11 @@ img{max-width:100%}` }
           const sc = await findScene(a);
           if (!sc) return err(tf("ui.aiActions.notFoundSceneNew", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body } = (0, import_md12.parseMdFile)(raw);
+          const { meta: meta2, body } = (0, import_md13.parseMdFile)(raw);
           const add = String(a.text || "");
           const mode = String(a.mode || "append");
           const next = mode === "replace" ? add : mode === "prepend" ? add + (body ? "\n\n" + body : "") : body ? body.replace(/\s+$/, "") + "\n\n" + add : add;
-          await kapi.writeFile(sc.path, (0, import_md12.dumpMdFile)(meta2, next));
+          await kapi.writeFile(sc.path, (0, import_md13.dumpMdFile)(meta2, next));
           const verb = mode === "replace" ? t("ui.common.overwrite") : mode === "prepend" ? t("ui.common.insertPage") : t("ui.aiActions.writeNext");
           return ok(tf("ui.aiActions.sceneDoneMergeChar", verb, sc.title, next.length));
         },
@@ -79351,8 +82441,8 @@ img{max-width:100%}` }
           }
           await kapi.writeFile(sf, JSON.stringify(d, null, 2));
           if (await kapi.exists(sc.path)) {
-            const { meta: meta2, body } = (0, import_md12.parseMdFile)(await kapi.readFile(sc.path));
-            await kapi.writeFile(sc.path, (0, import_md12.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
+            const { meta: meta2, body } = (0, import_md13.parseMdFile)(await kapi.readFile(sc.path));
+            await kapi.writeFile(sc.path, (0, import_md13.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
           }
           return ok(tf("ui.aiActions.changeNameSceneDone", a.newTitle));
         },
@@ -79391,7 +82481,7 @@ img{max-width:100%}` }
     newChatSession: () => newChatSession,
     renderAIChatPanel: () => renderAIChatPanel,
     restartSession: () => restartSession,
-    saveSession: () => saveSession
+    saveSession: () => saveSession2
   });
   async function sessionsDir() {
     if (!state.root) return null;
@@ -79401,21 +82491,21 @@ img{max-width:100%}` }
   }
   async function loadSessions(force) {
     if (!state.root) {
-      S2.sessions = [];
-      S2.root = null;
-      return S2.sessions;
+      S3.sessions = [];
+      S3.root = null;
+      return S3.sessions;
     }
-    if (!force && S2.root === state.root) return S2.sessions;
-    S2.root = state.root;
-    S2.sessions = [];
+    if (!force && S3.root === state.root) return S3.sessions;
+    S3.root = state.root;
+    S3.sessions = [];
     try {
       const d = await sessionsDir();
-      if (!d) return S2.sessions;
+      if (!d) return S3.sessions;
       for (const f of await kapi.listFiles(d)) {
         if (!/\.json$/i.test(f)) continue;
         try {
           const j = await kapi.readJson(await kapi.join(d, f));
-          if (j && j.id) S2.sessions.push(newSession(j));
+          if (j && j.id) S3.sessions.push(newSession(j));
         } catch (e) {
           log("warn", t("ui.aiChatPanel.aiChatReadSession") + f, e);
         }
@@ -79423,9 +82513,9 @@ img{max-width:100%}` }
     } catch (e) {
       log("warn", t("ui.aiChatPanel.aiChatReadFolder"), e);
     }
-    return S2.sessions;
+    return S3.sessions;
   }
-  async function saveSession(s, { force = false } = {}) {
+  async function saveSession2(s, { force = false } = {}) {
     if (!s) return false;
     if (s._draft && !force && !hasConversation(s)) return false;
     const d = await sessionsDir();
@@ -79433,9 +82523,9 @@ img{max-width:100%}` }
     delete s._draft;
     const { _draft, ...clean } = s;
     await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean, null, 2));
-    const i5 = S2.sessions.findIndex((x) => x.id === s.id);
-    if (i5 === -1) S2.sessions.push(s);
-    else S2.sessions[i5] = s;
+    const i5 = S3.sessions.findIndex((x) => x.id === s.id);
+    if (i5 === -1) S3.sessions.push(s);
+    else S3.sessions[i5] = s;
     return true;
   }
   function draftSession(patch = {}) {
@@ -79450,7 +82540,7 @@ img{max-width:100%}` }
       await kapi.remove(await kapi.join(d, sessionFileName(s)));
     } catch {
     }
-    S2.sessions = S2.sessions.filter((x) => x.id !== s.id);
+    S3.sessions = S3.sessions.filter((x) => x.id !== s.id);
     return true;
   }
   async function collectScope(session, { maxChars = 24e3 } = {}) {
@@ -79460,8 +82550,8 @@ img{max-width:100%}` }
     const push = async (file, label) => {
       try {
         const raw = await kapi.readFile(file);
-        const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
-        parts.push("### " + label + "\n" + parseMdFile12(raw).body);
+        const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+        parts.push("### " + label + "\n" + parseMdFile13(raw).body);
       } catch {
       }
     };
@@ -79504,29 +82594,29 @@ img{max-width:100%}` }
     return out;
   }
   async function renderAIChatPanel(host2) {
-    S2.host = host2 || $("#ai-chat-body");
-    if (!S2.host) return null;
+    S3.host = host2 || $("#ai-chat-body");
+    if (!S3.host) return null;
     if (!state.root) {
-      S2.host.innerHTML = "";
-      S2.host.append(el("div", "ai-chat-empty dim", t("ui.aiChatPanel.openProjectBeforeDone")));
-      return S2.host;
+      S3.host.innerHTML = "";
+      S3.host.append(el("div", "ai-chat-empty dim", t("ui.aiChatPanel.openProjectBeforeDone")));
+      return S3.host;
     }
     await loadSessions();
-    if (S2.cur && !S2.cur._draft) {
-      const fresh = S2.sessions.find((x) => x.id === S2.cur.id);
-      S2.cur = fresh || null;
+    if (S3.cur && !S3.cur._draft) {
+      const fresh = S3.sessions.find((x) => x.id === S3.cur.id);
+      S3.cur = fresh || null;
     }
-    if (!S2.cur && S2.view !== "list") S2.view = "list";
+    if (!S3.cur && S3.view !== "list") S3.view = "list";
     draw();
-    return S2.host;
+    return S3.host;
   }
   function draw() {
-    const h = S2.host;
+    const h = S3.host;
     if (!h) return;
     h.innerHTML = "";
     h.classList.add("ai-chat");
-    if (S2.view === "list") h.append(listView());
-    else if (S2.view === "detail") h.append(detailView());
+    if (S3.view === "list") h.append(listView());
+    else if (S3.view === "detail") h.append(detailView());
     else h.append(sessionView());
   }
   function listView() {
@@ -79535,7 +82625,7 @@ img{max-width:100%}` }
     const q = el("input", "ai-chat-search");
     q.type = "search";
     q.placeholder = t("ui.aiChatPanel.searchSessionNameText");
-    q.value = S2.query;
+    q.value = S3.query;
     const addBtn = el("button", "k-ok ai-chat-new", t("ui.aiChatPanel.sessionNew"));
     bar.append(q, addBtn);
     wrap2.append(bar);
@@ -79544,33 +82634,33 @@ img{max-width:100%}` }
     const arch = el("label", "ai-chat-archtoggle");
     const cb = el("input");
     cb.type = "checkbox";
-    cb.checked = S2.showArchived;
+    cb.checked = S3.showArchived;
     arch.append(cb, document.createTextNode(t("ui.aiChatPanel.showSessionArrangeKeep")));
     wrap2.append(arch);
     function fill3() {
       rows.innerHTML = "";
-      const list = searchSessions(S2.sessions, S2.query, { includeArchived: S2.showArchived });
+      const list = searchSessions(S3.sessions, S3.query, { includeArchived: S3.showArchived });
       if (!list.length) {
         rows.append(el(
           "div",
           "ai-chat-empty dim",
-          S2.query ? t("ui.aiChatPanel.notFoundSessionAt") : t("ui.aiChatPanel.notHasSessionPress")
+          S3.query ? t("ui.aiChatPanel.notFoundSessionAt") : t("ui.aiChatPanel.notHasSessionPress")
         ));
         return;
       }
       for (const s of list) rows.append(sessionRow(s));
     }
     q.oninput = () => {
-      S2.query = q.value;
+      S3.query = q.value;
       fill3();
     };
     cb.onchange = () => {
-      S2.showArchived = cb.checked;
+      S3.showArchived = cb.checked;
       fill3();
     };
     addBtn.onclick = () => {
-      S2.cur = draftSession();
-      S2.view = "session";
+      S3.cur = draftSession();
+      S3.view = "session";
       draw();
     };
     fill3();
@@ -79594,8 +82684,8 @@ img{max-width:100%}` }
     meta2.append(el("span", "ai-chat-row-tok", compact(st.total) + " tok"));
     row2.append(main, meta2);
     row2.onclick = () => {
-      S2.cur = s;
-      S2.view = "session";
+      S3.cur = s;
+      S3.view = "session";
       draw();
     };
     return row2;
@@ -79611,13 +82701,13 @@ img{max-width:100%}` }
     }
   }
   function sessionView() {
-    const s = S2.cur;
+    const s = S3.cur;
     const wrap2 = el("div", "ai-chat-session");
     const head2 = el("div", "ai-chat-head");
     const back = el("button", "ai-chat-back", "\u2190");
     back.title = t("ui.aiChatPanel.backListSession");
     back.onclick = () => {
-      S2.view = "list";
+      S3.view = "list";
       draw();
     };
     const title2 = el("div", "ai-chat-title", s.title || t("ui.aiChatPanel.session"));
@@ -79632,7 +82722,7 @@ img{max-width:100%}` }
       t("ui.aiChatPanel.clickViewDetail")
     ].join("\n");
     badge.onclick = () => {
-      S2.view = "detail";
+      S3.view = "detail";
       draw();
     };
     const restart = el("button", "ai-chat-restart", "\u21BB");
@@ -79650,7 +82740,7 @@ img{max-width:100%}` }
     viewSel.onchange = async () => {
       s.view = viewSel.value;
       viewSel.title = viewDef(s.view).hint;
-      await saveSession(s);
+      await saveSession2(s);
       draw();
     };
     const more = el("button", "ai-chat-more", "\u22EF");
@@ -79805,7 +82895,7 @@ img{max-width:100%}` }
         const x = el("span", "ai-chat-filex", "\xD7");
         x.onclick = async () => {
           s.files = s.files.filter((y) => y.path !== f.path);
-          await saveSession(s);
+          await saveSession2(s);
           drawFiles();
         };
         chip.append(x);
@@ -79825,17 +82915,17 @@ img{max-width:100%}` }
     box2.append(inputRow);
     modeSel.onchange = async () => {
       s.mode = modeSel.value;
-      await saveSession(s);
+      await saveSession2(s);
     };
     scopeSel.onchange = async () => {
       s.scope = scopeSel.value;
-      await saveSession(s);
+      await saveSession2(s);
     };
     modelSel.onchange = async () => {
       const [pid, model] = String(modelSel.value).split("\0");
       s.providerId = pid || "";
       s.model = model || "";
-      await saveSession(s);
+      await saveSession2(s);
     };
     fileBtn.onclick = async () => {
       const p = await (kapi.openFileDialog ? kapi.openFileDialog() : null);
@@ -79844,7 +82934,7 @@ img{max-width:100%}` }
         return;
       }
       s.files = [...s.files || [], { path: p, name: String(p).replace(/^.*[\\/]/, "") }];
-      await saveSession(s);
+      await saveSession2(s);
       drawFiles();
     };
     const doSend = () => send(s, ta, body, sendBtn);
@@ -79879,33 +82969,33 @@ img{max-width:100%}` }
   }
   async function send(s, ta, body, sendBtn) {
     const text = String(ta.value || "").trim();
-    if (!text || S2.sending) return;
+    if (!text || S3.sending) return;
     const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
     if (!prov) {
       setStatus(t("ui.aiChatPanel.cantSettingsProviderAI"));
       return;
     }
-    S2.sending = true;
+    S3.sending = true;
     sendBtn.disabled = true;
     ta.value = "";
-    const view2 = S2.cur ? S2.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
+    const view2 = S3.cur ? S3.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
-    S2.cur = addMessage(s, userMsg);
-    await saveSession(S2.cur);
+    S3.cur = addMessage(s, userMsg);
+    await saveSession2(S3.cur);
     body.append(msgNode(userMsg, view2));
     const pend = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
     const pendWho = el("div", "ai-msg-who dim", t("ui.aiChatPanel.busyThink"));
     pend.append(pendWho);
     body.append(pend);
     body.scrollTop = body.scrollHeight;
-    const md = modeDef(S2.cur.mode);
-    const cap = modeCap(S2.cur.mode);
+    const md = modeDef(S3.cur.mode);
+    const cap = modeCap(S3.cur.mode);
     let system = md.system;
     const tp = toolsSystemPrompt(cap);
     if (tp) system += "\n\n" + tp;
     try {
-      const ctx2 = await collectScope(S2.cur);
-      if (ctx2) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S2.cur.scope) + "):\n" + ctx2;
+      const ctx2 = await collectScope(S3.cur);
+      if (ctx2) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S3.cur.scope) + "):\n" + ctx2;
     } catch (e) {
       log("warn", t("ui.aiChatPanel.aiChatCollectContext"), e);
     }
@@ -79913,7 +83003,7 @@ img{max-width:100%}` }
     let touched = false;
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const t0 = Date.now();
-      res = await complete(prov, { system, messages: chatMessages(S2.cur), model: s.model || void 0 });
+      res = await complete(prov, { system, messages: chatMessages(S3.cur), model: s.model || void 0 });
       const ms = Date.now() - t0;
       const calls = res.ok ? parseToolCalls(res.text) : [];
       const reply = res.ok ? newMessage("assistant", res.text, {
@@ -79927,23 +83017,23 @@ img{max-width:100%}` }
       }) : newMessage("assistant", "", { error: res.error || t("ui.aiChatPanel.callAINotOk"), system, ms });
       if (res.ok && res.usage) {
         const used = (res.usage.input || 0) + (res.usage.output || 0);
-        S2.cur.contextLimit = Math.max(S2.cur.contextLimit || 0, guessLimit(used));
+        S3.cur.contextLimit = Math.max(S3.cur.contextLimit || 0, guessLimit(used));
       }
       recordUsage2(res, prov, s);
       if (!calls.length) {
-        S2.cur = addMessage(S2.cur, reply);
-        await saveSession(S2.cur);
+        S3.cur = addMessage(S3.cur, reply);
+        await saveSession2(S3.cur);
         pend.remove();
         body.append(msgNode(reply, view2));
         break;
       }
       pendWho.textContent = t("ui.aiChatPanel.busyAct") + calls.length + t("ui.aiChatPanel.cmd");
-      const results = await runCalls(calls, S2.cur, cap);
+      const results = await runCalls(calls, S3.cur, cap);
       reply.results = results;
       touched = touched || touchesProject(results);
-      S2.cur = addMessage(S2.cur, reply);
-      S2.cur = addMessage(S2.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
-      await saveSession(S2.cur);
+      S3.cur = addMessage(S3.cur, reply);
+      S3.cur = addMessage(S3.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
+      await saveSession2(S3.cur);
       body.append(msgNode(reply, view2));
       body.scrollTop = body.scrollHeight;
       if (results.some((r) => r.cancelled)) {
@@ -79962,14 +83052,14 @@ img{max-width:100%}` }
       }
     }
     if (touched) await refreshAfterActions();
-    S2.sending = false;
+    S3.sending = false;
     sendBtn.disabled = false;
     body.scrollTop = body.scrollHeight;
-    const t3 = S2.host && S2.host.querySelector(".ai-chat-title");
-    if (t3) t3.textContent = S2.cur.title;
-    const badge = S2.host && S2.host.querySelector(".ai-chat-ctx");
+    const t3 = S3.host && S3.host.querySelector(".ai-chat-title");
+    if (t3) t3.textContent = S3.cur.title;
+    const badge = S3.host && S3.host.querySelector(".ai-chat-ctx");
     if (badge) {
-      const st2 = sessionStats(S2.cur);
+      const st2 = sessionStats(S3.cur);
       badge.textContent = contextLabel(st2);
       badge.title = [
         t("ui.aiChatPanel.msg") + usd(st2.usd),
@@ -80057,17 +83147,17 @@ img{max-width:100%}` }
     }
   }
   async function restartSession(s, { confirm: confirm2 = true } = {}) {
-    const target = s || S2.cur;
+    const target = s || S3.cur;
     if (!target) return null;
     if (confirm2 && (target.messages || []).length && !await confirmBox(tf("ui.aiChatPanel.restartClearDialogueText", (target.messages || []).length, target.title))) {
       return null;
     }
-    S2.cur = clearMessages(target);
-    await saveSession(S2.cur);
-    S2.view = "session";
+    S3.cur = clearMessages(target);
+    await saveSession2(S3.cur);
+    S3.view = "session";
     draw();
     setStatus(t("ui.aiChatPanel.startDialogueNewDone"));
-    return S2.cur;
+    return S3.cur;
   }
   function sessionMenu(ev, s) {
     popupMenu(ev.clientX, ev.clientY, [
@@ -80079,7 +83169,7 @@ img{max-width:100%}` }
       // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
       { label: (s.autoRun === false ? "\u2610" : "\u2611") + t("ui.aiChatPanel.doCmdNotMust"), click: async () => {
         s.autoRun = s.autoRun === false;
-        await saveSession(s);
+        await saveSession2(s);
         setStatus(s.autoRun ? t("ui.aiChatPanel.aIActNotAsk") : t("ui.aiChatPanel.aIAskBeforeAll"));
       } },
       { label: (s.confirmDestructive === false ? "\u2610" : "\u2611") + t("ui.aiChatPanel.askBeforeAlwaysDel"), click: async () => {
@@ -80091,40 +83181,40 @@ img{max-width:100%}` }
           if (!okGo) return;
         }
         s.confirmDestructive = s.confirmDestructive === false;
-        await saveSession(s);
+        await saveSession2(s);
         setStatus(s.confirmDestructive ? t("ui.aiChatPanel.askBeforeDelAlways") : t("ui.aiChatPanel.unlockFullAIDel"));
       } },
       "-",
       { label: t("ui.aiChatPanel.changeName"), click: async () => {
         const v2 = await ask(t("ui.aiChatPanel.nameSession"), { value: s.title });
         if (v2 === null) return;
-        S2.cur = renameSession(s, v2);
-        await saveSession(S2.cur, { force: true });
+        S3.cur = renameSession(s, v2);
+        await saveSession2(S3.cur, { force: true });
         draw();
       } },
       { label: t("ui.aiChatPanel.copyMarkdown"), click: async () => {
         setStatus(await copyText(shareMarkdown(s)) ? t("ui.aiChatPanel.copyDialogueDone") : t("ui.common.copyNotOk"));
       } },
       { label: s.archived ? t("ui.aiChatPanel.exitArrangeKeep") : t("ui.aiChatPanel.arrangeKeep"), click: async () => {
-        S2.cur = archiveSession(s, !s.archived);
-        await saveSession(S2.cur);
-        S2.view = "list";
+        S3.cur = archiveSession(s, !s.archived);
+        await saveSession2(S3.cur);
+        S3.view = "list";
         draw();
-        setStatus(S2.cur.archived ? t("ui.aiChatPanel.arrangeKeepSessionDone") : t("ui.aiChatPanel.sessionExitArrangeKeep"));
+        setStatus(S3.cur.archived ? t("ui.aiChatPanel.arrangeKeepSessionDone") : t("ui.aiChatPanel.sessionExitArrangeKeep"));
       } },
       "-",
       { label: t("ui.aiChatPanel.delSession2"), click: async () => {
         if (!await confirmBox(tf("ui.aiChatPanel.delSession", s.title))) return;
         await deleteSessionFile(s);
-        S2.cur = null;
-        S2.view = "list";
+        S3.cur = null;
+        S3.view = "list";
         draw();
         setStatus(t("ui.aiChatPanel.delSessionDone"));
       } }
     ]);
   }
   function detailView() {
-    const s = S2.cur;
+    const s = S3.cur;
     const st = sessionStats(s);
     const wrap2 = el("div", "ai-chat-detail");
     const head2 = el("div", "ai-chat-head");
@@ -80132,7 +83222,7 @@ img{max-width:100%}` }
     const closeBtn = el("button", "ai-chat-close", "\u2715");
     closeBtn.title = t("ui.aiChatPanel.closeBackSession");
     closeBtn.onclick = () => {
-      S2.view = "session";
+      S3.view = "session";
       draw();
     };
     const hr = el("div", "ai-chat-head-right");
@@ -80182,15 +83272,15 @@ img{max-width:100%}` }
   async function newChatSession() {
     await loadSessions(true);
     const s = draftSession();
-    S2.cur = s;
-    S2.view = "session";
+    S3.cur = s;
+    S3.view = "session";
     draw();
     return s;
   }
   function _chatState() {
-    return S2;
+    return S3;
   }
-  var MAX_TOOL_ROUNDS, S2;
+  var MAX_TOOL_ROUNDS, S3;
   var init_ai_chat_panel = __esm({
     "src/ai/ai-chat-panel.js"() {
       init_i18n();
@@ -80201,7 +83291,7 @@ img{max-width:100%}` }
       init_ai_tools();
       init_ai_actions();
       MAX_TOOL_ROUNDS = 5;
-      S2 = {
+      S3 = {
         host: null,
         view: "list",
         // list | session | detail
@@ -80312,9 +83402,9 @@ img{max-width:100%}` }
     ov.append(box2);
     document.body.append(ov);
     return {
-      set(textMsg, pct) {
+      set(textMsg, pct2) {
         msg.textContent = textMsg;
-        if (pct != null) fill3.style.width = Math.round(pct * 100) + "%";
+        if (pct2 != null) fill3.style.width = Math.round(pct2 * 100) + "%";
       },
       close() {
         ov.remove();
@@ -80411,18 +83501,18 @@ img{max-width:100%}` }
   function titleHistory() {
     return getAISettings().titleHistory || [];
   }
-  function rememberTitles(kind, base3, titles) {
+  function rememberTitles(kind, base4, titles) {
     if (!state.meta) return;
     state.meta.ai = state.meta.ai || {};
     const hist = state.meta.ai.titleHistory || [];
-    hist.push({ date: (/* @__PURE__ */ new Date()).toISOString(), kind, base: base3, titles });
+    hist.push({ date: (/* @__PURE__ */ new Date()).toISOString(), kind, base: base4, titles });
     if (hist.length > 50) hist.splice(0, hist.length - 50);
     state.meta.ai.titleHistory = hist;
   }
-  function pastTitlesFor(base3) {
+  function pastTitlesFor(base4) {
     const out = [];
     for (const h of titleHistory()) {
-      if (base3 && h.base !== base3) continue;
+      if (base4 && h.base !== base4) continue;
       for (const t3 of h.titles || []) if (!out.includes(t3)) out.push(t3);
     }
     return out;
@@ -80681,18 +83771,18 @@ img{max-width:100%}` }
     return String(name5 || "").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim().slice(0, 80);
   }
   function planNameFromFile(file) {
-    const base3 = String(file || "").split(/[\\/]/).pop() || "";
-    return base3.replace(/\.json$/i, "");
+    const base4 = String(file || "").split(/[\\/]/).pop() || "";
+    return base4.replace(/\.json$/i, "");
   }
   function uniquePlanName(name5, existing) {
     const taken = new Set((existing || []).map((x) => String(x).toLowerCase()));
-    const base3 = safePlanName(name5) || t("ui.common.newPlan");
-    if (!taken.has(base3.toLowerCase())) return base3;
+    const base4 = safePlanName(name5) || t("ui.common.newPlan");
+    if (!taken.has(base4.toLowerCase())) return base4;
     for (let i5 = 2; i5 < 999; i5++) {
-      const n2 = `${base3} ${i5}`;
+      const n2 = `${base4} ${i5}`;
       if (!taken.has(n2.toLowerCase())) return n2;
     }
-    return base3 + " " + Date.now().toString(36);
+    return base4 + " " + Date.now().toString(36);
   }
   function planDirty(current2, saved) {
     if (!saved) return !!(current2 && (Object.keys(current2.positions || {}).length || Object.keys(current2.colors || {}).length || Object.keys(current2.choices || {}).length));
@@ -81406,11 +84496,11 @@ details>summary::-webkit-details-marker{display:none}
     if (!force && ps.graph && ps.graphRoot === state.root) {
       return { graph: ps.graph, analysis: ps.analysis };
     }
-    const scenes = await collectScenes();
-    const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const scenes = await collectScenes2();
+    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       try {
-        sc.body = sc.filePath ? parseMdFile12(await kapi.readFile(sc.filePath)).body || "" : "";
+        sc.body = sc.filePath ? parseMdFile13(await kapi.readFile(sc.filePath)).body || "" : "";
       } catch {
         sc.body = "";
       }
@@ -81732,7 +84822,7 @@ details>summary::-webkit-details-marker{display:none}
     branchPlansDir: () => branchPlansDir,
     checkDanglingOnOpen: () => checkDanglingOnOpen,
     closeBranchPlan: () => closeBranchPlan,
-    collectScenes: () => collectScenes,
+    collectScenes: () => collectScenes2,
     comparePlanDialog: () => comparePlanDialog,
     compareWithPlan: () => compareWithPlan,
     currentBranchPlan: () => currentBranchPlan,
@@ -81926,16 +85016,16 @@ details>summary::-webkit-details-marker{display:none}
     return inBranchPlan() ? applyPlanChoices(scenes, planState.live) : scenes;
   }
   async function newPlanFromCurrent(name5) {
-    const scenes = await collectScenes();
-    const base3 = newBranchPlan(name5);
-    base3.choices = inBranchPlan() ? JSON.parse(JSON.stringify(planState.live.choices || {})) : snapshotChoices(scenes);
-    base3.positions = { ...loadNodePositions() };
+    const scenes = await collectScenes2();
+    const base4 = newBranchPlan(name5);
+    base4.choices = inBranchPlan() ? JSON.parse(JSON.stringify(planState.live.choices || {})) : snapshotChoices(scenes);
+    base4.positions = { ...loadNodePositions() };
     closeBranchPlan();
-    planState.live = base3;
+    planState.live = base4;
     return saveBranchPlanAs(name5);
   }
   async function compareWithPlan(otherPath) {
-    const scenes = await collectScenes();
+    const scenes = await collectScenes2();
     const titleOf2 = (id) => (scenes.find((x) => String(x.id) === String(id)) || {}).title || id;
     const other = normalizeBranchPlan(await kapi.readJson(otherPath), planNameFromFile(otherPath));
     const rows = comparePlans(planState.live, other, titleOf2);
@@ -82126,7 +85216,7 @@ details>summary::-webkit-details-marker{display:none}
     const host2 = $("#branch-body");
     if (host2 && host2.firstChild) renderBranchingTree(host2);
   }
-  async function collectScenes() {
+  async function collectScenes2() {
     const out = [];
     if (!state.root) return out;
     for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
@@ -82158,11 +85248,11 @@ details>summary::-webkit-details-marker{display:none}
     return out;
   }
   async function loadSceneBodies(scenes) {
-    const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       if (typeof sc.body === "string" || !sc.filePath) continue;
       try {
-        sc.body = parseMdFile12(await kapi.readFile(sc.filePath)).body || "";
+        sc.body = parseMdFile13(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         sc.body = "";
       }
@@ -82202,7 +85292,7 @@ details>summary::-webkit-details-marker{display:none}
     let scenes = opts.scenes;
     if (!scenes) {
       try {
-        scenes = await collectScenes();
+        scenes = await collectScenes2();
       } catch (e) {
         log("error", t("ui.branch.branchingReadSceneNot"), e);
         scenes = [];
@@ -82214,7 +85304,7 @@ details>summary::-webkit-details-marker{display:none}
     const positions = loadNodePositions();
     const layout = layoutGraph(graph, { positions });
     const analysis = analyzeGraph(graph);
-    const redraw2 = (o) => renderBranchingTree(pane, o);
+    const redraw3 = (o) => renderBranchingTree(pane, o);
     const redrawUi = () => renderBranchingTree(pane, { scenes });
     const shell = el("div", "branch-shell");
     const main = el("div", "branch-main");
@@ -82379,16 +85469,16 @@ details>summary::-webkit-details-marker{display:none}
     if (dupN) {
       const mergeB = el("button", "branch-zbtn branch-dup", "\u{1F9F9}" + dupN);
       mergeB.title = tr2("mergeDupHint", t("ui.branch.mergeChoiceDup")) + ` (${dupN})`;
-      mergeB.onclick = () => mergeAllDuplicates(graph, redraw2);
+      mergeB.onclick = () => mergeAllDuplicates(graph, redraw3);
       tools.append(mergeB);
     }
     const scanB = el("button", "branch-zbtn", "\u{1F50E}");
     scanB.title = tr2("scanHint", t("ui.branch.scanAllSceneFind"));
-    scanB.onclick = () => scanAllScenes(scenes, redraw2);
+    scanB.onclick = () => scanAllScenes(scenes, redraw3);
     tools.append(scanB);
     const refreshB = el("button", "branch-zbtn", "\u{1F504}");
     refreshB.title = tr2("reload", t("ui.branch.readScenesJsonNew"));
-    refreshB.onclick = () => redraw2();
+    refreshB.onclick = () => redraw3();
     tools.append(refreshB);
     const sideTog = el("button", "branch-zbtn", bs.sideOpen ? "\u25B6" : "\u25C0");
     sideTog.title = bs.sideOpen ? tr2("hideSide", t("ui.branch.hidePanelChoice")) : tr2("showSide", t("ui.branch.showPanelChoice"));
@@ -82414,13 +85504,13 @@ details>summary::-webkit-details-marker{display:none}
     if (brokeN) {
       const b = addWarn("bw-lost", `\u{1F494} ${brokeN} ${tr2("warnBroken", t("ui.branch.choicePointSceneNot"))}`);
       b.classList.add("branch-badge-btn");
-      b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw2, redrawUi);
+      b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw3, redrawUi);
     }
     if (analysis.unreachable.length) addWarn("bw-lost", `\u{1F6AB} ${analysis.unreachable.length} ${tr2("warnLost", t("ui.branch.sceneNotTo"))}`);
     if (analysis.cycles.length) addWarn("bw-loop", `\u{1F501} ${analysis.cycles.length} ${tr2("warnLoop", t("ui.branch.sceneDup"))}`);
     if (analysis.endings.length) addWarn("bw-end", `\u{1F3C1} ${analysis.endings.length} ${tr2("sumEndings", t("ui.common.actEnd"))}`);
     if (warn.childNodes.length) wrap2.append(warn);
-    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw2));
+    if (scenes.length) wrap2.append(buildAdder(graph, bs, redraw3));
     if (!analysis.total) {
       wrap2.append(el(
         "div",
@@ -82614,7 +85704,7 @@ details>summary::-webkit-details-marker{display:none}
         box2.addEventListener("drop", async (ev) => {
           ev.preventDefault();
           box2.classList.remove("bn-drop");
-          await dropChoiceOn(n2, graph, redraw2);
+          await dropChoiceOn(n2, graph, redraw3);
         });
         nodeEls.set(n2.id, box2);
         canvas.append(box2);
@@ -82659,7 +85749,7 @@ details>summary::-webkit-details-marker{display:none}
           del2.onclick = async (e) => {
             e.stopPropagation();
             await removeChoice(n2, idx4);
-            redraw2();
+            redraw3();
           };
           row2.append(del2);
           choices.append(row2);
@@ -82681,7 +85771,7 @@ details>summary::-webkit-details-marker{display:none}
         card.addEventListener("drop", async (ev) => {
           ev.preventDefault();
           card.classList.remove("bn-drop");
-          await dropChoiceOn(n2, graph, redraw2);
+          await dropChoiceOn(n2, graph, redraw3);
         });
         cardEls.set(n2.id, card);
         tree.append(card);
@@ -82690,7 +85780,7 @@ details>summary::-webkit-details-marker{display:none}
     }
     main.append(wrap2);
     shell.append(main);
-    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw2, redrawUi));
+    if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw3, redrawUi));
     pane.replaceChildren(shell);
     if (keepScroll3) {
       const vp = pane.querySelector(".branch-viewport");
@@ -82781,7 +85871,7 @@ details>summary::-webkit-details-marker{display:none}
       ctx2.redraw();
     };
   }
-  async function dropChoiceOn(target, graph, redraw2) {
+  async function dropChoiceOn(target, graph, redraw3) {
     const d = dragChoice;
     dragChoice = null;
     if (!d || !target || d.node.id === target.id) return false;
@@ -82791,10 +85881,10 @@ details>summary::-webkit-details-marker{display:none}
     });
     await mutateChoices(target, (list) => [...list, { ...d.choice }]);
     setStatus(`${tr2("movedChoice", t("ui.branch.moveChoice"))} "${d.choice.text}" \u2192 ${target.title}`);
-    redraw2();
+    redraw3();
     return true;
   }
-  async function mergeAllDuplicates(graph, redraw2) {
+  async function mergeAllDuplicates(graph, redraw3) {
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const targets = [];
     for (const n2 of graph.nodes) {
@@ -82819,10 +85909,10 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     if (!ok2) return 0;
     for (const x of targets) await mutateChoices(x.node, () => x.list);
     setStatus(`${tr2("mergedDone", t("ui.branch.mergeChoiceDupDone"))} ${total}`);
-    redraw2();
+    redraw3();
     return total;
   }
-  function showBrokenDialog(graph, analysis, bs, redraw2, redrawUi = redraw2) {
+  function showBrokenDialog(graph, analysis, bs, redraw3, redrawUi = redraw3) {
     const rows = analysis.dangling.filter((e) => e.to);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog branch-dlg");
@@ -82852,7 +85942,7 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
         if (src2) {
           await removeChoice(src2, e.idx);
           ov.remove();
-          redraw2();
+          redraw3();
         }
       };
       row2.append(fix2, del2);
@@ -82873,7 +85963,7 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
   async function checkDanglingOnOpen() {
     try {
       if (!state.root) return 0;
-      const scenes = await collectScenes();
+      const scenes = await collectScenes2();
       const bad = danglingChoices(scenes);
       if (!bad.length) return 0;
       const names = [...new Set(bad.map((b) => b.sceneTitle))].slice(0, 3).join(", ");
@@ -83035,8 +86125,8 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
   async function readSceneBody(node) {
     if (!node || !node.filePath) return "";
     try {
-      const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return parseMdFile12(await kapi.readFile(node.filePath)).body || "";
+      const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+      return parseMdFile13(await kapi.readFile(node.filePath)).body || "";
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -83047,10 +86137,10 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
       setStatus(tr2("noFile", t("ui.common.sceneNotHasFile")));
       return false;
     }
-    const { parseMdFile: parseMdFile12, dumpMdFile: dumpMdFile6 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile13, dumpMdFile: dumpMdFile6 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { state: st } = await Promise.resolve().then(() => (init_core(), core_exports));
     const raw = await kapi.readFile(node.filePath);
-    const { meta: meta2, body } = parseMdFile12(raw);
+    const { meta: meta2, body } = parseMdFile13(raw);
     const marker = "[" + text + "]";
     if (body.includes(marker)) return true;
     const next = body.replace(/\s+$/, "") + "\n\n" + marker + "\n";
@@ -83075,9 +86165,9 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     let body = "";
     if (tab && (tab.editor || tab.sp)) body = (tab.editor || tab.sp).getMarkdown();
     if (!body) {
-      const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
       try {
-        body = parseMdFile12(await kapi.readFile(state.active.file)).body || "";
+        body = parseMdFile13(await kapi.readFile(state.active.file)).body || "";
       } catch {
       }
     }
@@ -83098,15 +86188,15 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     refreshOpenBranchTab();
     return missing.length;
   }
-  async function scanAllScenes(scenes, redraw2) {
-    const { parseMdFile: parseMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
+  async function scanAllScenes(scenes, redraw3) {
+    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
     for (const sc of scenes) {
       if (!sc.filePath) continue;
       let body = "";
       try {
-        body = parseMdFile12(await kapi.readFile(sc.filePath)).body || "";
+        body = parseMdFile13(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         continue;
       }
@@ -83131,10 +86221,10 @@ ${preview2}` + (found2.length > 8 ? `
       await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((x) => ({ text: x, nextSceneId: "" }))]);
     }
     setStatus(`${tr2("scanDone", t("ui.branch.bindChoiceTextDone"))} ${total}`);
-    redraw2();
+    redraw3();
     return total;
   }
-  function buildAdder(graph, bs, redraw2) {
+  function buildAdder(graph, bs, redraw3) {
     const adder = el("div", "branch-adder");
     adder.append(el("span", "branch-adder-lbl", "\u2795 " + tr2("addChoice", t("ui.branch.addChoice3"))));
     const fromSel = el("select", "k-field-select");
@@ -83165,7 +86255,7 @@ ${preview2}` + (found2.length > 8 ? `
       textInp.value = "";
       bs.sel = from2.id;
       setStatus(tr2("added", t("ui.branch.addChoiceDone")));
-      redraw2();
+      redraw3();
     };
     addB.onclick = doAdd;
     textInp.onkeydown = (e) => {
@@ -83260,7 +86350,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (e.target === ov) ov.remove();
     };
   }
-  function buildInspector(graph, layout, analysis, bs, redraw2, redrawUi = redraw2) {
+  function buildInspector(graph, layout, analysis, bs, redraw3, redrawUi = redraw3) {
     const side = el("div", "branch-side");
     const shead = el("div", "branch-side-head");
     shead.append(el("span", null, "\u{1F3AF} " + tr2("inspector", t("ui.branch.choiceScene"))));
@@ -83313,7 +86403,7 @@ ${preview2}` + (found2.length > 8 ? `
     body.append(colorRow(node.color, async (c) => {
       await setNodeColor(node, c);
       setStatus(c ? tr2("colorSet", t("ui.branch.recolorCardDone")) : tr2("colorClear", t("ui.branch.clearColorCardDone")));
-      redraw2();
+      redraw3();
     }));
     const docSec = el("div", "branch-doc");
     docSec.append(el("div", "branch-side-sub", "\u{1F517} " + tr2("docChoices", t("ui.branch.choiceBodyScene"))));
@@ -83345,7 +86435,7 @@ ${preview2}` + (found2.length > 8 ? `
           b.onclick = async () => {
             await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
             setStatus(`${tr2("docLinked1", t("ui.branch.bindChoiceDone"))}: ${txt}`);
-            redraw2();
+            redraw3();
           };
           row2.append(b);
           docBody.append(row2);
@@ -83354,7 +86444,7 @@ ${preview2}` + (found2.length > 8 ? `
         all.onclick = async () => {
           await mutateChoices(node, (list) => [...list, ...missing.map((x) => ({ text: x, nextSceneId: "" }))]);
           setStatus(tr2("docLinkedAll", t("ui.branch.bindChoiceTextComplete")));
-          redraw2();
+          redraw3();
         };
         docBody.append(all);
       }
@@ -83367,7 +86457,7 @@ ${preview2}` + (found2.length > 8 ? `
           b.onclick = async () => {
             if (await insertMarkerIntoScene(node, txt)) {
               setStatus(tr2("docInserted", t("ui.branch.insertSceneDone")));
-              redraw2();
+              redraw3();
             }
           };
           row2.append(b);
@@ -83411,7 +86501,7 @@ ${preview2}` + (found2.length > 8 ? `
           return list;
         });
         setStatus(tr2("textEdited", t("ui.branch.editTextChoiceDone")));
-        redraw2();
+        redraw3();
       };
       tIn.onblur = commitText;
       tIn.onkeydown = (e) => {
@@ -83433,7 +86523,7 @@ ${preview2}` + (found2.length > 8 ? `
           return list;
         });
         setStatus(tr2("targetChanged", t("ui.branch.changeToDone")));
-        redraw2();
+        redraw3();
       };
       const colB = el("button", "branch-edit-col", "\u{1F3A8}");
       colB.title = tr2("lineColor", t("ui.branch.colorLineChoice"));
@@ -83447,7 +86537,7 @@ ${preview2}` + (found2.length > 8 ? `
             return list;
           });
           setStatus(col ? tr2("lineColorSet", t("ui.branch.recolorLineDone")) : tr2("lineColorClear", t("ui.branch.clearColorLineDone")));
-          redraw2();
+          redraw3();
         });
         pop.classList.add("branch-colors-pop");
         row2.after(pop);
@@ -83464,13 +86554,13 @@ ${preview2}` + (found2.length > 8 ? `
         await recordChoice2(node.id, node.title, c.text);
         bs.sel = target.id;
         openSceneFromGraph(target, false);
-        redraw2();
+        redraw3();
       };
       const delB = el("button", "branch-edit-del", "\u2715");
       delB.title = tr2("delChoice", t("ui.branch.delChoice2"));
       delB.onclick = async () => {
         await removeChoice(node, idx4);
-        redraw2();
+        redraw3();
       };
       row2.append(grip, tIn, tSel, colB, goB, delB);
       body.append(row2);
@@ -83486,7 +86576,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (!txt) return;
       await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
       await insertMarkerIntoScene(node, txt);
-      redraw2();
+      redraw3();
     };
     body.append(addB);
     const info = enumeratePathsInfo(graph, node.id, PATH_LIMIT);
@@ -84831,14 +87921,14 @@ ${preview2}` + (found2.length > 8 ? `
       const total = row2 ? pr.width + nr.width : pr.height + nr.height;
       if (total <= 0) return;
       const start = row2 ? e.clientX : e.clientY;
-      const base3 = row2 ? pr.width : pr.height;
+      const base4 = row2 ? pr.width : pr.height;
       const sum2 = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
-      let ratio = base3 / total;
+      let ratio = base4 / total;
       h.classList.add("k-dragging");
       document.body.classList.add("k-resizing");
       const move = (ev) => {
         const d = (row2 ? ev.clientX : ev.clientY) - start;
-        ratio = Math.max(0.05, Math.min(0.95, (base3 + d) / total));
+        ratio = Math.max(0.05, Math.min(0.95, (base4 + d) / total));
         prev.style.flexGrow = String(sum2 * ratio);
         next.style.flexGrow = String(sum2 * (1 - ratio));
       };
@@ -85180,17 +88270,17 @@ ${preview2}` + (found2.length > 8 ? `
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function slug(name5, seq2) {
-    const base3 = String(name5 || "").trim().replace(/[\\/:*?"<>|#%{}]+/g, "").replace(/\s+/g, "-").slice(0, 60) || "entry";
-    return seq2 == null ? base3 : `${base3}-${seq2}`;
+    const base4 = String(name5 || "").trim().replace(/[\\/:*?"<>|#%{}]+/g, "").replace(/\s+/g, "-").slice(0, 60) || "entry";
+    return seq2 == null ? base4 : `${base4}-${seq2}`;
   }
   function assignPages(entities) {
     const used = /* @__PURE__ */ new Map();
     const out = /* @__PURE__ */ new Map();
     for (const e of entities || []) {
-      const base3 = slug(e.name);
-      const n2 = (used.get(base3.toLowerCase()) || 0) + 1;
-      used.set(base3.toLowerCase(), n2);
-      out.set(e.path, (n2 === 1 ? base3 : `${base3}-${n2}`) + ".html");
+      const base4 = slug(e.name);
+      const n2 = (used.get(base4.toLowerCase()) || 0) + 1;
+      used.set(base4.toLowerCase(), n2);
+      out.set(e.path, (n2 === 1 ? base4 : `${base4}-${n2}`) + ".html");
     }
     return out;
   }
@@ -85373,7 +88463,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   async function renderCodexPanel(host2) {
     const h = host2 || $("#codex-body");
     if (!h) return false;
-    const s = S3();
+    const s = S4();
     h.replaceChildren();
     h.classList.add("k-codex");
     if (!state.root) {
@@ -85518,14 +88608,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     draw2();
     return true;
   }
-  var S3;
+  var S4;
   var init_codex_ui = __esm({
     "src/codex/codex-ui.js"() {
       init_i18n();
       init_core();
       init_project_scan();
       init_codex_build();
-      S3 = () => state._codex || (state._codex = { ents: null, q: "", cat: "", sel: null });
+      S4 = () => state._codex || (state._codex = { ents: null, q: "", cat: "", sel: null });
     }
   });
 
@@ -85537,7 +88627,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     RECORD_FILE: () => RECORD_FILE,
     RECORD_SCHEMA: () => RECORD_SCHEMA,
     addEntry: () => addEntry,
-    csvCell: () => csvCell,
+    csvCell: () => csvCell2,
     csvFileName: () => csvFileName,
     dayKey: () => dayKey,
     filterEntries: () => filterEntries,
@@ -85641,18 +88731,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return hay.includes(needle);
     });
   }
-  function csvCell(v2) {
+  function csvCell2(v2) {
     const s = v2 == null ? "" : String(v2);
     if (!/[",\r\n]/.test(s) && s === s.trim()) return s;
     return '"' + s.replace(/"/g, '""') + '"';
   }
   function toCsv(entries, opts = {}) {
-    const rows = [CSV_COLUMNS.map(([, label]) => csvCell(label)).join(",")];
+    const rows = [CSV_COLUMNS.map(([, label]) => csvCell2(label)).join(",")];
     for (const e of sortEntries(entries)) {
       rows.push(CSV_COLUMNS.map(([key2]) => {
-        if (key2 === "tags") return csvCell((e.tags || []).join(" "));
-        if (key2 === "mood") return csvCell(e.mood ? moodLabel(e.mood) : "");
-        return csvCell(e[key2]);
+        if (key2 === "tags") return csvCell2((e.tags || []).join(" "));
+        if (key2 === "mood") return csvCell2(e.mood ? moodLabel(e.mood) : "");
+        return csvCell2(e[key2]);
       }).join(","));
     }
     const text = rows.join("\r\n") + "\r\n";
@@ -85697,7 +88787,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     resetRecords: () => resetRecords
   });
   async function loadRecords() {
-    const s = S4();
+    const s = S5();
     if (!state.root) {
       s.data = migrate4(null);
       return s.data;
@@ -85711,7 +88801,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return s.data;
   }
   async function saveRecords(next) {
-    const s = S4();
+    const s = S5();
     s.data = next;
     if (!state.root) return false;
     const p = await kapi.join(state.root, RECORD_FILE);
@@ -85724,7 +88814,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   async function renderRecordPanel(host2) {
     const h = host2 || $("#record-body");
     if (!h) return false;
-    const s = S4();
+    const s = S5();
     if (!s.data) await loadRecords();
     h.replaceChildren();
     h.classList.add("k-rec");
@@ -85924,13 +89014,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     showPanel2("record");
     await renderFeaturePanel2("record");
   }
-  var S4, newId3;
+  var S5, newId3;
   var init_record_ui = __esm({
     "src/record/record-ui.js"() {
       init_i18n();
       init_core();
       init_record_data();
-      S4 = () => state._record || (state._record = { data: null, q: "", mood: "", editing: null });
+      S5 = () => state._record || (state._record = { data: null, q: "", mood: "", editing: null });
       newId3 = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
   });
@@ -86187,7 +89277,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       disabled: (n2) => app.pluginDisabled(n2)
     });
     const counts = pluginCounts(list);
-    h.append(buildBar(h, counts, app));
+    h.append(buildBar2(h, counts, app));
     const body = el("div", "k-plug-list");
     h.append(body);
     if (!list.length) {
@@ -86196,12 +89286,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       empty2.append(el("div", "k-plug-empty-hint", t("ui.plug.emptyHint")));
       body.append(empty2);
     } else {
-      for (const p of list) body.append(cardFor(p, h, app));
+      for (const p of list) body.append(cardFor2(p, h, app));
     }
-    if (S5().showApi) h.append(apiDoc());
+    if (S6().showApi) h.append(apiDoc());
     return true;
   }
-  function buildBar(host2, counts, app) {
+  function buildBar2(host2, counts, app) {
     const bar = el("div", "k-plug-bar");
     const sum2 = el("div", "k-plug-sum");
     sum2.textContent = tf("ui.plug.summary", counts.total, counts.ok);
@@ -86253,10 +89343,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       () => makeSample(host2, app)
     ));
     const apiBtn = mkBtn(t("ui.plug.apiDoc"), t("ui.plug.apiDocHint"), async () => {
-      S5().showApi = !S5().showApi;
+      S6().showApi = !S6().showApi;
       await renderPluginPanel(host2);
     });
-    apiBtn.classList.toggle("on", !!S5().showApi);
+    apiBtn.classList.toggle("on", !!S6().showApi);
     btns.append(apiBtn);
     bar.append(btns);
     return bar;
@@ -86267,7 +89357,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     b.onclick = onClick;
     return b;
   }
-  function cardFor(p, host2, app) {
+  function cardFor2(p, host2, app) {
     const card = el("div", "k-plug-card k-plug-" + p.status);
     card.dataset.plugin = p.name;
     const head2 = el("div", "k-plug-head");
@@ -86348,8 +89438,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     if (!await confirmBox2(tf("ui.plug.uninstallAsk", p.name), t("ui.plug.uninstall"))) return false;
     try {
-      const base3 = await baseDirOf(p);
-      const r = await kapi.pluginUninstall(base3, p.folder || p.name);
+      const base4 = await baseDirOf(p);
+      const r = await kapi.pluginUninstall(base4, p.folder || p.name);
       if (!r || !r.ok) {
         setStatus(t("ui.plug.errUninstall") + " " + (r && r.reason || ""));
         return false;
@@ -86407,12 +89497,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     );
     if (!okGo) return false;
     try {
-      const base3 = await kapi.globalPluginsDir();
-      if (!base3) {
+      const base4 = await kapi.globalPluginsDir();
+      if (!base4) {
         setStatus(t("ui.plug.errNoDir"));
         return false;
       }
-      const dir2 = await kapi.join(base3, folder);
+      const dir2 = await kapi.join(base4, folder);
       if (await kapi.exists(dir2)) {
         if (!await confirmBox2(tf("ui.plug.installOverwrite", folder), t("ui.plug.install"))) return false;
       }
@@ -86457,12 +89547,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!name5) return false;
     const folder = safePluginFolder(name5);
     try {
-      const base3 = await kapi.globalPluginsDir();
-      if (!base3) {
+      const base4 = await kapi.globalPluginsDir();
+      if (!base4) {
         setStatus(t("ui.plug.errNoDir"));
         return false;
       }
-      const dir2 = await kapi.join(base3, folder);
+      const dir2 = await kapi.join(base4, folder);
       if (await kapi.exists(dir2)) {
         setStatus(tf("ui.plug.errExists", folder));
         return false;
@@ -86480,13 +89570,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  var S5;
+  var S6;
   var init_plugin_panel = __esm({
     "src/plugins/plugin-panel.js"() {
       init_i18n();
       init_core();
       init_plugin_core();
-      S5 = () => state._plugins || (state._plugins = { busy: false, showApi: false });
+      S6 = () => state._plugins || (state._plugins = { busy: false, showApi: false });
     }
   });
 
@@ -86503,7 +89593,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     WHERE_TAG: () => WHERE_TAG,
     WHERE_TURN: () => WHERE_TURN,
     characterFromTag: () => characterFromTag,
-    countWords: () => countWords3,
+    countWords: () => countWords4,
     extractDialogue: () => extractDialogue,
     extractRaw: () => extractRaw,
     filterDialogue: () => filterDialogue,
@@ -86746,7 +89836,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const k = r.speaker || "";
       const cur = m.get(k) || { speaker: k, count: 0, words: 0 };
       cur.count++;
-      cur.words += countWords3(r.text);
+      cur.words += countWords4(r.text);
       m.set(k, cur);
     }
     return [...m.values()].sort((a, b) => {
@@ -86754,7 +89844,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return b.count - a.count || a.speaker.localeCompare(b.speaker, "th");
     });
   }
-  function countWords3(s) {
+  function countWords4(s) {
     const t3 = String(s || "").trim();
     if (!t3) return 0;
     const thai = (t3.match(/[฀-๿]/g) || []).length;
@@ -86889,7 +89979,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return _scanning;
   }
   async function scanDialogueInner() {
-    const s = S6();
+    const s = S7();
     if (!state.root) {
       s.rows = [];
       return s.rows;
@@ -86908,7 +89998,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const chTitle = (chTitleCache.get(sc.draftPath) || {})[sc.chapterId] || sc.chapterId;
         let meta2 = {}, body = "";
         try {
-          const p = (0, import_md13.parseMdFile)(sc.text || "");
+          const p = (0, import_md14.parseMdFile)(sc.text || "");
           meta2 = p.meta || {};
           body = p.body || "";
         } catch {
@@ -86950,14 +90040,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return s.rows;
   }
   function visibleRows() {
-    const s = S6();
+    const s = S7();
     const rows = filterDialogue(s.rows || [], s.f);
     return s.f.sureOnly ? rows.filter((r) => !r.guessed) : rows;
   }
   async function renderDialoguePanel(host2) {
     const h = host2 || $("#dialogue-body");
     if (!h) return false;
-    const s = S6();
+    const s = S7();
     h.replaceChildren();
     h.classList.add("k-dlgp");
     if (!state.root) {
@@ -86969,16 +90059,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       await scanDialogue();
       return renderDialoguePanel(h);
     }
-    h.append(buildBar2(h));
+    h.append(buildBar3(h));
     const body = el("div", "k-dlgp-list");
     h.append(body);
     drawList(body);
     return true;
   }
-  function buildBar2(host2) {
-    const s = S6();
+  function buildBar3(host2) {
+    const s = S7();
     const bar = el("div", "k-dlgp-bar");
-    const redraw2 = () => {
+    const redraw3 = () => {
       const b = host2.querySelector(".k-dlgp-list");
       if (b) drawList(b);
       syncCount();
@@ -86990,7 +90080,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     q.value = s.f.q;
     q.oninput = () => {
       s.f.q = q.value;
-      redraw2();
+      redraw3();
     };
     const refresh = el("button", "k-dlgp-btn");
     refresh.textContent = t("ui.common.refresh");
@@ -87029,14 +90119,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const scenesOpt = s.scenes.filter((x) => (!s.f.section || x.section === s.f.section) && (!s.f.chapter || x.chapterId === s.f.chapter)).map((x) => [x.id, x.title || x.id]);
     const scSel = pick2(t("ui.dialogue.allScenes"), scenesOpt, s.f.scene, (v2) => {
       s.f.scene = v2;
-      redraw2();
+      redraw3();
     });
     const srcSel = pick2(t("ui.dialogue.allSources"), [
       [SRC_PROSE, t("ui.dialogue.srcProse")],
       [SRC_SCRIPT, t("ui.dialogue.srcScript")]
     ], s.f.source, (v2) => {
       s.f.source = v2;
-      redraw2();
+      redraw3();
     });
     const sure = el("label", "k-dlgp-sure");
     const sureBox = el("input");
@@ -87078,7 +90168,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     function syncCount() {
       const rows = visibleRows();
       const g = guessedCount(rows);
-      count.textContent = tf("ui.dialogue.count", rows.length, (S6().rows || []).length) + (g ? " \xB7 " + tf("ui.dialogue.guessedN", g) : "");
+      count.textContent = tf("ui.dialogue.count", rows.length, (S7().rows || []).length) + (g ? " \xB7 " + tf("ui.dialogue.guessedN", g) : "");
     }
     syncCount();
     function rebuild() {
@@ -87101,7 +90191,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   }
   function drawList(body) {
-    const s = S6();
+    const s = S7();
     body.replaceChildren();
     if (s.error) {
       body.append(el("div", "k-dlgp-empty dim", t("ui.dialogue.errScan") + " " + s.error));
@@ -87130,7 +90220,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   }
   function rowEl(r) {
-    const s = S6();
+    const s = S7();
     const d = el("div", "k-dlgp-item" + (r.speaker ? "" : " k-dlgp-item-unk") + (r.guessed ? " k-dlgp-item-guess" : ""));
     d.dataset.line = String(r.line);
     d.dataset.scene = String(r.sceneId || "");
@@ -87247,7 +90337,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     let meta2 = {}, body = "";
     try {
-      const p = (0, import_md13.parseMdFile)(raw);
+      const p = (0, import_md14.parseMdFile)(raw);
       meta2 = p.meta || {};
       body = p.body || "";
     } catch {
@@ -87259,7 +90349,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
     try {
-      await kapi.writeFile(r.path, (0, import_md13.dumpMdFile)(meta2, out));
+      await kapi.writeFile(r.path, (0, import_md14.dumpMdFile)(meta2, out));
     } catch (e) {
       setStatus(t("ui.dialogue.errWrite") + " " + (e.message || e));
       return false;
@@ -87309,15 +90399,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  var import_md13, S6, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
+  var import_md14, S7, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
   var init_dialogue_ui = __esm({
     "src/dialogue/dialogue-ui.js"() {
       init_i18n();
       init_core();
-      import_md13 = __toESM(require_md());
+      import_md14 = __toESM(require_md());
       init_project_scan();
       init_dialogue_core();
-      S6 = () => state._dialogue || (state._dialogue = {
+      S7 = () => state._dialogue || (state._dialogue = {
         rows: null,
         names: [],
         scenes: [],
@@ -87385,7 +90475,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     searchSessions: () => searchSessions2,
     sendModeDef: () => sendModeDef,
     sessionDirty: () => sessionDirty,
-    sessionFileName: () => sessionFileName2,
+    sessionFileName: () => sessionFileName3,
     sessionFromPreset: () => sessionFromPreset,
     sessionStats: () => sessionStats2,
     sessionToScreenplay: () => sessionToScreenplay,
@@ -87865,9 +90955,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (one.length <= max2) return one;
     return one.slice(0, max2).replace(/\s+\S*$/, "") + "\u2026";
   }
-  function sessionFileName2(session, taken = []) {
-    const base3 = String(session && session.title || t("ui.dlgBuilder.untitled")).replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60) || t("ui.dlgBuilder.untitled");
-    const reserved = base3.toLowerCase() === "presets" ? base3 + "_" : base3;
+  function sessionFileName3(session, taken = []) {
+    const base4 = String(session && session.title || t("ui.dlgBuilder.untitled")).replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60) || t("ui.dlgBuilder.untitled");
+    const reserved = base4.toLowerCase() === "presets" ? base4 + "_" : base4;
     let name5 = reserved + ".json";
     let i5 = 2;
     const used = new Set((taken || []).map((x) => String(x).toLowerCase()));
@@ -87979,23 +91069,23 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     saveBuilderDirty: () => saveBuilderDirty
   });
   function resetBuilder() {
-    S7.root = null;
-    S7.view = "list";
-    S7.sessions = [];
-    S7.presets = [];
-    S7.cur = null;
-    S7.curFile = "";
-    S7.savedAt = 0;
-    S7.query = "";
-    S7.sending = false;
-    S7.entities = null;
+    S8.root = null;
+    S8.view = "list";
+    S8.sessions = [];
+    S8.presets = [];
+    S8.cur = null;
+    S8.curFile = "";
+    S8.savedAt = 0;
+    S8.query = "";
+    S8.sending = false;
+    S8.entities = null;
   }
   function builderDirtyList() {
-    return sessionDirty(S7.cur, S7.savedAt) ? [S7.cur.title || t("ui.dlgb.untitledRow")] : [];
+    return sessionDirty(S8.cur, S8.savedAt) ? [S8.cur.title || t("ui.dlgb.untitledRow")] : [];
   }
   async function saveBuilderDirty() {
-    if (!sessionDirty(S7.cur, S7.savedAt)) return true;
-    return await saveSession2();
+    if (!sessionDirty(S8.cur, S8.savedAt)) return true;
+    return await saveSession3();
   }
   async function dir() {
     if (!state.root) return null;
@@ -88003,24 +91093,24 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!await kapi.exists(d)) await kapi.mkdir(d);
     return d;
   }
-  async function loadAll(force) {
+  async function loadAll2(force) {
     if (!state.root) {
-      S7.sessions = [];
-      S7.presets = [];
-      S7.root = null;
+      S8.sessions = [];
+      S8.presets = [];
+      S8.root = null;
       return;
     }
-    if (!force && S7.root === state.root) return;
-    S7.root = state.root;
-    S7.sessions = [];
-    S7.presets = [];
+    if (!force && S8.root === state.root) return;
+    S8.root = state.root;
+    S8.sessions = [];
+    S8.presets = [];
     const d = await dir();
     if (!d) return;
     try {
       const pf = await kapi.join(d, PRESET_FILE);
       if (await kapi.exists(pf)) {
         const raw = await kapi.readJson(pf);
-        S7.presets = (raw && Array.isArray(raw.presets) ? raw.presets : []).map(newPreset);
+        S8.presets = (raw && Array.isArray(raw.presets) ? raw.presets : []).map(newPreset);
       }
     } catch (e) {
       log("warn", t("ui.dlgb.errReadPresets"), e);
@@ -88029,7 +91119,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (f === PRESET_FILE) continue;
       try {
         const raw = await kapi.readJson(await kapi.join(d, f));
-        if (raw && Array.isArray(raw.turns)) S7.sessions.push({ file: f, data: newSession2(raw) });
+        if (raw && Array.isArray(raw.turns)) S8.sessions.push({ file: f, data: newSession2(raw) });
       } catch (e) {
         log("warn", t("ui.dlgb.errReadSession") + f, e);
       }
@@ -88040,21 +91130,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!d) return false;
     await kapi.writeFile(
       await kapi.join(d, PRESET_FILE),
-      JSON.stringify({ v: BUILDER_VERSION, presets: S7.presets }, null, 2)
+      JSON.stringify({ v: BUILDER_VERSION, presets: S8.presets }, null, 2)
     );
     return true;
   }
-  async function saveSession2(sess, file) {
-    const s = sess || S7.cur;
+  async function saveSession3(sess, file) {
+    const s = sess || S8.cur;
     if (!s) return false;
     const d = await dir();
     if (!d) return false;
     s.updated = Date.now();
     if (!s.created) s.created = s.updated;
-    let name5 = file || S7.curFile;
+    let name5 = file || S8.curFile;
     if (!name5) {
-      name5 = sessionFileName2(s, S7.sessions.map((r) => r.file));
-      S7.curFile = name5;
+      name5 = sessionFileName3(s, S8.sessions.map((r) => r.file));
+      S8.curFile = name5;
     }
     try {
       await kapi.writeFile(await kapi.join(d, name5), JSON.stringify(s, null, 2));
@@ -88063,43 +91153,43 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       setStatus(t("ui.dlgb.errSaveSession"));
       return false;
     }
-    const row2 = S7.sessions.find((r) => r.file === name5);
+    const row2 = S8.sessions.find((r) => r.file === name5);
     if (row2) row2.data = s;
-    else S7.sessions.push({ file: name5, data: s });
-    if (s === S7.cur) S7.savedAt = s.updated;
+    else S8.sessions.push({ file: name5, data: s });
+    if (s === S8.cur) S8.savedAt = s.updated;
     return true;
   }
   async function wikiRows(force) {
-    if (S7.entities && !force) return S7.entities;
+    if (S8.entities && !force) return S8.entities;
     try {
-      S7.entities = await listEntities(state.root);
+      S8.entities = await listEntities(state.root);
     } catch {
-      S7.entities = [];
+      S8.entities = [];
     }
-    return S7.entities;
+    return S8.entities;
   }
   async function renderBuilderPanel(host2) {
-    S7.host = host2 || $("#dlgb-body");
-    if (!S7.host) return;
+    S8.host = host2 || $("#dlgb-body");
+    if (!S8.host) return;
     if (!state.root) {
-      S7.host.replaceChildren(el("div", "dlgb-empty", t("ui.dlgb.openProjectFirst")));
+      S8.host.replaceChildren(el("div", "dlgb-empty", t("ui.dlgb.openProjectFirst")));
       return;
     }
-    await loadAll();
-    if (S7.view === "session" && S7.cur) drawSession();
+    await loadAll2();
+    if (S8.view === "session" && S8.cur) drawSession();
     else drawList2();
   }
-  function redraw() {
-    renderBuilderPanel(S7.host);
+  function redraw2() {
+    renderBuilderPanel(S8.host);
   }
   function drawList2() {
     const wrap2 = el("div", "dlgb-list");
     const bar = el("div", "dlgb-listbar");
     const q = el("input", "dlgb-search");
     q.placeholder = t("ui.dlgb.searchPh");
-    q.value = S7.query;
+    q.value = S8.query;
     q.oninput = () => {
-      S7.query = q.value;
+      S8.query = q.value;
       drawRows();
     };
     const bNew = el("button", "dlgb-new", t("ui.dlgb.newSession"));
@@ -88112,26 +91202,26 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const arch = el(
       "div",
       "dlgb-archtoggle",
-      S7.showArchived ? t("ui.dlgb.hideArchived") : t("ui.dlgb.showArchived")
+      S8.showArchived ? t("ui.dlgb.hideArchived") : t("ui.dlgb.showArchived")
     );
     arch.onclick = () => {
-      S7.showArchived = !S7.showArchived;
+      S8.showArchived = !S8.showArchived;
       drawList2();
     };
     wrap2.append(arch);
     function drawRows() {
       rows.replaceChildren();
       const list = searchSessions2(
-        S7.sessions.map((r) => r.data),
-        S7.query,
-        { includeArchived: S7.showArchived }
+        S8.sessions.map((r) => r.data),
+        S8.query,
+        { includeArchived: S8.showArchived }
       );
       if (!list.length) {
-        rows.append(el("div", "dlgb-empty", S7.query ? t("ui.dlgb.noMatch") : t("ui.dlgb.noSession")));
+        rows.append(el("div", "dlgb-empty", S8.query ? t("ui.dlgb.noMatch") : t("ui.dlgb.noSession")));
         return;
       }
       for (const s of list) {
-        const file = (S7.sessions.find((r) => r.data === s) || {}).file || "";
+        const file = (S8.sessions.find((r) => r.data === s) || {}).file || "";
         const row2 = el("div", "dlgb-row" + (s.archived ? " archived" : ""));
         const main = el("div", "dlgb-row-main");
         main.append(el("div", "dlgb-row-title", s.title || t("ui.dlgb.untitledRow")));
@@ -88142,7 +91232,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         meta2.append(el("span", "", tf("ui.dlgb.nTurns", st.spoken)));
         if (st.inserted) meta2.append(el("span", "", tf("ui.dlgb.nInserted", st.inserted)));
         row2.append(main, meta2);
-        row2.onclick = () => openSession(s, file);
+        row2.onclick = () => openSession2(s, file);
         row2.oncontextmenu = (e) => {
           e.preventDefault();
           sessionMenu2(e, s, file);
@@ -88151,7 +91241,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
     }
     drawRows();
-    S7.host.replaceChildren(wrap2);
+    S8.host.replaceChildren(wrap2);
   }
   function sessionMenu2(ev, s, file) {
     popupMenu(ev.clientX, ev.clientY, [
@@ -88159,8 +91249,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const v2 = await ask(t("ui.dlgb.mRename"), { value: s.title });
         if (v2 == null) return;
         s.title = v2.trim() || s.title;
-        await saveSession2(s, file);
-        redraw();
+        await saveSession3(s, file);
+        redraw2();
       } },
       { label: t("ui.dlgb.mDuplicate"), click: async () => {
         const copy2 = newSession2({
@@ -88170,15 +91260,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           created: 0,
           updated: 0
         });
-        const name5 = sessionFileName2(copy2, S7.sessions.map((r) => r.file));
-        await saveSession2(copy2, name5);
+        const name5 = sessionFileName3(copy2, S8.sessions.map((r) => r.file));
+        await saveSession3(copy2, name5);
         setStatus(t("ui.dlgb.duplicated"));
-        redraw();
+        redraw2();
       } },
       { label: s.archived ? t("ui.dlgb.mUnarchive") : t("ui.dlgb.mArchive"), click: async () => {
         s.archived = !s.archived;
-        await saveSession2(s, file);
-        redraw();
+        await saveSession3(s, file);
+        redraw2();
       } },
       "-",
       { label: t("ui.dlgb.mDelete"), danger: true, click: async () => {
@@ -88189,36 +91279,36 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         } catch (e) {
           log("warn", t("ui.dlgb.errDelete"), e);
         }
-        S7.sessions = S7.sessions.filter((r) => r.file !== file);
-        if (S7.cur === s) {
-          S7.cur = null;
-          S7.curFile = "";
-          S7.view = "list";
+        S8.sessions = S8.sessions.filter((r) => r.file !== file);
+        if (S8.cur === s) {
+          S8.cur = null;
+          S8.curFile = "";
+          S8.view = "list";
         }
-        redraw();
+        redraw2();
       } }
     ]);
   }
-  function openSession(s, file) {
-    S7.cur = s;
-    S7.curFile = file;
-    S7.savedAt = s.updated || 0;
-    S7.view = "session";
+  function openSession2(s, file) {
+    S8.cur = s;
+    S8.curFile = file;
+    S8.savedAt = s.updated || 0;
+    S8.view = "session";
     if (!s.next || !s.next.speaker && !s.next.listener) s.next = nextPair(s, Math.random);
     drawSession();
   }
   async function newSessionFlow() {
-    await loadAll(true);
+    await loadAll2(true);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-wide");
     box2.append(el("div", "k-dlg-title", t("ui.dlgb.newSession")));
     box2.append(el("label", "", t("ui.dlgb.pickPreset")));
     const sel = el("select", "dlgb-full");
-    for (const p of S7.presets) sel.append(el("option", "", `${p.name} (${(p.cast || []).length})`));
+    for (const p of S8.presets) sel.append(el("option", "", `${p.name} (${(p.cast || []).length})`));
     [...sel.options].forEach((o, i5) => {
-      o.value = S7.presets[i5].id;
+      o.value = S8.presets[i5].id;
     });
-    if (!S7.presets.length) {
+    if (!S8.presets.length) {
       const o = el("option", "", t("ui.dlgb.noPresetYet"));
       o.value = "";
       sel.append(o);
@@ -88241,7 +91331,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const btns = el("div", "k-dlg-btns");
     const ok2 = el("button", "k-ok", t("ui.dlgb.create"));
     ok2.onclick = async () => {
-      const p = S7.presets.find((x) => x.id === sel.value);
+      const p = S8.presets.find((x) => x.id === sel.value);
       if (!p) {
         setStatus(t("ui.dlgb.needPreset"));
         return;
@@ -88252,9 +91342,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       });
       s.next = nextPair(s, Math.random);
       ov.remove();
-      const name5 = sessionFileName2(s, S7.sessions.map((r) => r.file));
-      await saveSession2(s, name5);
-      openSession(s, name5);
+      const name5 = sessionFileName3(s, S8.sessions.map((r) => r.file));
+      await saveSession3(s, name5);
+      openSession2(s, name5);
     };
     const cancel = el("button", "k-cancel", t("ui.common.cancel"));
     cancel.onclick = () => ov.remove();
@@ -88268,9 +91358,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     sit.focus();
   }
   function drawSession() {
-    const s = S7.cur;
+    const s = S8.cur;
     if (!s) {
-      S7.view = "list";
+      S8.view = "list";
       drawList2();
       return;
     }
@@ -88281,7 +91371,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     back.title = t("ui.dlgb.backToList");
     back.onclick = async () => {
       await saveBuilderDirty();
-      S7.view = "list";
+      S8.view = "list";
       drawList2();
     };
     const title2 = el("div", "dlgb-title", s.title || t("ui.dlgb.untitledRow"));
@@ -88289,10 +91379,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const st = sessionStats2(s);
     const badge = el("button", "dlgb-ctx", tf("ui.dlgb.badge", st.spoken, st.total));
     badge.title = tf("ui.dlgb.badgeTip", st.calls, st.input, st.output, Math.round(st.ms / 100) / 10);
-    const eye = el("button", "dlgb-eye" + (S7.showThinking ? " on" : ""), S7.showThinking ? "\u{1F9E0}" : "\u{1F4AC}");
-    eye.title = S7.showThinking ? t("ui.dlgb.viewThinking") : t("ui.dlgb.viewNormal");
+    const eye = el("button", "dlgb-eye" + (S8.showThinking ? " on" : ""), S8.showThinking ? "\u{1F9E0}" : "\u{1F4AC}");
+    eye.title = S8.showThinking ? t("ui.dlgb.viewThinking") : t("ui.dlgb.viewNormal");
     eye.onclick = () => {
-      S7.showThinking = !S7.showThinking;
+      S8.showThinking = !S8.showThinking;
       drawSession();
     };
     const more = el("button", "dlgb-more", "\u22EF");
@@ -88338,11 +91428,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     for (const tn of s.turns) msgs.append(bubble(s, tn));
     wrap2.append(msgs);
     wrap2.append(composer2(s));
-    S7.host.replaceChildren(wrap2);
+    S8.host.replaceChildren(wrap2);
     msgs.scrollTop = msgs.scrollHeight;
   }
   function touch() {
-    if (S7.cur) S7.cur.updated = Date.now();
+    if (S8.cur) S8.cur.updated = Date.now();
   }
   function mkSelect(defs, value, onChange, label) {
     const w = el("label", "dlgb-opt");
@@ -88387,7 +91477,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     n2.append(body);
     if (tn.thinking) {
       const fold = el("details", "dlgb-think");
-      if (S7.showThinking) fold.open = true;
+      if (S8.showThinking) fold.open = true;
       fold.append(el("summary", "dlgb-think-sum", t("ui.dlgb.modelThinking")));
       fold.append(el("pre", "dlgb-think-pre", tn.thinking));
       n2.append(fold);
@@ -88399,9 +91489,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     acts.append(mkAct("\u270E", t("ui.dlgb.actEdit"), () => editTurn(tn)));
     acts.append(mkAct("\u2B07", t("ui.dlgb.actInsert"), () => insertTurn(tn)));
     acts.append(mkAct("\u{1F5D1}", t("ui.dlgb.actDelete"), async () => {
-      S7.cur.turns = S7.cur.turns.filter((x) => x.id !== tn.id);
+      S8.cur.turns = S8.cur.turns.filter((x) => x.id !== tn.id);
       touch();
-      await saveSession2();
+      await saveSession3();
       drawSession();
     }));
     n2.append(acts);
@@ -88450,12 +91540,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         send2(inp);
       }
     };
-    const bSend = el("button", "dlgb-send k-ok", S7.sending ? t("ui.dlgb.sending") : t("ui.dlgb.send"));
-    bSend.disabled = S7.sending;
+    const bSend = el("button", "dlgb-send k-ok", S8.sending ? t("ui.dlgb.sending") : t("ui.dlgb.send"));
+    bSend.disabled = S8.sending;
     bSend.onclick = () => send2(inp);
     const bCont = el("button", "dlgb-cont", t("ui.dlgb.keepTalking"));
     bCont.title = t("ui.dlgb.keepTalkingTip");
-    bCont.disabled = S7.sending;
+    bCont.disabled = S8.sending;
     bCont.onclick = () => {
       const last2 = lastSpoken(s);
       if (last2) {
@@ -88471,18 +91561,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return box2;
   }
   async function providerFor(member) {
-    const base3 = member && member.providerId ? await providerById(member.providerId) : await currentProvider();
-    if (!base3) return null;
-    const p = { ...base3 };
+    const base4 = member && member.providerId ? await providerById(member.providerId) : await currentProvider();
+    if (!base4) return null;
+    const p = { ...base4 };
     if (member && member.model) p.model = member.model;
     if (member && member.params && Object.keys(member.params).length) {
-      p.params = { ...base3.params || {}, ...member.params };
+      p.params = { ...base4.params || {}, ...member.params };
     }
     return p;
   }
   async function send2(inp) {
-    const s = S7.cur;
-    if (!s || S7.sending) return;
+    const s = S8.cur;
+    if (!s || S8.sending) return;
     const cfg = await aiConfigured();
     if (!cfg.ok) {
       setStatus(cfg.why);
@@ -88505,11 +91595,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (inp) inp.value = "";
       s.next = nextPair(s, Math.random);
       touch();
-      await saveSession2();
+      await saveSession3();
       drawSession();
       return;
     }
-    S7.sending = true;
+    S8.sending = true;
     drawSession();
     try {
       if (s.mode === "batch") await sendBatch(s);
@@ -88518,10 +91608,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       log("error", t("ui.dlgb.errSend"), e);
       setStatus(t("ui.dlgb.errSend"));
     } finally {
-      S7.sending = false;
+      S8.sending = false;
       s.next = nextPair(s, Math.random);
       touch();
-      await saveSession2();
+      await saveSession3();
       drawSession();
     }
   }
@@ -88612,8 +91702,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     });
   }
   async function reroll(tn) {
-    const s = S7.cur;
-    if (!s || S7.sending) return;
+    const s = S8.cur;
+    if (!s || S8.sending) return;
     const cfg = await aiConfigured();
     if (!cfg.ok) {
       setStatus(cfg.why);
@@ -88623,7 +91713,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (i5 < 0) return;
     const after = s.turns.slice(i5 + 1);
     s.turns = s.turns.slice(0, i5);
-    S7.sending = true;
+    S8.sending = true;
     drawSession();
     try {
       await sendOne(s, { speaker: tn.speaker, listener: tn.listener, needAi: false });
@@ -88632,9 +91722,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       s.turns.push(tn);
     } finally {
       s.turns.push(...after);
-      S7.sending = false;
+      S8.sending = false;
       touch();
-      await saveSession2();
+      await saveSession3();
       drawSession();
     }
   }
@@ -88646,16 +91736,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     tn.text = p.text;
     tn.paren = p.paren;
     touch();
-    await saveSession2();
+    await saveSession3();
     drawSession();
   }
   async function insertTurn(tn) {
-    const txt = turnToScreenplay(S7.cur, tn);
+    const txt = turnToScreenplay(S8.cur, tn);
     if (!txt) return;
     if (!insertToEditor(txt)) return;
     tn.inserted = { scene: state.active && (state.active.title || state.active.file) || "", at: Date.now() };
     touch();
-    await saveSession2();
+    await saveSession3();
     drawSession();
   }
   function insertToEditor(txt) {
@@ -88673,7 +91763,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return true;
   }
   async function insertAll() {
-    const s = S7.cur;
+    const s = S8.cur;
     if (!s) return;
     const txt = sessionToScreenplay(s);
     if (!txt) {
@@ -88685,23 +91775,23 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const scene = state.active && (state.active.title || state.active.file) || "";
     for (const tn of s.turns) if (!tn.inserted) tn.inserted = { scene, at };
     touch();
-    await saveSession2();
+    await saveSession3();
     drawSession();
   }
   async function directorNote() {
     const v2 = await ask(t("ui.dlgb.directorTitle"), { placeholder: t("ui.dlgb.directorPh") });
     if (v2 == null || !v2.trim()) return;
-    S7.cur.turns.push(newTurn({ kind: KIND_DIRECTOR, text: v2.trim(), ts: Date.now() }));
+    S8.cur.turns.push(newTurn({ kind: KIND_DIRECTOR, text: v2.trim(), ts: Date.now() }));
     touch();
-    await saveSession2();
+    await saveSession3();
     drawSession();
   }
   function sessionHeadMenu(ev) {
-    const s = S7.cur;
+    const s = S8.cur;
     popupMenu(ev.clientX, ev.clientY, [
       { label: t("ui.dlgb.mEditCast"), click: () => castEditor(s, async () => {
         touch();
-        await saveSession2();
+        await saveSession3();
         drawSession();
       }) },
       { label: t("ui.dlgb.mEditSituation"), click: async () => {
@@ -88709,7 +91799,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (v2 == null) return;
         s.situation = v2;
         touch();
-        await saveSession2();
+        await saveSession3();
         drawSession();
       } },
       { label: t("ui.dlgb.mRename"), click: async () => {
@@ -88717,7 +91807,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (v2 == null || !v2.trim()) return;
         s.title = v2.trim();
         touch();
-        await saveSession2();
+        await saveSession3();
         drawSession();
       } },
       "-",
@@ -88726,7 +91816,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const v2 = await ask(t("ui.dlgb.mSaveAsPreset"), { value: s.presetName || s.title });
         if (v2 == null || !v2.trim()) return;
         const p = newPreset({ name: v2.trim(), cast: s.cast, rels: s.rels });
-        S7.presets.push(p);
+        S8.presets.push(p);
         await savePresets();
         setStatus(t("ui.dlgb.presetSaved"));
       } },
@@ -88736,13 +91826,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         s.turns = [];
         s.next = nextPair(s, Math.random);
         touch();
-        await saveSession2();
+        await saveSession3();
         drawSession();
       } }
     ]);
   }
   async function presetManager() {
-    await loadAll(true);
+    await loadAll2(true);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-wide");
     box2.append(el("div", "k-dlg-title", t("ui.dlgb.managePresets")));
@@ -88750,8 +91840,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     box2.append(list);
     function draw2() {
       list.replaceChildren();
-      if (!S7.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
-      for (const p of S7.presets) {
+      if (!S8.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
+      for (const p of S8.presets) {
         const row2 = el("div", "dlgb-preset-row");
         const main = el("div", "dlgb-preset-main");
         main.append(el("div", "dlgb-row-title", p.name));
@@ -88768,7 +91858,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const bDel = el("button", "k-danger", t("ui.dlgb.delete"));
         bDel.onclick = async () => {
           if (!await confirmBox(tf("ui.dlgb.confirmDeletePreset", p.name))) return;
-          S7.presets = S7.presets.filter((x) => x !== p);
+          S8.presets = S8.presets.filter((x) => x !== p);
           await savePresets();
           draw2();
         };
@@ -88783,7 +91873,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const v2 = await ask(t("ui.dlgb.presetNameAsk"));
       if (v2 == null || !v2.trim()) return;
       const p = newPreset({ name: v2.trim() });
-      S7.presets.push(p);
+      S8.presets.push(p);
       await savePresets();
       castEditor(p, async () => {
         await savePresets();
@@ -88793,7 +91883,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const bClose = el("button", "k-cancel", t("ui.common.close"));
     bClose.onclick = () => {
       ov.remove();
-      redraw();
+      redraw2();
     };
     btns.append(bAdd, bClose);
     box2.append(btns);
@@ -88802,7 +91892,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     ov.onclick = (e) => {
       if (e.target === ov) {
         ov.remove();
-        redraw();
+        redraw2();
       }
     };
   }
@@ -89012,7 +92102,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const bClose = el("button", "k-ok", t("ui.common.close"));
     bClose.onclick = () => {
       ov.remove();
-      if (S7.view === "session") drawSession();
+      if (S8.view === "session") drawSession();
     };
     btns.append(bClose);
     box2.append(btns);
@@ -89021,14 +92111,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     ov.onclick = (e) => {
       if (e.target === ov) {
         ov.remove();
-        if (S7.view === "session") drawSession();
+        if (S8.view === "session") drawSession();
       }
     };
   }
   function builderState() {
-    return S7;
+    return S8;
   }
-  var S7;
+  var S8;
   var init_builder_ui = __esm({
     "src/dialogue/builder-ui.js"() {
       init_i18n();
@@ -89039,7 +92129,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_ai_settings();
       init_ai_providers();
       init_builder_core();
-      S7 = {
+      S8 = {
         host: null,
         root: null,
         // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
@@ -89226,8 +92316,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return { ...src2, ext: formatDef(fmtKey).ext, steps };
   }
   function suggestName(title2, fmtKey) {
-    const base3 = String(title2 || "export").replace(/[\\/:*?"<>|]/g, "_").trim() || "export";
-    return base3 + "." + formatDef(fmtKey).ext;
+    const base4 = String(title2 || "export").replace(/[\\/:*?"<>|]/g, "_").trim() || "export";
+    return base4 + "." + formatDef(fmtKey).ext;
   }
   var EXPORT_FORMATS, formatDef, pdfEngine;
   var init_export_formats = __esm({
@@ -89354,15 +92444,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return arr.map((p) => newTitlePage(
       (Array.isArray(p?.strings) ? p.strings : []).map((s) => ({
         text: String(s?.text ?? ""),
-        x: clamp4(num(s?.x, 1.5), -2, 40),
-        y: clamp4(num(s?.y, 4.5), -2, 40),
-        size: clamp4(num(s?.size, 12), 4, 96),
+        x: clamp5(num(s?.x, 1.5), -2, 40),
+        y: clamp5(num(s?.y, 4.5), -2, 40),
+        size: clamp5(num(s?.size, 12), 4, 96),
         font: String(s?.font ?? ""),
         bold: s?.bold === true,
         italic: s?.italic === true,
         underline: s?.underline === true,
         align: TITLE_ALIGNS.includes(s?.align) ? s.align : "left",
-        width: clamp4(num(s?.width, 0), 0, 40)
+        width: clamp5(num(s?.width, 0), 0, 40)
       }))
     ));
   }
@@ -89444,7 +92534,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const s = String(name5 ?? "").replace(/["'\\;{}()<>]/g, "").trim();
     return s ? `"${s}",monospace` : "";
   }
-  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp4, TitlePageEditor, esc4;
+  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp5, TitlePageEditor, esc4;
   var init_sp_title_pages = __esm({
     "src/sp-title-pages.js"() {
       init_i18n();
@@ -89452,7 +92542,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_num();
       TITLE_PAGE_VERSION = 1;
       TITLE_ALIGNS = ["left", "center", "right"];
-      clamp4 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
+      clamp5 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
       TitlePageEditor = class {
         constructor(pages) {
           this.pages = normalizeTitlePages(pages);
@@ -89468,7 +92558,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return p ? p.strings : [];
         }
         addPage(at) {
-          const i5 = Number.isFinite(+at) ? clamp4(Math.round(+at), 0, this.pages.length) : this.pages.length;
+          const i5 = Number.isFinite(+at) ? clamp5(Math.round(+at), 0, this.pages.length) : this.pages.length;
           this.pages.splice(i5, 0, newTitlePage());
           return i5;
         }
@@ -89491,7 +92581,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         /** ย้ายหน้า (ลาก/ปุ่มขึ้น-ลง) — คืน index ใหม่ หรือ -1 เมื่อย้ายไม่ได้ */
         movePage(from2, to) {
           if (!this.page(from2)) return -1;
-          const t3 = clamp4(Math.round(+to), 0, this.pages.length - 1);
+          const t3 = clamp5(Math.round(+to), 0, this.pages.length - 1);
           if (t3 === from2) return from2;
           const [p] = this.pages.splice(from2, 1);
           this.pages.splice(t3, 0, p);
@@ -89518,7 +92608,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         moveString(pageIdx, from2, to) {
           const list = this.strings(pageIdx);
           if (!list[from2]) return -1;
-          const t3 = clamp4(Math.round(+to), 0, list.length - 1);
+          const t3 = clamp5(Math.round(+to), 0, list.length - 1);
           if (t3 === from2) return from2;
           const [s] = list.splice(from2, 1);
           list.splice(t3, 0, s);
@@ -90523,7 +93613,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var stree = desc.stat_desc.static_tree;
         var has_stree = desc.stat_desc.has_stree;
         var extra = desc.stat_desc.extra_bits;
-        var base3 = desc.stat_desc.extra_base;
+        var base4 = desc.stat_desc.extra_base;
         var max_length = desc.stat_desc.max_length;
         var h;
         var n2, m;
@@ -90548,8 +93638,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           s.bl_count[bits3]++;
           xbits = 0;
-          if (n2 >= base3) {
-            xbits = extra[n2 - base3];
+          if (n2 >= base4) {
+            xbits = extra[n2 - base4];
           }
           f = tree[n2 * 2];
           s.opt_len += f * (bits3 + xbits);
@@ -92883,7 +95973,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var low;
         var mask2;
         var next;
-        var base3 = null;
+        var base4 = null;
         var base_index = 0;
         var end;
         var count = new utils2.Buf16(MAXBITS + 1);
@@ -92941,16 +96031,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         }
         if (type === CODES) {
-          base3 = extra = work;
+          base4 = extra = work;
           end = 19;
         } else if (type === LENS) {
-          base3 = lbase;
+          base4 = lbase;
           base_index -= 257;
           extra = lext;
           extra_index -= 257;
           end = 256;
         } else {
-          base3 = dbase;
+          base4 = dbase;
           extra = dext;
           end = -1;
         }
@@ -92973,7 +96063,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             here_val = work[sym];
           } else if (work[sym] > end) {
             here_op = extra[extra_index + work[sym]];
-            here_val = base3[base_index + work[sym]];
+            here_val = base4[base_index + work[sym]];
           } else {
             here_op = 32 + 64;
             here_val = 0;
@@ -98044,15 +101134,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         };
         StandardFontEmbedder2.prototype.widthOfTextAtSize = function(text, size) {
           var glyphs = this.encodeTextAsGlyphs(text);
-          var totalWidth = 0;
+          var totalWidth2 = 0;
           for (var idx4 = 0, len5 = glyphs.length; idx4 < len5; idx4++) {
             var left = glyphs[idx4].name;
             var right = (glyphs[idx4 + 1] || {}).name;
             var kernAmount = this.font.getXAxisKerningForPair(left, right) || 0;
-            totalWidth += this.widthOfGlyph(left) + kernAmount;
+            totalWidth2 += this.widthOfGlyph(left) + kernAmount;
           }
           var scale2 = size / 1e3;
-          return totalWidth * scale2;
+          return totalWidth2 * scale2;
         };
         StandardFontEmbedder2.prototype.heightOfFontAtSize = function(size, options) {
           if (options === void 0) {
@@ -98373,12 +101463,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         };
         CustomFontEmbedder2.prototype.widthOfTextAtSize = function(text, size) {
           var glyphs = this.font.layout(text, this.fontFeatures).glyphs;
-          var totalWidth = 0;
+          var totalWidth2 = 0;
           for (var idx4 = 0, len5 = glyphs.length; idx4 < len5; idx4++) {
-            totalWidth += glyphs[idx4].advanceWidth * this.scale;
+            totalWidth2 += glyphs[idx4].advanceWidth * this.scale;
           }
           var scale2 = size / 1e3;
-          return totalWidth * scale2;
+          return totalWidth2 * scale2;
         };
         CustomFontEmbedder2.prototype.heightOfFontAtSize = function(size, options) {
           if (options === void 0) {
@@ -99128,12 +102218,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               d = l(b.u, (1 << j) - 1, J2 + h, N, d, b.v);
               var r = V2.V(b.v, 0, J2, b.C);
               X2 = (1 << r) - 1;
-              var S8 = V2.V(b.v, J2, h, b.D);
-              u = (1 << S8) - 1;
+              var S9 = V2.V(b.v, J2, h, b.D);
+              u = (1 << S9) - 1;
               M2(b.C, r);
               I(b.C, r, v2);
-              M2(b.D, S8);
-              I(b.D, S8, C);
+              M2(b.D, S9);
+              I(b.D, S9, C);
             }
             while (true) {
               var T3 = v2[e(N, d) & X2];
@@ -110947,26 +114037,26 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return formatError(value);
       }
     }
-    var base3 = "", array = false, braces = ["{", "}"];
+    var base4 = "", array = false, braces = ["{", "}"];
     if (isArray2(value)) {
       array = true;
       braces = ["[", "]"];
     }
     if (isFunction(value)) {
       var n2 = value.name ? ": " + value.name : "";
-      base3 = " [Function" + n2 + "]";
+      base4 = " [Function" + n2 + "]";
     }
     if (isRegExp(value)) {
-      base3 = " " + RegExp.prototype.toString.call(value);
+      base4 = " " + RegExp.prototype.toString.call(value);
     }
     if (isDate(value)) {
-      base3 = " " + Date.prototype.toUTCString.call(value);
+      base4 = " " + Date.prototype.toUTCString.call(value);
     }
     if (isError(value)) {
-      base3 = " " + formatError(value);
+      base4 = " " + formatError(value);
     }
     if (keys4.length === 0 && (!array || value.length == 0)) {
-      return braces[0] + base3 + braces[1];
+      return braces[0] + base4 + braces[1];
     }
     if (recurseTimes < 0) {
       if (isRegExp(value)) {
@@ -110985,7 +114075,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       });
     }
     ctx2.seen.pop();
-    return reduceToSingleString(output, base3, braces);
+    return reduceToSingleString(output, base4, braces);
   }
   function formatPrimitive(ctx2, value) {
     if (isUndefined(value)) return ctx2.stylize("undefined", "undefined");
@@ -111072,15 +114162,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     return name5 + ": " + str2;
   }
-  function reduceToSingleString(output, base3, braces) {
+  function reduceToSingleString(output, base4, braces) {
     var length = output.reduce(function(prev, cur) {
       if (cur.indexOf("\n") >= 0) ;
       return prev + cur.replace(/\u001b\[\d\d?m/g, "").length + 1;
     }, 0);
     if (length > 60) {
-      return braces[0] + (base3 === "" ? "" : base3 + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
+      return braces[0] + (base4 === "" ? "" : base4 + "\n ") + " " + output.join(",\n  ") + " " + braces[1];
     }
-    return braces[0] + base3 + " " + output.join(", ") + " " + braces[1];
+    return braces[0] + base4 + " " + output.join(", ") + " " + braces[1];
   }
   function isArray2(ar) {
     return Array.isArray(ar);
@@ -112475,7 +115565,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     this.ltree = new Tree();
     this.dtree = new Tree();
   }
-  function tinf_build_bits_base(bits3, base3, delta, first) {
+  function tinf_build_bits_base(bits3, base4, delta, first) {
     var i5, sum2;
     for (i5 = 0; i5 < delta; ++i5) {
       bits3[i5] = 0;
@@ -112484,7 +115574,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       bits3[i5 + delta] = i5 / delta | 0;
     }
     for (sum2 = first, i5 = 0; i5 < 30; ++i5) {
-      base3[i5] = sum2;
+      base4[i5] = sum2;
       sum2 += 1 << bits3[i5];
     }
   }
@@ -112542,8 +115632,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     d.tag >>>= 1;
     return bit;
   }
-  function tinf_read_bits(d, num4, base3) {
-    if (!num4) return base3;
+  function tinf_read_bits(d, num4, base4) {
+    if (!num4) return base4;
     while (d.bitcount < 24) {
       d.tag |= d.source[d.sourceIndex++] << d.bitcount;
       d.bitcount += 8;
@@ -112551,7 +115641,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     var val = d.tag & 65535 >>> 16 - num4;
     d.tag >>>= num4;
     d.bitcount -= num4;
-    return val + base3;
+    return val + base4;
   }
   function tinf_decode_symbol(d, t3) {
     while (d.bitcount < 24) {
@@ -113465,7 +116555,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         glyphs.splice(_i3++, 0, g);
         end++;
       }
-      var base3 = end;
+      var base4 = end;
       var limit = start;
       var hasReph = false;
       if (indicConfig.rephPos !== POSITIONS.Ra_To_Become_Reph && features2.rphf && start + 3 <= end && (indicConfig.rephMode === "Implicit" && !isJoiner(glyphs[start + 2]) || indicConfig.rephMode === "Explicit" && glyphs[start + 2].shaperInfo.category === CATEGORIES.ZWJ)) {
@@ -113475,7 +116565,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           while (limit < end && isJoiner(glyphs[limit])) {
             limit++;
           }
-          base3 = start;
+          base4 = start;
           hasReph = true;
         }
       } else if (indicConfig.rephMode === "Log_Repha" && glyphs[start].shaperInfo.category === CATEGORIES.Repha) {
@@ -113483,7 +116573,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         while (limit < end && isJoiner(glyphs[limit])) {
           limit++;
         }
-        base3 = start;
+        base4 = start;
         hasReph = true;
       }
       switch (indicConfig.basePos) {
@@ -113494,13 +116584,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             var _info = glyphs[--_i4].shaperInfo;
             if (isConsonant(glyphs[_i4])) {
               if (_info.position !== POSITIONS.Below_C && (_info.position !== POSITIONS.Post_C || seenBelow)) {
-                base3 = _i4;
+                base4 = _i4;
                 break;
               }
               if (_info.position === POSITIONS.Below_C) {
                 seenBelow = true;
               }
-              base3 = _i4;
+              base4 = _i4;
             } else if (start < _i4 && _info.category === CATEGORIES.ZWJ && glyphs[_i4 - 1].shaperInfo.category === CATEGORIES.H) {
               break;
             }
@@ -113508,25 +116598,25 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           break;
         }
         case "First": {
-          base3 = start;
-          for (var _i5 = base3 + 1; _i5 < end; _i5++) {
+          base4 = start;
+          for (var _i5 = base4 + 1; _i5 < end; _i5++) {
             if (isConsonant(glyphs[_i5])) {
               glyphs[_i5].shaperInfo.position = POSITIONS.Below_C;
             }
           }
         }
       }
-      if (hasReph && base3 === start && limit - base3 <= 2) {
+      if (hasReph && base4 === start && limit - base4 <= 2) {
         hasReph = false;
       }
-      for (var _i6 = start; _i6 < base3; _i6++) {
+      for (var _i6 = start; _i6 < base4; _i6++) {
         var _info2 = glyphs[_i6].shaperInfo;
         _info2.position = Math.min(POSITIONS.Pre_C, _info2.position);
       }
-      if (base3 < end) {
-        glyphs[base3].shaperInfo.position = POSITIONS.Base_C;
+      if (base4 < end) {
+        glyphs[base4].shaperInfo.position = POSITIONS.Base_C;
       }
-      for (var _i7 = base3 + 1; _i7 < end; _i7++) {
+      for (var _i7 = base4 + 1; _i7 < end; _i7++) {
         if (glyphs[_i7].shaperInfo.category === CATEGORIES.M) {
           for (var j = _i7 + 1; j < end; j++) {
             if (isConsonant(glyphs[j])) {
@@ -113542,7 +116632,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       if (plan.isOldSpec) {
         var disallowDoubleHalants = plan.unicodeScript !== "Malayalam";
-        for (var _i8 = base3 + 1; _i8 < end; _i8++) {
+        for (var _i8 = base4 + 1; _i8 < end; _i8++) {
           if (glyphs[_i8].shaperInfo.category === CATEGORIES.H) {
             var _j = void 0;
             for (_j = end - 1; _j > _i8; _j--) {
@@ -113576,8 +116666,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           lastPos = _info3.position;
         }
       }
-      var last2 = base3;
-      for (var _i10 = base3 + 1; _i10 < end; _i10++) {
+      var last2 = base4;
+      for (var _i10 = base4 + 1; _i10 < end; _i10++) {
         if (isConsonant(glyphs[_i10])) {
           for (var _j3 = last2 + 1; _j3 < _i10; _j3++) {
             if (glyphs[_j3].shaperInfo.position < POSITIONS.SMVD) {
@@ -113596,7 +116686,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       glyphs.splice.apply(glyphs, [start, arr.length].concat(arr));
       for (var _i11 = start; _i11 < end; _i11++) {
         if (glyphs[_i11].shaperInfo.position === POSITIONS.Base_C) {
-          base3 = _i11;
+          base4 = _i11;
           break;
         }
       }
@@ -113604,28 +116694,28 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         glyphs[_i12].features.rphf = true;
       }
       var blwf = !plan.isOldSpec && indicConfig.blwfMode === "Pre_And_Post";
-      for (var _i13 = start; _i13 < base3; _i13++) {
+      for (var _i13 = start; _i13 < base4; _i13++) {
         glyphs[_i13].features.half = true;
         if (blwf) {
           glyphs[_i13].features.blwf = true;
         }
       }
-      for (var _i14 = base3 + 1; _i14 < end; _i14++) {
+      for (var _i14 = base4 + 1; _i14 < end; _i14++) {
         glyphs[_i14].features.abvf = true;
         glyphs[_i14].features.pstf = true;
         glyphs[_i14].features.blwf = true;
       }
       if (plan.isOldSpec && plan.unicodeScript === "Devanagari") {
-        for (var _i15 = start; _i15 + 1 < base3; _i15++) {
-          if (glyphs[_i15].shaperInfo.category === CATEGORIES.Ra && glyphs[_i15 + 1].shaperInfo.category === CATEGORIES.H && (_i15 + 1 === base3 || glyphs[_i15 + 2].shaperInfo.category === CATEGORIES.ZWJ)) {
+        for (var _i15 = start; _i15 + 1 < base4; _i15++) {
+          if (glyphs[_i15].shaperInfo.category === CATEGORIES.Ra && glyphs[_i15 + 1].shaperInfo.category === CATEGORIES.H && (_i15 + 1 === base4 || glyphs[_i15 + 2].shaperInfo.category === CATEGORIES.ZWJ)) {
             glyphs[_i15].features.blwf = true;
             glyphs[_i15 + 1].features.blwf = true;
           }
         }
       }
       var prefLen = 2;
-      if (features2.pref && base3 + prefLen < end) {
-        for (var _i16 = base3 + 1; _i16 + prefLen - 1 < end; _i16++) {
+      if (features2.pref && base4 + prefLen < end) {
+        for (var _i16 = base4 + 1; _i16 + prefLen - 1 < end; _i16++) {
           var _g2 = [glyphs[_i16].copy(), glyphs[_i16 + 1].copy()];
           if (wouldSubstitute(_g2, "pref")) {
             for (var _j4 = 0; _j4 < prefLen; _j4++) {
@@ -113659,18 +116749,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     var features2 = font._layoutEngine.engine.GSUBProcessor.features;
     for (var start = 0, end = nextSyllable(glyphs, 0); start < glyphs.length; start = end, end = nextSyllable(glyphs, start)) {
       var tryPref = !!features2.pref;
-      var base3 = start;
-      for (; base3 < end; base3++) {
-        if (glyphs[base3].shaperInfo.position >= POSITIONS.Base_C) {
-          if (tryPref && base3 + 1 < end) {
-            for (var i5 = base3 + 1; i5 < end; i5++) {
+      var base4 = start;
+      for (; base4 < end; base4++) {
+        if (glyphs[base4].shaperInfo.position >= POSITIONS.Base_C) {
+          if (tryPref && base4 + 1 < end) {
+            for (var i5 = base4 + 1; i5 < end; i5++) {
               if (glyphs[i5].features.pref) {
                 if (!(glyphs[i5].substituted && glyphs[i5].isLigated && !glyphs[i5].isMultiplied)) {
-                  base3 = i5;
-                  while (base3 < end && isHalantOrCoeng(glyphs[base3])) {
-                    base3++;
+                  base4 = i5;
+                  while (base4 < end && isHalantOrCoeng(glyphs[base4])) {
+                    base4++;
                   }
-                  glyphs[base3].shaperInfo.position = POSITIONS.BASE_C;
+                  glyphs[base4].shaperInfo.position = POSITIONS.BASE_C;
                   tryPref = false;
                 }
                 break;
@@ -113678,7 +116768,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
           if (plan.unicodeScript === "Malayalam") {
-            for (var _i18 = base3 + 1; _i18 < end; _i18++) {
+            for (var _i18 = base4 + 1; _i18 < end; _i18++) {
               while (_i18 < end && isJoiner(glyphs[_i18])) {
                 _i18++;
               }
@@ -113690,27 +116780,27 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 _i18++;
               }
               if (_i18 < end && isConsonant(glyphs[_i18]) && glyphs[_i18].shaperInfo.position === POSITIONS.Below_C) {
-                base3 = _i18;
-                glyphs[base3].shaperInfo.position = POSITIONS.Base_C;
+                base4 = _i18;
+                glyphs[base4].shaperInfo.position = POSITIONS.Base_C;
               }
             }
           }
-          if (start < base3 && glyphs[base3].shaperInfo.position > POSITIONS.Base_C) {
-            base3--;
+          if (start < base4 && glyphs[base4].shaperInfo.position > POSITIONS.Base_C) {
+            base4--;
           }
           break;
         }
       }
-      if (base3 === end && start < base3 && glyphs[base3 - 1].shaperInfo.category === CATEGORIES.ZWJ) {
-        base3--;
+      if (base4 === end && start < base4 && glyphs[base4 - 1].shaperInfo.category === CATEGORIES.ZWJ) {
+        base4--;
       }
-      if (base3 < end) {
-        while (start < base3 && glyphs[base3].shaperInfo.category & (CATEGORIES.N | HALANT_OR_COENG_FLAGS)) {
-          base3--;
+      if (base4 < end) {
+        while (start < base4 && glyphs[base4].shaperInfo.category & (CATEGORIES.N | HALANT_OR_COENG_FLAGS)) {
+          base4--;
         }
       }
-      if (start + 1 < end && start < base3) {
-        var newPos = base3 === end ? base3 - 2 : base3 - 1;
+      if (start + 1 < end && start < base4) {
+        var newPos = base4 === end ? base4 - 2 : base4 - 1;
         if (plan.unicodeScript !== "Malayalam" && plan.unicodeScript !== "Tamil") {
           while (newPos > start && !(glyphs[newPos].shaperInfo.category & (CATEGORIES.M | HALANT_OR_COENG_FLAGS))) {
             newPos--;
@@ -113727,8 +116817,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           for (var _i19 = newPos; _i19 > start; _i19--) {
             if (glyphs[_i19 - 1].shaperInfo.position === POSITIONS.Pre_M) {
               var oldPos = _i19 - 1;
-              if (oldPos < base3 && base3 <= newPos) {
-                base3--;
+              if (oldPos < base4 && base4 <= newPos) {
+                base4--;
               }
               var tmp = glyphs[oldPos];
               glyphs.splice.apply(glyphs, [oldPos, 0].concat(glyphs.splice(oldPos + 1, newPos - oldPos)));
@@ -113744,24 +116834,24 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var found2 = false;
         if (rephPos !== POSITIONS.After_Post) {
           newRephPos = start + 1;
-          while (newRephPos < base3 && !isHalantOrCoeng(glyphs[newRephPos])) {
+          while (newRephPos < base4 && !isHalantOrCoeng(glyphs[newRephPos])) {
             newRephPos++;
           }
-          if (newRephPos < base3 && isHalantOrCoeng(glyphs[newRephPos])) {
-            if (newRephPos + 1 < base3 && isJoiner(glyphs[newRephPos + 1])) {
+          if (newRephPos < base4 && isHalantOrCoeng(glyphs[newRephPos])) {
+            if (newRephPos + 1 < base4 && isJoiner(glyphs[newRephPos + 1])) {
               newRephPos++;
             }
             found2 = true;
           }
           if (!found2 && rephPos === POSITIONS.After_Main) {
-            newRephPos = base3;
+            newRephPos = base4;
             while (newRephPos + 1 < end && glyphs[newRephPos + 1].shaperInfo.position <= POSITIONS.After_Main) {
               newRephPos++;
             }
             found2 = newRephPos < end;
           }
           if (!found2 && rephPos === POSITIONS.After_Sub) {
-            newRephPos = base3;
+            newRephPos = base4;
             while (newRephPos + 1 < end && !(glyphs[newRephPos + 1].shaperInfo.position & (POSITIONS.Post_C | POSITIONS.After_Post | POSITIONS.SMVD))) {
               newRephPos++;
             }
@@ -113770,11 +116860,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
         if (!found2) {
           newRephPos = start + 1;
-          while (newRephPos < base3 && !isHalantOrCoeng(glyphs[newRephPos])) {
+          while (newRephPos < base4 && !isHalantOrCoeng(glyphs[newRephPos])) {
             newRephPos++;
           }
-          if (newRephPos < base3 && isHalantOrCoeng(glyphs[newRephPos])) {
-            if (newRephPos + 1 < base3 && isJoiner(glyphs[newRephPos + 1])) {
+          if (newRephPos < base4 && isHalantOrCoeng(glyphs[newRephPos])) {
+            if (newRephPos + 1 < base4 && isJoiner(glyphs[newRephPos + 1])) {
               newRephPos++;
             }
             found2 = true;
@@ -113786,7 +116876,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             newRephPos--;
           }
           if (isHalantOrCoeng(glyphs[newRephPos])) {
-            for (var _i20 = base3 + 1; _i20 < newRephPos; _i20++) {
+            for (var _i20 = base4 + 1; _i20 < newRephPos; _i20++) {
               if (glyphs[_i20].shaperInfo.category === CATEGORIES.M) {
                 newRephPos--;
               }
@@ -113796,22 +116886,22 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var reph = glyphs[start];
         glyphs.splice.apply(glyphs, [start, 0].concat(glyphs.splice(start + 1, newRephPos - start)));
         glyphs[newRephPos] = reph;
-        if (start < base3 && base3 <= newRephPos) {
-          base3--;
+        if (start < base4 && base4 <= newRephPos) {
+          base4--;
         }
       }
-      if (tryPref && base3 + 1 < end) {
-        for (var _i21 = base3 + 1; _i21 < end; _i21++) {
+      if (tryPref && base4 + 1 < end) {
+        for (var _i21 = base4 + 1; _i21 < end; _i21++) {
           if (glyphs[_i21].features.pref) {
             if (glyphs[_i21].isLigated && !glyphs[_i21].isMultiplied) {
-              var _newPos = base3;
+              var _newPos = base4;
               if (plan.unicodeScript !== "Malayalam" && plan.unicodeScript !== "Tamil") {
                 while (_newPos > start && !(glyphs[_newPos - 1].shaperInfo.category & (CATEGORIES.M | HALANT_OR_COENG_FLAGS))) {
                   _newPos--;
                 }
                 if (_newPos > start && glyphs[_newPos - 1].shaperInfo.category === CATEGORIES.M) {
                   var _oldPos2 = _i21;
-                  for (var j = base3 + 1; j < _oldPos2; j++) {
+                  for (var j = base4 + 1; j < _oldPos2; j++) {
                     if (glyphs[j].shaperInfo.category === CATEGORIES.M) {
                       _newPos--;
                       break;
@@ -113828,8 +116918,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               var _tmp = glyphs[_oldPos];
               glyphs.splice.apply(glyphs, [_newPos + 1, 0].concat(glyphs.splice(_newPos, _oldPos - _newPos)));
               glyphs[_newPos] = _tmp;
-              if (_newPos <= base3 && base3 < _oldPos) {
-                base3++;
+              if (_newPos <= base4 && base4 < _oldPos) {
+                base4++;
               }
             }
             break;
@@ -114445,7 +117535,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     this.ltree = new Tree$1();
     this.dtree = new Tree$1();
   }
-  function tinf_build_bits_base$1(bits3, base3, delta, first) {
+  function tinf_build_bits_base$1(bits3, base4, delta, first) {
     var i5, sum2;
     for (i5 = 0; i5 < delta; ++i5) {
       bits3[i5] = 0;
@@ -114454,7 +117544,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       bits3[i5 + delta] = i5 / delta | 0;
     }
     for (sum2 = first, i5 = 0; i5 < 30; ++i5) {
-      base3[i5] = sum2;
+      base4[i5] = sum2;
       sum2 += 1 << bits3[i5];
     }
   }
@@ -114512,8 +117602,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     d.tag >>>= 1;
     return bit;
   }
-  function tinf_read_bits$1(d, num4, base3) {
-    if (!num4) return base3;
+  function tinf_read_bits$1(d, num4, base4) {
+    if (!num4) return base4;
     while (d.bitcount < 24) {
       d.tag |= d.source[d.sourceIndex++] << d.bitcount;
       d.bitcount += 8;
@@ -114521,7 +117611,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     var val = d.tag & 65535 >>> 16 - num4;
     d.tag >>>= num4;
     d.bitcount -= num4;
-    return val + base3;
+    return val + base4;
   }
   function tinf_decode_symbol$1(d, t3) {
     while (d.bitcount < 24) {
@@ -134252,10 +137342,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return positions;
         };
         _proto.positionCluster = function positionCluster(glyphs, positions, clusterStart, clusterEnd) {
-          var base3 = glyphs[clusterStart];
-          var baseBox = base3.cbox.copy();
-          if (base3.codePoints.length > 1) {
-            baseBox.minX += (base3.codePoints.length - 1) * baseBox.width / base3.codePoints.length;
+          var base4 = glyphs[clusterStart];
+          var baseBox = base4.cbox.copy();
+          if (base4.codePoints.length > 1) {
+            baseBox.minX += (base4.codePoints.length - 1) * baseBox.width / base4.codePoints.length;
           }
           var xOffset = -positions[clusterStart].xAdvance;
           var yOffset = 0;
@@ -137390,16 +140480,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               if (!prev || !prev.isMark) {
                 return false;
               }
-              var _cur = this.glyphIterator.cur;
+              var _cur2 = this.glyphIterator.cur;
               var good = false;
-              if (_cur.ligatureID === prev.ligatureID) {
-                if (!_cur.ligatureID) {
+              if (_cur2.ligatureID === prev.ligatureID) {
+                if (!_cur2.ligatureID) {
                   good = true;
-                } else if (_cur.ligatureComponent === prev.ligatureComponent) {
+                } else if (_cur2.ligatureComponent === prev.ligatureComponent) {
                   good = true;
                 }
               } else {
-                if (_cur.ligatureID && !_cur.ligatureComponent || prev.ligatureID && !prev.ligatureComponent) {
+                if (_cur2.ligatureID && !_cur2.ligatureComponent || prev.ligatureID && !prev.ligatureComponent) {
                   good = true;
                 }
               }
@@ -138523,13 +141613,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                     var numBlends = stack.pop();
                     var numOperands = numBlends * blendVector.length;
                     var delta = stack.length - numOperands;
-                    var base3 = delta - numBlends;
+                    var base4 = delta - numBlends;
                     for (var i5 = 0; i5 < numBlends; i5++) {
-                      var sum2 = stack[base3 + i5];
+                      var sum2 = stack[base4 + i5];
                       for (var j = 0; j < blendVector.length; j++) {
                         sum2 += blendVector[j] * stack[delta++];
                       }
-                      stack[base3 + i5] = sum2;
+                      stack[base4 + i5] = sum2;
                     }
                     while (numOperands--) {
                       stack.pop();
@@ -144049,7 +147139,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     generateRtf: () => generateRtf,
     inTw: () => inTw,
     paraCtrl: () => paraCtrl,
-    plainText: () => plainText,
+    plainText: () => plainText2,
     rtfFs: () => rtfFs
   });
   function escapeRtf(s) {
@@ -144092,7 +147182,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     return out;
   }
-  function plainText(s) {
+  function plainText2(s) {
     return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1");
   }
   function paraCtrl(el2, fmt, fontPt) {
@@ -144165,7 +147255,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     for (const b of blocks || []) {
       if (!b || b.el === "blank") continue;
-      const text = plainText(b.text);
+      const text = plainText2(b.text);
       if (!text.trim() && b.el === "action") continue;
       const { ctrl, caps } = paraCtrl(b.el, f, opts && opts.fontPt);
       out.push(ctrl + " " + escapeRtf(caps ? text.toUpperCase() : text) + "\\par");
@@ -144194,12 +147284,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     escapeXml: () => escapeXml,
     fdxType: () => fdxType,
     generateFdx: () => generateFdx,
-    plainText: () => plainText2
+    plainText: () => plainText3
   });
   function escapeXml(s) {
     return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   }
-  function plainText2(s) {
+  function plainText3(s) {
     return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\u00A0/g, " ");
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
@@ -144215,7 +147305,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (!String(text ?? "").trim()) return;
       for (const line of String(text).split("\n")) {
         title2.push(`      <Paragraph Alignment="${align}" Type="Action">
-        <Text>${escapeXml(plainText2(line))}</Text>
+        <Text>${escapeXml(plainText3(line))}</Text>
       </Paragraph>`);
       }
     };
@@ -144288,7 +147378,7 @@ ${title2.join("\n")}
       };
       XML_BAD = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
       para = (type, text, indent = "    ", attrs = "") => `${indent}<Paragraph Type="${escapeXml(type)}"${attrs}>
-${indent}  <Text>${escapeXml(plainText2(text))}</Text>
+${indent}  <Text>${escapeXml(plainText3(text))}</Text>
 ${indent}</Paragraph>`;
     }
   });
@@ -144923,7 +148013,7 @@ ${pages.join("\n")}
     pruneTabs: () => pruneTabs2,
     sameSession: () => sameSession,
     sessionKey: () => sessionKey,
-    sessionSummary: () => sessionSummary
+    sessionSummary: () => sessionSummary2
   });
   function newSession3(root = "") {
     return {
@@ -144976,14 +148066,14 @@ ${pages.join("\n")}
     };
   }
   function mergeSession(prev, patch) {
-    const base3 = migrateSession(prev);
-    if (!patch || typeof patch !== "object") return base3;
-    const next = { ...base3 };
+    const base4 = migrateSession(prev);
+    if (!patch || typeof patch !== "object") return base4;
+    const next = { ...base4 };
     if (typeof patch.root === "string" && patch.root) next.root = patch.root;
     if (Number.isFinite(+patch.ts)) next.ts = +patch.ts;
     for (const k of SESSION_PARTS) {
       if (patch[k] === void 0) continue;
-      if (k === "tabs" || k === "panels") next[k] = { ...base3[k], ...patch[k] || {} };
+      if (k === "tabs" || k === "panels") next[k] = { ...base4[k], ...patch[k] || {} };
       else next[k] = patch[k];
     }
     return migrateSession(next);
@@ -145014,7 +148104,7 @@ ${pages.join("\n")}
     if (!Number.isFinite(n2) || n2 <= 0) return false;
     return n2 - ts > days * 864e5;
   }
-  function sessionSummary(s) {
+  function sessionSummary2(s) {
     const x = migrateSession(s);
     return {
       tabs: x.tabs.open.length,
@@ -145039,119 +148129,6 @@ ${pages.join("\n")}
     "src/session/session-core.js"() {
       SESSION_VERSION2 = 2;
       SESSION_PARTS = ["tabs", "panels", "split", "ui", "win"];
-    }
-  });
-
-  // src/ai/ai-bridge.js
-  var ai_bridge_exports = {};
-  __export(ai_bridge_exports, {
-    collectDocs: () => collectDocs,
-    getAIClient: () => getAIClient,
-    getRag: () => getRag,
-    ragContext: () => ragContext,
-    resetAI: () => resetAI,
-    tracker: () => tracker
-  });
-  function getAIClient() {
-    if (_client && _client._root === state.root) return _client;
-    _client = new AIClient({
-      http: httpFromKapi(kapi),
-      // settings เป็นฟังก์ชัน → เปลี่ยนใน dialog แล้วมีผลทันที ไม่ต้องสร้าง client ใหม่
-      settings: () => {
-        const ai = getAISettings();
-        return {
-          provider: ai.provider || "openai",
-          model: ai.model || "",
-          temperature: ai.temperature ?? 0.7,
-          maxTokens: ai.maxTokens || 800,
-          ollamaUrl: ai.ollamaUrl || "http://localhost:11434"
-        };
-      },
-      keyStore: new KeyStore({ io: keyIo(), root: state.root || "" }),
-      tracker,
-      log: (lv, msg, extra) => log(lv, msg, extra)
-    });
-    _client._root = state.root;
-    return _client;
-  }
-  async function collectDocs(root) {
-    const docs = [];
-    for (const e of await listEntities(root)) {
-      const body = [
-        Object.values(e.entity.fields || {}).join("\n"),
-        (e.entity.sections || []).map((s) => (s.title || "") + "\n" + (s.content || "")).join("\n")
-      ].join("\n").trim();
-      if (body) docs.push({
-        id: "wiki:" + e.path,
-        text: body,
-        meta: { kind: "wiki", title: e.name, cat: e.cat, path: e.path }
-      });
-    }
-    for (const s of await listScenes(root, { withText: true })) {
-      if (s.text && s.text.trim()) {
-        docs.push({
-          id: "scene:" + s.id,
-          text: s.text,
-          meta: { kind: "scene", title: s.title, sceneId: s.id, path: s.path }
-        });
-      }
-    }
-    return docs;
-  }
-  async function getRag({ rebuild = false, onProgress = null } = {}) {
-    if (!state.root) return null;
-    if (_rag && _ragRoot === state.root && !rebuild) return _rag;
-    const client = getAIClient();
-    let index = new VectorIndex({});
-    const idxPath = await kapi.join(state.root, INDEX_FILE);
-    if (!rebuild) {
-      try {
-        if (await kapi.exists(idxPath)) index = VectorIndex.fromJSON(await kapi.readJson(idxPath));
-      } catch {
-      }
-    }
-    _rag = new RagPipeline({ client, index });
-    _ragRoot = state.root;
-    if (!index.size) {
-      onProgress && onProgress(t("ui.aiBridge.busyNewIndexBody"));
-      const docs = await collectDocs(state.root);
-      const res = await _rag.indexDocs(docs);
-      log("info", t("ui.aiBridge.aiRagNewIndex"), { docs: docs.length, chunks: res.added, model: res.model });
-      try {
-        await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON()));
-      } catch {
-      }
-    }
-    return _rag;
-  }
-  async function ragContext(query, opts = {}) {
-    const rag = await getRag(opts);
-    if (!rag) return { text: "", sources: [], tokens: 0 };
-    try {
-      return await rag.context(query, { k: opts.k || 5, maxTokens: opts.maxTokens || 1500 });
-    } catch (e) {
-      log("warn", t("ui.aiBridge.aiRagRetrieveFail"), e);
-      return buildContext([], {});
-    }
-  }
-  function resetAI() {
-    _client = null;
-    _rag = null;
-    _ragRoot = "";
-  }
-  var _client, _rag, _ragRoot, tracker, keyIo;
-  var init_ai_bridge = __esm({
-    "src/ai/ai-bridge.js"() {
-      init_i18n();
-      init_core();
-      init_ai_core();
-      init_ai_settings();
-      init_project_scan();
-      _client = null;
-      _rag = null;
-      _ragRoot = "";
-      tracker = new CostTracker({});
-      keyIo = () => syncIo();
     }
   });
 
@@ -146358,7 +149335,7 @@ ${s.body}`).join("\n\n");
         const { toWikiEntity: toWikiEntity2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
         const cats = { magic: "lore", city: "locations", culture: "lore", economy: "lore", religion: "lore", faction: "lore" };
         const cat = cats[typeSel.value] || "lore";
-        const base3 = lastWorld ? toWikiEntity2(lastWorld, { category: cat }) : {
+        const base4 = lastWorld ? toWikiEntity2(lastWorld, { category: cat }) : {
           name: promptInput.value.trim().slice(0, 60) || "Worldbuilding",
           entityTypeKey: cat,
           aliases: [],
@@ -146372,7 +149349,7 @@ ${s.body}`).join("\n\n");
           images: [],
           relationships: [],
           chapterOverrides: [],
-          ...base3,
+          ...base4,
           sections: (lastWorld?.sections || []).map((s) => ({ title: s.title, content: s.body })).concat(lastWorld ? [] : [{ title: t("ai.description", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22"), content: r }]),
           created: (/* @__PURE__ */ new Date()).toISOString()
         };
@@ -147100,14 +150077,14 @@ ${s.body}`).join("\n\n");
     let written = 0;
     for (const f of plan.files) {
       const full = io.join(dest, ...f.path);
-      if (io.mkdir) await io.mkdir(dirOf(io, dest, f.path));
+      if (io.mkdir) await io.mkdir(dirOf2(io, dest, f.path));
       await io.writeFile(full, f.content);
       written++;
       if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
     }
     return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
   }
-  function dirOf(io, dest, parts) {
+  function dirOf2(io, dest, parts) {
     return io.join(dest, ...parts.slice(0, -1));
   }
   async function readDocRtf(io, root, id) {
@@ -147816,8 +150793,8 @@ ${sc.body || ""}
   }
   async function wikiCharacters() {
     const out = [];
-    const scan = async (base3) => {
-      const dir2 = await kapi.join(base3, "characters");
+    const scan = async (base4) => {
+      const dir2 = await kapi.join(base4, "characters");
       if (!await kapi.exists(dir2)) return;
       for (const f of await kapi.listFiles(dir2, ".json")) {
         try {
@@ -148331,13 +151308,13 @@ ${sc.body || ""}
         }
       }
       const total = CHART_KINDS.reduce((s, k) => s + stats[k], 0) || 1;
-      const pct = {};
-      for (const k of CHART_KINDS) pct[k] = +(stats[k] / total * 100).toFixed(1);
+      const pct2 = {};
+      for (const k of CHART_KINDS) pct2[k] = +(stats[k] / total * 100).toFixed(1);
       return {
         page: pg.index + startPage - 1,
         lines: stats,
         total,
-        percentages: pct,
+        percentages: pct2,
         charDensity: [...density.entries()].map(([name5, n2]) => ({ name: name5, lines: n2 })).sort((a, b) => b.lines - a.lines)
       };
     });
@@ -148807,6 +151784,7 @@ ${css}
     refreshOpenWikiBacklinks: () => refreshOpenWikiBacklinks,
     refreshSpView: () => refreshSpView,
     refreshTreeQueued: () => refreshTreeQueued,
+    refreshWikiLineNos: () => refreshWikiLineNos,
     relationDialog: () => relationDialog,
     reloadPlugins: () => reloadPlugins,
     reloadTabsFromDisk: () => reloadTabsFromDisk,
@@ -149030,6 +152008,7 @@ ${css}
   function refreshLineGutter() {
     const t3 = state.active;
     const pane = t3 && t3.pane;
+    if (pane && pane.classList.contains("wiki-pane")) return refreshWikiLineNos(pane);
     const pmEl = pane && !pane.classList.contains("wiki-pane") ? pane.querySelector(":scope > .workspace > .ProseMirror") : null;
     const show = !!state.settings.lineNumbers && !!pmEl && !isPageView(currentSpView());
     const g = lnGutterEl(show);
@@ -149076,6 +152055,41 @@ ${css}
       const off3 = (lineH - d.offsetHeight) / 2;
       if (off3 > 0.5) d.style.top = Math.round(parseFloat(d.style.top) + off3) + "px";
     }
+    return n2;
+  }
+  function refreshWikiLineNos(pane) {
+    const show = !!state.settings.lineNumbers;
+    let n2 = 0;
+    for (const box2 of pane.querySelectorAll(".wiki-sec-ed")) {
+      let g = box2.querySelector(":scope > .wiki-ln");
+      if (!show) {
+        if (g) g.remove();
+        continue;
+      }
+      const pm2 = box2.querySelector(":scope > .ProseMirror");
+      if (!pm2) {
+        if (g) g.remove();
+        continue;
+      }
+      if (!g) {
+        g = el("div", "wiki-ln");
+        box2.insertBefore(g, box2.firstChild);
+      }
+      const br = box2.getBoundingClientRect();
+      const frag = document.createDocumentFragment();
+      const kids = pm2.children;
+      for (let i5 = 0; i5 < kids.length; i5++) {
+        const r = kids[i5].getBoundingClientRect();
+        if (!r.height) continue;
+        const d = el("div", "wiki-ln-no", String(i5 + 1));
+        d.style.top = Math.round(r.top - br.top) + "px";
+        frag.appendChild(d);
+        n2++;
+      }
+      g.textContent = "";
+      g.appendChild(frag);
+    }
+    pane.classList.toggle("wiki-ln-on", show);
     return n2;
   }
   function initLineGutter() {
@@ -150270,6 +153284,7 @@ ${css}
     resetAI();
     resetSplitSystem();
     resetKanban();
+    resetAnalyzer();
     resetReview();
     resetCommentStore();
     _cmMigrated.clear();
@@ -150676,7 +153691,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -150912,7 +153927,7 @@ ${css}
     } finally {
       _sessRestoring = false;
     }
-    log("info", tf("ui.session.restored", sessionSummary(s).tabs));
+    log("info", tf("ui.session.restored", sessionSummary2(s).tabs));
     return s;
   }
   async function restoreSessionTabs(s) {
@@ -151141,6 +154156,12 @@ ${css}
           const chapters = ((await kapi.readJson(draftFile)).chapters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
           const scenesAll = (await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters || {};
           for (const ch of chapters) {
+            let chFiles = [];
+            try {
+              chFiles = await kapi.listFiles(await kapi.join(dPath, "Chapters", ch.folderName));
+            } catch {
+            }
+            const visSet = new Set(chFiles.filter((f) => /_vis\.csv$/i.test(f)).map((f) => f.toLowerCase()));
             const chEl = el("div", "chapter");
             const chHead = el("div", "ch-title");
             chHead.innerHTML = iconHtml("folder", 14) + " " + ch.title;
@@ -151362,6 +154383,7 @@ ${css}
                     await openScene(scEl.dataset.path, sc.title);
                     await openCommentsPanel();
                   } },
+                  { label: t("ui.vis.menu"), click: async () => await hasVis(scEl.dataset.path) ? openVisual(scEl.dataset.path, sc.title) : createVisual(scEl.dataset.path, sc.title) },
                   { label: t("ui.app.repeat"), click: () => duplicateScene(dPath, ch, sc) },
                   { label: t("ui.app.changeName2"), click: () => renameScene(dPath, ch, sc) },
                   // ข้อ 78: แนะนำชื่อจากเนื้อฉากจริง (ส่งเนื้อหาไปเป็นบริบทให้ AI)
@@ -151398,6 +154420,24 @@ ${css}
                 ]);
               };
               chEl.append(scEl);
+              if (visSet.has(sc.fileName.replace(/\.md$/i, "").toLowerCase() + "_vis.csv")) {
+                const vEl = el("div", "scene vis-row", "\u{1F3AC} " + t("ui.vis.title"));
+                vEl.dataset.nofilter = "1";
+                vEl.dataset.path = scEl.dataset.path;
+                vEl.onclick = (ev) => {
+                  ev.stopPropagation();
+                  openVisual(scEl.dataset.path, sc.title);
+                };
+                vEl.oncontextmenu = (ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  popupMenu(ev.clientX, ev.clientY, [
+                    { label: t("ui.vis.open"), click: () => openVisual(scEl.dataset.path, sc.title) },
+                    { label: t("ui.vis.reveal"), click: async () => kapi.revealInOS(await visPathOf(scEl.dataset.path)) }
+                  ]);
+                };
+                chEl.append(vEl);
+              }
             }
             if ((scenesAll[ch.guid] || []).length === 0) {
               const es = el("div", "empty-state-row");
@@ -151485,7 +154525,7 @@ ${css}
     for (const f of await kapi.listFiles(memoDir, ".md")) {
       const p = await kapi.join(memoDir, f);
       const raw = await kapi.readFile(p);
-      const title2 = (0, import_md14.parseMdFile)(raw).meta.title || f.replace(/\.md$/, "");
+      const title2 = (0, import_md15.parseMdFile)(raw).meta.title || f.replace(/\.md$/, "");
       const it = el("div", "scene", "\u{1F4C4} " + title2);
       it.dataset.path = p;
       it.onclick = () => openScene(p, title2);
@@ -151705,10 +154745,10 @@ ${css}
       rSec.append(es);
     }
     tree.append(rSec);
-    const wikiRootOf = async (base3) => {
-      const w = await kapi.join(base3, "Wiki");
+    const wikiRootOf = async (base4) => {
+      const w = await kapi.join(base4, "Wiki");
       if (await kapi.exists(w)) return w;
-      const b = await kapi.join(base3, "Bible");
+      const b = await kapi.join(base4, "Bible");
       if (await kapi.exists(b)) return b;
       return w;
     };
@@ -151831,10 +154871,10 @@ ${css}
       await renderCat(await kapi.join(projWiki, cat), cat, "");
     }
     for (const secName of await kapi.listDirs(state.root)) {
-      const base3 = await kapi.join(state.root, secName);
-      if (!await kapi.exists(await kapi.join(base3, "section.json"))) continue;
+      const base4 = await kapi.join(state.root, secName);
+      if (!await kapi.exists(await kapi.join(base4, "section.json"))) continue;
       for (const wname of ["Wiki", "Bible"]) {
-        const swiki = await kapi.join(base3, wname);
+        const swiki = await kapi.join(base4, wname);
         if (!await kapi.exists(swiki)) continue;
         for (const c of await kapi.listDirs(swiki)) {
           await renderCat(await kapi.join(swiki, c), c, secName);
@@ -151844,7 +154884,7 @@ ${css}
     }
     tree.append(wSec);
     const recDir = await kapi.join(state.root, "Recycle");
-    const recItems = await kapi.exists(recDir) ? (await kapi.listFiles(recDir)).filter((f) => !f.endsWith(".k2restore.json")) : [];
+    const recItems = await kapi.exists(recDir) ? (await kapi.listFiles(recDir)).filter((f) => !f.endsWith(".k2restore.json") && !f.endsWith(".vis.csv")) : [];
     const recDirs = await kapi.exists(recDir) ? await kapi.listDirs(recDir) : [];
     const all = [...recItems, ...recDirs];
     const tSec = el("div", "sec");
@@ -151862,6 +154902,10 @@ ${css}
             if (!await confirmBox(tf("ui.app.delRecoverRestoreCant", label), t("ui.app.del"))) return;
             await kapi.remove(p);
             await kapi.remove(p + ".k2restore.json");
+            try {
+              if (await kapi.exists(p + ".vis.csv")) await kapi.remove(p + ".vis.csv");
+            } catch {
+            }
             await buildTree2();
             setStatus(t("ui.app.delDone") + label);
           } }
@@ -152403,7 +155447,7 @@ ${css}
     refreshToolbar();
   }
   async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
-    const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -152415,7 +155459,7 @@ ${css}
     } while (used.has(fileName));
     await kapi.writeFile(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md14.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
+      (0, import_md15.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
     );
     await kapi.remove(memoPath);
     const row2 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
@@ -152434,14 +155478,14 @@ ${css}
     const src2 = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
     const memoDir = await kapi.join(state.root, "Memos");
     await kapi.mkdir(memoDir);
-    const base3 = safeName(sc.title || "memo");
+    const base4 = safeName(sc.title || "memo");
     let n2 = 0, dst;
     do {
-      dst = await kapi.join(memoDir, base3 + (n2 ? "-" + n2 : "") + ".md");
+      dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(src2));
-    await kapi.writeFile(dst, (0, import_md14.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
+    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(src2));
+    await kapi.writeFile(dst, (0, import_md15.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
     await kapi.remove(src2);
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -152461,10 +155505,10 @@ ${css}
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-      const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await kapi.writeFile(file, (0, import_md14.dumpMdFile)(meta2, body));
+      await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
     } catch {
     }
     await buildTree2();
@@ -153324,7 +156368,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md14.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md15.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -153877,10 +156921,10 @@ ${css}
     }
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row2 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await kapi.writeFile(file, (0, import_md14.dumpMdFile)(meta2, body));
+      await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -153955,7 +156999,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md14.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -154074,13 +157118,13 @@ ${css}
       statusLine.textContent = t("ui.app.busySave2");
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
       try {
-        const { meta: meta2, body: mbody } = (0, import_md14.parseMdFile)(await kapi.readFile(file0));
+        const { meta: meta2, body: mbody } = (0, import_md15.parseMdFile)(await kapi.readFile(file0));
         meta2.pov = row2.pov;
         meta2.tags = row2.tags;
         meta2.emotion = row2.emotion;
         meta2.conflict = row2.conflict;
         meta2.note = row2.note;
-        await kapi.writeFile(file0, (0, import_md14.dumpMdFile)(meta2, mbody));
+        await kapi.writeFile(file0, (0, import_md15.dumpMdFile)(meta2, mbody));
       } catch {
       }
       statusLine.innerHTML = iconHtml("check", 14) + t("ui.common.saveDone");
@@ -154097,7 +157141,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md14.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row2.title || "" };
@@ -154171,7 +157215,7 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
         }
@@ -154186,7 +157230,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md14.countWords)(body || "")
+          words: (0, import_md15.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -155551,19 +158595,19 @@ ${css}
       }
       if (!Object.keys(patch).length) continue;
       const file = await kapi.join(dir2, langFileName(lang));
-      let base3 = {};
+      let base4 = {};
       try {
-        if (await kapi.exists(file)) base3 = csvToTable(await kapi.readFile(file));
+        if (await kapi.exists(file)) base4 = csvToTable(await kapi.readFile(file));
       } catch {
       }
       for (const k of Object.keys(patch)) {
-        if (!(k in base3)) res.added++;
-        else if (base3[k] !== patch[k]) res.changed++;
-        base3[k] = patch[k];
+        if (!(k in base4)) res.added++;
+        else if (base4[k] !== patch[k]) res.changed++;
+        base4[k] = patch[k];
       }
-      base3["meta.code"] = lang;
-      base3["meta.nativeName"] = base3["meta.nativeName"] || fallbackLangName(lang);
-      await kapi.writeFile(file, tableToCsv(base3));
+      base4["meta.code"] = lang;
+      base4["meta.nativeName"] = base4["meta.nativeName"] || fallbackLangName(lang);
+      await kapi.writeFile(file, tableToCsv(base4));
       res.langs.push(lang);
     }
     if (!res.langs.length) {
@@ -155730,7 +158774,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md14.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md15.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -155827,11 +158871,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md14.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await kapi.writeFile(file, (0, import_md14.dumpMdFile)(meta2, body));
+    await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -155846,10 +158890,10 @@ ${css}
     return "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
   async function uniqueSceneFileName(dPath, folderName, order) {
-    let base3 = "scene-" + String(order).padStart(2, "0");
-    let name5 = base3 + ".md", n2 = 2;
+    let base4 = "scene-" + String(order).padStart(2, "0");
+    let name5 = base4 + ".md", n2 = 2;
     while (await kapi.exists(await kapi.join(dPath, "Chapters", folderName, name5)))
-      name5 = base3 + "-" + n2++ + ".md";
+      name5 = base4 + "-" + n2++ + ".md";
     return name5;
   }
   async function sceneMoveMenu(e, dPath, ch, sc) {
@@ -155865,8 +158909,8 @@ ${css}
     );
   }
   async function moveEntityToCat(srcPath, dstCatDir) {
-    const base3 = srcPath.replace(/^.*[\\/]/, "");
-    const dst = await kapi.join(dstCatDir, base3);
+    const base4 = srcPath.replace(/^.*[\\/]/, "");
+    const dst = await kapi.join(dstCatDir, base4);
     if (srcPath === dst) return;
     await kapi.mkdir(dstCatDir);
     if (await kapi.exists(dst)) {
@@ -155890,7 +158934,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md14.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md15.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -155898,7 +158942,7 @@ ${css}
     if (PANEL_WIN) return requestOpenInMain(file);
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md14.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md15.parseMdFile)(raw);
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
     pane.appendChild(ws);
@@ -155970,7 +159014,7 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md14.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md15.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
@@ -156055,10 +159099,10 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md14.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md15.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await kapi.writeFile(tab.file, (0, import_md14.dumpMdFile)(tab.meta, body));
+    await kapi.writeFile(tab.file, (0, import_md15.dumpMdFile)(tab.meta, body));
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     if (tab.editor) smart.bindView(tab.editor.view);
@@ -156164,10 +159208,10 @@ ${css}
   }
   function screenplayTerms(tab, skipPos) {
     const c = screenplayTermCounts(tab, skipPos);
-    const base3 = { min: smartLearnMin(), pinned: smartPinList(), ignored: smartIgnoreList() };
+    const base4 = { min: smartLearnMin(), pinned: smartPinList(), ignored: smartIgnoreList() };
     return {
-      chars: learnedTerms(c.chars, { ...base3, known: smart.byCat?.characters || [] }),
-      locs: learnedTerms(c.locs, { ...base3, known: smart.byCat?.locations || [] })
+      chars: learnedTerms(c.chars, { ...base4, known: smart.byCat?.characters || [] }),
+      locs: learnedTerms(c.locs, { ...base4, known: smart.byCat?.locations || [] })
     };
   }
   function clearTermCache() {
@@ -156246,10 +159290,10 @@ ${css}
     const render = () => {
       body.innerHTML = "";
       const counts = tab && tab.sp ? screenplayTermCounts(tab, -1) : { chars: /* @__PURE__ */ new Map(), locs: /* @__PURE__ */ new Map() };
-      const base3 = { min: smartLearnMin(), pinned: smartPinList(), ignored: smartIgnoreList() };
+      const base4 = { min: smartLearnMin(), pinned: smartPinList(), ignored: smartIgnoreList() };
       const known = { chars: smart.byCat?.characters || [], locs: smart.byCat?.locations || [] };
       for (const [title2, key2] of [[t("ui.app.characterChapter"), "chars"], [t("ui.app.placeChapter"), "locs"]]) {
-        const opt = { ...base3, known: known[key2] };
+        const opt = { ...base4, known: known[key2] };
         const list = learnedTerms(counts[key2], opt);
         body.append(el("div", "k-set-sub", title2));
         if (!list.length) body.append(el("div", "cmp-empty", t("ui.app.notHas")));
@@ -156384,12 +159428,12 @@ ${css}
     const guess = "file://" + (dir2 + "/" + rel).replace(/\\/g, "/");
     kapi.resolve(dir2, rel).then(async (abs) => {
       if (!await kapi.exists(abs)) {
-        const base3 = rel.split("/").pop();
-        abs = await kapi.join(state.root, "Images", base3);
+        const base4 = rel.split("/").pop();
+        abs = await kapi.join(state.root, "Images", base4);
         if (!await kapi.exists(abs)) {
           try {
             const { findImagePath: findImagePath2 } = await Promise.resolve().then(() => (init_album_core(), album_core_exports));
-            const p = await findImagePath2(kapi, state.root, base3);
+            const p = await findImagePath2(kapi, state.root, base4);
             if (p) abs = await kapi.join(state.root, "Images", ...p.split("/"));
           } catch {
           }
@@ -156492,14 +159536,14 @@ ${css}
     const body = tab.editor ? tab.editor.getMarkdown() : tab.sp ? tab.sp.getMarkdown() : tab.plain.value;
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md14.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md15.alignToString)(tab.editor.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
-    await writeKeepingComments(tab.file, (0, import_md14.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md15.dumpMdFile)(tab.meta, body));
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     setStatus(t("ui.app.saveDone") + tab.title);
@@ -156592,6 +159636,11 @@ ${css}
         return await _branchPlanApi.saveBranchPlan(true) !== false;
       }
     });
+    registerDirtySource("analysis", {
+      label: t("ui.app.aiAnalysis"),
+      list: analyzerDirtyList,
+      save: async () => await saveSession() !== null
+    });
     registerDirtySource("dlgb", {
       label: t("ui.app.dlgbSource"),
       list: () => builderDirtyList().map((title2) => ({ key: "::dlgb::" + title2, title: title2, file: "" })),
@@ -156667,12 +159716,12 @@ ${css}
     const names = await kapi.listFiles(dir2, ".md");
     const out = [];
     for (const fn of names) {
-      const base3 = fn.replace(/\.md$/i, "");
-      const idx4 = base3.indexOf("__");
+      const base4 = fn.replace(/\.md$/i, "");
+      const idx4 = base4.indexOf("__");
       out.push({
         name: fn,
-        ts: idx4 < 0 ? base3 : base3.slice(0, idx4),
-        label: idx4 < 0 ? "" : base3.slice(idx4 + 2),
+        ts: idx4 < 0 ? base4 : base4.slice(0, idx4),
+        label: idx4 < 0 ? "" : base4.slice(idx4 + 2),
         path: await kapi.join(dir2, fn)
       });
     }
@@ -156765,7 +159814,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md14.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md15.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -156858,9 +159907,9 @@ ${css}
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), "Revert")) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md14.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md15.parseMdFile)(content);
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md14.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md15.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
       t3.sp.destroy();
@@ -157072,7 +160121,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md14.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md15.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -157249,6 +160298,10 @@ ${css}
     $("#tb-focus")?.classList.toggle("on", document.body.classList.contains("focus-mode"));
     $("#tb-typewriter")?.classList.toggle("on", isTypewriter());
     $("#tb-linenum")?.classList.toggle("on", !!state.settings.lineNumbers);
+    $("#tb-visual")?.classList.toggle(
+      "dis",
+      !(state.active && /\.md$/i.test(state.active.file || ""))
+    );
     $("#tb-tree-panel")?.classList.toggle("on", isPanelOpen("tree"));
     $("#tb-outline-panel")?.classList.toggle("on", isPanelOpen("outline"));
     $("#tb-props-panel")?.classList.toggle("on", isPanelOpen("props"));
@@ -157314,12 +160367,12 @@ ${css}
       const fmt = spFormat();
       const blocks = blocksFromDoc(t3.sp.view.state.doc);
       const pg = pagesOf(blocks, fmt);
-      const base3 = currentStartPage(t3) - 1;
+      const base4 = currentStartPage(t3) - 1;
       const starts = pageStartMarks(pg, fmt);
       const onCt = spContinuedOn();
       const changed = setPageBreaks(starts.map((st, i5) => ({
         pos: st.pos,
-        page: base3 + i5 + 1,
+        page: base4 + i5 + 1,
         mid: st.mid,
         ind: st.indent,
         contBottom: onCt ? (pg.pages[i5 - 1] || {}).continuedBottom || "" : "",
@@ -157369,9 +160422,9 @@ ${css}
       const pblocks = proseBlocksFromDoc(t3.editor.view.state.doc);
       const ppg = prosePagesOf(pblocks, pf, spf.paper, spf.margins);
       state._mzDiag = { path: "estimate", pages: ppg.count, breaks: -1, cached: false };
-      const base3 = currentStartPage(t3) - 1;
+      const base4 = currentStartPage(t3) - 1;
       const changed = setProsePageBreaks(
-        prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base3 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos))
+        prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base4 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos))
       );
       const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
       if (changed || nChanged2) refreshProsePageBreaks(t3.editor.view);
@@ -157420,7 +160473,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", (0, import_md14.countWords)(body).toLocaleString(), body.length.toLocaleString());
+      let txt = tf("ui.app.wordChar", (0, import_md15.countWords)(body).toLocaleString(), body.length.toLocaleString());
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -158139,7 +161192,7 @@ ${css}
         const p = await kapi.saveAsDialog(t3.title + ".md");
         if (p) {
           const body = t3.editor ? t3.editor.getMarkdown() : t3.plain.value;
-          await kapi.writeFile(p, (0, import_md14.dumpMdFile)(t3.meta, body));
+          await kapi.writeFile(p, (0, import_md15.dumpMdFile)(t3.meta, body));
           setStatus("Save As: " + p);
         }
         break;
@@ -159355,7 +162408,7 @@ ${css}
       for (const t3 of state.tabs.values()) {
         if ((t3.editor || t3.sp) && t3.file && /\.md$/i.test(t3.file)) {
           const text = t3.editor ? t3.editor.getText() : t3.sp ? t3.sp.getText() : "";
-          totalWords += (0, import_md14.countWords)(text);
+          totalWords += (0, import_md15.countWords)(text);
         }
       }
     } catch {
@@ -159457,14 +162510,14 @@ ${css}
         }
       }
       const goal = state.goals?.projectWords || DEFAULT_GOALS.projectWords;
-      const pct = Math.min(100, Math.round(totalWords / goal * 100));
+      const pct2 = Math.min(100, Math.round(totalWords / goal * 100));
       bar.innerHTML = "";
       const items = [
         `\u{1F4C4} ${totalScenes} ${t("scenes")}`,
         `\u{1F4DD} ${totalWords.toLocaleString()} ${t("words")}`,
         `\u{1F464} ${totalChars} ${t("characters")}`,
         `\u{1F4CD} ${totalLocations} ${t("locations")}`,
-        `\u{1F4CA} ${pct}% ${t("percentGoal")}`
+        `\u{1F4CA} ${pct2}% ${t("percentGoal")}`
       ];
       for (const item of items) {
         const span = el("span", "sum-item", item);
@@ -159567,7 +162620,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -159599,13 +162652,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -159661,8 +162714,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -159716,7 +162769,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md14.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md15.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done2 = go();
@@ -159734,7 +162787,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -159745,7 +162798,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -159764,7 +162817,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -159793,7 +162846,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -159801,7 +162854,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -159809,7 +162862,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -162011,7 +165064,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md14.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md15.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -162732,7 +165785,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md14.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md15.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -162916,7 +165969,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md14.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md15.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -164487,8 +167540,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md14.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md14.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md15.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md15.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -164502,7 +167555,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md14.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md15.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -164645,7 +167698,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md14.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md15.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -164668,7 +167721,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md14.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md15.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -164725,7 +167778,8 @@ ${css}
         cks[2].checked = false;
         bx.querySelector(".k-ok").click();
       }
-      await new Promise((r) => setTimeout(r, 200));
+      for (let i5 = 0; i5 < 40 && document.querySelector(".scene .tree-flash"); i5++)
+        await new Promise((r) => setTimeout(r, 50));
       const scClear = await readSc0();
       check2(
         "\u0E40\u0E2D\u0E32\u0E1B\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E04\u0E49\u0E32\u0E07\u0E43\u0E19 Explorer",
@@ -164834,13 +167888,13 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "draft.json"), JSON.stringify(dj, null, 2));
         await kapi.mkdir(await kapi.join(dPath, "Chapters", c2.folderName));
         const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
-        const moveRow = { id: "scMove", title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", order: 50, fileName: "scene-50.md", chapterGuid: chP.guid };
-        sj4.chapters[chP.guid] = [...sj4.chapters[chP.guid], moveRow];
+        const moveRow2 = { id: "scMove", title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", order: 50, fileName: "scene-50.md", chapterGuid: chP.guid };
+        sj4.chapters[chP.guid] = [...sj4.chapters[chP.guid], moveRow2];
         sj4.chapters[c2.guid] = [];
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md14.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md15.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -164935,7 +167989,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md14.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md15.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -164957,7 +168011,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md14.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -164979,7 +168033,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md14.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md15.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(dPath, chP, { title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", fileName: "cmp2.md" });
         await new Promise((r) => setTimeout(r, 150));
@@ -165671,12 +168725,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md14.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md15.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md14.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md15.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -167365,7 +170419,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md14.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md15.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -167432,8 +170486,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md14.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md14.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md15.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md15.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -168210,15 +171264,15 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 40));
         resetPageScale();
-        const S9 = state.settings;
+        const S10 = state.settings;
         const CS = (sel) => getComputedStyle(document.querySelector(sel));
         const rootVar = (n2) => getComputedStyle(document.documentElement).getPropertyValue(n2).trim();
         check2(
           "[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A \u0E1A\u0E191 \u0E25\u0E48\u0E32\u0E071 \u0E0B\u0E49\u0E32\u0E221.5 \u0E02\u0E27\u0E321 \u0E19\u0E34\u0E49\u0E27",
-          S9.pageMargins.top === 1 && S9.pageMargins.bottom === 1 && S9.pageMargins.left === 1.5 && S9.pageMargins.right === 1,
-          JSON.stringify(S9.pageMargins)
+          S10.pageMargins.top === 1 && S10.pageMargins.bottom === 1 && S10.pageMargins.left === 1.5 && S10.pageMargins.right === 1,
+          JSON.stringify(S10.pageMargins)
         );
-        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S9.paperSize === "letter");
+        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S10.paperSize === "letter");
         check2(
           "[85] --page-w / --mg-left \u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E1A\u0E19 :root",
           rootVar("--page-w") === "8.5in" && rootVar("--mg-left") === "1.5in",
@@ -168229,14 +171283,14 @@ ${css}
           linesPerPage(spFormat().paper, spFormat().margins) === 54,
           String(linesPerPage(spFormat().paper, spFormat().margins))
         );
-        S9.paperSize = "a4";
+        S10.paperSize = "a4";
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E19\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 A4 \u2192 --page-w \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", rootVar("--page-w") === "8.27in", rootVar("--page-w"));
-        S9.paperSize = "letter";
-        S9.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
+        S10.paperSize = "letter";
+        S10.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 2 \u0E19\u0E34\u0E49\u0E27 \u2192 --mg-left \u0E15\u0E32\u0E21", rootVar("--mg-left") === "2in", rootVar("--mg-left"));
-        S9.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
+        S10.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
         applyPageVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E43\u0E0A\u0E49 Courier Final Draft \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19",
@@ -168255,35 +171309,35 @@ ${css}
         );
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E10\u0E32\u0E19 12pt = 16px \u0E17\u0E31\u0E49\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E30\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07",
-          S9.edFontPt === 12 && S9.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
+          S10.edFontPt === 12 && S10.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
         );
         applyZoomVars();
         const edFsBefore = rootVar("--ed-fs");
-        S9.spFontPt = 14;
+        S10.spFontPt = 14;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E01\u0E23\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 14pt \u2192 --sp-fs \u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01",
           Math.abs(parseFloat(rootVar("--sp-fs")) - 14 * 4 / 3) < 0.05,
           rootVar("--sp-fs")
         );
-        const keepPrFs = JSON.parse(JSON.stringify(S9.prose || {}));
-        S9.prose = { ...S9.prose || {}, fontPt: 1 };
-        S9.uiFontSize = -6;
+        const keepPrFs = JSON.parse(JSON.stringify(S10.prose || {}));
+        S10.prose = { ...S10.prose || {}, fontPt: 1 };
+        S10.uiFontSize = -6;
         applyZoomVars();
         check2(
           "[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
           parseFloat(rootVar("--ed-fs")) >= 9,
           rootVar("--ed-fs")
         );
-        S9.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
-        S9.uiFontSize = 0;
+        S10.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
+        S10.uiFontSize = 0;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E23\u0E30\u0E17\u0E1A",
           rootVar("--ed-fs") === edFsBefore,
           edFsBefore + " \u2192 " + rootVar("--ed-fs")
         );
-        S9.spFontPt = 12;
+        S10.spFontPt = 12;
         applyZoomVars();
         const spStyleEl = document.getElementById("k-sp-format");
         check2('[81] \u0E21\u0E35 <style id="k-sp-format"> \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07', !!spStyleEl && spStyleEl.textContent.includes(".sp.sp-character{"));
@@ -168372,7 +171426,7 @@ ${css}
               v87r.dispatch(v87r.state.tr.delete(_docSize87, v87r.state.doc.content.size));
             await new Promise((r) => setTimeout(r, 200));
           }
-          S9.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
+          S10.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
           applyPageVars();
           const cs2 = getComputedStyle(spT.pane.querySelector(".sp-character"));
           check2(
@@ -168387,7 +171441,7 @@ ${css}
             ).getPropertyValue("--sp-line-h")) || 16)) < 1,
             cs2.paddingTop
           );
-          S9.spStyles = { character: {
+          S10.spStyles = { character: {
             screen: { caps: false, bold: true, italic: false, underline: false },
             print: { caps: true, bold: false, italic: false, underline: true }
           } };
@@ -168399,8 +171453,8 @@ ${css}
             "[83] \u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E19\u0E08\u0E2D (\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C)",
             /@media print\{[\s\S]*\.sp\.sp-character\{[^}]*text-decoration:underline/.test(document.getElementById("k-sp-format").textContent)
           );
-          S9.spElements = null;
-          S9.spStyles = null;
+          S10.spElements = null;
+          S10.spStyles = null;
           applyPageVars();
           const blocks = parseScript(spT.sp.getMarkdown());
           const pgInfo = paginate(blocks, { fmt: spFormat() });
@@ -168408,7 +171462,7 @@ ${css}
           scheduleCount();
           await new Promise((r) => setTimeout(r, 400));
           check2("[84] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07", /\d+ หน้า/.test($("#wc").textContent), $("#wc").textContent);
-          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S9.spAutoPaginate === false, String(S9.spAutoPaginate));
+          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S10.spAutoPaginate === false, String(S10.spAutoPaginate));
           check2("[96] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E19\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35", /\d+ หน้า/.test($("#wc").textContent));
           check2(
             "[96] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1B\u0E34\u0E14 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19 1 \u0E2B\u0E19\u0E49\u0E32)",
@@ -168417,7 +171471,7 @@ ${css}
           );
           {
             const before = $("#wc").textContent;
-            S9.spAutoPaginate = true;
+            S10.spAutoPaginate = true;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
             check2(
@@ -168430,7 +171484,7 @@ ${css}
               $("#wc").textContent.replace(/^.*·/, "") === before.replace(/^.*·/, ""),
               before + " \u2192 " + $("#wc").textContent
             );
-            S9.spAutoPaginate = false;
+            S10.spAutoPaginate = false;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
           }
@@ -168440,20 +171494,20 @@ ${css}
             { el: "dialogue", text: "\u0E1E\u0E39\u0E14\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(60) }
           ];
           const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
-          S9.spPageRules = { minDialogueLinesAtBottom: 99 };
+          S10.spPageRules = { minDialogueLinesAtBottom: 99 };
           const split22 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[84] \u0E1B\u0E23\u0E31\u0E1A\u0E01\u0E0E minDialogueLinesAtBottom \u2192 \u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07",
             split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && !split22.pages.flatMap((p) => p.blocks).some((b) => b.split === "head")
           );
-          S9.spPageRules = null;
-          S9.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
+          S10.spPageRules = null;
+          S10.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
           const pgTh = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[92] \u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (MORE) \u0E41\u0E25\u0E49\u0E27\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07",
             pgTh.pages.flatMap((p) => p.blocks).some((b) => b.el === "more" && b.text === "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)")
           );
-          S9.spStrings = null;
+          S10.spStrings = null;
           spT.sp.setElement("character");
           smart.items = ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27"];
           smart.sel = 0;
@@ -168500,23 +171554,23 @@ ${css}
           await new Promise((r) => setTimeout(r, 150));
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D Tab / Shift+Tab / Enter",
-            spCycleKeys(S9).tab.code === "Tab" && spCycleKeys(S9).shiftTab.shift === true && spCycleKeys(S9).enter.code === "Enter"
+            spCycleKeys(S10).tab.code === "Tab" && spCycleKeys(S10).shiftTab.shift === true && spCycleKeys(S10).enter.code === "Enter"
           );
-          S9.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S9).tab.code === "BracketRight");
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S9).enter.code === "Enter");
+          S10.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S10).tab.code === "BracketRight");
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S10).enter.code === "Enter");
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01",
             spKeyLabel({ code: "Tab", shift: true }) === "Shift+Tab",
             spKeyLabel({ code: "Tab", shift: true })
           );
-          S9.spCycleKeys = null;
+          S10.spCycleKeys = null;
           const keepEnt2 = spT.sp.view.state.doc;
           const atEnd = () => spT.sp.gotoPos(spT.sp.view.state.doc.content.size - 1);
           spT.sp.setMarkdown("@\u0E2A\u0E21\u0E0A\u0E32\u0E22");
           await new Promise((r) => setTimeout(r, 150));
           atEnd();
-          S9.spCycleEnabled = false;
+          S10.spCycleEnabled = false;
           spT.sp.setElement("character");
           spT.sp.enter(true);
           check2(
@@ -168524,7 +171578,7 @@ ${css}
             spT.sp.curElement() === "character",
             spT.sp.curElement()
           );
-          S9.spCycleEnabled = true;
+          S10.spCycleEnabled = true;
           spT.sp.setMarkdown("@\u0E2A\u0E21\u0E0A\u0E32\u0E22");
           await new Promise((r) => setTimeout(r, 150));
           atEnd();
@@ -170389,7 +173443,7 @@ ${css}
           }
         }
         {
-          S9.homeThumb = 220;
+          S10.homeThumb = 220;
           applySettings();
           check2(
             "#12 \u0E15\u0E31\u0E49\u0E07\u0E02\u0E19\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E43\u0E19 settings \u0E44\u0E14\u0E49 (--home-thumb)",
@@ -170418,7 +173472,7 @@ ${css}
             );
           }
           ovHome.remove();
-          S9.homeThumb = 190;
+          S10.homeThumb = 190;
           applySettings();
         }
         {
@@ -173154,40 +176208,143 @@ ${css}
           );
         }
         {
+          const waitFor = async (fn, tries = 60, ms = 50) => {
+            for (let i5 = 0; i5 < tries; i5++) {
+              if (fn()) return true;
+              await new Promise((r) => setTimeout(r, ms));
+            }
+            return !!fn();
+          };
+          const clickWhen = async (sel) => {
+            await waitFor(() => !!$(sel));
+            const n2 = $(sel);
+            if (!n2) throw new Error("\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1B\u0E38\u0E48\u0E21: " + sel);
+            n2.click();
+          };
           check2(
             "[r3-5] \u0E41\u0E1C\u0E07 ai-analyzer \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 PANEL_DEFS",
             PANEL_DEFS.some((d) => d.id === "ai-analyzer")
           );
           check2("[r3-5] \u0E21\u0E35 element \u0E40\u0E08\u0E49\u0E32\u0E1A\u0E49\u0E32\u0E19\u0E43\u0E19 index.html", !!$("#ai-analyzer-panel"));
           check2(
-            "[r3-5] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 5 \u0E43\u0E1A\u0E04\u0E23\u0E1A\u0E15\u0E32\u0E21\u0E2A\u0E40\u0E1B\u0E01",
-            ANALYZER_CARDS.length === 5,
+            "[r3-5] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 11 \u0E0A\u0E19\u0E34\u0E14\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07",
+            ANALYZER_CARDS.length === 11,
             ANALYZER_CARDS.map((c) => c.id).join(",")
+          );
+          check2(
+            "[r3-5] \u0E25\u0E33\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E2A\u0E40\u0E1B\u0E01 1-11",
+            ANALYZER_CARDS.map((c) => c.id).join(",") === "pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime"
+          );
+          check2(
+            "[r3-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E2B\u0E25\u0E38\u0E14\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E32\u0E23\u0E4C\u0E14",
+            !ANALYZER_CARDS.some((c) => c.title.startsWith("ui.") || c.desc.startsWith("ui.")),
+            ANALYZER_CARDS.filter((c) => c.title.startsWith("ui.")).map((c) => c.id).join(",")
           );
           showPanel("ai-analyzer");
           await renderFeaturePanel("ai-analyzer");
-          await new Promise((r) => setTimeout(r, 250));
           const aiaHost = $("#ai-analyzer-body");
+          await waitFor(() => aiaHost.querySelectorAll(".aia-card").length === 11);
           check2("[r3-5] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E27\u0E32\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E08\u0E23\u0E34\u0E07", !!aiaHost.querySelector(".aia-wrap"));
           check2(
-            "[r3-5] \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 5 \u0E43\u0E1A",
-            aiaHost.querySelectorAll(".aia-card").length === 5,
+            "[r3-5] \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 11 \u0E43\u0E1A",
+            aiaHost.querySelectorAll(".aia-card").length === 11,
             aiaHost.querySelectorAll(".aia-card").length
           );
           const aiaTxt = aiaHost.textContent;
-          for (const kw of ["\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07", "\u0E2A\u0E48\u0E27\u0E19\u0E42\u0E04\u0E49\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23", "\u0E04\u0E33\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1A\u0E48\u0E2D\u0E22", "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07", "\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01"]) {
+          for (const kw of [
+            "\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+            "\u0E2A\u0E48\u0E27\u0E19\u0E42\u0E04\u0E49\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+            "\u0E04\u0E33\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1A\u0E48\u0E2D\u0E22",
+            "\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07",
+            "\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01",
+            "Plot Hole",
+            "\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E2D\u0E14\u0E04\u0E25\u0E49\u0E2D\u0E07",
+            "\u0E04\u0E33\u0E0B\u0E49\u0E33",
+            "\u0E04\u0E39\u0E48\u0E08\u0E34\u0E49\u0E19",
+            "\u0E43\u0E2B\u0E49\u0E04\u0E30\u0E41\u0E19\u0E19",
+            "Screentime"
+          ]) {
             check2('[r3-5] \u0E01\u0E32\u0E23\u0E4C\u0E14 "' + kw + '" \u0E41\u0E2A\u0E14\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E07', aiaTxt.includes(kw));
           }
           check2(
-            "[r3-5] \u0E1A\u0E2D\u0E01\u0E0A\u0E31\u0E14\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E32 (\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E1C\u0E25\u0E08\u0E23\u0E34\u0E07)",
-            !!aiaHost.querySelector(".aia-badge")
+            "[r3-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E41\u0E1C\u0E07",
+            !/ui\.[a-z]+\.[A-Za-z]/.test(aiaTxt),
+            (aiaTxt.match(/ui\.[a-z]+\.[A-Za-z0-9_]+/) || [""])[0]
           );
+          check2('[r3-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19" \u0E41\u0E25\u0E49\u0E27', !aiaHost.querySelector(".aia-badge"));
+          const scopeBtns = [...aiaHost.querySelectorAll(".aia-scope-btn")];
+          check2(
+            "[r3-5] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15 4 \u0E23\u0E30\u0E14\u0E31\u0E1A",
+            scopeBtns.length === 4,
+            scopeBtns.map((b) => b.dataset.scope).join(",")
+          );
+          check2(
+            "[r3-5] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
+            scopeBtns[0].dataset.scope === "project" && scopeBtns[0].classList.contains("on")
+          );
+          check2("[r3-5] \u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E22\u0E48\u0E2D\u0E22", !aiaHost.querySelector(".aia-scope-sel"));
+          const st5 = await analyzerStats();
+          check2("[r3-5] \u0E19\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49 > 0", st5.scenes > 0, JSON.stringify(st5));
           check2(
             "[r3-5] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E34\u0E15\u0E34\u0E2D\u0E48\u0E32\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E08\u0E23\u0E34\u0E07\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
             aiaHost.querySelectorAll(".aia-stat").length === 5
           );
-          const st5 = await analyzerStats();
-          check2("[r3-5] \u0E19\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49 > 0", st5.scenes > 0, JSON.stringify(st5));
+          scopeBtns.find((b) => b.dataset.scope === "chapter").click();
+          await waitFor(() => !!$("#ai-analyzer-body .aia-scope-sel"));
+          const chSel = $("#ai-analyzer-body .aia-scope-sel");
+          check2(
+            '[r3-5] \u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1A\u0E17" \u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E17',
+            !!chSel && chSel.options.length > 0,
+            chSel ? chSel.options.length : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+          );
+          check2(
+            "[r3-5] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E34\u0E14\u0E2A\u0E16\u0E32\u0E19\u0E30 on",
+            $('#ai-analyzer-body .aia-scope-btn[data-scope="chapter"]').classList.contains("on")
+          );
+          const chScenes = (await collectScenes()).filter((x) => x.chapterId === chSel.value).length;
+          check2(
+            "[r3-5] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1A\u0E2D\u0E01\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E19\u0E31\u0E1A\u0E09\u0E32\u0E01\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            $("#ai-analyzer-body .aia-scope-line").textContent.includes(String(chScenes)),
+            $("#ai-analyzer-body .aia-scope-line").textContent + " | \u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 " + chScenes
+          );
+          const rLen = await runAnalysis("length");
+          check2(
+            "[r3-5] \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49\u0E1C\u0E25\u0E08\u0E23\u0E34\u0E07",
+            !!rLen && !rLen.error && rLen.local.rows.length === chScenes,
+            JSON.stringify(rLen && rLen.local && rLen.local.stats)
+          );
+          check2("[r3-5] \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u2192 \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49\u0E1C\u0E25\u0E0A\u0E31\u0E49\u0E19\u0E04\u0E33\u0E19\u0E27\u0E13\u0E40\u0E2D\u0E07 (ai = null)", rLen.ai === null);
+          const lenCard = $('#ai-analyzer-body .aia-card[data-card="length"] .aia-result');
+          check2("[r3-5] \u0E1C\u0E25\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E25\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E02\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E19\u0E31\u0E49\u0E19", !!lenCard && !!lenCard.querySelector(".aia-bars"));
+          check2("[r3-5] \u0E21\u0E35\u0E04\u0E33\u0E43\u0E1A\u0E49\u0E27\u0E48\u0E32\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14 AI", !!lenCard.querySelector(".aia-hint"));
+          const lenCS = getComputedStyle(lenCard);
+          check2(
+            "[r3-5] \u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A/\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19)",
+            lenCS.display !== "none" && lenCS.visibility !== "hidden" && +lenCS.opacity > 0.5 && lenCard.getBoundingClientRect().height > 0,
+            lenCS.display + "/" + lenCS.visibility + "/" + lenCS.opacity
+          );
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="scene"]');
+          await waitFor(() => !!$("#ai-analyzer-body .aia-scope-sel"));
+          const rOne = await runAnalysis("length");
+          check2(
+            "[r3-5] \u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E09\u0E32\u0E01 \u2192 \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E09\u0E32\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27",
+            !!rOne && rOne.scenes === 1,
+            rOne && rOne.scenes
+          );
+          check2(
+            "[r3-5] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E41\u0E25\u0E49\u0E27\u0E1C\u0E25\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E01\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
+            rOne.local.rows.length === 1 && rLen.local.rows.length === chScenes
+          );
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="project"]');
+          await waitFor(() => !$("#ai-analyzer-body .aia-scope-sel"));
+          for (const id of ["pacing", "words", "conflict", "repeat", "screentime", "score"]) {
+            const r = await runAnalysis(id);
+            check2(
+              '[r3-5] \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C "' + id + '" \u0E04\u0E37\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E08\u0E23\u0E34\u0E07',
+              !!r && !r.error && Array.isArray(r.local.stats) && r.local.stats.length > 0,
+              r && r.error
+            );
+          }
           check2(
             "[r3-5] \u0E1B\u0E38\u0E48\u0E21 toolbar #tb-ai-analyzer \u0E21\u0E35\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E15\u0E34\u0E14 .on \u0E15\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E34\u0E14",
             !!$("#tb-ai-analyzer") && (refreshToolbar(), $("#tb-ai-analyzer").classList.contains("on"))
@@ -173195,6 +176352,142 @@ ${css}
           hidePanel("ai-analyzer");
           refreshToolbar();
           check2("[r3-5] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14 .on", !$("#tb-ai-analyzer").classList.contains("on"));
+        }
+        {
+          const waitFor = async (fn, tries = 60, ms = 50) => {
+            for (let i5 = 0; i5 < tries; i5++) {
+              if (fn()) return true;
+              await new Promise((r) => setTimeout(r, ms));
+            }
+            return !!fn();
+          };
+          const clickWhen = async (sel) => {
+            await waitFor(() => !!$(sel));
+            const n2 = $(sel);
+            if (!n2) throw new Error("\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1B\u0E38\u0E48\u0E21: " + sel);
+            n2.click();
+          };
+          const settled = async (extra) => waitFor(() => document.querySelectorAll("#ai-analyzer-body .aia-card").length === 11 && !!$("#aia-usage") && (!extra || extra()));
+          showPanel("ai-analyzer");
+          await renderFeaturePanel("ai-analyzer");
+          await settled();
+          check2("[89r] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E1A\u0E19\u0E41\u0E1C\u0E07", !!$("#aia-ai-settings"));
+          check2(
+            "[89r] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19/\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 CSV",
+            !!$("#aia-save-session") && !!$("#aia-open-session") && !!$("#aia-export-csv")
+          );
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          await clickWhen("#aia-ai-settings");
+          const gotDlg = await waitFor(() => !!$(".k-ai-settings"));
+          check2("[89r] \u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", gotDlg);
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          await waitFor(() => !$(".k-ai-settings"));
+          check2("[89r] \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E1A\u0E19\u0E08\u0E2D", !$(".k-ai-settings"));
+          await renderFeaturePanel("ai-analyzer");
+          await settled();
+          const uline = $("#aia-usage");
+          check2("[89r] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E42\u0E17\u0E40\u0E04\u0E19\u0E1A\u0E19\u0E41\u0E1C\u0E07", !!uline);
+          check2(
+            "[89r] \u0E1A\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E01\u0E32\u0E23\u0E01\u0E48\u0E2D\u0E19\u0E43\u0E0A\u0E49 (\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07 11 \u0E0A\u0E19\u0E34\u0E14)",
+            !!uline.querySelector(".aia-usage-before") && /\d/.test(uline.querySelector(".aia-usage-before").textContent),
+            uline.textContent
+          );
+          check2(
+            "[89r] \u0E1A\u0E2D\u0E01\u0E22\u0E2D\u0E14\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27 (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u2192 \u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E23\u0E35\u0E22\u0E01)",
+            !!uline.querySelector(".aia-usage-after"),
+            uline.textContent
+          );
+          const estChips = document.querySelectorAll("#ai-analyzer-body .aia-chip-est");
+          check2("[89r] \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E42\u0E17\u0E40\u0E04\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07", estChips.length === 11, estChips.length);
+          check2(
+            "[89r] \u0E0A\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E08\u0E33\u0E19\u0E27\u0E19\u0E42\u0E17\u0E40\u0E04\u0E19\u0E41\u0E25\u0E30\u0E23\u0E32\u0E04\u0E32",
+            /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes("$"),
+            estChips[0].textContent
+          );
+          const estProject = estChips[0].textContent;
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="scene"]');
+          await settled(() => !!$("#ai-analyzer-body .aia-scope-sel"));
+          const numOf = (s) => Number(String(s).replace(/[^0-9]/g, "").slice(0, 8)) || 0;
+          check2(
+            "[89r] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E01\u0E32\u0E23\u0E25\u0E14\u0E25\u0E07",
+            numOf(document.querySelectorAll("#ai-analyzer-body .aia-chip-est")[0].textContent) < numOf(estProject),
+            document.querySelectorAll("#ai-analyzer-body .aia-chip-est")[0].textContent + " vs " + estProject
+          );
+          await clickWhen('#ai-analyzer-body .aia-scope-btn[data-scope="project"]');
+          await settled(() => !$("#ai-analyzer-body .aia-scope-sel"));
+          await clickWhen("#aia-use-ai");
+          await settled(() => document.querySelectorAll("#ai-analyzer-body .aia-chip-est").length === 0);
+          check2("[89r] \u0E1B\u0E34\u0E14 AI \u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E42\u0E17\u0E40\u0E04\u0E19", document.querySelectorAll("#ai-analyzer-body .aia-chip-est").length === 0);
+          check2(
+            "[89r] \u0E1B\u0E34\u0E14 AI \u0E41\u0E25\u0E49\u0E27\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E48\u0E32\u0E43\u0E0A\u0E49\u0E08\u0E48\u0E32\u0E22",
+            $("#aia-usage").textContent.includes("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E48\u0E32\u0E43\u0E0A\u0E49\u0E08\u0E48\u0E32\u0E22"),
+            $("#aia-usage").textContent
+          );
+          await clickWhen("#aia-use-ai");
+          await settled(() => document.querySelectorAll("#ai-analyzer-body .aia-chip-est").length === 11);
+          await runAnalysis("length");
+          await runAnalysis("words");
+          const sv = await saveSession("\u0E40\u0E17\u0E2A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19");
+          check2("[89r] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E44\u0E14\u0E49", !!sv && !!sv.file, JSON.stringify(sv && sv.session && sv.session.id));
+          const anaDir = await kapi.join(state.root, "Analysis");
+          check2("[89r] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Analysis)", await kapi.exists(anaDir));
+          check2("[89r] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C", await kapi.exists(sv.file), sv.file);
+          const rawSess = await kapi.readJson(sv.file);
+          check2(
+            "[89r] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E1C\u0E25\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E17\u0E35\u0E48\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E44\u0E27\u0E49",
+            !!rawSess.results.length && !!rawSess.results.words,
+            Object.keys(rawSess.results || {}).join()
+          );
+          check2("[89r] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E44\u0E27\u0E49\u0E14\u0E49\u0E27\u0E22", rawSess.scope && rawSess.scope.kind === "project");
+          const sessRows = await listSessions();
+          check2(
+            "[89r] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
+            sessRows.some((r) => r.name === "\u0E40\u0E17\u0E2A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19"),
+            sessRows.map((r) => r.name).join()
+          );
+          resetAnalyzer();
+          await renderFeaturePanel("ai-analyzer");
+          await settled();
+          check2("[89r] \u0E25\u0E49\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1C\u0E25\u0E04\u0E49\u0E32\u0E07", Object.keys(currentResults()).length === 0);
+          await openSession((await listSessions()).find((r) => r.name === "\u0E40\u0E17\u0E2A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19"));
+          const savedKeys = Object.keys(rawSess.results).sort().join();
+          check2(
+            "[89r] \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E1C\u0E25\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49",
+            Object.keys(currentResults()).sort().join() === savedKeys,
+            Object.keys(currentResults()).sort().join() + " vs " + savedKeys
+          );
+          check2(
+            "[89r] \u0E1C\u0E25\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E14\u0E49\u0E27\u0E22",
+            !!currentResults().length && !!currentResults().words
+          );
+          await renderFeaturePanel("ai-analyzer");
+          await waitFor(() => !!$('#ai-analyzer-body .aia-card[data-card="length"] .aia-bars'));
+          check2(
+            "[89r] \u0E1C\u0E25\u0E08\u0E32\u0E01\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E08\u0E23\u0E34\u0E07",
+            !!$('#ai-analyzer-body .aia-card[data-card="length"] .aia-bars')
+          );
+          const csvPath2 = await kapi.join(state.root, "ana-test.csv");
+          const wrote = await exportAllCsv(csvPath2);
+          check2("[89r] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 CSV \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", wrote === csvPath2 && await kapi.exists(csvPath2));
+          const csvTxt = await kapi.readFile(csvPath2);
+          check2("[89r] CSV \u0E02\u0E36\u0E49\u0E19\u0E15\u0E49\u0E19\u0E14\u0E49\u0E27\u0E22 BOM (Excel \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E17\u0E22\u0E2D\u0E2D\u0E01)", csvTxt.charCodeAt(0) === 65279);
+          check2(
+            "[89r] CSV \u0E21\u0E35\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49",
+            csvTxt.includes("\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E09\u0E32\u0E01") && csvTxt.includes("\u0E04\u0E33\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1A\u0E48\u0E2D\u0E22")
+          );
+          check2("[89r] CSV \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07", csvTxt.includes("\u0E19\u0E32\u0E17\u0E35") && csvTxt.includes("\u0E15\u0E48\u0E2D\u0E2B\u0E21\u0E37\u0E48\u0E19\u0E04\u0E33"));
+          check2("[89r] CSV \u0E02\u0E36\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E14\u0E49\u0E27\u0E22 CRLF", !/[^\r]\n/.test(csvTxt));
+          check2(
+            "[89r] \u0E1C\u0E25\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E22\u0E34\u0E07 AI \u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07",
+            analyzerDirtyList().length === 0,
+            analyzerDirtyList().map((x) => x.title).join()
+          );
+          allDirtyList();
+          check2('[89r] \u0E41\u0E2B\u0E25\u0E48\u0E07\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 "analysis" \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27', dirtyRegistry.has("analysis"));
+          await kapi.remove(csvPath2);
+          await kapi.remove(sv.file);
+          hidePanel("ai-analyzer");
+          refreshToolbar();
         }
         {
           check2("[r3-6] >> \u0E17\u0E23\u0E32\u0E19\u0E0B\u0E34\u0E0A\u0E31\u0E19\u0E2D\u0E2D\u0E01 \u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19", prefixLen(">> CUT TO:") === 3);
@@ -173571,16 +176864,16 @@ ${css}
           [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
         }
       }
-      const S8 = state.settings;
+      const S9 = state.settings;
       {
         check2(
           '[61-1] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D "\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E30 "\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01"',
           GLOBAL_DEFAULTS.openLastProject === false && GLOBAL_DEFAULTS.showHomeOnStartup === false,
           JSON.stringify([GLOBAL_DEFAULTS.openLastProject, GLOBAL_DEFAULTS.showHomeOnStartup])
         );
-        const keepA = S8.openLastProject, keepB = S8.showHomeOnStartup;
+        const keepA = S9.openLastProject, keepB = S9.showHomeOnStartup;
         await toggleOpenLastProject(true);
-        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S8.openLastProject === true);
+        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S9.openLastProject === true);
         const g1 = await bootGlobalSettings();
         check2(
           "[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 global settings (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
@@ -173588,15 +176881,15 @@ ${css}
           JSON.stringify(g1.openLastProject)
         );
         await toggleOpenLastProject(false);
-        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S8.openLastProject === false);
+        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S9.openLastProject === false);
         await toggleShowHomeAlways(true);
         check2(
           '[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E2A\u0E21\u0E2D" \u0E17\u0E33\u0E07\u0E32\u0E19\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01',
-          S8.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
+          S9.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
         );
         await toggleShowHomeAlways(false);
-        S8.openLastProject = keepA;
-        S8.showHomeOnStartup = keepB;
+        S9.openLastProject = keepA;
+        S9.showHomeOnStartup = keepB;
       }
       {
         const scEl = document.querySelector("#tree .scene:not(.add-row)");
@@ -173716,7 +177009,7 @@ ${css}
         );
       }
       {
-        const keepFC = S8.spForceCase;
+        const keepFC = S9.spForceCase;
         toggleSpCase("spForceCase", false);
         const cssOff = document.getElementById("k-sp-format").textContent;
         check2(
@@ -173730,12 +177023,12 @@ ${css}
           /text-transform:uppercase/.test(document.getElementById("k-sp-format").textContent)
         );
         toggleSpCase("spAutoCapitalize", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S8.spAutoCapitalize === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S9.spAutoCapitalize === false);
         toggleSpCase("spAutoCapitalize", true);
         toggleSpCase("spAutoCorrectI", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S8.spAutoCorrectI === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S9.spAutoCorrectI === false);
         toggleSpCase("spAutoCorrectI", true);
-        S8.spForceCase = keepFC;
+        S9.spForceCase = keepFC;
       }
       {
         const AP = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
@@ -173896,7 +177189,7 @@ ${css}
         );
         const stNew = _chatState();
         stNew.cur = AS.addMessage(stNew.cur, AS.newMessage("user", "\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E41\u0E23\u0E01\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19"));
-        await saveSession(stNew.cur);
+        await saveSession2(stNew.cur);
         check2("[61-2] \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Sessions/ \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", await kapi.exists(sdir));
         const sfiles = await kapi.listFiles(sdir);
         check2(
@@ -176157,10 +179450,10 @@ ${css}
           CAPS_ELEMENTS.includes("character") && CAPS_ELEMENTS.includes("scene"),
           CAPS_ELEMENTS.join(",")
         );
-        const keepStyles = JSON.parse(JSON.stringify(S8.spStyles || {}));
-        const keepFC11 = S8.spForceCase;
-        S8.spForceCase = true;
-        S8.spStyles = {};
+        const keepStyles = JSON.parse(JSON.stringify(S9.spStyles || {}));
+        const keepFC11 = S9.spForceCase;
+        S9.spForceCase = true;
+        S9.spStyles = {};
         applySettings();
         check2("[62-11] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19: \u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E2B\u0E0D\u0E48", elementCaps(spFormat(), "character"));
         toggleElementCaps("character", false);
@@ -176177,14 +179470,14 @@ ${css}
         );
         toggleElementCaps("character", true);
         check2("[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", elementCaps(spFormat(), "character"));
-        S8.spForceCase = false;
+        S9.spForceCase = false;
         applySettings();
         check2("[62-11] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 = \u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E25\u0E34\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A", !elementCaps(spFormat(), "scene"));
         toggleElementCaps("scene", true);
         check2(
           "[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E19\u0E34\u0E14\u0E02\u0E13\u0E30\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 \u2192 \u0E1B\u0E25\u0E38\u0E01\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
-          S8.spForceCase !== false && elementCaps(spFormat(), "scene"),
-          String(S8.spForceCase)
+          S9.spForceCase !== false && elementCaps(spFormat(), "scene"),
+          String(S9.spForceCase)
         );
         const src11 = {};
         const out11 = setElementCaps(src11, "character", false);
@@ -176192,8 +179485,8 @@ ${css}
           "[62-11] setElementCaps \u0E04\u0E37\u0E19 object \u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
           Object.keys(src11).length === 0 && out11.character.screen.caps === false
         );
-        S8.spStyles = keepStyles;
-        S8.spForceCase = keepFC11;
+        S9.spStyles = keepStyles;
+        S9.spForceCase = keepFC11;
         applySettings();
       }
       {
@@ -177016,8 +180309,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md14.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md14.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md15.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md15.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -178635,6 +181928,508 @@ ${css}
         hidePanel("dlgb");
         check2("[82-8] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E44\u0E14\u0E49", !isPanelOpen("dlgb"));
       }
+      {
+        const VU = await Promise.resolve().then(() => (init_vis_ui(), vis_ui_exports));
+        const VCx = await Promise.resolve().then(() => (init_vis_core(), vis_core_exports));
+        const VP = await Promise.resolve().then(() => (init_vis_player(), vis_player_exports));
+        const waitV = (ms) => new Promise((r) => setTimeout(r, ms));
+        const paneV = () => state.tabs.get(keyV).pane;
+        const stV_ = () => state.tabs.get(keyV).visState;
+        const dPathV = await kapi.join(state.root, "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07", "Draft", "default");
+        const chDirV = await kapi.join(dPathV, "Chapters", "01 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07");
+        const scPathV = await kapi.join(chDirV, "scene-01.md");
+        const spPathV = await kapi.join(chDirV, "scene-02.md");
+        const visPathV = await VU.visPathOf(scPathV);
+        const keyV = "::vis::" + scPathV;
+        check2(
+          "[V-1] \u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E23\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E49\u0E32\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01 \u0E0A\u0E37\u0E48\u0E2D <\u0E09\u0E32\u0E01>_vis.csv",
+          visPathV === await kapi.join(chDirV, "scene-01_vis.csv"),
+          visPathV
+        );
+        check2("[V-1] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C \u2192 hasVis \u0E40\u0E1B\u0E47\u0E19\u0E40\u0E17\u0E47\u0E08", await VU.hasVis(scPathV) === false);
+        await openScene(scPathV, "\u0E15\u0E25\u0E32\u0E14\u0E40\u0E01\u0E48\u0E32");
+        await waitV(250);
+        const tbVis = $("#tb-visual");
+        check2('[V-2] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E" \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D', !!tbVis);
+        refreshToolbar();
+        check2("[V-2] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E14\u0E44\u0E14\u0E49", tbVis && !tbVis.classList.contains("dis"));
+        tbVis.click();
+        await waitV(700);
+        check2(
+          "[V-2] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E1F\u0E25\u0E4C + \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A",
+          await kapi.exists(visPathV) && state.tabs.has(keyV)
+        );
+        check2(
+          "[V-2] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E04\u0E37\u0E2D\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48 active",
+          !!state.active && state.active.file === keyV,
+          state.active && state.active.file
+        );
+        check2(
+          "[V-2] \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E21\u0E35 BOM (Excel \u0E44\u0E17\u0E22\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19)",
+          (await kapi.readFile(visPathV)).charCodeAt(0) === 65279
+        );
+        await buildTree2();
+        const vRowV = [...document.querySelectorAll("#tree .vis-row")].find((r) => r.dataset.path === scPathV);
+        check2('[V-3] \u0E41\u0E16\u0E27 "\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E" \u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19 Explorer \u0E43\u0E15\u0E49\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C', !!vRowV);
+        if (vRowV) {
+          const csV = getComputedStyle(vRowV), bxV = vRowV.getBoundingClientRect();
+          check2(
+            "[V-3] \u2605 \u0E41\u0E16\u0E27\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (opacity+visibility+\u0E02\u0E19\u0E32\u0E14)",
+            csV.display !== "none" && csV.visibility !== "hidden" && parseFloat(csV.opacity || "1") > 0.05 && bxV.width > 0 && bxV.height > 0,
+            csV.display + "/" + csV.visibility + "/" + csV.opacity + "/" + bxV.width + "x" + bxV.height
+          );
+        }
+        check2(
+          "[V-3] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27\u0E25\u0E39\u0E01",
+          ![...document.querySelectorAll("#tree .vis-row")].some((r) => r.dataset.path === spPathV)
+        );
+        check2("[V-4] \u0E41\u0E15\u0E01\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49", stV_().lines.length >= 4, stV_().lines.length);
+        check2("[V-4] \u0E15\u0E32\u0E23\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E27\u0E48\u0E32\u0E07 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E2D\u0E07)", stV_().rows.length === 0);
+        check2("[V-4] \u0E15\u0E32\u0E23\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32\u0E42\u0E0A\u0E27\u0E4C\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E27\u0E48\u0E32\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27", !!paneV().querySelector(".vis-empty"));
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        const pV = VU.pickLinesDialog(stV_());
+        await waitV(80);
+        const dlgV = [...document.querySelectorAll(".k-dialog.vis-pick")].pop();
+        check2("[V-5] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E1B\u0E34\u0E14\u0E02\u0E36\u0E49\u0E19", !!dlgV);
+        const cbsV = dlgV ? [...dlgV.querySelectorAll(".vis-pick-row input")] : [];
+        check2(
+          "[V-5] \u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E23\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01",
+          cbsV.length === stV_().lines.length,
+          cbsV.length + "/" + stV_().lines.length
+        );
+        cbsV[0].checked = true;
+        cbsV[0].dispatchEvent(new Event("change"));
+        cbsV[1].checked = true;
+        cbsV[1].dispatchEvent(new Event("change"));
+        dlgV.querySelector(".k-ok").click();
+        await pV;
+        await waitV(250);
+        check2("[V-6] \u0E44\u0E14\u0E49 2 \u0E41\u0E16\u0E27\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E34\u0E4A\u0E01", stV_().rows.length === 2, stV_().rows.length);
+        check2("[V-6] \u0E40\u0E25\u0E02\u0E25\u0E33\u0E14\u0E31\u0E1A 1,2", stV_().rows[0].no === 1 && stV_().rows[1].no === 2);
+        check2(
+          "[V-6] \u0E41\u0E16\u0E27\u0E1E\u0E01\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22",
+          stV_().rows[0].text === stV_().lines[0].text && stV_().rows[1].text === stV_().lines[1].text
+        );
+        const diskV = VCx.parseVis(await kapi.readFile(visPathV));
+        check2("[V-6] \u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E31\u0E19\u0E17\u0E35 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07 (\u0E01\u0E0E\u0E02\u0E49\u0E2D 1)", diskV.length === 2, diskV.length);
+        check2("[V-6] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E1A\u0E19\u0E08\u0E2D", diskV[1].text === stV_().rows[1].text);
+        const tblV = paneV().querySelector(".vis-table");
+        check2("[V-7] \u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07 grid", !!tblV);
+        const colsShownV = VCx.visibleCols(state.meta && state.meta.visColumns);
+        check2('[V-7] \u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C "\u0E09\u0E32\u0E01" \u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19', !colsShownV.includes("scene"));
+        check2("[V-7] \u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23/\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49 (\u0E02\u0E49\u0E2D 2)", colsShownV.includes("entities"));
+        check2(
+          "[V-7] \u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07 = \u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14 + \u0E23\u0E32\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E31\u0E27\u0E17\u0E49\u0E32\u0E22",
+          tblV.querySelectorAll(".vis-th").length === colsShownV.length + 2,
+          tblV.querySelectorAll(".vis-th").length + "/" + (colsShownV.length + 2)
+        );
+        const gridCols = tblV.style.gridTemplateColumns.trim().split(/\s+/);
+        check2(
+          "[V-8] \u2605 \u0E23\u0E32\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E41\u0E23\u0E01\u0E2A\u0E38\u0E14",
+          !!tblV.querySelector(".vis-th-move") && tblV.children[0].classList.contains("vis-th-move"),
+          [...tblV.children].slice(0, 3).map((c) => c.className).join(" | ")
+        );
+        check2(
+          "[V-8] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E49\u0E32\u0E22\u0E2A\u0E38\u0E14 \u0E2B\u0E25\u0E31\u0E07\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C",
+          tblV.children[colsShownV.length + 1].classList.contains("vis-th-del"),
+          (tblV.children[colsShownV.length + 1] || {}).className
+        );
+        const mvCell = tblV.querySelector(".vis-td-move");
+        check2("[V-8] \u0E23\u0E32\u0E07 \u25B2\u25BC \u0E21\u0E35\u0E2A\u0E2D\u0E07\u0E1B\u0E38\u0E48\u0E21", mvCell && mvCell.querySelectorAll(".vis-mini").length === 2);
+        {
+          const csMv = getComputedStyle(mvCell);
+          check2("[V-8] \u2605 \u25B2\u25BC \u0E40\u0E23\u0E35\u0E22\u0E07\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07 (\u0E2A\u0E2D\u0E07\u0E41\u0E16\u0E27)", csMv.flexDirection === "column", csMv.flexDirection);
+        }
+        check2("[V-8] \u0E41\u0E16\u0E27\u0E41\u0E23\u0E01\u0E01\u0E14\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E02\u0E36\u0E49\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", mvCell.querySelector(".vis-up").disabled === true);
+        check2("[V-9] \u2605 \u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E01\u0E34\u0E19 1000px", parseFloat(tblV.style.width) > 1e3, tblV.style.width);
+        {
+          const bodyV = paneV().querySelector(".vis-body");
+          check2(
+            "[V-9] \u2605 \u0E01\u0E23\u0E2D\u0E1A\u0E15\u0E32\u0E23\u0E32\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E14\u0E31\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E19\u0E49\u0E32)",
+            getComputedStyle(bodyV).overflowX !== "visible" && bodyV.scrollWidth > bodyV.clientWidth,
+            getComputedStyle(bodyV).overflowX + " " + bodyV.scrollWidth + ">" + bodyV.clientWidth
+          );
+        }
+        const firstTextV = stV_().rows[0].text;
+        tblV.querySelector(".vis-td-move .vis-down").click();
+        await waitV(250);
+        check2(
+          "[V-10] \u2605 \u0E22\u0E49\u0E32\u0E22\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E25\u0E31\u0E1A\u0E08\u0E23\u0E34\u0E07",
+          stV_().rows[1].text === firstTextV,
+          stV_().rows[1].text.slice(0, 20)
+        );
+        check2("[V-10] \u0E40\u0E25\u0E02\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48", stV_().rows[0].no === 1 && stV_().rows[1].no === 2);
+        check2(
+          "[V-10] \u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27",
+          VCx.parseVis(await kapi.readFile(visPathV))[1].text === firstTextV
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        const pE = VU.pickLinesDialog(stV_(), 0);
+        await waitV(80);
+        const dlgE = [...document.querySelectorAll(".k-dialog.vis-pick")].pop();
+        const cbsE = [...dlgE.querySelectorAll(".vis-pick-row input")];
+        check2("[V-11] \u0E41\u0E01\u0E49\u0E01\u0E32\u0E23\u0E1C\u0E39\u0E01: \u0E40\u0E2B\u0E47\u0E19\u0E17\u0E38\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01", cbsE.length === stV_().lines.length);
+        check2(
+          "[V-11] \u2605 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E41\u0E16\u0E27\u0E19\u0E35\u0E49\u0E1C\u0E39\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E39\u0E01\u0E15\u0E34\u0E4A\u0E01\u0E44\u0E27\u0E49\u0E43\u0E2B\u0E49\u0E41\u0E25\u0E49\u0E27",
+          cbsE.filter((c) => c.checked).length === 1,
+          cbsE.filter((c) => c.checked).length
+        );
+        const addIdx = cbsE.findIndex((c) => !c.checked);
+        cbsE[addIdx].checked = true;
+        cbsE[addIdx].dispatchEvent(new Event("change"));
+        dlgE.querySelector(".k-ok").click();
+        await pE;
+        await waitV(250);
+        const resE = VCx.resolveRow(stV_().rows[0], stV_().lines);
+        check2("[V-11] \u2605 \u0E2B\u0E19\u0E36\u0E48\u0E07\u0E41\u0E16\u0E27\u0E1C\u0E39\u0E01\u0E44\u0E14\u0E49 2 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14", resE.live.length === 2, resE.live.length);
+        check2(
+          "[V-11] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E01\u0E47\u0E1A\u0E2A\u0E2D\u0E07\u0E2A\u0E21\u0E2D",
+          VCx.parseRefs(VCx.parseVis(await kapi.readFile(visPathV))[0].ref).length === 2
+        );
+        check2(
+          "[V-11] \u0E0A\u0E48\u0E2D\u0E07 action \u0E27\u0E32\u0E14\u0E2A\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32",
+          paneV().querySelectorAll(".vis-td-text .vis-line").length >= 3,
+          paneV().querySelectorAll(".vis-td-text .vis-line").length
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        const pR = VU.pickLinesDialog(stV_(), 0);
+        await waitV(80);
+        const dlgR = [...document.querySelectorAll(".k-dialog.vis-pick")].pop();
+        const cbsR = [...dlgR.querySelectorAll(".vis-pick-row input")].filter((c) => c.checked);
+        cbsR[0].checked = false;
+        cbsR[0].dispatchEvent(new Event("change"));
+        dlgR.querySelector(".k-ok").click();
+        await pR;
+        await waitV(250);
+        check2(
+          "[V-11] \u2605 \u0E15\u0E34\u0E4A\u0E01\u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E34\u0E01\u0E1C\u0E39\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E19\u0E31\u0E49\u0E19",
+          VCx.resolveRow(stV_().rows[0], stV_().lines).live.length === 1
+        );
+        check2("[V-11] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E16\u0E27\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E25\u0E1A\u0E41\u0E16\u0E27)", stV_().rows.length === 2);
+        {
+          const toraF = await kapi.join(state.root, "Wiki", "characters", "tora.json");
+          await kapi.writeFile(toraF, JSON.stringify(
+            { name: "\u0E42\u0E17\u0E23\u0E30", entityTypeKey: "characters", aliases: [] },
+            null,
+            2
+          ));
+          await smart.loadNames(state.root);
+          check2("[V-12] \u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D Wiki \u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07", (smart.names || []).includes("\u0E42\u0E17\u0E23\u0E30"));
+          const iTora = stV_().lines.findIndex((l) => l.text.includes("\u0E42\u0E17\u0E23\u0E30"));
+          check2("[V-12] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E19\u0E35\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07", iTora >= 0);
+          VCx.bindRow(stV_().rows[0], stV_().lines, [iTora].filter((x) => x >= 0));
+          await kapi.writeFile(visPathV, VCx.dumpVis(stV_().rows));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          const entCell = paneV().querySelector(".vis-td-entities .vis-ents");
+          check2("[V-12] \u0E21\u0E35\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23/\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07", !!entCell);
+          const chips = entCell ? [...entCell.querySelectorAll(".vis-ent")] : [];
+          check2(
+            "[V-12] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01 Wiki \u0E17\u0E35\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E01 \u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E34\u0E1B",
+            chips.some((c) => c.textContent === "\u0E42\u0E17\u0E23\u0E30"),
+            chips.map((c) => c.textContent).join("|")
+          );
+          check2(
+            "[V-12] \u2605 \u0E0A\u0E34\u0E1B\u0E17\u0E35\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32 Wiki \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49 (\u0E02\u0E49\u0E2D 5)",
+            chips.some((c) => c.classList.contains("has-wiki"))
+          );
+        }
+        {
+          const th = paneV().querySelector(".vis-th-image");
+          check2("[V-13] \u0E2B\u0E31\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C frame \u0E21\u0E35\u0E21\u0E37\u0E2D\u0E08\u0E31\u0E1A\u0E25\u0E32\u0E01", !!th && !!th.querySelector(".vis-grip"));
+          check2("[V-13] \u0E0A\u0E37\u0E48\u0E2D\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19 frame \u0E41\u0E25\u0E49\u0E27", th.textContent.trim() === "frame", th.textContent);
+          check2(
+            "[V-13] \u0E0A\u0E37\u0E48\u0E2D\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19 action \u0E41\u0E25\u0E49\u0E27",
+            paneV().querySelector(".vis-th-text").textContent.trim() === "action"
+          );
+          const grip2 = th.querySelector(".vis-grip");
+          const r0 = th.getBoundingClientRect();
+          grip2.dispatchEvent(new MouseEvent("mousedown", { clientX: r0.right, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mousemove", { clientX: r0.right + 120, bubbles: true }));
+          document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+          await waitV(350);
+          const savedW = ((await kapi.readJson(await kapi.join(state.root, "project.khn.json"))).visColumns || []).find((c) => c.key === "image");
+          check2(
+            "[V-13] \u2605 \u0E25\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07",
+            paneV().querySelector(".vis-th-image").getBoundingClientRect().width > r0.width + 60,
+            r0.width + " \u2192 " + paneV().querySelector(".vis-th-image").getBoundingClientRect().width
+          );
+          check2(
+            "[V-13] \u2605 \u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 project.khn.json",
+            !!savedW && savedW.w > VCx.VIS_COL_W.image,
+            savedW && savedW.w
+          );
+        }
+        stV_().rows[0].image = "sunset.png";
+        await kapi.writeFile(visPathV, VCx.dumpVis(stV_().rows));
+        await VU.renderVisual(keyV);
+        await waitV(350);
+        {
+          const thumbV = paneV().querySelector(".vis-thumb");
+          check2(
+            "[V-14] \u0E23\u0E39\u0E1B\u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E20\u0E32\u0E1E\u0E08\u0E23\u0E34\u0E07",
+            !!thumbV && /sunset\.png$/.test(thumbV.src || ""),
+            thumbV ? String(thumbV.src).slice(-30) : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+          );
+          check2(
+            "[V-14] \u2605 \u0E23\u0E39\u0E1B\u0E01\u0E27\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 200px (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 thumbnail \u0E08\u0E34\u0E4B\u0E27)",
+            thumbV.getBoundingClientRect().width >= 200,
+            thumbV.getBoundingClientRect().width
+          );
+        }
+        try {
+          await kapi.testShot("/tmp/k2_vis_table.png");
+        } catch {
+        }
+        {
+          const wasLn = !!state.settings.lineNumbers;
+          state.settings.lineNumbers = true;
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check2(
+            "[V-15] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27\u0E42\u0E0A\u0E27\u0E4C\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E",
+            paneV().querySelectorAll(".vis-td-text .vis-lineno").length > 0,
+            paneV().querySelectorAll(".vis-td-text .vis-lineno").length
+          );
+          const lnEl = paneV().querySelector(".vis-td-text .vis-lineno");
+          const csLn = getComputedStyle(lnEl), bxLn = lnEl.getBoundingClientRect();
+          check2(
+            "[V-15] \u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+            csLn.display !== "none" && csLn.visibility !== "hidden" && parseFloat(csLn.opacity || "1") > 0.05 && bxLn.width > 0 && bxLn.height > 0
+          );
+          state.settings.lineNumbers = false;
+          await VU.renderVisual(keyV);
+          await waitV(250);
+          check2(
+            "[V-15] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E02\u0E2B\u0E32\u0E22\u0E44\u0E1B",
+            paneV().querySelectorAll(".vis-td-text .vis-lineno").length === 0
+          );
+          state.settings.lineNumbers = wasLn;
+        }
+        {
+          const wasLn = !!state.settings.lineNumbers;
+          const wf2 = await kapi.join(state.root, "Wiki", "characters", "cat.json");
+          const we = await kapi.readJson(wf2);
+          we.sections = [{ title: "\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34", content: "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07\n\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\n\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E32\u0E21" }];
+          await kapi.writeFile(wf2, JSON.stringify(we, null, 2));
+          await openEntity(wf2);
+          await waitV(600);
+          state.settings.lineNumbers = true;
+          applySettings();
+          const drawn = refreshLineGutter();
+          await waitV(200);
+          const wPane = state.active && state.active.pane;
+          check2(
+            "[V-16] \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32 Wiki \u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+            !!wPane && wPane.classList.contains("wiki-pane")
+          );
+          check2(
+            "[V-16] \u2605 Wiki \u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E02\u0E49\u0E32\u0E21\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E19\u0E49\u0E32)",
+            drawn > 0 && wPane.querySelectorAll(".wiki-ln-no").length > 0,
+            drawn + "/" + (wPane ? wPane.querySelectorAll(".wiki-ln-no").length : -1)
+          );
+          check2(
+            "[V-16] \u2605 \u0E41\u0E15\u0E48\u0E25\u0E30\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E19\u0E31\u0E1A\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48 1 \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E19\u0E31\u0E1A\u0E23\u0E27\u0E21\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E19\u0E49\u0E32)",
+            [...wPane.querySelectorAll(".wiki-sec-ed")].every((b) => {
+              const ns = [...b.querySelectorAll(".wiki-ln-no")].map((d) => d.textContent);
+              return !ns.length || ns[0] === "1";
+            })
+          );
+          {
+            const d0 = wPane.querySelector(".wiki-ln-no");
+            const cs0 = getComputedStyle(d0), bx0 = d0.getBoundingClientRect();
+            check2(
+              "[V-16] \u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 Wiki \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+              cs0.display !== "none" && cs0.visibility !== "hidden" && parseFloat(cs0.opacity || "1") > 0.05 && bx0.width > 0 && bx0.height > 0
+            );
+          }
+          state.settings.lineNumbers = false;
+          applySettings();
+          refreshLineGutter();
+          await waitV(150);
+          check2("[V-16] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E02\u0E43\u0E19 Wiki \u0E2B\u0E32\u0E22\u0E44\u0E1B", wPane.querySelectorAll(".wiki-ln-no").length === 0);
+          state.settings.lineNumbers = wasLn;
+          applySettings();
+          await activate(keyV);
+          await waitV(200);
+        }
+        {
+          const rawV = await kapi.readFile(scPathV);
+          await kapi.writeFile(scPathV, rawV.replace("\u0E04\u0E48\u0E33\u0E27\u0E31\u0E19\u0E19\u0E31\u0E49\u0E19", "\u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19"));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          const resV = VCx.resolveAll(stV_().rows, stV_().lines);
+          check2(
+            "[V-17] \u2605 \u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E41\u0E01\u0E49 \u2192 \u0E2A\u0E16\u0E32\u0E19\u0E30 changed (\u0E44\u0E21\u0E48\u0E25\u0E1A \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)",
+            resV.some((r) => r.status === "changed"),
+            resV.map((r) => r.status).join(",")
+          );
+          check2("[V-17] \u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15", !!paneV().querySelector(".vis-warn"));
+          const syncAllV = paneV().querySelector(".vis-syncall");
+          check2("[V-17] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", !!syncAllV);
+          if (syncAllV) syncAllV.click();
+          await waitV(400);
+          check2(
+            "[V-17] \u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15",
+            VCx.resolveAll(stV_().rows, stV_().lines).every((r) => r.status !== "changed"),
+            VCx.resolveAll(stV_().rows, stV_().lines).map((r) => r.status).join(",")
+          );
+          check2(
+            "[V-17] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
+            (await kapi.readFile(visPathV)).includes("\u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19")
+          );
+        }
+        {
+          const before = stV_().rows.length;
+          const rawV = await kapi.readFile(scPathV);
+          const target = stV_().lines.find((l) => l.text.includes("\u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19"));
+          await kapi.writeFile(scPathV, rawV.replace(target.text, "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E2B\u0E21\u0E14\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E40\u0E04\u0E49\u0E32\u0E40\u0E14\u0E34\u0E21\u0E2A\u0E31\u0E01\u0E04\u0E33\u0E40\u0E14\u0E35\u0E22\u0E27"));
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check2(
+            "[V-18] \u2605 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E32\u0E22 \u2192 \u0E41\u0E16\u0E27\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A (\u0E44\u0E21\u0E48\u0E25\u0E1A\u0E41\u0E16\u0E27)",
+            stV_().rows.length === before,
+            stV_().rows.length + "/" + before
+          );
+          const anyLost = VCx.resolveAll(stV_().rows, stV_().lines).some((r) => r.parts.some((p) => p.status === "lost"));
+          check2("[V-18] \u2605 \u0E2A\u0E21\u0E2D\u0E17\u0E35\u0E48\u0E2B\u0E32\u0E22\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22 lost \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C", anyLost);
+          check2(
+            "[V-18] \u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E2A\u0E21\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E27\u0E49 (\u0E40\u0E1C\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E39\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E04\u0E37\u0E19)",
+            VCx.parseVis(await kapi.readFile(visPathV)).length === before
+          );
+          await kapi.writeFile(scPathV, rawV);
+          await VU.renderVisual(keyV);
+          await waitV(300);
+        }
+        check2(
+          "[V-19] \u2605 \u0E15\u0E32\u0E23\u0E32\u0E07\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01",
+          !(await kapi.readFile(scPathV)).includes("_vis")
+        );
+        state._visView = "list";
+        await VU.renderVisual(keyV);
+        await waitV(300);
+        try {
+          await kapi.testShot("/tmp/k2_vis_list.png");
+        } catch {
+        }
+        check2(
+          "[V-20] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14",
+          paneV().querySelectorAll(".vis-card").length === 2,
+          paneV().querySelectorAll(".vis-card").length
+        );
+        state._visView = "table";
+        await VU.renderVisual(keyV);
+        await waitV(250);
+        {
+          const before = paneV().querySelectorAll(".vis-th").length;
+          const cfgV = VCx.normalizeCols(state.meta && state.meta.visColumns);
+          VCx.toggleCol(cfgV, "remark");
+          state.meta.visColumns = cfgV.map((c) => ({ key: c.key, on: c.on, w: c.w }));
+          await saveProjectMeta();
+          await VU.renderVisual(keyV);
+          await waitV(300);
+          check2(
+            "[V-21] \u0E0B\u0E48\u0E2D\u0E19\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07\u0E25\u0E14\u0E25\u0E07",
+            paneV().querySelectorAll(".vis-th").length === before - 1,
+            paneV().querySelectorAll(".vis-th").length + "/" + before
+          );
+          const metaOnDiskV = await kapi.readJson(await kapi.join(state.root, "project.khn.json"));
+          check2(
+            "[V-21] \u2605 \u0E04\u0E48\u0E32\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19 project.khn.json (\u0E1E\u0E01\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
+            (metaOnDiskV.visColumns || []).some((c) => c.key === "remark" && c.on === false)
+          );
+          VCx.toggleCol(cfgV, "remark");
+          state.meta.visColumns = cfgV.map((c) => ({ key: c.key, on: c.on, w: c.w }));
+          await saveProjectMeta();
+          await VU.renderVisual(keyV);
+          await waitV(250);
+        }
+        VP.openVisPlayer(stV_(), 0);
+        await waitV(300);
+        check2("[V-22] \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E15\u0E47\u0E21\u0E08\u0E2D\u0E44\u0E14\u0E49", VP.visPlayerOpen() && !!document.querySelector(".vis-player"));
+        {
+          const plBoxV = document.querySelector(".vis-player").getBoundingClientRect();
+          check2(
+            "[V-22] \u0E41\u0E1C\u0E48\u0E19\u0E40\u0E15\u0E47\u0E21\u0E08\u0E2D\u0E08\u0E23\u0E34\u0E07",
+            plBoxV.width >= window.innerWidth - 2 && plBoxV.height >= window.innerHeight - 2,
+            plBoxV.width + "x" + plBoxV.height
+          );
+          const stg = document.querySelector(".vis-player .vis-pl-stage").getBoundingClientRect();
+          check2(
+            "[V-22] \u2605 \u0E40\u0E27\u0E17\u0E35\u0E23\u0E39\u0E1B\u0E01\u0E34\u0E19\u0E40\u0E15\u0E47\u0E21\u0E08\u0E2D \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1A\u0E35\u0E22\u0E14",
+            stg.width >= window.innerWidth - 2 && stg.height >= window.innerHeight - 2,
+            stg.width + "x" + stg.height
+          );
+          const imEl = document.querySelector(".vis-player .vis-pl-img").getBoundingClientRect();
+          check2("[V-22] \u2605 \u0E23\u0E39\u0E1B\u0E02\u0E22\u0E32\u0E22\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E08\u0E2D", imEl.width >= window.innerWidth - 2, imEl.width);
+        }
+        try {
+          await kapi.testShot("/tmp/k2_vis_player.png");
+        } catch {
+        }
+        check2("[V-22] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48\u0E41\u0E16\u0E27\u0E41\u0E23\u0E01", VP.visPlayerAt() === 0);
+        check2(
+          "[V-22] \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E41\u0E16\u0E27\u0E41\u0E23\u0E01",
+          document.querySelector(".vis-player .vis-pl-prev").disabled === true
+        );
+        check2("[V-23] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E21\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E42\u0E0A\u0E27\u0E4C\u0E2D\u0E22\u0E39\u0E48", !VP.visPlayerTextHidden() && parseFloat(getComputedStyle(document.querySelector(".vis-pl-box")).opacity) > 0.5);
+        document.querySelector(".vis-player .vis-pl-eye").click();
+        await waitV(300);
+        check2(
+          "[V-23] \u2605 \u0E01\u0E14 \u{1F441} \u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19",
+          VP.visPlayerTextHidden() && parseFloat(getComputedStyle(document.querySelector(".vis-pl-box")).opacity) < 0.1,
+          getComputedStyle(document.querySelector(".vis-pl-box")).opacity
+        );
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "h", code: "KeyH", bubbles: true }));
+        await waitV(300);
+        check2("[V-23] \u2605 \u0E04\u0E35\u0E22\u0E4C H \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E42\u0E0A\u0E27\u0E4C\u0E44\u0E14\u0E49", !VP.visPlayerTextHidden());
+        document.querySelector(".vis-player .vis-pl-next").click();
+        await waitV(150);
+        check2("[V-24] \u2605 \u0E01\u0E14\u0E40\u0E14\u0E34\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E41\u0E16\u0E27\u0E16\u0E31\u0E14\u0E44\u0E1B", VP.visPlayerAt() === 1);
+        check2(
+          "[V-24] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E31\u0E0D\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E2A\u0E44\u0E25\u0E14\u0E4C",
+          !/\*\*|~~/.test(document.querySelector(".vis-player .vis-pl-text").textContent),
+          document.querySelector(".vis-player .vis-pl-text").textContent.slice(0, 40)
+        );
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+        await waitV(150);
+        check2("[V-24] \u0E25\u0E39\u0E01\u0E28\u0E23\u0E0B\u0E49\u0E32\u0E22\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", VP.visPlayerAt() === 0);
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await waitV(150);
+        check2("[V-24] Esc \u0E1B\u0E34\u0E14\u0E40\u0E15\u0E47\u0E21\u0E08\u0E2D", !VP.visPlayerOpen() && !document.querySelector(".vis-player"));
+        {
+          const before = stV_().rows.length;
+          const delBtn = paneV().querySelector(".vis-td-del .vis-mini-del");
+          check2("[V-25] \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E17\u0E49\u0E32\u0E22\u0E2A\u0E38\u0E14", !!delBtn);
+          delBtn.click();
+          await waitV(150);
+          const ovD = [...document.querySelectorAll(".k-overlay")].pop();
+          ovD.querySelector(".k-dialog .k-ok").click();
+          await waitV(350);
+          check2(
+            "[V-25] \u2605 \u0E25\u0E1A\u0E41\u0E16\u0E27\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+            stV_().rows.length === before - 1,
+            stV_().rows.length + "/" + before
+          );
+          check2(
+            "[V-25] \u0E25\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E31\u0E19\u0E17\u0E35",
+            VCx.parseVis(await kapi.readFile(visPathV)).length === before - 1
+          );
+        }
+        {
+          const scJsonV = await kapi.join(dPathV, "scenes.json");
+          const beforeIdsV = new Set((await kapi.readJson(scJsonV)).chapters.c1.map((x) => x.id));
+          const rowV = (await kapi.readJson(scJsonV)).chapters.c1.find((x) => x.id === "sc1");
+          await duplicateScene(dPathV, { guid: "c1", folderName: "01 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07", title: "\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07" }, rowV);
+          await waitV(600);
+          const dupRowV = (await kapi.readJson(scJsonV)).chapters.c1.find((x) => !beforeIdsV.has(x.id));
+          check2(
+            "[V-26] \u2605 \u0E17\u0E33\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E23\u0E32\u0E07\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
+            !!dupRowV && await kapi.exists(await kapi.join(chDirV, VCx.visFileName(dupRowV.fileName))),
+            dupRowV ? dupRowV.fileName : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E2A\u0E33\u0E40\u0E19\u0E32"
+          );
+        }
+      }
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -178646,12 +182441,12 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md14, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
       init_editor();
-      import_md14 = __toESM(require_md());
+      import_md15 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -178705,6 +182500,7 @@ ${css}
       init_tag_pane();
       init_global_search();
       init_scene_table();
+      init_vis_ui();
       init_scratchpad();
       init_quick_open();
       init_custom_status();
@@ -179308,6 +183104,7 @@ ${css}
         $("#tb-focus").onclick = () => handleCommand("focus-mode");
         $("#tb-typewriter").onclick = () => handleCommand("typewriter");
         $("#tb-linenum").onclick = () => handleCommand("line-numbers");
+        $("#tb-visual").onclick = () => openVisualForActive();
         $("#tb-quickopen").onclick = () => handleCommand("quick-open");
         document.addEventListener("keydown", (e) => {
           if (e.code === "Slash" && e.ctrlKey && e.shiftKey || e.key === "?" && !e.ctrlKey && !e.metaKey) {
