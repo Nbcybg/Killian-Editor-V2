@@ -4411,9 +4411,9 @@ ui.settings.recycleDaysHint,0 = never
 ui.settings.shortcuts,Shortcuts
 ui.settings.shortcutsHint,Click Edit then press new key combo
 ui.settings.spellCheck,Spell check
-ui.settings.spellCheckDict,Spell check with dictionary (Thai+English)
-ui.settings.spellCheckDictHint,Offline word list
-ui.settings.spellCheckHint,Underline misspelled words
+ui.settings.spellCheckDict,Use the app's dictionary (Thai+English)
+ui.settings.spellCheckDictHint,Offline word list · knows words you added · off = use the browser's checker (English only)
+ui.settings.spellCheckHint,Underline misspelled words (always a single underline, never stacked)
 ui.settings.spFontFamily,Screenplay Font
 ui.settings.spFontFamilyHint,Font used only in screenplay mode (default: Courier New)
 ui.settings.title,Project Settings

@@ -112,11 +112,12 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **2,182 checks** target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split/planner-data) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **3,419 checks** target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split/planner-data) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
-npm run test:unit                  # ทั้งชุด (~40 ไฟล์)
+npm run test:unit                  # ทั้งชุด 68 ไฟล์ · 4,560 ข้อ · ~20 วินาที (tools/run-unit.cjs)
+node tools/run-unit.cjs spell      # รันเฉพาะไฟล์ที่ชื่อมีคำนี้
 node test/planner-data.test.cjs    # 157 checks — schema v4/grid/snap/z-order/เรขาคณิตเส้น/หลายกระดาน
 node test/search-engine.test.cjs   # 22 checks — tokenize/AND/OR/NOT/field/snippet/score/perf
 node test/panel.test.cjs           # 26 checks — snap/dock/tab/resize/store/migrate

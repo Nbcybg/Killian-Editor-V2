@@ -82,6 +82,18 @@ function blockRange(doc, from, to) {
  * @param {PMKey} key
  * @param {(doc, from, to) => Decoration[]} scan สแกนช่วง [from,to] คืนรายการ decoration
  */
+/**
+ * สแกนช่วง [r.from, r.to] ใหม่ แล้วใส่ **เฉพาะส่วนต่าง** ลงชุด decoration เดิม
+ * (แยกออกมาเป็นฟังก์ชันเพราะทั้งทางปกติและทางตรวจคำผิดแบบเลื่อนเวลาใช้ตัวเดียวกัน)
+ */
+function rescanRange(doc, set, r, scan) {
+  const oldIn = set.find(r.from, r.to);
+  const next = scan(doc, r.from, r.to);
+  const { remove, add } = diffByKey(oldIn, next);
+  if (!remove.length && !add.length) return set;
+  return set.remove(remove).add(doc, add);
+}
+
 function incrementalDecoState(key, scan) {
   const full = (doc) => DecoSet.create(doc, scan(doc, 0, doc.content.size));
   return {
@@ -97,11 +109,7 @@ function incrementalDecoState(key, scan) {
       // เดิม `moved.remove(moved.find(...)).add(scan(...))` = ถอดทั้งบล็อกแล้วใส่กลับทั้งบล็อก
       // ย่อหน้าเดียวยาว ๆ หมายถึงถอด/ใส่ 2,252 ตัวต่อการพิมพ์หนึ่งตัว และ `removeInner()`
       // ของ PM เทียบแบบคูณกัน (รายการที่ลบ × decoration ในบล็อก) → ~5.1 ล้านครั้ง/ตัวอักษร
-      const oldIn = moved.find(r.from, r.to);
-      const next = scan(st.doc, r.from, r.to);
-      const { remove, add } = diffByKey(oldIn, next);
-      if (!remove.length && !add.length) return moved;
-      return moved.remove(remove).add(st.doc, add);
+      return rescanRange(st.doc, moved, r, scan);
     },
   };
 }
@@ -174,13 +182,110 @@ function spellScan(doc, checkFn, from, to) {
   });
   return out;
 }
+/**
+ * ══════════ [alpha.92 ข้อ 1] ★ ตรวจ "เมื่อคำจบ" ไม่ใช่ทุกตัวอักษร ══════════
+ *
+ * ของเดิม: พิมพ์ 1 ตัว → สแกนบล็อกที่แตะใหม่ทั้งใบทันที
+ * ผลคือคำที่ยังพิมพ์ไม่จบ **ถูกตัดสินว่าผิดตั้งแต่ตัวแรก** — พิมพ์ "สวัสดี" จะเห็นเส้นแดง
+ * วิ่งใต้เคอร์เซอร์ตลอด ส-สว-สวั-สวัส… แล้วค่อยหายตอนพิมพ์จบ · และเสียแรงตัดคำ (DP)
+ * ทั้งย่อหน้าใหม่ทุกตัวอักษร เพื่อผลที่รู้อยู่แล้วว่าจะถูกทิ้ง
+ *
+ * ของใหม่ — คำจะถูกตรวจเมื่อ "กลายเป็นคำ" แล้วเท่านั้น:
+ *   1. พิมพ์ตัวคั่นคำ (เว้นวรรค · ขึ้นบรรทัดใหม่ · เครื่องหมายวรรคตอน)
+ *   2. วาง/ลบก้อนใหญ่ หรือโครงสร้างบล็อกเปลี่ยน (Enter, ลบทั้งย่อหน้า)
+ *   3. เคอร์เซอร์ย้ายออกไปนอกบล็อกที่ค้างอยู่ (คลิกที่อื่น)
+ *   4. หยุดพิมพ์ครบ IDLE_MS — **ข้อนี้ขาดไม่ได้สำหรับภาษาไทย** เพราะไทยไม่เว้นวรรคระหว่างคำ
+ *      ทั้งย่อหน้าอาจไม่มีตัวคั่นเลยสักตัว ถ้ารอแต่ข้อ 1 ก็จะไม่ได้ตรวจตลอดกาล
+ *
+ * ระหว่างที่ยัง "ค้าง" อยู่ ให้ **ถอดเส้นแดงที่คร่อมจุดที่กำลังแก้ออกด้วย** — ผู้ใช้ที่กำลัง
+ * ไล่แก้คำผิดจะเห็นเส้นหายทันทีที่เริ่มพิมพ์ แล้วค่อยกลับมาถ้ายังผิดอยู่ (ไม่ใช่เส้นค้างคาตา)
+ *
+ * ชุด decoration สุดท้ายเท่าเดิมเป๊ะ — เทส [88-6] เทียบ "เพิ่มทีละส่วน = สแกนใหม่ทั้งเอกสาร"
+ * ยังคุมอยู่ แค่ต้องรอให้ตัวตั้งเวลาลงมือก่อนถึงจะเทียบได้
+ */
+const WORD_END = /[\s .,!?;:'"‘’“”()[\]{}<>…—–\-/\\|@#$%^&*+=~`]/;
+const SPELL_IDLE_MS = 400;   // หยุดพิมพ์เท่านี้ = ตรวจให้เลย
+
+const clampR = (doc, r) => {
+  const size = doc.content.size;
+  const from = Math.max(0, Math.min(r.from, size));
+  return { from, to: Math.max(from, Math.min(r.to, size)) };
+};
+
+/** state ของปลั๊กอินตรวจคำผิด — `{ set, dirty }` (dirty = ช่วงที่ยังไม่ได้ตรวจ) */
+function deferredSpellState(scan) {
+  const full = (doc) => ({ set: DecoSet.create(doc, scan(doc, 0, doc.content.size)), dirty: null });
+  const flush = (doc, set, dirty) =>
+    ({ set: dirty ? rescanRange(doc, set, clampR(doc, dirty), scan) : set, dirty: null });
+  return {
+    init: (_c, st) => full(st.doc),
+    apply(tr, prev, old, st) {
+      const meta = tr.getMeta(spellKey);
+      if (meta === true) return full(st.doc);                 // สั่งวาดใหม่ทั้งหมด (เปลี่ยนพจนานุกรม ฯลฯ)
+
+      let set = prev.set, dirty = prev.dirty;
+      if (tr.docChanged) {
+        set = set.map(tr.mapping, tr.doc);
+        if (dirty) dirty = { from: tr.mapping.map(dirty.from, -1), to: tr.mapping.map(dirty.to, 1) };
+      }
+      if (meta && meta.flush) return flush(st.doc, set, dirty);
+
+      if (!tr.docChanged) {
+        // เคอร์เซอร์ย้ายออกนอกบล็อกที่ค้าง = คำนั้นจบแน่แล้ว → ตรวจทันที ไม่ต้องรอตัวตั้งเวลา
+        if (dirty && tr.selectionSet) {
+          const p = st.selection.from;
+          if (p < dirty.from || p > dirty.to) return flush(st.doc, set, dirty);
+        }
+        return set === prev.set && dirty === prev.dirty ? prev : { set, dirty };
+      }
+
+      const ch = changedRange(tr);
+      if (!ch) return { set, dirty };
+      const r = blockRange(st.doc, ch.from, ch.to);
+
+      // "คำจบแล้วหรือยัง" — ดูตัวอักษรที่เพิ่งเกิดขึ้นก่อนตำแหน่งท้ายช่วงที่เปลี่ยน
+      const grew = ch.to - ch.from;
+      const structural = st.doc.childCount !== old.doc.childCount;   // Enter / ลบทั้งบล็อก
+      const typedEnd = grew > 0 && grew <= 2 &&
+        WORD_END.test(st.doc.textBetween(Math.max(0, ch.to - 1), ch.to) || ' ');
+      if (structural || grew > 2 || typedEnd) {
+        return { set: rescanRange(st.doc, set, dirty ? clampR(st.doc, {
+          from: Math.min(dirty.from, r.from), to: Math.max(dirty.to, r.to),
+        }) : r, scan), dirty: null };
+      }
+
+      // ยังพิมพ์คำนี้ไม่จบ → ยังไม่ตรวจ · ถอดเส้นแดงที่คร่อมจุดที่กำลังแก้ออกก่อน
+      const near = set.find(Math.max(0, ch.from - 1), ch.to + 1);
+      if (near.length) set = set.remove(near);
+      return { set, dirty: dirty ? { from: Math.min(dirty.from, r.from), to: Math.max(dirty.to, r.to) } : r };
+    },
+  };
+}
+
 // getChecker: () => (text)=>[{start,end,word}]  หรือ null เมื่อปิด/ยังไม่พร้อม
 export function spellPlugin(getChecker) {
   return new PMPlugin({
     key: spellKey,
-    state: incrementalDecoState(spellKey,
-      (doc, from, to) => spellScan(doc, getChecker(), from, to)),
-    props: { decorations(state) { return spellKey.getState(state); } },
+    state: deferredSpellState((doc, from, to) => spellScan(doc, getChecker(), from, to)),
+    props: { decorations(state) { const s = spellKey.getState(state); return s && s.set; } },
+    // ตัวตั้งเวลา "หยุดพิมพ์แล้วตรวจให้" — อยู่ในชั้น view เพราะ state.apply ต้องบริสุทธิ์
+    view(view) {
+      let timer = null;
+      const stop = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      return {
+        update() {
+          const s = spellKey.getState(view.state);
+          stop();
+          if (!s || !s.dirty) return;
+          timer = setTimeout(() => {
+            timer = null;
+            const cur = spellKey.getState(view.state);
+            if (cur && cur.dirty) view.dispatch(view.state.tr.setMeta(spellKey, { flush: true }));
+          }, SPELL_IDLE_MS);
+        },
+        destroy: stop,
+      };
+    },
   });
 }
 export function refreshSpell(view) {
@@ -260,8 +365,9 @@ export function refreshCommentAnchors(view) {
  */
 export function decoSignature(view) {
   const sig = (k) => {
-    const set = view && k.getState(view.state);
-    if (!set) return '';
+    const raw = view && k.getState(view.state);
+    const set = raw && raw.set ? raw.set : raw;      // ตรวจคำผิดเก็บเป็น { set, dirty }
+    if (!set || !set.find) return '';
     return set.find().map((d) => d.from + ':' + d.to).sort().join(',');
   };
   const spell = sig(spellKey), mention = sig(mentionKey), comment = sig(cmKey);

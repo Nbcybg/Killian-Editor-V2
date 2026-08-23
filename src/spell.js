@@ -7,6 +7,29 @@ const LATIN_RE = /[A-Za-z][A-Za-z'\u2019]*/g;
 const THAI_FULL = /^[\u0E00-\u0E7F]+$/;
 const MAX_TH_LEN = 24;   // ความยาวคำไทยยาวสุดที่ลองจับ (กันช้า)
 
+// [alpha.92 ข้อ 2] ★ ช่วงความยาวที่ "คุ้มจะตรวจ"
+//
+// สั้นไม่เกิน 2 ตัว — พยางค์เดียว/ตัวย่อ/เสียงอุทาน ("งั้น" "ฮึ่ม" "ok" "ๆๆ") คลังคำไม่มีทางครบ
+//                    ขีดแดงรัวไปทั้งหน้าโดยไม่ได้ช่วยอะไร
+// ยาวเกิน 65 ตัว   — ไม่ใช่คำแล้ว (URL, รหัส, คีย์, ตัวอักษรรัวจากการกดค้าง) ผู้ใช้ตั้งใจให้เป็นแบบนั้น
+//                    และเป็นเคสที่ DP ตัดคำเสียเวลามากที่สุดพอดี
+//
+// นับเป็น "ตัวที่ตาเห็น": สระบน/ล่างและวรรณยุกต์ไทยเป็น combining mark — "ที่" ยาว 3 หน่วยใน JS
+// แต่คนเห็นตัวเดียว · ถ้านับดิบ ๆ เกณฑ์จะเพี้ยนเฉพาะภาษาไทย
+const MIN_WORD = 3;      // ≤2 ตัว = ไม่ตรวจ ไม่ขีด
+const MAX_WORD = 65;     // >65 ตัว = ไม่ตรวจ ไม่ขีด
+// \u0E19\u0E31\u0E1A\u0E41\u0E1A\u0E1A\u0E27\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 `replace(/\u2026/g,'')` \u2014 \u0E15\u0E31\u0E27\u0E2B\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E2A\u0E15\u0E23\u0E34\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E40\u0E23\u0E35\u0E22\u0E01
+// \u0E41\u0E25\u0E30\u0E15\u0E31\u0E27\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E17\u0E38\u0E01 "\u0E0A\u0E48\u0E27\u0E07\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E44\u0E17\u0E22" \u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 (\u0E2B\u0E25\u0E31\u0E01\u0E2B\u0E21\u0E37\u0E48\u0E19\u0E04\u0E23\u0E31\u0E49\u0E07\u0E15\u0E48\u0E2D\u0E01\u0E32\u0E23\u0E2A\u0E41\u0E01\u0E19\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E23\u0E2D\u0E1A)
+function visLen(s) {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 0x0E31 || (c >= 0x0E34 && c <= 0x0E3A) || (c >= 0x0E47 && c <= 0x0E4E)) continue;
+    n++;
+  }
+  return n;
+}
+
 // คลังคำหลัก (โหลดครั้งเดียว) + คำเสริม (personal/plugin — เปลี่ยนได้ระหว่างใช้งาน)
 const base = { th: new Set(), en: new Set(), loaded: false };
 let extraTh = new Set();
@@ -27,7 +50,15 @@ let extraEn = new Set();
 //
 // รวมล่วงหน้าแล้วเก็บไว้ · เปลี่ยนเฉพาะตอนคลังคำเปลี่ยนจริง (loadBase/setExtra)
 let mergedTh = null, mergedEn = null;
-function invalidateMerged() { mergedTh = null; mergedEn = null; }
+
+// [alpha.92 ข้อ 1] แคชผลตรวจต่อ "ข้อความหนึ่งบล็อก"
+// ตัวแก้ไขสแกนเฉพาะช่วงที่แตะ = อย่างน้อย 2 บล็อกที่ประกบตำแหน่ง → บล็อกที่ไม่ได้แก้เลย
+// ถูกตรวจซ้ำทุกครั้งที่พิมพ์ · ล้างทิ้งเมื่อคลังคำเปลี่ยนเท่านั้น (ผลจึงไม่มีทางค้างเก่า)
+const CACHE_MAX = 2000;        // เอกสารบทหนึ่งราว 700 บล็อก — ต้องใส่ได้ทั้งเล่มไม่ให้ไล่ทิ้งวน
+const CACHE_TEXT_MAX = 8000;   // ยาวกว่านี้ไม่แคช (กันกินหน่วยความจำเปล่า ๆ)
+const cache = new Map();
+
+function invalidateMerged() { mergedTh = null; mergedEn = null; cache.clear(); }
 function knownTh() {
   if (!mergedTh) mergedTh = extraTh.size ? new Set([...base.th, ...extraTh]) : base.th;
   return mergedTh;
@@ -72,6 +103,11 @@ function reachForward(run, known) {
   const ok = new Array(n + 1).fill(false); ok[0] = true;
   let far = 0;
   for (let i = 1; i <= n; i++) {
+    // [alpha.92 ข้อ 2] ★ ออกทันทีเมื่อ "ตัดต่อไม่ได้อีกแล้วแน่นอน"
+    // ok[i] จะจริงได้ก็ต่อเมื่อมี ok[i-L] จริงสักตัว (L ≤ MAX_TH_LEN) — แต่จุดที่จริงและไกลสุด
+    // คือ far · พอ i - far > MAX_TH_LEN ทุกตัวในหน้าต่างนั้นเป็นเท็จหมด และจะเท็จตลอดไป
+    // เคสจริง: กดแป้นค้าง/แปะรหัส/URL — เดิมไล่จนจบ 900 ตัว × 24 = สองหมื่นครั้งเพื่อผลที่รู้อยู่แล้ว
+    if (i - far > MAX_TH_LEN) break;
     for (let L = 1; L <= Math.min(MAX_TH_LEN, i); L++) {
       if (ok[i - L] && known.has(run.slice(i - L, i))) { ok[i] = true; break; }
     }
@@ -84,6 +120,7 @@ function reachBackward(run, known) {
   const ok = new Array(n + 1).fill(false); ok[n] = true;
   let near = n;
   for (let i = n - 1; i >= 0; i--) {
+    if (near - i > MAX_TH_LEN) break;               // เหตุผลเดียวกับ reachForward (กลับทาง)
     for (let L = 1; L <= Math.min(MAX_TH_LEN, n - i); L++) {
       if (ok[i + L] && known.has(run.slice(i, i + L))) { ok[i] = true; break; }
     }
@@ -101,8 +138,11 @@ function badThaiSpans(run, known) {
 }
 
 // ---- ตรวจข้อความ → [{start, end, word}] (offset ในสตริง) ----
+// ผลที่คืนออกไปเป็นของ "อ่านอย่างเดียว" (ถูกแคชไว้ใช้ซ้ำ) — ผู้เรียกห้ามแก้ค่าในนั้น
 export function check(text) {
   if (!text || !base.loaded) return [];
+  const cached = cache.get(text);
+  if (cached) return cached;
   const thKnown = knownTh();
   const enKnown = knownEn();
   const out = [];
@@ -110,15 +150,19 @@ export function check(text) {
   THAI_RE.lastIndex = 0;
   while ((m = THAI_RE.exec(text))) {
     const run = m[0];
-    if (run.length < 2 || thKnown.has(run)) continue;
+    // [alpha.92 ข้อ 2] ทั้งช่วงยังสั้นกว่าเกณฑ์ = ข้ามไปเลย ไม่ต้องเสียเวลาตัดคำ
+    if (visLen(run) < MIN_WORD || thKnown.has(run)) continue;
     for (const [a, b] of badThaiSpans(run, thKnown)) {
-      if (b - a >= 2) out.push({ start: m.index + a, end: m.index + b, word: run.slice(a, b) });
+      const word = run.slice(a, b);
+      const n = visLen(word);
+      if (n < MIN_WORD || n > MAX_WORD) continue;
+      out.push({ start: m.index + a, end: m.index + b, word });
     }
   }
   LATIN_RE.lastIndex = 0;
   while ((m = LATIN_RE.exec(text))) {
     const w = m[0];
-    if (w.length < 3) continue;
+    if (w.length < MIN_WORD || w.length > MAX_WORD) continue;   // [alpha.92 ข้อ 2]
     const lw = w.toLowerCase().replace(/^['\u2019]+|['\u2019]+$/g, '');
     if (enKnown.has(lw)) continue;
     // สัณฐานวิทยาแบบเบา ๆ: พหูพจน์/กริยา
@@ -128,5 +172,12 @@ export function check(text) {
     if (lw.endsWith('ing') && (enKnown.has(lw.slice(0, -3)) || enKnown.has(lw.slice(0, -3) + 'e'))) continue;
     out.push({ start: m.index, end: m.index + w.length, word: w });
   }
+  if (text.length <= CACHE_TEXT_MAX) {
+    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);   // ทิ้งตัวเก่าสุดก่อน
+    cache.set(text, out);
+  }
   return out;
 }
+
+// จำนวนรายการในแคช — ให้เทสยืนยันว่าแคชทำงานจริงและไม่โตเกินเพดาน
+export function cacheSize() { return cache.size; }

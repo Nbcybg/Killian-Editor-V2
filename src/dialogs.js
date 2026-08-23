@@ -971,7 +971,8 @@ export function settingsDialog(openTab) {
   const origLn = !!s.lineNumbers, origSpell = s.spellCheck !== false,
         origSpellDict = s.spellCheckDict !== false, origMention = s.autoMention !== false;
   q('#st-ln').onchange = () => document.body.classList.toggle('k-ln', q('#st-ln').checked);
-  q('#st-spell').onchange = () => { s.spellCheck = q('#st-spell').checked; applySpellcheck(); };
+  // [alpha.92 ข้อ 3] สวิตช์ใหญ่คุมทั้งสองระบบ → ต้องวาดเส้นของโปรแกรมใหม่ด้วย ไม่ใช่แค่ของ Chromium
+  q('#st-spell').onchange = () => { s.spellCheck = q('#st-spell').checked; refreshAllSpell(); };
   q('#st-spelldict').onchange = () => { s.spellCheckDict = q('#st-spelldict').checked; refreshAllSpell(); };
   q('#st-mention').onchange = () => { s.autoMention = q('#st-mention').checked; refreshAllMentions(); };
 

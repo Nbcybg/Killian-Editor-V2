@@ -1700,16 +1700,41 @@ function showSourceView() {
   ta.focus();
 }
 
+// ══════════ [alpha.92 ข้อ 3] ★ ตัวตรวจคำผิดสองตัว ห้ามขีดทับกัน ══════════
+//
+// อาการที่ผู้ใช้เจอ: คำอังกฤษที่สะกดผิดได้ **เส้นสองเส้น** — เส้นตรงสีดำแนบเส้นบรรทัด
+// กับหยักแดงเยื้องลงมาอีกเส้น
+//
+// เหตุ: โปรแกรมเปิดตัวตรวจ **สองตัวพร้อมกัน** โดยไม่มีใครรู้จักกัน
+//   · ของ Chromium — attribute `spellcheck` บน contenteditable · เบราว์เซอร์วาดเอง ไม่มีใน DOM
+//     (พิสูจน์แล้ว: มี 57 ภาษา **ไม่มีไทย** → ขีดเฉพาะคำอังกฤษ จึงเห็นเส้นดำเฉพาะคำลาติน)
+//   · ของโปรแกรมเอง — `.k-spell-bad` หยักแดง · รู้จักไทย และรู้จัก "คำที่ผู้ใช้เพิ่มเอง"
+//
+// ของ Chromium ไม่มีทางรู้จักพจนานุกรมส่วนตัว → ผู้ใช้กด "เพิ่มลงพจนานุกรม" แล้วหยักแดงหาย
+// แต่ **เส้นดำยังอยู่** และไม่มีทางเอาออกได้เลย · เส้นที่ผู้ใช้สั่งอะไรไม่ได้ = เส้นที่ไม่ควรมี
+//
+// แก้: ให้เหลือตัวเดียวเสมอ
+//   "ตรวจคำผิด" (spellCheck)          = สวิตช์ใหญ่ · ปิด = ไม่ขีดอะไรเลยทั้งสองระบบ
+//   "ใช้พจนานุกรมของโปรแกรม" (…Dict)  = เปิด (ค่าเริ่มต้น) ใช้ของเรา · ปิด = ตกไปใช้ของ Chromium
+// ไม่ต้องย้ายค่าที่ผู้ใช้ตั้งไว้เดิมเลย เพราะค่าเดิมของทั้งคู่คือ "เปิด" อยู่แล้ว
+
+/** ตอนนี้ใช้ตัวตรวจของโปรแกรมเองอยู่ไหม (ไทย+อังกฤษ+คำที่ผู้ใช้เพิ่มเอง) */
+export function useDictSpell() {
+  return state.settings.spellCheck !== false
+      && state.settings.spellCheckDict !== false
+      && spell.ready();
+}
+
 // เปิด/ปิดการตรวจคำผิดของ Chromium บนตัวแก้ไขทุกตัว (contenteditable spellcheck)
+// ให้มันทำงาน **เฉพาะตอนที่ของเราไม่ได้ทำงาน** เท่านั้น — คลังคำหายก็ยังมีตัวสำรอง
 export function applySpellcheck() {
-  const on = state.settings.spellCheck !== false;
-  document.querySelectorAll('.ProseMirror').forEach((el) => { el.spellcheck = on; });
+  const native = state.settings.spellCheck !== false && !useDictSpell();
+  document.querySelectorAll('.ProseMirror').forEach((el) => { el.spellcheck = native; });
 }
 
 // ตัวตรวจคำผิดแบบพจนานุกรม (ไทย+อังกฤษ ออฟไลน์) — คืน null เมื่อปิดหรือคลังยังไม่พร้อม
-// ทำงานผสมกับ Chromium ได้: Chromium ขีดอังกฤษ native, ตัวนี้ขีดไทย+ยืนยันอังกฤษด้วยคลังคำ
 export function spellChecker() {
-  if (state.settings.spellCheckDict === false || !spell.ready()) return null;
+  if (!useDictSpell()) return null;
   return (text) => spell.check(text);
 }
 
@@ -1731,6 +1756,7 @@ async function loadSpellDict(root) {
 
 // รีเฟรชการขีดเส้นใต้คำผิดทุกแท็บ (ใช้เมื่อสลับตัวเลือก / เพิ่มคำ / โหลดคลังเสร็จ)
 export function refreshAllSpell() {
+  applySpellcheck();          // เงื่อนไข "ใครเป็นคนขีด" เปลี่ยนไปพร้อมกันเสมอ (คลังคำโหลดเสร็จ ฯลฯ)
   for (const t of state.tabs.values()) {
     if (t.editor) refreshSpell(t.editor.view);
     if (t.sp) refreshSpell(t.sp.view);
@@ -12632,6 +12658,119 @@ async function runTest(projectPath) {
     await loadSpellDict(state.root);
     check('เพิ่มคำลงพจนานุกรมแล้วไม่ถูกจับเป็นคำผิด',
           spell.check('อากสฎฆจ').length === 0, JSON.stringify(spell.check('อากสฎฆจ')));
+
+    // ══════════ [alpha.92] ตรวจ "เมื่อคำจบ" + เกณฑ์ความยาว + สีของเส้นที่ขีด ══════════
+    {
+      const nBad = () => document.querySelectorAll('.pane.on .k-spell-bad').length;
+      const wait92 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const v92 = t.editor.view;
+      const typeAt = (s) => {
+        const p = v92.state.selection.from;
+        v92.dispatch(v92.state.tr.insertText(s, p).scrollIntoView());
+      };
+
+      // ── ข้อ 1: พิมพ์คำผิดทีละตัว — ห้ามขีดแดงจนกว่าคำจะจบ ──
+      activate(t.file);
+      t.editor.setMarkdown('เขาเดินไปที่ตลาด ');
+      await wait92(120);
+      const before92 = nBad();
+      v92.dispatch(v92.state.tr.setSelection(
+        PMTextSelection.create(v92.state.doc, v92.state.doc.content.size - 1)));
+      for (const c of 'ฬฒฏฑฆ') { typeAt(c); await wait92(20); }   // คำมั่วไทย ยังไม่มีตัวคั่น
+      check('[92-1] ★ พิมพ์คำอยู่ยังไม่ขีดแดง (รอให้คำจบก่อน)', nBad() === before92,
+            'ก่อน ' + before92 + ' → ระหว่างพิมพ์ ' + nBad());
+
+      // ── ข้อ 1: เว้นวรรค = คำจบ → ขีดทันที ไม่ต้องรอตัวตั้งเวลา ──
+      typeAt(' ');
+      await wait92(60);                                  // สั้นกว่า SPELL_IDLE_MS (400ms) มาก
+      check('[92-1] ★ เว้นวรรคแล้วขีดแดงขึ้นทันที (ไม่รอตัวตั้งเวลา)', nBad() > before92,
+            before92 + ' → ' + nBad());
+
+      // ── ข้อ 1: ภาษาไทยไม่เว้นวรรค → ต้องมีทางออกด้วย "หยุดพิมพ์แล้วตรวจให้" ──
+      t.editor.setMarkdown('เขาเดินไปที่ตลาด ');
+      await wait92(120);
+      const base92 = nBad();
+      v92.dispatch(v92.state.tr.setSelection(
+        PMTextSelection.create(v92.state.doc, v92.state.doc.content.size - 1)));
+      for (const c of 'ฬฒฏฑฆ') { typeAt(c); await wait92(20); }
+      check('[92-1] ยังไม่ขีดตอนที่ยังพิมพ์ (ไม่มีตัวคั่นเลย)', nBad() === base92, nBad());
+      await wait92(700);                                 // หยุดพิมพ์เกิน SPELL_IDLE_MS
+      check('[92-1] ★ หยุดพิมพ์แล้วตรวจให้เอง (ไทยทั้งย่อหน้าไม่มีเว้นวรรค)',
+            nBad() > base92, base92 + ' → ' + nBad());
+
+      // ── ข้อ 1: แก้คำที่ขีดแดงอยู่ → เส้นหายทันทีที่เริ่มพิมพ์ (ไม่ค้างคาตา) ──
+      {
+        const withBad = nBad();
+        typeAt('ฬ');                                     // แทรกกลางคำที่กำลังขีดแดงอยู่
+        await wait92(60);
+        check('[92-1] เริ่มแก้คำที่ขีดแดง → เส้นหายทันที', nBad() < withBad,
+              withBad + ' → ' + nBad());
+        await wait92(700);
+        check('[92-1] แก้แล้วยังผิดอยู่ → เส้นกลับมาเองหลังหยุดพิมพ์', nBad() >= withBad,
+              nBad());
+      }
+
+      // ── ข้อ 2: คำสั้น ≤2 ตัว / ยาว >65 ตัว ไม่ถูกขีดในตัวแก้ไขจริง ──
+      t.editor.setMarkdown('ฬฒ zq ฏฑ ok ' + 'ฬ'.repeat(90) + ' ' + 'x'.repeat(90));
+      refreshSpell(v92);
+      await wait92(200);
+      check('[92-2] ★ คำสั้น ≤2 ตัว และคำยาว >65 ตัว ไม่ถูกขีดเลยสักจุด', nBad() === 0, nBad());
+      t.editor.setMarkdown('เขาเดินไปที่ตลาด ฬฒฏฑฆ มาก');
+      refreshSpell(v92);
+      await wait92(200);
+      check('[92-2] คำผิดความยาวปกติยังถูกขีดอยู่', nBad() >= 1, nBad());
+
+      // ── ข้อ 3: เส้นดำ + เส้นแดง = ตัวตรวจสองตัวขีดทับกัน · ต้องเหลือตัวเดียวเสมอ ──
+      // เส้นตรงสีดำแนบเส้นบรรทัด = ของ Chromium (attribute `spellcheck`) วาดโดยเบราว์เซอร์
+      //   ไม่มีใน DOM จึง query ไม่ได้ · มี 57 ภาษา **ไม่มีไทย** → ขีดเฉพาะคำลาติน
+      // หยักแดง #e5695e เยื้องลง 2px = ของโปรแกรมเอง (.k-spell-bad) รู้จักไทยและคำที่ผู้ใช้เพิ่มเอง
+      {
+        const pmOf = () => document.querySelector('.pane.on .ProseMirror');
+        const bad = document.querySelector('.pane.on .k-spell-bad');
+        const cs = bad && getComputedStyle(bad);
+        check('[92-3] เส้นแดงเป็นของโปรแกรมเอง (.k-spell-bad หยัก สีตามธีม)',
+              !!cs && cs.textDecorationStyle === 'wavy' &&
+              cs.textDecorationColor.replace(/\s/g, '') === 'rgb(229,105,94)',
+              cs && cs.textDecorationStyle + ' ' + cs.textDecorationColor);
+
+        // ★ หัวใจของข้อนี้: ของเราขีดอยู่ = ของ Chromium ต้องเงียบ
+        check('[92-3] ★★ ของโปรแกรมขีดอยู่ → ของ Chromium ต้องถูกปิด (ไม่มีเส้นดำซ้อน)',
+              nBad() >= 1 && pmOf().spellcheck === false && useDictSpell(),
+              'ขีดแดง ' + nBad() + ' จุด · spellcheck=' + pmOf().spellcheck);
+
+        // ปิดพจนานุกรมของโปรแกรม → ต้องตกไปใช้ของ Chromium (ไม่ใช่ "ไม่มีตัวตรวจเลย")
+        state.settings.spellCheckDict = false; refreshAllSpell();
+        await wait92(120);
+        check('[92-3] ★ ปิดพจนานุกรมของโปรแกรม → เส้นแดงหาย และของ Chromium มารับช่วง',
+              nBad() === 0 && pmOf().spellcheck === true,
+              nBad() + ' · spellcheck=' + pmOf().spellcheck);
+
+        // สวิตช์ใหญ่ปิด = ไม่ขีดอะไรเลยทั้งสองระบบ
+        state.settings.spellCheck = false; refreshAllSpell();
+        await wait92(120);
+        check('[92-3] ★ ปิด "ตรวจคำผิด" → เงียบทั้งสองระบบ',
+              nBad() === 0 && pmOf().spellcheck === false,
+              nBad() + ' · spellcheck=' + pmOf().spellcheck);
+
+        state.settings.spellCheck = true; state.settings.spellCheckDict = true; refreshAllSpell();
+        await wait92(120);
+        check('[92-3] เปิดกลับ → กลับมาเป็นของโปรแกรมตัวเดียว',
+              nBad() >= 1 && pmOf().spellcheck === false, nBad() + ' · ' + pmOf().spellcheck);
+        note('[92-3] เส้นดำ=ของ Chromium · หยักแดง=ของโปรแกรม → ตอนนี้ทำงานทีละตัว ไม่ขีดทับกันแล้ว');
+
+        // ภาพยืนยัน: คำไทยผิด + คำอังกฤษผิด ต้องได้ "เส้นเดียว" เหมือนกันทั้งคู่
+        t.editor.setMarkdown('ฬฒฏฑฆ helllo teh wrongwordz');
+        refreshSpell(v92);
+        const pm92 = pmOf();
+        pm92.style.fontSize = '46px';                    // ตัวโต ๆ ให้เห็นลายเส้นชัดตอนครอปรูป
+        v92.focus();
+        typeAt(' '); await wait92(150);
+        v92.dispatch(v92.state.tr.delete(v92.state.selection.from - 1, v92.state.selection.from));
+        await wait92(1200);                              // เผื่อเวลาให้ Chromium ลงมือ (ถ้ามันจะลงมือ)
+        await kapi.testShot('/tmp/k2_spell2.png');
+        pm92.style.fontSize = '';
+      }
+    }
     t.editor.setMarkdown(orig);
 
     // ---- จัดหน้ากระดาษ (align) โหมดนิยาย + บันทึกลงไฟล์ ----
@@ -15196,13 +15335,19 @@ async function runTest(projectPath) {
       if (state.tabs.has(secondFile)) closeTab(secondFile);
     }
 
-    // ---- ตรวจคำผิด (spellcheck attribute) ----
+    // ---- ตรวจคำผิด (spellcheck attribute ของ Chromium) ----
+    // [alpha.92 ข้อ 3] ของ Chromium ทำงาน **เฉพาะตอนที่ของโปรแกรมไม่ได้ทำงาน** เท่านั้น
+    const pmAll = () => [...document.querySelectorAll('.ProseMirror')];
     state.settings.spellCheck = false; applySpellcheck();
     check('ปิดตรวจคำผิด → .ProseMirror spellcheck=false',
-          [...document.querySelectorAll('.ProseMirror')].every((el) => el.spellcheck === false));
-    state.settings.spellCheck = true; applySpellcheck();
-    check('เปิดตรวจคำผิด → .ProseMirror spellcheck=true',
-          [...document.querySelectorAll('.ProseMirror')].every((el) => el.spellcheck === true));
+          pmAll().every((el) => el.spellcheck === false));
+    state.settings.spellCheck = true; state.settings.spellCheckDict = true; applySpellcheck();
+    check('[92-3] ★ เปิดทั้งคู่ → ของ Chromium ต้องถูกปิด (ไม่งั้นได้เส้นซ้อนสองเส้น)',
+          pmAll().every((el) => el.spellcheck === false), pmAll().map((el) => el.spellcheck).join(','));
+    state.settings.spellCheckDict = false; applySpellcheck();
+    check('[92-3] ★ ปิดพจนานุกรมของโปรแกรม → ตกไปใช้ของ Chromium (ยังมีตัวตรวจเสมอ)',
+          pmAll().every((el) => el.spellcheck === true), pmAll().map((el) => el.spellcheck).join(','));
+    state.settings.spellCheckDict = true; applySpellcheck();
 
     // ---- ดู Markdown ดิบ (source view) ----
     activate(t.file);
@@ -21139,6 +21284,9 @@ async function runTest(projectPath) {
                 Math.abs(grew) <= 6, counts.join(','));
 
           // ★ ข้อสำคัญที่สุด: ผลของทางเพิ่มทีละส่วน ต้องเท่ากับสแกนใหม่ทั้งเอกสารเป๊ะ
+          // [alpha.92 ข้อ 1] ตรวจคำผิด "รอให้คำจบก่อน" — ที่นี่พิมพ์ 'ก'/'ข' รวดเดียวไม่มีตัวคั่น
+          // เลยสักตัว จึงต้องรอตัวตั้งเวลา (400ms) ลงมือก่อน ค่อยเทียบ ไม่งั้นเทียบตอนที่ยังค้างอยู่
+          await new Promise((r) => setTimeout(r, 700));
           const inc6 = decoSignature(v6);
           refreshSpell(v6); refreshMentions(v6);
           await new Promise((r) => setTimeout(r, 900));

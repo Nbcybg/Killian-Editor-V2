@@ -1850,18 +1850,18 @@
         @internal
         */
         static resolveCached(doc3, pos) {
-          let cache2 = resolveCache.get(doc3);
-          if (cache2) {
-            for (let i5 = 0; i5 < cache2.elts.length; i5++) {
-              let elt = cache2.elts[i5];
+          let cache3 = resolveCache.get(doc3);
+          if (cache3) {
+            for (let i5 = 0; i5 < cache3.elts.length; i5++) {
+              let elt = cache3.elts[i5];
               if (elt.pos == pos)
                 return elt;
             }
           } else {
-            resolveCache.set(doc3, cache2 = new ResolveCache());
+            resolveCache.set(doc3, cache3 = new ResolveCache());
           }
-          let result = cache2.elts[cache2.i] = _ResolvedPos.resolve(doc3, pos);
-          cache2.i = (cache2.i + 1) % resolveCacheSize;
+          let result = cache3.elts[cache3.i] = _ResolvedPos.resolve(doc3, pos);
+          cache3.i = (cache3.i + 1) % resolveCacheSize;
           return result;
         }
       };
@@ -16412,6 +16412,13 @@
     }
     return { from: clamp6(Math.min(a, b)), to: clamp6(Math.max(a, b)) };
   }
+  function rescanRange(doc3, set, r, scan) {
+    const oldIn = set.find(r.from, r.to);
+    const next = scan(doc3, r.from, r.to);
+    const { remove, add } = diffByKey(oldIn, next);
+    if (!remove.length && !add.length) return set;
+    return set.remove(remove).add(doc3, add);
+  }
   function incrementalDecoState(key2, scan) {
     const full = (doc3) => DecorationSet.create(doc3, scan(doc3, 0, doc3.content.size));
     return {
@@ -16423,11 +16430,7 @@
         if (!ch) return prev.map(tr4.mapping, tr4.doc);
         const r = blockRange(st.doc, ch.from, ch.to);
         const moved = prev.map(tr4.mapping, tr4.doc);
-        const oldIn = moved.find(r.from, r.to);
-        const next = scan(st.doc, r.from, r.to);
-        const { remove, add } = diffByKey(oldIn, next);
-        if (!remove.length && !add.length) return moved;
-        return moved.remove(remove).add(st.doc, add);
+        return rescanRange(st.doc, moved, r, scan);
       }
     };
   }
@@ -16500,16 +16503,76 @@
     });
     return out;
   }
+  function deferredSpellState(scan) {
+    const full = (doc3) => ({ set: DecorationSet.create(doc3, scan(doc3, 0, doc3.content.size)), dirty: null });
+    const flush = (doc3, set, dirty) => ({ set: dirty ? rescanRange(doc3, set, clampR(doc3, dirty), scan) : set, dirty: null });
+    return {
+      init: (_c, st) => full(st.doc),
+      apply(tr4, prev, old, st) {
+        const meta2 = tr4.getMeta(spellKey);
+        if (meta2 === true) return full(st.doc);
+        let set = prev.set, dirty = prev.dirty;
+        if (tr4.docChanged) {
+          set = set.map(tr4.mapping, tr4.doc);
+          if (dirty) dirty = { from: tr4.mapping.map(dirty.from, -1), to: tr4.mapping.map(dirty.to, 1) };
+        }
+        if (meta2 && meta2.flush) return flush(st.doc, set, dirty);
+        if (!tr4.docChanged) {
+          if (dirty && tr4.selectionSet) {
+            const p = st.selection.from;
+            if (p < dirty.from || p > dirty.to) return flush(st.doc, set, dirty);
+          }
+          return set === prev.set && dirty === prev.dirty ? prev : { set, dirty };
+        }
+        const ch = changedRange(tr4);
+        if (!ch) return { set, dirty };
+        const r = blockRange(st.doc, ch.from, ch.to);
+        const grew = ch.to - ch.from;
+        const structural = st.doc.childCount !== old.doc.childCount;
+        const typedEnd = grew > 0 && grew <= 2 && WORD_END.test(st.doc.textBetween(Math.max(0, ch.to - 1), ch.to) || " ");
+        if (structural || grew > 2 || typedEnd) {
+          return { set: rescanRange(st.doc, set, dirty ? clampR(st.doc, {
+            from: Math.min(dirty.from, r.from),
+            to: Math.max(dirty.to, r.to)
+          }) : r, scan), dirty: null };
+        }
+        const near2 = set.find(Math.max(0, ch.from - 1), ch.to + 1);
+        if (near2.length) set = set.remove(near2);
+        return { set, dirty: dirty ? { from: Math.min(dirty.from, r.from), to: Math.max(dirty.to, r.to) } : r };
+      }
+    };
+  }
   function spellPlugin(getChecker) {
     return new Plugin({
       key: spellKey,
-      state: incrementalDecoState(
-        spellKey,
-        (doc3, from2, to) => spellScan(doc3, getChecker(), from2, to)
-      ),
+      state: deferredSpellState((doc3, from2, to) => spellScan(doc3, getChecker(), from2, to)),
       props: { decorations(state2) {
-        return spellKey.getState(state2);
-      } }
+        const s = spellKey.getState(state2);
+        return s && s.set;
+      } },
+      // ตัวตั้งเวลา "หยุดพิมพ์แล้วตรวจให้" — อยู่ในชั้น view เพราะ state.apply ต้องบริสุทธิ์
+      view(view2) {
+        let timer2 = null;
+        const stop = () => {
+          if (timer2) {
+            clearTimeout(timer2);
+            timer2 = null;
+          }
+        };
+        return {
+          update() {
+            const s = spellKey.getState(view2.state);
+            stop();
+            if (!s || !s.dirty) return;
+            timer2 = setTimeout(() => {
+              timer2 = null;
+              const cur = spellKey.getState(view2.state);
+              if (cur && cur.dirty) view2.dispatch(view2.state.tr.setMeta(spellKey, { flush: true }));
+            }, SPELL_IDLE_MS);
+          },
+          destroy: stop
+        };
+      }
     });
   }
   function refreshSpell(view2) {
@@ -16580,8 +16643,9 @@
   }
   function decoSignature(view2) {
     const sig = (k) => {
-      const set = view2 && k.getState(view2.state);
-      if (!set) return "";
+      const raw = view2 && k.getState(view2.state);
+      const set = raw && raw.set ? raw.set : raw;
+      if (!set || !set.find) return "";
       return set.find().map((d) => d.from + ":" + d.to).sort().join(",");
     };
     const spell = sig(spellKey), mention = sig(mentionKey), comment = sig(cmKey);
@@ -16695,7 +16759,7 @@
     }
     return out;
   }
-  var import_md, mentionKey, spellKey, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, KEditor;
+  var import_md, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, KEditor;
   var init_editor = __esm({
     "src/editor.js"() {
       init_i18n();
@@ -16719,6 +16783,13 @@
       init_deco_diff();
       mentionKey = new PluginKey("kmention");
       spellKey = new PluginKey("kspell");
+      WORD_END = /[\s .,!?;:'"‘’“”()[\]{}<>…—–\-/\\|@#$%^&*+=~`]/;
+      SPELL_IDLE_MS = 400;
+      clampR = (doc3, r) => {
+        const size = doc3.content.size;
+        const from2 = Math.max(0, Math.min(r.from, size));
+        return { from: from2, to: Math.max(from2, Math.min(r.to, size)) };
+      };
       focusKey = new PluginKey("kfocusline");
       _focusOn = false;
       cmKey = new PluginKey("kcomment");
@@ -46649,15 +46720,15 @@
               if (skipGroup || !this.group) {
                 return matrix;
               }
-              var key2 = this.transformMatrixKey(skipGroup), cache2 = this.matrixCache || (this.matrixCache = {});
-              if (cache2.key === key2) {
-                return cache2.value;
+              var key2 = this.transformMatrixKey(skipGroup), cache3 = this.matrixCache || (this.matrixCache = {});
+              if (cache3.key === key2) {
+                return cache3.value;
               }
               if (this.group) {
                 matrix = multiplyMatrices(this.group.calcTransformMatrix(false), matrix);
               }
-              cache2.key = key2;
-              cache2.value = matrix;
+              cache3.key = key2;
+              cache3.value = matrix;
               return matrix;
             },
             /**
@@ -46666,9 +46737,9 @@
              * @return {Array} transform matrix for the object
              */
             calcOwnMatrix: function() {
-              var key2 = this.transformMatrixKey(true), cache2 = this.ownMatrixCache || (this.ownMatrixCache = {});
-              if (cache2.key === key2) {
-                return cache2.value;
+              var key2 = this.transformMatrixKey(true), cache3 = this.ownMatrixCache || (this.ownMatrixCache = {});
+              if (cache3.key === key2) {
+                return cache3.value;
               }
               var tMatrix = this._calcTranslateMatrix(), options = {
                 angle: this.angle,
@@ -46681,9 +46752,9 @@
                 flipX: this.flipX,
                 flipY: this.flipY
               };
-              cache2.key = key2;
-              cache2.value = util.composeMatrix(options);
-              return cache2.value;
+              cache3.key = key2;
+              cache3.value = util.composeMatrix(options);
+              return cache3.value;
             },
             /*
              * Calculate object dimensions from its properties
@@ -53823,11 +53894,11 @@
               if (!fabric5.charWidthsCache[fontFamily]) {
                 fabric5.charWidthsCache[fontFamily] = {};
               }
-              var cache2 = fabric5.charWidthsCache[fontFamily], cacheProp = decl.fontStyle.toLowerCase() + "_" + (decl.fontWeight + "").toLowerCase();
-              if (!cache2[cacheProp]) {
-                cache2[cacheProp] = {};
+              var cache3 = fabric5.charWidthsCache[fontFamily], cacheProp = decl.fontStyle.toLowerCase() + "_" + (decl.fontWeight + "").toLowerCase();
+              if (!cache3[cacheProp]) {
+                cache3[cacheProp] = {};
               }
-              return cache2[cacheProp];
+              return cache3[cacheProp];
             },
             /**
              * measure and return the width of a single character.
@@ -61597,9 +61668,19 @@
   });
 
   // src/spell.js
+  function visLen(s) {
+    let n2 = 0;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const c = s.charCodeAt(i5);
+      if (c === 3633 || c >= 3636 && c <= 3642 || c >= 3655 && c <= 3662) continue;
+      n2++;
+    }
+    return n2;
+  }
   function invalidateMerged() {
     mergedTh = null;
     mergedEn = null;
+    cache.clear();
   }
   function knownTh() {
     if (!mergedTh) mergedTh = extraTh.size ? /* @__PURE__ */ new Set([...base2.th, ...extraTh]) : base2.th;
@@ -61643,6 +61724,7 @@
     ok2[0] = true;
     let far = 0;
     for (let i5 = 1; i5 <= n2; i5++) {
+      if (i5 - far > MAX_TH_LEN) break;
       for (let L2 = 1; L2 <= Math.min(MAX_TH_LEN, i5); L2++) {
         if (ok2[i5 - L2] && known.has(run3.slice(i5 - L2, i5))) {
           ok2[i5] = true;
@@ -61659,6 +61741,7 @@
     ok2[n2] = true;
     let near2 = n2;
     for (let i5 = n2 - 1; i5 >= 0; i5--) {
+      if (near2 - i5 > MAX_TH_LEN) break;
       for (let L2 = 1; L2 <= Math.min(MAX_TH_LEN, n2 - i5); L2++) {
         if (ok2[i5 + L2] && known.has(run3.slice(i5, i5 + L2))) {
           ok2[i5] = true;
@@ -61682,6 +61765,8 @@
   }
   function check(text) {
     if (!text || !base2.loaded) return [];
+    const cached = cache.get(text);
+    if (cached) return cached;
     const thKnown = knownTh();
     const enKnown = knownEn();
     const out = [];
@@ -61689,15 +61774,18 @@
     THAI_RE.lastIndex = 0;
     while (m = THAI_RE.exec(text)) {
       const run3 = m[0];
-      if (run3.length < 2 || thKnown.has(run3)) continue;
+      if (visLen(run3) < MIN_WORD || thKnown.has(run3)) continue;
       for (const [a, b] of badThaiSpans(run3, thKnown)) {
-        if (b - a >= 2) out.push({ start: m.index + a, end: m.index + b, word: run3.slice(a, b) });
+        const word = run3.slice(a, b);
+        const n2 = visLen(word);
+        if (n2 < MIN_WORD || n2 > MAX_WORD) continue;
+        out.push({ start: m.index + a, end: m.index + b, word });
       }
     }
     LATIN_RE.lastIndex = 0;
     while (m = LATIN_RE.exec(text)) {
       const w = m[0];
-      if (w.length < 3) continue;
+      if (w.length < MIN_WORD || w.length > MAX_WORD) continue;
       const lw = w.toLowerCase().replace(/^['\u2019]+|['\u2019]+$/g, "");
       if (enKnown.has(lw)) continue;
       if (lw.endsWith("s") && enKnown.has(lw.slice(0, -1))) continue;
@@ -61706,20 +61794,29 @@
       if (lw.endsWith("ing") && (enKnown.has(lw.slice(0, -3)) || enKnown.has(lw.slice(0, -3) + "e"))) continue;
       out.push({ start: m.index, end: m.index + w.length, word: w });
     }
+    if (text.length <= CACHE_TEXT_MAX) {
+      if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+      cache.set(text, out);
+    }
     return out;
   }
-  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, base2, extraTh, extraEn, mergedTh, mergedEn;
+  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, MIN_WORD, MAX_WORD, base2, extraTh, extraEn, mergedTh, mergedEn, CACHE_MAX, CACHE_TEXT_MAX, cache;
   var init_spell = __esm({
     "src/spell.js"() {
       THAI_RE = /[\u0E00-\u0E7F]+/g;
       LATIN_RE = /[A-Za-z][A-Za-z'\u2019]*/g;
       THAI_FULL = /^[\u0E00-\u0E7F]+$/;
       MAX_TH_LEN = 24;
+      MIN_WORD = 3;
+      MAX_WORD = 65;
       base2 = { th: /* @__PURE__ */ new Set(), en: /* @__PURE__ */ new Set(), loaded: false };
       extraTh = /* @__PURE__ */ new Set();
       extraEn = /* @__PURE__ */ new Set();
       mergedTh = null;
       mergedEn = null;
+      CACHE_MAX = 2e3;
+      CACHE_TEXT_MAX = 8e3;
+      cache = /* @__PURE__ */ new Map();
     }
   });
 
@@ -63482,10 +63579,10 @@ ${h.text}`;
       KEY_FILE3 = "ai-key.json";
       SECRET_KEYS = ["authorization", "x-api-key", "apikey", "api_key", "key", "token"];
       KeyStore = class {
-        constructor({ io = null, root = "", cache: cache2 = null } = {}) {
+        constructor({ io = null, root = "", cache: cache3 = null } = {}) {
           this.io = io;
           this.root = root;
-          this._cache = cache2;
+          this._cache = cache3;
         }
         async get() {
           if (this._cache != null) return this._cache;
@@ -70664,7 +70761,7 @@ ${h.text}`;
     q("#st-ln").onchange = () => document.body.classList.toggle("k-ln", q("#st-ln").checked);
     q("#st-spell").onchange = () => {
       s.spellCheck = q("#st-spell").checked;
-      applySpellcheck();
+      refreshAllSpell();
     };
     q("#st-spelldict").onchange = () => {
       s.spellCheckDict = q("#st-spelldict").checked;
@@ -79253,7 +79350,7 @@ ${BLOCK_END}
     return code3 >= 9 && code3 <= 13 || code3 === 32 || code3 === 160;
   }
   function norm2(weight = 1, mantissa = 3) {
-    const cache2 = /* @__PURE__ */ new Map();
+    const cache3 = /* @__PURE__ */ new Map();
     const m = Math.pow(10, mantissa);
     return {
       get(value) {
@@ -79266,13 +79363,13 @@ ${BLOCK_END}
           }
         } else inWord = false;
         if (numTokens === 0) numTokens = 1;
-        if (cache2.has(numTokens)) return cache2.get(numTokens);
+        if (cache3.has(numTokens)) return cache3.get(numTokens);
         const n2 = Math.round(m / Math.pow(numTokens, 0.5 * weight)) / m;
-        cache2.set(numTokens, n2);
+        cache3.set(numTokens, n2);
         return n2;
       },
       clear() {
-        cache2.clear();
+        cache3.clear();
       }
     };
   }
@@ -81360,19 +81457,19 @@ ${BLOCK_END}
   function getBlogOptions() {
     return { ...DEFAULT_OPTS, ...state.meta && state.meta.blogExport || {} };
   }
-  async function embedImages(html, cache2) {
+  async function embedImages(html, cache3) {
     const srcs = [...html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/g)].map((m) => m[1]);
     for (const src2 of new Set(srcs)) {
       if (/^(data:|https?:)/i.test(src2)) continue;
-      if (cache2.has(src2)) {
-        html = html.split(`src="${src2}"`).join(`src="${cache2.get(src2)}"`);
+      if (cache3.has(src2)) {
+        html = html.split(`src="${src2}"`).join(`src="${cache3.get(src2)}"`);
         continue;
       }
       try {
         const base4 = src2.split(/[\\/]/).pop();
         const fp = await kapi.join(state.root, "Images", base4);
         if (!await kapi.exists(fp)) {
-          cache2.set(src2, src2);
+          cache3.set(src2, src2);
           continue;
         }
         const bytes = await kapi.readBytes(fp);
@@ -81381,11 +81478,11 @@ ${BLOCK_END}
           bin += String.fromCharCode.apply(null, bytes.slice(i5, i5 + 8192));
         const mime = MIME[(base4.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
         const uri = `data:${mime};base64,${btoa(bin)}`;
-        cache2.set(src2, uri);
+        cache3.set(src2, uri);
         html = html.split(`src="${src2}"`).join(`src="${uri}"`);
       } catch (e) {
         log("warn", t("ui.exportBlog.exportBlogImageCant") + src2, e);
-        cache2.set(src2, src2);
+        cache3.set(src2, src2);
       }
     }
     return html;
@@ -83438,11 +83535,11 @@ img{max-width:100%}` }
         onProgress: (done2, total, label) => busy.set(tf("ui.aiSum.readScene", done2, total, label ? " \u2014 " + label : ""), total ? done2 / total * 0.6 : 0)
       });
       const h = hashText(text);
-      const cache2 = readCache();
-      if (!force && cache2 && cache2.hash === h && cache2.text) {
-        result = cache2.text;
+      const cache3 = readCache();
+      if (!force && cache3 && cache3.hash === h && cache3.text) {
+        result = cache3.text;
         cached = true;
-        cacheDate = cache2.date;
+        cacheDate = cache3.date;
         busy.set(t("ui.aiSum.useResultSummarySave"), 1);
       } else {
         busy.set(tf("ui.aiSum.busySendAISummary", scenes, entities), 0.7);
@@ -115107,7 +115204,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     options.encoding = this.encoding = "utf8";
     Transform$1.call(this, options);
   }
-  function cache(target, key2, descriptor) {
+  function cache2(target, key2, descriptor) {
     if (descriptor.get) {
       var get3 = descriptor.get;
       descriptor.get = function() {
@@ -115121,17 +115218,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       var fn = descriptor.value;
       return {
         get: function get4() {
-          var cache2 = /* @__PURE__ */ new Map();
+          var cache3 = /* @__PURE__ */ new Map();
           function memoized() {
             for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
               args[_key] = arguments[_key];
             }
             var key3 = args.length > 0 ? args[0] : "value";
-            if (cache2.has(key3)) {
-              return cache2.get(key3);
+            if (cache3.has(key3)) {
+              return cache3.get(key3);
             }
             var result = fn.apply(this, args);
-            cache2.set(key3, result);
+            cache3.set(key3, result);
             return result;
           }
           Object.defineProperty(this, key2, {
@@ -136992,7 +137089,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         };
         return CmapProcessor2;
-      })(), _applyDecoratedDescriptor(_class.prototype, "getCharacterSet", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "getCharacterSet"), _class.prototype), _applyDecoratedDescriptor(_class.prototype, "codePointsForGlyph", [cache], Object.getOwnPropertyDescriptor(_class.prototype, "codePointsForGlyph"), _class.prototype), _class);
+      })(), _applyDecoratedDescriptor(_class.prototype, "getCharacterSet", [cache2], Object.getOwnPropertyDescriptor(_class.prototype, "getCharacterSet"), _class.prototype), _applyDecoratedDescriptor(_class.prototype, "codePointsForGlyph", [cache2], Object.getOwnPropertyDescriptor(_class.prototype, "codePointsForGlyph"), _class.prototype), _class);
       KernProcessor = /* @__PURE__ */ (function() {
         function KernProcessor2(font) {
           this.kern = font.kern;
@@ -138434,7 +138531,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return res;
         };
         return AATLookupTable2;
-      })(), _applyDecoratedDescriptor$1(_class$1.prototype, "glyphsForValue", [cache], Object.getOwnPropertyDescriptor(_class$1.prototype, "glyphsForValue"), _class$1.prototype), _class$1);
+      })(), _applyDecoratedDescriptor$1(_class$1.prototype, "glyphsForValue", [cache2], Object.getOwnPropertyDescriptor(_class$1.prototype, "glyphsForValue"), _class$1.prototype), _class$1);
       START_OF_TEXT_STATE = 0;
       END_OF_TEXT_CLASS = 0;
       OUT_OF_BOUNDS_CLASS = 1;
@@ -138802,7 +138899,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           });
         };
         return AATMorxProcessor2;
-      })(), _applyDecoratedDescriptor$2(_class$2.prototype, "getStateMachine", [cache], Object.getOwnPropertyDescriptor(_class$2.prototype, "getStateMachine"), _class$2.prototype), _class$2);
+      })(), _applyDecoratedDescriptor$2(_class$2.prototype, "getStateMachine", [cache2], Object.getOwnPropertyDescriptor(_class$2.prototype, "getStateMachine"), _class$2.prototype), _class$2);
       AATLayoutEngine = /* @__PURE__ */ (function() {
         function AATLayoutEngine2(font) {
           this.font = font;
@@ -141148,7 +141245,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         }]);
         return Glyph2;
-      })(), _applyDecoratedDescriptor$3(_class$3.prototype, "cbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "cbox"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "bbox"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "path", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "path"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "advanceWidth", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceWidth"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "advanceHeight", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceHeight"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "name", [cache], Object.getOwnPropertyDescriptor(_class$3.prototype, "name"), _class$3.prototype), _class$3);
+      })(), _applyDecoratedDescriptor$3(_class$3.prototype, "cbox", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "cbox"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "bbox", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "bbox"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "path", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "path"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "advanceWidth", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceWidth"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "advanceHeight", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "advanceHeight"), _class$3.prototype), _applyDecoratedDescriptor$3(_class$3.prototype, "name", [cache2], Object.getOwnPropertyDescriptor(_class$3.prototype, "name"), _class$3.prototype), _class$3);
       GlyfHeader = new restructure.Struct({
         numberOfContours: restructure.int16,
         // if negative, this is a composite glyph
@@ -143355,7 +143452,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         }]);
         return TTFFont2;
-      })(), _applyDecoratedDescriptor$4(_class$4.prototype, "bbox", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "bbox"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_cmapProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_cmapProcessor"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "characterSet", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "characterSet"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_layoutEngine", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_layoutEngine"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "variationAxes", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "variationAxes"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "namedVariations", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "namedVariations"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_variationProcessor", [cache], Object.getOwnPropertyDescriptor(_class$4.prototype, "_variationProcessor"), _class$4.prototype), _class$4);
+      })(), _applyDecoratedDescriptor$4(_class$4.prototype, "bbox", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "bbox"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_cmapProcessor", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "_cmapProcessor"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "characterSet", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "characterSet"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_layoutEngine", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "_layoutEngine"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "variationAxes", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "variationAxes"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "namedVariations", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "namedVariations"), _class$4.prototype), _applyDecoratedDescriptor$4(_class$4.prototype, "_variationProcessor", [cache2], Object.getOwnPropertyDescriptor(_class$4.prototype, "_variationProcessor"), _class$4.prototype), _class$4);
       WOFFDirectoryEntry = new restructure.Struct({
         tag: new restructure.String(4),
         offset: new restructure.Pointer(restructure.uint32, "void", {
@@ -149496,7 +149593,7 @@ ${s.body}`).join("\n\n");
   var thesaurus_exports2 = {};
   __export(thesaurus_exports2, {
     CACHE_KEY: () => CACHE_KEY,
-    CACHE_MAX: () => CACHE_MAX,
+    CACHE_MAX: () => CACHE_MAX2,
     CACHE_TTL: () => CACHE_TTL,
     DATAMUSE: () => DATAMUSE,
     EN_ANTONYMS: () => EN_ANTONYMS,
@@ -149582,13 +149679,13 @@ ${s.body}`).join("\n\n");
       return null;
     }
   }
-  var CACHE_KEY, CACHE_TTL, CACHE_MAX, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD2, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
+  var CACHE_KEY, CACHE_TTL, CACHE_MAX2, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD2, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
   var init_thesaurus2 = __esm({
     "src/tools/thesaurus.js"() {
       init_i18n();
       CACHE_KEY = "k2-thes-cache";
       CACHE_TTL = 30 * 24 * 3600 * 1e3;
-      CACHE_MAX = 500;
+      CACHE_MAX2 = 500;
       TH_SYNONYMS = {
         "\u0E2A\u0E27\u0E22": ["\u0E07\u0E32\u0E21", "\u0E07\u0E14\u0E07\u0E32\u0E21", "\u0E40\u0E25\u0E2D\u0E42\u0E09\u0E21", "\u0E15\u0E23\u0E30\u0E01\u0E32\u0E23\u0E15\u0E32"],
         "\u0E40\u0E14\u0E34\u0E19": ["\u0E01\u0E49\u0E32\u0E27", "\u0E22\u0E48\u0E32\u0E07", "\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19", "\u0E22\u0E48\u0E32\u0E07\u0E40\u0E17\u0E49\u0E32"],
@@ -149644,7 +149741,7 @@ ${s.body}`).join("\n\n");
       uniq = (a) => [...new Set(a.filter(Boolean))];
       DATAMUSE = "https://api.datamuse.com/words";
       ThesaurusCache = class {
-        constructor({ storage = defaultStorage4(), key: key2 = CACHE_KEY, ttl = CACHE_TTL, max: max2 = CACHE_MAX, now = () => Date.now() } = {}) {
+        constructor({ storage = defaultStorage4(), key: key2 = CACHE_KEY, ttl = CACHE_TTL, max: max2 = CACHE_MAX2, now = () => Date.now() } = {}) {
           this.storage = storage;
           this.key = key2;
           this.ttl = ttl;
@@ -151875,6 +151972,7 @@ ${css}
     updatePageNumberHint: () => updatePageNumberHint,
     updateSceneRow: () => updateSceneRow,
     updateToolbarTitles: () => updateToolbarTitles,
+    useDictSpell: () => useDictSpell,
     userWorkflows: () => userWorkflows,
     versionAtLeast: () => versionAtLeast2,
     watchPlannerRows: () => watchPlannerRows,
@@ -153179,14 +153277,17 @@ ${css}
     };
     ta.focus();
   }
+  function useDictSpell() {
+    return state.settings.spellCheck !== false && state.settings.spellCheckDict !== false && ready();
+  }
   function applySpellcheck() {
-    const on2 = state.settings.spellCheck !== false;
+    const native = state.settings.spellCheck !== false && !useDictSpell();
     document.querySelectorAll(".ProseMirror").forEach((el2) => {
-      el2.spellcheck = on2;
+      el2.spellcheck = native;
     });
   }
   function spellChecker() {
-    if (state.settings.spellCheckDict === false || !ready()) return null;
+    if (!useDictSpell()) return null;
     return (text) => check(text);
   }
   async function loadSpellDict(root) {
@@ -153207,6 +153308,7 @@ ${css}
     refreshAllSpell();
   }
   function refreshAllSpell() {
+    applySpellcheck();
     for (const t3 of state.tabs.values()) {
       if (t3.editor) refreshSpell(t3.editor.view);
       if (t3.sp) refreshSpell(t3.sp.view);
@@ -165035,6 +165137,131 @@ ${css}
         check("\u0E2D\u0E32\u0E01\u0E2A\u0E0E\u0E06\u0E08").length === 0,
         JSON.stringify(check("\u0E2D\u0E32\u0E01\u0E2A\u0E0E\u0E06\u0E08"))
       );
+      {
+        const nBad = () => document.querySelectorAll(".pane.on .k-spell-bad").length;
+        const wait92 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const v92 = t3.editor.view;
+        const typeAt = (s) => {
+          const p = v92.state.selection.from;
+          v92.dispatch(v92.state.tr.insertText(s, p).scrollIntoView());
+        };
+        activate(t3.file);
+        t3.editor.setMarkdown("\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E15\u0E25\u0E32\u0E14 ");
+        await wait92(120);
+        const before92 = nBad();
+        v92.dispatch(v92.state.tr.setSelection(
+          TextSelection.create(v92.state.doc, v92.state.doc.content.size - 1)
+        ));
+        for (const c of "\u0E2C\u0E12\u0E0F\u0E11\u0E06") {
+          typeAt(c);
+          await wait92(20);
+        }
+        check2(
+          "[92-1] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E33\u0E2D\u0E22\u0E39\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E02\u0E35\u0E14\u0E41\u0E14\u0E07 (\u0E23\u0E2D\u0E43\u0E2B\u0E49\u0E04\u0E33\u0E08\u0E1A\u0E01\u0E48\u0E2D\u0E19)",
+          nBad() === before92,
+          "\u0E01\u0E48\u0E2D\u0E19 " + before92 + " \u2192 \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C " + nBad()
+        );
+        typeAt(" ");
+        await wait92(60);
+        check2(
+          "[92-1] \u2605 \u0E40\u0E27\u0E49\u0E19\u0E27\u0E23\u0E23\u0E04\u0E41\u0E25\u0E49\u0E27\u0E02\u0E35\u0E14\u0E41\u0E14\u0E07\u0E02\u0E36\u0E49\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E23\u0E2D\u0E15\u0E31\u0E27\u0E15\u0E31\u0E49\u0E07\u0E40\u0E27\u0E25\u0E32)",
+          nBad() > before92,
+          before92 + " \u2192 " + nBad()
+        );
+        t3.editor.setMarkdown("\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E15\u0E25\u0E32\u0E14 ");
+        await wait92(120);
+        const base92 = nBad();
+        v92.dispatch(v92.state.tr.setSelection(
+          TextSelection.create(v92.state.doc, v92.state.doc.content.size - 1)
+        ));
+        for (const c of "\u0E2C\u0E12\u0E0F\u0E11\u0E06") {
+          typeAt(c);
+          await wait92(20);
+        }
+        check2("[92-1] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E02\u0E35\u0E14\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E04\u0E31\u0E48\u0E19\u0E40\u0E25\u0E22)", nBad() === base92, nBad());
+        await wait92(700);
+        check2(
+          "[92-1] \u2605 \u0E2B\u0E22\u0E38\u0E14\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E15\u0E23\u0E27\u0E08\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E44\u0E17\u0E22\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E27\u0E49\u0E19\u0E27\u0E23\u0E23\u0E04)",
+          nBad() > base92,
+          base92 + " \u2192 " + nBad()
+        );
+        {
+          const withBad = nBad();
+          typeAt("\u0E2C");
+          await wait92(60);
+          check2(
+            "[92-1] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E41\u0E01\u0E49\u0E04\u0E33\u0E17\u0E35\u0E48\u0E02\u0E35\u0E14\u0E41\u0E14\u0E07 \u2192 \u0E40\u0E2A\u0E49\u0E19\u0E2B\u0E32\u0E22\u0E17\u0E31\u0E19\u0E17\u0E35",
+            nBad() < withBad,
+            withBad + " \u2192 " + nBad()
+          );
+          await wait92(700);
+          check2(
+            "[92-1] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E1C\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E40\u0E2A\u0E49\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E22\u0E38\u0E14\u0E1E\u0E34\u0E21\u0E1E\u0E4C",
+            nBad() >= withBad,
+            nBad()
+          );
+        }
+        t3.editor.setMarkdown("\u0E2C\u0E12 zq \u0E0F\u0E11 ok " + "\u0E2C".repeat(90) + " " + "x".repeat(90));
+        refreshSpell(v92);
+        await wait92(200);
+        check2("[92-2] \u2605 \u0E04\u0E33\u0E2A\u0E31\u0E49\u0E19 \u22642 \u0E15\u0E31\u0E27 \u0E41\u0E25\u0E30\u0E04\u0E33\u0E22\u0E32\u0E27 >65 \u0E15\u0E31\u0E27 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E02\u0E35\u0E14\u0E40\u0E25\u0E22\u0E2A\u0E31\u0E01\u0E08\u0E38\u0E14", nBad() === 0, nBad());
+        t3.editor.setMarkdown("\u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E15\u0E25\u0E32\u0E14 \u0E2C\u0E12\u0E0F\u0E11\u0E06 \u0E21\u0E32\u0E01");
+        refreshSpell(v92);
+        await wait92(200);
+        check2("[92-2] \u0E04\u0E33\u0E1C\u0E34\u0E14\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1B\u0E01\u0E15\u0E34\u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E02\u0E35\u0E14\u0E2D\u0E22\u0E39\u0E48", nBad() >= 1, nBad());
+        {
+          const pmOf = () => document.querySelector(".pane.on .ProseMirror");
+          const bad = document.querySelector(".pane.on .k-spell-bad");
+          const cs = bad && getComputedStyle(bad);
+          check2(
+            "[92-3] \u0E40\u0E2A\u0E49\u0E19\u0E41\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E40\u0E2D\u0E07 (.k-spell-bad \u0E2B\u0E22\u0E31\u0E01 \u0E2A\u0E35\u0E15\u0E32\u0E21\u0E18\u0E35\u0E21)",
+            !!cs && cs.textDecorationStyle === "wavy" && cs.textDecorationColor.replace(/\s/g, "") === "rgb(229,105,94)",
+            cs && cs.textDecorationStyle + " " + cs.textDecorationColor
+          );
+          check2(
+            "[92-3] \u2605\u2605 \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E02\u0E35\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E02\u0E2D\u0E07 Chromium \u0E15\u0E49\u0E2D\u0E07\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E14\u0E33\u0E0B\u0E49\u0E2D\u0E19)",
+            nBad() >= 1 && pmOf().spellcheck === false && useDictSpell(),
+            "\u0E02\u0E35\u0E14\u0E41\u0E14\u0E07 " + nBad() + " \u0E08\u0E38\u0E14 \xB7 spellcheck=" + pmOf().spellcheck
+          );
+          state.settings.spellCheckDict = false;
+          refreshAllSpell();
+          await wait92(120);
+          check2(
+            "[92-3] \u2605 \u0E1B\u0E34\u0E14\u0E1E\u0E08\u0E19\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2192 \u0E40\u0E2A\u0E49\u0E19\u0E41\u0E14\u0E07\u0E2B\u0E32\u0E22 \u0E41\u0E25\u0E30\u0E02\u0E2D\u0E07 Chromium \u0E21\u0E32\u0E23\u0E31\u0E1A\u0E0A\u0E48\u0E27\u0E07",
+            nBad() === 0 && pmOf().spellcheck === true,
+            nBad() + " \xB7 spellcheck=" + pmOf().spellcheck
+          );
+          state.settings.spellCheck = false;
+          refreshAllSpell();
+          await wait92(120);
+          check2(
+            '[92-3] \u2605 \u0E1B\u0E34\u0E14 "\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E1C\u0E34\u0E14" \u2192 \u0E40\u0E07\u0E35\u0E22\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A',
+            nBad() === 0 && pmOf().spellcheck === false,
+            nBad() + " \xB7 spellcheck=" + pmOf().spellcheck
+          );
+          state.settings.spellCheck = true;
+          state.settings.spellCheckDict = true;
+          refreshAllSpell();
+          await wait92(120);
+          check2(
+            "[92-3] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27",
+            nBad() >= 1 && pmOf().spellcheck === false,
+            nBad() + " \xB7 " + pmOf().spellcheck
+          );
+          note("[92-3] \u0E40\u0E2A\u0E49\u0E19\u0E14\u0E33=\u0E02\u0E2D\u0E07 Chromium \xB7 \u0E2B\u0E22\u0E31\u0E01\u0E41\u0E14\u0E07=\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2192 \u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E17\u0E33\u0E07\u0E32\u0E19\u0E17\u0E35\u0E25\u0E30\u0E15\u0E31\u0E27 \u0E44\u0E21\u0E48\u0E02\u0E35\u0E14\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27");
+          t3.editor.setMarkdown("\u0E2C\u0E12\u0E0F\u0E11\u0E06 helllo teh wrongwordz");
+          refreshSpell(v92);
+          const pm92 = pmOf();
+          pm92.style.fontSize = "46px";
+          v92.focus();
+          typeAt(" ");
+          await wait92(150);
+          v92.dispatch(v92.state.tr.delete(v92.state.selection.from - 1, v92.state.selection.from));
+          await wait92(1200);
+          await kapi.testShot("/tmp/k2_spell2.png");
+          pm92.style.fontSize = "";
+        }
+      }
       t3.editor.setMarkdown(orig);
       activate(t3.file);
       const { TextSelection: TSa } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
@@ -168058,18 +168285,30 @@ ${css}
         );
         if (state.tabs.has(secondFile)) closeTab(secondFile);
       }
+      const pmAll = () => [...document.querySelectorAll(".ProseMirror")];
       state.settings.spellCheck = false;
       applySpellcheck();
       check2(
         "\u0E1B\u0E34\u0E14\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E1C\u0E34\u0E14 \u2192 .ProseMirror spellcheck=false",
-        [...document.querySelectorAll(".ProseMirror")].every((el2) => el2.spellcheck === false)
+        pmAll().every((el2) => el2.spellcheck === false)
       );
       state.settings.spellCheck = true;
+      state.settings.spellCheckDict = true;
       applySpellcheck();
       check2(
-        "\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E1C\u0E34\u0E14 \u2192 .ProseMirror spellcheck=true",
-        [...document.querySelectorAll(".ProseMirror")].every((el2) => el2.spellcheck === true)
+        "[92-3] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E17\u0E31\u0E49\u0E07\u0E04\u0E39\u0E48 \u2192 \u0E02\u0E2D\u0E07 Chromium \u0E15\u0E49\u0E2D\u0E07\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E44\u0E14\u0E49\u0E40\u0E2A\u0E49\u0E19\u0E0B\u0E49\u0E2D\u0E19\u0E2A\u0E2D\u0E07\u0E40\u0E2A\u0E49\u0E19)",
+        pmAll().every((el2) => el2.spellcheck === false),
+        pmAll().map((el2) => el2.spellcheck).join(",")
       );
+      state.settings.spellCheckDict = false;
+      applySpellcheck();
+      check2(
+        "[92-3] \u2605 \u0E1B\u0E34\u0E14\u0E1E\u0E08\u0E19\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2192 \u0E15\u0E01\u0E44\u0E1B\u0E43\u0E0A\u0E49\u0E02\u0E2D\u0E07 Chromium (\u0E22\u0E31\u0E07\u0E21\u0E35\u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E40\u0E2A\u0E21\u0E2D)",
+        pmAll().every((el2) => el2.spellcheck === true),
+        pmAll().map((el2) => el2.spellcheck).join(",")
+      );
+      state.settings.spellCheckDict = true;
+      applySpellcheck();
       activate(t3.file);
       showSourceView();
       await new Promise((r) => setTimeout(r, 60));
@@ -174947,6 +175186,7 @@ ${css}
               Math.abs(grew) <= 6,
               counts.join(",")
             );
+            await new Promise((r) => setTimeout(r, 700));
             const inc6 = decoSignature(v6);
             refreshSpell(v6);
             refreshMentions(v6);

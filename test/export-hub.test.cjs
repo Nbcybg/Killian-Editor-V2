@@ -128,16 +128,25 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   // [alpha.82] เลิกบังคับทับค่าที่ผู้ใช้ตั้ง — เดิมจอไม่มีเลข 1 แต่ PDF มี (สองฝั่งอ่านคนละที่)
   // ตอนนี้ค่าเริ่มต้นเป็น "หน้าฉากแรกมีเลข" อยู่แล้ว ตัวนี้จึงแค่เติมค่าที่ขาดให้ครบ
   check('เคารพค่าที่ผู้ใช้ตั้ง (ไม่บังคับทับ)', out.pageNumbers.firstPage === false);
+  // [alpha.92] ★ อย่าเขียนค่าเริ่มต้นเป็นตัวเลขตายตัวในเทส — **อ่านจากแหล่งจริง**
+  // เทสสามข้อล่างนี้เคยแดงค้างมาตั้งแต่ alpha.88 (ตอนนั้นเปลี่ยนค่าเริ่มต้น firstPage
+  // จาก true เป็น false = มาตรฐานบทที่หน้า 1 ไม่ใส่เลข · e2e ถูกอัปเดตแต่ unit ถูกลืม)
+  // และเพราะ `test:unit` ต่อกันด้วย `&&` มันจึง **บล็อกเทสอีก 6 ไฟล์ที่อยู่หลังมันไม่ให้รันเลย**
+  const PN_DEF = T.exportPageNumberFmt(null).pageNumbers.firstPage;
   check('ค่าที่ไม่ได้ตั้งถูกเติมจากค่าเริ่มต้น',
-        T.exportPageNumberFmt({ pageNumbers: { show: true } }).pageNumbers.firstPage === true);
+        T.exportPageNumberFmt({ pageNumbers: { show: true } }).pageNumbers.firstPage === PN_DEF);
   check('ค่าอื่นของเลขหน้าไม่ถูกแตะ',
         out.pageNumbers.right === 1 && out.pageNumbers.top === 0.5 && out.pageNumbers.suffix === '.');
   check('ส่วนอื่นของรูปแบบยังอยู่ครบ', out.paper.width === 8.5 && out.paper.height === 11);
   check('ไม่แก้ของเดิม (คืนสำเนาเสมอ)', base.pageNumbers.firstPage === false);
   check('ปิดสวิตช์เลขหน้าไว้ก็ยังปิดอยู่ (ไม่ไปเปิดให้เอง)',
         T.exportPageNumberFmt({ pageNumbers: { show: false } }).pageNumbers.show === false);
-  check('ไม่มี pageNumbers เลยก็ไม่พัง', T.exportPageNumberFmt({}).pageNumbers.firstPage === true);
-  check('ค่าว่าง/undefined ไม่พัง', T.exportPageNumberFmt(null).pageNumbers.firstPage === true);
+  check('ไม่มี pageNumbers เลยก็ไม่พัง',
+        T.exportPageNumberFmt({}).pageNumbers.firstPage === PN_DEF);
+  check('ค่าว่าง/undefined ไม่พัง', typeof PN_DEF === 'boolean', String(PN_DEF));
+  // ค่าเริ่มต้นตอนนี้ = มาตรฐานบท (หน้า 1 ไม่ใส่เลข) — ผูกไว้ให้เปลี่ยนแล้วรู้ตัว
+  check('[92] ค่าเริ่มต้นของการส่งออก = หน้า 1 ของบทไม่ใส่เลข (ตรงกับ e2e [88-4])',
+        PN_DEF === false, String(PN_DEF));
 }
 
 // ═══════════ ชื่อไฟล์ที่เสนอ ═══════════

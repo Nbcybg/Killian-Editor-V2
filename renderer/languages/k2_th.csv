@@ -4411,9 +4411,9 @@ ui.settings.recycleDaysHint,0 = ไม่ล้างอัตโนมัติ
 ui.settings.shortcuts,ปุ่มลัด
 ui.settings.shortcutsHint,"คลิก ""แก้"" แล้วกดปุ่มลัดชุดใหม่ (ต้องมี Ctrl/⌘) · ปุ่มลัดที่ซ้ำกันจะถูกเตือน"
 ui.settings.spellCheck,ตรวจคำผิด
-ui.settings.spellCheckDict,ตรวจคำผิดด้วยพจนานุกรม (ไทย+อังกฤษ)
-ui.settings.spellCheckDictHint,คลังคำออฟไลน์
-ui.settings.spellCheckHint,ขีดเส้นใต้คำสะกดผิด
+ui.settings.spellCheckDict,ใช้พจนานุกรมของโปรแกรม (ไทย+อังกฤษ)
+ui.settings.spellCheckDictHint,คลังคำออฟไลน์ · รู้จักคำที่เพิ่มเอง · ปิด = ใช้ตัวตรวจของเบราว์เซอร์ (อังกฤษเท่านั้น)
+ui.settings.spellCheckHint,ขีดเส้นใต้คำสะกดผิด (ขีดเส้นเดียวเสมอ ไม่ซ้อนกัน)
 ui.settings.spFontFamily,แบบอักษรบทหนัง
 ui.settings.spFontFamilyHint,ฟอนต์เฉพาะโหมดบทภาพยนตร์ (ค่าเริ่มต้น Courier New ตามมาตรฐานบท)
 ui.settings.title,ตั้งค่าโปรเจกต์
