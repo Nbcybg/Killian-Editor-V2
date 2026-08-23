@@ -9,6 +9,8 @@ import { baseKeymap, toggleMark, chainCommands } from 'prosemirror-commands';
 import { parseScript, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
          splitCharacter, withExtension, blocksToMd } from './fountain.js';
 import { state, DEFAULT_SP_CYCLE, spCycleKeys, spKeyMatch } from './core.js';
+// [alpha.88] ระยะเว้นนำของ element — ใช้ตัดสินว่ากด Enter แล้วต้องแทรกบรรทัดว่างกี่บรรทัด
+import { blankLinesBefore } from './sp-format.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
 
@@ -192,6 +194,8 @@ export class SPEditor {
         if (text.length > 20) return false;  // กัน paste ใหญ่ ๆ
         return self._handleAutoText(view, from, to, text);
       },
+      // [alpha.88 ข้อ 8] วางข้อความบทดิบ → ผ่านตัวจำแนก element ตัวเดียวกับตอนเปิดไฟล์
+      handlePaste(view, ev) { return self.pasteScript(ev); },
       handleDOMEvents: {
         // Ctrl/Cmd+คลิก หรือคลิกกลาง บนชื่อ Wiki → เปิดหน้า Wiki (เหมือนโหมดนิยาย)
         mousedown(view, ev) {
@@ -250,6 +254,30 @@ export class SPEditor {
       .scrollIntoView());
     v.focus();
     return true;
+  }
+
+  /**
+   * [alpha.88 ข้อ 8] วางข้อความดิบ → จำแนก element ด้วย `parseScript` ตัวเดียวกับตอนเปิดไฟล์
+   *
+   * เดิมไม่มี handler เลย ProseMirror จึงยัดทุกบรรทัดเป็นบล็อกดีฟอลต์ (บรรยาย) ทั้งดุ้น
+   * — วาง `### ฉาก 1` ได้ **บรรยาย** ที่มีข้อความ `### ฉาก 1` แทนที่จะเป็น **หัวฉาก** ว่า `ฉาก 1`
+   * ตอนเปิดไฟล์ `spDocFromMarkdown()` จำแนกถูกอยู่แล้ว ทางการวางแค่ไม่ได้ใช้ตัวเดียวกัน
+   *
+   * ไม่แตะสองกรณีนี้ (ปล่อยให้ ProseMirror ทำเหมือนเดิม):
+   *   · ก็อปมาจากตัวแก้ไขบทเอง — HTML มี `data-el` ครบ จำแนกซ้ำมีแต่เสีย
+   *   · ข้อความบรรทัดเดียวที่จำแนกได้แค่ "บรรยาย" — คือคำธรรมดา ต้องวางเป็น inline
+   *     ไม่ใช่ตัดบล็อกที่เคอร์เซอร์อยู่ออกเป็นสองท่อน
+   * @returns {boolean} true = จัดการเอง
+   */
+  pasteScript(ev) {
+    const cd = ev && ev.clipboardData;
+    if (!cd) return false;
+    if (/data-el=/.test(cd.getData('text/html') || '')) return false;
+    const text = (cd.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    if (!text.trim()) return false;
+    const blocks = parseScript(text).filter((b) => b.el !== 'blank');
+    if (blocks.length <= 1 && (!blocks[0] || blocks[0].el === 'action')) return false;
+    return this.insertScript(text);
   }
 
   // [61][57] วาด decoration ของ "แสดงรูปแบบ" / เส้นคั่นหน้าใหม่ (เรียกหลังเปลี่ยนค่าตั้ง)
@@ -495,8 +523,26 @@ export class SPEditor {
     // เลือกรูปอยู่ (NodeSelection ระดับบนสุด · depth 0) → `$f.after(1)` throw
     // ใช้ปลายของ selection แทน = แทรกบล็อกใหม่ต่อจากรูป
     const insertAt = $f.depth >= 1 ? $f.after(1) : tr.selection.to;
-    tr = tr.insert(insertAt, sp);
-    tr = tr.setSelection(TextSelection.create(tr.doc, insertAt + 1));
+    // ═══ [alpha.88] ★ แทรก "บรรทัดว่างนำ" เป็นบล็อกจริงตั้งแต่ตอนกด Enter ═══
+    //
+    // เดิมสร้างแค่บล็อกเปล่าของ element ถัดไป · บล็อกที่ยังไม่มีข้อความนับเป็นบรรทัดว่าง
+    // 1 บรรทัด (กฎกลางของทั้งไฟล์/จอ/ตัวจัดหน้า) → **ยังไม่มีระยะเว้นให้เห็น**
+    // พอพิมพ์ตัวแรกมันกลายเป็น element จริงที่ไม่มีบรรทัดว่างนำ `linesBefore` จึงมีผลทันที
+    // บล็อกโตจาก 1 เป็น 3 บรรทัดในจังหวะเดียว แล้วดันทุกอย่างข้างล่างลง
+    // (ผู้ใช้: "ระยะห่างจะไม่เว้นจนกว่าจะพิมพ์" + "บรรทัดถูกดัน")
+    //
+    // ใส่บรรทัดว่างจริงแทน → ระยะเว้นเห็นตั้งแต่กด Enter · พิมพ์แล้วไม่ขยับสักบรรทัด
+    // (`prevBlank` ของ paginate ข้าม `linesBefore` ให้เอง = ความสูงรวมเท่าเดิมเป๊ะ)
+    // และได้ไฟล์หน้าตาเดียวกับบทที่เขียนมาจากที่อื่นด้วย (บรรทัดว่างคั่น element จริง ๆ)
+    const curBlank = $f.depth >= 1 && $f.parent.type === spSchema.nodes.sp &&
+                     !String($f.parent.textContent || '').trim();
+    const nBlank = curBlank ? 0
+      : blankLinesBefore(nextEl, { elements: state.settings && state.settings.spElements });
+    const lead = [];
+    for (let i = 0; i < nBlank; i++) lead.push(spSchema.nodes.sp.create({ el: nextEl }));
+    tr = tr.insert(insertAt, Fragment.fromArray(lead.concat([sp])));
+    // บล็อกว่างหนึ่งใบกินขนาด 2 (เปิด+ปิด) — เคอร์เซอร์ต้องข้ามไปอยู่ในบล็อกจริงใบสุดท้าย
+    tr = tr.setSelection(TextSelection.create(tr.doc, insertAt + nBlank * 2 + 1));
     v.dispatch(tr.scrollIntoView());
     if (this.onElement) this.onElement(nextEl);
     return true;

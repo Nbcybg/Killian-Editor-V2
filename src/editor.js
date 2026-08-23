@@ -22,6 +22,7 @@ import { prosePageBreakPlugin } from './prose-view.js';
 import { markdownCodePlugin } from './markdown-code-toggle.js';
 import { Plugin as PMPlugin, PluginKey as PMKey } from 'prosemirror-state';
 import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
+import { diffByKey } from './deco-diff.js';
 
 // ══════════ alpha.58 (บั๊ก 4) — decoration แบบ "ทาสีเฉพาะบล็อกที่เปลี่ยน" ══════════
 // อาการ: พิมพ์ในไฟล์ยาว ๆ แล้วโปรแกรมกระตุก
@@ -92,8 +93,15 @@ function incrementalDecoState(key, scan) {
       if (!ch) return prev.map(tr.mapping, tr.doc);
       const r = blockRange(st.doc, ch.from, ch.to);
       const moved = prev.map(tr.mapping, tr.doc);
-      const kept = moved.remove(moved.find(r.from, r.to));
-      return kept.add(st.doc, scan(st.doc, r.from, r.to));
+      // [alpha.88 ข้อ 6] ★ ส่ง **เฉพาะส่วนต่าง** เข้า remove()/add() — ผลสุดท้ายชุดเดิมเป๊ะ
+      // เดิม `moved.remove(moved.find(...)).add(scan(...))` = ถอดทั้งบล็อกแล้วใส่กลับทั้งบล็อก
+      // ย่อหน้าเดียวยาว ๆ หมายถึงถอด/ใส่ 2,252 ตัวต่อการพิมพ์หนึ่งตัว และ `removeInner()`
+      // ของ PM เทียบแบบคูณกัน (รายการที่ลบ × decoration ในบล็อก) → ~5.1 ล้านครั้ง/ตัวอักษร
+      const oldIn = moved.find(r.from, r.to);
+      const next = scan(st.doc, r.from, r.to);
+      const { remove, add } = diffByKey(oldIn, next);
+      if (!remove.length && !add.length) return moved;
+      return moved.remove(remove).add(st.doc, add);
     },
   };
 }
@@ -239,6 +247,26 @@ export function commentAnchorPlugin() {
 }
 export function refreshCommentAnchors(view) {
   if (view) view.dispatch(view.state.tr.setMeta(cmKey, true));
+}
+
+/**
+ * [alpha.88 ข้อ 6] ลายเซ็นของ decoration ทุกระบบในเอกสาร — **ประตูกัน "decoration รั่ว"**
+ *
+ * รอบก่อนเคยลองเร่งความเร็วด้วยการจำกัดช่วงสแกน แล้ว decoration ถูกใส่ซ้ำสะสมทีละนิด
+ * จนงานโตจาก 58ms เป็น 601ms โดยไม่มีเทสไหนจับได้เลย — เพราะไม่มีใครนับมันเลยสักที่
+ * ตัวนี้ให้เทสเทียบ "ผลของการเพิ่มทีละส่วน" กับ "ผลของการสแกนใหม่ทั้งเอกสาร" ได้ตรง ๆ
+ * ต้องตรงกันทุกตัวทุกตำแหน่ง ไม่ใช่แค่จำนวนเท่ากัน
+ * @returns {{spell:string, mention:string, comment:string, total:number}}
+ */
+export function decoSignature(view) {
+  const sig = (k) => {
+    const set = view && k.getState(view.state);
+    if (!set) return '';
+    return set.find().map((d) => d.from + ':' + d.to).sort().join(',');
+  };
+  const spell = sig(spellKey), mention = sig(mentionKey), comment = sig(cmKey);
+  const n = (x) => (x ? x.split(',').length : 0);
+  return { spell, mention, comment, total: n(spell) + n(mention) + n(comment) };
 }
 
 

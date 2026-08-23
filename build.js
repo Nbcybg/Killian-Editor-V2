@@ -14,7 +14,18 @@ function syncLanguages() {
   }
 }
 
+// [alpha.88] CHANGELOG ในโปรแกรม (เมนู "บันทึกการเปลี่ยนแปลง") อ่านจาก `renderer/CHANGELOG.md`
+// ด้วยเหตุผลเดียวกับไฟล์ภาษา — electron-builder แพ็กแค่ `renderer/**` ไฟล์ที่รากจึงไม่ติดไปด้วย
+// เดิมสำเนานี้ถูกก๊อปด้วยมือ แล้วไม่มีใครก๊อปอีกเลย → ค้างอยู่ที่ alpha.75 ขณะที่ของจริงถึง .88
+// (ผู้ใช้: "changelog ในโปรแกรมทำไมยัง alpha 75 อยู่") · ตอนนี้ก๊อปให้ทุกครั้งที่ build
+function syncChangelog() {
+  const src = path.join(__dirname, 'CHANGELOG.md');
+  const dst = path.join(__dirname, 'renderer', 'CHANGELOG.md');
+  if (fs.existsSync(src)) fs.copyFileSync(src, dst);
+}
+
 syncLanguages();
+syncChangelog();
 
 // [alpha.69] ตรรกะสมุดประวัติ (history-data.js) ถูกใช้ **สองฝั่ง**: renderer วาดแผง · main ลงมือกับดิสก์
 // main.js เป็น CommonJS และ import ES module ตรง ๆ ไม่ได้ → แปลงเป็น .cjs ไว้ให้ require

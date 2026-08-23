@@ -307,13 +307,43 @@ check('[57a] เลขหน้าชิดขวา 1" · 0.5" จากขอ�
 {
   const on = SF.mergeSpFormat({ pageNumbers: { show: true } });
   check('[57a] ปิดอยู่ → ไม่มีเลขหน้าเลย', SF.pageNumberLabel(3, F0, 1) === '');
-  // [alpha.82] ค่าเริ่มต้นเปลี่ยนแล้ว — ปก/หน้ารายชื่อตัวละครเป็นหน้าหน้าเล่มที่ไม่ถูกนับอยู่แล้ว
-  // หน้าแรกที่ผู้ใช้เห็นคือ "หน้าฉากแรก" ซึ่งต้องเป็นเลข 1
-  check('[82] หน้าฉากแรกได้เลข 1 เป็นค่าเริ่มต้น', SF.pageNumberLabel(1, on, 1) === '1.',
+  // [alpha.88 ข้อ 4] ค่าเริ่มต้นกลับเป็นมาตรฐานบท — **หน้าแรกไม่ใส่เลข** เริ่มนับที่หน้า 2
+  check('[88] หน้าแรกไม่มีเลขเป็นค่าเริ่มต้น (มาตรฐานบท)', SF.pageNumberLabel(1, on, 1) === '',
     SF.pageNumberLabel(1, on, 1));
-  check('[82] ปิดสวิตช์แล้วยังเว้นหน้าแรกได้',
-    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: false } }), 1) === '');
+  check('[88] เปิดสวิตช์เองแล้วหน้าแรกได้เลข 1',
+    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: true } }), 1) === '1.');
+  // กฎของ .82 ยังอยู่: ที่เว้นคือ "หน้า 1 ของบท" ไม่ใช่ "หน้าแรกของไฟล์"
+  check('[88] ไฟล์ที่เริ่มหน้า 12 → หน้าแรกของไฟล์ยังได้ "12."',
+    SF.pageNumberLabel(1, on, 12) === '12.', SF.pageNumberLabel(1, on, 12));
   check('[57a] หน้า 2 = "2."', SF.pageNumberLabel(2, on, 1) === '2.');
+
+  // [alpha.88] บรรทัดว่างนำของแต่ละ element (ใช้ตอนกด Enter สร้าง element ถัดไป)
+  check('[88] หัวฉากต้องมีบรรทัดว่างนำ 2 บรรทัด', SF.blankLinesBefore('scene') === 2,
+    SF.blankLinesBefore('scene'));
+  check('[88] ตัวละคร 1 บรรทัด', SF.blankLinesBefore('character') === 1,
+    SF.blankLinesBefore('character'));
+  check('[88] บรรยาย 1 บรรทัด', SF.blankLinesBefore('action') === 1);
+  // บทพูด/วงเล็บ ต่อใต้ตัวละครทันที ห้ามมีบรรทัดว่างคั่น
+  check('[88] บทพูดไม่มีบรรทัดว่างนำ', SF.blankLinesBefore('dialogue') === 0);
+  check('[88] วงเล็บไม่มีบรรทัดว่างนำ', SF.blankLinesBefore('parenthetical') === 0);
+  check('[88] ชนิดที่ไม่รู้จัก = 0 (ไม่พัง)', SF.blankLinesBefore('ไม่มีจริง') === 0);
+  // ★ หัวใจของการแก้: "บรรทัดว่างนำ n ใบ" ต้องกินที่เท่ากับ `linesBefore` ของ element เป๊ะ
+  //   ไม่งั้นการที่ Enter แทรกบรรทัดว่างให้ จะทำให้จำนวนหน้าขยับจากเดิม
+  {
+    const f88 = SF.mergeSpFormat({});
+    const mkBlank = [], mkPad = [];
+    for (let i = 0; i < 30; i++) {
+      mkBlank.push({ el: 'action', text: 'บรรยาย ' + i });
+      for (let k = 0; k < SF.blankLinesBefore('scene'); k++) mkBlank.push({ el: 'blank', text: '' });
+      mkBlank.push({ el: 'scene', text: 'INT. ห้อง ' + i + ' - เช้า' });
+      mkPad.push({ el: 'action', text: 'บรรยาย ' + i });
+      mkPad.push({ el: 'scene', text: 'INT. ห้อง ' + i + ' - เช้า' });
+    }
+    const a88 = SF.paginate(mkBlank, { fmt: f88 }).count;
+    const b88 = SF.paginate(mkPad, { fmt: f88 }).count;
+    check('[88] ★ บรรทัดว่างนำ vs linesBefore → จำนวนหน้าเท่ากันเป๊ะ', a88 === b88,
+      a88 + ' vs ' + b88);
+  }
   check('[57a] เริ่มนับที่ 12 → หน้าที่ 2 ของไฟล์ = "13."', SF.pageNumberLabel(2, on, 12) === '13.');
   check('[57a] เปิด firstPage → หน้าแรกได้เลขเริ่มต้น',
     SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: true } }), 7) === '7.');

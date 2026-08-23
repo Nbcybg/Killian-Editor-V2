@@ -366,14 +366,23 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
    เดิม padding บน/ล่างอยู่ในกฎ body.paper-mode เท่านั้น → ปิดโหมดกระดาษแล้ว layout ขยับทั้งหน้า
    ทั้งที่โหมดกระดาษควรเปลี่ยนแค่ "สี/เงา/เส้นขอบ" · ตอนนี้ทั้งสองโหมดใช้ --mg-* ชุดเดียวกัน */
 .pane:not(.wiki-pane) > .workspace > .ProseMirror {
-  padding:var(--mg-top) var(--mg-right) calc(var(--mg-bottom) + 32vh) var(--mg-left);
+  /* [alpha.88 ข้อ 5] ★ ที่ว่างสำหรับเลื่อนจอต้องอยู่ **นอกกระดาษ** (margin) ไม่ใช่ในกระดาษ
+     เดิม padding ล่างเป็น `--mg-bottom + 32vh` → แผ่นสุดท้ายมีกระดาษเปล่าห้อยใต้เนื้อหา
+     เกือบหนึ่งในสามจอเสมอ (ผู้ใช้: "มีที่ว่างมหาศาลใต้เนื้อหา · หน้ากระดาษไม่เคยถูก lock") */
+  padding:var(--mg-top) var(--mg-right) var(--mg-bottom) var(--mg-left);
   margin:28px auto 40vh;
-  /* [alpha.85 ข้อ 3] ★ กระดาษต้องสูง "เต็มแผ่น" เสมอ แม้ฉากยังว่าง
-     เดิมความสูงมาจากเนื้อหาล้วน ๆ → เปิดฉากใหม่แล้วได้กระดาษเตี้ยจัตุรัส ไม่เหมือนแผ่นจริง
-     ตั้งเป็น "หนึ่งแผ่น" พอ ไม่คูณจำนวนหน้า — เนื้อหาที่ยาวกว่านั้นดันความสูงเองอยู่แล้ว
-     (เคยลองคูณ --pg-count แล้วเอกสาร 60 หน้าได้กล่องสูงเกินเนื้อหาไปหลักหมื่นพิกเซล)
-     box-sizing:border-box ทั่วโปรเจกต์ ค่านี้จึงเป็นความสูงของ "แผ่น" ตรง ๆ */
-  min-height:var(--page-h, 11in); }
+  /* [alpha.85 ข้อ 3] กระดาษต้องสูง "เต็มแผ่น" เสมอ แม้ฉากยังว่าง (เดิมสูงตามเนื้อหาล้วน ๆ
+     → เปิดฉากใหม่แล้วได้กระดาษเตี้ยจัตุรัส) · box-sizing:border-box ทั่วโปรเจกต์
+     ค่านี้จึงเป็นความสูงของ "แผ่น" ตรง ๆ
+
+     [alpha.88 ข้อ 5] ★ ล็อกความสูง = **จำนวนหน้าจริง** ไม่ใช่ "อย่างน้อยหนึ่งแผ่น"
+     .85 เคยลองคูณ `--pg-count` แล้วได้กล่องสูงเกินเนื้อหาไปหลักหมื่นพิกเซล — เพราะคูณด้วย
+     **ความสูงกระดาษทั้งแผ่น** ทั้งที่มุมมองปกติเป็นสายเนื้อหาต่อเนื่อง (รอยต่อเป็นเส้นประ
+     ไม่มีขอบล่าง/ขอบบนคั่นระหว่างหน้า) หนึ่งหน้าในสายนี้จึงสูงเท่า **พื้นที่พิมพ์** เท่านั้น
+     แล้วบวกระยะขอบบน/ล่างของทั้งก้อนอีกชุดเดียว — วัดจริงแล้วเท่าความสูงเนื้อหาพอดี */
+  min-height:calc(var(--mg-top, 1in) + var(--mg-bottom, 1in)
+                  + var(--pg-count, 1)
+                    * (var(--page-h, 11in) - var(--mg-top, 1in) - var(--mg-bottom, 1in))); }
 /* [alpha.58r บั๊ก 16+17] ย่อหน้า/ช่วงบรรทัดของนิยาย มาจาก prose-format.js (ตัวแปร --ed-*) */
 .ProseMirror p { margin:0 0 var(--ed-para, .35em); text-indent:var(--ed-indent, 0); }
 .ProseMirror h1,.ProseMirror h2,.ProseMirror h3,.ProseMirror h4,
@@ -1123,7 +1132,8 @@ body.k-mod-down .k-mention { cursor:pointer; }
    และไม่เพี้ยนเมื่อซูมด้วย Ctrl+ล้อเมาส์ (ซูมทั้งหน้าผ่าน CSS zoom ที่ .pane > .workspace > .ProseMirror) */
 .pane.sp-pane .ProseMirror { width:var(--page-w); max-width:none; background:var(--side);
   border:1px solid var(--border); border-radius:4px;
-  padding:var(--mg-top) var(--mg-right) 40vh var(--mg-left);
+  /* [alpha.88 ข้อ 5] หางเปล่าไว้ "นอกกระดาษ" (margin) เหมือนฝั่งนิยาย */
+  padding:var(--mg-top) var(--mg-right) var(--mg-bottom) var(--mg-left);
   margin:24px auto 40vh; box-shadow:0 2px 18px rgba(0,0,0,.28); }
 /* alpha.58 (บั๊ก 3): บทภาพยนตร์ = 6 บรรทัด/นิ้ว → 12pt บนช่วงบรรทัด 12pt = line-height 1 พอดี
    ของเดิมเป็น 1.5 ทำให้หน้าหนึ่งจุแค่ 36 บรรทัดแทนที่จะเป็น 54 (ตัวหนังสือดู "ใหญ่/ห่าง" กว่า
@@ -3324,13 +3334,15 @@ body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
    ที่นี่เหลือแค่ "ห้ามกล่องกว้างเกินบล็อกแม่" ซึ่ง width:auto ของ .sp-more/.sp-contd ทำอยู่แล้ว */
 .sp-cont-mark.k-ct-in-block { max-width:none; }
 
-/* ---- [alpha.82] เส้นคั่นหน้าของนิยาย — สองแบบ เลือกได้ในตั้งค่า ----
+/* ---- เส้นคั่นหน้าของนิยายในมุมมอง "ปกติ" = เส้นประบาง ๆ ----
 
-   แบบ "เส้นบาง" : กล่องสูง 0 ไม่มี margin · เส้นวาดด้วย ::before แบบ absolute
-   แบบ "แยกแผ่นจริง" (`body.k-page-gaps` · ค่าเริ่มต้น): กล่องสูงเท่า ขอบล่างกระดาษ + แถบคั่น
-   + ขอบบนกระดาษ เห็นเป็นคนละแผ่นเหมือน Word ขณะพิมพ์
+   [alpha.88 ข้อ 3] เดิมมีสวิตช์ `paperGaps` ที่ทำให้มุมมองปกติวาดเป็น "แผ่นกระดาษแยกกันจริง"
+   ซึ่งซ้ำกับหน้าที่ของ **มุมมองจัดหน้า** เป๊ะ ๆ (ผู้ใช้: "มุมมองปกติกลับเป็นมุมมองที่ถูกต้อง
+   ของ layout ซึ่งมันผิด") → ตัดสวิตช์ทิ้งทั้งชุด เหลือกฎเดียว:
+     · มุมมองปกติ  = สายเนื้อหาต่อเนื่อง คั่นด้วยเส้นประ
+     · มุมมองจัดหน้า = แผ่นกระดาษจริง มีช่องว่างพื้นโต๊ะคั่น
 
-   ทั้งสองแบบไม่กระทบตัวเลข เพราะ measureProseBlocks() หักความสูงของกล่องพวกนี้ออกก่อนเสมอ
+   ความสูงของกล่องเส้นคั่นไม่กระทบตัวเลข เพราะ measureProseBlocks() หักออกก่อนวัดเสมอ
    (พิกัดที่ใช้หั่นหน้าเป็นแบบ "ไม่มีช่องว่างคั่นหน้า") ถ้าไม่หัก การวัดรอบถัดไปจะเพี้ยนแล้ววนไม่จบ */
 .ed-page-break { margin:0; height:0; border-top:0; }
 .ed-page-break::before { content:''; position:absolute; left:0; right:0; top:0;
@@ -3338,47 +3350,25 @@ body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
 .ed-page-break > .sp-page-break-num { top:-1.05em; }
 
-/* ตัดกลางย่อหน้า (ย่อหน้ายาวข้ามหน้า) — widget ต้องเป็น inline ไม่งั้น <div> ใน <p>
-   จะฉีกกล่องบรรทัด · กว้าง/สูงเป็นศูนย์ แล้ววาดเส้นล้ำออกไปเต็มความกว้างพื้นที่พิมพ์ */
-.ed-page-break.k-pb-inline { display:inline-block; width:0; height:0;
-  overflow:visible; vertical-align:top; text-indent:0; }
-.ed-page-break.k-pb-inline::before { left:0; right:auto; width:var(--text-w, 6in); top:-1px; }
-.ed-page-break.k-pb-inline > .sp-page-break-num { right:auto; left:var(--text-w, 6in);
-  transform:translateX(-100%); }
+/* ── [alpha.88 ข้อ 1] ★ ตัดกลางย่อหน้า (ย่อหน้ายาวข้ามหน้า) ──────────────────────
+   widget ต้องเป็น inline (ไม่งั้น <div> ใน <p> ฉีกกล่องบรรทัด) **แต่ต้องกินทั้งบรรทัด**
 
-/* ── แบบ "แยกแผ่นจริง" ────────────────────────────────────────────────────────
-   ความสูง = ขอบล่างของหน้าที่จบ + แถบคั่น + ขอบบนของหน้าถัดไป
-   ตัวกล่องเป็นสีกระดาษ (ต่อจากหน้าเดิม) แล้ว ::before ทาสีพื้นรอบกระดาษเฉพาะช่วงแถบคั่น
-   ล้ำออกนอกระยะขอบซ้าย/ขวาด้วย margin ติดลบ ให้เห็นว่าเป็นคนละแผ่นจริง ๆ
-   โหมดจัดหน้า (sp-view-layout) มีช่องว่างคั่นหน้าเป็นของตัวเองอยู่แล้ว จึงถูกกันออกจากกฎชุดนี้
-   ทั้งหมด — ไม่งั้นซ้อนสองชั้นแล้วระยะขอบถูกวาดซ้ำ */
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break {
-  height:calc(var(--mg-bottom, 1in) + var(--k-gap-band, 28px) + var(--mg-top, 1in));
-  margin:0 calc(-1 * var(--mg-right, 1in)) 0 calc(-1 * var(--mg-left, 1.5in));
-  border-top:0;
-}
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break::before {
-  top:var(--mg-bottom, 1in); bottom:var(--mg-top, 1in);
-  left:0; right:0; border-top:0;
-  background:var(--paper-surround, #3a3936);
-  box-shadow:inset 0 1px 0 var(--paper-edge, #d8d2c2), inset 0 -1px 0 var(--paper-edge, #d8d2c2);
-}
-/* เลขหน้าอยู่กลางแถบคั่น แบบ footer ของโปรแกรมจัดหน้า */
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break > .sp-page-break-num {
-  left:50%; right:auto; transform:translate(-50%, -50%);
-  top:calc(var(--mg-bottom, 1in) + var(--k-gap-band, 28px) / 2);
-  background:transparent; color:var(--dim);
-}
-/* ตัดกลางย่อหน้า: ต้องกว้างเต็มแผ่น (เลยระยะขอบทั้งสองข้าง) จึงถูกดันขึ้นบรรทัดของตัวเอง
-   vertical-align:top ทำให้กล่องบรรทัดสูงเท่ากล่องนี้พอดี — ไม่มีส่วนเกินให้การวัดคลาดเคลื่อน */
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-inline {
-  display:inline-block; vertical-align:top; overflow:visible; text-indent:0;
-  width:calc(100% + var(--mg-left, 1.5in) + var(--mg-right, 1in));
-  margin:0 0 0 calc(-1 * var(--mg-left, 1.5in));
-}
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-inline::before {
-  width:auto; left:0; right:0;
-}
+   ของเดิม `width:0; height:0` = ตัวมันแทรกอยู่ "กลางบรรทัด" ตรงตัวอักษรที่หน้าจบพอดี
+   แล้ววาดเส้นด้วย ::before ที่ `left:0` ของตัวเอง → เส้นประเริ่มกลางบรรทัดแล้วลากยาว
+   ออกไปนอกกระดาษ ทับตัวหนังสือของบรรทัดนั้นเต็ม ๆ (ผู้ใช้: "เส้นประขอบล่างขึ้นมาบังตัวหนังสือ")
+   และในโหมดจัดหน้าที่กล่องนี้ถูกตั้ง margin ติดลบซ้าย/ขวา ข้อความที่เหลือของบรรทัด
+   ยังไหลต่อในบรรทัดเดียวกัน → **ตัวหนังสือซ้อนทับกัน**
+
+   `width:100%` บังคับให้ขึ้นบรรทัดใหม่ของตัวเองเสมอ (กว้างเกินที่เหลือของบรรทัดปัจจุบัน)
+   ความสูงตั้งให้ **สูงกว่า strut ของย่อหน้าเล็กน้อย** เพื่อให้กล่องบรรทัดสูงเท่ากล่องนี้เป๊ะ —
+   measureProseBlocks() หักความสูงของ `.ed-page-break` ออกจากการวัด ถ้ากล่องบรรทัดสูงกว่า
+   กล่อง widget เมื่อไหร่ ส่วนต่างจะสะสมเป็นความคลาดเคลื่อนของจุดตัดทุกหน้า */
+.ed-page-break.k-pb-inline { display:inline-block; width:100%;
+  height:calc(var(--ed-lh, 1.75) * 1em + 2px);
+  overflow:visible; vertical-align:top; text-indent:0; margin:0; }
+.ed-page-break.k-pb-inline::before { left:0; right:0; width:auto; top:50%; }
+.ed-page-break.k-pb-inline > .sp-page-break-num { right:0; left:auto; top:50%;
+  transform:translateY(-50%); }
 
 /* ── [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของ "หน้าถัดไป" บนเส้นคั่นหน้า ──
    เดิมโหมดปกติ/จัดหน้ามีเลขหน้าเฉพาะหน้าแรก (::before ของ .ProseMirror) — หน้า 2 เป็นต้นไป
@@ -3388,13 +3378,17 @@ body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break.k-pb-in
 .sp-page-break > .sp-page-no-next { display:none; position:absolute;
   color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
   pointer-events:none; user-select:none; }
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break > .sp-page-no-next,
 .pane.sp-view-layout .sp-page-break > .sp-page-no-next {
   display:block; right:var(--pg-no-right, 1in);
-  top:calc(var(--mg-bottom, 1in) + var(--k-pb-band, var(--sp-page-gap, 28px)) + var(--pg-no-top, .5in));
+  top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) + var(--pg-no-top, .5in));
 }
-body.k-page-gaps .pane:not(.sp-pane):not(.sp-view-layout) .ed-page-break {
-  --k-pb-band:var(--k-gap-band, 28px);
+/* [alpha.88 ข้อ 3] มุมมองปกติไม่มี "ขอบบนของแผ่นถัดไป" ให้วางเลขหน้าอีกแล้ว
+   (สวิตช์ "แผ่นจริงขณะพิมพ์" ถูกตัดทิ้ง) → วางไว้ปลายซ้ายของเส้นคั่น ตรงข้ามป้าย "หน้า N" */
+.pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break > .sp-page-no-next {
+  display:block; left:0; right:auto; top:-1.05em;
+}
+.pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break.k-pb-inline > .sp-page-no-next {
+  top:50%; transform:translateY(-50%);
 }
 /* ปิดเลขหน้าอยู่ = ไม่มีอะไรให้โชว์ (ตัวเลขไม่ถูกสร้างตั้งแต่ต้นทาง แต่กันไว้อีกชั้น) */
 body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
@@ -3472,6 +3466,17 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
   margin:0 0 0 calc(-1 * (var(--mg-left, 1.5in) + var(--k-pb-ind, 0in)));
   width:var(--page-w, 8.5in);
 }
+/* [alpha.88 ข้อ 1] จุดตัดกลาง "ย่อหน้านิยาย" ในมุมมองจัดหน้า — เคสเดียวกับข้างบน
+   แต่ฝั่งนิยายเป็น `k-pb-inline` (widget ระดับ inline) จึงไม่เคยได้กฎของโหมดนี้เลย:
+   ได้แต่ `margin` ติดลบของกฎกลาง ทั้งที่ยังกว้าง 0 → ข้อความที่เหลือของบรรทัดถูกดูดกลับ
+   ไปทับตัวเอง (เห็นเป็นตัวหนังสือซ้อนกันตรงรอยต่อหน้า) */
+.pane.sp-view-layout .sp-page-break.k-pb-inline {
+  width:calc(100% + var(--mg-left, 1.5in) + var(--mg-right, 1in));
+  margin:0 0 0 calc(-1 * var(--mg-left, 1.5in));
+  height:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) + var(--mg-top, 1in));
+}
+/* เส้นประวางที่ขอบบนของกล่อง เหมือนจุดตัดระดับบล็อกในโหมดเดียวกัน (ค่าปกติคือกึ่งกลาง) */
+.pane.sp-view-layout .sp-page-break.k-pb-inline::before { top:0; }
 /* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ไม่ใช่กลางแถบทั้งแถบ */
 .pane.sp-view-layout .sp-page-break-num {
   position:absolute; right:auto; left:50%;

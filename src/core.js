@@ -278,12 +278,9 @@ export const PROJECT_DEFAULTS = {
   spShowFormat: false, spCheckBeforeExport: true, spLineLimits: null,
   spSceneNumbers: null, spPageNumbers: null,
   spContinued: null, spLineHeight: 1, spPageGap: 28,
-  // [alpha.83r ข้อ 1] ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์ที่บันทึกไว้ก่อน .82
-  // (ตอนนั้นค่าเริ่มต้นคือ "หน้าแรกไม่ใส่เลข" แล้วมันติดมาถาวรจนเลขหน้า 1 ไม่ขึ้นเลย)
+  // ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์เก่า — false = ยังไม่เคยย้าย ·
+  // true = ผ่าน .83r (ถูกบังคับเป็น true) · 2 = ผ่าน .88 แล้ว (กลับไปใช้มาตรฐานบท)
   pgFirstMigrated: false,
-  // [alpha.82] แยกหน้าเป็นแผ่นจริงขณะพิมพ์ (ขอบล่าง + แถบคั่น + ขอบบน) แบบ Word
-  // ปิด = เส้นประบาง ๆ แบบเดิม · ไม่กระทบตัวเลขหน้าไม่ว่าเปิดหรือปิด
-  paperGaps: true, paperGapBand: 28,
   // รูปแบบนิยาย (prose)
   prose: null,
   // ฟอนต์ตามภาษา
