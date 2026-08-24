@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('kapi', {
   // มีไว้ให้ e2e เทียบกับ PANEL_DEFS: เพิ่มแผงใหม่แล้วลืมใส่เมนู = เทสแดงทันที
   menuPanelIds: call('menu:panelIds'),
   httpFetch: call('http:fetch'),
+  httpAbort: call('http:abort'),        // [alpha.96] ยกเลิกคำขอ AI ที่กำลังวิ่ง
+  httpInflight: call('http:inflight'),
   // สตรีมทีละบรรทัด — main ส่งกลับทาง channel เฉพาะคำขอ แล้วถอด listener เมื่อจบ
   httpStream: (url, options, onLine) => {
     const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

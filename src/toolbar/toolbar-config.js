@@ -65,6 +65,7 @@ export const TOOLBAR_GROUPS = [
   ] },
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
     { id: 'tb-ai' }, { id: 'tb-ai-chat' }, { id: 'tb-ai-analyzer' },
+    { id: 'tb-starter' },                        // [alpha.94] Story Starter
   ] },
   { key: 'ext', labelKey: 'ui.tbcfg.grpExt', buttons: [
     { id: 'tb-plugins' },                        // [alpha.79] แผงจัดการปลั๊กอิน

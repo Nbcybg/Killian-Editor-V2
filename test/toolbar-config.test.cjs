@@ -72,15 +72,22 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
 
   const g = T.setGroupVisible(null, 'ai', false);
   check('ปิดทั้งกลุ่ม',
-        ['tb-ai', 'tb-ai-chat', 'tb-ai-analyzer'].every((id) => !T.isButtonVisible(g, id)));
+        (T.TOOLBAR_GROUPS.find((x) => x.key === 'ai') || { buttons: [] }).buttons
+          .filter((b) => T.isConfigurable(b.id))
+          .every((b) => !T.isButtonVisible(g, b.id)));
   check('ปิดกลุ่มหนึ่ง ไม่กระทบกลุ่มอื่น', T.isButtonVisible(g, 'tb-bold'));
   check('เปิดทั้งกลุ่มกลับ',
         ['tb-ai', 'tb-ai-chat'].every((id) => T.isButtonVisible(T.setGroupVisible(g, 'ai', true), id)));
   check('กลุ่มที่ไม่รู้จัก ไม่พัง', T.setGroupVisible(null, 'ไม่มี', false).hidden !== undefined);
 
   const c2 = T.toolbarCounts(g);
-  check('นับปุ่มที่เปิดอยู่ถูก', c2.total === T.allButtonIds().length && c2.on === c2.total - 3,
-        JSON.stringify(c2));
+  // [alpha.94] เดิมฮาร์ดโค้ด "- 3" ตามจำนวนปุ่มในกลุ่ม ai ตอนนั้น → เพิ่มปุ่มเข้ากลุ่มไหนก็แดง
+  // นับจากทะเบียนจริงแทน (บทเรียนข้อ 13: เทสที่พึ่งค่าคงที่พังทุกครั้งที่ฟีเจอร์โต)
+  const aiGroupSize = (T.TOOLBAR_GROUPS.find((x) => x.key === 'ai') || { buttons: [] })
+    .buttons.filter((b) => T.isConfigurable(b.id)).length;
+  check('นับปุ่มที่เปิดอยู่ถูก',
+        c2.total === T.allButtonIds().length && c2.on === c2.total - aiGroupSize,
+        JSON.stringify(c2) + ' aiGroupSize=' + aiGroupSize);
   check('รีเซ็ตแล้วกลับมาเปิดหมด',
         T.toolbarCounts(T.resetToolbarConfig()).on === T.allButtonIds().length);
 }

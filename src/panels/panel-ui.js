@@ -107,6 +107,10 @@ export const PANEL_DEFS = [
   { id: 'dlgb', minW: 420, dockW: 620, title: t('ui.panel.dlgbTitle'), icon: 'chat',
     adopt: '#dlgb-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.dlgbTitle',
     desc: t('ui.panel.dlgbDesc') },
+  // [alpha.94] Story Starter — สร้างเรื่องแบบทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
+  { id: 'starter', minW: 460, dockW: 680, title: t('ui.panel.starterTitle'), icon: 'book-content',
+    adopt: '#starter-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.starterTitle',
+    desc: t('ui.panel.starterDesc') },
   { id: 'plugins', minW: 420, dockW: 520, title: t('ui.panel.pluginsTitle'), icon: 'extension',
     adopt: '#plugins-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.pluginsTitle',
     desc: t('ui.panel.pluginsDesc') },
@@ -132,6 +136,8 @@ export const TEAROFF_PANELS = new Set([
   'player', 'ai-analyzer',
   // [alpha.69] สามตัวใหม่ — วาดจากไฟล์โปรเจกต์ล้วน ๆ ทั้งหมด ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้ตั้งแต่วันแรก
   'codex', 'history', 'record',
+  // [alpha.94] Story Starter อ่านทุกอย่างจาก Starters/ ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้
+  'starter',
   // [alpha.79] แผงบทพูดกวาดจากไฟล์ทั้งโปรเจกต์ (ฝากหน้าต่างหลักเปิดฉากให้ผ่าน panel-sync)
   'dialogue',
   // (แผง `plugins` **ไม่ใส่** — ปลั๊กอินลงทะเบียนคำสั่ง/แผงเข้ากับ context ของหน้าต่างหลัก

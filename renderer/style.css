@@ -4808,3 +4808,262 @@ body.k-ln .wiki-pane .wiki-ln { position:absolute; left:0; top:0; width:28px; te
   color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); font-variant-numeric:tabular-nums;
   pointer-events:none; user-select:none; z-index:1; }
 body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
+
+/* ═══════════════ [alpha.94] Story Starter ═══════════════
+   แผงเดียวสลับ 4 หน้า: หน้ารวม → wizard → รายการตอน → แชท Game Master
+   ใช้ตัวแปรสีของโปรแกรมทั้งหมด (ห้ามเขียน hex ตรง ๆ — ธีมสว่างจะพัง) */
+#starter-body { height:100%; overflow:auto; padding:14px; }
+
+/* ── ชิ้นส่วนที่ใช้ร่วมกันทุกหน้า ── */
+.st-field { display:flex; flex-direction:column; gap:6px; margin:12px 0; }
+.st-field > label { color:var(--dim); font-size:.9em; }
+.st-ta { resize:vertical; min-height:60px; font:inherit; line-height:1.6; }
+.st-row-btns { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px; }
+.st-hint { color:var(--dim); font-size:.85em; line-height:1.5; margin:6px 0; }
+.st-dim { color:var(--dim); font-size:.9em; }
+.st-sub { color:var(--dim); font-size:.85em; margin-top:8px; }
+.st-flex { flex:1; }
+.st-empty { color:var(--dim); text-align:center; padding:28px 12px; display:flex;
+  flex-direction:column; align-items:center; gap:12px; }
+.st-err { color:var(--accent-hi); padding:12px; }
+.st-back { background:transparent; color:var(--dim); padding:4px 6px; }
+.st-back:hover { color:var(--fg); background:var(--hover); }
+.st-ai { background:var(--sel); color:var(--bright); }
+.st-ai:hover { background:var(--accent); }
+.st-ai:disabled { opacity:.6; cursor:default; }
+.st-danger:hover { background:var(--danger-soft); }
+.st-linkbtn { background:transparent; color:var(--link); }
+
+/* รายการที่ AI เสนอมาให้เลือก */
+.st-suggest { border:1px solid var(--border); border-radius:8px; background:var(--sunken);
+  padding:8px; margin-top:8px; display:flex; flex-direction:column; gap:4px; width:100%; }
+.st-suggest-head { color:var(--dim); font-size:.85em; }
+.st-suggest-item { text-align:left; background:var(--bar); }
+.st-suggest-item:hover { background:var(--hover); border-color:var(--accent-hi); }
+.st-suggest-close { align-self:flex-end; background:transparent; color:var(--dim); }
+
+/* ── หน้ารวม starter ── */
+.st-list-head { display:flex; align-items:center; gap:12px; }
+.st-list-title { font-size:1.25em; font-weight:600; color:var(--bright); flex:1; }
+.st-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:14px; margin-top:12px; }
+.st-card { display:flex; flex-direction:column; background:var(--side);
+  border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.st-card:hover { border-color:var(--accent-hi); }
+/* [alpha.96] ปกไม่ถูกครอบตัดอีกต่อไป — ดู .st-img-box ด้านล่าง */
+.st-card-noimg { font-size:2.4em; opacity:.35; }
+.st-card-body { padding:10px 12px; flex:1; }
+.st-card-name { font-weight:600; color:var(--bright); }
+.st-card-sum, .st-card-draft { color:var(--dim); font-size:.85em; margin-top:4px; }
+.st-card-draft { color:var(--orange); }
+.st-card-btns { display:flex; gap:6px; padding:0 12px 12px; }
+.st-card-btns button { flex:1; }
+
+/* ── wizard ── */
+.st-wz-head { display:flex; align-items:center; gap:12px; }
+.st-wz-title { font-size:1.15em; font-weight:600; color:var(--bright); flex:1; }
+.st-wz-prog { color:var(--dim); font-size:.85em; }
+.st-steps { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 6px; }
+.st-chip { display:flex; align-items:center; gap:6px; background:var(--bar);
+  border:1px solid transparent; border-radius:999px; padding:5px 12px; }
+.st-chip.done { border-color:var(--border); }
+.st-chip.done .st-chip-ico { filter:none; }
+.st-chip.on { background:var(--sel); color:var(--bright); border-color:var(--accent-hi); }
+.st-chip-opt { color:var(--dim); font-size:.75em; }
+.st-bar { height:4px; background:var(--sunken); border-radius:2px; overflow:hidden; }
+.st-bar-fill { height:100%; background:var(--accent-hi); transition:width .2s; }
+.st-step-head { margin:16px 0 4px; }
+.st-step-title { font-size:1.05em; font-weight:600; color:var(--bright); }
+.st-step-desc { color:var(--dim); font-size:.85em; margin-top:2px; }
+.st-step-pane { margin-top:10px; }
+.st-wz-foot { display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  margin-top:20px; padding-top:14px; border-top:1px solid var(--border); }
+.st-miss { color:var(--orange); font-size:.85em; width:100%; }
+
+/* ── แท็ก ── */
+.st-tag-picked { display:flex; flex-wrap:wrap; gap:6px; min-height:30px; margin:6px 0; }
+.st-tag { background:var(--chip); border:1px solid transparent; border-radius:999px;
+  padding:3px 10px; font-size:.9em; }
+.st-tag.on { background:var(--sel); color:var(--bright); border-color:var(--accent-hi); }
+.st-tag-x { margin-left:6px; opacity:.7; }
+.st-tag-x:hover { opacity:1; color:var(--accent-hi); }
+.st-tag-own { display:flex; gap:8px; margin:10px 0; }
+.st-tag-own input { flex:1; }
+.st-tag-group { margin-top:12px; }
+.st-tag-group-label { color:var(--dim); font-size:.85em; margin-bottom:5px; }
+.st-tag-list { display:flex; flex-wrap:wrap; gap:6px; }
+
+/* ── ปก / รูป ── */
+.st-cover-prev, .st-edit-pic { width:190px; height:190px; border:1px solid var(--border);
+  border-radius:10px; background:var(--sunken); overflow:hidden;
+  display:flex; align-items:center; justify-content:center; }
+.st-cover-prev img, .st-edit-pic img { width:100%; height:100%; object-fit:contain; }
+.st-cover-empty { color:var(--dim); font-size:.85em; }
+
+/* ── ตัวละคร ── */
+.st-cast-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+.st-cast-card { display:flex; gap:10px; background:var(--side); border:1px solid var(--border);
+  border-radius:10px; padding:10px; align-items:flex-start; }
+.st-cast-card.todo { border-style:dashed; border-color:var(--orange); }
+.st-cast-pic { flex:0 0 96px; width:96px; height:128px; border-radius:8px; overflow:hidden;
+  background:var(--sunken); display:flex; align-items:center; justify-content:center; }
+.st-cast-pic img { width:100%; height:100%; object-fit:contain; }
+.st-cast-noimg { font-size:1.6em; opacity:.4; }
+.st-cast-info { flex:1; min-width:0; }
+.st-cast-name { font-weight:600; color:var(--bright); }
+.st-cast-meta { color:var(--dim); font-size:.8em; margin-top:2px; }
+.st-cast-desc { color:var(--fg); font-size:.85em; margin-top:5px; opacity:.85; line-height:1.45; }
+.st-cast-btns { display:flex; flex-direction:column; gap:4px; }
+.st-cast-btns button { font-size:.85em; padding:3px 8px; }
+.st-gender { display:flex; flex-wrap:wrap; gap:6px; }
+.st-gender-btn.on { background:var(--sel); color:var(--bright); }
+.st-more { margin-top:14px; border-top:1px solid var(--border); padding-top:8px; }
+.st-more summary { color:var(--dim); cursor:pointer; font-size:.9em; }
+
+/* ── กล่องเลือกจาก Wiki / จับคู่ ── */
+.st-pick-list { max-height:340px; overflow:auto; display:flex; flex-direction:column;
+  gap:3px; margin-top:8px; }
+.st-pick-item { text-align:left; background:var(--bar); }
+.st-pick-item:hover { background:var(--hover); }
+.st-pick-name { color:var(--bright); }
+.st-merge-row { display:flex; align-items:center; gap:10px; padding:7px 4px;
+  border-bottom:1px solid var(--border); }
+.st-merge-row.warn { background:var(--danger-soft); border-radius:6px; }
+.st-merge-name { flex:1; color:var(--bright); }
+.st-merge-status { color:var(--dim); font-size:.85em; flex:0 0 110px; }
+.st-merge-target { max-width:180px; }
+
+/* ── หน้าเรื่อง + รายการตอน ── */
+.st-hero { display:flex; gap:16px; margin:12px 0 18px; }
+/* [alpha.96] ปกบนหน้าเรื่องใช้ .st-img-cover (375 แนวตั้ง 3:4) แทน */
+.st-hero-info { flex:1; min-width:0; }
+.st-hero-title { font-size:1.35em; font-weight:600; color:var(--bright); }
+.st-hero-tags { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; }
+.st-hero-intro { color:var(--fg); opacity:.85; line-height:1.6; margin-top:6px; }
+.st-sc-bar { margin-bottom:10px; }
+.st-sc-search { flex:1; min-width:140px; }
+.st-sc-list { display:flex; flex-direction:column; gap:8px; }
+.st-sc-card { display:flex; gap:12px; align-items:center; background:var(--side);
+  border:1px solid var(--border); border-radius:10px; padding:11px 13px; }
+.st-sc-card:hover { border-color:var(--accent-hi); }
+.st-sc-main { flex:1; min-width:0; }
+.st-sc-title { font-weight:600; color:var(--bright); }
+.st-sc-prev { color:var(--link); font-size:.82em; margin-top:2px; }
+.st-sc-syn { color:var(--fg); opacity:.8; font-size:.88em; margin-top:4px; line-height:1.45; }
+.st-sc-meta { color:var(--dim); font-size:.8em; margin-top:4px; }
+.st-sc-btns { display:flex; gap:6px; flex:0 0 auto; }
+
+/* ── แชท Game Master ── */
+.st-chat { display:flex; flex-direction:column; height:100%; min-height:340px; }
+.st-chat-head { display:flex; align-items:center; gap:12px; padding-bottom:10px;
+  border-bottom:1px solid var(--border); }
+.st-chat-title { font-weight:600; color:var(--bright); flex:1; }
+.st-chat-meta { color:var(--dim); font-size:.82em; }
+.st-chat-log { flex:1; overflow:auto; padding:14px 2px; display:flex;
+  flex-direction:column; gap:14px; }
+.st-turn { max-width:88%; }
+.st-turn.gm { align-self:flex-start; }
+.st-turn.player { align-self:flex-end; }
+.st-turn-who { color:var(--dim); font-size:.78em; margin-bottom:3px; }
+.st-turn-text { white-space:pre-wrap; line-height:1.7; background:var(--side);
+  border:1px solid var(--border); border-radius:10px; padding:10px 13px; }
+.st-turn.player .st-turn-text { background:var(--sel); color:var(--bright); border-color:transparent; }
+.st-turn-chosen { color:var(--dim); font-size:.78em; margin-top:3px; }
+.st-chat-foot { border-top:1px solid var(--border); padding-top:10px; }
+.st-choices { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+.st-choices-head { color:var(--dim); font-size:.82em; }
+.st-choice { display:flex; gap:9px; align-items:flex-start; text-align:left;
+  background:var(--bar); border:1px solid var(--border); }
+.st-choice:hover { border-color:var(--accent-hi); background:var(--hover); }
+.st-choice-n { flex:0 0 20px; height:20px; border-radius:50%; background:var(--sel);
+  color:var(--bright); font-size:.8em; display:flex; align-items:center; justify-content:center; }
+.st-choice-t { flex:1; }
+.st-as-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.st-as { max-width:180px; }
+.st-chat-input { display:flex; gap:8px; align-items:flex-end; }
+.st-chat-ta { flex:1; resize:vertical; min-height:38px; }
+
+/* ── [alpha.95] กล่องแปลงเป็นต้นฉบับ + สะพานไปเส้นเวลา/แผนที่ ── */
+.st-cv-prog { color:var(--dim); font-size:.88em; min-height:1.3em; margin-top:10px; }
+.st-cv-prog:not(:empty) { color:var(--orange); }
+.st-br-row { display:flex; align-items:center; gap:9px; padding:7px 2px; cursor:pointer; }
+.st-br-row input[type=checkbox] { accent-color:var(--accent-hi); }
+.st-br-row:hover { background:var(--hover-soft); border-radius:6px; }
+
+/* ═══ [alpha.96] Story Starter รอบแก้ตามที่ผู้ใช้แจ้ง 10 ข้อ ═══ */
+
+/* ── กรอบรูปมาตรฐาน: **ไม่ครอบตัด** ทุกที่ ──
+   ผู้ใช้ขอมาตรง ๆ ว่า "รูปตัวละครต้องไม่ crop" — ใช้กติกาเดียวกันทั้งปก แบนเนอร์ และตัวละคร
+   พื้นหลังจมช่วยให้รูปที่สัดส่วนไม่ตรงกรอบยังดูตั้งใจ ไม่เหมือนวางผิดที่ */
+.st-img-box { background:var(--sunken); border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.st-img-box img { width:100%; height:100%; object-fit:contain; display:block; }
+/* ปก: กว้าง 375 อัตราส่วน 3:4 แนวตั้ง (ขนาดการ์ดนิยายจริง) */
+.st-img-cover { width:100%; max-width:375px; aspect-ratio:3/4; }
+/* แบนเนอร์: กว้างเต็ม อัตราส่วนกว้างแบบหน้าปกเว็บ */
+.st-img-banner { width:100%; aspect-ratio:3/1; max-height:260px; }
+.st-img-portrait { width:190px; aspect-ratio:3/4; height:auto; }
+
+/* ── หน้าเรื่อง: แถว 1 สองคอลัมน์ ── */
+.st-hero { display:grid; grid-template-columns:minmax(160px,260px) 1fr; gap:18px;
+  align-items:start; margin:12px 0 16px; }
+.st-hero-cover { max-width:260px; }
+.st-hero-author { color:var(--dim); font-size:.9em; margin-top:3px; }
+/* คำโปรย **บรรทัดเดียว** ตามสเปก — ยาวเกินให้ตัดด้วย ellipsis ไม่ใช่ตัดข้อความทิ้ง */
+.st-hero-blurb { margin-top:8px; color:var(--fg); opacity:.9;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width: 620px) { .st-hero { grid-template-columns:1fr; } }
+
+/* ── แถว 2: แบนเนอร์เต็มความกว้าง ── */
+.st-banner { width:100%; border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; background:var(--sunken); margin-bottom:14px; }
+.st-banner img { width:100%; height:auto; display:block; }
+
+/* ── แถว 3: คำบรรยายแบบพับได้ ── */
+.st-acc { border:1px solid var(--border); border-radius:10px; background:var(--side);
+  padding:8px 12px; margin-bottom:14px; }
+.st-acc-head { cursor:pointer; color:var(--bright); font-weight:600; list-style:none; }
+.st-acc-head::-webkit-details-marker { display:none; }
+.st-acc-head::before { content:'▸ '; color:var(--dim); }
+.st-acc[open] .st-acc-head::before { content:'▾ '; }
+
+/* ── แถว 5: แก้ไขล่าสุด ── */
+.st-updated { color:var(--dim); font-size:.82em; text-align:right;
+  margin-top:14px; padding-top:10px; border-top:1px solid var(--border); }
+
+/* ── ป้ายโทเคน ── */
+.st-tok { color:var(--dim); font-size:.78em; background:var(--chip);
+  border-radius:999px; padding:2px 9px; white-space:nowrap; }
+.st-chat-tok { margin-left:6px; }
+.st-sc-exported { color:var(--link); }
+
+/* ── ปุ่ม AI ตอนกำลังคิด = ปุ่มหยุด ── */
+.st-ai.busy { background:var(--danger-soft); color:var(--bright); }
+.st-ai.busy:hover { background:var(--accent); }
+.st-chat-busy { display:flex; align-items:center; gap:12px; padding:6px 0; }
+.st-chat-stop { flex:0 0 auto; }
+
+/* ── การ์ดตัวละคร: สองคอลัมน์ รูปไม่ครอบตัด ── */
+.st-cast-grid { grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); }
+.st-cast-card { align-items:stretch; }
+.st-cast-info { display:flex; flex-direction:column; }
+.st-card-author { color:var(--dim); font-size:.82em; margin-top:2px; }
+.st-card-blurb { color:var(--fg); opacity:.85; font-size:.85em; margin-top:4px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ── ตัวแก้ไขแบบเห็นผลจริง (Story Description) ── */
+.st-rt { border:1px solid var(--border); border-radius:10px; overflow:hidden;
+  background:var(--bg); }
+.st-rt-bar { display:flex; flex-wrap:wrap; align-items:center; gap:2px;
+  padding:5px 7px; background:var(--bar); border-bottom:1px solid var(--border); }
+.st-rt-btn { min-width:30px; padding:3px 8px; background:transparent; border-radius:5px; }
+.st-rt-btn:hover { background:var(--hover); }
+.st-rt-btn.on { background:var(--sel); color:var(--bright); }
+.st-rt-b { font-weight:800; } .st-rt-i { font-style:italic; } .st-rt-u { text-decoration:underline; }
+.st-rt-sep { width:1px; height:18px; background:var(--border); margin:0 5px; }
+.st-rt-area { padding:11px 13px; outline:none; line-height:1.7; overflow:auto; max-height:420px; }
+.st-rt-area:focus { background:var(--curline); }
+.st-rt-area img, .st-rt-view img { max-width:100%; height:auto; border-radius:6px; }
+.st-rt-area p, .st-rt-view p { margin:0 0 .7em; }
+.st-rt-view { line-height:1.7; padding-top:8px; }
+.st-rt-view :is(h1,h2,h3,h4) { color:var(--bright); margin:.6em 0 .3em; }

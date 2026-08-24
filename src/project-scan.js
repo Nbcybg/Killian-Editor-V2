@@ -36,7 +36,8 @@ export function syncIo() {
 }
 
 export const SKIP_DIRS = ['Images', 'Memos', 'Recycle', 'Snapshots', 'Backups', 'Plugins', 'Research',
-                          'Analysis'];   // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
+                          'Analysis',      // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
+                          'Sessions', 'Starters'];  // [alpha.94] บทสนทนา AI + Story Starter   // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
 export const WIKI_DIRS = ['Wiki', 'Bible'];
 
 /** chapterGuid → folderName จาก draft.json */

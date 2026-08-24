@@ -455,6 +455,9 @@ function buildMenu() {
       chk(tt('ui.menu.panelAIAssistantWrite'), toggles.panels['ai-chat'], () => send('toggle-panel', 'ai-chat')),
       { label: tt('ui.menu.sessionNew'), click: () => send('ai-chat-new') },
       { type: 'separator' },
+      // [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
+      chk(tt('ui.menu.panelStoryStarter'), toggles.panels['starter'], () => send('toggle-panel', 'starter')),
+      { type: 'separator' },
       { label: tt('ui.menu.assistantWriteExpandSummarize'), click: () => send('ai-assistant') },
       { label: tt('ui.menu.checkPlotHole'), click: () => send('ai-plot') },
       { label: tt('ui.menu.newDialogue'), click: () => send('ai-dialogue') },
@@ -683,6 +686,8 @@ const MENU_PANELS = [
   { id: 'gallery-board', label: tt('ui.common.boardMood') },
   { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
   { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
+  // [alpha.94] Story Starter
+  { id: 'starter', label: tt('ui.menu.panelStoryStarter') },
   { sep: true },
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
   { id: 'network', label: '🕸 Story Network' },
@@ -1155,11 +1160,49 @@ ipcMain.handle('menu:popup', (e, label, x, y) => {
   const item = menu.items.find((i) => i.id === label) || menu.items.find((i) => i.label === label);
   if (item && item.submenu) item.submenu.popup({ window: win, x: Math.round(x), y: Math.round(y) });
 });
+// [alpha.96] คำขอ HTTP ที่ **ยกเลิกได้และมีเวลาหมดอายุ**
+//
+// ของเดิมไม่มีทั้งสองอย่าง — คำขอที่ค้าง (เน็ตหลุดกลางทาง · ผู้ให้บริการไม่ตอบ) จะค้างตลอดกาล
+// ฝั่ง renderer ปุ่มก็ค้างเป็น "กำลังคิด…" ตลอดไป กดอะไรไม่ได้เลย และไม่มีร่องรอยใน log ด้วย
+// (ผู้ใช้รายงานว่า "ตอน AI กำลังคิด หยุดไม่ได้" กับ "ปุ่ม AI กดแล้วไม่ทำงาน" — ต้นตอเดียวกัน)
+//
+// `__reqId` = ชื่อเรียกของคำขอ ให้ renderer สั่งยกเลิกได้ · `__timeoutMs` = เพดานเวลา
+// ทั้งคู่ถูกถอดออกก่อนส่งให้ fetch จริง (ไม่ใช่ option ของ fetch)
+const httpInflight = new Map();
 H('http:fetch', async (url, options) => {
-  const res = await fetch(url, options || {});
-  const body = await res.text();
-  return { status: res.status, ok: res.ok, body };
+  const opts = { ...(options || {}) };
+  const reqId = opts.__reqId; delete opts.__reqId;
+  const timeoutMs = Number(opts.__timeoutMs) || 180000;   // 3 นาที — โมเดลคิดนานได้ แต่ไม่ใช่ตลอดกาล
+  delete opts.__timeoutMs;
+  const ac = new AbortController();
+  if (reqId) httpInflight.set(reqId, ac);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; try { ac.abort(); } catch {} }, timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: ac.signal });
+    const body = await res.text();
+    return { status: res.status, ok: res.ok, body };
+  } catch (e) {
+    // ยกเลิก/หมดเวลา = ไม่ใช่ข้อผิดพลาดที่ต้อง throw — คืนผลให้ฝั่งเรียกอ่านเหตุผลได้
+    const aborted = ac.signal.aborted;
+    if (!aborted) throw e;
+    return { status: 0, ok: false, body: '', aborted: true, timedOut,
+             error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+  } finally {
+    clearTimeout(timer);
+    if (reqId) httpInflight.delete(reqId);
+  }
 });
+/** ยกเลิกคำขอที่กำลังวิ่งอยู่ตาม id — คืน true เมื่อเจอตัวที่ยกเลิกได้จริง */
+H('http:abort', (reqId) => {
+  const ac = httpInflight.get(reqId);
+  if (!ac) return false;
+  try { ac.abort(); } catch {}
+  httpInflight.delete(reqId);
+  return true;
+});
+/** จำนวนคำขอที่ยังวิ่งอยู่ (e2e ใช้ยืนยันว่ายกเลิกแล้วไม่มีอะไรค้าง) */
+H('http:inflight', () => httpInflight.size);
 // สตรีมคำตอบ AI ทีละบรรทัด (SSE/ndjson) — ส่งกลับ renderer ผ่าน channel เฉพาะของคำขอนั้น
 H('http:stream', async (url, options, id) => {
   const ch = 'http:stream:' + id;

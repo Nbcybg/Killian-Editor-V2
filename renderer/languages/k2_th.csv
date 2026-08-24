@@ -3,9 +3,9 @@ meta.name,Thai
 meta.nativeName,ไทย
 meta.version,3
 meta.author,Killian 2
+ui.ai.aPIKeyNotValid,API key ไม่ถูกต้องหรือหมดสิทธิ์ (HTTP 
 ui.ai.aiChatRAGUse,ai chat: RAG ใช้ไม่ได้ → ถามตรง ๆ
 ui.ai.aiChatStreamFail,ai chat: stream ล้มเหลว
-ui.ai.aPIKeyNotValid,API key ไม่ถูกต้องหรือหมดสิทธิ์ (HTTP 
 ui.ai.assistantTitle,✨ AI ผู้ช่วยเขียน
 ui.ai.callAINotOk,เรียก AI ไม่สำเร็จ (HTTP 
 ui.ai.callFail,เรียก AI ไม่สำเร็จ
@@ -42,17 +42,17 @@ ui.ai.formatLabel,รูปแบบ:
 ui.ai.foundDotCheckRound,พบ {0} จุด · ตรวจ {1} รอบ
 ui.ai.foundDotSceneAppear,พบ {0} จุด จาก {1} ฉากที่ปรากฏ
 ui.ai.freeform,สร้างตามจินตนาการ
+ui.ai.genSynopsis,ให้ AI เขียนให้
 ui.ai.general,ทั่วไป
 ui.ai.generating,กำลังให้ AI เขียน…
-ui.ai.genSynopsis,ให้ AI เขียนให้
 ui.ai.greeting,สวัสดี! ถามอะไรเกี่ยวกับเรื่องของคุณได้เลย เช่น
 ui.ai.hasRoundCallAI,⚠ มี {0} รอบที่เรียก AI ไม่สำเร็จ
 ui.ai.important,สำคัญ
 ui.ai.inputLabel,ข้อความที่จะประมวลผล
 ui.ai.insert,📥 แทรก
+ui.ai.insertScene,📥 แทรกลงฉาก
 ui.ai.insertedDialogue,แทรกบทสนทนาลงฉากแล้ว
 ui.ai.insertedResult,แทรกผลลัพธ์ AI ลงฉากแล้ว
-ui.ai.insertScene,📥 แทรกลงฉาก
 ui.ai.kindLabel,ประเภท: 
 ui.ai.msg,ร้ายแรง
 ui.ai.nameA,ชื่อตัวละคร A
@@ -69,12 +69,12 @@ ui.ai.notChangeTone,ไม่เปลี่ยนโทน
 ui.ai.notKnownProvider,ไม่รู้จักผู้ให้บริการ: 
 ui.ai.notSet,(ยังไม่ตั้ง)
 ui.ai.opContinue,เขียนต่อ
-ui.ai.openProjectFirst,เปิดโปรเจกต์ก่อน
 ui.ai.opExpand,ขยายความ
 ui.ai.opLabel,คำสั่ง: 
 ui.ai.opRewrite,เขียนใหม่
 ui.ai.opSummarize,สรุปความ
 ui.ai.opTone,เปลี่ยนโทน
+ui.ai.openProjectFirst,เปิดโปรเจกต์ก่อน
 ui.ai.orWord,หรือ
 ui.ai.pickEntity,เลือกเอนทิตี้ (ตัวละคร) ก่อน
 ui.ai.plotTitle,🔍 ตรวจสอบ Plot Hole
@@ -85,8 +85,8 @@ ui.ai.result,▶ ประมวลผล
 ui.ai.resultLabel,ผลลัพธ์:
 ui.ai.sample1,เรื่องนี้มีตัวละครอะไรบ้าง
 ui.ai.sample2,ช่วยสรุปฉากที่มีไฟต์ให้หน่อย
-ui.ai.savedToWiki,บันทึกลง Wiki แล้ว: 
 ui.ai.saveWiki,📥 บันทึกลง Wiki
+ui.ai.savedToWiki,บันทึกลง Wiki แล้ว: 
 ui.ai.sceneLabel,ฉาก: 
 ui.ai.searchingProject,กำลังค้นข้อมูลในโปรเจกต์…
 ui.ai.sendingToAi,กำลังส่งให้ AI วิเคราะห์…
@@ -110,46 +110,14 @@ ui.ai.wCulture,วัฒนธรรม
 ui.ai.wEconomy,เศรษฐกิจ
 ui.ai.wFaction,กลุ่ม/ฝ่าย
 ui.ai.wMagic,ระบบเวทมนตร์
+ui.ai.wReligion,ศาสนา
 ui.ai.wordAsk,คำถาม: 
 ui.ai.working,กำลังประมวลผล…
 ui.ai.worldPrompt,"อธิบายสิ่งที่ต้องการสร้าง (เช่น ""ระบบเวทมนตร์ที่ใช้เลือดเป็นต้นทุน"")"
 ui.ai.worldTitle,🌍 สร้างโลก
-ui.ai.wReligion,ศาสนา
 ui.ai.youAssistantWriterReply,คุณเป็นผู้ช่วยนักเขียน ตอบคำถามเกี่ยวกับเนื้อหานิยายของผู้ใช้ 
-ui.aia.analyzePaceStory,วิเคราะห์จังหวะเรื่อง
-ui.aia.characterEachItemAppear,ติดตามว่าตัวละครแต่ละตัวปรากฏช่วงไหนของเรื่อง และหายไปนานเกินไปหรือเปล่า
-ui.aia.characterFindNChapter,ตัวละครที่หายไปเกิน N บท
-ui.aia.characterMentionNotOut,ตัวละครที่ถูกกล่าวถึงแต่ไม่เคยออกฉาก
-ui.aia.checkEachSceneHas,ตรวจว่าแต่ละฉากมีแรงต้านหรือไม่ ฉากที่ไม่มีความขัดแย้งเลยมักเป็นฉากที่ตัดได้
-ui.aia.compareLongSceneValue,เทียบความยาวฉากกับค่ากลางของทั้งเล่ม ชี้ฉากที่ผิดปกติทั้งสั้นและยาว
-ui.aia.conflictStuckNot,ความขัดแย้งที่ค้างไม่ถูกคลี่คลาย
-ui.aia.dotPaceScene,จุดที่จังหวะตกติดกันหลายฉาก
-ui.aia.dotStoryCompareStructure,จุดพลิกของเรื่องเทียบโครงสร้าง 3 องก์
-ui.aia.dragWordNextChapter,ความหลากหลายของคำศัพท์ต่อบท
-ui.aia.findWordDupSplit,หาคำและวลีที่ซ้ำจนสะดุดตา แยกตามบทและตามตัวละครผู้พูด
-ui.aia.foot,ผลทุกชนิดคำนวณจากไฟล์จริงในโปรเจกต์ · คลิกแถวเพื่อกระโดดไปฉากนั้น
-ui.aia.graphLongSceneOrder,กราฟความยาวฉากเรียงตามลำดับเรื่อง
-ui.aia.lead,วิเคราะห์ต้นฉบับ 11 แบบ เลือกขอบเขตได้ทั้งโปรเจกต์ · เฉพาะเล่ม · เฉพาะบท · เฉพาะฉาก ทุกแบบคำนวณเองได้โดยไม่ต้องใช้ AI แล้วให้ AI อ่านต่อถ้าตั้งค่าไว้
-ui.aia.longScene,ความยาวฉาก
-ui.aia.mockup,ตัวอย่างหน้าตา — ยังไม่เปิดใช้งาน
-ui.aia.nowShowSamplePage,ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง
-ui.aia.partCurveCharacter,ส่วนโค้งตัวละคร
-ui.aia.planImageAppearItem,แผนภาพการปรากฏตัวตลอดเรื่อง
-ui.aia.ratioActionDialogueNext,สัดส่วนบรรยาย : บทสนทนา ต่อบท
-ui.aia.run,วิเคราะห์
-ui.aia.samplePageCantNext,” ยังเป็นตัวอย่างหน้าตา — ยังไม่ได้ต่อกับ AI
-ui.aia.sceneCantSpecifyConflict,ฉากที่ยังไม่ได้ระบุความขัดแย้ง
-ui.aia.sceneLongValueCenter,ฉากยาวกว่าค่ากลาง 2 เท่าขึ้นไป
-ui.aia.sceneShortWord,ฉากสั้นกว่า 150 คำ
-ui.aia.timeReadCountPage,ประมาณเวลาอ่าน / จำนวนหน้าบท
-ui.aia.toolCheckFindWord,เครื่องมือ → ตรวจหาคำซ้ำ · AI → ตรวจ Plot Hole · AI → ตรวจความสอดคล้อง
-ui.aia.viewSceneSceneCompare,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน เทียบความยาว·ความหนาแน่นของบทพูดตลอดทั้งเล่ม
-ui.aia.wiki,เอนทิตี้ Wiki
-ui.aia.wordDupGapPara,คำซ้ำในระยะใกล้ (ย่อหน้าเดียวกัน)
-ui.aia.wordUse,คำที่ใช้บ่อย
-ui.aia.wordWriter,คำติดปากของนักเขียน
-ui.aiActions.addChapterDone,"เพิ่มบท ""{0}"" ใน ""{1}"" แล้ว"
 ui.aiActions.aIEditProjectDone,AI แก้ไขโปรเจกต์แล้ว — รีเฟรชรายการเรียบร้อย
+ui.aiActions.addChapterDone,"เพิ่มบท ""{0}"" ใน ""{1}"" แล้ว"
 ui.aiActions.bookHasChapter,"เล่มนี้มีบท ""{0}"" อยู่แล้ว"
 ui.aiActions.changeNameChapterDone,"เปลี่ยนชื่อบทเป็น ""{0}"" แล้ว (โฟลเดอร์คงชื่อเดิมไว้ ลิงก์ในต้นฉบับจึงไม่พัง)"
 ui.aiActions.changeNameSceneDone,"เปลี่ยนชื่อฉากเป็น ""{0}"" แล้ว"
@@ -270,19 +238,19 @@ ui.aiChat.wordAskNotFound,"### คำถาม
 
 (ไม่พบข้อมูลอ้างอิงในโปรเจกต์ — ถ้าตอบไม่ได้ให้บอกตรง ๆ)"
 ui.aiChat.youAssistantKnownWorld,คุณเป็นผู้ช่วยที่รู้จักโลกและเนื้อเรื่องของนักเขียนคนนี้เป็นอย่างดี 
-ui.aiChatPanel.actCmdOk,⚡ ลงมือทำ {0} คำสั่ง — สำเร็จ {1}/{2}
-ui.aiChatPanel.addFileInContext,เพิ่มไฟล์เข้าบริบทของเซสชันนี้
 ui.aiChatPanel.aIAct,"AI ขอลงมือทำ:
 
 "
 ui.aiChatPanel.aIActNotAsk,AI จะลงมือทำเองโดยไม่ถาม (ยกเว้นคำสั่งลบ)
 ui.aiChatPanel.aIAskBeforeAll,AI จะถามก่อนทุกคำสั่ง
-ui.aiChatPanel.aiChatCollectContext,ai-chat: รวบรวมบริบทไม่สำเร็จ
-ui.aiChatPanel.aiChatReadFolder,ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้
-ui.aiChatPanel.aiChatReadSession,ai-chat: อ่านเซสชันไม่ได้ 
 ui.aiChatPanel.aIDelProject,"⚠ AI ขอลบของในโปรเจกต์:
 
 "
+ui.aiChatPanel.actCmdOk,⚡ ลงมือทำ {0} คำสั่ง — สำเร็จ {1}/{2}
+ui.aiChatPanel.addFileInContext,เพิ่มไฟล์เข้าบริบทของเซสชันนี้
+ui.aiChatPanel.aiChatCollectContext,ai-chat: รวบรวมบริบทไม่สำเร็จ
+ui.aiChatPanel.aiChatReadFolder,ai-chat: อ่านโฟลเดอร์เซสชันไม่ได้
+ui.aiChatPanel.aiChatReadSession,ai-chat: อ่านเซสชันไม่ได้ 
 ui.aiChatPanel.arrangeKeep,📥 จัดเก็บ
 ui.aiChatPanel.arrangeKeepSessionDone,จัดเก็บเซสชันแล้ว
 ui.aiChatPanel.askBeforeAlwaysDel, ถามก่อนเสมอเมื่อจะลบของ
@@ -339,9 +307,9 @@ ui.aiChatPanel.jSONModelCmd,JSON ที่โมเดลสั่ง
 ui.aiChatPanel.levelInTo,ระดับการเข้าถึง
 ui.aiChatPanel.levelInToAI,ระดับการเข้าถึง — AI จะเห็นเนื้อหาแค่ระดับนี้
 ui.aiChatPanel.mode,โหมด
-ui.aiChatPanel.modelSessionValueSet,โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)
 ui.aiChatPanel.modeRun,"โหมดการทำงาน
 "
+ui.aiChatPanel.modelSessionValueSet,โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)
 ui.aiChatPanel.msg,ต้นทุน: 
 ui.aiChatPanel.nameSession,ชื่อเซสชัน
 ui.aiChatPanel.not,ไม่ทราบ
@@ -381,16 +349,16 @@ ui.aiChatPanel.textSession,ข้อความในเซสชัน
 ui.aiChatPanel.think, · คิด {0}
 ui.aiChatPanel.tokenInOut,token: เข้า {0} · ออก {1}
 ui.aiChatPanel.trashRecoverRestoreNot,(ของยังไปถังขยะ กู้คืนได้ แต่จะไม่มีจังหวะให้ทัดทาน)
+ui.aiChatPanel.uSD,ต้นทุน (USD)
 ui.aiChatPanel.unlockFullAIDel,⚠ ปลดล็อกเต็มที่ — AI ลบของได้เองโดยไม่ถาม
 ui.aiChatPanel.unlockFullDoAll,🔓 ปลดล็อกเต็มที่ — ทำได้ทุกอย่างรวมทั้งลบ (ของไปถังขยะ กู้คืนได้)
 ui.aiChatPanel.usage,การใช้งาน
 ui.aiChatPanel.usage2,การใช้งาน: 
-ui.aiChatPanel.uSD,ต้นทุน (USD)
 ui.aiChatPanel.use,โทเค็นที่ใช้
 ui.aiChatPanel.use2,โทเค็นที่ใช้: 
-ui.aiChatPanel.userNotAllow,ผู้ใช้ไม่อนุญาต
 ui.aiChatPanel.useTaskLatest,ใช้งานล่าสุด
 ui.aiChatPanel.useTime, · ใช้เวลา {0} วิ
+ui.aiChatPanel.userNotAllow,ผู้ใช้ไม่อนุญาต
 ui.aiChatPanel.you,คุณ
 ui.aiDialogue.call, (เรียกอีกอย่างว่า {0})
 ui.aiDialogue.chapter,บทบาท
@@ -463,10 +431,10 @@ ui.aiPlot.timeStory,เวลาในเรื่อง:
 ui.aiPlot.typeSeverityCriticalMajor,"[{{""type"":""<ชนิดจากรายการข้างบน>"",""severity"":""critical|major|minor"","
 ui.aiPlot.youEditorSourceStory,คุณเป็นบรรณาธิการต้นฉบับ (story editor) มืออาชีพ อ่านนิยาย/บทภาพยนตร์ภาษาไทยแล้วชี้จุดที่ขัดกันเอง 
 ui.aiPlot.youReportOnlyThing,คุณเข้มงวดแต่ยุติธรรม: รายงานเฉพาะสิ่งที่ขัดกันจริงในเนื้อหาที่ได้รับ ห้ามเดาสิ่งที่ไม่ได้เขียนไว้ 
+ui.aiProvider.aPIKeyNotValid,API key ไม่ถูกต้องหรือไม่มีสิทธิ์ (HTTP 
 ui.aiProvider.add,➕ เพิ่ม
 ui.aiProvider.addProvider,➕ เพิ่มผู้ให้บริการ
 ui.aiProvider.addProviderNew,เพิ่มผู้ให้บริการใหม่
-ui.aiProvider.aPIKeyNotValid,API key ไม่ถูกต้องหรือไม่มีสิทธิ์ (HTTP 
 ui.aiProvider.baseURLModel,Base URL: {0} · โมเดล: {1} · 
 ui.aiProvider.btnSendText,ปุ่มส่งข้อความในแชท
 ui.aiProvider.busyFetchListModel,กำลังดึงรายชื่อโมเดล…
@@ -505,7 +473,9 @@ ui.aiProvider.pressFetchListModel,"กด ""ดึงรายชื่อโม
 ui.aiProvider.saveCredentialDoneKey,✅ บันทึก Credential แล้ว (คีย์เก็บแยกที่ 
 ui.aiProvider.saveProvider,บันทึกผู้ให้บริการ
 ui.aiProvider.skSkipEmptyNot,sk-… (เว้นว่างได้ถ้าเซิร์ฟเวอร์ไม่ต้องใช้คีย์ เช่น Ollama)
+ui.aiProvider.stopped,ผู้ใช้สั่งหยุด
 ui.aiProvider.testConnect,🔌 ทดสอบการเชื่อมต่อ
+ui.aiProvider.timedOut,หมดเวลารอคำตอบ — ผู้ให้บริการไม่ตอบกลับมา
 ui.aiProvider.toReplyBackDone,ปลายทางตอบกลับแล้ว แต่ไม่มีรายชื่อโมเดลในคำตอบ
 ui.aiProvider.useDoneTokensTimes,ใช้ไปแล้ว {0} tokens · {1} ครั้ง · ประมาณ ${2}
 ui.aiProvider.xHeaderValueLine,X-Header: ค่า  (บรรทัดละหนึ่งคู่)
@@ -761,6 +731,236 @@ ui.aiWorld.wordSearch,คำค้น1
 ui.aiWorld.wordSearch2,คำค้น2
 ui.aiWorld.writeThaiConciseUse,2. เขียนเป็นภาษาไทย กระชับ ใช้ได้จริง ไม่ใช่คำสวยลอย ๆ
 ui.aiWorld.youNewWorldWorldbuilder,คุณเป็นนักสร้างโลก (worldbuilder) สำหรับนิยาย/บทภาพยนตร์ภาษาไทย 
+ui.aia.aiHead,ความเห็นจาก AI
+ui.aia.aiNoFinding,AI ไม่พบประเด็นที่ควรแจ้ง
+ui.aia.aiOffHint,แสดงเฉพาะผลที่คำนวณเอง (ยังไม่ได้ตั้งค่า AI หรือปิดการใช้ AI ไว้)
+ui.aia.aiSettings,ตั้งค่า AI
+ui.aia.aiSettingsTip,เปิดกล่องตั้งค่าผู้ให้บริการ AI โดยไม่ต้องเข้าเมนูตั้งค่า
+ui.aia.analyzePaceStory,วิเคราะห์จังหวะเรื่อง
+ui.aia.arcGap,หายไปช่วง
+ui.aia.arcHead,{0} — {1} ครั้ง ใน {2} ฉาก
+ui.aia.busy,กำลังวิเคราะห์…
+ui.aia.characterEachItemAppear,ติดตามว่าตัวละครแต่ละตัวปรากฏช่วงไหนของเรื่อง และหายไปนานเกินไปหรือเปล่า
+ui.aia.characterFindNChapter,ตัวละครที่หายไปเกิน N บท
+ui.aia.characterMentionNotOut,ตัวละครที่ถูกกล่าวถึงแต่ไม่เคยออกฉาก
+ui.aia.checkEachSceneHas,ตรวจว่าแต่ละฉากมีแรงต้านหรือไม่ ฉากที่ไม่มีความขัดแย้งเลยมักเป็นฉากที่ตัดได้
+ui.aia.compareLongSceneValue,เทียบความยาวฉากกับค่ากลางของทั้งเล่ม ชี้ฉากที่ผิดปกติทั้งสั้นและยาว
+ui.aia.confirmDelSession,"ลบเซสชัน ""{0}"" ทิ้ง?"
+ui.aia.conflictStuckNot,ความขัดแย้งที่ค้างไม่ถูกคลี่คลาย
+ui.aia.crCast,การกระจายน้ำหนักตัวละคร
+ui.aia.crCastNote,ตัวละคร {0} ตัว · ตัวหลักกิน {1}%
+ui.aia.crConflict,ความขัดแย้ง
+ui.aia.crConflictNote,ฉากที่ไม่พบร่องรอยความขัดแย้ง {0} ฉาก
+ui.aia.crDialogue,สัดส่วนบทสนทนา
+ui.aia.crDialogueNote,บทสนทนาเฉลี่ย {0}% ของเนื้อฉาก
+ui.aia.crLanguage,ความสะอาดของภาษา
+ui.aia.crLanguageNote,พบคำซ้ำระยะใกล้ {0} จุด
+ui.aia.crPacing,จังหวะเรื่อง
+ui.aia.crPacingNote,จังหวะเฉลี่ย {0} · ช่วงอืด {1} ช่วง
+ui.aia.crSceneLen,ความสม่ำเสมอของความยาวฉาก
+ui.aia.crSceneLenNote,เฉลี่ย {0} คำ · เบี่ยงเบน {1} คำ
+ui.aia.csAnalysis,การวิเคราะห์
+ui.aia.csAvgSent,ประโยคเฉลี่ย (คำ)
+ui.aia.csChapter,บท
+ui.aia.csCharacter,ตัวละคร
+ui.aia.csClosest,ห่างกันสั้นสุด (คำ)
+ui.aia.csCostUsd,ค่าใช้จ่าย (USD)
+ui.aia.csCount,จำนวนครั้ง
+ui.aia.csCreated,สร้างเมื่อ
+ui.aia.csCriterion,หัวข้อ
+ui.aia.csDensity,ความหนาแน่นต่อพันคำ
+ui.aia.csDetail,รายละเอียด
+ui.aia.csDialogue,บทสนทนา %
+ui.aia.csMarkers,ร่องรอยที่พบ
+ui.aia.csMentions,ถูกเอ่ยถึง
+ui.aia.csMinutes,นาที
+ui.aia.csNote,หมายเหตุ
+ui.aia.csPages,หน้า
+ui.aia.csPer10k,ต่อหมื่นคำ
+ui.aia.csScene,ฉาก
+ui.aia.csScope,ขอบเขต
+ui.aia.csScore,คะแนน
+ui.aia.csSession,เซสชัน
+ui.aia.csSeverity,ระดับ
+ui.aia.csShare,สัดส่วน %
+ui.aia.csSharedScenes,ฉากที่อยู่ร่วมกัน
+ui.aia.csSideA,ตัวละคร A
+ui.aia.csSideB,ตัวละคร B
+ui.aia.csStat,สถิติ
+ui.aia.csSuggestion,ข้อเสนอแนะ
+ui.aia.csSummary,บทสรุป
+ui.aia.csTempo,จังหวะ
+ui.aia.csTitle,หัวข้อ
+ui.aia.csTokenUsed,โทเคนที่ใช้
+ui.aia.csValue,ค่า
+ui.aia.csWord,คำ
+ui.aia.csWords,จำนวนคำ
+ui.aia.csvSaved,บันทึก CSV ที่ {0}
+ui.aia.dArc,ตัวละครแต่ละตัวโผล่ถี่แค่ไหนในแต่ละบท และหายไปช่วงไหนบ้าง
+ui.aia.dConflict,ฉากไหนมีร่องรอยความขัดแย้ง ฉากไหนเรียบจนไม่มีแรงผลัก
+ui.aia.dContinuity,ตรวจว่ารายละเอียดของตัวละครและโลกคงเส้นคงวาตลอดขอบเขตที่เลือก
+ui.aia.dLength,เทียบความยาวฉากกับค่ากลาง พร้อมเวลาอ่านโดยประมาณ
+ui.aia.dPacing,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน — คิดจากสัดส่วนบทพูด ความยาวประโยค และความยาวฉาก
+ui.aia.dPlotHole,หาจุดที่เนื้อเรื่องขัดกันเอง ปมที่เปิดแล้วไม่ปิด และแรงจูงใจที่หายไป
+ui.aia.dRepeat,คำเดียวกันโผล่ซ้ำในระยะใกล้จนอ่านแล้วสะดุด
+ui.aia.dScore,คะแนนสองชั้น: ชั้นจากตัวเลขล้วน และชั้นจากการอ่านของ AI
+ui.aia.dScreentime,ใครกินพื้นที่เล่าเรื่องไปเท่าไร วัดจากฉากที่ปรากฏและจำนวนครั้งที่ถูกเอ่ยถึง
+ui.aia.dShipping,คู่ตัวละครที่อยู่ด้วยกันบ่อยและมีน้ำหนักเชิงรักมากที่สุด
+ui.aia.dWords,คำที่ใช้บ่อยที่สุด พร้อมอัตราต่อหมื่นคำ (ตัดคำหยุดและชื่อตัวละครออกแล้ว)
+ui.aia.dgArc,{0}: ถูกเอ่ยถึง {1} ครั้ง ใน {2} ฉาก
+ui.aia.dgArcGap, · หายไปช่วง: {0}
+ui.aia.dgConflict,{0} [{1}] ไม่พบร่องรอยความขัดแย้ง
+ui.aia.dgLength,{0} [{1}] {2} คำ ({3} นาที)
+ui.aia.dgNote,{0} [{1}] {2}
+ui.aia.dgPacing,{0} [{1}] จังหวะ={2} บทพูด={3}% {4} คำ
+ui.aia.dgRepeat,“{0}” ×{1} ใน {2} [{3}] ห่างกันสั้นสุด {4} คำ
+ui.aia.dgScore,{0}: {1}/10 — {2}
+ui.aia.dgScreentime,{0}: {1} ฉาก · {2} ครั้ง · {3}%
+ui.aia.dgShipping,{0} × {1}: อยู่ร่วมกัน {2} ฉาก · คะแนน {3}
+ui.aia.dgWords,{0} ×{1} ({2} ต่อหมื่นคำ)
+ui.aia.done,เสร็จแล้ว
+ui.aia.dotPaceScene,จุดที่จังหวะตกติดกันหลายฉาก
+ui.aia.dotStoryCompareStructure,จุดพลิกของเรื่องเทียบโครงสร้าง 3 องก์
+ui.aia.dragWordNextChapter,ความหลากหลายของคำศัพท์ต่อบท
+ui.aia.errAiFail,เรียก AI ไม่สำเร็จ
+ui.aia.errCsv,เขียนไฟล์ CSV ไม่สำเร็จ
+ui.aia.errNoScene,ไม่พบฉากในขอบเขตที่เลือก
+ui.aia.errNothingToExport,ยังไม่มีผลให้ส่งออก — กดวิเคราะห์ก่อน
+ui.aia.errNothingToSave,ยังไม่มีผลวิเคราะห์ให้บันทึก — กดวิเคราะห์ก่อน
+ui.aia.errOpenScene,เปิดฉากจากแผงวิเคราะห์ไม่สำเร็จ
+ui.aia.errRun,วิเคราะห์ล้มเหลว
+ui.aia.errSessionDel,ลบเซสชันไม่สำเร็จ
+ui.aia.errSessionRead,อ่านไฟล์เซสชันไม่ได้: 
+ui.aia.errSessionSave,บันทึกเซสชันไม่สำเร็จ
+ui.aia.errUnknownKind,ไม่รู้จักชนิดการวิเคราะห์นี้
+ui.aia.estAll,ทั้ง 11 ชนิด ≈ {0} โทเคน · {1}
+ui.aia.estOff,ปิดการใช้ AI อยู่ — ไม่มีค่าใช้จ่าย
+ui.aia.estTip,ประมาณการก่อนยิง AI — เนื้อฉาก + คำสั่ง + เพดานคำตอบ
+ui.aia.estTokens,≈ {0} โทเคน · {1}
+ui.aia.exportCsv,ส่งออก CSV
+ui.aia.exportCsvOne,ส่งออกผลของชนิดนี้เป็น CSV
+ui.aia.exportCsvTip,ส่งออกทุกผลในขอบเขตนี้เป็นไฟล์ CSV (เปิดใน Excel/Sheets ได้)
+ui.aia.fastRun,ช่วงรัว
+ui.aia.findWordDupSplit,หาคำและวลีที่ซ้ำจนสะดุดตา แยกตามบทและตามตัวละครผู้พูด
+ui.aia.foot,ผลทุกชนิดคำนวณจากไฟล์จริงในโปรเจกต์ · คลิกแถวเพื่อกระโดดไปฉากนั้น
+ui.aia.graphLongSceneOrder,กราฟความยาวฉากเรียงตามลำดับเรื่อง
+ui.aia.lead,วิเคราะห์ต้นฉบับ 11 แบบ เลือกขอบเขตได้ทั้งโปรเจกต์ · เฉพาะเล่ม · เฉพาะบท · เฉพาะฉาก ทุกแบบคำนวณเองได้โดยไม่ต้องใช้ AI แล้วให้ AI อ่านต่อถ้าตั้งค่าไว้
+ui.aia.longScene,ความยาวฉาก
+ui.aia.mockup,ตัวอย่างหน้าตา — ยังไม่เปิดใช้งาน
+ui.aia.nScene, · {0} ฉาก
+ui.aia.noMarker,ไม่พบร่องรอย
+ui.aia.noProject,ยังไม่ได้เปิดโปรเจกต์
+ui.aia.noteCharOnce,โผล่ครั้งเดียวทั้งขอบเขต — ตรวจว่าตั้งใจหรือหลุด
+ui.aia.noteNoPov,ยังไม่ได้ระบุมุมมอง
+ui.aia.nowShowSamplePage,ตอนนี้แสดงเป็นตัวอย่างหน้าตาเพื่อให้เห็นว่าแต่ละหัวข้อจะบอกอะไรบ้าง
+ui.aia.pFormatFindings,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""อธิบาย"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉากถ้ามี"",""suggestion"":""ข้อเสนอแนะ""}"
+ui.aia.pFormatScore,"รูปแบบคำตอบ: JSON object {""criteria"":[{""label"":""หัวข้อ"",""score"":0-10,""note"":""เหตุผลสั้น ๆ""}],""total"":0-10,""summary"":""สรุปหนึ่งย่อหน้า""}"
+ui.aia.pHeadNumbers,ตัวเลขที่โปรแกรมนับมาแล้ว (ถือว่าถูกต้อง ห้ามนับใหม่):
+ui.aia.pHeadScenes,เนื้อฉาก:
+ui.aia.pHeadScope,ขอบเขตที่วิเคราะห์: 
+ui.aia.pHeadTask,งานที่ต้องทำ: 
+ui.aia.pRules,กฎ: อ้างอิงเฉพาะสิ่งที่ปรากฏในข้อมูลข้างต้นและเนื้อฉากที่แนบมา · ถ้าอ้างถึงฉากใดให้ใส่ sceneId ให้ตรง · เขียนเป็นภาษาไทย กระชับ ตรงประเด็น · ถ้าไม่มีอะไรควรบอก ให้ตอบเป็นรายการว่าง []
+ui.aia.pTruncated, (แนบมาบางส่วนเพราะยาวเกินงบ)
+ui.aia.partCurveCharacter,ส่วนโค้งตัวละคร
+ui.aia.planImageAppearItem,แผนภาพการปรากฏตัวตลอดเรื่อง
+ui.aia.ratioActionDialogueNext,สัดส่วนบรรยาย : บทสนทนา ต่อบท
+ui.aia.reload,โหลดใหม่
+ui.aia.rowLength,{0} คำ · {1} นาที
+ui.aia.rowPacing,{0} คำ · บทพูด {1}% · ประโยคเฉลี่ย {2} คำ
+ui.aia.rowRepeat,{0} · ห่างกันสั้นสุด {1} คำ
+ui.aia.rowScreentime,{0} ฉาก · {1} ครั้ง
+ui.aia.rowShip,อยู่ร่วมกัน {0} ฉาก · ถูกเอ่ย {1} ครั้ง
+ui.aia.run,วิเคราะห์
+ui.aia.runAll,วิเคราะห์ทั้งหมด
+ui.aia.runRange,{0} → {1} · ติดกัน {2}
+ui.aia.samplePageCantNext,” ยังเป็นตัวอย่างหน้าตา — ยังไม่ได้ต่อกับ AI
+ui.aia.sceneCantSpecifyConflict,ฉากที่ยังไม่ได้ระบุความขัดแย้ง
+ui.aia.sceneLongValueCenter,ฉากยาวกว่าค่ากลาง 2 เท่าขึ้นไป
+ui.aia.sceneShortWord,ฉากสั้นกว่า 150 คำ
+ui.aia.scopeBook,เฉพาะเล่ม
+ui.aia.scopeChapter,เฉพาะบท
+ui.aia.scopeProject,ทั้งโปรเจกต์
+ui.aia.scopeScene,เฉพาะฉาก
+ui.aia.scoreAiHead,คะแนนจาก AI
+ui.aia.scoreLocalHead,คะแนนจากตัวเลข
+ui.aia.sessionAuto,วิเคราะห์ {0}
+ui.aia.sessionCost,{0} โทเคน · ${1}
+ui.aia.sessionCurrent,เซสชันที่เปิดอยู่: {0}
+ui.aia.sessionDeleted,"ลบเซสชัน ""{0}"" แล้ว"
+ui.aia.sessionEmpty,ยังไม่มีเซสชันที่บันทึกไว้ในโปรเจกต์นี้
+ui.aia.sessionKinds,{0} ชนิด
+ui.aia.sessionList,เซสชัน
+ui.aia.sessionListTip,เปิดเซสชันที่บันทึกไว้ในโปรเจกต์
+ui.aia.sessionOpen,เปิด
+ui.aia.sessionOpened,"เปิดเซสชัน ""{0}"""
+ui.aia.sessionSave,บันทึกเซสชัน
+ui.aia.sessionSaveTip,เก็บผลของขอบเขตนี้ไว้ในโปรเจกต์ (โฟลเดอร์ Analysis)
+ui.aia.sessionSaveTitle,ตั้งชื่อเซสชัน
+ui.aia.sessionSaved,"บันทึกเซสชัน ""{0}"" แล้ว"
+ui.aia.sessionTitle,เซสชันการวิเคราะห์
+ui.aia.slowRun,ช่วงอืด
+ui.aia.stAvgWordScene,คำเฉลี่ยต่อฉาก
+ui.aia.stChapter,บท
+ui.aia.stCharAppear,ตัวละครที่ปรากฏ
+ui.aia.stCharGap,ตัวละครที่หายไปนาน
+ui.aia.stCharOnce,ตัวละครที่โผล่ครั้งเดียว
+ui.aia.stConflictDensity,ความหนาแน่นต่อพันคำ
+ui.aia.stDialogueAvg,บทสนทนาเฉลี่ย
+ui.aia.stFastRun,ช่วงรัว
+ui.aia.stHasStoryDate,ฉากที่ระบุเวลาในเรื่อง
+ui.aia.stLead,ตัวละครหลัก
+ui.aia.stLeadShare,สัดส่วนของตัวหลัก
+ui.aia.stMedian,ค่ากลาง
+ui.aia.stNoConflict,ฉากที่ไม่พบร่องรอย
+ui.aia.stNoPov,ฉากที่ไม่ได้ระบุมุมมอง
+ui.aia.stPairFound,คู่ที่พบ
+ui.aia.stReadTime,เวลาอ่านทั้งหมด
+ui.aia.stRepeatFound,คำซ้ำที่พบ
+ui.aia.stRichWord,ความหลากหลายของคำ
+ui.aia.stRomanceWord,คำเชิงรักทั้งหมด
+ui.aia.stSceneAffected,ฉากที่ได้รับผล
+ui.aia.stSceneHasConflict,ฉากที่มีความขัดแย้ง
+ui.aia.stScoreLocal,คะแนนจากตัวเลข
+ui.aia.stSilentChar,ตัวละครที่ไม่โผล่เลย
+ui.aia.stSlowRun,ช่วงอืด
+ui.aia.stTempoAvg,จังหวะเฉลี่ย
+ui.aia.stTooLong,ฉากยาวผิดปกติ
+ui.aia.stTopPair,คู่ที่แรงที่สุด
+ui.aia.stUniqueWord,คำไม่ซ้ำ
+ui.aia.stWindow,ระยะที่นับว่าซ้ำ
+ui.aia.sysEditor,คุณคือบรรณาธิการต้นฉบับที่อ่านละเอียดและตรงไปตรงมา วิเคราะห์เฉพาะสิ่งที่ปรากฏในข้อมูลที่ให้มา ห้ามแต่งเหตุการณ์หรือรายละเอียดที่ไม่มีในต้นฉบับ ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON
+ui.aia.tContinuity,ตรวจความสอดคล้อง
+ui.aia.tPlotHole,ตรวจ Plot Hole
+ui.aia.tRepeat,ตรวจหาคำซ้ำ
+ui.aia.tScore,ให้คะแนน
+ui.aia.tScreentime,Screentime / น้ำหนักตัวละคร
+ui.aia.tShipping,คู่จิ้น / เส้นความสัมพันธ์
+ui.aia.tagNeedAI,ต้องใช้ AI
+ui.aia.taskArc,ดูการปรากฏตัวของตัวละครแต่ละตัวแล้วบอกว่าเส้นเรื่องของใครขาดช่วง ใครหายนานเกินไป และใครยังไม่มีพัฒนาการ
+ui.aia.taskConflict,ประเมินว่าแต่ละฉากมีความขัดแย้งจริงหรือไม่ ใครต้องการอะไร ใครขวาง และฉากไหนควรเพิ่มแรงเสียดทาน
+ui.aia.taskContinuity,ตรวจว่ารายละเอียดของตัวละครและโลก (ชื่อ ลักษณะ ความสามารถ กฎของโลก) คงเส้นคงวาหรือขัดกันเอง
+ui.aia.taskLength,ดูความยาวฉากแล้วบอกว่าฉากไหนควรหั่น ฉากไหนสั้นจนไม่ทันรู้สึก และจังหวะพักของเล่มพอดีหรือยัง
+ui.aia.taskPacing,อ่านตัวเลขจังหวะรายฉากแล้วบอกว่าช่วงไหนหน่วง ช่วงไหนรัวเกินไป และควรตัดหรือขยายตรงไหน
+ui.aia.taskPlotHole,หาจุดที่เนื้อเรื่องขัดแย้งกันเอง ปมที่เปิดแล้วไม่ปิด แรงจูงใจที่หายไป และเวลาที่ไม่ลงรอย
+ui.aia.taskRepeat,ดูรายการคำซ้ำระยะใกล้แล้วบอกว่าจุดไหนน่ารำคาญจริง และเสนอคำแทนที่เข้ากับน้ำเสียงของเรื่อง
+ui.aia.taskScore,ให้คะแนนต้นฉบับตามหัวข้อ (เปิดเรื่อง จังหวะ ตัวละคร บทสนทนา ภาษา ปมและความน่าติดตาม) หัวข้อละ 0-10 พร้อมเหตุผลสั้น ๆ
+ui.aia.taskScreentime,ดูน้ำหนักการปรากฏของตัวละครแล้วบอกว่าการกระจายเหมาะกับเรื่องแบบนี้หรือไม่ ใครควรได้พื้นที่มากขึ้นหรือน้อยลง
+ui.aia.taskShipping,ประเมินเคมีของคู่ตัวละครที่พบ ว่าคู่ไหนมีน้ำหนักจริง คู่ไหนยังขาดฉากที่ทำให้ผู้อ่านเชื่อ
+ui.aia.taskWords,ดูคำที่ใช้บ่อยแล้วบอกว่าคำไหนเป็นคำติดปากที่ควรลด และคำไหนสะท้อนแก่นเรื่องจริง ๆ
+ui.aia.timeReadCountPage,ประมาณเวลาอ่าน / จำนวนหน้าบท
+ui.aia.toolCheckFindWord,เครื่องมือ → ตรวจหาคำซ้ำ · AI → ตรวจ Plot Hole · AI → ตรวจความสอดคล้อง
+ui.aia.truncated,เนื้อหายาวเกินงบ — AI อ่านได้บางส่วน ลองแคบขอบเขตลงเพื่อผลที่ละเอียดกว่า
+ui.aia.unitMin, นาที
+ui.aia.unitWord, คำ
+ui.aia.usage,ใช้ไป {0} โทเคน · ประมาณ ${1}
+ui.aia.useAI,ใช้ AI ต่อยอด
+ui.aia.usedNone,ยังไม่ได้เรียก AI ในขอบเขตนี้
+ui.aia.usedSoFar,ใช้ไปแล้ว {0} ครั้ง · {1} โทเคน · {2}
+ui.aia.viewSceneSceneCompare,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน เทียบความยาว·ความหนาแน่นของบทพูดตลอดทั้งเล่ม
+ui.aia.wiki,เอนทิตี้ Wiki
+ui.aia.wordDupGapPara,คำซ้ำในระยะใกล้ (ย่อหน้าเดียวกัน)
+ui.aia.wordUse,คำที่ใช้บ่อย
+ui.aia.wordWriter,คำติดปากของนักเขียน
 ui.allShortcutsTitle,⌨ ปุ่มลัดทั้งหมด
 ui.app.add,เพิ่ม “{0}” ลงพจนานุกรม
 ui.app.addBook,＋ เพิ่มเล่ม…
@@ -778,6 +978,7 @@ ui.app.addPart,+ เพิ่มส่วน
 ui.app.addReduce,+ เพิ่มฟิลด์
 ui.app.addScene,เพิ่มฉาก…
 ui.app.addSceneChapter,เพิ่มฉากในบทนี้
+ui.app.aiAnalysis,ผลวิเคราะห์ AI
 ui.app.all,ทุกที่มา
 ui.app.allLine,เหมือนกันทุกบรรทัด
 ui.app.app,ฐานของโปรแกรม
@@ -894,7 +1095,7 @@ ui.app.compareVersion2,⇋ เทียบเวอร์ชัน
 ui.app.compareVersion3,⇋ เทียบเวอร์ชัน…
 ui.app.consoleDev,🛠 คอนโซลนักพัฒนา
 ui.app.convertGo,แปลงเลย
-ui.app.convertLoss,"สลับโหมดแล้วบล็อกบางชนิดจะเปลี่ยนไปแบบย้อนกลับไม่ได้ — {0} · แปลงต่อไหม ?"
+ui.app.convertLoss,สลับโหมดแล้วบล็อกบางชนิดจะเปลี่ยนไปแบบย้อนกลับไม่ได้ — {0} · แปลงต่อไหม ?
 ui.app.convertLostItem,{0} → {1} ({2})
 ui.app.convertLostMore, และอีก {0} ชนิด
 ui.app.copyReportDone,คัดลอกรายงานแล้ว
@@ -940,6 +1141,7 @@ ui.app.delWorkFlow,ลบเวิร์กโฟลว์ “{0}” ?
 ui.app.detail,รายละเอียด
 ui.app.dialog,(ในกล่อง)
 ui.app.dirtyPending,dirty: ลงทะเบียนแหล่งงานค้าง 
+ui.app.dlgbSource,ห้องซ้อมบท
 ui.app.doItemSet,ทำตัวติดตั้ง/พกพา
 ui.app.done,) เสร็จ: 
 ui.app.doneDoneFile,เสร็จแล้ว {0} ไฟล์
@@ -977,6 +1179,7 @@ ui.app.exportChapter,ส่งออกบท
 ui.app.exportChapterDraft,ส่งออกบทจากฉบับร่างไหน
 ui.app.exportDone,ส่งออก .{0} แล้ว: {1}
 ui.app.exportDraft,ส่งออกฉบับร่างไหน
+ui.app.exportFontCssFail,ฝังฟอนต์ลงไฟล์ส่งออกไม่สำเร็จ
 ui.app.exportImportProjectZip,ส่งออก/นำเข้าโปรเจกต์เป็น .zip
 ui.app.exportMergeDone,ส่งออกรวมแล้ว: 
 ui.app.exportNext,ส่งออกต่อ
@@ -984,7 +1187,6 @@ ui.app.exportPDFDonePage,ส่งออก PDF แล้ว ({0} หน้า):
 ui.app.exportPDFWatermarkPerson,ส่งออก PDF ลายน้ำรายคน
 ui.app.exportTableWordDone,ส่งออกตารางคำแปลแล้ว ({0} คีย์): 
 ui.app.exportWorkFlow,ส่งออกด้วยเวิร์กโฟลว์
-ui.app.exportFontCssFail,ฝังฟอนต์ลงไฟล์ส่งออกไม่สำเร็จ
 ui.app.fail, ล้มเหลว
 ui.app.file,นามสกุลไฟล์
 ui.app.fileLangK2Csv,ไฟล์ภาษา (k2_*.csv)
@@ -1059,8 +1261,8 @@ ui.app.lineTime,🕒 เส้นเวลา…
 ui.app.link,ลิงก์เอนทิตี้
 ui.app.list,รายชื่อผู้รับ
 ui.app.listWordEnglishFolder,รายการคำไทย/อังกฤษในโฟลเดอร์ renderer/assets · เพิ่มเองได้ที่ Plugins/dictionaries
-ui.app.loading,กำลังโหลด…
 ui.app.loadPluginItem,โหลดปลั๊กอิน {0} ตัว
+ui.app.loading,กำลังโหลด…
 ui.app.lockEditCant, 🔒 ล็อกอยู่ (แก้ไม่ได้)
 ui.app.lockEditCant2,🔒 ล็อก (แก้ไม่ได้)
 ui.app.lockScene, 🔓 ล็อกฉากนี้
@@ -1077,6 +1279,7 @@ ui.app.markCentralizeStaleFail,markCentralizeStale ล้มเหลว
 ui.app.markdown,Markdown ดิบ — 
 ui.app.mergeFileBundler,รวมไฟล์ (bundler)
 ui.app.mergeStory,รวมทั้งเรื่อง: {0}
+ui.app.migPageNumFirst,"ย้ายค่าเก่า: เปิด ""ใส่เลขบนหน้าแรก"" ให้อัตโนมัติ (โปรเจกต์บันทึกไว้ก่อน alpha.82)"
 ui.app.mine,ของฉัน
 ui.app.modeCompareDoc,โหมดเทียบเอกสาร: 
 ui.app.modeFocus,โหมดโฟกัส
@@ -1166,9 +1369,6 @@ ui.app.newSceneNew2,สร้างฉากใหม่ที่ไหน
 ui.app.newTemplateDone,สร้างเทมเพลตแล้ว
 ui.app.newTemplateNew,+ สร้างเทมเพลตใหม่
 ui.app.newTemplateNew2,สร้างเทมเพลตใหม่
-ui.app.note,โน้ต: 
-ui.app.noteChapterNotMerge,โน้ตในบท — ไม่ถูกรวมตอนส่งออกฉบับร่าง
-ui.app.noteDoneNotMerge,"""{0}"" เป็นโน้ตแล้ว — จะไม่ถูกรวมตอนส่งออก"
 ui.app.notFoundDocAt,ไม่พบเอกสารที่ตรงกับคำค้น
 ui.app.notFoundElementAt,ไม่พบ element ที่ตรงเงื่อนไข
 ui.app.notFoundError,ไม่พบข้อผิดพลาด 🎉
@@ -1193,8 +1393,8 @@ ui.app.notHasDraftNew,ยังไม่มีฉบับร่าง — ส�
 ui.app.notHasFileHas,ไม่มี{0}ที่ {1} (ไฟล์นี้มี {2})
 ui.app.notHasFileOpen,ยังไม่มีไฟล์ให้เปิด
 ui.app.notHasFileTask,ยังไม่มีไฟล์งานวิจัย
-ui.app.notHasHeadingHead,(ยังไม่มีหัวข้อ/หัวฉาก)
 ui.app.notHasHeadScene,ยังไม่มีหัวฉากในบทนี้
+ui.app.notHasHeadingHead,(ยังไม่มีหัวข้อ/หัวฉาก)
 ui.app.notHasImage,(ยังไม่มีรูป)
 ui.app.notHasImageLibrary,ยังไม่มีรูปในคลัง
 ui.app.notHasLineAt,(ไม่มีบรรทัดที่ตรงตัวกรอง)
@@ -1220,6 +1420,9 @@ ui.app.notSave,⏳ ยังไม่บันทึก
 ui.app.notSet,(ไม่ตั้ง)
 ui.app.notSource,ไม่ทราบสิทธิ์ต้นฉบับ
 ui.app.notUseTemplate,"<option value="""">— ไม่ใช้เทมเพลต —</option>"
+ui.app.note,โน้ต: 
+ui.app.noteChapterNotMerge,โน้ตในบท — ไม่ถูกรวมตอนส่งออกฉบับร่าง
+ui.app.noteDoneNotMerge,"""{0}"" เป็นโน้ตแล้ว — จะไม่ถูกรวมตอนส่งออก"
 ui.app.novel, นิยาย
 ui.app.novel2, นิยาย ▾
 ui.app.novel3,นิยาย
@@ -1270,6 +1473,7 @@ ui.app.openSceneViewNavigation,(เปิดฉากเพื่อดู Navig
 ui.app.orderItemNumNot,ลำดับ (ตัวเลข — ไม่บังคับ)
 ui.app.out, เพื่อออก
 ui.app.outNotSave,ออกโดยไม่บันทึก
+ui.app.pDFWatermark,PDF ลายน้ำ
 ui.app.page, · {0} หน้า
 ui.app.pageChapterNotOk,นับหน้าบทไม่สำเร็จ
 ui.app.pageNotName, · หน้าตาไม่เหมือนชื่อ
@@ -1284,7 +1488,6 @@ ui.app.partBody,ส่วนเนื้อหา
 ui.app.partNameVO,ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)
 ui.app.pasteLineCharacterBefore,"วางเคอร์เซอร์ในบรรทัด ""ตัวละคร"" ก่อน"
 ui.app.pasteLineCharacterBefore2,"วางเคอร์เซอร์ในบรรทัด ""ตัวละคร"" ก่อนใส่ส่วนเสริม"
-ui.app.pDFWatermark,PDF ลายน้ำ
 ui.app.pick,— เลือกเอนทิตี้ —
 ui.app.pickEditionNewNum,"เลือก ""ฉบับใหม่"" (หมายเลข 1–"
 ui.app.pickEditionNum,"เลือก ""ฉบับเก่า"" (หมายเลข 1–"
@@ -1325,6 +1528,8 @@ ui.app.propsPlan,⚙ คุณสมบัติแผน…
 ui.app.propsSceneAtFile,คุณสมบัติฉากตรงกับไฟล์ .md อยู่แล้ว
 ui.app.propsSceneFileMd,ซิงก์คุณสมบัติฉากจากไฟล์ .md แล้ว ({0} ค่า)
 ui.app.propsWindow,คุณสมบัติ… (หน้าต่าง)
+ui.app.proseIndentOff,ย่อหน้าอัตโนมัติ: ปิด
+ui.app.proseIndentOn,ย่อหน้าอัตโนมัติ: เปิด ({0} นิ้ว)
 ui.app.quitSaveBeforeClose,quit: บันทึกก่อนปิดไม่สำเร็จ: 
 ui.app.ratio,สัดส่วน
 ui.app.read, — อ่านอย่างเดียว
@@ -1339,9 +1544,9 @@ ui.app.reducePart,{0} ฟิลด์ · {1} ส่วน
 ui.app.ref,อ้างอิง
 ui.app.refDocNote,+ อ้างอิงเอกสาร/โน้ต…
 ui.app.refOut,เอาการอ้างอิงนี้ออก
+ui.app.refToDocNote,อ้างอิงถึงเอกสาร/โน้ตไหน
 ui.app.refreshListProjectDone,รีเฟรชรายการโปรเจกต์แล้ว
 ui.app.refreshReadFileFolder,รีเฟรช — อ่านไฟล์/โฟลเดอร์ใหม่จากดิสก์
-ui.app.refToDocNote,อ้างอิงถึงเอกสาร/โน้ตไหน
 ui.app.registerPanelFail,registerPanel ล้มเหลว: 
 ui.app.remember,↩ เลิกจำเอง
 ui.app.remember2,✚ จำ
@@ -1374,7 +1579,6 @@ ui.app.saveAllDoneList,บันทึกทั้งหมดแล้ว ({0} 
 ui.app.saveAllSaveNotOk,saveAll: บันทึกไม่สำเร็จ: 
 ui.app.saveAuto,บันทึกอัตโนมัติ
 ui.app.saveCompleteListDone,บันทึกครบ {0} รายการ แล้วปิดโปรแกรม
-ui.app.saved,บันทึกแล้ว
 ui.app.saveDone,บันทึกแล้ว: 
 ui.app.saveDoneOut,บันทึกแล้วออก
 ui.app.saveFile,💾 บันทึกเป็นไฟล์…
@@ -1387,6 +1591,7 @@ ui.app.saveSizeUINot,บันทึกขนาด UI ไม่สำเร็�
 ui.app.saveTemplateDone,บันทึกเทมเพลตแล้ว
 ui.app.saveVersion,📸 บันทึกเวอร์ชันนี้
 ui.app.saveVersionDone,บันทึกเวอร์ชันแล้ว
+ui.app.saved,บันทึกแล้ว
 ui.app.saving,กำลังบันทึก…
 ui.app.scene," ฉาก, "
 ui.app.scene2,(ฉาก)
@@ -1397,13 +1602,13 @@ ui.app.scenePage,  {0} · {1} ฉาก · ~{2} หน้า
 ui.app.scroll,เลื่อนลง
 ui.app.scroll2,▲ เลื่อนขึ้น
 ui.app.scroll3,▼ เลื่อนลง
-ui.app.searching,กำลังค้นหา…
 ui.app.searchOnly, ค้นเฉพาะใน: 
 ui.app.searchOnlyChapter,ค้นเฉพาะในบท: 
 ui.app.searchOnlyChapter2,🔍 ค้นเฉพาะในบทนี้
 ui.app.searchProject,ค้นทั้งโปรเจกต์
 ui.app.searchSave,🔍 ค้นในบันทึก
 ui.app.searchStylePrint,ค้นหาแบบยอมพิมพ์ผิด
+ui.app.searching,กำลังค้นหา…
 ui.app.sectionProps,คุณสมบัติเล่ม…
 ui.app.sendOpenWindowMain,ส่งไปเปิดที่หน้าต่างหลักแล้ว
 ui.app.setCat,📁 ตั้งหมวด…
@@ -1420,6 +1625,8 @@ ui.app.sizeWatermarkPx,ขนาดลายน้ำ (px)
 ui.app.skipEmptyEventDot,เว้นว่าง = เหตุการณ์จุดเดียว
 ui.app.soundTypewriterClose,เสียงเครื่องพิมพ์ดีด: ปิด
 ui.app.soundTypewriterOpen,เสียงเครื่องพิมพ์ดีด: เปิด
+ui.app.spThaiOff,ฟอนต์ไทยในบท: ไม่ปรับ — ปล่อยตามฟอนต์สำรองของระบบ
+ui.app.spThaiOn,ฟอนต์ไทยในบท: ปรับสัดส่วน {0}% (ตัวไทยพอดีระยะบรรทัดของบท)
 ui.app.split,"แยก """
 ui.app.splitWindowFloat,🪟 แยกเป็นหน้าต่างลอย
 ui.app.startAppOpenProject,เริ่มโปรแกรม: เปิดโปรเจกต์ล่าสุดทันที (ข้ามหน้าแรก)
@@ -1433,11 +1640,11 @@ ui.app.suggestNameSceneAI,✨ แนะนำชื่อฉากด้วย A
 ui.app.tabDone,""" เป็นแท็บแล้ว"
 ui.app.template,เทมเพลต
 ui.app.templateManage,⚙ เทมเพลต (จัดการ)
+ui.app.templateWiki,เทมเพลต Wiki
 ui.app.templatesFillBlockProfile,templates: เติมบล็อก profile ให้เทมเพลตมาตรฐานของโปรเจกต์นี้แล้ว
 ui.app.templatesFillBlockProfile2,templates: เติมบล็อก profile ไม่สำเร็จ
 ui.app.templatesJsonFormat,templates.json ผิดรูปแบบ: 
 ui.app.templatesJsonJSONEdit,templates.json — JSON ล้วน แก้เสร็จกดบันทึก (ตรวจรูปแบบให้ก่อนเขียน)
-ui.app.templateWiki,เทมเพลต Wiki
 ui.app.text, — ข้อความล้วน
 ui.app.textContClose,ข้อความต่อเนื่อง: ปิด
 ui.app.textContOpenCONTINUED,ข้อความต่อเนื่อง: เปิด — (CONTINUED) · CONTINUED: · (MORE) · (cont'd)
@@ -1450,8 +1657,8 @@ ui.app.themeLightLight,ธีม: สว่าง (Light)
 ui.app.thesaurusWordOpposite,คำพ้อง/คำตรงข้าม “{0}”
 ui.app.thinkExplorerScreenplayWork,"แนวคิดของ Explorer, บทภาพยนตร์, เวิร์กโฟลว์ส่งออก และกระดานวางแผน"
 ui.app.timeEndNotForce,เวลาจบ (ไม่บังคับ — สำหรับ Gantt)
-ui.app.timesSpeak,ครั้งที่พูด
 ui.app.timeStoryStart,เวลาในเรื่อง (เริ่ม)
+ui.app.timesSpeak,ครั้งที่พูด
 ui.app.title,Killian 2
 ui.app.toggleModeChapterFilm,สลับเป็นโหมดบทหนัง
 ui.app.toggleModeDocNovel,สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)
@@ -1463,8 +1670,8 @@ ui.app.up, ขึ้นไป
 ui.app.updateIndexBacklinksFail,อัปเดตดัชนี backlinks ล้มเหลว
 ui.app.use,เครดิต · ใช้อะไรบ้าง มาจากไหน
 ui.app.useNameDateStory,"ใช้ {{ชื่อ}} {{วันที่}} {{เรื่อง}} ได้ · ระบุลายน้ำเฉพาะคนได้ด้วย ""ชื่อ | ลายน้ำ"""
-ui.app.user,ผู้ใช้
 ui.app.useReorderTimeText,ใช้จัดลำดับเมื่อเวลาเป็นข้อความ
+ui.app.user,ผู้ใช้
 ui.app.valueRememberAllWord, — ค่า 1 = จำทุกคำที่พิมพ์ (คำพิมพ์ผิดจะติดมาด้วย)
 ui.app.versionEdit,เวอร์ชันที่แก้ไข: 
 ui.app.viewListAll, ดูรายการทั้งหมด…
@@ -1524,11 +1731,11 @@ ui.branch.addChoiceBtn,เพิ่มทางเลือก
 ui.branch.addChoiceDone,เพิ่มทางเลือกแล้ว
 ui.branch.addChoiceScene,เพิ่มทางเลือกให้ฉากนี้
 ui.branch.addChoiceText,เพิ่มทางเลือกจากข้อความ 
+ui.branch.addToThis,เพิ่มทางเลือกให้ฉากนี้
+ui.branch.addToThisHint,สร้างทางเลือกใหม่ พร้อมแทรก [ข้อความ] ลงท้ายฉากให้ด้วย
 ui.branch.added,เพิ่มทางเลือกแล้ว
 ui.branch.addedFromText,เพิ่มทางเลือกจากข้อความ 
 ui.branch.addedFromTextTail, รายการ — ไปกำหนดปลายทางที่ผังแตกสาย
-ui.branch.addToThis,เพิ่มทางเลือกให้ฉากนี้
-ui.branch.addToThisHint,สร้างทางเลือกใหม่ พร้อมแทรก [ข้อความ] ลงท้ายฉากให้ด้วย
 ui.branch.allLinked,ทางเลือกในฉากนี้ผูกครบแล้ว (
 ui.branch.allPaths,เส้นทางที่เป็นไปได้
 ui.branch.arrangeGraphNewAuto,จัดผังใหม่อัตโนมัติ (ลืมตำแหน่งที่ลากเอง)
@@ -1541,14 +1748,14 @@ ui.branch.bindChoiceTextComplete,ผูกทางเลือกจากข�
 ui.branch.bindChoiceTextDone,ผูกทางเลือกจากข้อความแล้ว
 ui.branch.bindTextDone,ผูกกับข้อความแล้ว
 ui.branch.bookSkipEmpty,เล่ม/สังกัด (เว้นว่างได้)
+ui.branch.branchOpenPlan,branch: เปิดแผน 
+ui.branch.branchOpenPlanNot,branch: เปิดแผนไม่สำเร็จ
+ui.branch.branchReadFilePlan,branch: อ่านไฟล์แผนไม่ได้ 
 ui.branch.branchingCheckChoiceAct,branching: ตรวจทางเลือกตอนเปิดโปรเจกต์ไม่สำเร็จ
 ui.branch.branchingExportPNGNot,branching: ส่งออก PNG ไม่สำเร็จ
 ui.branch.branchingFoundChoicePoint,branching: พบทางเลือกชี้ไปฉากที่ไม่มีแล้ว 
 ui.branch.branchingReadBodyScene,branching: อ่านเนื้อฉากไม่สำเร็จ
 ui.branch.branchingReadSceneNot,branching: อ่านฉากไม่สำเร็จ
-ui.branch.branchOpenPlan,branch: เปิดแผน 
-ui.branch.branchOpenPlanNot,branch: เปิดแผนไม่สำเร็จ
-ui.branch.branchReadFilePlan,branch: อ่านไฟล์แผนไม่ได้ 
 ui.branch.brokenHint,ฉากปลายทางถูกลบหรือย้ายออกไปแล้ว — เลือกฉากต้นทางเพื่อไปแก้ปลายทางใหม่ หรือลบทางเลือกทิ้ง
 ui.branch.brokenTitle,ทางเลือกที่ชี้ไปฉากที่ไม่มีแล้ว
 ui.branch.busyReadScene,กำลังอ่านฉาก…
@@ -1620,16 +1827,16 @@ ui.branch.eg,เช่น ไปตลาด
 ui.branch.egBookOneUse,เช่น เล่มหนึ่ง — ใช้เมื่อแต่ละเล่มมีทางเลือกคนละชุด
 ui.branch.emptyGraph,ยังไม่มีฉากที่มีทางเลือก
 ui.branch.emptyHint,"ยังไม่มีฉากที่มีทางเลือก — เพิ่มได้ที่แถบ ""เพิ่มทางเลือก"" ด้านบน แล้วผังจะขึ้นทันที"
-ui.branch.expandGraph,ขยายผัง
 ui.branch.expDone,ส่งออกผังแล้ว: 
 ui.branch.expHtml,HTML tree (คลิกได้ · มีเนื้อฉากย่อ)
 ui.branch.expJson,JSON (โครงสร้างล้วน — เข้าเครื่องมืออื่น)
 ui.branch.expMd,Markdown outline (รายการย่อหน้า)
+ui.branch.expPng,PNG (ภาพผัง — ส่งในแชต/สไลด์)
+ui.branch.expSvg,SVG (ภาพผังแบบเวกเตอร์)
+ui.branch.expandGraph,ขยายผัง
 ui.branch.exportGraphDone,ส่งออกผังแล้ว: 
 ui.branch.exportGraphHTMLMarkdown,ส่งออกผัง — HTML / Markdown / JSON / SVG / PNG
 ui.branch.exportHint,ส่งออกผัง — HTML / Markdown / JSON / SVG / PNG
-ui.branch.expPng,PNG (ภาพผัง — ส่งในแชต/สไลด์)
-ui.branch.expSvg,SVG (ภาพผังแบบเวกเตอร์)
 ui.branch.filterPaths,กรองเส้นทาง — พิมพ์ชื่อฉากที่ต้องมีในเส้นทาง
 ui.branch.filterRoutePrintName,กรองเส้นทาง — พิมพ์ชื่อฉากที่ต้องมีในเส้นทาง
 ui.branch.findHint,พิมพ์เพื่อเน้นเฉพาะฉากที่ตรง — ที่เหลือจะจางลง
@@ -1639,10 +1846,11 @@ ui.branch.fixIt,ไปแก้
 ui.branch.foundChoiceTextNot,พบทางเลือกในข้อความที่ยังไม่ผูก
 ui.branch.foundTextNotChoice,พบในข้อความแต่ยังไม่เป็นทางเลือก
 ui.branch.fromScenes,จาก
-ui.branch.goneScene,ฉากหาย
 ui.branch.goTo,ไปยัง: 
+ui.branch.goneScene,ฉากหาย
 ui.branch.graph,ผัง
 ui.branch.graphBreakBranchNon,ผังแตกสาย (Non-linear)
+ui.branch.hTMLTreeClickHas,HTML tree (คลิกได้ · มีเนื้อฉากย่อ)
 ui.branch.hasMorePressView,"ยังมีมากกว่านี้ กด ""ดูทั้งหมด"""
 ui.branch.hasOnly," · มีเฉพาะ ""{0}"" {1}"
 ui.branch.hasOnly2,"เหมือนกัน {0} · ต่างกัน {1} · มีเฉพาะ ""{2}"" {3}"
@@ -1650,12 +1858,11 @@ ui.branch.hidePanel,ซ่อนแผงนี้
 ui.branch.hidePanelChoice,ซ่อนแผงทางเลือก
 ui.branch.hideSide,ซ่อนแผงทางเลือก
 ui.branch.hideThis,ซ่อนแผงนี้
-ui.branch.hTMLTreeClickHas,HTML tree (คลิกได้ · มีเนื้อฉากย่อ)
 ui.branch.inNotTo,เข้าไม่ถึง
-ui.branch.insertedDirty,แทรกในไฟล์แล้ว — ฉากที่เปิดอยู่ยังไม่บันทึก กดบันทึกทับได้เลยถ้าไม่ต้องการ
 ui.branch.insertFileDoneScene,แทรกในไฟล์แล้ว — ฉากที่เปิดอยู่ยังไม่บันทึก กดบันทึกทับได้เลยถ้าไม่ต้องการ
 ui.branch.insertScene,แทรกลงฉาก
 ui.branch.insertSceneDone,แทรกลงท้ายฉากแล้ว
+ui.branch.insertedDirty,แทรกในไฟล์แล้ว — ฉากที่เปิดอยู่ยังไม่บันทึก กดบันทึกทับได้เลยถ้าไม่ต้องการ
 ui.branch.inspector,ทางเลือกของฉาก
 ui.branch.items,รายการ
 ui.branch.jSONStructureInTool,JSON (โครงสร้างล้วน — เข้าเครื่องมืออื่น)
@@ -1670,10 +1877,10 @@ ui.branch.merge,รวมเลย
 ui.branch.mergeAsk,รวมทางเลือกที่ซ้ำกัน
 ui.branch.mergeChoiceDup,รวมทางเลือกที่ซ้ำกัน
 ui.branch.mergeChoiceDupDone,รวมทางเลือกซ้ำแล้ว
-ui.branch.mergedDone,รวมทางเลือกซ้ำแล้ว
 ui.branch.mergeDupHint,รวมทางเลือกที่ซ้ำกัน
 ui.branch.mergeNote,ข้อความเดียวกันแต่ไปคนละฉากจะไม่ถูกยุบ
 ui.branch.mergeOk,รวมเลย
+ui.branch.mergedDone,รวมทางเลือกซ้ำแล้ว
 ui.branch.moveCardDonePress,ย้ายการ์ดแล้ว — กด ⟲ เพื่อจัดผังใหม่อัตโนมัติ
 ui.branch.moveChoice,ย้ายทางเลือก
 ui.branch.moved,ย้ายการ์ดแล้ว — กด ⟲ เพื่อจัดผังใหม่อัตโนมัติ
@@ -1686,12 +1893,12 @@ ui.branch.needTreeView,เปิดมุมมองผังก่อนจึ
 ui.branch.newChoiceNewReady,สร้างทางเลือกใหม่ พร้อมแทรก [ข้อความ] ลงท้ายฉากให้ด้วย
 ui.branch.newNewPlanStartLayout,สร้างแผนใหม่ (เริ่มจากการจัดวางเปล่า)
 ui.branch.noChoice,ฉากนี้ยังไม่มีทางเลือก — เป็นตอนจบสายหนึ่ง
-ui.branch.nodeHelp,คลิก = เลือก · ลาก = ย้ายตำแหน่ง · ดับเบิลคลิก = เปิดฉาก
 ui.branch.noDup,ไม่มีทางเลือกซ้ำให้รวม
 ui.branch.noFile,ฉากนี้ยังไม่มีไฟล์
 ui.branch.noMarker,ไม่พบทางเลือกในฉากนี้ — พิมพ์ [ข้อความ] ตรงจุดที่เรื่องแตกสาย
 ui.branch.noMatch,ไม่พบ
 ui.branch.noTarget,ทางเลือกนี้ยังไม่ระบุปลายทาง
+ui.branch.nodeHelp,คลิก = เลือก · ลาก = ย้ายตำแหน่ง · ดับเบิลคลิก = เปิดฉาก
 ui.branch.notDefineColor,ไม่กำหนดสี
 ui.branch.notFoundChoiceScene,ไม่พบทางเลือกในฉากนี้ — พิมพ์ [ข้อความ] ตรงจุดที่เรื่องแตกสาย
 ui.branch.notHasChoiceDup,ไม่มีทางเลือกซ้ำให้รวม
@@ -1716,12 +1923,13 @@ ui.branch.openSceneBeforeDonePrint,เปิดฉากก่อน แล้�
 ui.branch.openSplit,เปิดคู่กับผัง
 ui.branch.openSplitHint,เปิดฉากในพื้นที่เขียน โดยยังเห็นผังเป็นแผงข้าง ๆ
 ui.branch.openViewGraphBefore,เปิดมุมมองผังก่อนจึงส่งออกรูปได้
+ui.branch.pNGImageGraphSend,PNG (ภาพผัง — ส่งในแชต/สไลด์)
 ui.branch.pastChoices,เคยเลือกที่ฉากนี้
 ui.branch.pathFromStart,เส้นทางจากจุดเริ่มมาที่นี่
-ui.branch.paths,เส้นทาง
-ui.branch.pathsFrom,เส้นทางจากฉากนี้
 ui.branch.pathTrunc,เรื่องแตกสายมากกว่า
 ui.branch.pathTruncHint,แสดงเท่าที่ไล่ไหว
+ui.branch.paths,เส้นทาง
+ui.branch.pathsFrom,เส้นทางจากฉากนี้
 ui.branch.pickNode,คลิกกล่องฉากบนผังเพื่อดู/แก้ทางเลือกของฉากนั้น
 ui.branch.pickNodeEmpty,ยังไม่มีฉากในผัง — เพิ่มทางเลือกให้ฉากสักฉากก่อน
 ui.branch.pickScene,เคยเลือกที่ฉากนี้
@@ -1734,14 +1942,13 @@ ui.branch.playFrom,เล่นจากที่นี่
 ui.branch.playFromHint,เปิดโหมดทดลองเล่นโดยเริ่มที่ฉากนี้
 ui.branch.playHint,ทดลองเล่น — อ่านเรื่องแล้วกดเลือกทางไปเรื่อย ๆ
 ui.branch.pngFail,ส่งออก PNG ไม่สำเร็จ: 
-ui.branch.pNGImageGraphSend,PNG (ภาพผัง — ส่งในแชต/สไลด์)
 ui.branch.pngSaved,บันทึกรูปผังลงคลังรูปแล้ว: 
 ui.branch.printOnlySceneAt,พิมพ์เพื่อเน้นเฉพาะฉากที่ตรง — ที่เหลือจะจางลง
 ui.branch.printTextSceneAt,พิมพ์ [ข้อความ] ในฉากตรงจุดที่เรื่องแตกสาย เช่น [ไปตลาด] แล้วกดผูกที่นี่
 ui.branch.propsPlan,🌿 คุณสมบัติแผน — 
 ui.branch.propsPlanStatusDraft,คุณสมบัติแผน — สถานะ (ร่าง/ใช้จริง/สำรอง) · สี · แท็ก · เล่ม · โน้ต
-ui.branch.reading,กำลังอ่านฉาก…
 ui.branch.readScenesJsonNew,อ่าน scenes.json ใหม่
+ui.branch.reading,กำลังอ่านฉาก…
 ui.branch.recolorCardDone,เปลี่ยนสีการ์ดแล้ว
 ui.branch.recolorLineDone,เปลี่ยนสีเส้นแล้ว
 ui.branch.relayout,จัดผังใหม่อัตโนมัติ (ลืมตำแหน่งที่ลากเอง)
@@ -1757,6 +1964,7 @@ ui.branch.roleRoot,จุดเริ่ม
 ui.branch.route,เส้นทางที่เป็นไปได้
 ui.branch.routeDotStart,เส้นทางจากจุดเริ่มมาที่นี่
 ui.branch.routeScene,เส้นทางจากฉากนี้
+ui.branch.sVGImageGraphStyle,SVG (ภาพผังแบบเวกเตอร์)
 ui.branch.saveImageGraphLibrary,บันทึกรูปผังลงคลังรูปแล้ว: 
 ui.branch.saveMapOpen,บันทึกแผนที่เปิดอยู่
 ui.branch.saveNewPlanCoverLayout,บันทึกเป็นแผนใหม่ (ก๊อปการจัดวางปัจจุบันไปเป็นอีกแผน)
@@ -1791,7 +1999,6 @@ ui.branch.sumChoices,ทางเลือก
 ui.branch.sumEndings,ตอนจบ
 ui.branch.sumRoots,จุดเริ่ม
 ui.branch.sumScenes,ฉากในผัง
-ui.branch.sVGImageGraphStyle,SVG (ภาพผังแบบเวกเตอร์)
 ui.branch.targetChanged,เปลี่ยนปลายทางแล้ว
 ui.branch.textChoice,ข้อความทางเลือก
 ui.branch.textChoiceEgOpen,"ข้อความทางเลือก เช่น ""เปิดประตู"""
@@ -1839,8 +2046,8 @@ ui.central.stats,📊 สถิติ
 ui.central.thingMustUpdate,📋 สิ่งที่ต้องอัปเดต
 ui.central.updateAutoAllTimes,อัปเดตอัตโนมัติทุกครั้งที่บันทึกไฟล์
 ui.characters,ตน
-ui.cmt.added,เพิ่มคอมเมนต์แล้ว
 ui.cmt.addFail,เพิ่มคอมเมนต์ไม่สำเร็จ
+ui.cmt.added,เพิ่มคอมเมนต์แล้ว
 ui.cmt.anchorHint,คอมเมนต์ที่เพิ่มจะผูกกับข้อความที่เลือกไว้
 ui.cmt.anchorLost,📍✕ (ข้อความถูกลบไปแล้ว) 
 ui.cmt.anchorLostHint,ไม่พบข้อความที่คอมเมนต์นี้ผูกไว้แล้ว
@@ -1849,8 +2056,8 @@ ui.cmt.anchorOkHint,ชี้เพื่อไฮไลต์ในฉาก ·
 ui.cmt.cancel,ยกเลิก
 ui.cmt.delete,ลบคอมเมนต์
 ui.cmt.deleteConfirm,ลบคอมเมนต์นี้ (พร้อมเธรดตอบกลับทั้งหมด) ?
-ui.cmt.deleted,ลบคอมเมนต์แล้ว
 ui.cmt.deleteHint,ลบคอมเมนต์นี้ (พร้อมเธรดตอบกลับ)
+ui.cmt.deleted,ลบคอมเมนต์แล้ว
 ui.cmt.edit,แก้ไขข้อความ
 ui.cmt.edited, (แก้ไขแล้ว)
 ui.cmt.editedDone,แก้ไขคอมเมนต์แล้ว
@@ -1923,11 +2130,11 @@ var q=document.getElementById('q'),g=document.getElementById('g');
 q.addEventListener('input',function(){{var v=q.value.trim().toLowerCase();
 [].forEach.call(g.children,function(c){{c.style.display=!v||c.dataset.n.indexOf(v)>=0?'':'none';}});}});
 </script>"
+ui.common.aIAnalyze,🧠 AI วิเคราะห์
+ui.common.aIAssistantWrite,💬 AI ผู้ช่วยเขียน
 ui.common.actEnd,ตอนจบ
 ui.common.action,บรรยาย
 ui.common.add,+ เพิ่ม
-ui.common.aIAnalyze,🧠 AI วิเคราะห์
-ui.common.aIAssistantWrite,💬 AI ผู้ช่วยเขียน
 ui.common.aiReadAiKey,ai: อ่าน ai-key.json ไม่ได้
 ui.common.alignLeft,ชิดซ้าย
 ui.common.all,ทั้งหมด
@@ -2021,8 +2228,8 @@ ui.common.howSpeak,วิธีพูด/สำนวน
 ui.common.image,รูปภาพ
 ui.common.insertPage,แทรกหน้า
 ui.common.insertSceneOpen,🖼 แทรกลงฉากที่เปิดอยู่
-ui.common.journal,🗒 บันทึกประจำวัน
 ui.common.jSONNotValid,JSON ไม่ถูกต้อง: 
+ui.common.journal,🗒 บันทึกประจำวัน
 ui.common.killian,เกี่ยวกับ Killian 2
 ui.common.left,ซ้าย
 ui.common.legend,ตำนาน
@@ -2063,8 +2270,6 @@ ui.common.newBoard,"สร้างกระดาน """
 ui.common.newBoardNew,สร้างกระดานใหม่
 ui.common.newPlan,แผนใหม่
 ui.common.normalPagePaper,ปกติ (หน้ากระดาษ)
-ui.common.note,โน้ต
-ui.common.notebookNoteQuick,สมุดโน้ตด่วน
 ui.common.notFound,ไม่พบ
 ui.common.notFoundFileScene,ไม่พบไฟล์ฉาก
 ui.common.notHas,— ไม่มี —
@@ -2080,6 +2285,8 @@ ui.common.notSpecifyTime,(ไม่ระบุเวลา)
 ui.common.notSpecifyTo,(ยังไม่ระบุปลายทาง)
 ui.common.notSpecifyTo2,ยังไม่ระบุปลายทาง
 ui.common.notUse,ยังไม่ถูกใช้
+ui.common.note,โน้ต
+ui.common.notebookNoteQuick,สมุดโน้ตด่วน
 ui.common.novel,📖 นิยาย
 ui.common.ok,สำเร็จ
 ui.common.ollamaItem,Ollama (เครื่องตัวเอง)
@@ -2161,8 +2368,8 @@ ui.common.version,เวอร์ชัน
 ui.common.view,มุมมอง
 ui.common.view2,มุมมอง: 
 ui.common.viewImageFull,🔍 ดูภาพเต็ม
-ui.common.viewPage,มุมมอง: {0} · {1} หน้า
 ui.common.viewPOV,มุมมอง (POV)
+ui.common.viewPage,มุมมอง: {0} · {1} หน้า
 ui.common.word, คำ
 ui.common.word2,คำ
 ui.common.writeEnd,เขียนจบ
@@ -2178,8 +2385,8 @@ ui.compile.draftPersonRead,ร่างสำหรับคนอ่าน
 ui.compile.drawFrameRoundNote,วาดกรอบรอบโน้ตที่ยังเหลือ (ใช้กับตัวสร้าง PDF ในโปรแกรม)
 ui.compile.editItemNameWiki,แก้ไขตัวแปร {{{{ชื่อ}}}} จาก Wiki
 ui.compile.formatUseNTitle,รูปแบบ — ใช้ {{n}} {{title}} ได้
-ui.compile.headChapter,หัวบท
 ui.compile.hTML,แปลงเป็น HTML
+ui.compile.headChapter,หัวบท
 ui.compile.insertTextContNot,แทรกข้อความต่อเนื่องไม่สำเร็จ: 
 ui.compile.itemBetweenScene,ตัวคั่นระหว่างฉาก
 ui.compile.javaScript,สคริปต์ JavaScript เอง
@@ -2590,11 +2797,11 @@ ui.dlg.elementPrevEnter,ไป element ถัดไป (เดิม Enter)
 ui.dlg.exportFileCSV,📤 ส่งออกไฟล์แปล (CSV)
 ui.dlg.exportTableLangLang,"ส่งออกตารางแปลของภาษาไหน (รหัสภาษา เช่น en, ja)"
 ui.dlg.exportTableRow,ส่งออกตารางแปล {0} แถว → {1}
+ui.dlg.iNTNightSceneOne,INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123
 ui.dlg.importFont,นำเข้าฟอนต์ 
 ui.dlg.importFontFail,นำเข้าฟอนต์ล้มเหลว
 ui.dlg.importFontNotOk,นำเข้าฟอนต์ไม่สำเร็จ
 ui.dlg.inch,{0} นิ้ว · 
-ui.dlg.iNTNightSceneOne,INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123
 ui.dlg.langReadNameFile,ภาษาอ่านจาก **ชื่อไฟล์** ในโฟลเดอร์ languages — วางไฟล์ `k2_<รหัสภาษา>.csv` เพิ่ม (เช่น k2_ja.csv) แล้วเปิดโปรแกรมใหม่ ก็มีภาษานั้นเลย ไม่ต้องติดตั้งอะไร
 ui.dlg.linePage,{0} บรรทัด/หน้า
 ui.dlg.linePage2,≈ {0} บรรทัด/หน้า · 
@@ -2612,6 +2819,8 @@ ui.dlg.restoreDefault,คืนค่าเริ่มต้น
 ui.dlg.saveSettingsFail,บันทึกการตั้งค่าล้มเหลว
 ui.dlg.searchFileLang,ที่ค้นหาไฟล์ภาษา: 
 ui.dlg.setCustom,— ตั้งเอง (Custom) —
+ui.dlg.spThaiAuto,อัตโนมัติ (ตัวแรกที่เครื่องมี)
+ui.dlg.spThaiSample,"INT. ห้องนอน - กลางคืน / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"
 ui.dlg.theme,ตามธีม
 ui.dlg.togglePagePrevTab,สลับไปข้างหน้า (เดิม Tab)
 ui.dlg.toggleUndoPrevShift,สลับย้อนกลับ (เดิม Shift+Tab)
@@ -2619,6 +2828,161 @@ ui.dlg.useFontPrintName,— ใช้ฟอนต์ที่ลงในเค�
 ui.dlg.useRow,ใช้แถวนี้
 ui.dlg.useRowSampleEnglish,ใช้อยู่ {0} แถว — ตัวอย่าง (ไทยผสมอังกฤษ):
 ui.dlg.warnToolbarPage,สร้างหน้าตั้งค่าแถบเครื่องมือไม่สำเร็จ
+ui.dlgBuilder.aiPick,🤖 ให้ AI เลือก
+ui.dlgBuilder.batchFormat,รูปแบบคำตอบ: บรรทัด @ชื่อตัวละคร แล้วขึ้นบรรทัดใหม่เป็นบทพูด เว้นบรรทัดคั่นแต่ละคน ห้ามใส่หัวฉากหรือคำบรรยาย
+ui.dlgBuilder.batchSystem,คุณเป็นนักเขียนบทภาพยนตร์ไทย เขียนบทสนทนาที่เป็นธรรมชาติและตรงบุคลิกของตัวละครแต่ละตัว
+ui.dlgBuilder.batchWrite,เขียนบทสนทนาต่อจากนี้อีก {0} บรรทัด
+ui.dlgBuilder.cueYourTurn,ตาคุณพูดแล้ว พูดกับ {0}
+ui.dlgBuilder.everyone,ทุกคน
+ui.dlgBuilder.headCast,— ตัวละครในวง —
+ui.dlgBuilder.headOthers,— คนอื่นในวง (เท่าที่คุณรู้จัก) —
+ui.dlgBuilder.headPronoun,— สรรพนามที่ต้องใช้ (ห้ามเปลี่ยนกลางบทสนทนา) —
+ui.dlgBuilder.headRecent,— บทสนทนาล่าสุด —
+ui.dlgBuilder.headRels,— ความสัมพันธ์ในซีนนี้ —
+ui.dlgBuilder.headRules,— กติกาการตอบ —
+ui.dlgBuilder.headSituation,— สถานการณ์ —
+ui.dlgBuilder.heardDirector,[เหตุการณ์] {0}
+ui.dlgBuilder.lenLong,ยาว
+ui.dlgBuilder.lenLongRule,ตอบได้ถึง 4 ประโยค แต่ยังต้องเป็นบทพูด ไม่ใช่ย่อหน้าบรรยาย
+ui.dlgBuilder.lenMedium,กลาง
+ui.dlgBuilder.lenMediumRule,ตอบ 1-2 ประโยค
+ui.dlgBuilder.lenShort,สั้น
+ui.dlgBuilder.lenShortRule,ตอบสั้น ๆ ประโยคเดียว
+ui.dlgBuilder.modeBatch,รวดเดียว
+ui.dlgBuilder.modeBatchHint,ยิงครั้งเดียวได้หลายบรรทัด ถูกกว่ามาก แต่ทุกตัวใช้โมเดลเดียวกัน
+ui.dlgBuilder.modeEach,ทีละคน
+ui.dlgBuilder.modeEachHint,ยิงหนึ่งครั้งต่อหนึ่งบรรทัด — ตั้งโมเดลแยกรายตัวได้ อยู่ในคาแรกเตอร์ที่สุด
+ui.dlgBuilder.personaYouAre,คุณคือ {0}
+ui.dlgBuilder.pickAnswerOnlyName,ตอบเป็นชื่อตัวละครคำเดียว ห้ามอธิบาย
+ui.dlgBuilder.pickAsk,จากบทสนทนาข้างล่าง ตัวละครคนไหนมีเหตุผลมากที่สุดที่จะพูดต่อ เลือกจาก:
+ui.dlgBuilder.pickSystem,คุณเป็นผู้กำกับ เลือกว่าตัวละครคนไหนควรพูดต่อ
+ui.dlgBuilder.policyAi,ให้ AI เลือก
+ui.dlgBuilder.policyAiHint,ให้โมเดลตัดสินว่าใครมีเหตุผลจะพูดต่อ
+ui.dlgBuilder.policyManual,กำหนดเอง
+ui.dlgBuilder.policyManualHint,ไม่เลื่อนช่องให้ เลือกเองทุกเทิร์น
+ui.dlgBuilder.policyPingPong,สลับกันไปมา
+ui.dlgBuilder.policyPingPongHint,A พูดกับ B แล้วเทิร์นถัดไป B ตอบ A — เหมาะกับสองคน
+ui.dlgBuilder.policyRandom,สุ่มคนพูด
+ui.dlgBuilder.policyRandomHint,สุ่มคนถัดไป ไม่ซ้ำคนที่เพิ่งพูด
+ui.dlgBuilder.policyRound,วนตามลำดับ
+ui.dlgBuilder.policyRoundHint,ไล่ตามลำดับในคณะ พูดกับทุกคน — เหมาะกับวง 3-5 คน
+ui.dlgBuilder.pronOther,"เรียก {0} ว่า ""{1}"""
+ui.dlgBuilder.pronSelf,"เรียกตัวเองว่า ""{0}"""
+ui.dlgBuilder.randomPick,🎲 สุ่ม
+ui.dlgBuilder.ruleNoName,ห้ามใส่ชื่อตัวเองนำหน้าบทพูด และห้ามพูดแทนคนอื่น
+ui.dlgBuilder.ruleNoNarrate,ห้ามบรรยายฉากหรืออธิบายสิ่งที่กำลังเกิดขึ้น พูดอย่างเดียว
+ui.dlgBuilder.ruleOnlyMe,ตอบเป็นบทพูดของ {0} เท่านั้น
+ui.dlgBuilder.ruleParenOff,ห้ามใส่วงเล็บบอกอารมณ์หรือท่าทาง
+ui.dlgBuilder.ruleParenOn,ใส่อารมณ์หรือท่าทางสั้น ๆ ในวงเล็บนำหน้าได้ถ้าจำเป็น
+ui.dlgBuilder.sceneOpen,ฉากเริ่มขึ้น: {0}
+ui.dlgBuilder.sceneOpenBare,ฉากเริ่มขึ้น
+ui.dlgBuilder.unknownName,ไม่ทราบชื่อ
+ui.dlgBuilder.untitled,ยังไม่ตั้งชื่อ
+ui.dlgb.actDelete,ลบบรรทัดนี้
+ui.dlgb.actEdit,แก้ข้อความ
+ui.dlgb.actInsert,แทรกลงบทที่เคอร์เซอร์
+ui.dlgb.actReroll,สุ่มบรรทัดนี้ใหม่
+ui.dlgb.addPreset,+ คณะใหม่
+ui.dlgb.addToCast,เพิ่มเข้าคณะ
+ui.dlgb.backToList,กลับไปรายการเซสชัน
+ui.dlgb.badge,{0} บรรทัด · {1} โทเคน
+ui.dlgb.badgeTip,ยิงไป {0} ครั้ง · เข้า {1} · ออก {2} · รวม {3} วินาที
+ui.dlgb.blurbPh,คำโปรยหนึ่งบรรทัด — ตัวละครอื่นเห็นแค่บรรทัดนี้
+ui.dlgb.blurbTip,ตัวละครอื่นในวงเห็นแค่บรรทัดนี้ ไม่เห็นใบบทบาทเต็มของคนนี้
+ui.dlgb.castCount,ตัวละครในคณะ ({0}/{1})
+ui.dlgb.castFull,ใส่ได้สูงสุด {0} ตัว
+ui.dlgb.castTitle,คณะนักแสดง: {0}
+ui.dlgb.confirmClear,ล้างบทสนทนาในเซสชันนี้ทั้งหมด?
+ui.dlgb.confirmDelete,"ลบเซสชัน ""{0}"" ทิ้ง?"
+ui.dlgb.confirmDeletePreset,"ลบคณะ ""{0}"" ทิ้ง?"
+ui.dlgb.copySuffix,​ (สำเนา)
+ui.dlgb.create,สร้าง
+ui.dlgb.delete,ลบ
+ui.dlgb.director,ผู้กำกับ
+ui.dlgb.directorPh,เช่น ไฟดับทั้งร้าน
+ui.dlgb.directorTip,แทรกเหตุการณ์กลางวง (ไฟดับ · มีคนเคาะประตู)
+ui.dlgb.directorTitle,เหตุการณ์ที่เกิดขึ้น
+ui.dlgb.duplicated,ทำสำเนาเซสชันแล้ว
+ui.dlgb.edit,แก้ไข
+ui.dlgb.emptyReply,โมเดลตอบกลับมาว่าง
+ui.dlgb.errDelete,ลบไฟล์เซสชันไม่สำเร็จ
+ui.dlgb.errReadPresets,อ่านคณะนักแสดงไม่สำเร็จ
+ui.dlgb.errReadSession,อ่านเซสชันไม่สำเร็จ: 
+ui.dlgb.errSaveSession,บันทึกเซสชันไม่สำเร็จ
+ui.dlgb.errSend,คุยกับ AI ไม่สำเร็จ
+ui.dlgb.genFromWiki,⟳ สร้างใบจาก Wiki
+ui.dlgb.hideArchived,ซ่อนที่จัดเก็บแล้ว
+ui.dlgb.inputPh,เว้นว่างไว้ = ให้ AI พูดแทน · พิมพ์เอง = บรรทัดนี้เป็นของคุณ (ไม่เสียโทเคน)
+ui.dlgb.inserted,แทรกบทพูดลงฉากแล้ว
+ui.dlgb.insertedInto,แทรกลงบทแล้ว: {0}
+ui.dlgb.keepTalking,⤵ พูดต่อ
+ui.dlgb.keepTalkingTip,ให้คนเดิมพูดต่ออีกบรรทัด
+ui.dlgb.lenLabel,ความยาว
+ui.dlgb.mArchive,จัดเก็บ
+ui.dlgb.mClearTurns,ล้างบทสนทนาทั้งหมด
+ui.dlgb.mDelete,ลบเซสชัน
+ui.dlgb.mDuplicate,ทำสำเนา
+ui.dlgb.mEditCast,แก้คณะนักแสดงของเซสชันนี้
+ui.dlgb.mEditSituation,แก้สถานการณ์
+ui.dlgb.mInsertAll,แทรกทั้งเซสชันลงบท
+ui.dlgb.mRename,เปลี่ยนชื่อ
+ui.dlgb.mSaveAsPreset,บันทึกคณะนี้เป็นคณะนักแสดง
+ui.dlgb.mUnarchive,เอากลับจากที่จัดเก็บ
+ui.dlgb.makePreset,สร้าง/แก้คณะนักแสดง
+ui.dlgb.managePresets,คณะนักแสดง
+ui.dlgb.modeLabel,การยิง
+ui.dlgb.modelLabel,โมเดล
+ui.dlgb.modelThinking,🧠 ความคิดของโมเดล
+ui.dlgb.nInserted,แทรกแล้ว {0}
+ui.dlgb.nTurns,{0} บรรทัด
+ui.dlgb.needPreset,เลือกคณะนักแสดงก่อน
+ui.dlgb.needSpeaker,ยังไม่ได้เลือกคนพูด
+ui.dlgb.newSession,+ เซสชันใหม่
+ui.dlgb.noCast,ยังไม่มีตัวละครในคณะ
+ui.dlgb.noEditor,เปิดฉากที่จะแทรกก่อน แล้ววางเคอร์เซอร์ตรงจุดที่ต้องการ
+ui.dlgb.noMatch,ไม่พบเซสชันที่ตรงกับคำค้น
+ui.dlgb.noPresetYet,ยังไม่มีคณะนักแสดง
+ui.dlgb.noProvider,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI
+ui.dlgb.noSession,"ยังไม่มีเซสชัน — กด ""เซสชันใหม่"" เพื่อเริ่ม"
+ui.dlgb.noWikiChars,ยังไม่มีตัวละครใน Wiki — สร้างที่ Wiki ก่อน แล้วกลับมาที่นี่
+ui.dlgb.nothingToInsert,ยังไม่มีบทพูดให้แทรก
+ui.dlgb.openProjectFirst,เปิดโปรเจกต์ก่อน
+ui.dlgb.overrideTitle,⚙ โมเดลและพารามิเตอร์ของตัวนี้
+ui.dlgb.parenLabel,วงเล็บอารมณ์
+ui.dlgb.personaPh,ใบบทบาท — เขียนเป็นภาษาคนได้เลย เช่น คุณคือโทระ พูดสั้น ตัดบท ไม่ชอบอธิบายตัวเอง
+ui.dlgb.pickFromWiki,— เลือกจาก Wiki —
+ui.dlgb.pickPreset,เลือกคณะนักแสดง
+ui.dlgb.policyLabel,โหมดคิว
+ui.dlgb.presetNameAsk,ตั้งชื่อคณะนักแสดง
+ui.dlgb.presetSaved,บันทึกคณะนักแสดงแล้ว
+ui.dlgb.pressSendToStart,"กด ""ส่ง"" ได้เลย ไม่ต้องพิมพ์อะไร — AI จะสวมบทตัวละครที่เลือกไว้"
+ui.dlgb.providerLabel,ผู้ให้บริการ
+ui.dlgb.relCallPh,เรียกอีกฝ่ายว่า
+ui.dlgb.relHint,เว้นว่าง = ใช้ตามที่เขียนไว้ใน Wiki · กรอกเมื่อซีนนี้ต่างจากปกติ (เช่น ใน Wiki เป็นเจ้านาย แต่ซีนนี้เป็นแฟนกัน)
+ui.dlgb.relHowPh,ความสัมพันธ์ในซีนนี้
+ui.dlgb.relPair,{0} มอง {1} ว่า
+ui.dlgb.relSection,ความสัมพันธ์เฉพาะซีนนี้
+ui.dlgb.removeFromCast,เอาออกจากคณะ
+ui.dlgb.searchPh,ค้นหาเซสชัน…
+ui.dlgb.selfPronPh,เรียกตัวเอง
+ui.dlgb.selfPronTip,สรรพนามที่ตัวละครใช้เรียกตัวเอง (ผม/เรา/กู/ข้า) — ล็อกไว้กันโมเดลสลับกลางบทสนทนา
+ui.dlgb.send,▶ ส่ง
+ui.dlgb.sending,กำลังคุย…
+ui.dlgb.showArchived,แสดงที่จัดเก็บแล้ว
+ui.dlgb.situationLabel,สถานการณ์ที่กำลังเกิดขึ้น
+ui.dlgb.situationPh,เช่น ทั้งวงนั่งดื่มที่ลานเบียร์หลังเลิกงาน ฝนเพิ่งหยุด
+ui.dlgb.speaksTo,พูดกับ
+ui.dlgb.titleAutoPh,เว้นว่างไว้ = ตั้งชื่อจากสถานการณ์ให้เอง
+ui.dlgb.titleLabel,ชื่อเซสชัน
+ui.dlgb.toWhom,→ {0}
+ui.dlgb.unknown,ไม่ทราบ
+ui.dlgb.untitledRow,เซสชันไม่มีชื่อ
+ui.dlgb.useProjectProvider,ตามโปรเจกต์
+ui.dlgb.useProviderModel,ตามผู้ให้บริการ
+ui.dlgb.useProviderValue,ตามผู้ให้บริการ
+ui.dlgb.viewNormal,ตอนนี้: แสดงเฉพาะบทพูด — กดเพื่อกางความคิดของโมเดลทั้งหมด
+ui.dlgb.viewThinking,ตอนนี้: กางความคิดของโมเดลไว้ — กดเพื่อย่อกลับ
+ui.dlgb.wikiNotFound,หาตัวละครนี้ใน Wiki ไม่เจอ
 ui.drafts.delCantDraftMain,ลบไม่ได้ — นี่คือร่างหลัก
 ui.drafts.delDraft,ลบร่าง
 ui.drafts.delDraftDraft,ลบร่าง “{0}” ทั้งร่าง ?
@@ -2746,19 +3110,19 @@ ui.fonts.msg2,ลาว
 ui.fonts.msg3,อาหรับ
 ui.fonts.msg4,เทวนาครี
 ui.fonts.tHSarabunNew,TH Sarabun New (ราชการไทย)
+ui.gallery.aISetCaptionImage,🤖 AI: ตั้งคำบรรยายให้รูปที่เลือก
+ui.gallery.aISuggestTagImage,🤖 AI: แนะนำแท็กให้รูปที่เลือก
 ui.gallery.addImage,＋ เพิ่มรูป…
 ui.gallery.addImageDone,เพิ่มรูปแล้ว: 
 ui.gallery.addImageItemIn,เพิ่มรูป {0} ใบเข้าอัลบั้ม {1}
 ui.gallery.addImageNew,＋ เพิ่มรูปใหม่…
 ui.gallery.addImageNotOk,เพิ่มรูปไม่สำเร็จ: 
-ui.gallery.aISetCaptionImage,🤖 AI: ตั้งคำบรรยายให้รูปที่เลือก
-ui.gallery.aISuggestTagImage,🤖 AI: แนะนำแท็กให้รูปที่เลือก
 ui.gallery.album,อัลบั้ม
 ui.gallery.albumCollapseNew,＋ อัลบั้มย่อยใหม่…
 ui.gallery.albumEmpty,(อัลบั้มนี้ยังว่าง)
 ui.gallery.albumTagUseDone,อัลบั้ม {0} · แท็ก {1} · ใช้แล้ว {2}
-ui.gallery.allAlbum,ทุกอัลบั้ม
 ui.gallery.allAND,ทั้งหมด (AND)
+ui.gallery.allAlbum,ทุกอัลบั้ม
 ui.gallery.busyAddImage,กำลังเพิ่มรูป…
 ui.gallery.busyCompareImage,กำลังเทียบรูป…
 ui.gallery.busyDelImage,กำลังลบรูป…
@@ -3157,8 +3521,8 @@ ui.maps.zoomOutCtrlWheel,ซูมออก (Ctrl+ล้อ)
 ui.md.codesOff,ซ่อนรหัสนำหน้าบรรทัด: ปิด (เห็นรหัสครบ)
 ui.md.codesOn,ซ่อนรหัสนำหน้าบรรทัด: เปิด
 ui.md.codesTitle,ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …)
-ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,🧠 AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)
+ui.menu.ai,AI
 ui.menu.alignLeftL,ชิดซ้าย ({0}+{1}+L)
 ui.menu.allFile,ทุกไฟล์
 ui.menu.arrangeAreaRun,จัดพื้นที่ทำงาน
@@ -3198,6 +3562,7 @@ ui.menu.delDelete,ลบ (Delete)
 ui.menu.delElementType,🧹 ลบ element ตามประเภท…
 ui.menu.delLineDelete,ลบทั้งบรรทัด ({0}+{1}+Delete)
 ui.menu.dialoguePanel,บทพูดทั้งผลงาน
+ui.menu.dlgbPanel,🎭 ห้องซ้อมบท
 ui.menu.doZ,เลิกทำ ({0}+Z)
 ui.menu.edit,แก้ไข
 ui.menu.editIIAuto,แก้ i เดี่ยว ๆ เป็น I ให้อัตโนมัติ
@@ -3236,8 +3601,8 @@ ui.menu.fullScreen,เต็มจอ
 ui.menu.graphAreaFloorPlan,ผังพื้นที่ (Floor Plan)
 ui.menu.graphDialogueNextPage,📊 กราฟบทพูดต่อหน้า (Dialogue Chart)…
 ui.menu.graphStoryBreakBranch,ผังเรื่องแตกสาย (Branch Tree)
-ui.menu.heading,หัวข้อ {0} ({1}+{2})
 ui.menu.headPaperAllPage,📑 หัวกระดาษทุกหน้า (Page Headers)…
+ui.menu.heading,หัวข้อ {0} ({1}+{2})
 ui.menu.help,ช่วยเหลือ
 ui.menu.help2,ช่วยเหลือ
 ui.menu.hidePageLineShot,ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …)
@@ -3300,6 +3665,7 @@ ui.menu.pageSceneG,ไปที่หน้า/ฉาก… ({0}+G)
 ui.menu.panel,แผง
 ui.menu.panelAIAssistantWrite,💬 แผง AI ผู้ช่วยเขียน
 ui.menu.panelPairPlannerPlanner,แผงคู่ของ Planner — Planner เป็นคนเปิด/ปิดให้เองตามการเลือกบนกระดาน
+ui.menu.panelStoryStarter,แผง Story Starter
 ui.menu.partNameVO,ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)…
 ui.menu.paste,วาง
 ui.menu.pasteStyleTextV,วางแบบข้อความล้วน ({0}+{1}+V)
@@ -3464,20 +3830,20 @@ ui.notes.delNoteDone,ลบโน้ตแล้ว
 ui.notes.do,ไว้ทำภายหลัง
 ui.notes.do2,📝 ไว้ทำภายหลัง ({0})
 ui.notes.doDone,ทำแล้ว
-ui.notes.doneDoDoneList,✅ เคลียร์หมดแล้ว (ทำไปแล้ว {0} รายการ)
 ui.notes.doNoteDone,ทำโน้ตนี้แล้ว
 ui.notes.doShowTopPage, ไว้ทำภายหลัง (แสดงบนหน้าเส้นเวลา)
+ui.notes.doneDoDoneList,✅ เคลียร์หมดแล้ว (ทำไปแล้ว {0} รายการ)
 ui.notes.latest,ล่าสุด:
 ui.notes.lineWordChar,{0} บรรทัด · {1} คำ · {2} อักขระ
 ui.notes.moveInMemo,📋 ย้ายเข้า Memo
 ui.notes.moveInMemoDone,ย้ายเข้า Memo แล้ว: 
 ui.notes.nameNoteMemo,ชื่อโน้ต (Memo)
-ui.notes.noteAll,📝 โน้ตทั้งหมด (
-ui.notes.notebookNoteQuick,📝 สมุดโน้ตด่วน
-ui.notes.noteQuick,📝 โน้ตด่วน — 
 ui.notes.notHasNotePress,ยังไม่มีโน้ต — กด 📝 ใน toolbar
 ui.notes.notHasNoteStuck,"ยังไม่มีโน้ตค้าง — กด 📝 บนแถบเครื่องมือแล้วติ๊ก ""ไว้ทำภายหลัง"""
 ui.notes.notHasTextMove,ยังไม่มีข้อความให้ย้าย
+ui.notes.noteAll,📝 โน้ตทั้งหมด (
+ui.notes.noteQuick,📝 โน้ตด่วน — 
+ui.notes.notebookNoteQuick,📝 สมุดโน้ตด่วน
 ui.notes.saveNoteDoDone,บันทึกโน้ตไว้ทำภายหลังแล้ว
 ui.notes.saveNoteDone,บันทึกโน้ตแล้ว
 ui.openSceneFirst,เปิดฉากก่อนจึงจะดู Markdown ได้
@@ -3535,16 +3901,18 @@ ui.panel.desc_toolbar,ปุ่มจัดรูปแบบและสวิ�
 ui.panel.desc_tree,สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ
 ui.panel.dialogueDesc,รวมบทพูดทั้งผลงาน — กรองตามเล่ม/บท/ฉาก/ตัวละคร คลิกกระโดดไป แก้ได้ทันที
 ui.panel.dialogueTitle,บทพูด
-ui.panel.doc,เอกสาร
+ui.panel.dlgbDesc,ให้ AI สวมบทตัวละครจาก Wiki คุยกันทีละเทิร์น แล้วหยิบบรรทัดที่ชอบไปใส่บทที่เคอร์เซอร์ — เปิดตอนคิดบทพูดไม่ออก
+ui.panel.dlgbTitle,ห้องซ้อมบท
 ui.panel.doFileProjectDone,ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)
+ui.panel.doc,เอกสาร
 ui.panel.draftExportTitle,ส่งออกฉบับร่าง
 ui.panel.dragHandle,ลากเพื่อย้ายแถบ
 ui.panel.emptyContent,(ว่าง)
 ui.panel.essentialsDefault,Essentials (ค่าเริ่มต้น)
 ui.panel.exportClip,คัดลอกการจัดวางแผงไปคลิปบอร์ดแล้ว
-ui.panel.exported,ส่งออกการจัดวางแผงแล้ว: 
 ui.panel.exportFail,ส่งออกการจัดวางแผงไม่สำเร็จ
 ui.panel.exportLayout,📤 ส่งออกการจัดวางแผงเป็นไฟล์ JSON…
+ui.panel.exported,ส่งออกการจัดวางแผงแล้ว: 
 ui.panel.fab,สร้างใหม่
 ui.panel.fabChapter,สร้างบท
 ui.panel.fabCharacter,สร้างตัวละคร
@@ -3570,13 +3938,13 @@ ui.panel.logEmpty,(ยังไม่มีบันทึก)
 ui.panel.logTitle,บันทึกการทำงานของโปรแกรม (Log)
 ui.panel.manage,📐 จัดการแผง
 ui.panel.manageBookDraftCover,จัดการเล่มและฉบับร่าง — ปก · คำโปรย · สถานะ · สถิติรายเล่ม · ลากสลับลำดับเล่ม
-ui.panel.mapsTitle,แผนที่
 ui.panel.mapWorldStoryPin,แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้
+ui.panel.mapsTitle,แผนที่
 ui.panel.menuAway, (หน้าต่างแยก)
 ui.panel.navigation,Navigation
+ui.panel.noVersions,ยังไม่มีเวอร์ชันที่บันทึกไว้
 ui.panel.noteDoMoodCount,จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้
 ui.panel.noteIdeaNotSource,ที่จดความคิดชั่วคราวโดยไม่ปนต้นฉบับ — โน้ตผูกกับฉากที่เปิดอยู่ตอนจด
-ui.panel.noVersions,ยังไม่มีเวอร์ชันที่บันทึกไว้
 ui.panel.orderEventTimeStory,"ลำดับเหตุการณ์ตาม ""เวลาในเรื่อง"" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง"
 ui.panel.outline,เค้าโครง
 ui.panel.outlineHeadingFileOpen,"เค้าโครงหัวข้อของ ""ไฟล์ที่เปิดอยู่"" — คลิกหัวข้อเพื่อกระโดดไปตำแหน่งนั้นในเอกสาร"
@@ -3623,6 +3991,8 @@ ui.panel.spaceNone,ไม่มีแผงให้ซ่อนแล้ว
 ui.panel.spaceRestored,คืนแผงที่ซ่อนไว้แล้ว
 ui.panel.spaceShow,⬒ คืนแผงที่ซ่อนไว้
 ui.panel.spaceSide,ซ่อนแผงฝั่ง
+ui.panel.starterDesc,สร้างเรื่อง ตัวละคร และฉากเริ่มต้น แล้วเล่นเป็นตอน ๆ กับ AI
+ui.panel.starterTitle,Story Starter
 ui.panel.thisScene,ฉากนี้
 ui.panel.timelineTitle,เส้นเวลา
 ui.panel.tocResultTaskBook,สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ
@@ -3735,11 +4105,11 @@ ui.pdf.openDoneCountPage,(เปิดแล้วจำนวนหน้าอ
 ui.pdf.openFileDonePage,[89] เปิดไฟล์แล้วไปที่หน้า
 ui.pdf.openHeadPaperDone,เปิดหัวกระดาษแล้ว
 ui.pdf.openUseHeadPaper,เปิดใช้หัวกระดาษ
+ui.pdf.pDFAppUseFont,PDF ในโปรแกรมใช้ฟอนต์ที่ฝังมาเสมอ — ช่องนี้มีผลกับพรีวิว/พิมพ์
 ui.pdf.page, หน้า
 ui.pdf.page2, หน้า 
 ui.pdf.pageNotHasHead,หน้านี้ไม่มีหัวกระดาษ
 ui.pdf.pageNumNumSceneFormat,เลขหน้า / เลขฉาก ตามรูปแบบบท
-ui.pdf.pDFAppUseFont,PDF ในโปรแกรมใช้ฟอนต์ที่ฝังมาเสมอ — ช่องนี้มีผลกับพรีวิว/พิมพ์
 ui.pdf.pickTextEditProps,เลือกข้อความเพื่อแก้คุณสมบัติ
 ui.pdf.posNormalInchRight,ขยับจากตำแหน่งปกติ (นิ้ว · บวก = ไปทางขวา)
 ui.pdf.posXYInch,ตำแหน่ง x × y (นิ้ว)
@@ -3756,10 +4126,10 @@ ui.pdf.scrollPage,เลื่อนหน้าขึ้น
 ui.pdf.scrollPage2,เลื่อนหน้าลง
 ui.pdf.sizePt,ขนาด (pt)
 ui.pdf.skipLineUnderHead,เว้นบรรทัดใต้หัวกระดาษ
+ui.pdf.tITLEPAGE,${{TITLE}} หรือ ${{PAGE}}
 ui.pdf.textAllItemLine,ข้อความ (ทุกชิ้นอยู่บรรทัดเดียวกัน — ต่างกันที่การจัดหน้า)
 ui.pdf.textNew,ข้อความใหม่
 ui.pdf.textPage,ข้อความในหน้านี้
-ui.pdf.tITLEPAGE,${{TITLE}} หรือ ${{PAGE}}
 ui.pdf.tocBookmarkNextHead,[87] สารบัญ (bookmark ต่อหัวฉาก)
 ui.pdf.twoCloseTabPage,ทั้งสองยังปิดอยู่ในแท็บหน้ากระดาษ
 ui.pdf.watermark,ลายน้ำ
@@ -3829,10 +4199,10 @@ ui.planner.cardScene,การ์ดฉาก
 ui.planner.cardWiki,การ์ด Wiki
 ui.planner.changeNameGroup,✏️ เปลี่ยนชื่อกลุ่ม…
 ui.planner.chapterNew,บทใหม่
-ui.planner.characterMain,ตัวละครหลัก
-ui.planner.characterNew,ตัวละครใหม่
 ui.planner.charBig,ตัวอักษรใหญ่ขึ้น
 ui.planner.charSmall,ตัวอักษรเล็กลง
+ui.planner.characterMain,ตัวละครหลัก
+ui.planner.characterNew,ตัวละครใหม่
 ui.planner.closeBoard,ปิดกระดาน
 ui.planner.closeSnap,⌗ ปิด snap
 ui.planner.colorChar,สีตัวอักษร
@@ -3904,8 +4274,8 @@ ui.planner.lock,🔒 ล็อก
 ui.planner.lockNotMove,ล็อกไม่ให้ย้าย
 ui.planner.moveLineDone,ย้ายปลายเส้นแล้ว
 ui.planner.mustHasLessCard,ต้องมีอย่างน้อย 2 การ์ด
-ui.planner.noteNew,โน้ตใหม่
 ui.planner.notHasBoardProject,ยังไม่มีกระดานในโปรเจกต์ — กด ✚ ใหม่ เพื่อสร้าง
+ui.planner.noteNew,โน้ตใหม่
 ui.planner.objectLineGroup,{0} วัตถุ · {1} เส้น · {2} กลุ่ม
 ui.planner.openBoard,"เปิดกระดาน """
 ui.planner.openBoardOther,เปิดกระดานอื่น
@@ -4036,8 +4406,8 @@ ui.plannerProps.msg,"<div class=""planner-prop-2col"">
     </div>"
 ui.plannerProps.msg2,"<input class=""planner-prop-input"" id=""plp-tags"" value=""{0}"" placeholder=""คั่นด้วย ,"">"
 ui.plannerProps.msg3,"<input class=""planner-prop-input"" id=""plpe-label"" value=""{0}"" placeholder=""เช่น ต่อเนื่อง / ย้อนอดีต"">"
-ui.plannerProps.note,📝 โน้ต
 ui.plannerProps.notHas,— ไม่มี
+ui.plannerProps.note,📝 โน้ต
 ui.plannerProps.object,วัตถุ
 ui.plannerProps.occurScene,เกิดอะไรขึ้นในฉากนี้
 ui.plannerProps.pickItem,⬚ เลือกไว้ {0} ชิ้น
@@ -4072,10 +4442,10 @@ ui.player.back,ย้อนกลับ
 ui.player.backHint,ถอยหนึ่งก้าว (ทางเลือกล่าสุดถูกถอนออกจากเส้นทาง)
 ui.player.busyReadStory,กำลังอ่านเรื่อง…
 ui.player.choiceNotHasTo,ทางเลือกนี้ยังไม่มีปลายทาง — ไปกำหนดที่ผังแตกสาย
-ui.player.cleared,ล้างรอบการเล่นแล้ว
 ui.player.clearHistoryDecideDone,ล้างประวัติการตัดสินใจแล้ว
 ui.player.clearRoundPlayDone,ล้างรอบการเล่นแล้ว
 ui.player.clearRuns,ล้าง
+ui.player.cleared,ล้างรอบการเล่นแล้ว
 ui.player.clickUndo,คลิกเพื่อย้อนกลับมาที่นี่
 ui.player.close,ปิด
 ui.player.deadHint,ทางเลือกนี้ยังไม่มีปลายทาง — ไปกำหนดที่ผังแตกสาย
@@ -4086,9 +4456,9 @@ ui.player.empty,ยังไม่มีเรื่องแตกสายใ�
 ui.player.emptyScene,(ฉากนี้ยังไม่มีเนื้อเรื่อง)
 ui.player.endBranchDone,จบสายนี้แล้ว
 ui.player.export,📥 ส่งออก
-ui.player.exported,ส่งออกรอบการเล่นแล้ว: 
 ui.player.exportRoundPlayDone,ส่งออกรอบการเล่นแล้ว: 
 ui.player.exportRuns,ส่งออก
+ui.player.exported,ส่งออกรอบการเล่นแล้ว: 
 ui.player.goneScene,ฉากหาย
 ui.player.history,ประวัติ
 ui.player.historyDecide,🎮 ประวัติการตัดสินใจ
@@ -4174,8 +4544,8 @@ ui.plug.errNoDir,เปิดโฟลเดอร์ไม่ได้
 ui.plug.errNoFiles,ไม่มีไฟล์ให้ติดตั้ง
 ui.plug.errNoManifest,ในซิปไม่มีไฟล์ plugin.json — อาจไม่ใช่ปลั๊กอินของ Killian
 ui.plug.errNoName,ไม่มีชื่อใน plugin.json และชื่อโฟลเดอร์ก็ว่าง
-ui.plug.errNotZip,รองรับเฉพาะลิงก์ GitHub หรือไฟล์ .zip
 ui.plug.errNoUrl,ยังไม่ได้ใส่ลิงก์
+ui.plug.errNotZip,รองรับเฉพาะลิงก์ GitHub หรือไฟล์ .zip
 ui.plug.errRun,รันคำสั่งของปลั๊กอินไม่สำเร็จ
 ui.plug.errSubNotFound,ไม่เจอโฟลเดอร์ย่อยที่ระบุในลิงก์
 ui.plug.errTooBig,ไฟล์ใหญ่เกินไป (เกิน 25MB) — ปลั๊กอินไม่ควรใหญ่ขนาดนี้
@@ -4183,11 +4553,11 @@ ui.plug.errUninstall,ถอนปลั๊กอินไม่สำเร็�
 ui.plug.install,ติดตั้งจากลิงก์
 ui.plug.installAsk,ลิงก์ GitHub ของปลั๊กอิน (หรือ user/repo หรือลิงก์ไฟล์ .zip)
 ui.plug.installConfirm,"ติดตั้งลงโฟลเดอร์ ""{0}"" — เขียนไฟล์ {1} ไฟล์"
-ui.plug.installed,ติดตั้ง {0} แล้ว ({1} ไฟล์)
 ui.plug.installFetching,กำลังโหลดปลั๊กอิน…
 ui.plug.installHint,วางลิงก์ GitHub ของปลั๊กอิน แล้วโปรแกรมโหลดมาติดตั้งให้
 ui.plug.installOverwrite,"มีโฟลเดอร์ ""{0}"" อยู่แล้ว — เขียนทับไหม"
 ui.plug.installWarn,⚠ ปลั๊กอินรันโค้ดได้เต็มที่ในโปรแกรม (อ่าน-เขียนไฟล์ในผลงานได้) — ติดตั้งเฉพาะจากคนที่เชื่อถือได้
+ui.plug.installed,ติดตั้ง {0} แล้ว ({1} ไฟล์)
 ui.plug.makeSample,สร้างตัวอย่าง
 ui.plug.makeSampleHint,สร้างปลั๊กอินที่ทำงานได้จริงให้ดูเป็นแบบ — เปิดไฟล์ไปแก้ต่อได้เลย
 ui.plug.minVer,ต้องใช้รุ่นอย่างน้อย
@@ -4213,8 +4583,8 @@ ui.plug.summary,ทั้งหมด {0} · ทำงานอยู่ {1}
 ui.plug.summaryErr, · มีปัญหา {0}
 ui.plug.uninstall,ถอนออก
 ui.plug.uninstallAsk,"ถอน ""{0}"" ออก — ลบโฟลเดอร์ทิ้งถาวร"
-ui.plug.uninstalled,ถอน {0} ออกแล้ว
 ui.plug.uninstallHint,ลบโฟลเดอร์ของปลั๊กอินนี้ออกจากเครื่อง
+ui.plug.uninstalled,ถอน {0} ออกแล้ว
 ui.plugin.failed,ปลั๊กอินพัง — ปิดไว้ชั่วคราว
 ui.plugin.loaded,โหลดปลั๊กอิน
 ui.plugin.needsNewer,ต้องใช้ Killian รุ่นใหม่กว่านี้
@@ -4262,10 +4632,10 @@ ui.recOrd.min, นาที
 ui.recOrd.minMerge,นาทีรวม
 ui.recOrd.msg,วัน
 ui.recOrd.normal,🙂 ปกติ
-ui.recOrd.noteSaveDone,จดบันทึกแล้ว
 ui.recOrd.notFoundSaveAt,(ไม่พบบันทึกที่ตรงกับที่ค้น)
 ui.recOrd.notHasSaveExport,ไม่มีบันทึกให้ส่งออก
 ui.recOrd.notHasSaveWrite,(ยังไม่มีบันทึก — เขียนช่องบนแล้วกดบันทึก)
+ui.recOrd.noteSaveDone,จดบันทึกแล้ว
 ui.recOrd.openProjectBeforeNote,เปิดโปรเจกต์ก่อนจึงจะจดบันทึกได้
 ui.recOrd.recordExportCSV,record: ส่งออก CSV 
 ui.recOrd.save,✔ บันทึก
@@ -4312,10 +4682,10 @@ ui.scene.move,ย้าย “
 ui.scene.nameChapter,ชื่อบท
 ui.scene.nameChapterNew,ชื่อบทใหม่
 ui.scene.nameSceneNew,ชื่อฉากใหม่
-ui.scene.noteChapter,โน้ตของบท
-ui.scene.noteWriterShowOnly,โน้ตสำหรับนักเขียน — แสดงเฉพาะที่นี่และ Planner ไม่แสดงในฉากปกติ
 ui.scene.notFoundChapterDraft,ไม่พบบทนี้ใน draft.json
 ui.scene.notHasSceneProject,ยังไม่มีฉากในโปรเจกต์
+ui.scene.noteChapter,โน้ตของบท
+ui.scene.noteWriterShowOnly,โน้ตสำหรับนักเขียน — แสดงเฉพาะที่นี่และ Planner ไม่แสดงในฉากปกติ
 ui.scene.orderChapterSceneNew,เรียงลำดับบท+ฉากใหม่แล้ว (
 ui.scene.pageNumStartScreenplay,เลขหน้าเริ่มต้น (บทภาพยนตร์)
 ui.scene.pinOut,เอาหมุดออก: 
@@ -4382,13 +4752,13 @@ ui.session.warnSave,บันทึกสถานะล่าสุดไม่
 ui.session.warnTabs,จำรายการแท็บที่เปิดอยู่ไม่ได้
 ui.settings.author,ผู้เขียน
 ui.settings.autoBackup,สำรองเวอร์ชันอัตโนมัติเมื่อบันทึก
-ui.settings.automation,อัตโนมัติ
 ui.settings.autoMention,จับชื่อ Wiki อัตโนมัติ
 ui.settings.autoMentionHint,ไฮไลต์ชื่อจากคลัง Wiki ในเนื้อเรื่อง
 ui.settings.autoSaveHint,0 = ปิดบันทึกอัตโนมัติ
 ui.settings.autoSaveMinutes,บันทึกอัตโนมัติทุก ๆ (นาที)
 ui.settings.autoSync,Auto-sync
 ui.settings.autoSyncHint,อัปเดตชื่อเอนทิตี้ในทุกไฟล์โดยอัตโนมัติ
+ui.settings.automation,อัตโนมัติ
 ui.settings.dailyGoal,เป้าหมายคำต่อวัน
 ui.settings.downloadLanguage,ดาวน์โหลดภาษาเพิ่ม…
 ui.settings.focusDim,ความจางของบรรทัดอื่น (โหมดโฟกัส)
@@ -4410,12 +4780,12 @@ ui.settings.recycleDays,ล้างถังขยะที่เก่าก�
 ui.settings.recycleDaysHint,0 = ไม่ล้างอัตโนมัติ
 ui.settings.shortcuts,ปุ่มลัด
 ui.settings.shortcutsHint,"คลิก ""แก้"" แล้วกดปุ่มลัดชุดใหม่ (ต้องมี Ctrl/⌘) · ปุ่มลัดที่ซ้ำกันจะถูกเตือน"
+ui.settings.spFontFamily,แบบอักษรบทหนัง
+ui.settings.spFontFamilyHint,ฟอนต์เฉพาะโหมดบทภาพยนตร์ (ค่าเริ่มต้น Courier New ตามมาตรฐานบท)
 ui.settings.spellCheck,ตรวจคำผิด
 ui.settings.spellCheckDict,ใช้พจนานุกรมของโปรแกรม (ไทย+อังกฤษ)
 ui.settings.spellCheckDictHint,คลังคำออฟไลน์ · รู้จักคำที่เพิ่มเอง · ปิด = ใช้ตัวตรวจของเบราว์เซอร์ (อังกฤษเท่านั้น)
 ui.settings.spellCheckHint,ขีดเส้นใต้คำสะกดผิด (ขีดเส้นเดียวเสมอ ไม่ซ้อนกัน)
-ui.settings.spFontFamily,แบบอักษรบทหนัง
-ui.settings.spFontFamilyHint,ฟอนต์เฉพาะโหมดบทภาพยนตร์ (ค่าเริ่มต้น Courier New ตามมาตรฐานบท)
 ui.settings.title,ตั้งค่าโปรเจกต์
 ui.settings.uiScale,ขนาด UI
 ui.settings.uiScaleHint,ย่อ/ขยายแถบเครื่องมือ แผง แท็บ และกล่องโต้ตอบ (75–200%)
@@ -4499,10 +4869,10 @@ ui.shortcuts.panelPlayer,แผง: ทดลองเล่น
 ui.shortcuts.panelPlugins,แผง: ปลั๊กอิน
 ui.shortcuts.panelProps,แผง: คุณสมบัติ
 ui.shortcuts.panelRecord,แผง: บันทึกประจำวัน
+ui.shortcuts.panelTimeline,แผง: เส้นเวลา
 ui.shortcuts.panelsHideAll,ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)
 ui.shortcuts.panelsHideLeft,ซ่อนแผงฝั่งซ้าย
 ui.shortcuts.panelsHideRight,ซ่อนแผงฝั่งขวา
-ui.shortcuts.panelTimeline,แผง: เส้นเวลา
 ui.shortcuts.paperMode,โหมดหน้ากระดาษ
 ui.shortcuts.print,พิมพ์
 ui.shortcuts.quickNote,โน้ตด่วน
@@ -4516,7 +4886,6 @@ ui.shortcuts.selectScene,เลือกทั้งฉาก
 ui.shortcuts.settings,ตั้งค่าโปรเจกต์
 ui.shortcuts.spActBreak,บทหนัง: ตอน
 ui.shortcuts.spDialogue,บทหนัง: บทพูด
-ui.shortcuts.splitView,แยกหน้าจอ
 ui.shortcuts.spNextElem,บทหนัง: element ถัดไป
 ui.shortcuts.spNote,บทหนัง: โน้ต
 ui.shortcuts.spParenthetical,บทหนัง: วงเล็บ
@@ -4524,6 +4893,7 @@ ui.shortcuts.spPrevElem,บทหนัง: element ก่อนหน้า
 ui.shortcuts.spShot,บทหนัง: ช็อต
 ui.shortcuts.spSwitchElem,บทหนัง: สลับชนิด element
 ui.shortcuts.spTransition,บทหนัง: ทรานซิชัน
+ui.shortcuts.splitView,แยกหน้าจอ
 ui.shortcuts.strikethrough,ขีดฆ่า
 ui.shortcuts.toggleFormat,สลับโหมดเอกสาร
 ui.shortcuts.toggleTheme,สลับธีมสว่าง/มืด
@@ -4561,15 +4931,6 @@ ui.spHeaders.nameAuthor,ชื่อผู้เขียน
 ui.spHeaders.nameDraftRoundEdit,ชื่อฉบับร่าง / รอบแก้
 ui.spHeaders.pageNumCurrent,เลขหน้าปัจจุบัน
 ui.spHeaders.text,ข้อความลิขสิทธิ์
-ui.split.closed,ยกเลิกแยกหน้าจอแล้ว
-ui.split.closePane,✕ ปิดช่องนี้
-ui.split.closePaneHint,ปิดช่องนี้ (แท็บยังเปิดอยู่)
-ui.split.dragResize,ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)
-ui.split.emptyPane,ช่องว่าง — ลากหัวแท็บมาวางที่นี่
-ui.split.emptyPaneHint,หรือคลิกช่องนี้แล้วเลือกแท็บด้านบน
-ui.split.openedEmpty,เปิดช่องว่างแล้ว — ลากหัวแท็บมาวางในช่อง หรือคลิกช่องแล้วเลือกแท็บ
-ui.split.removeFromPane,เอาออกจากช่องนี้ (แท็บยังเปิดอยู่)
-ui.split.statusPrefix,แยกหน้าจอ: 
 ui.spReports.beforeHeadSceneFirst,(ก่อนหัวฉากแรก)
 ui.spReports.graphDialoguePage,กราฟบทพูด — {0} หน้า
 ui.spReports.mergeStoryActionDialogue,รวมทั้งเรื่อง: บรรยาย {0}% · บทพูด {1}% · 
@@ -4604,9 +4965,339 @@ ui.spValidator.outline,โครง 1
 ui.spValidator.outline2,โครง 2
 ui.spValidator.outline3,โครง 3
 ui.spValidator.shot,ช็อต
-ui.status.addedToDictionary,เพิ่มลงพจนานุกรมแล้ว: 
+ui.split.closePane,✕ ปิดช่องนี้
+ui.split.closePaneHint,ปิดช่องนี้ (แท็บยังเปิดอยู่)
+ui.split.closed,ยกเลิกแยกหน้าจอแล้ว
+ui.split.dragResize,ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)
+ui.split.emptyPane,ช่องว่าง — ลากหัวแท็บมาวางที่นี่
+ui.split.emptyPaneHint,หรือคลิกช่องนี้แล้วเลือกแท็บด้านบน
+ui.split.openedEmpty,เปิดช่องว่างแล้ว — ลากหัวแท็บมาวางในช่อง หรือคลิกช่องแล้วเลือกแท็บ
+ui.split.removeFromPane,เอาออกจากช่องนี้ (แท็บยังเปิดอยู่)
+ui.split.statusPrefix,แยกหน้าจอ: 
+ui.starter.aiBetterWithIntro,เขียนเรื่องย่อก่อนจะได้ผลตรงกับเรื่องมากกว่า
+ui.starter.aiBetterWithTags,เลือกแนวเรื่องก่อนจะได้ผลตรงใจกว่า
+ui.starter.aiFail,เรียก AI ไม่สำเร็จ
+ui.starter.aiHelp,ให้ AI ช่วยคิด
+ui.starter.aiNoResult,AI ไม่ได้ตอบอะไรกลับมา ลองใหม่อีกครั้ง
+ui.starter.aiStop,หยุด
+ui.starter.aiStopHint,กดอีกครั้งเพื่อยกเลิกคำขอที่กำลังส่งอยู่
+ui.starter.aiStopping,กำลังหยุด…
+ui.starter.aiSuggestName,ให้ AI ตั้งชื่อให้
+ui.starter.aiThinking,กำลังคิด…
+ui.starter.aiWriteBlurb,ให้ AI เขียนคำโปรยให้
+ui.starter.aiWriteChar,ให้ AI เขียนคำบรรยายให้
+ui.starter.aiWriteIntro,ให้ AI เขียนเรื่องย่อให้
+ui.starter.aiWriteIntroShort,เอาแบบย่อหน้าเดียว
+ui.starter.aiWriteSynopsis,ให้ AI เขียนเรื่องย่อให้
+ui.starter.backToList,กลับหน้ารวม
+ui.starter.backToScenarios,กลับไปรายการตอน
+ui.starter.bannerSizeHint,แบนเนอร์แสดงเต็มความกว้างบนหน้าเรื่อง — แนวนอนราว 3:1
+ui.starter.brBtn,ส่งเข้าเส้นเวลา/แผนที่
+ui.starter.brBtnHint,เอา “เมื่อไหร่” และ “ที่ไหน” ของเรื่องไปสร้างเหตุการณ์และหมุดให้
+ui.starter.brDone,เส้นเวลา {0} รายการ · หมุดบนแผนที่ {1} จุด
+ui.starter.brGo,ส่งเลย
+ui.starter.brHint,กดครั้งต่อไปจะอัปเดตของเดิม ไม่สร้างซ้ำ
+ui.starter.brNothing,ยังไม่มีข้อมูล
+ui.starter.brScenarios,สร้างเหตุการณ์จากตอนทั้งหมด ({0} ตอน)
+ui.starter.brTitle,ส่งเข้าเส้นเวลาและแผนที่
+ui.starter.brWhen,สร้างเหตุการณ์บนเส้นเวลาจาก “เมื่อไหร่” (แทร็ก {0})
+ui.starter.brWhere,ปักหมุดบนแผนที่จาก “ที่ไหน” (แผนที่ {0})
+ui.starter.byAuthor,โดย 
+ui.starter.castAdd,เพิ่มตัวละคร
+ui.starter.castBackToList,กลับไปรายชื่อตัวละคร
+ui.starter.castDelAsk,เอา “{0}” ออกจากเรื่องนี้?
+ui.starter.castDelNote,เอาออกจากเรื่องนี้ไม่ได้ลบตัวละครใน Wiki — ของใน Wiki อาจถูกใช้ที่อื่นอยู่
+ui.starter.castEmpty,ยังไม่มีตัวละคร — กด “เพิ่มตัวละคร” หรือดึงจาก Wiki
+ui.starter.castFromWiki,ดึงจาก Wiki
+ui.starter.castNoDesc,ยังไม่มีคำบรรยาย
+ui.starter.castNoName,ยังไม่ได้ตั้งชื่อ
+ui.starter.castPushAll,บันทึกทั้งวงลง Wiki
+ui.starter.castPushAllHint,สร้าง/อัปเดตตัวละครทุกตัวใน Wiki ของโปรเจกต์นี้
+ui.starter.castPushFail, · ล้มเหลว {0} ตัว
+ui.starter.castPushed,บันทึกลง Wiki แล้ว {0} ตัว
+ui.starter.charSavedWiki,บันทึกลง Wiki แล้ว
+ui.starter.charToWiki,บันทึกลง Wiki
+ui.starter.charUpdateWiki,อัปเดตใน Wiki
+ui.starter.chatClear,ล้างบทสนทนา
+ui.starter.chatClearAsk,ล้างบทสนทนาทั้งตอนนี้? ข้อมูลตอน (ชื่อ/เรื่องย่อ) ยังอยู่
+ui.starter.chatEmpty,ยังไม่ได้เริ่ม — กดปุ่มด้านล่างให้ผู้เล่าเรื่องเปิดฉากให้
+ui.starter.chatFail,ส่งไม่สำเร็จ — ดูรายละเอียดใน บันทึกการทำงาน
+ui.starter.chatPlaceholder,พิมพ์สิ่งที่คุณทำหรือพูด แล้วกด Enter
+ui.starter.chatSend,ส่ง
+ui.starter.chatStart,เปิดฉาก
+ui.starter.choiceRuleHead,ทุกครั้งที่เล่าจบ ให้ปิดท้ายด้วยทางเลือก 2–4 ข้อสำหรับผู้เล่น ในรูปแบบนี้เป๊ะ ๆ:
+ui.starter.choiceRuleSample1,1. ทางเลือกแรก
+ui.starter.choiceRuleSample2,2. ทางเลือกที่สอง
+ui.starter.choiceRuleSample3,3. ทางเลือกที่สาม
+ui.starter.choiceRuleTail,แต่ละข้อสั้น ๆ ไม่เกินหนึ่งบรรทัด เป็นสิ่งที่ผู้เล่น “ทำ” ไม่ใช่ผลลัพธ์ · ผู้เล่นอาจไม่เลือกข้อไหนเลยแล้วพิมพ์เองก็ได้ ให้รับได้ทุกกรณี
+ui.starter.chooseOrType,เลือกหนึ่งข้อ หรือพิมพ์เองก็ได้
+ui.starter.continueSetup,ทำต่อ
+ui.starter.coverClear,เอาปกออก
+ui.starter.coverFromFile,เลือกรูปจากเครื่อง
+ui.starter.coverFromGallery,เลือกจากคลังรูป
+ui.starter.coverPortable,รูปถูกก๊อปเข้าโฟลเดอร์ของเรื่องนี้ — ย้ายโปรเจกต์แล้วปกไม่หาย
+ui.starter.coverSizeHint,ขนาดที่เหมาะ: กว้าง 375 อัตราส่วน 3:4 แนวตั้ง — รูปไม่ถูกครอบตัด
+ui.starter.createFail,สร้างเรื่องไม่สำเร็จ
+ui.starter.createNew,สร้างเรื่องใหม่
+ui.starter.created,สร้างเรื่องใหม่แล้ว — เริ่มที่ขั้นเลือกแนวเรื่อง
+ui.starter.cvAgainHint,แปลงซ้ำได้ — จะได้ฉากใหม่ต่อท้าย ไม่ทับของเดิม
+ui.starter.cvBtn,แปลงเป็นต้นฉบับ
+ui.starter.cvBtnHint,เอาบทที่เล่นไปแล้วไปเขียนเป็นฉากจริงในเล่ม Story Starter
+ui.starter.cvDone,แปลงเสร็จ {0} ฉาก ไปอยู่ในเล่ม {1} แล้ว
+ui.starter.cvFail,แปลงไม่สำเร็จ
+ui.starter.cvForkHead,## ทางแยก
+ui.starter.cvFormat,เขียนออกมาเป็น
+ui.starter.cvGo,แปลงเลย
+ui.starter.cvNoBook,สร้างเล่มปลายทางไม่สำเร็จ
+ui.starter.cvNoChapter,สร้างบทปลายทางไม่สำเร็จ
+ui.starter.cvNoDraft,เล่มปลายทางยังไม่มีฉบับร่าง
+ui.starter.cvNoPlayed,ยังไม่มีตอนไหนที่เล่นแล้ว — เข้าไปคุยกับผู้เล่าเรื่องก่อน
+ui.starter.cvNoScene,สร้างฉากไม่สำเร็จ
+ui.starter.cvNothing,ตอนนี้ยังไม่มีบทสนทนาให้แปลง
+ui.starter.cvOne,แปลงตอนนี้เป็นต้นฉบับ
+ui.starter.cvPartial,แปลงได้ {0} จาก {1} ช่วง — ส่วนที่ได้ถูกเก็บไว้แล้ว
+ui.starter.cvPickOne,เลือกอย่างน้อยหนึ่งตอน
+ui.starter.cvProse,นิยาย
+ui.starter.cvSp,บทภาพยนตร์
+ui.starter.cvTitle,แปลงเป็นต้นฉบับ
+ui.starter.cvWhereHint,ฉากใหม่จะไปอยู่ใน เล่ม “{0}” → บท “{1}”
+ui.starter.cvWhich,ตอนที่จะแปลง
+ui.starter.cvWorking,กำลังแปลง “{0}” ({1}/{2})…
+ui.starter.cvWorkingChunk,กำลังแปลง “{0}” ({1}/{2}) — ช่วงที่ {3}/{4}
+ui.starter.delAsk,ลบ “{0}” ทั้งเรื่อง (รวมตัวละครและตอนทั้งหมด)? ของจะไปอยู่ในถังขยะ
+ui.starter.delDone,ย้ายเรื่องลงถังขยะแล้ว
+ui.starter.descHead,คำบรรยายเรื่อง
+ui.starter.draftProgress,ร่าง — กรอกแล้ว {0}/{1} ขั้น
+ui.starter.drawFail,วาดหน้าไม่สำเร็จ — ดูรายละเอียดใน บันทึกการทำงาน
+ui.starter.editStarter,แก้ไขข้อมูลเรื่อง
+ui.starter.fAliases,ชื่อรอง
+ui.starter.fAliasesPlaceholder,คั่นด้วยเครื่องหมายจุลภาค
+ui.starter.fAuthor,ผู้แต่ง
+ui.starter.fAuthorPlaceholder,ชื่อคนเขียน หรือนามปากกา
+ui.starter.fBanner,แบนเนอร์ (แนวนอน)
+ui.starter.fBlurb,การ์ดย่อ
+ui.starter.fBlurbPlaceholder,หนึ่งบรรทัดที่ตัวละครอื่นรู้เกี่ยวกับคนนี้
+ui.starter.fCharName,ชื่อตัวละคร
+ui.starter.fCharNamePlaceholder,เช่น มานี
+ui.starter.fCover,ปกเรื่อง (แนวตั้ง)
+ui.starter.fDesc,คำบรรยายละเอียด
+ui.starter.fDescPlaceholder,รูปร่าง นิสัย ปูมหลัง ความสัมพันธ์ เป้าหมาย — เขียนรวมในช่องเดียวได้เลย
+ui.starter.fDescription,คำบรรยายเรื่อง
+ui.starter.fGender,เพศ
+ui.starter.fImage,รูป
+ui.starter.fIntro,เรื่องย่อ
+ui.starter.fIntroPlaceholder,เล่าคร่าว ๆ ว่าเรื่องนี้เกี่ยวกับอะไร หนึ่งย่อหน้าพอ
+ui.starter.fName,ชื่อเรื่อง
+ui.starter.fNamePlaceholder,เช่น ดาบแห่งรุ่งอรุณ
+ui.starter.fPronoun,สรรพนามเรียกตัวเอง
+ui.starter.fPronounPlaceholder,เช่น ข้า · ฉัน · ผม
+ui.starter.fStoryBlurb,คำโปรย (หนึ่งบรรทัด)
+ui.starter.fStoryBlurbPlaceholder,ประโยคเดียวที่ทำให้คนอยากอ่านต่อ
+ui.starter.finish,เสร็จสิ้น
+ui.starter.finishBlocked,ยังกรอกไม่ครบ: 
+ui.starter.folderFixed,เก็บอยู่ในโฟลเดอร์ Starters/{0} — เปลี่ยนชื่อเรื่องแล้วชื่อโฟลเดอร์ไม่เปลี่ยนตาม
+ui.starter.foreignAsk,“{0}” ดูเหมือนย้ายมาจากโปรเจกต์อื่น — ให้จับคู่ตัวละครกับ Wiki ของโปรเจกต์นี้เลยไหม
+ui.starter.genderFemale,หญิง
+ui.starter.genderMale,ชาย
+ui.starter.genderOther,อื่น ๆ
+ui.starter.genderUnset,ไม่ระบุ
+ui.starter.gm,ผู้เล่าเรื่อง
+ui.starter.gmThinking,ผู้เล่าเรื่องกำลังคิด…
+ui.starter.goAISettings,ไปตั้งค่า AI
+ui.starter.goScenarios,ไปที่รายการตอน →
+ui.starter.imgClear,เอารูปออก
+ui.starter.imgCopyFail,ก๊อปรูปไม่สำเร็จ
+ui.starter.imgFromFile,เลือกจากเครื่อง
+ui.starter.imgFromGallery,เลือกจากคลังรูป
+ui.starter.inWiki,อยู่ใน Wiki แล้ว
+ui.starter.lastUpdate,แก้ไขล่าสุด 
+ui.starter.linkedWiki,ผูกกับ Wiki อยู่
+ui.starter.listEmpty,ยังไม่มีเรื่อง — กด “สร้างเรื่องใหม่” เพื่อเริ่ม
+ui.starter.logImgFail,starter: ก๊อปรูปไม่สำเร็จ
+ui.starter.logReadFail,starter: อ่านไม่ได้ 
+ui.starter.logSaveFail,starter: บันทึกไม่สำเร็จ 
+ui.starter.logScReadFail,starter: อ่านตอนไม่ได้ 
+ui.starter.logWikiReadFail,starter: อ่าน entity ไม่ได้ 
+ui.starter.logWikiWriteFail,starter: เขียน Wiki ไม่สำเร็จ 
+ui.starter.makeRecap,สรุปตอนนี้
+ui.starter.makeRecapHint,ให้ AI ย่อบทสนทนาทั้งตอน — ตอนถัดไปที่ต่อจากตอนนี้จะได้รับก้อนนี้
+ui.starter.mgAlias,ตรงกับชื่อรอง
+ui.starter.mgCreate,สร้างใหม่ใน Wiki
+ui.starter.mgExact,ชื่อตรงกัน
+ui.starter.mgLink,ผูกกับของเดิม
+ui.starter.mgMany,ชนกันหลายตัว
+ui.starter.mgNone,ยังไม่มีในโปรเจกต์นี้
+ui.starter.mgSkip,ไม่ต้องทำอะไร
+ui.starter.moreFields,เพิ่มเติม (ชื่อรอง · สรรพนาม · การ์ดย่อ)
+ui.starter.needAI,ต้องตั้งค่า AI ก่อนจึงจะสร้างเรื่องได้
+ui.starter.needCharName,ตั้งชื่อตัวละครก่อน
+ui.starter.neverUpdated,ยังไม่เคยแก้ไข
+ui.starter.nextStep,ขั้นถัดไป
+ui.starter.noAuthor,ยังไม่ได้ใส่ชื่อผู้แต่ง
+ui.starter.noBlurb,ยังไม่มีคำโปรย
+ui.starter.noCover,ยังไม่มีปก
+ui.starter.noImage,ยังไม่มีรูป
+ui.starter.noMatch,ไม่พบที่ตรงกับที่ค้น
+ui.starter.noRenderer,ยังไม่มีตัววาดของขั้น “{0}”
+ui.starter.noTagYet,ยังไม่ได้เลือกแท็ก
+ui.starter.open,เปิด
+ui.starter.openFail,เปิดเรื่องนี้ไม่ได้ — ไฟล์อาจเสียหาย
+ui.starter.openProjectFirst,เปิดโปรเจกต์ก่อนจึงจะใช้ Story Starter ได้
+ui.starter.optional,ข้ามได้
+ui.starter.pBlurbRule,ข้อกำหนด: ประโยคเดียว ไม่เกิน 90 ตัวอักษร กระตุ้นให้อยากอ่านต่อ ห้ามสปอยล์ตอนจบ ตอบเฉพาะประโยคนั้น
+ui.starter.pBlurbTask,เขียนคำโปรยหนึ่งบรรทัดสำหรับเรื่องต่อไปนี้
+ui.starter.pCastHead,ตัวละครในเรื่อง:
+ui.starter.pCharGender,เพศ: 
+ui.starter.pCharName,ตัวละครที่ต้องเขียน: 
+ui.starter.pCharNoName,(ยังไม่ได้ตั้งชื่อ)
+ui.starter.pCharRule,ข้อกำหนด: เขียนเป็นร้อยแก้วต่อเนื่อง 2–4 ย่อหน้า ครอบคลุมรูปร่างหน้าตา นิสัย วิธีพูด ปูมหลัง เป้าหมาย และความสัมพันธ์กับตัวละครอื่น ห้ามใส่หัวข้อย่อยหรือรายการ ตอบเฉพาะคำบรรยาย
+ui.starter.pCharSoFar,สิ่งที่เขียนไว้แล้ว: 
+ui.starter.pCharTask,เขียนคำบรรยายตัวละครแบบละเอียดให้ตัวละครต่อไปนี้ ให้เข้ากับเรื่องและตัวละครอื่นที่มีอยู่
+ui.starter.pCvNoClose,ยังไม่ใช่ตอนจบ ห้ามสรุปปิดเรื่อง
+ui.starter.pCvNoReopen,ห้ามเปิดเรื่องใหม่หรือแนะนำตัวละครซ้ำ — เขียนต่อจากที่ค้างไว้เลย
+ui.starter.pCvPart,นี่คือช่วงที่ {0} จากทั้งหมด {1} ช่วงของตอนเดียวกัน
+ui.starter.pCvRuleProse,ข้อกำหนด: เขียนเป็นร้อยแก้วนิยายภาษาไทย มีบรรยายและบทสนทนาปนกันตามธรรมชาติ ใช้สรรพนามและน้ำเสียงให้ตรงกับตัวละคร · เปลี่ยน “ผู้เล่าเรื่อง:” เป็นการบรรยาย และ “ชื่อตัวละคร:” เป็นบทพูดในเครื่องหมายคำพูด · ห้ามใส่หัวข้อ รายการ หรือคำอธิบายนอกเรื่อง ห้ามเอ่ยถึงการเล่นเกมหรือทางเลือก · ตอบเฉพาะตัวเนื้อเรื่อง
+ui.starter.pCvRuleSp,"ข้อกำหนด: เขียนเป็นบทภาพยนตร์ภาษาไทย ใช้รูปแบบนี้เท่านั้น — หัวฉากขึ้นต้นด้วย ""### "" ตามด้วย INT. หรือ EXT. (เช่น ""### INT. ห้องนอน - คืน"") · ชื่อผู้พูดขึ้นต้นด้วย ""@"" อยู่บรรทัดของตัวเอง (เช่น ""@มานี"") แล้วบรรทัดถัดไปคือบทพูด · อารมณ์การพูดใส่ในวงเล็บสองชั้น ""((กระซิบ))"" ใต้ชื่อผู้พูด · บรรยายเขียนเป็นย่อหน้าเปล่า ๆ ห้ามใส่เลขฉาก ห้ามใส่คำอธิบายนอกบท · ตอบเฉพาะตัวบท"
+ui.starter.pCvSource,บทสนทนาต้นทาง:
+ui.starter.pCvTail,ท้ายของส่วนที่เขียนไปแล้ว (เขียนต่อจากนี้ให้เนียน ห้ามเล่าซ้ำ):
+ui.starter.pCvTask,เขียนบทสนทนาเล่นตามบทบาทต่อไปนี้ใหม่ให้เป็นนิยายร้อยแก้ว
+ui.starter.pCvTaskSp,เขียนบทสนทนาเล่นตามบทบาทต่อไปนี้ใหม่ให้เป็นบทภาพยนตร์
+ui.starter.pDescRule,ข้อกำหนด: 2–4 ย่อหน้า เขียนแบบคำโปรยหลังปกหนังสือ — เร้าใจแต่ไม่สปอยล์ตอนจบ ตอบเป็น HTML อย่างง่ายโดยใช้เฉพาะ <p> <b> <i> <br> เท่านั้น ห้ามใส่หัวข้อหรือคำอธิบายนอกเรื่อง
+ui.starter.pDescTask,เขียนคำบรรยายเรื่อง (Story Description) สำหรับหน้าปกของเรื่องต่อไปนี้
+ui.starter.pGmAsChar,(ผู้เล่นสวมบท {0}) {1}
+ui.starter.pGmLenLong,ความยาวต่อรอบ: ยาว 4–5 ย่อหน้า
+ui.starter.pGmLenMedium,ความยาวต่อรอบ: ปานกลาง 2–3 ย่อหน้า
+ui.starter.pGmLenShort,ความยาวต่อรอบ: สั้น 1–2 ย่อหน้า
+ui.starter.pGmOpenRule,พาผู้เล่นเข้าสู่สถานการณ์ทันที ไม่ต้องเกริ่นว่ากำลังจะเริ่ม จบด้วยจังหวะที่ผู้เล่นต้องตัดสินใจ
+ui.starter.pGmOpenTask,เปิดฉากแรกของตอนนี้
+ui.starter.pGmRole,คุณคือผู้เล่าเรื่อง (Game Master) ของเรื่องเล่นตามบทบาทเรื่องนี้ หน้าที่ของคุณคือบรรยายโลก ควบคุมตัวละครที่ผู้เล่นไม่ได้สวมบท และเปิดทางให้ผู้เล่นตัดสินใจ
+ui.starter.pGmRules,กติกา: ตอบเป็นภาษาไทยเสมอ · บรรยายเป็นร้อยแก้วเหมือนนิยาย ไม่ใช่รายงาน · ห้ามตัดสินใจแทนผู้เล่น · ห้ามข้ามเวลาไปไกลโดยไม่ถาม · คงความต่อเนื่องกับสิ่งที่เกิดขึ้นแล้ว · ห้ามอธิบายว่าตัวเองเป็น AI
+ui.starter.pGmUserChars,ตัวละครที่ผู้เล่นเป็นคนสวมบท: {0} — ห้ามพูดหรือตัดสินใจแทนตัวละครเหล่านี้เด็ดขาด
+ui.starter.pIntroHead,เรื่องย่อ:
+ui.starter.pIntroRule,ข้อกำหนด: ย่อหน้าเดียว ความยาว 4–6 ประโยค เขียนให้เห็นภาพและมีแรงดึงดูด บอกให้รู้ว่าใครเจอปัญหาอะไรและเดิมพันคืออะไร ตอบเฉพาะย่อหน้านั้น ไม่ต้องมีหัวข้อ
+ui.starter.pIntroTask,เขียนเรื่องย่อหนึ่งย่อหน้าสำหรับเรื่องต่อไปนี้
+ui.starter.pNameRule,ตอบเป็นรายการบรรทัดละหนึ่งชื่อ ไม่ต้องใส่คำอธิบาย ไม่ต้องใส่เครื่องหมายคำพูด
+ui.starter.pNameTask,เสนอชื่อเรื่องภาษาไทย 6 ชื่อสำหรับเรื่องต่อไปนี้
+ui.starter.pRecapRule,ข้อกำหนด: 1–2 ย่อหน้า เล่าว่าเกิดอะไรขึ้นบ้าง ใครทำอะไร และจบตอนไว้ที่จุดไหน เขียนให้คนที่ยังไม่ได้อ่านบทสนทนาเข้าใจได้ ตอบเฉพาะบทสรุป
+ui.starter.pRecapTask,ย่อบทสนทนาต่อไปนี้ให้เป็นบทสรุปของตอน
+ui.starter.pScNameTask,เสนอชื่อตอนภาษาไทย 6 ชื่อ สำหรับตอนที่มีเรื่องย่อดังนี้
+ui.starter.pScPrev,ตอนก่อนหน้า: 
+ui.starter.pScRule,ข้อกำหนด: ย่อหน้าเดียว 3–5 ประโยค บอกว่าตอนนี้เริ่มที่ไหน มีอะไรเป็นเดิมพัน และค้างไว้ตรงไหน ตอบเฉพาะย่อหน้านั้น
+ui.starter.pScSynopsis,เรื่องย่อของตอน:
+ui.starter.pScTask,เขียนเรื่องย่อของตอนหนึ่งตอนในเรื่องต่อไปนี้
+ui.starter.pScTitle,ชื่อตอน: 
+ui.starter.pSelfPronoun,เรียกตัวเองว่า 
+ui.starter.pTags,แนวเรื่อง: 
+ui.starter.pTitle,ชื่อเรื่อง: 
+ui.starter.pWHead,โครงเรื่อง:
+ui.starter.pWHint,สิ่งที่ช่องนี้ต้องการ: 
+ui.starter.pWRule,ข้อกำหนด: ตอบสั้น ๆ 1–3 ประโยค ให้เข้ากับสิ่งที่มีอยู่แล้ว ห้ามขัดกัน ตอบเฉพาะเนื้อหาของช่องนั้น
+ui.starter.pWTask,ช่วยคิดเนื้อหาสำหรับช่อง “{0}” ของเรื่องต่อไปนี้
+ui.starter.packBadJson,starter.json ในไฟล์เสียหาย
+ui.starter.packBusy,กำลังรวบรวมไฟล์ของเรื่องนี้…
+ui.starter.packDone,ส่งออกเรียบร้อย: 
+ui.starter.packExport,ส่งออกเป็นไฟล์ .zip (ย้ายไปโปรเจกต์อื่น/แจกต่อ)
+ui.starter.packFail,ทำไฟล์ .zip ไม่สำเร็จ
+ui.starter.packImport,นำเข้า .zip
+ui.starter.packImportHint,เปิดไฟล์ .zip ที่ส่งออกจาก Story Starter
+ui.starter.packImported,นำเข้า “{0}” แล้ว ({1} ไฟล์)
+ui.starter.packNoDir,ไม่พบโฟลเดอร์ของเรื่องนี้
+ui.starter.packNotStarter,ไฟล์นี้ไม่ใช่ Story Starter (ไม่พบ starter.json ข้างใน)
+ui.starter.packReading,กำลังอ่านไฟล์ .zip…
+ui.starter.packSkip,starter: ข้ามไฟล์ที่อ่านไม่ได้ 
+ui.starter.packWriting,กำลังเขียนไฟล์ .zip…
+ui.starter.pickFromWiki,เลือกตัวละครจาก Wiki
+ui.starter.pickOne,เลือกอันที่ชอบ
+ui.starter.prevStep,ขั้นก่อนหน้า
+ui.starter.progress,กรอกแล้ว {0}/{1}
+ui.starter.recapDone,สรุปตอนเรียบร้อย
+ui.starter.reconcileDone,ผูกกับของเดิม {0} ตัว · สร้างใหม่ {1} ตัว
+ui.starter.reconcileGo,จับคู่ให้
+ui.starter.reconcileHint,เรื่องนี้ย้ายมาจากโปรเจกต์อื่น — เลือกว่าตัวละครแต่ละตัวควรผูกกับของเดิมหรือสร้างใหม่
+ui.starter.reconcileTitle,จับคู่ตัวละครกับ Wiki ของโปรเจกต์นี้
+ui.starter.rtBold,ตัวหนา
+ui.starter.rtCenter,กึ่งกลาง
+ui.starter.rtClear,ล้างรูปแบบ
+ui.starter.rtImage,แทรกรูป (ก๊อปเข้าโฟลเดอร์ของเรื่องนี้ให้อัตโนมัติ)
+ui.starter.rtItalic,ตัวเอียง
+ui.starter.rtLeft,ชิดซ้าย
+ui.starter.rtList,รายการหัวข้อย่อย
+ui.starter.rtRight,ชิดขวา
+ui.starter.rtUnderline,ขีดเส้นใต้
+ui.starter.saveFail,บันทึกไม่สำเร็จ
+ui.starter.scAdd,สร้างตอนใหม่
+ui.starter.scAfter,ต่อจาก 
+ui.starter.scContinue,เล่นต่อ
+ui.starter.scDefaultTitle,ตอนที่ {0}
+ui.starter.scDelAsk,ลบตอน “{0}”?
+ui.starter.scDelPlayedAsk,ลบตอน “{0}”? เล่นไปแล้ว {1} เทิร์น และจะหายทั้งหมด
+ui.starter.scDlgTitle,ตั้งค่าตอน
+ui.starter.scEmpty,ยังไม่มีตอน — กด “สร้างตอนใหม่” เพื่อเริ่มเล่น
+ui.starter.scExported, · แปลงแล้ว {0} ครั้ง
+ui.starter.scMyChars,ตัวละครที่คุณสวมบท
+ui.starter.scMyCharsHint,ตัวที่เลือกไว้ Game Master จะไม่พูดแทน — ไม่เลือกเลยก็ได้ คุณจะเล่นในฐานะตัวเอง
+ui.starter.scName,ชื่อตอน
+ui.starter.scNoCast,ยังไม่มีตัวละครที่ตั้งชื่อแล้ว
+ui.starter.scNoMatch,ไม่พบตอนที่ตรงกับที่ค้น
+ui.starter.scNotPlayed,ยังไม่ได้เริ่มเล่น
+ui.starter.scPrev,ต่อจากตอน
+ui.starter.scPrevHint,ตอนถัดไปจะได้รับ “บทย่อ” ของตอนก่อนหน้า ไม่ใช่บทสนทนาทั้งหมด
+ui.starter.scPrevMissing,(ตอนก่อนหน้าถูกลบไปแล้ว)
+ui.starter.scPrevNone,— เริ่มใหม่ ไม่ต่อจากตอนไหน —
+ui.starter.scSearch,ค้นหาตอน
+ui.starter.scStart,เริ่มเล่น
+ui.starter.scStats,{0} เทิร์น · {1} คำ
+ui.starter.scSynopsis,เรื่องย่อของตอน
+ui.starter.scSynopsisPlaceholder,ตอนนี้จะเกิดอะไรขึ้น
+ui.starter.scUntitled,ตอนที่ยังไม่ได้ตั้งชื่อ
+ui.starter.searchName,ค้นหาจากชื่อหรือชื่อรอง
+ui.starter.searchStarter,ค้นหาจากชื่อ แท็ก เรื่องย่อ หรือชื่อตัวละคร
+ui.starter.speakAs,พูดในฐานะ
+ui.starter.stepCast,ตัวละคร
+ui.starter.stepCastDesc,เพิ่มได้ไม่จำกัด สร้างเองหรือดึงจาก Wiki ก็ได้ — ตัวที่สร้างที่นี่จะถูกบันทึกลง Wiki ให้
+ui.starter.stepCover,ปกเรื่อง
+ui.starter.stepCoverDesc,รูปที่จะแสดงบนการ์ดในหน้ารวม
+ui.starter.stepDrawFail,วาดขั้นนี้ไม่สำเร็จ
+ui.starter.stepIntro,ชื่อเรื่อง + เรื่องย่อ
+ui.starter.stepIntroDesc,ตั้งชื่อเรื่องและเขียนเรื่องย่อหนึ่งย่อหน้า คิดไม่ออกให้ AI ช่วยได้
+ui.starter.stepTags,แนวเรื่อง
+ui.starter.stepTagsDesc,เลือกได้มากกว่าหนึ่ง หรือพิมพ์แท็กเองก็ได้ — AI ใช้ชุดนี้กำหนดโทนของทั้งเรื่อง
+ui.starter.stepW,4W
+ui.starter.stepWDesc,อะไร เมื่อไหร่ ที่ไหน ทำไม — กรอกเท่าที่นึกออก ข้ามได้ทั้งหมด
+ui.starter.sumCast,ตัวละคร 
+ui.starter.sysWriter,คุณเป็นนักเขียนนิยายมืออาชีพที่เขียนภาษาไทยได้เป็นธรรมชาติ ตอบเป็นภาษาไทยเสมอ ตอบเฉพาะเนื้อหาที่ขอ ไม่ต้องเกริ่นนำหรือสรุปท้าย
+ui.starter.tagAdd,เพิ่ม
+ui.starter.tagGroupGenre,แนว
+ui.starter.tagGroupRating,เรตติ้ง
+ui.starter.tagGroupSetting,ฉากหลัง
+ui.starter.tagGroupTone,โทน
+ui.starter.tagOwnPlaceholder,พิมพ์แท็กเอง แล้วกด Enter
+ui.starter.tagPicked,แท็กที่เลือกไว้
+ui.starter.today,วันนี้
+ui.starter.tokDetail,ส่งเข้า {0} · ตอบกลับ {1}
+ui.starter.tokLine,{0} โทเคน
+ui.starter.tokNone,ยังไม่ใช้โทเคน
+ui.starter.trGm,ผู้เล่าเรื่อง
+ui.starter.trPlayer,ผู้เล่น
+ui.starter.untitled,ยังไม่ได้ตั้งชื่อ
+ui.starter.wAllOptional,ทุกช่องในขั้นนี้ข้ามได้ กรอกเท่าที่นึกออก
+ui.starter.wWhat,อะไร (What)
+ui.starter.wWhatHint,เหตุการณ์หลักของเรื่องคืออะไร
+ui.starter.wWhen,เมื่อไหร่ (When)
+ui.starter.wWhenHint,ยุคสมัย ฤดู หรือช่วงเวลาในเรื่อง
+ui.starter.wWhere,ที่ไหน (Where)
+ui.starter.wWhereHint,สถานที่หลักที่เรื่องเกิดขึ้น
+ui.starter.wWhy,ทำไม (Why)
+ui.starter.wWhyHint,แรงผลักดันหรือเหตุผลเบื้องหลัง
+ui.starter.welcomeHint,รวมเรื่องที่ตั้งต้นไว้ทั้งหมด — แต่ละเรื่องเก็บเป็นโฟลเดอร์แยกใน Starters/ ย้ายข้ามโปรเจกต์ได้
+ui.starter.wikiNoChar,Wiki ของโปรเจกต์นี้ยังไม่มีตัวละคร
+ui.starter.wikiReadFail,อ่านตัวละครจาก Wiki ไม่สำเร็จ
+ui.starter.wikiWriteFail,เขียนลง Wiki ไม่สำเร็จ
+ui.starter.yesterday,เมื่อวาน
+ui.starter.you,คุณ
 ui.status.addStatus,+ เพิ่มสถานะ
 ui.status.addStatusDone,เพิ่มสถานะแล้ว: 
+ui.status.addedToDictionary,เพิ่มลงพจนานุกรมแล้ว: 
 ui.status.allSaved,บันทึกทุกไฟล์แล้ว
 ui.status.backupFailed,สำรองโปรเจกต์ล้มเหลว
 ui.status.backupOK,สำรองโปรเจกต์แล้ว
@@ -4615,15 +5306,15 @@ ui.status.closeWithoutSaving,ปิดโดยไม่บันทึก
 ui.status.copied,คัดลอกแล้ว
 ui.status.customStatusImportFail,custom-status: นำเข้าล้มเหลว
 ui.status.default,  (มาตรฐาน)
-ui.status.deletedPermanently,ลบถาวรแล้ว: 
 ui.status.delStatus,"ลบสถานะ ""{0}"" ?"
 ui.status.delStatus2,ลบสถานะนี้
 ui.status.delStatusDone,ลบสถานะแล้ว: 
+ui.status.deletedPermanently,ลบถาวรแล้ว: 
 ui.status.dirtyClose,แท็บที่ยังไม่ได้บันทึก
 ui.status.egEditSendDone,"เช่น รอแก้ไข, ส่งแล้ว"
 ui.status.export,📤 ส่งออก…
-ui.status.exportedTo,ส่งออกแล้ว: 
 ui.status.exportSetStatusDone,ส่งออกชุดสถานะแล้ว: 
+ui.status.exportedTo,ส่งออกแล้ว: 
 ui.status.focusOff,โหมดโฟกัส: ปิด
 ui.status.focusOn,โหมดโฟกัส: เปิด
 ui.status.formatBarReset,รีเซ็ตตำแหน่งแถบรูปแบบแล้ว
@@ -4638,9 +5329,9 @@ ui.status.manageStatusScene,🏷 จัดการสถานะฉาก
 ui.status.movedScene,ย้ายฉากไป
 ui.status.movedToMemo,ย้ายไปที่ MEMO แล้ว
 ui.status.nameStatusNew,ชื่อสถานะใหม่
-ui.status.noteMoved,ย้ายโน้ตเข้าบท: 
 ui.status.notHasStatusDefine,ยังไม่มีสถานะที่กำหนดเอง
 ui.status.notHasStatusNew,ไม่มีสถานะใหม่ให้เพิ่ม (ซ้ำกับของเดิมทั้งหมด)
+ui.status.noteMoved,ย้ายโน้ตเข้าบท: 
 ui.status.nothingToSave,ไม่มีงานค้างให้บันทึก
 ui.status.opened,เปิดโปรเจกต์: 
 ui.status.paperOff,โหมดหน้ากระดาษ: ปิด
@@ -4652,10 +5343,10 @@ ui.status.recolorStatus,เปลี่ยนสีของสถานะน�
 ui.status.replacedN,แทนที่ %d แห่ง
 ui.status.restoredFromTrash,กู้คืนจากถังขยะแล้ว: 
 ui.status.saveAllAndClose,บันทึกทั้งหมดแล้วปิด
+ui.status.saveSetStatusColor,บันทึกชุดสถานะ + สี เป็นไฟล์ .json เพื่อนำไปใช้กับโปรเจกต์อื่น
 ui.status.saved,บันทึกแล้ว
 ui.status.savedAll,บันทึกทั้งหมดแล้ว
 ui.status.savedTo,บันทึกแล้ว: 
-ui.status.saveSetStatusColor,บันทึกชุดสถานะ + สี เป็นไฟล์ .json เพื่อนำไปใช้กับโปรเจกต์อื่น
 ui.status.saving,กำลังบันทึก…
 ui.status.searching,กำลังค้นหา…
 ui.status.settingsSaved,บันทึกการตั้งค่าแล้ว
@@ -4728,8 +5419,8 @@ ui.timeline.eventNotHasTime,+ อีก {0} เหตุการณ์ไม่
 ui.timeline.hasDotEventTime,⚠ มี {0} จุดที่เหตุการณ์เวลาตรงกัน (ไฮไลต์สีส้ม) — ตรวจว่าตั้งใจหรือไม่
 ui.timeline.hasDotTimeAt,⚠ มี {0} จุดที่เวลาตรงกัน (ไฮไลต์สีส้ม)
 ui.timeline.lineTime,🕒 เส้นเวลา
-ui.timeline.note, โน้ต
 ui.timeline.notHasEventPress,"ยังไม่มีเหตุการณ์ — กด ""＋ เพิ่มเหตุการณ์"" หรือไปตั้ง ""เวลาในเรื่อง"" ให้ฉากในคุณสมบัติฉาก"
+ui.timeline.note, โน้ต
 ui.timeline.open,เปิด: 
 ui.timeline.sceneSetTimeStory,"ฉากที่ตั้ง ""เวลาในเรื่อง"" จะขึ้นบนเส้นเวลาอัตโนมัติ"
 ui.timeline.viewGanttMustHas,"มุมมอง Gantt ต้องมีเหตุการณ์ที่ระบุเวลาเป็นตัวเลข (เช่น ""ปีที่ 1024"") — ยังไม่มีเลย"
@@ -4765,6 +5456,7 @@ ui.toolbar.readingMode,โหมดอ่าน
 ui.toolbar.replace,แทนที่
 ui.toolbar.replaceAll,ทั้งหมด
 ui.toolbar.replaceWith,แทนที่ด้วย…
+ui.toolbar.starter,✨ Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI)
 ui.toolbar.strike,ขีดฆ่า
 ui.toolbar.toggleMode,สลับโหมดเอกสาร
 ui.toolbar.underline,ขีดเส้นใต้
@@ -4788,6 +5480,59 @@ ui.ui.cancel2,"<div class=""k-dlg-title""></div>
 ui.ui.hasFileCantSave,มี {0} ไฟล์ที่ยังไม่ได้บันทึก
 ui.ui.notSave,ไม่บันทึก
 ui.ui.savePick,บันทึกที่เลือก ({0})
+ui.vis.addFree,➕ แถวว่าง
+ui.vis.addRow,➕ เพิ่มจากบรรทัดในฉาก
+ui.vis.addSelected,เพิ่มที่เลือก
+ui.vis.allLost,บรรทัดที่ผูกไว้ถูกลบจากฉากไปแล้วทั้งหมด
+ui.vis.allUsed,ทุกบรรทัดถูกใส่ในตารางแล้ว
+ui.vis.boundN,ผูก {0} บรรทัด
+ui.vis.changedCount,มี {0} แถวที่ต้นทางเปลี่ยนไปแล้ว
+ui.vis.clearImage,เอารูปออก
+ui.vis.close,ปิด
+ui.vis.colAction,action
+ui.vis.colComment,คอมเมนต์
+ui.vis.colDragW,ลากเพื่อปรับความกว้างคอลัมน์
+ui.vis.colEntities,ตัวละคร/สถานที่
+ui.vis.colFrame,frame
+ui.vis.colNo,ลำดับ
+ui.vis.colRemark,หมายเหตุ
+ui.vis.colResetW,คืนความกว้างคอลัมน์เป็นค่าเริ่มต้น
+ui.vis.colScene,ฉาก
+ui.vis.cols,⚙ คอลัมน์
+ui.vis.delRow,ลบแถวนี้
+ui.vis.delRowAsk,ลบแถวนี้ออกจากตารางเล่าด้วยภาพ?
+ui.vis.down,เลื่อนลง
+ui.vis.editBind,แก้บรรทัดที่ผูก
+ui.vis.editBindHint,ติ๊กเพิ่มเพื่อผูกหลายบรรทัดเข้าแถวเดียว · ติ๊กออกเพื่อเลิกผูก (แถวไม่หาย)
+ui.vis.empty,ยังไม่มีแถว — กดปุ่มเพิ่มจากบรรทัดในฉากเพื่อเริ่ม
+ui.vis.freeRow,(แถวว่าง — ยังไม่ได้ผูกกับบรรทัดไหน)
+ui.vis.lineUsed,ใช้ในแถวอื่นแล้ว
+ui.vis.menu,🎬 เล่าด้วยภาพ
+ui.vis.needScene,ยังไม่ได้เลือกฉาก
+ui.vis.next,ถัดไป
+ui.vis.noImage,ไม่มีรูป
+ui.vis.noLines,ฉากนี้ยังไม่มีข้อความให้เลือก
+ui.vis.ofTotal,{0}/{1}
+ui.vis.open,เปิดตารางเล่าด้วยภาพ
+ui.vis.openWiki,เปิดหน้า Wiki ของตัวนี้
+ui.vis.pickImage,เลือกรูปจากคลัง หรือเพิ่มรูปใหม่
+ui.vis.pickLine,เลือกบรรทัดจากฉาก
+ui.vis.pickLineHint,ติ๊กบรรทัดที่อยากทำเป็นภาพ — เลือกได้หลายบรรทัด
+ui.vis.prev,ก่อนหน้า
+ui.vis.remarkPh,หมายเหตุ…
+ui.vis.reveal,แสดงไฟล์ในโฟลเดอร์
+ui.vis.rowNum,{0} แถว
+ui.vis.saved,บันทึกตารางเล่าด้วยภาพแล้ว
+ui.vis.selectAll,เลือกทั้งหมด
+ui.vis.statusChanged,ต้นทางถูกแก้ไปแล้ว — กดเพื่ออัปเดตข้อความ
+ui.vis.statusChangedTag,ต้นทางเปลี่ยน
+ui.vis.syncAll,⟳ อัปเดตทั้งหมด
+ui.vis.title,เล่าด้วยภาพ
+ui.vis.toggleText,ซ่อน/แสดงข้อความ (H)
+ui.vis.up,เลื่อนขึ้น
+ui.vis.viewFull,⛶ เต็มจอ
+ui.vis.viewList,รายการ
+ui.vis.viewTable,ตาราง
 ui.watermark.name,{{ชื่อ}}
 ui.wiki.addFieldDataItem,เพิ่มช่องข้อมูลของตัวเอง
 ui.wiki.addHeading,เพิ่มหัวข้อ
@@ -4867,14 +5612,17 @@ ui.wiki.viewRecoverRestoreVersion,ดู/กู้คืนเวอร์ชั
 ui.words,คำ
 ui.worldAutoLink.busyLoadIndexLink,(กำลังโหลดดัชนีเชื่อมโยง…)
 ui.worldAutoLink.notHasSceneMention,(ยังไม่มีฉากที่กล่าวถึงเอนทิตี้นี้)
-
 ui.xhub.buildFail,สร้างผลลัพธ์ไม่สำเร็จ
 ui.xhub.building,กำลังสร้างตัวอย่าง…
 ui.xhub.content,เนื้อหา
+ui.xhub.docKind,ชนิดเอกสาร
 ui.xhub.donePdf,{0} หน้า · สารบัญ {1} รายการ
 ui.xhub.donePdfHtml,ตัวอักษรจริง (ไม่ใช่ภาพ)
+ui.xhub.donePdfPages,{0} หน้า (หน้าหน้าเล่ม {1} หน้า ไม่นับเลข)
 ui.xhub.editSteps,ปรับขั้นตอน…
 ui.xhub.exportFail,ส่งออกไม่สำเร็จ
+ui.xhub.fBlog,เว็บบล็อก (ธีม)
+ui.xhub.fBlogDesc,หน้าเว็บพร้อมธีมสำเร็จรูปสำหรับลงบล็อก
 ui.xhub.fFdx,Final Draft (FDX)
 ui.xhub.fFdxDesc,สำหรับบทภาพยนตร์ — เปิดใน Final Draft
 ui.xhub.fHtml,หน้าเว็บ (HTML)
@@ -4895,16 +5643,21 @@ ui.xhub.fZip,ทั้งโปรเจกต์ (.zip)
 ui.xhub.fZipDesc,สำรองงานทั้งชุด รวมรูปและเมทาดาทา
 ui.xhub.htmlOpts,ตัวเลือก HTML
 ui.xhub.htmlWysiwyg,ใช้รูปแบบหน้ากระดาษเดียวกับบนจอ
+ui.xhub.kindAuto,ตามไฟล์ต้นทาง
+ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
+ui.xhub.kindScript,บทภาพยนตร์
 ui.xhub.needProject,เปิดโปรเจกต์ก่อนจึงจะส่งออกได้
 ui.xhub.noDraft,(ยังไม่มีฉบับร่างในโปรเจกต์นี้)
 ui.xhub.noPreview,(ไม่มีตัวอย่างให้แสดง)
 ui.xhub.nothingToExport,ไม่มีเนื้อหาให้ส่งออก
 ui.xhub.openOwnDialog,เปิดกล่องตั้งค่าของรูปแบบนี้…
 ui.xhub.pdfCover,หน้าปก
+ui.xhub.pdfFrontNoNum,หน้าปกและหน้ารายชื่อไม่ถูกนับเลขหน้า — เลขหน้าเริ่มที่หน้าแรกของเนื้อเรื่อง
 ui.xhub.pdfHeaders,หัวกระดาษทุกหน้า
 ui.xhub.pdfNoPrinter,PDF สร้างในโปรแกรมเอง ไม่ผ่านเครื่องพิมพ์ของระบบ — ได้ตัวอักษรจริง คัดลอกและค้นหาในไฟล์ได้
 ui.xhub.pdfNums,เลขหน้า / เลขฉาก
 ui.xhub.pdfOpts,ตัวเลือก PDF
+ui.xhub.pdfRoster,หน้ารายชื่อตัวละคร
 ui.xhub.pdfToc,สารบัญ (bookmark)
 ui.xhub.pdfWm,ลายน้ำ
 ui.xhub.pdfWmHint,ว่าง = ไม่ใส่ลายน้ำ
@@ -4916,431 +5669,3 @@ ui.xhub.scopeDraft,ฉบับร่างทั้งเล่ม
 ui.xhub.scopeTab,ฉาก/บทที่เปิดอยู่
 ui.xhub.title,ส่งออก
 ui.xhub.wfAuto,เลือกให้อัตโนมัติตามรูปแบบ
-ui.xhub.fBlog,เว็บบล็อก (ธีม)
-ui.xhub.fBlogDesc,หน้าเว็บพร้อมธีมสำเร็จรูปสำหรับลงบล็อก
-ui.xhub.docKind,ชนิดเอกสาร
-ui.xhub.kindAuto,ตามไฟล์ต้นทาง
-ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
-ui.xhub.kindScript,บทภาพยนตร์
-ui.xhub.pdfRoster,หน้ารายชื่อตัวละคร
-ui.xhub.pdfFrontNoNum,หน้าปกและหน้ารายชื่อไม่ถูกนับเลขหน้า — เลขหน้าเริ่มที่หน้าแรกของเนื้อเรื่อง
-ui.xhub.donePdfPages,{0} หน้า (หน้าหน้าเล่ม {1} หน้า ไม่นับเลข)
-ui.dlgBuilder.aiPick,🤖 ให้ AI เลือก
-ui.dlgBuilder.everyone,ทุกคน
-ui.dlgBuilder.randomPick,🎲 สุ่ม
-ui.dlgBuilder.untitled,ยังไม่ตั้งชื่อ
-ui.dlgBuilder.unknownName,ไม่ทราบชื่อ
-ui.dlgBuilder.policyPingPong,สลับกันไปมา
-ui.dlgBuilder.policyPingPongHint,A พูดกับ B แล้วเทิร์นถัดไป B ตอบ A — เหมาะกับสองคน
-ui.dlgBuilder.policyRound,วนตามลำดับ
-ui.dlgBuilder.policyRoundHint,ไล่ตามลำดับในคณะ พูดกับทุกคน — เหมาะกับวง 3-5 คน
-ui.dlgBuilder.policyRandom,สุ่มคนพูด
-ui.dlgBuilder.policyRandomHint,สุ่มคนถัดไป ไม่ซ้ำคนที่เพิ่งพูด
-ui.dlgBuilder.policyAi,ให้ AI เลือก
-ui.dlgBuilder.policyAiHint,ให้โมเดลตัดสินว่าใครมีเหตุผลจะพูดต่อ
-ui.dlgBuilder.policyManual,กำหนดเอง
-ui.dlgBuilder.policyManualHint,ไม่เลื่อนช่องให้ เลือกเองทุกเทิร์น
-ui.dlgBuilder.modeEach,ทีละคน
-ui.dlgBuilder.modeEachHint,ยิงหนึ่งครั้งต่อหนึ่งบรรทัด — ตั้งโมเดลแยกรายตัวได้ อยู่ในคาแรกเตอร์ที่สุด
-ui.dlgBuilder.modeBatch,รวดเดียว
-ui.dlgBuilder.modeBatchHint,ยิงครั้งเดียวได้หลายบรรทัด ถูกกว่ามาก แต่ทุกตัวใช้โมเดลเดียวกัน
-ui.dlgBuilder.lenShort,สั้น
-ui.dlgBuilder.lenShortRule,ตอบสั้น ๆ ประโยคเดียว
-ui.dlgBuilder.lenMedium,กลาง
-ui.dlgBuilder.lenMediumRule,ตอบ 1-2 ประโยค
-ui.dlgBuilder.lenLong,ยาว
-ui.dlgBuilder.lenLongRule,ตอบได้ถึง 4 ประโยค แต่ยังต้องเป็นบทพูด ไม่ใช่ย่อหน้าบรรยาย
-ui.dlgBuilder.personaYouAre,คุณคือ {0}
-ui.dlgBuilder.pronSelf,"เรียกตัวเองว่า ""{0}"""
-ui.dlgBuilder.pronOther,"เรียก {0} ว่า ""{1}"""
-ui.dlgBuilder.headPronoun,— สรรพนามที่ต้องใช้ (ห้ามเปลี่ยนกลางบทสนทนา) —
-ui.dlgBuilder.headOthers,— คนอื่นในวง (เท่าที่คุณรู้จัก) —
-ui.dlgBuilder.headSituation,— สถานการณ์ —
-ui.dlgBuilder.headRules,— กติกาการตอบ —
-ui.dlgBuilder.headCast,— ตัวละครในวง —
-ui.dlgBuilder.headRels,— ความสัมพันธ์ในซีนนี้ —
-ui.dlgBuilder.headRecent,— บทสนทนาล่าสุด —
-ui.dlgBuilder.ruleOnlyMe,ตอบเป็นบทพูดของ {0} เท่านั้น
-ui.dlgBuilder.ruleParenOn,ใส่อารมณ์หรือท่าทางสั้น ๆ ในวงเล็บนำหน้าได้ถ้าจำเป็น
-ui.dlgBuilder.ruleParenOff,ห้ามใส่วงเล็บบอกอารมณ์หรือท่าทาง
-ui.dlgBuilder.ruleNoName,ห้ามใส่ชื่อตัวเองนำหน้าบทพูด และห้ามพูดแทนคนอื่น
-ui.dlgBuilder.ruleNoNarrate,ห้ามบรรยายฉากหรืออธิบายสิ่งที่กำลังเกิดขึ้น พูดอย่างเดียว
-ui.dlgBuilder.cueYourTurn,ตาคุณพูดแล้ว พูดกับ {0}
-ui.dlgBuilder.heardDirector,[เหตุการณ์] {0}
-ui.dlgBuilder.sceneOpen,ฉากเริ่มขึ้น: {0}
-ui.dlgBuilder.sceneOpenBare,ฉากเริ่มขึ้น
-ui.dlgBuilder.batchSystem,คุณเป็นนักเขียนบทภาพยนตร์ไทย เขียนบทสนทนาที่เป็นธรรมชาติและตรงบุคลิกของตัวละครแต่ละตัว
-ui.dlgBuilder.batchWrite,เขียนบทสนทนาต่อจากนี้อีก {0} บรรทัด
-ui.dlgBuilder.batchFormat,รูปแบบคำตอบ: บรรทัด @ชื่อตัวละคร แล้วขึ้นบรรทัดใหม่เป็นบทพูด เว้นบรรทัดคั่นแต่ละคน ห้ามใส่หัวฉากหรือคำบรรยาย
-ui.dlgBuilder.pickSystem,คุณเป็นผู้กำกับ เลือกว่าตัวละครคนไหนควรพูดต่อ
-ui.dlgBuilder.pickAsk,จากบทสนทนาข้างล่าง ตัวละครคนไหนมีเหตุผลมากที่สุดที่จะพูดต่อ เลือกจาก:
-ui.dlgBuilder.pickAnswerOnlyName,ตอบเป็นชื่อตัวละครคำเดียว ห้ามอธิบาย
-ui.panel.dlgbTitle,ห้องซ้อมบท
-ui.panel.dlgbDesc,ให้ AI สวมบทตัวละครจาก Wiki คุยกันทีละเทิร์น แล้วหยิบบรรทัดที่ชอบไปใส่บทที่เคอร์เซอร์ — เปิดตอนคิดบทพูดไม่ออก
-ui.menu.dlgbPanel,🎭 ห้องซ้อมบท
-ui.app.dlgbSource,ห้องซ้อมบท
-ui.dlgb.openProjectFirst,เปิดโปรเจกต์ก่อน
-ui.dlgb.searchPh,ค้นหาเซสชัน…
-ui.dlgb.newSession,+ เซสชันใหม่
-ui.dlgb.managePresets,คณะนักแสดง
-ui.dlgb.showArchived,แสดงที่จัดเก็บแล้ว
-ui.dlgb.hideArchived,ซ่อนที่จัดเก็บแล้ว
-ui.dlgb.noSession,"ยังไม่มีเซสชัน — กด ""เซสชันใหม่"" เพื่อเริ่ม"
-ui.dlgb.noMatch,ไม่พบเซสชันที่ตรงกับคำค้น
-ui.dlgb.untitledRow,เซสชันไม่มีชื่อ
-ui.dlgb.noCast,ยังไม่มีตัวละครในคณะ
-ui.dlgb.nTurns,{0} บรรทัด
-ui.dlgb.nInserted,แทรกแล้ว {0}
-ui.dlgb.mRename,เปลี่ยนชื่อ
-ui.dlgb.mDuplicate,ทำสำเนา
-ui.dlgb.copySuffix,​ (สำเนา)
-ui.dlgb.duplicated,ทำสำเนาเซสชันแล้ว
-ui.dlgb.mArchive,จัดเก็บ
-ui.dlgb.mUnarchive,เอากลับจากที่จัดเก็บ
-ui.dlgb.mDelete,ลบเซสชัน
-ui.dlgb.confirmDelete,"ลบเซสชัน ""{0}"" ทิ้ง?"
-ui.dlgb.errDelete,ลบไฟล์เซสชันไม่สำเร็จ
-ui.dlgb.errReadPresets,อ่านคณะนักแสดงไม่สำเร็จ
-ui.dlgb.errReadSession,อ่านเซสชันไม่สำเร็จ: 
-ui.dlgb.errSaveSession,บันทึกเซสชันไม่สำเร็จ
-ui.dlgb.pickPreset,เลือกคณะนักแสดง
-ui.dlgb.noPresetYet,ยังไม่มีคณะนักแสดง
-ui.dlgb.makePreset,สร้าง/แก้คณะนักแสดง
-ui.dlgb.situationLabel,สถานการณ์ที่กำลังเกิดขึ้น
-ui.dlgb.situationPh,เช่น ทั้งวงนั่งดื่มที่ลานเบียร์หลังเลิกงาน ฝนเพิ่งหยุด
-ui.dlgb.titleLabel,ชื่อเซสชัน
-ui.dlgb.titleAutoPh,เว้นว่างไว้ = ตั้งชื่อจากสถานการณ์ให้เอง
-ui.dlgb.create,สร้าง
-ui.dlgb.needPreset,เลือกคณะนักแสดงก่อน
-ui.dlgb.backToList,กลับไปรายการเซสชัน
-ui.dlgb.badge,{0} บรรทัด · {1} โทเคน
-ui.dlgb.badgeTip,ยิงไป {0} ครั้ง · เข้า {1} · ออก {2} · รวม {3} วินาที
-ui.dlgb.viewNormal,ตอนนี้: แสดงเฉพาะบทพูด — กดเพื่อกางความคิดของโมเดลทั้งหมด
-ui.dlgb.viewThinking,ตอนนี้: กางความคิดของโมเดลไว้ — กดเพื่อย่อกลับ
-ui.dlgb.policyLabel,โหมดคิว
-ui.dlgb.modeLabel,การยิง
-ui.dlgb.lenLabel,ความยาว
-ui.dlgb.parenLabel,วงเล็บอารมณ์
-ui.dlgb.pressSendToStart,"กด ""ส่ง"" ได้เลย ไม่ต้องพิมพ์อะไร — AI จะสวมบทตัวละครที่เลือกไว้"
-ui.dlgb.director,ผู้กำกับ
-ui.dlgb.unknown,ไม่ทราบ
-ui.dlgb.toWhom,→ {0}
-ui.dlgb.insertedInto,แทรกลงบทแล้ว: {0}
-ui.dlgb.modelThinking,🧠 ความคิดของโมเดล
-ui.dlgb.actReroll,สุ่มบรรทัดนี้ใหม่
-ui.dlgb.actEdit,แก้ข้อความ
-ui.dlgb.actInsert,แทรกลงบทที่เคอร์เซอร์
-ui.dlgb.actDelete,ลบบรรทัดนี้
-ui.dlgb.speaksTo,พูดกับ
-ui.dlgb.inputPh,เว้นว่างไว้ = ให้ AI พูดแทน · พิมพ์เอง = บรรทัดนี้เป็นของคุณ (ไม่เสียโทเคน)
-ui.dlgb.send,▶ ส่ง
-ui.dlgb.sending,กำลังคุย…
-ui.dlgb.keepTalking,⤵ พูดต่อ
-ui.dlgb.keepTalkingTip,ให้คนเดิมพูดต่ออีกบรรทัด
-ui.dlgb.directorTip,แทรกเหตุการณ์กลางวง (ไฟดับ · มีคนเคาะประตู)
-ui.dlgb.directorTitle,เหตุการณ์ที่เกิดขึ้น
-ui.dlgb.directorPh,เช่น ไฟดับทั้งร้าน
-ui.dlgb.errSend,คุยกับ AI ไม่สำเร็จ
-ui.dlgb.emptyReply,โมเดลตอบกลับมาว่าง
-ui.dlgb.needSpeaker,ยังไม่ได้เลือกคนพูด
-ui.dlgb.noProvider,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI
-ui.dlgb.noEditor,เปิดฉากที่จะแทรกก่อน แล้ววางเคอร์เซอร์ตรงจุดที่ต้องการ
-ui.dlgb.inserted,แทรกบทพูดลงฉากแล้ว
-ui.dlgb.nothingToInsert,ยังไม่มีบทพูดให้แทรก
-ui.dlgb.mEditCast,แก้คณะนักแสดงของเซสชันนี้
-ui.dlgb.mEditSituation,แก้สถานการณ์
-ui.dlgb.mInsertAll,แทรกทั้งเซสชันลงบท
-ui.dlgb.mSaveAsPreset,บันทึกคณะนี้เป็นคณะนักแสดง
-ui.dlgb.presetSaved,บันทึกคณะนักแสดงแล้ว
-ui.dlgb.mClearTurns,ล้างบทสนทนาทั้งหมด
-ui.dlgb.confirmClear,ล้างบทสนทนาในเซสชันนี้ทั้งหมด?
-ui.dlgb.addPreset,+ คณะใหม่
-ui.dlgb.presetNameAsk,ตั้งชื่อคณะนักแสดง
-ui.dlgb.confirmDeletePreset,"ลบคณะ ""{0}"" ทิ้ง?"
-ui.dlgb.edit,แก้ไข
-ui.dlgb.delete,ลบ
-ui.dlgb.castTitle,คณะนักแสดง: {0}
-ui.dlgb.castCount,ตัวละครในคณะ ({0}/{1})
-ui.dlgb.castFull,ใส่ได้สูงสุด {0} ตัว
-ui.dlgb.pickFromWiki,— เลือกจาก Wiki —
-ui.dlgb.addToCast,เพิ่มเข้าคณะ
-ui.dlgb.noWikiChars,ยังไม่มีตัวละครใน Wiki — สร้างที่ Wiki ก่อน แล้วกลับมาที่นี่
-ui.dlgb.removeFromCast,เอาออกจากคณะ
-ui.dlgb.selfPronPh,เรียกตัวเอง
-ui.dlgb.selfPronTip,สรรพนามที่ตัวละครใช้เรียกตัวเอง (ผม/เรา/กู/ข้า) — ล็อกไว้กันโมเดลสลับกลางบทสนทนา
-ui.dlgb.blurbPh,คำโปรยหนึ่งบรรทัด — ตัวละครอื่นเห็นแค่บรรทัดนี้
-ui.dlgb.blurbTip,ตัวละครอื่นในวงเห็นแค่บรรทัดนี้ ไม่เห็นใบบทบาทเต็มของคนนี้
-ui.dlgb.personaPh,ใบบทบาท — เขียนเป็นภาษาคนได้เลย เช่น คุณคือโทระ พูดสั้น ตัดบท ไม่ชอบอธิบายตัวเอง
-ui.dlgb.genFromWiki,⟳ สร้างใบจาก Wiki
-ui.dlgb.wikiNotFound,หาตัวละครนี้ใน Wiki ไม่เจอ
-ui.dlgb.relSection,ความสัมพันธ์เฉพาะซีนนี้
-ui.dlgb.relHint,เว้นว่าง = ใช้ตามที่เขียนไว้ใน Wiki · กรอกเมื่อซีนนี้ต่างจากปกติ (เช่น ใน Wiki เป็นเจ้านาย แต่ซีนนี้เป็นแฟนกัน)
-ui.dlgb.relPair,{0} มอง {1} ว่า
-ui.dlgb.relHowPh,ความสัมพันธ์ในซีนนี้
-ui.dlgb.relCallPh,เรียกอีกฝ่ายว่า
-ui.dlgb.overrideTitle,⚙ โมเดลและพารามิเตอร์ของตัวนี้
-ui.dlgb.providerLabel,ผู้ให้บริการ
-ui.dlgb.modelLabel,โมเดล
-ui.dlgb.useProjectProvider,ตามโปรเจกต์
-ui.dlgb.useProviderModel,ตามผู้ให้บริการ
-ui.dlgb.useProviderValue,ตามผู้ให้บริการ
-ui.app.migPageNumFirst,"ย้ายค่าเก่า: เปิด ""ใส่เลขบนหน้าแรก"" ให้อัตโนมัติ (โปรเจกต์บันทึกไว้ก่อน alpha.82)"
-ui.app.spThaiOn,ฟอนต์ไทยในบท: ปรับสัดส่วน {0}% (ตัวไทยพอดีระยะบรรทัดของบท)
-ui.app.spThaiOff,ฟอนต์ไทยในบท: ไม่ปรับ — ปล่อยตามฟอนต์สำรองของระบบ
-ui.app.proseIndentOn,ย่อหน้าอัตโนมัติ: เปิด ({0} นิ้ว)
-ui.app.proseIndentOff,ย่อหน้าอัตโนมัติ: ปิด
-ui.dlg.spThaiAuto,อัตโนมัติ (ตัวแรกที่เครื่องมี)
-ui.dlg.spThaiSample,"INT. ห้องนอน - กลางคืน / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"
-ui.aia.scopeProject,ทั้งโปรเจกต์
-ui.aia.scopeBook,เฉพาะเล่ม
-ui.aia.scopeChapter,เฉพาะบท
-ui.aia.scopeScene,เฉพาะฉาก
-ui.aia.nScene, · {0} ฉาก
-ui.aia.stTempoAvg,จังหวะเฉลี่ย
-ui.aia.stDialogueAvg,บทสนทนาเฉลี่ย
-ui.aia.stSlowRun,ช่วงอืด
-ui.aia.stFastRun,ช่วงรัว
-ui.aia.stCharAppear,ตัวละครที่ปรากฏ
-ui.aia.stChapter,บท
-ui.aia.stCharGap,ตัวละครที่หายไปนาน
-ui.aia.stUniqueWord,คำไม่ซ้ำ
-ui.aia.stRichWord,ความหลากหลายของคำ
-ui.aia.stSceneHasConflict,ฉากที่มีความขัดแย้ง
-ui.aia.stNoConflict,ฉากที่ไม่พบร่องรอย
-ui.aia.stConflictDensity,ความหนาแน่นต่อพันคำ
-ui.aia.stAvgWordScene,คำเฉลี่ยต่อฉาก
-ui.aia.stMedian,ค่ากลาง
-ui.aia.stTooLong,ฉากยาวผิดปกติ
-ui.aia.stReadTime,เวลาอ่านทั้งหมด
-ui.aia.unitMin, นาที
-ui.aia.stRepeatFound,คำซ้ำที่พบ
-ui.aia.stSceneAffected,ฉากที่ได้รับผล
-ui.aia.stWindow,ระยะที่นับว่าซ้ำ
-ui.aia.unitWord, คำ
-ui.aia.stPairFound,คู่ที่พบ
-ui.aia.stTopPair,คู่ที่แรงที่สุด
-ui.aia.stRomanceWord,คำเชิงรักทั้งหมด
-ui.aia.stLead,ตัวละครหลัก
-ui.aia.stLeadShare,สัดส่วนของตัวหลัก
-ui.aia.stSilentChar,ตัวละครที่ไม่โผล่เลย
-ui.aia.stScoreLocal,คะแนนจากตัวเลข
-ui.aia.stHasStoryDate,ฉากที่ระบุเวลาในเรื่อง
-ui.aia.stNoPov,ฉากที่ไม่ได้ระบุมุมมอง
-ui.aia.stCharOnce,ตัวละครที่โผล่ครั้งเดียว
-ui.aia.crPacing,จังหวะเรื่อง
-ui.aia.crPacingNote,จังหวะเฉลี่ย {0} · ช่วงอืด {1} ช่วง
-ui.aia.crDialogue,สัดส่วนบทสนทนา
-ui.aia.crDialogueNote,บทสนทนาเฉลี่ย {0}% ของเนื้อฉาก
-ui.aia.crConflict,ความขัดแย้ง
-ui.aia.crConflictNote,ฉากที่ไม่พบร่องรอยความขัดแย้ง {0} ฉาก
-ui.aia.crSceneLen,ความสม่ำเสมอของความยาวฉาก
-ui.aia.crSceneLenNote,เฉลี่ย {0} คำ · เบี่ยงเบน {1} คำ
-ui.aia.crLanguage,ความสะอาดของภาษา
-ui.aia.crLanguageNote,พบคำซ้ำระยะใกล้ {0} จุด
-ui.aia.crCast,การกระจายน้ำหนักตัวละคร
-ui.aia.crCastNote,ตัวละคร {0} ตัว · ตัวหลักกิน {1}%
-ui.aia.dPacing,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน — คิดจากสัดส่วนบทพูด ความยาวประโยค และความยาวฉาก
-ui.aia.dArc,ตัวละครแต่ละตัวโผล่ถี่แค่ไหนในแต่ละบท และหายไปช่วงไหนบ้าง
-ui.aia.dWords,คำที่ใช้บ่อยที่สุด พร้อมอัตราต่อหมื่นคำ (ตัดคำหยุดและชื่อตัวละครออกแล้ว)
-ui.aia.dConflict,ฉากไหนมีร่องรอยความขัดแย้ง ฉากไหนเรียบจนไม่มีแรงผลัก
-ui.aia.dLength,เทียบความยาวฉากกับค่ากลาง พร้อมเวลาอ่านโดยประมาณ
-ui.aia.tPlotHole,ตรวจ Plot Hole
-ui.aia.dPlotHole,หาจุดที่เนื้อเรื่องขัดกันเอง ปมที่เปิดแล้วไม่ปิด และแรงจูงใจที่หายไป
-ui.aia.tContinuity,ตรวจความสอดคล้อง
-ui.aia.dContinuity,ตรวจว่ารายละเอียดของตัวละครและโลกคงเส้นคงวาตลอดขอบเขตที่เลือก
-ui.aia.tRepeat,ตรวจหาคำซ้ำ
-ui.aia.dRepeat,คำเดียวกันโผล่ซ้ำในระยะใกล้จนอ่านแล้วสะดุด
-ui.aia.tShipping,คู่จิ้น / เส้นความสัมพันธ์
-ui.aia.dShipping,คู่ตัวละครที่อยู่ด้วยกันบ่อยและมีน้ำหนักเชิงรักมากที่สุด
-ui.aia.tScore,ให้คะแนน
-ui.aia.dScore,คะแนนสองชั้น: ชั้นจากตัวเลขล้วน และชั้นจากการอ่านของ AI
-ui.aia.tScreentime,Screentime / น้ำหนักตัวละคร
-ui.aia.dScreentime,ใครกินพื้นที่เล่าเรื่องไปเท่าไร วัดจากฉากที่ปรากฏและจำนวนครั้งที่ถูกเอ่ยถึง
-ui.aia.noteNoPov,ยังไม่ได้ระบุมุมมอง
-ui.aia.noteCharOnce,โผล่ครั้งเดียวทั้งขอบเขต — ตรวจว่าตั้งใจหรือหลุด
-ui.aia.sysEditor,คุณคือบรรณาธิการต้นฉบับที่อ่านละเอียดและตรงไปตรงมา วิเคราะห์เฉพาะสิ่งที่ปรากฏในข้อมูลที่ให้มา ห้ามแต่งเหตุการณ์หรือรายละเอียดที่ไม่มีในต้นฉบับ ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON
-ui.aia.taskPacing,อ่านตัวเลขจังหวะรายฉากแล้วบอกว่าช่วงไหนหน่วง ช่วงไหนรัวเกินไป และควรตัดหรือขยายตรงไหน
-ui.aia.taskArc,ดูการปรากฏตัวของตัวละครแต่ละตัวแล้วบอกว่าเส้นเรื่องของใครขาดช่วง ใครหายนานเกินไป และใครยังไม่มีพัฒนาการ
-ui.aia.taskWords,ดูคำที่ใช้บ่อยแล้วบอกว่าคำไหนเป็นคำติดปากที่ควรลด และคำไหนสะท้อนแก่นเรื่องจริง ๆ
-ui.aia.taskConflict,ประเมินว่าแต่ละฉากมีความขัดแย้งจริงหรือไม่ ใครต้องการอะไร ใครขวาง และฉากไหนควรเพิ่มแรงเสียดทาน
-ui.aia.taskLength,ดูความยาวฉากแล้วบอกว่าฉากไหนควรหั่น ฉากไหนสั้นจนไม่ทันรู้สึก และจังหวะพักของเล่มพอดีหรือยัง
-ui.aia.taskPlotHole,หาจุดที่เนื้อเรื่องขัดแย้งกันเอง ปมที่เปิดแล้วไม่ปิด แรงจูงใจที่หายไป และเวลาที่ไม่ลงรอย
-ui.aia.taskContinuity,ตรวจว่ารายละเอียดของตัวละครและโลก (ชื่อ ลักษณะ ความสามารถ กฎของโลก) คงเส้นคงวาหรือขัดกันเอง
-ui.aia.taskRepeat,ดูรายการคำซ้ำระยะใกล้แล้วบอกว่าจุดไหนน่ารำคาญจริง และเสนอคำแทนที่เข้ากับน้ำเสียงของเรื่อง
-ui.aia.taskShipping,ประเมินเคมีของคู่ตัวละครที่พบ ว่าคู่ไหนมีน้ำหนักจริง คู่ไหนยังขาดฉากที่ทำให้ผู้อ่านเชื่อ
-ui.aia.taskScore,ให้คะแนนต้นฉบับตามหัวข้อ (เปิดเรื่อง จังหวะ ตัวละคร บทสนทนา ภาษา ปมและความน่าติดตาม) หัวข้อละ 0-10 พร้อมเหตุผลสั้น ๆ
-ui.aia.taskScreentime,ดูน้ำหนักการปรากฏของตัวละครแล้วบอกว่าการกระจายเหมาะกับเรื่องแบบนี้หรือไม่ ใครควรได้พื้นที่มากขึ้นหรือน้อยลง
-ui.aia.dgPacing,{0} [{1}] จังหวะ={2} บทพูด={3}% {4} คำ
-ui.aia.dgArc,{0}: ถูกเอ่ยถึง {1} ครั้ง ใน {2} ฉาก
-ui.aia.dgArcGap, · หายไปช่วง: {0}
-ui.aia.dgWords,{0} ×{1} ({2} ต่อหมื่นคำ)
-ui.aia.dgConflict,{0} [{1}] ไม่พบร่องรอยความขัดแย้ง
-ui.aia.dgLength,{0} [{1}] {2} คำ ({3} นาที)
-ui.aia.dgRepeat,“{0}” ×{1} ใน {2} [{3}] ห่างกันสั้นสุด {4} คำ
-ui.aia.dgShipping,{0} × {1}: อยู่ร่วมกัน {2} ฉาก · คะแนน {3}
-ui.aia.dgScreentime,{0}: {1} ฉาก · {2} ครั้ง · {3}%
-ui.aia.dgScore,{0}: {1}/10 — {2}
-ui.aia.dgNote,{0} [{1}] {2}
-ui.aia.pHeadScope,ขอบเขตที่วิเคราะห์: 
-ui.aia.pHeadTask,งานที่ต้องทำ: 
-ui.aia.pHeadNumbers,ตัวเลขที่โปรแกรมนับมาแล้ว (ถือว่าถูกต้อง ห้ามนับใหม่):
-ui.aia.pRules,กฎ: อ้างอิงเฉพาะสิ่งที่ปรากฏในข้อมูลข้างต้นและเนื้อฉากที่แนบมา · ถ้าอ้างถึงฉากใดให้ใส่ sceneId ให้ตรง · เขียนเป็นภาษาไทย กระชับ ตรงประเด็น · ถ้าไม่มีอะไรควรบอก ให้ตอบเป็นรายการว่าง []
-ui.aia.pFormatFindings,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""อธิบาย"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉากถ้ามี"",""suggestion"":""ข้อเสนอแนะ""}"
-ui.aia.pFormatScore,"รูปแบบคำตอบ: JSON object {""criteria"":[{""label"":""หัวข้อ"",""score"":0-10,""note"":""เหตุผลสั้น ๆ""}],""total"":0-10,""summary"":""สรุปหนึ่งย่อหน้า""}"
-ui.aia.pHeadScenes,เนื้อฉาก:
-ui.aia.pTruncated, (แนบมาบางส่วนเพราะยาวเกินงบ)
-ui.aia.errUnknownKind,ไม่รู้จักชนิดการวิเคราะห์นี้
-ui.aia.errNoScene,ไม่พบฉากในขอบเขตที่เลือก
-ui.aia.errAiFail,เรียก AI ไม่สำเร็จ
-ui.aia.errOpenScene,เปิดฉากจากแผงวิเคราะห์ไม่สำเร็จ
-ui.aia.errRun,วิเคราะห์ล้มเหลว
-ui.aia.rowPacing,{0} คำ · บทพูด {1}% · ประโยคเฉลี่ย {2} คำ
-ui.aia.slowRun,ช่วงอืด
-ui.aia.fastRun,ช่วงรัว
-ui.aia.runRange,{0} → {1} · ติดกัน {2}
-ui.aia.arcHead,{0} — {1} ครั้ง ใน {2} ฉาก
-ui.aia.arcGap,หายไปช่วง
-ui.aia.noMarker,ไม่พบร่องรอย
-ui.aia.rowLength,{0} คำ · {1} นาที
-ui.aia.rowRepeat,{0} · ห่างกันสั้นสุด {1} คำ
-ui.aia.rowShip,อยู่ร่วมกัน {0} ฉาก · ถูกเอ่ย {1} ครั้ง
-ui.aia.rowScreentime,{0} ฉาก · {1} ครั้ง
-ui.aia.scoreLocalHead,คะแนนจากตัวเลข
-ui.aia.aiHead,ความเห็นจาก AI
-ui.aia.scoreAiHead,คะแนนจาก AI
-ui.aia.aiNoFinding,AI ไม่พบประเด็นที่ควรแจ้ง
-ui.aia.usage,ใช้ไป {0} โทเคน · ประมาณ ${1}
-ui.aia.busy,กำลังวิเคราะห์…
-ui.aia.done,เสร็จแล้ว
-ui.aia.truncated,เนื้อหายาวเกินงบ — AI อ่านได้บางส่วน ลองแคบขอบเขตลงเพื่อผลที่ละเอียดกว่า
-ui.aia.aiOffHint,แสดงเฉพาะผลที่คำนวณเอง (ยังไม่ได้ตั้งค่า AI หรือปิดการใช้ AI ไว้)
-ui.aia.reload,โหลดใหม่
-ui.aia.noProject,ยังไม่ได้เปิดโปรเจกต์
-ui.aia.useAI,ใช้ AI ต่อยอด
-ui.aia.runAll,วิเคราะห์ทั้งหมด
-ui.aia.tagNeedAI,ต้องใช้ AI
-ui.aia.csScene,ฉาก
-ui.aia.csChapter,บท
-ui.aia.csWords,จำนวนคำ
-ui.aia.csDialogue,บทสนทนา %
-ui.aia.csAvgSent,ประโยคเฉลี่ย (คำ)
-ui.aia.csTempo,จังหวะ
-ui.aia.csCharacter,ตัวละคร
-ui.aia.csCount,จำนวนครั้ง
-ui.aia.csWord,คำ
-ui.aia.csPer10k,ต่อหมื่นคำ
-ui.aia.csScore,คะแนน
-ui.aia.csDensity,ความหนาแน่นต่อพันคำ
-ui.aia.csMarkers,ร่องรอยที่พบ
-ui.aia.csMinutes,นาที
-ui.aia.csPages,หน้า
-ui.aia.csClosest,ห่างกันสั้นสุด (คำ)
-ui.aia.csSideA,ตัวละคร A
-ui.aia.csSideB,ตัวละคร B
-ui.aia.csSharedScenes,ฉากที่อยู่ร่วมกัน
-ui.aia.csMentions,ถูกเอ่ยถึง
-ui.aia.csShare,สัดส่วน %
-ui.aia.csCriterion,หัวข้อ
-ui.aia.csNote,หมายเหตุ
-ui.aia.csTitle,หัวข้อ
-ui.aia.csAnalysis,การวิเคราะห์
-ui.aia.csScope,ขอบเขต
-ui.aia.csStat,สถิติ
-ui.aia.csValue,ค่า
-ui.aia.csSummary,บทสรุป
-ui.aia.csSeverity,ระดับ
-ui.aia.csDetail,รายละเอียด
-ui.aia.csSuggestion,ข้อเสนอแนะ
-ui.aia.csTokenUsed,โทเคนที่ใช้
-ui.aia.csCostUsd,ค่าใช้จ่าย (USD)
-ui.aia.csSession,เซสชัน
-ui.aia.csCreated,สร้างเมื่อ
-ui.aia.aiSettings,ตั้งค่า AI
-ui.aia.aiSettingsTip,เปิดกล่องตั้งค่าผู้ให้บริการ AI โดยไม่ต้องเข้าเมนูตั้งค่า
-ui.aia.sessionSave,บันทึกเซสชัน
-ui.aia.sessionSaveTip,เก็บผลของขอบเขตนี้ไว้ในโปรเจกต์ (โฟลเดอร์ Analysis)
-ui.aia.sessionSaveTitle,ตั้งชื่อเซสชัน
-ui.aia.sessionList,เซสชัน
-ui.aia.sessionListTip,เปิดเซสชันที่บันทึกไว้ในโปรเจกต์
-ui.aia.sessionTitle,เซสชันการวิเคราะห์
-ui.aia.sessionEmpty,ยังไม่มีเซสชันที่บันทึกไว้ในโปรเจกต์นี้
-ui.aia.sessionOpen,เปิด
-ui.aia.sessionKinds,{0} ชนิด
-ui.aia.sessionCost,{0} โทเคน · ${1}
-ui.aia.sessionAuto,วิเคราะห์ {0}
-ui.aia.sessionCurrent,เซสชันที่เปิดอยู่: {0}
-ui.aia.sessionSaved,"บันทึกเซสชัน ""{0}"" แล้ว"
-ui.aia.sessionOpened,"เปิดเซสชัน ""{0}"""
-ui.aia.sessionDeleted,"ลบเซสชัน ""{0}"" แล้ว"
-ui.aia.confirmDelSession,"ลบเซสชัน ""{0}"" ทิ้ง?"
-ui.aia.errSessionRead,อ่านไฟล์เซสชันไม่ได้: 
-ui.aia.errSessionSave,บันทึกเซสชันไม่สำเร็จ
-ui.aia.errSessionDel,ลบเซสชันไม่สำเร็จ
-ui.aia.errNothingToSave,ยังไม่มีผลวิเคราะห์ให้บันทึก — กดวิเคราะห์ก่อน
-ui.aia.exportCsv,ส่งออก CSV
-ui.aia.exportCsvTip,ส่งออกทุกผลในขอบเขตนี้เป็นไฟล์ CSV (เปิดใน Excel/Sheets ได้)
-ui.aia.exportCsvOne,ส่งออกผลของชนิดนี้เป็น CSV
-ui.aia.csvSaved,บันทึก CSV ที่ {0}
-ui.aia.errCsv,เขียนไฟล์ CSV ไม่สำเร็จ
-ui.aia.errNothingToExport,ยังไม่มีผลให้ส่งออก — กดวิเคราะห์ก่อน
-ui.aia.estTokens,≈ {0} โทเคน · {1}
-ui.aia.estTip,ประมาณการก่อนยิง AI — เนื้อฉาก + คำสั่ง + เพดานคำตอบ
-ui.aia.estAll,ทั้ง 11 ชนิด ≈ {0} โทเคน · {1}
-ui.aia.estOff,ปิดการใช้ AI อยู่ — ไม่มีค่าใช้จ่าย
-ui.aia.usedSoFar,ใช้ไปแล้ว {0} ครั้ง · {1} โทเคน · {2}
-ui.aia.usedNone,ยังไม่ได้เรียก AI ในขอบเขตนี้
-ui.app.aiAnalysis,ผลวิเคราะห์ AI
-ui.vis.addFree,➕ แถวว่าง
-ui.vis.addRow,➕ เพิ่มจากบรรทัดในฉาก
-ui.vis.addSelected,เพิ่มที่เลือก
-ui.vis.allUsed,ทุกบรรทัดถูกใส่ในตารางแล้ว
-ui.vis.changedCount,มี {0} แถวที่ต้นทางเปลี่ยนไปแล้ว
-ui.vis.clearImage,เอารูปออก
-ui.vis.close,ปิด
-ui.vis.colComment,คอมเมนต์
-ui.vis.colNo,ลำดับ
-ui.vis.colRemark,หมายเหตุ
-ui.vis.colScene,ฉาก
-ui.vis.cols,⚙ คอลัมน์
-ui.vis.delRow,ลบแถวนี้
-ui.vis.delRowAsk,ลบแถวนี้ออกจากตารางเล่าด้วยภาพ?
-ui.vis.down,เลื่อนลง
-ui.vis.empty,ยังไม่มีแถว — กดปุ่มเพิ่มจากบรรทัดในฉากเพื่อเริ่ม
-ui.vis.freeRow,(แถวว่าง — ยังไม่ได้ผูกกับบรรทัดไหน)
-ui.vis.menu,🎬 เล่าด้วยภาพ
-ui.vis.needScene,ยังไม่ได้เลือกฉาก
-ui.vis.next,ถัดไป
-ui.vis.noImage,ไม่มีรูป
-ui.vis.noLines,ฉากนี้ยังไม่มีข้อความให้เลือก
-ui.vis.ofTotal,{0}/{1}
-ui.vis.open,เปิดตารางเล่าด้วยภาพ
-ui.vis.pickImage,เลือกรูปจากคลัง หรือเพิ่มรูปใหม่
-ui.vis.pickLine,เลือกบรรทัดจากฉาก
-ui.vis.pickLineHint,ติ๊กบรรทัดที่อยากทำเป็นภาพ — เลือกได้หลายบรรทัด
-ui.vis.prev,ก่อนหน้า
-ui.vis.remarkPh,หมายเหตุ…
-ui.vis.reveal,แสดงไฟล์ในโฟลเดอร์
-ui.vis.rowNum,{0} แถว
-ui.vis.saved,บันทึกตารางเล่าด้วยภาพแล้ว
-ui.vis.selectAll,เลือกทั้งหมด
-ui.vis.statusChanged,ต้นทางถูกแก้ไปแล้ว — กดเพื่ออัปเดตข้อความ
-ui.vis.statusChangedTag,ต้นทางเปลี่ยน
-ui.vis.syncAll,⟳ อัปเดตทั้งหมด
-ui.vis.title,เล่าด้วยภาพ
-ui.vis.up,เลื่อนขึ้น
-ui.vis.viewFull,⛶ เต็มจอ
-ui.vis.viewList,รายการ
-ui.vis.viewTable,ตาราง
-
-ui.vis.allLost,บรรทัดที่ผูกไว้ถูกลบจากฉากไปแล้วทั้งหมด
-ui.vis.boundN,ผูก {0} บรรทัด
-ui.vis.colAction,action
-ui.vis.colDragW,ลากเพื่อปรับความกว้างคอลัมน์
-ui.vis.colEntities,ตัวละคร/สถานที่
-ui.vis.colFrame,frame
-ui.vis.colResetW,คืนความกว้างคอลัมน์เป็นค่าเริ่มต้น
-ui.vis.editBind,แก้บรรทัดที่ผูก
-ui.vis.editBindHint,ติ๊กเพิ่มเพื่อผูกหลายบรรทัดเข้าแถวเดียว · ติ๊กออกเพื่อเลิกผูก (แถวไม่หาย)
-ui.vis.lineUsed,ใช้ในแถวอื่นแล้ว
-ui.vis.openWiki,เปิดหน้า Wiki ของตัวนี้
-ui.vis.toggleText,ซ่อน/แสดงข้อความ (H)

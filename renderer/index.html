@@ -140,6 +140,8 @@
   <button id="tb-ai" class="tb" title="เครื่องมือ AI (ขยาย · สรุป · เขียนใหม่)" data-icon="bot"></button>
   <!-- [alpha.62 บั๊ก 2] ปุ่มนี้คือสวิตช์ของแผง "AI ผู้ช่วยเขียน" (กดซ้ำ = ปิด) ไม่ใช่กล่องแชทเดิม -->
   <button id="tb-ai-chat" class="tb tb-toggle" title="AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง)" data-icon="chat"></button>
+  <!-- [alpha.94] Story Starter — สวิตช์แผง (กดซ้ำ = ปิด) -->
+  <button id="tb-starter" class="tb tb-toggle" title="✨ Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI)" data-icon="book-open"></button>
   <!-- [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI -->
   <button id="tb-ai-analyzer" class="tb tb-toggle" title="🧠 AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)" data-icon="brain"></button>
   <!-- [alpha.69] แผงใหม่ 3 ตัว — เป็นสวิตช์เหมือนปุ่มแผงตัวอื่น (กดซ้ำ = ปิด) -->
@@ -232,6 +234,8 @@
     <div id="ai-analyzer-panel" class="k-featpanel"><div id="ai-analyzer-body"></div></div>
     <!-- [alpha.61 ข้อ 2] แผงแชท AI แบบ opencode (รายการเซสชัน → เซสชัน → รายละเอียดบริบท) -->
     <div id="ai-chat-panel" class="k-featpanel"><div id="ai-chat-body"></div></div>
+    <!-- [alpha.94] Story Starter — หน้ารวม → wizard 5 ขั้น → รายการตอน → แชท Game Master -->
+    <div id="starter-panel" class="k-featpanel"><div id="starter-body"></div></div>
     <!-- [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร — ย้ายมาเป็นแผงให้ครบชุด
          (เดิมแย่งแถบแท็บกับฉากที่กำลังเขียน และเปิดคู่กับต้นฉบับไม่ได้) -->
     <div id="net-panel" class="k-featpanel"><div id="net-body"></div></div>

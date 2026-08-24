@@ -6313,8 +6313,8 @@
             throw new RangeError("Applying a mismatched transaction");
           let newInstance = new _EditorState(this.config), fields = this.config.fields;
           for (let i5 = 0; i5 < fields.length; i5++) {
-            let field = fields[i5];
-            newInstance[field.name] = field.apply(tr4, this[field.name], this, newInstance);
+            let field2 = fields[i5];
+            newInstance[field2.name] = field2.apply(tr4, this[field2.name], this, newInstance);
           }
           return newInstance;
         }
@@ -6386,24 +6386,24 @@
             throw new RangeError("Required config field 'schema' missing");
           let $config = new Configuration(config2.schema, config2.plugins);
           let instance = new _EditorState($config);
-          $config.fields.forEach((field) => {
-            if (field.name == "doc") {
+          $config.fields.forEach((field2) => {
+            if (field2.name == "doc") {
               instance.doc = Node2.fromJSON(config2.schema, json.doc);
-            } else if (field.name == "selection") {
+            } else if (field2.name == "selection") {
               instance.selection = Selection.fromJSON(instance.doc, json.selection);
-            } else if (field.name == "storedMarks") {
+            } else if (field2.name == "storedMarks") {
               if (json.storedMarks)
                 instance.storedMarks = json.storedMarks.map(config2.schema.markFromJSON);
             } else {
               if (pluginFields)
                 for (let prop in pluginFields) {
                   let plugin = pluginFields[prop], state2 = plugin.spec.state;
-                  if (plugin.key == field.name && state2 && state2.fromJSON && Object.prototype.hasOwnProperty.call(json, prop)) {
-                    instance[field.name] = state2.fromJSON.call(plugin, config2, json[prop], instance);
+                  if (plugin.key == field2.name && state2 && state2.fromJSON && Object.prototype.hasOwnProperty.call(json, prop)) {
+                    instance[field2.name] = state2.fromJSON.call(plugin, config2, json[prop], instance);
                     return;
                   }
                 }
-              instance[field.name] = field.init(config2, instance);
+              instance[field2.name] = field2.init(config2, instance);
             }
           });
           return instance;
@@ -14782,7 +14782,7 @@
   function paginate(blocks, opts = {}) {
     const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
-    const R = fmt.rules, S9 = fmt.strings;
+    const R = fmt.rules, S10 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
     const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
     const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
@@ -14854,10 +14854,10 @@
           contIn: !!b.contIn,
           contOut: true
         });
-        if (moreLines) addBlock({ el: "more", text: S9.dialogueMore, lines: 1, more: true });
+        if (moreLines) addBlock({ el: "more", text: S10.dialogueMore, lines: 1, more: true });
         pushPage();
         if (dlgSplit) {
-          addBlock({ el: "character", text: lastChar + " " + S9.dialogueContd, lines: 1, contd: true });
+          addBlock({ el: "character", text: lastChar + " " + S10.dialogueContd, lines: 1, contd: true });
           used += 1;
         }
         list[i5] = {
@@ -14899,7 +14899,7 @@
   }
   function annotateContinued(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const S9 = f.strings;
+    const S10 = f.strings;
     const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const on2 = CT.enabled !== false && CT.scene !== false;
     for (const p of pages) {
@@ -14930,9 +14930,9 @@
         contScene = p.sceneEnd;
       }
       run3++;
-      p.continuedBottom = S9.continuedBottom;
+      p.continuedBottom = S10.continuedBottom;
       n2.contdRun = run3;
-      n2.continuedTop = CT.number !== false && run3 > 2 ? `${S9.continuedTop} (${run3 - 1})` : S9.continuedTop;
+      n2.continuedTop = CT.number !== false && run3 > 2 ? `${S10.continuedTop} (${run3 - 1})` : S10.continuedTop;
     }
     return pages;
   }
@@ -17809,16 +17809,16 @@
         n2.textContent = label;
         page2.append(n2);
       }
-      const clip2 = document.createElement("div");
-      clip2.className = "ed-page-clip";
+      const clip3 = document.createElement("div");
+      clip3.className = "ed-page-clip";
       const sliceH = num(pg.end, NaN) - num(pg.start, 0);
-      clip2.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
+      clip3.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
       const sp = opts.startPos && opts.startPos[els.length];
-      if (Number.isFinite(sp)) clip2.dataset.pos = String(sp);
+      if (Number.isFinite(sp)) clip3.dataset.pos = String(sp);
       const inner = master.cloneNode(true);
       inner.style.cssText = "width:" + textW + "in;max-width:none;padding:0;min-height:0;margin:" + -num(pg.start, 0) + "px 0 0;";
-      clip2.append(inner);
-      page2.append(clip2);
+      clip3.append(inner);
+      page2.append(clip3);
       slot.append(page2);
       host2.append(slot);
       els.push(page2);
@@ -21870,7 +21870,10 @@
         "Backups",
         "Plugins",
         "Research",
-        "Analysis"
+        "Analysis",
+        // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
+        "Sessions",
+        "Starters"
       ];
       WIKI_DIRS = ["Wiki", "Bible"];
     }
@@ -25241,8 +25244,8 @@
           function n2(e2, t4, r3, n3, i6, s2) {
             var a, o, h = e2.file, u = e2.compression, l = s2 !== O.utf8encode, f = I.transformTo("string", s2(h.name)), c = I.transformTo("string", O.utf8encode(h.name)), d = h.comment, p = I.transformTo("string", s2(d)), m = I.transformTo("string", O.utf8encode(d)), _2 = c.length !== h.name.length, g = m.length !== d.length, b = "", v2 = "", y = "", w = h.dir, k = h.date, x = { crc32: 0, compressedSize: 0, uncompressedSize: 0 };
             t4 && !r3 || (x.crc32 = e2.crc32, x.compressedSize = e2.compressedSize, x.uncompressedSize = e2.uncompressedSize);
-            var S9 = 0;
-            t4 && (S9 |= 8), l || !_2 && !g || (S9 |= 2048);
+            var S10 = 0;
+            t4 && (S10 |= 8), l || !_2 && !g || (S10 |= 2048);
             var z = 0, C = 0;
             w && (z |= 16), "UNIX" === i6 ? (C = 798, z |= (function(e3, t5) {
               var r4 = e3;
@@ -25251,7 +25254,7 @@
               return 63 & (e3 || 0);
             })(h.dosPermissions)), a = k.getUTCHours(), a <<= 6, a |= k.getUTCMinutes(), a <<= 5, a |= k.getUTCSeconds() / 2, o = k.getUTCFullYear() - 1980, o <<= 4, o |= k.getUTCMonth() + 1, o <<= 5, o |= k.getUTCDate(), _2 && (v2 = A(1, 1) + A(B(f), 4) + c, b += "up" + A(v2.length, 2) + v2), g && (y = A(1, 1) + A(B(p), 4) + m, b += "uc" + A(y.length, 2) + y);
             var E = "";
-            return E += "\n\0", E += A(S9, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
+            return E += "\n\0", E += A(S10, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
           }
           var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
           function s(e2, t4, r3, n3) {
@@ -26517,7 +26520,7 @@
           };
         }, {}], 46: [function(e, t3, r) {
           "use strict";
-          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S9 = 258, z = S9 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
+          var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S10 = 258, z = S10 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
           function R(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
@@ -26541,14 +26544,14 @@
             e2.pending_buf[e2.pending++] = t4 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t4;
           }
           function L2(e2, t4) {
-            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S9, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
+            var r3, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S10, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
             e2.prev_length >= e2.good_match && (i6 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
             do {
               if (u2[(r3 = t4) + a2] === p2 && u2[r3 + a2 - 1] === d2 && u2[r3] === u2[s2] && u2[++r3] === u2[s2 + 1]) {
                 s2 += 2, r3++;
                 do {
                 } while (u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && u2[++s2] === u2[++r3] && s2 < c2);
-                if (n3 = S9 - (c2 - s2), s2 = c2 - S9, a2 < n3) {
+                if (n3 = S10 - (c2 - s2), s2 = c2 - S10, a2 < n3) {
                   if (e2.match_start = t4, o2 <= (a2 = n3)) break;
                   d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
                 }
@@ -26690,15 +26693,15 @@
                 return e3.insert = 0, t5 === f ? (N(e3, true), 0 === e3.strm.avail_out ? O : B) : e3.last_lit && (N(e3, false), 0 === e3.strm.avail_out) ? A : I;
               })(n3, t4) : 3 === n3.strategy ? (function(e3, t5) {
                 for (var r4, n4, i7, s3, a3 = e3.window; ; ) {
-                  if (e3.lookahead <= S9) {
-                    if (j(e3), e3.lookahead <= S9 && t5 === l) return A;
+                  if (e3.lookahead <= S10) {
+                    if (j(e3), e3.lookahead <= S10 && t5 === l) return A;
                     if (0 === e3.lookahead) break;
                   }
                   if (e3.match_length = 0, e3.lookahead >= x && 0 < e3.strstart && (n4 = a3[i7 = e3.strstart - 1]) === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7]) {
-                    s3 = e3.strstart + S9;
+                    s3 = e3.strstart + S10;
                     do {
                     } while (n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && n4 === a3[++i7] && i7 < s3);
-                    e3.match_length = S9 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
+                    e3.match_length = S10 - (s3 - i7), e3.match_length > e3.lookahead && (e3.match_length = e3.lookahead);
                   }
                   if (e3.match_length >= x ? (r4 = u._tr_tally(e3, 1, e3.match_length - x), e3.lookahead -= e3.match_length, e3.strstart += e3.match_length, e3.match_length = 0) : (r4 = u._tr_tally(e3, 0, e3.window[e3.strstart]), e3.lookahead--, e3.strstart++), r4 && (N(e3, false), 0 === e3.strm.avail_out)) return A;
                 }
@@ -26729,7 +26732,7 @@
         }, {}], 48: [function(e, t3, r) {
           "use strict";
           t3.exports = function(e2, t4) {
-            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S9, z, C;
+            var r3, n2, i5, s, a, o, h, u, l, f, c, d, p, m, _2, g, b, v2, y, w, k, x, S10, z, C;
             r3 = e2.state, n2 = e2.next_in, z = e2.input, i5 = n2 + (e2.avail_in - 5), s = e2.next_out, C = e2.output, a = s - (t4 - e2.avail_out), o = s + (e2.avail_out - 257), h = r3.dmax, u = r3.wsize, l = r3.whave, f = r3.wnext, c = r3.window, d = r3.hold, p = r3.bits, m = r3.lencode, _2 = r3.distcode, g = (1 << r3.lenbits) - 1, b = (1 << r3.distbits) - 1;
             e: do {
               p < 15 && (d += z[n2++] << p, p += 8, d += z[n2++] << p, p += 8), v2 = m[d & g];
@@ -26767,25 +26770,25 @@
                         e2.msg = "invalid distance too far back", r3.mode = 30;
                         break e;
                       }
-                      if (S9 = c, (x = 0) === f) {
+                      if (S10 = c, (x = 0) === f) {
                         if (x += u - y, y < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
-                          x = s - k, S9 = C;
+                          x = s - k, S10 = C;
                         }
                       } else if (f < y) {
                         if (x += u + f - y, (y -= f) < w) {
                           for (w -= y; C[s++] = c[x++], --y; ) ;
                           if (x = 0, f < w) {
                             for (w -= y = f; C[s++] = c[x++], --y; ) ;
-                            x = s - k, S9 = C;
+                            x = s - k, S10 = C;
                           }
                         }
                       } else if (x += f - y, y < w) {
                         for (w -= y; C[s++] = c[x++], --y; ) ;
-                        x = s - k, S9 = C;
+                        x = s - k, S10 = C;
                       }
-                      for (; 2 < w; ) C[s++] = S9[x++], C[s++] = S9[x++], C[s++] = S9[x++], w -= 3;
-                      w && (C[s++] = S9[x++], 1 < w && (C[s++] = S9[x++]));
+                      for (; 2 < w; ) C[s++] = S10[x++], C[s++] = S10[x++], C[s++] = S10[x++], w -= 3;
+                      w && (C[s++] = S10[x++], 1 < w && (C[s++] = S10[x++]));
                     } else {
                       for (x = s - k; C[s++] = C[x++], C[s++] = C[x++], C[s++] = C[x++], 2 < (w -= 3); ) ;
                       w && (C[s++] = C[x++], 1 < w && (C[s++] = C[x++]));
@@ -26843,7 +26846,7 @@
           r.inflateReset = o, r.inflateReset2 = h, r.inflateResetKeep = a, r.inflateInit = function(e2) {
             return u(e2, 15);
           }, r.inflateInit2 = u, r.inflate = function(e2, t4) {
-            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S9, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+            var r3, n3, i6, s2, a2, o2, h2, u2, l2, f2, c2, d, p, m, _2, g, b, v2, y, w, k, x, S10, z, C = 0, E = new I.Buf8(4), A = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
             if (!e2 || !e2.state || !e2.output || !e2.input && 0 !== e2.avail_in) return U;
             12 === (r3 = e2.state).mode && (r3.mode = 13), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, f2 = o2, c2 = h2, x = N;
             e: for (; ; ) switch (r3.mode) {
@@ -27016,7 +27019,7 @@
                   r3.lens[A[r3.have++]] = 7 & u2, u2 >>>= 3, l2 -= 3;
                 }
                 for (; r3.have < 19; ) r3.lens[A[r3.have++]] = 0;
-                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S9 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S9), r3.lenbits = S9.bits, x) {
+                if (r3.lencode = r3.lendyn, r3.lenbits = 7, S10 = { bits: r3.lenbits }, x = T3(0, r3.lens, 0, 19, r3.lencode, 0, r3.work, S10), r3.lenbits = S10.bits, x) {
                   e2.msg = "invalid code lengths set", r3.mode = 30;
                   break;
                 }
@@ -27064,11 +27067,11 @@
                   e2.msg = "invalid code -- missing end-of-block", r3.mode = 30;
                   break;
                 }
-                if (r3.lenbits = 9, S9 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S9), r3.lenbits = S9.bits, x) {
+                if (r3.lenbits = 9, S10 = { bits: r3.lenbits }, x = T3(D, r3.lens, 0, r3.nlen, r3.lencode, 0, r3.work, S10), r3.lenbits = S10.bits, x) {
                   e2.msg = "invalid literal/lengths set", r3.mode = 30;
                   break;
                 }
-                if (r3.distbits = 6, r3.distcode = r3.distdyn, S9 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S9), r3.distbits = S9.bits, x) {
+                if (r3.distbits = 6, r3.distcode = r3.distdyn, S10 = { bits: r3.distbits }, x = T3(F, r3.lens, r3.nlen, r3.ndist, r3.distcode, 0, r3.work, S10), r3.distbits = S10.bits, x) {
                   e2.msg = "invalid distances set", r3.mode = 30;
                   break;
                 }
@@ -27213,7 +27216,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S9 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S10 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -27223,21 +27226,21 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S9 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S10 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S9, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S9, y = u = 1 << x; i5[c + (E >> S9) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S10, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S10, y = u = 1 << x; i5[c + (E >> S10) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
                 b = t4[r3 + a[v2]];
               }
               if (k < b && (E & f) !== l) {
-                for (0 === S9 && (S9 = k), c += y, z = 1 << (x = b - S9); x + S9 < w && !((z -= O[x + S9]) <= 0); ) x++, z <<= 1;
+                for (0 === S10 && (S10 = k), c += y, z = 1 << (x = b - S10); x + S10 < w && !((z -= O[x + S10]) <= 0); ) x++, z <<= 1;
                 if (C += 1 << x, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
                 i5[l = E & f] = k << 24 | x << 16 | c - s | 0;
               }
             }
-            return 0 !== E && (i5[c + E] = b - S9 << 24 | 64 << 16 | 0), o.bits = k, 0;
+            return 0 !== E && (i5[c + E] = b - S10 << 24 | 64 << 16 | 0), o.bits = k, 0;
           };
         }, { "../utils/common": 41 }], 51: [function(e, t3, r) {
           "use strict";
@@ -27248,7 +27251,7 @@
           function n2(e2) {
             for (var t4 = e2.length; 0 <= --t4; ) e2[t4] = 0;
           }
-          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S9 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
+          var s = 0, a = 29, u = 256, l = u + 1 + a, f = 30, c = 19, _2 = 2 * l + 1, g = 15, d = 16, p = 7, m = 256, b = 16, v2 = 17, y = 18, w = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0], k = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13], x = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7], S10 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], z = new Array(2 * (l + 2));
           n2(z);
           var C = new Array(2 * f);
           n2(C);
@@ -27374,11 +27377,11 @@
               return o;
             })(e2)), Y(e2, e2.l_desc), Y(e2, e2.d_desc), a2 = (function(e3) {
               var t5;
-              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S9[t5] + 1]; t5--) ;
+              for (X2(e3, e3.dyn_ltree, e3.l_desc.max_code), X2(e3, e3.dyn_dtree, e3.d_desc.max_code), Y(e3, e3.bl_desc), t5 = c - 1; 3 <= t5 && 0 === e3.bl_tree[2 * S10[t5] + 1]; t5--) ;
               return e3.opt_len += 3 * (t5 + 1) + 5 + 5 + 4, t5;
             })(e2), i6 = e2.opt_len + 3 + 7 >>> 3, (s2 = e2.static_len + 3 + 7 >>> 3) <= i6 && (i6 = s2)) : i6 = s2 = r3 + 5, r3 + 4 <= i6 && -1 !== t4 ? J2(e2, t4, r3, n3) : 4 === e2.strategy || s2 === i6 ? (P(e2, 2 + (n3 ? 1 : 0), 3), K(e2, z, C)) : (P(e2, 4 + (n3 ? 1 : 0), 3), (function(e3, t5, r4, n4) {
               var i7;
-              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S9[i7] + 1], 3);
+              for (P(e3, t5 - 257, 5), P(e3, r4 - 1, 5), P(e3, n4 - 4, 4), i7 = 0; i7 < n4; i7++) P(e3, e3.bl_tree[2 * S10[i7] + 1], 3);
               V2(e3, e3.dyn_ltree, t5 - 1), V2(e3, e3.dyn_dtree, r4 - 1);
             })(e2, e2.l_desc.max_code + 1, e2.d_desc.max_code + 1, a2 + 1), K(e2, e2.dyn_ltree, e2.dyn_dtree)), W(e2), n3 && M2(e2);
           }, r._tr_tally = function(e2, t4, r3) {
@@ -28729,6 +28732,8 @@
     }
     const opts = { method: req.method || "POST", headers: req.headers };
     if (req.body !== void 0) opts.body = JSON.stringify(req.body);
+    if (req.reqId) opts.__reqId = req.reqId;
+    if (req.timeoutMs) opts.__timeoutMs = req.timeoutMs;
     const retries = Math.max(0, req.maxRetries ?? 0);
     const who = provider.name || hostOf2(req.url);
     try {
@@ -28748,6 +28753,15 @@
           } catch {
           }
           return { ok: true, status: res.status, json, body: res.body };
+        }
+        if (res && res.aborted) {
+          return {
+            ok: false,
+            status: 0,
+            aborted: true,
+            timedOut: !!res.timedOut,
+            error: res.timedOut ? t("ui.aiProvider.timedOut") : t("ui.aiProvider.stopped")
+          };
         }
         const st = res && res.status || 0;
         const retryable2 = st === 429 || st === 408 || st >= 500 && st < 600;
@@ -28796,8 +28810,19 @@
     if (!provider) return { ok: false, text: "", error: t("ui.aiProvider.cantSettingsProviderAI") };
     if (!provider.model && !opts.model) return { ok: false, text: "", error: t("ui.aiProvider.cantPickModel") };
     const req = chatRequest(provider, opts);
+    if (opts.reqId) req.reqId = opts.reqId;
+    if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
     const res = await sendRequest(provider, req);
-    if (!res.ok) return { ok: false, text: "", error: res.error, status: res.status };
+    if (!res.ok) {
+      return {
+        ok: false,
+        text: "",
+        error: res.error,
+        status: res.status,
+        aborted: !!res.aborted,
+        timedOut: !!res.timedOut
+      };
+    }
     const { text, thinking, usage } = parseChat(res.json);
     return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
   }
@@ -28931,7 +28956,7 @@
         box2.append(s);
         return s;
       };
-      const field = (host2, label, node, hint) => {
+      const field2 = (host2, label, node, hint) => {
         const r = el("div", "ai-field");
         r.append(el("label", null, label));
         r.append(node);
@@ -28940,7 +28965,7 @@
         return node;
       };
       const s1 = sec(1, t("ui.aiProvider.nameProvider"));
-      const nameInp = field(
+      const nameInp = field2(
         s1,
         t("ui.aiProvider.nameSet"),
         el("input", "wiki-input ai-prov-name"),
@@ -28948,9 +28973,9 @@
       );
       nameInp.value = P.name || "";
       const s2 = sec(2, "Credential");
-      const credName = field(s2, t("ui.aiProvider.nameCredential"), el("input", "wiki-input ai-cred-name"));
+      const credName = field2(s2, t("ui.aiProvider.nameCredential"), el("input", "wiki-input ai-cred-name"));
       credName.value = P.credential.name || "";
-      const apiInp = field(
+      const apiInp = field2(
         s2,
         "API",
         el("input", "wiki-input ai-cred-key"),
@@ -28959,10 +28984,10 @@
       apiInp.type = "password";
       apiInp.value = P.credential.apiKey || "";
       apiInp.placeholder = t("ui.aiProvider.skSkipEmptyNot");
-      const baseInp = field(s2, "Base URL", el("input", "wiki-input ai-cred-base"));
+      const baseInp = field2(s2, "Base URL", el("input", "wiki-input ai-cred-base"));
       baseInp.value = P.credential.baseUrl || "";
       baseInp.placeholder = "https://api.openai.com/v1";
-      const domInp = field(
+      const domInp = field2(
         s2,
         "Allowed HTTP Request Domains",
         el("textarea", "wiki-input ai-cred-domains"),
@@ -28978,7 +29003,7 @@
       credBtns.append(testBtn, saveCredBtn, credMsg);
       s2.append(credBtns);
       const s3 = sec(3, "Model");
-      const modelSel = field(
+      const modelSel = field2(
         s3,
         t("ui.common.model"),
         el("select", "wiki-input k-dlg-select ai-model-sel"),
@@ -29238,8 +29263,9 @@
     if (await loadApiKey()) return { ok: true, why: "" };
     return { ok: false, why: t("ui.aiSet.settingsAIFileSettings") };
   }
-  async function callAI(prompt2, system = "") {
+  async function callAI(prompt2, system = "", opts = {}) {
     const ai = getAISettings();
+    const t0 = Date.now();
     if (Array.isArray(ai.providers) && ai.providers.length) {
       const { currentProvider: currentProvider2, complete: complete2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
       const p = await currentProvider2();
@@ -29247,13 +29273,35 @@
         setStatus(t("ui.aiSet.aICantPickProvider"));
         return null;
       }
-      const r = await complete2(p, { system, messages: [{ role: "user", content: prompt2 }] });
+      log("info", "ai: request", {
+        provider: p.name,
+        model: p.model,
+        chars: String(prompt2 || "").length,
+        reqId: opts.reqId || ""
+      });
+      const r = await complete2(p, {
+        system,
+        messages: [{ role: "user", content: prompt2 }],
+        reqId: opts.reqId,
+        timeoutMs: opts.timeoutMs
+      });
       if (!r.ok) {
-        log("error", t("ui.aiSet.aIProviderNewFail"), r.error);
-        setStatus("\u274C AI: " + r.error);
+        const lv = r.aborted && !r.timedOut ? "info" : "error";
+        log(
+          lv,
+          "ai: " + (r.aborted ? r.timedOut ? "timeout" : "stopped by user" : "failed"),
+          { error: r.error, status: r.status, ms: Date.now() - t0, provider: p.name }
+        );
+        setStatus((r.aborted && !r.timedOut ? "\u23F9 " : "\u274C ") + "AI: " + r.error);
         return null;
       }
       recordUsage(r.usage && r.usage.total || 0, p.name, r.model);
+      log("info", "ai: reply", {
+        ms: Date.now() - t0,
+        chars: (r.text || "").length,
+        usage: r.usage || null,
+        model: r.model
+      });
       return (r.text || "").trim();
     }
     const apiKey = await loadApiKey();
@@ -63401,8 +63449,8 @@ ${h.text}`;
       if (!row2 || typeof row2 !== "object") continue;
       const clean = {};
       let ok2 = true;
-      for (const [field, rule] of Object.entries(schema2)) {
-        let v2 = row2[field];
+      for (const [field2, rule] of Object.entries(schema2)) {
+        let v2 = row2[field2];
         if (v2 === void 0 || v2 === null || v2 === "") v2 = rule.default;
         if (rule.enum && !rule.enum.includes(v2)) v2 = rule.default !== void 0 ? rule.default : rule.enum[0];
         if (rule.type === "number") v2 = Number(v2);
@@ -63412,7 +63460,7 @@ ${h.text}`;
           ok2 = false;
           break;
         }
-        clean[field] = v2;
+        clean[field2] = v2;
       }
       if (ok2) out.push(clean);
     }
@@ -64083,8 +64131,8 @@ ${h.text}`;
     const s = String(body || "").trim();
     return s.length <= max2 ? s : s.slice(0, max2) + t("ui.aiSyn.cutFile");
   }
-  function fieldPrompt(field, body, title2 = "") {
-    const def = AI_SCENE_FIELDS[field];
+  function fieldPrompt(field2, body, title2 = "") {
+    const def = AI_SCENE_FIELDS[field2];
     const text = trimBody(body);
     if (!def || !text) return null;
     const built = buildPrompt("summarize", {
@@ -64097,24 +64145,24 @@ ${h.text}`;
   function synopsisPrompt(body, title2 = "") {
     return fieldPrompt("synopsis", body, title2);
   }
-  function cleanResult(text, field = "synopsis") {
+  function cleanResult(text, field2 = "synopsis") {
     let s = String(text || "").trim();
     if (!s) return "";
     s = s.replace(/^```[\w]*\s*|\s*```$/g, "").trim();
     s = s.replace(/^(เรื่องย่อ|สรุป|มุมมอง|POV|อารมณ์|ความขัดแย้ง)\s*[:：-]\s*/i, "");
     s = s.replace(/^["“'‘]+|["”'’]+$/g, "").trim();
-    if (field !== "synopsis") s = s.split(/\r?\n/)[0].trim();
+    if (field2 !== "synopsis") s = s.split(/\r?\n/)[0].trim();
     return s;
   }
   function generateSceneSynopsis(body, title2, onResult) {
     return generateSceneField("synopsis", body, title2, onResult);
   }
-  function attachAiFieldButton(row2, input, field, ctx2, onFilled) {
-    const def = AI_SCENE_FIELDS[field];
+  function attachAiFieldButton(row2, input, field2, ctx2, onFilled) {
+    const def = AI_SCENE_FIELDS[field2];
     if (!row2 || !input || !def) return null;
     const b = el("button", "k-ai-fill", "\u2728");
     b.type = "button";
-    b.dataset.field = field;
+    b.dataset.field = field2;
     b.title = t("ai.genSynopsis", "\u0E43\u0E2B\u0E49 AI \u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E49") + " \u2014 " + def.label;
     b.onclick = async () => {
       if (b.disabled) return;
@@ -64124,7 +64172,7 @@ ${h.text}`;
       b.textContent = "\u23F3";
       try {
         const c = await ctx2() || {};
-        await generateSceneField(field, c.body || "", c.title || "", (val) => {
+        await generateSceneField(field2, c.body || "", c.title || "", (val) => {
           input.value = val;
           input.dispatchEvent(new Event("input", { bubbles: true }));
           if (onFilled) onFilled();
@@ -64140,10 +64188,10 @@ ${h.text}`;
     row2.append(b);
     return b;
   }
-  async function generateSceneField(field, body, title2, onResult) {
-    const def = AI_SCENE_FIELDS[field];
+  async function generateSceneField(field2, body, title2, onResult) {
+    const def = AI_SCENE_FIELDS[field2];
     if (!def) return "";
-    const p = fieldPrompt(field, body, title2);
+    const p = fieldPrompt(field2, body, title2);
     if (!p) {
       setStatus(t("ui.aiSyn.sceneNotHasBody"));
       return "";
@@ -64151,7 +64199,7 @@ ${h.text}`;
     setStatus(t("ui.aiSyn.busyAIWrite") + def.label + "\u2026");
     const raw = await callAI(p.prompt, p.system);
     if (raw === null) return "";
-    const out = cleanResult(raw, field);
+    const out = cleanResult(raw, field2);
     if (!out) {
       setStatus(t("ui.aiSyn.aICantSend") + def.label + t("ui.aiSyn.back"));
       return "";
@@ -67568,6 +67616,20 @@ ${h.text}`;
           i18n: "panel.dlgbTitle",
           desc: t("ui.panel.dlgbDesc")
         },
+        // [alpha.94] Story Starter — สร้างเรื่องแบบทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
+        {
+          id: "starter",
+          minW: 460,
+          dockW: 680,
+          title: t("ui.panel.starterTitle"),
+          icon: "book-content",
+          adopt: "#starter-panel",
+          defaultSide: "left",
+          closable: true,
+          floatable: true,
+          i18n: "panel.starterTitle",
+          desc: t("ui.panel.starterDesc")
+        },
         {
           id: "plugins",
           minW: 420,
@@ -67608,6 +67670,8 @@ ${h.text}`;
         "codex",
         "history",
         "record",
+        // [alpha.94] Story Starter อ่านทุกอย่างจาก Starters/ ไม่พึ่งฉากที่เปิดอยู่ จึงฉีกได้
+        "starter",
         // [alpha.79] แผงบทพูดกวาดจากไฟล์ทั้งโปรเจกต์ (ฝากหน้าต่างหลักเปิดฉากให้ผ่าน panel-sync)
         "dialogue"
         // (แผง `plugins` **ไม่ใส่** — ปลั๊กอินลงทะเบียนคำสั่ง/แผงเข้ากับ context ของหน้าต่างหลัก
@@ -69090,7 +69154,9 @@ ${h.text}`;
         { key: "ai", labelKey: "ui.tbcfg.grpAi", buttons: [
           { id: "tb-ai" },
           { id: "tb-ai-chat" },
-          { id: "tb-ai-analyzer" }
+          { id: "tb-ai-analyzer" },
+          { id: "tb-starter" }
+          // [alpha.94] Story Starter
         ] },
         { key: "ext", labelKey: "ui.tbcfg.grpExt", buttons: [
           { id: "tb-plugins" },
@@ -70355,18 +70421,18 @@ ${h.text}`;
       for (const k of SP_ELEMENT_KEYS) {
         const row2 = el("tr");
         row2.append(el("td", "", SP_ELEMS[k] && SP_ELEMS[k].th || k));
-        const numCell = (field, step, min, max2) => {
+        const numCell = (field2, step, min, max2) => {
           const td = el("td");
           const i5 = el("input");
           i5.type = "number";
           i5.step = String(step);
           i5.min = String(min);
           i5.max = String(max2);
-          i5.value = String(W.elements[k][field]);
+          i5.value = String(W.elements[k][field2]);
           i5.oninput = () => {
             const v2 = parseFloat(i5.value);
             if (Number.isFinite(v2)) {
-              W.elements[k][field] = v2;
+              W.elements[k][field2] = v2;
               previewPage();
             }
           };
@@ -72025,15 +72091,15 @@ ${h.text}`;
     showPanel("maps");
     const keepZoom = view.zoom;
     await renderMapsPanel();
-    const S9 = mapsState_C.s;
-    if (!S9 || !findMap(S9.data.maps, mapId)) {
+    const S10 = mapsState_C.s;
+    if (!S10 || !findMap(S10.data.maps, mapId)) {
       setStatus(t("ui.maps.notFoundMapScene"));
       return false;
     }
-    S9.currentId = mapId;
+    S10.currentId = mapId;
     view.zoom = keepZoom;
     view.sel.clear();
-    const pin = pinId ? (findMap(S9.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
+    const pin = pinId ? (findMap(S10.data.maps, mapId).pins || []).find((p) => p.id === pinId) : null;
     view.focusPin = pin ? { id: pin.id, x: pin.x, y: pin.y } : at && at.x != null ? { id: null, x: at.x, y: at.y } : null;
     await renderMaps($("#maps-body"));
     scrollFocusIntoView();
@@ -72101,9 +72167,9 @@ ${h.text}`;
   async function renderMaps(pane) {
     if (!pane) return;
     pane.innerHTML = "";
-    const S9 = mapsState_C.s;
-    if (!S9) return;
-    const maps = S9.data.maps;
+    const S10 = mapsState_C.s;
+    if (!S10) return;
+    const maps = S10.data.maps;
     const wrap2 = el("div", "map-wrap");
     pane.append(wrap2);
     const head2 = el("div", "map-head");
@@ -72150,11 +72216,11 @@ ${h.text}`;
       if (groups.length > 1) bar.append(el("div", "map-bar-cat", g.cat || t("ui.common.notSpecifyCat")));
       const row2 = el("div", "map-bar-row");
       for (const m of g.maps) {
-        const chip = el("div", "map-chip" + (m.id === S9.currentId ? " on" : ""), m.name);
+        const chip = el("div", "map-chip" + (m.id === S10.currentId ? " on" : ""), m.name);
         const st2 = pinStats(m);
         if (st2.portal) chip.append(el("span", "map-chip-badge", "\u{1F6AA}" + st2.portal));
         chip.onclick = () => {
-          S9.currentId = m.id;
+          S10.currentId = m.id;
           view.sel.clear();
           view.routeEdit = null;
           view.focusPin = null;
@@ -72165,11 +72231,11 @@ ${h.text}`;
       bar.append(row2);
     }
     wrap2.append(bar);
-    let cur = findMap(maps, S9.currentId);
+    let cur = findMap(maps, S10.currentId);
     if (!cur || view.catFilter !== null && String(cur.category || "").trim() !== view.catFilter) {
       cur = shown[0] && shown[0].maps[0] || sortMaps(maps)[0];
     }
-    S9.currentId = cur.id;
+    S10.currentId = cur.id;
     const crumb = breadcrumb(maps, cur.id);
     if (crumb.length > 1) {
       const bc = el("div", "map-crumb");
@@ -72177,7 +72243,7 @@ ${h.text}`;
         if (i5) bc.append(el("span", "map-crumb-sep", "\u203A"));
         const a = el("span", "map-crumb-item" + (c.id === cur.id ? " on" : ""), c.name);
         a.onclick = () => {
-          S9.currentId = c.id;
+          S10.currentId = c.id;
           view.sel.clear();
           renderMaps(pane);
         };
@@ -72187,7 +72253,7 @@ ${h.text}`;
     }
     const redraw3 = () => renderMaps(pane);
     const save = async () => {
-      await saveMaps(S9.data);
+      await saveMaps(S10.data);
     };
     const tools = el("div", "map-tools");
     const nameInp = el("input", "map-name-inp");
@@ -72228,16 +72294,16 @@ ${h.text}`;
     tools.append(chgImg);
     const expBtn = el("button", "cmp-mini", t("ui.common.exportPNG"));
     expBtn.title = t("ui.maps.saveMapReadyPin");
-    expBtn.onclick = () => exportMapPng(cur, S9.data.maps);
+    expBtn.onclick = () => exportMapPng(cur, S10.data.maps);
     tools.append(expBtn);
     const prnBtn = el("button", "cmp-mini", t("ui.maps.print"));
-    prnBtn.onclick = () => printMap(cur, S9.data.maps);
+    prnBtn.onclick = () => printMap(cur, S10.data.maps);
     tools.append(prnBtn);
     const delMap = el("button", "cmp-mini k-danger", t("ui.maps.delMap"));
     delMap.onclick = async () => {
       if (!await confirmBox(tf("ui.common.delMap", cur.name), t("ui.common.del"))) return;
-      S9.data.maps = deleteMap(maps, cur.id);
-      S9.currentId = S9.data.maps[0]?.id || null;
+      S10.data.maps = deleteMap(maps, cur.id);
+      S10.currentId = S10.data.maps[0]?.id || null;
       view.sel.clear();
       await save();
       redraw3();
@@ -72603,7 +72669,7 @@ ${h.text}`;
           return;
         }
         if (pin.kind === "portal" && pin.toMap) {
-          S9.currentId = pin.toMap;
+          S10.currentId = pin.toMap;
           view.sel.clear();
           view.focusPin = null;
           redraw3();
@@ -72785,8 +72851,8 @@ ${h.text}`;
     if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
   }
   function applyPinFilter(wrap2) {
-    const S9 = mapsState_C.s;
-    const cur = S9 && findMap(S9.data.maps, S9.currentId);
+    const S10 = mapsState_C.s;
+    const cur = S10 && findMap(S10.data.maps, S10.currentId);
     if (!cur) return;
     const q = String(view.q || "").trim();
     let hit = 0;
@@ -75123,12 +75189,12 @@ ${h.text}`;
         o.value = val;
         sel.append(o);
       }
-      const field = S2.scope.kind === "book" ? "sectionKey" : S2.scope.kind === "chapter" ? "chapterId" : "sceneId";
-      if (S2.scope[field]) sel.value = S2.scope[field];
+      const field2 = S2.scope.kind === "book" ? "sectionKey" : S2.scope.kind === "chapter" ? "chapterId" : "sceneId";
+      if (S2.scope[field2]) sel.value = S2.scope[field2];
       if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
-      S2.scope[field] = sel.value;
+      S2.scope[field2] = sel.value;
       sel.onchange = () => {
-        S2.scope[field] = sel.value;
+        S2.scope[field2] = sel.value;
         renderAIAnalyzerPanel(h);
       };
       bar.append(sel);
@@ -75264,9 +75330,9 @@ ${h.text}`;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     return d;
   }
-  async function addSection() {
-    const title2 = await ask(t("ui.section.nameBookNew"), { placeholder: t("ui.section.egBookTwo") });
-    if (!title2) return;
+  async function addSection(preset) {
+    const title2 = preset || await ask(t("ui.section.nameBookNew"), { placeholder: t("ui.section.egBookTwo") });
+    if (!title2) return "";
     let dir2 = await kapi.join(state.root, safeName(title2));
     if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
     let maxOrder = 0;
@@ -75295,6 +75361,7 @@ ${h.text}`;
     await buildTree2();
     setStatus(t("ui.section.addBook") + title2);
     refreshNetwork();
+    return dir2;
   }
   async function renameSection(secPath, sec) {
     const title2 = await ask(t("ui.section.nameBookNew"), { value: sec.title });
@@ -76175,9 +76242,9 @@ ${h.text}`;
     await buildTree2();
     refreshNetwork();
   }
-  async function addChapter(dPath) {
-    const title2 = await ask(t("ui.scene.nameChapterNew"));
-    if (!title2) return;
+  async function addChapter(dPath, preset) {
+    const title2 = preset || await ask(t("ui.scene.nameChapterNew"));
+    if (!title2) return null;
     const df = await kapi.join(dPath, "draft.json");
     const d = await kapi.readJson(df);
     const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
@@ -76197,10 +76264,11 @@ ${h.text}`;
     await buildTree2();
     setStatus(t("ui.scene.addChapter") + title2);
     refreshNetwork();
+    return ch;
   }
-  async function addScene(dPath, ch) {
-    const title2 = await ask(t("ui.scene.nameSceneNew"));
-    if (!title2) return;
+  async function addScene(dPath, ch, preset, opts = {}) {
+    const title2 = preset || await ask(t("ui.scene.nameSceneNew"));
+    if (!title2) return null;
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     d.chapters = d.chapters || {};
@@ -76219,11 +76287,13 @@ ${h.text}`;
     };
     d.chapters[ch.guid] = [...list, sc];
     const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    await kapi.writeFile(file, (0, import_md9.dumpMdFile)({ title: title2, type: "scene", format: "prose", pov: "", tags: [] }, ""));
+    const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
+    await kapi.writeFile(file, (0, import_md9.dumpMdFile)(meta2, opts.body || ""));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     await buildTree2();
-    openScene(file, title2);
+    if (!opts.silent) openScene(file, title2);
     refreshNetwork();
+    return { ...sc, path: file };
   }
   async function setSceneMeta(dPath, ch, sc, patch) {
     const sf = await kapi.join(dPath, "scenes.json");
@@ -76825,7 +76895,7 @@ ${h.text}`;
     try {
       const zip = new import_jszip2.default();
       let nFiles = 0;
-      const addDir = async (dir2, prefix2 = "") => {
+      const addDir2 = async (dir2, prefix2 = "") => {
         for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
           const full = await kapi.join(dir2, f);
           try {
@@ -76843,10 +76913,10 @@ ${h.text}`;
         }
         for (const d of await kapi.listDirs(dir2).catch(() => [])) {
           if (SKIP_DIRS4.includes(d)) continue;
-          await addDir(await kapi.join(dir2, d), prefix2 + d + "/");
+          await addDir2(await kapi.join(dir2, d), prefix2 + d + "/");
         }
       };
-      await addDir(state.root);
+      await addDir2(state.root);
       clearBusy();
       const dest = await kapi.saveAsDialog((state.title || "project") + ".zip");
       if (!dest) return false;
@@ -78371,7 +78441,7 @@ ${BLOCK_END}
     nav2.append(prev, counter, next, eye, close2);
     ov.append(stage, boxWrap, nav2);
     document.body.append(ov);
-    const draw2 = async () => {
+    const draw3 = async () => {
       const r = rows[i5];
       if (r.image) {
         img.src = await kapi.toFileURL(await kapi.join(state.root, "Images", r.image));
@@ -78394,7 +78464,7 @@ ${BLOCK_END}
       const j = i5 + d;
       if (j < 0 || j >= rows.length) return;
       i5 = j;
-      draw2();
+      draw3();
     };
     const toggleText = () => {
       hidden = !hidden;
@@ -78435,12 +78505,12 @@ ${BLOCK_END}
       if (e.key === "Home") {
         e.preventDefault();
         i5 = 0;
-        return draw2();
+        return draw3();
       }
       if (e.key === "End") {
         e.preventDefault();
         i5 = rows.length - 1;
-        return draw2();
+        return draw3();
       }
       if (e.code === "KeyH") {
         e.preventDefault();
@@ -78448,9 +78518,9 @@ ${BLOCK_END}
       }
     };
     document.addEventListener("keydown", onKey, true);
-    _cur = { ov, onKey, at: () => i5, go, draw: draw2, toggleText, isHidden: () => hidden };
+    _cur = { ov, onKey, at: () => i5, go, draw: draw3, toggleText, isHidden: () => hidden };
     ov.focus();
-    draw2();
+    draw3();
     return _cur;
   }
   function closeVisPlayer() {
@@ -85274,7 +85344,7 @@ details>summary::-webkit-details-marker{display:none}
     box2.append(row2);
     const body = E("div", "branch-cmp");
     box2.append(body);
-    const draw2 = async () => {
+    const draw3 = async () => {
       body.replaceChildren();
       const { rows, summary, other } = await compareWithPlan(sel.value);
       body.append(E(
@@ -85294,7 +85364,7 @@ details>summary::-webkit-details-marker{display:none}
         body.append(line);
       }
     };
-    sel.onchange = draw2;
+    sel.onchange = draw3;
     const btns = E("div", "k-dlg-btns");
     const cB = E("button", "k-ok", t("ui.common.close"));
     btns.append(cB);
@@ -85305,7 +85375,7 @@ details>summary::-webkit-details-marker{display:none}
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    await draw2();
+    await draw3();
     return true;
   }
   function setPlanProps(props) {
@@ -86428,7 +86498,7 @@ ${preview2}` + (found2.length > 8 ? `
     const list = el("div", "k-pick-list");
     list.style.maxHeight = "48vh";
     box2.append(list);
-    const draw2 = () => {
+    const draw3 = () => {
       const q = inp.value.trim().toLowerCase();
       list.replaceChildren();
       const rows = q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
@@ -86450,9 +86520,9 @@ ${preview2}` + (found2.length > 8 ? `
     let job = null;
     inp.oninput = () => {
       clearTimeout(job);
-      job = setTimeout(draw2, 130);
+      job = setTimeout(draw3, 130);
     };
-    draw2();
+    draw3();
     const btns = el("div", "k-dlg-btns");
     const copyB = el("button", null, "\u{1F4CB} " + tr2("copyPaths", t("ui.common.copyAll")));
     copyB.onclick = async () => {
@@ -86869,7 +86939,7 @@ ${preview2}` + (found2.length > 8 ? `
         key: key2,
         label: key2 === UNSET ? UNSET_LABEL : key2,
         cards: list.map((c) => {
-          const { _seq: _seq5, ...rest } = c;
+          const { _seq: _seq7, ...rest } = c;
           return rest;
         }),
         count: list.length,
@@ -88608,7 +88678,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     q.value = s.q;
     q.oninput = () => {
       s.q = q.value;
-      draw2();
+      draw3();
     };
     const catSel = el("select", "k-codex-cat");
     const all = el("option", null, t("ui.codex.allCat"));
@@ -88622,7 +88692,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     catSel.value = s.cat;
     catSel.onchange = () => {
       s.cat = catSel.value;
-      draw2();
+      draw3();
     };
     const expBtn = el("button", "k-codex-exp", t("ui.codex.exportWeb"));
     expBtn.title = t("ui.codex.newWebCodexStyle");
@@ -88634,7 +88704,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const prev = el("div", "k-codex-prev");
     body.append(grid, prev);
     h.append(body);
-    function draw2() {
+    function draw3() {
       const needle = s.q.trim().toLowerCase();
       const rows = ents.filter((e) => {
         if (s.cat && e.cat !== s.cat) return false;
@@ -88658,7 +88728,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if ((e.aliases || []).length) c.append(el("div", "k-codex-aka", (e.aliases || []).join(" \xB7 ")));
         c.onclick = () => {
           s.sel = e.path;
-          draw2();
+          draw3();
           showPreview(e);
         };
         c.ondblclick = async () => {
@@ -88729,7 +88799,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         setStatus(t("ui.codex.exportNotOk") + (e && e.message ? e.message : e));
       }
     }
-    draw2();
+    draw3();
     return true;
   }
   var S4;
@@ -91962,7 +92032,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     box2.append(el("div", "k-dlg-title", t("ui.dlgb.managePresets")));
     const list = el("div", "dlgb-preset-list");
     box2.append(list);
-    function draw2() {
+    function draw3() {
       list.replaceChildren();
       if (!S8.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
       for (const p of S8.presets) {
@@ -91977,20 +92047,20 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const bEdit = el("button", "", t("ui.dlgb.edit"));
         bEdit.onclick = () => castEditor(p, async () => {
           await savePresets();
-          draw2();
+          draw3();
         });
         const bDel = el("button", "k-danger", t("ui.dlgb.delete"));
         bDel.onclick = async () => {
           if (!await confirmBox(tf("ui.dlgb.confirmDeletePreset", p.name))) return;
           S8.presets = S8.presets.filter((x) => x !== p);
           await savePresets();
-          draw2();
+          draw3();
         };
         row2.append(main, bEdit, bDel);
         list.append(row2);
       }
     }
-    draw2();
+    draw3();
     const btns = el("div", "k-dlg-btns");
     const bAdd = el("button", "k-ok", t("ui.dlgb.addPreset"));
     bAdd.onclick = async () => {
@@ -92001,7 +92071,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       await savePresets();
       castEditor(p, async () => {
         await savePresets();
-        draw2();
+        draw3();
       });
     };
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -92027,7 +92097,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     box2.append(el("div", "k-dlg-title", tf("ui.dlgb.castTitle", holder.name || holder.title || "")));
     const body = el("div", "dlgb-cast-body");
     box2.append(body);
-    function draw2() {
+    function draw3() {
       body.replaceChildren();
       body.append(el("div", "dlgb-sec", tf("ui.dlgb.castCount", (holder.cast || []).length, MAX_CAST)));
       for (const c of holder.cast || []) body.append(castCard(c));
@@ -92068,7 +92138,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
           onSave();
-          draw2();
+          draw3();
         };
         add.append(sel, bAdd);
         body.append(add);
@@ -92117,7 +92187,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       bDel.onclick = () => {
         removeCast(holder, c.id);
         onSave();
-        draw2();
+        draw3();
       };
       head2.append(pron, bDel);
       card.append(head2);
@@ -92148,7 +92218,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         c.persona = personaFromEntity(r.entity, c.name);
         if (!c.blurb) c.blurb = blurbFromEntity(r.entity);
         onSave();
-        draw2();
+        draw3();
       };
       card.append(bGen);
       const fold = el("details", "dlgb-override");
@@ -92221,7 +92291,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       w.append(l, inp);
       return w;
     }
-    draw2();
+    draw3();
     const btns = el("div", "k-dlg-btns");
     const bClose = el("button", "k-ok", t("ui.common.close"));
     bClose.onclick = () => {
@@ -102342,12 +102412,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               d = l(b.u, (1 << j) - 1, J2 + h, N, d, b.v);
               var r = V2.V(b.v, 0, J2, b.C);
               X2 = (1 << r) - 1;
-              var S9 = V2.V(b.v, J2, h, b.D);
-              u = (1 << S9) - 1;
+              var S10 = V2.V(b.v, J2, h, b.D);
+              u = (1 << S10) - 1;
               M2(b.C, r);
               I(b.C, r, v2);
-              M2(b.D, S9);
-              I(b.D, S9, C);
+              M2(b.D, S10);
+              I(b.D, S10, C);
             }
             while (true) {
               var T3 = v2[e(N, d) & X2];
@@ -106337,9 +106407,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         function PDFAcroNonTerminal2() {
           return _super !== null && _super.apply(this, arguments) || this;
         }
-        PDFAcroNonTerminal2.prototype.addField = function(field) {
+        PDFAcroNonTerminal2.prototype.addField = function(field2) {
           var Kids = this.normalizedEntries().Kids;
-          Kids === null || Kids === void 0 ? void 0 : Kids.push(field);
+          Kids === null || Kids === void 0 ? void 0 : Kids.push(field2);
         };
         PDFAcroNonTerminal2.prototype.normalizedEntries = function() {
           var Kids = this.Kids();
@@ -106723,9 +106793,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             if (!fields)
               return;
             for (var idx4 = 0, len5 = fields.length; idx4 < len5; idx4++) {
-              var field = fields[idx4];
-              allFields.push(field);
-              var fieldModel = field[0];
+              var field2 = fields[idx4];
+              allFields.push(field2);
+              var fieldModel = field2[0];
               if (fieldModel instanceof PDFAcroNonTerminal_default) {
                 pushFields(createPDFAcroFields(fieldModel.Kids()));
               }
@@ -106734,16 +106804,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           pushFields(this.getFields());
           return allFields;
         };
-        PDFAcroForm2.prototype.addField = function(field) {
+        PDFAcroForm2.prototype.addField = function(field2) {
           var Fields = this.normalizedEntries().Fields;
-          Fields === null || Fields === void 0 ? void 0 : Fields.push(field);
+          Fields === null || Fields === void 0 ? void 0 : Fields.push(field2);
         };
-        PDFAcroForm2.prototype.removeField = function(field) {
-          var parent = field.getParent();
+        PDFAcroForm2.prototype.removeField = function(field2) {
+          var parent = field2.getParent();
           var fields = parent === void 0 ? this.normalizedEntries().Fields : parent.Kids();
-          var index = fields === null || fields === void 0 ? void 0 : fields.indexOf(field.ref);
+          var index = fields === null || fields === void 0 ? void 0 : fields.indexOf(field2.ref);
           if (fields === void 0 || index === void 0) {
-            throw new Error("Tried to remove inexistent field " + field.getFullyQualifiedName());
+            throw new Error("Tried to remove inexistent field " + field2.getFullyQualifiedName());
           }
           fields.remove(index);
           if (parent !== void 0 && fields.size() === 0) {
@@ -109658,17 +109728,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return { normal: appearance };
       };
       tfRegex2 = /\/([^\0\t\n\f\r\ ]+)[\0\t\n\f\r\ ]+(\d*\.\d+|\d+)[\0\t\n\f\r\ ]+Tf/;
-      getDefaultFontSize = function(field) {
+      getDefaultFontSize = function(field2) {
         var _a, _b;
-        var da = (_a = field.getDefaultAppearance()) !== null && _a !== void 0 ? _a : "";
+        var da = (_a = field2.getDefaultAppearance()) !== null && _a !== void 0 ? _a : "";
         var daMatch = (_b = findLastMatch(da, tfRegex2).match) !== null && _b !== void 0 ? _b : [];
         var defaultFontSize = Number(daMatch[2]);
         return isFinite(defaultFontSize) ? defaultFontSize : void 0;
       };
       colorRegex = /(\d*\.\d+|\d+)[\0\t\n\f\r\ ]*(\d*\.\d+|\d+)?[\0\t\n\f\r\ ]*(\d*\.\d+|\d+)?[\0\t\n\f\r\ ]*(\d*\.\d+|\d+)?[\0\t\n\f\r\ ]+(g|rg|k)/;
-      getDefaultColor = function(field) {
+      getDefaultColor = function(field2) {
         var _a;
-        var da = (_a = field.getDefaultAppearance()) !== null && _a !== void 0 ? _a : "";
+        var da = (_a = field2.getDefaultAppearance()) !== null && _a !== void 0 ? _a : "";
         var daMatch = findLastMatch(da, colorRegex).match;
         var _b = daMatch !== null && daMatch !== void 0 ? daMatch : [], c1 = _b[1], c2 = _b[2], c3 = _b[3], c4 = _b[4], colorSpace = _b[5];
         if (colorSpace === "g" && c1) {
@@ -109682,7 +109752,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
         return void 0;
       };
-      updateDefaultAppearance = function(field, color, font, fontSize) {
+      updateDefaultAppearance = function(field2, color, font, fontSize) {
         var _a;
         if (fontSize === void 0) {
           fontSize = 0;
@@ -109691,7 +109761,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           setFillingColor(color).toString(),
           setFontAndSize((_a = font === null || font === void 0 ? void 0 : font.name) !== null && _a !== void 0 ? _a : "dummy__noop", fontSize).toString()
         ].join("\n");
-        field.setDefaultAppearance(da);
+        field2.setDefaultAppearance(da);
       };
       defaultCheckBoxAppearanceProvider = function(checkBox, widget) {
         var _a, _b, _c;
@@ -111515,9 +111585,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           var fields = [];
           for (var idx4 = 0, len5 = allFields.length; idx4 < len5; idx4++) {
             var _a = allFields[idx4], acroField = _a[0], ref = _a[1];
-            var field = convertToPDFField(acroField, ref, this.doc);
-            if (field)
-              fields.push(field);
+            var field2 = convertToPDFField(acroField, ref, this.doc);
+            if (field2)
+              fields.push(field2);
           }
           return fields;
         };
@@ -111525,67 +111595,67 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           assertIs(name5, "name", ["string"]);
           var fields = this.getFields();
           for (var idx4 = 0, len5 = fields.length; idx4 < len5; idx4++) {
-            var field = fields[idx4];
-            if (field.getName() === name5)
-              return field;
+            var field2 = fields[idx4];
+            if (field2.getName() === name5)
+              return field2;
           }
           return void 0;
         };
         PDFForm2.prototype.getField = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getFieldMaybe(name5);
-          if (field)
-            return field;
+          var field2 = this.getFieldMaybe(name5);
+          if (field2)
+            return field2;
           throw new NoSuchFieldError(name5);
         };
         PDFForm2.prototype.getButton = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFButton_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFButton_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFButton_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFButton_default, field2);
         };
         PDFForm2.prototype.getCheckBox = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFCheckBox_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFCheckBox_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFCheckBox_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFCheckBox_default, field2);
         };
         PDFForm2.prototype.getDropdown = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFDropdown_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFDropdown_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFDropdown_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFDropdown_default, field2);
         };
         PDFForm2.prototype.getOptionList = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFOptionList_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFOptionList_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFOptionList_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFOptionList_default, field2);
         };
         PDFForm2.prototype.getRadioGroup = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFRadioGroup_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFRadioGroup_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFRadioGroup_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFRadioGroup_default, field2);
         };
         PDFForm2.prototype.getSignature = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFSignature_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFSignature_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFSignature_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFSignature_default, field2);
         };
         PDFForm2.prototype.getTextField = function(name5) {
           assertIs(name5, "name", ["string"]);
-          var field = this.getField(name5);
-          if (field instanceof PDFTextField_default)
-            return field;
-          throw new UnexpectedFieldTypeError(name5, PDFTextField_default, field);
+          var field2 = this.getField(name5);
+          if (field2 instanceof PDFTextField_default)
+            return field2;
+          throw new UnexpectedFieldTypeError(name5, PDFTextField_default, field2);
         };
         PDFForm2.prototype.createButton = function(name5) {
           assertIs(name5, "name", ["string"]);
@@ -111650,12 +111720,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           var fields = this.getFields();
           for (var i5 = 0, lenFields = fields.length; i5 < lenFields; i5++) {
-            var field = fields[i5];
-            var widgets = field.acroField.getWidgets();
+            var field2 = fields[i5];
+            var widgets = field2.acroField.getWidgets();
             for (var j = 0, lenWidgets = widgets.length; j < lenWidgets; j++) {
               var widget = widgets[j];
               var page2 = this.findWidgetPage(widget);
-              var widgetRef = this.findWidgetAppearanceRef(field, widget);
+              var widgetRef = this.findWidgetAppearanceRef(field2, widget);
               var xObjectKey = page2.node.newXObject("FlatWidget", widgetRef);
               var rectangle = widget.getRectangle();
               var operators = __spreadArrays([
@@ -111667,24 +111737,24 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               ]).filter(Boolean);
               page2.pushOperators.apply(page2, operators);
             }
-            this.removeField(field);
+            this.removeField(field2);
           }
         };
-        PDFForm2.prototype.removeField = function(field) {
-          var widgets = field.acroField.getWidgets();
+        PDFForm2.prototype.removeField = function(field2) {
+          var widgets = field2.acroField.getWidgets();
           var pages = /* @__PURE__ */ new Set();
           for (var i5 = 0, len5 = widgets.length; i5 < len5; i5++) {
             var widget = widgets[i5];
-            var widgetRef = this.findWidgetAppearanceRef(field, widget);
+            var widgetRef = this.findWidgetAppearanceRef(field2, widget);
             var page2 = this.findWidgetPage(widget);
             pages.add(page2);
             page2.node.removeAnnot(widgetRef);
           }
           pages.forEach(function(page3) {
-            return page3.node.removeAnnot(field.ref);
+            return page3.node.removeAnnot(field2.ref);
           });
-          this.acroForm.removeField(field.acroField);
-          var fieldKids = field.acroField.normalizedEntries().Kids;
+          this.acroForm.removeField(field2.acroField);
+          var fieldKids = field2.acroField.normalizedEntries().Kids;
           var kidsCount = fieldKids.size();
           for (var childIndex = 0; childIndex < kidsCount; childIndex++) {
             var child = fieldKids.get(childIndex);
@@ -111692,16 +111762,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               this.doc.context.delete(child);
             }
           }
-          this.doc.context.delete(field.ref);
+          this.doc.context.delete(field2.ref);
         };
         PDFForm2.prototype.updateFieldAppearances = function(font) {
           assertOrUndefined(font, "font", [[PDFFont_default, "PDFFont"]]);
           font = font !== null && font !== void 0 ? font : this.getDefaultFont();
           var fields = this.getFields();
           for (var idx4 = 0, len5 = fields.length; idx4 < len5; idx4++) {
-            var field = fields[idx4];
-            if (field.needsAppearancesUpdate()) {
-              field.defaultUpdateAppearances(font);
+            var field2 = fields[idx4];
+            if (field2.needsAppearancesUpdate()) {
+              field2.defaultUpdateAppearances(font);
             }
           }
         };
@@ -111737,18 +111807,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return page2;
         };
-        PDFForm2.prototype.findWidgetAppearanceRef = function(field, widget) {
+        PDFForm2.prototype.findWidgetAppearanceRef = function(field2, widget) {
           var _a;
           var refOrDict = widget.getNormalAppearance();
-          if (refOrDict instanceof PDFDict_default && (field instanceof PDFCheckBox_default || field instanceof PDFRadioGroup_default)) {
-            var value = field.acroField.getValue();
+          if (refOrDict instanceof PDFDict_default && (field2 instanceof PDFCheckBox_default || field2 instanceof PDFRadioGroup_default)) {
+            var value = field2.acroField.getValue();
             var ref = (_a = refOrDict.get(value)) !== null && _a !== void 0 ? _a : refOrDict.get(PDFName_default.of("Off"));
             if (ref instanceof PDFRef_default) {
               refOrDict = ref;
             }
           }
           if (!(refOrDict instanceof PDFRef_default)) {
-            var name_1 = field.getName();
+            var name_1 = field2.getName();
             throw new Error("Failed to extract appearance ref for: " + name_1);
           }
           return refOrDict;
@@ -111779,10 +111849,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         PDFForm2.prototype.findNonTerminal = function(partialName, parent) {
           var fields = parent instanceof PDFAcroForm_default ? this.acroForm.getFields() : createPDFAcroFields(parent.Kids());
           for (var idx4 = 0, len5 = fields.length; idx4 < len5; idx4++) {
-            var _a = fields[idx4], field = _a[0], ref = _a[1];
-            if (field.getPartialName() === partialName) {
-              if (field instanceof PDFAcroNonTerminal_default)
-                return [field, ref];
+            var _a = fields[idx4], field2 = _a[0], ref = _a[1];
+            if (field2.getPartialName() === partialName) {
+              if (field2 instanceof PDFAcroNonTerminal_default)
+                return [field2, ref];
               throw new FieldAlreadyExistsError(partialName);
             }
           }
@@ -111794,22 +111864,22 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return PDFForm2;
       })();
       PDFForm_default = PDFForm;
-      convertToPDFField = function(field, ref, doc3) {
-        if (field instanceof PDFAcroPushButton_default)
-          return PDFButton_default.of(field, ref, doc3);
-        if (field instanceof PDFAcroCheckBox_default)
-          return PDFCheckBox_default.of(field, ref, doc3);
-        if (field instanceof PDFAcroComboBox_default)
-          return PDFDropdown_default.of(field, ref, doc3);
-        if (field instanceof PDFAcroListBox_default)
-          return PDFOptionList_default.of(field, ref, doc3);
-        if (field instanceof PDFAcroText_default)
-          return PDFTextField_default.of(field, ref, doc3);
-        if (field instanceof PDFAcroRadioButton_default) {
-          return PDFRadioGroup_default.of(field, ref, doc3);
+      convertToPDFField = function(field2, ref, doc3) {
+        if (field2 instanceof PDFAcroPushButton_default)
+          return PDFButton_default.of(field2, ref, doc3);
+        if (field2 instanceof PDFAcroCheckBox_default)
+          return PDFCheckBox_default.of(field2, ref, doc3);
+        if (field2 instanceof PDFAcroComboBox_default)
+          return PDFDropdown_default.of(field2, ref, doc3);
+        if (field2 instanceof PDFAcroListBox_default)
+          return PDFOptionList_default.of(field2, ref, doc3);
+        if (field2 instanceof PDFAcroText_default)
+          return PDFTextField_default.of(field2, ref, doc3);
+        if (field2 instanceof PDFAcroRadioButton_default) {
+          return PDFRadioGroup_default.of(field2, ref, doc3);
         }
-        if (field instanceof PDFAcroSignature_default) {
-          return PDFSignature_default.of(field, ref, doc3);
+        if (field2 instanceof PDFAcroSignature_default) {
+          return PDFSignature_default.of(field2, ref, doc3);
         }
         return void 0;
       };
@@ -111832,7 +111902,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       };
       addFieldToParent = function(_a, _b, partialName) {
         var parent = _a[0], parentRef = _a[1];
-        var field = _b[0], fieldRef = _b[1];
+        var field2 = _b[0], fieldRef = _b[1];
         var entries = parent.normalizedEntries();
         var fields = createPDFAcroFields("Kids" in entries ? entries.Kids : entries.Fields);
         for (var idx4 = 0, len5 = fields.length; idx4 < len5; idx4++) {
@@ -111841,7 +111911,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         }
         parent.addField(fieldRef);
-        field.setParent(parentRef);
+        field2.setParent(parentRef);
       };
     }
   });
@@ -134560,9 +134630,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           this.ops = ops;
           this.fields = {};
           for (var _iterator2 = _createForOfIteratorHelperLoose$2(ops), _step2; !(_step2 = _iterator2()).done; ) {
-            var field = _step2.value;
-            var key2 = Array.isArray(field[0]) ? field[0][0] << 8 | field[0][1] : field[0];
-            this.fields[key2] = field;
+            var field2 = _step2.value;
+            var key2 = Array.isArray(field2[0]) ? field2[0][0] << 8 | field2[0][1] : field2[0];
+            this.fields[key2] = field2;
           }
         }
         var _proto = CFFDict2.prototype;
@@ -134618,8 +134688,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           });
           for (var key2 in this.fields) {
-            var field = this.fields[key2];
-            ret[field[1]] = field[3];
+            var field2 = this.fields[key2];
+            ret[field2[1]] = field2[3];
           }
           while (stream2.pos < end) {
             var b = stream2.readUInt8();
@@ -134658,17 +134728,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           };
           var len5 = 0;
           for (var k in this.fields) {
-            var field = this.fields[k];
-            var val = dict[field[1]];
-            if (val == null || deepEqual_1(val, field[3])) {
+            var field2 = this.fields[k];
+            var val = dict[field2[1]];
+            if (val == null || deepEqual_1(val, field2[3])) {
               continue;
             }
-            var operands = this.encodeOperands(field[2], null, ctx2, val);
+            var operands = this.encodeOperands(field2[2], null, ctx2, val);
             for (var _iterator2 = _createForOfIteratorHelperLoose$2(operands), _step2; !(_step2 = _iterator2()).done; ) {
               var op = _step2.value;
               len5 += CFFOperand.size(op);
             }
-            var key2 = Array.isArray(field[0]) ? field[0] : [field[0]];
+            var key2 = Array.isArray(field2[0]) ? field2[0] : [field2[0]];
             len5 += key2.length;
           }
           if (includePointers) {
@@ -134686,17 +134756,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           };
           ctx2.pointerOffset = stream2.pos + this.size(dict, ctx2, false);
           for (var _iterator3 = _createForOfIteratorHelperLoose$2(this.ops), _step3; !(_step3 = _iterator3()).done; ) {
-            var field = _step3.value;
-            var val = dict[field[1]];
-            if (val == null || deepEqual_1(val, field[3])) {
+            var field2 = _step3.value;
+            var val = dict[field2[1]];
+            if (val == null || deepEqual_1(val, field2[3])) {
               continue;
             }
-            var operands = this.encodeOperands(field[2], stream2, ctx2, val);
+            var operands = this.encodeOperands(field2[2], stream2, ctx2, val);
             for (var _iterator4 = _createForOfIteratorHelperLoose$2(operands), _step4; !(_step4 = _iterator4()).done; ) {
               var op = _step4.value;
               CFFOperand.encode(stream2, op);
             }
-            var key2 = Array.isArray(field[0]) ? field[0] : [field[0]];
+            var key2 = Array.isArray(field2[0]) ? field2[0] : [field2[0]];
             for (var _iterator5 = _createForOfIteratorHelperLoose$2(key2), _step5; !(_step5 = _iterator5()).done; ) {
               var _op = _step5.value;
               stream2.writeUInt8(_op);
@@ -146189,7 +146259,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return String(text ?? "").length * size * 0.6;
       }
     };
-    const draw2 = (page2, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
+    const draw3 = (page2, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
       const t3 = clean(text);
       if (!t3) return 0;
       const runs = splitFontRuns(t3, !!set.latin);
@@ -146236,7 +146306,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       return w;
     };
-    return { draw: draw2, widthOf, clean };
+    return { draw: draw3, widthOf, clean };
   }
   async function generatePdf(args = {}) {
     const fmt = args.fmt && args.fmt.elements ? args.fmt : mergeSpFormat(args.fmt);
@@ -146250,7 +146320,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const paged = paginate(blocks, { fmt, lines: bodyLines });
     const doc3 = await PDFDocument_default.create();
     const set = await embedFonts(doc3, args.fonts);
-    const { draw: draw2, widthOf } = makeDrawer(set, set.custom);
+    const { draw: draw3, widthOf } = makeDrawer(set, set.custom);
     const pw = +fmt.paper.width * PT_PER_IN;
     const ph = +fmt.paper.height * PT_PER_IN;
     const mgL = fmt.margins.left * PT_PER_IN;
@@ -146266,7 +146336,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (!wmText) return;
       const s = Math.max(8, num(opts.watermarkSize, 54));
       const w = widthOf(pickFont(set, false, false), wmText, s);
-      draw2(page2, wmText, {
+      draw3(page2, wmText, {
         // มุม 0 องศา (แนวนอน) เป็นค่าที่ผู้ใช้ตั้งได้จริง — `|| 0` จึงไม่ผิด แต่ใช้ num() ให้เหมือนกันทั้งไฟล์
         x: (pw - w * 0.8) / 2,
         y: ph / 2 - s / 2,
@@ -146290,7 +146360,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const cpi = CHARS_PER_INCH * 12 / sz;
         const lines = wrapTextLines(text, boxW / PT_PER_IN, cpi);
         lines.forEach((ln, i5) => {
-          draw2(page2, ln, {
+          draw3(page2, ln, {
             x,
             y: ph - num(s.y, 0) * PT_PER_IN - lh * (i5 + 1) + lh * 0.22,
             size: sz,
@@ -146323,7 +146393,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         SCENE: (rows.find((r) => r.block.el === "scene") || { block: {} }).block.text || ""
       });
       for (const r of hdrRows) {
-        draw2(page2, r.text, {
+        draw3(page2, r.text, {
           x: mgL + num(r.xOffset, 0) * PT_PER_IN,
           y: ph - mgT - size * 0.82,
           size,
@@ -146338,7 +146408,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const label = pageNumberLabel(pg.index, fmt, opts.startPage);
         if (label) {
           const w = widthOf(pickFont(set, false, false), label, size);
-          draw2(page2, label, {
+          draw3(page2, label, {
             x: pw - (fmt.pageNumbers.right || 1) * PT_PER_IN - w,
             boxWidth: 0,
             y: ph - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82,
@@ -146358,7 +146428,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const lines = row2.lines;
         lines.forEach((ln, i5) => {
           const text = st && st.caps ? String(ln).toUpperCase() : ln;
-          draw2(page2, text, {
+          draw3(page2, text, {
             x,
             y: baseline(row2.line + i5),
             size,
@@ -146372,9 +146442,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (opts.sceneNumbers && b.el === "scene" && fmt.sceneNumbers.show && b.sceneNo) {
           const label = String(b.sceneNo) + (fmt.sceneNumbers.suffix || "");
           const y = baseline(row2.line);
-          draw2(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
+          draw3(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
           const w = widthOf(pickFont(set, false, false), label, size);
-          draw2(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
+          draw3(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
         }
         if (b.el === "scene" && String(b.text || "").trim()) {
           bookmarks.push({
@@ -146407,7 +146477,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
       }
       if (pg.continuedTop) {
-        draw2(page2, pg.continuedTop, {
+        draw3(page2, pg.continuedTop, {
           x: mgL,
           y: baseline(-1),
           size,
@@ -146416,7 +146486,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         });
       }
       if (pg.continuedBottom) {
-        draw2(page2, pg.continuedBottom, {
+        draw3(page2, pg.continuedBottom, {
           x: mgL,
           y: baseline(bodyLines),
           size,
@@ -146493,7 +146563,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     await add(bodyBytes);
     if (o.pageNumbers !== false && fmt.pageNumbers && fmt.pageNumbers.show) {
       const set = await embedFonts(out, o.fonts);
-      const { draw: draw2, widthOf } = makeDrawer(set, set.custom);
+      const { draw: draw3, widthOf } = makeDrawer(set, set.custom);
       const size = numClamp(o.fontPt, 12, 4, 96);
       const pages = out.getPages();
       for (let i5 = bodyStart; i5 < pages.length; i5++) {
@@ -146501,7 +146571,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (!label) continue;
         const page2 = pages[i5];
         const w = widthOf(pickFont(set, false, false), label, size);
-        draw2(page2, label, {
+        draw3(page2, label, {
           x: page2.getWidth() - (fmt.pageNumbers.right || 1) * PT_PER_IN - w,
           boxWidth: 0,
           y: page2.getHeight() - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82,
@@ -149616,6 +149686,4225 @@ ${s.body}`).join("\n\n");
     }
   });
 
+  // src/starter/starter-model.js
+  var starter_model_exports = {};
+  __export(starter_model_exports, {
+    GENDERS: () => GENDERS,
+    IMAGE_DIR: () => IMAGE_DIR,
+    ROLE_GM: () => ROLE_GM,
+    ROLE_PLAYER: () => ROLE_PLAYER,
+    SCENARIO_DIR: () => SCENARIO_DIR,
+    SCENARIO_VERSION: () => SCENARIO_VERSION,
+    STARTER_DIR: () => STARTER_DIR,
+    STARTER_FILE: () => STARTER_FILE,
+    STARTER_VERSION: () => STARTER_VERSION,
+    _resetIds: () => _resetIds2,
+    addTurn: () => addTurn,
+    chainOf: () => chainOf,
+    charById: () => charById,
+    charReady: () => charReady,
+    genderDef: () => genderDef,
+    genderLabel: () => genderLabel,
+    hasIntro: () => hasIntro,
+    hasPlay: () => hasPlay,
+    hasTag: () => hasTag,
+    introText: () => introText,
+    lastUpdated: () => lastUpdated,
+    migrateScenario: () => migrateScenario,
+    migrateStarter: () => migrateStarter,
+    missingSteps: () => missingSteps,
+    newChar: () => newChar,
+    newCharId: () => newCharId,
+    newScenario: () => newScenario,
+    newScenarioId: () => newScenarioId,
+    newStarter: () => newStarter,
+    newStarterId: () => newStarterId,
+    newTurn: () => newTurn2,
+    normalizeTags: () => normalizeTags,
+    openChoices: () => openChoices,
+    removeChar: () => removeChar,
+    scenarioFileName: () => scenarioFileName,
+    scenarioStats: () => scenarioStats,
+    searchScenarios: () => searchScenarios,
+    searchStarters: () => searchStarters,
+    selectablePrev: () => selectablePrev,
+    slugify: () => slugify,
+    sortScenarios: () => sortScenarios,
+    sortStarters: () => sortStarters,
+    starterProgress: () => starterProgress,
+    starterReady: () => starterReady,
+    starterSummary: () => starterSummary,
+    stepFilled: () => stepFilled,
+    sumTokens: () => sumTokens,
+    toggleTag: () => toggleTag,
+    transcriptText: () => transcriptText,
+    uniqueSlug: () => uniqueSlug,
+    upsertChar: () => upsertChar
+  });
+  function genderDef(id) {
+    return GENDERS.find((g) => g.id === id) || GENDERS[3];
+  }
+  function genderLabel(id) {
+    return genderDef(id).label;
+  }
+  function _resetIds2() {
+    _seq5 = 0;
+  }
+  function nextId2(prefix2) {
+    _seq5 += 1;
+    return prefix2 + Date.now().toString(36) + _seq5.toString(36);
+  }
+  function newStarterId() {
+    return nextId2("st");
+  }
+  function newCharId() {
+    return nextId2("ch");
+  }
+  function newScenarioId() {
+    return nextId2("sc");
+  }
+  function slugify(name5) {
+    const s = String(name5 || "").replace(/[\\/:*?"<>|]/g, "").replace(/[\x00-\x1f\x7f]/g, "").replace(/\s+/g, "-").replace(/^[.\-]+|[.\-]+$/g, "").slice(0, 48).trim();
+    return s || "starter";
+  }
+  function uniqueSlug(name5, taken = []) {
+    const base4 = slugify(name5);
+    const used = new Set(taken);
+    if (!used.has(base4)) return base4;
+    for (let i5 = 2; i5 < 999; i5++) {
+      const s = base4 + "-" + i5;
+      if (!used.has(s)) return s;
+    }
+    return base4 + "-" + Date.now().toString(36);
+  }
+  function newChar(patch = {}) {
+    const base4 = newCastMember({ ...patch, id: patch.id || newCharId() });
+    return {
+      ...base4,
+      gender: patch.gender || "",
+      image: patch.image || "",
+      // ชื่อไฟล์ใน <starter>/images/ (ไม่ใช่ path เต็ม)
+      fromWiki: !!patch.fromWiki
+      // ดึงเข้ามาจาก Wiki (ไม่ได้เกิดที่นี่)
+    };
+  }
+  function charById(s, id) {
+    return (s && s.cast || []).find((c) => c.id === id) || null;
+  }
+  function upsertChar(cast, ch) {
+    const rows = [...cast || []];
+    const i5 = rows.findIndex((c) => c.id === ch.id);
+    if (i5 < 0) rows.push(ch);
+    else rows[i5] = { ...rows[i5], ...ch };
+    return rows;
+  }
+  function removeChar(cast, id) {
+    return (cast || []).filter((c) => c.id !== id);
+  }
+  function charReady(c) {
+    return !!(c && String(c.name || "").trim());
+  }
+  function normalizeTags(list) {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const raw of list || []) {
+      const v2 = String(raw || "").trim().replace(/\s+/g, " ");
+      if (!v2) continue;
+      const k = v2.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(v2);
+    }
+    return out;
+  }
+  function toggleTag(list, tag3) {
+    const cur = normalizeTags(list);
+    const k = String(tag3 || "").trim().toLowerCase();
+    if (!k) return cur;
+    const hit = cur.find((x) => x.toLowerCase() === k);
+    return hit ? cur.filter((x) => x.toLowerCase() !== k) : normalizeTags([...cur, tag3]);
+  }
+  function hasTag(list, tag3) {
+    const k = String(tag3 || "").trim().toLowerCase();
+    return normalizeTags(list).some((x) => x.toLowerCase() === k);
+  }
+  function newStarter(patch = {}) {
+    return {
+      v: STARTER_VERSION,
+      id: patch.id || newStarterId(),
+      slug: patch.slug || "",
+      name: patch.name || "",
+      tags: normalizeTags(patch.tags),
+      // [alpha.96] ผู้แต่ง + คำโปรยหนึ่งบรรทัด — หน้าเรื่องแสดงคู่กับปกแบบการ์ดนิยายจริง
+      author: patch.author || "",
+      blurb: patch.blurb || "",
+      // "Story Description" — เก็บเป็น **HTML** เพราะช่องกรอกเป็นตัวแก้ไขแบบเห็นผลจริง
+      // (ตัวหนา/เอียง/ขีดเส้นใต้ · จัดหน้า · แทรกรูป) · ส่งเข้า prompt ต้องผ่าน `introText()` เสมอ
+      intro: patch.intro || "",
+      // map เปิด — คีย์มาจากทะเบียนใน starter-steps-def.js ไม่ใช่จากที่นี่
+      w: { ...patch.w || {} },
+      cover: patch.cover || "",
+      // ปกแนวตั้ง 3:4 — ชื่อไฟล์ใน <starter>/images/
+      banner: patch.banner || "",
+      // แบนเนอร์กว้างเต็มหน้า — ชื่อไฟล์ใน <starter>/images/
+      cast: (patch.cast || []).map(newChar),
+      step: Number.isFinite(patch.step) ? patch.step : 0,
+      done: !!patch.done,
+      created: patch.created || 0,
+      updated: patch.updated || 0
+    };
+  }
+  function introText(s) {
+    const raw = String(s && s.intro || "");
+    if (!/<[a-z][\s\S]*>/i.test(raw)) return raw.trim();
+    return raw.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|blockquote)>/gi, "\n\n").replace(/<\/li>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<img[^>]*>/gi, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function hasIntro(s) {
+    return introText(s).length > 0;
+  }
+  function migrateStarter(raw) {
+    const src2 = raw && typeof raw === "object" ? raw : {};
+    const s = newStarter(src2);
+    s.v = STARTER_VERSION;
+    return s;
+  }
+  function stepFilled(s, step) {
+    if (!step || typeof step.filled !== "function") return false;
+    try {
+      return !!step.filled(s || {});
+    } catch {
+      return false;
+    }
+  }
+  function starterProgress(s, steps = []) {
+    const need = steps.filter((x) => x.required !== false);
+    const done2 = need.filter((x) => stepFilled(s, x)).length;
+    return { done: done2, total: need.length, pct: need.length ? Math.round(done2 / need.length * 100) : 0 };
+  }
+  function missingSteps(s, steps = []) {
+    return steps.filter((x) => x.required !== false && !stepFilled(s, x));
+  }
+  function starterReady(s, steps = []) {
+    return missingSteps(s, steps).length === 0;
+  }
+  function sortStarters(rows) {
+    return [...rows || []].sort((a, b) => (b.updated || 0) - (a.updated || 0) || String(a.name || "").localeCompare(String(b.name || ""), "th"));
+  }
+  function searchStarters(rows, query) {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return sortStarters(rows);
+    const hit = (s) => {
+      const hay = [s.name, s.intro, ...s.tags || [], ...(s.cast || []).map((c) => c.name)].join(" ").toLowerCase();
+      return hay.includes(q);
+    };
+    return sortStarters((rows || []).filter(hit));
+  }
+  function starterSummary(s) {
+    const parts = [];
+    if ((s.cast || []).length) parts.push(t("ui.starter.sumCast") + (s.cast || []).length);
+    if ((s.tags || []).length) parts.push((s.tags || []).slice(0, 3).join(" \xB7 "));
+    return parts.join(" \u2014 ");
+  }
+  function newTurn2(patch = {}) {
+    return {
+      id: patch.id || nextId2("tn"),
+      role: patch.role === ROLE_PLAYER ? ROLE_PLAYER : ROLE_GM,
+      speaker: patch.speaker || "",
+      // ไอดีตัวละครที่สวมบทอยู่ ('' = พูดในฐานะตัวเอง)
+      text: patch.text || "",
+      choices: [...patch.choices || []],
+      // ทางเลือกที่ GM ยื่นให้ (เฉพาะเทิร์นของ GM)
+      chosen: patch.chosen || "",
+      // ผู้เล่นกดข้อไหน ('' = พิมพ์เอง)
+      thinking: patch.thinking || "",
+      model: patch.model || "",
+      provider: patch.provider || "",
+      usage: patch.usage || null,
+      ts: patch.ts || 0
+    };
+  }
+  function newScenario(patch = {}) {
+    return {
+      v: SCENARIO_VERSION,
+      id: patch.id || newScenarioId(),
+      title: patch.title || "",
+      synopsis: patch.synopsis || "",
+      prevId: patch.prevId || "",
+      // เชื่อมกับตอนก่อนหน้า (สเปกข้อ 11)
+      cast: [...patch.cast || []],
+      // ไอดีตัวละครที่ร่วมวง
+      userChars: [...patch.userChars || []],
+      // ตัวไหนผู้เล่นเป็นคนสวมบท — GM ห้ามพูดแทน
+      policy: patch.policy || "manual",
+      len: patch.len || "medium",
+      turns: (patch.turns || []).map(newTurn2),
+      recap: patch.recap || "",
+      // บทย่อหลังเล่นจบ — ตอนถัดไปใช้ต่อ
+      // ประวัติการแปลงเป็นต้นฉบับ [{at, format, path}] — ต้องประกาศไว้ตรงนี้ ไม่งั้น
+      // `newScenario` จะตัดทิ้งตอนอ่านไฟล์กลับ (field ที่ไม่อยู่ในโมเดล = ไม่รอด migrate)
+      exports: (Array.isArray(patch.exports) ? patch.exports : []).filter((x) => x && typeof x === "object").map((x) => ({ at: x.at || 0, format: x.format || "", path: x.path || "" })),
+      archived: !!patch.archived,
+      created: patch.created || 0,
+      updated: patch.updated || 0
+    };
+  }
+  function migrateScenario(raw) {
+    const s = newScenario(raw && typeof raw === "object" ? raw : {});
+    s.v = SCENARIO_VERSION;
+    return s;
+  }
+  function scenarioFileName(sc) {
+    return String(sc && sc.id || "scenario") + ".json";
+  }
+  function hasPlay(sc) {
+    return (sc && sc.turns || []).length > 0;
+  }
+  function addTurn(sc, turn) {
+    const rows = [...sc && sc.turns || [], newTurn2(turn)];
+    return { ...sc, turns: rows, updated: Date.now() };
+  }
+  function openChoices(sc) {
+    const rows = sc && sc.turns || [];
+    const last2 = rows[rows.length - 1];
+    return last2 && last2.role === ROLE_GM ? [...last2.choices || []] : [];
+  }
+  function scenarioStats(sc) {
+    const rows = sc && sc.turns || [];
+    let inTok = 0, outTok = 0;
+    for (const r of rows) {
+      inTok += r.usage && (r.usage.in || r.usage.prompt_tokens) || 0;
+      outTok += r.usage && (r.usage.out || r.usage.completion_tokens) || 0;
+    }
+    return {
+      turns: rows.length,
+      gm: rows.filter((r) => r.role === ROLE_GM).length,
+      player: rows.filter((r) => r.role === ROLE_PLAYER).length,
+      words: rows.reduce((n2, r) => n2 + String(r.text || "").trim().split(/\s+/).filter(Boolean).length, 0),
+      inTok,
+      outTok
+    };
+  }
+  function sortScenarios(rows) {
+    return [...rows || []].sort((a, b) => (a.created || 0) - (b.created || 0) || String(a.title || "").localeCompare(String(b.title || ""), "th"));
+  }
+  function searchScenarios(rows, query, { includeArchived = false } = {}) {
+    const q = String(query || "").trim().toLowerCase();
+    const base4 = (rows || []).filter((r) => includeArchived || !r.archived);
+    if (!q) return sortScenarios(base4);
+    return sortScenarios(base4.filter((r) => [r.title, r.synopsis, r.recap].join(" ").toLowerCase().includes(q)));
+  }
+  function chainOf(rows, id) {
+    const byId = new Map((rows || []).map((r) => [r.id, r]));
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    let cur = byId.get(id);
+    while (cur && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      out.unshift(cur);
+      cur = cur.prevId ? byId.get(cur.prevId) : null;
+    }
+    return out;
+  }
+  function selectablePrev(rows, id) {
+    const kids = /* @__PURE__ */ new Set();
+    const walk3 = (pid) => {
+      for (const r of rows || []) {
+        if (r.prevId === pid && !kids.has(r.id)) {
+          kids.add(r.id);
+          walk3(r.id);
+        }
+      }
+    };
+    if (id) walk3(id);
+    return sortScenarios((rows || []).filter((r) => r.id !== id && !kids.has(r.id)));
+  }
+  function transcriptText(sc, nameOf2 = () => "") {
+    const rows = sc && sc.turns || [];
+    return rows.map((r) => {
+      const who = r.role === ROLE_GM ? t("ui.starter.trGm") : nameOf2(r.speaker) || t("ui.starter.trPlayer");
+      return who + ": " + String(r.text || "").trim();
+    }).filter((x) => x.trim().length > 2).join("\n\n");
+  }
+  function sumTokens(rows) {
+    let inTok = 0, outTok = 0, turns = 0;
+    for (const sc of rows || []) {
+      const st = scenarioStats(sc);
+      inTok += st.inTok;
+      outTok += st.outTok;
+      turns += st.turns;
+    }
+    return { inTok, outTok, total: inTok + outTok, turns };
+  }
+  function lastUpdated(s, rows) {
+    let t3 = s && s.updated || 0;
+    for (const sc of rows || []) t3 = Math.max(t3, sc.updated || 0, sc.created || 0);
+    return t3;
+  }
+  var STARTER_VERSION, STARTER_DIR, SCENARIO_DIR, STARTER_FILE, IMAGE_DIR, GENDERS, _seq5, SCENARIO_VERSION, ROLE_GM, ROLE_PLAYER;
+  var init_starter_model = __esm({
+    "src/starter/starter-model.js"() {
+      init_i18n();
+      init_builder_core();
+      STARTER_VERSION = 1;
+      STARTER_DIR = "Starters";
+      SCENARIO_DIR = "Scenarios";
+      STARTER_FILE = "starter.json";
+      IMAGE_DIR = "images";
+      GENDERS = [
+        { id: "female", label: t("ui.starter.genderFemale"), icon: "\u2640" },
+        { id: "male", label: t("ui.starter.genderMale"), icon: "\u2642" },
+        { id: "other", label: t("ui.starter.genderOther"), icon: "\u26A7" },
+        { id: "", label: t("ui.starter.genderUnset"), icon: "\u2013" }
+      ];
+      _seq5 = 0;
+      SCENARIO_VERSION = 1;
+      ROLE_GM = "gm";
+      ROLE_PLAYER = "player";
+    }
+  });
+
+  // src/starter/starter-ai.js
+  var starter_ai_exports = {};
+  __export(starter_ai_exports, {
+    AI_TIMEOUT_MS: () => AI_TIMEOUT_MS,
+    aiBtn: () => aiBtn,
+    aiBusy: () => aiBusy,
+    askAI: () => askAI,
+    compactNum: () => compactNum,
+    newReqId: () => newReqId,
+    stopAI: () => stopAI,
+    stopAllAI: () => stopAllAI,
+    tokenBadge: () => tokenBadge
+  });
+  function newReqId() {
+    _seq6 += 1;
+    return "st-" + Date.now().toString(36) + "-" + _seq6;
+  }
+  function aiBusy() {
+    return RUNNING.size > 0;
+  }
+  async function stopAI(reqId) {
+    if (!reqId) return false;
+    try {
+      const ok2 = await kapi.httpAbort(reqId);
+      log("info", "starter ai: abort", { reqId, ok: ok2 });
+      return !!ok2;
+    } catch (e) {
+      log("warn", "starter ai: abort failed", e);
+      return false;
+    }
+  }
+  async function stopAllAI() {
+    const ids = [...RUNNING];
+    for (const id of ids) await stopAI(id);
+    RUNNING.clear();
+    return ids.length;
+  }
+  async function askAI(what, prompt2, system, reqId = "") {
+    const id = reqId || newReqId();
+    RUNNING.add(id);
+    const t0 = Date.now();
+    log("info", "starter ai: " + what, { reqId: id, promptChars: String(prompt2 || "").length });
+    try {
+      const out = await callAI(prompt2, system, { reqId: id, timeoutMs: AI_TIMEOUT_MS });
+      log(
+        out ? "info" : "warn",
+        "starter ai: " + what + (out ? " ok" : " no-reply"),
+        { reqId: id, ms: Date.now() - t0, chars: (out || "").length }
+      );
+      return out;
+    } catch (e) {
+      log("error", "starter ai: " + what + " threw", e);
+      setStatus(t("ui.starter.aiFail"));
+      return null;
+    } finally {
+      RUNNING.delete(id);
+    }
+  }
+  function aiBtn(label, run3, { cls = "st-ai" } = {}) {
+    const b = el("button", cls, "\u2728 " + label);
+    const S10 = { busy: false, reqId: "" };
+    b.onclick = async () => {
+      if (S10.busy) {
+        b.textContent = "\u23F9 " + t("ui.starter.aiStopping");
+        await stopAI(S10.reqId);
+        return;
+      }
+      S10.busy = true;
+      S10.reqId = newReqId();
+      b.classList.add("busy");
+      b.textContent = "\u23F9 " + t("ui.starter.aiStop");
+      b.title = t("ui.starter.aiStopHint");
+      try {
+        await run3(S10.reqId);
+      } catch (e) {
+        log("error", "starter ai (button): " + label, e);
+        setStatus(t("ui.starter.aiFail"));
+      } finally {
+        S10.busy = false;
+        S10.reqId = "";
+        b.classList.remove("busy");
+        b.textContent = "\u2728 " + label;
+        b.title = "";
+      }
+    };
+    return b;
+  }
+  function tokenBadge(stats) {
+    const s = stats || {};
+    const inTok = s.inTok || 0, outTok = s.outTok || 0;
+    const wrap2 = el("span", "st-tok");
+    if (!inTok && !outTok) {
+      wrap2.textContent = t("ui.starter.tokNone");
+      return wrap2;
+    }
+    wrap2.textContent = tf("ui.starter.tokLine", compactNum(inTok + outTok));
+    wrap2.title = tf("ui.starter.tokDetail", compactNum(inTok), compactNum(outTok));
+    return wrap2;
+  }
+  function compactNum(n2) {
+    const v2 = Number(n2) || 0;
+    if (v2 < 1e3) return String(v2);
+    if (v2 < 1e6) return (v2 / 1e3).toFixed(v2 < 1e4 ? 1 : 0) + "k";
+    return (v2 / 1e6).toFixed(1) + "M";
+  }
+  var AI_TIMEOUT_MS, _seq6, RUNNING;
+  var init_starter_ai = __esm({
+    "src/starter/starter-ai.js"() {
+      init_core();
+      init_i18n();
+      init_ai_settings();
+      AI_TIMEOUT_MS = 18e4;
+      _seq6 = 0;
+      RUNNING = /* @__PURE__ */ new Set();
+    }
+  });
+
+  // src/starter/starter-steps-def.js
+  var starter_steps_def_exports = {};
+  __export(starter_steps_def_exports, {
+    STEPS: () => STEPS,
+    STEP_COUNT: () => STEP_COUNT,
+    TAG_GROUPS: () => TAG_GROUPS,
+    W_FIELDS: () => W_FIELDS,
+    clampStep: () => clampStep,
+    filledW: () => filledW,
+    isFirstStep: () => isFirstStep,
+    isLastStep: () => isLastStep,
+    isPresetTag: () => isPresetTag,
+    presetTags: () => presetTags,
+    stepAt: () => stepAt,
+    stepById: () => stepById,
+    stepIndex: () => stepIndex,
+    wFieldByKey: () => wFieldByKey
+  });
+  function wFieldByKey(key2) {
+    return W_FIELDS.find((f) => f.key === key2) || null;
+  }
+  function filledW(s) {
+    const w = s && s.w || {};
+    return W_FIELDS.filter((f) => String(w[f.key] || "").trim()).map((f) => ({ key: f.key, label: f.label, value: String(w[f.key]).trim() }));
+  }
+  function presetTags() {
+    return TAG_GROUPS.flatMap((g) => g.tags);
+  }
+  function isPresetTag(tag3) {
+    const k = String(tag3 || "").toLowerCase();
+    return presetTags().some((x) => x.toLowerCase() === k);
+  }
+  function stepById(id) {
+    return STEPS.find((x) => x.id === id) || null;
+  }
+  function stepIndex(id) {
+    return STEPS.findIndex((x) => x.id === id);
+  }
+  function clampStep(i5) {
+    const n2 = Number(i5);
+    if (!Number.isFinite(n2)) return 0;
+    return Math.max(0, Math.min(STEPS.length - 1, Math.floor(n2)));
+  }
+  function stepAt(i5) {
+    return STEPS[clampStep(i5)];
+  }
+  function isLastStep(i5) {
+    return clampStep(i5) === STEPS.length - 1;
+  }
+  function isFirstStep(i5) {
+    return clampStep(i5) === 0;
+  }
+  var W_FIELDS, TAG_GROUPS, STEPS, STEP_COUNT;
+  var init_starter_steps_def = __esm({
+    "src/starter/starter-steps-def.js"() {
+      init_i18n();
+      init_starter_model();
+      W_FIELDS = [
+        { key: "what", icon: "\u2753", label: t("ui.starter.wWhat"), hint: t("ui.starter.wWhatHint") },
+        { key: "when", icon: "\u{1F553}", label: t("ui.starter.wWhen"), hint: t("ui.starter.wWhenHint") },
+        { key: "where", icon: "\u{1F4CD}", label: t("ui.starter.wWhere"), hint: t("ui.starter.wWhereHint") },
+        { key: "why", icon: "\u{1F3AF}", label: t("ui.starter.wWhy"), hint: t("ui.starter.wWhyHint") }
+      ];
+      TAG_GROUPS = [
+        {
+          id: "genre",
+          label: t("ui.starter.tagGroupGenre"),
+          tags: [
+            "fantasy",
+            "sci-fi",
+            "isekai",
+            "romance",
+            "harem",
+            "action",
+            "mystery",
+            "horror",
+            "slice of life",
+            "comedy",
+            "drama",
+            "thriller",
+            "historical"
+          ]
+        },
+        {
+          id: "tone",
+          label: t("ui.starter.tagGroupTone"),
+          tags: ["dark", "lighthearted", "bittersweet", "epic", "gritty", "wholesome", "satirical"]
+        },
+        {
+          id: "setting",
+          label: t("ui.starter.tagGroupSetting"),
+          tags: [
+            "modern",
+            "medieval",
+            "cyberpunk",
+            "post-apocalyptic",
+            "school",
+            "space",
+            "urban fantasy",
+            "steampunk"
+          ]
+        },
+        {
+          id: "rating",
+          label: t("ui.starter.tagGroupRating"),
+          tags: ["all ages", "teen", "mature"]
+        }
+      ];
+      STEPS = [
+        {
+          id: "tags",
+          icon: "\u{1F3F7}",
+          required: true,
+          title: t("ui.starter.stepTags"),
+          desc: t("ui.starter.stepTagsDesc"),
+          filled: (s) => (s.tags || []).length > 0
+        },
+        {
+          id: "intro",
+          icon: "\u{1F4D6}",
+          required: true,
+          title: t("ui.starter.stepIntro"),
+          desc: t("ui.starter.stepIntroDesc"),
+          // [alpha.96] คำบรรยายเป็น HTML แล้ว — `<p><br></p>` ที่ตัวแก้ไขทิ้งไว้ต้องไม่นับว่ากรอกแล้ว
+          filled: (s) => !!String(s.name || "").trim() && hasIntro(s)
+        },
+        {
+          id: "cast",
+          icon: "\u{1F465}",
+          required: true,
+          title: t("ui.starter.stepCast"),
+          desc: t("ui.starter.stepCastDesc"),
+          filled: (s) => (s.cast || []).some(charReady)
+        },
+        {
+          id: "w",
+          icon: "\u{1F9ED}",
+          required: false,
+          title: t("ui.starter.stepW"),
+          desc: t("ui.starter.stepWDesc"),
+          filled: (s) => filledW(s).length > 0
+        },
+        {
+          id: "cover",
+          icon: "\u{1F5BC}",
+          required: false,
+          title: t("ui.starter.stepCover"),
+          desc: t("ui.starter.stepCoverDesc"),
+          filled: (s) => !!String(s.cover || "").trim() || !!String(s.banner || "").trim()
+        }
+      ];
+      STEP_COUNT = STEPS.length;
+    }
+  });
+
+  // src/starter/starter-store.js
+  var starter_store_exports = {};
+  __export(starter_store_exports, {
+    autoSaveScenario: () => autoSaveScenario,
+    autoSaveStarter: () => autoSaveStarter,
+    createScenario: () => createScenario,
+    createStarter: () => createStarter,
+    deleteScenario: () => deleteScenario,
+    deleteStarter: () => deleteStarter,
+    flushStarterSaves: () => flushStarterSaves,
+    imageUrl: () => imageUrl,
+    imagesDir: () => imagesDir2,
+    importFromGallery: () => importFromGallery,
+    importImage: () => importImage,
+    listScenarios: () => listScenarios,
+    listStarters: () => listStarters,
+    nextScenarioTitle: () => nextScenarioTitle,
+    pendingSaves: () => pendingSaves,
+    readScenario: () => readScenario,
+    readStarter: () => readStarter,
+    scenariosDir: () => scenariosDir,
+    starterDir: () => starterDir,
+    starterFile: () => starterFile,
+    startersRoot: () => startersRoot,
+    writeScenario: () => writeScenario,
+    writeStarter: () => writeStarter
+  });
+  async function startersRoot() {
+    if (!state.root) return "";
+    return kapi.join(state.root, STARTER_DIR);
+  }
+  async function starterDir(slug2) {
+    const base4 = await startersRoot();
+    return base4 ? kapi.join(base4, slug2) : "";
+  }
+  async function starterFile(slug2) {
+    const d = await starterDir(slug2);
+    return d ? kapi.join(d, STARTER_FILE) : "";
+  }
+  async function imagesDir2(slug2) {
+    const d = await starterDir(slug2);
+    return d ? kapi.join(d, IMAGE_DIR) : "";
+  }
+  async function scenariosDir(slug2) {
+    const d = await starterDir(slug2);
+    return d ? kapi.join(d, SCENARIO_DIR) : "";
+  }
+  async function imageUrl(slug2, file) {
+    if (!slug2 || !file) return "";
+    const p = await kapi.join(await imagesDir2(slug2), file);
+    if (!await kapi.exists(p)) return "";
+    return kapi.toFileURL(p);
+  }
+  async function listStarters() {
+    const base4 = await startersRoot();
+    if (!base4 || !await kapi.exists(base4)) return [];
+    let dirs = [];
+    try {
+      dirs = await kapi.listDirs(base4);
+    } catch {
+      return [];
+    }
+    const out = [];
+    for (const slug2 of dirs) {
+      try {
+        const f = await kapi.join(base4, slug2, STARTER_FILE);
+        if (!await kapi.exists(f)) continue;
+        const s = migrateStarter(await kapi.readJson(f));
+        s.slug = slug2;
+        out.push(s);
+      } catch (e) {
+        log("warn", t("ui.starter.logReadFail") + slug2, e);
+      }
+    }
+    return out;
+  }
+  async function readStarter(slug2) {
+    const f = await starterFile(slug2);
+    if (!f || !await kapi.exists(f)) return null;
+    try {
+      const s = migrateStarter(await kapi.readJson(f));
+      s.slug = slug2;
+      return s;
+    } catch (e) {
+      log("error", t("ui.starter.logReadFail") + slug2, e);
+      return null;
+    }
+  }
+  async function writeStarter(s) {
+    if (!s || !s.slug) return false;
+    const dir2 = await starterDir(s.slug);
+    await kapi.mkdir(dir2);
+    const body = { ...s, updated: Date.now() };
+    delete body.slug;
+    await kapi.writeFile(await kapi.join(dir2, STARTER_FILE), JSON.stringify(body, null, 2));
+    s.updated = body.updated;
+    return true;
+  }
+  function queueSave(key2, data2, writer) {
+    _pending.set(key2, data2);
+    _writers.set(key2, writer);
+    clearTimeout(_timers.get(key2));
+    _timers.set(key2, setTimeout(() => {
+      flushKey(key2);
+    }, SAVE_DELAY));
+  }
+  async function flushKey(key2) {
+    clearTimeout(_timers.get(key2));
+    _timers.delete(key2);
+    const data2 = _pending.get(key2);
+    const writer = _writers.get(key2);
+    _pending.delete(key2);
+    _writers.delete(key2);
+    if (!data2 || !writer) return false;
+    try {
+      return await writer(data2);
+    } catch (e) {
+      log("error", t("ui.starter.logSaveFail") + key2, e);
+      setStatus(t("ui.starter.saveFail"));
+      return false;
+    }
+  }
+  async function flushStarterSaves() {
+    const keys4 = [..._timers.keys()];
+    for (const k of keys4) await flushKey(k);
+    return keys4.length;
+  }
+  function pendingSaves() {
+    return _timers.size;
+  }
+  function autoSaveStarter(s) {
+    if (!s || !s.slug) return false;
+    queueSave("st:" + s.slug, s, writeStarter);
+    return true;
+  }
+  async function createStarter(name5) {
+    if (!state.root) return null;
+    const taken = (await listStarters()).map((x) => x.slug);
+    const slug2 = uniqueSlug(name5 || t("ui.starter.untitled"), taken);
+    const s = newStarter({ name: name5 || "", slug: slug2, created: Date.now() });
+    const dir2 = await starterDir(slug2);
+    await kapi.mkdir(dir2);
+    await kapi.mkdir(await kapi.join(dir2, IMAGE_DIR));
+    await kapi.mkdir(await kapi.join(dir2, SCENARIO_DIR));
+    await writeStarter(s);
+    return s;
+  }
+  async function deleteStarter(slug2) {
+    const dir2 = await starterDir(slug2);
+    if (!dir2 || !await kapi.exists(dir2)) return false;
+    await flushStarterSaves();
+    const dst = await kapi.join(
+      state.root,
+      "Recycle",
+      Date.now().toString(36) + "-" + slug2
+    );
+    await kapi.move(dir2, dst);
+    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
+      { kind: "starter", root: state.root, folderName: slug2 },
+      null,
+      2
+    ));
+    return true;
+  }
+  async function importImage(slug2, srcAbs) {
+    if (!slug2 || !srcAbs) return "";
+    try {
+      const dir2 = await imagesDir2(slug2);
+      await kapi.mkdir(dir2);
+      return await kapi.copyInto(srcAbs, dir2) || "";
+    } catch (e) {
+      log("error", t("ui.starter.logImgFail"), e);
+      return "";
+    }
+  }
+  async function importFromGallery(slug2, rel) {
+    if (!rel) return "";
+    const abs = await kapi.join(state.root, "Images", ...String(rel).split("/"));
+    if (!await kapi.exists(abs)) return "";
+    return importImage(slug2, abs);
+  }
+  async function listScenarios(slug2) {
+    const dir2 = await scenariosDir(slug2);
+    if (!dir2 || !await kapi.exists(dir2)) return [];
+    let files = [];
+    try {
+      files = await kapi.listFiles(dir2, ".json");
+    } catch {
+      return [];
+    }
+    const out = [];
+    for (const f of files) {
+      try {
+        out.push(migrateScenario(await kapi.readJson(await kapi.join(dir2, f))));
+      } catch (e) {
+        log("warn", t("ui.starter.logScReadFail") + f, e);
+      }
+    }
+    return out;
+  }
+  async function readScenario(slug2, id) {
+    const dir2 = await scenariosDir(slug2);
+    const f = await kapi.join(dir2, id + ".json");
+    if (!await kapi.exists(f)) return null;
+    try {
+      return migrateScenario(await kapi.readJson(f));
+    } catch (e) {
+      log("error", t("ui.starter.logScReadFail") + id, e);
+      return null;
+    }
+  }
+  async function writeScenario(slug2, sc) {
+    if (!slug2 || !sc || !sc.id) return false;
+    const dir2 = await scenariosDir(slug2);
+    await kapi.mkdir(dir2);
+    const body = { ...sc, updated: Date.now() };
+    await kapi.writeFile(await kapi.join(dir2, scenarioFileName(sc)), JSON.stringify(body, null, 2));
+    sc.updated = body.updated;
+    return true;
+  }
+  function autoSaveScenario(slug2, sc) {
+    if (!slug2 || !sc || !sc.id) return false;
+    queueSave("sc:" + slug2 + ":" + sc.id, sc, (data2) => writeScenario(slug2, data2));
+    return true;
+  }
+  async function createScenario(slug2, patch = {}) {
+    const sc = newScenario({ ...patch, created: Date.now() });
+    await writeScenario(slug2, sc);
+    return sc;
+  }
+  async function deleteScenario(slug2, id) {
+    const dir2 = await scenariosDir(slug2);
+    const f = await kapi.join(dir2, id + ".json");
+    if (!await kapi.exists(f)) return false;
+    await flushStarterSaves();
+    await kapi.remove(f);
+    return true;
+  }
+  function nextScenarioTitle(rows) {
+    return tf("ui.starter.scDefaultTitle", (rows || []).length + 1);
+  }
+  var SAVE_DELAY, _timers, _pending, _writers;
+  var init_starter_store = __esm({
+    "src/starter/starter-store.js"() {
+      init_core();
+      init_i18n();
+      init_starter_model();
+      SAVE_DELAY = 400;
+      _timers = /* @__PURE__ */ new Map();
+      _pending = /* @__PURE__ */ new Map();
+      _writers = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/starter/starter-choices.js
+  var starter_choices_exports = {};
+  __export(starter_choices_exports, {
+    CLOSE_TAG: () => CLOSE_TAG,
+    MAX_CHOICES: () => MAX_CHOICES,
+    MAX_CHOICE_LEN: () => MAX_CHOICE_LEN,
+    OPEN_TAG: () => OPEN_TAG,
+    choiceInstruction: () => choiceInstruction,
+    choiceMarker: () => choiceMarker,
+    choiceRows: () => choiceRows,
+    hasChoices: () => hasChoices,
+    normalizeChoices: () => normalizeChoices,
+    parseChoices: () => parseChoices,
+    stripChoices: () => stripChoices
+  });
+  function choiceInstruction() {
+    return [
+      t("ui.starter.choiceRuleHead"),
+      OPEN_TAG,
+      t("ui.starter.choiceRuleSample1"),
+      t("ui.starter.choiceRuleSample2"),
+      t("ui.starter.choiceRuleSample3"),
+      CLOSE_TAG,
+      t("ui.starter.choiceRuleTail")
+    ].join("\n");
+  }
+  function stripBullet(line) {
+    return String(line || "").replace(/^\s*(?:[-*•–—]|\(?\d{1,2}[.)]|\(?[๐-๙]{1,2}[.)])\s*/u, "").trim();
+  }
+  function looksLikeItem(line) {
+    return /^\s*(?:[-*•–—]|\(?\d{1,2}[.)]|\(?[๐-๙]{1,2}[.)])\s+\S/u.test(String(line || ""));
+  }
+  function normalizeChoices(list) {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const raw of list || []) {
+      let v2 = String(raw == null ? "" : raw).trim();
+      v2 = v2.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "").trim();
+      if (!v2 || v2.length > MAX_CHOICE_LEN) continue;
+      const k = v2.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(v2);
+      if (out.length >= MAX_CHOICES) break;
+    }
+    return out;
+  }
+  function blockRange2(text) {
+    const s = String(text || "");
+    const i5 = s.lastIndexOf(OPEN_TAG);
+    if (i5 < 0) return null;
+    const from2 = i5 + OPEN_TAG.length;
+    const j = s.indexOf(CLOSE_TAG, from2);
+    return { start: i5, from: from2, to: j < 0 ? s.length : j, end: j < 0 ? s.length : j + CLOSE_TAG.length };
+  }
+  function fromBlock(text) {
+    const r = blockRange2(text);
+    if (!r) return null;
+    const body = String(text).slice(r.from, r.to);
+    const rows = body.split(/\r?\n/).map(stripBullet).filter(Boolean);
+    const got = normalizeChoices(rows);
+    return got.length ? got : null;
+  }
+  function fromJson(text) {
+    const s = String(text || "");
+    for (let i5 = s.lastIndexOf("["); i5 >= 0; i5 = s.lastIndexOf("[", i5 - 1)) {
+      const j = s.indexOf("]", i5);
+      if (j < 0) continue;
+      try {
+        const v2 = JSON.parse(s.slice(i5, j + 1));
+        if (Array.isArray(v2) && v2.length) {
+          const got = normalizeChoices(v2.map((x) => typeof x === "string" ? x : x && (x.text || x.label || x.choice) || ""));
+          if (got.length >= 2) return got;
+        }
+      } catch {
+      }
+    }
+    return null;
+  }
+  function fromTrailingList(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const items = [];
+    for (let i5 = lines.length - 1; i5 >= 0; i5--) {
+      const ln = lines[i5];
+      if (!ln.trim()) {
+        if (items.length) break;
+        continue;
+      }
+      if (looksLikeItem(ln)) {
+        items.unshift(stripBullet(ln));
+        continue;
+      }
+      break;
+    }
+    const got = normalizeChoices(items);
+    return got.length >= 2 ? got : null;
+  }
+  function parseChoices(text) {
+    return fromBlock(text) || fromJson(text) || fromTrailingList(text) || [];
+  }
+  function stripChoices(text) {
+    const r = blockRange2(text);
+    if (!r) return String(text || "").trim();
+    const s = String(text);
+    return (s.slice(0, r.start) + s.slice(r.end)).replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function hasChoices(text) {
+    return parseChoices(text).length > 0;
+  }
+  function choiceMarker(choice) {
+    const v2 = String(choice || "").replace(/[\[\]]/g, "").trim().slice(0, 80);
+    return v2 ? "[" + v2 + "]" : "";
+  }
+  function choiceRows(list) {
+    return normalizeChoices(list).map((text) => ({ text, nextSceneId: "" }));
+  }
+  var MAX_CHOICES, MAX_CHOICE_LEN, OPEN_TAG, CLOSE_TAG;
+  var init_starter_choices = __esm({
+    "src/starter/starter-choices.js"() {
+      init_i18n();
+      MAX_CHOICES = 6;
+      MAX_CHOICE_LEN = 160;
+      OPEN_TAG = "<<CHOICES>>";
+      CLOSE_TAG = "<<END>>";
+    }
+  });
+
+  // src/starter/starter-prompt.js
+  var starter_prompt_exports = {};
+  __export(starter_prompt_exports, {
+    PROMPT_VERSION: () => PROMPT_VERSION,
+    SYS_WRITER: () => SYS_WRITER,
+    blurbPrompt: () => blurbPrompt,
+    castBlock: () => castBlock,
+    charDescPrompt: () => charDescPrompt,
+    clip: () => clip2,
+    descPrompt: () => descPrompt,
+    gmOpening: () => gmOpening,
+    gmSystem: () => gmSystem,
+    gmUserTurn: () => gmUserTurn,
+    introPrompt: () => introPrompt,
+    namePrompt: () => namePrompt,
+    recapPrompt: () => recapPrompt,
+    scenarioNamePrompt: () => scenarioNamePrompt,
+    starterBlock: () => starterBlock,
+    synopsisPrompt: () => synopsisPrompt2,
+    tagLine: () => tagLine,
+    wBlock: () => wBlock,
+    wFieldPrompt: () => wFieldPrompt
+  });
+  function clip2(text, max2 = 1200) {
+    const s = String(text || "").trim();
+    if (s.length <= max2) return s;
+    const cut = s.slice(0, max2);
+    const sp = cut.lastIndexOf(" ");
+    return (sp > max2 * 0.6 ? cut.slice(0, sp) : cut).trim() + "\u2026";
+  }
+  function tagLine(s) {
+    const tags = s && s.tags || [];
+    return tags.length ? t("ui.starter.pTags") + tags.join(", ") : "";
+  }
+  function castBlock(s, { full = true, exclude = "" } = {}) {
+    const rows = (s && s.cast || []).filter((c) => c && c.name && c.id !== exclude);
+    if (!rows.length) return "";
+    const lines = [t("ui.starter.pCastHead")];
+    for (const c of rows) {
+      const head2 = "- " + c.name + (c.gender ? " (" + genderLabel(c.gender) + ")" : "") + (c.selfPronoun ? " \xB7 " + t("ui.starter.pSelfPronoun") + c.selfPronoun : "");
+      lines.push(head2);
+      const body = full ? c.persona || c.blurb : c.blurb || c.persona;
+      if (String(body || "").trim()) lines.push("  " + clip2(body, full ? 900 : 200).replace(/\n+/g, " "));
+    }
+    return lines.join("\n");
+  }
+  function wBlock(s) {
+    const rows = filledW(s);
+    if (!rows.length) return "";
+    return [t("ui.starter.pWHead"), ...rows.map((r) => "- " + r.label + ": " + clip2(r.value, 300))].join("\n");
+  }
+  function starterBlock(s, { cast = true, full = true, intro = true } = {}) {
+    const out = [];
+    if (s && s.name) out.push(t("ui.starter.pTitle") + s.name);
+    const tl = tagLine(s);
+    if (tl) out.push(tl);
+    if (intro) {
+      const body = introText(s);
+      if (body) {
+        out.push(t("ui.starter.pIntroHead"));
+        out.push(clip2(body, 1500));
+      }
+    }
+    const w = wBlock(s);
+    if (w) out.push(w);
+    if (cast) {
+      const c = castBlock(s, { full });
+      if (c) out.push(c);
+    }
+    return out.join("\n\n");
+  }
+  function namePrompt(s) {
+    const body = introText(s);
+    return [
+      t("ui.starter.pNameTask"),
+      tagLine(s),
+      body ? t("ui.starter.pIntroHead") + "\n" + clip2(body, 800) : "",
+      t("ui.starter.pNameRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function introPrompt(s) {
+    return [
+      t("ui.starter.pIntroTask"),
+      tagLine(s),
+      s && s.name ? t("ui.starter.pTitle") + s.name : "",
+      wBlock(s),
+      t("ui.starter.pIntroRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function charDescPrompt(s, ch) {
+    const who = [
+      t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
+      ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip2(ch.persona, 400) : ""
+    ].filter(Boolean).join("\n");
+    return [
+      t("ui.starter.pCharTask"),
+      starterBlock(s, { cast: false }),
+      castBlock(s, { full: false, exclude: ch.id }),
+      who,
+      t("ui.starter.pCharRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function synopsisPrompt2(s, sc, prev) {
+    return [
+      t("ui.starter.pScTask"),
+      starterBlock(s, { full: false }),
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip2(prev.synopsis || prev.recap || "", 700) : "",
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      t("ui.starter.pScRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function scenarioNamePrompt(s, sc) {
+    return [
+      t("ui.starter.pScNameTask"),
+      tagLine(s),
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 700) : "",
+      t("ui.starter.pNameRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function gmSystem(s, sc, { prev = null, userChars = [], len: len5 = "medium" } = {}) {
+    const mine = new Set(userChars || []);
+    const owned = (s && s.cast || []).filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
+    const lenRule = {
+      short: t("ui.starter.pGmLenShort"),
+      medium: t("ui.starter.pGmLenMedium"),
+      long: t("ui.starter.pGmLenLong")
+    }[len5] || t("ui.starter.pGmLenMedium");
+    return [
+      t("ui.starter.pGmRole"),
+      starterBlock(s, { full: true }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip2(sc.synopsis, 900) : "",
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip2(prev.synopsis || "", 600) : "",
+      owned.length ? tf("ui.starter.pGmUserChars", owned.join(", ")) : "",
+      t("ui.starter.pGmRules"),
+      lenRule,
+      choiceInstruction()
+    ].filter(Boolean).join("\n\n");
+  }
+  function gmOpening(s, sc) {
+    return [
+      t("ui.starter.pGmOpenTask"),
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 600) : "",
+      t("ui.starter.pGmOpenRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function gmUserTurn(text, speaker = "") {
+    const body = String(text || "").trim();
+    return speaker ? tf("ui.starter.pGmAsChar", speaker, body) : body;
+  }
+  function recapPrompt(s, sc, transcript) {
+    return [
+      t("ui.starter.pRecapTask"),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      clip2(transcript, 6e3),
+      t("ui.starter.pRecapRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function wFieldPrompt(s, field2) {
+    return [
+      tf("ui.starter.pWTask", field2.label),
+      starterBlock(s, { cast: false }),
+      field2.hint ? t("ui.starter.pWHint") + field2.hint : "",
+      t("ui.starter.pWRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function blurbPrompt(s) {
+    return [
+      t("ui.starter.pBlurbTask"),
+      starterBlock(s, { cast: false }),
+      t("ui.starter.pBlurbRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function descPrompt(s) {
+    return [
+      t("ui.starter.pDescTask"),
+      tagLine(s),
+      s && s.name ? t("ui.starter.pTitle") + s.name : "",
+      wBlock(s),
+      castBlock(s, { full: false }),
+      t("ui.starter.pDescRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  var PROMPT_VERSION, SYS_WRITER;
+  var init_starter_prompt = __esm({
+    "src/starter/starter-prompt.js"() {
+      init_i18n();
+      init_starter_model();
+      init_starter_steps_def();
+      init_starter_choices();
+      PROMPT_VERSION = 1;
+      SYS_WRITER = () => t("ui.starter.sysWriter");
+    }
+  });
+
+  // src/starter/starter-wiki-merge.js
+  function normName(s) {
+    return String(s || "").replace(/[\u200b\u200c\u200d\ufeff]/g, "").replace(/\s+/g, "").toLowerCase();
+  }
+  function entityNames(e) {
+    return [e && e.name, ...e && e.aliases || []].map(normName).filter(Boolean);
+  }
+  function matchLabel(m) {
+    return {
+      exact: t("ui.starter.mgExact"),
+      alias: t("ui.starter.mgAlias"),
+      many: t("ui.starter.mgMany"),
+      none: t("ui.starter.mgNone")
+    }[m] || m;
+  }
+  function matchChar(ch, entities = []) {
+    const want = normName(ch && ch.name);
+    if (!want) return { status: MATCH_NONE, hit: null, candidates: [] };
+    if (ch.wikiPath) {
+      const byPath = entities.find((e) => e.file === ch.wikiPath);
+      if (byPath) return { status: MATCH_EXACT, hit: byPath, candidates: [byPath] };
+    }
+    const exact = entities.filter((e) => normName(e.name) === want);
+    if (exact.length === 1) return { status: MATCH_EXACT, hit: exact[0], candidates: exact };
+    if (exact.length > 1) return { status: MATCH_AMBIGUOUS, hit: null, candidates: exact };
+    const alias = entities.filter((e) => entityNames(e).includes(want));
+    if (alias.length === 1) return { status: MATCH_ALIAS, hit: alias[0], candidates: alias };
+    if (alias.length > 1) return { status: MATCH_AMBIGUOUS, hit: null, candidates: alias };
+    return { status: MATCH_NONE, hit: null, candidates: [] };
+  }
+  function defaultAction(status) {
+    if (status === MATCH_EXACT || status === MATCH_ALIAS) return ACT_LINK;
+    if (status === MATCH_NONE) return ACT_CREATE;
+    return ACT_SKIP;
+  }
+  function planMerge(cast = [], entities = []) {
+    return (cast || []).filter((c) => c && String(c.name || "").trim()).map((c) => {
+      const m = matchChar(c, entities);
+      return {
+        char: c,
+        status: m.status,
+        hit: m.hit,
+        candidates: m.candidates,
+        action: defaultAction(m.status),
+        // จริงเฉพาะตอนที่ระบบเดาแทนไม่ได้ — UI ไฮไลต์เฉพาะแถวพวกนี้
+        needsUser: m.status === MATCH_AMBIGUOUS
+      };
+    });
+  }
+  function mergeSummary(rows = []) {
+    const c = { link: 0, create: 0, skip: 0, ask: 0 };
+    for (const r of rows) {
+      if (r.needsUser) c.ask++;
+      c[r.action] = (c[r.action] || 0) + 1;
+    }
+    return c;
+  }
+  function needsAttention(rows = []) {
+    return rows.some((r) => r.needsUser);
+  }
+  function flattenEntityText(e) {
+    const out = [];
+    const fields = e && e.fields || {};
+    const props = e && e.customProperties || {};
+    for (const [k, v2] of [...Object.entries(fields), ...Object.entries(props)]) {
+      const val = String(v2 == null ? "" : v2).trim();
+      if (val) out.push(k + ": " + val);
+    }
+    for (const sec of e && e.sections || []) {
+      const body = String(sec && sec.content || "").trim();
+      if (!body) continue;
+      const title2 = String(sec && sec.title || "").trim();
+      out.push(title2 ? title2 + "\n" + body : body);
+    }
+    return out.join("\n\n").trim();
+  }
+  function charPatchFromEntity(e, file = "") {
+    return {
+      name: e && e.name || "",
+      aliases: [...e && e.aliases || []],
+      persona: flattenEntityText(e),
+      wikiPath: file || "",
+      cat: e && e.entityTypeKey || "characters",
+      fromWiki: true
+    };
+  }
+  function entityFromChar(ch, { id = "", cat = "characters", images = [] } = {}) {
+    return {
+      id,
+      entityTypeKey: cat,
+      name: ch && ch.name || "",
+      aliases: [...ch && ch.aliases || []],
+      fields: {},
+      customProperties: {},
+      images: [...images],
+      sections: [{ title: t("ui.common.desc"), content: ch && ch.persona || "" }],
+      relationships: [],
+      chapterOverrides: [],
+      templateId: "",
+      created: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  function applyCharToEntity(e, ch) {
+    const out = { ...e };
+    const secTitle = t("ui.common.desc");
+    const secs = [...e && e.sections || []];
+    const i5 = secs.findIndex((x) => String(x && x.title || "").trim() === secTitle);
+    const body = ch && ch.persona || "";
+    if (body.trim()) {
+      if (i5 < 0) secs.unshift({ title: secTitle, content: body });
+      else secs[i5] = { ...secs[i5], content: body };
+    }
+    out.sections = secs;
+    const have = new Set((e && e.aliases || []).map(normName));
+    const add = (ch && ch.aliases || []).filter((a) => a && !have.has(normName(a)));
+    out.aliases = [...e && e.aliases || [], ...add];
+    return out;
+  }
+  var MATCH_EXACT, MATCH_ALIAS, MATCH_AMBIGUOUS, MATCH_NONE, ACT_LINK, ACT_CREATE, ACT_SKIP;
+  var init_starter_wiki_merge = __esm({
+    "src/starter/starter-wiki-merge.js"() {
+      init_i18n();
+      MATCH_EXACT = "exact";
+      MATCH_ALIAS = "alias";
+      MATCH_AMBIGUOUS = "many";
+      MATCH_NONE = "none";
+      ACT_LINK = "link";
+      ACT_CREATE = "create";
+      ACT_SKIP = "skip";
+    }
+  });
+
+  // src/starter/starter-wiki.js
+  var starter_wiki_exports = {};
+  __export(starter_wiki_exports, {
+    charFromWiki: () => charFromWiki,
+    listWikiChars: () => listWikiChars,
+    looksForeign: () => looksForeign,
+    offerReconcile: () => offerReconcile,
+    pickWikiChar: () => pickWikiChar,
+    pushCharToWiki: () => pushCharToWiki,
+    readEntity: () => readEntity,
+    reconcileCast: () => reconcileCast,
+    syncCastToWiki: () => syncCastToWiki
+  });
+  async function listWikiChars() {
+    if (!state.root) return [];
+    const out = [];
+    const root = await wikiRoot();
+    const catDir = await kapi.join(root, CHAR_CAT);
+    if (!await kapi.exists(catDir)) return out;
+    let files = [];
+    try {
+      files = await kapi.listFiles(catDir, ".json");
+    } catch {
+      return out;
+    }
+    for (const f of files) {
+      try {
+        const p = await kapi.join(catDir, f);
+        const e = await kapi.readJson(p);
+        if (!e || !e.name) continue;
+        out.push({
+          file: p,
+          id: e.id || "",
+          name: e.name,
+          aliases: Array.isArray(e.aliases) ? e.aliases : [],
+          cat: CHAR_CAT
+        });
+      } catch (e) {
+        log("warn", t("ui.starter.logWikiReadFail") + f, e);
+      }
+    }
+    return out;
+  }
+  async function readEntity(file) {
+    try {
+      return await kapi.readJson(file);
+    } catch {
+      return null;
+    }
+  }
+  async function charFromWiki(slug2, file) {
+    const e = await readEntity(file);
+    if (!e) return null;
+    const patch = charPatchFromEntity(e, file);
+    const first = normalizeImage((e.images || [])[0]);
+    if (first && first.file) {
+      const abs = await kapi.join(state.root, "Images", ...String(first.file).split("/"));
+      if (await kapi.exists(abs)) patch.image = await importImage(slug2, abs);
+    }
+    return newChar(patch);
+  }
+  function pickWikiChar() {
+    return new Promise(async (resolve) => {
+      const rows = await listWikiChars();
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog st-pick");
+      box2.append(el("div", "k-dlg-title", t("ui.starter.pickFromWiki")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      if (!rows.length) {
+        box2.append(el("div", "st-dim", t("ui.starter.wikiNoChar")));
+      }
+      const search2 = el("input", "wiki-input");
+      search2.placeholder = t("ui.starter.searchName");
+      const list = el("div", "st-pick-list");
+      const draw3 = () => {
+        const q = search2.value.trim().toLowerCase();
+        list.innerHTML = "";
+        const hit = rows.filter((r) => !q || [r.name, ...r.aliases || []].join(" ").toLowerCase().includes(q));
+        for (const r of hit.slice(0, 200)) {
+          const b = el("button", "st-pick-item");
+          b.append(el("span", "st-pick-name", r.name));
+          if ((r.aliases || []).length) b.append(el("span", "st-dim", " \xB7 " + r.aliases.join(", ")));
+          b.onclick = () => done2(r.file);
+          list.append(b);
+        }
+        if (!hit.length && rows.length) list.append(el("div", "st-dim", t("ui.starter.noMatch")));
+      };
+      search2.oninput = draw3;
+      box2.append(search2, list);
+      const foot = el("div", "k-dlg-foot");
+      const cancel = el("button", null, t("ui.common.cancel"));
+      cancel.onclick = () => done2(null);
+      foot.append(cancel);
+      box2.append(foot);
+      ov.append(box2);
+      ov.onclick = (e) => {
+        if (e.target === ov) done2(null);
+      };
+      document.body.append(ov);
+      draw3();
+      search2.focus();
+    });
+  }
+  async function imageIntoProject(slug2, file) {
+    if (!file) return "";
+    try {
+      const src2 = await kapi.join(await imagesDir2(slug2), file);
+      if (!await kapi.exists(src2)) return "";
+      const dst = await kapi.join(state.root, "Images");
+      await kapi.mkdir(dst);
+      return await kapi.copyInto(src2, dst) || "";
+    } catch (e) {
+      log("warn", t("ui.starter.logImgFail"), e);
+      return "";
+    }
+  }
+  async function pushCharToWiki(slug2, ch) {
+    if (!ch || !String(ch.name || "").trim()) return "";
+    const root = await wikiRoot();
+    const catDir = await kapi.join(root, CHAR_CAT);
+    await kapi.mkdir(catDir);
+    const imgFile = await imageIntoProject(slug2, ch.image);
+    const images = imgFile ? [normalizeImage({ file: imgFile })] : [];
+    if (ch.wikiPath && await kapi.exists(ch.wikiPath)) {
+      const old = await readEntity(ch.wikiPath);
+      if (old) {
+        const merged = applyCharToEntity(old, ch);
+        if (images.length && !(old.images || []).length) merged.images = images;
+        await kapi.writeFile(ch.wikiPath, JSON.stringify(merged, null, 2));
+        return ch.wikiPath;
+      }
+    }
+    const e = entityFromChar(ch, { id: guid(), cat: CHAR_CAT, images });
+    const file = await kapi.join(
+      catDir,
+      safeName(ch.name) + "-" + Date.now().toString(36) + ".json"
+    );
+    await kapi.writeFile(file, JSON.stringify(e, null, 2));
+    return file;
+  }
+  async function syncCastToWiki(s) {
+    let saved = 0, failed = 0;
+    for (const ch of s.cast || []) {
+      try {
+        const p = await pushCharToWiki(s.slug, ch);
+        if (p) {
+          ch.wikiPath = p;
+          saved++;
+        } else failed++;
+      } catch (e) {
+        failed++;
+        log("error", t("ui.starter.logWikiWriteFail") + ch.name, e);
+      }
+    }
+    if (saved) {
+      await writeStarter(s);
+      await buildTree2();
+    }
+    return { saved, failed };
+  }
+  async function looksForeign(s) {
+    for (const ch of s.cast || []) {
+      if (ch.wikiPath && !await kapi.exists(ch.wikiPath)) return true;
+    }
+    return false;
+  }
+  async function reconcileCast(s, { silent = false } = {}) {
+    const ents = await listWikiChars();
+    const rows = planMerge(s.cast || [], ents);
+    if (!rows.length) return { link: 0, create: 0, skip: 0 };
+    let plan = rows;
+    if (!silent && (needsAttention(rows) || rows.some((r) => r.action === ACT_CREATE))) {
+      plan = await reconcileDialog(rows);
+      if (!plan) return null;
+    }
+    for (const r of plan) {
+      if (r.action === ACT_LINK && r.hit) {
+        r.char.wikiPath = r.hit.file;
+        if (!String(r.char.persona || "").trim()) {
+          const e = await readEntity(r.hit.file);
+          if (e) r.char.persona = charPatchFromEntity(e, r.hit.file).persona;
+        }
+        s.cast = upsertChar(s.cast, r.char);
+      } else if (r.action === ACT_CREATE) {
+        const p = await pushCharToWiki(s.slug, r.char);
+        if (p) {
+          r.char.wikiPath = p;
+          s.cast = upsertChar(s.cast, r.char);
+        }
+      }
+    }
+    await writeStarter(s);
+    await buildTree2();
+    const sum2 = mergeSummary(plan);
+    setStatus(tf("ui.starter.reconcileDone", sum2.link, sum2.create));
+    return sum2;
+  }
+  function reconcileDialog(rows) {
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide st-merge");
+      box2.append(el("div", "k-dlg-title", t("ui.starter.reconcileTitle")));
+      box2.append(el("div", "st-hint", t("ui.starter.reconcileHint")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      for (const r of rows) {
+        const line = el("div", "st-merge-row" + (r.needsUser ? " warn" : ""));
+        line.append(el("span", "st-merge-name", r.char.name));
+        line.append(el("span", "st-merge-status", matchLabel(r.status)));
+        const sel = el("select", "wiki-input k-dlg-select");
+        const opts = [
+          [ACT_LINK, t("ui.starter.mgLink")],
+          [ACT_CREATE, t("ui.starter.mgCreate")],
+          [ACT_SKIP, t("ui.starter.mgSkip")]
+        ];
+        for (const [v2, label] of opts) {
+          if (v2 === ACT_LINK && !r.candidates.length) continue;
+          const o = el("option", null, label);
+          o.value = v2;
+          sel.append(o);
+        }
+        sel.value = r.action;
+        sel.onchange = () => {
+          r.action = sel.value;
+          syncTarget();
+        };
+        line.append(sel);
+        const target = el("select", "wiki-input k-dlg-select st-merge-target");
+        for (const c of r.candidates) {
+          const o = el("option", null, c.name + (c.aliases && c.aliases.length ? " (" + c.aliases.join(",") + ")" : ""));
+          o.value = c.file;
+          target.append(o);
+        }
+        if (r.hit) target.value = r.hit.file;
+        target.onchange = () => {
+          r.hit = r.candidates.find((c) => c.file === target.value) || null;
+        };
+        const syncTarget = () => {
+          target.style.display = r.action === ACT_LINK && r.candidates.length > 1 ? "" : "none";
+          if (r.action === ACT_LINK && !r.hit) r.hit = r.candidates[0] || null;
+        };
+        line.append(target);
+        syncTarget();
+        box2.append(line);
+      }
+      const foot = el("div", "k-dlg-foot");
+      const cancel = el("button", null, t("ui.common.cancel"));
+      cancel.onclick = () => done2(null);
+      const ok2 = el("button", "k-ok", t("ui.starter.reconcileGo"));
+      ok2.onclick = () => done2(rows);
+      foot.append(cancel, ok2);
+      box2.append(foot);
+      ov.append(box2);
+      document.body.append(ov);
+    });
+  }
+  async function offerReconcile(s) {
+    if (!await looksForeign(s)) return false;
+    const yes = await confirmBox(
+      tf("ui.starter.foreignAsk", s.name || s.slug),
+      t("ui.starter.reconcileGo")
+    );
+    if (!yes) return false;
+    await reconcileCast(s);
+    return true;
+  }
+  var CHAR_CAT;
+  var init_starter_wiki = __esm({
+    "src/starter/starter-wiki.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_app();
+      init_wiki_images();
+      init_starter_model();
+      init_starter_wiki_merge();
+      init_starter_store();
+      CHAR_CAT = "characters";
+    }
+  });
+
+  // src/starter/starter-cast.js
+  async function renderCastStep(host2, ctx2) {
+    const s = ctx2.starter;
+    s.cast = s.cast || [];
+    host2.innerHTML = "";
+    if (CAST_C.editing) {
+      const ch = (s.cast || []).find((c) => c.id === CAST_C.editing);
+      if (ch) return renderEditor(host2, ctx2, ch);
+      CAST_C.editing = "";
+    }
+    const bar = el("div", "st-row-btns");
+    const add = el("button", "k-ok", "+ " + t("ui.starter.castAdd"));
+    add.onclick = async () => {
+      const ch = newChar({});
+      s.cast = upsertChar(s.cast, ch);
+      CAST_C.editing = ch.id;
+      await ctx2.save({ now: true });
+      renderCastStep(host2, ctx2);
+    };
+    const fromWiki = el("button", null, t("ui.starter.castFromWiki"));
+    fromWiki.onclick = async () => {
+      const file = await pickWikiChar();
+      if (!file) return;
+      const ch = await charFromWiki(s.slug, file);
+      if (!ch) {
+        setStatus(t("ui.starter.wikiReadFail"));
+        return;
+      }
+      s.cast = upsertChar(s.cast, ch);
+      await ctx2.save({ now: true });
+      renderCastStep(host2, ctx2);
+    };
+    const push = el("button", null, t("ui.starter.castPushAll"));
+    push.title = t("ui.starter.castPushAllHint");
+    push.onclick = async () => {
+      const r = await syncCastToWiki(s);
+      setStatus(tf("ui.starter.castPushed", r.saved) + (r.failed ? tf("ui.starter.castPushFail", r.failed) : ""));
+      renderCastStep(host2, ctx2);
+    };
+    bar.append(add, fromWiki, push);
+    host2.append(bar);
+    if (!s.cast.length) {
+      host2.append(el("div", "st-empty", t("ui.starter.castEmpty")));
+      return true;
+    }
+    const grid = el("div", "st-cast-grid");
+    host2.append(grid);
+    for (const ch of s.cast) {
+      const card = el("div", "st-cast-card" + (charReady(ch) ? "" : " todo"));
+      const pic = el("div", "st-cast-pic");
+      const url = await imageUrl(s.slug, ch.image);
+      if (url) {
+        const im = el("img");
+        im.src = url;
+        im.alt = ch.name || "";
+        pic.append(im);
+      } else pic.append(el("span", "st-cast-noimg", "\u{1F464}"));
+      card.append(pic);
+      const info = el("div", "st-cast-info");
+      info.append(el("div", "st-cast-name", ch.name || t("ui.starter.castNoName")));
+      const meta2 = [];
+      if (ch.gender) meta2.push((GENDERS.find((g) => g.id === ch.gender) || {}).label || "");
+      if (ch.wikiPath) meta2.push("\u{1F4DA} " + t("ui.starter.inWiki"));
+      if (meta2.length) info.append(el("div", "st-cast-meta", meta2.join(" \xB7 ")));
+      const desc = String(ch.persona || "").trim();
+      info.append(el(
+        "div",
+        "st-cast-desc",
+        desc ? desc.slice(0, 120) + (desc.length > 120 ? "\u2026" : "") : t("ui.starter.castNoDesc")
+      ));
+      card.append(info);
+      const btns = el("div", "st-cast-btns");
+      const edit = el("button", null, t("ui.common.edit"));
+      edit.onclick = () => {
+        CAST_C.editing = ch.id;
+        renderCastStep(host2, ctx2);
+      };
+      const del2 = el("button", "st-danger", t("ui.common.del"));
+      del2.onclick = async () => {
+        if (!await confirmBox(
+          tf("ui.starter.castDelAsk", ch.name || t("ui.starter.castNoName")),
+          t("ui.common.del")
+        )) return;
+        s.cast = removeChar(s.cast, ch.id);
+        await ctx2.save({ now: true });
+        renderCastStep(host2, ctx2);
+      };
+      btns.append(edit, del2);
+      card.append(btns);
+      grid.append(card);
+    }
+    host2.append(el("div", "st-hint", t("ui.starter.castDelNote")));
+    return true;
+  }
+  async function renderEditor(host2, ctx2, ch) {
+    const s = ctx2.starter;
+    host2.innerHTML = "";
+    const save = () => {
+      s.cast = upsertChar(s.cast, ch);
+      ctx2.save();
+    };
+    const head2 = el("div", "st-row-btns");
+    const back = el("button", "st-back", "\u2190 " + t("ui.starter.castBackToList"));
+    back.onclick = async () => {
+      CAST_C.editing = "";
+      await ctx2.save({ now: true });
+      renderCastStep(host2, ctx2);
+    };
+    head2.append(back);
+    host2.append(head2);
+    const picRow = el("div", "st-field");
+    picRow.append(el("label", null, t("ui.starter.fImage")));
+    const picBox = el("div", "st-edit-pic st-img-box st-img-portrait");
+    const drawPic = async () => {
+      picBox.innerHTML = "";
+      const url = await imageUrl(s.slug, ch.image);
+      if (url) {
+        const im = el("img");
+        im.src = url;
+        picBox.append(im);
+      } else picBox.append(el("div", "st-cover-empty", t("ui.starter.noImage")));
+    };
+    const picBtns = el("div", "st-row-btns");
+    const fromFile = el("button", null, t("ui.starter.imgFromFile"));
+    fromFile.onclick = async () => {
+      const p = await kapi.openImageDialog();
+      if (!p) return;
+      const f = await importImage(s.slug, p);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      ch.image = f;
+      save();
+      await drawPic();
+    };
+    const fromGal = el("button", null, t("ui.starter.imgFromGallery"));
+    fromGal.onclick = async () => {
+      const { pickImage: pickImage2 } = await Promise.resolve().then(() => (init_gallery(), gallery_exports));
+      const it = await pickImage2(ctx2.root);
+      if (!it || !it.file) return;
+      const f = await importFromGallery(s.slug, it.file);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      ch.image = f;
+      save();
+      await drawPic();
+    };
+    const clr = el("button", null, t("ui.starter.imgClear"));
+    clr.onclick = async () => {
+      ch.image = "";
+      save();
+      await drawPic();
+    };
+    picBtns.append(fromFile, fromGal, clr);
+    picRow.append(picBox, picBtns);
+    host2.append(picRow);
+    await drawPic();
+    const nameRow = el("div", "st-field");
+    nameRow.append(el("label", null, t("ui.starter.fCharName")));
+    const nameInp = el("input", "wiki-input");
+    nameInp.value = ch.name || "";
+    nameInp.placeholder = t("ui.starter.fCharNamePlaceholder");
+    nameInp.oninput = () => {
+      ch.name = nameInp.value;
+      save();
+    };
+    nameRow.append(nameInp);
+    host2.append(nameRow);
+    const genRow = el("div", "st-field");
+    genRow.append(el("label", null, t("ui.starter.fGender")));
+    const gen = el("div", "st-gender");
+    for (const g of GENDERS) {
+      const b = el("button", "st-gender-btn" + (ch.gender === g.id ? " on" : ""), g.icon + " " + g.label);
+      b.onclick = () => {
+        ch.gender = g.id;
+        save();
+        renderEditor(host2, ctx2, ch);
+      };
+      gen.append(b);
+    }
+    genRow.append(gen);
+    host2.append(genRow);
+    const descRow = el("div", "st-field");
+    descRow.append(el("label", null, t("ui.starter.fDesc")));
+    const ta = el("textarea", "wiki-input st-ta");
+    ta.rows = 10;
+    ta.value = ch.persona || "";
+    ta.placeholder = t("ui.starter.fDescPlaceholder");
+    ta.oninput = () => {
+      ch.persona = ta.value;
+      save();
+    };
+    descRow.append(ta);
+    const descBtns = el("div", "st-row-btns");
+    descBtns.append(aiBtn(t("ui.starter.aiWriteChar"), async (reqId) => {
+      if (!String(ch.name || "").trim()) {
+        setStatus(t("ui.starter.needCharName"));
+        return;
+      }
+      const out = await askAI("char-desc", charDescPrompt(s, ch), SYS_WRITER(), reqId);
+      if (out) {
+        ch.persona = out;
+        ta.value = out;
+        save();
+      } else setStatus(t("ui.starter.aiNoResult"));
+    }));
+    if (!String(s.intro || "").trim()) descBtns.append(el("span", "st-dim", t("ui.starter.aiBetterWithIntro")));
+    descRow.append(descBtns);
+    host2.append(descRow);
+    const more = el("details", "st-more");
+    more.append(el("summary", null, t("ui.starter.moreFields")));
+    const aliasRow = el("div", "st-field");
+    aliasRow.append(el("label", null, t("ui.starter.fAliases")));
+    const aliasInp = el("input", "wiki-input");
+    aliasInp.value = (ch.aliases || []).join(", ");
+    aliasInp.placeholder = t("ui.starter.fAliasesPlaceholder");
+    aliasInp.oninput = () => {
+      ch.aliases = aliasInp.value.split(",").map((x) => x.trim()).filter(Boolean);
+      save();
+    };
+    aliasRow.append(aliasInp);
+    more.append(aliasRow);
+    const pronRow = el("div", "st-field");
+    pronRow.append(el("label", null, t("ui.starter.fPronoun")));
+    const pronInp = el("input", "wiki-input");
+    pronInp.value = ch.selfPronoun || "";
+    pronInp.placeholder = t("ui.starter.fPronounPlaceholder");
+    pronInp.oninput = () => {
+      ch.selfPronoun = pronInp.value;
+      save();
+    };
+    pronRow.append(pronInp);
+    more.append(pronRow);
+    const blurbRow = el("div", "st-field");
+    blurbRow.append(el("label", null, t("ui.starter.fBlurb")));
+    const blurbInp = el("input", "wiki-input");
+    blurbInp.value = ch.blurb || "";
+    blurbInp.placeholder = t("ui.starter.fBlurbPlaceholder");
+    blurbInp.oninput = () => {
+      ch.blurb = blurbInp.value;
+      save();
+    };
+    blurbRow.append(blurbInp);
+    more.append(blurbRow);
+    host2.append(more);
+    const foot = el("div", "st-row-btns");
+    const toWiki = el("button", "k-ok", ch.wikiPath ? t("ui.starter.charUpdateWiki") : t("ui.starter.charToWiki"));
+    toWiki.onclick = async () => {
+      if (!charReady(ch)) {
+        setStatus(t("ui.starter.needCharName"));
+        return;
+      }
+      const p = await pushCharToWiki(s.slug, ch);
+      if (!p) {
+        setStatus(t("ui.starter.wikiWriteFail"));
+        return;
+      }
+      ch.wikiPath = p;
+      save();
+      await ctx2.save({ now: true });
+      setStatus(t("ui.starter.charSavedWiki"));
+      renderEditor(host2, ctx2, ch);
+    };
+    foot.append(toWiki);
+    if (ch.wikiPath) foot.append(el("span", "st-dim", t("ui.starter.linkedWiki")));
+    host2.append(foot);
+    return true;
+  }
+  var CAST_C;
+  var init_starter_cast = __esm({
+    "src/starter/starter-cast.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_starter_ai();
+      init_starter_model();
+      init_starter_prompt();
+      init_starter_store();
+      init_starter_wiki();
+      CAST_C = { editing: "" };
+    }
+  });
+
+  // src/starter/starter-html.js
+  var starter_html_exports = {};
+  __export(starter_html_exports, {
+    ALLOWED_ATTRS: () => ALLOWED_ATTRS,
+    ALLOWED_TAGS: () => ALLOWED_TAGS,
+    IMG_PREFIX: () => IMG_PREFIX,
+    cleanStyle: () => cleanStyle,
+    htmlToDisplay: () => htmlToDisplay,
+    htmlToStorage: () => htmlToStorage,
+    referencedImages: () => referencedImages,
+    sanitizeHtml: () => sanitizeHtml
+  });
+  function cleanStyle(v2) {
+    return String(v2 || "").split(";").map((x) => x.trim()).filter(Boolean).filter((x) => STYLE_OK.test(x.split(":")[0].trim())).filter((x) => !/url\s*\(/i.test(x) && !/expression/i.test(x)).join("; ");
+  }
+  function attrsOf(raw) {
+    const out = {};
+    const re = /([a-zA-Z:_-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+    let m;
+    while ((m = re.exec(raw)) !== null) {
+      out[m[1].toLowerCase()] = m[3] !== void 0 ? m[3] : m[4] !== void 0 ? m[4] : m[5] || "";
+    }
+    return out;
+  }
+  function safeUrl(v2) {
+    const s = String(v2 || "").trim();
+    if (/^(javascript|vbscript)\s*:/i.test(s)) return "";
+    if (/^data:/i.test(s) && !/^data:image\//i.test(s)) return "";
+    return s;
+  }
+  function sanitizeHtml(html) {
+    let s = String(html == null ? "" : html);
+    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[\s\S]*?<\/\1\s*>/gi, "");
+    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, "");
+    s = s.replace(/<!--[\s\S]*?-->/g, "");
+    return s.replace(/<(\/?)([a-zA-Z0-9]+)([^>]*)>/g, (all, slash, tagRaw, rest) => {
+      const tag3 = tagRaw.toLowerCase();
+      if (!ALLOWED_TAGS.has(tag3)) return "";
+      if (slash) return "</" + tag3 + ">";
+      const a = attrsOf(rest);
+      const keep = [];
+      for (const [k, v2] of Object.entries(a)) {
+        if (k.startsWith("on")) continue;
+        if (!ALLOWED_ATTRS.has(k)) continue;
+        if (k === "href" || k === "src") {
+          const u = safeUrl(v2);
+          if (!u) continue;
+          keep.push(k + '="' + u.replace(/"/g, "&quot;") + '"');
+          continue;
+        }
+        if (k === "style") {
+          const st = cleanStyle(v2);
+          if (st) keep.push('style="' + st.replace(/"/g, "&quot;") + '"');
+          continue;
+        }
+        keep.push(k + '="' + String(v2).replace(/"/g, "&quot;") + '"');
+      }
+      const selfClose = tag3 === "br" || tag3 === "img" || tag3 === "hr" ? " /" : "";
+      return "<" + tag3 + (keep.length ? " " + keep.join(" ") : "") + selfClose + ">";
+    });
+  }
+  function htmlToStorage(html) {
+    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
+      const m = /(^|\/)images\/([^/"?#]+)(?:[?#][^"]*)?$/i.exec(decodeURI(url));
+      return m ? 'src="' + IMG_PREFIX + m[2] + '"' : all;
+    });
+  }
+  function htmlToDisplay(html, baseUrl) {
+    const base4 = String(baseUrl || "").replace(/\/+$/, "");
+    if (!base4) return String(html || "");
+    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
+      if (!url.startsWith(IMG_PREFIX)) return all;
+      return 'src="' + base4 + "/" + url.split("/").map(encodeURIComponent).join("/") + '"';
+    });
+  }
+  function referencedImages(html) {
+    const out = [];
+    const re = /src\s*=\s*"([^"]*)"/gi;
+    let m;
+    while ((m = re.exec(String(html || ""))) !== null) {
+      if (m[1].startsWith(IMG_PREFIX)) out.push(m[1].slice(IMG_PREFIX.length));
+    }
+    return [...new Set(out)];
+  }
+  var ALLOWED_TAGS, ALLOWED_ATTRS, STYLE_OK, IMG_PREFIX;
+  var init_starter_html = __esm({
+    "src/starter/starter-html.js"() {
+      ALLOWED_TAGS = /* @__PURE__ */ new Set([
+        "p",
+        "br",
+        "div",
+        "span",
+        "b",
+        "strong",
+        "i",
+        "em",
+        "u",
+        "s",
+        "strike",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "a",
+        "img",
+        "hr"
+      ]);
+      ALLOWED_ATTRS = /* @__PURE__ */ new Set(["href", "src", "alt", "title", "style", "align"]);
+      STYLE_OK = /^(text-align|font-weight|font-style|text-decoration|margin|padding|width|max-width)$/i;
+      IMG_PREFIX = "images/";
+    }
+  });
+
+  // src/starter/starter-richtext.js
+  var starter_richtext_exports = {};
+  __export(starter_richtext_exports, {
+    renderRichView: () => renderRichView,
+    richEditor: () => richEditor
+  });
+  async function richEditor({ slug: slug2, value = "", onChange = () => {
+  }, minHeight = 180 }) {
+    const wrap2 = el("div", "st-rt");
+    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
+    const bar = el("div", "st-rt-bar");
+    const area = el("div", "st-rt-area");
+    area.contentEditable = "true";
+    area.spellcheck = false;
+    area.style.minHeight = minHeight + "px";
+    area.innerHTML = htmlToDisplay(sanitizeHtml(value), baseUrl);
+    const emit3 = () => {
+      onChange(htmlToStorage(sanitizeHtml(area.innerHTML)));
+    };
+    const syncActive = () => {
+      for (const b of bar.querySelectorAll("button[data-cmd]")) {
+        let on2 = false;
+        try {
+          on2 = document.queryCommandState(b.dataset.cmd);
+        } catch {
+        }
+        b.classList.toggle("on", !!on2);
+      }
+    };
+    for (const c of CMDS) {
+      if (c.sep) {
+        bar.append(el("span", "st-rt-sep"));
+        continue;
+      }
+      const b = el("button", "st-rt-btn" + (c.cls ? " " + c.cls : ""), c.label);
+      b.type = "button";
+      b.dataset.cmd = c.cmd;
+      b.title = c.tip();
+      b.onmousedown = (e) => e.preventDefault();
+      b.onclick = () => {
+        area.focus();
+        try {
+          document.execCommand(c.cmd, false, null);
+        } catch (e) {
+          log("warn", "starter rt: " + c.cmd, e);
+        }
+        syncActive();
+        emit3();
+      };
+      bar.append(b);
+    }
+    bar.append(el("span", "st-rt-sep"));
+    const imgBtn = el("button", "st-rt-btn", "\u{1F5BC}");
+    imgBtn.type = "button";
+    imgBtn.title = t("ui.starter.rtImage");
+    imgBtn.onmousedown = (e) => e.preventDefault();
+    imgBtn.onclick = async () => {
+      const p = await kapi.openImageDialog();
+      if (!p) return;
+      const f = await importImage(slug2, p);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      const url = baseUrl + "/images/" + encodeURIComponent(f);
+      area.focus();
+      try {
+        document.execCommand(
+          "insertHTML",
+          false,
+          '<img src="' + url + '" style="max-width: 100%" />'
+        );
+      } catch (e) {
+        log("warn", "starter rt: insert image", e);
+        area.append(Object.assign(document.createElement("img"), { src: url }));
+      }
+      emit3();
+    };
+    bar.append(imgBtn);
+    area.oninput = emit3;
+    area.onkeyup = syncActive;
+    area.onmouseup = syncActive;
+    area.onpaste = (e) => {
+      e.preventDefault();
+      const txt = (e.clipboardData || window.clipboardData).getData("text/plain");
+      try {
+        document.execCommand("insertText", false, txt);
+      } catch {
+        area.textContent += txt;
+      }
+      emit3();
+    };
+    wrap2.append(bar, area);
+    wrap2.__area = area;
+    wrap2.__setHtml = (v2) => {
+      area.innerHTML = htmlToDisplay(sanitizeHtml(v2), baseUrl);
+    };
+    return wrap2;
+  }
+  async function renderRichView(slug2, html) {
+    const box2 = el("div", "st-rt-view");
+    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
+    box2.innerHTML = htmlToDisplay(sanitizeHtml(html || ""), baseUrl);
+    return box2;
+  }
+  var CMDS;
+  var init_starter_richtext = __esm({
+    "src/starter/starter-richtext.js"() {
+      init_core();
+      init_i18n();
+      init_starter_html();
+      init_starter_store();
+      CMDS = [
+        { cmd: "bold", label: "B", cls: "st-rt-b", tip: () => t("ui.starter.rtBold") },
+        { cmd: "italic", label: "I", cls: "st-rt-i", tip: () => t("ui.starter.rtItalic") },
+        { cmd: "underline", label: "U", cls: "st-rt-u", tip: () => t("ui.starter.rtUnderline") },
+        { sep: true },
+        { cmd: "justifyLeft", label: "\u21E4", tip: () => t("ui.starter.rtLeft") },
+        { cmd: "justifyCenter", label: "\u2194", tip: () => t("ui.starter.rtCenter") },
+        { cmd: "justifyRight", label: "\u21E5", tip: () => t("ui.starter.rtRight") },
+        { sep: true },
+        { cmd: "insertUnorderedList", label: "\u2022", tip: () => t("ui.starter.rtList") },
+        { cmd: "removeFormat", label: "\u2715", tip: () => t("ui.starter.rtClear") }
+      ];
+    }
+  });
+
+  // src/starter/starter-steps.js
+  function field(labelText, value, onInput, { multiline = false, placeholder = "", rows = 5 } = {}) {
+    const row2 = el("div", "st-field");
+    row2.append(el("label", null, labelText));
+    const inp = multiline ? el("textarea", "wiki-input st-ta") : el("input", "wiki-input");
+    if (multiline) inp.rows = rows;
+    inp.value = value || "";
+    inp.placeholder = placeholder;
+    inp.oninput = () => onInput(inp.value);
+    row2.append(inp);
+    row2.__input = inp;
+    return row2;
+  }
+  function pickLine(host2, text, onPick) {
+    const lines = String(text || "").split(/\r?\n/).map((x) => x.replace(/^\s*(?:[-*•]|\d{1,2}[.)])\s*/, "").trim()).filter((x) => x && x.length < 120);
+    if (!lines.length) return false;
+    const box2 = el("div", "st-suggest");
+    box2.append(el("div", "st-suggest-head", t("ui.starter.pickOne")));
+    for (const ln of lines.slice(0, 8)) {
+      const b = el("button", "st-suggest-item", ln);
+      b.onclick = () => {
+        onPick(ln);
+        box2.remove();
+      };
+      box2.append(b);
+    }
+    const close2 = el("button", "st-suggest-close", t("ui.common.cancel"));
+    close2.onclick = () => box2.remove();
+    box2.append(close2);
+    host2.append(box2);
+    return true;
+  }
+  async function imagePicker(ctx2, key2, { ratio = "st-img-cover", label = "" } = {}) {
+    const s = ctx2.starter;
+    const row2 = el("div", "st-field");
+    if (label) row2.append(el("label", null, label));
+    const box2 = el("div", "st-img-box " + ratio);
+    const draw3 = async () => {
+      box2.innerHTML = "";
+      const url = await imageUrl(s.slug, s[key2]);
+      if (url) {
+        const im = el("img");
+        im.src = url;
+        box2.append(im);
+      } else box2.append(el("div", "st-cover-empty", t("ui.starter.noImage")));
+    };
+    const btns = el("div", "st-row-btns");
+    const fromFile = el("button", null, t("ui.starter.imgFromFile"));
+    fromFile.onclick = async () => {
+      const p = await kapi.openImageDialog();
+      if (!p) return;
+      const f = await importImage(s.slug, p);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      s[key2] = f;
+      await ctx2.save({ now: true });
+      await draw3();
+    };
+    const fromGal = el("button", null, t("ui.starter.imgFromGallery"));
+    fromGal.onclick = async () => {
+      const { pickImage: pickImage2 } = await Promise.resolve().then(() => (init_gallery(), gallery_exports));
+      const it = await pickImage2(ctx2.root);
+      if (!it || !it.file) return;
+      const f = await importFromGallery(s.slug, it.file);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      s[key2] = f;
+      await ctx2.save({ now: true });
+      await draw3();
+    };
+    const clr = el("button", null, t("ui.starter.imgClear"));
+    clr.onclick = async () => {
+      s[key2] = "";
+      await ctx2.save({ now: true });
+      await draw3();
+    };
+    btns.append(fromFile, fromGal, clr);
+    row2.append(box2, btns);
+    await draw3();
+    return row2;
+  }
+  function renderTags(host2, ctx2) {
+    const s = ctx2.starter;
+    const picked = el("div", "st-tag-picked");
+    const redrawPicked = () => {
+      picked.innerHTML = "";
+      const rows = normalizeTags(s.tags);
+      if (!rows.length) {
+        picked.append(el("div", "st-dim", t("ui.starter.noTagYet")));
+        return;
+      }
+      for (const tg of rows) {
+        const c = el("span", "st-tag on", tg);
+        const x = el("span", "st-tag-x", "\xD7");
+        x.onclick = () => {
+          s.tags = toggleTag(s.tags, tg);
+          ctx2.save();
+          redrawAll();
+        };
+        c.append(x);
+        picked.append(c);
+      }
+    };
+    const groups = el("div", "st-tag-groups");
+    const redrawGroups = () => {
+      groups.innerHTML = "";
+      for (const g of TAG_GROUPS) {
+        const box2 = el("div", "st-tag-group");
+        box2.append(el("div", "st-tag-group-label", g.label));
+        const list = el("div", "st-tag-list");
+        for (const tg of g.tags) {
+          const b = el("button", "st-tag" + (hasTag(s.tags, tg) ? " on" : ""), tg);
+          b.onclick = () => {
+            s.tags = toggleTag(s.tags, tg);
+            ctx2.save();
+            redrawAll();
+          };
+          list.append(b);
+        }
+        box2.append(list);
+        groups.append(box2);
+      }
+    };
+    const redrawAll = () => {
+      redrawPicked();
+      redrawGroups();
+    };
+    host2.append(el("div", "st-sub", t("ui.starter.tagPicked")));
+    host2.append(picked);
+    const own = el("div", "st-tag-own");
+    const inp = el("input", "wiki-input");
+    inp.placeholder = t("ui.starter.tagOwnPlaceholder");
+    const add = el("button", "k-ok", t("ui.starter.tagAdd"));
+    const doAdd = () => {
+      const v2 = inp.value.trim();
+      if (!v2) return;
+      s.tags = normalizeTags([...s.tags || [], v2]);
+      inp.value = "";
+      ctx2.save();
+      redrawAll();
+    };
+    add.onclick = doAdd;
+    inp.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.isComposing) {
+        e.preventDefault();
+        doAdd();
+      }
+    };
+    own.append(inp, add);
+    host2.append(own);
+    host2.append(groups);
+    redrawAll();
+  }
+  async function renderIntro(host2, ctx2) {
+    const s = ctx2.starter;
+    const nameRow = field(
+      t("ui.starter.fName"),
+      s.name,
+      (v2) => {
+        s.name = v2;
+        ctx2.save();
+      },
+      { placeholder: t("ui.starter.fNamePlaceholder") }
+    );
+    const nameBtns = el("div", "st-row-btns");
+    nameBtns.append(aiBtn(t("ui.starter.aiSuggestName"), async (reqId) => {
+      const out = await askAI("story-name", namePrompt(s), SYS_WRITER(), reqId);
+      if (!out) return;
+      if (!pickLine(nameBtns, out, (v2) => {
+        s.name = v2;
+        nameRow.__input.value = v2;
+        ctx2.save();
+      })) setStatus(t("ui.starter.aiNoResult"));
+    }));
+    nameRow.append(nameBtns);
+    host2.append(nameRow);
+    host2.append(el("div", "st-hint", tf("ui.starter.folderFixed", s.slug)));
+    host2.append(field(
+      t("ui.starter.fAuthor"),
+      s.author,
+      (v2) => {
+        s.author = v2;
+        ctx2.save();
+      },
+      { placeholder: t("ui.starter.fAuthorPlaceholder") }
+    ));
+    const blurbRow = field(
+      t("ui.starter.fStoryBlurb"),
+      s.blurb,
+      (v2) => {
+        s.blurb = v2;
+        ctx2.save();
+      },
+      { placeholder: t("ui.starter.fStoryBlurbPlaceholder") }
+    );
+    const blurbBtns = el("div", "st-row-btns");
+    blurbBtns.append(aiBtn(t("ui.starter.aiWriteBlurb"), async (reqId) => {
+      const out = await askAI("blurb", blurbPrompt(s), SYS_WRITER(), reqId);
+      if (!out) {
+        setStatus(t("ui.starter.aiNoResult"));
+        return;
+      }
+      const one = out.split(/\r?\n/).map((x) => x.trim()).filter(Boolean)[0] || out;
+      s.blurb = one;
+      blurbRow.__input.value = one;
+      ctx2.save();
+    }));
+    blurbRow.append(blurbBtns);
+    host2.append(blurbRow);
+    const descRow = el("div", "st-field");
+    descRow.append(el("label", null, t("ui.starter.fDescription")));
+    const rt = await richEditor({
+      slug: s.slug,
+      value: s.intro,
+      onChange: (html) => {
+        s.intro = html;
+        ctx2.save();
+      }
+    });
+    descRow.append(rt);
+    const descBtns = el("div", "st-row-btns");
+    descBtns.append(aiBtn(t("ui.starter.aiWriteIntro"), async (reqId) => {
+      const out = await askAI("description", descPrompt(s), SYS_WRITER(), reqId);
+      if (!out) {
+        setStatus(t("ui.starter.aiNoResult"));
+        return;
+      }
+      s.intro = out;
+      rt.__setHtml(out);
+      ctx2.save();
+    }));
+    descBtns.append(aiBtn(t("ui.starter.aiWriteIntroShort"), async (reqId) => {
+      const out = await askAI("intro-short", introPrompt(s), SYS_WRITER(), reqId);
+      if (!out) {
+        setStatus(t("ui.starter.aiNoResult"));
+        return;
+      }
+      s.intro = out;
+      rt.__setHtml(out);
+      ctx2.save();
+    }));
+    if (!(s.tags || []).length) descBtns.append(el("span", "st-dim", t("ui.starter.aiBetterWithTags")));
+    descRow.append(descBtns);
+    host2.append(descRow);
+  }
+  function renderW(host2, ctx2) {
+    const s = ctx2.starter;
+    s.w = s.w || {};
+    host2.append(el("div", "st-hint", t("ui.starter.wAllOptional")));
+    for (const f of W_FIELDS) {
+      const row2 = field(
+        f.icon + " " + f.label,
+        s.w[f.key] || "",
+        (v2) => {
+          s.w[f.key] = v2;
+          ctx2.save();
+        },
+        { multiline: true, rows: 3, placeholder: f.hint }
+      );
+      const btns = el("div", "st-row-btns");
+      btns.append(aiBtn(t("ui.starter.aiHelp"), async (reqId) => {
+        const out = await askAI("4w:" + f.key, wFieldPrompt(s, f), SYS_WRITER(), reqId);
+        if (!out) {
+          setStatus(t("ui.starter.aiNoResult"));
+          return;
+        }
+        s.w[f.key] = out;
+        row2.__input.value = out;
+        ctx2.save();
+      }));
+      row2.append(btns);
+      host2.append(row2);
+    }
+  }
+  async function renderCover(host2, ctx2) {
+    host2.append(await imagePicker(
+      ctx2,
+      "cover",
+      { ratio: "st-img-cover", label: t("ui.starter.fCover") }
+    ));
+    host2.append(el("div", "st-hint", t("ui.starter.coverSizeHint")));
+    host2.append(await imagePicker(
+      ctx2,
+      "banner",
+      { ratio: "st-img-banner", label: t("ui.starter.fBanner") }
+    ));
+    host2.append(el("div", "st-hint", t("ui.starter.bannerSizeHint")));
+    host2.append(el("div", "st-hint", t("ui.starter.coverPortable")));
+  }
+  var STEP_RENDERERS;
+  var init_starter_steps = __esm({
+    "src/starter/starter-steps.js"() {
+      init_core();
+      init_i18n();
+      init_starter_steps_def();
+      init_starter_model();
+      init_starter_prompt();
+      init_starter_store();
+      init_starter_cast();
+      init_starter_ai();
+      init_starter_richtext();
+      STEP_RENDERERS = {
+        tags: renderTags,
+        intro: renderIntro,
+        cast: renderCastStep,
+        w: renderW,
+        cover: renderCover
+      };
+    }
+  });
+
+  // src/starter/starter-wizard.js
+  function renderWizard(host2, ctx2) {
+    const s = ctx2.starter;
+    const i5 = clampStep(s.step);
+    const step = STEPS[i5];
+    host2.innerHTML = "";
+    const wrap2 = el("div", "st-wizard");
+    host2.append(wrap2);
+    const head2 = el("div", "st-wz-head");
+    const back = el("button", "st-back", "\u2190 " + t("ui.starter.backToList"));
+    back.onclick = () => ctx2.goList();
+    head2.append(back);
+    head2.append(el("div", "st-wz-title", s.name || t("ui.starter.untitled")));
+    const prog = starterProgress(s, STEPS);
+    head2.append(el("div", "st-wz-prog", tf("ui.starter.progress", prog.done, prog.total)));
+    wrap2.append(head2);
+    const chips = el("div", "st-steps");
+    STEPS.forEach((x, n2) => {
+      const c = el("button", "st-chip" + (n2 === i5 ? " on" : "") + (stepFilled(s, x) ? " done" : ""));
+      c.append(el("span", "st-chip-ico", x.icon));
+      c.append(el("span", "st-chip-txt", x.title));
+      if (x.required === false) c.append(el("span", "st-chip-opt", t("ui.starter.optional")));
+      c.title = x.desc;
+      c.onclick = () => {
+        s.step = n2;
+        ctx2.save();
+        ctx2.rerender();
+      };
+      chips.append(c);
+    });
+    wrap2.append(chips);
+    const bar = el("div", "st-bar");
+    const fill3 = el("div", "st-bar-fill");
+    fill3.style.width = prog.pct + "%";
+    bar.append(fill3);
+    wrap2.append(bar);
+    const body = el("div", "st-wz-body");
+    wrap2.append(body);
+    const head22 = el("div", "st-step-head");
+    head22.append(el("div", "st-step-title", step.icon + " " + step.title));
+    head22.append(el("div", "st-step-desc", step.desc));
+    body.append(head22);
+    const pane = el("div", "st-step-pane");
+    body.append(pane);
+    const draw3 = STEP_RENDERERS[step.id];
+    if (draw3) {
+      Promise.resolve(draw3(pane, ctx2)).catch((e) => {
+        pane.append(el("div", "st-err", t("ui.starter.stepDrawFail")));
+        Promise.resolve().then(() => (init_core(), core_exports)).then((m) => m.log("error", "starter step " + step.id, e));
+      });
+    } else {
+      pane.append(el("div", "st-err", tf("ui.starter.noRenderer", step.id)));
+    }
+    const foot = el("div", "st-wz-foot");
+    const prev = el("button", "st-nav", "\u2190 " + t("ui.starter.prevStep"));
+    prev.disabled = isFirstStep(i5);
+    prev.onclick = () => {
+      s.step = clampStep(i5 - 1);
+      ctx2.save();
+      ctx2.rerender();
+    };
+    foot.append(prev);
+    const spacer = el("div", "st-flex");
+    foot.append(spacer);
+    if (isLastStep(i5)) {
+      const miss = missingSteps(s, STEPS);
+      const fin = el("button", "k-ok st-finish", t("ui.starter.finish"));
+      if (!starterReady(s, STEPS)) {
+        fin.disabled = true;
+        fin.title = t("ui.starter.finishBlocked") + miss.map((x) => x.title).join(", ");
+        foot.append(el("div", "st-miss", fin.title));
+      }
+      fin.onclick = async () => {
+        s.done = true;
+        await ctx2.save({ now: true });
+        ctx2.goHome();
+      };
+      foot.append(fin);
+    } else {
+      const next = el("button", "k-ok st-nav", t("ui.starter.nextStep") + " \u2192");
+      next.onclick = () => {
+        s.step = clampStep(i5 + 1);
+        ctx2.save();
+        ctx2.rerender();
+      };
+      foot.append(next);
+    }
+    wrap2.append(foot);
+    if (s.done) {
+      const go = el("button", "st-linkbtn", t("ui.starter.goScenarios"));
+      go.onclick = () => ctx2.goHome();
+      foot.append(go);
+    }
+    return true;
+  }
+  var init_starter_wizard = __esm({
+    "src/starter/starter-wizard.js"() {
+      init_core();
+      init_i18n();
+      init_starter_steps_def();
+      init_starter_model();
+      init_starter_steps();
+    }
+  });
+
+  // src/starter/starter-render-prose.js
+  function roughTokens(text) {
+    const s = String(text || "");
+    const thai = (s.match(/[฀-๿]/g) || []).length;
+    return Math.ceil((s.length - thai) / 4) + Math.ceil(thai / 1.6);
+  }
+  function chunkTurns(turns, maxTokens = CHUNK_TOKENS) {
+    const rows = (turns || []).filter((r) => String(r.text || "").trim());
+    const out = [];
+    let cur = [];
+    let size = 0;
+    for (const r of rows) {
+      const n2 = roughTokens(r.text);
+      const canCut2 = r.role === ROLE_GM && cur.length > 0;
+      if (canCut2 && size + n2 > maxTokens) {
+        out.push(cur);
+        cur = [];
+        size = 0;
+      }
+      cur.push(r);
+      size += n2;
+    }
+    if (cur.length) out.push(cur);
+    return out.length ? out : [[]];
+  }
+  function chunkText2(chunk, nameOf2 = () => "") {
+    return (chunk || []).map((r) => {
+      const who = r.role === ROLE_GM ? t("ui.starter.trGm") : nameOf2(r.speaker) || t("ui.starter.trPlayer");
+      return who + ": " + String(r.text || "").trim();
+    }).join("\n\n");
+  }
+  function prosePrompt(s, sc, chunk, { part = 1, total = 1, tail = "", nameOf: nameOf2 } = {}) {
+    const first = part === 1;
+    const last2 = part === total;
+    return [
+      t("ui.starter.pCvTask"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip2(tail, TAIL_CHARS) : "",
+      t("ui.starter.pCvSource"),
+      chunkText2(chunk, nameOf2),
+      t("ui.starter.pCvRuleProse"),
+      first ? "" : t("ui.starter.pCvNoReopen"),
+      last2 ? "" : t("ui.starter.pCvNoClose")
+    ].filter(Boolean).join("\n\n");
+  }
+  function tailOf(text, chars3 = TAIL_CHARS) {
+    const s = String(text || "").trim();
+    return s.length <= chars3 ? s : s.slice(-chars3);
+  }
+  function stitch(parts) {
+    return (parts || []).map((x) => String(x || "").trim()).filter(Boolean).join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function proseBody(prose, openChoices2 = []) {
+    const marks2 = (openChoices2 || []).map(choiceMarker).filter(Boolean);
+    if (!marks2.length) return stitch([prose]);
+    return stitch([prose]) + "\n\n" + t("ui.starter.cvForkHead") + "\n\n" + marks2.map((m) => "- " + m).join("\n") + "\n";
+  }
+  var CHUNK_TOKENS, TAIL_CHARS;
+  var init_starter_render_prose = __esm({
+    "src/starter/starter-render-prose.js"() {
+      init_i18n();
+      init_starter_model();
+      init_starter_prompt();
+      init_starter_choices();
+      CHUNK_TOKENS = 2200;
+      TAIL_CHARS = 600;
+    }
+  });
+
+  // src/starter/starter-render-sp.js
+  function looksLikeSlug(line) {
+    const s = String(line || "").trim();
+    if (!s || s.length > 90) return false;
+    return SCENE_PREFIX.some((p) => s.toUpperCase().startsWith(p.toUpperCase()) || s.startsWith(p));
+  }
+  function looksLikeTransition(line) {
+    const s = String(line || "").trim().toUpperCase();
+    return TRANSITIONS.some((x) => s === x.toUpperCase());
+  }
+  function looksLikeParen(line) {
+    const s = String(line || "").trim();
+    return s.length > 2 && s.startsWith("(") && s.endsWith(")") && !s.includes("((");
+  }
+  function looksLikeCharacter(line, names = []) {
+    const s = String(line || "").trim().replace(/\s*\((cont'd|ต่อ|V\.O\.|O\.S\.)\)\s*$/i, "");
+    if (!s || s.length > 40) return false;
+    const bare = s.replace(/[:：]\s*$/, "").trim();
+    if (names.some((n2) => n2 && bare === n2)) return true;
+    return /^[A-Z][A-Z0-9 .'’-]{1,38}$/.test(bare) && !looksLikeTransition(bare);
+  }
+  function normalizeFountain(text, names = []) {
+    const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+    const out = [];
+    let prevWasCharacter = false;
+    for (const raw of lines) {
+      const s = raw.trim();
+      if (!s) {
+        out.push("");
+        prevWasCharacter = false;
+        continue;
+      }
+      if (/^(#{3,5} |@|\(\(|>> |<< |\/\/\/ |! |\$)/.test(s)) {
+        out.push(s);
+        prevWasCharacter = s.startsWith("@");
+        continue;
+      }
+      if (/^-{3,}$/.test(s)) {
+        out.push(s);
+        prevWasCharacter = false;
+        continue;
+      }
+      if (looksLikeSlug(s)) {
+        out.push("### " + s);
+        prevWasCharacter = false;
+        continue;
+      }
+      if (looksLikeTransition(s)) {
+        out.push(">> " + s);
+        prevWasCharacter = false;
+        continue;
+      }
+      if (prevWasCharacter && looksLikeParen(s)) {
+        out.push("((" + s.slice(1, -1).trim() + "))");
+        continue;
+      }
+      if (!prevWasCharacter && looksLikeCharacter(s, names)) {
+        out.push("@" + s.replace(/[:：]\s*$/, "").trim());
+        prevWasCharacter = true;
+        continue;
+      }
+      out.push(s);
+      prevWasCharacter = false;
+    }
+    return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function spPrompt(s, sc, chunk, { part = 1, total = 1, tail = "", nameOf: nameOf2 } = {}) {
+    const first = part === 1;
+    const last2 = part === total;
+    return [
+      t("ui.starter.pCvTaskSp"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip2(tail, TAIL_CHARS) : "",
+      t("ui.starter.pCvSource"),
+      chunkText2(chunk, nameOf2),
+      t("ui.starter.pCvRuleSp"),
+      first ? "" : t("ui.starter.pCvNoReopen"),
+      last2 ? "" : t("ui.starter.pCvNoClose")
+    ].filter(Boolean).join("\n\n");
+  }
+  function spBody(script2, openChoices2 = [], names = []) {
+    const body = normalizeFountain(script2, names);
+    const marks2 = (openChoices2 || []).map(choiceMarker).filter(Boolean);
+    if (!marks2.length) return body;
+    return body + "\n\n" + marks2.map((m) => "/// " + m).join("\n") + "\n";
+  }
+  var init_starter_render_sp = __esm({
+    "src/starter/starter-render-sp.js"() {
+      init_i18n();
+      init_fountain();
+      init_starter_prompt();
+      init_starter_render_prose();
+      init_starter_choices();
+    }
+  });
+
+  // src/starter/starter-export.js
+  var starter_export_exports = {};
+  __export(starter_export_exports, {
+    EXPORT_BOOK: () => EXPORT_BOOK,
+    FORMATS: () => FORMATS,
+    convertDialog: () => convertDialog,
+    convertScenario: () => convertScenario,
+    plainTranscript: () => plainTranscript
+  });
+  async function ensureBook() {
+    const secs = await listSections();
+    const hit = secs.find((x) => (x.meta && x.meta.title) === EXPORT_BOOK);
+    if (hit) return hit.secPath;
+    const dir2 = await addSection(EXPORT_BOOK);
+    return dir2 || "";
+  }
+  async function firstDraft(secPath) {
+    const root = await kapi.join(secPath, "Draft");
+    if (!await kapi.exists(root)) return "";
+    const dirs = await kapi.listDirs(root);
+    return dirs.length ? kapi.join(root, dirs[0]) : "";
+  }
+  async function ensureChapter(dPath, title2) {
+    const df = await kapi.join(dPath, "draft.json");
+    const d = await kapi.readJson(df);
+    const hit = (d.chapters || []).find((c) => c.title === title2);
+    if (hit) return hit;
+    return addChapter(dPath, title2);
+  }
+  async function setSceneChoices(dPath, chGuid, sceneId, rows) {
+    if (!rows.length) return false;
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    const list = (d.chapters || {})[chGuid] || [];
+    const row2 = list.find((x) => x.id === sceneId);
+    if (!row2) return false;
+    row2.choices = rows;
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    return true;
+  }
+  async function convertScenario(s, sc, { format: format3 = "prose", onProgress = null, ai = null } = {}) {
+    const turns = (sc.turns || []).filter((r) => String(r.text || "").trim());
+    if (!turns.length) {
+      setStatus(t("ui.starter.cvNothing"));
+      return null;
+    }
+    const callAI2 = ai || (await Promise.resolve().then(() => (init_ai_settings(), ai_settings_exports))).callAI;
+    const nameOf2 = (id) => {
+      const c = charById(s, id);
+      return c && c.name || "";
+    };
+    const names = (s.cast || []).map((c) => c.name).filter(Boolean);
+    const chunks = chunkTurns(turns);
+    const parts = [];
+    let tail = "";
+    for (let i5 = 0; i5 < chunks.length; i5++) {
+      if (onProgress) onProgress(i5, chunks.length);
+      const build = format3 === "screenplay" ? spPrompt : prosePrompt;
+      const prompt2 = build(
+        s,
+        sc,
+        chunks[i5],
+        { part: i5 + 1, total: chunks.length, tail, nameOf: nameOf2 }
+      );
+      const out = await callAI2(prompt2, t("ui.starter.sysWriter"));
+      if (!out) {
+        if (!parts.length) {
+          setStatus(t("ui.starter.cvFail"));
+          return null;
+        }
+        setStatus(tf("ui.starter.cvPartial", i5, chunks.length));
+        break;
+      }
+      parts.push(out);
+      tail = tailOf(out);
+    }
+    if (onProgress) onProgress(chunks.length, chunks.length);
+    const open = openChoices(sc);
+    const body = format3 === "screenplay" ? spBody(stitch(parts), open, names) : proseBody(stitch(parts), open);
+    const secPath = await ensureBook();
+    if (!secPath) {
+      setStatus(t("ui.starter.cvNoBook"));
+      return null;
+    }
+    const dPath = await firstDraft(secPath);
+    if (!dPath) {
+      setStatus(t("ui.starter.cvNoDraft"));
+      return null;
+    }
+    const ch = await ensureChapter(dPath, s.name || s.slug);
+    if (!ch) {
+      setStatus(t("ui.starter.cvNoChapter"));
+      return null;
+    }
+    const title2 = sc.title || t("ui.starter.scUntitled");
+    const row2 = await addScene(dPath, ch, title2, {
+      silent: true,
+      body,
+      meta: {
+        format: format3 === "screenplay" ? "screenplay" : "prose",
+        // ตามรอยกลับได้ว่าฉากนี้มาจากตอนไหน — เผื่อวันหลังอยากทำ "แปลงทับของเดิม"
+        starter: s.slug,
+        scenario: sc.id,
+        synopsis: (sc.synopsis || "").replace(/\s+/g, " ").slice(0, 200)
+      }
+    });
+    if (!row2) {
+      setStatus(t("ui.starter.cvNoScene"));
+      return null;
+    }
+    await setSceneChoices(dPath, ch.guid, row2.id, choiceRows(open));
+    sc.exports = [...sc.exports || [], { at: Date.now(), format: format3, path: row2.path }];
+    await writeScenario(s.slug, sc);
+    await buildTree2();
+    return { path: row2.path, chunks: parts.length };
+  }
+  function convertDialog(s, rows, only = null, opts = {}) {
+    return new Promise((resolve) => {
+      const list = only ? [only] : (rows || []).filter((r) => (r.turns || []).length);
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide st-cv");
+      box2.append(el("div", "k-dlg-title", t("ui.starter.cvTitle")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      if (!list.length) {
+        box2.append(el("div", "st-empty", t("ui.starter.cvNoPlayed")));
+      }
+      const fmtRow = el("div", "st-field");
+      fmtRow.append(el("label", null, t("ui.starter.cvFormat")));
+      const fmtBox = el("div", "st-tag-list");
+      const fmt = { v: "prose" };
+      const fmtBtns = [];
+      for (const f of FORMATS) {
+        const b = el("button", "st-tag" + (f.id === fmt.v ? " on" : ""), f.icon + " " + f.label);
+        b.onclick = () => {
+          fmt.v = f.id;
+          fmtBtns.forEach((x) => x.classList.toggle("on", x === b));
+        };
+        fmtBtns.push(b);
+        fmtBox.append(b);
+      }
+      fmtRow.append(fmtBox);
+      box2.append(fmtRow);
+      const pickRow = el("div", "st-field");
+      pickRow.append(el("label", null, t("ui.starter.cvWhich")));
+      const picked = new Set(list.map((r) => r.id));
+      const pickBox = el("div", "st-tag-list");
+      for (const r of list) {
+        const b = el("button", "st-tag on", r.title || t("ui.starter.scUntitled"));
+        b.onclick = () => {
+          if (picked.has(r.id)) picked.delete(r.id);
+          else picked.add(r.id);
+          b.classList.toggle("on");
+        };
+        pickBox.append(b);
+      }
+      pickRow.append(pickBox);
+      box2.append(pickRow);
+      box2.append(el("div", "st-hint", tf("ui.starter.cvWhereHint", EXPORT_BOOK, s.name || s.slug)));
+      box2.append(el("div", "st-hint", t("ui.starter.cvAgainHint")));
+      const prog = el("div", "st-cv-prog");
+      box2.append(prog);
+      const foot = el("div", "k-dlg-foot");
+      const cancel = el("button", null, t("ui.common.cancel"));
+      cancel.onclick = () => done2(null);
+      const go = el("button", "k-ok", t("ui.starter.cvGo"));
+      go.disabled = !list.length;
+      go.onclick = async () => {
+        const todo = list.filter((r) => picked.has(r.id));
+        if (!todo.length) {
+          setStatus(t("ui.starter.cvPickOne"));
+          return;
+        }
+        go.disabled = true;
+        cancel.disabled = true;
+        const made = [];
+        for (let i5 = 0; i5 < todo.length; i5++) {
+          const r = todo[i5];
+          prog.textContent = tf("ui.starter.cvWorking", r.title || "", i5 + 1, todo.length);
+          try {
+            const res = await convertScenario(s, r, {
+              format: fmt.v,
+              ai: opts.ai || null,
+              onProgress: (a, b) => {
+                prog.textContent = tf(
+                  "ui.starter.cvWorkingChunk",
+                  r.title || "",
+                  i5 + 1,
+                  todo.length,
+                  a,
+                  b
+                );
+              }
+            });
+            if (res) made.push(res.path);
+          } catch (e) {
+            log("error", "starter convert", e);
+            setStatus(t("ui.starter.cvFail"));
+          }
+        }
+        done2(made);
+        if (made.length) setStatus(tf("ui.starter.cvDone", made.length, EXPORT_BOOK));
+      };
+      foot.append(cancel, go);
+      box2.append(foot);
+      ov.append(box2);
+      document.body.append(ov);
+    });
+  }
+  function plainTranscript(s, sc) {
+    return transcriptText(sc, (id) => {
+      const c = charById(s, id);
+      return c && c.name || "";
+    });
+  }
+  var EXPORT_BOOK, FORMATS;
+  var init_starter_export = __esm({
+    "src/starter/starter-export.js"() {
+      init_core();
+      init_i18n();
+      init_section_ops();
+      init_scene_ops();
+      init_app();
+      init_starter_model();
+      init_starter_choices();
+      init_starter_render_prose();
+      init_starter_render_sp();
+      init_starter_store();
+      EXPORT_BOOK = "Story Starter";
+      FORMATS = [
+        { id: "prose", label: t("ui.starter.cvProse"), icon: "\u{1F4D6}" },
+        { id: "screenplay", label: t("ui.starter.cvSp"), icon: "\u{1F3AC}" }
+      ];
+    }
+  });
+
+  // src/starter/starter-bridge.js
+  var starter_bridge_exports = {};
+  __export(starter_bridge_exports, {
+    BRIDGE_MAP: () => BRIDGE_MAP,
+    bridgeDialog: () => bridgeDialog,
+    canPush: () => canPush,
+    pushAll: () => pushAll,
+    pushScenarios: () => pushScenarios,
+    pushWhen: () => pushWhen,
+    pushWhere: () => pushWhere,
+    srcKey: () => srcKey
+  });
+  function srcKey(slug2, what) {
+    return "starter:" + slug2 + ":" + what;
+  }
+  async function pushWhen(s) {
+    const w = filledW(s).find((x) => x.key === "when");
+    if (!w) return { added: 0, updated: 0 };
+    const data2 = await loadTimeline();
+    const key2 = srcKey(s.slug, "when");
+    const hit = (data2.events || []).find((e) => e.src === key2);
+    const title2 = s.name || s.slug;
+    if (hit) {
+      hit.title = title2;
+      hit.when = w.value;
+      hit.desc = s.intro || "";
+      await saveTimeline(data2);
+      return { added: 0, updated: 1 };
+    }
+    const ev = newEvent(w.value);
+    ev.title = title2;
+    ev.desc = s.intro || "";
+    ev.track = BRIDGE_MAP;
+    ev.tags = [...s.tags || []].slice(0, 6);
+    ev.src = key2;
+    data2.events = [...data2.events || [], ev];
+    await saveTimeline(data2);
+    return { added: 1, updated: 0 };
+  }
+  async function pushScenarios(s, rows) {
+    const list = (rows || []).filter((r) => String(r.title || "").trim());
+    if (!list.length) return { added: 0, updated: 0 };
+    const data2 = await loadTimeline();
+    data2.events = data2.events || [];
+    let added = 0, updated = 0;
+    list.forEach((sc, i5) => {
+      const key2 = srcKey(s.slug, "sc:" + sc.id);
+      const hit = data2.events.find((e) => e.src === key2);
+      const desc = (sc.recap || sc.synopsis || "").replace(/\s+/g, " ").slice(0, 300);
+      if (hit) {
+        hit.title = sc.title;
+        hit.desc = desc;
+        updated++;
+        return;
+      }
+      const ev = newEvent("");
+      ev.title = sc.title;
+      ev.desc = desc;
+      ev.track = s.name || s.slug;
+      ev.order = i5 + 1;
+      ev.src = key2;
+      data2.events.push(ev);
+      added++;
+    });
+    await saveTimeline(data2);
+    return { added, updated };
+  }
+  async function pushWhere(s) {
+    const w = filledW(s).find((x) => x.key === "where");
+    if (!w) return { added: 0, updated: 0 };
+    const data2 = await loadMaps();
+    data2.maps = data2.maps || [];
+    let map2 = data2.maps.find((m) => m.name === BRIDGE_MAP);
+    if (!map2) {
+      map2 = newMap(BRIDGE_MAP, "");
+      data2.maps.push(map2);
+    }
+    map2.pins = map2.pins || [];
+    const key2 = srcKey(s.slug, "where");
+    const hit = map2.pins.find((p) => p.src === key2);
+    const label = s.name || s.slug;
+    if (hit) {
+      hit.label = label;
+      hit.note = w.value;
+      await saveMaps(data2);
+      return { added: 0, updated: 1 };
+    }
+    const n2 = map2.pins.length;
+    const pin = newPin(45 + n2 * 7 % 30, 40 + n2 * 11 % 35, "note");
+    pin.label = label;
+    pin.note = w.value;
+    pin.src = key2;
+    map2.pins.push(pin);
+    await saveMaps(data2);
+    return { added: 1, updated: 0 };
+  }
+  async function pushAll(s, rows, { timeline: timeline2 = true, maps = true, scenarios = true } = {}) {
+    const sum2 = { when: null, where: null, scenarios: null, errors: [] };
+    if (timeline2) {
+      try {
+        sum2.when = await pushWhen(s);
+      } catch (e) {
+        log("error", "starter bridge when", e);
+        sum2.errors.push("timeline");
+      }
+    }
+    if (scenarios) {
+      try {
+        sum2.scenarios = await pushScenarios(s, rows);
+      } catch (e) {
+        log("error", "starter bridge scenarios", e);
+        sum2.errors.push("scenarios");
+      }
+    }
+    if (maps) {
+      try {
+        sum2.where = await pushWhere(s);
+      } catch (e) {
+        log("error", "starter bridge where", e);
+        sum2.errors.push("maps");
+      }
+    }
+    return sum2;
+  }
+  function canPush(s, rows) {
+    const w = filledW(s);
+    return w.some((x) => x.key === "when" || x.key === "where") || (rows || []).some((r) => String(r.title || "").trim());
+  }
+  function bridgeDialog(s, rows) {
+    return new Promise((resolve) => {
+      const w = filledW(s);
+      const hasWhen = w.some((x) => x.key === "when");
+      const hasWhere = w.some((x) => x.key === "where");
+      const nSc = (rows || []).filter((r) => String(r.title || "").trim()).length;
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog st-bridge");
+      box2.append(el("div", "k-dlg-title", t("ui.starter.brTitle")));
+      box2.append(el("div", "st-hint", t("ui.starter.brHint")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      const opts = { timeline: hasWhen, maps: hasWhere, scenarios: nSc > 0 };
+      const row2 = (key2, label, enabled) => {
+        const line = el("label", "st-br-row");
+        const cb = el("input");
+        cb.type = "checkbox";
+        cb.checked = enabled;
+        cb.disabled = !enabled;
+        cb.onchange = () => {
+          opts[key2] = cb.checked;
+        };
+        line.append(cb, el("span", null, label));
+        if (!enabled) line.append(el("span", "st-dim", " \u2014 " + t("ui.starter.brNothing")));
+        box2.append(line);
+      };
+      row2("timeline", tf("ui.starter.brWhen", BRIDGE_MAP), hasWhen);
+      row2("scenarios", tf("ui.starter.brScenarios", nSc), nSc > 0);
+      row2("maps", tf("ui.starter.brWhere", BRIDGE_MAP), hasWhere);
+      const foot = el("div", "k-dlg-foot");
+      const cancel = el("button", null, t("ui.common.cancel"));
+      cancel.onclick = () => done2(null);
+      const go = el("button", "k-ok", t("ui.starter.brGo"));
+      go.disabled = !(hasWhen || hasWhere || nSc);
+      go.onclick = async () => {
+        go.disabled = true;
+        const sum2 = await pushAll(s, rows, opts);
+        const n2 = (a) => a ? a.added + a.updated : 0;
+        setStatus(tf("ui.starter.brDone", n2(sum2.when) + n2(sum2.scenarios), n2(sum2.where)));
+        done2(sum2);
+      };
+      foot.append(cancel, go);
+      box2.append(foot);
+      ov.append(box2);
+      document.body.append(ov);
+    });
+  }
+  var BRIDGE_MAP;
+  var init_starter_bridge = __esm({
+    "src/starter/starter-bridge.js"() {
+      init_core();
+      init_i18n();
+      init_app();
+      init_timeline();
+      init_maps();
+      init_starter_steps_def();
+      BRIDGE_MAP = "Story Starter";
+    }
+  });
+
+  // src/starter/starter-scenario.js
+  var starter_scenario_exports = {};
+  __export(starter_scenario_exports, {
+    fmtWhen: () => fmtWhen2,
+    renderStarterHome: () => renderStarterHome,
+    scenarioDialog: () => scenarioDialog
+  });
+  async function renderStarterHome(host2, ctx2) {
+    const s = ctx2.starter;
+    host2.innerHTML = "";
+    const wrap2 = el("div", "st-home");
+    host2.append(wrap2);
+    const head2 = el("div", "st-home-head");
+    const back = el("button", "st-back", "\u2190 " + t("ui.starter.backToList"));
+    back.onclick = () => ctx2.goList();
+    head2.append(back);
+    wrap2.append(head2);
+    const rows = await listScenarios(s.slug);
+    const hero = el("div", "st-hero");
+    const coverBox = el("div", "st-img-box st-img-cover st-hero-cover");
+    const coverUrl = await imageUrl(s.slug, s.cover);
+    if (coverUrl) {
+      const im = el("img");
+      im.src = coverUrl;
+      im.alt = s.name || "";
+      coverBox.append(im);
+    } else coverBox.append(el("div", "st-cover-empty", t("ui.starter.noCover")));
+    hero.append(coverBox);
+    const heroInfo = el("div", "st-hero-info");
+    heroInfo.append(el("div", "st-hero-title", s.name || t("ui.starter.untitled")));
+    heroInfo.append(el(
+      "div",
+      "st-hero-author",
+      s.author ? t("ui.starter.byAuthor") + s.author : t("ui.starter.noAuthor")
+    ));
+    if ((s.tags || []).length) {
+      const tags = el("div", "st-hero-tags");
+      for (const tg of s.tags) tags.append(el("span", "st-tag on", tg));
+      heroInfo.append(tags);
+    }
+    heroInfo.append(el("div", "st-hero-blurb", s.blurb || t("ui.starter.noBlurb")));
+    const heroBtns = el("div", "st-row-btns");
+    const edit = el("button", null, "\u270F\uFE0F " + t("ui.starter.editStarter"));
+    edit.onclick = () => ctx2.goWizard();
+    heroBtns.append(edit);
+    if (rows.some((r) => (r.turns || []).length)) {
+      const cv = el("button", "k-ok", "\u{1F4DD} " + t("ui.starter.cvBtn"));
+      cv.title = t("ui.starter.cvBtnHint");
+      cv.onclick = async () => {
+        const made = await convertDialog(s, rows);
+        if (made && made.length) renderStarterHome(host2, ctx2);
+      };
+      heroBtns.append(cv);
+    }
+    if (canPush(s, rows)) {
+      const br = el("button", null, "\u{1F9ED} " + t("ui.starter.brBtn"));
+      br.title = t("ui.starter.brBtnHint");
+      br.onclick = () => bridgeDialog(s, rows);
+      heroBtns.append(br);
+    }
+    heroInfo.append(heroBtns);
+    hero.append(heroInfo);
+    wrap2.append(hero);
+    const bannerUrl = await imageUrl(s.slug, s.banner);
+    if (bannerUrl) {
+      const bn = el("div", "st-banner");
+      const im = el("img");
+      im.src = bannerUrl;
+      im.alt = "";
+      bn.append(im);
+      wrap2.append(bn);
+    }
+    if (hasIntro(s)) {
+      const acc = el("details", "st-acc");
+      acc.open = SC_C.descOpen;
+      acc.ontoggle = () => {
+        SC_C.descOpen = acc.open;
+      };
+      acc.append(el("summary", "st-acc-head", t("ui.starter.descHead")));
+      acc.append(await renderRichView(s.slug, s.intro));
+      wrap2.append(acc);
+    }
+    const bar = el("div", "st-row-btns st-sc-bar");
+    const add = el("button", "k-ok", "+ " + t("ui.starter.scAdd"));
+    add.onclick = async () => {
+      const sc = await createScenario(s.slug, { title: nextScenarioTitle(rows) });
+      const ok2 = await scenarioDialog(ctx2, sc, rows);
+      if (!ok2) {
+        await deleteScenario(s.slug, sc.id);
+        renderStarterHome(host2, ctx2);
+        return;
+      }
+      await writeScenario(s.slug, sc);
+      ctx2.openChat(sc);
+    };
+    bar.append(add);
+    const search2 = el("input", "wiki-input st-sc-search");
+    search2.placeholder = t("ui.starter.scSearch");
+    search2.value = SC_C.query;
+    search2.oninput = () => {
+      SC_C.query = search2.value;
+      drawList3();
+    };
+    bar.append(search2);
+    bar.append(tokenBadge(sumTokens(rows)));
+    wrap2.append(bar);
+    const list = el("div", "st-sc-list");
+    wrap2.append(list);
+    const drawList3 = () => {
+      list.innerHTML = "";
+      const hit = searchScenarios(rows, SC_C.query);
+      if (!hit.length) {
+        list.append(el(
+          "div",
+          "st-empty",
+          rows.length ? t("ui.starter.scNoMatch") : t("ui.starter.scEmpty")
+        ));
+        return;
+      }
+      for (const sc of hit) {
+        const card = el("div", "st-sc-card");
+        const main = el("div", "st-sc-main");
+        main.append(el("div", "st-sc-title", sc.title || t("ui.starter.scUntitled")));
+        if (sc.prevId) {
+          const chain = chainOf(rows, sc.id);
+          const prev = chain[chain.length - 2];
+          main.append(el("div", "st-sc-prev", "\u21B3 " + t("ui.starter.scAfter") + (prev ? prev.title || t("ui.starter.scUntitled") : t("ui.starter.scPrevMissing"))));
+        }
+        if (String(sc.synopsis || "").trim()) {
+          main.append(el("div", "st-sc-syn", sc.synopsis.slice(0, 160) + (sc.synopsis.length > 160 ? "\u2026" : "")));
+        }
+        const st = scenarioStats(sc);
+        const meta2 = el("div", "st-sc-meta");
+        meta2.append(el("span", null, st.turns ? tf("ui.starter.scStats", st.turns, st.words) : t("ui.starter.scNotPlayed")));
+        if (st.inTok || st.outTok) meta2.append(tokenBadge(st));
+        if ((sc.exports || []).length) {
+          meta2.append(el("span", "st-sc-exported", tf("ui.starter.scExported", sc.exports.length)));
+        }
+        main.append(meta2);
+        card.append(main);
+        const btns = el("div", "st-sc-btns");
+        const open = el("button", "k-ok", st.turns ? t("ui.starter.scContinue") : t("ui.starter.scStart"));
+        open.onclick = () => ctx2.openChat(sc);
+        btns.append(open);
+        if ((sc.turns || []).length) {
+          const cv1 = el("button", null, "\u{1F4DD}");
+          cv1.title = t("ui.starter.cvOne");
+          cv1.onclick = async () => {
+            const made = await convertDialog(s, rows, sc);
+            if (made && made.length) renderStarterHome(host2, ctx2);
+          };
+          btns.append(cv1);
+        }
+        const ed = el("button", null, t("ui.common.edit"));
+        ed.onclick = async () => {
+          if (await scenarioDialog(ctx2, sc, rows)) {
+            await writeScenario(s.slug, sc);
+            renderStarterHome(host2, ctx2);
+          }
+        };
+        const del2 = el("button", "st-danger", t("ui.common.del"));
+        del2.onclick = async () => {
+          const msg = hasPlay(sc) ? tf("ui.starter.scDelPlayedAsk", sc.title, scenarioStats(sc).turns) : tf("ui.starter.scDelAsk", sc.title);
+          if (!await confirmBox(msg, t("ui.common.del"))) return;
+          await deleteScenario(s.slug, sc.id);
+          renderStarterHome(host2, ctx2);
+        };
+        btns.append(ed, del2);
+        card.append(btns);
+        list.append(card);
+      }
+    };
+    drawList3();
+    const up = lastUpdated(s, rows);
+    wrap2.append(el(
+      "div",
+      "st-updated",
+      up ? t("ui.starter.lastUpdate") + fmtWhen2(up) : t("ui.starter.neverUpdated")
+    ));
+    return true;
+  }
+  function fmtWhen2(ms) {
+    const d = new Date(Number(ms) || 0);
+    if (!ms || Number.isNaN(d.getTime())) return "-";
+    const now = /* @__PURE__ */ new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const hh = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    if (sameDay) return t("ui.starter.today") + " " + hh;
+    const y = new Date(now.getTime() - 864e5);
+    if (d.toDateString() === y.toDateString()) return t("ui.starter.yesterday") + " " + hh;
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + " " + hh;
+  }
+  function scenarioDialog(ctx2, sc, rows) {
+    const s = ctx2.starter;
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide st-sc-dlg");
+      box2.append(el("div", "k-dlg-title", t("ui.starter.scDlgTitle")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      const nameRow = el("div", "st-field");
+      nameRow.append(el("label", null, t("ui.starter.scName")));
+      const nameInp = el("input", "wiki-input");
+      nameInp.value = sc.title || "";
+      nameRow.append(nameInp);
+      const nameBtns = el("div", "st-row-btns");
+      nameBtns.append(aiBtn(t("ui.starter.aiSuggestName"), async (reqId) => {
+        const out = await askAI(
+          "scenario-name",
+          scenarioNamePrompt(s, { ...sc, synopsis: synInp.value }),
+          SYS_WRITER(),
+          reqId
+        );
+        if (!out || !pickLine(nameBtns, out, (v2) => {
+          nameInp.value = v2;
+        })) {
+          setStatus(t("ui.starter.aiNoResult"));
+        }
+      }));
+      nameRow.append(nameBtns);
+      box2.append(nameRow);
+      const prevRow = el("div", "st-field");
+      prevRow.append(el("label", null, t("ui.starter.scPrev")));
+      const prevSel = el("select", "wiki-input k-dlg-select");
+      const none2 = el("option", null, t("ui.starter.scPrevNone"));
+      none2.value = "";
+      prevSel.append(none2);
+      for (const r of selectablePrev(rows, sc.id)) {
+        const o = el("option", null, r.title || t("ui.starter.scUntitled"));
+        o.value = r.id;
+        prevSel.append(o);
+      }
+      prevSel.value = sc.prevId || "";
+      prevRow.append(prevSel);
+      prevRow.append(el("div", "st-hint", t("ui.starter.scPrevHint")));
+      box2.append(prevRow);
+      const synRow = el("div", "st-field");
+      synRow.append(el("label", null, t("ui.starter.scSynopsis")));
+      const synInp = el("textarea", "wiki-input st-ta");
+      synInp.rows = 6;
+      synInp.value = sc.synopsis || "";
+      synInp.placeholder = t("ui.starter.scSynopsisPlaceholder");
+      synRow.append(synInp);
+      const synBtns = el("div", "st-row-btns");
+      synBtns.append(aiBtn(t("ui.starter.aiWriteSynopsis"), async (reqId) => {
+        const prev = rows.find((r) => r.id === prevSel.value) || null;
+        const out = await askAI(
+          "scenario-synopsis",
+          synopsisPrompt2(s, { ...sc, title: nameInp.value }, prev),
+          SYS_WRITER(),
+          reqId
+        );
+        if (out) synInp.value = out;
+        else setStatus(t("ui.starter.aiNoResult"));
+      }));
+      synRow.append(synBtns);
+      box2.append(synRow);
+      const castRow = el("div", "st-field");
+      castRow.append(el("label", null, t("ui.starter.scMyChars")));
+      const castBox = el("div", "st-tag-list");
+      const mine = new Set(sc.userChars || []);
+      const ready2 = (s.cast || []).filter((c) => String(c.name || "").trim());
+      if (!ready2.length) castBox.append(el("div", "st-dim", t("ui.starter.scNoCast")));
+      for (const c of ready2) {
+        const b = el("button", "st-tag" + (mine.has(c.id) ? " on" : ""), c.name);
+        b.onclick = () => {
+          if (mine.has(c.id)) mine.delete(c.id);
+          else mine.add(c.id);
+          b.classList.toggle("on");
+        };
+        castBox.append(b);
+      }
+      castRow.append(castBox);
+      castRow.append(el("div", "st-hint", t("ui.starter.scMyCharsHint")));
+      box2.append(castRow);
+      const foot = el("div", "k-dlg-foot");
+      const cancel = el("button", null, t("ui.common.cancel"));
+      cancel.onclick = () => done2(false);
+      const ok2 = el("button", "k-ok", t("ui.common.msg3"));
+      ok2.onclick = () => {
+        sc.title = nameInp.value.trim() || sc.title || t("ui.starter.scUntitled");
+        sc.synopsis = synInp.value;
+        sc.prevId = prevSel.value;
+        sc.userChars = [...mine];
+        sc.cast = ready2.map((c) => c.id);
+        done2(true);
+      };
+      foot.append(cancel, ok2);
+      box2.append(foot);
+      ov.append(box2);
+      document.body.append(ov);
+      nameInp.focus();
+    });
+  }
+  var SC_C;
+  var init_starter_scenario = __esm({
+    "src/starter/starter-scenario.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_starter_model();
+      init_starter_prompt();
+      init_starter_store();
+      init_starter_steps();
+      init_starter_ai();
+      init_starter_richtext();
+      init_starter_export();
+      init_starter_bridge();
+      SC_C = { query: "", descOpen: false };
+    }
+  });
+
+  // src/starter/starter-chat.js
+  function nameOf(s, id) {
+    const c = charById(s, id);
+    return c && c.name || "";
+  }
+  function historyMessages(s, sc) {
+    const rows = (sc.turns || []).map((r) => ({
+      role: r.role === ROLE_GM ? "assistant" : "user",
+      content: r.role === ROLE_GM ? r.text : gmUserTurn(r.text, nameOf(s, r.speaker))
+    })).filter((m) => String(m.content || "").trim());
+    let total = rows.reduce((n2, m) => n2 + estimateTokens(m.content), 0);
+    let i5 = 0;
+    while (total > MAX_CTX_TOKENS && i5 < rows.length - 2) {
+      total -= estimateTokens(rows[i5].content);
+      i5++;
+    }
+    return i5 ? rows.slice(i5) : rows;
+  }
+  async function callGm(s, sc, extraUser, reqId) {
+    const { currentProvider: currentProvider2, complete: complete2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+    const p = await currentProvider2();
+    if (!p) {
+      setStatus(t("ui.aiSet.aICantPickProvider"));
+      return null;
+    }
+    const rows = await listScenarios(s.slug);
+    const prev = sc.prevId ? rows.find((r3) => r3.id === sc.prevId) || null : null;
+    const system = gmSystem(s, sc, { prev, userChars: sc.userChars || [], len: sc.len });
+    const messages = historyMessages(s, sc);
+    if (extraUser) messages.push({ role: "user", content: extraUser });
+    log(
+      "info",
+      "starter gm: request",
+      { reqId, provider: p.name, model: p.model, msgs: messages.length }
+    );
+    const r = await complete2(p, { system, messages, reqId, timeoutMs: 18e4 });
+    if (!r.ok) {
+      log(
+        r.aborted && !r.timedOut ? "info" : "error",
+        "starter gm: " + (r.aborted ? r.timedOut ? "timeout" : "stopped by user" : "failed"),
+        { error: r.error, status: r.status, reqId }
+      );
+      setStatus((r.aborted && !r.timedOut ? "\u23F9 " : "\u274C ") + "AI: " + r.error);
+      return null;
+    }
+    log("info", "starter gm: reply", { reqId, chars: (r.text || "").length, usage: r.usage || null });
+    return {
+      text: (r.text || "").trim(),
+      thinking: r.thinking || "",
+      model: r.model || "",
+      provider: r.provider || "",
+      usage: r.usage || null
+    };
+  }
+  async function renderChat(host2, ctx2, sc) {
+    const s = ctx2.starter;
+    host2.innerHTML = "";
+    const wrap2 = el("div", "st-chat");
+    host2.append(wrap2);
+    const head2 = el("div", "st-chat-head");
+    const back = el("button", "st-back", "\u2190 " + t("ui.starter.backToScenarios"));
+    back.onclick = () => ctx2.goHome();
+    head2.append(back);
+    head2.append(el("div", "st-chat-title", sc.title || t("ui.starter.scUntitled")));
+    const st = scenarioStats(sc);
+    const metaEl = el("div", "st-chat-meta", tf("ui.starter.scStats", st.turns, st.words));
+    head2.append(metaEl);
+    const tokEl = el("span", "st-chat-tok");
+    tokEl.append(tokenBadge(st));
+    head2.append(tokEl);
+    wrap2.append(head2);
+    const log23 = el("div", "st-chat-log");
+    wrap2.append(log23);
+    const drawLog = () => {
+      log23.innerHTML = "";
+      if (!(sc.turns || []).length) {
+        const empty2 = el("div", "st-empty");
+        empty2.append(el("div", null, t("ui.starter.chatEmpty")));
+        const start = el("button", "k-ok", "\u25B6 " + t("ui.starter.chatStart"));
+        start.onclick = () => send3("", { opening: true });
+        empty2.append(start);
+        log23.append(empty2);
+        return;
+      }
+      for (const turn of sc.turns) {
+        const row2 = el("div", "st-turn " + (turn.role === ROLE_GM ? "gm" : "player"));
+        const who = turn.role === ROLE_GM ? "\u{1F3B2} " + t("ui.starter.gm") : "\u{1F642} " + (nameOf(s, turn.speaker) || t("ui.starter.you"));
+        row2.append(el("div", "st-turn-who", who));
+        const body = el("div", "st-turn-text", turn.text);
+        row2.append(body);
+        if (turn.chosen) row2.append(el("div", "st-turn-chosen", "\u21B3 " + turn.chosen));
+        log23.append(row2);
+      }
+      log23.scrollTop = log23.scrollHeight;
+    };
+    const foot = el("div", "st-chat-foot");
+    wrap2.append(foot);
+    const drawFoot = () => {
+      foot.innerHTML = "";
+      if (CHAT_C.sending) {
+        const busy = el("div", "st-chat-busy");
+        busy.append(el("span", "st-dim", "\u23F3 " + t("ui.starter.gmThinking")));
+        const stop = el("button", "st-danger st-chat-stop", "\u23F9 " + t("ui.starter.aiStop"));
+        stop.onclick = async () => {
+          stop.disabled = true;
+          stop.textContent = "\u23F9 " + t("ui.starter.aiStopping");
+          await stopAI(CHAT_C.reqId);
+        };
+        busy.append(stop);
+        foot.append(busy);
+        return;
+      }
+      const choices = openChoices(sc);
+      if (choices.length) {
+        const box2 = el("div", "st-choices");
+        box2.append(el("div", "st-choices-head", t("ui.starter.chooseOrType")));
+        choices.forEach((c, i5) => {
+          const b = el("button", "st-choice");
+          b.append(el("span", "st-choice-n", String(i5 + 1)));
+          b.append(el("span", "st-choice-t", c));
+          b.onclick = () => send3(c, { chosen: c });
+          box2.append(b);
+        });
+        foot.append(box2);
+      }
+      const mine = (sc.userChars || []).map((id) => charById(s, id)).filter(Boolean);
+      if (mine.length > 1) {
+        const asRow = el("div", "st-as-row");
+        asRow.append(el("span", "st-dim", t("ui.starter.speakAs")));
+        const sel = el("select", "wiki-input k-dlg-select st-as");
+        const me = el("option", null, t("ui.starter.you"));
+        me.value = "";
+        sel.append(me);
+        for (const c of mine) {
+          const o = el("option", null, c.name);
+          o.value = c.id;
+          sel.append(o);
+        }
+        sel.value = CHAT_C.speaker;
+        sel.onchange = () => {
+          CHAT_C.speaker = sel.value;
+        };
+        asRow.append(sel);
+        foot.append(asRow);
+      } else if (mine.length === 1) {
+        CHAT_C.speaker = mine[0].id;
+      }
+      const row2 = el("div", "st-chat-input");
+      const ta = el("textarea", "wiki-input st-chat-ta");
+      ta.rows = 2;
+      ta.value = CHAT_C.draft;
+      ta.placeholder = t("ui.starter.chatPlaceholder");
+      ta.oninput = () => {
+        CHAT_C.draft = ta.value;
+      };
+      ta.onkeydown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+          e.preventDefault();
+          doSend();
+        }
+      };
+      const go = el("button", "k-ok", t("ui.starter.chatSend"));
+      const doSend = () => {
+        const v2 = ta.value.trim();
+        if (!v2) return;
+        CHAT_C.draft = "";
+        send3(v2, {});
+      };
+      go.onclick = doSend;
+      row2.append(ta, go);
+      foot.append(row2);
+      if ((sc.turns || []).length) {
+        const tools = el("div", "st-row-btns");
+        const recap = el("button", null, "\u{1F4DD} " + t("ui.starter.makeRecap"));
+        recap.title = t("ui.starter.makeRecapHint");
+        recap.onclick = () => makeRecap();
+        tools.append(recap);
+        const clear = el("button", "st-danger", t("ui.starter.chatClear"));
+        clear.onclick = async () => {
+          if (!await confirmBox(t("ui.starter.chatClearAsk"), t("ui.common.del"))) return;
+          sc.turns = [];
+          await writeScenario(s.slug, sc);
+          drawLog();
+          drawFoot();
+        };
+        tools.append(clear);
+        foot.append(tools);
+      }
+    };
+    async function send3(text, { chosen = "", opening = false } = {}) {
+      if (CHAT_C.sending) return;
+      CHAT_C.sending = true;
+      CHAT_C.reqId = newReqId();
+      drawFoot();
+      try {
+        if (!opening) {
+          const patched = addTurn(sc, {
+            role: ROLE_PLAYER,
+            text,
+            chosen,
+            speaker: CHAT_C.speaker,
+            ts: Date.now()
+          });
+          sc.turns = patched.turns;
+          await writeScenario(s.slug, sc);
+          drawLog();
+        }
+        const extra = opening ? gmOpening(s, sc) : null;
+        const r = await callGm(s, sc, extra, CHAT_C.reqId);
+        if (!r) return;
+        const choices = parseChoices(r.text);
+        const prose = stripChoices(r.text);
+        const patched2 = addTurn(sc, {
+          role: ROLE_GM,
+          text: prose,
+          choices,
+          thinking: r.thinking,
+          model: r.model,
+          provider: r.provider,
+          usage: r.usage,
+          ts: Date.now()
+        });
+        sc.turns = patched2.turns;
+        await writeScenario(s.slug, sc);
+      } catch (e) {
+        log("error", "starter chat send", e);
+        setStatus(t("ui.starter.chatFail"));
+      } finally {
+        CHAT_C.sending = false;
+        CHAT_C.reqId = "";
+        drawLog();
+        drawFoot();
+        const st2 = scenarioStats(sc);
+        metaEl.textContent = tf("ui.starter.scStats", st2.turns, st2.words);
+        tokEl.innerHTML = "";
+        tokEl.append(tokenBadge(st2));
+      }
+    }
+    async function makeRecap() {
+      if (CHAT_C.sending) return;
+      CHAT_C.sending = true;
+      drawFoot();
+      try {
+        const { askAI: askAI2 } = await Promise.resolve().then(() => (init_starter_ai(), starter_ai_exports));
+        CHAT_C.reqId = newReqId();
+        const tr4 = transcriptText(sc, (id) => nameOf(s, id));
+        const out = await askAI2(
+          "recap",
+          recapPrompt(s, sc, tr4),
+          t("ui.starter.sysWriter"),
+          CHAT_C.reqId
+        );
+        if (!out) {
+          setStatus(t("ui.starter.aiNoResult"));
+          return;
+        }
+        sc.recap = out;
+        if (!String(sc.synopsis || "").trim()) sc.synopsis = out;
+        await writeScenario(s.slug, sc);
+        setStatus(t("ui.starter.recapDone"));
+      } finally {
+        CHAT_C.sending = false;
+        CHAT_C.reqId = "";
+        drawFoot();
+      }
+    }
+    drawLog();
+    drawFoot();
+    return true;
+  }
+  function resetChatState() {
+    CHAT_C.sending = false;
+    CHAT_C.speaker = "";
+    CHAT_C.draft = "";
+    CHAT_C.reqId = "";
+  }
+  var MAX_CTX_TOKENS, CHAT_C;
+  var init_starter_chat = __esm({
+    "src/starter/starter-chat.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_ai_session();
+      init_starter_model();
+      init_starter_prompt();
+      init_starter_choices();
+      init_starter_store();
+      init_starter_ai();
+      MAX_CTX_TOKENS = 6e3;
+      CHAT_C = { sending: false, speaker: "", draft: "", reqId: "" };
+    }
+  });
+
+  // src/starter/starter-pack.js
+  var starter_pack_exports = {};
+  __export(starter_pack_exports, {
+    exportStarterZip: () => exportStarterZip,
+    importStarterZip: () => importStarterZip,
+    packStarter: () => packStarter,
+    unpackStarter: () => unpackStarter
+  });
+  async function addDir(zip, dir2, prefix2 = "") {
+    for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
+      const full = await kapi.join(dir2, f);
+      try {
+        if (BIN_EXT2.test(f)) zip.file(prefix2 + f, new Uint8Array(await kapi.readBytes(full)));
+        else zip.file(prefix2 + f, await kapi.readFile(full));
+      } catch (e) {
+        log("warn", t("ui.starter.packSkip") + full, e);
+      }
+    }
+    for (const d of await kapi.listDirs(dir2).catch(() => [])) {
+      await addDir(zip, await kapi.join(dir2, d), prefix2 + d + "/");
+    }
+  }
+  async function packStarter(slug2) {
+    const dir2 = await starterDir(slug2);
+    if (!slug2 || !await kapi.exists(dir2)) return null;
+    const zip = new import_jszip3.default();
+    await addDir(zip, dir2, "");
+    return zip.generateAsync({ type: "uint8array" });
+  }
+  async function exportStarterZip(s) {
+    if (!s || !s.slug) return "";
+    const dir2 = await starterDir(s.slug);
+    if (!await kapi.exists(dir2)) {
+      setStatus(t("ui.starter.packNoDir"));
+      return "";
+    }
+    setBusy(t("ui.starter.packBusy"));
+    try {
+      const bytes = await packStarter(s.slug);
+      clearBusy();
+      if (!bytes) {
+        setStatus(t("ui.starter.packNoDir"));
+        return "";
+      }
+      const dest = await kapi.saveAsDialog((s.slug || "starter") + ".zip", "zip");
+      if (!dest) return "";
+      setBusy(t("ui.starter.packWriting"));
+      await kapi.writeBytes(dest, Array.from(bytes));
+      setStatus(t("ui.starter.packDone") + dest);
+      return dest;
+    } catch (e) {
+      log("error", "starter pack", e);
+      setStatus(t("ui.starter.packFail"));
+      return "";
+    } finally {
+      clearBusy();
+    }
+  }
+  async function importStarterZip() {
+    if (!state.root) {
+      setStatus(t("ui.common.cantOpenProject"));
+      return null;
+    }
+    const src2 = await kapi.openFileDialog("zip");
+    if (!src2) return null;
+    return unpackStarter(new Uint8Array(await kapi.readBytes(src2)));
+  }
+  async function unpackStarter(bytes) {
+    if (!state.root) {
+      setStatus(t("ui.common.cantOpenProject"));
+      return null;
+    }
+    setBusy(t("ui.starter.packReading"));
+    try {
+      const zip = await import_jszip3.default.loadAsync(bytes);
+      let base4 = "";
+      const names = Object.keys(zip.files);
+      const hit = names.find((n3) => n3 === "starter.json" || n3.endsWith("/starter.json"));
+      if (!hit) {
+        setStatus(t("ui.starter.packNotStarter"));
+        return null;
+      }
+      base4 = hit.slice(0, hit.length - "starter.json".length);
+      const rawText = await zip.file(hit).async("string");
+      let raw = null;
+      try {
+        raw = JSON.parse(rawText);
+      } catch {
+        setStatus(t("ui.starter.packBadJson"));
+        return null;
+      }
+      const s = migrateStarter(raw);
+      const taken = (await listStarters()).map((x) => x.slug);
+      s.slug = uniqueSlug(s.name || "starter", taken);
+      const dst = await starterDir(s.slug);
+      await kapi.mkdir(dst);
+      let n2 = 0;
+      for (const name5 of names) {
+        const f = zip.files[name5];
+        if (f.dir) continue;
+        if (base4 && !name5.startsWith(base4)) continue;
+        const rel = name5.slice(base4.length);
+        if (!rel || rel.startsWith("..")) continue;
+        const parts = rel.split("/").filter(Boolean);
+        if (!parts.length) continue;
+        const out = await kapi.join(dst, ...parts);
+        if (parts.length > 1) await kapi.mkdir(await kapi.join(dst, ...parts.slice(0, -1)));
+        if (BIN_EXT2.test(rel)) {
+          const buf = await f.async("uint8array");
+          await kapi.writeBytes(out, Array.from(buf));
+        } else {
+          await kapi.writeFile(out, await f.async("string"));
+        }
+        n2++;
+      }
+      const body = { ...s };
+      delete body.slug;
+      await kapi.writeFile(await kapi.join(dst, "starter.json"), JSON.stringify(body, null, 2));
+      setStatus(tf("ui.starter.packImported", s.name || s.slug, n2));
+      return await readStarter(s.slug);
+    } catch (e) {
+      log("error", "starter unpack", e);
+      setStatus(t("ui.starter.packFail"));
+      return null;
+    } finally {
+      clearBusy();
+    }
+  }
+  var import_jszip3, BIN_EXT2;
+  var init_starter_pack = __esm({
+    "src/starter/starter-pack.js"() {
+      import_jszip3 = __toESM(require_jszip_min());
+      init_core();
+      init_i18n();
+      init_starter_model();
+      init_starter_store();
+      BIN_EXT2 = /\.(png|jpe?g|jfif|gif|webp|svg|avif|bmp|ico|tiff?|heic|heif|apng|ttf|otf|woff2?)$/i;
+    }
+  });
+
+  // src/starter/starter-ui.js
+  var starter_ui_exports = {};
+  __export(starter_ui_exports, {
+    currentStarter: () => currentStarter,
+    flushStarter: () => flushStarter,
+    openStoryStarter: () => openStoryStarter,
+    renderStarterPanel: () => renderStarterPanel,
+    starterView: () => starterView
+  });
+  function armCloseGuard() {
+    if (_guardSet) return;
+    _guardSet = true;
+    Promise.resolve().then(() => (init_app(), app_exports)).then(({ setPanelCloseGuard: setPanelCloseGuard2 }) => {
+      setPanelCloseGuard2("starter", (proceed) => {
+        Promise.resolve().then(() => flushStarterSaves()).then(() => stopAllAI()).catch((e) => log("warn", "starter: flush on close failed", e)).finally(() => proceed());
+        return false;
+      });
+    }).catch(() => {
+      _guardSet = false;
+    });
+  }
+  async function renderStarterPanel(host2) {
+    S9.host = host2 || $("#starter-body");
+    if (!S9.host) return false;
+    armCloseGuard();
+    if (!state.root) {
+      S9.host.innerHTML = "";
+      S9.host.append(el("div", "st-empty", t("ui.starter.openProjectFirst")));
+      return true;
+    }
+    if (S9.root !== state.root) {
+      S9.root = state.root;
+      S9.view = "list";
+      S9.starter = null;
+      S9.scenario = null;
+      S9.query = "";
+      resetChatState();
+    }
+    return draw2();
+  }
+  async function openStoryStarter() {
+    const { showPanel: showPanel2, renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    showPanel2("starter");
+    return renderFeaturePanel2("starter");
+  }
+  function ctxFor() {
+    return {
+      get starter() {
+        return S9.starter;
+      },
+      root: state.root,
+      /** บันทึก — ปกติหน่วงรวบ · `{now:true}` เขียนทันที (ก่อนสลับหน้า/ปิดแผง) */
+      save: async (opts = {}) => {
+        if (!S9.starter) return false;
+        if (opts.now) {
+          await flushStarterSaves();
+          return writeStarter(S9.starter);
+        }
+        return autoSaveStarter(S9.starter);
+      },
+      rerender: () => draw2(),
+      goList: async () => {
+        await flushStarterSaves();
+        S9.view = "list";
+        S9.starter = null;
+        S9.scenario = null;
+        draw2();
+      },
+      goWizard: () => {
+        S9.view = "wizard";
+        draw2();
+      },
+      goHome: async () => {
+        await flushStarterSaves();
+        S9.view = "home";
+        S9.scenario = null;
+        resetChatState();
+        draw2();
+      },
+      openChat: (sc) => {
+        S9.scenario = sc;
+        S9.view = "chat";
+        resetChatState();
+        draw2();
+      },
+      touchTitle: () => {
+      }
+    };
+  }
+  async function draw2() {
+    const host2 = S9.host;
+    if (!host2) return false;
+    try {
+      if (S9.view === "wizard" && S9.starter) return renderWizard(host2, ctxFor());
+      if (S9.view === "home" && S9.starter) return renderStarterHome(host2, ctxFor());
+      if (S9.view === "chat" && S9.starter && S9.scenario) return renderChat(host2, ctxFor(), S9.scenario);
+      return renderList(host2);
+    } catch (e) {
+      log("error", "starter draw", e);
+      host2.innerHTML = "";
+      host2.append(el("div", "st-err", t("ui.starter.drawFail")));
+      return false;
+    }
+  }
+  async function renderList(host2) {
+    host2.innerHTML = "";
+    const wrap2 = el("div", "st-list-wrap");
+    host2.append(wrap2);
+    const head2 = el("div", "st-list-head");
+    head2.append(el("div", "st-list-title", "\u2728 Story Starter"));
+    const add = el("button", "k-ok", "+ " + t("ui.starter.createNew"));
+    add.onclick = () => createFlow();
+    head2.append(add);
+    const imp = el("button", null, "\u{1F4E5} " + t("ui.starter.packImport"));
+    imp.title = t("ui.starter.packImportHint");
+    imp.onclick = async () => {
+      const got = await importStarterZip();
+      if (!got) return;
+      await renderStarterPanel(host2);
+      try {
+        if (await offerReconcile(got)) await renderStarterPanel(host2);
+      } catch (e) {
+        log("warn", "starter reconcile (import)", e);
+      }
+    };
+    head2.append(imp);
+    wrap2.append(head2);
+    wrap2.append(el("div", "st-hint", t("ui.starter.welcomeHint")));
+    const rows = await listStarters();
+    if (rows.length > 3) {
+      const search2 = el("input", "wiki-input");
+      search2.placeholder = t("ui.starter.searchStarter");
+      search2.value = S9.query;
+      search2.oninput = () => {
+        S9.query = search2.value;
+        drawGrid();
+      };
+      wrap2.append(search2);
+    }
+    const grid = el("div", "st-grid");
+    wrap2.append(grid);
+    async function drawGrid() {
+      grid.innerHTML = "";
+      const hit = searchStarters(rows, S9.query);
+      if (!hit.length) {
+        grid.append(el(
+          "div",
+          "st-empty",
+          rows.length ? t("ui.starter.noMatch") : t("ui.starter.listEmpty")
+        ));
+        return;
+      }
+      for (const s of hit) {
+        const card = el("div", "st-card");
+        const cover = el("div", "st-img-box st-img-cover st-card-cover");
+        const url = await imageUrl(s.slug, s.cover);
+        if (url) {
+          const im = el("img");
+          im.src = url;
+          im.alt = s.name || "";
+          cover.append(im);
+        } else cover.append(el("span", "st-card-noimg", "\u{1F4D6}"));
+        card.append(cover);
+        const body = el("div", "st-card-body");
+        body.append(el("div", "st-card-name", s.name || t("ui.starter.untitled")));
+        if (s.author) body.append(el("div", "st-card-author", t("ui.starter.byAuthor") + s.author));
+        if (s.blurb) body.append(el("div", "st-card-blurb", s.blurb));
+        const sum2 = starterSummary(s);
+        if (sum2) body.append(el("div", "st-card-sum", sum2));
+        const prog = starterProgress(s, STEPS);
+        if (!s.done) {
+          body.append(el(
+            "div",
+            "st-card-draft",
+            tf("ui.starter.draftProgress", prog.done, prog.total)
+          ));
+        }
+        card.append(body);
+        const btns = el("div", "st-card-btns");
+        const open = el("button", "k-ok", s.done ? t("ui.starter.open") : t("ui.starter.continueSetup"));
+        open.onclick = () => openStarter(s.slug, s.done ? "home" : "wizard");
+        const exp = el("button", null, "\u{1F4E4}");
+        exp.title = t("ui.starter.packExport");
+        exp.onclick = () => exportStarterZip(s);
+        const del2 = el("button", "st-danger", t("ui.common.del"));
+        del2.onclick = async () => {
+          if (!await confirmBox(tf("ui.starter.delAsk", s.name || s.slug), t("ui.common.del"))) return;
+          await deleteStarter(s.slug);
+          setStatus(t("ui.starter.delDone"));
+          renderStarterPanel(host2);
+        };
+        btns.append(open, exp, del2);
+        card.append(btns);
+        grid.append(card);
+      }
+    }
+    await drawGrid();
+    return true;
+  }
+  async function createFlow() {
+    const gate = await aiConfigured();
+    if (!gate.ok) {
+      const yes = await confirmBox(
+        t("ui.starter.needAI") + "\n\n" + gate.why,
+        t("ui.starter.goAISettings")
+      );
+      if (!yes) return;
+      const { showAISettingsDialog: showAISettingsDialog3 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+      await showAISettingsDialog3();
+      const again = await aiConfigured();
+      if (!again.ok) {
+        setStatus(again.why);
+        return;
+      }
+    }
+    const s = await createStarter("");
+    if (!s) {
+      setStatus(t("ui.starter.createFail"));
+      return;
+    }
+    S9.starter = s;
+    S9.view = "wizard";
+    setStatus(t("ui.starter.created"));
+    draw2();
+  }
+  async function openStarter(slug2, view2) {
+    const s = await readStarter(slug2);
+    if (!s) {
+      setStatus(t("ui.starter.openFail"));
+      return;
+    }
+    S9.starter = s;
+    S9.view = view2 || (s.done ? "home" : "wizard");
+    draw2();
+    try {
+      if (await offerReconcile(s)) draw2();
+    } catch (e) {
+      log("warn", "starter reconcile", e);
+    }
+  }
+  async function flushStarter() {
+    await stopAllAI();
+    return flushStarterSaves();
+  }
+  function starterView() {
+    return S9.view;
+  }
+  function currentStarter() {
+    return S9.starter;
+  }
+  var S9, _guardSet;
+  var init_starter_ui = __esm({
+    "src/starter/starter-ui.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_ai_settings();
+      init_starter_model();
+      init_starter_ai();
+      init_starter_steps_def();
+      init_starter_store();
+      init_starter_wizard();
+      init_starter_scenario();
+      init_starter_chat();
+      init_starter_wiki();
+      init_starter_pack();
+      S9 = {
+        host: null,
+        view: "list",
+        starter: null,
+        // starter ที่เปิดอยู่
+        scenario: null,
+        // ตอนที่เปิดอยู่ (view === 'chat')
+        query: "",
+        root: null
+        // โปรเจกต์ที่โหลดรายการนี้มา — เปลี่ยนโปรเจกต์ = รีเซ็ต
+      };
+      _guardSet = false;
+    }
+  });
+
   // src/tools/thesaurus.js
   var thesaurus_exports2 = {};
   __export(thesaurus_exports2, {
@@ -150432,7 +154721,7 @@ ${sc.body || ""}
     return elements;
   }
   async function parseCeltx(buffer2) {
-    const zip = new import_jszip3.default();
+    const zip = new import_jszip4.default();
     await zip.loadAsync(buffer2);
     let htmlFile = zip.file("script/index.html") || zip.file("script.html");
     if (!htmlFile) {
@@ -150587,12 +154876,12 @@ ${sc.body || ""}
       counts
     };
   }
-  var import_jszip3, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
+  var import_jszip4, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
   var init_import_sp = __esm({
     "src/import-sp.js"() {
       init_i18n();
       init_fountain();
-      import_jszip3 = __toESM(require_jszip_min());
+      import_jszip4 = __toESM(require_jszip_min());
       SP_IMPORTERS = {
         fdx: { name: "Final Draft XML", ext: ".fdx", filter: "fdx", parse: parseFdx },
         celtx: { name: "Celtx", ext: ".celtx", filter: "celtx", parse: parseCeltx },
@@ -151291,7 +155580,7 @@ ${sc.body || ""}
   function generateLocationReport(blocks, opts = {}) {
     const { scenes, totalPages } = sceneBreakdown(blocks, opts);
     const groups = opts.groups || null;
-    const nameOf = (loc) => {
+    const nameOf2 = (loc) => {
       if (!groups) return loc;
       for (const g of Object.keys(groups)) {
         const arr = groups[g] || [];
@@ -151301,7 +155590,7 @@ ${sc.body || ""}
     };
     const map2 = /* @__PURE__ */ new Map();
     for (const s of scenes) {
-      const key2 = nameOf(s.location);
+      const key2 = nameOf2(s.location);
       if (!map2.has(key2)) {
         map2.set(key2, {
           location: key2,
@@ -152925,12 +157214,12 @@ ${css}
     };
     sel.onchange = () => {
       syncHint();
-      renderList();
+      renderList2();
     };
     row2.append(sel, inp, hint);
     box2.append(row2);
     const list = el("div", "k-goto-list");
-    const renderList = () => {
+    const renderList2 = () => {
       list.innerHTML = "";
       if (sel.value !== "scene") {
         list.style.display = "none";
@@ -152976,7 +157265,7 @@ ${css}
       if (e.target === ov) ov.remove();
     };
     syncHint();
-    renderList();
+    renderList2();
     inp.focus();
     inp.select();
     return ov;
@@ -153417,6 +157706,7 @@ ${css}
   }
   async function closeProjectIfAny() {
     if (!state.root) return true;
+    await flushStarter();
     await saveOpenTabs();
     const dirty = [...state.tabs.values()].filter((t3) => t3.dirty);
     if (dirty.length) {
@@ -154302,7 +158592,7 @@ ${css}
   }
   async function _buildTreeInner() {
     const tree = document.createElement("div");
-    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle"]);
+    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", "Sessions", "Starters"]);
     for (const name5 of await kapi.listDirs(state.root)) {
       if (skip.has(name5)) continue;
       const secPath = await kapi.join(state.root, name5);
@@ -155402,7 +159692,7 @@ ${css}
       await scan(await kapi.join(state.root, sec, "Bible"));
     }
     try {
-      const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", ".git"]);
+      const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", "Sessions", "Starters", ".git"]);
       for (const sec of await kapi.listDirs(state.root)) {
         if (skip.has(sec)) continue;
         const secPath = await kapi.join(state.root, sec);
@@ -155931,7 +160221,7 @@ ${css}
       const inp = el("input", "k-dlg-input");
       inp.placeholder = t("ui.app.printFilter");
       const list = el("div", "planner-board-list");
-      const draw2 = (q) => {
+      const draw3 = (q) => {
         list.innerHTML = "";
         const ql = (q || "").trim().toLowerCase();
         let n2 = 0;
@@ -155948,8 +160238,8 @@ ${css}
         }
         if (!n2) list.appendChild(el("div", "planner-props-empty", t("ui.app.notFoundDocAt")));
       };
-      draw2("");
-      inp.oninput = () => draw2(inp.value);
+      draw3("");
+      inp.oninput = () => draw3(inp.value);
       const btns = el("div", "k-dlg-btns");
       const cancel = el("button", "k-cancel", t("ui.common.cancel"));
       cancel.onclick = () => {
@@ -156518,7 +160808,7 @@ ${css}
   async function listRefTargets() {
     const out = [];
     if (!state.root) return out;
-    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle"]);
+    const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", "Sessions", "Starters"]);
     for (const secName of await kapi.listDirs(state.root).catch(() => [])) {
       if (skip.has(secName)) continue;
       const secPath = await kapi.join(state.root, secName);
@@ -158984,6 +163274,7 @@ ${css}
   async function confirmQuit() {
     await saveUiSession(true);
     await saveOpenTabs();
+    await flushStarter();
     const items = allDirtyList();
     logAction(
       "quit",
@@ -160407,6 +164698,7 @@ ${css}
     $("#tb-kanban").title = t("toolbar.kanban");
     $("#tb-ai").title = t("toolbar.aiAssistant");
     $("#tb-ai-chat").title = t("toolbar.aiChat");
+    $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
     $("#tb-plug").title = t("toolbar.plugins");
   }
   function refreshToolbar() {
@@ -160499,6 +164791,7 @@ ${css}
     $("#tb-dashboard")?.classList.toggle("on", isPanelOpen("dashboard"));
     $("#tb-ai-analyzer")?.classList.toggle("on", isPanelOpen("ai-analyzer"));
     $("#tb-ai-chat")?.classList.toggle("on", isPanelOpen("ai-chat"));
+    $("#tb-starter")?.classList.toggle("on", isPanelOpen("starter"));
     $("#tb-gallery")?.classList.toggle("on", isPanelOpen("gallery"));
     $("#tb-codex")?.classList.toggle("on", isPanelOpen("codex") || isTornOff("codex"));
     $("#tb-history")?.classList.toggle("on", isPanelOpen("history") || isTornOff("history"));
@@ -161938,6 +166231,17 @@ ${css}
       case "ai-chat-dialog":
         openAIChat();
         break;
+      // [alpha.94] Story Starter — เป็นแผง (กฎ: ฟีเจอร์ที่ไม่ใช่เอกสาร = แผง ไม่ใช่แท็บ)
+      case "story-starter":
+        await openStoryStarter();
+        syncMenuToggles();
+        break;
+      case "story-starter-toggle":
+        if (isPanelOpen("starter")) hidePanel("starter");
+        else await openStoryStarter();
+        refreshToolbar();
+        syncMenuToggles();
+        break;
       case "auto-sync":
         setAutoSync(a[0] === void 0 ? !isAutoSyncOn() : !!a[0]);
         state.settings.autoSync = isAutoSyncOn();
@@ -162205,6 +166509,7 @@ ${css}
     $("#tb-kanban") && ($("#tb-kanban").title = t("toolbar.kanban"));
     $("#tb-ai") && ($("#tb-ai").title = t("toolbar.aiAssistant"));
     $("#tb-ai-chat") && ($("#tb-ai-chat").title = t("toolbar.aiChat"));
+    $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
     const sab = $("#save-all-btn");
     if (sab) sab.title = t("shortcuts.saveAll") + " (Ctrl+Shift+S)";
     const hb = $("#home-btn");
@@ -171651,15 +175956,15 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 40));
         resetPageScale();
-        const S10 = state.settings;
+        const S11 = state.settings;
         const CS = (sel) => getComputedStyle(document.querySelector(sel));
         const rootVar = (n2) => getComputedStyle(document.documentElement).getPropertyValue(n2).trim();
         check2(
           "[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A \u0E1A\u0E191 \u0E25\u0E48\u0E32\u0E071 \u0E0B\u0E49\u0E32\u0E221.5 \u0E02\u0E27\u0E321 \u0E19\u0E34\u0E49\u0E27",
-          S10.pageMargins.top === 1 && S10.pageMargins.bottom === 1 && S10.pageMargins.left === 1.5 && S10.pageMargins.right === 1,
-          JSON.stringify(S10.pageMargins)
+          S11.pageMargins.top === 1 && S11.pageMargins.bottom === 1 && S11.pageMargins.left === 1.5 && S11.pageMargins.right === 1,
+          JSON.stringify(S11.pageMargins)
         );
-        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S10.paperSize === "letter");
+        check2("[85] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 Letter", S11.paperSize === "letter");
         check2(
           "[85] --page-w / --mg-left \u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E1A\u0E19 :root",
           rootVar("--page-w") === "8.5in" && rootVar("--mg-left") === "1.5in",
@@ -171670,14 +175975,14 @@ ${css}
           linesPerPage(spFormat().paper, spFormat().margins) === 54,
           String(linesPerPage(spFormat().paper, spFormat().margins))
         );
-        S10.paperSize = "a4";
+        S11.paperSize = "a4";
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E19\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19 A4 \u2192 --page-w \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", rootVar("--page-w") === "8.27in", rootVar("--page-w"));
-        S10.paperSize = "letter";
-        S10.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
+        S11.paperSize = "letter";
+        S11.pageMargins = { top: 1, bottom: 1, left: 2, right: 1 };
         applyPageVars();
         check2("[85] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 2 \u0E19\u0E34\u0E49\u0E27 \u2192 --mg-left \u0E15\u0E32\u0E21", rootVar("--mg-left") === "2in", rootVar("--mg-left"));
-        S10.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
+        S11.pageMargins = { top: 1, bottom: 1, left: 1.5, right: 1 };
         applyPageVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E43\u0E0A\u0E49 Courier Final Draft \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19",
@@ -171696,35 +176001,35 @@ ${css}
         );
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E10\u0E32\u0E19 12pt = 16px \u0E17\u0E31\u0E49\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E30\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07",
-          S10.edFontPt === 12 && S10.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
+          S11.edFontPt === 12 && S11.spFontPt === 12 && BASE_ED_FS === 16 && BASE_SP_FS === 16
         );
         applyZoomVars();
         const edFsBefore = rootVar("--ed-fs");
-        S10.spFontPt = 14;
+        S11.spFontPt = 14;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E01\u0E23\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 14pt \u2192 --sp-fs \u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01",
           Math.abs(parseFloat(rootVar("--sp-fs")) - 14 * 4 / 3) < 0.05,
           rootVar("--sp-fs")
         );
-        const keepPrFs = JSON.parse(JSON.stringify(S10.prose || {}));
-        S10.prose = { ...S10.prose || {}, fontPt: 1 };
-        S10.uiFontSize = -6;
+        const keepPrFs = JSON.parse(JSON.stringify(S11.prose || {}));
+        S11.prose = { ...S11.prose || {}, fontPt: 1 };
+        S11.uiFontSize = -6;
         applyZoomVars();
         check2(
           "[26] \u0E02\u0E19\u0E32\u0E14\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E25\u0E47\u0E01\u0E2A\u0E38\u0E14 \u0E46 \u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 9px",
           parseFloat(rootVar("--ed-fs")) >= 9,
           rootVar("--ed-fs")
         );
-        S10.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
-        S10.uiFontSize = 0;
+        S11.prose = Object.keys(keepPrFs).length ? keepPrFs : null;
+        S11.uiFontSize = 0;
         applyZoomVars();
         check2(
           "[\u0E1F\u0E2D\u0E19\u0E15\u0E4C] \u0E02\u0E19\u0E32\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E23\u0E30\u0E17\u0E1A",
           rootVar("--ed-fs") === edFsBefore,
           edFsBefore + " \u2192 " + rootVar("--ed-fs")
         );
-        S10.spFontPt = 12;
+        S11.spFontPt = 12;
         applyZoomVars();
         const spStyleEl = document.getElementById("k-sp-format");
         check2('[81] \u0E21\u0E35 <style id="k-sp-format"> \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E08\u0E32\u0E01\u0E04\u0E48\u0E32\u0E15\u0E31\u0E49\u0E07', !!spStyleEl && spStyleEl.textContent.includes(".sp.sp-character{"));
@@ -171813,7 +176118,7 @@ ${css}
               v87r.dispatch(v87r.state.tr.delete(_docSize87, v87r.state.doc.content.size));
             await new Promise((r) => setTimeout(r, 200));
           }
-          S10.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
+          S11.spElements = { character: { indent: 4.5, width: 3, linesBefore: 30, linesBetween: 10 } };
           applyPageVars();
           const cs2 = getComputedStyle(spT.pane.querySelector(".sp-character"));
           check2(
@@ -171828,7 +176133,7 @@ ${css}
             ).getPropertyValue("--sp-line-h")) || 16)) < 1,
             cs2.paddingTop
           );
-          S10.spStyles = { character: {
+          S11.spStyles = { character: {
             screen: { caps: false, bold: true, italic: false, underline: false },
             print: { caps: true, bold: false, italic: false, underline: true }
           } };
@@ -171840,8 +176145,8 @@ ${css}
             "[83] \u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E1A\u0E19\u0E08\u0E2D (\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C)",
             /@media print\{[\s\S]*\.sp\.sp-character\{[^}]*text-decoration:underline/.test(document.getElementById("k-sp-format").textContent)
           );
-          S10.spElements = null;
-          S10.spStyles = null;
+          S11.spElements = null;
+          S11.spStyles = null;
           applyPageVars();
           const blocks = parseScript(spT.sp.getMarkdown());
           const pgInfo = paginate(blocks, { fmt: spFormat() });
@@ -171849,7 +176154,7 @@ ${css}
           scheduleCount();
           await new Promise((r) => setTimeout(r, 400));
           check2("[84] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07", /\d+ หน้า/.test($("#wc").textContent), $("#wc").textContent);
-          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S10.spAutoPaginate === false, String(S10.spAutoPaginate));
+          check2("[96] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 spAutoPaginate \u0E04\u0E37\u0E2D\u0E1B\u0E34\u0E14", S11.spAutoPaginate === false, String(S11.spAutoPaginate));
           check2("[96] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E19\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35", /\d+ หน้า/.test($("#wc").textContent));
           check2(
             "[96] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1B\u0E34\u0E14 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19 1 \u0E2B\u0E19\u0E49\u0E32)",
@@ -171858,7 +176163,7 @@ ${css}
           );
           {
             const before = $("#wc").textContent;
-            S10.spAutoPaginate = true;
+            S11.spAutoPaginate = true;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
             check2(
@@ -171871,7 +176176,7 @@ ${css}
               $("#wc").textContent.replace(/^.*·/, "") === before.replace(/^.*·/, ""),
               before + " \u2192 " + $("#wc").textContent
             );
-            S10.spAutoPaginate = false;
+            S11.spAutoPaginate = false;
             scheduleCount();
             await new Promise((r) => setTimeout(r, 400));
           }
@@ -171881,20 +176186,20 @@ ${css}
             { el: "dialogue", text: "\u0E1E\u0E39\u0E14\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(60) }
           ];
           const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
-          S10.spPageRules = { minDialogueLinesAtBottom: 99 };
+          S11.spPageRules = { minDialogueLinesAtBottom: 99 };
           const split22 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[84] \u0E1B\u0E23\u0E31\u0E1A\u0E01\u0E0E minDialogueLinesAtBottom \u2192 \u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07",
             split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && !split22.pages.flatMap((p) => p.blocks).some((b) => b.split === "head")
           );
-          S10.spPageRules = null;
-          S10.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
+          S11.spPageRules = null;
+          S11.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
           const pgTh = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           check2(
             "[92] \u0E41\u0E01\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (MORE) \u0E41\u0E25\u0E49\u0E27\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07",
             pgTh.pages.flatMap((p) => p.blocks).some((b) => b.el === "more" && b.text === "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)")
           );
-          S10.spStrings = null;
+          S11.spStrings = null;
           spT.sp.setElement("character");
           smart.items = ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27"];
           smart.sel = 0;
@@ -171941,23 +176246,23 @@ ${css}
           await new Promise((r) => setTimeout(r, 150));
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D Tab / Shift+Tab / Enter",
-            spCycleKeys(S10).tab.code === "Tab" && spCycleKeys(S10).shiftTab.shift === true && spCycleKeys(S10).enter.code === "Enter"
+            spCycleKeys(S11).tab.code === "Tab" && spCycleKeys(S11).shiftTab.shift === true && spCycleKeys(S11).enter.code === "Enter"
           );
-          S10.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S10).tab.code === "BracketRight");
-          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S10).enter.code === "Enter");
+          S11.spCycleKeys = { tab: { code: "BracketRight", shift: false, ctrl: false, alt: false } };
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", spCycleKeys(S11).tab.code === "BracketRight");
+          check2("[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spCycleKeys(S11).enter.code === "Enter");
           check2(
             "[\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07] \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01",
             spKeyLabel({ code: "Tab", shift: true }) === "Shift+Tab",
             spKeyLabel({ code: "Tab", shift: true })
           );
-          S10.spCycleKeys = null;
+          S11.spCycleKeys = null;
           const keepEnt2 = spT.sp.view.state.doc;
           const atEnd = () => spT.sp.gotoPos(spT.sp.view.state.doc.content.size - 1);
           spT.sp.setMarkdown("@\u0E2A\u0E21\u0E0A\u0E32\u0E22");
           await new Promise((r) => setTimeout(r, 150));
           atEnd();
-          S10.spCycleEnabled = false;
+          S11.spCycleEnabled = false;
           spT.sp.setElement("character");
           spT.sp.enter(true);
           check2(
@@ -171965,7 +176270,7 @@ ${css}
             spT.sp.curElement() === "character",
             spT.sp.curElement()
           );
-          S10.spCycleEnabled = true;
+          S11.spCycleEnabled = true;
           spT.sp.setMarkdown("@\u0E2A\u0E21\u0E0A\u0E32\u0E22");
           await new Promise((r) => setTimeout(r, 150));
           atEnd();
@@ -173830,7 +178135,7 @@ ${css}
           }
         }
         {
-          S10.homeThumb = 220;
+          S11.homeThumb = 220;
           applySettings();
           check2(
             "#12 \u0E15\u0E31\u0E49\u0E07\u0E02\u0E19\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E43\u0E19 settings \u0E44\u0E14\u0E49 (--home-thumb)",
@@ -173859,7 +178164,7 @@ ${css}
             );
           }
           ovHome.remove();
-          S10.homeThumb = 190;
+          S11.homeThumb = 190;
           applySettings();
         }
         {
@@ -175538,17 +179843,17 @@ ${css}
           !!T3.pane.querySelector(".sp-pageview .ed-page .ed-page-clip > .ProseMirror")
         );
         {
-          const clip2 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
+          const clip3 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
           const spf15 = spFormat();
           const want = (spf15.paper.height - spf15.margins.top - spf15.margins.bottom) * 96;
           check2(
             "[83-3] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E27\u0E01\u0E40\u0E2A\u0E21\u0E2D",
-            !!clip2 && parseFloat(clip2.style.height) <= want + 0.5 && parseFloat(clip2.style.height) > 0,
-            (clip2 && clip2.style.height) + " <= " + want
+            !!clip3 && parseFloat(clip3.style.height) <= want + 0.5 && parseFloat(clip3.style.height) > 0,
+            (clip3 && clip3.style.height) + " <= " + want
           );
           check2(
             "[82] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
-            !!clip2 && !clip2.querySelector(".ed-page-break")
+            !!clip3 && !clip3.querySelector(".ed-page-break")
           );
           const pg2 = T3.pane.querySelectorAll(".sp-pageview .ed-page")[1];
           const inner2 = pg2 && pg2.querySelector(".ed-page-clip > .ProseMirror");
@@ -177407,16 +181712,16 @@ ${css}
           [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
         }
       }
-      const S9 = state.settings;
+      const S10 = state.settings;
       {
         check2(
           '[61-1] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D "\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E30 "\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01"',
           GLOBAL_DEFAULTS.openLastProject === false && GLOBAL_DEFAULTS.showHomeOnStartup === false,
           JSON.stringify([GLOBAL_DEFAULTS.openLastProject, GLOBAL_DEFAULTS.showHomeOnStartup])
         );
-        const keepA = S9.openLastProject, keepB = S9.showHomeOnStartup;
+        const keepA = S10.openLastProject, keepB = S10.showHomeOnStartup;
         await toggleOpenLastProject(true);
-        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S9.openLastProject === true);
+        check2('[61-1] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07', S10.openLastProject === true);
         const g1 = await bootGlobalSettings();
         check2(
           "[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 global settings (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)",
@@ -177424,15 +181729,15 @@ ${css}
           JSON.stringify(g1.openLastProject)
         );
         await toggleOpenLastProject(false);
-        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S9.openLastProject === false);
+        check2("[61-1] \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", S10.openLastProject === false);
         await toggleShowHomeAlways(true);
         check2(
           '[61-1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E2A\u0E21\u0E2D" \u0E17\u0E33\u0E07\u0E32\u0E19\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01',
-          S9.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
+          S10.showHomeOnStartup === true && (await bootGlobalSettings()).showHomeOnStartup === true
         );
         await toggleShowHomeAlways(false);
-        S9.openLastProject = keepA;
-        S9.showHomeOnStartup = keepB;
+        S10.openLastProject = keepA;
+        S10.showHomeOnStartup = keepB;
       }
       {
         const scEl = document.querySelector("#tree .scene:not(.add-row)");
@@ -177552,7 +181857,7 @@ ${css}
         );
       }
       {
-        const keepFC = S9.spForceCase;
+        const keepFC = S10.spForceCase;
         toggleSpCase("spForceCase", false);
         const cssOff = document.getElementById("k-sp-format").textContent;
         check2(
@@ -177566,12 +181871,12 @@ ${css}
           /text-transform:uppercase/.test(document.getElementById("k-sp-format").textContent)
         );
         toggleSpCase("spAutoCapitalize", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S9.spAutoCapitalize === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49", S10.spAutoCapitalize === false);
         toggleSpCase("spAutoCapitalize", true);
         toggleSpCase("spAutoCorrectI", false);
-        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S9.spAutoCorrectI === false);
+        check2("[61-4] \u0E1B\u0E34\u0E14\u0E41\u0E01\u0E49 i\u2192I \u0E44\u0E14\u0E49", S10.spAutoCorrectI === false);
         toggleSpCase("spAutoCorrectI", true);
-        S9.spForceCase = keepFC;
+        S10.spForceCase = keepFC;
       }
       {
         const AP = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
@@ -179215,6 +183520,548 @@ ${css}
           await wait62(200);
         }
         {
+          const SM = await Promise.resolve().then(() => (init_starter_model(), starter_model_exports));
+          const SD = await Promise.resolve().then(() => (init_starter_steps_def(), starter_steps_def_exports));
+          const SS = await Promise.resolve().then(() => (init_starter_store(), starter_store_exports));
+          const SW = await Promise.resolve().then(() => (init_starter_wiki(), starter_wiki_exports));
+          const SU = await Promise.resolve().then(() => (init_starter_ui(), starter_ui_exports));
+          const SC = await Promise.resolve().then(() => (init_starter_choices(), starter_choices_exports));
+          showPanel("starter", { targetId: "docs", side: "right", forceMove: true });
+          await renderFeaturePanel("starter");
+          await wait62(350);
+          const body94 = document.querySelector("#starter-body");
+          check2("[a94] \u0E41\u0E1C\u0E07 Story Starter \u0E27\u0E32\u0E14\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07", !!body94 && !!body94.querySelector(".st-list-wrap"));
+          check2(
+            "[a94] \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21\u0E27\u0E48\u0E32\u0E07 = \u0E0A\u0E27\u0E19\u0E43\u0E2B\u0E49\u0E2A\u0E23\u0E49\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E08\u0E2D\u0E40\u0E1B\u0E25\u0E48\u0E32",
+            !!body94.querySelector(".st-empty") && !!body94.querySelector(".st-list-head button")
+          );
+          const st94 = await SS.createStarter("\u0E40\u0E17\u0E2A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1C\u0E08\u0E0D\u0E20\u0E31\u0E22");
+          check2("[a94] \u0E2A\u0E23\u0E49\u0E32\u0E07 starter \u0E44\u0E14\u0E49 + \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E17\u0E22\u0E44\u0E14\u0E49", !!st94 && st94.slug === "\u0E40\u0E17\u0E2A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1C\u0E08\u0E0D\u0E20\u0E31\u0E22", st94 && st94.slug);
+          const dir94 = await SS.starterDir(st94.slug);
+          check2(
+            "[a94] \u0E40\u0E01\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E41\u0E22\u0E01\u0E43\u0E15\u0E49 Starters/",
+            await kapi.exists(dir94) && dir94.includes("Starters"),
+            dir94
+          );
+          check2(
+            "[a94] \u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E1E\u0E01\u0E1E\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27",
+            await kapi.exists(await kapi.join(dir94, "starter.json")) && await kapi.exists(await kapi.join(dir94, "images")) && await kapi.exists(await kapi.join(dir94, "Scenarios"))
+          );
+          await renderFeaturePanel("starter");
+          await wait62(300);
+          const card94 = [...document.querySelectorAll("#starter-body .st-card")].find((c) => (c.querySelector(".st-card-name") || {}).textContent === "\u0E40\u0E17\u0E2A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1C\u0E08\u0E0D\u0E20\u0E31\u0E22");
+          check2("[a94] starter \u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21", !!card94);
+          card94.querySelector(".st-card-btns button").click();
+          await wait62(350);
+          check2("[a94] \u0E01\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E02\u0E49\u0E32 wizard", SU.starterView() === "wizard" && !!document.querySelector("#starter-body .st-wizard"));
+          check2(
+            "[a94] \u0E41\u0E16\u0E1A\u0E02\u0E31\u0E49\u0E19\u0E04\u0E23\u0E1A\u0E15\u0E32\u0E21\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E02\u0E31\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E2D\u0E07)",
+            document.querySelectorAll("#starter-body .st-chip").length === SD.STEPS.length,
+            document.querySelectorAll("#starter-body .st-chip").length + "/" + SD.STEPS.length
+          );
+          const tagBtn94 = [...document.querySelectorAll("#starter-body .st-tag-group .st-tag")].find((b) => b.textContent === "fantasy");
+          check2("[a94] \u0E02\u0E31\u0E49\u0E19\u0E41\u0E23\u0E01\u0E21\u0E35\u0E41\u0E17\u0E47\u0E01\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E23\u0E39\u0E1B\u0E43\u0E2B\u0E49\u0E01\u0E14", !!tagBtn94);
+          tagBtn94.click();
+          await wait62(120);
+          check2(
+            "[a94] \u0E01\u0E14\u0E41\u0E17\u0E47\u0E01\u0E41\u0E25\u0E49\u0E27\u0E15\u0E34\u0E14\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E19\u0E17\u0E35",
+            [...document.querySelectorAll("#starter-body .st-tag-picked .st-tag")].some((x) => x.textContent.startsWith("fantasy"))
+          );
+          check2("[a94] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34: \u0E21\u0E35\u0E04\u0E34\u0E27\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E38\u0E01\u0E04\u0E35\u0E22\u0E4C\u0E01\u0E14)", SS.pendingSaves() > 0);
+          await SS.flushStarterSaves();
+          const onDisk94 = await SS.readStarter(st94.slug);
+          check2(
+            "[a94] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01",
+            (onDisk94.tags || []).includes("fantasy"),
+            JSON.stringify(onDisk94.tags)
+          );
+          const chips94 = [...document.querySelectorAll("#starter-body .st-chip")];
+          chips94[3].click();
+          await wait62(250);
+          check2("[a94] \u0E01\u0E14\u0E02\u0E49\u0E32\u0E21\u0E44\u0E1B\u0E02\u0E31\u0E49\u0E19 4W \u0E44\u0E14\u0E49", (await SS.readStarter(st94.slug)).step === 3 || document.querySelector("#starter-body .st-step-title").textContent.includes(SD.STEPS[3].title));
+          chips94[0].click();
+          await wait62(200);
+          check2("[a94] \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E02\u0E31\u0E49\u0E19\u0E41\u0E23\u0E01\u0E44\u0E14\u0E49", !!document.querySelector("#starter-body .st-tag-groups"));
+          chips94[2].click();
+          await wait62(300);
+          const addChar94 = [...document.querySelectorAll("#starter-body .st-step-pane button")].find((b) => b.textContent.includes("\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23"));
+          check2("[a94] \u0E02\u0E31\u0E49\u0E19\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1E\u0E34\u0E48\u0E21", !!addChar94);
+          addChar94.click();
+          await wait62(300);
+          const nameInp94 = document.querySelector("#starter-body .st-step-pane input.wiki-input");
+          check2("[a94] \u0E01\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E40\u0E02\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E01\u0E49\u0E44\u0E02\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E31\u0E19\u0E17\u0E35", !!nameInp94 && !!document.querySelector("#starter-body .st-gender"));
+          nameInp94.value = "\u0E21\u0E32\u0E19\u0E35\u0E40\u0E17\u0E2A";
+          nameInp94.dispatchEvent(new Event("input", { bubbles: true }));
+          const descTa94 = document.querySelector("#starter-body .st-step-pane textarea");
+          descTa94.value = "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A\u0E2A\u0E32\u0E27\u0E08\u0E32\u0E01\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D";
+          descTa94.dispatchEvent(new Event("input", { bubbles: true }));
+          await SS.flushStarterSaves();
+          const withChar94 = await SS.readStarter(st94.slug);
+          check2(
+            "[a94] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
+            (withChar94.cast || []).length === 1 && withChar94.cast[0].name === "\u0E21\u0E32\u0E19\u0E35\u0E40\u0E17\u0E2A",
+            JSON.stringify((withChar94.cast || []).map((c) => c.name))
+          );
+          check2(
+            "[a94] \u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E15\u0E32\u0E21\u0E2A\u0E40\u0E1B\u0E01",
+            withChar94.cast[0].persona === "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A\u0E2A\u0E32\u0E27\u0E08\u0E32\u0E01\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D"
+          );
+          check2(
+            "[a94] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E02\u0E2D\u0E07 starter \u0E43\u0E0A\u0E49\u0E42\u0E04\u0E23\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A cast \u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17",
+            ["persona", "blurb", "aliases", "selfPronoun", "wikiPath"].every((k) => k in withChar94.cast[0])
+          );
+          const toWiki94 = [...document.querySelectorAll("#starter-body .st-step-pane button")].find((b) => b.textContent.includes("\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 Wiki"));
+          check2("[a94] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E25\u0E07 Wiki", !!toWiki94);
+          toWiki94.click();
+          await wait62(500);
+          const afterWiki94 = await SS.readStarter(st94.slug);
+          const wpath94 = afterWiki94.cast[0].wikiPath;
+          check2(
+            "[a94] \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E43\u0E19 starter \u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E25\u0E07 Wiki \u0E08\u0E23\u0E34\u0E07",
+            !!wpath94 && await kapi.exists(wpath94),
+            wpath94 || "\u0E44\u0E21\u0E48\u0E21\u0E35 wikiPath"
+          );
+          const ent94 = wpath94 ? await kapi.readJson(wpath94) : null;
+          check2(
+            "[a94] entity \u0E43\u0E19 Wiki \u0E21\u0E35\u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E48\u0E27\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27",
+            !!ent94 && ent94.name === "\u0E21\u0E32\u0E19\u0E35\u0E40\u0E17\u0E2A" && (ent94.sections || []).length === 1 && ent94.sections[0].content === "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A\u0E2A\u0E32\u0E27\u0E08\u0E32\u0E01\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D"
+          );
+          {
+            const moved94 = JSON.parse(JSON.stringify(afterWiki94));
+            moved94.cast[0].wikiPath = "/\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E01\u0E48\u0E32/Wiki/characters/x.json";
+            check2("[a94] \u0E23\u0E39\u0E49\u0E27\u0E48\u0E32 starter \u0E15\u0E31\u0E27\u0E19\u0E35\u0E49\u0E22\u0E49\u0E32\u0E22\u0E21\u0E32\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E2D\u0E37\u0E48\u0E19", await SW.looksForeign(moved94) === true);
+            const sum94 = await SW.reconcileCast(moved94, { silent: true });
+            check2(
+              "[a94] \u0E08\u0E31\u0E1A\u0E04\u0E39\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32 Wiki \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49\u0E40\u0E2D\u0E07",
+              !!sum94 && sum94.link === 1 && moved94.cast[0].wikiPath === wpath94,
+              JSON.stringify(sum94)
+            );
+          }
+          {
+            const sc1 = await SS.createScenario(st94.slug, { title: "\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1", synopsis: "\u0E2D\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07" });
+            const sc2 = await SS.createScenario(st94.slug, { title: "\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2", prevId: sc1.id });
+            const rows94 = await SS.listScenarios(st94.slug);
+            check2("[a94] \u0E15\u0E2D\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07 starter (\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22)", rows94.length === 2);
+            check2(
+              "[a94] \u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E01\u0E31\u0E1A\u0E15\u0E2D\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49",
+              SM.chainOf(rows94, sc2.id).map((x) => x.title).join("\u2192") === "\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1\u2192\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2"
+            );
+            check2(
+              "[a94] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E2D\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E49\u0E32\u0E21\u0E44\u0E14\u0E49\u0E25\u0E39\u0E01\u0E2B\u0E25\u0E32\u0E19\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E01\u0E31\u0E19\u0E27\u0E07)",
+              SM.selectablePrev(rows94, sc1.id).length === 0
+            );
+            let played = SM.addTurn(sc1, {
+              role: SM.ROLE_GM,
+              text: "\u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E01",
+              choices: ["\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B", "\u0E16\u0E2D\u0E22\u0E01\u0E25\u0E31\u0E1A"]
+            });
+            check2(
+              "[a94] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E49\u0E32\u0E07\u0E23\u0E2D\u0E1C\u0E39\u0E49\u0E40\u0E25\u0E48\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19 GM",
+              SM.openChoices(played).join("|") === "\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B|\u0E16\u0E2D\u0E22\u0E01\u0E25\u0E31\u0E1A"
+            );
+            played = SM.addTurn(played, { role: SM.ROLE_PLAYER, text: "\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B", chosen: "\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B" });
+            check2("[a94] \u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07", SM.openChoices(played).length === 0);
+            await SS.writeScenario(st94.slug, played);
+            const back94 = await SS.readScenario(st94.slug, sc1.id);
+            check2("[a94] \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A", (back94.turns || []).length === 2 && back94.turns[1].chosen === "\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B");
+            const mk94 = SC.choiceMarker("\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B");
+            check2("[a94] \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E40\u0E01\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E44\u0E14\u0E49", mk94 === "[\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B]");
+            const BG94 = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
+            check2(
+              "[a94] \u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E2D\u0E48\u0E32\u0E19\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E40\u0E01\u0E2D\u0E23\u0E4C\u0E19\u0E31\u0E49\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+              BG94.scanChoiceMarkers("\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 " + mk94).map((x) => x.text).join() === "\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B"
+            );
+            await SS.deleteScenario(st94.slug, sc2.id);
+            check2("[a94] \u0E25\u0E1A\u0E15\u0E2D\u0E19\u0E44\u0E14\u0E49", (await SS.listScenarios(st94.slug)).length === 1);
+          }
+          {
+            const EX = await Promise.resolve().then(() => (init_starter_export(), starter_export_exports));
+            const BR = await Promise.resolve().then(() => (init_starter_bridge(), starter_bridge_exports));
+            const PK = await Promise.resolve().then(() => (init_starter_pack(), starter_pack_exports));
+            const BG95 = await Promise.resolve().then(() => (init_branch_graph(), branch_graph_exports));
+            const st95 = await SS.createStarter("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1B\u0E25\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
+            st95.name = "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1B\u0E25\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+            st95.tags = ["fantasy"];
+            st95.intro = "\u0E42\u0E25\u0E01\u0E17\u0E35\u0E48\u0E14\u0E27\u0E07\u0E2D\u0E32\u0E17\u0E34\u0E15\u0E22\u0E4C\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19";
+            st95.w = { when: "\u0E1B\u0E35\u0E17\u0E35\u0E48 1,024", where: "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D" };
+            st95.cast = [SM.newChar({ name: "\u0E21\u0E32\u0E19\u0E35", persona: "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A\u0E2A\u0E32\u0E27" })];
+            await SS.writeStarter(st95);
+            let sc95 = await SS.createScenario(st95.slug, { title: "\u0E15\u0E2D\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E41\u0E1B\u0E25\u0E07", synopsis: "\u0E2D\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07" });
+            sc95 = SM.addTurn(sc95, { role: SM.ROLE_GM, text: "\u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E01" });
+            sc95 = SM.addTurn(sc95, { role: SM.ROLE_PLAYER, text: "\u0E01\u0E49\u0E32\u0E27\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B" });
+            sc95 = SM.addTurn(sc95, {
+              role: SM.ROLE_GM,
+              text: "\u0E25\u0E21\u0E2B\u0E19\u0E32\u0E27\u0E1E\u0E31\u0E14\u0E21\u0E32",
+              choices: ["\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D", "\u0E1E\u0E31\u0E01\u0E17\u0E35\u0E48\u0E42\u0E23\u0E07\u0E40\u0E15\u0E35\u0E4A\u0E22\u0E21"]
+            });
+            await SS.writeScenario(st95.slug, sc95);
+            const fakeProse = async () => "\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19\u0E21\u0E32\u0E19\u0E35\u0E01\u0E49\u0E32\u0E27\u0E1C\u0E48\u0E32\u0E19\u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E44\u0E1B\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E2B\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E25\u0E31\u0E1A";
+            const made95 = await EX.convertScenario(st95, sc95, { format: "prose", ai: fakeProse });
+            check2("[a95] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49", !!made95 && !!made95.path, made95 && made95.path);
+            const secs95 = await listSections();
+            const book95 = secs95.find((x) => (x.meta && x.meta.title) === EX.EXPORT_BOOK);
+            check2('[a95] \u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E25\u0E48\u0E21 "Story Starter" \u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E01\u0E25\u0E07', !!book95);
+            check2(
+              "[a95] \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E1A\u0E17\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+              String(made95.path).includes("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E1B\u0E25\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"),
+              made95.path
+            );
+            const md95 = await kapi.readFile(made95.path);
+            check2("[a95] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E21\u0E32\u0E08\u0E32\u0E01\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07", md95.includes("\u0E21\u0E32\u0E19\u0E35\u0E01\u0E49\u0E32\u0E27\u0E1C\u0E48\u0E32\u0E19\u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E21\u0E37\u0E2D\u0E07"));
+            check2(
+              "[a95] frontmatter \u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22 + \u0E15\u0E32\u0E21\u0E23\u0E2D\u0E22\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E2B\u0E32\u0E15\u0E2D\u0E19\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E44\u0E14\u0E49",
+              md95.includes("format: prose") && md95.includes("scenario: " + sc95.id)
+            );
+            check2(
+              "[a95] \u0E17\u0E32\u0E07\u0E41\u0E22\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E40\u0E01\u0E2D\u0E23\u0E4C\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01",
+              md95.includes("[\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D]") && md95.includes("[\u0E1E\u0E31\u0E01\u0E17\u0E35\u0E48\u0E42\u0E23\u0E07\u0E40\u0E15\u0E35\u0E4A\u0E22\u0E21]")
+            );
+            const dP95 = await kapi.join(
+              book95.secPath,
+              "Draft",
+              (await kapi.listDirs(await kapi.join(book95.secPath, "Draft")))[0]
+            );
+            const scj95 = await kapi.readJson(await kapi.join(dP95, "scenes.json"));
+            const allRows95 = Object.values(scj95.chapters || {}).flat();
+            const row95 = allRows95.find((r) => r.id === (made95.path && allRows95.find((x) => String(made95.path).endsWith(x.fileName)) || {}).id) || allRows95.find((x) => String(made95.path).endsWith(x.fileName));
+            check2("[a95] \u0E40\u0E08\u0E2D\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19 scenes.json", !!row95);
+            check2(
+              "[a95] \u0E40\u0E02\u0E35\u0E22\u0E19 choices \u0E25\u0E07 scenes.json \u0E14\u0E49\u0E27\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1F\u0E34\u0E25\u0E14\u0E4C\u0E17\u0E35\u0E48 buildGraph \u0E2D\u0E48\u0E32\u0E19",
+              !!row95 && (row95.choices || []).length === 2 && "nextSceneId" in (row95.choices || [])[0],
+              JSON.stringify(row95 && row95.choices)
+            );
+            const g95 = BG95.buildGraph([{ ...row95, body: md95 }]);
+            check2(
+              "[a95] \u0E1C\u0E31\u0E07\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E40\u0E2B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E41\u0E1B\u0E25\u0E07\u0E21\u0E32",
+              g95.edges.length === 2,
+              "\u0E40\u0E2A\u0E49\u0E19=" + g95.edges.length
+            );
+            check2(
+              "[a95] \u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E22\u0E31\u0E07\u0E27\u0E48\u0E32\u0E07 = \u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E2B\u0E49\u0E2D\u0E22\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E1B\u0E1C\u0E39\u0E01\u0E40\u0E2D\u0E07",
+              g95.edges.every((e) => e.dangling)
+            );
+            check2(
+              "[a95] \u0E21\u0E32\u0E23\u0E4C\u0E01\u0E40\u0E01\u0E2D\u0E23\u0E4C\u0E43\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A choices (\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E27\u0E48\u0E32\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32)",
+              BG95.diffChoiceMarkers(BG95.scanChoiceMarkers(md95), row95.choices).orphan.length === 0,
+              JSON.stringify(BG95.diffChoiceMarkers(BG95.scanChoiceMarkers(md95), row95.choices))
+            );
+            const fakeSp = async () => "INT. \u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E21\u0E37\u0E2D\u0E07 - \u0E04\u0E37\u0E19\n\n\u0E25\u0E21\u0E2B\u0E19\u0E32\u0E27\u0E1E\u0E31\u0E14\u0E1C\u0E48\u0E32\u0E19\n\n\u0E21\u0E32\u0E19\u0E35\n(\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)\n\u0E16\u0E36\u0E07\u0E40\u0E27\u0E25\u0E32\u0E41\u0E25\u0E49\u0E27";
+            const madeSp95 = await EX.convertScenario(st95, sc95, { format: "screenplay", ai: fakeSp });
+            check2("[a95] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E44\u0E14\u0E49", !!madeSp95);
+            const spmd95 = await kapi.readFile(madeSp95.path);
+            check2("[a95] \u0E1A\u0E17\u0E44\u0E14\u0E49 frontmatter screenplay", spmd95.includes("format: screenplay"));
+            check2(
+              "[a95] \u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01/\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14/\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A \u0E44\u0E14\u0E49\u0E23\u0E2B\u0E31\u0E2A\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+              spmd95.includes("### INT. \u0E1B\u0E23\u0E30\u0E15\u0E39\u0E40\u0E21\u0E37\u0E2D\u0E07 - \u0E04\u0E37\u0E19") && spmd95.includes("@\u0E21\u0E32\u0E19\u0E35") && spmd95.includes("((\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A))"),
+              spmd95.slice(-260)
+            );
+            check2(
+              "[a95] \u0E17\u0E32\u0E07\u0E41\u0E22\u0E01\u0E43\u0E19\u0E1A\u0E17\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E19\u0E49\u0E15 \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E01\u0E34\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+              spmd95.includes("/// [\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D]")
+            );
+            check2(
+              "[a95] \u0E41\u0E1B\u0E25\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E14\u0E49\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
+              madeSp95.path !== made95.path && await kapi.exists(made95.path)
+            );
+            const scAfter95 = await SS.readScenario(st95.slug, sc95.id);
+            check2("[a95] \u0E15\u0E2D\u0E19\u0E08\u0E33\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32\u0E16\u0E39\u0E01\u0E41\u0E1B\u0E25\u0E07\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E01\u0E35\u0E48\u0E04\u0E23\u0E31\u0E49\u0E07", (scAfter95.exports || []).length === 2);
+            const rows95 = await SS.listScenarios(st95.slug);
+            check2("[a95] \u0E21\u0E35\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E49\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32/\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48", BR.canPush(st95, rows95) === true);
+            const sum95 = await BR.pushAll(st95, rows95);
+            check2("[a95] \u0E2A\u0E48\u0E07\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E2B\u0E19\u0E25\u0E49\u0E21", sum95.errors.length === 0, sum95.errors.join());
+            const tl95 = await kapi.readJson(await kapi.join(state.root, "timeline.json"));
+            const evWhen95 = (tl95.events || []).find((e) => e.src === BR.srcKey(st95.slug, "when"));
+            check2(
+              '[a95] "\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E44\u0E2B\u0E23\u0E48" \u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E1A\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E27\u0E25\u0E32',
+              !!evWhen95 && evWhen95.when === "\u0E1B\u0E35\u0E17\u0E35\u0E48 1,024",
+              JSON.stringify(evWhen95 && evWhen95.when)
+            );
+            check2(
+              "[a95] \u0E15\u0E2D\u0E19\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E14\u0E49\u0E27\u0E22",
+              (tl95.events || []).some((e) => e.src === BR.srcKey(st95.slug, "sc:" + sc95.id))
+            );
+            const mp95 = await kapi.readJson(await kapi.join(state.root, "maps.json"));
+            const map95 = (mp95.maps || []).find((m) => m.name === BR.BRIDGE_MAP);
+            check2(
+              '[a95] "\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E19" \u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E21\u0E38\u0E14\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48',
+              !!map95 && (map95.pins || []).some((p) => p.note === "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D")
+            );
+            const nEv95 = (tl95.events || []).length;
+            const nPin95 = (map95.pins || []).length;
+            await BR.pushAll(st95, rows95);
+            const tl95b = await kapi.readJson(await kapi.join(state.root, "timeline.json"));
+            const mp95b = await kapi.readJson(await kapi.join(state.root, "maps.json"));
+            const map95b = (mp95b.maps || []).find((m) => m.name === BR.BRIDGE_MAP);
+            check2(
+              "[a95] \u0E01\u0E14\u0E2A\u0E48\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E0B\u0E49\u0E33",
+              (tl95b.events || []).length === nEv95,
+              nEv95 + " \u2192 " + (tl95b.events || []).length
+            );
+            check2("[a95] \u0E01\u0E14\u0E2A\u0E48\u0E07\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14\u0E0B\u0E49\u0E33", (map95b.pins || []).length === nPin95);
+            const bytes95 = await PK.packStarter(st95.slug);
+            check2("[a95] \u0E1A\u0E35\u0E1A starter \u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1A\u0E15\u0E4C\u0E44\u0E14\u0E49", !!bytes95 && bytes95.length > 0);
+            const back95 = await PK.unpackStarter(bytes95);
+            check2("[a95] \u0E41\u0E15\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 starter \u0E15\u0E31\u0E27\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49", !!back95);
+            check2(
+              "[a95] \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E0B\u0E49\u0E33\u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
+              !!back95 && back95.slug !== st95.slug,
+              back95 && back95.slug
+            );
+            check2(
+              "[a95] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E04\u0E23\u0E1A (\u0E0A\u0E37\u0E48\u0E2D \xB7 \u0E41\u0E17\u0E47\u0E01 \xB7 4W \xB7 \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23)",
+              !!back95 && back95.name === st95.name && (back95.tags || []).join() === "fantasy" && back95.w.where === "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E40\u0E2B\u0E19\u0E37\u0E2D" && (back95.cast || []).length === 1 && back95.cast[0].name === "\u0E21\u0E32\u0E19\u0E35"
+            );
+            check2(
+              "[a95] \u0E15\u0E2D\u0E19\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22\u0E43\u0E19 .zip",
+              (await SS.listScenarios(back95.slug)).length === 1
+            );
+            check2(
+              "[a95] \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E17\u0E35\u0E48\u0E40\u0E25\u0E48\u0E19\u0E44\u0E27\u0E49\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E32\u0E07",
+              ((await SS.listScenarios(back95.slug))[0].turns || []).length === 3
+            );
+            const junk95 = await PK.unpackStarter(new Uint8Array([80, 75, 3, 4, 0, 0]));
+            check2("[a95] \u0E44\u0E1F\u0E25\u0E4C .zip \u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 starter \u0E44\u0E21\u0E48\u0E17\u0E33\u0E41\u0E1C\u0E07\u0E25\u0E48\u0E21", junk95 === null);
+            await SS.deleteStarter(st95.slug);
+            await SS.deleteStarter(back95.slug);
+            if (book95 && book95.secPath) await kapi.remove(book95.secPath);
+            {
+              const tlC = await kapi.readJson(await kapi.join(state.root, "timeline.json"));
+              tlC.events = (tlC.events || []).filter((e) => !String(e.src || "").startsWith("starter:"));
+              await kapi.writeFile(
+                await kapi.join(state.root, "timeline.json"),
+                JSON.stringify(tlC, null, 2)
+              );
+              const mpC = await kapi.readJson(await kapi.join(state.root, "maps.json"));
+              mpC.maps = (mpC.maps || []).filter((m) => m.name !== BR.BRIDGE_MAP);
+              await kapi.writeFile(
+                await kapi.join(state.root, "maps.json"),
+                JSON.stringify(mpC, null, 2)
+              );
+            }
+            await buildTree2();
+            check2(
+              "[a95] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49",
+              !(await listSections()).some((x) => (x.meta && x.meta.title) === EX.EXPORT_BOOK)
+            );
+          }
+          {
+            const SA = await Promise.resolve().then(() => (init_starter_ai(), starter_ai_exports));
+            const HT = await Promise.resolve().then(() => (init_starter_html(), starter_html_exports));
+            const RT = await Promise.resolve().then(() => (init_starter_richtext(), starter_richtext_exports));
+            const st96 = await SS.createStarter("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49");
+            st96.name = "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49";
+            st96.author = "\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+            st96.blurb = "\u0E04\u0E33\u0E42\u0E1B\u0E23\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14";
+            st96.tags = ["fantasy"];
+            st96.intro = "<p>\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01</p><p>\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E2D\u0E07</p>";
+            st96.cast = [SM.newChar({ name: "\u0E21\u0E32\u0E19\u0E35", persona: "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A" })];
+            await SS.writeStarter(st96);
+            check2("[a96-1] main \u0E23\u0E2D\u0E07\u0E23\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E04\u0E33\u0E02\u0E2D", typeof kapi.httpAbort === "function");
+            check2(
+              "[a96-1] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 id \u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48 = false \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E23\u0E30\u0E40\u0E1A\u0E34\u0E14",
+              await kapi.httpAbort("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E23\u0E34\u0E07") === false
+            );
+            check2("[a96-1] \u0E15\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E27\u0E34\u0E48\u0E07 \u0E19\u0E31\u0E1A\u0E44\u0E14\u0E49 0", await kapi.httpInflight() === 0);
+            {
+              const rid = SA.newReqId();
+              const p96 = kapi.httpFetch(
+                "http://10.255.255.1/never",
+                { method: "GET", __reqId: rid, __timeoutMs: 2e4 }
+              ).then((r) => r, (e) => ({ ok: false, threw: String(e && e.message || e) }));
+              await new Promise((r) => setTimeout(r, 200));
+              check2("[a96-1] \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E27\u0E34\u0E48\u0E07 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E19\u0E31\u0E1A\u0E04\u0E33\u0E02\u0E2D\u0E44\u0E14\u0E49", await kapi.httpInflight() >= 1);
+              const stopped = await kapi.httpAbort(rid);
+              check2("[a96-1] \u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E22\u0E38\u0E14\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E27\u0E34\u0E48\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", stopped === true);
+              const res96 = await p96;
+              check2(
+                "[a96-1] \u0E2B\u0E22\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E04\u0E33\u0E02\u0E2D\u0E08\u0E1A\u0E17\u0E31\u0E19\u0E17\u0E35 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07",
+                !!res96 && res96.ok === false,
+                JSON.stringify(res96).slice(0, 90)
+              );
+              check2("[a96-1] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E04\u0E49\u0E32\u0E07\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", await kapi.httpInflight() === 0);
+            }
+            {
+              const t96 = Date.now();
+              const r96 = await kapi.httpFetch(
+                "http://10.255.255.1/never",
+                { method: "GET", __timeoutMs: 800 }
+              ).then((r) => r, () => null);
+              const ms96 = Date.now() - t96;
+              check2(
+                "[a96-1] \u0E2B\u0E21\u0E14\u0E40\u0E27\u0E25\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E15\u0E25\u0E2D\u0E14\u0E01\u0E32\u0E25",
+                (!r96 || r96.ok === false) && ms96 < 8e3,
+                JSON.stringify(r96) + " ms=" + ms96
+              );
+              check2(
+                "[a96-1] \u0E2B\u0E21\u0E14\u0E40\u0E27\u0E25\u0E32\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E44\u0E14\u0E49",
+                !r96 || r96.timedOut === true || r96.aborted === true,
+                JSON.stringify(r96)
+              );
+            }
+            {
+              const before = logStore.all().length;
+              await SA.askAI("e2e-probe", "\u0E1E\u0E23\u0E2D\u0E21\u0E1B\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A", "\u0E23\u0E30\u0E1A\u0E1A", SA.newReqId());
+              const recs = logStore.all().slice(before);
+              check2(
+                "[a96-10] \u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19 log \u0E40\u0E2A\u0E21\u0E2D (\u0E41\u0E21\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI)",
+                recs.some((r) => String(r.msg || "").includes("e2e-probe")),
+                recs.map((r) => r.msg).join(" | ").slice(0, 120)
+              );
+              check2(
+                "[a96-10] log \u0E40\u0E01\u0E47\u0E1A\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E44\u0E27\u0E49\u0E14\u0E49\u0E27\u0E22 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E25\u0E48\u0E32",
+                recs.some((r) => r.detail && r.detail.length > 0)
+              );
+            }
+            {
+              const P96 = await Promise.resolve().then(() => (init_starter_prompt(), starter_prompt_exports));
+              const D96 = await Promise.resolve().then(() => (init_starter_steps_def(), starter_steps_def_exports));
+              const pr = P96.wFieldPrompt(st96, D96.W_FIELDS[0]);
+              check2(
+                "[a96-4] \u0E21\u0E35 prompt \u0E0A\u0E48\u0E27\u0E22\u0E04\u0E34\u0E14\u0E17\u0E35\u0E25\u0E30\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07 4W",
+                pr.includes(D96.W_FIELDS[0].label) && pr.includes("\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49")
+              );
+            }
+            check2("[a96-5] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E1A\u0E19\u0E40\u0E19\u0E2D\u0E23\u0E4C\u0E41\u0E22\u0E01\u0E08\u0E32\u0E01\u0E1B\u0E01", "banner" in st96 && "cover" in st96);
+            {
+              const D96 = await Promise.resolve().then(() => (init_starter_steps_def(), starter_steps_def_exports));
+              const cover = D96.STEPS.find((x) => x.id === "cover");
+              check2(
+                "[a96-5] \u0E43\u0E2A\u0E48\u0E41\u0E04\u0E48\u0E41\u0E1A\u0E19\u0E40\u0E19\u0E2D\u0E23\u0E4C\u0E01\u0E47\u0E19\u0E31\u0E1A\u0E27\u0E48\u0E32\u0E02\u0E31\u0E49\u0E19\u0E1B\u0E01\u0E01\u0E23\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",
+                cover.filled({ banner: "b.png", cover: "" }) === true
+              );
+            }
+            {
+              let sc96 = await SS.createScenario(st96.slug, { title: "\u0E15\u0E2D\u0E19\u0E42\u0E17\u0E40\u0E04\u0E19" });
+              sc96 = SM.addTurn(sc96, { role: SM.ROLE_GM, text: "\u0E01", usage: { in: 700, out: 300 } });
+              await SS.writeScenario(st96.slug, sc96);
+              const tk = SM.sumTokens(await SS.listScenarios(st96.slug));
+              check2("[a96-6] \u0E23\u0E27\u0E21\u0E42\u0E17\u0E40\u0E04\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E44\u0E14\u0E49", tk.total === 1e3, JSON.stringify(tk));
+              const badge = SA.tokenBadge(tk);
+              check2(
+                "[a96-6] \u0E1B\u0E49\u0E32\u0E22\u0E42\u0E17\u0E40\u0E04\u0E19\u0E22\u0E48\u0E2D\u0E40\u0E25\u0E02\u0E43\u0E2B\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E07\u0E48\u0E32\u0E22",
+                badge.textContent.includes("1.0k"),
+                badge.textContent
+              );
+              check2(
+                "[a96-6] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E42\u0E17\u0E40\u0E04\u0E19 = \u0E1A\u0E2D\u0E01\u0E15\u0E23\u0E07 \u0E46 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 0 \u0E40\u0E1B\u0E25\u0E48\u0E32 \u0E46",
+                SA.tokenBadge({}).textContent.length > 1
+              );
+            }
+            {
+              const ed = await RT.richEditor({ slug: st96.slug, value: st96.intro, onChange: () => {
+              } });
+              const btns = [...ed.querySelectorAll("button[data-cmd]")].map((b) => b.dataset.cmd);
+              check2(
+                "[a96-9] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 B I U \u0E04\u0E23\u0E1A",
+                ["bold", "italic", "underline"].every((c) => btns.includes(c)),
+                btns.join(",")
+              );
+              check2(
+                "[a96-9] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 \u0E0B\u0E49\u0E32\u0E22/\u0E01\u0E25\u0E32\u0E07/\u0E02\u0E27\u0E32",
+                ["justifyLeft", "justifyCenter", "justifyRight"].every((c) => btns.includes(c))
+              );
+              check2("[a96-9] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E17\u0E23\u0E01\u0E23\u0E39\u0E1B", ed.querySelectorAll(".st-rt-btn").length > btns.length);
+              check2("[a96-9] \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E01\u0E49\u0E44\u0E02\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", ed.__area.contentEditable === "true");
+              check2("[a96-9] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E42\u0E2B\u0E25\u0E14\u0E21\u0E32\u0E41\u0E2A\u0E14\u0E07", ed.__area.innerHTML.includes("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01"));
+            }
+            check2(
+              "[a96-9] \u0E23\u0E39\u0E1B\u0E43\u0E19\u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19 images/\u2026 \u0E40\u0E2A\u0E21\u0E2D",
+              HT.htmlToStorage('<img src="file:///x/Starters/y/images/z.png" />') === '<img src="images/z.png" />'
+            );
+            {
+              const ctx96 = {
+                starter: st96,
+                root: state.root,
+                save: async () => SS.writeStarter(st96),
+                rerender: () => {
+                },
+                goList: () => {
+                },
+                goWizard: () => {
+                },
+                goHome: () => {
+                },
+                openChat: () => {
+                }
+              };
+              await (await Promise.resolve().then(() => (init_starter_scenario(), starter_scenario_exports))).renderStarterHome(document.querySelector("#starter-body"), ctx96);
+              await wait62(250);
+              const body96 = document.querySelector("#starter-body");
+              check2(
+                "[a96-8] \u0E41\u0E16\u0E27 1 \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C: \u0E1B\u0E01 | \u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+                !!body96.querySelector(".st-hero .st-hero-cover") && !!body96.querySelector(".st-hero .st-hero-info")
+              );
+              check2(
+                "[a96-8] \u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \xB7 \u0E1C\u0E39\u0E49\u0E41\u0E15\u0E48\u0E07 \xB7 \u0E41\u0E17\u0E47\u0E01 \xB7 \u0E04\u0E33\u0E42\u0E1B\u0E23\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+                !!body96.querySelector(".st-hero-title") && (body96.querySelector(".st-hero-author") || {}).textContent.includes("\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A") && !!body96.querySelector(".st-hero-tags") && (body96.querySelector(".st-hero-blurb") || {}).textContent === "\u0E04\u0E33\u0E42\u0E1B\u0E23\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14"
+              );
+              check2(
+                "[a96-8] \u0E41\u0E16\u0E27 3 \u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E1E\u0E31\u0E1A\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E14\u0E49",
+                !!body96.querySelector("details.st-acc summary.st-acc-head")
+              );
+              check2("[a96-8] \u0E41\u0E16\u0E27 4 \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E2D\u0E19", !!body96.querySelector(".st-sc-list"));
+              check2(
+                "[a96-8] \u0E41\u0E16\u0E27 5 \u0E1A\u0E2D\u0E01\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14",
+                !!body96.querySelector(".st-updated") && body96.querySelector(".st-updated").textContent.length > 3,
+                (body96.querySelector(".st-updated") || {}).textContent
+              );
+              check2("[a96-6] \u0E1B\u0E49\u0E32\u0E22\u0E42\u0E17\u0E40\u0E04\u0E19\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07", !!body96.querySelector(".st-tok"));
+              const order = [...body96.querySelectorAll(".st-home > *")].map((x) => x.className.split(" ")[0]);
+              check2(
+                "[a96-8] \u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E1C\u0E31\u0E07\u0E17\u0E35\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14 (\u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E2D\u0E19)",
+                order.indexOf("st-acc") < order.indexOf("st-sc-list") && order.indexOf("st-sc-list") < order.indexOf("st-updated"),
+                order.join(">")
+              );
+            }
+            {
+              const css96 = [...document.styleSheets].flatMap((sh) => {
+                try {
+                  return [...sh.cssRules];
+                } catch {
+                  return [];
+                }
+              }).filter((r) => r.selectorText && /st-img-box img|st-cast-pic img/.test(r.selectorText));
+              check2(
+                "[a96-7] \u0E01\u0E0E\u0E23\u0E39\u0E1B\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E43\u0E0A\u0E49 contain \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 cover",
+                css96.length > 0 && css96.every((r) => r.style.objectFit === "contain"),
+                css96.map((r) => r.selectorText + "=" + r.style.objectFit).join(" | ")
+              );
+            }
+            {
+              let sc32 = await SS.createScenario(st96.slug, { title: "\u0E15\u0E2D\u0E19\u0E01\u0E31\u0E19\u0E2B\u0E32\u0E22" });
+              sc32 = SM.addTurn(sc32, { role: SM.ROLE_GM, text: "\u0E16\u0E32\u0E21\u0E21\u0E32", choices: ["\u0E01", "\u0E02"] });
+              await SS.writeScenario(st96.slug, sc32);
+              sc32 = SM.addTurn(sc32, { role: SM.ROLE_PLAYER, text: "\u0E01", chosen: "\u0E01" });
+              await SS.writeScenario(st96.slug, sc32);
+              hidePanel("starter");
+              await wait62(250);
+              const back3 = await SS.readScenario(st96.slug, sc32.id);
+              check2(
+                "[a96-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+                (back3.turns || []).length === 2 && back3.turns[1].chosen === "\u0E01",
+                JSON.stringify((back3.turns || []).map((x) => x.role))
+              );
+              showPanel("starter", { targetId: "docs", side: "right", forceMove: true });
+              await renderFeaturePanel("starter");
+              await wait62(200);
+            }
+            await SS.deleteStarter(st96.slug);
+          }
+          check2("[a94] \u0E25\u0E1A starter \u0E44\u0E14\u0E49", await SS.deleteStarter(st94.slug) === true);
+          check2("[a94] \u0E25\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E32\u0E22\u0E44\u0E1B", await kapi.exists(dir94) === false);
+          const recNames94 = await kapi.listDirs(await kapi.join(state.root, "Recycle"));
+          check2(
+            "[a94] \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E25\u0E1A\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30 (\u0E01\u0E14\u0E1C\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E39\u0E49\u0E44\u0E14\u0E49)",
+            recNames94.some((n2) => n2.endsWith(st94.slug)),
+            recNames94.join(",")
+          );
+          if (ent94 && wpath94 && await kapi.exists(wpath94)) await kapi.remove(wpath94);
+          await renderFeaturePanel("starter");
+          await wait62(250);
+          hidePanel("starter");
+          await wait62(200);
+        }
+        {
           const HDm = await Promise.resolve().then(() => (init_history_data(), history_data_exports));
           await kapi.historyConfig({ root: state.root, limit: 32, enabled: true });
           const probe = await kapi.join(state.root, "Memos", "k2-history-probe.md");
@@ -179993,10 +184840,10 @@ ${css}
           CAPS_ELEMENTS.includes("character") && CAPS_ELEMENTS.includes("scene"),
           CAPS_ELEMENTS.join(",")
         );
-        const keepStyles = JSON.parse(JSON.stringify(S9.spStyles || {}));
-        const keepFC11 = S9.spForceCase;
-        S9.spForceCase = true;
-        S9.spStyles = {};
+        const keepStyles = JSON.parse(JSON.stringify(S10.spStyles || {}));
+        const keepFC11 = S10.spForceCase;
+        S10.spForceCase = true;
+        S10.spStyles = {};
         applySettings();
         check2("[62-11] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19: \u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E2B\u0E0D\u0E48", elementCaps(spFormat(), "character"));
         toggleElementCaps("character", false);
@@ -180013,14 +184860,14 @@ ${css}
         );
         toggleElementCaps("character", true);
         check2("[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", elementCaps(spFormat(), "character"));
-        S9.spForceCase = false;
+        S10.spForceCase = false;
         applySettings();
         check2("[62-11] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 = \u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E25\u0E34\u0E01\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A", !elementCaps(spFormat(), "scene"));
         toggleElementCaps("scene", true);
         check2(
           "[62-11] \u0E40\u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E19\u0E34\u0E14\u0E02\u0E13\u0E30\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E1B\u0E34\u0E14 \u2192 \u0E1B\u0E25\u0E38\u0E01\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
-          S9.spForceCase !== false && elementCaps(spFormat(), "scene"),
-          String(S9.spForceCase)
+          S10.spForceCase !== false && elementCaps(spFormat(), "scene"),
+          String(S10.spForceCase)
         );
         const src11 = {};
         const out11 = setElementCaps(src11, "character", false);
@@ -180028,8 +184875,8 @@ ${css}
           "[62-11] setElementCaps \u0E04\u0E37\u0E19 object \u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21",
           Object.keys(src11).length === 0 && out11.character.screen.caps === false
         );
-        S9.spStyles = keepStyles;
-        S9.spForceCase = keepFC11;
+        S10.spStyles = keepStyles;
+        S10.spForceCase = keepFC11;
         applySettings();
       }
       {
@@ -183095,6 +187942,7 @@ ${css}
       init_export_hub();
       init_session_core();
       init_ai_ui();
+      init_starter_ui();
       init_thesaurus_ui();
       init_import_ui();
       init_import_sp();
@@ -183249,6 +188097,7 @@ ${css}
         "tb-read",
         "tb-ai",
         "tb-ai-chat",
+        "tb-starter",
         "tb-plug",
         "tb-ai-analyzer",
         "tb-md-codes",
@@ -183343,6 +188192,8 @@ ${css}
         // [alpha.60r3 ข้อ 5]
         "ai-chat": () => renderAIChatPanel($("#ai-chat-body")),
         // [alpha.61 ข้อ 2]
+        starter: () => renderStarterPanel($("#starter-body")),
+        // [alpha.94]
         // [alpha.62 บั๊ก 18+20] สองตัวนี้มีตัววาดครบมาตั้งแต่ .40 แต่ไม่เคยอยู่ในตารางนี้
         //   → เปิดแผงจากปุ่ม/ถาด/เลย์เอาต์ที่กู้มา แล้วได้กล่องเปล่า ("ใช้ไม่ได้เลย")
         //   มีแต่ทางเดียวที่เคยวาด คือคำสั่ง global-search / scratchpad ที่เรียก render เองตรง ๆ
@@ -183604,6 +188455,7 @@ ${css}
         $("#tb-ai-analyzer") && ($("#tb-ai-analyzer").onclick = () => handleCommand("ai-analyzer"));
         $("#tb-md-codes") && ($("#tb-md-codes").onclick = () => handleCommand("markdown-codes"));
         $("#tb-ai-chat").onclick = () => handleCommand("ai-chat-toggle");
+        $("#tb-starter") && ($("#tb-starter").onclick = () => handleCommand("story-starter-toggle"));
         $("#tb-tree-panel").onclick = () => {
           togglePanel("tree");
           refreshToolbar();

@@ -83,6 +83,9 @@ export async function sendRequest(provider, req) {
   }
   const opts = { method: req.method || 'POST', headers: req.headers };
   if (req.body !== undefined) opts.body = JSON.stringify(req.body);
+  // [alpha.96] ยกเลิกได้ + มีเพดานเวลา — main.js ถอดสองคีย์นี้ออกก่อนส่งให้ fetch จริง
+  if (req.reqId) opts.__reqId = req.reqId;
+  if (req.timeoutMs) opts.__timeoutMs = req.timeoutMs;
   const retries = Math.max(0, req.maxRetries ?? 0);
   // [alpha.62 บั๊ก 10] คำขอ AI ทุกเส้นทางผ่านที่นี่ที่เดียว → ติดตัวบอกสถานะตรงนี้ครั้งเดียวพอ
   const who = provider.name || hostOf(req.url);
@@ -100,6 +103,11 @@ export async function sendRequest(provider, req) {
         let json = null;
         try { json = JSON.parse(res.body); } catch {}
         return { ok: true, status: res.status, json, body: res.body };
+      }
+      // ผู้ใช้กดหยุดเอง หรือหมดเวลา — ห้ามลองใหม่ และต้องบอกเหตุผลตรง ๆ
+      if (res && res.aborted) {
+        return { ok: false, status: 0, aborted: true, timedOut: !!res.timedOut,
+                 error: res.timedOut ? t('ui.aiProvider.timedOut') : t('ui.aiProvider.stopped') };
       }
       const st = (res && res.status) || 0;
       const retryable = st === 429 || st === 408 || (st >= 500 && st < 600);
@@ -147,8 +155,14 @@ export async function complete(provider, opts = {}) {
   if (!provider) return { ok: false, text: '', error: t('ui.aiProvider.cantSettingsProviderAI') };
   if (!provider.model && !opts.model) return { ok: false, text: '', error: t('ui.aiProvider.cantPickModel') };
   const req = chatRequest(provider, opts);
+  // [alpha.96] ส่งต่อชื่อคำขอ + เพดานเวลา เพื่อให้กด "หยุด" ได้จริง
+  if (opts.reqId) req.reqId = opts.reqId;
+  if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
   const res = await sendRequest(provider, req);
-  if (!res.ok) return { ok: false, text: '', error: res.error, status: res.status };
+  if (!res.ok) {
+    return { ok: false, text: '', error: res.error, status: res.status,
+             aborted: !!res.aborted, timedOut: !!res.timedOut };
+  }
   const { text, thinking, usage } = parseChat(res.json);
   return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
 }

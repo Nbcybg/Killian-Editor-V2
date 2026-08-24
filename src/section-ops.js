@@ -73,8 +73,15 @@ export async function saveSectionMeta(sf, patch) {
   return d;
 }
 
-export async function addSection() {
-  const title = await ask(tt('ui.section.nameBookNew'), { placeholder: tt('ui.section.egBookTwo') }); if (!title) return;
+/**
+ * เพิ่มเล่มใหม่
+ * @param {string} [preset]  ส่งชื่อมา = ข้ามกล่องถาม (ตัวแปลงอัตโนมัติใช้ทางนี้ — [alpha.95])
+ *                           ไม่ส่ง = ถามผู้ใช้เหมือนเดิมทุกประการ
+ * @returns {Promise<string>} path ของโฟลเดอร์เล่ม ('' = ผู้ใช้ยกเลิก)
+ */
+export async function addSection(preset) {
+  const title = preset || await ask(tt('ui.section.nameBookNew'), { placeholder: tt('ui.section.egBookTwo') });
+  if (!title) return '';
   let dir = await kapi.join(state.root, safeName(title));
   if (await kapi.exists(dir)) dir += '-' + Date.now().toString(36).slice(-4);
   // ลำดับเล่มถัดจากเล่มที่มีอยู่
@@ -93,6 +100,7 @@ export async function addSection() {
   await kapi.mkdir(await kapi.join(dr, 'Chapters', ch.folderName));
   await buildTree(); setStatus(tt('ui.section.addBook') + title);
   refreshNetwork();
+  return dir;
 }
 
 export async function renameSection(secPath, sec) {

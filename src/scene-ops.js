@@ -159,8 +159,14 @@ export async function deleteChapter(dPath, ch) {
   await buildTree(); refreshNetwork();
 }
 
-export async function addChapter(dPath) {
-  const title = await ask(tt('ui.scene.nameChapterNew')); if (!title) return;
+/**
+ * เพิ่มบทใหม่
+ * @param {string} [preset]  ส่งชื่อมา = ข้ามกล่องถาม ([alpha.95] ตัวแปลงอัตโนมัติ)
+ * @returns {Promise<object|null>} แถวบทที่สร้าง (null = ยกเลิก)
+ */
+export async function addChapter(dPath, preset) {
+  const title = preset || await ask(tt('ui.scene.nameChapterNew'));
+  if (!title) return null;
   const df = await kapi.join(dPath, 'draft.json');
   const d = await kapi.readJson(df);
   const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
@@ -170,10 +176,19 @@ export async function addChapter(dPath) {
   await kapi.writeFile(df, JSON.stringify(d, null, 2));
   await kapi.mkdir(await kapi.join(dPath, 'Chapters', ch.folderName));
   await buildTree(); setStatus(tt('ui.scene.addChapter') + title); refreshNetwork();
+  return ch;
 }
 
-export async function addScene(dPath, ch) {
-  const title = await ask(tt('ui.scene.nameSceneNew')); if (!title) return;
+/**
+ * เพิ่มฉากใหม่
+ * @param {string} [preset]  ส่งชื่อมา = ข้ามกล่องถาม ([alpha.95] ตัวแปลงอัตโนมัติ)
+ * @param {object} [opts]    body = เนื้อฉาก · meta = frontmatter เพิ่ม (format/tags/…)
+ *                           silent = ไม่ต้องเปิดแท็บให้ (แปลงทีละหลายฉากแล้วเปิดหมดคือรก)
+ * @returns {Promise<object|null>} แถวฉากที่สร้าง (null = ยกเลิก)
+ */
+export async function addScene(dPath, ch, preset, opts = {}) {
+  const title = preset || await ask(tt('ui.scene.nameSceneNew'));
+  if (!title) return null;
   const sf = await kapi.join(dPath, 'scenes.json');
   const d = await kapi.readJson(sf);
   d.chapters = d.chapters || {};
@@ -183,10 +198,13 @@ export async function addScene(dPath, ch) {
                chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
   d.chapters[ch.guid] = [...list, sc];
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
-  await kapi.writeFile(file, dumpMdFile({ title, type: 'scene', format: 'prose', pov: '', tags: [] }, ''));
+  const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
+  await kapi.writeFile(file, dumpMdFile(meta, opts.body || ''));
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-  await buildTree(); openScene(file, title);
+  await buildTree();
+  if (!opts.silent) openScene(file, title);
   refreshNetwork();
+  return { ...sc, path: file };
 }
 
 export async function setSceneMeta(dPath, ch, sc, patch) {

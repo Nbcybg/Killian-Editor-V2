@@ -70,8 +70,13 @@ export async function aiConfigured() {
 }
 
 // ---- เรียก AI (ผ่าน main process) ----
-export async function callAI(prompt, system = '') {
+/**
+ * @param {object} [opts]  [alpha.96] reqId = ชื่อคำขอ (ให้กดหยุดได้) · timeoutMs = เพดานเวลา
+ *                         คืน `null` เมื่อล้มเหลว — เหตุผลจริงอยู่ใน log และแถบสถานะเสมอ
+ */
+export async function callAI(prompt, system = '', opts = {}) {
   const ai = getAISettings();
+  const t0 = Date.now();
   // [alpha.61 ข้อ 2] ถ้าผู้ใช้ตั้ง "ผู้ให้บริการที่เพิ่มเอง" ไว้ ให้ใช้ตัวนั้นก่อนเสมอ
   // ฟีเจอร์ AI เดิมทุกตัว (สรุปเรื่อง · แนะนำชื่อ · ผู้ช่วยเขียน) จึงวิ่งผ่านทะเบียนใหม่ได้
   // โดยไม่ต้องแก้ทีละไฟล์ — ค่าที่ตั้งแบบเก่ายังใช้ได้ถ้ายังไม่ได้เพิ่มเจ้าใหม่
@@ -82,9 +87,22 @@ export async function callAI(prompt, system = '') {
     // (ทางเก่าอ่าน `ai-key.json → apiKey` ซึ่งรูปแบบใหม่ไม่มี → ได้ข้อความ "ยังไม่ได้ตั้งค่า AI"
     //  ทั้งที่ตั้งครบแล้ว · ปุ่ม ✨ ในคุณสมบัติฉากจึงเงียบไปเฉย ๆ) → รายงานเหตุผลจริงเสมอ
     if (!p) { setStatus(t('ui.aiSet.aICantPickProvider')); return null; }
-    const r = await complete(p, { system, messages: [{ role: 'user', content: prompt }] });
-    if (!r.ok) { log('error', t('ui.aiSet.aIProviderNewFail'), r.error); setStatus('❌ AI: ' + r.error); return null; }
+    // [alpha.96] จดทุกคำขอลง log — เดิมสำเร็จก็เงียบ ล้มก็บอกแค่แถบสถานะ
+    // พอผู้ใช้เจอ "ปุ่ม AI ไม่ทำงาน" จึงไม่มีอะไรให้ไล่เลยสักบรรทัด
+    log('info', 'ai: request', { provider: p.name, model: p.model,
+                                 chars: String(prompt || '').length, reqId: opts.reqId || '' });
+    const r = await complete(p, { system, messages: [{ role: 'user', content: prompt }],
+                                  reqId: opts.reqId, timeoutMs: opts.timeoutMs });
+    if (!r.ok) {
+      const lv = r.aborted && !r.timedOut ? 'info' : 'error';
+      log(lv, 'ai: ' + (r.aborted ? (r.timedOut ? 'timeout' : 'stopped by user') : 'failed'),
+          { error: r.error, status: r.status, ms: Date.now() - t0, provider: p.name });
+      setStatus((r.aborted && !r.timedOut ? '⏹ ' : '❌ ') + 'AI: ' + r.error);
+      return null;
+    }
     recordUsage((r.usage && r.usage.total) || 0, p.name, r.model);
+    log('info', 'ai: reply', { ms: Date.now() - t0, chars: (r.text || '').length,
+                                  usage: r.usage || null, model: r.model });
     return (r.text || '').trim();
   }
   const apiKey = await loadApiKey();

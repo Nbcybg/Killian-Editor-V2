@@ -209,6 +209,8 @@ import { openExportHub, EXPORT_FORMATS, formatDef, docKind, pdfEngine, exportPag
          normalizeHub, defaultWorkflowFor, workflowForFormat, suggestName } from './export-hub.js';
 import * as SESS from './session/session-core.js';
 import { openAIAssistant, openPlotHoleDetector, openDialogueGenerator, openConsistencyCheck, openWorldGenerator, openAIChat } from './ai/ai-ui.js';
+// [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครแบบทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
+import { renderStarterPanel, openStoryStarter, flushStarter } from './starter/starter-ui.js';
 import { showThesaurusPopup, initThesaurus } from './tools/thesaurus-ui.js';
 import { importScrivenerDialog } from './import/import-ui.js';
 // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ
@@ -1848,6 +1850,8 @@ export async function saveProjectMeta() {
 // ---------------- โครงโปรเจกต์ (อ่านโครงเดียวกับ Killian v1) ----------------
 async function closeProjectIfAny() {
   if (!state.root) return true;
+  // [alpha.94] Story Starter บันทึกอัตโนมัติแบบหน่วงรวบ — เขียนของที่ยังค้างก่อนทิ้ง state.root
+  await flushStarter();
   // [alpha.60r ข้อ 2] บันทึกรายการแท็บที่เปิดอยู่ก่อนปิด — จะกู้คืนเมื่อเปิดโปรเจกต์ครั้งต่อไป
   await saveOpenTabs();
   const dirty = [...state.tabs.values()].filter((t) => t.dirty);
@@ -2766,7 +2770,7 @@ export async function buildTree() {
 }
 async function _buildTreeInner() {
   const tree = document.createElement('div');   // buffer ที่ยังไม่อยู่ใน DOM
-  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle']);
+  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle', 'Sessions', 'Starters']);
   for (const name of await kapi.listDirs(state.root)) {
     if (skip.has(name)) continue;
     const secPath = await kapi.join(state.root, name);
@@ -3662,7 +3666,7 @@ export async function loadAllEntities() {
   }
   // add scene/chapter/section structural nodes
   try {
-    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','.git']);
+    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','Sessions','Starters','.git']);
     for (const sec of await kapi.listDirs(state.root)) {
       if (skip.has(sec)) continue;
       const secPath = await kapi.join(state.root, sec);
@@ -4672,7 +4676,7 @@ export async function openFirstSceneOf(secPath) {
 export async function listRefTargets() {
   const out = [];
   if (!state.root) return out;
-  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle']);
+  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle', 'Sessions', 'Starters']);
   for (const secName of await kapi.listDirs(state.root).catch(() => [])) {
     if (skip.has(secName)) continue;
     const secPath = await kapi.join(state.root, secName);
@@ -6716,6 +6720,7 @@ async function confirmQuit() {
   // ต้องมาก่อนกล่องถาม เพราะถ้าผู้ใช้กด "ออกโดยไม่บันทึก" เราก็ยังอยากจำได้ว่าเปิดอะไรไว้
   await saveUiSession(true);
   await saveOpenTabs();
+  await flushStarter();                 // [alpha.94] ของที่ wizard ยังไม่ได้เขียนลงดิสก์
   // [alpha.72 ข้อ 4] อ่านจากทะเบียนงานค้าง ไม่ใช่แค่ state.tabs — กระดานวางแผนเคยหายเงียบตรงนี้
   const items = allDirtyList();
   logAction('quit', ttf('ui.app.closeAppPendingList', items.length),
@@ -8026,6 +8031,7 @@ function updateToolbarTitles() {
   $('#tb-kanban').title = t('toolbar.kanban');
   $('#tb-ai').title = t('toolbar.aiAssistant');
   $('#tb-ai-chat').title = t('toolbar.aiChat');
+  $('#tb-starter') && ($('#tb-starter').title = t('toolbar.starter'));
   $('#tb-plug').title = t('toolbar.plugins');
 }
 // re-export ให้ core.js เรียกหลังเปลี่ยนภาษา
@@ -8049,7 +8055,7 @@ const ALWAYS_ON_TB = new Set([
   'tb-close', 'tb-close-all', 'tb-focus', 'tb-typewriter', 'tb-linenum', 'tb-quickopen',
   'tb-gallery', 'tb-sp-elem',
   'tb-tree-panel', 'tb-outline-panel', 'tb-props-panel', 'tb-search-panel',
-  'tb-note', 'tb-panels', 'tb-kanban', 'tb-dashboard', 'tb-gsearch', 'tb-read', 'tb-ai', 'tb-ai-chat', 'tb-plug',
+  'tb-note', 'tb-panels', 'tb-kanban', 'tb-dashboard', 'tb-gsearch', 'tb-read', 'tb-ai', 'tb-ai-chat', 'tb-starter', 'tb-plug',
   'tb-ai-analyzer', 'tb-md-codes',       // [alpha.60r3 ข้อ 5 · ข้อ 6]
   // [alpha.69] สามแผงใหม่ทำงานระดับโปรเจกต์ทั้งหมด — ไม่ต้องมีฉากเปิดอยู่ก็กดได้
   'tb-codex', 'tb-history', 'tb-record',
@@ -8151,6 +8157,7 @@ function refreshToolbar() {
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI · [ข้อ 6] ซ่อน/แสดงรหัสมาร์กดาวน์
   $('#tb-ai-analyzer')?.classList.toggle('on', isPanelOpen('ai-analyzer'));
   $('#tb-ai-chat')?.classList.toggle('on', isPanelOpen('ai-chat'));   // [alpha.62 บั๊ก 2]
+  $('#tb-starter')?.classList.toggle('on', isPanelOpen('starter'));    // [alpha.94]
   $('#tb-gallery')?.classList.toggle('on', isPanelOpen('gallery'));   // [alpha.62 บั๊ก 14]
   // [alpha.69] สามแผงใหม่ — ปุ่มติดไฟตามสถานะจริง (รวมตอนถูกฉีกไปหน้าต่างแยกด้วย ผ่าน isPanelOpen)
   $('#tb-codex')?.classList.toggle('on', isPanelOpen('codex') || isTornOff('codex'));
@@ -9012,6 +9019,7 @@ const FEATURE_PANELS = {
   'gallery-board': () => renderGalleryBoardPanel(),   // [alpha.63r] กระดานอารมณ์เป็นแผงของตัวเอง
   'ai-analyzer': () => renderAIAnalyzerPanel($('#ai-analyzer-body')),   // [alpha.60r3 ข้อ 5]
   'ai-chat':     () => renderAIChatPanel($('#ai-chat-body')),           // [alpha.61 ข้อ 2]
+  starter:   () => renderStarterPanel($('#starter-body')),              // [alpha.94]
   // [alpha.62 บั๊ก 18+20] สองตัวนี้มีตัววาดครบมาตั้งแต่ .40 แต่ไม่เคยอยู่ในตารางนี้
   //   → เปิดแผงจากปุ่ม/ถาด/เลย์เอาต์ที่กู้มา แล้วได้กล่องเปล่า ("ใช้ไม่ได้เลย")
   //   มีแต่ทางเดียวที่เคยวาด คือคำสั่ง global-search / scratchpad ที่เรียก render เองตรง ๆ
@@ -9410,6 +9418,12 @@ async function handleCommand(ch, ...a) {
     case 'ai-chat-new': showPanel('ai-chat'); await newChatSession();
                         syncMenuToggles(); break;
     case 'ai-chat-dialog': openAIChat(); break;
+    // [alpha.94] Story Starter — เป็นแผง (กฎ: ฟีเจอร์ที่ไม่ใช่เอกสาร = แผง ไม่ใช่แท็บ)
+    case 'story-starter': await openStoryStarter(); syncMenuToggles(); break;
+    case 'story-starter-toggle':
+      if (isPanelOpen('starter')) hidePanel('starter');
+      else await openStoryStarter();
+      refreshToolbar(); syncMenuToggles(); break;
     case 'auto-sync': setAutoSync(a[0] === undefined ? !isAutoSyncOn() : !!a[0]);
                       state.settings.autoSync = isAutoSyncOn(); saveProjectMeta(); break;
     // ---- alpha.57: มุมมองบท (57/59/60/61) · ไปยังหน้า-ฉาก (78) · ตรวจบท (54) · ส่งออก (67/68/70) ----
@@ -9687,6 +9701,7 @@ export function applyToolbarShortcutTitles() {
   $('#tb-kanban') && ($('#tb-kanban').title = t('toolbar.kanban'));
   $('#tb-ai') && ($('#tb-ai').title = t('toolbar.aiAssistant'));
   $('#tb-ai-chat') && ($('#tb-ai-chat').title = t('toolbar.aiChat'));
+  $('#tb-starter') && ($('#tb-starter').title = t('toolbar.starter'));
   // save-all + home
   const sab = $('#save-all-btn');
   if (sab) sab.title = t('shortcuts.saveAll') + ' (Ctrl+Shift+S)';
@@ -10043,6 +10058,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#tb-md-codes') && ($('#tb-md-codes').onclick = () => handleCommand('markdown-codes'));
   // [alpha.62 บั๊ก 2] เป็นสวิตช์ของแผง "AI ผู้ช่วยเขียน" — กล่องแชทเดิมย้ายไปเมนู AI → แชทกับเรื่องของคุณ
   $('#tb-ai-chat').onclick = () => handleCommand('ai-chat-toggle');
+  $('#tb-starter') && ($('#tb-starter').onclick = () => handleCommand('story-starter-toggle'));
   $('#tb-tree-panel').onclick = () => { togglePanel('tree'); refreshToolbar(); };
   $('#tb-outline-panel').onclick = () => { togglePanel('outline'); refreshToolbar(); };
   $('#tb-props-panel').onclick = () => { togglePanel('props'); refreshToolbar(); };
@@ -24575,6 +24591,499 @@ async function runTest(projectPath) {
           await kapi.remove(p);
           resetRecords();
           hidePanel('record'); await wait62(200);
+        }
+
+        // ══ [a94] Story Starter — หน้ารวม → wizard → ตัวละคร → Wiki → ตอน ══
+        //
+        // บทเรียนจากรอบแผง (.66r10–r12): เทสที่เรียกฟังก์ชันตรง ๆ "ผ่านได้ทั้งที่ไม่ทำอะไรเลย"
+        // ที่นี่จึง **กดปุ่มจริงบน DOM** แล้ววัดผลจาก **ไฟล์บนดิสก์** เป็นหลัก
+        {
+          const SM = await import('./starter/starter-model.js');
+          const SD = await import('./starter/starter-steps-def.js');
+          const SS = await import('./starter/starter-store.js');
+          const SW = await import('./starter/starter-wiki.js');
+          const SU = await import('./starter/starter-ui.js');
+          const SC = await import('./starter/starter-choices.js');
+
+          showPanel('starter', { targetId: 'docs', side: 'right', forceMove: true });
+          await renderFeaturePanel('starter'); await wait62(350);
+          const body94 = document.querySelector('#starter-body');
+          check('[a94] แผง Story Starter วาดขึ้นจริง', !!body94 && !!body94.querySelector('.st-list-wrap'));
+          check('[a94] หน้ารวมว่าง = ชวนให้สร้าง ไม่ใช่จอเปล่า',
+                !!body94.querySelector('.st-empty') && !!body94.querySelector('.st-list-head button'));
+
+          // ── สร้าง starter แล้วต้องได้ "โฟลเดอร์แยก" จริงตามสเปกข้อ 9 ──
+          const st94 = await SS.createStarter('เทสเรื่องผจญภัย');
+          check('[a94] สร้าง starter ได้ + ชื่อโฟลเดอร์เป็นไทยได้', !!st94 && st94.slug === 'เทสเรื่องผจญภัย', st94 && st94.slug);
+          const dir94 = await SS.starterDir(st94.slug);
+          check('[a94] เก็บเป็นโฟลเดอร์แยกใต้ Starters/',
+                (await kapi.exists(dir94)) && dir94.includes('Starters'), dir94);
+          check('[a94] ทุกอย่างที่ต้องพกพาอยู่ในโฟลเดอร์เดียว',
+                (await kapi.exists(await kapi.join(dir94, 'starter.json')))
+                && (await kapi.exists(await kapi.join(dir94, 'images')))
+                && (await kapi.exists(await kapi.join(dir94, 'Scenarios'))));
+
+          // ── เปิด wizard ผ่าน UI จริง (กดปุ่ม "ทำต่อ" บนการ์ด) ──
+          await renderFeaturePanel('starter'); await wait62(300);
+          const card94 = [...document.querySelectorAll('#starter-body .st-card')]
+            .find((c) => (c.querySelector('.st-card-name') || {}).textContent === 'เทสเรื่องผจญภัย');
+          check('[a94] starter ที่สร้างโผล่ในหน้ารวม', !!card94);
+          card94.querySelector('.st-card-btns button').click();
+          await wait62(350);
+          check('[a94] กดการ์ดแล้วเข้า wizard', SU.starterView() === 'wizard'
+                && !!document.querySelector('#starter-body .st-wizard'));
+          check('[a94] แถบขั้นครบตามทะเบียน (เพิ่มขั้นแล้วแถบตามเอง)',
+                document.querySelectorAll('#starter-body .st-chip').length === SD.STEPS.length,
+                document.querySelectorAll('#starter-body .st-chip').length + '/' + SD.STEPS.length);
+
+          // ── ขั้นแท็ก: กดปุ่มจริง → ต้องถูกบันทึกลงดิสก์เอง (สเปกข้อ 8) ──
+          const tagBtn94 = [...document.querySelectorAll('#starter-body .st-tag-group .st-tag')]
+            .find((b) => b.textContent === 'fantasy');
+          check('[a94] ขั้นแรกมีแท็กสำเร็จรูปให้กด', !!tagBtn94);
+          tagBtn94.click(); await wait62(120);
+          check('[a94] กดแท็กแล้วติดสถานะเลือกทันที',
+                [...document.querySelectorAll('#starter-body .st-tag-picked .st-tag')]
+                  .some((x) => x.textContent.startsWith('fantasy')));
+          check('[a94] บันทึกอัตโนมัติ: มีคิวค้างอยู่จริง (ไม่ได้เขียนทุกคีย์กด)', SS.pendingSaves() > 0);
+          await SS.flushStarterSaves();
+          const onDisk94 = await SS.readStarter(st94.slug);
+          check('[a94] บันทึกอัตโนมัติเขียนลงไฟล์จริง ผู้ใช้ไม่ต้องกดบันทึก',
+                (onDisk94.tags || []).includes('fantasy'), JSON.stringify(onDisk94.tags));
+
+          // ── ย้อนกลับไปแก้ขั้นไหนก็ได้ (สเปกข้อ 8) ──
+          const chips94 = [...document.querySelectorAll('#starter-body .st-chip')];
+          chips94[3].click(); await wait62(250);
+          check('[a94] กดข้ามไปขั้น 4W ได้', (await SS.readStarter(st94.slug)).step === 3
+                || document.querySelector('#starter-body .st-step-title').textContent.includes(SD.STEPS[3].title));
+          chips94[0].click(); await wait62(200);
+          check('[a94] ย้อนกลับมาขั้นแรกได้', !!document.querySelector('#starter-body .st-tag-groups'));
+
+          // ── ขั้นตัวละคร: กดเพิ่ม → พิมพ์ชื่อ → ต้องอยู่ในไฟล์ ──
+          chips94[2].click(); await wait62(300);
+          const addChar94 = [...document.querySelectorAll('#starter-body .st-step-pane button')]
+            .find((b) => b.textContent.includes('เพิ่มตัวละคร'));
+          check('[a94] ขั้นตัวละครมีปุ่มเพิ่ม', !!addChar94);
+          addChar94.click(); await wait62(300);
+          const nameInp94 = document.querySelector('#starter-body .st-step-pane input.wiki-input');
+          check('[a94] กดเพิ่มแล้วเข้าหน้าแก้ไขตัวละครทันที', !!nameInp94
+                && !!document.querySelector('#starter-body .st-gender'));
+          nameInp94.value = 'มานีเทส';
+          nameInp94.dispatchEvent(new Event('input', { bubbles: true }));
+          const descTa94 = document.querySelector('#starter-body .st-step-pane textarea');
+          descTa94.value = 'นักดาบสาวจากเมืองเหนือ';
+          descTa94.dispatchEvent(new Event('input', { bubbles: true }));
+          await SS.flushStarterSaves();
+          const withChar94 = await SS.readStarter(st94.slug);
+          check('[a94] ตัวละครที่พิมพ์ถูกบันทึกลงไฟล์',
+                (withChar94.cast || []).length === 1 && withChar94.cast[0].name === 'มานีเทส',
+                JSON.stringify((withChar94.cast || []).map((c) => c.name)));
+          check('[a94] คำบรรยายละเอียดเป็นช่องเดียวตามสเปก',
+                withChar94.cast[0].persona === 'นักดาบสาวจากเมืองเหนือ');
+          check('[a94] ตัวละครของ starter ใช้โครงเดียวกับ cast ห้องซ้อมบท',
+                ['persona', 'blurb', 'aliases', 'selfPronoun', 'wikiPath']
+                  .every((k) => k in withChar94.cast[0]));
+
+          // ── เขียนกลับ Wiki (สเปกข้อ 6) — กดปุ่มจริงบนหน้าแก้ไข ──
+          const toWiki94 = [...document.querySelectorAll('#starter-body .st-step-pane button')]
+            .find((b) => b.textContent.includes('บันทึกลง Wiki'));
+          check('[a94] มีปุ่มบันทึกตัวละครลง Wiki', !!toWiki94);
+          toWiki94.click(); await wait62(500);
+          const afterWiki94 = await SS.readStarter(st94.slug);
+          const wpath94 = afterWiki94.cast[0].wikiPath;
+          check('[a94] ตัวละครที่สร้างใน starter ถูกเก็บลง Wiki จริง',
+                !!wpath94 && (await kapi.exists(wpath94)), wpath94 || 'ไม่มี wikiPath');
+          const ent94 = wpath94 ? await kapi.readJson(wpath94) : null;
+          check('[a94] entity ใน Wiki มีคำบรรยายเป็นส่วนเดียว',
+                !!ent94 && ent94.name === 'มานีเทส' && (ent94.sections || []).length === 1
+                && ent94.sections[0].content === 'นักดาบสาวจากเมืองเหนือ');
+
+          // ── ย้ายข้ามโปรเจกต์: wikiPath ตาย แล้วต้องจับคู่กลับได้เอง ──
+          {
+            const moved94 = JSON.parse(JSON.stringify(afterWiki94));
+            moved94.cast[0].wikiPath = '/ของโปรเจกต์เก่า/Wiki/characters/x.json';
+            check('[a94] รู้ว่า starter ตัวนี้ย้ายมาจากโปรเจกต์อื่น', (await SW.looksForeign(moved94)) === true);
+            const sum94 = await SW.reconcileCast(moved94, { silent: true });
+            check('[a94] จับคู่ชื่อกลับเข้า Wiki ของโปรเจกต์นี้ได้เอง',
+                  !!sum94 && sum94.link === 1 && moved94.cast[0].wikiPath === wpath94,
+                  JSON.stringify(sum94));
+          }
+
+          // ── ตอน (สเปกข้อ 10–11) ──
+          {
+            const sc1 = await SS.createScenario(st94.slug, { title: 'ตอนที่ 1', synopsis: 'ออกเดินทาง' });
+            const sc2 = await SS.createScenario(st94.slug, { title: 'ตอนที่ 2', prevId: sc1.id });
+            const rows94 = await SS.listScenarios(st94.slug);
+            check('[a94] ตอนเก็บในโฟลเดอร์ของ starter (ย้ายตามไปด้วย)', rows94.length === 2);
+            check('[a94] เชื่อมกับตอนก่อนหน้าได้',
+                  SM.chainOf(rows94, sc2.id).map((x) => x.title).join('→') === 'ตอนที่ 1→ตอนที่ 2');
+            check('[a94] เลือกตอนก่อนหน้าห้ามได้ลูกหลานตัวเอง (กันวง)',
+                  SM.selectablePrev(rows94, sc1.id).length === 0);
+
+            // เทิร์นของ GM ที่พก "ทางเลือก" มาด้วย (สเปกข้อ 13)
+            let played = SM.addTurn(sc1, { role: SM.ROLE_GM, text: 'ประตูเปิดออก',
+                                           choices: ['เดินเข้าไป', 'ถอยกลับ'] });
+            check('[a94] ทางเลือกค้างรอผู้เล่นหลังเทิร์น GM',
+                  SM.openChoices(played).join('|') === 'เดินเข้าไป|ถอยกลับ');
+            played = SM.addTurn(played, { role: SM.ROLE_PLAYER, text: 'เดินเข้าไป', chosen: 'เดินเข้าไป' });
+            check('[a94] ตอบแล้วทางเลือกไม่ค้าง', SM.openChoices(played).length === 0);
+            await SS.writeScenario(st94.slug, played);
+            const back94 = await SS.readScenario(st94.slug, sc1.id);
+            check('[a94] บทสนทนาถูกเขียนลงไฟล์ครบ', (back94.turns || []).length === 2
+                  && back94.turns[1].chosen === 'เดินเข้าไป');
+
+            // สัญญากับระบบเรื่องแตกสาย — ทางเลือกต้องแปลงเป็นมาร์กเกอร์ที่ scanChoiceMarkers อ่านออก
+            const mk94 = SC.choiceMarker('เดินเข้าไป');
+            check('[a94] ทางเลือกแปลงเป็นมาร์กเกอร์ของระบบแตกสายได้', mk94 === '[เดินเข้าไป]');
+            const BG94 = await import('./branch-graph.js');
+            check('[a94] ระบบแตกสายอ่านมาร์กเกอร์นั้นได้จริง',
+                  BG94.scanChoiceMarkers('เขาลังเล ' + mk94).map((x) => x.text).join() === 'เดินเข้าไป');
+
+            await SS.deleteScenario(st94.slug, sc2.id);
+            check('[a94] ลบตอนได้', (await SS.listScenarios(st94.slug)).length === 1);
+          }
+
+          // ══ [a95] เฟส 4-5: แปลงเป็นต้นฉบับ · สะพาน · .zip ══
+          //
+          // ตัวแปลงยิง AI จริงไม่ได้ในเทส → ใช้ช่อง `ai` ยิงตัวปลอมเข้าไป
+          // **ทางเดินไฟล์ทั้งเส้นยังเป็นของจริงทุกขั้น** (สร้างเล่ม/บท/ฉาก · เขียน .md · แก้ scenes.json)
+          {
+            const EX = await import('./starter/starter-export.js');
+            const BR = await import('./starter/starter-bridge.js');
+            const PK = await import('./starter/starter-pack.js');
+            const BG95 = await import('./branch-graph.js');
+
+            const st95 = await SS.createStarter('เรื่องแปลงทดสอบ');
+            st95.name = 'เรื่องแปลงทดสอบ';
+            st95.tags = ['fantasy'];
+            st95.intro = 'โลกที่ดวงอาทิตย์ไม่ขึ้น';
+            st95.w = { when: 'ปีที่ 1,024', where: 'เมืองเหนือ' };
+            st95.cast = [SM.newChar({ name: 'มานี', persona: 'นักดาบสาว' })];
+            await SS.writeStarter(st95);
+
+            let sc95 = await SS.createScenario(st95.slug, { title: 'ตอนทดสอบแปลง', synopsis: 'ออกเดินทาง' });
+            sc95 = SM.addTurn(sc95, { role: SM.ROLE_GM, text: 'ประตูเมืองเปิดออก' });
+            sc95 = SM.addTurn(sc95, { role: SM.ROLE_PLAYER, text: 'ก้าวเข้าไป' });
+            sc95 = SM.addTurn(sc95, { role: SM.ROLE_GM, text: 'ลมหนาวพัดมา',
+                                      choices: ['ไปทางเหนือ', 'พักที่โรงเตี๊ยม'] });
+            await SS.writeScenario(st95.slug, sc95);
+
+            // ── แปลงเป็นนิยาย ──
+            const fakeProse = async () => 'คืนนั้นมานีก้าวผ่านประตูเมืองไปโดยไม่หันหลังกลับ';
+            const made95 = await EX.convertScenario(st95, sc95, { format: 'prose', ai: fakeProse });
+            check('[a95] แปลงเป็นฉากจริงได้', !!made95 && !!made95.path, made95 && made95.path);
+
+            const secs95 = await listSections();
+            const book95 = secs95.find((x) => (x.meta && x.meta.title) === EX.EXPORT_BOOK);
+            check('[a95] ไปอยู่ในเล่ม "Story Starter" ตามที่ตกลง', !!book95);
+            check('[a95] อยู่ในบทชื่อเดียวกับเรื่อง',
+                  String(made95.path).includes('เรื่องแปลงทดสอบ'), made95.path);
+
+            const md95 = await kapi.readFile(made95.path);
+            check('[a95] เนื้อฉากมาจากตัวแปลงจริง', md95.includes('มานีก้าวผ่านประตูเมือง'));
+            check('[a95] frontmatter เป็นนิยาย + ตามรอยกลับไปหาตอนต้นทางได้',
+                  md95.includes('format: prose') && md95.includes('scenario: ' + sc95.id));
+            check('[a95] ทางแยกที่ยังไม่ได้ตอบกลายเป็นมาร์กเกอร์ในเนื้อฉาก',
+                  md95.includes('[ไปทางเหนือ]') && md95.includes('[พักที่โรงเตี๊ยม]'));
+
+            // ── สัญญากับระบบเรื่องแตกสาย: ต้องครบทั้งสองฝั่ง ──
+            const dP95 = await kapi.join(book95.secPath, 'Draft',
+              (await kapi.listDirs(await kapi.join(book95.secPath, 'Draft')))[0]);
+            const scj95 = await kapi.readJson(await kapi.join(dP95, 'scenes.json'));
+            const allRows95 = Object.values(scj95.chapters || {}).flat();
+            const row95 = allRows95.find((r) => r.id === (made95.path && allRows95.find((x) =>
+              String(made95.path).endsWith(x.fileName)) || {}).id)
+              || allRows95.find((x) => String(made95.path).endsWith(x.fileName));
+            check('[a95] เจอแถวฉากใน scenes.json', !!row95);
+            check('[a95] เขียน choices ลง scenes.json ด้วยชื่อฟิลด์ที่ buildGraph อ่าน',
+                  !!row95 && (row95.choices || []).length === 2
+                  && 'nextSceneId' in (row95.choices || [])[0],
+                  JSON.stringify(row95 && row95.choices));
+            const g95 = BG95.buildGraph([{ ...row95, body: md95 }]);
+            check('[a95] ผังแตกสายเห็นทางแยกจากฉากที่แปลงมา', g95.edges.length === 2,
+                  'เส้น=' + g95.edges.length);
+            check('[a95] ปลายทางยังว่าง = ขึ้นเป็นเส้นห้อยให้ผู้ใช้ไปผูกเอง',
+                  g95.edges.every((e) => e.dangling));
+            check('[a95] มาร์กเกอร์ในเนื้อฉากตรงกับ choices (ไม่ขึ้นเตือนว่ากำพร้า)',
+                  BG95.diffChoiceMarkers(BG95.scanChoiceMarkers(md95), row95.choices).orphan.length === 0,
+                  JSON.stringify(BG95.diffChoiceMarkers(BG95.scanChoiceMarkers(md95), row95.choices)));
+
+            // ── แปลงเป็นบทภาพยนตร์: ต้องได้รหัสนำหน้าบรรทัดที่โปรแกรมอ่านกลับได้ ──
+            const fakeSp = async () => 'INT. ประตูเมือง - คืน\n\nลมหนาวพัดผ่าน\n\nมานี\n(กระซิบ)\nถึงเวลาแล้ว';
+            const madeSp95 = await EX.convertScenario(st95, sc95, { format: 'screenplay', ai: fakeSp });
+            check('[a95] แปลงเป็นบทภาพยนตร์ได้', !!madeSp95);
+            const spmd95 = await kapi.readFile(madeSp95.path);
+            check('[a95] บทได้ frontmatter screenplay', spmd95.includes('format: screenplay'));
+            check('[a95] หัวฉาก/ชื่อผู้พูด/วงเล็บ ได้รหัสถูกต้อง',
+                  spmd95.includes('### INT. ประตูเมือง - คืน') && spmd95.includes('@มานี')
+                  && spmd95.includes('((กระซิบ))'), spmd95.slice(-260));
+            check('[a95] ทางแยกในบทเป็นโน้ต ไม่ไปกินบรรทัดของหน้ากระดาษ',
+                  spmd95.includes('/// [ไปทางเหนือ]'));
+
+            // ── แปลงซ้ำ = ฉากใหม่ ไม่ทับของเดิม (ตามที่ตกลง) ──
+            check('[a95] แปลงซ้ำได้ฉากใหม่ ไม่ทับของเดิม',
+                  madeSp95.path !== made95.path && (await kapi.exists(made95.path)));
+            const scAfter95 = await SS.readScenario(st95.slug, sc95.id);
+            check('[a95] ตอนจำได้ว่าถูกแปลงไปแล้วกี่ครั้ง', (scAfter95.exports || []).length === 2);
+
+            // ── สะพานไปเส้นเวลา/แผนที่ (เฟส 5) ──
+            const rows95 = await SS.listScenarios(st95.slug);
+            check('[a95] มีของให้ส่งเข้าเส้นเวลา/แผนที่', BR.canPush(st95, rows95) === true);
+            const sum95 = await BR.pushAll(st95, rows95);
+            check('[a95] ส่งได้ครบ ไม่มีส่วนไหนล้ม', sum95.errors.length === 0, sum95.errors.join());
+            const tl95 = await kapi.readJson(await kapi.join(state.root, 'timeline.json'));
+            const evWhen95 = (tl95.events || []).find((e) => e.src === BR.srcKey(st95.slug, 'when'));
+            check('[a95] "เมื่อไหร่" กลายเป็นเหตุการณ์บนเส้นเวลา',
+                  !!evWhen95 && evWhen95.when === 'ปีที่ 1,024', JSON.stringify(evWhen95 && evWhen95.when));
+            check('[a95] ตอนกลายเป็นเหตุการณ์ด้วย',
+                  (tl95.events || []).some((e) => e.src === BR.srcKey(st95.slug, 'sc:' + sc95.id)));
+            const mp95 = await kapi.readJson(await kapi.join(state.root, 'maps.json'));
+            const map95 = (mp95.maps || []).find((m) => m.name === BR.BRIDGE_MAP);
+            check('[a95] "ที่ไหน" กลายเป็นหมุดบนแผนที่',
+                  !!map95 && (map95.pins || []).some((p) => p.note === 'เมืองเหนือ'));
+
+            // กดซ้ำต้องอัปเดตของเดิม ไม่ใช่งอกซ้ำ — จุดที่พังง่ายที่สุดของสะพานแบบนี้
+            const nEv95 = (tl95.events || []).length;
+            const nPin95 = (map95.pins || []).length;
+            await BR.pushAll(st95, rows95);
+            const tl95b = await kapi.readJson(await kapi.join(state.root, 'timeline.json'));
+            const mp95b = await kapi.readJson(await kapi.join(state.root, 'maps.json'));
+            const map95b = (mp95b.maps || []).find((m) => m.name === BR.BRIDGE_MAP);
+            check('[a95] กดส่งซ้ำไม่สร้างเหตุการณ์ซ้ำ', (tl95b.events || []).length === nEv95,
+                  nEv95 + ' → ' + (tl95b.events || []).length);
+            check('[a95] กดส่งซ้ำไม่ปักหมุดซ้ำ', (map95b.pins || []).length === nPin95);
+
+            // ── .zip ไป-กลับ (เฟส 5) ──
+            const bytes95 = await PK.packStarter(st95.slug);
+            check('[a95] บีบ starter เป็นไบต์ได้', !!bytes95 && bytes95.length > 0);
+            const back95 = await PK.unpackStarter(bytes95);
+            check('[a95] แตกกลับเป็น starter ตัวใหม่ได้', !!back95);
+            check('[a95] นำเข้าซ้ำได้ชื่อโฟลเดอร์ใหม่ ไม่ทับของเดิม',
+                  !!back95 && back95.slug !== st95.slug, back95 && back95.slug);
+            check('[a95] เนื้อในครบ (ชื่อ · แท็ก · 4W · ตัวละคร)',
+                  !!back95 && back95.name === st95.name
+                  && (back95.tags || []).join() === 'fantasy'
+                  && back95.w.where === 'เมืองเหนือ'
+                  && (back95.cast || []).length === 1
+                  && back95.cast[0].name === 'มานี');
+            check('[a95] ตอนตามไปด้วยใน .zip',
+                  (await SS.listScenarios(back95.slug)).length === 1);
+            check('[a95] บทสนทนาที่เล่นไว้ไม่หายระหว่างทาง',
+                  ((await SS.listScenarios(back95.slug))[0].turns || []).length === 3);
+            const junk95 = await PK.unpackStarter(new Uint8Array([80, 75, 3, 4, 0, 0]));
+            check('[a95] ไฟล์ .zip ที่ไม่ใช่ starter ไม่ทำแผงล่ม', junk95 === null);
+
+            // ── เก็บกวาดให้โปรเจกต์ทดสอบกลับสภาพเดิม ──
+            // เทสที่ทิ้งของค้างไว้ = เทสของคนอื่นที่รันทีหลังพังโดยไม่มีใครรู้ว่าเพราะอะไร
+            // (รอบนี้เจอจริง: เล่ม "Story Starter" ที่ค้างไว้ไปทำ [83-5] แดง)
+            await SS.deleteStarter(st95.slug);
+            await SS.deleteStarter(back95.slug);
+            if (book95 && book95.secPath) await kapi.remove(book95.secPath);
+            {
+              const tlC = await kapi.readJson(await kapi.join(state.root, 'timeline.json'));
+              tlC.events = (tlC.events || []).filter((e) => !String(e.src || '').startsWith('starter:'));
+              await kapi.writeFile(await kapi.join(state.root, 'timeline.json'),
+                                   JSON.stringify(tlC, null, 2));
+              const mpC = await kapi.readJson(await kapi.join(state.root, 'maps.json'));
+              mpC.maps = (mpC.maps || []).filter((m) => m.name !== BR.BRIDGE_MAP);
+              await kapi.writeFile(await kapi.join(state.root, 'maps.json'),
+                                   JSON.stringify(mpC, null, 2));
+            }
+            await buildTree();
+            check('[a95] เก็บกวาดครบ ไม่เหลือเล่มทดสอบค้างไว้',
+                  !(await listSections()).some((x) => (x.meta && x.meta.title) === EX.EXPORT_BOOK));
+          }
+
+          // ══ [a96] รอบแก้ตามที่ผู้ใช้แจ้ง 10 ข้อ ══
+          {
+            const SA = await import('./starter/starter-ai.js');
+            const HT = await import('./starter/starter-html.js');
+            const RT = await import('./starter/starter-richtext.js');
+
+            const st96 = await SS.createStarter('เรื่องรอบแก้');
+            st96.name = 'เรื่องรอบแก้';
+            st96.author = 'นักเขียนทดสอบ';
+            st96.blurb = 'คำโปรยหนึ่งบรรทัด';
+            st96.tags = ['fantasy'];
+            st96.intro = '<p>ย่อหน้าแรก</p><p>ย่อหน้าสอง</p>';
+            st96.cast = [SM.newChar({ name: 'มานี', persona: 'นักดาบ' })];
+            await SS.writeStarter(st96);
+
+            // ── ข้อ 1: คำขอ AI ต้องยกเลิกได้ (เดิม http:fetch ไม่มีทั้ง timeout และ abort) ──
+            check('[a96-1] main รองรับการยกเลิกคำขอ', typeof kapi.httpAbort === 'function');
+            check('[a96-1] ยกเลิก id ที่ไม่มีอยู่ = false ไม่ใช่ระเบิด',
+                  (await kapi.httpAbort('ไม่มีจริง')) === false);
+            check('[a96-1] ตอนไม่มีคำขอวิ่ง นับได้ 0', (await kapi.httpInflight()) === 0);
+            // ยิงไปที่ปลายทางที่ **ค้างตอนเชื่อมต่อ** (ที่อยู่หลุมดำ ไม่ใช่พอร์ตที่ปฏิเสธทันที
+            // ซึ่งจะตอบกลับทันทีจนไม่ได้ทดสอบการยกเลิกจริง)
+            //
+            // ⚠ ต้องผูกตัวรับ error **ตั้งแต่บรรทัดที่สร้าง promise** — ผูกทีหลังด้วย `.catch()`
+            // จะเกิด `unhandledrejection` ระหว่างที่เรารอ แล้วไปโผล่เป็น ERROR ปลอมใน log
+            // (รอบแรกเขียนแบบนั้นแล้วเจอจริง)
+            {
+              const rid = SA.newReqId();
+              const p96 = kapi.httpFetch('http://10.255.255.1/never',
+                                         { method: 'GET', __reqId: rid, __timeoutMs: 20000 })
+                .then((r) => r, (e) => ({ ok: false, threw: String((e && e.message) || e) }));
+              await new Promise((r) => setTimeout(r, 200));
+              check('[a96-1] ระหว่างวิ่ง ทะเบียนนับคำขอได้', (await kapi.httpInflight()) >= 1);
+              const stopped = await kapi.httpAbort(rid);
+              check('[a96-1] สั่งหยุดคำขอที่กำลังวิ่งได้จริง', stopped === true);
+              const res96 = await p96;
+              check('[a96-1] หยุดแล้วคำขอจบทันที ไม่ค้าง', !!res96 && res96.ok === false,
+                    JSON.stringify(res96).slice(0, 90));
+              check('[a96-1] ยกเลิกแล้วไม่มีคำขอค้างในทะเบียน', (await kapi.httpInflight()) === 0);
+            }
+            // เพดานเวลาทำงานจริง — ตั้งสั้น ๆ แล้วต้องกลับมาเองโดยไม่ต้องมีใครสั่งหยุด
+            {
+              const t96 = Date.now();
+              const r96 = await kapi.httpFetch('http://10.255.255.1/never',
+                                               { method: 'GET', __timeoutMs: 800 })
+                .then((r) => r, () => null);
+              const ms96 = Date.now() - t96;
+              check('[a96-1] หมดเวลาแล้วกลับมาเอง ไม่ค้างตลอดกาล',
+                    (!r96 || r96.ok === false) && ms96 < 8000,
+                    JSON.stringify(r96) + ' ms=' + ms96);
+              check('[a96-1] หมดเวลาแล้วบอกเหตุผลได้',
+                    !r96 || r96.timedOut === true || r96.aborted === true, JSON.stringify(r96));
+            }
+
+            // ── ข้อ 10: ทุกคำขอ AI ต้องมีร่องรอยใน log ──
+            {
+              const before = logStore.all().length;
+              await SA.askAI('e2e-probe', 'พรอมป์ทดสอบ', 'ระบบ', SA.newReqId());
+              const recs = logStore.all().slice(before);
+              check('[a96-10] เรียก AI แล้วมีบรรทัดใน log เสมอ (แม้ยังไม่ได้ตั้งค่า AI)',
+                    recs.some((r) => String(r.msg || '').includes('e2e-probe')),
+                    recs.map((r) => r.msg).join(' | ').slice(0, 120));
+              check('[a96-10] log เก็บรายละเอียดไว้ด้วย ไม่ใช่แค่ข้อความเปล่า',
+                    recs.some((r) => r.detail && r.detail.length > 0));
+            }
+
+            // ── ข้อ 4: 4W มีปุ่ม AI ──
+            {
+              const P96 = await import('./starter/starter-prompt.js');
+              const D96 = await import('./starter/starter-steps-def.js');
+              const pr = P96.wFieldPrompt(st96, D96.W_FIELDS[0]);
+              check('[a96-4] มี prompt ช่วยคิดทีละช่องของ 4W',
+                    pr.includes(D96.W_FIELDS[0].label) && pr.includes('เรื่องรอบแก้'));
+            }
+
+            // ── ข้อ 5: ปก + แบนเนอร์ ──
+            check('[a96-5] มีช่องแบนเนอร์แยกจากปก', 'banner' in st96 && 'cover' in st96);
+            {
+              const D96 = await import('./starter/starter-steps-def.js');
+              const cover = D96.STEPS.find((x) => x.id === 'cover');
+              check('[a96-5] ใส่แค่แบนเนอร์ก็นับว่าขั้นปกกรอกแล้ว',
+                    cover.filled({ banner: 'b.png', cover: '' }) === true);
+            }
+
+            // ── ข้อ 6: โทเคน ──
+            {
+              let sc96 = await SS.createScenario(st96.slug, { title: 'ตอนโทเคน' });
+              sc96 = SM.addTurn(sc96, { role: SM.ROLE_GM, text: 'ก', usage: { in: 700, out: 300 } });
+              await SS.writeScenario(st96.slug, sc96);
+              const tk = SM.sumTokens(await SS.listScenarios(st96.slug));
+              check('[a96-6] รวมโทเคนของทั้งเรื่องได้', tk.total === 1000, JSON.stringify(tk));
+              const badge = SA.tokenBadge(tk);
+              check('[a96-6] ป้ายโทเคนย่อเลขให้อ่านง่าย', badge.textContent.includes('1.0k'),
+                    badge.textContent);
+              check('[a96-6] ยังไม่ใช้โทเคน = บอกตรง ๆ ไม่ใช่ 0 เปล่า ๆ',
+                    SA.tokenBadge({}).textContent.length > 1);
+            }
+
+            // ── ข้อ 9: คำบรรยายแบบเห็นผลจริง ──
+            {
+              const ed = await RT.richEditor({ slug: st96.slug, value: st96.intro, onChange: () => {} });
+              const btns = [...ed.querySelectorAll('button[data-cmd]')].map((b) => b.dataset.cmd);
+              check('[a96-9] มีปุ่ม B I U ครบ',
+                    ['bold', 'italic', 'underline'].every((c) => btns.includes(c)), btns.join(','));
+              check('[a96-9] มีปุ่มจัดหน้า ซ้าย/กลาง/ขวา',
+                    ['justifyLeft', 'justifyCenter', 'justifyRight'].every((c) => btns.includes(c)));
+              check('[a96-9] มีปุ่มแทรกรูป', ed.querySelectorAll('.st-rt-btn').length > btns.length);
+              check('[a96-9] พื้นที่พิมพ์แก้ไขได้จริง', ed.__area.contentEditable === 'true');
+              check('[a96-9] เนื้อเดิมถูกโหลดมาแสดง', ed.__area.innerHTML.includes('ย่อหน้าแรก'));
+            }
+            // รูปในคำบรรยายต้องเก็บแบบสัมพัทธ์ ไม่งั้นย้ายโปรเจกต์แล้วตาย
+            check('[a96-9] รูปในคำบรรยายเก็บเป็น images/… เสมอ',
+                  HT.htmlToStorage('<img src="file:///x/Starters/y/images/z.png" />')
+                    === '<img src="images/z.png" />');
+
+            // ── ข้อ 8: ผังหน้าเรื่องใหม่ (กดเข้าไปดูของจริง) ──
+            {
+              // บริบทเดียวกับที่แผงใช้จริง (แผงสร้างให้เองตอนผู้ใช้กดเปิดเรื่อง)
+              const ctx96 = { starter: st96, root: state.root,
+                              save: async () => SS.writeStarter(st96),
+                              rerender: () => {}, goList: () => {}, goWizard: () => {},
+                              goHome: () => {}, openChat: () => {} };
+              await (await import('./starter/starter-scenario.js'))
+                .renderStarterHome(document.querySelector('#starter-body'), ctx96);
+              await wait62(250);
+              const body96 = document.querySelector('#starter-body');
+              check('[a96-8] แถว 1 เป็นสองคอลัมน์: ปก | ข้อมูลเรื่อง',
+                    !!body96.querySelector('.st-hero .st-hero-cover')
+                    && !!body96.querySelector('.st-hero .st-hero-info'));
+              check('[a96-8] มีชื่อเรื่อง · ผู้แต่ง · แท็ก · คำโปรยหนึ่งบรรทัด',
+                    !!body96.querySelector('.st-hero-title')
+                    && (body96.querySelector('.st-hero-author') || {}).textContent.includes('นักเขียนทดสอบ')
+                    && !!body96.querySelector('.st-hero-tags')
+                    && (body96.querySelector('.st-hero-blurb') || {}).textContent === 'คำโปรยหนึ่งบรรทัด');
+              check('[a96-8] แถว 3 คำบรรยายเป็นตัวพับเก็บได้',
+                    !!body96.querySelector('details.st-acc summary.st-acc-head'));
+              check('[a96-8] แถว 4 มีรายการตอน', !!body96.querySelector('.st-sc-list'));
+              check('[a96-8] แถว 5 บอกวันที่แก้ล่าสุด',
+                    !!body96.querySelector('.st-updated')
+                    && body96.querySelector('.st-updated').textContent.length > 3,
+                    (body96.querySelector('.st-updated') || {}).textContent);
+              check('[a96-6] ป้ายโทเคนโผล่บนหน้าเรื่อง', !!body96.querySelector('.st-tok'));
+              // ลำดับต้องเป็น hero → banner? → acc → list → updated
+              const order = [...body96.querySelectorAll('.st-home > *')]
+                .map((x) => x.className.split(' ')[0]);
+              check('[a96-8] เรียงตามผังที่กำหนด (คำบรรยายอยู่เหนือรายการตอน)',
+                    order.indexOf('st-acc') < order.indexOf('st-sc-list')
+                    && order.indexOf('st-sc-list') < order.indexOf('st-updated'),
+                    order.join('>'));
+            }
+
+            // ── ข้อ 7: รูปตัวละครไม่ถูกครอบตัด ──
+            {
+              const css96 = [...document.styleSheets]
+                .flatMap((sh) => { try { return [...sh.cssRules]; } catch { return []; } })
+                .filter((r) => r.selectorText && /st-img-box img|st-cast-pic img/.test(r.selectorText));
+              check('[a96-7] กฎรูปทุกตัวใช้ contain ไม่ใช่ cover',
+                    css96.length > 0 && css96.every((r) => r.style.objectFit === 'contain'),
+                    css96.map((r) => r.selectorText + '=' + r.style.objectFit).join(' | '));
+            }
+
+            // ── ข้อ 3: ปิดแผงก่อนตอบ choice แล้วคำตอบต้องไม่หาย ──
+            {
+              let sc3 = await SS.createScenario(st96.slug, { title: 'ตอนกันหาย' });
+              sc3 = SM.addTurn(sc3, { role: SM.ROLE_GM, text: 'ถามมา', choices: ['ก', 'ข'] });
+              await SS.writeScenario(st96.slug, sc3);
+              // จำลอง "ผู้ใช้ตอบแล้วรีบปิดแผงทันที"
+              sc3 = SM.addTurn(sc3, { role: SM.ROLE_PLAYER, text: 'ก', chosen: 'ก' });
+              await SS.writeScenario(st96.slug, sc3);      // แชทเขียนทันทีทุกเทิร์นแล้ว
+              hidePanel('starter'); await wait62(250);
+              const back3 = await SS.readScenario(st96.slug, sc3.id);
+              check('[a96-3] ปิดแผงแล้วคำตอบที่เพิ่งเลือกยังอยู่',
+                    (back3.turns || []).length === 2 && back3.turns[1].chosen === 'ก',
+                    JSON.stringify((back3.turns || []).map((x) => x.role)));
+              showPanel('starter', { targetId: 'docs', side: 'right', forceMove: true });
+              await renderFeaturePanel('starter'); await wait62(200);
+            }
+
+            await SS.deleteStarter(st96.slug);
+          }
+
+          // ── ลบเรื่อง = ลงถังขยะ ไม่ใช่หายเลย ──
+          check('[a94] ลบ starter ได้', (await SS.deleteStarter(st94.slug)) === true);
+          check('[a94] ลบแล้วโฟลเดอร์เดิมหายไป', (await kapi.exists(dir94)) === false);
+          const recNames94 = await kapi.listDirs(await kapi.join(state.root, 'Recycle'));
+          check('[a94] ของที่ลบไปอยู่ในถังขยะ (กดผิดแล้วกู้ได้)',
+                recNames94.some((n) => n.endsWith(st94.slug)), recNames94.join(','));
+          if (ent94 && wpath94 && await kapi.exists(wpath94)) await kapi.remove(wpath94);
+
+          await renderFeaturePanel('starter'); await wait62(250);
+          hidePanel('starter'); await wait62(200);
         }
 
         // ── History: จดจริง → ย้อนกลับจริง (ตัวที่เสี่ยงที่สุดของรอบนี้) ──
