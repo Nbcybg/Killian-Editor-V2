@@ -12,7 +12,7 @@ import { inputRules, wrappingInputRule, textblockTypeInputRule,
          smartQuotes, InputRule } from 'prosemirror-inputrules';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
-import { mdToDoc, docToMd, collectAlign } from './md.js';
+import { mdToDoc, docToMd, mdLineCounts, collectAlign } from './md.js';
 import { searchPlugin } from './search.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
@@ -432,6 +432,11 @@ export const schema = new Schema({
     em: { parseDOM: [{ tag: 'em' }, { tag: 'i' }], toDOM: () => ['em', 0] },
     underline: { parseDOM: [{ tag: 'u' }], toDOM: () => ['u', 0] },
     strike: { parseDOM: [{ tag: 's' }, { tag: 'del' }], toDOM: () => ['s', 0] },
+    // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — อยู่กลุ่มเดียวกันและกันเองออก (ตัวเดียวกันเป็นทั้งสองไม่ได้)
+    sup: { group: 'vertalign', excludes: 'vertalign',
+           parseDOM: [{ tag: 'sup' }], toDOM: () => ['sup', 0] },
+    sub: { group: 'vertalign', excludes: 'vertalign',
+           parseDOM: [{ tag: 'sub' }], toDOM: () => ['sub', 0] },
   },
 });
 
@@ -456,6 +461,9 @@ function buildRules(s) {
       (m) => ({ order: +m[1] }), (m, n) => n.childCount + n.attrs.order === +m[1]),
     markRule(/(\*\*)([^*]+)\*\*$/, s.marks.strong),
     markRule(/(~~)([^~]+)~~$/, s.marks.strike),
+    // [alpha.97 ข้อ 4] พิมพ์ `x^2^` / `H~2~O` แล้วได้ตัวยก/ตัวห้อยทันที (เครื่องหมายเดียวกับที่เก็บลง .md)
+    markRule(/(\^)([^^]+)\^$/, s.marks.sup),
+    markRule(/(?<!~)(~)([^~]+)~$/, s.marks.sub),
     // [alpha.58r บั๊ก 27] พิมพ์ ``` แล้วได้บล็อกโค้ด · พิมพ์ --- แล้วได้เส้นคั่น
     textblockTypeInputRule(/^```([\w+-]*)\s$/, s.nodes.code_block, (m) => ({ lang: m[1] || '' })),
     new InputRule(/^(?:-{3,}|\*{3,}|_{3,})$/, (state, match, start, end) =>
@@ -518,6 +526,148 @@ export function removeTab(state, dispatch) {
   }
   return false;
 }
+
+// ══════════ [alpha.97 ข้อ 3+5] ★ ปุ่มโครงสร้างต้องเป็น "สวิตช์" เหมือน B I U ══════════
+//
+// `wrapInList()` / `wrapIn()` ของ ProseMirror **ห่ออย่างเดียว ไม่มีขากลับ** — กดปุ่มรายการ
+// สิบครั้งก็ได้รายการซ้อนสิบชั้น และวิธีเดียวที่จะเลิกเป็นรายการคือ "ลบทิ้งแล้วพิมพ์ใหม่"
+// สามตัวข้างล่างนี้เติมขาที่ขาดไป: อยู่ในนั้นอยู่แล้ว = ถอดออก · อยู่ในรายการอีกชนิด = สลับชนิด
+
+/** ความลึกของบรรพบุรุษชนิด `type` ที่ใกล้เคอร์เซอร์ที่สุด (0 = ไม่ได้อยู่ข้างใน) */
+export function ancestorDepth(state, type) {
+  const { $from } = state.selection;
+  for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === type) return d;
+  return 0;
+}
+
+/**
+ * สวิตช์รายการ — ในรายการชนิดเดียวกัน = ถอดออกจนพ้นทุกชั้น · ในอีกชนิด = สลับชนิด · นอกรายการ = ห่อ
+ * ต้องมี `view` เพื่อถอดหลายชั้น (liftListItem ทำได้ทีละชั้น แต่ละชั้นคิดจาก state ที่ปรับแล้ว)
+ */
+export function toggleListCmd(listType, itemType, otherType) {
+  return (state, dispatch, view) => {
+    if (ancestorDepth(state, listType)) {
+      const lift = liftListItem(itemType);
+      if (!dispatch) return lift(state);
+      if (!view) return lift(state, dispatch);
+      let guard = 0;
+      while (ancestorDepth(view.state, listType) && guard++ < 12) {
+        if (!lift(view.state, view.dispatch, view)) break;
+      }
+      return true;
+    }
+    const od = otherType ? ancestorDepth(state, otherType) : 0;
+    if (od) {
+      // ══ [alpha.98 ข้อ 5] ★ สลับชนิดต้องแตะ **เฉพาะข้อที่เลือก** ══
+      //
+      // ผู้ใช้: *"bullet เมื่อกดเปลี่ยนเป็นตัวเลข มันเปลี่ยนบรรทัดก่อนหน้าด้วย
+      //          ซึ่งมันต้องเป็นบรรทัดที่ cursor หรือ select อยู่สิ"*
+      //
+      // ของเดิม `setNodeMarkup()` ที่ **โหนดรายการทั้งก้อน** → ทุกข้อในรายการเปลี่ยนตาม
+      // ที่ถูกคือ "ถอดข้อที่เลือกออกมาก่อน แล้วค่อยห่อด้วยชนิดใหม่" — รายการเดิมจะถูกผ่า
+      // ออกเป็นท่อนบน/ท่อนที่เลือก/ท่อนล่างเองตามธรรมชาติ (พฤติกรรมเดียวกับ Word)
+      if (!dispatch) return true;
+      if (!view) return wrapInList(listType)(state, dispatch);
+      const liftOut = liftListItem(itemType);
+      let g2 = 0;
+      while (ancestorDepth(view.state, otherType) && g2++ < 12) {
+        if (!liftOut(view.state, view.dispatch, view)) break;
+      }
+      return wrapInList(listType)(view.state, view.dispatch, view);
+    }
+    return wrapInList(listType)(state, dispatch, view);
+  };
+}
+
+/** สวิตช์บล็อกที่ห่อได้ (คำพูดยกมา) — อยู่ข้างในแล้ว = ถอดออก */
+export function toggleWrapCmd(nodeType) {
+  return (state, dispatch, view) => {
+    if (ancestorDepth(state, nodeType)) return lift(state, dispatch);
+    return wrapIn(nodeType)(state, dispatch, view);
+  };
+}
+
+// ══════════ [alpha.98 ข้อ 9] ★ Home / End ต้องผูกเป็นคำสั่งจริง ไม่ใช่ปล่อยให้เบราว์เซอร์ ══════════
+//
+// ผู้ใช้: *"ปุ่ม home end ใช้ไม่ได้"*
+//
+// ไม่มีใครในโปรแกรมดักสองปุ่มนี้เลย (ไล่ listener ครบทุกตัวแล้ว) — มันเป็นพฤติกรรมพื้นฐานของ
+// contenteditable ซึ่ง **ไม่น่าเชื่อถือเมื่อในบรรทัดมี widget `contenteditable="false"` คั่นอยู่**
+// (เส้นคั่นหน้า/แถบคั่นแผ่นของเราเป็น widget แบบนั้นทั้งหมด) เคอร์เซอร์ไปตกใน widget แล้ว
+// ProseMirror ก็ดึงกลับ = เหมือนกดแล้วไม่มีอะไรเกิดขึ้น
+//
+// ผูกเป็นคำสั่งของเราเองจึงจบเรื่อง: คิดจากพิกัดของ **บรรทัดที่วาดจริง** (coordsAtPos +
+// posAtCoords) ได้ต้น/ท้ายบรรทัดที่ตาเห็น ไม่ใช่ต้น/ท้ายย่อหน้า — ตรงกับที่ผู้ใช้คาดหวัง
+// และทำงานเหมือนกันทั้งบรรทัดที่ตัดคำแล้วและบรรทัดที่ไม่ตัด
+
+/** ตำแหน่งต้น/ท้าย "บรรทัดที่วาดจริง" ของเคอร์เซอร์ — null = หาไม่ได้ */
+function lineEdgePos(view, toEnd) {
+  const { head } = view.state.selection;
+  let c;
+  try { c = view.coordsAtPos(head); } catch { return null; }
+  const box = view.dom.getBoundingClientRect();
+  const cs = getComputedStyle(view.dom);
+  const x = toEnd ? box.right - (parseFloat(cs.paddingRight) || 0) - 1
+                  : box.left + (parseFloat(cs.paddingLeft) || 0) + 1;
+  const y = (c.top + c.bottom) / 2;
+  const at = view.posAtCoords({ left: x, top: y });
+  if (!at) return null;
+  // อย่าให้หลุดออกนอกย่อหน้าเดิม (คลิกนอกกล่องอาจได้บล็อกข้างเคียง)
+  const $h = view.state.doc.resolve(head);
+  const lo = $h.start(), hi = $h.end();
+  let pos = Math.max(lo, Math.min(hi, at.pos));
+  // ★ ท้ายบรรทัดที่ "ตัดคำ" กับต้นบรรทัดถัดไปเป็น **ตำแหน่งเดียวกันในเอกสาร**
+  // จุดที่เลยตัวอักษรสุดท้ายไปจึงแมปกลับมาเป็นต้นบรรทัดถัดไป → กด End ซ้ำก็ไหลลงไปเรื่อย ๆ
+  // ถอยหนึ่งช่องเมื่อพบว่าเป็นรอยตัดคำ (coordsAtPos ฝั่ง "หลัง" ตกไปอยู่คนละบรรทัด)
+  if (toEnd && pos > lo) {
+    try {
+      const after = view.coordsAtPos(pos, 1);
+      if (after.top > y + 2) pos--;
+    } catch {}
+  }
+  return pos;
+}
+
+/** Home / End — คืน false เมื่อทำไม่ได้ เพื่อให้เบราว์เซอร์จัดการต่อตามเดิม */
+export function lineEdgeCmd(toEnd, extend) {
+  return (state, dispatch, view) => {
+    if (!view) return false;
+    const pos = lineEdgePos(view, toEnd);
+    if (pos == null || !Number.isFinite(pos)) return false;
+    if (dispatch) {
+      const $p = state.doc.resolve(pos);
+      const sel = extend ? TextSelection.between(state.selection.$anchor, $p)
+                         : TextSelection.near($p, toEnd ? -1 : 1);
+      dispatch(state.tr.setSelection(sel).scrollIntoView());
+    }
+    return true;
+  };
+}
+
+/** Ctrl+Home / Ctrl+End — ต้น/ท้ายเอกสาร */
+export function docEdgeCmd(toEnd, extend) {
+  return (state, dispatch) => {
+    if (dispatch) {
+      const $p = state.doc.resolve(toEnd ? state.doc.content.size : 0);
+      const sel = extend ? TextSelection.between(state.selection.$anchor, $p)
+                         : TextSelection.near($p, toEnd ? -1 : 1);
+      dispatch(state.tr.setSelection(sel).scrollIntoView());
+    }
+    return true;
+  };
+}
+
+/** ชุดคีย์ Home/End ที่ใช้ร่วมกันทั้งโหมดนิยายและบทภาพยนตร์ */
+export const HOME_END_KEYS = {
+  Home: lineEdgeCmd(false, false),
+  End: lineEdgeCmd(true, false),
+  'Shift-Home': lineEdgeCmd(false, true),
+  'Shift-End': lineEdgeCmd(true, true),
+  'Mod-Home': docEdgeCmd(false, false),
+  'Mod-End': docEdgeCmd(true, false),
+  'Shift-Mod-Home': docEdgeCmd(false, true),
+  'Shift-Mod-End': docEdgeCmd(true, true),
+};
 
 export class KEditor {
   constructor(mount, { markdown = '', onChange = null, resolveSrc = (p) => p,
@@ -591,6 +741,8 @@ export class KEditor {
           // [alpha.61 ข้อ 3] Tab = เยื้อง (ในรายการ = ลดชั้น) — เดิมไม่ทำอะไรแล้วโฟกัสหลุดไปแถบรูปแบบ
           Tab: chainCommands(sinkListItem(schema.nodes.list_item), insertTab),
           'Shift-Tab': chainCommands(liftListItem(schema.nodes.list_item), removeTab),
+          // [alpha.98 ข้อ 9] Home/End ผูกเป็นคำสั่งจริง (ดูคอมเมนต์ยาวเหนือ KEditor)
+          ...HOME_END_KEYS,
         }),
         keymap(baseKeymap),
         history(),
@@ -614,6 +766,15 @@ export class KEditor {
     return docToMd(this.view.state.doc.toJSON(),
                    opts || { alignComments: this.alignComments });
   }
+  /**
+   * [alpha.99 ข้อ 3] จำนวนบรรทัดใน .md ของบล็อกระดับบนแต่ละใบ — รางเลขบรรทัดใช้ตัวนี้
+   * เพื่อให้เลขตรงกับไฟล์เป๊ะ ไม่ใช่ไปนับลูกของ DOM เอง
+   */
+  mdLineCounts() {
+    return mdLineCounts(this.view.state.doc.toJSON(),
+                        { alignComments: this.alignComments });
+  }
+
   /** แผนที่จัดหน้าของบล็อกระดับบน — เก็บลง frontmatter (`align: [3:center]`) */
   getAlignMap() { return collectAlign(this.view.state.doc.toJSON()); }
   setMarkdown(md, alignMap) {
@@ -642,14 +803,20 @@ export class KEditor {
       case 'italic': return run(toggleMark(s.marks.em));
       case 'underline': return run(toggleMark(s.marks.underline));
       case 'strike': return run(toggleMark(s.marks.strike));
+      // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — กันเองออกด้วย `excludes` ใน schema แล้ว
+      case 'sup': return run(toggleMark(s.marks.sup));
+      case 'sub': return run(toggleMark(s.marks.sub));
       case 'undo': return run(undo);
       case 'redo': return run(redo);
       case 'paragraph': return run(setBlockType(s.nodes.paragraph));
       case 'heading': return run(setBlockType(s.nodes.heading, { level: arg || 1 }));
-      case 'quote': return run(wrapIn(s.nodes.blockquote));
+      // [alpha.97 ข้อ 3+5] สามตัวนี้เป็น "สวิตช์" แล้ว — กดซ้ำ = เอาออก (เหมือน B I U)
+      case 'quote': return run(toggleWrapCmd(s.nodes.blockquote));
       case 'lift': return run(lift);
-      case 'ul': return run(wrapInList(s.nodes.bullet_list));
-      case 'ol': return run(wrapInList(s.nodes.ordered_list));
+      case 'ul': return run(toggleListCmd(s.nodes.bullet_list, s.nodes.list_item,
+                                          s.nodes.ordered_list));
+      case 'ol': return run(toggleListCmd(s.nodes.ordered_list, s.nodes.list_item,
+                                          s.nodes.bullet_list));
       // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด
       case 'code': return run(setBlockType(s.nodes.code_block));
       case 'hr': {
@@ -691,6 +858,34 @@ export class KEditor {
   }
 
   /**
+   * [alpha.97 ข้อ 5] ตำแหน่งของรูปที่เคอร์เซอร์ "แตะอยู่" — -1 = ไม่มี
+   * รับทั้งกรณีเลือกทั้งโหนด (คลิกรูป) และเคอร์เซอร์อยู่ประชิดหน้า/หลังรูป
+   */
+  figurePos() {
+    const st = this.view.state;
+    const sel = st.selection;
+    if (sel.node && sel.node.type === schema.nodes.figure) return sel.from;
+    const $f = sel.$from;
+    if ($f.nodeAfter && $f.nodeAfter.type === schema.nodes.figure) return $f.pos;
+    if ($f.nodeBefore && $f.nodeBefore.type === schema.nodes.figure) {
+      return $f.pos - $f.nodeBefore.nodeSize;
+    }
+    return -1;
+  }
+
+  /** เอารูปที่เคอร์เซอร์แตะอยู่ออก — คืน false เมื่อไม่มีรูปตรงนั้น (ผู้เรียกไปเปิดตัวเลือกรูปแทน) */
+  removeFigure() {
+    const pos = this.figurePos();
+    if (pos < 0) return false;
+    const v = this.view;
+    const node = v.state.doc.nodeAt(pos);
+    if (!node || node.type !== schema.nodes.figure) return false;
+    v.dispatch(v.state.tr.delete(pos, pos + node.nodeSize));
+    v.focus();
+    return true;
+  }
+
+  /**
    * [alpha.82] แทรกข้อความหลายบรรทัดตรงเคอร์เซอร์ — บรรทัดว่าง/ขึ้นบรรทัดใหม่ = ย่อหน้าใหม่จริง
    *
    * เดิมโค้ดที่อยากแทรกข้อความเรียก `cmd('insertText', …)` ซึ่ง **ไม่มีอยู่ใน switch ของ cmd()**
@@ -726,6 +921,12 @@ export class KEditor {
       : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === 'blockquote' ? 'quote'
       : 'p';
     out.align = (p.type.name === 'paragraph' || p.type.name === 'heading') ? (p.attrs.align || 'left') : null;
+    // [alpha.97 ข้อ 3+5] สถานะของปุ่มโครงสร้าง — ไม่มีตรงนี้ ปุ่มก็ไม่มีทางติดไฟบอกว่า "เปิดอยู่"
+    const dUl = ancestorDepth(st, schema.nodes.bullet_list);
+    const dOl = ancestorDepth(st, schema.nodes.ordered_list);
+    out.list = dUl > dOl ? 'ul' : dOl > dUl ? 'ol' : '';
+    out.quote = !!ancestorDepth(st, schema.nodes.blockquote);
+    out.image = this.figurePos() >= 0;
     return out;
   }
 
@@ -753,20 +954,43 @@ function scrollerOf(el) {
   return document.scrollingElement || document.documentElement;
 }
 
-/** ช่วงที่เลือก "ยังเห็นอยู่" ในกล่องเลื่อนไหม — วัดจากช่วงทั้งช่วง ไม่ใช่แค่ปลาย */
-function selectionInView(view, sc) {
-  try {
-    const { from, to } = view.state.selection;
-    const a = view.coordsAtPos(from), b = view.coordsAtPos(to);
-    const box = (sc === document.scrollingElement || sc === document.documentElement)
-      ? { top: 0, bottom: window.innerHeight }
-      : sc.getBoundingClientRect();
-    return b.bottom > box.top && a.top < box.bottom;
-  } catch { return false; }
+/** ความสูงของ "ช่องมอง" ของกล่องเลื่อน */
+function viewportHeight(sc) {
+  return (sc === document.scrollingElement || sc === document.documentElement)
+    ? window.innerHeight : sc.clientHeight;
 }
 
 /**
- * รันคำสั่งแล้วคืนตำแหน่งเลื่อนเดิมให้ ถ้าตอนสั่ง "ช่วงที่เลือกยังอยู่ในสายตา"
+ * ช่วงที่เลือก ในหน่วย **พิกัดเอกสารของกล่องเลื่อน** (บวก scrollTop กลับเข้าไปแล้ว)
+ * ค่านี้ไม่ขึ้นกับว่าตอนนี้เลื่อนอยู่ตรงไหน จึงเอาไปเทียบกับตำแหน่งเลื่อน "ค่าอื่น" ได้
+ */
+export function selectionDocRange(view, sc) {
+  try {
+    const { from, to } = view.state.selection;
+    const a = view.coordsAtPos(from), b = view.coordsAtPos(to);
+    const boxTop = (sc === document.scrollingElement || sc === document.documentElement)
+      ? 0 : sc.getBoundingClientRect().top;
+    return { top: Math.min(a.top, b.top) - boxTop + sc.scrollTop,
+             bottom: Math.max(a.bottom, b.bottom) - boxTop + sc.scrollTop };
+  } catch { return null; }
+}
+
+/**
+ * ══════ [alpha.97 ข้อ 1] ★ ตัดสิน "จะเลื่อนไหม" จากเคอร์เซอร์ **หลัง** คำสั่งจบ ══════
+ *
+ * ผู้ใช้: *"scroll ไม่ lock เมื่อถูก undo มันกระโดดมั่วไปหมด · ตามหลักคือถ้า cursor
+ *          อยู่ในหน้าจอ scroll จะไม่ขยับ จนกว่า cursor จะไม่อยู่ในจอ"*
+ *
+ * ของเดิมวัด `selectionInView()` **ก่อน** รัน แล้วถ้า "ตอนนั้นเห็นอยู่" ก็ตรึงจอไว้เฉย ๆ
+ * ซึ่งใช้ได้กับคำสั่งจัดรูปแบบ (เคอร์เซอร์ไม่ไปไหน) แต่ **ผิดเต็ม ๆ กับ undo/redo**:
+ * undo ย้ายเคอร์เซอร์ไปยังจุดที่เพิ่งย้อน ซึ่งอาจอยู่คนละหน้า — เงื่อนไขที่วัดไว้เป็นของ
+ * เคอร์เซอร์ *ตัวเก่า* จอจึงถูกตรึงไว้ที่เดิมทั้งที่ควรตามไป (หรือกลับกัน ปล่อยให้กระโดด
+ * ทั้งที่ไม่ต้อง)
+ *
+ * กฎที่ถูกต้องมีข้อเดียว และวัดได้หลังคำสั่งจบเท่านั้น:
+ *   **ถ้าคืนตำแหน่งเลื่อนเดิมแล้วเคอร์เซอร์ยังอยู่ในจอ → คืน · ไม่อยู่ → เลื่อนไปหา**
+ * (เทียบ "ช่วงที่เลือกในพิกัดเอกสาร" กับ "ช่องมองที่ตำแหน่งเลื่อนเดิม" ตรง ๆ)
+ *
  * @param {import('prosemirror-view').EditorView} view
  * @param {() => any} run
  */
@@ -774,15 +998,23 @@ export function keepScroll(view, run) {
   if (!view || !view.dom || !view.dom.isConnected) return run();
   const sc = scrollerOf(view.dom);
   const top = sc.scrollTop, left = sc.scrollLeft;
-  const lock = selectionInView(view, sc);
   const out = run();
-  if (lock) {
-    const restore = () => {
+  const settle = () => {
+    if (!view.dom.isConnected) return;
+    const r = selectionDocRange(view, sc);
+    if (!r) return;
+    const h = viewportHeight(sc);
+    const PAD = 8;                              // เผื่อขอบ — เคอร์เซอร์แนบขอบพอดี = ยังไม่นับว่าเห็น
+    if (r.bottom > top + PAD && r.top < top + h - PAD) {
       if (sc.scrollTop !== top) sc.scrollTop = top;
       if (sc.scrollLeft !== left) sc.scrollLeft = left;
-    };
-    restore();                                  // กันตัวที่เลื่อนแบบซิงโครนัส (focus/scrollIntoView)
-    requestAnimationFrame(restore);             // กันตัวที่เลื่อนหลังเบราว์เซอร์วาดใหม่
-  }
+      return;
+    }
+    // หลุดจอไปแล้ว → เลื่อนตามไป โดยวางไว้ราว 1 ใน 3 จากขอบบน (เห็นบริบทรอบ ๆ ด้วย)
+    const max = Math.max(0, sc.scrollHeight - sc.clientHeight);
+    sc.scrollTop = Math.min(Math.max(0, Math.round(r.top - h / 3)), max);
+  };
+  settle();                                     // กันตัวที่เลื่อนแบบซิงโครนัส (focus/scrollIntoView)
+  requestAnimationFrame(settle);                // กันตัวที่เลื่อนหลังเบราว์เซอร์วาดใหม่
   return out;
 }

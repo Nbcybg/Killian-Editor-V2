@@ -307,12 +307,17 @@ check('[57a] เลขหน้าชิดขวา 1" · 0.5" จากขอ�
 {
   const on = SF.mergeSpFormat({ pageNumbers: { show: true } });
   check('[57a] ปิดอยู่ → ไม่มีเลขหน้าเลย', SF.pageNumberLabel(3, F0, 1) === '');
-  // [alpha.88 ข้อ 4] ค่าเริ่มต้นกลับเป็นมาตรฐานบท — **หน้าแรกไม่ใส่เลข** เริ่มนับที่หน้า 2
-  check('[88] หน้าแรกไม่มีเลขเป็นค่าเริ่มต้น (มาตรฐานบท)', SF.pageNumberLabel(1, on, 1) === '',
-    SF.pageNumberLabel(1, on, 1));
-  check('[88] เปิดสวิตช์เองแล้วหน้าแรกได้เลข 1',
-    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: true } }), 1) === '1.');
-  // กฎของ .82 ยังอยู่: ที่เว้นคือ "หน้า 1 ของบท" ไม่ใช่ "หน้าแรกของไฟล์"
+  // ═══ [alpha.97 ข้อ 11] ★ ไม่มีสวิตช์ "ใส่เลขบนหน้าแรก" อีกแล้ว ═══
+  // กฎเดียว: หน้าที่ไม่ใช่ฉากไม่มีเลข (หน้าปก/รายชื่อแยกเป็นหน้าหน้าเล่มตั้งแต่ .81r2)
+  // หน้าเนื้อเรื่องจึงมีเลขทุกหน้ารวมหน้าแรก โดยไม่ต้องไปติ๊กอะไร
+  check('[97-11] หน้าแรกของเนื้อเรื่องได้เลข "1." ทันทีที่เปิดเลขหน้า',
+    SF.pageNumberLabel(1, on, 1) === '1.', SF.pageNumberLabel(1, on, 1));
+  check('[97-11] ไม่มีคีย์ firstPage ในค่าเริ่มต้นแล้ว',
+    !('firstPage' in SF.PAGE_NUMBER_DEFAULTS), JSON.stringify(SF.PAGE_NUMBER_DEFAULTS));
+  check('[97-11] ค่า firstPage เก่าที่ค้างในไฟล์โปรเจกต์ไม่มีผลอีกแล้ว',
+    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: false } }), 1)
+      === '1.');
+  // กฎของ .82 ยังอยู่: ไฟล์ที่เริ่มหน้า 12 หน้าแรกของมันได้ "12."
   check('[88] ไฟล์ที่เริ่มหน้า 12 → หน้าแรกของไฟล์ยังได้ "12."',
     SF.pageNumberLabel(1, on, 12) === '12.', SF.pageNumberLabel(1, on, 12));
   check('[57a] หน้า 2 = "2."', SF.pageNumberLabel(2, on, 1) === '2.');

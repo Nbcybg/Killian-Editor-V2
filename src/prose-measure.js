@@ -136,11 +136,28 @@ export function zoomFactorOf(el) {
   return z > 0.01 && z < 100 ? z : 1;
 }
 
-/** ความสูงรวมของช่องว่างคั่นหน้าที่อยู่ "ข้างใน" บล็อก (เกิดจากการตัดกลางย่อหน้า) */
-function innerGapHeight(el) {
-  let sum = 0;
-  for (const g of el.querySelectorAll('.' + GAP_CLASS)) sum += g.getBoundingClientRect().height;
-  return sum;
+/**
+ * ══ [alpha.98 ข้อ 8] ★ ความสูงของช่องว่างคั่นหน้าที่อยู่ "ข้างใน" แต่ละบล็อก ══
+ *
+ * ของเดิมเป็น `el.querySelectorAll()` **ต่อบล็อก** → เอกสาร 80 หน้า (2,400 บล็อก)
+ * = ค้นต้นไม้ย่อย 2,400 รอบต่อการจัดหน้าหนึ่งครั้ง ทั้งที่ทั้งเอกสารมีเส้นคั่นแค่ ~80 อัน
+ * ตอนนี้กวาดเส้นคั่นครั้งเดียวแล้วไต่ขึ้นไปหาว่า "อยู่ในบล็อกไหน" — O(เส้นคั่น) แทน O(บล็อก)
+ * @param {HTMLElement} pm
+ * @param {Set<Element>} owners  บล็อกที่กำลังวัด (ผลของ measurableChildren)
+ * @returns {Map<Element, number>}
+ */
+function innerGapMap(pm, owners) {
+  const out = new Map();
+  for (const g of pm.querySelectorAll('.' + GAP_CLASS)) {
+    const h = g.getBoundingClientRect().height;
+    if (!(h > 0)) continue;                       // โหมดวัดซ่อนไว้อยู่แล้ว = ไม่ต้องคิด
+    for (let n = g.parentElement; n && n !== pm; n = n.parentElement) {
+      if (!owners.has(n)) continue;
+      out.set(n, (out.get(n) || 0) + h);
+      break;
+    }
+  }
+  return out;
 }
 
 /**
@@ -234,20 +251,78 @@ function blockRules(el) {
  * @param {number} origin       พิกัด Y บนจอของขอบบนพื้นที่พิมพ์หน้าแรก
  * @param {number} zoomFactor
  */
+/**
+ * ══════ [alpha.97 ข้อ 2] ★ "หนึ่งรายการ" ไม่ใช่ "หนึ่งบล็อก" ══════
+ *
+ * ผู้ใช้: *"มี 1 หัวข้อ บรรทัดอยู่ท้ายกระดาษ พอมี 2 หัวข้อ ทั้งกลุ่มกลับย้ายไปหน้าสอง
+ *          เราว่าปัญหาเกิดจากระยะบรรทัดไม่เท่ากัน"* — ระยะบรรทัดเท่ากันจริง ต้นตออยู่ที่นี่
+ *
+ * ตัววัดเดินแค่ `pm.children` → `<ul>` ทั้งชุด (จะกี่ข้อก็ตาม) นับเป็น **บล็อกเดียว**
+ * ที่มีกฎกันบรรทัดโดดเดี่ยว `splitMinLines = 2` · พอรายการมี 2 ข้อ `lineOffsets` มีจุดเดียว
+ * `tailMax` จึงติดลบ → `lineCut()` คืน null → **ยกทั้งรายการไปหน้าใหม่ทั้งก้อน**
+ * (มีข้อเดียวไม่เจอ เพราะมันยังพอดีหน้าอยู่)
+ *
+ * ที่ถูกคือรายการเป็น "หลายบล็อกเรียงกัน" เหมือนย่อหน้า — ตัดระหว่างข้อได้ ไม่ตัดกลางข้อสั้น ๆ
+ * (ข้อเดียวบรรทัดเดียวไม่มี lineOffsets อยู่แล้ว จึงยกทั้งข้อไปหน้าใหม่โดยอัตโนมัติ)
+ *
+ * ผลพลอยได้: จุดตัดตกที่ **ตำแหน่งของ `<li>` ในเอกสาร** ซึ่ง parent เป็น `<ul>` ไม่ใช่ textblock
+ * → เส้นคั่นถูกวาดเป็น `<div>` ระหว่าง `<li>` แทนที่จะไปแทรก *ข้างใน* `<li>` ก่อน `<p>`
+ * ซึ่งเป็นตัวที่ทำให้หัวข้อกับข้อความแยกคนละบรรทัดในภาพที่ผู้ใช้ส่งมา
+ */
+function measurableChildren(pm) {
+  const out = [];
+  for (const el of Array.from(pm.children)) {
+    if (!el || el.nodeType !== 1) continue;
+    const tag = (el.tagName || '').toLowerCase();
+    if (tag === 'ul' || tag === 'ol') {
+      const kids = Array.from(el.children).filter((k) => k && k.nodeType === 1
+        && ((k.tagName || '').toLowerCase() === 'li'
+            || (k.classList && k.classList.contains(GAP_CLASS))));
+      if (kids.length) { out.push(...kids); continue; }
+    }
+    out.push(el);
+  }
+  return out;
+}
+
+/**
+ * ══ [alpha.98 ข้อ 8] ต้นแบบของ "กล่องบล็อก" — getter อยู่บน prototype ไม่ใช่ทีละใบ ══
+ *
+ * ของเดิมเรียก `Object.defineProperty()` **สองครั้งต่อบล็อก** → เอกสาร 80 หน้า
+ * (2,400 บล็อก) = 4,800 ครั้งต่อการจัดหน้าหนึ่งรอบ ซึ่งเป็นการสร้าง property descriptor
+ * ใหม่ทั้งหมด · ย้ายมาไว้บน prototype ก้อนเดียว แล้วเก็บสถานะเป็นพร็อพเพอร์ตี้ธรรมดา
+ * พฤติกรรมเหมือนเดิมทุกประการ (ยังขี้เกียจ · ยังเขียนทับค่าได้จากภายนอก)
+ */
+const BLOCK_PROTO = {
+  get lines() {
+    if (!this._lines) this._lines = domLineRects(this.el, this._z);
+    return this._lines;
+  },
+  set lines(v) { this._lines = v; },
+  get lineOffsets() {
+    if (!this._offs) this._offs = lineBreakOffsets(this.lines);
+    return this._offs;
+  },
+  set lineOffsets(v) { this._offs = v; },
+};
+
 export function measureProseBlocks(pm, origin, zoomFactor) {
   const z = zoomFactor > 0 ? zoomFactor : 1;
   const blocks = [];
   let gapAccum = 0, totalHeight = 0;
 
-  for (const el of Array.from(pm.children)) {
+  const kids = measurableChildren(pm);
+  const gapMap = innerGapMap(pm, new Set(kids));
+  for (const el of kids) {
     if (!el || el.nodeType !== 1) continue;
     const rect = el.getBoundingClientRect();
     if (el.classList && el.classList.contains(GAP_CLASS)) { gapAccum += rect.height; continue; }
     if (!(rect.height > 0)) continue;
-    const innerGap = innerGapHeight(el);
+    const innerGap = gapMap.get(el) || 0;
     const top = (rect.top - origin - gapAccum) / z;
     const height = (rect.height - innerGap) / z;
-    const b = { top, height, el, ...blockRules(el) };
+    const b = Object.assign(Object.create(BLOCK_PROTO),
+                           { top, height, el, _z: z }, blockRules(el));
     // [alpha.85 ข้อ 2] **วัดบรรทัดแบบขี้เกียจ** — ตัวที่แพงที่สุดของทั้งระบบ
     //
     // `domLineRects()` เดินทุก text node ในบล็อกแล้วเรียก getClientRects() ทีละตัว
@@ -257,18 +332,6 @@ export function measureProseBlocks(pm, origin, zoomFactor) {
     //
     // ⚠ ผู้เรียกต้องอ่านค่าพวกนี้ **ในโหมด withMeasureMode เท่านั้น** เพราะตอนนี้มันไปอ่าน
     // DOM ทีหลัง ไม่ใช่ตอนวัดแล้ว (ดู proseMeasured / proseBreakList)
-    let _lines = null;
-    Object.defineProperty(b, 'lines', {
-      configurable: true, enumerable: false,
-      get() { if (!_lines) _lines = domLineRects(el, z); return _lines; },
-      set(v) { _lines = v; },
-    });
-    let _offs = null;
-    Object.defineProperty(b, 'lineOffsets', {
-      configurable: true, enumerable: false,
-      get() { if (!_offs) _offs = lineBreakOffsets(this.lines); return _offs; },
-      set(v) { _offs = v; },
-    });
     blocks.push(b);
     gapAccum += innerGap;
     totalHeight = Math.max(totalHeight, top + height);

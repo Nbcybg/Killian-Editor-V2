@@ -72,8 +72,8 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, pageNumberLabel,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, defaultLangFonts, normalizeLangFonts,
          buildLangFontCss, withLangFamily, applyLangFonts,
-         SP_THAI_DEFAULTS, SP_THAI_FALLBACKS, normalizeSpThai, buildSpThaiCss,
-         withSpThaiFamily, applySpThaiFont,
+         SP_FAMILY, FONT_TARGETS, withSpFamily, migrateSpThai, usableCounts, rowAppliesTo,
+         normalizeRange, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE,
          SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX,
          SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, dataLabel, BUILTIN_CATS, CAT_ICON,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
@@ -276,31 +276,7 @@ async function loadSettings(meta) {
   // project settings ชนะ global (project overrides global for overlapping keys)
   state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...(meta.settings || {}) };
   state.goals = { ...DEFAULT_GOALS, ...(meta.goals || {}) };
-  migratePageNumberFirst();
   applySettings();
-}
-
-/**
- * [alpha.88 ข้อ 4] ★ กลับคำของ .83r — **หน้าแรกของบทไม่ใส่เลขหน้า** (มาตรฐานอุตสาหกรรม)
- *
- * .83r แก้อาการ "เปิดเลขหน้าแล้วไม่ขึ้นเลยสักตัว" ด้วยการ **เขียน `firstPage:true` ทับ**
- * ลง project.khn.json ของทุกโปรเจกต์ ตอนนั้นเหตุผลคือ "โหมดปกติวาดเลขได้แค่หน้าแรก"
- * ซึ่งไม่จริงอีกแล้ว — ตั้งแต่ .83 ข้อ 4 หน้า 2 เป็นต้นไปมีเลขบนเส้นคั่นหน้าเอง
- * เหลือแต่ผลข้างเคียง: บททุกฉบับได้เลข "1" บนหน้าแรก ซึ่งผิดธรรมเนียมบท
- *
- * จึง **ล้างค่าที่ .83r เขียนไว้ทิ้ง** ให้กลับไปใช้ค่าเริ่มต้นใหม่ (`firstPage:false`)
- * ทำครั้งเดียวเหมือนเดิม (ธงเปลี่ยนเป็น 2) — ใครอยากได้เลขหน้าแรกเปิดเองได้ที่ตั้งค่า
- */
-export function migratePageNumberFirst() {
-  const s2 = state.settings;
-  if (s2.pgFirstMigrated === 2) return false;
-  const forcedBy83r = s2.pgFirstMigrated === true;
-  s2.pgFirstMigrated = 2;
-  const pn = s2.spPageNumbers;
-  if (!forcedBy83r || !pn || pn.firstPage !== true) return false;
-  s2.spPageNumbers = { ...pn, firstPage: false };
-  log('info', tt('ui.app.migPageNumFirst'));
-  return true;
 }
 
 // นำ settings ปัจจุบันไปใช้: ขนาดฟอนต์ตัวแก้ไข + จับเวลา autosave
@@ -318,24 +294,27 @@ export function applySettings() {
     Math.max(120, Math.min(400, parseInt(state.settings.homeThumb, 10) || 190)) + 'px');
   document.body.classList.toggle('k-ln', !!state.settings.lineNumbers);
   scheduleLineGutter();                              // [60r2 ข้อ 11] รางเลขบรรทัดฝั่ง UI
-  document.body.classList.toggle('paper-mode', state.settings.paperMode !== false);
+  applyPaperClass();                                 // [alpha.99 ข้อ 2] กระดาษเปิดตลอด ไม่มีสวิตช์
   document.body.classList.toggle('k-fab-off', state.settings.fabEnabled === false);   // [60r2 ข้อ 9]
   applyTheme();                                      // [60r2 ข้อ 10] ธีมสว่าง/มืดของ UI
   // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา — ต้องมาก่อนตั้ง --ed-font/--sp-font เพราะจะเอา "K2 Lang" ไปนำหน้า
   const nLang = applyProjectLangFonts();
   // [alpha.58r บั๊ก 18] ฟอนต์เริ่มต้นของ "นิยาย" = ตัวพิมพ์แบบสัดส่วน ไม่ใช่ Courier (ฟอนต์บท)
-  // ค่าที่ผู้ใช้ตั้งไว้ในรูปแบบนิยาย (settings.prose.fontFamily) มาก่อน แล้วค่อย fontFamily เดิม
+  //
+  // [alpha.97 ข้อ 12] ★ **ตัดชั้น override ของ "รูปแบบนิยาย" ทิ้ง** (`settings.prose.fontFamily`)
+  // ผู้ใช้: *"ฟอนต์ตัวอักษร เรามี override มั่วไปหมด · ฟอนต์นิยาย เอาออกไปใช้กับฟอนต์ตามภาษา"*
+  // เดิมมีสามชั้นทับกันโดยไม่มีใครบอกว่าชั้นไหนชนะ — เหลือชั้นเดียว: สแตกฐาน (ตั้งค่า → ทั่วไป)
+  // แล้วค่อยให้ "ฟอนต์ตามภาษา" แทนที่เป็นช่วงอักขระ ซึ่งละเอียดกว่าและตั้งได้ทีละภาษา
   const pf = proseFormat();
-  const edStack = pf.fontFamily || state.settings.fontFamily || DEFAULT_PROSE_FONT;
-  document.documentElement.style.setProperty('--ed-font', withLangFamily(edStack, nLang > 0));
+  const edStack = state.settings.fontFamily || DEFAULT_PROSE_FONT;
+  document.documentElement.style.setProperty('--ed-font', withLangFamily(edStack, nLang.prose > 0));
   applyProseVars(pf);                                // [16][17][23][24] ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด
   // ฟอนต์บทหนังแยกจากนิยาย (บั๊ก #2) — ว่าง = Courier Final Draft เช่นกัน
-  // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบท ต้องมาก่อน "K2 Lang" และก่อนสแตกของผู้ใช้
-  // (ฟอนต์บทเริ่มด้วย Courier Prime ที่ไม่มีอักษรไทย → ไทยตกไปฟอนต์สำรองที่เมตริกคนละเรื่อง)
-  applySpThaiFont(spThaiCfg());
+  // [alpha.97 ข้อ 12] บทมีวงศ์ของตัวเอง ("K2 SP") ที่สร้างจากแถวที่ target = screenplay/all
+  // — รวมแถว "ไทย 85%" ที่เดิมเป็นระบบแยก (spThaiFont) เข้ามาอยู่ในตารางเดียวกันแล้ว
   const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
   document.documentElement.style.setProperty(
-    '--sp-font', withSpThaiFamily(withLangFamily(spStack, nLang > 0), spThaiCfg()));
+    '--sp-font', withSpFamily(spStack, nLang.screenplay > 0));
   // [alpha.82] ฟอนต์เปลี่ยน = ความกว้างที่วัดไว้ใช้ไม่ได้แล้ว
   refreshTextMeasurer();
   // [alpha.57a ข้อ 1] เสียงเครื่องพิมพ์ดีด
@@ -434,6 +413,55 @@ function lnGutterEl(make) {
   return g || null;
 }
 /**
+ * [alpha.99 ข้อ 3] จำนวนบรรทัด .md ของบล็อกแต่ละใบ — แคชผูกกับตัว doc
+ * (พิมพ์ทีเดียว doc เปลี่ยนตัวใหม่เสมอ จึงเทียบด้วย === ได้ตรง ๆ)
+ */
+let _lnCache = null;
+function lnCountsOf(tab) {
+  const ed = tab && tab.editor;
+  if (!ed || !ed.mdLineCounts) return null;
+  const doc = ed.view.state.doc;
+  if (_lnCache && _lnCache.doc === doc) return _lnCache.counts;
+  let counts = null;
+  try { counts = ed.mdLineCounts(); } catch { counts = null; }
+  _lnCache = { doc, counts };
+  return counts;
+}
+
+/**
+ * [alpha.99 ข้อ 3] "บรรทัดย่อย" ที่ต้องวาดเลขให้ในบล็อกหนึ่งใบ
+ *   · รายการ      → หนึ่งข้อหนึ่งเลข
+ *   · คำพูดยกมา   → หนึ่งย่อหน้าหนึ่งเลข
+ *   · Shift+Enter → หนึ่งท่อนที่คั่นด้วย <br> หนึ่งเลข
+ * ไม่เข้าเคสไหนเลย (บล็อกโค้ด ฯลฯ) = วาดเลขเดียวที่หัวบล็อก ตามเดิม
+ * @returns {Array<{top:number, height:number, el?:Element}>}
+ */
+function lnSubRows(kid, span) {
+  const box = (e) => { const r = e.getBoundingClientRect(); return { top: r.top, height: r.height, el: e }; };
+  const one = () => [box(kid)];
+  if (span <= 1) return one();
+  const tag = (kid.tagName || '').toLowerCase();
+  if (tag === 'ul' || tag === 'ol' || tag === 'blockquote') {
+    const rows = [...kid.children]
+      .filter((e) => e.nodeType === 1 && !e.classList.contains('ed-page-break')
+                     && !e.classList.contains('sp-page-break'))
+      .map(box).filter((b) => b.height > 0);
+    return rows.length ? rows : one();
+  }
+  // ย่อหน้าที่มี hard break — <br> ของ ProseMirror ที่ปิดท้ายบล็อกว่างไม่นับ
+  const brs = [...kid.querySelectorAll(':scope > br')]
+    .filter((b) => !b.classList.contains('ProseMirror-trailingBreak'));
+  if (!brs.length) return one();
+  const r0 = kid.getBoundingClientRect();
+  const tops = [r0.top, ...brs.map((b) => b.getBoundingClientRect().bottom)];
+  return tops.map((tp, k) => ({
+    top: tp,
+    height: (k + 1 < tops.length ? tops[k + 1] : r0.bottom) - tp,
+    el: kid,
+  }));
+}
+
+/**
  * วาดเลขบรรทัดของแท็บที่กำลังใช้งาน — คืนจำนวนเลขที่วาดจริง (0 = ปิด/ไม่มีอะไรให้นับ)
  * วาดเฉพาะบล็อกที่อยู่ในสายตา (เอกสารยาวหลายพันย่อหน้าจึงไม่หน่วง)
  */
@@ -459,33 +487,54 @@ export function refreshLineGutter() {
   g.style.left = Math.round(pr.left - hr.left) + 'px';
   g.style.top = Math.round(pr.top - hr.top) + 'px';
   g.style.height = Math.round(pr.height) + 'px';
-  const kids = pmEl.children;
+  // ══ [alpha.99 ข้อ 3] ★ เลขบรรทัดยึด "ไฟล์ .md" เป็นแหล่งความจริง ══
+  //
+  // ผู้ใช้: *"ใน markdown มี 642 ใน editor มี 638 · ทำไมไม่ใช้ markdown เป็น reference"*
+  //
+  // ของเดิมนับ "ลูกของ .ProseMirror" ทีละใบ = เดาเอาว่าหนึ่งบล็อกคือหนึ่งบรรทัด
+  // ซึ่งไม่จริงกับรายการ (5 ข้อ = 1 บล็อก) · คำพูดยกมาหลายย่อหน้า · Shift+Enter · บล็อกโค้ด
+  // แถมยังนับ **แถบคั่นหน้า** (widget) เป็นบรรทัดด้วยตั้งแต่มันมีความสูงจริงใน alpha.98
+  //
+  // ตอนนี้ถามตัวเขียนไฟล์ตรง ๆ ว่าบล็อกใบนี้กินกี่บรรทัดใน .md แล้วไล่เลขตามนั้น
+  // → ตัวเลขสุดท้ายบนรางเท่ากับจำนวนบรรทัดในไฟล์เสมอ ไม่ต้องเดาอีก
+  const counts = lnCountsOf(t);
+  const kids = [...pmEl.children].filter((e) => e.nodeType === 1
+    && !e.classList.contains('ed-page-break')
+    && !e.classList.contains('sp-page-break')
+    && !e.classList.contains('ProseMirror-gapcursor'));
   const frag = document.createDocumentFragment();
-  // [alpha.81 ข้อ 6] "เลขบรรทัดมันไม่ตรงกลาง มันเหมือนชิดบน"
-  // เดิมวางเลขไว้ที่ `top` ของบล็อกพอดี — ซึ่งคือ **ขอบบนของกล่อง** ไม่ใช่กลางบรรทัดแรก
-  // ย่อหน้าที่มีช่วงบรรทัดสูง (นิยาย 1.75) เลขจึงลอยสูงกว่าตัวหนังสือเห็นได้ชัด
-  // ชดเชยด้วยครึ่งหนึ่งของ (ความสูงบรรทัดแรก − ความสูงตัวเลข)
-  // ความสูงบรรทัดของบล็อกเป็นหน่วย CSS ที่อยู่ในกล่องซึ่งถูก `zoom` ย่อ → ต้องคูณกลับด้วย zoom จริง
   const zoom = parseFloat(getComputedStyle(pmEl.parentElement).zoom) || 1;
   let n = 0;
+  let lineNo = 1;                       // เลขบรรทัดใน .md ของบล็อกที่กำลังจะวาด
   for (let i = 0; i < kids.length; i++) {
-    const r = kids[i].getBoundingClientRect();
+    const kid = kids[i];
+    const span = counts && counts[i] > 0 ? counts[i] : 1;
+    const start = lineNo;
+    lineNo += span;
+    const r = kid.getBoundingClientRect();
     if (!r.height) continue;
-    // [alpha.87 ข้อ C] ★ เลขต้องทาบ "บรรทัดข้อความแรก" ไม่ใช่ขอบบนของกล่อง
-    // ตั้งแต่ระยะเว้นบรรทัดของบทย้ายจาก margin ไปเป็น padding (เพื่อให้ตรงกับโมเดล)
-    // ขอบบนกล่อง = บนสุดของช่องไฟนำ ไม่ใช่ตัวหนังสือ → เลขลอยสูงขึ้นเรื่อย ๆ ตามระยะเว้น
-    // (ของ margin เดิมอยู่ *นอก* กล่อง จึงไม่มีอาการนี้) · หักช่องไฟนำออกก่อนเสมอ
-    const csPad = parseFloat(getComputedStyle(kids[i]).paddingTop);
-    const padTop = Number.isFinite(csPad) ? csPad * zoom : 0;
-    const top = r.top - pr.top + padTop;
-    if (top > pr.height + 60) break;              // เลยขอบล่างของแผงแล้ว — ที่เหลือไม่ต้องดู
-    if (top + r.height < -60) continue;           // ยังอยู่เหนือขอบบน
-    const csLh = parseFloat(getComputedStyle(kids[i]).lineHeight);
-    const lineH = Math.min(r.height, (Number.isFinite(csLh) ? csLh * zoom : r.height));
-    const d = el('div', 'k-ln-no', String(i + 1));
-    d.style.top = Math.round(top) + 'px';
-    d.dataset.lineh = String(Math.round(lineH));
-    frag.appendChild(d); n++;
+    const top0 = r.top - pr.top;
+    if (top0 > pr.height + 60) break;              // เลยขอบล่างของแผงแล้ว — ที่เหลือไม่ต้องดู
+    if (top0 + r.height < -60) continue;           // ยังอยู่เหนือขอบบน
+    // บล็อกที่กินหลายบรรทัดใน .md → วาดเลขให้ทุกบรรทัดย่อย ตามตำแหน่งที่วาดจริง
+    const subs = lnSubRows(kid, span);
+    for (let k = 0; k < subs.length; k++) {
+      const sr = subs[k];
+      // [alpha.87 ข้อ C] ★ เลขต้องทาบ "บรรทัดข้อความแรก" ไม่ใช่ขอบบนของกล่อง
+      // ตั้งแต่ระยะเว้นบรรทัดของบทย้ายจาก margin ไปเป็น padding (เพื่อให้ตรงกับโมเดล)
+      // ขอบบนกล่อง = บนสุดของช่องไฟนำ ไม่ใช่ตัวหนังสือ → เลขลอยสูงขึ้นเรื่อย ๆ ตามระยะเว้น
+      const csPad = k === 0 ? parseFloat(getComputedStyle(kid).paddingTop) : 0;
+      const padTop = Number.isFinite(csPad) ? csPad * zoom : 0;
+      const top = sr.top - pr.top + padTop;
+      if (top > pr.height + 60) break;
+      if (top + sr.height < -60) continue;
+      const csLh = parseFloat(getComputedStyle(sr.el || kid).lineHeight);
+      const lineH = Math.min(sr.height, (Number.isFinite(csLh) ? csLh * zoom : sr.height));
+      const d = el('div', 'k-ln-no', String(start + k));
+      d.style.top = Math.round(top) + 'px';
+      d.dataset.lineh = String(Math.round(lineH));
+      frag.appendChild(d); n++;
+    }
   }
   g.textContent = '';
   g.appendChild(frag);
@@ -669,6 +718,14 @@ export async function preloadLangFontUrls() {
 }
 /** ยัด @font-face ตามภาษาเข้า <head> — คืนจำนวนแถวที่ใช้จริง */
 export function applyProjectLangFonts() {
+  // [alpha.97 ข้อ 12] โปรเจกต์เก่ามี `spThaiFont` เป็นระบบแยก → ย้ายมาเป็นแถวในตารางก่อนใช้
+  // (ทำครั้งเดียวโดยธรรมชาติ — migrateSpThai เห็นแถวของบทที่คุมช่วงไทยแล้วจะไม่ยุ่งอีก)
+  if (state.settings.spThaiFont) {
+    const mig = migrateSpThai(state.settings.langFonts, state.settings.spThaiFont);
+    state.settings.langFonts = mig.rows;
+    delete state.settings.spThaiFont;
+    if (mig.moved) log('info', tt('ui.app.migSpThaiFont'));
+  }
   return applyLangFonts(state.settings.langFonts, langFontUrl);
 }
 /**
@@ -690,8 +747,12 @@ export async function exportFontCss() {
       const p = await kapi.join(dir, 'assets', 'fonts', r.builtin);
       if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
     }
-    return buildLangFontCss(state.settings.langFonts,
-                            (row) => (row.builtin ? (abs.get(row.builtin) || '') : langFontUrl(row)));
+    // [alpha.97 ข้อ 12] ต้องออกทั้งสองวงศ์ — ไฟล์ที่ส่งออกมีทั้งเนื้อนิยายและบทในเล่มเดียวกันได้
+    const url2 = (row) => (row.builtin ? (abs.get(row.builtin) || '') : langFontUrl(row));
+    return buildLangFontCss(state.settings.langFonts, url2,
+                            { family: LANG_FAMILY, target: 'prose' })
+      + '\n' + buildLangFontCss(state.settings.langFonts, url2,
+                                { family: SP_FAMILY, target: 'screenplay' });
   } catch (e) { log('warn', tt('ui.app.exportFontCssFail'), e); return ''; }
 }
 
@@ -977,11 +1038,9 @@ function proseClipLabel(index, pf, spf, startPage) {
   // ตอนนี้ทุกมุมมองอ่าน spPageNumbers ตัวเดียว (กล่องตั้งค่านิยายเขียนลงตัวเดียวกันแล้ว)
   const pn = spf.pageNumbers;
   if (!pn.show) return '';
+  // [alpha.97 ข้อ 11] หน้าเนื้อเรื่องมีเลขทุกหน้ารวมหน้าแรก — กฎเดียวคือหน้าที่ไม่ใช่ฉากไม่มีเลข
   const i = Math.max(1, Math.round(+index || 1));
-  // [alpha.88 ข้อ 4] เว้นเฉพาะ "หน้า 1 จริง ๆ" — ไฟล์ที่เริ่มหน้า 12 หน้าแรกยังได้ "12"
-  const n = Math.max(1, Math.round(+startPage || 1)) + i - 1;
-  if (n === 1 && pn.firstPage === false) return '';
-  return String(n);
+  return String(Math.max(1, Math.round(+startPage || 1)) + i - 1);
 }
 
 function drawProsePageView(tab) {
@@ -1160,20 +1219,39 @@ export function toggleProseIndent(on) {
 }
 
 /**
- * [alpha.84 ข้อ 1] ค่าตั้ง "ปรับสัดส่วนฟอนต์ไทยในบทภาพยนตร์" — เก็บใน project.khn.json
- * ค่าเริ่มต้นเปิดไว้ เพราะสแตกฟอนต์บทมาตรฐาน (Courier Prime) ไม่มีอักษรไทยเลย
- * ตัวไทยจึงตกไปฟอนต์สำรองที่ตัวใหญ่กว่าและล้นกล่องบรรทัด `line-height:1` ของบททุกครั้ง
+ * ══ [alpha.97 ข้อ 12] "ไทยในบทภาพยนตร์" = แถวหนึ่งในตารางฟอนต์ตามภาษา ══
+ *
+ * เดิมเป็นระบบแยก (`settings.spThaiFont`) ที่เขียนคำว่า "ไทย" กับ "บทภาพยนตร์" ตายไว้ในโค้ด
+ * คนเขียนภาษาอื่นจึงไม่มีทางได้ตัวปรับสัดส่วนแบบเดียวกัน · ตอนนี้เป็นแถวธรรมดาที่
+ * `target = 'screenplay'` และคุมช่วง U+0E00-0E7F — ลบได้ ทำซ้ำให้ภาษาอื่นได้
+ * เมนู/คีย์ลัดเดิมยังใช้ได้ โดยไปสลับ `enabled` ของแถวนั้นแทน
  */
-export function spThaiCfg() {
-  return normalizeSpThai({ ...SP_THAI_DEFAULTS, ...(state.settings.spThaiFont || {}) });
+function spThaiRowIndex() {
+  const rows = normalizeLangFonts(state.settings.langFonts);
+  return rows.findIndex((r) => rowAppliesTo(r, 'screenplay')
+    && normalizeRange(r.range) === SP_THAI_RANGE);
 }
-/** เปิด/ปิดตัวปรับสัดส่วน (หรือแก้ค่าบางตัวแล้วใช้ผลทันที) */
+export function spThaiCfg() {
+  const rows = normalizeLangFonts(state.settings.langFonts);
+  const i = spThaiRowIndex();
+  return i >= 0 ? rows[i] : { enabled: false, size: SP_THAI_SIZE, family: '' };
+}
+/** แก้ค่าของแถวนั้นแล้วใช้ผลทันที (สร้างแถวให้ถ้ายังไม่มี) */
 export function setSpThaiFont(patch) {
-  state.settings.spThaiFont = normalizeSpThai({ ...spThaiCfg(), ...(patch || {}) });
+  const rows = normalizeLangFonts(state.settings.langFonts);
+  let i = spThaiRowIndex();
+  if (i < 0) {
+    rows.push(normalizeLangFonts([{ id: 'sp-thai', label: tt('ui.common.msg8'),
+      range: SP_THAI_RANGE, target: 'screenplay', family: SP_THAI_FALLBACKS.join(', '),
+      system: true, size: SP_THAI_SIZE }])[0]);
+    i = rows.length - 1;
+  }
+  rows[i] = normalizeLangFonts([{ ...rows[i], ...(patch || {}) }])[0];
+  state.settings.langFonts = rows;
   applySettings();
   refreshSpView();
   saveProjectMeta(); syncMenuToggles(); refreshToolbar();
-  return state.settings.spThaiFont;
+  return rows[i];
 }
 export function toggleSpThaiFont(on) {
   const c = spThaiCfg();
@@ -1269,9 +1347,8 @@ export function updatePageNumberHint() {
   // ป้ายบนเส้นคั่นหน้าและมุมมองหน้ากระดาษ ทุกที่จึงเขียนเลขเหมือนกันเป๊ะ
   const mk = t2.sp ? pageNumberLabelFor(fmt) : prosePageNumberLabelFor(fmt);
   const first = Math.max(1, Math.round(+currentStartPage(t2) || 1));
-  // [alpha.88 ข้อ 4] เว้นเฉพาะ **หน้า 1 ของบท** — ไฟล์ที่เริ่มหน้า 12 ยังได้ "12." เหมือนเดิม
-  const skipFirst = first === 1 && fmt.pageNumbers.firstPage === false;
-  const label = (isDoc && mk && !skipFirst) ? mk(first) : '';
+  // [alpha.97 ข้อ 11] ไม่มีเงื่อนไข "ข้ามหน้าแรก" อีกแล้ว
+  const label = (isDoc && mk) ? mk(first) : '';
   pane.style.setProperty('--pg-no-first', label ? JSON.stringify(label) : '""');
   return label;
 }
@@ -1734,6 +1811,18 @@ function bumpUIScale(dir) {
 }
 
 // ดู Markdown ดิบของฉากปัจจุบัน (อ่าน + คัดลอกได้ · ตรงกับไฟล์ .md ที่บันทึก)
+/**
+ * ══════ [alpha.97 ข้อ 6] ★ Markdown ดิบ — แก้ไขได้ + มีเลขบรรทัด ══════
+ *
+ * ผู้ใช้: *"Markdown ดิบ ยังได้แค่ดู แต่แก้ไขไม่ได้ ควรแก้ไขได้ และสามารถแสดงเลขบรรทัด"*
+ *
+ * ของเดิมตั้ง `ta.readOnly = true` ตรง ๆ — กล่องนี้จึงเป็นแค่หน้าต่างส่องดู
+ * ตอนนี้พิมพ์กลับได้จริง: กด "ใช้การแก้ไข" แล้วข้อความถูกพาร์สกลับเข้าเอกสาร
+ * (เส้นทางเดียวกับตอนเปิดไฟล์ — `setMarkdown()` ของตัวแก้ไขนั้น ๆ) แล้วมาร์กว่ายังไม่บันทึก
+ *
+ * เลขบรรทัดเป็นรางแยกที่ซิงก์ `scrollTop` กับ textarea — วิธีเดียวที่ทำได้กับ textarea จริง
+ * (จะใช้ ::before ไม่ได้เพราะข้อความในนั้นเป็นค่าของ element ไม่ใช่ลูกใน DOM)
+ */
 function showSourceView() {
   // ห้ามตั้งชื่อตัวแปรว่า t — จะบัง t() ของ i18n ทำให้ปุ่ม "คัดลอกทั้งหมด" พังตอนเรียก t('status.copied')
   const tab = state.active;
@@ -1743,14 +1832,48 @@ function showSourceView() {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide');
   box.append(el('div', 'k-dlg-title', tt('ui.app.markdown') + tab.title));
-  const ta = el('textarea', 'k-src-view'); ta.value = md; ta.readOnly = true;
-  box.append(ta);
+  const wrap = el('div', 'k-src-wrap');
+  const gut = el('div', 'k-src-gutter');
+  const ta = el('textarea', 'k-src-view');
+  ta.value = md;
+  ta.spellcheck = false;
+  wrap.append(gut, ta);
+  box.append(wrap);
+  const hint = el('div', 'k-hint k-src-hint', tt('ui.app.mdEditHint'));
+  box.append(hint);
+  const syncNums = () => {
+    const n = ta.value.split('\n').length;
+    if (gut.childElementCount !== n) {
+      const frag = document.createDocumentFragment();
+      for (let i = 1; i <= n; i++) frag.append(el('div', null, String(i)));
+      gut.replaceChildren(frag);
+    }
+    gut.scrollTop = ta.scrollTop;
+  };
+  ta.addEventListener('input', syncNums);
+  ta.addEventListener('scroll', () => { gut.scrollTop = ta.scrollTop; });
+  syncNums();
   const btns = el('div', 'k-dlg-btns');
   const cp = el('button', null, tt('ui.common.copyAll'));
+  const ap = el('button', null, tt('ui.app.mdApply'));
   const cl = el('button', 'k-ok', tt('ui.common.close'));
   cp.onclick = () => { ta.select(); document.execCommand('copy'); setStatus(t('status.copied')); };
+  ap.onclick = () => {
+    if (ta.value === md) { setStatus(tt('ui.app.mdNoChange')); return; }
+    try {
+      src.setMarkdown(ta.value);
+      markDirty(tab);
+      // เนื้อหาถูกแทนทั้งก้อน — decoration/ตำแหน่งที่จำไว้เป็นของเอกสารเก่าทั้งหมด
+      if (tab.editor) { refreshMentions(tab.editor.view); bumpProseLayout(); }
+      resetViewScroll(tab);
+      repaginateFast(tab);
+      scheduleCount();
+      setStatus(tt('ui.app.mdApplied'));
+      ov.remove();
+    } catch (err) { setStatus(tt('ui.app.mdApplyFail') + (err && err.message)); }
+  };
   cl.onclick = () => ov.remove();
-  btns.append(cp, cl); box.append(btns); ov.append(box); document.body.append(ov);
+  btns.append(cp, ap, cl); box.append(btns); ov.append(box); document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   ta.focus();
 }
@@ -2490,7 +2613,7 @@ export async function captureSession() {
   s.ui = {
     ls: lsAll,
     zoom: pageScale,
-    paper: state.settings.paperMode !== false,
+    paper: true,
     reading: document.body.classList.contains('reading-mode'),
     focus: document.body.classList.contains('focus-mode'),
   };
@@ -5018,7 +5141,7 @@ export function syncMenuToggles() {
   try {
     const ps = panelToggleState();
     const payload = {
-      paperMode: state.settings.paperMode !== false,
+      paperMode: true,
       theme: currentTheme(),                        // [60r2 ข้อ 10]
       fabEnabled: state.settings.fabEnabled !== false,   // [60r2 ข้อ 9]
       readingMode: document.body.classList.contains('reading-mode'),
@@ -5061,15 +5184,21 @@ export function syncMenuToggles() {
 }
 
 // ---------------- โหมดหน้ากระดาษ (กระดาษขาว high-contrast แบบสคริปต์จริง) ----------------
-function togglePaper(on) {
-  // ค่าเริ่มต้น (undefined) = เปิด → นิพจน์นี้ต้องอ่านสถานะ "ที่เห็นอยู่จริง" ก่อนกลับด้าน
-  const v = on ?? !(state.settings.paperMode !== false);
-  state.settings.paperMode = v;
-  document.body.classList.toggle('paper-mode', v);
-  saveProjectMeta();
-  const btn = $('#tb-paper'); if (btn) btn.classList.toggle('on', v);
-  syncMenuToggles();
-  setStatus(v ? tt('ui.app.modePagePaperOpen') : tt('ui.app.modePagePaperClose'));
+/**
+ * ══════ [alpha.99 ข้อ 2] ★ "โหมดหน้ากระดาษ" ถูกถอดออกทั้งชุด ══════
+ *
+ * ผู้ใช้: *"เราบอกว่า mode หน้ากระดาษ Ctrl+Alt+U ลบออก เพราะมันซ้ำกับ layout"*
+ *
+ * สวิตช์นี้ทำเรื่องเดียวกับการสลับ **มุมมองปกติ ↔ มุมมองจัดหน้า** ทุกประการ
+ * (ปกติ = สายเนื้อหาต่อเนื่อง รอยต่อเป็นเส้นประ · จัดหน้า = แผ่นกระดาษจริง)
+ * เหลือไว้สองทางทำเรื่องเดียวกันคือที่มาของความสับสนทั้งหมดในสามรอบที่ผ่านมา
+ *
+ * คลาส `paper-mode` ยังอยู่บน `<body>` **ตลอดเวลา** เพราะเป็นนิยามของ "หน้าตากระดาษ"
+ * ที่กฎ CSS อีกหลายสิบข้อใช้อยู่ (สีกระดาษ · หมึก · โหมดอ่าน) — แค่ไม่มีใครปิดมันได้อีกแล้ว
+ */
+export function applyPaperClass() {
+  document.body.classList.add('paper-mode');
+  return true;
 }
 
 // ---------------- [alpha.60r2 ข้อ 10] ธีมของโปรแกรม (Dark / Light) ----------------
@@ -8002,7 +8131,7 @@ function bindTabStripMenus() {
 }
 
 // ---------------- toolbar / statusbar ----------------
-const FMTS = ['bold', 'italic', 'underline', 'strike'];
+const FMTS = ['bold', 'italic', 'underline', 'strike', 'sup', 'sub'];
 
 // ตั้ง title ปุ่ม toolbar ให้แสดง shortcut (เรียกตอนเริ่ม + หลังเปลี่ยนภาษา)
 function updateToolbarTitles() {
@@ -8011,6 +8140,8 @@ function updateToolbarTitles() {
   $('#tb-italic').title = withShortcut('toolbar.italic', 'KeyI', true, false);
   $('#tb-underline').title = withShortcut('toolbar.underline', 'KeyU', true, false);
   $('#tb-strike').title = withShortcut('toolbar.strike', 'KeyX', true, true);
+  $('#tb-sup').title = withShortcut('toolbar.superscript', 'Equal', 'ctrl+alt', false);
+  $('#tb-sub').title = withShortcut('toolbar.subscript', 'Minus', 'ctrl+alt', false);
   $('#tb-ul').title = withShortcut('toolbar.bulletList', 'Digit8', true, true);
   $('#tb-ol').title = withShortcut('toolbar.numberList', 'Digit7', true, true);
   $('#tb-quote').title = t('toolbar.quote');
@@ -8020,7 +8151,6 @@ function updateToolbarTitles() {
   $('#tb-align-justify').title = withShortcut('toolbar.alignJustify', 'KeyJ', true, true);
   // ปุ่มโหมด
   // [alpha.60r2 ข้อ 10] Ctrl+Shift+P ย้ายไปเป็น "ธีมสว่าง/มืด" — ปุ่มกระดาษไม่มีคีย์ลัดแล้ว
-  $('#tb-paper').title = t('toolbar.paperMode');
   applyTheme();                       // ตั้ง title/สถานะของปุ่มธีมตามภาษาปัจจุบัน
   $('#tb-mode').title = t('toolbar.toggleMode') + ' (Ctrl+Shift+M)';
   // ปุ่มเครื่องมือ
@@ -8074,9 +8204,21 @@ function refreshToolbar() {
               || state.active?.wiki?.secEditors?.[0]?.k;
   const marks = ed ? ed.activeMarks() : wkEd ? wkEd.activeMarks() : {};
   for (const f of FMTS) {
-    const key = { bold: 'strong', italic: 'em', underline: 'underline', strike: 'strike' }[f];
-    $('#tb-' + f).classList.toggle('on', !!marks[key]);
+    const key = { bold: 'strong', italic: 'em', underline: 'underline', strike: 'strike',
+                  sup: 'sup', sub: 'sub' }[f];
+    const bf = $('#tb-' + f);
+    if (bf) bf.classList.toggle('on', !!marks[key]);
   }
+  // ═══ [alpha.97 ข้อ 3+5] ★ ปุ่มโครงสร้างต้องบอกสถานะเหมือน B I U ═══
+  // เดิมสี่ปุ่มนี้ไม่เคยติดไฟเลย ผู้ใช้จึงไม่มีทางรู้ว่า "ตอนนี้อยู่ในรายการอยู่นะ"
+  // — ซึ่งเป็นครึ่งหนึ่งของเหตุผลที่รู้สึกว่ามันไม่ใช่สวิตช์ (อีกครึ่งคือกดแล้วถอดไม่ได้)
+  // [alpha.98 ข้อ 4] บทภาพยนตร์มีรายการเป็น "คำนำหน้าในข้อความ" — สถานะมาจาก sp.curList()
+  let spList = '';
+  if (sp) { try { spList = sp.curList(); } catch {} }
+  $('#tb-ul')?.classList.toggle('on', marks.list === 'ul' || spList === 'ul');
+  $('#tb-ol')?.classList.toggle('on', marks.list === 'ol' || spList === 'ol');
+  $('#tb-quote')?.classList.toggle('on', !!marks.quote);
+  $('#tb-img')?.classList.toggle('on', !!marks.image);
   const sel = $('#tb-style');
   if (marks.block) sel.value = marks.block;
   // ไฮไลต์ปุ่มจัดหน้าตามบล็อกปัจจุบัน (นิยายอ่านจาก activeMarks · บทหนังจาก curAlign)
@@ -8100,7 +8242,7 @@ function refreshToolbar() {
     spView.value = currentSpView();
   }
   document.querySelectorAll('.tb').forEach((b) => {
-    if (b.id === 'tb-paper' || b.id === 'tb-theme') return;   // โหมดหน้ากระดาษ/ธีม ใช้ได้ตลอด
+    if (b.id === 'tb-theme') return;                          // ธีมใช้ได้ตลอด
     // บั๊ก #1: ปุ่มแยกหน้าจอเคยถูกปิดไปด้วยตอนแท็บที่เปิดอยู่ไม่ใช่เอดิเตอร์ (แดชบอร์ด/ผัง/คลังรูป)
     // ทั้งที่แยกจอใช้กับแท็บพวกนั้นได้ → ใช้ได้ตราบใดที่มีแท็บเปิดอยู่อย่างน้อยหนึ่ง
     if (b.id === 'tb-split') { b.classList.toggle('dis', state.tabs.size === 0); return; }
@@ -8135,7 +8277,6 @@ function refreshToolbar() {
     tbInd.classList.toggle('on', proseIndentOn());
     tbInd.classList.toggle('dis', !ed);
   }
-  $('#tb-paper').classList.toggle('on', state.settings.paperMode !== false);
   applyTheme();                       // [60r2 ข้อ 10] ปุ่มธีมสะท้อนสถานะจริง
   // ปุ่มสวิตช์อื่น ๆ ต้องสะท้อนสถานะจริงด้วย ไม่งั้นจุดบอกสถานะโกหก
   $('#tb-read')?.classList.toggle('on', document.body.classList.contains('reading-mode'));
@@ -8324,14 +8465,35 @@ function tuneProsePagePads(t) {
   const firstBlk = [...pm.children].find((e) => e.nodeType === 1
     && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
   let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+  // ★ [alpha.97 ข้อ 10] **กล่องเส้นคั่นเองก็สูง** — ตัวเลขนี้คือหัวใจของ "หน้าไม่เท่ากัน"
+  //
+  // ผู้ใช้: *"หน้า 2 มันเริ่มล้น แต่เล็กจนไม่สังเกต พอหน้า 3 เริ่มเห็นแล้ว
+  //          การตัดหน้าไม่ผิด แต่การ render ผิด"* — ถูกทุกคำ และต้นตออยู่ตรงนี้บรรทัดเดียว
+  //
+  // ระยะจาก "หัวเส้นคั่น i" ถึง "หัวเส้นคั่น i+1" = ความสูงกล่องเส้นคั่น i + เนื้อหน้า i+1 + pad
+  // ของเดิมเทียบระยะนั้นกับ `target` (= ความสูงพื้นที่พิมพ์) เฉย ๆ **ราวกับกล่องเส้นคั่นสูง 0**
+  // ซึ่งจริงเฉพาะ "มุมมองปกติ + จุดตัดระดับบล็อก" เท่านั้น:
+  //   · มุมมองจัดหน้า      กล่อง = ขอบล่าง + ช่องว่างพื้นโต๊ะ + ขอบบน ≈ **220px**
+  //   · จุดตัดกลางย่อหน้า  แถบ k-pb-inline สูงหนึ่งบรรทัด ≈ **30px**
+  // ส่วนที่ไม่ได้นับถูกหักออกจาก pad ของหน้าถัดไปทุกครั้ง → แผ่นเตี้ยลงเรื่อย ๆ ทีละหน้า
+  // (หน้าแรกยังตรงเพราะไม่มีเส้นคั่นอยู่ก่อนหน้ามัน — ตรงกับที่ผู้ใช้เห็นเป๊ะ)
+  //
+  // ★★ [alpha.98 ข้อ 7] ตั้งแต่ pad เป็น **ความสูงของกล่อง** (ไม่ใช่ margin เหนือกล่อง)
+  // กติกาการชดเชยก็เปลี่ยนจาก "บวกเพิ่ม" เป็น **"กำหนดค่าตรง ๆ"**:
+  //   ที่ว่างท้ายหน้า i = ความสูงพื้นที่พิมพ์ − เนื้อหาที่หน้า i ใช้ไปจริง
+  // เพราะ `pad` อยู่ *ใต้* ขอบบนของกล่องแล้ว มันจึงไม่มีผลกับระยะที่เพิ่งวัด (ซึ่งจบที่ขอบบน)
+  // — ถ้ายังใช้ `pad += delta` เหมือนเดิม ตัวชดเชยจะไปแก้กล่องผิดตัว (เหลื่อมไปหนึ่งช่อง)
+  // แล้วไม่มีวันลงตัว (อาการ: หน้าไม่เท่ากันแบบสุ่ม ๆ เมื่อมีหัวข้อปน)
+  let prevH = 0;
   let changed = false;
   for (let i = 0; i < els.length; i++) {
     const y = lineY(els[i]);
-    const delta = target - (y - prev);
+    // ระยะจาก **ก้นกล่องก่อนหน้า** ถึงขอบบนกล่องนี้ = เนื้อหาที่หน้านี้ใช้ไปจริง
+    const used = y - prev - prevH;
     prev = y;
-    if (Math.abs(delta) < 0.5) continue;
-    const want = Math.max(0, Math.round((num(list[i].pad, 0) + delta) * 10) / 10);
-    if (Math.abs(want - num(list[i].pad, 0)) < 0.05) continue;
+    prevH = els[i].getBoundingClientRect().height / z;
+    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
     list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
     changed = true;
   }
@@ -8342,20 +8504,95 @@ function tuneProsePagePads(t) {
 }
 
 /**
+ * [alpha.98 ข้อ 7] วนชดเชยจนระยะลงตัว — ตั้งแต่ pad เป็น "ความสูงจริง" มันตอบสนองแบบ 1:1
+ * รอบเดียวก็ตรงแล้วในทางทฤษฎี · วนซ้ำอีกไม่เกินสองรอบไว้กันเศษจากการปัดครึ่งพิกเซล
+ * และกันกรณีที่ระยะขอบของบล็อกที่ประกบเปลี่ยนเพราะกล่องเส้นคั่นเพิ่งโตขึ้น
+ */
+function tuneProsePagePadsLoop(t, rounds = 2) {
+  let n = 0;
+  for (let i = 0; i < rounds; i++) {
+    _padTuneUntil = 0;                     // ตัวกันวนมีไว้กัน "จัดหน้า → ชดเชย → จัดหน้า"
+    if (!tuneProsePagePads(t)) break;      // ไม่ขยับแล้ว = ลงตัว
+    n++;
+  }
+  _padTuneUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 400;
+  return n;
+}
+
+/**
+ * ══════ [alpha.97 ข้อ 9] ★ ตรึงเคอร์เซอร์ไว้ที่เดิม "บนจอ" ระหว่างจัดหน้า ══════
+ *
+ * ผู้ใช้: *"scroll bar ไม่ตาม cursor เมื่อกดวาง"*
+ *
+ * ProseMirror สั่ง `scrollIntoView()` ให้ตอนวางอยู่แล้ว และมันทำงานถูกต้อง — ปัญหาเกิด
+ * **หลังจากนั้น**: ตัวจัดหน้าเดินตามมาอีกไม่กี่ร้อยมิลลิวินาที แล้วแทรก "ที่ว่างท้ายหน้า"
+ * (`--k-pb-pad`) กับแถบคั่นหน้าเข้าไป **เหนือ** เคอร์เซอร์ ทุกอย่างใต้มันจึงเลื่อนลง
+ * ตามความสูงที่เพิ่งงอกขึ้นมา ส่วนแถบเลื่อนไม่ขยับเลยเพราะไม่มีใครบอกมัน
+ * = ตัวหนังสือหนีลงไปจากจอทั้งที่เพิ่งเลื่อนมาให้เห็นเมื่อกี้
+ *
+ * แก้ตรงจุด: จำ "เคอร์เซอร์อยู่สูงจากขอบบนกล่องเลื่อนเท่าไร" ก่อนแตะ DOM แล้วชดเชย
+ * ส่วนต่างคืนหลังวาดเสร็จ · ตรึงเฉพาะตอนตัวแก้ไขถือโฟกัสและเคอร์เซอร์เห็นอยู่จริง
+ * (ไม่งั้นจะไปแย่งแถบเลื่อนตอนผู้ใช้กำลังอ่านที่อื่น)
+ */
+function proseCaretAnchor(t) {
+  const v = t && t.editor && t.editor.view;
+  if (!v || !v.dom || !v.dom.isConnected) return null;
+  const sc = t.pane;
+  if (!sc || !sc.isConnected) return null;
+  try {
+    if (!v.hasFocus()) return null;
+    const head = v.state.selection.head;
+    const c = v.coordsAtPos(head);
+    const box = sc.getBoundingClientRect();
+    if (c.bottom < box.top || c.top > box.bottom) return null;   // ไม่เห็นอยู่แล้ว = ไม่ต้องตรึง
+    return { sc, y: c.top - box.top, head };
+  } catch { return null; }
+}
+function releaseCaretAnchor(t, a) {
+  if (!a) return false;
+  const v = t && t.editor && t.editor.view;
+  if (!v || !v.dom || !v.dom.isConnected || !a.sc.isConnected) return false;
+  try {
+    const c = v.coordsAtPos(Math.min(a.head, v.state.doc.content.size));
+    const dy = (c.top - a.sc.getBoundingClientRect().top) - a.y;
+    if (Math.abs(dy) < 0.5) return false;
+    const max = Math.max(0, a.sc.scrollHeight - a.sc.clientHeight);
+    a.sc.scrollTop = Math.min(Math.max(0, a.sc.scrollTop + dy), max);
+    return true;
+  } catch { return false; }
+}
+
+/**
  * [alpha.58r บั๊ก 20 · แยกออกมาใน alpha.60r2 ข้อ 3] จัดหน้าเอกสาร "นิยาย" + วาดเส้นคั่นหน้า
  * @returns {number} จำนวนหน้า (0 = คำนวณไม่ได้)
  */
 function repaginateProseNow(t) {
   if (!t || !t.editor) return 0;
+  // [alpha.97 ข้อ 9] จำตำแหน่งเคอร์เซอร์บนจอไว้ก่อน — เส้นคั่น/ที่ว่างท้ายหน้าที่กำลังจะแทรก
+  // อาจงอกขึ้นเหนือมันแล้วดันจอหนี
+  const caret = proseCaretAnchor(t);
   try {
     const spf = spFormat();
     // [alpha.82] ทางหลัก — วัดของจริงบนจอ (ตัดตามบรรทัด · ตัดกลางย่อหน้าได้)
-    const mz = proseMeasured(t, spf);
-    if (mz) {
+    // ══ [alpha.98 ข้อ 8] ★ เข้า "โหมดวัด" ครั้งเดียวต่อการจัดหน้าหนึ่งรอบ ══
+    //
+    // ผู้ใช้: *"performance issues ตอนเราทำ 40 หน้า โดยที่ไม่มีตัวหนังสือเลยนะ กระตุกมาก ๆ"*
+    //
+    // `withMeasureMode()` เพิ่ม/ถอดคลาสบน `<body>` ซึ่งบังคับให้เบราว์เซอร์คิดสไตล์ใหม่
+    // **ทั้งเอกสาร** สองครั้งต่อการเข้า-ออกหนึ่งรอบ · ของเดิมเข้า-ออกถึงสามรอบต่อการจัดหน้า
+    // หนึ่งครั้ง (ตอนวัด · ตอนหั่นหน้า · ตอนแปลงพิกัดกลับ) = คิดสไตล์ใหม่ทั้งเอกสาร 6 รอบ
+    // ครอบทั้งชุดไว้ในรอบเดียว — ชั้นในเห็นว่ามีคลาสอยู่แล้วจึงไม่ทำอะไรซ้ำ (ออกแบบมาให้ซ้อนได้)
+    const mzAll = withMeasureMode(() => {
+      const m = proseMeasured(t, spf);
+      if (!m) return null;
       resetCutFail();
       // [alpha.93 ข้อ 5] ส่งความสูงพื้นที่พิมพ์เข้าไปด้วย → แต่ละเส้นคั่นรู้ว่าต้องอมที่ว่างเท่าไร
-      const list82 = proseBreakList(t.editor.view, mz.blocks, mz.pages,
-                                    currentStartPage(t), mz.contentHeight);
+      return { m, list: proseBreakList(t.editor.view, m.blocks, m.pages,
+                                       currentStartPage(t), m.contentHeight) };
+    });
+    const mz = mzAll && mzAll.m;
+    if (mz) {
+      const list82 = mzAll.list;
       // [alpha.82] ตัวรายงานสำหรับไล่บั๊ก "จัดหน้าซ้ำได้คนละคำตอบ"
       // แปลงพิกัดกลับไม่สำเร็จจะถูกทิ้งเงียบ ๆ → ต้องเห็นว่าหน้ากับเส้นคั่นห่างกันแค่ไหน
       state._mzDiag = { path: 'measured', pages: mz.pages.length, breaks: list82.length,
@@ -8378,7 +8615,8 @@ function repaginateProseNow(t) {
       // [alpha.93 ข้อ 5] ทาที่ว่างท้ายหน้าลงกล่องที่วาดแล้ว + เก็บเศษที่โมเดลเดาพลาด
       // (ต้องรอให้เบราว์เซอร์วาดเส้นคั่นก่อนถึงจะวัดได้ — บทเรียน "อย่าวัดทันทีหลังสั่งวาด")
       requestAnimationFrame(() => {
-        try { applyProsePagePads(t.editor.view.dom); tuneProsePagePads(t); } catch {}
+        try { applyProsePagePads(t.editor.view.dom); tuneProsePagePadsLoop(t); } catch {}
+        releaseCaretAnchor(t, caret);          // [alpha.97 ข้อ 9] ชดเชยความสูงที่เพิ่งงอก
       });
       return mz.pages.length;
     }
@@ -8395,6 +8633,7 @@ function repaginateProseNow(t) {
     if (changed || nChanged2) refreshProsePageBreaks(t.editor.view);
     setLayoutPageCount(t, ppg.count);      // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();
+    requestAnimationFrame(() => releaseCaretAnchor(t, caret));
     return ppg.count;
   } catch (e) { log('warn', tt('ui.app.pageNovelNotOk'), e); return 0; }
 }
@@ -8419,6 +8658,16 @@ let _fastPageJob = 0;
 function repaginateOnEnter(tab, ev) {
   if (!ev || ev.key !== 'Enter' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   if (_fastPageJob) return;
+  // ══ [alpha.98 ข้อ 8] ★ เอกสารยาวมากอย่าจัดหน้า **ทันที** ทุกครั้งที่กด Enter ══
+  //
+  // ผู้ใช้: *"performance issues ตอนเราทำ 40 หน้า โดยที่ไม่มีตัวหนังสือเลยนะ กระตุกมาก ๆ"*
+  //
+  // ต้นตอไม่ใช่การวาดหน้ากระดาษ (วัดแล้ว: เลื่อนจอเท่ากับโหมดร่างเป๊ะ) แต่เป็น **การจัดหน้า
+  // หนึ่งรอบใช้เวลา ~74ms ที่ 80 หน้า** แล้วทางลัด "กด Enter = จัดหน้าเดี๋ยวนี้" ยิงทุกครั้ง
+  // → ร่างโครงเรื่องด้วยการเคาะ Enter รัว ๆ จึงค้างทุกครั้งที่เคาะ
+  // เอกสารสั้น (ส่วนใหญ่) ยังทันใจเหมือนเดิม เพราะจัดหน้าเสร็จในไม่กี่มิลลิวินาที
+  const tHeavy = tab || state.active;
+  if (tHeavy && heavyDelay(tHeavy) > 100) return;
   _fastPageJob = setTimeout(() => { _fastPageJob = 0; try { repaginateFast(tab); } catch {} }, 0);
 }
 
@@ -8607,6 +8856,32 @@ function closeFind() {
   state.active?.editor?.focus();
 }
 
+/**
+ * ══ [alpha.97 ข้อ 7] ★ รูปในคลิปบอร์ดอยู่ที่ `items` ไม่ใช่ `files` ══
+ *
+ * ผู้ใช้: *"copy รูป แล้ววางไม่ได้"*
+ *
+ * `clipboardData.files` มีของก็ต่อเมื่อสิ่งที่คัดลอกมาเป็น **ไฟล์จริง** (ลากจาก Explorer /
+ * Ctrl+C ที่ไอคอนไฟล์) · แต่การ "คัดลอกรูป" จากเบราว์เซอร์ · โปรแกรมดูรูป · เครื่องมือจับภาพ
+ * วางบิตแมปดิบลงคลิปบอร์ด ซึ่งโผล่ที่ `clipboardData.items` เท่านั้น (`kind:'file'`)
+ * — ตัวกรองเดิมจึงเห็นเป็นศูนย์รายการทุกครั้ง แล้วปล่อยผ่านไปเงียบ ๆ
+ *
+ * ⚠ ต้องเรียก `getAsFile()` **ก่อน await ตัวแรก** — DataTransfer ตายทันทีที่จบรอบอีเวนต์
+ * @returns {File[]}
+ */
+function clipboardImages(dt) {
+  if (!dt) return [];
+  const isImg = (f) => f && typeof f.type === 'string' && f.type.startsWith('image/');
+  const out = [...(dt.files || [])].filter(isImg);
+  if (out.length) return out;
+  for (const it of [...(dt.items || [])]) {
+    if (it.kind !== 'file' || !String(it.type || '').startsWith('image/')) continue;
+    const f = it.getAsFile();
+    if (isImg(f)) out.push(f);
+  }
+  return out;
+}
+
 // วาง/ลากไฟล์รูปเข้าเอกสาร → เขียนเข้าคลัง Images (base64) แล้วแทรกอ้างอิงแบบสัมพัทธ์
 async function importImageFile(file, t) {
   try {
@@ -8626,7 +8901,19 @@ async function importImageFile(file, t) {
   } catch (err) { setStatus(tt('ui.app.insertImageNotOk') + err.message); }
 }
 
+/**
+ * [alpha.97 ข้อ 5] ★ ปุ่มแทรกรูปเป็น "สวิตช์" — เคอร์เซอร์แตะรูปอยู่ = กดแล้วเอารูปออก
+ * (ไม่ใช่เปิดตัวเลือกรูปซ้อนเข้าไปอีกรูป ซึ่งเป็นของเดิม)
+ */
 async function insertImage() {
+  const t0 = state.active;
+  const ed0 = t0 && t0.editor;
+  if (ed0 && ed0.removeFigure()) {
+    markDirty(t0);
+    refreshToolbar();
+    setStatus(tt('ui.app.imageRemoved'));
+    return;
+  }
   const it = await pickImage(state.root);          // เลือกจากคลังแบบเห็นรูปจริง (แบบ v1)
   if (!it) return;
   return insertImageByName(it.file, it.caption);
@@ -9197,7 +9484,6 @@ async function handleCommand(ch, ...a) {
     case 'network': openNetwork(); break;
     case 'planner': openPlanner(); break;
     case 'focus-mode': toggleFocus(); break;
-    case 'paper-mode': togglePaper(); break;
     case 'toggle-theme': toggleTheme(a[0]); break;      // [60r2 ข้อ 10] Ctrl+Shift+P
     case 'sync-scene-meta': await syncSceneMetaFromFiles(); break;   // [60r2 ข้อ 13]
     // [alpha.60r3 ข้อ 4] ชุดเครื่องมือผู้แปล (JSON ↔ CSV)
@@ -9676,10 +9962,11 @@ function makeDraggable(elm, handle, opts = {}) {
 // map: element ID -> shortcut ID (matching SHORTCUTS table)
 const TB_SC_MAP = {
   'tb-bold': 'fmt:bold', 'tb-italic': 'fmt:italic', 'tb-underline': 'fmt:underline',
-  'tb-strike': 'fmt:strike', 'tb-ul': 'fmt:ul', 'tb-ol': 'fmt:ol',
+  'tb-strike': 'fmt:strike', 'tb-sup': 'fmt:sup', 'tb-sub': 'fmt:sub',
+  'tb-ul': 'fmt:ul', 'tb-ol': 'fmt:ol',
   'tb-align-left': 'fmt:align:left', 'tb-align-center': 'fmt:align:center',
   'tb-align-right': 'fmt:align:right', 'tb-align-justify': 'fmt:align:justify',
-  'tb-paper': 'paper-mode', 'tb-theme': 'toggle-theme', 'tb-gsearch': 'global-search', 'tb-mode': 'toggle-format',
+  'tb-theme': 'toggle-theme', 'tb-gsearch': 'global-search', 'tb-mode': 'toggle-format',
   'tb-close': 'close-tab', 'tb-focus': 'focus-mode',
   'tb-typewriter': 'typewriter', 'tb-quickopen': 'quick-open',
   'tb-gallery': 'gallery',
@@ -9736,8 +10023,8 @@ function setupFloatingFormatBar() {
   bar.append(handle);
   // ลำดับปุ่มตามภาพ: [grip] 📄กระดาษ · 📖โหมด · สไตล์ · B I U S · •≣ 1≣ · ❝ · ← ↔ → ☰ · 🖼 · </>
   // ลำดับปุ่มตาม Layout ใหม่: [📄] [📖▾] | [style] | [B I U S] | [•≡ 1≡ ❝] | [⬅ ⬌ ➡ ☰] | [🖼 </> 📖 🔍]
-  ['#tb-sp-elem', '#sp-view-select', '#tb-paper', '#tb-mode', '#tb-style', '#tb-case',
-   '#tb-bold', '#tb-italic', '#tb-underline', '#tb-strike',
+  ['#tb-sp-elem', '#sp-view-select', '#tb-mode', '#tb-style', '#tb-case',
+   '#tb-bold', '#tb-italic', '#tb-underline', '#tb-strike', '#tb-sup', '#tb-sub',
    '#tb-ul', '#tb-ol', '#tb-quote',
    '#tb-align-left', '#tb-align-center', '#tb-align-right', '#tb-align-justify',
    // [alpha.84 ข้อ 3+4] สวิตช์ที่ผู้ใช้ขอให้อยู่ "ใกล้มือ" — ต่อเนื่อง (บท) · ย่อหน้า (นิยาย)
@@ -9925,6 +10212,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   tb('#tb-bold', 'bold'); tb('#tb-italic', 'italic');
   tb('#tb-underline', 'underline'); tb('#tb-strike', 'strike');
+  // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
+  tb('#tb-sup', 'sup'); tb('#tb-sub', 'sub');
   tb('#tb-ul', 'ul'); tb('#tb-ol', 'ol'); tb('#tb-quote', 'quote');
   tb('#tb-align-left', 'align', 'left'); tb('#tb-align-center', 'align', 'center');
   tb('#tb-align-right', 'align', 'right'); tb('#tb-align-justify', 'align', 'justify');
@@ -10029,11 +10318,9 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#tb-source').onclick = () => showSourceView();
   $('#tb-theme') && ($('#tb-theme').onclick = () => toggleTheme());   // [60r2 ข้อ 10]
-  $('#tb-paper').onclick = () => togglePaper();
   // [alpha.84 ข้อ 3+4] สวิตช์ใหม่บนแถบรูปแบบ
   const bCont = $('#tb-sp-cont'); if (bCont) bCont.onclick = () => toggleContinueds();
   const bInd = $('#tb-indent'); if (bInd) bInd.onclick = () => toggleProseIndent();
-  $('#tb-paper').classList.toggle('on', state.settings.paperMode !== false);
   // ---- ปุ่มโหมดอ่าน + ค้นหาทั้งโปรเจกต์ ----
   $('#tb-read').onclick = () => toggleReading();
   $('#tb-gsearch').onclick = () => handleCommand('global-search');
@@ -10227,8 +10514,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // วาง (paste) / ลาก-วาง (drop) รูปเข้าเอกสาร → คัดลอกเข้าคลัง Images แล้วแทรกอัตโนมัติ
   document.addEventListener('paste', async (e) => {
-    const t = state.active; if (!t?.editor || !state.root) return;
-    const imgs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+    const t = state.active;
+    // [alpha.97 ข้อ 7] บทภาพยนตร์ก็แทรกรูปได้ (SPEditor มี insertImage มาตั้งแต่ .24)
+    // เดิมเช็ค `!t?.editor` จึงตัดแท็บบททิ้งตั้งแต่บรรทัดแรก ทั้งที่ importImageFile รองรับอยู่แล้ว
+    if (!t || !(t.editor || t.sp) || !state.root) return;
+    const imgs = clipboardImages(e.clipboardData);
     if (!imgs.length) return;
     e.preventDefault();
     for (const f of imgs) await importImageFile(f, t);
@@ -10238,8 +10528,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if ([...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault();
   });
   paneHost.addEventListener('drop', async (e) => {
-    const t = state.active; if (!t?.editor || !state.root) return;
-    const imgs = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith('image/'));
+    const t = state.active;
+    if (!t || !(t.editor || t.sp) || !state.root) return;      // [alpha.97 ข้อ 7] บทหนังด้วย
+    const imgs = clipboardImages(e.dataTransfer);
     if (!imgs.length) return;
     e.preventDefault();
     for (const f of imgs) await importImageFile(f, t);
@@ -13084,18 +13375,19 @@ async function runTest(projectPath) {
     // ---- โหมดหน้ากระดาษ (paper mode) ----
     activate(t.file);
     t.editor.setMarkdown('ค่ายผู้ลี้ภัยใหญ่กว่าที่คนข้างนอกจะจินตนาการได้\n\nเต็นท์เรียงรายต่อกันเป็นแถวยาว จนแทบมองไม่เห็นปลาย');
-    togglePaper(true);
+    setSpView('normal', true);
     await new Promise((r) => setTimeout(r, 60));
-    check('โหมดหน้ากระดาษ: body มีคลาส paper-mode', document.body.classList.contains('paper-mode'));
+    check('หน้ากระดาษ: body มีคลาส paper-mode เสมอ (ไม่มีสวิตช์ให้ปิดแล้ว)',
+          document.body.classList.contains('paper-mode'));
     const pmBg = getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor;
     check('โหมดหน้ากระดาษ: หน้าเป็นสีกระดาษนวล (ไม่ใช่พื้นมืด)', pmBg === 'rgb(245, 241, 230)', pmBg);
-    check('โหมดหน้ากระดาษ: บันทึกลง settings', state.settings.paperMode === true);
+    check('[99-2] ★★ ไม่มีสวิตช์โหมดหน้ากระดาษเหลืออยู่เลย (ปุ่ม/คีย์ลัด/คำสั่ง)',
+          !document.querySelector('#tb-paper') &&
+          !SHORTCUTS.some((x) => x[3] === 'paper-mode') &&
+          !/case ['"]paper-mode['"]/.test(String(handleCommand)));
     await kapi.testShot('/tmp/k2_paper_prose.png');
-    togglePaper(false);
-    await new Promise((r) => setTimeout(r, 40));
-    check('ปิดโหมดหน้ากระดาษได้ (พื้นมืดกลับมา)',
-          !document.body.classList.contains('paper-mode') && state.settings.paperMode === false);
-    togglePaper(true);   // เปิดกลับเป็นค่าเริ่มต้น
+    check('[99-1] ★★ มุมมองปกติมีเส้นคั่นหน้าเป็น "เส้นประ" ไม่ใช่แผ่นกระดาษแยก',
+          !document.querySelector('.pane.on').classList.contains('sp-view-layout'));
     t.editor.setMarkdown(orig);
 
     // ---- วาง/ลากรูปเข้าเอกสาร (paste/drop image import) ----
@@ -13119,16 +13411,17 @@ async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 40));
     check('แถบรูปแบบลอยแสดงเมื่อเปิดฉาก + มีปุ่มจัดรูปแบบ',
           !!floatBar && floatBar.style.display === 'flex' && !!floatBar.querySelector('#tb-bold'));
-    // ข้อ 1: ปุ่ม 📄กระดาษ · 📖โหมด · </>ซอร์ส ย้ายเข้าแถบลอยแล้ว + เรียงตามภาพ (paper→mode→style→…→source)
-    check('ย้ายปุ่ม paper/mode/source เข้าแถบลอยแล้ว',
-          !!floatBar.querySelector('#tb-paper') && !!floatBar.querySelector('#tb-mode') &&
-          !!floatBar.querySelector('#tb-source'));
+    // ข้อ 1: ปุ่ม 📖โหมด · </>ซอร์ส ย้ายเข้าแถบลอยแล้ว + เรียงตามภาพ (mode→style→…→source)
+    // [alpha.99 ข้อ 2] ปุ่ม 📄 โหมดหน้ากระดาษถูกถอดออกทั้งชุด (ซ้ำกับมุมมอง ปกติ/จัดหน้า)
+    check('ย้ายปุ่ม mode/source เข้าแถบลอยแล้ว',
+          !!floatBar.querySelector('#tb-mode') && !!floatBar.querySelector('#tb-source'));
+    check('[99-2] ★ ไม่มีปุ่มโหมดหน้ากระดาษในแถบลอยแล้ว', !floatBar.querySelector('#tb-paper'));
     {
       const ids = [...floatBar.children].map((c) => c.id).filter(Boolean);
-      const iPaper = ids.indexOf('tb-paper'), iMode = ids.indexOf('tb-mode'),
+      const iView = ids.indexOf('sp-view-select'), iMode = ids.indexOf('tb-mode'),
             iStyle = ids.indexOf('tb-style'), iSrc = ids.indexOf('tb-source');
-      check('ลำดับปุ่มในแถบตรงภาพ (paper<mode<style<source)',
-            iPaper >= 0 && iPaper < iMode && iMode < iStyle && iStyle < iSrc,
+      check('ลำดับปุ่มในแถบตรงภาพ (มุมมอง<mode<style<source)',
+            iView >= 0 && iView < iMode && iMode < iStyle && iStyle < iSrc,
             JSON.stringify(ids));
     }
     await kapi.testShot('/tmp/k2_fmtbar.png');
@@ -13728,7 +14021,6 @@ async function runTest(projectPath) {
           !document.querySelector('.pane.on .sp-character .k-spell-bad'));
     await kapi.testShot('/tmp/k2_sp_fixed.png');
     // ถ่ายบทหนังในโหมดหน้ากระดาษด้วย
-    togglePaper(true); await new Promise((r) => setTimeout(r, 60));
     check('บทหนังโหมดหน้ากระดาษ: หน้าขาว',
           getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor === 'rgb(245, 241, 230)');
     await kapi.testShot('/tmp/k2_paper_sp.png');
@@ -17396,7 +17688,7 @@ async function runTest(projectPath) {
       // ---- ข้อ 1: โหมดอ่าน + โหมดหน้ากระดาษ ต้องไม่ได้หมึกดำบนพื้นดำ ----
       const scEl0 = document.querySelector('#tree .scene[data-path]');
       if (scEl0) { scEl0.click(); await new Promise((r) => setTimeout(r, 500)); }
-      togglePaper(true);
+      setSpView('normal', true);
       toggleReading(true);
       await new Promise((r) => setTimeout(r, 120));
       const pm = document.querySelector('.pane.on .ProseMirror');
@@ -17413,30 +17705,47 @@ async function runTest(projectPath) {
       check('ออกจากโหมดอ่าน → แผงข้าง/แถบบนกลับมา (ไม่มี inline display ค้าง)',
             $('#app-root').style.display === '' && $('#topbar').style.display === '' &&
             $('#k-fab').style.display === '' && !document.body.classList.contains('reading-mode'));
-      // togglePaper ต้องสลับได้จริงทั้งสองทาง (ค่าเริ่มต้น undefined = เปิด)
-      delete state.settings.paperMode;
-      togglePaper();
-      check('togglePaper: ค่าเริ่มต้น (undefined=เปิด) กดครั้งแรกต้องปิด',
-            state.settings.paperMode === false && !document.body.classList.contains('paper-mode'));
-      togglePaper();
-      check('togglePaper: กดอีกครั้งกลับมาเปิด',
-            state.settings.paperMode === true && document.body.classList.contains('paper-mode'));
+      // ═══ [alpha.99 ข้อ 1+2] ★ คืนมุมมองจัดหน้า · ตัดสวิตช์โหมดหน้ากระดาษทิ้ง ═══
+      // ผู้ใช้: *"มุมมองหน้ากระดาษปกติ … เป็นมุมมองคล้าย ๆ layout แต่ไม่แสดงการแบ่งหน้า
+      //          แต่จะใช้เส้นประบอก"* · *"mode หน้ากระดาษ Ctrl+Alt+U ลบออก เพราะซ้ำกับ layout"*
+      check('[99-2] ★★ ไม่มีปุ่มโหมดหน้ากระดาษบนแถบเครื่องมือแล้ว', !document.querySelector('#tb-paper'));
+      check('[99-2] ★★ ไม่มีคีย์ลัด Ctrl+Alt+U (paper-mode) ในตารางแล้ว',
+            !SHORTCUTS.some((x) => x[3] === 'paper-mode'),
+            JSON.stringify(SHORTCUTS.filter((x) => x[3] === 'paper-mode')));
+      check('[99-2] ★ ไม่มีคำสั่ง paper-mode ใน handleCommand แล้ว',
+            !/case ['"]paper-mode['"]/.test(String(handleCommand)));
+      check('[99-1] ★★ มุมมอง "จัดหน้า" กลับมาอยู่ในรายการแล้ว',
+            SP_VIEWS.includes('layout') && isValidView('layout'), SP_VIEWS.join(','));
+      check('[99-1] ★ และมีในกล่องเลือกมุมมองด้วย',
+            [...$('#sp-view-select').options].some((o) => o.value === 'layout'));
+      {
+        const pane99 = document.querySelector('.pane.on');
+        setSpView('normal', true);
+        await new Promise((r) => setTimeout(r, 200));
+        check('[99-1] ★★ มุมมองปกติ = ไม่มีคลาสหน้ากระดาษแยกแผ่น',
+              !pane99.classList.contains('sp-view-layout'), pane99.className);
+        check('[99-1] ★★ แต่ยังมีแถบคั่นหน้าให้เห็น (เส้นประ) ไม่ใช่หายไปเลย',
+              [...pane99.querySelectorAll('.ed-page-break')]
+                .every((e) => getComputedStyle(e).display !== 'none'));
+        setSpView('layout', true);
+        await new Promise((r) => setTimeout(r, 250));
+        check('[99-1] ★ มุมมองจัดหน้า = แผ่นกระดาษจริง (คลาสกลับมา)',
+              pane99.classList.contains('sp-view-layout'));
+        setSpView('normal', true);
+        await new Promise((r) => setTimeout(r, 150));
+      }
 
       // ══ [alpha.60r2 ข้อ 10] ธีมสว่าง/มืด — Ctrl+Shift+P ไม่ใช่โหมดหน้ากระดาษแล้ว ══
       {
         const sc = SHORTCUTS.find((x) => x[0] === 'KeyP' && x[1] === true && x[2] === true);
         check('[10] Ctrl+Shift+P ผูกกับ toggle-theme แล้ว', !!sc && sc[3] === 'toggle-theme',
               sc && sc[3]);
-        // [alpha.79] เจตนาเดิมของข้อนี้คือ "Ctrl+Shift+P ต้องไม่ใช่โหมดหน้ากระดาษแล้ว"
-        // ไม่ใช่ "ห้ามโหมดหน้ากระดาษมีคีย์ลัดเลย" — รอบ .79 ให้คีย์ใหม่ไปเป็น Ctrl+Alt+U
-        // (พื้นที่ Ctrl+Alt เพิ่งเปิดใช้ได้ในรอบนี้ · ผู้ใช้สั่งว่า "คีย์ลัดต้องมีให้ครบ")
-        check('[10] Ctrl+Shift+P ไม่ผูกกับโหมดหน้ากระดาษแล้ว',
-              !SHORTCUTS.some((x) => x[3] === 'paper-mode' && x[0] === 'KeyP' && x[1] === true && x[2] === true));
-        check('[10] โหมดหน้ากระดาษมีคีย์ลัดของตัวเอง (Ctrl+Alt+U)',
-              SHORTCUTS.some((x) => x[3] === 'paper-mode' && x[1] === 'ctrl+alt'),
+        // [alpha.99 ข้อ 2] โหมดหน้ากระดาษถูกถอดออกทั้งชุด — ไม่มีคีย์ลัด ไม่มีปุ่ม ไม่มีคำสั่ง
+        check('[99-2] ★★ ไม่มีคีย์ลัดของโหมดหน้ากระดาษเหลืออยู่เลย',
+              !SHORTCUTS.some((x) => x[3] === 'paper-mode'),
               JSON.stringify(SHORTCUTS.filter((x) => x[3] === 'paper-mode')));
         check('[10] มีปุ่มธีมบนแถบเครื่องมือ', !!$('#tb-theme'));
-        check('[10] ปุ่มโหมดหน้ากระดาษยังอยู่ (ปิดฟีเจอร์ไม่ได้ แค่ย้ายคีย์ลัด)', !!$('#tb-paper'));
+        check('[99-2] ★★ ไม่มีปุ่มโหมดหน้ากระดาษแล้ว', !$('#tb-paper'));
         // จำค่ากระดาษไว้ก่อน — ธีมต้องไม่ไปแตะมัน
         const paperBefore = document.body.classList.contains('paper-mode');
         const pmPaper = document.querySelector('.pane.on > .workspace > .ProseMirror');
@@ -17493,11 +17802,12 @@ async function runTest(projectPath) {
       check('ปุ่ม toolbar ที่เป็นสวิตช์ถูกทำเครื่องหมายไว้ (.tb-toggle)',
             document.querySelectorAll('.tb.tb-toggle').length >= 3,
             String(document.querySelectorAll('.tb.tb-toggle').length));
+      // [alpha.99 ข้อ 2] ปุ่มโหมดหน้ากระดาษถูกถอดออกแล้ว — ใช้ปุ่มธีมเป็นตัวแทนของ "สวิตช์ในแถบลอย"
       check('จุดบอกสถานะสวิตช์ตามปุ่มไปแถบลอยด้วย (ไม่ผูกกับ #toolbar)',
-            getComputedStyle($('#tb-paper'), '::after').content !== 'none',
-            getComputedStyle($('#tb-paper'), '::after').content);
-      check('ปุ่มโหมดหน้ากระดาษเป็นสวิตช์ + ติดสถานะเปิด',
-            $('#tb-paper').classList.contains('tb-toggle') && $('#tb-paper').classList.contains('on'));
+            getComputedStyle($('#tb-md-codes'), '::after').content !== 'none',
+            getComputedStyle($('#tb-md-codes'), '::after').content);
+      check('ปุ่มสวิตช์ในแถบมีคลาส tb-toggle จริง',
+            $('#tb-md-codes').classList.contains('tb-toggle'));
 
       // ---- ข้อ 16 (ลำดับปุ่มบนหัวแผง) + ข้อ 4 (พับ/ปิด) — ระบบแผงใหม่ alpha.46 ----
       const treePanelEl = () => document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
@@ -17558,7 +17868,7 @@ async function runTest(projectPath) {
 
       // ---- ข้อ 16a: tooltip ต้องลอยเหนือ trigger element (ไม่ใช่ของ OS) ----
       {
-        const host = document.querySelector('#tree .scene[title]') || $('#tb-paper');
+        const host = document.querySelector('#tree .scene[title]') || $('#tb-theme');
         const y = 400, x = 300;
         host.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }));
         await new Promise((r) => setTimeout(r, 320));
@@ -18190,75 +18500,107 @@ async function runTest(projectPath) {
       activate(t.file);
     }
 
-    // ---- [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ ----
-    // ผู้ใช้: "Courier Prime ใช้ในนิยายได้ไม่มีปัญหาทั้งไทยและละติน แต่ในบทหนังเพี้ยนมาก"
-    // เพราะสแตกของบทเริ่มด้วยฟอนต์ที่ไม่มีอักษรไทย ตัวไทยจึงตกไปฟอนต์สำรองที่เมตริกคนละชุด
-    // แล้วล้นกล่องบรรทัด line-height:1 ของบท (วัดจริง: ไทยสูงรวม 137% ของกล่อง)
+    // ---- [alpha.97 ข้อ 12] ฟอนต์ทั้งระบบรวมเป็นตารางเดียว ("ฟอนต์ตามภาษา") ----
+    // ผู้ใช้: "ฟอนต์ตัวอักษร เรามี override มั่วไปหมด · ฟอนต์นิยาย เอาออกไปใช้กับฟอนต์ตามภาษา
+    //          ดีกว่า เพราะละเอียดกว่า ... ปัญหาคือเราต้องการให้ต่างชาติใช้ด้วย"
+    // "ไทยในบทภาพยนตร์ 85%" ที่เคยเป็นระบบแยก (spThaiFont) ตอนนี้เป็นแค่แถวหนึ่งในตาราง
     {
-      const origThai84 = state.settings.spThaiFont ? { ...state.settings.spThaiFont } : null;
-      const origSpF84 = state.settings.spFontFamily || '';
+      const origLF97 = state.settings.langFonts
+        ? JSON.parse(JSON.stringify(state.settings.langFonts)) : null;
+      const origThai97 = state.settings.spThaiFont ? { ...state.settings.spThaiFont } : null;
+      const origSpF97 = state.settings.spFontFamily || '';
       state.settings.spFontFamily = '';
       state.settings.spThaiFont = null;
+      state.settings.langFonts = null;                 // = โปรเจกต์ที่ไม่เคยตั้งอะไร
       applySettings();
-      check('[84-1] เปิดใช้เป็นค่าเริ่มต้น (โปรเจกต์ที่ไม่เคยตั้งอะไรก็หายเพี้ยนทันที)',
+      check('[97-12] ค่าเริ่มต้นมีแถว "ไทยของบท 85%" เปิดไว้ให้เลย',
             spThaiCfg().enabled === true && spThaiCfg().size === 85, JSON.stringify(spThaiCfg()));
-      const st84 = document.getElementById('k-sp-thai');
-      check('[84-1] มี <style id="k-sp-thai"> พร้อม size-adjust',
-            !!st84 && st84.textContent.includes('size-adjust:85%'), st84 && st84.textContent.slice(0, 90));
-      check('[84-1] จำกัดเฉพาะช่วงอักษรไทย (ไม่แตะตัวละติน)',
-            !!st84 && st84.textContent.includes('unicode-range:U+0E00-0E7F'));
-      const spFont84 = document.documentElement.style.getPropertyValue('--sp-font');
-      check('[84-1] วงศ์ตัวปรับอยู่หน้าสุดของ --sp-font', spFont84.trim().startsWith('"K2 SP Thai"'),
-            spFont84);
-      check('[84-1] ไม่แตะฟอนต์ฝั่งนิยายเลย (นิยายไม่ได้มีปัญหานี้)',
-            !(document.documentElement.style.getPropertyValue('--ed-font') || '').includes('K2 SP Thai'),
-            document.documentElement.style.getPropertyValue('--ed-font'));
+      const stSp = document.getElementById('k-sp-fonts');
+      check('[97-12] ★ มี <style id="k-sp-fonts"> ของสแตกบท พร้อม size-adjust',
+            !!stSp && stSp.textContent.includes('size-adjust:85%'),
+            stSp && stSp.textContent.slice(0, 120));
+      check('[97-12] จำกัดเฉพาะช่วงอักษรไทย (ไม่แตะตัวละติน)',
+            !!stSp && stSp.textContent.includes('unicode-range:U+0E00-0E7F'));
+      const spFont97 = document.documentElement.style.getPropertyValue('--sp-font');
+      check('[97-12] ★ วงศ์ของบท ("K2 SP") อยู่หน้าสุดของ --sp-font',
+            spFont97.trim().startsWith('"' + SP_FAMILY + '"'), spFont97);
+      check('[97-12] ★ แถวที่เป็นของบทอย่างเดียว ต้องไม่ไหลไปสแตกนิยาย',
+            !(document.getElementById('k-lang-fonts') || {}).textContent
+            || !document.getElementById('k-lang-fonts').textContent.includes('size-adjust:85%'),
+            (document.getElementById('k-lang-fonts') || {}).textContent);
       // ตัวปรับต้องมีผลกับกล่อง .sp จริง — ไม่ใช่แค่ตัวแปร CSS ลอย ๆ
       {
         const probe = el('div', 'sp sp-action', 'ทดสอบไทย');
         document.body.appendChild(probe);
-        check('[84-1] บล็อกบทหนังใช้วงศ์ตัวปรับจริง',
-              getComputedStyle(probe).fontFamily.includes('K2 SP Thai'),
+        check('[97-12] บล็อกบทหนังใช้วงศ์ของบทจริง',
+              getComputedStyle(probe).fontFamily.includes(SP_FAMILY),
               getComputedStyle(probe).fontFamily);
         probe.remove();
       }
-      // สวิตช์ปิด/เปิด
+      // สวิตช์ปิด/เปิด (เมนู/คีย์ลัดเดิมยังใช้ได้ — ไปสลับ enabled ของแถวนั้น)
       toggleSpThaiFont(false);
-      check('[84-1] ปิดสวิตช์ → CSS หาย และวงศ์หลุดออกจากสแตก',
-            (document.getElementById('k-sp-thai').textContent || '') === '' &&
-            !document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'));
+      check('[97-12] ปิดสวิตช์ → CSS ของแถวนั้นหาย และวงศ์หลุดออกจากสแตก',
+            (document.getElementById('k-sp-fonts').textContent || '') === '' &&
+            !document.documentElement.style.getPropertyValue('--sp-font').includes(SP_FAMILY));
       toggleSpThaiFont(true);
-      check('[84-1] เปิดกลับ → กลับมาครบ',
-            document.getElementById('k-sp-thai').textContent.includes('size-adjust') &&
-            document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'));
+      check('[97-12] เปิดกลับ → กลับมาครบ',
+            document.getElementById('k-sp-fonts').textContent.includes('size-adjust') &&
+            document.documentElement.style.getPropertyValue('--sp-font').includes(SP_FAMILY));
       setSpThaiFont({ size: 92 });
-      check('[84-1] ปรับ % แล้วเห็นผลทันที + จำลง settings',
-            document.getElementById('k-sp-thai').textContent.includes('size-adjust:92%') &&
-            state.settings.spThaiFont.size === 92);
-      check('[84-1] คำสั่ง sp-thai-font มีจริงใน handleCommand',
+      check('[97-12] ปรับ % แล้วเห็นผลทันที + จำลงตาราง',
+            document.getElementById('k-sp-fonts').textContent.includes('size-adjust:92%') &&
+            spThaiCfg().size === 92);
+      check('[97-12] คำสั่ง sp-thai-font มีจริงใน handleCommand',
             /case ['"]sp-thai-font['"]/.test(String(handleCommand)));
-      // กล่องตั้งค่า → แท็บ "ฟอนต์" ต้องมีช่องจริง
+      check('[97-12] ★ ไม่มีระบบฟอนต์ไทยแยกหลงเหลือ (<style id="k-sp-thai"> หายไปแล้ว)',
+            !document.getElementById('k-sp-thai'));
+      // ── กล่องตั้งค่า → แท็บฟอนต์: แถวต้องตั้งเป้าหมาย/สัดส่วน/เลือกจากเครื่องได้ ──
       settingsDialog('fonts');
-      await new Promise((r) => setTimeout(r, 150));
-      check('[84-1] แท็บฟอนต์มีสวิตช์ + ช่อง % + ช่องเลือกฟอนต์ไทย',
-            !!document.querySelector('#st-spthai-on') && !!document.querySelector('#st-spthai-size') &&
-            !!document.querySelector('#st-spthai-family'));
-      check('[84-1] ช่องในกล่องโชว์ค่าที่ใช้อยู่จริง',
-            document.querySelector('#st-spthai-on').checked === true &&
-            +document.querySelector('#st-spthai-size').value === 92,
-            document.querySelector('#st-spthai-size').value);
-      check('[84-1] มีตัวอย่างที่ใช้ระยะบรรทัดของบทจริง (1 เท่า)',
-            !!document.querySelector('#st-spthai-sample') &&
-            getComputedStyle(document.querySelector('#st-spthai-sample')).lineHeight
-              === getComputedStyle(document.querySelector('#st-spthai-sample')).fontSize,
-            getComputedStyle(document.querySelector('#st-spthai-sample')).lineHeight);
-      document.querySelector('.k-dialog .k-cancel').click();
-      await new Promise((r) => setTimeout(r, 60));
-      check('[84-1] กดยกเลิกแล้ววงศ์ตัวปรับไม่หลุดหาย (บทเรียน alpha.78)',
-            document.documentElement.style.getPropertyValue('--sp-font').includes('K2 SP Thai'),
+      await new Promise((r) => setTimeout(r, 200));
+      const dlg97 = [...document.querySelectorAll('.k-dialog')].pop();
+      const row97 = dlg97 && dlg97.querySelector('.k-font-row');
+      check('[97-12] ★ แท็บฟอนต์มีแถวอย่างน้อยหนึ่งแถว', !!row97);
+      check('[97-12] ★ แต่ละแถวเลือกได้ว่าใช้กับโหมดไหน (นิยาย/บท/ทั้งสอง)',
+            !!row97 && !!row97.querySelector('.k-font-target') &&
+            row97.querySelector('.k-font-target').options.length === FONT_TARGETS.length);
+      check('[97-12] ★ แต่ละแถวตั้งสัดส่วน (size-adjust) ได้เอง',
+            !!row97 && !!row97.querySelector('.k-font-size'));
+      check('[97-12] ★ มีปุ่ม "จากเครื่อง" ให้จับฟอนต์ที่ลงไว้ในเครื่อง',
+            !!row97 && !!row97.querySelector('.k-font-sys'));
+      check('[97-12] ★ แถวแรก = ไทยของบท (ค่าที่เพิ่งตั้ง 92% โชว์อยู่จริง)',
+            !!row97 && row97.querySelector('.k-font-target').value === 'screenplay' &&
+            +row97.querySelector('.k-font-size').value === 92,
+            row97 && row97.querySelector('.k-font-size').value);
+      check('[97-12] ★ ช่อง "ฟอนต์นิยาย" ในแท็บรูปแบบนิยายถูกตัดทิ้งแล้ว',
+            !document.querySelector('#st-pr-font'));
+      check('[97-12] ★ ไม่มีบล็อกฟอนต์ไทยแยกในกล่องตั้งค่าแล้ว',
+            !document.querySelector('#st-spthai-on') && !document.querySelector('#st-spthai-size'));
+      dlg97.querySelector('.k-cancel').click();
+      await new Promise((r) => setTimeout(r, 80));
+      check('[97-12] กดยกเลิกแล้ววงศ์ของบทไม่หลุดหาย (บทเรียน alpha.78)',
+            document.documentElement.style.getPropertyValue('--sp-font').includes(SP_FAMILY),
             document.documentElement.style.getPropertyValue('--sp-font'));
-      state.settings.spThaiFont = origThai84;
-      state.settings.spFontFamily = origSpF84;
+      // ── รายชื่อฟอนต์จากเครื่อง (IPC ของจริง) ──
+      {
+        let sysFonts = [];
+        try { sysFonts = (await kapi.listFonts()) || []; } catch {}
+        check('[97-12] ★ อ่านรายชื่อฟอนต์จากเครื่องได้จริง (ไม่ใช่รายการฮาร์ดโค้ด)',
+              Array.isArray(sysFonts) && sysFonts.length > 5, sysFonts.length);
+        check('[97-12] ชื่อที่ได้เป็นชื่อวงศ์ ไม่ใช่ชื่อไฟล์',
+              sysFonts.every((f) => typeof f === 'string' && f && !/\.(ttf|otf|ttc)$/i.test(f)));
+        check('[97-12] เรียงแล้วและไม่ซ้ำ', new Set(sysFonts).size === sysFonts.length);
+      }
+      // ── โปรเจกต์เก่าที่มี spThaiFont ต้องถูกย้ายมาเป็นแถวโดยไม่เสียค่า ──
+      {
+        state.settings.langFonts = [];
+        const mig = migrateSpThai([], { enabled: true, size: 77, family: 'Leelawadee UI' });
+        check('[97-12] ★ ค่าเก่าของโปรเจกต์เดิมถูกย้ายมาเป็นแถว (ไม่หายไปเฉย ๆ)',
+              mig.moved === true && mig.rows[0].size === 77 &&
+              mig.rows[0].target === 'screenplay', JSON.stringify(mig.rows[0]));
+      }
+      state.settings.langFonts = origLF97;
+      state.settings.spThaiFont = origThai97;
+      state.settings.spFontFamily = origSpF97;
       applySettings();
     }
 
@@ -19255,18 +19597,18 @@ async function runTest(projectPath) {
                 pageNumberLabel(1, spFormat(), 12) === '12.' &&
                 pageNumberLabel(2, spFormat(), 12) === '13.',
                 pageNumberLabel(1, spFormat(), 12) + '/' + pageNumberLabel(2, spFormat(), 12));
-          {   // [alpha.88 ข้อ 4] "ไม่ใส่เลขหน้าแรก" = เว้นเฉพาะ **หน้า 1 ของบท**
-            //     ไม่ใช่ "หน้าแรกของไฟล์" — ไฟล์ที่เริ่มหน้า 12 ยังต้องได้ "12." เหมือนเดิม
-            const keepFp = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
-            check('[88-4] ★ ปิดเลขหน้าแรก → เว้นเฉพาะหน้า 1 จริง ๆ',
-                  pageNumberLabel(1, spFormat(), 1) === '', pageNumberLabel(1, spFormat(), 1));
-            check('[88-4] ★ …ไฟล์ที่เริ่มหน้า 12 ยังได้ "12." (กฎของ .82 ยังอยู่ครบ)',
-                  pageNumberLabel(1, spFormat(), 12) === '12.', pageNumberLabel(1, spFormat(), 12));
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-            check('[88-4] เปิดสวิตช์แล้วหน้า 1 ได้เลข "1."',
+          {   // ═══ [alpha.97 ข้อ 11] ★ ไม่มีสวิตช์ "ใส่เลขบนหน้าแรก" อีกแล้ว ═══
+            // กฎที่ผู้ใช้ให้ไว้มีข้อเดียว: **หน้าที่ไม่ใช่ฉาก ไม่มีเลขหน้า**
+            // หน้าเนื้อเรื่องจึงมีเลขทุกหน้ารวมหน้าแรก โดยไม่ต้องไปติ๊กอะไรทั้งนั้น
+            check('[97-11] ★ หน้า 1 ของเนื้อเรื่องได้เลข "1." โดยไม่ต้องตั้งค่าอะไร',
                   pageNumberLabel(1, spFormat(), 1) === '1.', pageNumberLabel(1, spFormat(), 1));
-            state.settings.spPageNumbers = keepFp;
+            check('[97-11] ★ ไฟล์ที่เริ่มหน้า 12 ยังได้ "12." เหมือนเดิม',
+                  pageNumberLabel(1, spFormat(), 12) === '12.', pageNumberLabel(1, spFormat(), 12));
+            check('[97-11] ★ ค่าเริ่มต้นไม่มีคีย์ firstPage หลงเหลือ',
+                  !('firstPage' in PAGE_NUMBER_DEFAULTS),
+                  JSON.stringify(PAGE_NUMBER_DEFAULTS));
+            check('[97-11] ★ กล่องตั้งค่าไม่มีช่องติ๊ก "ใส่เลขบนหน้าแรก" แล้วทั้งสองแท็บ',
+                  !document.querySelector('#st-pn-first') && !document.querySelector('#st-pr-pgfirst'));
           }
           check('[57a-2] เส้นคั่นหน้าในตัวแก้ไขนับต่อจากเลขเริ่มต้น (ถ้าบทยาวพอ)', (() => {
             const brk = pageBreaks();
@@ -19407,21 +19749,20 @@ async function runTest(projectPath) {
           ];
           const n = applyProjectLangFonts();
           check('[57a-5] สร้าง @font-face ตามภาษาเข้า <head>',
-                n === 1 && !!document.getElementById('k-lang-fonts'));
+                n.total === 1 && n.prose === 1 && !!document.getElementById('k-lang-fonts'),
+                JSON.stringify(n));
           const css = document.getElementById('k-lang-fonts').textContent;
           check('[57a-5] CSS มี unicode-range ของไทย + ไฟล์ที่ฝังมา',
                 css.includes('unicode-range:U+0E00-0E7F') && css.includes('CourierThaiMono.ttf'), css);
           applySettings();
           const edFont = document.documentElement.style.getPropertyValue('--ed-font');
           const spFont = document.documentElement.style.getPropertyValue('--sp-font');
-          // [alpha.84 ข้อ 1] ฝั่งบทมี "K2 SP Thai" (ตัวปรับสัดส่วนไทย) นำหน้าอีกชั้นหนึ่ง
-          // — ตั้งใจให้เป็นแบบนี้: ตัวปรับต้องชนะทุกอย่างในช่วงอักษรไทยของบท
-          check('[57a-5] วงศ์รวมถูกเอาไปนำหน้า font stack ทั้งนิยายและบทหนัง',
-                edFont.startsWith('"' + LANG_FAMILY + '"') && spFont.includes('"' + LANG_FAMILY + '"'),
-                edFont + ' | ' + spFont);
-          check('[84-1] ในบท ตัวปรับสัดส่วนไทยต้องมาก่อน "วงศ์รวมตามภาษา" เสมอ',
-                spFont.trim().startsWith('"K2 SP Thai"') &&
-                spFont.indexOf('K2 SP Thai') < spFont.indexOf(LANG_FAMILY), spFont);
+          // [alpha.97 ข้อ 12] สองสแตกมีวงศ์ของตัวเอง — แถวที่ target='all' โผล่ทั้งคู่
+          check('[57a-5] วงศ์ของนิยายถูกเอาไปนำหน้า --ed-font',
+                edFont.startsWith('"' + LANG_FAMILY + '"'), edFont);
+          check('[97-12] ★ วงศ์ของบทถูกเอาไปนำหน้า --sp-font (คนละวงศ์กับนิยาย)',
+                spFont.trim().startsWith('"' + SP_FAMILY + '"') &&
+                !spFont.includes(LANG_FAMILY), spFont);
           check('[57a-5] ยังเก็บฟอนต์เดิมไว้ท้าย stack', spFont.includes('Courier'), spFont);
           // ฟอนต์ไทยที่ฝังมาต้องโหลดได้จริง (ไม่ใช่แค่ประกาศ @font-face)
           // [alpha.78] ต้องส่ง "ข้อความไทย" ไปด้วย — @font-face ถูกจำกัด unicode-range ไว้ที่ไทย
@@ -19451,8 +19792,9 @@ async function runTest(projectPath) {
           applySettings();
           const spBefore = document.documentElement.style.getPropertyValue('--sp-font');
           const edBefore = document.documentElement.style.getPropertyValue('--ed-font');
+          // [alpha.97 ข้อ 12] แถวนี้ target = all จึงต้องโผล่ทั้งสองสแตก แต่คนละชื่อวงศ์
           check('[a78] เตรียมสภาพ: ฟอนต์ตามภาษาถูกใช้จริงทั้งบทและนิยาย',
-                spBefore.includes(LANG_FAMILY) && edBefore.includes(LANG_FAMILY),
+                spBefore.includes(SP_FAMILY) && edBefore.includes(LANG_FAMILY),
                 spBefore + ' | ' + edBefore);
           document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
           settingsDialog();
@@ -19462,7 +19804,7 @@ async function runTest(projectPath) {
           dlg.querySelector('.k-cancel').click();
           await new Promise((r) => setTimeout(r, 250));
           check('[a78] กดยกเลิกแล้วฟอนต์ตามภาษาของบทยังอยู่',
-                document.documentElement.style.getPropertyValue('--sp-font').includes(LANG_FAMILY),
+                document.documentElement.style.getPropertyValue('--sp-font').includes(SP_FAMILY),
                 document.documentElement.style.getPropertyValue('--sp-font'));
           check('[a78] กดยกเลิกแล้วฟอนต์ตามภาษาของนิยายยังอยู่',
                 document.documentElement.style.getPropertyValue('--ed-font').includes(LANG_FAMILY),
@@ -19664,6 +20006,7 @@ async function runTest(projectPath) {
 
         // ---- [58] Layout View ----
         {
+          // [alpha.99 ข้อ 1] มุมมอง "จัดหน้า" กลับมาแล้ว (ตัดสวิตช์โหมดหน้ากระดาษทิ้งแทน)
           check('[58] มีโหมด layout ในรายการมุมมอง', SP_VIEWS.includes('layout'));
           check('[58] ตัวเลือกบนแถบเครื่องมือมีโหมดจัดหน้า',
                 [...$('#sp-view-select').options].some((o) => o.value === 'layout'));
@@ -19678,7 +20021,9 @@ async function runTest(projectPath) {
           check('[58] โหมดจัดหน้ายังพิมพ์ได้ (ไม่ใช่ overlay อ่านอย่างเดียว)',
                 isEditView('layout') && !spT58.pane.querySelector(':scope > .sp-pageview'));
           const pmCS = getComputedStyle(spT58.pane.querySelector('.ProseMirror'));
-          check('[58] กระดาษเป็นสีขาวจริง', pmCS.backgroundColor === 'rgb(255, 255, 255)', pmCS.backgroundColor);
+          // [alpha.98 ข้อ 6] ใช้สีกระดาษที่ผู้ใช้ตั้ง (ครีม) ไม่ใช่ขาวตายตัวอีกแล้ว
+          check('[58] กระดาษเป็นสีกระดาษที่ตั้งไว้ ไม่ใช่พื้นมืดของธีม',
+                pmCS.backgroundColor === 'rgb(245, 241, 230)', pmCS.backgroundColor);
           check('[58] มีเงาใต้กระดาษ', pmCS.boxShadow !== 'none');
           check('[58] ระยะขอบกระดาษถูกต้อง (ซ้าย 1.5 นิ้ว บน 1 นิ้ว)',
                 Math.abs(parseFloat(pmCS.paddingLeft) - 1.5 * 96) < 2 &&
@@ -19723,6 +20068,58 @@ async function runTest(projectPath) {
           await new Promise((r) => setTimeout(r, 200));
           check('[58] กลับโหมดปกติแล้วไม่มีคลาสมุมมองค้าง',
                 ALL_VIEW_CLASSES.every((c) => !spT58.pane.classList.contains(c)));
+
+          // ═══ [alpha.98 ข้อ 4] ★ รายการหัวข้อย่อย/ตัวเลขในโหมดบทภาพยนตร์ ═══
+          // ผู้ใช้: *"bullet และ หมายเลข ใช้ใน mode หนังไม่ได้"*
+          // บทไม่มีโครงสร้างรายการในรูปแบบไฟล์ → ทำเป็นคำนำหน้าในข้อความ (เก็บลงไฟล์ได้ตรง ๆ)
+          {
+            const keepSp98 = spT58.sp.getMarkdown();
+            spT58.sp.setMarkdown(['.INT. ห้องประชุม - เช้า',
+                                  '!ของที่ต้องเตรียม',
+                                  '!กล้อง',
+                                  '!ไฟ'].join(String.fromCharCode(10)));
+            await new Promise((r) => setTimeout(r, 400));
+            const spTexts = () => {
+              const out = [];
+              spT58.sp.view.state.doc.forEach((n) => out.push(n.textContent || ''));
+              return out;
+            };
+            const goto98 = (needle) => {
+              let pos = null;
+              spT58.sp.view.state.doc.forEach((n, off) => {
+                if (pos === null && (n.textContent || '').includes(needle)) pos = off + 1;
+              });
+              if (pos !== null) spT58.sp.gotoPos(pos);
+              return pos;
+            };
+            goto98('กล้อง');
+            await new Promise((r) => setTimeout(r, 120));
+            check('[98-4] ★★ กดหัวข้อย่อยในบทแล้วได้คำนำหน้าจริง',
+                  spT58.sp.cmd('ul') === true && spTexts().some((x) => x.startsWith('• กล้อง')),
+                  spTexts().join(' | '));
+            refreshToolbar();
+            check('[98-4] ★ ปุ่มหัวข้อย่อยติดไฟตามสถานะบรรทัดในบท',
+                  $('#tb-ul').classList.contains('on'));
+            check('[98-4] แตะเฉพาะบรรทัดที่เคอร์เซอร์อยู่ (บรรทัดอื่นไม่ขยับ)',
+                  spTexts().filter((x) => x.startsWith('• ')).length === 1,
+                  spTexts().join(' | '));
+            check('[98-4] ★★ กดซ้ำ = เอาออก (สวิตช์เหมือนโหมดนิยาย)',
+                  spT58.sp.cmd('ul') === true && !spTexts().some((x) => x.startsWith('• ')),
+                  spTexts().join(' | '));
+            goto98('ไฟ');
+            await new Promise((r) => setTimeout(r, 120));
+            check('[98-4] ★ รายการตัวเลขก็ใช้ได้',
+                  spT58.sp.cmd('ol') === true && spTexts().some((x) => /^1\. ไฟ/.test(x)),
+                  spTexts().join(' | '));
+            check('[98-4] ★ คำนำหน้าอยู่ในข้อความจริง — เขียนลงไฟล์แล้วอ่านกลับได้เหมือนเดิม',
+                  /1\. ไฟ/.test(spT58.sp.getMarkdown()),
+                  spT58.sp.getMarkdown().split(String.fromCharCode(10)).pop());
+            check('[98-4] สลับหัวข้อย่อย ↔ ตัวเลขบนบรรทัดเดิมได้ ไม่ซ้อนคำนำหน้า',
+                  spT58.sp.cmd('ul') === true && spTexts().some((x) => x === '• ไฟ'),
+                  spTexts().join(' | '));
+            spT58.sp.setMarkdown(keepSp98);
+            await new Promise((r) => setTimeout(r, 300));
+          }
         }
 
         // ---- [55][56] CONTINUED / (MORE) / (cont'd) ----
@@ -19794,13 +20191,18 @@ async function runTest(projectPath) {
               const bT = brkIn.getBoundingClientRect().top, dT = dlgEl.getBoundingClientRect().top;
               check('[84-2] จุดตัดอยู่ต่ำกว่าหัวบทพูดหลายบรรทัด (ตัดกลางจริง)',
                     bT - dT > 100, `brk=${Math.round(bT)} dlg=${Math.round(dT)}`);
-              // ระยะเยื้องถูกหักกลับแล้ว → ขอบซ้ายของแถบคั่นต้องตรงกับขอบซ้ายของ *พื้นที่พิมพ์*
+              // ระยะเยื้องของบล็อกถูกหักกลับแล้ว → ขอบซ้ายของแถบคั่นต้องเป็น "ขอบของหน้า"
+              // [alpha.98 ข้อ 6] มีสองกรณีตามสวิตช์หน้ากระดาษ:
+              //   ไม่มีกระดาษ = เส้นประกางเท่าพื้นที่พิมพ์ · มีกระดาษ = แถบคั่นแผ่นกางเต็มกระดาษ
               const actEl = spT58.pane.querySelector('.sp-action');
               if (actEl) {
-                check('[84-2] แถบคั่นหน้าหักระยะเยื้องของบล็อกคืนแล้ว (ตรงขอบพื้นที่พิมพ์)',
-                      Math.abs(brkIn.getBoundingClientRect().left
-                               - actEl.getBoundingClientRect().left) < 4,
-                      `${brkIn.getBoundingClientRect().left} vs ${actEl.getBoundingClientRect().left}`);
+                const onPaper = spT58.pane.classList.contains('sp-view-layout');
+                const mgL = parseFloat(getComputedStyle(spT58.pane)
+                  .getPropertyValue('--mg-left')) * 96 || 144;
+                const want = actEl.getBoundingClientRect().left - (onPaper ? mgL : 0);
+                check('[84-2] แถบคั่นหน้าหักระยะเยื้องของบล็อกคืนแล้ว (ตรงขอบของหน้า)',
+                      Math.abs(brkIn.getBoundingClientRect().left - want) < 4,
+                      `${brkIn.getBoundingClientRect().left} vs ${want} (paper=${onPaper})`);
               }
               check('[84-2] เส้นคั่นหน้าได้ระยะเยื้องของบล็อกมาทาง --k-pb-ind',
                     /in$/.test(brkIn.style.getPropertyValue('--k-pb-ind') || ''),
@@ -20443,10 +20845,10 @@ async function runTest(projectPath) {
 
       // ---- #2 ฟอนต์ Courier Prime ฝังมากับโปรแกรม (ไม่ต้องลงเครื่อง) ----
       // [alpha.58r บั๊ก 18] บทภาพยนตร์ = Courier Prime · นิยาย = ตัวพิมพ์แบบสัดส่วน (คนละชุดกันแล้ว)
-      // [alpha.84 ข้อ 1] มี "K2 SP Thai" (ตัวปรับสัดส่วนไทย · ครอบเฉพาะ U+0E00-0E7F) นำหน้าอีกชั้น
+      // [alpha.97 ข้อ 12] มีวงศ์ของบท ("K2 SP" · ครอบเฉพาะช่วงอักขระที่ตั้งไว้ในตาราง) นำหน้าอีกชั้น
       // → ตัวละตินยังตกมาที่ Courier Prime เป็นตัวแรกเหมือนเดิมทุกประการ
-      check('#2 ฟอนต์บทภาพยนตร์ชี้ไป Courier Prime เป็นตัวแรก (ถัดจากตัวปรับสัดส่วนไทย)',
-            /^\s*("K2 SP Thai",\s*)?"Courier Prime"/.test(rootVar2('--sp-font')),
+      check('#2 ฟอนต์บทภาพยนตร์ชี้ไป Courier Prime เป็นตัวแรก (ถัดจากวงศ์ฟอนต์ตามภาษาของบท)',
+            /^\s*("K2 SP",\s*)?"Courier Prime"/.test(rootVar2('--sp-font')),
             rootVar2('--sp-font'));
       check('[18] ฟอนต์นิยายไม่ใช่ Courier แล้ว',
             !/Courier/i.test(rootVar2('--ed-font')), rootVar2('--ed-font'));
@@ -20696,22 +21098,31 @@ async function runTest(projectPath) {
       // ---- [4] โหมดกระดาษเปลี่ยนเฉพาะสี ไม่เปลี่ยน layout ----
       const pmR = T.pane.querySelector(':scope > .workspace > .ProseMirror');
       check('[58r] เจอหน้ากระดาษของแท็บนิยาย', !!pmR);
-      const paperWas = S2.paperMode !== false;
-      if (!paperWas) { togglePaper(true); await new Promise((r) => setTimeout(r, 120)); }
+      setSpView('normal', true); await new Promise((r) => setTimeout(r, 120));
       const csOn = getComputedStyle(pmR);
       const layOn = { pl: csOn.paddingLeft, pt: csOn.paddingTop, pr: csOn.paddingRight, w: csOn.width };
       const bgOn = csOn.backgroundColor;
-      togglePaper(false); await new Promise((r) => setTimeout(r, 150));
+      // [alpha.99 ข้อ 1] มุมมองปกติ = สายเนื้อหาต่อเนื่อง (เส้นประ) · จัดหน้า = แผ่นกระดาษจริง
+      setSpView('layout', true); await new Promise((r) => setTimeout(r, 200));
       const csOff = getComputedStyle(pmR);
-      check('[4] ปิดโหมดกระดาษแล้วระยะขอบไม่ขยับเลย',
-            csOff.paddingLeft === layOn.pl && csOff.paddingTop === layOn.pt &&
-            csOff.paddingRight === layOn.pr && csOff.width === layOn.w,
-            `${layOn.pl}/${layOn.pt} → ${csOff.paddingLeft}/${csOff.paddingTop}`);
-      check('[4] แต่สีพื้นต้องเปลี่ยนจริง (ไม่งั้นสวิตช์ไม่มีความหมาย)',
-            csOff.backgroundColor !== bgOn, `${bgOn} → ${csOff.backgroundColor}`);
+      check('[99-1] ★ เข้ามุมมองจัดหน้า → pane ได้คลาสของมัน',
+            T.pane.classList.contains('sp-view-layout'), T.pane.className);
+      check('[99-1] ★★ กลับมุมมองปกติแล้วเป็นสายเนื้อหาต่อเนื่อง (ไม่ใช่แผ่นแยก) แต่ยังมีเส้นคั่น',
+            (() => {
+              setSpView('normal', true);
+              return !T.pane.classList.contains('sp-view-layout')
+                && [...T.pane.querySelectorAll('.ed-page-break')]
+                     .every((e) => getComputedStyle(e).display !== 'none');
+            })());
+      await new Promise((r) => setTimeout(r, 200));
+      const csBack = getComputedStyle(pmR);
+      check('[4] มุมมองปกติ: ระยะขอบ/ความกว้างกระดาษเท่าเดิมเป๊ะ',
+            csBack.paddingLeft === layOn.pl && csBack.paddingTop === layOn.pt &&
+            csBack.paddingRight === layOn.pr && csBack.width === layOn.w,
+            `${layOn.pl}/${layOn.w} → ${csBack.paddingLeft}/${csBack.width}`);
+      void csOff; void bgOn;
       check('[4] ระยะขอบซ้ายยังเท่ากับ --mg-left (1.5in = 144px)',
-            Math.abs(parseFloat(csOff.paddingLeft) - 144) < 2, csOff.paddingLeft);
-      togglePaper(true); await new Promise((r) => setTimeout(r, 120));
+            Math.abs(parseFloat(csBack.paddingLeft) - 144) < 2, csBack.paddingLeft);
 
       // ---- [3] โหมดอ่านต้องมีระยะขอบ + หมึกเข้ากับพื้นเสมอ ----
       const lum = (c) => { const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c || '');
@@ -20725,15 +21136,8 @@ async function runTest(projectPath) {
       check('[3] โหมดอ่าน+กระดาษ: หมึกเข้มบนพื้นสว่าง',
             lum(csRead.backgroundColor) - lum(csRead.color) > 60,
             `bg=${csRead.backgroundColor} fg=${csRead.color}`);
-      togglePaper(false); await new Promise((r) => setTimeout(r, 200));
-      const csRead2 = getComputedStyle(pmRead);
-      check('[3] โหมดอ่านแบบไม่มีกระดาษ: หมึกสว่างบนพื้นมืด',
-            lum(csRead2.color) - lum(csRead2.backgroundColor) > 60,
-            `bg=${csRead2.backgroundColor} fg=${csRead2.color}`);
-      check('[3] โหมดอ่านแบบไม่มีกระดาษ: ยังมีระยะขอบ',
-            parseFloat(csRead2.paddingLeft) >= 40, csRead2.paddingLeft);
-      togglePaper(true);
       toggleReading(false); await new Promise((r) => setTimeout(r, 200));
+
 
       // ═══ [alpha.85 ข้อ 2] "กด Enter แล้วโคตรกระพริบ" — เส้นคั่นหน้าต้อง **ไม่ถูกสร้างใหม่** ═══
       // ต้นเหตุ: key ของ widget decoration มี `pos` อยู่ด้วย → พิมพ์ทีเดียวตำแหน่งของทุกเส้น
@@ -20789,8 +21193,11 @@ async function runTest(projectPath) {
           // จับจำนวนบล็อกที่ "ถูกถาม" จริงระหว่างหั่นหน้า — ต้องน้อยกว่าจำนวนบล็อกทั้งหมดมาก
           const mz85b = measureProseLayout(v85, { paper: spf85.paper, margins: spf85.margins });
           let asked = 0;
+          // [alpha.98 ข้อ 8] getter ย้ายไปอยู่บน prototype (เดิม defineProperty ทีละใบ = 4,800 ครั้ง
+          // ต่อการจัดหน้าหนึ่งรอบในเอกสาร 80 หน้า) → ต้องหยิบ descriptor จาก prototype แทน
+          const proto85 = Object.getPrototypeOf(mz85b.blocks[0]);
+          const real = Object.getOwnPropertyDescriptor(proto85, 'lineOffsets').get;
           for (const b of mz85b.blocks) {
-            const real = Object.getOwnPropertyDescriptor(b, 'lineOffsets').get;
             Object.defineProperty(b, 'lineOffsets', {
               configurable: true, get() { asked++; return real.call(this); },
             });
@@ -21405,12 +21812,21 @@ async function runTest(projectPath) {
                 csPm.paddingBottom + ' ควรได้ ' + mgB + 'px');
           const nPg = Math.max(1, Math.round(+T.pane.style.getPropertyValue('--pg-count') || 1));
           const bodyH = (sfg2.paper.height - sfg2.margins.top - sfg2.margins.bottom) * 96;
-          const wantMin = (sfg2.margins.top + sfg2.margins.bottom) * 96 + nPg * bodyH;
+          // [alpha.98 ข้อ 6] สองสูตรตามสวิตช์หน้ากระดาษ:
+          //   ไม่มีกระดาษ = สายเนื้อหาต่อเนื่อง (ขอบบน+ล่างชุดเดียว + พื้นที่พิมพ์ × จำนวนหน้า)
+          //   มีกระดาษ    = แผ่นจริงเรียงกัน (ความสูงกระดาษ × จำนวนหน้า + ช่องว่างระหว่างแผ่น)
+          const onPaper88 = T.pane.classList.contains('sp-view-layout');
+          const gapPx88 = parseFloat(getComputedStyle(T.pane)
+            .getPropertyValue('--sp-page-gap')) || 28;
+          const wantMin = onPaper88
+            ? nPg * sfg2.paper.height * 96 + (nPg - 1) * gapPx88
+            : (sfg2.margins.top + sfg2.margins.bottom) * 96 + nPg * bodyH;
           check('[88-5] ★ ความสูงขั้นต่ำของกระดาษ = จำนวนหน้าจริง (ไม่ยืดหดตามเนื้อหา)',
                 Math.abs(parseFloat(csPm.minHeight) - wantMin) < 3,
-                csPm.minHeight + ' ควรได้ ' + wantMin.toFixed(1) + 'px (' + nPg + ' หน้า)');
+                csPm.minHeight + ' ควรได้ ' + wantMin.toFixed(1) + 'px (' + nPg + ' หน้า · กระดาษ='
+                  + onPaper88 + ')');
         }
-        // ── ข้อ 1 (ต่อ): มุมมองจัดหน้า — จุดตัดกลางย่อหน้าต้องเป็นรอยต่อแผ่นจริง ──
+        // ── ข้อ 1 (ต่อ): โหมดหน้ากระดาษ — จุดตัดกลางย่อหน้าต้องเป็นรอยต่อแผ่นจริง ──
         {
           setSpView('layout');
           await new Promise((r) => setTimeout(r, 350));
@@ -21611,20 +22027,39 @@ async function runTest(projectPath) {
           }
           T.editor.setMarkdown(mixed.join('\n\n'));
           await w93(800); repaginateFast(T); await w93(500);
-          const brTops = [...pm93.querySelectorAll('.ed-page-break')]
-            .map((e) => e.getBoundingClientRect().top);
-          const brGaps = [];
-          for (let i = 1; i < brTops.length; i++) brGaps.push(+(brTops[i] - brTops[i - 1]).toFixed(1));
-          // หน้าแรกวัดจาก "ขอบบนของบล็อกแรก" (ตรงกับที่ตัววัดใช้เป็นพิกัด 0)
+          // ★★ [alpha.98 ข้อ 7] วัด "ความสูงของหน้า" ให้ตรงกับนิยามจริง
+          //   หน้า i = เนื้อหาที่ใช้ไปจริง + ที่ว่างท้ายหน้า
+          //   · เนื้อหาที่ใช้ = จากก้นกล่องเส้นคั่นก่อนหน้า ถึงขอบบนกล่องเส้นคั่นนี้ (วัดจาก DOM)
+          //   · ที่ว่างท้ายหน้า = `--k-pb-pad` ที่เบราว์เซอร์ใช้จริง (อ่านจาก computed style)
+          // ทั้งสองค่ามาจากของจริงบนจอ ถ้าตัวชดเชยคิดผิด ผลรวมจะไม่เท่าความสูงพื้นที่พิมพ์ทันที
+          const brEls93 = [...pm93.querySelectorAll('.ed-page-break')];
+          const padOf93 = (e) =>
+            parseFloat(getComputedStyle(e).getPropertyValue('--k-pb-pad')) || 0;
           const firstBlk93 = [...pm93.children].find((e) => e.nodeType === 1
             && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
-          if (firstBlk93 && brTops.length)
-            brGaps.unshift(+(brTops[0] - firstBlk93.getBoundingClientRect().top).toFixed(1));
+          const brGaps = [];
+          let prevBot93 = firstBlk93 ? firstBlk93.getBoundingClientRect().top : 0;
+          for (const e of brEls93) {
+            const r = e.getBoundingClientRect();
+            brGaps.push(+(r.top - prevBot93 + padOf93(e)).toFixed(1));
+            prevBot93 = r.bottom;
+          }
+          const brTops = brEls93.map((e) => e.getBoundingClientRect().top);
           const spread = brGaps.length ? Math.max(...brGaps) - Math.min(...brGaps) : 0;
           note('[93-5] ปกติ: ' + brTops.length + ' เส้นคั่น · ระยะ = ' + brGaps.slice(0, 10).join(' , ')
                + ' · ต่างกันมากสุด ' + spread.toFixed(1) + 'px');
           check('[93-5] ★★ ระยะระหว่างหน้าในโหมดปกติเท่ากันทุกหน้า (ก่อนแก้ต่างกัน 32.8px)',
                 brGaps.length >= 3 && spread <= 2, brGaps.slice(0, 8).join(' , '));
+          {
+            // [alpha.97 ข้อ 10] ★ "เท่ากัน" ยังไม่พอ — ต้องเท่ากับ **ความสูงพื้นที่พิมพ์จริง**
+            // (ของเดิมเท่ากันหมดเหมือนกัน แต่เตี้ยกว่าที่ควรเป็นเท่าความสูงของแถบคั่นทุกหน้า)
+            const f935 = spFormat();
+            const want935 = (f935.paper.height - f935.margins.top - f935.margins.bottom) * 96;
+            const off935 = brGaps.length ? Math.max(...brGaps.map((g) => Math.abs(g - want935))) : 999;
+            check('[97-10] ★★ ระยะที่ได้เท่ากับความสูงพื้นที่พิมพ์จริง ไม่ใช่แค่เท่ากันเอง',
+                  brGaps.length >= 3 && off935 <= 2,
+                  'ต้องได้ ' + Math.round(want935) + ' · ได้ ' + brGaps.slice(0, 6).join(' , '));
+          }
           setSpView('side'); await w93(900);
           const phs = [...pane93.querySelectorAll('.sp-pageview .ed-page')]
             .map((e) => +e.getBoundingClientRect().height.toFixed(1));
@@ -21634,13 +22069,776 @@ async function runTest(projectPath) {
           setSpView('layout'); await w93(900);
           const lh = [...pm93.querySelectorAll('.ed-page-break')]
             .map((e) => +e.getBoundingClientRect().height.toFixed(1));
-          const lspread = lh.length ? Math.max(...lh) - Math.min(...lh) : 0;
-          note('[93-5] จัดหน้า: แถบคั่นแผ่น ' + lh.length + ' อัน · ต่างกันมากสุด ' + lspread.toFixed(1) + 'px');
-          check('[93-5] ★ แถบคั่นแผ่นในมุมมองจัดหน้าสูงเท่ากันทุกอัน', lspread <= 0.6, lh.slice(0, 8).join(','));
+          // [alpha.98 ข้อ 7] แถบคั่นแผ่น **อมที่ว่างท้ายหน้าไว้ในความสูงแล้ว** จึงไม่เท่ากันเป็นเรื่องปกติ
+          // สิ่งที่ต้องเท่ากันคือ "ระยะระหว่างหน้า" ซึ่งเทสข้างบนกับ [97-10] ตรวจไว้แล้ว
+          note('[93-5] หน้ากระดาษ: แถบคั่นแผ่น ' + lh.length + ' อัน = ' + lh.slice(0, 6).join(','));
+          check('[93-5] ★ แถบคั่นแผ่นสูงอย่างน้อยเท่าขอบล่าง+ช่องว่าง+ขอบบน',
+                lh.length >= 1 && lh.every((h) => h >= 96 + 28 + 96 - 2), lh.slice(0, 8).join(','));
 
           setSpView(keepView93 === 'draft' ? 'normal' : keepView93, true);
           T.editor.setMarkdown(keep93);
           await w93(400);
+        }
+
+        // ══════════ [alpha.97] รอบเก็บอาการที่ผู้ใช้แจ้ง 12 ข้อ ══════════
+        {
+          const w97 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const until97 = async (fn, ms = 3000) => {
+            const t0 = Date.now();
+            while (Date.now() - t0 < ms) { if (fn()) return true; await w97(60); }
+            return false;
+          };
+          // ★ บทเรียน: `setMarkdown()` สร้าง state ใหม่ แต่ปลั๊กอินเส้นคั่นยังถือ **ตำแหน่งของ
+          //   เอกสารก่อนหน้า** อยู่จนกว่าตัวจัดหน้าจะเดินรอบใหม่ — อ่าน DOM ทันทีจะได้เส้นคั่นเก่า
+          //   (เจอจริงตอนเขียนเทสนี้: ได้ 8 ตำแหน่งของเอกสารเดิม เหลือ 2 อันที่ยังอยู่ในช่วง)
+          const settle97 = async () => {
+            bumpProseLayout();
+            repaginateFast(T);
+            await until97(() => {
+              const size = T.editor.view.state.doc.content.size;
+              const list = prosePageBreaks();
+              return list.length > 0 && list.every((b) => b.pos < size)
+                && pm97.querySelectorAll('.ed-page-break').length === list.length;
+            });
+            await w97(250);
+          };
+          const keep97 = T.editor.getMarkdown();
+          const keepView97 = currentSpView();
+          const pm97 = T.editor.view.dom;
+          const pane97 = T.pane;
+
+          // ═══ ข้อ 1 · แถบเลื่อนตอน undo — "cursor อยู่ในจอ = ไม่ขยับ · หลุดจอ = ตามไป" ═══
+          {
+            setSpView('normal', true);
+            const many = [];
+            for (let i = 1; i <= 90; i++) many.push('ย่อหน้าที่ ' + i + ' ' + 'เนื้อความทดสอบการเลื่อนจอ '.repeat(4));
+            T.editor.setMarkdown(many.join(String.fromCharCode(10, 10)));
+            await w97(700);
+            const caretY = () => {
+              try {
+                const c = T.editor.view.coordsAtPos(T.editor.view.state.selection.head);
+                return c.top - pane97.getBoundingClientRect().top;
+              } catch { return NaN; }
+            };
+            const inView = () => { const y = caretY(); return y > -2 && y < pane97.clientHeight + 2; };
+            // (ก) เคอร์เซอร์อยู่ต้นเอกสาร แล้วผู้ใช้เลื่อนไปดูท้ายเอกสาร → สั่งคำสั่งจัดรูปแบบ
+            T.editor.gotoPos(1);
+            await w97(120);
+            pane97.scrollTop = pane97.scrollHeight;          // เลื่อนจนเคอร์เซอร์หลุดจอ
+            await w97(120);
+            check('[97-1] จัดฉากได้: เคอร์เซอร์หลุดจอจริงก่อนเริ่มวัด', !inView(), caretY());
+            T.editor.cmd('bold');                            // เส้นทางเดียวกับ undo (ผ่าน keepScroll)
+            await w97(160);
+            check('[97-1] ★ เคอร์เซอร์หลุดจอ → จอเลื่อนตามไปหาเคอร์เซอร์',
+                  inView(), 'caretY=' + caretY() + ' h=' + pane97.clientHeight);
+            T.editor.cmd('bold');                            // ยกเลิก mark ที่เพิ่งตั้ง
+            await w97(120);
+            // (ข) เคอร์เซอร์อยู่ในจอ → ห้ามขยับแม้แต่พิกเซลเดียว
+            const topBefore = pane97.scrollTop;
+            T.editor.cmd('bold'); T.editor.cmd('bold');
+            await w97(160);
+            check('[97-1] ★ เคอร์เซอร์อยู่ในจอ → แถบเลื่อนไม่ขยับเลย',
+                  Math.abs(pane97.scrollTop - topBefore) < 1.5,
+                  topBefore + ' → ' + pane97.scrollTop);
+            // (ค) undo ของจริง — พิมพ์ท้ายเอกสาร เลื่อนขึ้นบนสุด แล้ว undo ต้องพาจอกลับไปหา
+            const endPos = T.editor.view.state.doc.content.size - 1;
+            T.editor.gotoPos(endPos);
+            await w97(120);
+            T.editor.view.dispatch(T.editor.view.state.tr.insertText('คำที่จะย้อน'));
+            await w97(200);
+            pane97.scrollTop = 0;
+            await w97(120);
+            T.editor.cmd('undo');
+            await w97(220);
+            check('[97-1] ★ undo แล้วจอตามไปที่จุดที่ถูกย้อน (ไม่ค้างอยู่บนสุด)',
+                  pane97.scrollTop > 40 && inView(),
+                  'scrollTop=' + Math.round(pane97.scrollTop) + ' caretY=' + Math.round(caretY()));
+          }
+
+          // ═══ ข้อ 2 · รายการ (bullet/เลข) ที่คร่อมหน้า ═══
+          {
+            const items = [];
+            for (let i = 1; i <= 70; i++) items.push((i) + '. ข้อที่ ' + i + ' ของรายการทดสอบการตัดหน้า');
+            T.editor.setMarkdown('นำเรื่องสั้น ๆ ก่อนรายการ' + String.fromCharCode(10, 10) + items.join(String.fromCharCode(10)));
+            await w97(500);
+            await settle97();
+            const lis = pm97.querySelectorAll('ol > li');
+            check('[97-2] จัดฉากได้: รายการยาวพอให้คร่อมหน้า', lis.length >= 60, lis.length);
+            const brs = [...pm97.querySelectorAll('.ed-page-break')];
+            check('[97-2] รายการยาวถูกตัดเป็นหลายหน้าจริง', brs.length >= 1, brs.length);
+            // ★ ต้นตอในภาพที่ผู้ใช้ส่งมา: widget ถูกแทรก **ข้างใน `<li>`** ก่อน `<p>`
+            //   → หมายเลขข้ออยู่บรรทัดหนึ่ง ข้อความหล่นไปอีกบรรทัด และเส้นประเยื้องตามรายการ
+            check('[97-2] ★★ ไม่มีเส้นคั่นหน้าตัวไหนถูกแทรกอยู่ข้างใน <li>',
+                  brs.every((b) => (b.parentElement.tagName || '').toLowerCase() !== 'li'),
+                  brs.map((b) => b.parentElement.tagName).join(','));
+            check('[97-2] ★ เส้นคั่นในรายการอยู่ระดับ <ol>/<ul> (ระหว่างข้อ)',
+                  brs.filter((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || '')).length >= 1,
+                  brs.map((b) => b.parentElement.tagName).join(','));
+            // เส้นประต้องกางเต็มความกว้างเนื้อหา ไม่ใช่แค่ในคอลัมน์ของรายการ
+            {
+              const b0 = brs.find((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || ''));
+              const cs = getComputedStyle(pm97);
+              const contentLeft = pm97.getBoundingClientRect().left + parseFloat(cs.paddingLeft);
+              // [alpha.98 ข้อ 6] มีกระดาษ = แถบกางเต็มกระดาษ · ไม่มีกระดาษ = กางเท่าพื้นที่พิมพ์
+              const onPaper97 = pane97.classList.contains('sp-view-layout');
+              const want97 = contentLeft - (onPaper97 ? parseFloat(cs.paddingLeft) : 0);
+              const gap = b0 ? b0.getBoundingClientRect().left - want97 : 999;
+              check('[97-2] ★ แถบคั่นในรายการกางเต็มความกว้างของหน้า (ไม่เยื้องตามรายการ)',
+                    Math.abs(gap) < 3, gap.toFixed(1) + 'px (กระดาษ=' + onPaper97 + ')');
+            }
+            // ภาพยืนยัน — เทียบกับสกรีนช็อตที่ผู้ใช้ส่งมา (หมายเลขข้อกับข้อความต้องอยู่บรรทัดเดียวกัน)
+            try {
+              const b0s = brs.find((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || ''));
+              if (b0s) b0s.scrollIntoView({ block: 'center' });
+              await w97(200);
+              await kapi.testShot('/tmp/k2_list_pagebreak.png');
+            } catch {}
+            // ★ หมายเลขข้อกับข้อความของ "ข้อที่คร่อมเส้นคั่น" ต้องอยู่บรรทัดเดียวกันเสมอ
+            // (ในภาพของผู้ใช้ หมายเลขอยู่บรรทัดหนึ่ง ข้อความหล่นไปอีกบรรทัด = widget ฉีก <li>)
+            {
+              const bad = [...pm97.querySelectorAll('ol > li, ul > li')].filter((li) => {
+                const pEl = li.querySelector(':scope > p');
+                if (!pEl) return false;
+                // ขอบบนของข้อความต้องอยู่ในกล่องบรรทัดแรกของ <li> (ห่างไม่เกินหนึ่งบรรทัด)
+                return pEl.getBoundingClientRect().top - li.getBoundingClientRect().top > 6;
+              });
+              check('[97-2] ★★ ทุกข้อในรายการ: หมายเลขกับข้อความอยู่บรรทัดเดียวกัน (ตรงกับภาพที่ผู้ใช้ส่งมา)',
+                    bad.length === 0, bad.length + ' ข้อที่ข้อความหล่นลงบรรทัดใหม่');
+            }
+            // ── ต้นตอจริง: ตัววัดต้องเห็นรายการเป็น "หลายบล็อก" ไม่ใช่ก้อนเดียว ──
+            {
+              const mz97 = measureProseLayout(T.editor.view,
+                { paper: spFormat().paper, margins: spFormat().margins });
+              check('[97-2] ★★ ตัววัดแตกรายการเป็นข้อ ๆ (เดิม <ul> ทั้งชุด = บล็อกเดียว)',
+                    !!mz97 && mz97.blocks.length >= lis.length,
+                    (mz97 ? mz97.blocks.length : -1) + ' บล็อก vs ' + lis.length + ' ข้อ');
+              check('[97-2] แต่ละข้อเป็นกล่องของตัวเอง (ตัดระหว่างข้อได้)',
+                    !!mz97 && mz97.blocks.filter((b) => (b.el.tagName || '').toLowerCase() === 'li')
+                      .length >= lis.length - 1);
+            }
+          }
+
+          // ═══ ข้อ 10 · หน้ากระดาษต้องสูงเท่ากันเป๊ะทุกแผ่น (รวมโหมดจัดหน้า) ═══
+          {
+            const spf97 = spFormat();
+            const contentH = (spf97.paper.height - spf97.margins.top - spf97.margins.bottom) * 96;
+            const nums = [];
+            for (let i = 1; i <= 120; i++) nums.push(String(i));
+            T.editor.setMarkdown(nums.join(String.fromCharCode(10, 10)));
+            // วัดระยะ "หัวเส้นคั่น i → หัวเส้นคั่น i+1" แล้วหักความสูงของกล่องเส้นคั่นเองออก
+            // ความสูงของหน้า = เนื้อหาที่ใช้จริง + ที่ว่างท้ายหน้าที่เบราว์เซอร์ใช้จริง (ดู [93-5])
+            const gapsOf = () => {
+              const z = zoomFactorOf(pm97) || 1;
+              const first = [...pm97.children].find((e) => e.nodeType === 1
+                && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
+              let prevBot = first ? first.getBoundingClientRect().top : 0;
+              const out = [];
+              for (const e of pm97.querySelectorAll('.ed-page-break')) {
+                const r = e.getBoundingClientRect();
+                const pad = parseFloat(getComputedStyle(e).getPropertyValue('--k-pb-pad')) || 0;
+                out.push(+(((r.top - prevBot) / z) + pad).toFixed(1));
+                prevBot = r.bottom;
+              }
+              return out;
+            };
+            // [alpha.98] วัดทั้งแบบไม่มีกระดาษ (เส้นประ) และมีกระดาษ (แผ่นจริง)
+            for (const paper of [false, true]) {
+              setSpView(paper ? 'layout' : 'normal', true);
+              await w97(300);
+              await settle97();
+              await until97(() => pm97.querySelectorAll('.ed-page-break').length >= 3);
+              await w97(700);           // ให้ตัวชดเชยวัดแล้วปรับเสร็จก่อน
+              const g = gapsOf();
+              const worst = g.length ? Math.max(...g.map((x) => Math.abs(x - contentH))) : 999;
+              const lbl = paper ? 'มุมมองจัดหน้า' : 'มุมมองปกติ';
+              note('[97-10] ' + lbl + ': ' + g.length + ' หน้า · เพี้ยนมากสุด ' + worst.toFixed(1) + 'px');
+              check('[97-10] ★★ ' + lbl + ': ทุกหน้าสูงเท่าพื้นที่พิมพ์เป๊ะ',
+                    g.length >= 3 && worst <= 2,
+                    'ต้องได้ ' + Math.round(contentH) + ' · ได้ ' + g.slice(0, 8).join(' , '));
+            }
+            setSpView('normal', true);
+            await w97(250);
+          }
+
+          // ═══ ข้อ 9 · แถบเลื่อนต้องตามเคอร์เซอร์ตอนจัดหน้าใหม่ (อาการ "กดวางแล้วหาย") ═══
+          {
+            T.editor.view.focus();
+            T.editor.gotoPos(Math.round(T.editor.view.state.doc.content.size * 0.6));
+            await w97(250);
+            const yOf = () => {
+              const c = T.editor.view.coordsAtPos(T.editor.view.state.selection.head);
+              return c.top - pane97.getBoundingClientRect().top;
+            };
+            const y0 = yOf();
+            bumpProseLayout();                 // บังคับให้จัดหน้าใหม่ทั้งชุด (เส้นคั่น/ที่ว่างงอกใหม่)
+            repaginateFast(T);
+            await w97(500);
+            check('[97-9] ★★ จัดหน้าใหม่แล้วเคอร์เซอร์ยังอยู่ที่เดิมบนจอ',
+                  Math.abs(yOf() - y0) < 4, Math.round(y0) + ' → ' + Math.round(yOf()));
+          }
+
+          // ═══ ข้อ 3 + 5 · ปุ่มโครงสร้างเป็นสวิตช์ (กดซ้ำ = เอาออก) และบอกสถานะได้ ═══
+          {
+            setSpView('normal', true);
+            T.editor.setMarkdown('ย่อหน้าทดสอบสวิตช์');
+            await w97(300);
+            T.editor.gotoPos(3);
+            const nodeNames = () => T.editor.view.state.doc.content.content.map((n) => n.type.name);
+            for (const [cmdName, nodeName, btn] of
+                 [['ul', 'bullet_list', '#tb-ul'], ['ol', 'ordered_list', '#tb-ol'],
+                  ['quote', 'blockquote', '#tb-quote']]) {
+              T.editor.cmd(cmdName);
+              await w97(120);
+              refreshToolbar();
+              check('[97-3] เปิด ' + cmdName + ' → ได้ ' + nodeName,
+                    nodeNames().includes(nodeName), nodeNames().join(','));
+              check('[97-3] ★ ปุ่ม ' + btn + ' ติดไฟบอกสถานะ',
+                    $(btn).classList.contains('on'), $(btn).className);
+              T.editor.cmd(cmdName);
+              await w97(120);
+              refreshToolbar();
+              check('[97-3] ★★ กด ' + cmdName + ' ซ้ำ = เอาออก (เดิมต้องลบทิ้งอย่างเดียว)',
+                    !nodeNames().includes(nodeName), nodeNames().join(','));
+              check('[97-3] ปุ่ม ' + btn + ' ดับตาม', !$(btn).classList.contains('on'));
+            }
+            // ul ↔ ol สลับชนิดกัน ไม่ใช่ห่อซ้อนอีกชั้น
+            T.editor.cmd('ul'); await w97(100);
+            T.editor.cmd('ol'); await w97(100);
+            check('[97-5] ★ สลับ ul → ol เปลี่ยนชนิดของรายการ ไม่ใช่ห่อซ้อน',
+                  nodeNames().join(',') === 'ordered_list', nodeNames().join(','));
+            T.editor.cmd('ol'); await w97(100);
+            check('[97-5] ถอดออกจนหมดได้', !nodeNames().some((n) => /_list$/.test(n)));
+          }
+
+          // ═══ ข้อ 4 · ตัวยก/ตัวห้อย ═══
+          {
+            T.editor.setMarkdown('H~2~O และ x^2^');
+            await w97(250);
+            const has = (mk) => {
+              let found = false;
+              T.editor.view.state.doc.descendants((n) => {
+                if (n.isText && (n.marks || []).some((m) => m.type.name === mk)) found = true;
+              });
+              return found;
+            };
+            check('[97-4] ★ อ่าน ^ยก^ / ~ห้อย~ จาก .md เข้าเป็น mark จริง', has('sup') && has('sub'));
+            check('[97-4] ★ เขียนกลับเป็น .md ได้เหมือนเดิม',
+                  T.editor.getMarkdown() === 'H~2~O และ x^2^', T.editor.getMarkdown());
+            check('[97-4] มีปุ่มตัวยก/ตัวห้อยบนแถบเครื่องมือ', !!$('#tb-sup') && !!$('#tb-sub'));
+            check('[97-4] ตัวยก/ตัวห้อยตั้งปุ่มลัดเองได้ (อยู่ในตาราง SHORTCUTS)',
+                  SHORTCUTS.some((x) => shortcutId(x) === 'fmt:sup') &&
+                  SHORTCUTS.some((x) => shortcutId(x) === 'fmt:sub'));
+            // ★ ต้องไม่ทำให้กล่องบรรทัดสูงขึ้น ไม่งั้นตัวจัดหน้า (วัดจาก DOM) เพี้ยนทั้งหน้า
+            T.editor.setMarkdown('บรรทัดธรรมดาไม่มีตัวยก' + String.fromCharCode(10, 10) + 'บรรทัดมีตัวยก x^2^ ปนอยู่');
+            await w97(300);
+            const ps97 = [...pm97.querySelectorAll('p')];
+            const h1 = ps97[0] && ps97[0].getBoundingClientRect().height;
+            const h2 = ps97[1] && ps97[1].getBoundingClientRect().height;
+            check('[97-4] ★ ตัวยกไม่ดันกล่องบรรทัดให้สูงขึ้น (ไม่งั้นการตัดหน้าเพี้ยน)',
+                  Math.abs(h1 - h2) < 1, h1 + ' vs ' + h2);
+            // สลับเป็น mark ผ่านคำสั่งได้ และกันเองออก
+            T.editor.setMarkdown('abc');
+            await w97(150);
+            T.editor.view.dispatch(T.editor.view.state.tr.setSelection(
+              PMTextSelection.create(T.editor.view.state.doc, 1, 4)));
+            T.editor.cmd('sup');
+            await w97(120);
+            check('[97-4] คำสั่ง sup ใส่ mark ให้ช่วงที่เลือก', has('sup'));
+            T.editor.cmd('sub');
+            await w97(120);
+            check('[97-4] ★ sup กับ sub กันเองออก (ตัวเดียวเป็นทั้งสองไม่ได้)',
+                  has('sub') && !has('sup'));
+          }
+
+          // ═══ ข้อ 5 (รูป) · ปุ่มแทรกรูปเป็นสวิตช์ ═══
+          {
+            T.editor.setMarkdown('ก่อนรูป');
+            await w97(200);
+            T.editor.gotoPos(T.editor.view.state.doc.content.size);
+            T.editor.insertImage('../Images/t.png', 'ทดสอบ', '![ทดสอบ](../Images/t.png)');
+            await w97(250);
+            const figs = () => T.editor.view.state.doc.content.content
+              .filter((n) => n.type.name === 'figure').length;
+            check('[97-5] แทรกรูปได้', figs() === 1, figs());
+            check('[97-5] ★ เคอร์เซอร์แตะรูป → activeMarks บอกว่ามีรูป',
+                  T.editor.activeMarks().image === true,
+                  JSON.stringify(T.editor.activeMarks().image));
+            refreshToolbar();
+            check('[97-5] ★ ปุ่มแทรกรูปติดไฟตอนแตะรูปอยู่', $('#tb-img').classList.contains('on'));
+            check('[97-5] ★★ สั่งเอาออกได้ (ปุ่มเดียวกัน กดซ้ำ = ลบรูป)',
+                  T.editor.removeFigure() === true && figs() === 0, figs());
+            check('[97-5] ไม่มีรูปตรงนั้น = ไม่ทำอะไร (ผู้เรียกไปเปิดตัวเลือกรูปแทน)',
+                  T.editor.removeFigure() === false);
+          }
+
+          // ═══ ข้อ 7 · รูปในคลิปบอร์ดอยู่ที่ items ไม่ใช่ files ═══
+          {
+            const png97 = new File([new Uint8Array([137, 80, 78, 71])], 'clip.png', { type: 'image/png' });
+            // สิ่งที่ Chromium ให้มาตอน "คัดลอกรูป" จากเบราว์เซอร์/โปรแกรมดูรูป: files ว่าง · items มีของ
+            const fakeDt = { files: [],
+                             items: [{ kind: 'file', type: 'image/png', getAsFile: () => png97 },
+                                     { kind: 'string', type: 'text/html', getAsFile: () => null }] };
+            const got = clipboardImages(fakeDt);
+            check('[97-7] ★★ อ่านรูปจาก clipboardData.items ได้ (เดิมดูแต่ .files → ได้ศูนย์เสมอ)',
+                  got.length === 1 && got[0].type === 'image/png', got.length);
+            check('[97-7] ไม่หยิบของที่ไม่ใช่ไฟล์รูปมาด้วย',
+                  clipboardImages({ files: [], items: [{ kind: 'string', type: 'text/plain' }] }).length === 0);
+            check('[97-7] ยังรับทาง .files ได้เหมือนเดิม (ลากไฟล์จาก Explorer)',
+                  clipboardImages({ files: [png97], items: [] }).length === 1);
+            check('[97-7] ไม่มีคลิปบอร์ด = ไม่พัง', clipboardImages(null).length === 0);
+          }
+
+          // ═══ ข้อ 6 · Markdown ดิบแก้ไขได้ + มีเลขบรรทัด ═══
+          {
+            document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+            T.editor.setMarkdown('บรรทัดหนึ่ง' + String.fromCharCode(10, 10) + 'บรรทัดสอง');
+            await w97(250);
+            showSourceView();
+            await w97(200);
+            const dlg97b = [...document.querySelectorAll('.k-dialog')].pop();
+            const ta97 = dlg97b && dlg97b.querySelector('.k-src-view');
+            check('[97-6] ★★ ช่อง Markdown ดิบแก้ไขได้ (เดิม readOnly ตายตัว)',
+                  !!ta97 && ta97.readOnly === false);
+            const gut97 = dlg97b && dlg97b.querySelector('.k-src-gutter');
+            check('[97-6] ★ มีรางเลขบรรทัด และจำนวนเลขตรงกับจำนวนบรรทัดจริง',
+                  !!gut97 && gut97.childElementCount === ta97.value.split(String.fromCharCode(10)).length,
+                  (gut97 && gut97.childElementCount) + ' vs ' +
+                    ta97.value.split(String.fromCharCode(10)).length);
+            check('[97-6] เลขบรรทัดเริ่มที่ 1', !!gut97 && gut97.firstElementChild.textContent === '1');
+            check('[97-6] รางกับข้อความสูงบรรทัดเท่ากัน (เลขไม่เลื่อนหนี)',
+                  getComputedStyle(gut97).lineHeight === getComputedStyle(ta97).lineHeight,
+                  getComputedStyle(gut97).lineHeight + ' vs ' + getComputedStyle(ta97).lineHeight);
+            // พิมพ์เพิ่มแล้วเลขบรรทัดต้องเดินตาม
+            ta97.value += String.fromCharCode(10) + String.fromCharCode(10) + 'บรรทัดสาม';
+            ta97.dispatchEvent(new Event('input', { bubbles: true }));
+            await w97(80);
+            check('[97-6] ★ พิมพ์เพิ่มแล้วเลขบรรทัดเดินตามทันที',
+                  gut97.childElementCount === ta97.value.split(String.fromCharCode(10)).length,
+                  gut97.childElementCount);
+            // กด "ใช้การแก้ไข" แล้วเนื้อหาต้องเข้าเอกสารจริง
+            const apply97 = [...dlg97b.querySelectorAll('.k-dlg-btns button')]
+              .find((b) => b.textContent === tt('ui.app.mdApply'));
+            check('[97-6] มีปุ่ม "ใช้การแก้ไข"', !!apply97);
+            apply97.click();
+            await w97(400);
+            check('[97-6] ★★ แก้ใน Markdown ดิบแล้วเขียนกลับเข้าเอกสารได้จริง',
+                  T.editor.getText().includes('บรรทัดสาม'), T.editor.getText().slice(0, 60));
+            check('[97-6] กล่องปิดเองหลังใช้การแก้ไข', !document.querySelector('.k-src-view'));
+            document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+          }
+
+          setSpView(keepView97 === 'draft' ? 'normal' : keepView97, true);
+          T.editor.setMarkdown(keep97);
+          bumpProseLayout();
+          await w97(400);
+        }
+
+        // ══════════ [alpha.98] รอบเก็บอาการที่ผู้ใช้แจ้ง 9 ข้อ ══════════
+        {
+          const w98 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const until98 = async (fn, ms = 3000) => {
+            const t0 = Date.now();
+            while (Date.now() - t0 < ms) { if (fn()) return true; await w98(60); }
+            return false;
+          };
+          const pm98 = T.editor.view.dom;
+          const pane98 = T.pane;
+          const keep98 = T.editor.getMarkdown();
+          const settle98 = async () => {
+            bumpProseLayout();
+            repaginateFast(T);
+            await until98(() => {
+              const size = T.editor.view.state.doc.content.size;
+              const list = prosePageBreaks();
+              return list.length > 0 && list.every((b) => b.pos < size)
+                && pm98.querySelectorAll('.ed-page-break').length === list.length;
+            });
+            await w98(300);
+          };
+          const nodeNames98 = () => T.editor.view.state.doc.content.content.map((n) => n.type.name);
+          const key98 = (k, opts = {}) => T.editor.view.dom.dispatchEvent(
+            new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
+          setSpView('normal', true);
+
+          // ═══ ข้อ 2 · ฟอนต์ตามภาษาต้องมีผลกับโหมดนิยาย ═══
+          {
+            const keepLF98 = state.settings.langFonts
+              ? JSON.parse(JSON.stringify(state.settings.langFonts)) : null;
+            state.settings.langFonts = [
+              { id: 'th98', range: 'U+0E00-0E7F', target: 'all',
+                builtin: 'CourierThaiMono.ttf', enabled: true },
+            ];
+            applySettings();
+            await w98(150);
+            const fam98 = getComputedStyle(pm98).fontFamily;
+            check('[98-2] ★★ วงศ์ฟอนต์ตามภาษาไปถึงตัวแก้ไขนิยายจริง (เดิม proseCss เขียนทับทิ้ง)',
+                  fam98.includes(LANG_FAMILY), fam98);
+            check('[98-2] ★ กฎของ "รูปแบบนิยาย" อ่านผ่านตัวแปร ไม่เขียน font-family ทับดิบ ๆ',
+                  /font-family:var\(--ed-font/.test(
+                    document.getElementById('k-prose-format').textContent),
+                  document.getElementById('k-prose-format').textContent.slice(0, 80));
+            // ตัวหนังสือไทยต้องถูกวาดด้วยฟอนต์นั้นจริง ไม่ใช่แค่ชื่อโผล่ในสแตก
+            check('[98-2] สแตกเรียงถูก: วงศ์ตามภาษามาก่อนฟอนต์พื้น',
+                  fam98.trim().startsWith('"' + LANG_FAMILY + '"'), fam98);
+            state.settings.langFonts = keepLF98;
+            applySettings();
+            await w98(120);
+          }
+
+          // ═══ ข้อ 3 · toggle รายการแล้วบรรทัดห้ามขยับ ═══
+          {
+            const lines98 = ['บรรทัดหนึ่งของการทดสอบระยะ', 'บรรทัดสองของการทดสอบระยะ',
+                             'บรรทัดสามของการทดสอบระยะ'];
+            T.editor.setMarkdown(lines98.join(String.fromCharCode(10, 10)));
+            await w98(350);
+            const spanOf = (sel) => {
+              const els = [...pm98.querySelectorAll(sel)];
+              if (els.length < 2) return NaN;
+              const a = els[0].getBoundingClientRect(), b = els[els.length - 1].getBoundingClientRect();
+              return +(b.bottom - a.top).toFixed(1);
+            };
+            const asPara = spanOf(':scope > p');
+            // เลือกทั้งสามย่อหน้าแล้วทำเป็นรายการ
+            T.editor.view.dispatch(T.editor.view.state.tr.setSelection(
+              PMTextSelection.create(T.editor.view.state.doc, 1,
+                                     T.editor.view.state.doc.content.size - 1)));
+            T.editor.cmd('ul');
+            await w98(350);
+            const asList = spanOf('li > p');
+            note('[98-3] ย่อหน้า ' + asPara + 'px → รายการ ' + asList + 'px');
+            check('[98-3] ★★ ทำเป็นรายการแล้วความสูงรวมเท่าเดิม (บรรทัดไม่ขยับ)',
+                  Number.isFinite(asPara) && Math.abs(asList - asPara) <= 2,
+                  asPara + ' → ' + asList);
+            const liP = pm98.querySelector('li > p');
+            check('[98-3] ★ ข้อในรายการไม่มีย่อหน้าบรรทัดแรก (ย่อหน้าปกติมี รายการไม่ควรมี)',
+                  !!liP && parseFloat(getComputedStyle(liP).textIndent) === 0,
+                  liP && getComputedStyle(liP).textIndent);
+            // toggle กลับต้องได้ความสูงเดิมเป๊ะ
+            T.editor.cmd('ul');
+            await w98(350);
+            check('[98-3] ★ toggle กลับแล้วความสูงกลับมาเท่าเดิม',
+                  Math.abs(spanOf(':scope > p') - asPara) <= 2,
+                  asPara + ' → ' + spanOf(':scope > p'));
+          }
+
+          // ═══ [alpha.99 ข้อ 3] ★ เลขบรรทัดต้องตรงกับไฟล์ .md เป๊ะ ═══
+          {
+            const keepLn = state.settings.lineNumbers;
+            const md99 = ['ย่อหน้าหนึ่ง', '', '- ข้อ ก', '- ข้อ ข', '- ข้อ ค', '',
+                          '> ยกมาหนึ่ง', '> ยกมาสอง', '', 'ย่อหน้าท้าย'].join(String.fromCharCode(10));
+            T.editor.setMarkdown(md99);
+            await w98(400);
+            state.settings.lineNumbers = true;
+            document.body.classList.add('k-ln');
+            refreshLineGutter();
+            await w98(250);
+            refreshLineGutter();
+            const mdLines = T.editor.getMarkdown().split(String.fromCharCode(10)).length;
+            const nos = [...document.querySelectorAll('#k-ln-gutter .k-ln-no')]
+              .map((e) => +e.textContent).filter(Number.isFinite);
+            note('[99-3] .md มี ' + mdLines + ' บรรทัด · รางวาดเลข ' + nos.length
+                 + ' ตัว สูงสุด ' + (nos.length ? Math.max(...nos) : 0));
+            check('[99-3] ★★ เลขบรรทัดสุดท้าย = จำนวนบรรทัดในไฟล์ .md เป๊ะ',
+                  nos.length > 0 && Math.max(...nos) === mdLines,
+                  (nos.length ? Math.max(...nos) : 0) + ' vs ' + mdLines);
+            check('[99-3] ★★ วาดครบทุกบรรทัด ไม่ข้ามรายการ/คำพูดยกมา (เดิมนับบล็อกละหนึ่ง)',
+                  nos.length === mdLines, nos.length + ' vs ' + mdLines);
+            check('[99-3] ★ เลขเรียง 1..N ไม่ซ้ำไม่ขาด',
+                  nos.slice().sort((a, b) => a - b).join(',')
+                    === Array.from({ length: mdLines }, (_, k) => k + 1).join(','),
+                  nos.join(','));
+            check('[99-3] ★ แถบคั่นหน้าไม่ถูกนับเป็นบรรทัด',
+                  !nos.includes(0) && Math.max(...nos) <= mdLines);
+            // ไฟล์ที่ยาวขึ้นก็ยังตรง (เคสจริงของผู้ใช้: ตัวเลขต่างกัน 4 บรรทัด)
+            {
+              const many = [];
+              for (let i = 1; i <= 60; i++) {
+                many.push(i % 9 === 0 ? '- ข้อ ' + i : 'บรรทัด ' + i);
+                if (i % 9 !== 0) many.push('');
+              }
+              T.editor.setMarkdown(many.join(String.fromCharCode(10)));
+              await w98(500);
+              refreshLineGutter();
+              const md2 = T.editor.getMarkdown().split(String.fromCharCode(10)).length;
+              const counts2 = T.editor.mdLineCounts();
+              check('[99-3] ★★ ผลรวมบรรทัดของทุกบล็อก = จำนวนบรรทัดในไฟล์',
+                    counts2.reduce((a, b) => a + b, 0) === md2,
+                    counts2.reduce((a, b) => a + b, 0) + ' vs ' + md2);
+            }
+            state.settings.lineNumbers = keepLn;
+            document.body.classList.toggle('k-ln', !!keepLn);
+            refreshLineGutter();
+            await w98(150);
+          }
+
+          // ═══ ข้อ 5 · สลับ ul → ol ต้องแตะเฉพาะข้อที่เลือก ═══
+          {
+            T.editor.setMarkdown(['- ข้อหนึ่ง', '- ข้อสอง', '- ข้อสาม'].join(String.fromCharCode(10)));
+            await w98(300);
+            check('[98-5] จัดฉากได้: เป็นรายการหัวข้อย่อยก้อนเดียว 3 ข้อ',
+                  nodeNames98().join(',') === 'bullet_list' &&
+                  pm98.querySelectorAll('ul > li').length === 3,
+                  nodeNames98().join(',') + ' · ' + pm98.querySelectorAll('ul > li').length);
+            // วางเคอร์เซอร์ในข้อที่สอง
+            const li2 = pm98.querySelectorAll('ul > li')[1];
+            const pos2 = T.editor.view.posAtDOM(li2.querySelector('p').firstChild || li2, 1);
+            T.editor.gotoPos(pos2);
+            await w98(120);
+            T.editor.cmd('ol');
+            await w98(300);
+            const names = nodeNames98();
+            note('[98-5] โครงหลังสลับ = ' + names.join(','));
+            check('[98-5] ★★ สลับเป็นเลขแล้วแตะเฉพาะข้อที่เคอร์เซอร์อยู่ (รายการถูกผ่าเป็นสามท่อน)',
+                  names.length === 3 && names[0] === 'bullet_list' &&
+                  names[1] === 'ordered_list' && names[2] === 'bullet_list',
+                  names.join(','));
+            check('[98-5] ★ ข้อก่อนหน้ายังเป็นหัวข้อย่อยเหมือนเดิม',
+                  (pm98.querySelector('ul') || {}).textContent === 'ข้อหนึ่ง',
+                  (pm98.querySelector('ul') || {}).textContent);
+            check('[98-5] ★ ข้อที่ถูกสลับมีข้อความเดิมครบ',
+                  (pm98.querySelector('ol') || {}).textContent === 'ข้อสอง',
+                  (pm98.querySelector('ol') || {}).textContent);
+          }
+
+          // ═══ ข้อ 9 · Home / End ═══
+          {
+            const longLine = 'คำทดสอบปุ่มโฮมและเอนด์ '.repeat(12);
+            T.editor.setMarkdown(longLine);
+            await w98(300);
+            const view98 = T.editor.view;
+            view98.focus();
+            const mid = Math.round(view98.state.doc.content.size / 2);
+            T.editor.gotoPos(mid);
+            await w98(120);
+            const xOf = () => view98.coordsAtPos(view98.state.selection.head).left;
+            const contentLeft = pm98.getBoundingClientRect().left
+              + parseFloat(getComputedStyle(pm98).paddingLeft);
+            const x0 = xOf();
+            key98('Home');
+            await w98(120);
+            check('[98-9] ★★ Home พาเคอร์เซอร์ไปต้นบรรทัดที่วาดจริง',
+                  Math.abs(xOf() - contentLeft) < 12 && xOf() < x0 - 5,
+                  'x ' + Math.round(x0) + ' → ' + Math.round(xOf()) +
+                  ' (ขอบเนื้อหา ' + Math.round(contentLeft) + ')');
+            const homePos = view98.state.selection.head;
+            key98('End');
+            await w98(120);
+            const endPos98 = view98.state.selection.head;
+            key98('End');                       // กดซ้ำต้องไม่ขยับ = อยู่ท้ายบรรทัดจริง
+            await w98(120);
+            check('[98-9] ★★ End พาเคอร์เซอร์ไปท้ายบรรทัดเดียวกัน (กดซ้ำแล้วนิ่ง)',
+                  endPos98 > homePos && view98.state.selection.head === endPos98,
+                  homePos + ' → ' + endPos98 + ' → ' + view98.state.selection.head);
+            check('[98-9] ★ ท้ายบรรทัดอยู่ค่อนไปทางขวาของพื้นที่พิมพ์',
+                  xOf() > contentLeft + pm98.clientWidth * 0.5,
+                  Math.round(xOf()) + ' > ' + Math.round(contentLeft + pm98.clientWidth * 0.5));
+            key98('Home', { ctrlKey: true });
+            await w98(120);
+            check('[98-9] ★ Ctrl+Home ไปต้นเอกสาร', view98.state.selection.head <= 1,
+                  view98.state.selection.head);
+            key98('End', { ctrlKey: true });
+            await w98(120);
+            check('[98-9] ★ Ctrl+End ไปท้ายเอกสาร',
+                  view98.state.selection.head >= view98.state.doc.content.size - 1,
+                  view98.state.selection.head + '/' + view98.state.doc.content.size);
+            key98('Home', { shiftKey: true });
+            await w98(120);
+            check('[98-9] Shift+Home ขยายช่วงเลือก (ไม่ใช่แค่ย้ายเคอร์เซอร์)',
+                  !view98.state.selection.empty);
+          }
+
+          // ═══ ข้อ 1 · toggle รายการที่คร่อมหน้าแล้วเส้นคั่นต้องไม่หาย ═══
+          {
+            const items98 = [];
+            for (let i = 1; i <= 70; i++) items98.push('- ข้อที่ ' + i + ' ของรายการที่คร่อมหน้ากระดาษ');
+            T.editor.setMarkdown(items98.join(String.fromCharCode(10)));
+            await w98(500);
+            await settle98();
+            const before98 = pm98.querySelectorAll('.ed-page-break').length;
+            check('[98-1] จัดฉากได้: รายการคร่อมหน้าจริง', before98 >= 1, before98);
+            // วางเคอร์เซอร์ที่ข้อ "ตรงรอยต่อหน้า" แล้วกดปิดรายการ
+            const brk98 = pm98.querySelector('ul > .ed-page-break, ol > .ed-page-break');
+            const liNear = brk98 ? brk98.nextElementSibling : pm98.querySelectorAll('li')[30];
+            const pNear = liNear && liNear.querySelector ? liNear.querySelector('p') : null;
+            if (pNear && pNear.firstChild) {
+              T.editor.gotoPos(T.editor.view.posAtDOM(pNear.firstChild, 1));
+              await w98(150);
+            }
+            T.editor.cmd('ul');                    // กดปิดรายการตรงรอยต่อหน้า
+            await w98(500);
+            await settle98();
+            const after98 = pm98.querySelectorAll('.ed-page-break').length;
+            note('[98-1] เส้นคั่น ' + before98 + ' → ' + after98 + ' อัน');
+            check('[98-1] ★★ ปิดรายการตรงรอยต่อหน้าแล้วเส้นคั่นหน้าไม่หายไปไหน',
+                  after98 >= 1, before98 + ' → ' + after98);
+            check('[98-1] ★ จำนวนเส้นคั่นตรงกับที่ตัวจัดหน้าคำนวณไว้',
+                  after98 === prosePageBreaks().length,
+                  after98 + ' vs ' + prosePageBreaks().length);
+            check('[98-1] ทุกเส้นคั่นชี้ตำแหน่งที่ยังอยู่ในเอกสาร',
+                  prosePageBreaks().every((b) => b.pos > 0
+                    && b.pos < T.editor.view.state.doc.content.size));
+          }
+
+          // ═══ ข้อ 7 · หน้าไม่เท่ากันเมื่อมี "หัวข้อ" ปนอยู่ (เคสจริงของผู้ใช้) ═══
+          {
+            const spf98 = spFormat();
+            const contentH98 = (spf98.paper.height - spf98.margins.top - spf98.margins.bottom) * 96;
+            const doc98 = [];
+            for (let i = 1; i <= 60; i++) {
+              if (i % 7 === 0) doc98.push('## หัวข้อที่ ' + i);
+              else doc98.push('ย่อหน้าที่ ' + i + ' ' + 'เนื้อความยาวพอควรให้เต็มบรรทัด '.repeat(3));
+            }
+            T.editor.setMarkdown(doc98.join(String.fromCharCode(10, 10)));
+            await w98(700);
+            const gaps98 = () => {
+              const z = zoomFactorOf(pm98) || 1;
+              const first = [...pm98.children].find((e) => e.nodeType === 1
+                && !e.classList.contains('ed-page-break') && e.getBoundingClientRect().height > 0);
+              let prevBot = first ? first.getBoundingClientRect().top : 0;
+              const out = [];
+              for (const e of pm98.querySelectorAll('.ed-page-break')) {
+                const r = e.getBoundingClientRect();
+                const pad = parseFloat(getComputedStyle(e).getPropertyValue('--k-pb-pad')) || 0;
+                out.push(+(((r.top - prevBot) / z) + pad).toFixed(1));
+                prevBot = r.bottom;
+              }
+              return out;
+            };
+            for (const paper of [false, true]) {
+              setSpView(paper ? 'layout' : 'normal', true);
+              await w98(300);
+              await settle98();
+              await w98(800);
+              const g = gaps98();
+              const worst = g.length ? Math.max(...g.map((x) => Math.abs(x - contentH98))) : 999;
+              const lbl = paper ? 'มุมมองจัดหน้า' : 'มุมมองปกติ';
+              note('[98-7] ' + lbl + ' (มีหัวข้อปน): ' + g.length + ' หน้า · เพี้ยนมากสุด '
+                   + worst.toFixed(1) + 'px · ' + g.slice(0, 6).join(' , '));
+              check('[98-7] ★★ ' + lbl + ': มีหัวข้อปนแล้วทุกหน้ายังสูงเท่าพื้นที่พิมพ์เป๊ะ',
+                    g.length >= 3 && worst <= 2,
+                    'ต้องได้ ' + Math.round(contentH98) + ' · ได้ ' + g.slice(0, 8).join(' , '));
+            }
+            setSpView('normal', true);
+            await kapi.testShot('/tmp/k2_98_heading_pages.png');
+          }
+
+          // ═══ ข้อ 8 · วัดว่าการวาดหน้ากระดาษหนักแค่ไหน (40 หน้า) ═══
+          {
+            const many98 = [];
+            for (let i = 1; i <= 1200; i++) many98.push('บรรทัดที่ ' + i);
+            T.editor.setMarkdown(many98.join(String.fromCharCode(10, 10)));
+            await w98(900);
+            const scrollCost = async () => {
+              pane98.scrollTop = 0;
+              await w98(200);
+              const t0 = performance.now();
+              let frames = 0;
+              for (let i = 0; i < 24; i++) {
+                pane98.scrollTop += 400;
+                await new Promise((r) => requestAnimationFrame(r));
+                frames++;
+              }
+              return +((performance.now() - t0) / frames).toFixed(2);
+            };
+            // ── วัด "พิมพ์แล้วหน่วงแค่ไหน" ด้วย — ผู้ใช้บอกว่ากระตุกตอนใช้งาน ไม่ใช่ตอนเลื่อนจอ ──
+            const typeCost = async () => {
+              const v = T.editor.view;
+              v.focus();
+              T.editor.gotoPos(Math.round(v.state.doc.content.size / 2));
+              await w98(200);
+              const t0 = performance.now();
+              for (let i = 0; i < 12; i++) {
+                v.dispatch(v.state.tr.insertText('ก'));
+                pm98.getBoundingClientRect();          // บังคับให้คิด layout จริงทุกตัว
+                repaginateFast(T);                     // เส้นทางเดียวกับตอนกด Enter
+              }
+              return +((performance.now() - t0) / 12).toFixed(2);
+            };
+            const repagCost = () => {
+              const t0 = performance.now();
+              repaginateFast(T);
+              return +(performance.now() - t0).toFixed(2);
+            };
+            setSpView('layout', true);
+            await settle98(); await w98(400);
+            const nPages98 = prosePageBreaks().length + 1;
+            const costPaper = await scrollCost();
+            const typePaper = await typeCost();
+            bumpProseLayout();
+            const repagPaper = repagCost();
+            setSpView('draft', true);
+            await w98(600);
+            const costDraft = await scrollCost();
+            const typeDraft = await typeCost();
+            bumpProseLayout();
+            const repagDraft = repagCost();
+            setSpView('layout', true);
+            await w98(400);
+            note('[98-8] ' + nPages98 + ' หน้า · เลื่อนจอ: กระดาษ ' + costPaper
+                 + ' / ร่าง ' + costDraft + ' ms/เฟรม');
+            note('[98-8] พิมพ์: กระดาษ ' + typePaper + ' / ร่าง ' + typeDraft
+                 + ' ms/ตัว · จัดหน้าหนึ่งรอบ: กระดาษ ' + repagPaper
+                 + ' / ร่าง ' + repagDraft + ' ms');
+            // แยกดูว่าเวลาหมดไปกับขั้นไหน
+            {
+              const spfP = spFormat();
+              const optP = { paper: spfP.paper, margins: spfP.margins };
+              bumpProseLayout();
+              const a0 = performance.now();
+              const mzP = measureProseLayout(T.editor.view, optP);
+              const a1 = performance.now();
+              const pagesP = mzP ? withMeasureMode(() =>
+                sliceProsePages(mzP.blocks, mzP.contentHeight, mzP.totalHeight)) : [];
+              const a2 = performance.now();
+              const brkP = mzP ? proseBreakList(T.editor.view, mzP.blocks,
+                pagesP.map((x, i) => ({ ...x, index: i + 1 })), 1, mzP.contentHeight) : [];
+              const a3 = performance.now();
+              tuneProsePagePadsLoop(T);
+              const a4 = performance.now();
+              note('[98-8] แยกขั้น: วัด ' + (a1 - a0).toFixed(1) + ' · หั่นหน้า '
+                   + (a2 - a1).toFixed(1) + ' · แปลงตำแหน่ง ' + (a3 - a2).toFixed(1)
+                   + ' · ชดเชยที่ว่าง ' + (a4 - a3).toFixed(1) + ' ms · บล็อก '
+                   + (mzP ? mzP.blocks.length : -1) + ' · จุดตัด ' + brkP.length);
+            }
+            check('[98-8] เอกสารทดสอบยาวพอ (อย่างน้อย 20 หน้า)', nPages98 >= 20, nPages98);
+            check('[98-8] ★★ เลื่อนจอในโหมดหน้ากระดาษไม่กระตุก (ต่ำกว่า 3 เฟรมของ 60Hz)',
+                  costPaper < 50, costPaper + ' ms/เฟรม (โหมดร่าง ' + costDraft + ')');
+            check('[98-8] ★ การวาดหน้ากระดาษไม่ใช่ตัวถ่วง (เลื่อนจอพอ ๆ กับโหมดร่าง)',
+                  costPaper < costDraft * 2 + 5, costPaper + ' vs ' + costDraft);
+            // ★★ ต้นตอจริง: ทางลัด "กด Enter = จัดหน้าเดี๋ยวนี้" ยิงทุกครั้งแม้เอกสารยาวมาก
+            {
+              const enterCost = async () => {
+                const v98 = T.editor.view;
+                v98.focus();
+                T.editor.gotoPos(Math.round(v98.state.doc.content.size / 2));
+                await w98(150);
+                const t0 = performance.now();
+                v98.dom.dispatchEvent(new KeyboardEvent('keydown',
+                  { key: 'Enter', bubbles: true, cancelable: true }));
+                v98.dispatch(v98.state.tr.split(v98.state.selection.head));
+                await new Promise((r) => setTimeout(r, 0));   // ให้ทางลัดได้ทำงานถ้ามันจะทำ
+                return +(performance.now() - t0).toFixed(2);
+              };
+              const enterPaper = await enterCost();
+              setSpView('draft', true); await w98(500);
+              const enterDraft = await enterCost();           // โหมดร่างไม่วาดหน้ากระดาษเลย
+              setSpView('layout', true); await w98(400);
+              note('[98-8] กด Enter หนึ่งครั้งที่ ' + nPages98 + ' หน้า: กระดาษ ' + enterPaper
+                   + ' / ร่าง ' + enterDraft + ' ms (จัดหน้าหนึ่งรอบ = ' + repagPaper + ' ms)');
+              check('[98-8] ★★ กด Enter ในเอกสารยาวมากไม่จ่ายค่าจัดหน้าเต็มราคาอีกแล้ว',
+                    enterPaper < repagPaper * 0.85,
+                    enterPaper + ' ms vs จัดหน้า ' + repagPaper + ' ms');
+              check('[98-8] ★ ค่าที่เหลือไม่ได้มาจากการวาดหน้ากระดาษ (โหมดร่างพอ ๆ กัน)',
+                    enterPaper < enterDraft * 2 + 10, enterPaper + ' vs ' + enterDraft);
+              check('[98-8] เอกสารยาวเข้าเกณฑ์ "หนัก" จริง (ตัวหน่วงเวลาทำงาน)',
+                    heavyDelay(T) > 100, heavyDelay(T) + ' ms');
+            }
+          }
+
+          setSpView('normal', true);
+          T.editor.setMarkdown(keep98);
+          bumpProseLayout();
+          await w98(400);
         }
         T.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
         await new Promise((r) => setTimeout(r, 250));
@@ -21650,7 +22848,8 @@ async function runTest(projectPath) {
       // ---- [15] มุมมองหน้ากระดาษของนิยาย ----
       setSpView('layout');
       await new Promise((r) => setTimeout(r, 200));
-      check('[15] นิยายเข้าโหมดจัดหน้าได้', T.pane.classList.contains('sp-view-layout'));
+      check('[15] นิยายเข้าโหมดจัดหน้าได้',
+            T.pane.classList.contains('sp-view-layout'), T.pane.className);
       setSpView('side');
       await new Promise((r) => setTimeout(r, 250));
       check('[15] นิยายเข้าโหมดเรียงหน้าคู่แล้ววาดหน้าจริง',
@@ -27177,13 +28376,14 @@ async function runTest(projectPath) {
           // หน้าแรกที่เหลือคือหน้า 1 ของเนื้อเรื่อง ต้องมีเลข (ตัวอย่างกับไฟล์ต้องใช้กฎเดียวกัน)
           // [alpha.82] เลิก "บังคับทับ" — จอกับ PDF ต้องอ่านค่าเดียวกัน (เดิมจอไม่มีเลข 1 แต่ PDF มี)
           check('[82] ส่งออกใช้ค่าเลขหน้าชุดเดียวกับหน้าจอ',
-                exportPageNumberFmt(spFormat()).pageNumbers.firstPage
-                  === spFormat().pageNumbers.firstPage);
-          // [alpha.88 ข้อ 4] ค่าเริ่มต้นกลับเป็นมาตรฐานบท: หน้า 1 ของบทไม่ใส่เลข
-          check('[88-4] ค่าเริ่มต้นของการส่งออก = หน้า 1 ของบทไม่ใส่เลข',
-                exportPageNumberFmt({}).pageNumbers.firstPage === false);
+                exportPageNumberFmt(spFormat()).pageNumbers.show
+                  === spFormat().pageNumbers.show);
+          // [alpha.97 ข้อ 11] ตัวส่งออกไม่บังคับอะไรทับอีกแล้ว — ทั้งจอและ PDF ใช้กฎเดียว
+          check('[97-11] ตัวส่งออกไม่มีคีย์ firstPage หลงเหลือ',
+                !('firstPage' in exportPageNumberFmt({}).pageNumbers),
+                JSON.stringify(exportPageNumberFmt({}).pageNumbers));
           check('[81r3] ไม่แก้ค่าที่ผู้ใช้ตั้งไว้ในโปรเจกต์',
-                spFormat().pageNumbers.firstPage === mergeSpFormat(state.settings).pageNumbers.firstPage);
+                spFormat().pageNumbers.show === mergeSpFormat(state.settings).pageNumbers.show);
           {
             const keepPn3 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
             togglePageNumbers(true);
@@ -27239,9 +28439,8 @@ async function runTest(projectPath) {
           if (tp81) {
             await activate(tp81.file);
             const keepPn = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
-            // มาตรฐานอุตสาหกรรม: หน้าแรกไม่ใส่เลข (firstPage:false) — เปิดไว้ในเทสเพื่อวัดหน้าแรกได้
+            // [alpha.97 ข้อ 11] หน้าแรกมีเลขเสมอแล้ว — ไม่ต้องตั้งสวิตช์อะไรก่อนวัด
             togglePageNumbers(true);
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
             applyPageVars();
             await wait81(80);
             const lbl = updatePageNumberHint();
@@ -27298,18 +28497,15 @@ async function runTest(projectPath) {
             };
             const top0 = clipTop(), h0 = clipH();
             togglePageNumbers(true);
-            // ตรึงค่าสวิตช์ "ใส่เลขบนหน้าแรก" ให้แน่นอน — บล็อกก่อนหน้าอาจสลับค่าไว้
-            state.settings.spPageNumbers =
-              { ...state.settings.spPageNumbers, firstPage: false };
             applyPageVars(); refreshSpView();
             await until83(() => !!tp83.pane.querySelector('.sp-pageview .ed-page .sp-page-num'));
             const numEl = tp83.pane.querySelector('.sp-pageview .ed-page .sp-page-num');
-            // [alpha.88 ข้อ 4] หน้า 1 ไม่ใส่เลขแล้ว (มาตรฐานบท · ใช้สวิตช์เดียวกันทั้งสองโหมด)
-            // เลขที่เจอตัวแรกจึงเป็นของหน้า 2 — ที่ต้องพิสูจน์คือ "มีเลขจริงและเป็นตัวเลขล้วน"
-            check('[83-5] นิยาย: เปิดเลขหน้า → หน้าถัด ๆ ไปมีเลขจริง',
+            // [alpha.97 ข้อ 11] หน้าเนื้อเรื่องมีเลขทุกหน้ารวมหน้าแรก — ไม่มีสวิตช์ย่อยอีกแล้ว
+            check('[83-5] นิยาย: เปิดเลขหน้า → มีเลขจริงและเป็นตัวเลขล้วน',
                   !!numEl && /^[0-9]+$/.test(numEl.textContent.trim()), numEl && numEl.textContent);
-            check('[88-4] ★ นิยาย: หน้า 1 ไม่มีเลข (สวิตช์ "ใส่เลขบนหน้าแรก" ปิดเป็นค่าเริ่มต้น)',
-                  !tp83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
+            check('[97-11] ★ นิยาย: หน้า 1 มีเลข "1" ทันทีที่เปิด (ไม่ต้องไปติ๊กเพิ่ม)',
+                  (tp83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num')
+                    || {}).textContent === '1',
                   [...tp83.pane.querySelectorAll('.sp-pageview .sp-page-num')]
                     .map((n) => n.textContent).join(','));
             check('[83-2] ★ เลขหน้าเป็นโอเวอร์เลย์ — เนื้อหาไม่ถูกดันลง',
@@ -27330,6 +28526,11 @@ async function runTest(projectPath) {
                     clips.map((c) => c.style.height).join(','));
             }
             // ── ข้อ 4: โหมดปกติ/จัดหน้า ต้องมีเลขหน้าของหน้าถัด ๆ ไปด้วย ไม่ใช่แค่หน้าแรก ──
+            // [alpha.98 ข้อ 6] ปิดโหมดกระดาษ = ไม่มีเส้นคั่นให้เห็นเลย → ไม่มีเลขหน้าบนเส้นคั่นด้วย
+            setSpView('normal');
+            await wait83(250);
+            repaginateFast(tp83);
+            await wait83(250);
             for (const mode of ['normal', 'layout']) {
               setSpView(mode);
               await wait83(150);
@@ -27387,22 +28588,12 @@ async function runTest(projectPath) {
               check('[83-5] ★ บทหนัง: ปิดเลขหน้า → ไม่มีเลขสักหน้า (เดิมหน้า 2+ ติดตายเอาออกไม่ได้)',
                     ts83.pane.querySelectorAll('.sp-pageview .sp-page-num').length === 0,
                     ts83.pane.querySelectorAll('.sp-pageview .sp-page-num').length);
-              // [alpha.88 ข้อ 4] มาตรฐานบท = หน้า 1 ไม่ใส่เลข · สวิตช์ "ใส่เลขบนหน้าแรก" เปิดเองได้
+              // [alpha.97 ข้อ 11] เปิดเลขหน้า = ได้ทุกหน้ารวมหน้าแรก ไม่มีสวิตช์ย่อยอีกแล้ว
               togglePageNumbers(true);
-              state.settings.spPageNumbers =
-                { ...state.settings.spPageNumbers, firstPage: false };
-              applyPageVars(); refreshSpView();
-              await wait83(350);
-              check('[88-4] ★ บทหนัง: หน้าแรกไม่มีเลขหน้า (มาตรฐานอุตสาหกรรม)',
-                    !ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
-                    [...ts83.pane.querySelectorAll('.sp-pageview .sp-page-num')]
-                      .map((n) => n.textContent).join(','));
-              state.settings.spPageNumbers =
-                { ...state.settings.spPageNumbers, firstPage: true };
               applyPageVars(); refreshSpView();
               await wait83(350);
               const nums = [...ts83.pane.querySelectorAll('.sp-pageview .sp-page-num')];
-              check('[83-5] บทหนัง: เปิดสวิตช์ "ใส่เลขบนหน้าแรก" → หน้าแรกมีเลขด้วย',
+              check('[97-11] ★ บทหนัง: เปิดเลขหน้าแล้วหน้าแรกมีเลขทันที (ไม่ต้องติ๊กเพิ่ม)',
                     nums.length > 0 &&
                     !!ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
                     nums.map((n) => n.textContent).join(','));
@@ -27451,32 +28642,21 @@ async function runTest(projectPath) {
 
           // ══════════ [alpha.83r] รอบเก็บบั๊กต่อจาก .83 (4 ข้อ) ══════════
           {
-            // ── [alpha.88 ข้อ 4] กลับด้านจาก .83r: หน้าแรกของบทต้องไม่มีเลข ──
-            const keepMig = state.settings.pgFirstMigrated;
+            // ── [alpha.97 ข้อ 11] สวิตช์ "เลขหน้าแรก" ถูกถอดออกทั้งระบบ ──
+            // (.82 → .83r → .88 เถียงกันสามรุ่นเพราะตีความคำว่า "หน้าแรก" ผิด — ดู sp-format.js)
             const keepPn83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
-            check('[88-4] ★ ค่าเริ่มต้นของ "เลขหน้าแรก" = ปิด (มาตรฐานบท)',
-                  PAGE_NUMBER_DEFAULTS.firstPage === false);
-            state.settings.pgFirstMigrated = true;   // = โปรเจกต์ที่ .83r เคยเขียนทับไว้
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-            const moved = migratePageNumberFirst();
-            check('[88-4] ★ โปรเจกต์ที่ .83r บังคับ firstPage:true ไว้ → ถูกล้างกลับเป็น false',
-                  moved === true && state.settings.spPageNumbers.firstPage === false,
-                  JSON.stringify(state.settings.spPageNumbers));
-            check('[88-4] ล้างครั้งเดียว — เปิดเองทีหลังแล้วไม่ถูกทับซ้ำ',
+            check('[97-11] ★ ค่าเริ่มต้นไม่มีสวิตช์ firstPage แล้ว',
+                  !('firstPage' in PAGE_NUMBER_DEFAULTS), JSON.stringify(PAGE_NUMBER_DEFAULTS));
+            check('[97-11] ★ ไม่มีตัวย้ายค่า firstPage หลงเหลือใน settings',
+                  !('pgFirstMigrated' in DEFAULT_SETTINGS));
+            check('[97-11] ★ ค่าเก่าที่ค้างในไฟล์โปรเจกต์ไม่มีผลกับเลขหน้าอีกแล้ว',
                   (() => {
-                    state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-                    const again = migratePageNumberFirst();
-                    return again === false && state.settings.spPageNumbers.firstPage === true;
+                    state.settings.spPageNumbers =
+                      { ...state.settings.spPageNumbers, show: true, firstPage: false };
+                    const got = pageNumberLabel(1, spFormat(), 1);
+                    state.settings.spPageNumbers = keepPn83;
+                    return got === '1.';
                   })());
-            check('[88-4] โปรเจกต์ใหม่ (ไม่เคยผ่าน .83r) ไม่ถูกแตะ',
-                  (() => {
-                    state.settings.pgFirstMigrated = false;
-                    state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-                    const r88 = migratePageNumberFirst();
-                    return r88 === false && state.settings.spPageNumbers.firstPage === true &&
-                           state.settings.pgFirstMigrated === 2;
-                  })());
-            state.settings.pgFirstMigrated = keepMig;
             state.settings.spPageNumbers = keepPn83;
             applyPageVars();
 
@@ -27488,7 +28668,6 @@ async function runTest(projectPath) {
             if (tsp) {
               setSpView('normal');
               togglePageNumbers(true);
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
               applyPageVars(); updatePageNumberHint();
               await wait83(200);
               const pmS = tsp.pane.querySelector(':scope > .workspace > .ProseMirror');

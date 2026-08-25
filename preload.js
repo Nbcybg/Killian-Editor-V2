@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('kapi', {
   listFiles: call('fs:listFiles'), mkdir: call('fs:mkdir'), move: callW('fs:move'), remove: callW('fs:remove'), isDir: call('fs:isDir'), mtime: call('fs:mtime'),
   stat: call('fs:stat'),                   // [alpha.63] {size, mtimeMs, birthtimeMs, isDir} — คลังรูปใช้
   copyInto: callW('fs:copyInto'), writeImageData: callW('fs:writeImageData'),
+  // [alpha.97 ข้อ 12] ชื่อวงศ์ฟอนต์ที่ลงไว้ในเครื่อง (อ่านจากโฟลเดอร์ฟอนต์ของระบบ)
+  listFonts: call('fonts:list'),
   writeBytes: callW('fs:writeBytes'), readBytes: call('fs:readBytes'), copyFile: callW('fs:copyFile'),
   spellBase: call('spell:base'), spellExtra: call('spell:extra'),
   spellAddWord: call('spell:addWord'), spellDownload: call('spell:download'), spellHasBase: call('spell:hasBase'),

@@ -399,12 +399,25 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
   font-family:"Courier Prime","Courier New",monospace; font-size:.92em; line-height:1.5;
   white-space:pre-wrap; }
 .ProseMirror pre code { font-family:inherit; }
-.ProseMirror ul,.ProseMirror ol { padding-left:28px; margin:.3em 0; }
+/* [alpha.98 ข้อ 3] ค่าฐานต้องตรงกับที่ proseCss() ออกให้ — รายการกินที่เท่าย่อหน้า
+   (ของเดิม .3em บน-ล่าง ทำให้ toggle รายการทีเดียวบรรทัดขยับ) */
+.ProseMirror ul,.ProseMirror ol { padding-left:var(--ed-list-pad, 28px);
+  margin:0 0 var(--ed-para, .35em); }
+.ProseMirror li > p { margin:0; text-indent:0; }
+.ProseMirror li + li > p { margin-top:var(--ed-para, .35em); }
+.ProseMirror li > ul,.ProseMirror li > ol { margin:0; }
 .ProseMirror figure { margin:1em 0; text-align:center; }
 .ProseMirror figure img { max-width:100%; max-height:480px; border-radius:8px; }
 .ProseMirror figure figcaption { color:var(--dim); font-size:13px; margin-top:6px; }
 .ProseMirror figure.ProseMirror-selectednode img { outline:3px solid var(--accent-hi); }
 .ProseMirror u { text-underline-offset:3px; }
+/* [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — `line-height:0` **บังคับ** ไม่ใช่ความสวยงาม:
+   ค่าเริ่มต้นของเบราว์เซอร์ทำให้กล่องบรรทัดที่มีตัวยกสูงกว่าบรรทัดอื่น ซึ่งตัวจัดหน้าของนิยาย
+   (prose-measure.js) วัดจาก DOM จริง → บรรทัดเดียวที่สูงผิดปกติทำให้จุดตัดหน้าเลื่อนทั้งหน้า */
+.ProseMirror sup,.ProseMirror sub { font-size:.72em; line-height:0; position:relative;
+  vertical-align:baseline; }
+.ProseMirror sup { top:-.45em; }
+.ProseMirror sub { top:.22em; }
 
 /* เลขบรรทัด (นับตามย่อหน้า/บล็อกระดับบน) — เปิดด้วย body.k-ln
    [alpha.58r บั๊ก 2] "เปิดเลขบรรทัดแล้วข้อความต้องไม่ขยับ"
@@ -1264,10 +1277,22 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 
 /* ---------- changelog ---------- */
 .k-dialog.k-wide { min-width:640px; max-width:78vw; }
-.k-src-view { width:100%; height:52vh; resize:vertical; box-sizing:border-box;
-  background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:8px;
+/* [alpha.97 ข้อ 6] Markdown ดิบ: แก้ไขได้ + รางเลขบรรทัด
+   รางเป็น element แยกที่ซิงก์ scrollTop กับ textarea — ทำใน textarea เองไม่ได้
+   เพราะข้อความในนั้นเป็น "ค่าของ element" ไม่ใช่ลูกใน DOM ที่จะแปะ ::before ได้
+   ★ font/line-height ของรางกับ textarea ต้องเท่ากันเป๊ะ ไม่งั้นเลขเลื่อนหนีทีละบรรทัด */
+.k-src-wrap { display:flex; align-items:stretch; height:52vh; box-sizing:border-box;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.k-src-gutter { flex:0 0 auto; min-width:46px; overflow:hidden; text-align:right;
+  padding:12px 8px 12px 10px; box-sizing:border-box;
+  background:var(--sunken); color:var(--dim); border-right:1px solid var(--border);
+  font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,monospace;
+  user-select:none; white-space:pre; }
+.k-src-view { flex:1 1 auto; width:100%; height:100%; resize:none; box-sizing:border-box;
+  background:transparent; color:var(--fg); border:0; border-radius:0;
   padding:12px 14px; font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,monospace;
-  white-space:pre; overflow:auto; }
+  white-space:pre; overflow:auto; outline:none; }
+.k-src-hint { margin:6px 2px 0; }
 #st-keys { max-height:46vh; overflow:auto; }
 .k-key-row { display:flex; align-items:center; gap:8px; padding:5px 2px; border-bottom:1px solid var(--border); }
 .k-key-label { flex:1; font-size:calc(13px * var(--ui-scale, 1)); color:var(--fg); }
@@ -3449,11 +3474,51 @@ body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
 /* ★ กางที่ว่างด้วย `margin-top` ไม่ใช่ `height` — กล่องต้องคง "ความเป็นกล่องว่าง" ไว้
    (สูง 0 · ไม่มีขอบ/พื้นใน) เพื่อให้ margin ของย่อหน้าบน-ล่างยังยุบรวมกับมันเป็นก้อนเดียว
    ถ้าใช้ height กล่องจะเลิกว่าง margin เลิกยุบ แล้วระยะเกินมาไม่เท่ากันในแต่ละรอยต่อ */
-.ed-page-break { margin:var(--k-pb-pad, 0px) 0 0; height:0; border-top:0; }
-.ed-page-break::before { content:''; position:absolute; left:0; right:0; top:0; bottom:auto;
+/* ══ [alpha.98 ข้อ 7] ★★ ที่ว่างท้ายหน้าต้องเป็น **ความสูงจริง** ไม่ใช่ margin ══
+   ผู้ใช้: *"เมื่อไหร่เราเป็นหัวข้อขึ้นมา หน้ากระดาษเพี้ยนทันที ... เราต้อง lock ความสูงของหน้าจริง ๆ"*
+   ถูกทุกคำ · ของเดิมกล่องนี้เป็น **กล่องว่าง** (สูง 0 ไม่มีขอบ/พื้นใน) → margin ของมัน
+   ยุบรวมกับย่อหน้าบน-ล่างตามสเปก CSS ระยะจริงจึงเป็น `max(mbบน, pad, mtล่าง)`
+   หัวข้อมี `margin-top` ราว 1em (~30px) พอ `pad < 30` การปรับ pad จึง **ไม่มีผลอะไรเลย**
+   ตัวชดเชยอิ่มตัว แก้ไม่ได้ = "ข้อความล้วนไม่มีปัญหา มีหัวข้อเมื่อไหร่พังทันที"
+   ใช้ `height` แทน → กล่องไม่ว่างอีกต่อไป margin ของสองฝั่งเลิกยุบผ่านมัน และ pad
+   มีผลกับระยะแบบ 1:1 ตัวชดเชยจึงลงตัวในรอบเดียวเสมอ */
+.ed-page-break { margin:0; height:var(--k-pb-pad, 0px); border-top:0; }
+/* บล็อกแรกของหน้าใหม่ไม่มีระยะนำ — ตรงกับที่ตัววาดหน้ากระดาษจริงทำมาตลอด
+   (`firstBlock.paddingTop = 0` ใน renderPageView) และทำให้ที่ว่างท้ายหน้าไม่ติดลบ
+   ★ ต้องยกเว้นตอนวัด ไม่งั้นเรขาคณิตขึ้นกับ "ตอนนี้เส้นคั่นอยู่ตรงไหน" = จัดหน้าไม่นิ่ง */
+body:not(.k-measuring) .ed-page-break + * { margin-top:0 !important; }
+/* [alpha.98 ข้อ 7] ที่ว่างท้ายหน้าอยู่ "ในกล่อง" แล้ว → เส้นประคือ **ก้นกล่อง** ไม่ใช่ขอบบน
+   (ขอบบน = บรรทัดสุดท้ายของหน้าเพิ่งจบ · ก้นกล่อง = รอยต่อหน้าจริง) */
+.ed-page-break::before { content:''; position:absolute; left:0; right:0; bottom:0; top:auto;
   border-top:1px dashed var(--border); }
 body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
-.ed-page-break > .sp-page-break-num { top:-1.05em; bottom:auto; }
+.ed-page-break > .sp-page-break-num { bottom:.1em; top:auto; }
+
+/* ── [alpha.97 ข้อ 2] เส้นคั่นหน้าที่ตกใน "รายการ" ──────────────────────────────
+   ตัววัดแตกรายการเป็นข้อ ๆ แล้ว (measurableChildren) จุดตัดจึงตกที่ตำแหน่งของ `<li>`
+   ในเอกสาร → ProseMirror วาง widget เป็น `<div>` **ระหว่าง `<li>`** (ลูกของ `<ul>`)
+   ไม่ใช่แทรกเข้าไปข้างใน `<li>` ก่อน `<p>` อีกต่อไป — ซึ่งตัวหลังคือสิ่งที่ทำให้
+   หมายเลขข้อกับข้อความแยกคนละบรรทัดในภาพที่ผู้ใช้ส่งมา
+
+   เหลือเรื่องความกว้าง: กล่องอยู่ในคอลัมน์ของรายการซึ่งเยื้องเข้ามา `--ed-list-pad`
+   ต้องหักกลับให้เส้นประกางเต็มความกว้างเนื้อหาเหมือนเส้นคั่นปกติ */
+.ProseMirror ul > .ed-page-break,
+.ProseMirror ol > .ed-page-break {
+  margin-left:calc(-1 * var(--ed-list-pad, 28px)); margin-right:0;
+}
+/* [alpha.98] ในโหมดหน้ากระดาษ แถบคั่นแผ่นต้องกางเต็ม *กระดาษ* — ต้องหักคืนทั้งระยะขอบกระดาษ
+   และระยะเยื้องของรายการ (ไม่งั้นล้ำออกไปทางซ้ายเกินขอบกระดาษ) */
+.pane.sp-view-layout .ProseMirror ul > .ed-page-break,
+.pane.sp-view-layout .ProseMirror ol > .ed-page-break,
+.pane.sp-view-layout .ProseMirror li .ed-page-break.k-pb-inline {
+  margin-left:calc(-1 * (var(--mg-left, 1.5in) + var(--ed-list-pad, 28px)));
+  width:var(--page-w, 8.5in);
+}
+/* จุดตัดที่ตก "กลางข้อ" ยังเป็น widget ระดับ inline ใน `<p>` ของ `<li>` ซึ่ง `.ProseMirror li`
+   เป็น `position:relative` → ::before ของมันอ้างขอบซ้ายของ `<li>` (เยื้องแล้ว) ต้องหักกลับเช่นกัน */
+.ProseMirror li .ed-page-break.k-pb-inline::before {
+  left:calc(-1 * var(--ed-list-pad, 28px)); right:0;
+}
 
 /* ── [alpha.88 ข้อ 1] ★ ตัดกลางย่อหน้า (ย่อหน้ายาวข้ามหน้า) ──────────────────────
    widget ต้องเป็น inline (ไม่งั้น <div> ใน <p> ฉีกกล่องบรรทัด) **แต่ต้องกินทั้งบรรทัด**
@@ -3475,12 +3540,15 @@ body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
    ตัววัดและตัวเทสจึงอ้างจุดเดียวกันได้ ไม่ต้องแยกเคส */
 .ed-page-break.k-pb-inline { display:inline-block; width:100%;
   --k-pb-strip:calc(var(--ed-lh, 1.75) * 1em + 2px);
-  height:var(--k-pb-strip);
+  /* [alpha.98 ข้อ 7] ที่ว่างท้ายหน้ารวมอยู่ในความสูงเลย (เหตุผลเดียวกับตัวระดับบล็อก) */
+  height:calc(var(--k-pb-strip) + var(--k-pb-pad, 0px));
   overflow:visible; vertical-align:top; text-indent:0;
-  margin:var(--k-pb-pad, 0px) 0 0; }
-.ed-page-break.k-pb-inline::before { left:0; right:0; width:auto; top:0; bottom:auto; }
+  margin:0; }
+/* แถบหนึ่งบรรทัดอยู่ "ก้นกล่อง" — ที่ว่างท้ายหน้ากางอยู่เหนือมัน */
+.ed-page-break.k-pb-inline::before { left:0; right:0; width:auto;
+  bottom:var(--k-pb-strip); top:auto; }
 .ed-page-break.k-pb-inline > .sp-page-break-num { right:0; left:auto;
-  top:calc(var(--k-pb-strip) / 2); bottom:auto; transform:translateY(-50%); }
+  bottom:calc(var(--k-pb-strip) / 2); top:auto; transform:translateY(50%); }
 
 /* ── [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของ "หน้าถัดไป" บนเส้นคั่นหน้า ──
    เดิมโหมดปกติ/จัดหน้ามีเลขหน้าเฉพาะหน้าแรก (::before ของ .ProseMirror) — หน้า 2 เป็นต้นไป
@@ -3491,16 +3559,16 @@ body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
   color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
   pointer-events:none; user-select:none; }
 .pane.sp-view-layout .sp-page-break > .sp-page-no-next {
-  display:block; right:var(--pg-no-right, 1in); bottom:auto;
-  top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) + var(--pg-no-top, .5in));
+  display:block; right:var(--pg-no-right, 1in); top:auto;
+  bottom:calc(var(--mg-top, 1in) - var(--pg-no-top, .5in));
 }
 /* [alpha.88 ข้อ 3] มุมมองปกติไม่มี "ขอบบนของแผ่นถัดไป" ให้วางเลขหน้าอีกแล้ว
    (สวิตช์ "แผ่นจริงขณะพิมพ์" ถูกตัดทิ้ง) → วางไว้ปลายซ้ายของเส้นคั่น ตรงข้ามป้าย "หน้า N" */
 .pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break > .sp-page-no-next {
-  display:block; left:0; right:auto; top:-1.05em; bottom:auto;
+  display:block; left:0; right:auto; bottom:.1em; top:auto;
 }
 .pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break.k-pb-inline > .sp-page-no-next {
-  top:calc(var(--k-pb-strip) / 2); bottom:auto; transform:translateY(-50%);
+  bottom:calc(var(--k-pb-strip) / 2); top:auto; transform:translateY(50%);
 }
 /* ปิดเลขหน้าอยู่ = ไม่มีอะไรให้โชว์ (ตัวเลขไม่ถูกสร้างตั้งแต่ต้นทาง แต่กันไว้อีกชั้น) */
 body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
@@ -3524,7 +3592,9 @@ body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
    โดย --pg-count ตั้งจาก JS ทุกครั้งที่จัดหน้าใหม่ (setLayoutPageCount) */
 .pane.sp-view-layout > .workspace > .ProseMirror,
 body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
-  background:#ffffff !important; color:#111 !important;
+  /* [alpha.98 ข้อ 6] ใช้สีกระดาษที่ผู้ใช้ตั้งไว้ (กระดาษครีมของ alpha.34) ไม่ใช่ขาวตายตัว
+     — มุมมอง "จัดหน้า" เดิมบังคับขาวจนหน้าตาไม่ตรงกับโหมดกระดาษ พอรวมกันแล้วต้องเป็นสีเดียว */
+  background:var(--paper, #fff) !important; color:var(--paper-ink, #111) !important;
   border:1px solid var(--paper-edge) !important;
   box-shadow:0 0 10px rgba(0,0,0,.35) !important;
   min-height:calc(var(--page-h, 11in) * var(--pg-count, 1)
@@ -3560,21 +3630,27 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 .pane.sp-view-layout .sp-page-break {
   --pb-gap:var(--sp-page-gap, 28px);
   --pb-mb:var(--mg-bottom, 1in);
-  /* [alpha.93 ข้อ 5] ที่ว่างท้ายหน้ากางด้วย `margin-top` (พื้นหลังตรงนั้นเป็นสีกระดาษอยู่แล้ว)
-     กล่องแถบคั่นจึงคงสูตรเดิม ไม่ต้องบวก pad เข้าไปอีก — ไม่งั้นนับซ้ำสองเท่า */
-  margin-top:var(--k-pb-pad, 0px);
-  height:calc(var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in)); border:0;
+  /* [alpha.98 ข้อ 7] ที่ว่างท้ายหน้ารวมอยู่ในความสูง — ต้องไม่ใช้ margin (ยุบกับหัวข้อได้) */
+  margin-top:0;
+  height:calc(var(--k-pb-pad, 0px) + var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in));
+  border:0;
   margin-right:calc(-1 * var(--mg-right, 1in));
   margin-left:calc(-1 * var(--mg-left, 1.5in));
   margin-bottom:0;
-  background:linear-gradient(to bottom,
-    #fff 0, #fff var(--pb-mb),
-    var(--paper-edge) var(--pb-mb), var(--paper-edge) calc(var(--pb-mb) + 2px),
-    var(--paper-surround, #33322f) calc(var(--pb-mb) + 2px),
-    var(--paper-surround, #33322f) calc(var(--pb-mb) + var(--pb-gap) - 2px),
-    var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap) - 2px),
-    var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap)),
-    #fff calc(var(--pb-mb) + var(--pb-gap)), #fff 100%);
+  /* [alpha.98 ข้อ 7] แถบรอยต่อแผ่นสูงคงที่ (ขอบล่าง+ช่องว่าง+ขอบบน) และยึด **ก้นกล่อง**
+     ส่วนที่เหลือข้างบนคือ "ก้นหน้าที่ยังว่าง" ซึ่งต้องเป็นสีกระดาษ → ชั้นล่างทาสีกระดาษไว้ */
+  --pb-band:calc(var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in));
+  background:
+    linear-gradient(to bottom,
+      var(--paper, #fff) 0, var(--paper, #fff) var(--pb-mb),
+      var(--paper-edge) var(--pb-mb), var(--paper-edge) calc(var(--pb-mb) + 2px),
+      var(--paper-surround, #33322f) calc(var(--pb-mb) + 2px),
+      var(--paper-surround, #33322f) calc(var(--pb-mb) + var(--pb-gap) - 2px),
+      var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap) - 2px),
+      var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap)),
+      var(--paper, #fff) calc(var(--pb-mb) + var(--pb-gap)), var(--paper, #fff) 100%)
+      left bottom / 100% var(--pb-band) no-repeat,
+    var(--paper, #fff);
 }
 /* [alpha.84 ข้อ 2] จุดตัดกลางบทพูด — แถบคั่นแผ่นต้องกว้างเต็มกระดาษเหมือนกรณีปกติ
    แต่ตัวมันอยู่ในบล็อกที่เยื้องมาแล้ว จึงคิดระยะซ้ายจาก "ขอบซ้ายกระดาษ" ตรง ๆ:
@@ -3590,14 +3666,15 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 .pane.sp-view-layout .sp-page-break.k-pb-inline {
   width:calc(100% + var(--mg-left, 1.5in) + var(--mg-right, 1in));
   margin:0 0 0 calc(-1 * var(--mg-left, 1.5in));
-  height:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) + var(--mg-top, 1in));
+  height:calc(var(--k-pb-pad, 0px) + var(--mg-bottom, 1in)
+              + var(--sp-page-gap, 28px) + var(--mg-top, 1in));
 }
 /* เส้นประวางที่ขอบบนของกล่อง เหมือนจุดตัดระดับบล็อกในโหมดเดียวกัน (ค่าปกติคือกึ่งกลาง) */
 .pane.sp-view-layout .sp-page-break.k-pb-inline::before { top:0; }
-/* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ไม่ใช่กลางแถบทั้งแถบ */
+/* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ยึดก้นกล่อง */
 .pane.sp-view-layout .sp-page-break-num {
-  position:absolute; right:auto; left:50%; bottom:auto;
-  top:calc(var(--mg-bottom, 1in) + var(--sp-page-gap, 28px) / 2); transform:translate(-50%, -50%);
+  position:absolute; right:auto; left:50%; top:auto;
+  bottom:calc(var(--mg-top, 1in) + var(--sp-page-gap, 28px) / 2); transform:translate(-50%, 50%);
   background:transparent; color:var(--dim); padding:0;
   font-size:calc(11px * var(--ui-scale, 1)); }
 
@@ -3800,10 +3877,21 @@ body.paper-mode .sp-cont-page { color:#6b6552; }
 .k-font-script { min-width:150px; }
 .k-font-pick { flex:1 1 240px; min-width:180px; }
 .k-font-range, .k-font-family { flex:1 1 170px; min-width:150px; }
-/* [alpha.84 ข้อ 1] ตัวอย่างฟอนต์ไทยในบท — ต้องใช้ระยะบรรทัดของ "บท" จริง (1 เท่า)
-   ไม่งั้นตัวอย่างสวยแต่ของจริงยังชนกัน (ซึ่งคืออาการที่ผู้ใช้รายงานมา) */
-.k-spthai-sample { background:#fff; color:#111; border:1px solid var(--border); border-radius:4px;
-  padding:10px 12px; margin-top:6px; font-size:18px; line-height:1; white-space:pre-wrap; }
+/* [alpha.97 ข้อ 12] แถวฟอนต์บอกได้ครบว่า ช่วงไหน → ฟอนต์อะไร → โหมดไหน → สัดส่วนเท่าไร */
+.k-font-row input[type=number] { font:inherit; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:5px; padding:3px 7px; }
+.k-font-target { min-width:118px; }
+.k-font-size { width:62px; text-align:right; }
+.k-font-sys { white-space:nowrap; }
+/* ตัวเลือกฟอนต์จากเครื่อง — หมายเหตุ "ย้ายเครื่องแล้วอาจหาย" อยู่ในกล่องตายตัว ไม่ใช่แค่ tooltip */
+.k-font-warn { margin:0 0 8px; line-height:1.5; }
+.k-font-list { max-height:46vh; overflow:auto; margin-top:8px;
+  border:1px solid var(--border); border-radius:6px; background:var(--bg); }
+.k-font-item { padding:6px 10px; font-size:16px; cursor:default;
+  border-bottom:1px solid var(--border); }
+.k-font-item:last-child { border-bottom:0; }
+.k-font-item:hover { background:var(--hover); }
+.k-font-item.on { background:var(--accent); color:var(--bright); }
 .k-font-range.bad { border-color:#e5695e; color:#e5695e; }
 #st-fonts-sample { border:1px solid var(--border); border-radius:8px; padding:10px 14px;
   background:var(--bg); color:var(--fg); overflow-x:auto; white-space:nowrap; }
@@ -5067,3 +5155,5 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .st-rt-area p, .st-rt-view p { margin:0 0 .7em; }
 .st-rt-view { line-height:1.7; padding-top:8px; }
 .st-rt-view :is(h1,h2,h3,h4) { color:var(--bright); margin:.6em 0 .3em; }
+
+

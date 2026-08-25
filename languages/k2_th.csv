@@ -1230,6 +1230,7 @@ ui.app.historyVersion, ประวัติเวอร์ชัน…
 ui.app.historyVersion2,🕘 ประวัติเวอร์ชัน…
 ui.app.home,หน้าแรก
 ui.app.image,รูป: 
+ui.app.imageRemoved,เอารูปออกแล้ว
 ui.app.import,นำเข้า-
 ui.app.importKeyLangAdd,นำเข้า {0} คีย์ · ภาษา {1} · เพิ่ม/แก้ {2}
 ui.app.importNotOkNot,นำเข้าไม่สำเร็จ: ยังไม่มีเล่ม/ฉบับร่างที่ใช้งานอยู่
@@ -1277,9 +1278,15 @@ ui.app.mapChar,"<div class=""k-dlg-title"">แผนที่อักขระ�
 ui.app.mapReadCant,🗺 แผนที่ (อ่านไม่ได้)
 ui.app.markCentralizeStaleFail,markCentralizeStale ล้มเหลว
 ui.app.markdown,Markdown ดิบ — 
+ui.app.mdApplied,อัปเดตเนื้อหาจาก Markdown แล้ว
+ui.app.mdApply,ใช้การแก้ไข
+ui.app.mdApplyFail,ใช้การแก้ไขไม่สำเร็จ: 
+ui.app.mdEditHint,"แก้ไขได้ — กด ""ใช้การแก้ไข"" เพื่อเขียนกลับเข้าเอกสาร (ยังไม่บันทึกลงไฟล์จนกว่าจะกด Ctrl+S)"
+ui.app.mdNoChange,ไม่มีอะไรเปลี่ยน
 ui.app.mergeFileBundler,รวมไฟล์ (bundler)
 ui.app.mergeStory,รวมทั้งเรื่อง: {0}
 ui.app.migPageNumFirst,"ย้ายค่าเก่า: เปิด ""ใส่เลขบนหน้าแรก"" ให้อัตโนมัติ (โปรเจกต์บันทึกไว้ก่อน alpha.82)"
+ui.app.migSpThaiFont,"ย้ายค่าฟอนต์ไทยของบทภาพยนตร์มาเป็นแถวใน ""ฟอนต์ตามภาษา"" แล้ว"
 ui.app.mine,ของฉัน
 ui.app.modeCompareDoc,โหมดเทียบเอกสาร: 
 ui.app.modeFocus,โหมดโฟกัส
@@ -2638,7 +2645,6 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>ขวา: ระยะจากขอบกระดาษขวา (นิ้ว)</label><input type=""number"" id=""st-sn-right"" class=""k-narrow"" min=""0"" max=""5"" step=""0.05""></div>
       <div class=""k-set-sub k-full"">เลขหน้า (Page Number)</div>
       <div class=""k-row""><label>แสดงเลขหน้า<span class=""k-hint"">มีเฉพาะไฟล์ที่เป็นฉาก · เลขเริ่มต้นตั้งรายไฟล์ที่ ""คุณสมบัติฉาก""</span></label><input type=""checkbox"" id=""st-pn-show""></div>
-      <div class=""k-row""><label>ใส่เลขบนหน้าแรกด้วย<span class=""k-hint"">ธรรมเนียมบท: หน้าแรกไม่ใส่เลข</span></label><input type=""checkbox"" id=""st-pn-first""></div>
       <div class=""k-row""><label>ระยะจากขอบขวา (นิ้ว)</label><input type=""number"" id=""st-pn-right"" class=""k-narrow"" min=""0"" max=""5"" step=""0.05""></div>
       <div class=""k-row""><label>ระยะจากขอบบน (นิ้ว)</label><input type=""number"" id=""st-pn-top"" class=""k-narrow"" min=""0"" max=""5"" step=""0.05""></div>
       <div class=""k-row""><label>ท้ายเลข</label><input type=""text"" id=""st-pn-suffix"" class=""k-narrow""></div>
@@ -2667,7 +2673,6 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
         [16–24] รูปแบบของ ""เนื้อเรื่องนิยาย"" — ย่อหน้าบรรทัดแรก · ช่วงบรรทัด · หัวข้อ · ยกคำพูด
         · ค่าที่ตั้งที่นี่ใช้ทั้งบนจอและตอนส่งออก HTML (WYSIWYG)</div>
       <div class=""k-set-sub k-full"">เนื้อเรื่อง</div>
-      <div class=""k-row""><label>ฟอนต์นิยาย<span class=""k-hint"">ว่าง = ตัวพิมพ์สัดส่วนมาตรฐาน (Sarabun/Georgia) ไม่ใช่ Courier ของบท</span></label><select id=""st-pr-font"" class=""k-dlg-select"" style=""width:100%""></select></div>
       <div class=""k-row""><label>ขนาด (pt)</label><input type=""number"" id=""st-pr-pt"" class=""k-narrow"" min=""6"" max=""48"" step=""0.5""></div>
       <div class=""k-row""><label>ช่วงบรรทัด<span class=""k-hint"">1.0 = ชิด · 1.75 = ปกติ · 2.0 = เว้นบรรทัดคู่</span></label><input type=""number"" id=""st-pr-lh"" class=""k-narrow"" min=""0.8"" max=""4"" step=""0.05""></div>
       <div class=""k-row""><label>ระยะระหว่างย่อหน้า (em)<span class=""k-hint"">นิยายมาตรฐาน = 0 (ใช้ย่อหน้าแทนการเว้นบรรทัด)</span></label><input type=""number"" id=""st-pr-para"" class=""k-narrow"" min=""0"" max=""4"" step=""0.05""></div>
@@ -2690,7 +2695,6 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>สีตัวอักษร<span class=""k-hint"">ว่าง = ใช้สีของธีม</span></label><input type=""text"" id=""st-pr-qcolor"" class=""k-narrow"" placeholder=""#c8792f""></div>
       <div class=""k-set-sub k-full"">เลขหน้า (มุมมองหน้ากระดาษของนิยาย)</div>
       <div class=""k-row""><label>แสดงเลขหน้า</label><input type=""checkbox"" id=""st-pr-pgnum""></div>
-      <div class=""k-row""><label>ใส่เลขบนหน้าแรกด้วย</label><input type=""checkbox"" id=""st-pr-pgfirst""></div>
       <div class=""k-hint k-full"" id=""st-pr-info"" style=""margin-top:8px""></div>
       <div class=""k-full"" style=""margin-top:12px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap"">
         <button id=""st-pr-preset-novel"" class=""k-key-btn"">📖 ตั้งเป็นแบบนิยายมาตรฐาน</button>
@@ -2725,20 +2729,10 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     </div>
     <div class=""k-set-page"" data-p=""fonts"">
       <div class=""k-hint"" style=""margin-bottom:10px"">
-        ฟอนต์บทมาตรฐาน (Courier) ไม่มีอักษรไทย — กำหนดเองได้ว่า ""ช่วงอักขระไหน ใช้ฟอนต์อะไร""
-        เพิ่มได้ไม่จำกัด · ใช้ได้ทั้งโหมดนิยายและบทภาพยนตร์ · แถวบนสุดมีลำดับก่อน</div>
-      <div class=""k-set-sub k-full"">🎬 ฟอนต์ไทยในบทภาพยนตร์ — ปรับสัดส่วนให้เท่า Courier</div>
-      <div class=""k-hint"" style=""margin-bottom:8px"">
-        สแตกฟอนต์ของบทเริ่มด้วย Courier Prime ซึ่ง <b>ไม่มีอักษรไทยเลย</b> ตัวไทยจึงตกไปฟอนต์สำรองของระบบ
-        ที่มีเมตริกคนละชุด — ตัวใหญ่กว่าและล้นระยะบรรทัดของบท (ตายตัวที่ 1/6 นิ้ว = 6 บรรทัด/นิ้ว)
-        วรรณยุกต์จึงชนบรรทัดบนหรือหายไป · โหมดนิยายไม่เจอปัญหานี้เพราะสแตกของมันเริ่มด้วยฟอนต์ไทยอยู่แล้ว
-        <br>สวิตช์นี้ย่อ <b>เฉพาะอักษรไทย</b> ให้พอดี — ไม่แตะระยะบรรทัด ไม่แตะโหมดนิยาย</div>
-      <div class=""k-row""><label>ปรับสัดส่วนฟอนต์ไทย<span class=""k-hint"">ปิด = ปล่อยตามระบบ (อาการเดิม)</span></label><input type=""checkbox"" id=""st-spthai-on""></div>
-      <div class=""k-row""><label>ขนาดตัวไทย (%)<span class=""k-hint"">85 = ค่าที่วัดแล้วเท่า Courier Prime พอดี</span></label><input type=""number"" id=""st-spthai-size"" min=""50"" max=""150"" step=""1"" class=""k-dlg-input""></div>
-      <div class=""k-row""><label>ฟอนต์ไทยที่ใช้<span class=""k-hint"">อัตโนมัติ = ไล่ Ayuthaya → Thonburi → Leelawadee UI → Sarabun → Tahoma</span></label><select id=""st-spthai-family"" class=""k-dlg-select""></select></div>
-      <div class=""k-hint"" style=""margin-top:8px"">ตัวอย่างจริง (ระยะบรรทัดของบทภาพยนตร์)</div>
-      <div id=""st-spthai-sample"" class=""k-spthai-sample""></div>
-      <div class=""k-set-sub k-full"" style=""margin-top:16px"">🔤 ฟอนต์ตามช่วงอักขระ (ใช้ได้ทั้งนิยายและบท)</div>
+        ตารางเดียวคุมฟอนต์ทั้งโปรแกรม: <b>ช่วงอักขระไหน → ฟอนต์อะไร → ใช้กับโหมดไหน → ย่อ/ขยายกี่ %</b>
+        เพิ่ม/ลบได้ไม่จำกัด · แถวบนสุดมีลำดับก่อน · ฟอนต์เอามาได้ทั้งจากที่ฝังมากับโปรแกรม ไฟล์ที่นำเข้าเก็บไว้ในโปรเจกต์ และฟอนต์ที่ลงไว้ในเครื่อง
+        <br><b>ช่อง %</b> คือตัวย่อกลิฟให้พอดีกล่องบรรทัด — ""ไทยในบทภาพยนตร์"" ใช้ 85 เพราะสแตกของบทเริ่มด้วย Courier ที่ไม่มีอักษรไทย ตัวไทยจึงตกไปฟอนต์สำรองที่ตัวใหญ่กว่า แล้วล้นระยะบรรทัดตายตัวของบท (6 บรรทัด/นิ้ว) · ภาษาอื่นทำแบบเดียวกันได้ด้วยการเพิ่มแถว</div>
+      <div class=""k-set-sub k-full"">🔤 ฟอนต์ตามช่วงอักขระ (ใช้ได้ทั้งนิยายและบท)</div>
       <div id=""st-fonts-list""></div>
       <div style=""margin-top:12px; display:flex; gap:8px; flex-wrap:wrap"">
         <button id=""st-fonts-add"" class=""k-key-btn"">➕ เพิ่มแถว</button>
@@ -2797,6 +2791,14 @@ ui.dlg.elementPrevEnter,ไป element ถัดไป (เดิม Enter)
 ui.dlg.exportFileCSV,📤 ส่งออกไฟล์แปล (CSV)
 ui.dlg.exportTableLangLang,"ส่งออกตารางแปลของภาษาไหน (รหัสภาษา เช่น en, ja)"
 ui.dlg.exportTableRow,ส่งออกตารางแปล {0} แถว → {1}
+ui.dlg.fontFromMachine,จากเครื่อง
+ui.dlg.fontFromMachineHint,เลือกจากรายชื่อฟอนต์ที่ลงไว้ในเครื่องนี้
+ui.dlg.fontMachineWarn,"หมายเหตุ: ฟอนต์จากเครื่องผูกกับเครื่องนี้เท่านั้น — เปิดงานบนเครื่องอื่นแล้วอาจไม่มีฟอนต์ตัวนี้ แนะนำให้ใช้ปุ่ม ""นำเข้าฟอนต์"" เพื่อเก็บไฟล์ไว้ในโปรเจกต์แทน"
+ui.dlg.fontSizeAdjustHint,ย่อ/ขยายกลิฟให้พอดีกล่องบรรทัด (100 = ขนาดจริง · ไทยในบทภาพยนตร์ใช้ 85)
+ui.dlg.fontTargetAll,ทั้งสองโหมด
+ui.dlg.fontTargetHint,แถวนี้ใช้กับโหมดไหน
+ui.dlg.fontTargetProse,นิยาย
+ui.dlg.fontTargetSp,บทภาพยนตร์
 ui.dlg.iNTNightSceneOne,INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123
 ui.dlg.importFont,นำเข้าฟอนต์ 
 ui.dlg.importFontFail,นำเข้าฟอนต์ล้มเหลว
@@ -2807,6 +2809,7 @@ ui.dlg.linePage,{0} บรรทัด/หน้า
 ui.dlg.linePage2,≈ {0} บรรทัด/หน้า · 
 ui.dlg.loadFileLangNew,โหลดไฟล์ภาษาใหม่แล้ว
 ui.dlg.loadFileLangNew2,↻ โหลดไฟล์ภาษาใหม่
+ui.dlg.notFoundFont,ไม่พบฟอนต์ที่ตรง
 ui.dlg.notHasFolderLang,"ยังไม่มีโฟลเดอร์ภาษา — กด ""ส่งออกไฟล์แปล"" เพื่อสร้างไฟล์ตั้งต้นก่อน"
 ui.dlg.notHasRowPress,"(ยังไม่มีแถว — กด ""เพิ่มแถว"")"
 ui.dlg.openFolderLang,📁 เปิดโฟลเดอร์ภาษา
@@ -2818,6 +2821,7 @@ ui.dlg.project, (โปรเจกต์)
 ui.dlg.restoreDefault,คืนค่าเริ่มต้น
 ui.dlg.saveSettingsFail,บันทึกการตั้งค่าล้มเหลว
 ui.dlg.searchFileLang,ที่ค้นหาไฟล์ภาษา: 
+ui.dlg.searchFontName,พิมพ์ชื่อฟอนต์เพื่อค้นหา
 ui.dlg.setCustom,— ตั้งเอง (Custom) —
 ui.dlg.spThaiAuto,อัตโนมัติ (ตัวแรกที่เครื่องมี)
 ui.dlg.spThaiSample,"INT. ห้องนอน - กลางคืน / โตราเดินเข้ามาในห้อง ฝนตกหนักมาก / She said ""I'm fine."" แต่เธอไม่ได้โอเคเลยสักนิด"
@@ -4895,6 +4899,8 @@ ui.shortcuts.spSwitchElem,บทหนัง: สลับชนิด element
 ui.shortcuts.spTransition,บทหนัง: ทรานซิชัน
 ui.shortcuts.splitView,แยกหน้าจอ
 ui.shortcuts.strikethrough,ขีดฆ่า
+ui.shortcuts.subscript,ตัวห้อย
+ui.shortcuts.superscript,ตัวยก
 ui.shortcuts.toggleFormat,สลับโหมดเอกสาร
 ui.shortcuts.toggleTheme,สลับธีมสว่าง/มืด
 ui.shortcuts.typewriter,โหมดเครื่องพิมพ์ดีด
@@ -5458,6 +5464,8 @@ ui.toolbar.replaceAll,ทั้งหมด
 ui.toolbar.replaceWith,แทนที่ด้วย…
 ui.toolbar.starter,✨ Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI)
 ui.toolbar.strike,ขีดฆ่า
+ui.toolbar.subscript,ตัวห้อย
+ui.toolbar.superscript,ตัวยก
 ui.toolbar.toggleMode,สลับโหมดเอกสาร
 ui.toolbar.underline,ขีดเส้นใต้
 ui.toolbar.viewSource,ดู Markdown ดิบ

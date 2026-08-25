@@ -56,7 +56,7 @@ export const spSchema = new Schema({
 // inline **หนา** ฯลฯ — ชุดเดียวกับ md.js (import ตรงจะวนกันเอง จึงรับผ่านพารามิเตอร์)
 import { mdToDoc, docToMd } from './md.js';
 import { spellPlugin, mentionPlugin, refreshMentions, focusLinePlugin, commentAnchorPlugin,
-         keepScroll } from './editor.js';
+         keepScroll, HOME_END_KEYS } from './editor.js';
 // [61] แสดงรูปแบบ + [57] เส้นคั่นหน้าในตัวแก้ไข
 import { spFormatGuidePlugin, spPageBreakPlugin, spSceneNumberPlugin, spContinuedPlugin,
          refreshFormatGuide, refreshPageBreaks, refreshSceneNumbers,
@@ -90,6 +90,11 @@ export function spDocFromMarkdown(markdown, resolveSrc = (p) => p) {
   if (!blocks.length) blocks.push({ type: 'sp', attrs: { el: 'scene' } });
   return spSchema.nodeFromJSON({ type: 'doc', content: blocks });
 }
+
+/** คำนำหน้าของ "รายการ" ในบทภาพยนตร์ — เก็บลงไฟล์เป็นตัวอักษรธรรมดา (ดูคอมเมนต์ใน toggleTextList) */
+const SP_BULLET_RE = /^[•\-*]\s+/;
+const SP_NUMBER_RE = /^\d+[.)]\s+/;
+const SP_ANY_LIST_RE = /^(?:[•\-*]|\d+[.)])\s+/;
 
 export class SPEditor {
   constructor(mount, { markdown = '', onChange = null, onKeyDown = null,
@@ -129,6 +134,8 @@ export class SPEditor {
             'Mod-Enter': () => { self.insertPageBreak(); return true; },
             'Mod-ArrowDown': () => { self.cycle(1); return true; },   // สลับรูปแบบถัดไป
             'Mod-ArrowUp': () => { self.cycle(-1); return true; },    // สลับรูปแบบก่อนหน้า
+            // [alpha.98 ข้อ 9] Home/End ชุดเดียวกับโหมดนิยาย
+            ...HOME_END_KEYS,
           }),
           keymap(baseKeymap),
           history(),
@@ -558,6 +565,9 @@ export class SPEditor {
     if (mk) return run(toggleMark(spSchema.marks[mk]));
     if (name === 'undo') return run(undo);
     if (name === 'redo') return run(redo);
+    // [alpha.98 ข้อ 4] รายการหัวข้อย่อย/ตัวเลขในบท — เป็นคำนำหน้าในข้อความ (ดูคอมเมนต์ด้านล่าง)
+    if (name === 'ul') return this.toggleTextList(false);
+    if (name === 'ol') return this.toggleTextList(true);
     if (name === 'align') return this.setAlign(arg);
     // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก — ใช้ตัวเดียวกับโหมดนิยาย
     if (name === 'case') {
@@ -566,6 +576,70 @@ export class SPEditor {
       v.focus();
       return !!tr;
     }
+  }
+
+  // ══════════ [alpha.98 ข้อ 4] ★ รายการหัวข้อย่อย/ตัวเลขในโหมดบทภาพยนตร์ ══════════
+  //
+  // ผู้ใช้: *"bullet และ หมายเลข ใช้ใน mode หนังไม่ได้"*
+  //
+  // บทภาพยนตร์ไม่มี "โครงสร้างรายการ" ในรูปแบบไฟล์ (fountain มีแต่ชนิดของบล็อก) การยัด
+  // `<ul>/<li>` เข้ามาใน schema จะทำให้ไฟล์ที่เขียนออกไปไม่ใช่บทอีกต่อไป และเปิดกลับไม่ได้
+  // → ทำเป็น **คำนำหน้าในตัวข้อความ** แทน (`• ` / `1. `) ซึ่งเป็นสิ่งที่คนเขียนบทใช้กันจริง
+  //   ในบล็อกบรรยาย · เก็บลงไฟล์เป็นตัวอักษรธรรมดา เปิดที่ไหนก็เหมือนเดิม ไม่มีข้อมูลหาย
+  //
+  // สวิตช์เหมือนโหมดนิยาย: ทุกบรรทัดที่เลือกมีคำนำหน้าอยู่แล้ว = กดแล้วเอาออก · ไม่งั้น = ใส่ให้
+
+  /** บล็อกระดับบนทั้งหมดที่ช่วงที่เลือกแตะอยู่ — [{pos, node, idx}] */
+  _selectedBlocks() {
+    const st = this.view.state;
+    const { from, to } = st.selection;
+    const out = [];
+    st.doc.forEach((node, offset, index) => {
+      if (offset + node.nodeSize <= from || offset >= to + (from === to ? 1 : 0)) return;
+      out.push({ pos: offset, node, idx: index });
+    });
+    if (!out.length) {
+      const $f = st.doc.resolve(from);
+      if ($f.depth) out.push({ pos: $f.before(1), node: $f.node(1), idx: $f.index(0) });
+    }
+    return out;
+  }
+
+  /** ชนิดรายการของบรรทัดที่เคอร์เซอร์อยู่ ('ul' | 'ol' | '') — ใช้ให้ปุ่มบนแถบติดไฟ */
+  curList() {
+    const b = this._selectedBlocks()[0];
+    const t2 = b ? String(b.node.textContent || '') : '';
+    if (SP_BULLET_RE.test(t2)) return 'ul';
+    if (SP_NUMBER_RE.test(t2)) return 'ol';
+    return '';
+  }
+
+  /** สวิตช์รายการในบท — คืน true เมื่อทำอะไรจริง */
+  toggleTextList(numbered) {
+    const v = this.view;
+    const blocks = this._selectedBlocks().filter((b) => b.node.isTextblock);
+    if (!blocks.length) return false;
+    const re = numbered ? SP_NUMBER_RE : SP_BULLET_RE;
+    const anyRe = SP_ANY_LIST_RE;
+    const all = blocks.every((b) => re.test(b.node.textContent || ''));
+    let tr = v.state.tr;
+    let n = 0;
+    // ทำจากท้ายมาหน้า — ตำแหน่งของบล็อกก่อนหน้าจึงไม่ขยับระหว่างแก้
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const b = blocks[i];
+      const text = String(b.node.textContent || '');
+      const bare = text.replace(anyRe, '');
+      const next = all ? bare : (numbered ? (i + 1) + '. ' : '• ') + bare;
+      if (next === text) continue;
+      const start = b.pos + 1;
+      tr = tr.replaceWith(start, start + b.node.content.size,
+                          next ? spSchema.text(next) : null);
+      n++;
+    }
+    if (!n) return false;
+    v.dispatch(tr.scrollIntoView());
+    v.focus();
+    return true;
   }
 
   getMarkdown() {

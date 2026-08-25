@@ -101,58 +101,77 @@ check('รายการ null ไม่พัง', LF.buildLangFontCss(null, ur
   check('แถวไม่ระบุ enabled = เปิด', n[0].enabled === true);
   check('ค่าไม่ใช่อาร์เรย์ → คืนค่าเริ่มต้น',
     LF.normalizeLangFonts(null).length === LF.defaultLangFonts().length);
-  check('ค่าเริ่มต้นเป็นไทย + ปิดไว้ก่อน (ไม่แอบเปลี่ยนหน้าตาโปรเจกต์เดิม)',
-    LF.defaultLangFonts()[0].range === 'U+0E00-0E7F' && LF.defaultLangFonts()[0].enabled === false);
+  // [alpha.97 ข้อ 12] ค่าเริ่มต้นมีสองแถว: ไทยของบท (เปิด · แทน spThaiFont เดิม) + ไทยฝังมา (ปิด)
+  const D = LF.defaultLangFonts();
+  check('[97-12] แถวแรก = ไทยของบทภาพยนตร์ ย่อ 85% และเปิดไว้',
+    D[0].target === 'screenplay' && D[0].range === 'U+0E00-0E7F' &&
+    D[0].size === 85 && D[0].enabled === true, JSON.stringify(D[0]));
+  check('[97-12] แถวไทยที่ฝังมากับโปรแกรมยังปิดไว้ก่อนเหมือนเดิม',
+    D[1].range === 'U+0E00-0E7F' && D[1].enabled === false && D[1].target === 'all');
+  check('[97-12] normalize เติม target/size/system ให้ครบทุกแถว',
+    n.every((r) => 'target' in r && 'size' in r && 'system' in r));
+  check('[97-12] target ที่ไม่รู้จัก → ตกเป็น all',
+    LF.normalizeLangFonts([{ builtin: 'a.ttf', target: 'zzz' }])[0].target === 'all');
+  check('[97-12] size ถูกหนีบไว้ 50–150',
+    LF.normalizeLangFonts([{ builtin: 'a.ttf', size: 5 }])[0].size === 50 &&
+    LF.normalizeLangFonts([{ builtin: 'a.ttf', size: 999 }])[0].size === 150);
+  check('[97-12] size ที่ไม่ใช่ตัวเลข → 100 (ขนาดจริง)',
+    LF.normalizeLangFonts([{ builtin: 'a.ttf', size: 'x' }])[0].size === 100);
 }
 
-// ═══ [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ ═══
+// ═══ [alpha.97 ข้อ 12] แถวเดียวใช้ได้ทั้งสองโหมด + สัดส่วนรายแถว ═══
 {
-  check('ค่าเริ่มต้นเปิดไว้ที่ 85% (วัดแล้วเท่า Courier Prime)',
-    LF.SP_THAI_DEFAULTS.enabled === true && LF.SP_THAI_DEFAULTS.size === 85);
-  const d = LF.normalizeSpThai(undefined);
-  check('normalizeSpThai: ไม่ส่งอะไรมา → ได้ค่าเริ่มต้นครบ',
-    d.enabled === true && d.size === 85 && d.family === '' && d.ascent === 0 && d.descent === 0);
-  check('normalizeSpThai: หนีบขนาดไว้ 50–150',
-    LF.normalizeSpThai({ size: 5 }).size === 50 && LF.normalizeSpThai({ size: 999 }).size === 150);
-  check('normalizeSpThai: ค่าไม่ใช่ตัวเลข → คืนค่าเริ่มต้น',
-    LF.normalizeSpThai({ size: 'x' }).size === 85);
-  check('normalizeSpThai: ล้างอักขระอันตรายออกจากชื่อฟอนต์ (กัน CSS injection)',
-    LF.normalizeSpThai({ family: 'A";}body{x' }).family === 'Abodyx',
-    LF.normalizeSpThai({ family: 'A";}body{x' }).family);
-  check('ชื่อฟอนต์ที่ถูกล้างแล้วยังยัดลง CSS ได้อย่างปลอดภัย',
-    !LF.buildSpThaiCss({ family: 'A";}body{x' }).includes('body{'));
-
-  const css = LF.buildSpThaiCss({});
-  check('สร้าง @font-face ของวงศ์ K2 SP Thai', css.includes('font-family:"' + LF.SP_THAI_FAMILY + '"'));
-  check('จำกัดเฉพาะช่วงอักษรไทย', css.includes('unicode-range:U+0E00-0E7F'));
-  check('มี size-adjust ซึ่งเป็นหัวใจของการแก้', css.includes('size-adjust:85%'));
-  check('ใช้ local() ล้วน (ฟอนต์ไทยของระบบแจกไม่ได้)',
-    css.includes('local("Ayuthaya")') && !css.includes('url('));
-  check('ไม่ใส่ ascent/descent-override ถ้าไม่ได้ตั้ง',
-    !css.includes('ascent-override') && !css.includes('descent-override'));
-  const css2 = LF.buildSpThaiCss({ ascent: 90, descent: 25, size: 80 });
-  check('ตั้ง ascent/descent แล้วออกมาใน CSS',
-    css2.includes('ascent-override:90%') && css2.includes('descent-override:25%') &&
-    css2.includes('size-adjust:80%'));
-  check('ปิดสวิตช์ = ไม่มี CSS เลย', LF.buildSpThaiCss({ enabled: false }) === '');
-
-  check('เลือกฟอนต์เองแล้วมันมาก่อนลูกโซ่มาตรฐาน',
-    LF.spThaiSources({ family: 'Sarabun' })[0] === 'Sarabun' &&
-    LF.spThaiSources({ family: 'Sarabun' }).filter((f) => f === 'Sarabun').length === 1);
-  check('ไม่เลือก = ใช้ลูกโซ่มาตรฐานทั้งชุด',
-    LF.spThaiSources({}).join(',') === LF.SP_THAI_FALLBACKS.join(','));
-
-  const stack = '"Courier Prime", monospace';
-  check('withSpThaiFamily: เอาวงศ์ไปไว้หน้าสุด',
-    LF.withSpThaiFamily(stack, {}) === '"K2 SP Thai", ' + stack);
-  check('withSpThaiFamily: เรียกซ้ำไม่ซ้อน',
-    LF.withSpThaiFamily(LF.withSpThaiFamily(stack, {}), {}) === '"K2 SP Thai", ' + stack);
-  check('withSpThaiFamily: ปิดสวิตช์ = คืนสแตกเดิมไม่แตะ',
-    LF.withSpThaiFamily(stack, { enabled: false }) === stack);
-  check('withSpThaiFamily: ต้องมาก่อน K2 Lang ด้วย (ไทยของบทชนะฟอนต์ตามภาษา)',
-    LF.withSpThaiFamily(LF.withLangFamily(stack, true), {})
-      .startsWith('"K2 SP Thai", "K2 Lang"'));
+  const rows = [
+    { id: 'a', range: 'U+0E00-0E7F', family: 'Ayuthaya', target: 'screenplay', size: 85 },
+    { id: 'b', range: 'U+0400-04FF', family: 'Sarabun', target: 'prose' },
+    { id: 'c', range: 'U+1000-109F', family: 'Padauk', target: 'all' },
+  ];
+  const sp = LF.buildLangFontCss(rows, url, { family: LF.SP_FAMILY, target: 'screenplay' });
+  const pr = LF.buildLangFontCss(rows, url, { family: LF.LANG_FAMILY, target: 'prose' });
+  check('[97-12] สแตกบทได้เฉพาะแถว screenplay + all', (sp.match(/@font-face/g) || []).length === 2);
+  check('[97-12] สแตกนิยายได้เฉพาะแถว prose + all', (pr.match(/@font-face/g) || []).length === 2);
+  check('[97-12] สองสแตกใช้คนละชื่อวงศ์ (ไม่ปนกัน)',
+    sp.includes('font-family:"' + LF.SP_FAMILY + '"') &&
+    pr.includes('font-family:"' + LF.LANG_FAMILY + '"') &&
+    !sp.includes('"' + LF.LANG_FAMILY + '"'));
+  check('[97-12] ★ สัดส่วนรายแถวออกมาเป็น size-adjust', sp.includes('size-adjust:85%'), sp);
+  check('[97-12] size 100 = ไม่ต้องใส่ size-adjust (ไม่รบกวนของเดิม)',
+    !pr.includes('size-adjust'), pr);
+  check('[97-12] นับแถวที่ใช้ได้แยกตามโหมด',
+    LF.usableCounts(rows).screenplay === 2 && LF.usableCounts(rows).prose === 2 &&
+    LF.usableCounts(rows).total === 3);
+  const ov = LF.buildLangFontCss([{ range: 'U+0E00-0E7F', family: 'A', ascent: 90, descent: 25 }],
+    url, {});
+  check('[97-12] ascent/descent override ออกมาครบ',
+    ov.includes('ascent-override:90%') && ov.includes('descent-override:25%'), ov);
+  check('[97-12] ชื่อฟอนต์หลายตัวคั่นจุลภาค = ลูกโซ่ local() ตามลำดับ',
+    (LF.buildLangFontCss([{ range: '', family: 'A, B, C' }], url, {}).match(/local\(/g) || [])
+      .length === 3);
+  check('[97-12] ★ ลูกโซ่ชื่อฟอนต์ยังถูกล้างอักขระอันตรายทุกตัว (กัน CSS injection)',
+    !LF.buildLangFontCss([{ range: '', family: 'A, x";}body{y' }], url, {}).includes('body{'));
 }
+
+// ═══ [alpha.97 ข้อ 12] ย้ายค่า spThaiFont ของโปรเจกต์เก่ามาเป็นแถว ═══
+{
+  const r1 = LF.migrateSpThai([], { enabled: true, size: 92, family: 'Leelawadee UI' });
+  check('[97-12] ★ ย้าย spThaiFont เก่ามาเป็นแถวของบท',
+    r1.moved === true && r1.rows[0].target === 'screenplay' && r1.rows[0].size === 92 &&
+    r1.rows[0].family.startsWith('Leelawadee UI'), JSON.stringify(r1.rows[0]));
+  check('[97-12] ฟอนต์ที่ผู้ใช้เลือกมาก่อน แล้วต่อด้วยลูกโซ่มาตรฐาน',
+    r1.rows[0].family.split(',').length === LF.SP_THAI_FALLBACKS.length);
+  const r2 = LF.migrateSpThai(r1.rows, { enabled: true, size: 60 });
+  check('[97-12] ★ ย้ายซ้ำไม่ทับของที่มีอยู่แล้ว',
+    r2.moved === false && r2.rows[0].size === 92);
+  check('[97-12] ไม่มีค่าเก่า = ไม่ทำอะไร', LF.migrateSpThai([], null).moved === false);
+  check('[97-12] ปิดสวิตช์ไว้ก็ย้ายมาแบบปิด',
+    LF.migrateSpThai([], { enabled: false }).rows[0].enabled === false);
+}
+
+// ═══ ไทยในบทภาพยนตร์ — ค่าคงที่ที่ยังใช้ตั้งค่าเริ่มต้นของแถว ═══
+check('ช่วงอักษรไทยของบทยังเป็นค่าเดิม', LF.SP_THAI_RANGE === 'U+0E00-0E7F');
+check('85% = ค่าที่วัดแล้วเท่า Courier Prime', LF.SP_THAI_SIZE === 85);
+check('ลูกโซ่ฟอนต์ไทยมาตรฐานยังครบ',
+  LF.SP_THAI_FALLBACKS.includes('Ayuthaya') && LF.SP_THAI_FALLBACKS.includes('Leelawadee UI'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

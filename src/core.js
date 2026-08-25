@@ -278,9 +278,6 @@ export const PROJECT_DEFAULTS = {
   spShowFormat: false, spCheckBeforeExport: true, spLineLimits: null,
   spSceneNumbers: null, spPageNumbers: null,
   spContinued: null, spLineHeight: 1, spPageGap: 28,
-  // ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์เก่า — false = ยังไม่เคยย้าย ·
-  // true = ผ่าน .83r (ถูกบังคับเป็น true) · 2 = ผ่าน .88 แล้ว (กลับไปใช้มาตรฐานบท)
-  pgFirstMigrated: false,
   // รูปแบบนิยาย (prose)
   prose: null,
   // ฟอนต์ตามภาษา
@@ -431,9 +428,9 @@ export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, def
          normalizeRange, cssFamilyName, isUsable as isLangFontUsable, buildLangFontCss,
          withLangFamily, applyLangFonts,
          // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
-         SP_THAI_FAMILY, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_DEFAULTS,
-         normalizeSpThai, spThaiSources, buildSpThaiCss, withSpThaiFamily,
-         applySpThaiFont } from './lang-fonts.js';
+         SP_FAMILY, FONT_TARGETS, rowTarget, rowAppliesTo, familyList, withFamily,
+         withSpFamily, usableCounts, migrateSpThai,
+         SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE } from './lang-fonts.js';
 
 // ---- ระบบภาษา (i18n) ----
 // เอนจินจริงอยู่ `src/i18n.js` (บริสุทธิ์ · โมดูลที่ import core ไม่ได้ก็ใช้ได้) — ตรงนี้เหลือแค่
@@ -600,6 +597,10 @@ export const SHORTCUTS = [
   ['KeyI', true, false, 'fmt', 'italic'],
   ['KeyU', true, false, 'fmt', 'underline'],
   ['KeyX', true, true, 'fmt', 'strike'],
+  // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เลียนแบบ Word (Ctrl+Shift+= / Ctrl+=) แต่ต้องเติม Alt
+  // เพราะตัวดักซูมหน้ากระดาษกิน Ctrl+= / Ctrl+- ไปแล้วโดยไม่ดูปุ่ม Shift (มันเช็คแค่ Alt)
+  ['Equal', 'ctrl+alt', false, 'fmt', 'sup'],
+  ['Minus', 'ctrl+alt', false, 'fmt', 'sub'],
   ['Digit1', true, false, 'fmt', 'heading', 1],
   ['Digit2', true, false, 'fmt', 'heading', 2],
   ['Digit3', true, false, 'fmt', 'heading', 3],
@@ -657,7 +658,6 @@ export const SHORTCUTS = [
   ['Period', true, true, 'goto-page'],
   ['Comma', true, true, 'goto-scene'],
   ['BracketRight', true, true, 'panels-hide-left'],   // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งขวา)
-  ['KeyU', 'ctrl+alt', false, 'paper-mode'],
   ['KeyR', 'ctrl+alt', false, 'line-numbers'],
   // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
   ['Digit1', 'ctrl+alt', false, 'chapter'],
@@ -696,10 +696,11 @@ export const SHORTCUT_LABELS = {
   'open-project': 'shortcuts.openProject', 'print': 'shortcuts.print', 'close-tab': 'shortcuts.closeTab',
   'find': 'shortcuts.find', 'settings': 'shortcuts.settings', 'editor-undo': 'shortcuts.undo', 'editor-redo': 'shortcuts.redo',
   'fmt:bold': 'shortcuts.bold', 'fmt:italic': 'shortcuts.italic', 'fmt:underline': 'shortcuts.underline', 'fmt:strike': 'shortcuts.strikethrough',
+  'fmt:sup': 'shortcuts.superscript', 'fmt:sub': 'shortcuts.subscript',
   'fmt:heading:1': 'shortcuts.heading1', 'fmt:heading:2': 'shortcuts.heading2', 'fmt:heading:3': 'shortcuts.heading3',
   'fmt:paragraph': 'shortcuts.bodyText', 'fmt:ul': 'shortcuts.bulletList', 'fmt:ol': 'shortcuts.numberedList',
   'fmt:clear': 'shortcuts.clearFormatting', 'toggle-format': 'shortcuts.toggleFormat', 'focus-mode': 'shortcuts.focusMode',
-  'paper-mode': 'shortcuts.paperMode', 'toggle-theme': 'shortcuts.toggleTheme',
+  'toggle-theme': 'shortcuts.toggleTheme',
   'global-search': 'shortcuts.globalSearch',
   'quick-open': 'shortcuts.quickOpen', 'typewriter': 'shortcuts.typewriter',
   'fmt:align:left': 'shortcuts.alignLeft', 'fmt:align:center': 'shortcuts.alignCenter',
@@ -765,7 +766,7 @@ export const SHORTCUT_CATS = [
     ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
   { key: 'view', labelKey: 'ui.shortcuts.catView',
-    ids: ['toggle-theme', 'paper-mode', 'focus-mode', 'typewriter', 'reading-mode', 'line-numbers',
+    ids: ['toggle-theme', 'focus-mode', 'typewriter', 'reading-mode', 'line-numbers',
           'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu'] },
   { key: 'create', labelKey: 'ui.shortcuts.catCreate',
     ids: ['chapter', 'scene', 'character', 'location', 'memo', 'quick-note'] },

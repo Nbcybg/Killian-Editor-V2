@@ -143,11 +143,13 @@ check('proseHeadings: doc ว่างไม่พัง', P.proseHeadings(null)
 // ───────── [20] เลขหน้า ─────────
 check('เลขหน้าปิดไว้ → ว่าง', P.prosePageLabel(2, D) === '');
 const PN = P.mergeProseFormat({ pageNumbers: true });
-check('เปิดเลขหน้า: หน้าแรกไม่มีเลข', P.prosePageLabel(1, PN) === '');
+// [alpha.97 ข้อ 11] ไม่มีสวิตช์ "ใส่เลขบนหน้าแรก" อีกแล้ว — หน้าเนื้อเรื่องมีเลขทุกหน้า
+check('เปิดเลขหน้า: หน้าแรกมีเลข "1" ทันที', P.prosePageLabel(1, PN) === '1');
 check('เปิดเลขหน้า: หน้า 2 = "2"', P.prosePageLabel(2, PN) === '2');
 check('เลขเริ่มต้นรายไฟล์', P.prosePageLabel(2, PN, 10) === '11');
-check('เปิด firstPage → หน้าแรกมีเลข',
-  P.prosePageLabel(1, P.mergeProseFormat({ pageNumbers: true, pageNumberFirst: true })) === '1');
+check('ไฟล์ที่เริ่มหน้า 10 → หน้าแรกของมันได้ "10"', P.prosePageLabel(1, PN, 10) === '10');
+check('ไม่มีคีย์ pageNumberFirst หลงเหลือในค่าเริ่มต้น',
+  !('pageNumberFirst' in P.mergeProseFormat({})));
 
 // ───────── blocksFromDoc (จำลอง doc ของ ProseMirror) ─────────
 const fakeDoc = {

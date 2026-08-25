@@ -241,7 +241,6 @@ function buildMenu() {
         { label: tt('ui.menu.lightLight'), type: 'radio', checked: toggles.theme === 'light',
           click: () => send('toggle-theme', 'light') },
       ] },
-      chk(tt('ui.menu.modePagePaper'), toggles.paperMode, () => send('paper-mode')),
       chk(tt('ui.menu.showNumLineLeft'), toggles.lineNumbers, () => send('line-numbers')),
       // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot $sub $in $act $intercut (( )) = # ! )
       chk(tt('ui.menu.hidePageLineShot'), toggles.markdownCodes,
@@ -750,6 +749,119 @@ H('fs:stat', (p) => {
   } catch { return { size: 0, mtimeMs: 0, birthtimeMs: 0, isDir: false }; }
 });
 // เขียนรูปจากข้อมูล base64 (ใช้ตอนวาง/ลากรูปเข้าเอกสาร) — กันชื่อชนในโฟลเดอร์ปลายทาง
+// ═══════════ [alpha.97 ข้อ 12] รายชื่อฟอนต์ "ที่ลงไว้ในเครื่อง" ═══════════
+//
+// ผู้ใช้: *"ฟอนต์ที่ใช้ ต้องเพิ่มได้ และจับ font จากเครื่องเลย"*
+//
+// Electron ไม่มี API ให้เลย และ `queryLocalFonts()` ของ Chromium ต้องขอสิทธิ์ผู้ใช้
+// ทุกครั้ง (แล้วในหน้าต่างที่ไม่มี user gesture ก็ถูกปฏิเสธเงียบ ๆ) → อ่านจากโฟลเดอร์ฟอนต์
+// ของระบบเอง แล้วดึง "ชื่อวงศ์" ออกจากตาราง `name` ของไฟล์ sfnt ตรง ๆ
+//
+// อ่านทั้งไฟล์ไม่ไหว (โฟลเดอร์ฟอนต์ของ Windows ใหญ่หลายร้อย MB) จึงอ่านเป็นช่วง:
+//   header 12 ไบต์ → รายการตาราง 16 ไบต์/ตาราง → หา tag 'name' → อ่านเฉพาะช่วงนั้น
+// ผลลัพธ์ถูกแคชไว้ตลอดอายุโปรเซส (โฟลเดอร์ฟอนต์ไม่เปลี่ยนระหว่างใช้งาน)
+const FONT_DIRS = process.platform === 'win32'
+  ? [path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts'),
+     path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'Windows', 'Fonts')]
+  : process.platform === 'darwin'
+    ? ['/System/Library/Fonts', '/Library/Fonts',
+       path.join(process.env.HOME || '', 'Library', 'Fonts')]
+    : ['/usr/share/fonts', '/usr/local/share/fonts',
+       path.join(process.env.HOME || '', '.local', 'share', 'fonts')];
+
+const FONT_EXT = /\.(ttf|otf|ttc|otc)$/i;
+
+/** อ่านช่วงไบต์จาก fd — คืน Buffer ว่างเมื่ออ่านไม่ได้ */
+function readAt(fd, pos, len) {
+  if (!(len > 0) || len > 4 * 1024 * 1024) return Buffer.alloc(0);
+  const buf = Buffer.alloc(len);
+  try { fs.readSync(fd, buf, 0, len, pos); } catch { return Buffer.alloc(0); }
+  return buf;
+}
+
+/** ชื่อวงศ์จาก sfnt หนึ่งตัว (offset = ตำแหน่งเริ่มของ sfnt ในไฟล์) */
+function sfntFamily(fd, base) {
+  const head = readAt(fd, base, 12);
+  if (head.length < 12) return '';
+  const numTables = head.readUInt16BE(4);
+  if (!(numTables > 0) || numTables > 512) return '';
+  const dir = readAt(fd, base + 12, numTables * 16);
+  let nOff = 0, nLen = 0;
+  for (let i = 0; i + 16 <= dir.length; i += 16) {
+    if (dir.toString('latin1', i, i + 4) !== 'name') continue;
+    nOff = dir.readUInt32BE(i + 8); nLen = dir.readUInt32BE(i + 12);
+    break;
+  }
+  if (!nLen) return '';
+  const nm = readAt(fd, nOff, nLen);
+  if (nm.length < 6) return '';
+  const count = nm.readUInt16BE(2);
+  const strOff = nm.readUInt16BE(4);
+  let best = '', bestScore = -1;
+  for (let i = 0; i < count; i++) {
+    const p = 6 + i * 12;
+    if (p + 12 > nm.length) break;
+    const platform = nm.readUInt16BE(p);
+    const nameId = nm.readUInt16BE(p + 6);
+    if (nameId !== 1 && nameId !== 16) continue;       // 1 = family · 16 = typographic family
+    const len = nm.readUInt16BE(p + 8);
+    const off = strOff + nm.readUInt16BE(p + 10);
+    if (off + len > nm.length) continue;
+    // platform 3 (Windows) เก็บชื่อเป็น UTF-16 **BE** — Node มีแต่ LE จึงต้องสลับไบต์เอง
+    const raw = nm.subarray(off, off + len);
+    const val = platform === 3 ? Buffer.from(raw).swap16().toString('utf16le')
+                               : raw.toString('latin1');
+    const clean = val.replace(/\u0000/g, '').trim();
+    if (!clean) continue;
+    // ชอบ typographic family (16) มากกว่า และชอบของ Windows มากกว่า Mac
+    const score = (nameId === 16 ? 2 : 0) + (platform === 3 ? 1 : 0);
+    if (score > bestScore) { bestScore = score; best = clean; }
+  }
+  return best;
+}
+
+/** ชื่อวงศ์ทั้งหมดในไฟล์เดียว (ttc มีหลายตัว) */
+function fontFamiliesOf(file) {
+  let fd = null;
+  try {
+    fd = fs.openSync(file, 'r');
+    const tag = readAt(fd, 0, 12);
+    if (tag.length < 12) return [];
+    if (tag.toString('latin1', 0, 4) === 'ttcf') {
+      const n = Math.min(tag.readUInt32BE(8), 64);
+      const offs = readAt(fd, 12, n * 4);
+      const out = [];
+      for (let i = 0; i + 4 <= offs.length; i += 4) {
+        const f = sfntFamily(fd, offs.readUInt32BE(i));
+        if (f) out.push(f);
+      }
+      return out;
+    }
+    const f = sfntFamily(fd, 0);
+    return f ? [f] : [];
+  } catch { return []; }
+  finally { if (fd !== null) { try { fs.closeSync(fd); } catch {} } }
+}
+
+let _sysFonts = null;
+H('fonts:list', () => {
+  if (_sysFonts) return _sysFonts;
+  const seen = new Set();
+  for (const dir of FONT_DIRS) {
+    if (!dir) continue;
+    let names = [];
+    try { names = fs.readdirSync(dir); } catch { continue; }
+    for (const n of names) {
+      if (!FONT_EXT.test(n)) continue;
+      for (const fam of fontFamiliesOf(path.join(dir, n))) {
+        if (fam.length <= 64) seen.add(fam);
+      }
+    }
+  }
+  _sysFonts = [...seen].sort((a, b) => a.localeCompare(b));
+  return _sysFonts;
+});
+
 H('fs:writeImageData', (dstDir, name, base64) => {
   fs.mkdirSync(dstDir, { recursive: true });
   const ext = path.extname(name) || '.png';

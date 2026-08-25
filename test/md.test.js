@@ -18,6 +18,10 @@ const cases = [
   "[[ลิงก์วิกิ]] และ ((โน้ต))",
   "ดาวเดี่ยว ** ค้าง",
   "5. เริ่มนับที่ห้า",
+  // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — ต้องไป-กลับได้และห้ามไปชนกับ ~~ขีดฆ่า~~
+  "สูตร H~2~O กับ x^2^ ปนกัน",
+  "~ห้อย~ ต้นบรรทัด และ ^ยก^ ด้วย",
+  "~~ฆ่า~~ อยู่กับ ~ห้อย~ ในบรรทัดเดียว",
   // [alpha.61 ข้อ 3] Shift+Enter = hard break (แบ็กสแลชท้ายบรรทัด · ย่อหน้าเดียวกัน)
   "บรรทัดบน\\",
   "บรรทัดล่างในย่อหน้าเดียวกัน",
@@ -83,3 +87,22 @@ console.log("overlap stable:", one);
   if (docToMd(mdToDoc(md5)) !== md5) throw new Error("hard break + mark ไม่นิ่ง");
 }
 console.log("alpha.61 hard break / page break / tab OK");
+
+// ───────── [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย ─────────
+{
+  const marksOf = (doc, i, j) => (doc.content[i].content[j].marks || []).map((m) => m.type).sort();
+  const dSup = mdToDoc("x^2^");
+  if (marksOf(dSup, 0, 1).join(",") !== "sup") throw new Error("sup: mark ผิด " + JSON.stringify(dSup.content[0].content));
+  const dSub = mdToDoc("H~2~O");
+  if (marksOf(dSub, 0, 1).join(",") !== "sub") throw new Error("sub: mark ผิด " + JSON.stringify(dSub.content[0].content));
+  // `~` เดี่ยวต้องไม่ไปแย่งแมตช์ใน `~~ขีดฆ่า~~`
+  const dStr = mdToDoc("~~ฆ่า~~");
+  if (marksOf(dStr, 0, 0).join(",") !== "strike") throw new Error("strike ถูก sub แย่งไป");
+  // ซ้อนกับตัวหนาแล้วยังไป-กลับได้
+  const mixed = "**หนา ^ยก^ ต่อ**";
+  if (docToMd(mdToDoc(mixed)) !== mixed) throw new Error("sup ซ้อน strong ไม่นิ่ง: " + docToMd(mdToDoc(mixed)));
+  // sup กับ sub อยู่ตัวเดียวกันไม่ได้ (schema กันไว้) — แต่ md ต้องเขียนสองก้อนติดกันได้
+  const two = "^ยก^~ห้อย~";
+  if (docToMd(mdToDoc(two)) !== two) throw new Error("sup+sub ติดกันไม่นิ่ง: " + docToMd(mdToDoc(two)));
+}
+console.log("alpha.97 superscript / subscript OK");

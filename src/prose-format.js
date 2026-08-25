@@ -75,7 +75,6 @@ export const PROSE_DEFAULTS = {
   quote: null,               // [24] null = QUOTE_DEFAULTS
   avgCharEm: 0.5,            // ความกว้างเฉลี่ยต่อตัวอักษร (เท่าของ em) — ใช้ประมาณการนับหน้า
   pageNumbers: false,        // [20] แสดงเลขหน้าในมุมมองหน้ากระดาษ
-  pageNumberFirst: false,    // พิมพ์เลขบนหน้าแรกไหม
 };
 
 /** ผสานค่าที่ผู้ใช้ตั้ง (settings.prose) ทับค่าเริ่มต้น — คืน object ใหม่เสมอ */
@@ -144,9 +143,38 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
   // ถูกใช้แค่ตอนส่งออก (`proseExportCss`) กับมุมมองเรียงหน้าเท่านั้น บนจอจึงเป็นฟอนต์ UI
   // เขียนอย่างหนึ่ง ได้อีกอย่าง · ผู้ใช้สั่งว่า "มุมมอง layout คือตัว override" →
   // ทั้งสองที่ต้องอ่านจาก proseFormat ชุดเดียวกัน (ขนาดผ่าน --ed-fs ที่คิดจาก fontPt ตัวเดียวกัน)
-  out.push(`${sel}{font-family:${proseFontStack(f)};font-size:var(--ed-fs, ${proseFontPx(f)}px);` +
+  // ══ [alpha.98 ข้อ 2] ★ **ฟอนต์ตามภาษาในโหมดนิยายไม่เคยทำงานเลย** ══
+  //
+  // ผู้ใช้: *"ฟอนต์ตามภาษา ใน mode นิยายใช้ไม่ได้"*
+  //
+  // กฎนี้เขียน `font-family` ลง `.ProseMirror` ตรง ๆ ด้วยตัวเลือกที่ specificity สูงกว่า
+  // `.ProseMirror { font-family:var(--ed-font) }` ใน style.css **ทุกกรณี** → วงศ์ "K2 Lang"
+  // ที่ applySettings() อุตส่าห์เอาไปนำหน้า `--ed-font` ถูกทับหายตั้งแต่ยังไม่ทันได้ใช้
+  // (บั๊กมาตั้งแต่ alpha.81r ที่เพิ่งเริ่มเขียน font-family ลงกฎนี้ — ฝั่งบทไม่โดนเพราะ
+  //  `--sp-font` ไม่มีใครเขียนทับ)
+  //
+  // แก้: อ่านผ่านตัวแปรเสมอ แล้วให้สแตกของ "รูปแบบนิยาย" เป็นแค่ค่าสำรองเมื่อไม่มีตัวแปร
+  out.push(`${sel}{font-family:var(--ed-font, ${proseFontStack(f)});` +
+           `font-size:var(--ed-fs, ${proseFontPx(f)}px);` +
            `line-height:${f.lineHeight};text-align:${f.align}}`);
   out.push(`${sel} p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`);
+  // ══ [alpha.98 ข้อ 3] ★ รายการต้องกินที่แนวตั้ง **เท่ากับย่อหน้าเป๊ะ** ══
+  //
+  // ผู้ใช้: *"ข้อความที่ bullet หรือมีหมายเลข ระยะห่างระหว่างบรรทัดเปลี่ยนไป
+  //          พอกด toggle ไปมา แล้วบรรทัดขยับ"*
+  //
+  // ต้นตอ: กฎ `${sel} p{...}` ข้างบนลงไปถึง `<p>` ที่อยู่ใน `<li>` ด้วย (เป็นตัวเลือกแบบลูกหลาน)
+  // ย่อหน้าในข้อรายการจึงได้ทั้ง **ระยะท้ายย่อหน้า** และ **ย่อหน้าบรรทัดแรก** ติดมา
+  // แล้ว `<ul>` ยังมี margin ของตัวเองอีก .3em บน-ล่าง → toggle ทีเดียวบรรทัดขยับทันที
+  //
+  // กติกาใหม่: N ข้อ = N ย่อหน้าเป๊ะ · ระยะระหว่างข้อ = ระยะระหว่างย่อหน้า ·
+  // ตัวรายการเองมีระยะท้ายเท่าย่อหน้า และไม่มีระยะนำ (ให้ย่อหน้าก่อนหน้าเป็นคนเว้น)
+  out.push(`${sel} ul,${sel} ol{margin:0 0 ${f.paraSpacing}em;` +
+           `padding-left:var(--ed-list-pad, 28px)}`);
+  out.push(`${sel} li>p{margin:0;text-indent:0}`);
+  out.push(`${sel} li+li>p{margin-top:${f.paraSpacing}em}`);
+  // รายการซ้อนชั้นก็ไม่เพิ่มระยะเกินมา
+  out.push(`${sel} li>ul,${sel} li>ol{margin:0}`);
   // ย่อหน้าแรกของเอกสาร/หลังหัวข้อ ไม่ย่อ (ธรรมเนียมการจัดหน้าหนังสือ)
   if (!f.indentAfterHeading) {
     out.push(`${sel} > p:first-child,` +
@@ -347,8 +375,8 @@ export function prosePageCount(blocks, opts) { return paginateProse(blocks, opts
 export function prosePageLabel(index, fmt, startPage) {
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
   if (!f.pageNumbers) return '';
+  // [alpha.97 ข้อ 11] เลิกเว้นหน้าแรก — กฎเดียวคือ "หน้าที่ไม่ใช่ฉากไม่มีเลข"
   const i = Math.max(1, Math.round(+index || 1));
-  if (i === 1 && !f.pageNumberFirst) return '';
   const start = Math.max(1, Math.round(+startPage || 1));
   return String(start + i - 1);
 }

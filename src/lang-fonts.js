@@ -10,8 +10,28 @@
 // ส่วนที่แตะ DOM มีแค่ applyLangFonts() ตัวเดียว
 
 import { t } from './i18n.js';
-/** ชื่อวงศ์ที่สร้างขึ้น — ต้องมาก่อนฟอนต์อื่นใน font stack เสมอ */
+/** ชื่อวงศ์ที่สร้างขึ้นสำหรับสแตก "นิยาย/ทั่วไป" — ต้องมาก่อนฟอนต์อื่นใน font stack เสมอ */
 export const LANG_FAMILY = 'K2 Lang';
+/** ชื่อวงศ์ที่สร้างขึ้นสำหรับสแตก "บทภาพยนตร์" (คนละชุดกับนิยาย) */
+export const SP_FAMILY = 'K2 SP';
+
+/**
+ * ══ [alpha.97 ข้อ 12] ★ แถวเดียวใช้ได้ทั้งสองโหมด — และตั้งสัดส่วนได้ทีละแถว ══
+ *
+ * ผู้ใช้: *"ฟอนต์ตัวอักษร เรามี override มั่วไปหมด · ฟอนต์นิยาย เอาออกไปใช้กับฟอนต์ตามภาษา
+ *          ดีกว่า เพราะละเอียดกว่า · คราวนี้ ฟอนต์ไทยในบทภาพยนตร์ ปรับสัดส่วนให้เท่า Courier
+ *          ปัญหาคือเราต้องการให้ต่างชาติใช้ด้วย อาจจะต้องเป็น เพิ่ม ลบ เอา"*
+ *
+ * เดิมมีระบบฟอนต์ **ห้าชุด** ที่ไม่รู้จักกัน: `settings.fontFamily` · `settings.prose.fontFamily`
+ * · `settings.spFontFamily` · `langFonts[]` · และ `spThaiFont` ที่ฮาร์ดโค้ดว่า "ไทย" กับ
+ * "บทภาพยนตร์" ไว้ในตัวมันเอง — คนเขียนภาษาอื่นจึงไม่มีทางได้ตัวปรับสัดส่วนแบบเดียวกันเลย
+ *
+ * ตอนนี้เหลือแนวคิดเดียว: **ตารางฟอนต์ตามภาษา** ที่แต่ละแถวบอกได้ครบว่า
+ *   ช่วงอักขระไหน → ฟอนต์อะไร → ใช้กับโหมดไหน (`target`) → ย่อ/ขยายเท่าไร (`size`)
+ * "ไทยในบทภาพยนตร์ 85%" จึงกลายเป็นแค่ **แถวหนึ่งในตาราง** ที่ลบได้ แก้ได้ และทำซ้ำ
+ * ให้ภาษาอื่นได้ทันที
+ */
+export const FONT_TARGETS = ['all', 'prose', 'screenplay'];
 
 /** ช่วงอักขระสำเร็จรูป — ผู้ใช้เลือกจากรายการนี้ หรือพิมพ์ช่วงเองก็ได้ */
 export const SCRIPT_PRESETS = [
@@ -47,11 +67,19 @@ export const SYSTEM_THAI_FONTS = [
   { family: 'TH Sarabun New', label: t('ui.fonts.tHSarabunNew') },
 ];
 
-/** รายการเริ่มต้น: ไทยใช้ Courier Thai Mono ที่ฝังมา · นอกนั้นปล่อยตาม font stack เดิม */
+/**
+ * รายการเริ่มต้น
+ *  1. ไทยในบทภาพยนตร์ — ย่อ 85% ให้เท่ากล่องบรรทัดของ Courier (เดิมคือ `spThaiFont`)
+ *  2. ไทยแบบฝังมากับโปรแกรม — ปิดไว้ ให้เลือกเปิดเอง
+ */
 export function defaultLangFonts() {
   return [
-    { id: 'thai', label: t('ui.common.msg8'), range: 'U+0E00-0E7F',
-      builtin: 'CourierThaiMono.ttf', family: '', file: '', enabled: false },
+    { id: 'sp-thai', label: t('ui.common.msg8'), range: SP_THAI_RANGE, target: 'screenplay',
+      builtin: '', file: '', family: SP_THAI_FALLBACKS.join(', '), system: true,
+      size: 85, ascent: 0, descent: 0, enabled: true },
+    { id: 'thai', label: t('ui.common.msg8'), range: 'U+0E00-0E7F', target: 'all',
+      builtin: 'CourierThaiMono.ttf', family: '', file: '', system: false,
+      size: 100, ascent: 0, descent: 0, enabled: false },
   ];
 }
 
@@ -80,40 +108,76 @@ export function isUsable(row) {
   return !row.range || !!normalizeRange(row.range);
 }
 
+/** เป้าหมายของแถว — 'all' ใช้ได้ทั้งสองโหมด */
+export function rowTarget(row) {
+  const v = String((row && row.target) || 'all');
+  return FONT_TARGETS.includes(v) ? v : 'all';
+}
+/** แถวนี้มีผลกับสแตกไหน ('prose' | 'screenplay') */
+export function rowAppliesTo(row, target) {
+  const t2 = rowTarget(row);
+  return t2 === 'all' || t2 === target;
+}
+
+const clampPct = (v, lo, hi, dflt) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt;
+};
+
+/** ชื่อฟอนต์ในเครื่องของแถวหนึ่ง — คั่นด้วยจุลภาคได้ (ลูกโซ่สำรอง) */
+export function familyList(row) {
+  return String((row && row.family) || '').split(',')
+    .map((x) => cssFamilyName(x)).filter(Boolean);
+}
+
 /**
  * สร้างข้อความ CSS ของทั้งรายการ
- * @param {Array} rows  [{range, builtin, file, family, enabled}]
+ * @param {Array} rows  [{range, builtin, file, family, target, size, ascent, descent, enabled}]
  * @param {(row)=>string} resolveUrl  แปลง builtin/file เป็น URL ที่โหลดได้ (คืน '' = ข้ามแถวนั้น)
+ * @param {{family?:string, target?:string}} [opts]
+ *        family = ชื่อวงศ์ที่จะประกาศ (ค่าเริ่มต้น LANG_FAMILY) · target = กรองเฉพาะแถวของโหมดนั้น
  * @returns {string}
  */
-export function buildLangFontCss(rows, resolveUrl) {
+export function buildLangFontCss(rows, resolveUrl, opts = {}) {
+  const famName = opts.family || LANG_FAMILY;
+  const target = opts.target || '';
   const out = [];
   for (const row of rows || []) {
     if (!isUsable(row)) continue;
+    if (target && !rowAppliesTo(row, target)) continue;
     const range = normalizeRange(row.range);
     const srcs = [];
     const url = (row.builtin || row.file) && resolveUrl ? resolveUrl(row) : '';
-    if (url) srcs.push(`url("${String(url).replace(/"/g, '%22')}")`);
-    const fam = cssFamilyName(row.family);
+    if (url) srcs.push('url("' + String(url).replace(/"/g, '%22') + '")');
     // local() = ใช้ฟอนต์ที่ลงไว้ในเครื่องแล้ว (ไม่ต้องมีไฟล์ในโปรเจกต์)
-    if (fam) srcs.push(`local("${fam}")`);
+    // หลายชื่อ = ลูกโซ่สำรอง ตัวแรกที่เครื่องมีจะถูกใช้ (mac → Ayuthaya · win → Leelawadee UI)
+    for (const f of familyList(row)) srcs.push('local("' + f + '")');
     if (!srcs.length) continue;
-    out.push(`@font-face{font-family:"${LANG_FAMILY}";font-display:swap;` +
-             `src:${srcs.join(',')};` + (range ? `unicode-range:${range};` : '') + '}');
+    // [alpha.97 ข้อ 12] สัดส่วนรายแถว — ตัวที่ทำให้ "ไทยในบทเท่า Courier" เป็นแค่ค่าในตาราง
+    const size = clampPct(row.size, 50, 150, 100);
+    const asc = clampPct(row.ascent, 0, 200, 0);
+    const desc = clampPct(row.descent, 0, 200, 0);
+    out.push('@font-face{font-family:"' + famName + '";font-display:swap;' +
+             'src:' + srcs.join(',') + ';' +
+             (range ? 'unicode-range:' + range + ';' : '') +
+             (size !== 100 ? 'size-adjust:' + size + '%;' : '') +
+             (asc > 0 ? 'ascent-override:' + asc + '%;' : '') +
+             (desc > 0 ? 'descent-override:' + desc + '%;' : '') + '}');
   }
   return out.join('\n');
 }
 
-/**
- * เอา "K2 Lang" ไปนำหน้า font stack ที่ผู้ใช้ตั้งไว้
- * (ถ้าไม่มีแถวไหนใช้ได้เลย ก็คืน stack เดิมไม่แตะต้อง)
- */
-export function withLangFamily(stack, hasRows) {
+/** เอาวงศ์ที่สร้างขึ้นไปนำหน้า font stack ที่ผู้ใช้ตั้งไว้ */
+export function withFamily(stack, famName, hasRows) {
   const s = String(stack || '').trim();
-  if (!hasRows) return s;
-  if (s.startsWith(`"${LANG_FAMILY}"`)) return s;
-  return `"${LANG_FAMILY}"` + (s ? ', ' + s : '');
+  if (!hasRows || !famName) return s;
+  if (s.startsWith('"' + famName + '"')) return s;
+  return '"' + famName + '"' + (s ? ', ' + s : '');
 }
+/** สแตกของนิยาย/ทั่วไป */
+export function withLangFamily(stack, hasRows) { return withFamily(stack, LANG_FAMILY, hasRows); }
+/** สแตกของบทภาพยนตร์ */
+export function withSpFamily(stack, hasRows) { return withFamily(stack, SP_FAMILY, hasRows); }
 
 /** ทำให้แถวที่อ่านจาก project.khn.json อยู่ในรูปที่ UI ใช้ได้เสมอ */
 export function normalizeLangFonts(list) {
@@ -122,122 +186,100 @@ export function normalizeLangFonts(list) {
     id: String(r?.id || 'f' + i),
     label: String(r?.label || ''),
     range: String(r?.range || ''),
+    target: rowTarget(r),
     builtin: String(r?.builtin || ''),
     file: String(r?.file || ''),
     family: String(r?.family || ''),
+    // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
+    system: r?.system === true,
+    size: clampPct(r?.size, 50, 150, 100),
+    ascent: clampPct(r?.ascent, 0, 200, 0),
+    descent: clampPct(r?.descent, 0, 200, 0),
     enabled: r?.enabled !== false,
   }));
 }
 
-// ═════════ [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของ "บทภาพยนตร์" ═════════
-//
-// อาการที่ผู้ใช้เจอ: ฟอนต์ Courier Prime ใช้ในโหมดนิยายได้สวยทั้งไทยและละติน
-// แต่พอเป็นบทภาพยนตร์กลับ "เพี้ยนมาก" — ตัวไทยใหญ่เกิน วรรณยุกต์ชนบรรทัดบน บางตัวหายไปเลย
-//
-// ต้นเหตุ (วัดจริงด้วย canvas ที่ 100px):
-//   · สแตกนิยายเริ่มด้วย **Sarabun** ซึ่งเป็นฟอนต์ไทย → ไทยกับละตินมาจากวงศ์เดียวกัน สัดส่วนตรงกัน
-//   · สแตกบทเริ่มด้วย **Courier Prime** ซึ่ง *ไม่มีอักษรไทยเลย* → ไทยตกไปที่ฟอนต์สำรอง
-//     (Ayuthaya บน macOS) ที่มีเมตริกคนละชุด: Courier Prime ขึ้นสูง 66 / ลงลึก 22
-//     ส่วน Ayuthaya ตัวไทยขึ้นสูง 107 / ลงลึก 30 = **สูงรวม 137 ในกล่องบรรทัดที่สูงแค่ 100**
-//   · บทภาพยนตร์ใช้ `line-height:1` ตายตัว (6 บรรทัด/นิ้ว = มาตรฐานอุตสาหกรรม ห้ามขยับ
-//     ไม่งั้นหน้าละ 54 บรรทัดเพี้ยนทั้งระบบ) → ตัวไทยจึงล้นกล่องบรรทัดแล้วชนกันเอง
-//
-// วิธีแก้: ประกาศ @font-face ของ "ช่วงอักษรไทย" ทับด้วย `size-adjust` (+ ascent/descent-override
-// ถ้าต้องการ) แล้วเอาไปไว้หน้าสุดของ --sp-font → เบราว์เซอร์ย่อกลิฟไทยลงให้พอดีกล่องบรรทัด
-// **โดยไม่แตะระยะบรรทัดและไม่แตะโหมดนิยายเลย** · 85% คือค่าที่วัดแล้วตรงกับ Courier Prime ที่สุด
-
-/** ชื่อวงศ์ที่สร้างขึ้นสำหรับ "ไทยในบทภาพยนตร์" — ต้องมาก่อน Courier Prime ใน --sp-font */
-export const SP_THAI_FAMILY = 'K2 SP Thai';
-/** ช่วงอักษรไทย (รวมเลขไทยและอักขระพิเศษ) */
-export const SP_THAI_RANGE = 'U+0E00-0E7F';
-/** ลูกโซ่ฟอนต์ไทยมาตรฐาน — ตัวแรกที่เครื่องมีจะถูกใช้ (mac → Ayuthaya · win → Leelawadee UI) */
-export const SP_THAI_FALLBACKS = ['Ayuthaya', 'Thonburi', 'Leelawadee UI', 'Sarabun', 'Tahoma'];
-
-export const SP_THAI_DEFAULTS = {
-  enabled: true,
-  family: '',      // '' = ใช้ SP_THAI_FALLBACKS ตามลำดับ
-  size: 85,        // size-adjust (%) — 85 = ค่าที่วัดแล้วตัวไทยเท่า Courier Prime พอดี
-  ascent: 0,       // ascent-override (%) · 0 = ไม่ override
-  descent: 0,      // descent-override (%) · 0 = ไม่ override
-};
-
-const clampPct = (v, lo, hi, dflt) => {
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt;
-};
-
-/** ทำให้ค่าที่อ่านจาก project.khn.json อยู่ในรูปที่ใช้ได้เสมอ */
-export function normalizeSpThai(cfg) {
-  const c = cfg && typeof cfg === 'object' ? cfg : {};
+/** จำนวนแถวที่ใช้ได้จริงของแต่ละสแตก */
+export function usableCounts(rows) {
+  const list = normalizeLangFonts(rows).filter(isUsable);
   return {
-    enabled: c.enabled !== false,
-    family: cssFamilyName(c.family),
-    size: clampPct(c.size, 50, 150, SP_THAI_DEFAULTS.size),
-    ascent: clampPct(c.ascent, 0, 200, 0),
-    descent: clampPct(c.descent, 0, 200, 0),
+    prose: list.filter((r) => rowAppliesTo(r, 'prose')).length,
+    screenplay: list.filter((r) => rowAppliesTo(r, 'screenplay')).length,
+    total: list.length,
   };
 }
 
-/** รายชื่อฟอนต์ที่จะลองใช้จริง (ของผู้ใช้มาก่อน แล้วค่อยลูกโซ่มาตรฐาน) */
-export function spThaiSources(cfg) {
-  const c = normalizeSpThai(cfg);
-  return c.family ? [c.family, ...SP_THAI_FALLBACKS.filter((f) => f !== c.family)]
-                  : SP_THAI_FALLBACKS.slice();
-}
+// ═════════ ไทยในบทภาพยนตร์ — ตอนนี้เป็น "แถวหนึ่งในตาราง" ไม่ใช่ระบบแยก ═════════
+//
+// อาการเดิม (alpha.84 ข้อ 1): ฟอนต์ Courier Prime สวยในโหมดนิยาย แต่ในบทภาพยนตร์
+// ตัวไทยใหญ่เกิน วรรณยุกต์ชนบรรทัดบน บางตัวหายไปเลย
+//
+// ต้นเหตุ (วัดจริงด้วย canvas ที่ 100px):
+//   · สแตกนิยายเริ่มด้วย **Sarabun** ซึ่งเป็นฟอนต์ไทย → ไทยกับละตินสัดส่วนตรงกัน
+//   · สแตกบทเริ่มด้วย **Courier Prime** ซึ่ง *ไม่มีอักษรไทยเลย* → ไทยตกไปฟอนต์สำรอง
+//     ที่มีเมตริกคนละชุด: Courier Prime ขึ้นสูง 66 / ลงลึก 22 · Ayuthaya 107 / 30
+//     = สูงรวม 137 ในกล่องบรรทัดที่สูงแค่ 100
+//   · บทใช้ `line-height:1` ตายตัว (6 บรรทัด/นิ้ว = มาตรฐานอุตสาหกรรม ห้ามขยับ)
+//     → ตัวไทยล้นกล่องบรรทัดแล้วชนกันเอง
+//
+// วิธีแก้ยังเหมือนเดิมทุกประการ (`size-adjust` 85%) — เปลี่ยนแค่ "ที่อยู่ของค่า":
+// จากค่าคงที่ในโค้ด มาเป็นแถวในตารางที่ลบได้/ทำซ้ำให้ภาษาอื่นได้
+
+/** ช่วงอักษรไทย (รวมเลขไทยและอักขระพิเศษ) */
+export const SP_THAI_RANGE = 'U+0E00-0E7F';
+/** ลูกโซ่ฟอนต์ไทยมาตรฐาน — ตัวแรกที่เครื่องมีจะถูกใช้ */
+export const SP_THAI_FALLBACKS = ['Ayuthaya', 'Thonburi', 'Leelawadee UI', 'Sarabun', 'Tahoma'];
+/** 85 = ค่าที่วัดแล้วตัวไทยเท่า Courier Prime พอดี */
+export const SP_THAI_SIZE = 85;
 
 /**
- * CSS ของตัวปรับสัดส่วน — คืน '' เมื่อปิดสวิตช์ (ผู้เรียกจะได้ล้าง <style> ทิ้ง)
- * ใช้ `local()` ล้วน ๆ เพราะฟอนต์ไทยของระบบแจกมากับโปรแกรมไม่ได้ (สิทธิ์ของผู้ผลิต)
+ * ย้ายค่าของโปรเจกต์เก่า (`settings.spThaiFont`) มาเป็นแถวในตาราง — เรียกซ้ำได้ ไม่ทับของใหม่
+ * @returns {{rows:Array, moved:boolean}}
  */
-export function buildSpThaiCss(cfg) {
-  const c = normalizeSpThai(cfg);
-  if (!c.enabled) return '';
-  const src = spThaiSources(c).map((f) => `local("${f}")`).join(',');
-  if (!src) return '';
-  const over = (c.ascent > 0 ? `ascent-override:${c.ascent}%;` : '')
-             + (c.descent > 0 ? `descent-override:${c.descent}%;` : '');
-  return `@font-face{font-family:"${SP_THAI_FAMILY}";font-display:swap;src:${src};` +
-         `unicode-range:${SP_THAI_RANGE};size-adjust:${c.size}%;${over}}`;
+export function migrateSpThai(list, spThai) {
+  const rows = normalizeLangFonts(list);
+  if (!spThai || typeof spThai !== 'object') return { rows, moved: false };
+  // มีแถวของบทที่คุมช่วงไทยอยู่แล้ว = เคยย้ายแล้ว (หรือผู้ใช้ตั้งเอง) → ไม่ยุ่ง
+  const has = rows.some((r) => rowAppliesTo(r, 'screenplay')
+    && normalizeRange(r.range) === SP_THAI_RANGE);
+  if (has) return { rows, moved: false };
+  const fam = cssFamilyName(spThai.family);
+  rows.unshift(normalizeLangFonts([{
+    id: 'sp-thai', label: t('ui.common.msg8'), range: SP_THAI_RANGE, target: 'screenplay',
+    family: fam ? [fam, ...SP_THAI_FALLBACKS.filter((f) => f !== fam)].join(', ')
+                : SP_THAI_FALLBACKS.join(', '),
+    system: true,
+    size: clampPct(spThai.size, 50, 150, SP_THAI_SIZE),
+    ascent: clampPct(spThai.ascent, 0, 200, 0),
+    descent: clampPct(spThai.descent, 0, 200, 0),
+    enabled: spThai.enabled !== false,
+  }])[0]);
+  return { rows, moved: true };
 }
 
-/** เอา "K2 SP Thai" ไปนำหน้าสแตกฟอนต์บท (ปิดสวิตช์ = คืนสแตกเดิมไม่แตะต้อง) */
-export function withSpThaiFamily(stack, cfg) {
-  const s = String(stack || '').trim();
-  if (!normalizeSpThai(cfg).enabled) return s;
-  if (s.startsWith(`"${SP_THAI_FAMILY}"`)) return s;
-  return `"${SP_THAI_FAMILY}"` + (s ? ', ' + s : '');
-}
-
-/**
- * ยัด <style id="k-sp-thai"> เข้า <head> — เรียกซ้ำได้
- * @returns {boolean} true = ตัวปรับสัดส่วนทำงานอยู่
- */
-export function applySpThaiFont(cfg) {
-  const css = buildSpThaiCss(cfg);
-  let st = document.getElementById('k-sp-thai');
+// ───────── ส่วนที่แตะ DOM ─────────
+/** ยัด <style id> ก้อนหนึ่งเข้า <head> — เรียกซ้ำได้ (เขียนทับก้อนเดิม) */
+function putStyle(id, css) {
+  let st = document.getElementById(id);
   if (!st) {
     st = document.createElement('style');
-    st.id = 'k-sp-thai';
+    st.id = id;
+    // ต้องอยู่ท้าย <head> เพื่อให้ทับ @font-face ของ style.css ได้เมื่อชื่อวงศ์ซ้ำ
     document.head.appendChild(st);
   }
   st.textContent = css;
   return !!css;
 }
 
-// ───────── ส่วนที่แตะ DOM ─────────
 /**
- * ยัด <style id="k-lang-fonts"> เข้า <head> — เรียกซ้ำได้ (เขียนทับก้อนเดิม)
- * @returns {number} จำนวนแถวที่ใช้จริง
+ * ยัด @font-face ตามภาษาเข้า <head> — **สองวงศ์**: ของนิยาย (K2 Lang) กับของบท (K2 SP)
+ * @returns {{prose:number, screenplay:number, total:number}} จำนวนแถวที่ใช้จริงของแต่ละสแตก
  */
 export function applyLangFonts(rows, resolveUrl) {
   const list = normalizeLangFonts(rows).filter(isUsable);
-  let st = document.getElementById('k-lang-fonts');
-  if (!st) {
-    st = document.createElement('style');
-    st.id = 'k-lang-fonts';
-    // ต้องอยู่ท้าย <head> เพื่อให้ทับ @font-face ของ style.css ได้เมื่อชื่อวงศ์ซ้ำ
-    document.head.appendChild(st);
-  }
-  st.textContent = buildLangFontCss(list, resolveUrl);
-  return list.length;
+  putStyle('k-lang-fonts',
+    buildLangFontCss(list, resolveUrl, { family: LANG_FAMILY, target: 'prose' }));
+  putStyle('k-sp-fonts',
+    buildLangFontCss(list, resolveUrl, { family: SP_FAMILY, target: 'screenplay' }));
+  return usableCounts(list);
 }

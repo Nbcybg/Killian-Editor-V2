@@ -1,6 +1,6 @@
 // Markdown ⇄ ProseMirror doc JSON — เข้ากับไฟล์ Killian v1 ทุกประการ
 // กติกา (เหมือน richtext.py ใน v1):
-//   **หนา**  *เอียง*  _ขีดเส้นใต้_  ~~ขีดฆ่า~~  # หัวข้อ  > คำพูดยกมา  - รายการ  1. รายการ
+//   **หนา**  *เอียง*  _ขีดเส้นใต้_  ~~ขีดฆ่า~~  ^ตัวยก^  ~ตัวห้อย~  # หัวข้อ  > คำพูดยกมา  - รายการ  1. รายการ
 //   ![คำบรรยาย](path) ทั้งบรรทัด = รูป · เครื่องหมายจับคู่ไม่ได้ → คงเป็นตัวอักษร (ไม่มีข้อมูลหาย)
 
 const PATS = [
@@ -9,6 +9,10 @@ const PATS = [
   [/(?<![*\w])\*([^*\n]+)\*(?![*\w])/, ['em']],
   [/(?<![\w_])_([^_\n]+)_(?![\w_])/, ['underline']],
   [/~~([^~\n]+)~~/, ['strike']],
+  // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เครื่องหมายเดียวกับ Pandoc (`x^2^` · `H~2~O`)
+  // ตัวห้อยใช้ `~` เดี่ยว จึงต้องมี lookaround กันไปแย่งแมตช์ใน `~~ขีดฆ่า~~`
+  [/\^([^^\n]+)\^/, ['sup']],
+  [/(?<!~)~([^~\n]+)~(?!~)/, ['sub']],
 ];
 // [alpha.83 ข้อ 1] `###` ล้วน ๆ (ไม่มีวรรค/ไม่มีข้อความ) ก็เป็นหัวข้อว่างตามมาตรฐาน CommonMark
 // — ต้องจับให้ได้ ไม่งั้นกลายเป็น "ย่อหน้าที่มีข้อความ ###" ค้างอยู่ในไฟล์ตลอดไป
@@ -186,7 +190,13 @@ function mdToDoc(md, alignMap) {
 }
 
 // ---------- inline: nodes → md (ซ้อนเครื่องหมายตามความยาวช่วงจริง เหมือน v1) ----------
-const MARKSET = ['strong', 'em', 'underline', 'strike'];
+const MARKSET = ['strong', 'em', 'underline', 'strike', 'sup', 'sub'];
+/**
+ * mark ที่มี "เครื่องหมายคู่" ของตัวเองตายตัว — ต่างจากตระกูลดาวที่ตัวหนา+เอียงรวมร่างเป็น `***`
+ * [alpha.97 ข้อ 4] เพิ่ม sup/sub ที่ตารางนี้ที่เดียว แทนการเขียน if ทีละตัวกระจายทั่ว emitRuns
+ */
+const SIMPLE_MARKS = [['strike', '~~'], ['underline', '_'], ['sup', '^'], ['sub', '~']];
+const simpleOf = (kind) => SIMPLE_MARKS.find(([, k]) => k === kind);
 function starKind(sig) {
   if (sig.has('strong') && sig.has('em')) return '***';
   if (sig.has('strong')) return '**';
@@ -199,9 +209,9 @@ function emitRuns(runs) {
     let n = 0;
     for (let j = idx; j < runs.length; j++) {
       const sig = runs[j].sig;
-      if (kind === '~~' && !sig.has('strike')) break;
-      if (kind === '_' && !sig.has('underline')) break;
-      if (kind !== '~~' && kind !== '_' && starKind(sig) !== kind) break;
+      const simple = simpleOf(kind);
+      if (simple) { if (!sig.has(simple[0])) break; }
+      else if (starKind(sig) !== kind) break;
       n += runs[j].text.length;
     }
     return n;
@@ -211,8 +221,7 @@ function emitRuns(runs) {
   runs.forEach((run, idx) => {
     const ks = starKind(run.sig);
     const need = new Set();
-    if (run.sig.has('strike')) need.add('~~');
-    if (run.sig.has('underline')) need.add('_');
+    for (const [mk, sign] of SIMPLE_MARKS) if (run.sig.has(mk)) need.add(sign);
     if (ks) need.add(ks);
     const bad = stack.findIndex((mk) => !need.has(mk));
     const pool = new Set();
@@ -249,8 +258,26 @@ function inlineToMd(content) {
 }
 
 // ---------- doc → md ----------
-function docToMd(doc, opts) {
+/**
+ * ══ [alpha.99 ข้อ 3] ★ ไฟล์ .md คือ "แหล่งความจริง" ของเลขบรรทัด ══
+ *
+ * ผู้ใช้: *"ใน markdown มี 642 ใน editor มี 638 · ทำไมไปคำนวณใหม่
+ *          ทำไมไม่ใช้ markdown เป็น reference แทน"*
+ *
+ * บล็อกหนึ่งใบใน ProseMirror **ไม่ได้เท่ากับหนึ่งบรรทัดใน .md** เสมอไป:
+ *   · รายการ 5 ข้อ           = 1 บล็อก แต่ 5 บรรทัด
+ *   · คำพูดยกมา 2 ย่อหน้า     = 1 บล็อก แต่ 2 บรรทัด
+ *   · ย่อหน้าที่มี Shift+Enter = 1 บล็อก แต่หลายบรรทัด
+ *   · บล็อกโค้ด              = 1 บล็อก แต่ = เนื้อ + รั้ว 2 เส้น
+ * รางเลขบรรทัดเดิมนับ "ลูกของ .ProseMirror" ตรง ๆ จึงหายไปทีละใบตามรูปแบบพวกนี้
+ *
+ * ตัวนี้คืนจำนวนบรรทัด .md ของบล็อกแต่ละใบ (เรียงตามลำดับในเอกสาร) โดยใช้
+ * **ตัวเขียนไฟล์ตัวเดียวกับของจริง** — ตัวเลขจึงตรงกับไฟล์เสมอโดยไม่ต้องเดา
+ * @returns {{lines: string[], counts: number[]}}
+ */
+function docToMdParts(doc, opts) {
   const lines = [];
+  const counts = [];
   // opts.alignComments === false → ไม่เขียน <!--align:…--> ลงไฟล์ (เก็บใน frontmatter แทน)
   const useComments = !opts || opts.alignComments !== false;
   const alignPfx = (n) => { const a = (n.attrs || {}).align;
@@ -258,6 +285,7 @@ function docToMd(doc, opts) {
   const textOf = (n) => (n.content || []).filter((x) => x.type === 'text')
                           .map((x) => x.text).join('');
   for (const node of doc.content || []) {
+    const before = lines.length;
     switch (node.type) {
       case 'horizontal_rule':
         lines.push('---');
@@ -303,9 +331,16 @@ function docToMd(doc, opts) {
       default:
         lines.push(alignPfx(node) + inlineToMd(node.content));
     }
+    // ข้อความที่ push ไปอาจมี \n อยู่ข้างในเอง (hard break) → นับตามของจริงเสมอ
+    counts.push(lines.slice(before).join('\n').split('\n').length);
   }
-  return lines.join('\n');
+  return { lines, counts };
 }
+
+function docToMd(doc, opts) { return docToMdParts(doc, opts).lines.join('\n'); }
+
+/** จำนวนบรรทัดใน .md ของบล็อกระดับบนแต่ละใบ (ดูคอมเมนต์ของ docToMdParts) */
+function mdLineCounts(doc, opts) { return docToMdParts(doc, opts).counts; }
 
 // ---------- frontmatter (โครงเดียวกับ v1: --- k: v --- ) ----------
 // บล็อกคอมเมนต์ท้ายไฟล์ (comment-core.js) — ต้องตัดออกทุกทางเข้า ไม่งั้นโผล่ในตัวแก้ไข/ส่งออก/นับคำ
@@ -349,5 +384,5 @@ function countWords(body) {
   return n;
 }
 
-module.exports = { mdToDoc, docToMd, parseMdFile, dumpMdFile, countWords,
+module.exports = { mdToDoc, docToMd, mdLineCounts, parseMdFile, dumpMdFile, countWords,
                    collectAlign, alignToString, alignFromString };

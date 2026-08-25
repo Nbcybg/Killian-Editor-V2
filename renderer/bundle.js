@@ -13739,7 +13739,11 @@
         [/(?<!\*)\*\*([^*\n]+)\*\*(?!\*)/, ["strong"]],
         [/(?<![*\w])\*([^*\n]+)\*(?![*\w])/, ["em"]],
         [/(?<![\w_])_([^_\n]+)_(?![\w_])/, ["underline"]],
-        [/~~([^~\n]+)~~/, ["strike"]]
+        [/~~([^~\n]+)~~/, ["strike"]],
+        // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เครื่องหมายเดียวกับ Pandoc (`x^2^` · `H~2~O`)
+        // ตัวห้อยใช้ `~` เดี่ยว จึงต้องมี lookaround กันไปแย่งแมตช์ใน `~~ขีดฆ่า~~`
+        [/\^([^^\n]+)\^/, ["sup"]],
+        [/(?<!~)~([^~\n]+)~(?!~)/, ["sub"]]
       ];
       var RE_H = /^(#{1,6})(?: |$)/;
       var RE_UL = /^[-*] /;
@@ -13901,7 +13905,9 @@
         }
         return doc3;
       }
-      var MARKSET = ["strong", "em", "underline", "strike"];
+      var MARKSET = ["strong", "em", "underline", "strike", "sup", "sub"];
+      var SIMPLE_MARKS = [["strike", "~~"], ["underline", "_"], ["sup", "^"], ["sub", "~"]];
+      var simpleOf = (kind) => SIMPLE_MARKS.find(([, k]) => k === kind);
       function starKind(sig) {
         if (sig.has("strong") && sig.has("em")) return "***";
         if (sig.has("strong")) return "**";
@@ -13913,9 +13919,10 @@
           let n2 = 0;
           for (let j = idx4; j < runs.length; j++) {
             const sig = runs[j].sig;
-            if (kind === "~~" && !sig.has("strike")) break;
-            if (kind === "_" && !sig.has("underline")) break;
-            if (kind !== "~~" && kind !== "_" && starKind(sig) !== kind) break;
+            const simple = simpleOf(kind);
+            if (simple) {
+              if (!sig.has(simple[0])) break;
+            } else if (starKind(sig) !== kind) break;
             n2 += runs[j].text.length;
           }
           return n2;
@@ -13925,8 +13932,7 @@
         runs.forEach((run3, idx4) => {
           const ks = starKind(run3.sig);
           const need = /* @__PURE__ */ new Set();
-          if (run3.sig.has("strike")) need.add("~~");
-          if (run3.sig.has("underline")) need.add("_");
+          for (const [mk2, sign] of SIMPLE_MARKS) if (run3.sig.has(mk2)) need.add(sign);
           if (ks) need.add(ks);
           const bad = stack.findIndex((mk2) => !need.has(mk2));
           const pool3 = /* @__PURE__ */ new Set();
@@ -13962,8 +13968,9 @@
         }
         return parts.map(emitRuns).join("\\\n");
       }
-      function docToMd4(doc3, opts) {
+      function docToMdParts(doc3, opts) {
         const lines = [];
+        const counts = [];
         const useComments = !opts || opts.alignComments !== false;
         const alignPfx = (n2) => {
           const a = (n2.attrs || {}).align;
@@ -13971,6 +13978,7 @@
         };
         const textOf2 = (n2) => (n2.content || []).filter((x) => x.type === "text").map((x) => x.text).join("");
         for (const node of doc3.content || []) {
+          const before = lines.length;
           switch (node.type) {
             case "horizontal_rule":
               lines.push("---");
@@ -14012,8 +14020,15 @@
             default:
               lines.push(alignPfx(node) + inlineToMd2(node.content));
           }
+          counts.push(lines.slice(before).join("\n").split("\n").length);
         }
-        return lines.join("\n");
+        return { lines, counts };
+      }
+      function docToMd4(doc3, opts) {
+        return docToMdParts(doc3, opts).lines.join("\n");
+      }
+      function mdLineCounts2(doc3, opts) {
+        return docToMdParts(doc3, opts).counts;
       }
       var K2_COMMENTS_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
       function parseMdFile13(text) {
@@ -14052,6 +14067,7 @@
       module.exports = {
         mdToDoc: mdToDoc4,
         docToMd: docToMd4,
+        mdLineCounts: mdLineCounts2,
         parseMdFile: parseMdFile13,
         dumpMdFile: dumpMdFile6,
         countWords: countWords6,
@@ -14673,9 +14689,7 @@
     if (!pn.show) return "";
     const i5 = Math.max(1, Math.round(+index || 1));
     const start = Math.max(1, Math.round(+startPage || 1));
-    const n2 = start + i5 - 1;
-    if (n2 === 1 && !pn.firstPage) return "";
-    return String(n2) + (pn.suffix || "");
+    return String(start + i5 - 1) + (pn.suffix || "");
   }
   function mergeSpFormat(user) {
     const u = user || {};
@@ -15111,7 +15125,7 @@
         timeTitle: "Time"
       };
       SCENE_NUMBER_DEFAULTS = { show: false, left: 0.75, right: 1, suffix: "" };
-      PAGE_NUMBER_DEFAULTS = { show: false, right: 1, top: 0.5, suffix: ".", firstPage: false };
+      PAGE_NUMBER_DEFAULTS = { show: false, right: 1, top: 0.5, suffix: "." };
       DEFAULT_SP_FORMAT = {
         paperSize: "letter",
         paper: { width: 8.5, height: 11 },
@@ -15212,8 +15226,12 @@
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     const out = [];
     const q = f.quote;
-    out.push(`${sel}{font-family:${proseFontStack(f)};font-size:var(--ed-fs, ${proseFontPx(f)}px);line-height:${f.lineHeight};text-align:${f.align}}`);
+    out.push(`${sel}{font-family:var(--ed-font, ${proseFontStack(f)});font-size:var(--ed-fs, ${proseFontPx(f)}px);line-height:${f.lineHeight};text-align:${f.align}}`);
     out.push(`${sel} p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`);
+    out.push(`${sel} ul,${sel} ol{margin:0 0 ${f.paraSpacing}em;padding-left:var(--ed-list-pad, 28px)}`);
+    out.push(`${sel} li>p{margin:0;text-indent:0}`);
+    out.push(`${sel} li+li>p{margin-top:${f.paraSpacing}em}`);
+    out.push(`${sel} li>ul,${sel} li>ol{margin:0}`);
     if (!f.indentAfterHeading) {
       out.push(`${sel} > p:first-child,${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
     }
@@ -15380,7 +15398,6 @@
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     if (!f.pageNumbers) return "";
     const i5 = Math.max(1, Math.round(+index || 1));
-    if (i5 === 1 && !f.pageNumberFirst) return "";
     const start = Math.max(1, Math.round(+startPage || 1));
     return String(start + i5 - 1);
   }
@@ -15537,10 +15554,8 @@
         // [24] null = QUOTE_DEFAULTS
         avgCharEm: 0.5,
         // ความกว้างเฉลี่ยต่อตัวอักษร (เท่าของ em) — ใช้ประมาณการนับหน้า
-        pageNumbers: false,
+        pageNumbers: false
         // [20] แสดงเลขหน้าในมุมมองหน้ากระดาษ
-        pageNumberFirst: false
-        // พิมพ์เลขบนหน้าแรกไหม
       };
       proseFontPx = (fmt) => {
         const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
@@ -16378,15 +16393,19 @@
   // src/editor.js
   var editor_exports = {};
   __export(editor_exports, {
+    HOME_END_KEYS: () => HOME_END_KEYS,
     KEditor: () => KEditor,
+    ancestorDepth: () => ancestorDepth,
     commentAnchorPlugin: () => commentAnchorPlugin,
     commentAnchors: () => commentAnchors,
     decoSignature: () => decoSignature,
+    docEdgeCmd: () => docEdgeCmd,
     focusLinePlugin: () => focusLinePlugin,
     insertHardBreak: () => insertHardBreak,
     insertPageBreak: () => insertPageBreak,
     insertTab: () => insertTab,
     keepScroll: () => keepScroll,
+    lineEdgeCmd: () => lineEdgeCmd,
     mentionPlugin: () => mentionPlugin,
     refreshCommentAnchors: () => refreshCommentAnchors,
     refreshFocusLine: () => refreshFocusLine,
@@ -16394,9 +16413,12 @@
     refreshSpell: () => refreshSpell,
     removeTab: () => removeTab,
     schema: () => schema,
+    selectionDocRange: () => selectionDocRange,
     setCommentAnchors: () => setCommentAnchors,
     setFocusLine: () => setFocusLine,
-    spellPlugin: () => spellPlugin
+    spellPlugin: () => spellPlugin,
+    toggleListCmd: () => toggleListCmd,
+    toggleWrapCmd: () => toggleWrapCmd
   });
   function changedRange(tr4) {
     let from2 = Infinity, to = -Infinity;
@@ -16694,6 +16716,9 @@
       ),
       markRule(/(\*\*)([^*]+)\*\*$/, s.marks.strong),
       markRule(/(~~)([^~]+)~~$/, s.marks.strike),
+      // [alpha.97 ข้อ 4] พิมพ์ `x^2^` / `H~2~O` แล้วได้ตัวยก/ตัวห้อยทันที (เครื่องหมายเดียวกับที่เก็บลง .md)
+      markRule(/(\^)([^^]+)\^$/, s.marks.sup),
+      markRule(/(?<!~)(~)([^~]+)~$/, s.marks.sub),
       // [alpha.58r บั๊ก 27] พิมพ์ ``` แล้วได้บล็อกโค้ด · พิมพ์ --- แล้วได้เส้นคั่น
       textblockTypeInputRule(/^```([\w+-]*)\s$/, s.nodes.code_block, (m) => ({ lang: m[1] || "" })),
       new InputRule(/^(?:-{3,}|\*{3,}|_{3,})$/, (state2, match, start, end) => state2.tr.replaceRangeWith(start, end, s.nodes.horizontal_rule.create()))
@@ -16741,6 +16766,92 @@
     }
     return false;
   }
+  function ancestorDepth(state2, type) {
+    const { $from } = state2.selection;
+    for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === type) return d;
+    return 0;
+  }
+  function toggleListCmd(listType, itemType, otherType) {
+    return (state2, dispatch, view2) => {
+      if (ancestorDepth(state2, listType)) {
+        const lift3 = liftListItem(itemType);
+        if (!dispatch) return lift3(state2);
+        if (!view2) return lift3(state2, dispatch);
+        let guard = 0;
+        while (ancestorDepth(view2.state, listType) && guard++ < 12) {
+          if (!lift3(view2.state, view2.dispatch, view2)) break;
+        }
+        return true;
+      }
+      const od = otherType ? ancestorDepth(state2, otherType) : 0;
+      if (od) {
+        if (!dispatch) return true;
+        if (!view2) return wrapInList(listType)(state2, dispatch);
+        const liftOut = liftListItem(itemType);
+        let g2 = 0;
+        while (ancestorDepth(view2.state, otherType) && g2++ < 12) {
+          if (!liftOut(view2.state, view2.dispatch, view2)) break;
+        }
+        return wrapInList(listType)(view2.state, view2.dispatch, view2);
+      }
+      return wrapInList(listType)(state2, dispatch, view2);
+    };
+  }
+  function toggleWrapCmd(nodeType) {
+    return (state2, dispatch, view2) => {
+      if (ancestorDepth(state2, nodeType)) return lift2(state2, dispatch);
+      return wrapIn(nodeType)(state2, dispatch, view2);
+    };
+  }
+  function lineEdgePos(view2, toEnd) {
+    const { head: head2 } = view2.state.selection;
+    let c;
+    try {
+      c = view2.coordsAtPos(head2);
+    } catch {
+      return null;
+    }
+    const box2 = view2.dom.getBoundingClientRect();
+    const cs = getComputedStyle(view2.dom);
+    const x = toEnd ? box2.right - (parseFloat(cs.paddingRight) || 0) - 1 : box2.left + (parseFloat(cs.paddingLeft) || 0) + 1;
+    const y = (c.top + c.bottom) / 2;
+    const at = view2.posAtCoords({ left: x, top: y });
+    if (!at) return null;
+    const $h = view2.state.doc.resolve(head2);
+    const lo = $h.start(), hi = $h.end();
+    let pos = Math.max(lo, Math.min(hi, at.pos));
+    if (toEnd && pos > lo) {
+      try {
+        const after = view2.coordsAtPos(pos, 1);
+        if (after.top > y + 2) pos--;
+      } catch {
+      }
+    }
+    return pos;
+  }
+  function lineEdgeCmd(toEnd, extend) {
+    return (state2, dispatch, view2) => {
+      if (!view2) return false;
+      const pos = lineEdgePos(view2, toEnd);
+      if (pos == null || !Number.isFinite(pos)) return false;
+      if (dispatch) {
+        const $p = state2.doc.resolve(pos);
+        const sel = extend ? TextSelection.between(state2.selection.$anchor, $p) : TextSelection.near($p, toEnd ? -1 : 1);
+        dispatch(state2.tr.setSelection(sel).scrollIntoView());
+      }
+      return true;
+    };
+  }
+  function docEdgeCmd(toEnd, extend) {
+    return (state2, dispatch) => {
+      if (dispatch) {
+        const $p = state2.doc.resolve(toEnd ? state2.doc.content.size : 0);
+        const sel = extend ? TextSelection.between(state2.selection.$anchor, $p) : TextSelection.near($p, toEnd ? -1 : 1);
+        dispatch(state2.tr.setSelection(sel).scrollIntoView());
+      }
+      return true;
+    };
+  }
   function scrollerOf(el2) {
     for (let n2 = el2; n2 && n2 !== document.body; n2 = n2.parentElement) {
       const ov = getComputedStyle(n2).overflowY;
@@ -16748,33 +16859,46 @@
     }
     return document.scrollingElement || document.documentElement;
   }
-  function selectionInView(view2, sc) {
+  function viewportHeight(sc) {
+    return sc === document.scrollingElement || sc === document.documentElement ? window.innerHeight : sc.clientHeight;
+  }
+  function selectionDocRange(view2, sc) {
     try {
       const { from: from2, to } = view2.state.selection;
       const a = view2.coordsAtPos(from2), b = view2.coordsAtPos(to);
-      const box2 = sc === document.scrollingElement || sc === document.documentElement ? { top: 0, bottom: window.innerHeight } : sc.getBoundingClientRect();
-      return b.bottom > box2.top && a.top < box2.bottom;
+      const boxTop = sc === document.scrollingElement || sc === document.documentElement ? 0 : sc.getBoundingClientRect().top;
+      return {
+        top: Math.min(a.top, b.top) - boxTop + sc.scrollTop,
+        bottom: Math.max(a.bottom, b.bottom) - boxTop + sc.scrollTop
+      };
     } catch {
-      return false;
+      return null;
     }
   }
   function keepScroll(view2, run3) {
     if (!view2 || !view2.dom || !view2.dom.isConnected) return run3();
     const sc = scrollerOf(view2.dom);
     const top = sc.scrollTop, left = sc.scrollLeft;
-    const lock = selectionInView(view2, sc);
     const out = run3();
-    if (lock) {
-      const restore = () => {
+    const settle = () => {
+      if (!view2.dom.isConnected) return;
+      const r = selectionDocRange(view2, sc);
+      if (!r) return;
+      const h = viewportHeight(sc);
+      const PAD2 = 8;
+      if (r.bottom > top + PAD2 && r.top < top + h - PAD2) {
         if (sc.scrollTop !== top) sc.scrollTop = top;
         if (sc.scrollLeft !== left) sc.scrollLeft = left;
-      };
-      restore();
-      requestAnimationFrame(restore);
-    }
+        return;
+      }
+      const max2 = Math.max(0, sc.scrollHeight - sc.clientHeight);
+      sc.scrollTop = Math.min(Math.max(0, Math.round(r.top - h / 3)), max2);
+    };
+    settle();
+    requestAnimationFrame(settle);
     return out;
   }
-  var import_md, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, KEditor;
+  var import_md, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, HOME_END_KEYS, KEditor;
   var init_editor = __esm({
     "src/editor.js"() {
       init_i18n();
@@ -16937,9 +17061,32 @@
           strong: { parseDOM: [{ tag: "strong" }, { tag: "b" }], toDOM: () => ["strong", 0] },
           em: { parseDOM: [{ tag: "em" }, { tag: "i" }], toDOM: () => ["em", 0] },
           underline: { parseDOM: [{ tag: "u" }], toDOM: () => ["u", 0] },
-          strike: { parseDOM: [{ tag: "s" }, { tag: "del" }], toDOM: () => ["s", 0] }
+          strike: { parseDOM: [{ tag: "s" }, { tag: "del" }], toDOM: () => ["s", 0] },
+          // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — อยู่กลุ่มเดียวกันและกันเองออก (ตัวเดียวกันเป็นทั้งสองไม่ได้)
+          sup: {
+            group: "vertalign",
+            excludes: "vertalign",
+            parseDOM: [{ tag: "sup" }],
+            toDOM: () => ["sup", 0]
+          },
+          sub: {
+            group: "vertalign",
+            excludes: "vertalign",
+            parseDOM: [{ tag: "sub" }],
+            toDOM: () => ["sub", 0]
+          }
         }
       });
+      HOME_END_KEYS = {
+        Home: lineEdgeCmd(false, false),
+        End: lineEdgeCmd(true, false),
+        "Shift-Home": lineEdgeCmd(false, true),
+        "Shift-End": lineEdgeCmd(true, true),
+        "Mod-Home": docEdgeCmd(false, false),
+        "Mod-End": docEdgeCmd(true, false),
+        "Shift-Mod-Home": docEdgeCmd(false, true),
+        "Shift-Mod-End": docEdgeCmd(true, true)
+      };
       KEditor = class {
         constructor(mount, {
           markdown = "",
@@ -17024,7 +17171,9 @@
                 "Mod-Enter": chainCommands(insertPageBreak),
                 // [alpha.61 ข้อ 3] Tab = เยื้อง (ในรายการ = ลดชั้น) — เดิมไม่ทำอะไรแล้วโฟกัสหลุดไปแถบรูปแบบ
                 Tab: chainCommands(sinkListItem(schema.nodes.list_item), insertTab),
-                "Shift-Tab": chainCommands(liftListItem(schema.nodes.list_item), removeTab)
+                "Shift-Tab": chainCommands(liftListItem(schema.nodes.list_item), removeTab),
+                // [alpha.98 ข้อ 9] Home/End ผูกเป็นคำสั่งจริง (ดูคอมเมนต์ยาวเหนือ KEditor)
+                ...HOME_END_KEYS
               }),
               keymap(baseKeymap),
               history(),
@@ -17046,6 +17195,16 @@
           return (0, import_md.docToMd)(
             this.view.state.doc.toJSON(),
             opts || { alignComments: this.alignComments }
+          );
+        }
+        /**
+         * [alpha.99 ข้อ 3] จำนวนบรรทัดใน .md ของบล็อกระดับบนแต่ละใบ — รางเลขบรรทัดใช้ตัวนี้
+         * เพื่อให้เลขตรงกับไฟล์เป๊ะ ไม่ใช่ไปนับลูกของ DOM เอง
+         */
+        mdLineCounts() {
+          return (0, import_md.mdLineCounts)(
+            this.view.state.doc.toJSON(),
+            { alignComments: this.alignComments }
           );
         }
         /** แผนที่จัดหน้าของบล็อกระดับบน — เก็บลง frontmatter (`align: [3:center]`) */
@@ -17087,6 +17246,11 @@
               return run3(toggleMark(s.marks.underline));
             case "strike":
               return run3(toggleMark(s.marks.strike));
+            // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — กันเองออกด้วย `excludes` ใน schema แล้ว
+            case "sup":
+              return run3(toggleMark(s.marks.sup));
+            case "sub":
+              return run3(toggleMark(s.marks.sub));
             case "undo":
               return run3(undo);
             case "redo":
@@ -17095,14 +17259,23 @@
               return run3(setBlockType2(s.nodes.paragraph));
             case "heading":
               return run3(setBlockType2(s.nodes.heading, { level: arg || 1 }));
+            // [alpha.97 ข้อ 3+5] สามตัวนี้เป็น "สวิตช์" แล้ว — กดซ้ำ = เอาออก (เหมือน B I U)
             case "quote":
-              return run3(wrapIn(s.nodes.blockquote));
+              return run3(toggleWrapCmd(s.nodes.blockquote));
             case "lift":
               return run3(lift2);
             case "ul":
-              return run3(wrapInList(s.nodes.bullet_list));
+              return run3(toggleListCmd(
+                s.nodes.bullet_list,
+                s.nodes.list_item,
+                s.nodes.ordered_list
+              ));
             case "ol":
-              return run3(wrapInList(s.nodes.ordered_list));
+              return run3(toggleListCmd(
+                s.nodes.ordered_list,
+                s.nodes.list_item,
+                s.nodes.bullet_list
+              ));
             // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด
             case "code":
               return run3(setBlockType2(s.nodes.code_block));
@@ -17148,6 +17321,32 @@
           this.view.focus();
         }
         /**
+         * [alpha.97 ข้อ 5] ตำแหน่งของรูปที่เคอร์เซอร์ "แตะอยู่" — -1 = ไม่มี
+         * รับทั้งกรณีเลือกทั้งโหนด (คลิกรูป) และเคอร์เซอร์อยู่ประชิดหน้า/หลังรูป
+         */
+        figurePos() {
+          const st = this.view.state;
+          const sel = st.selection;
+          if (sel.node && sel.node.type === schema.nodes.figure) return sel.from;
+          const $f = sel.$from;
+          if ($f.nodeAfter && $f.nodeAfter.type === schema.nodes.figure) return $f.pos;
+          if ($f.nodeBefore && $f.nodeBefore.type === schema.nodes.figure) {
+            return $f.pos - $f.nodeBefore.nodeSize;
+          }
+          return -1;
+        }
+        /** เอารูปที่เคอร์เซอร์แตะอยู่ออก — คืน false เมื่อไม่มีรูปตรงนั้น (ผู้เรียกไปเปิดตัวเลือกรูปแทน) */
+        removeFigure() {
+          const pos = this.figurePos();
+          if (pos < 0) return false;
+          const v2 = this.view;
+          const node = v2.state.doc.nodeAt(pos);
+          if (!node || node.type !== schema.nodes.figure) return false;
+          v2.dispatch(v2.state.tr.delete(pos, pos + node.nodeSize));
+          v2.focus();
+          return true;
+        }
+        /**
          * [alpha.82] แทรกข้อความหลายบรรทัดตรงเคอร์เซอร์ — บรรทัดว่าง/ขึ้นบรรทัดใหม่ = ย่อหน้าใหม่จริง
          *
          * เดิมโค้ดที่อยากแทรกข้อความเรียก `cmd('insertText', …)` ซึ่ง **ไม่มีอยู่ใน switch ของ cmd()**
@@ -17174,6 +17373,11 @@
           const p = st.selection.$from.parent;
           out.block = p.type.name === "heading" ? "h" + p.attrs.level : p.type.name === "code_block" ? "code" : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === "blockquote" ? "quote" : "p";
           out.align = p.type.name === "paragraph" || p.type.name === "heading" ? p.attrs.align || "left" : null;
+          const dUl = ancestorDepth(st, schema.nodes.bullet_list);
+          const dOl = ancestorDepth(st, schema.nodes.ordered_list);
+          out.list = dUl > dOl ? "ul" : dOl > dUl ? "ol" : "";
+          out.quote = !!ancestorDepth(st, schema.nodes.blockquote);
+          out.image = this.figurePos() >= 0;
           return out;
         }
         focus() {
@@ -17547,10 +17751,18 @@
     const z = el2.getBoundingClientRect().width / w;
     return z > 0.01 && z < 100 ? z : 1;
   }
-  function innerGapHeight(el2) {
-    let sum2 = 0;
-    for (const g of el2.querySelectorAll("." + GAP_CLASS)) sum2 += g.getBoundingClientRect().height;
-    return sum2;
+  function innerGapMap(pm2, owners) {
+    const out = /* @__PURE__ */ new Map();
+    for (const g of pm2.querySelectorAll("." + GAP_CLASS)) {
+      const h = g.getBoundingClientRect().height;
+      if (!(h > 0)) continue;
+      for (let n2 = g.parentElement; n2 && n2 !== pm2; n2 = n2.parentElement) {
+        if (!owners.has(n2)) continue;
+        out.set(n2, (out.get(n2) || 0) + h);
+        break;
+      }
+    }
+    return out;
   }
   function domLineRects(el2, zoomFactor) {
     const z = zoomFactor > 0 ? zoomFactor : 1;
@@ -17610,11 +17822,29 @@
     if (tag3 === "hr" || tag3 === "figure" || tag3 === "img") return { splitMinLines: 99 };
     return { splitMinLines: WIDOW_LINES };
   }
+  function measurableChildren(pm2) {
+    const out = [];
+    for (const el2 of Array.from(pm2.children)) {
+      if (!el2 || el2.nodeType !== 1) continue;
+      const tag3 = (el2.tagName || "").toLowerCase();
+      if (tag3 === "ul" || tag3 === "ol") {
+        const kids = Array.from(el2.children).filter((k) => k && k.nodeType === 1 && ((k.tagName || "").toLowerCase() === "li" || k.classList && k.classList.contains(GAP_CLASS)));
+        if (kids.length) {
+          out.push(...kids);
+          continue;
+        }
+      }
+      out.push(el2);
+    }
+    return out;
+  }
   function measureProseBlocks(pm2, origin, zoomFactor) {
     const z = zoomFactor > 0 ? zoomFactor : 1;
     const blocks = [];
     let gapAccum = 0, totalHeight = 0;
-    for (const el2 of Array.from(pm2.children)) {
+    const kids = measurableChildren(pm2);
+    const gapMap = innerGapMap(pm2, new Set(kids));
+    for (const el2 of kids) {
       if (!el2 || el2.nodeType !== 1) continue;
       const rect = el2.getBoundingClientRect();
       if (el2.classList && el2.classList.contains(GAP_CLASS)) {
@@ -17622,34 +17852,14 @@
         continue;
       }
       if (!(rect.height > 0)) continue;
-      const innerGap = innerGapHeight(el2);
+      const innerGap = gapMap.get(el2) || 0;
       const top = (rect.top - origin - gapAccum) / z;
       const height = (rect.height - innerGap) / z;
-      const b = { top, height, el: el2, ...blockRules(el2) };
-      let _lines = null;
-      Object.defineProperty(b, "lines", {
-        configurable: true,
-        enumerable: false,
-        get() {
-          if (!_lines) _lines = domLineRects(el2, z);
-          return _lines;
-        },
-        set(v2) {
-          _lines = v2;
-        }
-      });
-      let _offs = null;
-      Object.defineProperty(b, "lineOffsets", {
-        configurable: true,
-        enumerable: false,
-        get() {
-          if (!_offs) _offs = lineBreakOffsets(this.lines);
-          return _offs;
-        },
-        set(v2) {
-          _offs = v2;
-        }
-      });
+      const b = Object.assign(
+        Object.create(BLOCK_PROTO),
+        { top, height, el: el2, _z: z },
+        blockRules(el2)
+      );
       blocks.push(b);
       gapAccum += innerGap;
       totalHeight = Math.max(totalHeight, top + height);
@@ -17825,7 +18035,7 @@
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
-  var DPI3, GAP_CLASS, WIDOW_LINES, MEASURE_CLASS, CUT_FAIL;
+  var DPI3, GAP_CLASS, WIDOW_LINES, BLOCK_PROTO, MEASURE_CLASS, CUT_FAIL;
   var init_prose_measure = __esm({
     "src/prose-measure.js"() {
       init_sp_format();
@@ -17833,6 +18043,22 @@
       DPI3 = 96;
       GAP_CLASS = "ed-page-break";
       WIDOW_LINES = 2;
+      BLOCK_PROTO = {
+        get lines() {
+          if (!this._lines) this._lines = domLineRects(this.el, this._z);
+          return this._lines;
+        },
+        set lines(v2) {
+          this._lines = v2;
+        },
+        get lineOffsets() {
+          if (!this._offs) this._offs = lineBreakOffsets(this.lines);
+          return this._offs;
+        },
+        set lineOffsets(v2) {
+          this._offs = v2;
+        }
+      };
       MEASURE_CLASS = "k-measuring";
       CUT_FAIL = { detached: 0, noLine: 0, noBlock: 0, threw: 0, ok: 0 };
     }
@@ -19830,6 +20056,9 @@
         "italic": '<path fill="currentColor" d="M19 7V4H9v3h2.868L9.012 17H5v3h10v-3h-2.868l2.856-10H19z"/>',
         "underline": '<path fill="currentColor" d="M5 18h14v2H5zM6 4v6c0 3.309 2.691 6 6 6s6-2.691 6-6V4h-2v6c0 2.206-1.794 4-4 4s-4-1.794-4-4V4z"/>',
         "strikethrough": '<path fill="currentColor" d="M20 11h-8c-4 0-4-1.816-4-2.5C8 7.882 8 6 12 6c2.8 0 2.99 1.678 3 2.014L16 8h1c0-1.384-1.045-4-5-4c-5.416 0-6 3.147-6 4.5c0 .728.148 1.667.736 2.5H4v2h16zm-8 7c-3.793 0-3.99-1.815-4-2H6c0 .04.069 4 6 4c5.221 0 6-2.819 6-4.5c0-.146-.009-.317-.028-.5h-2.006c.032.2.034.376.034.5c0 .684 0 2.5-4 2.5"/>',
+        // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — X ตัวใหญ่ + เลข 2 ที่มุมบน/มุมล่าง
+        "superscript": '<path fill="currentColor" d="M4 19h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 6h-2.4l-2.8 4.5h-.1L7.6 6H5.1l4 6.4zm14-9h5V8.7h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>',
+        "subscript": '<path fill="currentColor" d="M4 18h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 5h-2.4l-2.8 4.5h-.1L7.6 5H5.1l4 6.4zm14 2h5v-1.3h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>',
         "list-ul": '<path fill="currentColor" d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm16-8V6H8.023v2H18.8zM8 11h12v2H8zm0 5h12v2H8z"/>',
         "list-ol": '<path fill="currentColor" d="M5.282 12.064c-.428.328-.72.609-.875.851q-.233.361-.279.768h2.679v-.748H5.413c.081-.081.152-.151.212-.201q.093-.076.361-.27q.454-.327.626-.604c.116-.186.173-.375.173-.578a.9.9 0 0 0-.151-.512.9.9 0 0 0-.412-.341q-.262-.113-.733-.111q-.451 0-.706.114a.9.9 0 0 0-.396.338q-.141.216-.194.604l.894.076q.037-.28.147-.394a.38.38 0 0 1 .279-.108q.165 0 .272.108a.34.34 0 0 1 .108.258a.55.55 0 0 1-.108.297q-.11.154-.503.453m.055 6.386a.4.4 0 0 1-.282-.105q-.111-.104-.162-.378L4 18.085q.088.306.251.506t.417.306Q4.92 19 5.36 19q.45 0 .725-.14a1 1 0 0 0 .424-.403q.146-.26.146-.544a.8.8 0 0 0-.088-.393.7.7 0 0 0-.249-.261a1 1 0 0 0-.286-.11a.94.94 0 0 0 .345-.299a.67.67 0 0 0 .113-.383a.75.75 0 0 0-.281-.596q-.28-.238-.909-.238q-.548 0-.847.219q-.3.216-.404.626l.844.151q.034-.242.133-.338c.099-.096.151-.098.257-.098a.33.33 0 0 1 .241.089q.088.09.087.238q0 .155-.117.27c-.117.115-.177.112-.293.112a1 1 0 0 1-.116-.011l-.045.649a1 1 0 0 1 .289-.056q.199 0 .313.126q.115.123.115.352q0 .22-.119.354a.4.4 0 0 1-.301.134m.948-10.083V5h-.739a1.5 1.5 0 0 1-.394.523q-.252.212-.708.365v.754a2.6 2.6 0 0 0 .937-.48v2.206zM9 6h11v2H9zm0 5h11v2H9zm0 5h11v2H9z"/>',
         "code-alt": '<path fill="currentColor" d="m7.375 16.781l1.25-1.562L4.601 12l4.024-3.219l-1.25-1.562l-5 4a1 1 0 0 0 0 1.562zm9.25-9.562l-1.25 1.562L19.399 12l-4.024 3.219l1.25 1.562l5-4a1 1 0 0 0 0-1.562zm-1.649-4.003l-4 18l-1.953-.434l4-18z"/>',
@@ -19912,6 +20141,10 @@
         // nf-fa-underline
         "strikethrough": "\uF0CC",
         // nf-fa-strikethrough
+        "superscript": "\uF12B",
+        // nf-fa-superscript
+        "subscript": "\uF12C",
+        // nf-fa-subscript
         "align-left": "\uF036",
         // nf-fa-align_left
         "align-center": "\uF037",
@@ -20236,12 +20469,31 @@
   function defaultLangFonts() {
     return [
       {
+        id: "sp-thai",
+        label: t("ui.common.msg8"),
+        range: SP_THAI_RANGE,
+        target: "screenplay",
+        builtin: "",
+        file: "",
+        family: SP_THAI_FALLBACKS.join(", "),
+        system: true,
+        size: 85,
+        ascent: 0,
+        descent: 0,
+        enabled: true
+      },
+      {
         id: "thai",
         label: t("ui.common.msg8"),
         range: "U+0E00-0E7F",
+        target: "all",
         builtin: "CourierThaiMono.ttf",
         family: "",
         file: "",
+        system: false,
+        size: 100,
+        ascent: 0,
+        descent: 0,
         enabled: false
       }
     ];
@@ -20260,26 +20512,48 @@
     if (!src2) return false;
     return !row2.range || !!normalizeRange(row2.range);
   }
-  function buildLangFontCss(rows, resolveUrl) {
+  function rowTarget(row2) {
+    const v2 = String(row2 && row2.target || "all");
+    return FONT_TARGETS.includes(v2) ? v2 : "all";
+  }
+  function rowAppliesTo(row2, target) {
+    const t22 = rowTarget(row2);
+    return t22 === "all" || t22 === target;
+  }
+  function familyList(row2) {
+    return String(row2 && row2.family || "").split(",").map((x) => cssFamilyName(x)).filter(Boolean);
+  }
+  function buildLangFontCss(rows, resolveUrl, opts = {}) {
+    const famName = opts.family || LANG_FAMILY;
+    const target = opts.target || "";
     const out = [];
     for (const row2 of rows || []) {
       if (!isUsable(row2)) continue;
+      if (target && !rowAppliesTo(row2, target)) continue;
       const range3 = normalizeRange(row2.range);
       const srcs = [];
       const url = (row2.builtin || row2.file) && resolveUrl ? resolveUrl(row2) : "";
-      if (url) srcs.push(`url("${String(url).replace(/"/g, "%22")}")`);
-      const fam = cssFamilyName(row2.family);
-      if (fam) srcs.push(`local("${fam}")`);
+      if (url) srcs.push('url("' + String(url).replace(/"/g, "%22") + '")');
+      for (const f of familyList(row2)) srcs.push('local("' + f + '")');
       if (!srcs.length) continue;
-      out.push(`@font-face{font-family:"${LANG_FAMILY}";font-display:swap;src:${srcs.join(",")};` + (range3 ? `unicode-range:${range3};` : "") + "}");
+      const size = clampPct(row2.size, 50, 150, 100);
+      const asc = clampPct(row2.ascent, 0, 200, 0);
+      const desc = clampPct(row2.descent, 0, 200, 0);
+      out.push('@font-face{font-family:"' + famName + '";font-display:swap;src:' + srcs.join(",") + ";" + (range3 ? "unicode-range:" + range3 + ";" : "") + (size !== 100 ? "size-adjust:" + size + "%;" : "") + (asc > 0 ? "ascent-override:" + asc + "%;" : "") + (desc > 0 ? "descent-override:" + desc + "%;" : "") + "}");
     }
     return out.join("\n");
   }
-  function withLangFamily(stack, hasRows) {
+  function withFamily(stack, famName, hasRows) {
     const s = String(stack || "").trim();
-    if (!hasRows) return s;
-    if (s.startsWith(`"${LANG_FAMILY}"`)) return s;
-    return `"${LANG_FAMILY}"` + (s ? ", " + s : "");
+    if (!hasRows || !famName) return s;
+    if (s.startsWith('"' + famName + '"')) return s;
+    return '"' + famName + '"' + (s ? ", " + s : "");
+  }
+  function withLangFamily(stack, hasRows) {
+    return withFamily(stack, LANG_FAMILY, hasRows);
+  }
+  function withSpFamily(stack, hasRows) {
+    return withFamily(stack, SP_FAMILY, hasRows);
   }
   function normalizeLangFonts(list) {
     if (!Array.isArray(list)) return defaultLangFonts();
@@ -20287,46 +20561,51 @@
       id: String(r?.id || "f" + i5),
       label: String(r?.label || ""),
       range: String(r?.range || ""),
+      target: rowTarget(r),
       builtin: String(r?.builtin || ""),
       file: String(r?.file || ""),
       family: String(r?.family || ""),
+      // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
+      system: r?.system === true,
+      size: clampPct(r?.size, 50, 150, 100),
+      ascent: clampPct(r?.ascent, 0, 200, 0),
+      descent: clampPct(r?.descent, 0, 200, 0),
       enabled: r?.enabled !== false
     }));
   }
-  function normalizeSpThai(cfg) {
-    const c = cfg && typeof cfg === "object" ? cfg : {};
+  function usableCounts(rows) {
+    const list = normalizeLangFonts(rows).filter(isUsable);
     return {
-      enabled: c.enabled !== false,
-      family: cssFamilyName(c.family),
-      size: clampPct(c.size, 50, 150, SP_THAI_DEFAULTS.size),
-      ascent: clampPct(c.ascent, 0, 200, 0),
-      descent: clampPct(c.descent, 0, 200, 0)
+      prose: list.filter((r) => rowAppliesTo(r, "prose")).length,
+      screenplay: list.filter((r) => rowAppliesTo(r, "screenplay")).length,
+      total: list.length
     };
   }
-  function spThaiSources(cfg) {
-    const c = normalizeSpThai(cfg);
-    return c.family ? [c.family, ...SP_THAI_FALLBACKS.filter((f) => f !== c.family)] : SP_THAI_FALLBACKS.slice();
+  function migrateSpThai(list, spThai) {
+    const rows = normalizeLangFonts(list);
+    if (!spThai || typeof spThai !== "object") return { rows, moved: false };
+    const has2 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
+    if (has2) return { rows, moved: false };
+    const fam = cssFamilyName(spThai.family);
+    rows.unshift(normalizeLangFonts([{
+      id: "sp-thai",
+      label: t("ui.common.msg8"),
+      range: SP_THAI_RANGE,
+      target: "screenplay",
+      family: fam ? [fam, ...SP_THAI_FALLBACKS.filter((f) => f !== fam)].join(", ") : SP_THAI_FALLBACKS.join(", "),
+      system: true,
+      size: clampPct(spThai.size, 50, 150, SP_THAI_SIZE),
+      ascent: clampPct(spThai.ascent, 0, 200, 0),
+      descent: clampPct(spThai.descent, 0, 200, 0),
+      enabled: spThai.enabled !== false
+    }])[0]);
+    return { rows, moved: true };
   }
-  function buildSpThaiCss(cfg) {
-    const c = normalizeSpThai(cfg);
-    if (!c.enabled) return "";
-    const src2 = spThaiSources(c).map((f) => `local("${f}")`).join(",");
-    if (!src2) return "";
-    const over = (c.ascent > 0 ? `ascent-override:${c.ascent}%;` : "") + (c.descent > 0 ? `descent-override:${c.descent}%;` : "");
-    return `@font-face{font-family:"${SP_THAI_FAMILY}";font-display:swap;src:${src2};unicode-range:${SP_THAI_RANGE};size-adjust:${c.size}%;${over}}`;
-  }
-  function withSpThaiFamily(stack, cfg) {
-    const s = String(stack || "").trim();
-    if (!normalizeSpThai(cfg).enabled) return s;
-    if (s.startsWith(`"${SP_THAI_FAMILY}"`)) return s;
-    return `"${SP_THAI_FAMILY}"` + (s ? ", " + s : "");
-  }
-  function applySpThaiFont(cfg) {
-    const css = buildSpThaiCss(cfg);
-    let st = document.getElementById("k-sp-thai");
+  function putStyle(id, css) {
+    let st = document.getElementById(id);
     if (!st) {
       st = document.createElement("style");
-      st.id = "k-sp-thai";
+      st.id = id;
       document.head.appendChild(st);
     }
     st.textContent = css;
@@ -20334,20 +20613,23 @@
   }
   function applyLangFonts(rows, resolveUrl) {
     const list = normalizeLangFonts(rows).filter(isUsable);
-    let st = document.getElementById("k-lang-fonts");
-    if (!st) {
-      st = document.createElement("style");
-      st.id = "k-lang-fonts";
-      document.head.appendChild(st);
-    }
-    st.textContent = buildLangFontCss(list, resolveUrl);
-    return list.length;
+    putStyle(
+      "k-lang-fonts",
+      buildLangFontCss(list, resolveUrl, { family: LANG_FAMILY, target: "prose" })
+    );
+    putStyle(
+      "k-sp-fonts",
+      buildLangFontCss(list, resolveUrl, { family: SP_FAMILY, target: "screenplay" })
+    );
+    return usableCounts(list);
   }
-  var LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, SAFE_RANGE, SP_THAI_FAMILY, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_DEFAULTS, clampPct;
+  var LANG_FAMILY, SP_FAMILY, FONT_TARGETS, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, SAFE_RANGE, clampPct, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE;
   var init_lang_fonts = __esm({
     "src/lang-fonts.js"() {
       init_i18n();
       LANG_FAMILY = "K2 Lang";
+      SP_FAMILY = "K2 SP";
+      FONT_TARGETS = ["all", "prose", "screenplay"];
       SCRIPT_PRESETS = [
         { key: "thai", label: t("ui.common.msg8"), range: "U+0E00-0E7F" },
         { key: "latin", label: t("ui.fonts.english"), range: "U+0000-024F, U+2000-206F" },
@@ -20373,24 +20655,13 @@
         { family: "TH Sarabun New", label: t("ui.fonts.tHSarabunNew") }
       ];
       SAFE_RANGE = /^\s*u\+[0-9a-f]{1,6}(-[0-9a-f]{1,6})?\s*$/i;
-      SP_THAI_FAMILY = "K2 SP Thai";
-      SP_THAI_RANGE = "U+0E00-0E7F";
-      SP_THAI_FALLBACKS = ["Ayuthaya", "Thonburi", "Leelawadee UI", "Sarabun", "Tahoma"];
-      SP_THAI_DEFAULTS = {
-        enabled: true,
-        family: "",
-        // '' = ใช้ SP_THAI_FALLBACKS ตามลำดับ
-        size: 85,
-        // size-adjust (%) — 85 = ค่าที่วัดแล้วตัวไทยเท่า Courier Prime พอดี
-        ascent: 0,
-        // ascent-override (%) · 0 = ไม่ override
-        descent: 0
-        // descent-override (%) · 0 = ไม่ override
-      };
       clampPct = (v2, lo, hi, dflt) => {
         const n2 = parseFloat(v2);
         return Number.isFinite(n2) ? Math.max(lo, Math.min(hi, n2)) : dflt;
       };
+      SP_THAI_RANGE = "U+0E00-0E7F";
+      SP_THAI_FALLBACKS = ["Ayuthaya", "Thonburi", "Leelawadee UI", "Sarabun", "Tahoma"];
+      SP_THAI_SIZE = 85;
     }
   });
 
@@ -20412,6 +20683,7 @@
     DEFAULT_SP_CYCLE_KEYS: () => DEFAULT_SP_CYCLE_KEYS,
     DEFAULT_SP_FORMAT: () => DEFAULT_SP_FORMAT,
     DEFAULT_STATUS_COLOR: () => DEFAULT_STATUS_COLOR,
+    FONT_TARGETS: () => FONT_TARGETS,
     GLOBAL_DEFAULTS: () => GLOBAL_DEFAULTS,
     LANG_FAMILY: () => LANG_FAMILY,
     LANG_LS_KEY: () => LANG_LS_KEY,
@@ -20440,11 +20712,11 @@
     SP_ELEMENT_CONFIG: () => SP_ELEMENT_CONFIG,
     SP_ELEMENT_KEYS: () => SP_ELEMENT_KEYS,
     SP_ELEMENT_STYLES: () => SP_ELEMENT_STYLES,
+    SP_FAMILY: () => SP_FAMILY,
     SP_STRINGS: () => SP_STRINGS,
-    SP_THAI_DEFAULTS: () => SP_THAI_DEFAULTS,
     SP_THAI_FALLBACKS: () => SP_THAI_FALLBACKS,
-    SP_THAI_FAMILY: () => SP_THAI_FAMILY,
     SP_THAI_RANGE: () => SP_THAI_RANGE,
+    SP_THAI_SIZE: () => SP_THAI_SIZE,
     STATUS_COLORS: () => STATUS_COLORS,
     SYSTEM_THAI_FONTS: () => SYSTEM_THAI_FONTS,
     T: () => T,
@@ -20455,9 +20727,7 @@
     annotateContinued: () => annotateContinued,
     applyDataI18n: () => applyDataI18n,
     applyLangFonts: () => applyLangFonts,
-    applySpThaiFont: () => applySpThaiFont,
     buildLangFontCss: () => buildLangFontCss,
-    buildSpThaiCss: () => buildSpThaiCss,
     busyMsg: () => busyMsg,
     categorizeRole: () => categorizeRole,
     categorizeWith: () => categorizeWith,
@@ -20472,6 +20742,7 @@
     elPath: () => elPath,
     elementCaps: () => elementCaps,
     fallbackLangName: () => fallbackLangName,
+    familyList: () => familyList,
     formatLines: () => formatLines,
     formatMsg: () => formatMsg,
     formatShortcut: () => formatShortcut,
@@ -20491,12 +20762,12 @@
     logStore: () => logStore,
     makeMsgid: () => makeMsgid,
     mergeSpFormat: () => mergeSpFormat,
+    migrateSpThai: () => migrateSpThai,
     needsAlt: () => needsAlt,
     newRoster: () => newRoster,
     normalizeLangFonts: () => normalizeLangFonts,
     normalizeRange: () => normalizeRange,
     normalizeRoster: () => normalizeRoster,
-    normalizeSpThai: () => normalizeSpThai,
     num: () => num,
     numClamp: () => numClamp,
     numInt: () => numInt,
@@ -20509,6 +20780,8 @@
     ptToPx: () => ptToPx,
     restoreScrollSnap: () => restoreScrollSnap,
     rosterToText: () => rosterToText,
+    rowAppliesTo: () => rowAppliesTo,
+    rowTarget: () => rowTarget,
     scanLanguages: () => scanLanguages,
     sceneNumberOffsets: () => sceneNumberOffsets,
     scrollSnapshot: () => scrollSnapshot,
@@ -20522,7 +20795,6 @@
     spCycleKeys: () => spCycleKeys,
     spKeyLabel: () => spKeyLabel,
     spKeyMatch: () => spKeyMatch,
-    spThaiSources: () => spThaiSources,
     splitText: () => splitText,
     state: () => state,
     t: () => t,
@@ -20531,10 +20803,12 @@
     textWidth: () => textWidth,
     tf: () => tf,
     tm: () => tm,
+    usableCounts: () => usableCounts,
     withBusy: () => withBusy,
+    withFamily: () => withFamily,
     withLangFamily: () => withLangFamily,
     withShortcut: () => withShortcut,
-    withSpThaiFamily: () => withSpThaiFamily,
+    withSpFamily: () => withSpFamily,
     wrapLines: () => wrapLines
   });
   function elPath(root, e) {
@@ -21034,9 +21308,6 @@
         spContinued: null,
         spLineHeight: 1,
         spPageGap: 28,
-        // ธงย้ายค่า `pageNumbers.firstPage` ของโปรเจกต์เก่า — false = ยังไม่เคยย้าย ·
-        // true = ผ่าน .83r (ถูกบังคับเป็น true) · 2 = ผ่าน .88 แล้ว (กลับไปใช้มาตรฐานบท)
-        pgFirstMigrated: false,
         // รูปแบบนิยาย (prose)
         prose: null,
         // ฟอนต์ตามภาษา
@@ -21156,6 +21427,10 @@
         ["KeyI", true, false, "fmt", "italic"],
         ["KeyU", true, false, "fmt", "underline"],
         ["KeyX", true, true, "fmt", "strike"],
+        // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เลียนแบบ Word (Ctrl+Shift+= / Ctrl+=) แต่ต้องเติม Alt
+        // เพราะตัวดักซูมหน้ากระดาษกิน Ctrl+= / Ctrl+- ไปแล้วโดยไม่ดูปุ่ม Shift (มันเช็คแค่ Alt)
+        ["Equal", "ctrl+alt", false, "fmt", "sup"],
+        ["Minus", "ctrl+alt", false, "fmt", "sub"],
         ["Digit1", true, false, "fmt", "heading", 1],
         ["Digit2", true, false, "fmt", "heading", 2],
         ["Digit3", true, false, "fmt", "heading", 3],
@@ -21213,7 +21488,6 @@
         ["Comma", true, true, "goto-scene"],
         ["BracketRight", true, true, "panels-hide-left"],
         // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งขวา)
-        ["KeyU", "ctrl+alt", false, "paper-mode"],
         ["KeyR", "ctrl+alt", false, "line-numbers"],
         // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
         ["Digit1", "ctrl+alt", false, "chapter"],
@@ -21260,6 +21534,8 @@
         "fmt:italic": "shortcuts.italic",
         "fmt:underline": "shortcuts.underline",
         "fmt:strike": "shortcuts.strikethrough",
+        "fmt:sup": "shortcuts.superscript",
+        "fmt:sub": "shortcuts.subscript",
         "fmt:heading:1": "shortcuts.heading1",
         "fmt:heading:2": "shortcuts.heading2",
         "fmt:heading:3": "shortcuts.heading3",
@@ -21269,7 +21545,6 @@
         "fmt:clear": "shortcuts.clearFormatting",
         "toggle-format": "shortcuts.toggleFormat",
         "focus-mode": "shortcuts.focusMode",
-        "paper-mode": "shortcuts.paperMode",
         "toggle-theme": "shortcuts.toggleTheme",
         "global-search": "shortcuts.globalSearch",
         "quick-open": "shortcuts.quickOpen",
@@ -21411,7 +21686,6 @@
           labelKey: "ui.shortcuts.catView",
           ids: [
             "toggle-theme",
-            "paper-mode",
             "focus-mode",
             "typewriter",
             "reading-mode",
@@ -23195,7 +23469,7 @@
     if (!blocks.length) blocks.push({ type: "sp", attrs: { el: "scene" } });
     return spSchema.nodeFromJSON({ type: "doc", content: blocks });
   }
-  var import_md4, marks, spSchema, SPEditor;
+  var import_md4, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
   var init_screenplay = __esm({
     "src/screenplay.js"() {
       init_dist2();
@@ -23269,6 +23543,9 @@
         },
         marks
       });
+      SP_BULLET_RE = /^[•\-*]\s+/;
+      SP_NUMBER_RE = /^\d+[.)]\s+/;
+      SP_ANY_LIST_RE = /^(?:[•\-*]|\d+[.)])\s+/;
       SPEditor = class {
         constructor(mount, {
           markdown = "",
@@ -23327,8 +23604,10 @@
                   "Mod-ArrowUp": () => {
                     self2.cycle(-1);
                     return true;
-                  }
+                  },
                   // สลับรูปแบบก่อนหน้า
+                  // [alpha.98 ข้อ 9] Home/End ชุดเดียวกับโหมดนิยาย
+                  ...HOME_END_KEYS
                 }),
                 keymap(baseKeymap),
                 history(),
@@ -23720,6 +23999,8 @@
           if (mk2) return run3(toggleMark(spSchema.marks[mk2]));
           if (name5 === "undo") return run3(undo);
           if (name5 === "redo") return run3(redo);
+          if (name5 === "ul") return this.toggleTextList(false);
+          if (name5 === "ol") return this.toggleTextList(true);
           if (name5 === "align") return this.setAlign(arg);
           if (name5 === "case") {
             const tr4 = caseTransform(v2.state, arg);
@@ -23727,6 +24008,68 @@
             v2.focus();
             return !!tr4;
           }
+        }
+        // ══════════ [alpha.98 ข้อ 4] ★ รายการหัวข้อย่อย/ตัวเลขในโหมดบทภาพยนตร์ ══════════
+        //
+        // ผู้ใช้: *"bullet และ หมายเลข ใช้ใน mode หนังไม่ได้"*
+        //
+        // บทภาพยนตร์ไม่มี "โครงสร้างรายการ" ในรูปแบบไฟล์ (fountain มีแต่ชนิดของบล็อก) การยัด
+        // `<ul>/<li>` เข้ามาใน schema จะทำให้ไฟล์ที่เขียนออกไปไม่ใช่บทอีกต่อไป และเปิดกลับไม่ได้
+        // → ทำเป็น **คำนำหน้าในตัวข้อความ** แทน (`• ` / `1. `) ซึ่งเป็นสิ่งที่คนเขียนบทใช้กันจริง
+        //   ในบล็อกบรรยาย · เก็บลงไฟล์เป็นตัวอักษรธรรมดา เปิดที่ไหนก็เหมือนเดิม ไม่มีข้อมูลหาย
+        //
+        // สวิตช์เหมือนโหมดนิยาย: ทุกบรรทัดที่เลือกมีคำนำหน้าอยู่แล้ว = กดแล้วเอาออก · ไม่งั้น = ใส่ให้
+        /** บล็อกระดับบนทั้งหมดที่ช่วงที่เลือกแตะอยู่ — [{pos, node, idx}] */
+        _selectedBlocks() {
+          const st = this.view.state;
+          const { from: from2, to } = st.selection;
+          const out = [];
+          st.doc.forEach((node, offset, index) => {
+            if (offset + node.nodeSize <= from2 || offset >= to + (from2 === to ? 1 : 0)) return;
+            out.push({ pos: offset, node, idx: index });
+          });
+          if (!out.length) {
+            const $f = st.doc.resolve(from2);
+            if ($f.depth) out.push({ pos: $f.before(1), node: $f.node(1), idx: $f.index(0) });
+          }
+          return out;
+        }
+        /** ชนิดรายการของบรรทัดที่เคอร์เซอร์อยู่ ('ul' | 'ol' | '') — ใช้ให้ปุ่มบนแถบติดไฟ */
+        curList() {
+          const b = this._selectedBlocks()[0];
+          const t22 = b ? String(b.node.textContent || "") : "";
+          if (SP_BULLET_RE.test(t22)) return "ul";
+          if (SP_NUMBER_RE.test(t22)) return "ol";
+          return "";
+        }
+        /** สวิตช์รายการในบท — คืน true เมื่อทำอะไรจริง */
+        toggleTextList(numbered) {
+          const v2 = this.view;
+          const blocks = this._selectedBlocks().filter((b) => b.node.isTextblock);
+          if (!blocks.length) return false;
+          const re = numbered ? SP_NUMBER_RE : SP_BULLET_RE;
+          const anyRe = SP_ANY_LIST_RE;
+          const all = blocks.every((b) => re.test(b.node.textContent || ""));
+          let tr4 = v2.state.tr;
+          let n2 = 0;
+          for (let i5 = blocks.length - 1; i5 >= 0; i5--) {
+            const b = blocks[i5];
+            const text = String(b.node.textContent || "");
+            const bare = text.replace(anyRe, "");
+            const next = all ? bare : (numbered ? i5 + 1 + ". " : "\u2022 ") + bare;
+            if (next === text) continue;
+            const start = b.pos + 1;
+            tr4 = tr4.replaceWith(
+              start,
+              start + b.node.content.size,
+              next ? spSchema.text(next) : null
+            );
+            n2++;
+          }
+          if (!n2) return false;
+          v2.dispatch(tr4.scrollIntoView());
+          v2.focus();
+          return true;
         }
         getMarkdown() {
           const nodes = [];
@@ -69074,7 +69417,6 @@ ${h.text}`;
       ];
       TOOLBAR_GROUPS = [
         { key: "view", labelKey: "ui.tbcfg.grpView", buttons: [
-          { id: "tb-paper" },
           { id: "tb-theme" },
           { id: "tb-read" },
           { id: "tb-focus" },
@@ -69089,6 +69431,9 @@ ${h.text}`;
           { id: "tb-italic" },
           { id: "tb-underline" },
           { id: "tb-strike" },
+          // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
+          { id: "tb-sup" },
+          { id: "tb-sub" },
           { id: "tb-ul" },
           { id: "tb-ol" },
           { id: "tb-quote" },
@@ -69685,6 +70030,7 @@ ${h.text}`;
   __export(dialogs_exports, {
     exportLangCsv: () => exportLangCsv,
     fileVersionDialog: () => fileVersionDialog,
+    pickSystemFont: () => pickSystemFont,
     settingsDialog: () => settingsDialog,
     showChangelog: () => showChangelog,
     showLog: () => showLog,
@@ -69840,6 +70186,67 @@ ${h.text}`;
     }
     return out;
   }
+  async function pickSystemFont(current2) {
+    let list = [];
+    try {
+      list = await kapi.listFonts() || [];
+    } catch {
+    }
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog");
+      box2.append(el("div", "k-dlg-title", t("ui.dlg.fontFromMachine")));
+      const warn = el("div", "k-hint k-font-warn", t("ui.dlg.fontMachineWarn"));
+      box2.append(warn);
+      const search2 = el("input", "k-dlg-input");
+      search2.placeholder = t("ui.dlg.searchFontName");
+      box2.append(search2);
+      const host2 = el("div", "k-font-list");
+      box2.append(host2);
+      let sel = String(current2 || "");
+      const draw3 = () => {
+        const qy = search2.value.trim().toLowerCase();
+        const rows = list.filter((f) => !qy || f.toLowerCase().includes(qy)).slice(0, 400);
+        host2.replaceChildren();
+        if (!rows.length) {
+          host2.append(el("div", "cmp-empty", t("ui.dlg.notFoundFont")));
+          return;
+        }
+        for (const f of rows) {
+          const it = el("div", "k-font-item", f);
+          it.style.fontFamily = '"' + f.replace(/"/g, "") + '", sans-serif';
+          it.classList.toggle("on", f === sel);
+          it.onclick = () => {
+            sel = f;
+            draw3();
+          };
+          it.ondblclick = () => {
+            ov.remove();
+            resolve(f);
+          };
+          host2.append(it);
+        }
+      };
+      search2.oninput = draw3;
+      draw3();
+      const btns = el("div", "k-dlg-btns");
+      const cancel = el("button", null, t("dialogs.cancel"));
+      const ok2 = el("button", "k-ok", t("dialogs.ok"));
+      cancel.onclick = () => {
+        ov.remove();
+        resolve(null);
+      };
+      ok2.onclick = () => {
+        ov.remove();
+        resolve(sel || null);
+      };
+      btns.append(cancel, ok2);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      search2.focus();
+    });
+  }
   function settingsDialog(openTab) {
     if (!state.root) {
       alert(t("errors.openProjectFirst"));
@@ -69849,7 +70256,6 @@ ${h.text}`;
     const origFont = parseInt(s.uiFontSize, 10) || 0;
     const origFontFamily = s.fontFamily || "";
     const origSpFontFamily = s.spFontFamily || "";
-    const origSpThai = s.spThaiFont ? { ...s.spThaiFont } : null;
     const W = {
       paperSize: PAPER_SIZES[s.paperSize] ? s.paperSize : "letter",
       customPaper: { width: 8.5, height: 11, ...s.customPaper || {} },
@@ -69867,10 +70273,9 @@ ${h.text}`;
       // [alpha.83r ข้อ 3] สวิตช์ "ใส่ CONTINUED อัตโนมัติ" — ผู้ใช้ขอให้อยู่ในตั้งค่าโปรเจกต์
       // (เดิมมีแต่ในเมนู "บท" ซึ่งหาไม่เจอถ้าไม่รู้ว่ามี) · ปิดแล้วพิมพ์เองด้วยบล็อก cont-left/right
       continued: { ...CONTINUED_DEFAULTS, ...s.spContinued || {} },
-      // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา (สำเนาทำงาน)
-      langFonts: normalizeLangFonts(s.langFonts),
-      // [alpha.84 ข้อ 1] ปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์ (สำเนาทำงาน)
-      spThai: normalizeSpThai({ ...SP_THAI_DEFAULTS, ...s.spThaiFont || {} }),
+      // [alpha.57a ข้อ 5 · alpha.97 ข้อ 12] ฟอนต์ตามภาษา (สำเนาทำงาน)
+      // รวม "ไทยในบทภาพยนตร์" ที่เคยเป็นระบบแยก (spThaiFont) เข้ามาเป็นแถวหนึ่งแล้ว
+      langFonts: migrateSpThai(s.langFonts, s.spThaiFont).rows,
       // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
       spLineHeight: Number.isFinite(+s.spLineHeight) ? +s.spLineHeight : 1,
       spPageGap: parseInt(s.spPageGap, 10) || 28
@@ -69881,13 +70286,12 @@ ${h.text}`;
     ov.appendChild(box2);
     document.body.appendChild(ov);
     const q = (id) => box2.querySelector(id);
-    const applySpFont = (v2, rows, thai) => {
+    const applySpFont = (v2, rows) => {
       const list = rows || state.settings.langFonts;
-      const nLang = normalizeLangFonts(list).filter(isUsable).length;
-      const cfg = thai || W.spThai;
+      const n2 = usableCounts(list);
       document.documentElement.style.setProperty(
         "--sp-font",
-        withSpThaiFamily(withLangFamily(v2 || DEFAULT_SCRIPT_FONT, nLang > 0), cfg)
+        withSpFamily(v2 || DEFAULT_SCRIPT_FONT, n2.screenplay > 0)
       );
     };
     (async () => {
@@ -70017,7 +70421,6 @@ ${h.text}`;
         sel.appendChild(o);
       }
     };
-    fillFontSel(q("#st-pr-font"), P.fontFamily);
     fillFontSel(q("#st-pr-hfont"), P.headingFont);
     q("#st-pr-pt").value = P.fontPt;
     q("#st-pr-lh").value = P.lineHeight;
@@ -70034,12 +70437,9 @@ ${h.text}`;
     q("#st-pr-qind").value = P.quote.indent;
     q("#st-pr-qcolor").value = P.quote.color || "";
     const syncPgNum = () => {
-      const a1 = q("#st-pr-pgnum"), b1 = q("#st-pr-pgfirst");
-      const a2 = q("#st-pn-show"), b2 = q("#st-pn-first");
+      const a1 = q("#st-pr-pgnum"), a2 = q("#st-pn-show");
       if (a1) a1.checked = !!W.pageNumbers.show;
-      if (b1) b1.checked = W.pageNumbers.firstPage !== false;
       if (a2) a2.checked = !!W.pageNumbers.show;
-      if (b2) b2.checked = W.pageNumbers.firstPage !== false;
     };
     syncPgNum();
     const headBody = q("#st-pr-heads tbody");
@@ -70112,7 +70512,6 @@ ${h.text}`;
       });
     };
     const readProse = () => {
-      P.fontFamily = q("#st-pr-font").value || "";
       P.fontPt = parseFloat(q("#st-pr-pt").value) || 12;
       s.edFontPt = P.fontPt;
       const mirrorEd = q("#st-edpt");
@@ -70132,9 +70531,7 @@ ${h.text}`;
       P.quote.indent = parseFloat(q("#st-pr-qind").value) || 0;
       P.quote.color = q("#st-pr-qcolor").value.trim();
       W.pageNumbers.show = q("#st-pr-pgnum").checked;
-      W.pageNumbers.firstPage = q("#st-pr-pgfirst").checked;
       P.pageNumbers = W.pageNumbers.show;
-      P.pageNumberFirst = W.pageNumbers.firstPage;
       return P;
     };
     const previewProse = () => {
@@ -70150,7 +70547,6 @@ ${h.text}`;
       q("#st-pr-info").textContent = tf("ui.dlg.linePage2", proseLinesPerPage(f, pp, W.margins)) + tf("ui.dlg.charLine", proseCharsPerLine(f, pp, W.margins));
     };
     for (const id of [
-      "#st-pr-font",
       "#st-pr-pt",
       "#st-pr-lh",
       "#st-pr-para",
@@ -70166,8 +70562,7 @@ ${h.text}`;
       "#st-pr-qb",
       "#st-pr-qind",
       "#st-pr-qcolor",
-      "#st-pr-pgnum",
-      "#st-pr-pgfirst"
+      "#st-pr-pgnum"
     ]) {
       const n2 = q(id);
       if (!n2) continue;
@@ -70179,7 +70574,6 @@ ${h.text}`;
       Object.assign(P, f);
       P.headings = f.headings.map((h) => ({ ...h }));
       P.quote = { ...f.quote };
-      fillFontSel(q("#st-pr-font"), P.fontFamily);
       fillFontSel(q("#st-pr-hfont"), P.headingFont);
       q("#st-pr-pt").value = P.fontPt;
       q("#st-pr-lh").value = P.lineHeight;
@@ -70201,13 +70595,7 @@ ${h.text}`;
     };
     q("#st-pr-reset").onclick = () => loadProse(null);
     q("#st-pr-preset-novel").onclick = () => loadProse({ ...PROSE_DEFAULTS, firstLineIndent: 0.5, paraSpacing: 0, lineHeight: 1.6 });
-    q("#st-pr-preset-ms").onclick = () => loadProse({
-      ...PROSE_DEFAULTS,
-      firstLineIndent: 0.5,
-      paraSpacing: 0,
-      lineHeight: 2,
-      fontFamily: '"TH Sarabun New", "Times New Roman", serif'
-    });
+    q("#st-pr-preset-ms").onclick = () => loadProse({ ...PROSE_DEFAULTS, firstLineIndent: 0.5, paraSpacing: 0, lineHeight: 2 });
     renderHeads();
     previewProse();
     const SETUP_FIELDS = [
@@ -70361,10 +70749,6 @@ ${h.text}`;
     });
     chk("#st-pn-show", () => W.pageNumbers.show, (v2) => {
       W.pageNumbers.show = v2;
-      syncPgNum();
-    });
-    chk("#st-pn-first", () => W.pageNumbers.firstPage, (v2) => {
-      W.pageNumbers.firstPage = v2;
       syncPgNum();
     });
     numIn("#st-pn-right", () => W.pageNumbers.right, (v2) => {
@@ -70607,44 +70991,16 @@ ${h.text}`;
     let projectFonts = [];
     const fontsHost = q("#st-fonts-list");
     const previewFonts = () => {
-      applyLangFonts(W.langFonts, langFontUrl);
-      const usable = W.langFonts.filter((r) => r.enabled !== false && (r.builtin || r.file || r.family));
-      q("#st-fonts-preview").textContent = usable.length ? tf("ui.dlg.useRowSampleEnglish", usable.length) : t("ui.dlg.cantDefineRowUse");
+      const n2 = applyLangFonts(W.langFonts, langFontUrl);
+      q("#st-fonts-preview").textContent = n2.total ? tf("ui.dlg.useRowSampleEnglish", n2.total) : t("ui.dlg.cantDefineRowUse");
       const sample = q("#st-fonts-sample");
       sample.textContent = t("ui.dlg.iNTNightSceneOne");
-      sample.style.fontFamily = `"${LANG_FAMILY}", ` + (q("#st-spfontfamily")?.value || DEFAULT_SCRIPT_FONT);
+      sample.style.fontFamily = withSpFamily(
+        q("#st-spfontfamily")?.value || DEFAULT_SCRIPT_FONT,
+        n2.screenplay > 0
+      );
+      applySpFont(q("#st-spfontfamily")?.value ?? s.spFontFamily, W.langFonts);
     };
-    {
-      const on2 = q("#st-spthai-on"), size = q("#st-spthai-size"), fam = q("#st-spthai-family");
-      const sample = q("#st-spthai-sample");
-      if (on2 && size && fam) {
-        fam.innerHTML = "";
-        for (const [v2, label] of [["", t("ui.dlg.spThaiAuto")], ...SP_THAI_FALLBACKS.map((f) => [f, f])]) {
-          const o = document.createElement("option");
-          o.value = v2;
-          o.textContent = label;
-          if (v2 === W.spThai.family) o.selected = true;
-          fam.appendChild(o);
-        }
-        on2.checked = W.spThai.enabled;
-        size.value = W.spThai.size;
-        const previewThai = () => {
-          W.spThai = normalizeSpThai({ enabled: on2.checked, size: size.value, family: fam.value });
-          size.disabled = fam.disabled = !on2.checked;
-          applySpThaiFont(W.spThai);
-          applySpFont(q("#st-spfontfamily")?.value ?? s.spFontFamily, W.langFonts, W.spThai);
-          if (sample) {
-            sample.textContent = t("ui.dlg.spThaiSample").split(" / ").join("\n");
-            sample.style.fontFamily = withSpThaiFamily(
-              q("#st-spfontfamily")?.value || DEFAULT_SCRIPT_FONT,
-              W.spThai
-            );
-          }
-        };
-        on2.onchange = size.oninput = fam.onchange = previewThai;
-        previewThai();
-      }
-    }
     function renderFonts() {
       fontsHost.innerHTML = "";
       if (!W.langFonts.length) fontsHost.append(el("div", "cmp-empty", t("ui.dlg.notHasRowPress")));
@@ -70715,9 +71071,54 @@ ${h.text}`;
         };
         famIn.oninput = () => {
           row2.family = famIn.value;
+          row2.system = false;
           previewFonts();
         };
-        r.append(fontSel, famIn);
+        const sysBtn = el("button", "k-key-btn k-font-sys", t("ui.dlg.fontFromMachine"));
+        sysBtn.title = t("ui.dlg.fontFromMachineHint");
+        sysBtn.onclick = async () => {
+          const picked = await pickSystemFont(famIn.value);
+          if (picked == null) return;
+          row2.family = picked;
+          row2.system = true;
+          row2.builtin = "";
+          row2.file = "";
+          fontSel.value = "";
+          famIn.style.display = "";
+          famIn.value = picked;
+          renderFonts();
+        };
+        r.append(fontSel, famIn, sysBtn);
+        const tgt = el("select", "k-dlg-select k-font-target");
+        const TARGET_LABEL = {
+          all: t("ui.dlg.fontTargetAll"),
+          prose: t("ui.dlg.fontTargetProse"),
+          screenplay: t("ui.dlg.fontTargetSp")
+        };
+        for (const v2 of FONT_TARGETS) {
+          const o = el("option", null, TARGET_LABEL[v2] || v2);
+          o.value = v2;
+          tgt.append(o);
+        }
+        tgt.value = rowTarget(row2);
+        tgt.title = t("ui.dlg.fontTargetHint");
+        tgt.onchange = () => {
+          row2.target = tgt.value;
+          previewFonts();
+        };
+        r.append(tgt);
+        const sz = el("input", "k-font-size");
+        sz.type = "number";
+        sz.min = "50";
+        sz.max = "150";
+        sz.step = "1";
+        sz.value = String(row2.size ?? 100);
+        sz.title = t("ui.dlg.fontSizeAdjustHint");
+        sz.oninput = () => {
+          row2.size = parseFloat(sz.value) || 100;
+          previewFonts();
+        };
+        r.append(sz, el("span", "k-hint", "%"));
         const up = el("button", "k-key-btn", "\u2191");
         up.title = t("ui.common.scroll");
         up.onclick = () => {
@@ -70744,9 +71145,14 @@ ${h.text}`;
         id: "f" + W.langFonts.length,
         label: t("ui.common.msg8"),
         range: "U+0E00-0E7F",
+        target: "all",
         builtin: "CourierThaiMono.ttf",
         file: "",
         family: "",
+        system: false,
+        size: 100,
+        ascent: 0,
+        descent: 0,
         enabled: true
       });
       renderFonts();
@@ -70769,9 +71175,14 @@ ${h.text}`;
           id: "f" + W.langFonts.length,
           label: "",
           range: "",
+          target: "all",
           builtin: "",
           file: name5,
           family: "",
+          system: false,
+          size: 100,
+          ascent: 0,
+          descent: 0,
           enabled: true
         });
         renderFonts();
@@ -70968,13 +71379,11 @@ ${h.text}`;
       setTypeVolume(origSnd.vol);
       const nLangBack = applyProjectLangFonts();
       s.spFontFamily = origSpFontFamily;
-      const thaiBack = normalizeSpThai({ ...SP_THAI_DEFAULTS, ...origSpThai || {} });
-      applySpThaiFont(thaiBack);
-      applySpFont(origSpFontFamily, null, thaiBack);
+      applySpFont(origSpFontFamily, null);
       s.fontFamily = origFontFamily;
       document.documentElement.style.setProperty(
         "--ed-font",
-        withLangFamily(proseFormat().fontFamily || origFontFamily || DEFAULT_PROSE_FONT, nLangBack > 0)
+        withLangFamily(origFontFamily || DEFAULT_PROSE_FONT, nLangBack.prose > 0)
       );
       s.focusDim = origDim;
       applyFocusDim();
@@ -71047,7 +71456,7 @@ ${h.text}`;
       s.typeSoundAlways = s.typeSoundMode === "always";
       s.typeSoundVolume = Math.min(1, Math.max(0, parseFloat(q("#st-typesnd-vol").value) || 0));
       s.langFonts = JSON.parse(JSON.stringify(W.langFonts));
-      s.spThaiFont = { ...W.spThai };
+      delete s.spThaiFont;
       s.prose = JSON.parse(JSON.stringify(mergeProseFormat(readProse())));
       for (const [sel, key2] of SETUP_FIELDS) m[key2] = q(sel).value.trim();
       g.dailyWords = num4("#st-daily", 500);
@@ -156079,6 +156488,7 @@ ${css}
     anyPageModel: () => anyPageModel,
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
+    applyPaperClass: () => applyPaperClass,
     applyProjectLangFonts: () => applyProjectLangFonts,
     applyProseVars: () => applyProseVars,
     applySettings: () => applySettings,
@@ -156161,7 +156571,6 @@ ${css}
     markDirty: () => markDirty,
     markPlannerRow: () => markPlannerRow,
     markSessionDirty: () => markSessionDirty,
-    migratePageNumberFirst: () => migratePageNumberFirst,
     netInst: () => netInst,
     newPlannerBoard: () => newPlannerBoard,
     newProject: () => newProject,
@@ -156306,19 +156715,7 @@ ${css}
     }
     state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...meta2.settings || {} };
     state.goals = { ...DEFAULT_GOALS, ...meta2.goals || {} };
-    migratePageNumberFirst();
     applySettings();
-  }
-  function migratePageNumberFirst() {
-    const s2 = state.settings;
-    if (s2.pgFirstMigrated === 2) return false;
-    const forcedBy83r = s2.pgFirstMigrated === true;
-    s2.pgFirstMigrated = 2;
-    const pn = s2.spPageNumbers;
-    if (!forcedBy83r || !pn || pn.firstPage !== true) return false;
-    s2.spPageNumbers = { ...pn, firstPage: false };
-    log("info", t("ui.app.migPageNumFirst"));
-    return true;
   }
   function applySettings() {
     applyZoomVars();
@@ -156333,19 +156730,18 @@ ${css}
     );
     document.body.classList.toggle("k-ln", !!state.settings.lineNumbers);
     scheduleLineGutter();
-    document.body.classList.toggle("paper-mode", state.settings.paperMode !== false);
+    applyPaperClass();
     document.body.classList.toggle("k-fab-off", state.settings.fabEnabled === false);
     applyTheme();
     const nLang = applyProjectLangFonts();
     const pf = proseFormat();
-    const edStack = pf.fontFamily || state.settings.fontFamily || DEFAULT_PROSE_FONT;
-    document.documentElement.style.setProperty("--ed-font", withLangFamily(edStack, nLang > 0));
+    const edStack = state.settings.fontFamily || DEFAULT_PROSE_FONT;
+    document.documentElement.style.setProperty("--ed-font", withLangFamily(edStack, nLang.prose > 0));
     applyProseVars(pf);
-    applySpThaiFont(spThaiCfg());
     const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
     document.documentElement.style.setProperty(
       "--sp-font",
-      withSpThaiFamily(withLangFamily(spStack, nLang > 0), spThaiCfg())
+      withSpFamily(spStack, nLang.screenplay > 0)
     );
     refreshTextMeasurer();
     setTypeVolume(state.settings.typeSoundVolume ?? 0.5);
@@ -156420,6 +156816,42 @@ ${css}
     }
     return g || null;
   }
+  function lnCountsOf(tab) {
+    const ed = tab && tab.editor;
+    if (!ed || !ed.mdLineCounts) return null;
+    const doc3 = ed.view.state.doc;
+    if (_lnCache && _lnCache.doc === doc3) return _lnCache.counts;
+    let counts = null;
+    try {
+      counts = ed.mdLineCounts();
+    } catch {
+      counts = null;
+    }
+    _lnCache = { doc: doc3, counts };
+    return counts;
+  }
+  function lnSubRows(kid, span) {
+    const box2 = (e) => {
+      const r = e.getBoundingClientRect();
+      return { top: r.top, height: r.height, el: e };
+    };
+    const one = () => [box2(kid)];
+    if (span <= 1) return one();
+    const tag3 = (kid.tagName || "").toLowerCase();
+    if (tag3 === "ul" || tag3 === "ol" || tag3 === "blockquote") {
+      const rows = [...kid.children].filter((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && !e.classList.contains("sp-page-break")).map(box2).filter((b) => b.height > 0);
+      return rows.length ? rows : one();
+    }
+    const brs = [...kid.querySelectorAll(":scope > br")].filter((b) => !b.classList.contains("ProseMirror-trailingBreak"));
+    if (!brs.length) return one();
+    const r0 = kid.getBoundingClientRect();
+    const tops = [r0.top, ...brs.map((b) => b.getBoundingClientRect().bottom)];
+    return tops.map((tp, k) => ({
+      top: tp,
+      height: (k + 1 < tops.length ? tops[k + 1] : r0.bottom) - tp,
+      el: kid
+    }));
+  }
   function refreshLineGutter() {
     const t3 = state.active;
     const pane = t3 && t3.pane;
@@ -156443,25 +156875,38 @@ ${css}
     g.style.left = Math.round(pr.left - hr.left) + "px";
     g.style.top = Math.round(pr.top - hr.top) + "px";
     g.style.height = Math.round(pr.height) + "px";
-    const kids = pmEl.children;
+    const counts = lnCountsOf(t3);
+    const kids = [...pmEl.children].filter((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && !e.classList.contains("sp-page-break") && !e.classList.contains("ProseMirror-gapcursor"));
     const frag = document.createDocumentFragment();
     const zoom = parseFloat(getComputedStyle(pmEl.parentElement).zoom) || 1;
     let n2 = 0;
+    let lineNo = 1;
     for (let i5 = 0; i5 < kids.length; i5++) {
-      const r = kids[i5].getBoundingClientRect();
+      const kid = kids[i5];
+      const span = counts && counts[i5] > 0 ? counts[i5] : 1;
+      const start = lineNo;
+      lineNo += span;
+      const r = kid.getBoundingClientRect();
       if (!r.height) continue;
-      const csPad = parseFloat(getComputedStyle(kids[i5]).paddingTop);
-      const padTop = Number.isFinite(csPad) ? csPad * zoom : 0;
-      const top = r.top - pr.top + padTop;
-      if (top > pr.height + 60) break;
-      if (top + r.height < -60) continue;
-      const csLh = parseFloat(getComputedStyle(kids[i5]).lineHeight);
-      const lineH = Math.min(r.height, Number.isFinite(csLh) ? csLh * zoom : r.height);
-      const d = el("div", "k-ln-no", String(i5 + 1));
-      d.style.top = Math.round(top) + "px";
-      d.dataset.lineh = String(Math.round(lineH));
-      frag.appendChild(d);
-      n2++;
+      const top0 = r.top - pr.top;
+      if (top0 > pr.height + 60) break;
+      if (top0 + r.height < -60) continue;
+      const subs = lnSubRows(kid, span);
+      for (let k = 0; k < subs.length; k++) {
+        const sr = subs[k];
+        const csPad = k === 0 ? parseFloat(getComputedStyle(kid).paddingTop) : 0;
+        const padTop = Number.isFinite(csPad) ? csPad * zoom : 0;
+        const top = sr.top - pr.top + padTop;
+        if (top > pr.height + 60) break;
+        if (top + sr.height < -60) continue;
+        const csLh = parseFloat(getComputedStyle(sr.el || kid).lineHeight);
+        const lineH = Math.min(sr.height, Number.isFinite(csLh) ? csLh * zoom : sr.height);
+        const d = el("div", "k-ln-no", String(start + k));
+        d.style.top = Math.round(top) + "px";
+        d.dataset.lineh = String(Math.round(lineH));
+        frag.appendChild(d);
+        n2++;
+      }
     }
     g.textContent = "";
     g.appendChild(frag);
@@ -156626,6 +157071,12 @@ ${css}
     return _langFontUrls.size;
   }
   function applyProjectLangFonts() {
+    if (state.settings.spThaiFont) {
+      const mig = migrateSpThai(state.settings.langFonts, state.settings.spThaiFont);
+      state.settings.langFonts = mig.rows;
+      delete state.settings.spThaiFont;
+      if (mig.moved) log("info", t("ui.app.migSpThaiFont"));
+    }
     return applyLangFonts(state.settings.langFonts, langFontUrl);
   }
   async function exportFontCss() {
@@ -156638,9 +157089,15 @@ ${css}
         const p = await kapi.join(dir2, "assets", "fonts", r.builtin);
         if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
       }
+      const url2 = (row2) => row2.builtin ? abs.get(row2.builtin) || "" : langFontUrl(row2);
       return buildLangFontCss(
         state.settings.langFonts,
-        (row2) => row2.builtin ? abs.get(row2.builtin) || "" : langFontUrl(row2)
+        url2,
+        { family: LANG_FAMILY, target: "prose" }
+      ) + "\n" + buildLangFontCss(
+        state.settings.langFonts,
+        url2,
+        { family: SP_FAMILY, target: "screenplay" }
       );
     } catch (e) {
       log("warn", t("ui.app.exportFontCssFail"), e);
@@ -156855,9 +157312,7 @@ ${css}
     const pn = spf.pageNumbers;
     if (!pn.show) return "";
     const i5 = Math.max(1, Math.round(+index || 1));
-    const n2 = Math.max(1, Math.round(+startPage || 1)) + i5 - 1;
-    if (n2 === 1 && pn.firstPage === false) return "";
-    return String(n2);
+    return String(Math.max(1, Math.round(+startPage || 1)) + i5 - 1);
   }
   function drawProsePageView(tab) {
     if (!tab || !tab.editor || !tab.pane) return 0;
@@ -157001,17 +157456,38 @@ ${css}
     setStatus(v2 ? tf("ui.app.proseIndentOn", prev) : t("ui.app.proseIndentOff"));
     return v2;
   }
+  function spThaiRowIndex() {
+    const rows = normalizeLangFonts(state.settings.langFonts);
+    return rows.findIndex((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
+  }
   function spThaiCfg() {
-    return normalizeSpThai({ ...SP_THAI_DEFAULTS, ...state.settings.spThaiFont || {} });
+    const rows = normalizeLangFonts(state.settings.langFonts);
+    const i5 = spThaiRowIndex();
+    return i5 >= 0 ? rows[i5] : { enabled: false, size: SP_THAI_SIZE, family: "" };
   }
   function setSpThaiFont(patch) {
-    state.settings.spThaiFont = normalizeSpThai({ ...spThaiCfg(), ...patch || {} });
+    const rows = normalizeLangFonts(state.settings.langFonts);
+    let i5 = spThaiRowIndex();
+    if (i5 < 0) {
+      rows.push(normalizeLangFonts([{
+        id: "sp-thai",
+        label: t("ui.common.msg8"),
+        range: SP_THAI_RANGE,
+        target: "screenplay",
+        family: SP_THAI_FALLBACKS.join(", "),
+        system: true,
+        size: SP_THAI_SIZE
+      }])[0]);
+      i5 = rows.length - 1;
+    }
+    rows[i5] = normalizeLangFonts([{ ...rows[i5], ...patch || {} }])[0];
+    state.settings.langFonts = rows;
     applySettings();
     refreshSpView();
     saveProjectMeta();
     syncMenuToggles();
     refreshToolbar();
-    return state.settings.spThaiFont;
+    return rows[i5];
   }
   function toggleSpThaiFont(on2) {
     const c = spThaiCfg();
@@ -157081,8 +157557,7 @@ ${css}
     const isDoc = !!(t22.sp || t22.editor);
     const mk2 = t22.sp ? pageNumberLabelFor(fmt) : prosePageNumberLabelFor(fmt);
     const first = Math.max(1, Math.round(+currentStartPage(t22) || 1));
-    const skipFirst = first === 1 && fmt.pageNumbers.firstPage === false;
-    const label = isDoc && mk2 && !skipFirst ? mk2(first) : "";
+    const label = isDoc && mk2 ? mk2(first) : "";
     pane.style.setProperty("--pg-no-first", label ? JSON.stringify(label) : '""');
     return label;
   }
@@ -157611,20 +158086,61 @@ ${css}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-wide");
     box2.append(el("div", "k-dlg-title", t("ui.app.markdown") + tab.title));
+    const wrap2 = el("div", "k-src-wrap");
+    const gut = el("div", "k-src-gutter");
     const ta = el("textarea", "k-src-view");
     ta.value = md;
-    ta.readOnly = true;
-    box2.append(ta);
+    ta.spellcheck = false;
+    wrap2.append(gut, ta);
+    box2.append(wrap2);
+    const hint = el("div", "k-hint k-src-hint", t("ui.app.mdEditHint"));
+    box2.append(hint);
+    const syncNums = () => {
+      const n2 = ta.value.split("\n").length;
+      if (gut.childElementCount !== n2) {
+        const frag = document.createDocumentFragment();
+        for (let i5 = 1; i5 <= n2; i5++) frag.append(el("div", null, String(i5)));
+        gut.replaceChildren(frag);
+      }
+      gut.scrollTop = ta.scrollTop;
+    };
+    ta.addEventListener("input", syncNums);
+    ta.addEventListener("scroll", () => {
+      gut.scrollTop = ta.scrollTop;
+    });
+    syncNums();
     const btns = el("div", "k-dlg-btns");
     const cp = el("button", null, t("ui.common.copyAll"));
+    const ap = el("button", null, t("ui.app.mdApply"));
     const cl = el("button", "k-ok", t("ui.common.close"));
     cp.onclick = () => {
       ta.select();
       document.execCommand("copy");
       setStatus(t("status.copied"));
     };
+    ap.onclick = () => {
+      if (ta.value === md) {
+        setStatus(t("ui.app.mdNoChange"));
+        return;
+      }
+      try {
+        src2.setMarkdown(ta.value);
+        markDirty(tab);
+        if (tab.editor) {
+          refreshMentions(tab.editor.view);
+          bumpProseLayout();
+        }
+        resetViewScroll(tab);
+        repaginateFast(tab);
+        scheduleCount();
+        setStatus(t("ui.app.mdApplied"));
+        ov.remove();
+      } catch (err2) {
+        setStatus(t("ui.app.mdApplyFail") + (err2 && err2.message));
+      }
+    };
     cl.onclick = () => ov.remove();
-    btns.append(cp, cl);
+    btns.append(cp, ap, cl);
     box2.append(btns);
     ov.append(box2);
     document.body.append(ov);
@@ -158299,7 +158815,7 @@ ${css}
     s.ui = {
       ls: lsAll,
       zoom: pageScale,
-      paper: state.settings.paperMode !== false,
+      paper: true,
       reading: document.body.classList.contains("reading-mode"),
       focus: document.body.classList.contains("focus-mode")
     };
@@ -161269,7 +161785,7 @@ ${css}
     try {
       const ps = panelToggleState();
       const payload = {
-        paperMode: state.settings.paperMode !== false,
+        paperMode: true,
         theme: currentTheme(),
         // [60r2 ข้อ 10]
         fabEnabled: state.settings.fabEnabled !== false,
@@ -161318,15 +161834,9 @@ ${css}
     } catch {
     }
   }
-  function togglePaper(on2) {
-    const v2 = on2 ?? !(state.settings.paperMode !== false);
-    state.settings.paperMode = v2;
-    document.body.classList.toggle("paper-mode", v2);
-    saveProjectMeta();
-    const btn2 = $("#tb-paper");
-    if (btn2) btn2.classList.toggle("on", v2);
-    syncMenuToggles();
-    setStatus(v2 ? t("ui.app.modePagePaperOpen") : t("ui.app.modePagePaperClose"));
+  function applyPaperClass() {
+    document.body.classList.add("paper-mode");
+    return true;
   }
   function currentTheme() {
     return state.settings.theme === "light" ? "light" : "dark";
@@ -164681,6 +165191,8 @@ ${css}
     $("#tb-italic").title = withShortcut("toolbar.italic", "KeyI", true, false);
     $("#tb-underline").title = withShortcut("toolbar.underline", "KeyU", true, false);
     $("#tb-strike").title = withShortcut("toolbar.strike", "KeyX", true, true);
+    $("#tb-sup").title = withShortcut("toolbar.superscript", "Equal", "ctrl+alt", false);
+    $("#tb-sub").title = withShortcut("toolbar.subscript", "Minus", "ctrl+alt", false);
     $("#tb-ul").title = withShortcut("toolbar.bulletList", "Digit8", true, true);
     $("#tb-ol").title = withShortcut("toolbar.numberList", "Digit7", true, true);
     $("#tb-quote").title = t("toolbar.quote");
@@ -164688,7 +165200,6 @@ ${css}
     $("#tb-align-center").title = withShortcut("toolbar.alignCenter", "KeyK", true, true);
     $("#tb-align-right").title = withShortcut("toolbar.alignRight", "KeyR", true, true);
     $("#tb-align-justify").title = withShortcut("toolbar.alignJustify", "KeyJ", true, true);
-    $("#tb-paper").title = t("toolbar.paperMode");
     applyTheme();
     $("#tb-mode").title = t("toolbar.toggleMode") + " (Ctrl+Shift+M)";
     $("#tb-img").title = t("toolbar.insertImage");
@@ -164707,9 +165218,28 @@ ${css}
     const wkEd = state.active?.wiki?.secEditors?.find(({ k }) => k?.view?.hasFocus())?.k || state.active?.wiki?.secEditors?.[0]?.k;
     const marks2 = ed ? ed.activeMarks() : wkEd ? wkEd.activeMarks() : {};
     for (const f of FMTS) {
-      const key2 = { bold: "strong", italic: "em", underline: "underline", strike: "strike" }[f];
-      $("#tb-" + f).classList.toggle("on", !!marks2[key2]);
+      const key2 = {
+        bold: "strong",
+        italic: "em",
+        underline: "underline",
+        strike: "strike",
+        sup: "sup",
+        sub: "sub"
+      }[f];
+      const bf = $("#tb-" + f);
+      if (bf) bf.classList.toggle("on", !!marks2[key2]);
     }
+    let spList = "";
+    if (sp) {
+      try {
+        spList = sp.curList();
+      } catch {
+      }
+    }
+    $("#tb-ul")?.classList.toggle("on", marks2.list === "ul" || spList === "ul");
+    $("#tb-ol")?.classList.toggle("on", marks2.list === "ol" || spList === "ol");
+    $("#tb-quote")?.classList.toggle("on", !!marks2.quote);
+    $("#tb-img")?.classList.toggle("on", !!marks2.image);
     const sel = $("#tb-style");
     if (marks2.block) sel.value = marks2.block;
     const curAlign = ed ? marks2.align || "left" : sp ? sp.curAlign() : null;
@@ -164734,7 +165264,7 @@ ${css}
       spView.value = currentSpView();
     }
     document.querySelectorAll(".tb").forEach((b) => {
-      if (b.id === "tb-paper" || b.id === "tb-theme") return;
+      if (b.id === "tb-theme") return;
       if (b.id === "tb-split") {
         b.classList.toggle("dis", state.tabs.size === 0);
         return;
@@ -164772,7 +165302,6 @@ ${css}
       tbInd.classList.toggle("on", proseIndentOn());
       tbInd.classList.toggle("dis", !ed);
     }
-    $("#tb-paper").classList.toggle("on", state.settings.paperMode !== false);
     applyTheme();
     $("#tb-read")?.classList.toggle("on", document.body.classList.contains("reading-mode"));
     $("#tb-split")?.classList.toggle("on", isSplit());
@@ -164894,14 +165423,15 @@ ${css}
     const lineY = (e) => (e.getBoundingClientRect().top - top0) / z;
     const firstBlk = [...pm2.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
     let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+    let prevH = 0;
     let changed = false;
     for (let i5 = 0; i5 < els.length; i5++) {
       const y = lineY(els[i5]);
-      const delta = target - (y - prev);
+      const used = y - prev - prevH;
       prev = y;
-      if (Math.abs(delta) < 0.5) continue;
-      const want = Math.max(0, Math.round((num(list[i5].pad, 0) + delta) * 10) / 10);
-      if (Math.abs(want - num(list[i5].pad, 0)) < 0.05) continue;
+      prevH = els[i5].getBoundingClientRect().height / z;
+      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
       list[i5].pad = want;
       changed = true;
     }
@@ -164910,20 +165440,67 @@ ${css}
     applyProsePagePads(pm2);
     return true;
   }
+  function tuneProsePagePadsLoop(t3, rounds = 2) {
+    let n2 = 0;
+    for (let i5 = 0; i5 < rounds; i5++) {
+      _padTuneUntil = 0;
+      if (!tuneProsePagePads(t3)) break;
+      n2++;
+    }
+    _padTuneUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 400;
+    return n2;
+  }
+  function proseCaretAnchor(t3) {
+    const v2 = t3 && t3.editor && t3.editor.view;
+    if (!v2 || !v2.dom || !v2.dom.isConnected) return null;
+    const sc = t3.pane;
+    if (!sc || !sc.isConnected) return null;
+    try {
+      if (!v2.hasFocus()) return null;
+      const head2 = v2.state.selection.head;
+      const c = v2.coordsAtPos(head2);
+      const box2 = sc.getBoundingClientRect();
+      if (c.bottom < box2.top || c.top > box2.bottom) return null;
+      return { sc, y: c.top - box2.top, head: head2 };
+    } catch {
+      return null;
+    }
+  }
+  function releaseCaretAnchor(t3, a) {
+    if (!a) return false;
+    const v2 = t3 && t3.editor && t3.editor.view;
+    if (!v2 || !v2.dom || !v2.dom.isConnected || !a.sc.isConnected) return false;
+    try {
+      const c = v2.coordsAtPos(Math.min(a.head, v2.state.doc.content.size));
+      const dy = c.top - a.sc.getBoundingClientRect().top - a.y;
+      if (Math.abs(dy) < 0.5) return false;
+      const max2 = Math.max(0, a.sc.scrollHeight - a.sc.clientHeight);
+      a.sc.scrollTop = Math.min(Math.max(0, a.sc.scrollTop + dy), max2);
+      return true;
+    } catch {
+      return false;
+    }
+  }
   function repaginateProseNow(t3) {
     if (!t3 || !t3.editor) return 0;
+    const caret = proseCaretAnchor(t3);
     try {
       const spf = spFormat();
-      const mz = proseMeasured(t3, spf);
-      if (mz) {
+      const mzAll = withMeasureMode(() => {
+        const m = proseMeasured(t3, spf);
+        if (!m) return null;
         resetCutFail();
-        const list82 = proseBreakList(
+        return { m, list: proseBreakList(
           t3.editor.view,
-          mz.blocks,
-          mz.pages,
+          m.blocks,
+          m.pages,
           currentStartPage(t3),
-          mz.contentHeight
-        );
+          m.contentHeight
+        ) };
+      });
+      const mz = mzAll && mzAll.m;
+      if (mz) {
+        const list82 = mzAll.list;
         state._mzDiag = {
           path: "measured",
           pages: mz.pages.length,
@@ -164943,9 +165520,10 @@ ${css}
         requestAnimationFrame(() => {
           try {
             applyProsePagePads(t3.editor.view.dom);
-            tuneProsePagePads(t3);
+            tuneProsePagePadsLoop(t3);
           } catch {
           }
+          releaseCaretAnchor(t3, caret);
         });
         return mz.pages.length;
       }
@@ -164961,6 +165539,7 @@ ${css}
       if (changed || nChanged2) refreshProsePageBreaks(t3.editor.view);
       setLayoutPageCount(t3, ppg.count);
       refreshSpView();
+      requestAnimationFrame(() => releaseCaretAnchor(t3, caret));
       return ppg.count;
     } catch (e) {
       log("warn", t("ui.app.pageNovelNotOk"), e);
@@ -164980,6 +165559,8 @@ ${css}
   function repaginateOnEnter(tab, ev) {
     if (!ev || ev.key !== "Enter" || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (_fastPageJob) return;
+    const tHeavy = tab || state.active;
+    if (tHeavy && heavyDelay(tHeavy) > 100) return;
     _fastPageJob = setTimeout(() => {
       _fastPageJob = 0;
       try {
@@ -165172,6 +165753,18 @@ ${css}
     if (ed) setQuery(ed.view, "");
     state.active?.editor?.focus();
   }
+  function clipboardImages(dt) {
+    if (!dt) return [];
+    const isImg = (f) => f && typeof f.type === "string" && f.type.startsWith("image/");
+    const out = [...dt.files || []].filter(isImg);
+    if (out.length) return out;
+    for (const it of [...dt.items || []]) {
+      if (it.kind !== "file" || !String(it.type || "").startsWith("image/")) continue;
+      const f = it.getAsFile();
+      if (isImg(f)) out.push(f);
+    }
+    return out;
+  }
   async function importImageFile(file, t3) {
     try {
       const buf = await file.arrayBuffer();
@@ -165193,6 +165786,14 @@ ${css}
     }
   }
   async function insertImage() {
+    const t0 = state.active;
+    const ed0 = t0 && t0.editor;
+    if (ed0 && ed0.removeFigure()) {
+      markDirty(t0);
+      refreshToolbar();
+      setStatus(t("ui.app.imageRemoved"));
+      return;
+    }
     const it = await pickImage(state.root);
     if (!it) return;
     return insertImageByName(it.file, it.caption);
@@ -165820,9 +166421,6 @@ ${css}
         break;
       case "focus-mode":
         toggleFocus();
-        break;
-      case "paper-mode":
-        togglePaper();
         break;
       case "toggle-theme":
         toggleTheme(a[0]);
@@ -166541,7 +167139,6 @@ ${css}
     [
       "#tb-sp-elem",
       "#sp-view-select",
-      "#tb-paper",
       "#tb-mode",
       "#tb-style",
       "#tb-case",
@@ -166549,6 +167146,8 @@ ${css}
       "#tb-italic",
       "#tb-underline",
       "#tb-strike",
+      "#tb-sup",
+      "#tb-sub",
       "#tb-ul",
       "#tb-ol",
       "#tb-quote",
@@ -169887,20 +170486,23 @@ ${css}
       await new Promise((r) => setTimeout(r, 20));
       activate(t3.file);
       t3.editor.setMarkdown("\u0E04\u0E48\u0E32\u0E22\u0E1C\u0E39\u0E49\u0E25\u0E35\u0E49\u0E20\u0E31\u0E22\u0E43\u0E2B\u0E0D\u0E48\u0E01\u0E27\u0E48\u0E32\u0E17\u0E35\u0E48\u0E04\u0E19\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01\u0E08\u0E30\u0E08\u0E34\u0E19\u0E15\u0E19\u0E32\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49\n\n\u0E40\u0E15\u0E47\u0E19\u0E17\u0E4C\u0E40\u0E23\u0E35\u0E22\u0E07\u0E23\u0E32\u0E22\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E16\u0E27\u0E22\u0E32\u0E27 \u0E08\u0E19\u0E41\u0E17\u0E1A\u0E21\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E47\u0E19\u0E1B\u0E25\u0E32\u0E22");
-      togglePaper(true);
+      setSpView("normal", true);
       await new Promise((r) => setTimeout(r, 60));
-      check2("\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: body \u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A paper-mode", document.body.classList.contains("paper-mode"));
+      check2(
+        "\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: body \u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A paper-mode \u0E40\u0E2A\u0E21\u0E2D (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E2B\u0E49\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27)",
+        document.body.classList.contains("paper-mode")
+      );
       const pmBg = getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor;
       check2("\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E19\u0E27\u0E25 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14)", pmBg === "rgb(245, 241, 230)", pmBg);
-      check2("\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 settings", state.settings.paperMode === true);
-      await kapi.testShot("/tmp/k2_paper_prose.png");
-      togglePaper(false);
-      await new Promise((r) => setTimeout(r, 40));
       check2(
-        "\u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E14\u0E49 (\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32)",
-        !document.body.classList.contains("paper-mode") && state.settings.paperMode === false
+        "[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E25\u0E22 (\u0E1B\u0E38\u0E48\u0E21/\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14/\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07)",
+        !document.querySelector("#tb-paper") && !SHORTCUTS.some((x) => x[3] === "paper-mode") && !/case ['"]paper-mode['"]/.test(String(handleCommand))
       );
-      togglePaper(true);
+      await kapi.testShot("/tmp/k2_paper_prose.png");
+      check2(
+        '[99-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 "\u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E22\u0E01',
+        !document.querySelector(".pane.on").classList.contains("sp-view-layout")
+      );
       t3.editor.setMarkdown(orig);
       activate(t3.file);
       const pngSig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]);
@@ -169929,15 +170531,16 @@ ${css}
         !!floatBar && floatBar.style.display === "flex" && !!floatBar.querySelector("#tb-bold")
       );
       check2(
-        "\u0E22\u0E49\u0E32\u0E22\u0E1B\u0E38\u0E48\u0E21 paper/mode/source \u0E40\u0E02\u0E49\u0E32\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27",
-        !!floatBar.querySelector("#tb-paper") && !!floatBar.querySelector("#tb-mode") && !!floatBar.querySelector("#tb-source")
+        "\u0E22\u0E49\u0E32\u0E22\u0E1B\u0E38\u0E48\u0E21 mode/source \u0E40\u0E02\u0E49\u0E32\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27",
+        !!floatBar.querySelector("#tb-mode") && !!floatBar.querySelector("#tb-source")
       );
+      check2("[99-2] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27", !floatBar.querySelector("#tb-paper"));
       {
         const ids = [...floatBar.children].map((c) => c.id).filter(Boolean);
-        const iPaper = ids.indexOf("tb-paper"), iMode = ids.indexOf("tb-mode"), iStyle = ids.indexOf("tb-style"), iSrc = ids.indexOf("tb-source");
+        const iView = ids.indexOf("sp-view-select"), iMode = ids.indexOf("tb-mode"), iStyle = ids.indexOf("tb-style"), iSrc = ids.indexOf("tb-source");
         check2(
-          "\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E15\u0E23\u0E07\u0E20\u0E32\u0E1E (paper<mode<style<source)",
-          iPaper >= 0 && iPaper < iMode && iMode < iStyle && iStyle < iSrc,
+          "\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E15\u0E23\u0E07\u0E20\u0E32\u0E1E (\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07<mode<style<source)",
+          iView >= 0 && iView < iMode && iMode < iStyle && iStyle < iSrc,
           JSON.stringify(ids)
         );
       }
@@ -170684,8 +171287,6 @@ ${css}
         !document.querySelector(".pane.on .sp-character .k-spell-bad")
       );
       await kapi.testShot("/tmp/k2_sp_fixed.png");
-      togglePaper(true);
-      await new Promise((r) => setTimeout(r, 60));
       check2(
         "\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E2B\u0E19\u0E49\u0E32\u0E02\u0E32\u0E27",
         getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor === "rgb(245, 241, 230)"
@@ -174804,7 +175405,7 @@ ${css}
           scEl0.click();
           await new Promise((r) => setTimeout(r, 500));
         }
-        togglePaper(true);
+        setSpView("normal", true);
         toggleReading(true);
         await new Promise((r) => setTimeout(r, 120));
         const pm2 = document.querySelector(".pane.on .ProseMirror");
@@ -174830,17 +175431,47 @@ ${css}
           "\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19 \u2192 \u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07/\u0E41\u0E16\u0E1A\u0E1A\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 (\u0E44\u0E21\u0E48\u0E21\u0E35 inline display \u0E04\u0E49\u0E32\u0E07)",
           $("#app-root").style.display === "" && $("#topbar").style.display === "" && $("#k-fab").style.display === "" && !document.body.classList.contains("reading-mode")
         );
-        delete state.settings.paperMode;
-        togglePaper();
+        check2("[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E41\u0E25\u0E49\u0E27", !document.querySelector("#tb-paper"));
         check2(
-          "togglePaper: \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (undefined=\u0E40\u0E1B\u0E34\u0E14) \u0E01\u0E14\u0E04\u0E23\u0E31\u0E49\u0E07\u0E41\u0E23\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E1B\u0E34\u0E14",
-          state.settings.paperMode === false && !document.body.classList.contains("paper-mode")
+          "[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14 Ctrl+Alt+U (paper-mode) \u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27",
+          !SHORTCUTS.some((x) => x[3] === "paper-mode"),
+          JSON.stringify(SHORTCUTS.filter((x) => x[3] === "paper-mode"))
         );
-        togglePaper();
         check2(
-          "togglePaper: \u0E01\u0E14\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E1B\u0E34\u0E14",
-          state.settings.paperMode === true && document.body.classList.contains("paper-mode")
+          "[99-2] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 paper-mode \u0E43\u0E19 handleCommand \u0E41\u0E25\u0E49\u0E27",
+          !/case ['"]paper-mode['"]/.test(String(handleCommand))
         );
+        check2(
+          '[99-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 "\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32" \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E25\u0E49\u0E27',
+          SP_VIEWS.includes("layout") && isValidView("layout"),
+          SP_VIEWS.join(",")
+        );
+        check2(
+          "[99-1] \u2605 \u0E41\u0E25\u0E30\u0E21\u0E35\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22",
+          [...$("#sp-view-select").options].some((o) => o.value === "layout")
+        );
+        {
+          const pane99 = document.querySelector(".pane.on");
+          setSpView("normal", true);
+          await new Promise((r) => setTimeout(r, 200));
+          check2(
+            "[99-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E22\u0E01\u0E41\u0E1C\u0E48\u0E19",
+            !pane99.classList.contains("sp-view-layout"),
+            pane99.className
+          );
+          check2(
+            "[99-1] \u2605\u2605 \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19 (\u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E25\u0E22",
+            [...pane99.querySelectorAll(".ed-page-break")].every((e) => getComputedStyle(e).display !== "none")
+          );
+          setSpView("layout", true);
+          await new Promise((r) => setTimeout(r, 250));
+          check2(
+            "[99-1] \u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 = \u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 (\u0E04\u0E25\u0E32\u0E2A\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32)",
+            pane99.classList.contains("sp-view-layout")
+          );
+          setSpView("normal", true);
+          await new Promise((r) => setTimeout(r, 150));
+        }
         {
           const sc = SHORTCUTS.find((x) => x[0] === "KeyP" && x[1] === true && x[2] === true);
           check2(
@@ -174849,16 +175480,12 @@ ${css}
             sc && sc[3]
           );
           check2(
-            "[10] Ctrl+Shift+P \u0E44\u0E21\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27",
-            !SHORTCUTS.some((x) => x[3] === "paper-mode" && x[0] === "KeyP" && x[1] === true && x[2] === true)
-          );
-          check2(
-            "[10] \u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (Ctrl+Alt+U)",
-            SHORTCUTS.some((x) => x[3] === "paper-mode" && x[1] === "ctrl+alt"),
+            "[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E25\u0E22",
+            !SHORTCUTS.some((x) => x[3] === "paper-mode"),
             JSON.stringify(SHORTCUTS.filter((x) => x[3] === "paper-mode"))
           );
           check2("[10] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E18\u0E35\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D", !!$("#tb-theme"));
-          check2("[10] \u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E1B\u0E34\u0E14\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E41\u0E04\u0E48\u0E22\u0E49\u0E32\u0E22\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14)", !!$("#tb-paper"));
+          check2("[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27", !$("#tb-paper"));
           const paperBefore = document.body.classList.contains("paper-mode");
           const pmPaper = document.querySelector(".pane.on > .workspace > .ProseMirror");
           const paperBg0 = pmPaper ? getComputedStyle(pmPaper).backgroundColor : "";
@@ -174934,12 +175561,12 @@ ${css}
         );
         check2(
           "\u0E08\u0E38\u0E14\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E15\u0E32\u0E21\u0E1B\u0E38\u0E48\u0E21\u0E44\u0E1B\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A #toolbar)",
-          getComputedStyle($("#tb-paper"), "::after").content !== "none",
-          getComputedStyle($("#tb-paper"), "::after").content
+          getComputedStyle($("#tb-md-codes"), "::after").content !== "none",
+          getComputedStyle($("#tb-md-codes"), "::after").content
         );
         check2(
-          "\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C + \u0E15\u0E34\u0E14\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E1B\u0E34\u0E14",
-          $("#tb-paper").classList.contains("tb-toggle") && $("#tb-paper").classList.contains("on")
+          "\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A tb-toggle \u0E08\u0E23\u0E34\u0E07",
+          $("#tb-md-codes").classList.contains("tb-toggle")
         );
         const treePanelEl = () => document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
         const treeBtn = (act) => treePanelEl()?.querySelector(`:scope > .k-panel-head .k-panel-btn-${act}`);
@@ -175006,7 +175633,7 @@ ${css}
           String(document.querySelectorAll("#tree .scene.img-row").length)
         );
         {
-          const host2 = document.querySelector("#tree .scene[title]") || $("#tb-paper");
+          const host2 = document.querySelector("#tree .scene[title]") || $("#tb-theme");
           const y = 400, x = 300;
           host2.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, clientX: x, clientY: y }));
           await new Promise((r) => setTimeout(r, 320));
@@ -175736,91 +176363,138 @@ ${css}
         activate(t3.file);
       }
       {
-        const origThai84 = state.settings.spThaiFont ? { ...state.settings.spThaiFont } : null;
-        const origSpF84 = state.settings.spFontFamily || "";
+        const origLF97 = state.settings.langFonts ? JSON.parse(JSON.stringify(state.settings.langFonts)) : null;
+        const origThai97 = state.settings.spThaiFont ? { ...state.settings.spThaiFont } : null;
+        const origSpF97 = state.settings.spFontFamily || "";
         state.settings.spFontFamily = "";
         state.settings.spThaiFont = null;
+        state.settings.langFonts = null;
         applySettings();
         check2(
-          "[84-1] \u0E40\u0E1B\u0E34\u0E14\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E15\u0E31\u0E49\u0E07\u0E2D\u0E30\u0E44\u0E23\u0E01\u0E47\u0E2B\u0E32\u0E22\u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35)",
+          '[97-12] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E21\u0E35\u0E41\u0E16\u0E27 "\u0E44\u0E17\u0E22\u0E02\u0E2D\u0E07\u0E1A\u0E17 85%" \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E22',
           spThaiCfg().enabled === true && spThaiCfg().size === 85,
           JSON.stringify(spThaiCfg())
         );
-        const st84 = document.getElementById("k-sp-thai");
+        const stSp = document.getElementById("k-sp-fonts");
         check2(
-          '[84-1] \u0E21\u0E35 <style id="k-sp-thai"> \u0E1E\u0E23\u0E49\u0E2D\u0E21 size-adjust',
-          !!st84 && st84.textContent.includes("size-adjust:85%"),
-          st84 && st84.textContent.slice(0, 90)
+          '[97-12] \u2605 \u0E21\u0E35 <style id="k-sp-fonts"> \u0E02\u0E2D\u0E07\u0E2A\u0E41\u0E15\u0E01\u0E1A\u0E17 \u0E1E\u0E23\u0E49\u0E2D\u0E21 size-adjust',
+          !!stSp && stSp.textContent.includes("size-adjust:85%"),
+          stSp && stSp.textContent.slice(0, 120)
         );
         check2(
-          "[84-1] \u0E08\u0E33\u0E01\u0E31\u0E14\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0A\u0E48\u0E27\u0E07\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E44\u0E17\u0E22 (\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E15\u0E31\u0E27\u0E25\u0E30\u0E15\u0E34\u0E19)",
-          !!st84 && st84.textContent.includes("unicode-range:U+0E00-0E7F")
+          "[97-12] \u0E08\u0E33\u0E01\u0E31\u0E14\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0A\u0E48\u0E27\u0E07\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E44\u0E17\u0E22 (\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E15\u0E31\u0E27\u0E25\u0E30\u0E15\u0E34\u0E19)",
+          !!stSp && stSp.textContent.includes("unicode-range:U+0E00-0E7F")
         );
-        const spFont84 = document.documentElement.style.getPropertyValue("--sp-font");
+        const spFont97 = document.documentElement.style.getPropertyValue("--sp-font");
         check2(
-          "[84-1] \u0E27\u0E07\u0E28\u0E4C\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E31\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07 --sp-font",
-          spFont84.trim().startsWith('"K2 SP Thai"'),
-          spFont84
+          '[97-12] \u2605 \u0E27\u0E07\u0E28\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17 ("K2 SP") \u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07 --sp-font',
+          spFont97.trim().startsWith('"' + SP_FAMILY + '"'),
+          spFont97
         );
         check2(
-          "[84-1] \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1D\u0E31\u0E48\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E25\u0E22 (\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E19\u0E35\u0E49)",
-          !(document.documentElement.style.getPropertyValue("--ed-font") || "").includes("K2 SP Thai"),
-          document.documentElement.style.getPropertyValue("--ed-font")
+          "[97-12] \u2605 \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E44\u0E2B\u0E25\u0E44\u0E1B\u0E2A\u0E41\u0E15\u0E01\u0E19\u0E34\u0E22\u0E32\u0E22",
+          !(document.getElementById("k-lang-fonts") || {}).textContent || !document.getElementById("k-lang-fonts").textContent.includes("size-adjust:85%"),
+          (document.getElementById("k-lang-fonts") || {}).textContent
         );
         {
           const probe = el("div", "sp sp-action", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E17\u0E22");
           document.body.appendChild(probe);
           check2(
-            "[84-1] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E27\u0E07\u0E28\u0E4C\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E31\u0E1A\u0E08\u0E23\u0E34\u0E07",
-            getComputedStyle(probe).fontFamily.includes("K2 SP Thai"),
+            "[97-12] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E27\u0E07\u0E28\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07",
+            getComputedStyle(probe).fontFamily.includes(SP_FAMILY),
             getComputedStyle(probe).fontFamily
           );
           probe.remove();
         }
         toggleSpThaiFont(false);
         check2(
-          "[84-1] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 CSS \u0E2B\u0E32\u0E22 \u0E41\u0E25\u0E30\u0E27\u0E07\u0E28\u0E4C\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2A\u0E41\u0E15\u0E01",
-          (document.getElementById("k-sp-thai").textContent || "") === "" && !document.documentElement.style.getPropertyValue("--sp-font").includes("K2 SP Thai")
+          "[97-12] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 CSS \u0E02\u0E2D\u0E07\u0E41\u0E16\u0E27\u0E19\u0E31\u0E49\u0E19\u0E2B\u0E32\u0E22 \u0E41\u0E25\u0E30\u0E27\u0E07\u0E28\u0E4C\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E2A\u0E41\u0E15\u0E01",
+          (document.getElementById("k-sp-fonts").textContent || "") === "" && !document.documentElement.style.getPropertyValue("--sp-font").includes(SP_FAMILY)
         );
         toggleSpThaiFont(true);
         check2(
-          "[84-1] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
-          document.getElementById("k-sp-thai").textContent.includes("size-adjust") && document.documentElement.style.getPropertyValue("--sp-font").includes("K2 SP Thai")
+          "[97-12] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
+          document.getElementById("k-sp-fonts").textContent.includes("size-adjust") && document.documentElement.style.getPropertyValue("--sp-font").includes(SP_FAMILY)
         );
         setSpThaiFont({ size: 92 });
         check2(
-          "[84-1] \u0E1B\u0E23\u0E31\u0E1A % \u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E47\u0E19\u0E1C\u0E25\u0E17\u0E31\u0E19\u0E17\u0E35 + \u0E08\u0E33\u0E25\u0E07 settings",
-          document.getElementById("k-sp-thai").textContent.includes("size-adjust:92%") && state.settings.spThaiFont.size === 92
+          "[97-12] \u0E1B\u0E23\u0E31\u0E1A % \u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E47\u0E19\u0E1C\u0E25\u0E17\u0E31\u0E19\u0E17\u0E35 + \u0E08\u0E33\u0E25\u0E07\u0E15\u0E32\u0E23\u0E32\u0E07",
+          document.getElementById("k-sp-fonts").textContent.includes("size-adjust:92%") && spThaiCfg().size === 92
         );
         check2(
-          "[84-1] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sp-thai-font \u0E21\u0E35\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19 handleCommand",
+          "[97-12] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sp-thai-font \u0E21\u0E35\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19 handleCommand",
           /case ['"]sp-thai-font['"]/.test(String(handleCommand))
         );
+        check2(
+          '[97-12] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E30\u0E1A\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22\u0E41\u0E22\u0E01\u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D (<style id="k-sp-thai"> \u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27)',
+          !document.getElementById("k-sp-thai")
+        );
         settingsDialog("fonts");
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise((r) => setTimeout(r, 200));
+        const dlg97 = [...document.querySelectorAll(".k-dialog")].pop();
+        const row97 = dlg97 && dlg97.querySelector(".k-font-row");
+        check2("[97-12] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E21\u0E35\u0E41\u0E16\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E41\u0E16\u0E27", !!row97);
         check2(
-          "[84-1] \u0E41\u0E17\u0E47\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C + \u0E0A\u0E48\u0E2D\u0E07 % + \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22",
-          !!document.querySelector("#st-spthai-on") && !!document.querySelector("#st-spthai-size") && !!document.querySelector("#st-spthai-family")
+          "[97-12] \u2605 \u0E41\u0E15\u0E48\u0E25\u0E30\u0E41\u0E16\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32\u0E43\u0E0A\u0E49\u0E01\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E44\u0E2B\u0E19 (\u0E19\u0E34\u0E22\u0E32\u0E22/\u0E1A\u0E17/\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07)",
+          !!row97 && !!row97.querySelector(".k-font-target") && row97.querySelector(".k-font-target").options.length === FONT_TARGETS.length
         );
         check2(
-          "[84-1] \u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
-          document.querySelector("#st-spthai-on").checked === true && +document.querySelector("#st-spthai-size").value === 92,
-          document.querySelector("#st-spthai-size").value
+          "[97-12] \u2605 \u0E41\u0E15\u0E48\u0E25\u0E30\u0E41\u0E16\u0E27\u0E15\u0E31\u0E49\u0E07\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 (size-adjust) \u0E44\u0E14\u0E49\u0E40\u0E2D\u0E07",
+          !!row97 && !!row97.querySelector(".k-font-size")
         );
         check2(
-          "[84-1] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E23\u0E30\u0E22\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 (1 \u0E40\u0E17\u0E48\u0E32)",
-          !!document.querySelector("#st-spthai-sample") && getComputedStyle(document.querySelector("#st-spthai-sample")).lineHeight === getComputedStyle(document.querySelector("#st-spthai-sample")).fontSize,
-          getComputedStyle(document.querySelector("#st-spthai-sample")).lineHeight
+          '[97-12] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E08\u0E32\u0E01\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07" \u0E43\u0E2B\u0E49\u0E08\u0E31\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E25\u0E07\u0E44\u0E27\u0E49\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07',
+          !!row97 && !!row97.querySelector(".k-font-sys")
         );
-        document.querySelector(".k-dialog .k-cancel").click();
-        await new Promise((r) => setTimeout(r, 60));
         check2(
-          "[84-1] \u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E27\u0E07\u0E28\u0E4C\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E2B\u0E32\u0E22 (\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19 alpha.78)",
-          document.documentElement.style.getPropertyValue("--sp-font").includes("K2 SP Thai"),
+          "[97-12] \u2605 \u0E41\u0E16\u0E27\u0E41\u0E23\u0E01 = \u0E44\u0E17\u0E22\u0E02\u0E2D\u0E07\u0E1A\u0E17 (\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E15\u0E31\u0E49\u0E07 92% \u0E42\u0E0A\u0E27\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07)",
+          !!row97 && row97.querySelector(".k-font-target").value === "screenplay" && +row97.querySelector(".k-font-size").value === 92,
+          row97 && row97.querySelector(".k-font-size").value
+        );
+        check2(
+          '[97-12] \u2605 \u0E0A\u0E48\u0E2D\u0E07 "\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22" \u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E17\u0E34\u0E49\u0E07\u0E41\u0E25\u0E49\u0E27',
+          !document.querySelector("#st-pr-font")
+        );
+        check2(
+          "[97-12] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E44\u0E17\u0E22\u0E41\u0E22\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27",
+          !document.querySelector("#st-spthai-on") && !document.querySelector("#st-spthai-size")
+        );
+        dlg97.querySelector(".k-cancel").click();
+        await new Promise((r) => setTimeout(r, 80));
+        check2(
+          "[97-12] \u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E27\u0E07\u0E28\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E2B\u0E32\u0E22 (\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19 alpha.78)",
+          document.documentElement.style.getPropertyValue("--sp-font").includes(SP_FAMILY),
           document.documentElement.style.getPropertyValue("--sp-font")
         );
-        state.settings.spThaiFont = origThai84;
-        state.settings.spFontFamily = origSpF84;
+        {
+          let sysFonts = [];
+          try {
+            sysFonts = await kapi.listFonts() || [];
+          } catch {
+          }
+          check2(
+            "[97-12] \u2605 \u0E2D\u0E48\u0E32\u0E19\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E08\u0E32\u0E01\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2E\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E04\u0E49\u0E14)",
+            Array.isArray(sysFonts) && sysFonts.length > 5,
+            sysFonts.length
+          );
+          check2(
+            "[97-12] \u0E0A\u0E37\u0E48\u0E2D\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E27\u0E07\u0E28\u0E4C \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C",
+            sysFonts.every((f) => typeof f === "string" && f && !/\.(ttf|otf|ttc)$/i.test(f))
+          );
+          check2("[97-12] \u0E40\u0E23\u0E35\u0E22\u0E07\u0E41\u0E25\u0E49\u0E27\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33", new Set(sysFonts).size === sysFonts.length);
+        }
+        {
+          state.settings.langFonts = [];
+          const mig = migrateSpThai([], { enabled: true, size: 77, family: "Leelawadee UI" });
+          check2(
+            "[97-12] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E01\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E22\u0E49\u0E32\u0E22\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E16\u0E27 (\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E09\u0E22 \u0E46)",
+            mig.moved === true && mig.rows[0].size === 77 && mig.rows[0].target === "screenplay",
+            JSON.stringify(mig.rows[0])
+          );
+        }
+        state.settings.langFonts = origLF97;
+        state.settings.spThaiFont = origThai97;
+        state.settings.spFontFamily = origSpF97;
         applySettings();
       }
       {
@@ -176978,25 +177652,25 @@ ${css}
               pageNumberLabel(1, spFormat(), 12) + "/" + pageNumberLabel(2, spFormat(), 12)
             );
             {
-              const keepFp = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
               check2(
-                "[88-4] \u2605 \u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 \u2192 \u0E40\u0E27\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2B\u0E19\u0E49\u0E32 1 \u0E08\u0E23\u0E34\u0E07 \u0E46",
-                pageNumberLabel(1, spFormat(), 1) === "",
-                pageNumberLabel(1, spFormat(), 1)
-              );
-              check2(
-                '[88-4] \u2605 \u2026\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32 12 \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49 "12." (\u0E01\u0E0E\u0E02\u0E2D\u0E07 .82 \u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A)',
-                pageNumberLabel(1, spFormat(), 12) === "12.",
-                pageNumberLabel(1, spFormat(), 12)
-              );
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-              check2(
-                '[88-4] \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E19\u0E49\u0E32 1 \u0E44\u0E14\u0E49\u0E40\u0E25\u0E02 "1."',
+                '[97-11] \u2605 \u0E2B\u0E19\u0E49\u0E32 1 \u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E40\u0E25\u0E02 "1." \u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E2D\u0E30\u0E44\u0E23',
                 pageNumberLabel(1, spFormat(), 1) === "1.",
                 pageNumberLabel(1, spFormat(), 1)
               );
-              state.settings.spPageNumbers = keepFp;
+              check2(
+                '[97-11] \u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E23\u0E34\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32 12 \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49 "12." \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21',
+                pageNumberLabel(1, spFormat(), 12) === "12.",
+                pageNumberLabel(1, spFormat(), 12)
+              );
+              check2(
+                "[97-11] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C firstPage \u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D",
+                !("firstPage" in PAGE_NUMBER_DEFAULTS),
+                JSON.stringify(PAGE_NUMBER_DEFAULTS)
+              );
+              check2(
+                '[97-11] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E34\u0E4A\u0E01 "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u0E41\u0E25\u0E49\u0E27\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A',
+                !document.querySelector("#st-pn-first") && !document.querySelector("#st-pr-pgfirst")
+              );
             }
             check2("[57a-2] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E31\u0E1A\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E25\u0E02\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E16\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E32\u0E27\u0E1E\u0E2D)", (() => {
               const brk = pageBreaks();
@@ -177164,7 +177838,8 @@ ${css}
             const n2 = applyProjectLangFonts();
             check2(
               "[57a-5] \u0E2A\u0E23\u0E49\u0E32\u0E07 @font-face \u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E40\u0E02\u0E49\u0E32 <head>",
-              n2 === 1 && !!document.getElementById("k-lang-fonts")
+              n2.total === 1 && n2.prose === 1 && !!document.getElementById("k-lang-fonts"),
+              JSON.stringify(n2)
             );
             const css = document.getElementById("k-lang-fonts").textContent;
             check2(
@@ -177176,13 +177851,13 @@ ${css}
             const edFont = document.documentElement.style.getPropertyValue("--ed-font");
             const spFont = document.documentElement.style.getPropertyValue("--sp-font");
             check2(
-              "[57a-5] \u0E27\u0E07\u0E28\u0E4C\u0E23\u0E27\u0E21\u0E16\u0E39\u0E01\u0E40\u0E2D\u0E32\u0E44\u0E1B\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 font stack \u0E17\u0E31\u0E49\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E30\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07",
-              edFont.startsWith('"' + LANG_FAMILY + '"') && spFont.includes('"' + LANG_FAMILY + '"'),
-              edFont + " | " + spFont
+              "[57a-5] \u0E27\u0E07\u0E28\u0E4C\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E16\u0E39\u0E01\u0E40\u0E2D\u0E32\u0E44\u0E1B\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 --ed-font",
+              edFont.startsWith('"' + LANG_FAMILY + '"'),
+              edFont
             );
             check2(
-              '[84-1] \u0E43\u0E19\u0E1A\u0E17 \u0E15\u0E31\u0E27\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E17\u0E22\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E32\u0E01\u0E48\u0E2D\u0E19 "\u0E27\u0E07\u0E28\u0E4C\u0E23\u0E27\u0E21\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32" \u0E40\u0E2A\u0E21\u0E2D',
-              spFont.trim().startsWith('"K2 SP Thai"') && spFont.indexOf("K2 SP Thai") < spFont.indexOf(LANG_FAMILY),
+              "[97-12] \u2605 \u0E27\u0E07\u0E28\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E16\u0E39\u0E01\u0E40\u0E2D\u0E32\u0E44\u0E1B\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 --sp-font (\u0E04\u0E19\u0E25\u0E30\u0E27\u0E07\u0E28\u0E4C\u0E01\u0E31\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22)",
+              spFont.trim().startsWith('"' + SP_FAMILY + '"') && !spFont.includes(LANG_FAMILY),
               spFont
             );
             check2("[57a-5] \u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E27\u0E49\u0E17\u0E49\u0E32\u0E22 stack", spFont.includes("Courier"), spFont);
@@ -177214,7 +177889,7 @@ ${css}
             const edBefore = document.documentElement.style.getPropertyValue("--ed-font");
             check2(
               "[a78] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E16\u0E39\u0E01\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07\u0E17\u0E31\u0E49\u0E07\u0E1A\u0E17\u0E41\u0E25\u0E30\u0E19\u0E34\u0E22\u0E32\u0E22",
-              spBefore.includes(LANG_FAMILY) && edBefore.includes(LANG_FAMILY),
+              spBefore.includes(SP_FAMILY) && edBefore.includes(LANG_FAMILY),
               spBefore + " | " + edBefore
             );
             document.querySelectorAll(".k-overlay").forEach((x) => x.remove());
@@ -177226,7 +177901,7 @@ ${css}
             await new Promise((r) => setTimeout(r, 250));
             check2(
               "[a78] \u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
-              document.documentElement.style.getPropertyValue("--sp-font").includes(LANG_FAMILY),
+              document.documentElement.style.getPropertyValue("--sp-font").includes(SP_FAMILY),
               document.documentElement.style.getPropertyValue("--sp-font")
             );
             check2(
@@ -177472,7 +178147,11 @@ ${css}
               isEditView("layout") && !spT58.pane.querySelector(":scope > .sp-pageview")
             );
             const pmCS = getComputedStyle(spT58.pane.querySelector(".ProseMirror"));
-            check2("[58] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E02\u0E32\u0E27\u0E08\u0E23\u0E34\u0E07", pmCS.backgroundColor === "rgb(255, 255, 255)", pmCS.backgroundColor);
+            check2(
+              "[58] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21",
+              pmCS.backgroundColor === "rgb(245, 241, 230)",
+              pmCS.backgroundColor
+            );
             check2("[58] \u0E21\u0E35\u0E40\u0E07\u0E32\u0E43\u0E15\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", pmCS.boxShadow !== "none");
             check2(
               "[58] \u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 (\u0E0B\u0E49\u0E32\u0E22 1.5 \u0E19\u0E34\u0E49\u0E27 \u0E1A\u0E19 1 \u0E19\u0E34\u0E49\u0E27)",
@@ -177534,6 +178213,70 @@ ${css}
               "[58] \u0E01\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E04\u0E49\u0E32\u0E07",
               ALL_VIEW_CLASSES.every((c) => !spT58.pane.classList.contains(c))
             );
+            {
+              const keepSp98 = spT58.sp.getMarkdown();
+              spT58.sp.setMarkdown([
+                ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E1B\u0E23\u0E30\u0E0A\u0E38\u0E21 - \u0E40\u0E0A\u0E49\u0E32",
+                "!\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E15\u0E23\u0E35\u0E22\u0E21",
+                "!\u0E01\u0E25\u0E49\u0E2D\u0E07",
+                "!\u0E44\u0E1F"
+              ].join(String.fromCharCode(10)));
+              await new Promise((r) => setTimeout(r, 400));
+              const spTexts = () => {
+                const out2 = [];
+                spT58.sp.view.state.doc.forEach((n2) => out2.push(n2.textContent || ""));
+                return out2;
+              };
+              const goto98 = (needle) => {
+                let pos2 = null;
+                spT58.sp.view.state.doc.forEach((n2, off3) => {
+                  if (pos2 === null && (n2.textContent || "").includes(needle)) pos2 = off3 + 1;
+                });
+                if (pos2 !== null) spT58.sp.gotoPos(pos2);
+                return pos2;
+              };
+              goto98("\u0E01\u0E25\u0E49\u0E2D\u0E07");
+              await new Promise((r) => setTimeout(r, 120));
+              check2(
+                "[98-4] \u2605\u2605 \u0E01\u0E14\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E43\u0E19\u0E1A\u0E17\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07",
+                spT58.sp.cmd("ul") === true && spTexts().some((x) => x.startsWith("\u2022 \u0E01\u0E25\u0E49\u0E2D\u0E07")),
+                spTexts().join(" | ")
+              );
+              refreshToolbar();
+              check2(
+                "[98-4] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E15\u0E34\u0E14\u0E44\u0E1F\u0E15\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19\u0E1A\u0E17",
+                $("#tb-ul").classList.contains("on")
+              );
+              check2(
+                "[98-4] \u0E41\u0E15\u0E30\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48 (\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A)",
+                spTexts().filter((x) => x.startsWith("\u2022 ")).length === 1,
+                spTexts().join(" | ")
+              );
+              check2(
+                "[98-4] \u2605\u2605 \u0E01\u0E14\u0E0B\u0E49\u0E33 = \u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01 (\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22)",
+                spT58.sp.cmd("ul") === true && !spTexts().some((x) => x.startsWith("\u2022 ")),
+                spTexts().join(" | ")
+              );
+              goto98("\u0E44\u0E1F");
+              await new Promise((r) => setTimeout(r, 120));
+              check2(
+                "[98-4] \u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E01\u0E47\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49",
+                spT58.sp.cmd("ol") === true && spTexts().some((x) => /^1\. ไฟ/.test(x)),
+                spTexts().join(" | ")
+              );
+              check2(
+                "[98-4] \u2605 \u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 \u2014 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                /1\. ไฟ/.test(spT58.sp.getMarkdown()),
+                spT58.sp.getMarkdown().split(String.fromCharCode(10)).pop()
+              );
+              check2(
+                "[98-4] \u0E2A\u0E25\u0E31\u0E1A\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22 \u2194 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E34\u0E21\u0E44\u0E14\u0E49 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32",
+                spT58.sp.cmd("ul") === true && spTexts().some((x) => x === "\u2022 \u0E44\u0E1F"),
+                spTexts().join(" | ")
+              );
+              spT58.sp.setMarkdown(keepSp98);
+              await new Promise((r) => setTimeout(r, 300));
+            }
           }
           {
             check2("[55] \u0E23\u0E30\u0E1A\u0E1A\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", spContinuedOn());
@@ -177620,10 +178363,13 @@ ${css}
                 );
                 const actEl = spT58.pane.querySelector(".sp-action");
                 if (actEl) {
+                  const onPaper = spT58.pane.classList.contains("sp-view-layout");
+                  const mgL = parseFloat(getComputedStyle(spT58.pane).getPropertyValue("--mg-left")) * 96 || 144;
+                  const want = actEl.getBoundingClientRect().left - (onPaper ? mgL : 0);
                   check2(
-                    "[84-2] \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E31\u0E01\u0E23\u0E30\u0E22\u0E30\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E15\u0E23\u0E07\u0E02\u0E2D\u0E1A\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C)",
-                    Math.abs(brkIn.getBoundingClientRect().left - actEl.getBoundingClientRect().left) < 4,
-                    `${brkIn.getBoundingClientRect().left} vs ${actEl.getBoundingClientRect().left}`
+                    "[84-2] \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E31\u0E01\u0E23\u0E30\u0E22\u0E30\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E15\u0E23\u0E07\u0E02\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32)",
+                    Math.abs(brkIn.getBoundingClientRect().left - want) < 4,
+                    `${brkIn.getBoundingClientRect().left} vs ${want} (paper=${onPaper})`
                   );
                 }
                 check2(
@@ -178465,8 +179211,8 @@ ${css}
         await new Promise((r) => setTimeout(r, 60));
         const rootVar2 = (n2) => getComputedStyle(document.documentElement).getPropertyValue(n2).trim();
         check2(
-          "#2 \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E0A\u0E35\u0E49\u0E44\u0E1B Courier Prime \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01 (\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E17\u0E22)",
-          /^\s*("K2 SP Thai",\s*)?"Courier Prime"/.test(rootVar2("--sp-font")),
+          "#2 \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E0A\u0E35\u0E49\u0E44\u0E1B Courier Prime \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01 (\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E27\u0E07\u0E28\u0E4C\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17)",
+          /^\s*("K2 SP",\s*)?"Courier Prime"/.test(rootVar2("--sp-font")),
           rootVar2("--sp-font")
         );
         check2(
@@ -178792,34 +179538,40 @@ ${css}
         const S22 = state.settings;
         const pmR = T3.pane.querySelector(":scope > .workspace > .ProseMirror");
         check2("[58r] \u0E40\u0E08\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22", !!pmR);
-        const paperWas = S22.paperMode !== false;
-        if (!paperWas) {
-          togglePaper(true);
-          await new Promise((r) => setTimeout(r, 120));
-        }
+        setSpView("normal", true);
+        await new Promise((r) => setTimeout(r, 120));
         const csOn = getComputedStyle(pmR);
         const layOn = { pl: csOn.paddingLeft, pt: csOn.paddingTop, pr: csOn.paddingRight, w: csOn.width };
         const bgOn = csOn.backgroundColor;
-        togglePaper(false);
-        await new Promise((r) => setTimeout(r, 150));
+        setSpView("layout", true);
+        await new Promise((r) => setTimeout(r, 200));
         const csOff = getComputedStyle(pmR);
         check2(
-          "[4] \u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E40\u0E25\u0E22",
-          csOff.paddingLeft === layOn.pl && csOff.paddingTop === layOn.pt && csOff.paddingRight === layOn.pr && csOff.width === layOn.w,
-          `${layOn.pl}/${layOn.pt} \u2192 ${csOff.paddingLeft}/${csOff.paddingTop}`
+          "[99-1] \u2605 \u0E40\u0E02\u0E49\u0E32\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 \u2192 pane \u0E44\u0E14\u0E49\u0E04\u0E25\u0E32\u0E2A\u0E02\u0E2D\u0E07\u0E21\u0E31\u0E19",
+          T3.pane.classList.contains("sp-view-layout"),
+          T3.pane.className
         );
         check2(
-          "[4] \u0E41\u0E15\u0E48\u0E2A\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E21\u0E32\u0E22)",
-          csOff.backgroundColor !== bgOn,
-          `${bgOn} \u2192 ${csOff.backgroundColor}`
+          "[99-1] \u2605\u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E41\u0E22\u0E01) \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19",
+          (() => {
+            setSpView("normal", true);
+            return !T3.pane.classList.contains("sp-view-layout") && [...T3.pane.querySelectorAll(".ed-page-break")].every((e) => getComputedStyle(e).display !== "none");
+          })()
         );
+        await new Promise((r) => setTimeout(r, 200));
+        const csBack = getComputedStyle(pmR);
+        check2(
+          "[4] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A/\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30",
+          csBack.paddingLeft === layOn.pl && csBack.paddingTop === layOn.pt && csBack.paddingRight === layOn.pr && csBack.width === layOn.w,
+          `${layOn.pl}/${layOn.w} \u2192 ${csBack.paddingLeft}/${csBack.width}`
+        );
+        void csOff;
+        void bgOn;
         check2(
           "[4] \u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E22\u0E31\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A --mg-left (1.5in = 144px)",
-          Math.abs(parseFloat(csOff.paddingLeft) - 144) < 2,
-          csOff.paddingLeft
+          Math.abs(parseFloat(csBack.paddingLeft) - 144) < 2,
+          csBack.paddingLeft
         );
-        togglePaper(true);
-        await new Promise((r) => setTimeout(r, 120));
         const lum = (c) => {
           const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(c || "");
           return m ? 0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3] : 0;
@@ -178838,20 +179590,6 @@ ${css}
           lum(csRead.backgroundColor) - lum(csRead.color) > 60,
           `bg=${csRead.backgroundColor} fg=${csRead.color}`
         );
-        togglePaper(false);
-        await new Promise((r) => setTimeout(r, 200));
-        const csRead2 = getComputedStyle(pmRead);
-        check2(
-          "[3] \u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E41\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E2B\u0E21\u0E36\u0E01\u0E2A\u0E27\u0E48\u0E32\u0E07\u0E1A\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14",
-          lum(csRead2.color) - lum(csRead2.backgroundColor) > 60,
-          `bg=${csRead2.backgroundColor} fg=${csRead2.color}`
-        );
-        check2(
-          "[3] \u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E41\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E22\u0E31\u0E07\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A",
-          parseFloat(csRead2.paddingLeft) >= 40,
-          csRead2.paddingLeft
-        );
-        togglePaper(true);
         toggleReading(false);
         await new Promise((r) => setTimeout(r, 200));
         {
@@ -178904,8 +179642,9 @@ ${css}
           {
             const mz85b = measureProseLayout(v85, { paper: spf85.paper, margins: spf85.margins });
             let asked = 0;
+            const proto85 = Object.getPrototypeOf(mz85b.blocks[0]);
+            const real = Object.getOwnPropertyDescriptor(proto85, "lineOffsets").get;
             for (const b of mz85b.blocks) {
-              const real = Object.getOwnPropertyDescriptor(b, "lineOffsets").get;
               Object.defineProperty(b, "lineOffsets", {
                 configurable: true,
                 get() {
@@ -179568,11 +180307,13 @@ ${css}
             );
             const nPg = Math.max(1, Math.round(+T3.pane.style.getPropertyValue("--pg-count") || 1));
             const bodyH = (sfg2.paper.height - sfg2.margins.top - sfg2.margins.bottom) * 96;
-            const wantMin = (sfg2.margins.top + sfg2.margins.bottom) * 96 + nPg * bodyH;
+            const onPaper88 = T3.pane.classList.contains("sp-view-layout");
+            const gapPx88 = parseFloat(getComputedStyle(T3.pane).getPropertyValue("--sp-page-gap")) || 28;
+            const wantMin = onPaper88 ? nPg * sfg2.paper.height * 96 + (nPg - 1) * gapPx88 : (sfg2.margins.top + sfg2.margins.bottom) * 96 + nPg * bodyH;
             check2(
               "[88-5] \u2605 \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33\u0E02\u0E2D\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E22\u0E37\u0E14\u0E2B\u0E14\u0E15\u0E32\u0E21\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32)",
               Math.abs(parseFloat(csPm.minHeight) - wantMin) < 3,
-              csPm.minHeight + " \u0E04\u0E27\u0E23\u0E44\u0E14\u0E49 " + wantMin.toFixed(1) + "px (" + nPg + " \u0E2B\u0E19\u0E49\u0E32)"
+              csPm.minHeight + " \u0E04\u0E27\u0E23\u0E44\u0E14\u0E49 " + wantMin.toFixed(1) + "px (" + nPg + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29=" + onPaper88 + ")"
             );
           }
           {
@@ -179790,12 +180531,17 @@ ${css}
             await w93(800);
             repaginateFast(T3);
             await w93(500);
-            const brTops = [...pm93.querySelectorAll(".ed-page-break")].map((e) => e.getBoundingClientRect().top);
-            const brGaps = [];
-            for (let i5 = 1; i5 < brTops.length; i5++) brGaps.push(+(brTops[i5] - brTops[i5 - 1]).toFixed(1));
+            const brEls93 = [...pm93.querySelectorAll(".ed-page-break")];
+            const padOf93 = (e) => parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
             const firstBlk93 = [...pm93.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
-            if (firstBlk93 && brTops.length)
-              brGaps.unshift(+(brTops[0] - firstBlk93.getBoundingClientRect().top).toFixed(1));
+            const brGaps = [];
+            let prevBot93 = firstBlk93 ? firstBlk93.getBoundingClientRect().top : 0;
+            for (const e of brEls93) {
+              const r = e.getBoundingClientRect();
+              brGaps.push(+(r.top - prevBot93 + padOf93(e)).toFixed(1));
+              prevBot93 = r.bottom;
+            }
+            const brTops = brEls93.map((e) => e.getBoundingClientRect().top);
             const spread = brGaps.length ? Math.max(...brGaps) - Math.min(...brGaps) : 0;
             note("[93-5] \u0E1B\u0E01\u0E15\u0E34: " + brTops.length + " \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 \xB7 \u0E23\u0E30\u0E22\u0E30 = " + brGaps.slice(0, 10).join(" , ") + " \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + spread.toFixed(1) + "px");
             check2(
@@ -179803,6 +180549,16 @@ ${css}
               brGaps.length >= 3 && spread <= 2,
               brGaps.slice(0, 8).join(" , ")
             );
+            {
+              const f935 = spFormat();
+              const want935 = (f935.paper.height - f935.margins.top - f935.margins.bottom) * 96;
+              const off935 = brGaps.length ? Math.max(...brGaps.map((g) => Math.abs(g - want935))) : 999;
+              check2(
+                "[97-10] \u2605\u2605 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07",
+                brGaps.length >= 3 && off935 <= 2,
+                "\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E14\u0E49 " + Math.round(want935) + " \xB7 \u0E44\u0E14\u0E49 " + brGaps.slice(0, 6).join(" , ")
+              );
+            }
             setSpView("side");
             await w93(900);
             const phs = [...pane93.querySelectorAll(".sp-pageview .ed-page")].map((e) => +e.getBoundingClientRect().height.toFixed(1));
@@ -179812,12 +180568,877 @@ ${css}
             setSpView("layout");
             await w93(900);
             const lh = [...pm93.querySelectorAll(".ed-page-break")].map((e) => +e.getBoundingClientRect().height.toFixed(1));
-            const lspread = lh.length ? Math.max(...lh) - Math.min(...lh) : 0;
-            note("[93-5] \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19 " + lh.length + " \u0E2D\u0E31\u0E19 \xB7 \u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + lspread.toFixed(1) + "px");
-            check2("[93-5] \u2605 \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E43\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E2D\u0E31\u0E19", lspread <= 0.6, lh.slice(0, 8).join(","));
+            note("[93-5] \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19 " + lh.length + " \u0E2D\u0E31\u0E19 = " + lh.slice(0, 6).join(","));
+            check2(
+              "[93-5] \u2605 \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E2A\u0E39\u0E07\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22\u0E40\u0E17\u0E48\u0E32\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07+\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07+\u0E02\u0E2D\u0E1A\u0E1A\u0E19",
+              lh.length >= 1 && lh.every((h) => h >= 96 + 28 + 96 - 2),
+              lh.slice(0, 8).join(",")
+            );
             setSpView(keepView93 === "draft" ? "normal" : keepView93, true);
             T3.editor.setMarkdown(keep93);
             await w93(400);
+          }
+          {
+            const w97 = (ms) => new Promise((r) => setTimeout(r, ms));
+            const until97 = async (fn, ms = 3e3) => {
+              const t0 = Date.now();
+              while (Date.now() - t0 < ms) {
+                if (fn()) return true;
+                await w97(60);
+              }
+              return false;
+            };
+            const settle97 = async () => {
+              bumpProseLayout();
+              repaginateFast(T3);
+              await until97(() => {
+                const size = T3.editor.view.state.doc.content.size;
+                const list = prosePageBreaks();
+                return list.length > 0 && list.every((b) => b.pos < size) && pm97.querySelectorAll(".ed-page-break").length === list.length;
+              });
+              await w97(250);
+            };
+            const keep97 = T3.editor.getMarkdown();
+            const keepView97 = currentSpView();
+            const pm97 = T3.editor.view.dom;
+            const pane97 = T3.pane;
+            {
+              setSpView("normal", true);
+              const many = [];
+              for (let i5 = 1; i5 <= 90; i5++) many.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D ".repeat(4));
+              T3.editor.setMarkdown(many.join(String.fromCharCode(10, 10)));
+              await w97(700);
+              const caretY = () => {
+                try {
+                  const c = T3.editor.view.coordsAtPos(T3.editor.view.state.selection.head);
+                  return c.top - pane97.getBoundingClientRect().top;
+                } catch {
+                  return NaN;
+                }
+              };
+              const inView = () => {
+                const y = caretY();
+                return y > -2 && y < pane97.clientHeight + 2;
+              };
+              T3.editor.gotoPos(1);
+              await w97(120);
+              pane97.scrollTop = pane97.scrollHeight;
+              await w97(120);
+              check2("[97-1] \u0E08\u0E31\u0E14\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49: \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E2D\u0E08\u0E23\u0E34\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21\u0E27\u0E31\u0E14", !inView(), caretY());
+              T3.editor.cmd("bold");
+              await w97(160);
+              check2(
+                "[97-1] \u2605 \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E2D \u2192 \u0E08\u0E2D\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E2B\u0E32\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C",
+                inView(),
+                "caretY=" + caretY() + " h=" + pane97.clientHeight
+              );
+              T3.editor.cmd("bold");
+              await w97(120);
+              const topBefore = pane97.scrollTop;
+              T3.editor.cmd("bold");
+              T3.editor.cmd("bold");
+              await w97(160);
+              check2(
+                "[97-1] \u2605 \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D \u2192 \u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E40\u0E25\u0E22",
+                Math.abs(pane97.scrollTop - topBefore) < 1.5,
+                topBefore + " \u2192 " + pane97.scrollTop
+              );
+              const endPos = T3.editor.view.state.doc.content.size - 1;
+              T3.editor.gotoPos(endPos);
+              await w97(120);
+              T3.editor.view.dispatch(T3.editor.view.state.tr.insertText("\u0E04\u0E33\u0E17\u0E35\u0E48\u0E08\u0E30\u0E22\u0E49\u0E2D\u0E19"));
+              await w97(200);
+              pane97.scrollTop = 0;
+              await w97(120);
+              T3.editor.cmd("undo");
+              await w97(220);
+              check2(
+                "[97-1] \u2605 undo \u0E41\u0E25\u0E49\u0E27\u0E08\u0E2D\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E22\u0E49\u0E2D\u0E19 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
+                pane97.scrollTop > 40 && inView(),
+                "scrollTop=" + Math.round(pane97.scrollTop) + " caretY=" + Math.round(caretY())
+              );
+            }
+            {
+              const items = [];
+              for (let i5 = 1; i5 <= 70; i5++) items.push(i5 + ". \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 " + i5 + " \u0E02\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32");
+              T3.editor.setMarkdown("\u0E19\u0E33\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2A\u0E31\u0E49\u0E19 \u0E46 \u0E01\u0E48\u0E2D\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23" + String.fromCharCode(10, 10) + items.join(String.fromCharCode(10)));
+              await w97(500);
+              await settle97();
+              const lis = pm97.querySelectorAll("ol > li");
+              check2("[97-2] \u0E08\u0E31\u0E14\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49: \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E43\u0E2B\u0E49\u0E04\u0E23\u0E48\u0E2D\u0E21\u0E2B\u0E19\u0E49\u0E32", lis.length >= 60, lis.length);
+              const brs = [...pm97.querySelectorAll(".ed-page-break")];
+              check2("[97-2] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E22\u0E32\u0E27\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07", brs.length >= 1, brs.length);
+              check2(
+                "[97-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E16\u0E39\u0E01\u0E41\u0E17\u0E23\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E49\u0E32\u0E07\u0E43\u0E19 <li>",
+                brs.every((b) => (b.parentElement.tagName || "").toLowerCase() !== "li"),
+                brs.map((b) => b.parentElement.tagName).join(",")
+              );
+              check2(
+                "[97-2] \u2605 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E23\u0E30\u0E14\u0E31\u0E1A <ol>/<ul> (\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E02\u0E49\u0E2D)",
+                brs.filter((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || "")).length >= 1,
+                brs.map((b) => b.parentElement.tagName).join(",")
+              );
+              {
+                const b0 = brs.find((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || ""));
+                const cs = getComputedStyle(pm97);
+                const contentLeft = pm97.getBoundingClientRect().left + parseFloat(cs.paddingLeft);
+                const onPaper97 = pane97.classList.contains("sp-view-layout");
+                const want97 = contentLeft - (onPaper97 ? parseFloat(cs.paddingLeft) : 0);
+                const gap = b0 ? b0.getBoundingClientRect().left - want97 : 999;
+                check2(
+                  "[97-2] \u2605 \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E01\u0E32\u0E07\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32 (\u0E44\u0E21\u0E48\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)",
+                  Math.abs(gap) < 3,
+                  gap.toFixed(1) + "px (\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29=" + onPaper97 + ")"
+                );
+              }
+              try {
+                const b0s = brs.find((b) => /^(ol|ul)$/i.test(b.parentElement.tagName || ""));
+                if (b0s) b0s.scrollIntoView({ block: "center" });
+                await w97(200);
+                await kapi.testShot("/tmp/k2_list_pagebreak.png");
+              } catch {
+              }
+              {
+                const bad = [...pm97.querySelectorAll("ol > li, ul > li")].filter((li) => {
+                  const pEl2 = li.querySelector(":scope > p");
+                  if (!pEl2) return false;
+                  return pEl2.getBoundingClientRect().top - li.getBoundingClientRect().top > 6;
+                });
+                check2(
+                  "[97-2] \u2605\u2605 \u0E17\u0E38\u0E01\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23: \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E25\u0E02\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 (\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E20\u0E32\u0E1E\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E48\u0E07\u0E21\u0E32)",
+                  bad.length === 0,
+                  bad.length + " \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E48\u0E19\u0E25\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E2B\u0E21\u0E48"
+                );
+              }
+              {
+                const mz97 = measureProseLayout(
+                  T3.editor.view,
+                  { paper: spFormat().paper, margins: spFormat().margins }
+                );
+                check2(
+                  "[97-2] \u2605\u2605 \u0E15\u0E31\u0E27\u0E27\u0E31\u0E14\u0E41\u0E15\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D \u0E46 (\u0E40\u0E14\u0E34\u0E21 <ul> \u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14 = \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27)",
+                  !!mz97 && mz97.blocks.length >= lis.length,
+                  (mz97 ? mz97.blocks.length : -1) + " \u0E1A\u0E25\u0E47\u0E2D\u0E01 vs " + lis.length + " \u0E02\u0E49\u0E2D"
+                );
+                check2(
+                  "[97-2] \u0E41\u0E15\u0E48\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E15\u0E31\u0E14\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E02\u0E49\u0E2D\u0E44\u0E14\u0E49)",
+                  !!mz97 && mz97.blocks.filter((b) => (b.el.tagName || "").toLowerCase() === "li").length >= lis.length - 1
+                );
+              }
+            }
+            {
+              const spf97 = spFormat();
+              const contentH = (spf97.paper.height - spf97.margins.top - spf97.margins.bottom) * 96;
+              const nums = [];
+              for (let i5 = 1; i5 <= 120; i5++) nums.push(String(i5));
+              T3.editor.setMarkdown(nums.join(String.fromCharCode(10, 10)));
+              const gapsOf = () => {
+                const z = zoomFactorOf(pm97) || 1;
+                const first = [...pm97.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
+                let prevBot = first ? first.getBoundingClientRect().top : 0;
+                const out2 = [];
+                for (const e of pm97.querySelectorAll(".ed-page-break")) {
+                  const r = e.getBoundingClientRect();
+                  const pad3 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
+                  out2.push(+((r.top - prevBot) / z + pad3).toFixed(1));
+                  prevBot = r.bottom;
+                }
+                return out2;
+              };
+              for (const paper of [false, true]) {
+                setSpView(paper ? "layout" : "normal", true);
+                await w97(300);
+                await settle97();
+                await until97(() => pm97.querySelectorAll(".ed-page-break").length >= 3);
+                await w97(700);
+                const g = gapsOf();
+                const worst = g.length ? Math.max(...g.map((x) => Math.abs(x - contentH))) : 999;
+                const lbl = paper ? "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32" : "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34";
+                note("[97-10] " + lbl + ": " + g.length + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + worst.toFixed(1) + "px");
+                check2(
+                  "[97-10] \u2605\u2605 " + lbl + ": \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1B\u0E4A\u0E30",
+                  g.length >= 3 && worst <= 2,
+                  "\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E14\u0E49 " + Math.round(contentH) + " \xB7 \u0E44\u0E14\u0E49 " + g.slice(0, 8).join(" , ")
+                );
+              }
+              setSpView("normal", true);
+              await w97(250);
+            }
+            {
+              T3.editor.view.focus();
+              T3.editor.gotoPos(Math.round(T3.editor.view.state.doc.content.size * 0.6));
+              await w97(250);
+              const yOf = () => {
+                const c = T3.editor.view.coordsAtPos(T3.editor.view.state.selection.head);
+                return c.top - pane97.getBoundingClientRect().top;
+              };
+              const y0 = yOf();
+              bumpProseLayout();
+              repaginateFast(T3);
+              await w97(500);
+              check2(
+                "[97-9] \u2605\u2605 \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21\u0E1A\u0E19\u0E08\u0E2D",
+                Math.abs(yOf() - y0) < 4,
+                Math.round(y0) + " \u2192 " + Math.round(yOf())
+              );
+            }
+            {
+              setSpView("normal", true);
+              T3.editor.setMarkdown("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C");
+              await w97(300);
+              T3.editor.gotoPos(3);
+              const nodeNames = () => T3.editor.view.state.doc.content.content.map((n2) => n2.type.name);
+              for (const [cmdName, nodeName, btn2] of [
+                ["ul", "bullet_list", "#tb-ul"],
+                ["ol", "ordered_list", "#tb-ol"],
+                ["quote", "blockquote", "#tb-quote"]
+              ]) {
+                T3.editor.cmd(cmdName);
+                await w97(120);
+                refreshToolbar();
+                check2(
+                  "[97-3] \u0E40\u0E1B\u0E34\u0E14 " + cmdName + " \u2192 \u0E44\u0E14\u0E49 " + nodeName,
+                  nodeNames().includes(nodeName),
+                  nodeNames().join(",")
+                );
+                check2(
+                  "[97-3] \u2605 \u0E1B\u0E38\u0E48\u0E21 " + btn2 + " \u0E15\u0E34\u0E14\u0E44\u0E1F\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30",
+                  $(btn2).classList.contains("on"),
+                  $(btn2).className
+                );
+                T3.editor.cmd(cmdName);
+                await w97(120);
+                refreshToolbar();
+                check2(
+                  "[97-3] \u2605\u2605 \u0E01\u0E14 " + cmdName + " \u0E0B\u0E49\u0E33 = \u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01 (\u0E40\u0E14\u0E34\u0E21\u0E15\u0E49\u0E2D\u0E07\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27)",
+                  !nodeNames().includes(nodeName),
+                  nodeNames().join(",")
+                );
+                check2("[97-3] \u0E1B\u0E38\u0E48\u0E21 " + btn2 + " \u0E14\u0E31\u0E1A\u0E15\u0E32\u0E21", !$(btn2).classList.contains("on"));
+              }
+              T3.editor.cmd("ul");
+              await w97(100);
+              T3.editor.cmd("ol");
+              await w97(100);
+              check2(
+                "[97-5] \u2605 \u0E2A\u0E25\u0E31\u0E1A ul \u2192 ol \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E19\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2B\u0E48\u0E2D\u0E0B\u0E49\u0E2D\u0E19",
+                nodeNames().join(",") === "ordered_list",
+                nodeNames().join(",")
+              );
+              T3.editor.cmd("ol");
+              await w97(100);
+              check2("[97-5] \u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E19\u0E2B\u0E21\u0E14\u0E44\u0E14\u0E49", !nodeNames().some((n2) => /_list$/.test(n2)));
+            }
+            {
+              T3.editor.setMarkdown("H~2~O \u0E41\u0E25\u0E30 x^2^");
+              await w97(250);
+              const has2 = (mk2) => {
+                let found2 = false;
+                T3.editor.view.state.doc.descendants((n2) => {
+                  if (n2.isText && (n2.marks || []).some((m) => m.type.name === mk2)) found2 = true;
+                });
+                return found2;
+              };
+              check2("[97-4] \u2605 \u0E2D\u0E48\u0E32\u0E19 ^\u0E22\u0E01^ / ~\u0E2B\u0E49\u0E2D\u0E22~ \u0E08\u0E32\u0E01 .md \u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 mark \u0E08\u0E23\u0E34\u0E07", has2("sup") && has2("sub"));
+              check2(
+                "[97-4] \u2605 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 .md \u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                T3.editor.getMarkdown() === "H~2~O \u0E41\u0E25\u0E30 x^2^",
+                T3.editor.getMarkdown()
+              );
+              check2("[97-4] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E15\u0E31\u0E27\u0E22\u0E01/\u0E15\u0E31\u0E27\u0E2B\u0E49\u0E2D\u0E22\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D", !!$("#tb-sup") && !!$("#tb-sub"));
+              check2(
+                "[97-4] \u0E15\u0E31\u0E27\u0E22\u0E01/\u0E15\u0E31\u0E27\u0E2B\u0E49\u0E2D\u0E22\u0E15\u0E31\u0E49\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E31\u0E14\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49 (\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07 SHORTCUTS)",
+                SHORTCUTS.some((x) => shortcutId(x) === "fmt:sup") && SHORTCUTS.some((x) => shortcutId(x) === "fmt:sub")
+              );
+              T3.editor.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E22\u0E01" + String.fromCharCode(10, 10) + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E21\u0E35\u0E15\u0E31\u0E27\u0E22\u0E01 x^2^ \u0E1B\u0E19\u0E2D\u0E22\u0E39\u0E48");
+              await w97(300);
+              const ps97 = [...pm97.querySelectorAll("p")];
+              const h12 = ps97[0] && ps97[0].getBoundingClientRect().height;
+              const h2 = ps97[1] && ps97[1].getBoundingClientRect().height;
+              check2(
+                "[97-4] \u2605 \u0E15\u0E31\u0E27\u0E22\u0E01\u0E44\u0E21\u0E48\u0E14\u0E31\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E2B\u0E49\u0E2A\u0E39\u0E07\u0E02\u0E36\u0E49\u0E19 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19)",
+                Math.abs(h12 - h2) < 1,
+                h12 + " vs " + h2
+              );
+              T3.editor.setMarkdown("abc");
+              await w97(150);
+              T3.editor.view.dispatch(T3.editor.view.state.tr.setSelection(
+                TextSelection.create(T3.editor.view.state.doc, 1, 4)
+              ));
+              T3.editor.cmd("sup");
+              await w97(120);
+              check2("[97-4] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sup \u0E43\u0E2A\u0E48 mark \u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", has2("sup"));
+              T3.editor.cmd("sub");
+              await w97(120);
+              check2(
+                "[97-4] \u2605 sup \u0E01\u0E31\u0E1A sub \u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07\u0E2D\u0E2D\u0E01 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
+                has2("sub") && !has2("sup")
+              );
+            }
+            {
+              T3.editor.setMarkdown("\u0E01\u0E48\u0E2D\u0E19\u0E23\u0E39\u0E1B");
+              await w97(200);
+              T3.editor.gotoPos(T3.editor.view.state.doc.content.size);
+              T3.editor.insertImage("../Images/t.png", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A", "![\u0E17\u0E14\u0E2A\u0E2D\u0E1A](../Images/t.png)");
+              await w97(250);
+              const figs = () => T3.editor.view.state.doc.content.content.filter((n2) => n2.type.name === "figure").length;
+              check2("[97-5] \u0E41\u0E17\u0E23\u0E01\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49", figs() === 1, figs());
+              check2(
+                "[97-5] \u2605 \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E41\u0E15\u0E30\u0E23\u0E39\u0E1B \u2192 activeMarks \u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E21\u0E35\u0E23\u0E39\u0E1B",
+                T3.editor.activeMarks().image === true,
+                JSON.stringify(T3.editor.activeMarks().image)
+              );
+              refreshToolbar();
+              check2("[97-5] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E41\u0E17\u0E23\u0E01\u0E23\u0E39\u0E1B\u0E15\u0E34\u0E14\u0E44\u0E1F\u0E15\u0E2D\u0E19\u0E41\u0E15\u0E30\u0E23\u0E39\u0E1B\u0E2D\u0E22\u0E39\u0E48", $("#tb-img").classList.contains("on"));
+              check2(
+                "[97-5] \u2605\u2605 \u0E2A\u0E31\u0E48\u0E07\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49 (\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E01\u0E14\u0E0B\u0E49\u0E33 = \u0E25\u0E1A\u0E23\u0E39\u0E1B)",
+                T3.editor.removeFigure() === true && figs() === 0,
+                figs()
+              );
+              check2(
+                "[97-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B\u0E15\u0E23\u0E07\u0E19\u0E31\u0E49\u0E19 = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23 (\u0E1C\u0E39\u0E49\u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E1B\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E41\u0E17\u0E19)",
+                T3.editor.removeFigure() === false
+              );
+            }
+            {
+              const png97 = new File([new Uint8Array([137, 80, 78, 71])], "clip.png", { type: "image/png" });
+              const fakeDt = {
+                files: [],
+                items: [
+                  { kind: "file", type: "image/png", getAsFile: () => png97 },
+                  { kind: "string", type: "text/html", getAsFile: () => null }
+                ]
+              };
+              const got = clipboardImages(fakeDt);
+              check2(
+                "[97-7] \u2605\u2605 \u0E2D\u0E48\u0E32\u0E19\u0E23\u0E39\u0E1B\u0E08\u0E32\u0E01 clipboardData.items \u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E14\u0E39\u0E41\u0E15\u0E48 .files \u2192 \u0E44\u0E14\u0E49\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E40\u0E2A\u0E21\u0E2D)",
+                got.length === 1 && got[0].type === "image/png",
+                got.length
+              );
+              check2(
+                "[97-7] \u0E44\u0E21\u0E48\u0E2B\u0E22\u0E34\u0E1A\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E44\u0E1F\u0E25\u0E4C\u0E23\u0E39\u0E1B\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22",
+                clipboardImages({ files: [], items: [{ kind: "string", type: "text/plain" }] }).length === 0
+              );
+              check2(
+                "[97-7] \u0E22\u0E31\u0E07\u0E23\u0E31\u0E1A\u0E17\u0E32\u0E07 .files \u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21 (\u0E25\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E32\u0E01 Explorer)",
+                clipboardImages({ files: [png97], items: [] }).length === 1
+              );
+              check2("[97-7] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E25\u0E34\u0E1B\u0E1A\u0E2D\u0E23\u0E4C\u0E14 = \u0E44\u0E21\u0E48\u0E1E\u0E31\u0E07", clipboardImages(null).length === 0);
+            }
+            {
+              document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+              T3.editor.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07" + String.fromCharCode(10, 10) + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07");
+              await w97(250);
+              showSourceView();
+              await w97(200);
+              const dlg97b = [...document.querySelectorAll(".k-dialog")].pop();
+              const ta97 = dlg97b && dlg97b.querySelector(".k-src-view");
+              check2(
+                "[97-6] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07 Markdown \u0E14\u0E34\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21 readOnly \u0E15\u0E32\u0E22\u0E15\u0E31\u0E27)",
+                !!ta97 && ta97.readOnly === false
+              );
+              const gut97 = dlg97b && dlg97b.querySelector(".k-src-gutter");
+              check2(
+                "[97-6] \u2605 \u0E21\u0E35\u0E23\u0E32\u0E07\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u0E41\u0E25\u0E30\u0E08\u0E33\u0E19\u0E27\u0E19\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07",
+                !!gut97 && gut97.childElementCount === ta97.value.split(String.fromCharCode(10)).length,
+                (gut97 && gut97.childElementCount) + " vs " + ta97.value.split(String.fromCharCode(10)).length
+              );
+              check2("[97-6] \u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48 1", !!gut97 && gut97.firstElementChild.textContent === "1");
+              check2(
+                "[97-6] \u0E23\u0E32\u0E07\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19 (\u0E40\u0E25\u0E02\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E35)",
+                getComputedStyle(gut97).lineHeight === getComputedStyle(ta97).lineHeight,
+                getComputedStyle(gut97).lineHeight + " vs " + getComputedStyle(ta97).lineHeight
+              );
+              ta97.value += String.fromCharCode(10) + String.fromCharCode(10) + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E32\u0E21";
+              ta97.dispatchEvent(new Event("input", { bubbles: true }));
+              await w97(80);
+              check2(
+                "[97-6] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E34\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35",
+                gut97.childElementCount === ta97.value.split(String.fromCharCode(10)).length,
+                gut97.childElementCount
+              );
+              const apply97 = [...dlg97b.querySelectorAll(".k-dlg-btns button")].find((b) => b.textContent === t("ui.app.mdApply"));
+              check2('[97-6] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E43\u0E0A\u0E49\u0E01\u0E32\u0E23\u0E41\u0E01\u0E49\u0E44\u0E02"', !!apply97);
+              apply97.click();
+              await w97(400);
+              check2(
+                "[97-6] \u2605\u2605 \u0E41\u0E01\u0E49\u0E43\u0E19 Markdown \u0E14\u0E34\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+                T3.editor.getText().includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E32\u0E21"),
+                T3.editor.getText().slice(0, 60)
+              );
+              check2("[97-6] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E01\u0E32\u0E23\u0E41\u0E01\u0E49\u0E44\u0E02", !document.querySelector(".k-src-view"));
+              document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+            }
+            setSpView(keepView97 === "draft" ? "normal" : keepView97, true);
+            T3.editor.setMarkdown(keep97);
+            bumpProseLayout();
+            await w97(400);
+          }
+          {
+            const w98 = (ms) => new Promise((r) => setTimeout(r, ms));
+            const until98 = async (fn, ms = 3e3) => {
+              const t0 = Date.now();
+              while (Date.now() - t0 < ms) {
+                if (fn()) return true;
+                await w98(60);
+              }
+              return false;
+            };
+            const pm98 = T3.editor.view.dom;
+            const pane98 = T3.pane;
+            const keep98 = T3.editor.getMarkdown();
+            const settle98 = async () => {
+              bumpProseLayout();
+              repaginateFast(T3);
+              await until98(() => {
+                const size = T3.editor.view.state.doc.content.size;
+                const list = prosePageBreaks();
+                return list.length > 0 && list.every((b) => b.pos < size) && pm98.querySelectorAll(".ed-page-break").length === list.length;
+              });
+              await w98(300);
+            };
+            const nodeNames98 = () => T3.editor.view.state.doc.content.content.map((n2) => n2.type.name);
+            const key98 = (k, opts = {}) => T3.editor.view.dom.dispatchEvent(
+              new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...opts })
+            );
+            setSpView("normal", true);
+            {
+              const keepLF98 = state.settings.langFonts ? JSON.parse(JSON.stringify(state.settings.langFonts)) : null;
+              state.settings.langFonts = [
+                {
+                  id: "th98",
+                  range: "U+0E00-0E7F",
+                  target: "all",
+                  builtin: "CourierThaiMono.ttf",
+                  enabled: true
+                }
+              ];
+              applySettings();
+              await w98(150);
+              const fam98 = getComputedStyle(pm98).fontFamily;
+              check2(
+                "[98-2] \u2605\u2605 \u0E27\u0E07\u0E28\u0E4C\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E44\u0E1B\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E34\u0E22\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21 proseCss \u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E17\u0E34\u0E49\u0E07)",
+                fam98.includes(LANG_FAMILY),
+                fam98
+              );
+              check2(
+                '[98-2] \u2605 \u0E01\u0E0E\u0E02\u0E2D\u0E07 "\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22" \u0E2D\u0E48\u0E32\u0E19\u0E1C\u0E48\u0E32\u0E19\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 font-family \u0E17\u0E31\u0E1A\u0E14\u0E34\u0E1A \u0E46',
+                /font-family:var\(--ed-font/.test(
+                  document.getElementById("k-prose-format").textContent
+                ),
+                document.getElementById("k-prose-format").textContent.slice(0, 80)
+              );
+              check2(
+                "[98-2] \u0E2A\u0E41\u0E15\u0E01\u0E40\u0E23\u0E35\u0E22\u0E07\u0E16\u0E39\u0E01: \u0E27\u0E07\u0E28\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E21\u0E32\u0E01\u0E48\u0E2D\u0E19\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1E\u0E37\u0E49\u0E19",
+                fam98.trim().startsWith('"' + LANG_FAMILY + '"'),
+                fam98
+              );
+              state.settings.langFonts = keepLF98;
+              applySettings();
+              await w98(120);
+            }
+            {
+              const lines98 = [
+                "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E22\u0E30",
+                "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E22\u0E30",
+                "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E32\u0E21\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E22\u0E30"
+              ];
+              T3.editor.setMarkdown(lines98.join(String.fromCharCode(10, 10)));
+              await w98(350);
+              const spanOf = (sel) => {
+                const els = [...pm98.querySelectorAll(sel)];
+                if (els.length < 2) return NaN;
+                const a = els[0].getBoundingClientRect(), b = els[els.length - 1].getBoundingClientRect();
+                return +(b.bottom - a.top).toFixed(1);
+              };
+              const asPara = spanOf(":scope > p");
+              T3.editor.view.dispatch(T3.editor.view.state.tr.setSelection(
+                TextSelection.create(
+                  T3.editor.view.state.doc,
+                  1,
+                  T3.editor.view.state.doc.content.size - 1
+                )
+              ));
+              T3.editor.cmd("ul");
+              await w98(350);
+              const asList2 = spanOf("li > p");
+              note("[98-3] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 " + asPara + "px \u2192 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 " + asList2 + "px");
+              check2(
+                "[98-3] \u2605\u2605 \u0E17\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E25\u0E49\u0E27\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E23\u0E27\u0E21\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 (\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A)",
+                Number.isFinite(asPara) && Math.abs(asList2 - asPara) <= 2,
+                asPara + " \u2192 " + asList2
+              );
+              const liP = pm98.querySelector("li > p");
+              check2(
+                "[98-3] \u2605 \u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E21\u0E48\u0E21\u0E35\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 (\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E15\u0E34\u0E21\u0E35 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E21\u0E35)",
+                !!liP && parseFloat(getComputedStyle(liP).textIndent) === 0,
+                liP && getComputedStyle(liP).textIndent
+              );
+              T3.editor.cmd("ul");
+              await w98(350);
+              check2(
+                "[98-3] \u2605 toggle \u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21",
+                Math.abs(spanOf(":scope > p") - asPara) <= 2,
+                asPara + " \u2192 " + spanOf(":scope > p")
+              );
+            }
+            {
+              const keepLn = state.settings.lineNumbers;
+              const md99 = [
+                "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07",
+                "",
+                "- \u0E02\u0E49\u0E2D \u0E01",
+                "- \u0E02\u0E49\u0E2D \u0E02",
+                "- \u0E02\u0E49\u0E2D \u0E04",
+                "",
+                "> \u0E22\u0E01\u0E21\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07",
+                "> \u0E22\u0E01\u0E21\u0E32\u0E2A\u0E2D\u0E07",
+                "",
+                "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E49\u0E32\u0E22"
+              ].join(String.fromCharCode(10));
+              T3.editor.setMarkdown(md99);
+              await w98(400);
+              state.settings.lineNumbers = true;
+              document.body.classList.add("k-ln");
+              refreshLineGutter();
+              await w98(250);
+              refreshLineGutter();
+              const mdLines = T3.editor.getMarkdown().split(String.fromCharCode(10)).length;
+              const nos = [...document.querySelectorAll("#k-ln-gutter .k-ln-no")].map((e) => +e.textContent).filter(Number.isFinite);
+              note("[99-3] .md \u0E21\u0E35 " + mdLines + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \xB7 \u0E23\u0E32\u0E07\u0E27\u0E32\u0E14\u0E40\u0E25\u0E02 " + nos.length + " \u0E15\u0E31\u0E27 \u0E2A\u0E39\u0E07\u0E2A\u0E38\u0E14 " + (nos.length ? Math.max(...nos) : 0));
+              check2(
+                "[99-3] \u2605\u2605 \u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C .md \u0E40\u0E1B\u0E4A\u0E30",
+                nos.length > 0 && Math.max(...nos) === mdLines,
+                (nos.length ? Math.max(...nos) : 0) + " vs " + mdLines
+              );
+              check2(
+                "[99-3] \u2605\u2605 \u0E27\u0E32\u0E14\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u0E44\u0E21\u0E48\u0E02\u0E49\u0E32\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23/\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E22\u0E01\u0E21\u0E32 (\u0E40\u0E14\u0E34\u0E21\u0E19\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E25\u0E30\u0E2B\u0E19\u0E36\u0E48\u0E07)",
+                nos.length === mdLines,
+                nos.length + " vs " + mdLines
+              );
+              check2(
+                "[99-3] \u2605 \u0E40\u0E25\u0E02\u0E40\u0E23\u0E35\u0E22\u0E07 1..N \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E02\u0E32\u0E14",
+                nos.slice().sort((a, b) => a - b).join(",") === Array.from({ length: mdLines }, (_2, k) => k + 1).join(","),
+                nos.join(",")
+              );
+              check2(
+                "[99-3] \u2605 \u0E41\u0E16\u0E1A\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+                !nos.includes(0) && Math.max(...nos) <= mdLines
+              );
+              {
+                const many = [];
+                for (let i5 = 1; i5 <= 60; i5++) {
+                  many.push(i5 % 9 === 0 ? "- \u0E02\u0E49\u0E2D " + i5 : "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 " + i5);
+                  if (i5 % 9 !== 0) many.push("");
+                }
+                T3.editor.setMarkdown(many.join(String.fromCharCode(10)));
+                await w98(500);
+                refreshLineGutter();
+                const md2 = T3.editor.getMarkdown().split(String.fromCharCode(10)).length;
+                const counts2 = T3.editor.mdLineCounts();
+                check2(
+                  "[99-3] \u2605\u2605 \u0E1C\u0E25\u0E23\u0E27\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E17\u0E38\u0E01\u0E1A\u0E25\u0E47\u0E2D\u0E01 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C",
+                  counts2.reduce((a, b) => a + b, 0) === md2,
+                  counts2.reduce((a, b) => a + b, 0) + " vs " + md2
+                );
+              }
+              state.settings.lineNumbers = keepLn;
+              document.body.classList.toggle("k-ln", !!keepLn);
+              refreshLineGutter();
+              await w98(150);
+            }
+            {
+              T3.editor.setMarkdown(["- \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07", "- \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "- \u0E02\u0E49\u0E2D\u0E2A\u0E32\u0E21"].join(String.fromCharCode(10)));
+              await w98(300);
+              check2(
+                "[98-5] \u0E08\u0E31\u0E14\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49: \u0E40\u0E1B\u0E47\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27 3 \u0E02\u0E49\u0E2D",
+                nodeNames98().join(",") === "bullet_list" && pm98.querySelectorAll("ul > li").length === 3,
+                nodeNames98().join(",") + " \xB7 " + pm98.querySelectorAll("ul > li").length
+              );
+              const li2 = pm98.querySelectorAll("ul > li")[1];
+              const pos2 = T3.editor.view.posAtDOM(li2.querySelector("p").firstChild || li2, 1);
+              T3.editor.gotoPos(pos2);
+              await w98(120);
+              T3.editor.cmd("ol");
+              await w98(300);
+              const names = nodeNames98();
+              note("[98-5] \u0E42\u0E04\u0E23\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E2A\u0E25\u0E31\u0E1A = " + names.join(","));
+              check2(
+                "[98-5] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E25\u0E02\u0E41\u0E25\u0E49\u0E27\u0E41\u0E15\u0E30\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48 (\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E16\u0E39\u0E01\u0E1C\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E32\u0E21\u0E17\u0E48\u0E2D\u0E19)",
+                names.length === 3 && names[0] === "bullet_list" && names[1] === "ordered_list" && names[2] === "bullet_list",
+                names.join(",")
+              );
+              check2(
+                "[98-5] \u2605 \u0E02\u0E49\u0E2D\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                (pm98.querySelector("ul") || {}).textContent === "\u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07",
+                (pm98.querySelector("ul") || {}).textContent
+              );
+              check2(
+                "[98-5] \u2605 \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E2A\u0E25\u0E31\u0E1A\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
+                (pm98.querySelector("ol") || {}).textContent === "\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07",
+                (pm98.querySelector("ol") || {}).textContent
+              );
+            }
+            {
+              const longLine = "\u0E04\u0E33\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2E\u0E21\u0E41\u0E25\u0E30\u0E40\u0E2D\u0E19\u0E14\u0E4C ".repeat(12);
+              T3.editor.setMarkdown(longLine);
+              await w98(300);
+              const view98 = T3.editor.view;
+              view98.focus();
+              const mid = Math.round(view98.state.doc.content.size / 2);
+              T3.editor.gotoPos(mid);
+              await w98(120);
+              const xOf = () => view98.coordsAtPos(view98.state.selection.head).left;
+              const contentLeft = pm98.getBoundingClientRect().left + parseFloat(getComputedStyle(pm98).paddingLeft);
+              const x0 = xOf();
+              key98("Home");
+              await w98(120);
+              check2(
+                "[98-9] \u2605\u2605 Home \u0E1E\u0E32\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E1B\u0E15\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07",
+                Math.abs(xOf() - contentLeft) < 12 && xOf() < x0 - 5,
+                "x " + Math.round(x0) + " \u2192 " + Math.round(xOf()) + " (\u0E02\u0E2D\u0E1A\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32 " + Math.round(contentLeft) + ")"
+              );
+              const homePos = view98.state.selection.head;
+              key98("End");
+              await w98(120);
+              const endPos98 = view98.state.selection.head;
+              key98("End");
+              await w98(120);
+              check2(
+                "[98-9] \u2605\u2605 End \u0E1E\u0E32\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E1B\u0E17\u0E49\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 (\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E19\u0E34\u0E48\u0E07)",
+                endPos98 > homePos && view98.state.selection.head === endPos98,
+                homePos + " \u2192 " + endPos98 + " \u2192 " + view98.state.selection.head
+              );
+              check2(
+                "[98-9] \u2605 \u0E17\u0E49\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E02\u0E27\u0E32\u0E02\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C",
+                xOf() > contentLeft + pm98.clientWidth * 0.5,
+                Math.round(xOf()) + " > " + Math.round(contentLeft + pm98.clientWidth * 0.5)
+              );
+              key98("Home", { ctrlKey: true });
+              await w98(120);
+              check2(
+                "[98-9] \u2605 Ctrl+Home \u0E44\u0E1B\u0E15\u0E49\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23",
+                view98.state.selection.head <= 1,
+                view98.state.selection.head
+              );
+              key98("End", { ctrlKey: true });
+              await w98(120);
+              check2(
+                "[98-9] \u2605 Ctrl+End \u0E44\u0E1B\u0E17\u0E49\u0E32\u0E22\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23",
+                view98.state.selection.head >= view98.state.doc.content.size - 1,
+                view98.state.selection.head + "/" + view98.state.doc.content.size
+              );
+              key98("Home", { shiftKey: true });
+              await w98(120);
+              check2(
+                "[98-9] Shift+Home \u0E02\u0E22\u0E32\u0E22\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C)",
+                !view98.state.selection.empty
+              );
+            }
+            {
+              const items98 = [];
+              for (let i5 = 1; i5 <= 70; i5++) items98.push("- \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 " + i5 + " \u0E02\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E04\u0E23\u0E48\u0E2D\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29");
+              T3.editor.setMarkdown(items98.join(String.fromCharCode(10)));
+              await w98(500);
+              await settle98();
+              const before98 = pm98.querySelectorAll(".ed-page-break").length;
+              check2("[98-1] \u0E08\u0E31\u0E14\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49: \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E04\u0E23\u0E48\u0E2D\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07", before98 >= 1, before98);
+              const brk98 = pm98.querySelector("ul > .ed-page-break, ol > .ed-page-break");
+              const liNear = brk98 ? brk98.nextElementSibling : pm98.querySelectorAll("li")[30];
+              const pNear = liNear && liNear.querySelector ? liNear.querySelector("p") : null;
+              if (pNear && pNear.firstChild) {
+                T3.editor.gotoPos(T3.editor.view.posAtDOM(pNear.firstChild, 1));
+                await w98(150);
+              }
+              T3.editor.cmd("ul");
+              await w98(500);
+              await settle98();
+              const after98 = pm98.querySelectorAll(".ed-page-break").length;
+              note("[98-1] \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 " + before98 + " \u2192 " + after98 + " \u0E2D\u0E31\u0E19");
+              check2(
+                "[98-1] \u2605\u2605 \u0E1B\u0E34\u0E14\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E23\u0E07\u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E44\u0E2B\u0E19",
+                after98 >= 1,
+                before98 + " \u2192 " + after98
+              );
+              check2(
+                "[98-1] \u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E04\u0E33\u0E19\u0E27\u0E13\u0E44\u0E27\u0E49",
+                after98 === prosePageBreaks().length,
+                after98 + " vs " + prosePageBreaks().length
+              );
+              check2(
+                "[98-1] \u0E17\u0E38\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E0A\u0E35\u0E49\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23",
+                prosePageBreaks().every((b) => b.pos > 0 && b.pos < T3.editor.view.state.doc.content.size)
+              );
+            }
+            {
+              const spf98 = spFormat();
+              const contentH98 = (spf98.paper.height - spf98.margins.top - spf98.margins.bottom) * 96;
+              const doc98 = [];
+              for (let i5 = 1; i5 <= 60; i5++) {
+                if (i5 % 7 === 0) doc98.push("## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48 " + i5);
+                else doc98.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E04\u0E27\u0E23\u0E43\u0E2B\u0E49\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 ".repeat(3));
+              }
+              T3.editor.setMarkdown(doc98.join(String.fromCharCode(10, 10)));
+              await w98(700);
+              const gaps98 = () => {
+                const z = zoomFactorOf(pm98) || 1;
+                const first = [...pm98.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
+                let prevBot = first ? first.getBoundingClientRect().top : 0;
+                const out2 = [];
+                for (const e of pm98.querySelectorAll(".ed-page-break")) {
+                  const r = e.getBoundingClientRect();
+                  const pad3 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
+                  out2.push(+((r.top - prevBot) / z + pad3).toFixed(1));
+                  prevBot = r.bottom;
+                }
+                return out2;
+              };
+              for (const paper of [false, true]) {
+                setSpView(paper ? "layout" : "normal", true);
+                await w98(300);
+                await settle98();
+                await w98(800);
+                const g = gaps98();
+                const worst = g.length ? Math.max(...g.map((x) => Math.abs(x - contentH98))) : 999;
+                const lbl = paper ? "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32" : "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34";
+                note("[98-7] " + lbl + " (\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E1B\u0E19): " + g.length + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19\u0E21\u0E32\u0E01\u0E2A\u0E38\u0E14 " + worst.toFixed(1) + "px \xB7 " + g.slice(0, 6).join(" , "));
+                check2(
+                  "[98-7] \u2605\u2605 " + lbl + ": \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E1B\u0E19\u0E41\u0E25\u0E49\u0E27\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E07\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1B\u0E4A\u0E30",
+                  g.length >= 3 && worst <= 2,
+                  "\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E14\u0E49 " + Math.round(contentH98) + " \xB7 \u0E44\u0E14\u0E49 " + g.slice(0, 8).join(" , ")
+                );
+              }
+              setSpView("normal", true);
+              await kapi.testShot("/tmp/k2_98_heading_pages.png");
+            }
+            {
+              const many98 = [];
+              for (let i5 = 1; i5 <= 1200; i5++) many98.push("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48 " + i5);
+              T3.editor.setMarkdown(many98.join(String.fromCharCode(10, 10)));
+              await w98(900);
+              const scrollCost = async () => {
+                pane98.scrollTop = 0;
+                await w98(200);
+                const t0 = performance.now();
+                let frames = 0;
+                for (let i5 = 0; i5 < 24; i5++) {
+                  pane98.scrollTop += 400;
+                  await new Promise((r) => requestAnimationFrame(r));
+                  frames++;
+                }
+                return +((performance.now() - t0) / frames).toFixed(2);
+              };
+              const typeCost = async () => {
+                const v4 = T3.editor.view;
+                v4.focus();
+                T3.editor.gotoPos(Math.round(v4.state.doc.content.size / 2));
+                await w98(200);
+                const t0 = performance.now();
+                for (let i5 = 0; i5 < 12; i5++) {
+                  v4.dispatch(v4.state.tr.insertText("\u0E01"));
+                  pm98.getBoundingClientRect();
+                  repaginateFast(T3);
+                }
+                return +((performance.now() - t0) / 12).toFixed(2);
+              };
+              const repagCost = () => {
+                const t0 = performance.now();
+                repaginateFast(T3);
+                return +(performance.now() - t0).toFixed(2);
+              };
+              setSpView("layout", true);
+              await settle98();
+              await w98(400);
+              const nPages98 = prosePageBreaks().length + 1;
+              const costPaper = await scrollCost();
+              const typePaper = await typeCost();
+              bumpProseLayout();
+              const repagPaper = repagCost();
+              setSpView("draft", true);
+              await w98(600);
+              const costDraft = await scrollCost();
+              const typeDraft = await typeCost();
+              bumpProseLayout();
+              const repagDraft = repagCost();
+              setSpView("layout", true);
+              await w98(400);
+              note("[98-8] " + nPages98 + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + costPaper + " / \u0E23\u0E48\u0E32\u0E07 " + costDraft + " ms/\u0E40\u0E1F\u0E23\u0E21");
+              note("[98-8] \u0E1E\u0E34\u0E21\u0E1E\u0E4C: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + typePaper + " / \u0E23\u0E48\u0E32\u0E07 " + typeDraft + " ms/\u0E15\u0E31\u0E27 \xB7 \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E23\u0E2D\u0E1A: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + repagPaper + " / \u0E23\u0E48\u0E32\u0E07 " + repagDraft + " ms");
+              {
+                const spfP = spFormat();
+                const optP = { paper: spfP.paper, margins: spfP.margins };
+                bumpProseLayout();
+                const a0 = performance.now();
+                const mzP = measureProseLayout(T3.editor.view, optP);
+                const a1 = performance.now();
+                const pagesP = mzP ? withMeasureMode(() => sliceProsePages(mzP.blocks, mzP.contentHeight, mzP.totalHeight)) : [];
+                const a2 = performance.now();
+                const brkP = mzP ? proseBreakList(
+                  T3.editor.view,
+                  mzP.blocks,
+                  pagesP.map((x, i5) => ({ ...x, index: i5 + 1 })),
+                  1,
+                  mzP.contentHeight
+                ) : [];
+                const a3 = performance.now();
+                tuneProsePagePadsLoop(T3);
+                const a4 = performance.now();
+                note("[98-8] \u0E41\u0E22\u0E01\u0E02\u0E31\u0E49\u0E19: \u0E27\u0E31\u0E14 " + (a1 - a0).toFixed(1) + " \xB7 \u0E2B\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32 " + (a2 - a1).toFixed(1) + " \xB7 \u0E41\u0E1B\u0E25\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 " + (a3 - a2).toFixed(1) + " \xB7 \u0E0A\u0E14\u0E40\u0E0A\u0E22\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 " + (a4 - a3).toFixed(1) + " ms \xB7 \u0E1A\u0E25\u0E47\u0E2D\u0E01 " + (mzP ? mzP.blocks.length : -1) + " \xB7 \u0E08\u0E38\u0E14\u0E15\u0E31\u0E14 " + brkP.length);
+              }
+              check2("[98-8] \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E1E\u0E2D (\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 20 \u0E2B\u0E19\u0E49\u0E32)", nPages98 >= 20, nPages98);
+              check2(
+                "[98-8] \u2605\u2605 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E15\u0E38\u0E01 (\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 3 \u0E40\u0E1F\u0E23\u0E21\u0E02\u0E2D\u0E07 60Hz)",
+                costPaper < 50,
+                costPaper + " ms/\u0E40\u0E1F\u0E23\u0E21 (\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07 " + costDraft + ")"
+              );
+              check2(
+                "[98-8] \u2605 \u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E16\u0E48\u0E27\u0E07 (\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D\u0E1E\u0E2D \u0E46 \u0E01\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07)",
+                costPaper < costDraft * 2 + 5,
+                costPaper + " vs " + costDraft
+              );
+              {
+                const enterCost = async () => {
+                  const v98 = T3.editor.view;
+                  v98.focus();
+                  T3.editor.gotoPos(Math.round(v98.state.doc.content.size / 2));
+                  await w98(150);
+                  const t0 = performance.now();
+                  v98.dom.dispatchEvent(new KeyboardEvent(
+                    "keydown",
+                    { key: "Enter", bubbles: true, cancelable: true }
+                  ));
+                  v98.dispatch(v98.state.tr.split(v98.state.selection.head));
+                  await new Promise((r) => setTimeout(r, 0));
+                  return +(performance.now() - t0).toFixed(2);
+                };
+                const enterPaper = await enterCost();
+                setSpView("draft", true);
+                await w98(500);
+                const enterDraft = await enterCost();
+                setSpView("layout", true);
+                await w98(400);
+                note("[98-8] \u0E01\u0E14 Enter \u0E2B\u0E19\u0E36\u0E48\u0E07\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48 " + nPages98 + " \u0E2B\u0E19\u0E49\u0E32: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + enterPaper + " / \u0E23\u0E48\u0E32\u0E07 " + enterDraft + " ms (\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E23\u0E2D\u0E1A = " + repagPaper + " ms)");
+                check2(
+                  "[98-8] \u2605\u2605 \u0E01\u0E14 Enter \u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01\u0E44\u0E21\u0E48\u0E08\u0E48\u0E32\u0E22\u0E04\u0E48\u0E32\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E15\u0E47\u0E21\u0E23\u0E32\u0E04\u0E32\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27",
+                  enterPaper < repagPaper * 0.85,
+                  enterPaper + " ms vs \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 " + repagPaper + " ms"
+                );
+                check2(
+                  "[98-8] \u2605 \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E21\u0E32\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 (\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E1E\u0E2D \u0E46 \u0E01\u0E31\u0E19)",
+                  enterPaper < enterDraft * 2 + 10,
+                  enterPaper + " vs " + enterDraft
+                );
+                check2(
+                  '[98-8] \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E22\u0E32\u0E27\u0E40\u0E02\u0E49\u0E32\u0E40\u0E01\u0E13\u0E11\u0E4C "\u0E2B\u0E19\u0E31\u0E01" \u0E08\u0E23\u0E34\u0E07 (\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E17\u0E33\u0E07\u0E32\u0E19)',
+                  heavyDelay(T3) > 100,
+                  heavyDelay(T3) + " ms"
+                );
+              }
+            }
+            setSpView("normal", true);
+            T3.editor.setMarkdown(keep98);
+            bumpProseLayout();
+            await w98(400);
           }
           T3.editor.setMarkdown(longMd.join(String.fromCharCode(10)));
           await new Promise((r) => setTimeout(r, 250));
@@ -179826,7 +181447,11 @@ ${css}
         }
         setSpView("layout");
         await new Promise((r) => setTimeout(r, 200));
-        check2("[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49", T3.pane.classList.contains("sp-view-layout"));
+        check2(
+          "[15] \u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49",
+          T3.pane.classList.contains("sp-view-layout"),
+          T3.pane.className
+        );
         setSpView("side");
         await new Promise((r) => setTimeout(r, 250));
         check2(
@@ -186615,15 +188240,16 @@ ${css}
           );
           check2(
             "[82] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E43\u0E0A\u0E49\u0E04\u0E48\u0E32\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D",
-            exportPageNumberFmt(spFormat()).pageNumbers.firstPage === spFormat().pageNumbers.firstPage
+            exportPageNumberFmt(spFormat()).pageNumbers.show === spFormat().pageNumbers.show
           );
           check2(
-            "[88-4] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 = \u0E2B\u0E19\u0E49\u0E32 1 \u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02",
-            exportPageNumberFmt({}).pageNumbers.firstPage === false
+            "[97-11] \u0E15\u0E31\u0E27\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C firstPage \u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D",
+            !("firstPage" in exportPageNumberFmt({}).pageNumbers),
+            JSON.stringify(exportPageNumberFmt({}).pageNumbers)
           );
           check2(
             "[81r3] \u0E44\u0E21\u0E48\u0E41\u0E01\u0E49\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
-            spFormat().pageNumbers.firstPage === mergeSpFormat(state.settings).pageNumbers.firstPage
+            spFormat().pageNumbers.show === mergeSpFormat(state.settings).pageNumbers.show
           );
           {
             const keepPn3 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
@@ -186691,7 +188317,6 @@ ${css}
             await activate(tp81.file);
             const keepPn = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
             togglePageNumbers(true);
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
             applyPageVars();
             await wait81(80);
             const lbl = updatePageNumberHint();
@@ -186759,19 +188384,18 @@ ${css}
             };
             const top0 = clipTop(), h02 = clipH();
             togglePageNumbers(true);
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
             applyPageVars();
             refreshSpView();
             await until83(() => !!tp83.pane.querySelector(".sp-pageview .ed-page .sp-page-num"));
             const numEl = tp83.pane.querySelector(".sp-pageview .ed-page .sp-page-num");
             check2(
-              "[83-5] \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14 \u0E46 \u0E44\u0E1B\u0E21\u0E35\u0E40\u0E25\u0E02\u0E08\u0E23\u0E34\u0E07",
+              "[83-5] \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E21\u0E35\u0E40\u0E25\u0E02\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E25\u0E49\u0E27\u0E19",
               !!numEl && /^[0-9]+$/.test(numEl.textContent.trim()),
               numEl && numEl.textContent
             );
             check2(
-              '[88-4] \u2605 \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E2B\u0E19\u0E49\u0E32 1 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02 (\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19)',
-              !tp83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
+              '[97-11] \u2605 \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E2B\u0E19\u0E49\u0E32 1 \u0E21\u0E35\u0E40\u0E25\u0E02 "1" \u0E17\u0E31\u0E19\u0E17\u0E35\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E1B\u0E15\u0E34\u0E4A\u0E01\u0E40\u0E1E\u0E34\u0E48\u0E21)',
+              (tp83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num') || {}).textContent === "1",
               [...tp83.pane.querySelectorAll(".sp-pageview .sp-page-num")].map((n2) => n2.textContent).join(",")
             );
             check2(
@@ -186799,6 +188423,10 @@ ${css}
                 clips.map((c) => c.style.height).join(",")
               );
             }
+            setSpView("normal");
+            await wait83(250);
+            repaginateFast(tp83);
+            await wait83(250);
             for (const mode of ["normal", "layout"]) {
               setSpView(mode);
               await wait83(150);
@@ -186862,22 +188490,12 @@ ${css}
                 ts83.pane.querySelectorAll(".sp-pageview .sp-page-num").length
               );
               togglePageNumbers(true);
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: false };
-              applyPageVars();
-              refreshSpView();
-              await wait83(350);
-              check2(
-                "[88-4] \u2605 \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 (\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19\u0E2D\u0E38\u0E15\u0E2A\u0E32\u0E2B\u0E01\u0E23\u0E23\u0E21)",
-                !ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
-                [...ts83.pane.querySelectorAll(".sp-pageview .sp-page-num")].map((n2) => n2.textContent).join(",")
-              );
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
               applyPageVars();
               refreshSpView();
               await wait83(350);
               const nums = [...ts83.pane.querySelectorAll(".sp-pageview .sp-page-num")];
               check2(
-                '[83-5] \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02\u0E14\u0E49\u0E27\u0E22',
+                "[97-11] \u2605 \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07: \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E40\u0E25\u0E02\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E15\u0E34\u0E4A\u0E01\u0E40\u0E1E\u0E34\u0E48\u0E21)",
                 nums.length > 0 && !!ts83.pane.querySelector('.sp-pageview .sp-page[data-page="1"] .sp-page-num'),
                 nums.map((n2) => n2.textContent).join(",")
               );
@@ -186928,38 +188546,25 @@ ${css}
             );
           }
           {
-            const keepMig = state.settings.pgFirstMigrated;
             const keepPn83 = JSON.parse(JSON.stringify(state.settings.spPageNumbers || {}));
             check2(
-              '[88-4] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07 "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" = \u0E1B\u0E34\u0E14 (\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19\u0E1A\u0E17)',
-              PAGE_NUMBER_DEFAULTS.firstPage === false
-            );
-            state.settings.pgFirstMigrated = true;
-            state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-            const moved = migratePageNumberFirst();
-            check2(
-              "[88-4] \u2605 \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E35\u0E48 .83r \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A firstPage:true \u0E44\u0E27\u0E49 \u2192 \u0E16\u0E39\u0E01\u0E25\u0E49\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 false",
-              moved === true && state.settings.spPageNumbers.firstPage === false,
-              JSON.stringify(state.settings.spPageNumbers)
+              "[97-11] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C firstPage \u0E41\u0E25\u0E49\u0E27",
+              !("firstPage" in PAGE_NUMBER_DEFAULTS),
+              JSON.stringify(PAGE_NUMBER_DEFAULTS)
             );
             check2(
-              "[88-4] \u0E25\u0E49\u0E32\u0E07\u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u2014 \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E17\u0E35\u0E2B\u0E25\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A\u0E0B\u0E49\u0E33",
+              "[97-11] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E22\u0E49\u0E32\u0E22\u0E04\u0E48\u0E32 firstPage \u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E43\u0E19 settings",
+              !("pgFirstMigrated" in DEFAULT_SETTINGS)
+            );
+            check2(
+              "[97-11] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E01\u0E48\u0E32\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1C\u0E25\u0E01\u0E31\u0E1A\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27",
               (() => {
-                state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-                const again2 = migratePageNumberFirst();
-                return again2 === false && state.settings.spPageNumbers.firstPage === true;
+                state.settings.spPageNumbers = { ...state.settings.spPageNumbers, show: true, firstPage: false };
+                const got = pageNumberLabel(1, spFormat(), 1);
+                state.settings.spPageNumbers = keepPn83;
+                return got === "1.";
               })()
             );
-            check2(
-              "[88-4] \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48 (\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E1C\u0E48\u0E32\u0E19 .83r) \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
-              (() => {
-                state.settings.pgFirstMigrated = false;
-                state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
-                const r88 = migratePageNumberFirst();
-                return r88 === false && state.settings.spPageNumbers.firstPage === true && state.settings.pgFirstMigrated === 2;
-              })()
-            );
-            state.settings.pgFirstMigrated = keepMig;
             state.settings.spPageNumbers = keepPn83;
             applyPageVars();
             const spScene83b = [...document.querySelectorAll(".scene")].find((x) => x.textContent.includes("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"));
@@ -186971,7 +188576,6 @@ ${css}
             if (tsp) {
               setSpView("normal");
               togglePageNumbers(true);
-              state.settings.spPageNumbers = { ...state.settings.spPageNumbers, firstPage: true };
               applyPageVars();
               updatePageNumberHint();
               await wait83(200);
@@ -187831,7 +189435,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _padTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _padTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -187969,6 +189573,7 @@ ${css}
       autosaveTimer = null;
       LN_GUTTER_ID = "k-ln-gutter";
       _lnJob = 0;
+      _lnCache = null;
       _lnBound = false;
       _langFontUrls = /* @__PURE__ */ new Map();
       _typeSoundBound = false;
@@ -188059,7 +189664,7 @@ ${css}
       _termCache = { tab: null, at: 0, val: null };
       imgURLBase = /* @__PURE__ */ new Map();
       _branchPlanApi = null;
-      FMTS = ["bold", "italic", "underline", "strike"];
+      FMTS = ["bold", "italic", "underline", "strike", "sup", "sub"];
       TB_PANEL_BUTTONS = [
         ["tb-timeline", "timeline"],
         ["tb-maps", "maps"],
@@ -188273,13 +189878,14 @@ ${css}
         "tb-italic": "fmt:italic",
         "tb-underline": "fmt:underline",
         "tb-strike": "fmt:strike",
+        "tb-sup": "fmt:sup",
+        "tb-sub": "fmt:sub",
         "tb-ul": "fmt:ul",
         "tb-ol": "fmt:ol",
         "tb-align-left": "fmt:align:left",
         "tb-align-center": "fmt:align:center",
         "tb-align-right": "fmt:align:right",
         "tb-align-justify": "fmt:align:justify",
-        "tb-paper": "paper-mode",
         "tb-theme": "toggle-theme",
         "tb-gsearch": "global-search",
         "tb-mode": "toggle-format",
@@ -188308,6 +189914,8 @@ ${css}
         tb("#tb-italic", "italic");
         tb("#tb-underline", "underline");
         tb("#tb-strike", "strike");
+        tb("#tb-sup", "sup");
+        tb("#tb-sub", "sub");
         tb("#tb-ul", "ul");
         tb("#tb-ol", "ol");
         tb("#tb-quote", "quote");
@@ -188418,12 +190026,10 @@ ${css}
         });
         $("#tb-source").onclick = () => showSourceView();
         $("#tb-theme") && ($("#tb-theme").onclick = () => toggleTheme());
-        $("#tb-paper").onclick = () => togglePaper();
         const bCont = $("#tb-sp-cont");
         if (bCont) bCont.onclick = () => toggleContinueds();
         const bInd = $("#tb-indent");
         if (bInd) bInd.onclick = () => toggleProseIndent();
-        $("#tb-paper").classList.toggle("on", state.settings.paperMode !== false);
         $("#tb-read").onclick = () => toggleReading();
         $("#tb-gsearch").onclick = () => handleCommand("global-search");
         bindGlobalSearchShortcut();
@@ -188653,8 +190259,8 @@ ${css}
         }, true);
         document.addEventListener("paste", async (e) => {
           const t3 = state.active;
-          if (!t3?.editor || !state.root) return;
-          const imgs = [...e.clipboardData?.files || []].filter((f) => f.type.startsWith("image/"));
+          if (!t3 || !(t3.editor || t3.sp) || !state.root) return;
+          const imgs = clipboardImages(e.clipboardData);
           if (!imgs.length) return;
           e.preventDefault();
           for (const f of imgs) await importImageFile(f, t3);
@@ -188665,8 +190271,8 @@ ${css}
         });
         paneHost.addEventListener("drop", async (e) => {
           const t3 = state.active;
-          if (!t3?.editor || !state.root) return;
-          const imgs = [...e.dataTransfer?.files || []].filter((f) => f.type.startsWith("image/"));
+          if (!t3 || !(t3.editor || t3.sp) || !state.root) return;
+          const imgs = clipboardImages(e.dataTransfer);
           if (!imgs.length) return;
           e.preventDefault();
           for (const f of imgs) await importImageFile(f, t3);

@@ -19,8 +19,15 @@ function check(name, cond, extra) {
 }
 
 // ── รายการโหมด ──
+// [alpha.99 ข้อ 1+2] มุมมอง "จัดหน้า" กลับมา — ตัด **สวิตช์โหมดหน้ากระดาษ** ทิ้งแทน
+// (สองอย่างนี้ทำเรื่องเดียวกัน เหลือไว้อย่างเดียวคือมุมมอง ซึ่งเป็นที่ที่ผู้ใช้มองหาอยู่แล้ว)
 check('มี 6 โหมด: ปกติ/จัดหน้า/ร่าง/เรียงหน้า/ภาพรวม 2 ระดับ',
   SV.SP_VIEWS.length === 6 && SV.SP_VIEWS.includes('layout'), SV.SP_VIEWS.join(','));
+check('[99-1] โหมดจัดหน้ายังพิมพ์ได้ (ไม่ใช่มุมมองอ่านอย่างเดียว)',
+  SV.isValidView('layout') && SV.isEditView('layout') && !SV.isPageView('layout'));
+check('[99-1] คลาสของโหมดจัดหน้าอยู่ในรายการที่ล้างได้',
+  SV.ALL_VIEW_CLASSES.includes('sp-view-layout')
+  && !SV.ALL_VIEW_CLASSES.includes('sp-view-paper'));
 check('ทุกโหมดมีป้ายชื่อภาษาไทย', SV.SP_VIEWS.every((m) => (SV.SP_VIEW_LABELS[m] || '').length > 2));
 check('ทุกโหมดมีคลาส CSS กำกับ (normal = ว่าง)',
   SV.SP_VIEW_CLASS.normal === '' && SV.SP_VIEWS.slice(1).every((m) => SV.SP_VIEW_CLASS[m].length > 3));
@@ -155,7 +162,7 @@ check('[58] layoutCssVars ให้ตัวแปร CSS ครบ',
 check('[58] ช่องว่างคั่นหน้าไม่แคบเกินจนมองไม่เห็น',
   parseInt(SV.layoutCssVars(null, 0)['--sp-page-gap'], 10) >= 8);
 check('[58] โหมดจัดหน้ายังพิมพ์ได้ (ไม่ใช่ page view)',
-  SV.isEditView('layout') && !SV.isPageView('layout'));
+  SV.isEditView('normal') && !SV.isPageView('normal'));
 check('[58] โหมดเรียงหน้า/ภาพรวม = อ่านอย่างเดียว',
   !SV.isEditView('side') && !SV.isEditView('overview4'));
 check('[58] โหมดจัดหน้ามีคลาส CSS ของตัวเอง', SV.SP_VIEW_CLASS.layout === 'sp-view-layout');
