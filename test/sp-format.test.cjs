@@ -559,6 +559,143 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
     String(F.elements.scene.linesBefore));
 }
 
+// ══════ [alpha.102 บั๊ก 2] ★ keepSceneWithNext — หัวเรื่องห้ามค้างท้ายหน้าตัวเดียว ══════
+//
+// ผู้ใช้: *"ในกรณีที่ หัวฉาก / ทรานสิชั่นขวา / ฉากย่อย / สลับฉาก / shot / ตอน / note /
+//           ต่อเนื่องซ้าย / ต่อเนื่องขวา อยู่บรรทัดสุดท้าย จะไม่เกิดการตัดหน้า"*
+//
+// กฎนี้อยู่ในตาราง `PAGE_BREAK_RULES` มาตั้งแต่ข้อ 84 และมีช่องให้ตั้งในกล่องตั้งค่า
+// แต่ `paginate()` **ไม่เคยอ่านมันเลย** — เป็นสวิตช์ที่ปรับแล้วไม่มีอะไรเกิดขึ้นมาตลอด
+{
+  const fmt = SF.mergeSpFormat({});
+  const perPage = SF.formatLines(fmt);
+  const MK = { scene: 'INT. ตลาด - เย็น', transition: 'CUT TO:', 'transition-in': 'FADE IN:',
+               subheader: 'ห้องครัว', intercut: 'สลับฉาก', shot: 'ภาพระยะใกล้',
+               'act-break': 'องก์สอง', note: 'โน้ต',
+               'cont-left': 'ต่อเนื่องซ้าย', 'cont-right': 'ต่อเนื่องขวา' };
+  check('[102-2] มี KEEP_WITH_NEXT ครบทุกชนิดที่ผู้ใช้แจ้ง',
+    Object.keys(MK).every((k) => SF.KEEP_WITH_NEXT.has(k)),
+    [...SF.KEEP_WITH_NEXT].join(','));
+  check('[102-2] บทพูด/วงเล็บ/ชื่อตัวละคร ไม่อยู่ในชุดนี้ (มีกฎของตัวเองอยู่แล้ว)',
+    !SF.KEEP_WITH_NEXT.has('dialogue') && !SF.KEEP_WITH_NEXT.has('parenthetical')
+    && !SF.KEEP_WITH_NEXT.has('character'));
+
+  // กวาดทุกชนิด × ทุกตำแหน่งใกล้ท้ายหน้า — ต้องไม่มีอันไหนค้างเป็นบล็อกสุดท้ายของหน้า
+  const orphans = [];
+  for (const el of Object.keys(MK)) {
+    for (let fill = perPage - 6; fill <= perPage - 1; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text: MK[el] });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อจากนั้น ' + i });
+      const r = SF.paginate(blocks, { fmt });
+      r.pages.forEach((p, pi) => {
+        const last = p.blocks[p.blocks.length - 1];
+        if (last && last.el === el && pi < r.pages.length - 1) orphans.push(el + '@' + fill);
+      });
+    }
+  }
+  check('[102-2] ★★ ไม่มีหัวเรื่องชนิดไหนค้างเป็นบรรทัดสุดท้ายของหน้าเลย',
+    orphans.length === 0, orphans.slice(0, 8).join(' , '));
+
+  // ★ ต้องยังไม่ล้นหน้า — กฎใหม่ห้ามไปทำให้หน้าไหนเกินโควตา
+  const usedOf = (page) => {
+    let used = 0, prevBlank = false;
+    page.blocks.forEach((b, j) => {
+      const c = fmt.elements[b.el] || fmt.elements.action;
+      if (b.el === 'blank') { used += 1; prevBlank = true; return; }
+      const before = j > 0 && b.split !== 'tail' && !prevBlank
+        ? Math.round((c.linesBefore ?? 10) / 10) : 0;
+      prevBlank = false;
+      used += before + (b.lines || 1);
+    });
+    return used;
+  };
+  const over = [];
+  for (const el of Object.keys(MK)) {
+    for (let fill = perPage - 6; fill <= perPage - 1; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text: MK[el] });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อจากนั้น ' + i });
+      SF.paginate(blocks, { fmt }).pages.forEach((p, pi) => {
+        if (usedOf(p) > perPage) over.push(el + '@' + fill + '=' + usedOf(p));
+      });
+    }
+  }
+  check('[102-2] ★ และไม่มีหน้าไหนล้นโควตาบรรทัด', over.length === 0, over.slice(0, 6).join(' , '));
+
+  // ── ตัวช่วย: กวาดหาความยาว filler ที่ทำให้บล็อกนั้น "ตกเป็นบล็อกสุดท้ายของหน้าแรก" ──
+  // (คำนวณด้วยมือไม่ได้ เพราะบล็อกบรรยายแต่ละก้อนกิน 1 บรรทัดเนื้อ + 1 บรรทัดเว้นนำ
+  //  และหน้าแรกไม่มีเว้นนำ — กวาดหาเอาตรง ๆ ชัดกว่าและไม่พังเมื่อค่าเริ่มต้นเปลี่ยน)
+  const anyFillWhereLastOnPage1 = (el, text, f, withTail) => {
+    for (let fill = 1; fill < perPage; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text });
+      if (withTail) for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+      const r = SF.paginate(blocks, { fmt: f });
+      if (r.pages.length < 2) continue;
+      const last = r.pages[0].blocks[r.pages[0].blocks.length - 1];
+      if (last && last.el === el) return fill;
+    }
+    return -1;
+  };
+
+  // ตั้งเป็น 0 = ปิดกฎ (ผู้ใช้ตั้งเองได้ที่ ตั้งค่า → หน้ากระดาษ)
+  {
+    const off = SF.mergeSpFormat({ rules: { keepSceneWithNext: 0 } });
+    check('[102-2] ตั้งกฎเป็น 0 = ปิดได้จริง (หัวฉากค้างท้ายหน้าได้ตามเดิม)',
+      anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', off, true) > 0);
+    check('[102-2] ★ และเปิดกฎแล้วเคสเดียวกันไม่มีทางเกิดขึ้นเลย',
+      anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', fmt, true) === -1);
+  }
+
+  // หัวเรื่องที่เป็น "ของชิ้นสุดท้ายจริง ๆ" ไม่ต้องยกไปหน้าใหม่ (ไม่ได้ค้างอยู่คนเดียว)
+  // — `FADE OUT.` ท้ายบทเป็นเคสคลาสสิก ถ้าดันไปหน้าใหม่จะได้หน้าเปล่าทั้งหน้าเพื่อบรรทัดเดียว
+  // เทียบ "เปิดกฎ" กับ "ปิดกฎ" ตรง ๆ: ไม่มีเนื้อตาม = ผลต้องเหมือนกันเป๊ะทุกความยาว
+  {
+    const off = SF.mergeSpFormat({ rules: { keepSceneWithNext: 0 } });
+    const pagesOf = (el, text, f, withTail) => {
+      const out = [];
+      for (let fill = 1; fill < perPage; fill++) {
+        const blocks = [];
+        for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+        blocks.push({ el, text });
+        if (withTail) for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+        out.push(SF.paginate(blocks, { fmt: f }).pages.length);
+      }
+      return out.join(',');
+    };
+    check('[102-2] ★ ไม่มีเนื้อตาม (ปิดเรื่องท้ายบท) → กฎต้องไม่แตะอะไรเลย',
+      pagesOf('transition', 'FADE OUT.', fmt, false)
+      === pagesOf('transition', 'FADE OUT.', off, false),
+      pagesOf('transition', 'FADE OUT.', fmt, false));
+    check('[102-2] ★ หัวฉากก็เช่นกันเมื่อเป็นบล็อกสุดท้ายของเอกสาร',
+      pagesOf('scene', 'INT. ตลาด - เย็น', fmt, false)
+      === pagesOf('scene', 'INT. ตลาด - เย็น', off, false));
+    // และต้อง "ต่างกันจริง" เมื่อมีเนื้อตาม — เอาความยาวที่ปิดกฎแล้วเกิด orphan มาเป็นตัวตั้ง
+    // แล้วยืนยันว่าเปิดกฎ **หัวฉากย้ายไปเป็นบล็อกแรกของหน้าถัดไป** ไม่ใช่แค่หายไปเฉย ๆ
+    // (จำนวนหน้ามักเท่าเดิม เพราะย้ายบรรทัดเดียว — เทียบจำนวนหน้าจึงพิสูจน์อะไรไม่ได้)
+    {
+      const fill = anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', off, true);
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el: 'scene', text: 'INT. ตลาด - เย็น' });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+      const on = SF.paginate(blocks, { fmt });
+      const p1 = on.pages[0].blocks;
+      const p2 = on.pages[1] ? on.pages[1].blocks : [];
+      check('[102-2] ★★ เปิดกฎแล้วหัวฉากย้ายไปเป็นบล็อกแรกของหน้าถัดไปจริง',
+        fill > 0 && p1[p1.length - 1].el !== 'scene' && !!p2[0] && p2[0].el === 'scene',
+        'fill=' + fill + ' · ท้ายหน้า1=' + (p1[p1.length - 1] || {}).el
+        + ' · ต้นหน้า2=' + (p2[0] || {}).el);
+      check('[102-2] ★ และเนื้อของฉากยังตามมาต่อทันที (ไม่ได้ขาดจากกัน)',
+        !!p2[1] && p2[1].el === 'action', (p2[1] || {}).el);
+    }
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 try { fs.unlinkSync(tmp); } catch {}
 if (fail) process.exit(1);

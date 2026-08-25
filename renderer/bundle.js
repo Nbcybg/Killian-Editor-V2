@@ -14666,6 +14666,14 @@
     }
     return out;
   }
+  function hasContentAfter(list, i5) {
+    for (let j = i5 + 1; j < list.length; j++) {
+      const e = list[j] && list[j].el;
+      if (e === "page-break") return false;
+      if (e !== "blank") return true;
+    }
+    return false;
+  }
   function blankLinesBefore(el2, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     const cfg = f.elements[el2];
@@ -14845,6 +14853,12 @@
       const body = wrapLines(b.text, c.width);
       const need = before + body;
       const free = perPage - used;
+      const keepN = Math.max(0, Math.round(num(R.keepSceneWithNext, 0)));
+      if (need <= free && keepN > 0 && cur.length && KEEP_WITH_NEXT.has(b.el) && free - need < keepN && hasContentAfter(list, i5)) {
+        pushPage();
+        i5--;
+        continue;
+      }
       if (need <= free) {
         addBlock({ ...b, lines: body });
         used += need;
@@ -15023,7 +15037,7 @@
     while (out.length && out[out.length - 1] === "") out.pop();
     return out.join("\n");
   }
-  var PAPER_SIZES, MARGIN_DEFAULTS, CHARS_PER_INCH, LINES_PER_INCH, LINE_HEIGHT_IN, SP_ELEMENT_CONFIG, ST, SP_ELEMENT_STYLES, CAPS_ELEMENTS, PAGE_BREAK_RULES, CONTINUED_DEFAULTS, SP_STRINGS, SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, DEFAULT_SP_FORMAT, SP_ELEMENT_KEYS, ROSTER_VERSION;
+  var PAPER_SIZES, MARGIN_DEFAULTS, CHARS_PER_INCH, LINES_PER_INCH, LINE_HEIGHT_IN, SP_ELEMENT_CONFIG, ST, SP_ELEMENT_STYLES, CAPS_ELEMENTS, PAGE_BREAK_RULES, KEEP_WITH_NEXT, CONTINUED_DEFAULTS, SP_STRINGS, SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, DEFAULT_SP_FORMAT, SP_ELEMENT_KEYS, ROSTER_VERSION;
   var init_sp_format = __esm({
     "src/sp-format.js"() {
       init_i18n();
@@ -15107,6 +15121,18 @@
         keepSceneWithNext: 2
         // หัวฉากท้ายหน้าต้องมีเนื้อตามอย่างน้อยกี่บรรทัด ไม่งั้นยกทั้งก้อน
       };
+      KEEP_WITH_NEXT = /* @__PURE__ */ new Set([
+        "scene",
+        "subheader",
+        "intercut",
+        "shot",
+        "act-break",
+        "transition",
+        "transition-in",
+        "note",
+        "cont-left",
+        "cont-right"
+      ]);
       CONTINUED_DEFAULTS = {
         enabled: true,
         scene: true,
@@ -17085,7 +17111,11 @@
         "Mod-Home": docEdgeCmd(false, false),
         "Mod-End": docEdgeCmd(true, false),
         "Shift-Mod-Home": docEdgeCmd(false, true),
-        "Shift-Mod-End": docEdgeCmd(true, true)
+        "Shift-Mod-End": docEdgeCmd(true, true),
+        "Ctrl-Home": docEdgeCmd(false, false),
+        "Ctrl-End": docEdgeCmd(true, false),
+        "Shift-Ctrl-Home": docEdgeCmd(false, true),
+        "Shift-Ctrl-End": docEdgeCmd(true, true)
       };
       KEditor = class {
         constructor(mount, {
@@ -21245,6 +21275,12 @@
         fontFamily: "",
         language: "th",
         spFontFamily: "",
+        // [alpha.100 ข้อ 4] สีกระดาษ — เลือกเองได้ (พรีเซ็ต/สีใดก็ได้) · '' = ค่าเริ่มต้น (ขาว)
+        // เก็บระดับผู้ใช้เพราะเป็นความสบายตาของคนอ่านจอ ไม่ใช่รูปแบบของผลงาน
+        // (ตอนพิมพ์/ส่งออก PDF ยังขาวเสมอ — ดู @media print และ pdf-generator.js)
+        paperColor: "",
+        // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบสี่ด้านทุกแผ่น · เริ่มต้นปิด
+        pageGuides: false,
         autoSync: false,
         thesaurus: false,
         focusDim: 0.3,
@@ -22995,6 +23031,7 @@
     fitScale: () => fitScale,
     isEditView: () => isEditView,
     isPageView: () => isPageView,
+    isPaperView: () => isPaperView,
     isValidView: () => isValidView,
     layoutCssVars: () => layoutCssVars,
     lineEndingType: () => lineEndingType,
@@ -23220,7 +23257,7 @@
     const name5 = SP_VIEW_LABELS[mode] || SP_VIEW_LABELS.normal;
     return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
   }
-  var SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, isValidView, isEditView, OVERVIEW_PX, LINE_MARK, cssIn2;
+  var SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPaperView, isPageView, isValidView, isEditView, OVERVIEW_PX, LINE_MARK, cssIn2;
   var init_sp_view = __esm({
     "src/sp-view.js"() {
       init_i18n();
@@ -23237,7 +23274,7 @@
       };
       SP_VIEW_CLASS = {
         normal: "",
-        layout: "sp-view-layout",
+        layout: "sp-view-layout k-paper",
         draft: "sp-view-draft",
         side: "sp-view-side",
         overview1: "sp-view-overview sp-view-ov1",
@@ -23249,8 +23286,10 @@
         "sp-view-side",
         "sp-view-overview",
         "sp-view-ov1",
-        "sp-view-ov4"
+        "sp-view-ov4",
+        "k-paper"
       ];
+      isPaperView = (mode) => mode === "layout";
       isPageView = (mode) => mode === "side" || mode === "overview1" || mode === "overview4";
       isValidView = (mode) => SP_VIEWS.includes(mode);
       isEditView = (mode) => !isPageView(mode);
@@ -23408,7 +23447,7 @@
   function refreshContinueds(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(ctKey, true));
   }
-  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, setSpPageNumberLabel, ctKey, _conts, _contSig, ctSigOf;
+  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, applySpPagePads, setSpPageNumberLabel, ctKey, _conts, _contSig, ctSigOf;
   var init_sp_format_guide = __esm({
     "src/sp-format-guide.js"() {
       init_i18n();
@@ -23432,6 +23471,7 @@
       pageBreaks = SP_PB.breaks;
       spPageBreakPlugin = SP_PB.plugin;
       refreshPageBreaks = SP_PB.refresh;
+      applySpPagePads = SP_PB.applyPads;
       setSpPageNumberLabel = SP_PB.setNumberLabel;
       ctKey = new PluginKey("kspcontinued");
       _conts = [];
@@ -65365,6 +65405,81 @@ ${h.text}`;
     }
   });
 
+  // src/paper-color.js
+  function hexRgb(hex) {
+    let h = String(hex == null ? "" : hex).trim().replace(/^#/, "");
+    if (/^[0-9a-f]{3}$/i.test(h)) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (!/^[0-9a-f]{6}$/i.test(h)) return null;
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+  }
+  function rgbHex(c) {
+    if (!c) return PAPER_DEFAULT;
+    return "#" + [c.r, c.g, c.b].map((v2) => clamp255(v2).toString(16).padStart(2, "0")).join("");
+  }
+  function normalizePaperColor(hex, fallback = PAPER_DEFAULT) {
+    const c = hexRgb(hex);
+    return c ? rgbHex(c) : fallback;
+  }
+  function mixHex(hex, target, amount) {
+    const a = hexRgb(hex), b = hexRgb(target);
+    if (!a || !b) return normalizePaperColor(hex);
+    const k = Math.max(0, Math.min(1, +amount || 0));
+    return rgbHex({ r: a.r + (b.r - a.r) * k, g: a.g + (b.g - a.g) * k, b: a.b + (b.b - a.b) * k });
+  }
+  function luminance(hex) {
+    const c = hexRgb(hex);
+    if (!c) return 1;
+    const f = (v2) => {
+      const s = v2 / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+  function paperVars(hex) {
+    const paper = normalizePaperColor(hex);
+    const light = isLightPaper(paper);
+    const toward = light ? "#000000" : "#ffffff";
+    return {
+      "--paper": paper,
+      // หมึก: กระดาษสว่าง = เกือบดำ · กระดาษมืด = เกือบขาว (ไม่ใช่ดำ/ขาวสุดโต่ง อ่านสบายกว่า)
+      "--paper-ink": mixHex(paper, toward, light ? 0.9 : 0.88),
+      "--paper-edge": mixHex(paper, toward, 0.16),
+      // เส้นขอบแผ่นกระดาษ
+      "--paper-line": mixHex(paper, toward, 0.26),
+      // เส้นประคั่นหน้า / เส้นบอกระยะขอบ
+      "--paper-code": mixHex(paper, toward, 0.05),
+      // พื้นบล็อกโค้ดบนกระดาษ
+      "--paper-dim": mixHex(paper, toward, 0.48)
+      // ป้ายเลขหน้า / ข้อความจาง ๆ บนกระดาษ
+    };
+  }
+  function matchPaperPreset(hex) {
+    const c = normalizePaperColor(hex);
+    const hit = PAPER_PRESETS.find((p) => p.color === c);
+    return hit ? hit.key : "";
+  }
+  function paperPresetColor(key2) {
+    const hit = PAPER_PRESETS.find((p) => p.key === key2);
+    return hit ? hit.color : null;
+  }
+  var PAPER_DEFAULT, PAPER_PRESETS, clamp255, isLightPaper;
+  var init_paper_color = __esm({
+    "src/paper-color.js"() {
+      init_i18n();
+      PAPER_DEFAULT = "#ffffff";
+      PAPER_PRESETS = [
+        { key: "white", color: "#ffffff", label: T`ขาว` },
+        { key: "cream", color: "#f5f1e6", label: T`ครีม (ของเดิม)` },
+        { key: "sepia", color: "#efe3cc", label: T`กระดาษเก่า` },
+        { key: "gray", color: "#eeeeee", label: T`เทาอ่อน` },
+        { key: "mint", color: "#eaf2ec", label: T`เขียวถนอมสายตา` },
+        { key: "dark", color: "#2b2b2b", label: T`มืด` }
+      ];
+      clamp255 = (v2) => Math.max(0, Math.min(255, Math.round(v2)));
+      isLightPaper = (hex) => luminance(hex) >= 0.4;
+    }
+  });
+
   // src/word-history.js
   function getWordHistory() {
     if (!state.meta) return [];
@@ -68697,6 +68812,9 @@ ${h.text}`;
     if (isPanelOpen("dashboard") && $("#dash-body")) renderDashboard($("#dash-body"));
   }
   async function renderDashboard(pane) {
+    const root = state.root;
+    if (!root) return false;
+    const stale2 = () => state.root !== root;
     pane.innerHTML = "";
     const wrap2 = el("div", "dash-wrap");
     pane.append(wrap2);
@@ -68715,12 +68833,14 @@ ${h.text}`;
     const sceneRows = [];
     const byStatus = {};
     const chapterWords = [];
-    for (const secName of await kapi.listDirs(state.root)) {
-      const secPath = await kapi.join(state.root, secName);
+    for (const secName of await kapi.listDirs(root)) {
+      if (stale2()) return false;
+      const secPath = await kapi.join(root, secName);
       if (!await kapi.exists(await kapi.join(secPath, "section.json"))) continue;
       const draftRoot = await kapi.join(secPath, "Draft");
       if (!await kapi.exists(draftRoot)) continue;
       for (const dname of await kapi.listDirs(draftRoot)) {
+        if (stale2()) return false;
         const dPath = await kapi.join(draftRoot, dname);
         const df = await kapi.join(dPath, "draft.json");
         if (!await kapi.exists(df)) continue;
@@ -68866,19 +68986,19 @@ ${h.text}`;
     try {
       const AC = await Promise.resolve().then(() => (init_album_core(), album_core_exports));
       const UIX = await Promise.resolve().then(() => (init_usage_index(), usage_index_exports));
-      const albums = await AC.listAlbums(kapi, state.root);
-      const imgs = await AC.allImages(kapi, state.root, albums);
+      const albums = await AC.listAlbums(kapi, root);
+      const imgs = await AC.allImages(kapi, root, albums);
       if (imgs.length) {
         for (let i5 = 0; i5 < imgs.length; i5 += 32) {
           await Promise.all(imgs.slice(i5, i5 + 32).map(async (it) => {
             try {
-              it.size = (await kapi.stat(await kapi.join(state.root, "Images", ...it.path.split("/")))).size;
+              it.size = (await kapi.stat(await kapi.join(root, "Images", ...it.path.split("/")))).size;
             } catch {
               it.size = 0;
             }
           }));
         }
-        const { index } = await UIX.scanUsage(kapi, state.root);
+        const { index } = await UIX.scanUsage(kapi, root);
         const st = AC.galleryStats(UIX.attachUsage(imgs, index), albums);
         const gpanel = el("div", "dash-apanel dash-apanel-wide dash-gallery");
         gpanel.append(el("div", "dash-apanel-title", t("ui.dash.libraryImage")));
@@ -68906,7 +69026,7 @@ ${h.text}`;
       renderChoicePanel(box2, {
         limit: 6,
         onOpenScene: async (sceneId) => {
-          const hit = await findScenePath(state.root, sceneId);
+          const hit = await findScenePath(root, sceneId);
           if (hit && await kapi.exists(hit.path)) openScene(hit.path, hit.title);
         }
       });
@@ -68932,12 +69052,14 @@ ${h.text}`;
     }
     const centHost = el("div", "dash-cent");
     wrap2.append(centHost);
+    if (stale2()) return false;
     try {
       const { renderReview: renderReview2 } = await Promise.resolve().then(() => (init_dash_review(), dash_review_exports));
       await renderReview2(centHost);
     } catch (e) {
       centHost.append(el("div", "dim", t("ui.dash.loadPartHubNot")));
     }
+    return true;
   }
   var import_md5;
   var init_dashboard = __esm({
@@ -70635,6 +70757,61 @@ ${h.text}`;
       pageInfo();
       previewPage();
     };
+    W.paperColor = normalizePaperColor(s.paperColor || PAPER_DEFAULT, PAPER_DEFAULT);
+    W.pageGuides = !!s.pageGuides;
+    const pcSel = q("#st-paper-color");
+    const pcHex = q("#st-paper-color-hex");
+    const pcGuides = q("#st-page-guides");
+    if (pcSel && pcHex) {
+      for (const p of PAPER_PRESETS) {
+        const o = el("option");
+        o.value = p.key;
+        o.textContent = p.label;
+        pcSel.append(o);
+      }
+      {
+        const o = el("option");
+        o.value = "";
+        o.textContent = t("ui.dlg.setCustom");
+        pcSel.append(o);
+      }
+      const previewPaper = () => {
+        const keep = s.paperColor;
+        s.paperColor = W.paperColor;
+        applyPaperVars();
+        s.paperColor = keep;
+        try {
+          renderPaperSheets(state.active);
+        } catch {
+        }
+      };
+      const syncPaperColor = () => {
+        pcSel.value = matchPaperPreset(W.paperColor);
+        pcHex.value = W.paperColor;
+        previewPaper();
+      };
+      pcSel.onchange = () => {
+        const c = paperPresetColor(pcSel.value);
+        if (!c) {
+          pcSel.value = "";
+          return;
+        }
+        W.paperColor = c;
+        syncPaperColor();
+      };
+      pcHex.oninput = () => {
+        W.paperColor = normalizePaperColor(pcHex.value, W.paperColor);
+        syncPaperColor();
+      };
+      syncPaperColor();
+    }
+    if (pcGuides) {
+      pcGuides.checked = W.pageGuides;
+      pcGuides.onchange = () => {
+        W.pageGuides = pcGuides.checked;
+        document.body.classList.toggle("k-page-guides", W.pageGuides);
+      };
+    }
     const numIn = (sel, get3, set, step) => {
       const inp = q(sel);
       inp.value = get3();
@@ -70864,6 +71041,14 @@ ${h.text}`;
       q("#st-splh").value = "1";
       q("#st-sppagegap").value = "28";
       paperSel.value = "letter";
+      W.paperColor = PAPER_DEFAULT;
+      W.pageGuides = false;
+      if (pcSel && pcHex) {
+        pcSel.value = matchPaperPreset(W.paperColor);
+        pcHex.value = W.paperColor;
+      }
+      if (pcGuides) pcGuides.checked = false;
+      document.body.classList.remove("k-page-guides");
       for (const side of ["top", "bottom", "left", "right"]) q("#st-mg-" + side).value = W.margins[side];
       q("#st-paper-w").value = W.customPaper.width;
       q("#st-paper-h").value = W.customPaper.height;
@@ -71451,6 +71636,8 @@ ${h.text}`;
       s.spContinued = { ...W.continued };
       s.spLineHeight = W.spLineHeight;
       s.spPageGap = W.spPageGap;
+      s.paperColor = normalizePaperColor(W.paperColor, PAPER_DEFAULT);
+      s.pageGuides = !!W.pageGuides;
       s.typeSound = q("#st-typesnd").checked;
       s.typeSoundMode = q("#st-typesnd-mode").value === "typewriter" ? "typewriter" : "always";
       s.typeSoundAlways = s.typeSoundMode === "always";
@@ -71498,7 +71685,9 @@ ${h.text}`;
             "heavyDocBlocks",
             "mdAlignStyle",
             "shortcuts",
-            "showHomeOnStartup"
+            "showHomeOnStartup",
+            "paperColor",
+            "pageGuides"
           ];
           const globals = {};
           for (const k of globalKeys) {
@@ -71733,6 +71922,7 @@ ${h.text}`;
       init_core();
       init_typewriter_sound();
       init_margin_presets2();
+      init_paper_color();
       init_fountain();
       init_dashboard();
       init_ui();
@@ -156489,6 +156679,7 @@ ${css}
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
     applyPaperClass: () => applyPaperClass,
+    applyPaperVars: () => applyPaperVars,
     applyProjectLangFonts: () => applyProjectLangFonts,
     applyProseVars: () => applyProseVars,
     applySettings: () => applySettings,
@@ -156616,6 +156807,7 @@ ${css}
     renderGalleryPanel: () => renderGalleryPanel,
     renderNetworkPanel: () => renderNetworkPanel,
     renderOpenFeaturePanels: () => renderOpenFeaturePanels,
+    renderPaperSheets: () => renderPaperSheets,
     renderPlannerPanel: () => renderPlannerPanel,
     repaginateFast: () => repaginateFast,
     reportPanelWindowHealth: () => reportPanelWindowHealth,
@@ -156683,6 +156875,7 @@ ${css}
     toggleGallery: () => toggleGallery,
     toggleMarkdownCodes: () => toggleMarkdownCodes,
     toggleOpenLastProject: () => toggleOpenLastProject,
+    togglePageGuides: () => togglePageGuides,
     togglePageNumbers: () => togglePageNumbers,
     toggleProseIndent: () => toggleProseIndent,
     toggleSceneNumbers: () => toggleSceneNumbers,
@@ -156790,6 +156983,14 @@ ${css}
     R.setProperty("--page-scale", pageScale.toFixed(3));
     bumpProseLayout();
     syncWorkspaceWidths();
+    try {
+      renderPaperSheets(state.active);
+    } catch {
+    }
+    try {
+      retunePagePads(state.active);
+    } catch {
+    }
     const slider = $("#zoom-slider");
     if (slider) slider.value = String(Math.round(pageScale * 100));
     const lbl = $("#zoom-label");
@@ -156991,8 +157192,17 @@ ${css}
   function spFormat() {
     return mergeSpFormat(spFormatSettings());
   }
+  function applyPaperVars() {
+    const hex = normalizePaperColor(state.settings.paperColor || PAPER_DEFAULT, PAPER_DEFAULT);
+    const R = document.documentElement.style;
+    const vars = paperVars(hex);
+    for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
+    document.body.classList.toggle("k-page-guides", !!state.settings.pageGuides);
+    return hex;
+  }
   function applyPageVars() {
     const fmt = spFormat();
+    applyPaperVars();
     const R = document.documentElement.style;
     const vars = pageCssVars(fmt);
     for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
@@ -157021,6 +157231,10 @@ ${css}
     for (const tb2 of state.tabs.values()) if (tb2.sp) tb2.sp.refreshGuides();
     const pv = proseLayoutCssVars(proseFormat(), fmt.paper, fmt.margins, state.settings.spPageGap);
     for (const k of Object.keys(pv)) R.setProperty(k, pv[k]);
+    try {
+      renderPaperSheets(state.active);
+    } catch {
+    }
     return fmt;
   }
   function proseFormatSettings() {
@@ -157403,6 +157617,7 @@ ${css}
     document.querySelectorAll(".pane").forEach((p) => {
       p.classList.remove(...ALL_VIEW_CLASSES);
       if (p !== (tab && tab.pane)) clearPageView(p);
+      p.querySelectorAll(":scope > .workspace > .k-paper-layer").forEach((n2) => n2.remove());
     });
     let pages = null;
     if (tab && tab.pane && (tab.sp || tab.editor)) {
@@ -157410,6 +157625,8 @@ ${css}
       if (cls.length) tab.pane.classList.add(...cls);
       if (isPageView(m)) pages = tab.sp ? drawPageView(tab) : drawProsePageView(tab);
       else clearPageView(tab.pane);
+      renderPaperSheets(tab);
+      retunePagePads(tab);
     }
     const sel = $("#sp-view-select");
     if (sel) sel.value = m;
@@ -157420,11 +157637,38 @@ ${css}
     if (!quiet) setStatus(viewStatusText(m, pages ?? void 0));
     return m;
   }
+  function retunePagePads(tab) {
+    const t3 = tab || state.active;
+    if (!t3) return;
+    requestAnimationFrame(() => {
+      try {
+        if (t3.sp) tuneSpPagePadsLoop(t3);
+        else if (t3.editor) {
+          applyProsePagePads(t3.editor.view.dom);
+          tuneProsePagePadsLoop(t3);
+        }
+      } catch {
+      }
+      try {
+        renderPaperSheets(t3);
+      } catch {
+      }
+    });
+  }
   function refreshSpView() {
     if (!isPageView(spViewMode)) return;
     const tab = state.active;
     if (tab && tab.sp) drawPageView(tab);
     else if (tab && tab.editor) drawProsePageView(tab);
+  }
+  function togglePageGuides(on2) {
+    const v2 = on2 === void 0 ? !state.settings.pageGuides : !!on2;
+    state.settings.pageGuides = v2;
+    document.body.classList.toggle("k-page-guides", v2);
+    saveGlobalSetting("pageGuides", v2);
+    syncMenuToggles();
+    setStatus(v2 ? T`เปิดเส้นบอกระยะขอบกระดาษ (มุมมองจัดหน้า)` : T`ปิดเส้นบอกระยะขอบกระดาษ`);
+    return v2;
   }
   function toggleShowFormat(on2) {
     const v2 = on2 ?? !isFormatGuide();
@@ -161798,6 +162042,8 @@ ${css}
         format: state.active?.sp ? "screenplay" : "prose",
         // alpha.57 — เมนู "บท": โหมดมุมมอง + แสดงรูปแบบ + ตรวจก่อนส่งออก
         spView: currentSpView(),
+        pageGuides: !!state.settings.pageGuides,
+        // [alpha.100 ข้อ 2]
         showFormat: isFormatGuide(),
         checkBeforeExport: state.settings.spCheckBeforeExport !== false,
         // alpha.57a — เลขฉาก / เลขหน้า / เสียงพิมพ์
@@ -165371,6 +165617,39 @@ ${css}
     if (!pane) return 0;
     const n2 = Math.max(1, Math.round(+count || 1));
     pane.style.setProperty("--pg-count", String(n2));
+    renderPaperSheets(tab, n2);
+    return n2;
+  }
+  function renderPaperSheets(tab, count) {
+    const pane = tab && tab.pane;
+    if (!pane) return 0;
+    const ws = pane.querySelector(":scope > .workspace");
+    const old = ws && ws.querySelector(":scope > .k-paper-layer");
+    if (!ws || !pane.classList.contains("k-paper") || !isPaperView(currentSpView())) {
+      if (old) old.remove();
+      return 0;
+    }
+    const pm2 = ws.querySelector(":scope > .ProseMirror");
+    if (!pm2) {
+      if (old) old.remove();
+      return 0;
+    }
+    const fmt = spFormat();
+    const pageH = Math.max(1, num(fmt.paper.height, 11) * 96);
+    const gap = Math.max(8, Math.min(120, Math.round(num(state.settings.spPageGap, 28))));
+    const n2 = Math.max(1, Math.round(+count || parseInt(pane.style.getPropertyValue("--pg-count"), 10) || 1));
+    const layer = old || el("div", "k-paper-layer");
+    layer.style.top = pm2.offsetTop + "px";
+    layer.style.height = n2 * pageH + (n2 - 1) * gap + "px";
+    while (layer.children.length > n2) layer.lastChild.remove();
+    while (layer.children.length < n2) layer.append(el("div", "k-paper-sheet"));
+    for (let i5 = 0; i5 < n2; i5++) {
+      const sh = layer.children[i5];
+      sh.style.top = i5 * (pageH + gap) + "px";
+      sh.style.height = pageH + "px";
+      sh.dataset.sheet = String(i5 + 1);
+    }
+    if (!old) ws.insertBefore(layer, ws.firstChild);
     return n2;
   }
   function repaginateNow(t3) {
@@ -165396,6 +165675,12 @@ ${css}
       if (changed || cChanged || nChanged) t3.sp.refreshGuides();
       setLayoutPageCount(t3, pg.count);
       refreshSpView();
+      requestAnimationFrame(() => {
+        try {
+          tuneSpPagePadsLoop(t3);
+        } catch {
+        }
+      });
       _spPageText = tf("ui.app.page", pg.count);
       return _spPageText;
     } catch (e) {
@@ -165439,6 +165724,53 @@ ${css}
     _padTuneUntil = nowMs + 400;
     applyProsePagePads(pm2);
     return true;
+  }
+  function tuneSpPagePads(t3) {
+    if (!t3 || !t3.sp || !t3.pane) return false;
+    if (currentSpView() !== "layout") return false;
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (nowMs < _spPadTuneUntil) return false;
+    const pm2 = t3.sp.view.dom;
+    if (!pm2 || !pm2.isConnected) return false;
+    const list = pageBreaks();
+    if (!list.length) return false;
+    const els = [...pm2.querySelectorAll(".sp-page-break")];
+    if (els.length !== list.length) return false;
+    const fmt = spFormat();
+    const target = (num(fmt.paper.height, 11) - num(fmt.margins.top, 1) - num(fmt.margins.bottom, 1)) * 96;
+    if (!(target > 8)) return false;
+    const z = zoomFactorOf(pm2) || 1;
+    const cs = getComputedStyle(pm2);
+    const top0 = pm2.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
+    const yOf = (e) => (e.getBoundingClientRect().top - top0) / z;
+    const firstBlk = [...pm2.children].find((e) => e.nodeType === 1 && !e.classList.contains("sp-page-break") && e.getBoundingClientRect().height > 0);
+    let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+    let prevH = 0;
+    let changed = false;
+    for (let i5 = 0; i5 < els.length; i5++) {
+      const y = yOf(els[i5]);
+      const used = y - prev - prevH;
+      prev = y;
+      prevH = els[i5].getBoundingClientRect().height / z;
+      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
+      list[i5].pad = want;
+      changed = true;
+    }
+    if (!changed) return false;
+    _spPadTuneUntil = nowMs + 400;
+    applySpPagePads(pm2);
+    return true;
+  }
+  function tuneSpPagePadsLoop(t3, rounds = 2) {
+    let n2 = 0;
+    for (let i5 = 0; i5 < rounds; i5++) {
+      _spPadTuneUntil = 0;
+      if (!tuneSpPagePads(t3)) break;
+      n2++;
+    }
+    _spPadTuneUntil = (typeof performance !== "undefined" ? performance.now() : Date.now()) + 400;
+    return n2;
   }
   function tuneProsePagePadsLoop(t3, rounds = 2) {
     let n2 = 0;
@@ -166195,6 +166527,8 @@ ${css}
     const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
     const backScroll = keepScroll2(() => document.querySelector(sel));
     const p = Promise.resolve().then(f).catch((e) => {
+      state._panelDrawErrors = (state._panelDrawErrors || 0) + 1;
+      state._panelDrawLastErr = pid + ": " + (e && e.message ? e.message : String(e));
       log("error", t("ui.app.drawPanel") + pid + t("ui.app.fail"), e);
     }).finally(() => _featInFlight.delete(pid)).then(() => {
       try {
@@ -166848,6 +167182,10 @@ ${css}
       // ---- alpha.57: มุมมองบท (57/59/60/61) · ไปยังหน้า-ฉาก (78) · ตรวจบท (54) · ส่งออก (67/68/70) ----
       case "sp-view":
         setSpView(a[0]);
+        break;
+      // [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ — สวิตช์เดียว ครบทั้งสี่ด้านทุกแผ่น
+      case "page-guides":
+        togglePageGuides(a[0]);
         break;
       case "sp-show-format":
         toggleShowFormat(a[0]);
@@ -170493,7 +170831,11 @@ ${css}
         document.body.classList.contains("paper-mode")
       );
       const pmBg = getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor;
-      check2("\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E19\u0E27\u0E25 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14)", pmBg === "rgb(245, 241, 230)", pmBg);
+      check2(
+        "[100-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 (\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E23\u0E35\u0E21)",
+        /rgba\(0, 0, 0, 0\)|transparent/.test(pmBg),
+        pmBg
+      );
       check2(
         "[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E25\u0E22 (\u0E1B\u0E38\u0E48\u0E21/\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14/\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07)",
         !document.querySelector("#tb-paper") && !SHORTCUTS.some((x) => x[3] === "paper-mode") && !/case ['"]paper-mode['"]/.test(String(handleCommand))
@@ -171288,8 +171630,11 @@ ${css}
       );
       await kapi.testShot("/tmp/k2_sp_fixed.png");
       check2(
-        "\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: \u0E2B\u0E19\u0E49\u0E32\u0E02\u0E32\u0E27",
-        getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor === "rgb(245, 241, 230)"
+        "[100-1] \u2605 \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E0A\u0E48\u0E19\u0E01\u0E31\u0E19 (\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A)",
+        /rgba\(0, 0, 0, 0\)|transparent/.test(
+          getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor
+        ),
+        getComputedStyle(document.querySelector(".pane.on .ProseMirror")).backgroundColor
       );
       await kapi.testShot("/tmp/k2_paper_sp.png");
       imageLightboxTest();
@@ -171368,6 +171713,54 @@ ${css}
         [...document.querySelectorAll("#dash-body .dash-apanel-title")].some((e) => e.textContent.includes("\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E41\u0E15\u0E48\u0E25\u0E30\u0E1A\u0E17"))
       );
       await kapi.testShot("/tmp/k2_analytics.png");
+      {
+        const keepRoot100 = state.root;
+        const errBefore = state._panelDrawErrors || 0;
+        const job = renderDashboard($("#dash-body"));
+        state.root = null;
+        let threw = null, ret;
+        try {
+          ret = await job;
+        } catch (e) {
+          threw = e;
+        }
+        state.root = keepRoot100;
+        check2(
+          "[100-5] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14 \u2192 \u0E44\u0E21\u0E48 throw",
+          !threw,
+          threw && threw.message
+        );
+        check2(
+          "[100-5] \u2605\u2605 \u0E41\u0E25\u0E30\u0E40\u0E25\u0E34\u0E01\u0E27\u0E32\u0E14\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2A\u0E07\u0E1A (\u0E04\u0E37\u0E19 false) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E27\u0E32\u0E14\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E01\u0E48\u0E32\u0E15\u0E48\u0E2D",
+          ret === false,
+          String(ret)
+        );
+        check2(
+          "[100-5] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35 error \u0E40\u0E07\u0E35\u0E22\u0E1A\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E43\u0E19\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07",
+          (state._panelDrawErrors || 0) === errBefore,
+          errBefore + " \u2192 " + (state._panelDrawErrors || 0) + " \xB7 " + (state._panelDrawLastErr || "")
+        );
+        state.root = null;
+        let ret2, threw2 = null;
+        try {
+          ret2 = await renderDashboard($("#dash-body"));
+        } catch (e) {
+          threw2 = e;
+        }
+        state.root = keepRoot100;
+        check2(
+          "[100-5] \u2605 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C \u2192 \u0E04\u0E37\u0E19 false \u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E44\u0E21\u0E48 throw",
+          !threw2 && ret2 === false,
+          threw2 ? threw2.message : String(ret2)
+        );
+        await openDashboard();
+        await new Promise((r) => setTimeout(r, 500));
+        check2(
+          "[100-5] \u2605 \u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E37\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
+          document.querySelector("#dash-body .dash-num")?.textContent !== "\u2026",
+          document.querySelector("#dash-body .dash-num")?.textContent
+        );
+      }
       closeTab("::dash::");
       {
         const drafts = await listDrafts();
@@ -175473,6 +175866,304 @@ ${css}
           await new Promise((r) => setTimeout(r, 150));
         }
         {
+          const pn = document.querySelector(".pane.on");
+          const pm3 = () => pn.querySelector(":scope > .workspace > .ProseMirror");
+          const layer = () => pn.querySelector(":scope > .workspace > .k-paper-layer");
+          let _w100 = 0, _pad100 = "";
+          const isClear = (c) => /rgba\(0, 0, 0, 0\)|transparent/.test(c);
+          const lum2 = (css) => {
+            const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(String(css || ""));
+            if (!m) return 1;
+            const f = (v4) => {
+              const x = +v4 / 255;
+              return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * f(m[1]) + 0.7152 * f(m[2]) + 0.0722 * f(m[3]);
+          };
+          const t100 = state.active;
+          const ed100 = t100 && (t100.editor || t100.sp);
+          const keepMd100 = ed100 ? ed100.getMarkdown() : null;
+          if (ed100) {
+            ed100.setMarkdown(t100.sp ? [
+              ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19",
+              ...Array.from(
+                { length: 150 },
+                (_2, i5) => "!\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48 " + i5 + " \u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E04\u0E27\u0E23\u0E43\u0E2B\u0E49\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E46"
+              )
+            ].join(String.fromCharCode(10)) : Array.from(
+              { length: 160 },
+              (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48 " + i5 + " \u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E04\u0E27\u0E23\u0E43\u0E2B\u0E49\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E46 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E33\u0E2A\u0E31\u0E49\u0E19 \u0E46"
+            ).join(String.fromCharCode(10, 10)));
+            await new Promise((r) => setTimeout(r, 700));
+            repaginateFast(t100);
+            await new Promise((r) => setTimeout(r, 400));
+          }
+          setSpView("normal", true);
+          await new Promise((r) => setTimeout(r, 220));
+          check2(
+            "[100-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: pane \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+            !pn.classList.contains("k-paper"),
+            pn.className
+          );
+          {
+            const cs = getComputedStyle(pm3());
+            check2(
+              "[100-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E04\u0E23\u0E35\u0E21)",
+              isClear(cs.backgroundColor),
+              cs.backgroundColor
+            );
+            check2(
+              "[100-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E07\u0E32\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+              cs.boxShadow === "none",
+              cs.boxShadow
+            );
+            check2(
+              "[100-1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+              parseFloat(cs.borderTopWidth) === 0,
+              cs.borderTopWidth
+            );
+            check2("[100-1] \u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E1B\u0E39\u0E2D\u0E22\u0E39\u0E48", !layer());
+            _w100 = pm3().getBoundingClientRect().width;
+            _pad100 = cs.paddingLeft + "/" + cs.paddingTop;
+            check2(
+              "[100-1] \u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E0A\u0E34\u0E14\u0E02\u0E2D\u0E1A)",
+              parseFloat(cs.paddingLeft) > 20 && parseFloat(cs.paddingTop) > 20,
+              _pad100
+            );
+            check2(
+              "[100-1] \u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E22\u0E31\u0E07\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E2D\u0E32\u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E2D\u0E01)",
+              [...pn.querySelectorAll(".ed-page-break")].every((e) => getComputedStyle(e).display !== "none")
+            );
+            await kapi.testShot("/tmp/k2_100_normal.png");
+          }
+          setSpView("layout", true);
+          await new Promise((r) => setTimeout(r, 300));
+          {
+            repaginateFast(t100);
+            await new Promise((r) => setTimeout(r, 400));
+            const L2 = layer();
+            const nPg = Math.max(1, Math.round(+pn.style.getPropertyValue("--pg-count") || 1));
+            note("[100-3] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A = " + (t100 && t100.sp ? "\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07" : "\u0E19\u0E34\u0E22\u0E32\u0E22") + " \xB7 --pg-count = " + nPg);
+            check2("[100-3] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E21\u0E35\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E1B\u0E39\u0E2D\u0E22\u0E39\u0E48", !!L2);
+            const sheets = L2 ? [...L2.children] : [];
+            check2(
+              "[100-3] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E1C\u0E48\u0E19 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07",
+              sheets.length === nPg,
+              sheets.length + " vs " + nPg
+            );
+            check2(
+              "[100-3] \u2605 \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E02\u0E49\u0E32\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E40\u0E17\u0E2A\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E16\u0E39\u0E01\u0E02\u0E49\u0E32\u0E21)",
+              sheets.length >= 2,
+              sheets.length
+            );
+            check2(
+              "[100-3] \u2605\u2605 \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A/\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E2D\u0E1A-\u0E40\u0E07\u0E32 (\u0E41\u0E1C\u0E48\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E21\u0E31\u0E19\u0E40\u0E2D\u0E07)",
+              isClear(getComputedStyle(pm3()).backgroundColor) && getComputedStyle(pm3()).boxShadow === "none" && parseFloat(getComputedStyle(pm3()).borderTopWidth) === 0,
+              getComputedStyle(pm3()).backgroundColor + " | " + getComputedStyle(pm3()).boxShadow
+            );
+            if (sheets.length >= 2) {
+              const r0 = sheets[0].getBoundingClientRect();
+              const r1 = sheets[1].getBoundingClientRect();
+              const gapCss = Math.max(8, Math.round(num(state.settings.spPageGap, 28)));
+              const zoom = r0.height / (num(spFormat().paper.height, 11) * 96);
+              note("[100-3] \u0E41\u0E1C\u0E48\u0E19 " + sheets.length + " \u0E43\u0E1A \xB7 \u0E2A\u0E39\u0E07 " + r0.height.toFixed(1) + "px \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07 " + (r1.top - r0.bottom).toFixed(1) + "px");
+              check2(
+                "[100-3] \u2605\u2605 \u0E41\u0E1C\u0E48\u0E19\u0E41\u0E22\u0E01\u0E01\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07 \u2014 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u0E04\u0E31\u0E48\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E22\u0E32\u0E27",
+                r1.top - r0.bottom > 1,
+                (r1.top - r0.bottom).toFixed(2)
+              );
+              check2(
+                "[100-3] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 (spPageGap)",
+                Math.abs(r1.top - r0.bottom - gapCss * zoom) < 2,
+                (r1.top - r0.bottom).toFixed(2) + " vs " + (gapCss * zoom).toFixed(2)
+              );
+              const hs = sheets.map((x) => x.getBoundingClientRect().height);
+              check2(
+                "[100-3] \u2605\u2605 \u0E17\u0E38\u0E01\u0E41\u0E1C\u0E48\u0E19\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E4A\u0E30",
+                Math.max(...hs) - Math.min(...hs) < 0.6,
+                hs.slice(0, 6).join(",")
+              );
+              check2(
+                "[100-3] \u2605 \u0E41\u0E1C\u0E48\u0E19\u0E41\u0E23\u0E01\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48\u0E2B\u0E31\u0E27\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E1E\u0E2D\u0E14\u0E35",
+                Math.abs(r0.top - pm3().getBoundingClientRect().top) < 1.5,
+                r0.top.toFixed(1) + " vs " + pm3().getBoundingClientRect().top.toFixed(1)
+              );
+              check2(
+                "[100-3] \u2605 \u0E41\u0E1C\u0E48\u0E19\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07)",
+                Math.abs(r0.width - pm3().getBoundingClientRect().width) < 1.5,
+                r0.width.toFixed(1) + " vs " + pm3().getBoundingClientRect().width.toFixed(1)
+              );
+              check2(
+                "[100-3] \u2605 \u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E34\u0E01 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34)",
+                getComputedStyle(L2).pointerEvents === "none"
+              );
+              {
+                const pmE = pm3();
+                const zE = zoomFactorOf(pmE) || 1;
+                const csE = getComputedStyle(pmE);
+                const t0E = pmE.getBoundingClientRect().top + (parseFloat(csE.paddingTop) || 0) * zE;
+                const brE = [...pmE.querySelectorAll(".ed-page-break")];
+                const f1E = [...pmE.children].find((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && e.getBoundingClientRect().height > 0);
+                const stE = [f1E ? (f1E.getBoundingClientRect().top - t0E) / zE : 0];
+                for (const e of brE) {
+                  const r = e.getBoundingClientRect();
+                  stE.push((r.top - t0E) / zE + r.height / zE);
+                }
+                const wantE = num(spFormat().paper.height, 11) * 96 + gapCss;
+                const stepsE = stE.slice(1).map((y, i5) => +(y - stE[i5]).toFixed(1));
+                const offE = stepsE.filter((v4) => Math.abs(v4 - wantE) > 1.5);
+                note("[100r-2] \u0E19\u0E34\u0E22\u0E32\u0E22 " + stE.length + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 " + wantE + "px \xB7 \u0E27\u0E31\u0E14\u0E44\u0E14\u0E49 " + stepsE.slice(0, 6).join(" , "));
+                check2(
+                  "[100r-2] \u2605\u2605 \u0E19\u0E34\u0E22\u0E32\u0E22: \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E40\u0E1B\u0E4A\u0E30\u0E40\u0E0A\u0E48\u0E19\u0E01\u0E31\u0E19",
+                  offE.length === 0,
+                  "\u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19 " + offE.length + "/" + stepsE.length + ": " + offE.slice(0, 6).join(" , ")
+                );
+              }
+              check2(
+                "[100-1] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E1B\u0E01\u0E15\u0E34\u2194\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 \u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
+                Math.abs(pm3().getBoundingClientRect().width - _w100) < 1.5,
+                _w100.toFixed(1) + " \u2192 " + pm3().getBoundingClientRect().width.toFixed(1)
+              );
+              check2(
+                "[100-1] \u2605 \u0E41\u0E25\u0E30\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E01\u0E47\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21",
+                getComputedStyle(pm3()).paddingLeft + "/" + getComputedStyle(pm3()).paddingTop === _pad100,
+                _pad100 + " \u2192 " + getComputedStyle(pm3()).paddingLeft + "/" + getComputedStyle(pm3()).paddingTop
+              );
+            }
+            if (sheets.length >= 2) {
+              const r0s = sheets[0].getBoundingClientRect();
+              pn.scrollTop += r0s.bottom - pn.getBoundingClientRect().top - pn.clientHeight / 2;
+              await new Promise((r) => setTimeout(r, 250));
+            }
+            await kapi.testShot("/tmp/k2_100_layout.png");
+            pn.scrollTop = 0;
+            await new Promise((r) => setTimeout(r, 150));
+            {
+              const alignAt = (pct2) => {
+                const p1 = pm3().getBoundingClientRect();
+                const s1 = layer().children[0].getBoundingClientRect();
+                return {
+                  dl: s1.left - p1.left,
+                  dr: s1.right - p1.right,
+                  dt: s1.top - p1.top,
+                  pct: pct2
+                };
+              };
+              const base4 = alignAt(100);
+              note("[100r-1] \u0E0B\u0E39\u0E21 100%: \u0E41\u0E1C\u0E48\u0E19\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 \u0E0B\u0E49\u0E32\u0E22 " + base4.dl.toFixed(1) + " \xB7 \u0E02\u0E27\u0E32 " + base4.dr.toFixed(1) + " \xB7 \u0E1A\u0E19 " + base4.dt.toFixed(1));
+              check2(
+                "[100r-1] \u2605 \u0E17\u0E35\u0E48 100% \u0E41\u0E1C\u0E48\u0E19\u0E17\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E1E\u0E2D\u0E14\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27",
+                Math.abs(base4.dl) < 2 && Math.abs(base4.dr) < 2,
+                JSON.stringify(base4)
+              );
+              const bad = [];
+              for (const pct2 of [60, 150, 220, 100]) {
+                setPageScale(pct2 / 100);
+                await new Promise((r) => setTimeout(r, 350));
+                const a = alignAt(pct2);
+                note("[100r-1] \u0E0B\u0E39\u0E21 " + pct2 + "%: \u0E0B\u0E49\u0E32\u0E22 " + a.dl.toFixed(1) + " \xB7 \u0E02\u0E27\u0E32 " + a.dr.toFixed(1) + " \xB7 \u0E1A\u0E19 " + a.dt.toFixed(1));
+                if (Math.abs(a.dl) > 3 || Math.abs(a.dr) > 3 || Math.abs(a.dt) > 3) bad.push(a);
+              }
+              check2(
+                "[100r-1] \u2605\u2605 \u0E0B\u0E39\u0E21\u0E17\u0E38\u0E01\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E48\u0E19\u0E22\u0E31\u0E07\u0E17\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E1E\u0E2D\u0E14\u0E35 (\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E44\u0E1B)",
+                bad.length === 0,
+                JSON.stringify(bad)
+              );
+              resetPageScale();
+              await new Promise((r) => setTimeout(r, 300));
+              check2(
+                "[100r-1] \u2605 \u0E04\u0E37\u0E19\u0E0B\u0E39\u0E21\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E15\u0E23\u0E07\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                Math.abs(alignAt(100).dl - base4.dl) < 2
+              );
+            }
+            check2(
+              "[100-3] \u2605 \u0E41\u0E1C\u0E48\u0E19\u0E21\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+              !sheets.length || !isClear(getComputedStyle(sheets[0]).backgroundColor),
+              sheets.length && getComputedStyle(sheets[0]).backgroundColor
+            );
+            check2(
+              "[100-2] \u2605\u2605 \u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E01\u0E48\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E17\u0E34\u0E49\u0E07\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32",
+              [...pn.querySelectorAll(".ed-page-break")].every((e) => getComputedStyle(e, "::before").display === "none"),
+              [...pn.querySelectorAll(".ed-page-break")].slice(0, 1).map((e) => getComputedStyle(e, "::before").display).join("")
+            );
+            const guideOf = () => sheets.length ? getComputedStyle(sheets[0], "::before") : null;
+            check2(
+              "[100-2] \u2605\u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E1A\u0E2D\u0E01\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E40\u0E25\u0E22",
+              !state.settings.pageGuides && (!guideOf() || guideOf().content === "none"),
+              guideOf() && guideOf().content
+            );
+            togglePageGuides(true);
+            await new Promise((r) => setTimeout(r, 120));
+            check2(
+              "[100-2] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 body \u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A k-page-guides",
+              document.body.classList.contains("k-page-guides") && state.settings.pageGuides === true
+            );
+            if (sheets.length) {
+              const g = getComputedStyle(sheets[0], "::before");
+              check2("[100-2] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E48\u0E19", g.content !== "none", g.content);
+              const w = ["borderTopWidth", "borderBottomWidth", "borderLeftWidth", "borderRightWidth"].map((k) => parseFloat(g[k]) || 0);
+              check2(
+                "[100-2] \u2605\u2605 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E35\u0E48\u0E14\u0E49\u0E32\u0E19 (\u0E1A\u0E19-\u0E25\u0E48\u0E32\u0E07-\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E14\u0E49\u0E32\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27",
+                w.every((x) => x > 0),
+                w.join(",")
+              );
+              check2("[100-2] \u2605 \u0E40\u0E1B\u0E47\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30", g.borderTopStyle === "dashed", g.borderTopStyle);
+            }
+            await kapi.testShot("/tmp/k2_100_layout_guides.png");
+            togglePageGuides(false);
+            await new Promise((r) => setTimeout(r, 100));
+            check2(
+              "[100-2] \u2605 \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E25\u0E22)",
+              !document.body.classList.contains("k-page-guides") && !state.settings.pageGuides
+            );
+            const readVar = (k) => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+            const before = { p: readVar("--paper"), e: readVar("--paper-edge") };
+            check2(
+              "[100-4] \u2605\u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E32\u0E27 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E23\u0E35\u0E21 #f5f1e6",
+              !/f5f1e6/i.test(before.p),
+              before.p
+            );
+            const sheetBg = () => sheets.length ? getComputedStyle(sheets[0]).backgroundColor : "";
+            const bg0 = sheetBg();
+            state.settings.paperColor = "#f5f1e6";
+            applyPaperVars();
+            await new Promise((r) => setTimeout(r, 100));
+            check2(
+              "[100-4] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E08\u0E23\u0E34\u0E07",
+              sheetBg() !== bg0,
+              bg0 + " \u2192 " + sheetBg()
+            );
+            check2(
+              "[100-4] \u2605\u2605 \u0E2A\u0E35\u0E02\u0E49\u0E32\u0E07\u0E40\u0E04\u0E35\u0E22\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E40\u0E14\u0E34\u0E21)",
+              readVar("--paper-edge") !== before.e,
+              before.e + " \u2192 " + readVar("--paper-edge")
+            );
+            state.settings.paperColor = "#2b2b2b";
+            applyPaperVars();
+            await new Promise((r) => setTimeout(r, 100));
+            {
+              const ink = readVar("--paper-ink");
+              check2(
+                "[100-4] \u2605\u2605 \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E21\u0E37\u0E14 \u2192 \u0E2B\u0E21\u0E36\u0E01\u0E2A\u0E27\u0E48\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E14\u0E33\u0E1A\u0E19\u0E14\u0E33)",
+                lum2(ink) > 0.5,
+                ink
+              );
+            }
+            state.settings.paperColor = "";
+            applyPaperVars();
+            await new Promise((r) => setTimeout(r, 100));
+            check2("[100-4] \u2605 \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E02\u0E32\u0E27", /255, 255, 255|#ffffff/i.test(readVar("--paper")) || readVar("--paper") === "#ffffff", readVar("--paper"));
+          }
+          setSpView("normal", true);
+          await new Promise((r) => setTimeout(r, 180));
+          check2("[100-1] \u2605\u2605 \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E17\u0E34\u0E49\u0E07 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07)", !layer());
+          if (ed100 && keepMd100 != null) {
+            ed100.setMarkdown(keepMd100);
+            repaginateFast(t100);
+            await new Promise((r) => setTimeout(r, 400));
+          }
+        }
+        {
           const sc = SHORTCUTS.find((x) => x[0] === "KeyP" && x[1] === true && x[2] === true);
           check2(
             "[10] Ctrl+Shift+P \u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A toggle-theme \u0E41\u0E25\u0E49\u0E27",
@@ -175486,9 +176177,13 @@ ${css}
           );
           check2("[10] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E18\u0E35\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D", !!$("#tb-theme"));
           check2("[99-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27", !$("#tb-paper"));
+          setSpView("layout", true);
+          await new Promise((r) => setTimeout(r, 220));
           const paperBefore = document.body.classList.contains("paper-mode");
           const pmPaper = document.querySelector(".pane.on > .workspace > .ProseMirror");
-          const paperBg0 = pmPaper ? getComputedStyle(pmPaper).backgroundColor : "";
+          const sheet0 = document.querySelector(".pane.on > .workspace > .k-paper-layer > .k-paper-sheet");
+          const sheetBg0 = sheet0 ? getComputedStyle(sheet0).backgroundColor : "";
+          const paperBg0 = sheetBg0;
           const paperInk0 = pmPaper ? getComputedStyle(pmPaper).color : "";
           const paperW0 = pmPaper ? pmPaper.getBoundingClientRect().width : 0;
           const bg0 = getComputedStyle(document.body).backgroundColor;
@@ -175504,9 +176199,9 @@ ${css}
             bg0 + " \u2192 " + getComputedStyle(document.body).backgroundColor
           );
           check2(
-            "[10][\u0E01\u0E0E\u0E40\u0E2B\u0E25\u0E47\u0E01] \u0E18\u0E35\u0E21\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
-            !pmPaper || getComputedStyle(pmPaper).backgroundColor === paperBg0,
-            paperBg0 + " \u2192 " + (pmPaper && getComputedStyle(pmPaper).backgroundColor)
+            "[10][\u0E01\u0E0E\u0E40\u0E2B\u0E25\u0E47\u0E01] \u0E18\u0E35\u0E21\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 (\u0E27\u0E31\u0E14\u0E17\u0E35\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E08\u0E23\u0E34\u0E07 \u2014 alpha.100)",
+            !sheet0 || getComputedStyle(sheet0).backgroundColor === sheetBg0,
+            sheetBg0 + " \u2192 " + (sheet0 && getComputedStyle(sheet0).backgroundColor)
           );
           check2(
             "[10][\u0E01\u0E0E\u0E40\u0E2B\u0E25\u0E47\u0E01] \u0E18\u0E35\u0E21\u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E2A\u0E35\u0E2B\u0E21\u0E36\u0E01\u0E1A\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
@@ -175529,6 +176224,8 @@ ${css}
             state.settings.theme === "dark" && !document.body.classList.contains("theme-light")
           );
           check2("[10] \u0E18\u0E35\u0E21\u0E21\u0E37\u0E14\u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A theme-dark", document.body.classList.contains("theme-dark"));
+          setSpView("normal", true);
+          await new Promise((r) => setTimeout(r, 150));
         }
         {
           state.settings.fabEnabled = false;
@@ -177005,7 +177702,15 @@ ${css}
           await new Promise((r) => setTimeout(r, 80));
           check2("[57] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34", currentSpView() === "normal");
           const pmSp57 = spT.pane.querySelector(".ProseMirror");
-          const bgNormal = getComputedStyle(pmSp57).backgroundColor;
+          setSpView("layout");
+          await new Promise((r) => setTimeout(r, 200));
+          const sheet57 = spT.pane.querySelector(".k-paper-layer > .k-paper-sheet");
+          const bgNormal = sheet57 ? getComputedStyle(sheet57).backgroundColor : "";
+          check2(
+            "[100-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E01\u0E47\u0E44\u0E14\u0E49\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22",
+            !!sheet57 && !/rgba\(0, 0, 0, 0\)/.test(bgNormal),
+            bgNormal
+          );
           setSpView("draft");
           await new Promise((r) => setTimeout(r, 120));
           check2(
@@ -177017,6 +177722,10 @@ ${css}
             "[57] \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07: \u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E2B\u0E32\u0E22\u0E44\u0E1B (\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A)",
             cs57.backgroundColor === "rgba(0, 0, 0, 0)" && bgNormal !== cs57.backgroundColor,
             bgNormal + " \u2192 " + cs57.backgroundColor
+          );
+          check2(
+            "[100-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07: \u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E17\u0E34\u0E49\u0E07 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            !spT.pane.querySelector(".k-paper-layer")
           );
           check2("[57] \u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E07\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", cs57.boxShadow === "none", cs57.boxShadow);
           const spBlk57 = spT.pane.querySelector(".sp-character") || spT.pane.querySelector(".sp");
@@ -178147,12 +178856,15 @@ ${css}
               isEditView("layout") && !spT58.pane.querySelector(":scope > .sp-pageview")
             );
             const pmCS = getComputedStyle(spT58.pane.querySelector(".ProseMirror"));
+            const sh58 = [...spT58.pane.querySelectorAll(".k-paper-layer > .k-paper-sheet")];
+            check2("[58] \u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E1B\u0E39\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E1C\u0E48\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E22\u0E32\u0E27 \u0E46)", sh58.length >= 1, sh58.length);
+            const shCS = sh58.length ? getComputedStyle(sh58[0]) : null;
             check2(
               "[58] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21",
-              pmCS.backgroundColor === "rgb(245, 241, 230)",
-              pmCS.backgroundColor
+              !!shCS && !/rgba\(0, 0, 0, 0\)/.test(shCS.backgroundColor),
+              shCS && shCS.backgroundColor
             );
-            check2("[58] \u0E21\u0E35\u0E40\u0E07\u0E32\u0E43\u0E15\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", pmCS.boxShadow !== "none");
+            check2("[58] \u0E21\u0E35\u0E40\u0E07\u0E32\u0E43\u0E15\u0E49\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", !!shCS && shCS.boxShadow !== "none", shCS && shCS.boxShadow);
             check2(
               "[58] \u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 (\u0E0B\u0E49\u0E32\u0E22 1.5 \u0E19\u0E34\u0E49\u0E27 \u0E1A\u0E19 1 \u0E19\u0E34\u0E49\u0E27)",
               Math.abs(parseFloat(pmCS.paddingLeft) - 1.5 * 96) < 2 && Math.abs(parseFloat(pmCS.paddingTop) - 1 * 96) < 2,
@@ -178178,9 +178890,13 @@ ${css}
                 bCS.marginLeft + " / " + bCS.marginRight
               );
               check2(
-                "[58] \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E31\u0E49\u0E19\u0E2A\u0E35 (\u0E02\u0E32\u0E27\u2013\u0E02\u0E2D\u0E1A\u2013\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u2013\u0E02\u0E2D\u0E1A\u2013\u0E02\u0E32\u0E27)",
-                /linear-gradient/.test(bCS.backgroundImage),
-                bCS.backgroundImage.slice(0, 60)
+                "[100-3] \u2605\u2605 \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 gradient \u0E1B\u0E25\u0E2D\u0E21\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27 (\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A \u0E40\u0E2B\u0E47\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u0E08\u0E23\u0E34\u0E07)",
+                !/linear-gradient/.test(bCS.backgroundImage) && /rgba\(0, 0, 0, 0\)|transparent/.test(bCS.backgroundColor),
+                bCS.backgroundImage.slice(0, 40) + " | " + bCS.backgroundColor
+              );
+              check2(
+                "[100-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E1B\u0E23\u0E30\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E1A\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32",
+                [...spT58.pane.querySelectorAll(".ed-page-break")].every((e) => getComputedStyle(e, "::before").display === "none")
               );
               const num4 = brks[0].querySelector(".sp-page-break-num");
               check2("[58] \u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E33\u0E01\u0E31\u0E1A\u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D", !!num4 && /\d/.test(num4.textContent), num4 && num4.textContent);
@@ -178201,6 +178917,103 @@ ${css}
               rootVar("--sp-body-h") === lvVars["--sp-body-h"] && rootVar("--sp-line-h") === lvVars["--sp-line-h"],
               rootVar("--sp-body-h") + " / " + rootVar("--sp-line-h")
             );
+            {
+              const keepSn = spT58.sp.getMarkdown();
+              const wasSn = !!(state.settings.spSceneNumbers || {}).show;
+              state.settings.spSceneNumbers = { ...state.settings.spSceneNumbers || {}, show: true };
+              applyPageVars();
+              spT58.sp.setMarkdown([
+                ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E41\u0E23\u0E01 - \u0E40\u0E0A\u0E49\u0E32",
+                "!\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2B\u0E19\u0E36\u0E48\u0E07",
+                ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E2A\u0E2D\u0E07 - \u0E1A\u0E48\u0E32\u0E22",
+                "!\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E2A\u0E2D\u0E07"
+              ].join(String.fromCharCode(10)));
+              await new Promise((r) => setTimeout(r, 450));
+              const scenesSn = [...spT58.pane.querySelectorAll(".ProseMirror > .sp-scene")];
+              check2("[102-1] \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01\u0E2A\u0E2D\u0E07\u0E2D\u0E31\u0E19\u0E43\u0E2B\u0E49\u0E15\u0E23\u0E27\u0E08", scenesSn.length === 2, scenesSn.length);
+              const offOf = (sc) => {
+                const no = sc.querySelector(".k-scene-no");
+                if (!no) return null;
+                const rn = no.getBoundingClientRect();
+                const rs = sc.getBoundingClientRect();
+                const padTop = parseFloat(getComputedStyle(sc).paddingTop) || 0;
+                const lineTop = rs.top + padTop;
+                return +(rn.top - lineTop).toFixed(1);
+              };
+              const dSn = scenesSn.map(offOf);
+              note("[102-1] \u0E40\u0E25\u0E02\u0E09\u0E32\u0E01\u0E2B\u0E48\u0E32\u0E07\u0E08\u0E32\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07: " + dSn.join(" , ") + " px");
+              check2(
+                "[102-1] \u2605\u2605 \u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E23\u0E01\u0E2A\u0E38\u0E14: \u0E40\u0E25\u0E02\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01",
+                dSn[0] !== null && Math.abs(dSn[0]) < 4,
+                String(dSn[0])
+              );
+              check2(
+                "[102-1] \u2605 \u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01\u0E01\u0E25\u0E32\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E01\u0E47\u0E22\u0E31\u0E07\u0E15\u0E23\u0E07\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                dSn[1] !== null && Math.abs(dSn[1]) < 4,
+                String(dSn[1])
+              );
+              check2(
+                "[102-1] \u2605\u2605 \u0E41\u0E25\u0E30\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2D\u0E31\u0E19 (\u0E01\u0E0E\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1A\u0E31\u0E07\u0E40\u0E2D\u0E34\u0E0D)",
+                Math.abs(dSn[0] - dSn[1]) < 2,
+                dSn.join(" vs ")
+              );
+              const kpad0 = getComputedStyle(scenesSn[0]).getPropertyValue("--k-pad").trim();
+              check2(
+                "[102-1] \u2605 \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E21\u0E35 --k-pad = 0 (\u0E15\u0E31\u0E14\u0E1E\u0E23\u0E49\u0E2D\u0E21 padding-top)",
+                kpad0 === "0",
+                kpad0
+              );
+              state.settings.spSceneNumbers = { ...state.settings.spSceneNumbers || {}, show: wasSn };
+              applyPageVars();
+              spT58.sp.setMarkdown(keepSn);
+              await new Promise((r) => setTimeout(r, 450));
+              repaginateFast(spT58);
+              await new Promise((r) => setTimeout(r, 400));
+            }
+            {
+              const pmSp = spT58.pane.querySelector(":scope > .workspace > .ProseMirror");
+              const brSp = [...spT58.pane.querySelectorAll(".sp-page-break")];
+              const zSp = zoomFactorOf(pmSp) || 1;
+              const csSp = getComputedStyle(pmSp);
+              const top0Sp = pmSp.getBoundingClientRect().top + (parseFloat(csSp.paddingTop) || 0) * zSp;
+              const ySp = (e) => (e.getBoundingClientRect().top - top0Sp) / zSp;
+              const firstSp = [...pmSp.children].find((e) => e.nodeType === 1 && !e.classList.contains("sp-page-break") && e.getBoundingClientRect().height > 0);
+              const starts = [firstSp ? (firstSp.getBoundingClientRect().top - top0Sp) / zSp : 0];
+              for (const e of brSp) starts.push(ySp(e) + e.getBoundingClientRect().height / zSp);
+              const fmtSp = spFormat();
+              const pageHsp = num(fmtSp.paper.height, 11) * 96;
+              const gapSp = Math.max(8, Math.min(120, Math.round(num(state.settings.spPageGap, 28))));
+              const stepWant = pageHsp + gapSp;
+              const steps = starts.slice(1).map((y, i5) => +(y - starts[i5]).toFixed(1));
+              note("[100r-2] \u0E1A\u0E17 " + (brSp.length + 1) + " \u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E23\u0E30\u0E22\u0E30\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 " + stepWant + "px \xB7 \u0E27\u0E31\u0E14\u0E44\u0E14\u0E49 " + steps.slice(0, 8).join(" , "));
+              check2("[100r-2] \u2605 \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E1A\u0E17\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E02\u0E49\u0E32\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07", brSp.length >= 2, brSp.length);
+              const off3 = steps.filter((v4) => Math.abs(v4 - stepWant) > 1.5);
+              check2(
+                "[100r-2] \u2605\u2605 \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E40\u0E1B\u0E4A\u0E30 (\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E02\u0E32\u0E14)",
+                off3.length === 0,
+                "\u0E40\u0E1E\u0E35\u0E49\u0E22\u0E19 " + off3.length + "/" + steps.length + " \u0E0A\u0E48\u0E27\u0E07: " + off3.slice(0, 6).join(" , ")
+              );
+              const shSp = [...spT58.pane.querySelectorAll(".k-paper-layer > .k-paper-sheet")];
+              check2(
+                "[100r-2] \u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E1C\u0E48\u0E19 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17",
+                shSp.length === brSp.length + 1,
+                shSp.length + " vs " + (brSp.length + 1)
+              );
+              if (shSp.length) {
+                const spill = [];
+                brSp.forEach((e, i5) => {
+                  const r = e.getBoundingClientRect();
+                  const sheetBottom = shSp[i5].getBoundingClientRect().bottom;
+                  if (r.top > sheetBottom + 1) spill.push(i5 + 1);
+                });
+                check2(
+                  "[100r-2] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E2B\u0E19\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E19\u0E2D\u0E01\u0E41\u0E1C\u0E48\u0E19 (\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30)",
+                  spill.length === 0,
+                  "\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E25\u0E49\u0E19: " + spill.slice(0, 8).join(",")
+                );
+              }
+              await kapi.testShot("/tmp/k2_100r_sp_layout.png");
+            }
             setSpView("draft");
             await new Promise((r) => setTimeout(r, 200));
             check2(
@@ -181420,8 +182233,8 @@ ${css}
                 note("[98-8] \u0E01\u0E14 Enter \u0E2B\u0E19\u0E36\u0E48\u0E07\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48 " + nPages98 + " \u0E2B\u0E19\u0E49\u0E32: \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + enterPaper + " / \u0E23\u0E48\u0E32\u0E07 " + enterDraft + " ms (\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E23\u0E2D\u0E1A = " + repagPaper + " ms)");
                 check2(
                   "[98-8] \u2605\u2605 \u0E01\u0E14 Enter \u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01\u0E44\u0E21\u0E48\u0E08\u0E48\u0E32\u0E22\u0E04\u0E48\u0E32\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E15\u0E47\u0E21\u0E23\u0E32\u0E04\u0E32\u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27",
-                  enterPaper < repagPaper * 0.85,
-                  enterPaper + " ms vs \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 " + repagPaper + " ms"
+                  enterPaper - enterDraft < repagPaper * 0.5,
+                  "\u0E2A\u0E48\u0E27\u0E19\u0E40\u0E01\u0E34\u0E19 " + (enterPaper - enterDraft).toFixed(1) + " ms (\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + enterPaper + " \u2212 \u0E23\u0E48\u0E32\u0E07 " + enterDraft + ") vs \u0E04\u0E23\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 " + (repagPaper * 0.5).toFixed(1) + " ms"
                 );
                 check2(
                   "[98-8] \u2605 \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E21\u0E32\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 (\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07\u0E1E\u0E2D \u0E46 \u0E01\u0E31\u0E19)",
@@ -188090,10 +188903,31 @@ ${css}
             cs.height + " \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32\u0E02\u0E2D\u0E1A\u0E23\u0E27\u0E21 " + want
           );
           check2(
-            "[81-7] \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E31\u0E49\u0E19\u0E2A\u0E35 (\u0E02\u0E32\u0E27\u2013\u0E1E\u0E37\u0E49\u0E19\u0E42\u0E15\u0E4A\u0E30\u2013\u0E02\u0E32\u0E27) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E1B\u0E25\u0E48\u0E32",
-            /gradient/.test(cs.backgroundImage),
+            "[100-3] \u2605\u2605 \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A (\u0E40\u0E25\u0E34\u0E01\u0E1B\u0E25\u0E2D\u0E21\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E14\u0E49\u0E27\u0E22 gradient)",
+            !/gradient/.test(cs.backgroundImage),
             cs.backgroundImage.slice(0, 40)
           );
+          {
+            const L81 = t81.pane.querySelector(":scope > .workspace > .k-paper-layer");
+            check2(
+              "[100-3] \u2605\u2605 \u0E15\u0E31\u0E49\u0E07\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32 3 \u2192 \u0E1B\u0E39\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 3 \u0E43\u0E1A",
+              !!L81 && L81.children.length === 3,
+              L81 && L81.children.length
+            );
+            if (L81 && L81.children.length === 3) {
+              const r = [...L81.children].map((x) => x.getBoundingClientRect());
+              check2(
+                "[100-3] \u2605\u2605 \u0E41\u0E1C\u0E48\u0E19\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19\u0E14\u0E49\u0E27\u0E22\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07",
+                Math.abs(r[1].top - r[0].bottom - (r[2].top - r[1].bottom)) < 0.6,
+                (r[1].top - r[0].bottom).toFixed(2) + " , " + (r[2].top - r[1].bottom).toFixed(2)
+              );
+              check2(
+                "[100-3] \u2605 \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E23\u0E27\u0E21\u0E02\u0E2D\u0E07\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19 = \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33\u0E02\u0E2D\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E35\u0E48 CSS \u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49",
+                Math.abs((r[2].bottom - r[0].top) / pageH3 - r[0].height / (num(spFormat().paper.height, 11) * 96)) < 0.01,
+                (r[2].bottom - r[0].top).toFixed(1) + " vs " + pageH3
+              );
+            }
+          }
           probe.remove();
           setLayoutPageCount(t81, 1);
           setSpView(wasView);
@@ -189424,6 +190258,11 @@ ${css}
           );
         }
       }
+      check2(
+        "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
+        (state._panelDrawErrors || 0) === 0,
+        (state._panelDrawErrors || 0) + " \u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14: " + (state._panelDrawLastErr || "\u2014")
+      );
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -189435,7 +190274,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _padTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -189555,6 +190394,7 @@ ${css}
       init_icons();
       init_roster_ui();
       init_sp_view();
+      init_paper_color();
       init_sp_format_guide();
       init_sp_continued();
       init_smart_terms();
@@ -189735,6 +190575,7 @@ ${css}
       _countRunAt = 0;
       repaginateJob = null;
       _padTuneUntil = 0;
+      _spPadTuneUntil = 0;
       _fastPageJob = 0;
       _spPageText = "";
       outlineJob = null;

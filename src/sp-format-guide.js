@@ -137,6 +137,15 @@ export const setPageBreaks = SP_PB.setBreaks;
 export const pageBreaks = SP_PB.breaks;
 export const spPageBreakPlugin = SP_PB.plugin;
 export const refreshPageBreaks = SP_PB.refresh;
+/**
+ * [alpha.100 บั๊ก 2] ทา "ที่ว่างท้ายหน้า" ลงกล่องเส้นคั่นของบทที่วาดไว้แล้ว
+ *
+ * บทภาพยนตร์จัดหน้าจาก **โมเดล** (นับบรรทัดจากฟอนต์ล้วน ๆ ไม่เคยอ่าน DOM) — เร็วและตรงกับ PDF
+ * แต่ก็แปลว่า "หนึ่งหน้า = 54 บรรทัด" เป็นความจริงของโมเดล ไม่ใช่ของจอ · ฟอนต์ไทยที่มี
+ * ตัวบน-ตัวล่างทำให้ความสูงบรรทัดจริงไม่เท่ากับ ⅙ นิ้วเป๊ะ เนื้อหน้าจึงล้นแผ่นทีละนิด
+ * (ฝั่งนิยายไม่เจอเพราะมันวัด DOM จริงอยู่แล้ว) — ตัวชดเชยอยู่ที่ app.js: tuneSpPagePads
+ */
+export const applySpPagePads = SP_PB.applyPads;
 /** [alpha.83 ข้อ 4] ตัวทำ "เลขหน้าจริง" ที่มุมขวาบนของหน้าถัดไป (โหมดปกติ/จัดหน้า) */
 export const setSpPageNumberLabel = SP_PB.setNumberLabel;
 

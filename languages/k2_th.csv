@@ -2637,6 +2637,11 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       </div>
       <div class=""k-row""><label>ช่วงบรรทัดบทภาพยนตร์<span class=""k-hint"">มาตรฐาน = 1 (6 บรรทัด/นิ้ว) · เปลี่ยนแล้วจำนวนบรรทัดต่อหน้าเปลี่ยนตาม</span></label><input type=""number"" id=""st-splh"" class=""k-narrow"" min=""0.8"" max=""2.5"" step=""0.05""></div>
       <div class=""k-row""><label>ช่องว่างระหว่างหน้าในโหมดจัดหน้า (px)</label><input type=""number"" id=""st-sppagegap"" class=""k-narrow"" min=""8"" max=""120"" step=""2""></div>
+      <div class=""k-set-sub k-full"">สีกระดาษ</div>
+      <div class=""k-hint k-full"" style=""margin-bottom:8px"">[alpha.100] สีของแผ่นกระดาษบนจอ — มีผลกับมุมมองจัดหน้า · เรียงหน้าคู่ · ภาพรวม · โหมดอ่าน · ตอนพิมพ์และส่งออก PDF ยังเป็นขาวเสมอ</div>
+      <div class=""k-row""><label>พรีเซ็ต</label><select id=""st-paper-color"" class=""k-dlg-select""></select></div>
+      <div class=""k-row""><label>เลือกสีเอง<span class=""k-hint"">สีขอบแผ่น เส้นประ และสีหมึก คำนวณตามให้อัตโนมัติ</span></label><input type=""color"" id=""st-paper-color-hex"" class=""k-narrow""></div>
+      <div class=""k-row""><label>เส้นบอกระยะขอบกระดาษ<span class=""k-hint"">เส้นประรอบพื้นที่พิมพ์ในมุมมองจัดหน้า — ครบทั้งสี่ด้านทุกแผ่น</span></label><input type=""checkbox"" id=""st-page-guides""></div>
       <div class=""k-hint k-full"" id=""st-page-info"" style=""margin-top:8px""></div>
       <div class=""k-set-sub k-full"">เลขฉาก (Scene Number)</div>
       <div class=""k-row""><label>แสดงเลขฉากข้างหัวฉาก<span class=""k-hint"">เลขจะอยู่ทั้งซ้ายและขวาของบรรทัดหัวฉาก</span></label><input type=""checkbox"" id=""st-sn-show""></div>
@@ -3709,6 +3714,7 @@ ui.menu.settingsAIProviderCredential,ตั้งค่า AI (ผู้ให�
 ui.menu.settingsProject,"ตั้งค่าโปรเจกต์… ({0}+,)"
 ui.menu.showFormatLineMargin,แสดงรูปแบบ (เส้นขอบ element + เครื่องหมายจบบรรทัด)
 ui.menu.showNumLineLeft,แสดงเลขบรรทัด (รางซ้ายของแผง)
+ui.menu.pageGuides,เส้นบอกระยะขอบกระดาษ
 ui.menu.showPageFirstAlways,แสดงหน้าแรกเสมอเมื่อเริ่มโปรแกรม
 ui.menu.sizeUIBarTool,ขนาด UI (แถบเครื่องมือ/แผง/กล่อง)
 ui.menu.sizeUINormal,ขนาด UI ปกติ (100%)

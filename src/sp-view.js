@@ -35,16 +35,29 @@ export const SP_VIEW_LABELS = {
   overview4: t('ui.common.overviewPxChar2'),
 };
 // คลาสที่ใส่ให้ .pane — normal ไม่ต้องมีคลาสอะไร
+// ══ [alpha.100 ข้อ 1] ★ `k-paper` = "มุมมองนี้มีแผ่นกระดาษอยู่จริง" ══
+//
+// ผู้ใช้: *"มุมมองหน้ากระดาษปกติ จะต้องไม่แสดงหน้ากระดาษสีเหลือง ...
+//           ก็ไม่มีแค่กระดาษแต่ทุกอย่างเหมือนเดิม ง่าย ๆ อยู่บน canvas"*
+//
+// ตั้งแต่ alpha.99 ที่ถอดสวิตช์โหมดหน้ากระดาษทิ้ง คลาส `paper-mode` อยู่บน <body> ตลอดเวลา
+// → กฎกระดาษหลายสิบข้อลงไปถึง **ทุกมุมมองที่พิมพ์ได้** รวมมุมมองปกติที่ไม่ควรมีแผ่นเลย
+// ตัวคุมที่ถูกต้องคือ "มุมมองนี้วาดแผ่นไหม" ซึ่งเป็นเรื่องของ pane ไม่ใช่ของ body
+//   · จัดหน้า  → มีแผ่นจริง (ชั้น .k-paper-layer)      = ใส่ k-paper
+//   · ปกติ/ร่าง → สายเนื้อหาบนพื้นโปรแกรม               = ไม่ใส่
+//   · หน้าคู่/ภาพรวม → วาดแผ่นเองใน .sp-pageview อยู่แล้ว = ไม่ต้องใส่
 export const SP_VIEW_CLASS = {
   normal: '',
-  layout: 'sp-view-layout',
+  layout: 'sp-view-layout k-paper',
   draft: 'sp-view-draft',
   side: 'sp-view-side',
   overview1: 'sp-view-overview sp-view-ov1',
   overview4: 'sp-view-overview sp-view-ov4',
 };
 export const ALL_VIEW_CLASSES = ['sp-view-layout', 'sp-view-draft', 'sp-view-side',
-                                 'sp-view-overview', 'sp-view-ov1', 'sp-view-ov4'];
+                                 'sp-view-overview', 'sp-view-ov1', 'sp-view-ov4', 'k-paper'];
+/** มุมมองนี้วาด "แผ่นกระดาษ" ไว้ข้างหลังตัวแก้ไขไหม (ตัวเดียวที่ renderPaperSheets ต้องรู้) */
+export const isPaperView = (mode) => mode === 'layout';
 /** โหมดที่วาด "หน้ากระดาษจริง" แทนตัวแก้ไข (อ่านอย่างเดียว) */
 export const isPageView = (mode) => mode === 'side' || mode === 'overview1' || mode === 'overview4';
 export const isValidView = (mode) => SP_VIEWS.includes(mode);

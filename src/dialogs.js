@@ -2,7 +2,7 @@
 import { tf } from './i18n.js';
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
-         applyProseVars, proseFormat } from './app.js';
+         applyProseVars, proseFormat, applyPaperVars, renderPaperSheets } from './app.js';
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
@@ -20,6 +20,9 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
 import { setTypeVolume, playType } from './typewriter-sound.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
+// [alpha.100 ข้อ 4] สีกระดาษที่ผู้ใช้เลือกเอง
+import { PAPER_PRESETS, PAPER_DEFAULT, normalizePaperColor, matchPaperPreset,
+         paperPresetColor } from './paper-color.js';
 import { SP_ELEMS, TAB_CYCLE } from './fountain.js';
 import { refreshDashboardIfOpen } from './dashboard.js';
 // refreshDashboardIfOpen — ใช้ต่อเมื่อ dashboard.js export ฟังก์ชันนี้
@@ -594,6 +597,48 @@ export function settingsDialog(openTab) {
       tf('ui.dlg.linePage', formatLines(fmt));
   };
   paperSel.onchange = () => { W.paperSize = paperSel.value; pageInfo(); previewPage(); };
+
+  // ── [alpha.100 ข้อ 4] สีกระดาษ (พรีเซ็ต + เลือกเอง) · [ข้อ 2] เส้นบอกระยะขอบ ──
+  // ผู้ใช้: *"หน้ากระดาษที่เป็นสีเหลือง ... ให้เปลี่ยนเป็นสีขาวให้หมด หรือทำ option
+  //           ให้ผู้ใช้เปลี่ยนสีที่ต้องการได้"* — ค่าเริ่มต้นขาว และเลือกเองได้ตรงนี้
+  // เห็นผลสด ๆ ระหว่างตั้งค่า (เขียนตัวแปร CSS จริง) · กดยกเลิก = คืนค่าเดิมที่ปุ่มปิดกล่อง
+  W.paperColor = normalizePaperColor(s.paperColor || PAPER_DEFAULT, PAPER_DEFAULT);
+  W.pageGuides = !!s.pageGuides;
+  const pcSel = q('#st-paper-color');
+  const pcHex = q('#st-paper-color-hex');
+  const pcGuides = q('#st-page-guides');
+  if (pcSel && pcHex) {
+    for (const p of PAPER_PRESETS) {
+      const o = el('option'); o.value = p.key; o.textContent = p.label; pcSel.append(o);
+    }
+    { const o = el('option'); o.value = ''; o.textContent = t('ui.dlg.setCustom'); pcSel.append(o); }
+    const previewPaper = () => {
+      const keep = s.paperColor;
+      s.paperColor = W.paperColor;
+      applyPaperVars();
+      s.paperColor = keep;              // ค่าจริงยังไม่เปลี่ยนจนกว่าจะกดบันทึก
+      try { renderPaperSheets(state.active); } catch {}
+    };
+    const syncPaperColor = () => {
+      pcSel.value = matchPaperPreset(W.paperColor);
+      pcHex.value = W.paperColor;
+      previewPaper();
+    };
+    pcSel.onchange = () => {
+      const c = paperPresetColor(pcSel.value);
+      if (!c) { pcSel.value = ''; return; }      // "ตั้งเอง" = ไม่แตะสี
+      W.paperColor = c; syncPaperColor();
+    };
+    pcHex.oninput = () => { W.paperColor = normalizePaperColor(pcHex.value, W.paperColor); syncPaperColor(); };
+    syncPaperColor();
+  }
+  if (pcGuides) {
+    pcGuides.checked = W.pageGuides;
+    pcGuides.onchange = () => {
+      W.pageGuides = pcGuides.checked;
+      document.body.classList.toggle('k-page-guides', W.pageGuides);
+    };
+  }
   const numIn = (sel, get, set, step) => {
     const inp = q(sel); inp.value = get();
     inp.oninput = () => { const v = parseFloat(inp.value); if (Number.isFinite(v)) { set(v); pageInfo(); previewPage(); } };
@@ -716,6 +761,11 @@ export function settingsDialog(openTab) {
     W.spLineHeight = 1; W.spPageGap = 28;
     q('#st-splh').value = '1'; q('#st-sppagegap').value = '28';
     paperSel.value = 'letter';
+    // [alpha.100] สีกระดาษ/เส้นระยะขอบ กลับไปค่าเริ่มต้นด้วย (ขาว · ไม่มีเส้น)
+    W.paperColor = PAPER_DEFAULT; W.pageGuides = false;
+    if (pcSel && pcHex) { pcSel.value = matchPaperPreset(W.paperColor); pcHex.value = W.paperColor; }
+    if (pcGuides) pcGuides.checked = false;
+    document.body.classList.remove('k-page-guides');
     for (const side of ['top', 'bottom', 'left', 'right']) q('#st-mg-' + side).value = W.margins[side];
     q('#st-paper-w').value = W.customPaper.width; q('#st-paper-h').value = W.customPaper.height;
     for (const sel of Object.keys(RULE_MAP)) q(sel).value = W.rules[RULE_MAP[sel]];
@@ -1193,6 +1243,9 @@ export function settingsDialog(openTab) {
     s.spContinued = { ...W.continued };           // [alpha.83r ข้อ 3]
     s.spLineHeight = W.spLineHeight;              // [alpha.58r บั๊ก 5]
     s.spPageGap = W.spPageGap;
+    // [alpha.100 ข้อ 2+4] สีกระดาษ + เส้นบอกระยะขอบ (ระดับผู้ใช้ — ดู globalKeys ด้านล่าง)
+    s.paperColor = normalizePaperColor(W.paperColor, PAPER_DEFAULT);
+    s.pageGuides = !!W.pageGuides;
     s.typeSound = q('#st-typesnd').checked;
     s.typeSoundMode = q('#st-typesnd-mode').value === 'typewriter' ? 'typewriter' : 'always';
     s.typeSoundAlways = s.typeSoundMode === 'always';   // คีย์เก่า — ให้รุ่นก่อนอ่านต่อได้
@@ -1217,7 +1270,8 @@ export function settingsDialog(openTab) {
         const globalKeys = ['autoSaveMinutes','maxBackups','autoBackup','lineNumbers','fabEnabled','uiFontSize','uiScale',
           'spellCheck','spellCheckDict','autoMention','recycleDays','paperMode','fontFamily','spFontFamily',
           'language','autoSync','thesaurus','focusDim','typeSound','typeSoundVolume','typeSoundAlways','typeSoundMode',
-          'homeThumb','smartLearnMin','heavyDocBlocks','mdAlignStyle','shortcuts','showHomeOnStartup'];
+          'homeThumb','smartLearnMin','heavyDocBlocks','mdAlignStyle','shortcuts','showHomeOnStartup',
+          'paperColor','pageGuides'];   // [alpha.100 ข้อ 2+4]
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
         await kapi.writeGlobalSettings(globals);

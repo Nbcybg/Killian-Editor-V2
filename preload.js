@@ -32,7 +32,27 @@ contextBridge.exposeInMainWorld('kapi', {
   writeBytes: callW('fs:writeBytes'), readBytes: call('fs:readBytes'), copyFile: callW('fs:copyFile'),
   spellBase: call('spell:base'), spellExtra: call('spell:extra'),
   spellAddWord: call('spell:addWord'), spellDownload: call('spell:download'), spellHasBase: call('spell:hasBase'),
-  join: call('path:join'), resolve: call('path:resolve'),
+  // ══ [alpha.100] path:join ต้องฟ้องให้รู้เรื่อง ไม่ใช่ "Received null" ลอย ๆ ══
+  //
+  // อาการที่เจอ: ทุกครั้งที่เปิดโปรแกรม log มี
+  //   `ERROR วาดแผง dashboard ล้มเหลว | ... 'path:join': TypeError ... Received null`
+  // แล้ว **หาไม่เจอว่าใครเรียก** เพราะ error เกิดฝั่ง main (คนละสแตกกับ renderer)
+  // สแตกที่ได้จึงจบแค่ที่ ipcRenderer.invoke ไม่มีบรรทัดของโค้ดที่เรียกจริงเลย
+  // (สแตกฝั่ง preload ก็ช่วยไม่ได้ — contextBridge แยกโลก เฟรมของ renderer ไม่ติดมาด้วย)
+  //
+  // สิ่งที่ช่วยได้จริงคือ **บอกว่าอาร์กิวเมนต์ตัวไหนพัง และทั้งชุดมีอะไรบ้าง** — ของจริงคราวนั้น
+  // ได้ `[null , Recycle]` ซึ่งชี้ตรงไปที่ลูปไล่โฟลเดอร์ระดับรากทันที (ดู renderDashboard)
+  join: (...a) => {
+    const bad = a.findIndex((x) => typeof x !== 'string');
+    if (bad >= 0) {
+      return Promise.reject(new Error(
+        'kapi.join: ส่วนที่ ' + (bad + 1) + ' ของเส้นทางไม่ใช่ข้อความ (' +
+        (a[bad] === undefined ? 'undefined' : JSON.stringify(a[bad])) + ') — ' +
+        'ทั้งชุด: [' + a.map((x) => (typeof x === 'string' ? x : String(x))).join(' , ') + ']'));
+    }
+    return ipcRenderer.invoke('path:join', ...a);
+  },
+  resolve: call('path:resolve'),
   relative: call('path:relative'), toFileURL: call('path:toFileURL'),
   openProjectDialog: call('dialog:openProject'), openImageDialog: call('dialog:openImage'),
   saveAsDialog: call('dialog:saveAs'), savePdfDialog: call('dialog:savePdf'),

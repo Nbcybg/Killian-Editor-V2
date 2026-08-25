@@ -165,7 +165,19 @@ check('[58] โหมดจัดหน้ายังพิมพ์ได้ (
   SV.isEditView('normal') && !SV.isPageView('normal'));
 check('[58] โหมดเรียงหน้า/ภาพรวม = อ่านอย่างเดียว',
   !SV.isEditView('side') && !SV.isEditView('overview4'));
-check('[58] โหมดจัดหน้ามีคลาส CSS ของตัวเอง', SV.SP_VIEW_CLASS.layout === 'sp-view-layout');
+check('[58] โหมดจัดหน้ามีคลาส CSS ของตัวเอง',
+  SV.SP_VIEW_CLASS.layout.split(' ').includes('sp-view-layout'));
+// ── [alpha.100 ข้อ 1] `k-paper` = "มุมมองนี้มีแผ่นกระดาษจริง" ──
+// กฎกระดาษทั้งชุดใน style.css ผูกกับคลาสนี้ · มุมมองปกติต้อง **ไม่มี** ไม่งั้นได้แผ่นครีมกลับมา
+check('[100-1] ★ มุมมองปกติไม่มีคลาสกระดาษ (ไม่แสดงแผ่น)',
+  SV.SP_VIEW_CLASS.normal === '' && !SV.isPaperView('normal'));
+check('[100-1] ★ มุมมองจัดหน้ามีคลาสกระดาษ',
+  SV.SP_VIEW_CLASS.layout.split(' ').includes('k-paper') && SV.isPaperView('layout'));
+check('[100-1] โหมดร่าง/หน้าคู่/ภาพรวม ไม่มีคลาสกระดาษ (วาดแผ่นเองคนละทาง)',
+  ['draft', 'side', 'overview1', 'overview4']
+    .every((m) => !SV.SP_VIEW_CLASS[m].split(' ').includes('k-paper') && !SV.isPaperView(m)));
+check('[100-1] k-paper ถูกล้างตอนสลับมุมมอง (อยู่ใน ALL_VIEW_CLASSES)',
+  SV.ALL_VIEW_CLASSES.includes('k-paper'));
 check('[58] ALL_VIEW_CLASSES ครอบคลุมทุกโหมด (ล้างคลาสได้หมด)',
   SV.SP_VIEWS.filter((m) => m !== 'normal')
     .every((m) => SV.SP_VIEW_CLASS[m].split(' ').every((c) => SV.ALL_VIEW_CLASSES.includes(c))));

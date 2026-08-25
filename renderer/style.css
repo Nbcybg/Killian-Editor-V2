@@ -1143,11 +1143,14 @@ body.k-mod-down .k-mention { cursor:pointer; }
 /* พื้นที่แก้บทหนังทำเป็น "หน้ากระดาษ" กว้างคงที่ กึ่งกลาง อ่านง่ายเหมือนสคริปต์จริง
    ระยะเยื้องใช้หน่วย ch (ความกว้างตัวอักษร courier) = ตรงตามมาตรฐานสคริปต์จริง
    และไม่เพี้ยนเมื่อซูมด้วย Ctrl+ล้อเมาส์ (ซูมทั้งหน้าผ่าน CSS zoom ที่ .pane > .workspace > .ProseMirror) */
-.pane.sp-pane .ProseMirror { width:var(--page-w); max-width:none; background:var(--side);
-  border:1px solid var(--border); border-radius:4px;
+/* [alpha.100 ข้อ 1] มุมมองปกติของบทหนังก็ "ไม่มีแผ่น" เหมือนฝั่งนิยาย — เดิมกฎนี้วาดการ์ด
+   สี --side มีขอบ+เงา ซึ่งถูกกฎ paper-mode ทับไว้ตลอด (จึงไม่มีใครเห็น) พอกฎกระดาษย้ายไป
+   ผูกกับ .k-paper การ์ดตัวนี้จะโผล่กลับมาแทนที่ = ยังไม่ใช่ "อยู่บน canvas" ที่ผู้ใช้ขอ */
+.pane.sp-pane .ProseMirror { width:var(--page-w); max-width:none; background:transparent;
+  border:0; border-radius:4px;
   /* [alpha.88 ข้อ 5] หางเปล่าไว้ "นอกกระดาษ" (margin) เหมือนฝั่งนิยาย */
   padding:var(--mg-top) var(--mg-right) var(--mg-bottom) var(--mg-left);
-  margin:24px auto 40vh; box-shadow:0 2px 18px rgba(0,0,0,.28); }
+  margin:24px auto 40vh; box-shadow:none; }
 /* alpha.58 (บั๊ก 3): บทภาพยนตร์ = 6 บรรทัด/นิ้ว → 12pt บนช่วงบรรทัด 12pt = line-height 1 พอดี
    ของเดิมเป็น 1.5 ทำให้หน้าหนึ่งจุแค่ 36 บรรทัดแทนที่จะเป็น 54 (ตัวหนังสือดู "ใหญ่/ห่าง" กว่า
    Final Draft ครึ่งเท่า) และเส้นคั่นหน้าในตัวแก้ไขไม่ตรงกับที่ paginate()/ตอนพิมพ์คิดไว้
@@ -1203,7 +1206,19 @@ body.k-mod-down .k-mention { cursor:pointer; }
    เกินมา 32px = linesBefore ของหัวฉาก → ทุกหน้าเริ่มต่ำกว่าที่โมเดลคิด และเคอร์เซอร์
    ไม่ตรงกริดบรรทัด (ผู้ใช้: "เหมือนมันห้อย … cursor ไม่ตรงบรรทัด") */
 .pane.sp-pane > .workspace > .ProseMirror > .sp:first-child,
-.sp-page-break + .sp { padding-top:0 !important; }
+.sp-page-break + .sp {
+  padding-top:0 !important;
+  /* ══ [alpha.102 บั๊ก 1] ★ ตัด padding แล้วต้องตัด `--k-pad` ด้วย ══
+     ผู้ใช้: *"เลข scene ในกรณีที่หัวฉากอยู่บรรทัดบนสุด ตัวเลขจะมาอยู่บรรทัดที่สอง"*
+     `--k-pad` = ระยะเว้นนำของบล็อก (หน่วยบรรทัด) และ **widget เลขฉากใช้มันเป็น `top`**
+     (`.k-scene-no{top:calc(var(--k-pad) * var(--sp-line-h))}` — เพื่อให้เลขลงมาอยู่แนวเดียว
+     กับตัวหนังสือ แทนที่จะลอยอยู่เหนือมันในช่องว่างนำ)
+     กฎนี้ตัด padding ของบล็อกแรกในหน้าทิ้ง แต่ **ลืมตัดตัวแปร** → ข้อความขึ้นไปอยู่บรรทัดบนสุด
+     ส่วนเลขฉากยังถูกดันลงมาเท่าระยะเว้นนำเดิม (หัวฉาก = 2 บรรทัด) = เลขอยู่คนละบรรทัดกับฉาก
+     กฎ `.sp:has(> br.ProseMirror-trailingBreak)` ข้างบนเจอปัญหาเดียวกันมาแล้วตั้งแต่ alpha.87
+     และแก้ด้วยการตั้ง `--k-pad:0` — ที่นี่ตกหล่นไป */
+  --k-pad:0;
+}
 
 .sp-scene { color:var(--link); }
 .sp-character { color:var(--bright); }
@@ -1826,56 +1841,73 @@ body.k-split-on #tabs { display:none !important; }
 .tree-scope-x { margin-left:auto; cursor:pointer; opacity:.75; }
 .tree-scope-x:hover { opacity:1; }
 
-/* ========== โหมดหน้ากระดาษ (paper mode) — กระดาษสีนวลตา high-contrast แบบสคริปต์จริง ========== */
-/* สีกระดาษปรับได้ที่ตัวแปรนี้ — ค่าเริ่มต้นเป็นครีมนวลตา (ถนอมสายตากว่าขาวจ้า) */
-:root { --paper:#f5f1e6; --paper-ink:#20201c; --paper-edge:#d8d2c2; --paper-surround:var(--hover); }
-body.paper-mode #panes,
-body.paper-mode .pane { background:var(--paper-surround); }
+/* ════════ หน้าตากระดาษ (paper) ════════
+   [alpha.100 ข้อ 1] ★★ **มุมมองปกติไม่มีแผ่นกระดาษอีกแล้ว**
 
-/* หน้ากระดาษ — ใช้กรอบเดียวกันทั้งโหมดนิยายและบทหนัง (กว้างเท่ากัน สีเดียวกัน)
+   ผู้ใช้: *"มุมมองหน้ากระดาษปกติ จะต้องไม่แสดงหน้ากระดาษสีเหลือง ...
+             ก็ไม่มีแค่กระดาษแต่ทุกอย่างเหมือนเดิม ง่าย ๆ อยู่บน canvas
+             หรือนึกเร็ว ๆ ก็ paper transparent 0%"*
+
+   ของเดิมทาสีกระดาษให้ `.ProseMirror` **ทุกมุมมองที่พิมพ์ได้** เพราะคลาส `paper-mode`
+   อยู่บน <body> ตลอดเวลา (ตั้งแต่ alpha.99 ที่ถอดสวิตช์ทิ้ง) → มุมมองปกติจึงเป็นแผ่นครีม
+   ทั้งที่มันควรเป็น "สายเนื้อหาบนพื้นโปรแกรม"
+
+   ตอนนี้แผ่นกระดาษผูกกับคลาส **`.k-paper` ที่ pane** ซึ่งใส่ให้เฉพาะมุมมองที่มีแผ่นจริง
+   (= จัดหน้า · ดู SP_VIEW_CLASS ใน sp-view.js) · มุมมองปกติไม่มีคลาสนี้ จึงตกกลับไปใช้
+   กฎธีมปกติทั้งชุดโดยไม่ต้องเขียนกฎ "ย้อนสี" ซ้ำสักบรรทัด
+
+   [alpha.100 ข้อ 4] สีกระดาษทุกตัวมาจาก applyPaperVars() ใน app.js (คำนวณจากสีเดียวที่
+   ผู้ใช้เลือก — paper-color.js) · ค่าที่เขียนไว้ตรงนี้เป็นแค่ค่าสำรองตอนยังไม่ได้ตั้ง */
+:root { --paper:#ffffff; --paper-ink:#1a1a1a; --paper-edge:#d6d6d6; --paper-line:#bdbdbd;
+        --paper-code:#f2f2f2; --paper-dim:#858585; --paper-surround:var(--hover); }
+body.paper-mode #panes,
+body.paper-mode .pane.k-paper { background:var(--paper-surround); }
+
+/* เนื้อหาบนกระดาษ — ใช้กรอบเดียวกันทั้งโหมดนิยายและบทหนัง (กว้างเท่ากัน สีเดียวกัน)
    สำคัญ: จับเฉพาะ .ProseMirror ที่เป็น "ลูกตรง" ของ pane (นิยาย/บทหนัง)
-   ไม่ลงไปโดน wiki (ProseMirror ซ้อนลึกใน .wiki-wrap) — กันบั๊กกระดาษขาวบัง field wiki */
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror {
-  background:var(--paper); color:var(--paper-ink);
+   ไม่ลงไปโดน wiki (ProseMirror ซ้อนลึกใน .wiki-wrap) — กันบั๊กกระดาษขาวบัง field wiki
+
+   [alpha.100 ข้อ 3] ★ ตัว .ProseMirror **ไม่ได้เป็นแผ่นกระดาษเองอีกแล้ว** — แผ่นจริง
+   ถูกวาดเป็นชั้นข้างหลัง (.k-paper-layer ด้านล่าง) ที่นี่จึงเหลือแค่ "สีหมึก" */
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror {
+  background:transparent; color:var(--paper-ink);
   width:var(--page-w); max-width:none;
-  border:1px solid var(--paper-edge);
-  border-radius:2px;
-  box-shadow:0 4px 26px rgba(0,0,0,.45);
+  border:0; box-shadow:none;
   caret-color:var(--paper-ink);
 }
 /* [alpha.58r บั๊ก 4] ระยะขอบ/ระยะห่างย้ายไปเป็นกฎกลางของหน้ากระดาษแล้ว (ดูบล็อกตัวแก้ไขด้านบน)
    โหมดกระดาษเปลี่ยนเฉพาะ "สี · เส้นขอบ · เงา · caret" — สลับโหมดแล้ว layout ต้องไม่ขยับแม้แต่พิกเซลเดียว */
 
 /* นิยาย: หัวข้อ/ยกคำพูด/ลิงก์ ให้อ่านชัดบนกระดาษนวล */
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h1,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h2,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h3,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h4,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h5,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror h6 { color:#111; }
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror blockquote { border-left-color:#c15f3c; color:#7a3d24; }
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror a,
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror .k-mention,
-body.paper-mode .pane.sp-pane .k-mention { color:#1b5fa8; background:#e8eef7; }
-body.paper-mode .pane:not(.wiki-pane) > .workspace > .ProseMirror ::selection,
-body.paper-mode .pane.sp-pane > .workspace > .ProseMirror ::selection { background:#c9dcf2; color:#000; }
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h1,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h2,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h3,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h4,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h5,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror h6 { color:#111; }
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror blockquote { border-left-color:#c15f3c; color:#7a3d24; }
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror a,
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror .k-mention,
+body.paper-mode .pane.k-paper.sp-pane .k-mention { color:#1b5fa8; background:#e8eef7; }
+body.paper-mode .pane.k-paper:not(.wiki-pane) > .workspace > .ProseMirror ::selection,
+body.paper-mode .pane.k-paper.sp-pane > .workspace > .ProseMirror ::selection { background:#c9dcf2; color:#000; }
 /* [alpha.60r2 ข้อ 11] รางเลขบรรทัดเป็น UI — สีตามธีมของโปรแกรม ไม่ใช่หมึกบนกระดาษ
    (เดิมกฎนี้เปลี่ยนสีเลขให้กลืนกับกระดาษครีม ตอนนี้ไม่จำเป็นแล้ว) */
 /* (เดิมมี padding-left:64px ตรงนี้ — เอาออกตามบั๊ก 2: เลขบรรทัดต้องไม่ดันข้อความ) */
 
 /* บทหนัง: ธาตุต่าง ๆ เป็นหมึกดำแบบสคริปต์จริง */
-body.paper-mode .sp { color:var(--paper-ink); }
-body.paper-mode .sp-scene { color:#000; }
-body.paper-mode .sp-character { color:#000; }
-body.paper-mode .sp-parenthetical { color:#555; }
-body.paper-mode .sp-transition { color:#000; }
-body.paper-mode .sp-dialogue { color:#141414; }
-body.paper-mode .sp-outline1,
-body.paper-mode .sp-outline2,
-body.paper-mode .sp-outline3 { color:#a0430f; }
-body.paper-mode .sp-summary { color:#2b6b2b; }
-body.paper-mode .sp-note { color:#8a6d00; }
-body.paper-mode .sp-raw { color:#888; }
+body.paper-mode .k-paper .sp { color:var(--paper-ink); }
+body.paper-mode .k-paper .sp-scene { color:#000; }
+body.paper-mode .k-paper .sp-character { color:#000; }
+body.paper-mode .k-paper .sp-parenthetical { color:#555; }
+body.paper-mode .k-paper .sp-transition { color:#000; }
+body.paper-mode .k-paper .sp-dialogue { color:#141414; }
+body.paper-mode .k-paper .sp-outline1,
+body.paper-mode .k-paper .sp-outline2,
+body.paper-mode .k-paper .sp-outline3 { color:#a0430f; }
+body.paper-mode .k-paper .sp-summary { color:#2b6b2b; }
+body.paper-mode .k-paper .sp-note { color:#8a6d00; }
+body.paper-mode .k-paper .sp-raw { color:#888; }
 
 /* ปุ่มโหมดหน้ากระดาษตอนเปิด */
 #tb-paper.on { background:var(--sel); color:var(--bright); }
@@ -2873,7 +2905,7 @@ body.fm2 #tabs { display:none; }
   border-top:2px dashed var(--accent); margin:12px 0; min-height:1.3em;
   font-size:calc(11px * var(--ui-scale, 1)); letter-spacing:0; }
 .sp.sp-page-break-el::after { content:'— ขึ้นหน้าใหม่ —'; }
-body.paper-mode .sp.sp-page-break-el { border-top-color:#c9a06a; color:#a5752f; }
+body.paper-mode .k-paper .sp.sp-page-break-el { border-top-color:#c9a06a; color:#a5752f; }
 
 /* ====== [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (fountain / มาร์กดาวน์) ======
    ซ่อนเฉพาะ "ตัวนำหน้า" — เนื้อหาหลังรหัสยังแสดงตามปกติ และไฟล์ .md ไม่ถูกแก้เลย */
@@ -3426,7 +3458,7 @@ body.paper-mode .pane.sp-view-draft > .workspace > .ProseMirror {
   height:calc(var(--sp-cont-h) * 3 + 8px); margin:0; border-top:0; }
 .sp-page-break.k-pb-cont::before { content:''; position:absolute; left:0; right:0; top:50%;
   border-top:1px dashed var(--border); }
-body.paper-mode .sp-page-break.k-pb-cont::before { border-top-color:#c9c2ae; }
+body.paper-mode .k-paper .sp-page-break.k-pb-cont::before { border-top-color:var(--paper-line); }
 .sp-page-break.k-pb-cont > .sp-cont-bottom { bottom:calc(50% + 2px); top:auto; }
 .sp-page-break.k-pb-cont > .sp-cont-top { top:calc(50% + 2px); bottom:auto; }
 /* ป้าย "หน้า N" ต้องไม่ชนกับ (CONTINUED) — ทั้งคู่เคยชิดขวาในครึ่งบนเดียวกัน
@@ -3440,8 +3472,8 @@ body.paper-mode .sp-page-break.k-pb-cont::before { border-top-color:#c9c2ae; }
 .sp-page-break-num { position:absolute; right:0; top:-.85em;
   font-size:calc(10px * var(--ui-scale, 1)); color:var(--dim);
   background:var(--bg); padding:0 6px; border-radius:3px; }
-body.paper-mode .sp-page-break { border-top-color:#c9c2ae; }
-body.paper-mode .sp-page-break-num { background:var(--paper); color:#8a836f; }
+body.paper-mode .k-paper .sp-page-break { border-top-color:var(--paper-line); }
+body.paper-mode .k-paper .sp-page-break-num { background:var(--paper); color:var(--paper-dim); }
 
 /* ---- [alpha.84 ข้อ 2] เส้นคั่นหน้าของ "บท" ที่ตกกลางย่อหน้า (บทพูดยาวถูกหั่น) ----
    ต่างจากนิยาย: บทวาดเป็น <div> จริง (midMode:'block') เพราะการจัดหน้าของบทวัดความกว้าง
@@ -3491,7 +3523,7 @@ body:not(.k-measuring) .ed-page-break + * { margin-top:0 !important; }
    (ขอบบน = บรรทัดสุดท้ายของหน้าเพิ่งจบ · ก้นกล่อง = รอยต่อหน้าจริง) */
 .ed-page-break::before { content:''; position:absolute; left:0; right:0; bottom:0; top:auto;
   border-top:1px dashed var(--border); }
-body.paper-mode .ed-page-break::before { border-top-color:#c9c2ae; }
+body.paper-mode .k-paper .ed-page-break::before { border-top-color:var(--paper-line); }
 .ed-page-break > .sp-page-break-num { bottom:.1em; top:auto; }
 
 /* ── [alpha.97 ข้อ 2] เส้นคั่นหน้าที่ตกใน "รายการ" ──────────────────────────────
@@ -3592,16 +3624,56 @@ body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
    โดย --pg-count ตั้งจาก JS ทุกครั้งที่จัดหน้าใหม่ (setLayoutPageCount) */
 .pane.sp-view-layout > .workspace > .ProseMirror,
 body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
-  /* [alpha.98 ข้อ 6] ใช้สีกระดาษที่ผู้ใช้ตั้งไว้ (กระดาษครีมของ alpha.34) ไม่ใช่ขาวตายตัว
-     — มุมมอง "จัดหน้า" เดิมบังคับขาวจนหน้าตาไม่ตรงกับโหมดกระดาษ พอรวมกันแล้วต้องเป็นสีเดียว */
-  background:var(--paper, #fff) !important; color:var(--paper-ink, #111) !important;
-  border:1px solid var(--paper-edge) !important;
-  box-shadow:0 0 10px rgba(0,0,0,.35) !important;
+  /* [alpha.100 ข้อ 3] ★★ แผ่นกระดาษเป็น **ชั้นข้างหลัง** (.k-paper-layer) ไม่ใช่ตัว editor แล้ว
+     ผู้ใช้: *"มุมมองแบบ layout ยังไม่มีการแบ่งหน้าแบบจริง ๆ เหมือนมุมมองหน้าคู่
+               ยังใช้วิธีเอาหน้ากระดาษยาว ๆ มาแล้วขั่นด้วยแถบ"* — ถูกต้อง
+     ของเดิม editor **คือ** กระดาษ: กรอบ+เงาล้อมทั้งเสาเดียว แล้ววาดรอยต่อด้วย gradient
+     ในกล่องเส้นคั่น → ยังไงก็เป็นแผ่นเดียวยาว ๆ ที่ถูกขั้น
+     ตอนนี้ editor โปร่งใสไม่มีกรอบ/เงา แล้ว renderPaperSheets() ปูแผ่นจริง N ใบไว้ข้างหลัง
+     (แต่ละใบมีขอบ/เงา/มุมของตัวเอง เห็นพื้นโต๊ะคั่นจริง) — ดูคอมเมนต์ยาวใน app.js */
+  background:transparent !important; color:var(--paper-ink, #111) !important;
+  border:0 !important;
+  box-shadow:none !important;
   min-height:calc(var(--page-h, 11in) * var(--pg-count, 1)
                   + var(--sp-page-gap, 28px) * (var(--pg-count, 1) - 1));
   padding-bottom:var(--mg-bottom, 1in) !important;
   margin-bottom:60px !important;
 }
+
+/* ── [alpha.100 ข้อ 3] ชั้นแผ่นกระดาษจริง — ปูไว้ "ข้างหลัง" ตัวแก้ไข ─────────────────
+   ทำไมต้องเป็นชั้นข้างหลัง แทนที่จะเป็น editor หลายตัว: contenteditable ก้อนเดียว
+   แตกออกเป็น N กล่องไม่ได้โดยธรรมชาติ (เนื้อหาต้องไหลข้ามกล่อง · เคอร์เซอร์/เลือก/undo
+   ต้องข้ามกล่อง) — นั่นคือการเขียนเอนจินจัดหน้าเองทั้งตัว
+   แต่ตั้งแต่ alpha.98 ที่ล็อกความสูงหน้าไว้เป๊ะ ตำแหน่งแผ่นที่ k คือ k×(สูงกระดาษ+ช่องว่าง)
+   เสมอ → ปูแผ่นตามสูตรนี้แล้วให้ตัวหนังสือลอยอยู่บนมัน ได้ผลตาเท่ากับแผ่นแยกจริง
+   (ชั้นนี้ pointer-events:none · ไม่กินที่ในสายเนื้อหา จึงไม่กระทบการวัด/จัดหน้าเลย) */
+.pane.k-paper > .workspace { position:relative; }
+/* ══ [alpha.100r] ★★ ตำแหน่งแนวนอนของแผ่นต้องเป็น **CSS ล้วน** ห้ามให้ JS วัดแล้วจำไว้ ══
+   ผู้ใช้: *"ถ้าเรา zoom หน้ากระดาษจะเพี้ยนมาก ... เพราะหน้ากระดาษไม่ถูก lock ไว้ตอน zoom"*
+   ต้นตอ: รอบแรกวาง layer ด้วยค่าที่วัดจาก DOM (`pm.offsetLeft` / `offsetWidth`) ซึ่ง
+   **เปลี่ยนทุกครั้งที่ซูม** — `applyZoomVars()` เรียก `syncWorkspaceWidths()` ที่ไปตั้ง
+   `min-width` ของ `.workspace` ใหม่ตามระดับซูม → `.ProseMirror` (margin:auto) ถูกจัด
+   กึ่งกลางที่พิกัดใหม่ แต่แผ่นยังอยู่ที่เดิม = ตัวหนังสือหลุดออกไปนอกกระดาษ
+   ตอนนี้แผ่นจัดกึ่งกลางด้วย `left:50%` + กว้าง `--page-w` เท่ากับกฎที่จัด `.ProseMirror`
+   → ตรงกันเสมอโดยไม่ต้องวัดอะไรเลย ซูมเท่าไรก็ไม่มีทางเหลื่อม */
+.k-paper-layer { position:absolute; left:0; right:0;
+  pointer-events:none; user-select:none; z-index:0; }
+.k-paper-sheet { position:absolute; left:50%; transform:translateX(-50%);
+  width:var(--page-w);
+  background:var(--paper); border:1px solid var(--paper-edge); border-radius:2px;
+  box-shadow:0 4px 26px rgba(0,0,0,.45); }
+/* ตัวแก้ไขต้องอยู่ "บน" แผ่นเสมอ (.ProseMirror มี position:relative อยู่แล้ว) */
+.pane.k-paper > .workspace > .ProseMirror { z-index:1; }
+
+/* [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ — สวิตช์ที่ ตั้งค่า → หน้ากระดาษ (ค่าเริ่มต้น = ปิด)
+   ผู้ใช้: *"มี toggle แสดงระยะตัดตก แต่ต้องมีทั้งหัวและล่าง กับไม่มีเลย"*
+   วาดเป็นกรอบประรอบ **พื้นที่พิมพ์** ของแผ่นนั้น จึงครบทั้งสี่ด้านโดยโครงสร้าง
+   ไม่มีทางเหลือข้างเดียวเหมือนเส้นเก่าที่เกาะกล่องเส้นคั่นหน้า */
+body.k-page-guides .k-paper-sheet::before {
+  content:''; position:absolute;
+  top:var(--mg-top, 1in); bottom:var(--mg-bottom, 1in);
+  left:var(--mg-left, 1.5in); right:var(--mg-right, 1in);
+  border:1px dashed var(--paper-line); }
 .pane.sp-view-layout .sp,
 .pane.sp-view-layout .sp-scene, .pane.sp-view-layout .sp-character,
 .pane.sp-view-layout .sp-dialogue, .pane.sp-view-layout .sp-transition,
@@ -3620,8 +3692,8 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 .pane.sp-view-layout > .workspace > .ProseMirror h4,
 .pane.sp-view-layout > .workspace > .ProseMirror h5,
 .pane.sp-view-layout > .workspace > .ProseMirror h6 { color:#111; }
-.pane.sp-view-layout > .workspace > .ProseMirror pre { background:#f2f0ea; color:#222;
-  border-color:#d8d2c2; }
+.pane.sp-view-layout > .workspace > .ProseMirror pre { background:var(--paper-code); color:var(--paper-ink);
+  border-color:var(--paper-edge); }
 /* โหมดร่างของนิยาย: ไม่ต้องมีย่อหน้า/ระยะขอบกระดาษ (เห็นข้อความล้วน) */
 .pane.sp-view-draft > .workspace > .ProseMirror p { text-indent:0 !important; }
 /* รอยต่อระหว่างแผ่น = ขอบล่างของหน้าเดิม (ขาว) + ช่องว่างจริง (พื้นโต๊ะ) + ขอบบนของหน้าใหม่ (ขาว)
@@ -3637,20 +3709,12 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
   margin-right:calc(-1 * var(--mg-right, 1in));
   margin-left:calc(-1 * var(--mg-left, 1.5in));
   margin-bottom:0;
-  /* [alpha.98 ข้อ 7] แถบรอยต่อแผ่นสูงคงที่ (ขอบล่าง+ช่องว่าง+ขอบบน) และยึด **ก้นกล่อง**
-     ส่วนที่เหลือข้างบนคือ "ก้นหน้าที่ยังว่าง" ซึ่งต้องเป็นสีกระดาษ → ชั้นล่างทาสีกระดาษไว้ */
-  --pb-band:calc(var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in));
-  background:
-    linear-gradient(to bottom,
-      var(--paper, #fff) 0, var(--paper, #fff) var(--pb-mb),
-      var(--paper-edge) var(--pb-mb), var(--paper-edge) calc(var(--pb-mb) + 2px),
-      var(--paper-surround, #33322f) calc(var(--pb-mb) + 2px),
-      var(--paper-surround, #33322f) calc(var(--pb-mb) + var(--pb-gap) - 2px),
-      var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap) - 2px),
-      var(--paper-edge) calc(var(--pb-mb) + var(--pb-gap)),
-      var(--paper, #fff) calc(var(--pb-mb) + var(--pb-gap)), var(--paper, #fff) 100%)
-      left bottom / 100% var(--pb-band) no-repeat,
-    var(--paper, #fff);
+  /* [alpha.100 ข้อ 3] เดิมที่นี่วาด "รอยต่อแผ่น" ด้วย gradient (กระดาษ→ขอบ→พื้นโต๊ะ→ขอบ→กระดาษ)
+     เพราะตัว editor เป็นแผ่นเดียวยาว ๆ จึงต้องปลอมช่องว่างขึ้นมา
+     ตอนนี้แผ่นจริงอยู่ข้างหลังแล้ว (.k-paper-layer) กล่องนี้จึงต้อง **โปร่งใสสนิท**:
+     ส่วนบน (ก้นหน้าที่ยังว่าง + ขอบล่าง) ทับอยู่บนแผ่นเดิม · ช่วงกลางไม่มีแผ่น = เห็นพื้นโต๊ะจริง
+     · ส่วนล่าง (ขอบบนของหน้าใหม่) ทับอยู่บนแผ่นถัดไป — ตรงตามความจริงทุกช่วงโดยไม่ต้องปลอม */
+  background:none;
 }
 /* [alpha.84 ข้อ 2] จุดตัดกลางบทพูด — แถบคั่นแผ่นต้องกว้างเต็มกระดาษเหมือนกรณีปกติ
    แต่ตัวมันอยู่ในบล็อกที่เยื้องมาแล้ว จึงคิดระยะซ้ายจาก "ขอบซ้ายกระดาษ" ตรง ๆ:
@@ -3671,6 +3735,15 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 }
 /* เส้นประวางที่ขอบบนของกล่อง เหมือนจุดตัดระดับบล็อกในโหมดเดียวกัน (ค่าปกติคือกึ่งกลาง) */
 .pane.sp-view-layout .sp-page-break.k-pb-inline::before { top:0; }
+/* ══ [alpha.100 ข้อ 2] ★ เส้นประที่ "โผล่ที่หัวกระดาษข้างเดียว" ══
+   ผู้ใช้: *"มุมมอง layout เหมือนจะมีเส้นประแสดงตัดตกอยู่ด้านบนขอบกระดาษ"*
+   ต้นตอ: `.ed-page-break::before` เกาะ **ก้นกล่อง** (กฎของมุมมองปกติ ที่นั่นก้นกล่อง = รอยต่อหน้า
+   จริง ๆ) แต่ในโหมดจัดหน้ากล่องนี้ยาวคร่อม "ขอบล่างแผ่นเก่า + ช่องว่าง + ขอบบนแผ่นใหม่"
+   ก้นกล่องจึงไปตกที่ **เส้นระยะขอบบนของแผ่นใหม่** — เห็นเป็นเส้นบอกระยะที่มีแต่ด้านบน
+   ไม่มีคู่ด้านล่าง (ฝั่งบทไม่โดนเพราะ .sp-page-break ในโหมดนี้ border:0 ตั้งแต่แรก)
+   โหมดจัดหน้ามีขอบแผ่นจริงให้ดูอยู่แล้ว → ตัดทิ้ง · ใครอยากได้เส้นระยะขอบ เปิดสวิตช์
+   "เส้นบอกระยะขอบกระดาษ" ซึ่งวาดครบทั้งสี่ด้านทุกแผ่น */
+.pane.sp-view-layout .ed-page-break::before { display:none; }
 /* เลขหน้าอยู่ตรงกลางช่องว่างพื้นโต๊ะ (แบบ footer ของโปรแกรมจัดหน้า) — ยึดก้นกล่อง */
 .pane.sp-view-layout .sp-page-break-num {
   position:absolute; right:auto; left:50%; top:auto;
@@ -3687,7 +3760,7 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
 /* โหมดปกติ: เส้นประบาง ๆ มี margin 14px หัวท้าย — วางคร่อมเส้นพอดี */
 .sp-cont-edge.sp-cont-bottom { right:0; bottom:2px; text-align:right; }
 .sp-cont-edge.sp-cont-top    { left:0;  top:2px;    text-align:left; }
-body.paper-mode .sp-cont-edge { color:#6b6552; }
+body.paper-mode .k-paper .sp-cont-edge { color:var(--paper-dim); }
 /* โหมดจัดหน้า: มีแถบระยะขอบจริง — วางไว้ "ในขอบล่างของแผ่นก่อน" และ "ขอบบนของแผ่นใหม่" */
 .pane.sp-view-layout .sp-cont-edge { color:#555; opacity:.9; }
 /* กล่องของเส้นคั่นในโหมดนี้ = ขอบล่างแผ่นก่อน + ช่องว่าง + ขอบบนแผ่นใหม่
@@ -3715,7 +3788,7 @@ body.paper-mode .sp-cont-edge { color:#6b6552; }
 .sp-cont-mark.sp-continued-top { text-align:left; font-style:italic; }
 .sp-cont-mark.sp-more { text-align:left; }
 .sp-cont-mark.sp-contd { text-align:left; text-transform:uppercase; }
-body.paper-mode .sp-cont-mark { color:#6b6552; }
+body.paper-mode .k-paper .sp-cont-mark { color:var(--paper-dim); }
 .pane.sp-view-layout .sp-cont-mark { color:#555; opacity:.9; }
 /* โหมดร่าง = ข้อความล้วน ไม่ต้องมีเครื่องหมายจัดหน้า */
 .pane.sp-view-draft .sp-cont-mark { display:none; }
@@ -3775,7 +3848,7 @@ body.paper-mode .sp-cont-mark { color:#6b6552; }
   pointer-events:none; user-select:none; z-index:2; }
 .sp-cont-page.sp-continued-top { text-align:left; }
 .sp-cont-page.sp-continued-bottom { text-align:right; }
-body.paper-mode .sp-cont-page { color:#6b6552; }
+body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 .sp-pageview .sp-more { margin-left:2.2in; color:#333; }
 /* [alpha.58r บั๊ก 15+20] มุมมองหน้ากระดาษของ "นิยาย" (renderProsePageView) */
 .sp-pageview .ed-page { color:var(--paper-ink); }
@@ -3785,8 +3858,8 @@ body.paper-mode .sp-cont-page { color:#6b6552; }
 .sp-pageview .ed-page h4, .sp-pageview .ed-page h5, .sp-pageview .ed-page h6 {
   color:#111; margin:1em 0 .4em; line-height:1.3; }
 .sp-pageview .ed-page blockquote { color:#4a4438; font-style:italic;
-  border-left:3px solid #c9c2ae; padding-left:12px; margin:.6em 0; }
-.sp-pageview .ed-page hr { border:0; border-top:1px solid #c9c2ae; margin:1em 0; }
+  border-left:3px solid var(--paper-line); padding-left:12px; margin:.6em 0; }
+.sp-pageview .ed-page hr { border:0; border-top:1px solid var(--paper-line); margin:1em 0; }
 .sp-pageview .ed-page .pv-figure { color:#7a7466; font-style:italic; text-align:center; margin:1em 0; }
 /* เส้นคั่นหน้าในตัวแก้ไขนิยาย — ใช้หน้าตาเดียวกับของบทภาพยนตร์ */
 .ed-page-break { pointer-events:none; }
@@ -4015,8 +4088,8 @@ body.paper-mode .sp-cont-page { color:#6b6552; }
   border-top:2px dashed var(--accent-hi); user-select:none; }
 .k-manual-page-break::after { content:attr(data-label); position:absolute; right:0; top:-.9em;
   background:var(--bg); padding:0 8px; font-size:.72em; color:var(--accent-hi); letter-spacing:.04em; }
-body.paper-mode .k-manual-page-break { border-top-color:#c9a06a; }
-body.paper-mode .k-manual-page-break::after { background:var(--paper); color:#a5752f; }
+body.paper-mode .k-paper .k-manual-page-break { border-top-color:#c9a06a; }
+body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); color:#a5752f; }
 .ProseMirror-selectednode.k-manual-page-break { border-top-color:var(--accent); }
 @media print {
   .k-manual-page-break { break-before:page; page-break-before:always;

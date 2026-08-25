@@ -227,11 +227,13 @@ import { SP_VIEWS, SP_VIEW_LABELS, SP_VIEW_CLASS, ALL_VIEW_CLASSES, isPageView, 
          fitScale, overviewScale, viewScale, blocksFromDoc, pagesOf, pageStartPositions,
          pageStartMarks,
          findPageStart, scenePositions, findNthScene, renderPageView, viewStatusText,
-         pageMetrics, layoutCssVars, isEditView } from './sp-view.js';
+         pageMetrics, layoutCssVars, isEditView, isPaperView } from './sp-view.js';
+// [alpha.100 ข้อ 4] สีกระดาษที่ผู้ใช้เลือกเอง — โมดูลบริสุทธิ์ (test/paper-color.test.cjs)
+import { paperVars, normalizePaperColor, PAPER_DEFAULT } from './paper-color.js';
 import { setFormatGuide, isFormatGuide, setPageBreaks, pageBreaks,
          setSceneNumbers, isSceneNumbers, refreshSceneNumbers,
          setContinueds, continueds, refreshContinueds,
-         setSpPageNumberLabel } from './sp-format-guide.js';
+         setSpPageNumberLabel, applySpPagePads } from './sp-format-guide.js';
 // ---- alpha.58: ระบบต่อเนื่อง (55/56) + รายงานบท (71/72/73) ----
 import { computeContinueds, continuedSummary, continuedStatusText, pagesWithContinueds,
          CONTINUED_DEFAULTS } from './sp-continued.js';
@@ -386,6 +388,10 @@ export function applyZoomVars(uiOff) {
   R.setProperty('--page-scale', pageScale.toFixed(3));
   bumpProseLayout();          // [alpha.82] ขนาดฟอนต์เปลี่ยน = ต้องวัดหน้าใหม่
   syncWorkspaceWidths();
+  // [alpha.100r บั๊ก 1] ซูมเปลี่ยนความกว้างของ workspace → ตัวแก้ไขถูกจัดกึ่งกลางใหม่
+  // แนวนอนของแผ่นเป็น CSS ล้วนแล้วจึงตามเองอัตโนมัติ · ที่นี่แค่รีเฟรชแนวตั้งให้ชัวร์
+  try { renderPaperSheets(state.active); } catch {}
+  try { retunePagePads(state.active); } catch {}
   const slider = $('#zoom-slider'); if (slider) slider.value = String(Math.round(pageScale * 100));
   const lbl = $('#zoom-label'); if (lbl) lbl.textContent = Math.round(pageScale * 100) + '%';
 }
@@ -622,8 +628,32 @@ export function spFormatSettings() {
 export function spFormat() { return mergeSpFormat(spFormatSettings()); }
 
 /** ตั้งตัวแปร CSS ของหน้ากระดาษ + สร้าง CSS ต่อ element ของบทหนังใหม่ (ข้อ 81–85) */
+/**
+ * [alpha.100 ข้อ 4] สีกระดาษที่ผู้ใช้เลือก → ตัวแปร CSS ทั้งชุด
+ *
+ * ผู้ใช้: *"หน้ากระดาษที่เป็นสีเหลือง check เลยว่ามีจุดไหน ให้เปลี่ยนเป็นสีขาวให้หมด
+ *           หรือทำ option ให้ผู้ใช้เปลี่ยนสีที่ต้องการได้"* — ทำทั้งสองอย่าง:
+ * ค่าเริ่มต้นเป็นขาว และเลือกสีเองได้ที่ ตั้งค่า → หน้ากระดาษ
+ *
+ * ที่สำคัญกว่าตัว --paper คือ **สีข้างเคียง**: เดิมขอบแผ่น/เส้นประ/พื้นบล็อกโค้ดเป็นเลข
+ * โทนครีมฝังตายอยู่ใน style.css คนละที่กัน → เปลี่ยนแค่ --paper จะได้ "กระดาษขาวขอบครีม"
+ * ตอนนี้ทุกตัวคำนวณจากสีกระดาษสีเดียว (paper-color.js) จึงเข้ากันทุกสีที่เลือกโดยอัตโนมัติ
+ *
+ * @returns {string} สีกระดาษที่ใช้จริง (hex 6 หลัก)
+ */
+export function applyPaperVars() {
+  const hex = normalizePaperColor(state.settings.paperColor || PAPER_DEFAULT, PAPER_DEFAULT);
+  const R = document.documentElement.style;
+  const vars = paperVars(hex);
+  for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
+  // [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ — สวิตช์เดียว ครบทั้งสี่ด้านทุกแผ่น
+  document.body.classList.toggle('k-page-guides', !!state.settings.pageGuides);
+  return hex;
+}
+
 export function applyPageVars() {
   const fmt = spFormat();
+  applyPaperVars();          // [alpha.100 ข้อ 4] สีกระดาษต้องพร้อมก่อนใครวาดแผ่น
   const R = document.documentElement.style;
   const vars = pageCssVars(fmt);
   for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
@@ -654,6 +684,8 @@ export function applyPageVars() {
   // [alpha.58r บั๊ก 15+20] ตัวเลขหน้ากระดาษฝั่งนิยาย (ใช้ขนาดกระดาษ/ระยะขอบชุดเดียวกัน)
   const pv = proseLayoutCssVars(proseFormat(), fmt.paper, fmt.margins, state.settings.spPageGap);
   for (const k of Object.keys(pv)) R.setProperty(k, pv[k]);
+  // [alpha.100 ข้อ 3] ขนาดกระดาษ/ช่องว่างเปลี่ยน = แผ่นที่ปูไว้ต้องขยับตามทันที
+  try { renderPaperSheets(state.active); } catch {}
   return fmt;
 }
 
@@ -1146,6 +1178,8 @@ export function setSpView(mode, quiet) {
   document.querySelectorAll('.pane').forEach((p) => {
     p.classList.remove(...ALL_VIEW_CLASSES);
     if (p !== (tab && tab.pane)) clearPageView(p);
+    // [alpha.100 ข้อ 3] ชั้นแผ่นกระดาษของ pane ที่ไม่ได้อยู่โหมดจัดหน้าแล้วต้องหายไปด้วย
+    p.querySelectorAll(':scope > .workspace > .k-paper-layer').forEach((n) => n.remove());
   });
   let pages = null;
   // [alpha.58r บั๊ก 15] โหมดมุมมองใช้ได้ทั้งบทภาพยนตร์และนิยาย (คลาส pane ชุดเดียวกัน)
@@ -1154,6 +1188,16 @@ export function setSpView(mode, quiet) {
     if (cls.length) tab.pane.classList.add(...cls);
     if (isPageView(m)) pages = tab.sp ? drawPageView(tab) : drawProsePageView(tab);
     else clearPageView(tab.pane);
+    // [alpha.100 ข้อ 3] วาดแผ่นทันทีที่เข้าโหมดจัดหน้า — ไม่ต้องรอรอบจัดหน้าถัดไป
+    // (จำนวนหน้ายังเป็นค่าเดิมที่ตั้งไว้ที่ --pg-count · รอบจัดหน้าถัดไปจะอัปเดตให้เอง)
+    renderPaperSheets(tab);
+    // ══ [alpha.100r บั๊ก 2] ★ สลับมุมมองแล้วต้องคิด "ที่ว่างท้ายหน้า" ใหม่ ══
+    // กล่องเส้นคั่นหน้าตาไม่เหมือนกันในแต่ละมุมมอง (ปกติ = เส้นบาง · จัดหน้า = ขอบล่าง+ช่องว่าง+ขอบบน)
+    // ค่าชดเชยที่คำนวณไว้ตอนอยู่มุมมองหนึ่งจึงใช้กับอีกมุมมองไม่ได้
+    // เดิมตัวชดเชยถูกเรียกจาก "รอบจัดหน้า" อย่างเดียว — และการสลับมุมมอง **ไม่ได้จัดหน้าใหม่**
+    // → เข้าโหมดจัดหน้าแล้วได้ค่าของมุมมองเดิมค้างอยู่ (ฝั่งบท = ไม่เคยถูกชดเชยเลย เพราะตัวชดเชย
+    //   ทำงานเฉพาะโหมดจัดหน้า แต่ไม่มีใครเรียกมันตอนเพิ่งเข้าโหมดนั้นพอดี)
+    retunePagePads(tab);
   }
   const sel = $('#sp-view-select'); if (sel) sel.value = m;
   syncMenuToggles();
@@ -1163,6 +1207,23 @@ export function setSpView(mode, quiet) {
   if (tab && tab.pane && prevMode !== m) restoreViewScroll(tab, m, frac);
   if (!quiet) setStatus(viewStatusText(m, pages ?? undefined));
   return m;
+}
+
+/**
+ * [alpha.100r บั๊ก 2] คิด "ที่ว่างท้ายหน้า" ใหม่แล้ววาดแผ่นตาม — ใช้ได้ทั้งนิยายและบท
+ * เรียกหลังเหตุการณ์ที่เปลี่ยน **เรขาคณิตของกล่องเส้นคั่น** โดยไม่ได้จัดหน้าใหม่
+ * (สลับมุมมอง · ซูม) · ต้องรอเฟรมถัดไปเสมอ — วัดทันทีหลังสั่งวาดได้ค่าของเก่า
+ */
+function retunePagePads(tab) {
+  const t = tab || state.active;
+  if (!t) return;
+  requestAnimationFrame(() => {
+    try {
+      if (t.sp) tuneSpPagePadsLoop(t);
+      else if (t.editor) { applyProsePagePads(t.editor.view.dom); tuneProsePagePadsLoop(t); }
+    } catch {}
+    try { renderPaperSheets(t); } catch {}
+  });
 }
 
 /** วาดมุมมองหน้ากระดาษใหม่เมื่อเนื้อหา/ขนาดหน้าต่างเปลี่ยน */
@@ -1182,6 +1243,27 @@ window.addEventListener('resize', () => {
   clearTimeout(_spViewJob);
   _spViewJob = setTimeout(refreshSpView, 150);
 });
+
+/**
+ * [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า
+ *
+ * ผู้ใช้: *"มุมมอง layout เหมือนจะมีเส้นประแสดงตัดตกอยู่ด้านบนขอบกระดาษ ให้เลือกคือ
+ *           มี toggle แสดงระยะตัดตก แต่ต้องมีทั้งหัวและล่าง กับไม่มีเลยดีกว่า"*
+ *
+ * เส้นเก่าเป็นของแถมจากกฎเส้นคั่นหน้าของ **มุมมองปกติ** ที่หลุดมาโดนโหมดจัดหน้า จึงมี
+ * ได้แค่ด้านเดียว (ถูกตัดทิ้งแล้วใน style.css) · ตัวใหม่วาดเป็นกรอบประรอบพื้นที่พิมพ์
+ * ของแต่ละแผ่น → ครบทั้งสี่ด้านโดยโครงสร้าง ไม่มีทางเหลือข้างเดียวอีก
+ * เป็นความชอบส่วนตัวของคนดูจอ → เก็บระดับผู้ใช้ (settings.json) ไม่ใช่ของผลงาน
+ */
+export function togglePageGuides(on) {
+  const v = on === undefined ? !state.settings.pageGuides : !!on;
+  state.settings.pageGuides = v;
+  document.body.classList.toggle('k-page-guides', v);
+  saveGlobalSetting('pageGuides', v);
+  syncMenuToggles();
+  setStatus(v ? T`เปิดเส้นบอกระยะขอบกระดาษ (มุมมองจัดหน้า)` : T`ปิดเส้นบอกระยะขอบกระดาษ`);
+  return v;
+}
 
 // [61] แสดงรูปแบบ — เส้นฟ้าขอบ element + เครื่องหมายบอกชนิดการจบบรรทัด
 export function toggleShowFormat(on) {
@@ -5152,6 +5234,7 @@ export function syncMenuToggles() {
       format: state.active?.sp ? 'screenplay' : 'prose',
       // alpha.57 — เมนู "บท": โหมดมุมมอง + แสดงรูปแบบ + ตรวจก่อนส่งออก
       spView: currentSpView(),
+      pageGuides: !!state.settings.pageGuides,      // [alpha.100 ข้อ 2]
       showFormat: isFormatGuide(),
       checkBeforeExport: state.settings.spCheckBeforeExport !== false,
       // alpha.57a — เลขฉาก / เลขหน้า / เสียงพิมพ์
@@ -8378,6 +8461,77 @@ export function setLayoutPageCount(tab, count) {
   if (!pane) return 0;
   const n = Math.max(1, Math.round(+count || 1));
   pane.style.setProperty('--pg-count', String(n));
+  renderPaperSheets(tab, n);          // [alpha.100 ข้อ 3] แผ่นกระดาษจริงต้องตามจำนวนหน้าเสมอ
+  return n;
+}
+
+/**
+ * ══ [alpha.100 ข้อ 3] ★★ แผ่นกระดาษจริงในมุมมองจัดหน้า ══
+ *
+ * ผู้ใช้: *"มุมมองแบบ layout ยังไม่มีการแบ่งหน้าแบบจริง ๆ เหมือนมุมมองหน้าคู่
+ *           ยังใช้วิธีเอาหน้ากระดาษยาว ๆ มาแล้วขั่นด้วยแถบ เหมือนเดิม
+ *           ต้องปรับนะ หรือปรับไม่ได้ อธิบายมาด้วย"*
+ *
+ * **ที่แยกแผ่นเป็น editor คนละตัวไม่ได้** — ตัวแก้ไขเป็น contenteditable ก้อนเดียว
+ * เนื้อหาต้องไหลข้ามแผ่นเอง เคอร์เซอร์/การเลือก/undo ต้องข้ามแผ่นได้ · แตกเป็น N กล่อง
+ * = เขียนเอนจินจัดหน้าเองทั้งตัว (รื้อแกน ProseMirror) · มุมมองหน้าคู่ทำได้เพราะมัน
+ * **อ่านอย่างเดียว** — ก๊อป DOM แล้วครอบทีละหน้า (renderProseClipPages)
+ *
+ * **แต่ทำให้เป็นแผ่นแยกจริงบนจอได้** และเรขาคณิตรองรับอยู่แล้ว: ตั้งแต่ alpha.98 ที่
+ * ล็อกความสูงหน้าไว้เป๊ะ สายเนื้อหาในโหมดนี้เรียงเป็น
+ *     ขอบบน + เนื้อหน้า + [ขอบล่าง + ช่องว่าง + ขอบบน] + เนื้อหน้า + … + ขอบล่าง
+ * ซึ่งยุบได้เป็น `n × สูงกระดาษ + (n−1) × ช่องว่าง` พอดี → **แผ่นที่ k อยู่ที่
+ * `k × (สูงกระดาษ + ช่องว่าง)` เสมอ** ไม่ต้องวัด DOM เลย
+ *
+ * จึงปูแผ่นจริง n ใบไว้ข้างหลังตัวแก้ไข (แต่ละใบมีขอบ/เงา/มุมของตัวเอง) แล้วทำตัวแก้ไข
+ * ให้โปร่งใส · กล่องเส้นคั่นหน้าเลิกวาด gradient ปลอมช่องว่าง → ช่วงกลางไม่มีแผ่นรอง
+ * = เห็นพื้นโต๊ะจริงคั่นระหว่างแผ่น เหมือนมุมมองหน้าคู่
+ *
+ * ชั้นนี้ `position:absolute` + `pointer-events:none` → ไม่กินที่ในสายเนื้อหา
+ * การวัด/จัดหน้าจึงไม่เปลี่ยนแม้แต่พิกเซลเดียว (สำคัญมาก — ตัววัดอ่าน DOM จริง)
+ *
+ * @returns {number} จำนวนแผ่นที่วาด (0 = มุมมองนี้ไม่มีแผ่น)
+ */
+export function renderPaperSheets(tab, count) {
+  const pane = tab && tab.pane;
+  if (!pane) return 0;
+  const ws = pane.querySelector(':scope > .workspace');
+  const old = ws && ws.querySelector(':scope > .k-paper-layer');
+  // ไม่ใช่มุมมองที่มีแผ่น (ปกติ/ร่าง/หน้าคู่/ภาพรวม) → เก็บชั้นทิ้งให้เกลี้ยง
+  if (!ws || !pane.classList.contains('k-paper') || !isPaperView(currentSpView())) {
+    if (old) old.remove();
+    return 0;
+  }
+  const pm = ws.querySelector(':scope > .ProseMirror');
+  if (!pm) { if (old) old.remove(); return 0; }
+  const fmt = spFormat();
+  const pageH = Math.max(1, num(fmt.paper.height, 11) * 96);
+  const gap = Math.max(8, Math.min(120, Math.round(num(state.settings.spPageGap, 28))));
+  const n = Math.max(1, Math.round(+count || parseInt(pane.style.getPropertyValue('--pg-count'), 10) || 1));
+
+  const layer = old || el('div', 'k-paper-layer');
+  // ══ [alpha.100r บั๊ก 1] ★ JS ตั้งได้เฉพาะ "แนวตั้ง" เท่านั้น ══
+  // แนวนอน (ซ้าย/กว้าง) เป็นหน้าที่ของ CSS ล้วน — `left:50%` + `width:var(--page-w)`
+  // เท่ากับกฎที่จัด `.ProseMirror` กึ่งกลาง · เดิม JS วัด `offsetLeft/offsetWidth` มาจำไว้
+  // แล้วค่านั้น **ค้าง** เมื่อผู้ใช้ซูม (ซูมไปตั้ง min-width ของ workspace ใหม่ →
+  // ตัวแก้ไขถูกจัดกึ่งกลางที่พิกัดใหม่ แต่แผ่นอยู่ที่เดิม) = ตัวหนังสือหลุดออกนอกกระดาษ
+  //
+  // แนวตั้งปลอดภัยกว่ามาก: `pm.offsetTop` = ระยะขอบบนที่ CSS กำหนดไว้คงที่ (28px นิยาย /
+  // 24px บท) ไม่ขึ้นกับความกว้างของแผงหรือระดับซูม · และค่าทั้งหมดที่นี่เป็น **พิกเซลก่อนซูม**
+  // เพราะ layer อยู่ใน `.workspace` ที่ถูก `zoom` ครอบอยู่แล้ว — ซูมจึงย่อ/ขยายทั้งแผ่นและ
+  // ตัวหนังสือด้วยอัตราเดียวกันโดยอัตโนมัติ ไม่ต้องคำนวณอะไรเพิ่ม
+  layer.style.top = pm.offsetTop + 'px';
+  layer.style.height = (n * pageH + (n - 1) * gap) + 'px';
+  // สร้าง/ตัดใบให้พอดีจำนวนหน้า แล้ววางตำแหน่งใหม่ทุกใบ (เอกสาร 400 หน้าก็แค่ 400 div ว่าง)
+  while (layer.children.length > n) layer.lastChild.remove();
+  while (layer.children.length < n) layer.append(el('div', 'k-paper-sheet'));
+  for (let i = 0; i < n; i++) {
+    const sh = layer.children[i];
+    sh.style.top = (i * (pageH + gap)) + 'px';
+    sh.style.height = pageH + 'px';
+    sh.dataset.sheet = String(i + 1);
+  }
+  if (!old) ws.insertBefore(layer, ws.firstChild);   // ต้องอยู่ **ก่อน** ตัวแก้ไข = อยู่ข้างหลัง
   return n;
 }
 
@@ -8414,6 +8568,9 @@ function repaginateNow(t) {
     if (changed || cChanged || nChanged) t.sp.refreshGuides();
     setLayoutPageCount(t, pg.count);       // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();                       // มุมมองเรียงหน้า/ภาพรวมตามเนื้อหาล่าสุด
+    // [alpha.100r บั๊ก 2] ชดเชยที่ว่างท้ายหน้าให้เนื้อหน้าลงแผ่นพอดี
+    // (ต้องรอให้เบราว์เซอร์วาดเส้นคั่นก่อนถึงจะวัดได้ — บทเรียน "อย่าวัดทันทีหลังสั่งวาด")
+    requestAnimationFrame(() => { try { tuneSpPagePadsLoop(t); } catch {} });
     _spPageText = ttf('ui.app.page', pg.count);
     return _spPageText;
   } catch (e) { log('warn', tt('ui.app.pageChapterNotOk'), e); return _spPageText; }
@@ -8501,6 +8658,85 @@ function tuneProsePagePads(t) {
   _padTuneUntil = nowMs + 400;
   applyProsePagePads(pm);                  // ทาลง DOM ตรง ๆ — ไม่ dispatch ไม่สร้าง DOM ใหม่
   return true;
+}
+
+/**
+ * ══ [alpha.100r บั๊ก 2] ★★ บทภาพยนตร์: เนื้อหน้าล้นแผ่นเพราะ "บรรทัดจริงไม่เท่าโมเดล" ══
+ *
+ * ผู้ใช้: *"ในรูปที่ 3 บทหนังเจออาการหน้าล้น เพราะบทหนังมีระยะบรรทัดที่ไม่เท่ากัน"*
+ *
+ * บทจัดหน้าจาก **โมเดล** (`sp-format.js` นับบรรทัดจากฟอนต์ล้วน ๆ **ไม่เคยอ่าน DOM** —
+ * ตั้งใจแบบนั้น เพราะทำให้จอ · PDF · มุมมองหน้าคู่ ได้ตัวเลขชุดเดียวกัน) โมเดลจึงเชื่อว่า
+ * หนึ่งหน้า = 54 บรรทัด × ⅙ นิ้ว = ความสูงพื้นที่พิมพ์พอดี
+ *
+ * แต่บนจอ ความสูงบรรทัดจริงไม่เท่านั้นเสมอ — ฟอนต์ไทยมีตัวบน-ตัวล่าง · แต่ละ element มี
+ * `linesBefore` เป็นระยะเว้นจริง · หัวฉาก/ทรานซิชันมีสไตล์ของตัวเอง → เนื้อหน้าสูงเกิน
+ * ความสูงพื้นที่พิมพ์ทีละนิด **สะสมทุกหน้า**
+ *
+ * ก่อน alpha.100 ไม่มีใครเห็น เพราะกระดาษเป็น "แผ่นเดียวยาว ๆ" ที่ยืดตามเนื้อหา — ส่วนที่เกิน
+ * ก็แค่ไปอยู่บนกระดาษต่อ · พอเปลี่ยนเป็นแผ่นจริงที่ล็อกความสูงไว้ ส่วนเกินเลยไปโผล่บนพื้นโต๊ะ
+ *
+ * แก้แบบเดียวกับที่ฝั่งนิยายใช้มาตั้งแต่ alpha.93: **วัดของจริงแล้วชดเชย** —
+ * ที่ว่างท้ายหน้า i = ความสูงพื้นที่พิมพ์ − เนื้อหาที่หน้า i ใช้ไปจริง (ติดลบได้ = หน้านั้นล้น
+ * ก็หนีบเป็น 0 แล้วปล่อยให้หน้าถัดไปรับไป ไม่ใช่ดันแผ่นให้เพี้ยนทั้งเล่ม)
+ *
+ * **ไม่แตะการจัดหน้าเลย** — pad เป็นเรื่องของการวาดล้วน ๆ · การนับหน้า/ตำแหน่งตัดยังมาจาก
+ * โมเดลเหมือนเดิมทุกประการ (จอกับ PDF จึงยังตรงกัน)
+ *
+ * @returns {boolean} true = ปรับจริง
+ */
+let _spPadTuneUntil = 0;
+function tuneSpPagePads(t) {
+  if (!t || !t.sp || !t.pane) return false;
+  // มีผลเฉพาะมุมมองจัดหน้า — มุมมองอื่นกล่องเส้นคั่นไม่ได้ใช้ `--k-pb-pad` เลย
+  if (currentSpView() !== 'layout') return false;
+  const nowMs = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if (nowMs < _spPadTuneUntil) return false;
+  const pm = t.sp.view.dom;
+  if (!pm || !pm.isConnected) return false;
+  const list = pageBreaks();
+  if (!list.length) return false;
+  const els = [...pm.querySelectorAll('.sp-page-break')];
+  if (els.length !== list.length) return false;         // ยังวาดไม่ครบ — รอรอบหน้า
+  const fmt = spFormat();
+  const target = (num(fmt.paper.height, 11) - num(fmt.margins.top, 1)
+                  - num(fmt.margins.bottom, 1)) * 96;
+  if (!(target > 8)) return false;
+  const z = zoomFactorOf(pm) || 1;
+  const cs = getComputedStyle(pm);
+  const top0 = pm.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
+  const yOf = (e) => (e.getBoundingClientRect().top - top0) / z;
+  // หน้าแรกเริ่มที่ขอบบนของบล็อกแรกที่มีความสูงจริง (เหมือนฝั่งนิยาย)
+  const firstBlk = [...pm.children].find((e) => e.nodeType === 1
+    && !e.classList.contains('sp-page-break') && e.getBoundingClientRect().height > 0);
+  let prev = firstBlk ? (firstBlk.getBoundingClientRect().top - top0) / z : 0;
+  let prevH = 0;
+  let changed = false;
+  for (let i = 0; i < els.length; i++) {
+    const y = yOf(els[i]);
+    const used = y - prev - prevH;                       // เนื้อหาที่หน้านี้ใช้ไปจริง
+    prev = y;
+    prevH = els[i].getBoundingClientRect().height / z;
+    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
+    list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
+    changed = true;
+  }
+  if (!changed) return false;
+  _spPadTuneUntil = nowMs + 400;
+  applySpPagePads(pm);                     // ทาลง DOM ตรง ๆ — ไม่ dispatch ไม่สร้าง DOM ใหม่
+  return true;
+}
+/** วนชดเชยจนลงตัว (สองรอบพอ — pad ตอบสนองแบบ 1:1 เหมือนฝั่งนิยาย) */
+function tuneSpPagePadsLoop(t, rounds = 2) {
+  let n = 0;
+  for (let i = 0; i < rounds; i++) {
+    _spPadTuneUntil = 0;
+    if (!tuneSpPagePads(t)) break;
+    n++;
+  }
+  _spPadTuneUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 400;
+  return n;
 }
 
 /**
@@ -9345,7 +9581,16 @@ export function renderFeaturePanel(id) {
   const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
   const backScroll = keepScroll(() => document.querySelector(sel));
   const p = Promise.resolve().then(f)
-    .catch((e) => { log('error', tt('ui.app.drawPanel') + pid + tt('ui.app.fail'), e); })
+    .catch((e) => {
+      // ══ [alpha.100] ★ ตาข่ายจับ "error เงียบ" ของตัววาดแผง ══
+      // catch ตรงนี้กันแอปล่มได้จริง แต่มันก็ **กลืนบั๊กไปด้วย**: ผู้ใช้ไม่เห็นอะไรผิด · e2e เขียว ·
+      // บั๊กแดชบอร์ดที่ระเบิดทุกครั้งที่เปิดโปรเจกต์จึงอยู่ได้หลายรุ่นโดยไม่มีใครรู้
+      // (เจอเพราะบังเอิญไปไล่อ่าน `<userData>/logs/app-*.log`)
+      // เก็บเป็นตัวนับให้ e2e ยืนยันได้ว่า "จบรอบแล้วต้องไม่มีแผงไหนวาดพังเลย"
+      state._panelDrawErrors = (state._panelDrawErrors || 0) + 1;
+      state._panelDrawLastErr = pid + ': ' + (e && e.message ? e.message : String(e));
+      log('error', tt('ui.app.drawPanel') + pid + tt('ui.app.fail'), e);
+    })
     .finally(() => _featInFlight.delete(pid))
     .then(() => { try { backScroll(); } catch {} return true; });
   _featInFlight.set(pid, p);
@@ -9714,6 +9959,8 @@ async function handleCommand(ch, ...a) {
                       state.settings.autoSync = isAutoSyncOn(); saveProjectMeta(); break;
     // ---- alpha.57: มุมมองบท (57/59/60/61) · ไปยังหน้า-ฉาก (78) · ตรวจบท (54) · ส่งออก (67/68/70) ----
     case 'sp-view': setSpView(a[0]); break;
+    // [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ — สวิตช์เดียว ครบทั้งสี่ด้านทุกแผ่น
+    case 'page-guides': togglePageGuides(a[0]); break;
     case 'sp-show-format': toggleShowFormat(a[0]); break;
     // ---- alpha.58: ระบบต่อเนื่อง (55/56) · รายงานบท (71/72/73) ----
     case 'sp-continued': toggleContinueds(a[0]); break;
@@ -13379,8 +13626,13 @@ async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 60));
     check('หน้ากระดาษ: body มีคลาส paper-mode เสมอ (ไม่มีสวิตช์ให้ปิดแล้ว)',
           document.body.classList.contains('paper-mode'));
+    // ══ [alpha.100 ข้อ 1] ★★ กลับสัญญาเดิม: **มุมมองปกติต้องไม่มีแผ่นกระดาษ** ══
+    // เดิมเทสนี้ยืนยันว่ามุมมองปกติเป็นแผ่นครีม `rgb(245,241,230)` — ซึ่งคือสิ่งที่ผู้ใช้บอกว่าผิด
+    // ("มุมมองหน้ากระดาษปกติ จะต้องไม่แสดงหน้ากระดาษสีเหลือง ... paper transparent 0%")
+    // แผ่นกระดาษย้ายไปอยู่ที่มุมมองจัดหน้าอย่างเดียว และวาดเป็นชั้นข้างหลัง (.k-paper-sheet)
     const pmBg = getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor;
-    check('โหมดหน้ากระดาษ: หน้าเป็นสีกระดาษนวล (ไม่ใช่พื้นมืด)', pmBg === 'rgb(245, 241, 230)', pmBg);
+    check('[100-1] ★★ มุมมองปกติ: ไม่มีแผ่นกระดาษ (พื้นโปร่งใส ไม่ใช่ครีม)',
+          /rgba\(0, 0, 0, 0\)|transparent/.test(pmBg), pmBg);
     check('[99-2] ★★ ไม่มีสวิตช์โหมดหน้ากระดาษเหลืออยู่เลย (ปุ่ม/คีย์ลัด/คำสั่ง)',
           !document.querySelector('#tb-paper') &&
           !SHORTCUTS.some((x) => x[3] === 'paper-mode') &&
@@ -14020,9 +14272,13 @@ async function runTest(projectPath) {
     check('บล็อกตัวละคร: ไม่มีขีดแดงตรวจคำผิด',
           !document.querySelector('.pane.on .sp-character .k-spell-bad'));
     await kapi.testShot('/tmp/k2_sp_fixed.png');
-    // ถ่ายบทหนังในโหมดหน้ากระดาษด้วย
-    check('บทหนังโหมดหน้ากระดาษ: หน้าขาว',
-          getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor === 'rgb(245, 241, 230)');
+    // ถ่ายบทหนังในมุมมองปกติด้วย
+    // [alpha.100 ข้อ 1] เดิมเทสนี้ยืนยันว่าบทหนังในมุมมองปกติเป็นแผ่นครีม — สัญญาเปลี่ยนแล้ว
+    // (มุมมองปกติ = สายเนื้อหาบนพื้นโปรแกรม · แผ่นกระดาษอยู่ที่มุมมองจัดหน้าอย่างเดียว)
+    check('[100-1] ★ บทหนังมุมมองปกติ: ไม่มีแผ่นกระดาษเช่นกัน (พื้นโปร่งใส)',
+          /rgba\(0, 0, 0, 0\)|transparent/.test(
+            getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor),
+          getComputedStyle(document.querySelector('.pane.on .ProseMirror')).backgroundColor);
     await kapi.testShot('/tmp/k2_paper_sp.png');
     // กล่องขยายรูปทำงาน (lightbox)
     imageLightboxTest();
@@ -14087,6 +14343,44 @@ async function runTest(projectPath) {
           [...document.querySelectorAll('#dash-body .dash-apanel-title')]
             .some((e) => e.textContent.includes('ความยาวแต่ละบท')));
     await kapi.testShot('/tmp/k2_analytics.png');
+
+    // ══ [alpha.100] ★★ error เงียบ: แดชบอร์ดระเบิดทุกครั้งที่สลับโปรเจกต์ ══
+    //
+    // อาการ: ไม่มีอะไรผิดใน UI · e2e เขียวตลอด · แต่ log ของแอปมีทุกครั้งที่เปิดโปรเจกต์
+    //   `ERROR วาดแผง dashboard ล้มเหลว | path:join ... Received null`
+    // ต้นตอ: แดชบอร์ดอ่านไฟล์ทั้งโปรเจกต์ (await หลายสิบจุด) แล้วอ่าน `state.root` ใหม่ทุกครั้ง
+    // ระหว่างทาง · พอโปรเจกต์ถูกปิดกลางคัน (`state.root = null`) รอบวนถัดไปก็ตาย
+    // ของจริงตายที่ `join(null, 'Recycle')` = ลูปไล่โฟลเดอร์ระดับรากวนมาถึงใบที่ 9 พอดี
+    //
+    // ทำซ้ำตรง ๆ: สั่งวาดแล้ว **ไม่ await** · ดึงโปรเจกต์ออกจากใต้เท้าทันที · แล้วค่อยรอผล
+    {
+      const keepRoot100 = state.root;
+      const errBefore = state._panelDrawErrors || 0;
+      const job = renderDashboard($('#dash-body'));      // ยังไม่ await — ให้มันค้างกลางทาง
+      state.root = null;                                 // เหมือน closeProjectIfAny() ทำ
+      let threw = null, ret;
+      try { ret = await job; } catch (e) { threw = e; }
+      state.root = keepRoot100;
+      check('[100-5] ★★ สลับโปรเจกต์ระหว่างวาดแดชบอร์ด → ไม่ throw',
+            !threw, threw && threw.message);
+      check('[100-5] ★★ และเลิกวาดอย่างสงบ (คืน false) ไม่ใช่วาดข้อมูลโปรเจกต์เก่าต่อ',
+            ret === false, String(ret));
+      check('[100-5] ★★ ไม่มี error เงียบเพิ่มในตัวนับของตัววาดแผง',
+            (state._panelDrawErrors || 0) === errBefore,
+            errBefore + ' → ' + (state._panelDrawErrors || 0) + ' · ' + (state._panelDrawLastErr || ''));
+      // ยังไม่มีโปรเจกต์เลยก็ต้องไม่พัง (หน้าต่างแผงที่ฉีกออกมา/ตอนบูตเจอเคสนี้)
+      state.root = null;
+      let ret2, threw2 = null;
+      try { ret2 = await renderDashboard($('#dash-body')); } catch (e) { threw2 = e; }
+      state.root = keepRoot100;
+      check('[100-5] ★ ยังไม่มีโปรเจกต์ → คืน false เงียบ ๆ ไม่ throw',
+            !threw2 && ret2 === false, threw2 ? threw2.message : String(ret2));
+      await openDashboard();                             // วาดกลับให้ครบตามเดิม
+      await new Promise((r) => setTimeout(r, 500));
+      check('[100-5] ★ วาดใหม่หลังคืนโปรเจกต์แล้วตัวเลขกลับมาครบ',
+            document.querySelector('#dash-body .dash-num')?.textContent !== '…',
+            document.querySelector('#dash-body .dash-num')?.textContent);
+    }
     closeTab('::dash::');
 
     // ---- เวิร์กโฟลว์ส่งออก (compile) ----
@@ -17735,6 +18029,262 @@ async function runTest(projectPath) {
         await new Promise((r) => setTimeout(r, 150));
       }
 
+      // ══════ [alpha.100] มุมมองปกติไม่มีกระดาษ · จัดหน้า = แผ่นจริง · สีกระดาษเลือกได้ ══════
+      {
+        const pn = document.querySelector('.pane.on');
+        const pm = () => pn.querySelector(':scope > .workspace > .ProseMirror');
+        const layer = () => pn.querySelector(':scope > .workspace > .k-paper-layer');
+        let _w100 = 0, _pad100 = '';
+        const isClear = (c) => /rgba\(0, 0, 0, 0\)|transparent/.test(c);
+        // ความสว่างของสีที่ getComputedStyle คืนมา ("rgb(r, g, b)") — ใช้ตัดสินหมึกดำ/ขาว
+        const lum = (css) => {
+          const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(String(css || ''));
+          if (!m) return 1;
+          const f = (v) => { const x = +v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+          return 0.2126 * f(m[1]) + 0.7152 * f(m[2]) + 0.0722 * f(m[3]);
+        };
+
+        // เนื้อหายาวพอให้ข้ามหน้าจริง — ไม่งั้นได้แผ่นเดียว แล้วข้อ 3 (ช่องว่างระหว่างแผ่น)
+        // ซึ่งเป็นหัวใจของรอบนี้จะไม่ถูกวัดเลย (บทเรียน: เทสที่ "ข้ามเงียบ" = ไม่มีเทส)
+        const t100 = state.active;
+        const ed100 = t100 && (t100.editor || t100.sp);
+        const keepMd100 = ed100 ? ed100.getMarkdown() : null;
+        if (ed100) {
+          ed100.setMarkdown(t100.sp
+            ? ['.INT. ห้องทดสอบ - กลางวัน',
+               ...Array.from({ length: 150 },
+                 (_, i) => '!บรรยายฉากที่ ' + i + ' ยาวพอควรให้เต็มบรรทัดจริง ๆ')].join(String.fromCharCode(10))
+            : Array.from({ length: 160 },
+                (_, i) => 'ย่อหน้าทดสอบหน้ากระดาษที่ ' + i + ' ยาวพอควรให้เต็มบรรทัดจริง ๆ ไม่ใช่คำสั้น ๆ')
+                .join(String.fromCharCode(10, 10)));
+          await new Promise((r) => setTimeout(r, 700));
+          repaginateFast(t100);                 // อย่ารอตัวหน่วง — เทสต้องได้จำนวนหน้าจริงเดี๋ยวนี้
+          await new Promise((r) => setTimeout(r, 400));
+        }
+
+        // ── ข้อ 1: มุมมองปกติ = ไม่มีแผ่นกระดาษเลย (paper transparent 0%) ──
+        setSpView('normal', true);
+        await new Promise((r) => setTimeout(r, 220));
+        check('[100-1] ★★ มุมมองปกติ: pane ไม่มีคลาสกระดาษ', !pn.classList.contains('k-paper'),
+              pn.className);
+        {
+          const cs = getComputedStyle(pm());
+          check('[100-1] ★★ มุมมองปกติ: พื้นหลังตัวแก้ไขโปร่งใส (ไม่ใช่แผ่นครีม)',
+                isClear(cs.backgroundColor), cs.backgroundColor);
+          check('[100-1] ★★ มุมมองปกติ: ไม่มีเงาแผ่นกระดาษ',
+                cs.boxShadow === 'none', cs.boxShadow);
+          check('[100-1] ★★ มุมมองปกติ: ไม่มีเส้นขอบแผ่นกระดาษ',
+                parseFloat(cs.borderTopWidth) === 0, cs.borderTopWidth);
+          check('[100-1] ★ มุมมองปกติ: ไม่มีชั้นแผ่นกระดาษปูอยู่', !layer());
+          // "ทุกอย่างเหมือนเดิม" — ระยะขอบ/ความกว้างต้องไม่ขยับ (เทียบกับโหมดจัดหน้าด้านล่าง)
+          _w100 = pm().getBoundingClientRect().width;
+          _pad100 = cs.paddingLeft + '/' + cs.paddingTop;
+          check('[100-1] ★ มุมมองปกติ: ยังใช้ระยะขอบกระดาษเท่าเดิม (ไม่ใช่ข้อความชิดขอบ)',
+                parseFloat(cs.paddingLeft) > 20 && parseFloat(cs.paddingTop) > 20, _pad100);
+          check('[100-1] ★ มุมมองปกติ: ยังมีเส้นคั่นหน้าให้เห็น (ไม่ได้เอาการแบ่งหน้าออก)',
+                [...pn.querySelectorAll('.ed-page-break')]
+                  .every((e) => getComputedStyle(e).display !== 'none'));
+          await kapi.testShot('/tmp/k2_100_normal.png');
+        }
+
+        // ── ข้อ 3: มุมมองจัดหน้า = แผ่นกระดาษจริงแยกใบ ──
+        setSpView('layout', true);
+        await new Promise((r) => setTimeout(r, 300));
+        {
+          repaginateFast(t100);
+          await new Promise((r) => setTimeout(r, 400));
+          const L = layer();
+          const nPg = Math.max(1, Math.round(+pn.style.getPropertyValue('--pg-count') || 1));
+          note('[100-3] แท็บทดสอบ = ' + (t100 && t100.sp ? 'บทหนัง' : 'นิยาย')
+               + ' · --pg-count = ' + nPg);
+          check('[100-3] ★★ มุมมองจัดหน้า: มีชั้นแผ่นกระดาษจริงปูอยู่', !!L);
+          const sheets = L ? [...L.children] : [];
+          check('[100-3] ★★ จำนวนแผ่น = จำนวนหน้าจริง', sheets.length === nPg,
+                sheets.length + ' vs ' + nPg);
+          check('[100-3] ★ เอกสารทดสอบยาวข้ามหน้าจริง (ไม่งั้นเทสช่องว่างระหว่างแผ่นถูกข้าม)',
+                sheets.length >= 2, sheets.length);
+          check('[100-3] ★★ ตัวแก้ไขเองโปร่งใส/ไม่มีขอบ-เงา (แผ่นอยู่ข้างหลัง ไม่ใช่ตัวมันเอง)',
+                isClear(getComputedStyle(pm()).backgroundColor)
+                && getComputedStyle(pm()).boxShadow === 'none'
+                && parseFloat(getComputedStyle(pm()).borderTopWidth) === 0,
+                getComputedStyle(pm()).backgroundColor + ' | ' + getComputedStyle(pm()).boxShadow);
+          if (sheets.length >= 2) {
+            const r0 = sheets[0].getBoundingClientRect();
+            const r1 = sheets[1].getBoundingClientRect();
+            const gapCss = Math.max(8, Math.round(num(state.settings.spPageGap, 28)));
+            const zoom = r0.height / (num(spFormat().paper.height, 11) * 96);
+            note('[100-3] แผ่น ' + sheets.length + ' ใบ · สูง ' + r0.height.toFixed(1)
+                 + 'px · ช่องว่างจริง ' + (r1.top - r0.bottom).toFixed(1) + 'px');
+            check('[100-3] ★★ แผ่นแยกกันจริง — มีช่องว่างพื้นโต๊ะคั่น ไม่ใช่แผ่นเดียวยาว',
+                  r1.top - r0.bottom > 1, (r1.top - r0.bottom).toFixed(2));
+            check('[100-3] ★★ ช่องว่างตรงกับที่ตั้งไว้ (spPageGap)',
+                  Math.abs((r1.top - r0.bottom) - gapCss * zoom) < 2,
+                  (r1.top - r0.bottom).toFixed(2) + ' vs ' + (gapCss * zoom).toFixed(2));
+            const hs = sheets.map((x) => x.getBoundingClientRect().height);
+            check('[100-3] ★★ ทุกแผ่นสูงเท่ากันเป๊ะ',
+                  Math.max(...hs) - Math.min(...hs) < 0.6, hs.slice(0, 6).join(','));
+            check('[100-3] ★ แผ่นแรกเริ่มที่หัวของตัวแก้ไขพอดี',
+                  Math.abs(r0.top - pm().getBoundingClientRect().top) < 1.5,
+                  r0.top.toFixed(1) + ' vs ' + pm().getBoundingClientRect().top.toFixed(1));
+            check('[100-3] ★ แผ่นกว้างเท่ากล่องตัวแก้ไข (กระดาษเต็มความกว้าง)',
+                  Math.abs(r0.width - pm().getBoundingClientRect().width) < 1.5,
+                  r0.width.toFixed(1) + ' vs ' + pm().getBoundingClientRect().width.toFixed(1));
+            check('[100-3] ★ ชั้นแผ่นไม่รับคลิก (พิมพ์ทับได้ตามปกติ)',
+                  getComputedStyle(L).pointerEvents === 'none');
+            // ★ [alpha.100r บั๊ก 2] สัญญาเดียวกับฝั่งบท: **สายเนื้อหาต้องเดินเท่ากับแผ่น**
+            // (เช็คข้างบนวัด "ชั้นแผ่น" ซึ่งคำนวณจากสูตร — ตัวนี้วัด "ตัวหนังสือจริง"
+            //  ถ้าสองอย่างนี้ไม่ตรงกันเมื่อไหร่ ตัวหนังสือก็ไปโผล่บนพื้นโต๊ะ)
+            {
+              const pmE = pm();
+              const zE = zoomFactorOf(pmE) || 1;
+              const csE = getComputedStyle(pmE);
+              const t0E = pmE.getBoundingClientRect().top + (parseFloat(csE.paddingTop) || 0) * zE;
+              const brE = [...pmE.querySelectorAll('.ed-page-break')];
+              const f1E = [...pmE.children].find((e) => e.nodeType === 1
+                && !e.classList.contains('ed-page-break')
+                && e.getBoundingClientRect().height > 0);
+              const stE = [f1E ? (f1E.getBoundingClientRect().top - t0E) / zE : 0];
+              for (const e of brE) {
+                const r = e.getBoundingClientRect();
+                stE.push((r.top - t0E) / zE + r.height / zE);
+              }
+              const wantE = num(spFormat().paper.height, 11) * 96 + gapCss;
+              const stepsE = stE.slice(1).map((y, i) => +(y - stE[i]).toFixed(1));
+              const offE = stepsE.filter((v) => Math.abs(v - wantE) > 1.5);
+              note('[100r-2] นิยาย ' + stE.length + ' หน้า · ควรเป็น ' + wantE
+                   + 'px · วัดได้ ' + stepsE.slice(0, 6).join(' , '));
+              check('[100r-2] ★★ นิยาย: ทุกหน้ากินพื้นที่เท่ากับหนึ่งแผ่นเป๊ะเช่นกัน',
+                    offE.length === 0,
+                    'เพี้ยน ' + offE.length + '/' + stepsE.length + ': ' + offE.slice(0, 6).join(' , '));
+            }
+            // ★ สลับมุมมองแล้ว "ทุกอย่างเหมือนเดิม" — กล่องข้อความต้องกว้างเท่าเดิมเป๊ะ
+            check('[100-1] ★★ สลับปกติ↔จัดหน้า ความกว้างกล่องข้อความไม่ขยับ',
+                  Math.abs(pm().getBoundingClientRect().width - _w100) < 1.5,
+                  _w100.toFixed(1) + ' → ' + pm().getBoundingClientRect().width.toFixed(1));
+            check('[100-1] ★ และระยะขอบก็เท่าเดิม',
+                  getComputedStyle(pm()).paddingLeft + '/' + getComputedStyle(pm()).paddingTop === _pad100,
+                  _pad100 + ' → ' + getComputedStyle(pm()).paddingLeft + '/' + getComputedStyle(pm()).paddingTop);
+          }
+          // ★ ถ่ายรูป "รอยต่อระหว่างแผ่น" ให้เห็นกับตา — เลื่อนไปคร่อมขอบล่างของแผ่นแรก
+          if (sheets.length >= 2) {
+            const r0s = sheets[0].getBoundingClientRect();
+            pn.scrollTop += (r0s.bottom - pn.getBoundingClientRect().top) - pn.clientHeight / 2;
+            await new Promise((r) => setTimeout(r, 250));
+          }
+          await kapi.testShot('/tmp/k2_100_layout.png');
+          pn.scrollTop = 0;
+          await new Promise((r) => setTimeout(r, 150));
+
+          // ══ [alpha.100r บั๊ก 1] ★★ ซูมแล้วแผ่นต้องไม่หลุดจากตัวหนังสือ ══
+          // ผู้ใช้: *"ถ้าเรา zoom หน้ากระดาษจะเพี้ยนมาก ... หน้ากระดาษไม่ถูก lock ไว้ตอน zoom"*
+          // ต้นตอ: layer ถูกวางด้วยค่าที่ **วัดจาก DOM** (`offsetLeft/offsetWidth`) ซึ่งเปลี่ยน
+          // ทุกครั้งที่ซูม เพราะ `applyZoomVars()` → `syncWorkspaceWidths()` ตั้ง min-width ใหม่
+          // → `.ProseMirror` (margin:auto) ถูกจัดกึ่งกลางที่พิกัดใหม่ แต่แผ่นค้างที่เดิม
+          // ตอนนี้แนวนอนเป็น CSS ล้วน (`left:50%` + `width:var(--page-w)`) จึงตามกันเสมอ
+          {
+            const alignAt = (pct) => {
+              const p1 = pm().getBoundingClientRect();
+              const s1 = layer().children[0].getBoundingClientRect();
+              return { dl: s1.left - p1.left, dr: s1.right - p1.right,
+                       dt: s1.top - p1.top, pct };
+            };
+            const base = alignAt(100);
+            note('[100r-1] ซูม 100%: แผ่นเทียบตัวแก้ไข ซ้าย ' + base.dl.toFixed(1)
+                 + ' · ขวา ' + base.dr.toFixed(1) + ' · บน ' + base.dt.toFixed(1));
+            check('[100r-1] ★ ที่ 100% แผ่นทับกล่องตัวแก้ไขพอดีอยู่แล้ว',
+                  Math.abs(base.dl) < 2 && Math.abs(base.dr) < 2, JSON.stringify(base));
+            const bad = [];
+            for (const pct of [60, 150, 220, 100]) {
+              setPageScale(pct / 100);         // ตั้งค่าสัมบูรณ์ (handleCommand('zoom') เป็นค่าบวก-ลบ)
+              await new Promise((r) => setTimeout(r, 350));
+              const a = alignAt(pct);
+              note('[100r-1] ซูม ' + pct + '%: ซ้าย ' + a.dl.toFixed(1)
+                   + ' · ขวา ' + a.dr.toFixed(1) + ' · บน ' + a.dt.toFixed(1));
+              // เผื่อไว้ 3px ต่อระดับซูม (ขอบ 1px ของแผ่น × สเกล + การปัดครึ่งพิกเซล)
+              if (Math.abs(a.dl) > 3 || Math.abs(a.dr) > 3 || Math.abs(a.dt) > 3) bad.push(a);
+            }
+            check('[100r-1] ★★ ซูมทุกระดับแล้วแผ่นยังทับกล่องตัวแก้ไขพอดี (ไม่หลุดออกไป)',
+                  bad.length === 0, JSON.stringify(bad));
+            resetPageScale();                          // คืนซูม 100%
+            await new Promise((r) => setTimeout(r, 300));
+            check('[100r-1] ★ คืนซูมแล้วยังตรงเหมือนเดิม',
+                  Math.abs(alignAt(100).dl - base.dl) < 2);
+          }
+          check('[100-3] ★ แผ่นมีพื้นเป็นสีกระดาษจริง',
+                !sheets.length || !isClear(getComputedStyle(sheets[0]).backgroundColor),
+                sheets.length && getComputedStyle(sheets[0]).backgroundColor);
+
+          // ── ข้อ 2: เส้นบอกระยะขอบ — ปิดเป็นค่าเริ่มต้น · เปิดแล้วครบสี่ด้าน ──
+          check('[100-2] ★★ เส้นประเก่าที่หัวกระดาษถูกตัดทิ้งในโหมดจัดหน้า',
+                [...pn.querySelectorAll('.ed-page-break')].every((e) =>
+                  getComputedStyle(e, '::before').display === 'none'),
+                [...pn.querySelectorAll('.ed-page-break')].slice(0, 1)
+                  .map((e) => getComputedStyle(e, '::before').display).join(''));
+          const guideOf = () => sheets.length
+            ? getComputedStyle(sheets[0], '::before') : null;
+          check('[100-2] ★★ ค่าเริ่มต้น = ไม่มีเส้นบอกระยะขอบเลย',
+                !state.settings.pageGuides
+                && (!guideOf() || guideOf().content === 'none'),
+                guideOf() && guideOf().content);
+          togglePageGuides(true);
+          await new Promise((r) => setTimeout(r, 120));
+          check('[100-2] ★★ เปิดสวิตช์ → body มีคลาส k-page-guides',
+                document.body.classList.contains('k-page-guides') && state.settings.pageGuides === true);
+          if (sheets.length) {
+            const g = getComputedStyle(sheets[0], '::before');
+            check('[100-2] ★★ เปิดแล้วมีเส้นจริงบนแผ่น', g.content !== 'none', g.content);
+            // ★ หัวใจของข้อ 2: ต้องครบทั้งบน-ล่าง (ของเดิมมีแต่ด้านบน)
+            const w = ['borderTopWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth']
+              .map((k) => parseFloat(g[k]) || 0);
+            check('[100-2] ★★ เส้นครบทั้งสี่ด้าน (บน-ล่าง-ซ้าย-ขวา) ไม่ใช่ด้านเดียว',
+                  w.every((x) => x > 0), w.join(','));
+            check('[100-2] ★ เป็นเส้นประ', g.borderTopStyle === 'dashed', g.borderTopStyle);
+          }
+          await kapi.testShot('/tmp/k2_100_layout_guides.png');
+          togglePageGuides(false);
+          await new Promise((r) => setTimeout(r, 100));
+          check('[100-2] ★ ปิดกลับได้ (ไม่มีเส้นเลย)',
+                !document.body.classList.contains('k-page-guides') && !state.settings.pageGuides);
+
+          // ── ข้อ 4: สีกระดาษเลือกได้ + สีข้างเคียงตามให้ครบ ──
+          const readVar = (k) => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+          const before = { p: readVar('--paper'), e: readVar('--paper-edge') };
+          check('[100-4] ★★ ค่าเริ่มต้นของกระดาษเป็นขาว ไม่ใช่ครีม #f5f1e6',
+                !/f5f1e6/i.test(before.p), before.p);
+          const sheetBg = () => sheets.length ? getComputedStyle(sheets[0]).backgroundColor : '';
+          const bg0 = sheetBg();
+          state.settings.paperColor = '#f5f1e6';        // ผู้ใช้เลือกครีมกลับ
+          applyPaperVars();
+          await new Promise((r) => setTimeout(r, 100));
+          check('[100-4] ★★ เลือกสีแล้วแผ่นกระดาษเปลี่ยนสีจริง', sheetBg() !== bg0,
+                bg0 + ' → ' + sheetBg());
+          check('[100-4] ★★ สีข้างเคียงเปลี่ยนตามด้วย (ไม่ค้างเป็นสีเดิม)',
+                readVar('--paper-edge') !== before.e,
+                before.e + ' → ' + readVar('--paper-edge'));
+          state.settings.paperColor = '#2b2b2b';        // กระดาษมืด → หมึกต้องกลับด้าน
+          applyPaperVars();
+          await new Promise((r) => setTimeout(r, 100));
+          {
+            const ink = readVar('--paper-ink');
+            check('[100-4] ★★ กระดาษมืด → หมึกสว่าง (ไม่ใช่ดำบนดำ)',
+                  lum(ink) > 0.5, ink);
+          }
+          state.settings.paperColor = '';               // คืนค่าเริ่มต้น
+          applyPaperVars();
+          await new Promise((r) => setTimeout(r, 100));
+          check('[100-4] ★ คืนค่าเริ่มต้นแล้วกลับมาขาว', /255, 255, 255|#ffffff/i.test(readVar('--paper'))
+                || readVar('--paper') === '#ffffff', readVar('--paper'));
+        }
+        setSpView('normal', true);
+        await new Promise((r) => setTimeout(r, 180));
+        check('[100-1] ★★ ออกจากโหมดจัดหน้าแล้วชั้นแผ่นกระดาษถูกเก็บทิ้ง (ไม่ค้าง)', !layer());
+        if (ed100 && keepMd100 != null) {
+          ed100.setMarkdown(keepMd100);
+          repaginateFast(t100);
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
+
       // ══ [alpha.60r2 ข้อ 10] ธีมสว่าง/มืด — Ctrl+Shift+P ไม่ใช่โหมดหน้ากระดาษแล้ว ══
       {
         const sc = SHORTCUTS.find((x) => x[0] === 'KeyP' && x[1] === true && x[2] === true);
@@ -17747,9 +18297,15 @@ async function runTest(projectPath) {
         check('[10] มีปุ่มธีมบนแถบเครื่องมือ', !!$('#tb-theme'));
         check('[99-2] ★★ ไม่มีปุ่มโหมดหน้ากระดาษแล้ว', !$('#tb-paper'));
         // จำค่ากระดาษไว้ก่อน — ธีมต้องไม่ไปแตะมัน
+        // [alpha.100 ข้อ 1] ★ ต้องวัดใน **มุมมองจัดหน้า** เพราะตอนนี้แผ่นกระดาษมีที่นั่นที่เดียว
+        // มุมมองปกติเป็น "สายเนื้อหาบนพื้นโปรแกรม" → สีของมันเป็นสีธีม จึงเปลี่ยนตามธีมได้ถูกแล้ว
+        setSpView('layout', true);
+        await new Promise((r) => setTimeout(r, 220));
         const paperBefore = document.body.classList.contains('paper-mode');
         const pmPaper = document.querySelector('.pane.on > .workspace > .ProseMirror');
-        const paperBg0 = pmPaper ? getComputedStyle(pmPaper).backgroundColor : '';
+        const sheet0 = document.querySelector('.pane.on > .workspace > .k-paper-layer > .k-paper-sheet');
+        const sheetBg0 = sheet0 ? getComputedStyle(sheet0).backgroundColor : '';
+        const paperBg0 = sheetBg0;
         const paperInk0 = pmPaper ? getComputedStyle(pmPaper).color : '';
         const paperW0 = pmPaper ? pmPaper.getBoundingClientRect().width : 0;
         const bg0 = getComputedStyle(document.body).backgroundColor;
@@ -17761,9 +18317,9 @@ async function runTest(projectPath) {
               getComputedStyle(document.body).backgroundColor !== bg0,
               bg0 + ' → ' + getComputedStyle(document.body).backgroundColor);
         // ── กฎเหล็ก: แก้ UI ต้องไม่กระทบหน้ากระดาษ ──
-        check('[10][กฎเหล็ก] ธีมไม่แตะสีกระดาษ',
-              !pmPaper || getComputedStyle(pmPaper).backgroundColor === paperBg0,
-              paperBg0 + ' → ' + (pmPaper && getComputedStyle(pmPaper).backgroundColor));
+        check('[10][กฎเหล็ก] ธีมไม่แตะสีกระดาษ (วัดที่แผ่นจริง — alpha.100)',
+              !sheet0 || getComputedStyle(sheet0).backgroundColor === sheetBg0,
+              sheetBg0 + ' → ' + (sheet0 && getComputedStyle(sheet0).backgroundColor));
         check('[10][กฎเหล็ก] ธีมไม่แตะสีหมึกบนกระดาษ',
               !pmPaper || getComputedStyle(pmPaper).color === paperInk0,
               paperInk0 + ' → ' + (pmPaper && getComputedStyle(pmPaper).color));
@@ -17777,6 +18333,8 @@ async function runTest(projectPath) {
         check('[10] คำสั่ง toggle-theme สลับกลับเป็นธีมมืด',
               state.settings.theme === 'dark' && !document.body.classList.contains('theme-light'));
         check('[10] ธีมมืดมีคลาส theme-dark', document.body.classList.contains('theme-dark'));
+        setSpView('normal', true);
+        await new Promise((r) => setTimeout(r, 150));
       }
 
       // ══ [alpha.60r2 ข้อ 9] ปุ่มลอย (FAB) ปิดได้จากตั้งค่า ══
@@ -19048,7 +19606,14 @@ async function runTest(projectPath) {
         await new Promise((r) => setTimeout(r, 80));
         check('[57] เริ่มต้นเป็นมุมมองปกติ', currentSpView() === 'normal');
         const pmSp57 = spT.pane.querySelector('.ProseMirror');
-        const bgNormal = getComputedStyle(pmSp57).backgroundColor;
+        // [alpha.100 ข้อ 1] มุมมองปกติโปร่งใสไปแล้วเหมือนกัน → เทียบกับ **โหมดจัดหน้า**
+        // ซึ่งเป็นมุมมองเดียวที่ยังมีแผ่นกระดาษ (เจตนาเดิมของเทส: "โหมดร่างต้องไม่มีกระดาษ")
+        setSpView('layout');
+        await new Promise((r) => setTimeout(r, 200));
+        const sheet57 = spT.pane.querySelector('.k-paper-layer > .k-paper-sheet');
+        const bgNormal = sheet57 ? getComputedStyle(sheet57).backgroundColor : '';
+        check('[100-3] ★ โหมดจัดหน้าของบทหนังก็ได้แผ่นกระดาษจริงเหมือนนิยาย',
+              !!sheet57 && !/rgba\(0, 0, 0, 0\)/.test(bgNormal), bgNormal);
         setSpView('draft');
         await new Promise((r) => setTimeout(r, 120));
         check('[57] เปลี่ยนเป็นโหมดร่าง → pane ติดคลาส sp-view-draft',
@@ -19057,6 +19622,8 @@ async function runTest(projectPath) {
         check('[57] โหมดร่าง: พื้นหลังกระดาษหายไป (โปร่งใส)',
               cs57.backgroundColor === 'rgba(0, 0, 0, 0)' && bgNormal !== cs57.backgroundColor,
               bgNormal + ' → ' + cs57.backgroundColor);
+        check('[100-3] ★ โหมดร่าง: ชั้นแผ่นกระดาษถูกเก็บทิ้ง ไม่ค้างอยู่',
+              !spT.pane.querySelector('.k-paper-layer'));
         check('[57] โหมดร่าง: ไม่มีเงากระดาษ', cs57.boxShadow === 'none', cs57.boxShadow);
         const spBlk57 = spT.pane.querySelector('.sp-character') || spT.pane.querySelector('.sp');
         check('[57] โหมดร่าง: ไม่เยื้องแบบสคริปต์ (margin-left = 0)',
@@ -20021,10 +20588,15 @@ async function runTest(projectPath) {
           check('[58] โหมดจัดหน้ายังพิมพ์ได้ (ไม่ใช่ overlay อ่านอย่างเดียว)',
                 isEditView('layout') && !spT58.pane.querySelector(':scope > .sp-pageview'));
           const pmCS = getComputedStyle(spT58.pane.querySelector('.ProseMirror'));
-          // [alpha.98 ข้อ 6] ใช้สีกระดาษที่ผู้ใช้ตั้ง (ครีม) ไม่ใช่ขาวตายตัวอีกแล้ว
+          // ══ [alpha.100 ข้อ 3] แผ่นกระดาษย้ายไปเป็น "ชั้นข้างหลัง" แล้ว ══
+          // เดิมวัดสี/เงาที่ตัว .ProseMirror เพราะมันเป็นแผ่นเอง — ตอนนี้มันโปร่งใส
+          // และแผ่นจริงคือ .k-paper-sheet ที่ปูอยู่ข้างหลัง (จึงแยกเป็นใบ ๆ ได้จริง)
+          const sh58 = [...spT58.pane.querySelectorAll('.k-paper-layer > .k-paper-sheet')];
+          check('[58] มีแผ่นกระดาษจริงปูอยู่ (ไม่ใช่แผ่นเดียวยาว ๆ)', sh58.length >= 1, sh58.length);
+          const shCS = sh58.length ? getComputedStyle(sh58[0]) : null;
           check('[58] กระดาษเป็นสีกระดาษที่ตั้งไว้ ไม่ใช่พื้นมืดของธีม',
-                pmCS.backgroundColor === 'rgb(245, 241, 230)', pmCS.backgroundColor);
-          check('[58] มีเงาใต้กระดาษ', pmCS.boxShadow !== 'none');
+                !!shCS && !/rgba\(0, 0, 0, 0\)/.test(shCS.backgroundColor), shCS && shCS.backgroundColor);
+          check('[58] มีเงาใต้กระดาษ', !!shCS && shCS.boxShadow !== 'none', shCS && shCS.boxShadow);
           check('[58] ระยะขอบกระดาษถูกต้อง (ซ้าย 1.5 นิ้ว บน 1 นิ้ว)',
                 Math.abs(parseFloat(pmCS.paddingLeft) - 1.5 * 96) < 2 &&
                 Math.abs(parseFloat(pmCS.paddingTop) - 1 * 96) < 2,
@@ -20040,11 +20612,19 @@ async function runTest(projectPath) {
             check('[58] ช่องว่างล้ำออกนอกระยะขอบทั้งสองข้าง',
                   parseFloat(bCS.marginLeft) < -1 && parseFloat(bCS.marginRight) < -1,
                   bCS.marginLeft + ' / ' + bCS.marginRight);
-            // [alpha.81 ข้อ 7] รอยต่อเปลี่ยนจาก "เส้นขอบบน-ล่าง" เป็นชั้นสี
-            // ขาว(ขอบล่างของแผ่นก่อน) → เส้นขอบกระดาษ → พื้นโต๊ะ → เส้นขอบ → ขาว(ขอบบนของแผ่นใหม่)
-            // เพราะเส้นขอบเปล่า ๆ ทำให้เนื้อหน้าถัดไป "ชิดขอบบน" ไม่เหมือนกระดาษจริง
-            check('[58] ช่องว่างวาดเป็นชั้นสี (ขาว–ขอบ–พื้นโต๊ะ–ขอบ–ขาว)',
-                  /linear-gradient/.test(bCS.backgroundImage), bCS.backgroundImage.slice(0, 60));
+            // ══ [alpha.100 ข้อ 3] ★ รอยต่อเลิก "ปลอมช่องว่างด้วย gradient" แล้ว ══
+            // alpha.81–.99 วาดชั้นสี ขาว→ขอบ→พื้นโต๊ะ→ขอบ→ขาว ลงในกล่องเส้นคั่น เพราะตัว
+            // editor เป็นแผ่นเดียวยาว ๆ จึงต้องเขียนภาพ "คนละแผ่น" ขึ้นมาเอง
+            // ตอนนี้แผ่นจริงอยู่ข้างหลัง → กล่องนี้ต้องโปร่งใสสนิท แล้วช่องว่างที่เห็นคือ
+            // "ช่วงที่ไม่มีแผ่นรองอยู่จริง ๆ" (ผู้ใช้: "ยังใช้วิธีเอาหน้ากระดาษยาว ๆ มาแล้วขั่นด้วยแถบ")
+            check('[100-3] ★★ รอยต่อไม่ใช่ gradient ปลอมอีกแล้ว (โปร่งใส เห็นพื้นโต๊ะจริง)',
+                  !/linear-gradient/.test(bCS.backgroundImage)
+                  && /rgba\(0, 0, 0, 0\)|transparent/.test(bCS.backgroundColor),
+                  bCS.backgroundImage.slice(0, 40) + ' | ' + bCS.backgroundColor);
+            // ★ ข้อ 2: เส้นประที่หลุดมาโผล่หัวกระดาษด้านเดียวต้องไม่มีแล้ว
+            check('[100-2] ★★ ไม่มีเส้นประค้างที่ขอบบนกระดาษในโหมดจัดหน้า',
+                  [...spT58.pane.querySelectorAll('.ed-page-break')]
+                    .every((e) => getComputedStyle(e, '::before').display === 'none'));
             const num = brks[0].querySelector('.sp-page-break-num');
             check('[58] มีเลขหน้ากำกับรอยต่อ', !!num && /\d/.test(num.textContent), num && num.textContent);
           }
@@ -20058,6 +20638,112 @@ async function runTest(projectPath) {
                 rootVar('--sp-body-h') === lvVars['--sp-body-h'] &&
                 rootVar('--sp-line-h') === lvVars['--sp-line-h'],
                 rootVar('--sp-body-h') + ' / ' + rootVar('--sp-line-h'));
+
+          // ══ [alpha.102 บั๊ก 1] ★★ เลขฉากต้องอยู่บรรทัดเดียวกับหัวฉากเสมอ ══
+          //
+          // ผู้ใช้: *"เลข scene ในกรณีที่หัวฉากอยู่บรรทัดบนสุด ตัวเลขจะมาอยู่บรรทัดที่สอง"*
+          //
+          // เลขฉากเป็น widget วางแบบ absolute ในกล่องหัวฉาก แล้วเลื่อนลงเท่า `--k-pad`
+          // (= ระยะเว้นนำของบล็อก) เพื่อให้ลงมาอยู่แนวเดียวกับตัวหนังสือ
+          // แต่กฎ "บล็อกแรกของหน้าไม่มีระยะเว้นนำ" ตัดแค่ `padding-top` **ลืมตัด `--k-pad`**
+          // → ข้อความขึ้นไปบรรทัดบนสุด ส่วนเลขยังถูกดันลงมา 2 บรรทัด
+          {
+            const keepSn = spT58.sp.getMarkdown();
+            const wasSn = !!(state.settings.spSceneNumbers || {}).show;
+            state.settings.spSceneNumbers = { ...(state.settings.spSceneNumbers || {}), show: true };
+            applyPageVars();
+            // หัวฉากเป็นบล็อกแรกสุดของเอกสาร (โดนกฎ :first-child) + อีกอันกลางเอกสาร (ปกติ)
+            spT58.sp.setMarkdown(['.INT. ห้องแรก - เช้า', '!บรรยายหนึ่ง',
+                                  '.INT. ห้องสอง - บ่าย', '!บรรยายสอง'].join(String.fromCharCode(10)));
+            await new Promise((r) => setTimeout(r, 450));
+            const scenesSn = [...spT58.pane.querySelectorAll('.ProseMirror > .sp-scene')];
+            check('[102-1] มีหัวฉากสองอันให้ตรวจ', scenesSn.length === 2, scenesSn.length);
+            const offOf = (sc) => {
+              const no = sc.querySelector('.k-scene-no');
+              if (!no) return null;
+              // เทียบ "กลางกล่องเลข" กับ "กลางบรรทัดข้อความของหัวฉากเอง"
+              const rn = no.getBoundingClientRect();
+              const rs = sc.getBoundingClientRect();
+              const padTop = parseFloat(getComputedStyle(sc).paddingTop) || 0;
+              const lineTop = rs.top + padTop;          // ขอบบนของบรรทัดข้อความจริง
+              return +(rn.top - lineTop).toFixed(1);
+            };
+            const dSn = scenesSn.map(offOf);
+            note('[102-1] เลขฉากห่างจากบรรทัดของตัวเอง: ' + dSn.join(' , ') + ' px');
+            check('[102-1] ★★ หัวฉากที่เป็นบล็อกแรกสุด: เลขอยู่บรรทัดเดียวกับหัวฉาก',
+                  dSn[0] !== null && Math.abs(dSn[0]) < 4, String(dSn[0]));
+            check('[102-1] ★ หัวฉากกลางเอกสารก็ยังตรงเหมือนเดิม',
+                  dSn[1] !== null && Math.abs(dSn[1]) < 4, String(dSn[1]));
+            check('[102-1] ★★ และตรงกันทั้งสองอัน (กฎเดียวกัน ไม่ใช่บังเอิญ)',
+                  Math.abs(dSn[0] - dSn[1]) < 2, dSn.join(' vs '));
+            // --k-pad ของบล็อกแรกต้องถูกตัดเป็น 0 พร้อม padding (ต้นตอของบั๊ก)
+            const kpad0 = getComputedStyle(scenesSn[0]).getPropertyValue('--k-pad').trim();
+            check('[102-1] ★ บล็อกแรกของหน้ามี --k-pad = 0 (ตัดพร้อม padding-top)',
+                  kpad0 === '0', kpad0);
+            state.settings.spSceneNumbers = { ...(state.settings.spSceneNumbers || {}), show: wasSn };
+            applyPageVars();
+            spT58.sp.setMarkdown(keepSn);
+            await new Promise((r) => setTimeout(r, 450));
+            repaginateFast(spT58);
+            await new Promise((r) => setTimeout(r, 400));
+          }
+
+          // ══ [alpha.100r บั๊ก 2] ★★ บทภาพยนตร์: เนื้อหน้าต้องลงแผ่นพอดี ไม่ล้นออกพื้นโต๊ะ ══
+          //
+          // ผู้ใช้: *"บทหนังเจออาการหน้าล้น เพราะบทหนังมีระยะบรรทัดที่ไม่เท่ากัน"*
+          //
+          // บทจัดหน้าจาก **โมเดล** (นับบรรทัดจากฟอนต์ล้วน ไม่อ่าน DOM) — โมเดลเชื่อว่า
+          // 54 บรรทัด × ⅙ นิ้ว = ความสูงพื้นที่พิมพ์พอดี แต่บนจอความสูงบรรทัดจริงไม่เท่านั้น
+          // (ฟอนต์ไทยมีตัวบน-ตัวล่าง · แต่ละ element มีระยะเว้นของตัวเอง) → เนื้อหน้าล้นทีละนิด
+          // สะสมทุกหน้า · เดิมมองไม่เห็นเพราะกระดาษเป็นแผ่นเดียวยาวที่ยืดตามเนื้อหา
+          //
+          // สัญญาที่ต้องจริงเสมอ: **ระยะจาก "หัวเนื้อหน้า i" ถึง "หัวเนื้อหน้า i+1"
+          // = ความสูงกระดาษ + ช่องว่างระหว่างแผ่น** เป๊ะ ๆ ทุกช่วง — นั่นคือนิยามของ
+          // "หนึ่งหน้าอยู่บนหนึ่งแผ่น" และเป็นสิ่งเดียวกับที่ทำให้แผ่นในชั้นข้างหลังตรงกับตัวหนังสือ
+          {
+            const pmSp = spT58.pane.querySelector(':scope > .workspace > .ProseMirror');
+            const brSp = [...spT58.pane.querySelectorAll('.sp-page-break')];
+            const zSp = zoomFactorOf(pmSp) || 1;
+            const csSp = getComputedStyle(pmSp);
+            const top0Sp = pmSp.getBoundingClientRect().top
+                           + (parseFloat(csSp.paddingTop) || 0) * zSp;
+            const ySp = (e) => (e.getBoundingClientRect().top - top0Sp) / zSp;
+            const firstSp = [...pmSp.children].find((e) => e.nodeType === 1
+              && !e.classList.contains('sp-page-break')
+              && e.getBoundingClientRect().height > 0);
+            // หัวเนื้อหน้าที่ 1 = ขอบบนบล็อกแรก · หน้าถัดไป = ก้นกล่องเส้นคั่นก่อนหน้า
+            const starts = [firstSp ? (firstSp.getBoundingClientRect().top - top0Sp) / zSp : 0];
+            for (const e of brSp) starts.push(ySp(e) + e.getBoundingClientRect().height / zSp);
+            const fmtSp = spFormat();
+            const pageHsp = num(fmtSp.paper.height, 11) * 96;
+            const gapSp = Math.max(8, Math.min(120, Math.round(num(state.settings.spPageGap, 28))));
+            const stepWant = pageHsp + gapSp;
+            const steps = starts.slice(1).map((y, i) => +(y - starts[i]).toFixed(1));
+            note('[100r-2] บท ' + (brSp.length + 1) + ' หน้า · ระยะต่อหน้าที่ควรเป็น '
+                 + stepWant + 'px · วัดได้ ' + steps.slice(0, 8).join(' , '));
+            check('[100r-2] ★ เอกสารบททดสอบยาวข้ามหน้าจริง', brSp.length >= 2, brSp.length);
+            const off = steps.filter((v) => Math.abs(v - stepWant) > 1.5);
+            check('[100r-2] ★★ ทุกหน้าของบทกินพื้นที่เท่ากับหนึ่งแผ่นเป๊ะ (ไม่ล้น ไม่ขาด)',
+                  off.length === 0,
+                  'เพี้ยน ' + off.length + '/' + steps.length + ' ช่วง: ' + off.slice(0, 6).join(' , '));
+            // และตัวหนังสือต้องอยู่ในแผ่นจริง ๆ — เทียบกับชั้นแผ่นที่ปูไว้
+            const shSp = [...spT58.pane.querySelectorAll('.k-paper-layer > .k-paper-sheet')];
+            check('[100r-2] ★ จำนวนแผ่น = จำนวนหน้าของบท',
+                  shSp.length === brSp.length + 1, shSp.length + ' vs ' + (brSp.length + 1));
+            if (shSp.length) {
+              const spill = [];
+              brSp.forEach((e, i) => {
+                // ขอบบนของกล่องเส้นคั่น = บรรทัดสุดท้ายของหน้า i เพิ่งจบ → ต้องยังอยู่บนแผ่น i
+                const r = e.getBoundingClientRect();
+                const sheetBottom = shSp[i].getBoundingClientRect().bottom;
+                if (r.top > sheetBottom + 1) spill.push(i + 1);
+              });
+              check('[100r-2] ★★ ไม่มีหน้าไหนที่เนื้อหาล้นออกไปนอกแผ่น (ไปอยู่บนพื้นโต๊ะ)',
+                    spill.length === 0, 'หน้าที่ล้น: ' + spill.slice(0, 8).join(','));
+            }
+            await kapi.testShot('/tmp/k2_100r_sp_layout.png');
+          }
+
           // สลับกลับ/สลับไปโหมดร่างแล้วคลาสต้องไม่ค้าง
           setSpView('draft');
           await new Promise((r) => setTimeout(r, 200));
@@ -22825,9 +23511,19 @@ async function runTest(projectPath) {
               setSpView('layout', true); await w98(400);
               note('[98-8] กด Enter หนึ่งครั้งที่ ' + nPages98 + ' หน้า: กระดาษ ' + enterPaper
                    + ' / ร่าง ' + enterDraft + ' ms (จัดหน้าหนึ่งรอบ = ' + repagPaper + ' ms)');
+              // [alpha.100] ★ วัดเป็น "ส่วนต่าง" ไม่ใช่ค่าดิบ
+              // เกณฑ์เดิม `enterPaper < repagPaper * 0.85` เปราะบนเครื่องเร็ว: ค่าพื้นของการกด
+              // Enter (ProseMirror วาดเอกสาร 2,400 บล็อกใหม่ = ค่า enterDraft) ไม่ได้ลดตามไปด้วย
+              // พอ repagPaper ลงมาใกล้ ๆ ค่าพื้น อัตราส่วนก็แกว่งข้ามเส้นทั้งที่พฤติกรรมถูกต้อง
+              // (วัดจริงรอบหนึ่ง: กระดาษ 44.3 · ร่าง 35.2 · จัดหน้า 51.2 → ส่วนต่างแค่ 9.1 ms
+              //  = ไม่ได้จัดหน้า แต่ 44.3 ไม่ผ่าน 43.5 หวุดหวิด)
+              // สิ่งที่ต้องพิสูจน์จริง ๆ คือ **ไม่มีรอบจัดหน้าเต็มแฝงอยู่ในการกด Enter**
+              // → ต้นทุนส่วนเกินจากโหมดร่าง (ซึ่งไม่จัดหน้าเลย) ต้องน้อยกว่าครึ่งของหนึ่งรอบจัดหน้า
               check('[98-8] ★★ กด Enter ในเอกสารยาวมากไม่จ่ายค่าจัดหน้าเต็มราคาอีกแล้ว',
-                    enterPaper < repagPaper * 0.85,
-                    enterPaper + ' ms vs จัดหน้า ' + repagPaper + ' ms');
+                    (enterPaper - enterDraft) < repagPaper * 0.5,
+                    'ส่วนเกิน ' + (enterPaper - enterDraft).toFixed(1)
+                    + ' ms (กระดาษ ' + enterPaper + ' − ร่าง ' + enterDraft
+                    + ') vs ครึ่งหนึ่งของจัดหน้า ' + (repagPaper * 0.5).toFixed(1) + ' ms');
               check('[98-8] ★ ค่าที่เหลือไม่ได้มาจากการวาดหน้ากระดาษ (โหมดร่างพอ ๆ กัน)',
                     enterPaper < enterDraft * 2 + 10, enterPaper + ' vs ' + enterDraft);
               check('[98-8] เอกสารยาวเข้าเกณฑ์ "หนัก" จริง (ตัวหน่วงเวลาทำงาน)',
@@ -28269,8 +28965,28 @@ async function runTest(projectPath) {
                        inPx(getComputedStyle(document.documentElement).getPropertyValue('--mg-bottom'));
           check('[81-7] รอยต่อหน้ามีระยะขอบของทั้งสองแผ่นอยู่ด้วย',
                 probe.getBoundingClientRect().height > want, cs.height + ' ต้องมากกว่าขอบรวม ' + want);
-          check('[81-7] รอยต่อหน้าวาดเป็นชั้นสี (ขาว–พื้นโต๊ะ–ขาว) ไม่ใช่เส้นเปล่า',
-                /gradient/.test(cs.backgroundImage), cs.backgroundImage.slice(0, 40));
+          // [alpha.100 ข้อ 3] เดิมรอยต่อวาด "ชั้นสีปลอมช่องว่าง" ด้วย gradient เพราะกระดาษ
+          // เป็นแผ่นเดียวยาว ๆ · ตอนนี้แผ่นจริงปูอยู่ข้างหลังแล้ว กล่องนี้ต้องโปร่งใสสนิท
+          // ไม่งั้นมันจะไปบังพื้นโต๊ะระหว่างแผ่น = กลับไปเป็น "แผ่นเดียวถูกขั้นด้วยแถบ" เหมือนเดิม
+          check('[100-3] ★★ รอยต่อหน้าโปร่งใส (เลิกปลอมช่องว่างด้วย gradient)',
+                !/gradient/.test(cs.backgroundImage), cs.backgroundImage.slice(0, 40));
+          {
+            const L81 = t81.pane.querySelector(':scope > .workspace > .k-paper-layer');
+            check('[100-3] ★★ ตั้งจำนวนหน้า 3 → ปูแผ่นกระดาษจริง 3 ใบ',
+                  !!L81 && L81.children.length === 3, L81 && L81.children.length);
+            if (L81 && L81.children.length === 3) {
+              const r = [...L81.children].map((x) => x.getBoundingClientRect());
+              check('[100-3] ★★ แผ่นเรียงต่อกันด้วยช่องว่างเท่ากันทุกช่อง',
+                    Math.abs((r[1].top - r[0].bottom) - (r[2].top - r[1].bottom)) < 0.6,
+                    (r[1].top - r[0].bottom).toFixed(2) + ' , ' + (r[2].top - r[1].bottom).toFixed(2));
+              // เทียบเป็น "สัดส่วน" เพราะ getBoundingClientRect ถูก zoom ของ workspace คูณ
+              // ส่วน minHeight เป็น px ก่อนซูม — เทียบดิบ ๆ จะแดงทันทีที่ผู้ใช้/เทสซูมค้างไว้
+              check('[100-3] ★ ความสูงรวมของชั้นแผ่น = ความสูงขั้นต่ำของกระดาษที่ CSS ตั้งไว้',
+                    Math.abs((r[2].bottom - r[0].top) / pageH3 - r[0].height
+                             / (num(spFormat().paper.height, 11) * 96)) < 0.01,
+                    (r[2].bottom - r[0].top).toFixed(1) + ' vs ' + pageH3);
+            }
+          }
           probe.remove();
           setLayoutPageCount(t81, 1);
           setSpView(wasView);
@@ -29384,6 +30100,15 @@ async function runTest(projectPath) {
                 dupRowV ? dupRowV.fileName : 'ไม่มีฉากสำเนา');
         }
       }
+
+      // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══
+      // `renderFeaturePanel` มี catch ที่กันแอปล่ม — ซึ่งก็ **กลืนบั๊กไปด้วย**: ตัววาดแผงพังได้
+      // โดยไม่มีใครรู้ (บั๊กแดชบอร์ดของ alpha.100 อยู่มาหลายรุ่นแบบนี้ · UI ปกติ · e2e เขียว
+      // · เห็นเฉพาะใน `<userData>/logs/app-*.log` ซึ่งไม่มีใครเปิดดู)
+      // ต่อจากนี้ "จบรอบแล้วต้องไม่มีแผงไหนวาดพังเลย" เป็นเงื่อนไขของ ALL OK
+      check('[100-5] ★★ ทั้งรอบไม่มีตัววาดแผงตัวไหนพังเงียบ ๆ เลย',
+            (state._panelDrawErrors || 0) === 0,
+            (state._panelDrawErrors || 0) + ' ครั้ง · ล่าสุด: ' + (state._panelDrawLastErr || '—'));
 
     out.push('ALL OK');
   } catch (e) {

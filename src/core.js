@@ -236,6 +236,12 @@ export const GLOBAL_DEFAULTS = {
   theme: 'dark',
   uiFontSize: 0, uiScale: 1, spellCheck: true, spellCheckDict: true, autoMention: true, recycleDays: 30,
   paperMode: true, fontFamily: '', language: 'th', spFontFamily: '',
+  // [alpha.100 ข้อ 4] สีกระดาษ — เลือกเองได้ (พรีเซ็ต/สีใดก็ได้) · '' = ค่าเริ่มต้น (ขาว)
+  // เก็บระดับผู้ใช้เพราะเป็นความสบายตาของคนอ่านจอ ไม่ใช่รูปแบบของผลงาน
+  // (ตอนพิมพ์/ส่งออก PDF ยังขาวเสมอ — ดู @media print และ pdf-generator.js)
+  paperColor: '',
+  // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบสี่ด้านทุกแผ่น · เริ่มต้นปิด
+  pageGuides: false,
   autoSync: false, thesaurus: false, focusDim: 0.3,
   // [alpha.60r2 ข้อ 4] เสียงพิมพ์ดีด — เดิมต้องเปิดสองสวิตช์ (typeSound + typeSoundAlways)
   // ผู้ใช้เปิด "เสียงพิมพ์ดีด" แล้วเงียบสนิท เพราะ typeSoundAlways ค่าเริ่มต้นเป็น false

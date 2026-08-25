@@ -657,7 +657,14 @@ export function docEdgeCmd(toEnd, extend) {
   };
 }
 
-/** ชุดคีย์ Home/End ที่ใช้ร่วมกันทั้งโหมดนิยายและบทภาพยนตร์ */
+/** ชุดคีย์ Home/End ที่ใช้ร่วมกันทั้งโหมดนิยายและบทภาพยนตร์
+ *
+ * [alpha.100] ★ **ต้องผูก `Ctrl-` ไว้ด้วย ไม่ใช่แค่ `Mod-`**
+ * prosemirror-keymap แปล `Mod-` เป็น **Meta (⌘) บน macOS** → บนแมค `Ctrl+Home` ไม่ตรงกับ
+ * อะไรเลย แล้วเบราว์เซอร์ก็ไม่ทำอะไรต่อ = "กด Ctrl+Home แล้วเงียบ" ทั้งที่คนที่ชินจาก Windows
+ * กดปุ่มนี้กันเป็นปกติ (ตรงกับหลักของโปรเจกต์: คีย์ลัดต้องทำงานทุกแป้นพิมพ์/ทุกเครื่อง)
+ * บน Windows/Linux `Mod-` = `Ctrl-` อยู่แล้ว การใส่ซ้ำจึงชี้ไปที่คำสั่งเดียวกัน ไม่ชนกัน
+ */
 export const HOME_END_KEYS = {
   Home: lineEdgeCmd(false, false),
   End: lineEdgeCmd(true, false),
@@ -667,6 +674,10 @@ export const HOME_END_KEYS = {
   'Mod-End': docEdgeCmd(true, false),
   'Shift-Mod-Home': docEdgeCmd(false, true),
   'Shift-Mod-End': docEdgeCmd(true, true),
+  'Ctrl-Home': docEdgeCmd(false, false),
+  'Ctrl-End': docEdgeCmd(true, false),
+  'Shift-Ctrl-Home': docEdgeCmd(false, true),
+  'Shift-Ctrl-End': docEdgeCmd(true, true),
 };
 
 export class KEditor {
