@@ -533,6 +533,42 @@ export function removeTab(state, dispatch) {
 // สิบครั้งก็ได้รายการซ้อนสิบชั้น และวิธีเดียวที่จะเลิกเป็นรายการคือ "ลบทิ้งแล้วพิมพ์ใหม่"
 // สามตัวข้างล่างนี้เติมขาที่ขาดไป: อยู่ในนั้นอยู่แล้ว = ถอดออก · อยู่ในรายการอีกชนิด = สลับชนิด
 
+/**
+ * ══════ [alpha.103 ข้อ 2] ★★ เปลี่ยนชนิดบล็อกแล้ว **การจัดหน้าต้องไม่หาย** ══════
+ *
+ * ผู้ใช้: *"เมื่อใช้หัวข้อหรือ bullet จะถูกจัดชิดซ้ายเสมอ และปรับเปลี่ยนไม่ได้"*
+ *
+ * ต้นตอครึ่งแรก: `setBlockType(heading, { level })` ของ ProseMirror **เขียน attrs ทับทั้งชุด**
+ * ในชุดนั้นมีแต่ `level` → `align` ที่ผู้ใช้ตั้งไว้หายกลายเป็น null (= ชิดซ้าย) ทุกครั้งที่
+ * แปลงย่อหน้าเป็นหัวข้อ (และขากลับก็เหมือนกัน) · ฝั่งบทภาพยนตร์ไม่มีอาการนี้เพราะ
+ * `SPEditor.setElement()` คัด `align` ของเดิมมาใส่ให้ตั้งแต่แรก (screenplay.js)
+ *
+ * ตัวห่อนี้จำ align ของทุกบล็อกข้อความในช่วงที่เลือกไว้ก่อน แล้วทาคืนใน **transaction
+ * เดียวกัน** หลังคำสั่งเดิมทำงานเสร็จ — undo ครั้งเดียวจบ และไม่มีจังหวะที่จอกะพริบเป็นซ้าย
+ */
+function keepAlign(cmd) {
+  return (state, dispatch, view) => {
+    if (!dispatch) return cmd(state, dispatch, view);
+    const { from, to } = state.selection;
+    const keep = [];
+    state.doc.nodesBetween(from, to, (node, pos) => {
+      if (node.isTextblock && node.attrs && node.attrs.align) keep.push([pos, node.attrs.align]);
+    });
+    if (!keep.length) return cmd(state, dispatch, view);
+    return cmd(state, (tr) => {
+      for (const [pos, align] of keep) {
+        const p = tr.mapping.map(pos, -1);
+        const n = tr.doc.nodeAt(p);
+        const spec = n && n.type.spec.attrs;
+        if (!n || !n.isTextblock || !spec || !('align' in spec)) continue;
+        if (n.attrs.align === align) continue;
+        tr.setNodeMarkup(p, null, { ...n.attrs, align });
+      }
+      dispatch(tr);
+    }, view);
+  };
+}
+
 /** ความลึกของบรรพบุรุษชนิด `type` ที่ใกล้เคอร์เซอร์ที่สุด (0 = ไม่ได้อยู่ข้างใน) */
 export function ancestorDepth(state, type) {
   const { $from } = state.selection;
@@ -657,7 +693,14 @@ export function docEdgeCmd(toEnd, extend) {
   };
 }
 
-/** ชุดคีย์ Home/End ที่ใช้ร่วมกันทั้งโหมดนิยายและบทภาพยนตร์ */
+/** ชุดคีย์ Home/End ที่ใช้ร่วมกันทั้งโหมดนิยายและบทภาพยนตร์
+ *
+ * [alpha.100] ★ **ต้องผูก `Ctrl-` ไว้ด้วย ไม่ใช่แค่ `Mod-`**
+ * prosemirror-keymap แปล `Mod-` เป็น **Meta (⌘) บน macOS** → บนแมค `Ctrl+Home` ไม่ตรงกับ
+ * อะไรเลย แล้วเบราว์เซอร์ก็ไม่ทำอะไรต่อ = "กด Ctrl+Home แล้วเงียบ" ทั้งที่คนที่ชินจาก Windows
+ * กดปุ่มนี้กันเป็นปกติ (ตรงกับหลักของโปรเจกต์: คีย์ลัดต้องทำงานทุกแป้นพิมพ์/ทุกเครื่อง)
+ * บน Windows/Linux `Mod-` = `Ctrl-` อยู่แล้ว การใส่ซ้ำจึงชี้ไปที่คำสั่งเดียวกัน ไม่ชนกัน
+ */
 export const HOME_END_KEYS = {
   Home: lineEdgeCmd(false, false),
   End: lineEdgeCmd(true, false),
@@ -667,6 +710,10 @@ export const HOME_END_KEYS = {
   'Mod-End': docEdgeCmd(true, false),
   'Shift-Mod-Home': docEdgeCmd(false, true),
   'Shift-Mod-End': docEdgeCmd(true, true),
+  'Ctrl-Home': docEdgeCmd(false, false),
+  'Ctrl-End': docEdgeCmd(true, false),
+  'Shift-Ctrl-Home': docEdgeCmd(false, true),
+  'Shift-Ctrl-End': docEdgeCmd(true, true),
 };
 
 export class KEditor {
@@ -808,8 +855,9 @@ export class KEditor {
       case 'sub': return run(toggleMark(s.marks.sub));
       case 'undo': return run(undo);
       case 'redo': return run(redo);
-      case 'paragraph': return run(setBlockType(s.nodes.paragraph));
-      case 'heading': return run(setBlockType(s.nodes.heading, { level: arg || 1 }));
+      // [alpha.103 ข้อ 2] ห่อด้วย keepAlign — เปลี่ยนชนิดบล็อกแล้ว align ต้องอยู่ที่เดิม
+      case 'paragraph': return run(keepAlign(setBlockType(s.nodes.paragraph)));
+      case 'heading': return run(keepAlign(setBlockType(s.nodes.heading, { level: arg || 1 })));
       // [alpha.97 ข้อ 3+5] สามตัวนี้เป็น "สวิตช์" แล้ว — กดซ้ำ = เอาออก (เหมือน B I U)
       case 'quote': return run(toggleWrapCmd(s.nodes.blockquote));
       case 'lift': return run(lift);

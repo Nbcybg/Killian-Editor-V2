@@ -220,10 +220,49 @@ check('paginate: ชื่อตัวละครไม่ค้างท้า
   !(lastOfFirst && lastOfFirst.el === 'character' && !po.pages[0].blocks.some((b) => b.el === 'dialogue')),
   lastOfFirst && lastOfFirst.el);
 
-// กฎที่ตั้งเองมีผลจริง
-const strict = SF.paginate(longDlg, { lines: 14, fmt: SF.mergeSpFormat({ rules: { minDialogueLinesAtBottom: 99 } }) });
+// กฎที่ตั้งเองมีผลจริง — บทพูดที่ **สั้นกว่าหนึ่งหน้า** ต้องถูกยกไปทั้งก้อน ไม่ถูกหั่น
+// [alpha.103 ข้อ 3] เดิมเทสนี้ใช้บทพูดที่ยาวเกินหนึ่งหน้า แล้วคาดหวังว่า "ไม่หั่น" —
+// ซึ่งแปลว่ายอมให้หน้านั้นสูง 35 บรรทัดบนกระดาษ 14 บรรทัด (คือบั๊กหน้าล้นที่กำลังแก้อยู่)
+// เจตนาจริงของเทสคือ "กฎที่ผู้ใช้ตั้งมีผล" → วัดด้วยบล็อกที่ยกทั้งก้อนได้จริง
+const shortDlg = [
+  { el: 'action', text: 'x '.repeat(30) },
+  { el: 'character', text: 'ทอร่า' },
+  { el: 'dialogue', text: 'คำพูด '.repeat(18) },
+];
+const strict = SF.paginate(shortDlg, { lines: 14, fmt: SF.mergeSpFormat({ rules: { minDialogueLinesAtBottom: 99 } }) });
 check('paginate: ตั้ง minDialogueLinesAtBottom สูง → ไม่แบ่งบทพูด',
-  !strict.pages.flatMap((p) => p.blocks).some((b) => b.split === 'head'));
+  !strict.pages.flatMap((p) => p.blocks).some((b) => b.split === 'head'),
+  JSON.stringify(strict.pages.map((p) => p.blocks.map((b) => b.el + ':' + (b.lines || 0)))));
+
+// ══ [alpha.103 ข้อ 3] ★ หั่นได้ทุกชนิดแบบ Fade In ══
+{
+  const LINES = 20;
+  const long = 'ข้อความยาวมากที่ต้องพันหลายบรรทัด '.repeat(120);   // ≥ 3 หน้าทุกความกว้าง
+  for (const elName of SF.SP_ELEMENT_KEYS) {
+    if (['blank', 'page-break', 'more'].includes(elName)) continue;
+    const pg = SF.paginate([{ el: elName, text: long }], { lines: LINES });
+    const over = pg.pages.filter((p) => p.blocks.reduce((s, b) => s + (b.lines || 0), 0) > LINES);
+    check('[103-3] ' + elName + ': ไม่มีหน้าไหนล้นโควตา', over.length === 0,
+      JSON.stringify(pg.pages.map((p) => p.blocks.reduce((s, b) => s + (b.lines || 0), 0))));
+    check('[103-3] ' + elName + ': ยาวเกินหน้า → ถูกหั่นข้ามหน้าจริง',
+      pg.count > 1 && pg.pages.flatMap((p) => p.blocks).some((b) => b.split === 'tail'),
+      'pages=' + pg.count);
+  }
+  // ★ ของสั้น (หัวฉาก/ชื่อตัวละคร/ทรานสิชั่น) ต้องไม่ถูกหั่นกลาง แม้จะเปิดอิสระให้ทุกชนิด
+  const mix = [];
+  for (let i = 0; i < 17; i++) mix.push({ el: 'action', text: 'บรรยาย ' + i });
+  mix.push({ el: 'scene', text: 'INT. ห้องนอนของคัสซี่ที่มีหน้าต่างบานใหญ่ - กลางคืน' });
+  for (let i = 0; i < 8; i++) mix.push({ el: 'action', text: 'ต่อ ' + i });
+  const pmix = SF.paginate(mix, { lines: LINES });
+  check('[103-3] ★ หัวฉากยังไม่ถูกหั่นกลาง (เกณฑ์ widow/orphan กันเอง)',
+    !pmix.pages.flatMap((p) => p.blocks).some((b) => b.el === 'scene' && b.split));
+  // ★ เกณฑ์ที่ตั้งจนหั่นไม่ได้ ก็ยังต้องไม่ปล่อยให้หน้าล้น (ด่านสุดท้าย)
+  const wild = SF.paginate([{ el: 'action', text: long }],
+    { lines: LINES, fmt: SF.mergeSpFormat({ rules: { minActionLinesAtTop: 999 } }) });
+  check('[103-3] ★★ ตั้งเกณฑ์จนหั่นไม่ได้ ก็ยังไม่มีหน้าล้น',
+    wild.pages.every((p) => p.blocks.reduce((s, b) => s + (b.lines || 0), 0) <= LINES),
+    JSON.stringify(wild.pages.map((p) => p.blocks.reduce((s, b) => s + (b.lines || 0), 0))));
+}
 
 // splitText
 const sp = SF.splitText('one two three four five six seven eight nine ten', 1, 2);
@@ -312,11 +351,16 @@ check('[57a] เลขหน้าชิดขวา 1" · 0.5" จากขอ�
   // หน้าเนื้อเรื่องจึงมีเลขทุกหน้ารวมหน้าแรก โดยไม่ต้องไปติ๊กอะไร
   check('[97-11] หน้าแรกของเนื้อเรื่องได้เลข "1." ทันทีที่เปิดเลขหน้า',
     SF.pageNumberLabel(1, on, 1) === '1.', SF.pageNumberLabel(1, on, 1));
-  check('[97-11] ไม่มีคีย์ firstPage ในค่าเริ่มต้นแล้ว',
-    !('firstPage' in SF.PAGE_NUMBER_DEFAULTS), JSON.stringify(SF.PAGE_NUMBER_DEFAULTS));
-  check('[97-11] ค่า firstPage เก่าที่ค้างในไฟล์โปรเจกต์ไม่มีผลอีกแล้ว',
-    SF.pageNumberLabel(1, SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: false } }), 1)
-      === '1.');
+  // ── [alpha.103 ข้อ 4] สวิตช์กลับมาแล้ว (ผู้ใช้ขอ) · ค่าเริ่มต้น = เปิด → พฤติกรรมเท่า .97 ──
+  check('[103-4] ค่าเริ่มต้นมีคีย์ firstPage และเปิดไว้',
+    SF.PAGE_NUMBER_DEFAULTS.firstPage === true, JSON.stringify(SF.PAGE_NUMBER_DEFAULTS));
+  const noFirst = SF.mergeSpFormat({ pageNumbers: { show: true, firstPage: false } });
+  check('[103-4] ปิดสวิตช์ → หน้าที่เลขจริงเป็น 1 ไม่มีเลข',
+    SF.pageNumberLabel(1, noFirst, 1) === '', JSON.stringify(SF.pageNumberLabel(1, noFirst, 1)));
+  check('[103-4] ปิดสวิตช์ → หน้าอื่นยังมีเลขครบ',
+    SF.pageNumberLabel(2, noFirst, 1) === '2.' && SF.pageNumberLabel(3, noFirst, 1) === '3.');
+  check('[103-4] ★ "หน้าแรก" = เลขจริง 1 เท่านั้น — ไฟล์ที่เริ่มหน้า 12 ยังได้เลขตามปกติ',
+    SF.pageNumberLabel(1, noFirst, 12) === '12.', SF.pageNumberLabel(1, noFirst, 12));
   // กฎของ .82 ยังอยู่: ไฟล์ที่เริ่มหน้า 12 หน้าแรกของมันได้ "12."
   check('[88] ไฟล์ที่เริ่มหน้า 12 → หน้าแรกของไฟล์ยังได้ "12."',
     SF.pageNumberLabel(1, on, 12) === '12.', SF.pageNumberLabel(1, on, 12));
@@ -557,6 +601,179 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
   check('[87-D] หัวฉากมีระยะเว้นนำจริง (เทสข้างบนจึงมีความหมาย)',
     Math.round((F.elements.scene.linesBefore ?? 10) / 10) >= 1,
     String(F.elements.scene.linesBefore));
+}
+
+// ══════ [alpha.102 บั๊ก 2] ★ keepSceneWithNext — หัวเรื่องห้ามค้างท้ายหน้าตัวเดียว ══════
+//
+// ผู้ใช้: *"ในกรณีที่ หัวฉาก / ทรานสิชั่นขวา / ฉากย่อย / สลับฉาก / shot / ตอน / note /
+//           ต่อเนื่องซ้าย / ต่อเนื่องขวา อยู่บรรทัดสุดท้าย จะไม่เกิดการตัดหน้า"*
+//
+// กฎนี้อยู่ในตาราง `PAGE_BREAK_RULES` มาตั้งแต่ข้อ 84 และมีช่องให้ตั้งในกล่องตั้งค่า
+// แต่ `paginate()` **ไม่เคยอ่านมันเลย** — เป็นสวิตช์ที่ปรับแล้วไม่มีอะไรเกิดขึ้นมาตลอด
+{
+  const fmt = SF.mergeSpFormat({});
+  const perPage = SF.formatLines(fmt);
+  const MK = { scene: 'INT. ตลาด - เย็น', transition: 'CUT TO:', 'transition-in': 'FADE IN:',
+               subheader: 'ห้องครัว', intercut: 'สลับฉาก', shot: 'ภาพระยะใกล้',
+               'act-break': 'องก์สอง', note: 'โน้ต',
+               'cont-left': 'ต่อเนื่องซ้าย', 'cont-right': 'ต่อเนื่องขวา' };
+  check('[102-2] มี KEEP_WITH_NEXT ครบทุกชนิดที่ผู้ใช้แจ้ง',
+    Object.keys(MK).every((k) => SF.KEEP_WITH_NEXT.has(k)),
+    [...SF.KEEP_WITH_NEXT].join(','));
+  check('[102-2] บทพูด/วงเล็บ/ชื่อตัวละคร ไม่อยู่ในชุดนี้ (มีกฎของตัวเองอยู่แล้ว)',
+    !SF.KEEP_WITH_NEXT.has('dialogue') && !SF.KEEP_WITH_NEXT.has('parenthetical')
+    && !SF.KEEP_WITH_NEXT.has('character'));
+
+  // กวาดทุกชนิด × ทุกตำแหน่งใกล้ท้ายหน้า — ต้องไม่มีอันไหนค้างเป็นบล็อกสุดท้ายของหน้า
+  const orphans = [];
+  for (const el of Object.keys(MK)) {
+    for (let fill = perPage - 6; fill <= perPage - 1; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text: MK[el] });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อจากนั้น ' + i });
+      const r = SF.paginate(blocks, { fmt });
+      r.pages.forEach((p, pi) => {
+        const last = p.blocks[p.blocks.length - 1];
+        if (last && last.el === el && pi < r.pages.length - 1) orphans.push(el + '@' + fill);
+      });
+    }
+  }
+  check('[102-2] ★★ ไม่มีหัวเรื่องชนิดไหนค้างเป็นบรรทัดสุดท้ายของหน้าเลย',
+    orphans.length === 0, orphans.slice(0, 8).join(' , '));
+
+  // ★ ต้องยังไม่ล้นหน้า — กฎใหม่ห้ามไปทำให้หน้าไหนเกินโควตา
+  const usedOf = (page) => {
+    let used = 0, prevBlank = false;
+    page.blocks.forEach((b, j) => {
+      const c = fmt.elements[b.el] || fmt.elements.action;
+      if (b.el === 'blank') { used += 1; prevBlank = true; return; }
+      const before = j > 0 && b.split !== 'tail' && !prevBlank
+        ? Math.round((c.linesBefore ?? 10) / 10) : 0;
+      prevBlank = false;
+      used += before + (b.lines || 1);
+    });
+    return used;
+  };
+  const over = [];
+  for (const el of Object.keys(MK)) {
+    for (let fill = perPage - 6; fill <= perPage - 1; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text: MK[el] });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อจากนั้น ' + i });
+      SF.paginate(blocks, { fmt }).pages.forEach((p, pi) => {
+        if (usedOf(p) > perPage) over.push(el + '@' + fill + '=' + usedOf(p));
+      });
+    }
+  }
+  check('[102-2] ★ และไม่มีหน้าไหนล้นโควตาบรรทัด', over.length === 0, over.slice(0, 6).join(' , '));
+
+  // ── ตัวช่วย: กวาดหาความยาว filler ที่ทำให้บล็อกนั้น "ตกเป็นบล็อกสุดท้ายของหน้าแรก" ──
+  // (คำนวณด้วยมือไม่ได้ เพราะบล็อกบรรยายแต่ละก้อนกิน 1 บรรทัดเนื้อ + 1 บรรทัดเว้นนำ
+  //  และหน้าแรกไม่มีเว้นนำ — กวาดหาเอาตรง ๆ ชัดกว่าและไม่พังเมื่อค่าเริ่มต้นเปลี่ยน)
+  const anyFillWhereLastOnPage1 = (el, text, f, withTail) => {
+    for (let fill = 1; fill < perPage; fill++) {
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el, text });
+      if (withTail) for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+      const r = SF.paginate(blocks, { fmt: f });
+      if (r.pages.length < 2) continue;
+      const last = r.pages[0].blocks[r.pages[0].blocks.length - 1];
+      if (last && last.el === el) return fill;
+    }
+    return -1;
+  };
+
+  // ตั้งเป็น 0 = ปิดกฎ (ผู้ใช้ตั้งเองได้ที่ ตั้งค่า → หน้ากระดาษ)
+  {
+    const off = SF.mergeSpFormat({ rules: { keepSceneWithNext: 0 } });
+    check('[102-2] ตั้งกฎเป็น 0 = ปิดได้จริง (หัวฉากค้างท้ายหน้าได้ตามเดิม)',
+      anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', off, true) > 0);
+    check('[102-2] ★ และเปิดกฎแล้วเคสเดียวกันไม่มีทางเกิดขึ้นเลย',
+      anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', fmt, true) === -1);
+  }
+
+  // หัวเรื่องที่เป็น "ของชิ้นสุดท้ายจริง ๆ" ไม่ต้องยกไปหน้าใหม่ (ไม่ได้ค้างอยู่คนเดียว)
+  // — `FADE OUT.` ท้ายบทเป็นเคสคลาสสิก ถ้าดันไปหน้าใหม่จะได้หน้าเปล่าทั้งหน้าเพื่อบรรทัดเดียว
+  // เทียบ "เปิดกฎ" กับ "ปิดกฎ" ตรง ๆ: ไม่มีเนื้อตาม = ผลต้องเหมือนกันเป๊ะทุกความยาว
+  {
+    const off = SF.mergeSpFormat({ rules: { keepSceneWithNext: 0 } });
+    const pagesOf = (el, text, f, withTail) => {
+      const out = [];
+      for (let fill = 1; fill < perPage; fill++) {
+        const blocks = [];
+        for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+        blocks.push({ el, text });
+        if (withTail) for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+        out.push(SF.paginate(blocks, { fmt: f }).pages.length);
+      }
+      return out.join(',');
+    };
+    check('[102-2] ★ ไม่มีเนื้อตาม (ปิดเรื่องท้ายบท) → กฎต้องไม่แตะอะไรเลย',
+      pagesOf('transition', 'FADE OUT.', fmt, false)
+      === pagesOf('transition', 'FADE OUT.', off, false),
+      pagesOf('transition', 'FADE OUT.', fmt, false));
+    check('[102-2] ★ หัวฉากก็เช่นกันเมื่อเป็นบล็อกสุดท้ายของเอกสาร',
+      pagesOf('scene', 'INT. ตลาด - เย็น', fmt, false)
+      === pagesOf('scene', 'INT. ตลาด - เย็น', off, false));
+    // และต้อง "ต่างกันจริง" เมื่อมีเนื้อตาม — เอาความยาวที่ปิดกฎแล้วเกิด orphan มาเป็นตัวตั้ง
+    // แล้วยืนยันว่าเปิดกฎ **หัวฉากย้ายไปเป็นบล็อกแรกของหน้าถัดไป** ไม่ใช่แค่หายไปเฉย ๆ
+    // (จำนวนหน้ามักเท่าเดิม เพราะย้ายบรรทัดเดียว — เทียบจำนวนหน้าจึงพิสูจน์อะไรไม่ได้)
+    {
+      const fill = anyFillWhereLastOnPage1('scene', 'INT. ตลาด - เย็น', off, true);
+      const blocks = [];
+      for (let i = 0; i < fill; i++) blocks.push({ el: 'action', text: 'บรรยาย ' + i });
+      blocks.push({ el: 'scene', text: 'INT. ตลาด - เย็น' });
+      for (let i = 0; i < 6; i++) blocks.push({ el: 'action', text: 'ต่อ ' + i });
+      const on = SF.paginate(blocks, { fmt });
+      const p1 = on.pages[0].blocks;
+      const p2 = on.pages[1] ? on.pages[1].blocks : [];
+      check('[102-2] ★★ เปิดกฎแล้วหัวฉากย้ายไปเป็นบล็อกแรกของหน้าถัดไปจริง',
+        fill > 0 && p1[p1.length - 1].el !== 'scene' && !!p2[0] && p2[0].el === 'scene',
+        'fill=' + fill + ' · ท้ายหน้า1=' + (p1[p1.length - 1] || {}).el
+        + ' · ต้นหน้า2=' + (p2[0] || {}).el);
+      check('[102-2] ★ และเนื้อของฉากยังตามมาต่อทันที (ไม่ได้ขาดจากกัน)',
+        !!p2[1] && p2[1].el === 'action', (p2[1] || {}).el);
+    }
+  }
+}
+
+
+// ══ [alpha.103r ข้อ 1] ★★ element ที่บังคับตัวพิมพ์ใหญ่ ต้องนับบรรทัดจาก "ตัวใหญ่" ══
+// ผู้ใช้ส่งภาพ: ชื่อตัวละครยาว ๆ ไหลทะลุขอบล่างแผ่นลงไปบนพื้นโต๊ะสองบรรทัด
+// ต้นตอ: caps เป็น text-transform (ตัวอักษรในไฟล์ยังเป็นตัวเล็ก) แต่ตัววัดวัดข้อความดิบ
+// → ฟอนต์สัดส่วนวาดตัวใหญ่กว้างกว่า จอจึงตัดบรรทัดมากกว่าที่โมเดลนับ = หน้าล้น
+{
+  check('[103r-1] มี displayText ให้ใช้ร่วมกันทั้งจอ/PDF', typeof SF.displayText === 'function');
+  check('[103r-1] caps=false → ข้อความเดิม', SF.displayText('abc', false) === 'abc');
+  check('[103r-1] caps=true → ตัวใหญ่', SF.displayText('abc', true) === 'ABC');
+  // ตัวที่ยาวขึ้นตอนแปลง (ß→SS) ต้องถอยไปใช้ของเดิม ไม่งั้นดัชนีที่ใช้หั่นจะเลื่อน
+  check('[103r-1] ★ ตัวอักษรที่ยาวขึ้นตอนแปลง → ใช้ของเดิม (ดัชนีหั่นต้องไม่เลื่อน)',
+        SF.displayText('straße', true) === 'straße', SF.displayText('straße', true));
+
+  // ★ ตัววัดของ node เป็นแบบ cpi (ตัวอักษรเท่ากันทุกตัว) จึงพิสูจน์ "ความกว้างต่างกัน" ไม่ได้
+  //   สิ่งที่พิสูจน์ได้ที่นี่คือ **เส้นทางส่งค่า**: paginate ต้องส่ง caps ของ element เข้าไปจริง
+  //   (ตัวเลขความกว้างจริงถูกวัดใน e2e ที่มีฟอนต์จริง)
+  const capsOn = SF.mergeSpFormat({});
+  check('[103r-1] ชื่อตัวละคร/หัวฉาก/ทรานซิชัน = ตัวพิมพ์ใหญ่ตามค่ามาตรฐาน',
+        SF.elementCaps(capsOn, 'character') && SF.elementCaps(capsOn, 'scene')
+        && SF.elementCaps(capsOn, 'transition'));
+  check('[103r-1] บทพูด/บรรยาย ไม่ใช่ตัวพิมพ์ใหญ่',
+        !SF.elementCaps(capsOn, 'dialogue') && !SF.elementCaps(capsOn, 'action'));
+  // ★ พิสูจน์ว่า "ข้อความที่ตาเห็น" เดินไปถึงตัวตัดบรรทัดจริง — บรรทัดที่คืนมาต้องเป็นตัวใหญ่
+  const ls = SF.wrapScriptLines('abc def ghi', 3.8, 10, true);
+  check('[103r-1] ★★ wrapScriptLines(caps=true) ตัดบรรทัดจากตัวใหญ่จริง',
+        ls.join('') === ls.join('').toUpperCase() && /[A-Z]/.test(ls.join('')), JSON.stringify(ls));
+  const ls0 = SF.wrapScriptLines('abc def ghi', 3.8, 10, false);
+  check('[103r-1] ★ caps=false ยังได้ตัวเล็กเหมือนเดิม', !/[A-Z]/.test(ls0.join('')), JSON.stringify(ls0));
+  // splitText ต้องคืนชิ้นส่วนของ "ข้อความต้นฉบับ" (ตัวเล็ก) แม้จะวัดจากตัวใหญ่
+  const sp2 = SF.splitText('one two three four five six seven eight nine ten', 1, 2, true);
+  check('[103r-1] ★★ splitText หั่นจากข้อความต้นฉบับ (ไม่คืนตัวใหญ่ออกมา)',
+        !/[A-Z]/.test(sp2.head + sp2.rest), sp2.head + ' || ' + sp2.rest);
+  check('[103r-1] ★ และรวมกันแล้วยังได้คำครบ',
+        (sp2.head + ' ' + sp2.rest).split(/\s+/).length === 10, sp2.head + ' || ' + sp2.rest);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

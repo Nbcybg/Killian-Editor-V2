@@ -134,5 +134,33 @@ const para = (top, n, extra) => ({
         P.proseWrap(long, 78) <= Math.ceil(long.length / 78), P.proseWrap(long, 78));
 }
 
+
+// ══ [alpha.103r ข้อ 2] ★★ บล็อกที่สูงเกินหนึ่งหน้าต้องถูกหั่น "ตามบรรทัดจริง" ══
+// ผู้ใช้: *"block ที่ไม่ใช่ข้อความปกติ ไม่ตัดหน้าให้เลย"* — หัวข้อยาว ๆ ไหลทะลุขอบกระดาษ
+// ต้นตอ: blockRules() ให้หัวข้อ splitMinLines:99 (ห้ามฉีก) → lineCut() คืน null ตลอด
+// → ตกไปเส้นทาง "ตัดดิบที่ขอบหน้า" ซึ่งได้พิกัดที่ไม่ตรงกับบรรทัดไหนเลย
+// → prosePosAtCut() แปลงกลับไม่ได้ แล้วเส้นคั่นถูกทิ้งเงียบ ๆ (จอไม่มีรอยตัดให้เห็น)
+{
+  const LH = 24;
+  const nLines = 100;                        // 100 บรรทัด = สูงกว่าหนึ่งหน้า (36 บรรทัด)
+  const offs = Array.from({ length: nLines - 1 }, (_, i) => (i + 1) * LH);
+  const head = { top: 0, height: nLines * LH, lineOffsets: offs, splitMinLines: 99, keepNext: true };
+  const pages = M.sliceProsePages([head], CH, nLines * LH);
+  check('[103r-2] ★★ หัวข้อยาวเกินหน้า → ถูกหั่นเป็นหลายหน้า', pages.length >= 3, pages.length);
+  const onGrid = pages.slice(1).every((p) => Math.abs(p.start % LH) < 0.001);
+  check('[103r-2] ★★ จุดตัดทุกจุดตกที่ "ขอบบรรทัดจริง" (แปลงกลับเป็นตำแหน่งในเอกสารได้)',
+        onGrid, JSON.stringify(pages.map((p) => p.start)));
+  const over = pages.filter((p) => p.end - p.start > CH + 0.001);
+  check('[103r-2] ★ ไม่มีหน้าไหนสูงเกินพื้นที่พิมพ์', over.length === 0,
+        JSON.stringify(pages.map((p) => +(p.end - p.start).toFixed(1))));
+  // ★ หัวข้อสั้น (ไม่เกินหนึ่งหน้า) ต้องยังยกไปทั้งก้อนเหมือนเดิม — กฎ "ห้ามฉีกหัวข้อ" ยังอยู่
+  const body = { top: 0, height: CH - 60, lineOffsets: [24, 48], splitMinLines: 2 };
+  const h2 = { top: CH - 60, height: 3 * LH, lineOffsets: [LH, 2 * LH], splitMinLines: 99 };
+  const p2 = M.sliceProsePages([body, h2], CH, CH - 60 + 3 * LH);
+  check('[103r-2] ★★ หัวข้อสั้นที่คร่อมขอบหน้า ยังถูกยกไปทั้งก้อน (ไม่ฉีก)',
+        p2.length === 2 && Math.abs(p2[1].start - h2.top) < 0.001,
+        JSON.stringify(p2.map((p) => p.start)));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

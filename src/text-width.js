@@ -104,7 +104,9 @@ export function measureWidth(text, o = {}) {
   const s = String(text ?? '');
   if (!s) return 0;
   if (!o.heuristic && _measure) {
-    const w = _measure(s, o.kind || 'sp');
+    // [alpha.104r] ★ ส่ง "หน้าตาของตัวอักษร" ไปด้วย — ตัวหนา/ตัวเอียงกว้างไม่เท่าตัวปกติ
+    // (note/วงเล็บ/สรุป = เอียง · หัวฉาก/ฉากย่อย/ช็อต/ตอน/โครงเรื่อง = หนา)
+    const w = _measure(s, o.kind || 'sp', o);
     if (Number.isFinite(w) && w >= 0) return w;
   }
   return (visualLength(s) / (o.cpi > 0 ? o.cpi : FALLBACK_CPI)) * DPI;
@@ -121,6 +123,34 @@ const SPACE_RE = /\s/;
 export const TOK_SPACE = 'space';    // ช่องว่าง — จุดตัดบรรทัด และถูกกลืนเมื่อตัดตรงนั้น
 export const TOK_ATOM = 'atom';      // คำที่ห้ามตัดกลาง (ละติน/ตัวเลข)
 export const TOK_RUN = 'run';        // ช่วงที่ตัดตรงไหนก็ได้ (ไทย/เขมร/พม่า/CJK)
+
+/**
+ * ══════ [alpha.107] ★★ "รอยต่อสคริปต์ที่ติดกันสนิท" ไม่ใช่จุดขึ้นบรรทัดใหม่ ══════
+ *
+ * ผู้ใช้: *"เมื่อเราพิมพ์ภาษาไทยหน้าบรรทัดแล้วพิมพ์ภาษาอังกฤษต่อโดยไม่เว้น ... มันเลยตัดคำ
+ *           แบบไทย-อังกฤษ ไม่ใช่ตัดแบบตัวอักษร"* — ถูกต้อง และวัดยืนยันได้ถึงระดับตัวอักษร
+ *
+ * วัดจริงในโปรแกรม (กล่องกว้างเท่า element จริง · ข้อความ `…ข้อความทดสอบการคัดลอกGBJOIJ…`):
+ *   Chromium ตัดที่ตัวที่ 18 → `การคัด` | `ลอกGBJOIJ…`   (ขอบคำไทย · ลาก "ลอก" ลงไปกับละติน)
+ *   ของเราเดิมตัดที่ตัวที่ 21 → `คัดลอก` | `GBJOIJ…`      (ตรงรอยต่อไทย↔ละติน)
+ *
+ * เพราะ tokenize() แยกไทยเป็น RUN และละตินเป็น ATOM คนละก้อน แล้วตัวตัดบรรทัดถือว่า
+ * "ระหว่างสองโทเคน = ขึ้นบรรทัดใหม่ได้" ซึ่ง **Chromium ไม่ยอม** เมื่อไม่มีช่องว่างคั่น
+ * (ICU ถือว่าไทยที่ติดกับละตินเป็นก้อนเดียว ต้องถอยไปตัดที่ขอบคำไทยก่อนหน้า)
+ *
+ * ผลของความต่างนี้: บรรทัดคลาดทีละหนึ่ง สะสมไปเรื่อย ๆ จนบรรทัดสุดท้ายของหน้าล้นขอบล่าง
+ * แล้วตัวชดเชยที่ว่างท้ายหน้า (ซึ่งหนีบต่ำสุดที่ 0) ก็ได้แต่ปล่อยให้ล้นต่อ — ตรงกับที่ผู้ใช้
+ * อธิบายว่า *"มันไปเกินการชดเชยแทน ... เมื่อเกิน margin หน้า มันจะไม่ขึ้นหน้าใหม่"*
+ *
+ * เคสไทยล้วน/ละตินล้วนไม่มีรอยต่อแบบนี้เลย จึงตรงกับจอมาตลอด — บั๊กโผล่เฉพาะข้อความผสม
+ */
+export function scriptJunction(s, p) {
+  if (p <= 0 || p >= s.length) return false;
+  const a = s[p - 1], b = s[p];
+  if (SPACE_RE.test(a) || SPACE_RE.test(b)) return false;
+  if (ZERO_WIDTH_ONE.test(b)) return false;      // สระ/วรรณยุกต์เกาะตัวหน้าเสมอ ไม่ใช่รอยต่อ
+  return BREAKABLE_RE.test(a) !== BREAKABLE_RE.test(b);
+}
 
 /**
  * แยกย่อหน้าเป็นโทเคน — ตัวตัดบรรทัดเดินตามนี้
@@ -148,7 +178,20 @@ export function tokenize(para) {
     out.push({ t, s: s.slice(start, j), i: start });
     i = j;
   }
-  return out;
+  // [alpha.107] ★ ไทยติดละตินโดยไม่เว้นวรรค = **ก้อนเดียวกัน** — รวมเป็น RUN ก้อนเดียว
+  // แล้วให้จุดตัดมาจากขอบคำ ICU เท่านั้น (ซึ่งกรองรอยต่อสคริปต์ออกไปแล้วใน breakPoints)
+  const merged = [];
+  for (const tok of out) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.t !== TOK_SPACE && tok.t !== TOK_SPACE
+        && prev.i + prev.s.length === tok.i) {
+      prev.s += tok.s;
+      prev.t = TOK_RUN;                 // ก้อนผสม: ตัดได้เฉพาะที่ขอบคำ (และกลางคำเมื่อจำเป็น)
+      continue;
+    }
+    merged.push({ ...tok });
+  }
+  return merged;
 }
 
 /**
@@ -182,7 +225,13 @@ export function breakPoints(s) {
   const hit = _bpCache.get(s);
   if (hit) return hit;
   const out = [];
-  try { for (const part of seg.segment(s)) if (part.index > 0) out.push(part.index); }
+  // [alpha.107] ICU ให้ขอบคำที่รอยต่อสคริปต์ด้วย แต่ **Chromium ไม่ขึ้นบรรทัดใหม่ตรงนั้น**
+  // เมื่อไม่มีช่องว่างคั่น → คัดออก จุดตัดจึงถอยไปที่ขอบคำไทยก่อนหน้าเหมือนที่จอทำจริง
+  try {
+    for (const part of seg.segment(s)) {
+      if (part.index > 0 && !scriptJunction(s, part.index)) out.push(part.index);
+    }
+  }
   catch { return null; }
   if (_bpCache.size >= BP_CACHE_CAP) _bpCache = new Map();
   _bpCache.set(s, out);

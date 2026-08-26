@@ -106,3 +106,44 @@ console.log("alpha.61 hard break / page break / tab OK");
   if (docToMd(mdToDoc(two)) !== two) throw new Error("sup+sub ติดกันไม่นิ่ง: " + docToMd(mdToDoc(two)));
 }
 console.log("alpha.97 superscript / subscript OK");
+
+// ══ [alpha.103 ข้อ 2] ★ แผนที่การจัดหน้าต้องครอบคลุมย่อหน้าใน "รายการ / คำพูดยกมา" ══
+// ผู้ใช้: *"เมื่อใช้หัวข้อหรือ bullet จะถูกจัดชิดซ้ายเสมอ และปรับเปลี่ยนไม่ได้"*
+// ครึ่งหนึ่งของต้นตอ: collectAlign เดิมเก็บเฉพาะบล็อกระดับบนสุด → ข้อในรายการไม่เคยถูกบันทึก
+{
+  const { collectAlign, alignToString, alignFromString } = require('../src/md.js');
+  const doc = mdToDoc('# หัว\n\n- หนึ่ง\n- สอง\n\n> ยกมา');
+  // ตั้ง align ให้: หัวข้อ (บนสุด) · ข้อที่สองของรายการ · ย่อหน้าในคำพูดยกมา
+  doc.content[0].attrs = { ...(doc.content[0].attrs || {}), align: 'center' };
+  const list = doc.content.find((n) => n.type === 'bullet_list');
+  list.content[1].content[0].attrs = { align: 'right' };
+  const quote = doc.content.find((n) => n.type === 'blockquote');
+  quote.content[0].attrs = { align: 'justify' };
+
+  const map = collectAlign(doc);
+  const li = doc.content.indexOf(list), qi = doc.content.indexOf(quote);
+  if (map['0'] !== 'center') throw new Error('align หัวข้อระดับบนหาย: ' + JSON.stringify(map));
+  if (map[li + '.1.0'] !== 'right') throw new Error('align ของข้อในรายการหาย: ' + JSON.stringify(map));
+  if (map[qi + '.0'] !== 'justify') throw new Error('align ในคำพูดยกมาหาย: ' + JSON.stringify(map));
+
+  // ไป-กลับผ่าน frontmatter แล้วต้องได้ค่าเดิมครบทุกชั้น
+  const back = alignFromString(alignToString(map));
+  if (JSON.stringify(back) !== JSON.stringify(map)) {
+    throw new Error('align ไป-กลับไม่ตรง: ' + alignToString(map) + ' → ' + JSON.stringify(back));
+  }
+  const doc2 = mdToDoc('# หัว\n\n- หนึ่ง\n- สอง\n\n> ยกมา', back);
+  const list2 = doc2.content.find((n) => n.type === 'bullet_list');
+  const quote2 = doc2.content.find((n) => n.type === 'blockquote');
+  if (doc2.content[0].attrs.align !== 'center') throw new Error('โหลดกลับ: หัวข้อไม่ได้ align');
+  if (list2.content[1].content[0].attrs.align !== 'right') throw new Error('โหลดกลับ: ข้อในรายการไม่ได้ align');
+  if (quote2.content[0].attrs.align !== 'justify') throw new Error('โหลดกลับ: คำพูดยกมาไม่ได้ align');
+  if (list2.content[0].content[0].attrs && list2.content[0].content[0].attrs.align) {
+    throw new Error('โหลดกลับ: ข้อที่ไม่ได้ตั้งกลับมีค่า');
+  }
+  // เรียงคีย์แบบพาธ: 2 ต้องมาก่อน 2.1.0 และ 2.1.0 ต้องมาก่อน 10
+  const sorted = alignToString({ '10': 'center', '2.1.0': 'right', '2': 'center' });
+  if (sorted !== '2:center, 2.1.0:right, 10:center') throw new Error('เรียงคีย์พาธผิด: ' + sorted);
+  // คีย์เก่า (เลขตัวเดียว) ยังอ่านได้เหมือนเดิม
+  if (alignFromString('3:center')['3'] !== 'center') throw new Error('คีย์เก่าอ่านไม่ได้');
+}
+console.log('alpha.103 align map (list / quote) OK');

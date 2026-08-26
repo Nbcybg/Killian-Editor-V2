@@ -236,6 +236,12 @@ export const GLOBAL_DEFAULTS = {
   theme: 'dark',
   uiFontSize: 0, uiScale: 1, spellCheck: true, spellCheckDict: true, autoMention: true, recycleDays: 30,
   paperMode: true, fontFamily: '', language: 'th', spFontFamily: '',
+  // [alpha.100 ข้อ 4] สีกระดาษ — เลือกเองได้ (พรีเซ็ต/สีใดก็ได้) · '' = ค่าเริ่มต้น (ขาว)
+  // เก็บระดับผู้ใช้เพราะเป็นความสบายตาของคนอ่านจอ ไม่ใช่รูปแบบของผลงาน
+  // (ตอนพิมพ์/ส่งออก PDF ยังขาวเสมอ — ดู @media print และ pdf-generator.js)
+  paperColor: '',
+  // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบสี่ด้านทุกแผ่น · เริ่มต้นปิด
+  pageGuides: false,
   autoSync: false, thesaurus: false, focusDim: 0.3,
   // [alpha.60r2 ข้อ 4] เสียงพิมพ์ดีด — เดิมต้องเปิดสองสวิตช์ (typeSound + typeSoundAlways)
   // ผู้ใช้เปิด "เสียงพิมพ์ดีด" แล้วเงียบสนิท เพราะ typeSoundAlways ค่าเริ่มต้นเป็น false
@@ -419,6 +425,8 @@ export { PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES, SP_
          PAGE_BREAK_RULES, SP_STRINGS, DEFAULT_SP_FORMAT, mergeSpFormat, pageCssVars, spCss,
          linesPerPage, formatLines, lineHeightIn, clampLineHeight,
          textWidth, wrapLines, paginate, pageCount, splitText, annotateContinued,
+         // [alpha.104r] ความกว้างที่ element ถูกวาดจริง (หนีบไม่ให้ล้นพื้นที่พิมพ์)
+         elementWidthIn, displayText,
          newRoster, normalizeRoster, rosterToText, ROSTER_VERSION,
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, CONTINUED_DEFAULTS, sceneNumberOffsets, pageNumberLabel,
          // [alpha.62 บั๊ก 11] ตัวพิมพ์ใหญ่รายชนิด element

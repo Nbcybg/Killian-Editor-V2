@@ -99,6 +99,7 @@ const toggles = {
   theme: 'dark', fabEnabled: true,          // [alpha.60r2 ข้อ 9 + 10]
   // alpha.57 — โหมดมุมมองบท (normal/draft/side/overview1/overview4) + สวิตช์ของเมนู "บท"
   spView: 'normal', showFormat: false, checkBeforeExport: true,
+  pageGuides: false,                    // [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ
   // alpha.57a — เลขฉาก/เลขหน้า/เสียงพิมพ์
   sceneNumbers: false, pageNumbers: false, typeSound: false,
   // [alpha.58r บั๊ก 7] ค่าเริ่มต้นของ "ข้อความต่อเนื่อง" คือ "เปิด" (CONTINUED_DEFAULTS.enabled = true)
@@ -233,6 +234,10 @@ function buildMenu() {
           click: () => send('sp-view', 'overview1') },
         { label: tt('ui.common.overviewPxChar2'), type: 'radio', checked: toggles.spView === 'overview4',
           click: () => send('sp-view', 'overview4') },
+        { type: 'separator' },
+        // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบทั้งสี่ด้านทุกแผ่น
+        { label: tt('ui.menu.pageGuides'), type: 'checkbox', checked: !!toggles.pageGuides,
+          click: () => send('page-guides') },
       ] },
       // [alpha.60r2 ข้อ 10] Ctrl+Shift+P ย้ายมาสลับธีมของโปรแกรม — โหมดหน้ากระดาษยังกดที่นี่/ปุ่ม 📄 ได้
       { label: ttf('ui.menu.themeLightDarkP', C, S), submenu: [

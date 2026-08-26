@@ -47,11 +47,14 @@ export const WIDOW_LINES = 2;
  * @param {{top:number,lineOffsets?:number[],splitMinLines?:number}} block
  * @param {number} pageStart  พิกัด Y ของขอบบนหน้าปัจจุบัน
  * @param {number} limit      พิกัด Y ของขอบล่างพื้นที่พิมพ์ของหน้าปัจจุบัน
+ * @param {number} [minOverride] บังคับกฎบรรทัดโดดเดี่ยวเป็นค่านี้ (ใช้ตอน "ไม่ตัดไม่ได้แล้ว")
  */
-export function lineCut(block, pageStart, limit) {
+export function lineCut(block, pageStart, limit, minOverride) {
   const offs = (block && block.lineOffsets) || null;
   if (!offs || !offs.length) return null;
-  const minLines = Math.max(1, Math.round(num(block.splitMinLines, 1)));
+  const minLines = Number.isFinite(minOverride)
+    ? Math.max(1, Math.round(minOverride))
+    : Math.max(1, Math.round(num(block.splitMinLines, 1)));
   // บล็อกเริ่มบนหน้านี้ → ต้องเหลือหัวไว้อย่างน้อย minLines บรรทัด
   // บล็อกไหลมาจากหน้าก่อน → หัวเต็มอยู่แล้ว ตัดตั้งแต่บรรทัดแรกที่ล้นได้เลย
   const headMin = block.top >= pageStart ? minLines - 1 : 0;
@@ -91,11 +94,25 @@ function sliceProsePagesRaw(blocks, contentHeight, totalHeight) {
     if (b.breakBefore && b.top > pageStart) newPage(b.top);
     // [AbiWord ข้อ 4] ระยะเว้นท้ายย่อหน้าไม่กินความจุของหน้า — วัดจากหมึกบรรทัดสุดท้าย
     const inkBottom = b.top + b.height - Math.max(0, num(b.spaceAfterPx, 0));
+    // ══ [alpha.103r ข้อ 2] ★★ บล็อกที่สูงเกินหนึ่งหน้า **ต้องยอมให้ตัดกลาง** ══
+    //
+    // ผู้ใช้: *"block ที่ไม่ใช่ข้อความปกติ ไม่ตัดหน้าให้เลย"* (หัวข้อยาว ๆ ไหลทะลุขอบกระดาษ)
+    //
+    // ต้นตอ: `blockRules()` ให้หัวข้อ `splitMinLines: 99` = "ห้ามฉีก" ซึ่งถูกสำหรับหัวข้อ
+    // ปกติ (1–2 บรรทัด ต้องไปทั้งก้อน) แต่พอหัวข้อยาวเกินหนึ่งหน้า กฎนี้ทำให้ `lineCut()`
+    // คืน null ตลอด → ตกไปเส้นทาง "ตัดดิบที่ขอบหน้า" ซึ่งได้พิกัดที่ **ไม่ตรงกับบรรทัดไหนเลย**
+    // → `prosePosAtCut()` แปลงกลับไม่ได้ (CUT_FAIL.noLine) → เส้นคั่นถูกทิ้งเงียบ ๆ
+    // = จำนวนหน้าเพิ่มขึ้นจริง แต่บนจอไม่มีรอยตัด ตัวหนังสือเลยไหลข้ามพื้นโต๊ะไปเรื่อย ๆ
+    //
+    // กติกาใหม่: ถ้าบล็อกเดียวสูงเกินความจุหนึ่งหน้า ให้ผ่อนกฎบรรทัดโดดเดี่ยวเหลือ 1
+    // (ยังตัด "ตามบรรทัดจริง" อยู่ จึงแปลงพิกัดกลับได้และวาดเส้นคั่นได้ตามปกติ)
+    const tooTall = b.height - Math.max(0, num(b.spaceAfterPx, 0)) > ch;
     let guard = 0;
     while (inkBottom > pageStart + ch && guard++ < 5000) {
-      const cut = lineCut(b, pageStart, pageStart + ch);
+      const cut = lineCut(b, pageStart, pageStart + ch)
+        ?? (tooTall ? lineCut(b, pageStart, pageStart + ch, 1) : null);
       if (cut !== null) { newPage(cut); continue; }
-      if (b.top > pageStart) {
+      if (b.top > pageStart && !tooTall) {
         // ยกทั้งบล็อกไปหน้าใหม่ — [AbiWord keepNext] ถ้าบล็อกก่อนหน้าเป็นหัวข้อที่ห้าม
         // ค้างท้ายหน้าเดี่ยว ๆ ให้ลากมันตามไปด้วย ไม่ปล่อยให้ "บทที่ 3" อยู่บรรทัดสุดท้าย
         const prev = i > 0 ? list[i - 1] : null;

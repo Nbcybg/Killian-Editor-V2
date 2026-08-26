@@ -86,27 +86,65 @@ function inlineNodesMulti(rawLines) {
 const RE_ALIGN = /^<!--align:(left|center|right|justify)-->/;
 const ALIGNS = ['left', 'center', 'right', 'justify'];
 
-/** แผนที่ align ของบล็อกระดับบน → { "3": "center" } (ใช้เขียนลง frontmatter) */
+/** โหนดที่ "ถือ" ค่า align ได้จริง (บล็อกข้อความ) */
+const alignable = (n) => !!n && (n.type === 'paragraph' || n.type === 'heading');
+/**
+ * ══ [alpha.103 ข้อ 2] ★ บล็อกที่ **ห่อ** บล็อกข้อความไว้ข้างใน ══
+ * ผู้ใช้: *"เมื่อใช้หัวข้อหรือ bullet จะถูกจัดชิดซ้ายเสมอ และปรับเปลี่ยนไม่ได้"*
+ * ครึ่งหนึ่งของต้นตออยู่ตรงนี้: แผนที่ align เดิมเก็บ **เฉพาะบล็อกระดับบนสุด** —
+ * ย่อหน้าที่อยู่ใน `<li>` (และใน blockquote) จึงไม่เคยถูกบันทึกหรือโหลดกลับเลย
+ * จัดกึ่งกลางได้ตอนนั้นจริง แต่พอเซฟ/เปิดใหม่ก็กลับเป็นชิดซ้ายหมด = "ปรับเปลี่ยนไม่ได้"
+ * → คีย์กลายเป็น **ดอตพาธของดัชนีลูก** (`4.1.0` = ข้อที่ 2 ของรายการที่ 5)
+ *   คีย์เก่าที่เป็นเลขตัวเดียว (`3`) ยังอ่านได้เหมือนเดิม เพราะมันคือพาธความยาว 1
+ */
+const ALIGN_CONTAINERS = new Set(['bullet_list', 'ordered_list', 'list_item', 'blockquote']);
+
+/** แผนที่ align ของบล็อกข้อความทุกชั้น → { "3": "center", "4.1.0": "right" } */
 function collectAlign(doc) {
   const out = {};
-  (doc.content || []).forEach((n, i) => {
-    const a = (n.attrs || {}).align;
-    if (a && a !== 'left' && ALIGNS.includes(a)) out[String(i)] = a;
-  });
+  const walk = (node, prefix) => {
+    (node.content || []).forEach((n, i) => {
+      const key = prefix ? prefix + '.' + i : String(i);
+      const a = (n.attrs || {}).align;
+      if (alignable(n)) { if (a && a !== 'left' && ALIGNS.includes(a)) out[key] = a; }
+      else if (ALIGN_CONTAINERS.has(n.type)) walk(n, key);
+    });
+  };
+  walk(doc, '');
   return out;
 }
-/** "3:center, 7:right" ⇄ { "3": "center" } */
+/** เรียงคีย์แบบพาธ (`4.1.0` มาหลัง `4` และก่อน `10`) — เรียงเป็นตัวเลขทีละชั้น */
+function cmpAlignKey(a, b) {
+  const x = String(a).split('.'), y = String(b).split('.');
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (i < x.length ? +x[i] : -1) - (i < y.length ? +y[i] : -1);
+    if (d) return d;
+  }
+  return 0;
+}
+/** "3:center, 4.1.0:right" ⇄ { "3": "center", "4.1.0": "right" } */
 function alignToString(map) {
-  return Object.keys(map || {}).sort((a, b) => a - b).map((k) => k + ':' + map[k]).join(', ');
+  return Object.keys(map || {}).sort(cmpAlignKey).map((k) => k + ':' + map[k]).join(', ');
 }
 function alignFromString(v) {
   const out = {};
   const list = Array.isArray(v) ? v : String(v || '').split(',');
   for (const part of list) {
-    const m = /^\s*(\d+)\s*:\s*(left|center|right|justify)\s*$/.exec(String(part));
+    const m = /^\s*(\d+(?:\.\d+)*)\s*:\s*(left|center|right|justify)\s*$/.exec(String(part));
     if (m && m[2] !== 'left') out[m[1]] = m[2];
   }
   return out;
+}
+/** โหนดที่ปลายพาธ (`"4.1.0"`) ของเอกสาร JSON — null = ไม่มีจริง */
+function nodeAtAlignPath(doc, key) {
+  let n = doc;
+  for (const part of String(key).split('.')) {
+    const kids = n && n.content;
+    if (!Array.isArray(kids)) return null;
+    n = kids[+part];
+    if (!n) return null;
+  }
+  return n;
 }
 
 function mdToDoc(md, alignMap) {
@@ -181,10 +219,9 @@ function mdToDoc(md, alignMap) {
   const map = alignMap && typeof alignMap === 'object' && !Array.isArray(alignMap)
     ? alignMap : alignFromString(alignMap);
   for (const k of Object.keys(map || {})) {
-    const n = doc.content[+k];
-    if (n && (n.type === 'paragraph' || n.type === 'heading')) {
-      n.attrs = { ...(n.attrs || {}), align: map[k] };
-    }
+    // [alpha.103 ข้อ 2] คีย์เป็นดอตพาธแล้ว — ย่อหน้าในรายการ/คำพูดยกมาจึงโหลดกลับได้ด้วย
+    const n = nodeAtAlignPath(doc, k);
+    if (alignable(n)) n.attrs = { ...(n.attrs || {}), align: map[k] };
   }
   return doc;
 }

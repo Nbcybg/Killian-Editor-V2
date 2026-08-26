@@ -20,7 +20,7 @@ import fontkit from '@pdf-lib/fontkit';
 
 import { wrapScriptLines } from './sp-format.js';
 import { mergeSpFormat, textWidth, lineHeightIn, paginate, pageNumberLabel,
-         CHARS_PER_INCH } from './sp-format.js';
+         elementWidthIn, CHARS_PER_INCH } from './sp-format.js';
 import { mergeHeaders, headerStringsFor, headerLineCount, linesForBody } from './sp-headers.js';
 import { normalizeTitlePages } from './sp-title-pages.js';
 import { num, numClamp } from './num.js';
@@ -112,10 +112,13 @@ export function mergePdfOptions(user) {
 // — แล้วมันก็ไม่เหมือนจริง (ดันบรรทัดเปล่าออกมาทุกย่อหน้าไทย)
 // สองชุดที่ต้องตรงกันเป๊ะ = ต้องเป็นชุดเดียว
 /** ตัดข้อความเป็นบรรทัด — คืนอาร์เรย์บรรทัดจริง */
-export function wrapTextLines(text, widthIn, cpi = CHARS_PER_INCH) {
+export function wrapTextLines(text, widthIn, cpi = CHARS_PER_INCH, caps = false, style = null) {
   const s = String(text ?? '');
   if (!s.trim()) return [''];
-  return wrapScriptLines(s, num(widthIn, 6), cpi);
+  // [alpha.103r ข้อ 1] `caps` เป็นการแสดงผล — ตอนวาดเราแปลงเป็นตัวใหญ่ (ดู st.caps ข้างล่าง)
+  // การตัดบรรทัดจึงต้องวัดจากตัวใหญ่ด้วย ไม่งั้นบรรทัดล้นกล่องและหน้าไม่ตรงกับจอ
+  // [alpha.104r] เช่นเดียวกับตัวหนา/ตัวเอียง (`draw()` ข้างล่างวาดตามค่าเดียวกันนี้)
+  return wrapScriptLines(s, num(widthIn, 6), cpi, caps, style);
 }
 
 /**
@@ -135,7 +138,9 @@ export function layoutPageLines(page, fmt) {
     // จะกลายเป็น 10 (เว้น 1 บรรทัด) แล้วบทพูดหลุดจากชื่อตัวละคร (บทเรียน 5)
     const before = i > 0 && !marker ? Math.round(num(c.linesBefore, 10) / 10) : 0;
     line += before;
-    const lines = wrapTextLines(b.text, c.width);
+    const stB = (f.styles[b.el] || f.styles.action).print || {};
+    // [alpha.104r] ความกว้างที่วาดจริง (หนีบไม่ให้ล้นพื้นที่พิมพ์) — ตัวเดียวกับที่ `draw()` ใช้
+    const lines = wrapTextLines(b.text, elementWidthIn(f, b.el), CHARS_PER_INCH, !!stB.caps, stB);
     out.push({ block: b, line, lines });
     line += Math.max(1, b.lines || lines.length);
   });

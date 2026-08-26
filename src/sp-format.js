@@ -171,6 +171,43 @@ export const PAGE_BREAK_RULES = {
   keepSceneWithNext: 2,          // หัวฉากท้ายหน้าต้องมีเนื้อตามอย่างน้อยกี่บรรทัด ไม่งั้นยกทั้งก้อน
 };
 
+/**
+ * ══ [alpha.102 บั๊ก 2] ★★ element ที่ "ห้ามค้างท้ายหน้าตัวเดียว" ══
+ *
+ * ผู้ใช้: *"ในกรณีที่ หัวฉาก / ทรานสิชั่นขวา / ฉากย่อย / สลับฉาก / shot / ตอน /
+ *           ขึ้นหน้าใหม่ / note / ต่อเนื่องซ้าย / ต่อเนื่องขวา อยู่บรรทัดสุดท้าย
+ *           จะไม่เกิดการตัดหน้า"*
+ *
+ * ทั้งหมดนี้เป็น **หัวเรื่องของสิ่งที่ตามมา** ไม่ใช่เนื้อหาที่จบในตัวเอง — ธรรมเนียมบท
+ * (และทุกโปรแกรมบท) ห้ามปล่อยให้มันเป็นบรรทัดสุดท้ายของหน้าโดยไม่มีเนื้อตามอย่างน้อยสองบรรทัด
+ * เพราะคนอ่านจะพลิกหน้าไปเจอเนื้อที่ไม่รู้ว่าเป็นของฉากไหน
+ *
+ * ★ กฎนี้ **มีอยู่ในตารางมาตั้งแต่ข้อ 84 แล้ว** (`keepSceneWithNext`) และมีช่องให้ผู้ใช้ตั้ง
+ * ใน ตั้งค่า → หน้ากระดาษ ด้วย — แต่ `paginate()` **ไม่เคยอ่านมันเลยสักครั้ง**
+ * มันจึงเป็นสวิตช์ที่ปรับแล้วไม่มีอะไรเกิดขึ้นมาตลอด (grep เจอแค่ 2 ที่: ตรงนี้กับกล่องตั้งค่า)
+ *
+ * `dialogue`/`parenthetical` ไม่อยู่ในชุดนี้เพราะมีกฎของตัวเองอยู่แล้ว (ยกชื่อตัวละครตามไปด้วย)
+ * `character` ก็เช่นกัน — มันถูกดึงตามบทพูดผ่าน `carry`
+ */
+export const KEEP_WITH_NEXT = new Set([
+  'scene', 'subheader', 'intercut', 'shot', 'act-break',
+  'transition', 'transition-in', 'note', 'cont-left', 'cont-right',
+]);
+
+/**
+ * มีเนื้อหาจริงตามหลังบล็อกที่ i ไหม (ข้ามบรรทัดว่าง)
+ * — ถ้าไม่มี (จบเอกสาร หรือเจอคำสั่งขึ้นหน้าใหม่พอดี) ก็ไม่ต้องยกไปหน้าใหม่
+ *   เพราะมันไม่ได้ "ค้างอยู่คนเดียว" แต่มันคือของชิ้นสุดท้ายจริง ๆ
+ */
+function hasContentAfter(list, i) {
+  for (let j = i + 1; j < list.length; j++) {
+    const e = list[j] && list[j].el;
+    if (e === 'page-break') return false;      // ผู้ใช้สั่งขึ้นหน้าใหม่ตรงนั้นเอง
+    if (e !== 'blank') return true;
+  }
+  return false;
+}
+
 // ───────── 55–56. CONTINUED / (MORE) / (cont'd) ─────────
 // สวิตช์ของ "ระบบต่อเนื่อง" ทั้งชุด — ข้อความที่ใช้จริงอยู่ใน SP_STRINGS (ข้อ 92)
 //   scene    = (CONTINUED) ท้ายหน้า + CONTINUED: ต้นหน้า เมื่อฉากเดียวกันข้ามหน้า
@@ -208,7 +245,18 @@ export const SCENE_NUMBER_DEFAULTS = { show: false, left: 0.75, right: 1.0, suff
 // คำว่า "หน้าแรก" ผิด · สิ่งที่ต้องไม่มีเลขคือ **หน้าหน้าเล่ม** (ปก · รายชื่อนักแสดง ·
 // สารบัญ) ซึ่งแยกเป็นหน้าที่ไม่ถูกนับอยู่แล้วตั้งแต่ .81r2 — ไม่ใช่หน้าแรกของเนื้อเรื่อง
 // จึงตัดสวิตช์ทิ้งทั้งชุด: หน้าเนื้อเรื่องได้เลขทุกหน้ารวมหน้าแรก
-export const PAGE_NUMBER_DEFAULTS = { show: false, right: 1.0, top: 0.5, suffix: '.' };
+//
+// ══ [alpha.103 ข้อ 4] ★ เอาสวิตช์กลับมา — แต่คราวนี้ความหมายไม่กำกวมแล้ว ══
+//
+// ผู้ใช้: *"เราขอโทษ นำ toggle เลขหน้าแรกกลับมาได้มั้ย เพราะเราถาม บางคนบอกว่า
+//           หน้าแรกในบทหนัง หน้า 1 บางคนเขาไม่ใส่กัน"* — เป็นเรื่องธรรมเนียมของแต่ละคนจริง
+//
+// สิ่งที่ .97 แก้ถูกและยังอยู่: **หน้าหน้าเล่ม (ปก/รายชื่อ/สารบัญ) ไม่นับเลขหน้า** — นั่นเป็น
+// เรื่องของโครงสร้างเอกสาร ไม่ใช่สวิตช์ · ส่วน `firstPage` ตอนนี้แปลว่า "หน้าที่เลขจริง = 1
+// ต้องพิมพ์เลขไหม" เท่านั้น (ไฟล์ที่ตั้ง `startPage` ไว้ที่ 5 หน้าแรกของมันคือหน้า 5 ไม่ใช่หน้าแรก
+// จึงมีเลขเสมอ) — ตีความได้ทางเดียว ไม่ต้องมีโค้ดย้ายค่าและไม่ต้องมีสองช่องในกล่องตั้งค่าอีก
+// ค่าเริ่มต้น = true (เหมือนพฤติกรรมตั้งแต่ .97 → โปรเจกต์เดิมไม่เปลี่ยนอะไรเลย)
+export const PAGE_NUMBER_DEFAULTS = { show: false, firstPage: true, right: 1.0, top: 0.5, suffix: '.' };
 
 /**
  * [alpha.88] จำนวน **บรรทัดว่างนำ** ที่ element ชนิดนี้ต้องมี เมื่อขึ้นต่อจากบล็อกที่มีข้อความ
@@ -249,8 +297,11 @@ export function pageNumberLabel(index, fmt, startPage) {
   if (!pn.show) return '';
   const i = Math.max(1, Math.round(+index || 1));
   const start = Math.max(1, Math.round(+startPage || 1));
-  // [alpha.97 ข้อ 11] ไม่มีข้อยกเว้นเรื่อง "หน้าแรก" อีกแล้ว — หน้าเนื้อเรื่องมีเลขทุกหน้า
-  return String(start + i - 1) + (pn.suffix || '');
+  const no = start + i - 1;
+  // [alpha.103 ข้อ 4] ข้ามเฉพาะ "หน้าที่เลขจริงเป็น 1" — ไม่ใช่ "หน้าแรกของไฟล์"
+  // (ฉากที่ตั้งเลขเริ่มต้นไว้ 5 หน้าแรกของมันคือหน้า 5 ต้องมีเลขตามปกติ)
+  if (no === 1 && pn.firstPage === false) return '';
+  return String(no) + (pn.suffix || '');
 }
 
 // ───────── ค่าตั้งต้นรวม + การผสานกับค่าที่ผู้ใช้ตั้ง ─────────
@@ -428,16 +479,42 @@ export function spCss(fmt) {
 }
 
 // ───────── 84. การจัดหน้า (pagination) ─────────
+/**
+ * ══ [alpha.103r ข้อ 1] ★★ ข้อความ "อย่างที่ตาเห็น" — ตัวพิมพ์ใหญ่ต้องวัดจากตัวใหญ่ ══
+ *
+ * ผู้ใช้ส่งภาพบทที่ตัวหนังสือไหลทะลุขอบล่างของแผ่นลงไปบนพื้นโต๊ะสองบรรทัด
+ *
+ * ต้นตอ: `caps` ของบทเป็น **การแสดงผลล้วน ๆ** (`text-transform:uppercase` — ตัวอักษรในไฟล์
+ * ยังเป็นตัวเล็กตามที่พิมพ์ ดูคอมเมนต์ข้อ 62 บั๊ก 11) แต่ตัววัดความกว้าง **วัดข้อความดิบ**
+ * → ชื่อตัวละคร/หัวฉาก/ทรานซิชันถูกวัดเป็นตัวเล็ก แล้วไปวาดเป็นตัวใหญ่ซึ่งกว้างกว่า
+ * (ฟอนต์สัดส่วนกว้างขึ้น ~10–15% · ฟอนต์ monospace ไม่ต่าง — จึงไม่มีใครเห็นบั๊กนี้
+ *  ตราบใดที่ยังใช้ Courier Prime ล้วน ๆ) → จอตัดบรรทัดได้มากกว่าที่โมเดลนับ
+ * = หน้าล้นทีละ 1–2 บรรทัด และ **PDF ก็ผิดแบบเดียวกัน** (pdf-generator วาดตัวใหญ่
+ *   แต่ตัดบรรทัดจากตัวเล็ก)
+ *
+ * ★ ปลอดภัยกับการหั่นข้อความ: เราคืน "ดัชนี" ที่ชี้กลับไปยังข้อความต้นฉบับเสมอ จึงใช้ตัวใหญ่
+ * ก็ต่อเมื่อความยาวเท่าเดิมเป๊ะ (ß→SS · ﬁ→FI ทำให้ยาวขึ้น — เคสพวกนั้นถอยไปวัดของเดิม)
+ */
+export function displayText(text, caps) {
+  const s = String(text ?? '');
+  if (!caps) return s;
+  const up = s.toUpperCase();
+  return up.length === s.length ? up : s;
+}
+
 /** จำนวนบรรทัดที่ข้อความหนึ่งบล็อกกินจริง เมื่อกว้าง width นิ้ว */
-export function wrapLines(text, widthIn, cpi = CHARS_PER_INCH) {
+export function wrapLines(text, widthIn, cpi = CHARS_PER_INCH, caps = false, style = null) {
   // [alpha.82] วัดจากความกว้างจริงของฟอนต์ (ถ้าติดตั้งตัววัดไว้) ไม่ใช่กริดตัวอักษรต่อนิ้ว
   // — `cpi` เหลือไว้เป็นทางสำรองตอนยังไม่มีตัววัด (เทสด้วย node / ก่อนฟอนต์พร้อม)
   // ตัวตัดบรรทัดเป็นตัวเดียวกับที่ PDF ใช้ จึงได้จำนวนบรรทัดตรงกันโดยโครงสร้าง
-  return wrapText(text, num(widthIn, 6), { kind: 'sp', cpi });
+  return wrapText(displayText(text, caps), num(widthIn, 6),
+                  { kind: 'sp', cpi, bold: !!(style && style.bold), italic: !!(style && style.italic) });
 }
 /** บรรทัดจริง ๆ ของบล็อกหนึ่ง (ตัวเดียวกับที่ wrapLines นับ) */
-export function wrapScriptLines(text, widthIn, cpi = CHARS_PER_INCH) {
-  return wrapLineStrings(text, num(widthIn, 6), { kind: 'sp', cpi });
+export function wrapScriptLines(text, widthIn, cpi = CHARS_PER_INCH, caps = false, style = null) {
+  return wrapLineStrings(displayText(text, caps), num(widthIn, 6),
+                         { kind: 'sp', cpi, bold: !!(style && style.bold),
+                           italic: !!(style && style.italic) });
 }
 
 /**
@@ -523,15 +600,49 @@ export function paginate(blocks, opts = {}) {
     const before = cur.length && b.split !== 'tail' && !prevBlank
       ? Math.round(num(c.linesBefore, 10) / 10) : 0;
     prevBlank = false;
-    const body = wrapLines(b.text, c.width);
+    // [alpha.103r ข้อ 1] element ที่บังคับตัวพิมพ์ใหญ่ต้องนับบรรทัดจากตัวใหญ่
+    const caps = elementCaps(fmt, b.el, 'screen');
+    // [alpha.104r] ตัวหนา/ตัวเอียงของ element ก็เป็นความกว้างจริงที่ต้องวัดด้วย
+    const stEl = (fmt.styles[b.el] || fmt.styles.action).screen;
+    // [alpha.104r] ★ ความกว้างที่ "วาดจริง" ไม่ใช่ค่าดิบในตาราง (ทรานซิชันออกถูกหนีบ 2→1.5)
+    const wEl = elementWidthIn(fmt, b.el);
+    const body = wrapLines(b.text, wEl, CHARS_PER_INCH, caps, stEl);
     const need = before + body;
     const free = perPage - used;
 
+    // ── [alpha.102 บั๊ก 2] ★ หัวเรื่องห้ามค้างท้ายหน้าโดยไม่มีเนื้อตาม ──
+    // ใส่ลงหน้านี้ได้ก็จริง แต่ถ้าที่เหลือไม่พอให้เนื้อของมันตามมาอย่างน้อย keepSceneWithNext
+    // บรรทัด ก็ต้องยกไปขึ้นหน้าใหม่ทั้งก้อน (เงื่อนไข `cur.length` กันวนไม่จบ — อยู่ต้นหน้าว่าง ๆ
+    // อยู่แล้วก็ไม่มีที่ไหนให้ยกไปอีก · ตั้งค่าเป็น 0 = ปิดกฎนี้)
+    const keepN = Math.max(0, Math.round(num(R.keepSceneWithNext, 0)));
+    if (need <= free && keepN > 0 && cur.length && KEEP_WITH_NEXT.has(b.el)
+        && free - need < keepN && hasContentAfter(list, i)) {
+      pushPage();
+      i--;                         // คิดใหม่บนหน้าใหม่ (`before` จะกลายเป็น 0 เองเพราะ cur ว่าง)
+      continue;
+    }
     if (need <= free) { addBlock({ ...b, lines: body }); used += need; continue; }
 
     // ── ไม่พอ: ตัดสินใจตามชนิด ──
+    //
+    // ══ [alpha.103 ข้อ 3] ★★ หั่นได้ทุกชนิด — "ให้อิสระแบบ Fade In" ══
+    //
+    // ผู้ใช้: *"ใน mode บทหนัง block ที่ไม่ใช่บทพูดหรือบรรยาย เมื่อพิมพ์เกินหน้า
+    //           จะไม่ยอมตัดบรรทัด · เราไป test ใน Fade In แล้ว block พวกนี้อนุญาตให้ตัดหน้าได้"*
+    //
+    // ต้นตอเป็นบรรทัดเดียว: เงื่อนไขเดิม `if ((isDlg || isAct) && …)` เป็น **whitelist**
+    // ที่มีแค่ dialogue/action/note/summary · ชนิดอื่น (หัวฉาก · วงเล็บ · ทรานสิชั่น ·
+    // ฉากย่อย · สลับฉาก · shot · ตอน · โครงเรื่อง 1–3 · raw …) ตกลงเส้นทาง
+    // "ยกทั้งก้อนไปหน้าใหม่" เสมอ — แล้วถ้าก้อนนั้นยาวเกินหนึ่งหน้า มันก็กองอยู่หน้าเดียว
+    // ทั้งก้อน (ดูด่านสุดท้ายท้ายบล็อกนี้) = หน้าสูงเท่าไรก็ได้ ล้นแผ่นออกไปบนพื้นโต๊ะ
+    //
+    // ★ **ไม่ต้องมีข้อยกเว้นรายชนิดเลย** — เกณฑ์ widow/orphan ที่มีอยู่แล้วทำหน้าที่นั้นให้เอง:
+    //   ต้องเหลือท้ายหน้า ≥ `minBot` (2) และยกไปหน้าใหม่ ≥ `minTop` (3)
+    //   → บล็อกที่สั้นกว่า 5 บรรทัด (หัวฉาก · ชื่อตัวละคร · ทรานสิชั่น ซึ่งยาว 1–2 บรรทัด)
+    //     ได้ `canBottom = body - minTop` ติดลบ จึงไม่มีทางถูกหั่นกลางโดยอัตโนมัติอยู่ดี
+    // กฎ "ห้ามค้างท้ายหน้าเดี่ยว ๆ" (KEEP_WITH_NEXT) ก็ยังทำงานเหมือนเดิม เพราะมันตัดสิน
+    // ไปแล้วตั้งแต่ก่อนถึงตรงนี้ (ตอนที่บล็อก *ใส่ลงหน้านี้ได้* แต่ไม่มีที่ให้เนื้อตาม)
     const isDlg = b.el === 'dialogue';
-    const isAct = b.el === 'action' || b.el === 'note' || b.el === 'summary';
     const minBot = isDlg ? R.minDialogueLinesAtBottom : R.minActionLinesAtBottom;
     const minTop = isDlg ? R.minDialogueLinesAtTop : R.minActionLinesAtTop;
 
@@ -566,9 +677,9 @@ export function paginate(blocks, opts = {}) {
     // ให้ท้ายเหลือครบ minTop พอดี แล้วค่อยตัด — กฎ widow/orphan ยังได้ตามเดิมและไม่มีหน้าล้น
     const canBottom = Math.min(free - before - moreLines, body - Math.max(1, minTop));
 
-    if ((isDlg || isAct) && canBottom >= minBot) {
+    if (canBottom >= minBot) {
       // แบ่งครึ่ง: ท้ายหน้าใส่ (MORE) · ต้นหน้าใหม่ทวนชื่อ + (cont'd)
-      const head = splitText(b.text, c.width, canBottom);
+      const head = splitText(b.text, wEl, canBottom, caps, stEl);
       // [alpha.84 ข้อ 2] **จำ "จุดตัด" เป็นระยะตัวอักษรจากต้นบล็อกเดิม**
       // ท่อนหางถือ `pos` ของบล็อกต้นฉบับ (มันคือย่อหน้าเดียวกัน) — ถ้าไม่จำ cut ไว้
       // ตัววาดฝั่ง ProseMirror จะเอาเส้นคั่นหน้า/(MORE)/ชื่อ+(cont'd) ไปแปะที่ *ต้นบล็อก*
@@ -611,6 +722,26 @@ export function paginate(blocks, opts = {}) {
     // (เส้นทางที่หั่นครึ่งแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.83 แต่เส้นทางนี้ถูกลืม)
     // `opened` กันกรณีอยู่ต้นหน้าว่าง ๆ อยู่แล้ว — ป้อนกลับก็ไม่มีอะไรดีขึ้น มีแต่จะวนไม่จบ
     if (opened && body > perPage - used) { list[i] = b; i--; continue; }
+    // ══ [alpha.103 ข้อ 3] ★ ด่านสุดท้าย: อยู่ต้นหน้าแล้วแต่ยังยาวเกินทั้งหน้า ══
+    // เกิดได้เมื่อเกณฑ์ที่ผู้ใช้ตั้งเองหั่นไม่ได้ (เช่น `minLinesAtTop` สูงกว่าความจุหนึ่งหน้า
+    // → `canBottom` ติดลบตลอด) · เดิมบรรทัดถัดไปยัดทั้งก้อนลงหน้าเดียวโดยไม่ตรวจซ้ำ
+    // = แผ่นสูงเท่าไรก็ได้ · ยอมหั่นดิบตรงขอบหน้าดีกว่า — จำนวนหน้าจึงเป็นจริงเสมอ
+    let freeNow = perPage - used;
+    if (freeNow < 1 && cur.length) { pushPage(); freeNow = perPage; }
+    const before2 = cur.length && b.split !== 'tail' && !prevBlank
+      ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    const take = Math.max(1, freeNow - before2);
+    if (body > take) {
+      const head = splitText(b.text, wEl, take, caps, stEl);
+      const at = String(b.text ?? '').length - String(head.rest ?? '').length;
+      addBlock({ ...b, text: head.head, lines: take, split: 'head',
+                 contIn: !!b.contIn, contOut: true });
+      pushPage();
+      list[i] = { ...b, text: head.rest, split: 'tail', contIn: true, contOut: false,
+                  cut: num(b.cut, 0) + at };
+      i--;
+      continue;
+    }
     addBlock({ ...b, lines: body });
     used += body;
   }
@@ -673,9 +804,12 @@ export function annotateContinued(pages, fmt) {
  * ที่ต้อง "ตรงกับอีกสองชุดเป๊ะ" — หัวที่ตัดมายาวไม่เท่าที่หน้าจองไว้เมื่อไหร่ ข้อความก็ล้นหน้า
  * · และตัดจาก **ข้อความต้นฉบับ** ตรง ๆ จึงไม่มีช่องว่างแปลกปลอมโผล่เข้ามาเหมือนตอน join เอง
  */
-export function splitText(text, widthIn, n) {
+export function splitText(text, widthIn, n, caps = false, style = null) {
   const s = String(text ?? '');
-  const cuts = wrapCuts(s, num(widthIn, 6), { kind: 'sp' });
+  // [alpha.103r ข้อ 1] วัดจาก "ตัวที่ตาเห็น" แต่หั่นจากข้อความต้นฉบับ (ดัชนีตรงกันเสมอ)
+  const cuts = wrapCuts(displayText(s, caps), num(widthIn, 6),
+                        { kind: 'sp', bold: !!(style && style.bold),
+                          italic: !!(style && style.italic) });
   if (!cuts.length) return { head: s, rest: '' };
   const k = Math.max(1, Math.min(Math.round(n) || 1, cuts.length));
   const at = cuts[k - 1];
@@ -706,6 +840,29 @@ export function isMidBlock(b) { return !!b && num(b.cut, 0) > 0; }
  * ระยะเยื้องของ element หนึ่ง เทียบจาก **ขอบพื้นที่พิมพ์** (นิ้ว) — ตัวเดียวกับที่ spCss ใช้
  * ใช้ชดเชยตำแหน่งของเครื่องหมายที่ถูกวาดไว้ *ข้างใน* บล็อก (มันสืบระยะเยื้องของบล็อกมาด้วย)
  */
+/**
+ * ══ [alpha.104r] ★★ ความกว้างที่ element นี้ **ถูกวาดจริง** (นิ้ว) ══
+ *
+ * ผู้ใช้: *"ส่วนบทภาพยนตร์ หน้ายังเหลื่อม ตามรูป"* — และต้นตออยู่ตรงนี้
+ *
+ * `spCss()` หนีบความกว้างไม่ให้ล้นพื้นที่พิมพ์มาตั้งแต่ต้น (คอมเมนต์ในนั้นอธิบายไว้ครบ)
+ * แต่ **ตัวจัดหน้าใช้ `c.width` ดิบ ๆ** ไม่เคยหนีบตาม → สองที่คิดคนละความกว้าง
+ *
+ * มีอยู่ชนิดเดียวที่โดน: **ทรานซิชันออก** (`indent 6.0 + width 2.0 = 8.0` ซึ่งเลยขอบขวา
+ * ของพื้นที่พิมพ์ที่ 7.5) → CSS วาดที่ **1.5 นิ้ว** แต่โมเดลนับบรรทัดที่ **2.0 นิ้ว**
+ * = จอต้องการบรรทัดมากกว่าที่โมเดลจองไว้ราวหนึ่งในสาม แล้วหน้าก็ล้นสะสมไปเรื่อย ๆ
+ * (วัดจริงในโปรแกรม: โมเดล 400 บรรทัด · จอวาด 467)
+ *
+ * ตั้งแต่นี้ทั้งจอ · โมเดล · PDF อ่านความกว้างจากฟังก์ชันตัวเดียวกัน
+ */
+export function elementWidthIn(fmt, el) {
+  const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+  const c = f.elements[el] || f.elements.action;
+  const tw = textWidth(f.paper, f.margins);
+  const ml = Math.max(0, +(num(c.indent, f.margins.left) - f.margins.left).toFixed(4));
+  return Math.max(0.3, Math.min(num(c.width, 6), +(tw - ml).toFixed(4)));
+}
+
 export function elementIndentIn(fmt, el) {
   const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
   const c = f.elements[el] || f.elements.action;

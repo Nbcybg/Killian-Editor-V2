@@ -142,9 +142,12 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
         T.exportPageNumberFmt({}).pageNumbers.show === false);
   check('ค่าว่าง/undefined ไม่พัง',
         typeof T.exportPageNumberFmt(null).pageNumbers.show === 'boolean');
-  // [alpha.97 ข้อ 11] ★ ผูกไว้กันสวิตช์ที่ถอดออกแล้วแอบกลับมา
-  check('[97-11] ตัวส่งออกไม่มีคีย์ firstPage แล้ว',
-        !('firstPage' in T.exportPageNumberFmt({}).pageNumbers));
+  // [alpha.103 ข้อ 4] ★ สวิตช์ "ใส่เลขบนหน้าแรก" กลับมาแล้ว — ตัวส่งออกต้อง **ส่งต่อค่าตามที่ตั้ง**
+  // (ห้ามบังคับทับเหมือน .81r3/.82 อีก ไม่งั้นจอกับ PDF ได้เลขคนละชุด)
+  check('[103-4] ตัวส่งออกส่งต่อค่า firstPage ที่ผู้ใช้ตั้ง',
+        T.exportPageNumberFmt({ pageNumbers: { firstPage: false } }).pageNumbers.firstPage === false
+        && T.exportPageNumberFmt({}).pageNumbers.firstPage === true,
+        JSON.stringify(T.exportPageNumberFmt({}).pageNumbers));
 }
 
 // ═══════════ ชื่อไฟล์ที่เสนอ ═══════════
