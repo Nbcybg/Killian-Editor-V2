@@ -6023,3 +6023,45 @@ ui.tree.snapCountFail,Could not count versions
 ui.tree.trashEmptyAlready,The trash is already empty
 ui.tree.trashSettings,Auto-empty schedule (project settings)
 ui.tree.versionCount,{0} versions kept
+ui.shortcode.yes,Yes
+ui.shortcode.no,No
+ui.shortcode.dlanguage,Current project language code (th/en)
+ui.shortcode.dappversion,App version number
+ui.shortcode.demotion,Scene emotion
+ui.shortcode.dconflict,Scene conflict
+ui.shortcode.dnote,Scene note
+ui.shortcode.dfuturenote,Note to future self
+ui.shortcode.dstorydate,In-story date of the scene (not the real-world date)
+ui.shortcode.dcolor,Scene color
+ui.shortcode.dflag,Whether the scene is pinned
+ui.shortcode.dlocked,Whether the scene is locked
+ui.shortcode.dchapterstatus,Chapter status
+ui.shortcode.dchapteract,Chapter act
+ui.shortcode.dchapterdate,Chapter date
+ui.shortcode.dchapterflag,Whether the chapter is marked important
+ui.shortcode.dtotalwords,Total word count across the project
+ui.shortcode.dtotalscenes,Total scene count across the project
+ui.shortcode.dtotalchapters,Total chapter count across the project
+ui.shortcode.dtotalbooks,Total book count across the project
+ui.shortcode.dtotalcharacters,Number of characters in the Wiki
+ui.shortcode.dtotallocations,Number of locations in the Wiki
+ui.shortcode.ddailygoal,Daily word-count goal
+ui.shortcode.dprojectgoal,Project-wide word-count goal
+ui.shortcode.dprogress,Progress toward the goal (%)
+ui.shortcode.dcommentcount,Number of comments on this file
+ui.shortcode.dtime,Current time (HH:MM)
+ui.shortcode.dyear,Current year
+ui.shortcode.dweekday,Current day of the week
+ui.shortcode.dfield,"Field value of the entity being edited, e.g. [field:Age]"
+ui.shortcode.dentity,Name of the Wiki entity being edited
+ui.shortcode.dentitycat,Category of the entity being edited
+ui.shortcode.dentitysummary,Entity summary
+ui.shortcode.dentitytags,Entity tags
+ui.shortcode.drelation,"Names related by this role, e.g. [relation:Father]"
+ui.shortcode.needField,"Click into a text field first, then insert a shortcode"
+ui.shortcode.liveCtxFail,Could not read data for the shortcode context
+ui.shortcode.statsScanFail,Could not compute project statistics
+ui.aiChatPanel.insertShortcode,Insert shortcode (resolved immediately)
+ui.cmtComment.insertShortcode,Insert shortcode (resolved immediately)
+ui.wiki.insertShortcode,Shortcode
+ui.wiki.insertShortcodeHint,Insert a shortcode (own fields · relationships · other Wiki data · project stats) into the focused field

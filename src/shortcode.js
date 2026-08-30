@@ -19,6 +19,17 @@
 //     ถูกตีความเป็นโค้ดโดยไม่ตั้งใจ)
 //
 // ไฟล์นี้ไม่แตะ DOM/fs/เวลา — วันที่รับผ่าน `ctx.now` เพื่อให้เทสคาดเดาผลได้
+//
+// ═══ [alpha.121] ขยายให้ครอบคลุม Wiki/เอนทิตี้/แชท AI/คอมเมนต์ ═══
+// ผู้ใช้: *"ทำ shortcode ให้เยอะและละเอียดที่สุด ครอบคลุมทุกหัวข้อ ทั้ง wiki ทั้ง entities
+//         ทั้ง ai chat ทั้ง comment"*
+// เดิมทะเบียนมี 16 ตัว ใช้ได้จริงแค่ในเวิร์กโฟลว์ส่งออก (sceneContext) — Wiki/แชท/คอมเมนต์
+// ไม่มีทางเข้าถึงเลย เพิ่มรอบนี้:
+//   - โค้ดใหม่ 33 ตัว (สถานะ/องก์/วันที่ของบท · อารมณ์/ขัดแย้ง/โน้ต/สี/ปักหมุด/ล็อกของฉาก ·
+//     สถิติโปรเจกต์รวม · เวลา/วัน/ปี · ฟิลด์-หมวด-เรื่องย่อ-แท็ก-ความสัมพันธ์ของเอนทิตี้ Wiki)
+//   - `entityContext()` คู่ขนานกับ `sceneContext()` — บริบทของเอนทิตี้ Wiki หนึ่งใบ
+//   - จุดเชื่อมกับ UI จริง (แผง Wiki/แชท AI/คอมเมนต์) อยู่ที่ `liveShortcodeContext()`
+//     ใน app.js (ไฟล์นี้ยังบริสุทธิ์ 100% เหมือนเดิม ไม่แตะ DOM/kapi)
 
 import { t } from './i18n.js';
 
@@ -54,7 +65,7 @@ export function parseArgs(rest) {
 // ────────────────────────────────────────────────────────────────
 const str = (v) => (v === undefined || v === null ? '' : String(v));
 
-/** วันที่ในรูปแบบที่ขอ — `iso` (2026-08-30) · `year` · ไม่ระบุ = ตามเครื่อง */
+/** วันที่ในรูปแบบที่ขอ — `iso` (2026-08-30) · `year` · `time` · `weekday` · ไม่ระบุ = ตามเครื่อง */
 export function formatDate(d, fmt) {
   // ไม่ได้ส่งวันที่มา = ไม่มีวันที่ **ไม่ใช่** 1 ม.ค. 1970 (`new Date(0)`) — เคยพลาดตรงนี้ในเทส
   if (d === undefined || d === null || d === '') return '';
@@ -64,8 +75,12 @@ export function formatDate(d, fmt) {
   if (fmt === 'iso') return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
   if (fmt === 'year') return String(dt.getFullYear());
   if (fmt === 'time') return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
+  if (fmt === 'weekday') { try { return dt.toLocaleDateString(undefined, { weekday: 'long' }); } catch { return ''; } }
   try { return dt.toLocaleDateString(); } catch { return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`; }
 }
+
+/** boolean → ป้ายที่แปลแล้ว (ใช่/ไม่ใช่) — ใช้กับ flag/locked/chapterflag */
+const yn = (v) => (v ? t('ui.shortcode.yes') : t('ui.shortcode.no'));
 
 // **คำอธิบายเขียนเป็น `t('คีย์ตรง ๆ')` ในตาราง ห้ามต่อสตริง** — ประตูกันพลาดของระบบภาษา
 // (`test/i18n-keys.test.cjs`) กวาดหา `t('…')` ด้วย regex · `t('ui.shortcode.d' + name)`
@@ -76,7 +91,9 @@ export const SHORTCODES = [
   { name: 'author',   group: 'work', label: t('ui.shortcode.dauthor'),  get: (c) => str(c.author) },
   { name: 'project',  group: 'work', label: t('ui.shortcode.dproject'), get: (c) => str(c.project) },
   { name: 'book',     group: 'work', label: t('ui.shortcode.dbook'),    get: (c) => str(c.book) },
-  // ── ที่ที่โค้ดนี้ยืนอยู่ ──
+  { name: 'language',  group: 'work', label: t('ui.shortcode.dlanguage'),  get: (c) => str(c.language) },
+  { name: 'appversion', group: 'work', label: t('ui.shortcode.dappversion'), get: (c) => str(c.appVersion) },
+  // ── ที่ที่โค้ดนี้ยืนอยู่ (บท/ฉาก) ──
   { name: 'chapter',  group: 'place', label: t('ui.shortcode.dchapter'),   get: (c) => str(c.chapter) },
   { name: 'scene',    group: 'place', label: t('ui.shortcode.dscene'),     get: (c) => str(c.scene) },
   { name: 'sceneno',  group: 'place', label: t('ui.shortcode.dsceneno'),   get: (c) => str(c.sceneNo) },
@@ -87,18 +104,61 @@ export const SHORTCODES = [
   { name: 'tags',     group: 'place', label: t('ui.shortcode.dtags'),
     get: (c, sc) => (Array.isArray(c.tags) ? c.tags : String(c.tags || '').split(','))
       .map((x) => String(x).trim()).filter(Boolean).join(sc.opts.sep || ', ') },
-  // ── ตัวเลข ──
+  { name: 'emotion',   group: 'place', label: t('ui.shortcode.demotion'),   get: (c) => str(c.emotion) },
+  { name: 'conflict',  group: 'place', label: t('ui.shortcode.dconflict'),  get: (c) => str(c.conflict) },
+  { name: 'note',      group: 'place', label: t('ui.shortcode.dnote'),      get: (c) => str(c.note) },
+  { name: 'futurenote', group: 'place', label: t('ui.shortcode.dfuturenote'), get: (c) => str(c.futureNote) },
+  { name: 'storydate', group: 'place', label: t('ui.shortcode.dstorydate'), get: (c) => str(c.storyDate) },
+  { name: 'color',     group: 'place', label: t('ui.shortcode.dcolor'),     get: (c) => str(c.color) },
+  { name: 'flag',      group: 'place', label: t('ui.shortcode.dflag'),      get: (c) => str(c.flag) },
+  { name: 'locked',    group: 'place', label: t('ui.shortcode.dlocked'),    get: (c) => str(c.locked) },
+  { name: 'chapterstatus', group: 'place', label: t('ui.shortcode.dchapterstatus'), get: (c) => str(c.chapterStatus) },
+  { name: 'chapteract',    group: 'place', label: t('ui.shortcode.dchapteract'),    get: (c) => str(c.chapterAct) },
+  { name: 'chapterdate',   group: 'place', label: t('ui.shortcode.dchapterdate'),   get: (c) => str(c.chapterDate) },
+  { name: 'chapterflag',   group: 'place', label: t('ui.shortcode.dchapterflag'),   get: (c) => str(c.chapterFlag) },
+  // ── ตัวเลข (ฉากปัจจุบัน + สถิติรวมทั้งโปรเจกต์) ──
   { name: 'words',    group: 'num', label: t('ui.shortcode.dwords'), get: (c) => str(c.words) },
   { name: 'chars',    group: 'num', label: t('ui.shortcode.dchars'), get: (c) => str(c.chars) },
   { name: 'pages',    group: 'num', label: t('ui.shortcode.dpages'), get: (c) => str(c.pages) },
+  { name: 'totalwords',      group: 'num', label: t('ui.shortcode.dtotalwords'),      get: (c) => str(c.totalWords) },
+  { name: 'totalscenes',     group: 'num', label: t('ui.shortcode.dtotalscenes'),     get: (c) => str(c.totalScenes) },
+  { name: 'totalchapters',   group: 'num', label: t('ui.shortcode.dtotalchapters'),   get: (c) => str(c.totalChapters) },
+  { name: 'totalbooks',      group: 'num', label: t('ui.shortcode.dtotalbooks'),      get: (c) => str(c.totalBooks) },
+  { name: 'totalcharacters', group: 'num', label: t('ui.shortcode.dtotalcharacters'), get: (c) => str(c.totalCharacters) },
+  { name: 'totallocations',  group: 'num', label: t('ui.shortcode.dtotallocations'),  get: (c) => str(c.totalLocations) },
+  { name: 'dailygoal',       group: 'num', label: t('ui.shortcode.ddailygoal'),       get: (c) => str(c.dailyGoal) },
+  { name: 'projectgoal',     group: 'num', label: t('ui.shortcode.dprojectgoal'),     get: (c) => str(c.projectGoal) },
+  { name: 'progress',        group: 'num', label: t('ui.shortcode.dprogress'),        get: (c) => str(c.progress) },
+  { name: 'commentcount',    group: 'num', label: t('ui.shortcode.dcommentcount'),    get: (c) => str(c.commentCount) },
   // ── เวลา ──
   { name: 'date',     group: 'time', label: t('ui.shortcode.ddate'),
     get: (c, sc) => formatDate(c.now, sc.opts.fmt || sc.arg) },
-  // ── ข้อมูลจาก Wiki (ใช้ตารางเดียวกับ {{ตัวแปร}} — ไม่มีแหล่งข้อมูลซ้อน) ──
-  { name: 'wiki',     group: 'wiki', label: t('ui.shortcode.dwiki'),
+  { name: 'time',     group: 'time', label: t('ui.shortcode.dtime'),    get: (c) => formatDate(c.now, 'time') },
+  { name: 'year',     group: 'time', label: t('ui.shortcode.dyear'),    get: (c) => formatDate(c.now, 'year') },
+  { name: 'weekday',  group: 'time', label: t('ui.shortcode.dweekday'), get: (c) => formatDate(c.now, 'weekday') },
+  // ── ข้อมูลจาก Wiki / เอนทิตี้ (ใช้ตารางเดียวกับ {{ตัวแปร}} — ไม่มีแหล่งข้อมูลซ้อน) ──
+  // `needsArg: true` = ต้องมีเป้าหมายถึงมีความหมาย (เมนู "แทรกค่าจริงทันที" ของ app.js
+  // ใช้ธงนี้ตัดสินว่าต้องถามชื่อ/บทบาทก่อนค่อยแทน ไม่ใช่แทรกค่าว่างเงียบ ๆ)
+  { name: 'wiki',     group: 'wiki', label: t('ui.shortcode.dwiki'), needsArg: true,
     get: (c, sc) => str((c.vars || {})[sc.arg]) },
-  { name: 'var',      group: 'wiki', label: t('ui.shortcode.dvar'),
+  { name: 'var',      group: 'wiki', label: t('ui.shortcode.dvar'), needsArg: true,
     get: (c, sc) => str((c.vars || {})[sc.arg]) },
+  // ค่าฟิลด์ของ "เอนทิตี้ที่กำลังแก้อยู่เอง" — ไม่ต้องพิมพ์ชื่อนำหน้าเหมือน [wiki:ชื่อ.ฟิลด์]
+  { name: 'field',    group: 'wiki', label: t('ui.shortcode.dfield'), needsArg: true,
+    get: (c, sc) => {
+      const f = c.entityFields || {};
+      if (sc.arg in f) return str(f[sc.arg]);
+      const want = String(sc.arg || '').trim().toLowerCase();
+      for (const k of Object.keys(f)) if (k.toLowerCase() === want) return str(f[k]);
+      return '';
+    } },
+  { name: 'entity',        group: 'wiki', label: t('ui.shortcode.dentity'),        get: (c) => str(c.entity) },
+  { name: 'entitycat',     group: 'wiki', label: t('ui.shortcode.dentitycat'),     get: (c) => str(c.entityCat) },
+  { name: 'entitysummary', group: 'wiki', label: t('ui.shortcode.dentitysummary'), get: (c) => str(c.entitySummary) },
+  { name: 'entitytags',    group: 'wiki', label: t('ui.shortcode.dentitytags'),    get: (c) => str(c.entityTags) },
+  // ความสัมพันธ์ตามบทบาท — `[relation:พ่อ]` คืนชื่อทุกคนที่ผูกไว้ด้วยบทบาทนั้น คั่นด้วยจุลภาค
+  { name: 'relation', group: 'wiki', label: t('ui.shortcode.drelation'), needsArg: true,
+    get: (c, sc) => ((c.entityRelations || {})[String(sc.arg || '').trim().toLowerCase()] || []).join(', ') },
 ];
 
 export const shortcodeDef = (name) =>
@@ -175,22 +235,84 @@ export function expandShortcodesInfo(text, ctx = {}, o = {}) {
   return { text: out, used, unknown };
 }
 
+// 'Outline' = สถานะเริ่มต้นที่ยังไม่ได้ตั้งจริง (ตรงกับความหมายเดียวกันทั่วทั้งแอป —
+// filterTree/buildTree/updateSummaryBar ก็ปฏิบัติกับค่านี้เหมือนกัน "ยังไม่ตั้ง") → ไม่ควรโผล่
+// เป็นข้อความ "Outline" ตรง ๆ ในเอกสารที่ส่งออก
+const statusOf = (s) => (s && s !== 'Outline') ? String(s) : '';
+
+/** ส่วนร่วมของทุกบริบท — ข้อมูลระดับ "งาน" ที่มีความหมายไม่ว่าจะยืนอยู่ตรงไหน */
+function workContext(model = {}, now = null) {
+  return {
+    title: model.title || '', author: model.author || '',
+    project: model.project || model.title || '', book: model.book || '',
+    language: model.language || '', appVersion: model.appVersion || '',
+    now: now || null,
+  };
+}
+
+/** ส่วนร่วมของทุกบริบท — สถิติรวมทั้งโปรเจกต์ (ผู้เรียกส่งมา ไฟล์นี้ไม่แตะดิสก์เอง) */
+function statsContext(stats = {}) {
+  const total = stats.totalWords, goal = stats.projectGoal;
+  return {
+    totalWords: stats.totalWords ?? '', totalScenes: stats.totalScenes ?? '',
+    totalChapters: stats.totalChapters ?? '', totalBooks: stats.totalBooks ?? '',
+    totalCharacters: stats.totalCharacters ?? '', totalLocations: stats.totalLocations ?? '',
+    dailyGoal: stats.dailyGoal ?? '', projectGoal: stats.projectGoal ?? '',
+    progress: (Number.isFinite(total) && goal) ? String(Math.min(100, Math.round(total / goal * 100))) : '',
+    commentCount: stats.commentCount ?? '',
+  };
+}
+
 /**
  * บริบทของ "ฉากหนึ่งฉากในเล่มหนึ่งเล่ม" — จุดเดียวที่รู้ว่าโมเดลส่งออกหน้าตาแบบไหน
  * แยกออกมาเป็นฟังก์ชันเพื่อให้ทั้งเวิร์กโฟลว์ส่งออกและเมนูแทรกในตัวแก้ไขใช้ตัวเดียวกัน
+ * `stats` (ถ้ามี) = สถิติรวมทั้งโปรเจกต์ — ดู `statsContext()`
  */
 export function sceneContext({ model = {}, chapter = null, scene = null,
-                               chapterNo = 0, sceneNo = 0, vars = {}, now = null } = {}) {
+                               chapterNo = 0, sceneNo = 0, vars = {}, now = null, stats = {} } = {}) {
   const sc = scene || {};
   const ch = chapter || {};
   return {
-    title: model.title || '', author: model.author || '', project: model.project || model.title || '',
+    ...workContext(model, now),
     book: model.book || ch.book || '',
     chapter: ch.title || '', chapterNo: chapterNo || '',
+    chapterStatus: statusOf(ch.status), chapterAct: ch.act || '', chapterDate: ch.date || '',
+    chapterFlag: yn(ch.isFavorite),
     scene: sc.title || '', sceneNo: sceneNo || '',
-    status: sc.status || '', pov: sc.pov || '', synopsis: sc.synopsis || '',
+    status: statusOf(sc.status), pov: sc.pov || '', synopsis: sc.synopsis || '',
     tags: sc.tags || [],
-    words: sc.words || 0, chars: sc.chars || 0, pages: model.pages || 0,
-    vars: vars || {}, now: now || null,
+    emotion: sc.emotion || '', conflict: sc.conflict || '', note: sc.note || '',
+    futureNote: sc.futureNote || '', storyDate: sc.storyDate || '',
+    color: sc.color || '', flag: yn(sc.flag), locked: yn(sc.locked),
+    // scenes.json เก็บจำนวนคำเป็น `wordCount` · โมเดลตอนคอมไพล์คำนวณสดเป็น `words` — รับได้ทั้งคู่
+    words: sc.words ?? sc.wordCount ?? 0, chars: sc.chars || 0, pages: model.pages || 0,
+    vars: vars || {},
+    ...statsContext(stats),
+  };
+}
+
+/**
+ * บริบทของ "เอนทิตี้ Wiki หนึ่งใบ" — คู่ขนานกับ `sceneContext()` แต่สำหรับหน้า Wiki/entity
+ * `entity` = JSON ของเอนทิตี้ (`{name, fields, customProperties, relationships, tags, summary}`)
+ * `catLabel` = ป้ายหมวดที่แปลแล้ว — ไฟล์นี้ไม่รู้จักตาราง i18n ของหมวด ผู้เรียกต้องส่งมาเอง
+ */
+export function entityContext({ model = {}, entity = null, cat = '', catLabel = '',
+                                vars = {}, stats = {}, now = null } = {}) {
+  const e = entity || {};
+  const fields = { ...(e.fields || {}), ...(e.customProperties || {}) };
+  const relations = {};
+  for (const r of e.relationships || []) {
+    const role = String(r.role || '').trim().toLowerCase();
+    if (!role) continue;
+    (relations[role] = relations[role] || []).push(r.target || '');
+  }
+  return {
+    ...workContext(model, now),
+    vars: vars || {},
+    entity: e.name || '', entityCat: catLabel || cat || '',
+    entitySummary: e.summary || '',
+    entityTags: Array.isArray(e.tags) ? e.tags.filter(Boolean).join(', ') : '',
+    entityFields: fields, entityRelations: relations,
+    ...statsContext(stats),
   };
 }

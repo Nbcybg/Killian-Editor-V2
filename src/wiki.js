@@ -228,6 +228,22 @@ export class WikiEditor {
       snapBtn.onclick = () => this.onSnapshot && this.onSnapshot();
       head.append(snapBtn);
     }
+    // [alpha.121] แทรกโค้ดสั้น (ค่าฟิลด์ของตัวเอง · ความสัมพันธ์ · ข้อมูลจาก Wiki อื่น ·
+    // สถิติโปรเจกต์ ฯลฯ) เป็นค่าจริงทันทีลงช่องที่โฟกัสอยู่ล่าสุด — หน้า Wiki ไม่มีขั้นตอน
+    // คอมไพล์ทีหลังเหมือนเอกสารนิยาย/บทหนัง จึงแทนค่าเลยแทนที่จะแทรก placeholder ค้าง
+    {
+      const scBtn = document.createElement('button');
+      // คลาสของตัวเอง (ไม่ใช้ .wiki-ver-btn ซ้ำกับ 3 ปุ่มบน) — เทสเดิม [10] นับปุ่มกลุ่มประวัติ/
+      // เวอร์ชัน/หาในดิสก์ตายตัวไว้ที่ 3 ตัว ปนกันแล้วเลขจะเพี้ยน · หน้าตายังเหมือนกันผ่าน CSS ร่วม
+      scBtn.className = 'wiki-sc-btn'; scBtn.innerHTML = iconHtml('bookmark', 14) + tt('ui.wiki.insertShortcode');
+      scBtn.title = tt('ui.wiki.insertShortcodeHint');
+      scBtn.onclick = async (e) => {
+        const { openResolvedShortcodeMenu, resolveWikiInsertTarget } = await import('./app.js');
+        const target = resolveWikiInsertTarget(p);
+        await openResolvedShortcodeMenu(e, target);
+      };
+      head.append(scBtn);
+    }
     // [alpha.58] หาไฟล์ในดิสก์ — เปิดโฟลเดอร์ของ .json นี้ใน File Explorer/Finder
     if (this.onReveal) {
       const revBtn = document.createElement('button');

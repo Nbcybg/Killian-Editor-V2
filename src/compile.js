@@ -422,8 +422,10 @@ export function runWorkflow(model0, workflow,
           let si = 0;
           for (const s of c.scenes) {
             si++;
+            // [alpha.121] model.book/language/appVersion/stats มาจาก buildDraftModel() แล้ว —
+            // sceneContext อ่าน model.book/.language/.appVersion เองจาก model ที่ส่งมาทั้งก้อน
             const ctx = sceneContext({ model, chapter: c, scene: s, chapterNo: ci, sceneNo: si,
-                                       vars: varCtx, now: shortcodeNow });
+                                       vars: varCtx, now: shortcodeNow, stats: model.stats });
             s.body = expandShortcodes(s.body || '', ctx);
             s.title = expandShortcodes(s.title || '', ctx);
           }

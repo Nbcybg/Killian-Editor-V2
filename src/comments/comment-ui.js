@@ -161,6 +161,15 @@ export async function renderCommentPanel(host) {
   const inp = el('textarea', 'k-cm-input');
   inp.placeholder = sel ? tr('cmt.placeholderSel', 'คอมเมนต์เกี่ยวกับข้อความที่เลือก…') : tr('cmt.placeholder', 'พิมพ์คอมเมนต์…');
   inp.rows = 2;
+  // [alpha.121] แทรกโค้ดสั้น (วันที่ · ชื่อบท/ฉาก · สถานะ ฯลฯ) เป็นค่าจริงทันที — คอมเมนต์ไม่มี
+  // ขั้นตอนคอมไพล์ทีหลังเหมือนเอกสารนิยาย/บทหนัง จึงแทนค่าเลยแทนที่จะแทรก placeholder ค้าง
+  const scB = el('button', 'k-cm-scbtn', '🏷');
+  scB.type = 'button';
+  scB.title = tt('ui.cmtComment.insertShortcode');
+  scB.onclick = async () => {
+    const { openResolvedShortcodeMenu } = await import('../app.js');
+    await openResolvedShortcodeMenu(null, inp);
+  };
   const addB = el('button', 'k-ok', tt('ui.cmtComment.add'));
   const doAdd = async () => {
     const text = inp.value.trim();
@@ -176,7 +185,7 @@ export async function renderCommentPanel(host) {
   addB.onclick = doAdd;
   // Enter = ส่ง · Shift+Enter = ขึ้นบรรทัดใหม่
   inp.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doAdd(); } };
-  row.append(inp, addB);
+  row.append(inp, scB, addB);
   foot.append(row);
   host.append(foot);
 

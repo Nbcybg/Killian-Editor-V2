@@ -138,5 +138,77 @@ const CTX = {
   check('sceneContext ไม่ส่งอะไรมาก็ไม่พัง', typeof S.sceneContext().title === 'string');
 }
 
+// ═══════════ [alpha.121] โค้ดใหม่ — ฉาก/บท/สถิติ/เวลา ═══════════
+{
+  const now = new Date(2026, 7, 30, 9, 5);   // อาทิตย์ 30 ส.ค. 2026 09:05
+  const ctx = S.sceneContext({
+    model: { title: 'ดาบเจ็ดสี', author: 'ท็อป', language: 'th', appVersion: '2.0.0-alpha.121' },
+    chapter: { title: 'บทเปิด', status: 'กำลังเขียน', act: 'I', date: '2026-01-01', isFavorite: true },
+    scene: { title: 'ตลาดยามเช้า', status: 'Outline', emotion: 'หวาดกลัว', conflict: 'พ่อค้าโกง',
+              note: 'จำ', futureNote: 'อย่าลืม', storyDate: 'ปีที่ 3', color: '#ff0000',
+              flag: true, locked: false, wordCount: 500 },
+    chapterNo: 1, sceneNo: 1, now,
+    stats: { totalWords: 12000, totalScenes: 40, totalChapters: 8, totalBooks: 2,
+             totalCharacters: 6, totalLocations: 3, dailyGoal: 500, projectGoal: 50000, commentCount: 4 },
+  });
+  check('language/appversion', S.expandShortcodes('[language]/[appversion]', ctx) === 'th/2.0.0-alpha.121');
+  check('★ สถานะ "Outline" (ยังไม่ตั้ง) ไม่โผล่เป็นตัวหนังสือ',
+        S.expandShortcodes('[status]', ctx) === '', JSON.stringify(ctx.status));
+  check('chapterstatus/chapteract/chapterdate ของบท',
+        S.expandShortcodes('[chapterstatus]|[chapteract]|[chapterdate]', ctx) === 'กำลังเขียน|I|2026-01-01');
+  check('chapterflag แปลเป็นใช่/ไม่ใช่', S.expandShortcodes('[chapterflag]', ctx) === 'ใช่');
+  check('emotion/conflict/note/futurenote/storydate/color',
+        S.expandShortcodes('[emotion]/[conflict]/[note]/[futurenote]/[storydate]/[color]', ctx)
+        === 'หวาดกลัว/พ่อค้าโกง/จำ/อย่าลืม/ปีที่ 3/#ff0000');
+  check('flag/locked แปลเป็นใช่/ไม่ใช่', S.expandShortcodes('[flag]|[locked]', ctx) === 'ใช่|ไม่ใช่');
+  check('words อ่านจาก wordCount ได้เมื่อไม่มี words',
+        S.expandShortcodes('[words]', ctx) === '500', ctx.words);
+  check('★ สถิติรวมทั้งโปรเจกต์', S.expandShortcodes(
+        '[totalwords]/[totalscenes]/[totalchapters]/[totalbooks]/[totalcharacters]/[totallocations]', ctx)
+        === '12000/40/8/2/6/3', JSON.stringify(ctx));
+  check('เป้าหมาย + ความคืบหน้าคำนวณถูก (12000/50000=24%)',
+        S.expandShortcodes('[dailygoal]/[projectgoal]/[progress]', ctx) === '500/50000/24');
+  check('commentcount', S.expandShortcodes('[commentcount]', ctx) === '4');
+  check('★ เวลา: time/year/weekday อ่านจาก now', S.expandShortcodes('[time]|[year]', ctx) === '09:05|2026');
+  check('weekday ไม่ระเบิด (ค่าขึ้นกับ locale ของเครื่องเทส จึงเช็คแค่ว่าไม่ใช่ค่าว่าง)',
+        S.expandShortcodes('[weekday]', ctx).length > 0);
+  check('sceneContext ไม่ส่ง stats มา → เลขว่างเปล่า ไม่ใช่ NaN/undefined',
+        S.expandShortcodes('[totalwords][progress]', S.sceneContext({})) === '');
+}
+
+// ═══════════ [alpha.121] entityContext — บริบทของเอนทิตี้ Wiki ═══════════
+{
+  const entity = {
+    name: 'โทระ', summary: 'นักดาบเร่ร่อน', tags: ['พระเอก', 'หัวร้อน'],
+    fields: { อายุ: '20', อาชีพ: 'นักดาบ' }, customProperties: { สี: 'แดง' },
+    relationships: [{ target: 'คัสซี่', role: 'คู่รัก' }, { target: 'ลูน่า', role: 'เพื่อน' },
+                    { target: 'นาซารีน่า', role: 'เพื่อน' }],
+  };
+  const ctx = S.entityContext({
+    model: { title: 'ดาบเจ็ดสี', author: 'ท็อป' },
+    entity, cat: 'characters', catLabel: 'ตัวละคร',
+    vars: { 'โทระ.อายุ': '20' }, stats: { totalCharacters: 6 },
+  });
+  check('★ entity/entitycat/entitysummary/entitytags',
+        S.expandShortcodes('[entity]|[entitycat]|[entitysummary]|[entitytags]', ctx)
+        === 'โทระ|ตัวละคร|นักดาบเร่ร่อน|พระเอก, หัวร้อน', JSON.stringify(ctx));
+  check('★★ field: อ่านฟิลด์ของเอนทิตี้ตัวเอง (รวม customProperties)',
+        S.expandShortcodes('[field:อายุ] / [field:อาชีพ] / [field:สี]', ctx) === '20 / นักดาบ / แดง');
+  check('field: ไม่พบ = คืนค่าว่าง (ไม่ใช่ undefined)', S.expandShortcodes('[field:ไม่มีจริง]', ctx) === '');
+  check('★★ relation: รวมทุกชื่อที่ผูกด้วยบทบาทเดียวกัน',
+        S.expandShortcodes('[relation:เพื่อน]', ctx) === 'ลูน่า, นาซารีน่า');
+  check('relation: บทบาทเดียว', S.expandShortcodes('[relation:คู่รัก]', ctx) === 'คัสซี่');
+  check('relation: บทบาทที่ไม่มี = ว่าง', S.expandShortcodes('[relation:ศัตรู]', ctx) === '');
+  check('title/author ยังใช้ได้จาก entityContext (workContext ใช้ร่วมกัน)',
+        S.expandShortcodes('[title] โดย [author]', ctx) === 'ดาบเจ็ดสี โดย ท็อป');
+  check('★ wiki:/var: ยังใช้งานข้ามเอนทิตี้ได้ในบริบทนี้ (ตาราง vars เดียวกันทั้งแอป)',
+        S.expandShortcodes('[wiki:โทระ.อายุ]', ctx) === '20');
+  check('entityContext ไม่ส่งอะไรมาก็ไม่พัง (เอนทิตี้ว่าง)',
+        S.expandShortcodes('[entity][field:x]', S.entityContext({})) === '');
+  check('ทุกฟิลด์ของ SHORTCODES ที่กลุ่ม wiki ครอบคลุมทั้ง Wiki-lookup และ entity-lookup',
+        S.SHORTCODES.filter((s) => s.group === 'wiki').map((s) => s.name).sort().join(',')
+        === ['entity', 'entitycat', 'entitysummary', 'entitytags', 'field', 'relation', 'var', 'wiki'].sort().join(','));
+}
+
 console.log(`shortcode: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

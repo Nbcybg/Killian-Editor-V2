@@ -213,7 +213,8 @@ import { fmtBarTarget, tweenAt, FMTBAR_TWEEN_MS, clampBarPos, clampBarInBox, vis
          FMTBAR_OPACITIES, nextOpacity, opacityPercent, normalizeBarState, resetBarState,
          nextAlign, normalizeAlign, alignBarPos, defaultBarPos } from './toolbar/fmtbar-pos.js';
 // [alpha.116 ข้อ 8] โค้ดสั้น `[title]` — ทะเบียน + ตัวแทนค่า (บริสุทธิ์ · เทสแยก)
-import { SHORTCODES, SHORTCODE_GROUPS, shortcodeLabel } from './shortcode.js';
+import { SHORTCODES, SHORTCODE_GROUPS, shortcodeLabel, expandShortcodes,
+         sceneContext, entityContext } from './shortcode.js';
 // [alpha.111] ปุ่มลอย (FAB) ที่ผู้ใช้เลือกคำสั่งเองได้ + เมนูวงกลม/แถวตั้ง
 import { normalizeFab, fabAction, fabMenuItems, fabRadialPositions, fabStackPositions,
          fabRadius, fabOpenDir, fabAnimMs, clampFabPos } from './toolbar/fab-config.js';
@@ -6541,14 +6542,26 @@ export async function rosterTextForDraft(dPath) {
 }
 
 export async function buildDraftModel(dPath, title) {
+  // [alpha.121] ชื่อเล่ม + สถิติรวมทั้งโปรเจกต์ — ให้โค้ดสั้น [book]/[totalwords]/[progress] ฯลฯ
+  // ใช้ได้จริงตอนส่งออกด้วย ไม่ใช่แค่ตอนแก้สด (liveShortcodeContext) เท่านั้น
+  let book = '';
+  try {
+    const secPath = String(dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
+    const sf = await kapi.join(secPath, 'section.json');
+    if (await kapi.exists(sf)) book = (await kapi.readJson(sf)).title || '';
+  } catch {}
   const model = { title: title || state.title, author: (state.meta && state.meta.author) || '',
+                  book, language: state.settings.language || DEFAULT_SETTINGS.language || '',
+                  appVersion: APP_VERSION, stats: await computeProjectStats(),
                   roster: await rosterTextForDraft(dPath),
                   chapters: [] };
   const chapters = ((await kapi.readJson(await kapi.join(dPath, 'draft.json'))).chapters || [])
     .sort((a, b) => (a.order || 0) - (b.order || 0));
   const scAll = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters || {};
   for (const ch of chapters) {
-    const c = { title: ch.title || '', guid: ch.guid, scenes: [] };
+    const c = { title: ch.title || '', guid: ch.guid,
+                status: ch.status || '', act: ch.act || '', date: ch.date || '',
+                isFavorite: !!ch.isFavorite, scenes: [] };
     for (const sc of (scAll[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0))) {
       const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
       let body = '', meta = {};
@@ -6557,6 +6570,16 @@ export async function buildDraftModel(dPath, title) {
       c.scenes.push({ title: sc.title || '', file, body: (body || '').trim(),
                       synopsis: sc.synopsis || (meta && meta.synopsis) || '',
                       status: sc.status || (meta && meta.status) || '',
+                      // คุณสมบัติหนักอยู่ในทั้ง frontmatter และ scenes.json — frontmatter ชนะ
+                      // (แหล่งความจริงเดียวกับที่ readSceneMeta ใช้ — ดู scene-meta.js)
+                      pov: (meta && meta.pov) || sc.pov || '',
+                      emotion: (meta && meta.emotion) || sc.emotion || '',
+                      conflict: (meta && meta.conflict) || sc.conflict || '',
+                      note: (meta && meta.note) || sc.note || '',
+                      futureNote: (meta && meta.futureNote) || sc.futureNote || '',
+                      storyDate: (meta && meta.storyDate) || sc.storyDate || '',
+                      tags: (meta && meta.tags) || sc.tags || [],
+                      color: sc.color || '', flag: !!sc.flag, locked: !!sc.locked,
                       // [alpha.81 ข้อ 8] ปลายทาง PDF ต้องรู้ว่านี่ "บทหนัง" หรือ "นิยาย"
                       // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
                       format: (meta && meta.format) === 'screenplay' ? 'screenplay' : 'prose',
@@ -7604,8 +7627,9 @@ export async function openPlainFile(file, title) {
   return tab;
 }
 
-// บริบทของฉากที่เปิดอยู่: { dPath, ch, row } — โมดูล feature ใช้ผูกข้อมูลกับฉากปัจจุบัน
-// (คอมเมนต์ / โน้ตด่วน / ผังพื้นที่)
+// บริบทของฉากที่เปิดอยู่: { dPath, ch, row, chapterNo, sceneNo } — โมดูล feature ใช้ผูกข้อมูลกับ
+// ฉากปัจจุบัน (คอมเมนต์ / โน้ตด่วน / ผังพื้นที่ / [alpha.121] โค้ดสั้นแบบ live ใน liveShortcodeContext)
+// chapterNo/sceneNo = ลำดับที่ 1-based ตาม `order` — คำนวณที่นี่ทีเดียวเพราะข้อมูลอยู่ในมืออยู่แล้ว
 export async function sceneCtx(file) {
   const t = file ? { file } : state.active;
   if (!t || !t.file || !/\.md$/i.test(t.file) || !/[\\/]Chapters[\\/]/.test(t.file)) return null;
@@ -7614,9 +7638,12 @@ export async function sceneCtx(file) {
     const scenes = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
     const draft = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
     const fname = t.file.split(/[\\/]/).pop();
-    for (const ch of (draft.chapters || [])) {
-      const row = ((scenes.chapters || {})[ch.guid] || []).find((s) => s.fileName === fname);
-      if (row) return { dPath, ch, row };
+    const chapters = (draft.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    for (let ci = 0; ci < chapters.length; ci++) {
+      const ch = chapters[ci];
+      const list = ((scenes.chapters || {})[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const si = list.findIndex((s) => s.fileName === fname);
+      if (si >= 0) return { dPath, ch, row: list[si], chapterNo: ci + 1, sceneNo: si + 1 };
     }
   } catch (e) { log('warn', 'sceneCtx failed', e); }
   return null;
@@ -11048,8 +11075,20 @@ export async function handleCommand(ch, ...a) {
       ed?.focus();
       break;
     }
-    // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` ตรงเคอร์เซอร์ (ทะเบียนอยู่ที่ src/shortcode.js)
-    case 'insert-shortcode': insertShortcodeMenu(a[0]); break;
+    // [alpha.116 ข้อ 8 · alpha.121] แทรกโค้ดสั้นตรงเคอร์เซอร์ (ทะเบียนอยู่ที่ src/shortcode.js)
+    // เมนู "แทรก" ของ OS เป็นทางเดียวที่ไม่ผูกกับพื้นที่ใดพื้นที่หนึ่ง — ต้องฉลาดพอจะรู้ว่า
+    // ตอนนี้ผู้ใช้กำลังโฟกัสอยู่ที่ไหน: ตัวแก้ไขเอกสาร (นิยาย/บทหนัง/ส่วน Wiki แบบ ProseMirror)
+    // ยังคงแทรก placeholder ดิบให้คอมไพล์ทีหลังเหมือนเดิม · ช่องข้อความธรรมดา (ฟิลด์ Wiki ·
+    // ช่องแชท AI · กล่องคอมเมนต์) แทนค่าจริงทันทีแทน — ไม่มีขั้นตอนคอมไพล์ให้รอ
+    case 'insert-shortcode': {
+      const ed = getActiveEditor();
+      if (ed && ed.view) { insertShortcodeMenu(a[0]); break; }
+      const act = document.activeElement;
+      const plain = (act && typeof act.selectionStart === 'number' && !act.readOnly) ? act : lastWikiField;
+      if (plain && document.body.contains(plain)) { await openResolvedShortcodeMenu(a[0], plain); break; }
+      setStatus(tt('ui.shortcode.needEditor'));
+      break;
+    }
     case 'revert': if (t) await revertTab(t.file); break;
     case 'remove-elements': removeElementsDialog(); break;
     case 'char-map': showCharMap(); break;
@@ -11553,6 +11592,125 @@ export function insertShortcodeText(text) {
   markDirty(state.active);
   ed.focus();
   return true;
+}
+
+// ══ [alpha.121] โค้ดสั้นแบบ "สด" — ใช้นอกเวิร์กโฟลว์ส่งออก (แชท AI · คอมเมนต์ · ฟิลด์ Wiki) ══
+//
+// ผู้ใช้: *"ทำ shortcode ให้เยอะและละเอียดที่สุด ครอบคลุมทุกหัวข้อ ทั้ง wiki ทั้ง entities
+//         ทั้ง ai chat ทั้ง comment"*
+//
+// `insertShortcodeMenu()`/`insertShortcodeText()` ข้างบนแทรก **placeholder ดิบ** (`[title]`)
+// ลงในเอกสารนิยาย/บทหนัง — ถูกต้องแล้วเพราะเอกสารพวกนั้นผ่านขั้นตอนคอมไพล์/ส่งออกที่ค่อยขยาย
+// โค้ดเป็นค่าจริงทีหลัง (เทมเพลตเดียวใช้ซ้ำได้หลายเล่ม) แต่แชท AI/คอมเมนต์/ฟิลด์ Wiki **ไม่มี**
+// ขั้นตอนคอมไพล์แบบนั้น — ใส่ placeholder ค้างไว้จะกลายเป็นข้อความ `[title]` เปล่า ๆ ตลอดไป
+// ทางนี้จึงแทน **ค่าจริงทันทีที่คลิก** โดยอ่านบริบทของสิ่งที่ผู้ใช้กำลังดูอยู่ตอนนี้:
+//   - กำลังแก้เอนทิตี้ Wiki อยู่ → entityContext()
+//   - กำลังแก้ฉาก/บทอยู่ → sceneContext() (ผ่าน sceneCtx() ที่มีอยู่แล้ว)
+//   - ไม่มีบริบทเฉพาะ → ยังมีชื่อเรื่อง/ผู้เขียน/สถิติรวมให้ใช้เสมอ
+export async function liveShortcodeContext() {
+  const model = {
+    title: state.title || '', author: (state.meta && state.meta.author) || '',
+    language: state.settings.language || DEFAULT_SETTINGS.language || '',
+    appVersion: APP_VERSION,
+  };
+  const now = new Date();
+  if (!state.root) return sceneContext({ model, now });
+  let stats = {}, vars = {};
+  try {
+    [stats, vars] = await Promise.all([
+      computeProjectStats(),
+      import('./template-vars.js').then((m) => m.buildVarContext(state.root, kapi)),
+    ]);
+  } catch (e) { log('warn', tt('ui.shortcode.liveCtxFail'), e); }
+
+  const t = state.active;
+  // กำลังแก้เอนทิตี้ Wiki อยู่ — หมวดอ่านจากทางไฟล์ (Wiki/<หมวด>/<ไฟล์>.json) ไม่ต้องอ่านดิสก์เพิ่ม
+  if (t && t.wiki && t.wiki.e) {
+    const m = /[\\/](?:Wiki|Bible)[\\/]([^\\/]+)[\\/][^\\/]+\.json$/.exec(t.file || '');
+    const cat = m ? m[1] : '';
+    return entityContext({ model, entity: t.wiki.e, cat, catLabel: cat ? catLabel(cat) : '', vars, stats, now });
+  }
+  // กำลังแก้ฉาก/บทอยู่
+  const c = await sceneCtx();
+  if (c) {
+    let book = '';
+    try {
+      const secPath = String(c.dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
+      const sf = await kapi.join(secPath, 'section.json');
+      if (await kapi.exists(sf)) book = (await kapi.readJson(sf)).title || '';
+    } catch {}
+    return sceneContext({ model: { ...model, book }, chapter: c.ch, scene: c.row,
+                          chapterNo: c.chapterNo, sceneNo: c.sceneNo, vars, now, stats });
+  }
+  return sceneContext({ model, vars, now, stats });
+}
+
+/** แทรกข้อความตรงเคอร์เซอร์ของ `<input>`/`<textarea>` ธรรมดา (ไม่ใช่ ProseMirror) */
+export function insertTextAtField(el0, text) {
+  if (!el0 || typeof el0.selectionStart !== 'number') return false;
+  const v = String(text ?? '');
+  const s = el0.selectionStart, e = el0.selectionEnd ?? s;
+  el0.value = el0.value.slice(0, s) + v + el0.value.slice(e);
+  const pos = s + v.length;
+  try { el0.setSelectionRange(pos, pos); } catch {}
+  // ทุกที่ที่ใช้ช่องนี้ (autosave ของแผงคุณสมบัติ · ตัวนับตัวอักษรของแชท ฯลฯ) ฟัง 'input' อยู่แล้ว
+  el0.dispatchEvent(new Event('input', { bubbles: true }));
+  el0.focus();
+  return true;
+}
+
+/**
+ * เมนูแทรกโค้ดสั้นแบบ "ค่าจริงทันที" — ให้กล่องข้อความธรรมดาที่ไม่มีขั้นตอนคอมไพล์
+ * (ช่องแชท AI · กล่องคอมเมนต์ · ฟิลด์ Wiki) คนละแบบกับ `insertShortcodeMenu()` ที่แทรก placeholder
+ * โค้ดที่ต้องมีเป้าหมาย (`needsArg`) จะถามชื่อ/บทบาทก่อน ไม่ใช่แทรกค่าว่างเงียบ ๆ
+ */
+export async function openResolvedShortcodeMenu(ev, targetEl) {
+  if (!targetEl) { setStatus(tt('ui.shortcode.needField')); return 0; }
+  const ctx = await liveShortcodeContext();
+  const items = [];
+  for (const g of SHORTCODE_GROUPS) {
+    const rows = SHORTCODES.filter((sc) => sc.group === g.key);
+    if (!rows.length) continue;
+    if (items.length) items.push('-');
+    for (const sc of rows) {
+      if (sc.needsArg) {
+        items.push({ label: '[' + sc.name + ':…]  ·  ' + shortcodeLabel(sc.name),
+          click: async () => {
+            const arg = await ask(shortcodeLabel(sc.name));
+            if (!arg) return;
+            let v = ''; try { v = sc.get(ctx, { arg, opts: {} }); } catch { v = ''; }
+            insertTextAtField(targetEl, v);
+          } });
+        continue;
+      }
+      let v = ''; try { v = sc.get(ctx, { arg: '', opts: {} }); } catch { v = ''; }
+      const preview = String(v || '').trim() ? '  →  ' + String(v).slice(0, 24) : '';
+      items.push({ label: shortcodeLabel(sc.name) + preview, click: () => insertTextAtField(targetEl, v) });
+    }
+  }
+  const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
+  const y = ev && Number.isFinite(ev.clientY) ? ev.clientY : Math.round(window.innerHeight / 3);
+  popupMenu(x, y, items);
+  return items.length;
+}
+
+// ── ช่องแบบธรรมดา (input/textarea) ที่มีโฟกัสอยู่ล่าสุดในแผง Wiki ──
+// แผง Wiki มีฟิลด์เป็นสิบ ๆ ช่องต่อเอนทิตี้ — ปุ่มเดียวบนหัวแผงต้องรู้ว่าจะแทรกลงช่องไหน
+let lastWikiField = null;
+document.addEventListener('focusin', (e) => {
+  const el0 = e.target;
+  if (el0 && el0.closest && el0.closest('.wiki-pane') &&
+      (el0.tagName === 'INPUT' || el0.tagName === 'TEXTAREA') && !el0.readOnly) {
+    lastWikiField = el0;
+  }
+});
+/** เป้าหมายที่ปุ่ม "แทรกโค้ดสั้น" ของแผง Wiki ควรแทรกลง — เรียงลำดับ:
+ * ช่องที่โฟกัสอยู่ตอนนี้ (ถ้าอยู่ในแผงเดียวกัน) → ช่องที่โฟกัสล่าสุด → ช่องแรกในแผง */
+export function resolveWikiInsertTarget(pane) {
+  const act = document.activeElement;
+  if (act && pane && pane.contains(act) && typeof act.selectionStart === 'number') return act;
+  if (lastWikiField && pane && pane.contains(lastWikiField) && document.body.contains(lastWikiField)) return lastWikiField;
+  return pane ? pane.querySelector('.wiki-input, textarea.wiki-input') : null;
 }
 
 let floatBar = null;
@@ -12880,6 +13038,50 @@ function refreshStatusBar() {
 }
 
 // ---------------- Summary Bar (ข้อ 46) — แสดงสรุปด่วนเหนือ tree ----------------
+/**
+ * [alpha.121] สถิติรวมทั้งโปรเจกต์ — แยกออกจาก `updateSummaryBar()` เพื่อให้
+ * ตัวสร้างบริบทของโค้ดสั้น (`liveShortcodeContext()`) เรียกใช้ตัวเดียวกัน ไม่ต้องนับเลขซ้ำสองชุด
+ * ที่เสี่ยงเบี่ยงกันทีหลัง (แถบสรุปนับแบบหนึ่ง shortcode นับอีกแบบ)
+ */
+export async function computeProjectStats() {
+  const out = { totalScenes: 0, totalWords: 0, totalChapters: 0, totalBooks: 0,
+                totalCharacters: 0, totalLocations: 0,
+                dailyGoal: state.goals?.dailyWords || DEFAULT_GOALS.dailyWords,
+                projectGoal: state.goals?.projectWords || DEFAULT_GOALS.projectWords };
+  if (!state.root) return out;
+  try {
+    const sections = await listSections();
+    out.totalBooks = sections.length;
+    for (const sec of sections) {
+      const dr = await kapi.join(sec.secPath, 'Draft');
+      if (!(await kapi.exists(dr))) continue;
+      for (const dn of await kapi.listDirs(dr)) {
+        const dp = await kapi.join(dr, dn);
+        const df = await kapi.join(dp, 'draft.json');
+        if (await kapi.exists(df)) out.totalChapters += ((await kapi.readJson(df)).chapters || []).length;
+        const sf = await kapi.join(dp, 'scenes.json');
+        if (!(await kapi.exists(sf))) continue;
+        const d = await kapi.readJson(sf);
+        for (const cg of Object.keys(d.chapters || {})) {
+          for (const sc of (d.chapters[cg] || [])) {
+            if (sc.type === 'memo') continue;
+            out.totalScenes++; out.totalWords += sc.wordCount || 0;
+          }
+        }
+      }
+    }
+    for (const wbase of ['Wiki', 'Bible']) {
+      const wr = await kapi.join(state.root, wbase);
+      if (!(await kapi.exists(wr))) continue;
+      const charsDir = await kapi.join(wr, 'characters');
+      if (await kapi.exists(charsDir)) out.totalCharacters = (await kapi.listFiles(charsDir, '.json')).length;
+      const locsDir = await kapi.join(wr, 'locations');
+      if (await kapi.exists(locsDir)) out.totalLocations = (await kapi.listFiles(locsDir, '.json')).length;
+    }
+  } catch (e) { log('warn', tt('ui.shortcode.statsScanFail'), e); }
+  return out;
+}
+
 async function updateSummaryBar() {
   const bar = $('#summary-bar');
   if (!bar || !state.root) return;
@@ -12887,54 +13089,17 @@ async function updateSummaryBar() {
   // (โค้ดคงไว้ทั้งหมด เปิดกลับได้จากเมนูคลิกขวาพื้นที่ว่างใน Explorer)
   if (!summaryBarOn()) { bar.style.display = 'none'; bar.replaceChildren(); return; }
   bar.style.display = '';
-  
+
   try {
-    let totalScenes = 0, totalWords = 0, totalChars = 0, totalLocations = 0;
-    
-    // นับฉาก + คำจากทุกเล่ม
-    for (const sec of await listSections()) {
-      const dr = await kapi.join(sec.secPath, 'Draft');
-      if (!(await kapi.exists(dr))) continue;
-      for (const dn of await kapi.listDirs(dr)) {
-        const dp = await kapi.join(dr, dn);
-        const sf = await kapi.join(dp, 'scenes.json');
-        if (!(await kapi.exists(sf))) continue;
-        const d = await kapi.readJson(sf);
-        const chs = d.chapters || {};
-        for (const cg of Object.keys(chs)) {
-          for (const sc of (chs[cg] || [])) {
-            if (sc.type === 'memo') continue;
-            totalScenes++;
-            totalWords += sc.wordCount || 0;
-          }
-        }
-      }
-    }
-    
-    // นับตัวละคร + สถานที่จาก Wiki
-    for (const wbase of ['Wiki', 'Bible']) {
-      const wr = await kapi.join(state.root, wbase);
-      if (!(await kapi.exists(wr))) continue;
-      const charsDir = await kapi.join(wr, 'characters');
-      if (await kapi.exists(charsDir)) {
-        totalChars = (await kapi.listFiles(charsDir, '.json')).length;
-      }
-      const locsDir = await kapi.join(wr, 'locations');
-      if (await kapi.exists(locsDir)) {
-        totalLocations = (await kapi.listFiles(locsDir, '.json')).length;
-      }
-    }
-    
-    // เป้าหมาย
-    const goal = state.goals?.projectWords || DEFAULT_GOALS.projectWords;
-    const pct = Math.min(100, Math.round((totalWords / goal) * 100));
-    
+    const s = await computeProjectStats();
+    const pct = s.projectGoal ? Math.min(100, Math.round((s.totalWords / s.projectGoal) * 100)) : 0;
+
     bar.innerHTML = '';
     const items = [
-      `📄 ${totalScenes} ${t('scenes')}`,
-      `📝 ${totalWords.toLocaleString()} ${t('words')}`,
-      `👤 ${totalChars} ${t('characters')}`,
-      `📍 ${totalLocations} ${t('locations')}`,
+      `📄 ${s.totalScenes} ${t('scenes')}`,
+      `📝 ${s.totalWords.toLocaleString()} ${t('words')}`,
+      `👤 ${s.totalCharacters} ${t('characters')}`,
+      `📍 ${s.totalLocations} ${t('locations')}`,
       `📊 ${pct}% ${t('percentGoal')}`,
     ];
     for (const item of items) {
@@ -34272,6 +34437,222 @@ async function runTest(projectPath) {
         }
 
         await buildTree();
+      }
+
+      // ═══════════════ [alpha.121] shortcode ขยายใหญ่: Wiki/เอนทิตี้/แชท AI/คอมเมนต์ ═══════════════
+      {
+        const w121 = (ms) => new Promise((r) => setTimeout(r, ms));
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ---- ทะเบียนโตขึ้นจริง (เดิม 16 ตัว) ----
+        check('[121] ★ ทะเบียนโค้ดสั้นขยายเป็น 45 ตัวขึ้นไป', SHORTCODES.length >= 45, SHORTCODES.length);
+        check('[121] ทุกกลุ่มยังมีอย่างน้อยหนึ่งโค้ด',
+              SHORTCODE_GROUPS.every((g) => SHORTCODES.some((s) => s.group === g.key)));
+        check('[121] โค้ดที่ต้องมีอาร์กิวเมนต์ติดธง needsArg ครบ (wiki/var/field/relation)',
+              ['wiki', 'var', 'field', 'relation'].every((n) => SHORTCODES.find((s) => s.name === n).needsArg));
+
+        // ---- sceneCtx() คืน chapterNo/sceneNo แล้ว (ของเดิมคืนแค่ dPath/ch/row) ----
+        await buildTree();
+        const row121 = [...document.querySelectorAll('#tree .scene[data-path]')].find((r) => r._ctx);
+        check('[121] มีฉากให้ทดสอบ', !!row121);
+        if (row121) {
+          await openScene(row121.dataset.path, row121._ctx.sc.title);
+          await w121(200);
+          const c121 = await sceneCtx();
+          check('[121] ★ sceneCtx() คืน chapterNo/sceneNo เป็นเลขลำดับ ≥ 1',
+                !!c121 && Number.isInteger(c121.chapterNo) && c121.chapterNo >= 1 &&
+                Number.isInteger(c121.sceneNo) && c121.sceneNo >= 1,
+                JSON.stringify(c121 && { chapterNo: c121.chapterNo, sceneNo: c121.sceneNo }));
+        }
+
+        // ---- computeProjectStats() ----
+        {
+          const stats121 = await computeProjectStats();
+          check('[121] ★ computeProjectStats นับฉาก/บท/เล่มได้จริง',
+                stats121.totalScenes > 0 && stats121.totalChapters > 0 && stats121.totalBooks > 0,
+                JSON.stringify(stats121));
+          check('[121] มี dailyGoal/projectGoal จากเป้าหมายที่ตั้งไว้',
+                stats121.dailyGoal > 0 && stats121.projectGoal > 0, JSON.stringify(stats121));
+          check('[121] updateSummaryBar ใช้ตัวนับเดียวกัน (ไม่มีตรรกะนับเลขสองชุด)',
+                typeof computeProjectStats === 'function');
+        }
+
+        // ---- liveShortcodeContext() ตามฉากที่เปิดอยู่ ----
+        {
+          const c121b = await sceneCtx();
+          if (c121b) {
+            const ctx121 = await liveShortcodeContext();
+            check('[121] ★★ liveShortcodeContext ให้ชื่อฉาก/บทตรงกับฉากที่เปิดอยู่จริง',
+                  ctx121.scene === c121b.row.title && ctx121.chapter === c121b.ch.title,
+                  JSON.stringify({ scene: ctx121.scene, chapter: ctx121.chapter }));
+            check('[121] liveShortcodeContext มีสถิติโปรเจกต์ติดมาด้วย (ไม่ใช่ NaN/undefined)',
+                  ctx121.totalWords === '' || Number.isFinite(+ctx121.totalWords), String(ctx121.totalWords));
+            check('[121] expandShortcodes ใช้ ctx สดได้ตรง ๆ',
+                  expandShortcodes('[scene] อยู่ในบท [chapter]', ctx121)
+                  === c121b.row.title + ' อยู่ในบท ' + c121b.ch.title);
+          }
+        }
+
+        // ---- insertTextAtField: แทรกตรงเคอร์เซอร์ของ input/textarea ธรรมดา ----
+        {
+          const ta121 = document.createElement('textarea');
+          document.body.appendChild(ta121);
+          // ตัวอักษรละติน (ไม่ใช้ไทย) — สระ/วรรณยุกต์ไทยเป็น combining mark กินคนละ code unit
+          // นับตำแหน่งเคอร์เซอร์ด้วยตาไม่ตรงกับ .selectionStart จริง (บทเรียนจากรอบนี้เอง)
+          ta121.value = 'BEFOREAFTER'; ta121.setSelectionRange(6, 6);   // เคอร์เซอร์ระหว่าง BEFORE|AFTER
+          let inputFired121 = false;
+          ta121.addEventListener('input', () => { inputFired121 = true; });
+          const ok121 = insertTextAtField(ta121, 'XXX');
+          check('[121] ★ insertTextAtField แทรกตรงเคอร์เซอร์ (ไม่ใช่ต่อท้าย)',
+                ok121 === true && ta121.value === 'BEFOREXXXAFTER', ta121.value);
+          check('[121] insertTextAtField ยิงอีเวนต์ input ให้ตัวฟังอื่นทำงานต่อ (เช่น autosave)', inputFired121);
+          ta121.remove();
+        }
+
+        // ---- ปุ่มแทรกโค้ดสั้นในแผงแชท AI (ค่าจริงทันที ไม่ใช่ placeholder) ----
+        {
+          showPanel('ai-chat');
+          await renderFeaturePanel('ai-chat');
+          await w121(250);
+          const host121 = document.getElementById('ai-chat-body');
+          if (host121 && host121.querySelector('.ai-chat-new')) {
+            host121.querySelector('.ai-chat-new').click();
+            await w121(200);
+          }
+          const scBtn121 = host121 ? host121.querySelector('.ai-chat-shortcode') : null;
+          check('[121] ★ ช่องแชท AI มีปุ่มแทรกโค้ดสั้น', !!scBtn121);
+          const taChat121 = host121 ? host121.querySelector('.ai-chat-input') : null;
+          if (scBtn121 && taChat121) {
+            taChat121.value = ''; taChat121.focus();
+            scBtn121.click();
+            await w121(200);
+            const menu121a = document.querySelector('.k-menu');
+            check('[121] คลิกปุ่มแล้วเมนูโค้ดสั้นขึ้นจริง', !!menu121a);
+            const titleItem121 = menu121a ? [...menu121a.querySelectorAll('.k-menu-item')]
+              .find((it) => it.textContent.startsWith(shortcodeLabel('title'))) : null;
+            check('[121] เมนูมีรายการ "ชื่อเรื่อง"', !!titleItem121,
+                  menu121a ? [...menu121a.querySelectorAll('.k-menu-item')].map((x) => x.textContent).slice(0, 4).join(' | ') : '');
+            if (titleItem121) titleItem121.click();
+            await w121(200);
+            check('[121] ★★ แทรกในแชท AI ได้ "ค่าจริง" ทันที ไม่ใช่ placeholder ค้าง',
+                  taChat121.value === state.title && taChat121.value !== '[title]', JSON.stringify(taChat121.value));
+          }
+        }
+
+        // ---- ปุ่มแทรกโค้ดสั้นในกล่องคอมเมนต์ (ค่าจริงทันที) ----
+        {
+          const c121c = await sceneCtx();
+          if (c121c) {
+            const sceneFile121 = await kapi.join(c121c.dPath, 'Chapters', c121c.ch.folderName, c121c.row.fileName);
+            await openScene(sceneFile121, c121c.row.title);
+            await w121(150);
+            await openCommentsPanel();
+            await w121(300);
+            const cmHost121 = $('#comments-body');
+            const scB121 = cmHost121 ? cmHost121.querySelector('.k-cm-scbtn') : null;
+            check('[121] ★ กล่องคอมเมนต์มีปุ่มแทรกโค้ดสั้น', !!scB121);
+            const cmInp121 = cmHost121 ? cmHost121.querySelector('.k-cm-input') : null;
+            if (scB121 && cmInp121) {
+              cmInp121.value = '';
+              scB121.click();
+              await w121(200);
+              const menu121b = document.querySelector('.k-menu');
+              const sceneItem121 = menu121b ? [...menu121b.querySelectorAll('.k-menu-item')]
+                .find((it) => it.textContent.startsWith(shortcodeLabel('scene'))) : null;
+              check('[121] เมนูมีรายการ "ชื่อฉาก"', !!sceneItem121);
+              if (sceneItem121) sceneItem121.click();
+              await w121(200);
+              check('[121] ★★ แทรกในคอมเมนต์ได้ค่าจริง (ชื่อฉากที่เปิดอยู่)',
+                    cmInp121.value === c121c.row.title, cmInp121.value);
+            }
+          }
+        }
+
+        // ---- ปุ่มแทรกโค้ดสั้นในแผง Wiki: ฟิลด์ธรรมดา + [field:]/[relation:] ที่ต้องถามก่อน ----
+        {
+          document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+          const wDir121 = await kapi.join(state.root, 'Wiki', 'characters');
+          await kapi.mkdir(wDir121);
+          const wf121 = await kapi.join(wDir121, 'e121-test.json');
+          await kapi.writeFile(wf121, JSON.stringify({
+            name: 'ทดสอบ121', entityTypeKey: 'characters',
+            summary: 'เอนทิตี้ทดสอบโค้ดสั้น', tags: ['ทดสอบ121'],
+            fields: { อายุ121: '20' },
+            relationships: [{ target: 'เพื่อน121', role: 'เพื่อน121' }],
+          }, null, 2));
+          if (state.tabs.has(wf121)) closeTab(wf121);
+          await w121(120);
+          await openEntity(wf121);
+          await w121(400);
+          const wtab121 = state.tabs.get(wf121);
+          check('[121] เปิดเอนทิตี้ทดสอบสำเร็จ', !!wtab121 && !!wtab121.wiki);
+
+          if (wtab121 && wtab121.wiki) {
+            // liveShortcodeContext() ตอนโฟกัสอยู่ที่แผง Wiki ต้องให้ entitysummary/entitytags/relation ถูก
+            const ctxW121 = await liveShortcodeContext();
+            check('[121] ★★ liveShortcodeContext อ่าน entity/entitysummary/entitytags ของเอนทิตี้ที่เปิดอยู่',
+                  expandShortcodes('[entity]|[entitysummary]|[entitytags]', ctxW121)
+                  === 'ทดสอบ121|เอนทิตี้ทดสอบโค้ดสั้น|ทดสอบ121', JSON.stringify(ctxW121).slice(0, 200));
+            check('[121] ★ liveShortcodeContext อ่านหมวดเป็นป้ายที่แปลแล้ว (ไม่ใช่คีย์ดิบ "characters")',
+                  ctxW121.entityCat && ctxW121.entityCat !== 'characters', ctxW121.entityCat);
+            check('[121] ★★ [relation:] อ่านความสัมพันธ์ของเอนทิตี้ที่เปิดอยู่ถูกต้อง',
+                  expandShortcodes('[relation:เพื่อน121]', ctxW121) === 'เพื่อน121');
+            check('[121] ★ [field:] อ่านฟิลด์ของเอนทิตี้ที่เปิดอยู่ถูกต้อง',
+                  expandShortcodes('[field:อายุ121]', ctxW121) === '20');
+
+            const head121 = wtab121.pane.querySelector('.wiki-head');
+            const scBtnW121 = head121 ? head121.querySelector('.wiki-sc-btn') : null;
+            check('[121] ★ แผง Wiki มีปุ่มแทรกโค้ดสั้นบนหัวการ์ด', !!scBtnW121);
+            check('[121] ★ ปุ่มแทรกโค้ดสั้นใช้คลาสแยกจาก .wiki-ver-btn (กันปนกับเทส [10] ที่นับปุ่มกลุ่มเดิมตายตัวไว้ที่ 3)',
+                  !!scBtnW121 && !scBtnW121.classList.contains('wiki-ver-btn'));
+            const nameInput121 = wtab121.pane.querySelector('.wiki-input');
+            check('[121] เอนทิตี้ทดสอบมีช่องกรอกอย่างน้อยหนึ่งช่อง (ชื่อ)', !!nameInput121);
+
+            if (scBtnW121 && nameInput121) {
+              // โค้ดไม่ต้องมีอาร์กิวเมนต์ (entity) → แทรกค่าจริงทันที
+              nameInput121.value = ''; nameInput121.focus();
+              scBtnW121.click();
+              await w121(200);
+              const menuW121 = document.querySelector('.k-menu');
+              check('[121] คลิกปุ่มบนแผง Wiki แล้วเมนูขึ้นจริง', !!menuW121);
+              const entItem121 = menuW121 ? [...menuW121.querySelectorAll('.k-menu-item')]
+                .find((it) => it.textContent.startsWith(shortcodeLabel('entity'))) : null;
+              if (entItem121) entItem121.click();
+              await w121(200);
+              check('[121] ★★ แทรกในฟิลด์ Wiki ได้ค่าจริงทันที (ชื่อเอนทิตี้ที่กำลังแก้)',
+                    nameInput121.value === 'ทดสอบ121', nameInput121.value);
+
+              // โค้ดที่ต้องมีอาร์กิวเมนต์ ([field:]) → ต้องถามก่อน ไม่ใช่แทรกค่าว่างเงียบ ๆ
+              nameInput121.value = ''; nameInput121.focus();
+              scBtnW121.click();
+              await w121(200);
+              const menuW121b = document.querySelector('.k-menu');
+              const fieldItem121 = menuW121b ? [...menuW121b.querySelectorAll('.k-menu-item')]
+                .find((it) => it.textContent.startsWith('[field:')) : null;
+              check('[121] ★ โค้ดที่ต้องมีอาร์กิวเมนต์มีป้ายบอกไว้ชัด ([field:…])', !!fieldItem121,
+                    menuW121b ? [...menuW121b.querySelectorAll('.k-menu-item')].map((x) => x.textContent).slice(0, 6).join(' | ') : '');
+              if (fieldItem121) {
+                fieldItem121.click();
+                await w121(200);
+                const askBox121 = [...document.querySelectorAll('.k-overlay .k-dialog')].pop();
+                check('[121] ★ คลิกโค้ดที่ต้องมีอาร์กิวเมนต์แล้วมีกล่องถามชื่อฟิลด์จริง (ไม่แทรกค่าว่างเงียบ ๆ)',
+                      !!askBox121 && nameInput121.value === '');
+                if (askBox121) {
+                  askBox121.querySelector('.k-dlg-input').value = 'อายุ121';
+                  askBox121.querySelector('.k-ok').click();
+                  await w121(250);
+                  check('[121] ★★ ตอบชื่อฟิลด์แล้วได้ค่าฟิลด์นั้นจริง (20)', nameInput121.value === '20', nameInput121.value);
+                }
+              }
+            }
+          }
+          if (wtab121) closeTab(wf121);
+          await w121(120);
+          try { await kapi.remove(wf121); } catch {}
+          await buildTree();
+        }
+
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

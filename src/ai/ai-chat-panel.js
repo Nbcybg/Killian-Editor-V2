@@ -428,6 +428,10 @@ function composer(s, body) {
   const ctrls = el('div', 'ai-chat-ctrls');
   const fileBtn = el('button', 'ai-chat-file', '📎');
   fileBtn.title = tt('ui.aiChatPanel.addFileInContext');
+  // [alpha.121] แทรกโค้ดสั้น (เรื่องย่อฉาก · ข้อมูลเอนทิตี้ · สถิติโปรเจกต์ ฯลฯ) ตรงเคอร์เซอร์
+  // ต่างจากตัวแก้ไขเอกสาร: ค่าถูกแทนทันที ไม่ใช่ placeholder ค้าง (แชทไม่มีขั้นตอนคอมไพล์ทีหลัง)
+  const scBtn = el('button', 'ai-chat-file ai-chat-shortcode', '🏷');
+  scBtn.title = tt('ui.aiChatPanel.insertShortcode');
   const modeSel = el('select', 'ai-chat-mode');
   for (const m of CHAT_MODES) { const o = el('option', null, m.icon + ' ' + m.label); o.value = m.id; modeSel.append(o); }
   modeSel.value = s.mode || DEFAULT_MODE;
@@ -443,7 +447,7 @@ function composer(s, body) {
   for (const sc of SCOPES) { const o = el('option', null, sc.label); o.value = sc.id; scopeSel.append(o); }
   scopeSel.value = s.scope || DEFAULT_SCOPE;
   scopeSel.title = tt('ui.aiChatPanel.levelInToAI');
-  ctrls.append(fileBtn, modeSel, modelSel, scopeSel);
+  ctrls.append(fileBtn, scBtn, modeSel, modelSel, scopeSel);
   box.append(ctrls);
 
   fillModelSelect(modelSel, s);
@@ -491,6 +495,11 @@ function composer(s, body) {
     if (!p) { setStatus(tt('ui.aiChatPanel.pickFileNotOk')); return; }
     s.files = [...(s.files || []), { path: p, name: String(p).replace(/^.*[\\/]/, '') }];
     await saveSession(s); drawFiles();
+  };
+  // dynamic import กัน circular — app.js import จากไฟล์นี้อยู่แล้ว (ai-chat-panel ↔ app)
+  scBtn.onclick = async (e) => {
+    const { openResolvedShortcodeMenu } = await import('../app.js');
+    await openResolvedShortcodeMenu(e, ta);
   };
 
   const doSend = () => send(s, ta, body, sendBtn);

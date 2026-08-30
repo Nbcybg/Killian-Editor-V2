@@ -1321,11 +1321,13 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 .wiki-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .wiki-head > span:first-child { flex:1; }
 .wiki-save { -webkit-app-region:no-drag; }
-/* ปุ่มประวัติ/บันทึกเวอร์ชันของหน้า Wiki (ข้อ 10) */
-.wiki-ver-btn { -webkit-app-region:no-drag; background:var(--bar); color:var(--fg);
+/* ปุ่มประวัติ/บันทึกเวอร์ชันของหน้า Wiki (ข้อ 10) · [alpha.121] .wiki-sc-btn = ปุ่มแทรกโค้ดสั้น
+   (คลาสแยกจาก .wiki-ver-btn เพราะเทสเดิมนับกลุ่มปุ่มประวัติ/เวอร์ชัน/หาในดิสก์ตายตัวไว้ที่ 3 ตัว
+   หน้าตายังใช้กฎเดียวกัน) */
+.wiki-ver-btn, .wiki-sc-btn { -webkit-app-region:no-drag; background:var(--bar); color:var(--fg);
   border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:calc(11.5px * var(--ui-scale, 1));
   cursor:pointer; white-space:nowrap; }
-.wiki-ver-btn:hover { border-color:var(--accent); color:var(--bright); }
+.wiki-ver-btn:hover, .wiki-sc-btn:hover { border-color:var(--accent); color:var(--bright); }
 .wiki-imgs { display:flex; flex-wrap:wrap; gap:10px; }
 .wiki-img { position:relative; }
 .wiki-img img { max-width:180px; max-height:130px; border-radius:8px; display:block; }

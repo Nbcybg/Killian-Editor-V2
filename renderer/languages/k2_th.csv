@@ -6023,3 +6023,45 @@ ui.tree.snapCountFail,นับจำนวนเวอร์ชันไม่�
 ui.tree.trashEmptyAlready,ถังขยะว่างอยู่แล้ว
 ui.tree.trashSettings,ตั้งเวลาล้างถังขยะ (ตั้งค่าโปรเจกต์)
 ui.tree.versionCount,มี {0} เวอร์ชันเก็บไว้
+ui.shortcode.yes,ใช่
+ui.shortcode.no,ไม่ใช่
+ui.shortcode.dlanguage,รหัสภาษาปัจจุบันของโปรเจกต์ (th/en)
+ui.shortcode.dappversion,เวอร์ชันของโปรแกรม
+ui.shortcode.demotion,อารมณ์ของฉาก
+ui.shortcode.dconflict,ความขัดแย้งของฉาก
+ui.shortcode.dnote,โน้ตของฉาก
+ui.shortcode.dfuturenote,โน้ตถึงตัวเองในอนาคต
+ui.shortcode.dstorydate,เวลาในเรื่องของฉาก (ไม่ใช่วันที่จริง)
+ui.shortcode.dcolor,สีที่ตั้งให้ฉาก
+ui.shortcode.dflag,ฉากนี้ถูกปักหมุดไว้หรือไม่
+ui.shortcode.dlocked,ฉากนี้ถูกล็อกแก้ไขหรือไม่
+ui.shortcode.dchapterstatus,สถานะของบท
+ui.shortcode.dchapteract,องก์ของบท
+ui.shortcode.dchapterdate,วันที่ของบท
+ui.shortcode.dchapterflag,บทนี้เป็นบทสำคัญหรือไม่
+ui.shortcode.dtotalwords,จำนวนคำรวมทั้งโปรเจกต์
+ui.shortcode.dtotalscenes,จำนวนฉากรวมทั้งโปรเจกต์
+ui.shortcode.dtotalchapters,จำนวนบทรวมทั้งโปรเจกต์
+ui.shortcode.dtotalbooks,จำนวนเล่มรวมทั้งโปรเจกต์
+ui.shortcode.dtotalcharacters,จำนวนตัวละครใน Wiki
+ui.shortcode.dtotallocations,จำนวนสถานที่ใน Wiki
+ui.shortcode.ddailygoal,เป้าหมายจำนวนคำต่อวัน
+ui.shortcode.dprojectgoal,เป้าหมายจำนวนคำทั้งโปรเจกต์
+ui.shortcode.dprogress,ความคืบหน้าตามเป้าหมาย (%)
+ui.shortcode.dcommentcount,จำนวนคอมเมนต์ในไฟล์นี้
+ui.shortcode.dtime,เวลาปัจจุบัน (ชม:นาที)
+ui.shortcode.dyear,ปีปัจจุบัน
+ui.shortcode.dweekday,วันในสัปดาห์ปัจจุบัน
+ui.shortcode.dfield,ค่าฟิลด์ของเอนทิตี้ที่กำลังแก้อยู่ เช่น [field:อายุ]
+ui.shortcode.dentity,ชื่อเอนทิตี้ Wiki ที่กำลังแก้อยู่
+ui.shortcode.dentitycat,หมวดของเอนทิตี้ที่กำลังแก้อยู่
+ui.shortcode.dentitysummary,คำบรรยายย่อของเอนทิตี้
+ui.shortcode.dentitytags,แท็กของเอนทิตี้
+ui.shortcode.drelation,รายชื่อที่ผูกความสัมพันธ์ด้วยบทบาทนี้ เช่น [relation:พ่อ]
+ui.shortcode.needField,เลือก/คลิกช่องข้อความก่อนถึงจะแทรกโค้ดสั้นได้
+ui.shortcode.liveCtxFail,อ่านข้อมูลสำหรับโค้ดสั้นไม่สำเร็จ
+ui.shortcode.statsScanFail,นับสถิติโปรเจกต์ไม่สำเร็จ
+ui.aiChatPanel.insertShortcode,แทรกโค้ดสั้น (ค่าจริงทันที)
+ui.cmtComment.insertShortcode,แทรกโค้ดสั้น (ค่าจริงทันที)
+ui.wiki.insertShortcode,โค้ดสั้น
+ui.wiki.insertShortcodeHint,แทรกโค้ดสั้น (ค่าฟิลด์ตัวเอง · ความสัมพันธ์ · ข้อมูลจาก Wiki อื่น · สถิติโปรเจกต์) ลงช่องที่โฟกัสอยู่
