@@ -52,6 +52,8 @@ export async function sceneProps(dPath, ch, sc) {
     r.append(c); box.append(r); return c;
   };
 
+  // [alpha.120 ข้อ 6] เปลี่ยนชื่อฉากได้จากคุณสมบัติ (ทั้งกล่องและแผงต้องมีเหมือนกัน)
+  const iTitle = mk(t('ui.props.sceneName'), row.title);
   const iSyn = mk(t('ui.common.synopsis'), M.synopsis, 'textarea');
   const iStoryDate = mk(t('ui.common.timeStoryLineTime'), M.storyDate);
   iStoryDate.placeholder = t('ui.scene.egDate');
@@ -102,6 +104,13 @@ export async function sceneProps(dPath, ch, sc) {
   cB.onclick = () => ov.remove();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   okB.onclick = async () => {
+    // ชื่อฉากเขียนผ่าน setSceneTitle เท่านั้น (มันแก้ทั้ง scenes.json · frontmatter · ชื่อบนแท็บ)
+    const newTitle = iTitle.value.trim();
+    if (newTitle && newTitle !== row.title) {
+      const { setSceneTitle } = await import('./scene-ops.js');
+      await setSceneTitle(dPath, ch, row, newTitle);
+      row.title = newTitle;
+    }
     row.synopsis = iSyn.value; row.pov = iPov.value; row.status = iStatus.value; row.storyDate = iStoryDate.value.trim();
     // เก็บเฉพาะเมื่อผู้ใช้กรอกจริง (ค่าว่าง = เริ่มที่ 1) — กัน field ว่างรกทุกแถว
     { const sp = parseInt(iStartPage.value, 10);

@@ -5970,3 +5970,56 @@ ui.html.elNote,Note
 ui.html.elContLeft,Continued (left)
 ui.html.elContRight,Continued (right)
 ui.html.tbModeText,📖 Prose ▾
+ui.dlg.settingsFactory,Factory reset
+ui.dlg.settingsFactoryAsk,Reset every setting to the program defaults? (The current values are kept so you can revert.)
+ui.dlg.settingsFactoryDone,Reset to factory defaults
+ui.dlg.settingsFactoryHint,Restore all defaults — the old values stay revertable
+ui.dlg.settingsPrevFail,Could not snapshot previous settings
+ui.dlg.settingsRevert,Revert to previous
+ui.dlg.settingsRevertAsk,Revert settings to the set saved before the last save?
+ui.dlg.settingsRevertHint,Go back to the values saved before the latest save
+ui.dlg.settingsReverted,Settings reverted
+ui.props.renameHint,Edit the scene name here — press Enter to save
+ui.props.sceneName,Scene name
+ui.props.writeMetaFail,Could not write scene properties to the file
+ui.tree.clipEmpty,Nothing has been copied yet
+ui.tree.collapseAll,Collapse all
+ui.tree.confirmDeleteN,Move the {0} selected items to the trash?
+ui.tree.confirmEmptyTrash,Permanently delete all {0} items in the trash? This cannot be undone.
+ui.tree.copy,Copy
+ui.tree.copiedN,Copied {0} items
+ui.tree.cut,Cut
+ui.tree.cutN,Cut {0} items
+ui.tree.delFail,Delete failed
+ui.tree.deleteSelected,Delete selected
+ui.tree.deletedN,Deleted {0} items
+ui.tree.duplicate,Duplicate
+ui.tree.duplicatedN,Duplicated {0} items
+ui.tree.emptiedTrash,Emptied {0} items from the trash
+ui.tree.emptyTrashN,Empty trash ({0})
+ui.tree.expandAll,Expand all
+ui.tree.hideSummary,Hide the summary bar
+ui.tree.moveToChapter,Move to chapter…
+ui.tree.movedN,Moved {0} items to {1}
+ui.tree.newBook,New book
+ui.tree.newChapter,New chapter…
+ui.tree.newChapterHere,New chapter
+ui.tree.newScene,New scene…
+ui.tree.newSceneHere,New scene
+ui.tree.nothingSelected,Nothing selected
+ui.tree.paste,Paste…
+ui.tree.pasteFail,Paste failed
+ui.tree.pasteHere,Paste here
+ui.tree.pasteWhere,Paste into which chapter
+ui.tree.pastedN,Pasted {0} items into {1}
+ui.tree.pickChapterFirst,Pick a destination chapter first
+ui.tree.projectFolder,Open the project folder
+ui.tree.projectSettings,Project settings
+ui.tree.purgeNowByDays,Purge old items by the configured age
+ui.tree.selectedCount,{0} selected
+ui.tree.showSummary,Show the summary bar
+ui.tree.skipCrossDraft,Skipped {0} items (cannot move across drafts)
+ui.tree.snapCountFail,Could not count versions
+ui.tree.trashEmptyAlready,The trash is already empty
+ui.tree.trashSettings,Auto-empty schedule (project settings)
+ui.tree.versionCount,{0} versions kept

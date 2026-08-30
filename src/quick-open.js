@@ -107,7 +107,7 @@ export function openQuickOpen() {
   async function openFile(f) {
     ov.remove();
     const { openScene, openPlainFile } = await import('./app.js');
-    if (f.ext === 'md') openScene(f.path, f.name.replace(/\.md$/i, ''));
+    if (f.ext === 'md') openScene(f.path, null);
     else if (f.ext === 'json' || f.ext === 'txt') await openPlainFile(f.path, f.name);
     else kapi.revealInOS(f.path);
   }

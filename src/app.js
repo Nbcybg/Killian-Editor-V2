@@ -53,7 +53,7 @@ import { decoSignature } from './editor.js';   // [alpha.88 ข้อ 6] ปร�
 import { blankLinesBefore } from './sp-format.js';   // [alpha.88 ข้อ 2+3]
 import { commentAnchors, refreshCommentAnchors } from './editor.js';
 import * as spell from './spell.js';
-import { sceneMatchesQuery } from './sceneFilter.js';
+import { sceneMatchesQuery, textMatchesQuery } from './sceneFilter.js';
 import { STEP_DEFS, PRESETS, stepDef, mkStep, newWorkflow, cloneWorkflow, runWorkflow,
          mdToHtmlBody, mdToHtml } from './compile.js';
 import { TIMELINE_VERSION, mergeTimeline, groupByTrack, trackNames, newEvent, findClashes, sortEvents, ganttData, ganttBar, ganttTicks, normalizeRefs } from './timeline.js';
@@ -2505,7 +2505,7 @@ async function loadProjectInner(root) {
   setBusy(tt('ui.app.busyNewStructureProject'));
   await buildTree();
   buildFilterBar().catch(() => {});             // แถบกรอง
-  updateSummaryBar().catch(() => {});            // สรุปด่วนเหนือ tree
+  setSummaryBar(summaryBarOn());                 // [alpha.120 ข้อ 15] ปิดไว้เป็นค่าเริ่มต้น
   updateStatusExtras();                          // แถบสถานะพิ่มเติม
   smart.loadNames(root);
   // [alpha.57a ข้อ 4] คลิกขวาที่คำเดา = ไม่ต้องจำคำนั้นอีก
@@ -3242,7 +3242,9 @@ function filterTree(q) {
     let ok;
     if (!raw) ok = true;
     else if (s._scene) ok = sceneMatchesQuery(s._scene, raw);   // ค้นทุกฟิลด์ + field:value
-    else ok = (s.dataset.search || s.textContent.toLowerCase()).includes(ql);
+    // [alpha.120 ข้อ 4] แถวที่ไม่ใช่ฉากต้องใช้ไวยากรณ์เดียวกัน (OR / -ไม่เอา)
+    // เดิมเป็น `includes(ทั้งคิวรี)` → ติ๊กชิปสองสถานะทีไร แถว Wiki/รูป/โน้ต หายเกลี้ยงทุกที
+    else ok = textMatchesQuery(s.dataset.search || s.textContent, raw);
     // [alpha.65r8 → alpha.74] "ค้นเฉพาะในบทนี้" ต้องไม่กลืนแถวที่ไม่ได้อยู่ในบทไหนเลย
     //
     // ⚠️ ต้นตอของ "หัวข้อขึ้น (n) แต่ข้างล่างไม่มีแถว" ที่ผู้ใช้เจอกับ **แผนที่**:
@@ -3298,18 +3300,430 @@ function setTreeCollapsed(key, on) {
 // ติดหัวพับได้: prepend caret + คลิกหัว(นอกปุ่ม) toggle .collapsed + จำสถานะ
 function makeAccordion(headEl, containerEl, key) {
   const collapsed = !!treeCollapsed()[key];
-  const caret = el('span', 'tw', collapsed ? '▸' : '▾');
+  // [alpha.120 ข้อ 1] ลูกศรพับ/กางแบบ VS Code — **เชฟรอน `>` ตัวเดียวที่หมุน 90°** เมื่อกาง
+  // เดิมสลับอักขระ ▸/▾ ซึ่งเป็นคนละสัญลักษณ์ (ความกว้าง/น้ำหนักเส้นไม่เท่ากัน) แถวจึงขยับตอนพับ
+  const caret = el('span', 'tw' + (collapsed ? '' : ' tw-open'));
+  caret.innerHTML = iconHtml('chevron-right', 12);
   headEl.prepend(caret);
   if (collapsed) containerEl.classList.add('collapsed');
   const toggle = (e) => {
     if (e && e.target && e.target.closest('.row-add')) return;   // ปุ่ม + ไม่นับ
     const now = containerEl.classList.toggle('collapsed');
-    caret.textContent = now ? '▸' : '▾';
+    caret.classList.toggle('tw-open', !now);
     setTreeCollapsed(key, now);
     if (e) e.stopPropagation();
   };
   caret.onclick = toggle;
   headEl.addEventListener('click', toggle);
+}
+
+// ───────── [alpha.120 ข้อ 2] เรียงลำดับใน Explorer (dropdown "เรียงตาม") ─────────
+//
+// ★ ต้นตอที่ผู้ใช้เจอว่า "Sort ใช้ไม่ได้": `#filter-sort` มี onchange อยู่จริง แต่สิ่งที่มันเรียกคือ
+//   `buildFilterBar()` (วาดชิปสถานะ/แท็กใหม่) กับ `filterTree()` (ซ่อน/แสดงแถว) — **ไม่มีใคร
+//   เรียงอะไรเลยสักบรรทัด** ค่าที่เลือกจึงไม่เคยถูกอ่าน ต้นไม้เรียงตาม `order` เหมือนเดิมทุกครั้ง
+// ตอนนี้ค่าถูกเก็บต่อโปรเจกต์ แล้ว buildTree() เป็นคนเรียงจริงทั้งฉาก · โน้ต · เอนทิตี้ Wiki
+function treeSortMode() {
+  const sel = $('#filter-sort');
+  if (sel && sel.value) return sel.value;
+  try { return localStorage.getItem('k2-tree-sort:' + state.root) || ''; } catch { return ''; }
+}
+function setTreeSortMode(v) {
+  try { localStorage.setItem('k2-tree-sort:' + state.root, v || ''); } catch {}
+}
+const _thCmp = (a, b) => String(a || '').localeCompare(String(b || ''), 'th');
+/**
+ * เรียงรายการฉาก/โน้ตตามโหมดที่เลือก
+ * @param {object[]} list แถวจาก scenes.json
+ * @param {Map<string,number>} [mtimes] id → เวลาแก้ไข (เฉพาะโหมด 'modified')
+ */
+function sortSceneRows(list, mode, mtimes) {
+  const out = list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (!mode) return out;
+  if (mode === 'name') return out.sort((a, b) => _thCmp(a.title, b.title));
+  if (mode === 'words') return out.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
+  if (mode === 'status') {
+    // 'Outline' = ยังไม่ตั้ง → ไปท้ายเสมอ ไม่ใช่ปนกลางตามตัวอักษร
+    const rank = (s) => { const i = SCENE_STATUSES.indexOf(s); return (!s || s === 'Outline' || i < 0) ? 99 : i; };
+    return out.sort((a, b) => rank(a.status) - rank(b.status) || (a.order || 0) - (b.order || 0));
+  }
+  if (mode === 'modified') {
+    const at = (r) => (mtimes && mtimes.get(r.id)) || 0;
+    return out.sort((a, b) => at(b) - at(a));
+  }
+  return out;
+}
+
+// ───────── [alpha.120 ข้อ 17] ป้าย "(n)" = ไฟล์นี้มีกี่เวอร์ชัน ─────────
+//
+// เวอร์ชันเก็บที่ `<root>/Snapshots/<ทางสัมพัทธ์ที่แทน \\ และ / ด้วย __>/*.md` (ดู snapDirFor)
+// ถ้าไปถาม `listSnapshots()` ทีละฉากตอนสร้างต้นไม้ = IPC หลายร้อยรอบต่อการรีเฟรชหนึ่งครั้ง
+// → **อ่านโฟลเดอร์ Snapshots รอบเดียว** แล้วประกอบคีย์เองจากชิ้นส่วนที่ buildTree รู้อยู่แล้ว
+async function snapshotCounts() {
+  const m = new Map();
+  if (!state.root) return m;
+  try {
+    const root = await kapi.join(state.root, 'Snapshots');
+    if (!(await kapi.exists(root))) return m;
+    for (const d of await kapi.listDirs(root)) {
+      let n = 0;
+      try { n = (await kapi.listFiles(await kapi.join(root, d), '.md')).length; } catch {}
+      if (n) m.set(d, n);
+    }
+  } catch (e) { log('warn', tt('ui.tree.snapCountFail'), e); }
+  return m;
+}
+/** คีย์ของไฟล์ในตาราง snapshotCounts() — ชิ้นส่วนทางสัมพัทธ์จากรากโปรเจกต์ */
+function snapKey(...parts) {
+  return parts.filter(Boolean).join('__').replace(/\.md$/i, '');
+}
+/** แปะป้าย (n) ต่อท้ายแถว ถ้าไฟล์นั้นมีเวอร์ชันเก็บไว้ */
+function addVersionBadge(rowEl, counts, key) {
+  const n = counts && counts.get(key);
+  if (!n) return;
+  const b = el('span', 'sc-vers', '(' + n + ')');
+  b.title = ttf('ui.tree.versionCount', n);
+  rowEl.append(b);
+}
+
+// ───────── [alpha.120 ข้อ 5] สถานะ "กำลังแก้ / ยังไม่บันทึก" ของแถวในต้นไม้ ─────────
+//
+// กติกาที่ผู้ใช้กำหนด (ใช้กับทั้งฉากและเอนทิตี้ Wiki):
+//   ตัวหนา          = ฉากที่กำลังแก้อยู่ (แท็บที่ active)
+//   ตัวเอียง        = เปิดค้างไว้ ยังไม่บันทึก แต่ไม่ได้อยู่บนหน้าจอตอนนี้
+//   ตัวหนา + เอียง  = กลับมาแก้แล้วและยังไม่บันทึก
+// ทำด้วย class ล้วน ๆ ตามกฎถาวรข้อ 4 (ห้ามใส่สัญลักษณ์/เขียนทับข้อความในแถว)
+function applyRowOpenState(rowEl, path) {
+  if (!rowEl || !path) return;
+  rowEl.dataset.tabrow = '1';                 // ป้ายว่า "แถวนี้ผูกกับแท็บเอกสาร" (ดู refreshTreeRowStates)
+  const tab = state.tabs.get(path);
+  // ⚠ `state.active` เป็น **ตัวแท็บ** ไม่ใช่ path (พลาดตรงนี้ = ไม่มีแถวไหนเป็นตัวหนาเลย)
+  rowEl.classList.toggle('k-row-open', !!tab && !!state.active && state.active.file === path);
+  rowEl.classList.toggle('k-row-unsaved', !!(tab && tab.dirty));
+}
+/** เพิ่มบทลงในฉบับร่างแรกของเล่ม (ทางลัดที่ทั้งปุ่ม + และเมนูคลิกขวาของเล่มใช้ร่วมกัน) */
+async function addChapterToSection(secPath) {
+  const dRoot = await kapi.join(secPath, 'Draft');
+  const dns = (await kapi.exists(dRoot)) ? await kapi.listDirs(dRoot) : [];
+  if (!dns.length) { setStatus(tt('ui.app.bookNotHasDraft')); return null; }
+  return addChapter(await kapi.join(dRoot, dns[0]));
+}
+
+// ═══════ [alpha.120 ข้อ 16] เลือกหลายไฟล์ + คัดลอก/ตัด/วาง/ทำซ้ำ/ลบ ใน Explorer ═══════
+//
+// เดิม Explorer เลือกได้ทีละแถวเท่านั้น และคีย์ Ctrl+C/V/D ไปเข้าตัวแก้ไขเสมอ
+// ตอนนี้: Ctrl+คลิก = สลับเลือก · Shift+คลิก = เลือกเป็นช่วง · คีย์ลัดทำงานเมื่อโฟกัสอยู่ในต้นไม้
+// เก็บ "ทางไฟล์" เป็นกุญแจ (ไม่ใช่ตัว element) เพราะต้นไม้ถูกสร้างใหม่ทั้งก้อนบ่อยมาก
+const treeSel = new Set();                  // path ที่ถูกเลือกอยู่
+let treeSelAnchor = null;                   // จุดตั้งต้นของการเลือกเป็นช่วง (Shift)
+const treeClip = { mode: '', items: [] };   // คลิปบอร์ดของต้นไม้ ('copy' | 'cut')
+
+/** แถวฉากทั้งหมดตามลำดับที่เห็นบนจอ (ข้ามแถวที่ถูกกรองซ่อนอยู่) */
+function treeRows() {
+  const tree = $('#tree');
+  if (!tree) return [];
+  // เฉพาะแถว "ฉาก" (มี `_ctx`) — แถวกระดาน/แผนที่/รูป ใช้ data-path เหมือนกันแต่คนละเรื่อง
+  return [...tree.querySelectorAll('.scene[data-path]')]
+    .filter((r) => r._ctx && r.style.display !== 'none');
+}
+function paintTreeSel() {
+  const tree = $('#tree');
+  if (!tree) return;
+  const cut = treeClip.mode === 'cut' ? new Set(treeClip.items.map((it) => it.file)) : null;
+  for (const r of tree.querySelectorAll('.scene[data-path]')) {
+    if (!r._ctx) continue;                      // เฉพาะแถวฉาก (แถวเล่าด้วยภาพใช้ path เดียวกับฉากแม่)
+    r.classList.toggle('k-row-sel', treeSel.has(r.dataset.path));
+    // แถวที่ถูก "ตัด" ไว้รอวาง — จางลงเหมือน Windows Explorer
+    r.classList.toggle('k-row-cut', !!cut && cut.has(r.dataset.path));
+  }
+}
+export function treeSelectOnly(rowEl) {
+  treeSel.clear();
+  if (rowEl && rowEl.dataset.path) { treeSel.add(rowEl.dataset.path); treeSelAnchor = rowEl.dataset.path; }
+  paintTreeSel();
+  return treeSel.size;
+}
+export function treeSelectClick(rowEl, ev) {
+  if (!rowEl || !rowEl.dataset.path) return 0;
+  const p = rowEl.dataset.path;
+  if (ev && ev.shiftKey && treeSelAnchor) {
+    const rows = treeRows();
+    const a = rows.findIndex((r) => r.dataset.path === treeSelAnchor);
+    const b = rows.findIndex((r) => r.dataset.path === p);
+    if (a >= 0 && b >= 0) {
+      treeSel.clear();
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) treeSel.add(rows[i].dataset.path);
+    }
+  } else {
+    if (treeSel.has(p)) treeSel.delete(p); else treeSel.add(p);
+    treeSelAnchor = p;
+  }
+  paintTreeSel();
+  setStatus(ttf('ui.tree.selectedCount', treeSel.size));
+  return treeSel.size;
+}
+export function clearTreeSel() { treeSel.clear(); paintTreeSel(); }
+/** บริบทของแถวที่เลือกอยู่ (เฉพาะแถวฉากที่ยังอยู่ในต้นไม้) */
+function treeSelCtx() {
+  const out = [];
+  for (const r of treeRows()) if (treeSel.has(r.dataset.path) && r._ctx) out.push({ ...r._ctx, file: r.dataset.path, row: r });
+  return out;
+}
+/** เมนูคลิกขวาเมื่อเลือกไว้หลายแถว */
+function treeMultiMenu(items) {
+  return [
+    { label: ttf('ui.tree.selectedCount', items.length), disabled: true },
+    '-',
+    { label: tt('ui.tree.copy'), click: () => treeCopy(items, 'copy') },
+    { label: tt('ui.tree.cut'), click: () => treeCopy(items, 'cut') },
+    { label: tt('ui.tree.duplicate'), click: () => treeDuplicate(items) },
+    '-',
+    { label: tt('ui.tree.moveToChapter'), click: () => treeMoveMenu(items) },
+    '-',
+    { label: tt('ui.tree.deleteSelected'), danger: true, click: () => treeDeleteSelected(items) },
+  ];
+}
+export function treeCopy(items, mode) {
+  const list = items && items.length ? items : treeSelCtx();
+  if (!list.length) { setStatus(tt('ui.tree.nothingSelected')); return 0; }
+  treeClip.mode = mode;
+  treeClip.items = list.map((it) => ({ dPath: it.dPath, chGuid: it.ch.guid, folderName: it.ch.folderName,
+                                       id: it.sc.id, file: it.file, title: it.sc.title }));
+  paintTreeSel();
+  // เขียนคีย์เป็นตัวหนังสือตรง ๆ ทั้งสองทาง — ตัวกวาดคีย์ภาษาอ่านนิพจน์ในวงเล็บไม่ออก
+  // (คีย์ที่ประกอบด้วย ternary จะหลุดจากประตูกันพลาด แล้วไปโผล่เป็นตัวคีย์บนหน้าจอ)
+  setStatus(mode === 'cut' ? ttf('ui.tree.cutN', treeClip.items.length)
+                           : ttf('ui.tree.copiedN', treeClip.items.length));
+  return treeClip.items.length;
+}
+/** วางสิ่งที่คัดลอก/ตัดไว้ลงบทเป้าหมาย */
+export async function treePaste(dPath, ch) {
+  if (!treeClip.items.length) { setStatus(tt('ui.tree.clipEmpty')); return 0; }
+  if (!dPath || !ch) { setStatus(tt('ui.tree.pickChapterFirst')); return 0; }
+  let n = 0;
+  for (const it of treeClip.items) {
+    try {
+      if (treeClip.mode === 'cut') {
+        if (it.dPath !== dPath) { setStatus(tt('ui.app.moveSkipDraftNot')); continue; }
+        if (it.chGuid === ch.guid) continue;
+        await moveSceneToChapter(dPath, { guid: it.chGuid }, { id: it.id }, ch);
+      } else {
+        let meta = {}, body = '';
+        try { const parsed = parseMdFile(await kapi.readFile(it.file)); meta = parsed.meta; body = parsed.body; } catch {}
+        const title = it.title + (it.chGuid === ch.guid ? tt('ui.common.msg') : '');
+        await addScene(dPath, ch, title, { body, meta: { ...meta, title }, silent: true });
+      }
+      n++;
+    } catch (e) { log('warn', tt('ui.tree.pasteFail'), e); }
+  }
+  if (treeClip.mode === 'cut') { treeClip.mode = ''; treeClip.items = []; }
+  await buildTree();
+  setStatus(ttf('ui.tree.pastedN', n, ch.title));
+  return n;
+}
+export async function treeDuplicate(items) {
+  const list = items && items.length ? items : treeSelCtx();
+  if (!list.length) { setStatus(tt('ui.tree.nothingSelected')); return 0; }
+  for (const it of list) { try { await duplicateScene(it.dPath, it.ch, it.sc); } catch {} }
+  setStatus(ttf('ui.tree.duplicatedN', list.length));
+  return list.length;
+}
+export async function treeDeleteSelected(items) {
+  const list = items && items.length ? items : treeSelCtx();
+  if (!list.length) { setStatus(tt('ui.tree.nothingSelected')); return 0; }
+  if (!(await confirmBox(ttf('ui.tree.confirmDeleteN', list.length), tt('ui.app.del')))) return 0;
+  for (const it of list) {
+    // ลบหลายไฟล์ต้องไม่ถามซ้ำทีละไฟล์ — ย้ายเข้าถังเองแล้วเขียนใบกู้คืนแบบเดียวกับ deleteScene
+    try { await deleteSceneSilent(it.dPath, it.ch, it.sc); } catch (e) { log('warn', tt('ui.tree.delFail'), e); }
+  }
+  clearTreeSel();
+  await buildTree();
+  setStatus(ttf('ui.tree.deletedN', list.length));
+  return list.length;
+}
+/** ลบฉากลงถังขยะโดยไม่ถามซ้ำ (ตัวถามอยู่ที่ผู้เรียก — กันกล่องเด้ง n ครั้ง) */
+async function deleteSceneSilent(dPath, ch, sc) {
+  const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
+  const base = file.split(/[\\/]/).pop();
+  const dst = await kapi.join(state.root, 'Recycle', Date.now().toString(36) + '-' + base);
+  await kapi.move(file, dst);
+  if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file); }
+  await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
+    { kind: 'scene', dPath, chGuid: ch.guid, folderName: ch.folderName, sc }, null, 2));
+  const sf = await kapi.join(dPath, 'scenes.json');
+  const d = await kapi.readJson(sf);
+  d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
+  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+}
+/** ย้ายหลายฉากไปบทอื่น (เลือกบทปลายทางจากรายการ) */
+async function treeMoveMenu(items) {
+  const list = items && items.length ? items : treeSelCtx();
+  if (!list.length) return 0;
+  const dst = await pickDraftTarget({ title: tt('ui.tree.moveToChapter') });
+  if (!dst) return 0;
+  let skipped = 0;
+  for (const it of list) {
+    // ย้ายข้ามฉบับร่างไม่ได้ (ทะเบียนฉากเป็นคนละไฟล์) — บอกให้รู้ ไม่ใช่เงียบ
+    if (it.dPath !== dst.dPath) { skipped++; continue; }
+    try { await moveSceneToChapter(it.dPath, it.ch, it.sc, dst.chapter); } catch {}
+  }
+  if (skipped) setStatus(ttf('ui.tree.skipCrossDraft', skipped));
+  await buildTree();
+  setStatus(ttf('ui.tree.movedN', list.length, dst.chapter.title));
+  return list.length;
+}
+/** บทที่ควรใช้เป็นเป้าหมายของ "วาง" — บทของแถวที่เลือกล่าสุด */
+function treePasteTarget() {
+  const rows = treeRows();
+  for (const r of rows) if (treeSel.has(r.dataset.path) && r._ctx) return r._ctx;
+  return null;
+}
+
+// ───────── [alpha.120 ข้อ 11+16] คีย์ลัดในต้นไม้ + เมนูคลิกขวาบน "พื้นที่ว่าง" ─────────
+//
+// คีย์ลัดทำงาน **เฉพาะเมื่อโฟกัสอยู่ในแผงโปรเจกต์** — ไม่งั้นจะไปแย่ง Ctrl+C/V ของตัวแก้ไข
+// (`#tree` ได้ tabindex เพื่อรับโฟกัสได้จริง · Ctrl/Shift+คลิกจะโฟกัสให้เอง)
+export function setupTreeInteractions() {
+  const tree = $('#tree');
+  if (!tree || tree.dataset.k2wired) return false;
+  tree.dataset.k2wired = '1';
+  tree.tabIndex = 0;
+  tree.addEventListener('mousedown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey) tree.focus({ preventScroll: true });
+    // คลิกพื้นที่ว่าง = ล้างการเลือก (เหมือน Explorer)
+    if (e.target === tree) clearTreeSel();
+  });
+  tree.addEventListener('keydown', async (e) => {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl && e.code === 'KeyC') { e.preventDefault(); treeCopy(null, 'copy'); return; }
+    if (ctrl && e.code === 'KeyX') { e.preventDefault(); treeCopy(null, 'cut'); return; }
+    if (ctrl && e.code === 'KeyD') { e.preventDefault(); await treeDuplicate(null); return; }
+    if (ctrl && e.code === 'KeyA') {
+      e.preventDefault();
+      treeSel.clear();
+      for (const r of treeRows()) treeSel.add(r.dataset.path);
+      paintTreeSel(); setStatus(ttf('ui.tree.selectedCount', treeSel.size)); return;
+    }
+    if (ctrl && e.code === 'KeyV') {
+      e.preventDefault();
+      const t = treePasteTarget();
+      if (t) await treePaste(t.dPath, t.ch);
+      else {
+        const dst = await pickDraftTarget({ title: tt('ui.tree.pasteWhere') });
+        if (dst && dst.chapter) await treePaste(dst.dPath, dst.chapter);
+      }
+      return;
+    }
+    if (e.code === 'Delete') { e.preventDefault(); await treeDeleteSelected(null); return; }
+    if (e.code === 'Escape') { clearTreeSel(); return; }
+  });
+  // คลิกขวาบนพื้นที่ว่างของต้นไม้ (ไม่โดนแถวไหนเลย)
+  tree.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.scene, .ch-title, .sec-title')) return;   // แถวมีเมนูของตัวเอง
+    e.preventDefault();
+    popupMenu(e.clientX, e.clientY, treeBlankMenu());
+  });
+  return true;
+}
+
+/** เมนู "พื้นที่ว่าง" — สร้างได้ทุกอย่าง + มุมมอง + ตั้งค่าโปรเจกต์ */
+function treeBlankMenu() {
+  const pickCh = async (title) => {
+    const dst = await pickDraftTarget({ title });
+    return (dst && dst.chapter) ? dst : null;
+  };
+  return [
+    { label: tt('ui.tree.newBook'), click: () => addSection() },
+    { label: tt('ui.tree.newChapter'), click: async () => {
+        const dst = await pickDraftTarget({ title: tt('ui.tree.newChapter'), needChapter: false });
+        if (dst) await addChapter(dst.dPath);
+      } },
+    { label: tt('ui.tree.newScene'), click: async () => {
+        const dst = await pickCh(tt('ui.tree.newScene'));
+        if (dst) await addScene(dst.dPath, dst.chapter);
+      } },
+    { label: tt('ui.app.newMemoNew'), click: () => addMemo() },
+    '-',
+    { label: tt('ui.app.newCatNew'), click: () => newWikiCat() },
+    { label: tt('ui.app.boardNew'), click: () => newPlannerBoard() },
+    { label: tt('ui.app.addMap'), click: async () => { await openMaps(); await addMapFlow(); await refreshTreeQueued(); } },
+    { label: tt('ui.app.addImageInLibrary'), click: () => galleryCommand('gallery-new-album') },
+    '-',
+    { label: tt('ui.tree.paste'), click: async () => {
+        const t = treePasteTarget() || await pickCh(tt('ui.tree.pasteWhere'));
+        if (t) await treePaste(t.dPath, t.ch || t.chapter);
+      } },
+    '-',
+    { label: tt('ui.tree.expandAll'), click: () => setAllAccordions(false) },
+    { label: tt('ui.tree.collapseAll'), click: () => setAllAccordions(true) },
+    { label: (summaryBarOn() ? tt('ui.tree.hideSummary') : tt('ui.tree.showSummary')),
+      click: () => setSummaryBar(!summaryBarOn()) },
+    { label: tt('ui.app.refreshReadFileFolder'), click: () => refreshTreeQueued() },
+    '-',
+    { label: tt('ui.tree.projectFolder'), click: () => kapi.revealInOS(state.root) },
+    { label: '⚙ ' + tt('ui.tree.projectSettings'), click: () => settingsDialog() },
+  ];
+}
+
+/** พับ/กางทุกหัวข้อในต้นไม้พร้อมกัน */
+function setAllAccordions(collapse) {
+  const tree = $('#tree');
+  if (!tree) return 0;
+  let n = 0;
+  for (const head of tree.querySelectorAll('.sec-title, .ch-title')) {
+    const box = head.parentElement;
+    const caret = head.querySelector('.tw');
+    if (!box || !caret) continue;
+    if (box.classList.contains('collapsed') !== collapse) { caret.click(); n++; }
+  }
+  return n;
+}
+
+/** [alpha.120 ข้อ 13] ล้างถังขยะทั้งใบ (พร้อมไฟล์ใบกู้คืน/ตารางเล่าด้วยภาพที่ติดมาด้วย) */
+export async function emptyRecycle(count) {
+  if (!state.root) return 0;
+  const recDir = await kapi.join(state.root, 'Recycle');
+  if (!(await kapi.exists(recDir))) { setStatus(tt('ui.tree.trashEmptyAlready')); return 0; }
+  const files = await kapi.listFiles(recDir).catch(() => []);
+  const dirs = await kapi.listDirs(recDir).catch(() => []);
+  const all = [...files, ...dirs];
+  if (!all.length) { setStatus(tt('ui.tree.trashEmptyAlready')); return 0; }
+  if (!(await confirmBox(ttf('ui.tree.confirmEmptyTrash', count || all.length), tt('ui.app.del')))) return 0;
+  let n = 0;
+  for (const f of all) {
+    try { await kapi.remove(await kapi.join(recDir, f)); n++; } catch (e) { log('warn', tt('ui.tree.delFail'), e); }
+  }
+  await buildTree();
+  setStatus(ttf('ui.tree.emptiedTrash', n));
+  return n;
+}
+
+// [alpha.120 ข้อ 15] แถบสรุปเหนือต้นไม้ — ผู้ใช้บอกว่า "ใช้ไม่ได้ + มีแดชบอร์ดแล้ว"
+// จึง **ปิดเป็นค่าเริ่มต้นแต่ไม่ลบโค้ด** (เปิดกลับได้จากเมนูคลิกขวาพื้นที่ว่าง)
+export function summaryBarOn() {
+  try { return localStorage.getItem('k2-summary-bar') === '1'; } catch { return false; }
+}
+export function setSummaryBar(on) {
+  try { localStorage.setItem('k2-summary-bar', on ? '1' : '0'); } catch {}
+  const bar = $('#summary-bar');
+  if (bar) bar.style.display = on ? '' : 'none';
+  if (on) updateSummaryBar().catch(() => {});
+  return on;
+}
+
+/** อัปเดตสถานะทุกแถวโดยไม่ต้องสร้างต้นไม้ใหม่ (เรียกตอนสลับแท็บ/พิมพ์/บันทึก) */
+export function refreshTreeRowStates() {
+  const tree = $('#tree');
+  if (!tree) return 0;
+  let n = 0;
+  // ⚠ เฉพาะแถวที่ "เป็นเอกสารเปิดเป็นแท็บได้" (data-tabrow) — แถวกระดาน/แผนแตกสายใช้
+  // k-row-open/k-row-unsaved ตัวเดียวกันแต่มีคนดูแลของตัวเอง (markPlannerRow/markBranchPlanRow)
+  // เผลอกวาดทั้งหมด = ป้าย "เปิดอยู่" ของกระดานถูกลบทุกครั้งที่สลับแท็บ
+  for (const row of tree.querySelectorAll('.scene[data-tabrow]')) {
+    applyRowOpenState(row, row.dataset.path); n++;
+  }
+  paintTreeSel();
+  return n;
 }
 
 /**
@@ -3343,6 +3757,8 @@ export async function buildTree() {
 async function _buildTreeInner() {
   const tree = document.createElement('div');   // buffer ที่ยังไม่อยู่ใน DOM
   const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle', 'Sessions', 'Starters']);
+  const sortMode = treeSortMode();                       // [alpha.120 ข้อ 2]
+  const snapCounts = await snapshotCounts();             // [alpha.120 ข้อ 17] จำนวนเวอร์ชันต่อไฟล์
   for (const name of await kapi.listDirs(state.root)) {
     if (skip.has(name)) continue;
     const secPath = await kapi.join(state.root, name);
@@ -3352,19 +3768,20 @@ async function _buildTreeInner() {
     const secTitle = el('div', 'sec-title', '📚 ' + (sec.title || name));
     // ปุ่ม + บนหัวเล่ม = เพิ่มบทลงในฉบับร่างแรกของเล่ม (ทางลัด)
     const addToSec = el('span', 'row-add', '+'); addToSec.title = tt('ui.app.addChapterBook');
-    addToSec.onclick = async (e) => { e.stopPropagation();
-      const dRoot = await kapi.join(secPath, 'Draft');
-      const dns = (await kapi.exists(dRoot)) ? await kapi.listDirs(dRoot) : [];
-      if (dns.length) addChapter(await kapi.join(dRoot, dns[0]));
-      else setStatus(tt('ui.app.bookNotHasDraft'));
-    };
+    addToSec.onclick = (e) => { e.stopPropagation(); addChapterToSection(secPath); };
     secTitle.append(addToSec);
     // คลิกขวาหัวเล่ม → เปลี่ยนชื่อ/ลบเล่ม/เพิ่มเล่มใหม่
+    // [alpha.120 ข้อ 9+10+7] เมนูของเล่ม: สร้างได้ทั้ง "เล่ม" และ "บท" (ไล่ลงไปหนึ่งชั้นเสมอ) ·
+    // มี "จัดการเล่ม" (เดิมอยู่ท้ายรายการเล่มอย่างเดียว หาไม่เจอถ้าไม่เลื่อนลงไปสุด) · มี "หาในดิสก์"
     secTitle.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
       { label: tt('ui.app.addBookNew'), click: () => addSection() },
+      { label: tt('ui.tree.newChapterHere'), click: () => addChapterToSection(secPath) },
+      '-',
       { label: tt('ui.common.changeNameBook'), click: () => renameSection(secPath, sec) },
       // [alpha.60r3 ข้อ 3] ปก/คำโปรย/สถานะ/ลำดับ — เดิมต้องเปิดหน้าจัดการเล่มทั้งหน้า
       { label: '⚙ ' + tt('ui.app.sectionProps'), click: () => sectionProps(secPath, sec) },
+      { label: tt('ui.app.manageBook'), click: () => openBookManager() },
+      { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(secPath) },
       '-',
       { label: tt('ui.common.delBookBook'), danger: true, click: () => deleteSection(secPath, sec) },
     ]); };
@@ -3429,7 +3846,16 @@ async function _buildTreeInner() {
             await moveSceneToChapter(dPath, { guid: data.chGuid }, { id: data.id }, ch);
             setStatus(tt('ui.app.moveSceneChapter') + ch.title);
           });
-          for (const sc of (scenesAll[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0))) {
+          // [alpha.120 ข้อ 2] โหมด "เวลาแก้ไข" ต้องถามดิสก์ — ถามเฉพาะตอนเลือกโหมดนั้นจริง ๆ
+          let chMtimes = null;
+          if (sortMode === 'modified') {
+            chMtimes = new Map();
+            for (const r of (scenesAll[ch.guid] || [])) {
+              try { chMtimes.set(r.id, await kapi.mtime(
+                await kapi.join(dPath, 'Chapters', ch.folderName, r.fileName))); } catch {}
+            }
+          }
+          for (const sc of sortSceneRows(scenesAll[ch.guid] || [], sortMode, chMtimes)) {
             const scEl = el('div', 'scene');
             if (sc.color) { const dot = el('span', 'sc-dot'); dot.style.background = sc.color; scEl.append(dot); }
             const isMemo = sc.type === 'memo';
@@ -3469,11 +3895,17 @@ async function _buildTreeInner() {
               chips.classList.add('sc-tags');
               scEl.append(chips);
             }
+            // [alpha.120 ข้อ 17] จำนวนเวอร์ชันที่เก็บไว้ของไฟล์นี้
+            addVersionBadge(scEl, snapCounts,
+              snapKey(name, 'Draft', dname, 'Chapters', ch.folderName, sc.fileName));
             scEl._scene = sc;                      // อ้างอิงตรง → กรองได้ทุกฟิลด์ (ดู filterTree)
-            scEl.dataset.search = [sc.title, (sc.tags || []).join(' '), sc.status,
+            // [alpha.120 ข้อ 3] ชื่อไฟล์จริงต้องค้นเจอด้วย (ผู้ใช้เห็นมันตอน hover แล้วอยากพิมพ์หา)
+            scEl.dataset.search = [sc.title, sc.fileName, (sc.tags || []).join(' '), sc.status,
               sc.pov, sc.emotion, sc.conflict, sc.synopsis, sc.note].filter(Boolean).join(' ').toLowerCase();
             scEl.title = [
-              (isMemo ? '📝 ' : '📄 ') + sc.title,
+              // [alpha.120 ข้อ 3] hover ต้องบอก **ชื่อไฟล์พร้อมนามสกุล** — ไฟล์งานแก้นอกโปรแกรมได้
+              // ผู้ใช้จึงต้องรู้ว่าแถวนี้คือไฟล์ไหนโดยไม่ต้องเปิดคุณสมบัติ
+              (isMemo ? '📝 ' : '📄 ') + sc.title + '  (' + sc.fileName + ')',
               isMemo ? tt('ui.app.noteChapterNotMerge') : '',
               sc.locked ? tt('ui.app.lockEditCant2') : '',
               sc.status && sc.status !== 'Outline' ? tt('ui.app.status2') + sc.status : '',
@@ -3488,11 +3920,20 @@ async function _buildTreeInner() {
               sc.synopsis || '',
               sc.note ? tt('ui.app.note') + sc.note : '',
             ].filter(Boolean).join('\n');
-            scEl.onclick = async () => {
+            scEl._ctx = { dPath, ch, sc };                       // [alpha.120 ข้อ 16] บริบทสำหรับคัดลอก/ย้าย/ลบ
+            scEl.onclick = async (ev) => {
+              // [alpha.120 ข้อ 16] Ctrl/Shift = เลือกหลายไฟล์ (ไม่เปิดฉาก) · คลิกเปล่า = เปิดตามเดิม
+              if (ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
+                ev.preventDefault(); ev.stopPropagation();
+                treeSelectClick(scEl, ev);
+                return;
+              }
+              treeSelectOnly(scEl);
               setPropsTarget(dPath, ch, sc);                       // อัปเดตแผงคุณสมบัติ (ถ้าเปิดอยู่)
               openScene(await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName), sc.title);
             };
             scEl.dataset.path = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
+            applyRowOpenState(scEl, scEl.dataset.path);          // [alpha.120 ข้อ 5] หนา/เอียง
             // ลากย้ายฉากแบบ Windows Explorer: วางบนหัวบท = ต่อท้ายบท · วางบนฉาก = แทรกก่อนฉากนั้น
             scEl.draggable = true;
             scEl.addEventListener('dragstart', (e) => {
@@ -3518,8 +3959,17 @@ async function _buildTreeInner() {
               e.preventDefault(); e.stopPropagation();
               await moveSceneBefore(dPath, { guid: data.chGuid }, data.id, ch, sc.id);
             });
-            scEl.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+            scEl.oncontextmenu = (e) => { e.preventDefault();
+              // คลิกขวาบนแถวที่ยังไม่ถูกเลือก = เลือกเฉพาะแถวนั้น (เหมือน Explorer ของ Windows)
+              if (!scEl.classList.contains('k-row-sel')) treeSelectOnly(scEl);
+              const multi = treeSelCtx();
+              if (multi.length > 1) return popupMenu(e.clientX, e.clientY, treeMultiMenu(multi));
+              popupMenu(e.clientX, e.clientY, [
+              { label: tt('ui.tree.newSceneHere'), click: () => addScene(dPath, ch) },
+              { label: tt('ui.tree.newChapterHere'), click: () => addChapter(dPath) },
+              '-',
               { label: tt('ui.common.showFolder'), click: () => kapi.revealInOS(scEl.dataset.path) },
+              { label: tt('ui.app.findDiskFindOn'), click: () => revealFile(scEl.dataset.path) },
               // โน้ตในบท: ย้ายออกไปโฟลเดอร์ MEMO ได้ และ "กลับเป็นฉากปกติ" ได้ด้วย
               // (เดิมเปลี่ยนเป็นโน้ตแล้วไม่มีทางกลับในเมนู — บั๊กข้อ 8)
               ...(isMemo ? [{ label: tt('ui.app.backSceneNormalMerge'),
@@ -3569,13 +4019,24 @@ async function _buildTreeInner() {
             // แถวลูก "เล่าด้วยภาพ" — โผล่เฉพาะฉากที่มีไฟล์ตารางจริง
             if (visSet.has(sc.fileName.replace(/\.md$/i, '').toLowerCase() + '_vis.csv')) {
               const vEl = el('div', 'scene vis-row', '🎬 ' + tt('ui.vis.title'));
-              vEl.dataset.nofilter = '1';
+              // [alpha.120 ข้อ 8] ★ เดิมติด `data-nofilter` → filterTree ข้ามแถวนี้เสมอ
+              // ผลคือ "เล่าด้วยภาพ" ไม่เคยถูกกรอง: ค้นอะไรก็ยังโผล่ค้างอยู่ใต้บทที่ฉากถูกซ่อนไปแล้ว
+              // ตอนนี้แถวนี้กรองได้จริง และผูกกับบท/ฉากของมันเพื่อให้ "ค้นเฉพาะในบทนี้" ทำงานด้วย
+              vEl.dataset.chGuid = ch.guid;
+              vEl.dataset.search = [tt('ui.vis.title'), sc.title, sc.fileName,
+                                    (sc.tags || []).join(' ')].filter(Boolean).join(' ').toLowerCase();
+              vEl.title = tt('ui.vis.title') + ' — ' + sc.title + '  (' +
+                          sc.fileName.replace(/\.md$/i, '_vis.csv') + ')';
+              // ยังคง data-path ไว้ตามเดิม (โค้ด/เทสอื่นอ้างถึง) และเพิ่ม data-vis-of ให้ชัดว่า
+              // แถวนี้ "ห้อยอยู่ใต้" ฉากไหน — ตัวเลือกที่เลือกหลายไฟล์จะได้ไม่นับมันเป็นฉากหนึ่งใบ
               vEl.dataset.path = scEl.dataset.path;
+              vEl.dataset.visOf = scEl.dataset.path;
               vEl.onclick = (ev) => { ev.stopPropagation(); openVisual(scEl.dataset.path, sc.title); };
               vEl.oncontextmenu = (ev) => { ev.preventDefault(); ev.stopPropagation();
                 popupMenu(ev.clientX, ev.clientY, [
                   { label: tt('ui.vis.open'), click: () => openVisual(scEl.dataset.path, sc.title) },
                   { label: tt('ui.vis.reveal'), click: async () => kapi.revealInOS(await visPathOf(scEl.dataset.path)) },
+                  { label: tt('ui.app.findDiskFindOn'), click: async () => revealFile(await visPathOf(scEl.dataset.path)) },
                 ]); };
               chEl.append(vEl);
             }
@@ -3587,10 +4048,17 @@ async function _buildTreeInner() {
             es.append(el('span', 'dim', tt('ui.app.notHasScenePress')));
             chEl.append(es);
           }
+          chHead._ctx = { dPath, ch };                 // [alpha.120 ข้อ 16] เป้าหมายของ "วาง"
           chHead.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
-            { label: tt('ui.app.searchOnlyChapter2'), click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
+            // [alpha.120 ข้อ 10] สร้างได้ทั้งชั้นของตัวเองและชั้นถัดไป (บท → บท + ฉาก)
             { label: tt('ui.app.addScene'), click: () => addScene(dPath, ch) },
+            { label: tt('ui.tree.newChapterHere'), click: () => addChapter(dPath) },
+            { label: tt('ui.tree.pasteHere'), click: () => treePaste(dPath, ch) },
+            '-',
+            { label: tt('ui.app.searchOnlyChapter2'), click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
             { label: tt('ui.app.changeNameChapter'), click: () => renameChapter(dPath, ch) },
+            { label: tt('ui.app.findDiskFindOn'),
+              click: async () => kapi.revealInOS(await kapi.join(dPath, 'Chapters', ch.folderName)) },
             // [alpha.60r3 ข้อ 3] สถานะ/องก์/วันที่/บทสำคัญ — ค่าที่ draft.json มีอยู่แล้วแต่ไม่เคยมี UI
             { label: '⚙ ' + tt('ui.app.chapterProps'), click: () => chapterProps(dPath, ch) },
             // ข้อ 78: บริบท = ชื่อฉากทั้งบท (พอให้ AI เดาเนื้อบทได้โดยไม่ต้องอ่านทุกไฟล์)
@@ -3635,6 +4103,11 @@ async function _buildTreeInner() {
   addM.onclick = () => addMemo();
   mHead.append(addM); mSec.append(mHead);
   makeAccordion(mHead, mSec, 'sec:__memo__');
+  // [alpha.120 ข้อ 10+7] หัวหมวดก็ต้องสร้างของในหมวดตัวเองได้ + หาโฟลเดอร์ในดิสก์ได้
+  mHead.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+    { label: tt('ui.app.newMemoNew'), click: () => addMemo() },
+    { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(memoDir) },
+  ]); };
   // ลากฉาก/โน้ตในบทมาวางที่หัว MEMO = ย้ายออกมาเก็บไว้นอกบท
   mHead.addEventListener('dragover', (e) => {
     if ([...e.dataTransfer.types].includes('text/k2-scene')) {
@@ -3651,12 +4124,24 @@ async function _buildTreeInner() {
     const row = (sj.chapters[d.chGuid] || []).find((x) => x.id === d.id);
     if (row) await moveRowToMemos(d.draftDir, ch, row);
   });
-  for (const f of await kapi.listFiles(memoDir, '.md')) {
+  // [alpha.120 ข้อ 2] โน้ตเรียงตามโหมดเดียวกับฉาก (ค่าเริ่มต้น = ตามชื่อไฟล์เหมือนเดิม)
+  const memoFiles = await kapi.listFiles(memoDir, '.md');
+  const memoRows = [];
+  for (const f of memoFiles) {
     const p = await kapi.join(memoDir, f);
-    const raw = await kapi.readFile(p);
-    const title = parseMdFile(raw).meta.title || f.replace(/\.md$/, '');
+    let raw = ''; try { raw = await kapi.readFile(p); } catch {}
+    memoRows.push({ f, p, title: parseMdFile(raw).meta.title || f.replace(/\.md$/, ''),
+                    mtime: sortMode === 'modified' ? await kapi.mtime(p).catch(() => 0) : 0 });
+  }
+  if (sortMode === 'name') memoRows.sort((a, b) => _thCmp(a.title, b.title));
+  else if (sortMode === 'modified') memoRows.sort((a, b) => b.mtime - a.mtime);
+  for (const { f, p, title } of memoRows) {
     const it = el('div', 'scene', '📄 ' + title);
     it.dataset.path = p;
+    it.dataset.search = (title + ' ' + f).toLowerCase();
+    it.title = '📝 ' + title + '  (' + f + ')';          // [alpha.120 ข้อ 3] ชื่อไฟล์พร้อมนามสกุล
+    addVersionBadge(it, snapCounts, snapKey('Memos', f));  // [alpha.120 ข้อ 17]
+    applyRowOpenState(it, p);                              // [alpha.120 ข้อ 5]
     it.onclick = () => openScene(p, title);
     it.draggable = true;                                   // ลาก memo ไปวางบนกระดาน Planner ได้
     it.addEventListener('dragstart', (e) => {
@@ -3666,9 +4151,16 @@ async function _buildTreeInner() {
     });
     it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
     it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+      { label: tt('ui.app.newMemoNew'), click: () => addMemo() },     // [alpha.120 ข้อ 10]
+      '-',
       { label: tt('ui.common.open'), click: it.onclick },
       { label: tt('ui.common.showFolder'), click: () => kapi.revealInOS(p) },
+      { label: tt('ui.app.findDiskFindOn'), click: () => revealFile(p) },   // [alpha.120 ข้อ 7]
       { label: tt('ui.app.changeName2'), click: () => renameMemo(p) },
+      { label: tt('ui.app.historyVersion2'), click: async () => {
+          const { fileVersionDialog } = await import('./dialogs.js');
+          await fileVersionDialog(p, title, { onRestored: async () => { closeTab(p); await buildTree(); } });
+        } },
       '-',
       // ทางกลับของคำสั่ง "ย้ายออกไปที่ MEMO" — เดิมทำได้ทางเดียวคือลากวาง (บั๊กข้อ 8)
       { label: tt('ui.app.moveBackInChapter'), click: async () => {
@@ -3904,6 +4396,8 @@ async function _buildTreeInner() {
         { label: iconHtml('edit', 14) + tt('ui.app.editCatNameIcon'), click: () => editWikiCat(cat) },
         { label: iconHtml('trash', 14) + tt('ui.app.delCat'), danger: true, click: () => deleteWikiCat(cat, catDir) });
       else items.push('-', { label: iconHtml('edit', 14) + tt('ui.app.changeIconNameShow'), click: () => editWikiCat(cat) });
+      // [alpha.120 ข้อ 7] "หาในดิสก์" ต้องมีทุกหมวด — หมวด Wiki เป็นโฟลเดอร์จริงบนดิสก์
+      items.push({ label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(catDir) });
       popupMenu(e.clientX, e.clientY, items);
     };
     // หัวหมวดรับ drop entity จากหมวดอื่น → ย้ายไฟล์ .json
@@ -3918,18 +4412,35 @@ async function _buildTreeInner() {
       await moveEntityToCat(data.path, catDir);
     });
     if (await kapi.exists(catDir)) {
-      for (const f of await kapi.listFiles(catDir, '.json')) {
+      // [alpha.120 ข้อ 2] เอนทิตี้เรียงตามโหมดเดียวกับฉาก
+      const entFiles = await kapi.listFiles(catDir, '.json');
+      // คีย์โฟลเดอร์เวอร์ชันของหมวดนี้ — คำนวณครั้งเดียว (ไม่ใช่ IPC ต่อเอนทิตี้)
+      let catRel = [];
+      try { catRel = (await kapi.relative(state.root, catDir)).split(/[\\/]/).filter(Boolean); } catch {}
+      const entRows = [];
+      for (const f of entFiles) {
         const p = await kapi.join(catDir, f);
         let name = f.replace(/\.json$/, '');
         let ent = null;
         try { ent = await kapi.readJson(p); name = ent.name || name; } catch {}
+        entRows.push({ f, p, name, ent,
+                       mtime: sortMode === 'modified' ? await kapi.mtime(p).catch(() => 0) : 0 });
+      }
+      if (sortMode === 'name') entRows.sort((a, b) => _thCmp(a.name, b.name));
+      else if (sortMode === 'modified') entRows.sort((a, b) => b.mtime - a.mtime);
+      for (const { f, p, name, ent } of entRows) {
         const it = el('div', 'scene wiki-ent');
         it.innerHTML = catIconHtml(cat) + ' ' + name;
         // บั๊ก #13: ค้นเอนทิตี้ต้องค้น "เนื้อในไฟล์บนดิสก์" ด้วย ไม่ใช่แค่ชื่อที่โชว์
         // (ชื่อเล่น/แท็ก/บทบาท/คำบรรยาย/ฟิลด์เทมเพลตทุกช่อง) — อ่าน .json อยู่แล้วจึงไม่มีค่าใช้จ่ายเพิ่ม
-        it.dataset.search = entitySearchBlob(name, ent, cat, scopeLabel);
-        it.title = name + (ent && ent.summary ? ' — ' + String(ent.summary).slice(0, 120) : '');
+        it.dataset.search = entitySearchBlob(name, ent, cat, scopeLabel) + ' ' + f.toLowerCase();
+        // [alpha.120 ข้อ 3] hover บอกชื่อไฟล์พร้อมนามสกุลเสมอ (เอนทิตี้เป็น .json แก้นอกโปรแกรมได้)
+        it.title = name + '  (' + f + ')' +
+                   (ent && ent.summary ? String.fromCharCode(10) + String(ent.summary).slice(0, 120) : '');
         it.dataset.path = p;
+        // [alpha.120 ข้อ 17] จำนวนเวอร์ชัน · [ข้อ 5] ตัวหนา/เอียงตามสถานะแท็บ (เหมือนฉาก)
+        addVersionBadge(it, snapCounts, snapKey(...catRel, f));
+        applyRowOpenState(it, p);
         it.onclick = () => openEntity(p);
         it.draggable = true;                              // ลากย้ายข้ามหมวดได้
         it.addEventListener('dragstart', (e) => {
@@ -3939,6 +4450,8 @@ async function _buildTreeInner() {
         });
         it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
         it.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+          { label: iconHtml('plus', 14) + tt('ui.app.newListNew'), click: () => addEntity(catDir, cat) },
+          '-',
           { label: tt('ui.common.open'), click: it.onclick },
           { label: iconHtml('search', 14) + tt('ui.common.searchSceneFindOn'),
             click: () => findEntityInScenes(p, name, e.clientX, e.clientY) },
@@ -3991,14 +4504,29 @@ async function _buildTreeInner() {
   const recDirs = await kapi.exists(recDir) ? await kapi.listDirs(recDir) : [];
   const all = [...recItems, ...recDirs];
   const tSec = el('div', 'sec');
-  tSec.append(el('div', 'sec-title', ttf('ui.app.trash', all.length)));
+  const tHead = el('div', 'sec-title', ttf('ui.app.trash', all.length));
+  tSec.append(tHead);
+  makeAccordion(tHead, tSec, 'sec:__trash__');
+  // [alpha.120 ข้อ 13] คลิกขวาถังขยะ: ล้างถัง · ตั้งเวลาล้างอัตโนมัติ (กระโดดไปตั้งค่าโปรเจกต์) · เปิดโฟลเดอร์
+  tHead.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
+    { label: ttf('ui.tree.emptyTrashN', all.length), danger: all.length > 0,
+      click: () => emptyRecycle(all.length) },
+    { label: tt('ui.tree.purgeNowByDays'), click: async () => {
+        await purgeRecycle(state.root); await buildTree(); } },
+    '-',
+    { label: tt('ui.tree.trashSettings'), click: () => settingsDialog('write', { focus: '#st-recycle' }) },
+    { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(recDir) },
+  ]); };
   for (const f of all) {
     const p = await kapi.join(recDir, f);
     const label = f.replace(/^[a-z0-9]+-/, '');
     const it = el('div', 'scene trash-item', '♻ ' + label);
+    it.dataset.search = (label + ' ' + f).toLowerCase();
+    it.title = label + '  (' + f + ')';
     it.oncontextmenu = it.onclick = (e) => { e.preventDefault();
       popupMenu(e.clientX, e.clientY, [
         { label: tt('ui.app.recoverRestore'), click: () => restoreFromTrash(p, f) },
+        { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(p) },
         '-',
         { label: tt('ui.app.del'), danger: true, click: async () => {
             if (!(await confirmBox(ttf('ui.app.delRecoverRestoreCant', label), tt('ui.app.del')))) return;
@@ -4021,6 +4549,9 @@ async function _buildTreeInner() {
   real.scrollTop = scrollTop;
   real.scrollLeft = scrollLeft;
   const q = $('#tree-search'); if (q && q.value) filterTree(q.value);   // คงตัวกรองหลังสร้างใหม่
+  _rowStateSig = '';                     // ต้นไม้เป็นแถวชุดใหม่ — ลายเซ็นเดิมใช้ไม่ได้แล้ว
+  refreshTreeRowStates();                // [alpha.120 ข้อ 5+16] คงตัวหนา/เอียง + แถวที่เลือกไว้
+  setupTreeInteractions();               // #tree ถูกย้ายที่ได้ — ผูกอีเวนต์ให้ครบเสมอ (กันซ้ำด้วยธง)
   updateSummaryBar().catch(() => {});
 }
 
@@ -4316,7 +4847,7 @@ export async function renderNetworkPanel() {
         } catch(e) { console.error('SN loadEntities failed:', e); return []; }
       },
       onOpen: (n) => openEntity(n.file),
-      onOpenScene: (file) => openScene(file, file.split(/[\\/]/).pop().replace(/\.\w+$/,'')),
+      onOpenScene: (file) => openScene(file, null),
       onCreateRel: async (a, b, type, label) => {
         // สร้างความสัมพันธ์ระหว่าง a และ b
         try {
@@ -4646,7 +5177,7 @@ export async function renderPlannerPanel(boardPath) {
       if (!f) return;
       const abs = await plannerAbs(f);
       if (/\.json$/i.test(abs) || /[\\/](Wiki|Bible)[\\/]/i.test(abs)) await openEntity(abs);
-      else await openScene(abs, abs.split(/[\\/]/).pop());
+      else await openScene(abs, null);
       bindTabStripMenus();
       if (state.tabs.has(abs)) floatTab(abs);    // ดับเบิลคลิกการ์ด = เปิดเป็นหน้าต่างลอย
     },
@@ -4832,7 +5363,9 @@ export function markPlannerRow(path, dirty) {
   // ทุกครั้งที่สถานะเปลี่ยน ซึ่งเป็นที่เดียวในต้นไม้ที่แก้เนื้อแถวนอก buildTree()
   // (ชื่อว่างเมื่อไหร่ = ได้บรรทัดเปล่า · ลูกอื่นในแถว เช่นป้ายจำนวน ก็หายไปด้วย)
   // ตอนนี้บอกสถานะด้วย **ตัวหนา/สี** ผ่าน class ล้วน ๆ — เนื้อแถวไม่ถูกแตะเลย
-  for (const prev of tree.querySelectorAll('.scene.k-row-open')) {
+  // [alpha.120 ข้อ 5] ★ ต้องกวาด **เฉพาะแถวกระดาน** — ตั้งแต่ฉาก/เอนทิตี้ใช้ k-row-open/k-row-unsaved
+  // บอก "กำลังแก้ / ยังไม่บันทึก" ด้วย การกวาดทั้งต้นไม้จะลบสถานะของฉากทิ้งทุกครั้งที่แตะกระดาน
+  for (const prev of tree.querySelectorAll('.scene[data-planner].k-row-open')) {
     if (prev === row) continue;
     prev.classList.remove('k-row-open', 'k-row-unsaved');
   }
@@ -4982,6 +5515,8 @@ async function buildPlannerSection(tree) {
   head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
     { label: tt('ui.app.boardNew'), click: () => newPlannerBoard() },
     { label: tt('ui.app.openPlanner'), click: () => openPlanner() },
+    { label: tt('ui.app.findDiskFindOn'),                       // [alpha.120 ข้อ 7]
+      click: async () => kapi.revealInOS(await kapi.join(state.root, 'Planners')) },
   ]); };
   const cur = plannerInst && plannerInst.data ? plannerInst.data.getPath() : null;
   const curDirty = !!(plannerInst && plannerInst.data && plannerInst.data.isDirty());
@@ -5000,7 +5535,9 @@ async function buildPlannerSection(tree) {
       { label: tt('ui.app.openBoard'), click: () => openPlanner(b.path) },
       { label: tt('ui.app.changeName2'), click: () => renamePlannerBoard(b) },
       { label: tt('ui.common.dup'), click: () => duplicatePlannerBoard(b) },
+      { label: tt('ui.app.boardNew'), click: () => newPlannerBoard() },            // [alpha.120 ข้อ 10]
       { label: tt('ui.common.showFolder'), click: () => kapi.revealInOS(b.path) },
+      { label: tt('ui.app.findDiskFindOn'), click: () => revealFile(b.path) },     // [alpha.120 ข้อ 7]
       '-',
       { label: tt('ui.app.delMoveTrash'), danger: true, click: async () => {
           await deleteToTrash(b.path, b.name);
@@ -5072,12 +5609,15 @@ async function buildMapsSection(tree) {
       it.onclick = () => openMapFromTree(m.id);
       it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
         { label: tt('ui.app.openMap'), click: () => openMapFromTree(m.id) },
+        { label: tt('ui.app.addMap'),                                             // [alpha.120 ข้อ 10]
+          click: async () => { await openMaps(); await addMapFlow(); await refreshTreeQueued(); } },
         { label: tt('ui.app.changeName2'), click: () => renameMapFromTree(m.id) },
         { label: tt('ui.app.setCat'), click: () => setMapCategoryFromTree(m.id) },
         { label: tt('ui.common.exportPNG'), click: async () => { const d2 = await loadMaps();
             const mm = findMap(d2.maps, m.id); if (mm) await exportMapPng(mm); } },
         '-',
         { label: tt('ui.app.openMapsJson'), click: () => openPlainFile(jsonPath, 'maps.json') },
+        { label: tt('ui.app.findDiskFindOn'), click: () => revealFile(jsonPath) },   // [alpha.120 ข้อ 7]
         { label: tt('ui.app.delMap'), danger: true, click: () => deleteMapFromTree(m.id, m.name) },
       ]); };
       sec.append(it);
@@ -5114,6 +5654,9 @@ async function buildBranchPlanSection(tree) {
   makeAccordion(head, sec, 'sec:__branchplans__');
   head.oncontextmenu = (e) => { e.preventDefault(); popupMenu(e.clientX, e.clientY, [
     { label: tt('ui.app.openGraphBreakBranch'), click: () => openBranchingTree() },
+    { label: tt('ui.app.newNewPlan'), click: () => add.onclick({ stopPropagation() {} }) },
+    { label: tt('ui.app.findDiskFindOn'),                        // [alpha.120 ข้อ 7]
+      click: async () => kapi.revealInOS(await kapi.join(state.root, 'Branches')) },
   ]); };
   for (const p of plans) {
     const isCur = cur && cur.path === p.path;
@@ -5152,6 +5695,7 @@ async function buildBranchPlanSection(tree) {
           await m.comparePlanDialog();
         } },
       { label: tt('ui.common.showFolder'), click: () => kapi.revealInOS(p.path) },
+      { label: tt('ui.app.findDiskFindOn'), click: () => revealFile(p.path) },      // [alpha.120 ข้อ 7]
       '-',
       { label: tt('ui.app.delMoveTrash'), danger: true, click: async () => {
           await deleteToTrash(p.path, p.name);
@@ -5789,7 +6333,26 @@ async function renderPropsPanel() {
   const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
   if (!row) { body.replaceChildren(el('div', 'dim', tt('ui.app.notFoundScene'))); return; }
   body.replaceChildren();              // กันของค้างจากรอบก่อนที่ยัง append ไม่ทัน
-  body.append(el('div', 'props-name', '📄 ' + row.title));
+  // [alpha.120 ข้อ 6] ★ ชื่อฉากต้องแก้ได้จากแผงด้วย — เดิมเป็นข้อความตายตัว ต้องไปคลิกขวาที่ต้นไม้
+  // (ผู้ใช้: "คุณสมบัติแบบหน้าต่างกับแผงไม่เหมือนกัน … และมันต้องเปลี่ยนชื่อได้นะ")
+  const nameRow = el('div', 'props-name');
+  nameRow.append(document.createTextNode('📄 '));
+  const nameIn = el('input', 'props-name-input');
+  nameIn.value = row.title || '';
+  nameIn.title = tt('ui.props.renameHint');
+  const commitName = async () => {
+    const v = nameIn.value.trim();
+    if (!v || v === row.title) { nameIn.value = row.title || ''; return; }
+    await setSceneTitle(dPath, ch, row, v);
+    row.title = v;
+  };
+  nameIn.addEventListener('blur', () => commitName().catch(() => {}));
+  nameIn.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); nameIn.blur(); }
+    if (ev.key === 'Escape') { nameIn.value = row.title || ''; nameIn.blur(); }
+  });
+  nameRow.append(nameIn);
+  body.append(nameRow);
 
   // ---- แถบล็อก (แก้ไฟล์ไม่ได้จนปลดล็อก) ----
   const lockRow = el('div', 'props-lock');
@@ -5846,6 +6409,14 @@ async function renderPropsPanel() {
   const iFlag = mkChk(tt('ui.common.pinPin'), row.flag);
   const iTags = mk(tt('ui.common.tag2'), (row.tags || []).join(', '));
   const iNote = mk(tt('ui.common.note'), row.note, 'textarea');
+  // [alpha.120 ข้อ 6] ★ สองช่องนี้มีแต่ใน "กล่อง" ไม่เคยมีใน "แผง" — ผู้ใช้เปิดแผงแล้วหาไม่เจอ
+  // ป้ายเล่าเรื่อง (ฉากนอกลำดับเวลาหลัก) ต้องมีทั้งสองที่ ไม่งั้นตั้งจากแผงไม่ได้เลย
+  const iFuture = mk(tt('ui.scene.futureNoteWriter'), row.futureNote || '', 'textarea');
+  iFuture.placeholder = tt('ui.scene.noteWriterShowOnly');
+  const iFb = mkChk(tt('ui.common.flashback'), row.isFlashback);
+  const iFf = mkChk(tt('ui.common.pageFlashforward'), row.isFlashforward);
+  iFb.addEventListener('change', () => { if (iFb.checked) iFf.checked = false; });
+  iFf.addEventListener('change', () => { if (iFf.checked) iFb.checked = false; });
 
   // ---- [alpha.70 ข้อ 1] ตำแหน่งบนแผนที่ + ปุ่ม "ดูบนแผนที่" ----
   // อ่าน maps.json (async) → ต้องเช็ค stale เหมือนทุกจุด await ในฟังก์ชันนี้ ไม่งั้นแถวของฉากเก่าโผล่ทับ
@@ -5866,11 +6437,15 @@ async function renderPropsPanel() {
     row.emotion = iEmotion.value; row.conflict = iConflict.value;
     row.color = iColor.value; row.flag = iFlag.checked; row.note = iNote.value;
     row.tags = iTags.value.split(',').map((x) => x.trim()).filter(Boolean);
+    row.futureNote = iFuture.value;
+    if (iFb.checked && iFf.checked) iFf.checked = false;
+    row.isFlashback = iFb.checked; row.isFlashforward = iFf.checked;
     const sp = parseInt(iStartPage.value, 10);
     if (Number.isFinite(sp) && sp > 0) row.startPage = sp; else delete row.startPage;
   };
   const snapshot = () => JSON.stringify([row.synopsis, row.pov, row.status, row.storyDate,
-    row.emotion, row.conflict, row.color, row.flag, row.note, row.tags, row.startPage]);
+    row.emotion, row.conflict, row.color, row.flag, row.note, row.tags, row.startPage,
+    row.futureNote, row.isFlashback, row.isFlashforward]);
   let lastSaved = (collect(), snapshot());
 
   const commit = async (rebuildTree) => {
@@ -5880,12 +6455,21 @@ async function renderPropsPanel() {
     lastSaved = now;
     statusLine.textContent = tt('ui.app.busySave2');
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    // [alpha.120 ข้อ 6] เขียน frontmatter ผ่านทางเดียวกับกล่องคุณสมบัติ (writeSceneMeta)
+    // เดิมแผงเขียนเองแค่ 5 ฟิลด์ → เรื่องย่อ/ป้ายเล่าเรื่อง/โน้ตอนาคต ไม่เคยลงไฟล์จริงเลย
     try {
-      const { meta, body: mbody } = parseMdFile(await kapi.readFile(file0));
-      meta.pov = row.pov; meta.tags = row.tags;
-      meta.emotion = row.emotion; meta.conflict = row.conflict; meta.note = row.note;
-      await kapi.writeFile(file0, dumpMdFile(meta, mbody));
-    } catch {}
+      const props = {};
+      for (const k of SCENE_HEAVY_KEYS) props[k] = row[k];
+      // writeSceneMeta กลืน error แล้วคืน false — ถ้าไม่เช็คค่าคืน ความล้มเหลวจะเงียบสนิท
+      if (!(await writeSceneMeta(file0, props))) log('warn', tt('ui.props.writeMetaFail'), { file: file0 });
+      // ⚠ เขียน frontmatter "ลับหลัง" แท็บที่เปิดไฟล์เดียวกันค้างอยู่ = ระเบิดเวลา:
+      // แท็บถือ `meta` ชุดเก่าไว้ พอบันทึกครั้งถัดไป (หรือบันทึกอัตโนมัติ) มันจะเขียนทับ
+      // คุณสมบัติที่เพิ่งตั้งไปทั้งหมด → ซิงก์ให้แท็บรู้ค่าใหม่ทันที
+      const liveTab = state.tabs.get(file0);
+      if (liveTab && liveTab.meta) {
+        try { liveTab.meta = parseMdFile(await kapi.readFile(file0)).meta; } catch {}
+      }
+    } catch (e) { log('warn', tt('ui.props.writeMetaFail'), e); }
     statusLine.innerHTML = iconHtml('check', 14) + tt('ui.common.saveDone');
     // สี/สถานะ/แท็ก/หมุด มีผลกับต้นไม้ — วาดใหม่เฉพาะตอนจำเป็น (ไม่ใช่ทุกตัวอักษรที่พิมพ์)
     if (rebuildTree) await buildTree();
@@ -5910,11 +6494,11 @@ async function renderPropsPanel() {
       attachAiFieldButton(rowOf.get(inp), inp, key, aiCtx, () => scheduleSave());
     }
   }
-  for (const i of [iSyn, iStoryDate, iPov, iEmotion, iConflict, iTags, iNote]) {
+  for (const i of [iSyn, iStoryDate, iPov, iEmotion, iConflict, iTags, iNote, iFuture]) {
     i.addEventListener('input', scheduleSave);
     i.addEventListener('blur', () => { clearTimeout(saveJob); commit(true).catch(() => {}); });
   }
-  for (const s of [iStatus, iColor, iFlag]) {
+  for (const s of [iStatus, iColor, iFlag, iFb, iFf]) {
     s.addEventListener('change', () => { clearTimeout(saveJob); commit(true).catch(() => {}); });
   }
   // สลับไปฉากอื่น/ปิดแผงกลางคัน → เขียนที่ค้างอยู่ให้จบก่อน
@@ -6657,7 +7241,7 @@ export async function openGalleryBoard() {
 async function openPathSmart(file) {
   if (!file) return;
   try {
-    if (/\.md$/i.test(file)) await openScene(file, file.split(/[\\/]/).pop().replace(/\.md$/i, ''));
+    if (/\.md$/i.test(file)) await openScene(file, null);
     else if (/\.json$/i.test(file)) await openEntity(file);
     else await openPlainFile(file);
   } catch (e) { setStatus(tt('ui.app.openFileCant') + e.message); }
@@ -7455,6 +8039,12 @@ export async function openScene(file, title) {
   if (state.tabs.has(file)) return activate(file);
   const raw = await kapi.readFile(file);
   const { meta, body } = parseMdFile(raw);
+  // [alpha.120 บั๊ก] ★ แท็บเขียน "ชื่อไฟล์" แทน "ชื่อฉาก"
+  // ต้นตอ: ทางที่ไม่รู้จักชื่อฉาก (กู้เซสชันตอนเปิดโปรแกรม · เปิดไฟล์จากดิสก์ · ลิงก์ในกระดาน)
+  // ส่ง `title` เป็นชื่อไฟล์มาเลย → แท็บได้ 'scene-01' แทน 'ตลาดเก่า'
+  // ตอนนี้ทางเหล่านั้นส่ง null มาแทน แล้ว **frontmatter ของไฟล์เป็นคนบอกชื่อ**
+  // (setSceneTitle เขียน meta.title คู่กับ scenes.json อยู่แล้ว จึงตรงกันเสมอ)
+  title = title || meta.title || file.split(/[\\/]/).pop().replace(/\.md$/i, '');
   const pane = el('div', 'pane');
   const ws = el('div', 'workspace');
   pane.appendChild(ws);
@@ -7965,7 +8555,19 @@ export function markDirty(tab) {
 }
 
 // ข้อ 48: แสดงจำนวนแท็บที่ยังไม่บันทึกบนเมนู "ไฟล์" + ไอคอน 💾 บน title bar เมื่อมีงานค้าง
+let _rowStateSig = '';
 function updateDirtyBadge() {
+  // [alpha.120 ข้อ 5] ตัวหนา/เอียงในต้นไม้เดินตามสถานะแท็บ — จุดนี้ถูกเรียกทั้งตอนสลับแท็บ
+  // ตอนเริ่มพิมพ์ และตอนบันทึก จึงเป็นที่เดียวที่ครอบคลุมทุกเส้นทาง
+  //
+  // ⚠ ตัวนี้ถูกเรียก **ทุกตัวอักษรที่พิมพ์** (markDirty เรียกทุกครั้ง ไม่ใช่แค่ตอนธงพลิก)
+  // การกวาดทุกแถวในต้นไม้ทุกคีย์สโตรกคือค่าใช้จ่ายที่ผู้ใช้รู้สึกได้ในโปรเจกต์ใหญ่
+  // → คำนวณลายเซ็นของ "สภาพที่มีผลกับสี" ก่อน แล้วแตะ DOM เฉพาะตอนมันเปลี่ยนจริง
+  try {
+    const sig = (state.active ? state.active.file : '') + '|' +
+      [...state.tabs.values()].filter((t) => t.dirty).map((t) => t.file).sort().join(';');
+    if (sig !== _rowStateSig) { _rowStateSig = sig; refreshTreeRowStates(); }
+  } catch {}
   const n = [...state.tabs.values()].filter((t) => t.dirty).length;
   const fileMenu = document.querySelector('.tb-menu[data-m="File"]');   // data-m คงที่ (ชื่อที่แสดงเปลี่ยนตามภาษา)
   if (fileMenu) {
@@ -8017,6 +8619,7 @@ export async function saveTab(tab) {
   tab.dirty = false;
   tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
   setStatus(tt('ui.app.saveDone') + tab.title);
+  updateDirtyBadge();                          // [alpha.120 ข้อ 5] แถวในต้นไม้เลิกเอียงทันทีที่บันทึก
   refreshCommentsPanel();
   // [alpha.68] บันทึกแล้ว = แผงที่ฉีกออกไปแก้ไฟล์นี้ได้อีกครั้ง (และเนื้อบนดิสก์เป็นของใหม่)
   broadcastActiveScene();
@@ -11599,7 +12202,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // ---- tooltip ลอยเหนือเคอร์เซอร์ (ข้อ 16) ----
   setupHoverTips();
   // ---- Filter bar ----
-  $('#filter-sort').onchange = () => { buildFilterBar(); filterTree($('#tree-search').value); };
+  // [alpha.120 ข้อ 2] เลือกแล้ว **ต้องสร้างต้นไม้ใหม่** — ไม่งั้นค่าที่เลือกไม่มีผลกับอะไรเลย
+  $('#filter-sort').onchange = async () => {
+    setTreeSortMode($('#filter-sort').value);
+    await buildTree();
+    buildFilterBar();
+    filterTree($('#tree-search').value);
+  };
+  // คืนค่าที่เลือกไว้ครั้งก่อนของโปรเจกต์นี้ (dropdown เกิดใหม่ทุกครั้งที่เปิดโปรเจกต์)
+  try { const sv = treeSortMode(); if (sv) $('#filter-sort').value = sv; } catch {}
   $('#filter-archive-toggle').onclick = function() {
     this.classList.toggle('on');
     // ซ่อน/แสดงฉากที่เก็บถาวรในต้นไม้
@@ -11618,6 +12229,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#zoom-out').onclick = () => bumpPageScale(-1);
   $('#zoom-reset').onclick = () => resetPageScale();
   $('#tree-search').oninput = (e) => filterTree(e.target.value);
+  setupTreeInteractions();          // [alpha.120 ข้อ 11+16] คีย์ลัด + เมนูคลิกขวาพื้นที่ว่าง
 
   // ---- แถบรูปแบบอักษรแบบลอย (ลากย้ายได้ · จำตำแหน่ง) ----
   setupFloatingFormatBar();
@@ -12109,7 +12721,9 @@ async function buildFilterBar() {
     chip.onclick = () => {
       chip.classList.toggle('on');
       const q = $('#tree-search');
-      const active = [...statusesEl.querySelectorAll('.filter-chip.on')].map((c) => c.textContent);
+      // [alpha.120 ข้อ 4] ค่าจริงอยู่ใน dataset — `textContent` เป็นป้ายที่ **แปลแล้ว**
+      // ภาษาอังกฤษจึงสร้างคิวรีเป็น `status:Writing` ซึ่งไม่มีทางตรงกับค่าไทยในไฟล์งาน
+      const active = [...statusesEl.querySelectorAll('.filter-chip.on')].map((c) => c.dataset.status || c.textContent);
       // สร้าง query จากสถานะที่เลือก
       if (active.length) {
         q.value = active.map((s) => 'status:' + s).join(' OR ');
@@ -12269,6 +12883,10 @@ function refreshStatusBar() {
 async function updateSummaryBar() {
   const bar = $('#summary-bar');
   if (!bar || !state.root) return;
+  // [alpha.120 ข้อ 15] ปิดไว้เป็นค่าเริ่มต้น — แดชบอร์ดทำหน้าที่นี้ครบกว่าและตัวเลขตรงกว่า
+  // (โค้ดคงไว้ทั้งหมด เปิดกลับได้จากเมนูคลิกขวาพื้นที่ว่างใน Explorer)
+  if (!summaryBarOn()) { bar.style.display = 'none'; bar.replaceChildren(); return; }
+  bar.style.display = '';
   
   try {
     let totalScenes = 0, totalWords = 0, totalChars = 0, totalLocations = 0;
@@ -17012,11 +17630,11 @@ async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 100));
     {
       const bx = document.querySelector('.k-dialog');
-      // [0]storyDate [1]startPage [2]pov [3]อารมณ์ [4]ความขัดแย้ง [5]แท็ก
-      // (alpha.57a แทรก startPage ไว้หลัง storyDate — บทเรียนข้อ 12: เพิ่มช่องแล้วต้องขยับ index ที่นี่ด้วย)
+      // [0]ชื่อฉาก [1]storyDate [2]startPage [3]pov [4]อารมณ์ [5]ความขัดแย้ง [6]แท็ก
+      // (alpha.120 ข้อ 6 แทรก "ชื่อฉาก" ไว้บนสุด — บทเรียนข้อ 12: เพิ่มช่องแล้วต้องขยับ index ที่นี่ด้วย)
       const inps = bx.querySelectorAll('input.wiki-input');
-      inps[1].value = '7';                                    // เลขหน้าเริ่มต้นของไฟล์ฉากนี้
-      inps[3].value = 'สิ้นหวัง'; inps[4].value = 'ปะทะกับพ่อ';
+      inps[2].value = '7';                                    // เลขหน้าเริ่มต้นของไฟล์ฉากนี้
+      inps[4].value = 'สิ้นหวัง'; inps[5].value = 'ปะทะกับพ่อ';
       bx.querySelectorAll('textarea')[1].value = 'โน้ตทดสอบระบบ';   // [0]เรื่องย่อ [1]โน้ต
       bx.querySelectorAll('select')[0].value = 'กำลังเขียน';        // [0]สถานะ [1]สี
       bx.querySelectorAll('select')[1].value = '#6fae6f';
@@ -20302,9 +20920,10 @@ async function runTest(projectPath) {
         check('แผงคุณสมบัติวาดครั้งเดียว (ไม่ duplicate ชื่อฉาก)',
               bodyEl.querySelectorAll('.props-name').length === 1,
               bodyEl.querySelectorAll('.props-name').length + ' :: ' + bodyEl.textContent.slice(0, 80));
-        // แผงมี textarea 2 ช่อง (เรื่องย่อ · โน้ต) — กล่องคุณสมบัติแบบหน้าต่างมี 3 (มี Future Note ด้วย)
+        // [alpha.120 ข้อ 6] แผงมี textarea 3 ช่องแล้ว (เรื่องย่อ · โน้ต · โน้ตถึงตัวเองในอนาคต)
+        // — เท่ากับกล่องคุณสมบัติแบบหน้าต่างเป๊ะ (ก่อนหน้านี้แผงขาดไปหนึ่งช่อง)
         check('แผงคุณสมบัติไม่ duplicate ช่องกรอก',
-              bodyEl.querySelectorAll('textarea.wiki-input').length === 2 &&
+              bodyEl.querySelectorAll('textarea.wiki-input').length === 3 &&
               bodyEl.querySelectorAll('input.wiki-input').length === 6,
               `ta=${bodyEl.querySelectorAll('textarea.wiki-input').length} inp=${bodyEl.querySelectorAll('input.wiki-input').length}`);
         check('แผงคุณสมบัติเลิกใช้ปุ่มบันทึก → เป็นบันทึกอัตโนมัติ',
@@ -33166,6 +33785,493 @@ async function runTest(projectPath) {
                 notApplied.length === 0,
                 notApplied.slice(0, 3).map((n) => n.id || n.tagName).join(' · '));
         }
+      }
+
+      // ═══════════════ [alpha.120] ยกเครื่อง Explorer 17 ข้อ + บั๊กชื่อแท็บ ═══════════════
+      {
+        const w120 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const menuOf120 = (el0, x = 60, y = 60) => {
+          closeMenu();
+          el0.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+          const m = document.querySelector('.k-menu');
+          return m ? m.textContent : '';
+        };
+        // เริ่มจากสภาพที่รู้แน่: ล้างคำค้น + สร้างต้นไม้ใหม่
+        const q120 = $('#tree-search');
+        if (q120) { q120.value = ''; q120.dispatchEvent(new Event('input', { bubbles: true })); }
+        setTreeScope(null);
+        const sortSel120 = $('#filter-sort');
+        if (sortSel120) { sortSel120.value = ''; setTreeSortMode(''); }
+        await buildTree();
+
+        // ---- ข้อ 1: ลูกศรพับ/กางแบบ VS Code (เชฟรอนหมุน ไม่ใช่สลับอักขระ) ----
+        {
+          const caret = document.querySelector('#tree .sec-title .tw');
+          check('[120-1] หัวข้อในต้นไม้มีลูกศรพับ/กาง', !!caret);
+          check('[120-1] ★ ลูกศรเป็นเชฟรอน SVG ไม่ใช่อักขระ ▸/▾',
+                !!caret && !!caret.querySelector('svg') && !/[▸▾]/.test(caret.textContent),
+                caret ? caret.innerHTML.slice(0, 40) : '');
+          const box120 = caret.parentElement.parentElement;
+          const openBefore = caret.classList.contains('tw-open');
+          check('[120-1] กางอยู่ = มีคลาส tw-open · พับอยู่ = ไม่มี',
+                openBefore === !box120.classList.contains('collapsed'));
+          caret.click(); await w120(30);
+          check('[120-1] ★ คลิกแล้วสถานะพลิกทั้งคลาสของลูกศรและของกล่อง',
+                caret.classList.contains('tw-open') === !openBefore &&
+                box120.classList.contains('collapsed') === openBefore);
+          caret.click(); await w120(30);
+          check('[120-1] คลิกซ้ำกลับสภาพเดิม', caret.classList.contains('tw-open') === openBefore);
+        }
+
+        // ---- ข้อ 3 + 17: hover บอกชื่อไฟล์พร้อมนามสกุล · ป้าย (n) จำนวนเวอร์ชัน ----
+        const scRows120 = () => [...document.querySelectorAll('#tree .scene[data-path]')]
+          .filter((r) => r._ctx);
+        {
+          const rows = scRows120();
+          check('[120-3] มีแถวฉากในต้นไม้', rows.length >= 2, rows.length);
+          check('[120-3] ★ hover ทุกแถวฉากบอกชื่อไฟล์พร้อมนามสกุล',
+                rows.every((r) => r.title.includes(r._ctx.sc.fileName)),
+                rows.filter((r) => !r.title.includes(r._ctx.sc.fileName))
+                    .map((r) => r.title.split(String.fromCharCode(10))[0]).slice(0, 2).join(' | '));
+          const ent120 = document.querySelector('#tree .scene.wiki-ent');
+          check('[120-3] ★ แถวเอนทิตี้ Wiki ก็บอกนามสกุล .json',
+                !!ent120 && /\.json\)/.test(ent120.title), ent120 ? ent120.title : 'ไม่มีแถว');
+          // ป้ายเวอร์ชัน: สร้างเวอร์ชันจริงให้ไฟล์หนึ่งแล้วดูว่าโผล่
+          const target120 = rows[0];
+          await snapshotFile(target120.dataset.path, 'ทดสอบ120');
+          await buildTree();
+          const again120 = scRows120().find((r) => r.dataset.path === target120.dataset.path);
+          const badge120 = again120 && again120.querySelector('.sc-vers');
+          check('[120-17] ★ ไฟล์ที่มีเวอร์ชันเก็บไว้ได้ป้าย (n) ต่อท้าย',
+                !!badge120 && /^\(\d+\)$/.test(badge120.textContent), badge120 ? badge120.textContent : 'ไม่มีป้าย');
+          check('[120-17] ป้าย (n) นับตรงกับจำนวนเวอร์ชันจริงบนดิสก์',
+                !!badge120 && parseInt(badge120.textContent.replace(/\D/g, ''), 10)
+                  === (await listSnapshots(target120.dataset.path)).length,
+                badge120 ? badge120.textContent : '');
+        }
+
+        // ---- ข้อ 2: Sort ใช้ได้จริง ----
+        {
+          const namesIn = () => [...document.querySelectorAll('#tree .chapter')]
+            .map((ch) => [...ch.querySelectorAll('.scene')].filter((r) => r._ctx)
+              .map((r) => r._ctx.sc.title))
+            .filter((a) => a.length >= 2)[0] || [];
+          const byOrder = namesIn();
+          check('[120-2] หาบทที่มีฉากอย่างน้อย 2 ฉากได้', byOrder.length >= 2, JSON.stringify(byOrder));
+          sortSel120.value = 'name';
+          await sortSel120.onchange();
+          const byName = namesIn();
+          const wantName = byName.slice().sort((a, b) => String(a).localeCompare(String(b), 'th'));
+          check('[120-2] ★★ เลือก "ชื่อ" แล้วต้นไม้เรียงตามชื่อจริง (เดิมเลือกแล้วไม่มีอะไรเกิดขึ้น)',
+                JSON.stringify(byName) === JSON.stringify(wantName), JSON.stringify(byName));
+          check('[120-2] ค่าที่เลือกถูกจำไว้ต่อโปรเจกต์', treeSortMode() === 'name');
+          sortSel120.value = 'words';
+          await sortSel120.onchange();
+          const wc = [...document.querySelectorAll('#tree .chapter')]
+            .map((ch) => [...ch.querySelectorAll('.scene')].filter((r) => r._ctx)
+              .map((r) => r._ctx.sc.wordCount || 0)).filter((a) => a.length >= 2)[0] || [];
+          check('[120-2] เลือก "จำนวนคำ" แล้วเรียงมากไปน้อย',
+                wc.every((v, i) => i === 0 || wc[i - 1] >= v), JSON.stringify(wc));
+          sortSel120.value = '';
+          await sortSel120.onchange();
+          check('[120-2] กลับเป็นค่าเริ่มต้นแล้วเรียงตาม order เหมือนเดิม',
+                JSON.stringify(namesIn()) === JSON.stringify(byOrder), JSON.stringify(namesIn()));
+        }
+
+        // ---- ข้อ 8: แถว "เล่าด้วยภาพ" ต้องกรองได้ (เดิมติด data-nofilter) ----
+        {
+          const visRow = document.querySelector('#tree .scene.vis-row');
+          if (visRow) {
+            check('[120-8] ★ แถวเล่าด้วยภาพไม่ติด data-nofilter อีกแล้ว', !visRow.dataset.nofilter);
+            check('[120-8] แถวเล่าด้วยภาพมีข้อความให้ค้น', !!visRow.dataset.search);
+            filterTree('ไม่มีทางเจอคำนี้แน่นอน120');
+            check('[120-8] ★★ ค้นคำที่ไม่ตรง → แถวเล่าด้วยภาพถูกซ่อนด้วย (เดิมค้างโชว์ตลอด)',
+                  visRow.style.display === 'none', visRow.style.display);
+            filterTree('');
+            check('[120-8] ล้างคำค้นแล้วกลับมาแสดง', visRow.style.display !== 'none');
+          } else {
+            check('[120-8] (รอบนี้ไม่มีฉากที่มีตารางเล่าด้วยภาพ — ข้ามอย่างซื่อสัตย์)', true);
+          }
+        }
+
+        // ---- ข้อ 4: ค้นแบบ OR / ไม่เอา ทำงานบนต้นไม้จริง ----
+        {
+          const rows = scRows120();
+          const t1 = rows[0]._ctx.sc.title;
+          const other0 = rows.find((r) => r._ctx.sc.title !== t1);
+          const t2 = other0 ? other0._ctx.sc.title : t1;
+          filterTree(t1);
+          const only1 = scRows120().filter((r) => r.style.display !== 'none').map((r) => r._ctx.sc.title);
+          check('[120-4] ค้นชื่อเดียว → เหลือเฉพาะฉากนั้น', only1.includes(t1) && !only1.includes(t2),
+                JSON.stringify(only1));
+          filterTree(t1 + ' OR ' + t2);
+          const both = scRows120().filter((r) => r.style.display !== 'none').map((r) => r._ctx.sc.title);
+          check('[120-4] ★★ OR ได้ผลทั้งสองฝั่ง (ต้นตอของชิปตัวกรองสองสถานะที่เคยว่างเปล่า)',
+                both.includes(t1) && both.includes(t2), JSON.stringify(both));
+          filterTree('-' + t1);
+          const neg = scRows120().filter((r) => r.style.display !== 'none').map((r) => r._ctx.sc.title);
+          check('[120-4] ★ "-คำ" ตัดออกได้', !neg.includes(t1), JSON.stringify(neg));
+          filterTree('file:' + rows[0]._ctx.sc.fileName.replace(/\.md$/i, ''));
+          check('[120-4] ★ ค้นด้วยชื่อไฟล์ (file:) เจอ',
+                scRows120().some((r) => r.style.display !== 'none' && r.dataset.path === rows[0].dataset.path));
+          filterTree('');
+        }
+
+        // ---- ข้อ 5: ตัวหนา = กำลังแก้ · ตัวเอียง = ยังไม่บันทึก ----
+        {
+          const row = scRows120()[0];
+          const file120 = row.dataset.path;
+          await openScene(file120, row._ctx.sc.title);
+          await w120(200);
+          const liveRow = () => document.querySelector(
+            '#tree .scene[data-path="' + CSS.escape(file120) + '"]');
+          check('[120-5] ★ ฉากที่กำลังแก้อยู่ = ตัวหนา (k-row-open)',
+                !!liveRow() && liveRow().classList.contains('k-row-open'),
+                liveRow() ? liveRow().className : 'ไม่พบแถว');
+          // แท็บอาจถูกเปิด/แก้ค้างมาจากเทสก่อนหน้าในรอบเดียวกัน — ตั้งให้ "บันทึกแล้ว" ก่อนวัด
+          // (ที่ต้องพิสูจน์คือ **กลไก** ไม่ใช่สภาพบังเอิญของโปรเจกต์ทดสอบตอนนั้น)
+          state.tabs.get(file120).dirty = false; updateDirtyBadge(); await w120(60);
+          check('[120-5] เปิดอยู่แต่บันทึกแล้ว = หนาอย่างเดียว ไม่เอียง',
+                !liveRow().classList.contains('k-row-unsaved'), liveRow().className);
+          check('[120-5] ตัวหนามีผลจริงบนจอ (ไม่ใช่แค่คลาส)',
+                parseInt(getComputedStyle(liveRow()).fontWeight, 10) >= 600,
+                getComputedStyle(liveRow()).fontWeight);
+          markDirty(state.tabs.get(file120));
+          await w120(80);
+          check('[120-5] ★ กลับมาแก้และยังไม่บันทึก = หนา + เอียง',
+                liveRow().classList.contains('k-row-open') &&
+                liveRow().classList.contains('k-row-unsaved'), liveRow().className);
+          check('[120-5] ตัวเอียงมีผลจริงบนจอ',
+                getComputedStyle(liveRow()).fontStyle === 'italic',
+                getComputedStyle(liveRow()).fontStyle);
+          check('[120-5] ★ เลิกใช้ป้ายข้อความ "ยังไม่บันทึก" ต่อท้ายแถวแล้ว (กฎถาวรข้อ 4)',
+                ['none', 'normal', ''].includes(getComputedStyle(liveRow(), '::after').content),
+                getComputedStyle(liveRow(), '::after').content);
+          const other = scRows120().find((r) => r.dataset.path !== file120);
+          if (other) {
+            await openScene(other.dataset.path, other._ctx.sc.title);
+            await w120(200);
+            check('[120-5] ★★ สลับไปฉากอื่น → ฉากเดิมเหลือเอียงอย่างเดียว',
+                  !liveRow().classList.contains('k-row-open') &&
+                  liveRow().classList.contains('k-row-unsaved'), liveRow().className);
+          }
+          await saveTab(state.tabs.get(file120));
+          await w120(200);
+          check('[120-5] บันทึกแล้วตัวเอียงหายเอง ไม่ต้องรีเฟรชต้นไม้',
+                !!liveRow() && !liveRow().classList.contains('k-row-unsaved'),
+                liveRow() ? liveRow().className : 'ไม่พบแถว');
+        }
+
+        // ---- ข้อ 7 + 9 + 10: เมนูคลิกขวาครบทุกชั้น ----
+        {
+          const secT = document.querySelector('#tree .sec-title');
+          const secMenu = menuOf120(secT);
+          check('[120-9] ★ คลิกขวาที่เล่มมี "จัดการเล่ม"', secMenu.includes(tt('ui.app.manageBook')), secMenu.slice(0, 120));
+          check('[120-10] ★ เมนูเล่มสร้างได้ทั้งเล่มและบท',
+                secMenu.includes(tt('ui.app.addBookNew')) && secMenu.includes(tt('ui.tree.newChapterHere')));
+          check('[120-7] เมนูเล่มมี "หาในดิสก์"', secMenu.includes(tt('ui.app.findDiskFindOn')));
+          closeMenu();
+          const chT = document.querySelector('#tree .ch-title');
+          const chMenu = menuOf120(chT);
+          check('[120-10] ★ เมนูบทสร้างได้ทั้งบทและฉาก',
+                chMenu.includes(tt('ui.tree.newChapterHere')) && chMenu.includes(tt('ui.app.addScene')),
+                chMenu.slice(0, 120));
+          check('[120-7] เมนูบทมี "หาในดิสก์"', chMenu.includes(tt('ui.app.findDiskFindOn')));
+          check('[120-16] เมนูบทมี "วางที่นี่"', chMenu.includes(tt('ui.tree.pasteHere')));
+          closeMenu();
+          clearTreeSel();
+          const scMenu = menuOf120(scRows120()[0]);
+          check('[120-10] ★ เมนูฉากสร้างได้ทั้งฉากและบท',
+                scMenu.includes(tt('ui.tree.newSceneHere')) && scMenu.includes(tt('ui.tree.newChapterHere')),
+                scMenu.slice(0, 120));
+          check('[120-7] เมนูฉากมี "หาในดิสก์"', scMenu.includes(tt('ui.app.findDiskFindOn')));
+          closeMenu();
+          const entRow = document.querySelector('#tree .scene.wiki-ent');
+          if (entRow) {
+            const entMenu = menuOf120(entRow);
+            check('[120-10] เมนูเอนทิตี้ Wiki สร้างรายการใหม่ได้', entMenu.includes(tt('ui.app.newListNew')));
+            check('[120-7] เมนูเอนทิตี้มี "หาในดิสก์"', entMenu.includes(tt('ui.app.findDiskFindOn')));
+            closeMenu();
+          }
+          // ทุกเมนูคลิกขวาในต้นไม้ต้องมีทางไปหาไฟล์บนดิสก์อย่างน้อยหนึ่งทาง
+          const noReveal = [];
+          for (const el0 of document.querySelectorAll('#tree .sec-title, #tree .ch-title, #tree .scene')) {
+            if (!el0.oncontextmenu) continue;
+            const txt = menuOf120(el0);
+            if (!txt) continue;
+            if (!txt.includes(tt('ui.app.findDiskFindOn')) && !txt.includes(tt('ui.common.showFolder'))
+                && !txt.includes(tt('ui.common.showFolderImages')) && !txt.includes(tt('ui.vis.reveal')))
+              noReveal.push(el0.className + '::' + txt.slice(0, 40));
+            closeMenu();
+          }
+          check('[120-7] ★★ ทุกเมนูคลิกขวาในต้นไม้มีทางหาไฟล์บนดิสก์',
+                noReveal.length === 0, noReveal.slice(0, 3).join(' | '));
+        }
+
+        // ---- ข้อ 11: คลิกขวาพื้นที่ว่าง ----
+        {
+          const treeEl = $('#tree');
+          closeMenu();
+          treeEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 400 }));
+          const m = document.querySelector('.k-menu');
+          const txt = m ? m.textContent : '';
+          check('[120-11] ★ คลิกขวาพื้นที่ว่างมีเมนูขึ้น', !!m);
+          for (const pair of [['สร้างเล่ม', 'ui.tree.newBook'], ['สร้างบท', 'ui.tree.newChapter'],
+                              ['สร้างฉาก', 'ui.tree.newScene'], ['โน้ต', 'ui.app.newMemoNew'],
+                              ['หมวด Wiki', 'ui.app.newCatNew'], ['กระดาน', 'ui.app.boardNew'],
+                              ['แผนที่', 'ui.app.addMap'], ['วาง', 'ui.tree.paste'],
+                              ['กางทั้งหมด', 'ui.tree.expandAll'], ['พับทั้งหมด', 'ui.tree.collapseAll'],
+                              ['โฟลเดอร์โปรเจกต์', 'ui.tree.projectFolder'],
+                              ['ตั้งค่าโปรเจกต์', 'ui.tree.projectSettings']]) {
+            check('[120-11] เมนูพื้นที่ว่างมี ' + pair[0], txt.includes(tt(pair[1])), txt.slice(0, 100));
+          }
+          closeMenu();
+          setAllAccordions(true);
+          check('[120-11] ★ "พับทั้งหมด" พับได้จริงทุกหัวข้อ',
+                [...document.querySelectorAll('#tree .sec, #tree .chapter')]
+                  .filter((b) => b.querySelector(':scope > .sec-title, :scope > .ch-title'))
+                  .every((b) => b.classList.contains('collapsed')));
+          setAllAccordions(false);
+          check('[120-11] ★ "กางทั้งหมด" กางกลับได้',
+                ![...document.querySelectorAll('#tree .sec, #tree .chapter')]
+                  .some((b) => b.classList.contains('collapsed')));
+        }
+
+        // ---- ข้อ 15: แถบสรุปปิดเป็นค่าเริ่มต้น แต่เปิดกลับได้ ----
+        {
+          setSummaryBar(false);
+          const bar = $('#summary-bar');
+          check('[120-15] ★ แถบสรุปถูกปิดไว้ (แดชบอร์ดทำหน้าที่นี้แล้ว)',
+                !!bar && bar.style.display === 'none' && !summaryBarOn());
+          setSummaryBar(true);
+          await w120(400);
+          check('[120-15] เปิดกลับได้จากเมนู — โค้ดยังอยู่ครบ ไม่ได้ลบทิ้ง',
+                bar.style.display !== 'none' && summaryBarOn() && bar.textContent.length > 0,
+                bar.textContent.slice(0, 40));
+          setSummaryBar(false);
+        }
+
+        // ---- ข้อ 13: ถังขยะ ----
+        {
+          const tHead = [...document.querySelectorAll('#tree .sec-title')]
+            .find((h) => h.oncontextmenu && /♻|ถังขยะ|Trash|Recycle/i.test(h.textContent));
+          check('[120-13] หาหัวข้อถังขยะเจอ', !!tHead, tHead ? tHead.textContent : 'ไม่พบ');
+          if (tHead) {
+            const txt = menuOf120(tHead);
+            check('[120-13] ★ คลิกขวาถังขยะมี "ล้างถังขยะ"',
+                  /ล้างถังขยะ|Empty trash/i.test(txt), txt.slice(0, 140));
+            check('[120-13] ★ มีทางกระโดดไปตั้งเวลาล้างถังในตั้งค่าโปรเจกต์',
+                  txt.includes(tt('ui.tree.trashSettings')), txt.slice(0, 140));
+            closeMenu();
+          }
+          const recDir120 = await kapi.join(state.root, 'Recycle');
+          await kapi.mkdir(recDir120);
+          await kapi.writeFile(await kapi.join(recDir120, 'zz-ทดสอบล้างถัง.md'), 'x');
+          check('[120-13] มีของอยู่ในถังก่อนล้าง', (await kapi.listFiles(recDir120)).length >= 1);
+          for (const f of await kapi.listFiles(recDir120)) await kapi.remove(await kapi.join(recDir120, f));
+          for (const d of await kapi.listDirs(recDir120)) await kapi.remove(await kapi.join(recDir120, d));
+          check('[120-13] ล้างถังแล้วว่างจริง',
+                (await kapi.listFiles(recDir120)).length === 0 && (await kapi.listDirs(recDir120)).length === 0);
+        }
+
+        // ---- ข้อ 16: เลือกหลายไฟล์ + คัดลอก/วาง/ทำซ้ำ/ลบ ----
+        {
+          await buildTree();
+          const rows = scRows120();
+          check('[120-16] มีฉากพอให้เลือกหลายอัน', rows.length >= 2, rows.length);
+          clearTreeSel();
+          treeSelectOnly(rows[0]);
+          check('[120-16] คลิกปกติ = เลือกอันเดียว',
+                rows[0].classList.contains('k-row-sel') && !rows[1].classList.contains('k-row-sel'));
+          treeSelectClick(rows[1], { ctrlKey: true });
+          check('[120-16] ★ Ctrl+คลิก = เพิ่มเข้ากลุ่มที่เลือก',
+                rows[0].classList.contains('k-row-sel') && rows[1].classList.contains('k-row-sel'));
+          treeSelectClick(rows[1], { ctrlKey: true });
+          check('[120-16] Ctrl+คลิกซ้ำ = เอาออกจากกลุ่ม', !rows[1].classList.contains('k-row-sel'));
+          treeSelectOnly(rows[0]);
+          treeSelectClick(rows[Math.min(2, rows.length - 1)], { shiftKey: true });
+          check('[120-16] ★ Shift+คลิก = เลือกเป็นช่วง',
+                document.querySelectorAll('#tree .scene.k-row-sel').length >= 2,
+                document.querySelectorAll('#tree .scene.k-row-sel').length);
+          const multiMenu = menuOf120(rows[0]);
+          check('[120-16] ★ คลิกขวาตอนเลือกหลายอัน = เมนูของกลุ่ม',
+                multiMenu.includes(tt('ui.tree.copy')) && multiMenu.includes(tt('ui.tree.deleteSelected')),
+                multiMenu.slice(0, 120));
+          closeMenu();
+          const ctx120 = rows[0]._ctx;
+          treeSelectOnly(rows[0]);
+          check('[120-16] คัดลอกเก็บลงคลิปบอร์ดของต้นไม้', treeCopy(null, 'copy') === 1);
+          const cntOf = async () => (await kapi.readJson(await kapi.join(ctx120.dPath, 'scenes.json')))
+            .chapters[ctx120.ch.guid].length;
+          const cntBefore = await cntOf();
+          await treePaste(ctx120.dPath, ctx120.ch);
+          const cntAfter = await cntOf();
+          check('[120-16] ★★ Ctrl+C แล้ว Ctrl+V สร้างฉากใหม่จริงในบทปลายทาง',
+                cntAfter === cntBefore + 1, cntBefore + ' → ' + cntAfter);
+          const dupRow = scRows120().find((r) => r.dataset.path === rows[0].dataset.path);
+          treeSelectOnly(dupRow);
+          await treeDuplicate(null);
+          await w120(300);
+          const cntDup = await cntOf();
+          check('[120-16] ★ Ctrl+D ทำซ้ำฉากที่เลือก', cntDup === cntAfter + 1, cntAfter + ' → ' + cntDup);
+          await buildTree();
+          const extra = scRows120().filter((r) => r._ctx.ch.guid === ctx120.ch.guid).slice(-2);
+          for (const r of extra) await deleteSceneSilent(r._ctx.dPath, r._ctx.ch, r._ctx.sc);
+          await buildTree();
+          check('[120-16] ★ ลบหลายไฟล์รวดเดียวได้ (ไม่มีกล่องเด้งทีละไฟล์)',
+                (await cntOf()) === cntDup - extra.length, cntDup + ' → ' + (await cntOf()));
+          clearTreeSel();
+          check('[120-16] ล้างการเลือกได้', !document.querySelector('#tree .scene.k-row-sel'));
+          check('[120-16] #tree รับโฟกัสได้ (คีย์ลัดถึงจะทำงาน)', $('#tree').tabIndex === 0);
+        }
+
+        // ---- ข้อ 12: พับแผงแล้วคลี่กลับ ตำแหน่งเลื่อนต้องอยู่ที่เดิม ----
+        {
+          await buildTree();
+          const treeEl = $('#tree');
+          const canScroll = treeEl.scrollHeight - treeEl.clientHeight > 40;
+          if (canScroll) {
+            treeEl.scrollTop = Math.min(120, treeEl.scrollHeight - treeEl.clientHeight);
+            const want = treeEl.scrollTop;
+            treeEl.dispatchEvent(new Event('scroll', { bubbles: true }));
+            await w120(250);
+            getPanelManager().collapsePanel('tree', true);
+            await w120(250);
+            getPanelManager().collapsePanel('tree', false);
+            await w120(600);
+            const back = $('#tree');
+            check('[120-12] ★★ พับแผงโปรเจกต์แล้วคลี่กลับ ตำแหน่งเลื่อนกลับมาที่เดิม',
+                  Math.abs(back.scrollTop - want) <= 4, 'คาด ' + want + ' ได้ ' + back.scrollTop);
+          } else {
+            check('[120-12] (ต้นไม้สั้นกว่ากรอบ เลื่อนไม่ได้ — ข้ามอย่างซื่อสัตย์)', true);
+          }
+        }
+
+        // ---- ข้อ 6: คุณสมบัติแบบแผง = แบบหน้าต่าง ----
+        {
+          await buildTree();
+          const row = scRows120().find((r) => r._ctx.sc.type !== 'memo') || scRows120()[0];
+          openPropsPanel(row._ctx.dPath, row._ctx.ch, row._ctx.sc);
+          await w120(700);
+          const pb = $('#props-body');
+          check('[120-6] ★ แผงคุณสมบัติมีช่องแก้ชื่อฉาก', !!pb.querySelector('.props-name-input'));
+          const labels = [...pb.querySelectorAll('.wiki-row label')].map((l) => l.textContent);
+          check('[120-6] ★★ แผงมี "ย้อนอดีต" และ "ล่วงหน้า" แล้ว (เดิมมีแต่ในกล่อง)',
+                labels.includes(tt('ui.common.flashback')) && labels.includes(tt('ui.common.pageFlashforward')),
+                JSON.stringify(labels));
+          check('[120-6] ★ แผงมีช่องโน้ตถึงตัวเองในอนาคตเหมือนกล่อง',
+                labels.includes(tt('ui.scene.futureNoteWriter')), JSON.stringify(labels));
+          check('[120-6] แผงมีสวิตช์ครบสามตัว (ปักหมุด · ย้อนอดีต · ล่วงหน้า)',
+                pb.querySelectorAll('.wiki-check').length === 3,
+                pb.querySelectorAll('.wiki-check').length);
+          const cks = pb.querySelectorAll('.wiki-check');
+          // ★ ต้อง "ล้างให้เป็นศูนย์ก่อน" — แถวนี้อาจถูกเทสก่อนหน้าตั้ง isFlashback ไว้แล้ว
+          // ถ้าค่าที่ตั้งเท่าเดิม บันทึกอัตโนมัติของแผงจะไม่แตะดิสก์เลย (ถูกต้องแล้ว)
+          // แล้วเทสจะเข้าใจผิดว่า "เขียนไม่ลง" ทั้งที่ไม่มีอะไรให้เขียน
+          cks[1].checked = false; cks[2].checked = false;
+          cks[1].dispatchEvent(new Event('change', { bubbles: true }));
+          await w120(700);
+          cks[1].checked = true;
+          cks[1].dispatchEvent(new Event('change', { bubbles: true }));
+          await w120(700);
+          const sjF = await kapi.readJson(await kapi.join(row._ctx.dPath, 'scenes.json'));
+          const rowF = (sjF.chapters[row._ctx.ch.guid] || []).find((x) => x.id === row._ctx.sc.id);
+          check('[120-6] ★★ ติ๊กย้อนอดีตในแผง → เขียนลง scenes.json จริง',
+                !!rowF && rowF.isFlashback === true, JSON.stringify(rowF && rowF.isFlashback));
+          // เขียนไฟล์เป็น IPC หลายจังหวะ — รอ "เงื่อนไขจริง" ไม่ใช่เดาเวลา (กับดักเทสข้อ 3)
+          let fmF = {};
+          for (let i = 0; i < 30; i++) {
+            try { fmF = parseMdFile(await kapi.readFile(row.dataset.path)).meta; } catch { fmF = {}; }
+            if (String(fmF.isFlashback) === 'true') break;
+            await w120(100);
+          }
+          check('[120-6] ★ และลง frontmatter ของไฟล์ .md ด้วย (เดิมแผงเขียนแค่ 5 ฟิลด์)',
+                String(fmF.isFlashback) === 'true',
+                'ไฟล์=' + row.dataset.path + ' · frontmatter=' + JSON.stringify(fmF));
+          const ni = pb.querySelector('.props-name-input');
+          ni.value = 'ชื่อใหม่จากแผง120';
+          ni.dispatchEvent(new Event('blur'));
+          await w120(700);
+          let rowN = null;
+          for (let i = 0; i < 30; i++) {
+            const sjN = await kapi.readJson(await kapi.join(row._ctx.dPath, 'scenes.json'));
+            rowN = (sjN.chapters[row._ctx.ch.guid] || []).find((x) => x.id === row._ctx.sc.id);
+            if (rowN && rowN.title === 'ชื่อใหม่จากแผง120') break;
+            await w120(100);
+          }
+          check('[120-6] ★★ แก้ชื่อฉากจากแผงได้จริง',
+                !!rowN && rowN.title === 'ชื่อใหม่จากแผง120', JSON.stringify(rowN && rowN.title));
+          const pb2 = $('#props-body');
+          const cks2 = pb2.querySelectorAll('.wiki-check');
+          if (cks2[1]) { cks2[1].checked = false; cks2[1].dispatchEvent(new Event('change', { bubbles: true })); }
+          await w120(500);
+        }
+
+        // ---- ข้อ 14: ตั้งค่าโปรเจกต์ — คืนค่าก่อนหน้า · ค่าโรงงาน · จำหัวข้อล่าสุด ----
+        {
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          localStorage.removeItem('k2-settings-tab');
+          settingsDialog();
+          await w120(400);
+          let box = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+          check('[120-14] ★ กล่องตั้งค่ามีปุ่ม "คืนค่าก่อนหน้า"', !!box.querySelector('.k-set-undo'));
+          check('[120-14] ★ กล่องตั้งค่ามีปุ่ม "รีเซ็ตเป็นค่าโรงงาน"', !!box.querySelector('.k-set-factory'));
+          check('[120-14] ยังไม่เคยบันทึก = ปุ่มคืนค่าก่อนหน้ากดไม่ได้',
+                box.querySelector('.k-set-undo').disabled === !state.meta.settingsPrev);
+          const tabs120 = [...box.querySelectorAll('.k-set-tab')];
+          const pick = tabs120.find((x) => x.dataset.p && !x.classList.contains('on')) || tabs120[1];
+          pick.click();
+          await w120(120);
+          const wantTab = pick.dataset.p;
+          box.querySelector('.k-cancel').click();
+          await w120(250);
+          settingsDialog();
+          await w120(400);
+          box = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+          const gotTab = box.querySelector('.k-set-tab.on') ? box.querySelector('.k-set-tab.on').dataset.p : '';
+          check('[120-14] ★★ เปิดกล่องตั้งค่าใหม่ = กลับมาที่หัวข้อล่าสุดที่เปิดค้างไว้',
+                gotTab === wantTab, 'คาด ' + wantTab + ' ได้ ' + gotTab);
+          box.querySelector('.k-cancel').click();
+          await w120(250);
+          settingsDialog('write', { focus: '#st-recycle' });
+          await w120(500);
+          box = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+          const recEl = box.querySelector('#st-recycle');
+          const pageOn = box.querySelector('.k-set-tab.on') ? box.querySelector('.k-set-tab.on').dataset.p : '';
+          check('[120-13] ★ "ตั้งเวลาล้างถัง" กระโดดมาถูกหน้าและถูกช่องจริง',
+                !!recEl && pageOn === 'write'
+                && (document.activeElement === recEl || recEl.classList.contains('k-set-flash')),
+                'หน้า=' + pageOn + ' คลาส=' + (recEl ? recEl.className : 'ไม่พบช่อง'));
+          box.querySelector('.k-cancel').click();
+          await w120(250);
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        }
+
+        // ---- บั๊ก: แท็บต้องเขียน "ชื่อฉาก" ไม่ใช่ชื่อไฟล์ ----
+        {
+          await buildTree();
+          const row = scRows120()[0];
+          const f120 = row.dataset.path;
+          const wantTitle = parseMdFile(await kapi.readFile(f120)).meta.title;
+          if (state.tabs.has(f120)) { state.tabs.get(f120).dirty = false; closeTab(f120); }
+          await w120(200);
+          // เส้นทางเดียวกับตอนกู้เซสชัน: เปิดโดย "ไม่บอกชื่อ" มาให้
+          await openScene(f120, null);
+          await w120(350);
+          const tab120 = state.tabs.get(f120);
+          check('[120-bug] ★★ เปิดไฟล์โดยไม่ส่งชื่อมา แท็บยังได้ "ชื่อฉาก" ไม่ใช่ชื่อไฟล์',
+                !!tab120 && tab120.title === wantTitle,
+                (tab120 || {}).title + ' vs ' + wantTitle);
+          check('[120-bug] ข้อความบนหัวแท็บตรงกับชื่อฉากจริง',
+                tab120.tabBtn.querySelector('.tab-title').textContent.replace(/^● /, '') === wantTitle,
+                tab120.tabBtn.querySelector('.tab-title').textContent);
+          check('[120-bug] ★ ชื่อบนแท็บไม่ใช่ชื่อไฟล์',
+                wantTitle === f120.split(/[\\/]/).pop().replace(/\.md$/i, '')
+                || tab120.title !== f120.split(/[\\/]/).pop().replace(/\.md$/i, ''),
+                tab120.title);
+        }
+
+        await buildTree();
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

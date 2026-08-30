@@ -6,6 +6,7 @@ import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageV
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
+         DEFAULT_SETTINGS, DEFAULT_GOALS,
          fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
@@ -1128,7 +1129,28 @@ export function settingsDialog(openTab, opts = {}) {
     if (main) main.scrollTop = 0;
   };
   box.querySelectorAll('.k-set-tab').forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
+  // [alpha.120 ข้อ 14] จำว่า "เปิดค้างไว้ที่หัวข้อไหน" — กล่องนี้มีสิบกว่าหน้า
+  // ผู้ใช้ที่กำลังไล่ปรับหน้าเดียวต้องคลิกหาใหม่ทุกครั้งที่ปิด-เปิด
+  const LAST_TAB_KEY = 'k2-settings-tab';
+  const rememberTab = (name) => { try { localStorage.setItem(LAST_TAB_KEY, name || ''); } catch {} };
+  box.querySelectorAll('.k-set-tab').forEach((tabEl) => tabEl.addEventListener('click', () => rememberTab(tabEl.dataset.p)));
   if (openTab) gotoTab(openTab);      // เปิดตรงแท็บที่ผู้เรียกระบุ (ex. เมนู "ข้อมูลผลงาน")
+  else {
+    let last = '';
+    try { last = localStorage.getItem(LAST_TAB_KEY) || ''; } catch {}
+    if (last && box.querySelector(`.k-set-tab[data-p="${CSS.escape(last)}"]`)) gotoTab(last);
+  }
+  // [alpha.120 ข้อ 13] กระโดดมาที่ช่องใดช่องหนึ่งโดยตรง (เมนูถังขยะ → "ตั้งเวลาล้างถัง")
+  if (opts.focus) {
+    setTimeout(() => {
+      const el2 = q(opts.focus);
+      if (!el2) return;
+      el2.scrollIntoView({ block: 'center' });
+      el2.classList.add('k-set-flash');
+      try { el2.focus(); el2.select && el2.select(); } catch {}
+      setTimeout(() => el2.classList.remove('k-set-flash'), 1800);
+    }, 60);
+  }
 
   // ── [alpha.79] รายการหัวข้อด้านซ้าย: ช่องค้นหา ──
   // กล่องตั้งค่ามี 13 หน้า — หาหัวข้อไม่เจอเป็นปัญหาจริง ช่องนี้กรองจากทั้งชื่อและคำค้นที่ติดไว้ (data-find)
@@ -1200,6 +1222,49 @@ export function settingsDialog(openTab, opts = {}) {
 
   box.querySelector('.k-cancel').onclick = cancel;
   ov.onclick = (e) => { if (e.target === ov) cancel(); };
+
+  // ── [alpha.120 ข้อ 14] "คืนค่าก่อนหน้า" + "รีเซ็ตเป็นค่าโรงงาน" ──
+  // ทั้งสองปุ่มเขียนค่าลง project.khn.json แล้ว **เปิดกล่องใหม่** เสมอ — ไม่พยายามยัดค่ากลับ
+  // เข้าช่องทีละช่อง (กล่องนี้มีร้อยกว่าช่อง + สำเนาทำงาน W ที่ต้องประกอบใหม่ทั้งชุด)
+  {
+    const foot = box.querySelector('.k-dlg-btns');
+    if (foot) {
+      const undoB = el('button', 'k-set-undo', t('ui.dlg.settingsRevert'));
+      undoB.title = t('ui.dlg.settingsRevertHint');
+      undoB.disabled = !(m && m.settingsPrev);
+      undoB.onclick = async () => {
+        if (!m.settingsPrev) return;
+        if (!(await confirmBox(t('ui.dlg.settingsRevertAsk'), t('ui.dlg.settingsRevert')))) return;
+        const back = JSON.parse(JSON.stringify(m.settingsPrev));
+        m.settingsPrev = JSON.parse(JSON.stringify({ settings: s, goals: g }));   // สลับได้ไป-กลับ
+        Object.keys(s).forEach((k) => delete s[k]);
+        Object.assign(s, back.settings || {});
+        Object.keys(g).forEach((k) => delete g[k]);
+        Object.assign(g, back.goals || DEFAULT_GOALS);
+        await saveProjectMeta();
+        applySettings();
+        close();
+        setStatus(t('ui.dlg.settingsReverted'));
+        settingsDialog(box.querySelector('.k-set-tab.on')?.dataset.p);
+      };
+      const factoryB = el('button', 'k-set-factory', t('ui.dlg.settingsFactory'));
+      factoryB.title = t('ui.dlg.settingsFactoryHint');
+      factoryB.onclick = async () => {
+        if (!(await confirmBox(t('ui.dlg.settingsFactoryAsk'), t('ui.dlg.settingsFactory')))) return;
+        m.settingsPrev = JSON.parse(JSON.stringify({ settings: s, goals: g }));
+        Object.keys(s).forEach((k) => delete s[k]);
+        Object.assign(s, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+        Object.keys(g).forEach((k) => delete g[k]);
+        Object.assign(g, { ...DEFAULT_GOALS });
+        await saveProjectMeta();
+        applySettings();
+        close();
+        setStatus(t('ui.dlg.settingsFactoryDone'));
+        settingsDialog();
+      };
+      foot.prepend(undoB, factoryB);
+    }
+  }
   box.querySelector('.k-ok').onclick = async () => {
     m.title = q('#st-title').value.trim() || m.title;
     m.author = q('#st-author').value.trim();
@@ -1278,6 +1343,12 @@ export function settingsDialog(openTab, opts = {}) {
                       panButton: q('#st-net-pan')?.value || 'left' };
     try {
       await preloadLangFontUrls();         // ฟอนต์ที่เพิ่งนำเข้าต้องมี URL ก่อน applySettings สร้าง CSS
+      // [alpha.120 ข้อ 14] เก็บภาพของ "ค่าก่อนกดบันทึกรอบนี้" ไว้ให้ปุ่มคืนค่าก่อนหน้า
+      // (อ่านจากไฟล์บนดิสก์ = ค่าที่บันทึกไว้จริงครั้งล่าสุด ไม่ใช่ค่าที่เพิ่งพิมพ์ในกล่อง)
+      try {
+        const onDisk = await kapi.readJson(await kapi.join(state.root, 'project.khn.json'));
+        m.settingsPrev = { settings: onDisk.settings || {}, goals: onDisk.goals || {} };
+      } catch (e) { log('warn', t('ui.dlg.settingsPrevFail'), e); }
       await saveProjectMeta();
       // [alpha.60 ข้อ 94] บันทึก global settings ลง userData/settings.json
       try {

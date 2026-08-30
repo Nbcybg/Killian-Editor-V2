@@ -9,7 +9,7 @@
 // เพราะโค้ดทั้งโปรเจกต์อ้าง id เหล่านี้ ($('#panes'), $('#tabs'), $('#props-body'), …)
 import { tf } from '../i18n.js';
 import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
-         keepScroll, restoreScrollSnap, elByPath } from '../core.js';
+         keepScroll, restoreScrollSnap, elByPath, scrollSnapshot } from '../core.js';
 import { popupMenu, ask, confirmBox } from '../ui.js';
 import * as PL from './panel-layout.js';
 import { PanelManager } from './panel-store.js';
@@ -551,6 +551,10 @@ function captureScroll() {
 function restoreScroll(jobs) {
   for (const j of jobs) { try { j(); } catch {} }
   replayScrollMemo();
+  // [alpha.120 ข้อ 12] เล่นซ้ำอีกครั้งหลัง layout นิ่ง — ตอนคลี่แผงกลับมา กล่องเพิ่งพ้น
+  // display:none มาหมาด ๆ `scrollHeight` ยังเป็น 0 อยู่ เบราว์เซอร์จึงหนีบค่าที่เขียนให้เหลือ 0
+  try { requestAnimationFrame(() => replayScrollMemo()); } catch {}
+  setTimeout(replayScrollMemo, 60);
 }
 
 /**
@@ -563,13 +567,53 @@ function replayScrollMemo() {
     const sel = `#${HOST_ID} .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
     const el2 = document.querySelector(sel);
     if (!el2 || !el2.getBoundingClientRect().width) continue;      // ยังไม่เห็น (ปิด/พับ/แท็บอื่น)
+    if (el2.classList.contains('k-collapsed')) continue;           // พับอยู่ — คืนค่าตอนนี้ได้แค่ 0
     const target = elByPath(el2, snap[0] ? snap[0].path : null) || null;
+    // [alpha.120 ข้อ 12] กล่องที่ยัง "ไม่มีความสูงให้เลื่อน" ยังคืนค่าไม่ได้ ต้องรอรอบถัดไป
+    // (เดิมปล่อยผ่านแล้วถือว่าเสร็จ → คลี่แผงกลับมาได้ 0 ทุกครั้ง)
     if (target && (target.scrollTop || target.scrollLeft)) continue;   // ยังอยู่ดี ไม่ต้องแตะ
     try { restoreScrollSnap(() => document.querySelector(sel), snap)(); } catch {}
   }
 }
 /** ล้างความจำตำแหน่งเลื่อน (เปลี่ยนโปรเจกต์ = เนื้อคนละชุดแล้ว) */
 export function resetScrollMemo() { scrollMemo.clear(); }
+
+// ───────── [alpha.120 ข้อ 12] จำตำแหน่งเลื่อน "ตอนผู้ใช้เลื่อน" ไม่ใช่ตอนวาดแผง ─────────
+//
+// ★ ต้นตอที่ผู้ใช้เจอ (พับแผงโปรเจกต์แล้วคลี่กลับ → ต้นไม้เด้งกลับบนสุด):
+//   ความจำเดิมถูกเก็บ **เฉพาะตอน renderPanels()** เท่านั้น และตอนพับ CSS สั่ง
+//   `.k-collapsed #tree { display:none }` — กล่องที่ไม่มีกล่องเรนเดอร์จะรายงาน `scrollTop = 0`
+//   เสมอ · ลำดับที่ทำให้ค่าหาย: พับ (จดได้ถูก) → มีอะไรก็ตามสั่งวาดแผงใหม่ระหว่างที่ยังพับอยู่
+//   (สลับแท็บ · เปิด/ปิดแผงอื่น · ลากขอบ) → `captureScroll()` รอบนั้นอ่าน 0 จากทุกกล่อง
+//   → ไม่ตรงเงื่อนไข `if (!e.scrollTop && !e.scrollLeft) return` เลยไม่ทับของเดิมก็จริง
+//   **แต่ `restoreScroll()` ที่ตามมาเขียน 0 ทับลงกล่องที่ซ่อนอยู่** แล้วรอบวาดถัดไปก็ไม่มีใครจดใหม่
+//   สุดท้ายตอนคลี่กลับจึงไม่มีค่าที่ถูกต้องเหลืออยู่
+// ทางแก้: ดักอีเวนต์ `scroll` จริง ๆ (แบบ capture — scroll ไม่ bubble) แล้วจดทันทีที่ผู้ใช้เลื่อน
+// ค่าที่จดจึงเป็น "ตำแหน่งล่าสุดที่มองเห็นจริง" เสมอ ไม่ขึ้นกับจังหวะวาดแผงอีกต่อไป
+let _scrollWatch = false;
+function watchScrollMemo() {
+  if (_scrollWatch) return false;
+  const h = host();
+  if (!h) return false;
+  _scrollWatch = true;
+  let job = null;
+  h.addEventListener('scroll', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const a = t.closest(SCROLL_ANCHOR);
+    if (!a) return;
+    const k = memoKey(a);
+    if (!k) return;
+    // รวบเป็นเฟรมเดียว — อีเวนต์ scroll ยิงถี่มากระหว่างลากแถบเลื่อน
+    clearTimeout(job);
+    job = setTimeout(() => {
+      if (!a.isConnected) return;
+      const snap = scrollSnapshot(a);
+      if (snap.length) scrollMemo.set(k, snap);
+    }, 90);
+  }, true);
+  return true;
+}
 
 // ───────── [alpha.66r5] ตาข่ายกัน "ช่องว่างค้าง" + ตัววินิจฉัย ─────────
 // ผู้ใช้เจอช่องว่างฝั่งขวาหลังลากปรับขนาด แต่ **ทำซ้ำในเครื่องเทสไม่ได้** จึงยังไม่ฟันธงต้นตอ
@@ -642,6 +686,7 @@ export function renderPanels(force) {
   lastSig = sig;
   const saved = captureScroll();
   renderPanelLayout(host(), pm, renderOpts());
+  watchScrollMemo();                    // [alpha.120 ข้อ 12] ผูกตัวจดตำแหน่งเลื่อน (ครั้งเดียว)
   restoreScroll(saved);
   // ตรวจ "ช่องว่างค้าง" หลัง layout เสร็จจริง (rAF) แล้วปิดรูให้ทันทีถ้าเจอ
   try { requestAnimationFrame(() => auditPanelGaps()); } catch {}

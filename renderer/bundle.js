@@ -754,8 +754,8 @@
     function node() {
       return nfa2.push([]) - 1;
     }
-    function edge(from2, to, term) {
-      let edge2 = { term, to };
+    function edge(from2, to, term2) {
+      let edge2 = { term: term2, to };
       nfa2[from2].push(edge2);
       return edge2;
     }
@@ -822,8 +822,8 @@
         return scan(edges[0].to);
       result.push(node2);
       for (let i5 = 0; i5 < edges.length; i5++) {
-        let { term, to } = edges[i5];
-        if (!term && result.indexOf(to) == -1)
+        let { term: term2, to } = edges[i5];
+        if (!term2 && result.indexOf(to) == -1)
           scan(to);
       }
     }
@@ -834,16 +834,16 @@
     function explore(states) {
       let out = [];
       states.forEach((node) => {
-        nfa2[node].forEach(({ term, to }) => {
-          if (!term)
+        nfa2[node].forEach(({ term: term2, to }) => {
+          if (!term2)
             return;
           let set;
           for (let i5 = 0; i5 < out.length; i5++)
-            if (out[i5][0] == term)
+            if (out[i5][0] == term2)
               set = out[i5][1];
           nullFrom(nfa2, to).forEach((node2) => {
             if (!set)
-              out.push([term, set = []]);
+              out.push([term2, set = []]);
             if (set.indexOf(node2) == -1)
               set.push(node2);
           });
@@ -22015,12 +22015,12 @@
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     const add = (raw, via) => {
-      const term = String(raw || "").trim();
-      if (term.length < MIN_TERM) return;
-      const k = norm(term);
+      const term2 = String(raw || "").trim();
+      if (term2.length < MIN_TERM) return;
+      const k = norm(term2);
       if (seen.has(k)) return;
       seen.add(k);
-      out.push({ term, via });
+      out.push({ term: term2, via });
     };
     add(entity.name, "name");
     for (const a of entity.aliases || []) add(a, "alias");
@@ -47774,11 +47774,11 @@
              * @return {String}
              */
             getSvgSpanStyles: function(style, useWhiteSpace) {
-              var term = "; ";
-              var fontFamily = style.fontFamily ? "font-family: " + (style.fontFamily.indexOf("'") === -1 && style.fontFamily.indexOf('"') === -1 ? "'" + style.fontFamily + "'" : style.fontFamily) + term : "";
-              var strokeWidth = style.strokeWidth ? "stroke-width: " + style.strokeWidth + term : "", fontFamily = fontFamily, fontSize = style.fontSize ? "font-size: " + style.fontSize + "px" + term : "", fontStyle = style.fontStyle ? "font-style: " + style.fontStyle + term : "", fontWeight = style.fontWeight ? "font-weight: " + style.fontWeight + term : "", fill3 = style.fill ? getSvgColorString("fill", style.fill) : "", stroke2 = style.stroke ? getSvgColorString("stroke", style.stroke) : "", textDecoration = this.getSvgTextDecoration(style), deltaY = style.deltaY ? "baseline-shift: " + -style.deltaY + "; " : "";
+              var term2 = "; ";
+              var fontFamily = style.fontFamily ? "font-family: " + (style.fontFamily.indexOf("'") === -1 && style.fontFamily.indexOf('"') === -1 ? "'" + style.fontFamily + "'" : style.fontFamily) + term2 : "";
+              var strokeWidth = style.strokeWidth ? "stroke-width: " + style.strokeWidth + term2 : "", fontFamily = fontFamily, fontSize = style.fontSize ? "font-size: " + style.fontSize + "px" + term2 : "", fontStyle = style.fontStyle ? "font-style: " + style.fontStyle + term2 : "", fontWeight = style.fontWeight ? "font-weight: " + style.fontWeight + term2 : "", fill3 = style.fill ? getSvgColorString("fill", style.fill) : "", stroke2 = style.stroke ? getSvgColorString("stroke", style.stroke) : "", textDecoration = this.getSvgTextDecoration(style), deltaY = style.deltaY ? "baseline-shift: " + -style.deltaY + "; " : "";
               if (textDecoration) {
-                textDecoration = "text-decoration: " + textDecoration + term;
+                textDecoration = "text-decoration: " + textDecoration + term2;
               }
               return [
                 stroke2,
@@ -62633,38 +62633,75 @@
   });
 
   // src/sceneFilter.js
-  function parseQuery(q) {
-    return (q || "").trim().split(/\s+/).filter(Boolean).map((tok) => {
-      const m = /^([^:]+):(.*)$/.exec(tok);
-      if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: (m[2] || "").toLowerCase() };
-      return { field: "*", value: tok.toLowerCase() };
-    });
+  function term(tok) {
+    let neg = false;
+    if (tok.startsWith("-") && tok.length > 1) {
+      neg = true;
+      tok = tok.slice(1);
+    }
+    const m = /^([^:]+):(.*)$/.exec(tok);
+    if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: (m[2] || "").toLowerCase(), neg };
+    return { field: "*", value: tok.toLowerCase(), neg };
+  }
+  function parseGroups(q) {
+    const toks = (q || "").trim().split(/\s+/).filter(Boolean);
+    const groups = [[]];
+    for (const tok of toks) {
+      const up = tok.toUpperCase();
+      if (up === "OR" || tok === "|" || up === "\u0E2B\u0E23\u0E37\u0E2D") {
+        groups.push([]);
+        continue;
+      }
+      if (up === "NOT" || up === "\u0E44\u0E21\u0E48") {
+        groups[groups.length - 1].push({ pendingNot: true });
+        continue;
+      }
+      const last2 = groups[groups.length - 1];
+      const prev = last2[last2.length - 1];
+      const tm2 = term(tok);
+      if (prev && prev.pendingNot) {
+        last2.pop();
+        tm2.neg = true;
+      }
+      last2.push(tm2);
+    }
+    return groups.map((g) => g.filter((x) => !x.pendingNot)).filter((g) => g.length);
   }
   function tagStr(sc) {
     return (Array.isArray(sc.tags) ? sc.tags.join(" ") : String(sc.tags || "")).toLowerCase();
   }
   function allText(sc) {
     const status = sc.status && sc.status !== "Outline" ? sc.status : "";
-    return [sc.title, sc.synopsis, sc.note, sc.pov, sc.emotion, sc.conflict, status, tagStr(sc)].filter(Boolean).join(" ").toLowerCase();
+    return [sc.title, sc.fileName, sc.synopsis, sc.note, sc.pov, sc.emotion, sc.conflict, status, tagStr(sc)].filter(Boolean).join(" ").toLowerCase();
+  }
+  function hitTerm(sc, hay, t3) {
+    let ok2;
+    if (t3.field === "*") ok2 = hay.includes(t3.value);
+    else if (t3.field === "flag") {
+      const on2 = ["1", "true", t("ui.common.pinPin"), "fav", "yes", "y"].includes(t3.value);
+      ok2 = !!sc.flag === on2;
+    } else if (t3.field === "tags") ok2 = tagStr(sc).includes(t3.value);
+    else if (t3.field === "status") {
+      const v2 = sc.status && sc.status !== "Outline" ? String(sc.status).toLowerCase() : "";
+      ok2 = v2.includes(t3.value);
+    } else ok2 = String(sc[t3.field] ?? "").toLowerCase().includes(t3.value);
+    return t3.neg ? !ok2 : ok2;
   }
   function sceneMatchesQuery(sc, q) {
     if (!sc) return true;
-    const terms = parseQuery(q);
-    if (!terms.length) return true;
+    const groups = parseGroups(q);
+    if (!groups.length) return true;
     const hay = allText(sc);
-    return terms.every((t3) => {
-      if (t3.field === "*") return hay.includes(t3.value);
-      if (t3.field === "flag") {
-        const on2 = ["1", "true", t("ui.common.pinPin"), "fav", "yes", "y"].includes(t3.value);
-        return !!sc.flag === on2;
-      }
-      if (t3.field === "tags") return tagStr(sc).includes(t3.value);
-      if (t3.field === "status") {
-        const v2 = sc.status && sc.status !== "Outline" ? String(sc.status).toLowerCase() : "";
-        return v2.includes(t3.value);
-      }
-      return String(sc[t3.field] ?? "").toLowerCase().includes(t3.value);
-    });
+    return groups.some((g) => g.every((t3) => hitTerm(sc, hay, t3)));
+  }
+  function textMatchesQuery(hay, q) {
+    const groups = parseGroups(q);
+    if (!groups.length) return true;
+    const h = String(hay || "").toLowerCase();
+    return groups.some((g) => g.every((t3) => {
+      const ok2 = h.includes(t3.value);
+      return t3.neg ? !ok2 : ok2;
+    }));
   }
   var FIELD;
   var init_sceneFilter = __esm({
@@ -62692,7 +62729,15 @@
         "note": "note",
         "\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14": "flag",
         "flag": "flag",
-        "fav": "flag"
+        "fav": "flag",
+        /* i18n-skip: คีย์ตารางนี้คือคำสั่งค้นหาที่ผู้ใช้พิมพ์ เช่น ไฟล์:scene-01 ไม่ใช่ป้ายบนหน้าจอ
+           แปลตามภาษา UI เมื่อไหร่ คิวรีที่ผู้ใช้จำไว้ก็ใช้ไม่ได้ทันที (เหตุผลเดียวกับคีย์ไทยด้านบน) */
+        "\u0E44\u0E1F\u0E25\u0E4C": "fileName",
+        "file": "fileName",
+        "filename": "fileName",
+        "\u0E0A\u0E37\u0E48\u0E2D": "title",
+        "title": "title"
+        /* /i18n-skip */
       };
     }
   });
@@ -65249,8 +65294,8 @@ ${h.text}`;
   function replaceName(text, oldName, newName) {
     if (!text || !oldName || oldName === newName) return { text: text || "", changed: 0 };
     const src2 = String(text);
-    const term = String(oldName);
-    const ascii = /^[\x20-\x7f]+$/.test(term);
+    const term2 = String(oldName);
+    const ascii = /^[\x20-\x7f]+$/.test(term2);
     const WORD2 = /[A-Za-z0-9_]/;
     let out = "";
     let i5 = 0, changed = 0;
@@ -65261,7 +65306,7 @@ ${h.text}`;
           const inner = src2.slice(i5 + 2, close2);
           const bar = inner.indexOf("|");
           const target = bar >= 0 ? inner.slice(0, bar) : inner;
-          if (target.trim() === term) {
+          if (target.trim() === term2) {
             out += "[[" + newName + (bar >= 0 ? inner.slice(bar) : "") + "]]";
             i5 = close2 + 2;
             changed++;
@@ -65269,13 +65314,13 @@ ${h.text}`;
           }
         }
       }
-      if (src2.startsWith(term, i5)) {
+      if (src2.startsWith(term2, i5)) {
         const before = i5 > 0 ? src2[i5 - 1] : "";
-        const after = src2[i5 + term.length] || "";
+        const after = src2[i5 + term2.length] || "";
         const okWord = !ascii || !WORD2.test(before) && !WORD2.test(after);
         if (okWord) {
           out += newName;
-          i5 += term.length;
+          i5 += term2.length;
           changed++;
           continue;
         }
@@ -67767,6 +67812,11 @@ ${h.text}`;
       }
     }
     replayScrollMemo();
+    try {
+      requestAnimationFrame(() => replayScrollMemo());
+    } catch {
+    }
+    setTimeout(replayScrollMemo, 60);
   }
   function replayScrollMemo() {
     if (!scrollMemo.size) return;
@@ -67774,6 +67824,7 @@ ${h.text}`;
       const sel = `#${HOST_ID} .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
       const el2 = document.querySelector(sel);
       if (!el2 || !el2.getBoundingClientRect().width) continue;
+      if (el2.classList.contains("k-collapsed")) continue;
       const target = elByPath(el2, snap2[0] ? snap2[0].path : null) || null;
       if (target && (target.scrollTop || target.scrollLeft)) continue;
       try {
@@ -67784,6 +67835,28 @@ ${h.text}`;
   }
   function resetScrollMemo() {
     scrollMemo.clear();
+  }
+  function watchScrollMemo() {
+    if (_scrollWatch) return false;
+    const h = host();
+    if (!h) return false;
+    _scrollWatch = true;
+    let job = null;
+    h.addEventListener("scroll", (e) => {
+      const t3 = e.target;
+      if (!t3 || !t3.closest) return;
+      const a = t3.closest(SCROLL_ANCHOR);
+      if (!a) return;
+      const k = memoKey(a);
+      if (!k) return;
+      clearTimeout(job);
+      job = setTimeout(() => {
+        if (!a.isConnected) return;
+        const snap2 = scrollSnapshot(a);
+        if (snap2.length) scrollMemo.set(k, snap2);
+      }, 90);
+    }, true);
+    return true;
   }
   function auditPanelGaps(opts = {}) {
     const h = host();
@@ -67843,6 +67916,7 @@ ${h.text}`;
     lastSig = sig;
     const saved = captureScroll();
     renderPanelLayout(host(), pm, renderOpts());
+    watchScrollMemo();
     restoreScroll(saved);
     try {
       requestAnimationFrame(() => auditPanelGaps());
@@ -68359,7 +68433,7 @@ ${h.text}`;
     } catch {
     }
   }
-  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, TEAROFF_PANELS, tornOff, _syncBound, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, BUILTIN_WORKSPACES, _stash, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, GAP_TOL, _gapLogged, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
+  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, TEAROFF_PANELS, tornOff, _syncBound, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, BUILTIN_WORKSPACES, _stash, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, _scrollWatch, GAP_TOL, _gapLogged, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
   var init_panel_ui = __esm({
     "src/panels/panel-ui.js"() {
       init_i18n();
@@ -68891,6 +68965,7 @@ ${h.text}`;
       ].join(", ");
       SCROLL_ANCHOR = ".k-float-panel[data-panel-id], .k-panel[data-panel-id]";
       scrollMemo = /* @__PURE__ */ new Map();
+      _scrollWatch = false;
       GAP_TOL = 4;
       _gapLogged = /* @__PURE__ */ new Set();
       _rememberJob = null;
@@ -72821,7 +72896,37 @@ ${h.text}`;
       if (main) main.scrollTop = 0;
     };
     box2.querySelectorAll(".k-set-tab").forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
+    const LAST_TAB_KEY = "k2-settings-tab";
+    const rememberTab = (name5) => {
+      try {
+        localStorage.setItem(LAST_TAB_KEY, name5 || "");
+      } catch {
+      }
+    };
+    box2.querySelectorAll(".k-set-tab").forEach((tabEl) => tabEl.addEventListener("click", () => rememberTab(tabEl.dataset.p)));
     if (openTab) gotoTab(openTab);
+    else {
+      let last2 = "";
+      try {
+        last2 = localStorage.getItem(LAST_TAB_KEY) || "";
+      } catch {
+      }
+      if (last2 && box2.querySelector(`.k-set-tab[data-p="${CSS.escape(last2)}"]`)) gotoTab(last2);
+    }
+    if (opts.focus) {
+      setTimeout(() => {
+        const el2 = q(opts.focus);
+        if (!el2) return;
+        el2.scrollIntoView({ block: "center" });
+        el2.classList.add("k-set-flash");
+        try {
+          el2.focus();
+          el2.select && el2.select();
+        } catch {
+        }
+        setTimeout(() => el2.classList.remove("k-set-flash"), 1800);
+      }, 60);
+    }
     const navQ = q("#st-nav-q");
     if (navQ) {
       navQ.oninput = () => {
@@ -72895,6 +73000,45 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) cancel();
     };
+    {
+      const foot = box2.querySelector(".k-dlg-btns");
+      if (foot) {
+        const undoB = el("button", "k-set-undo", t("ui.dlg.settingsRevert"));
+        undoB.title = t("ui.dlg.settingsRevertHint");
+        undoB.disabled = !(m && m.settingsPrev);
+        undoB.onclick = async () => {
+          if (!m.settingsPrev) return;
+          if (!await confirmBox(t("ui.dlg.settingsRevertAsk"), t("ui.dlg.settingsRevert"))) return;
+          const back = JSON.parse(JSON.stringify(m.settingsPrev));
+          m.settingsPrev = JSON.parse(JSON.stringify({ settings: s, goals: g }));
+          Object.keys(s).forEach((k) => delete s[k]);
+          Object.assign(s, back.settings || {});
+          Object.keys(g).forEach((k) => delete g[k]);
+          Object.assign(g, back.goals || DEFAULT_GOALS);
+          await saveProjectMeta();
+          applySettings();
+          close2();
+          setStatus(t("ui.dlg.settingsReverted"));
+          settingsDialog(box2.querySelector(".k-set-tab.on")?.dataset.p);
+        };
+        const factoryB = el("button", "k-set-factory", t("ui.dlg.settingsFactory"));
+        factoryB.title = t("ui.dlg.settingsFactoryHint");
+        factoryB.onclick = async () => {
+          if (!await confirmBox(t("ui.dlg.settingsFactoryAsk"), t("ui.dlg.settingsFactory"))) return;
+          m.settingsPrev = JSON.parse(JSON.stringify({ settings: s, goals: g }));
+          Object.keys(s).forEach((k) => delete s[k]);
+          Object.assign(s, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+          Object.keys(g).forEach((k) => delete g[k]);
+          Object.assign(g, { ...DEFAULT_GOALS });
+          await saveProjectMeta();
+          applySettings();
+          close2();
+          setStatus(t("ui.dlg.settingsFactoryDone"));
+          settingsDialog();
+        };
+        foot.prepend(undoB, factoryB);
+      }
+    }
     box2.querySelector(".k-ok").onclick = async () => {
       m.title = q("#st-title").value.trim() || m.title;
       m.author = q("#st-author").value.trim();
@@ -72961,6 +73105,12 @@ ${h.text}`;
       };
       try {
         await preloadLangFontUrls();
+        try {
+          const onDisk = await kapi.readJson(await kapi.join(state.root, "project.khn.json"));
+          m.settingsPrev = { settings: onDisk.settings || {}, goals: onDisk.goals || {} };
+        } catch (e) {
+          log("warn", t("ui.dlg.settingsPrevFail"), e);
+        }
         await saveProjectMeta();
         try {
           const globalKeys = [
@@ -75042,6 +75192,1034 @@ ${h.text}`;
     }
   });
 
+  // src/recycle.js
+  async function restoreFromTrash(p, fname) {
+    const sidecar = p + ".k2restore.json";
+    if (await kapi.exists(sidecar)) {
+      const info = await kapi.readJson(sidecar);
+      if (info.kind === "album" || info.kind === "image") {
+        const AC = await Promise.resolve().then(() => (init_album_core(), album_core_exports));
+        await AC.restoreFromRecycle(kapi, info.root || state.root, p, info);
+        await kapi.remove(sidecar);
+        await buildTree2();
+        smart.loadNames(state.root);
+        setStatus(info.kind === "album" ? t("ui.trash.recoverRestoreAlbumDone") : t("ui.trash.recoverRestoreImageDone"));
+        return;
+      }
+      if (info.kind === "section") {
+        await kapi.move(p, await kapi.join(info.root, info.folderName));
+        await kapi.remove(sidecar);
+        await buildTree2();
+        smart.loadNames(state.root);
+        refreshNetwork();
+        setStatus(t("ui.trash.recoverRestoreBookDone"));
+        return;
+      }
+      if (info.kind === "scene") {
+        const dst = await kapi.join(info.dPath, "Chapters", info.folderName, info.sc.fileName);
+        await kapi.move(p, dst);
+        try {
+          if (await kapi.exists(p + ".vis.csv"))
+            await kapi.move(p + ".vis.csv", dst.replace(/\.md$/i, "") + "_vis.csv");
+        } catch {
+        }
+        const sf = await kapi.join(info.dPath, "scenes.json");
+        const d = await kapi.readJson(sf);
+        d.chapters = d.chapters || {};
+        d.chapters[info.chGuid] = [...d.chapters[info.chGuid] || [], info.sc];
+        await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      } else if (info.kind === "chapter") {
+        await kapi.move(p, await kapi.join(info.dPath, "Chapters", info.ch.folderName));
+        const df = await kapi.join(info.dPath, "draft.json");
+        const d = await kapi.readJson(df);
+        d.chapters = [...d.chapters || [], info.ch];
+        await kapi.writeFile(df, JSON.stringify(d, null, 2));
+        const sf = await kapi.join(info.dPath, "scenes.json");
+        const s2 = await kapi.readJson(sf);
+        s2.chapters = s2.chapters || {};
+        s2.chapters[info.ch.guid] = info.scenes || [];
+        await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+      }
+      await kapi.remove(sidecar);
+    } else if (fname.endsWith(".json")) {
+      let cat = "characters";
+      try {
+        cat = (await kapi.readJson(p)).entityTypeKey || cat;
+      } catch {
+      }
+      const w = await kapi.join(state.root, "Wiki");
+      const base4 = await kapi.exists(w) ? w : await kapi.exists(await kapi.join(state.root, "Bible")) ? await kapi.join(state.root, "Bible") : w;
+      await kapi.mkdir(await kapi.join(base4, cat));
+      await kapi.move(p, await kapi.join(base4, cat, fname.replace(/^[a-z0-9]+-/, "")));
+    } else {
+      await kapi.mkdir(await kapi.join(state.root, "Memos"));
+      await kapi.move(p, await kapi.join(state.root, "Memos", fname.replace(/^[a-z0-9]+-/, "")));
+    }
+    await buildTree2();
+    smart.loadNames(state.root);
+    refreshNetwork();
+    setStatus(t("ui.trash.recoverRestoreDone"));
+  }
+  async function deleteToTrash(file, label) {
+    if (!await confirmBox(tf("ui.trash.delMoveTrashProject", label))) return null;
+    const base4 = file.split(/[\\/]/).pop();
+    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
+    await kapi.move(file, dst);
+    if (state.tabs.has(file)) {
+      state.tabs.get(file).dirty = false;
+      closeTab(file);
+    }
+    await buildTree2();
+    smart.loadNames(state.root);
+    refreshNetwork();
+    setStatus(t("ui.trash.moveTrash") + label);
+    return dst;
+  }
+  async function purgeRecycle(root) {
+    const days = parseInt(state.settings.recycleDays, 10) || 0;
+    if (days <= 0) return;
+    const recDir = await kapi.join(root, "Recycle");
+    if (!await kapi.exists(recDir)) return;
+    const cutoff = Date.now() - days * 864e5;
+    let purged = 0;
+    for (const name5 of await kapi.listDirs(recDir).catch(() => [])) {
+      const p = await kapi.join(recDir, name5);
+      if (await kapi.mtime(p) < cutoff) {
+        await kapi.remove(p);
+        purged++;
+      }
+    }
+    for (const name5 of await kapi.listFiles(recDir, "").catch(() => [])) {
+      const p = await kapi.join(recDir, name5);
+      if (await kapi.mtime(p) < cutoff) {
+        await kapi.remove(p);
+        purged++;
+      }
+    }
+    if (purged) setStatus(tf("ui.trash.clearTrashAutoList", purged, days));
+  }
+  var init_recycle = __esm({
+    "src/recycle.js"() {
+      init_i18n();
+      init_app();
+      init_core();
+      init_ui();
+    }
+  });
+
+  // src/visual/vis-core.js
+  var vis_core_exports = {};
+  __export(vis_core_exports, {
+    COL_W_MAX: () => COL_W_MAX,
+    COL_W_MIN: () => COL_W_MIN,
+    CSV_BOM: () => CSV_BOM,
+    REF_SEP: () => REF_SEP,
+    SIMILAR_MIN: () => SIMILAR_MIN,
+    SNAP_SEP: () => SNAP_SEP,
+    VIS_COL_DEFAULT_OFF: () => VIS_COL_DEFAULT_OFF,
+    VIS_COL_KEYS: () => VIS_COL_KEYS,
+    VIS_COL_W: () => VIS_COL_W,
+    VIS_FIXED_W: () => VIS_FIXED_W,
+    VIS_HEADER: () => VIS_HEADER,
+    bindRow: () => bindRow,
+    boundIdxs: () => boundIdxs,
+    clampColW: () => clampColW,
+    commentsForText: () => commentsForText,
+    csvCell: () => csvCell,
+    displayText: () => displayText2,
+    dumpVis: () => dumpVis,
+    entitiesIn: () => entitiesIn,
+    insertRow: () => insertRow,
+    joinSnaps: () => joinSnaps,
+    lineHash: () => lineHash,
+    lineUsage: () => lineUsage,
+    liveLineNos: () => liveLineNos,
+    liveText: () => liveText,
+    makeRef: () => makeRef,
+    makeRow: () => makeRow,
+    moveCol: () => moveCol,
+    moveRow: () => moveRow,
+    normText: () => normText,
+    normalizeCols: () => normalizeCols,
+    parseCsv: () => parseCsv2,
+    parseRef: () => parseRef,
+    parseRefs: () => parseRefs,
+    parseVis: () => parseVis,
+    removeRow: () => removeRow,
+    renumber: () => renumber,
+    resolveAll: () => resolveAll,
+    resolveRow: () => resolveRow,
+    rowFromLines: () => rowFromLines,
+    sceneFileOfVis: () => sceneFileOfVis,
+    setColWidth: () => setColWidth,
+    similarity: () => similarity2,
+    splitLines: () => splitLines,
+    splitSnaps: () => splitSnaps,
+    syncRow: () => syncRow,
+    toggleCol: () => toggleCol,
+    totalWidth: () => totalWidth,
+    unusedLines: () => unusedLines,
+    visFileName: () => visFileName,
+    visibleCols: () => visibleCols
+  });
+  function visFileName(sceneFileName) {
+    const s = String(sceneFileName || "").trim();
+    if (!s) return "";
+    return s.replace(/\.md$/i, "") + "_vis.csv";
+  }
+  function sceneFileOfVis(visName) {
+    const m = /^(.*)_vis\.csv$/i.exec(String(visName || "").trim());
+    return m ? m[1] + ".md" : "";
+  }
+  function normText(s) {
+    return String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+  }
+  function lineHash(s) {
+    const t3 = normText(s);
+    let h = 5381;
+    for (let i5 = 0; i5 < t3.length; i5++) h = (h << 5) + h + t3.charCodeAt(i5) >>> 0;
+    return h.toString(36);
+  }
+  function makeRef(idx4, text) {
+    return String(idx4 | 0) + "|" + lineHash(text);
+  }
+  function parseRef(ref) {
+    const s = String(ref || "").trim();
+    if (!s) return { idx: -1, hash: "" };
+    const i5 = s.indexOf("|");
+    if (i5 < 0) return { idx: -1, hash: s };
+    return { idx: parseInt(s.slice(0, i5), 10) || 0, hash: s.slice(i5 + 1) };
+  }
+  function parseRefs(ref) {
+    return String(ref || "").split(REF_SEP).map((x) => x.trim()).filter(Boolean).map(parseRef);
+  }
+  function splitSnaps(text) {
+    const s = String(text == null ? "" : text);
+    if (!s.trim()) return [];
+    return s.split(/\n\s*\n/).map((x) => x.trim());
+  }
+  function joinSnaps(list) {
+    return (list || []).join(SNAP_SEP);
+  }
+  function trigrams(s) {
+    const t3 = normText(s);
+    const out = /* @__PURE__ */ new Set();
+    if (t3.length <= 3) {
+      if (t3) out.add(t3);
+      return out;
+    }
+    for (let i5 = 0; i5 + 3 <= t3.length; i5++) out.add(t3.slice(i5, i5 + 3));
+    return out;
+  }
+  function similarity2(a, b) {
+    const A = trigrams(a), B = trigrams(b);
+    if (!A.size || !B.size) return A.size === B.size ? 1 : 0;
+    let hit = 0;
+    for (const g of A) if (B.has(g)) hit++;
+    return hit / (A.size + B.size - hit);
+  }
+  function splitLines(body, format3 = "prose") {
+    const raw = String(body || "").replace(/<!--align:[^>]*-->/g, "").replace(/\r\n/g, "\n");
+    const parts = format3 === "screenplay" ? raw.split("\n") : raw.split(/\n\s*\n/);
+    const out = [];
+    for (const p of parts) {
+      const text = p.trim();
+      if (!text) continue;
+      out.push({ i: out.length, text });
+    }
+    return out;
+  }
+  function displayText2(raw) {
+    let s = String(raw == null ? "" : raw);
+    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+    s = s.replace(/^\s{0,3}>\s?/gm, "");
+    s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
+    s = s.replace(/^\s{0,3}\d+[.)]\s+/gm, "");
+    s = s.replace(/~~([^~]+)~~/g, "$1");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+    s = s.replace(/(^|[^_])_([^_\n]+)_/g, "$1$2");
+    s = s.replace(/`([^`]+)`/g, "$1");
+    return s.replace(/[ \t]+$/gm, "");
+  }
+  function entitiesIn(text, names) {
+    const s = displayText2(text);
+    if (!s || !names || !names.length) return [];
+    const sorted = [...new Set(names.filter(Boolean).map(String))].sort((a, b) => b.length - a.length);
+    const taken = new Array(s.length).fill(false);
+    const hits = [];
+    for (const n2 of sorted) {
+      if (!n2) continue;
+      let from2 = 0, at;
+      while ((at = s.indexOf(n2, from2)) >= 0) {
+        let free = true;
+        for (let k = at; k < at + n2.length; k++) if (taken[k]) {
+          free = false;
+          break;
+        }
+        if (free) {
+          for (let k = at; k < at + n2.length; k++) taken[k] = true;
+          hits.push({ at, name: n2 });
+        }
+        from2 = at + 1;
+      }
+    }
+    hits.sort((a, b) => a.at - b.at);
+    const out = [];
+    for (const h of hits) if (!out.includes(h.name)) out.push(h.name);
+    return out;
+  }
+  function makeRow({ no = 0, ref = "", image = "", text = "", remark = "" } = {}) {
+    return {
+      no: no | 0,
+      ref: String(ref || ""),
+      image: String(image || ""),
+      text: String(text || ""),
+      remark: String(remark || "")
+    };
+  }
+  function rowFromLines(lines) {
+    const ls = Array.isArray(lines) ? lines : [lines];
+    return makeRow({
+      ref: ls.map((l) => makeRef(l.i, l.text)).join(REF_SEP),
+      text: joinSnaps(ls.map((l) => l.text))
+    });
+  }
+  function bindRow(row2, lines, idxs) {
+    const byI = new Map((lines || []).map((l) => [l.i, l]));
+    const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
+    row2.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
+    row2.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
+    return row2;
+  }
+  function renumber(rows) {
+    (rows || []).forEach((r, i5) => {
+      r.no = i5 + 1;
+    });
+    return rows;
+  }
+  function moveRow(rows, idx4, dir2) {
+    const j = idx4 + (dir2 < 0 ? -1 : 1);
+    if (idx4 < 0 || idx4 >= rows.length || j < 0 || j >= rows.length) return idx4;
+    const [r] = rows.splice(idx4, 1);
+    rows.splice(j, 0, r);
+    renumber(rows);
+    return j;
+  }
+  function insertRow(rows, idx4, row2) {
+    const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
+    rows.splice(at, 0, row2);
+    renumber(rows);
+    return at;
+  }
+  function removeRow(rows, idx4) {
+    if (idx4 < 0 || idx4 >= rows.length) return null;
+    const [r] = rows.splice(idx4, 1);
+    renumber(rows);
+    return r;
+  }
+  function resolvePart(hash2, snap2, ls, hintIdx) {
+    if (ls[hintIdx] && lineHash(ls[hintIdx].text) === hash2)
+      return { status: "ok", idx: hintIdx, text: ls[hintIdx].text, snap: snap2 };
+    for (let k = 0; k < ls.length; k++)
+      if (lineHash(ls[k].text) === hash2) return { status: "ok", idx: k, text: ls[k].text, snap: snap2 };
+    let best = -1, bs = 0;
+    for (let k = 0; k < ls.length; k++) {
+      const s = similarity2(ls[k].text, snap2);
+      if (s > bs) {
+        bs = s;
+        best = k;
+      }
+    }
+    if (best >= 0 && bs >= SIMILAR_MIN)
+      return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
+    return { status: "lost", idx: -1, text: "", snap: snap2 };
+  }
+  function resolveRow(row2, lines) {
+    const ls = lines || [];
+    const refs = parseRefs(row2 && row2.ref);
+    const snaps = splitSnaps(row2 && row2.text);
+    if (!refs.length) return { status: "free", parts: [], live: [] };
+    const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
+    const live = parts.filter((p) => p.status !== "lost");
+    const status = parts.some((p) => p.status === "changed") ? "changed" : live.length ? "ok" : "lost";
+    return { status, parts, live };
+  }
+  function resolveAll(rows, lines) {
+    return (rows || []).map((r) => resolveRow(r, lines));
+  }
+  function liveText(res) {
+    return (res && res.live ? res.live : []).map((p) => p.text).join(SNAP_SEP);
+  }
+  function liveLineNos(res) {
+    return (res && res.live ? res.live : []).map((p) => p.idx + 1);
+  }
+  function syncRow(row2, res) {
+    if (!res || !res.parts || !res.parts.length) return row2;
+    const refs = parseRefs(row2.ref);
+    const snaps = splitSnaps(row2.text);
+    const nextRefs = [], nextSnaps = [];
+    res.parts.forEach((p, i5) => {
+      if (p.status === "lost") {
+        nextRefs.push(refs[i5] ? String(refs[i5].idx) + "|" + refs[i5].hash : "");
+        nextSnaps.push(snaps[i5] == null ? "" : snaps[i5]);
+      } else {
+        nextRefs.push(makeRef(p.idx, p.text));
+        nextSnaps.push(p.text);
+      }
+    });
+    row2.ref = nextRefs.filter(Boolean).join(REF_SEP);
+    row2.text = joinSnaps(nextSnaps);
+    return row2;
+  }
+  function boundIdxs(row2, lines) {
+    return resolveRow(row2, lines).live.map((p) => p.idx);
+  }
+  function lineUsage(rows, lines) {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of rows || [])
+      for (const i5 of boundIdxs(r, lines)) m.set(i5, (m.get(i5) || 0) + 1);
+    return m;
+  }
+  function unusedLines(rows, lines) {
+    const used = lineUsage(rows, lines);
+    return (lines || []).filter((l) => !used.has(l.i));
+  }
+  function commentsForText(text, comments) {
+    const t3 = normText(text);
+    if (!t3) return [];
+    return (comments || []).filter((c) => {
+      const q = normText(c && c.anchor && c.anchor.quote);
+      return !!q && (t3.includes(q) || q.includes(t3));
+    });
+  }
+  function clampColW(w, key2) {
+    const n2 = Math.round(Number(w));
+    if (!Number.isFinite(n2)) return VIS_COL_W[key2] || 160;
+    return Math.max(COL_W_MIN, Math.min(COL_W_MAX, n2));
+  }
+  function normalizeCols(cfg) {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    for (const c of Array.isArray(cfg) ? cfg : []) {
+      const key2 = typeof c === "string" ? c : c && c.key;
+      if (!VIS_COL_KEYS.includes(key2) || seen.has(key2)) continue;
+      seen.add(key2);
+      out.push({
+        key: key2,
+        on: typeof c === "string" ? true : c.on !== false,
+        w: clampColW(typeof c === "string" ? VIS_COL_W[key2] : c.w, key2)
+      });
+    }
+    for (const key2 of VIS_COL_KEYS)
+      if (!seen.has(key2)) out.push({ key: key2, on: !VIS_COL_DEFAULT_OFF.includes(key2), w: VIS_COL_W[key2] });
+    if (!out.some((c) => c.on)) out.forEach((c) => {
+      c.on = true;
+    });
+    return out;
+  }
+  function toggleCol(cols, key2) {
+    const c = cols.find((x) => x.key === key2);
+    if (!c) return cols;
+    if (c.on && cols.filter((x) => x.on).length === 1) return cols;
+    c.on = !c.on;
+    return cols;
+  }
+  function moveCol(cols, key2, dir2) {
+    const i5 = cols.findIndex((x) => x.key === key2);
+    const j = i5 + (dir2 < 0 ? -1 : 1);
+    if (i5 < 0 || j < 0 || j >= cols.length) return cols;
+    const [c] = cols.splice(i5, 1);
+    cols.splice(j, 0, c);
+    return cols;
+  }
+  function setColWidth(cols, key2, w) {
+    const c = cols.find((x) => x.key === key2);
+    if (c) c.w = clampColW(w, key2);
+    return cols;
+  }
+  function visibleCols(cols) {
+    return normalizeCols(cols).filter((c) => c.on).map((c) => c.key);
+  }
+  function totalWidth(cols) {
+    return normalizeCols(cols).filter((c) => c.on).reduce((a, c) => a + c.w, 0) + VIS_FIXED_W;
+  }
+  function csvCell(v2) {
+    const s = String(v2 == null ? "" : v2);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function parseCsv2(text) {
+    const s = String(text || "").replace(/^﻿/, "");
+    const rows = [];
+    let row2 = [], cell = "", q = false;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const ch = s[i5];
+      if (q) {
+        if (ch === '"') {
+          if (s[i5 + 1] === '"') {
+            cell += '"';
+            i5++;
+          } else q = false;
+        } else cell += ch;
+        continue;
+      }
+      if (ch === '"') {
+        q = true;
+        continue;
+      }
+      if (ch === ",") {
+        row2.push(cell);
+        cell = "";
+        continue;
+      }
+      if (ch === "\r") continue;
+      if (ch === "\n") {
+        row2.push(cell);
+        rows.push(row2);
+        row2 = [];
+        cell = "";
+        continue;
+      }
+      cell += ch;
+    }
+    if (cell !== "" || row2.length) {
+      row2.push(cell);
+      rows.push(row2);
+    }
+    return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
+  }
+  function parseVis(text) {
+    const table9 = parseCsv2(text);
+    if (!table9.length) return [];
+    let start = 0;
+    const head2 = table9[0].map((h) => String(h || "").trim().toLowerCase());
+    const idxOf = {};
+    if (head2.includes("ref") || head2.includes("no")) {
+      start = 1;
+      VIS_HEADER.forEach((k) => {
+        idxOf[k] = head2.indexOf(k);
+      });
+    } else {
+      VIS_HEADER.forEach((k, i5) => {
+        idxOf[k] = i5;
+      });
+    }
+    const rows = [];
+    for (let r = start; r < table9.length; r++) {
+      const t3 = table9[r];
+      const g = (k) => idxOf[k] >= 0 ? t3[idxOf[k]] || "" : "";
+      rows.push(makeRow({
+        no: parseInt(g("no"), 10) || 0,
+        ref: g("ref"),
+        image: g("image"),
+        text: g("text"),
+        remark: g("remark")
+      }));
+    }
+    return renumber(rows);
+  }
+  function dumpVis(rows) {
+    const out = [VIS_HEADER.join(",")];
+    for (const r of renumber(rows || []))
+      out.push(VIS_HEADER.map((k) => csvCell(r[k])).join(","));
+    return CSV_BOM + out.join("\r\n") + "\r\n";
+  }
+  var REF_SEP, SNAP_SEP, SIMILAR_MIN, VIS_COL_KEYS, VIS_COL_DEFAULT_OFF, VIS_COL_W, COL_W_MIN, COL_W_MAX, VIS_FIXED_W, CSV_BOM, VIS_HEADER;
+  var init_vis_core = __esm({
+    "src/visual/vis-core.js"() {
+      REF_SEP = ";";
+      SNAP_SEP = "\n\n";
+      SIMILAR_MIN = 0.4;
+      VIS_COL_KEYS = ["no", "scene", "image", "text", "entities", "remark", "comment"];
+      VIS_COL_DEFAULT_OFF = ["scene"];
+      VIS_COL_W = { no: 64, scene: 150, image: 300, text: 340, entities: 170, remark: 240, comment: 220 };
+      COL_W_MIN = 56;
+      COL_W_MAX = 1200;
+      VIS_FIXED_W = 40 + 42;
+      CSV_BOM = "\uFEFF";
+      VIS_HEADER = ["no", "ref", "image", "text", "remark"];
+    }
+  });
+
+  // src/scene-ops.js
+  var scene_ops_exports = {};
+  __export(scene_ops_exports, {
+    addChapter: () => addChapter,
+    addScene: () => addScene,
+    chapterProps: () => chapterProps,
+    deleteChapter: () => deleteChapter,
+    deleteScene: () => deleteScene,
+    duplicateScene: () => duplicateScene,
+    moveChapterBefore: () => moveChapterBefore,
+    moveSceneBefore: () => moveSceneBefore,
+    moveSceneOrder: () => moveSceneOrder,
+    moveSceneToChapter: () => moveSceneToChapter,
+    renameChapter: () => renameChapter,
+    renameScene: () => renameScene,
+    renumberChapters: () => renumberChapters,
+    renumberMenuItems: () => renumberMenuItems,
+    sceneColorMenu: () => sceneColorMenu,
+    sceneStatusMenu: () => sceneStatusMenu,
+    setChapterTitle: () => setChapterTitle,
+    setSceneMeta: () => setSceneMeta,
+    setSceneTitle: () => setSceneTitle,
+    toggleSceneFlag: () => toggleSceneFlag
+  });
+  async function renameScene(dPath, ch, sc) {
+    const title2 = await ask(t("ui.scene.nameSceneNew"), { value: sc.title });
+    if (!title2) return;
+    return setSceneTitle(dPath, ch, sc, title2);
+  }
+  async function setSceneTitle(dPath, ch, sc, title2) {
+    if (!title2 || title2 === sc.title) return;
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    for (const s of d.chapters[ch.guid] || []) if (s.id === sc.id) s.title = title2;
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
+    const { meta: meta2, body } = (0, import_md7.parseMdFile)(await kapi.readFile(file));
+    meta2.title = title2;
+    await kapi.writeFile(file, (0, import_md7.dumpMdFile)(meta2, body));
+    const t3 = state.tabs.get(file);
+    if (t3) {
+      t3.title = title2;
+      t3.tabBtn.querySelector(".tab-title").textContent = (t3.dirty ? "\u25CF " : "") + title2;
+    }
+    await buildTree2();
+  }
+  async function renameChapter(dPath, ch) {
+    const title2 = await ask(t("ui.scene.nameChapterNew"), { value: ch.title });
+    if (!title2) return;
+    return setChapterTitle(dPath, ch, title2);
+  }
+  async function setChapterTitle(dPath, ch, title2) {
+    if (!title2 || title2 === ch.title) return;
+    const df = await kapi.join(dPath, "draft.json");
+    const d = await kapi.readJson(df);
+    for (const c of d.chapters || []) if (c.guid === ch.guid) c.title = title2;
+    await kapi.writeFile(df, JSON.stringify(d, null, 2));
+    await buildTree2();
+  }
+  async function chapterProps(dPath, ch) {
+    const df = await kapi.join(dPath, "draft.json");
+    let d;
+    try {
+      d = await kapi.readJson(df);
+    } catch {
+      setStatus(t("ui.scene.readDraftJsonCant"));
+      return false;
+    }
+    const cur = (d.chapters || []).find((c) => c.guid === ch.guid);
+    if (!cur) {
+      setStatus(t("ui.scene.notFoundChapterDraft"));
+      return false;
+    }
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-chapter-props");
+    box2.append(el("div", "k-dlg-title", t("ui.scene.propsChapter") + (cur.title || "")));
+    const mk2 = (label, val, tag3 = "input") => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const i5 = el(tag3, "wiki-input");
+      i5.value = val == null ? "" : String(val);
+      r.append(i5);
+      box2.append(r);
+      return i5;
+    };
+    const mkSel = (label, options, curVal) => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const s = el("select", "wiki-input k-dlg-select");
+      for (const [v2, txt] of options) {
+        const o = el("option", null, txt);
+        o.value = v2;
+        if (v2 === curVal) o.selected = true;
+        s.append(o);
+      }
+      r.append(s);
+      box2.append(r);
+      return s;
+    };
+    const mkChk = (label, checked) => {
+      const r = el("div", "wiki-row");
+      r.append(el("label", null, label));
+      const c = el("input", "wiki-check");
+      c.type = "checkbox";
+      c.checked = !!checked;
+      r.append(c);
+      box2.append(r);
+      return c;
+    };
+    const iTitle = mk2(t("ui.scene.nameChapter"), cur.title || "");
+    const statuses = allStatuses();
+    const iStatus = mkSel(
+      t("ui.common.status"),
+      [["Outline", t("ui.common.notSet")], ...statuses.map((s) => [s, dataLabel(s)])],
+      statuses.includes(cur.status) ? cur.status : "Outline"
+    );
+    const iAct = mk2(t("ui.scene.actAct"), cur.act || "");
+    iAct.placeholder = t("ui.scene.iIIIIIName");
+    const iDate = mk2(t("ui.scene.dateDefineSend"), cur.date || "");
+    iDate.placeholder = t("ui.scene.egPage");
+    const iNote = mk2(t("ui.scene.noteChapter"), cur.note || "", "textarea");
+    const iFav = mkChk(t("ui.scene.chapterImportantFavorite"), cur.isFavorite);
+    return new Promise((resolve) => {
+      const btns = el("div", "k-dlg-btns");
+      const cB = el("button", null, t("ui.common.cancel"));
+      const okB = el("button", "k-ok", t("ui.common.save"));
+      btns.append(cB, okB);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      const close2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      cB.onclick = () => close2(false);
+      ov.onclick = (e) => {
+        if (e.target === ov) close2(false);
+      };
+      box2.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") close2(false);
+      });
+      okB.onclick = async () => {
+        const title2 = iTitle.value.trim();
+        if (title2) cur.title = title2;
+        cur.status = iStatus.value;
+        cur.act = iAct.value.trim();
+        cur.date = iDate.value.trim();
+        cur.isFavorite = iFav.checked;
+        const note = iNote.value.trim();
+        if (note) cur.note = note;
+        else delete cur.note;
+        if (!cur.act) delete cur.act;
+        if (!cur.date) delete cur.date;
+        await kapi.writeFile(df, JSON.stringify(d, null, 2));
+        await buildTree2();
+        setStatus(t("ui.scene.savePropsChapterDone") + (cur.title || ""));
+        close2(true);
+      };
+    });
+  }
+  async function deleteScene(dPath, ch, sc) {
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
+    const dst = await deleteToTrash(file, sc.title);
+    if (!dst) return;
+    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
+      { kind: "scene", dPath, chGuid: ch.guid, folderName: ch.folderName, sc },
+      null,
+      2
+    ));
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
+    await buildTree2();
+    refreshNetwork();
+  }
+  async function deleteChapter(dPath, ch) {
+    const dir2 = await kapi.join(dPath, "Chapters", ch.folderName);
+    if (!await confirmBox(tf("ui.scene.delChapterChapterAll", ch.title))) return;
+    const dst = await kapi.join(
+      state.root,
+      "Recycle",
+      Date.now().toString(36) + "-" + ch.folderName
+    );
+    const scenesNow = (await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters?.[ch.guid] || [];
+    await kapi.move(dir2, dst);
+    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
+      { kind: "chapter", dPath, ch, scenes: scenesNow },
+      null,
+      2
+    ));
+    const df = await kapi.join(dPath, "draft.json");
+    const d = await kapi.readJson(df);
+    d.chapters = (d.chapters || []).filter((c) => c.guid !== ch.guid);
+    await kapi.writeFile(df, JSON.stringify(d, null, 2));
+    const sf = await kapi.join(dPath, "scenes.json");
+    const s2 = await kapi.readJson(sf);
+    if (s2.chapters) delete s2.chapters[ch.guid];
+    await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+    await buildTree2();
+    refreshNetwork();
+  }
+  async function addChapter(dPath, preset) {
+    const title2 = preset || await ask(t("ui.scene.nameChapterNew"));
+    if (!title2) return null;
+    const df = await kapi.join(dPath, "draft.json");
+    const d = await kapi.readJson(df);
+    const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
+    const ch = {
+      guid: guid(),
+      title: title2,
+      order,
+      status: "Outline",
+      act: "I",
+      date: "",
+      isFavorite: false,
+      folderName: String(order).padStart(2, "0") + " - " + safeName(title2)
+    };
+    d.chapters = [...d.chapters || [], ch];
+    await kapi.writeFile(df, JSON.stringify(d, null, 2));
+    await kapi.mkdir(await kapi.join(dPath, "Chapters", ch.folderName));
+    await buildTree2();
+    setStatus(t("ui.scene.addChapter") + title2);
+    refreshNetwork();
+    return ch;
+  }
+  async function addScene(dPath, ch, preset, opts = {}) {
+    const title2 = preset || await ask(t("ui.scene.nameSceneNew"));
+    if (!title2) return null;
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    d.chapters = d.chapters || {};
+    const list = d.chapters[ch.guid] || [];
+    const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
+    const sc = {
+      id: guid(),
+      title: title2,
+      order,
+      fileName: "scene-" + String(order).padStart(2, "0") + ".md",
+      chapterGuid: ch.guid,
+      date: "",
+      isFavorite: false,
+      wordCount: 0,
+      synopsis: ""
+    };
+    d.chapters[ch.guid] = [...list, sc];
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
+    const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
+    await kapi.writeFile(file, (0, import_md7.dumpMdFile)(meta2, opts.body || ""));
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await buildTree2();
+    if (!opts.silent) openScene(file, title2);
+    refreshNetwork();
+    return { ...sc, path: file };
+  }
+  async function setSceneMeta(dPath, ch, sc, patch) {
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row2) return;
+    Object.assign(row2, patch);
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    const heavy = {};
+    for (const k of SCENE_HEAVY_KEYS) if (k in (patch || {})) heavy[k] = patch[k];
+    if (Object.keys(heavy).length) {
+      try {
+        await writeSceneMeta(await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName), heavy);
+      } catch {
+      }
+    }
+    await buildTree2();
+  }
+  async function toggleSceneFlag(dPath, ch, sc) {
+    await setSceneMeta(dPath, ch, sc, { flag: !sc.flag });
+    setStatus(sc.flag ? t("ui.scene.pinOut") + sc.title : t("ui.scene.pinPin") + sc.title);
+  }
+  async function duplicateScene(dPath, ch, sc) {
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    const list = d.chapters[ch.guid] || [];
+    const row2 = list.find((x) => x.id === sc.id);
+    if (!row2) return;
+    const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
+    const fileName = "scene-" + String(order).padStart(2, "0") + ".md";
+    const newTitle = row2.title + t("ui.common.msg");
+    const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
+    try {
+      const parsed = (0, import_md7.parseMdFile)(await kapi.readFile(srcFile));
+      meta2 = parsed.meta;
+      body = parsed.body;
+    } catch {
+    }
+    meta2.title = newTitle;
+    const nrow = { ...row2, id: guid(), title: newTitle, order, fileName, isFavorite: false };
+    d.chapters[ch.guid] = [...list, nrow];
+    await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md7.dumpMdFile)(meta2, body));
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await copyVisSidecar(dPath, ch.folderName, row2.fileName, fileName);
+    await buildTree2();
+    openScene(await kapi.join(dPath, "Chapters", ch.folderName, fileName), newTitle);
+  }
+  async function moveSceneOrder(dPath, ch, sc, dir2) {
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    const list = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const i5 = list.findIndex((x) => x.id === sc.id);
+    const j = i5 + dir2;
+    if (i5 < 0 || j < 0 || j >= list.length) return;
+    const oa = list[i5].order || 0, ob = list[j].order || 0;
+    list[i5].order = ob;
+    list[j].order = oa;
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await buildTree2();
+  }
+  async function moveSceneToChapter(dPath, ch, sc, dstCh) {
+    if (dstCh.guid === ch.guid) return;
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    d.chapters = d.chapters || {};
+    const from2 = d.chapters[ch.guid] || [];
+    const row2 = from2.find((x) => x.id === sc.id);
+    if (!row2) return;
+    const oldPath = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    const openTab = state.tabs.get(oldPath);
+    if (openTab) {
+      if (openTab.dirty) await saveTab(openTab);
+      openTab.dirty = false;
+      closeTab(oldPath);
+    }
+    const dst = d.chapters[dstCh.guid] || [];
+    const order = Math.max(0, ...dst.map((s) => s.order || 0)) + 1;
+    const newFile = await uniqueSceneFileName(dPath, dstCh.folderName, order);
+    await kapi.move(oldPath, await kapi.join(dPath, "Chapters", dstCh.folderName, newFile));
+    await moveVisSidecar(dPath, ch.folderName, row2.fileName, dstCh.folderName, newFile);
+    d.chapters[ch.guid] = from2.filter((x) => x.id !== sc.id);
+    row2.order = order;
+    row2.fileName = newFile;
+    row2.chapterGuid = dstCh.guid;
+    d.chapters[dstCh.guid] = [...dst, row2];
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await buildTree2();
+    setStatus(t("ui.scene.move") + row2.title + t("ui.scene.chapter2") + dstCh.title + t("ui.common.done2"));
+  }
+  async function moveChapterBefore(dPath, srcGuid, dstGuid) {
+    if (srcGuid === dstGuid) return;
+    const df = await kapi.join(dPath, "draft.json");
+    const d = await kapi.readJson(df);
+    const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const si = list.findIndex((c) => c.guid === srcGuid);
+    if (si < 0) return;
+    const [moved] = list.splice(si, 1);
+    const di = dstGuid ? list.findIndex((c) => c.guid === dstGuid) : list.length;
+    list.splice(di < 0 ? list.length : di, 0, moved);
+    list.forEach((c, i5) => {
+      c.order = i5 + 1;
+    });
+    d.chapters = list;
+    await kapi.writeFile(df, JSON.stringify(d, null, 2));
+    await buildTree2();
+    setStatus(t("ui.scene.reorderChapterNewDone"));
+  }
+  async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
+    const sf = await kapi.join(dPath, "scenes.json");
+    if (srcCh.guid !== dstCh.guid) {
+      const d0 = await kapi.readJson(sf);
+      const row0 = (d0.chapters[srcCh.guid] || []).find((x) => x.id === srcId);
+      if (!row0) return;
+      await moveSceneToChapter(dPath, srcCh, { id: srcId }, dstCh);
+      srcCh = dstCh;
+    }
+    const d = await kapi.readJson(sf);
+    const list = (d.chapters[dstCh.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const si = list.findIndex((x) => x.id === srcId);
+    if (si < 0) {
+      await buildTree2();
+      return;
+    }
+    const [moved] = list.splice(si, 1);
+    const di = dstId ? list.findIndex((x) => x.id === dstId) : list.length;
+    list.splice(di < 0 ? list.length : di, 0, moved);
+    list.forEach((x, i5) => {
+      x.order = i5 + 1;
+    });
+    d.chapters[dstCh.guid] = list;
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await buildTree2();
+    setStatus(t("ui.scene.reorderSceneNewDone"));
+  }
+  function sceneStatusMenu(e, dPath, ch, sc) {
+    popupMenu(e.clientX, e.clientY, [
+      // allStatuses = มาตรฐาน + ที่ผู้ใช้เพิ่มเอง (custom-status.js)
+      ...allStatuses().map((s) => ({ label: s, click: () => setSceneMeta(dPath, ch, sc, { status: s }) })),
+      "-",
+      { label: t("ui.scene.clearStatus"), click: () => setSceneMeta(dPath, ch, sc, { status: "Outline" }) }
+    ]);
+  }
+  function sceneColorMenu(e, dPath, ch, sc) {
+    popupMenu(e.clientX, e.clientY, [
+      ...SCENE_COLORS.map(([name5, hex]) => ({ label: "\u25CF " + name5, click: () => setSceneMeta(dPath, ch, sc, { color: hex }) })),
+      "-",
+      { label: t("ui.scene.clearColor"), click: () => setSceneMeta(dPath, ch, sc, { color: "" }) }
+    ]);
+  }
+  async function renumberChapters(dPath) {
+    const df = await kapi.join(dPath, "draft.json");
+    const draft = await kapi.readJson(df);
+    const chapters = (draft.chapters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+    chapters.forEach((ch, i5) => {
+      ch.order = i5 + 1;
+    });
+    await kapi.writeFile(df, JSON.stringify(draft, null, 2));
+    const sf = await kapi.join(dPath, "scenes.json");
+    const scData = await kapi.readJson(sf);
+    for (const ch of chapters) {
+      const scenes = (scData.chapters[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+      scenes.forEach((sc, i5) => {
+        sc.order = i5 + 1;
+      });
+    }
+    await kapi.writeFile(sf, JSON.stringify(scData, null, 2));
+    await buildTree2();
+    setStatus(t("ui.scene.orderChapterSceneNew") + chapters.length + t("ui.scene.chapter"));
+  }
+  function renumberMenuItems(dPath) {
+    return [
+      { label: t("ui.common.orderNumNew"), click: () => renumberChapters(dPath) }
+    ];
+  }
+  async function visOf(dPath, folderName, fileName) {
+    return kapi.join(dPath, "Chapters", folderName, visFileName(fileName));
+  }
+  async function moveVisSidecar(dPath, srcFolder, srcFile, dstFolder, dstFile) {
+    try {
+      const src2 = await visOf(dPath, srcFolder, srcFile);
+      if (!await kapi.exists(src2)) return false;
+      await kapi.move(src2, await visOf(dPath, dstFolder, dstFile));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function copyVisSidecar(dPath, folderName, srcFile, dstFile) {
+    try {
+      const src2 = await visOf(dPath, folderName, srcFile);
+      if (!await kapi.exists(src2)) return false;
+      await kapi.writeFile(await visOf(dPath, folderName, dstFile), await kapi.readFile(src2));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
+    try {
+      const src2 = await visOf(dPath, folderName, fileName);
+      if (!trashPath || !await kapi.exists(src2)) return false;
+      await kapi.move(src2, trashPath + ".vis.csv");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  var import_md7;
+  var init_scene_ops = __esm({
+    "src/scene-ops.js"() {
+      init_i18n();
+      init_app();
+      init_core();
+      init_custom_status();
+      init_recycle();
+      init_ui();
+      import_md7 = __toESM(require_md());
+      init_scene_meta();
+      init_vis_core();
+    }
+  });
+
   // src/scene-props.js
   async function sceneProps(dPath, ch, sc) {
     const sf = await kapi.join(dPath, "scenes.json");
@@ -75088,6 +76266,7 @@ ${h.text}`;
       box2.append(r);
       return c;
     };
+    const iTitle = mk2(t("ui.props.sceneName"), row2.title);
     const iSyn = mk2(t("ui.common.synopsis"), M2.synopsis, "textarea");
     const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), M2.storyDate);
     iStoryDate.placeholder = t("ui.scene.egDate");
@@ -75129,7 +76308,7 @@ ${h.text}`;
     const aiCtx = async () => {
       let body = "";
       try {
-        body = (0, import_md7.parseMdFile)(await kapi.readFile(file)).body || "";
+        body = (0, import_md8.parseMdFile)(await kapi.readFile(file)).body || "";
       } catch {
       }
       return { body, title: row2.title || "" };
@@ -75150,6 +76329,12 @@ ${h.text}`;
       if (e.target === ov) ov.remove();
     };
     okB.onclick = async () => {
+      const newTitle = iTitle.value.trim();
+      if (newTitle && newTitle !== row2.title) {
+        const { setSceneTitle: setSceneTitle2 } = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
+        await setSceneTitle2(dPath, ch, row2, newTitle);
+        row2.title = newTitle;
+      }
       row2.synopsis = iSyn.value;
       row2.pov = iPov.value;
       row2.status = iStatus.value;
@@ -75184,7 +76369,7 @@ ${h.text}`;
       setStatus(t("ui.scene.savePropsSceneDone"));
     };
   }
-  var import_md7;
+  var import_md8;
   var init_scene_props = __esm({
     "src/scene-props.js"() {
       init_i18n();
@@ -75194,7 +76379,7 @@ ${h.text}`;
       init_spell();
       init_scene_meta();
       init_ai_synopsis();
-      import_md7 = __toESM(require_md());
+      import_md8 = __toESM(require_md());
     }
   });
 
@@ -77351,10 +78536,10 @@ ${h.text}`;
           if (sc.type === "memo") continue;
           scenes++;
           try {
-            const { body } = (0, import_md8.parseMdFile)(await kapi.readFile(
+            const { body } = (0, import_md9.parseMdFile)(await kapi.readFile(
               await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName)
             ));
-            words += (0, import_md8.countWords)(body);
+            words += (0, import_md9.countWords)(body);
           } catch {
           }
         }
@@ -77542,14 +78727,14 @@ ${h.text}`;
     setStatus(t("ui.section.delBookDone") + sec.title);
     refreshNetwork();
   }
-  var import_md8, SECTION_STATUS_OPTS;
+  var import_md9, SECTION_STATUS_OPTS;
   var init_section_ops = __esm({
     "src/section-ops.js"() {
       init_i18n();
       init_app();
       init_core();
       init_ui();
-      import_md8 = __toESM(require_md());
+      import_md9 = __toESM(require_md());
       SECTION_STATUS_OPTS = [
         ["outline", t("ui.common.outlineStory")],
         ["drafting", t("ui.common.busyWrite")],
@@ -77557,1006 +78742,6 @@ ${h.text}`;
         ["done", t("ui.common.writeEnd")],
         ["published", t("ui.common.printDone")]
       ];
-    }
-  });
-
-  // src/recycle.js
-  async function restoreFromTrash(p, fname) {
-    const sidecar = p + ".k2restore.json";
-    if (await kapi.exists(sidecar)) {
-      const info = await kapi.readJson(sidecar);
-      if (info.kind === "album" || info.kind === "image") {
-        const AC = await Promise.resolve().then(() => (init_album_core(), album_core_exports));
-        await AC.restoreFromRecycle(kapi, info.root || state.root, p, info);
-        await kapi.remove(sidecar);
-        await buildTree2();
-        smart.loadNames(state.root);
-        setStatus(info.kind === "album" ? t("ui.trash.recoverRestoreAlbumDone") : t("ui.trash.recoverRestoreImageDone"));
-        return;
-      }
-      if (info.kind === "section") {
-        await kapi.move(p, await kapi.join(info.root, info.folderName));
-        await kapi.remove(sidecar);
-        await buildTree2();
-        smart.loadNames(state.root);
-        refreshNetwork();
-        setStatus(t("ui.trash.recoverRestoreBookDone"));
-        return;
-      }
-      if (info.kind === "scene") {
-        const dst = await kapi.join(info.dPath, "Chapters", info.folderName, info.sc.fileName);
-        await kapi.move(p, dst);
-        try {
-          if (await kapi.exists(p + ".vis.csv"))
-            await kapi.move(p + ".vis.csv", dst.replace(/\.md$/i, "") + "_vis.csv");
-        } catch {
-        }
-        const sf = await kapi.join(info.dPath, "scenes.json");
-        const d = await kapi.readJson(sf);
-        d.chapters = d.chapters || {};
-        d.chapters[info.chGuid] = [...d.chapters[info.chGuid] || [], info.sc];
-        await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-      } else if (info.kind === "chapter") {
-        await kapi.move(p, await kapi.join(info.dPath, "Chapters", info.ch.folderName));
-        const df = await kapi.join(info.dPath, "draft.json");
-        const d = await kapi.readJson(df);
-        d.chapters = [...d.chapters || [], info.ch];
-        await kapi.writeFile(df, JSON.stringify(d, null, 2));
-        const sf = await kapi.join(info.dPath, "scenes.json");
-        const s2 = await kapi.readJson(sf);
-        s2.chapters = s2.chapters || {};
-        s2.chapters[info.ch.guid] = info.scenes || [];
-        await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
-      }
-      await kapi.remove(sidecar);
-    } else if (fname.endsWith(".json")) {
-      let cat = "characters";
-      try {
-        cat = (await kapi.readJson(p)).entityTypeKey || cat;
-      } catch {
-      }
-      const w = await kapi.join(state.root, "Wiki");
-      const base4 = await kapi.exists(w) ? w : await kapi.exists(await kapi.join(state.root, "Bible")) ? await kapi.join(state.root, "Bible") : w;
-      await kapi.mkdir(await kapi.join(base4, cat));
-      await kapi.move(p, await kapi.join(base4, cat, fname.replace(/^[a-z0-9]+-/, "")));
-    } else {
-      await kapi.mkdir(await kapi.join(state.root, "Memos"));
-      await kapi.move(p, await kapi.join(state.root, "Memos", fname.replace(/^[a-z0-9]+-/, "")));
-    }
-    await buildTree2();
-    smart.loadNames(state.root);
-    refreshNetwork();
-    setStatus(t("ui.trash.recoverRestoreDone"));
-  }
-  async function deleteToTrash(file, label) {
-    if (!await confirmBox(tf("ui.trash.delMoveTrashProject", label))) return null;
-    const base4 = file.split(/[\\/]/).pop();
-    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
-    await kapi.move(file, dst);
-    if (state.tabs.has(file)) {
-      state.tabs.get(file).dirty = false;
-      closeTab(file);
-    }
-    await buildTree2();
-    smart.loadNames(state.root);
-    refreshNetwork();
-    setStatus(t("ui.trash.moveTrash") + label);
-    return dst;
-  }
-  async function purgeRecycle(root) {
-    const days = parseInt(state.settings.recycleDays, 10) || 0;
-    if (days <= 0) return;
-    const recDir = await kapi.join(root, "Recycle");
-    if (!await kapi.exists(recDir)) return;
-    const cutoff = Date.now() - days * 864e5;
-    let purged = 0;
-    for (const name5 of await kapi.listDirs(recDir).catch(() => [])) {
-      const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) {
-        await kapi.remove(p);
-        purged++;
-      }
-    }
-    for (const name5 of await kapi.listFiles(recDir, "").catch(() => [])) {
-      const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) {
-        await kapi.remove(p);
-        purged++;
-      }
-    }
-    if (purged) setStatus(tf("ui.trash.clearTrashAutoList", purged, days));
-  }
-  var init_recycle = __esm({
-    "src/recycle.js"() {
-      init_i18n();
-      init_app();
-      init_core();
-      init_ui();
-    }
-  });
-
-  // src/visual/vis-core.js
-  var vis_core_exports = {};
-  __export(vis_core_exports, {
-    COL_W_MAX: () => COL_W_MAX,
-    COL_W_MIN: () => COL_W_MIN,
-    CSV_BOM: () => CSV_BOM,
-    REF_SEP: () => REF_SEP,
-    SIMILAR_MIN: () => SIMILAR_MIN,
-    SNAP_SEP: () => SNAP_SEP,
-    VIS_COL_DEFAULT_OFF: () => VIS_COL_DEFAULT_OFF,
-    VIS_COL_KEYS: () => VIS_COL_KEYS,
-    VIS_COL_W: () => VIS_COL_W,
-    VIS_FIXED_W: () => VIS_FIXED_W,
-    VIS_HEADER: () => VIS_HEADER,
-    bindRow: () => bindRow,
-    boundIdxs: () => boundIdxs,
-    clampColW: () => clampColW,
-    commentsForText: () => commentsForText,
-    csvCell: () => csvCell,
-    displayText: () => displayText2,
-    dumpVis: () => dumpVis,
-    entitiesIn: () => entitiesIn,
-    insertRow: () => insertRow,
-    joinSnaps: () => joinSnaps,
-    lineHash: () => lineHash,
-    lineUsage: () => lineUsage,
-    liveLineNos: () => liveLineNos,
-    liveText: () => liveText,
-    makeRef: () => makeRef,
-    makeRow: () => makeRow,
-    moveCol: () => moveCol,
-    moveRow: () => moveRow,
-    normText: () => normText,
-    normalizeCols: () => normalizeCols,
-    parseCsv: () => parseCsv2,
-    parseRef: () => parseRef,
-    parseRefs: () => parseRefs,
-    parseVis: () => parseVis,
-    removeRow: () => removeRow,
-    renumber: () => renumber,
-    resolveAll: () => resolveAll,
-    resolveRow: () => resolveRow,
-    rowFromLines: () => rowFromLines,
-    sceneFileOfVis: () => sceneFileOfVis,
-    setColWidth: () => setColWidth,
-    similarity: () => similarity2,
-    splitLines: () => splitLines,
-    splitSnaps: () => splitSnaps,
-    syncRow: () => syncRow,
-    toggleCol: () => toggleCol,
-    totalWidth: () => totalWidth,
-    unusedLines: () => unusedLines,
-    visFileName: () => visFileName,
-    visibleCols: () => visibleCols
-  });
-  function visFileName(sceneFileName) {
-    const s = String(sceneFileName || "").trim();
-    if (!s) return "";
-    return s.replace(/\.md$/i, "") + "_vis.csv";
-  }
-  function sceneFileOfVis(visName) {
-    const m = /^(.*)_vis\.csv$/i.exec(String(visName || "").trim());
-    return m ? m[1] + ".md" : "";
-  }
-  function normText(s) {
-    return String(s == null ? "" : s).replace(/\s+/g, " ").trim();
-  }
-  function lineHash(s) {
-    const t3 = normText(s);
-    let h = 5381;
-    for (let i5 = 0; i5 < t3.length; i5++) h = (h << 5) + h + t3.charCodeAt(i5) >>> 0;
-    return h.toString(36);
-  }
-  function makeRef(idx4, text) {
-    return String(idx4 | 0) + "|" + lineHash(text);
-  }
-  function parseRef(ref) {
-    const s = String(ref || "").trim();
-    if (!s) return { idx: -1, hash: "" };
-    const i5 = s.indexOf("|");
-    if (i5 < 0) return { idx: -1, hash: s };
-    return { idx: parseInt(s.slice(0, i5), 10) || 0, hash: s.slice(i5 + 1) };
-  }
-  function parseRefs(ref) {
-    return String(ref || "").split(REF_SEP).map((x) => x.trim()).filter(Boolean).map(parseRef);
-  }
-  function splitSnaps(text) {
-    const s = String(text == null ? "" : text);
-    if (!s.trim()) return [];
-    return s.split(/\n\s*\n/).map((x) => x.trim());
-  }
-  function joinSnaps(list) {
-    return (list || []).join(SNAP_SEP);
-  }
-  function trigrams(s) {
-    const t3 = normText(s);
-    const out = /* @__PURE__ */ new Set();
-    if (t3.length <= 3) {
-      if (t3) out.add(t3);
-      return out;
-    }
-    for (let i5 = 0; i5 + 3 <= t3.length; i5++) out.add(t3.slice(i5, i5 + 3));
-    return out;
-  }
-  function similarity2(a, b) {
-    const A = trigrams(a), B = trigrams(b);
-    if (!A.size || !B.size) return A.size === B.size ? 1 : 0;
-    let hit = 0;
-    for (const g of A) if (B.has(g)) hit++;
-    return hit / (A.size + B.size - hit);
-  }
-  function splitLines(body, format3 = "prose") {
-    const raw = String(body || "").replace(/<!--align:[^>]*-->/g, "").replace(/\r\n/g, "\n");
-    const parts = format3 === "screenplay" ? raw.split("\n") : raw.split(/\n\s*\n/);
-    const out = [];
-    for (const p of parts) {
-      const text = p.trim();
-      if (!text) continue;
-      out.push({ i: out.length, text });
-    }
-    return out;
-  }
-  function displayText2(raw) {
-    let s = String(raw == null ? "" : raw);
-    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
-    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
-    s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
-    s = s.replace(/^\s{0,3}>\s?/gm, "");
-    s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
-    s = s.replace(/^\s{0,3}\d+[.)]\s+/gm, "");
-    s = s.replace(/~~([^~]+)~~/g, "$1");
-    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
-    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
-    s = s.replace(/(^|[^_])_([^_\n]+)_/g, "$1$2");
-    s = s.replace(/`([^`]+)`/g, "$1");
-    return s.replace(/[ \t]+$/gm, "");
-  }
-  function entitiesIn(text, names) {
-    const s = displayText2(text);
-    if (!s || !names || !names.length) return [];
-    const sorted = [...new Set(names.filter(Boolean).map(String))].sort((a, b) => b.length - a.length);
-    const taken = new Array(s.length).fill(false);
-    const hits = [];
-    for (const n2 of sorted) {
-      if (!n2) continue;
-      let from2 = 0, at;
-      while ((at = s.indexOf(n2, from2)) >= 0) {
-        let free = true;
-        for (let k = at; k < at + n2.length; k++) if (taken[k]) {
-          free = false;
-          break;
-        }
-        if (free) {
-          for (let k = at; k < at + n2.length; k++) taken[k] = true;
-          hits.push({ at, name: n2 });
-        }
-        from2 = at + 1;
-      }
-    }
-    hits.sort((a, b) => a.at - b.at);
-    const out = [];
-    for (const h of hits) if (!out.includes(h.name)) out.push(h.name);
-    return out;
-  }
-  function makeRow({ no = 0, ref = "", image = "", text = "", remark = "" } = {}) {
-    return {
-      no: no | 0,
-      ref: String(ref || ""),
-      image: String(image || ""),
-      text: String(text || ""),
-      remark: String(remark || "")
-    };
-  }
-  function rowFromLines(lines) {
-    const ls = Array.isArray(lines) ? lines : [lines];
-    return makeRow({
-      ref: ls.map((l) => makeRef(l.i, l.text)).join(REF_SEP),
-      text: joinSnaps(ls.map((l) => l.text))
-    });
-  }
-  function bindRow(row2, lines, idxs) {
-    const byI = new Map((lines || []).map((l) => [l.i, l]));
-    const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
-    row2.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
-    row2.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
-    return row2;
-  }
-  function renumber(rows) {
-    (rows || []).forEach((r, i5) => {
-      r.no = i5 + 1;
-    });
-    return rows;
-  }
-  function moveRow(rows, idx4, dir2) {
-    const j = idx4 + (dir2 < 0 ? -1 : 1);
-    if (idx4 < 0 || idx4 >= rows.length || j < 0 || j >= rows.length) return idx4;
-    const [r] = rows.splice(idx4, 1);
-    rows.splice(j, 0, r);
-    renumber(rows);
-    return j;
-  }
-  function insertRow(rows, idx4, row2) {
-    const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
-    rows.splice(at, 0, row2);
-    renumber(rows);
-    return at;
-  }
-  function removeRow(rows, idx4) {
-    if (idx4 < 0 || idx4 >= rows.length) return null;
-    const [r] = rows.splice(idx4, 1);
-    renumber(rows);
-    return r;
-  }
-  function resolvePart(hash2, snap2, ls, hintIdx) {
-    if (ls[hintIdx] && lineHash(ls[hintIdx].text) === hash2)
-      return { status: "ok", idx: hintIdx, text: ls[hintIdx].text, snap: snap2 };
-    for (let k = 0; k < ls.length; k++)
-      if (lineHash(ls[k].text) === hash2) return { status: "ok", idx: k, text: ls[k].text, snap: snap2 };
-    let best = -1, bs = 0;
-    for (let k = 0; k < ls.length; k++) {
-      const s = similarity2(ls[k].text, snap2);
-      if (s > bs) {
-        bs = s;
-        best = k;
-      }
-    }
-    if (best >= 0 && bs >= SIMILAR_MIN)
-      return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
-    return { status: "lost", idx: -1, text: "", snap: snap2 };
-  }
-  function resolveRow(row2, lines) {
-    const ls = lines || [];
-    const refs = parseRefs(row2 && row2.ref);
-    const snaps = splitSnaps(row2 && row2.text);
-    if (!refs.length) return { status: "free", parts: [], live: [] };
-    const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
-    const live = parts.filter((p) => p.status !== "lost");
-    const status = parts.some((p) => p.status === "changed") ? "changed" : live.length ? "ok" : "lost";
-    return { status, parts, live };
-  }
-  function resolveAll(rows, lines) {
-    return (rows || []).map((r) => resolveRow(r, lines));
-  }
-  function liveText(res) {
-    return (res && res.live ? res.live : []).map((p) => p.text).join(SNAP_SEP);
-  }
-  function liveLineNos(res) {
-    return (res && res.live ? res.live : []).map((p) => p.idx + 1);
-  }
-  function syncRow(row2, res) {
-    if (!res || !res.parts || !res.parts.length) return row2;
-    const refs = parseRefs(row2.ref);
-    const snaps = splitSnaps(row2.text);
-    const nextRefs = [], nextSnaps = [];
-    res.parts.forEach((p, i5) => {
-      if (p.status === "lost") {
-        nextRefs.push(refs[i5] ? String(refs[i5].idx) + "|" + refs[i5].hash : "");
-        nextSnaps.push(snaps[i5] == null ? "" : snaps[i5]);
-      } else {
-        nextRefs.push(makeRef(p.idx, p.text));
-        nextSnaps.push(p.text);
-      }
-    });
-    row2.ref = nextRefs.filter(Boolean).join(REF_SEP);
-    row2.text = joinSnaps(nextSnaps);
-    return row2;
-  }
-  function boundIdxs(row2, lines) {
-    return resolveRow(row2, lines).live.map((p) => p.idx);
-  }
-  function lineUsage(rows, lines) {
-    const m = /* @__PURE__ */ new Map();
-    for (const r of rows || [])
-      for (const i5 of boundIdxs(r, lines)) m.set(i5, (m.get(i5) || 0) + 1);
-    return m;
-  }
-  function unusedLines(rows, lines) {
-    const used = lineUsage(rows, lines);
-    return (lines || []).filter((l) => !used.has(l.i));
-  }
-  function commentsForText(text, comments) {
-    const t3 = normText(text);
-    if (!t3) return [];
-    return (comments || []).filter((c) => {
-      const q = normText(c && c.anchor && c.anchor.quote);
-      return !!q && (t3.includes(q) || q.includes(t3));
-    });
-  }
-  function clampColW(w, key2) {
-    const n2 = Math.round(Number(w));
-    if (!Number.isFinite(n2)) return VIS_COL_W[key2] || 160;
-    return Math.max(COL_W_MIN, Math.min(COL_W_MAX, n2));
-  }
-  function normalizeCols(cfg) {
-    const seen = /* @__PURE__ */ new Set(), out = [];
-    for (const c of Array.isArray(cfg) ? cfg : []) {
-      const key2 = typeof c === "string" ? c : c && c.key;
-      if (!VIS_COL_KEYS.includes(key2) || seen.has(key2)) continue;
-      seen.add(key2);
-      out.push({
-        key: key2,
-        on: typeof c === "string" ? true : c.on !== false,
-        w: clampColW(typeof c === "string" ? VIS_COL_W[key2] : c.w, key2)
-      });
-    }
-    for (const key2 of VIS_COL_KEYS)
-      if (!seen.has(key2)) out.push({ key: key2, on: !VIS_COL_DEFAULT_OFF.includes(key2), w: VIS_COL_W[key2] });
-    if (!out.some((c) => c.on)) out.forEach((c) => {
-      c.on = true;
-    });
-    return out;
-  }
-  function toggleCol(cols, key2) {
-    const c = cols.find((x) => x.key === key2);
-    if (!c) return cols;
-    if (c.on && cols.filter((x) => x.on).length === 1) return cols;
-    c.on = !c.on;
-    return cols;
-  }
-  function moveCol(cols, key2, dir2) {
-    const i5 = cols.findIndex((x) => x.key === key2);
-    const j = i5 + (dir2 < 0 ? -1 : 1);
-    if (i5 < 0 || j < 0 || j >= cols.length) return cols;
-    const [c] = cols.splice(i5, 1);
-    cols.splice(j, 0, c);
-    return cols;
-  }
-  function setColWidth(cols, key2, w) {
-    const c = cols.find((x) => x.key === key2);
-    if (c) c.w = clampColW(w, key2);
-    return cols;
-  }
-  function visibleCols(cols) {
-    return normalizeCols(cols).filter((c) => c.on).map((c) => c.key);
-  }
-  function totalWidth(cols) {
-    return normalizeCols(cols).filter((c) => c.on).reduce((a, c) => a + c.w, 0) + VIS_FIXED_W;
-  }
-  function csvCell(v2) {
-    const s = String(v2 == null ? "" : v2);
-    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-  function parseCsv2(text) {
-    const s = String(text || "").replace(/^﻿/, "");
-    const rows = [];
-    let row2 = [], cell = "", q = false;
-    for (let i5 = 0; i5 < s.length; i5++) {
-      const ch = s[i5];
-      if (q) {
-        if (ch === '"') {
-          if (s[i5 + 1] === '"') {
-            cell += '"';
-            i5++;
-          } else q = false;
-        } else cell += ch;
-        continue;
-      }
-      if (ch === '"') {
-        q = true;
-        continue;
-      }
-      if (ch === ",") {
-        row2.push(cell);
-        cell = "";
-        continue;
-      }
-      if (ch === "\r") continue;
-      if (ch === "\n") {
-        row2.push(cell);
-        rows.push(row2);
-        row2 = [];
-        cell = "";
-        continue;
-      }
-      cell += ch;
-    }
-    if (cell !== "" || row2.length) {
-      row2.push(cell);
-      rows.push(row2);
-    }
-    return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
-  }
-  function parseVis(text) {
-    const table9 = parseCsv2(text);
-    if (!table9.length) return [];
-    let start = 0;
-    const head2 = table9[0].map((h) => String(h || "").trim().toLowerCase());
-    const idxOf = {};
-    if (head2.includes("ref") || head2.includes("no")) {
-      start = 1;
-      VIS_HEADER.forEach((k) => {
-        idxOf[k] = head2.indexOf(k);
-      });
-    } else {
-      VIS_HEADER.forEach((k, i5) => {
-        idxOf[k] = i5;
-      });
-    }
-    const rows = [];
-    for (let r = start; r < table9.length; r++) {
-      const t3 = table9[r];
-      const g = (k) => idxOf[k] >= 0 ? t3[idxOf[k]] || "" : "";
-      rows.push(makeRow({
-        no: parseInt(g("no"), 10) || 0,
-        ref: g("ref"),
-        image: g("image"),
-        text: g("text"),
-        remark: g("remark")
-      }));
-    }
-    return renumber(rows);
-  }
-  function dumpVis(rows) {
-    const out = [VIS_HEADER.join(",")];
-    for (const r of renumber(rows || []))
-      out.push(VIS_HEADER.map((k) => csvCell(r[k])).join(","));
-    return CSV_BOM + out.join("\r\n") + "\r\n";
-  }
-  var REF_SEP, SNAP_SEP, SIMILAR_MIN, VIS_COL_KEYS, VIS_COL_DEFAULT_OFF, VIS_COL_W, COL_W_MIN, COL_W_MAX, VIS_FIXED_W, CSV_BOM, VIS_HEADER;
-  var init_vis_core = __esm({
-    "src/visual/vis-core.js"() {
-      REF_SEP = ";";
-      SNAP_SEP = "\n\n";
-      SIMILAR_MIN = 0.4;
-      VIS_COL_KEYS = ["no", "scene", "image", "text", "entities", "remark", "comment"];
-      VIS_COL_DEFAULT_OFF = ["scene"];
-      VIS_COL_W = { no: 64, scene: 150, image: 300, text: 340, entities: 170, remark: 240, comment: 220 };
-      COL_W_MIN = 56;
-      COL_W_MAX = 1200;
-      VIS_FIXED_W = 40 + 42;
-      CSV_BOM = "\uFEFF";
-      VIS_HEADER = ["no", "ref", "image", "text", "remark"];
-    }
-  });
-
-  // src/scene-ops.js
-  async function renameScene(dPath, ch, sc) {
-    const title2 = await ask(t("ui.scene.nameSceneNew"), { value: sc.title });
-    if (!title2) return;
-    return setSceneTitle(dPath, ch, sc, title2);
-  }
-  async function setSceneTitle(dPath, ch, sc, title2) {
-    if (!title2 || title2 === sc.title) return;
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    for (const s of d.chapters[ch.guid] || []) if (s.id === sc.id) s.title = title2;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    const { meta: meta2, body } = (0, import_md9.parseMdFile)(await kapi.readFile(file));
-    meta2.title = title2;
-    await kapi.writeFile(file, (0, import_md9.dumpMdFile)(meta2, body));
-    const t3 = state.tabs.get(file);
-    if (t3) {
-      t3.title = title2;
-      t3.tabBtn.querySelector(".tab-title").textContent = (t3.dirty ? "\u25CF " : "") + title2;
-    }
-    await buildTree2();
-  }
-  async function renameChapter(dPath, ch) {
-    const title2 = await ask(t("ui.scene.nameChapterNew"), { value: ch.title });
-    if (!title2) return;
-    return setChapterTitle(dPath, ch, title2);
-  }
-  async function setChapterTitle(dPath, ch, title2) {
-    if (!title2 || title2 === ch.title) return;
-    const df = await kapi.join(dPath, "draft.json");
-    const d = await kapi.readJson(df);
-    for (const c of d.chapters || []) if (c.guid === ch.guid) c.title = title2;
-    await kapi.writeFile(df, JSON.stringify(d, null, 2));
-    await buildTree2();
-  }
-  async function chapterProps(dPath, ch) {
-    const df = await kapi.join(dPath, "draft.json");
-    let d;
-    try {
-      d = await kapi.readJson(df);
-    } catch {
-      setStatus(t("ui.scene.readDraftJsonCant"));
-      return false;
-    }
-    const cur = (d.chapters || []).find((c) => c.guid === ch.guid);
-    if (!cur) {
-      setStatus(t("ui.scene.notFoundChapterDraft"));
-      return false;
-    }
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog k-chapter-props");
-    box2.append(el("div", "k-dlg-title", t("ui.scene.propsChapter") + (cur.title || "")));
-    const mk2 = (label, val, tag3 = "input") => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const i5 = el(tag3, "wiki-input");
-      i5.value = val == null ? "" : String(val);
-      r.append(i5);
-      box2.append(r);
-      return i5;
-    };
-    const mkSel = (label, options, curVal) => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const s = el("select", "wiki-input k-dlg-select");
-      for (const [v2, txt] of options) {
-        const o = el("option", null, txt);
-        o.value = v2;
-        if (v2 === curVal) o.selected = true;
-        s.append(o);
-      }
-      r.append(s);
-      box2.append(r);
-      return s;
-    };
-    const mkChk = (label, checked) => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      const c = el("input", "wiki-check");
-      c.type = "checkbox";
-      c.checked = !!checked;
-      r.append(c);
-      box2.append(r);
-      return c;
-    };
-    const iTitle = mk2(t("ui.scene.nameChapter"), cur.title || "");
-    const statuses = allStatuses();
-    const iStatus = mkSel(
-      t("ui.common.status"),
-      [["Outline", t("ui.common.notSet")], ...statuses.map((s) => [s, dataLabel(s)])],
-      statuses.includes(cur.status) ? cur.status : "Outline"
-    );
-    const iAct = mk2(t("ui.scene.actAct"), cur.act || "");
-    iAct.placeholder = t("ui.scene.iIIIIIName");
-    const iDate = mk2(t("ui.scene.dateDefineSend"), cur.date || "");
-    iDate.placeholder = t("ui.scene.egPage");
-    const iNote = mk2(t("ui.scene.noteChapter"), cur.note || "", "textarea");
-    const iFav = mkChk(t("ui.scene.chapterImportantFavorite"), cur.isFavorite);
-    return new Promise((resolve) => {
-      const btns = el("div", "k-dlg-btns");
-      const cB = el("button", null, t("ui.common.cancel"));
-      const okB = el("button", "k-ok", t("ui.common.save"));
-      btns.append(cB, okB);
-      box2.append(btns);
-      ov.append(box2);
-      document.body.append(ov);
-      const close2 = (v2) => {
-        ov.remove();
-        resolve(v2);
-      };
-      cB.onclick = () => close2(false);
-      ov.onclick = (e) => {
-        if (e.target === ov) close2(false);
-      };
-      box2.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") close2(false);
-      });
-      okB.onclick = async () => {
-        const title2 = iTitle.value.trim();
-        if (title2) cur.title = title2;
-        cur.status = iStatus.value;
-        cur.act = iAct.value.trim();
-        cur.date = iDate.value.trim();
-        cur.isFavorite = iFav.checked;
-        const note = iNote.value.trim();
-        if (note) cur.note = note;
-        else delete cur.note;
-        if (!cur.act) delete cur.act;
-        if (!cur.date) delete cur.date;
-        await kapi.writeFile(df, JSON.stringify(d, null, 2));
-        await buildTree2();
-        setStatus(t("ui.scene.savePropsChapterDone") + (cur.title || ""));
-        close2(true);
-      };
-    });
-  }
-  async function deleteScene(dPath, ch, sc) {
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    const dst = await deleteToTrash(file, sc.title);
-    if (!dst) return;
-    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
-      { kind: "scene", dPath, chGuid: ch.guid, folderName: ch.folderName, sc },
-      null,
-      2
-    ));
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
-    await buildTree2();
-    refreshNetwork();
-  }
-  async function deleteChapter(dPath, ch) {
-    const dir2 = await kapi.join(dPath, "Chapters", ch.folderName);
-    if (!await confirmBox(tf("ui.scene.delChapterChapterAll", ch.title))) return;
-    const dst = await kapi.join(
-      state.root,
-      "Recycle",
-      Date.now().toString(36) + "-" + ch.folderName
-    );
-    const scenesNow = (await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters?.[ch.guid] || [];
-    await kapi.move(dir2, dst);
-    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
-      { kind: "chapter", dPath, ch, scenes: scenesNow },
-      null,
-      2
-    ));
-    const df = await kapi.join(dPath, "draft.json");
-    const d = await kapi.readJson(df);
-    d.chapters = (d.chapters || []).filter((c) => c.guid !== ch.guid);
-    await kapi.writeFile(df, JSON.stringify(d, null, 2));
-    const sf = await kapi.join(dPath, "scenes.json");
-    const s2 = await kapi.readJson(sf);
-    if (s2.chapters) delete s2.chapters[ch.guid];
-    await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
-    await buildTree2();
-    refreshNetwork();
-  }
-  async function addChapter(dPath, preset) {
-    const title2 = preset || await ask(t("ui.scene.nameChapterNew"));
-    if (!title2) return null;
-    const df = await kapi.join(dPath, "draft.json");
-    const d = await kapi.readJson(df);
-    const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
-    const ch = {
-      guid: guid(),
-      title: title2,
-      order,
-      status: "Outline",
-      act: "I",
-      date: "",
-      isFavorite: false,
-      folderName: String(order).padStart(2, "0") + " - " + safeName(title2)
-    };
-    d.chapters = [...d.chapters || [], ch];
-    await kapi.writeFile(df, JSON.stringify(d, null, 2));
-    await kapi.mkdir(await kapi.join(dPath, "Chapters", ch.folderName));
-    await buildTree2();
-    setStatus(t("ui.scene.addChapter") + title2);
-    refreshNetwork();
-    return ch;
-  }
-  async function addScene(dPath, ch, preset, opts = {}) {
-    const title2 = preset || await ask(t("ui.scene.nameSceneNew"));
-    if (!title2) return null;
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    d.chapters = d.chapters || {};
-    const list = d.chapters[ch.guid] || [];
-    const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-    const sc = {
-      id: guid(),
-      title: title2,
-      order,
-      fileName: "scene-" + String(order).padStart(2, "0") + ".md",
-      chapterGuid: ch.guid,
-      date: "",
-      isFavorite: false,
-      wordCount: 0,
-      synopsis: ""
-    };
-    d.chapters[ch.guid] = [...list, sc];
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
-    await kapi.writeFile(file, (0, import_md9.dumpMdFile)(meta2, opts.body || ""));
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await buildTree2();
-    if (!opts.silent) openScene(file, title2);
-    refreshNetwork();
-    return { ...sc, path: file };
-  }
-  async function setSceneMeta(dPath, ch, sc, patch) {
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) return;
-    Object.assign(row2, patch);
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    const heavy = {};
-    for (const k of SCENE_HEAVY_KEYS) if (k in (patch || {})) heavy[k] = patch[k];
-    if (Object.keys(heavy).length) {
-      try {
-        await writeSceneMeta(await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName), heavy);
-      } catch {
-      }
-    }
-    await buildTree2();
-  }
-  async function toggleSceneFlag(dPath, ch, sc) {
-    await setSceneMeta(dPath, ch, sc, { flag: !sc.flag });
-    setStatus(sc.flag ? t("ui.scene.pinOut") + sc.title : t("ui.scene.pinPin") + sc.title);
-  }
-  async function duplicateScene(dPath, ch, sc) {
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const list = d.chapters[ch.guid] || [];
-    const row2 = list.find((x) => x.id === sc.id);
-    if (!row2) return;
-    const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-    const fileName = "scene-" + String(order).padStart(2, "0") + ".md";
-    const newTitle = row2.title + t("ui.common.msg");
-    const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-    let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
-    try {
-      const parsed = (0, import_md9.parseMdFile)(await kapi.readFile(srcFile));
-      meta2 = parsed.meta;
-      body = parsed.body;
-    } catch {
-    }
-    meta2.title = newTitle;
-    const nrow = { ...row2, id: guid(), title: newTitle, order, fileName, isFavorite: false };
-    d.chapters[ch.guid] = [...list, nrow];
-    await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md9.dumpMdFile)(meta2, body));
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await copyVisSidecar(dPath, ch.folderName, row2.fileName, fileName);
-    await buildTree2();
-    openScene(await kapi.join(dPath, "Chapters", ch.folderName, fileName), newTitle);
-  }
-  async function moveSceneOrder(dPath, ch, sc, dir2) {
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const list = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const i5 = list.findIndex((x) => x.id === sc.id);
-    const j = i5 + dir2;
-    if (i5 < 0 || j < 0 || j >= list.length) return;
-    const oa = list[i5].order || 0, ob = list[j].order || 0;
-    list[i5].order = ob;
-    list[j].order = oa;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await buildTree2();
-  }
-  async function moveSceneToChapter(dPath, ch, sc, dstCh) {
-    if (dstCh.guid === ch.guid) return;
-    const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    d.chapters = d.chapters || {};
-    const from2 = d.chapters[ch.guid] || [];
-    const row2 = from2.find((x) => x.id === sc.id);
-    if (!row2) return;
-    const oldPath = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-    const openTab = state.tabs.get(oldPath);
-    if (openTab) {
-      if (openTab.dirty) await saveTab(openTab);
-      openTab.dirty = false;
-      closeTab(oldPath);
-    }
-    const dst = d.chapters[dstCh.guid] || [];
-    const order = Math.max(0, ...dst.map((s) => s.order || 0)) + 1;
-    const newFile = await uniqueSceneFileName(dPath, dstCh.folderName, order);
-    await kapi.move(oldPath, await kapi.join(dPath, "Chapters", dstCh.folderName, newFile));
-    await moveVisSidecar(dPath, ch.folderName, row2.fileName, dstCh.folderName, newFile);
-    d.chapters[ch.guid] = from2.filter((x) => x.id !== sc.id);
-    row2.order = order;
-    row2.fileName = newFile;
-    row2.chapterGuid = dstCh.guid;
-    d.chapters[dstCh.guid] = [...dst, row2];
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await buildTree2();
-    setStatus(t("ui.scene.move") + row2.title + t("ui.scene.chapter2") + dstCh.title + t("ui.common.done2"));
-  }
-  async function moveChapterBefore(dPath, srcGuid, dstGuid) {
-    if (srcGuid === dstGuid) return;
-    const df = await kapi.join(dPath, "draft.json");
-    const d = await kapi.readJson(df);
-    const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const si = list.findIndex((c) => c.guid === srcGuid);
-    if (si < 0) return;
-    const [moved] = list.splice(si, 1);
-    const di = dstGuid ? list.findIndex((c) => c.guid === dstGuid) : list.length;
-    list.splice(di < 0 ? list.length : di, 0, moved);
-    list.forEach((c, i5) => {
-      c.order = i5 + 1;
-    });
-    d.chapters = list;
-    await kapi.writeFile(df, JSON.stringify(d, null, 2));
-    await buildTree2();
-    setStatus(t("ui.scene.reorderChapterNewDone"));
-  }
-  async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
-    const sf = await kapi.join(dPath, "scenes.json");
-    if (srcCh.guid !== dstCh.guid) {
-      const d0 = await kapi.readJson(sf);
-      const row0 = (d0.chapters[srcCh.guid] || []).find((x) => x.id === srcId);
-      if (!row0) return;
-      await moveSceneToChapter(dPath, srcCh, { id: srcId }, dstCh);
-      srcCh = dstCh;
-    }
-    const d = await kapi.readJson(sf);
-    const list = (d.chapters[dstCh.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const si = list.findIndex((x) => x.id === srcId);
-    if (si < 0) {
-      await buildTree2();
-      return;
-    }
-    const [moved] = list.splice(si, 1);
-    const di = dstId ? list.findIndex((x) => x.id === dstId) : list.length;
-    list.splice(di < 0 ? list.length : di, 0, moved);
-    list.forEach((x, i5) => {
-      x.order = i5 + 1;
-    });
-    d.chapters[dstCh.guid] = list;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await buildTree2();
-    setStatus(t("ui.scene.reorderSceneNewDone"));
-  }
-  function sceneStatusMenu(e, dPath, ch, sc) {
-    popupMenu(e.clientX, e.clientY, [
-      // allStatuses = มาตรฐาน + ที่ผู้ใช้เพิ่มเอง (custom-status.js)
-      ...allStatuses().map((s) => ({ label: s, click: () => setSceneMeta(dPath, ch, sc, { status: s }) })),
-      "-",
-      { label: t("ui.scene.clearStatus"), click: () => setSceneMeta(dPath, ch, sc, { status: "Outline" }) }
-    ]);
-  }
-  function sceneColorMenu(e, dPath, ch, sc) {
-    popupMenu(e.clientX, e.clientY, [
-      ...SCENE_COLORS.map(([name5, hex]) => ({ label: "\u25CF " + name5, click: () => setSceneMeta(dPath, ch, sc, { color: hex }) })),
-      "-",
-      { label: t("ui.scene.clearColor"), click: () => setSceneMeta(dPath, ch, sc, { color: "" }) }
-    ]);
-  }
-  async function renumberChapters(dPath) {
-    const df = await kapi.join(dPath, "draft.json");
-    const draft = await kapi.readJson(df);
-    const chapters = (draft.chapters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-    chapters.forEach((ch, i5) => {
-      ch.order = i5 + 1;
-    });
-    await kapi.writeFile(df, JSON.stringify(draft, null, 2));
-    const sf = await kapi.join(dPath, "scenes.json");
-    const scData = await kapi.readJson(sf);
-    for (const ch of chapters) {
-      const scenes = (scData.chapters[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-      scenes.forEach((sc, i5) => {
-        sc.order = i5 + 1;
-      });
-    }
-    await kapi.writeFile(sf, JSON.stringify(scData, null, 2));
-    await buildTree2();
-    setStatus(t("ui.scene.orderChapterSceneNew") + chapters.length + t("ui.scene.chapter"));
-  }
-  async function visOf(dPath, folderName, fileName) {
-    return kapi.join(dPath, "Chapters", folderName, visFileName(fileName));
-  }
-  async function moveVisSidecar(dPath, srcFolder, srcFile, dstFolder, dstFile) {
-    try {
-      const src2 = await visOf(dPath, srcFolder, srcFile);
-      if (!await kapi.exists(src2)) return false;
-      await kapi.move(src2, await visOf(dPath, dstFolder, dstFile));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function copyVisSidecar(dPath, folderName, srcFile, dstFile) {
-    try {
-      const src2 = await visOf(dPath, folderName, srcFile);
-      if (!await kapi.exists(src2)) return false;
-      await kapi.writeFile(await visOf(dPath, folderName, dstFile), await kapi.readFile(src2));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
-    try {
-      const src2 = await visOf(dPath, folderName, fileName);
-      if (!trashPath || !await kapi.exists(src2)) return false;
-      await kapi.move(src2, trashPath + ".vis.csv");
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  var import_md9;
-  var init_scene_ops = __esm({
-    "src/scene-ops.js"() {
-      init_i18n();
-      init_app();
-      init_core();
-      init_custom_status();
-      init_recycle();
-      init_ui();
-      import_md9 = __toESM(require_md());
-      init_scene_meta();
-      init_vis_core();
     }
   });
 
@@ -79898,7 +80083,7 @@ ${h.text}`;
           e.stopPropagation();
           if (h.type === "md") {
             const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-            openScene2(h.file, h.name);
+            openScene2(h.file, null);
           } else {
             const { activate: activate2 } = await Promise.resolve().then(() => (init_app(), app_exports));
             try {
@@ -81585,7 +81770,7 @@ ${BLOCK_END}
     const matches2 = pattern.match(exp);
     return matches2 ? matches2[1] : null;
   }
-  function parseQuery2(pattern, options = {}) {
+  function parseQuery(pattern, options = {}) {
     return pattern.replace(/\\\|/g, ESCAPED_PIPE).split(OR_TOKEN).map((item) => {
       const query = tokenize3(item.replace(/\u0000/g, "|").trim()).filter((item2) => item2 && !!item2.trim());
       const results = [];
@@ -81746,9 +81931,9 @@ ${BLOCK_END}
       perDocTerms = /* @__PURE__ */ new Map();
       index.docTermFieldHits.set(docIdx, perDocTerms);
     }
-    for (const term of distinctTerms) {
-      perDocTerms.set(term, (perDocTerms.get(term) || 0) + 1);
-      index.df.set(term, (index.df.get(term) || 0) + 1);
+    for (const term2 of distinctTerms) {
+      perDocTerms.set(term2, (perDocTerms.get(term2) || 0) + 1);
+      index.df.set(term2, (index.df.get(term2) || 0) + 1);
     }
   }
   function ingestRecord(index, record, keyCount, analyzer) {
@@ -81785,10 +81970,10 @@ ${BLOCK_END}
     index.docFieldCount.delete(docIdx);
     const perDocTerms = index.docTermFieldHits.get(docIdx);
     if (!perDocTerms) return;
-    for (const [term, hits] of perDocTerms) {
-      const next = (index.df.get(term) || 0) - hits;
-      if (next <= 0) index.df.delete(term);
-      else index.df.set(term, next);
+    for (const [term2, hits] of perDocTerms) {
+      const next = (index.df.get(term2) || 0) - hits;
+      if (next <= 0) index.df.delete(term2);
+      else index.df.set(term2, next);
     }
     index.docTermFieldHits.delete(docIdx);
   }
@@ -82289,7 +82474,7 @@ ${BLOCK_END}
           pattern = isCaseSensitive ? pattern : pattern.toLowerCase();
           pattern = ignoreDiacritics ? stripDiacritics(pattern) : pattern;
           this.pattern = pattern;
-          this.query = parseQuery2(this.pattern, this.options);
+          this.query = parseQuery(this.pattern, this.options);
         }
         static condition(_2, options) {
           return options.useExtendedSearch;
@@ -82425,8 +82610,8 @@ ${BLOCK_END}
           const { df, fieldCount } = options._invertedIndex;
           this.termSearchers = [];
           this.idfWeights = [];
-          for (const term of queryTerms) {
-            this.termSearchers.push(new BitapSearch(term, {
+          for (const term2 of queryTerms) {
+            this.termSearchers.push(new BitapSearch(term2, {
               location: options.location,
               threshold: options.threshold,
               distance: options.distance,
@@ -82437,7 +82622,7 @@ ${BLOCK_END}
               ignoreDiacritics: options.ignoreDiacritics,
               ignoreLocation: true
             }));
-            const docFreq = df.get(term) || 0;
+            const docFreq = df.get(term2) || 0;
             const idf = Math.log(1 + (fieldCount - docFreq + 0.5) / (docFreq + 0.5));
             this.idfWeights.push(idf);
           }
@@ -82927,7 +83112,7 @@ ${BLOCK_END}
     async function openFile(f) {
       ov.remove();
       const { openScene: openScene2, openPlainFile: openPlainFile2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-      if (f.ext === "md") openScene2(f.path, f.name.replace(/\.md$/i, ""));
+      if (f.ext === "md") openScene2(f.path, null);
       else if (f.ext === "json" || f.ext === "txt") await openPlainFile2(f.path, f.name);
       else kapi.revealInOS(f.path);
     }
@@ -158880,6 +159065,7 @@ ${css}
     checkScreenplay: () => checkScreenplay,
     clearFeaturePanels: () => clearFeaturePanels,
     clearTermCache: () => clearTermCache,
+    clearTreeSel: () => clearTreeSel,
     closeTab: () => closeTab,
     currentScriptSource: () => currentScriptSource,
     currentSpView: () => currentSpView,
@@ -158890,6 +159076,7 @@ ${css}
     deleteCurrentLine: () => deleteCurrentLine,
     drawPanel: () => drawPanel,
     embeddedFontUrls: () => embeddedFontUrls,
+    emptyRecycle: () => emptyRecycle,
     entityCreateDialog: () => entityCreateDialog,
     entitySearchBlob: () => entitySearchBlob,
     eventDialog: () => eventDialog,
@@ -158978,6 +159165,7 @@ ${css}
     refreshOpenWikiBacklinks: () => refreshOpenWikiBacklinks,
     refreshSpView: () => refreshSpView,
     refreshTreeQueued: () => refreshTreeQueued,
+    refreshTreeRowStates: () => refreshTreeRowStates,
     refreshWikiLineNos: () => refreshWikiLineNos,
     relationDialog: () => relationDialog,
     reloadPlugins: () => reloadPlugins,
@@ -159027,6 +159215,8 @@ ${css}
     setPluginDisabled: () => setPluginDisabled,
     setSpThaiFont: () => setSpThaiFont,
     setSpView: () => setSpView,
+    setSummaryBar: () => setSummaryBar,
+    setupTreeInteractions: () => setupTreeInteractions,
     shortcutClashes: () => shortcutClashes,
     showErrorList: () => showErrorList,
     showLoader: () => showLoader,
@@ -159053,6 +159243,7 @@ ${css}
     spThaiCfg: () => spThaiCfg,
     spellChecker: () => spellChecker,
     startSessionWatch: () => startSessionWatch,
+    summaryBarOn: () => summaryBarOn,
     syncMenuToggles: () => syncMenuToggles,
     syncModeHint: () => syncModeHint,
     syncSceneMetaFromFiles: () => syncSceneMetaFromFiles,
@@ -159077,6 +159268,12 @@ ${css}
     toggleSpCase: () => toggleSpCase,
     toggleSpThaiFont: () => toggleSpThaiFont,
     toggleTheme: () => toggleTheme,
+    treeCopy: () => treeCopy,
+    treeDeleteSelected: () => treeDeleteSelected,
+    treeDuplicate: () => treeDuplicate,
+    treePaste: () => treePaste,
+    treeSelectClick: () => treeSelectClick,
+    treeSelectOnly: () => treeSelectOnly,
     tweenFmtBar: () => tweenFmtBar,
     typeSoundMode: () => typeSoundMode,
     uiFontOffset: () => uiFontOffset,
@@ -160996,8 +161193,7 @@ ${css}
     await buildTree2();
     buildFilterBar().catch(() => {
     });
-    updateSummaryBar().catch(() => {
-    });
+    setSummaryBar(summaryBarOn());
     updateStatusExtras();
     smart.loadNames(root);
     smart.onIgnore = (w) => {
@@ -161702,7 +161898,7 @@ ${css}
       let ok2;
       if (!raw) ok2 = true;
       else if (s._scene) ok2 = sceneMatchesQuery(s._scene, raw);
-      else ok2 = (s.dataset.search || s.textContent.toLowerCase()).includes(ql);
+      else ok2 = textMatchesQuery(s.dataset.search || s.textContent, raw);
       if (ok2 && treeScope && s.dataset.chGuid) ok2 = s.dataset.chGuid === treeScope.guid;
       if (!ok2 && s.dataset.planner) {
         log(
@@ -161744,18 +161940,480 @@ ${css}
   }
   function makeAccordion(headEl, containerEl, key2) {
     const collapsed = !!treeCollapsed()[key2];
-    const caret = el("span", "tw", collapsed ? "\u25B8" : "\u25BE");
+    const caret = el("span", "tw" + (collapsed ? "" : " tw-open"));
+    caret.innerHTML = iconHtml("chevron-right", 12);
     headEl.prepend(caret);
     if (collapsed) containerEl.classList.add("collapsed");
     const toggle = (e) => {
       if (e && e.target && e.target.closest(".row-add")) return;
       const now = containerEl.classList.toggle("collapsed");
-      caret.textContent = now ? "\u25B8" : "\u25BE";
+      caret.classList.toggle("tw-open", !now);
       setTreeCollapsed(key2, now);
       if (e) e.stopPropagation();
     };
     caret.onclick = toggle;
     headEl.addEventListener("click", toggle);
+  }
+  function treeSortMode() {
+    const sel = $("#filter-sort");
+    if (sel && sel.value) return sel.value;
+    try {
+      return localStorage.getItem("k2-tree-sort:" + state.root) || "";
+    } catch {
+      return "";
+    }
+  }
+  function setTreeSortMode(v2) {
+    try {
+      localStorage.setItem("k2-tree-sort:" + state.root, v2 || "");
+    } catch {
+    }
+  }
+  function sortSceneRows(list, mode, mtimes) {
+    const out = list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!mode) return out;
+    if (mode === "name") return out.sort((a, b) => _thCmp(a.title, b.title));
+    if (mode === "words") return out.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
+    if (mode === "status") {
+      const rank = (s) => {
+        const i5 = SCENE_STATUSES.indexOf(s);
+        return !s || s === "Outline" || i5 < 0 ? 99 : i5;
+      };
+      return out.sort((a, b) => rank(a.status) - rank(b.status) || (a.order || 0) - (b.order || 0));
+    }
+    if (mode === "modified") {
+      const at = (r) => mtimes && mtimes.get(r.id) || 0;
+      return out.sort((a, b) => at(b) - at(a));
+    }
+    return out;
+  }
+  async function snapshotCounts() {
+    const m = /* @__PURE__ */ new Map();
+    if (!state.root) return m;
+    try {
+      const root = await kapi.join(state.root, "Snapshots");
+      if (!await kapi.exists(root)) return m;
+      for (const d of await kapi.listDirs(root)) {
+        let n2 = 0;
+        try {
+          n2 = (await kapi.listFiles(await kapi.join(root, d), ".md")).length;
+        } catch {
+        }
+        if (n2) m.set(d, n2);
+      }
+    } catch (e) {
+      log("warn", t("ui.tree.snapCountFail"), e);
+    }
+    return m;
+  }
+  function snapKey(...parts) {
+    return parts.filter(Boolean).join("__").replace(/\.md$/i, "");
+  }
+  function addVersionBadge(rowEl2, counts, key2) {
+    const n2 = counts && counts.get(key2);
+    if (!n2) return;
+    const b = el("span", "sc-vers", "(" + n2 + ")");
+    b.title = tf("ui.tree.versionCount", n2);
+    rowEl2.append(b);
+  }
+  function applyRowOpenState(rowEl2, path) {
+    if (!rowEl2 || !path) return;
+    rowEl2.dataset.tabrow = "1";
+    const tab = state.tabs.get(path);
+    rowEl2.classList.toggle("k-row-open", !!tab && !!state.active && state.active.file === path);
+    rowEl2.classList.toggle("k-row-unsaved", !!(tab && tab.dirty));
+  }
+  async function addChapterToSection(secPath) {
+    const dRoot = await kapi.join(secPath, "Draft");
+    const dns = await kapi.exists(dRoot) ? await kapi.listDirs(dRoot) : [];
+    if (!dns.length) {
+      setStatus(t("ui.app.bookNotHasDraft"));
+      return null;
+    }
+    return addChapter(await kapi.join(dRoot, dns[0]));
+  }
+  function treeRows() {
+    const tree = $("#tree");
+    if (!tree) return [];
+    return [...tree.querySelectorAll(".scene[data-path]")].filter((r) => r._ctx && r.style.display !== "none");
+  }
+  function paintTreeSel() {
+    const tree = $("#tree");
+    if (!tree) return;
+    const cut = treeClip.mode === "cut" ? new Set(treeClip.items.map((it) => it.file)) : null;
+    for (const r of tree.querySelectorAll(".scene[data-path]")) {
+      if (!r._ctx) continue;
+      r.classList.toggle("k-row-sel", treeSel.has(r.dataset.path));
+      r.classList.toggle("k-row-cut", !!cut && cut.has(r.dataset.path));
+    }
+  }
+  function treeSelectOnly(rowEl2) {
+    treeSel.clear();
+    if (rowEl2 && rowEl2.dataset.path) {
+      treeSel.add(rowEl2.dataset.path);
+      treeSelAnchor = rowEl2.dataset.path;
+    }
+    paintTreeSel();
+    return treeSel.size;
+  }
+  function treeSelectClick(rowEl2, ev) {
+    if (!rowEl2 || !rowEl2.dataset.path) return 0;
+    const p = rowEl2.dataset.path;
+    if (ev && ev.shiftKey && treeSelAnchor) {
+      const rows = treeRows();
+      const a = rows.findIndex((r) => r.dataset.path === treeSelAnchor);
+      const b = rows.findIndex((r) => r.dataset.path === p);
+      if (a >= 0 && b >= 0) {
+        treeSel.clear();
+        for (let i5 = Math.min(a, b); i5 <= Math.max(a, b); i5++) treeSel.add(rows[i5].dataset.path);
+      }
+    } else {
+      if (treeSel.has(p)) treeSel.delete(p);
+      else treeSel.add(p);
+      treeSelAnchor = p;
+    }
+    paintTreeSel();
+    setStatus(tf("ui.tree.selectedCount", treeSel.size));
+    return treeSel.size;
+  }
+  function clearTreeSel() {
+    treeSel.clear();
+    paintTreeSel();
+  }
+  function treeSelCtx() {
+    const out = [];
+    for (const r of treeRows()) if (treeSel.has(r.dataset.path) && r._ctx) out.push({ ...r._ctx, file: r.dataset.path, row: r });
+    return out;
+  }
+  function treeMultiMenu(items) {
+    return [
+      { label: tf("ui.tree.selectedCount", items.length), disabled: true },
+      "-",
+      { label: t("ui.tree.copy"), click: () => treeCopy(items, "copy") },
+      { label: t("ui.tree.cut"), click: () => treeCopy(items, "cut") },
+      { label: t("ui.tree.duplicate"), click: () => treeDuplicate(items) },
+      "-",
+      { label: t("ui.tree.moveToChapter"), click: () => treeMoveMenu(items) },
+      "-",
+      { label: t("ui.tree.deleteSelected"), danger: true, click: () => treeDeleteSelected(items) }
+    ];
+  }
+  function treeCopy(items, mode) {
+    const list = items && items.length ? items : treeSelCtx();
+    if (!list.length) {
+      setStatus(t("ui.tree.nothingSelected"));
+      return 0;
+    }
+    treeClip.mode = mode;
+    treeClip.items = list.map((it) => ({
+      dPath: it.dPath,
+      chGuid: it.ch.guid,
+      folderName: it.ch.folderName,
+      id: it.sc.id,
+      file: it.file,
+      title: it.sc.title
+    }));
+    paintTreeSel();
+    setStatus(mode === "cut" ? tf("ui.tree.cutN", treeClip.items.length) : tf("ui.tree.copiedN", treeClip.items.length));
+    return treeClip.items.length;
+  }
+  async function treePaste(dPath, ch) {
+    if (!treeClip.items.length) {
+      setStatus(t("ui.tree.clipEmpty"));
+      return 0;
+    }
+    if (!dPath || !ch) {
+      setStatus(t("ui.tree.pickChapterFirst"));
+      return 0;
+    }
+    let n2 = 0;
+    for (const it of treeClip.items) {
+      try {
+        if (treeClip.mode === "cut") {
+          if (it.dPath !== dPath) {
+            setStatus(t("ui.app.moveSkipDraftNot"));
+            continue;
+          }
+          if (it.chGuid === ch.guid) continue;
+          await moveSceneToChapter(dPath, { guid: it.chGuid }, { id: it.id }, ch);
+        } else {
+          let meta2 = {}, body = "";
+          try {
+            const parsed = (0, import_md15.parseMdFile)(await kapi.readFile(it.file));
+            meta2 = parsed.meta;
+            body = parsed.body;
+          } catch {
+          }
+          const title2 = it.title + (it.chGuid === ch.guid ? t("ui.common.msg") : "");
+          await addScene(dPath, ch, title2, { body, meta: { ...meta2, title: title2 }, silent: true });
+        }
+        n2++;
+      } catch (e) {
+        log("warn", t("ui.tree.pasteFail"), e);
+      }
+    }
+    if (treeClip.mode === "cut") {
+      treeClip.mode = "";
+      treeClip.items = [];
+    }
+    await buildTree2();
+    setStatus(tf("ui.tree.pastedN", n2, ch.title));
+    return n2;
+  }
+  async function treeDuplicate(items) {
+    const list = items && items.length ? items : treeSelCtx();
+    if (!list.length) {
+      setStatus(t("ui.tree.nothingSelected"));
+      return 0;
+    }
+    for (const it of list) {
+      try {
+        await duplicateScene(it.dPath, it.ch, it.sc);
+      } catch {
+      }
+    }
+    setStatus(tf("ui.tree.duplicatedN", list.length));
+    return list.length;
+  }
+  async function treeDeleteSelected(items) {
+    const list = items && items.length ? items : treeSelCtx();
+    if (!list.length) {
+      setStatus(t("ui.tree.nothingSelected"));
+      return 0;
+    }
+    if (!await confirmBox(tf("ui.tree.confirmDeleteN", list.length), t("ui.app.del"))) return 0;
+    for (const it of list) {
+      try {
+        await deleteSceneSilent(it.dPath, it.ch, it.sc);
+      } catch (e) {
+        log("warn", t("ui.tree.delFail"), e);
+      }
+    }
+    clearTreeSel();
+    await buildTree2();
+    setStatus(tf("ui.tree.deletedN", list.length));
+    return list.length;
+  }
+  async function deleteSceneSilent(dPath, ch, sc) {
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
+    const base4 = file.split(/[\\/]/).pop();
+    const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
+    await kapi.move(file, dst);
+    if (state.tabs.has(file)) {
+      state.tabs.get(file).dirty = false;
+      closeTab(file);
+    }
+    await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
+      { kind: "scene", dPath, chGuid: ch.guid, folderName: ch.folderName, sc },
+      null,
+      2
+    ));
+    const sf = await kapi.join(dPath, "scenes.json");
+    const d = await kapi.readJson(sf);
+    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  }
+  async function treeMoveMenu(items) {
+    const list = items && items.length ? items : treeSelCtx();
+    if (!list.length) return 0;
+    const dst = await pickDraftTarget({ title: t("ui.tree.moveToChapter") });
+    if (!dst) return 0;
+    let skipped = 0;
+    for (const it of list) {
+      if (it.dPath !== dst.dPath) {
+        skipped++;
+        continue;
+      }
+      try {
+        await moveSceneToChapter(it.dPath, it.ch, it.sc, dst.chapter);
+      } catch {
+      }
+    }
+    if (skipped) setStatus(tf("ui.tree.skipCrossDraft", skipped));
+    await buildTree2();
+    setStatus(tf("ui.tree.movedN", list.length, dst.chapter.title));
+    return list.length;
+  }
+  function treePasteTarget() {
+    const rows = treeRows();
+    for (const r of rows) if (treeSel.has(r.dataset.path) && r._ctx) return r._ctx;
+    return null;
+  }
+  function setupTreeInteractions() {
+    const tree = $("#tree");
+    if (!tree || tree.dataset.k2wired) return false;
+    tree.dataset.k2wired = "1";
+    tree.tabIndex = 0;
+    tree.addEventListener("mousedown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) tree.focus({ preventScroll: true });
+      if (e.target === tree) clearTreeSel();
+    });
+    tree.addEventListener("keydown", async (e) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.code === "KeyC") {
+        e.preventDefault();
+        treeCopy(null, "copy");
+        return;
+      }
+      if (ctrl && e.code === "KeyX") {
+        e.preventDefault();
+        treeCopy(null, "cut");
+        return;
+      }
+      if (ctrl && e.code === "KeyD") {
+        e.preventDefault();
+        await treeDuplicate(null);
+        return;
+      }
+      if (ctrl && e.code === "KeyA") {
+        e.preventDefault();
+        treeSel.clear();
+        for (const r of treeRows()) treeSel.add(r.dataset.path);
+        paintTreeSel();
+        setStatus(tf("ui.tree.selectedCount", treeSel.size));
+        return;
+      }
+      if (ctrl && e.code === "KeyV") {
+        e.preventDefault();
+        const t3 = treePasteTarget();
+        if (t3) await treePaste(t3.dPath, t3.ch);
+        else {
+          const dst = await pickDraftTarget({ title: t("ui.tree.pasteWhere") });
+          if (dst && dst.chapter) await treePaste(dst.dPath, dst.chapter);
+        }
+        return;
+      }
+      if (e.code === "Delete") {
+        e.preventDefault();
+        await treeDeleteSelected(null);
+        return;
+      }
+      if (e.code === "Escape") {
+        clearTreeSel();
+        return;
+      }
+    });
+    tree.addEventListener("contextmenu", (e) => {
+      if (e.target.closest(".scene, .ch-title, .sec-title")) return;
+      e.preventDefault();
+      popupMenu(e.clientX, e.clientY, treeBlankMenu());
+    });
+    return true;
+  }
+  function treeBlankMenu() {
+    const pickCh = async (title2) => {
+      const dst = await pickDraftTarget({ title: title2 });
+      return dst && dst.chapter ? dst : null;
+    };
+    return [
+      { label: t("ui.tree.newBook"), click: () => addSection() },
+      { label: t("ui.tree.newChapter"), click: async () => {
+        const dst = await pickDraftTarget({ title: t("ui.tree.newChapter"), needChapter: false });
+        if (dst) await addChapter(dst.dPath);
+      } },
+      { label: t("ui.tree.newScene"), click: async () => {
+        const dst = await pickCh(t("ui.tree.newScene"));
+        if (dst) await addScene(dst.dPath, dst.chapter);
+      } },
+      { label: t("ui.app.newMemoNew"), click: () => addMemo() },
+      "-",
+      { label: t("ui.app.newCatNew"), click: () => newWikiCat() },
+      { label: t("ui.app.boardNew"), click: () => newPlannerBoard() },
+      { label: t("ui.app.addMap"), click: async () => {
+        await openMaps();
+        await addMapFlow();
+        await refreshTreeQueued();
+      } },
+      { label: t("ui.app.addImageInLibrary"), click: () => galleryCommand("gallery-new-album") },
+      "-",
+      { label: t("ui.tree.paste"), click: async () => {
+        const t3 = treePasteTarget() || await pickCh(t("ui.tree.pasteWhere"));
+        if (t3) await treePaste(t3.dPath, t3.ch || t3.chapter);
+      } },
+      "-",
+      { label: t("ui.tree.expandAll"), click: () => setAllAccordions(false) },
+      { label: t("ui.tree.collapseAll"), click: () => setAllAccordions(true) },
+      {
+        label: summaryBarOn() ? t("ui.tree.hideSummary") : t("ui.tree.showSummary"),
+        click: () => setSummaryBar(!summaryBarOn())
+      },
+      { label: t("ui.app.refreshReadFileFolder"), click: () => refreshTreeQueued() },
+      "-",
+      { label: t("ui.tree.projectFolder"), click: () => kapi.revealInOS(state.root) },
+      { label: "\u2699 " + t("ui.tree.projectSettings"), click: () => settingsDialog() }
+    ];
+  }
+  function setAllAccordions(collapse3) {
+    const tree = $("#tree");
+    if (!tree) return 0;
+    let n2 = 0;
+    for (const head2 of tree.querySelectorAll(".sec-title, .ch-title")) {
+      const box2 = head2.parentElement;
+      const caret = head2.querySelector(".tw");
+      if (!box2 || !caret) continue;
+      if (box2.classList.contains("collapsed") !== collapse3) {
+        caret.click();
+        n2++;
+      }
+    }
+    return n2;
+  }
+  async function emptyRecycle(count) {
+    if (!state.root) return 0;
+    const recDir = await kapi.join(state.root, "Recycle");
+    if (!await kapi.exists(recDir)) {
+      setStatus(t("ui.tree.trashEmptyAlready"));
+      return 0;
+    }
+    const files = await kapi.listFiles(recDir).catch(() => []);
+    const dirs = await kapi.listDirs(recDir).catch(() => []);
+    const all = [...files, ...dirs];
+    if (!all.length) {
+      setStatus(t("ui.tree.trashEmptyAlready"));
+      return 0;
+    }
+    if (!await confirmBox(tf("ui.tree.confirmEmptyTrash", count || all.length), t("ui.app.del"))) return 0;
+    let n2 = 0;
+    for (const f of all) {
+      try {
+        await kapi.remove(await kapi.join(recDir, f));
+        n2++;
+      } catch (e) {
+        log("warn", t("ui.tree.delFail"), e);
+      }
+    }
+    await buildTree2();
+    setStatus(tf("ui.tree.emptiedTrash", n2));
+    return n2;
+  }
+  function summaryBarOn() {
+    try {
+      return localStorage.getItem("k2-summary-bar") === "1";
+    } catch {
+      return false;
+    }
+  }
+  function setSummaryBar(on2) {
+    try {
+      localStorage.setItem("k2-summary-bar", on2 ? "1" : "0");
+    } catch {
+    }
+    const bar = $("#summary-bar");
+    if (bar) bar.style.display = on2 ? "" : "none";
+    if (on2) updateSummaryBar().catch(() => {
+    });
+    return on2;
+  }
+  function refreshTreeRowStates() {
+    const tree = $("#tree");
+    if (!tree) return 0;
+    let n2 = 0;
+    for (const row2 of tree.querySelectorAll(".scene[data-tabrow]")) {
+      applyRowOpenState(row2, row2.dataset.path);
+      n2++;
+    }
+    paintTreeSel();
+    return n2;
   }
   async function buildTree2() {
     if (_treeBuilding) {
@@ -161786,6 +162444,8 @@ ${css}
   async function _buildTreeInner() {
     const tree = document.createElement("div");
     const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", "Sessions", "Starters"]);
+    const sortMode = treeSortMode();
+    const snapCounts = await snapshotCounts();
     for (const name5 of await kapi.listDirs(state.root)) {
       if (skip.has(name5)) continue;
       const secPath = await kapi.join(state.root, name5);
@@ -161795,21 +162455,22 @@ ${css}
       const secTitle = el("div", "sec-title", "\u{1F4DA} " + (sec.title || name5));
       const addToSec = el("span", "row-add", "+");
       addToSec.title = t("ui.app.addChapterBook");
-      addToSec.onclick = async (e) => {
+      addToSec.onclick = (e) => {
         e.stopPropagation();
-        const dRoot = await kapi.join(secPath, "Draft");
-        const dns = await kapi.exists(dRoot) ? await kapi.listDirs(dRoot) : [];
-        if (dns.length) addChapter(await kapi.join(dRoot, dns[0]));
-        else setStatus(t("ui.app.bookNotHasDraft"));
+        addChapterToSection(secPath);
       };
       secTitle.append(addToSec);
       secTitle.oncontextmenu = (e) => {
         e.preventDefault();
         popupMenu(e.clientX, e.clientY, [
           { label: t("ui.app.addBookNew"), click: () => addSection() },
+          { label: t("ui.tree.newChapterHere"), click: () => addChapterToSection(secPath) },
+          "-",
           { label: t("ui.common.changeNameBook"), click: () => renameSection(secPath, sec) },
           // [alpha.60r3 ข้อ 3] ปก/คำโปรย/สถานะ/ลำดับ — เดิมต้องเปิดหน้าจัดการเล่มทั้งหน้า
           { label: "\u2699 " + t("ui.app.sectionProps"), click: () => sectionProps(secPath, sec) },
+          { label: t("ui.app.manageBook"), click: () => openBookManager() },
+          { label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(secPath) },
           "-",
           { label: t("ui.common.delBookBook"), danger: true, click: () => deleteSection(secPath, sec) }
         ]);
@@ -161905,7 +162566,19 @@ ${css}
               await moveSceneToChapter(dPath, { guid: data2.chGuid }, { id: data2.id }, ch);
               setStatus(t("ui.app.moveSceneChapter") + ch.title);
             });
-            for (const sc of (scenesAll[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0))) {
+            let chMtimes = null;
+            if (sortMode === "modified") {
+              chMtimes = /* @__PURE__ */ new Map();
+              for (const r of scenesAll[ch.guid] || []) {
+                try {
+                  chMtimes.set(r.id, await kapi.mtime(
+                    await kapi.join(dPath, "Chapters", ch.folderName, r.fileName)
+                  ));
+                } catch {
+                }
+              }
+            }
+            for (const sc of sortSceneRows(scenesAll[ch.guid] || [], sortMode, chMtimes)) {
               const scEl = el("div", "scene");
               if (sc.color) {
                 const dot = el("span", "sc-dot");
@@ -161950,9 +162623,15 @@ ${css}
                 chips.classList.add("sc-tags");
                 scEl.append(chips);
               }
+              addVersionBadge(
+                scEl,
+                snapCounts,
+                snapKey(name5, "Draft", dname, "Chapters", ch.folderName, sc.fileName)
+              );
               scEl._scene = sc;
               scEl.dataset.search = [
                 sc.title,
+                sc.fileName,
                 (sc.tags || []).join(" "),
                 sc.status,
                 sc.pov,
@@ -161962,7 +162641,9 @@ ${css}
                 sc.note
               ].filter(Boolean).join(" ").toLowerCase();
               scEl.title = [
-                (isMemo ? "\u{1F4DD} " : "\u{1F4C4} ") + sc.title,
+                // [alpha.120 ข้อ 3] hover ต้องบอก **ชื่อไฟล์พร้อมนามสกุล** — ไฟล์งานแก้นอกโปรแกรมได้
+                // ผู้ใช้จึงต้องรู้ว่าแถวนี้คือไฟล์ไหนโดยไม่ต้องเปิดคุณสมบัติ
+                (isMemo ? "\u{1F4DD} " : "\u{1F4C4} ") + sc.title + "  (" + sc.fileName + ")",
                 isMemo ? t("ui.app.noteChapterNotMerge") : "",
                 sc.locked ? t("ui.app.lockEditCant2") : "",
                 sc.status && sc.status !== "Outline" ? t("ui.app.status2") + sc.status : "",
@@ -161977,11 +162658,20 @@ ${css}
                 sc.synopsis || "",
                 sc.note ? t("ui.app.note") + sc.note : ""
               ].filter(Boolean).join("\n");
-              scEl.onclick = async () => {
+              scEl._ctx = { dPath, ch, sc };
+              scEl.onclick = async (ev) => {
+                if (ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  treeSelectClick(scEl, ev);
+                  return;
+                }
+                treeSelectOnly(scEl);
                 setPropsTarget(dPath, ch, sc);
                 openScene(await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName), sc.title);
               };
               scEl.dataset.path = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
+              applyRowOpenState(scEl, scEl.dataset.path);
               scEl.draggable = true;
               scEl.addEventListener("dragstart", (e) => {
                 e.dataTransfer.effectAllowed = "move";
@@ -162034,8 +162724,15 @@ ${css}
               });
               scEl.oncontextmenu = (e) => {
                 e.preventDefault();
+                if (!scEl.classList.contains("k-row-sel")) treeSelectOnly(scEl);
+                const multi = treeSelCtx();
+                if (multi.length > 1) return popupMenu(e.clientX, e.clientY, treeMultiMenu(multi));
                 popupMenu(e.clientX, e.clientY, [
+                  { label: t("ui.tree.newSceneHere"), click: () => addScene(dPath, ch) },
+                  { label: t("ui.tree.newChapterHere"), click: () => addChapter(dPath) },
+                  "-",
                   { label: t("ui.common.showFolder"), click: () => kapi.revealInOS(scEl.dataset.path) },
+                  { label: t("ui.app.findDiskFindOn"), click: () => revealFile(scEl.dataset.path) },
                   // โน้ตในบท: ย้ายออกไปโฟลเดอร์ MEMO ได้ และ "กลับเป็นฉากปกติ" ได้ด้วย
                   // (เดิมเปลี่ยนเป็นโน้ตแล้วไม่มีทางกลับในเมนู — บั๊กข้อ 8)
                   ...isMemo ? [
@@ -162094,8 +162791,16 @@ ${css}
               chEl.append(scEl);
               if (visSet.has(sc.fileName.replace(/\.md$/i, "").toLowerCase() + "_vis.csv")) {
                 const vEl = el("div", "scene vis-row", "\u{1F3AC} " + t("ui.vis.title"));
-                vEl.dataset.nofilter = "1";
+                vEl.dataset.chGuid = ch.guid;
+                vEl.dataset.search = [
+                  t("ui.vis.title"),
+                  sc.title,
+                  sc.fileName,
+                  (sc.tags || []).join(" ")
+                ].filter(Boolean).join(" ").toLowerCase();
+                vEl.title = t("ui.vis.title") + " \u2014 " + sc.title + "  (" + sc.fileName.replace(/\.md$/i, "_vis.csv") + ")";
                 vEl.dataset.path = scEl.dataset.path;
+                vEl.dataset.visOf = scEl.dataset.path;
                 vEl.onclick = (ev) => {
                   ev.stopPropagation();
                   openVisual(scEl.dataset.path, sc.title);
@@ -162105,7 +162810,8 @@ ${css}
                   ev.stopPropagation();
                   popupMenu(ev.clientX, ev.clientY, [
                     { label: t("ui.vis.open"), click: () => openVisual(scEl.dataset.path, sc.title) },
-                    { label: t("ui.vis.reveal"), click: async () => kapi.revealInOS(await visPathOf(scEl.dataset.path)) }
+                    { label: t("ui.vis.reveal"), click: async () => kapi.revealInOS(await visPathOf(scEl.dataset.path)) },
+                    { label: t("ui.app.findDiskFindOn"), click: async () => revealFile(await visPathOf(scEl.dataset.path)) }
                   ]);
                 };
                 chEl.append(vEl);
@@ -162117,12 +162823,21 @@ ${css}
               es.append(el("span", "dim", t("ui.app.notHasScenePress")));
               chEl.append(es);
             }
+            chHead._ctx = { dPath, ch };
             chHead.oncontextmenu = (e) => {
               e.preventDefault();
               popupMenu(e.clientX, e.clientY, [
-                { label: t("ui.app.searchOnlyChapter2"), click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
+                // [alpha.120 ข้อ 10] สร้างได้ทั้งชั้นของตัวเองและชั้นถัดไป (บท → บท + ฉาก)
                 { label: t("ui.app.addScene"), click: () => addScene(dPath, ch) },
+                { label: t("ui.tree.newChapterHere"), click: () => addChapter(dPath) },
+                { label: t("ui.tree.pasteHere"), click: () => treePaste(dPath, ch) },
+                "-",
+                { label: t("ui.app.searchOnlyChapter2"), click: () => setTreeScope({ guid: ch.guid, label: ch.title }) },
                 { label: t("ui.app.changeNameChapter"), click: () => renameChapter(dPath, ch) },
+                {
+                  label: t("ui.app.findDiskFindOn"),
+                  click: async () => kapi.revealInOS(await kapi.join(dPath, "Chapters", ch.folderName))
+                },
                 // [alpha.60r3 ข้อ 3] สถานะ/องก์/วันที่/บทสำคัญ — ค่าที่ draft.json มีอยู่แล้วแต่ไม่เคยมี UI
                 { label: "\u2699 " + t("ui.app.chapterProps"), click: () => chapterProps(dPath, ch) },
                 // ข้อ 78: บริบท = ชื่อฉากทั้งบท (พอให้ AI เดาเนื้อบทได้โดยไม่ต้องอ่านทุกไฟล์)
@@ -162171,6 +162886,13 @@ ${css}
     mHead.append(addM);
     mSec.append(mHead);
     makeAccordion(mHead, mSec, "sec:__memo__");
+    mHead.oncontextmenu = (e) => {
+      e.preventDefault();
+      popupMenu(e.clientX, e.clientY, [
+        { label: t("ui.app.newMemoNew"), click: () => addMemo() },
+        { label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(memoDir) }
+      ]);
+    };
     mHead.addEventListener("dragover", (e) => {
       if ([...e.dataTransfer.types].includes("text/k2-scene")) {
         e.preventDefault();
@@ -162194,12 +162916,31 @@ ${css}
       const row2 = (sj.chapters[d.chGuid] || []).find((x) => x.id === d.id);
       if (row2) await moveRowToMemos(d.draftDir, ch, row2);
     });
-    for (const f of await kapi.listFiles(memoDir, ".md")) {
+    const memoFiles = await kapi.listFiles(memoDir, ".md");
+    const memoRows = [];
+    for (const f of memoFiles) {
       const p = await kapi.join(memoDir, f);
-      const raw = await kapi.readFile(p);
-      const title2 = (0, import_md15.parseMdFile)(raw).meta.title || f.replace(/\.md$/, "");
+      let raw = "";
+      try {
+        raw = await kapi.readFile(p);
+      } catch {
+      }
+      memoRows.push({
+        f,
+        p,
+        title: (0, import_md15.parseMdFile)(raw).meta.title || f.replace(/\.md$/, ""),
+        mtime: sortMode === "modified" ? await kapi.mtime(p).catch(() => 0) : 0
+      });
+    }
+    if (sortMode === "name") memoRows.sort((a, b) => _thCmp(a.title, b.title));
+    else if (sortMode === "modified") memoRows.sort((a, b) => b.mtime - a.mtime);
+    for (const { f, p, title: title2 } of memoRows) {
       const it = el("div", "scene", "\u{1F4C4} " + title2);
       it.dataset.path = p;
+      it.dataset.search = (title2 + " " + f).toLowerCase();
+      it.title = "\u{1F4DD} " + title2 + "  (" + f + ")";
+      addVersionBadge(it, snapCounts, snapKey("Memos", f));
+      applyRowOpenState(it, p);
       it.onclick = () => openScene(p, title2);
       it.draggable = true;
       it.addEventListener("dragstart", (e) => {
@@ -162211,9 +162952,21 @@ ${css}
       it.oncontextmenu = (e) => {
         e.preventDefault();
         popupMenu(e.clientX, e.clientY, [
+          { label: t("ui.app.newMemoNew"), click: () => addMemo() },
+          // [alpha.120 ข้อ 10]
+          "-",
           { label: t("ui.common.open"), click: it.onclick },
           { label: t("ui.common.showFolder"), click: () => kapi.revealInOS(p) },
+          { label: t("ui.app.findDiskFindOn"), click: () => revealFile(p) },
+          // [alpha.120 ข้อ 7]
           { label: t("ui.app.changeName2"), click: () => renameMemo(p) },
+          { label: t("ui.app.historyVersion2"), click: async () => {
+            const { fileVersionDialog: fileVersionDialog2 } = await Promise.resolve().then(() => (init_dialogs(), dialogs_exports));
+            await fileVersionDialog2(p, title2, { onRestored: async () => {
+              closeTab(p);
+              await buildTree2();
+            } });
+          } },
           "-",
           // ทางกลับของคำสั่ง "ย้ายออกไปที่ MEMO" — เดิมทำได้ทางเดียวคือลากวาง (บั๊กข้อ 8)
           { label: t("ui.app.moveBackInChapter"), click: async () => {
@@ -162459,6 +163212,7 @@ ${css}
           { label: iconHtml("trash", 14) + t("ui.app.delCat"), danger: true, click: () => deleteWikiCat(cat, catDir) }
         );
         else items.push("-", { label: iconHtml("edit", 14) + t("ui.app.changeIconNameShow"), click: () => editWikiCat(cat) });
+        items.push({ label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(catDir) });
         popupMenu(e.clientX, e.clientY, items);
       };
       cHead.addEventListener("dragover", (e) => {
@@ -162481,7 +163235,14 @@ ${css}
         await moveEntityToCat(data2.path, catDir);
       });
       if (await kapi.exists(catDir)) {
-        for (const f of await kapi.listFiles(catDir, ".json")) {
+        const entFiles = await kapi.listFiles(catDir, ".json");
+        let catRel = [];
+        try {
+          catRel = (await kapi.relative(state.root, catDir)).split(/[\\/]/).filter(Boolean);
+        } catch {
+        }
+        const entRows = [];
+        for (const f of entFiles) {
           const p = await kapi.join(catDir, f);
           let name5 = f.replace(/\.json$/, "");
           let ent = null;
@@ -162490,11 +163251,24 @@ ${css}
             name5 = ent.name || name5;
           } catch {
           }
+          entRows.push({
+            f,
+            p,
+            name: name5,
+            ent,
+            mtime: sortMode === "modified" ? await kapi.mtime(p).catch(() => 0) : 0
+          });
+        }
+        if (sortMode === "name") entRows.sort((a, b) => _thCmp(a.name, b.name));
+        else if (sortMode === "modified") entRows.sort((a, b) => b.mtime - a.mtime);
+        for (const { f, p, name: name5, ent } of entRows) {
           const it = el("div", "scene wiki-ent");
           it.innerHTML = catIconHtml(cat) + " " + name5;
-          it.dataset.search = entitySearchBlob(name5, ent, cat, scopeLabel2);
-          it.title = name5 + (ent && ent.summary ? " \u2014 " + String(ent.summary).slice(0, 120) : "");
+          it.dataset.search = entitySearchBlob(name5, ent, cat, scopeLabel2) + " " + f.toLowerCase();
+          it.title = name5 + "  (" + f + ")" + (ent && ent.summary ? String.fromCharCode(10) + String(ent.summary).slice(0, 120) : "");
           it.dataset.path = p;
+          addVersionBadge(it, snapCounts, snapKey(...catRel, f));
+          applyRowOpenState(it, p);
           it.onclick = () => openEntity(p);
           it.draggable = true;
           it.addEventListener("dragstart", (e) => {
@@ -162506,6 +163280,8 @@ ${css}
           it.oncontextmenu = (e) => {
             e.preventDefault();
             popupMenu(e.clientX, e.clientY, [
+              { label: iconHtml("plus", 14) + t("ui.app.newListNew"), click: () => addEntity(catDir, cat) },
+              "-",
               { label: t("ui.common.open"), click: it.onclick },
               {
                 label: iconHtml("search", 14) + t("ui.common.searchSceneFindOn"),
@@ -162560,15 +163336,37 @@ ${css}
     const recDirs = await kapi.exists(recDir) ? await kapi.listDirs(recDir) : [];
     const all = [...recItems, ...recDirs];
     const tSec = el("div", "sec");
-    tSec.append(el("div", "sec-title", tf("ui.app.trash", all.length)));
+    const tHead = el("div", "sec-title", tf("ui.app.trash", all.length));
+    tSec.append(tHead);
+    makeAccordion(tHead, tSec, "sec:__trash__");
+    tHead.oncontextmenu = (e) => {
+      e.preventDefault();
+      popupMenu(e.clientX, e.clientY, [
+        {
+          label: tf("ui.tree.emptyTrashN", all.length),
+          danger: all.length > 0,
+          click: () => emptyRecycle(all.length)
+        },
+        { label: t("ui.tree.purgeNowByDays"), click: async () => {
+          await purgeRecycle(state.root);
+          await buildTree2();
+        } },
+        "-",
+        { label: t("ui.tree.trashSettings"), click: () => settingsDialog("write", { focus: "#st-recycle" }) },
+        { label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(recDir) }
+      ]);
+    };
     for (const f of all) {
       const p = await kapi.join(recDir, f);
       const label = f.replace(/^[a-z0-9]+-/, "");
       const it = el("div", "scene trash-item", "\u267B " + label);
+      it.dataset.search = (label + " " + f).toLowerCase();
+      it.title = label + "  (" + f + ")";
       it.oncontextmenu = it.onclick = (e) => {
         e.preventDefault();
         popupMenu(e.clientX, e.clientY, [
           { label: t("ui.app.recoverRestore"), click: () => restoreFromTrash(p, f) },
+          { label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(p) },
           "-",
           { label: t("ui.app.del"), danger: true, click: async () => {
             if (!await confirmBox(tf("ui.app.delRecoverRestoreCant", label), t("ui.app.del"))) return;
@@ -162602,6 +163400,9 @@ ${css}
     real.scrollLeft = scrollLeft;
     const q = $("#tree-search");
     if (q && q.value) filterTree(q.value);
+    _rowStateSig = "";
+    refreshTreeRowStates();
+    setupTreeInteractions();
     updateSummaryBar().catch(() => {
     });
   }
@@ -163000,7 +163801,7 @@ ${css}
           }
         },
         onOpen: (n2) => openEntity(n2.file),
-        onOpenScene: (file) => openScene(file, file.split(/[\\/]/).pop().replace(/\.\w+$/, "")),
+        onOpenScene: (file) => openScene(file, null),
         onCreateRel: async (a, b, type, label) => {
           try {
             if (!a.file || !b.file) return;
@@ -163352,7 +164153,7 @@ ${css}
         if (!f) return;
         const abs = await plannerAbs(f);
         if (/\.json$/i.test(abs) || /[\\/](Wiki|Bible)[\\/]/i.test(abs)) await openEntity(abs);
-        else await openScene(abs, abs.split(/[\\/]/).pop());
+        else await openScene(abs, null);
         bindTabStripMenus();
         if (state.tabs.has(abs)) floatTab(abs);
       },
@@ -163513,7 +164314,7 @@ ${css}
     const tree = $("#tree");
     if (!tree) return false;
     const row2 = path ? tree.querySelector(`.scene[data-planner="${CSS.escape(path)}"]`) : null;
-    for (const prev of tree.querySelectorAll(".scene.k-row-open")) {
+    for (const prev of tree.querySelectorAll(".scene[data-planner].k-row-open")) {
       if (prev === row2) continue;
       prev.classList.remove("k-row-open", "k-row-unsaved");
     }
@@ -163659,7 +164460,12 @@ ${css}
       e.preventDefault();
       popupMenu(e.clientX, e.clientY, [
         { label: t("ui.app.boardNew"), click: () => newPlannerBoard() },
-        { label: t("ui.app.openPlanner"), click: () => openPlanner() }
+        { label: t("ui.app.openPlanner"), click: () => openPlanner() },
+        {
+          label: t("ui.app.findDiskFindOn"),
+          // [alpha.120 ข้อ 7]
+          click: async () => kapi.revealInOS(await kapi.join(state.root, "Planners"))
+        }
       ]);
     };
     const cur = plannerInst && plannerInst.data ? plannerInst.data.getPath() : null;
@@ -163683,7 +164489,11 @@ ${css}
           { label: t("ui.app.openBoard"), click: () => openPlanner(b.path) },
           { label: t("ui.app.changeName2"), click: () => renamePlannerBoard(b) },
           { label: t("ui.common.dup"), click: () => duplicatePlannerBoard(b) },
+          { label: t("ui.app.boardNew"), click: () => newPlannerBoard() },
+          // [alpha.120 ข้อ 10]
           { label: t("ui.common.showFolder"), click: () => kapi.revealInOS(b.path) },
+          { label: t("ui.app.findDiskFindOn"), click: () => revealFile(b.path) },
+          // [alpha.120 ข้อ 7]
           "-",
           { label: t("ui.app.delMoveTrash"), danger: true, click: async () => {
             await deleteToTrash(b.path, b.name);
@@ -163782,6 +164592,15 @@ ${css}
           ev.preventDefault();
           popupMenu(ev.clientX, ev.clientY, [
             { label: t("ui.app.openMap"), click: () => openMapFromTree(m.id) },
+            {
+              label: t("ui.app.addMap"),
+              // [alpha.120 ข้อ 10]
+              click: async () => {
+                await openMaps();
+                await addMapFlow();
+                await refreshTreeQueued();
+              }
+            },
             { label: t("ui.app.changeName2"), click: () => renameMapFromTree(m.id) },
             { label: t("ui.app.setCat"), click: () => setMapCategoryFromTree(m.id) },
             { label: t("ui.common.exportPNG"), click: async () => {
@@ -163791,6 +164610,8 @@ ${css}
             } },
             "-",
             { label: t("ui.app.openMapsJson"), click: () => openPlainFile(jsonPath, "maps.json") },
+            { label: t("ui.app.findDiskFindOn"), click: () => revealFile(jsonPath) },
+            // [alpha.120 ข้อ 7]
             { label: t("ui.app.delMap"), danger: true, click: () => deleteMapFromTree(m.id, m.name) }
           ]);
         };
@@ -163832,7 +164653,14 @@ ${css}
     head2.oncontextmenu = (e) => {
       e.preventDefault();
       popupMenu(e.clientX, e.clientY, [
-        { label: t("ui.app.openGraphBreakBranch"), click: () => openBranchingTree() }
+        { label: t("ui.app.openGraphBreakBranch"), click: () => openBranchingTree() },
+        { label: t("ui.app.newNewPlan"), click: () => add.onclick({ stopPropagation() {
+        } }) },
+        {
+          label: t("ui.app.findDiskFindOn"),
+          // [alpha.120 ข้อ 7]
+          click: async () => kapi.revealInOS(await kapi.join(state.root, "Branches"))
+        }
       ]);
     };
     for (const p of plans) {
@@ -163895,6 +164723,8 @@ ${css}
             await m.comparePlanDialog();
           } },
           { label: t("ui.common.showFolder"), click: () => kapi.revealInOS(p.path) },
+          { label: t("ui.app.findDiskFindOn"), click: () => revealFile(p.path) },
+          // [alpha.120 ข้อ 7]
           "-",
           { label: t("ui.app.delMoveTrash"), danger: true, click: async () => {
             await deleteToTrash(p.path, p.name);
@@ -164651,7 +165481,34 @@ ${css}
       return;
     }
     body.replaceChildren();
-    body.append(el("div", "props-name", "\u{1F4C4} " + row2.title));
+    const nameRow = el("div", "props-name");
+    nameRow.append(document.createTextNode("\u{1F4C4} "));
+    const nameIn = el("input", "props-name-input");
+    nameIn.value = row2.title || "";
+    nameIn.title = t("ui.props.renameHint");
+    const commitName = async () => {
+      const v2 = nameIn.value.trim();
+      if (!v2 || v2 === row2.title) {
+        nameIn.value = row2.title || "";
+        return;
+      }
+      await setSceneTitle(dPath, ch, row2, v2);
+      row2.title = v2;
+    };
+    nameIn.addEventListener("blur", () => commitName().catch(() => {
+    }));
+    nameIn.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        nameIn.blur();
+      }
+      if (ev.key === "Escape") {
+        nameIn.value = row2.title || "";
+        nameIn.blur();
+      }
+    });
+    nameRow.append(nameIn);
+    body.append(nameRow);
     const lockRow = el("div", "props-lock");
     const lockChk = el("input", null);
     lockChk.type = "checkbox";
@@ -164744,6 +165601,16 @@ ${css}
     const iFlag = mkChk(t("ui.common.pinPin"), row2.flag);
     const iTags = mk2(t("ui.common.tag2"), (row2.tags || []).join(", "));
     const iNote = mk2(t("ui.common.note"), row2.note, "textarea");
+    const iFuture = mk2(t("ui.scene.futureNoteWriter"), row2.futureNote || "", "textarea");
+    iFuture.placeholder = t("ui.scene.noteWriterShowOnly");
+    const iFb = mkChk(t("ui.common.flashback"), row2.isFlashback);
+    const iFf = mkChk(t("ui.common.pageFlashforward"), row2.isFlashforward);
+    iFb.addEventListener("change", () => {
+      if (iFb.checked) iFf.checked = false;
+    });
+    iFf.addEventListener("change", () => {
+      if (iFf.checked) iFb.checked = false;
+    });
     try {
       const mapRow = await buildShowOnMapRow(row2);
       if (stale2()) return;
@@ -164764,6 +165631,10 @@ ${css}
       row2.flag = iFlag.checked;
       row2.note = iNote.value;
       row2.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
+      row2.futureNote = iFuture.value;
+      if (iFb.checked && iFf.checked) iFf.checked = false;
+      row2.isFlashback = iFb.checked;
+      row2.isFlashforward = iFf.checked;
       const sp = parseInt(iStartPage.value, 10);
       if (Number.isFinite(sp) && sp > 0) row2.startPage = sp;
       else delete row2.startPage;
@@ -164779,7 +165650,10 @@ ${css}
       row2.flag,
       row2.note,
       row2.tags,
-      row2.startPage
+      row2.startPage,
+      row2.futureNote,
+      row2.isFlashback,
+      row2.isFlashforward
     ]);
     let lastSaved = (collect(), snapshot());
     const commit = async (rebuildTree) => {
@@ -164790,14 +165664,18 @@ ${css}
       statusLine.textContent = t("ui.app.busySave2");
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
       try {
-        const { meta: meta2, body: mbody } = (0, import_md15.parseMdFile)(await kapi.readFile(file0));
-        meta2.pov = row2.pov;
-        meta2.tags = row2.tags;
-        meta2.emotion = row2.emotion;
-        meta2.conflict = row2.conflict;
-        meta2.note = row2.note;
-        await kapi.writeFile(file0, (0, import_md15.dumpMdFile)(meta2, mbody));
-      } catch {
+        const props = {};
+        for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
+        if (!await writeSceneMeta(file0, props)) log("warn", t("ui.props.writeMetaFail"), { file: file0 });
+        const liveTab = state.tabs.get(file0);
+        if (liveTab && liveTab.meta) {
+          try {
+            liveTab.meta = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).meta;
+          } catch {
+          }
+        }
+      } catch (e) {
+        log("warn", t("ui.props.writeMetaFail"), e);
       }
       statusLine.innerHTML = iconHtml("check", 14) + t("ui.common.saveDone");
       if (rebuildTree) await buildTree2();
@@ -164827,7 +165705,7 @@ ${css}
         attachAiFieldButton(rowOf.get(inp), inp, key2, aiCtx, () => scheduleSave());
       }
     }
-    for (const i5 of [iSyn, iStoryDate, iPov, iEmotion, iConflict, iTags, iNote]) {
+    for (const i5 of [iSyn, iStoryDate, iPov, iEmotion, iConflict, iTags, iNote, iFuture]) {
       i5.addEventListener("input", scheduleSave);
       i5.addEventListener("blur", () => {
         clearTimeout(saveJob);
@@ -164835,7 +165713,7 @@ ${css}
         });
       });
     }
-    for (const s of [iStatus, iColor, iFlag]) {
+    for (const s of [iStatus, iColor, iFlag, iFb, iFf]) {
       s.addEventListener("change", () => {
         clearTimeout(saveJob);
         commit(true).catch(() => {
@@ -165664,7 +166542,7 @@ ${css}
   async function openPathSmart(file) {
     if (!file) return;
     try {
-      if (/\.md$/i.test(file)) await openScene(file, file.split(/[\\/]/).pop().replace(/\.md$/i, ""));
+      if (/\.md$/i.test(file)) await openScene(file, null);
       else if (/\.json$/i.test(file)) await openEntity(file);
       else await openPlainFile(file);
     } catch (e) {
@@ -166616,6 +167494,7 @@ ${css}
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
     const { meta: meta2, body } = (0, import_md15.parseMdFile)(raw);
+    title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
     pane.appendChild(ws);
@@ -167167,6 +168046,14 @@ ${css}
     updateProgressBar();
   }
   function updateDirtyBadge() {
+    try {
+      const sig = (state.active ? state.active.file : "") + "|" + [...state.tabs.values()].filter((t3) => t3.dirty).map((t3) => t3.file).sort().join(";");
+      if (sig !== _rowStateSig) {
+        _rowStateSig = sig;
+        refreshTreeRowStates();
+      }
+    } catch {
+    }
     const n2 = [...state.tabs.values()].filter((t3) => t3.dirty).length;
     const fileMenu = document.querySelector('.tb-menu[data-m="File"]');
     if (fileMenu) {
@@ -167223,6 +168110,7 @@ ${css}
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     setStatus(t("ui.app.saveDone") + tab.title);
+    updateDirtyBadge();
     refreshCommentsPanel();
     broadcastActiveScene();
     if (state.settings.autoBackup !== false && isSnapshotable(tab))
@@ -170867,7 +171755,7 @@ ${css}
       chip.onclick = () => {
         chip.classList.toggle("on");
         const q = $("#tree-search");
-        const active = [...statusesEl.querySelectorAll(".filter-chip.on")].map((c) => c.textContent);
+        const active = [...statusesEl.querySelectorAll(".filter-chip.on")].map((c) => c.dataset.status || c.textContent);
         if (active.length) {
           q.value = active.map((s) => "status:" + s).join(" OR ");
         } else {
@@ -170998,6 +171886,12 @@ ${css}
   async function updateSummaryBar() {
     const bar = $("#summary-bar");
     if (!bar || !state.root) return;
+    if (!summaryBarOn()) {
+      bar.style.display = "none";
+      bar.replaceChildren();
+      return;
+    }
+    bar.style.display = "";
     try {
       let totalScenes = 0, totalWords = 0, totalChars = 0, totalLocations = 0;
       for (const sec of await listSections()) {
@@ -176521,9 +177415,9 @@ ${css}
       {
         const bx = document.querySelector(".k-dialog");
         const inps = bx.querySelectorAll("input.wiki-input");
-        inps[1].value = "7";
-        inps[3].value = "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07";
-        inps[4].value = "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D";
+        inps[2].value = "7";
+        inps[4].value = "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07";
+        inps[5].value = "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D";
         bx.querySelectorAll("textarea")[1].value = "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A";
         bx.querySelectorAll("select")[0].value = "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19";
         bx.querySelectorAll("select")[1].value = "#6fae6f";
@@ -180173,7 +181067,7 @@ ${css}
           );
           check2(
             "\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E44\u0E21\u0E48 duplicate \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E01",
-            bodyEl.querySelectorAll("textarea.wiki-input").length === 2 && bodyEl.querySelectorAll("input.wiki-input").length === 6,
+            bodyEl.querySelectorAll("textarea.wiki-input").length === 3 && bodyEl.querySelectorAll("input.wiki-input").length === 6,
             `ta=${bodyEl.querySelectorAll("textarea.wiki-input").length} inp=${bodyEl.querySelectorAll("input.wiki-input").length}`
           );
           check2(
@@ -195397,6 +196291,585 @@ ${css}
           );
         }
       }
+      {
+        const w120 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const menuOf120 = (el0, x = 60, y = 60) => {
+          closeMenu();
+          el0.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+          const m = document.querySelector(".k-menu");
+          return m ? m.textContent : "";
+        };
+        const q120 = $("#tree-search");
+        if (q120) {
+          q120.value = "";
+          q120.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        setTreeScope(null);
+        const sortSel120 = $("#filter-sort");
+        if (sortSel120) {
+          sortSel120.value = "";
+          setTreeSortMode("");
+        }
+        await buildTree2();
+        {
+          const caret = document.querySelector("#tree .sec-title .tw");
+          check2("[120-1] \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E21\u0E35\u0E25\u0E39\u0E01\u0E28\u0E23\u0E1E\u0E31\u0E1A/\u0E01\u0E32\u0E07", !!caret);
+          check2(
+            "[120-1] \u2605 \u0E25\u0E39\u0E01\u0E28\u0E23\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E0A\u0E1F\u0E23\u0E2D\u0E19 SVG \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30 \u25B8/\u25BE",
+            !!caret && !!caret.querySelector("svg") && !/[▸▾]/.test(caret.textContent),
+            caret ? caret.innerHTML.slice(0, 40) : ""
+          );
+          const box120 = caret.parentElement.parentElement;
+          const openBefore = caret.classList.contains("tw-open");
+          check2(
+            "[120-1] \u0E01\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48 = \u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A tw-open \xB7 \u0E1E\u0E31\u0E1A\u0E2D\u0E22\u0E39\u0E48 = \u0E44\u0E21\u0E48\u0E21\u0E35",
+            openBefore === !box120.classList.contains("collapsed")
+          );
+          caret.click();
+          await w120(30);
+          check2(
+            "[120-1] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1E\u0E25\u0E34\u0E01\u0E17\u0E31\u0E49\u0E07\u0E04\u0E25\u0E32\u0E2A\u0E02\u0E2D\u0E07\u0E25\u0E39\u0E01\u0E28\u0E23\u0E41\u0E25\u0E30\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07",
+            caret.classList.contains("tw-open") === !openBefore && box120.classList.contains("collapsed") === openBefore
+          );
+          caret.click();
+          await w120(30);
+          check2("[120-1] \u0E04\u0E25\u0E34\u0E01\u0E0B\u0E49\u0E33\u0E01\u0E25\u0E31\u0E1A\u0E2A\u0E20\u0E32\u0E1E\u0E40\u0E14\u0E34\u0E21", caret.classList.contains("tw-open") === openBefore);
+        }
+        const scRows120 = () => [...document.querySelectorAll("#tree .scene[data-path]")].filter((r) => r._ctx);
+        {
+          const rows = scRows120();
+          check2("[120-3] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49", rows.length >= 2, rows.length);
+          check2(
+            "[120-3] \u2605 hover \u0E17\u0E38\u0E01\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E1A\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25",
+            rows.every((r) => r.title.includes(r._ctx.sc.fileName)),
+            rows.filter((r) => !r.title.includes(r._ctx.sc.fileName)).map((r) => r.title.split(String.fromCharCode(10))[0]).slice(0, 2).join(" | ")
+          );
+          const ent120 = document.querySelector("#tree .scene.wiki-ent");
+          check2(
+            "[120-3] \u2605 \u0E41\u0E16\u0E27\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki \u0E01\u0E47\u0E1A\u0E2D\u0E01\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25 .json",
+            !!ent120 && /\.json\)/.test(ent120.title),
+            ent120 ? ent120.title : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27"
+          );
+          const target120 = rows[0];
+          await snapshotFile(target120.dataset.path, "\u0E17\u0E14\u0E2A\u0E2D\u0E1A120");
+          await buildTree2();
+          const again120 = scRows120().find((r) => r.dataset.path === target120.dataset.path);
+          const badge120 = again120 && again120.querySelector(".sc-vers");
+          check2(
+            "[120-17] \u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E21\u0E35\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E44\u0E27\u0E49\u0E44\u0E14\u0E49\u0E1B\u0E49\u0E32\u0E22 (n) \u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22",
+            !!badge120 && /^\(\d+\)$/.test(badge120.textContent),
+            badge120 ? badge120.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22"
+          );
+          check2(
+            "[120-17] \u0E1B\u0E49\u0E32\u0E22 (n) \u0E19\u0E31\u0E1A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C",
+            !!badge120 && parseInt(badge120.textContent.replace(/\D/g, ""), 10) === (await listSnapshots(target120.dataset.path)).length,
+            badge120 ? badge120.textContent : ""
+          );
+        }
+        {
+          const namesIn = () => [...document.querySelectorAll("#tree .chapter")].map((ch) => [...ch.querySelectorAll(".scene")].filter((r) => r._ctx).map((r) => r._ctx.sc.title)).filter((a) => a.length >= 2)[0] || [];
+          const byOrder = namesIn();
+          check2("[120-2] \u0E2B\u0E32\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 2 \u0E09\u0E32\u0E01\u0E44\u0E14\u0E49", byOrder.length >= 2, JSON.stringify(byOrder));
+          sortSel120.value = "name";
+          await sortSel120.onchange();
+          const byName = namesIn();
+          const wantName = byName.slice().sort((a, b) => String(a).localeCompare(String(b), "th"));
+          check2(
+            '[120-2] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E0A\u0E37\u0E48\u0E2D" \u0E41\u0E25\u0E49\u0E27\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E34\u0E14\u0E02\u0E36\u0E49\u0E19)',
+            JSON.stringify(byName) === JSON.stringify(wantName),
+            JSON.stringify(byName)
+          );
+          check2("[120-2] \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49\u0E15\u0E48\u0E2D\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", treeSortMode() === "name");
+          sortSel120.value = "words";
+          await sortSel120.onchange();
+          const wc = [...document.querySelectorAll("#tree .chapter")].map((ch) => [...ch.querySelectorAll(".scene")].filter((r) => r._ctx).map((r) => r._ctx.sc.wordCount || 0)).filter((a) => a.length >= 2)[0] || [];
+          check2(
+            '[120-2] \u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33" \u0E41\u0E25\u0E49\u0E27\u0E40\u0E23\u0E35\u0E22\u0E07\u0E21\u0E32\u0E01\u0E44\u0E1B\u0E19\u0E49\u0E2D\u0E22',
+            wc.every((v4, i5) => i5 === 0 || wc[i5 - 1] >= v4),
+            JSON.stringify(wc)
+          );
+          sortSel120.value = "";
+          await sortSel120.onchange();
+          check2(
+            "[120-2] \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21 order \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+            JSON.stringify(namesIn()) === JSON.stringify(byOrder),
+            JSON.stringify(namesIn())
+          );
+        }
+        {
+          const visRow = document.querySelector("#tree .scene.vis-row");
+          if (visRow) {
+            check2("[120-8] \u2605 \u0E41\u0E16\u0E27\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14 data-nofilter \u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27", !visRow.dataset.nofilter);
+            check2("[120-8] \u0E41\u0E16\u0E27\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E2B\u0E49\u0E04\u0E49\u0E19", !!visRow.dataset.search);
+            filterTree("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E08\u0E2D\u0E04\u0E33\u0E19\u0E35\u0E49\u0E41\u0E19\u0E48\u0E19\u0E2D\u0E19120");
+            check2(
+              "[120-8] \u2605\u2605 \u0E04\u0E49\u0E19\u0E04\u0E33\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07 \u2192 \u0E41\u0E16\u0E27\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E04\u0E49\u0E32\u0E07\u0E42\u0E0A\u0E27\u0E4C\u0E15\u0E25\u0E2D\u0E14)",
+              visRow.style.display === "none",
+              visRow.style.display
+            );
+            filterTree("");
+            check2("[120-8] \u0E25\u0E49\u0E32\u0E07\u0E04\u0E33\u0E04\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E2A\u0E14\u0E07", visRow.style.display !== "none");
+          } else {
+            check2("[120-8] (\u0E23\u0E2D\u0E1A\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E15\u0E32\u0E23\u0E32\u0E07\u0E40\u0E25\u0E48\u0E32\u0E14\u0E49\u0E27\u0E22\u0E20\u0E32\u0E1E \u2014 \u0E02\u0E49\u0E32\u0E21\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E0B\u0E37\u0E48\u0E2D\u0E2A\u0E31\u0E15\u0E22\u0E4C)", true);
+          }
+        }
+        {
+          const rows = scRows120();
+          const t1 = rows[0]._ctx.sc.title;
+          const other0 = rows.find((r) => r._ctx.sc.title !== t1);
+          const t23 = other0 ? other0._ctx.sc.title : t1;
+          filterTree(t1);
+          const only1 = scRows120().filter((r) => r.style.display !== "none").map((r) => r._ctx.sc.title);
+          check2(
+            "[120-4] \u0E04\u0E49\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E35\u0E22\u0E27 \u2192 \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E09\u0E32\u0E01\u0E19\u0E31\u0E49\u0E19",
+            only1.includes(t1) && !only1.includes(t23),
+            JSON.stringify(only1)
+          );
+          filterTree(t1 + " OR " + t23);
+          const both = scRows120().filter((r) => r.style.display !== "none").map((r) => r._ctx.sc.title);
+          check2(
+            "[120-4] \u2605\u2605 OR \u0E44\u0E14\u0E49\u0E1C\u0E25\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E1D\u0E31\u0E48\u0E07 (\u0E15\u0E49\u0E19\u0E15\u0E2D\u0E02\u0E2D\u0E07\u0E0A\u0E34\u0E1B\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E2A\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E27\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32)",
+            both.includes(t1) && both.includes(t23),
+            JSON.stringify(both)
+          );
+          filterTree("-" + t1);
+          const neg = scRows120().filter((r) => r.style.display !== "none").map((r) => r._ctx.sc.title);
+          check2('[120-4] \u2605 "-\u0E04\u0E33" \u0E15\u0E31\u0E14\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49', !neg.includes(t1), JSON.stringify(neg));
+          filterTree("file:" + rows[0]._ctx.sc.fileName.replace(/\.md$/i, ""));
+          check2(
+            "[120-4] \u2605 \u0E04\u0E49\u0E19\u0E14\u0E49\u0E27\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C (file:) \u0E40\u0E08\u0E2D",
+            scRows120().some((r) => r.style.display !== "none" && r.dataset.path === rows[0].dataset.path)
+          );
+          filterTree("");
+        }
+        {
+          const row2 = scRows120()[0];
+          const file120 = row2.dataset.path;
+          await openScene(file120, row2._ctx.sc.title);
+          await w120(200);
+          const liveRow = () => document.querySelector(
+            '#tree .scene[data-path="' + CSS.escape(file120) + '"]'
+          );
+          check2(
+            "[120-5] \u2605 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E41\u0E01\u0E49\u0E2D\u0E22\u0E39\u0E48 = \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32 (k-row-open)",
+            !!liveRow() && liveRow().classList.contains("k-row-open"),
+            liveRow() ? liveRow().className : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E41\u0E16\u0E27"
+          );
+          state.tabs.get(file120).dirty = false;
+          updateDirtyBadge();
+          await w120(60);
+          check2(
+            "[120-5] \u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E15\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 = \u0E2B\u0E19\u0E32\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E40\u0E2D\u0E35\u0E22\u0E07",
+            !liveRow().classList.contains("k-row-unsaved"),
+            liveRow().className
+          );
+          check2(
+            "[120-5] \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E21\u0E35\u0E1C\u0E25\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E04\u0E25\u0E32\u0E2A)",
+            parseInt(getComputedStyle(liveRow()).fontWeight, 10) >= 600,
+            getComputedStyle(liveRow()).fontWeight
+          );
+          markDirty(state.tabs.get(file120));
+          await w120(80);
+          check2(
+            "[120-5] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E01\u0E49\u0E41\u0E25\u0E30\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 = \u0E2B\u0E19\u0E32 + \u0E40\u0E2D\u0E35\u0E22\u0E07",
+            liveRow().classList.contains("k-row-open") && liveRow().classList.contains("k-row-unsaved"),
+            liveRow().className
+          );
+          check2(
+            "[120-5] \u0E15\u0E31\u0E27\u0E40\u0E2D\u0E35\u0E22\u0E07\u0E21\u0E35\u0E1C\u0E25\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D",
+            getComputedStyle(liveRow()).fontStyle === "italic",
+            getComputedStyle(liveRow()).fontStyle
+          );
+          check2(
+            '[120-5] \u2605 \u0E40\u0E25\u0E34\u0E01\u0E43\u0E0A\u0E49\u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22\u0E41\u0E16\u0E27\u0E41\u0E25\u0E49\u0E27 (\u0E01\u0E0E\u0E16\u0E32\u0E27\u0E23\u0E02\u0E49\u0E2D 4)',
+            ["none", "normal", ""].includes(getComputedStyle(liveRow(), "::after").content),
+            getComputedStyle(liveRow(), "::after").content
+          );
+          const other = scRows120().find((r) => r.dataset.path !== file120);
+          if (other) {
+            await openScene(other.dataset.path, other._ctx.sc.title);
+            await w120(200);
+            check2(
+              "[120-5] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E2D\u0E37\u0E48\u0E19 \u2192 \u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E40\u0E2D\u0E35\u0E22\u0E07\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
+              !liveRow().classList.contains("k-row-open") && liveRow().classList.contains("k-row-unsaved"),
+              liveRow().className
+            );
+          }
+          await saveTab(state.tabs.get(file120));
+          await w120(200);
+          check2(
+            "[120-5] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E35\u0E22\u0E07\u0E2B\u0E32\u0E22\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49",
+            !!liveRow() && !liveRow().classList.contains("k-row-unsaved"),
+            liveRow() ? liveRow().className : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E41\u0E16\u0E27"
+          );
+        }
+        {
+          const secT = document.querySelector("#tree .sec-title");
+          const secMenu = menuOf120(secT);
+          check2('[120-9] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E40\u0E25\u0E48\u0E21\u0E21\u0E35 "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E21"', secMenu.includes(t("ui.app.manageBook")), secMenu.slice(0, 120));
+          check2(
+            "[120-10] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21\u0E41\u0E25\u0E30\u0E1A\u0E17",
+            secMenu.includes(t("ui.app.addBookNew")) && secMenu.includes(t("ui.tree.newChapterHere"))
+          );
+          check2('[120-7] \u0E40\u0E21\u0E19\u0E39\u0E40\u0E25\u0E48\u0E21\u0E21\u0E35 "\u0E2B\u0E32\u0E43\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C"', secMenu.includes(t("ui.app.findDiskFindOn")));
+          closeMenu();
+          const chT = document.querySelector("#tree .ch-title");
+          const chMenu = menuOf120(chT);
+          check2(
+            "[120-10] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E1A\u0E17\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E1A\u0E17\u0E41\u0E25\u0E30\u0E09\u0E32\u0E01",
+            chMenu.includes(t("ui.tree.newChapterHere")) && chMenu.includes(t("ui.app.addScene")),
+            chMenu.slice(0, 120)
+          );
+          check2('[120-7] \u0E40\u0E21\u0E19\u0E39\u0E1A\u0E17\u0E21\u0E35 "\u0E2B\u0E32\u0E43\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C"', chMenu.includes(t("ui.app.findDiskFindOn")));
+          check2('[120-16] \u0E40\u0E21\u0E19\u0E39\u0E1A\u0E17\u0E21\u0E35 "\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48"', chMenu.includes(t("ui.tree.pasteHere")));
+          closeMenu();
+          clearTreeSel();
+          const scMenu = menuOf120(scRows120()[0]);
+          check2(
+            "[120-10] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E09\u0E32\u0E01\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E30\u0E1A\u0E17",
+            scMenu.includes(t("ui.tree.newSceneHere")) && scMenu.includes(t("ui.tree.newChapterHere")),
+            scMenu.slice(0, 120)
+          );
+          check2('[120-7] \u0E40\u0E21\u0E19\u0E39\u0E09\u0E32\u0E01\u0E21\u0E35 "\u0E2B\u0E32\u0E43\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C"', scMenu.includes(t("ui.app.findDiskFindOn")));
+          closeMenu();
+          const entRow = document.querySelector("#tree .scene.wiki-ent");
+          if (entRow) {
+            const entMenu = menuOf120(entRow);
+            check2("[120-10] \u0E40\u0E21\u0E19\u0E39\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 Wiki \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49", entMenu.includes(t("ui.app.newListNew")));
+            check2('[120-7] \u0E40\u0E21\u0E19\u0E39\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E21\u0E35 "\u0E2B\u0E32\u0E43\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C"', entMenu.includes(t("ui.app.findDiskFindOn")));
+            closeMenu();
+          }
+          const noReveal = [];
+          for (const el0 of document.querySelectorAll("#tree .sec-title, #tree .ch-title, #tree .scene")) {
+            if (!el0.oncontextmenu) continue;
+            const txt = menuOf120(el0);
+            if (!txt) continue;
+            if (!txt.includes(t("ui.app.findDiskFindOn")) && !txt.includes(t("ui.common.showFolder")) && !txt.includes(t("ui.common.showFolderImages")) && !txt.includes(t("ui.vis.reveal")))
+              noReveal.push(el0.className + "::" + txt.slice(0, 40));
+            closeMenu();
+          }
+          check2(
+            "[120-7] \u2605\u2605 \u0E17\u0E38\u0E01\u0E40\u0E21\u0E19\u0E39\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E21\u0E35\u0E17\u0E32\u0E07\u0E2B\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C",
+            noReveal.length === 0,
+            noReveal.slice(0, 3).join(" | ")
+          );
+        }
+        {
+          const treeEl = $("#tree");
+          closeMenu();
+          treeEl.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 40, clientY: 400 }));
+          const m = document.querySelector(".k-menu");
+          const txt = m ? m.textContent : "";
+          check2("[120-11] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E21\u0E35\u0E40\u0E21\u0E19\u0E39\u0E02\u0E36\u0E49\u0E19", !!m);
+          for (const pair of [
+            ["\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E25\u0E48\u0E21", "ui.tree.newBook"],
+            ["\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17", "ui.tree.newChapter"],
+            ["\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E09\u0E32\u0E01", "ui.tree.newScene"],
+            ["\u0E42\u0E19\u0E49\u0E15", "ui.app.newMemoNew"],
+            ["\u0E2B\u0E21\u0E27\u0E14 Wiki", "ui.app.newCatNew"],
+            ["\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19", "ui.app.boardNew"],
+            ["\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48", "ui.app.addMap"],
+            ["\u0E27\u0E32\u0E07", "ui.tree.paste"],
+            ["\u0E01\u0E32\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", "ui.tree.expandAll"],
+            ["\u0E1E\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", "ui.tree.collapseAll"],
+            ["\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", "ui.tree.projectFolder"],
+            ["\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", "ui.tree.projectSettings"]
+          ]) {
+            check2("[120-11] \u0E40\u0E21\u0E19\u0E39\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E21\u0E35 " + pair[0], txt.includes(t(pair[1])), txt.slice(0, 100));
+          }
+          closeMenu();
+          setAllAccordions(true);
+          check2(
+            '[120-11] \u2605 "\u0E1E\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E1E\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07\u0E17\u0E38\u0E01\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D',
+            [...document.querySelectorAll("#tree .sec, #tree .chapter")].filter((b) => b.querySelector(":scope > .sec-title, :scope > .ch-title")).every((b) => b.classList.contains("collapsed"))
+          );
+          setAllAccordions(false);
+          check2(
+            '[120-11] \u2605 "\u0E01\u0E32\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E01\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49',
+            ![...document.querySelectorAll("#tree .sec, #tree .chapter")].some((b) => b.classList.contains("collapsed"))
+          );
+        }
+        {
+          setSummaryBar(false);
+          const bar = $("#summary-bar");
+          check2(
+            "[120-15] \u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E23\u0E38\u0E1B\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49 (\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E17\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27)",
+            !!bar && bar.style.display === "none" && !summaryBarOn()
+          );
+          setSummaryBar(true);
+          await w120(400);
+          check2(
+            "[120-15] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39 \u2014 \u0E42\u0E04\u0E49\u0E14\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07",
+            bar.style.display !== "none" && summaryBarOn() && bar.textContent.length > 0,
+            bar.textContent.slice(0, 40)
+          );
+          setSummaryBar(false);
+        }
+        {
+          const tHead = [...document.querySelectorAll("#tree .sec-title")].find((h) => h.oncontextmenu && /♻|ถังขยะ|Trash|Recycle/i.test(h.textContent));
+          check2("[120-13] \u0E2B\u0E32\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E40\u0E08\u0E2D", !!tHead, tHead ? tHead.textContent : "\u0E44\u0E21\u0E48\u0E1E\u0E1A");
+          if (tHead) {
+            const txt = menuOf120(tHead);
+            check2(
+              '[120-13] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E21\u0E35 "\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30"',
+              /ล้างถังขยะ|Empty trash/i.test(txt),
+              txt.slice(0, 140)
+            );
+            check2(
+              "[120-13] \u2605 \u0E21\u0E35\u0E17\u0E32\u0E07\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E1B\u0E15\u0E31\u0E49\u0E07\u0E40\u0E27\u0E25\u0E32\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
+              txt.includes(t("ui.tree.trashSettings")),
+              txt.slice(0, 140)
+            );
+            closeMenu();
+          }
+          const recDir120 = await kapi.join(state.root, "Recycle");
+          await kapi.mkdir(recDir120);
+          await kapi.writeFile(await kapi.join(recDir120, "zz-\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07.md"), "x");
+          check2("[120-13] \u0E21\u0E35\u0E02\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E16\u0E31\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E49\u0E32\u0E07", (await kapi.listFiles(recDir120)).length >= 1);
+          for (const f of await kapi.listFiles(recDir120)) await kapi.remove(await kapi.join(recDir120, f));
+          for (const d of await kapi.listDirs(recDir120)) await kapi.remove(await kapi.join(recDir120, d));
+          check2(
+            "[120-13] \u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+            (await kapi.listFiles(recDir120)).length === 0 && (await kapi.listDirs(recDir120)).length === 0
+          );
+        }
+        {
+          await buildTree2();
+          const rows = scRows120();
+          check2("[120-16] \u0E21\u0E35\u0E09\u0E32\u0E01\u0E1E\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E25\u0E32\u0E22\u0E2D\u0E31\u0E19", rows.length >= 2, rows.length);
+          clearTreeSel();
+          treeSelectOnly(rows[0]);
+          check2(
+            "[120-16] \u0E04\u0E25\u0E34\u0E01\u0E1B\u0E01\u0E15\u0E34 = \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E31\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27",
+            rows[0].classList.contains("k-row-sel") && !rows[1].classList.contains("k-row-sel")
+          );
+          treeSelectClick(rows[1], { ctrlKey: true });
+          check2(
+            "[120-16] \u2605 Ctrl+\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            rows[0].classList.contains("k-row-sel") && rows[1].classList.contains("k-row-sel")
+          );
+          treeSelectClick(rows[1], { ctrlKey: true });
+          check2("[120-16] Ctrl+\u0E04\u0E25\u0E34\u0E01\u0E0B\u0E49\u0E33 = \u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E01\u0E25\u0E38\u0E48\u0E21", !rows[1].classList.contains("k-row-sel"));
+          treeSelectOnly(rows[0]);
+          treeSelectClick(rows[Math.min(2, rows.length - 1)], { shiftKey: true });
+          check2(
+            "[120-16] \u2605 Shift+\u0E04\u0E25\u0E34\u0E01 = \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E48\u0E27\u0E07",
+            document.querySelectorAll("#tree .scene.k-row-sel").length >= 2,
+            document.querySelectorAll("#tree .scene.k-row-sel").length
+          );
+          const multiMenu = menuOf120(rows[0]);
+          check2(
+            "[120-16] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E15\u0E2D\u0E19\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2B\u0E25\u0E32\u0E22\u0E2D\u0E31\u0E19 = \u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21",
+            multiMenu.includes(t("ui.tree.copy")) && multiMenu.includes(t("ui.tree.deleteSelected")),
+            multiMenu.slice(0, 120)
+          );
+          closeMenu();
+          const ctx120 = rows[0]._ctx;
+          treeSelectOnly(rows[0]);
+          check2("[120-16] \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E25\u0E07\u0E04\u0E25\u0E34\u0E1B\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49", treeCopy(null, "copy") === 1);
+          const cntOf = async () => (await kapi.readJson(await kapi.join(ctx120.dPath, "scenes.json"))).chapters[ctx120.ch.guid].length;
+          const cntBefore = await cntOf();
+          await treePaste(ctx120.dPath, ctx120.ch);
+          const cntAfter = await cntOf();
+          check2(
+            "[120-16] \u2605\u2605 Ctrl+C \u0E41\u0E25\u0E49\u0E27 Ctrl+V \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E1A\u0E17\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07",
+            cntAfter === cntBefore + 1,
+            cntBefore + " \u2192 " + cntAfter
+          );
+          const dupRow = scRows120().find((r) => r.dataset.path === rows[0].dataset.path);
+          treeSelectOnly(dupRow);
+          await treeDuplicate(null);
+          await w120(300);
+          const cntDup = await cntOf();
+          check2("[120-16] \u2605 Ctrl+D \u0E17\u0E33\u0E0B\u0E49\u0E33\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", cntDup === cntAfter + 1, cntAfter + " \u2192 " + cntDup);
+          await buildTree2();
+          const extra = scRows120().filter((r) => r._ctx.ch.guid === ctx120.ch.guid).slice(-2);
+          for (const r of extra) await deleteSceneSilent(r._ctx.dPath, r._ctx.ch, r._ctx.sc);
+          await buildTree2();
+          check2(
+            "[120-16] \u2605 \u0E25\u0E1A\u0E2B\u0E25\u0E32\u0E22\u0E44\u0E1F\u0E25\u0E4C\u0E23\u0E27\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E49\u0E07\u0E17\u0E35\u0E25\u0E30\u0E44\u0E1F\u0E25\u0E4C)",
+            await cntOf() === cntDup - extra.length,
+            cntDup + " \u2192 " + await cntOf()
+          );
+          clearTreeSel();
+          check2("[120-16] \u0E25\u0E49\u0E32\u0E07\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49", !document.querySelector("#tree .scene.k-row-sel"));
+          check2("[120-16] #tree \u0E23\u0E31\u0E1A\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E44\u0E14\u0E49 (\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E16\u0E36\u0E07\u0E08\u0E30\u0E17\u0E33\u0E07\u0E32\u0E19)", $("#tree").tabIndex === 0);
+        }
+        {
+          await buildTree2();
+          const treeEl = $("#tree");
+          const canScroll = treeEl.scrollHeight - treeEl.clientHeight > 40;
+          if (canScroll) {
+            treeEl.scrollTop = Math.min(120, treeEl.scrollHeight - treeEl.clientHeight);
+            const want = treeEl.scrollTop;
+            treeEl.dispatchEvent(new Event("scroll", { bubbles: true }));
+            await w120(250);
+            getPanelManager().collapsePanel("tree", true);
+            await w120(250);
+            getPanelManager().collapsePanel("tree", false);
+            await w120(600);
+            const back = $("#tree");
+            check2(
+              "[120-12] \u2605\u2605 \u0E1E\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E35\u0E48\u0E01\u0E25\u0E31\u0E1A \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+              Math.abs(back.scrollTop - want) <= 4,
+              "\u0E04\u0E32\u0E14 " + want + " \u0E44\u0E14\u0E49 " + back.scrollTop
+            );
+          } else {
+            check2("[120-12] (\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E2A\u0E31\u0E49\u0E19\u0E01\u0E27\u0E48\u0E32\u0E01\u0E23\u0E2D\u0E1A \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u2014 \u0E02\u0E49\u0E32\u0E21\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E0B\u0E37\u0E48\u0E2D\u0E2A\u0E31\u0E15\u0E22\u0E4C)", true);
+          }
+        }
+        {
+          await buildTree2();
+          const row2 = scRows120().find((r) => r._ctx.sc.type !== "memo") || scRows120()[0];
+          openPropsPanel(row2._ctx.dPath, row2._ctx.ch, row2._ctx.sc);
+          await w120(700);
+          const pb2 = $("#props-body");
+          check2("[120-6] \u2605 \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01", !!pb2.querySelector(".props-name-input"));
+          const labels = [...pb2.querySelectorAll(".wiki-row label")].map((l) => l.textContent);
+          check2(
+            '[120-6] \u2605\u2605 \u0E41\u0E1C\u0E07\u0E21\u0E35 "\u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15" \u0E41\u0E25\u0E30 "\u0E25\u0E48\u0E27\u0E07\u0E2B\u0E19\u0E49\u0E32" \u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E15\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07)',
+            labels.includes(t("ui.common.flashback")) && labels.includes(t("ui.common.pageFlashforward")),
+            JSON.stringify(labels)
+          );
+          check2(
+            "[120-6] \u2605 \u0E41\u0E1C\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E42\u0E19\u0E49\u0E15\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07\u0E43\u0E19\u0E2D\u0E19\u0E32\u0E04\u0E15\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07",
+            labels.includes(t("ui.scene.futureNoteWriter")),
+            JSON.stringify(labels)
+          );
+          check2(
+            "[120-6] \u0E41\u0E1C\u0E07\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E04\u0E23\u0E1A\u0E2A\u0E32\u0E21\u0E15\u0E31\u0E27 (\u0E1B\u0E31\u0E01\u0E2B\u0E21\u0E38\u0E14 \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15 \xB7 \u0E25\u0E48\u0E27\u0E07\u0E2B\u0E19\u0E49\u0E32)",
+            pb2.querySelectorAll(".wiki-check").length === 3,
+            pb2.querySelectorAll(".wiki-check").length
+          );
+          const cks = pb2.querySelectorAll(".wiki-check");
+          cks[1].checked = false;
+          cks[2].checked = false;
+          cks[1].dispatchEvent(new Event("change", { bubbles: true }));
+          await w120(700);
+          cks[1].checked = true;
+          cks[1].dispatchEvent(new Event("change", { bubbles: true }));
+          await w120(700);
+          const sjF = await kapi.readJson(await kapi.join(row2._ctx.dPath, "scenes.json"));
+          const rowF = (sjF.chapters[row2._ctx.ch.guid] || []).find((x) => x.id === row2._ctx.sc.id);
+          check2(
+            "[120-6] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01\u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15\u0E43\u0E19\u0E41\u0E1C\u0E07 \u2192 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07 scenes.json \u0E08\u0E23\u0E34\u0E07",
+            !!rowF && rowF.isFlashback === true,
+            JSON.stringify(rowF && rowF.isFlashback)
+          );
+          let fmF = {};
+          for (let i5 = 0; i5 < 30; i5++) {
+            try {
+              fmF = (0, import_md15.parseMdFile)(await kapi.readFile(row2.dataset.path)).meta;
+            } catch {
+              fmF = {};
+            }
+            if (String(fmF.isFlashback) === "true") break;
+            await w120(100);
+          }
+          check2(
+            "[120-6] \u2605 \u0E41\u0E25\u0E30\u0E25\u0E07 frontmatter \u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C .md \u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19\u0E41\u0E04\u0E48 5 \u0E1F\u0E34\u0E25\u0E14\u0E4C)",
+            String(fmF.isFlashback) === "true",
+            "\u0E44\u0E1F\u0E25\u0E4C=" + row2.dataset.path + " \xB7 frontmatter=" + JSON.stringify(fmF)
+          );
+          const ni = pb2.querySelector(".props-name-input");
+          ni.value = "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120";
+          ni.dispatchEvent(new Event("blur"));
+          await w120(700);
+          let rowN = null;
+          for (let i5 = 0; i5 < 30; i5++) {
+            const sjN = await kapi.readJson(await kapi.join(row2._ctx.dPath, "scenes.json"));
+            rowN = (sjN.chapters[row2._ctx.ch.guid] || []).find((x) => x.id === row2._ctx.sc.id);
+            if (rowN && rowN.title === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120") break;
+            await w120(100);
+          }
+          check2(
+            "[120-6] \u2605\u2605 \u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+            !!rowN && rowN.title === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120",
+            JSON.stringify(rowN && rowN.title)
+          );
+          const pb22 = $("#props-body");
+          const cks2 = pb22.querySelectorAll(".wiki-check");
+          if (cks2[1]) {
+            cks2[1].checked = false;
+            cks2[1].dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          await w120(500);
+        }
+        {
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          localStorage.removeItem("k2-settings-tab");
+          settingsDialog();
+          await w120(400);
+          let box2 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+          check2('[120-14] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32"', !!box2.querySelector(".k-set-undo"));
+          check2('[120-14] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E42\u0E23\u0E07\u0E07\u0E32\u0E19"', !!box2.querySelector(".k-set-factory"));
+          check2(
+            "[120-14] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 = \u0E1B\u0E38\u0E48\u0E21\u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E14\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+            box2.querySelector(".k-set-undo").disabled === !state.meta.settingsPrev
+          );
+          const tabs120 = [...box2.querySelectorAll(".k-set-tab")];
+          const pick2 = tabs120.find((x) => x.dataset.p && !x.classList.contains("on")) || tabs120[1];
+          pick2.click();
+          await w120(120);
+          const wantTab = pick2.dataset.p;
+          box2.querySelector(".k-cancel").click();
+          await w120(250);
+          settingsDialog();
+          await w120(400);
+          box2 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+          const gotTab = box2.querySelector(".k-set-tab.on") ? box2.querySelector(".k-set-tab.on").dataset.p : "";
+          check2(
+            "[120-14] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48 = \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49",
+            gotTab === wantTab,
+            "\u0E04\u0E32\u0E14 " + wantTab + " \u0E44\u0E14\u0E49 " + gotTab
+          );
+          box2.querySelector(".k-cancel").click();
+          await w120(250);
+          settingsDialog("write", { focus: "#st-recycle" });
+          await w120(500);
+          box2 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+          const recEl = box2.querySelector("#st-recycle");
+          const pageOn = box2.querySelector(".k-set-tab.on") ? box2.querySelector(".k-set-tab.on").dataset.p : "";
+          check2(
+            '[120-13] \u2605 "\u0E15\u0E31\u0E49\u0E07\u0E40\u0E27\u0E25\u0E32\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07" \u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E21\u0E32\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07',
+            !!recEl && pageOn === "write" && (document.activeElement === recEl || recEl.classList.contains("k-set-flash")),
+            "\u0E2B\u0E19\u0E49\u0E32=" + pageOn + " \u0E04\u0E25\u0E32\u0E2A=" + (recEl ? recEl.className : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E0A\u0E48\u0E2D\u0E07")
+          );
+          box2.querySelector(".k-cancel").click();
+          await w120(250);
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        }
+        {
+          await buildTree2();
+          const row2 = scRows120()[0];
+          const f120 = row2.dataset.path;
+          const wantTitle = (0, import_md15.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          if (state.tabs.has(f120)) {
+            state.tabs.get(f120).dirty = false;
+            closeTab(f120);
+          }
+          await w120(200);
+          await openScene(f120, null);
+          await w120(350);
+          const tab120 = state.tabs.get(f120);
+          check2(
+            '[120-bug] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E32 \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E44\u0E14\u0E49 "\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C',
+            !!tab120 && tab120.title === wantTitle,
+            (tab120 || {}).title + " vs " + wantTitle
+          );
+          check2(
+            "[120-bug] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E23\u0E34\u0E07",
+            tab120.tabBtn.querySelector(".tab-title").textContent.replace(/^● /, "") === wantTitle,
+            tab120.tabBtn.querySelector(".tab-title").textContent
+          );
+          check2(
+            "[120-bug] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C",
+            wantTitle === f120.split(/[\\/]/).pop().replace(/\.md$/i, "") || tab120.title !== f120.split(/[\\/]/).pop().replace(/\.md$/i, ""),
+            tab120.title
+          );
+        }
+        await buildTree2();
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -195413,7 +196886,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -195612,6 +197085,10 @@ ${css}
       _treeBuilding = false;
       _treeQueued = false;
       _treeSwapping = false;
+      _thCmp = (a, b) => String(a || "").localeCompare(String(b || ""), "th");
+      treeSel = /* @__PURE__ */ new Set();
+      treeSelAnchor = null;
+      treeClip = { mode: "", items: [] };
       _treeWaiters = [];
       INV_C = { m: null, cat: {} };
       netInst = null;
@@ -195649,6 +197126,7 @@ ${css}
       TERM_TTL = 700;
       _termCache = { tab: null, at: 0, val: null };
       imgURLBase = /* @__PURE__ */ new Map();
+      _rowStateSig = "";
       _branchPlanApi = null;
       FMTS = ["bold", "italic", "underline", "strike", "sup", "sub"];
       TB_PANEL_BUTTONS = [
@@ -196135,10 +197613,17 @@ ${css}
         updateToolbarTitles();
         wireFab();
         setupHoverTips();
-        $("#filter-sort").onchange = () => {
+        $("#filter-sort").onchange = async () => {
+          setTreeSortMode($("#filter-sort").value);
+          await buildTree2();
           buildFilterBar();
           filterTree($("#tree-search").value);
         };
+        try {
+          const sv = treeSortMode();
+          if (sv) $("#filter-sort").value = sv;
+        } catch {
+        }
         $("#filter-archive-toggle").onclick = function() {
           this.classList.toggle("on");
           const hideArchived = !this.classList.contains("on");
@@ -196155,6 +197640,7 @@ ${css}
         $("#zoom-out").onclick = () => bumpPageScale(-1);
         $("#zoom-reset").onclick = () => resetPageScale();
         $("#tree-search").oninput = (e) => filterTree(e.target.value);
+        setupTreeInteractions();
         setupFloatingFormatBar();
         bindToolbarContextMenu();
         initLineGutter();

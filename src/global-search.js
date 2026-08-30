@@ -174,7 +174,7 @@ export async function openGlobalSearch() {
         ov.remove();
         if (h.type === 'md') {
           const { openScene } = await import('./app.js');
-          openScene(h.file, h.name);
+          openScene(h.file, null);
         } else {
           // เปิดเป็น JSON editor
           const { activate } = await import('./app.js');
@@ -323,7 +323,7 @@ export async function renderSearchPanel(host) {
       const openB = el('button', 'k-ok k-gsearch-open', t('ui.common.open'));
       openB.onclick = async (e) => {
         e.stopPropagation();
-        if (h.type === 'md') { const { openScene } = await import('./app.js'); openScene(h.file, h.name); }
+        if (h.type === 'md') { const { openScene } = await import('./app.js'); openScene(h.file, null); }
         else {
           const { activate } = await import('./app.js');
           try {

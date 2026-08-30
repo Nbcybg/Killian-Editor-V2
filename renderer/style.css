@@ -1531,7 +1531,8 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 #props-panel { display:flex; flex-direction:column; min-height:0; }
 #props-body { max-height:40%; overflow:auto; padding:2px 4px 8px; }
 .k-panel-floating #props-body, .k-panel-floating #tree { max-height:none; flex:1; overflow:auto; }
-.props-name { color:var(--bright); font-weight:600; margin:2px 4px 8px; }
+.props-name { color:var(--bright); font-weight:600; margin:2px 4px 8px;
+  display:flex; align-items:center; gap:2px; }
 #props-body .wiki-row { flex-direction:column; align-items:stretch; gap:3px; margin:6px 4px; }
 #props-body .wiki-row label { min-width:0; font-size:calc(11px * var(--ui-scale, 1)); }
 #props-body textarea.wiki-input { min-height:44px; resize:vertical; }
@@ -4547,12 +4548,38 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
    เดิมสลับข้อความแถวเป็น '▶ ชื่อ ●' ตอนเปิด/ยังไม่บันทึก = รื้อลูกของแถวทิ้งทุกครั้งที่สถานะเปลี่ยน
    (ชื่อว่างเมื่อไหร่ก็ได้บรรทัดเปล่า · ป้ายอื่นในแถวหายตามไปด้วย)
    ตอนนี้เนื้อแถวถูกสร้างครั้งเดียวใน buildTree() แล้วไม่มีใครแตะอีก — สถานะบอกด้วย class ล้วน ๆ */
+/* [alpha.120 ข้อ 5] กติกาของผู้ใช้:
+     ตัวหนา = ฉากที่กำลังแก้อยู่ · ตัวเอียง = เปิดค้างและยังไม่บันทึก · หนา+เอียง = กลับมาแก้และยังไม่บันทึก
+   ใช้กับทั้งแถวฉากและแถวเอนทิตี้ Wiki (ตัวเดียวกันทั้งคู่ ไม่มีสัญลักษณ์ — กฎถาวรข้อ 4)
+   ป้ายข้อความ "ยังไม่บันทึก" ที่เคยต่อท้ายด้วย ::after ถูกถอดออกแล้ว: มันเป็นข้อความไทย
+   ฮาร์ดโค้ดใน CSS (แปลไม่ได้) และกินที่แถวจนป้ายอื่นตกบรรทัด */
 #tree .scene.k-row-open { font-weight:700; color:var(--bright); }
-#tree .scene.k-row-unsaved { color:#e5878c; }
+#tree .scene.k-row-unsaved { font-style:italic; color:#e5878c; }
+#tree .scene.k-row-open.k-row-unsaved { font-weight:700; font-style:italic; }
 /* กันพลาดซ้ำรอย K-1: แถวใน Explorer ต้องมองเห็นเสมอ ไม่ว่ากฎไหนจะพยายามทำให้จาง */
 #tree .scene { opacity:1; visibility:visible; }
-#tree .scene.k-row-unsaved::after { content:'ยังไม่บันทึก'; margin-left:6px; opacity:.85;
-  font-size:calc(9.5px * var(--ui-scale, 1)); font-weight:400; }
+
+/* ═══ [alpha.120] Explorer: ลูกศรแบบ VS Code · เลือกหลายไฟล์ · ป้ายจำนวนเวอร์ชัน ═══ */
+/* ข้อ 1 — เชฟรอนตัวเดียวที่หมุน (ไม่ใช่สลับอักขระ ▸/▾ ที่ความกว้างไม่เท่ากัน) */
+.tw svg { transition:transform .12s ease; transform:rotate(0deg); }
+.tw.tw-open svg { transform:rotate(90deg); }
+/* ข้อ 16 — แถวที่ถูกเลือก / ถูกตัดรอวาง */
+#tree .scene.k-row-sel { background:var(--sel, rgba(120,160,255,.20)); }
+#tree .scene.k-row-cut { opacity:.55; }
+#tree:focus { outline:none; }
+#tree:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
+/* ข้อ 17 — (n) = ไฟล์นี้มีกี่เวอร์ชันเก็บไว้ */
+.scene .sc-vers { margin-left:5px; color:var(--dim); font-weight:400; font-style:normal;
+  font-size:calc(9.5px * var(--ui-scale, 1)); }
+/* ข้อ 6 — ช่องชื่อฉากในแผงคุณสมบัติ (แก้ชื่อได้ในที่) */
+.props-name-input { flex:1; min-width:0; background:transparent; border:1px solid transparent;
+  color:inherit; font:inherit; font-weight:600; padding:2px 4px; border-radius:5px; }
+.props-name-input:hover { border-color:var(--border); }
+.props-name-input:focus { border-color:var(--accent); background:var(--side); outline:none; }
+/* ข้อ 13+14 — ไฮไลต์ช่องที่ถูกกระโดดมาหาในกล่องตั้งค่า */
+.k-set-flash { animation:k2setflash 1.6s ease-out; }
+@keyframes k2setflash { 0%,100% { box-shadow:none; } 15%,60% { box-shadow:0 0 0 3px var(--accent); } }
+.k-set-undo, .k-set-factory { margin-right:auto; }
 
 /* [alpha.74] กล่องเทียบแผนผังแตกสาย */
 .k-dialog-wide { max-width:min(860px, 92vw); width:860px; }

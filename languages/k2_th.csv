@@ -5970,3 +5970,56 @@ ui.html.elNote,โน้ต
 ui.html.elContLeft,ต่อเนื่อง (ซ้าย)
 ui.html.elContRight,ต่อเนื่อง (ขวา)
 ui.html.tbModeText,📖 นิยาย ▾
+ui.dlg.settingsFactory,รีเซ็ตเป็นค่าโรงงาน
+ui.dlg.settingsFactoryAsk,คืนค่าตั้งค่าทั้งหมดกลับเป็นค่าเริ่มต้นของโปรแกรม? (ค่าปัจจุบันจะถูกเก็บไว้ให้กดคืนค่าก่อนหน้าได้)
+ui.dlg.settingsFactoryDone,รีเซ็ตเป็นค่าโรงงานแล้ว
+ui.dlg.settingsFactoryHint,คืนทุกหัวข้อกลับเป็นค่าเริ่มต้น — ค่าเดิมยังกดคืนได้
+ui.dlg.settingsPrevFail,เก็บค่าตั้งค่าก่อนหน้าไม่สำเร็จ
+ui.dlg.settingsRevert,คืนค่าก่อนหน้า
+ui.dlg.settingsRevertAsk,คืนค่าตั้งค่ากลับเป็นชุดก่อนการบันทึกครั้งล่าสุด?
+ui.dlg.settingsRevertHint,ย้อนกลับไปใช้ค่าที่บันทึกไว้ก่อนครั้งล่าสุด
+ui.dlg.settingsReverted,คืนค่าตั้งค่าก่อนหน้าแล้ว
+ui.props.renameHint,แก้ชื่อฉากได้ที่นี่ — กด Enter เพื่อบันทึก
+ui.props.sceneName,ชื่อฉาก
+ui.props.writeMetaFail,เขียนคุณสมบัติลงไฟล์ฉากไม่สำเร็จ
+ui.tree.clipEmpty,ยังไม่ได้คัดลอกอะไรไว้
+ui.tree.collapseAll,พับทุกหัวข้อ
+ui.tree.confirmDeleteN,ย้าย {0} รายการที่เลือกไปถังขยะ?
+ui.tree.confirmEmptyTrash,ลบของในถังขยะทั้งหมด {0} รายการถาวร? กู้คืนไม่ได้
+ui.tree.copy,คัดลอก
+ui.tree.copiedN,คัดลอกไว้แล้ว {0} รายการ
+ui.tree.cut,ตัด
+ui.tree.cutN,ตัดไว้แล้ว {0} รายการ
+ui.tree.delFail,ลบไม่สำเร็จ
+ui.tree.deleteSelected,ลบรายการที่เลือก
+ui.tree.deletedN,ลบแล้ว {0} รายการ
+ui.tree.duplicate,ทำซ้ำ
+ui.tree.duplicatedN,ทำซ้ำแล้ว {0} รายการ
+ui.tree.emptiedTrash,ล้างถังขยะแล้ว {0} รายการ
+ui.tree.emptyTrashN,ล้างถังขยะ ({0})
+ui.tree.expandAll,กางทุกหัวข้อ
+ui.tree.hideSummary,ซ่อนแถบสรุป
+ui.tree.moveToChapter,ย้ายไปบท…
+ui.tree.movedN,ย้ายแล้ว {0} รายการ ไปที่ {1}
+ui.tree.newBook,สร้างเล่มใหม่
+ui.tree.newChapter,สร้างบทใหม่…
+ui.tree.newChapterHere,สร้างบทใหม่
+ui.tree.newScene,สร้างฉากใหม่…
+ui.tree.newSceneHere,สร้างฉากใหม่
+ui.tree.nothingSelected,ยังไม่ได้เลือกรายการไหน
+ui.tree.paste,วาง…
+ui.tree.pasteFail,วางไม่สำเร็จ
+ui.tree.pasteHere,วางที่นี่
+ui.tree.pasteWhere,วางลงบทไหน
+ui.tree.pastedN,วางแล้ว {0} รายการ ที่ {1}
+ui.tree.pickChapterFirst,เลือกบทปลายทางก่อน
+ui.tree.projectFolder,เปิดโฟลเดอร์โปรเจกต์
+ui.tree.projectSettings,ตั้งค่าโปรเจกต์
+ui.tree.purgeNowByDays,ล้างของเก่าตามจำนวนวันที่ตั้งไว้
+ui.tree.selectedCount,เลือกไว้ {0} รายการ
+ui.tree.showSummary,แสดงแถบสรุป
+ui.tree.skipCrossDraft,ข้าม {0} รายการ (ย้ายข้ามฉบับร่างไม่ได้)
+ui.tree.snapCountFail,นับจำนวนเวอร์ชันไม่สำเร็จ
+ui.tree.trashEmptyAlready,ถังขยะว่างอยู่แล้ว
+ui.tree.trashSettings,ตั้งเวลาล้างถังขยะ (ตั้งค่าโปรเจกต์)
+ui.tree.versionCount,มี {0} เวอร์ชันเก็บไว้
