@@ -12,6 +12,10 @@ import { notifyEntityRenamed } from './auto-task/event-ui.js';
 import { findScenePath } from './project-scan.js';
 import { choicesByCharacter, renderChoicePanel } from './player-choices.js';
 import { ensureSensory, renderSensoryProfile } from './sensory-profile.js';
+// [alpha.116 ข้อ 9] ✨ ปุ่ม AI คลิกเดียวข้างช่องข้อความของ Wiki
+import { aiConfigured } from './ai-settings.js';
+import { currentProvider, complete } from './ai/ai-provider-ui.js';
+import { buildFieldPrompt, fieldResult } from './ai/ai-field.js';
 
 export function wikiCats() {
   if (!state.meta) return [];
@@ -121,6 +125,8 @@ export async function openEntity(file) {
     },
     // [alpha.58] หาไฟล์ในดิสก์ — เอนทิตี้เป็นไฟล์ .json แก้นอกโปรแกรมได้ ต้องเปิดโฟลเดอร์เจอ
     onReveal: (f) => revealFile(f),
+    // [alpha.116 ข้อ 9] ✨ ปุ่ม AI คลิกเดียวข้างทุกช่องข้อความ
+    onFieldAI: (req) => fillFieldWithAI(req),
     // [alpha.60r3 ข้อ 1] คลิกขวาในหน้า Wiki → เมนูรายชื่อฉาก (ทางเดียวกับ Explorer)
     onFindInScenes: (f, name, x, y) => findEntityInScenes(f, name || tab.title, x, y),
     onSnapshot: async () => {
@@ -297,4 +303,49 @@ export async function duplicateEntity(file) {
   await buildTree(); await smart.loadNames(state.root);
   refreshNetwork();
   openEntity(nf);
+}
+
+// ══════════ [alpha.116 ข้อ 9] เติมช่องข้อมูล Wiki ด้วย AI คลิกเดียว ══════════
+//
+// ผู้ใช้: *"ใน wiki ส่วน field ที่เป็น text input ให้มี one click ai ด้วย"*
+//
+// หน้าที่ของฟังก์ชันนี้มีสามอย่างเท่านั้น: รวบบริบท → ยิง → คืนค่าที่จะเขียนลงช่อง
+// การประกอบ prompt กับการล้างคำตอบอยู่ใน `src/ai/ai-field.js` (บริสุทธิ์ · มี unit test)
+//
+// **ค่าเดิมไม่ถูกทับเงียบ ๆ** — ช่องที่มีข้อความอยู่แล้วต้องถามก่อนเสมอ
+// (เขียนทับงานที่คนเขียนไว้เองโดยไม่บอกคือความเสียหายที่กู้คืนยากกว่าประโยชน์ที่ได้)
+export async function fillFieldWithAI(req) {
+  const { label, value, entity } = req || {};
+  const cfg = await aiConfigured();
+  if (!cfg.ok) { setStatus(cfg.why); return null; }
+  const prov = await currentProvider();
+  if (!prov) { setStatus(tt('ui.wiki.aiNoProvider')); return null; }
+
+  // ช่องอื่นที่กรอกไว้แล้ว = บริบท (ชื่อช่องใช้ป้ายไทยของเทมเพลต ไม่ใช่คีย์ดิบ)
+  const labels = fieldLabels(entity && entity.templateId) || {};
+  const rows = [];
+  for (const [k, v] of Object.entries((entity && entity.fields) || {})) rows.push({ label: labels[k] || k, value: v });
+  for (const [k, v] of Object.entries((entity && entity.customProperties) || {})) rows.push({ label: k, value: v });
+  if (entity && entity.desc) rows.push({ label: tt('ui.wiki.aiCtxDesc'), value: entity.desc });
+
+  const { system, prompt } = buildFieldPrompt({
+    fieldLabel: label, current: value, entityName: entity && entity.name,
+    catLabel: CAT_TH[entity && entity.entityTypeKey] || (entity && entity.entityTypeKey) || '',
+    fields: rows,
+    story: (state.meta && (state.meta.synopsis || state.meta.title)) || '',
+  });
+
+  setStatus(ttf('ui.wiki.aiWorking', label));
+  const res = await complete(prov, { system, messages: [{ role: 'user', content: prompt }] });
+  if (!res || !res.ok) { setStatus('❌ ' + ((res && res.error) || tt('ui.wiki.aiFailed'))); return null; }
+  const next = fieldResult(res.text, label);
+  if (!next) { setStatus(tt('ui.wiki.aiEmpty')); return null; }
+
+  const cur = String(value || '').trim();
+  if (cur && cur !== next) {
+    const ok = await confirmBox(ttf('ui.wiki.aiReplaceAsk', label) + String.fromCharCode(10, 10) + next);
+    if (!ok) { setStatus(tt('ui.wiki.aiKept')); return null; }
+  }
+  setStatus(ttf('ui.wiki.aiFilled', label));
+  return next;
 }

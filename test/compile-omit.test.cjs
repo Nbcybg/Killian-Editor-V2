@@ -150,5 +150,110 @@ check('cloneWorkflow เติมขั้นตอนที่พรีเซ�
         CP.runWorkflow(named, wfHead).text.includes('## บทที่หนึ่ง'));
 }
 
+// ══════════ [alpha.113] ★★ บรรทัดว่างในบทภาพยนตร์ต้องไม่ถูกยุบตอน compile ══════════
+//
+// ผู้ใช้: *"ใน markdown มี 41 บรรทัด แต่ใน pdf น่าจะแค่ 30 บรรทัด บรรทัดว่างถูกลบทิ้ง"*
+// ต้นตอ: ไปป์ไลน์ compile ยุบ `\n{3,}` → `\n\n` (ถูกสำหรับนิยาย · **ทำลายบท**
+// เพราะที่นั่นบรรทัดว่างเป็นเนื้อหาที่ paginate() นับเป็น 1 บรรทัดตั้งแต่ alpha.86)
+{
+  const SF = build('sp-format.js', 'k2-omit-spf-test.cjs');
+  const SH = build('sp-headers.js', 'k2-omit-hdr-test.cjs');
+  const EF = build('export-formats.js', 'k2-omit-ef-test.cjs');
+
+  // ตัวชี้ชนิดเอกสารต้องตรงกับ docKind() เสมอ (คนละไฟล์ เพราะ import วนกลับไม่ได้)
+  {
+    const mk = (fmts) => ({ title: 'x', chapters: [{ title: 'c',
+      scenes: fmts.map((f, i) => ({ title: 's' + i, format: f, body: 'x' })) }] });
+    const cases = [['screenplay'], ['prose'], ['screenplay', 'screenplay', 'prose'],
+                   ['prose', 'prose', 'screenplay'], ['screenplay', 'prose'], []];
+    const bad = cases.filter((c) =>
+      CP.modelIsScreenplay(mk(c)) !== (EF.docKind(mk(c)) === 'screenplay'));
+    check('[113] modelIsScreenplay ตอบตรงกับ docKind() ทุกกรณี', bad.length === 0,
+          JSON.stringify(bad));
+    check('[113] ข้าม memo เหมือน docKind', (() => {
+      const m = { title: 'x', chapters: [{ title: 'c', scenes: [
+        { format: 'screenplay', body: 'a' }, { type: 'memo', format: 'prose', body: 'b' }] }] };
+      return CP.modelIsScreenplay(m) === true;
+    })());
+  }
+
+  // เอกสารที่มีช่วงบรรทัดว่างติดกันหลายแบบ (เลียนไฟล์จริงของผู้ใช้: ว่าง 3, 4 และ 7 บรรทัด)
+  const body = ['บรรยายท่อนแรก', '', '', '', 'บรรยายท่อนสอง', '', '', '', '',
+                'บรรยายท่อนสาม', '', '', '', '', '', '', '', 'บรรยายท่อนสี่'].join('\n');
+  const nLines = (s) => s.split('\n').length;
+  const mkModel = (format) => ({ title: 'ทดสอบ', author: '', chapters: [{ title: 'บทที่ 1',
+    scenes: [{ title: 'ฉากหนึ่ง', format, body, words: 10 }] }] });
+  const wfPdf = CP.PRESETS.find((p) => p.id === 'screenplay-pdf');
+  check('[113] มีพรีเซ็ต screenplay-pdf ให้ทดสอบ', !!wfPdf);
+
+  const sp = CP.runWorkflow(mkModel('screenplay'), wfPdf).text;
+  const pr = CP.runWorkflow(mkModel('prose'), wfPdf).text;
+  check('[113] ★★ บท: ช่วงบรรทัดว่างติดกันอยู่ครบ ไม่ถูกยุบ',
+        /\n{4}/.test(sp) && nLines(sp) >= nLines(body) - 1,
+        `compile ${nLines(sp)} บรรทัด · ต้นฉบับ ${nLines(body)}`);
+  check('[113] ★ นิยาย: ยังยุบเหมือนเดิม (ไม่ทำ regression ให้ฝั่งนิยาย)',
+        !/\n{3,}/.test(pr) && nLines(pr) < nLines(body),
+        `compile ${nLines(pr)} บรรทัด · ต้นฉบับ ${nLines(body)}`);
+  check('[113] เนื้อความยังครบทุกท่อนทั้งสองโหมด',
+        ['แรก', 'สอง', 'สาม', 'สี่'].every((w) => sp.includes('บรรยายท่อน' + w) &&
+                                                    pr.includes('บรรยายท่อน' + w)));
+
+  // ★ หัวใจ: จำนวนหน้าที่ได้จากข้อความที่ compile ต้องเท่ากับที่ได้จากไฟล์ดิบ
+  {
+    const fmt = SF.mergeSpFormat({ paperSize: 'a4',
+                                   margins: { top: 1, bottom: 1, left: 1, right: 1 } });
+    const lines = SH.linesForBody(fmt, SH.mergeHeaders(null));
+    const big = [];
+    for (let i = 0; i < 20; i++) big.push('บรรยายฉากยาวพอควรสำหรับทดสอบการตัดหน้า ' + i, '', '', '');
+    const raw = big.join('\n');
+    const model = { title: 'ทดสอบ', author: '', chapters: [{ title: 'บทที่ 1',
+      scenes: [{ title: 'ฉากหนึ่ง', format: 'screenplay', body: raw, words: 50 }] }] };
+    const wfBare = { id: 'bare', name: 'bare', ext: 'pdf', steps: [] };  // ไม่มีหัวบท/หัวฉาก
+    const compiled = CP.runWorkflow(model, wfBare).text;
+    const pagesRaw = SF.paginate(FT.parseScript(raw), { fmt, lines }).count;
+    const pagesCompiled = SF.paginate(FT.parseScript(compiled), { fmt, lines }).count;
+    check('[113] ชุดทดสอบนี้ยาวเกินหนึ่งหน้าจริง', pagesRaw >= 2, String(pagesRaw));
+    check('[113] ★★★ จำนวนหน้าจากข้อความที่ compile = จำนวนหน้าจากไฟล์ดิบ',
+          pagesCompiled === pagesRaw, `compile ${pagesCompiled} vs ดิบ ${pagesRaw}`);
+    // และต้องต่างจากตอนที่ยุบบรรทัดว่าง (พิสูจน์ว่าถ้าใครเอาโค้ดเก่ากลับมา เทสนี้จะแดง)
+    const squashed = SF.paginate(FT.parseScript(raw.replace(/\n{3,}/g, '\n\n')), { fmt, lines }).count;
+    check('[113] ★ และไม่เท่ากับตอนยุบบรรทัดว่าง (ย้อนโค้ดกลับ = แดงทันที)',
+          pagesCompiled !== squashed, `compile ${pagesCompiled} vs ยุบ ${squashed}`);
+  }
+
+  // ★★ ฉบับร่างที่ **ปนนิยายกับบท** — ต้องตัดสินรายฉาก ไม่ใช่เสียงข้างมาก
+  // (ฉบับร่างจริงของผู้ใช้: 7 ฉาก เป็นบทแค่ฉากเดียว → เสียงข้างมากบอก "นิยาย"
+  //  แล้วฉากบทฉากนั้นเสียบรรทัดว่างไปทั้งฉาก = PDF ตัดหน้าไม่ตรงกับที่เห็นบนจอ)
+  {
+    const mixed = { title: 'ปนกัน', author: '', chapters: [{ title: 'บทที่ 1', scenes: [
+      { title: 'ฉากบท', format: 'screenplay', body, words: 10 },
+      { title: 'ฉากนิยาย 1', format: 'prose', body, words: 10 },
+      { title: 'ฉากนิยาย 2', format: 'prose', body, words: 10 },
+      { title: 'ฉากนิยาย 3', format: 'prose', body, words: 10 },
+    ] }] };
+    check('[113] ชุดปนกันนี้เสียงข้างมากคือ "นิยาย" จริง', CP.modelIsScreenplay(mixed) === false);
+    check('[113] แต่ modelHasScreenplay จับได้ว่ามีฉากบทอยู่', CP.modelHasScreenplay(mixed) === true);
+    const mx = CP.runWorkflow(mixed, { id: 'bare', name: 'bare', ext: 'pdf', steps: [] }).text;
+    // ฉากบทอยู่ก้อนแรก → ต้องยังมีช่วงว่างยาว · ฉากนิยายที่เหลือต้องถูกยุบ
+    const parts = mx.split('บรรยายท่อนสี่');
+    check('[113] ★★★ ฉากบทเก็บช่องไฟไว้ครบ แม้อยู่ในฉบับร่างที่นิยายเป็นเสียงข้างมาก',
+          /\n{4}/.test(parts[0]), JSON.stringify(parts[0]));
+    check('[113] ★★ ฉากนิยายในเล่มเดียวกันยังถูกยุบตามปกติ',
+          parts.slice(1).every((x) => !/\n{3,}/.test(x)),
+          JSON.stringify(parts.slice(1).join('|')));
+  }
+
+  // omitElements: ตัดโน้ตแล้วช่องไฟของผู้เขียนต้องไม่หายไปด้วยในโหมดบท
+  {
+    const src = ['บรรยาย', '', '', '((โน้ตของนักเขียน))', '', '', 'บรรยายต่อ'].join('\n');
+    const keep = CP.omitElements(src, 'note', { keepBlanks: true });
+    const squash = CP.omitElements(src, 'note');
+    check('[113] ★ omitElements: โหมดบทเก็บช่องไฟไว้ครบ',
+          !keep.includes('โน้ตของนักเขียน') && /\n{3,}/.test(keep), JSON.stringify(keep));
+    check('[113] omitElements: โหมดนิยายยังยุบเหมือนเดิม',
+          !squash.includes('โน้ตของนักเขียน') && !/\n{3,}/.test(squash), JSON.stringify(squash));
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

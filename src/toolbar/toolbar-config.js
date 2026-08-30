@@ -66,6 +66,7 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-gallery-board' },
   ] },
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
+    { id: 'tb-ai-hub' },                         // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
     { id: 'tb-ai' }, { id: 'tb-ai-chat' }, { id: 'tb-ai-analyzer' },
     { id: 'tb-starter' },                        // [alpha.94] Story Starter
   ] },
@@ -181,4 +182,176 @@ export function layoutToolbar(seq, visible) {
     seenButton = true;
   }
   return out;
+}
+
+// ══════════════ [alpha.111] แถบรูปแบบลอย: ตั้งค่าแยก "นิยาย" กับ "บทภาพยนตร์" ══════════════
+//
+// ผู้ใช้: *"format bar คลิกขวาแล้วปรับแต่งได้ ถอดปุ่มออกได้ ที่ตั้งค่า — แบ่งเป็นนิยายกับหนัง"*
+//
+// ทำไมต้องแยกจาก `settings.toolbar`: ปุ่มชุดเดียวกันมี **ความหมายต่างกันตามโหมด** —
+// คนเขียนบทไม่ต้องการช่องหัวข้อ/ยกคำพูด ส่วนคนเขียนนิยายไม่ต้องการสวิตช์ "ต่อเนื่อง"
+// ถ้าใช้ก้อนเดียวกัน ผู้ใช้จะต้องมานั่งติ๊กกลับไปกลับมาทุกครั้งที่สลับโหมด
+//
+// **กติกาสำคัญ**: ปุ่มที่อยู่บนแถบลอย (`FMTBAR_IDS`) ถูกคุมด้วยก้อนนี้เท่านั้น
+// `settings.toolbar` เลิกยุ่งกับมันแล้ว — ไม่งั้นมีสวิตช์สองที่คุมปุ่มเดียวกัน แล้วเถียงกันเอง
+
+/** โหมดเอกสารที่แถบลอยรองรับ */
+export const FMT_MODES = ['prose', 'screenplay'];
+
+/**
+ * ปุ่มบนแถบรูปแบบลอย **เรียงตามลำดับจริง** — ต้องตรงกับรายการใน `setupFloatingFormatBar()`
+ * (ตัวที่ไม่ได้อยู่ใน TOOLBAR_GROUPS เช่น `tb-fmt-here` ถือว่าเป็นของแถบ คุมไม่ได้)
+ */
+export const FMTBAR_IDS = [
+  'tb-sp-elem', 'sp-view-select', 'tb-mode', 'tb-style', 'tb-case',
+  'tb-bold', 'tb-italic', 'tb-underline', 'tb-strike', 'tb-sup', 'tb-sub',
+  'tb-ul', 'tb-ol', 'tb-quote',
+  'tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify',
+  'tb-indent', 'tb-sp-cont',
+  'tb-img', 'tb-source', 'tb-read', 'tb-gsearch',
+];
+
+/** ปุ่มนี้อยู่บนแถบลอย (ไม่ใช่บนแถบเครื่องมือหลัก) ไหม */
+export function isFmtbarButton(id) { return FMTBAR_IDS.includes(id); }
+
+/**
+ * ปุ่มที่ **โหมดนั้นใช้ไม่ได้จริง ๆ** → ฝั่ง UI ทำเป็นสีเทา (ไม่ใช่ซ่อน — ผู้ใช้ต้องเห็นว่ามีอยู่)
+ *
+ * เกณฑ์เดียว: `KEditor._cmd` / `SPEditor._cmd` **ไม่มีคำสั่งนั้น** ก็คือใช้ไม่ได้
+ *   · บท: ไม่มี heading/paragraph/quote (fountain ไม่มีชนิดบล็อกพวกนี้) · ไม่มี sup/sub
+ *   · นิยาย: ปุ่มเฉพาะบท (element/ต่อเนื่อง) — โปรแกรมซ่อนให้อยู่แล้ว ใส่ไว้กันหลุด
+ *
+ * หมายเหตุ: **หัวข้อย่อย/ตัวเลข (`tb-ul`/`tb-ol`) ใช้ได้ในบท** ตั้งแต่ alpha.98 —
+ * ทำเป็นคำนำหน้าในข้อความ (`• ` / `1. `) จึงไม่อยู่ในรายการนี้
+ */
+export const FMT_UNSUPPORTED = {
+  screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote'],
+  prose: ['tb-sp-elem', 'tb-sp-cont'],   // (`tb-sp-ext` อยู่บนแถบหลัก ไม่ใช่แถบลอย)
+};
+
+/** โหมดนี้ใช้ปุ่มนี้ได้ไหม */
+export function fmtSupported(mode, id) {
+  const list = FMT_UNSUPPORTED[mode];
+  return !(list && list.includes(id));
+}
+
+/** โหมดเอกสารมาตรฐาน (อะไรที่ไม่ใช่ 'screenplay' ถือเป็น 'prose' — wiki ใช้เอนจินเดียวกับนิยาย) */
+export function fmtMode(mode) { return mode === 'screenplay' ? 'screenplay' : 'prose'; }
+
+/** ปุ่มบนแถบลอยที่ผู้ใช้ตั้งค่าได้ (ตัดตัวที่โปรแกรมคุมเองออก) */
+export function fmtbarConfigurableIds() {
+  return FMTBAR_IDS.filter((id) => !LOCKED_BUTTONS.includes(id));
+}
+
+/**
+ * กลุ่มปุ่มสำหรับหน้าตั้งค่า **แถบเครื่องมือหลัก** — ตัดตัวที่ย้ายไปอยู่บนแถบลอยออก
+ * (ไม่งั้นจะมีสวิตช์สองที่คุมปุ่มเดียวกัน แล้วผู้ใช้ติ๊กที่หนึ่งแต่ไปเปลี่ยนอีกที่)
+ */
+export function mainbarGroups() {
+  return TOOLBAR_GROUPS
+    .map((g) => ({ ...g, buttons: g.buttons.filter((b) => !isFmtbarButton(b.id)) }))
+    .filter((g) => g.buttons.length);
+}
+
+/** จำนวนปุ่มที่เปิดอยู่ / ทั้งหมด **เฉพาะแถบเครื่องมือหลัก** */
+export function mainbarCounts(cfg) {
+  const ids = mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id))
+    .filter((id) => isConfigurable(id));
+  const n = normalizeToolbar(cfg);
+  return { total: ids.length, on: ids.filter((id) => !n.hidden[id]).length };
+}
+
+/**
+ * กลุ่มปุ่มสำหรับหน้าตั้งค่าแถบลอย — ใช้กลุ่มเดียวกับแถบเครื่องมือ แต่กรองเหลือเฉพาะตัวที่อยู่บนแถบลอย
+ * (จึงไม่มีทางที่ชื่อกลุ่มสองที่จะไม่ตรงกัน)
+ */
+export function fmtbarGroups() {
+  return TOOLBAR_GROUPS
+    .map((g) => ({ ...g, buttons: g.buttons.filter((b) => isFmtbarButton(b.id) && isConfigurable(b.id)) }))
+    .filter((g) => g.buttons.length);
+}
+
+/**
+ * ทำค่าที่อ่านมาให้อยู่ในรูปมาตรฐาน: `{ prose:{hidden:{}}, screenplay:{hidden:{}} }`
+ *
+ * `legacy` = `settings.toolbar` ก้อนเก่า — ถ้ายังไม่เคยตั้งค่าแถบลอยเลย ให้ **สืบทอด**
+ * ตัวที่เคยซ่อนไว้มาใส่ทั้งสองโหมด ผู้ใช้จะได้ไม่เจอปุ่มที่เคยเอาออกแล้วโผล่กลับมาเอง
+ */
+export function normalizeFmtbar(cfg, legacy) {
+  const known = new Set(fmtbarConfigurableIds());
+  const out = {};
+  const src = (cfg && typeof cfg === 'object') ? cfg : null;
+  let inherit = null;
+  if (!src && legacy) {
+    const old = normalizeToolbar(legacy);
+    inherit = Object.keys(old.hidden).filter((id) => known.has(id));
+  }
+  for (const m of FMT_MODES) {
+    const hidden = {};
+    const raw = (src && src[m] && typeof src[m].hidden === 'object') ? src[m].hidden : null;
+    if (raw) { for (const id of Object.keys(raw)) if (raw[id] && known.has(id)) hidden[id] = true; }
+    else if (inherit) { for (const id of inherit) hidden[id] = true; }
+    out[m] = { hidden };
+  }
+  return out;
+}
+
+/** ปุ่มนี้ถูกซ่อนในโหมดนี้ไหม */
+export function fmtbarHidden(cfg, mode, id) {
+  if (!fmtbarConfigurableIds().includes(id)) return false;      // ตัวที่โปรแกรมคุมเอง = ไม่แตะ
+  return !!normalizeFmtbar(cfg)[fmtMode(mode)].hidden[id];
+}
+
+/** เปิด/ปิดปุ่มหนึ่งตัวในโหมดหนึ่ง → คืน cfg ก้อนใหม่ */
+export function setFmtbarVisible(cfg, mode, id, on) {
+  const next = normalizeFmtbar(cfg);
+  if (!fmtbarConfigurableIds().includes(id)) return next;
+  const m = fmtMode(mode);
+  const hidden = { ...next[m].hidden };
+  if (on) delete hidden[id]; else hidden[id] = true;
+  return { ...next, [m]: { hidden } };
+}
+
+/** เปิด/ปิดทั้งกลุ่มในโหมดหนึ่ง */
+export function setFmtbarGroupVisible(cfg, mode, groupKey, on) {
+  let next = cfg;
+  const g = fmtbarGroups().find((x) => x.key === groupKey);
+  if (!g) return normalizeFmtbar(cfg);
+  for (const b of g.buttons) next = setFmtbarVisible(next, mode, b.id, on);
+  return normalizeFmtbar(next);
+}
+
+/** เปิดปุ่มทั้งหมดของโหมดหนึ่ง (อีกโหมดไม่กระทบ) */
+export function setFmtbarGroupVisibleAll(cfg, mode) {
+  const next = normalizeFmtbar(cfg);
+  return { ...next, [fmtMode(mode)]: { hidden: {} } };
+}
+
+/** คืนค่าเริ่มต้น (ทุกโหมดเปิดหมด) */
+export function resetFmtbarConfig() {
+  const out = {};
+  for (const m of FMT_MODES) out[m] = { hidden: {} };
+  return out;
+}
+
+/** จำนวนปุ่มที่เปิดอยู่ / ทั้งหมด ของโหมดหนึ่ง */
+export function fmtbarCounts(cfg, mode) {
+  const ids = fmtbarConfigurableIds();
+  const n = normalizeFmtbar(cfg)[fmtMode(mode)];
+  return { total: ids.length, on: ids.filter((id) => !n.hidden[id]).length };
+}
+
+/**
+ * แผนการแสดงผลของแถบลอยทั้งแถบ — ตัวเดียวที่ฝั่ง DOM ต้องเรียก
+ * @param {string[]} seq ลำดับจริงของลูกในแถบ (`id` · `'sep'` · `null` = ของแถบเอง)
+ * @returns {{show:boolean[], grey:boolean[]}} `grey` = เห็นอยู่แต่ใช้ไม่ได้ในโหมดนี้
+ */
+export function layoutFmtbar(seq, cfg, mode) {
+  const list = Array.isArray(seq) ? seq : [];
+  const m = fmtMode(mode);
+  const vis = (id) => !fmtbarHidden(cfg, m, id);
+  const show = layoutToolbar(list.map((x) => (x == null ? ' keep' : x)),
+                             (x) => (x === ' keep' ? true : vis(x)));
+  const grey = list.map((x) => (x && x !== 'sep' ? !fmtSupported(m, x) : false));
+  return { show, grey };
 }

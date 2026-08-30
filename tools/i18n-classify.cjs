@@ -16,9 +16,42 @@ const SKIP_FILES = new Set([
   'src/tools/thesaurus.js',                         // คลังคำพ้อง/คำตรงข้ามไทย = ข้อมูลภาษา
 ]);
 
+// ═══ [alpha.116 ข้อ 6] เครื่องหมายในซอร์ส — ท่าที่ควรใช้กับของใหม่ทุกครั้ง ═══
+//
+// SKIP_RANGES ข้างล่างอ้าง **เลขบรรทัด** ซึ่งเลื่อนทุกครั้งที่มีใครแทรกโค้ดเหนือช่วงนั้น
+// (รอบ alpha.116 รอบเดียวพังสามครั้ง: builder-core · main.js · app.js) — อาการคือเทสแดง
+// ด้วยข้อความ "มีข้อความไทยตกค้าง" ที่ชี้ไปบรรทัดที่ไม่เกี่ยวอะไรเลย เสียเวลาไล่ทุกครั้ง
+//
+// ตอนนี้เขียนกำกับในซอร์สได้ตรง ๆ แทน — ย้ายโค้ดไปไหนเครื่องหมายก็ติดไปด้วย:
+//     /* i18n-skip: <เหตุผล> */   … โค้ด …   /* /i18n-skip */
+const SKIP_OPEN = /\/\*\s*i18n-skip[^*]*\*\//g;
+const SKIP_CLOSE = /\/\*\s*\/i18n-skip\s*\*\//;
+
+/** ช่วง [start,end) ของทุกบล็อกที่ถูกกำกับด้วยเครื่องหมายในไฟล์นี้ */
+function markedRegions(src) {
+  const out = [];
+  SKIP_OPEN.lastIndex = 0;
+  let m;
+  while ((m = SKIP_OPEN.exec(src))) {
+    if (SKIP_CLOSE.test(m[0])) continue;                  // ตัวปิด — ไม่ใช่ตัวเปิด
+    const rest = src.slice(m.index + m[0].length);
+    const c = rest.search(SKIP_CLOSE);
+    const end = c < 0 ? src.length : m.index + m[0].length + c;
+    out.push([m.index, end]);
+    SKIP_OPEN.lastIndex = end;
+  }
+  return out;
+}
+const _markCache = new Map();
+function markedFor(src) {
+  if (!_markCache.has(src)) _markCache.set(src, markedRegions(src));
+  return _markCache.get(src);
+}
+
 // ช่วงบรรทัดที่เป็นค่าคงที่ซึ่งถูกเขียนลงไฟล์งาน (อ่านกลับด้วยค่าเดิม)
+// **ของใหม่ให้ใช้เครื่องหมายในซอร์สแทน** — ตารางนี้เหลือไว้ให้ของเดิมที่ยังไม่ได้ย้าย
 const SKIP_RANGES = {
-  'src/core.js': [[368, 392]],                      // SCENE_STATUSES / SCENE_COLORS / STATUS_COLORS
+  'src/core.js': [[372, 396]],                      // SCENE_STATUSES / SCENE_COLORS / STATUS_COLORS
   'src/planner/planner-data.js': [[14, 24]],        // PLANNER_STATUSES (เก็บใน Planners/*.json)
   'src/kanban/kanban-core.js': [[8, 20]],           // คอลัมน์ = สถานะฉากตัวเดียวกับ scenes.json
   'src/branch-plans.js': [[20, 28]],                // PLAN_STATUSES (เก็บใน Branches/*.json)
@@ -37,14 +70,6 @@ const SKIP_RANGES = {
   // ปลั๊กอินตัวอย่าง) ไม่ใช่ข้อความบนหน้าจอของโปรแกรม · เป็นซอร์สโค้ดที่ผู้ใช้เปิดไปแก้ต่อ
   // แปลตามภาษา UI ไม่ได้ (ไฟล์บนดิสก์ต้องคงที่ ไม่งั้นสลับภาษาแล้วไฟล์ที่สร้างไว้ไม่ตรงกัน)
   'src/plugins/plugin-core.js': [[128, 163]],
-  // [alpha.82] PERSONA_FIELDS — **ชื่อฟิลด์ใน Wiki JSON ของผู้ใช้** ที่ใช้ประกอบใบบทบาท
-  // ไม่ใช่ข้อความบนหน้าจอ · แปลตามภาษา UI เมื่อไหร่ = สลับเป็นอังกฤษแล้วหาฟิลด์ไทยไม่เจอเลย
-  // (ป้ายที่เขียนลงใบบทบาทใช้ตัวเดียวกัน เพราะใบถูกเก็บเป็นเนื้อหาในไฟล์เซสชัน)
-  'src/dialogue/builder-core.js': [[239, 248]],
-  // [alpha.108] k2PageDoctor() — **เครื่องมือวินิจฉัยของนักพัฒนา** เรียกจาก DevTools เท่านั้น
-  // (`window.k2PageDoctor()`) ไม่มี UI ไม่มีปุ่ม ไม่เคยขึ้นบนหน้าจอโปรแกรม · ป้ายในรายงาน
-  // เป็นภาษาไทยเพื่อให้ผู้ใช้อ่านผลแล้วส่งกลับมาได้ทันทีตอนไล่บั๊กที่จำลองบนเครื่องพัฒนาไม่ได้
-  'src/app.js': [[486, 585]],
 };
 
 /** app.js: บล็อก selftest — ชื่อเทสเป็นของนักพัฒนา ไม่ใช่ข้อความของผู้ใช้ */
@@ -75,6 +100,7 @@ function classify(src, tok, rel, tstart) {
   if (SKIP_FILES.has(rel)) return 'skip-file';
   if (tok.line >= (tstart === undefined ? testStart(rel, src) : tstart)) return 'test';
   for (const [a, b] of (SKIP_RANGES[rel] || [])) if (tok.line >= a && tok.line <= b) return 'data-range';
+  for (const [a, b] of markedFor(src)) if (tok.start >= a && tok.end <= b) return 'data-range';
   const before = src.slice(Math.max(0, tok.start - 120), tok.start);
   const after = src.slice(tok.end, tok.end + 24);
   if (ALREADY.test(before)) return 'already';
@@ -89,4 +115,4 @@ function classify(src, tok, rel, tstart) {
   return 'ui';
 }
 
-module.exports = { classify, testStart, SKIP_FILES, SKIP_RANGES };
+module.exports = { classify, testStart, SKIP_FILES, SKIP_RANGES, markedRegions };

@@ -11,10 +11,10 @@ import { $, el, state, setStatus, log, setBusy, clearBusy } from '../core.js';
 import {
   PARAM_DEFS, defaultParams, normalizeParams, parseDomains, isDomainAllowed,
   newProvider, validateProvider, stripSecrets, withSecrets,
-  modelsRequests, parseModels, chatRequest, parseChat,
+  modelsRequests, parseModels, chatRequest, parseChat, parseStreamChunk,
   listProviders, activeProvider, upsertProvider, removeProvider,
 } from './ai-providers.js';
-import { SEND_KEYS, DEFAULT_SEND_KEY } from './ai-session.js';
+import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keys = null;                 // { <credentialId>: apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -87,7 +87,10 @@ export async function sendRequest(provider, req) {
   if (req.reqId) opts.__reqId = req.reqId;
   if (req.timeoutMs) opts.__timeoutMs = req.timeoutMs;
   const retries = Math.max(0, req.maxRetries ?? 0);
-  // [alpha.62 บั๊ก 10] คำขอ AI ทุกเส้นทางผ่านที่นี่ที่เดียว → ติดตัวบอกสถานะตรงนี้ครั้งเดียวพอ
+  // [alpha.96] ช่วยด้วยการหน่วงเวลาระหว่างรอบใหม่ — เดิมยิงซ้ำทันที ทำให้เน็ตช้า/เซิร์ฟเวอร์แออัดโดนถล่มซ้ำ
+  // จน "ช้าจน timeout" ยิ่งยืดยาว (3 คำขอต่อเนื่อง = 3×60 วิ) หน่วงแบบ exponential สั้น ๆ ก็พอ
+  const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const who = provider.name || hostOf(req.url);
   try {
     for (let attempt = 0; ; attempt++) {
@@ -96,7 +99,7 @@ export async function sendRequest(provider, req) {
       try {
         res = await kapi.httpFetch(req.url, opts);
       } catch (e) {
-        if (attempt < retries) continue;
+        if (attempt < retries) { await sleep(backoff(attempt)); continue; }
         return { ok: false, status: 0, error: t('ui.aiProvider.connectCant') + (e && e.message) };
       }
       if (res && res.ok) {
@@ -111,7 +114,7 @@ export async function sendRequest(provider, req) {
       }
       const st = (res && res.status) || 0;
       const retryable = st === 429 || st === 408 || (st >= 500 && st < 600);
-      if (retryable && attempt < retries) continue;
+      if (retryable && attempt < retries) { await sleep(backoff(attempt)); continue; }
       return { ok: false, status: st, error: httpMsg(st), body: (res && res.body) || '' };
     }
   } finally { clearBusy(); }
@@ -165,6 +168,60 @@ export async function complete(provider, opts = {}) {
   }
   const { text, thinking, usage } = parseChat(res.json);
   return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
+}
+
+/**
+ * คุยกับโมเดลแบบสตรีม — ข้อความ/ความคิดไหลมาทีละก้อนผ่าน `onChunk`
+ * (ผู้ใช้เห็นว่ากำลัง "ติดต่ออยู่จริง" ไม่ใช่จอว่างรอ timeout — ปัญหาที่ผู้ใช้รายงานมา)
+ *
+ * @param {object} provider
+ * @param {object} opts   เหมือน `complete` ({system, messages, model, reqId, timeoutMs})
+ * @param {function} onChunk  ({delta, thinking, text, thinkingAll}) เรียกทุกก้อน
+ * @returns {Promise<{ok, text, thinking, usage, model, provider, aborted?, timedOut?}>}
+ * ไม่มี `httpStream` (transport เก่า) → ตกไป `complete` แล้วส่งทั้งก้อนครั้งเดียว UI ไม่ต้องแยกกรณี
+ */
+export async function completeStream(provider, opts = {}, onChunk = () => {}) {
+  if (!provider) return { ok: false, text: '', error: t('ui.aiProvider.cantSettingsProviderAI') };
+  if (!provider.model && !opts.model) return { ok: false, text: '', error: t('ui.aiProvider.cantPickModel') };
+  if (typeof kapi.httpStream !== 'function') {
+    const r = await complete(provider, opts);
+    if (r.ok && r.text) onChunk({ delta: r.text, thinking: r.thinking || '', text: r.text, thinkingAll: r.thinking || '' });
+    return r;
+  }
+  const req = chatRequest(provider, { ...opts, stream: true });
+  if (opts.reqId) req.reqId = opts.reqId;
+  if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
+  if (!isDomainAllowed(req.url, (provider.credential || {}).allowedDomains || [])) {
+    return { ok: false, status: 0, error: t('ui.aiProvider.domainNotListAllowed') + req.url };
+  }
+  const who = provider.name || hostOf(req.url);
+  const httpOpts = { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) };
+  if (req.reqId) httpOpts.__reqId = req.reqId;
+  if (req.timeoutMs) httpOpts.__timeoutMs = req.timeoutMs;
+  let text = '';
+  let thinking = '';
+  try {
+    setBusy(tf('ui.aiProvider.busyNext', who));
+    const res = await kapi.httpStream(req.url, httpOpts, (line) => {
+      const c = parseStreamChunk(line);
+      if (!c) return;
+      if (c.done) return;
+      if (c.thinking) thinking += c.thinking;
+      if (c.delta) text += c.delta;
+      onChunk({ delta: c.delta || '', thinking: c.thinking || '', text, thinkingAll: thinking });
+    });
+    if (res && res.ok === false) {
+      return { ok: false, text, thinking, error: httpMsg(res.status || 0), status: res.status };
+    }
+    const usage = {
+      input: estimateTokens((opts.messages || []).reduce((n, m) => n + (m.content || ''), '') + (opts.system || '')),
+      output: estimateTokens(text), reasoning: estimateTokens(thinking), cached: 0, total: 0,
+    };
+    usage.total = usage.input + usage.output;
+    return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name };
+  } catch (e) {
+    return { ok: false, text, thinking, error: t('ui.aiProvider.connectCant') + (e && e.message) };
+  } finally { clearBusy(); }
 }
 
 // ══════════════════════════════ UI: กล่องตั้งค่า AI ══════════════════════════════

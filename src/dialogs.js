@@ -235,7 +235,11 @@ export async function pickSystemFont(current) {
   });
 }
 
-export function settingsDialog(openTab) {
+/**
+ * @param {string} [openTab] เปิดตรงหัวข้อไหน (data-p)
+ * @param {object} [opts] ค่าเสริมของหน้านั้น — ตอนนี้มี `{ fmtMode }` (โหมดที่หน้า "แถบรูปแบบ" เปิดค้าง)
+ */
+export function settingsDialog(openTab, opts = {}) {
   if (!state.root) { alert(t('errors.openProjectFirst')); return; }
   const s = state.settings, g = state.goals, m = state.meta;
   const origFont = parseInt(s.uiFontSize, 10) || 0;
@@ -1153,11 +1157,17 @@ export function settingsDialog(openTab) {
   }
 
   // ── [alpha.79] หน้า "แถบเครื่องมือ" — ใช้ตัวสร้างรายการตัวเดียวกับกล่องเดี่ยว ──
+  // [alpha.111] พร้อมกับอีกสองหน้าใหม่: แถบรูปแบบลอย (แยกนิยาย/บท) และปุ่มลอย FAB
+  // ทั้งสามใช้ import ก้อนเดียว — โหลดครั้งเดียว ไม่มีทางที่หน้าใดหน้าหนึ่งจะหลุดไป
   const tbHost = q('#st-toolbar-host');
-  if (tbHost) {
-    import('./toolbar/toolbar-ui.js')
-      .then((m) => m.buildToolbarList(tbHost, { compact: true }))
-      .catch((e) => log('warn', t('ui.dlg.warnToolbarPage'), e));
+  const fmtHost = q('#st-fmtbar-host');
+  const fabHost = q('#st-fab-host');
+  if (tbHost || fmtHost || fabHost) {
+    import('./toolbar/toolbar-ui.js').then((m) => {
+      if (tbHost) m.buildToolbarList(tbHost, { compact: true });
+      if (fmtHost) m.buildFmtbarList(fmtHost, { mode: opts.fmtMode });
+      if (fabHost) m.buildFabList(fabHost);
+    }).catch((e) => log('warn', t('ui.dlg.warnToolbarPage'), e));
   }
   q('#st-font').oninput = () => applyZoomVars(parseInt(q('#st-font').value, 10) || 0);
 
@@ -1275,7 +1285,9 @@ export function settingsDialog(openTab) {
           'spellCheck','spellCheckDict','autoMention','recycleDays','paperMode','fontFamily','spFontFamily',
           'language','autoSync','thesaurus','focusDim','typeSound','typeSoundVolume','typeSoundAlways','typeSoundMode',
           'homeThumb','smartLearnMin','heavyDocBlocks','mdAlignStyle','shortcuts','showHomeOnStartup',
-          'paperColor','pageGuides'];   // [alpha.100 ข้อ 2+4]
+          'paperColor','pageGuides',    // [alpha.100 ข้อ 2+4]
+          // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
+          'toolbar','fmtbar','fab'];
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
         await kapi.writeGlobalSettings(globals);

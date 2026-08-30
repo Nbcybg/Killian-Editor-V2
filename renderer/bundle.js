@@ -659,10 +659,10 @@
       end: node.resolveNoCache(node.content.size - slice3.openEnd - extra)
     };
   }
-  function wrapMarks(marks2, str2) {
+  function wrapMarks(marks2, str3) {
     for (let i5 = marks2.length - 1; i5 >= 0; i5--)
-      str2 = marks2[i5].type.name + "(" + str2 + ")";
-    return str2;
+      str3 = marks2[i5].type.name + "(" + str3 + ")";
+    return str3;
   }
   function parseExpr(stream2) {
     let exprs = [];
@@ -1819,10 +1819,10 @@
         @internal
         */
         toString() {
-          let str2 = "";
+          let str3 = "";
           for (let i5 = 1; i5 <= this.depth; i5++)
-            str2 += (str2 ? "/" : "") + this.node(i5).type.name + "_" + this.index(i5 - 1);
-          return str2 + ":" + this.parentOffset;
+            str3 += (str3 ? "/" : "") + this.node(i5).type.name + "_" + this.index(i5 - 1);
+          return str3 + ":" + this.parentOffset;
         }
         /**
         @internal
@@ -2555,8 +2555,8 @@
         eat(tok) {
           return this.next == tok && (this.pos++ || true);
         }
-        err(str2) {
-          throw new SyntaxError(str2 + " (in content expression '" + this.string + "')");
+        err(str3) {
+          throw new SyntaxError(str3 + " (in content expression '" + this.string + "')");
         }
       };
       NodeType = class _NodeType {
@@ -7278,21 +7278,21 @@
       pos += child.nodeSize;
       if (!child.isText)
         continue;
-      let str2 = child.text;
+      let str3 = child.text;
       while (i5 < frag.childCount) {
         let next = frag.child(i5++);
         pos += next.nodeSize;
         if (!next.isText)
           break;
-        str2 += next.text;
+        str3 += next.text;
       }
       if (pos >= from2) {
-        if (pos >= to && str2.slice(to - text.length - childStart, to - childStart) == text)
+        if (pos >= to && str3.slice(to - text.length - childStart, to - childStart) == text)
           return to - text.length;
-        let found2 = childStart < to ? str2.lastIndexOf(text, to - childStart - 1) : -1;
+        let found2 = childStart < to ? str3.lastIndexOf(text, to - childStart - 1) : -1;
         if (found2 >= 0 && found2 + text.length + childStart >= from2)
           return childStart + found2;
-        if (from2 == to && str2.length >= to + text.length - childStart && str2.slice(to - childStart, to - childStart + text.length) == text)
+        if (from2 == to && str3.length >= to + text.length - childStart && str3.slice(to - childStart, to - childStart + text.length) == text)
           return to;
       }
     }
@@ -15735,11 +15735,11 @@
       b.contBottom || ""
     ].join(":")).join(",");
     function setBreaks(next) {
-      const clean = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
-      const s = sigOf(clean);
+      const clean2 = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
+      const s = sigOf(clean2);
       if (s === sig) return false;
       sig = s;
-      list = clean;
+      list = clean2;
       return true;
     }
     function mapBreaks(mapping) {
@@ -19255,11 +19255,11 @@
       splitRatios: cleanRatios(state2.splitRatios)
     });
   }
-  function deserializeLayout(str2) {
-    if (!str2) return null;
+  function deserializeLayout(str3) {
+    if (!str3) return null;
     let data2;
     try {
-      data2 = JSON.parse(str2);
+      data2 = JSON.parse(str3);
     } catch {
       return null;
     }
@@ -20281,6 +20281,10 @@
         "edit": '<path fill="currentColor" d="m18.988 2.012l3 3L19.701 7.3l-3-3zM8 16h3l7.287-7.287l-3-3L8 13z"/><path fill="currentColor" d="M19 19H8.158c-.026 0-.053.01-.079.01c-.033 0-.066-.009-.1-.01H5V5h6.847l2-2H5c-1.103 0-2 .896-2 2v14c0 1.104.897 2 2 2h14a2 2 0 0 0 2-2v-8.668l-2 2z"/>',
         "trash": '<path fill="currentColor" d="M6 7H5v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm4 12H8v-9h2zm6 0h-2v-9h2zm.618-15L15 2H9L7.382 4H3v2h18V4z"/>',
         "chevron-down": '<path fill="currentColor" d="M16.939 7.939L12 12.879l-4.939-4.94l-2.122 2.122L12 17.121l7.061-7.06z"/>',
+        // [alpha.117] ล็อกแถบรูปแบบลอย + ชิดขอบบน (bx:lock-alt · bx:lock-open-alt · bx:chevron-up)
+        "chevron-up": '<path fill="currentColor" d="m6.293 13.293l1.414 1.414L12 10.414l4.293 4.293l1.414-1.414L12 7.586z"/>',
+        "lock": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5m0 2c1.654 0 3 1.346 3 3v3H9V7c0-1.654 1.346-3 3-3m6 8l.002 8H6v-8z"/>',
+        "lock-open": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2H9V7c0-1.654 1.346-3 3-3s3 1.346 3 3h2c0-2.757-2.243-5-5-5m6 10l.002 8H6v-8z"/>',
         "quote-left": '<path fill="currentColor" d="M20.309 17.708C22.196 15.66 22.006 13.03 22 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292m-11.007 0C11.19 15.66 10.999 13.03 10.993 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292"/>',
         // bxs:quote-right
         "film": '<path fill="currentColor" d="M19 4v1h-2V3H7v2H5V3H3v18h2v-2h2v2h10v-2h2v2h2V3h-2zM5 7h2v2H5zm0 4h2v2H5zm0 6v-2h2v2zm12 0v-2h2v2zm2-4h-2v-2h2zm-2-4V7h2v2z"/>',
@@ -20296,7 +20300,11 @@
         // bxs:bar-chart-square
         // [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสนำหน้าบรรทัด (bx:show / bx:hide)
         "eye": '<path fill="currentColor" d="M12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/><path fill="currentColor" d="M12 5c-7.633 0-9.927 6.617-9.948 6.684L1.946 12l.105.316C2.073 12.383 4.367 19 12 19s9.927-6.617 9.948-6.684l.106-.316l-.105-.316C21.927 11.617 19.633 5 12 5m0 12c-5.351 0-7.424-3.846-7.926-5C4.578 10.842 6.652 7 12 7c5.351 0 7.424 3.846 7.926 5c-.504 1.158-2.578 5-7.926 5"/>',
-        "eye-off": '<path fill="currentColor" d="M12 19c.946 0 1.81-.103 2.598-.281l-1.757-1.757c-.273.021-.55.038-.841.038c-5.351 0-7.424-3.846-7.926-5a8.6 8.6 0 0 1 1.508-2.297L4.184 8.305C1.923 10.427 1.026 12.607 1.002 12.673l-.181.499l.181.499C1.031 13.746 3.845 19 12 19m0-14c-1.837 0-3.346.396-4.605.981L3.707 2.293L2.293 3.707l18 18l1.414-1.414l-3.319-3.319c2.614-1.951 3.547-4.615 3.573-4.694l.181-.499l-.181-.499C21.969 10.254 19.155 5 12 5m4.972 10.558l-2.28-2.28c.19-.39.308-.819.308-1.278a2.99 2.99 0 0 0-3-3c-.459 0-.888.118-1.277.309L8.915 7.501A9.3 9.3 0 0 1 12 7c5.351 0 7.424 3.846 7.926 5c-.302.692-1.166 2.342-2.954 3.558"/>'
+        "eye-off": '<path fill="currentColor" d="M12 19c.946 0 1.81-.103 2.598-.281l-1.757-1.757c-.273.021-.55.038-.841.038c-5.351 0-7.424-3.846-7.926-5a8.6 8.6 0 0 1 1.508-2.297L4.184 8.305C1.923 10.427 1.026 12.607 1.002 12.673l-.181.499l.181.499C1.031 13.746 3.845 19 12 19m0-14c-1.837 0-3.346.396-4.605.981L3.707 2.293L2.293 3.707l18 18l1.414-1.414l-3.319-3.319c2.614-1.951 3.547-4.615 3.573-4.694l.181-.499l-.181-.499C21.969 10.254 19.155 5 12 5m4.972 10.558l-2.28-2.28c.19-.39.308-.819.308-1.278a2.99 2.99 0 0 0-3-3c-.459 0-.888.118-1.277.309L8.915 7.501A9.3 9.3 0 0 1 12 7c5.351 0 7.424 3.846 7.926 5c-.302.692-1.166 2.342-2.954 3.558"/>',
+        // [alpha.111] เป้าเล็ง — ปุ่ม "เรียกแถบรูปแบบมาหาเคอร์เซอร์" บนแถบลอย
+        "crosshair": '<path fill="currentColor" d="M11 2v3.055A7.01 7.01 0 0 0 5.055 11H2v2h3.055A7.01 7.01 0 0 0 11 18.945V22h2v-3.055A7.01 7.01 0 0 0 18.945 13H22v-2h-3.055A7.01 7.01 0 0 0 13 5.055V2zm1 5a5 5 0 1 1 0 10a5 5 0 0 1 0-10m0 3a2 2 0 1 0 0 4a2 2 0 0 0 0-4"/>',
+        // [alpha.111] ลูกโลก — คำสั่ง "แผนที่" บนปุ่มลอย (แยกจาก 'map' ที่ใช้กับสถานที่ใน Wiki)
+        "globe": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m7.931 9h-2.764a14.7 14.7 0 0 0-1.792-6.243A8.01 8.01 0 0 1 19.931 11M12.53 4.027c1.035 1.364 2.427 3.78 2.627 6.973H9.03c.139-2.596.994-5.028 2.451-6.974zm-.98 15.947c-1.036-1.364-2.428-3.78-2.628-6.974h6.126c-.139 2.596-.994 5.028-2.451 6.974zM8.624 4.758A14.7 14.7 0 0 0 6.832 11H4.069a8.01 8.01 0 0 1 4.556-6.242M4.069 13h2.763a14.7 14.7 0 0 0 1.792 6.243A8.01 8.01 0 0 1 4.069 13m11.306 6.242A14.7 14.7 0 0 0 17.167 13h2.764a8.01 8.01 0 0 1-4.556 6.242"/>'
       };
       NF = {
         "bold": "\uF032",
@@ -20397,6 +20405,12 @@
         // nf-fa-trash
         "chevron-down": "\uF078",
         // nf-fa-chevron_down
+        "chevron-up": "\uF077",
+        // nf-fa-chevron_up
+        "lock": "\uF023",
+        // nf-fa-lock
+        "lock-open": "\uF09C",
+        // nf-fa-unlock
         "chevron-right": "\uF054",
         // nf-fa-chevron_right
         "film": "\uF008",
@@ -20419,8 +20433,12 @@
         // nf-fa-bar_chart
         "eye": "\uF06E",
         // nf-fa-eye
-        "eye-off": "\uF070"
+        "eye-off": "\uF070",
         // nf-fa-eye_slash
+        "crosshair": "\uF05B",
+        // nf-fa-crosshairs
+        "globe": "\uF0AC"
+        // nf-fa-globe
       };
     }
   });
@@ -20875,6 +20893,7 @@
     SHORTCUTS: () => SHORTCUTS,
     SHORTCUT_CATS: () => SHORTCUT_CATS,
     SHORTCUT_LABELS: () => SHORTCUT_LABELS,
+    SHORTCUT_PANEL_SKIP: () => SHORTCUT_PANEL_SKIP,
     SP_ELEMENT_CONFIG: () => SP_ELEMENT_CONFIG,
     SP_ELEMENT_KEYS: () => SP_ELEMENT_KEYS,
     SP_ELEMENT_STYLES: () => SP_ELEMENT_STYLES,
@@ -21251,6 +21270,12 @@
     return true;
   }
   function applyDataI18n() {
+    document.querySelectorAll("[data-i18n-title]").forEach((el2) => {
+      const key2 = el2.getAttribute("data-i18n-title");
+      if (!key2) return;
+      const text = t(key2);
+      if (text != null) el2.setAttribute("title", text);
+    });
     document.querySelectorAll("[data-i18n]").forEach((el2) => {
       const key2 = el2.getAttribute("data-i18n");
       if (key2) {
@@ -21309,7 +21334,7 @@
     const sc = formatShortcut(code3, ctrl, shift2);
     return label + " (" + sc + ")";
   }
-  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, DATA_KEYS, BUILTIN_CATS, CAT_ICON, i18n, langHooks, SHORTCUTS, shortcutId, SHORTCUT_LABELS, SHORTCUT_CATS, isMac, accelText;
+  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, _busyMsg, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, DATA_KEYS, BUILTIN_CATS, CAT_ICON, i18n, langHooks, SHORTCUTS, SHORTCUT_PANEL_SKIP, shortcutId, SHORTCUT_LABELS, SHORTCUT_CATS, isMac, accelText;
   var init_core = __esm({
     "src/core.js"() {
       init_smart();
@@ -21400,6 +21425,10 @@
         lineNumbers: false,
         // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง — ปิดได้ (บางคนบอกว่ามันบังงาน)
         fabEnabled: true,
+        // [alpha.111] คำสั่งบนปุ่มลอย (สูงสุด 4) + รูปแบบการแสดง · null = ใช้ชุดเริ่มต้นใน fab-config.js
+        fab: null,
+        // [alpha.111] ปุ่มที่ถูกถอดออกจากแถบรูปแบบลอย แยกตามโหมด { prose:{hidden:{}}, screenplay:{hidden:{}} }
+        fmtbar: null,
         // [alpha.60r2 ข้อ 10] ธีมของโปรแกรม — Ctrl+Shift+P สลับ dark ↔ light
         // (คนละเรื่องกับ paperMode ซึ่งเป็น "หน้าตาของกระดาษ" ไม่ใช่ของ UI)
         theme: "dark",
@@ -21669,6 +21698,12 @@
         ["Digit3", "ctrl+alt", false, "character"],
         ["Digit4", "ctrl+alt", false, "location"],
         ["Digit5", "ctrl+alt", false, "memo"],
+        // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (Ctrl+Shift+/)
+        ["Slash", true, true, "fmtbar-here"],
+        // [alpha.117] สภาพของแถบรูปแบบลอย — วางไว้ติดกันบนแป้นพิมพ์กับ Ctrl+Shift+/ ให้จำเป็นชุด
+        ["Quote", true, true, "fmtbar-opacity"],
+        ["Semicolon", true, true, "fmtbar-align"],
+        ["Equal", true, true, "fmtbar-lock"],
         // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
         ["KeyS", "ctrl+alt", false, "save-all"],
         // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
@@ -21690,8 +21725,31 @@
         ["KeyI", "ctrl+alt", false, "toggle-panel", "props"],
         // [alpha.79] แผงใหม่สองตัวของรอบนี้
         ["KeyL", "ctrl+alt", false, "toggle-panel", "dialogue"],
-        ["KeyE", "ctrl+alt", false, "toggle-panel", "plugins"]
+        ["KeyE", "ctrl+alt", false, "toggle-panel", "plugins"],
+        // ══ [alpha.116 ข้อ 7] ★ ปิดช่องว่างของตารางคีย์ลัด ══
+        //
+        // ผู้ใช้: *"เช็ค shortcut มีครบมั้ย"* — กวาดแล้วพบว่า **9 แผงไม่มีคีย์ลัดเลย**
+        // ทั้งที่แผงอื่นมีครบ (แผงที่มาทีหลังทุกตัวถูกลืม: ห้องซ้อมบท · Story Starter · แชท AI
+        //  และแผงพื้นฐานที่มีมาแต่ต้นอย่าง โครงเรื่อง/สารบัญ/บันทึก/ประวัติการบันทึก/ค้นหา)
+        //
+        // ประตูกันพลาดอยู่ที่ `test/shortcuts.test.cjs` — แผงที่ปิดได้ทุกตัวต้องมีคีย์ลัด
+        // หรือไม่ก็ต้องประกาศเหตุผลไว้ใน SHORTCUT_PANEL_SKIP ลืมเมื่อไหร่เทสแดงตั้งแต่ build
+        ["KeyQ", "ctrl+alt", false, "toggle-panel", "ai-hub"],
+        ["KeyW", "ctrl+alt", false, "toggle-panel", "ai-chat"],
+        ["KeyV", "ctrl+alt", false, "toggle-panel", "dlgb"],
+        ["KeyZ", "ctrl+alt", false, "toggle-panel", "starter"],
+        ["Digit6", "ctrl+alt", false, "toggle-panel", "tree"],
+        ["Digit7", "ctrl+alt", false, "toggle-panel", "outline"],
+        ["Digit8", "ctrl+alt", false, "toggle-panel", "notes"],
+        ["Digit9", "ctrl+alt", false, "toggle-panel", "log"],
+        ["Digit0", "ctrl+alt", false, "toggle-panel", "search"]
       ];
+      SHORTCUT_PANEL_SKIP = {
+        // เหตุผลเป็นข้อความของนักพัฒนา (โผล่ในผลเทสเท่านั้น ไม่ขึ้นหน้าจอ) จึงไม่ผ่านระบบภาษา
+        "planner-props": "companion panel of Planner \u2014 opened by Planner itself",
+        kanban: "has its own command shortcut (Ctrl+K)",
+        gallery: "has its own command shortcut (Ctrl+Shift+G)"
+      };
       shortcutId = (s) => s.slice(3).join(":");
       SHORTCUT_LABELS = {
         "save": "shortcuts.save",
@@ -21754,6 +21812,10 @@
         "panels-hide-left": "shortcuts.panelsHideLeft",
         "workspace-menu": "shortcuts.workspaceMenu",
         // ── [alpha.79] ชุดใหม่ ──
+        "fmtbar-here": "ui.shortcuts.fmtbarHere",
+        "fmtbar-opacity": "ui.shortcuts.fmtbarOpacity",
+        "fmtbar-align": "ui.shortcuts.fmtbarAlign",
+        "fmtbar-lock": "ui.shortcuts.fmtbarLock",
         "insert-image": "ui.shortcuts.insertImage",
         "quick-note": "ui.shortcuts.quickNote",
         "reading-mode": "ui.shortcuts.readingMode",
@@ -21782,7 +21844,17 @@
         "toggle-panel:comments": "ui.shortcuts.panelComments",
         "toggle-panel:props": "ui.shortcuts.panelProps",
         "toggle-panel:dialogue": "ui.shortcuts.panelDialogue",
-        "toggle-panel:plugins": "ui.shortcuts.panelPlugins"
+        "toggle-panel:plugins": "ui.shortcuts.panelPlugins",
+        // [alpha.116 ข้อ 7] เก้าตัวที่เคยตกหล่น
+        "toggle-panel:ai-hub": "ui.shortcuts.panelAiHub",
+        "toggle-panel:ai-chat": "ui.shortcuts.panelAiChat",
+        "toggle-panel:dlgb": "ui.shortcuts.panelDlgb",
+        "toggle-panel:starter": "ui.shortcuts.panelStarter",
+        "toggle-panel:tree": "ui.shortcuts.panelTree",
+        "toggle-panel:outline": "ui.shortcuts.panelOutline",
+        "toggle-panel:notes": "ui.shortcuts.panelNotes",
+        "toggle-panel:log": "ui.shortcuts.panelLog",
+        "toggle-panel:search": "ui.shortcuts.panelSearch"
       };
       SHORTCUT_CATS = [
         {
@@ -21868,7 +21940,11 @@
             "panels-hide-all",
             "panels-hide-right",
             "panels-hide-left",
-            "workspace-menu"
+            "workspace-menu",
+            "fmtbar-here",
+            "fmtbar-opacity",
+            "fmtbar-align",
+            "fmtbar-lock"
           ]
         },
         {
@@ -21899,7 +21975,17 @@
             "toggle-panel:comments",
             "toggle-panel:props",
             "toggle-panel:dialogue",
-            "toggle-panel:plugins"
+            "toggle-panel:plugins",
+            // [alpha.116 ข้อ 7] เก้าตัวที่เคยตกหล่น
+            "toggle-panel:ai-hub",
+            "toggle-panel:ai-chat",
+            "toggle-panel:dlgb",
+            "toggle-panel:starter",
+            "toggle-panel:tree",
+            "toggle-panel:outline",
+            "toggle-panel:notes",
+            "toggle-panel:log",
+            "toggle-panel:search"
           ]
         },
         { key: "other", labelKey: "ui.shortcuts.catOther", ids: ["settings", "dev-console"] }
@@ -22499,6 +22585,7 @@
           onSnapshot = null,
           onSwapTemplate = null,
           onReveal = null,
+          onFieldAI = null,
           onFindInScenes = null
         } = {}) {
           this.onRendered = onRendered;
@@ -22506,6 +22593,7 @@
           this.onVersions = onVersions;
           this.onSnapshot = onSnapshot;
           this.onReveal = onReveal;
+          this.onFieldAI = onFieldAI;
           this.onSwapTemplate = onSwapTemplate;
           this.pane = pane;
           this.file = file;
@@ -22613,6 +22701,30 @@
             });
             return i5;
           };
+          const aiFill = (r, i5, label) => {
+            if (!this.onFieldAI) return null;
+            const b = document.createElement("span");
+            b.className = "row-add wiki-ai-btn";
+            b.innerHTML = iconHtml("brain", 14);
+            b.title = t("ui.wiki.aiFillTip");
+            b.onclick = async (ev) => {
+              ev.stopPropagation();
+              if (b.classList.contains("busy")) return;
+              b.classList.add("busy");
+              try {
+                const v2 = await this.onFieldAI({ label, value: i5.value, entity: this.e });
+                if (v2 != null && String(v2).trim()) {
+                  i5.value = String(v2).trim();
+                  i5.dispatchEvent(new Event("input"));
+                }
+              } catch {
+              } finally {
+                b.classList.remove("busy");
+              }
+            };
+            r.appendChild(b);
+            return b;
+          };
           const linkedField = (labelText, val, cb) => {
             const r = row2(labelText);
             const i5 = input(val, (v2) => {
@@ -22620,6 +22732,7 @@
               syncLink();
             });
             r.appendChild(i5);
+            aiFill(r, i5, labelText);
             const linkRow = document.createElement("div");
             linkRow.className = "wiki-field-links";
             r.appendChild(linkRow);
@@ -22816,17 +22929,21 @@
             prof.appendChild(info);
             wrap2.appendChild(prof);
           }
-          row2(t("ui.common.name")).appendChild(input(this.e.name || "", (v2) => {
+          const rName = row2(t("ui.common.name"));
+          const iName = input(this.e.name || "", (v2) => {
             this.e.name = v2;
-          }));
-          row2(t("ui.wiki.nameOther")).appendChild(
-            input(
-              (this.e.aliases || []).join(", "),
-              (v2) => {
-                this.e.aliases = v2.split(",").map((x) => x.trim()).filter(Boolean);
-              }
-            )
+          });
+          rName.appendChild(iName);
+          aiFill(rName, iName, t("ui.common.name"));
+          const rAlias = row2(t("ui.wiki.nameOther"));
+          const iAlias = input(
+            (this.e.aliases || []).join(", "),
+            (v2) => {
+              this.e.aliases = v2.split(",").map((x) => x.trim()).filter(Boolean);
+            }
           );
+          rAlias.appendChild(iAlias);
+          aiFill(rAlias, iAlias, t("ui.wiki.nameOther"));
           const fields = this.e.fields || {};
           if (Object.keys(fields).length) {
             const fh = document.createElement("div");
@@ -23383,7 +23500,10 @@
         page2.append(d);
       }
       const firstBlock = page2.querySelector(".sp");
-      if (firstBlock) firstBlock.style.paddingTop = "0";
+      if (firstBlock) {
+        firstBlock.style.paddingTop = "0";
+        firstBlock.style.setProperty("--k-pad", "0");
+      }
       if (pg.continuedBottom) putCont("bottom", pg.continuedBottom);
       slot.append(page2);
       host2.append(slot);
@@ -24785,22 +24905,22 @@
     return { adopted: Object.keys(synced.images).length - before, captions: capsUsed };
   }
   async function createAlbum(api, root, name5, parent = "") {
-    const clean = sanitizeAlbumName(name5);
-    if (!clean) throw new Error(t("ui.galleryAlbum.nameAlbumUseCant"));
+    const clean2 = sanitizeAlbumName(name5);
+    if (!clean2) throw new Error(t("ui.galleryAlbum.nameAlbumUseCant"));
     const albums = await listAlbums(api, root);
-    const id = albumId(parent, clean);
+    const id = albumId(parent, clean2);
     if (albums.some((a) => a.id === id)) throw new Error(t("ui.galleryAlbum.hasAlbumName"));
     const dir2 = await albumDir(api, root, id);
     await api.mkdir(dir2);
     const rec = normalizeAlbum({
       id,
-      name: clean,
+      name: clean2,
       parent: parent === ROOT_ALBUM ? "" : parent,
       order: childrenOf(albums, parent).length,
       created: Date.now()
     });
     const next = [...albums, rec];
-    await writeAlbumDoc(api, root, id, newAlbumDoc(clean));
+    await writeAlbumDoc(api, root, id, newAlbumDoc(clean2));
     await saveAlbums(api, root, next);
     return rec;
   }
@@ -25039,12 +25159,12 @@
     return setImageMeta2(d, file, { tags: cur.filter((x) => x !== t3) });
   }
   function setTags(doc3, file, tags) {
-    const clean = [];
+    const clean2 = [];
     for (const raw of tags || []) {
       const t3 = normalizeTag(raw);
-      if (t3 && !clean.includes(t3)) clean.push(t3);
+      if (t3 && !clean2.includes(t3)) clean2.push(t3);
     }
-    return setImageMeta2(normalizeAlbumDoc(doc3), file, { tags: clean });
+    return setImageMeta2(normalizeAlbumDoc(doc3), file, { tags: clean2 });
   }
   function addTagMany(doc3, files, tag3) {
     let d = normalizeAlbumDoc(doc3);
@@ -25230,12 +25350,12 @@
     if (!oldFile || !newRel2) return { text: s, changed: 0 };
     let changed = 0;
     const swap2 = (p) => {
-      const clean = cleanRef(p);
-      if (basename(clean) !== oldFile) return null;
-      const i5 = clean.toLowerCase().lastIndexOf("images/");
+      const clean2 = cleanRef(p);
+      if (basename(clean2) !== oldFile) return null;
+      const i5 = clean2.toLowerCase().lastIndexOf("images/");
       if (i5 < 0) return null;
       changed++;
-      return clean.slice(0, i5 + "images/".length) + newRel2;
+      return clean2.slice(0, i5 + "images/".length) + newRel2;
     };
     let out = s.replace(MD_IMG, (m0, alt, p) => {
       const np = swap2(p);
@@ -28517,6 +28637,7 @@
     parseChat: () => parseChat,
     parseDomains: () => parseDomains,
     parseModels: () => parseModels,
+    parseStreamChunk: () => parseStreamChunk,
     parseThinking: () => parseThinking,
     removeProvider: () => removeProvider,
     stripSecrets: () => stripSecrets,
@@ -28662,7 +28783,7 @@
     }
     return out.sort((a, b) => a.localeCompare(b));
   }
-  function chatRequest(provider, { messages = [], system = "", stream: stream2 = false, model } = {}) {
+  function chatRequest(provider, { messages = [], system = "", stream: stream2 = false, model, temperature, maxTokens } = {}) {
     const base4 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
     const pr = normalizeParams(provider && provider.params || {});
     const url = /\/chat\/completions$/i.test(base4) ? base4 : /\/v1$/i.test(base4) ? base4 + "/chat/completions" : base4 + "/v1/chat/completions";
@@ -28674,8 +28795,8 @@
     const put = (k, v2) => {
       if (v2 !== null && v2 !== void 0 && v2 !== "") body[k] = v2;
     };
-    put("temperature", pr.temperature);
-    put("max_tokens", pr.maxTokens);
+    put("temperature", temperature !== void 0 ? temperature : pr.temperature);
+    put("max_tokens", maxTokens !== void 0 ? maxTokens : pr.maxTokens);
     put("frequency_penalty", pr.frequencyPenalty);
     put("presence_penalty", pr.presencePenalty);
     put("top_p", pr.topP);
@@ -28725,6 +28846,43 @@
       if (th) return th;
     }
     return "";
+  }
+  function parseStreamChunk(line) {
+    const s = String(line || "").trim();
+    if (!s) return null;
+    if (s === "[DONE]" || s === "data: [DONE]" || s === "data:[DONE]") return { done: true };
+    const payload = /^data:\s*/i.test(s) ? s.replace(/^data:\s*/i, "") : s;
+    let d;
+    try {
+      d = JSON.parse(payload);
+    } catch {
+      return null;
+    }
+    if (!d || typeof d !== "object") return null;
+    let delta = "";
+    let thinking = "";
+    if (d.type === "content_block_delta" && d.delta) {
+      if (d.delta.type === "thinking_delta") thinking = d.delta.thinking || "";
+      else if (typeof d.delta.text === "string") delta = d.delta.text;
+    } else if (d.type === "message_stop") {
+      return { done: true };
+    }
+    const ch = d.choices && d.choices[0];
+    if (ch) {
+      const dl = ch.delta || ch.message || {};
+      if (typeof dl.content === "string") delta = dl.content;
+      if (typeof dl.reasoning_content === "string") thinking = dl.reasoning_content;
+      else if (typeof dl.reasoning === "string") thinking = dl.reasoning;
+    }
+    if (!delta && !thinking) {
+      const m = d.message || {};
+      if (typeof m.content === "string") delta = m.content;
+      if (typeof m.thinking === "string") thinking = m.thinking;
+      if (typeof d.response === "string") delta = d.response;
+      if (d.done) return { done: true, delta, thinking };
+    }
+    if (!delta && !thinking) return null;
+    return { delta, thinking };
   }
   function emptyUsage() {
     return { input: 0, output: 0, reasoning: 0, cached: 0, total: 0 };
@@ -29182,6 +29340,7 @@
     aiMeta: () => aiMeta,
     clearKeysCache: () => clearKeysCache,
     complete: () => complete,
+    completeStream: () => completeStream,
     currentProvider: () => currentProvider,
     fetchModels: () => fetchModels,
     loadKeys: () => loadKeys,
@@ -29256,6 +29415,8 @@
     if (req.reqId) opts.__reqId = req.reqId;
     if (req.timeoutMs) opts.__timeoutMs = req.timeoutMs;
     const retries = Math.max(0, req.maxRetries ?? 0);
+    const backoff2 = (n2) => Math.min(8e3, 500 * Math.pow(2, n2));
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const who = provider.name || hostOf2(req.url);
     try {
       for (let attempt = 0; ; attempt++) {
@@ -29264,7 +29425,10 @@
         try {
           res = await kapi.httpFetch(req.url, opts);
         } catch (e) {
-          if (attempt < retries) continue;
+          if (attempt < retries) {
+            await sleep(backoff2(attempt));
+            continue;
+          }
           return { ok: false, status: 0, error: t("ui.aiProvider.connectCant") + (e && e.message) };
         }
         if (res && res.ok) {
@@ -29286,7 +29450,10 @@
         }
         const st = res && res.status || 0;
         const retryable2 = st === 429 || st === 408 || st >= 500 && st < 600;
-        if (retryable2 && attempt < retries) continue;
+        if (retryable2 && attempt < retries) {
+          await sleep(backoff2(attempt));
+          continue;
+        }
         return { ok: false, status: st, error: httpMsg(st), body: res && res.body || "" };
       }
     } finally {
@@ -29346,6 +29513,55 @@
     }
     const { text, thinking, usage } = parseChat(res.json);
     return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
+  }
+  async function completeStream(provider, opts = {}, onChunk = () => {
+  }) {
+    if (!provider) return { ok: false, text: "", error: t("ui.aiProvider.cantSettingsProviderAI") };
+    if (!provider.model && !opts.model) return { ok: false, text: "", error: t("ui.aiProvider.cantPickModel") };
+    if (typeof kapi.httpStream !== "function") {
+      const r = await complete(provider, opts);
+      if (r.ok && r.text) onChunk({ delta: r.text, thinking: r.thinking || "", text: r.text, thinkingAll: r.thinking || "" });
+      return r;
+    }
+    const req = chatRequest(provider, { ...opts, stream: true });
+    if (opts.reqId) req.reqId = opts.reqId;
+    if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
+    if (!isDomainAllowed(req.url, (provider.credential || {}).allowedDomains || [])) {
+      return { ok: false, status: 0, error: t("ui.aiProvider.domainNotListAllowed") + req.url };
+    }
+    const who = provider.name || hostOf2(req.url);
+    const httpOpts = { method: "POST", headers: req.headers, body: JSON.stringify(req.body) };
+    if (req.reqId) httpOpts.__reqId = req.reqId;
+    if (req.timeoutMs) httpOpts.__timeoutMs = req.timeoutMs;
+    let text = "";
+    let thinking = "";
+    try {
+      setBusy(tf("ui.aiProvider.busyNext", who));
+      const res = await kapi.httpStream(req.url, httpOpts, (line) => {
+        const c = parseStreamChunk(line);
+        if (!c) return;
+        if (c.done) return;
+        if (c.thinking) thinking += c.thinking;
+        if (c.delta) text += c.delta;
+        onChunk({ delta: c.delta || "", thinking: c.thinking || "", text, thinkingAll: thinking });
+      });
+      if (res && res.ok === false) {
+        return { ok: false, text, thinking, error: httpMsg(res.status || 0), status: res.status };
+      }
+      const usage = {
+        input: estimateTokens((opts.messages || []).reduce((n2, m) => n2 + (m.content || ""), "") + (opts.system || "")),
+        output: estimateTokens(text),
+        reasoning: estimateTokens(thinking),
+        cached: 0,
+        total: 0
+      };
+      usage.total = usage.input + usage.output;
+      return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name };
+    } catch (e) {
+      return { ok: false, text, thinking, error: t("ui.aiProvider.connectCant") + (e && e.message) };
+    } finally {
+      clearBusy();
+    }
   }
   async function showAISettingsDialog() {
     if (!state.root) {
@@ -35812,8 +36028,8 @@
           } else if (sweep === 1 && dtheta < 0) {
             dtheta += 2 * PI;
           }
-          var segments = Math.ceil(Math.abs(dtheta / PI * 2)), result = [], mDelta = dtheta / segments, mT = 8 / 3 * Math.sin(mDelta / 4) * Math.sin(mDelta / 4) / Math.sin(mDelta / 2), th3 = mTheta + mDelta;
-          for (var i5 = 0; i5 < segments; i5++) {
+          var segments2 = Math.ceil(Math.abs(dtheta / PI * 2)), result = [], mDelta = dtheta / segments2, mT = 8 / 3 * Math.sin(mDelta / 4) * Math.sin(mDelta / 4) / Math.sin(mDelta / 2), th3 = mTheta + mDelta;
+          for (var i5 = 0; i5 < segments2; i5++) {
             result[i5] = segmentToBezier2(mTheta, th3, cosTh, sinTh, rx, ry, cx1, cy1, mT, fromX, fromY);
             fromX = result[i5][5];
             fromY = result[i5][6];
@@ -36471,28 +36687,28 @@
           }
           return graphemes;
         }
-        function getWholeChar(str2, i5) {
-          var code3 = str2.charCodeAt(i5);
+        function getWholeChar(str3, i5) {
+          var code3 = str3.charCodeAt(i5);
           if (isNaN(code3)) {
             return "";
           }
           if (code3 < 55296 || code3 > 57343) {
-            return str2.charAt(i5);
+            return str3.charAt(i5);
           }
           if (55296 <= code3 && code3 <= 56319) {
-            if (str2.length <= i5 + 1) {
+            if (str3.length <= i5 + 1) {
               throw "High surrogate without following low surrogate";
             }
-            var next = str2.charCodeAt(i5 + 1);
+            var next = str3.charCodeAt(i5 + 1);
             if (56320 > next || next > 57343) {
               throw "High surrogate without following low surrogate";
             }
-            return str2.charAt(i5) + str2.charAt(i5 + 1);
+            return str3.charAt(i5) + str3.charAt(i5 + 1);
           }
           if (i5 === 0) {
             throw "Low surrogate without preceding high surrogate";
           }
-          var prev = str2.charCodeAt(i5 - 1);
+          var prev = str3.charCodeAt(i5 - 1);
           if (55296 > prev || prev > 56319) {
             throw "Low surrogate without preceding high surrogate";
           }
@@ -37070,7 +37286,7 @@
         function easeOutCubic(t3, b, c, d) {
           return c * ((t3 = t3 / d - 1) * t3 * t3 + 1) + b;
         }
-        function easeInOutCubic(t3, b, c, d) {
+        function easeInOutCubic2(t3, b, c, d) {
           t3 /= d / 2;
           if (t3 < 1) {
             return c / 2 * t3 * t3 * t3 + b;
@@ -37268,7 +37484,7 @@
             return c * (t3 /= d) * t3 * t3 + b;
           },
           easeOutCubic,
-          easeInOutCubic,
+          easeInOutCubic: easeInOutCubic2,
           easeInQuart,
           easeOutQuart,
           easeInOutQuart,
@@ -47501,11 +47717,11 @@
           } else if (value.toLive) {
             return prop + ": url(#SVGID_" + value.id + "); ";
           } else {
-            var color = new fabric4.Color(value), str2 = prop + ": " + color.toRgb() + "; ", opacity = color.getAlpha();
+            var color = new fabric4.Color(value), str3 = prop + ": " + color.toRgb() + "; ", opacity = color.getAlpha();
             if (opacity !== 1) {
-              str2 += prop + "-opacity: " + opacity.toString() + "; ";
+              str3 += prop + "-opacity: " + opacity.toString() + "; ";
             }
-            return str2;
+            return str3;
           }
         }
         var toFixed = fabric4.util.toFixed;
@@ -62539,6 +62755,208 @@
     }
   });
 
+  // src/shortcode.js
+  var shortcode_exports = {};
+  __export(shortcode_exports, {
+    SHORTCODES: () => SHORTCODES,
+    SHORTCODE_GROUPS: () => SHORTCODE_GROUPS,
+    expandShortcodes: () => expandShortcodes,
+    expandShortcodesInfo: () => expandShortcodesInfo,
+    formatDate: () => formatDate,
+    parseArgs: () => parseArgs,
+    scanShortcodes: () => scanShortcodes,
+    sceneContext: () => sceneContext,
+    shortcodeDef: () => shortcodeDef,
+    shortcodeLabel: () => shortcodeLabel,
+    shortcodeNames: () => shortcodeNames
+  });
+  function parseArgs(rest) {
+    const out = { arg: "", opts: {} };
+    let s = String(rest || "");
+    if (s.startsWith(":")) {
+      const m2 = s.slice(1).match(/^(\S*)([\s\S]*)$/);
+      out.arg = m2 && m2[1] || "";
+      s = m2 && m2[2] || "";
+    }
+    const KV = /(\w+)=("([^"]*)"|'([^']*)'|[^\s]*)/g;
+    let m;
+    while (m = KV.exec(s)) {
+      out.opts[m[1]] = m[3] !== void 0 ? m[3] : m[4] !== void 0 ? m[4] : m[2];
+    }
+    return out;
+  }
+  function formatDate(d, fmt) {
+    if (d === void 0 || d === null || d === "") return "";
+    const dt = d instanceof Date ? d : new Date(d);
+    if (!(dt instanceof Date) || isNaN(dt.getTime())) return "";
+    const p2 = (n2) => String(n2).padStart(2, "0");
+    if (fmt === "iso") return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
+    if (fmt === "year") return String(dt.getFullYear());
+    if (fmt === "time") return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
+    try {
+      return dt.toLocaleDateString();
+    } catch {
+      return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
+    }
+  }
+  function scanShortcodes(text) {
+    const out = [];
+    const s = String(text || "");
+    TOKEN.lastIndex = 0;
+    let m;
+    while (m = TOKEN.exec(s)) {
+      if (m[1] !== void 0) {
+        out.push({
+          name: "",
+          arg: "",
+          opts: {},
+          raw: m[0],
+          start: m.index,
+          end: m.index + m[0].length,
+          known: false,
+          escaped: true
+        });
+        continue;
+      }
+      const name5 = m[2].toLowerCase();
+      const { arg, opts } = parseArgs(m[3]);
+      out.push({
+        name: name5,
+        arg,
+        opts,
+        raw: m[0],
+        start: m.index,
+        end: m.index + m[0].length,
+        known: !!shortcodeDef(name5),
+        escaped: false
+      });
+    }
+    return out;
+  }
+  function expandShortcodes(text, ctx2 = {}, o = {}) {
+    return expandShortcodesInfo(text, ctx2, o).text;
+  }
+  function expandShortcodesInfo(text, ctx2 = {}, o = {}) {
+    const keepUnknown = o.keepUnknown !== false;
+    const used = [];
+    const unknown = [];
+    const src2 = String(text || "");
+    TOKEN.lastIndex = 0;
+    const out = src2.replace(TOKEN, (raw, esc6, name5, rest) => {
+      if (esc6 !== void 0) return "[" + esc6 + "]";
+      const key2 = String(name5).toLowerCase();
+      const def = shortcodeDef(key2);
+      if (!def) {
+        if (!unknown.includes(key2)) unknown.push(key2);
+        return keepUnknown ? raw : "";
+      }
+      const sc = parseArgs(rest);
+      if (!used.includes(key2)) used.push(key2);
+      let v2 = "";
+      try {
+        v2 = def.get(ctx2 || {}, sc);
+      } catch {
+        v2 = "";
+      }
+      return v2 === void 0 || v2 === null ? "" : String(v2);
+    });
+    return { text: out, used, unknown };
+  }
+  function sceneContext({
+    model = {},
+    chapter = null,
+    scene = null,
+    chapterNo = 0,
+    sceneNo = 0,
+    vars = {},
+    now = null
+  } = {}) {
+    const sc = scene || {};
+    const ch = chapter || {};
+    return {
+      title: model.title || "",
+      author: model.author || "",
+      project: model.project || model.title || "",
+      book: model.book || ch.book || "",
+      chapter: ch.title || "",
+      chapterNo: chapterNo || "",
+      scene: sc.title || "",
+      sceneNo: sceneNo || "",
+      status: sc.status || "",
+      pov: sc.pov || "",
+      synopsis: sc.synopsis || "",
+      tags: sc.tags || [],
+      words: sc.words || 0,
+      chars: sc.chars || 0,
+      pages: model.pages || 0,
+      vars: vars || {},
+      now: now || null
+    };
+  }
+  var TOKEN, str, SHORTCODES, shortcodeDef, shortcodeLabel, shortcodeNames, SHORTCODE_GROUPS;
+  var init_shortcode = __esm({
+    "src/shortcode.js"() {
+      init_i18n();
+      TOKEN = /\[\[([^[\]]*)\]\]|\[([A-Za-z][A-Za-z0-9_-]*)((?::|\s)[^[\]]*)?\]/g;
+      str = (v2) => v2 === void 0 || v2 === null ? "" : String(v2);
+      SHORTCODES = [
+        // ── งาน ──
+        { name: "title", group: "work", label: t("ui.shortcode.dtitle"), get: (c) => str(c.title) },
+        { name: "author", group: "work", label: t("ui.shortcode.dauthor"), get: (c) => str(c.author) },
+        { name: "project", group: "work", label: t("ui.shortcode.dproject"), get: (c) => str(c.project) },
+        { name: "book", group: "work", label: t("ui.shortcode.dbook"), get: (c) => str(c.book) },
+        // ── ที่ที่โค้ดนี้ยืนอยู่ ──
+        { name: "chapter", group: "place", label: t("ui.shortcode.dchapter"), get: (c) => str(c.chapter) },
+        { name: "scene", group: "place", label: t("ui.shortcode.dscene"), get: (c) => str(c.scene) },
+        { name: "sceneno", group: "place", label: t("ui.shortcode.dsceneno"), get: (c) => str(c.sceneNo) },
+        { name: "chapterno", group: "place", label: t("ui.shortcode.dchapterno"), get: (c) => str(c.chapterNo) },
+        { name: "status", group: "place", label: t("ui.shortcode.dstatus"), get: (c) => str(c.status) },
+        { name: "pov", group: "place", label: t("ui.shortcode.dpov"), get: (c) => str(c.pov) },
+        { name: "synopsis", group: "place", label: t("ui.shortcode.dsynopsis"), get: (c) => str(c.synopsis) },
+        {
+          name: "tags",
+          group: "place",
+          label: t("ui.shortcode.dtags"),
+          get: (c, sc) => (Array.isArray(c.tags) ? c.tags : String(c.tags || "").split(",")).map((x) => String(x).trim()).filter(Boolean).join(sc.opts.sep || ", ")
+        },
+        // ── ตัวเลข ──
+        { name: "words", group: "num", label: t("ui.shortcode.dwords"), get: (c) => str(c.words) },
+        { name: "chars", group: "num", label: t("ui.shortcode.dchars"), get: (c) => str(c.chars) },
+        { name: "pages", group: "num", label: t("ui.shortcode.dpages"), get: (c) => str(c.pages) },
+        // ── เวลา ──
+        {
+          name: "date",
+          group: "time",
+          label: t("ui.shortcode.ddate"),
+          get: (c, sc) => formatDate(c.now, sc.opts.fmt || sc.arg)
+        },
+        // ── ข้อมูลจาก Wiki (ใช้ตารางเดียวกับ {{ตัวแปร}} — ไม่มีแหล่งข้อมูลซ้อน) ──
+        {
+          name: "wiki",
+          group: "wiki",
+          label: t("ui.shortcode.dwiki"),
+          get: (c, sc) => str((c.vars || {})[sc.arg])
+        },
+        {
+          name: "var",
+          group: "wiki",
+          label: t("ui.shortcode.dvar"),
+          get: (c, sc) => str((c.vars || {})[sc.arg])
+        }
+      ];
+      shortcodeDef = (name5) => SHORTCODES.find((s) => s.name === String(name5 || "").toLowerCase()) || null;
+      shortcodeLabel = (name5) => (shortcodeDef(name5) || {}).label || String(name5 || "");
+      shortcodeNames = () => SHORTCODES.map((s) => s.name);
+      SHORTCODE_GROUPS = [
+        { key: "work", label: t("ui.shortcode.grpWork") },
+        { key: "place", label: t("ui.shortcode.grpPlace") },
+        { key: "num", label: t("ui.shortcode.grpNum") },
+        { key: "time", label: t("ui.shortcode.grpTime") },
+        { key: "wiki", label: t("ui.shortcode.grpWiki") }
+      ];
+    }
+  });
+
   // src/sp-continued.js
   function firstReal(page2) {
     return (page2 && page2.blocks || []).find((x) => x && Number.isFinite(x.pos)) || null;
@@ -62637,6 +63055,8 @@
     mdToHtml: () => mdToHtml,
     mdToHtmlBody: () => mdToHtmlBody,
     mkStep: () => mkStep,
+    modelHasScreenplay: () => modelHasScreenplay,
+    modelIsScreenplay: () => modelIsScreenplay,
     newWorkflow: () => newWorkflow,
     omitElements: () => omitElements,
     runWorkflow: () => runWorkflow,
@@ -62673,7 +63093,7 @@
     });
     return out.join("\n");
   }
-  function omitElements(text, types2) {
+  function omitElements(text, types2, { keepBlanks = false } = {}) {
     const drop = new Set((Array.isArray(types2) ? types2 : String(types2 ?? "").split(",")).map((s2) => String(s2).trim()).filter(Boolean));
     const s = String(text ?? "");
     if (!drop.size || !s) return s;
@@ -62702,7 +63122,8 @@
       prevBlank = false;
       prevType = el2;
     }
-    return out.join("\n").replace(/\n{3,}/g, "\n\n");
+    const joined = out.join("\n");
+    return keepBlanks ? joined : joined.replace(/\n{3,}/g, "\n\n");
   }
   function mkStep(key2, on2 = true, opts = null) {
     const d = stepDef(key2);
@@ -62806,6 +63227,24 @@ ${css}
 ${mdToHtmlBody(md)}
 </body></html>`;
   }
+  function modelIsScreenplay(model) {
+    let sp = 0, pr = 0;
+    for (const ch of model && model.chapters || [])
+      for (const sc of ch.scenes || []) {
+        if (sc.type === "memo") continue;
+        if (sc.format === "screenplay") sp++;
+        else pr++;
+      }
+    return sp > pr;
+  }
+  function modelHasScreenplay(model) {
+    for (const ch of model && model.chapters || [])
+      for (const sc of ch.scenes || []) {
+        if (sc.type === "memo") continue;
+        if (sc.format === "screenplay") return true;
+      }
+    return false;
+  }
   function modelStats(model) {
     let sc = 0, w = 0;
     for (const ch of model.chapters) for (const s of ch.scenes) {
@@ -62818,10 +63257,13 @@ ${mdToHtmlBody(md)}
     allowJs = true,
     varCtx = {},
     spFormat: spFormat2 = null,
+    now = null,
     proseFormat: proseFormat2 = null,
     paper = null,
-    margins = null
+    margins = null,
+    keepBlanks
   } = {}) {
+    const shortcodeNow = now || /* @__PURE__ */ new Date();
     const warn = [];
     const model = {
       title: model0.title,
@@ -62837,6 +63279,8 @@ ${mdToHtmlBody(md)}
       return v2 === void 0 || v2 === null ? dflt : v2;
     };
     const has2 = (key2) => steps.some((s) => s.key === key2);
+    const keepFor = (sc) => keepBlanks === void 0 ? sc.format === "screenplay" : !!keepBlanks;
+    const squashAll = keepBlanks === void 0 ? !modelHasScreenplay(model) : !keepBlanks;
     for (const st of at("model")) {
       const o = st.opts || {};
       switch (st.key) {
@@ -62847,7 +63291,7 @@ ${mdToHtmlBody(md)}
         case "omit-elements": {
           const types2 = o.types === void 0 ? "note" : o.types;
           for (const c of model.chapters) for (const s of c.scenes)
-            s.body = omitElements(s.body || "", types2);
+            s.body = omitElements(s.body || "", types2, { keepBlanks: keepFor(s) });
           break;
         }
         case "filter-status": {
@@ -62879,6 +63323,29 @@ ${mdToHtmlBody(md)}
             s.title = resolveVars(s.title || "", varCtx);
           }
           break;
+        // [alpha.116 ข้อ 8] แทนโค้ดสั้น — บริบทสร้างใหม่ต่อฉาก (ฉากรู้ว่าตัวเองอยู่บทไหน ลำดับที่เท่าไร)
+        case "shortcodes": {
+          let ci = 0;
+          for (const c of model.chapters) {
+            ci++;
+            let si = 0;
+            for (const s of c.scenes) {
+              si++;
+              const ctx2 = sceneContext({
+                model,
+                chapter: c,
+                scene: s,
+                chapterNo: ci,
+                sceneNo: si,
+                vars: varCtx,
+                now: shortcodeNow
+              });
+              s.body = expandShortcodes(s.body || "", ctx2);
+              s.title = expandShortcodes(s.title || "", ctx2);
+            }
+          }
+          break;
+        }
         default:
           break;
       }
@@ -62911,7 +63378,7 @@ ${mdToHtmlBody(md)}
           out.push(fill(opt("scene-heading", "template", "### {title}"), sn, s.title || "", varCtx), "");
         if (has2("scene-meta"))
           out.push(tf("ui.compile.word", s.status || t("ui.compile.notSpecifyStatus"), (s.words || 0).toLocaleString()), "");
-        const b = String(s.body || "").trim();
+        const b = keepFor(s) ? String(s.body || "").replace(/\s+$/, "") : String(s.body || "").trim().replace(/\n{3,}/g, "\n\n");
         if (b) out.push(b, "");
       }
     }
@@ -62928,7 +63395,9 @@ ${mdToHtmlBody(md)}
         ""
       );
     }
-    let text = out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+    let text = out.join("\n");
+    if (squashAll) text = text.replace(/\n{3,}/g, "\n\n");
+    text = text.trim() + "\n";
     let ext = workflow.ext || "md";
     for (const st of at("text")) {
       if (st.key === "sp-continued") {
@@ -62967,6 +63436,7 @@ ${mdToHtmlBody(md)}
     "src/compile.js"() {
       init_i18n();
       init_template_vars();
+      init_shortcode();
       init_fountain();
       init_sp_format();
       init_sp_continued();
@@ -63009,6 +63479,9 @@ ${mdToHtmlBody(md)}
         { key: "strip-mentions", stage: "model", label: t("ui.compile.linkNameText") },
         { key: "strip-markdown", stage: "model", label: t("ui.compile.cutMarkdownText") },
         { key: "resolve-vars", stage: "model", label: t("ui.compile.editItemNameWiki") },
+        // [alpha.116 ข้อ 8] โค้ดสั้น `[title]` `[chapter]` `[scene]` `[date]` `[wiki:ชื่อ.ฟิลด์}`
+        // ต่างจาก {{ตัวแปร}} ตรงที่รู้ "บริบทของฉากที่กำลังส่งออก" ไม่ใช่แค่ตาราง Wiki
+        { key: "shortcodes", stage: "model", label: t("ui.compile.expandShortcode") },
         // ---- ช่วงประกอบ ----
         {
           key: "cover",
@@ -63797,7 +64270,7 @@ ${mdToHtmlBody(md)}
       return { text: "", usage: usageOf2(0, 0, 0, "") };
     }
   }
-  function parseStreamChunk(provider, line) {
+  function parseStreamChunk2(provider, line) {
     const p = PROVIDERS[provider] || PROVIDERS.openai;
     if (!line) return null;
     try {
@@ -63968,7 +64441,7 @@ ${h.text}`;
     const out = [];
     for (const row2 of coerceArray(rows)) {
       if (!row2 || typeof row2 !== "object") continue;
-      const clean = {};
+      const clean2 = {};
       let ok2 = true;
       for (const [field2, rule] of Object.entries(schema2)) {
         let v2 = row2[field2];
@@ -63981,9 +64454,9 @@ ${h.text}`;
           ok2 = false;
           break;
         }
-        clean[field2] = v2;
+        clean2[field2] = v2;
       }
-      if (ok2) out.push(clean);
+      if (ok2) out.push(clean2);
     }
     return out;
   }
@@ -64370,7 +64843,7 @@ ${h.text}`;
               req.url,
               { method: "POST", headers: req.headers, body: JSON.stringify(req.body) },
               (line) => {
-                const c = parseStreamChunk(provider, line);
+                const c = parseStreamChunk2(provider, line);
                 if (c && c.text) {
                   text += c.text;
                   onChunk(c.text, { partial: text });
@@ -65378,6 +65851,72 @@ ${h.text}`;
         { key: "touch", label: t("ui.sensory.touch"), icon: "edit", hint: t("ui.sensory.egBg") },
         { key: "taste", label: t("ui.sensory.taste"), icon: "star", hint: t("ui.sensory.eg") }
       ];
+    }
+  });
+
+  // src/ai/ai-field.js
+  function fieldContextRows(fields = [], skipLabel = "", limit = MAX_CONTEXT_FIELDS) {
+    const out = [];
+    for (const f of fields || []) {
+      if (!f) continue;
+      const label = String(f.label || "").trim();
+      const value = String(f.value == null ? "" : f.value).trim();
+      if (!label || !value) continue;
+      if (label === String(skipLabel || "").trim()) continue;
+      out.push(label + ": " + value.replace(/\s+/g, " ").slice(0, 400));
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+  function buildFieldPrompt(o = {}) {
+    const fieldLabel = String(o.fieldLabel || "").trim();
+    const current2 = String(o.current || "").trim();
+    const rows = [];
+    rows.push(tf(
+      "ui.aiField.taskLine",
+      String(o.catLabel || "").trim() || t("ui.aiField.thing"),
+      String(o.entityName || "").trim() || t("ui.aiField.unnamed")
+    ));
+    const ctx2 = fieldContextRows(o.fields, fieldLabel);
+    if (ctx2.length) {
+      rows.push("", t("ui.aiField.headKnown"));
+      rows.push(...ctx2.map((x) => "- " + x));
+    }
+    if (String(o.story || "").trim()) {
+      rows.push("", t("ui.aiField.headStory"), String(o.story).trim().slice(0, 800));
+    }
+    rows.push("", tf("ui.aiField.askField", fieldLabel));
+    if (current2) rows.push(tf("ui.aiField.hasCurrent", current2));
+    rows.push("", t("ui.aiField.headRules"));
+    rows.push(t("ui.aiField.ruleOnlyValue"));
+    rows.push(t("ui.aiField.ruleNoLabel"));
+    rows.push(t("ui.aiField.ruleShort"));
+    rows.push(t("ui.aiField.ruleSameLang"));
+    return { system: t("ui.aiField.system"), prompt: rows.join("\n") };
+  }
+  function parseFieldAnswer(raw, fieldLabel = "") {
+    let txt = String(raw || "").replace(FENCE, "").trim();
+    if (!txt) return "";
+    const label = String(fieldLabel || "").trim();
+    if (label) {
+      const esc6 = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      txt = txt.replace(new RegExp("^\\s*" + esc6 + "\\s*[:\uFF1A]\\s*"), "").trim();
+    }
+    txt = txt.replace(/^[-•*]\s+/, "").trim();
+    const q = txt.match(/^["“”「『«]([\s\S]+)["“”」』»]$/);
+    if (q && !/["“”]/.test(q[1])) txt = q[1].trim();
+    return txt;
+  }
+  function fieldResult(raw, fieldLabel = "") {
+    const v2 = parseFieldAnswer(raw, fieldLabel);
+    return v2 ? v2 : "";
+  }
+  var MAX_CONTEXT_FIELDS, FENCE;
+  var init_ai_field = __esm({
+    "src/ai/ai-field.js"() {
+      init_i18n();
+      MAX_CONTEXT_FIELDS = 14;
+      FENCE = /```[a-z]*\n?/gi;
     }
   });
 
@@ -68057,6 +68596,21 @@ ${h.text}`;
           i18n: "panel.aiAnalyzerTitle",
           desc: t("ui.panel.setToolAnalyzeSource")
         },
+        // [alpha.116 ข้อ 3] AI Hub — รวมทางเข้าของความสามารถ AI ทุกตัวไว้ที่เดียว
+        // (ตัวมันเองไม่มีตรรกะ AI เลย — ทุกการ์ดยิงเข้า handleCommand ตัวเดิม)
+        {
+          id: "ai-hub",
+          minW: 320,
+          dockW: 420,
+          title: t("ui.panel.aiHubTitle"),
+          icon: "brain",
+          adopt: "#ai-hub-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "panel.aiHubTitle",
+          desc: t("ui.panel.aiHubDesc")
+        },
         // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
         {
           id: "ai-chat",
@@ -69567,17 +70121,35 @@ ${h.text}`;
   // src/toolbar/toolbar-config.js
   var toolbar_config_exports = {};
   __export(toolbar_config_exports, {
+    FMTBAR_IDS: () => FMTBAR_IDS,
+    FMT_MODES: () => FMT_MODES,
+    FMT_UNSUPPORTED: () => FMT_UNSUPPORTED,
     LOCKED_BUTTONS: () => LOCKED_BUTTONS,
     TOOLBAR_GROUPS: () => TOOLBAR_GROUPS,
     allButtonIds: () => allButtonIds,
     defaultVisible: () => defaultVisible,
+    fmtMode: () => fmtMode,
+    fmtSupported: () => fmtSupported,
+    fmtbarConfigurableIds: () => fmtbarConfigurableIds,
+    fmtbarCounts: () => fmtbarCounts,
+    fmtbarGroups: () => fmtbarGroups,
+    fmtbarHidden: () => fmtbarHidden,
     groupOf: () => groupOf,
     isButtonVisible: () => isButtonVisible,
     isConfigurable: () => isConfigurable,
+    isFmtbarButton: () => isFmtbarButton,
+    layoutFmtbar: () => layoutFmtbar,
     layoutToolbar: () => layoutToolbar,
+    mainbarCounts: () => mainbarCounts,
+    mainbarGroups: () => mainbarGroups,
+    normalizeFmtbar: () => normalizeFmtbar,
     normalizeToolbar: () => normalizeToolbar,
+    resetFmtbarConfig: () => resetFmtbarConfig,
     resetToolbarConfig: () => resetToolbarConfig,
     setButtonVisible: () => setButtonVisible,
+    setFmtbarGroupVisible: () => setFmtbarGroupVisible,
+    setFmtbarGroupVisibleAll: () => setFmtbarGroupVisibleAll,
+    setFmtbarVisible: () => setFmtbarVisible,
     setGroupVisible: () => setGroupVisible,
     toolbarCounts: () => toolbarCounts
   });
@@ -69666,7 +70238,97 @@ ${h.text}`;
     }
     return out;
   }
-  var LOCKED_BUTTONS, TOOLBAR_GROUPS;
+  function isFmtbarButton(id) {
+    return FMTBAR_IDS.includes(id);
+  }
+  function fmtSupported(mode, id) {
+    const list = FMT_UNSUPPORTED[mode];
+    return !(list && list.includes(id));
+  }
+  function fmtMode(mode) {
+    return mode === "screenplay" ? "screenplay" : "prose";
+  }
+  function fmtbarConfigurableIds() {
+    return FMTBAR_IDS.filter((id) => !LOCKED_BUTTONS.includes(id));
+  }
+  function mainbarGroups() {
+    return TOOLBAR_GROUPS.map((g) => ({ ...g, buttons: g.buttons.filter((b) => !isFmtbarButton(b.id)) })).filter((g) => g.buttons.length);
+  }
+  function mainbarCounts(cfg) {
+    const ids = mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id)).filter((id) => isConfigurable(id));
+    const n2 = normalizeToolbar(cfg);
+    return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
+  }
+  function fmtbarGroups() {
+    return TOOLBAR_GROUPS.map((g) => ({ ...g, buttons: g.buttons.filter((b) => isFmtbarButton(b.id) && isConfigurable(b.id)) })).filter((g) => g.buttons.length);
+  }
+  function normalizeFmtbar(cfg, legacy) {
+    const known = new Set(fmtbarConfigurableIds());
+    const out = {};
+    const src2 = cfg && typeof cfg === "object" ? cfg : null;
+    let inherit = null;
+    if (!src2 && legacy) {
+      const old = normalizeToolbar(legacy);
+      inherit = Object.keys(old.hidden).filter((id) => known.has(id));
+    }
+    for (const m of FMT_MODES) {
+      const hidden = {};
+      const raw = src2 && src2[m] && typeof src2[m].hidden === "object" ? src2[m].hidden : null;
+      if (raw) {
+        for (const id of Object.keys(raw)) if (raw[id] && known.has(id)) hidden[id] = true;
+      } else if (inherit) {
+        for (const id of inherit) hidden[id] = true;
+      }
+      out[m] = { hidden };
+    }
+    return out;
+  }
+  function fmtbarHidden(cfg, mode, id) {
+    if (!fmtbarConfigurableIds().includes(id)) return false;
+    return !!normalizeFmtbar(cfg)[fmtMode(mode)].hidden[id];
+  }
+  function setFmtbarVisible(cfg, mode, id, on2) {
+    const next = normalizeFmtbar(cfg);
+    if (!fmtbarConfigurableIds().includes(id)) return next;
+    const m = fmtMode(mode);
+    const hidden = { ...next[m].hidden };
+    if (on2) delete hidden[id];
+    else hidden[id] = true;
+    return { ...next, [m]: { hidden } };
+  }
+  function setFmtbarGroupVisible(cfg, mode, groupKey, on2) {
+    let next = cfg;
+    const g = fmtbarGroups().find((x) => x.key === groupKey);
+    if (!g) return normalizeFmtbar(cfg);
+    for (const b of g.buttons) next = setFmtbarVisible(next, mode, b.id, on2);
+    return normalizeFmtbar(next);
+  }
+  function setFmtbarGroupVisibleAll(cfg, mode) {
+    const next = normalizeFmtbar(cfg);
+    return { ...next, [fmtMode(mode)]: { hidden: {} } };
+  }
+  function resetFmtbarConfig() {
+    const out = {};
+    for (const m of FMT_MODES) out[m] = { hidden: {} };
+    return out;
+  }
+  function fmtbarCounts(cfg, mode) {
+    const ids = fmtbarConfigurableIds();
+    const n2 = normalizeFmtbar(cfg)[fmtMode(mode)];
+    return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
+  }
+  function layoutFmtbar(seq2, cfg, mode) {
+    const list = Array.isArray(seq2) ? seq2 : [];
+    const m = fmtMode(mode);
+    const vis = (id) => !fmtbarHidden(cfg, m, id);
+    const show = layoutToolbar(
+      list.map((x) => x == null ? " keep" : x),
+      (x) => x === " keep" ? true : vis(x)
+    );
+    const grey = list.map((x) => x && x !== "sep" ? !fmtSupported(m, x) : false);
+    return { show, grey };
+  }
+  var LOCKED_BUTTONS, TOOLBAR_GROUPS, FMT_MODES, FMTBAR_IDS, FMT_UNSUPPORTED;
   var init_toolbar_config = __esm({
     "src/toolbar/toolbar-config.js"() {
       LOCKED_BUTTONS = [
@@ -69757,6 +70419,8 @@ ${h.text}`;
           { id: "tb-gallery-board" }
         ] },
         { key: "ai", labelKey: "ui.tbcfg.grpAi", buttons: [
+          { id: "tb-ai-hub" },
+          // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
           { id: "tb-ai" },
           { id: "tb-ai-chat" },
           { id: "tb-ai-analyzer" },
@@ -69770,38 +70434,278 @@ ${h.text}`;
           // เมนูคำสั่งที่ปลั๊กอินลงทะเบียนไว้
         ] }
       ];
+      FMT_MODES = ["prose", "screenplay"];
+      FMTBAR_IDS = [
+        "tb-sp-elem",
+        "sp-view-select",
+        "tb-mode",
+        "tb-style",
+        "tb-case",
+        "tb-bold",
+        "tb-italic",
+        "tb-underline",
+        "tb-strike",
+        "tb-sup",
+        "tb-sub",
+        "tb-ul",
+        "tb-ol",
+        "tb-quote",
+        "tb-align-left",
+        "tb-align-center",
+        "tb-align-right",
+        "tb-align-justify",
+        "tb-indent",
+        "tb-sp-cont",
+        "tb-img",
+        "tb-source",
+        "tb-read",
+        "tb-gsearch"
+      ];
+      FMT_UNSUPPORTED = {
+        screenplay: ["tb-style", "tb-sup", "tb-sub", "tb-quote"],
+        prose: ["tb-sp-elem", "tb-sp-cont"]
+        // (`tb-sp-ext` อยู่บนแถบหลัก ไม่ใช่แถบลอย)
+      };
+    }
+  });
+
+  // src/toolbar/fab-config.js
+  var fab_config_exports = {};
+  __export(fab_config_exports, {
+    DEFAULT_FAB_ACTIONS: () => DEFAULT_FAB_ACTIONS,
+    FAB_ACTIONS: () => FAB_ACTIONS,
+    FAB_DISPLAYS: () => FAB_DISPLAYS,
+    FAB_DISPLAY_LABELS: () => FAB_DISPLAY_LABELS,
+    FAB_GROUPS: () => FAB_GROUPS,
+    FAB_MAX: () => FAB_MAX,
+    allFabIds: () => allFabIds,
+    canAddFab: () => canAddFab,
+    clampFabPos: () => clampFabPos,
+    fabAction: () => fabAction,
+    fabAnimMs: () => fabAnimMs,
+    fabGroupActions: () => fabGroupActions,
+    fabMenuItems: () => fabMenuItems,
+    fabOpenDir: () => fabOpenDir,
+    fabRadialPositions: () => fabRadialPositions,
+    fabRadius: () => fabRadius,
+    fabStackPositions: () => fabStackPositions,
+    hasFabAction: () => hasFabAction,
+    moveFabAction: () => moveFabAction,
+    normalizeFab: () => normalizeFab,
+    resetFabConfig: () => resetFabConfig,
+    setFabDisplay: () => setFabDisplay,
+    toggleFabAction: () => toggleFabAction
+  });
+  function allFabIds() {
+    return FAB_ACTIONS.map((a) => a.id);
+  }
+  function fabAction(id) {
+    return FAB_ACTIONS.find((a) => a.id === id) || null;
+  }
+  function fabGroupActions(key2) {
+    return FAB_ACTIONS.filter((a) => a.grp === key2);
+  }
+  function normalizeFab(cfg) {
+    const src2 = cfg && typeof cfg === "object" ? cfg : {};
+    const known = new Set(allFabIds());
+    const seen = /* @__PURE__ */ new Set();
+    const actions = [];
+    for (const id of Array.isArray(src2.actions) ? src2.actions : []) {
+      if (!known.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      actions.push(id);
+      if (actions.length >= FAB_MAX) break;
+    }
+    const list = Array.isArray(src2.actions) ? actions : DEFAULT_FAB_ACTIONS.slice();
+    const display = FAB_DISPLAYS.includes(src2.display) ? src2.display : "icon";
+    return { actions: list, display };
+  }
+  function hasFabAction(cfg, id) {
+    return normalizeFab(cfg).actions.includes(id);
+  }
+  function canAddFab(cfg) {
+    return normalizeFab(cfg).actions.length < FAB_MAX;
+  }
+  function toggleFabAction(cfg, id, on2) {
+    const next = normalizeFab(cfg);
+    if (!fabAction(id)) return next;
+    const at = next.actions.indexOf(id);
+    if (on2) {
+      if (at >= 0 || next.actions.length >= FAB_MAX) return next;
+      return { ...next, actions: [...next.actions, id] };
+    }
+    if (at < 0) return next;
+    return { ...next, actions: next.actions.filter((x) => x !== id) };
+  }
+  function moveFabAction(cfg, id, dir2) {
+    const next = normalizeFab(cfg);
+    const at = next.actions.indexOf(id);
+    const to = at + (dir2 < 0 ? -1 : 1);
+    if (at < 0 || to < 0 || to >= next.actions.length) return next;
+    const arr = next.actions.slice();
+    arr.splice(to, 0, arr.splice(at, 1)[0]);
+    return { ...next, actions: arr };
+  }
+  function setFabDisplay(cfg, display) {
+    const next = normalizeFab(cfg);
+    return { ...next, display: FAB_DISPLAYS.includes(display) ? display : next.display };
+  }
+  function resetFabConfig() {
+    return { actions: DEFAULT_FAB_ACTIONS.slice(), display: "icon" };
+  }
+  function fabMenuItems(cfg) {
+    return normalizeFab(cfg).actions.map((id) => fabAction(id)).filter(Boolean);
+  }
+  function fabOpenDir(cx2, cy2, vw, vh) {
+    return { dirX: cx2 > vw / 2 ? -1 : 1, dirY: cy2 > vh / 2 ? -1 : 1 };
+  }
+  function fabRadius(n2, item, gap = 12, spread = 90, min = 84) {
+    if (!(n2 > 1)) return min;
+    const step = spread / (n2 - 1) * DEG;
+    if (!(step > 0)) return min;
+    return Math.max(min, (item + gap) / step);
+  }
+  function fabRadialPositions(n2, o = {}) {
+    const count = Math.max(0, Math.floor(n2));
+    if (!count) return [];
+    const radius = o.radius > 0 ? o.radius : 96;
+    const dirX = o.dirX < 0 ? -1 : 1;
+    const dirY = o.dirY < 0 ? -1 : 1;
+    const spread = Number.isFinite(o.spread) ? o.spread : 90;
+    const start = Number.isFinite(o.start) ? o.start : 0;
+    const stagger = Number.isFinite(o.stagger) ? o.stagger : 45;
+    const out = [];
+    for (let i5 = 0; i5 < count; i5++) {
+      const angle = count === 1 ? start + spread / 2 : start + spread * i5 / (count - 1);
+      const rad = angle * DEG;
+      out.push({
+        angle,
+        x: dirX * radius * Math.cos(rad),
+        // ทั้งสองแกนใช้พิกัดหน้าจอตรง ๆ (y ชี้ลง) → dirY=-1 = กางขึ้น · +1 = กางลง
+        y: dirY * radius * Math.sin(rad),
+        delay: (o.closing ? count - 1 - i5 : i5) * stagger
+      });
+    }
+    return out;
+  }
+  function fabStackPositions(n2, o = {}) {
+    const count = Math.max(0, Math.floor(n2));
+    if (!count) return [];
+    const item = o.item > 0 ? o.item : 42;
+    const gap = Number.isFinite(o.gap) ? o.gap : 10;
+    const offset = Number.isFinite(o.offset) ? o.offset : 62;
+    const dirY = o.dirY < 0 ? -1 : 1;
+    const stagger = Number.isFinite(o.stagger) ? o.stagger : 45;
+    const out = [];
+    for (let i5 = 0; i5 < count; i5++) {
+      out.push({
+        x: 0,
+        y: dirY * (offset + i5 * (item + gap)),
+        delay: (o.closing ? count - 1 - i5 : i5) * stagger
+      });
+    }
+    return out;
+  }
+  function fabAnimMs(n2, stagger = 45, dur = 220) {
+    return Math.max(0, Math.max(0, n2 - 1) * stagger) + dur;
+  }
+  function clampFabPos(pos, size, vw, vh, pad3 = 6) {
+    const w = size && size.width > 0 ? size.width : 52;
+    const h = size && size.height > 0 ? size.height : 52;
+    const maxL = Math.max(pad3, vw - w - pad3);
+    const maxT = Math.max(pad3, vh - h - pad3);
+    return {
+      left: Math.min(Math.max(pad3, Math.round(pos && pos.left || 0)), maxL),
+      top: Math.min(Math.max(pad3, Math.round(pos && pos.top || 0)), maxT)
+    };
+  }
+  var FAB_MAX, FAB_DISPLAYS, FAB_DISPLAY_LABELS, FAB_ACTIONS, FAB_GROUPS, DEFAULT_FAB_ACTIONS, DEG;
+  var init_fab_config = __esm({
+    "src/toolbar/fab-config.js"() {
+      FAB_MAX = 4;
+      FAB_DISPLAYS = ["icon", "iconText", "text"];
+      FAB_DISPLAY_LABELS = {
+        icon: "ui.fab.dispIcon",
+        iconText: "ui.fab.dispIconText",
+        text: "ui.fab.dispText"
+      };
+      FAB_ACTIONS = [
+        { id: "scene", cmd: "scene", icon: "file", grp: "create", labelKey: "ui.fab.actScene" },
+        { id: "chapter", cmd: "chapter", icon: "folder", grp: "create", labelKey: "ui.fab.actChapter" },
+        { id: "character", cmd: "new-entity", args: ["characters"], icon: "user", grp: "create", labelKey: "ui.fab.actCharacter" },
+        { id: "location", cmd: "new-entity", args: ["locations"], icon: "map", grp: "create", labelKey: "ui.fab.actLocation" },
+        { id: "item", cmd: "new-entity", args: ["items"], icon: "briefcase", grp: "create", labelKey: "ui.fab.actItem" },
+        { id: "lore", cmd: "new-entity", args: ["lore"], icon: "book-content", grp: "create", labelKey: "ui.fab.actLore" },
+        { id: "memo", cmd: "memo", icon: "clipboard", grp: "create", labelKey: "ui.fab.actMemo" },
+        { id: "template", cmd: "new-from-template", icon: "star", grp: "create", labelKey: "ui.fab.actTemplate" },
+        { id: "note", cmd: "scratchpad", icon: "note", grp: "write", labelKey: "ui.fab.actNote" },
+        { id: "quicknote", cmd: "quick-note", icon: "edit", grp: "write", labelKey: "ui.fab.actQuickNote" },
+        { id: "search", cmd: "global-search", icon: "search", grp: "write", labelKey: "ui.fab.actSearch" },
+        { id: "quickopen", cmd: "quick-open", icon: "book-open", grp: "write", labelKey: "ui.fab.actQuickOpen" },
+        { id: "image", cmd: "insert-image", icon: "image-add", grp: "write", labelKey: "ui.fab.actImage" },
+        { id: "dashboard", cmd: "toggle-panel", args: ["dashboard"], icon: "chart", grp: "view", labelKey: "ui.fab.actDashboard" },
+        { id: "timeline", cmd: "toggle-panel", args: ["timeline"], icon: "history", grp: "view", labelKey: "ui.fab.actTimeline" },
+        { id: "maps", cmd: "toggle-panel", args: ["maps"], icon: "globe", grp: "view", labelKey: "ui.fab.actMaps" },
+        { id: "kanban", cmd: "kanban", icon: "grid", grp: "view", labelKey: "ui.fab.actKanban" },
+        { id: "gallery", cmd: "gallery", icon: "image", grp: "view", labelKey: "ui.fab.actGallery" },
+        { id: "focus", cmd: "focus-mode", icon: "eye", grp: "view", labelKey: "ui.fab.actFocus" },
+        { id: "saveall", cmd: "save-all", icon: "save", grp: "file", labelKey: "ui.fab.actSaveAll" },
+        { id: "snapshot", cmd: "backup-now", icon: "archive", grp: "file", labelKey: "ui.fab.actSnapshot" },
+        { id: "export", cmd: "export-hub", icon: "book-content", grp: "file", labelKey: "ui.fab.actExport" },
+        { id: "settings", cmd: "settings", icon: "cog", grp: "file", labelKey: "ui.fab.actSettings" }
+      ];
+      FAB_GROUPS = [
+        { key: "create", labelKey: "ui.fab.grpCreate" },
+        { key: "write", labelKey: "ui.fab.grpWrite" },
+        { key: "view", labelKey: "ui.fab.grpView" },
+        { key: "file", labelKey: "ui.fab.grpFile" }
+      ];
+      DEFAULT_FAB_ACTIONS = ["scene", "chapter", "character", "location"];
+      DEG = Math.PI / 180;
     }
   });
 
   // src/toolbar/toolbar-ui.js
   var toolbar_ui_exports = {};
   __export(toolbar_ui_exports, {
+    TB_FMT_HOST: () => TB_FMT_HOST,
     TB_HOSTS: () => TB_HOSTS,
+    TB_MAIN_HOSTS: () => TB_MAIN_HOSTS,
+    applyFmtbarConfig: () => applyFmtbarConfig,
     applyToolbarConfig: () => applyToolbarConfig,
+    buildFabList: () => buildFabList,
+    buildFmtbarList: () => buildFmtbarList,
     buildToolbarList: () => buildToolbarList,
+    currentFmtMode: () => currentFmtMode,
+    fabContextItems: () => fabContextItems,
+    fmtbarContextItems: () => fmtbarContextItems,
     labelOf: () => labelOf2,
+    openFmtbarSettings: () => openFmtbarSettings,
     toolbarContextItems: () => toolbarContextItems,
     toolbarDialog: () => toolbarDialog
   });
   function labelOf2(id) {
     const b = btn(id);
     const raw = b && (b.title || b.getAttribute("aria-label")) || "";
-    const clean = raw.replace(/\s*\((?:Ctrl|⌘|Alt|⌥|Shift|⇧)[^)]*\)\s*$/i, "").trim();
-    return clean || id.replace(/^tb-/, "");
+    const clean2 = raw.replace(/\s*\((?:Ctrl|⌘|Alt|⌥|Shift|⇧)[^)]*\)\s*$/i, "").trim();
+    return clean2 || id.replace(/^tb-/, "");
+  }
+  function barSeq(bar) {
+    return [...bar.children].map((k) => {
+      if (k.classList.contains("sep")) return "sep";
+      return k.id && isConfigurable(k.id) ? k.id : null;
+    });
   }
   function applyToolbarConfig(cfg) {
     const conf = normalizeToolbar(cfg ?? (state.settings && state.settings.toolbar));
     const vis = (id) => !conf.hidden[id];
     let found2 = false;
-    for (const sel of TB_HOSTS) {
+    for (const sel of TB_MAIN_HOSTS) {
       const bar = document.querySelector(sel);
       if (!bar) continue;
       found2 = true;
       const kids = [...bar.children];
-      const seq2 = kids.map((k) => {
-        if (k.classList.contains("sep")) return "sep";
-        return k.id && isConfigurable(k.id) ? k.id : null;
-      });
+      const seq2 = barSeq(bar);
       const show = layoutToolbar(seq2.map((x) => x ?? " keep"), (x) => x === " keep" ? true : vis(x));
       kids.forEach((k, i5) => {
         if (seq2[i5] === "sep") {
@@ -69812,7 +70716,27 @@ ${h.text}`;
         k.classList.toggle("tb-hidden", !vis(seq2[i5]));
       });
     }
+    applyFmtbarConfig();
     return found2;
+  }
+  function applyFmtbarConfig(cfg, mode) {
+    const bar = document.querySelector(TB_FMT_HOST);
+    if (!bar) return false;
+    const conf = cfg ?? (state.settings && state.settings.fmtbar);
+    const m = fmtMode(mode ?? currentFmtMode());
+    const kids = [...bar.children];
+    const { show, grey } = layoutFmtbar(barSeq(bar), conf, m);
+    kids.forEach((k, i5) => {
+      const isSep = k.classList.contains("sep");
+      if (isSep || k.id && isConfigurable(k.id)) k.classList.toggle("tb-hidden", !show[i5]);
+      k.classList.toggle("tb-na", !!grey[i5]);
+      if (k.tagName === "SELECT") k.disabled = !!grey[i5];
+    });
+    bar.dataset.fmtMode = m;
+    return true;
+  }
+  function currentFmtMode() {
+    return state.active && state.active.sp ? "screenplay" : "prose";
   }
   function buildToolbarList(host2, opts = {}) {
     if (!host2) return null;
@@ -69825,7 +70749,7 @@ ${h.text}`;
     const list = el("div", "k-tbcfg-list");
     host2.append(list);
     const syncCount = () => {
-      const c = toolbarCounts(cfgNow());
+      const c = mainbarCounts(cfgNow());
       count.textContent = tf("ui.tbcfg.count", c.on, c.total);
     };
     const save = async (next) => {
@@ -69838,7 +70762,7 @@ ${h.text}`;
       } catch {
       }
     };
-    for (const g of TOOLBAR_GROUPS) {
+    for (const g of mainbarGroups()) {
       const sec = el("div", "k-tbcfg-sec");
       const head2 = el("div", "k-tbcfg-head");
       head2.append(el("span", "k-tbcfg-gname", t(g.labelKey)));
@@ -69948,14 +70872,245 @@ ${h.text}`;
     document.addEventListener("keydown", esc6);
     return ov;
   }
-  var btn, TB_HOSTS;
+  async function saveFmtbar(next) {
+    state.settings.fmtbar = next;
+    applyFmtbarConfig(next);
+    try {
+      const app = await Promise.resolve().then(() => (init_app(), app_exports));
+      await app.saveGlobalSetting("fmtbar", next);
+    } catch {
+    }
+  }
+  function buildFmtbarList(host2, opts = {}) {
+    if (!host2) return null;
+    host2.replaceChildren();
+    host2.classList.add("k-tbcfg-host");
+    let mode = fmtMode(opts.mode || currentFmtMode());
+    host2.append(el("div", "k-hint", t("ui.fmtcfg.hint")));
+    const tabs2 = el("div", "k-fmtcfg-modes");
+    const modeBtns = {};
+    for (const m of FMT_MODES) {
+      const b = el(
+        "button",
+        "k-fmtcfg-mode",
+        t(m === "screenplay" ? "ui.fmtcfg.modeScreen" : "ui.fmtcfg.modeProse")
+      );
+      b.dataset.mode = m;
+      b.onclick = () => {
+        mode = m;
+        redrawAll();
+      };
+      modeBtns[m] = b;
+      tabs2.append(b);
+    }
+    host2.append(tabs2);
+    const count = el("div", "k-tbcfg-count dim");
+    host2.append(count);
+    const list = el("div", "k-tbcfg-list");
+    host2.append(list);
+    const cfgNow = () => normalizeFmtbar(
+      state.settings && state.settings.fmtbar,
+      state.settings && state.settings.toolbar
+    );
+    const save = async (next) => {
+      await saveFmtbar(next);
+      redrawAll();
+    };
+    function redrawAll() {
+      for (const m of FMT_MODES) modeBtns[m].classList.toggle("on", m === mode);
+      const c = fmtbarCounts(cfgNow(), mode);
+      count.textContent = tf("ui.tbcfg.count", c.on, c.total);
+      list.replaceChildren();
+      for (const g of fmtbarGroups()) {
+        const sec = el("div", "k-tbcfg-sec");
+        const head2 = el("div", "k-tbcfg-head");
+        head2.append(el("span", "k-tbcfg-gname", t(g.labelKey)));
+        const onAll = el("button", "k-tbcfg-mini", t("ui.tbcfg.allOn"));
+        onAll.onclick = () => save(setFmtbarGroupVisible(cfgNow(), mode, g.key, true));
+        const offAll = el("button", "k-tbcfg-mini", t("ui.tbcfg.allOff"));
+        offAll.onclick = () => save(setFmtbarGroupVisible(cfgNow(), mode, g.key, false));
+        head2.append(onAll, offAll);
+        sec.append(head2);
+        for (const b of g.buttons) {
+          const ok2 = fmtSupported(mode, b.id);
+          const row2 = el("div", "k-tbcfg-row" + (ok2 ? "" : " k-tbcfg-na"));
+          row2.dataset.btn = b.id;
+          const ic = el("span", "k-tbcfg-icon");
+          const src2 = btn(b.id);
+          if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
+          else ic.textContent = "\u25CF";
+          row2.append(ic, el("span", "k-tbcfg-name", labelOf2(b.id)));
+          if (!ok2) row2.append(el("span", "k-tbcfg-miss dim", t("ui.fmtcfg.naTag")));
+          const sw = el("input", "k-tbcfg-sw");
+          sw.type = "checkbox";
+          sw.checked = !fmtbarHidden(cfgNow(), mode, b.id);
+          sw.disabled = !ok2;
+          sw.onchange = () => save(setFmtbarVisible(cfgNow(), mode, b.id, sw.checked));
+          row2.append(sw);
+          sec.append(row2);
+        }
+        list.append(sec);
+      }
+    }
+    redrawAll();
+    const foot = el("div", "k-tbcfg-foot");
+    const reset = el("button", "k-reset-btn", t("ui.tbcfg.reset"));
+    reset.onclick = async () => {
+      await save(resetFmtbarConfig());
+      setStatus(t("ui.tbcfg.resetDone"));
+    };
+    foot.append(reset);
+    host2.append(foot);
+    return host2;
+  }
+  function fmtbarContextItems(btnId) {
+    const mode = currentFmtMode();
+    const cfg = () => normalizeFmtbar(
+      state.settings && state.settings.fmtbar,
+      state.settings && state.settings.toolbar
+    );
+    const modeName = t(mode === "screenplay" ? "ui.fmtcfg.modeScreen" : "ui.fmtcfg.modeProse");
+    const items = [];
+    if (btnId && isConfigurable(btnId) && isFmtbarButton(btnId)) {
+      const name5 = labelOf2(btnId);
+      items.push({ label: tf("ui.fmtcfg.hideThis", name5, modeName), click: async () => {
+        await saveFmtbar(setFmtbarVisible(cfg(), mode, btnId, false));
+        setStatus(tf("ui.fmtcfg.hidden", name5, modeName));
+      } });
+      items.push("-");
+    }
+    items.push({
+      label: tf("ui.fmtcfg.customize", modeName),
+      click: () => openFmtbarSettings(mode)
+    });
+    items.push({ label: tf("ui.fmtcfg.showAll", modeName), click: async () => {
+      await saveFmtbar(setFmtbarGroupVisibleAll(cfg(), mode));
+      setStatus(t("ui.tbcfg.resetDone"));
+    } });
+    return items;
+  }
+  async function openFmtbarSettings(mode) {
+    try {
+      const d = await Promise.resolve().then(() => (init_dialogs(), dialogs_exports));
+      d.settingsDialog("fmtbar", { fmtMode: mode });
+    } catch (e) {
+      setStatus(t("ui.fmtcfg.openFail"));
+    }
+  }
+  async function saveFab(next) {
+    state.settings.fab = next;
+    try {
+      const app = await Promise.resolve().then(() => (init_app(), app_exports));
+      app.renderFabMenu();
+      await app.saveGlobalSetting("fab", next);
+    } catch {
+    }
+  }
+  function buildFabList(host2) {
+    if (!host2) return null;
+    host2.replaceChildren();
+    host2.classList.add("k-tbcfg-host", "k-fabcfg-host");
+    host2.append(el("div", "k-hint", tf("ui.fab.hint", FAB_MAX)));
+    const cfgNow = () => normalizeFab(state.settings && state.settings.fab);
+    const save = async (next) => {
+      await saveFab(next);
+      redrawAll();
+    };
+    const dispRow = el("div", "k-fabcfg-disp");
+    dispRow.append(el("span", "k-tbcfg-gname", t("ui.fab.display")));
+    const dispBtns = {};
+    for (const d of FAB_DISPLAYS) {
+      const b = el("button", "k-fmtcfg-mode", t(FAB_DISPLAY_LABELS[d]));
+      b.dataset.disp = d;
+      b.onclick = () => save(setFabDisplay(cfgNow(), d));
+      dispBtns[d] = b;
+      dispRow.append(b);
+    }
+    host2.append(dispRow);
+    const count = el("div", "k-tbcfg-count dim");
+    host2.append(count);
+    const chosen = el("div", "k-fabcfg-chosen");
+    host2.append(chosen);
+    const list = el("div", "k-tbcfg-list");
+    host2.append(list);
+    function redrawAll() {
+      const cfg = cfgNow();
+      for (const d of FAB_DISPLAYS) dispBtns[d].classList.toggle("on", d === cfg.display);
+      count.textContent = tf("ui.fab.count", cfg.actions.length, FAB_MAX);
+      chosen.replaceChildren();
+      if (!cfg.actions.length) chosen.append(el("div", "k-hint dim", t("ui.fab.empty")));
+      cfg.actions.forEach((id, i5) => {
+        const a = fabAction(id);
+        const row2 = el("div", "k-fabcfg-pick");
+        row2.append(el("span", "k-fabcfg-num", String(i5 + 1)));
+        row2.append(el("span", "k-tbcfg-name", t(a.labelKey)));
+        const up = el("button", "k-tbcfg-mini", "\u2191");
+        up.disabled = i5 === 0;
+        up.onclick = () => save(moveFabAction(cfgNow(), id, -1));
+        const dn = el("button", "k-tbcfg-mini", "\u2193");
+        dn.disabled = i5 === cfg.actions.length - 1;
+        dn.onclick = () => save(moveFabAction(cfgNow(), id, 1));
+        const rm2 = el("button", "k-tbcfg-mini", "\u2715");
+        rm2.onclick = () => save(toggleFabAction(cfgNow(), id, false));
+        row2.append(up, dn, rm2);
+        chosen.append(row2);
+      });
+      list.replaceChildren();
+      const full = !canAddFab(cfg);
+      for (const g of FAB_GROUPS) {
+        const acts = fabGroupActions(g.key);
+        if (!acts.length) continue;
+        const sec = el("div", "k-tbcfg-sec");
+        const head2 = el("div", "k-tbcfg-head");
+        head2.append(el("span", "k-tbcfg-gname", t(g.labelKey)));
+        sec.append(head2);
+        for (const a of acts) {
+          const on2 = cfg.actions.includes(a.id);
+          const row2 = el("div", "k-tbcfg-row" + (!on2 && full ? " k-tbcfg-na" : ""));
+          row2.dataset.fab = a.id;
+          row2.append(el("span", "k-tbcfg-name", t(a.labelKey)));
+          const sw = el("input", "k-tbcfg-sw");
+          sw.type = "checkbox";
+          sw.checked = on2;
+          sw.disabled = !on2 && full;
+          sw.onchange = () => save(toggleFabAction(cfgNow(), a.id, sw.checked));
+          row2.append(sw);
+          sec.append(row2);
+        }
+        list.append(sec);
+      }
+    }
+    redrawAll();
+    const foot = el("div", "k-tbcfg-foot");
+    const reset = el("button", "k-reset-btn", t("ui.tbcfg.reset"));
+    reset.onclick = async () => {
+      await save(resetFabConfig());
+      setStatus(t("ui.tbcfg.resetDone"));
+    };
+    foot.append(reset);
+    host2.append(foot);
+    return host2;
+  }
+  function fabContextItems({ onReset, onConfig, onHide } = {}) {
+    return [
+      { label: t("ui.fab.ctxMoveHint"), disabled: true },
+      "-",
+      { label: t("ui.fab.ctxReset"), click: () => onReset && onReset() },
+      { label: t("ui.fab.ctxConfig"), click: () => onConfig && onConfig() },
+      { label: t("ui.fab.ctxHide"), click: () => onHide && onHide() }
+    ];
+  }
+  var btn, TB_HOSTS, TB_MAIN_HOSTS, TB_FMT_HOST;
   var init_toolbar_ui = __esm({
     "src/toolbar/toolbar-ui.js"() {
       init_i18n();
       init_core();
       init_toolbar_config();
+      init_fab_config();
       btn = (id) => document.getElementById(id);
       TB_HOSTS = ["#toolbar", ".k-fmtbar"];
+      TB_MAIN_HOSTS = ["#toolbar"];
+      TB_FMT_HOST = ".k-fmtbar";
     }
   });
 
@@ -70507,7 +71662,7 @@ ${h.text}`;
       search2.focus();
     });
   }
-  function settingsDialog(openTab) {
+  function settingsDialog(openTab, opts = {}) {
     if (!state.root) {
       alert(t("errors.openProjectFirst"));
       return;
@@ -71693,8 +72848,14 @@ ${h.text}`;
       };
     }
     const tbHost = q("#st-toolbar-host");
-    if (tbHost) {
-      Promise.resolve().then(() => (init_toolbar_ui(), toolbar_ui_exports)).then((m2) => m2.buildToolbarList(tbHost, { compact: true })).catch((e) => log("warn", t("ui.dlg.warnToolbarPage"), e));
+    const fmtHost = q("#st-fmtbar-host");
+    const fabHost = q("#st-fab-host");
+    if (tbHost || fmtHost || fabHost) {
+      Promise.resolve().then(() => (init_toolbar_ui(), toolbar_ui_exports)).then((m2) => {
+        if (tbHost) m2.buildToolbarList(tbHost, { compact: true });
+        if (fmtHost) m2.buildFmtbarList(fmtHost, { mode: opts.fmtMode });
+        if (fabHost) m2.buildFabList(fabHost);
+      }).catch((e) => log("warn", t("ui.dlg.warnToolbarPage"), e));
     }
     q("#st-font").oninput = () => applyZoomVars(parseInt(q("#st-font").value, 10) || 0);
     const close2 = () => ov.remove();
@@ -71832,7 +72993,12 @@ ${h.text}`;
             "shortcuts",
             "showHomeOnStartup",
             "paperColor",
-            "pageGuides"
+            "pageGuides",
+            // [alpha.100 ข้อ 2+4]
+            // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
+            "toolbar",
+            "fmtbar",
+            "fab"
           ];
           const globals = {};
           for (const k of globalKeys) {
@@ -72088,6 +73254,7 @@ ${h.text}`;
     deleteWikiCat: () => deleteWikiCat,
     duplicateEntity: () => duplicateEntity,
     editWikiCat: () => editWikiCat,
+    fillFieldWithAI: () => fillFieldWithAI,
     newWikiCat: () => newWikiCat,
     openEntity: () => openEntity,
     wikiCats: () => wikiCats
@@ -72232,6 +73399,8 @@ ${h.text}`;
       },
       // [alpha.58] หาไฟล์ในดิสก์ — เอนทิตี้เป็นไฟล์ .json แก้นอกโปรแกรมได้ ต้องเปิดโฟลเดอร์เจอ
       onReveal: (f) => revealFile(f),
+      // [alpha.116 ข้อ 9] ✨ ปุ่ม AI คลิกเดียวข้างทุกช่องข้อความ
+      onFieldAI: (req) => fillFieldWithAI(req),
       // [alpha.60r3 ข้อ 1] คลิกขวาในหน้า Wiki → เมนูรายชื่อฉาก (ทางเดียวกับ Explorer)
       onFindInScenes: (f, name5, x2, y) => findEntityInScenes(f, name5 || tab.title, x2, y),
       onSnapshot: async () => {
@@ -72431,6 +73600,53 @@ ${h.text}`;
     refreshNetwork();
     openEntity(nf);
   }
+  async function fillFieldWithAI(req) {
+    const { label, value, entity } = req || {};
+    const cfg = await aiConfigured();
+    if (!cfg.ok) {
+      setStatus(cfg.why);
+      return null;
+    }
+    const prov = await currentProvider();
+    if (!prov) {
+      setStatus(t("ui.wiki.aiNoProvider"));
+      return null;
+    }
+    const labels = fieldLabels(entity && entity.templateId) || {};
+    const rows = [];
+    for (const [k, v2] of Object.entries(entity && entity.fields || {})) rows.push({ label: labels[k] || k, value: v2 });
+    for (const [k, v2] of Object.entries(entity && entity.customProperties || {})) rows.push({ label: k, value: v2 });
+    if (entity && entity.desc) rows.push({ label: t("ui.wiki.aiCtxDesc"), value: entity.desc });
+    const { system, prompt: prompt2 } = buildFieldPrompt({
+      fieldLabel: label,
+      current: value,
+      entityName: entity && entity.name,
+      catLabel: CAT_TH[entity && entity.entityTypeKey] || entity && entity.entityTypeKey || "",
+      fields: rows,
+      story: state.meta && (state.meta.synopsis || state.meta.title) || ""
+    });
+    setStatus(tf("ui.wiki.aiWorking", label));
+    const res = await complete(prov, { system, messages: [{ role: "user", content: prompt2 }] });
+    if (!res || !res.ok) {
+      setStatus("\u274C " + (res && res.error || t("ui.wiki.aiFailed")));
+      return null;
+    }
+    const next = fieldResult(res.text, label);
+    if (!next) {
+      setStatus(t("ui.wiki.aiEmpty"));
+      return null;
+    }
+    const cur = String(value || "").trim();
+    if (cur && cur !== next) {
+      const ok2 = await confirmBox(tf("ui.wiki.aiReplaceAsk", label) + String.fromCharCode(10, 10) + next);
+      if (!ok2) {
+        setStatus(t("ui.wiki.aiKept"));
+        return null;
+      }
+    }
+    setStatus(tf("ui.wiki.aiFilled", label));
+    return next;
+  }
   var init_wiki_ui = __esm({
     "src/wiki-ui.js"() {
       init_i18n();
@@ -72445,6 +73661,9 @@ ${h.text}`;
       init_project_scan();
       init_player_choices();
       init_sensory_profile();
+      init_ai_settings();
+      init_ai_provider_ui();
+      init_ai_field();
     }
   });
 
@@ -73989,7 +75208,91 @@ ${h.text}`;
     resetAI: () => resetAI,
     tracker: () => tracker
   });
+  function registryActive() {
+    const ai = state.meta && state.meta.ai || {};
+    return Array.isArray(ai.providers) && ai.providers.length > 0;
+  }
+  function registryClient() {
+    const empty2 = (error2, extra = {}) => ({
+      ok: false,
+      text: "",
+      error: error2,
+      code: "no-provider",
+      usage: { input: 0, output: 0, total: 0 },
+      cost: { usd: 0 },
+      ...extra
+    });
+    const normUsage = (u) => ({ ...u || {}, total: u && (u.total || (u.input || 0) + (u.output || 0)) || 0 });
+    return {
+      async ready() {
+        const p = await currentProvider();
+        return !!(p && p.model);
+      },
+      async complete(opts = {}) {
+        const p = await currentProvider();
+        if (!p) return empty2(t("ui.aiProvider.cantSettingsProviderAI"));
+        const messages = opts.messages && opts.messages.length ? opts.messages : [{ role: "user", content: opts.prompt || "" }];
+        const r = await complete(p, {
+          system: opts.system || "",
+          messages,
+          model: opts.model || void 0,
+          temperature: opts.temperature,
+          maxTokens: opts.maxTokens,
+          reqId: opts.reqId,
+          timeoutMs: opts.timeoutMs
+        });
+        if (!r.ok) return empty2(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+        const usage = normUsage(r.usage);
+        return {
+          ok: true,
+          text: (r.text || "").trim(),
+          thinking: r.thinking || "",
+          usage,
+          cost: estimateCost(p.provider || "openai", r.model || "", usage),
+          provider: r.provider,
+          model: r.model
+        };
+      },
+      async stream(opts = {}, onChunk = () => {
+      }) {
+        const p = await currentProvider();
+        if (!p) return empty2(t("ui.aiProvider.cantSettingsProviderAI"));
+        const messages = opts.messages && opts.messages.length ? opts.messages : [{ role: "user", content: opts.prompt || "" }];
+        const r = await completeStream(p, {
+          system: opts.system || "",
+          messages,
+          model: opts.model || void 0,
+          temperature: opts.temperature,
+          maxTokens: opts.maxTokens,
+          reqId: opts.reqId,
+          timeoutMs: opts.timeoutMs
+        }, (c) => onChunk(c.delta || "", { partial: c.text }));
+        if (!r.ok) return empty2(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+        const usage = normUsage(r.usage);
+        return {
+          ok: true,
+          text: r.text,
+          thinking: r.thinking || "",
+          usage,
+          cost: estimateCost(p.provider || "openai", r.model || "", usage),
+          provider: r.provider,
+          model: r.model
+        };
+      },
+      async embed(texts, opts = {}) {
+        const list = Array.isArray(texts) ? texts : [texts];
+        return { ok: true, vectors: list.map((x) => localEmbed(x)), model: "local", local: true };
+      }
+    };
+  }
   function getAIClient() {
+    if (registryActive()) {
+      if (_client && _client._root === state.root && _client._adapter) return _client;
+      _client = registryClient();
+      _client._root = state.root;
+      _client._adapter = true;
+      return _client;
+    }
     if (_client && _client._root === state.root) return _client;
     _client = new AIClient({
       http: httpFromKapi(kapi),
@@ -74083,6 +75386,7 @@ ${h.text}`;
       init_core();
       init_ai_core();
       init_ai_settings();
+      init_ai_provider_ui();
       init_project_scan();
       _client = null;
       _rag = null;
@@ -77741,9 +79045,9 @@ ${h.text}`;
     return names.every((n2) => n2.startsWith(p)) ? p : "";
   }
   function safeRel(name5) {
-    const clean = String(name5 || "").replace(/\\/g, "/").replace(/^[/]+/, "");
-    if (!clean || clean.endsWith("/")) return "";
-    const parts = clean.split("/").filter((x) => x && x !== ".");
+    const clean2 = String(name5 || "").replace(/\\/g, "/").replace(/^[/]+/, "");
+    if (!clean2 || clean2.endsWith("/")) return "";
+    const parts = clean2.split("/").filter((x) => x && x !== ".");
     if (parts.includes("..")) return "";
     if (/^[a-zA-Z]:/.test(parts[0] || "")) return "";
     return parts.join("/");
@@ -79895,120 +81199,6 @@ ${BLOCK_END}
   });
 
   // src/scratchpad.js
-  async function openScratchpad() {
-    const key2 = "::scratchpad::";
-    if (state.tabs.has(key2)) {
-      const { activate: activate3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-      activate3(key2);
-      return;
-    }
-    const pane = el("div", "pane");
-    $("#panes").append(pane);
-    const tabBtn = el("div", "tab");
-    tabBtn.append(el("span", "tab-title", t("ui.notes.notebookNoteQuick")));
-    const x = el("span", "tab-x", "\xD7");
-    tabBtn.append(x);
-    $("#tabs").append(tabBtn);
-    let saved = "";
-    try {
-      saved = localStorage.getItem("k2-scratchpad") || "";
-    } catch {
-    }
-    const ta = el("textarea", "scratch-area");
-    ta.value = saved;
-    ta.spellcheck = false;
-    let saveTimer = null;
-    ta.oninput = () => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        try {
-          localStorage.setItem("k2-scratchpad", ta.value);
-        } catch {
-        }
-      }, 3e3);
-    };
-    const bar = el("div", "scratch-bar");
-    const exportBtn = el("button", null, t("ui.common.exportMd"));
-    const memoBtn = el("button", null, t("ui.notes.moveInMemo"));
-    const clearBtn = el("button", "k-danger", t("ui.common.clear2"));
-    const info = el("span", "scratch-info");
-    bar.append(info, exportBtn, memoBtn, clearBtn);
-    exportBtn.onclick = async () => {
-      const dest = await kapi.saveAsDialog("scratchpad.md");
-      if (!dest) return;
-      await kapi.writeFile(dest, ta.value);
-      setStatus(t("ui.common.exportDone") + dest);
-    };
-    memoBtn.onclick = async () => {
-      if (!state.root) {
-        setStatus(t("ui.common.cantOpenProject"));
-        return;
-      }
-      if (!ta.value.trim()) {
-        setStatus(t("ui.notes.notHasTextMove"));
-        return;
-      }
-      const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const { safeName: safeName5, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-      const title2 = await ask2(t("ui.notes.nameNoteMemo"), { value: ta.value.trim().slice(0, 40).split("\n")[0] });
-      if (!title2) return;
-      const memoDir = await kapi.join(state.root, "Memos");
-      await kapi.mkdir(memoDir);
-      const fname = safeName5(title2) + "-" + Date.now().toString(36) + ".md";
-      const { dumpMdFile: dumpMdFile6 } = await Promise.resolve().then(() => __toESM(require_md()));
-      await kapi.writeFile(
-        await kapi.join(memoDir, fname),
-        dumpMdFile6({ title: title2, type: "memo" }, ta.value)
-      );
-      setStatus(t("ui.notes.moveInMemoDone") + title2);
-      await buildTree3();
-    };
-    clearBtn.onclick = () => {
-      ta.value = "";
-      try {
-        localStorage.setItem("k2-scratchpad", "");
-      } catch {
-      }
-      setStatus(t("ui.notes.clearNotebookNoteDone"));
-    };
-    const updateInfo = () => {
-      const lines = ta.value.split("\n").length;
-      const chars3 = ta.value.length;
-      const words = ta.value ? ta.value.trim().split(/\s+/).length : 0;
-      info.textContent = tf("ui.notes.lineWordChar", lines, words, chars3);
-    };
-    ta.addEventListener("input", updateInfo);
-    updateInfo();
-    pane.append(bar, ta);
-    const tab = {
-      file: key2,
-      title: t("ui.common.notebookNoteQuick"),
-      pane,
-      tabBtn,
-      dirty: false,
-      editor: null,
-      plain: ta,
-      wiki: null,
-      gal: null
-    };
-    tab.plain = ta;
-    tabBtn.onclick = (e) => {
-      if (e.target !== x) {
-        Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.activate(key2));
-      }
-    };
-    x.onclick = () => {
-      try {
-        localStorage.setItem("k2-scratchpad", ta.value);
-      } catch {
-      }
-      Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.closeTab(key2));
-    };
-    state.tabs.set(key2, tab);
-    const { activate: activate2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    activate2(key2);
-    ta.focus();
-  }
   function renderNotesPanel(host2) {
     if (!host2 || host2.dataset.ready === "1") return;
     host2.dataset.ready = "1";
@@ -80849,7 +82039,7 @@ ${BLOCK_END}
         "\xDF": "ss"
       };
       NON_DECOMPOSABLE_RE = new RegExp("[" + Object.keys(NON_DECOMPOSABLE_MAP).join("") + "]", "g");
-      stripDiacritics = typeof String.prototype.normalize === "function" ? (str2) => str2.normalize("NFD").replace(/[\u0300-\u036F\u0483-\u0489\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0711\u0730-\u074A\u07A6-\u07B0\u07EB-\u07F3\u07FD\u0816-\u0819\u081B-\u0823\u0825-\u0827\u0829-\u082D\u0859-\u085B\u08D3-\u08E1\u08E3-\u0903\u093A-\u093C\u093E-\u094F\u0951-\u0957\u0962\u0963\u0981-\u0983\u09BC\u09BE-\u09C4\u09C7\u09C8\u09CB-\u09CD\u09D7\u09E2\u09E3\u09FE\u0A01-\u0A03\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A70\u0A71\u0A75\u0A81-\u0A83\u0ABC\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AE2\u0AE3\u0AFA-\u0AFF\u0B01-\u0B03\u0B3C\u0B3E-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B62\u0B63\u0B82\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD7\u0C00-\u0C04\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C62\u0C63\u0C81-\u0C83\u0CBC\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CE2\u0CE3\u0D00-\u0D03\u0D3B\u0D3C\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D57\u0D62\u0D63\u0D82\u0D83\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2\u0DF3\u0E31\u0E34-\u0E3A\u0E47-\u0E4E\u0EB1\u0EB4-\u0EB9\u0EBB\u0EBC\u0EC8-\u0ECD\u0F18\u0F19\u0F35\u0F37\u0F39\u0F3E\u0F3F\u0F71-\u0F84\u0F86\u0F87\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u102B-\u103E\u1056-\u1059\u105E-\u1060\u1062-\u1064\u1067-\u106D\u1071-\u1074\u1082-\u108D\u108F\u109A-\u109D\u135D-\u135F\u1712-\u1714\u1732-\u1734\u1752\u1753\u1772\u1773\u17B4-\u17D3\u17DD\u180B-\u180D\u1885\u1886\u18A9\u1920-\u192B\u1930-\u193B\u1A17-\u1A1B\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F\u1AB0-\u1ABE\u1B00-\u1B04\u1B34-\u1B44\u1B6B-\u1B73\u1B80-\u1B82\u1BA1-\u1BAD\u1BE6-\u1BF3\u1C24-\u1C37\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CED\u1CF2-\u1CF4\u1CF7-\u1CF9\u1DC0-\u1DF9\u1DFB-\u1DFF\u20D0-\u20F0\u2CEF-\u2CF1\u2D7F\u2DE0-\u2DFF\u302A-\u302F\u3099\u309A\uA66F-\uA672\uA674-\uA67D\uA69E\uA69F\uA6F0\uA6F1\uA802\uA806\uA80B\uA823-\uA827\uA880\uA881\uA8B4-\uA8C5\uA8E0-\uA8F1\uA8FF\uA926-\uA92D\uA947-\uA953\uA980-\uA983\uA9B3-\uA9C0\uA9E5\uAA29-\uAA36\uAA43\uAA4C\uAA4D\uAA7B-\uAA7D\uAAB0\uAAB2-\uAAB4\uAAB7\uAAB8\uAABE\uAABF\uAAC1\uAAEB-\uAAEF\uAAF5\uAAF6\uABE3-\uABEA\uABEC\uABED\uFB1E\uFE00-\uFE0F\uFE20-\uFE2F]/g, "").replace(NON_DECOMPOSABLE_RE, (ch) => NON_DECOMPOSABLE_MAP[ch]) : (str2) => str2;
+      stripDiacritics = typeof String.prototype.normalize === "function" ? (str3) => str3.normalize("NFD").replace(/[\u0300-\u036F\u0483-\u0489\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0711\u0730-\u074A\u07A6-\u07B0\u07EB-\u07F3\u07FD\u0816-\u0819\u081B-\u0823\u0825-\u0827\u0829-\u082D\u0859-\u085B\u08D3-\u08E1\u08E3-\u0903\u093A-\u093C\u093E-\u094F\u0951-\u0957\u0962\u0963\u0981-\u0983\u09BC\u09BE-\u09C4\u09C7\u09C8\u09CB-\u09CD\u09D7\u09E2\u09E3\u09FE\u0A01-\u0A03\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A70\u0A71\u0A75\u0A81-\u0A83\u0ABC\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AE2\u0AE3\u0AFA-\u0AFF\u0B01-\u0B03\u0B3C\u0B3E-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B62\u0B63\u0B82\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD7\u0C00-\u0C04\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C62\u0C63\u0C81-\u0C83\u0CBC\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CE2\u0CE3\u0D00-\u0D03\u0D3B\u0D3C\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D57\u0D62\u0D63\u0D82\u0D83\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2\u0DF3\u0E31\u0E34-\u0E3A\u0E47-\u0E4E\u0EB1\u0EB4-\u0EB9\u0EBB\u0EBC\u0EC8-\u0ECD\u0F18\u0F19\u0F35\u0F37\u0F39\u0F3E\u0F3F\u0F71-\u0F84\u0F86\u0F87\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u102B-\u103E\u1056-\u1059\u105E-\u1060\u1062-\u1064\u1067-\u106D\u1071-\u1074\u1082-\u108D\u108F\u109A-\u109D\u135D-\u135F\u1712-\u1714\u1732-\u1734\u1752\u1753\u1772\u1773\u17B4-\u17D3\u17DD\u180B-\u180D\u1885\u1886\u18A9\u1920-\u192B\u1930-\u193B\u1A17-\u1A1B\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F\u1AB0-\u1ABE\u1B00-\u1B04\u1B34-\u1B44\u1B6B-\u1B73\u1B80-\u1B82\u1BA1-\u1BAD\u1BE6-\u1BF3\u1C24-\u1C37\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CED\u1CF2-\u1CF4\u1CF7-\u1CF9\u1DC0-\u1DF9\u1DFB-\u1DFF\u20D0-\u20F0\u2CEF-\u2CF1\u2D7F\u2DE0-\u2DFF\u302A-\u302F\u3099\u309A\uA66F-\uA672\uA674-\uA67D\uA69E\uA69F\uA6F0\uA6F1\uA802\uA806\uA80B\uA823-\uA827\uA880\uA881\uA8B4-\uA8C5\uA8E0-\uA8F1\uA8FF\uA926-\uA92D\uA947-\uA953\uA980-\uA983\uA9B3-\uA9C0\uA9E5\uAA29-\uAA36\uAA43\uAA4C\uAA4D\uAA7B-\uAA7D\uAAB0\uAAB2-\uAAB4\uAAB7\uAAB8\uAABE\uAABF\uAAC1\uAAEB-\uAAEF\uAAF5\uAAF6\uABE3-\uABEA\uABEC\uABED\uFB1E\uFE00-\uFE0F\uFE20-\uFE2F]/g, "").replace(NON_DECOMPOSABLE_RE, (ch) => NON_DECOMPOSABLE_MAP[ch]) : (str3) => str3;
       BitapSearch = class {
         constructor(pattern, { location: location2 = Config.location, threshold = Config.threshold, distance = Config.distance, includeMatches = Config.includeMatches, findAllMatches = Config.findAllMatches, minMatchCharLength = Config.minMatchCharLength, isCaseSensitive = Config.isCaseSensitive, ignoreDiacritics = Config.ignoreDiacritics, ignoreLocation = Config.ignoreLocation } = {}) {
           this.options = {
@@ -82355,8 +83545,8 @@ ${BLOCK_END}
             try {
               const raw = await kapi.readFile(fp);
               const { body: md } = (0, import_md12.parseMdFile)(raw);
-              const clean = stripMentions(stripComments(md));
-              let inner = mdToHtmlBody(clean);
+              const clean2 = stripMentions(stripComments(md));
+              let inner = mdToHtmlBody(clean2);
               if (o.embedImages) inner = await embedImages(inner, imgCache);
               const head2 = o.sceneHeads ? `<h3>${escapeHtml(sc.title || "")}</h3>
 ` : "";
@@ -83459,8 +84649,8 @@ img{max-width:100%}` }
     const d = await sessionsDir();
     if (!d) return false;
     delete s._draft;
-    const { _draft, ...clean } = s;
-    await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean, null, 2));
+    const { _draft, ...clean2 } = s;
+    await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean2, null, 2));
     const i5 = S3.sessions.findIndex((x) => x.id === s.id);
     if (i5 === -1) S3.sessions.push(s);
     else S3.sessions[i5] = s;
@@ -83905,6 +85095,10 @@ img{max-width:100%}` }
     }
     sel.value = s.providerId && s.model ? s.providerId + "\0" + s.model : "";
   }
+  function newReqId() {
+    _reqSeq += 1;
+    return "chat-" + Date.now().toString(36) + "-" + _reqSeq;
+  }
   async function send(s, ta, body, sendBtn) {
     const text = String(ta.value || "").trim();
     if (!text || S3.sending) return;
@@ -83916,16 +85110,48 @@ img{max-width:100%}` }
     S3.sending = true;
     sendBtn.disabled = true;
     ta.value = "";
+    const reqId = newReqId();
     const view2 = S3.cur ? S3.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
     S3.cur = addMessage(s, userMsg);
     await saveSession2(S3.cur);
     body.append(msgNode(userMsg, view2));
     const pend = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
-    const pendWho = el("div", "ai-msg-who dim", t("ui.aiChatPanel.busyThink"));
-    pend.append(pendWho);
+    const pendWho = el("div", "ai-msg-who dim");
+    const whoLabel = el("span", null, t("ui.aiChatPanel.busyThink"));
+    const whoTime = el("span", "ai-msg-elapsed");
+    const stopBtn = el("button", "ai-msg-copy", "\u23F9");
+    stopBtn.type = "button";
+    stopBtn.title = t("ui.aiChatPanel.stopHint");
+    stopBtn.onclick = () => {
+      if (kapi.httpAbort) kapi.httpAbort(reqId);
+    };
+    pendWho.append(whoLabel, whoTime, stopBtn);
+    const pendThink = el("div", "ai-msg-thinking-live");
+    pendThink.style.display = "none";
+    const pendText = el("div", "ai-msg-text");
+    pendText.style.display = "none";
+    pend.append(pendWho, pendThink, pendText);
     body.append(pend);
     body.scrollTop = body.scrollHeight;
+    let liveText2 = "";
+    let liveThink = "";
+    const startAt = Date.now();
+    const tick = setInterval(() => {
+      whoTime.textContent = tf("ui.aiChatPanel.useTime", ((Date.now() - startAt) / 1e3).toFixed(1));
+    }, 400);
+    const renderPend = () => {
+      if (liveText2) {
+        pendText.textContent = liveText2;
+        pendText.style.display = "";
+      }
+      if (liveThink) {
+        pendThink.textContent = t("ui.aiChatPanel.ideaModel") + "\n" + liveThink;
+        pendThink.style.display = "";
+      }
+      body.scrollTop = body.scrollHeight;
+    };
+    const stopTick = () => clearInterval(tick);
     const md = modeDef(S3.cur.mode);
     const cap = modeCap(S3.cur.mode);
     let system = md.system;
@@ -83939,55 +85165,72 @@ img{max-width:100%}` }
     }
     let res = null;
     let touched = false;
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const t0 = Date.now();
-      res = await complete(prov, { system, messages: chatMessages(S3.cur), model: s.model || void 0 });
-      const ms = Date.now() - t0;
-      const calls = res.ok ? parseToolCalls(res.text) : [];
-      const reply = res.ok ? newMessage("assistant", res.text, {
-        usage: res.usage,
-        model: res.model,
-        provider: res.provider,
-        thinking: res.thinking,
-        system,
-        ms,
-        calls: calls.length ? calls : null
-      }) : newMessage("assistant", "", { error: res.error || t("ui.aiChatPanel.callAINotOk"), system, ms });
-      if (res.ok && res.usage) {
-        const used = (res.usage.input || 0) + (res.usage.output || 0);
-        S3.cur.contextLimit = Math.max(S3.cur.contextLimit || 0, guessLimit(used));
-      }
-      recordUsage2(res, prov, s);
-      if (!calls.length) {
+    try {
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        const rt0 = Date.now();
+        res = await completeStream(prov, {
+          system,
+          messages: chatMessages(S3.cur),
+          model: s.model || void 0,
+          reqId
+        }, (c) => {
+          if (c.thinking) {
+            liveThink += c.thinking;
+          }
+          if (c.delta) {
+            liveText2 = c.text;
+          }
+          renderPend();
+        });
+        const ms = Date.now() - rt0;
+        const calls = res.ok ? parseToolCalls(res.text) : [];
+        const reply = res.ok ? newMessage("assistant", res.text, {
+          usage: res.usage,
+          model: res.model,
+          provider: res.provider,
+          thinking: res.thinking,
+          system,
+          ms,
+          calls: calls.length ? calls : null
+        }) : newMessage("assistant", "", { error: res.error || t("ui.aiChatPanel.callAINotOk"), system, ms });
+        if (res.ok && res.usage) {
+          const used = (res.usage.input || 0) + (res.usage.output || 0);
+          S3.cur.contextLimit = Math.max(S3.cur.contextLimit || 0, guessLimit(used));
+        }
+        recordUsage2(res, prov, s);
+        if (!calls.length) {
+          S3.cur = addMessage(S3.cur, reply);
+          await saveSession2(S3.cur);
+          pend.remove();
+          body.append(msgNode(reply, view2));
+          break;
+        }
+        whoLabel.textContent = t("ui.aiChatPanel.busyAct") + calls.length + t("ui.aiChatPanel.cmd");
+        const results = await runCalls(calls, S3.cur, cap);
+        reply.results = results;
+        touched = touched || touchesProject(results);
         S3.cur = addMessage(S3.cur, reply);
+        S3.cur = addMessage(S3.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
         await saveSession2(S3.cur);
-        pend.remove();
         body.append(msgNode(reply, view2));
-        break;
+        body.scrollTop = body.scrollHeight;
+        if (results.some((r) => r.cancelled)) {
+          pend.remove();
+          break;
+        }
+        if (round === MAX_TOOL_ROUNDS - 1) {
+          pend.remove();
+          body.append(el(
+            "div",
+            "ai-chat-empty dim",
+            tf("ui.aiChatPanel.roundNotEndPrint", MAX_TOOL_ROUNDS)
+          ));
+        } else {
+          whoLabel.textContent = t("ui.aiChatPanel.busyThinkNext");
+        }
       }
-      pendWho.textContent = t("ui.aiChatPanel.busyAct") + calls.length + t("ui.aiChatPanel.cmd");
-      const results = await runCalls(calls, S3.cur, cap);
-      reply.results = results;
-      touched = touched || touchesProject(results);
-      S3.cur = addMessage(S3.cur, reply);
-      S3.cur = addMessage(S3.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
-      await saveSession2(S3.cur);
-      body.append(msgNode(reply, view2));
-      body.scrollTop = body.scrollHeight;
-      if (results.some((r) => r.cancelled)) {
-        pend.remove();
-        break;
-      }
-      if (round === MAX_TOOL_ROUNDS - 1) {
-        pend.remove();
-        body.append(el(
-          "div",
-          "ai-chat-empty dim",
-          tf("ui.aiChatPanel.roundNotEndPrint", MAX_TOOL_ROUNDS)
-        ));
-      } else {
-        pendWho.textContent = t("ui.aiChatPanel.busyThinkNext");
-      }
+    } finally {
+      stopTick();
     }
     if (touched) await refreshAfterActions();
     S3.sending = false;
@@ -84218,7 +85461,7 @@ img{max-width:100%}` }
   function _chatState() {
     return S3;
   }
-  var MAX_TOOL_ROUNDS, S3;
+  var MAX_TOOL_ROUNDS, S3, _reqSeq;
   var init_ai_chat_panel = __esm({
     "src/ai/ai-chat-panel.js"() {
       init_i18n();
@@ -84243,6 +85486,7 @@ img{max-width:100%}` }
         root: null
         // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
       };
+      _reqSeq = 0;
     }
   });
 
@@ -87765,11 +89009,11 @@ ${preview2}` + (found2.length > 8 ? `
   function serializeKanban(layout) {
     return JSON.stringify({ ...newLayout(), ...layout, version: KANBAN_VERSION });
   }
-  function deserializeKanban(str2) {
-    if (!str2) return null;
+  function deserializeKanban(str3) {
+    if (!str3) return null;
     let d;
     try {
-      d = JSON.parse(str2);
+      d = JSON.parse(str3);
     } catch {
       return null;
     }
@@ -88452,11 +89696,11 @@ ${preview2}` + (found2.length > 8 ? `
   function serializeSplit(root) {
     return JSON.stringify({ version: SPLIT_VERSION, root: root ?? null });
   }
-  function deserializeSplit(str2) {
-    if (!str2) return null;
+  function deserializeSplit(str3) {
+    if (!str3) return null;
     let d;
     try {
-      d = JSON.parse(str2);
+      d = JSON.parse(str3);
     } catch {
       return null;
     }
@@ -91374,10 +92618,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     DEFAULT_SEND_MODE: () => DEFAULT_SEND_MODE,
     KIND_DIRECTOR: () => KIND_DIRECTOR,
     KIND_LINE: () => KIND_LINE,
+    KIND_MONO: () => KIND_MONO,
     KIND_USER: () => KIND_USER,
     MAX_CAST: () => MAX_CAST,
     PERSONA_FIELDS: () => PERSONA_FIELDS,
     PRESET_FILE: () => PRESET_FILE,
+    SELF_MONO: () => SELF_MONO,
     SEND_MODES: () => SEND_MODES,
     TURN_LENGTHS: () => TURN_LENGTHS,
     TURN_POLICIES: () => TURN_POLICIES,
@@ -91392,6 +92638,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     castById: () => castById,
     castName: () => castName,
     estimateTokens: () => estimateTokens,
+    isMonologue: () => isMonologue,
     lastSpoken: () => lastSpoken,
     lengthDef: () => lengthDef,
     listenerOptions: () => listenerOptions,
@@ -91433,6 +92680,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function lengthDef(id) {
     return TURN_LENGTHS.find((l) => l.id === id) || TURN_LENGTHS[1];
+  }
+  function isMonologue(turn) {
+    return !!turn && (turn.kind === KIND_MONO || turn.listener === SELF_MONO);
   }
   function nextId(prefix2) {
     _seq4 += 1;
@@ -91530,6 +92780,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return (session && session.cast || []).find((c) => c.id === id) || null;
   }
   function castName(session, id) {
+    if (id === SELF_MONO) return t("ui.dlgBuilder.selfMono");
     if (id === ALL_LISTEN) return t("ui.dlgBuilder.everyone");
     if (id === ANY_RANDOM) return t("ui.dlgBuilder.randomPick");
     if (id === AI_PICK) return t("ui.dlgBuilder.aiPick");
@@ -91637,7 +92888,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const i5 = ids.indexOf(last2.speaker);
       return { speaker: ids[(i5 + 1) % ids.length], listener: ALL_LISTEN };
     }
-    if (!last2.listener || last2.listener === ALL_LISTEN) {
+    if (!last2.listener || last2.listener === ALL_LISTEN || last2.listener === SELF_MONO) {
       return {
         speaker: cast.length > 2 ? AI_PICK : ids.find((x) => x !== last2.speaker) || ids[0],
         listener: last2.speaker
@@ -91673,12 +92924,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function listenerOptions(session) {
     const rows = (session && session.cast || []).map((c) => ({ id: c.id, label: c.name }));
     rows.push({ id: ALL_LISTEN, label: t("ui.dlgBuilder.everyone") });
+    rows.push({ id: SELF_MONO, label: t("ui.dlgBuilder.selfMono") });
     rows.push({ id: ANY_RANDOM, label: t("ui.dlgBuilder.randomPick") });
     return rows;
   }
-  function buildSystem(session, charId) {
+  function buildSystem(session, charId, opts = {}) {
     const me = castById(session, charId);
     if (!me) return "";
+    const mono = !!opts.mono;
     const rows = [];
     rows.push(me.persona || tf("ui.dlgBuilder.personaYouAre", me.name));
     const pron = [];
@@ -91706,7 +92959,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     rows.push(lengthDef(session.len).rule);
     rows.push(session.paren !== false ? t("ui.dlgBuilder.ruleParenOn") : t("ui.dlgBuilder.ruleParenOff"));
     rows.push(t("ui.dlgBuilder.ruleNoName"));
-    rows.push(t("ui.dlgBuilder.ruleNoNarrate"));
+    if (mono) {
+      rows.push(t("ui.dlgBuilder.ruleMonoAlone"));
+      rows.push(t("ui.dlgBuilder.ruleMonoInner"));
+    } else rows.push(t("ui.dlgBuilder.ruleNoNarrate"));
     return rows.join("\n");
   }
   function turnAsHeard(session, turn) {
@@ -91714,6 +92970,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (turn.kind === KIND_DIRECTOR) return tf("ui.dlgBuilder.heardDirector", turn.text);
     const nm = castName(session, turn.speaker) || t("ui.dlgBuilder.unknownName");
     const paren = turn.paren ? `(${turn.paren}) ` : "";
+    if (isMonologue(turn)) return tf("ui.dlgBuilder.heardMono", nm, paren + turn.text);
     return `${nm}: ${paren}${turn.text}`;
   }
   function buildMessages(session, charId, { maxTokens = 6e3 } = {}) {
@@ -91721,6 +92978,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const rows = [];
     for (const tn of turns) {
       if (!tn.text && tn.kind !== KIND_DIRECTOR) continue;
+      if (isMonologue(tn) && tn.speaker !== charId) continue;
       if (tn.kind !== KIND_DIRECTOR && tn.speaker === charId) {
         const paren = tn.paren ? `(${tn.paren}) ` : "";
         rows.push({ role: "assistant", content: paren + tn.text });
@@ -91748,19 +93006,22 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return out;
   }
   function turnCue(session, speaker, listener) {
+    if (listener === SELF_MONO) return t("ui.dlgBuilder.cueMonologue");
     const to = listener === ALL_LISTEN || !listener ? t("ui.dlgBuilder.everyone") : castName(session, listener);
     return tf("ui.dlgBuilder.cueYourTurn", to);
   }
   function buildTurnRequest(session, speaker, listener, opts = {}) {
     const me = castById(session, speaker);
     if (!me) return null;
+    const mono = listener === SELF_MONO;
     const messages = buildMessages(session, speaker, opts);
     messages.push({ role: "user", content: turnCue(session, speaker, listener) });
     return {
-      system: buildSystem(session, speaker),
+      system: buildSystem(session, speaker, { mono }),
       messages,
       maxTokens: lengthDef(session.len).maxTokens,
-      cast: me
+      cast: me,
+      mono
     };
   }
   function buildBatchRequest(session, lines = 6, opts = {}) {
@@ -91801,7 +93062,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const rows = [t("ui.dlgBuilder.pickAsk")];
     rows.push(cast.map((c) => c.name).join(" / "));
     if (session.situation) rows.push("", t("ui.dlgBuilder.headSituation"), session.situation);
-    const recent = (session.turns || []).slice(-6).map((tn) => turnAsHeard(session, tn));
+    const recent = (session.turns || []).filter((tn) => !isMonologue(tn)).slice(-6).map((tn) => turnAsHeard(session, tn));
     if (recent.length) rows.push("", t("ui.dlgBuilder.headRecent"), ...recent);
     rows.push("", t("ui.dlgBuilder.pickAnswerOnlyName"));
     return {
@@ -91819,7 +93080,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return "";
   }
   function parseSpokenLine(raw, name5 = "", opts = {}) {
-    let txt = String(raw || "").replace(FENCE, "").trim();
+    let txt = String(raw || "").replace(FENCE2, "").trim();
     let paren = "";
     if (!txt) return { text: "", paren: "" };
     const aliases = [name5, ...Array.isArray(opts.aliases) ? opts.aliases : []].filter(Boolean);
@@ -91843,7 +93104,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return { text: txt, paren };
   }
   function parseBatch(session, raw) {
-    const txt = String(raw || "").replace(FENCE, "").trim();
+    const txt = String(raw || "").replace(FENCE2, "").trim();
     const out = [];
     let cur = null;
     for (const rawLine of txt.split(/\r?\n/)) {
@@ -91880,6 +93141,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const rows = [];
     if (nm) rows.push("@" + nm);
     if (turn.paren) rows.push("(" + turn.paren + ")");
+    else if (isMonologue(turn)) rows.push("(" + t("ui.dlgBuilder.monoParen") + ")");
     rows.push(turn.text);
     return rows.join("\n");
   }
@@ -91948,7 +93210,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return hay.includes(q);
     }));
   }
-  var BUILDER_DIR, PRESET_FILE, BUILDER_VERSION, MAX_CAST, ANY_RANDOM, ALL_LISTEN, AI_PICK, TURN_POLICIES, DEFAULT_POLICY, SEND_MODES, DEFAULT_SEND_MODE, TURN_LENGTHS, DEFAULT_LENGTH, KIND_LINE, KIND_USER, KIND_DIRECTOR, _seq4, PERSONA_FIELDS, FENCE;
+  var BUILDER_DIR, PRESET_FILE, BUILDER_VERSION, MAX_CAST, ANY_RANDOM, ALL_LISTEN, AI_PICK, SELF_MONO, TURN_POLICIES, DEFAULT_POLICY, SEND_MODES, DEFAULT_SEND_MODE, TURN_LENGTHS, DEFAULT_LENGTH, KIND_LINE, KIND_USER, KIND_DIRECTOR, KIND_MONO, _seq4, PERSONA_FIELDS, FENCE2;
   var init_builder_core = __esm({
     "src/dialogue/builder-core.js"() {
       init_i18n();
@@ -91960,6 +93222,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       ANY_RANDOM = "__random__";
       ALL_LISTEN = "__all__";
       AI_PICK = "__ai__";
+      SELF_MONO = "__self__";
       TURN_POLICIES = [
         { id: "pingpong", label: t("ui.dlgBuilder.policyPingPong"), hint: t("ui.dlgBuilder.policyPingPongHint") },
         { id: "round", label: t("ui.dlgBuilder.policyRound"), hint: t("ui.dlgBuilder.policyRoundHint") },
@@ -91982,6 +93245,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       KIND_LINE = "line";
       KIND_USER = "user";
       KIND_DIRECTOR = "director";
+      KIND_MONO = "mono";
       _seq4 = 0;
       PERSONA_FIELDS = [
         { key: "role", label: "\u0E1A\u0E17\u0E1A\u0E32\u0E17", names: ["role", "\u0E1A\u0E17\u0E1A\u0E32\u0E17"] },
@@ -91993,7 +93257,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         { key: "fear", label: "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E01\u0E25\u0E31\u0E27", names: ["fear", "weakness", "\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E01\u0E25\u0E31\u0E27", "\u0E08\u0E38\u0E14\u0E2D\u0E48\u0E2D\u0E19"] },
         { key: "quirk", label: "\u0E19\u0E34\u0E2A\u0E31\u0E22\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27", names: ["quirk", "\u0E19\u0E34\u0E2A\u0E31\u0E22\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E15\u0E31\u0E27"] }
       ];
-      FENCE = /```[a-z]*\n?/gi;
+      FENCE2 = /```[a-z]*\n?/gi;
     }
   });
 
@@ -92017,6 +93281,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     S8.query = "";
     S8.sending = false;
     S8.entities = null;
+    S8.reqId = "";
+    S8.sendingSince = 0;
   }
   function builderDirtyList() {
     return sessionDirty(S8.cur, S8.savedAt) ? [S8.cur.title || t("ui.dlgb.untitledRow")] : [];
@@ -92364,6 +93630,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (s.situation) msgs.append(el("div", "dlgb-situation", s.situation));
     if (!s.turns.length) msgs.append(el("div", "dlgb-empty", t("ui.dlgb.pressSendToStart")));
     for (const tn of s.turns) msgs.append(bubble(s, tn));
+    if (S8.sending) msgs.append(pendingBubble());
     wrap2.append(msgs);
     wrap2.append(composer2(s));
     S8.host.replaceChildren(wrap2);
@@ -92391,13 +93658,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function bubble(s, tn) {
     const isDir = tn.kind === KIND_DIRECTOR;
-    const n2 = el("div", "dlgb-bubble" + (isDir ? " dlgb-director" : "") + (tn.kind === KIND_USER ? " dlgb-usertyped" : ""));
+    const isMono = isMonologue(tn);
+    const n2 = el("div", "dlgb-bubble" + (isDir ? " dlgb-director" : "") + (isMono ? " dlgb-mono" : "") + (tn.kind === KIND_USER ? " dlgb-usertyped" : ""));
     const head2 = el("div", "dlgb-bub-head");
     if (isDir) head2.append(el("span", "dlgb-bub-name", "\u{1F3AC} " + t("ui.dlgb.director")));
     else {
-      head2.append(el("span", "dlgb-bub-name", castName(s, tn.speaker) || t("ui.dlgb.unknown")));
-      const to = castName(s, tn.listener);
-      if (to) head2.append(el("span", "dlgb-bub-to", tf("ui.dlgb.toWhom", to)));
+      head2.append(el(
+        "span",
+        "dlgb-bub-name",
+        (isMono ? "\u{1F4AD} " : "") + (castName(s, tn.speaker) || t("ui.dlgb.unknown"))
+      ));
+      if (isMono) head2.append(el("span", "dlgb-bub-to", t("ui.dlgb.monoTag")));
+      else {
+        const to = castName(s, tn.listener);
+        if (to) head2.append(el("span", "dlgb-bub-to", tf("ui.dlgb.toWhom", to)));
+      }
     }
     if (tn.inserted) {
       const chk = el("span", "dlgb-bub-ins", "\u2713");
@@ -92440,6 +93715,42 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     b.title = tip;
     b.onclick = fn;
     return b;
+  }
+  function pendingBubble() {
+    const pend = el("div", "dlgb-bubble dlgb-pending");
+    const head2 = el("div", "dlgb-bub-head");
+    head2.append(el("span", "dlgb-bub-name", t("ui.dlgb.thinking")));
+    head2.append(el("span", "dlgb-bub-elapsed", ""));
+    const stopBtn = el("button", "dlgb-bub-stop", "\u23F9");
+    stopBtn.type = "button";
+    stopBtn.title = t("ui.dlgb.stopHint");
+    stopBtn.onclick = () => {
+      if (kapi.httpAbort && S8.reqId) kapi.httpAbort(S8.reqId);
+    };
+    head2.append(stopBtn);
+    pend.append(head2);
+    const body = el("div", "dlgb-bub-body");
+    const think = el("div", "dlgb-bub-thinklive");
+    think.style.display = "none";
+    body.append(think, el("div", "dlgb-bub-text", "\u2026"));
+    pend.append(body);
+    return pend;
+  }
+  function updatePending(c) {
+    if (!S8.host) return;
+    const pend = S8.host.querySelector(".dlgb-pending");
+    if (!pend) return;
+    if (typeof c.text === "string") {
+      const txt = pend.querySelector(".dlgb-bub-text");
+      if (txt) txt.textContent = c.text || "\u2026";
+    }
+    const th = pend.querySelector(".dlgb-bub-thinklive");
+    if (th && typeof c.thinking === "string") {
+      if (c.thinking) {
+        th.textContent = t("ui.dlgb.modelThinking") + "\n" + c.thinking;
+        th.style.display = "";
+      } else th.style.display = "none";
+    }
   }
   function composer2(s) {
     const box2 = el("div", "dlgb-composer");
@@ -92491,12 +93802,31 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       send2(inp);
     };
+    const bMono = el("button", "dlgb-mono-btn", "\u{1F4AD}");
+    bMono.title = t("ui.dlgb.monoTip");
+    bMono.disabled = S8.sending;
+    bMono.onclick = () => {
+      s.next = {
+        speaker: s.next && s.next.speaker || (s.cast[0] || {}).id || "",
+        listener: SELF_MONO
+      };
+      touch();
+      send2(inp);
+    };
     const bDir = el("button", "dlgb-dir", "\u{1F3AC}");
     bDir.title = t("ui.dlgb.directorTip");
     bDir.onclick = () => directorNote();
-    row2.append(inp, bSend, bCont, bDir);
+    row2.append(inp, bSend, bCont, bMono, bDir);
     box2.append(row2);
     return box2;
+  }
+  function newReqId2() {
+    _reqSeq2 += 1;
+    return "dlgb-" + Date.now().toString(36) + "-" + _reqSeq2;
+  }
+  function tickElapsed() {
+    const el2 = S8.host && S8.host.querySelector(".dlgb-bub-elapsed");
+    if (el2) el2.textContent = tf("ui.dlgb.elapsed", ((Date.now() - S8.sendingSince) / 1e3).toFixed(1));
   }
   async function providerFor(member) {
     const base4 = member && member.providerId ? await providerById(member.providerId) : await currentProvider();
@@ -92538,6 +93868,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return;
     }
     S8.sending = true;
+    S8.reqId = newReqId2();
+    S8.sendingSince = Date.now();
+    const tick = setInterval(tickElapsed, 400);
     drawSession();
     try {
       if (s.mode === "batch") await sendBatch(s);
@@ -92546,7 +93879,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       log("error", t("ui.dlgb.errSend"), e);
       setStatus(t("ui.dlgb.errSend"));
     } finally {
+      clearInterval(tick);
       S8.sending = false;
+      S8.reqId = "";
       s.next = nextPair(s, Math.random);
       touch();
       await saveSession3();
@@ -92559,7 +93894,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const pk = buildPickerRequest(s);
       const prov2 = await currentProvider();
       if (pk && prov2) {
-        const res2 = await complete(prov2, { system: pk.system, messages: pk.messages });
+        const res2 = await complete(prov2, { system: pk.system, messages: pk.messages, reqId: S8.reqId });
         if (res2.ok) speaker = parsePickedSpeaker(s, res2.text);
       }
       if (!speaker) {
@@ -92581,7 +93916,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return;
     }
     const t0 = Date.now();
-    const res = await complete(prov, { system: req.system, messages: req.messages });
+    const res = await completeStream(
+      prov,
+      { system: req.system, messages: req.messages, reqId: S8.reqId },
+      (c) => updatePending({ text: c.text, thinking: c.thinkingAll })
+    );
     if (!res.ok) {
       setStatus("\u274C " + (res.error || t("ui.dlgb.errSend")));
       return;
@@ -92592,6 +93931,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return;
     }
     s.turns.push(newTurn({
+      // [alpha.116 ข้อ 1] จดชนิดไว้ในเทิร์นเลย — ไฟล์เซสชันอ่านย้อนได้ว่าบรรทัดไหนเป็นเสียงในใจ
+      kind: req.mono ? KIND_MONO : KIND_LINE,
       speaker,
       listener: pair.listener,
       text: parsed.text,
@@ -92613,7 +93954,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return;
     }
     const t0 = Date.now();
-    const res = await complete(prov, { system: req.system, messages: req.messages });
+    const res = await completeStream(
+      prov,
+      { system: req.system, messages: req.messages, reqId: S8.reqId },
+      (c) => updatePending({ text: c.text, thinking: c.thinkingAll })
+    );
     if (!res.ok) {
       setStatus("\u274C " + (res.error || t("ui.dlgb.errSend")));
       return;
@@ -92652,6 +93997,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const after = s.turns.slice(i5 + 1);
     s.turns = s.turns.slice(0, i5);
     S8.sending = true;
+    S8.reqId = newReqId2();
+    S8.sendingSince = Date.now();
+    const tick = setInterval(tickElapsed, 400);
     drawSession();
     try {
       await sendOne(s, { speaker: tn.speaker, listener: tn.listener, needAi: false });
@@ -92659,8 +94007,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       log("error", t("ui.dlgb.errSend"), e);
       s.turns.push(tn);
     } finally {
+      clearInterval(tick);
       s.turns.push(...after);
       S8.sending = false;
+      S8.reqId = "";
       touch();
       await saveSession3();
       drawSession();
@@ -93056,7 +94406,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function builderState() {
     return S8;
   }
-  var S8;
+  var S8, _reqSeq2;
   var init_builder_ui = __esm({
     "src/dialogue/builder-ui.js"() {
       init_i18n();
@@ -93086,9 +94436,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         sending: false,
         showThinking: false,
         // 💬 ปกติ / 🧠 ความคิด
-        entities: null
+        entities: null,
         // แคชรายชื่อจาก Wiki
+        reqId: "",
+        // [alpha.96] คำขอที่กำลังวิ่ง (กดหยุดได้)
+        sendingSince: 0
+        // เวลาเริ่มส่ง (ไว้แสดง "คิดมาแล้วกี่วินาที")
       };
+      _reqSeq2 = 0;
     }
   });
 
@@ -93196,6 +94551,155 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       _ctx2 = null;
       _cache = /* @__PURE__ */ new Map();
       _fontOf = { sp: "", prose: "" };
+    }
+  });
+
+  // src/toolbar/fmtbar-pos.js
+  var fmtbar_pos_exports = {};
+  __export(fmtbar_pos_exports, {
+    FMTBAR_ALIGNS: () => FMTBAR_ALIGNS,
+    FMTBAR_ALIGN_DEFAULT: () => FMTBAR_ALIGN_DEFAULT,
+    FMTBAR_CURSOR_GAP: () => FMTBAR_CURSOR_GAP,
+    FMTBAR_DROP: () => FMTBAR_DROP,
+    FMTBAR_OPACITIES: () => FMTBAR_OPACITIES,
+    FMTBAR_OPACITY_DEFAULT: () => FMTBAR_OPACITY_DEFAULT,
+    FMTBAR_TWEEN_MS: () => FMTBAR_TWEEN_MS,
+    alignBarPos: () => alignBarPos,
+    clampBarInBox: () => clampBarInBox,
+    clampBarPos: () => clampBarPos,
+    defaultBarPos: () => defaultBarPos,
+    easeInOutCubic: () => easeInOutCubic,
+    fmtBarTarget: () => fmtBarTarget,
+    nextAlign: () => nextAlign,
+    nextOpacity: () => nextOpacity,
+    normalizeAlign: () => normalizeAlign,
+    normalizeBarState: () => normalizeBarState,
+    normalizeOpacity: () => normalizeOpacity,
+    opacityPercent: () => opacityPercent,
+    resetBarState: () => resetBarState,
+    tweenAt: () => tweenAt,
+    visibleHostBox: () => visibleHostBox
+  });
+  function easeInOutCubic(t3) {
+    const x = t3 < 0 ? 0 : t3 > 1 ? 1 : t3;
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+  function tweenAt(from2, to, t3) {
+    return from2 + (to - from2) * easeInOutCubic(t3);
+  }
+  function fmtBarTarget(o = {}) {
+    const host2 = o.host || { left: 0, top: 0, width: 0, height: 0 };
+    const bar = o.bar || { width: 0, height: 0 };
+    const vp = o.viewport || { width: 0, height: 0 };
+    const pad3 = Number.isFinite(o.pad) ? o.pad : 8;
+    const useCursor = !!(o.pointer && o.inEditor && Number.isFinite(o.pointer.x) && Number.isFinite(o.pointer.y));
+    const cx2 = useCursor ? o.pointer.x : vp.width / 2;
+    const top0 = useCursor ? o.pointer.y + FMTBAR_CURSOR_GAP : vp.height / 2 + FMTBAR_DROP;
+    let left = cx2 - bar.width / 2 - host2.left;
+    let top = top0 - host2.top;
+    const maxL = host2.width - bar.width - pad3;
+    const maxT = host2.height - bar.height - pad3;
+    left = maxL < pad3 ? pad3 : Math.min(Math.max(pad3, left), maxL);
+    top = maxT < pad3 ? pad3 : Math.min(Math.max(pad3, top), maxT);
+    return { left: Math.round(left), top: Math.round(top), fallback: !useCursor };
+  }
+  function clampBarPos(pos, bar, host2, pad3 = 4) {
+    const hw = Math.max(0, host2 && host2.width || 0);
+    const hh = Math.max(0, host2 && host2.height || 0);
+    return clampBarInBox(pos, bar, { left: 0, top: 0, right: hw, bottom: hh }, pad3);
+  }
+  function clampBarInBox(pos, bar, box2, pad3 = 4) {
+    const p = pos || {};
+    const b = box2 || {};
+    const bw = Math.max(0, bar && bar.width || 0);
+    const bh = Math.max(0, bar && bar.height || 0);
+    const bl = Number.isFinite(b.left) ? b.left : 0;
+    const bt = Number.isFinite(b.top) ? b.top : 0;
+    const br = Number.isFinite(b.right) ? b.right : bl;
+    const bb = Number.isFinite(b.bottom) ? b.bottom : bt;
+    const l0 = Number.isFinite(p.left) ? p.left : 0;
+    const t0 = Number.isFinite(p.top) ? p.top : 0;
+    const minL = bl + pad3, minT = bt + pad3;
+    const maxL = br - bw - pad3;
+    const maxT = bb - bh - pad3;
+    const left = Math.round(maxL < minL ? minL : Math.min(Math.max(minL, l0), maxL));
+    const top = Math.round(maxT < minT ? minT : Math.min(Math.max(minT, t0), maxT));
+    return { left, top, moved: left !== Math.round(l0) || top !== Math.round(t0) };
+  }
+  function visibleHostBox(hostRect, viewport) {
+    const hr = hostRect || {};
+    const vp = viewport || {};
+    const hl = Number.isFinite(hr.left) ? hr.left : 0;
+    const ht = Number.isFinite(hr.top) ? hr.top : 0;
+    const hw = Math.max(0, hr.width || 0);
+    const hh = Math.max(0, hr.height || 0);
+    const vw = Number.isFinite(vp.width) && vp.width > 0 ? vp.width : hl + hw;
+    const vh = Number.isFinite(vp.height) && vp.height > 0 ? vp.height : ht + hh;
+    const left = Math.max(0, Math.min(hw, -hl));
+    const top = Math.max(0, Math.min(hh, -ht));
+    const right = Math.max(left, Math.min(hw, vw - hl));
+    const bottom = Math.max(top, Math.min(hh, vh - ht));
+    return { left, top, right, bottom };
+  }
+  function normalizeOpacity(v2) {
+    const n2 = Number(v2);
+    if (!Number.isFinite(n2) || n2 <= 0 || n2 > 1) return FMTBAR_OPACITY_DEFAULT;
+    let best = FMTBAR_OPACITIES[0];
+    for (const lv of FMTBAR_OPACITIES) if (Math.abs(lv - n2) < Math.abs(best - n2)) best = lv;
+    return best;
+  }
+  function nextOpacity(cur) {
+    const i5 = FMTBAR_OPACITIES.indexOf(normalizeOpacity(cur));
+    return FMTBAR_OPACITIES[(i5 + 1) % FMTBAR_OPACITIES.length];
+  }
+  function opacityPercent(v2) {
+    return Math.round(normalizeOpacity(v2) * 100);
+  }
+  function normalizeAlign(a) {
+    return FMTBAR_ALIGNS.includes(a) ? a : FMTBAR_ALIGN_DEFAULT;
+  }
+  function nextAlign(cur) {
+    return normalizeAlign(cur) === "top" ? "bottom" : "top";
+  }
+  function alignBarPos(align, pos, bar, host2, pad3 = 4) {
+    const hh = Math.max(0, host2 && host2.height || 0);
+    const bh = Math.max(0, bar && bar.height || 0);
+    const want = normalizeAlign(align) === "top" ? pad3 : hh - bh - pad3;
+    const maxT = hh - bh - pad3;
+    const top = Math.round(maxT < pad3 ? pad3 : Math.min(Math.max(pad3, want), maxT));
+    const l = pos && Number.isFinite(pos.left) ? pos.left : 0;
+    return { left: Math.round(l), top };
+  }
+  function normalizeBarState(saved) {
+    const s = saved || {};
+    return {
+      opacity: normalizeOpacity(s.opacity),
+      align: normalizeAlign(s.align),
+      locked: !!s.locked
+    };
+  }
+  function resetBarState() {
+    return { opacity: FMTBAR_OPACITY_DEFAULT, align: FMTBAR_ALIGN_DEFAULT, locked: false };
+  }
+  function defaultBarPos(bar, host2, pad3 = 16) {
+    const bw = Math.max(0, bar && bar.width || 0);
+    const bh = Math.max(0, bar && bar.height || 0);
+    const hw = Math.max(0, host2 && host2.width || 0);
+    const hh = Math.max(0, host2 && host2.height || 0);
+    const left = Math.round(Math.max(pad3, (hw - bw) / 2));
+    const top = Math.round(Math.max(pad3, hh - bh - pad3));
+    return { left, top };
+  }
+  var FMTBAR_DROP, FMTBAR_TWEEN_MS, FMTBAR_CURSOR_GAP, FMTBAR_OPACITIES, FMTBAR_OPACITY_DEFAULT, FMTBAR_ALIGNS, FMTBAR_ALIGN_DEFAULT;
+  var init_fmtbar_pos = __esm({
+    "src/toolbar/fmtbar-pos.js"() {
+      FMTBAR_DROP = 250;
+      FMTBAR_TWEEN_MS = 420;
+      FMTBAR_CURSOR_GAP = 26;
+      FMTBAR_OPACITIES = [1, 0.5, 0.05];
+      FMTBAR_OPACITY_DEFAULT = 1;
+      FMTBAR_ALIGNS = ["top", "bottom"];
+      FMTBAR_ALIGN_DEFAULT = "bottom";
     }
   });
 
@@ -93939,15 +95443,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
         return padding + value;
       };
-      copyStringIntoBuffer = function(str2, buffer2, offset) {
-        var length = str2.length;
+      copyStringIntoBuffer = function(str3, buffer2, offset) {
+        var length = str3.length;
         for (var idx4 = 0; idx4 < length; idx4++) {
-          buffer2[offset++] = str2.charCodeAt(idx4);
+          buffer2[offset++] = str3.charCodeAt(idx4);
         }
         return length;
       };
-      escapeRegExp = function(str2) {
-        return str2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      escapeRegExp = function(str3) {
+        return str3.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       };
       cleanText = function(text) {
         return text.replace(/\t|\u0085|\u2028|\u2029/g, "    ").replace(/[\b\v]/g, "");
@@ -94112,11 +95616,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return mergedBuffer;
       };
       arrayAsString = function(array) {
-        var str2 = "";
+        var str3 = "";
         for (var idx4 = 0, len5 = array.length; idx4 < len5; idx4++) {
-          str2 += charFromCode(array[idx4]);
+          str3 += charFromCode(array[idx4]);
         }
-        return str2;
+        return str3;
       };
       byAscendingId = function(a, b) {
         return a.id - b.id;
@@ -95322,7 +96826,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       function fill_window(s) {
         var _w_size = s.w_size;
-        var p, n2, m, more, str2;
+        var p, n2, m, more, str3;
         do {
           more = s.window_size - s.lookahead - s.strstart;
           if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD)) {
@@ -95350,14 +96854,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           n2 = read_buf(s.strm, s.window, s.strstart + s.lookahead, more);
           s.lookahead += n2;
           if (s.lookahead + s.insert >= MIN_MATCH) {
-            str2 = s.strstart - s.insert;
-            s.ins_h = s.window[str2];
-            s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + 1]) & s.hash_mask;
+            str3 = s.strstart - s.insert;
+            s.ins_h = s.window[str3];
+            s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str3 + 1]) & s.hash_mask;
             while (s.insert) {
-              s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + MIN_MATCH - 1]) & s.hash_mask;
-              s.prev[str2 & s.w_mask] = s.head[s.ins_h];
-              s.head[s.ins_h] = str2;
-              str2++;
+              s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str3 + MIN_MATCH - 1]) & s.hash_mask;
+              s.prev[str3 & s.w_mask] = s.head[s.ins_h];
+              s.head[s.ins_h] = str3;
+              str3++;
               s.insert--;
               if (s.lookahead + s.insert < MIN_MATCH) {
                 break;
@@ -96133,7 +97637,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       function deflateSetDictionary(strm, dictionary2) {
         var dictLength = dictionary2.length;
         var s;
-        var str2, n2;
+        var str3, n2;
         var wrap2;
         var avail;
         var next;
@@ -96171,15 +97675,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         strm.input = dictionary2;
         fill_window(s);
         while (s.lookahead >= MIN_MATCH) {
-          str2 = s.strstart;
+          str3 = s.strstart;
           n2 = s.lookahead - (MIN_MATCH - 1);
           do {
-            s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + MIN_MATCH - 1]) & s.hash_mask;
-            s.prev[str2 & s.w_mask] = s.head[s.ins_h];
-            s.head[s.ins_h] = str2;
-            str2++;
+            s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str3 + MIN_MATCH - 1]) & s.hash_mask;
+            s.prev[str3 & s.w_mask] = s.head[s.ins_h];
+            s.head[s.ins_h] = str3;
+            str3++;
           } while (--n2);
-          s.strstart = str2;
+          s.strstart = str3;
           s.lookahead = MIN_MATCH - 1;
           fill_window(s);
         }
@@ -96230,12 +97734,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       var q;
       _utf8len[254] = _utf8len[254] = 1;
-      exports.string2buf = function(str2) {
-        var buf, c, c2, m_pos, i5, str_len = str2.length, buf_len = 0;
+      exports.string2buf = function(str3) {
+        var buf, c, c2, m_pos, i5, str_len = str3.length, buf_len = 0;
         for (m_pos = 0; m_pos < str_len; m_pos++) {
-          c = str2.charCodeAt(m_pos);
+          c = str3.charCodeAt(m_pos);
           if ((c & 64512) === 55296 && m_pos + 1 < str_len) {
-            c2 = str2.charCodeAt(m_pos + 1);
+            c2 = str3.charCodeAt(m_pos + 1);
             if ((c2 & 64512) === 56320) {
               c = 65536 + (c - 55296 << 10) + (c2 - 56320);
               m_pos++;
@@ -96245,9 +97749,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
         buf = new utils2.Buf8(buf_len);
         for (i5 = 0, m_pos = 0; i5 < buf_len; m_pos++) {
-          c = str2.charCodeAt(m_pos);
+          c = str3.charCodeAt(m_pos);
           if ((c & 64512) === 55296 && m_pos + 1 < str_len) {
-            c2 = str2.charCodeAt(m_pos + 1);
+            c2 = str3.charCodeAt(m_pos + 1);
             if ((c2 & 64512) === 56320) {
               c = 65536 + (c - 55296 << 10) + (c2 - 56320);
               m_pos++;
@@ -96286,10 +97790,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       exports.buf2binstring = function(buf) {
         return buf2binstring(buf, buf.length);
       };
-      exports.binstring2buf = function(str2) {
-        var buf = new utils2.Buf8(str2.length);
+      exports.binstring2buf = function(str3) {
+        var buf = new utils2.Buf8(str3.length);
         for (var i5 = 0, len5 = buf.length; i5 < len5; i5++) {
-          buf[i5] = str2.charCodeAt(i5);
+          buf[i5] = str3.charCodeAt(i5);
         }
         return buf;
       };
@@ -98609,11 +100113,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return bytes;
       };
       arrayToString = function(array) {
-        var str2 = "";
+        var str3 = "";
         for (var i5 = 0; i5 < array.length; i5++) {
-          str2 += String.fromCharCode(array[i5]);
+          str3 += String.fromCharCode(array[i5]);
         }
-        return str2;
+        return str3;
       };
       decompressJson = function(compressedJson) {
         return arrayToString(import_pako.default.inflate(decodeFromBase642(compressedJson)));
@@ -98854,9 +100358,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           this.encodeUnicodeCodePoint = function(codePoint) {
             var mapped = _this.unicodeMappings[codePoint];
             if (!mapped) {
-              var str2 = String.fromCharCode(codePoint);
+              var str3 = String.fromCharCode(codePoint);
               var hexCode = "0x" + padStart2(codePoint.toString(16), 4, "0");
-              var msg = _this.name + ' cannot encode "' + str2 + '" (' + hexCode + ")";
+              var msg = _this.name + ' cannot encode "' + str3 + '" (' + hexCode + ")";
               throw new Error(msg);
             }
             return { code: mapped[0], name: mapped[1] };
@@ -105418,7 +106922,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         FlateStream2.prototype.readBlock = function() {
           var buffer2;
           var len5;
-          var str2 = this.stream;
+          var str3 = this.stream;
           var hdr = this.getBits(3);
           if (hdr & 1) {
             this.eof = true;
@@ -105426,19 +106930,19 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           hdr >>= 1;
           if (hdr === 0) {
             var b = void 0;
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               throw new Error("Bad block header in flate stream");
             }
             var blockLen = b;
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               throw new Error("Bad block header in flate stream");
             }
             blockLen |= b << 8;
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               throw new Error("Bad block header in flate stream");
             }
             var check2 = b;
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               throw new Error("Bad block header in flate stream");
             }
             check2 |= b << 8;
@@ -105452,12 +106956,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             var end = bufferLength + blockLen;
             this.bufferLength = end;
             if (blockLen === 0) {
-              if (str2.peekByte() === -1) {
+              if (str3.peekByte() === -1) {
                 this.eof = true;
               }
             } else {
               for (var n2 = bufferLength; n2 < end; ++n2) {
-                if ((b = str2.getByte()) === -1) {
+                if ((b = str3.getByte()) === -1) {
                   this.eof = true;
                   break;
                 }
@@ -105557,12 +107061,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
         };
         FlateStream2.prototype.getBits = function(bits3) {
-          var str2 = this.stream;
+          var str3 = this.stream;
           var codeSize = this.codeSize;
           var codeBuf = this.codeBuf;
           var b;
           while (codeSize < bits3) {
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               throw new Error("Bad encoding in flate stream");
             }
             codeBuf |= b << codeSize;
@@ -105574,14 +107078,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return b;
         };
         FlateStream2.prototype.getCode = function(table9) {
-          var str2 = this.stream;
+          var str3 = this.stream;
           var codes = table9[0];
           var maxLen = table9[1];
           var codeSize = this.codeSize;
           var codeBuf = this.codeBuf;
           var b;
           while (codeSize < maxLen) {
-            if ((b = str2.getByte()) === -1) {
+            if ((b = str3.getByte()) === -1) {
               break;
             }
             codeBuf |= b << codeSize;
@@ -109616,11 +111120,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         } else if (thArc > 0 && sweep === 0) {
           thArc -= 2 * Math.PI;
         }
-        var segments = Math.ceil(Math.abs(thArc / (Math.PI * 0.5 + 1e-3)));
+        var segments2 = Math.ceil(Math.abs(thArc / (Math.PI * 0.5 + 1e-3)));
         var result = [];
-        for (var i5 = 0; i5 < segments; i5++) {
-          var th2 = th0 + i5 * thArc / segments;
-          var th3 = th0 + (i5 + 1) * thArc / segments;
+        for (var i5 = 0; i5 < segments2; i5++) {
+          var th2 = th0 + i5 * thArc / segments2;
+          var th3 = th0 + (i5 + 1) * thArc / segments2;
           result[i5] = [xc, yc, th2, th3, rx, ry, sinTh, cosTh];
         }
         return result;
@@ -114847,7 +116351,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     var i5 = 1;
     var args = arguments;
     var len5 = args.length;
-    var str2 = String(f).replace(formatRegExp, function(x2) {
+    var str3 = String(f).replace(formatRegExp, function(x2) {
       if (x2 === "%%") return "%";
       if (i5 >= len5) return x2;
       switch (x2) {
@@ -114867,12 +116371,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     });
     for (var x = args[i5]; i5 < len5; x = args[++i5]) {
       if (isNull(x) || !isObject2(x)) {
-        str2 += " " + x;
+        str3 += " " + x;
       } else {
-        str2 += " " + inspect(x);
+        str3 += " " + inspect(x);
       }
     }
-    return str2;
+    return str3;
   }
   function deprecate(fn, msg) {
     if (isUndefined(global$1.process)) {
@@ -114935,16 +116439,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (ctx2.colors) ctx2.stylize = stylizeWithColor;
     return formatValue2(ctx2, obj, ctx2.depth);
   }
-  function stylizeWithColor(str2, styleType) {
+  function stylizeWithColor(str3, styleType) {
     var style = inspect.styles[styleType];
     if (style) {
-      return "\x1B[" + inspect.colors[style][0] + "m" + str2 + "\x1B[" + inspect.colors[style][1] + "m";
+      return "\x1B[" + inspect.colors[style][0] + "m" + str3 + "\x1B[" + inspect.colors[style][1] + "m";
     } else {
-      return str2;
+      return str3;
     }
   }
-  function stylizeNoColor(str2, styleType) {
-    return str2;
+  function stylizeNoColor(str3, styleType) {
+    return str3;
   }
   function arrayToHash(array) {
     var hash2 = {};
@@ -115060,49 +116564,49 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return output;
   }
   function formatProperty(ctx2, value, recurseTimes, visibleKeys, key2, array) {
-    var name5, str2, desc;
+    var name5, str3, desc;
     desc = Object.getOwnPropertyDescriptor(value, key2) || {
       value: value[key2]
     };
     if (desc.get) {
       if (desc.set) {
-        str2 = ctx2.stylize("[Getter/Setter]", "special");
+        str3 = ctx2.stylize("[Getter/Setter]", "special");
       } else {
-        str2 = ctx2.stylize("[Getter]", "special");
+        str3 = ctx2.stylize("[Getter]", "special");
       }
     } else {
       if (desc.set) {
-        str2 = ctx2.stylize("[Setter]", "special");
+        str3 = ctx2.stylize("[Setter]", "special");
       }
     }
     if (!hasOwnProperty(visibleKeys, key2)) {
       name5 = "[" + key2 + "]";
     }
-    if (!str2) {
+    if (!str3) {
       if (ctx2.seen.indexOf(desc.value) < 0) {
         if (isNull(recurseTimes)) {
-          str2 = formatValue2(ctx2, desc.value, null);
+          str3 = formatValue2(ctx2, desc.value, null);
         } else {
-          str2 = formatValue2(ctx2, desc.value, recurseTimes - 1);
+          str3 = formatValue2(ctx2, desc.value, recurseTimes - 1);
         }
-        if (str2.indexOf("\n") > -1) {
+        if (str3.indexOf("\n") > -1) {
           if (array) {
-            str2 = str2.split("\n").map(function(line) {
+            str3 = str3.split("\n").map(function(line) {
               return "  " + line;
             }).join("\n").substr(2);
           } else {
-            str2 = "\n" + str2.split("\n").map(function(line) {
+            str3 = "\n" + str3.split("\n").map(function(line) {
               return "   " + line;
             }).join("\n");
           }
         }
       } else {
-        str2 = ctx2.stylize("[Circular]", "special");
+        str3 = ctx2.stylize("[Circular]", "special");
       }
     }
     if (isUndefined(name5)) {
       if (array && key2.match(/^\d+$/)) {
-        return str2;
+        return str3;
       }
       name5 = JSON.stringify("" + key2);
       if (name5.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
@@ -115113,7 +116617,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         name5 = ctx2.stylize(name5, "string");
       }
     }
-    return name5 + ": " + str2;
+    return name5 + ": " + str3;
   }
   function reduceToSingleString(output, base4, braces) {
     var length = output.reduce(function(prev, cur) {
@@ -115445,19 +116949,19 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     var ret = p.data;
     n2 -= ret.length;
     while (p = p.next) {
-      var str2 = p.data;
-      var nb = n2 > str2.length ? str2.length : n2;
-      if (nb === str2.length) ret += str2;
-      else ret += str2.slice(0, n2);
+      var str3 = p.data;
+      var nb = n2 > str3.length ? str3.length : n2;
+      if (nb === str3.length) ret += str3;
+      else ret += str3.slice(0, n2);
       n2 -= nb;
       if (n2 === 0) {
-        if (nb === str2.length) {
+        if (nb === str3.length) {
           ++c;
           if (p.next) list.head = p.next;
           else list.head = list.tail = null;
         } else {
           list.head = p;
-          p.data = str2.slice(nb);
+          p.data = str3.slice(nb);
         }
         break;
       }
@@ -120187,11 +121691,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return Buffer3.compare(this, b) === 0;
         };
         Buffer3.prototype.inspect = function inspect2() {
-          var str2 = "";
+          var str3 = "";
           var max2 = exports.INSPECT_MAX_BYTES;
-          str2 = this.toString("hex", 0, max2).replace(/(.{2})/g, "$1 ").trim();
-          if (this.length > max2) str2 += " ... ";
-          return "<Buffer " + str2 + ">";
+          str3 = this.toString("hex", 0, max2).replace(/(.{2})/g, "$1 ").trim();
+          if (this.length > max2) str3 += " ... ";
+          return "<Buffer " + str3 + ">";
         };
         if (customInspectSymbol) {
           Buffer3.prototype[customInspectSymbol] = Buffer3.prototype.inspect;
@@ -120993,14 +122497,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return this;
         };
         var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g;
-        function base64clean(str2) {
-          str2 = str2.split("=")[0];
-          str2 = str2.trim().replace(INVALID_BASE64_RE, "");
-          if (str2.length < 2) return "";
-          while (str2.length % 4 !== 0) {
-            str2 = str2 + "=";
+        function base64clean(str3) {
+          str3 = str3.split("=")[0];
+          str3 = str3.trim().replace(INVALID_BASE64_RE, "");
+          if (str3.length < 2) return "";
+          while (str3.length % 4 !== 0) {
+            str3 = str3 + "=";
           }
-          return str2;
+          return str3;
         }
         function utf8ToBytes(string, units) {
           units = units || Infinity;
@@ -121050,19 +122554,19 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return bytes;
         }
-        function asciiToBytes(str2) {
+        function asciiToBytes(str3) {
           var byteArray = [];
-          for (var i5 = 0; i5 < str2.length; ++i5) {
-            byteArray.push(str2.charCodeAt(i5) & 255);
+          for (var i5 = 0; i5 < str3.length; ++i5) {
+            byteArray.push(str3.charCodeAt(i5) & 255);
           }
           return byteArray;
         }
-        function utf16leToBytes(str2, units) {
+        function utf16leToBytes(str3, units) {
           var c, hi, lo;
           var byteArray = [];
-          for (var i5 = 0; i5 < str2.length; ++i5) {
+          for (var i5 = 0; i5 < str3.length; ++i5) {
             if ((units -= 2) < 0) break;
-            c = str2.charCodeAt(i5);
+            c = str3.charCodeAt(i5);
             hi = c >> 8;
             lo = c % 256;
             byteArray.push(lo);
@@ -121070,8 +122574,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return byteArray;
         }
-        function base64ToBytes(str2) {
-          return base64Js.toByteArray(base64clean(str2));
+        function base64ToBytes(str3) {
+          return base64Js.toByteArray(base64clean(str3));
         }
         function blitBuffer(src2, dst, offset, length) {
           for (var i5 = 0; i5 < length; ++i5) {
@@ -122135,12 +123639,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       safer_1 = safer;
       BOMChar = "\uFEFF";
       PrependBOM = PrependBOMWrapper;
-      PrependBOMWrapper.prototype.write = function(str2) {
+      PrependBOMWrapper.prototype.write = function(str3) {
         if (this.addBOM) {
-          str2 = BOMChar + str2;
+          str3 = BOMChar + str3;
           this.addBOM = false;
         }
-        return this.encoder.write(str2);
+        return this.encoder.write(str3);
       };
       PrependBOMWrapper.prototype.end = function() {
         return this.encoder.end();
@@ -122199,25 +123703,25 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         StringDecoder.prototype.end = function() {
         };
       InternalDecoder.prototype = StringDecoder.prototype;
-      InternalEncoder.prototype.write = function(str2) {
-        return Buffer$1.from(str2, this.enc);
+      InternalEncoder.prototype.write = function(str3) {
+        return Buffer$1.from(str3, this.enc);
       };
       InternalEncoder.prototype.end = function() {
       };
-      InternalEncoderBase64.prototype.write = function(str2) {
-        str2 = this.prevStr + str2;
-        var completeQuads = str2.length - str2.length % 4;
-        this.prevStr = str2.slice(completeQuads);
-        str2 = str2.slice(0, completeQuads);
-        return Buffer$1.from(str2, "base64");
+      InternalEncoderBase64.prototype.write = function(str3) {
+        str3 = this.prevStr + str3;
+        var completeQuads = str3.length - str3.length % 4;
+        this.prevStr = str3.slice(completeQuads);
+        str3 = str3.slice(0, completeQuads);
+        return Buffer$1.from(str3, "base64");
       };
       InternalEncoderBase64.prototype.end = function() {
         return Buffer$1.from(this.prevStr, "base64");
       };
-      InternalEncoderCesu8.prototype.write = function(str2) {
-        var buf = Buffer$1.alloc(str2.length * 3), bufIdx = 0;
-        for (var i5 = 0; i5 < str2.length; i5++) {
-          var charCode = str2.charCodeAt(i5);
+      InternalEncoderCesu8.prototype.write = function(str3) {
+        var buf = Buffer$1.alloc(str3.length * 3), bufIdx = 0;
+        for (var i5 = 0; i5 < str3.length; i5++) {
+          var charCode = str3.charCodeAt(i5);
           if (charCode < 128) buf[bufIdx++] = charCode;
           else if (charCode < 2048) {
             buf[bufIdx++] = 192 + (charCode >>> 6);
@@ -122285,8 +123789,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       Utf16BECodec.prototype.encoder = Utf16BEEncoder;
       Utf16BECodec.prototype.decoder = Utf16BEDecoder;
       Utf16BECodec.prototype.bomAware = true;
-      Utf16BEEncoder.prototype.write = function(str2) {
-        var buf = Buffer$2.from(str2, "ucs2");
+      Utf16BEEncoder.prototype.write = function(str3) {
+        var buf = Buffer$2.from(str3, "ucs2");
         for (var i5 = 0; i5 < buf.length; i5 += 2) {
           var tmp = buf[i5];
           buf[i5] = buf[i5 + 1];
@@ -122317,8 +123821,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       utf16_1 = Utf16Codec;
       Utf16Codec.prototype.encoder = Utf16Encoder;
       Utf16Codec.prototype.decoder = Utf16Decoder;
-      Utf16Encoder.prototype.write = function(str2) {
-        return this.encoder.write(str2);
+      Utf16Encoder.prototype.write = function(str3) {
+        return this.encoder.write(str3);
       };
       Utf16Encoder.prototype.end = function() {
         return this.encoder.end();
@@ -122355,8 +123859,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       Utf7Codec.prototype.decoder = Utf7Decoder;
       Utf7Codec.prototype.bomAware = true;
       nonDirectChars = /[^A-Za-z0-9'\(\),-\.\/:\? \n\r\t]+/g;
-      Utf7Encoder.prototype.write = function(str2) {
-        return Buffer$3.from(str2.replace(nonDirectChars, function(chunk) {
+      Utf7Encoder.prototype.write = function(str3) {
+        return Buffer$3.from(str3.replace(nonDirectChars, function(chunk) {
           return "+" + (chunk === "+" ? "" : this.iconv.encode(chunk, "utf16-be").toString("base64").replace(/=+$/, "")) + "-";
         }.bind(this)));
       };
@@ -122419,10 +123923,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       Utf7IMAPCodec.prototype.encoder = Utf7IMAPEncoder;
       Utf7IMAPCodec.prototype.decoder = Utf7IMAPDecoder;
       Utf7IMAPCodec.prototype.bomAware = true;
-      Utf7IMAPEncoder.prototype.write = function(str2) {
-        var inBase64 = this.inBase64, base64Accum = this.base64Accum, base64AccumIdx = this.base64AccumIdx, buf = Buffer$3.alloc(str2.length * 5 + 10), bufIdx = 0;
-        for (var i5 = 0; i5 < str2.length; i5++) {
-          var uChar = str2.charCodeAt(i5);
+      Utf7IMAPEncoder.prototype.write = function(str3) {
+        var inBase64 = this.inBase64, base64Accum = this.base64Accum, base64AccumIdx = this.base64AccumIdx, buf = Buffer$3.alloc(str3.length * 5 + 10), bufIdx = 0;
+        for (var i5 = 0; i5 < str3.length; i5++) {
+          var uChar = str3.charCodeAt(i5);
           if (32 <= uChar && uChar <= 126) {
             if (inBase64) {
               if (base64AccumIdx > 0) {
@@ -122524,10 +124028,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       _sbcs = SBCSCodec;
       SBCSCodec.prototype.encoder = SBCSEncoder;
       SBCSCodec.prototype.decoder = SBCSDecoder;
-      SBCSEncoder.prototype.write = function(str2) {
-        var buf = Buffer$4.alloc(str2.length);
-        for (var i5 = 0; i5 < str2.length; i5++) {
-          buf[i5] = this.encodeBuf[str2.charCodeAt(i5)];
+      SBCSEncoder.prototype.write = function(str3) {
+        var buf = Buffer$4.alloc(str3.length);
+        for (var i5 = 0; i5 < str3.length; i5++) {
+          buf[i5] = this.encodeBuf[str3.charCodeAt(i5)];
         }
         return buf;
       };
@@ -123249,12 +124753,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           else if (uCode <= SEQ_START) this._setEncodeSequence(this.decodeTableSeq[SEQ_START - uCode], mbCode);
         }
       };
-      DBCSEncoder.prototype.write = function(str2) {
-        var newBuf = Buffer$5.alloc(str2.length * (this.gb18030 ? 4 : 3)), leadSurrogate = this.leadSurrogate, seqObj = this.seqObj, nextChar = -1, i5 = 0, j = 0;
+      DBCSEncoder.prototype.write = function(str3) {
+        var newBuf = Buffer$5.alloc(str3.length * (this.gb18030 ? 4 : 3)), leadSurrogate = this.leadSurrogate, seqObj = this.seqObj, nextChar = -1, i5 = 0, j = 0;
         while (true) {
           if (nextChar === -1) {
-            if (i5 == str2.length) break;
-            var uCode = str2.charCodeAt(i5++);
+            if (i5 == str3.length) break;
+            var uCode = str3.charCodeAt(i5++);
           } else {
             var uCode = nextChar;
             nextChar = -1;
@@ -132076,10 +133580,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             return Buffer$7.isNativeEncoding(encoding) || iconv.encodingExists(encoding);
           };
           original.BufferByteLength = Buffer$7.byteLength;
-          Buffer$7.byteLength = SlowBuffer.byteLength = function(str2, encoding) {
+          Buffer$7.byteLength = SlowBuffer.byteLength = function(str3, encoding) {
             encoding = String(encoding || "utf8").toLowerCase();
-            if (Buffer$7.isNativeEncoding(encoding)) return original.BufferByteLength.call(this, str2, encoding);
-            return iconv.encode(str2, encoding).length;
+            if (Buffer$7.isNativeEncoding(encoding)) return original.BufferByteLength.call(this, str3, encoding);
+            return iconv.encode(str3, encoding).length;
           };
           original.BufferToString = Buffer$7.prototype.toString;
           Buffer$7.prototype.toString = function(encoding, start, end) {
@@ -132156,10 +133660,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         iconv.encodings = null;
         iconv.defaultCharUnicode = "\uFFFD";
         iconv.defaultCharSingleByte = "?";
-        iconv.encode = function encode(str2, encoding, options) {
-          str2 = "" + (str2 || "");
+        iconv.encode = function encode(str3, encoding, options) {
+          str3 = "" + (str3 || "");
           var encoder = iconv.getEncoder(encoding, options);
-          var res = encoder.write(str2);
+          var res = encoder.write(str3);
           var trail = encoder.end();
           return trail && trail.length > 0 ? Buffer3.concat([res, trail]) : res;
         };
@@ -134612,10 +136116,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       })();
       toStr = Object.prototype.toString;
       isArguments = function isArguments2(value) {
-        var str2 = toStr.call(value);
-        var isArgs2 = str2 === "[object Arguments]";
+        var str3 = toStr.call(value);
+        var isArgs2 = str3 === "[object Arguments]";
         if (!isArgs2) {
-          isArgs2 = str2 !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr.call(value.callee) === "[object Function]";
+          isArgs2 = str3 !== "[object Array]" && value !== null && typeof value === "object" && typeof value.length === "number" && value.length >= 0 && toStr.call(value.callee) === "[object Function]";
         }
         return isArgs2;
       };
@@ -135304,21 +136808,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             return stream2.readInt32BE();
           }
           if (value === 30) {
-            var str2 = "";
+            var str3 = "";
             while (true) {
               var b = stream2.readUInt8();
               var n1 = b >> 4;
               if (n1 === FLOAT_EOF) {
                 break;
               }
-              str2 += FLOAT_LOOKUP[n1];
+              str3 += FLOAT_LOOKUP[n1];
               var n2 = b & 15;
               if (n2 === FLOAT_EOF) {
                 break;
               }
-              str2 += FLOAT_LOOKUP[n2];
+              str3 += FLOAT_LOOKUP[n2];
             }
-            return parseFloat(str2);
+            return parseFloat(str3);
           }
           return null;
         };
@@ -135327,8 +136831,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             value = 32768;
           }
           if ((value | 0) !== value) {
-            var str2 = "" + value;
-            return 1 + Math.ceil((str2.length + 1) / 2);
+            var str3 = "" + value;
+            return 1 + Math.ceil((str3.length + 1) / 2);
           } else if (-107 <= value && value <= 107) {
             return 1;
           } else if (108 <= value && value <= 1131 || -1131 <= value && value <= -108) {
@@ -135346,14 +136850,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             return stream2.writeInt32BE(val);
           } else if ((val | 0) !== val) {
             stream2.writeUInt8(30);
-            var str2 = "" + val;
-            for (var i5 = 0; i5 < str2.length; i5 += 2) {
-              var c1 = str2[i5];
+            var str3 = "" + val;
+            for (var i5 = 0; i5 < str3.length; i5 += 2) {
+              var c1 = str3[i5];
               var n1 = FLOAT_ENCODE_LOOKUP[c1] || +c1;
-              if (i5 === str2.length - 1) {
+              if (i5 === str3.length - 1) {
                 var n2 = FLOAT_EOF;
               } else {
-                var c2 = str2[i5 + 1];
+                var c2 = str3[i5 + 1];
                 var n2 = FLOAT_ENCODE_LOOKUP[c2] || +c2;
               }
               stream2.writeUInt8(n1 << 4 | n2 & 15);
@@ -140627,7 +142131,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           this.tags = dfa3.tags;
         }
         var _proto = StateMachine2.prototype;
-        _proto.match = function match(str2) {
+        _proto.match = function match(str3) {
           var _ref;
           var self2 = this;
           return _ref = {}, _ref[Symbol.iterator] = /* @__PURE__ */ regeneratorRuntime.mark(function _callee() {
@@ -140642,11 +142146,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                     lastState = null;
                     p = 0;
                   case 5:
-                    if (!(p < str2.length)) {
+                    if (!(p < str3.length)) {
                       _context.next = 21;
                       break;
                     }
-                    c = str2[p];
+                    c = str3[p];
                     lastState = state2;
                     state2 = self2.stateTable[state2][c];
                     if (!(state2 === FAIL_STATE)) {
@@ -140691,13 +142195,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }, _callee);
           }), _ref;
         };
-        _proto.apply = function apply4(str2, actions) {
-          for (var _iterator2 = _createForOfIteratorHelperLoose$e(this.match(str2)), _step2; !(_step2 = _iterator2()).done; ) {
+        _proto.apply = function apply4(str3, actions) {
+          for (var _iterator2 = _createForOfIteratorHelperLoose$e(this.match(str3)), _step2; !(_step2 = _iterator2()).done; ) {
             var _step$value = _step2.value, start = _step$value[0], end = _step$value[1], tags = _step$value[2];
             for (var _iterator22 = _createForOfIteratorHelperLoose$e(tags), _step22; !(_step22 = _iterator22()).done; ) {
               var tag3 = _step22.value;
               if (typeof actions[tag3] === "function") {
-                actions[tag3](start, end, str2.slice(start, end + 1));
+                actions[tag3](start, end, str3.slice(start, end + 1));
               }
             }
           }
@@ -142423,9 +143927,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           var stream2 = this._font.stream;
           var pos = stream2.pos;
           var cff = this._font.CFF2 || this._font["CFF "];
-          var str2 = cff.topDict.CharStrings[this.id];
-          var end = str2.offset + str2.length;
-          stream2.pos = str2.offset;
+          var str3 = cff.topDict.CharStrings[this.id];
+          var end = str3.offset + str3.length;
+          stream2.pos = str3.offset;
           var path = new Path();
           var stack = [];
           var trans = [];
@@ -146958,10 +148462,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const cfg = (el2) => f.elements[el2] || f.elements.action;
     const out = [];
     let line = 0;
+    let prevBlank = false;
     (page2.blocks || []).forEach((b, i5) => {
       const c = cfg(b.el);
       const marker = b.more === true || b.contd === true || b.el === "more" || b.el === "continued-top" || b.el === "continued-bottom";
-      const before = i5 > 0 && !marker ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+      const before = i5 > 0 && !marker && !prevBlank && b.el !== "blank" ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+      prevBlank = b.el === "blank";
       line += before;
       const stB = (f.styles[b.el] || f.styles.action).print || {};
       const lines = wrapTextLines(b.text, elementWidthIn(f, b.el), CHARS_PER_INCH, !!stB.caps, stB);
@@ -147011,16 +148517,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     };
   }
   function makeDrawer(set, custom) {
-    const clean = (s) => custom ? String(s ?? "") : sanitizeForStandardFont(s);
+    const clean2 = (s) => custom ? String(s ?? "") : sanitizeForStandardFont(s);
     const widthOf = (font, text, size) => {
       try {
-        return font.widthOfTextAtSize(clean(text), size);
+        return font.widthOfTextAtSize(clean2(text), size);
       } catch {
         return String(text ?? "").length * size * 0.6;
       }
     };
     const draw3 = (page2, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
-      const t3 = clean(text);
+      const t3 = clean2(text);
       if (!t3) return 0;
       const runs = splitFontRuns(t3, !!set.latin);
       const fontFor2 = (r) => r.latin ? pickFont(set.latin, bold, italic) : pickFont(set, bold, italic);
@@ -147066,7 +148572,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       return w;
     };
-    return { draw: draw3, widthOf, clean };
+    return { draw: draw3, widthOf, clean: clean2 };
   }
   async function generatePdf(args = {}) {
     const fmt = args.fmt && args.fmt.elements ? args.fmt : mergeSpFormat(args.fmt);
@@ -147075,7 +148581,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const meta2 = args.meta || {};
     const titles = opts.titlePages ? normalizeTitlePages(args.titlePages) : [];
     const omit = new Set(opts.omit);
-    const blocks = (args.blocks || []).filter((b) => b && b.el !== "blank" && !omit.has(b.el));
+    const blocks = (args.blocks || []).filter((b) => b && !omit.has(b.el));
     const bodyLines = linesForBody(fmt, hdr);
     const paged = paginate(blocks, { fmt, lines: bodyLines });
     const doc3 = await PDFDocument_default.create();
@@ -149753,25 +151259,25 @@ ${pages.join("\n")}
       if (typeof v2 === "string" && !(k in fields)) fields[k] = v2;
     }
     const keys4 = tpl ? tpl.fields.map((f) => f.key).filter((k) => k !== "name") : Object.keys(fields);
-    const clean = {};
-    for (const k of keys4) clean[k] = str(fields[k]);
+    const clean2 = {};
+    for (const k of keys4) clean2[k] = str2(fields[k]);
     const sections = validate(obj.sections, {
       title: { required: true, type: "string" },
       body: { required: true, type: "string" }
     });
     const missing = [
-      ...keys4.filter((k) => !clean[k]),
+      ...keys4.filter((k) => !clean2[k]),
       ...(tpl ? tpl.sections : []).filter((s) => !sections.some((x) => x.title.includes(s) || s.includes(x.title)))
     ];
     return {
       type,
       template: tpl ? tpl.label : type,
-      name: str(obj.name) || str(fields.name) || "",
-      fields: clean,
+      name: str2(obj.name) || str2(fields.name) || "",
+      fields: clean2,
       sections,
-      tags: (Array.isArray(obj.tags) ? obj.tags : []).map(str).filter(Boolean),
+      tags: (Array.isArray(obj.tags) ? obj.tags : []).map(str2).filter(Boolean),
       missing,
-      ok: !!(str(obj.name) || sections.length)
+      ok: !!(str2(obj.name) || sections.length)
     };
   }
   function toWikiEntity(world, opts = {}) {
@@ -149823,7 +151329,7 @@ ${s.body}`).join("\n\n");
     if (!world.ok) return { ok: false, world, prompt: built.prompt, error: t("ui.aiWorld.aIReplyNotAt"), code: "bad-shape", usage: res.usage };
     return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };
   }
-  var SYSTEM4, WORLD_TEMPLATES, WORLD_TYPES, str;
+  var SYSTEM4, WORLD_TEMPLATES, WORLD_TYPES, str2;
   var init_ai_world = __esm({
     "src/ai/ai-world.js"() {
       init_i18n();
@@ -149916,7 +151422,7 @@ ${s.body}`).join("\n\n");
         }
       };
       WORLD_TYPES = Object.keys(WORLD_TEMPLATES);
-      str = (v2) => v2 == null ? "" : typeof v2 === "string" ? v2.trim() : typeof v2 === "object" ? JSON.stringify(v2) : String(v2);
+      str2 = (v2) => v2 == null ? "" : typeof v2 === "string" ? v2.trim() : typeof v2 === "object" ? JSON.stringify(v2) : String(v2);
     }
   });
 
@@ -150446,6 +151952,248 @@ ${s.body}`).join("\n\n");
     }
   });
 
+  // src/ai/ai-hub-def.js
+  var ai_hub_def_exports = {};
+  __export(ai_hub_def_exports, {
+    AI_HUB_GROUPS: () => AI_HUB_GROUPS,
+    AI_HUB_ITEMS: () => AI_HUB_ITEMS,
+    aiHubItem: () => aiHubItem,
+    aiHubItemsOf: () => aiHubItemsOf,
+    hubStatus: () => hubStatus
+  });
+  function hubStatus(o = {}) {
+    if (!o.configured) return { tone: "warn", text: o.why || t("ui.aiHub.notReady") };
+    const name5 = String(o.providerName || "").trim();
+    const model = String(o.model || "").trim();
+    if (!name5) return { tone: "warn", text: t("ui.aiHub.notReady") };
+    return { tone: "ok", text: model ? name5 + " \xB7 " + model : name5 };
+  }
+  var AI_HUB_GROUPS, AI_HUB_ITEMS, aiHubItem, aiHubItemsOf;
+  var init_ai_hub_def = __esm({
+    "src/ai/ai-hub-def.js"() {
+      init_i18n();
+      AI_HUB_GROUPS = [
+        { key: "talk", label: t("ui.aiHub.grpTalk"), hint: t("ui.aiHub.grpTalkHint") },
+        { key: "write", label: t("ui.aiHub.grpWrite"), hint: t("ui.aiHub.grpWriteHint") },
+        { key: "check", label: t("ui.aiHub.grpCheck"), hint: t("ui.aiHub.grpCheckHint") },
+        { key: "build", label: t("ui.aiHub.grpBuild"), hint: t("ui.aiHub.grpBuildHint") },
+        { key: "setting", label: t("ui.aiHub.grpSetting"), hint: t("ui.aiHub.grpSettingHint") }
+      ];
+      AI_HUB_ITEMS = [
+        // ── คุยกับ AI ──
+        {
+          id: "chat",
+          group: "talk",
+          cmd: "ai-chat-toggle",
+          panel: "ai-chat",
+          icon: "chat",
+          label: t("ui.aiHub.iChat"),
+          desc: t("ui.aiHub.iChatDesc")
+        },
+        {
+          id: "dlgb",
+          group: "talk",
+          cmd: "toggle-panel",
+          args: ["dlgb"],
+          panel: "dlgb",
+          icon: "chat",
+          label: t("ui.aiHub.iDlgb"),
+          desc: t("ui.aiHub.iDlgbDesc")
+        },
+        {
+          id: "starter",
+          group: "talk",
+          cmd: "toggle-panel",
+          args: ["starter"],
+          panel: "starter",
+          icon: "book-content",
+          label: t("ui.aiHub.iStarter"),
+          desc: t("ui.aiHub.iStarterDesc")
+        },
+        // ── ช่วยเขียน ──
+        {
+          id: "assistant",
+          group: "write",
+          cmd: "ai-assistant",
+          icon: "edit",
+          needsScene: true,
+          label: t("ui.aiHub.iAssistant"),
+          desc: t("ui.aiHub.iAssistantDesc")
+        },
+        {
+          id: "dialogue",
+          group: "write",
+          cmd: "ai-dialogue",
+          icon: "chat",
+          needsScene: true,
+          label: t("ui.aiHub.iDialogue"),
+          desc: t("ui.aiHub.iDialogueDesc")
+        },
+        {
+          id: "summary",
+          group: "write",
+          cmd: "ai-summary",
+          icon: "clipboard",
+          needsScene: true,
+          label: t("ui.aiHub.iSummary"),
+          desc: t("ui.aiHub.iSummaryDesc")
+        },
+        {
+          id: "title",
+          group: "write",
+          cmd: "ai-title",
+          icon: "star",
+          label: t("ui.aiHub.iTitle"),
+          desc: t("ui.aiHub.iTitleDesc")
+        },
+        // ── ตรวจงาน ──
+        {
+          id: "analyzer",
+          group: "check",
+          cmd: "ai-analyzer",
+          panel: "ai-analyzer",
+          icon: "brain",
+          label: t("ui.aiHub.iAnalyzer"),
+          desc: t("ui.aiHub.iAnalyzerDesc")
+        },
+        {
+          id: "plot",
+          group: "check",
+          cmd: "ai-plot",
+          icon: "search",
+          label: t("ui.aiHub.iPlot"),
+          desc: t("ui.aiHub.iPlotDesc")
+        },
+        {
+          id: "consistency",
+          group: "check",
+          cmd: "ai-consistency",
+          icon: "check",
+          needsScene: true,
+          label: t("ui.aiHub.iConsistency"),
+          desc: t("ui.aiHub.iConsistencyDesc")
+        },
+        // ── สร้างโลก ──
+        {
+          id: "world",
+          group: "build",
+          cmd: "ai-world",
+          icon: "globe",
+          label: t("ui.aiHub.iWorld"),
+          desc: t("ui.aiHub.iWorldDesc")
+        },
+        // ── ตั้งค่า ──
+        {
+          id: "settings",
+          group: "setting",
+          cmd: "ai-settings",
+          icon: "cog",
+          label: t("ui.aiHub.iSettings"),
+          desc: t("ui.aiHub.iSettingsDesc")
+        }
+      ];
+      aiHubItem = (id) => AI_HUB_ITEMS.find((x) => x.id === id) || null;
+      aiHubItemsOf = (group) => AI_HUB_ITEMS.filter((x) => x.group === group);
+    }
+  });
+
+  // src/ai-hub-ui.js
+  async function renderAIHubPanel(host2) {
+    const h = host2 || document.getElementById("ai-hub-body");
+    if (!h) return 0;
+    h.innerHTML = "";
+    const wrap2 = el("div", "aihub");
+    const cfg = await aiConfigured().catch(() => ({ ok: false, why: "" }));
+    let prov = null;
+    try {
+      prov = await currentProvider();
+    } catch {
+      prov = null;
+    }
+    const st = hubStatus({
+      configured: cfg.ok,
+      why: cfg.why,
+      providerName: prov && prov.name,
+      model: prov && prov.model
+    });
+    const head2 = el("div", "aihub-head");
+    const dot = el("span", "aihub-dot " + (st.tone === "ok" ? "ok" : "warn"));
+    head2.append(dot, el("span", "aihub-headtext", st.text));
+    const cog = el("button", "aihub-cfg");
+    cog.innerHTML = iconHtml("cog", 14);
+    cog.title = t("ui.aiHub.openSettings");
+    cog.onclick = () => handleCommand("ai-settings");
+    head2.append(cog);
+    wrap2.append(head2);
+    if (st.tone !== "ok") {
+      const warn = el("div", "aihub-warn");
+      warn.append(el("span", null, t("ui.aiHub.setupFirst")));
+      const b = el("button", "k-ok", t("ui.aiHub.setupBtn"));
+      b.onclick = () => handleCommand("ai-settings");
+      warn.append(b);
+      wrap2.append(warn);
+    }
+    const hasScene = !!(state.active && (state.active.editor || state.active.sp));
+    let cards = 0;
+    for (const g of AI_HUB_GROUPS) {
+      const rows = aiHubItemsOf(g.key);
+      if (!rows.length) continue;
+      const sec = el("div", "aihub-group");
+      const title2 = el("div", "aihub-grouphead");
+      title2.append(el("span", "aihub-grouptitle", g.label));
+      title2.append(el("span", "aihub-grouphint", g.hint));
+      sec.append(title2);
+      const grid = el("div", "aihub-grid");
+      for (const it of rows) {
+        grid.append(hubCard(it, hasScene));
+        cards++;
+      }
+      sec.append(grid);
+      wrap2.append(sec);
+    }
+    h.append(wrap2);
+    return cards;
+  }
+  function hubCard(it, hasScene) {
+    const open = it.panel ? isPanelOpen(it.panel) : false;
+    const blocked = !!it.needsScene && !hasScene;
+    const card = el("button", "aihub-card" + (open ? " on" : "") + (blocked ? " blocked" : ""));
+    const ico = el("span", "aihub-ico");
+    ico.innerHTML = iconHtml(it.icon || "brain", 18);
+    card.append(ico);
+    const body = el("div", "aihub-cardbody");
+    const nameRow = el("div", "aihub-name", it.label);
+    if (open) nameRow.append(el("span", "aihub-openbadge", t("ui.aiHub.openNow")));
+    body.append(nameRow);
+    body.append(el("div", "aihub-desc", blocked ? t("ui.aiHub.needScene") : it.desc));
+    card.append(body);
+    card.disabled = blocked;
+    card.title = blocked ? t("ui.aiHub.needScene") : it.desc;
+    card.dataset.hub = it.id;
+    card.onclick = async () => {
+      try {
+        await handleCommand(it.cmd, ...it.args || []);
+      } catch (e) {
+        setStatus(tf("ui.aiHub.runFail", it.label));
+        return;
+      }
+      if (it.panel) renderAIHubPanel();
+    };
+    return card;
+  }
+  var init_ai_hub_ui = __esm({
+    "src/ai-hub-ui.js"() {
+      init_i18n();
+      init_core();
+      init_icons();
+      init_ai_settings();
+      init_ai_provider_ui();
+      init_ai_hub_def();
+      init_panel_ui();
+      init_app();
+    }
+  });
+
   // src/starter/starter-model.js
   var starter_model_exports = {};
   __export(starter_model_exports, {
@@ -150831,12 +152579,12 @@ ${s.body}`).join("\n\n");
     aiBusy: () => aiBusy,
     askAI: () => askAI,
     compactNum: () => compactNum,
-    newReqId: () => newReqId,
+    newReqId: () => newReqId3,
     stopAI: () => stopAI,
     stopAllAI: () => stopAllAI,
     tokenBadge: () => tokenBadge
   });
-  function newReqId() {
+  function newReqId3() {
     _seq6 += 1;
     return "st-" + Date.now().toString(36) + "-" + _seq6;
   }
@@ -150861,7 +152609,7 @@ ${s.body}`).join("\n\n");
     return ids.length;
   }
   async function askAI(what, prompt2, system, reqId = "") {
-    const id = reqId || newReqId();
+    const id = reqId || newReqId3();
     RUNNING.add(id);
     const t0 = Date.now();
     log("info", "starter ai: " + what, { reqId: id, promptChars: String(prompt2 || "").length });
@@ -150891,7 +152639,7 @@ ${s.body}`).join("\n\n");
         return;
       }
       S10.busy = true;
-      S10.reqId = newReqId();
+      S10.reqId = newReqId3();
       b.classList.add("busy");
       b.textContent = "\u23F9 " + t("ui.starter.aiStop");
       b.title = t("ui.starter.aiStopHint");
@@ -152090,7 +153838,238 @@ ${s.body}`).join("\n\n");
     }
   });
 
+  // src/starter/starter-names.js
+  var starter_names_exports = {};
+  __export(starter_names_exports, {
+    NAME_MARKERS: () => NAME_MARKERS,
+    NAME_MAX: () => NAME_MAX,
+    NAME_MAX_WORDS: () => NAME_MAX_WORDS,
+    NAME_MIN: () => NAME_MIN,
+    NAME_STOP: () => NAME_STOP,
+    THAI_NAME_MAX: () => THAI_NAME_MAX,
+    capitalizedNames: () => capitalizedNames,
+    markedNames: () => markedNames,
+    mentionCount: () => mentionCount,
+    quotedNames: () => quotedNames,
+    sourceLabel: () => sourceLabel,
+    starterText: () => starterText,
+    stripHtml: () => stripHtml,
+    suggestNames: () => suggestNames
+  });
+  function stripHtml(html) {
+    return String(html || "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li|h[1-6])>/gi, "\n").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/[ \t]+/g, " ").trim();
+  }
+  function segments(text) {
+    try {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const seg = new Intl.Segmenter("th", { granularity: "word" });
+        return [...seg.segment(text)].filter((s) => s.isWordLike).map((s) => s.segment);
+      }
+    } catch {
+    }
+    return String(text).split(/[\s,.;:!?()"'“”‘’«»「」『』\-–—]+/).filter(Boolean);
+  }
+  function quotedNames(text) {
+    const out = [];
+    const RE = /[“"«「『‘']([^”"»」』‘']{1,24})[”"»」』’']/g;
+    let m;
+    while (m = RE.exec(String(text || ""))) {
+      const v2 = clean(m[1]);
+      if (okLen(v2) && !/[.!?]$/.test(v2)) out.push(v2);
+    }
+    return out;
+  }
+  function markedNames(text) {
+    const src2 = String(text || "");
+    const out = [];
+    const markers = [...NAME_MARKERS].sort((a, b) => b.length - a.length);
+    let i5 = 0;
+    while (i5 < src2.length) {
+      const mk2 = markers.find((x) => src2.startsWith(x, i5));
+      if (!mk2) {
+        i5++;
+        continue;
+      }
+      i5 += mk2.length;
+      const rest = src2.slice(i5).replace(/^[\s:：]+/, "");
+      const cand = clean(boundedChunk(rest));
+      if (acceptName(cand)) out.push(cand);
+    }
+    return out;
+  }
+  function boundedChunk(rest) {
+    const m = String(rest || "").match(/^[^\s.,!?;:·—–\-()"'“”‘’«»「」『』\n]{1,24}/);
+    return m ? m[0] : "";
+  }
+  function acceptName(cand) {
+    if (!okLen(cand)) return false;
+    if (NAME_STOP.includes(cand) || NAME_MARKERS.includes(cand)) return false;
+    if (/^[A-Za-z][A-Za-z'\-]*$/.test(cand)) return true;
+    if (cand.length > THAI_NAME_MAX) return false;
+    if (NAME_STOP.some((w) => cand.startsWith(w))) return false;
+    const segs = segments(cand);
+    return segs.length <= NAME_MAX_WORDS;
+  }
+  function capitalizedNames(text) {
+    const out = [];
+    const RE = /\b([A-Z][a-z]{1,20})\b/g;
+    let m;
+    while (m = RE.exec(String(text || ""))) {
+      if (EN_STOP.has(m[1])) continue;
+      out.push(m[1]);
+    }
+    return out;
+  }
+  function mentionCount(text, name5) {
+    const s = String(text || ""), n2 = String(name5 || "");
+    if (!n2) return 0;
+    let c = 0, i5 = 0;
+    for (; ; ) {
+      const at = s.indexOf(n2, i5);
+      if (at < 0) break;
+      c++;
+      i5 = at + n2.length;
+    }
+    return c;
+  }
+  function suggestNames(text, o = {}) {
+    const src2 = stripHtml(text);
+    if (!src2) return [];
+    const limit = Number.isFinite(o.limit) ? o.limit : 8;
+    const norm3 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
+    const skip = new Set((o.exclude || []).map(norm3).filter(Boolean));
+    const found2 = /* @__PURE__ */ new Map();
+    const add = (name5, source, rank) => {
+      const key2 = norm3(name5);
+      if (!key2 || skip.has(key2)) return;
+      const old = found2.get(key2);
+      if (old) {
+        if (rank < old.rank) {
+          old.rank = rank;
+          old.source = source;
+        }
+        return;
+      }
+      found2.set(key2, { name: name5, hits: mentionCount(src2, name5), source, rank });
+    };
+    for (const n2 of quotedNames(src2)) add(n2, "quote", 0);
+    for (const n2 of markedNames(src2)) add(n2, "marker", 1);
+    for (const n2 of capitalizedNames(src2)) add(n2, "caps", 2);
+    return [...found2.values()].sort((a, b) => a.rank - b.rank || b.hits - a.hits || a.name.localeCompare(b.name)).slice(0, limit).map(({ name: name5, hits, source }) => ({ name: name5, hits, source }));
+  }
+  function sourceLabel(source) {
+    if (source === "quote") return t("ui.starter.nameFromQuote");
+    if (source === "marker") return t("ui.starter.nameFromMarker");
+    return t("ui.starter.nameFromCaps");
+  }
+  function starterText(starter) {
+    const s = starter || {};
+    const rows = [s.blurb || "", introText(s)];
+    for (const v2 of Object.values(s.w || {})) rows.push(String(v2 || ""));
+    return rows.filter(Boolean).join("\n");
+  }
+  var NAME_MIN, NAME_MAX, NAME_MARKERS, NAME_STOP, EN_STOP, clean, okLen, THAI_NAME_MAX, NAME_MAX_WORDS;
+  var init_starter_names = __esm({
+    "src/starter/starter-names.js"() {
+      init_i18n();
+      init_starter_model();
+      NAME_MIN = 2;
+      NAME_MAX = 24;
+      NAME_MARKERS = [
+        "\u0E0A\u0E37\u0E48\u0E2D\u0E27\u0E48\u0E32",
+        "\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D",
+        "\u0E19\u0E32\u0E21\u0E27\u0E48\u0E32",
+        "\u0E0A\u0E37\u0E48\u0E2D",
+        "\u0E19\u0E32\u0E07\u0E2A\u0E32\u0E27",
+        "\u0E40\u0E14\u0E47\u0E01\u0E0A\u0E32\u0E22",
+        "\u0E40\u0E14\u0E47\u0E01\u0E2B\u0E0D\u0E34\u0E07",
+        "\u0E19\u0E32\u0E22",
+        "\u0E19\u0E32\u0E07",
+        "\u0E04\u0E38\u0E13",
+        "\u0E40\u0E08\u0E49\u0E32\u0E0A\u0E32\u0E22",
+        "\u0E40\u0E08\u0E49\u0E32\u0E2B\u0E0D\u0E34\u0E07",
+        "\u0E17\u0E48\u0E32\u0E19",
+        "\u0E2B\u0E21\u0E2D",
+        "\u0E04\u0E23\u0E39",
+        "\u0E2D\u0E32\u0E08\u0E32\u0E23\u0E22\u0E4C",
+        "\u0E01\u0E31\u0E1B\u0E15\u0E31\u0E19",
+        "\u0E08\u0E48\u0E32",
+        "\u0E1C\u0E39\u0E49\u0E2B\u0E21\u0E27\u0E14",
+        "\u0E23\u0E32\u0E0A\u0E32",
+        "\u0E23\u0E32\u0E0A\u0E34\u0E19\u0E35"
+      ];
+      NAME_STOP = [
+        "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+        "\u0E02\u0E2D\u0E07",
+        "\u0E19\u0E35\u0E49",
+        "\u0E19\u0E31\u0E49\u0E19",
+        "\u0E17\u0E35\u0E48",
+        "\u0E41\u0E25\u0E30",
+        "\u0E2B\u0E23\u0E37\u0E2D",
+        "\u0E01\u0E31\u0E1A",
+        "\u0E43\u0E19",
+        "\u0E40\u0E21\u0E37\u0E2D\u0E07",
+        "\u0E42\u0E25\u0E01",
+        "\u0E15\u0E2D\u0E19",
+        "\u0E1A\u0E17",
+        "\u0E09\u0E32\u0E01",
+        "\u0E40\u0E02\u0E32",
+        "\u0E40\u0E18\u0E2D",
+        "\u0E21\u0E31\u0E19",
+        "\u0E09\u0E31\u0E19",
+        "\u0E1C\u0E21",
+        "\u0E40\u0E23\u0E32",
+        "\u0E04\u0E19",
+        "\u0E2B\u0E19\u0E36\u0E48\u0E07",
+        "\u0E2A\u0E2D\u0E07"
+      ];
+      EN_STOP = /* @__PURE__ */ new Set([
+        "The",
+        "A",
+        "An",
+        "In",
+        "On",
+        "At",
+        "It",
+        "He",
+        "She",
+        "They",
+        "This",
+        "That",
+        "When",
+        "Where",
+        "What",
+        "Who",
+        "And",
+        "But",
+        "For",
+        "With",
+        "His",
+        "Her",
+        "Their",
+        "One",
+        "Two",
+        "After",
+        "Before",
+        "Then",
+        "There",
+        "Here",
+        "If",
+        "As"
+      ]);
+      clean = (s) => String(s || "").replace(/^[\s"'“”‘’«»「」『』]+|[\s"'“”‘’«»「」『』.,!?;:]+$/g, "").trim();
+      okLen = (s) => s.length >= NAME_MIN && s.length <= NAME_MAX;
+      THAI_NAME_MAX = 12;
+      NAME_MAX_WORDS = 3;
+    }
+  });
+
   // src/starter/starter-cast.js
+  var starter_cast_exports = {};
+  __export(starter_cast_exports, {
+    renderCastStep: () => renderCastStep,
+    renderNameHints: () => renderNameHints
+  });
   async function renderCastStep(host2, ctx2) {
     const s = ctx2.starter;
     s.cast = s.cast || [];
@@ -152131,6 +154110,7 @@ ${s.body}`).join("\n\n");
     };
     bar.append(add, fromWiki, push);
     host2.append(bar);
+    renderNameHints(host2, ctx2);
     if (!s.cast.length) {
       host2.append(el("div", "st-empty", t("ui.starter.castEmpty")));
       return true;
@@ -152183,6 +154163,32 @@ ${s.body}`).join("\n\n");
     }
     host2.append(el("div", "st-hint", t("ui.starter.castDelNote")));
     return true;
+  }
+  function renderNameHints(host2, ctx2) {
+    const s = ctx2.starter;
+    const taken = [];
+    for (const c of s.cast || []) {
+      if (c.name) taken.push(c.name);
+    }
+    const rows = suggestNames(starterText(s), { exclude: taken, limit: 8 });
+    if (!rows.length) return 0;
+    const box2 = el("div", "st-namehints");
+    box2.append(el("span", "st-namehints-label", t("ui.starter.nameHintLabel")));
+    for (const r of rows) {
+      const chip = el("button", "st-namechip", "+ " + r.name);
+      chip.dataset.name = r.name;
+      chip.title = sourceLabel(r.source) + (r.hits > 1 ? tf("ui.starter.nameHintHits", r.hits) : "");
+      chip.onclick = async () => {
+        const ch = newChar({ name: r.name });
+        s.cast = upsertChar(s.cast, ch);
+        CAST_C.editing = ch.id;
+        await ctx2.save({ now: true });
+        renderCastStep(host2, ctx2);
+      };
+      box2.append(chip);
+    }
+    host2.append(box2);
+    return rows.length;
   }
   async function renderEditor(host2, ctx2, ch) {
     const s = ctx2.starter;
@@ -152372,6 +154378,7 @@ ${s.body}`).join("\n\n");
       init_starter_prompt();
       init_starter_store();
       init_starter_wiki();
+      init_starter_names();
       CAST_C = { editing: "" };
     }
   });
@@ -154143,7 +156150,7 @@ ${s.body}`).join("\n\n");
     async function send3(text, { chosen = "", opening = false } = {}) {
       if (CHAT_C.sending) return;
       CHAT_C.sending = true;
-      CHAT_C.reqId = newReqId();
+      CHAT_C.reqId = newReqId3();
       drawFoot();
       try {
         if (!opening) {
@@ -154195,7 +156202,7 @@ ${s.body}`).join("\n\n");
       drawFoot();
       try {
         const { askAI: askAI2 } = await Promise.resolve().then(() => (init_starter_ai(), starter_ai_exports));
-        CHAT_C.reqId = newReqId();
+        CHAT_C.reqId = newReqId3();
         const tr4 = transcriptText(sc, (id) => nameOf(s, id));
         const out = await askAI2(
           "recap",
@@ -155992,7 +157999,7 @@ ${sc.body || ""}
         tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
       }
     };
-    const clean = () => {
+    const clean2 = () => {
       tab.dirty = false;
       tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     };
@@ -156837,6 +158844,7 @@ ${css}
     allShortcutRows: () => allShortcutRows,
     allWorkflows: () => allWorkflows,
     anyPageModel: () => anyPageModel,
+    applyFmtbarState: () => applyFmtbarState,
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
     applyPaperClass: () => applyPaperClass,
@@ -156877,6 +158885,7 @@ ${css}
     currentSpView: () => currentSpView,
     currentStartPage: () => currentStartPage,
     currentTheme: () => currentTheme,
+    cycleFmtbarOpacity: () => cycleFmtbarOpacity,
     defaultPlannerPath: () => defaultPlannerPath,
     deleteCurrentLine: () => deleteCurrentLine,
     drawPanel: () => drawPanel,
@@ -156892,7 +158901,10 @@ ${css}
     finalizeCompiled: () => finalizeCompiled,
     findEntityInScenes: () => findEntityInScenes,
     findNextSpError: () => findNextSpError,
+    fmtBarHereTarget: () => fmtBarHereTarget,
+    fmtBarToPointer: () => fmtBarToPointer,
     fmtTs: () => fmtTs,
+    fmtbarState: () => fmtbarState,
     galleryCommand: () => galleryCommand,
     galleryInstance: () => galleryInstance,
     gotoDialog: () => gotoDialog,
@@ -156900,15 +158912,20 @@ ${css}
     gotoProsePos: () => gotoProsePos,
     gotoScene: () => gotoScene,
     guid: () => guid,
+    handleCommand: () => handleCommand,
     handleSyncMessage: () => handleSyncMessage,
     healPlannerRow: () => healPlannerRow,
     hideLoader: () => hideLoader,
     importLanguageCsv: () => importLanguageCsv,
     initLineGutter: () => initLineGutter,
+    insertShortcodeMenu: () => insertShortcodeMenu,
+    insertShortcodeText: () => insertShortcodeText,
     invertRole: () => invertRole,
     isFeaturePanel: () => isFeaturePanel,
     k2PageDoctor: () => k2PageDoctor,
+    keepFloatingUiInView: () => keepFloatingUiInView,
     langFontUrl: () => langFontUrl,
+    lastEditView: () => lastEditView,
     lineSpills: () => lineSpills,
     listDrafts: () => listDrafts,
     listPlannerBoards: () => listPlannerBoards,
@@ -156967,6 +158984,7 @@ ${css}
     reloadTabsFromDisk: () => reloadTabsFromDisk,
     remeasureAfterFonts: () => remeasureAfterFonts,
     removeElementsDialog: () => removeElementsDialog,
+    renderFabMenu: () => renderFabMenu,
     renderFeaturePanel: () => renderFeaturePanel,
     renderGalleryBoardPanel: () => renderGalleryBoardPanel,
     renderGalleryPanel: () => renderGalleryPanel,
@@ -156978,13 +158996,16 @@ ${css}
     repaginateFast: () => repaginateFast,
     reportPanelWindowHealth: () => reportPanelWindowHealth,
     requestOpenInMain: () => requestOpenInMain,
+    resetFmtbarAll: () => resetFmtbarAll,
     resetViewScroll: () => resetViewScroll,
     resolveImg: () => resolveImg,
+    restoreFabPos: () => restoreFabPos,
     restoreSessionLayout: () => restoreSessionLayout,
     restoreSessionTabs: () => restoreSessionTabs,
     revealFile: () => revealFile,
     revertTab: () => revertTab,
     rosterTextForDraft: () => rosterTextForDraft,
+    runFabAction: () => runFabAction,
     safeName: () => safeName,
     saveAllTabs: () => saveAllTabs,
     saveGlobalSetting: () => saveGlobalSetting,
@@ -156999,6 +159020,8 @@ ${css}
     scriptMeta: () => scriptMeta,
     sectionCoverUrl: () => sectionCoverUrl,
     seedTabView: () => seedTabView,
+    setFmtbarAlign: () => setFmtbarAlign,
+    setFmtbarOpacity: () => setFmtbarOpacity,
     setLayoutPageCount: () => setLayoutPageCount,
     setModDown: () => setModDown,
     setPluginDisabled: () => setPluginDisabled,
@@ -157039,6 +159062,9 @@ ${css}
     templateOf: () => templateOf,
     toggleContinueds: () => toggleContinueds,
     toggleElementCaps: () => toggleElementCaps,
+    toggleFabMenu: () => toggleFabMenu,
+    toggleFmtbarAlign: () => toggleFmtbarAlign,
+    toggleFmtbarLock: () => toggleFmtbarLock,
     toggleGallery: () => toggleGallery,
     toggleMarkdownCodes: () => toggleMarkdownCodes,
     toggleOpenLastProject: () => toggleOpenLastProject,
@@ -157051,6 +159077,7 @@ ${css}
     toggleSpCase: () => toggleSpCase,
     toggleSpThaiFont: () => toggleSpThaiFont,
     toggleTheme: () => toggleTheme,
+    tweenFmtBar: () => tweenFmtBar,
     typeSoundMode: () => typeSoundMode,
     uiFontOffset: () => uiFontOffset,
     uniqueSceneFileName: () => uniqueSceneFileName,
@@ -157062,6 +159089,7 @@ ${css}
     userWorkflows: () => userWorkflows,
     versionAtLeast: () => versionAtLeast2,
     viewOfTab: () => viewOfTab,
+    watchFloatHostSize: () => watchFloatHostSize,
     watchPlannerRows: () => watchPlannerRows,
     watermarkDialog: () => watermarkDialog,
     wikiRoot: () => wikiRoot,
@@ -157359,8 +159387,11 @@ ${css}
           out.push("off-sheet:" + Math.round(r.top));
           continue;
         }
-        if (r.bottom > b.gBot + 2) out.push("bottom+" + (r.bottom - b.gBot).toFixed(1));
-        else if (r.top < b.gTop - 2) out.push("top-" + (b.gTop - r.top).toFixed(1));
+        const lhPx = parseFloat(getComputedStyle(par).lineHeight);
+        const slack = 2 + (Number.isFinite(lhPx) && r.height > lhPx ? (r.height - lhPx) / 2 : 0);
+        const info = " h=" + r.height.toFixed(1) + " lh=" + lhPx + " el=" + par.className;
+        if (r.bottom > b.gBot + slack) out.push("bottom+" + (r.bottom - b.gBot).toFixed(1) + info);
+        else if (r.top < b.gTop - slack) out.push("top-" + (b.gTop - r.top).toFixed(1) + info);
       }
     }
     return out;
@@ -157733,6 +159764,7 @@ ${css}
   }
   function recenterPageSoon(pane) {
     const run3 = () => {
+      syncWorkspaceWidths();
       const p = pane || state.active && state.active.pane;
       if (p) centerPage(p);
     };
@@ -157760,6 +159792,10 @@ ${css}
     if (tab && (tab.sp || tab.editor)) return viewOfTab(tab);
     return spViewMode;
   }
+  function lastEditView(tab) {
+    const v2 = tab && tab._editView;
+    return isValidView(v2) && !isPageView(v2) ? v2 : "normal";
+  }
   function seedTabView(tab) {
     if (!tab) return spViewMode;
     if (!isValidView(tab.spView)) tab.spView = spViewMode;
@@ -157780,7 +159816,7 @@ ${css}
       const page2 = ev.target.closest && ev.target.closest(".sp-page");
       if (!blk && !page2) return;
       const pos = blk ? parseInt(blk.dataset.pos, 10) : parseInt(page2.querySelector("[data-pos]")?.dataset.pos ?? "", 10);
-      setSpView("normal");
+      setSpView(lastEditView(tab));
       if (Number.isFinite(pos)) gotoPos(pos);
     });
     return host2;
@@ -158017,7 +160053,11 @@ ${css}
       frac = viewScrollFrac(tab.pane);
     }
     spViewMode = m;
-    if (tab && (tab.sp || tab.editor)) tab.spView = m;
+    if (tab && (tab.sp || tab.editor)) {
+      if (!isPageView(prevMode)) tab._editView = prevMode;
+      if (!isPageView(m)) tab._editView = m;
+      tab.spView = m;
+    }
     const pages = syncPaneViews(true);
     const sel = $("#sp-view-select");
     if (sel) sel.value = currentSpView();
@@ -161196,6 +163236,7 @@ ${css}
     syncSplitPanes();
     bringFloatFront(win);
     const n2 = [...state.tabs.values()].filter((x) => x.floatWin).length;
+    const savedBox = uiLayout()["floatwin:" + file];
     makeDraggable(win, bar, {
       key: "floatwin:" + file,
       resizable: true,
@@ -161215,13 +163256,16 @@ ${css}
       const up = () => {
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
+        saveFloatWinBox(file, win);
       };
       document.addEventListener("mousemove", move);
       document.addEventListener("mouseup", up);
     });
+    if (savedBox && savedBox.min) win.classList.add("min");
     bMin.onclick = () => {
       win.classList.toggle("min");
       refitTab(t3);
+      saveFloatWinBox(file, win);
     };
     bDock.onclick = () => dockTab(file);
     bX.onclick = () => closeTab(file);
@@ -163492,12 +165536,12 @@ ${css}
   }
   async function pluginPath(rel) {
     if (!state.root) return null;
-    const clean = String(rel || "").replace(/\\/g, "/").replace(/^[/]+/, "");
-    if (clean.split("/").includes("..")) {
+    const clean2 = String(rel || "").replace(/\\/g, "/").replace(/^[/]+/, "");
+    if (clean2.split("/").includes("..")) {
       log("warn", t("ui.app.pluginPathMarginProject") + rel);
       return null;
     }
-    return kapi.join(state.root, ...clean.split("/").filter(Boolean));
+    return kapi.join(state.root, ...clean2.split("/").filter(Boolean));
   }
   function aboutBox(msg) {
     setStatus(msg);
@@ -167035,7 +169079,10 @@ ${css}
   }
   async function renderOpenFeaturePanels() {
     for (const id of Object.keys(FEATURE_PANELS)) {
-      if (isPanelOpen(id)) await renderFeaturePanel(id);
+      if (!isPanelOpen(id)) continue;
+      if (id === "ai-chat" && _chatState().sending) continue;
+      if (id === "dlgb" && builderState().sending) continue;
+      await renderFeaturePanel(id);
     }
   }
   function hideInactivePanes() {
@@ -167227,6 +169274,65 @@ ${css}
       // [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสมาร์กดาวน์+fountain ที่นำหน้าบรรทัด
       case "markdown-codes":
         toggleMarkdownCodes();
+        break;
+      // ══ [alpha.111] คำสั่ง "สร้างของใหม่" — เดิมมีแต่ในตารางคีย์ลัดแต่ **ไม่มีตัวรับ**
+      // (กด Ctrl+Alt+1 แล้วเงียบมาตั้งแต่ alpha.79) · ตอนนี้ FAB กับคีย์ลัดใช้ทางเดียวกันแล้ว
+      case "scene": {
+        if (!state.root) {
+          setStatus(t("ui.fab.needProject"));
+          break;
+        }
+        const dst = await pickDraftTarget({ title: t("ui.app.newSceneNew2") });
+        if (!dst) break;
+        addScene(dst.dPath, dst.chapter);
+        break;
+      }
+      case "chapter": {
+        if (!state.root) {
+          setStatus(t("ui.fab.needProject"));
+          break;
+        }
+        const dst = await pickDraftTarget({ needChapter: false, title: t("ui.app.newChapterNew") });
+        if (!dst) break;
+        addChapter(dst.dPath);
+        break;
+      }
+      // ตัวละคร/สถานที่/ของ/ตำนาน — หมวดเดียวกับโฟลเดอร์ใน Wiki (ชื่อหมวดมาจาก a[0])
+      case "new-entity": {
+        if (!state.root) {
+          setStatus(t("ui.fab.needProject"));
+          break;
+        }
+        const cat = a[0] || "characters";
+        const w = await wikiRoot();
+        const dir2 = await kapi.join(w, cat);
+        await kapi.mkdir(dir2);
+        addEntity(dir2, cat);
+        break;
+      }
+      case "character":
+        await handleCommand("new-entity", "characters");
+        break;
+      case "location":
+        await handleCommand("new-entity", "locations");
+        break;
+      case "memo":
+        if (state.root) addMemo();
+        else setStatus(t("ui.fab.needProject"));
+        break;
+      // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (ปุ่มบนแถบ + Ctrl+Shift+/)
+      case "fmtbar-here":
+        fmtBarToPointer();
+        break;
+      // [alpha.117] สภาพของแถบรูปแบบลอย — จาง · ชิดขอบบน/ล่าง · ล็อกไม่ให้ขยับ
+      case "fmtbar-opacity":
+        cycleFmtbarOpacity();
+        break;
+      case "fmtbar-align":
+        toggleFmtbarAlign();
+        break;
+      case "fmtbar-lock":
+        toggleFmtbarLock();
         break;
       // [60r2 ข้อ 9] เปิด/ปิดปุ่มลอยมุมขวาล่าง
       case "toggle-fab": {
@@ -167511,6 +169617,10 @@ ${css}
         ed?.focus();
         break;
       }
+      // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` ตรงเคอร์เซอร์ (ทะเบียนอยู่ที่ src/shortcode.js)
+      case "insert-shortcode":
+        insertShortcodeMenu(a[0]);
+        break;
       case "revert":
         if (t3) await revertTab(t3.file);
         break;
@@ -167793,8 +169903,9 @@ ${css}
   }
   function makeDraggable(elm, handle, opts = {}) {
     const { key: key2, defaultPos } = opts;
+    const resolveDefaultPos = () => typeof defaultPos === "function" ? defaultPos() : defaultPos;
     const saved = key2 ? uiLayout()[key2] : null;
-    const pos = saved || defaultPos;
+    const pos = saved || resolveDefaultPos();
     if (pos) {
       elm.style.left = pos.left + "px";
       elm.style.top = pos.top + "px";
@@ -167809,6 +169920,7 @@ ${css}
     let sx2, sy2, ox, oy, dragging = false, lastE = null;
     const down = (e) => {
       if (e.button !== 0 || !elm) return;
+      if (opts.locked && opts.locked()) return;
       dragging = true;
       sx2 = e.clientX;
       sy2 = e.clientY;
@@ -167869,9 +169981,10 @@ ${css}
           delete l[key2];
           localStorage.setItem("k2-ui-layout", JSON.stringify(l));
         }
-        if (defaultPos) {
-          elm.style.left = defaultPos.left + "px";
-          elm.style.top = defaultPos.top + "px";
+        const dp = resolveDefaultPos();
+        if (dp) {
+          elm.style.left = dp.left + "px";
+          elm.style.top = dp.top + "px";
         }
       }
     };
@@ -167903,9 +170016,13 @@ ${css}
     });
     const fab = $("#k-fab");
     if (fab) fab.title = t("panel.fab");
-    fab?.parentElement?.querySelectorAll(".k-menu-item span[data-i18n]").forEach((s) => {
-      s.textContent = t(s.getAttribute("data-i18n"));
-    });
+    if ($("#k-fab-menu")) renderFabMenu();
+    const fh = $("#tb-fmt-here");
+    if (fh) fh.title = t("ui.fmtcfg.hereBtn");
+    try {
+      applyFmtbarState();
+    } catch {
+    }
   }
   function tb(id, cmd, arg) {
     $(id).onclick = () => {
@@ -167914,13 +170031,158 @@ ${css}
       if (state.active) markDirty(state.active);
     };
   }
+  function keepFloatingUiInView() {
+    let moved = 0;
+    const host2 = $("#content");
+    if (floatBar && host2 && floatBar.style.display !== "none") {
+      const r = floatBar.getBoundingClientRect();
+      const hr = host2.getBoundingClientRect();
+      if (r.width && hr.width) {
+        const cur = {
+          left: parseInt(floatBar.style.left, 10) || 0,
+          top: parseInt(floatBar.style.top, 10) || 0
+        };
+        const c = clampBarInBox(
+          cur,
+          { width: r.width, height: r.height },
+          visibleHostBox(hr, {
+            width: window.innerWidth,
+            height: window.innerHeight
+          })
+        );
+        if (c.moved) {
+          floatBar.style.left = c.left + "px";
+          floatBar.style.top = c.top + "px";
+          floatBar.style.right = "auto";
+          floatBar.style.bottom = "auto";
+          saveUiLayout("fmtbar", { left: c.left, top: c.top });
+          moved++;
+        }
+      }
+    }
+    const fab = $("#k-fab");
+    if (fab && uiLayout().fab) {
+      const r = fab.getBoundingClientRect();
+      if (r.width) {
+        const c = clampBarPos(
+          { left: Math.round(r.left), top: Math.round(r.top) },
+          { width: r.width, height: r.height },
+          { width: window.innerWidth, height: window.innerHeight }
+        );
+        if (c.moved) {
+          setFabPos(c);
+          saveUiLayout("fab", c);
+          moved++;
+        }
+      }
+    }
+    for (const [file, tb2] of state.tabs) {
+      const w = tb2.floatWin;
+      if (!w) continue;
+      const r = w.getBoundingClientRect();
+      if (!r.width) continue;
+      const c = clampBarPos(
+        {
+          left: parseInt(w.style.left, 10) || Math.round(r.left),
+          top: parseInt(w.style.top, 10) || Math.round(r.top)
+        },
+        { width: r.width, height: r.height },
+        { width: window.innerWidth, height: window.innerHeight }
+      );
+      if (c.moved) {
+        w.style.left = c.left + "px";
+        w.style.top = c.top + "px";
+        moved++;
+      }
+      saveFloatWinBox(file, w);
+    }
+    return moved;
+  }
+  function watchFloatHostSize() {
+    const host2 = $("#content");
+    if (_floatKeepRO || !host2 || typeof ResizeObserver === "undefined") return false;
+    _floatKeepRO = new ResizeObserver(() => {
+      if (_floatKeepJob) return;
+      _floatKeepJob = requestAnimationFrame(() => {
+        _floatKeepJob = 0;
+        try {
+          keepFloatingUiInView();
+        } catch {
+        }
+      });
+    });
+    _floatKeepRO.observe(host2);
+    return true;
+  }
+  function saveFloatWinBox(file, win) {
+    if (!file || !win) return;
+    saveUiLayout("floatwin:" + file, {
+      left: parseInt(win.style.left, 10) || 0,
+      top: parseInt(win.style.top, 10) || 0,
+      width: Math.round(win.getBoundingClientRect().width),
+      height: parseInt(win.style.height, 10) || Math.round(win.getBoundingClientRect().height),
+      min: win.classList.contains("min")
+    });
+  }
+  function insertShortcodeMenu(ev) {
+    const ed = getActiveEditor();
+    if (!ed || !ed.view) {
+      setStatus(t("ui.shortcode.needEditor"));
+      return 0;
+    }
+    const items = [];
+    for (const g of SHORTCODE_GROUPS) {
+      const rows = SHORTCODES.filter((sc) => sc.group === g.key);
+      if (!rows.length) continue;
+      if (items.length) items.push("-");
+      for (const sc of rows) {
+        const text = sc.group === "wiki" ? "[" + sc.name + ":]" : "[" + sc.name + "]";
+        items.push({
+          label: text + "  \xB7  " + shortcodeLabel(sc.name),
+          click: () => insertShortcodeText(text)
+        });
+      }
+    }
+    const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
+    const y = ev && Number.isFinite(ev.clientY) ? ev.clientY : Math.round(window.innerHeight / 3);
+    popupMenu(x, y, items);
+    return items.length;
+  }
+  function insertShortcodeText(text) {
+    const ed = getActiveEditor();
+    if (!ed || !ed.view) return false;
+    const v2 = ed.view;
+    const txt = String(text || "");
+    const from2 = v2.state.selection.from;
+    let tr4 = v2.state.tr.insertText(txt);
+    if (txt.endsWith(":]")) {
+      try {
+        tr4 = tr4.setSelection(TextSelection.create(tr4.doc, from2 + txt.length - 1));
+      } catch {
+      }
+    }
+    v2.dispatch(tr4.scrollIntoView());
+    markDirty(state.active);
+    ed.focus();
+    return true;
+  }
   function setupFloatingFormatBar() {
     if (floatBar) return;
     const bar = el("div", "k-fmtbar");
     const handle = el("div", "k-fmtbar-grip");
-    handle.title = t("ui.app.dragMoveBar");
     handle.innerHTML = "<span></span><span></span>";
     bar.append(handle);
+    const here = el("button", "tb k-fmtbar-here");
+    here.id = "tb-fmt-here";
+    here.innerHTML = iconHtml("crosshair", 15);
+    here.title = t("ui.fmtcfg.hereBtn");
+    here.onclick = () => fmtBarToPointer();
+    bar.append(here);
+    handle.oncontextmenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fmtbarSettingsMenu(e);
+    };
     [
       "#tb-sp-elem",
       "#sp-view-select",
@@ -167954,12 +170216,187 @@ ${css}
     $("#toolbar").querySelectorAll(".sep").forEach((s) => s.remove());
     $("#content").append(bar);
     floatBar = bar;
-    const drag = makeDraggable(bar, handle, { key: "fmtbar", defaultPos: { left: 24, top: 12 } });
-    handle.addEventListener("dblclick", () => {
-      drag.reset();
-      setStatus(t("ui.app.resetPosBarFormat"));
+    const defPos = () => {
+      const hostR = $("#content").getBoundingClientRect();
+      const barR = bar.getBoundingClientRect();
+      return defaultBarPos(
+        { width: barR.width, height: barR.height },
+        { width: hostR.width, height: hostR.height }
+      );
+    };
+    const hadSavedPos = Number.isFinite((uiLayout().fmtbar || {}).left);
+    const drag = makeDraggable(bar, handle, {
+      key: "fmtbar",
+      defaultPos: defPos,
+      locked: () => fmtbarState().locked
     });
+    fmtBarDrag = drag;
+    handle.addEventListener("dblclick", () => resetFmtbarAll());
+    applyFmtbarState();
+    applyFmtbarConfig();
     syncFloatBarVisible();
+    try {
+      watchFloatHostSize();
+    } catch {
+    }
+    setTimeout(() => {
+      try {
+        keepFloatingUiInView();
+      } catch {
+      }
+      if (!hadSavedPos) drag.reset();
+    }, 400);
+  }
+  function fmtbarState() {
+    return normalizeBarState(uiLayout().fmtbar);
+  }
+  function applyFmtbarState() {
+    const bar = floatBar;
+    if (!bar) return null;
+    const st = fmtbarState();
+    bar.style.setProperty("--fmtbar-opacity", String(st.opacity));
+    bar.classList.toggle("k-fmtbar-locked", st.locked);
+    bar.classList.toggle("k-fmtbar-dim", st.opacity < 1);
+    const grip = bar.querySelector(".k-fmtbar-grip");
+    if (grip) {
+      grip.title = (st.locked ? t("ui.fmtbar.lockedTip") : t("ui.app.dragMoveBar")) + t("ui.fmtbar.rightClickHint");
+    }
+    return st;
+  }
+  function scHint(id) {
+    const sc = effectiveShortcuts().find((x) => shortcutId(x) === id);
+    return sc ? " (" + formatShortcut(sc[0], sc[1], sc[2]) + ")" : "";
+  }
+  function setFmtbarOpacity(v2) {
+    saveUiLayout("fmtbar", { opacity: v2 });
+    applyFmtbarState();
+    setStatus(tf("ui.fmtbar.fadeSet", opacityPercent(v2)));
+    return v2;
+  }
+  function cycleFmtbarOpacity() {
+    return setFmtbarOpacity(nextOpacity(fmtbarState().opacity));
+  }
+  function setFmtbarAlign(align) {
+    const bar = floatBar, host2 = $("#content");
+    if (fmtbarState().locked) {
+      setStatus(t("ui.fmtbar.lockedBlocked"));
+      return null;
+    }
+    const a = normalizeAlign(align);
+    saveUiLayout("fmtbar", { align: a });
+    if (bar && host2) {
+      const r = bar.getBoundingClientRect(), hr = host2.getBoundingClientRect();
+      const pos = alignBarPos(
+        a,
+        { left: parseInt(bar.style.left, 10) || 0 },
+        { width: r.width, height: r.height },
+        { width: hr.width, height: hr.height }
+      );
+      bar.style.left = pos.left + "px";
+      bar.style.top = pos.top + "px";
+      bar.style.right = "auto";
+      bar.style.bottom = "auto";
+      saveUiLayout("fmtbar", pos);
+    }
+    applyFmtbarState();
+    setStatus(t(a === "top" ? "ui.fmtbar.movedTop" : "ui.fmtbar.movedBottom"));
+    return a;
+  }
+  function toggleFmtbarAlign() {
+    return setFmtbarAlign(nextAlign(fmtbarState().align));
+  }
+  function toggleFmtbarLock(on2) {
+    const v2 = on2 === void 0 ? !fmtbarState().locked : !!on2;
+    saveUiLayout("fmtbar", { locked: v2 });
+    applyFmtbarState();
+    setStatus(t(v2 ? "ui.fmtbar.locked" : "ui.fmtbar.unlocked"));
+    return v2;
+  }
+  function resetFmtbarAll() {
+    if (fmtBarDrag) fmtBarDrag.reset();
+    const bar = floatBar;
+    const pos = bar ? { left: parseInt(bar.style.left, 10) || 0, top: parseInt(bar.style.top, 10) || 0 } : {};
+    saveUiLayout("fmtbar", { ...resetBarState(), ...pos });
+    applyFmtbarState();
+    setStatus(t("ui.app.resetPosBarFormat"));
+  }
+  function fmtbarSettingsMenu(ev) {
+    const st = fmtbarState();
+    const mark = (on2) => on2 ? "\u2713 " : "";
+    popupMenu(ev.clientX, ev.clientY, [
+      { label: t("ui.fmtbar.menuOpacity") + scHint("fmtbar-opacity"), disabled: true },
+      ...FMTBAR_OPACITIES.map((v2) => ({
+        label: mark(Math.abs(st.opacity - v2) < 1e-3) + opacityPercent(v2) + "%",
+        click: () => setFmtbarOpacity(v2)
+      })),
+      "-",
+      { label: t("ui.fmtbar.menuAlign") + scHint("fmtbar-align"), disabled: true },
+      { label: mark(st.align === "top") + t("ui.fmtbar.posTop"), click: () => setFmtbarAlign("top") },
+      { label: mark(st.align === "bottom") + t("ui.fmtbar.posBottom"), click: () => setFmtbarAlign("bottom") },
+      "-",
+      {
+        label: mark(st.locked) + t("ui.fmtbar.lockTip") + scHint("fmtbar-lock"),
+        click: () => toggleFmtbarLock()
+      },
+      "-",
+      { label: t("ui.fmtbar.menuResetAll"), click: () => resetFmtbarAll() }
+    ]);
+  }
+  function tweenFmtBar(toLeft, toTop, ms) {
+    if (fmtbarState().locked) {
+      setStatus(t("ui.fmtbar.lockedBlocked"));
+      return null;
+    }
+    const bar = floatBar;
+    if (!bar) return false;
+    cancelAnimationFrame(_fmtTween);
+    const fromL = parseFloat(bar.style.left);
+    const fromT = parseFloat(bar.style.top);
+    const l0 = Number.isFinite(fromL) ? fromL : bar.offsetLeft;
+    const t0 = Number.isFinite(fromT) ? fromT : bar.offsetTop;
+    bar.style.right = "auto";
+    bar.style.bottom = "auto";
+    const dur = ms > 0 ? ms : FMTBAR_TWEEN_MS;
+    const started2 = performance.now();
+    const done2 = () => {
+      bar.style.left = Math.round(toLeft) + "px";
+      bar.style.top = Math.round(toTop) + "px";
+      bar.classList.remove("k-fmt-flying");
+      saveUiLayout("fmtbar", { left: Math.round(toLeft), top: Math.round(toTop) });
+    };
+    bar.classList.add("k-fmt-flying");
+    const step = (now) => {
+      const k = Math.min(1, (now - started2) / dur);
+      bar.style.left = tweenAt(l0, toLeft, k).toFixed(1) + "px";
+      bar.style.top = tweenAt(t0, toTop, k).toFixed(1) + "px";
+      if (k < 1) _fmtTween = requestAnimationFrame(step);
+      else {
+        _fmtTween = 0;
+        done2();
+      }
+    };
+    _fmtTween = requestAnimationFrame(step);
+    return true;
+  }
+  function fmtBarHereTarget() {
+    const bar = floatBar, host2 = $("#content");
+    if (!bar || !host2) return null;
+    const hr = host2.getBoundingClientRect();
+    const br = bar.getBoundingClientRect();
+    return fmtBarTarget({
+      pointer: _mousePt,
+      inEditor: _mouseInEd,
+      host: { left: hr.left, top: hr.top, width: hr.width, height: hr.height },
+      bar: { width: br.width, height: br.height },
+      viewport: { width: window.innerWidth, height: window.innerHeight }
+    });
+  }
+  function fmtBarToPointer() {
+    const tgt = fmtBarHereTarget();
+    if (!tgt) return null;
+    tweenFmtBar(tgt.left, tgt.top);
+    setStatus(t(tgt.fallback ? "ui.fmtcfg.hereCenter" : "ui.fmtcfg.hereCursor"));
+    return tgt;
   }
   function getActiveEditor() {
     const t3 = state.active;
@@ -167977,7 +170414,14 @@ ${css}
     if (!floatBar) return;
     const ed = getActiveEditor();
     const wk = state.active?.wiki?.secEditors?.some(({ k }) => k?.view?.hasFocus()) || state.active?.wiki?.secEditors?.length > 0;
+    const was = floatBar.style.display;
     floatBar.style.display = ed || wk ? "flex" : "none";
+    if (was === "none" && floatBar.style.display === "flex") {
+      try {
+        keepFloatingUiInView();
+      } catch {
+      }
+    }
   }
   function bindToolbarContextMenu() {
     if (_tbCtxBound) return false;
@@ -167985,14 +170429,16 @@ ${css}
     for (const sel of TB_HOSTS) {
       const bar = document.querySelector(sel);
       if (!bar) continue;
+      const isFmt = sel === TB_FMT_HOST;
       bar.oncontextmenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
         const hit = e.target.closest("[id]");
+        const id = hit && bar.contains(hit) ? hit.id : "";
         popupMenu(
           e.clientX,
           e.clientY,
-          toolbarContextItems(hit && bar.contains(hit) ? hit.id : "")
+          isFmt ? fmtbarContextItems(id) : toolbarContextItems(id)
         );
       };
       n2++;
@@ -168200,69 +170646,212 @@ ${css}
       okB.focus();
     });
   }
+  function fabCfg() {
+    return normalizeFab(state.settings && state.settings.fab);
+  }
+  function fabPos() {
+    const fab = $("#k-fab");
+    if (!fab) return { left: 0, top: 0 };
+    const r = fab.getBoundingClientRect();
+    return { left: Math.round(r.left), top: Math.round(r.top) };
+  }
+  function setFabPos(pos) {
+    const fab = $("#k-fab");
+    if (!fab) return;
+    fab.style.left = pos.left + "px";
+    fab.style.top = pos.top + "px";
+    fab.style.right = "auto";
+    fab.style.bottom = "auto";
+  }
+  function restoreFabPos() {
+    const fab = $("#k-fab");
+    if (!fab) return false;
+    const saved = uiLayout().fab;
+    if (!saved || !Number.isFinite(saved.left) || !Number.isFinite(saved.top)) return false;
+    const r = fab.getBoundingClientRect();
+    setFabPos(clampFabPos(saved, r, window.innerWidth, window.innerHeight));
+    return true;
+  }
+  function resetFabPos() {
+    const fab = $("#k-fab");
+    if (!fab) return;
+    fab.style.left = "";
+    fab.style.top = "";
+    fab.style.right = "";
+    fab.style.bottom = "";
+    const l = uiLayout();
+    delete l.fab;
+    localStorage.setItem("k2-ui-layout", JSON.stringify(l));
+    try {
+      localStorage.setItem(LS_TS_KEY, String(Date.now()));
+    } catch {
+    }
+    markSessionDirty();
+    closeFabMenu(true);
+  }
+  function renderFabMenu() {
+    const menu = $("#k-fab-menu");
+    if (!menu) return 0;
+    const cfg = fabCfg();
+    menu.replaceChildren();
+    menu.classList.add("k-fab-radial");
+    menu.dataset.disp = cfg.display;
+    for (const a of fabMenuItems(cfg)) {
+      const it = el("div", "k-fab-item");
+      it.dataset.action = a.id;
+      it.title = t(a.labelKey);
+      if (cfg.display !== "text") {
+        const ic = el("span", "k-fab-item-ic");
+        ic.innerHTML = iconHtml(a.icon, 18);
+        it.append(ic);
+      }
+      if (cfg.display !== "icon") it.append(el("span", "k-fab-item-tx", t(a.labelKey)));
+      it.onclick = (e) => {
+        e.stopPropagation();
+        closeFabMenu();
+        runFabAction(a.id);
+      };
+      menu.append(it);
+    }
+    if (fabOpen) layoutFabMenu(false);
+    return menu.children.length;
+  }
+  function runFabAction(id) {
+    const a = fabAction(id);
+    if (!a) return false;
+    handleCommand(a.cmd, ...a.args || []);
+    return true;
+  }
+  function layoutFabMenu(closing) {
+    const fab = $("#k-fab"), menu = $("#k-fab-menu");
+    if (!fab || !menu) return;
+    const items = [...menu.children];
+    const n2 = items.length;
+    const r = fab.getBoundingClientRect();
+    const cx2 = r.left + r.width / 2, cy2 = r.top + r.height / 2;
+    const dir2 = fabOpenDir(cx2, cy2, window.innerWidth, window.innerHeight);
+    menu.style.left = cx2 + "px";
+    menu.style.top = cy2 + "px";
+    const pill = menu.dataset.disp !== "icon";
+    const pos = pill ? fabStackPositions(n2, {
+      item: 42,
+      gap: 10,
+      offset: 62,
+      dirY: dir2.dirY,
+      stagger: FAB_STAGGER,
+      closing: !!closing
+    }) : fabRadialPositions(n2, {
+      radius: fabRadius(n2, 48, 16, 90, 96),
+      dirX: dir2.dirX,
+      dirY: dir2.dirY,
+      spread: 90,
+      start: 0,
+      stagger: FAB_STAGGER,
+      closing: !!closing
+    });
+    items.forEach((it, i5) => {
+      const p = pos[i5] || { x: 0, y: 0, delay: 0 };
+      const ax = pill ? dir2.dirX < 0 ? "-100%" : "0%" : "-50%";
+      it.style.setProperty("--fab-x", p.x + "px");
+      it.style.setProperty("--fab-y", p.y + "px");
+      it.style.setProperty("--fab-ax", ax);
+      it.style.transitionDelay = p.delay + "ms";
+    });
+    menu.classList.toggle("k-fab-left", dir2.dirX < 0);
+  }
+  function openFabMenu() {
+    const fab = $("#k-fab"), menu = $("#k-fab-menu");
+    if (!fab || !menu || !menu.children.length) return false;
+    clearTimeout(menu._hideJob);
+    fabOpen = true;
+    menu.classList.remove("k-menu-off");
+    layoutFabMenu(false);
+    void menu.offsetWidth;
+    menu.classList.add("open");
+    fab.classList.add("open");
+    return true;
+  }
+  function closeFabMenu(instant) {
+    const fab = $("#k-fab"), menu = $("#k-fab-menu");
+    if (!fab || !menu) return;
+    fabOpen = false;
+    fab.classList.remove("open");
+    menu.classList.remove("open");
+    clearTimeout(menu._hideJob);
+    if (instant) {
+      menu.classList.add("k-menu-off");
+      return;
+    }
+    layoutFabMenu(true);
+    menu._hideJob = setTimeout(
+      () => menu.classList.add("k-menu-off"),
+      fabAnimMs(menu.children.length, FAB_STAGGER)
+    );
+  }
+  function toggleFabMenu(on2) {
+    const want = on2 === void 0 ? !fabOpen : !!on2;
+    if (want) openFabMenu();
+    else closeFabMenu();
+    return fabOpen;
+  }
   function wireFab() {
     const fab = $("#k-fab");
     const fabMenu = $("#k-fab-menu");
     if (!fab || !fabMenu) return;
-    let fabOpen = false;
+    renderFabMenu();
+    restoreFabPos();
     fab.onclick = () => {
-      fabOpen = !fabOpen;
-      fab.classList.toggle("open", fabOpen);
-      fabMenu.classList.toggle("k-menu-off", !fabOpen);
+      toggleFabMenu();
     };
-    fabMenu.querySelectorAll(".k-menu-item").forEach((item) => {
-      item.onclick = async (e) => {
-        e.stopPropagation();
-        fabOpen = false;
-        fab.classList.remove("open");
-        fabMenu.classList.add("k-menu-off");
-        const action = item.dataset.action;
-        switch (action) {
-          case "scene": {
-            if (!state.root) break;
-            const dst = await pickDraftTarget({ title: t("ui.app.newSceneNew2") });
-            if (!dst) break;
-            addScene(dst.dPath, dst.chapter);
-            break;
-          }
-          case "chapter": {
-            if (!state.root) break;
-            const dst = await pickDraftTarget({ needChapter: false, title: t("ui.app.newChapterNew") });
-            if (!dst) break;
-            addChapter(dst.dPath);
-            break;
-          }
-          case "character":
-            if (state.root) {
-              const w = await wikiRoot();
-              await kapi.mkdir(await kapi.join(w, "characters"));
-              addEntity(await kapi.join(w, "characters"), "characters");
-            }
-            break;
-          case "location":
-            if (state.root) {
-              const w = await wikiRoot();
-              await kapi.mkdir(await kapi.join(w, "locations"));
-              addEntity(await kapi.join(w, "locations"), "locations");
-            }
-            break;
-          case "note":
-            openScratchpad();
-            break;
-          case "memo":
-            if (state.root) {
-              addMemo();
-            }
-            break;
+    fab.addEventListener("contextmenu", (e) => e.preventDefault());
+    fab.addEventListener("mousedown", (e) => {
+      if (e.button !== 2) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const r = fab.getBoundingClientRect();
+      const sx2 = e.clientX, sy2 = e.clientY, ox = r.left, oy = r.top;
+      let moved = false;
+      const move = (ev) => {
+        if (!moved && Math.abs(ev.clientX - sx2) + Math.abs(ev.clientY - sy2) > FAB_DRAG_SLOP) {
+          moved = true;
+          closeFabMenu(true);
+          fab.classList.add("k-dragging");
+        }
+        if (!moved) return;
+        setFabPos(clampFabPos(
+          { left: ox + (ev.clientX - sx2), top: oy + (ev.clientY - sy2) },
+          r,
+          window.innerWidth,
+          window.innerHeight
+        ));
+      };
+      const up = (ev) => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        fab.classList.remove("k-dragging");
+        if (moved) {
+          saveUiLayout("fab", fabPos());
+          setStatus(t("ui.fab.posSaved"));
+        } else {
+          popupMenu(ev.clientX, ev.clientY, fabContextItems({
+            onReset: () => {
+              resetFabPos();
+              setStatus(t("ui.fab.posReset"));
+            },
+            onConfig: () => settingsDialog("fab"),
+            onHide: () => handleCommand("toggle-fab")
+          }));
         }
       };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    });
+    window.addEventListener("resize", () => {
+      restoreFabPos();
+      if (fabOpen) layoutFabMenu(false);
     });
     document.addEventListener("click", (e) => {
-      if (fabOpen && !fab.contains(e.target) && !fabMenu.contains(e.target)) {
-        fabOpen = false;
-        fab.classList.remove("open");
-        fabMenu.classList.add("k-menu-off");
-      }
+      if (fabOpen && !fab.contains(e.target) && !fabMenu.contains(e.target)) closeFabMenu();
     });
   }
   async function buildFilterBar() {
@@ -171349,6 +173938,149 @@ ${css}
         "\u0E1B\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E22\u0E31\u0E07\u0E2A\u0E31\u0E48\u0E07\u0E07\u0E32\u0E19\u0E44\u0E14\u0E49 (id \u0E40\u0E14\u0E34\u0E21)",
         typeof document.querySelector("#tb-bold").onclick === "function"
       );
+      {
+        const TCF = await Promise.resolve().then(() => (init_toolbar_config(), toolbar_config_exports));
+        const TBU111 = await Promise.resolve().then(() => (init_toolbar_ui(), toolbar_ui_exports));
+        const keepFmt = state.settings.fmtbar;
+        const wait111 = (ms) => new Promise((r) => setTimeout(r, ms));
+        document.querySelectorAll(".k-menu:not(#k-fab-menu)").forEach((m) => m.remove());
+        bindToolbarContextMenu();
+        floatBar.querySelector("#tb-bold").dispatchEvent(
+          new MouseEvent("contextmenu", { clientX: 200, clientY: 200, bubbles: true })
+        );
+        await wait111(40);
+        const fmenu111 = document.querySelector(".k-menu:not(#k-fab-menu)");
+        check2(
+          "[111-4] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A \u2192 \u0E21\u0E35\u0E40\u0E21\u0E19\u0E39\u0E1B\u0E23\u0E31\u0E1A\u0E41\u0E15\u0E48\u0E07",
+          !!fmenu111 && fmenu111.children.length >= 2,
+          fmenu111 ? fmenu111.textContent.slice(0, 70) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E21\u0E19\u0E39"
+        );
+        check2(
+          "[111-4] \u2605\u2605 \u0E40\u0E21\u0E19\u0E39\u0E1A\u0E2D\u0E01\u0E0A\u0E31\u0E14\u0E27\u0E48\u0E32\u0E21\u0E35\u0E1C\u0E25\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E42\u0E2B\u0E21\u0E14\u0E44\u0E2B\u0E19 (\u0E19\u0E34\u0E22\u0E32\u0E22/\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C)",
+          !!fmenu111 && fmenu111.textContent.includes(t("ui.fmtcfg.modeProse")),
+          fmenu111 ? fmenu111.textContent.slice(0, 90) : ""
+        );
+        fmenu111.children[0].click();
+        await wait111(60);
+        check2(
+          "[111-4] \u2605\u2605 \u0E01\u0E14\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01\u0E41\u0E16\u0E1A\u0E08\u0E23\u0E34\u0E07",
+          floatBar.querySelector("#tb-bold").classList.contains("tb-hidden")
+        );
+        check2(
+          "[111-4] \u2605\u2605 \u0E0B\u0E48\u0E2D\u0E19\u0E43\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E17\u0E1A\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C",
+          TCF.fmtbarHidden(state.settings.fmtbar, "prose", "tb-bold") === true && TCF.fmtbarHidden(state.settings.fmtbar, "screenplay", "tb-bold") === false,
+          JSON.stringify(state.settings.fmtbar)
+        );
+        applyFmtbarConfig(state.settings.fmtbar, "screenplay");
+        check2(
+          "[111-4] \u2605 \u0E27\u0E32\u0E14\u0E41\u0E16\u0E1A\u0E14\u0E49\u0E27\u0E22\u0E42\u0E2B\u0E21\u0E14\u0E1A\u0E17 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E27\u0E49\u0E43\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32",
+          !floatBar.querySelector("#tb-bold").classList.contains("tb-hidden")
+        );
+        state.settings.fmtbar = TCF.resetFmtbarConfig();
+        applyFmtbarConfig(state.settings.fmtbar, "prose");
+        check2(
+          "[111-4] \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
+          !floatBar.querySelector("#tb-bold").classList.contains("tb-hidden")
+        );
+        check2('[111-4] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 "\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A" \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49', (() => {
+          const host2 = el("div", "");
+          document.body.append(host2);
+          const ok2 = !!TBU111.buildFmtbarList(host2, { mode: "prose" }) && host2.querySelectorAll(".k-tbcfg-row").length >= 15 && host2.querySelectorAll(".k-fmtcfg-mode").length === 2;
+          host2.remove();
+          return ok2;
+        })());
+        applyFmtbarConfig(state.settings.fmtbar, "screenplay");
+        check2(
+          "[111-6] \u2605\u2605 \u0E42\u0E2B\u0E21\u0E14\u0E1A\u0E17: \u0E0A\u0E48\u0E2D\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D/\u0E22\u0E01\u0E04\u0E33\u0E1E\u0E39\u0E14/\u0E15\u0E31\u0E27\u0E22\u0E01/\u0E15\u0E31\u0E27\u0E2B\u0E49\u0E2D\u0E22 \u0E40\u0E1B\u0E47\u0E19\u0E40\u0E17\u0E32",
+          ["tb-style", "tb-quote", "tb-sup", "tb-sub"].every((id) => $("#" + id).classList.contains("tb-na")),
+          ["tb-style", "tb-quote", "tb-sup", "tb-sub"].filter((id) => !$("#" + id).classList.contains("tb-na")).join(",")
+        );
+        check2(
+          "[111-6] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E17\u0E32 = \u0E01\u0E14\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E2A\u0E35\u0E08\u0E32\u0E07)",
+          getComputedStyle($("#tb-quote")).pointerEvents === "none" && $("#tb-style").disabled === true,
+          getComputedStyle($("#tb-quote")).pointerEvents
+        );
+        check2(
+          "[111-6] \u2605 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32/\u0E40\u0E2D\u0E35\u0E22\u0E07/\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 \u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E43\u0E19\u0E1A\u0E17 (\u0E44\u0E21\u0E48\u0E40\u0E17\u0E32\u0E40\u0E01\u0E34\u0E19\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19)",
+          ["tb-bold", "tb-italic", "tb-align-center"].every((id) => !$("#" + id).classList.contains("tb-na"))
+        );
+        check2(
+          "[111-6] \u2605 \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22/\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E43\u0E19\u0E1A\u0E17 (\u0E04\u0E33\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 \u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48 alpha.98)",
+          !$("#tb-ul").classList.contains("tb-na") && !$("#tb-ol").classList.contains("tb-na")
+        );
+        applyFmtbarConfig(state.settings.fmtbar, "prose");
+        check2(
+          "[111-6] \u2605\u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E32\u0E22\u0E40\u0E17\u0E32 \u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34",
+          ["tb-style", "tb-quote", "tb-sup", "tb-sub"].every((id) => !$("#" + id).classList.contains("tb-na")) && $("#tb-style").disabled === false
+        );
+        check2(
+          "[111-5] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E23\u0E35\u0E22\u0E01\u0E41\u0E16\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22",
+          !!floatBar.querySelector("#tb-fmt-here")
+        );
+        check2(
+          "[111-5] \u0E1B\u0E38\u0E48\u0E21\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E16\u0E2D\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
+          TCF.isConfigurable("tb-fmt-here") === false
+        );
+        const hostR = $("#content").getBoundingClientRect();
+        const pmEl2 = document.querySelector(".pane.on .ProseMirror") || document.querySelector(".ProseMirror");
+        const pmR = pmEl2.getBoundingClientRect();
+        const px2 = Math.round(pmR.left + pmR.width / 2), py2 = Math.round(pmR.top + pmR.height / 3);
+        pmEl2.dispatchEvent(new MouseEvent("mousemove", { clientX: px2, clientY: py2, bubbles: true }));
+        await wait111(20);
+        const tgt = fmtBarHereTarget();
+        const barW = floatBar.getBoundingClientRect().width;
+        const roomy111 = hostR.width - barW > 40;
+        check2(
+          "[111-5] \u2605\u2605 \u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 \u2192 \u0E04\u0E34\u0E14\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E08\u0E32\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E21\u0E32\u0E2A\u0E4C (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D)",
+          !!tgt && tgt.fallback === false && Math.abs(tgt.top + hostR.top - py2) < 40 && (!roomy111 || Math.abs(tgt.left + barW / 2 + hostR.left - px2) < 2),
+          JSON.stringify(tgt) + " \u0E40\u0E21\u0E32\u0E2A\u0E4C " + px2 + "," + py2 + " \u0E41\u0E16\u0E1A\u0E01\u0E27\u0E49\u0E32\u0E07 " + Math.round(barW) + " \u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 " + Math.round(hostR.width)
+        );
+        check2(
+          "[111-5] \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E2A\u0E21\u0E2D",
+          tgt.left >= 0 && tgt.top >= 0 && tgt.top <= hostR.height,
+          JSON.stringify(tgt)
+        );
+        floatBar.querySelector("#tb-fmt-here").click();
+        const mid = floatBar.getBoundingClientRect().left;
+        await wait111(600);
+        const endL = parseFloat(floatBar.style.left), endT = parseFloat(floatBar.style.top);
+        check2(
+          "[111-5] \u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E1A\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E16\u0E36\u0E07\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07",
+          Math.abs(endL - tgt.left) < 2 && Math.abs(endT - tgt.top) < 2,
+          `${endL},${endT} \u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 ${tgt.left},${tgt.top}`
+        );
+        check2(
+          "[111-5] \u2605 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E39\u0E01\u0E08\u0E33\u0E25\u0E07 localStorage",
+          Math.abs((JSON.parse(localStorage.getItem("k2-ui-layout") || "{}").fmtbar || {}).left - tgt.left) < 2
+        );
+        $("#toolbar").dispatchEvent(new MouseEvent("mousemove", { clientX: 5, clientY: 5, bubbles: true }));
+        await wait111(20);
+        const tgt2 = fmtBarToPointer();
+        check2(
+          "[111-5] \u2605\u2605 \u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E19\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 \u2192 \u0E44\u0E1B\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D \u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D 200\u2013300px",
+          !!tgt2 && tgt2.fallback === true && (!roomy111 || Math.abs(tgt2.left + barW / 2 + hostR.left - window.innerWidth / 2) < 2) && (() => {
+            const d = tgt2.top + hostR.top - window.innerHeight / 2;
+            return d >= 200 && d <= 300 || tgt2.top === hostR.height - floatBar.getBoundingClientRect().height - 8;
+          })(),
+          JSON.stringify(tgt2) + " \u0E08\u0E2D " + window.innerWidth + "x" + window.innerHeight
+        );
+        await wait111(600);
+        check2(
+          "[111-5] \u2605 \u0E01\u0E32\u0E23\u0E22\u0E49\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 tween (\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E19\u0E25\u0E30\u0E17\u0E35\u0E48\u0E01\u0E31\u0E1A\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14)",
+          Math.abs(mid - tgt.left) > 1 || Math.abs(mid - hostR.left) > 1,
+          String(mid)
+        );
+        const scHere = SHORTCUTS.find((x) => shortcutId(x) === "fmtbar-here");
+        check2(
+          "[111-5] \u2605 \u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07 + \u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32",
+          !!scHere && !!SHORTCUT_LABELS["fmtbar-here"] && t(SHORTCUT_LABELS["fmtbar-here"]) !== SHORTCUT_LABELS["fmtbar-here"],
+          scHere ? scHere.join(",") : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+        );
+        await kapi.testShot("/tmp/k2_fmtbar111.png");
+        state.settings.fmtbar = keepFmt;
+        applyFmtbarConfig();
+        localStorage.removeItem("k2-ui-layout");
+      }
       resetPanels();
       await new Promise((r) => setTimeout(r, 30));
       const PMG = getPanelManager();
@@ -174647,8 +177379,195 @@ ${css}
           !$("#k-fab-menu").classList.contains("k-menu-off")
         );
         document.body.click();
-        await new Promise((r) => setTimeout(r, 60));
+        await new Promise((r) => setTimeout(r, 500));
         check2("\u0E04\u0E25\u0E34\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01 \u2192 \u0E40\u0E21\u0E19\u0E39\u0E1B\u0E34\u0E14", $("#k-fab-menu").classList.contains("k-menu-off"));
+      }
+      {
+        const fab = $("#k-fab"), fmenu = $("#k-fab-menu");
+        const FBC = await Promise.resolve().then(() => (init_fab_config(), fab_config_exports));
+        check2(
+          "[111-2] \u0E40\u0E21\u0E19\u0E39 FAB \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E32\u0E22\u0E15\u0E31\u0E27\u0E43\u0E19 index.html \u0E41\u0E25\u0E49\u0E27 (\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E2D\u0E19\u0E23\u0E31\u0E19)",
+          fmenu.querySelectorAll(".k-fab-item").length > 0 && fmenu.querySelectorAll(".k-menu-item").length === 0
+        );
+        check2(
+          "[111-2] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E44\u0E14\u0E49 4 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 (\u0E40\u0E17\u0E48\u0E32\u0E40\u0E1E\u0E14\u0E32\u0E19)",
+          fmenu.children.length === FBC.DEFAULT_FAB_ACTIONS.length,
+          fmenu.children.length + " \u0E1B\u0E38\u0E48\u0E21"
+        );
+        const keepFab = state.settings.fab;
+        state.settings.fab = { actions: ["scene", "memo"], display: "icon" };
+        renderFabMenu();
+        check2(
+          "[111-2] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35",
+          fmenu.children.length === 2 && [...fmenu.children].map((c) => c.dataset.action).join(",") === "scene,memo",
+          [...fmenu.children].map((c) => c.dataset.action).join(",")
+        );
+        state.settings.fab = { actions: FBC.allFabIds(), display: "icon" };
+        renderFabMenu();
+        check2(
+          "[111-2] \u2605\u2605 \u0E43\u0E2A\u0E48\u0E40\u0E01\u0E34\u0E19 4 \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u0E15\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E22\u0E31\u0E14\u0E04\u0E48\u0E32\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32\u0E15\u0E23\u0E07 \u0E46",
+          fmenu.children.length === FBC.FAB_MAX,
+          fmenu.children.length
+        );
+        state.settings.fab = { actions: ["scene", "memo"], display: "icon" };
+        renderFabMenu();
+        check2(
+          '[111-2] \u0E41\u0E1A\u0E1A "\u0E44\u0E2D\u0E04\u0E2D\u0E19" \u2014 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E1B\u0E38\u0E48\u0E21',
+          fmenu.dataset.disp === "icon" && !fmenu.querySelector(".k-fab-item-tx") && !!fmenu.querySelector(".k-fab-item-ic")
+        );
+        state.settings.fab = { actions: ["scene", "memo"], display: "iconText" };
+        renderFabMenu();
+        check2(
+          '[111-2] \u2605 \u0E41\u0E1A\u0E1A "\u0E44\u0E2D\u0E04\u0E2D\u0E19 + \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21" \u2014 \u0E21\u0E35\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2D\u0E22\u0E48\u0E32\u0E07',
+          !!fmenu.querySelector(".k-fab-item-ic") && !!fmenu.querySelector(".k-fab-item-tx") && fmenu.querySelector(".k-fab-item-tx").textContent.length > 0,
+          fmenu.querySelector(".k-fab-item-tx")?.textContent
+        );
+        state.settings.fab = { actions: ["scene", "memo"], display: "text" };
+        renderFabMenu();
+        check2(
+          '[111-2] \u2605 \u0E41\u0E1A\u0E1A "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27" \u2014 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E2D\u0E04\u0E2D\u0E19',
+          !fmenu.querySelector(".k-fab-item-ic") && !!fmenu.querySelector(".k-fab-item-tx")
+        );
+        state.settings.fab = { actions: ["scene", "chapter", "character", "memo"], display: "icon" };
+        renderFabMenu();
+        toggleFabMenu(true);
+        await new Promise((r) => setTimeout(r, 420));
+        const boxes = [...fmenu.children].map((c) => c.getBoundingClientRect());
+        const fr = fab.getBoundingClientRect();
+        const fcx = fr.left + fr.width / 2, fcy = fr.top + fr.height / 2;
+        const dists = boxes.map((b) => Math.hypot(b.left + b.width / 2 - fcx, b.top + b.height / 2 - fcy));
+        check2(
+          "[111-3] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E39\u0E01\u0E01\u0E32\u0E07\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07 (\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E08\u0E2D)",
+          dists.every((d) => d > 60),
+          dists.map((d) => d.toFixed(0)).join(",")
+        );
+        check2("[111-3] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E39\u0E01\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19 (\u0E2B\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 40px)", (() => {
+          for (let i5 = 0; i5 < boxes.length; i5++) {
+            for (let j = i5 + 1; j < boxes.length; j++) {
+              const dx = boxes[i5].left + boxes[i5].width / 2 - boxes[j].left - boxes[j].width / 2;
+              const dy = boxes[i5].top + boxes[i5].height / 2 - boxes[j].top - boxes[j].height / 2;
+              if (Math.hypot(dx, dy) < 40) return false;
+            }
+          }
+          return true;
+        })());
+        check2(
+          "[111-3] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E21\u0E38\u0E21\u0E02\u0E27\u0E32\u0E25\u0E48\u0E32\u0E07 \u2192 \u0E40\u0E21\u0E19\u0E39\u0E01\u0E32\u0E07\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E36\u0E49\u0E19 (\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E02\u0E2D\u0E1A\u0E08\u0E2D)",
+          boxes.every((b) => b.left >= 0 && b.top >= 0 && b.right <= window.innerWidth && b.bottom <= window.innerHeight),
+          JSON.stringify(boxes.map((b) => [Math.round(b.left), Math.round(b.top)]))
+        );
+        check2(
+          "[111-3] \u2605 \u0E2B\u0E19\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E44\u0E25\u0E48\u0E17\u0E35\u0E25\u0E30\u0E15\u0E31\u0E27 (\u0E15\u0E31\u0E27\u0E2B\u0E25\u0E31\u0E07\u0E0A\u0E49\u0E32\u0E01\u0E27\u0E48\u0E32\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01)",
+          parseFloat(fmenu.children[3].style.transitionDelay) > parseFloat(fmenu.children[0].style.transitionDelay),
+          [...fmenu.children].map((c) => c.style.transitionDelay).join(",")
+        );
+        check2(
+          "[111-3] \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E39\u0E01\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A\u0E04\u0E49\u0E32\u0E07)",
+          +getComputedStyle(fmenu.children[0]).opacity > 0.9,
+          getComputedStyle(fmenu.children[0]).opacity
+        );
+        await kapi.testShot("/tmp/k2_fab_radial.png");
+        state.settings.fab = { actions: ["scene", "chapter", "character", "memo"], display: "iconText" };
+        renderFabMenu();
+        toggleFabMenu(true);
+        await new Promise((r) => setTimeout(r, 420));
+        const tb111 = [...fmenu.children].map((c) => c.getBoundingClientRect());
+        check2(
+          "[111-3] \u2605 \u0E41\u0E1A\u0E1A\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E01\u0E47\u0E22\u0E31\u0E07\u0E01\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E1B\u0E38\u0E48\u0E21",
+          tb111.every((b) => b.left >= 0 && b.top >= 0 && b.right <= window.innerWidth && b.bottom <= window.innerHeight),
+          JSON.stringify(tb111.map((b) => [Math.round(b.left), Math.round(b.top), Math.round(b.width)]))
+        );
+        check2("[111-3] \u2605\u2605 \u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19 (\u0E01\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E19\u0E40\u0E25\u0E22)", (() => {
+          for (let i5 = 0; i5 < tb111.length; i5++) {
+            for (let j = i5 + 1; j < tb111.length; j++) {
+              const a = tb111[i5], b = tb111[j];
+              if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) return false;
+            }
+          }
+          return true;
+        })(), JSON.stringify(tb111.map((b) => [Math.round(b.top), Math.round(b.bottom)])));
+        await kapi.testShot("/tmp/k2_fab_radial_text.png");
+        state.settings.fab = { actions: ["scene", "chapter", "character", "memo"], display: "icon" };
+        renderFabMenu();
+        toggleFabMenu(false);
+        await new Promise((r) => setTimeout(r, 500));
+        check2("[111-3] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E22\u0E38\u0E1A\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07", fmenu.classList.contains("k-menu-off"));
+        const before = fab.getBoundingClientRect();
+        const rdown = (x, y) => fab.dispatchEvent(new MouseEvent(
+          "mousedown",
+          { button: 2, clientX: x, clientY: y, bubbles: true }
+        ));
+        const rmove = (x, y) => document.dispatchEvent(new MouseEvent(
+          "mousemove",
+          { button: 2, clientX: x, clientY: y, bubbles: true }
+        ));
+        const rup = (x, y) => document.dispatchEvent(new MouseEvent(
+          "mouseup",
+          { button: 2, clientX: x, clientY: y, bubbles: true }
+        ));
+        const gx = before.left + 10, gy = before.top + 10;
+        rdown(gx, gy);
+        rmove(gx - 190, gy - 90);
+        rmove(gx - 200, gy - 100);
+        rup(gx - 200, gy - 100);
+        await new Promise((r) => setTimeout(r, 80));
+        const after = fab.getBoundingClientRect();
+        check2(
+          "[111-1] \u2605\u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E04\u0E49\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E25\u0E32\u0E01 \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E49\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07",
+          Math.abs(after.left - (before.left - 200)) < 3 && Math.abs(after.top - (before.top - 100)) < 3,
+          `${Math.round(before.left)},${Math.round(before.top)} \u2192 ${Math.round(after.left)},${Math.round(after.top)}`
+        );
+        const savedFab = JSON.parse(localStorage.getItem("k2-ui-layout") || "{}").fab;
+        check2(
+          "[111-1] \u2605\u2605 \u0E08\u0E33\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E25\u0E07 k2-ui-layout",
+          !!savedFab && Math.abs(savedFab.left - after.left) < 2,
+          JSON.stringify(savedFab)
+        );
+        fab.style.left = "";
+        fab.style.top = "";
+        fab.style.right = "";
+        fab.style.bottom = "";
+        restoreFabPos();
+        check2(
+          "[111-1] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48 (restoreFabPos) \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+          Math.abs(fab.getBoundingClientRect().left - after.left) < 2
+        );
+        const now = fab.getBoundingClientRect();
+        rdown(now.left + 10, now.top + 10);
+        rmove(now.left + 9e3, now.top + 9e3);
+        rup(now.left + 9e3, now.top + 9e3);
+        await new Promise((r) => setTimeout(r, 60));
+        const off3 = fab.getBoundingClientRect();
+        check2(
+          "[111-1] \u2605 \u0E25\u0E32\u0E01\u0E40\u0E25\u0E22\u0E02\u0E2D\u0E1A\u0E08\u0E2D \u2192 \u0E16\u0E39\u0E01\u0E2B\u0E19\u0E35\u0E1A\u0E43\u0E2B\u0E49\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D",
+          off3.right <= window.innerWidth + 1 && off3.bottom <= window.innerHeight + 1,
+          `${Math.round(off3.right)}/${window.innerWidth}`
+        );
+        document.querySelectorAll(".k-menu:not(#k-fab-menu)").forEach((m) => m.remove());
+        const still = fab.getBoundingClientRect();
+        rdown(still.left + 10, still.top + 10);
+        rup(still.left + 10, still.top + 10);
+        await new Promise((r) => setTimeout(r, 60));
+        const ctx2 = document.querySelector(".k-menu:not(#k-fab-menu)");
+        check2(
+          "[111-1] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A \u2192 \u0E44\u0E14\u0E49\u0E40\u0E21\u0E19\u0E39\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E1B\u0E38\u0E48\u0E21",
+          !!ctx2 && ctx2.textContent.includes(t("ui.fab.ctxReset").slice(0, 6)),
+          ctx2 ? ctx2.textContent.slice(0, 60) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E21\u0E19\u0E39"
+        );
+        check2(
+          "[111-1] \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E41\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A \u0E44\u0E21\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E22\u0E31\u0E1A",
+          Math.abs(fab.getBoundingClientRect().left - still.left) < 1
+        );
+        ctx2 && ctx2.remove();
+        state.settings.fab = keepFab;
+        renderFabMenu();
+        const lay2 = uiLayout();
+        delete lay2.fab;
+        localStorage.setItem("k2-ui-layout", JSON.stringify(lay2));
+        fab.style.left = "";
+        fab.style.top = "";
+        fab.style.right = "";
+        fab.style.bottom = "";
       }
       {
         document.querySelector(".scene").click();
@@ -176213,6 +179132,57 @@ ${css}
         );
         const emb = await client.embed(["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"], { local: true });
         check2("AIClient embed \u0E41\u0E1A\u0E1A local \u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C)", emb.ok && emb.vectors[0].length === 256);
+        {
+          const savedAi = state.meta.ai;
+          state.meta.ai = { ...state.meta.ai || {}, providers: [{}], activeProviderId: "" };
+          resetAI();
+          const c2 = getAIClient();
+          check2(
+            "[96] \u0E15\u0E31\u0E49\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27 getAIClient \u0E43\u0E0A\u0E49 adapter (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 AIClient \u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32)",
+            !!c2 && c2._adapter === true && typeof c2.complete === "function" && typeof c2.stream === "function" && typeof c2.embed === "function"
+          );
+          const emb2 = await c2.embed(["\u0E01\u0E02\u0E04"]);
+          check2(
+            "[96] adapter.embed \u0E43\u0E0A\u0E49 local \u0E44\u0E14\u0E49\u0E41\u0E21\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48",
+            emb2.ok && Array.isArray(emb2.vectors) && emb2.vectors[0].length === 256
+          );
+          state.meta.ai = savedAi;
+          resetAI();
+        }
+        {
+          const { completeStream: completeStream2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+          const { newProvider: newProvider2 } = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
+          const prov = newProvider2({
+            name: "mock-sse",
+            model: "mock-model",
+            credential: { name: "mock", baseUrl: "http://127.0.0.1:8931/v1", allowedDomains: ["127.0.0.1"] }
+          });
+          const deltas2 = [];
+          const thunks = [];
+          const r = await completeStream2(prov, {
+            system: "sys",
+            messages: [{ role: "user", content: "\u0E02\u0E2D\u0E04\u0E33\u0E15\u0E2D\u0E1A" }]
+          }, (c) => {
+            if (c.delta) deltas2.push(c.delta);
+            if (c.thinking) thunks.push(c.thinking);
+          });
+          const sseUp = r.ok && r.text.length > 0;
+          if (sseUp) {
+            check2(
+              "[115] \u2605 \u0E2A\u0E15\u0E23\u0E35\u0E21\u0E1C\u0E48\u0E32\u0E19 IPC \u0E2A\u0E48\u0E07\u0E01\u0E49\u0E2D\u0E19\u0E22\u0E48\u0E2D\u0E22\u0E2B\u0E25\u0E32\u0E22\u0E01\u0E49\u0E2D\u0E19 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E15\u0E2D\u0E19\u0E08\u0E1A)",
+              deltas2.length >= 3,
+              "deltas=" + deltas2.length + " text=" + r.text
+            );
+            check2("[115] \u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E23\u0E27\u0E21\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07", r.text === "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A \u0E08\u0E1A", r.text);
+            check2(
+              "[115] \u2605 \u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14 (reasoning) \u0E44\u0E2B\u0E25\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E49\u0E2D\u0E19\u0E22\u0E48\u0E2D\u0E22",
+              thunks.length >= 2 && r.thinking.includes("\u0E04\u0E34\u0E14\u0E02\u0E31\u0E49\u0E19 1"),
+              "thunks=" + thunks.length + " thinking=" + r.thinking
+            );
+          } else {
+            check2("[115] (\u0E02\u0E49\u0E32\u0E21) \u0E40\u0E0B\u0E34\u0E23\u0E4C\u0E1F\u0E40\u0E27\u0E2D\u0E23\u0E4C SSE \u0E08\u0E33\u0E25\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21 \u2014 \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E17\u0E2A\u0E2A\u0E15\u0E23\u0E35\u0E21", true, r.error || "");
+          }
+        }
         const plot = await Promise.resolve().then(() => (init_ai_plot(), ai_plot_exports));
         const dlg = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
         const chr = await Promise.resolve().then(() => (init_ai_character(), ai_character_exports));
@@ -178439,9 +181409,11 @@ ${css}
           const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
           S11.spPageRules = { minDialogueLinesAtBottom: 99 };
           const split22 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
+          const cutMap = (r) => r.pages.map((pg) => pg.blocks.map((b) => b.el + ":" + (b.lines || 0) + (b.split ? "/" + b.split : "")).join("|")).join(" \u27C2 ");
           check2(
             "[84] \u0E1B\u0E23\u0E31\u0E1A\u0E01\u0E0E minDialogueLinesAtBottom \u2192 \u0E01\u0E32\u0E23\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07",
-            split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && !split22.pages.flatMap((p) => p.blocks).some((b) => b.split === "head")
+            split1.pages.flatMap((p) => p.blocks).some((b) => b.split === "head") && cutMap(split1) !== cutMap(split22),
+            cutMap(split1) + "   \u0E04\u0E27\u0E23\u0E15\u0E48\u0E32\u0E07\u0E08\u0E32\u0E01   " + cutMap(split22)
           );
           S11.spPageRules = null;
           S11.spStrings = { dialogueMore: "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E08\u0E1A)" };
@@ -178741,6 +181713,73 @@ ${css}
               "[59] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E21\u0E35 data-pos \u0E44\u0E27\u0E49\u0E43\u0E2B\u0E49\u0E04\u0E25\u0E34\u0E01\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14",
               !!pv.querySelector(".sp[data-pos]")
             );
+            {
+              const blanks59 = pv.querySelectorAll(".sp.sp-blank");
+              check2("[112] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E04\u0E39\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E15\u0E23\u0E27\u0E08\u0E08\u0E23\u0E34\u0E07", blanks59.length > 0, blanks59.length);
+              const csB = getComputedStyle(blanks59[0]);
+              check2(
+                "[112] \u2605 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E2A\u0E39\u0E07\u0E1E\u0E2D\u0E14\u0E35 1 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E40\u0E27\u0E49\u0E19\u0E19\u0E33/\u0E15\u0E32\u0E21",
+                csB.paddingTop === "0px" && csB.paddingBottom === "0px" && Math.abs(parseFloat(csB.height) - parseFloat(csB.lineHeight)) < 0.6,
+                `h=${csB.height} lh=${csB.lineHeight} pad=${csB.paddingTop}/${csB.paddingBottom}`
+              );
+              const afterB = [...pv.querySelectorAll(".sp.sp-blank + .sp:not(.sp-blank)")];
+              check2(
+                "[112] \u2605\u2605 \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E40\u0E27\u0E49\u0E19\u0E19\u0E33\u0E0B\u0E49\u0E33",
+                afterB.length > 0 && afterB.every((e0) => getComputedStyle(e0).paddingTop === "0px"),
+                afterB.length + " \u0E01\u0E49\u0E2D\u0E19 \xB7 " + afterB.map((e0) => getComputedStyle(e0).paddingTop).join(",")
+              );
+              const over59 = [];
+              for (const pgEl of pv.querySelectorAll(".sp-page")) {
+                const cs4 = getComputedStyle(pgEl);
+                const body = parseFloat(cs4.height) - parseFloat(cs4.paddingTop) - parseFloat(cs4.paddingBottom);
+                let h = 0;
+                for (const kid of pgEl.children) {
+                  if (kid.classList.contains("sp-page-num") || kid.className.includes("sp-cont-page")) continue;
+                  h += kid.offsetHeight;
+                }
+                if (h > body + 1) over59.push(`\u0E2B\u0E19\u0E49\u0E32 ${pgEl.dataset.page}: \u0E40\u0E19\u0E37\u0E49\u0E2D ${Math.round(h)} > \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48 ${Math.round(body)}`);
+              }
+              check2(
+                "[112] \u2605\u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E2B\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E49\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07",
+                over59.length === 0,
+                over59.join(" | ")
+              );
+            }
+            {
+              const CP113 = await Promise.resolve().then(() => (init_compile(), compile_exports));
+              const FT113 = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+              const wf113 = { id: "e2e-bare", name: "e2e", ext: "pdf", steps: [] };
+              const body113 = spT.sp.getMarkdown();
+              const nBlank = (x) => x.split(String.fromCharCode(10)).filter((y) => !y.trim()).length;
+              const mk113 = (format3) => ({ title: "e2e", author: "", chapters: [{
+                title: "\u0E1A\u0E17",
+                scenes: [{ title: "\u0E09\u0E32\u0E01", format: format3, body: body113, words: 1 }]
+              }] });
+              const spText = CP113.runWorkflow(mk113("screenplay"), wf113).text;
+              check2("[113] \u0E0A\u0E38\u0E14\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E19\u0E35\u0E49\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E2A\u0E35\u0E22\u0E08\u0E23\u0E34\u0E07", nBlank(body113) > 0, nBlank(body113));
+              check2(
+                "[113] \u2605\u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48 compile \u0E40\u0E01\u0E47\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E44\u0E27\u0E49\u0E04\u0E23\u0E1A",
+                nBlank(spText) >= nBlank(body113) - 1,
+                `compile ${nBlank(spText)} \xB7 \u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A ${nBlank(body113)}`
+              );
+              const nTab = pagesOf(blocksFromDoc(spT.sp.view.state.doc), spFormat()).count;
+              const nHub = pagesOf(FT113.parseScript(spText), spFormat()).count;
+              check2(
+                "[113] \u2605\u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E32\u0E01\u0E40\u0E2A\u0E49\u0E19\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2B\u0E47\u0E19",
+                nHub === nTab,
+                `\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E23\u0E27\u0E21 ${nHub} vs \u0E41\u0E17\u0E47\u0E1A ${nTab}`
+              );
+              const mixed113 = { title: "e2e", author: "", chapters: [{ title: "\u0E1A\u0E17", scenes: [
+                { title: "\u0E1A\u0E17", format: "screenplay", body: body113, words: 1 },
+                { title: "\u0E19\u0E34\u0E22\u0E32\u0E221", format: "prose", body: body113, words: 1 },
+                { title: "\u0E19\u0E34\u0E22\u0E32\u0E222", format: "prose", body: body113, words: 1 }
+              ] }] };
+              check2(
+                "[113] \u2605 \u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E1B\u0E19\u0E01\u0E31\u0E19: \u0E09\u0E32\u0E01\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E44\u0E27\u0E49",
+                nBlank(CP113.runWorkflow(mixed113, wf113).text) > nBlank(body113),
+                String(nBlank(CP113.runWorkflow(mixed113, wf113).text))
+              );
+            }
             setSpView("overview4");
             await new Promise((r) => setTimeout(r, 200));
             const pv4 = spT.pane.querySelector(".sp-pageview");
@@ -180068,6 +183107,35 @@ ${css}
                     brC2 + " vs " + (pgC.count - 1)
                   );
                 }
+                {
+                  const fmtW = spFormat();
+                  const FT114 = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+                  const bad114 = [], seen114 = [];
+                  for (const elName of Object.keys(fmtW.elements)) {
+                    if (elName === "page-break") continue;
+                    const src114 = FT114.lineFor(elName, "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 abcdef", true, "action");
+                    spT58.sp.setMarkdown([
+                      ".INT. \u0E2B\u0E49\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19",
+                      src114
+                    ].join(String.fromCharCode(10)));
+                    await new Promise((r) => setTimeout(r, 160));
+                    const n0 = spT58.pane.querySelector(".sp-" + elName);
+                    if (!n0) continue;
+                    seen114.push(elName);
+                    const cs0 = getComputedStyle(n0);
+                    const inner = n0.getBoundingClientRect().width - parseFloat(cs0.paddingLeft) - parseFloat(cs0.paddingRight) - parseFloat(cs0.borderLeftWidth) - parseFloat(cs0.borderRightWidth);
+                    const want = elementWidthIn(fmtW, elName) * 96;
+                    if (Math.abs(inner - want) > 1) {
+                      bad114.push(elName + ": \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19 " + inner.toFixed(1) + " \u2260 \u0E42\u0E21\u0E40\u0E14\u0E25 " + want.toFixed(1) + " (pad " + cs0.paddingLeft + "/" + cs0.paddingRight + " border " + cs0.borderLeftWidth + "/" + cs0.borderRightWidth + ")");
+                    }
+                  }
+                  check2("[114] \u0E15\u0E23\u0E27\u0E08\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 8 \u0E0A\u0E19\u0E34\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01", seen114.length >= 8, seen114.join(","));
+                  check2(
+                    "[114] \u2605\u2605\u2605 \u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01: \u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E1A\u0E19\u0E08\u0E2D = \u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E42\u0E21\u0E40\u0E14\u0E25\u0E43\u0E0A\u0E49",
+                    bad114.length === 0,
+                    bad114.join(" | ")
+                  );
+                }
               }
               {
                 const TW107 = await Promise.resolve().then(() => (init_text_width(), text_width_exports));
@@ -180309,7 +183377,7 @@ ${css}
                 );
                 {
                   const doc3 = window.k2PageDoctor && window.k2PageDoctor({ tab: spT58 });
-                  note("[108] k2PageDoctor: " + (doc3 ? JSON.stringify(doc3.problems) : "\u0E44\u0E21\u0E48\u0E21\u0E35"));
+                  note("[108] k2PageDoctor: " + (doc3 ? JSON.stringify(doc3.problems) : "\u0E44\u0E21\u0E48\u0E21\u0E35") + " | screen=" + JSON.stringify(doc3 && doc3.screen));
                   check2(
                     "[108] \u2605 k2PageDoctor() \u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E14\u0E49\u0E41\u0E25\u0E30\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E0A\u0E31\u0E49\u0E19",
                     !!doc3 && !!doc3.env && !!doc3.model && !!doc3.grid && !!doc3.screen,
@@ -186005,6 +189073,25 @@ ${css}
         hidePanel("ai-chat");
         await new Promise((r) => setTimeout(r, 60));
       }
+      {
+        const cst = _chatState();
+        showPanel("ai-chat");
+        await renderFeaturePanel("ai-chat");
+        await new Promise((r) => setTimeout(r, 80));
+        const host2 = document.getElementById("ai-chat-body");
+        cst.cur = null;
+        cst.view = "list";
+        await renderAIChatPanel(host2);
+        await new Promise((r) => setTimeout(r, 50));
+        const before = host2.innerHTML;
+        cst.sending = true;
+        await renderOpenFeaturePanels();
+        check2("[115] \u2605 \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E2A\u0E48\u0E07 (S.sending=true) \u0E41\u0E1C\u0E07\u0E41\u0E0A\u0E17\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E23\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48", host2.innerHTML === before);
+        cst.sending = false;
+        await renderAIChatPanel(host2);
+        hidePanel("ai-chat");
+        await new Promise((r) => setTimeout(r, 50));
+      }
       const wait62 = (ms) => new Promise((r) => setTimeout(r, ms));
       const until62 = async (fn, tries = 40, ms = 50) => {
         for (let i5 = 0; i5 < tries; i5++) {
@@ -189764,9 +192851,13 @@ ${css}
           "[79-5] \u0E27\u0E32\u0E14\u0E41\u0E16\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E22\u0E31\u0E07\u0E2B\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01 refreshToolbar \u0E14\u0E31\u0E19\u0E01\u0E25\u0E31\u0E1A)",
           getComputedStyle(aiBtn79).display === "none"
         );
-        state.settings.toolbar = TB79.setGroupVisible(state.settings.toolbar, "align", false);
-        applyToolbarConfig();
         const alignIds79 = ["tb-align-left", "tb-align-center", "tb-align-right", "tb-align-justify"];
+        check2(
+          "[114] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E2B\u0E25\u0E31\u0E01\u0E41\u0E25\u0E49\u0E27",
+          alignIds79.every((id) => TB79.isFmtbarButton(id)) && !TB79.mainbarGroups().some((g) => g.buttons.some((b) => alignIds79.includes(b.id)))
+        );
+        state.settings.fmtbar = TB79.setFmtbarGroupVisible(state.settings.fmtbar, "prose", "align", false);
+        applyFmtbarConfig(state.settings.fmtbar, "prose");
         check2(
           "[79-5] \u0E1B\u0E34\u0E14\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E32\u0E22\u0E2B\u0E21\u0E14",
           alignIds79.every((id) => {
@@ -189774,13 +192865,25 @@ ${css}
             return b && getComputedStyle(b).display === "none";
           }),
           JSON.stringify({
-            cfg: state.settings.toolbar,
+            cfg: state.settings.fmtbar,
             dom: alignIds79.map((id) => {
               const b = document.getElementById(id);
-              return id + "=" + (!b ? "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21" : (b.classList.contains("tb-hidden") ? "cls+" : "cls-") + getComputedStyle(b).display + (b.parentElement ? "@" + b.parentElement.id : "@\u0E2B\u0E25\u0E38\u0E14"));
+              return id + "=" + (!b ? "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21" : (b.classList.contains("tb-hidden") ? "cls+" : "cls-") + getComputedStyle(b).display + (b.parentElement ? "@" + (b.parentElement.id || b.parentElement.className) : "@\u0E2B\u0E25\u0E38\u0E14"));
             })
           })
         );
+        check2(
+          "[114] \u2605 \u0E1B\u0E34\u0E14\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E21\u0E14\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E17\u0E1A",
+          alignIds79.every((id) => !TB79.fmtbarHidden(state.settings.fmtbar, "screenplay", id))
+        );
+        state.settings.fmtbar = TB79.resetFmtbarConfig();
+        applyFmtbarConfig();
+        check2(
+          "[79-5] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
+          alignIds79.every((id) => getComputedStyle(document.getElementById(id)).display !== "none")
+        );
+        state.settings.toolbar = TB79.setGroupVisible(state.settings.toolbar, "tabs", false);
+        applyToolbarConfig();
         const seps79 = [...$("#toolbar").querySelectorAll("span.sep")];
         const visSeps = seps79.filter((s) => getComputedStyle(s).display !== "none");
         check2("[79-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2A\u0E2D\u0E07\u0E2D\u0E31\u0E19\u0E15\u0E34\u0E14\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E0B\u0E48\u0E2D\u0E19\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21", (() => {
@@ -189794,22 +192897,28 @@ ${css}
         await wait79(120);
         check2("[79-5] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E23\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E44\u0E14\u0E49", !!document.querySelector(".k-dialog.k-tbcfg"));
         const rowsTb = document.querySelectorAll(".k-tbcfg-row");
+        const mainIds114 = TB79.mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id));
         check2(
-          "[79-5] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E2A\u0E14\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
-          rowsTb.length === TB79.allButtonIds().length,
-          rowsTb.length + "/" + TB79.allButtonIds().length
+          "[79-5] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E2A\u0E14\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E2B\u0E25\u0E31\u0E01",
+          rowsTb.length === mainIds114.length,
+          rowsTb.length + "/" + mainIds114.length
+        );
+        check2(
+          "[114] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22\u0E2B\u0E25\u0E38\u0E14\u0E21\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E01\u0E31\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E0B\u0E49\u0E33\u0E2A\u0E2D\u0E07\u0E17\u0E35\u0E48)",
+          ![...rowsTb].some((r) => TB79.isFmtbarButton(r.dataset.btn)),
+          [...rowsTb].filter((r) => TB79.isFmtbarButton(r.dataset.btn)).map((r) => r.dataset.btn).join(",")
         );
         check2("[79-5] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E08\u0E23\u0E34\u0E07", (() => {
           const r = [...rowsTb].find((x) => x.dataset.btn === "tb-ai");
           return r && r.querySelector(".k-tbcfg-sw").checked === false;
         })());
         check2("[79-5] \u0E0A\u0E37\u0E48\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01 tooltip \u0E02\u0E2D\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E32\u0E23\u0E32\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E0B\u0E49\u0E33\u0E2D\u0E35\u0E01\u0E0A\u0E38\u0E14)", (() => {
-          const r = [...rowsTb].find((x) => x.dataset.btn === "tb-bold");
+          const r = [...rowsTb].find((x) => x.dataset.btn === "tb-kanban");
           const nm = r && r.querySelector(".k-tbcfg-name").textContent;
           return !!nm && nm.length > 1 && !/^tb-/.test(nm) && !/Ctrl/.test(nm);
         })(), (() => {
-          const r = [...rowsTb].find((x) => x.dataset.btn === "tb-bold");
-          return r ? r.querySelector(".k-tbcfg-name").textContent : "";
+          const r = [...rowsTb].find((x) => x.dataset.btn === "tb-kanban");
+          return r ? r.querySelector(".k-tbcfg-name").textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27";
         })());
         const swAi = [...rowsTb].find((x) => x.dataset.btn === "tb-ai").querySelector(".k-tbcfg-sw");
         swAi.checked = true;
@@ -191210,6 +194319,26 @@ ${css}
           );
           probe.remove();
         }
+        {
+          const st96 = U82.builderState();
+          st96.cur = sess82;
+          st96.curFile = file82;
+          st96.view = "session";
+          st96.sending = true;
+          st96.sendingSince = Date.now();
+          await U82.renderBuilderPanel();
+          const found96 = await until82(() => !!document.querySelector("#dlgb-body .dlgb-pending"));
+          const pend96 = document.querySelector("#dlgb-body .dlgb-pending");
+          check2(
+            '[82-9] \u2605 \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E23\u0E2D\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E21\u0E35\u0E1F\u0E2D\u0E07 "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14" + \u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E27\u0E25\u0E32 + \u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E22\u0E38\u0E14',
+            found96 && !!pend96 && !!pend96.querySelector(".dlgb-bub-elapsed") && !!pend96.querySelector(".dlgb-bub-stop"),
+            pend96 ? pend96.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1F\u0E2D\u0E07"
+          );
+          st96.sending = false;
+          st96.reqId = "";
+          await U82.renderBuilderPanel();
+          check2("[82-9] \u0E08\u0E1A\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B", !document.querySelector("#dlgb-body .dlgb-pending"));
+        }
         check2(
           "[82-7] \u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E2B\u0E25\u0E48\u0E07\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27",
           dirtyRegistry.ids().includes("dlgb"),
@@ -191725,6 +194854,549 @@ ${css}
           );
         }
       }
+      {
+        const wait116 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until116 = async (fn, ms = 4e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            if (fn()) return true;
+            await wait116(50);
+          }
+          return false;
+        };
+        const visible116 = (node) => {
+          if (!node) return false;
+          const cs = getComputedStyle(node), box2 = node.getBoundingClientRect();
+          return cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity || "1") > 0.05 && box2.width > 0 && box2.height > 0;
+        };
+        {
+          const BC = await Promise.resolve().then(() => (init_builder_core(), builder_core_exports));
+          const BU = await Promise.resolve().then(() => (init_builder_ui(), builder_ui_exports));
+          const sess = BC.newSession({ situation: "\u0E22\u0E37\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E14\u0E32\u0E14\u0E1F\u0E49\u0E32\u0E04\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27", title: "\u0E40\u0E17\u0E2A\u0E23\u0E33\u0E1E\u0E36\u0E07 116" });
+          const c1 = BC.addCast(sess, { name: "\u0E42\u0E17\u0E23\u0E30116", blurb: "\u0E01" });
+          const c2 = BC.addCast(sess, { name: "\u0E41\u0E04\u0E2A\u0E0B\u0E35\u0E48116", blurb: "\u0E02" });
+          sess.turns.push(BC.newTurn({ speaker: c1.id, listener: c2.id, text: "\u0E44\u0E1B\u0E01\u0E31\u0E19\u0E40\u0E16\u0E2D\u0E30" }));
+          sess.turns.push(BC.newTurn({
+            kind: BC.KIND_MONO,
+            speaker: c1.id,
+            listener: BC.SELF_MONO,
+            text: "\u0E17\u0E33\u0E44\u0E21\u0E09\u0E31\u0E19\u0E16\u0E36\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E23\u0E07\u0E19\u0E35\u0E49"
+          }));
+          check2(
+            '[116-1] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E23\u0E33\u0E1E\u0E36\u0E07\u0E04\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27" \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E04\u0E19\u0E1F\u0E31\u0E07',
+            BC.listenerOptions(sess).some((o) => o.id === BC.SELF_MONO)
+          );
+          check2(
+            "[116-1] \u2605 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E43\u0E19\u0E43\u0E08\u0E44\u0E21\u0E48\u0E23\u0E31\u0E48\u0E27\u0E40\u0E02\u0E49\u0E32 transcript \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E2D\u0E37\u0E48\u0E19",
+            !BC.buildMessages(sess, c2.id).some((m) => m.content.includes("\u0E17\u0E33\u0E44\u0E21\u0E09\u0E31\u0E19\u0E16\u0E36\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E23\u0E07\u0E19\u0E35\u0E49")) && BC.buildMessages(sess, c1.id).some((m) => m.content.includes("\u0E17\u0E33\u0E44\u0E21\u0E09\u0E31\u0E19\u0E16\u0E36\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E23\u0E07\u0E19\u0E35\u0E49"))
+          );
+          BU.resetBuilder();
+          showPanel("dlgb");
+          await renderFeaturePanel("dlgb");
+          const stB = BU.builderState();
+          stB.cur = sess;
+          stB.curFile = "mono116.json";
+          stB.view = "session";
+          await BU.renderBuilderPanel();
+          const okDraw = await until116(() => !!document.querySelector("#dlgb-body .dlgb-bubble"));
+          const monoBub = document.querySelector("#dlgb-body .dlgb-bubble.dlgb-mono");
+          check2(
+            "[116-1] \u2605 \u0E1F\u0E2D\u0E07\u0E23\u0E33\u0E1E\u0E36\u0E07\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E41\u0E25\u0E30\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E21\u0E35\u0E43\u0E19 DOM)",
+            okDraw && visible116(monoBub),
+            monoBub ? monoBub.textContent.slice(0, 40) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1F\u0E2D\u0E07\u0E23\u0E33\u0E1E\u0E36\u0E07"
+          );
+          const monoBtn = document.querySelector("#dlgb-body .dlgb-mono-btn");
+          check2("[116-1] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 \u{1F4AD} \u0E43\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E48\u0E07 \u0E41\u0E25\u0E30\u0E01\u0E14\u0E44\u0E14\u0E49", !!monoBtn && !monoBtn.disabled);
+          const lisSel = [...document.querySelectorAll("#dlgb-body .dlgb-pick-sel")].pop();
+          check2(
+            '[116-1] \u0E0A\u0E48\u0E2D\u0E07 "\u0E1E\u0E39\u0E14\u0E01\u0E31\u0E1A" \u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E33\u0E1E\u0E36\u0E07\u0E04\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D',
+            !!lisSel && [...lisSel.options].some((o) => o.value === BC.SELF_MONO),
+            lisSel ? [...lisSel.options].map((o) => o.value).join(",") : "-"
+          );
+          BU.resetBuilder();
+          hidePanel("dlgb");
+        }
+        {
+          check2(
+            "[116-3] \u0E41\u0E1C\u0E07 ai-hub \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 PANEL_DEFS + \u0E21\u0E35\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 DOM",
+            PANEL_DEFS.some((d) => d.id === "ai-hub" && d.adopt === "#ai-hub-panel") && !!$("#ai-hub-body")
+          );
+          const menuIds = await kapi.menuPanelIds();
+          check2("[116-3] \u0E41\u0E1C\u0E07 ai-hub \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39 native \u0E14\u0E49\u0E27\u0E22", menuIds.ids.includes("ai-hub"));
+          showPanel("ai-hub");
+          await renderFeaturePanel("ai-hub");
+          const okHub = await until116(() => !!document.querySelector("#ai-hub-body .aihub-card"));
+          const cards = document.querySelectorAll("#ai-hub-body .aihub-card");
+          check2("[116-3] \u2605 Hub \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16", okHub && cards.length >= 10, cards.length);
+          check2("[116-3] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", visible116(cards[0]));
+          check2(
+            "[116-3] \u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E01\u0E32\u0E23\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E15\u0E48\u0E2D",
+            !!document.querySelector("#ai-hub-body .aihub-headtext")
+          );
+          const HD = await Promise.resolve().then(() => (init_ai_hub_def(), ai_hub_def_exports));
+          check2(
+            "[116-3] \u2605 \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35 id/\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E1A\u0E44\u0E2B\u0E19\u0E27\u0E48\u0E32\u0E07",
+            [...cards].every((c) => c.dataset.hub && HD.aiHubItem(c.dataset.hub)),
+            [...cards].map((c) => c.dataset.hub).filter((x) => !HD.aiHubItem(x)).join(",")
+          );
+          hidePanel("ai-hub");
+          check2("[116-3] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07 AI Hub \u0E44\u0E14\u0E49", !isPanelOpen("ai-hub"));
+        }
+        {
+          const ids = new Set(SHORTCUTS.map((x) => shortcutId(x)));
+          const miss = PANEL_DEFS.filter((d) => d.closable !== false).map((d) => d.id).filter((id) => !ids.has("toggle-panel:" + id) && !SHORTCUT_PANEL_SKIP[id]);
+          check2(
+            "[116-7] \u2605 \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14 (\u0E2B\u0E23\u0E37\u0E2D\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E44\u0E27\u0E49)",
+            miss.length === 0,
+            miss.join(" \xB7 ")
+          );
+          check2("[116-7] \u0E41\u0E1C\u0E07 AI Hub \u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07", ids.has("toggle-panel:ai-hub"));
+          check2(
+            "[116-7] \u0E2B\u0E49\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E21\u0E1A\u0E17/Story Starter \u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E15\u0E01\u0E2B\u0E25\u0E48\u0E19\u0E21\u0E35\u0E41\u0E25\u0E49\u0E27",
+            ids.has("toggle-panel:dlgb") && ids.has("toggle-panel:starter")
+          );
+        }
+        if (![...state.tabs.values()].some((x) => x.editor)) {
+          try {
+            await openScene(await kapi.join(
+              state.root,
+              "\u0E40\u0E25\u0E48\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07",
+              "Draft",
+              "default",
+              "Chapters",
+              "01 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E36\u0E48\u0E07",
+              "scene-01.md"
+            ), "\u0E15\u0E25\u0E32\u0E14\u0E40\u0E01\u0E48\u0E32");
+            await wait116(400);
+          } catch {
+          }
+        }
+        const tab116 = [...state.tabs.values()].find((x) => x.editor);
+        check2(
+          "[116] \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E02\u0E49\u0E2D 2/4/8",
+          !!tab116,
+          [...state.tabs.keys()].join(" , ").slice(0, 120)
+        );
+        if (tab116) {
+          await activate(tab116.file);
+          await wait116(200);
+          setSpView("layout", true);
+          await wait116(250);
+          check2("[116-4] \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49", currentSpView() === "layout");
+          setSpView("side", true);
+          const drew = await until116(() => !!tab116.pane.querySelector(".sp-pageview .sp-page"), 5e3);
+          check2(
+            "[116-4] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E04\u0E39\u0E48\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+            drew,
+            tab116.pane.querySelector(".sp-pageview") ? "\u0E21\u0E35 host \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19" : "\u0E44\u0E21\u0E48\u0E21\u0E35 host"
+          );
+          const page116 = tab116.pane.querySelector(".sp-pageview .sp-page");
+          if (page116) {
+            page116.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            await wait116(300);
+            check2(
+              '[116-4] \u2605 \u0E01\u0E14\u0E40\u0E02\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1B\u0E01\u0E15\u0E34\u0E40\u0E2A\u0E21\u0E2D',
+              currentSpView() === "layout",
+              currentSpView()
+            );
+          }
+          setSpView("normal", true);
+          await wait116(200);
+          {
+            const SC = await Promise.resolve().then(() => (init_shortcode(), shortcode_exports));
+            check2("[116-8] \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E21\u0E35\u0E02\u0E2D\u0E07\u0E04\u0E23\u0E1A", SC.SHORTCODES.length >= 15, SC.SHORTCODES.length);
+            const v4 = tab116.editor.view;
+            const before = v4.state.doc.textBetween(0, v4.state.doc.content.size, " ");
+            const ok2 = insertShortcodeText("[title]");
+            await wait116(80);
+            const after = v4.state.doc.textBetween(0, v4.state.doc.content.size, " ");
+            check2(
+              "[116-8] \u2605 \u0E41\u0E17\u0E23\u0E01 [title] \u0E25\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+              ok2 === true && after.includes("[title]") && after.length > before.length,
+              after.slice(0, 60)
+            );
+            check2(
+              "[116-8] \u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07",
+              SC.expandShortcodes("[title]", { title: "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A" }) === "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"
+            );
+            check2(
+              "[116-8] \u2605 [[title]] \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19",
+              SC.expandShortcodes("[[title]]", { title: "x" }) === "[title]"
+            );
+            check2(
+              "[116-8] \u0E40\u0E21\u0E19\u0E39\u0E41\u0E17\u0E23\u0E01\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49",
+              insertShortcodeMenu() >= SC.SHORTCODES.length,
+              String(insertShortcodeMenu())
+            );
+            document.querySelectorAll(".k-menu, .k-overlay").forEach((n2) => n2.remove());
+            await handleCommand("editor-undo");
+            await wait116(80);
+          }
+          {
+            const ws = tab116.pane.querySelector(":scope > .workspace");
+            toggleFocus(true);
+            await wait116(500);
+            const paneW = tab116.pane.clientWidth;
+            const wsW = ws ? ws.getBoundingClientRect().width : 0;
+            check2(
+              "[116-2] \u2605 \u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E15\u0E47\u0E21\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E41\u0E1C\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E02\u0E19\u0E32\u0E14\u0E40\u0E14\u0E34\u0E21)",
+              paneW > 0 && Math.abs(wsW - paneW) <= Math.max(24, paneW * 0.05),
+              "workspace " + Math.round(wsW) + " \xB7 pane " + paneW
+            );
+            const pm116 = tab116.pane.querySelector(".ProseMirror");
+            if (pm116) {
+              const rP = tab116.pane.getBoundingClientRect();
+              const rE = pm116.getBoundingClientRect();
+              const gapL = rE.left - rP.left, gapR = rP.right - rE.right;
+              check2(
+                "[116-2] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D (\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19)",
+                Math.abs(gapL - gapR) <= Math.max(16, rP.width * 0.04),
+                "\u0E0B\u0E49\u0E32\u0E22 " + Math.round(gapL) + " \xB7 \u0E02\u0E27\u0E32 " + Math.round(gapR)
+              );
+            }
+            toggleFocus(false);
+            await wait116(400);
+          }
+        }
+        {
+          const bar = document.querySelector(".k-fmtbar");
+          const host2 = $("#content");
+          if (bar && host2 && bar.style.display !== "none") {
+            const keep = { left: bar.style.left, top: bar.style.top };
+            bar.style.left = "99999px";
+            bar.style.top = "99999px";
+            const moved = keepFloatingUiInView();
+            const nowL = parseInt(bar.style.left, 10) || 0;
+            const hostW = host2.getBoundingClientRect().width;
+            check2(
+              "[116-5] \u2605 \u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E19\u0E2D\u0E01\u0E08\u0E2D\u0E16\u0E39\u0E01\u0E14\u0E36\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E01\u0E23\u0E2D\u0E1A",
+              moved >= 1 && nowL < hostW,
+              nowL + " / " + Math.round(hostW)
+            );
+            const lay2 = JSON.parse(localStorage.getItem("k2-ui-layout") || "{}");
+            check2(
+              "[116-5] \u2605 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E35\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E1A\u0E19\u0E08\u0E2D)",
+              lay2.fmtbar && Math.abs(lay2.fmtbar.left - nowL) <= 1,
+              JSON.stringify(lay2.fmtbar)
+            );
+            bar.style.left = keep.left;
+            bar.style.top = keep.top;
+          }
+        }
+        {
+          const bar119 = document.querySelector(".k-fmtbar");
+          const host119 = $("#content");
+          if (bar119 && host119 && bar119.style.display !== "none") {
+            const keep119 = { left: bar119.style.left, top: bar119.style.top };
+            const h02 = host119.getBoundingClientRect().height;
+            const barH = bar119.getBoundingClientRect().height;
+            bar119.style.top = Math.round(h02 - barH - 4) + "px";
+            const shrink119 = Math.round(h02 / 2);
+            host119.style.height = shrink119 + "px";
+            host119.style.maxHeight = shrink119 + "px";
+            await wait116(160);
+            const h12 = host119.getBoundingClientRect().height;
+            const t1 = parseInt(bar119.style.top, 10) || 0;
+            check2(
+              "[119] \u0E01\u0E23\u0E2D\u0E1A\u0E40\u0E15\u0E35\u0E49\u0E22\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E40\u0E17\u0E2A (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E40\u0E17\u0E2A\u0E02\u0E49\u0E32\u0E07\u0E25\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E21\u0E32\u0E22)",
+              h12 < h02 - 20,
+              h02 + " \u2192 " + h12
+            );
+            check2(
+              "[119] \u2605 \u0E01\u0E23\u0E2D\u0E1A\u0E40\u0E15\u0E35\u0E49\u0E22\u0E25\u0E07\u0E40\u0E2D\u0E07\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E21\u0E35 window.resize \u2192 \u0E41\u0E16\u0E1A\u0E16\u0E39\u0E01\u0E14\u0E31\u0E19\u0E02\u0E36\u0E49\u0E19\u0E44\u0E21\u0E48\u0E43\u0E2B\u0E49\u0E25\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07",
+              t1 + barH <= h12,
+              "top=" + t1 + " +\u0E2A\u0E39\u0E07" + Math.round(barH) + " \u0E15\u0E49\u0E2D\u0E07 \u2264 " + Math.round(h12)
+            );
+            check2("[119] \u2605 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E1A\u0E19\u0E14\u0E49\u0E27\u0E22 (\u0E04\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E27\u0E01\u0E40\u0E2A\u0E21\u0E2D)", t1 >= 0, "top=" + t1);
+            const rB119 = bar119.getBoundingClientRect(), rH119 = host119.getBoundingClientRect();
+            check2(
+              "[119] \u2605 \u0E27\u0E31\u0E14\u0E1A\u0E19\u0E08\u0E2D\u0E08\u0E23\u0E34\u0E07: \u0E17\u0E31\u0E49\u0E07\u0E41\u0E16\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19",
+              rB119.top >= rH119.top - 1 && rB119.bottom <= rH119.bottom + 1,
+              Math.round(rB119.top) + "-" + Math.round(rB119.bottom) + " \u0E43\u0E19 " + Math.round(rH119.top) + "-" + Math.round(rH119.bottom)
+            );
+            const lay119 = JSON.parse(localStorage.getItem("k2-ui-layout") || "{}").fmtbar || {};
+            check2(
+              "[119] \u2605 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E14\u0E31\u0E19\u0E02\u0E36\u0E49\u0E19\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E1A (\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E2D\u0E35\u0E01)",
+              Math.abs((lay119.top ?? -999) - t1) <= 1,
+              JSON.stringify(lay119)
+            );
+            host119.style.height = "";
+            host119.style.maxHeight = "";
+            await wait116(160);
+            bar119.style.left = keep119.left;
+            bar119.style.top = keep119.top;
+            saveUiLayout("fmtbar", {
+              left: parseInt(keep119.left, 10) || 0,
+              top: parseInt(keep119.top, 10) || 0
+            });
+          }
+        }
+        {
+          const bar117 = document.querySelector(".k-fmtbar");
+          check2("[117] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!bar117);
+          if (bar117) {
+            const FB = await Promise.resolve().then(() => (init_fmtbar_pos(), fmtbar_pos_exports));
+            const lay117 = () => JSON.parse(localStorage.getItem("k2-ui-layout") || "{}").fmtbar || {};
+            const closeMenus117 = () => document.querySelectorAll(".k-menu").forEach((m) => m.remove());
+            closeMenus117();
+            saveUiLayout("fmtbar", resetBarState());
+            applyFmtbarState();
+            check2(
+              "[117] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E08\u0E32\u0E07/\u0E0A\u0E34\u0E14\u0E02\u0E2D\u0E1A/\u0E25\u0E47\u0E2D\u0E01\u0E25\u0E2D\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E41\u0E25\u0E49\u0E27 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E22\u0E2D\u0E30\u0E44\u0E1B)",
+              !bar117.querySelector("#tb-fmt-fade") && !bar117.querySelector("#tb-fmt-align") && !bar117.querySelector("#tb-fmt-lock")
+            );
+            check2(
+              "[117] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E48\u0E2D\u0E41\u0E16\u0E1A\u0E14\u0E49\u0E27\u0E22 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E21\u0E48\u0E40\u0E2D\u0E32\u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48 .117)",
+              !bar117.querySelector("#tb-fmt-min, .k-fmtbar-min")
+            );
+            const grip117 = bar117.querySelector(".k-fmtbar-grip");
+            check2("[117] \u0E21\u0E35\u0E2B\u0E39\u0E08\u0E31\u0E1A\u0E43\u0E2B\u0E49\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32", !!grip117);
+            const openMenu117 = (x, y) => {
+              closeMenus117();
+              grip117.dispatchEvent(new MouseEvent(
+                "contextmenu",
+                { bubbles: true, cancelable: true, clientX: x ?? 300, clientY: y ?? 300 }
+              ));
+              return document.querySelector(".k-menu");
+            };
+            const menu117 = openMenu117();
+            check2("[117] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E39\u0E08\u0E31\u0E1A\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E21\u0E19\u0E39\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", !!menu117);
+            const menuTxt117 = menu117 ? menu117.textContent : "";
+            check2(
+              "[117] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E08\u0E32\u0E07\u0E04\u0E23\u0E1A\u0E2A\u0E32\u0E21\u0E23\u0E30\u0E14\u0E31\u0E1A",
+              menuTxt117.includes("100%") && menuTxt117.includes("50%") && menuTxt117.includes("5%"),
+              menuTxt117
+            );
+            check2(
+              "[117] \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E34\u0E14\u0E02\u0E2D\u0E1A\u0E1A\u0E19/\u0E25\u0E48\u0E32\u0E07",
+              menuTxt117.includes(t("ui.fmtbar.posTop")) && menuTxt117.includes(t("ui.fmtbar.posBottom"))
+            );
+            check2(
+              "[117] \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E25\u0E47\u0E2D\u0E01 + \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",
+              menuTxt117.includes(t("ui.fmtbar.lockTip")) && menuTxt117.includes(t("ui.fmtbar.menuResetAll"))
+            );
+            closeMenus117();
+            const otherBtn117 = bar117.querySelector("#tb-bold");
+            check2('[117] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E37\u0E48\u0E19\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E21\u0E19\u0E39 "\u0E1B\u0E23\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E16\u0E1A" \u0E41\u0E1A\u0E1A\u0E40\u0E14\u0E34\u0E21 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E2B\u0E39\u0E08\u0E31\u0E1A', (() => {
+              if (!otherBtn117) return true;
+              otherBtn117.dispatchEvent(new MouseEvent(
+                "contextmenu",
+                { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }
+              ));
+              const m2 = document.querySelector(".k-menu");
+              const ok2 = !!m2 && !m2.textContent.includes(t("ui.fmtbar.menuResetAll"));
+              closeMenus117();
+              return ok2;
+            })());
+            const opa = () => bar117.style.getPropertyValue("--fmtbar-opacity").trim();
+            check2("[117] \u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E35\u0E48\u0E0A\u0E31\u0E14\u0E40\u0E15\u0E47\u0E21", opa() === "1", opa());
+            setFmtbarOpacity(0.5);
+            check2("[117] \u0E40\u0E25\u0E37\u0E2D\u0E01 50% \u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39\u0E15\u0E23\u0E07 \u0E46 \u0E44\u0E14\u0E49", opa() === "0.5", opa());
+            setFmtbarOpacity(0.05);
+            check2("[117] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01 5% \u0E44\u0E14\u0E49 (\u0E08\u0E32\u0E07 \u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E17\u0E31\u0E49\u0E07\u0E2D\u0E31\u0E19)", opa() === "0.05", opa());
+            check2(
+              "[117] \u2605 5% \u0E22\u0E31\u0E07\u0E01\u0E14\u0E42\u0E14\u0E19\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 pointer-events)",
+              getComputedStyle(bar117).pointerEvents !== "none",
+              getComputedStyle(bar117).pointerEvents
+            );
+            check2(
+              "[117] \u0E04\u0E27\u0E32\u0E21\u0E08\u0E32\u0E07\u0E16\u0E39\u0E01\u0E08\u0E33\u0E25\u0E07\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C",
+              lay117().opacity === 0.05,
+              JSON.stringify(lay117())
+            );
+            check2(
+              "[117] \u2605 \u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14/\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E31\u0E14\u0E22\u0E31\u0E07\u0E27\u0E19\u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21 (100\u219250\u21925\u2192100)",
+              cycleFmtbarOpacity() === 1 && opa() === "1"
+            );
+            const hostR = $("#content").getBoundingClientRect();
+            bar117.style.left = "200px";
+            bar117.style.top = "250px";
+            saveUiLayout("fmtbar", { left: 200, top: 250 });
+            const barH = bar117.getBoundingClientRect().height;
+            setFmtbarAlign("bottom");
+            await wait116(80);
+            check2(
+              "[117] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E15\u0E23\u0E07 \u0E46 \u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+              Math.abs(parseInt(bar117.style.top, 10) - (hostR.height - barH - 4)) <= 2,
+              bar117.style.top
+            );
+            check2(
+              "[117] \u2605 \u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E08\u0E31\u0E14\u0E0B\u0E49\u0E32\u0E22-\u0E02\u0E27\u0E32\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27)",
+              parseInt(bar117.style.left, 10) === 200,
+              bar117.style.left
+            );
+            setFmtbarAlign("top");
+            await wait116(80);
+            check2(
+              "[117] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E1A\u0E1A\u0E19\u0E15\u0E23\u0E07 \u0E46 \u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E02\u0E2D\u0E1A\u0E1A\u0E19",
+              parseInt(bar117.style.top, 10) === 4,
+              bar117.style.top
+            );
+            check2(
+              "[117] \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E39\u0E01\u0E08\u0E33\u0E25\u0E07\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C",
+              lay117().align === "top" && lay117().top === 4,
+              JSON.stringify(lay117())
+            );
+            const alignBefore117 = fmtbarState().align;
+            toggleFmtbarAlign();
+            check2("[117] \u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E22\u0E31\u0E07\u0E27\u0E19\u0E2A\u0E25\u0E31\u0E1A\u0E1A\u0E19\u2194\u0E25\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21", fmtbarState().align !== alignBefore117);
+            setFmtbarAlign("top");
+            toggleFmtbarLock(true);
+            check2("[117] \u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E1A\u0E44\u0E14\u0E49\u0E04\u0E25\u0E32\u0E2A\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30", bar117.classList.contains("k-fmtbar-locked"));
+            const beforeLock = bar117.style.left + "|" + bar117.style.top;
+            grip117.dispatchEvent(new MouseEvent("mousedown", {
+              bubbles: true,
+              button: 0,
+              clientX: 210,
+              clientY: 30
+            }));
+            document.dispatchEvent(new MouseEvent("mousemove", {
+              bubbles: true,
+              clientX: 520,
+              clientY: 300
+            }));
+            document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+            await wait116(80);
+            check2(
+              "[117] \u2605\u2605 \u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E25\u0E32\u0E01\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E08\u0E23\u0E34\u0E07",
+              bar117.style.left + "|" + bar117.style.top === beforeLock,
+              beforeLock + " \u2192 " + bar117.style.left + "|" + bar117.style.top
+            );
+            check2(
+              '[117] \u2605 \u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27 "\u0E40\u0E23\u0E35\u0E22\u0E01\u0E21\u0E32\u0E2B\u0E32\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C" \u0E01\u0E47\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E22\u0E49\u0E32\u0E22',
+              tweenFmtBar(600, 400) === null && bar117.style.left + "|" + bar117.style.top === beforeLock
+            );
+            check2(
+              "[117] \u2605 \u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E31\u0E48\u0E07\u0E0A\u0E34\u0E14\u0E02\u0E2D\u0E1A\u0E01\u0E47\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E22\u0E49\u0E32\u0E22",
+              setFmtbarAlign("bottom") === null && bar117.style.left + "|" + bar117.style.top === beforeLock
+            );
+            const menuLocked117 = openMenu117();
+            check2(
+              "[117] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E25\u0E47\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+              !!menuLocked117 && menuLocked117.textContent.includes("\u2713"),
+              menuLocked117 ? menuLocked117.textContent : ""
+            );
+            closeMenus117();
+            toggleFmtbarLock(false);
+            check2("[117] \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E32\u0E2A\u0E2B\u0E32\u0E22\u0E44\u0E1B", !bar117.classList.contains("k-fmtbar-locked"));
+            const ids117 = new Set(SHORTCUTS.map((x) => shortcutId(x)));
+            check2(
+              "[117] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E31\u0E14\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E32\u0E21\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07",
+              ["fmtbar-opacity", "fmtbar-align", "fmtbar-lock"].every((x) => ids117.has(x))
+            );
+            for (const id of ["fmtbar-opacity", "fmtbar-align", "fmtbar-lock"]) {
+              check2("[117] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 " + id + " \u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E31\u0E14", !!SHORTCUT_LABELS[id]);
+            }
+            cycleFmtbarOpacity();
+            toggleFmtbarLock(true);
+            grip117.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+            await wait116(120);
+            check2(
+              "[117] \u2605 \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E39\u0E08\u0E31\u0E1A = \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14 (\u0E0A\u0E31\u0E14\u0E40\u0E15\u0E47\u0E21 + \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01)",
+              opa() === "1" && !bar117.classList.contains("k-fmtbar-locked") && fmtbarState().locked === false,
+              opa() + " / locked=" + fmtbarState().locked
+            );
+            check2("[117] \u2605 \u0E41\u0E16\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15", visible116(bar117));
+            check2(
+              "[117] \u0E04\u0E48\u0E32\u0E17\u0E35\u0E48 FB \u0E04\u0E37\u0E19\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E17\u0E32\u0E25\u0E07\u0E08\u0E2D\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19",
+              FB.normalizeBarState(lay117()).opacity === 1
+            );
+            {
+              const barR117 = bar117.getBoundingClientRect();
+              const hostR117 = $("#content").getBoundingClientRect();
+              const t4 = parseInt(bar117.style.top, 10), l = parseInt(bar117.style.left, 10);
+              const want117 = FB.defaultBarPos(
+                { width: barR117.width, height: barR117.height },
+                { width: hostR117.width, height: hostR117.height }
+              );
+              check2(
+                "[117] \u2605 \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E41\u0E25\u0E49\u0E27\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A defaultBarPos \u0E17\u0E35\u0E48\u0E04\u0E33\u0E19\u0E27\u0E13\u0E08\u0E32\u0E01\u0E02\u0E19\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E13 \u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49",
+                Math.abs(l - want117.left) <= 2 && Math.abs(t4 - want117.top) <= 2,
+                "\u0E44\u0E14\u0E49 " + l + "," + t4 + " \xB7 \u0E04\u0E32\u0E14 " + JSON.stringify(want117)
+              );
+              check2(
+                "[117] \u2605 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E21\u0E38\u0E21\u0E1A\u0E19\u0E0B\u0E49\u0E32\u0E22\u0E41\u0E1A\u0E1A\u0E40\u0E14\u0E34\u0E21 {24,12} \u2014 \u0E2D\u0E22\u0E39\u0E48\u0E04\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E25\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E1A\u0E0A\u0E31\u0E14\u0E40\u0E08\u0E19",
+                t4 > hostR117.height * 0.5,
+                "top=" + t4 + " hostH=" + hostR117.height
+              );
+              check2(
+                "[117] \u2605 \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E17\u0E35\u0E48\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E1A\u0E19\u0E08\u0E2D\u0E40\u0E09\u0E22 \u0E46)",
+                Number.isFinite(lay117().left) && Number.isFinite(lay117().top),
+                JSON.stringify(lay117())
+              );
+            }
+          }
+        }
+        {
+          const ents116 = await listEntities(state.root);
+          if (ents116.length) {
+            const wf2 = ents116[0].path;
+            await openEntity(wf2);
+            await wait116(400);
+            const wtab2 = state.tabs.get(wf2);
+            const btns = wtab2 ? wtab2.pane.querySelectorAll(".wiki-ai-btn") : [];
+            const inputs = wtab2 ? wtab2.pane.querySelectorAll(".wiki-input") : [];
+            check2(
+              "[116-9] \u2605 \u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19 Wiki \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 AI \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07",
+              btns.length >= 2 && btns.length >= Math.min(inputs.length, 2),
+              btns.length + " \u0E1B\u0E38\u0E48\u0E21 / " + inputs.length + " \u0E0A\u0E48\u0E2D\u0E07"
+            );
+            check2("[116-9] \u0E1B\u0E38\u0E48\u0E21 AI \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E21\u0E35\u0E43\u0E19 DOM)", visible116(btns[0]));
+            closeTab(wf2);
+          }
+        }
+        {
+          const NM = await Promise.resolve().then(() => (init_starter_names(), starter_names_exports));
+          const CS = await Promise.resolve().then(() => (init_starter_cast(), starter_cast_exports));
+          const starter116 = {
+            name: "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A 116",
+            blurb: "",
+            intro: "<p>\u0E0A\u0E32\u0E22\u0E2B\u0E19\u0E38\u0E48\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E27\u0E48\u0E32\u0E42\u0E17\u0E23\u0E30116 \u0E2D\u0E2D\u0E01\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07\u0E15\u0E32\u0E21\u0E2B\u0E32\u0E40\u0E08\u0E49\u0E32\u0E2B\u0E0D\u0E34\u0E07\u0E25\u0E39\u0E19\u0E48\u0E32116</p>",
+            w: {},
+            cast: []
+          };
+          const found2 = NM.suggestNames(NM.starterText(starter116));
+          check2(
+            "[116-10] \u2605 \u0E40\u0E14\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+            found2.some((r) => r.name === "\u0E42\u0E17\u0E23\u0E30116") && found2.some((r) => r.name === "\u0E25\u0E39\u0E19\u0E48\u0E32116"),
+            JSON.stringify(found2.map((r) => r.name))
+          );
+          const hostS = el("div");
+          document.body.append(hostS);
+          const n2 = CS.renderNameHints(hostS, { starter: starter116, save: async () => {
+          } });
+          const chips = hostS.querySelectorAll(".st-namechip");
+          check2("[116-10] \u0E27\u0E32\u0E14\u0E0A\u0E34\u0E1B\u0E41\u0E19\u0E30\u0E19\u0E33\u0E0A\u0E37\u0E48\u0E2D\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E08\u0E23\u0E34\u0E07", n2 >= 2 && chips.length === n2, n2 + "/" + chips.length);
+          check2("[116-10] \u0E0A\u0E34\u0E1B\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", visible116(chips[0]));
+          starter116.cast = [{ id: "x1", name: "\u0E42\u0E17\u0E23\u0E30116" }];
+          hostS.innerHTML = "";
+          CS.renderNameHints(hostS, { starter: starter116, save: async () => {
+          } });
+          check2(
+            "[116-10] \u2605 \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E04\u0E13\u0E30\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E19\u0E30\u0E19\u0E33\u0E0B\u0E49\u0E33",
+            ![...hostS.querySelectorAll(".st-namechip")].some((c) => c.dataset.name === "\u0E42\u0E17\u0E23\u0E30116"),
+            [...hostS.querySelectorAll(".st-namechip")].map((c) => c.dataset.name).join(",")
+          );
+          hostS.remove();
+        }
+        {
+          const withKey = document.querySelectorAll("[data-i18n-title]");
+          check2(
+            "[116-6] index.html \u0E43\u0E0A\u0E49 data-i18n-title \u0E41\u0E25\u0E49\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 60 \u0E08\u0E38\u0E14",
+            withKey.length >= 60,
+            withKey.length
+          );
+          const notApplied = [...withKey].filter((n2) => {
+            const k = n2.getAttribute("data-i18n-title");
+            return !n2.getAttribute("title") || n2.getAttribute("title") === k;
+          });
+          check2(
+            "[116-6] \u2605 \u0E17\u0E38\u0E01\u0E08\u0E38\u0E14\u0E44\u0E14\u0E49\u0E04\u0E33\u0E41\u0E1B\u0E25\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E04\u0E35\u0E22\u0E4C\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D",
+            notApplied.length === 0,
+            notApplied.slice(0, 3).map((n2) => n2.id || n2.tagName).join(" \xB7 ")
+          );
+        }
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -191741,7 +195413,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, floatBar, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt;
+  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -191849,9 +195521,13 @@ ${css}
       init_text_measure();
       init_toolbar_config();
       init_toolbar_ui();
+      init_fmtbar_pos();
+      init_shortcode();
+      init_fab_config();
       init_export_hub();
       init_session_core();
       init_ai_ui();
+      init_ai_hub_ui();
       init_starter_ui();
       init_thesaurus_ui();
       init_import_ui();
@@ -191897,6 +195573,7 @@ ${css}
         scheduleLineGutter();
         clearTimeout(_spViewJob);
         _spViewJob = setTimeout(refreshSpView, 150);
+        keepFloatingUiInView();
       });
       _spErrors = [];
       SP_REPORTS = {
@@ -191987,8 +195664,10 @@ ${css}
         ["tb-comments", "comments"],
         ["tb-notes-panel", "notes"],
         ["tb-log", "log"],
-        ["tb-dlgb", "dlgb"]
+        ["tb-dlgb", "dlgb"],
         // [alpha.82] ห้องซ้อมบท
+        ["tb-ai-hub", "ai-hub"]
+        // [alpha.116 ข้อ 3] AI Hub
       ];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
         "tb-close",
@@ -192026,6 +195705,7 @@ ${css}
         "tb-dialogue",
         "tb-plugins",
         "tb-dlgb",
+        "tb-ai-hub",
         "tb-timeline",
         "tb-maps",
         "tb-books",
@@ -192134,7 +195814,9 @@ ${css}
         dialogue: () => renderDialoguePanel($("#dialogue-body")),
         plugins: () => renderPluginPanel($("#plugins-body")),
         // [alpha.82] ห้องซ้อมบท
-        dlgb: () => renderBuilderPanel($("#dlgb-body"))
+        dlgb: () => renderBuilderPanel($("#dlgb-body")),
+        // [alpha.116 ข้อ 3] AI Hub
+        "ai-hub": () => renderAIHubPanel($("#ai-hub-body"))
       };
       _featInFlight = /* @__PURE__ */ new Map();
       setPanelShowHook((pid) => {
@@ -192207,7 +195889,19 @@ ${css}
         "tb-quickopen": "quick-open",
         "tb-gallery": "gallery"
       };
+      _floatKeepRO = null;
+      _floatKeepJob = 0;
       floatBar = null;
+      fmtBarDrag = null;
+      _mousePt = null;
+      _mouseInEd = false;
+      ED_ZONE = ".ProseMirror, #panes, .k-page, .k-paper";
+      document.addEventListener("mousemove", (e) => {
+        _mousePt = { x: e.clientX, y: e.clientY };
+        const tg = e.target;
+        _mouseInEd = !!(tg && tg.closest && tg.closest(ED_ZONE));
+      }, true);
+      _fmtTween = 0;
       _tbCtxBound = false;
       TIP_GAP = 6;
       _tipEl = null;
@@ -192620,6 +196314,9 @@ ${css}
         if (!location.search.includes("k2test")) bootSequence();
         restartAutosave();
       });
+      FAB_DRAG_SLOP = 4;
+      FAB_STAGGER = 45;
+      fabOpen = false;
     }
   });
   init_app();

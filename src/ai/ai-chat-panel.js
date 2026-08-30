@@ -18,7 +18,7 @@ import {
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
   searchSessions, chatMessages, rawJson, shareMarkdown, estimateTokens,
 } from './ai-session.js';
-import { providerList, providerById, currentProvider, complete, aiMeta } from './ai-provider-ui.js';
+import { providerList, providerById, currentProvider, completeStream, aiMeta } from './ai-provider-ui.js';
 import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
          toolByName, resultsMessage } from './ai-tools.js';
 import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.js';
@@ -526,6 +526,9 @@ function fillModelSelect(sel, s) {
 }
 
 // ── ส่งข้อความ ──
+let _reqSeq = 0;
+function newReqId() { _reqSeq += 1; return 'chat-' + Date.now().toString(36) + '-' + _reqSeq; }
+
 async function send(s, ta, body, sendBtn) {
   const text = String(ta.value || '').trim();
   if (!text || S.sending) return;
@@ -537,6 +540,7 @@ async function send(s, ta, body, sendBtn) {
   S.sending = true;
   sendBtn.disabled = true;
   ta.value = '';
+  const reqId = newReqId();
 
   const view = S.cur ? (S.cur.view || DEFAULT_VIEW) : DEFAULT_VIEW;
   const userMsg = newMessage('user', text, { files: (s.files || []).slice() });
@@ -544,11 +548,41 @@ async function send(s, ta, body, sendBtn) {
   // ข้อความแรก = เซสชันเกิดจริง (addMessage ตั้งชื่อจากข้อความนี้ให้แล้ว) → บันทึกลงไฟล์ตอนนี้
   await saveSession(S.cur);
   body.append(msgNode(userMsg, view));
+
+  // ฟอง "กำลังคิด" แบบสด — เห็นข้อความ/ความคิดไหลมา + ใช้เวลาเท่าไร + ปุ่มหยุด
+  // (เดิมมีแค่ข้อความนิ่ง ๆ "กำลังคิด…" — ผู้ใช้ไม่รู้ว่าติดต่ออยู่จริงหรือค้าง)
   const pend = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
-  const pendWho = el('div', 'ai-msg-who dim', tt('ui.aiChatPanel.busyThink'));
-  pend.append(pendWho);
+  const pendWho = el('div', 'ai-msg-who dim');
+  const whoLabel = el('span', null, tt('ui.aiChatPanel.busyThink'));
+  const whoTime = el('span', 'ai-msg-elapsed');
+  const stopBtn = el('button', 'ai-msg-copy', '⏹');
+  stopBtn.type = 'button';
+  stopBtn.title = tt('ui.aiChatPanel.stopHint');
+  stopBtn.onclick = () => { if (kapi.httpAbort) kapi.httpAbort(reqId); };
+  pendWho.append(whoLabel, whoTime, stopBtn);
+  const pendThink = el('div', 'ai-msg-thinking-live');
+  pendThink.style.display = 'none';
+  const pendText = el('div', 'ai-msg-text');
+  pendText.style.display = 'none';
+  pend.append(pendWho, pendThink, pendText);
   body.append(pend);
   body.scrollTop = body.scrollHeight;
+
+  let liveText = '';
+  let liveThink = '';
+  const startAt = Date.now();
+  const tick = setInterval(() => {
+    whoTime.textContent = ttf('ui.aiChatPanel.useTime', ((Date.now() - startAt) / 1000).toFixed(1));
+  }, 400);
+  const renderPend = () => {
+    if (liveText) { pendText.textContent = liveText; pendText.style.display = ''; }
+    if (liveThink) {
+      pendThink.textContent = tt('ui.aiChatPanel.ideaModel') + '\n' + liveThink;
+      pendThink.style.display = '';
+    }
+    body.scrollTop = body.scrollHeight;
+  };
+  const stopTick = () => clearInterval(tick);
 
   const md = modeDef(S.cur.mode);
   const cap = modeCap(S.cur.mode);
@@ -563,54 +597,65 @@ async function send(s, ta, body, sendBtn) {
   // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
   let res = null;
   let touched = false;
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const t0 = Date.now();
-    res = await complete(prov, { system, messages: chatMessages(S.cur), model: s.model || undefined });
-    const ms = Date.now() - t0;
+  try {
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const rt0 = Date.now();
+      // สตรีมสด (transport ไม่รองรับ → ตกไป complete แล้วโผล่ทีเดียว UI ไม่ต้องแยกกรณี)
+      res = await completeStream(prov, {
+        system, messages: chatMessages(S.cur), model: s.model || undefined, reqId,
+      }, (c) => {
+        if (c.thinking) { liveThink += c.thinking; }
+        if (c.delta) { liveText = c.text; }
+        renderPend();
+      });
+      const ms = Date.now() - rt0;
 
-    const calls = res.ok ? parseToolCalls(res.text) : [];
-    const reply = res.ok
-      ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
-                                            thinking: res.thinking, system, ms,
-                                            calls: calls.length ? calls : null })
-      : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'), system, ms });
+      const calls = res.ok ? parseToolCalls(res.text) : [];
+      const reply = res.ok
+        ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
+                                              thinking: res.thinking, system, ms,
+                                              calls: calls.length ? calls : null })
+        : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'), system, ms });
 
-    if (res.ok && res.usage) {
-      const used = (res.usage.input || 0) + (res.usage.output || 0);
-      S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
-    }
-    recordUsage(res, prov, s);
+      if (res.ok && res.usage) {
+        const used = (res.usage.input || 0) + (res.usage.output || 0);
+        S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
+      }
+      recordUsage(res, prov, s);
 
-    if (!calls.length) {                          // ไม่มีคำสั่ง = จบรอบ
+      if (!calls.length) {                          // ไม่มีคำสั่ง = จบรอบ
+        S.cur = addMessage(S.cur, reply);
+        await saveSession(S.cur);
+        pend.remove();
+        body.append(msgNode(reply, view));
+        break;
+      }
+
+      whoLabel.textContent = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
+      const results = await runCalls(calls, S.cur, cap);
+      reply.results = results;
+      touched = touched || touchesProject(results);
       S.cur = addMessage(S.cur, reply);
+      // ผลของคำสั่งกลับเข้าบทสนทนาในนามผู้ใช้ — โมเดลอ่านต่อได้ในรอบถัดไป
+      S.cur = addMessage(S.cur, newMessage('user', resultsMessage(results), { toolResult: true }));
       await saveSession(S.cur);
-      pend.remove();
       body.append(msgNode(reply, view));
-      break;
-    }
+      body.scrollTop = body.scrollHeight;
 
-    pendWho.textContent = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
-    const results = await runCalls(calls, S.cur, cap);
-    reply.results = results;
-    touched = touched || touchesProject(results);
-    S.cur = addMessage(S.cur, reply);
-    // ผลของคำสั่งกลับเข้าบทสนทนาในนามผู้ใช้ — โมเดลอ่านต่อได้ในรอบถัดไป
-    S.cur = addMessage(S.cur, newMessage('user', resultsMessage(results), { toolResult: true }));
-    await saveSession(S.cur);
-    body.append(msgNode(reply, view));
-    body.scrollTop = body.scrollHeight;
-
-    if (results.some((r) => r.cancelled)) {       // ผู้ใช้กดยกเลิก = หยุดทั้งชุด
-      pend.remove();
-      break;
+      if (results.some((r) => r.cancelled)) {       // ผู้ใช้กดยกเลิก = หยุดทั้งชุด
+        pend.remove();
+        break;
+      }
+      if (round === MAX_TOOL_ROUNDS - 1) {
+        pend.remove();
+        body.append(el('div', 'ai-chat-empty dim',
+          ttf('ui.aiChatPanel.roundNotEndPrint', MAX_TOOL_ROUNDS)));
+      } else {
+        whoLabel.textContent = tt('ui.aiChatPanel.busyThinkNext');
+      }
     }
-    if (round === MAX_TOOL_ROUNDS - 1) {
-      pend.remove();
-      body.append(el('div', 'ai-chat-empty dim',
-        ttf('ui.aiChatPanel.roundNotEndPrint', MAX_TOOL_ROUNDS)));
-    } else {
-      pendWho.textContent = tt('ui.aiChatPanel.busyThinkNext');
-    }
+  } finally {
+    stopTick();
   }
   if (touched) await refreshAfterActions();
 

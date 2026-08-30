@@ -231,6 +231,10 @@ export const GLOBAL_DEFAULTS = {
   autoSaveMinutes: 5, maxBackups: 10, autoBackup: true, lineNumbers: false,
   // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง — ปิดได้ (บางคนบอกว่ามันบังงาน)
   fabEnabled: true,
+  // [alpha.111] คำสั่งบนปุ่มลอย (สูงสุด 4) + รูปแบบการแสดง · null = ใช้ชุดเริ่มต้นใน fab-config.js
+  fab: null,
+  // [alpha.111] ปุ่มที่ถูกถอดออกจากแถบรูปแบบลอย แยกตามโหมด { prose:{hidden:{}}, screenplay:{hidden:{}} }
+  fmtbar: null,
   // [alpha.60r2 ข้อ 10] ธีมของโปรแกรม — Ctrl+Shift+P สลับ dark ↔ light
   // (คนละเรื่องกับ paperMode ซึ่งเป็น "หน้าตาของกระดาษ" ไม่ใช่ของ UI)
   theme: 'dark',
@@ -553,7 +557,18 @@ export async function loadLanguage(lang, root) {
 }
 
 // แทนข้อความ data-i18n ทั้งเอกสาร
+//
+// [alpha.116 ข้อ 6] เพิ่ม `data-i18n-title` — **คีย์แยกสำหรับ tooltip**
+// เดิมมีแต่ `data-i18n` + `data-i18n-attr` ซึ่งเลือกได้อย่างเดียวว่าจะแปล "ข้อความ" หรือ
+// "attribute หนึ่งตัว" · ปุ่มบนแถบเครื่องมือส่วนใหญ่ต้องการทั้งคู่ (บางตัวมีข้อความด้วย)
+// ผลคือ tooltip ไทยกว่า 70 จุดใน index.html ไม่เคยผ่านระบบภาษาเลยมาตลอด
 export function applyDataI18n() {
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-title');
+    if (!key) return;
+    const text = t(key);
+    if (text != null) el.setAttribute('title', text);
+  });
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
     if (key) {
@@ -673,6 +688,12 @@ export const SHORTCUTS = [
   ['Digit3', 'ctrl+alt', false, 'character'],
   ['Digit4', 'ctrl+alt', false, 'location'],
   ['Digit5', 'ctrl+alt', false, 'memo'],
+  // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (Ctrl+Shift+/)
+  ['Slash', true, true, 'fmtbar-here'],
+  // [alpha.117] สภาพของแถบรูปแบบลอย — วางไว้ติดกันบนแป้นพิมพ์กับ Ctrl+Shift+/ ให้จำเป็นชุด
+  ['Quote', true, true, 'fmtbar-opacity'],
+  ['Semicolon', true, true, 'fmtbar-align'],
+  ['Equal', true, true, 'fmtbar-lock'],
   // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
   ['KeyS', 'ctrl+alt', false, 'save-all'],
   // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
@@ -695,7 +716,35 @@ export const SHORTCUTS = [
   // [alpha.79] แผงใหม่สองตัวของรอบนี้
   ['KeyL', 'ctrl+alt', false, 'toggle-panel', 'dialogue'],
   ['KeyE', 'ctrl+alt', false, 'toggle-panel', 'plugins'],
+  // ══ [alpha.116 ข้อ 7] ★ ปิดช่องว่างของตารางคีย์ลัด ══
+  //
+  // ผู้ใช้: *"เช็ค shortcut มีครบมั้ย"* — กวาดแล้วพบว่า **9 แผงไม่มีคีย์ลัดเลย**
+  // ทั้งที่แผงอื่นมีครบ (แผงที่มาทีหลังทุกตัวถูกลืม: ห้องซ้อมบท · Story Starter · แชท AI
+  //  และแผงพื้นฐานที่มีมาแต่ต้นอย่าง โครงเรื่อง/สารบัญ/บันทึก/ประวัติการบันทึก/ค้นหา)
+  //
+  // ประตูกันพลาดอยู่ที่ `test/shortcuts.test.cjs` — แผงที่ปิดได้ทุกตัวต้องมีคีย์ลัด
+  // หรือไม่ก็ต้องประกาศเหตุผลไว้ใน SHORTCUT_PANEL_SKIP ลืมเมื่อไหร่เทสแดงตั้งแต่ build
+  ['KeyQ', 'ctrl+alt', false, 'toggle-panel', 'ai-hub'],
+  ['KeyW', 'ctrl+alt', false, 'toggle-panel', 'ai-chat'],
+  ['KeyV', 'ctrl+alt', false, 'toggle-panel', 'dlgb'],
+  ['KeyZ', 'ctrl+alt', false, 'toggle-panel', 'starter'],
+  ['Digit6', 'ctrl+alt', false, 'toggle-panel', 'tree'],
+  ['Digit7', 'ctrl+alt', false, 'toggle-panel', 'outline'],
+  ['Digit8', 'ctrl+alt', false, 'toggle-panel', 'notes'],
+  ['Digit9', 'ctrl+alt', false, 'toggle-panel', 'log'],
+  ['Digit0', 'ctrl+alt', false, 'toggle-panel', 'search'],
 ];
+
+/**
+ * [alpha.116 ข้อ 7] แผงที่ **จงใจ** ไม่มีคีย์ลัดของตัวเอง — ต้องมีเหตุผลกำกับเสมอ
+ * (เดียวกับ `MENU_PANELS_SKIP` ใน main.js — ไม่ปล่อยให้อะไรหายเงียบ ๆ)
+ */
+export const SHORTCUT_PANEL_SKIP = {
+  // เหตุผลเป็นข้อความของนักพัฒนา (โผล่ในผลเทสเท่านั้น ไม่ขึ้นหน้าจอ) จึงไม่ผ่านระบบภาษา
+  'planner-props': 'companion panel of Planner — opened by Planner itself',
+  kanban: 'has its own command shortcut (Ctrl+K)',
+  gallery: 'has its own command shortcut (Ctrl+Shift+G)',
+};
 
 export const shortcutId = (s) => s.slice(3).join(':');
 
@@ -729,6 +778,10 @@ export const SHORTCUT_LABELS = {
   'panels-hide-all': 'shortcuts.panelsHideAll', 'panels-hide-right': 'shortcuts.panelsHideRight',
   'panels-hide-left': 'shortcuts.panelsHideLeft', 'workspace-menu': 'shortcuts.workspaceMenu',
   // ── [alpha.79] ชุดใหม่ ──
+  'fmtbar-here': 'ui.shortcuts.fmtbarHere',
+  'fmtbar-opacity': 'ui.shortcuts.fmtbarOpacity',
+  'fmtbar-align': 'ui.shortcuts.fmtbarAlign',
+  'fmtbar-lock': 'ui.shortcuts.fmtbarLock',
   'insert-image': 'ui.shortcuts.insertImage', 'quick-note': 'ui.shortcuts.quickNote',
   'reading-mode': 'ui.shortcuts.readingMode', 'new-from-template': 'ui.shortcuts.newFromTemplate',
   'goto-page': 'ui.shortcuts.gotoPage', 'goto-scene': 'ui.shortcuts.gotoScene',
@@ -753,6 +806,16 @@ export const SHORTCUT_LABELS = {
   'toggle-panel:props': 'ui.shortcuts.panelProps',
   'toggle-panel:dialogue': 'ui.shortcuts.panelDialogue',
   'toggle-panel:plugins': 'ui.shortcuts.panelPlugins',
+  // [alpha.116 ข้อ 7] เก้าตัวที่เคยตกหล่น
+  'toggle-panel:ai-hub': 'ui.shortcuts.panelAiHub',
+  'toggle-panel:ai-chat': 'ui.shortcuts.panelAiChat',
+  'toggle-panel:dlgb': 'ui.shortcuts.panelDlgb',
+  'toggle-panel:starter': 'ui.shortcuts.panelStarter',
+  'toggle-panel:tree': 'ui.shortcuts.panelTree',
+  'toggle-panel:outline': 'ui.shortcuts.panelOutline',
+  'toggle-panel:notes': 'ui.shortcuts.panelNotes',
+  'toggle-panel:log': 'ui.shortcuts.panelLog',
+  'toggle-panel:search': 'ui.shortcuts.panelSearch',
 };
 
 /**
@@ -775,7 +838,8 @@ export const SHORTCUT_CATS = [
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
   { key: 'view', labelKey: 'ui.shortcuts.catView',
     ids: ['toggle-theme', 'focus-mode', 'typewriter', 'reading-mode', 'line-numbers',
-          'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu'] },
+          'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu',
+          'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock'] },
   { key: 'create', labelKey: 'ui.shortcuts.catCreate',
     ids: ['chapter', 'scene', 'character', 'location', 'memo', 'quick-note'] },
   { key: 'panels', labelKey: 'ui.shortcuts.catPanels',
@@ -784,7 +848,11 @@ export const SHORTCUT_CATS = [
           'toggle-panel:codex', 'toggle-panel:history', 'toggle-panel:record',
           'toggle-panel:gallery-board', 'toggle-panel:floorplan', 'toggle-panel:player',
           'toggle-panel:ai-analyzer', 'toggle-panel:comments', 'toggle-panel:props',
-          'toggle-panel:dialogue', 'toggle-panel:plugins'] },
+          'toggle-panel:dialogue', 'toggle-panel:plugins',
+          // [alpha.116 ข้อ 7] เก้าตัวที่เคยตกหล่น
+          'toggle-panel:ai-hub', 'toggle-panel:ai-chat', 'toggle-panel:dlgb',
+          'toggle-panel:starter', 'toggle-panel:tree', 'toggle-panel:outline',
+          'toggle-panel:notes', 'toggle-panel:log', 'toggle-panel:search'] },
   { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console'] },
 ];
 

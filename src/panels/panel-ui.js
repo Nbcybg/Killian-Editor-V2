@@ -73,6 +73,11 @@ export const PANEL_DEFS = [
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
   { id: 'ai-analyzer', minW: 400, dockW: 640, title: t('ui.common.aIAnalyze'),  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
     desc: t('ui.panel.setToolAnalyzeSource') },
+  // [alpha.116 ข้อ 3] AI Hub — รวมทางเข้าของความสามารถ AI ทุกตัวไว้ที่เดียว
+  // (ตัวมันเองไม่มีตรรกะ AI เลย — ทุกการ์ดยิงเข้า handleCommand ตัวเดิม)
+  { id: 'ai-hub', minW: 320, dockW: 420, title: t('ui.panel.aiHubTitle'), icon: 'brain',
+    adopt: '#ai-hub-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiHubTitle',
+    desc: t('ui.panel.aiHubDesc') },
   // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
   { id: 'ai-chat', dockW: 640,   title: t('ui.common.aIAssistantWrite'),       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
     desc: t('ui.panel.liftAIStoryTask') },

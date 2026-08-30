@@ -130,13 +130,20 @@ export function layoutPageLines(page, fmt) {
   const cfg = (el) => f.elements[el] || f.elements.action;
   const out = [];
   let line = 0;
+  let prevBlank = false;              // [alpha.112] บล็อกก่อนหน้าเป็นบรรทัดว่างไหม
   (page.blocks || []).forEach((b, i) => {
     const c = cfg(b.el);
     const marker = b.more === true || b.contd === true ||
                    b.el === 'more' || b.el === 'continued-top' || b.el === 'continued-bottom';
+    // ══ [alpha.112] ต้องมิเรอร์กฎ `prevBlank` ของ paginate() ให้ครบ ══
+    // บรรทัดว่างคือช่องไฟที่ "มีตัวตน" อยู่แล้ว → บล็อกถัดจากมันไม่เติม linesBefore ซ้ำ
+    // (ไม่งั้นทุกช่องไฟกินเพิ่มหนึ่งบรรทัด แล้วเนื้อหน้าเลื่อนลงจนล้นขอบล่าง)
+    // ตัวบรรทัดว่างเองก็ไม่มีระยะเว้นนำ — มันคือช่องไฟ ไม่ใช่ของที่ต้องมีช่องไฟ
     // ห้ามใช้ `+c.linesBefore || 10` — บทพูด/วงเล็บมี linesBefore = 0 ซึ่ง falsy
     // จะกลายเป็น 10 (เว้น 1 บรรทัด) แล้วบทพูดหลุดจากชื่อตัวละคร (บทเรียน 5)
-    const before = i > 0 && !marker ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    const before = i > 0 && !marker && !prevBlank && b.el !== 'blank'
+      ? Math.round(num(c.linesBefore, 10) / 10) : 0;
+    prevBlank = b.el === 'blank';
     line += before;
     const stB = (f.styles[b.el] || f.styles.action).print || {};
     // [alpha.104r] ความกว้างที่วาดจริง (หนีบไม่ให้ล้นพื้นที่พิมพ์) — ตัวเดียวกับที่ `draw()` ใช้
@@ -285,8 +292,17 @@ export async function generatePdf(args = {}) {
   const titles = opts.titlePages ? normalizeTitlePages(args.titlePages) : [];
 
   const omit = new Set(opts.omit);
-  const blocks = (args.blocks || [])
-    .filter((b) => b && b.el !== 'blank' && !omit.has(b.el));
+  // ══ [alpha.112 ★ ต้นตอ "PDF ตัดหน้าไม่ตรงกับจอ"] บรรทัดว่างเป็นของจริง ห้ามทิ้ง ══
+  //
+  // alpha.86 แก้เรื่องนี้ไปแล้วใน `paginate()` (ดูคอมเมนต์ยาวที่นั่น) แต่ **ตกที่นี่ไว้**:
+  // ตัวกรองยังเขียนว่า `b.el !== 'blank'` = โยนบรรทัดว่างทิ้งก่อนจัดหน้า
+  // → PDF จัดหน้าจากเอกสาร "คนละฉบับ" กับที่จอเห็น
+  //
+  // วัดจริงจากไฟล์ของผู้ใช้ (41 บล็อก = บรรยาย 19 + บรรทัดว่าง 22 · A4 · 58 บรรทัด/หน้า):
+  //   จอ  → 2 หน้า (49 + 4 บรรทัด)
+  //   PDF → **1 หน้า** เพราะเหลือแค่ 19 บล็อก
+  // และบรรทัดว่างที่ผู้ใช้ตั้งใจเว้นก็หายไปจากไฟล์ที่ส่งออกทั้งหมด
+  const blocks = (args.blocks || []).filter((b) => b && !omit.has(b.el));
 
   const bodyLines = linesForBody(fmt, hdr);
   const paged = paginate(blocks, { fmt, lines: bodyLines });

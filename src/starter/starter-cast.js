@@ -16,6 +16,8 @@ import { GENDERS, newChar, upsertChar, removeChar, charReady } from './starter-m
 import { charDescPrompt, SYS_WRITER } from './starter-prompt.js';
 import { importImage, importFromGallery, imageUrl } from './starter-store.js';
 import { pickWikiChar, charFromWiki, syncCastToWiki, pushCharToWiki } from './starter-wiki.js';
+// [alpha.116 ข้อ 10] ชื่อที่โผล่ในเรื่องย่อ = ผู้ต้องสงสัยว่าเป็นตัวละคร (บริสุทธิ์ · เทสแยก)
+import { suggestNames, starterText, sourceLabel } from './starter-names.js';
 
 // ES module: ตัวแปรที่ reassign ข้ามไฟล์ไม่ได้ → เก็บใน object (กฎเหล็กข้อ 2 ใน AGENTS.md)
 const CAST_C = { editing: '' };
@@ -61,9 +63,19 @@ export async function renderCastStep(host, ctx) {
   bar.append(add, fromWiki, push);
   host.append(bar);
 
+  // ══ [alpha.116 ข้อ 10] ★ ชื่อที่เรื่องย่อตั้งไว้แล้ว ══
+  //
+  // ผู้ใช้: *"ในการสร้างเรื่องย่อ มักจะถูกกำหนดชื่อตัวละคร ดังนั้นเมื่อเข้าหน้าตัวละคร
+  //         ควรมี suggestion"*
+  //
+  // ที่ผ่านมาคนเขียนต้องอ่านเรื่องย่อของตัวเองแล้วพิมพ์ชื่อซ้ำเข้าไปทีละตัว — ทั้งที่ชื่อ
+  // มันอยู่ในข้อความอยู่แล้ว · ชิปที่นี่กดครั้งเดียวได้ตัวละครใหม่พร้อมชื่อ
+  // (ตัวที่มีในคณะแล้วถูกกรองออกให้ ไม่มีทางแนะนำซ้ำ)
+  renderNameHints(host, ctx);
+
   if (!s.cast.length) {
     host.append(el('div', 'st-empty', t('ui.starter.castEmpty')));
-    return true;
+    return true;                              // ชิปแนะนำชื่อวาดไปแล้วข้างบน (สำคัญที่สุดตอนยังไม่มีใครเลย)
   }
 
   // ── การ์ดตัวละคร ─────────────────────────────────────────
@@ -108,6 +120,36 @@ export async function renderCastStep(host, ctx) {
   // ลบใน starter ไม่ตามไปลบใน Wiki โดยตั้งใจ — ของใน Wiki อาจถูกใช้ที่อื่นในเรื่องแล้ว
   host.append(el('div', 'st-hint', t('ui.starter.castDelNote')));
   return true;
+}
+
+/**
+ * แถบชิป "ชื่อที่เจอในเรื่องย่อ" — ไม่มีชื่อให้แนะนำก็ไม่วาดอะไรเลย
+ * @returns {number} จำนวนชิปที่วาด (ให้ selftest ยืนยันได้)
+ */
+export function renderNameHints(host, ctx) {
+  const s = ctx.starter;
+  const taken = [];
+  for (const c of s.cast || []) { if (c.name) taken.push(c.name); }
+  const rows = suggestNames(starterText(s), { exclude: taken, limit: 8 });
+  if (!rows.length) return 0;
+
+  const box = el('div', 'st-namehints');
+  box.append(el('span', 'st-namehints-label', t('ui.starter.nameHintLabel')));
+  for (const r of rows) {
+    const chip = el('button', 'st-namechip', '+ ' + r.name);
+    chip.dataset.name = r.name;
+    chip.title = sourceLabel(r.source) + (r.hits > 1 ? tf('ui.starter.nameHintHits', r.hits) : '');
+    chip.onclick = async () => {
+      const ch = newChar({ name: r.name });
+      s.cast = upsertChar(s.cast, ch);
+      CAST_C.editing = ch.id;                 // เปิดตัวแก้ไขต่อทันที — กดชิปแล้วได้เขียนต่อเลย
+      await ctx.save({ now: true });
+      renderCastStep(host, ctx);
+    };
+    box.append(chip);
+  }
+  host.append(box);
+  return rows.length;
 }
 
 // ───────────────────────── ตัวแก้ไขตัวละคร ─────────────────────────

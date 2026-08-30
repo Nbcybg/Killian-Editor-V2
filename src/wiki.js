@@ -36,11 +36,14 @@ export class WikiEditor {
                                     getChecker = null, onRendered = null,
                                     onVersions = null, onSnapshot = null,
                                     onSwapTemplate = null, onReveal = null,
+                                    onFieldAI = null,
                                     onFindInScenes = null } = {}) {
     this.onRendered = onRendered;
     this.onFindInScenes = onFindInScenes;   // [alpha.60r3 ข้อ 1] คลิกขวา → เมนูรายชื่อฉากที่กล่าวถึง
     this.onVersions = onVersions; this.onSnapshot = onSnapshot;   // ประวัติเวอร์ชันหน้า Wiki (ข้อ 10)
     this.onReveal = onReveal;                                      // [alpha.58] หาไฟล์ในดิสก์
+    // [alpha.116 ข้อ 9] ปุ่ม AI คลิกเดียวข้างช่องข้อความ — ไม่ส่งมา = ไม่มีปุ่ม
+    this.onFieldAI = onFieldAI;
     this.onSwapTemplate = onSwapTemplate;                          // เปลี่ยนเทมเพลต (ข้อ 18b)
     this.pane = pane; this.file = file; this.e = entity;
     this.projectRoot = projectRoot; this.labels = labels;
@@ -124,12 +127,43 @@ export class WikiEditor {
       i.addEventListener('input', () => { cb(i.value); this.markDirty(); });
       return i;
     };
+    // ══ [alpha.116 ข้อ 9] ★ ปุ่ม AI คลิกเดียวข้างช่องข้อความ ══
+    //
+    // ผู้ใช้: *"ใน wiki ส่วน field ที่เป็น text input ให้มี one click ai ด้วย"*
+    //
+    // ตัวเรียก AI จริงอยู่ข้างนอก (ส่งมาทาง `onFieldAI`) — ไฟล์นี้ไม่รู้จักผู้ให้บริการเลย
+    // ไม่ส่งมา = ไม่มีปุ่มโผล่ (เช่นตอนวาดในหน้าต่างแผงที่แยกออกไป)
+    //
+    // เขียนค่าคืนด้วยการ **ยิงอีเวนต์ input** ไม่ใช่เรียก cb เอง — ทางเดียวกับที่ผู้ใช้พิมพ์
+    // จริง ๆ ทุกประการ (markDirty · ป้ายลิงก์ของ linkedField · ตัวตรวจอื่น ๆ ได้ทำงานครบ)
+    const aiFill = (r, i, label) => {
+      if (!this.onFieldAI) return null;
+      const b = document.createElement('span');
+      b.className = 'row-add wiki-ai-btn';
+      b.innerHTML = iconHtml('brain', 14);
+      b.title = tt('ui.wiki.aiFillTip');
+      b.onclick = async (ev) => {
+        ev.stopPropagation();
+        if (b.classList.contains('busy')) return;      // กันกดรัวแล้วยิงซ้อน
+        b.classList.add('busy');
+        try {
+          const v = await this.onFieldAI({ label, value: i.value, entity: this.e });
+          if (v != null && String(v).trim()) {
+            i.value = String(v).trim();
+            i.dispatchEvent(new Event('input'));
+          }
+        } catch {} finally { b.classList.remove('busy'); }
+      };
+      r.appendChild(b);
+      return b;
+    };
     // ช่องข้อมูลที่ "ลิงก์ได้": ถ้าค่าตรงกับชื่อ entity ใน Wiki → แสดงป้ายคลิกได้ใต้ input
     // (พิมพ์แก้ได้ตามปกติ · รองรับหลายชื่อคั่นด้วย , · คลิกชื่อ = เปิดหน้า Wiki นั้น)
     const linkedField = (labelText, val, cb) => {
       const r = row(labelText);
       const i = input(val, (v) => { cb(v); syncLink(); });
       r.appendChild(i);
+      aiFill(r, i, labelText);              // [alpha.116 ข้อ 9] ✨ คลิกเดียวให้ AI เติมช่องนี้
       const linkRow = document.createElement('div');
       linkRow.className = 'wiki-field-links';
       r.appendChild(linkRow);
@@ -318,10 +352,16 @@ export class WikiEditor {
       wrap.appendChild(prof);
     }
 
-    row(tt('ui.common.name')).appendChild(input(this.e.name || '', (v) => { this.e.name = v; }));
-    row(tt('ui.wiki.nameOther')).appendChild(
-      input((this.e.aliases || []).join(', '),
-            (v) => { this.e.aliases = v.split(',').map((x) => x.trim()).filter(Boolean); }));
+    // ชื่อ + ชื่อรอง — ช่องพื้นฐานสองช่องนี้ก็ได้ปุ่ม AI เหมือนช่องของเทมเพลต
+    const rName = row(tt('ui.common.name'));
+    const iName = input(this.e.name || '', (v) => { this.e.name = v; });
+    rName.appendChild(iName);
+    aiFill(rName, iName, tt('ui.common.name'));
+    const rAlias = row(tt('ui.wiki.nameOther'));
+    const iAlias = input((this.e.aliases || []).join(', '),
+      (v) => { this.e.aliases = v.split(',').map((x) => x.trim()).filter(Boolean); });
+    rAlias.appendChild(iAlias);
+    aiFill(rAlias, iAlias, tt('ui.wiki.nameOther'));
 
     // fields จากเทมเพลต (label ไทย) + customProperties (เพิ่ม field เองได้)
     const fields = this.e.fields || {};

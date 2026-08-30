@@ -11,7 +11,7 @@ import { t, tf } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import { listEntities } from '../project-scan.js';
-import { currentProvider, providerById, providerList, complete } from '../ai/ai-provider-ui.js';
+import { currentProvider, providerById, providerList, complete, completeStream } from '../ai/ai-provider-ui.js';
 import { aiConfigured } from '../ai-settings.js';
 import { PARAM_DEFS } from '../ai/ai-providers.js';
 import * as C from './builder-core.js';
@@ -31,12 +31,14 @@ const S = {
   sending: false,
   showThinking: false,     // 💬 ปกติ / 🧠 ความคิด
   entities: null,          // แคชรายชื่อจาก Wiki
+  reqId: '',               // [alpha.96] คำขอที่กำลังวิ่ง (กดหยุดได้)
+  sendingSince: 0,         // เวลาเริ่มส่ง (ไว้แสดง "คิดมาแล้วกี่วินาที")
 };
 
 export function resetBuilder() {
   S.root = null; S.view = 'list'; S.sessions = []; S.presets = [];
   S.cur = null; S.curFile = ''; S.savedAt = 0; S.query = ''; S.sending = false;
-  S.entities = null;
+  S.entities = null; S.reqId = ''; S.sendingSince = 0;
 }
 
 /** เซสชันที่เปิดอยู่และยังไม่ได้บันทึก (กฎข้อ 1 — ต้องขึ้นรายการงานค้าง) */
@@ -323,6 +325,8 @@ function drawSession() {
   if (s.situation) msgs.append(el('div', 'dlgb-situation', s.situation));
   if (!s.turns.length) msgs.append(el('div', 'dlgb-empty', t('ui.dlgb.pressSendToStart')));
   for (const tn of s.turns) msgs.append(bubble(s, tn));
+  // [alpha.96] ฟอง "กำลังคิด" ระหว่างรอ — เดิมจอว่าง ผู้ใช้ไม่รู้ว่าติดต่ออยู่จริงหรือค้าง
+  if (S.sending) msgs.append(pendingBubble());
   wrap.append(msgs);
 
   // ── แถบเลือกคนพูด + กล่องส่ง ──
@@ -354,15 +358,22 @@ function mkSelect(defs, value, onChange, label) {
 // ── ฟองข้อความ ─────────────────────────────────────────────────
 function bubble(s, tn) {
   const isDir = tn.kind === C.KIND_DIRECTOR;
+  // [alpha.116 ข้อ 1] รำพึงคนเดียวต้องดูออกทันทีว่าไม่ใช่บทพูดที่คนอื่นได้ยิน
+  const isMono = C.isMonologue(tn);
   const n = el('div', 'dlgb-bubble' + (isDir ? ' dlgb-director' : '')
+                    + (isMono ? ' dlgb-mono' : '')
                     + (tn.kind === C.KIND_USER ? ' dlgb-usertyped' : ''));
 
   const head = el('div', 'dlgb-bub-head');
   if (isDir) head.append(el('span', 'dlgb-bub-name', '🎬 ' + t('ui.dlgb.director')));
   else {
-    head.append(el('span', 'dlgb-bub-name', C.castName(s, tn.speaker) || t('ui.dlgb.unknown')));
-    const to = C.castName(s, tn.listener);
-    if (to) head.append(el('span', 'dlgb-bub-to', tf('ui.dlgb.toWhom', to)));
+    head.append(el('span', 'dlgb-bub-name',
+                   (isMono ? '💭 ' : '') + (C.castName(s, tn.speaker) || t('ui.dlgb.unknown'))));
+    if (isMono) head.append(el('span', 'dlgb-bub-to', t('ui.dlgb.monoTag')));
+    else {
+      const to = C.castName(s, tn.listener);
+      if (to) head.append(el('span', 'dlgb-bub-to', tf('ui.dlgb.toWhom', to)));
+    }
   }
   if (tn.inserted) {
     const chk = el('span', 'dlgb-bub-ins', '✓');
@@ -407,6 +418,42 @@ function mkAct(icon, tip, fn) {
   return b;
 }
 
+/** ฟอง "กำลังคิด…" ระหว่างรอคำตอบ — บอกเวลาที่ผ่านไป + ปุ่มหยุด + สตรีมข้อความ/ความคิดสด */
+function pendingBubble() {
+  const pend = el('div', 'dlgb-bubble dlgb-pending');
+  const head = el('div', 'dlgb-bub-head');
+  head.append(el('span', 'dlgb-bub-name', t('ui.dlgb.thinking')));
+  head.append(el('span', 'dlgb-bub-elapsed', ''));
+  const stopBtn = el('button', 'dlgb-bub-stop', '⏹');
+  stopBtn.type = 'button';
+  stopBtn.title = t('ui.dlgb.stopHint');
+  stopBtn.onclick = () => { if (kapi.httpAbort && S.reqId) kapi.httpAbort(S.reqId); };
+  head.append(stopBtn);
+  pend.append(head);
+  const body = el('div', 'dlgb-bub-body');
+  const think = el('div', 'dlgb-bub-thinklive');
+  think.style.display = 'none';
+  body.append(think, el('div', 'dlgb-bub-text', '…'));
+  pend.append(body);
+  return pend;
+}
+
+/** อัปเดตฟอง "กำลังคิด" ระหว่างสตรีม — ข้อความ/ความคิดไหลมาแบบเรียลไทม์ ไม่ต้องรอจบ */
+function updatePending(c) {
+  if (!S.host) return;
+  const pend = S.host.querySelector('.dlgb-pending');
+  if (!pend) return;
+  if (typeof c.text === 'string') {
+    const txt = pend.querySelector('.dlgb-bub-text');
+    if (txt) txt.textContent = c.text || '…';
+  }
+  const th = pend.querySelector('.dlgb-bub-thinklive');
+  if (th && typeof c.thinking === 'string') {
+    if (c.thinking) { th.textContent = t('ui.dlgb.modelThinking') + '\n' + c.thinking; th.style.display = ''; }
+    else th.style.display = 'none';
+  }
+}
+
 // ── แถบส่ง ──────────────────────────────────────────────────────
 function composer(s) {
   const box = el('div', 'dlgb-composer');
@@ -443,15 +490,34 @@ function composer(s) {
     if (last) { s.next = { speaker: last.speaker, listener: last.listener }; }
     send(inp);
   };
+  // [alpha.116 ข้อ 1] 💭 รำพึงคนเดียว — ตั้งช่อง "พูดกับ" เป็นตัวเองแล้วส่งในคลิกเดียว
+  const bMono = el('button', 'dlgb-mono-btn', '💭');
+  bMono.title = t('ui.dlgb.monoTip');
+  bMono.disabled = S.sending;
+  bMono.onclick = () => {
+    s.next = { speaker: (s.next && s.next.speaker) || (s.cast[0] || {}).id || '',
+               listener: C.SELF_MONO };
+    touch();
+    send(inp);
+  };
   const bDir = el('button', 'dlgb-dir', '🎬');
   bDir.title = t('ui.dlgb.directorTip');
   bDir.onclick = () => directorNote();
-  row.append(inp, bSend, bCont, bDir);
+  row.append(inp, bSend, bCont, bMono, bDir);
   box.append(row);
   return box;
 }
 
 // ══════════════════════════════ ยิงคำขอ ══════════════════════════════
+
+let _reqSeq = 0;
+function newReqId() { _reqSeq += 1; return 'dlgb-' + Date.now().toString(36) + '-' + _reqSeq; }
+
+/** อัปเดตตัวบอก "คิดมาแล้วกี่วิ" บนฟองที่กำลังรอ (ถ้ายังมีอยู่) */
+function tickElapsed() {
+  const el = S.host && S.host.querySelector('.dlgb-bub-elapsed');
+  if (el) el.textContent = tf('ui.dlgb.elapsed', ((Date.now() - S.sendingSince) / 1000).toFixed(1));
+}
 
 /** ผู้ให้บริการที่ตัวละครตัวนี้ใช้ — ทับ model/params เฉพาะที่ตั้งไว้จริง */
 async function providerFor(member) {
@@ -489,6 +555,9 @@ async function send(inp) {
   }
 
   S.sending = true;
+  S.reqId = newReqId();
+  S.sendingSince = Date.now();
+  const tick = setInterval(tickElapsed, 400);
   drawSession();
   try {
     if (s.mode === 'batch') await sendBatch(s);
@@ -497,7 +566,9 @@ async function send(inp) {
     log('error', t('ui.dlgb.errSend'), e);
     setStatus(t('ui.dlgb.errSend'));
   } finally {
+    clearInterval(tick);
     S.sending = false;
+    S.reqId = '';
     s.next = C.nextPair(s, Math.random);
     touch();
     await saveSession();
@@ -514,7 +585,7 @@ async function sendOne(s, pair) {
     const pk = C.buildPickerRequest(s);
     const prov = await currentProvider();
     if (pk && prov) {
-      const res = await complete(prov, { system: pk.system, messages: pk.messages });
+      const res = await complete(prov, { system: pk.system, messages: pk.messages, reqId: S.reqId });
       if (res.ok) speaker = C.parsePickedSpeaker(s, res.text);
     }
     if (!speaker) {
@@ -530,11 +601,15 @@ async function sendOne(s, pair) {
   if (!prov) { setStatus(t('ui.dlgb.noProvider')); return; }
 
   const t0 = Date.now();
-  const res = await complete(prov, { system: req.system, messages: req.messages });
+  // สตรีมสด — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน ไม่ต้องรอ generate จบ
+  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
+    (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
   if (!res.ok) { setStatus('❌ ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const parsed = C.parseSpokenLine(res.text, req.cast.name, { aliases: req.cast.aliases });
   if (!parsed.text) { setStatus(t('ui.dlgb.emptyReply')); return; }
   s.turns.push(C.newTurn({
+    // [alpha.116 ข้อ 1] จดชนิดไว้ในเทิร์นเลย — ไฟล์เซสชันอ่านย้อนได้ว่าบรรทัดไหนเป็นเสียงในใจ
+    kind: req.mono ? C.KIND_MONO : C.KIND_LINE,
     speaker, listener: pair.listener, text: parsed.text, paren: parsed.paren,
     thinking: res.thinking || '', model: res.model || '', provider: res.provider || '',
     usage: res.usage || null, ms: Date.now() - t0, ts: Date.now(),
@@ -548,7 +623,9 @@ async function sendBatch(s) {
   const prov = await currentProvider();
   if (!prov) { setStatus(t('ui.dlgb.noProvider')); return; }
   const t0 = Date.now();
-  const res = await complete(prov, { system: req.system, messages: req.messages });
+  // สตรีมสดเหมือนโหมดทีละคน — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน
+  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
+    (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
   if (!res.ok) { setStatus('❌ ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const rows = C.parseBatch(s, res.text);
   if (!rows.length) { setStatus(t('ui.dlgb.emptyReply')); return; }
@@ -574,15 +651,18 @@ async function reroll(tn) {
   if (i < 0) return;
   const after = s.turns.slice(i + 1);
   s.turns = s.turns.slice(0, i);
-  S.sending = true; drawSession();
+  S.sending = true; S.reqId = newReqId(); S.sendingSince = Date.now();
+  const tick = setInterval(tickElapsed, 400);
+  drawSession();
   try {
     await sendOne(s, { speaker: tn.speaker, listener: tn.listener, needAi: false });
   } catch (e) {
     log('error', t('ui.dlgb.errSend'), e);
     s.turns.push(tn);            // ล้มเหลว = คืนของเดิม ห้ามทำบทพูดหาย
   } finally {
+    clearInterval(tick);
     s.turns.push(...after);
-    S.sending = false; touch(); await saveSession(); drawSession();
+    S.sending = false; S.reqId = ''; touch(); await saveSession(); drawSession();
   }
 }
 

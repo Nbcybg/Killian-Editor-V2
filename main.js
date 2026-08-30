@@ -271,6 +271,8 @@ function buildMenu() {
       ] },
       { type: 'separator' },
       { label: tt('ui.menu.insertImage'), click: () => send('insert-image') },
+      // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` — ทะเบียนอยู่ที่ src/shortcode.js
+      { label: tt('ui.menu.insertShortcode'), click: () => send('insert-shortcode') },
       { label: tt('ui.menu.insertLine'), click: () => send('fmt', 'hr') },
       { label: tt('ui.menu.blockCode'), click: () => send('fmt', 'code') },
     ] },
@@ -688,6 +690,7 @@ const MENU_PANELS = [
   { id: 'maps', label: tt('ui.common.map') },
   { id: 'gallery', label: (C, S) => ttf('ui.menu.libraryImageG', C, S) },
   { id: 'gallery-board', label: tt('ui.common.boardMood') },
+  { id: 'ai-hub', label: tt('ui.menu.aiHubPanel') },
   { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
   { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
   // [alpha.94] Story Starter
@@ -1321,10 +1324,20 @@ H('http:abort', (reqId) => {
 /** จำนวนคำขอที่ยังวิ่งอยู่ (e2e ใช้ยืนยันว่ายกเลิกแล้วไม่มีอะไรค้าง) */
 H('http:inflight', () => httpInflight.size);
 // สตรีมคำตอบ AI ทีละบรรทัด (SSE/ndjson) — ส่งกลับ renderer ผ่าน channel เฉพาะของคำขอนั้น
+// [alpha.96] รองรับ `__reqId`/`__timeoutMs` เช่นเดียวกับ http:fetch — เดิมสตรีมไม่มีทั้งสองอย่าง
+// เน็ตหลุดกลางทางแล้วค้างตลอดกาล ผู้ใช้ไม่รู้ว่ากำลังติดต่ออยู่จริงหรือไม่
 H('http:stream', async (url, options, id) => {
   const ch = 'http:stream:' + id;
+  const opts = { ...(options || {}) };
+  const reqId = opts.__reqId; delete opts.__reqId;
+  const timeoutMs = Number(opts.__timeoutMs) || 180000;
+  delete opts.__timeoutMs;
+  const ac = new AbortController();
+  if (reqId) httpInflight.set(reqId, ac);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; try { ac.abort(); } catch {} }, timeoutMs);
   try {
-    const res = await fetch(url, options || {});
+    const res = await fetch(url, { ...opts, signal: ac.signal });
     if (!res.ok || !res.body) {
       let body = ''; try { body = await res.text(); } catch {}
       return { ok: false, status: res.status, body };
@@ -1346,9 +1359,48 @@ H('http:stream', async (url, options, id) => {
     if (buf.trim() && win) win.webContents.send(ch, buf.trim());
     return { ok: true, status: res.status };
   } catch (e) {
-    return { ok: false, status: 0, body: String((e && e.message) || e) };
+    const aborted = ac.signal.aborted;
+    if (!aborted) return { ok: false, status: 0, body: String((e && e.message) || e) };
+    return { ok: false, status: 0, body: '', aborted: true, timedOut,
+             error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+  } finally {
+    clearTimeout(timer);
+    if (reqId) httpInflight.delete(reqId);
   }
 });
+// [alpha.115] เซิร์ฟเวอร์ SSE จำลอง — ไว้ให้ e2e พิสูจน์ว่า "สตรีมคำตอบ AI" ทำงานจริง
+// (ก่อนหน้านี้เส้นทางสตรีมไม่เคยถูกเทส end-to-end เลย — สตรีมค้าง/ไม่ไหลก็เทสยังผ่าน)
+// เปิดเฉพาะตอน KILLIAN_TEST=1 · ยิง POST /v1/chat/completions แล้วตอบกลับทีละก้อนทุก 120ms
+const MOCK_SSE_PORT = 8931;
+function startMockSse() {
+  try {
+    const http = require('http');
+    const srv = http.createServer((req, res) => {
+      if (req.method === 'POST') {
+        let b = ''; req.on('data', (c) => b += c); req.on('end', () => {
+          res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+          /* i18n-skip: ข้อความในก้อนจำลองคือ "ค่าที่เทสคาดหวัง" (เทียบตรง ๆ ว่าได้ 'สวัสดีครับ จบ') */
+          const chunks = [
+            { delta: { reasoning_content: 'คิดขั้น 1 ' } },
+            { delta: { reasoning_content: 'คิดขั้น 2 ' } },
+            { delta: { content: 'สวัสดี' } }, { delta: { content: 'ครับ' } }, { delta: { content: ' จบ' } },
+          ]; /* /i18n-skip */
+          let i = 0;
+          (function send() {
+            if (i >= chunks.length) { res.write('data: [DONE]\n\n'); res.end(); return; }
+            res.write('data: ' + JSON.stringify({ id: 'mock', choices: [{ index: 0, delta: chunks[i].delta, finish_reason: null }] }) + '\n\n');
+            i++; setTimeout(send, 120);
+          })();
+        });
+      } else if (/\/models$/.test(req.url || '')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ data: [{ id: 'mock-model' }] }));
+      } else { res.writeHead(404); res.end('{}'); }
+    });
+    srv.on('error', () => {});           // พอร์ตชน (รันซ้อน) → เงียบ ๆ ใช้ตัวเดิมที่เปิดอยู่
+    srv.listen(MOCK_SSE_PORT, '127.0.0.1');
+  } catch {}
+}
 // สกรีนช็อตสำหรับ debug — ห้าม throw ทำให้ selftest ล้มทั้งชุด
 // (capturePage ล้มได้เมื่อหน้าต่างถูกย่อ/compositor ไม่พร้อม — ไม่เกี่ยวกับฟีเจอร์ที่กำลังเทส)
 H('test:shot', async (out) => {
@@ -1596,6 +1648,7 @@ ipcMain.handle('panel:fileChanged', (e, p) => {
 app.whenReady().then(() => {
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
   try { loadLangTable(lastLangCode()); } catch {}
+  if (TEST) startMockSse();            // [alpha.115] เซิร์ฟเวอร์ SSE จำลองสำหรับเทสสตรีม
   createWindow();
   if (TEST) {
     win.webContents.once('did-finish-load', () => {

@@ -1202,6 +1202,35 @@ body.k-mod-down .k-mention { cursor:pointer; }
   height:var(--sp-line-h, 16px); min-height:0;
 }
 .sp:has(> br.ProseMirror-trailingBreak) + .sp {
+  /* [alpha.112] ตัด padding แล้วต้องตัด `--k-pad` ด้วยเสมอ — widget เลขฉากใช้มันเป็น `top`
+     (บทเรียนเดียวกับ alpha.87 ข้อ D และ alpha.102 บั๊ก 1 · ตรงนี้ตกหล่นมาตั้งแต่แรก) */
+  --k-pad:0;
+  margin-top:0 !important; padding-top:0 !important; }
+
+/* ══ [alpha.112] ★★ กฎคู่เดียวกันนี้ สำหรับแผ่นที่ **ไม่ได้วาดด้วย ProseMirror** ══
+   ผู้ใช้: *"การตัดหน้า หน้าคู่ล้นออกมา"* (ภาพ: หน้าซ้ายเนื้อทะลุขอบล่าง หน้าขวามีบรรทัดเดียว)
+
+   ต้นตอ: กฎบรรทัดว่างข้างบนจับด้วย `br.ProseMirror-trailingBreak` ซึ่งเป็น **ของที่
+   ProseMirror สร้าง** → มีเฉพาะในมุมมองที่ยังพิมพ์ได้ (ปกติ/จัดหน้า/ร่าง)
+   ส่วน `renderPageView()` (หน้าคู่ · ภาพรวม) ประกอบ `<div class="sp sp-blank">` เปล่า ๆ เอง
+   จึงไม่โดนกฎนี้เลย ผลคือ:
+     · บรรทัดว่างไม่ถูกบังคับสูง 1 บรรทัด
+     · **บล็อกที่อยู่ถัดจากบรรทัดว่างยังได้ `padding-top` เต็ม ๆ** ทั้งที่ `paginate()`
+       ข้ามให้แล้ว (`prevBlank` → `before = 0`) = ทุกช่องไฟกินเกินไปหนึ่งบรรทัด
+   วัดจริงจากไฟล์ผู้ใช้: หน้าแรกจุได้ 930px (58 บรรทัด) แต่เนื้อสูง 1,248px — เกิน 18 บรรทัด
+   ซึ่งเท่ากับจำนวนช่องไฟในหน้านั้นพอดี
+
+   `blocksFromDoc()` ตั้ง `el:'blank'` ให้บล็อกว่าง **ทุกชนิด** อยู่แล้ว (alpha.87 ข้อ B)
+   คลาส `sp-blank` จึงเป็นตัวชี้ที่เชื่อถือได้ และไม่มีทางไปโดนบล็อกในตัวแก้ไข
+   (ที่นั่นบล็อกว่างยังคงคลาสตามชนิดเดิมของมัน — สองกฎนี้จึงเสริมกัน ไม่ทับกัน) */
+.sp.sp-blank {
+  --k-pad:0;
+  margin-top:0 !important; margin-bottom:0 !important;
+  padding-top:0 !important; padding-bottom:0 !important;
+  height:var(--sp-line-h, 16px); min-height:0;
+}
+.sp.sp-blank + .sp {
+  --k-pad:0;
   margin-top:0 !important; padding-top:0 !important; }
 
 /* [alpha.87 ข้อ 4] ★ **บล็อกแรกของหน้าไม่มีระยะเว้นนำ** — จอต้องตรงกับโมเดล
@@ -1237,7 +1266,23 @@ body.k-mod-down .k-mention { cursor:pointer; }
 .sp-outline1,.sp-outline2,.sp-outline3 { color:var(--accent-hi); }
 .sp-summary { color:var(--green); font-style:italic; }
 .sp-act-break { text-align:center; }
-.sp-note { background:#fff3cd; border-left:3px solid #ffc107; color:#856404; padding:4px 8px; font-style:italic; border-radius:0 4px 4px 0; margin:0; }
+/* ══ [alpha.114] ★★ เครื่องประดับของบล็อกห้ามกิน "ความกว้างข้อความ" ══
+   ผู้ใช้เจอเป็น e2e `[104r] note` แดงมานาน: โมเดลนับ 54 บรรทัด จอวาด 61 (+13%)
+   แล้วลามไป `[108]`/`[105r]` ที่ฟ้องว่าบรรทัดล้ำกรอบเส้นตัดตก
+
+   ต้นตอ: `.sp` เป็น `box-sizing:border-box` และ `spCss()` ตั้ง `width:<w>in` = **ความกว้าง
+   ข้อความตามสเปกบท** · พอกฎนี้เติม `padding:4px 8px` + `border-left:3px` เข้าไป
+   กล่องข้อความจริงเหลือ 557px ขณะที่โมเดลคิด 576px → ทุกย่อหน้าโน้ตตัดบรรทัดถี่กว่าที่โมเดลจอง
+
+   วัดแยกปัจจัยแล้ว (บรรยายปกติ 54/54 · บรรยายบังคับเอียง 54/54 · โน้ต 54/61):
+   **ตัวเอียงไม่เกี่ยวเลย** — ตัววัดรองรับ italic ถูกต้องตั้งแต่ alpha.104r · เหลือแค่ 19px นี้
+
+   แก้: ทำแถบสีด้วย **background gradient** แทน border + ตัด padding แนวนอนทิ้ง
+   → ศูนย์ต้นทุนเลย์เอาต์ · หน้าตาเหมือนเดิม · และพิมพ์ออกมาได้เหมือนพื้นหลังปกติ
+   (ต่างจาก box-shadow ที่ Chromium ไม่การันตีตอนพิมพ์)
+   ระยะเว้นบน-ล่างไม่ต้องแตะ — `.sp.sp-note` ของ spCss (เจาะจงกว่า) คุม padding-top/bottom อยู่แล้ว */
+.sp-note { background:linear-gradient(to right, #ffc107 0 3px, #fff3cd 3px);
+  color:#856404; font-style:italic; border-radius:0 4px 4px 0; margin:0; }
 .sp-raw { color:var(--dim); }
 /* รูปในบทหนัง — จัดกลาง คลิกเลือกได้ (atom) ไม่กลายเป็น markdown */
 figure.sp-image { margin:1em auto; text-align:center; }
@@ -2029,14 +2074,35 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
 #k-fab:hover { background:var(--accent-hi); transform:scale(1.08); box-shadow:0 8px 32px rgba(193,95,60,.55); }
 .k-fab-icon { font-size:calc(28px * var(--ui-scale, 1)); line-height:1; transition:transform .2s; }
 #k-fab.open .k-fab-icon { transform:rotate(45deg); }
-/* FAB dropdown menu */
-#k-fab-menu { position:fixed; z-index:77; min-width:180px; bottom:96px; right:28px;
-  background:var(--side); border:1px solid var(--border); border-radius:10px;
-  box-shadow:0 8px 30px rgba(0,0,0,.45); padding:6px; }
+#k-fab.k-dragging { cursor:grabbing; transform:scale(1.12); box-shadow:0 12px 36px rgba(0,0,0,.55); }
+/* ═══ [alpha.111] เมนูวงกลม (Material radial FAB menu) ═══
+   ตัวเมนูเป็น "จุด" ที่กึ่งกลางปุ่มแม่ — ปุ่มลูกกางออกด้วย transform ล้วน ๆ
+   ตำแหน่ง (--fab-x/--fab-y) กับหน่วงเวลาถูกคำนวณใน src/toolbar/fab-config.js */
+#k-fab-menu.k-fab-radial { position:fixed; z-index:77; left:0; top:0;
+  width:0; height:0; min-width:0; padding:0; background:none; border:none; box-shadow:none;
+  overflow:visible; pointer-events:none; }
 #k-fab-menu.k-menu-off { display:none; }
-#k-fab-menu .k-menu-item { padding:8px 14px; border-radius:8px; font-size:calc(13.5px * var(--ui-scale, 1));
-  cursor:pointer; transition:background .1s; }
-#k-fab-menu .k-menu-item:hover { background:var(--accent); color:#fff; }
+.k-fab-item { position:absolute; left:0; top:0; display:flex; align-items:center; gap:8px;
+  white-space:nowrap; cursor:pointer; pointer-events:auto; user-select:none;
+  background:var(--side); color:var(--fg); border:1px solid var(--border);
+  box-shadow:0 6px 20px rgba(0,0,0,.42);
+  border-radius:999px; padding:0 6px; min-height:calc(42px * var(--ui-scale, 1));
+  font-size:calc(13px * var(--ui-scale, 1));
+  /* ปิดอยู่ = ยุบเข้าหาปุ่มแม่ · เปิด = เลื่อนไปตำแหน่งบนส่วนโค้ง */
+  transform:translate(-50%, -50%) scale(.2);
+  opacity:0;
+  transition:transform .22s cubic-bezier(.34,1.4,.64,1), opacity .18s ease; }
+#k-fab-menu.open .k-fab-item {
+  transform:translate(var(--fab-ax, -50%), -50%) translate(var(--fab-x, 0px), var(--fab-y, 0px)) scale(1);
+  opacity:1; }
+.k-fab-item:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+/* ไอคอนล้วน = วงกลมพอดีตัว · มีข้อความ = แคปซูล */
+#k-fab-menu[data-disp="icon"] .k-fab-item { padding:0; width:calc(42px * var(--ui-scale, 1));
+  justify-content:center; }
+.k-fab-item-ic { display:flex; align-items:center; justify-content:center;
+  width:calc(30px * var(--ui-scale, 1)); flex:none; }
+.k-fab-item-tx { padding-right:10px; }
+#k-fab-menu[data-disp="text"] .k-fab-item-tx { padding:0 14px; }
 /* บันทึกทั้งหมดปุ่ม */
 #save-all-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
   padding:3px 8px; cursor:pointer; font-size:calc(14px * var(--ui-scale, 1)); }
@@ -3121,8 +3187,8 @@ button, select { padding:calc(4px * var(--uis)) calc(10px * var(--uis)); border-
 
 /* --- ปุ่มลอย FAB + ถาดแผงย่อ --- */
 #k-fab { width:calc(52px * var(--uis)); height:calc(52px * var(--uis)); }
-#k-fab-menu { min-width:calc(180px * var(--uis)); padding:calc(6px * var(--uis)); }
-#k-fab-menu .k-menu-item { padding:calc(8px * var(--uis)) calc(14px * var(--uis)); }
+/* [alpha.111] เมนูวงกลมไม่มีกล่องของตัวเองแล้ว — min-width/padding เดิมจะไปดันปุ่มลูกเพี้ยน
+   ขนาดของปุ่มลูกคูณ --ui-scale อยู่ในกฎของมันเองแล้ว ที่นี่จึงไม่ต้องทำอะไร */
 
 /* ====== แผงฟีเจอร์ที่ไม่ใช่เอกสาร (บั๊ก #18) ======
    แดชบอร์ด/Kanban/จัดการเล่ม/เส้นเวลา/แผนที่ — เดิมเป็น .pane ในแถบแท็บเอกสาร
@@ -4206,6 +4272,13 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .ai-msg-err { color:#e06c62; font-size:calc(11.5px * var(--ui-scale, 1)); padding:4px 10px; }
 .ai-msg-files { font-size:calc(10.5px * var(--ui-scale, 1)); padding:2px 10px; }
 .ai-msg-pending .ai-msg-who { opacity:.7; }
+/* [alpha.96] ตัวบอกสถานะระหว่างรอคำตอบ — เวลาที่ผ่านไป + ความคิดที่ไหลมาแบบสด */
+.ai-msg-elapsed { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); font-variant-numeric:tabular-nums; }
+.ai-msg-thinking-live { margin:4px 10px; padding:6px 10px; border-radius:8px;
+  background:color-mix(in srgb, var(--accent) 8%, var(--side));
+  font-size:calc(11px * var(--ui-scale, 1)); line-height:1.5; color:var(--dim);
+  font-style:italic; white-space:pre-wrap; word-break:break-word; max-height:240px;
+  overflow:auto; user-select:text; }
 
 /* ── [alpha.63r4] transcript view + คำสั่งที่ AI ลงมือทำ ── */
 .ai-chat-viewsel { background:var(--bar); border:1px solid var(--border); color:var(--fg);
@@ -4500,6 +4573,53 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
    → กฎที่ผูกกับ #toolbar อย่างเดียวไปไม่ถึงปุ่มพวกนั้นเลย (ต้องระบุทั้งสองที่อยู่) */
 #toolbar .tb-hidden, #toolbar span.sep.tb-hidden,
 .k-fmtbar .tb-hidden, .k-fmtbar span.sep.tb-hidden { display:none !important; }
+/* ═══ [alpha.111] "โหมดนี้ใช้ไม่ได้" — เห็นอยู่แต่กดไม่ติด ═══
+   ต่างจาก `.dis` (ซึ่งแปลว่า "ตอนนี้ยังไม่มีเอกสารเปิด") — ตัวนี้แปลว่า
+   "บทภาพยนตร์ไม่มีสิ่งนี้ให้ใช้" จึงจางกว่าและมีเคอร์เซอร์บอกชัด */
+.tb-na { opacity:.34 !important; pointer-events:none !important; cursor:not-allowed; }
+.tb-na.on { background:transparent !important; color:inherit !important; }
+/* ปุ่ม "เรียกแถบมาหาเคอร์เซอร์" — ของแถบเอง ไม่ใช่ปุ่มจัดรูปแบบ จึงอยู่ติดที่จับ */
+.k-fmtbar-here { min-width:26px !important; opacity:.72; }
+.k-fmtbar-here:hover { opacity:1; }
+.k-fmtbar.k-fmt-flying { transition:none; box-shadow:0 12px 30px rgba(0,0,0,.5); }
+
+/* ══════════ [alpha.117] จาง · ชิดขอบ · ล็อก ══════════
+   ผู้ใช้: *"ไม่อยากให้ย่อ · เอา opacity 3 ระดับ 5% 50% 100% ดีกว่า คือไม่หายหมด"*
+
+   ★ กฎที่ทำให้ 5% ใช้งานได้จริง: **เลื่อนเมาส์ไปโดนแล้วกลับมาชัดเต็มเสมอ**
+   ถ้าไม่มีข้อนี้ 5% จะกลายเป็น "หายไปแล้วกดอะไรไม่ถูก" ซึ่งแย่กว่าปุ่มย่อที่ผู้ใช้ไม่เอา
+   (โหมดลากอยู่ก็ต้องชัด — ไม่งั้นลากของที่มองไม่เห็น) */
+.k-fmtbar { opacity:var(--fmtbar-opacity, 1); transition:opacity .18s ease; }
+.k-fmtbar:hover, .k-fmtbar.k-dragging, .k-fmtbar.k-fmt-flying,
+.k-fmtbar:focus-within { opacity:1 !important; }
+/* จางอยู่ = ไม่ควรดักคลิกจนกว่าจะเล็งมาโดนจริง ๆ · แต่ห้ามถึงขั้น pointer-events:none
+   เพราะแบบนั้นจะ hover ไม่ติดเลย แล้วไม่มีทางกลับมาชัดด้วยเมาส์ */
+.k-fmtbar.k-fmtbar-dim { box-shadow:none; }
+.k-fmtbar.k-fmtbar-dim:hover { box-shadow:0 6px 20px rgba(0,0,0,.4); }
+/* ล็อกแล้ว: หูจับบอกด้วยเคอร์เซอร์ว่าลากไม่ได้ (กฎกันลากอยู่ใน makeDraggable ไม่ใช่ที่ CSS) */
+.k-fmtbar.k-fmtbar-locked .k-fmtbar-grip { cursor:default; opacity:.45; }
+/* [alpha.118] ผู้ใช้: *"เอาเป็นแบบ click ขวาดีกว่าแบบปุ่ม เพราะตอนนี้ปุ่มเยอะไป"*
+   สามปุ่ม (จาง/ชิดขอบ/ล็อก) หายไปแล้ว — ย้ายเข้าเมนูคลิกขวาบนหูจับทั้งหมด (ดู fmtbarSettingsMenu
+   ใน app.js) จุดสังเกตเดียวที่ยังเหลือบน CSS คือหูจับต้องดูมีอะไรให้กดขวาได้ ไม่ใช่แค่ลาก */
+.k-fmtbar-grip:hover { background:var(--hover); border-radius:5px; }
+
+/* ═══ [alpha.111] หน้าตั้งค่า: สวิตช์โหมด (นิยาย/บท) + รูปแบบการแสดงของ FAB ═══ */
+.k-fmtcfg-modes, .k-fabcfg-disp { display:flex; align-items:center; gap:6px; margin:8px 0 10px; flex-wrap:wrap; }
+.k-fmtcfg-mode { background:transparent; color:var(--fg); border:1px solid var(--border);
+  border-radius:999px; padding:4px 14px; cursor:pointer; font-size:calc(12.5px * var(--ui-scale, 1)); }
+.k-fmtcfg-mode:hover { background:var(--hover); }
+.k-fmtcfg-mode.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+/* แถวที่โหมดนั้นใช้ไม่ได้ — จางลงแต่ยังอ่านออก (ผู้ใช้ต้องรู้ว่ามีปุ่มนี้อยู่) */
+.k-tbcfg-row.k-tbcfg-na { opacity:.5; }
+.k-tbcfg-row.k-tbcfg-na .k-tbcfg-sw { cursor:not-allowed; }
+/* ลำดับคำสั่งที่เลือกไว้บน FAB */
+.k-fabcfg-chosen { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }
+.k-fabcfg-pick { display:flex; align-items:center; gap:8px; padding:5px 8px;
+  background:var(--hover-soft); border-radius:8px; }
+.k-fabcfg-num { width:20px; height:20px; flex:none; border-radius:50%; background:var(--accent);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.k-fabcfg-pick .k-tbcfg-name { flex:1; }
 
 .k-dialog.k-tbcfg { width:520px; max-width:92vw; max-height:80vh;
   display:flex; flex-direction:column; overflow:hidden; }
@@ -4719,12 +4839,32 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   background:var(--bar); }
 .dlgb-bubble.dlgb-director { background:var(--sunken); border-style:dashed; }
 .dlgb-bubble.dlgb-usertyped { border-color:var(--accent); }
+/* [alpha.116] 💭 รำพึงคนเดียว — เสียงในใจ ไม่มีตัวละครอื่นได้ยิน
+   บอกสถานะด้วยตัวเอียง + แถบซ้าย ไม่ใช้สัญลักษณ์เกินจำเป็น (กฎข้อ 4 ของผู้ใช้)
+   คลาสผูกกับ .dlgb-bubble เสมอ ไม่ปล่อยลอย (บทเรียน K-1) */
+.dlgb-bubble.dlgb-mono { background:var(--sunken); border-style:dotted;
+  box-shadow:inset 3px 0 0 var(--accent-hi); }
+.dlgb-bubble.dlgb-mono .dlgb-bub-text { font-style:italic; }
+.dlgb-mono-btn { background:none; border:1px solid var(--border); border-radius:6px;
+  color:var(--dim); cursor:pointer; padding:0 8px; }
+.dlgb-mono-btn:hover:not(:disabled) { color:var(--bright); border-color:var(--accent); }
+.dlgb-mono-btn:disabled { opacity:.4; cursor:default; }
 .dlgb-bub-head { display:flex; align-items:center; gap:6px; margin-bottom:3px;
   font-size:calc(11px * var(--ui-scale, 1)); }
 .dlgb-bub-name { color:var(--accent-hi); font-weight:600; }
 .dlgb-bub-to, .dlgb-bub-model { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); }
 .dlgb-bub-model { margin-left:auto; opacity:.7; }
 .dlgb-bub-ins { color:#6bbf72; }
+/* [alpha.96] ฟอง "กำลังคิด…" ระหว่างรอคำตอบ */
+.dlgb-bubble.dlgb-pending { opacity:.75; border-style:dashed; }
+.dlgb-bub-elapsed { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1));
+  font-variant-numeric:tabular-nums; }
+.dlgb-bub-stop { margin-left:auto; background:none; border:1px solid transparent; color:var(--dim);
+  cursor:pointer; border-radius:5px; padding:0 5px; font-size:calc(11px * var(--ui-scale, 1)); }
+.dlgb-bub-stop:hover { color:var(--bright); border-color:var(--border); }
+.dlgb-bub-thinklive { margin:3px 0 4px; padding:5px 8px; background:var(--sunken); border-radius:5px;
+  color:var(--dim); font-style:italic; white-space:pre-wrap; font-size:calc(11px * var(--ui-scale, 1));
+  line-height:1.5; max-height:180px; overflow-y:auto; }
 .dlgb-bub-paren { color:var(--dim); font-style:italic;
   font-size:calc(11.5px * var(--ui-scale, 1)); }
 .dlgb-bub-text { color:var(--fg); line-height:1.75; white-space:pre-wrap;
@@ -5242,3 +5382,53 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .st-rt-view :is(h1,h2,h3,h4) { color:var(--bright); margin:.6em 0 .3em; }
 
 
+
+
+/* ══════════ [alpha.116 ข้อ 3] แผง AI Hub ══════════
+   ทุกกฎผูกกับ `.aihub` เสมอ — ไม่มีคลาสลอยที่ชนกับที่อื่นได้ (บทเรียน K-1) */
+.aihub { display:flex; flex-direction:column; gap:12px; padding:8px 10px 16px; }
+.aihub-head { display:flex; align-items:center; gap:8px; padding:6px 10px;
+  background:var(--bar); border:1px solid var(--border); border-radius:8px; }
+.aihub-dot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+.aihub-dot.ok { background:#6bbf72; }
+.aihub-dot.warn { background:var(--accent-hi); }
+.aihub-headtext { flex:1; min-width:0; color:var(--fg); overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; font-size:calc(12px * var(--ui-scale, 1)); }
+.aihub-cfg { background:none; border:1px solid transparent; border-radius:6px; color:var(--dim);
+  cursor:pointer; padding:2px 6px; display:flex; align-items:center; }
+.aihub-cfg:hover { color:var(--bright); border-color:var(--border); }
+.aihub-warn { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px;
+  border:1px dashed var(--accent-hi); border-radius:8px; color:var(--dim);
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+.aihub-group { display:flex; flex-direction:column; gap:6px; }
+.aihub-grouphead { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.aihub-grouptitle { color:var(--bright); font-weight:600;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.aihub-grouphint { color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); }
+.aihub-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:8px; }
+.aihub-card { display:flex; align-items:flex-start; gap:9px; text-align:left; cursor:pointer;
+  padding:9px 10px; border:1px solid var(--border); border-radius:8px;
+  background:var(--bar); color:var(--fg); font:inherit; }
+.aihub-card:hover:not(:disabled) { border-color:var(--accent); background:var(--hover); }
+.aihub-card.on { border-color:var(--accent-hi); }
+.aihub-card:disabled, .aihub-card.blocked { opacity:.45; cursor:default; }
+.aihub-ico { color:var(--accent-hi); display:flex; flex:0 0 auto; margin-top:1px; }
+.aihub-cardbody { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.aihub-name { color:var(--bright); font-weight:600; display:flex; align-items:center; gap:6px;
+  flex-wrap:wrap; font-size:calc(12px * var(--ui-scale, 1)); }
+.aihub-openbadge { color:var(--accent-hi); font-weight:400;
+  font-size:calc(10px * var(--ui-scale, 1)); }
+.aihub-desc { color:var(--dim); line-height:1.45;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+
+
+/* [alpha.116 ข้อ 10] ชิป "ชื่อที่เจอในเรื่องย่อ" ในขั้นตัวละครของ Story Starter
+   ผูกกับที่อยู่ของมันเสมอ (บทเรียน K-1) */
+.st-namehints { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  padding:6px 2px 2px; }
+.st-namehints-label { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
+.st-namehints .st-namechip { background:var(--bar); color:var(--fg); cursor:pointer;
+  border:1px dashed var(--border); border-radius:999px; padding:2px 10px; font:inherit;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+.st-namehints .st-namechip:hover { border-style:solid; border-color:var(--accent);
+  color:var(--bright); }

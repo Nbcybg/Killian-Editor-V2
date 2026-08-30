@@ -11,6 +11,8 @@
 
 import { t, tf } from './i18n.js';
 import { resolveVars } from './template-vars.js';
+// [alpha.116 ข้อ 8] โค้ดสั้น `[title]` — ทะเบียนและตัวแทนค่าอยู่ที่ shortcode.js (บริสุทธิ์ · เทสแยก)
+import { expandShortcodes, sceneContext } from './shortcode.js';
 // [alpha.58 · 55–56] ส่งออกบทภาพยนตร์พร้อมข้อความต่อเนื่อง — ใช้เอนจินจัดหน้าตัวเดียวกับบนจอ
 // [alpha.59 · 88] classify — ใช้ระบุประเภท element ของแต่ละบรรทัดตอน "ตัดออกตอนส่งออก"
 import { parseScript, lineFor, classify, blockIsBlank,
@@ -68,7 +70,7 @@ export function insertContinueds(text, fmt) {
  * @param {string} text  ข้อความบทแบบ fountain
  * @param {string|string[]} types  ประเภทที่ตัด เช่น 'note,summary' หรือ ['note']
  */
-export function omitElements(text, types) {
+export function omitElements(text, types, { keepBlanks = false } = {}) {
   const drop = new Set((Array.isArray(types) ? types : String(types ?? '').split(','))
     .map((s) => String(s).trim()).filter(Boolean));
   const s = String(text ?? '');
@@ -90,7 +92,10 @@ export function omitElements(text, types) {
     prevBlank = false; prevType = el;
   }
   // ตัดโน้ตที่มีบรรทัดว่างขนาบทั้งสองข้าง เหลือช่องว่างซ้อน → ยุบให้เหลือบรรทัดว่างเดียว
-  return out.join('\n').replace(/\n{3,}/g, '\n\n');
+  // [alpha.113] **ยกเว้นบทภาพยนตร์** — ที่นั่นบรรทัดว่างคือ "เนื้อหา" ที่ paginate() นับเป็น
+  // 1 บรรทัดเต็ม ๆ (ตั้งแต่ alpha.86) การยุบจึงเปลี่ยนการตัดหน้าและกินช่องไฟที่ผู้ใช้ตั้งใจเว้น
+  const joined = out.join('\n');
+  return keepBlanks ? joined : joined.replace(/\n{3,}/g, '\n\n');
 }
 
 /** ประเภทที่ให้เลือกตัดได้ (ข้อ 88) — เนื้อบทหลัก (หัวฉาก/บรรยาย/บทพูด) ไม่อยู่ในรายการ */
@@ -118,6 +123,9 @@ export const STEP_DEFS = [
   { key: 'strip-mentions', stage: 'model', label: t('ui.compile.linkNameText') },
   { key: 'strip-markdown', stage: 'model', label: t('ui.compile.cutMarkdownText') },
   { key: 'resolve-vars', stage: 'model', label: t('ui.compile.editItemNameWiki') },
+  // [alpha.116 ข้อ 8] โค้ดสั้น `[title]` `[chapter]` `[scene]` `[date]` `[wiki:ชื่อ.ฟิลด์}`
+  // ต่างจาก {{ตัวแปร}} ตรงที่รู้ "บริบทของฉากที่กำลังส่งออก" ไม่ใช่แค่ตาราง Wiki
+  { key: 'shortcodes', stage: 'model', label: t('ui.compile.expandShortcode') },
   // ---- ช่วงประกอบ ----
   { key: 'cover', stage: 'render', label: t('ui.compile.coverTitleAuthorCount'),
     opts: { author: '' }, fields: [{ k: 'author', label: t('ui.compile.authorEmptyUseProject'), type: 'text' }] },
@@ -290,6 +298,38 @@ const fill = (tpl, n, title, ctx = {}) => {
   return resolveVars(s, ctx);
 };
 
+/**
+ * ══ [alpha.113] เอกสารชุดนี้เป็นบทภาพยนตร์ไหม ══
+ *
+ * **ตรรกะเดียวกับ `docKind()` ใน export-formats.js** — ที่นั่น `import` ไฟล์นี้อยู่แล้ว
+ * จึงย้อนกลับมา import ไม่ได้ (วงกลม) · มี unit test ล็อกไว้ว่าสองที่ต้องตอบตรงกันเสมอ
+ */
+export function modelIsScreenplay(model) {
+  let sp = 0, pr = 0;
+  for (const ch of (model && model.chapters) || [])
+    for (const sc of ch.scenes || []) {
+      if (sc.type === 'memo') continue;
+      if (sc.format === 'screenplay') sp++; else pr++;
+    }
+  return sp > pr;
+}
+
+/**
+ * มีฉากที่เป็นบทภาพยนตร์อยู่ไหม (แม้แค่ฉากเดียว)
+ *
+ * **ทำไมไม่ใช้เสียงข้างมากแบบ `docKind()`**: ฉบับร่างจริงของผู้ใช้ปนกันได้
+ * (7 ฉาก เป็นบทแค่ฉากเดียว) — ถ้าตัดสินด้วยเสียงข้างมาก ฉากบทฉากนั้นจะโดนกฎของนิยาย
+ * แล้วบรรทัดว่างหายไปทั้งฉาก · การเก็บบรรทัดว่างต้องตัดสิน **รายฉาก** เสมอ
+ */
+export function modelHasScreenplay(model) {
+  for (const ch of (model && model.chapters) || [])
+    for (const sc of ch.scenes || []) {
+      if (sc.type === 'memo') continue;
+      if (sc.format === 'screenplay') return true;
+    }
+  return false;
+}
+
 function modelStats(model) {
   let sc = 0, w = 0;
   for (const ch of model.chapters) for (const s of ch.scenes) { sc++; w += s.words || 0; }
@@ -297,8 +337,10 @@ function modelStats(model) {
 }
 
 export function runWorkflow(model0, workflow,
-    { allowJs = true, varCtx = {}, spFormat = null,
-      proseFormat = null, paper = null, margins = null } = {}) {
+    { allowJs = true, varCtx = {}, spFormat = null, now = null,
+      proseFormat = null, paper = null, margins = null, keepBlanks } = {}) {
+  // [alpha.116 ข้อ 8] เวลาที่โค้ดสั้น `[date]` ใช้ — ฉีดเข้ามาได้เพื่อให้เทสคาดเดาผลได้
+  const shortcodeNow = now || new Date();
   const warn = [];
   // สำเนาลึกแบบพอเพียง — ไม่แก้ของเดิม
   const model = { title: model0.title, author: model0.author || '', roster: model0.roster || '',
@@ -311,6 +353,23 @@ export function runWorkflow(model0, workflow,
     return v === undefined || v === null ? dflt : v;
   };
   const has = (key) => steps.some((s) => s.key === key);
+  // ══ [alpha.113 ★ ต้นตอ "PDF ตัดหน้าผิด บรรทัดว่างถูกลบทิ้ง"] ══
+  //
+  // ผู้ใช้: *"ใน markdown มี 41 บรรทัด แต่ใน pdf น่าจะแค่ 30 บรรทัด บรรทัดว่างถูกลบทิ้ง"*
+  //
+  // ไปป์ไลน์นี้ประกอบข้อความให้ **ทั้งนิยายและบท** แต่กฎ "จัดระเบียบช่องว่าง" ที่ถูกต้อง
+  // สำหรับนิยาย (ยุบบรรทัดว่างซ้อนให้เหลือหนึ่ง = ย่อหน้ามาร์กดาวน์ปกติ) **ทำลายบทภาพยนตร์**
+  // เพราะที่นั่นบรรทัดว่างเป็นเนื้อหาจริงที่ `paginate()` นับเป็น 1 บรรทัด (alpha.86)
+  //
+  // วัดจากไฟล์จริงของผู้ใช้ (A4 · 58 บรรทัด/หน้า): 41 บรรทัด (ว่าง 22) → `.trim()` เหลือ 39
+  // → ยุบ `\n{3,}` เหลือ **28** (ว่าง 9) เพราะมีช่วงว่างติดกัน 3, 4 และ 7 บรรทัด
+  // ผลคือ PDF ที่ออกจาก "ศูนย์รวมการส่งออก" ได้ **1 หน้า** ขณะที่ตัวแก้ไขเห็น 2 หน้า
+  // (ทางที่ส่งออกจากแท็บบทโดยตรงไม่ผ่านที่นี่ จึงถูกอยู่แล้ว — คนละไปป์ไลน์กัน)
+  // ตัดสิน **รายฉาก** — ฉบับร่างปนนิยายกับบทได้ (`keepBlanks` ที่ผู้เรียกส่งมาชนะเสมอ)
+  const keepFor = (sc) => (keepBlanks === undefined ? sc.format === 'screenplay' : !!keepBlanks);
+  // การยุบทั้งเอกสารตอนท้ายมองไม่ออกว่าช่วงไหนมาจากฉากไหน → **มีฉากบทแม้ฉากเดียวก็ห้ามยุบ**
+  // (เอกสารที่เป็นนิยายล้วนยังได้พฤติกรรมเดิมเป๊ะ — ไม่มี regression ฝั่งนิยาย)
+  const squashAll = keepBlanks === undefined ? !modelHasScreenplay(model) : !keepBlanks;
 
   // ---- 1) ช่วงเนื้อหา ----
   for (const st of at('model')) {
@@ -323,7 +382,7 @@ export function runWorkflow(model0, workflow,
       case 'omit-elements': {
         const types = o.types === undefined ? 'note' : o.types;
         for (const c of model.chapters) for (const s of c.scenes)
-          s.body = omitElements(s.body || '', types);
+          s.body = omitElements(s.body || '', types, { keepBlanks: keepFor(s) });
         break;
       }
       case 'filter-status': {
@@ -355,6 +414,22 @@ export function runWorkflow(model0, workflow,
           s.title = resolveVars(s.title || '', varCtx);
         }
         break;
+      // [alpha.116 ข้อ 8] แทนโค้ดสั้น — บริบทสร้างใหม่ต่อฉาก (ฉากรู้ว่าตัวเองอยู่บทไหน ลำดับที่เท่าไร)
+      case 'shortcodes': {
+        let ci = 0;
+        for (const c of model.chapters) {
+          ci++;
+          let si = 0;
+          for (const s of c.scenes) {
+            si++;
+            const ctx = sceneContext({ model, chapter: c, scene: s, chapterNo: ci, sceneNo: si,
+                                       vars: varCtx, now: shortcodeNow });
+            s.body = expandShortcodes(s.body || '', ctx);
+            s.title = expandShortcodes(s.title || '', ctx);
+          }
+        }
+        break;
+      }
       default: break;
     }
   }
@@ -395,7 +470,9 @@ export function runWorkflow(model0, workflow,
         out.push(fill(opt('scene-heading', 'template', '### {title}'), sn, s.title || '', varCtx), '');
       if (has('scene-meta'))
         out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), (s.words || 0).toLocaleString()), '');
-      const b = String(s.body || '').trim();
+      // บท: ตัดแค่ช่องว่างท้าย (กันซ้อนกับ `''` ที่ push ตามหลัง) — ช่องไฟข้างในเป็นเนื้อหา
+      const b = keepFor(s) ? String(s.body || '').replace(/\s+$/, '')
+                           : String(s.body || '').trim().replace(/\n{3,}/g, '\n\n');
       if (b) out.push(b, '');
     }
   }
@@ -405,7 +482,11 @@ export function runWorkflow(model0, workflow,
              tf('ui.compile.wordAll', st0.words.toLocaleString()),
              tf('ui.compile.timeReadMin', Math.max(1, Math.round(st0.words / 250))), '');
   }
-  let text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  // `.trim()` ของทั้งเอกสารยังทำทั้งสองโหมด — บรรทัดว่างหัว/ท้ายสุดเป็นเศษจากโครงประกอบ
+  // (ปก/หัวบท/ตัวคั่น) ไม่ใช่ช่องไฟที่ผู้เขียนตั้งใจ · ที่ห้ามแตะคือช่องว่าง **ข้างใน**
+  let text = out.join('\n');
+  if (squashAll) text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.trim() + '\n';
 
   // ---- 3) ช่วงข้อความสุดท้าย ----
   let ext = workflow.ext || 'md';

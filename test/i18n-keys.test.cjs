@@ -107,6 +107,52 @@ for (const abs of srcFiles) {
 check('ไม่มีข้อความไทยที่ต้องแปลตกค้างในซอร์ส', hardcoded === 0,
       hardcoded + ' จุด: ' + where.join(' · '));
 
+// ═══════ [alpha.116 ข้อ 6] ★ index.html ก็ต้องไม่มีไทยฮาร์ดโค้ด ═══════
+//
+// ผู้ใช้: *"เช็ค hardcode ต้องไม่มีภาษาไทย อย่าลืม"*
+//
+// ประตูกันพลาดเดิมกวาดเฉพาะ `.js` — `renderer/index.html` จึงรอดมาตลอด และมีไทย
+// ฮาร์ดโค้ดค้างอยู่ **92 จุด** (tooltip ของปุ่มแทบทั้งแถบ + ตัวเลือกในกล่องเลือก)
+// สลับภาษาเป็นอังกฤษแล้วแถบเครื่องมือยังเป็นไทยทั้งแถบ
+//
+// กติกา: ข้อความไทยใน index.html ต้องมี `data-i18n` / `data-i18n-title` /
+// `data-i18n-attr` กำกับเสมอ และคีย์นั้นต้องมีจริงในไฟล์ภาษาทุกไฟล์
+{
+  const htmlPath = path.join(ROOT, 'renderer/index.html');
+  const raw = fs.readFileSync(htmlPath, 'utf8');
+  // ตัดคอมเมนต์ HTML ทิ้ง (คำอธิบายในนั้นเป็นของนักพัฒนา ไม่ใช่ข้อความบนหน้าจอ)
+  const html = raw.replace(/<!--[\s\S]*?-->/g, ' ');
+  const bad = [];
+
+  // 1) title="…" ที่ไม่มีคีย์กำกับ
+  const TITLE = /<[a-z]+[^>]*\stitle="([^"]*)"[^>]*>/g;
+  let m;
+  while ((m = TITLE.exec(html))) {
+    if (!THAI.test(m[1])) continue;
+    if (/data-i18n-title=/.test(m[0]) || /data-i18n-attr="title"/.test(m[0])) continue;
+    bad.push('title: ' + m[1].slice(0, 30));
+  }
+  // 2) ข้อความไทยระหว่างแท็กที่ไม่มีคีย์กำกับ
+  const TEXT = /<([a-z]+)([^>]*)>([^<>]*[฀-๿][^<>]*)</g;
+  while ((m = TEXT.exec(html))) {
+    if (/data-i18n=/.test(m[2])) continue;
+    bad.push('<' + m[1] + '>: ' + m[3].trim().slice(0, 30));
+  }
+  check('★ index.html ไม่มีข้อความไทยที่ไม่ได้ผ่านระบบภาษา', bad.length === 0,
+        bad.length + ' จุด: ' + bad.slice(0, 5).join(' · '));
+
+  // 3) คีย์ที่ index.html อ้าง ต้องมีจริงในไฟล์ภาษาทุกไฟล์
+  const keys = new Set();
+  const KEY = /data-i18n(?:-title)?="([^"]+)"/g;
+  while ((m = KEY.exec(html))) keys.add(m[1]);
+  check('index.html อ้างคีย์ภาษาอย่างน้อย 80 คีย์', keys.size >= 80, keys.size);
+  for (const f of langFiles) {
+    const miss = [...keys].filter((k) => !(tables[f][k] || tables[f]['ui.' + k]));
+    check(`${f}: คีย์ที่ index.html อ้างมีครบ`, miss.length === 0,
+          miss.length + ' ขาด: ' + miss.slice(0, 4).join(' · '));
+  }
+}
+
 // ───────── คีย์ต้องอ่านรู้เรื่อง ─────────
 const badShape = [...used.keys()].filter((k) => !/^ui\.[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9:]*$/.test(k));
 check('คีย์ทุกตัวอยู่ในรูป ui.<module>.<name>', badShape.length === 0, badShape.slice(0, 5).join(' · '));

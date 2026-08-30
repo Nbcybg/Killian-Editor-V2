@@ -318,5 +318,43 @@ const check = (name, cond, extra) => {
         md.startsWith('# ') && md.includes('**คุณ:**') && md.includes('**ผู้ช่วย:**'), md.slice(0, 40));
 }
 
+// ══════════════════ 8) สตรีม (alpha.96) ══════════════════
+{
+  // OpenAI-compatible SSE
+  check('[สตรีม] OpenAI delta.content อ่านได้',
+        P.parseStreamChunk('data: {"choices":[{"delta":{"content":"สวัสดี"}}]}').delta === 'สวัสดี');
+  check('[สตรีม] [DONE] ถูกจับเป็น done',
+        P.parseStreamChunk('data: [DONE]').done === true);
+  check('[สตรีม] reasoning_content ไหลมาในช่อง thinking',
+        P.parseStreamChunk('data: {"choices":[{"delta":{"reasoning_content":"คิดอยู่…"}}]}').thinking === 'คิดอยู่…');
+  check('[สตรีม] OpenRouter .reasoning อ่านได้',
+        P.parseStreamChunk('data: {"choices":[{"delta":{"reasoning":"รอ"}}]}').thinking === 'รอ');
+  // Anthropic SSE
+  const anthText = P.parseStreamChunk('data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"บท"}}');
+  check('[สตรีม] Anthropic text_delta อ่านได้', anthText.delta === 'บท');
+  const anthThink = P.parseStreamChunk('data: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"เหตุผล"}}');
+  check('[สตรีม] Anthropic thinking_delta อ่านได้', anthThink.thinking === 'เหตุผล');
+  check('[สตรีม] Anthropic message_stop เป็น done',
+        P.parseStreamChunk('data: {"type":"message_stop"}').done === true);
+  // Ollama เนทีฟ
+  check('[สตรีม] Ollama message.content + done อ่านได้',
+        P.parseStreamChunk('{"message":{"content":"ต่อ"},"done":true}').delta === 'ต่อ');
+  // ขยะไม่ทำให้ล้ม
+  check('[สตรีม] บรรทัดที่ไม่ใช่ JSON คืน null', P.parseStreamChunk('data: junk') === null);
+  check('[สตรีม] บรรทัดว่างคืน null', P.parseStreamChunk('') === null);
+  check('[สตรีม] ก้อนที่ไม่มีทั้งข้อความและความคิดคืน null',
+        P.parseStreamChunk('data: {"choices":[{"delta":{}}]}') === null);
+
+  // chatRequest รับ temperature/maxTokens ทับจากผู้เรียก (เช่น analyzer ต้องการ temperature 0.3)
+  const ov = P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' } }),
+    { temperature: 0.3, maxTokens: 1200 });
+  check('[chat] temperature/maxTokens จากผู้เรียกทับค่าพารามิเตอร์',
+        ov.body.temperature === 0.3 && ov.body.max_tokens === 1200, JSON.stringify(ov.body));
+  const noOv = P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' } }), {});
+  check('[chat] ไม่ส่ง override → ใช้ค่าพารามิเตอร์เดิม',
+        noOv.body.temperature === 0.7 && noOv.body.max_tokens === 2048,
+        JSON.stringify({ t: noOv.body.temperature, m: noOv.body.max_tokens }));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

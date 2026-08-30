@@ -228,7 +228,7 @@ export function parseModels(json) {
  * คำขอ "คุยกับโมเดล" — รูปแบบ OpenAI chat/completions (มาตรฐานที่เจ้าอื่นทำตามกันหมด)
  * พารามิเตอร์ที่ผู้ใช้ปล่อยว่าง (null) จะ **ไม่ถูกส่ง** เพื่อไม่ให้เซิร์ฟเวอร์ที่ไม่รองรับตอบ 400
  */
-export function chatRequest(provider, { messages = [], system = '', stream = false, model } = {}) {
+export function chatRequest(provider, { messages = [], system = '', stream = false, model, temperature, maxTokens } = {}) {
   const base = trimSlash((provider && provider.credential && provider.credential.baseUrl) || '');
   const pr = normalizeParams((provider && provider.params) || {});
   const url = /\/chat\/completions$/i.test(base) ? base
@@ -240,8 +240,8 @@ export function chatRequest(provider, { messages = [], system = '', stream = fal
   };
   if (stream) body.stream = true;
   const put = (k, v) => { if (v !== null && v !== undefined && v !== '') body[k] = v; };
-  put('temperature', pr.temperature);
-  put('max_tokens', pr.maxTokens);
+  put('temperature', temperature !== undefined ? temperature : pr.temperature);
+  put('max_tokens', maxTokens !== undefined ? maxTokens : pr.maxTokens);
   put('frequency_penalty', pr.frequencyPenalty);
   put('presence_penalty', pr.presencePenalty);
   put('top_p', pr.topP);
@@ -292,6 +292,55 @@ export function parseThinking(json) {
   }
   return '';
 }
+/**
+ * อ่านข้อความ + ความคิดที่ไหลมาทีละก้อนจากสตรีม (SSE/ndjson)
+ * แต่ละเจ้าใช้โครงต่างกัน — ลองทุกสำนวนที่ใช้กันจริง:
+ *   OpenAI-compatible: `choices[0].delta.content` + `.reasoning_content`/`.reasoning` (OpenRouter)
+ *   Anthropic: `content_block_delta` ที่มี `delta.type === 'text_delta'|'thinking_delta'` · `message_stop`
+ * @param {string} line  บรรทัดจากสตรีม (รับได้ทั้ง `data: {…}` และ JSON เปล่า ๆ)
+ * @returns {{delta?:string, thinking?:string, done?:boolean}|null}
+ */
+export function parseStreamChunk(line) {
+  const s = String(line || '').trim();
+  if (!s) return null;
+  if (s === '[DONE]' || s === 'data: [DONE]' || s === 'data:[DONE]') return { done: true };
+  const payload = /^data:\s*/i.test(s) ? s.replace(/^data:\s*/i, '') : s;
+  let d;
+  try { d = JSON.parse(payload); } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+
+  let delta = '';
+  let thinking = '';
+
+  // Anthropic — ใช้ `type` เป็นตัวชี้ ตรวจก่อนเพราะ `choices` ไม่มีในสตรีมของ Anthropic
+  if (d.type === 'content_block_delta' && d.delta) {
+    if (d.delta.type === 'thinking_delta') thinking = d.delta.thinking || '';
+    else if (typeof d.delta.text === 'string') delta = d.delta.text;
+  } else if (d.type === 'message_stop') {
+    return { done: true };
+  }
+
+  // OpenAI-compatible — choices[0].delta.{content,reasoning_content,reasoning}
+  const ch = d.choices && d.choices[0];
+  if (ch) {
+    const dl = ch.delta || ch.message || {};
+    if (typeof dl.content === 'string') delta = dl.content;
+    if (typeof dl.reasoning_content === 'string') thinking = dl.reasoning_content;
+    else if (typeof dl.reasoning === 'string') thinking = dl.reasoning;
+  }
+  // Ollama เนทีฟ (เผื่อมีคนต่อ base URL ไปที่ Ollama) — message.content / response
+  if (!delta && !thinking) {
+    const m = d.message || {};
+    if (typeof m.content === 'string') delta = m.content;
+    if (typeof m.thinking === 'string') thinking = m.thinking;
+    if (typeof d.response === 'string') delta = d.response;
+    if (d.done) return { done: true, delta, thinking };
+  }
+
+  if (!delta && !thinking) return null;
+  return { delta, thinking };
+}
+
 function emptyUsage() { return { input: 0, output: 0, reasoning: 0, cached: 0, total: 0 }; }
 function numOr(...vals) {
   for (const v of vals) if (typeof v === 'number' && isFinite(v)) return v;

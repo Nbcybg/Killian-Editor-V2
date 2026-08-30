@@ -139,5 +139,35 @@ const resolve = (tbl, key) => tbl[key] || tbl['ui.' + key];
   check('ฟีเจอร์หลักมีคีย์ลัดครบ', missing.length === 0, missing.join(' · '));
 }
 
+// ═══════════ [alpha.116 ข้อ 7] ★ แผงทุกตัวที่ปิดได้ ต้องมีคีย์ลัด ═══════════
+//
+// ผู้ใช้: *"เช็ค shortcut มีครบมั้ย"* — คำตอบตอนนั้นคือ "ไม่ครบ ขาด 9 แผง"
+// เหตุที่ขาดคือ **ไม่มีใครตรวจ**: เพิ่มแผงใหม่แล้วลืมเติมคีย์ลัดก็ไม่มีอะไรเตือน
+// (อาการเดียวกับที่เมนู "มุมมอง → แผง" เคยตกหล่นสามตัวใน alpha.69 จนต้องทำ MENU_PANELS ขึ้นมา)
+// เทสนี้คือประตูกันพลาดตัวนั้นสำหรับคีย์ลัด — ลืมเมื่อไหร่แดงตั้งแต่ build
+{
+  const outPanel = path.join(require('os').tmpdir(), '_scpanels.cjs');
+  require('esbuild').buildSync({ entryPoints: [path.join(ROOT, 'src/panels/panel-ui.js')],
+    outfile: outPanel, format: 'cjs', bundle: true, logLevel: 'silent' });
+  const P = require(outPanel);
+  const ids2 = new Set(C.SHORTCUTS.map((s) => C.shortcutId(s)));
+  const closable = P.PANEL_DEFS.filter((d) => d.closable !== false).map((d) => d.id);
+  check('อ่านรายชื่อแผงออกมาได้จริง', closable.length >= 20, closable.length);
+  const noKey = closable.filter((id) => !ids2.has('toggle-panel:' + id)
+                                     && !C.SHORTCUT_PANEL_SKIP[id]);
+  check('★ แผงที่ปิดได้ทุกตัวมีคีย์ลัด (หรือประกาศเหตุผลไว้แล้ว)',
+        noKey.length === 0, noKey.join(' · '));
+  const ghostSkip = Object.keys(C.SHORTCUT_PANEL_SKIP)
+    .filter((id) => !P.PANEL_DEFS.some((d) => d.id === id));
+  check('รายการยกเว้นไม่ได้อ้างแผงที่ไม่มีจริง', ghostSkip.length === 0, ghostSkip.join(' · '));
+  const noReason = Object.entries(C.SHORTCUT_PANEL_SKIP).filter(([, v]) => !String(v || '').trim());
+  check('ทุกรายการที่ยกเว้นมีเหตุผลกำกับ', noReason.length === 0,
+        noReason.map((x) => x[0]).join(' · '));
+  const ghost = [...ids2].filter((id) => id.startsWith('toggle-panel:'))
+    .map((id) => id.slice('toggle-panel:'.length))
+    .filter((pid) => !P.PANEL_DEFS.some((d) => d.id === pid));
+  check('คีย์ลัดไม่ได้ชี้ไปแผงที่ไม่มีจริง', ghost.length === 0, ghost.join(' · '));
+}
+
 console.log(`\nshortcuts: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

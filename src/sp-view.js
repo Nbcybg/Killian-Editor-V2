@@ -372,7 +372,10 @@ export function renderPageView(host, pages, fmt, opts = {}) {
     // `before = 0` เมื่อหน้ายังว่าง (`cur.length === 0`) · ถ้าไม่ตัด หน้าที่ขึ้นด้วยหัวฉาก
     // จะล้นไป 2 บรรทัด (วัดจริง: 32px) ทั้งที่จำนวนบรรทัดในโมเดลยังไม่เกินโควตา
     const firstBlock = page.querySelector('.sp');
-    if (firstBlock) firstBlock.style.paddingTop = '0';
+    // [alpha.112] ตัด padding แล้วต้องตัด `--k-pad` ด้วย ไม่งั้นเลขฉากของหัวฉากที่เป็น
+    // บรรทัดบนสุดของหน้าไปลอยคนละบรรทัดกับตัวมันเอง (บทเรียนเดียวกับ alpha.102 บั๊ก 1
+    // ซึ่งแก้ไว้เฉพาะฝั่งตัวแก้ไข แต่ตกมุมมองหน้าคู่/ภาพรวมไว้)
+    if (firstBlock) { firstBlock.style.paddingTop = '0'; firstBlock.style.setProperty('--k-pad', '0'); }
     if (pg.continuedBottom) putCont('bottom', pg.continuedBottom);
     slot.append(page);
     host.append(slot);

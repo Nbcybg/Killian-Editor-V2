@@ -131,5 +131,110 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
         JSON.stringify(L(['a', 'b'], all)) === JSON.stringify([true, true]));
 }
 
+// ═══════════ [alpha.111] แถบรูปแบบลอย: ตั้งค่าแยกนิยาย / บทภาพยนตร์ ═══════════
+{
+  const ids = T.FMTBAR_IDS;
+  check('รายการปุ่มบนแถบลอยมีอย่างน้อย 20 ตัว', ids.length >= 20, ids.length);
+  check('ไม่มี id ซ้ำในรายการแถบลอย', new Set(ids).size === ids.length);
+  check('ทุกตัวบนแถบลอยรู้จักในระบบตั้งค่า (ไม่มีตัวหลงมา)',
+        ids.every((x) => T.isConfigurable(x) || T.LOCKED_BUTTONS.includes(x)),
+        ids.filter((x) => !T.isConfigurable(x) && !T.LOCKED_BUTTONS.includes(x)).join(','));
+  check('isFmtbarButton แยกได้ว่าปุ่มไหนอยู่แถบไหน',
+        T.isFmtbarButton('tb-bold') === true && T.isFmtbarButton('tb-kanban') === false);
+
+  // ★ กติกาข้อสำคัญที่สุด: ปุ่มเดียวห้ามมีสวิตช์สองที่
+  const main = T.mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id));
+  const fmt = T.fmtbarGroups().flatMap((g) => g.buttons.map((b) => b.id));
+  check('★ ไม่มีปุ่มไหนโผล่ทั้งหน้าแถบเครื่องมือและหน้าแถบรูปแบบ',
+        main.every((x) => !fmt.includes(x)), main.filter((x) => fmt.includes(x)).join(','));
+  check('รวมสองหน้าแล้วยังครบทุกปุ่มที่ตั้งค่าได้',
+        T.allButtonIds().filter((x) => T.isConfigurable(x)).length === main.length + fmt.length,
+        `${main.length}+${fmt.length}`);
+  check('หน้าแถบเครื่องมือไม่เหลือกลุ่มว่าง', T.mainbarGroups().every((g) => g.buttons.length > 0));
+  check('นับปุ่มของแถบหลักไม่รวมปุ่มบนแถบลอย',
+        T.mainbarCounts(null).total === main.length, T.mainbarCounts(null).total);
+
+  check('โหมดมีสองโหมด', T.FMT_MODES.join(',') === 'prose,screenplay');
+  check('โหมดที่ไม่รู้จักตกเป็นนิยาย',
+        T.fmtMode('wiki') === 'prose' && T.fmtMode(undefined) === 'prose'
+        && T.fmtMode('screenplay') === 'screenplay');
+
+  // ── ปุ่มที่โหมดนั้นใช้ไม่ได้ ──
+  check('บทภาพยนตร์: ช่องหัวข้อ/ยกคำพูด/ตัวยก/ตัวห้อย ใช้ไม่ได้',
+        ['tb-style', 'tb-quote', 'tb-sup', 'tb-sub'].every((x) => !T.fmtSupported('screenplay', x)));
+  check('★ หัวข้อย่อย/ตัวเลข ใช้ได้ในบท (คำนำหน้าในข้อความ ตั้งแต่ alpha.98)',
+        T.fmtSupported('screenplay', 'tb-ul') && T.fmtSupported('screenplay', 'tb-ol'));
+  check('นิยาย: ตัวหนา/ยกคำพูด/หัวข้อ ใช้ได้หมด',
+        ['tb-bold', 'tb-quote', 'tb-style', 'tb-sup'].every((x) => T.fmtSupported('prose', x)));
+  check('นิยาย: ปุ่มเฉพาะบทใช้ไม่ได้', !T.fmtSupported('prose', 'tb-sp-cont'));
+  check('ทุกตัวใน FMT_UNSUPPORTED มีอยู่จริงบนแถบลอย',
+        Object.values(T.FMT_UNSUPPORTED).flat().every((x) => T.FMTBAR_IDS.includes(x)),
+        Object.values(T.FMT_UNSUPPORTED).flat().filter((x) => !T.FMTBAR_IDS.includes(x)).join(','));
+
+  // ── เปิด/ปิดทีละตัว แยกโหมดจริงไหม ──
+  {
+    let c = T.setFmtbarVisible(null, 'screenplay', 'tb-bold', false);
+    check('★ ซ่อนในบท ไม่กระทบนิยาย',
+          T.fmtbarHidden(c, 'screenplay', 'tb-bold') === true
+          && T.fmtbarHidden(c, 'prose', 'tb-bold') === false);
+    c = T.setFmtbarVisible(c, 'screenplay', 'tb-bold', true);
+    check('เปิดกลับได้', T.fmtbarHidden(c, 'screenplay', 'tb-bold') === false);
+    check('ปุ่มที่โปรแกรมคุมเอง ซ่อนไม่ได้',
+          T.fmtbarHidden(T.setFmtbarVisible(null, 'prose', 'tb-mode', false), 'prose', 'tb-mode') === false);
+    check('ปุ่มที่ไม่ได้อยู่บนแถบลอย ไม่ถูกนับว่าซ่อน',
+          T.fmtbarHidden(null, 'prose', 'tb-kanban') === false);
+  }
+  {
+    const c = T.setFmtbarGroupVisible(null, 'prose', 'align', false);
+    check('ปิดทั้งกลุ่มได้',
+          ['tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify']
+            .every((x) => T.fmtbarHidden(c, 'prose', x)));
+    check('ปิดกลุ่มในนิยาย ไม่กระทบบท', !T.fmtbarHidden(c, 'screenplay', 'tb-align-left'));
+    const c2 = T.setFmtbarGroupVisibleAll(c, 'prose');
+    check('แสดงทุกปุ่มของโหมดเดียวได้', !T.fmtbarHidden(c2, 'prose', 'tb-align-left'));
+    const c3 = T.setFmtbarGroupVisible(c, 'prose', 'ไม่มีกลุ่มนี้', false);
+    check('กลุ่มที่ไม่มีจริงไม่พัง', !!c3.prose && !!c3.screenplay);
+  }
+  check('นับจำนวนที่เปิดอยู่ถูก',
+        T.fmtbarCounts(T.setFmtbarVisible(null, 'prose', 'tb-bold', false), 'prose').on
+          === T.fmtbarCounts(null, 'prose').on - 1);
+  check('รีเซ็ตแล้วเปิดหมดทั้งสองโหมด', (() => {
+    const r = T.resetFmtbarConfig();
+    return T.FMT_MODES.every((m) => Object.keys(r[m].hidden).length === 0);
+  })());
+
+  // ── สืบทอดค่าเก่าจาก settings.toolbar ──
+  {
+    const legacy = { hidden: { 'tb-bold': true, 'tb-kanban': true } };
+    const c = T.normalizeFmtbar(null, legacy);
+    check('★ ยังไม่เคยตั้งค่าแถบลอย → สืบทอดตัวที่เคยซ่อนไว้มาทั้งสองโหมด',
+          c.prose.hidden['tb-bold'] === true && c.screenplay.hidden['tb-bold'] === true);
+    check('ตัวที่ไม่ได้อยู่บนแถบลอย ไม่ถูกสืบทอดมา', !c.prose.hidden['tb-kanban']);
+    const c2 = T.normalizeFmtbar({ prose: { hidden: {} }, screenplay: { hidden: {} } }, legacy);
+    check('ตั้งค่าเองแล้ว = ไม่สืบทอดทับอีก', !c2.prose.hidden['tb-bold']);
+  }
+  check('ค่าขยะไม่พัง', (() => {
+    const c = T.normalizeFmtbar({ prose: { hidden: { 'ไม่มีปุ่มนี้': true } } });
+    return Object.keys(c.prose.hidden).length === 0 && !!c.screenplay;
+  })());
+
+  // ── แผนการแสดงผลทั้งแถบ ──
+  {
+    const seq = [null, 'tb-bold', 'sep', 'tb-style', 'tb-quote'];   // null = ที่จับลากของแถบ
+    const r = T.layoutFmtbar(seq, null, 'screenplay');
+    check('layoutFmtbar คืนสองชุดยาวเท่าลำดับที่ส่งไป',
+          r.show.length === seq.length && r.grey.length === seq.length);
+    check('ปุ่มที่ใช้ไม่ได้ในบท ถูกทำเครื่องหมายเทา (แต่ยังแสดง)',
+          r.grey[3] === true && r.grey[4] === true && r.show[3] === true && r.show[4] === true);
+    check('ปุ่มที่ใช้ได้ ไม่โดนเทา', r.grey[1] === false);
+    check('ที่จับลากของแถบไม่เคยโดนเทา/ซ่อน', r.grey[0] === false && r.show[0] === true);
+    const r2 = T.layoutFmtbar(seq, null, 'prose');
+    check('โหมดนิยาย ไม่มีปุ่มไหนเทาในชุดนี้', r2.grey.every((x) => x === false));
+    const r3 = T.layoutFmtbar(T.FMTBAR_IDS.map((x) => x), T.setFmtbarVisible(null, 'prose', 'tb-bold', false), 'prose');
+    check('ปุ่มที่ซ่อนไว้ไม่แสดง', r3.show[T.FMTBAR_IDS.indexOf('tb-bold')] === false);
+    check('ลำดับว่างไม่พัง', T.layoutFmtbar(null, null, 'prose').show.length === 0);
+  }
+}
+
 console.log(`\ntoolbar-config: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

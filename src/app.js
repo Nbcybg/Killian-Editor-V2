@@ -80,6 +80,7 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          t, i18n, loadLanguage, scanLanguages, languageCatalog, applyDataI18n, onLanguageChanged,
          csvToTable, tableToCsv, langFileName, fallbackLangName,
          SHORTCUTS, SHORTCUT_LABELS, shortcutId, SHORTCUT_CATS, shortcutCat, needsAlt,
+         SHORTCUT_PANEL_SKIP,
          formatShortcut, accelText, withShortcut, num,
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
@@ -204,11 +205,24 @@ import { installTextMeasurer, refreshTextMeasurer, preloadMeasuredFonts } from '
 import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
          resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
          isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
-import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS } from './toolbar/toolbar-ui.js';
+import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS,
+         applyFmtbarConfig, fmtbarContextItems, fabContextItems,
+         TB_FMT_HOST } from './toolbar/toolbar-ui.js';
+// [alpha.111] ปุ่ม "เรียกแถบรูปแบบมาหาเคอร์เซอร์" — ตรรกะพิกัด/เส้นโค้งอยู่ในโมดูลบริสุทธิ์
+import { fmtBarTarget, tweenAt, FMTBAR_TWEEN_MS, clampBarPos, clampBarInBox, visibleHostBox,
+         FMTBAR_OPACITIES, nextOpacity, opacityPercent, normalizeBarState, resetBarState,
+         nextAlign, normalizeAlign, alignBarPos, defaultBarPos } from './toolbar/fmtbar-pos.js';
+// [alpha.116 ข้อ 8] โค้ดสั้น `[title]` — ทะเบียน + ตัวแทนค่า (บริสุทธิ์ · เทสแยก)
+import { SHORTCODES, SHORTCODE_GROUPS, shortcodeLabel } from './shortcode.js';
+// [alpha.111] ปุ่มลอย (FAB) ที่ผู้ใช้เลือกคำสั่งเองได้ + เมนูวงกลม/แถวตั้ง
+import { normalizeFab, fabAction, fabMenuItems, fabRadialPositions, fabStackPositions,
+         fabRadius, fabOpenDir, fabAnimMs, clampFabPos } from './toolbar/fab-config.js';
 import { openExportHub, EXPORT_FORMATS, formatDef, docKind, pdfEngine, exportPageNumberFmt,
          normalizeHub, defaultWorkflowFor, workflowForFormat, suggestName } from './export-hub.js';
 import * as SESS from './session/session-core.js';
 import { openAIAssistant, openPlotHoleDetector, openDialogueGenerator, openConsistencyCheck, openWorldGenerator, openAIChat } from './ai/ai-ui.js';
+// [alpha.116 ข้อ 3] AI Hub — ประตูเดียวเข้าทุกความสามารถ AI
+import { renderAIHubPanel } from './ai-hub-ui.js';
 // [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครแบบทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
 import { renderStarterPanel, openStoryStarter, flushStarter } from './starter/starter-ui.js';
 import { showThesaurusPopup, initThesaurus } from './tools/thesaurus-ui.js';
@@ -486,6 +500,8 @@ function lnSubRows(kid, span) {
  *   2. **กริด** — ความสูงจริงของบล็อกเท่ากับจำนวนบรรทัดที่จองไว้ไหม (บทภาพยนตร์)
  *   3. **ของจริงบนจอ** — มีบรรทัดไหนล้ำกรอบพื้นที่พิมพ์ของแผ่นตัวเองไหม
  */
+/* i18n-skip: k2PageDoctor — เครื่องมือวินิจฉัยของนักพัฒนา เรียกจาก DevTools เท่านั้น
+   ไม่มี UI ไม่มีปุ่ม ป้ายในรายงานเป็นไทยเพื่อให้ผู้ใช้ก๊อปผลส่งกลับมาได้ทันที */
 export function k2PageDoctor(opt) {
   const t = (opt && opt.tab) || state.active;
   const out = { ok: true, problems: [] };
@@ -586,6 +602,7 @@ export function k2PageDoctor(opt) {
   try { console.log('%ck2PageDoctor', 'font-weight:bold', out); } catch {}
   return out;
 }
+/* /i18n-skip */
 
 /**
  * ══ [alpha.105r] ★ "บรรทัดไหนล้ำกรอบเส้นตัดตกบ้าง" — วิธีวัดหน้าเหลื่อมที่ตรงที่สุด ══
@@ -624,10 +641,21 @@ export function lineSpills(pm, sheets, mgTopPx, mgBotPx) {
       const mid = (r.top + r.bottom) / 2;
       const b = boxes.find((x) => mid >= x.top - 1 && mid <= x.bottom + 1);
       if (!b) { out.push('off-sheet:' + Math.round(r.top)); continue; }
-      // เผื่อ 2px ให้ครึ่งบรรทัดที่ล้นกล่องกลิฟตามปกติของฟอนต์
+      // ══ [alpha.114] ★ ค่าเผื่อต้องมาจาก "ฟอนต์จริง" ไม่ใช่ตัวเลขตายตัว ══
+      //
+      // `getClientRects()` ของโหนดข้อความคืน **กล่องบรรทัดตามเมตริกฟอนต์** (ascent+descent)
+      // ซึ่ง **สูงกว่า `line-height` ได้** เมื่อฟอนต์มีหางบน/ล่างยาว — ไทยเป็นแบบนั้นทุกตัว
+      // วัดจริงในเทส: `h=21.0 lh=16px` = ล้นข้างละ 2.5px ทั้งที่ตัวหนังสืออยู่ตรงกริดเป๊ะ
+      // ค่าเผื่อ 2px ตายตัวจึงฟ้องผิดตลอด (`top-3.0`) แล้วกลบเคสที่ล้นจริง ๆ ไปด้วย
+      //
+      // ที่ถูกคือเผื่อ **ครึ่งหนึ่งของส่วนที่กล่องกลิฟเกิน line-height** — บรรทัดที่ล้นจริง
+      // จะเกินเป็นระดับหนึ่งบรรทัดเต็ม (16px) ซึ่งยังห่างจากค่าเผื่อนี้มาก จึงไม่มีทางรอด
+      const lhPx = parseFloat(getComputedStyle(par).lineHeight);
+      const slack = 2 + (Number.isFinite(lhPx) && r.height > lhPx ? (r.height - lhPx) / 2 : 0);
       // ข้อความวินิจฉัยล้วน (ไม่ใช่ UI) — ใช้อักษรละตินเพื่อไม่ให้ประตูกัน i18n จับผิดตัว
-      if (r.bottom > b.gBot + 2) out.push('bottom+' + (r.bottom - b.gBot).toFixed(1));
-      else if (r.top < b.gTop - 2) out.push('top-' + (b.gTop - r.top).toFixed(1));
+      const info = ' h=' + r.height.toFixed(1) + ' lh=' + lhPx + ' el=' + par.className;
+      if (r.bottom > b.gBot + slack) out.push('bottom+' + (r.bottom - b.gBot).toFixed(1) + info);
+      else if (r.top < b.gTop - slack) out.push('top-' + (b.gTop - r.top).toFixed(1) + info);
     }
   }
   return out;
@@ -1084,7 +1112,20 @@ export function centerPage(pane) {
  * แล้วกระดาษค้างชิดซ้ายทุกครั้ง · ตั้งซ้ำหลายจังหวะเพราะ ProseMirror จัดหน้าใหม่ไม่พร้อมกัน
  */
 function recenterPageSoon(pane) {
-  const run = () => { const p = pane || (state.active && state.active.pane); if (p) centerPage(p); };
+  // ══ [alpha.116 ข้อ 2] ★ ต้องวัดความกว้างของ workspace ใหม่ก่อน ไม่ใช่แค่เลื่อนจอ ══
+  //
+  // ผู้ใช้: *"โหมดเต็มจอยังขึ้นแบบเบี่ยงซ้าย ไม่กลางจอ"*
+  //
+  // ต้นตอ: กระดาษถูกจัดกึ่งกลางด้วย `margin:auto` ของ `.ProseMirror` **ภายใน `.workspace`**
+  // ซึ่งกว้างเท่ากับ `min-width` ที่ `syncWorkspaceWidths()` ตั้งไว้เป็นพิกเซล (= ความกว้าง
+  // ของ pane หารด้วยซูม) · เข้าโหมดเต็มจอ/โฟกัสไม่ได้ทำให้หน้าต่าง resize จึงไม่มีใครเรียก
+  // `syncWorkspaceWidths()` เลย → workspace ยังกว้างเท่าตอนมีแผงข้าง = แคบกว่าจอ
+  // กระดาษจึงกองอยู่ครึ่งซ้าย และ `centerPage()` (เลื่อน scrollLeft) ก็ช่วยไม่ได้
+  // เพราะไม่มีอะไรให้เลื่อน (scrollWidth == clientWidth)
+  const run = () => {
+    syncWorkspaceWidths();
+    const p = pane || (state.active && state.active.pane); if (p) centerPage(p);
+  };
   requestAnimationFrame(run);
   for (const ms of [40, 120, 260]) setTimeout(run, ms);
 }
@@ -1131,6 +1172,22 @@ export function currentSpView() {
   if (tab && (tab.sp || tab.editor)) return viewOfTab(tab);
   return spViewMode;
 }
+
+// ══ [alpha.116 ข้อ 4] ★ "กดเข้าหน้ากระดาษ" ต้องกลับไป **มุมมองแก้ไขล่าสุด** ไม่ใช่ปกติเสมอ ══
+//
+// ผู้ใช้: *"เมื่ออยู่โหมดหน้าคู่แล้วกดเข้าหน้ากระดาษ มักจะเป็นมุมมองปกติตลอด ต้องเป็นมุมมองล่าสุด"*
+//
+// ต้นตอ: ตัวจับคลิกใน `pageViewHost()` เขียน `setSpView('normal')` ไว้ตายตัวตั้งแต่ alpha.57
+// ตอนนั้นมีมุมมองแก้ไขเดียว (ปกติ) จึงถูก — พอมี "จัดหน้า" กับ "ร่าง" เพิ่มเข้ามา
+// คนที่ทำงานในโหมดจัดหน้าแล้วแวะดูหน้าคู่ จะถูกดีดกลับไปโหมดปกติทุกครั้ง
+//
+// ตอนนี้แต่ละแท็บจำ "มุมมองแก้ไขล่าสุดของตัวเอง" ไว้ (`tab._editView`) — จดตอนออกจาก
+// มุมมองแก้ไขเท่านั้น จึงไม่มีวันเป็นมุมมองหน้ากระดาษเอง
+/** มุมมองแก้ไขล่าสุดของแท็บ (ปกติ/จัดหน้า/ร่าง) — ไม่เคยตั้ง = 'normal' */
+export function lastEditView(tab) {
+  const v = tab && tab._editView;
+  return (isValidView(v) && !isPageView(v)) ? v : 'normal';
+}
 /** ค่าเริ่มต้นสำหรับแท็บที่เพิ่งเปิด — เรียกจาก mountEditor ก่อนทามุมมองครั้งแรก */
 export function seedTabView(tab) {
   if (!tab) return spViewMode;
@@ -1158,7 +1215,7 @@ function pageViewHost(tab, gotoPos) {
     if (!blk && !page) return;
     const pos = blk ? parseInt(blk.dataset.pos, 10)
                     : parseInt(page.querySelector('[data-pos]')?.dataset.pos ?? '', 10);
-    setSpView('normal');
+    setSpView(lastEditView(tab));
     if (Number.isFinite(pos)) gotoPos(pos);
   });
   return host;
@@ -1494,7 +1551,12 @@ export function setSpView(mode, quiet) {
     frac = viewScrollFrac(tab.pane);
   }
   spViewMode = m;                          // ค่าเริ่มต้นของแท็บที่จะเปิดต่อจากนี้
-  if (tab && (tab.sp || tab.editor)) tab.spView = m;
+  if (tab && (tab.sp || tab.editor)) {
+    // [alpha.116 ข้อ 4] จดมุมมองแก้ไขล่าสุดไว้ก่อนออกไปมุมมองหน้ากระดาษ
+    if (!isPageView(prevMode)) tab._editView = prevMode;
+    if (!isPageView(m)) tab._editView = m;
+    tab.spView = m;
+  }
   const pages = syncPaneViews(true);      // ผู้ใช้สั่งเปลี่ยนเอง = ทาใหม่ทุกช่องเสมอ
   const sel = $('#sp-view-select'); if (sel) sel.value = currentSpView();
   syncMenuToggles();
@@ -1543,6 +1605,8 @@ window.addEventListener('resize', () => {
   scheduleLineGutter();
   clearTimeout(_spViewJob);
   _spViewJob = setTimeout(refreshSpView, 150);
+  // [alpha.116 ข้อ 5] ย่อ/ขยายหน้าต่าง → ของลอยต้องยังอยู่ในจอ **และบันทึกทับค่าที่จำไว้**
+  keepFloatingUiInView();
 });
 
 /**
@@ -4478,6 +4542,7 @@ function floatTab(file) {
   bringFloatFront(win);
 
   const n = [...state.tabs.values()].filter((x) => x.floatWin).length;
+  const savedBox = uiLayout()['floatwin:' + file];
   makeDraggable(win, bar, {
     key: 'floatwin:' + file, resizable: true, snap: true,
     defaultPos: { left: 180 + n * 26, top: 90 + n * 26, width: 720, height: 520 },
@@ -4493,11 +4558,14 @@ function floatTab(file) {
       win.style.height = Math.max(180, r.height + ev.clientY - sy) + 'px';
       refitTab(t);
     };
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+                       saveFloatWinBox(file, win); };      // [alpha.116 ข้อ 5] จำขนาดด้วย ไม่ใช่แค่ตำแหน่ง
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   });
 
-  bMin.onclick = () => { win.classList.toggle('min'); refitTab(t); };
+  // [alpha.116 ข้อ 5] สถานะ "ย่อ" ต้องถูกจำไว้เหมือนตำแหน่ง — เดิมกดย่อแล้วปิด/เปิดใหม่ก็คลี่กลับทุกครั้ง
+  if (savedBox && savedBox.min) win.classList.add('min');
+  bMin.onclick = () => { win.classList.toggle('min'); refitTab(t); saveFloatWinBox(file, win); };
   bDock.onclick = () => dockTab(file);
   bX.onclick = () => closeTab(file);
   bar.ondblclick = (e) => { if (!e.target.closest('.float-btn')) dockTab(file); };
@@ -8578,6 +8646,7 @@ const TB_PANEL_BUTTONS = [
   ['tb-gallery-board', 'gallery-board'], ['tb-comments', 'comments'],
   ['tb-notes-panel', 'notes'], ['tb-log', 'log'],
   ['tb-dlgb', 'dlgb'],                         // [alpha.82] ห้องซ้อมบท
+  ['tb-ai-hub', 'ai-hub'],                     // [alpha.116 ข้อ 3] AI Hub
 ];
 
 // บั๊ก #11: ปุ่มที่ทำงานระดับโปรเจกต์/หน้าต่าง — ไม่ต้องมีฉากเปิดอยู่ก็ใช้ได้
@@ -8592,7 +8661,7 @@ const ALWAYS_ON_TB = new Set([
   // [alpha.80] **ปุ่มแผงทุกตัวต้องกดได้โดยไม่ต้องเปิดฉากก่อน**
   // แผงพวกนี้อ่านจากไฟล์ทั้งผลงาน ไม่ได้ผูกกับฉากที่เปิดอยู่เลย —
   // เดิมถูก disable ไปพร้อมปุ่มจัดรูปแบบ ทำให้ "เปิดโปรแกรมมาแล้วกดแผงบทพูดไม่ได้"
-  'tb-dialogue', 'tb-plugins', 'tb-dlgb',
+  'tb-dialogue', 'tb-plugins', 'tb-dlgb', 'tb-ai-hub',
   'tb-timeline', 'tb-maps', 'tb-books', 'tb-network', 'tb-planner', 'tb-branch',
   'tb-floorplan', 'tb-player', 'tb-gallery-board', 'tb-comments', 'tb-notes-panel', 'tb-log',
 ]);
@@ -8713,7 +8782,7 @@ function refreshToolbar() {
   $('#tb-md-codes')?.classList.toggle('on', showMarkdownCodes());
   // [alpha.79] ปุ่มที่ผู้ใช้ซ่อนไว้ ต้องซ่อนต่อทุกครั้งที่แถบถูกวาดใหม่ —
   // refreshToolbar เขียน style.display ของหลายปุ่มตามโหมดเอกสาร จึงต้องทาบทับทีหลังเสมอ
-  applyToolbarConfig();
+  applyToolbarConfig();       // (เรียก applyFmtbarConfig ต่อให้ด้วย — แถบลอยได้ทั้งซ่อนและเทา)
   syncFloatBarVisible();
   syncMenuToggles();          // เมนู native ติ๊กถูกตามสถานะจริง (ส่งเฉพาะตอนค่าเปลี่ยน)
 }
@@ -9988,6 +10057,8 @@ const FEATURE_PANELS = {
   plugins:   () => renderPluginPanel($('#plugins-body')),
   // [alpha.82] ห้องซ้อมบท
   dlgb:      () => renderBuilderPanel($('#dlgb-body')),
+  // [alpha.116 ข้อ 3] AI Hub
+  'ai-hub':  () => renderAIHubPanel($('#ai-hub-body')),
 };
 export function isFeaturePanel(id) { return !!FEATURE_PANELS[panelId(id)]; }
 // วาดค้างอยู่ = ใช้รอบเดียวกัน — openX() เรียก showPanel (hook เริ่มวาด) แล้ว await ต่อ
@@ -10051,7 +10122,12 @@ export function clearFeaturePanels() {
 /** วาดแผงฟีเจอร์ทุกตัวที่เปิดค้างอยู่ (เรียกหลัง initPanelSystem ตอนเปิดโปรเจกต์) */
 export async function renderOpenFeaturePanels() {
   for (const id of Object.keys(FEATURE_PANELS)) {
-    if (isPanelOpen(id)) await renderFeaturePanel(id);
+    if (!isPanelOpen(id)) continue;
+    // [alpha.115] แผงที่กำลังส่งคำขอ AI อยู่ → ห้ามรื้อ DOM กลางคัน (บันทึกเซสชันของมันเอง
+    // ปลุก project-changed → วนกลับมาที่นี่ → วาดใหม่ → ข้อความ/สตรีมที่กำลังวิ่งหายไป)
+    if (id === 'ai-chat' && _chatState().sending) continue;
+    if (id === 'dlgb' && builderState().sending) continue;
+    await renderFeaturePanel(id);
   }
 }
 
@@ -10075,7 +10151,7 @@ function restoreInactivePanes() {
 const QUIET_CMDS = new Set(['zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                             'find', 'find-next', 'find-prev']);
 
-async function handleCommand(ch, ...a) {
+export async function handleCommand(ch, ...a) {
   const t = state.active;
   // จดทุกคำสั่งที่ผู้ใช้สั่ง — ไล่ย้อนได้ว่า "ก่อนพังกดอะไรไป" (เดิม log ไม่มีร่องรอยนี้เลย)
   try {
@@ -10161,6 +10237,41 @@ async function handleCommand(ch, ...a) {
     case 'ai-analyzer': togglePanel('ai-analyzer'); refreshToolbar(); syncMenuToggles(); break;
     // [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสมาร์กดาวน์+fountain ที่นำหน้าบรรทัด
     case 'markdown-codes': toggleMarkdownCodes(); break;
+    // ══ [alpha.111] คำสั่ง "สร้างของใหม่" — เดิมมีแต่ในตารางคีย์ลัดแต่ **ไม่มีตัวรับ**
+    // (กด Ctrl+Alt+1 แล้วเงียบมาตั้งแต่ alpha.79) · ตอนนี้ FAB กับคีย์ลัดใช้ทางเดียวกันแล้ว
+    case 'scene': {
+      if (!state.root) { setStatus(tt('ui.fab.needProject')); break; }
+      const dst = await pickDraftTarget({ title: tt('ui.app.newSceneNew2') });
+      if (!dst) break;
+      addScene(dst.dPath, dst.chapter);
+      break;
+    }
+    case 'chapter': {
+      if (!state.root) { setStatus(tt('ui.fab.needProject')); break; }
+      const dst = await pickDraftTarget({ needChapter: false, title: tt('ui.app.newChapterNew') });
+      if (!dst) break;
+      addChapter(dst.dPath);
+      break;
+    }
+    // ตัวละคร/สถานที่/ของ/ตำนาน — หมวดเดียวกับโฟลเดอร์ใน Wiki (ชื่อหมวดมาจาก a[0])
+    case 'new-entity': {
+      if (!state.root) { setStatus(tt('ui.fab.needProject')); break; }
+      const cat = a[0] || 'characters';
+      const w = await wikiRoot();
+      const dir = await kapi.join(w, cat);
+      await kapi.mkdir(dir);
+      addEntity(dir, cat);
+      break;
+    }
+    case 'character': await handleCommand('new-entity', 'characters'); break;
+    case 'location': await handleCommand('new-entity', 'locations'); break;
+    case 'memo': if (state.root) addMemo(); else setStatus(tt('ui.fab.needProject')); break;
+    // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (ปุ่มบนแถบ + Ctrl+Shift+/)
+    case 'fmtbar-here': fmtBarToPointer(); break;
+    // [alpha.117] สภาพของแถบรูปแบบลอย — จาง · ชิดขอบบน/ล่าง · ล็อกไม่ให้ขยับ
+    case 'fmtbar-opacity': cycleFmtbarOpacity(); break;
+    case 'fmtbar-align': toggleFmtbarAlign(); break;
+    case 'fmtbar-lock': toggleFmtbarLock(); break;
     // [60r2 ข้อ 9] เปิด/ปิดปุ่มลอยมุมขวาล่าง
     case 'toggle-fab': {
       const v = !(state.settings.fabEnabled !== false);
@@ -10334,6 +10445,8 @@ async function handleCommand(ch, ...a) {
       ed?.focus();
       break;
     }
+    // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` ตรงเคอร์เซอร์ (ทะเบียนอยู่ที่ src/shortcode.js)
+    case 'insert-shortcode': insertShortcodeMenu(a[0]); break;
     case 'revert': if (t) await revertTab(t.file); break;
     case 'remove-elements': removeElementsDialog(); break;
     case 'char-map': showCharMap(); break;
@@ -10564,8 +10677,13 @@ const LS_TS_KEY = 'k2-ls-ts';
 // opts: { key, defaultPos:{left,top}, resizable, onEnd }
 function makeDraggable(elm, handle, opts = {}) {
   const { key, defaultPos } = opts;
+  // [alpha.118] `defaultPos` รับฟังก์ชันได้แล้ว — เรียกสด ๆ ทุกครั้งที่ต้องใช้จริง (ตอนติดตั้ง
+  // และตอน .reset()) แทนที่จะพึ่งค่าที่คำนวณครั้งเดียวตอนเริ่มสคริปต์ ซึ่งเลย์เอาต์อาจยังไม่นิ่ง
+  // (ต้นตอของบั๊กที่แถบรูปแบบลอย "รีเซ็ต" แล้วได้ตำแหน่งมุมจอ — ดู setupFloatingFormatBar)
+  // ตัวเรียกเดิมที่ส่งอ็อบเจกต์ตรง ๆ (FAB · หน้าต่างลอย) ไม่ได้รับผลกระทบเลย
+  const resolveDefaultPos = () => (typeof defaultPos === 'function' ? defaultPos() : defaultPos);
   const saved = key ? uiLayout()[key] : null;
-  const pos = saved || defaultPos;
+  const pos = saved || resolveDefaultPos();
   if (pos) {
     elm.style.left = pos.left + 'px'; elm.style.top = pos.top + 'px';
     elm.style.right = 'auto'; elm.style.bottom = 'auto';
@@ -10575,6 +10693,8 @@ function makeDraggable(elm, handle, opts = {}) {
   let sx, sy, ox, oy, dragging = false, lastE = null;
   const down = (e) => {
     if (e.button !== 0 || !elm) return;
+    // [alpha.117] ล็อกแล้วต้องลากไม่ได้จริง — กันที่ต้นทาง ไม่ใช่ไปคืนตำแหน่งทีหลัง
+    if (opts.locked && opts.locked()) return;
     dragging = true; sx = e.clientX; sy = e.clientY;
     const r = elm.getBoundingClientRect();
     const op = elm.offsetParent;
@@ -10624,7 +10744,8 @@ function makeDraggable(elm, handle, opts = {}) {
   handle.addEventListener('mousedown', down);
   return {
     reset() { if (key) { const l = uiLayout(); delete l[key]; localStorage.setItem('k2-ui-layout', JSON.stringify(l)); }
-              if (defaultPos) { elm.style.left = defaultPos.left + 'px'; elm.style.top = defaultPos.top + 'px'; } },
+              const dp = resolveDefaultPos();
+              if (dp) { elm.style.left = dp.left + 'px'; elm.style.top = dp.top + 'px'; } },
   };
 }
 
@@ -10669,12 +10790,15 @@ export function applyToolbarShortcutTitles() {
     const k = o.getAttribute('data-i18n');
     if (k) o.textContent = t(k);
   });
-  // FAB
+  // FAB — [alpha.111] ปุ่มลูกสร้างตอนรัน จึงต้อง "วาดใหม่" ไม่ใช่ไล่เปลี่ยนข้อความ
   const fab = $('#k-fab');
   if (fab) fab.title = t('panel.fab');
-  fab?.parentElement?.querySelectorAll('.k-menu-item span[data-i18n]').forEach((s) => {
-    s.textContent = t(s.getAttribute('data-i18n'));
-  });
+  if ($('#k-fab-menu')) renderFabMenu();
+  // ปุ่มของแถบรูปแบบลอยที่สร้างตอนรัน (ไม่มี data-i18n ใน index.html)
+  const fh = $('#tb-fmt-here');
+  if (fh) fh.title = t('ui.fmtcfg.hereBtn');
+  // [alpha.117] จาง/ชิดขอบ/ล็อก — ป้ายและไอคอนอ่านจากสภาพจริงทุกครั้ง
+  try { applyFmtbarState(); } catch {}
 }
 
 // ---------------- toolbar wiring ----------------
@@ -10684,13 +10808,175 @@ export function tb(id, cmd, arg) { $(id).onclick = () => {
 
 // สร้างแถบรูปแบบอักษรแบบลอยในพื้นที่หน้ากระดาษ — ย้ายปุ่มจัดรูปแบบเดิมเข้าไป (id คงเดิม
 // จึงใช้ร่วมกับ tb()/refreshToolbar ได้ทันที) ลากด้วยหูจับซ้าย + จำตำแหน่งลง localStorage
+// ══ [alpha.116 ข้อ 5] ★ ของลอยต้องยังอยู่ในจอหลัง "ย่อ/ขยาย" หน้าต่าง ══
+//
+// เรียกทุกครั้งที่หน้าต่างเปลี่ยนขนาด (รวมย่อ/ขยาย/คืนขนาด) — หนีบเข้ากรอบแล้ว
+// **บันทึกทับค่าที่จำไว้** ไม่งั้นรอบหน้าเปิดโปรแกรมมาก็ยังชี้ไปนอกจอเหมือนเดิม
+export function keepFloatingUiInView() {
+  let moved = 0;
+  // แถบรูปแบบลอย — ลอยอยู่ใน #content
+  const host = $('#content');
+  if (floatBar && host && floatBar.style.display !== 'none') {
+    const r = floatBar.getBoundingClientRect();
+    const hr = host.getBoundingClientRect();
+    if (r.width && hr.width) {
+      const cur = { left: parseInt(floatBar.style.left, 10) || 0,
+                    top: parseInt(floatBar.style.top, 10) || 0 };
+      // [alpha.119] หนีบเข้า **ส่วนที่มองเห็นได้จริง** ของ `#content` ไม่ใช่ทั้งก้อน —
+      // ตอนออกจากเต็มจอ/โหมดโฟกัส host อาจสูงเลยขอบล่างหน้าต่างไปชั่วขณะ
+      const c = clampBarInBox(cur, { width: r.width, height: r.height },
+                              visibleHostBox(hr, { width: window.innerWidth,
+                                                   height: window.innerHeight }));
+      if (c.moved) {
+        floatBar.style.left = c.left + 'px'; floatBar.style.top = c.top + 'px';
+        floatBar.style.right = 'auto'; floatBar.style.bottom = 'auto';
+        saveUiLayout('fmtbar', { left: c.left, top: c.top });
+        moved++;
+      }
+    }
+  }
+  // ปุ่มลอย (FAB) — ลอยอยู่กับหน้าต่างทั้งใบ
+  const fab = $('#k-fab');
+  if (fab && uiLayout().fab) {
+    const r = fab.getBoundingClientRect();
+    if (r.width) {
+      const c = clampBarPos({ left: Math.round(r.left), top: Math.round(r.top) },
+                            { width: r.width, height: r.height },
+                            { width: window.innerWidth, height: window.innerHeight });
+      if (c.moved) { setFabPos(c); saveUiLayout('fab', c); moved++; }
+    }
+  }
+  // หน้าต่างลอยของแท็บ — หนีบเข้าจอแล้วจำทั้งตำแหน่งและขนาด
+  for (const [file, tb] of state.tabs) {
+    const w = tb.floatWin;
+    if (!w) continue;
+    const r = w.getBoundingClientRect();
+    if (!r.width) continue;
+    const c = clampBarPos({ left: parseInt(w.style.left, 10) || Math.round(r.left),
+                            top: parseInt(w.style.top, 10) || Math.round(r.top) },
+                          { width: r.width, height: r.height },
+                          { width: window.innerWidth, height: window.innerHeight });
+    if (c.moved) { w.style.left = c.left + 'px'; w.style.top = c.top + 'px'; moved++; }
+    saveFloatWinBox(file, w);
+  }
+  return moved;
+}
+
+// ══ [alpha.119] ★ ต้นตอจริงของ "แถบลอยล้นจอหลังออกจากเต็มจอ" ══
+//
+// ผู้ใช้: *"float bar เมื่อกด fullscreen แล้วย้ายตำแหน่ง หรือ reset ตำแหน่ง พอออกจาก fullscreen
+//         ทำให้ float bar ล้นจอ"*
+//
+// ตัวหนีบ (`keepFloatingUiInView`) มีมาตั้งแต่ alpha.116 และทำงานถูกต้องทุกอย่าง — **แต่ไม่มีใครเรียกมัน**
+// ในจังหวะนี้ เพราะคนเรียกคนเดียวคือ `window.addEventListener('resize')` ซึ่งยิงเฉพาะตอน
+// **หน้าต่างทั้งใบ** เปลี่ยนขนาด · ส่วนสิ่งที่ทำให้ `#content` สูงขึ้น/เตี้ยลงจริง ๆ มีอีกหลายทางที่
+// ไม่แตะขนาดหน้าต่างเลยสักนิด:
+//   · โหมดโฟกัส/เต็มจอในโปรแกรม (`toggleFocus`) — แค่สลับคลาสบน `<body>` แล้วแผงข้างหาย
+//   · เปิด/ปิด/ลากขอบแผง · แยกจอ · โหมดอ่าน · แถบเครื่องมือขึ้นบรรทัดที่สอง
+// และแม้แต่เต็มจอของ OS เอง (macOS) ก็ยังเป็นการเปลี่ยนขนาดแบบ **มีอนิเมชัน** — `resize` ยิงครั้งเดียว
+// ตอนต้นทาง ขนาดสุดท้ายมาถึงทีหลังโดยไม่มีอีเวนต์ตามมาอีก
+//
+// → ผู้ใช้ย้ายแถบไปขอบล่างตอนพื้นที่สูง 900px แล้วออกจากเต็มจอเหลือ 600px: ค่าที่จำไว้ยังเป็น 860
+//   ไม่มีใครมาตรวจ แถบจึงจมอยู่ใต้ขอบล่าง (และค่าที่ผิดถูกบันทึกค้างไว้ด้วย = เปิดใหม่ก็ยังหาย)
+//
+// ★ ท่าที่ใช้: **ResizeObserver บน `#content` เอง** — เลิกเดาว่า "อะไรบ้างที่ทำให้พื้นที่เปลี่ยน"
+// แล้วไปเฝ้าที่ผลลัพธ์ตรง ๆ แทน · กรอบเปลี่ยนด้วยเหตุใดก็ตาม (หน้าต่าง · โฟกัส · แผง · อนิเมชัน
+// ทีละเฟรมของ macOS) คอลแบ็กก็ยิงหลัง layout ของเฟรมนั้นเสมอ — ครบทุกทางในที่เดียว
+// รวบเป็นเฟรมเดียวด้วย rAF เพราะระหว่างอนิเมชันมันยิงรัว (บทเรียนข้อ 25)
+let _floatKeepRO = null, _floatKeepJob = 0;
+export function watchFloatHostSize() {
+  const host = $('#content');
+  if (_floatKeepRO || !host || typeof ResizeObserver === 'undefined') return false;
+  _floatKeepRO = new ResizeObserver(() => {
+    if (_floatKeepJob) return;                       // ยิงรัวระหว่างอนิเมชัน → รวบเป็นเฟรมเดียว
+    _floatKeepJob = requestAnimationFrame(() => {
+      _floatKeepJob = 0;
+      try { keepFloatingUiInView(); } catch {}
+    });
+  });
+  _floatKeepRO.observe(host);
+  return true;
+}
+
+/** จำกล่องของหน้าต่างลอย (ตำแหน่ง+ขนาด+สถานะย่อ) — เดิมจำแค่ตำแหน่งตอนปล่อยเมาส์ */
+function saveFloatWinBox(file, win) {
+  if (!file || !win) return;
+  saveUiLayout('floatwin:' + file, {
+    left: parseInt(win.style.left, 10) || 0,
+    top: parseInt(win.style.top, 10) || 0,
+    width: Math.round(win.getBoundingClientRect().width),
+    height: parseInt(win.style.height, 10) || Math.round(win.getBoundingClientRect().height),
+    min: win.classList.contains('min'),
+  });
+}
+
+// ══ [alpha.116 ข้อ 8] เมนูแทรกโค้ดสั้น ══
+//
+// ทะเบียนโค้ดอยู่ที่ `src/shortcode.js` ที่เดียว — เมนูนี้อ่านจากที่นั่นล้วน ๆ
+// เพิ่มโค้ดใหม่หนึ่งแถวในทะเบียน แล้วมันโผล่ในเมนูนี้เอง ไม่ต้องแก้ที่นี่อีก
+export function insertShortcodeMenu(ev) {
+  const ed = getActiveEditor();
+  if (!ed || !ed.view) { setStatus(tt('ui.shortcode.needEditor')); return 0; }
+  const items = [];
+  for (const g of SHORTCODE_GROUPS) {
+    const rows = SHORTCODES.filter((sc) => sc.group === g.key);
+    if (!rows.length) continue;
+    if (items.length) items.push('-');
+    for (const sc of rows) {
+      // โค้ดที่ต้องมีเป้าหมาย (`[wiki:ชื่อ]`) แทรกโครงให้ก่อน แล้วผู้ใช้พิมพ์ชื่อต่อได้เลย
+      const text = sc.group === 'wiki' ? '[' + sc.name + ':]' : '[' + sc.name + ']';
+      items.push({ label: text + '  ·  ' + shortcodeLabel(sc.name),
+                   click: () => insertShortcodeText(text) });
+    }
+  }
+  const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
+  const y = ev && Number.isFinite(ev.clientY) ? ev.clientY : Math.round(window.innerHeight / 3);
+  popupMenu(x, y, items);
+  return items.length;
+}
+
+/** แทรกข้อความโค้ดสั้นตรงเคอร์เซอร์ · แบบที่ต้องพิมพ์ต่อ (`[wiki:]`) วางเคอร์เซอร์ไว้ก่อน `]` */
+export function insertShortcodeText(text) {
+  const ed = getActiveEditor();
+  if (!ed || !ed.view) return false;
+  const v = ed.view;
+  const txt = String(text || '');
+  const from = v.state.selection.from;
+  let tr = v.state.tr.insertText(txt);
+  if (txt.endsWith(':]')) {
+    try { tr = tr.setSelection(PMTextSelection.create(tr.doc, from + txt.length - 1)); } catch {}
+  }
+  v.dispatch(tr.scrollIntoView());
+  markDirty(state.active);
+  ed.focus();
+  return true;
+}
+
 let floatBar = null;
 function setupFloatingFormatBar() {
   if (floatBar) return;
   const bar = el('div', 'k-fmtbar');
-  const handle = el('div', 'k-fmtbar-grip'); handle.title = tt('ui.app.dragMoveBar');
+  const handle = el('div', 'k-fmtbar-grip');
   handle.innerHTML = '<span></span><span></span>';
   bar.append(handle);
+  // [alpha.111] ปุ่ม "เรียกแถบมาหาเคอร์เซอร์" — ของแถบเอง (ไม่อยู่ในรายการปุ่มที่ตั้งค่าได้)
+  // จึงสร้างที่นี่ ไม่ใช่ใน index.html · id ไม่ขึ้นต้น `tb-` ที่ตั้งค่าได้ = ไม่มีวันถูกซ่อนหาย
+  const here = el('button', 'tb k-fmtbar-here');
+  here.id = 'tb-fmt-here';
+  here.innerHTML = iconHtml('crosshair', 15);
+  here.title = tt('ui.fmtcfg.hereBtn');
+  here.onclick = () => fmtBarToPointer();
+  bar.append(here);
+  // ══ [alpha.118] ★ จาง · ชิดขอบ · ล็อก ย้ายจากปุ่มไปเป็นเมนูคลิกขวาบนหูจับ ══
+  //
+  // ผู้ใช้ (หลังลองใช้ alpha.117): *"ให้ใช้เป็นแบบ click ขวาดีกว่าแบบปุ่ม เพราะตอนนี้ปุ่มเยอะไป"*
+  // เดิมสามปุ่มนี้ต้องอยู่ถาวรบนแถบ (ปุ่มปลดล็อกหายไม่ได้ ไม่งั้นล็อกแล้วแก้จากแถบเองไม่ได้)
+  // ตอนนี้ย้ายทั้งสามเข้าเมนูเดียว เปิดจากหูจับ — หูจับเป็นจุดเดียวที่ไม่มีวันถูกซ่อน (ไม่ใช่ปุ่ม
+  // ที่ตั้งค่าได้) จึงยังคงกฎเดิมไว้ครบ แค่ไม่ใช่ปุ่มลอยกินที่บนแถบอีกต่อไป
+  handle.oncontextmenu = (e) => {
+    e.preventDefault(); e.stopPropagation();     // กันไม่ให้ไปเข้าเมนู "ปรับปุ่มแถบ" ของทั้งบาร์
+    fmtbarSettingsMenu(e);
+  };
   // ลำดับปุ่มตามภาพ: [grip] 📄กระดาษ · 📖โหมด · สไตล์ · B I U S · •≣ 1≣ · ❝ · ← ↔ → ☰ · 🖼 · </>
   // ลำดับปุ่มตาม Layout ใหม่: [📄] [📖▾] | [style] | [B I U S] | [•≡ 1≡ ❝] | [⬅ ⬌ ➡ ☰] | [🖼 </> 📖 🔍]
   ['#tb-sp-elem', '#sp-view-select', '#tb-mode', '#tb-style', '#tb-case',
@@ -10705,9 +10991,246 @@ function setupFloatingFormatBar() {
   $('#toolbar').querySelectorAll('.sep').forEach((s) => s.remove());
   $('#content').append(bar);
   floatBar = bar;
-  const drag = makeDraggable(bar, handle, { key: 'fmtbar', defaultPos: { left: 24, top: 12 } });
-  handle.addEventListener('dblclick', () => { drag.reset(); setStatus(tt('ui.app.resetPosBarFormat')); });
+  // ══ [alpha.118] ★ ตำแหน่งเริ่มต้น — กึ่งกลางแนวนอน ชิดขอบล่าง ══
+  //
+  // ผู้ใช้: *"ตำแหน่ง default ควรอยู่ขอบล่าง ตรงกลางของ editor ตอนนี้มันอยู่ตำแหน่งบน เยื้องไปซ้าย"*
+  // วัดขนาดจริงของแถบกับพื้นที่เขียนจริง แล้วคำนวณให้ — ไม่ใช่ค่าตายตัว {24,12} แบบเดิมที่ไม่เคยรู้
+  // ขนาดแถบเลย · มีผลเฉพาะตอนยังไม่มีตำแหน่งจำไว้ หรือกด "รีเซ็ต"
+  //
+  // ★ ต้องเป็น**ฟังก์ชัน** ไม่ใช่ค่าที่คำนวณครั้งเดียวตรงนี้ — จุดนี้รันตอน DOMContentLoaded ซึ่ง
+  // ในโหมดเทส (เปิดโปรเจกต์อัตโนมัติ) เลย์เอาต์ของ `#content` อาจยังไม่นิ่ง วัดได้ค่าเพี้ยน
+  // (บั๊กที่ e2e จับได้จริง: กด "รีเซ็ต" แล้วได้ตำแหน่ง {16,16} คือค่า pad ล้วน ๆ ไม่ใช่กึ่งกลางขอบล่าง
+  // เพราะตอนวัดครั้งแรก `bar` กว้างกว่า `#content` ที่ยังไม่ได้ขนาดจริง) — ฟังก์ชันนี้ถูกเรียกใหม่
+  // ทุกครั้งที่ต้องใช้จริง (mount ครั้งแรก + ทุกครั้งที่กด "รีเซ็ต") จึงได้ขนาดปัจจุบันเสมอ ไม่ใช่ค่าค้าง
+  const defPos = () => {
+    const hostR = $('#content').getBoundingClientRect();
+    const barR = bar.getBoundingClientRect();
+    return defaultBarPos({ width: barR.width, height: barR.height },
+                         { width: hostR.width, height: hostR.height });
+  };
+  // จำไว้ว่า "ตอนติดตั้งยังไม่เคยมีตำแหน่งจำจริง ๆ" — ใช้ตัดสินว่าต้องคำนวณซ้ำตอนเลย์เอาต์นิ่งแล้วไหม
+  const hadSavedPos = Number.isFinite((uiLayout().fmtbar || {}).left);
+  const drag = makeDraggable(bar, handle, { key: 'fmtbar', defaultPos: defPos,
+                                            locked: () => fmtbarState().locked });
+  fmtBarDrag = drag;
+  // [alpha.117] ดับเบิลคลิกหูจับ = **รีเซ็ตทั้งชุด** ไม่ใช่แค่ตำแหน่ง —
+  // ทางออกเดียวที่จำง่ายเวลาแถบจางจนแทบมองไม่เห็นหรือถูกล็อกค้างไว้
+  handle.addEventListener('dblclick', () => resetFmtbarAll());
+  applyFmtbarState();
+  applyFmtbarConfig();
   syncFloatBarVisible();
+  // [alpha.116 ข้อ 5] ตำแหน่งที่จำไว้อาจมาจากตอนหน้าต่างใหญ่กว่านี้ — หนีบตั้งแต่เปิดโปรแกรม
+  // (ไม่งั้นต้องรอให้ผู้ใช้ย่อ/ขยายหน้าต่างสักครั้งก่อน แถบถึงจะกลับเข้าจอ)
+  // [alpha.119] เฝ้าขนาดของ `#content` ตรง ๆ — ครอบคลุมทุกทางที่พื้นที่เปลี่ยนโดยหน้าต่างไม่ขยับ
+  // (โหมดโฟกัส/เต็มจอ · เปิด-ปิด-ลากแผง · แยกจอ) ซึ่ง `window.resize` มองไม่เห็นเลย
+  try { watchFloatHostSize(); } catch {}
+  setTimeout(() => {
+    try { keepFloatingUiInView(); } catch {}
+    // [alpha.118] ติดตั้งครั้งแรกจริง ๆ (ยังไม่เคยมีตำแหน่งจำไว้เลย) — ค่าที่ได้ตอน mount
+    // อาจเจอเลย์เอาต์ที่ยังไม่นิ่ง ลองคำนวณตำแหน่งเริ่มต้นซ้ำอีกทีตอนที่ทุกอย่างนิ่งแล้วแน่ ๆ
+    if (!hadSavedPos) drag.reset();
+  }, 400);
+}
+
+// ══════════ [alpha.117 → 118] จาง · ชิดขอบ · ล็อก ══════════
+//
+// alpha.117: *"floating bar เราไม่อยากให้ย่อ · เอา opacity 3 ระดับ 5% 50% 100% ดีกว่า
+//            คือไม่หายหมด และ reset เป็น 100% ได้ · เพิ่ม align ขอบบน/ล่าง · เพิ่ม lock พร้อม shortcut"*
+// alpha.118: *"ให้ใช้เป็นแบบ click ขวาดีกว่าแบบปุ่ม เพราะตอนนี้ปุ่มเยอะไป"*
+// → สามปุ่มที่เคยลอยอยู่บนแถบย้ายเข้าเมนูคลิกขวาที่หูจับตัวเดียว (ดู `fmtbarSettingsMenu` ท้ายบล็อกนี้)
+//
+// สภาพทั้งสามเก็บรวมกับตำแหน่งใน `k2-ui-layout.fmtbar` (ก้อนเดียวกับ left/top)
+// การตีความค่าที่อ่านมาอยู่ใน `toolbar/fmtbar-pos.js` ทั้งหมด — ที่นี่แค่ทาลงจอแล้วบันทึก
+
+/** สภาพปัจจุบันของแถบ (ผ่านตัวทำให้เป็นมาตรฐานเสมอ — ไฟล์เก่าไม่มีสามช่องนี้ก็ไม่พัง) */
+export function fmtbarState() { return normalizeBarState(uiLayout().fmtbar); }
+
+/** ทาสภาพลงบนแถบจริง (ความจาง/คลาสล็อก) + ปรับข้อความบนหูจับ */
+export function applyFmtbarState() {
+  const bar = floatBar;
+  if (!bar) return null;
+  const st = fmtbarState();
+  bar.style.setProperty('--fmtbar-opacity', String(st.opacity));
+  bar.classList.toggle('k-fmtbar-locked', st.locked);
+  bar.classList.toggle('k-fmtbar-dim', st.opacity < 1);
+  // [alpha.118] ทั้งสามตัวเลือกย้ายเข้าเมนูคลิกขวาแล้ว — tooltip ของหูจับจึงต้องบอกทางเข้าด้วย
+  const grip = bar.querySelector('.k-fmtbar-grip');
+  if (grip) {
+    grip.title = (st.locked ? tt('ui.fmtbar.lockedTip') : tt('ui.app.dragMoveBar'))
+               + tt('ui.fmtbar.rightClickHint');
+  }
+  return st;
+}
+
+/** " (Ctrl+Shift+')" — ต่อท้ายป้าย/tooltip ให้ผู้ใช้เห็นปุ่มลัดโดยไม่ต้องเปิดตั้งค่า */
+function scHint(id) {
+  const sc = effectiveShortcuts().find((x) => shortcutId(x) === id);
+  return sc ? ' (' + formatShortcut(sc[0], sc[1], sc[2]) + ')' : '';
+}
+
+/** ตั้งความจางไปค่าที่เลือกตรง ๆ (เมนูคลิกขวา — ปุ่มลัดยังคงวนแบบเดิมผ่าน cycleFmtbarOpacity) */
+export function setFmtbarOpacity(v) {
+  saveUiLayout('fmtbar', { opacity: v });
+  applyFmtbarState();
+  setStatus(tf('ui.fmtbar.fadeSet', opacityPercent(v)));
+  return v;
+}
+/** วนความจาง 100% → 50% → 5% → 100% (ครบรอบ = รีเซ็ตในตัว) — คีย์ลัด Ctrl+Shift+' */
+export function cycleFmtbarOpacity() {
+  return setFmtbarOpacity(nextOpacity(fmtbarState().opacity));
+}
+
+/** ย้ายไปชิดขอบบน/ล่างตรง ๆ (เมนูคลิกขวา) — แนวนอนไม่ขยับ (ผู้ใช้จัดซ้าย-ขวาไว้แล้ว) */
+export function setFmtbarAlign(align) {
+  const bar = floatBar, host = $('#content');
+  // [alpha.117] ล็อกไว้ = ห้ามย้าย แม้จะสั่งจากเมนู/คีย์ลัด (ไม่งั้นล็อกก็ไม่มีความหมาย)
+  if (fmtbarState().locked) { setStatus(tt('ui.fmtbar.lockedBlocked')); return null; }
+  const a = normalizeAlign(align);
+  saveUiLayout('fmtbar', { align: a });
+  if (bar && host) {
+    const r = bar.getBoundingClientRect(), hr = host.getBoundingClientRect();
+    const pos = alignBarPos(a, { left: parseInt(bar.style.left, 10) || 0 },
+                            { width: r.width, height: r.height },
+                            { width: hr.width, height: hr.height });
+    bar.style.left = pos.left + 'px'; bar.style.top = pos.top + 'px';
+    bar.style.right = 'auto'; bar.style.bottom = 'auto';
+    saveUiLayout('fmtbar', pos);
+  }
+  applyFmtbarState();
+  setStatus(tt(a === 'top' ? 'ui.fmtbar.movedTop' : 'ui.fmtbar.movedBottom'));
+  return a;
+}
+/** สลับ "ชิดขอบบน ↔ ขอบล่าง" — คีย์ลัด Ctrl+Shift+; */
+export function toggleFmtbarAlign() {
+  return setFmtbarAlign(nextAlign(fmtbarState().align));
+}
+
+/** ล็อก/ปลดล็อกไม่ให้แถบขยับ — คีย์ลัด Ctrl+Shift+= */
+export function toggleFmtbarLock(on) {
+  const v = on === undefined ? !fmtbarState().locked : !!on;
+  saveUiLayout('fmtbar', { locked: v });
+  applyFmtbarState();
+  setStatus(tt(v ? 'ui.fmtbar.locked' : 'ui.fmtbar.unlocked'));
+  return v;
+}
+
+/**
+ * รีเซ็ตทั้งชุด — ตำแหน่งกลับไปกึ่งกลางขอบล่าง + ชัดเต็ม + ปลดล็อก
+ *
+ * `fmtBarDrag.reset()` ลบตำแหน่งที่จำไว้ทิ้งทั้งก้อนแล้วเซ็ตสไตล์บน DOM ตรง ๆ จาก defaultPos
+ * (ไม่เขียนกลับลงไฟล์) — ถ้าหยุดแค่นั้น รีสตาร์ตแอปจะได้ตำแหน่งที่ไม่มีอยู่จริง (`left:undefinedpx`)
+ * เพราะ `saveUiLayout` ข้างล่างเขียนแค่ opacity/align/locked ไม่รู้เรื่องตำแหน่ง → อ่านค่า
+ * `bar.style.left/top` กลับมาบันทึกด้วยในจังหวะเดียวกันเลย กันไม่ให้เกิดช่องว่างนั้น
+ */
+export function resetFmtbarAll() {
+  if (fmtBarDrag) fmtBarDrag.reset();
+  const bar = floatBar;
+  const pos = bar ? { left: parseInt(bar.style.left, 10) || 0, top: parseInt(bar.style.top, 10) || 0 } : {};
+  saveUiLayout('fmtbar', { ...resetBarState(), ...pos });
+  applyFmtbarState();
+  setStatus(tt('ui.app.resetPosBarFormat'));
+}
+
+/**
+ * [alpha.118] เมนูคลิกขวาบนหูจับของแถบรูปแบบลอย — ความจาง · ตำแหน่ง · ล็อก · รีเซ็ต
+ * แทนที่สามปุ่มเดิม (ผู้ใช้บอกว่าปุ่มเยอะไป) โดยพฤติกรรมเดิมทั้งหมดยังอยู่ครบผ่านฟังก์ชันข้างบน
+ */
+function fmtbarSettingsMenu(ev) {
+  const st = fmtbarState();
+  const mark = (on) => (on ? '✓ ' : '');
+  popupMenu(ev.clientX, ev.clientY, [
+    { label: tt('ui.fmtbar.menuOpacity') + scHint('fmtbar-opacity'), disabled: true },
+    ...FMTBAR_OPACITIES.map((v) => ({
+      label: mark(Math.abs(st.opacity - v) < 0.001) + opacityPercent(v) + '%',
+      click: () => setFmtbarOpacity(v),
+    })),
+    '-',
+    { label: tt('ui.fmtbar.menuAlign') + scHint('fmtbar-align'), disabled: true },
+    { label: mark(st.align === 'top') + tt('ui.fmtbar.posTop'), click: () => setFmtbarAlign('top') },
+    { label: mark(st.align === 'bottom') + tt('ui.fmtbar.posBottom'), click: () => setFmtbarAlign('bottom') },
+    '-',
+    { label: mark(st.locked) + tt('ui.fmtbar.lockTip') + scHint('fmtbar-lock'),
+      click: () => toggleFmtbarLock() },
+    '-',
+    { label: tt('ui.fmtbar.menuResetAll'), click: () => resetFmtbarAll() },
+  ]);
+}
+
+// ═══════ [alpha.111] "เรียกแถบรูปแบบมาหาเคอร์เซอร์" ═══════
+//
+// ผู้ใช้: *"ปุ่มที่กดแล้วย้ายไปยังจุดที่ mouse pointer อยู่ · เมาส์อยู่นอกที่เขียน → กลางจอ
+//         ต่ำกว่ากลางราว 200-300px · ย้ายแบบ tween"*
+//
+// การคำนวณปลายทางอยู่ใน `toolbar/fmtbar-pos.js` (บริสุทธิ์ · มี unit test)
+// ที่นี่มีแค่ "อ่านของจริงจากจอ" กับ "ไล่เฟรม"
+
+let fmtBarDrag = null;
+/** ตำแหน่งเมาส์ล่าสุด + อยู่ในพื้นที่เขียนไหม (อ่านจากอีเวนต์ ไม่ใช่ elementFromPoint —
+ *  ตัวแถบเองลอยทับพื้นที่เขียนอยู่ ถ้าถามจากพิกัดจะได้คำตอบว่า "ไม่ได้อยู่ในที่เขียน") */
+let _mousePt = null, _mouseInEd = false;
+const ED_ZONE = '.ProseMirror, #panes, .k-page, .k-paper';
+document.addEventListener('mousemove', (e) => {
+  _mousePt = { x: e.clientX, y: e.clientY };
+  const tg = e.target;
+  _mouseInEd = !!(tg && tg.closest && tg.closest(ED_ZONE));
+}, true);
+
+/** id ของเฟรมที่กำลังวิ่งอยู่ (0 = ไม่มี) — ยกเลิกก่อนเริ่มรอบใหม่เสมอ */
+let _fmtTween = 0;
+
+/** เคลื่อนแถบไปตำแหน่งเป้าหมายแบบ tween (พิกัดสัมพัทธ์กับ `#content`) */
+export function tweenFmtBar(toLeft, toTop, ms) {
+  // [alpha.117] ล็อกไว้ = ห้ามย้าย แม้สั่งจากปุ่ม/คีย์ลัด (ไม่งั้นล็อกกันได้แค่การลากด้วยมือ)
+  if (fmtbarState().locked) { setStatus(tt('ui.fmtbar.lockedBlocked')); return null; }
+  const bar = floatBar;
+  if (!bar) return false;
+  cancelAnimationFrame(_fmtTween);
+  const fromL = parseFloat(bar.style.left);
+  const fromT = parseFloat(bar.style.top);
+  const l0 = Number.isFinite(fromL) ? fromL : bar.offsetLeft;
+  const t0 = Number.isFinite(fromT) ? fromT : bar.offsetTop;
+  bar.style.right = 'auto'; bar.style.bottom = 'auto';
+  const dur = ms > 0 ? ms : FMTBAR_TWEEN_MS;
+  const started = performance.now();
+  const done = () => {
+    bar.style.left = Math.round(toLeft) + 'px';
+    bar.style.top = Math.round(toTop) + 'px';
+    bar.classList.remove('k-fmt-flying');
+    saveUiLayout('fmtbar', { left: Math.round(toLeft), top: Math.round(toTop) });
+  };
+  bar.classList.add('k-fmt-flying');
+  const step = (now) => {
+    const k = Math.min(1, (now - started) / dur);
+    bar.style.left = tweenAt(l0, toLeft, k).toFixed(1) + 'px';
+    bar.style.top = tweenAt(t0, toTop, k).toFixed(1) + 'px';
+    if (k < 1) _fmtTween = requestAnimationFrame(step);
+    else { _fmtTween = 0; done(); }
+  };
+  _fmtTween = requestAnimationFrame(step);
+  return true;
+}
+
+/** เป้าหมายของ "เรียกแถบมาที่นี่" ตอนนี้ — แยกออกมาให้เทสเรียกได้โดยไม่ต้องรออนิเมชัน */
+export function fmtBarHereTarget() {
+  const bar = floatBar, host = $('#content');
+  if (!bar || !host) return null;
+  const hr = host.getBoundingClientRect();
+  const br = bar.getBoundingClientRect();
+  return fmtBarTarget({
+    pointer: _mousePt, inEditor: _mouseInEd,
+    host: { left: hr.left, top: hr.top, width: hr.width, height: hr.height },
+    bar: { width: br.width, height: br.height },
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+  });
+}
+
+/** ปุ่ม/คีย์ลัด "เรียกแถบรูปแบบมาหาเคอร์เซอร์" */
+export function fmtBarToPointer() {
+  const tgt = fmtBarHereTarget();
+  if (!tgt) return null;
+  tweenFmtBar(tgt.left, tgt.top);
+  setStatus(tt(tgt.fallback ? 'ui.fmtcfg.hereCenter' : 'ui.fmtcfg.hereCursor'));
+  return tgt;
 }
 function getActiveEditor() {
   const t = state.active;
@@ -10727,13 +11250,21 @@ function syncFloatBarVisible() {
   const ed = getActiveEditor();
   const wk = state.active?.wiki?.secEditors?.some(({k}) => k?.view?.hasFocus())
           || (state.active?.wiki?.secEditors?.length > 0);
+  const was = floatBar.style.display;
   floatBar.style.display = (ed || wk) ? 'flex' : 'none';
+  // [alpha.119] ตอนซ่อนอยู่ แถบวัดขนาดไม่ได้ (0×0) ตัวหนีบจึงข้ามมันไปทุกครั้ง —
+  // ถ้ากรอบเปลี่ยนขนาดระหว่างที่ซ่อน ค่าที่ค้างอยู่จะกลายเป็นนอกจอทันทีที่กลับมาแสดง
+  if (was === 'none' && floatBar.style.display === 'flex') {
+    try { keepFloatingUiInView(); } catch {}
+  }
 }
 
 // ═════════ [alpha.81 ข้อ 1] คลิกขวาบนแถบเครื่องมือ / แถบ B I U ═════════
 // เดิมทางเดียวที่จะเอาปุ่มเข้า-ออกได้คือคลิกขวาบนปุ่ม "แผง" ตัวเดียว — ไม่มีใครเดาถูก
 // ตอนนี้คลิกขวา "ที่ไหนก็ได้" บนแถบทั้งสอง → เมนูแบบเดียวกับ Customize Toolbar ของเบราว์เซอร์
 // รายการเมนูมาจาก toolbar-ui.js (ที่เดียวกับกล่องตั้งค่า) — ที่นี่ทำแค่ผูกเหตุการณ์
+// [alpha.111] แถบลอยมีเมนูของตัวเอง — ซ่อนปุ่มที่นั่นมีผลเฉพาะโหมดที่กำลังเขียน (นิยาย/บท)
+// จึงใช้ `fmtbarContextItems()` คนละชุดกับแถบเครื่องมือหลัก
 let _tbCtxBound = false;
 export function bindToolbarContextMenu() {
   if (_tbCtxBound) return false;
@@ -10741,11 +11272,13 @@ export function bindToolbarContextMenu() {
   for (const sel of TB_HOSTS) {
     const bar = document.querySelector(sel);
     if (!bar) continue;
+    const isFmt = sel === TB_FMT_HOST;
     bar.oncontextmenu = (e) => {
       e.preventDefault(); e.stopPropagation();
       const hit = e.target.closest('[id]');
+      const id = hit && bar.contains(hit) ? hit.id : '';
       popupMenu(e.clientX, e.clientY,
-                toolbarContextItems(hit && bar.contains(hit) ? hit.id : ''));
+                isFmt ? fmtbarContextItems(id) : toolbarContextItems(id));
     };
     n++;
   }
@@ -11319,77 +11852,242 @@ async function pickDraftTarget({ needChapter = true, title = tt('ui.app.new2') }
   });
 }
 
+// ══════════════════ [alpha.111] ปุ่มลอย (FAB) — ย้ายได้ · เลือกคำสั่งเองได้ · เมนูวงกลม ══════════════════
+//
+// ผู้ใช้ขอ 3 อย่างพร้อมกัน:
+//   1. คลิกขวาแล้วลากย้ายได้ + จำตำแหน่ง       → ปุ่มขวาค้างแล้วลาก · เก็บลง `k2-ui-layout.fab`
+//   2. เพิ่ม/ลบคำสั่งได้ สูงสุด 4 + เลือกว่าจะโชว์ไอคอน/ข้อความ  → `src/toolbar/fab-config.js`
+//   3. เมนูโผล่แบบ radial (Material) พร้อมหน่วงไล่ทีละตัว        → `fabRadialPositions()`
+//
+// **ทำไมคลิกขวาถึงทำได้ทั้ง "ลาก" และ "เปิดเมนู"**: ตัดสินตอนปล่อยปุ่ม —
+// ขยับเกิน 4px = ถือว่าลาก (ไม่เด้งเมนู) · ไม่ขยับ = เมนูคำสั่งลัดของปุ่มเอง
+// (`makeDraggable` ใช้ไม่ได้ตรง ๆ เพราะมันผูกปุ่มซ้าย ซึ่งที่นี่สงวนไว้ให้ "เปิดเมนูวงกลม")
+
+/** ระยะที่ถือว่า "ขยับแล้ว" ระหว่างลากด้วยปุ่มขวา */
+const FAB_DRAG_SLOP = 4;
+/** หน่วงต่อปุ่มลูกหนึ่งตัว (ms) — ตรงกับ CSS `--fab-dur` */
+const FAB_STAGGER = 45;
+
+let fabOpen = false;
+
+/** ค่าตั้งค่าปัจจุบันของ FAB (ผ่านตัวทำให้เป็นมาตรฐานเสมอ) */
+function fabCfg() { return normalizeFab(state.settings && state.settings.fab); }
+
+/** ตำแหน่งบนจอของปุ่มแม่ (สัมพัทธ์กับหน้าต่าง) */
+function fabPos() {
+  const fab = $('#k-fab');
+  if (!fab) return { left: 0, top: 0 };
+  const r = fab.getBoundingClientRect();
+  return { left: Math.round(r.left), top: Math.round(r.top) };
+}
+
+/** ย้ายปุ่มแม่ไปตำแหน่งที่กำหนด (พิกัดหน้าต่าง) */
+function setFabPos(pos) {
+  const fab = $('#k-fab');
+  if (!fab) return;
+  fab.style.left = pos.left + 'px';
+  fab.style.top = pos.top + 'px';
+  fab.style.right = 'auto';
+  fab.style.bottom = 'auto';
+}
+
+/** เอาตำแหน่งที่จำไว้มาใช้ (หนีบให้อยู่ในจอเสมอ — จอเล็กลงกว่าตอนบันทึกก็ยังเห็น) */
+export function restoreFabPos() {
+  const fab = $('#k-fab');
+  if (!fab) return false;
+  const saved = uiLayout().fab;
+  // `{}` ที่หลงเหลือจากการรีเซ็ตต้องไม่ถูกอ่านเป็น "มุมซ้ายบน" (บทเรียนข้อ 5: 0 เป็น falsy)
+  if (!saved || !Number.isFinite(saved.left) || !Number.isFinite(saved.top)) return false;
+  const r = fab.getBoundingClientRect();
+  setFabPos(clampFabPos(saved, r, window.innerWidth, window.innerHeight));
+  return true;
+}
+
+/** คืนปุ่มกลับมุมขวาล่างตามค่าเริ่มต้น */
+function resetFabPos() {
+  const fab = $('#k-fab');
+  if (!fab) return;
+  fab.style.left = ''; fab.style.top = ''; fab.style.right = ''; fab.style.bottom = '';
+  const l = uiLayout(); delete l.fab;
+  localStorage.setItem('k2-ui-layout', JSON.stringify(l));
+  // บอกเซสชันด้วย ไม่งั้นไฟล์เซสชันเก่าจะยัดตำแหน่งเดิมกลับมาตอนเปิดใหม่ (บทเรียน alpha.93 ข้อ 2)
+  try { localStorage.setItem(LS_TS_KEY, String(Date.now())); } catch {}
+  markSessionDirty();
+  closeFabMenu(true);
+}
+
+/**
+ * วาดปุ่มลูกใหม่ทั้งชุดตามที่ผู้ใช้ตั้งไว้
+ * เรียกตอนเริ่มโปรแกรม · ตอนเปลี่ยนภาษา · และทุกครั้งที่กล่องตั้งค่าบันทึก
+ */
+export function renderFabMenu() {
+  const menu = $('#k-fab-menu');
+  if (!menu) return 0;
+  const cfg = fabCfg();
+  menu.replaceChildren();
+  menu.classList.add('k-fab-radial');
+  menu.dataset.disp = cfg.display;
+  for (const a of fabMenuItems(cfg)) {
+    const it = el('div', 'k-fab-item');
+    it.dataset.action = a.id;
+    it.title = tt(a.labelKey);
+    if (cfg.display !== 'text') {
+      const ic = el('span', 'k-fab-item-ic');
+      ic.innerHTML = iconHtml(a.icon, 18);
+      it.append(ic);
+    }
+    if (cfg.display !== 'icon') it.append(el('span', 'k-fab-item-tx', tt(a.labelKey)));
+    it.onclick = (e) => {
+      e.stopPropagation();
+      closeFabMenu();
+      runFabAction(a.id);
+    };
+    menu.append(it);
+  }
+  if (fabOpen) layoutFabMenu(false);
+  return menu.children.length;
+}
+
+/** สั่งงานคำสั่งของ FAB — ทุกตัวชี้ไปที่ช่องคำสั่งเดิมของโปรแกรม ไม่มีตรรกะซ้อน */
+export function runFabAction(id) {
+  const a = fabAction(id);
+  if (!a) return false;
+  handleCommand(a.cmd, ...(a.args || []));
+  return true;
+}
+
+/**
+ * วางปุ่มลูกตามเรขาคณิตวงกลม
+ * @param {boolean} closing true = ยุบกลับ (ไล่หน่วงกลับทาง)
+ */
+function layoutFabMenu(closing) {
+  const fab = $('#k-fab'), menu = $('#k-fab-menu');
+  if (!fab || !menu) return;
+  const items = [...menu.children];
+  const n = items.length;
+  const r = fab.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const dir = fabOpenDir(cx, cy, window.innerWidth, window.innerHeight);
+  // เมนูเป็น "จุด" ที่กึ่งกลางปุ่มแม่ — ปุ่มลูกกางออกจากจุดนี้ด้วย transform ล้วน ๆ
+  menu.style.left = cx + 'px';
+  menu.style.top = cy + 'px';
+  // ไอคอนล้วน = กางเป็นวงกลม · มีข้อความ = แถวตั้ง (ดูเหตุผลใน fabStackPositions)
+  const pill = menu.dataset.disp !== 'icon';
+  const pos = pill
+    ? fabStackPositions(n, { item: 42, gap: 10, offset: 62,
+                             dirY: dir.dirY, stagger: FAB_STAGGER, closing: !!closing })
+    : fabRadialPositions(n, {
+        radius: fabRadius(n, 48, 16, 90, 96), dirX: dir.dirX, dirY: dir.dirY,
+        spread: 90, start: 0, stagger: FAB_STAGGER, closing: !!closing,
+      });
+  items.forEach((it, i) => {
+    const p = pos[i] || { x: 0, y: 0, delay: 0 };
+    // ปุ่มไอคอนล้วน = จับที่จุดกึ่งกลาง · ปุ่มมีข้อความ = จับที่ "ขอบด้านใน"
+    // (ด้านที่หันเข้าหาปุ่มแม่) ไม่งั้นป้ายยาว ๆ จะยื่นเลยขอบจอทันทีที่ปุ่มอยู่ริม
+    const ax = pill ? (dir.dirX < 0 ? '-100%' : '0%') : '-50%';
+    it.style.setProperty('--fab-x', p.x + 'px');
+    it.style.setProperty('--fab-y', p.y + 'px');
+    it.style.setProperty('--fab-ax', ax);
+    it.style.transitionDelay = p.delay + 'ms';
+  });
+  menu.classList.toggle('k-fab-left', dir.dirX < 0);
+}
+
+/** เปิดเมนูวงกลม */
+function openFabMenu() {
+  const fab = $('#k-fab'), menu = $('#k-fab-menu');
+  if (!fab || !menu || !menu.children.length) return false;
+  clearTimeout(menu._hideJob);
+  fabOpen = true;
+  menu.classList.remove('k-menu-off');
+  layoutFabMenu(false);
+  // บังคับให้เบราว์เซอร์อ่านค่าเริ่มต้นก่อน แล้วค่อยติดคลาส `open` — ไม่งั้นไม่มีอนิเมชัน
+  void menu.offsetWidth;
+  menu.classList.add('open');
+  fab.classList.add('open');
+  return true;
+}
+
+/**
+ * ปิดเมนูวงกลม
+ * @param {boolean} [instant] ปิดทันทีไม่ต้องมีอนิเมชัน (ระหว่างลากย้ายปุ่ม)
+ */
+function closeFabMenu(instant) {
+  const fab = $('#k-fab'), menu = $('#k-fab-menu');
+  if (!fab || !menu) return;
+  fabOpen = false;
+  fab.classList.remove('open');
+  menu.classList.remove('open');
+  clearTimeout(menu._hideJob);
+  if (instant) { menu.classList.add('k-menu-off'); return; }
+  layoutFabMenu(true);                                  // ยุบกลับไล่จากตัวไกลสุดเข้ามา
+  // ซ่อนจริงหลังยุบเสร็จ — ไม่งั้นปุ่มลูกที่ opacity:0 ยังกินคลิกอยู่
+  menu._hideJob = setTimeout(() => menu.classList.add('k-menu-off'),
+                             fabAnimMs(menu.children.length, FAB_STAGGER));
+}
+
+/** สวิตช์เปิด/ปิด — ใช้ทั้งจากการคลิกและจากเทส */
+export function toggleFabMenu(on) {
+  const want = on === undefined ? !fabOpen : !!on;
+  if (want) openFabMenu(); else closeFabMenu();
+  return fabOpen;
+}
+
 function wireFab() {
   const fab = $('#k-fab');
   const fabMenu = $('#k-fab-menu');
   if (!fab || !fabMenu) return;
-  let fabOpen = false;
-  
-  fab.onclick = () => {
-    fabOpen = !fabOpen;
-    fab.classList.toggle('open', fabOpen);
-    fabMenu.classList.toggle('k-menu-off', !fabOpen);
-  };
-  
-  // จัดการคลิกที่เมนู FAB
-  fabMenu.querySelectorAll('.k-menu-item').forEach((item) => {
-    item.onclick = async (e) => {
-      e.stopPropagation();
-      fabOpen = false;
-      fab.classList.remove('open');
-      fabMenu.classList.add('k-menu-off');
-      
-      const action = item.dataset.action;
-      
-      switch (action) {
-        case 'scene': {
-          // ให้ผู้ใช้เลือก เล่ม→ฉบับร่าง→บท เอง (เดิมยัดลงบทแรกของเล่มแรกเสมอ — บั๊กข้อ 9)
-          if (!state.root) break;
-          const dst = await pickDraftTarget({ title: tt('ui.app.newSceneNew2') });
-          if (!dst) break;
-          addScene(dst.dPath, dst.chapter);
-          break;
-        }
-        case 'chapter': {
-          if (!state.root) break;
-          const dst = await pickDraftTarget({ needChapter: false, title: tt('ui.app.newChapterNew') });
-          if (!dst) break;
-          addChapter(dst.dPath);
-          break;
-        }
-        case 'character':
-          if (state.root) {
-            const w = await wikiRoot();
-            await kapi.mkdir(await kapi.join(w, 'characters'));
-            addEntity(await kapi.join(w, 'characters'), 'characters');
-          }
-          break;
-        case 'location':
-          if (state.root) {
-            const w = await wikiRoot();
-            await kapi.mkdir(await kapi.join(w, 'locations'));
-            addEntity(await kapi.join(w, 'locations'), 'locations');
-          }
-          break;
-        case 'note':
-          openScratchpad();
-          break;
-        case 'memo':
-          if (state.root) {
-            addMemo();
-          }
-          break;
+  renderFabMenu();
+  restoreFabPos();
+
+  fab.onclick = () => { toggleFabMenu(); };
+
+  // ── คลิกขวา = ลากย้าย (หรือเมนูคำสั่งลัด ถ้าไม่ได้ขยับ) ──
+  fab.addEventListener('contextmenu', (e) => e.preventDefault());
+  fab.addEventListener('mousedown', (e) => {
+    if (e.button !== 2) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = fab.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY, ox = r.left, oy = r.top;
+    let moved = false;
+    const move = (ev) => {
+      if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > FAB_DRAG_SLOP) {
+        moved = true;
+        closeFabMenu(true);
+        fab.classList.add('k-dragging');
+      }
+      if (!moved) return;
+      setFabPos(clampFabPos({ left: ox + (ev.clientX - sx), top: oy + (ev.clientY - sy) },
+                            r, window.innerWidth, window.innerHeight));
+    };
+    const up = (ev) => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      fab.classList.remove('k-dragging');
+      if (moved) {
+        saveUiLayout('fab', fabPos());
+        setStatus(tt('ui.fab.posSaved'));
+      } else {
+        popupMenu(ev.clientX, ev.clientY, fabContextItems({
+          onReset: () => { resetFabPos(); setStatus(tt('ui.fab.posReset')); },
+          onConfig: () => settingsDialog('fab'),
+          onHide: () => handleCommand('toggle-fab'),
+        }));
       }
     };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
   });
-  
+
+  // จอเปลี่ยนขนาด → ดึงปุ่มกลับเข้าจอ แล้ววางเมนูใหม่ตามทิศที่ถูกต้อง
+  window.addEventListener('resize', () => {
+    restoreFabPos();
+    if (fabOpen) layoutFabMenu(false);
+  });
+
   // คลิกข้างนอก = ปิด
   document.addEventListener('click', (e) => {
-    if (fabOpen && !fab.contains(e.target) && !fabMenu.contains(e.target)) {
-      fabOpen = false;
-      fab.classList.remove('open');
-      fabMenu.classList.add('k-menu-off');
-    }
+    if (fabOpen && !fab.contains(e.target) && !fabMenu.contains(e.target)) closeFabMenu();
   });
 }
 
@@ -14113,6 +14811,138 @@ async function runTest(projectPath) {
           JSON.stringify(lay.fmtbar));
     check('ปุ่มจัดรูปแบบในแถบลอยยังสั่งงานได้ (id เดิม)',
           typeof document.querySelector('#tb-bold').onclick === 'function');
+
+    // ═════ [alpha.111 ข้อ 4-6] แถบรูปแบบ: ปรับแต่งแยกโหมด · เรียกมาหาเคอร์เซอร์ · ปุ่มที่ใช้ไม่ได้เป็นเทา ═════
+    {
+      const TCF = await import('./toolbar/toolbar-config.js');
+      const TBU111 = await import('./toolbar/toolbar-ui.js');
+      const keepFmt = state.settings.fmtbar;
+      const wait111 = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // ── ข้อ 4: คลิกขวาบนแถบ → เมนูของแถบลอยเอง (คนละชุดกับแถบเครื่องมือหลัก) ──
+      document.querySelectorAll('.k-menu:not(#k-fab-menu)').forEach((m) => m.remove());
+      bindToolbarContextMenu();
+      floatBar.querySelector('#tb-bold').dispatchEvent(
+        new MouseEvent('contextmenu', { clientX: 200, clientY: 200, bubbles: true }));
+      await wait111(40);
+      const fmenu111 = document.querySelector('.k-menu:not(#k-fab-menu)');
+      check('[111-4] ★ คลิกขวาบนแถบรูปแบบ → มีเมนูปรับแต่ง',
+            !!fmenu111 && fmenu111.children.length >= 2,
+            fmenu111 ? fmenu111.textContent.slice(0, 70) : 'ไม่มีเมนู');
+      check('[111-4] ★★ เมนูบอกชัดว่ามีผลเฉพาะโหมดไหน (นิยาย/บทภาพยนตร์)',
+            !!fmenu111 && fmenu111.textContent.includes(tt('ui.fmtcfg.modeProse')),
+            fmenu111 ? fmenu111.textContent.slice(0, 90) : '');
+      // กด "ซ่อนปุ่มนี้" จริง ๆ แล้วดูว่าปุ่มหายจากแถบ
+      fmenu111.children[0].click();
+      await wait111(60);
+      check('[111-4] ★★ กดซ่อนแล้วปุ่มหายจากแถบจริง',
+            floatBar.querySelector('#tb-bold').classList.contains('tb-hidden'));
+      check('[111-4] ★★ ซ่อนในนิยาย ไม่กระทบบทภาพยนตร์',
+            TCF.fmtbarHidden(state.settings.fmtbar, 'prose', 'tb-bold') === true &&
+            TCF.fmtbarHidden(state.settings.fmtbar, 'screenplay', 'tb-bold') === false,
+            JSON.stringify(state.settings.fmtbar));
+      // เปลี่ยนเป็นโหมดบท → ปุ่มต้องกลับมา
+      applyFmtbarConfig(state.settings.fmtbar, 'screenplay');
+      check('[111-4] ★ วาดแถบด้วยโหมดบท → ปุ่มที่ซ่อนไว้ในนิยายกลับมา',
+            !floatBar.querySelector('#tb-bold').classList.contains('tb-hidden'));
+      state.settings.fmtbar = TCF.resetFmtbarConfig();
+      applyFmtbarConfig(state.settings.fmtbar, 'prose');
+      check('[111-4] รีเซ็ตแล้วปุ่มกลับมาครบ',
+            !floatBar.querySelector('#tb-bold').classList.contains('tb-hidden'));
+      check('[111-4] ★ หน้าตั้งค่า "แถบรูปแบบ" มีอยู่จริงและสร้างรายการได้', (() => {
+        const host = el('div', '');
+        document.body.append(host);
+        const ok = !!TBU111.buildFmtbarList(host, { mode: 'prose' }) &&
+                   host.querySelectorAll('.k-tbcfg-row').length >= 15 &&
+                   host.querySelectorAll('.k-fmtcfg-mode').length === 2;
+        host.remove();
+        return ok;
+      })());
+
+      // ── ข้อ 6: ปุ่มที่บทภาพยนตร์ไม่มีให้ใช้ → เทา ──
+      applyFmtbarConfig(state.settings.fmtbar, 'screenplay');
+      check('[111-6] ★★ โหมดบท: ช่องหัวข้อ/ยกคำพูด/ตัวยก/ตัวห้อย เป็นเทา',
+            ['tb-style', 'tb-quote', 'tb-sup', 'tb-sub']
+              .every((id) => $('#' + id).classList.contains('tb-na')),
+            ['tb-style', 'tb-quote', 'tb-sup', 'tb-sub']
+              .filter((id) => !$('#' + id).classList.contains('tb-na')).join(','));
+      check('[111-6] ★★ ปุ่มเทา = กดไม่ติดจริง (ไม่ใช่แค่สีจาง)',
+            getComputedStyle($('#tb-quote')).pointerEvents === 'none' &&
+            $('#tb-style').disabled === true,
+            getComputedStyle($('#tb-quote')).pointerEvents);
+      check('[111-6] ★ ตัวหนา/เอียง/จัดหน้า ยังใช้ได้ในบท (ไม่เทาเกินจำเป็น)',
+            ['tb-bold', 'tb-italic', 'tb-align-center']
+              .every((id) => !$('#' + id).classList.contains('tb-na')));
+      check('[111-6] ★ หัวข้อย่อย/ตัวเลข ยังใช้ได้ในบท (คำนำหน้าในข้อความ ตั้งแต่ alpha.98)',
+            !$('#tb-ul').classList.contains('tb-na') && !$('#tb-ol').classList.contains('tb-na'));
+      applyFmtbarConfig(state.settings.fmtbar, 'prose');
+      check('[111-6] ★★ กลับมาโหมดนิยาย → ปุ่มเดิมหายเทา ใช้ได้ตามปกติ',
+            ['tb-style', 'tb-quote', 'tb-sup', 'tb-sub']
+              .every((id) => !$('#' + id).classList.contains('tb-na')) &&
+            $('#tb-style').disabled === false);
+
+      // ── ข้อ 5: ปุ่มเรียกแถบมาหาเคอร์เซอร์ ──
+      check('[111-5] ★ มีปุ่มเรียกแถบอยู่บนแถบลอย',
+            !!floatBar.querySelector('#tb-fmt-here'));
+      check('[111-5] ปุ่มนี้ไม่อยู่ในรายการที่ผู้ใช้ถอดออกได้ (ไม่งั้นถอดแล้วเรียกกลับไม่ได้)',
+            TCF.isConfigurable('tb-fmt-here') === false);
+      const hostR = $('#content').getBoundingClientRect();
+      // จำลองเมาส์อยู่ในพื้นที่เขียน
+      const pmEl = document.querySelector('.pane.on .ProseMirror') || document.querySelector('.ProseMirror');
+      const pmR = pmEl.getBoundingClientRect();
+      const px = Math.round(pmR.left + pmR.width / 2), py = Math.round(pmR.top + pmR.height / 3);
+      pmEl.dispatchEvent(new MouseEvent('mousemove', { clientX: px, clientY: py, bubbles: true }));
+      await wait111(20);
+      const tgt = fmtBarHereTarget();
+      const barW = floatBar.getBoundingClientRect().width;
+      // แถบกว้างเกือบเท่าพื้นที่เขียน — บนหน้าต่างแคบ ๆ การหนีบขอบจะชนะการจัดกึ่งกลาง
+      // (ตรรกะการจัดกึ่งกลางล้วน ๆ มีเทสของตัวเองใน test/fmtbar-pos.test.cjs แล้ว)
+      const roomy111 = hostR.width - barW > 40;
+      check('[111-5] ★★ เมาส์อยู่ในที่เขียน → คิดเป้าหมายจากตำแหน่งเมาส์ (ไม่ใช่กลางจอ)',
+            !!tgt && tgt.fallback === false &&
+            Math.abs(tgt.top + hostR.top - py) < 40 &&
+            (!roomy111 || Math.abs(tgt.left + barW / 2 + hostR.left - px) < 2),
+            JSON.stringify(tgt) + ' เมาส์ ' + px + ',' + py + ' แถบกว้าง ' + Math.round(barW)
+            + ' ที่ว่าง ' + Math.round(hostR.width));
+      check('[111-5] เป้าหมายอยู่ในกรอบพื้นที่เขียนเสมอ',
+            tgt.left >= 0 && tgt.top >= 0 && tgt.top <= hostR.height, JSON.stringify(tgt));
+      floatBar.querySelector('#tb-fmt-here').click();
+      const mid = floatBar.getBoundingClientRect().left;
+      await wait111(600);                              // นานกว่า FMTBAR_TWEEN_MS
+      const endL = parseFloat(floatBar.style.left), endT = parseFloat(floatBar.style.top);
+      check('[111-5] ★★ กดปุ่มแล้วแถบย้ายไปถึงเป้าหมายจริง',
+            Math.abs(endL - tgt.left) < 2 && Math.abs(endT - tgt.top) < 2,
+            `${endL},${endT} ควรเป็น ${tgt.left},${tgt.top}`);
+      check('[111-5] ★ ตำแหน่งใหม่ถูกจำลง localStorage',
+            Math.abs((JSON.parse(localStorage.getItem('k2-ui-layout') || '{}').fmtbar || {}).left
+                     - tgt.left) < 2);
+      // ── เมาส์อยู่นอกพื้นที่เขียน → กลางจอ ต่ำกว่ากลางราว 250px ──
+      $('#toolbar').dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 5, bubbles: true }));
+      await wait111(20);
+      const tgt2 = fmtBarToPointer();
+      check('[111-5] ★★ เมาส์นอกที่เขียน → ไปกลางจอ ต่ำกว่ากึ่งกลางจอ 200–300px',
+            !!tgt2 && tgt2.fallback === true &&
+            (!roomy111 || Math.abs(tgt2.left + barW / 2 + hostR.left - window.innerWidth / 2) < 2) &&
+            (() => { const d = tgt2.top + hostR.top - window.innerHeight / 2;
+                     // หน้าต่างเตี้ยเกินกว่าจะลงไปได้ 250px = ถูกหนีบไว้ที่ก้นกรอบ ถือว่าถูกแล้ว
+                     return (d >= 200 && d <= 300)
+                            || tgt2.top === hostR.height - floatBar.getBoundingClientRect().height - 8; })(),
+            JSON.stringify(tgt2) + ' จอ ' + window.innerWidth + 'x' + window.innerHeight);
+      await wait111(600);
+      check('[111-5] ★ การย้ายเป็น tween (ระหว่างทางอยู่คนละที่กับปลายทาง ไม่ใช่กระโดด)',
+            Math.abs(mid - tgt.left) > 1 || Math.abs(mid - hostR.left) > 1, String(mid));
+      // คีย์ลัดต้องเรียกได้เหมือนกัน
+      const scHere = SHORTCUTS.find((x) => shortcutId(x) === 'fmtbar-here');
+      check('[111-5] ★ มีคีย์ลัดในตาราง + มีชื่อแสดงในหน้าตั้งค่า',
+            !!scHere && !!SHORTCUT_LABELS['fmtbar-here'] &&
+            tt(SHORTCUT_LABELS['fmtbar-here']) !== SHORTCUT_LABELS['fmtbar-here'],
+            scHere ? scHere.join(',') : 'ไม่มี');
+      await kapi.testShot('/tmp/k2_fmtbar111.png');
+
+      state.settings.fmtbar = keepFmt;
+      applyFmtbarConfig();
+      localStorage.removeItem('k2-ui-layout');
+    }
     // ════ Panel System (Photoshop-style dock/tab/float) — alpha.46 ════
     // e2e ไม่ idempotent ถ้าเลย์เอาต์เก่าค้างใน localStorage → เริ่มจากค่าตั้งต้นเสมอ
     resetPanels();
@@ -16961,10 +17791,170 @@ async function runTest(projectPath) {
       await new Promise((r) => setTimeout(r, 60));
       check('กด FAB → เมนู dropdown โผล่',
             !$('#k-fab-menu').classList.contains('k-menu-off'));
-      // ปิด FAB
+      // ปิด FAB — [alpha.111] การปิดมีอนิเมชันยุบกลับ ต้องรอให้จบก่อนจึงจะซ่อนจริง
       document.body.click();
-      await new Promise((r) => setTimeout(r, 60));
+      await new Promise((r) => setTimeout(r, 500));
       check('คลิกข้างนอก → เมนูปิด', $('#k-fab-menu').classList.contains('k-menu-off'));
+    }
+
+    // ═════ [alpha.111 ข้อ 1-3] FAB: ย้ายด้วยคลิกขวา · คำสั่งที่เลือกเอง · เมนูวงกลม ═════
+    {
+      const fab = $('#k-fab'), fmenu = $('#k-fab-menu');
+      const FBC = await import('./toolbar/fab-config.js');
+
+      // ── ข้อ 2: คำสั่งมาจากค่าตั้งค่า ไม่ใช่ HTML ตายตัวอีกแล้ว ──
+      check('[111-2] เมนู FAB ไม่มีรายการตายตัวใน index.html แล้ว (สร้างตอนรัน)',
+            fmenu.querySelectorAll('.k-fab-item').length > 0 &&
+            fmenu.querySelectorAll('.k-menu-item').length === 0);
+      check('[111-2] ค่าเริ่มต้นได้ 4 คำสั่ง (เท่าเพดาน)',
+            fmenu.children.length === FBC.DEFAULT_FAB_ACTIONS.length,
+            fmenu.children.length + ' ปุ่ม');
+
+      const keepFab = state.settings.fab;
+      state.settings.fab = { actions: ['scene', 'memo'], display: 'icon' };
+      renderFabMenu();
+      check('[111-2] ★ เปลี่ยนคำสั่งในตั้งค่า → ปุ่มลูกเปลี่ยนตามทันที',
+            fmenu.children.length === 2 &&
+            [...fmenu.children].map((c) => c.dataset.action).join(',') === 'scene,memo',
+            [...fmenu.children].map((c) => c.dataset.action).join(','));
+      state.settings.fab = { actions: FBC.allFabIds(), display: 'icon' };
+      renderFabMenu();
+      check('[111-2] ★★ ใส่เกิน 4 ไม่ได้ ต่อให้ยัดค่าเข้ามาตรง ๆ',
+            fmenu.children.length === FBC.FAB_MAX, fmenu.children.length);
+
+      // ── ข้อ 2: รูปแบบการแสดง ไอคอน / ไอคอน+ข้อความ / ข้อความ ──
+      state.settings.fab = { actions: ['scene', 'memo'], display: 'icon' };
+      renderFabMenu();
+      check('[111-2] แบบ "ไอคอน" — ไม่มีข้อความในปุ่ม',
+            fmenu.dataset.disp === 'icon' &&
+            !fmenu.querySelector('.k-fab-item-tx') && !!fmenu.querySelector('.k-fab-item-ic'));
+      state.settings.fab = { actions: ['scene', 'memo'], display: 'iconText' };
+      renderFabMenu();
+      check('[111-2] ★ แบบ "ไอคอน + ข้อความ" — มีครบทั้งสองอย่าง',
+            !!fmenu.querySelector('.k-fab-item-ic') && !!fmenu.querySelector('.k-fab-item-tx') &&
+            fmenu.querySelector('.k-fab-item-tx').textContent.length > 0,
+            fmenu.querySelector('.k-fab-item-tx')?.textContent);
+      state.settings.fab = { actions: ['scene', 'memo'], display: 'text' };
+      renderFabMenu();
+      check('[111-2] ★ แบบ "ข้อความอย่างเดียว" — ไม่มีไอคอน',
+            !fmenu.querySelector('.k-fab-item-ic') && !!fmenu.querySelector('.k-fab-item-tx'));
+
+      // ── ข้อ 3: เมนูวงกลม — ปุ่มลูกต้อง "กระจายออก" จริง ไม่ใช่ซ้อนกันที่จุดเดียว ──
+      state.settings.fab = { actions: ['scene', 'chapter', 'character', 'memo'], display: 'icon' };
+      renderFabMenu();
+      toggleFabMenu(true);
+      await new Promise((r) => setTimeout(r, 420));
+      const boxes = [...fmenu.children].map((c) => c.getBoundingClientRect());
+      const fr = fab.getBoundingClientRect();
+      const fcx = fr.left + fr.width / 2, fcy = fr.top + fr.height / 2;
+      const dists = boxes.map((b) => Math.hypot(b.left + b.width / 2 - fcx, b.top + b.height / 2 - fcy));
+      check('[111-3] ★★ เปิดแล้วปุ่มลูกกางออกจากปุ่มแม่จริง (วัดจากตำแหน่งบนจอ)',
+            dists.every((d) => d > 60), dists.map((d) => d.toFixed(0)).join(','));
+      check('[111-3] ★★ ปุ่มลูกไม่ทับกัน (ห่างกันอย่างน้อย 40px)', (() => {
+        for (let i = 0; i < boxes.length; i++) {
+          for (let j = i + 1; j < boxes.length; j++) {
+            const dx = boxes[i].left + boxes[i].width / 2 - boxes[j].left - boxes[j].width / 2;
+            const dy = boxes[i].top + boxes[i].height / 2 - boxes[j].top - boxes[j].height / 2;
+            if (Math.hypot(dx, dy) < 40) return false;
+          }
+        }
+        return true;
+      })());
+      check('[111-3] ★ ปุ่มอยู่มุมขวาล่าง → เมนูกางซ้าย-ขึ้น (ไม่หลุดขอบจอ)',
+            boxes.every((b) => b.left >= 0 && b.top >= 0 &&
+                               b.right <= window.innerWidth && b.bottom <= window.innerHeight),
+            JSON.stringify(boxes.map((b) => [Math.round(b.left), Math.round(b.top)])));
+      check('[111-3] ★ หน่วงเวลาไล่ทีละตัว (ตัวหลังช้ากว่าตัวแรก)',
+            parseFloat(fmenu.children[3].style.transitionDelay) >
+            parseFloat(fmenu.children[0].style.transitionDelay),
+            [...fmenu.children].map((c) => c.style.transitionDelay).join(','));
+      check('[111-3] ปุ่มลูกมองเห็นจริงตอนเปิด (ไม่ใช่โปร่งใสค้าง)',
+            +getComputedStyle(fmenu.children[0]).opacity > 0.9,
+            getComputedStyle(fmenu.children[0]).opacity);
+      await kapi.testShot('/tmp/k2_fab_radial.png');       // ภาพเมนูวงกลมตอนกางเต็มที่
+      state.settings.fab = { actions: ['scene', 'chapter', 'character', 'memo'], display: 'iconText' };
+      renderFabMenu(); toggleFabMenu(true);
+      await new Promise((r) => setTimeout(r, 420));
+      const tb111 = [...fmenu.children].map((c) => c.getBoundingClientRect());
+      check('[111-3] ★ แบบมีข้อความก็ยังกางอยู่ในจอครบทุกปุ่ม',
+            tb111.every((b) => b.left >= 0 && b.top >= 0 &&
+                               b.right <= window.innerWidth && b.bottom <= window.innerHeight),
+            JSON.stringify(tb111.map((b) => [Math.round(b.left), Math.round(b.top), Math.round(b.width)])));
+      // ★ ป้ายยาว ๆ ทับกันในแนวนอนอยู่แล้ว → กรอบต้องไม่ซ้อนกันเลยแม้แต่พิกเซลเดียว
+      check('[111-3] ★★ ป้ายข้อความไม่ทับกัน (กรอบไม่ซ้อนกันเลย)', (() => {
+        for (let i = 0; i < tb111.length; i++) {
+          for (let j = i + 1; j < tb111.length; j++) {
+            const a = tb111[i], b = tb111[j];
+            if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) return false;
+          }
+        }
+        return true;
+      })(), JSON.stringify(tb111.map((b) => [Math.round(b.top), Math.round(b.bottom)])));
+      await kapi.testShot('/tmp/k2_fab_radial_text.png');
+      state.settings.fab = { actions: ['scene', 'chapter', 'character', 'memo'], display: 'icon' };
+      renderFabMenu();
+      toggleFabMenu(false);
+      await new Promise((r) => setTimeout(r, 500));
+      check('[111-3] ปิดแล้วยุบหายจริง', fmenu.classList.contains('k-menu-off'));
+
+      // ── ข้อ 1: คลิกขวาลากย้าย + จำตำแหน่ง ──
+      const before = fab.getBoundingClientRect();
+      const rdown = (x, y) => fab.dispatchEvent(new MouseEvent('mousedown',
+        { button: 2, clientX: x, clientY: y, bubbles: true }));
+      const rmove = (x, y) => document.dispatchEvent(new MouseEvent('mousemove',
+        { button: 2, clientX: x, clientY: y, bubbles: true }));
+      const rup = (x, y) => document.dispatchEvent(new MouseEvent('mouseup',
+        { button: 2, clientX: x, clientY: y, bubbles: true }));
+      // จับที่จุด +10,+10 ในตัวปุ่ม แล้วลากไป -200,-100 → ปุ่มต้องขยับเท่ากับระยะที่เมาส์เดิน
+      const gx = before.left + 10, gy = before.top + 10;
+      rdown(gx, gy);
+      rmove(gx - 190, gy - 90);
+      rmove(gx - 200, gy - 100);
+      rup(gx - 200, gy - 100);
+      await new Promise((r) => setTimeout(r, 80));
+      const after = fab.getBoundingClientRect();
+      check('[111-1] ★★ คลิกขวาค้างแล้วลาก → ปุ่มย้ายจริง',
+            Math.abs(after.left - (before.left - 200)) < 3 &&
+            Math.abs(after.top - (before.top - 100)) < 3,
+            `${Math.round(before.left)},${Math.round(before.top)} → ${Math.round(after.left)},${Math.round(after.top)}`);
+      const savedFab = JSON.parse(localStorage.getItem('k2-ui-layout') || '{}').fab;
+      check('[111-1] ★★ จำตำแหน่งลง k2-ui-layout',
+            !!savedFab && Math.abs(savedFab.left - after.left) < 2, JSON.stringify(savedFab));
+      // โหลดค่ากลับมาใหม่ = ต้องได้ที่เดิม
+      fab.style.left = ''; fab.style.top = ''; fab.style.right = ''; fab.style.bottom = '';
+      restoreFabPos();
+      check('[111-1] ★ เปิดโปรแกรมใหม่ (restoreFabPos) → กลับไปที่เดิม',
+            Math.abs(fab.getBoundingClientRect().left - after.left) < 2);
+      // ลากออกนอกจอ → ต้องถูกดึงกลับเข้ามา
+      const now = fab.getBoundingClientRect();
+      rdown(now.left + 10, now.top + 10);
+      rmove(now.left + 9000, now.top + 9000);
+      rup(now.left + 9000, now.top + 9000);
+      await new Promise((r) => setTimeout(r, 60));
+      const off = fab.getBoundingClientRect();
+      check('[111-1] ★ ลากเลยขอบจอ → ถูกหนีบให้ยังอยู่ในจอ',
+            off.right <= window.innerWidth + 1 && off.bottom <= window.innerHeight + 1,
+            `${Math.round(off.right)}/${window.innerWidth}`);
+      // คลิกขวาแบบไม่ขยับ = เมนูคำสั่งลัด (ไม่ใช่การย้าย)
+      document.querySelectorAll('.k-menu:not(#k-fab-menu)').forEach((m) => m.remove());
+      const still = fab.getBoundingClientRect();
+      rdown(still.left + 10, still.top + 10);
+      rup(still.left + 10, still.top + 10);
+      await new Promise((r) => setTimeout(r, 60));
+      const ctx = document.querySelector('.k-menu:not(#k-fab-menu)');
+      check('[111-1] ★ คลิกขวาแล้วไม่ขยับ → ได้เมนูคำสั่งลัดของปุ่ม',
+            !!ctx && ctx.textContent.includes(tt('ui.fab.ctxReset').slice(0, 6)),
+            ctx ? ctx.textContent.slice(0, 60) : 'ไม่มีเมนู');
+      check('[111-1] คลิกขวาแบบไม่ขยับ ไม่ทำให้ปุ่มขยับ',
+            Math.abs(fab.getBoundingClientRect().left - still.left) < 1);
+      ctx && ctx.remove();
+
+      // คืนสภาพ
+      state.settings.fab = keepFab;
+      renderFabMenu();
+      const lay = uiLayout(); delete lay.fab;
+      localStorage.setItem('k2-ui-layout', JSON.stringify(lay));
+      fab.style.left = ''; fab.style.top = ''; fab.style.right = ''; fab.style.bottom = '';
     }
 
     // ---- ข้อ 3: Ctrl+Shift+S บันทึกทั้งหมด ----
@@ -18367,6 +19357,48 @@ async function runTest(projectPath) {
             typeof client.complete === 'function' && typeof client.stream === 'function' && typeof client.embed === 'function');
       const emb = await client.embed(['ทดสอบ'], { local: true });
       check('AIClient embed แบบ local ได้ (ไม่ต้องมีคีย์)', emb.ok && emb.vectors[0].length === 256);
+
+      // ---- [alpha.96 บั๊ก 1] ทะเบียนใหม่ (providers[]) ต้องทำให้ getAIClient() วิ่งผ่าน ai-provider-ui ----
+      // เดิมอ่าน meta.ai.provider รุ่นเก่า → เจ้าเป็น openai + คีย์ว่าง → "ติดต่อ API ไม่ได้ทั้งที่ตั้งค่าแล้ว"
+      {
+        const savedAi = state.meta.ai;
+        state.meta.ai = { ...(state.meta.ai || {}), providers: [{}], activeProviderId: '' };
+        resetAI();
+        const c2 = getAIClient();
+        check('[96] ตั้งทะเบียนใหม่แล้ว getAIClient ใช้ adapter (ไม่ใช่ AIClient รุ่นเก่า)',
+              !!c2 && c2._adapter === true && typeof c2.complete === 'function'
+              && typeof c2.stream === 'function' && typeof c2.embed === 'function');
+        const emb2 = await c2.embed(['กขค']);
+        check('[96] adapter.embed ใช้ local ได้แม้ยังไม่มีคีย์ทะเบียนใหม่',
+              emb2.ok && Array.isArray(emb2.vectors) && emb2.vectors[0].length === 256);
+        state.meta.ai = savedAi;
+        resetAI();
+      }
+
+      // ---- [alpha.115] สตรีมคำตอบ AI ต้องไหลมาจริงผ่าน IPC (ไม่รอจบแล้วโผล่ทีเดียว) ----
+      // เซิร์ฟเวอร์ SSE จำลองอยู่ใน main.js (เปิดเฉพาะ KILLIAN_TEST=1) — ถ้าเชื่อมต่อไม่ได้
+      // (รันบนเครื่องที่ปิดพอร์ต) ให้ข้ามไป ไม่นับเป็นความล้มเหลว
+      {
+        const { completeStream } = await import('./ai/ai-provider-ui.js');
+        const { newProvider } = await import('./ai/ai-providers.js');
+        const prov = newProvider({ name: 'mock-sse', model: 'mock-model',
+          credential: { name: 'mock', baseUrl: 'http://127.0.0.1:8931/v1', allowedDomains: ['127.0.0.1'] } });
+        const deltas = [];
+        const thunks = [];
+        const r = await completeStream(prov, {
+          system: 'sys', messages: [{ role: 'user', content: 'ขอคำตอบ' }],
+        }, (c) => { if (c.delta) deltas.push(c.delta); if (c.thinking) thunks.push(c.thinking); });
+        const sseUp = r.ok && r.text.length > 0;
+        if (sseUp) {
+          check('[115] ★ สตรีมผ่าน IPC ส่งก้อนย่อยหลายก้อน (ไม่ใช่ก้อนเดียวตอนจบ)',
+                deltas.length >= 3, 'deltas=' + deltas.length + ' text=' + r.text);
+          check('[115] ★ ข้อความรวมถูกต้อง', r.text === 'สวัสดีครับ จบ', r.text);
+          check('[115] ★ ความคิด (reasoning) ไหลมาด้วยเป็นก้อนย่อย',
+                thunks.length >= 2 && r.thinking.includes('คิดขั้น 1'), 'thunks=' + thunks.length + ' thinking=' + r.thinking);
+        } else {
+          check('[115] (ข้าม) เซิร์ฟเวอร์ SSE จำลองไม่พร้อม — ไม่ได้เทสสตรีม', true, r.error || '');
+        }
+      }
 
       // ---- UI ของ AI ต้องเรียกเอนจินที่เทสไว้ ไม่ใช่ยิง prompt เอง (ข้อ 73–76) ----
       const plot = await import('./ai/ai-plot.js');
@@ -20299,9 +21331,16 @@ async function runTest(projectPath) {
         const split1 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
         S.spPageRules = { minDialogueLinesAtBottom: 99 };
         const split2 = paginate(longBlocks, { lines: 14, fmt: spFormat() });
+        // [alpha.111] เดิมเช็คว่า "ตั้ง 99 แล้วต้องไม่มีการหั่นบล็อกเลย" — **เงื่อนไขนั้นหมดอายุ**
+        // ตั้งแต่มี "ด่านสุดท้าย" ที่บังคับหั่นบล็อกซึ่งสูงเกินหนึ่งหน้า (ไม่งั้นหน้าล้นออกนอกแผ่น)
+        // บทพูดก้อนนี้ยาวเกินหนึ่งหน้า จึงถูกหั่นเสมอไม่ว่าตั้งกฎเป็นเท่าไร
+        // สิ่งที่กฎยังคุมอยู่จริงคือ **จุดตัด** → เทสจึงต้องวัดตรงนั้น ตรงกับชื่อเทสพอดี
+        const cutMap = (r) => r.pages.map((pg) => pg.blocks
+          .map((b) => b.el + ':' + (b.lines || 0) + (b.split ? '/' + b.split : '')).join('|')).join(' ⟂ ');
         check('[84] ปรับกฎ minDialogueLinesAtBottom → การแบ่งหน้าเปลี่ยนจริง',
               split1.pages.flatMap((p) => p.blocks).some((b) => b.split === 'head') &&
-              !split2.pages.flatMap((p) => p.blocks).some((b) => b.split === 'head'));
+              cutMap(split1) !== cutMap(split2),
+              cutMap(split1) + '   ควรต่างจาก   ' + cutMap(split2));
         S.spPageRules = null;
         // ---- [92] ข้อความมาตรฐานที่แก้ได้ ----
         S.spStrings = { dialogueMore: '(ยังไม่จบ)' };
@@ -20565,6 +21604,79 @@ async function runTest(projectPath) {
                 `${sc59} vs ${fit.scale}`);
           check('[59] บล็อกในหน้ามี data-pos ไว้ให้คลิกกระโดด',
                 !!pv.querySelector('.sp[data-pos]'));
+
+          // ══ [alpha.112] ★★ เนื้อหน้าต้องไม่ล้นแผ่นในมุมมองหน้าคู่ ══
+          //
+          // ผู้ใช้: *"การตัดหน้า หน้าคู่ล้นออกมา"* — หน้าซ้ายเนื้อทะลุขอบล่าง หน้าขวามีบรรทัดเดียว
+          // ต้นตอ: กฎ CSS ของบรรทัดว่างจับด้วย `br.ProseMirror-trailingBreak` ซึ่ง **มีเฉพาะ
+          // ในตัวแก้ไข** · มุมมองนี้ประกอบ `<div class="sp sp-blank">` เอง จึงไม่โดนกฎ
+          // → บล็อกถัดจากบรรทัดว่างได้ padding-top เต็ม ๆ ทั้งที่ paginate() ข้ามให้แล้ว
+          //   (ทุกช่องไฟกินเกินไปหนึ่งบรรทัด · วัดจริงจากไฟล์ผู้ใช้: เกิน 18 บรรทัด/หน้า)
+          //
+          // เทสนี้ **วัดของจริงบนจอ** ไม่ใช่ถามโมเดล — เนื้อทั้งหมดต้องอยู่ในกรอบพื้นที่พิมพ์
+          {
+            const blanks59 = pv.querySelectorAll('.sp.sp-blank');
+            check('[112] มุมมองหน้าคู่มีบรรทัดว่างให้ตรวจจริง', blanks59.length > 0, blanks59.length);
+            const csB = getComputedStyle(blanks59[0]);
+            check('[112] ★ บรรทัดว่างสูงพอดี 1 บรรทัด ไม่มีระยะเว้นนำ/ตาม',
+                  csB.paddingTop === '0px' && csB.paddingBottom === '0px' &&
+                  Math.abs(parseFloat(csB.height) - parseFloat(csB.lineHeight)) < 0.6,
+                  `h=${csB.height} lh=${csB.lineHeight} pad=${csB.paddingTop}/${csB.paddingBottom}`);
+            const afterB = [...pv.querySelectorAll('.sp.sp-blank + .sp:not(.sp-blank)')];
+            check('[112] ★★ บล็อกถัดจากบรรทัดว่างไม่มีระยะเว้นนำซ้ำ',
+                  afterB.length > 0 && afterB.every((e0) => getComputedStyle(e0).paddingTop === '0px'),
+                  afterB.length + ' ก้อน · ' + afterB.map((e0) => getComputedStyle(e0).paddingTop).join(','));
+            const over59 = [];
+            for (const pgEl of pv.querySelectorAll('.sp-page')) {
+              const cs = getComputedStyle(pgEl);
+              // ความสูงพื้นที่พิมพ์ = กล่อง − ระยะขอบบน/ล่าง (ทุกค่าเป็น px ก่อนสเกล)
+              const body = parseFloat(cs.height) - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+              let h = 0;
+              for (const kid of pgEl.children) {
+                if (kid.classList.contains('sp-page-num') || kid.className.includes('sp-cont-page')) continue;
+                h += kid.offsetHeight;
+              }
+              if (h > body + 1) over59.push(`หน้า ${pgEl.dataset.page}: เนื้อ ${Math.round(h)} > พื้นที่ ${Math.round(body)}`);
+            }
+            check('[112] ★★★ ไม่มีหน้าไหนเนื้อล้นพื้นที่พิมพ์ของแผ่นตัวเอง',
+                  over59.length === 0, over59.join(' | '));
+          }
+
+          // ══ [alpha.113] ★★ เส้น "ศูนย์รวมการส่งออก" ต้องตัดหน้าเท่ากับแท็บ ══
+          //
+          // ผู้ใช้: *"ในเอกสารมี 2 หน้า แต่ PDF ออกมา 1 หน้า · บรรทัดว่างถูกลบทิ้ง"*
+          // PDF มีสองไปป์ไลน์: แท็บ (`blocksFromDoc`) กับศูนย์รวมส่งออก
+          // (`compileDraftText` → `runWorkflow` → `parseScript`) — alpha.112 แก้ไปแค่เส้นแรก
+          // เส้นหลังยังยุบ `\n{3,}` → `\n\n` ตอนประกอบข้อความ ซึ่งถูกสำหรับนิยาย
+          // แต่ทำลายบท (บรรทัดว่างที่นั่นคือเนื้อหาที่ paginate() นับเป็น 1 บรรทัด)
+          // วัดจริงจากไฟล์ผู้ใช้: 41 บรรทัด → 28 → **1 หน้า** ทั้งที่จอเห็น 2 หน้า
+          {
+            const CP113 = await import('./compile.js');
+            const FT113 = await import('./fountain.js');
+            const wf113 = { id: 'e2e-bare', name: 'e2e', ext: 'pdf', steps: [] };
+            const body113 = spT.sp.getMarkdown();
+            const nBlank = (x) => x.split(String.fromCharCode(10)).filter((y) => !y.trim()).length;
+            const mk113 = (format) => ({ title: 'e2e', author: '', chapters: [{ title: 'บท',
+              scenes: [{ title: 'ฉาก', format, body: body113, words: 1 }] }] });
+            const spText = CP113.runWorkflow(mk113('screenplay'), wf113).text;
+            check('[113] ชุดทดสอบนี้มีบรรทัดว่างให้เสียจริง', nBlank(body113) > 0, nBlank(body113));
+            check('[113] ★★ ข้อความที่ compile เก็บบรรทัดว่างของบทไว้ครบ',
+                  nBlank(spText) >= nBlank(body113) - 1,
+                  `compile ${nBlank(spText)} · ต้นฉบับ ${nBlank(body113)}`);
+            const nTab = pagesOf(blocksFromDoc(spT.sp.view.state.doc), spFormat()).count;
+            const nHub = pagesOf(FT113.parseScript(spText), spFormat()).count;
+            check('[113] ★★★ จำนวนหน้าจากเส้นศูนย์รวมส่งออก = จำนวนหน้าที่แท็บเห็น',
+                  nHub === nTab, `ศูนย์รวม ${nHub} vs แท็บ ${nTab}`);
+            // ฉบับร่างที่ปนนิยายกับบท: ฉากบทต้องรอด แม้นิยายเป็นเสียงข้างมาก
+            const mixed113 = { title: 'e2e', author: '', chapters: [{ title: 'บท', scenes: [
+              { title: 'บท', format: 'screenplay', body: body113, words: 1 },
+              { title: 'นิยาย1', format: 'prose', body: body113, words: 1 },
+              { title: 'นิยาย2', format: 'prose', body: body113, words: 1 },
+            ] }] };
+            check('[113] ★ ฉบับร่างปนกัน: ฉากบทยังเก็บบรรทัดว่างไว้',
+                  nBlank(CP113.runWorkflow(mixed113, wf113).text) > nBlank(body113),
+                  String(nBlank(CP113.runWorkflow(mixed113, wf113).text)));
+          }
 
           setSpView('overview4');
           await new Promise((r) => setTimeout(r, 200));
@@ -21744,6 +22856,46 @@ async function runTest(projectPath) {
                 check('[104r] ★★ ' + elName + ': เส้นคั่นถูกวาดครบทุกรอยต่อ',
                       brC2 === pgC.count - 1, brC2 + ' vs ' + (pgC.count - 1));
               }
+
+              // ══ [alpha.114] ★★★ ตาข่ายทั่วไป: เครื่องประดับห้ามกินความกว้างข้อความ ══
+              //
+              // `[104r] note` แดงมานานเพราะ `.sp-note` มี `padding:4px 8px` + `border-left:3px`
+              // บน `box-sizing:border-box` → กล่องข้อความจริงแคบกว่าที่ `elementWidthIn()` บอก 19px
+              // แล้วทุกย่อหน้าโน้ตตัดบรรทัดถี่กว่าที่โมเดลจอง (54 → 61 บรรทัด) จนหน้าล้น
+              //
+              // เทสข้อเดิมจับได้เฉพาะ element ที่บังเอิญอยู่ในลิสต์ — ข้อนี้กวาด **ทุกชนิด**
+              // แล้ววัดที่ต้นเหตุโดยตรง (ความกว้างเนื้อใน) ไม่ใช่ที่ปลายทาง (จำนวนบรรทัด)
+              // ใครเติม padding/border แนวนอนให้ `.sp-*` เมื่อไหร่ ข้อนี้แดงทันทีในรอบนั้น
+              {
+                const fmtW = spFormat();
+                const FT114 = await import('./fountain.js');
+                const bad114 = [], seen114 = [];
+                for (const elName of Object.keys(fmtW.elements)) {
+                  if (elName === 'page-break') continue;      // คำสั่ง ไม่ใช่บล็อกข้อความ
+                  // ใช้ตัวเขียนบรรทัดตัวจริง (`lineFor`) แทนตารางคำนำหน้าที่ทำเอง —
+                  // ครอบคลุมทุกชนิดโดยไม่ต้องไล่เติมเองทุกครั้งที่มี element ใหม่
+                  const src114 = FT114.lineFor(elName, 'ทดสอบความกว้าง abcdef', true, 'action');
+                  spT58.sp.setMarkdown(['.INT. ห้องทดสอบ - กลางวัน',
+                                        src114].join(String.fromCharCode(10)));
+                  await new Promise((r) => setTimeout(r, 160));
+                  const n0 = spT58.pane.querySelector('.sp-' + elName);
+                  if (!n0) continue;
+                  seen114.push(elName);
+                  const cs0 = getComputedStyle(n0);
+                  const inner = n0.getBoundingClientRect().width
+                    - parseFloat(cs0.paddingLeft) - parseFloat(cs0.paddingRight)
+                    - parseFloat(cs0.borderLeftWidth) - parseFloat(cs0.borderRightWidth);
+                  const want = elementWidthIn(fmtW, elName) * 96;
+                  if (Math.abs(inner - want) > 1) {
+                    bad114.push(elName + ': เนื้อใน ' + inner.toFixed(1) + ' ≠ โมเดล ' + want.toFixed(1)
+                                + ' (pad ' + cs0.paddingLeft + '/' + cs0.paddingRight
+                                + ' border ' + cs0.borderLeftWidth + '/' + cs0.borderRightWidth + ')');
+                  }
+                }
+                check('[114] ตรวจได้อย่างน้อย 8 ชนิดบล็อก', seen114.length >= 8, seen114.join(','));
+                check('[114] ★★★ ทุกชนิดบล็อก: ความกว้างเนื้อในบนจอ = ความกว้างที่โมเดลใช้',
+                      bad114.length === 0, bad114.join(' | '));
+              }
             }
               // ══ [alpha.107] ★★ วัด "จุดตัดบรรทัดจริงของ Chromium" เทียบกับของโมเดล ══
               //
@@ -21974,7 +23126,8 @@ async function runTest(projectPath) {
                 // [alpha.108] เครื่องมือวินิจฉัยที่ผู้ใช้เรียกเองได้ต้องทำงานจริง
                 {
                   const doc = window.k2PageDoctor && window.k2PageDoctor({ tab: spT58 });
-                  note('[108] k2PageDoctor: ' + (doc ? JSON.stringify(doc.problems) : 'ไม่มี'));
+                  note('[108] k2PageDoctor: ' + (doc ? JSON.stringify(doc.problems) : 'ไม่มี')
+           + ' | screen=' + JSON.stringify(doc && doc.screen));
                   check('[108] ★ k2PageDoctor() เรียกได้และรายงานครบทุกชั้น',
                         !!doc && !!doc.env && !!doc.model && !!doc.grid && !!doc.screen,
                         doc && Object.keys(doc).join(','));
@@ -26729,6 +27882,28 @@ async function runTest(projectPath) {
         await new Promise((r) => setTimeout(r, 60));
       }
 
+      // ---- [alpha.115] ระหว่างส่งคำขอ ต้องไม่รื้อ DOM ของแผงแชท (กันข้อความ/สตรีมหาย) ----
+      // ต้นตอ: saveSession() ของ send() เขียนไฟล์ → panel:fileChanged → project-changed →
+      // renderOpenFeaturePanels() → วาดแผงแชทใหม่ → ทิ้ง body เก่า → ข้อความหาย
+      {
+        const cst = _chatState();
+        showPanel('ai-chat');
+        await renderFeaturePanel('ai-chat');
+        await new Promise((r) => setTimeout(r, 80));
+        const host = document.getElementById('ai-chat-body');
+        cst.cur = null; cst.view = 'list';
+        await renderAIChatPanel(host);
+        await new Promise((r) => setTimeout(r, 50));
+        const before = host.innerHTML;
+        cst.sending = true;
+        await renderOpenFeaturePanels();          // จำลอง project-changed ระหว่างส่ง
+        check('[115] ★ ระหว่างส่ง (S.sending=true) แผงแชทไม่ถูกรื้อใหม่', host.innerHTML === before);
+        cst.sending = false;
+        await renderAIChatPanel(host);            // จบส่ง → วาดใหม่ได้ตามปกติ
+        hidePanel('ai-chat');
+        await new Promise((r) => setTimeout(r, 50));
+      }
+
       // ═══════════════════ alpha.62 — รอบเก็บบั๊กจาก human test 8 ข้อ ═══════════════════
       const wait62 = (ms) => new Promise((r) => setTimeout(r, ms));
       /** วนรอ "เงื่อนไขจริง" แทนการเดาเวลา (บทเรียน 61 · 74) */
@@ -29837,25 +31012,43 @@ async function runTest(projectPath) {
         await wait79(60);
         check('[79-5] วาดแถบใหม่แล้วปุ่มที่ปิดไว้ยังหายอยู่ (ไม่ถูก refreshToolbar ดันกลับ)',
               getComputedStyle(aiBtn79).display === 'none');
-        // ปิดทั้งกลุ่ม → เส้นคั่นต้องไม่ลอยค้าง
-        state.settings.toolbar = TB79.setGroupVisible(state.settings.toolbar, 'align', false);
-        applyToolbarConfig();
+        // ══ [alpha.114] กลุ่ม "จัดหน้า" ย้ายบ้านแล้ว — ต้องปิดจากที่ที่มันอยู่จริง ══
+        //
+        // alpha.111 แยกปุ่มบนแถบรูปแบบลอยออกจาก `settings.toolbar` ไปอยู่ `settings.fmtbar`
+        // (แยกชุดนิยาย/บท) ตามกติกา "ปุ่มหนึ่งตัวมีสวิตช์ได้ที่เดียว" —
+        // เทสข้อนี้ยังสั่งผ่านก้อนเก่าอยู่ จึงสั่งไปแล้วไม่มีอะไรเกิดขึ้น
+        // (ไม่มีใครเห็นเพราะ e2e ตายที่ `[104r]` ก่อนถึงตรงนี้มาตลอด — บทเรียน: เทสที่ถูกบัง
+        //  ด้วยความล้มเหลวก่อนหน้า = เทสที่ไม่มีอยู่จริง)
         const alignIds79 = ['tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify'];
+        check('[114] กลุ่มจัดหน้าอยู่บนแถบรูปแบบลอย ไม่ใช่แถบเครื่องมือหลักแล้ว',
+              alignIds79.every((id) => TB79.isFmtbarButton(id)) &&
+              !TB79.mainbarGroups().some((g) => g.buttons.some((b) => alignIds79.includes(b.id))));
+        state.settings.fmtbar = TB79.setFmtbarGroupVisible(state.settings.fmtbar, 'prose', 'align', false);
+        applyFmtbarConfig(state.settings.fmtbar, 'prose');
         check('[79-5] ปิดทั้งกลุ่มจัดหน้าแล้วปุ่มหายหมด',
               alignIds79.every((id) => {
                 const b = document.getElementById(id);
                 return b && getComputedStyle(b).display === 'none';
               }),
               JSON.stringify({
-                cfg: state.settings.toolbar,
+                cfg: state.settings.fmtbar,
                 dom: alignIds79.map((id) => {
                   const b = document.getElementById(id);
                   return id + '=' + (!b ? 'ไม่มีปุ่ม'
                     : (b.classList.contains('tb-hidden') ? 'cls+' : 'cls-')
                       + getComputedStyle(b).display
-                      + (b.parentElement ? '@' + b.parentElement.id : '@หลุด'));
+                      + (b.parentElement ? '@' + (b.parentElement.id || b.parentElement.className) : '@หลุด'));
                 }),
               }));
+        check('[114] ★ ปิดในโหมดนิยายแล้วโหมดบทไม่กระทบ',
+              alignIds79.every((id) => !TB79.fmtbarHidden(state.settings.fmtbar, 'screenplay', id)));
+        state.settings.fmtbar = TB79.resetFmtbarConfig();
+        applyFmtbarConfig();
+        check('[79-5] เปิดกลุ่มกลับแล้วปุ่มจัดหน้ากลับมาครบ',
+              alignIds79.every((id) => getComputedStyle(document.getElementById(id)).display !== 'none'));
+        // เส้นคั่นบนแถบเครื่องมือหลักต้องไม่ลอยค้างเมื่อปิดทั้งกลุ่ม (ใช้กลุ่มที่อยู่บนแถบนั้นจริง)
+        state.settings.toolbar = TB79.setGroupVisible(state.settings.toolbar, 'tabs', false);
+        applyToolbarConfig();
         const seps79 = [...$('#toolbar').querySelectorAll('span.sep')];
         const visSeps = seps79.filter((s) => getComputedStyle(s).display !== 'none');
         check('[79-5] ไม่มีเส้นคั่นสองอันติดกันหลังซ่อนทั้งกลุ่ม', (() => {
@@ -29870,18 +31063,27 @@ async function runTest(projectPath) {
         await wait79(120);
         check('[79-5] เปิดกล่องปรับแถบเครื่องมือได้', !!document.querySelector('.k-dialog.k-tbcfg'));
         const rowsTb = document.querySelectorAll('.k-tbcfg-row');
-        check('[79-5] กล่องแสดงปุ่มครบทุกตัว', rowsTb.length === TB79.allButtonIds().length,
-              rowsTb.length + '/' + TB79.allButtonIds().length);
+        // [alpha.114] กล่องนี้คุมเฉพาะ **แถบเครื่องมือหลัก** แล้ว — ปุ่มบนแถบรูปแบบลอย
+        // มีหน้าตั้งค่าของตัวเอง (ตั้งค่า → แถบรูปแบบลอย · แยกชุดนิยาย/บท)
+        const mainIds114 = TB79.mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id));
+        check('[79-5] กล่องแสดงปุ่มครบทุกตัวของแถบหลัก', rowsTb.length === mainIds114.length,
+              rowsTb.length + '/' + mainIds114.length);
+        check('[114] ★ ไม่มีปุ่มของแถบรูปแบบลอยหลุดมาอยู่ในกล่องนี้ (กันสวิตช์ซ้ำสองที่)',
+              ![...rowsTb].some((r) => TB79.isFmtbarButton(r.dataset.btn)),
+              [...rowsTb].filter((r) => TB79.isFmtbarButton(r.dataset.btn))
+                         .map((r) => r.dataset.btn).join(','));
         check('[79-5] สวิตช์สะท้อนสถานะจริง', (() => {
           const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-ai');
           return r && r.querySelector('.k-tbcfg-sw').checked === false;
         })());
+        // [alpha.114] เดิมใช้ `tb-bold` เป็นตัวอย่าง — ย้ายไปแถบรูปแบบลอยแล้ว จึงไม่อยู่ในกล่องนี้
+        // เปลี่ยนเป็นปุ่มที่ยังอยู่บนแถบหลักจริง (เจตนาของเทสเหมือนเดิม: ชื่อมาจาก tooltip)
         check('[79-5] ชื่อปุ่มในกล่องมาจาก tooltip ของปุ่มจริง (ไม่มีตารางชื่อซ้ำอีกชุด)', (() => {
-          const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-bold');
+          const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-kanban');
           const nm = r && r.querySelector('.k-tbcfg-name').textContent;
           return !!nm && nm.length > 1 && !/^tb-/.test(nm) && !/Ctrl/.test(nm);
-        })(), (() => { const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-bold');
-                       return r ? r.querySelector('.k-tbcfg-name').textContent : ''; })());
+        })(), (() => { const r = [...rowsTb].find((x) => x.dataset.btn === 'tb-kanban');
+                       return r ? r.querySelector('.k-tbcfg-name').textContent : 'ไม่มีแถว'; })());
         // กดสวิตช์กลับ แล้วปุ่มต้องโผล่ทันที
         const swAi = [...rowsTb].find((x) => x.dataset.btn === 'tb-ai').querySelector('.k-tbcfg-sw');
         swAi.checked = true; swAi.dispatchEvent(new Event('change'));
@@ -31043,6 +32245,23 @@ async function runTest(projectPath) {
           probe.remove();
         }
 
+        // ── [alpha.96 บั๊ก 3] ระหว่างรอคำตอบต้องมีฟอง "กำลังคิด" (เดิมจอว่าง) ──
+        {
+          const st96 = U82.builderState();
+          st96.cur = sess82; st96.curFile = file82; st96.view = 'session';
+          st96.sending = true; st96.sendingSince = Date.now();
+          await U82.renderBuilderPanel();
+          const found96 = await until82(() => !!document.querySelector('#dlgb-body .dlgb-pending'));
+          const pend96 = document.querySelector('#dlgb-body .dlgb-pending');
+          check('[82-9] ★ ระหว่างรอคำตอบมีฟอง "กำลังคิด" + ตัวนับเวลา + ปุ่มหยุด',
+                found96 && !!pend96 && !!pend96.querySelector('.dlgb-bub-elapsed')
+                && !!pend96.querySelector('.dlgb-bub-stop'),
+                pend96 ? pend96.textContent : 'ไม่มีฟอง');
+          st96.sending = false; st96.reqId = '';
+          await U82.renderBuilderPanel();
+          check('[82-9] จบคำตอบแล้วฟองหายไป', !document.querySelector('#dlgb-body .dlgb-pending'));
+        }
+
         // ── งานค้างต้องขึ้นทะเบียน (กฎข้อ 1 ของผู้ใช้) ──
         check('[82-7] ห้องซ้อมบทลงทะเบียนเป็นแหล่งงานค้างแล้ว',
               dirtyRegistry.ids().includes('dlgb'), dirtyRegistry.ids().join(','));
@@ -31485,6 +32704,467 @@ async function runTest(projectPath) {
           check('[V-26] ★ ทำสำเนาฉากแล้วไฟล์ตารางไปด้วย',
                 !!dupRowV && (await kapi.exists(await kapi.join(chDirV, VCx.visFileName(dupRowV.fileName)))),
                 dupRowV ? dupRowV.fileName : 'ไม่มีฉากสำเนา');
+        }
+      }
+
+      // ══════════════ [alpha.116] รอบเก็บบั๊กก่อนปล่อย ══════════════
+      // สิบข้อจากผู้ใช้ — ทุกข้อที่พิสูจน์ได้โดยไม่ยิง API จริง ถูกล็อกไว้ที่นี่
+      {
+        const wait116 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until116 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { if (fn()) return true; await wait116(50); }
+          return false;
+        };
+        /** "มองเห็นจริงไหม" — ต้องดู opacity/visibility/ขนาด ไม่ใช่แค่ display (บทเรียน K-1) */
+        const visible116 = (node) => {
+          if (!node) return false;
+          const cs = getComputedStyle(node), box = node.getBoundingClientRect();
+          return cs.display !== 'none' && cs.visibility !== 'hidden'
+              && parseFloat(cs.opacity || '1') > 0.05 && box.width > 0 && box.height > 0;
+        };
+
+        // ────────── ข้อ 1: 💭 รำพึงคนเดียวในห้องซ้อมบท ──────────
+        {
+          const BC = await import('./dialogue/builder-core.js');
+          const BU = await import('./dialogue/builder-ui.js');
+          const sess = BC.newSession({ situation: 'ยืนอยู่บนดาดฟ้าคนเดียว', title: 'เทสรำพึง 116' });
+          const c1 = BC.addCast(sess, { name: 'โทระ116', blurb: 'ก' });
+          const c2 = BC.addCast(sess, { name: 'แคสซี่116', blurb: 'ข' });
+          sess.turns.push(BC.newTurn({ speaker: c1.id, listener: c2.id, text: 'ไปกันเถอะ' }));
+          sess.turns.push(BC.newTurn({ kind: BC.KIND_MONO, speaker: c1.id, listener: BC.SELF_MONO,
+                                       text: 'ทำไมฉันถึงยังอยู่ตรงนี้' }));
+
+          check('[116-1] ตัวเลือก "รำพึงคนเดียว" อยู่ในรายการคนฟัง',
+                BC.listenerOptions(sess).some((o) => o.id === BC.SELF_MONO));
+          check('[116-1] ★ เสียงในใจไม่รั่วเข้า transcript ของตัวละครอื่น',
+                !BC.buildMessages(sess, c2.id).some((m) => m.content.includes('ทำไมฉันถึงยังอยู่ตรงนี้'))
+                && BC.buildMessages(sess, c1.id).some((m) => m.content.includes('ทำไมฉันถึงยังอยู่ตรงนี้')));
+
+          BU.resetBuilder();
+          showPanel('dlgb');
+          await renderFeaturePanel('dlgb');
+          const stB = BU.builderState();
+          stB.cur = sess; stB.curFile = 'mono116.json'; stB.view = 'session';
+          await BU.renderBuilderPanel();
+          const okDraw = await until116(() => !!document.querySelector('#dlgb-body .dlgb-bubble'));
+          const monoBub = document.querySelector('#dlgb-body .dlgb-bubble.dlgb-mono');
+          check('[116-1] ★ ฟองรำพึงถูกวาดและมองเห็นจริง (ไม่ใช่แค่มีใน DOM)',
+                okDraw && visible116(monoBub),
+                monoBub ? monoBub.textContent.slice(0, 40) : 'ไม่มีฟองรำพึง');
+          const monoBtn = document.querySelector('#dlgb-body .dlgb-mono-btn');
+          check('[116-1] มีปุ่ม 💭 ในแถบส่ง และกดได้', !!monoBtn && !monoBtn.disabled);
+          const lisSel = [...document.querySelectorAll('#dlgb-body .dlgb-pick-sel')].pop();
+          check('[116-1] ช่อง "พูดกับ" มีตัวเลือกรำพึงคนเดียวจริงบนหน้าจอ',
+                !!lisSel && [...lisSel.options].some((o) => o.value === BC.SELF_MONO),
+                lisSel ? [...lisSel.options].map((o) => o.value).join(',') : '-');
+          BU.resetBuilder();
+          hidePanel('dlgb');
+        }
+
+        // ────────── ข้อ 3: แผง AI Hub ──────────
+        {
+          check('[116-3] แผง ai-hub อยู่ใน PANEL_DEFS + มีที่อยู่ใน DOM',
+                PANEL_DEFS.some((d) => d.id === 'ai-hub' && d.adopt === '#ai-hub-panel') && !!$('#ai-hub-body'));
+          const menuIds = await kapi.menuPanelIds();
+          check('[116-3] แผง ai-hub อยู่ในเมนู native ด้วย', menuIds.ids.includes('ai-hub'));
+          showPanel('ai-hub');
+          await renderFeaturePanel('ai-hub');
+          const okHub = await until116(() => !!document.querySelector('#ai-hub-body .aihub-card'));
+          const cards = document.querySelectorAll('#ai-hub-body .aihub-card');
+          check('[116-3] ★ Hub วาดการ์ดครบทุกความสามารถ', okHub && cards.length >= 10, cards.length);
+          check('[116-3] การ์ดมองเห็นได้จริง', visible116(cards[0]));
+          check('[116-3] หัวแผงบอกสถานะการเชื่อมต่อ',
+                !!document.querySelector('#ai-hub-body .aihub-headtext'));
+          // ทุกการ์ดต้องชี้ไปคำสั่งที่มีจริง — กดแล้วเงียบคือบั๊กที่มองไม่เห็น
+          const HD = await import('./ai/ai-hub-def.js');
+          check('[116-3] ★ ทุกการ์ดมี id/คำสั่งครบ ไม่มีใบไหนว่าง',
+                [...cards].every((c) => c.dataset.hub && HD.aiHubItem(c.dataset.hub)),
+                [...cards].map((c) => c.dataset.hub).filter((x) => !HD.aiHubItem(x)).join(','));
+          hidePanel('ai-hub');
+          check('[116-3] ปิดแผง AI Hub ได้', !isPanelOpen('ai-hub'));
+        }
+
+        // ────────── ข้อ 7: คีย์ลัดของแผงต้องครบ ──────────
+        {
+          const ids = new Set(SHORTCUTS.map((x) => shortcutId(x)));
+          const miss = PANEL_DEFS.filter((d) => d.closable !== false)
+            .map((d) => d.id)
+            .filter((id) => !ids.has('toggle-panel:' + id) && !SHORTCUT_PANEL_SKIP[id]);
+          check('[116-7] ★ แผงที่ปิดได้ทุกตัวมีคีย์ลัด (หรือประกาศเหตุผลไว้)',
+                miss.length === 0, miss.join(' · '));
+          check('[116-7] แผง AI Hub มีคีย์ลัดของตัวเอง', ids.has('toggle-panel:ai-hub'));
+          check('[116-7] ห้องซ้อมบท/Story Starter ที่เคยตกหล่นมีแล้ว',
+                ids.has('toggle-panel:dlgb') && ids.has('toggle-panel:starter'));
+        }
+
+        // ────────── ข้อ 2 + 4 + 8: ทำงานบนแท็บนิยายที่เปิดอยู่ ──────────
+        // เปิดฉากเองถ้าไม่มี — "ไม่มีแท็บเลยเลยข้ามเทส" คือการข้ามแบบเงียบ ๆ ที่มองไม่ออกจากผลรัน
+        if (![...state.tabs.values()].some((x) => x.editor)) {
+          try {
+            await openScene(await kapi.join(state.root, 'เล่มหนึ่ง', 'Draft', 'default',
+                                            'Chapters', '01 - บทที่หนึ่ง', 'scene-01.md'), 'ตลาดเก่า');
+            await wait116(400);
+          } catch {}
+        }
+        const tab116 = [...state.tabs.values()].find((x) => x.editor);
+        check('[116] มีแท็บนิยายให้ทดสอบข้อ 2/4/8', !!tab116,
+              [...state.tabs.keys()].join(' , ').slice(0, 120));
+        if (tab116) {
+          await activate(tab116.file);
+          await wait116(200);
+
+          // ── ข้อ 4: กดเข้าหน้ากระดาษจากมุมมองหน้าคู่ ต้องกลับมุมมองล่าสุด ──
+          setSpView('layout', true);
+          await wait116(250);
+          check('[116-4] เข้าโหมดจัดหน้าได้', currentSpView() === 'layout');
+          setSpView('side', true);
+          const drew = await until116(() => !!tab116.pane.querySelector('.sp-pageview .sp-page'), 5000);
+          check('[116-4] มุมมองหน้าคู่วาดแผ่นกระดาษจริง', drew,
+                tab116.pane.querySelector('.sp-pageview') ? 'มี host แต่ยังไม่มีแผ่น' : 'ไม่มี host');
+          const page116 = tab116.pane.querySelector('.sp-pageview .sp-page');
+          if (page116) {
+            page116.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            await wait116(300);
+            check('[116-4] ★ กดเข้าหน้ากระดาษแล้วกลับ "มุมมองล่าสุด" ไม่ใช่ปกติเสมอ',
+                  currentSpView() === 'layout', currentSpView());
+          }
+          setSpView('normal', true);
+          await wait116(200);
+
+          // ── ข้อ 8: แทรกโค้ดสั้น [title] ตรงเคอร์เซอร์ ──
+          {
+            const SC = await import('./shortcode.js');
+            check('[116-8] ทะเบียนโค้ดสั้นมีของครบ', SC.SHORTCODES.length >= 15, SC.SHORTCODES.length);
+            const v = tab116.editor.view;
+            const before = v.state.doc.textBetween(0, v.state.doc.content.size, ' ');
+            const ok = insertShortcodeText('[title]');
+            await wait116(80);
+            const after = v.state.doc.textBetween(0, v.state.doc.content.size, ' ');
+            check('[116-8] ★ แทรก [title] ลงตัวแก้ไขได้จริง',
+                  ok === true && after.includes('[title]') && after.length > before.length,
+                  after.slice(0, 60));
+            check('[116-8] แทนค่าแล้วได้ชื่อเรื่องจริง',
+                  SC.expandShortcodes('[title]', { title: 'เรื่องทดสอบ' }) === 'เรื่องทดสอบ');
+            check('[116-8] ★ [[title]] ยังเป็นตัวอักษร ไม่ถูกแทน',
+                  SC.expandShortcodes('[[title]]', { title: 'x' }) === '[title]');
+            check('[116-8] เมนูแทรกโค้ดสั้นสร้างรายการได้',
+                  insertShortcodeMenu() >= SC.SHORTCODES.length,
+                  String(insertShortcodeMenu()));
+            document.querySelectorAll('.k-menu, .k-overlay').forEach((n) => n.remove());
+            await handleCommand('editor-undo'); await wait116(80);
+          }
+
+          // ── ข้อ 2: โหมดโฟกัส/เต็มจอ ต้องจัดกระดาษกลางจอ ไม่เบี่ยงซ้าย ──
+          {
+            const ws = tab116.pane.querySelector(':scope > .workspace');
+            toggleFocus(true);
+            await wait116(500);                       // recenterPageSoon ตั้งซ้ำถึง 260ms
+            const paneW = tab116.pane.clientWidth;
+            const wsW = ws ? ws.getBoundingClientRect().width : 0;
+            check('[116-2] ★ เข้าโหมดเต็มจอแล้วพื้นที่เขียนกว้างเท่าแผงจริง (ไม่ค้างขนาดเดิม)',
+                  paneW > 0 && Math.abs(wsW - paneW) <= Math.max(24, paneW * 0.05),
+                  'workspace ' + Math.round(wsW) + ' · pane ' + paneW);
+            const pm116 = tab116.pane.querySelector('.ProseMirror');
+            if (pm116) {
+              const rP = tab116.pane.getBoundingClientRect();
+              const rE = pm116.getBoundingClientRect();
+              const gapL = rE.left - rP.left, gapR = rP.right - rE.right;
+              check('[116-2] ★ หน้ากระดาษอยู่กึ่งกลางจอ (ขอบซ้าย-ขวาเท่ากัน)',
+                    Math.abs(gapL - gapR) <= Math.max(16, rP.width * 0.04),
+                    'ซ้าย ' + Math.round(gapL) + ' · ขวา ' + Math.round(gapR));
+            }
+            toggleFocus(false);
+            await wait116(400);
+          }
+        }
+
+        // ────────── ข้อ 5: ของลอยต้องยังอยู่ในจอหลังย่อ/ขยายหน้าต่าง ──────────
+        {
+          const bar = document.querySelector('.k-fmtbar');
+          const host = $('#content');
+          if (bar && host && bar.style.display !== 'none') {
+            const keep = { left: bar.style.left, top: bar.style.top };
+            bar.style.left = '99999px'; bar.style.top = '99999px';
+            const moved = keepFloatingUiInView();
+            const nowL = parseInt(bar.style.left, 10) || 0;
+            const hostW = host.getBoundingClientRect().width;
+            check('[116-5] ★ แถบลอยที่หลุดนอกจอถูกดึงกลับเข้ากรอบ',
+                  moved >= 1 && nowL < hostW, nowL + ' / ' + Math.round(hostW));
+            const lay = JSON.parse(localStorage.getItem('k2-ui-layout') || '{}');
+            check('[116-5] ★ ตำแหน่งที่หนีบแล้วถูกบันทึกทับของเดิม (ไม่ใช่แค่ขยับบนจอ)',
+                  lay.fmtbar && Math.abs(lay.fmtbar.left - nowL) <= 1,
+                  JSON.stringify(lay.fmtbar));
+            bar.style.left = keep.left; bar.style.top = keep.top;
+          }
+        }
+
+        // ── [alpha.119] ★ กรอบเตี้ยลง "โดยหน้าต่างไม่ขยับ" (ออกจากเต็มจอ/โหมดโฟกัส) ──
+        //
+        // เทสของ [116-5] ข้างบนเรียก `keepFloatingUiInView()` เอง จึงพิสูจน์แค่ว่า "ตัวหนีบคำนวณถูก"
+        // — บั๊กจริงของผู้ใช้อยู่คนละที่: **ไม่มีใครเรียกตัวหนีบ** เมื่อ `#content` เปลี่ยนขนาดเองโดย
+        // หน้าต่างไม่ขยับ (`window.resize` ไม่ยิง) · เทสนี้จึงห้ามเรียกตัวหนีบเอง — ย่อกรอบแล้วรอเฉย ๆ
+        {
+          const bar119 = document.querySelector('.k-fmtbar');
+          const host119 = $('#content');
+          if (bar119 && host119 && bar119.style.display !== 'none') {
+            const keep119 = { left: bar119.style.left, top: bar119.style.top };
+            const h0 = host119.getBoundingClientRect().height;
+            const barH = bar119.getBoundingClientRect().height;
+            // จำลอง "ย้าย/รีเซ็ตไปชิดขอบล่างตอนเต็มจอ"
+            bar119.style.top = Math.round(h0 - barH - 4) + 'px';
+            const shrink119 = Math.round(h0 / 2);
+            host119.style.height = shrink119 + 'px';
+            host119.style.maxHeight = shrink119 + 'px';
+            await wait116(160);            // ResizeObserver ยิงหลัง layout แล้วรวบด้วย rAF อีกเฟรม
+            const h1 = host119.getBoundingClientRect().height;
+            const t1 = parseInt(bar119.style.top, 10) || 0;
+            check('[119] กรอบเตี้ยลงจริงในเทส (ไม่งั้นเทสข้างล่างไม่มีความหมาย)',
+                  h1 < h0 - 20, h0 + ' → ' + h1);
+            check('[119] ★ กรอบเตี้ยลงเองโดยไม่มี window.resize → แถบถูกดันขึ้นไม่ให้ล้นขอบล่าง',
+                  t1 + barH <= h1, 'top=' + t1 + ' +สูง' + Math.round(barH) + ' ต้อง ≤ ' + Math.round(h1));
+            check('[119] ★ และไม่ล้นขอบบนด้วย (ค่าเป็นบวกเสมอ)', t1 >= 0, 'top=' + t1);
+            const rB119 = bar119.getBoundingClientRect(), rH119 = host119.getBoundingClientRect();
+            check('[119] ★ วัดบนจอจริง: ทั้งแถบอยู่ในกรอบที่มองเห็น',
+                  rB119.top >= rH119.top - 1 && rB119.bottom <= rH119.bottom + 1,
+                  Math.round(rB119.top) + '-' + Math.round(rB119.bottom)
+                  + ' ใน ' + Math.round(rH119.top) + '-' + Math.round(rH119.bottom));
+            const lay119 = JSON.parse(localStorage.getItem('k2-ui-layout') || '{}').fmtbar || {};
+            check('[119] ★ ตำแหน่งที่ถูกดันขึ้นถูกบันทึกทับ (เปิดโปรแกรมใหม่ต้องไม่หายอีก)',
+                  Math.abs((lay119.top ?? -999) - t1) <= 1, JSON.stringify(lay119));
+            host119.style.height = ''; host119.style.maxHeight = '';
+            await wait116(160);
+            bar119.style.left = keep119.left; bar119.style.top = keep119.top;
+            saveUiLayout('fmtbar', { left: parseInt(keep119.left, 10) || 0,
+                                     top: parseInt(keep119.top, 10) || 0 });
+          }
+        }
+
+        // ══════════ [alpha.117 → 118] แถบรูปแบบลอย: จาง · ชิดขอบ · ล็อก ══════════
+        //
+        // alpha.117: ผู้ใช้เปลี่ยนใจจาก "ปุ่มย่อ" เป็นสามอย่างนี้ — *"คือไม่หายหมด"*
+        // alpha.118: ผู้ใช้ลองใช้จริงแล้วบอก *"ให้ใช้เป็นแบบ click ขวาดีกว่าแบบปุ่ม
+        //            เพราะตอนนี้ปุ่มเยอะไป"* + *"default ควรอยู่ขอบล่าง ตรงกลางของ editor"*
+        // เทสจึงต้องพิสูจน์ทั้งสี่ข้อบนแถบจริง ไม่ใช่แค่ตัวเลขในโมดูลบริสุทธิ์
+        {
+          const bar117 = document.querySelector('.k-fmtbar');
+          check('[117] มีแถบรูปแบบลอยให้ทดสอบ', !!bar117);
+          if (bar117) {
+            const FB = await import('./toolbar/fmtbar-pos.js');
+            const lay117 = () => JSON.parse(localStorage.getItem('k2-ui-layout') || '{}').fmtbar || {};
+            const closeMenus117 = () => document.querySelectorAll('.k-menu').forEach((m) => m.remove());
+            // เริ่มจากสภาพสะอาดเสมอ (เลย์เอาต์อาจค้างมาจากบล็อกก่อนหน้า)
+            closeMenus117();
+            saveUiLayout('fmtbar', resetBarState());
+            applyFmtbarState();
+
+            // ── [118] ★ ปุ่มลอยสามตัวหายไปแล้ว — ย้ายเข้าเมนูคลิกขวาบนหูจับ ──
+            check('[117] ★ ไม่มีปุ่มจาง/ชิดขอบ/ล็อกลอยอยู่บนแถบแล้ว (ผู้ใช้บอกว่าปุ่มเยอะไป)',
+                  !bar117.querySelector('#tb-fmt-fade') && !bar117.querySelector('#tb-fmt-align')
+                  && !bar117.querySelector('#tb-fmt-lock'));
+            check('[117] ไม่มีปุ่มย่อแถบด้วย (ผู้ใช้ไม่เอาตั้งแต่ .117)',
+                  !bar117.querySelector('#tb-fmt-min, .k-fmtbar-min'));
+            const grip117 = bar117.querySelector('.k-fmtbar-grip');
+            check('[117] มีหูจับให้คลิกขวา', !!grip117);
+            const openMenu117 = (x, y) => {
+              closeMenus117();
+              grip117.dispatchEvent(new MouseEvent('contextmenu',
+                { bubbles: true, cancelable: true, clientX: x ?? 300, clientY: y ?? 300 }));
+              return document.querySelector('.k-menu');
+            };
+            const menu117 = openMenu117();
+            check('[117] ★ คลิกขวาที่หูจับเปิดเมนูตั้งค่าได้จริง', !!menu117);
+            const menuTxt117 = menu117 ? menu117.textContent : '';
+            check('[117] ★ เมนูมีความจางครบสามระดับ',
+                  menuTxt117.includes('100%') && menuTxt117.includes('50%') && menuTxt117.includes('5%'),
+                  menuTxt117);
+            check('[117] เมนูมีตัวเลือกชิดขอบบน/ล่าง',
+                  menuTxt117.includes(tt('ui.fmtbar.posTop')) && menuTxt117.includes(tt('ui.fmtbar.posBottom')));
+            check('[117] เมนูมีตัวเลือกล็อก + รีเซ็ตทั้งหมด',
+                  menuTxt117.includes(tt('ui.fmtbar.lockTip')) && menuTxt117.includes(tt('ui.fmtbar.menuResetAll')));
+            closeMenus117();
+            // ★ คลิกขวาบนหูจับต้อง "ไม่หลุด" ไปเปิดเมนู "ปรับปุ่มแถบ" เดิมที่ผูกไว้กับทั้งบาร์
+            // (สองเมนูใช้ element คนละตัวแต่ชนกันได้ถ้าอีเวนต์บับเบิลทะลุ — ต้อง stopPropagation)
+            const otherBtn117 = bar117.querySelector('#tb-bold');
+            check('[117] ★ คลิกขวาปุ่มอื่นบนแถบยังเป็นเมนู "ปรับปุ่มแถบ" แบบเดิม ไม่ใช่เมนูของหูจับ', (() => {
+              if (!otherBtn117) return true;      // โหมดเอกสารตอนนี้อาจไม่มีปุ่มนี้อยู่บนแถบ — ข้าม
+              otherBtn117.dispatchEvent(new MouseEvent('contextmenu',
+                { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }));
+              const m2 = document.querySelector('.k-menu');
+              const ok = !!m2 && !m2.textContent.includes(tt('ui.fmtbar.menuResetAll'));
+              closeMenus117();
+              return ok;
+            })());
+
+            // ── ความจาง 3 ระดับ (ฟังก์ชันเบื้องหลังเมนู — ตัวเมนูเองพิสูจน์แล้วว่าเปิดถูกด้านบน) ──
+            const opa = () => bar117.style.getPropertyValue('--fmtbar-opacity').trim();
+            check('[117] เริ่มที่ชัดเต็ม', opa() === '1', opa());
+            setFmtbarOpacity(0.5);
+            check('[117] เลือก 50% จากเมนูตรง ๆ ได้', opa() === '0.5', opa());
+            setFmtbarOpacity(0.05);
+            check('[117] ★ เลือก 5% ได้ (จาง แต่ไม่หายไปทั้งอัน)', opa() === '0.05', opa());
+            check('[117] ★ 5% ยังกดโดนอยู่ (ไม่ได้ถูกปิด pointer-events)',
+                  getComputedStyle(bar117).pointerEvents !== 'none',
+                  getComputedStyle(bar117).pointerEvents);
+            check('[117] ความจางถูกจำลงเลย์เอาต์', lay117().opacity === 0.05,
+                  JSON.stringify(lay117()));
+            check('[117] ★ คีย์ลัด/ปุ่มลัดยังวนได้เหมือนเดิม (100→50→5→100)',
+                  cycleFmtbarOpacity() === 1 && opa() === '1');
+
+            // ── ชิดขอบบน/ล่าง — [118] เมนูเลือกตรง ๆ ได้ ไม่ต้องวนทีละสเต็ปอีกต่อไป ──
+            const hostR = $('#content').getBoundingClientRect();
+            bar117.style.left = '200px'; bar117.style.top = '250px';
+            saveUiLayout('fmtbar', { left: 200, top: 250 });
+            const barH = bar117.getBoundingClientRect().height;
+            setFmtbarAlign('bottom');
+            await wait116(80);
+            check('[117] ★ เลือกขอบล่างตรง ๆ จากเมนู → ไปอยู่ขอบล่างจริง',
+                  Math.abs(parseInt(bar117.style.top, 10) - (hostR.height - barH - 4)) <= 2,
+                  bar117.style.top);
+            check('[117] ★ แนวนอนไม่ขยับตาม (ผู้ใช้จัดซ้าย-ขวาไว้แล้ว)',
+                  parseInt(bar117.style.left, 10) === 200, bar117.style.left);
+            setFmtbarAlign('top');
+            await wait116(80);
+            check('[117] เลือกขอบบนตรง ๆ จากเมนู → กลับขอบบน',
+                  parseInt(bar117.style.top, 10) === 4, bar117.style.top);
+            check('[117] ตำแหน่งใหม่ถูกจำลงเลย์เอาต์',
+                  lay117().align === 'top' && lay117().top === 4, JSON.stringify(lay117()));
+            const alignBefore117 = fmtbarState().align;
+            toggleFmtbarAlign();
+            check('[117] คีย์ลัดยังวนสลับบน↔ล่างได้เหมือนเดิม', fmtbarState().align !== alignBefore117);
+            setFmtbarAlign('top');       // คืนสภาพก่อนเข้าเทสล็อกข้างล่าง
+
+            // ── ล็อก ──
+            toggleFmtbarLock(true);
+            check('[117] ล็อกแล้วแถบได้คลาสบอกสถานะ', bar117.classList.contains('k-fmtbar-locked'));
+            const beforeLock = bar117.style.left + '|' + bar117.style.top;
+            // ★ ลากจริง ๆ ตอนล็อก แล้วต้องไม่ขยับสักพิกเซล
+            grip117.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0,
+                                                                clientX: 210, clientY: 30 }));
+            document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true,
+                                                                 clientX: 520, clientY: 300 }));
+            document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            await wait116(80);
+            check('[117] ★★ ล็อกแล้วลากไม่ขยับจริง',
+                  bar117.style.left + '|' + bar117.style.top === beforeLock,
+                  beforeLock + ' → ' + bar117.style.left + '|' + bar117.style.top);
+            check('[117] ★ ล็อกแล้ว "เรียกมาหาเคอร์เซอร์" ก็ต้องไม่ย้าย',
+                  tweenFmtBar(600, 400) === null
+                  && bar117.style.left + '|' + bar117.style.top === beforeLock);
+            check('[117] ★ ล็อกแล้วสั่งชิดขอบก็ต้องไม่ย้าย',
+                  setFmtbarAlign('bottom') === null
+                  && bar117.style.left + '|' + bar117.style.top === beforeLock);
+            const menuLocked117 = openMenu117();
+            check('[117] ★ เมนูมีเครื่องหมายบอกว่าล็อกอยู่จริง',
+                  !!menuLocked117 && menuLocked117.textContent.includes('✓'),
+                  menuLocked117 ? menuLocked117.textContent : '');
+            closeMenus117();
+
+            toggleFmtbarLock(false);
+            check('[117] ปลดล็อกแล้วคลาสหายไป', !bar117.classList.contains('k-fmtbar-locked'));
+
+            // ── ปุ่มลัดครบสามคำสั่ง + รีเซ็ตด้วยดับเบิลคลิกหูจับ ──
+            const ids117 = new Set(SHORTCUTS.map((x) => shortcutId(x)));
+            check('[117] ★ มีปุ่มลัดครบทั้งสามคำสั่ง',
+                  ['fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock'].every((x) => ids117.has(x)));
+            for (const id of ['fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock']) {
+              check('[117] คำสั่ง ' + id + ' มีชื่อในตารางปุ่มลัด', !!SHORTCUT_LABELS[id]);
+            }
+            cycleFmtbarOpacity(); toggleFmtbarLock(true);
+            grip117.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            await wait116(120);
+            check('[117] ★ ดับเบิลคลิกหูจับ = รีเซ็ตทั้งชุด (ชัดเต็ม + ปลดล็อก)',
+                  opa() === '1' && !bar117.classList.contains('k-fmtbar-locked')
+                  && fmtbarState().locked === false,
+                  opa() + ' / locked=' + fmtbarState().locked);
+            check('[117] ★ แถบยังมองเห็นได้จริงหลังรีเซ็ต', visible116(bar117));
+            check('[117] ค่าที่ FB คืนกับที่ทาลงจอตรงกัน',
+                  FB.normalizeBarState(lay117()).opacity === 1);
+
+            // ── [118] ★ ตำแหน่งเริ่มต้น/หลังรีเซ็ต = กึ่งกลางแนวนอน ชิดขอบล่าง ──
+            //
+            // ★ เทสรอบแรกเขียนสูตร "กึ่งกลาง" ซ้ำเองในนี้ตรง ๆ (`(hostW - barW) / 2`) แล้วพังทันที
+            // ที่หน้าจอทดสอบจริง — แถบมีปุ่มยี่สิบกว่าตัวจนกว้างเกือบเท่าพื้นที่เขียน (830 กับ ~800px)
+            // ซึ่ง `defaultBarPos()` ตัวจริงจะ "ชนพื้น" ที่ระยะขอบ (pad) แทนการกึ่งกลางตรง ๆ โดยตั้งใจ
+            // (ดูเทส "แถบกว้างเกือบเท่ากรอบ" ใน fmtbar-pos.test.cjs) — สูตรซ้ำในนี้ไม่รู้กฎข้อนั้น
+            // จึงคำนวณ "ค่าที่ควรจะเป็น" ผิด ทั้งที่ค่าจริงถูกต้องอยู่แล้ว
+            // ★★ ทางที่ถูก: เรียก `FB.defaultBarPos()` ตัวเดียวกับที่โค้ดจริงใช้มาเป็น "คำตอบที่ถูก"
+            // แล้วเทียบ ไม่ใช่คำนวณสูตรเองอีกชุด (ไม่งั้นกลายเป็นเทสสองสูตรชนกันเองแทนที่จะเทสของจริง)
+            {
+              const barR117 = bar117.getBoundingClientRect();
+              const hostR117 = $('#content').getBoundingClientRect();
+              const t = parseInt(bar117.style.top, 10), l = parseInt(bar117.style.left, 10);
+              const want117 = FB.defaultBarPos({ width: barR117.width, height: barR117.height },
+                                               { width: hostR117.width, height: hostR117.height });
+              check('[117] ★ รีเซ็ตแล้วตำแหน่งตรงกับ defaultBarPos ที่คำนวณจากขนาดจริง ณ ตอนนี้',
+                    Math.abs(l - want117.left) <= 2 && Math.abs(t - want117.top) <= 2,
+                    'ได้ ' + l + ',' + t + ' · คาด ' + JSON.stringify(want117));
+              check('[117] ★ ไม่ใช่มุมบนซ้ายแบบเดิม {24,12} — อยู่ค่อนไปทางล่างของกรอบชัดเจน',
+                    t > hostR117.height * 0.5, 'top=' + t + ' hostH=' + hostR117.height);
+              check('[117] ★ ตำแหน่งที่รีเซ็ตแล้วถูกบันทึกลงเลย์เอาต์ด้วย (ไม่ใช่แค่ขยับบนจอเฉย ๆ)',
+                    Number.isFinite(lay117().left) && Number.isFinite(lay117().top),
+                    JSON.stringify(lay117()));
+            }
+          }
+        }
+
+        // ────────── ข้อ 9: ปุ่ม AI คลิกเดียวข้างช่องข้อความของ Wiki ──────────
+        {
+          const ents116 = await listEntities(state.root);
+          if (ents116.length) {
+            const wf = ents116[0].path;
+            await openEntity(wf);
+            await wait116(400);
+            const wtab = state.tabs.get(wf);
+            const btns = wtab ? wtab.pane.querySelectorAll('.wiki-ai-btn') : [];
+            const inputs = wtab ? wtab.pane.querySelectorAll('.wiki-input') : [];
+            check('[116-9] ★ ทุกช่องข้อความใน Wiki มีปุ่ม AI ของตัวเอง',
+                  btns.length >= 2 && btns.length >= Math.min(inputs.length, 2),
+                  btns.length + ' ปุ่ม / ' + inputs.length + ' ช่อง');
+            check('[116-9] ปุ่ม AI มองเห็นได้จริง (ไม่ใช่แค่มีใน DOM)', visible116(btns[0]));
+            closeTab(wf);
+          }
+        }
+
+        // ────────── ข้อ 10: ชิปแนะนำชื่อตัวละครใน Story Starter ──────────
+        {
+          const NM = await import('./starter/starter-names.js');
+          const CS = await import('./starter/starter-cast.js');
+          const starter116 = { name: 'เรื่องทดสอบ 116', blurb: '',
+                               intro: '<p>ชายหนุ่มชื่อว่าโทระ116 ออกเดินทางตามหาเจ้าหญิงลูน่า116</p>',
+                               w: {}, cast: [] };
+          const found = NM.suggestNames(NM.starterText(starter116));
+          check('[116-10] ★ เดาชื่อจากเรื่องย่อได้จริง',
+                found.some((r) => r.name === 'โทระ116') && found.some((r) => r.name === 'ลูน่า116'),
+                JSON.stringify(found.map((r) => r.name)));
+          const hostS = el('div');
+          document.body.append(hostS);
+          const n = CS.renderNameHints(hostS, { starter: starter116, save: async () => {} });
+          const chips = hostS.querySelectorAll('.st-namechip');
+          check('[116-10] วาดชิปแนะนำชื่อออกมาจริง', n >= 2 && chips.length === n, n + '/' + chips.length);
+          check('[116-10] ชิปมองเห็นได้จริง', visible116(chips[0]));
+          starter116.cast = [{ id: 'x1', name: 'โทระ116' }];
+          hostS.innerHTML = '';
+          CS.renderNameHints(hostS, { starter: starter116, save: async () => {} });
+          check('[116-10] ★ ตัวที่อยู่ในคณะแล้วไม่ถูกแนะนำซ้ำ',
+                ![...hostS.querySelectorAll('.st-namechip')].some((c) => c.dataset.name === 'โทระ116'),
+                [...hostS.querySelectorAll('.st-namechip')].map((c) => c.dataset.name).join(','));
+          hostS.remove();
+        }
+
+        // ────────── ข้อ 6: index.html ต้องไม่มีไทยที่ไม่ผ่านระบบภาษา ──────────
+        // (ประตูกันพลาดตัวเต็มอยู่ที่ test/i18n-keys.test.cjs — ที่นี่พิสูจน์ว่า **กลไกทำงานจริงบนจอ**)
+        {
+          const withKey = document.querySelectorAll('[data-i18n-title]');
+          check('[116-6] index.html ใช้ data-i18n-title แล้วอย่างน้อย 60 จุด',
+                withKey.length >= 60, withKey.length);
+          const notApplied = [...withKey].filter((n) => {
+            const k = n.getAttribute('data-i18n-title');
+            return !n.getAttribute('title') || n.getAttribute('title') === k;
+          });
+          check('[116-6] ★ ทุกจุดได้คำแปลจริง ไม่มีตัวคีย์โผล่บนหน้าจอ',
+                notApplied.length === 0,
+                notApplied.slice(0, 3).map((n) => n.id || n.tagName).join(' · '));
         }
       }
 

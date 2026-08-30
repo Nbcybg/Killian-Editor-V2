@@ -425,5 +425,72 @@ const ids = (s) => s.cast.map((c) => c.id);
         [B.ANY_RANDOM, B.ALL_LISTEN, B.AI_PICK].every((x) => x.startsWith('__')));
 }
 
+// ═══════════ [alpha.116 ข้อ 1] 💭 รำพึงคนเดียว (monologue) ═══════════
+{
+  const s = mkSession(3);
+  const [A, Bb] = ids(s);
+
+  check('มีค่าพิเศษ "รำพึงคนเดียว" และไม่ชนกับ id จริง', B.SELF_MONO.startsWith('__'));
+  check('รายการ "พูดกับ" มีตัวเลือกรำพึงคนเดียว',
+        B.listenerOptions(s).some((o) => o.id === B.SELF_MONO));
+  check('ช่อง "คนพูด" ไม่มีรำพึงคนเดียว (มันเป็นคนฟัง ไม่ใช่คนพูด)',
+        !B.speakerOptions(s).some((o) => o.id === B.SELF_MONO));
+
+  const mono = B.newTurn({ kind: B.KIND_MONO, speaker: A, listener: B.SELF_MONO, text: 'ทำไมฉันถึงยังอยู่ตรงนี้' });
+  const typedMono = B.newTurn({ kind: B.KIND_USER, speaker: A, listener: B.SELF_MONO, text: 'พรุ่งนี้ต้องบอกเขา' });
+  const normal = B.newTurn({ speaker: A, listener: Bb, text: 'ไปกันเถอะ' });
+  check('isMonologue จับได้ทั้งที่ AI เขียนและที่ผู้ใช้พิมพ์เอง',
+        B.isMonologue(mono) && B.isMonologue(typedMono) && !B.isMonologue(normal));
+  check('isMonologue ไม่พังกับค่าว่าง', B.isMonologue(null) === false);
+
+  // ★ ใจความของฟีเจอร์: เสียงในใจต้องไม่รั่วไปเข้าหูตัวละครอื่น
+  s.turns.push(normal, mono);
+  const mineA = B.buildMessages(s, A);
+  const mineB = B.buildMessages(s, Bb);
+  check('★ เจ้าของเสียงในใจยังเห็นบรรทัดของตัวเอง',
+        mineA.some((m) => m.content.includes('ทำไมฉันถึงยังอยู่ตรงนี้')),
+        JSON.stringify(mineA));
+  check('★ ตัวละครอื่นไม่เห็นเสียงในใจเลย',
+        !mineB.some((m) => m.content.includes('ทำไมฉันถึงยังอยู่ตรงนี้')),
+        JSON.stringify(mineB));
+  check('บทพูดปกติยังเห็นได้ตามเดิม',
+        mineB.some((m) => m.content.includes('ไปกันเถอะ')));
+
+  // ตัวเลือกคนพูดถัดไปต้องไม่กลายเป็นค่าพิเศษ (ปิงปองไม่มีคู่ให้สลับหลังรำพึง)
+  const nxt = B.nextPair(s, () => 0);
+  check('★ หลังรำพึง ปิงปองไม่คืน __self__ มาเป็นคนพูด', nxt.speaker !== B.SELF_MONO,
+        JSON.stringify(nxt));
+  check('หลังรำพึง คนฟังถัดไปคือคนที่เพิ่งรำพึง', nxt.listener === A, JSON.stringify(nxt));
+
+  // คำสั่งท้าย prompt + กติกาของโหมด
+  check('คำสั่งท้าย prompt เปลี่ยนเป็นแบบรำพึง',
+        B.turnCue(s, A, B.SELF_MONO) !== B.turnCue(s, A, Bb));
+  const sysMono = B.buildSystem(s, A, { mono: true });
+  const sysTalk = B.buildSystem(s, A);
+  check('★ กติกาโหมดรำพึงไม่มี "ห้ามบรรยาย" ของโหมดสนทนา',
+        sysTalk.includes('ห้ามบรรยายฉาก') && !sysMono.includes('ห้ามบรรยายฉาก'));
+  check('กติกาโหมดรำพึงบอกว่าไม่มีใครได้ยิน', sysMono.includes('ไม่มีใครได้ยิน'));
+
+  const req = B.buildTurnRequest(s, A, B.SELF_MONO);
+  check('buildTurnRequest ติดธง mono มาให้ผู้เรียก', req.mono === true);
+  check('buildTurnRequest ปกติไม่ติดธง mono', B.buildTurnRequest(s, A, Bb).mono === false);
+
+  // แทรกลงบท — ต้องอ่านออกว่าเป็นเสียงในใจ
+  const sp = B.turnToScreenplay(s, mono);
+  check('★ แทรกลงบทแล้วมีวงเล็บกำกับว่าเป็นเสียงในใจ',
+        sp.includes('@โทระ') && sp.includes('(ในใจ)'), sp);
+  const sp2 = B.turnToScreenplay(s, B.newTurn({ kind: B.KIND_MONO, speaker: A,
+    listener: B.SELF_MONO, paren: 'เหนื่อย', text: 'พอแล้ว' }));
+  check('วงเล็บอารมณ์ที่โมเดลให้มาชนะคำกำกับมาตรฐาน',
+        sp2.includes('(เหนื่อย)') && !sp2.includes('(ในใจ)'), sp2);
+
+  // ตัวเลือกคนพูดของ picker ต้องไม่เห็นเสียงในใจเช่นกัน
+  const pk = B.buildPickerRequest(s);
+  check('★ prompt "ใครพูดต่อ" ไม่มีเสียงในใจปนอยู่',
+        !pk.messages[0].content.includes('ทำไมฉันถึงยังอยู่ตรงนี้'), pk.messages[0].content);
+
+  check('รำพึงยังนับเป็นเทิร์นที่พูดในสถิติ', B.sessionStats(s).spoken === 2);
+}
+
 console.log(`dialogue-builder: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

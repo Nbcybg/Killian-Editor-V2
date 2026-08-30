@@ -36,6 +36,8 @@ export const MAX_CAST = 5;
 export const ANY_RANDOM = '__random__';    // 🎲 สุ่ม
 export const ALL_LISTEN = '__all__';       // 👥 ทุกคน
 export const AI_PICK = '__ai__';           // 🤖 ให้ AI เลือกคนพูด
+// [alpha.116 ข้อ 1] 💭 รำพึงคนเดียว — "คนฟัง" เป็นตัวเอง = ไม่มีใครในวงได้ยิน
+export const SELF_MONO = '__self__';
 
 // ── โหมดคิว: หลังกดส่งแล้ว ช่องจะเด้งไปเป็นอะไร ──────────────────
 export const TURN_POLICIES = [
@@ -69,6 +71,21 @@ export function lengthDef(id) { return TURN_LENGTHS.find((l) => l.id === id) || 
 export const KIND_LINE = 'line';         // บทพูดที่ AI สวมบทให้
 export const KIND_USER = 'user';         // ผู้ใช้พิมพ์แทนตัวละครเอง (ไม่ยิง API)
 export const KIND_DIRECTOR = 'director'; // ผู้กำกับแทรกเหตุการณ์กลางวง
+export const KIND_MONO = 'mono';         // [alpha.116] รำพึงคนเดียว — เสียงในใจ ไม่มีใครได้ยิน
+
+/**
+ * [alpha.116 ข้อ 1] ★ เทิร์นนี้เป็น "รำพึงคนเดียว" ไหม
+ *
+ * ผู้ใช้ขอ monologue เพิ่มในห้องซ้อมบท · ที่ต้องระวังคือ **มันไม่ใช่บทพูดธรรมดาที่ไม่มีคนฟัง**
+ * แต่เป็นเสียงในใจ — ตัวละครอื่นต้องไม่เห็นมันใน transcript ของตัวเอง ไม่งั้นซ้อมไปสองสามเทิร์น
+ * ทุกตัวจะรู้ความลับของกันและกันหมด (ขัดกับหลักคิดข้อ 1 ของไฟล์นี้ตรง ๆ)
+ *
+ * รับสองทาง: `kind === KIND_MONO` (AI เขียนให้) และ `listener === SELF_MONO`
+ * (ผู้ใช้พิมพ์เอง — ยังเป็น KIND_USER เพราะ "ใครเขียน" กับ "พูดกับใคร" เป็นคนละเรื่อง)
+ */
+export function isMonologue(turn) {
+  return !!turn && (turn.kind === KIND_MONO || turn.listener === SELF_MONO);
+}
 
 // ────────────────────────────────────────────────────────────────
 // 1) โครงข้อมูล
@@ -172,6 +189,7 @@ export function castById(session, id) {
   return ((session && session.cast) || []).find((c) => c.id === id) || null;
 }
 export function castName(session, id) {
+  if (id === SELF_MONO) return t('ui.dlgBuilder.selfMono');
   if (id === ALL_LISTEN) return t('ui.dlgBuilder.everyone');
   if (id === ANY_RANDOM) return t('ui.dlgBuilder.randomPick');
   if (id === AI_PICK) return t('ui.dlgBuilder.aiPick');
@@ -237,6 +255,8 @@ export function removeCast(holder, id) {
  * tools/i18n-classify.cjs → SKIP_RANGES) · ป้ายที่เขียนลงใบบทบาทก็ใช้ตัวเดียวกัน เพราะใบบทบาท
  * ถูกเก็บลงไฟล์เซสชันเป็นเนื้อหา ไม่ใช่ข้อความที่วาดใหม่ทุกครั้ง
  */
+/* i18n-skip: ชื่อฟิลด์ใน Wiki JSON ของผู้ใช้ + ป้ายที่เขียนลงใบบทบาท (เก็บเป็นเนื้อหาในไฟล์เซสชัน)
+   แปลตามภาษาหน้าจอเมื่อไหร่ = สลับเป็นอังกฤษแล้วหาฟิลด์ไทยไม่เจอทั้งกระดาน */
 export const PERSONA_FIELDS = [
   { key: 'role',        label: 'บทบาท',        names: ['role', 'บทบาท'] },
   { key: 'age',         label: 'อายุ',          names: ['age', 'อายุ'] },
@@ -246,7 +266,7 @@ export const PERSONA_FIELDS = [
   { key: 'goal',        label: 'เป้าหมาย',      names: ['goal', 'motivation', 'เป้าหมาย'] },
   { key: 'fear',        label: 'สิ่งที่กลัว',    names: ['fear', 'weakness', 'สิ่งที่กลัว', 'จุดอ่อน'] },
   { key: 'quirk',       label: 'นิสัยเฉพาะตัว', names: ['quirk', 'นิสัยเฉพาะตัว'] },
-];
+]; /* /i18n-skip */
 
 function pickField(src, names) {
   for (const n of names) {
@@ -346,7 +366,9 @@ export function nextPair(session, rnd = () => 0) {
   // pingpong — สลับคู่ของเทิร์นล่าสุด
   // เคสที่พังถ้าไม่ดัก: เทิร์นล่าสุดเป็น A→ทุกคน แล้วใครสวน? ปิงปองไม่มีคำตอบ
   // → ตกไปที่ "ให้ AI เลือก" เพราะมันเลือกคนที่ *มีเหตุผลจะสวน* ดีกว่าสุ่มมั่ว
-  if (!last.listener || last.listener === ALL_LISTEN) {
+  // [alpha.116] รำพึงคนเดียวก็ "ไม่มีคู่ให้สลับ" เหมือนพูดกับทุกคน — ถ้าไม่ดักตรงนี้
+  // ปิงปองจะคืน speaker เป็นค่าพิเศษ `__self__` ซึ่งไม่ใช่ตัวละครใครเลย แล้วส่งไม่ออก
+  if (!last.listener || last.listener === ALL_LISTEN || last.listener === SELF_MONO) {
     return { speaker: cast.length > 2 ? AI_PICK : (ids.find((x) => x !== last.speaker) || ids[0]),
              listener: last.speaker };
   }
@@ -392,6 +414,7 @@ export function speakerOptions(session) {
 export function listenerOptions(session) {
   const rows = ((session && session.cast) || []).map((c) => ({ id: c.id, label: c.name }));
   rows.push({ id: ALL_LISTEN, label: t('ui.dlgBuilder.everyone') });
+  rows.push({ id: SELF_MONO, label: t('ui.dlgBuilder.selfMono') });   // [alpha.116] 💭 รำพึงคนเดียว
   rows.push({ id: ANY_RANDOM, label: t('ui.dlgBuilder.randomPick') });
   return rows;
 }
@@ -404,9 +427,10 @@ export function listenerOptions(session) {
  * system prompt ของตัวละครหนึ่งตัว
  * โครง: ใบตัวเอง → สรรพนาม → การ์ดสาธารณะของคนอื่น → สถานการณ์ → กติกาการตอบ
  */
-export function buildSystem(session, charId) {
+export function buildSystem(session, charId, opts = {}) {
   const me = castById(session, charId);
   if (!me) return '';
+  const mono = !!opts.mono;
   const rows = [];
   rows.push(me.persona || tf('ui.dlgBuilder.personaYouAre', me.name));
 
@@ -440,7 +464,10 @@ export function buildSystem(session, charId) {
   rows.push(lengthDef(session.len).rule);
   rows.push(session.paren !== false ? t('ui.dlgBuilder.ruleParenOn') : t('ui.dlgBuilder.ruleParenOff'));
   rows.push(t('ui.dlgBuilder.ruleNoName'));
-  rows.push(t('ui.dlgBuilder.ruleNoNarrate'));
+  // [alpha.116 ข้อ 1] โหมดรำพึง — กติกาต่างจากบทสนทนาชัดเจน ต้องสลับทั้งชุด ไม่ใช่เติมบรรทัด
+  // ("ห้ามเล่าเรื่อง" ของโหมดสนทนาขัดกับ monologue ตรง ๆ เพราะรำพึงคือการเล่าให้ตัวเองฟัง)
+  if (mono) { rows.push(t('ui.dlgBuilder.ruleMonoAlone')); rows.push(t('ui.dlgBuilder.ruleMonoInner')); }
+  else rows.push(t('ui.dlgBuilder.ruleNoNarrate'));
   return rows.join('\n');
 }
 
@@ -450,6 +477,7 @@ export function turnAsHeard(session, turn) {
   if (turn.kind === KIND_DIRECTOR) return tf('ui.dlgBuilder.heardDirector', turn.text);
   const nm = castName(session, turn.speaker) || t('ui.dlgBuilder.unknownName');
   const paren = turn.paren ? `(${turn.paren}) ` : '';
+  if (isMonologue(turn)) return tf('ui.dlgBuilder.heardMono', nm, paren + turn.text);
   return `${nm}: ${paren}${turn.text}`;
 }
 
@@ -463,6 +491,9 @@ export function buildMessages(session, charId, { maxTokens = 6000 } = {}) {
   const rows = [];
   for (const tn of turns) {
     if (!tn.text && tn.kind !== KIND_DIRECTOR) continue;
+    // [alpha.116 ข้อ 1] ★ เสียงในใจของคนอื่น **ไม่เข้า transcript ของเรา** — ตัดตั้งแต่ต้นทาง
+    // เหมือนที่ใบบทบาทของคนอื่นไม่เคยเข้า prompt (หลักคิดข้อ 1) จึงไม่ต้องมีสวิตช์ให้ตั้งผิด
+    if (isMonologue(tn) && tn.speaker !== charId) continue;
     if (tn.kind !== KIND_DIRECTOR && tn.speaker === charId) {
       const paren = tn.paren ? `(${tn.paren}) ` : '';
       rows.push({ role: 'assistant', content: paren + tn.text });
@@ -495,6 +526,7 @@ export function buildMessages(session, charId, { maxTokens = 6000 } = {}) {
 
 /** คำสั่งท้ายสุดที่บอกว่า "ตาคุณพูดแล้ว พูดกับใคร" */
 export function turnCue(session, speaker, listener) {
+  if (listener === SELF_MONO) return t('ui.dlgBuilder.cueMonologue');
   const to = listener === ALL_LISTEN || !listener
     ? t('ui.dlgBuilder.everyone') : castName(session, listener);
   return tf('ui.dlgBuilder.cueYourTurn', to);
@@ -507,10 +539,11 @@ export function turnCue(session, speaker, listener) {
 export function buildTurnRequest(session, speaker, listener, opts = {}) {
   const me = castById(session, speaker);
   if (!me) return null;
+  const mono = listener === SELF_MONO;
   const messages = buildMessages(session, speaker, opts);
   messages.push({ role: 'user', content: turnCue(session, speaker, listener) });
-  return { system: buildSystem(session, speaker), messages,
-           maxTokens: lengthDef(session.len).maxTokens, cast: me };
+  return { system: buildSystem(session, speaker, { mono }), messages,
+           maxTokens: lengthDef(session.len).maxTokens, cast: me, mono };
 }
 
 /**
@@ -554,7 +587,8 @@ export function buildPickerRequest(session) {
   const rows = [t('ui.dlgBuilder.pickAsk')];
   rows.push(cast.map((c) => c.name).join(' / '));
   if (session.situation) rows.push('', t('ui.dlgBuilder.headSituation'), session.situation);
-  const recent = (session.turns || []).slice(-6).map((tn) => turnAsHeard(session, tn));
+  const recent = (session.turns || []).filter((tn) => !isMonologue(tn))
+    .slice(-6).map((tn) => turnAsHeard(session, tn));
   if (recent.length) rows.push('', t('ui.dlgBuilder.headRecent'), ...recent);
   rows.push('', t('ui.dlgBuilder.pickAnswerOnlyName'));
   return { system: t('ui.dlgBuilder.pickSystem'), messages: [{ role: 'user', content: rows.join('\n') }],
@@ -659,7 +693,10 @@ export function turnToScreenplay(session, turn) {
   const nm = castName(session, turn.speaker);
   const rows = [];
   if (nm) rows.push('@' + nm);
+  // [alpha.116 ข้อ 1] รำพึงคนเดียวต้องอ่านออกว่าเป็นเสียงในใจตอนแทรกลงบท —
+  // ใช้วงเล็บอารมณ์ที่โมเดลให้มาถ้ามี ไม่งั้นเติมคำกำกับมาตรฐานให้
   if (turn.paren) rows.push('(' + turn.paren + ')');
+  else if (isMonologue(turn)) rows.push('(' + t('ui.dlgBuilder.monoParen') + ')');
   rows.push(turn.text);
   return rows.join('\n');
 }

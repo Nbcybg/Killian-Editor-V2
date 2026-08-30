@@ -15,6 +15,7 @@
 import { t as tt, tf as ttf } from '../i18n.js';
 import { $, el, state, setStatus } from '../core.js';
 import * as TC from './toolbar-config.js';
+import * as FB from './fab-config.js';
 
 /** ปุ่มจริงบนแถบ (หรือ null ถ้าไม่มี) */
 const btn = (id) => document.getElementById(id);
@@ -37,25 +38,38 @@ export function labelOf(id) {
  */
 export const TB_HOSTS = ['#toolbar', '.k-fmtbar'];
 
+/** แถบที่ `settings.toolbar` (ก้อนรวม) คุม — **ไม่รวมแถบลอย** ตั้งแต่ alpha.111 */
+export const TB_MAIN_HOSTS = ['#toolbar'];
+/** แถบรูปแบบลอย — คุมด้วย `settings.fmtbar` ซึ่งแยกตามโหมดเอกสาร */
+export const TB_FMT_HOST = '.k-fmtbar';
+
+/** ลำดับจริงของลูกในแถบ → `id` ที่ตั้งค่าได้ · `'sep'` · `null` (ของแถบเอง/ปุ่มที่โปรแกรมคุม) */
+function barSeq(bar) {
+  return [...bar.children].map((k) => {
+    if (k.classList.contains('sep')) return 'sep';
+    return k.id && TC.isConfigurable(k.id) ? k.id : null;
+  });
+}
+
 /**
- * เอาค่าที่ตั้งไว้ไปใช้กับแถบจริง — **ทุกที่ที่ปุ่มไปอยู่**
+ * เอาค่าที่ตั้งไว้ไปใช้กับแถบจริง
  * เรียกตอนเริ่มโปรแกรม · ตอนกดสวิตช์ · และท้าย `refreshToolbar()`
+ *
+ * [alpha.111] แถบลอยแยกไปใช้ `applyFmtbarConfig()` แล้ว (ตั้งค่าแยกนิยาย/บท) —
+ * ตัวนี้จึงคุมเฉพาะ `#toolbar` แต่ยังเรียก `applyFmtbarConfig()` ต่อให้ เพื่อให้จุดเรียกเดิม
+ * ทั่วโปรแกรม (ท้าย refreshToolbar ฯลฯ) ได้ผลครบทั้งสองแถบเหมือนเดิมโดยไม่ต้องไล่แก้ทีละแห่ง
  */
 export function applyToolbarConfig(cfg) {
   const conf = TC.normalizeToolbar(cfg ?? (state.settings && state.settings.toolbar));
   const vis = (id) => !conf.hidden[id];
   let found = false;
 
-  for (const sel of TB_HOSTS) {
+  for (const sel of TB_MAIN_HOSTS) {
     const bar = document.querySelector(sel);
     if (!bar) continue;
     found = true;
-    // ลำดับจริงของลูกในแถบ (ปุ่ม/select ที่ตั้งค่าได้ = id · เส้นคั่น = 'sep' · ที่เหลือ = null)
     const kids = [...bar.children];
-    const seq = kids.map((k) => {
-      if (k.classList.contains('sep')) return 'sep';
-      return k.id && TC.isConfigurable(k.id) ? k.id : null;
-    });
+    const seq = barSeq(bar);
     // ลูกที่ไม่เกี่ยวข้อง (ที่จับลากของแถบลอย · ปุ่มที่โปรแกรมคุมเอง) นับเป็น "ปุ่มที่มองเห็น"
     // เพื่อไม่ให้เส้นคั่นหายผิดจังหวะ
     const show = TC.layoutToolbar(seq.map((x) => x ?? ' keep'), (x) => (x === ' keep' ? true : vis(x)));
@@ -65,7 +79,40 @@ export function applyToolbarConfig(cfg) {
       k.classList.toggle('tb-hidden', !vis(seq[i]));
     });
   }
+  applyFmtbarConfig();
   return found;
+}
+
+/**
+ * [alpha.111] แถบรูปแบบลอย — ซ่อนตามที่ผู้ใช้ตั้งไว้ **ของโหมดปัจจุบัน**
+ * และทำปุ่มที่โหมดนี้ใช้ไม่ได้เป็นสีเทา (`.tb-na`) โดยยังเห็นอยู่
+ *
+ * @param {object} [cfg] ก้อนตั้งค่า (ไม่ส่ง = อ่านจาก state)
+ * @param {string} [mode] 'prose' | 'screenplay' (ไม่ส่ง = เดาจากแท็บที่เปิดอยู่)
+ */
+export function applyFmtbarConfig(cfg, mode) {
+  const bar = document.querySelector(TB_FMT_HOST);
+  if (!bar) return false;
+  const conf = cfg ?? (state.settings && state.settings.fmtbar);
+  const m = TC.fmtMode(mode ?? currentFmtMode());
+  const kids = [...bar.children];
+  const { show, grey } = TC.layoutFmtbar(barSeq(bar), conf, m);
+  kids.forEach((k, i) => {
+    const isSep = k.classList.contains('sep');
+    if (isSep || (k.id && TC.isConfigurable(k.id))) k.classList.toggle('tb-hidden', !show[i]);
+    // ปุ่มที่โปรแกรมคุมเอง (LOCKED_BUTTONS) ยังทำเป็นเทาได้ ถ้าโหมดนี้ใช้ไม่ได้
+    k.classList.toggle('tb-na', !!grey[i]);
+    // `pointer-events:none` กันเมาส์ได้ แต่ `<select>` ยังเปิดด้วยคีย์บอร์ดได้ →
+    // ต้องปิดที่ตัวมันเองด้วย ไม่งั้น "เทา" กลายเป็นแค่สี ไม่ใช่สถานะจริง
+    if (k.tagName === 'SELECT') k.disabled = !!grey[i];
+  });
+  bar.dataset.fmtMode = m;
+  return true;
+}
+
+/** โหมดของแท็บที่เปิดอยู่ — wiki/นิยายใช้เอนจินเดียวกันจึงนับเป็น 'prose' */
+export function currentFmtMode() {
+  return state.active && state.active.sp ? 'screenplay' : 'prose';
 }
 
 /**
@@ -88,7 +135,7 @@ export function buildToolbarList(host, opts = {}) {
   host.append(list);
 
   const syncCount = () => {
-    const c = TC.toolbarCounts(cfgNow());
+    const c = TC.mainbarCounts(cfgNow());
     count.textContent = ttf('ui.tbcfg.count', c.on, c.total);
   };
 
@@ -102,7 +149,7 @@ export function buildToolbarList(host, opts = {}) {
     } catch { /* ยังไม่เปิดโปรเจกต์ก็ใช้ได้ — ค่าอยู่ใน state แล้ว */ }
   };
 
-  for (const g of TC.TOOLBAR_GROUPS) {
+  for (const g of TC.mainbarGroups()) {
     const sec = el('div', 'k-tbcfg-sec');
     const head = el('div', 'k-tbcfg-head');
     head.append(el('span', 'k-tbcfg-gname', tt(g.labelKey)));
@@ -215,4 +262,255 @@ export function toolbarDialog() {
   };
   document.addEventListener('keydown', esc);
   return ov;
+}
+
+// ══════════════════ [alpha.111] หน้าตั้งค่า "แถบรูปแบบ" (แยกนิยาย / บทภาพยนตร์) ══════════════════
+//
+// หน้าตาเหมือนหน้าแถบเครื่องมือทุกอย่าง ต่างแค่มีสวิตช์โหมดอยู่ด้านบน และแถวที่โหมดนั้น
+// **ใช้ไม่ได้จริง ๆ** จะขึ้นป้าย "ใช้ไม่ได้ในโหมดนี้" พร้อมสวิตช์ที่กดไม่ได้ —
+// เพื่อไม่ให้ผู้ใช้เสียเวลาเปิดปุ่มที่เปิดไปก็กดไม่ได้
+
+/** เก็บค่าแถบลอยลงระดับผู้ใช้ (ใช้ร่วมทุกผลงาน เหมือนแถบเครื่องมือ) */
+async function saveFmtbar(next) {
+  state.settings.fmtbar = next;
+  applyFmtbarConfig(next);
+  try {
+    const app = await import('../app.js');
+    await app.saveGlobalSetting('fmtbar', next);
+  } catch { /* ยังไม่เปิดโปรเจกต์ก็ใช้ได้ — ค่าอยู่ใน state แล้ว */ }
+}
+
+/**
+ * สร้างรายการปุ่มของแถบลอยลงในกล่องที่ให้มา
+ * @param {HTMLElement} host กล่องปลายทาง (จะถูกล้างก่อน)
+ * @param {object} [opts] `{ mode }` โหมดที่เปิดค้างไว้ตอนแรก
+ */
+export function buildFmtbarList(host, opts = {}) {
+  if (!host) return null;
+  host.replaceChildren();
+  host.classList.add('k-tbcfg-host');
+  let mode = TC.fmtMode(opts.mode || currentFmtMode());
+
+  host.append(el('div', 'k-hint', tt('ui.fmtcfg.hint')));
+
+  // ── สวิตช์โหมด ──
+  const tabs = el('div', 'k-fmtcfg-modes');
+  const modeBtns = {};
+  for (const m of TC.FMT_MODES) {
+    const b = el('button', 'k-fmtcfg-mode',
+                 tt(m === 'screenplay' ? 'ui.fmtcfg.modeScreen' : 'ui.fmtcfg.modeProse'));
+    b.dataset.mode = m;
+    b.onclick = () => { mode = m; redrawAll(); };
+    modeBtns[m] = b;
+    tabs.append(b);
+  }
+  host.append(tabs);
+
+  const count = el('div', 'k-tbcfg-count dim');
+  host.append(count);
+  const list = el('div', 'k-tbcfg-list');
+  host.append(list);
+
+  const cfgNow = () => TC.normalizeFmtbar(state.settings && state.settings.fmtbar,
+                                          state.settings && state.settings.toolbar);
+  const save = async (next) => { await saveFmtbar(next); redrawAll(); };
+
+  function redrawAll() {
+    for (const m of TC.FMT_MODES) modeBtns[m].classList.toggle('on', m === mode);
+    const c = TC.fmtbarCounts(cfgNow(), mode);
+    count.textContent = ttf('ui.tbcfg.count', c.on, c.total);
+    list.replaceChildren();
+    for (const g of TC.fmtbarGroups()) {
+      const sec = el('div', 'k-tbcfg-sec');
+      const head = el('div', 'k-tbcfg-head');
+      head.append(el('span', 'k-tbcfg-gname', tt(g.labelKey)));
+      const onAll = el('button', 'k-tbcfg-mini', tt('ui.tbcfg.allOn'));
+      onAll.onclick = () => save(TC.setFmtbarGroupVisible(cfgNow(), mode, g.key, true));
+      const offAll = el('button', 'k-tbcfg-mini', tt('ui.tbcfg.allOff'));
+      offAll.onclick = () => save(TC.setFmtbarGroupVisible(cfgNow(), mode, g.key, false));
+      head.append(onAll, offAll);
+      sec.append(head);
+
+      for (const b of g.buttons) {
+        const ok = TC.fmtSupported(mode, b.id);
+        const row = el('div', 'k-tbcfg-row' + (ok ? '' : ' k-tbcfg-na'));
+        row.dataset.btn = b.id;
+        const ic = el('span', 'k-tbcfg-icon');
+        const src = btn(b.id);
+        if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
+        else ic.textContent = '●';
+        row.append(ic, el('span', 'k-tbcfg-name', labelOf(b.id)));
+        if (!ok) row.append(el('span', 'k-tbcfg-miss dim', tt('ui.fmtcfg.naTag')));
+        const sw = el('input', 'k-tbcfg-sw');
+        sw.type = 'checkbox';
+        sw.checked = !TC.fmtbarHidden(cfgNow(), mode, b.id);
+        sw.disabled = !ok;
+        sw.onchange = () => save(TC.setFmtbarVisible(cfgNow(), mode, b.id, sw.checked));
+        row.append(sw);
+        sec.append(row);
+      }
+      list.append(sec);
+    }
+  }
+  redrawAll();
+
+  const foot = el('div', 'k-tbcfg-foot');
+  const reset = el('button', 'k-reset-btn', tt('ui.tbcfg.reset'));
+  reset.onclick = async () => { await save(TC.resetFmtbarConfig()); setStatus(tt('ui.tbcfg.resetDone')); };
+  foot.append(reset);
+  host.append(foot);
+  return host;
+}
+
+/**
+ * [alpha.111] เมนูคลิกขวาบน "แถบรูปแบบลอย" — คนละชุดกับแถบเครื่องมือหลัก
+ * เพราะซ่อนปุ่มที่นี่ = ซ่อนเฉพาะโหมดที่กำลังเขียนอยู่
+ * @param {string} btnId ปุ่มที่เมาส์ชี้อยู่ ('' = ที่ว่างบนแถบ)
+ */
+export function fmtbarContextItems(btnId) {
+  const mode = currentFmtMode();
+  const cfg = () => TC.normalizeFmtbar(state.settings && state.settings.fmtbar,
+                                       state.settings && state.settings.toolbar);
+  const modeName = tt(mode === 'screenplay' ? 'ui.fmtcfg.modeScreen' : 'ui.fmtcfg.modeProse');
+  const items = [];
+  if (btnId && TC.isConfigurable(btnId) && TC.isFmtbarButton(btnId)) {
+    const name = labelOf(btnId);
+    items.push({ label: ttf('ui.fmtcfg.hideThis', name, modeName), click: async () => {
+      await saveFmtbar(TC.setFmtbarVisible(cfg(), mode, btnId, false));
+      setStatus(ttf('ui.fmtcfg.hidden', name, modeName));
+    } });
+    items.push('-');
+  }
+  items.push({ label: ttf('ui.fmtcfg.customize', modeName),
+               click: () => openFmtbarSettings(mode) });
+  items.push({ label: ttf('ui.fmtcfg.showAll', modeName), click: async () => {
+    await saveFmtbar(TC.setFmtbarGroupVisibleAll(cfg(), mode));
+    setStatus(tt('ui.tbcfg.resetDone'));
+  } });
+  return items;
+}
+
+/** เปิดหน้าตั้งค่าแถบรูปแบบ (อยู่ในกล่องตั้งค่าหลัก — ที่เดียวกับที่ผู้ใช้ขอ) */
+export async function openFmtbarSettings(mode) {
+  try {
+    const d = await import('../dialogs.js');
+    d.settingsDialog('fmtbar', { fmtMode: mode });
+  } catch (e) { setStatus(tt('ui.fmtcfg.openFail')); }
+}
+
+// ══════════════════ [alpha.111] หน้าตั้งค่า "ปุ่มลอย (FAB)" ══════════════════
+
+/** เก็บค่า FAB ลงระดับผู้ใช้ + วาดเมนูใหม่ทันที */
+async function saveFab(next) {
+  state.settings.fab = next;
+  try {
+    const app = await import('../app.js');
+    app.renderFabMenu();
+    await app.saveGlobalSetting('fab', next);
+  } catch { /* ยังไม่เปิดโปรเจกต์ก็ใช้ได้ */ }
+}
+
+/**
+ * รายการคำสั่งของ FAB พร้อมสวิตช์ — เลือกได้ไม่เกิน `FAB_MAX`
+ * @param {HTMLElement} host กล่องปลายทาง (จะถูกล้างก่อน)
+ */
+export function buildFabList(host) {
+  if (!host) return null;
+  host.replaceChildren();
+  host.classList.add('k-tbcfg-host', 'k-fabcfg-host');
+  host.append(el('div', 'k-hint', ttf('ui.fab.hint', FB.FAB_MAX)));
+
+  const cfgNow = () => FB.normalizeFab(state.settings && state.settings.fab);
+  const save = async (next) => { await saveFab(next); redrawAll(); };
+
+  // ── รูปแบบการแสดง ──
+  const dispRow = el('div', 'k-fabcfg-disp');
+  dispRow.append(el('span', 'k-tbcfg-gname', tt('ui.fab.display')));
+  const dispBtns = {};
+  for (const d of FB.FAB_DISPLAYS) {
+    const b = el('button', 'k-fmtcfg-mode', tt(FB.FAB_DISPLAY_LABELS[d]));
+    b.dataset.disp = d;
+    b.onclick = () => save(FB.setFabDisplay(cfgNow(), d));
+    dispBtns[d] = b;
+    dispRow.append(b);
+  }
+  host.append(dispRow);
+
+  // ── ลำดับที่เลือกไว้ ──
+  const count = el('div', 'k-tbcfg-count dim');
+  host.append(count);
+  const chosen = el('div', 'k-fabcfg-chosen');
+  host.append(chosen);
+  const list = el('div', 'k-tbcfg-list');
+  host.append(list);
+
+  function redrawAll() {
+    const cfg = cfgNow();
+    for (const d of FB.FAB_DISPLAYS) dispBtns[d].classList.toggle('on', d === cfg.display);
+    count.textContent = ttf('ui.fab.count', cfg.actions.length, FB.FAB_MAX);
+
+    chosen.replaceChildren();
+    if (!cfg.actions.length) chosen.append(el('div', 'k-hint dim', tt('ui.fab.empty')));
+    cfg.actions.forEach((id, i) => {
+      const a = FB.fabAction(id);
+      const row = el('div', 'k-fabcfg-pick');
+      row.append(el('span', 'k-fabcfg-num', String(i + 1)));
+      row.append(el('span', 'k-tbcfg-name', tt(a.labelKey)));
+      const up = el('button', 'k-tbcfg-mini', '↑');
+      up.disabled = i === 0;
+      up.onclick = () => save(FB.moveFabAction(cfgNow(), id, -1));
+      const dn = el('button', 'k-tbcfg-mini', '↓');
+      dn.disabled = i === cfg.actions.length - 1;
+      dn.onclick = () => save(FB.moveFabAction(cfgNow(), id, 1));
+      const rm = el('button', 'k-tbcfg-mini', '✕');
+      rm.onclick = () => save(FB.toggleFabAction(cfgNow(), id, false));
+      row.append(up, dn, rm);
+      chosen.append(row);
+    });
+
+    // ── รายการทั้งหมดให้เลือก ──
+    list.replaceChildren();
+    const full = !FB.canAddFab(cfg);
+    for (const g of FB.FAB_GROUPS) {
+      const acts = FB.fabGroupActions(g.key);
+      if (!acts.length) continue;
+      const sec = el('div', 'k-tbcfg-sec');
+      const head = el('div', 'k-tbcfg-head');
+      head.append(el('span', 'k-tbcfg-gname', tt(g.labelKey)));
+      sec.append(head);
+      for (const a of acts) {
+        const on = cfg.actions.includes(a.id);
+        const row = el('div', 'k-tbcfg-row' + (!on && full ? ' k-tbcfg-na' : ''));
+        row.dataset.fab = a.id;
+        row.append(el('span', 'k-tbcfg-name', tt(a.labelKey)));
+        const sw = el('input', 'k-tbcfg-sw');
+        sw.type = 'checkbox';
+        sw.checked = on;
+        sw.disabled = !on && full;              // เต็มแล้ว = ต้องถอดตัวเก่าออกก่อน
+        sw.onchange = () => save(FB.toggleFabAction(cfgNow(), a.id, sw.checked));
+        row.append(sw);
+        sec.append(row);
+      }
+      list.append(sec);
+    }
+  }
+  redrawAll();
+
+  const foot = el('div', 'k-tbcfg-foot');
+  const reset = el('button', 'k-reset-btn', tt('ui.tbcfg.reset'));
+  reset.onclick = async () => { await save(FB.resetFabConfig()); setStatus(tt('ui.tbcfg.resetDone')); };
+  foot.append(reset);
+  host.append(foot);
+  return host;
+}
+
+/** เมนูคลิกขวาบนปุ่มลอย — ย้ายตำแหน่ง/รีเซ็ต/ตั้งค่าคำสั่ง (app.js เป็นคนผูกเหตุการณ์) */
+export function fabContextItems({ onReset, onConfig, onHide } = {}) {
+  return [
+    { label: tt('ui.fab.ctxMoveHint'), disabled: true },
+    '-',
+    { label: tt('ui.fab.ctxReset'), click: () => onReset && onReset() },
+    { label: tt('ui.fab.ctxConfig'), click: () => onConfig && onConfig() },
+    { label: tt('ui.fab.ctxHide'), click: () => onHide && onHide() },
+  ];
 }

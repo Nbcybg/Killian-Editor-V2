@@ -33,40 +33,40 @@
   <span id="elem-badge"></span>
   <button id="new-btn" data-i18n="app.newProject">สร้างโปรเจกต์ใหม่…</button>
   <button id="open-btn" data-i18n="app.openProject">เปิดโปรเจกต์…</button>
-  <button id="save-all-btn" title="บันทึกทั้งหมด (Ctrl+Shift+S)" style="display:none" data-icon="save"></button>
-  <button id="home-btn" title="หน้าแรก" data-icon="home"></button>
+  <button id="save-all-btn" title="บันทึกทั้งหมด (Ctrl+Shift+S)" data-i18n-title="ui.html.saveAllBtn" style="display:none" data-icon="save"></button>
+  <button id="home-btn" title="หน้าแรก" data-i18n-title="ui.html.homeBtn" data-icon="home"></button>
 </div>
 <div id="toolbar">
   <!-- [alpha.60r2 ข้อ 10] ธีมของโปรแกรม (มืด/สว่าง) — Ctrl+Shift+P · ไม่แตะหน้ากระดาษ -->
-  <button id="tb-theme" class="tb tb-toggle" title="ธีมมืด — คลิกเพื่อไปธีมสว่าง (Ctrl+Shift+P)" data-icon="sun"></button>
-  <button id="tb-mode" title="สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)" style="display:none">📖 นิยาย ▾</button>
+  <button id="tb-theme" class="tb tb-toggle" title="ธีมมืด — คลิกเพื่อไปธีมสว่าง (Ctrl+Shift+P)" data-i18n-title="ui.html.tbTheme" data-icon="sun"></button>
+  <button id="tb-mode" data-i18n="ui.html.tbModeText" title="สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)" data-i18n-title="ui.html.tbMode" style="display:none">📖 นิยาย ▾</button>
   <select id="tb-sp-elem" class="tb" style="display:none">
-    <option value="action">บรรยาย</option>
-    <option value="scene">หัวฉาก</option>
-    <option value="character">ตัวละคร</option>
-    <option value="parenthetical">วงเล็บ</option>
-    <option value="dialogue">บทพูด</option>
-    <option value="transition-in">ทรานซิชันเข้า (ซ้าย)</option>
-    <option value="transition">ทรานซิชันออก (ขวา)</option>
-    <option value="subheader">ฉากย่อย</option>
-    <option value="intercut">สลับฉาก</option>
-    <option value="shot">ช็อต</option>
-    <option value="act-break">ตอน</option>
-    <option value="page-break">— ขึ้นหน้าใหม่ (---)</option>
-    <option value="note">โน้ต</option>
-    <option value="cont-left">ต่อเนื่อง (ซ้าย)</option>
-    <option value="cont-right">ต่อเนื่อง (ขวา)</option>
+    <option value="action" data-i18n="ui.html.elAction">บรรยาย</option>
+    <option value="scene" data-i18n="ui.html.elScene">หัวฉาก</option>
+    <option value="character" data-i18n="ui.html.elCharacter">ตัวละคร</option>
+    <option value="parenthetical" data-i18n="ui.html.elParenthetical">วงเล็บ</option>
+    <option value="dialogue" data-i18n="ui.html.elDialogue">บทพูด</option>
+    <option value="transition-in" data-i18n="ui.html.elTransitionIn">ทรานซิชันเข้า (ซ้าย)</option>
+    <option value="transition" data-i18n="ui.html.elTransition">ทรานซิชันออก (ขวา)</option>
+    <option value="subheader" data-i18n="ui.html.elSubheader">ฉากย่อย</option>
+    <option value="intercut" data-i18n="ui.html.elIntercut">สลับฉาก</option>
+    <option value="shot" data-i18n="ui.html.elShot">ช็อต</option>
+    <option value="act-break" data-i18n="ui.html.elActBreak">ตอน</option>
+    <option value="page-break" data-i18n="ui.html.elPageBreak">— ขึ้นหน้าใหม่ (---)</option>
+    <option value="note" data-i18n="ui.html.elNote">โน้ต</option>
+    <option value="cont-left" data-i18n="ui.html.elContLeft">ต่อเนื่อง (ซ้าย)</option>
+    <option value="cont-right" data-i18n="ui.html.elContRight">ต่อเนื่อง (ขวา)</option>
   </select>
   <!-- alpha.57a ข้อ 2: ส่วนเสริมท้ายชื่อตัวละคร (V.O./O.S./cont'd) — เว้นจากชื่อ 1 วรรค -->
-  <button id="tb-sp-ext" class="tb" style="display:none" title="ส่วนเสริมท้ายชื่อตัวละคร (Extension)">( )</button>
+  <button id="tb-sp-ext" class="tb" style="display:none" title="ส่วนเสริมท้ายชื่อตัวละคร (Extension)" data-i18n-title="ui.html.tbSpExt">( )</button>
   <!-- alpha.57 [57][59][60] มุมมองหน้ากระดาษ — [60r2 ข้อ 5] ใช้ได้ทั้งนิยายและบทภาพยนตร์ -->
-  <select id="sp-view-select" class="tb" style="display:none" title="มุมมองหน้ากระดาษ">
-    <option value="normal">ปกติ (หน้ากระดาษ)</option>
-    <option value="layout">จัดหน้า (Layout)</option>
-    <option value="draft">ร่าง — ข้อความล้วน</option>
-    <option value="side">เรียงหน้าคู่</option>
-    <option value="overview1">ภาพรวม 1px</option>
-    <option value="overview4">ภาพรวม 4px</option>
+  <select id="sp-view-select" class="tb" style="display:none" title="มุมมองหน้ากระดาษ" data-i18n-title="ui.html.spViewSelect">
+    <option value="normal" data-i18n="ui.common.normalPagePaper">ปกติ (หน้ากระดาษ)</option>
+    <option value="layout" data-i18n="ui.common.arrangePageSeePage">จัดหน้า (Layout)</option>
+    <option value="draft" data-i18n="ui.common.draftTextDraft">ร่าง — ข้อความล้วน</option>
+    <option value="side" data-i18n="ui.common.pagePairSideBy">เรียงหน้าคู่</option>
+    <option value="overview1" data-i18n="ui.common.overviewPxChar">ภาพรวม 1px</option>
+    <option value="overview4" data-i18n="ui.common.overviewPxChar2">ภาพรวม 4px</option>
   </select>
   <span class="sep"></span>
   <select id="tb-style" class="tb">
@@ -80,7 +80,7 @@
     <option value="quote" data-i18n="toolbar.quote">คำพูดยกมา</option>
   </select>
   <!-- [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก — เลือกแล้วเด้งกลับหัวข้อเสมอ -->
-  <select id="tb-case" class="tb" title="สลับรูปตัวพิมพ์ของข้อความที่เลือก">
+  <select id="tb-case" class="tb" title="สลับรูปตัวพิมพ์ของข้อความที่เลือก" data-i18n-title="ui.html.tbCase">
     <option value="">Aa ▾</option>
     <option value="SC">Sentence case</option>
     <option value="lc">lower case</option>
@@ -91,84 +91,86 @@
     <option value="iC">iNVERSE cASE</option>
   </select>
   <span class="sep"></span>
-  <button id="tb-bold" class="tb" title="ตัวหนา (Ctrl+B)" data-icon="bold"></button>
-  <button id="tb-italic" class="tb" title="ตัวเอียง (Ctrl+I)" data-icon="italic"></button>
-  <button id="tb-underline" class="tb" title="ขีดเส้นใต้ (Ctrl+U)" data-icon="underline"></button>
-  <button id="tb-strike" class="tb" title="ขีดฆ่า" data-icon="strikethrough"></button>
+  <button id="tb-bold" class="tb" title="ตัวหนา (Ctrl+B)" data-i18n-title="ui.html.tbBold" data-icon="bold"></button>
+  <button id="tb-italic" class="tb" title="ตัวเอียง (Ctrl+I)" data-i18n-title="ui.html.tbItalic" data-icon="italic"></button>
+  <button id="tb-underline" class="tb" title="ขีดเส้นใต้ (Ctrl+U)" data-i18n-title="ui.html.tbUnderline" data-icon="underline"></button>
+  <button id="tb-strike" class="tb" title="ขีดฆ่า" data-i18n-title="ui.html.tbStrike" data-icon="strikethrough"></button>
   <!-- [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — สวิตช์แบบเดียวกับ B I U -->
-  <button id="tb-sup" class="tb" title="ตัวยก" data-icon="superscript"></button>
-  <button id="tb-sub" class="tb" title="ตัวห้อย" data-icon="subscript"></button>
+  <button id="tb-sup" class="tb" title="ตัวยก" data-i18n-title="ui.html.tbSup" data-icon="superscript"></button>
+  <button id="tb-sub" class="tb" title="ตัวห้อย" data-i18n-title="ui.html.tbSub" data-icon="subscript"></button>
   <span class="sep"></span>
-  <button id="tb-ul" class="tb" title="รายการหัวข้อย่อย" data-icon="list-ul"></button>
-  <button id="tb-ol" class="tb" title="รายการตัวเลข" data-icon="list-ol"></button>
-  <button id="tb-quote" class="tb" title="คำพูดยกมา" data-icon="quote-left"></button>
+  <button id="tb-ul" class="tb" title="รายการหัวข้อย่อย" data-i18n-title="ui.html.tbUl" data-icon="list-ul"></button>
+  <button id="tb-ol" class="tb" title="รายการตัวเลข" data-i18n-title="ui.html.tbOl" data-icon="list-ol"></button>
+  <button id="tb-quote" class="tb" title="คำพูดยกมา" data-i18n-title="ui.html.tbQuote" data-icon="quote-left"></button>
   <span class="sep"></span>
-  <button id="tb-align-left" class="tb" title="ชิดซ้าย (Ctrl+Shift+L)" data-icon="align-left"></button>
-  <button id="tb-align-center" class="tb" title="กึ่งกลาง (Ctrl+Shift+K)" data-icon="align-center"></button>
-  <button id="tb-align-right" class="tb" title="ชิดขวา (Ctrl+Shift+R)" data-icon="align-right"></button>
-  <button id="tb-align-justify" class="tb" title="เต็มบรรทัด (Ctrl+Shift+J)" data-icon="align-justify"></button>
+  <button id="tb-align-left" class="tb" title="ชิดซ้าย (Ctrl+Shift+L)" data-i18n-title="ui.html.tbAlignLeft" data-icon="align-left"></button>
+  <button id="tb-align-center" class="tb" title="กึ่งกลาง (Ctrl+Shift+K)" data-i18n-title="ui.html.tbAlignCenter" data-icon="align-center"></button>
+  <button id="tb-align-right" class="tb" title="ชิดขวา (Ctrl+Shift+R)" data-i18n-title="ui.html.tbAlignRight" data-icon="align-right"></button>
+  <button id="tb-align-justify" class="tb" title="เต็มบรรทัด (Ctrl+Shift+J)" data-i18n-title="ui.html.tbAlignJustify" data-icon="align-justify"></button>
   <span class="sep"></span>
-  <button id="tb-img" class="tb" title="แทรกรูป" data-icon="image-add"></button>
+  <button id="tb-img" class="tb" title="แทรกรูป" data-i18n-title="ui.html.tbImg" data-icon="image-add"></button>
   <!-- [alpha.62 บั๊ก 14] คลังรูปเป็นแผงตั้งแต่ .60r1 แล้ว ปุ่มจึงต้องเป็นสวิตช์เหมือนแผงอื่น
        (เดิม class="tb" + openGallery() = กดกี่ครั้งก็เปิดซ้ำ ปิดไม่ได้เลย) -->
-  <button id="tb-gallery" class="tb tb-toggle" title="คลังรูปภาพ (Ctrl+Shift+G)" data-icon="image"></button>
-  <button id="tb-visual" class="tb" title="เล่าด้วยภาพ (Visual telling) — สตอรีบอร์ดของฉากนี้" data-icon="image"></button>
+  <button id="tb-gallery" class="tb tb-toggle" title="คลังรูปภาพ (Ctrl+Shift+G)" data-i18n-title="ui.html.tbGallery" data-icon="image"></button>
+  <button id="tb-visual" class="tb" title="เล่าด้วยภาพ (Visual telling) — สตอรีบอร์ดของฉากนี้" data-i18n-title="ui.html.tbVisual" data-icon="image"></button>
   <!-- [alpha.84 ข้อ 3] สวิตช์ CONTINUED/(MORE)/(cont'd) — เดิมมีแต่ในเมนู "บท" ซึ่งหาไม่เจอ -->
-  <button id="tb-sp-cont" class="tb tb-toggle" style="display:none" title="ข้อความต่อเนื่องอัตโนมัติ — (CONTINUED) · CONTINUED: · (MORE) · ชื่อ+(cont'd)">(∞)</button>
+  <button id="tb-sp-cont" class="tb tb-toggle" style="display:none" title="ข้อความต่อเนื่องอัตโนมัติ — (CONTINUED) · CONTINUED: · (MORE) · ชื่อ+(cont'd)" data-i18n-title="ui.html.tbSpCont">(∞)</button>
   <!-- [alpha.84 ข้อ 4] ย่อหน้าอัตโนมัติของนิยาย — สลับเปิด/ปิดได้ทันที (จำระยะเดิมไว้) -->
-  <button id="tb-indent" class="tb tb-toggle" style="display:none" title="ย่อหน้าอัตโนมัติ (บรรทัดแรกของย่อหน้า)">⇥¶</button>
-  <button id="tb-source" class="tb" title="ดู Markdown ดิบของฉากนี้" data-icon="code-alt"></button>
+  <button id="tb-indent" class="tb tb-toggle" style="display:none" title="ย่อหน้าอัตโนมัติ (บรรทัดแรกของย่อหน้า)" data-i18n-title="ui.html.tbIndent">⇥¶</button>
+  <button id="tb-source" class="tb" title="ดู Markdown ดิบของฉากนี้" data-i18n-title="ui.html.tbSource" data-icon="code-alt"></button>
   <!-- [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสนำหน้าบรรทัด (. @ > $shot # …) — เปิดไว้เป็นค่าเริ่มต้น -->
-  <button id="tb-md-codes" class="tb tb-toggle" title="ซ่อนรหัสนำหน้าบรรทัด (. @ &gt; $shot # …)" data-icon="eye"></button>
-  <button id="tb-read" class="tb tb-toggle" title="โหมดอ่าน (เต็มจอ)" data-icon="book-open"></button>
-  <button id="tb-gsearch" class="tb" title="ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F)" data-icon="search"></button>
-  <button id="tb-tree-panel"    class="tb tb-toggle" title="โปรเจกต์ (Explorer)" data-icon="book-content"></button>
+  <button id="tb-md-codes" class="tb tb-toggle" title="ซ่อนรหัสนำหน้าบรรทัด (. @ &gt; $shot # …)" data-i18n-title="ui.html.tbMdCodes" data-icon="eye"></button>
+  <button id="tb-read" class="tb tb-toggle" title="โหมดอ่าน (เต็มจอ)" data-i18n-title="ui.html.tbRead" data-icon="book-open"></button>
+  <button id="tb-gsearch" class="tb" title="ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F)" data-i18n-title="ui.html.tbGsearch" data-icon="search"></button>
+  <button id="tb-tree-panel"    class="tb tb-toggle" title="โปรเจกต์ (Explorer)" data-i18n-title="ui.html.tbTreePanel" data-icon="book-content"></button>
   <button id="tb-outline-panel" class="tb tb-toggle" title="Navigation" data-icon="list-ul"></button>
-  <button id="tb-props-panel"   class="tb tb-toggle" title="คุณสมบัติ" data-icon="clipboard"></button>
-  <button id="tb-search-panel"  class="tb tb-toggle" title="ค้นหา" data-icon="search"></button>
+  <button id="tb-props-panel"   class="tb tb-toggle" title="คุณสมบัติ" data-i18n-title="ui.html.tbPropsPanel" data-icon="clipboard"></button>
+  <button id="tb-search-panel"  class="tb tb-toggle" title="ค้นหา" data-i18n-title="ui.html.tbSearchPanel" data-icon="search"></button>
   <span class="sep"></span>
-  <button id="tb-note" class="tb" title="โน้ตด่วน — จดความคิดตอนนี้ไว้ก่อน" data-icon="note"></button>
-  <button id="tb-panels" class="tb" title="จัดการแผง" data-icon="layout"></button>
-  <button id="tb-split" class="tb tb-toggle" title="แยกหน้าจอ (Split View)" data-icon="dock-right"></button>
-  <button id="tb-close" class="tb" title="ปิดแท็บ (Ctrl+W)" data-icon="x"></button>
-  <button id="tb-close-all" class="tb" title="ปิดทุกแท็บ (Ctrl+Shift+W)" data-icon="reset"></button>
-  <button id="tb-focus" class="tb tb-toggle" title="โหมดโฟกัส (Ctrl+Shift+D)" data-icon="expand"></button>
-  <button id="tb-typewriter" class="tb tb-toggle" title="โหมดเครื่องพิมพ์ดีด (Ctrl+Shift+T)" data-icon="edit"></button>
-  <button id="tb-linenum" class="tb tb-toggle" title="แสดงเลขบรรทัด" data-icon="list-ol"></button>
-  <button id="tb-quickopen" class="tb" title="ค้นหาไฟล์ด่วน (Ctrl+Shift+O)" data-icon="search"></button>
-  <button id="tb-kanban" class="tb tb-toggle" title="Kanban ตามสถานะ (กดซ้ำ = ปิดแผง)" data-icon="grid"></button>
+  <button id="tb-note" class="tb" title="โน้ตด่วน — จดความคิดตอนนี้ไว้ก่อน" data-i18n-title="ui.html.tbNote" data-icon="note"></button>
+  <button id="tb-panels" class="tb" title="จัดการแผง" data-i18n-title="ui.html.tbPanels" data-icon="layout"></button>
+  <button id="tb-split" class="tb tb-toggle" title="แยกหน้าจอ (Split View)" data-i18n-title="ui.html.tbSplit" data-icon="dock-right"></button>
+  <button id="tb-close" class="tb" title="ปิดแท็บ (Ctrl+W)" data-i18n-title="ui.html.tbClose" data-icon="x"></button>
+  <button id="tb-close-all" class="tb" title="ปิดทุกแท็บ (Ctrl+Shift+W)" data-i18n-title="ui.html.tbCloseAll" data-icon="reset"></button>
+  <button id="tb-focus" class="tb tb-toggle" title="โหมดโฟกัส (Ctrl+Shift+D)" data-i18n-title="ui.html.tbFocus" data-icon="expand"></button>
+  <button id="tb-typewriter" class="tb tb-toggle" title="โหมดเครื่องพิมพ์ดีด (Ctrl+Shift+T)" data-i18n-title="ui.html.tbTypewriter" data-icon="edit"></button>
+  <button id="tb-linenum" class="tb tb-toggle" title="แสดงเลขบรรทัด" data-i18n-title="ui.html.tbLinenum" data-icon="list-ol"></button>
+  <button id="tb-quickopen" class="tb" title="ค้นหาไฟล์ด่วน (Ctrl+Shift+O)" data-i18n-title="ui.html.tbQuickopen" data-icon="search"></button>
+  <button id="tb-kanban" class="tb tb-toggle" title="Kanban ตามสถานะ (กดซ้ำ = ปิดแผง)" data-i18n-title="ui.html.tbKanban" data-icon="grid"></button>
   <!-- [alpha.60r ข้อ 4] ปุ่มแดชบอร์ด — toggle แผง dashboard -->
-  <button id="tb-dashboard" class="tb tb-toggle" title="แดชบอร์ด (Dashboard — สถิติ · ความคืบหน้า)" data-icon="chart"></button>
-  <button id="tb-ai" class="tb" title="เครื่องมือ AI (ขยาย · สรุป · เขียนใหม่)" data-icon="bot"></button>
+  <button id="tb-dashboard" class="tb tb-toggle" title="แดชบอร์ด (Dashboard — สถิติ · ความคืบหน้า)" data-i18n-title="ui.html.tbDashboard" data-icon="chart"></button>
+  <button id="tb-ai" class="tb" title="เครื่องมือ AI (ขยาย · สรุป · เขียนใหม่)" data-i18n-title="ui.html.tbAi" data-icon="bot"></button>
+  <!-- [alpha.116 ข้อ 3] AI Hub — ประตูเดียวเข้าทุกความสามารถ AI (กดซ้ำ = ปิดแผง) -->
+  <button id="tb-ai-hub" class="tb tb-toggle" title="AI Hub — ทางเข้าเดียวของทุกความสามารถ AI (Ctrl+Alt+Q)" data-i18n-title="ui.html.tbAiHub" data-icon="brain"></button>
   <!-- [alpha.62 บั๊ก 2] ปุ่มนี้คือสวิตช์ของแผง "AI ผู้ช่วยเขียน" (กดซ้ำ = ปิด) ไม่ใช่กล่องแชทเดิม -->
-  <button id="tb-ai-chat" class="tb tb-toggle" title="AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง)" data-icon="chat"></button>
+  <button id="tb-ai-chat" class="tb tb-toggle" title="AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง)" data-i18n-title="ui.html.tbAiChat" data-icon="chat"></button>
   <!-- [alpha.94] Story Starter — สวิตช์แผง (กดซ้ำ = ปิด) -->
-  <button id="tb-starter" class="tb tb-toggle" title="✨ Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI)" data-icon="book-open"></button>
+  <button id="tb-starter" class="tb tb-toggle" title="✨ Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI)" data-i18n-title="ui.html.tbStarter" data-icon="book-open"></button>
   <!-- [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI -->
-  <button id="tb-ai-analyzer" class="tb tb-toggle" title="🧠 AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)" data-icon="brain"></button>
+  <button id="tb-ai-analyzer" class="tb tb-toggle" title="🧠 AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)" data-i18n-title="ui.html.tbAiAnalyzer" data-icon="brain"></button>
   <!-- [alpha.69] แผงใหม่ 3 ตัว — เป็นสวิตช์เหมือนปุ่มแผงตัวอื่น (กดซ้ำ = ปิด) -->
-  <button id="tb-codex" class="tb tb-toggle" title="📚 สารานุกรม (Codex — เอนทิตี้ Wiki ทั้งเล่ม · ส่งออกเป็นเว็บได้)" data-icon="book-content"></button>
-  <button id="tb-history" class="tb tb-toggle" title="🕘 ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้)" data-icon="history"></button>
-  <button id="tb-record" class="tb tb-toggle" title="🗒 บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)" data-icon="note"></button>
+  <button id="tb-codex" class="tb tb-toggle" title="📚 สารานุกรม (Codex — เอนทิตี้ Wiki ทั้งเล่ม · ส่งออกเป็นเว็บได้)" data-i18n-title="ui.html.tbCodex" data-icon="book-content"></button>
+  <button id="tb-history" class="tb tb-toggle" title="🕘 ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้)" data-i18n-title="ui.html.tbHistory" data-icon="history"></button>
+  <button id="tb-record" class="tb tb-toggle" title="🗒 บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)" data-i18n-title="ui.html.tbRecord" data-icon="note"></button>
   <!-- [alpha.79] แผงบทพูด (รวมบทพูดทั้งผลงาน) + แผงจัดการปลั๊กอิน -->
-  <button id="tb-dialogue" class="tb tb-toggle" title="บทพูดทั้งผลงาน (Ctrl+Alt+L)" data-icon="chat"></button>
-  <button id="tb-dlgb" class="tb tb-toggle" title="ห้องซ้อมบท — ให้ AI สวมบทตัวละครคุยกัน" data-icon="chat"></button>
-  <button id="tb-plugins" class="tb tb-toggle" title="ปลั๊กอิน (Ctrl+Alt+E)" data-icon="extension"></button>
+  <button id="tb-dialogue" class="tb tb-toggle" title="บทพูดทั้งผลงาน (Ctrl+Alt+L)" data-i18n-title="ui.html.tbDialogue" data-icon="chat"></button>
+  <button id="tb-dlgb" class="tb tb-toggle" title="ห้องซ้อมบท — ให้ AI สวมบทตัวละครคุยกัน" data-i18n-title="ui.html.tbDlgb" data-icon="chat"></button>
+  <button id="tb-plugins" class="tb tb-toggle" title="ปลั๊กอิน (Ctrl+Alt+E)" data-i18n-title="ui.html.tbPlugins" data-icon="extension"></button>
   <!-- [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบเลย — ต้องเข้าถึงได้จากที่เดียวกับแผงอื่น
        (ซ่อนตัวที่ไม่ใช้ได้ที่ ตั้งค่า → แถบเครื่องมือ) -->
-  <button id="tb-timeline" class="tb tb-toggle" title="เส้นเวลา (Ctrl+Alt+T)" data-icon="history"></button>
-  <button id="tb-maps" class="tb tb-toggle" title="แผนที่ (Ctrl+Alt+M)" data-icon="map"></button>
-  <button id="tb-books" class="tb tb-toggle" title="จัดการเล่ม (Ctrl+Alt+K)" data-icon="book"></button>
+  <button id="tb-timeline" class="tb tb-toggle" title="เส้นเวลา (Ctrl+Alt+T)" data-i18n-title="ui.html.tbTimeline" data-icon="history"></button>
+  <button id="tb-maps" class="tb tb-toggle" title="แผนที่ (Ctrl+Alt+M)" data-i18n-title="ui.html.tbMaps" data-icon="map"></button>
+  <button id="tb-books" class="tb tb-toggle" title="จัดการเล่ม (Ctrl+Alt+K)" data-i18n-title="ui.html.tbBooks" data-icon="book"></button>
   <button id="tb-network" class="tb tb-toggle" title="Story Network (Ctrl+Alt+N)" data-icon="link"></button>
-  <button id="tb-planner" class="tb tb-toggle" title="กระดานวางแผน (Ctrl+Alt+P)" data-icon="layout"></button>
-  <button id="tb-branch" class="tb tb-toggle" title="ผังแตกสาย (Ctrl+Alt+B)" data-icon="grid"></button>
-  <button id="tb-floorplan" class="tb tb-toggle" title="ผังพื้นที่ (Ctrl+Alt+F)" data-icon="map"></button>
-  <button id="tb-player" class="tb tb-toggle" title="ทดลองเล่น (Ctrl+Alt+Y)" data-icon="film"></button>
-  <button id="tb-gallery-board" class="tb tb-toggle" title="กระดานอารมณ์ (Ctrl+Alt+G)" data-icon="camera"></button>
-  <button id="tb-comments" class="tb tb-toggle" title="คอมเมนต์ (Ctrl+Alt+O)" data-icon="chat"></button>
-  <button id="tb-notes-panel" class="tb tb-toggle" title="สมุดโน้ตด่วน" data-icon="bookmark"></button>
-  <button id="tb-log" class="tb tb-toggle" title="บันทึกการทำงาน" data-icon="clipboard"></button>
-  <button id="tb-plug" class="tb" title="คำสั่งจากปลั๊กอิน" style="display:none" data-icon="extension"></button>
+  <button id="tb-planner" class="tb tb-toggle" title="กระดานวางแผน (Ctrl+Alt+P)" data-i18n-title="ui.html.tbPlanner" data-icon="layout"></button>
+  <button id="tb-branch" class="tb tb-toggle" title="ผังแตกสาย (Ctrl+Alt+B)" data-i18n-title="ui.html.tbBranch" data-icon="grid"></button>
+  <button id="tb-floorplan" class="tb tb-toggle" title="ผังพื้นที่ (Ctrl+Alt+F)" data-i18n-title="ui.html.tbFloorplan" data-icon="map"></button>
+  <button id="tb-player" class="tb tb-toggle" title="ทดลองเล่น (Ctrl+Alt+Y)" data-i18n-title="ui.html.tbPlayer" data-icon="film"></button>
+  <button id="tb-gallery-board" class="tb tb-toggle" title="กระดานอารมณ์ (Ctrl+Alt+G)" data-i18n-title="ui.html.tbGalleryBoard" data-icon="camera"></button>
+  <button id="tb-comments" class="tb tb-toggle" title="คอมเมนต์ (Ctrl+Alt+O)" data-i18n-title="ui.html.tbComments" data-icon="chat"></button>
+  <button id="tb-notes-panel" class="tb tb-toggle" title="สมุดโน้ตด่วน" data-i18n-title="ui.html.tbNotesPanel" data-icon="bookmark"></button>
+  <button id="tb-log" class="tb tb-toggle" title="บันทึกการทำงาน" data-i18n-title="ui.html.tbLog" data-icon="clipboard"></button>
+  <button id="tb-plug" class="tb" title="คำสั่งจากปลั๊กอิน" data-i18n-title="ui.html.tbPlug" style="display:none" data-icon="extension"></button>
 </div>
 <div id="findbar">
   <input id="find-q" data-i18n-attr="placeholder" data-i18n="toolbar.findBar">
@@ -236,6 +238,8 @@
     <div id="ai-analyzer-panel" class="k-featpanel"><div id="ai-analyzer-body"></div></div>
     <!-- [alpha.61 ข้อ 2] แผงแชท AI แบบ opencode (รายการเซสชัน → เซสชัน → รายละเอียดบริบท) -->
     <div id="ai-chat-panel" class="k-featpanel"><div id="ai-chat-body"></div></div>
+    <!-- [alpha.116 ข้อ 3] AI Hub — ประตูเดียวเข้าทุกความสามารถ AI (ทะเบียนอยู่ที่ src/ai/ai-hub-def.js) -->
+    <div id="ai-hub-panel" class="k-featpanel"><div id="ai-hub-body"></div></div>
     <!-- [alpha.94] Story Starter — หน้ารวม → wizard 5 ขั้น → รายการตอน → แชท Game Master -->
     <div id="starter-panel" class="k-featpanel"><div id="starter-body"></div></div>
     <!-- [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร — ย้ายมาเป็นแผงให้ครบชุด
@@ -264,16 +268,16 @@
   <div id="status-right">
     <span id="wc"></span>
     <!-- [54] จำนวนข้อผิดพลาดในบท — คลิกเพื่อไปข้อถัดไป -->
-    <span id="sp-errors" title="ตรวจบทภาพยนตร์ (Ctrl+Shift+U)"></span>
+    <span id="sp-errors"></span>
     <span id="status-mode"></span>
     <span id="status-save"></span>
     <span id="status-scenes"></span>
-    <div id="zoom-ctl" title="ซูมหน้ากระดาษ (Ctrl+ล้อเมาส์)">
-      <button id="zoom-out" title="ย่อ (Ctrl+-)" data-icon="minus"></button>
+    <div id="zoom-ctl" title="ซูมหน้ากระดาษ (Ctrl+ล้อเมาส์)" data-i18n-title="ui.html.zoomCtl">
+      <button id="zoom-out" title="ย่อ (Ctrl+-)" data-i18n-title="ui.html.zoomOut" data-icon="minus"></button>
       <input type="range" id="zoom-slider" min="50" max="250" step="5" value="100">
-      <button id="zoom-in" title="ขยาย (Ctrl+=)" data-icon="plus"></button>
+      <button id="zoom-in" title="ขยาย (Ctrl+=)" data-i18n-title="ui.html.zoomIn" data-icon="plus"></button>
       <span id="zoom-label">100%</span>
-      <button id="zoom-reset" title="รีเซ็ต (Ctrl+Shift+0)" data-icon="reset"></button>
+      <button id="zoom-reset" title="รีเซ็ต (Ctrl+Shift+0)" data-i18n-title="ui.html.zoomReset" data-icon="reset"></button>
     </div>
   </div>
 </div>
@@ -281,14 +285,9 @@
 <div id="k-fab" data-i18n-attr="title" data-i18n="panel.fab">
   <span class="k-fab-icon" data-icon="plus" data-icon-size="22"></span>
 </div>
-<div id="k-fab-menu" class="k-menu k-menu-off">
-  <div class="k-menu-item" data-action="scene"><span data-icon="file" data-icon-size="16"></span> <span data-i18n="panel.fabScene">สร้างฉาก</span></div>
-  <div class="k-menu-item" data-action="chapter"><span data-icon="folder" data-icon-size="16"></span> <span data-i18n="panel.fabChapter">สร้างบท</span></div>
-  <div class="k-menu-item" data-action="character"><span data-icon="user" data-icon-size="16"></span> <span data-i18n="panel.fabCharacter">สร้างตัวละคร</span></div>
-  <div class="k-menu-item" data-action="location"><span data-icon="map" data-icon-size="16"></span> <span data-i18n="panel.fabLocation">สร้างสถานที่</span></div>
-  <div class="k-menu-item" data-action="note"><span data-icon="note" data-icon-size="16"></span> <span data-i18n="panel.fabNote">สร้างโน้ต</span></div>
-  <div class="k-menu-item" data-action="memo"><span data-icon="clipboard" data-icon-size="16"></span> <span data-i18n="panel.fabMemo">สร้าง Memo</span></div>
-</div>
+<!-- [alpha.111] ปุ่มลูกถูกสร้างตอนรันโดย renderFabMenu() ตามคำสั่งที่ผู้ใช้เลือกไว้
+     (ตั้งค่า → ปุ่มลอย) — จึงไม่มีรายการตายตัวในไฟล์นี้อีกแล้ว -->
+<div id="k-fab-menu" class="k-menu k-fab-radial k-menu-off"></div>
 <script src="bundle.js"></script>
 <!-- [alpha.62 บั๊ก 9] หน้าจอรอโหลด (#k-loader) ถูกลบทิ้งแล้ว — ดู #status-busy ที่แถบสถานะล่างแทน -->
 </body>

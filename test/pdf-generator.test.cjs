@@ -456,6 +456,76 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     check('[81r2] หน้าหน้าเล่มหลายก้อนต่อกันได้', r2.frontCount === 2 && r2.pageCount === 2 + bodyPages);
   }
 
+  // ══════════ [alpha.112] ★★ บรรทัดว่างต้องไม่ถูกโยนทิ้งก่อนจัดหน้า ══════════
+  //
+  // ผู้ใช้: *"ในเอกสารมี 2 หน้า แต่ PDF ออกมา 1 หน้า"*
+  // ต้นตอ: ตัวกรองใน generatePdf ยังเป็น `b.el !== 'blank'` แบบก่อน alpha.86
+  // → PDF จัดหน้าจากเอกสารคนละฉบับกับที่จอเห็น และบรรทัดว่างที่ผู้ใช้เว้นไว้หายหมด
+  {
+    const SH = build('sp-headers.js', 'k2-pdfgen-hdr-test.cjs');
+    const fmtA4 = SF.mergeSpFormat({ paperSize: 'a4', margins: { top: 1, bottom: 1, left: 1, right: 1 } });
+    const lines = SH.linesForBody(fmtA4, SH.mergeHeaders(null));
+    // เลียนไฟล์จริงของผู้ใช้: บรรยายยาว ๆ คั่นด้วยบรรทัดว่างเป็นชุด ๆ
+    const para = 'บรรยายฉากยาวพอสมควรเพื่อให้กินหลายบรรทัดในหน้ากระดาษ A4 ของผู้ใช้จริง '.repeat(3);
+    const withBlanks = [];
+    for (let i = 0; i < 20; i++) {
+      withBlanks.push({ el: 'action', text: para + i });
+      withBlanks.push({ el: 'blank', text: '' });
+      withBlanks.push({ el: 'blank', text: '' });
+    }
+    const noBlanks = withBlanks.filter((b) => b.el !== 'blank');
+    const modelPages = SF.paginate(withBlanks, { fmt: fmtA4, lines }).count;
+    const strippedPages = SF.paginate(noBlanks, { fmt: fmtA4, lines }).count;
+    check('[112] ชุดทดสอบนี้ "บรรทัดว่างมีผลจริง" (ทิ้งแล้วจำนวนหน้าเปลี่ยน)',
+          modelPages !== strippedPages, modelPages + ' vs ' + strippedPages);
+
+    const pdf = await G.generatePdf({ blocks: withBlanks, fmt: fmtA4,
+      opts: { toc: false, titlePages: false, headers: false, pageNumbers: false } });
+    check('[112] ★★ PDF ได้จำนวนหน้าเท่ากับที่โมเดล (จอ) คิด',
+          pdf.pageCount === modelPages, 'PDF ' + pdf.pageCount + ' vs โมเดล ' + modelPages);
+    check('[112] ★ และไม่เท่ากับตอนที่โยนบรรทัดว่างทิ้ง (พิสูจน์ว่าบั๊กเดิมจะแดง)',
+          pdf.pageCount !== strippedPages, 'PDF ' + pdf.pageCount + ' vs ทิ้งว่าง ' + strippedPages);
+
+    // ตัวกรอง `omit` ต้องยังทำงานเหมือนเดิม (ทิ้งเฉพาะชนิดที่ผู้ใช้สั่ง)
+    const pdfOmit = await G.generatePdf({ blocks: withBlanks, fmt: fmtA4,
+      opts: { toc: false, titlePages: false, headers: false, pageNumbers: false, omit: ['action'] } });
+    check('[112] ตัวเลือก "ไม่เอาชนิดนี้" ยังทำงาน', pdfOmit.pageCount < pdf.pageCount,
+          pdfOmit.pageCount + ' vs ' + pdf.pageCount);
+
+    // ── layoutPageLines ต้องมิเรอร์กฎ prevBlank ของ paginate() ──
+    const pg1 = SF.paginate(withBlanks, { fmt: fmtA4, lines }).pages[0];
+    const rows = G.layoutPageLines(pg1, fmtA4);
+    check('[112] ทุกบล็อกในหน้าได้ที่อยู่ครบ', rows.length === pg1.blocks.length);
+    {
+      // หาบล็อกที่อยู่ "ถัดจากบรรทัดว่าง" แล้วดูว่าไม่มีระยะเว้นนำเพิ่ม
+      let checked = 0, bad = [];
+      for (let i = 1; i < rows.length; i++) {
+        if (pg1.blocks[i - 1].el !== 'blank' || pg1.blocks[i].el === 'blank') continue;
+        checked++;
+        const gap = rows[i].line - (rows[i - 1].line + Math.max(1, pg1.blocks[i - 1].lines || 1));
+        if (gap !== 0) bad.push(i + ':' + gap);
+      }
+      check('[112] ★★ บล็อกถัดจากบรรทัดว่างไม่เติมระยะเว้นนำซ้ำ',
+            checked > 0 && bad.length === 0, 'ตรวจ ' + checked + ' จุด · ผิด ' + bad.join(','));
+    }
+    {
+      const blankRows = rows.filter((r, i) => pg1.blocks[i].el === 'blank');
+      check('[112] บรรทัดว่างมีอยู่จริงในหน้า', blankRows.length > 0);
+      let bad = 0;
+      rows.forEach((r, i) => {
+        if (pg1.blocks[i].el !== 'blank') return;
+        const prev = rows[i - 1];
+        if (i > 0 && r.line !== prev.line + Math.max(1, pg1.blocks[i - 1].lines || 1)) bad++;
+      });
+      check('[112] ★ บรรทัดว่างกินพอดี 1 บรรทัด ไม่มีระยะเว้นนำของตัวเอง', bad === 0, String(bad));
+    }
+    {
+      const last = rows[rows.length - 1];
+      const used = last.line + Math.max(1, pg1.blocks[pg1.blocks.length - 1].lines || 1);
+      check('[112] ★★ เนื้อหน้าไม่ล้นโควตาบรรทัดของหน้า', used <= lines, used + ' vs ' + lines);
+    }
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('FAIL exception | ' + (e && e.stack || e)); process.exit(1); });

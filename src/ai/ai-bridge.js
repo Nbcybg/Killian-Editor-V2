@@ -3,8 +3,9 @@
 import { t } from '../i18n.js';
 import { state, log } from '../core.js';
 import { AIClient, KeyStore, CostTracker, RagPipeline, VectorIndex,
-         httpFromKapi, INDEX_FILE, buildContext } from './ai-core.js';
+         httpFromKapi, INDEX_FILE, buildContext, estimateCost, localEmbed } from './ai-core.js';
 import { getAISettings } from '../ai-settings.js';
+import { currentProvider, complete as providerComplete, completeStream as providerStream } from './ai-provider-ui.js';
 import { listScenes, listEntities, syncIo } from '../project-scan.js';
 
 let _client = null;
@@ -15,7 +16,72 @@ export const tracker = new CostTracker({});
 // io adapter สำหรับ KeyStore (join ต้องเป็น sync — ดู syncIo ใน project-scan.js)
 const keyIo = () => syncIo();
 
+/** ทะเบียนผู้ให้บริการแบบใหม่ (alpha.61) ทำงานอยู่หรือยัง */
+function registryActive() {
+  const ai = (state.meta && state.meta.ai) || {};
+  return Array.isArray(ai.providers) && ai.providers.length > 0;
+}
+
+/**
+ * [alpha.96] client ที่ใช้ทะเบียนใหม่ — คืนออบเจกต์หน้าเหมือน AIClient
+ * (`.complete` / `.stream` / `.embed` / `.ready`) แต่ยิงผ่าน `ai-provider-ui.js`
+ *
+ * ต้นตอของบั๊ก "AI วิเคราะห์ติดต่อ API ไม่ได้ทั้งที่ตั้งค่าแล้ว": เดิมทุกฟีเจอร์ที่เรียก
+ * `getAIClient()` ได้ `AIClient` รุ่นเก่าที่อ่าน `meta.ai.provider` + `ai-key.json → apiKey`
+ * ส่วนทะเบียนใหม่เก็บ `meta.ai.providers[]` + `ai-key.json → keys` → คีย์ว่าง/เจ้าเป็น openai เสมอ
+ */
+function registryClient() {
+  const empty = (error, extra = {}) => ({ ok: false, text: '', error, code: 'no-provider',
+    usage: { input: 0, output: 0, total: 0 }, cost: { usd: 0 }, ...extra });
+  const normUsage = (u) => ({ ...(u || {}), total: (u && (u.total || (u.input || 0) + (u.output || 0))) || 0 });
+  return {
+    async ready() { const p = await currentProvider(); return !!(p && p.model); },
+    async complete(opts = {}) {
+      const p = await currentProvider();
+      if (!p) return empty(t('ui.aiProvider.cantSettingsProviderAI'));
+      const messages = (opts.messages && opts.messages.length)
+        ? opts.messages : [{ role: 'user', content: opts.prompt || '' }];
+      const r = await providerComplete(p, {
+        system: opts.system || '', messages, model: opts.model || undefined,
+        temperature: opts.temperature, maxTokens: opts.maxTokens,
+        reqId: opts.reqId, timeoutMs: opts.timeoutMs,
+      });
+      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+      const usage = normUsage(r.usage);
+      return { ok: true, text: (r.text || '').trim(), thinking: r.thinking || '', usage,
+               cost: estimateCost(p.provider || 'openai', r.model || '', usage), provider: r.provider, model: r.model };
+    },
+    async stream(opts = {}, onChunk = () => {}) {
+      const p = await currentProvider();
+      if (!p) return empty(t('ui.aiProvider.cantSettingsProviderAI'));
+      const messages = (opts.messages && opts.messages.length)
+        ? opts.messages : [{ role: 'user', content: opts.prompt || '' }];
+      const r = await providerStream(p, {
+        system: opts.system || '', messages, model: opts.model || undefined,
+        temperature: opts.temperature, maxTokens: opts.maxTokens,
+        reqId: opts.reqId, timeoutMs: opts.timeoutMs,
+      }, (c) => onChunk(c.delta || '', { partial: c.text }));
+      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+      const usage = normUsage(r.usage);
+      return { ok: true, text: r.text, thinking: r.thinking || '', usage,
+               cost: estimateCost(p.provider || 'openai', r.model || '', usage), provider: r.provider, model: r.model };
+    },
+    async embed(texts, opts = {}) {
+      // ทะเบียนใหม่ไม่มี remote embeddings — ใช้ local อย่างเดียว (RAG ยังทำงานได้แบบออฟไลน์)
+      const list = Array.isArray(texts) ? texts : [texts];
+      return { ok: true, vectors: list.map((x) => localEmbed(x)), model: 'local', local: true };
+    },
+  };
+}
+
 export function getAIClient() {
+  if (registryActive()) {
+    if (_client && _client._root === state.root && _client._adapter) return _client;
+    _client = registryClient();
+    _client._root = state.root;
+    _client._adapter = true;
+    return _client;
+  }
   if (_client && _client._root === state.root) return _client;
   _client = new AIClient({
     http: httpFromKapi(kapi),
